@@ -14,6 +14,9 @@ Feature: Swap, set and confirm
       | curry | 2     |      | 150 g rice   |
       | pizza | 2     |      | 200 g dough  |
       | stew  | 2     |      | 300 g beef   |
+      | risotto | 2   |      | 180 g rice   |
+      | salad | 2     |      | 80 g lettuce |
+      | tacos | 2     |      | 120 g maize  |
     And I am signed in as the User
     And the planner has finished
 

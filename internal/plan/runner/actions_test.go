@@ -486,7 +486,9 @@ func TestViewListsEverySlotOfTheHorizonWithMealsAndRules(t *testing.T) {
 func TestASlotRuleFixesItsMealSlotAndGetsASlotRuleChip(t *testing.T) {
 	e := newEnv(t)
 	e.src.settings.HorizonDays = 7 // Mon 9 .. Sun 15; Friday is the 13th
-	// Keep pizza out of Monday to Thursday so its Cool-down cannot block Friday (a Slot Rule never falls back).
+	// Pin four other Recipes on Monday to Thursday (no pizza among them), then add the Slot Rule and
+	// replan with the rules-changed reason, which clears every unpinned meal. Pizza therefore appears
+	// nowhere else in the horizon before Friday, so its Cool-down cannot block the rule (a Slot Rule never falls back).
 	for day, name := range map[int]string{9: "pasta", 10: "soup", 11: "curry", 12: "stew"} {
 		if _, err := e.r.SetMeal(ctx, e.key(day), e.rec[name], nil); err != nil {
 			t.Fatal(err)
@@ -495,7 +497,9 @@ func TestASlotRuleFixesItsMealSlotAndGetsASlotRuleChip(t *testing.T) {
 	if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.slotIDs[5], RecipeID: e.rec["pizza"]}); err != nil {
 		t.Fatal(err)
 	}
-	e.mustPlan()
+	if _, err := e.r.Plan(ctx, plan.ReasonRulesChanged); err != nil {
+		t.Fatal(err)
+	}
 	fri := e.meal(13)
 	if fri.RecipeID != e.rec["pizza"] {
 		t.Fatalf("Friday = Recipe %d, want pizza (Slot Rule)", fri.RecipeID)

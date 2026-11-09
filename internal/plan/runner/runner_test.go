@@ -7,10 +7,20 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
 func TestPlanFillsThePlanningHorizonWithDistinctRecipesAndWhyChips(t *testing.T) {
 	e := newEnv(t)
+	// Drop the 4-portion chicken Recipe: its second Batch could legitimately serve Tuesday as a Leftover.
+	// The simple Recipes yield exactly the 2 portions a meal needs, so every meal is cooked fresh.
+	var simple []planner.Recipe
+	for _, rec := range e.src.recipes {
+		if rec.Yield == 2 {
+			simple = append(simple, rec)
+		}
+	}
+	e.src.recipes = simple
 	sum, err := e.r.Plan(ctx, plan.ReasonNightly)
 	if err != nil {
 		t.Fatal(err)
@@ -228,5 +238,38 @@ func TestInvalidateNeverBlocksTheCaller(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("Invalidate blocked without a worker")
+	}
+}
+
+func TestPlanClearsUnpinnedMealsThatBreakASlotRuleAndKeepsPinnedOnes(t *testing.T) {
+	e := newEnv(t)
+	e.src.recipes = e.src.recipes[:len(simpleRecipes)] // no chicken: every meal is cooked fresh, none served from a Leftover
+	e.mustPlan()
+	if _, err := e.r.Confirm(ctx, e.key(9)); err != nil { // Monday is Pinned
+		t.Fatal(err)
+	}
+	mon, tue := e.meal(9), e.meal(10)
+	// A Slot Rule appears on Monday and Tuesday that neither meal satisfies (a Recipe nobody planned there).
+	var other int64
+	for _, name := range simpleRecipes {
+		if id := e.rec[name]; id != mon.RecipeID && id != tue.RecipeID {
+			other = id
+			break
+		}
+	}
+	for _, k := range []plan.Key{e.key(9), e.key(10)} {
+		if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: k.MealSlotID, RecipeID: other}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A plain Plan (not ReasonRulesChanged) still must not keep an unpinned meal that breaks its Slot Rule.
+	if _, err := e.r.Plan(ctx, plan.ReasonNightly); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.meal(9); got.ID != mon.ID || got.RecipeID != mon.RecipeID || !got.Pinned {
+		t.Errorf("a Pinned meal changed: %+v -> %+v", mon, got)
+	}
+	if got, err := e.st.Meal(ctx, e.key(10)); err == nil && got.RecipeID == tue.RecipeID {
+		t.Errorf("an unpinned meal that breaks the Slot Rule was kept: %+v", got)
 	}
 }
