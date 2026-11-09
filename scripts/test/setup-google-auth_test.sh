@@ -17,7 +17,7 @@ cat >"$TMP/bin/gcloud" <<'STUB'
 printf '%s\n' "$*" >>"${GCLOUD_LOG:?}"
 case "$1 $2" in
   "auth list") [ -n "${GCLOUD_NO_AUTH:-}" ] || echo "someone@example.com" ;;
-  "config get-value") echo "${GCLOUD_PROJECT:-stub-project}" ;;
+  "config get-value") echo "${GCLOUD_PROJECT-stub-project}" ;;
   "projects describe") [ -z "${GCLOUD_PROJECT_MISSING:-}" ] || exit 1 ;;
 esac
 exit 0
@@ -112,20 +112,20 @@ setup; INPUT=""; run --dry-run "${COMMON[@]}" "$ENVF"
 check "dry-run does not create env file" test ! -e "$ENVF"
 
 # --- project handling
-setup; GCLOUD_PROJECT=from-config INPUT=$'id\n'"$SECRET"; run --admin-email a@b.co --base-url https://x.example --env-file "$ENVF"
+setup; export GCLOUD_PROJECT=from-config INPUT=$'id\n'"$SECRET"; run --admin-email a@b.co --base-url https://x.example --env-file "$ENVF"
 check "project from gcloud config used" out_has "project=from-config"
-setup; GCLOUD_PROJECT="" INPUT=$'id\n'"$SECRET"; run --admin-email a@b.co --env-file "$ENVF"
+setup; export GCLOUD_PROJECT="" INPUT=$'id\n'"$SECRET"; run --admin-email a@b.co --env-file "$ENVF"
 check "no project and no flag fails" rc_is 1
-setup; GCLOUD_PROJECT_MISSING=1 INPUT=$'id\n'"$SECRET"; run --create-project --yes "${COMMON[@]}" "$ENVF"
+setup; export GCLOUD_PROJECT_MISSING=1 INPUT=$'id\n'"$SECRET"; run --create-project --yes "${COMMON[@]}" "$ENVF"
 check "create-project with --yes creates" has "$GCLOUD_LOG" "projects create p-1"
-setup; GCLOUD_PROJECT_MISSING=1 INPUT=$'id\n'"$SECRET"; run --create-project "${COMMON[@]}" "$ENVF"
+setup; export GCLOUD_PROJECT_MISSING=1 INPUT=$'id\n'"$SECRET"; run --create-project "${COMMON[@]}" "$ENVF"
 check "create-project without confirmation refused" rc_is 2
 check "refused creation ran no create" bash -c "! grep -q 'projects create' '$GCLOUD_LOG'"
 setup; INPUT=$'id\n'"$SECRET"; run --create-project --admin-email a@b.co --env-file "$ENVF"
 check "create-project without project id is usage error" rc_is 2
 
 # --- gcloud state errors
-setup; GCLOUD_NO_AUTH=1 INPUT=$'id\n'"$SECRET"; run "${COMMON[@]}" "$ENVF"
+setup; export GCLOUD_NO_AUTH=1 INPUT=$'id\n'"$SECRET"; run "${COMMON[@]}" "$ENVF"
 check "not logged in fails" rc_is 1
 check "not logged in writes nothing" test ! -e "$ENVF"
 setup; mkdir -p "$TMP/empty"; OUT="$(PATH="$TMP/empty" /bin/bash "$SCRIPT" "${COMMON[@]}" "$ENVF" 2>&1 <<<"")"; RC=$?
