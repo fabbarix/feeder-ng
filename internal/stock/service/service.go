@@ -480,6 +480,30 @@ func (s *Service) Projected(ctx context.Context) (stock.ProjectedStock, error) {
 
 // RecordWaste records waste directly (Planning: discarded Leftovers, reason leftover_discarded).
 func (s *Service) RecordWaste(ctx context.Context, in store.WasteRecord) (store.WasteRecord, error) {
+	in, err := s.checkWaste(ctx, in)
+	if err != nil {
+		return store.WasteRecord{}, err
+	}
+	rec, err := s.st.AddWaste(ctx, in)
+	if err != nil {
+		return store.WasteRecord{}, err
+	}
+	s.publish(map[string]any{"changed": "waste"})
+	return rec, nil
+}
+
+// RecordWasteTx is RecordWaste inside the caller's transaction (Planning records the waste of a discarded
+// Leftover in the same transaction as the discard). It publishes nothing: the caller publishes after its commit.
+func (s *Service) RecordWasteTx(ctx context.Context, tx *sql.Tx, in store.WasteRecord) (store.WasteRecord, error) {
+	in, err := s.checkWaste(ctx, in)
+	if err != nil {
+		return store.WasteRecord{}, err
+	}
+	return s.st.AddWasteTx(ctx, tx, in)
+}
+
+// checkWaste validates a waste record and fills its date (today when unset).
+func (s *Service) checkWaste(ctx context.Context, in store.WasteRecord) (store.WasteRecord, error) {
 	if math.IsNaN(in.Quantity) || math.IsInf(in.Quantity, 0) || in.Quantity < 0 {
 		return store.WasteRecord{}, invalid("waste quantity cannot be negative")
 	}
@@ -501,12 +525,20 @@ func (s *Service) RecordWaste(ctx context.Context, in store.WasteRecord) (store.
 			return store.WasteRecord{}, err
 		}
 	}
-	rec, err := s.st.AddWaste(ctx, in)
+	return in, nil
+}
+
+// ProjectedTx is Projected inside the caller's transaction (see store.LotsTx).
+func (s *Service) ProjectedTx(ctx context.Context, tx *sql.Tx) (stock.ProjectedStock, error) {
+	stored, err := s.st.LotsTx(ctx, tx)
 	if err != nil {
-		return store.WasteRecord{}, err
+		return nil, err
 	}
-	s.publish(map[string]any{"changed": "waste"})
-	return rec, nil
+	plain := make([]stock.Lot, 0, len(stored))
+	for _, l := range stored {
+		plain = append(plain, l.Lot)
+	}
+	return stock.Project(plain), nil
 }
 
 // Waste lists waste records with a date in [from, to] (empty bound = open).
