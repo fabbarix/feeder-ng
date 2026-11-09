@@ -3,20 +3,21 @@
 
 /** Minor-unit digits of an ISO 4217 code (USD 2, JPY 0), from Intl. */
 export function fractionDigits(currency: string): number {
-  void currency
-  throw new Error('TODO')
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
 }
 
 /** "$1.59" (locale en-US unless given). */
-export function formatMinor(cents: number, currency: string, locale?: string): string {
-  void cents; void currency; void locale
-  throw new Error('TODO')
+export function formatMinor(cents: number, currency: string, locale = 'en-US'): string {
+  const digits = fractionDigits(currency)
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 10 ** digits)
 }
 
 /** Plain decimal text without symbol or grouping, e.g. 159 -> "1.59" (USD), 159 -> "159" (JPY). */
 export function formatMajor(cents: number, currency: string): string {
-  void cents; void currency
-  throw new Error('TODO')
+  const digits = fractionDigits(currency)
+  if (digits === 0) return String(cents)
+  const s = String(Math.abs(cents)).padStart(digits + 1, '0')
+  return `${cents < 0 ? '-' : ''}${s.slice(0, -digits)}.${s.slice(-digits)}`
 }
 
 /**
@@ -26,12 +27,18 @@ export function formatMajor(cents: number, currency: string): string {
  * currency has ("1.599" for USD). Zero is returned as 0 (callers require > 0).
  */
 export function parseMajor(text: string, currency: string): number | null {
-  void text; void currency
-  throw new Error('TODO')
+  const m = /^(\d*)(?:[.,](\d*))?$/.exec(text.trim())
+  if (!m) return null
+  const whole = m[1] ?? ''
+  const frac = m[2] ?? ''
+  if (whole === '' && frac === '') return null
+  const digits = fractionDigits(currency)
+  if (frac.length > digits) return null
+  const n = Number(whole + frac.padEnd(digits, '0'))
+  return Number.isSafeInteger(n) ? n : null
 }
 
 /** "$2.27 / kg". */
 export function formatPricePerKg(cents: number, currency: string, locale?: string): string {
-  void cents; void currency; void locale
-  throw new Error('TODO')
+  return `${formatMinor(cents, currency, locale)} / kg`
 }

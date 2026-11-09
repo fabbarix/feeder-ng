@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query'
+import { productsApi } from '../api'
 import type { Product } from '../types'
 
 export interface UseProducts {
@@ -8,6 +10,6 @@ export interface UseProducts {
 
 /** All Products, filtered by name text on the server (key ['products', { q }]). */
 export function useProducts(q: string): UseProducts {
-  void q
-  throw new Error('TODO')
+  const query = useQuery({ queryKey: ['products', { q }], queryFn: () => productsApi.list({ q: q.trim() }) })
+  return { products: query.data ?? [], isLoading: query.isLoading, error: query.error }
 }
