@@ -14,11 +14,33 @@ export interface StockApi {
 
 /** Typed calls for /api/stock. See docs/dev/design/t10-stock.md for the routes. */
 export function createStockApi(client: HttpClient): StockApi {
-  void client
-  const todo = (): never => {
-    throw new Error('TODO')
+  return {
+    async totals() {
+      return (await client.get<{ ingredients: IngredientStock[] }>('/api/stock')).ingredients
+    },
+    async lots(ingredientId) {
+      const path = ingredientId === undefined ? '/api/stock/lots' : `/api/stock/lots?ingredientId=${ingredientId}`
+      return (await client.get<{ lots: StockLot[] }>(path)).lots
+    },
+    addLot(input) {
+      return client.post<StockLot>('/api/stock/lots', input)
+    },
+    setTotal(ingredientId, total) {
+      return client.put<{ ingredient: IngredientStock; lots: StockLot[] }>(`/api/stock/ingredients/${ingredientId}/total`, { total })
+    },
+    async spoiled() {
+      return (await client.get<{ lots: StockLot[] }>('/api/stock/spoiled')).lots
+    },
+    throwOut(lotId) {
+      return client.post<WasteRecord>(`/api/stock/lots/${lotId}/throw-out`)
+    },
+    keep(lotId) {
+      return client.post<StockLot>(`/api/stock/lots/${lotId}/keep`)
+    },
+    async cooked(needs) {
+      return (await client.post<{ warnings: StockWarning[] }>('/api/stock/cooked', { needs })).warnings
+    },
   }
-  return { totals: todo, lots: todo, addLot: todo, setTotal: todo, spoiled: todo, throwOut: todo, keep: todo, cooked: todo }
 }
 
 export const stockApi: StockApi = createStockApi(defaultHttp)

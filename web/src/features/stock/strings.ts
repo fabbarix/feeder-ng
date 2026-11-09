@@ -30,4 +30,6 @@ export const stockStrings = {
   },
   source: { scan: 'Scanned', stock_take: 'Stock-take', manual: 'Added by hand' } as const,
   noGoOff: 'No go-off date',
+  loading: 'Loading Stock…',
+  actionFailed: 'That did not save. Try again.',
 }
