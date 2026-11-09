@@ -6,6 +6,9 @@ export type SignedOutView =
   | { view: 'not-invited' }
 
 /** Which signed-out page to show: /not-invited, else the sign-in page (with a reason from ?error=denied|failed). */
-export function signedOutView(_pathname: string, _search: string): SignedOutView {
-  throw new Error('not implemented')
+export function signedOutView(pathname: string, search: string): SignedOutView {
+  if (pathname.replace(/\/+$/, '') === '/not-invited') return { view: 'not-invited' }
+  const error = new URLSearchParams(search).get('error')
+  if (error === 'denied' || error === 'failed') return { view: 'sign-in', reason: error }
+  return { view: 'sign-in' }
 }

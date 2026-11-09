@@ -8,7 +8,11 @@ afterEach(() => vi.unstubAllGlobals())
 
 function mount(path: string, me: Response) {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(me))
-  const router = createMemoryRouter([{ path: '/', element: <AppRoot />, children: [{ path: 'plan', element: <p>plan page</p> }] }], { initialEntries: [path] })
+  // A catch-all child stands in for the signin feature's routes, which the real app mounts under AppRoot.
+  const router = createMemoryRouter(
+    [{ path: '/', element: <AppRoot />, children: [{ path: 'plan', element: <p>plan page</p> }, { path: '*', element: <p>other page</p> }] }],
+    { initialEntries: [path] },
+  )
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <RouterProvider router={router} />
