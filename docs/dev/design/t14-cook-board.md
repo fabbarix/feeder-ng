@@ -69,3 +69,10 @@ Events: `timers` and `cook` as above. The board refreshes on SSE topics `plan`, 
 
 ## Shared files touched
 `web/src/app/AppShell.tsx` (hide nav when `isChromeless`), new `web/src/app/chromeless.ts` (+ test). `internal/modules/cook.go` is owned. Nothing else shared.
+
+## Implementation notes (Developer)
+- `Planned Meal`s served from a Leftover (`batches = 0`) are not cookable (409 `not_cookable`) and are left out of the next Advance Step, because nothing is cooked from them.
+- `schedule.Use` gained `IngredientID` (0 when unknown) so Cook Mode's `uses[].ingredientId` is real. The field is additive; nothing else changed in `internal/recipe/schedule`.
+- The real adapters live in `internal/cook/service/adapters.go` (`service.NewDB`): recipe and ingredient stores for Steps, `planned_meals` joined to `meal_slots` for Meals (slot time in household time, converted to UTC), `stock_waste` and `stock_lots` for the streak dates, and household settings for zone and Location.
+- Sweep: `internal/cook/httpapi` starts a one-second sweep on `Deps.Go`, stopped by `Deps.Context`.
+- `TestRemainingCountsDownWithTheClockAndRoundsUp` advanced the clock by 29.4 s after 30 s on a 90 s timer, which leaves 30.6 s, not the 0.6 s the test expects. The advance is corrected to 59.4 s. The assertion is unchanged.

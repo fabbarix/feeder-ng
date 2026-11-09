@@ -71,7 +71,7 @@ describe('useTimers', () => {
   })
 
   it('counts down every tick without asking the server', async () => {
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'], shouldAdvanceTime: true })
     let nowMs = T0
     const { Wrapper } = wrapper()
     const { result } = renderHook(() => useTimers(undefined, { now: () => nowMs, tickMs: 1000 }), { wrapper: Wrapper })

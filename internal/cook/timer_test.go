@@ -57,7 +57,7 @@ func TestRemainingCountsDownWithTheClockAndRoundsUp(t *testing.T) {
 	if got := tm.RemainingSeconds(clk.Now()); got != 60 {
 		t.Errorf("after 30 s: %d, want 60", got)
 	}
-	clk.Advance(29*time.Second + 400*time.Millisecond)
+	clk.Advance(59*time.Second + 400*time.Millisecond)
 	if got := tm.RemainingSeconds(clk.Now()); got != 1 {
 		t.Errorf("0.6 s left shows 1 s, got %d", got)
 	}
