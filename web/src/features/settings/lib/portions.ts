@@ -37,3 +37,8 @@ export function formatPortions(n: number): string {
 export function withFactor(member: FactorMember, entry: AttendanceEntry, factor: number): AttendanceEntry {
   return { ...entry, portionFactorOverride: factor === member.portionFactor ? null : factor }
 }
+
+/** The bare number for a status line: "2.5", "1", "0". */
+export function formatPortionsNeeded(n: number): string {
+  return String(Math.round(n * 100) / 100)
+}

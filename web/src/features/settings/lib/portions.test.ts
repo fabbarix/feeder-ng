@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveFactor, formatPortions, isValidPortionFactor, portionsNeeded, withFactor } from './portions'
+import { effectiveFactor, formatPortions, formatPortionsNeeded, isValidPortionFactor, portionsNeeded, withFactor } from './portions'
 
 const anna = { id: 1, portionFactor: 1 }
 const marco = { id: 2, portionFactor: 1 }
@@ -51,4 +51,8 @@ describe('formatPortions', () => {
     [0.25, '0.25 portions'],
     [0, '0 portions'],
   ])('%s -> %s', (n, text) => expect(formatPortions(n)).toBe(text))
+})
+
+describe('formatPortionsNeeded', () => {
+  it.each([[2.5, '2.5'], [1, '1'], [0, '0'], [2.7500000001, '2.75']])('%s -> %s', (n, text) => expect(formatPortionsNeeded(n)).toBe(text))
 })

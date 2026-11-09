@@ -66,7 +66,8 @@ describe('PreferencesForm', () => {
     const onSave = setup()
     await userEvent.click(screen.getByRole('checkbox', { name: 'Use a secondary colour' }))
     const secondary = screen.getByLabelText('Secondary colour')
-    expect(secondary).toHaveValue(expect.stringMatching(/^#[0-9a-f]{6}$/i))
+    // jest-dom's toHaveValue cannot take an asymmetric matcher, so compare the string directly.
+    expect((secondary as HTMLInputElement).value).toMatch(/^#[0-9a-f]{6}$/i)
     fireEvent.change(secondary, { target: { value: '#ffb4a2' } })
     await userEvent.click(save())
     expect(onSave).toHaveBeenLastCalledWith({ ...DEFAULT_PREFERENCES, secondary: '#ffb4a2' })
