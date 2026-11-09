@@ -9,6 +9,8 @@ export const strings = {
   emptyTitle: 'No Ingredients yet',
   emptyText: 'Ingredients appear here as you add Recipes, or you can create one now.',
   noMatches: 'No Ingredient matches that search',
+  notFoundTitle: 'That Ingredient does not exist',
+  actionFailed: 'That did not work. Try again.',
   nameTaken: 'An Ingredient with that name already exists',
   rename: 'Rename',
   saveName: 'Save name',
@@ -38,6 +40,7 @@ export const strings = {
   mergeConflictShelfLife: 'Shelf Life is…',
   mergeKeep: (value: string) => `Keep ${value}`,
   mergeKeepNoShelfLife: 'Keep no Shelf Life',
+  mergeChangeTarget: 'Choose another Ingredient',
   mergeConfirm: 'Merge',
   errors: {
     unitRequired: 'Enter a unit',

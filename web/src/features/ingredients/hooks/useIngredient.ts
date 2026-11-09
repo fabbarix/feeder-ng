@@ -1,3 +1,6 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ingredientsApi } from '../api'
+import { totalReferences } from '../lib/references'
 import type { BaseUnit } from '../../../lib/units'
 import type { Conversion, Ingredient, IngredientDetail } from '../types'
 
@@ -19,6 +22,33 @@ export interface UseIngredient {
 
 /** One Ingredient (react-query key ['ingredients', id]); every mutation refreshes it and the list. */
 export function useIngredient(id: number): UseIngredient {
-  void id
-  throw new Error('TODO')
+  const client = useQueryClient()
+  const query = useQuery({ queryKey: ['ingredients', id], queryFn: () => ingredientsApi.get(id) })
+
+  const refresh = () => client.invalidateQueries({ queryKey: ['ingredients'] })
+  const changed = async <T>(request: Promise<T>): Promise<T> => {
+    const result = await request
+    await refresh()
+    return result
+  }
+
+  const ingredient = query.data
+  const referenceCount = totalReferences(ingredient?.references ?? {})
+
+  return {
+    ingredient,
+    isLoading: query.isLoading,
+    error: query.error,
+    referenceCount,
+    rename: (name) => changed(ingredientsApi.patch(id, { name })),
+    setBaseUnit: (baseUnit) => changed(ingredientsApi.patch(id, { baseUnit })),
+    setShelfLife: (shelfLifeDays) => changed(ingredientsApi.patch(id, { shelfLifeDays })),
+    setConversion: (c) => changed(ingredientsApi.setConversion(id, c)),
+    removeConversion: (unit) => changed(ingredientsApi.removeConversion(id, unit)),
+    remove: async () => {
+      await ingredientsApi.remove(id)
+      client.removeQueries({ queryKey: ['ingredients', id], exact: true })
+      await client.invalidateQueries({ queryKey: ['ingredients'], exact: true })
+    },
+  }
 }

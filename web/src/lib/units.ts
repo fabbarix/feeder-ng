@@ -5,12 +5,16 @@
 export type UnitSystem = 'metric' | 'imperial'
 export type BaseUnit = 'g' | 'ml' | 'piece'
 
+// Same numbers as internal/units (Go): keep them identical.
 export const GRAMS_PER_OUNCE = 28.349523125
 export const GRAMS_PER_POUND = 453.59237
-export const ML_PER_TSP = 4.92892159375 // US customary
-export const ML_PER_TBSP = 14.78676478125
+export const ML_PER_TSP = 4.92892159375 // US customary: 1/6 fl oz
+export const ML_PER_TBSP = 14.78676478125 // 1/2 fl oz
 export const ML_PER_FL_OZ = 29.5735295625
-export const ML_PER_CUP = 236.5882365
+export const ML_PER_CUP = 236.5882365 // 8 fl oz
+
+/** Imperial mass switches from plain ounces to pounds and ounces at this many oz. */
+const POUND_THRESHOLD_OZ = 15.95
 
 /**
  * Formats a quantity given in Base Units.
@@ -31,17 +35,23 @@ export const ML_PER_CUP = 236.5882365
  * positive amount with a leading "-". Non-finite input returns "".
  */
 export function formatQuantity(amount: number, base: BaseUnit, system: UnitSystem): string {
-  void amount
-  void base
-  void system
-  throw new Error('TODO')
+  if (!Number.isFinite(amount)) return ''
+  if (base === 'piece') {
+    return withSign(amount, (abs) => `${trim(abs, 1)} ${abs === 1 ? 'piece' : 'pieces'}`)
+  }
+  if (system === 'metric') {
+    return withSign(amount, (abs) => `${trim(abs, 1)} ${base}`)
+  }
+  return base === 'g'
+    ? withSign(amount, imperialMass)
+    : withSign(amount, imperialVolume)
 }
 
 /** The label of a Base Unit in the system: g/oz, ml/fl oz, piece/piece. */
 export function baseUnitLabel(base: BaseUnit, system: UnitSystem): string {
-  void base
-  void system
-  throw new Error('TODO')
+  if (base === 'piece') return 'piece'
+  if (base === 'g') return system === 'imperial' ? 'oz' : 'g'
+  return system === 'imperial' ? 'fl oz' : 'ml'
 }
 
 /**
@@ -49,9 +59,38 @@ export function baseUnitLabel(base: BaseUnit, system: UnitSystem): string {
  * "1 clove = 0.2 oz" (imperial; 1 decimal via formatQuantity), "1 bunch = 2 pieces".
  */
 export function formatConversion(unit: string, toBase: number, base: BaseUnit, system: UnitSystem): string {
-  void unit
-  void toBase
-  void base
-  void system
-  throw new Error('TODO')
+  return `1 ${unit} = ${formatQuantity(toBase, base, system)}`
+}
+
+/** Applies the sign of amount to the body formatted from its absolute value. */
+function withSign(amount: number, body: (abs: number) => string): string {
+  return (amount < 0 ? '-' : '') + body(Math.abs(amount))
+}
+
+/** Rounds to a fixed number of decimals and drops trailing zeros ("3.50" -> "3.5"). */
+function trim(n: number, digits: number): string {
+  return String(Number(n.toFixed(digits)))
+}
+
+/** Rounds x to the nearest multiple of step. */
+function nearest(x: number, step: number): number {
+  return Math.round(x / step) * step
+}
+
+function imperialMass(abs: number): string {
+  const oz = abs / GRAMS_PER_OUNCE
+  if (oz < POUND_THRESHOLD_OZ) return `${trim(oz, 1)} oz`
+  const totalOz = Math.round(oz)
+  const lb = Math.floor(totalOz / 16)
+  const rest = totalOz % 16
+  return rest === 0 ? `${lb} lb` : `${lb} lb ${rest} oz`
+}
+
+function imperialVolume(abs: number): string {
+  if (abs === 0) return '0 fl oz'
+  if (abs < 14) return `${trim(Math.max(nearest(abs / ML_PER_TSP, 0.25), 0.25), 2)} tsp`
+  if (abs < 60) return `${trim(nearest(abs / ML_PER_TBSP, 0.5), 1)} tbsp`
+  if (abs < 120) return `${trim(abs / ML_PER_FL_OZ, 1)} fl oz`
+  const cups = nearest(abs / ML_PER_CUP, 0.25)
+  return `${trim(cups, 2)} ${cups === 1 ? 'cup' : 'cups'}`
 }

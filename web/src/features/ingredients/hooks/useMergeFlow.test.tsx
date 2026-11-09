@@ -11,10 +11,11 @@ const preview: MergePreview = {
   conflicts: [{ kind: 'conversion', unit: 'jar', source: 700, target: 680 }, { kind: 'shelfLife', unit: '', source: 5, target: 9 }],
   sourceReferences: {}, targetReferences: {},
 }
-const api = {
+// vi.mock is hoisted above imports, so the mock fixture must be hoisted too.
+const api = vi.hoisted(() => ({
   list: vi.fn(), get: vi.fn(), create: vi.fn(), patch: vi.fn(), remove: vi.fn(), setConversion: vi.fn(), removeConversion: vi.fn(),
   search: vi.fn(), mergePreview: vi.fn(), merge: vi.fn(),
-}
+}))
 vi.mock('../api', () => ({ ingredientsApi: api }))
 
 import { useMergeFlow } from './useMergeFlow'
