@@ -54,6 +54,9 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	defer a.Close()
+
+	go a.Deps.Scheduler.Run(ctx, time.Minute)
 
 	srv := &http.Server{Addr: cfg.Addr, Handler: a.Handler, ReadHeaderTimeout: 10 * time.Second}
 	serveErr := make(chan error, 1)

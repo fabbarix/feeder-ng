@@ -7,12 +7,14 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/config"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/scheduler"
 )
 
 type options struct {
@@ -33,6 +35,17 @@ func WithLogger(l *slog.Logger) Option { return func(o *options) { o.logger = l 
 type App struct {
 	Handler http.Handler
 	Deps    Deps
+	stop    context.CancelFunc
+	workers *sync.WaitGroup
+}
+
+// Close ends Deps.Context and waits until the workers the modules started with Deps.Go have returned.
+// Safe to call more than once.
+func (a *App) Close() {
+	if a.stop != nil {
+		a.stop()
+	}
+	a.workers.Wait()
 }
 
 // New builds the application: the event bus and auth service, the first Admin
@@ -52,7 +65,10 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	if _, err := authSvc.SeedAdmin(context.Background(), cfg.AdminEmail); err != nil {
 		return nil, fmt.Errorf("app: seed admin: %w", err)
 	}
-	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger}
+	lifetime, stop := context.WithCancel(context.Background())
+	workers := &sync.WaitGroup{}
+	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger,
+		Scheduler: scheduler.New(clk, scheduler.NewSQLRunStore(d), o.logger), Context: lifetime, workers: workers}
 	// Removal and sign-out end the live-update streams of the affected User or session.
 	authSvc.OnRevoke(deps.Events.CloseOwner)
 
@@ -70,7 +86,7 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	for _, m := range o.registry.Modules() {
 		m.Mount(r, deps)
 	}
-	return &App{Handler: recoverPanics(o.logger, httpx.CSRFGuard(cfg.BaseURL, mux)), Deps: deps}, nil
+	return &App{Handler: recoverPanics(o.logger, httpx.CSRFGuard(cfg.BaseURL, mux)), Deps: deps, stop: stop, workers: workers}, nil
 }
 
 // eventStream serves GET /api/events for a signed-in request. The stream is
