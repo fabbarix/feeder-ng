@@ -363,3 +363,53 @@ func TestKeep(t *testing.T) {
 		t.Errorf("undated lot changed: %+v", got)
 	}
 }
+
+// need NaN or +-Inf is a no-op, exactly like need <= 0 (Deduct has no error
+// return): nothing taken, no shortfall, lots unchanged.
+func TestDeductNonFiniteNeedIsNoOp(t *testing.T) {
+	lots := []Lot{lot(1, 500, "2026-11-01", "2026-11-12"), lot(2, 300, "2026-11-05", None)}
+	for _, need := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		res := Deduct(lots, need)
+		if !reflect.DeepEqual(res.Lots, lots) || len(res.Taken) != 0 || res.Shortfall != 0 {
+			t.Errorf("Deduct(need=%v) = %+v, want unchanged lots, no taken, no shortfall", need, res)
+		}
+	}
+}
+
+// Deduct uses the same 1e-9 tolerance as SetTotal.
+func TestDeductFloatTolerance(t *testing.T) {
+	t.Run("0.1 + 0.2 covers a need of 0.3", func(t *testing.T) {
+		lots := []Lot{lot(1, 0.1, "2026-11-01", "2026-11-10"), lot(2, 0.2, "2026-11-02", "2026-11-11")}
+		res := Deduct(lots, 0.3)
+		if res.Shortfall != 0 {
+			t.Errorf("Shortfall = %v, want 0", res.Shortfall)
+		}
+		if len(res.Lots) != 0 {
+			t.Errorf("Lots = %+v, want none (no near-zero leftover lot)", res.Lots)
+		}
+	})
+	t.Run("near-zero leftover lot is dropped", func(t *testing.T) {
+		res := Deduct([]Lot{lot(1, 1, "2026-11-01", None)}, 1-1e-12)
+		if len(res.Lots) != 0 || res.Shortfall != 0 {
+			t.Errorf("got %+v, want empty lots and no shortfall", res)
+		}
+	})
+	t.Run("tiny shortfall below tolerance is zero", func(t *testing.T) {
+		res := Deduct([]Lot{lot(1, 1, "2026-11-01", None)}, 1+1e-12)
+		if res.Shortfall != 0 || len(res.Lots) != 0 {
+			t.Errorf("got %+v, want no shortfall", res)
+		}
+	})
+	t.Run("real shortfall above tolerance is reported", func(t *testing.T) {
+		res := Deduct([]Lot{lot(1, 1, "2026-11-01", None)}, 1.001)
+		if !near(res.Shortfall, 0.001) {
+			t.Errorf("Shortfall = %v, want 0.001", res.Shortfall)
+		}
+	})
+	t.Run("a real leftover above tolerance is kept", func(t *testing.T) {
+		res := Deduct([]Lot{lot(1, 1, "2026-11-01", None)}, 0.999)
+		if len(res.Lots) != 1 || !near(res.Lots[0].Quantity, 0.001) {
+			t.Errorf("Lots = %+v, want one lot of 0.001", res.Lots)
+		}
+	})
+}

@@ -33,6 +33,65 @@ type Conversion struct {
 	ToBase float64
 }
 
+// ErrInvalidConversion is matched (errors.Is) by every *InvalidConversionError.
+var ErrInvalidConversion = errors.New("invalid unit conversion")
+
+// Reasons carried by InvalidConversionError.
+const (
+	ReasonEmptyUnit = "empty_unit"  // Unit is empty after trimming
+	ReasonBaseUnit  = "base_unit"   // Unit equals the Ingredient's Base Unit
+	ReasonBadToBase = "bad_to_base" // ToBase is NaN, Inf, zero or negative
+)
+
+// InvalidConversionError reports an Ingredient-specific Unit Conversion that
+// ValidateConversion rejects.
+type InvalidConversionError struct {
+	Unit   string  // the unit as given
+	ToBase float64 // the factor as given
+	Base   Base
+	Reason string // one of the Reason* constants
+}
+
+func (e *InvalidConversionError) Error() string {
+	return fmt.Sprintf("invalid unit conversion %q = %v %s: %s", e.Unit, e.ToBase, e.Base, e.Reason)
+}
+
+// Is makes errors.Is(err, ErrInvalidConversion) true.
+func (e *InvalidConversionError) Is(target error) bool {
+	return target == ErrInvalidConversion
+}
+
+// ValidateConversion checks an Ingredient-specific Unit Conversion for an
+// Ingredient with the given Base Unit. The unit must be non-empty (after
+// NormalizeUnit) and must not equal the Base Unit (after NormalizeUnit); ToBase
+// must be finite and > 0. It returns nil or an *InvalidConversionError; the
+// checks run in that order, so the first failing one sets Reason.
+// Global units other than the Base Unit (e.g. "cup") are allowed: they override.
+func ValidateConversion(base Base, c Conversion) error {
+	panic("TODO")
+}
+
+// Imperial and US customary factors. They exist for Weight Barcode Rules and
+// for imperial display only. They are NOT global units: oz and lb are not valid
+// recipe units (recipe-file spec lists only kg, l, dl, cl, tsp, tbsp, cup), so
+// GlobalFactor/Factor/ToBase never accept them.
+const (
+	GramsPerOunce              = 28.349523125
+	GramsPerPound              = 453.59237
+	MillilitresPerFluidOunce   = 29.5735295625
+	MillilitresPerUSCup        = 236.5882365    // 8 US fl oz
+	MillilitresPerUSTablespoon = 14.78676478125 // 1/2 US fl oz
+	MillilitresPerUSTeaspoon   = 4.92892159375  // 1/6 US fl oz
+)
+
+// DisplayFactor returns how many Base Units one display-only unit is: for Gram
+// "oz" and "lb"; for Millilitre "fl oz", "us cup", "us tbsp", "us tsp" (keys are
+// matched after NormalizeUnit). Any other unit, or a Piece base, is not found.
+// Recipe units are handled by GlobalFactor, never by this function.
+func DisplayFactor(base Base, unit string) (float64, bool) {
+	panic("TODO")
+}
+
 // Ingredient is the part of an Ingredient the unit maths needs.
 type Ingredient struct {
 	Name        string

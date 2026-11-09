@@ -207,3 +207,155 @@ func TestNormalizeUnit(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateConversion(t *testing.T) {
+	inf, nan := math.Inf(1), math.NaN()
+	tests := []struct {
+		name       string
+		base       Base
+		c          Conversion
+		wantReason string // "" means valid
+	}{
+		{"clove on g", Gram, Conversion{"clove", 5}, ""},
+		{"fractional factor", Gram, Conversion{"pinch", 0.3}, ""},
+		{"global unit may be overridden", Millilitre, Conversion{"tbsp", 13.5}, ""},
+		{"cup on g ingredient", Gram, Conversion{"cup", 185}, ""},
+		{"unit is case/space insensitive", Gram, Conversion{"  Clove ", 5}, ""},
+		{"empty unit", Gram, Conversion{"", 5}, ReasonEmptyUnit},
+		{"blank unit", Gram, Conversion{"  \t", 5}, ReasonEmptyUnit},
+		{"unit equals base g", Gram, Conversion{"g", 2}, ReasonBaseUnit},
+		{"unit equals base ml, any case", Millilitre, Conversion{" ML ", 2}, ReasonBaseUnit},
+		{"unit equals base piece", Piece, Conversion{"piece", 2}, ReasonBaseUnit},
+		{"zero factor", Gram, Conversion{"clove", 0}, ReasonBadToBase},
+		{"negative factor", Gram, Conversion{"clove", -5}, ReasonBadToBase},
+		{"NaN factor", Gram, Conversion{"clove", nan}, ReasonBadToBase},
+		{"+Inf factor", Gram, Conversion{"clove", inf}, ReasonBadToBase},
+		{"-Inf factor", Gram, Conversion{"clove", -inf}, ReasonBadToBase},
+		{"empty unit is checked before factor", Gram, Conversion{"", 0}, ReasonEmptyUnit},
+		{"base unit is checked before factor", Gram, Conversion{"g", 0}, ReasonBaseUnit},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateConversion(tc.base, tc.c)
+			if tc.wantReason == "" {
+				if err != nil {
+					t.Fatalf("unexpected error %v", err)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInvalidConversion) {
+				t.Fatalf("err = %v, want ErrInvalidConversion", err)
+			}
+			var ice *InvalidConversionError
+			if !errors.As(err, &ice) {
+				t.Fatalf("err = %T, want *InvalidConversionError", err)
+			}
+			if ice.Reason != tc.wantReason || ice.Base != tc.base || ice.Unit != tc.c.Unit {
+				t.Errorf("got %+v, want reason %s base %s unit %q", ice, tc.wantReason, tc.base, tc.c.Unit)
+			}
+		})
+	}
+}
+
+// An invalid Unit Conversion is never used silently: ToBase returns the
+// validation error, Factor/IsConvertible report the unit as not convertible,
+// and there is no fall-back to a global unit of the same name.
+func TestInvalidConversionIsNotUsed(t *testing.T) {
+	badFactor := Ingredient{Name: "x", Base: Gram, Conversions: []Conversion{{Unit: "clove", ToBase: 0}}}
+	if _, err := ToBase(2, "clove", badFactor); !errors.Is(err, ErrInvalidConversion) {
+		t.Errorf("ToBase with zero factor: err = %v, want ErrInvalidConversion", err)
+	}
+	if _, ok := Factor("clove", badFactor); ok {
+		t.Error("Factor must not return an invalid conversion")
+	}
+	if IsConvertible("clove", badFactor) {
+		t.Error("IsConvertible must be false for an invalid conversion")
+	}
+
+	nanFactor := Ingredient{Name: "x", Base: Millilitre, Conversions: []Conversion{{Unit: "cup", ToBase: math.NaN()}}}
+	if _, err := ToBase(1, "cup", nanFactor); !errors.Is(err, ErrInvalidConversion) {
+		t.Errorf("invalid cup must not fall back to the global 240: err = %v", err)
+	}
+
+	sameAsBase := Ingredient{Name: "x", Base: Gram, Conversions: []Conversion{{Unit: "g", ToBase: 2}}}
+	if got, err := ToBase(10, "g", sameAsBase); !errors.Is(err, ErrInvalidConversion) {
+		t.Errorf("ToBase(10 g) = %v, %v; want ErrInvalidConversion (not 20, not 10)", got, err)
+	}
+
+	// An invalid conversion for another unit does not affect valid ones.
+	mixed := Ingredient{Name: "x", Base: Gram, Conversions: []Conversion{{Unit: "clove", ToBase: -1}, {Unit: "pinch", ToBase: 0.4}}}
+	if got, err := ToBase(5, "pinch", mixed); err != nil || !near(got, 2) {
+		t.Errorf("ToBase(5 pinch) = %v, %v; want 2", got, err)
+	}
+	if got, err := ToBase(1, "kg", mixed); err != nil || !near(got, 1000) {
+		t.Errorf("ToBase(1 kg) = %v, %v; want 1000", got, err)
+	}
+}
+
+func TestImperialConstants(t *testing.T) {
+	tests := []struct {
+		name      string
+		got, want float64
+	}{
+		{"oz in g", GramsPerOunce, 28.349523125},
+		{"lb in g", GramsPerPound, 453.59237},
+		{"lb is 16 oz", GramsPerPound / GramsPerOunce, 16},
+		{"fl oz in ml", MillilitresPerFluidOunce, 29.5735295625},
+		{"US cup is 8 fl oz", MillilitresPerUSCup, 8 * 29.5735295625},
+		{"US tbsp is half a fl oz", MillilitresPerUSTablespoon, 29.5735295625 / 2},
+		{"US tsp is a sixth of a fl oz", MillilitresPerUSTeaspoon, 29.5735295625 / 6},
+	}
+	for _, tc := range tests {
+		if math.Abs(tc.got-tc.want) > 1e-9 {
+			t.Errorf("%s: got %v, want %v", tc.name, tc.got, tc.want)
+		}
+	}
+}
+
+func TestDisplayFactor(t *testing.T) {
+	found := []struct {
+		base Base
+		unit string
+		want float64
+	}{
+		{Gram, "oz", GramsPerOunce},
+		{Gram, " LB ", GramsPerPound},
+		{Millilitre, "fl oz", MillilitresPerFluidOunce},
+		{Millilitre, "us cup", MillilitresPerUSCup},
+		{Millilitre, "us tbsp", MillilitresPerUSTablespoon},
+		{Millilitre, "us tsp", MillilitresPerUSTeaspoon},
+	}
+	for _, tc := range found {
+		if got, ok := DisplayFactor(tc.base, tc.unit); !ok || math.Abs(got-tc.want) > 1e-9 {
+			t.Errorf("DisplayFactor(%s, %q) = %v, %v; want %v", tc.base, tc.unit, got, ok, tc.want)
+		}
+	}
+	missing := []struct {
+		base Base
+		unit string
+	}{
+		{Millilitre, "oz"}, {Gram, "fl oz"}, {Gram, "us cup"}, {Piece, "oz"}, {Piece, "lb"}, {Gram, "kg"}, {Gram, ""},
+	}
+	for _, tc := range missing {
+		if _, ok := DisplayFactor(tc.base, tc.unit); ok {
+			t.Errorf("DisplayFactor(%s, %q) must not be found", tc.base, tc.unit)
+		}
+	}
+}
+
+// oz, lb and the other imperial units are display-only: never valid recipe units.
+func TestImperialUnitsAreNotRecipeUnits(t *testing.T) {
+	for _, u := range []string{"oz", "lb", "fl oz", "us cup", "us tbsp", "us tsp"} {
+		for _, ing := range []Ingredient{flour, milk, egg} {
+			if _, ok := GlobalFactor(ing.Base, u); ok {
+				t.Errorf("GlobalFactor(%s, %q) must not be found", ing.Base, u)
+			}
+			if IsConvertible(u, ing) {
+				t.Errorf("%q must not be convertible for %s", u, ing.Name)
+			}
+			if _, err := ToBase(1, u, ing); !errors.Is(err, ErrUnconvertibleUnit) {
+				t.Errorf("ToBase(1 %s, %s) err = %v, want ErrUnconvertibleUnit", u, ing.Name, err)
+			}
+		}
+	}
+}
