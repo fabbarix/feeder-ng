@@ -55,12 +55,12 @@ describe('useCamera', () => {
 
   it.each([['NotAllowedError'], ['SecurityError']])('%s means the camera is denied', async (name) => {
     const err = Object.assign(new Error('no'), { name })
-    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: devices(Promise.reject(err)) }))
+    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: { getUserMedia: () => Promise.reject(err) } }))
     await waitFor(() => expect(result.current.status).toBe('denied'))
   })
 
   it('reports other failures as an error', async () => {
-    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: devices(Promise.reject(new Error('busy'))) }))
+    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: { getUserMedia: () => Promise.reject(new Error('busy')) } }))
     await waitFor(() => expect(result.current.status).toBe('error'))
   })
 
