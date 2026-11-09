@@ -245,6 +245,18 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 	return queryLots(ctx, tx, ingredientID)
 }
 
+// DeleteLot removes one Stock Lot whole (Undo of a scan); ErrNotFound for an unknown lot.
+func (s *Store) DeleteLot(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM stock_lots WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // AddWaste records waste.
 func (s *Store) AddWaste(ctx context.Context, w WasteRecord) (WasteRecord, error) {
 	return insertWaste(ctx, s.db, w, s.now())
