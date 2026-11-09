@@ -1,7 +1,7 @@
 export interface TileArt {
   /** First letter of the name, upper-case (Unicode-aware); '?' for a blank name. */
   initial: string
-  /** Icon key of the first Tag that has one, else 'dish'. */
+  /** Icon key of the first Tag that has one, else 'plate'. */
   icon: TagIcon
   /** Accent tone index 0..TONE_COUNT-1, stable for a given name (not random). */
   tone: number
@@ -9,7 +9,7 @@ export interface TileArt {
 
 export const TONE_COUNT = 6
 
-export type TagIcon = 'fish' | 'meat' | 'chicken' | 'pasta' | 'rice' | 'soup' | 'salad' | 'veg' | 'bake' | 'roast' | 'breakfast' | 'sweet' | 'dish'
+export type TagIcon = 'fish' | 'meat' | 'chicken' | 'pasta' | 'rice' | 'soup' | 'salad' | 'veg' | 'bake' | 'roast' | 'breakfast' | 'sweet' | 'plate'
 
 /** Whole words of a Tag that choose an icon. */
 const ICON_WORDS: Record<string, TagIcon> = {
@@ -39,7 +39,7 @@ const ICON_WORDS: Record<string, TagIcon> = {
 export function tileArt(name: string, tags: string[]): TileArt {
   const trimmed = name.trim()
   const initial = trimmed === '' ? '?' : [...trimmed][0]!.toUpperCase()
-  let icon: TagIcon = 'dish'
+  let icon: TagIcon = 'plate'
   for (const tag of tags) {
     const found = tag
       .toLowerCase()

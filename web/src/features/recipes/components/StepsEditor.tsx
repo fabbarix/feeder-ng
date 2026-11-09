@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '../../../ui'
-import { newKey, type DraftErrors, type StepDraft } from '../lib/draft'
-import { afterOptions, changeKind, moveStep, removeStep } from '../lib/steps'
+import type { DraftErrors, StepDraft } from '../lib/draft'
+import { afterOptions, changeKind, moveStep, newStepDraft, removeStep, toggleAfter } from '../lib/steps'
 import { codeMessage, recipeStrings } from '../strings'
 import type { StepKind } from '../types'
 
@@ -27,17 +27,7 @@ export function StepsEditor({ steps, errors, onChange }: StepsEditorProps): Reac
   const patch = (i: number, change: Partial<StepDraft>) =>
     onChange(steps.map((s, j) => (j === i ? { ...s, ...change } : s)))
 
-  const add = () =>
-    onChange([
-      ...steps,
-      { key: newKey('step'), text: '', kind: 'active', durationMinutes: '', leadTimeMinutes: '', after: [], uses: [], image: '' },
-    ])
-
-  const toggleAfter = (i: number, j: number, on: boolean) => {
-    const current = steps[i]!.after
-    const after = on ? [...new Set([...current, j])].sort((a, b) => a - b) : current.filter((x) => x !== j)
-    patch(i, { after })
-  }
+  const add = () => onChange([...steps, newStepDraft()])
 
   const errorsFor = (i: number) =>
     ['text', 'durationMinutes', 'leadTimeMinutes', 'kind', 'after']
@@ -86,7 +76,7 @@ export function StepsEditor({ steps, errors, onChange }: StepsEditorProps): Reac
                     <input
                       type="checkbox"
                       checked={s.after.includes(j)}
-                      onChange={(e) => toggleAfter(i, j, e.target.checked)}
+                      onChange={(e) => onChange(toggleAfter(steps, i, j, e.target.checked))}
                     />
                     {recipeStrings.steps.afterStep(j + 1)}
                   </label>

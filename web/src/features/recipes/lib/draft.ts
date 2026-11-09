@@ -249,29 +249,29 @@ export function serverErrorKey(field: string, reason: string): string {
     .replace('source.attribution', 'sourceAttribution')
 }
 
-// ---- Pure draft operations (STUBS: the Developer implements them; RecipeEditorScreen goes through useRecipeEditor) ----
+// ---- Pure draft operations: return new drafts, never mutate; called from useRecipeEditor ----
 
 /** A new, blank ingredient line with a fresh key. */
 export function newLineDraft(): LineDraft {
-  throw new Error('not implemented')
+  return { key: newKey('line'), ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '' }
 }
 
 /** Appends a blank line. Returns a new draft; the input is not mutated. */
-export function addLine(_draft: RecipeDraft): RecipeDraft {
-  throw new Error('not implemented')
+export function addLine(draft: RecipeDraft): RecipeDraft {
+  return { ...draft, lines: [...draft.lines, newLineDraft()] }
 }
 
 /** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */
-export function updateLine(_draft: RecipeDraft, _key: string, _patch: Partial<LineDraft>): RecipeDraft {
-  throw new Error('not implemented')
+export function updateLine(draft: RecipeDraft, key: string, patch: Partial<LineDraft>): RecipeDraft {
+  return { ...draft, lines: draft.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }
 }
 
 /** Chooses an Ingredient for the line with `key`: sets ingredientId, ingredientName and the unit to the Ingredient's Base Unit; quantity, optional and note are kept. */
-export function pickIngredient(_draft: RecipeDraft, _key: string, _ingredient: IngredientRef): RecipeDraft {
-  throw new Error('not implemented')
+export function pickIngredient(draft: RecipeDraft, key: string, ingredient: IngredientRef): RecipeDraft {
+  return updateLine(draft, key, { ingredientId: ingredient.id, ingredientName: ingredient.name, unit: ingredient.baseUnit })
 }
 
 /** Removes the line with `key`; the others keep their order and keys. */
-export function removeLine(_draft: RecipeDraft, _key: string): RecipeDraft {
-  throw new Error('not implemented')
+export function removeLine(draft: RecipeDraft, key: string): RecipeDraft {
+  return { ...draft, lines: draft.lines.filter((l) => l.key !== key) }
 }

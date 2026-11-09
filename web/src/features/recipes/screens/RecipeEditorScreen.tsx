@@ -11,7 +11,7 @@ import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useIngredientSearch } from '../hooks/useIngredientSearch'
 import { usePhotoUpload } from '../hooks/usePhotoUpload'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
-import { newKey, type LineDraft, type RecipeDraft } from '../lib/draft'
+import type { LineDraft, RecipeDraft } from '../lib/draft'
 import { codeMessage, recipeStrings } from '../strings'
 import type { IngredientRef } from '../types'
 
@@ -57,19 +57,10 @@ export function RecipeEditorScreen(): ReactNode {
     }
   }
 
-  const updateLine = (key: string, patch: Partial<LineDraft>) =>
-    setDraft((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }))
-
   const pick = (line: LineDraft, ing: IngredientRef) => {
-    updateLine(line.key, { ingredientId: ing.id, ingredientName: ing.name, unit: ing.baseUnit })
+    editor.pickIngredient(line.key, ing)
     setSearching(null)
   }
-
-  const addLine = () =>
-    setDraft((d) => ({
-      ...d,
-      lines: [...d.lines, { key: newKey('line'), ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '' }],
-    }))
 
   const onFile = async (file: File) => {
     const imageId = await photo.upload(file)
@@ -101,16 +92,16 @@ export function RecipeEditorScreen(): ReactNode {
             results={searching?.key === line.key ? results : []}
             onSearch={(text) => setSearching({ key: line.key, text })}
             onPick={(ing) => pick(line, ing)}
-            onChange={(patch) => updateLine(line.key, patch)}
-            onRemove={() => setDraft((d) => ({ ...d, lines: d.lines.filter((l) => l.key !== line.key) }))}
+            onChange={(patch) => editor.updateLine(line.key, patch)}
+            onRemove={() => editor.removeLine(line.key)}
           />
         ))}
       </ul>
-      <Button variant="tonal" onClick={addLine}>
+      <Button variant="tonal" onClick={editor.addLine}>
         {recipeStrings.lines.add}
       </Button>
       <h2>{recipeStrings.stepsTitle}</h2>
-      <StepsEditor steps={draft.steps} errors={editor.errors} onChange={(steps) => setDraft((d) => ({ ...d, steps }))} />
+      <StepsEditor steps={draft.steps} errors={editor.errors} onChange={editor.setSteps} />
       {saveError ? <p role="alert">{saveError}</p> : null}
       {Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
       <div>

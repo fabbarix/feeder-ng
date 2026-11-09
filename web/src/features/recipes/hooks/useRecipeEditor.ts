@@ -2,9 +2,23 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { recipesApi } from '../api'
-import { draftFromRecipe, draftToInput, emptyDraft, serverErrorKey, validateDraft, type DraftErrors, type RecipeDraft } from '../lib/draft'
+import {
+  addLine,
+  draftFromRecipe,
+  draftToInput,
+  emptyDraft,
+  pickIngredient,
+  removeLine,
+  serverErrorKey,
+  updateLine,
+  validateDraft,
+  type DraftErrors,
+  type LineDraft,
+  type RecipeDraft,
+  type StepDraft,
+} from '../lib/draft'
 import { parseUnknownUnit, type UnitPrompt } from '../lib/unitPrompt'
-import type { Recipe } from '../types'
+import type { IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
   draft: RecipeDraft
@@ -24,6 +38,13 @@ export interface UseRecipeEditor {
   /** Saves the Unit Conversion on the Ingredient, clears the prompt and saves the Recipe again. */
   answerUnitPrompt: (toBase: number) => Promise<Recipe | null>
   dismissUnitPrompt: () => void
+  /** Ingredient lines: append a blank one, patch one by key, choose its Ingredient, remove it. */
+  addLine: () => void
+  updateLine: (key: string, patch: Partial<LineDraft>) => void
+  pickIngredient: (key: string, ingredient: IngredientRef) => void
+  removeLine: (key: string) => void
+  /** Replaces the Steps (the StepsEditor computes the new list with lib/steps). */
+  setSteps: (steps: StepDraft[]) => void
 }
 
 /** `recipeId` undefined = a new Recipe; otherwise the draft loads from ['recipes', id]. */
@@ -104,5 +125,10 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
       return submit(draft)
     },
     dismissUnitPrompt: () => setUnitPrompt(null),
+    addLine: () => setDraft(addLine),
+    updateLine: (key, patch) => setDraft((d) => updateLine(d, key, patch)),
+    pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
+    removeLine: (key) => setDraft((d) => removeLine(d, key)),
+    setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
   }
 }
