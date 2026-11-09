@@ -150,6 +150,12 @@ func (s *Store) Lots(ctx context.Context, ingredientID int64) ([]StoredLot, erro
 	return queryLots(ctx, s.db, ingredientID)
 }
 
+// LotsTx lists every Stock Lot (all Ingredients) inside tx, in the order Lots uses. Planning reads the projection
+// inside its own transaction, after it has deducted Stock in it.
+func (s *Store) LotsTx(ctx context.Context, tx *sql.Tx) ([]StoredLot, error) {
+	return queryLots(ctx, tx, 0)
+}
+
 // Begin starts a transaction for callers that group several store calls
 // (UpdateTx) into one all-or-nothing change.
 func (s *Store) Begin(ctx context.Context) (*sql.Tx, error) {
@@ -242,6 +248,11 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 // AddWaste records waste.
 func (s *Store) AddWaste(ctx context.Context, w WasteRecord) (WasteRecord, error) {
 	return insertWaste(ctx, s.db, w, s.now())
+}
+
+// AddWasteTx records a waste row inside the caller's transaction.
+func (s *Store) AddWasteTx(ctx context.Context, tx *sql.Tx, w WasteRecord) (WasteRecord, error) {
+	return insertWaste(ctx, tx, w, s.now())
 }
 
 // Waste lists waste records with WastedOn in [from, to] (an empty bound is
