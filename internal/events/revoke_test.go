@@ -78,7 +78,7 @@ func (s *stream) ended(d time.Duration) (closed, sawEvent bool) {
 func TestCloseOwnerEndsOnlyMatchingStreams(t *testing.T) {
 	b := events.NewBus()
 	srv := ownerServer(b)
-	defer srv.Close()
+	t.Cleanup(srv.Close) // after the stream cleanups below (LIFO): Close waits for open streams
 	gone := open(t, srv, "user:1,session:10")
 	otherSession := open(t, srv, "user:1,session:11")
 	stranger := open(t, srv, "user:2,session:20")
@@ -105,7 +105,7 @@ func TestCloseOwnerEndsOnlyMatchingStreams(t *testing.T) {
 func TestClosedStreamGetsNoFurtherEvents(t *testing.T) {
 	b := events.NewBus()
 	srv := ownerServer(b)
-	defer srv.Close()
+	t.Cleanup(srv.Close) // after the stream cleanups below (LIFO): Close waits for open streams
 	s := open(t, srv, "user:1")
 	b.CloseOwner("user:1")
 	b.Publish("plan", "secret") // published after revocation
@@ -127,7 +127,7 @@ func TestRevalidateOnEveryPingEndsStreamWhenFalse(t *testing.T) {
 		events.WithPingInterval(20*time.Millisecond),
 		events.WithRevalidate(func(*http.Request) bool { return valid.Load() }),
 	)
-	defer srv.Close()
+	t.Cleanup(srv.Close) // after the stream cleanups below (LIFO): Close waits for open streams
 	s := open(t, srv, "")
 	if closed, _ := s.ended(150 * time.Millisecond); closed {
 		t.Fatal("stream must stay open while revalidation passes")

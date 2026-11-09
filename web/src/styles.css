@@ -150,11 +150,11 @@ a {
   }
 }
 
-.account-menu-anchor {
+.your-menu-anchor {
   position: relative;
 }
 
-.account-menu-button {
+.your-menu-button {
   background: none;
   border: 0;
   padding: 0;
@@ -162,7 +162,7 @@ a {
   border-radius: 50%;
 }
 
-.account-menu {
+.your-menu {
   position: absolute;
   right: 0;
   top: 52px;
@@ -176,8 +176,8 @@ a {
   z-index: 10;
 }
 
-.account-menu a,
-.account-menu button {
+.your-menu a,
+.your-menu button {
   text-align: left;
   padding: 10px 14px;
   border: 0;
@@ -187,8 +187,8 @@ a {
   cursor: pointer;
 }
 
-.account-menu a:hover,
-.account-menu button:hover {
+.your-menu a:hover,
+.your-menu button:hover {
   background: var(--color-primary-container);
 }
 

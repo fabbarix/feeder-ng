@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,14 +45,34 @@ type User struct {
 
 // Service manages Users and sessions.
 type Service struct {
-	db     *sql.DB
-	clk    clock.Clock
-	secure bool
+	db       *sql.DB
+	clk      clock.Clock
+	secure   bool
+	onRevoke []func(key string)
 }
 
 // NewService returns a Service. secureCookies sets the Secure flag on cookies.
 func NewService(d *sql.DB, clk clock.Clock, secureCookies bool) *Service {
 	return &Service{db: d, clk: clk, secure: secureCookies}
+}
+
+// UserKey is the revocation key for every session of user id.
+func UserKey(id int64) string { return "user:" + strconv.FormatInt(id, 10) }
+
+// SessionKey is the revocation key for the session row id.
+func SessionKey(id int64) string { return "session:" + strconv.FormatInt(id, 10) }
+
+// OnRevoke registers fn to be called with the revocation key (UserKey or
+// SessionKey) whenever access ends: DeleteUser, EndSession, and when an expired
+// session is deleted during Authenticate.
+func (s *Service) OnRevoke(fn func(key string)) {
+	s.onRevoke = append(s.onRevoke, fn)
+}
+
+func (s *Service) revoked(key string) {
+	for _, fn := range s.onRevoke {
+		fn(key)
+	}
 }
 
 // SeedAdmin makes email an Admin: it creates the User if absent, or promotes
@@ -114,6 +135,7 @@ func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
 }
 
 // DeleteUser removes a User from the allowlist; their sessions go with them.
+// OnRevoke hooks receive UserKey(id).
 func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
@@ -126,6 +148,7 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	if n == 0 {
 		return ErrNotFound
 	}
+	s.revoked(UserKey(id))
 	return nil
 }
 
@@ -151,14 +174,26 @@ func (s *Service) CreateSession(ctx context.Context, userID int64) (string, time
 // Authenticate returns the User behind token, sliding the session expiry.
 // ErrNoSession if the token is unknown or expired.
 func (s *Service) Authenticate(ctx context.Context, token string) (User, error) {
-	u, _, _, err := s.resolve(ctx, token)
-	return u, err
+	r, err := s.resolve(ctx, token)
+	return r.user, err
 }
 
-// EndSession ends the session for token. Idempotent.
+// EndSession ends the session for token. Idempotent. OnRevoke hooks receive
+// the SessionKey of a session that was ended.
 func (s *Service) EndSession(ctx context.Context, token string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = ?`, hashToken(token))
-	return err
+	var id int64
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM sessions WHERE token_hash = ?`, hashToken(token)).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, id); err != nil {
+		return err
+	}
+	s.revoked(SessionKey(id))
+	return nil
 }
 
 // SessionCookie is the cookie that carries a session token.
@@ -187,54 +222,64 @@ func (s *Service) ClearCookie() *http.Cookie {
 	}
 }
 
-// resolve validates a token. slid reports whether the expiry was moved, in
-// which case expiresAt is the new expiry.
-func (s *Service) resolve(ctx context.Context, token string) (u User, expiresAt time.Time, slid bool, err error) {
+// resolved is the outcome of validating a session token.
+type resolved struct {
+	user      User
+	sessionID int64
+	expiresAt time.Time
+	slid      bool // expiry was moved; expiresAt is the new expiry
+}
+
+// resolve validates a token. An expired session is deleted and reported to the
+// OnRevoke hooks.
+func (s *Service) resolve(ctx context.Context, token string) (resolved, error) {
 	if token == "" {
-		return User{}, time.Time{}, false, ErrNoSession
+		return resolved{}, ErrNoSession
 	}
 	var (
-		sessionID          int64
+		r                  resolved
+		u                  = &r.user
 		created, exp, seen string
 	)
-	err = s.db.QueryRowContext(ctx, `SELECT u.id, u.email, u.display_name, u.is_admin, u.created_at,
+	err := s.db.QueryRowContext(ctx, `SELECT u.id, u.email, u.display_name, u.is_admin, u.created_at,
 			s.id, s.expires_at, s.last_seen
 		FROM sessions s JOIN users u ON u.id = s.user_id
 		WHERE s.token_hash = ?`, hashToken(token)).
-		Scan(&u.ID, &u.Email, &u.DisplayName, &u.IsAdmin, &created, &sessionID, &exp, &seen)
+		Scan(&u.ID, &u.Email, &u.DisplayName, &u.IsAdmin, &created, &r.sessionID, &exp, &seen)
 	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, time.Time{}, false, ErrNoSession
+		return resolved{}, ErrNoSession
 	}
 	if err != nil {
-		return User{}, time.Time{}, false, err
+		return resolved{}, err
 	}
 	if u.CreatedAt, err = time.Parse(timeFormat, created); err != nil {
-		return User{}, time.Time{}, false, err
+		return resolved{}, err
 	}
-	expiresAt, err = time.Parse(timeFormat, exp)
-	if err != nil {
-		return User{}, time.Time{}, false, err
+	if r.expiresAt, err = time.Parse(timeFormat, exp); err != nil {
+		return resolved{}, err
 	}
 	lastSeen, err := time.Parse(timeFormat, seen)
 	if err != nil {
-		return User{}, time.Time{}, false, err
+		return resolved{}, err
 	}
 
 	now := s.clk.Now().UTC().Truncate(time.Second)
-	if !now.Before(expiresAt) {
-		_, _ = s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, sessionID)
-		return User{}, time.Time{}, false, ErrNoSession
+	if !now.Before(r.expiresAt) {
+		if _, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, r.sessionID); err == nil {
+			s.revoked(SessionKey(r.sessionID))
+		}
+		return resolved{}, ErrNoSession
 	}
 	if now.Sub(lastSeen) > slideThrottle {
-		expiresAt = now.Add(SessionTTL)
+		r.expiresAt = now.Add(SessionTTL)
 		if _, err := s.db.ExecContext(ctx,
 			`UPDATE sessions SET expires_at = ?, last_seen = ? WHERE id = ?`,
-			expiresAt.Format(timeFormat), now.Format(timeFormat), sessionID); err != nil {
-			return User{}, time.Time{}, false, err
+			r.expiresAt.Format(timeFormat), now.Format(timeFormat), r.sessionID); err != nil {
+			return resolved{}, err
 		}
-		slid = true
+		r.slid = true
 	}
-	return u, expiresAt, slid, nil
+	return r, nil
 }
 
 func normalizeEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }

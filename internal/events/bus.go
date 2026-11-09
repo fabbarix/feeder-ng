@@ -3,6 +3,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,8 +24,10 @@ type Event struct {
 }
 
 type subscriber struct {
-	topics map[string]struct{} // nil means every topic
-	ch     chan Event
+	topics  map[string]struct{} // nil means every topic
+	owners  []string            // revocation keys this stream belongs to
+	ch      chan Event
+	revoked chan struct{} // closed by CloseOwner
 }
 
 // Bus fans published events out to subscribers. Publish never blocks.
@@ -63,7 +66,12 @@ func (b *Bus) Publish(topic string, data any) {
 // none are given) and a cancel func that closes the channel. Cancel is
 // idempotent.
 func (b *Bus) Subscribe(topics ...string) (<-chan Event, func()) {
-	s := &subscriber{ch: make(chan Event, bufferSize)}
+	s := b.subscribe(nil, topics)
+	return s.ch, b.cancelFunc(s)
+}
+
+func (b *Bus) subscribe(owners []string, topics []string) *subscriber {
+	s := &subscriber{ch: make(chan Event, bufferSize), owners: owners, revoked: make(chan struct{})}
 	if len(topics) > 0 {
 		s.topics = make(map[string]struct{}, len(topics))
 		for _, t := range topics {
@@ -73,9 +81,12 @@ func (b *Bus) Subscribe(topics ...string) (<-chan Event, func()) {
 	b.mu.Lock()
 	b.subs[s] = struct{}{}
 	b.mu.Unlock()
+	return s
+}
 
+func (b *Bus) cancelFunc(s *subscriber) func() {
 	var once sync.Once
-	cancel := func() {
+	return func() {
 		once.Do(func() {
 			b.mu.Lock()
 			defer b.mu.Unlock()
@@ -83,12 +94,64 @@ func (b *Bus) Subscribe(topics ...string) (<-chan Event, func()) {
 			close(s.ch)
 		})
 	}
-	return s.ch, cancel
+}
+
+// CloseOwner ends every stream registered under key (see WithOwners). Those
+// streams receive no further events, and their handlers return. Idempotent.
+func (b *Bus) CloseOwner(key string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for s := range b.subs {
+		for _, o := range s.owners {
+			if o == key {
+				delete(b.subs, s)
+				close(s.revoked)
+				break
+			}
+		}
+	}
+}
+
+type ownersKey struct{}
+
+// WithOwners tags ctx with the revocation keys that streams opened under it
+// belong to. Handler registers the stream under those keys.
+func WithOwners(ctx context.Context, keys ...string) context.Context {
+	return context.WithValue(ctx, ownersKey{}, keys)
+}
+
+func ownersFrom(ctx context.Context) []string {
+	keys, _ := ctx.Value(ownersKey{}).([]string)
+	return keys
+}
+
+// HandlerOption configures Handler.
+type HandlerOption func(*handlerOptions)
+
+type handlerOptions struct {
+	pingEvery  time.Duration
+	revalidate func(*http.Request) bool
+}
+
+// WithPingInterval sets how often a keep-alive ping is written (default 25 s).
+func WithPingInterval(d time.Duration) HandlerOption {
+	return func(o *handlerOptions) { o.pingEvery = d }
+}
+
+// WithRevalidate checks every stream at each ping. When fn returns false the
+// stream ends. It is a second line of defence behind CloseOwner.
+func WithRevalidate(fn func(*http.Request) bool) HandlerOption {
+	return func(o *handlerOptions) { o.revalidate = fn }
 }
 
 // Handler streams events as Server-Sent Events. The optional ?topics=a,b query
-// parameter filters the stream.
-func (b *Bus) Handler() http.Handler {
+// parameter filters the stream. The stream is registered under the owner keys
+// found in the request context (see WithOwners).
+func (b *Bus) Handler(opts ...HandlerOption) http.Handler {
+	o := handlerOptions{pingEvery: pingEvery}
+	for _, opt := range opts {
+		opt(&o)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -101,7 +164,8 @@ func (b *Bus) Handler() http.Handler {
 				topics = append(topics, t)
 			}
 		}
-		ch, cancel := b.Subscribe(topics...)
+		s := b.subscribe(ownersFrom(r.Context()), topics)
+		cancel := b.cancelFunc(s)
 		defer cancel()
 
 		h := w.Header()
@@ -112,19 +176,29 @@ func (b *Bus) Handler() http.Handler {
 		fmt.Fprint(w, ": connected\n\n")
 		flusher.Flush()
 
-		ping := time.NewTicker(pingEvery)
+		ping := time.NewTicker(o.pingEvery)
 		defer ping.Stop()
 		for {
 			select {
 			case <-r.Context().Done():
 				return
-			case ev, open := <-ch:
+			case <-s.revoked:
+				return
+			case ev, open := <-s.ch:
 				if !open {
 					return
+				}
+				select {
+				case <-s.revoked: // revoked while this event was queued
+					return
+				default:
 				}
 				fmt.Fprintf(w, "event: %s\ndata: %s\n\n", ev.Topic, ev.Data)
 				flusher.Flush()
 			case <-ping.C:
+				if o.revalidate != nil && !o.revalidate(r) {
+					return
+				}
 				fmt.Fprint(w, ": ping\n\n")
 				flusher.Flush()
 			}

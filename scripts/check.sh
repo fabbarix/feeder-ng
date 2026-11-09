@@ -28,4 +28,27 @@ step "vite build" pnpm -C web build
 step "go vet" go vet ./...
 step "go test" go test ./...
 
+# Every scripts/test/*_test.sh runs; the step fails if any of them fails.
+run_shell_tests() {
+  local status=0 f
+  local tests=()
+  shopt -s nullglob
+  tests=("$ROOT"/scripts/test/*_test.sh)
+  shopt -u nullglob
+  if [ "${#tests[@]}" -eq 0 ]; then
+    echo "no scripts/test/*_test.sh files"
+    return 0
+  fi
+  for f in "${tests[@]}"; do
+    printf -- '--> %s\n' "${f#"$ROOT"/}"
+    if ! bash "$f"; then
+      printf 'FAILED: %s\n' "${f#"$ROOT"/}"
+      status=1
+    fi
+  done
+  return "$status"
+}
+
+step "shell tests (scripts/test)" run_shell_tests
+
 printf '\nCHECK PASSED\n' | tee -a "$LOG"

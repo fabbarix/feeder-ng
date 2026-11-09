@@ -53,13 +53,15 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 		return nil, fmt.Errorf("app: seed admin: %w", err)
 	}
 	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger}
+	// Removal and sign-out end the live-update streams of the affected User or session.
+	authSvc.OnRevoke(deps.Events.CloseOwner)
 
 	mux := http.NewServeMux()
 	r := &Router{mux: mux, auth: authSvc}
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.Handle("GET /api/events", authSvc.RequireUser(deps.Events.Handler()))
+	mux.Handle("GET /api/events", authSvc.RequireUser(eventStream(deps.Events, authSvc)))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "No such API route")
 	})
@@ -69,6 +71,25 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 		m.Mount(r, deps)
 	}
 	return &App{Handler: recoverPanics(o.logger, mux), Deps: deps}, nil
+}
+
+// eventStream serves GET /api/events for a signed-in request. The stream is
+// registered under the request's User and session keys, so revoking either
+// ends it. Each ping re-checks the session as a second line of defence.
+func eventStream(bus *events.Bus, authSvc *auth.Service) http.Handler {
+	h := bus.Handler(events.WithRevalidate(func(r *http.Request) bool {
+		c, err := r.Cookie(auth.CookieName)
+		if err != nil {
+			return false
+		}
+		_, err = authSvc.Authenticate(r.Context(), c.Value)
+		return err == nil
+	}))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, _ := auth.UserFrom(r.Context())
+		ctx := events.WithOwners(r.Context(), auth.UserKey(u.ID), auth.SessionKeyFrom(r.Context()))
+		h.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
