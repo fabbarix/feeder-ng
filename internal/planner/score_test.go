@@ -268,6 +268,9 @@ func TestScoreNewLeftover(t *testing.T) {
 			name: "next slot is claimed by a Slot Rule", slots: []Slot{dinner(0), withRules(dinner(1), SlotRule{RecipeID: 2})}, want: -1,
 		},
 		{
+			name: "next slot is claimed by a Slot Rule the Recipe satisfies", slots: []Slot{dinner(0), withRules(dinner(1), SlotRule{RecipeID: 1})}, want: 1,
+		},
+		{
 			name:  "next slot is already Pinned",
 			slots: []Slot{dinner(0), withExisting(dinner(1), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1})}, want: -1,
 		},

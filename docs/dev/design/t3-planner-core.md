@@ -37,7 +37,7 @@ The walk is one chronological pass over all slots. State: projected Stock lots p
 
 **Empty slot** (no `Existing`, or Planned in `Regenerate`/dropped):
 0. `portions = sum(PortionFactor)`; `<= 0` gives `Unfilled{no_attendance}`.
-1. *Leftover first* unless the slot has any Slot Rule (**D**: any rule claims the slot, even if the Leftover's Recipe matches it). A pending Leftover is eligible if its Recipe is known, remaining portions `>= portions`, `slot date <= UseBy`, it was produced by an earlier slot (`source.At < slot.At`; actual Leftovers are always available), and no attendee has an Exclusion on the Recipe or any of its Ingredients (optional lines included). Dislikes, cool-down and Variety Rules do not apply. Place the soonest Use-by (ties: actual before planned, then lowest id / earliest source). The remainder `(remaining - portions)` stays pending with the same Use-by (**D**). Chip: `leftover`.
+1. *Leftover first*. A pending Leftover is eligible if (product owner decision) the slot has no Slot Rule, or the Leftover's Recipe satisfies one of the slot's Slot Rules (matches by Recipe id, or carries the rule's Tag); a Leftover that matches none of the rules is blocked and the slot cooks a fresh Recipe that does. Also: its Recipe is known, remaining portions `>= portions`, `slot date <= UseBy`, it was produced by an earlier slot (`source.At < slot.At`; actual Leftovers are always available), and no attendee has an Exclusion on the Recipe or any of its Ingredients (optional lines included). Dislikes, cool-down and Variety Rules do not apply. Place the soonest Use-by (ties: actual before planned, then lowest id / earliest source). The remainder `(remaining - portions)` stays pending with the same Use-by (**D**). Chip: `leftover` (when a Slot Rule matched, `slot_rule` follows as the second chip).
 2. *Candidates*: non-archived Recipes with `Yield > 0`; if the slot has Slot Rules, only Recipes matching ANY rule (by id or Tag). Then filters, each candidate counted once in `Eliminations` by the first that removes it:
    1. *Exclusion*: any attendee (factor > 0) excludes the Recipe or any of its Ingredients (optional lines included, because of allergies).
    2. *Cool-down*: `|slotDate - d| < cooldown` for any fresh-cook date `d` of the Recipe (history, fixed meals, earlier placements, past or future). `cooldown` = Recipe override else `Config.DefaultCooldownDays`. Exactly `cooldown` days apart is allowed.
@@ -47,7 +47,7 @@ The walk is one chronological pass over all slots. State: projected Stock lots p
 3. *Score* = sum of terms (zero terms are omitted from `Placement.Terms`). Per candidate, `batches = BatchesFor(portions, yield)`, needs are non-optional lines `x batches`, and "available" means projected lots with `GoesOff == "" || GoesOff >= slotDate`:
    - `Favourite x count(attendees who favourite it)`; `Dislike x count(attendees who dislike it)` (the weight is negative).
    - `PerishableUse x share`, `StockCoverage x share`, `IngredientOverlap x share`. **D** `share` = mean over the non-optional lines of `min(1, covered / need)` (unit-free, so grams and pieces do not mix); no non-optional lines gives 0. `covered` is: for perishable use, the sum of **at-risk** available lots, where at-risk means `GoesOff != ""` and `GoesOff <= slotDate + PerishWindowDays` (**D**: the spec's "before the next time those lots could be used" needs look-ahead; it is approximated by a 2-day window, tunable in `Config`); for stock coverage, all available lots (planned-purchase remainders included); for overlap, only available lots that are **pack remainders of planned purchases** (a lot created by this run's rounding-up; plain Stock is not overlap, so overlap is a subset of coverage). Planned-purchase lots are bought on the date of the meal that triggered them (**D**) and go off `ShelfLifeDays` later if known.
-   - Extra portions: `s = batches x yield - portions`. `s == 0` contributes 0. Else `LeftoverFits` if some **later** slot (by `At`) is still to be filled (empty in this run; not Pinned/Cooked/Skipped/kept, not claimed by a Slot Rule), has `slotDate <= UseBy`, needs `<= s` portions and none of its attendees has an Exclusion on the Recipe; otherwise `LeftoverWasted`. Use-by = slot date + (Recipe `UseByDays` else `Config.DefaultUseByDays`).
+   - Extra portions: `s = batches x yield - portions`. `s == 0` contributes 0. Else `LeftoverFits` if some **later** slot (by `At`) is still to be filled (empty in this run; not Pinned/Cooked/Skipped/kept, and either without Slot Rules or with one the Recipe satisfies), has `slotDate <= UseBy`, needs `<= s` portions and none of its attendees has an Exclusion on the Recipe; otherwise `LeftoverWasted`. Use-by = slot date + (Recipe `UseByDays` else `Config.DefaultUseByDays`).
    - `Recency x recentness`: `recentness = 1 - min(days, RecencyDays) / RecencyDays` where `days` is the gap to the most recent fresh-cook date **before** the slot (0 if never; `RecencyDays` = 28). The weight is negative, so recent Recipes lose and the term is never positive.
    - `Jitter`: `JitterFor(seed, slotKey, recipeID, weights.Jitter)`, uniform in `[-J, +J]`, from a hash of the arguments (no `math/rand`, stable across Go versions and independent of candidate order). Different seeds change the plan; the same seed never does.
 4. *Pick* the highest total; ties go to the lowest Recipe id (so with all weights zero the lowest id wins, which tests rely on). Then: `Batches = BatchesFor(...)`; `NewLeftover` if `> 0` (cooked date + Use-by days); consume projected Stock soonest-go-off first, then oldest purchase, then lot id; for each Ingredient short by `x`: with a `Pack` for it, buy `ceil(x / size)` packs (a planned lot of the full bought amount is added, then consumed, leaving the remainder), without one buy exactly `x` and leave no remainder. Record `Purchase{Shortfall, Packs, PackSize, Quantity}` on the placement and merge into `Result.Purchases` (ordered by IngredientID).
@@ -55,23 +55,23 @@ The walk is one chronological pass over all slots. State: projected Stock lots p
 
 **Swap**: runs the same walk on the given `Input` as the current plan state: the target slot's `Existing` is treated as empty, every other existing meal stays as is. It evaluates the target's candidates exactly as step 2 and 3 (so context such as an earlier Pinned meal's Stock use, cool-down and later fitting slots is honoured), minus the current Recipe, and returns the top 3 by score (ties: lowest id) as `Placement`s with Batches, NewLeftover, Purchases and Why. **D** Slot Rules are ignored (the User is overriding them), Leftovers are not offered. Errors: `ErrUnknownSlot`, `ErrSlotNotSwappable` (Cooked or skipped). The caller pins the choice and calls `Plan`/`Regenerate`-style replanning of downstream slots (§7.3): it sets the downstream unpinned slots' `Existing` to nil (or uses `Regenerate`).
 
-## Planner Style presets (**D**)
+## Planner Style presets
 
 `Style` in [0,1]; clamped; NaN means 0.5. Piecewise linear between three anchors:
 
-| Weight | 0 Use what we have | 0.5 Variety (spec) | 1 Favourites |
+| Weight | 0 Use what we have | 0.5 Variety (default) | 1 Favourites |
 |---|---|---|---|
-| Favourite (per Member) | 2 | **3** | 5 |
-| Dislike (per Member) | -2 | **-2** | -2 |
-| PerishableUse | 6 | **4** | 2 |
-| IngredientOverlap | 3 | **2** | 1 |
-| StockCoverage | 2 | **1** | 0.5 |
+| Favourite (per Member) | 2 | **2** | 5 |
+| Dislike (per Member) | -2 | **-2** | -3 |
+| PerishableUse | 6 | **3** | 2 |
+| IngredientOverlap | 3 | **1.5** | 1 |
+| StockCoverage | 2 | **0.75** | 0.5 |
 | LeftoverFits | 1 | **1** | 1 |
 | LeftoverWasted | -1 | **-1** | -1 |
-| Recency | -0.25 | **-0.5** | -0.25 |
-| Jitter amplitude | 0.5 | **0.5** | 0.5 |
+| Recency | -0.25 | **-1** | -0.25 |
+| Jitter amplitude | 0.5 | **0.75** | 0.5 |
 
-The middle anchor reproduces the spec's weights exactly. "Use what we have" boosts perishable use, overlap and coverage; "Favourites" boosts the Favourite weight; recency is strongest in the middle ("Variety"), which is how the spec's "Variety boosts recency" is realised with the middle preset fixed to the spec numbers.
+Product-owner/PM decision: the middle anchor leans further into variety than the old spec §7.2 numbers (which the docs team is updating). "Variety" (the default) has the strongest recency penalty and the most jitter, and weaker Favourite, perishable-use, overlap and coverage pulls than "Use what we have"; "Use what we have" boosts perishable use, overlap and coverage; "Favourites" boosts the Favourite weight and the Dislike penalty. Tests that need exact scores isolate one term via `Input.Weights`.
 
 ## Package layout
 

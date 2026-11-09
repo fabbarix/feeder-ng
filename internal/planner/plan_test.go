@@ -300,7 +300,7 @@ func TestDeterminismAndRegenerateVariation(t *testing.T) {
 func TestPlannerStyleMovesTheChoice(t *testing.T) {
 	// Recipe 1 uses chicken that goes off tomorrow (perishable use); Recipe 2 is Anna's Favourite.
 	// Use what we have: Recipe 1 = 6 (perishable) + 2 (coverage) = 8 vs Recipe 2 = 2 (Favourite).
-	// Favourites: Recipe 1 = 2 + 0.5 = 2.5 vs Recipe 2 = 5.
+	// Favourites: Recipe 1 = 2 + 0.5 = 2.5 vs Recipe 2 = 5 (jitter at most 0.5).
 	build := func(style float64) Input {
 		in := baseInput([]Slot{dinner(0)}, rcp(1, 2, needs(need(chicken, 500))), rcp(2, 2))
 		in.Weights, in.Style = nil, style

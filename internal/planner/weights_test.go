@@ -14,18 +14,18 @@ func weightsClose(a, b Weights) bool {
 
 func TestWeightsFor(t *testing.T) {
 	useWhatWeHave := Weights{Favourite: 2, Dislike: -2, PerishableUse: 6, IngredientOverlap: 3, StockCoverage: 2, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.25, Jitter: 0.5}
-	middle := Weights{Favourite: 3, Dislike: -2, PerishableUse: 4, IngredientOverlap: 2, StockCoverage: 1, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.5, Jitter: 0.5}
-	favourites := Weights{Favourite: 5, Dislike: -2, PerishableUse: 2, IngredientOverlap: 1, StockCoverage: 0.5, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.25, Jitter: 0.5}
+	middle := Weights{Favourite: 2, Dislike: -2, PerishableUse: 3, IngredientOverlap: 1.5, StockCoverage: 0.75, LeftoverFits: 1, LeftoverWasted: -1, Recency: -1, Jitter: 0.75}
+	favourites := Weights{Favourite: 5, Dislike: -3, PerishableUse: 2, IngredientOverlap: 1, StockCoverage: 0.5, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.25, Jitter: 0.5}
 	tests := []struct {
 		name  string
 		style float64
 		want  Weights
 	}{
 		{"anchor Use what we have", 0, useWhatWeHave},
-		{"middle anchor is the spec weights", 0.5, middle},
+		{"middle anchor Variety is the default", 0.5, middle},
 		{"anchor Favourites", 1, favourites},
-		{"halfway to the middle interpolates", 0.25, Weights{Favourite: 2.5, Dislike: -2, PerishableUse: 5, IngredientOverlap: 2.5, StockCoverage: 1.5, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.375, Jitter: 0.5}},
-		{"halfway to Favourites interpolates", 0.75, Weights{Favourite: 4, Dislike: -2, PerishableUse: 3, IngredientOverlap: 1.5, StockCoverage: 0.75, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.375, Jitter: 0.5}},
+		{"halfway to the middle interpolates", 0.25, Weights{Favourite: 2, Dislike: -2, PerishableUse: 4.5, IngredientOverlap: 2.25, StockCoverage: 1.375, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.625, Jitter: 0.625}},
+		{"halfway to Favourites interpolates", 0.75, Weights{Favourite: 3.5, Dislike: -2.5, PerishableUse: 2.5, IngredientOverlap: 1.25, StockCoverage: 0.625, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.625, Jitter: 0.625}},
 		{"below range clamps to 0", -3, useWhatWeHave},
 		{"above range clamps to 1", 7, favourites},
 		{"NaN means the middle", math.NaN(), middle},
@@ -47,8 +47,23 @@ func TestWeightsForDirection(t *testing.T) {
 	if !(use.IngredientOverlap > mid.IngredientOverlap && use.StockCoverage > mid.StockCoverage) {
 		t.Errorf("Use what we have must boost overlap and coverage")
 	}
-	if !(fav.Favourite > mid.Favourite && mid.Favourite > use.Favourite) {
+	if !(mid.Recency < use.Recency && mid.Recency < fav.Recency) {
+		t.Errorf("Variety must have the strongest recency penalty: %v %v %v", use.Recency, mid.Recency, fav.Recency)
+	}
+	if !(mid.Jitter > use.Jitter && mid.Jitter > fav.Jitter) {
+		t.Errorf("Variety must have the largest jitter: %v %v %v", use.Jitter, mid.Jitter, fav.Jitter)
+	}
+	if !(fav.Favourite >= mid.Favourite && mid.Favourite >= use.Favourite && fav.Favourite > use.Favourite) {
 		t.Errorf("favourite weight should rise towards Favourites")
+	}
+}
+
+func TestDefaultStyleIsVariety(t *testing.T) {
+	if got, want := WeightsFor(0.5), WeightsFor(math.NaN()); !weightsClose(got, want) {
+		t.Errorf("NaN must mean the middle: %+v vs %+v", got, want)
+	}
+	if got := WeightsFor(0.5); !approx(got.Recency, -1) || !approx(got.Jitter, 0.75) {
+		t.Errorf("Variety leans into recency and jitter: %+v", got)
 	}
 }
 

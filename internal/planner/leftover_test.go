@@ -37,12 +37,24 @@ func TestLeftoverFirst(t *testing.T) {
 			prefs: map[MemberID]Preferences{ben: {Dislikes: []RecipeID{2}}}, wantLeftover: 7, wantRecipe: 2,
 		},
 		{
-			name: "a Slot Rule claiming the slot beats the Leftover", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
+			name: "a Slot Rule for another Recipe blocks the Leftover", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
 			slotRules: []SlotRule{{RecipeID: 3}}, wantRecipe: 3,
 		},
 		{
-			name: "a Slot Rule by Tag matching the Leftover's Recipe still cooks fresh", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
-			slotRules: []SlotRule{{Tag: "pizza"}}, wantRecipe: 2,
+			name: "a Slot Rule by Tag the Leftover does not match blocks it", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
+			slotRules: []SlotRule{{Tag: "salad"}}, wantRecipe: 3,
+		},
+		{
+			name: "a Slot Rule naming the Leftover's Recipe allows it", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
+			slotRules: []SlotRule{{RecipeID: 2}}, wantLeftover: 7, wantRecipe: 2,
+		},
+		{
+			name: "a Slot Rule by a Tag of the Leftover's Recipe allows it", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
+			slotRules: []SlotRule{{Tag: "pizza"}}, wantLeftover: 7, wantRecipe: 2,
+		},
+		{
+			name: "any one of several Slot Rules matching allows the Leftover", leftovers: []Leftover{leftoverOf(7, 2, 2, day(3))},
+			slotRules: []SlotRule{{Tag: "salad"}, {Tag: "pizza"}}, wantLeftover: 7, wantRecipe: 2,
 		},
 		{name: "Leftover of an unknown Recipe is not servable", leftovers: []Leftover{leftoverOf(7, 99, 2, day(3))}, wantRecipe: 1},
 	}
@@ -53,7 +65,7 @@ func TestLeftoverFirst(t *testing.T) {
 			in := baseInput([]Slot{s},
 				rcp(1, 2, needs(need(chicken, 500))),
 				rcp(2, 2, tags("pizza"), needs(need(spinach, 300))),
-				rcp(3, 2, needs(need(rice, 200))))
+				rcp(3, 2, tags("salad"), needs(need(rice, 200))))
 			in.Leftovers = tt.leftovers
 			in.Members = tt.prefs
 			p := placementAt(t, mustPlan(t, in), key(0))
@@ -73,6 +85,16 @@ func TestLeftoverFirst(t *testing.T) {
 				t.Errorf("a Leftover meal has no extra portions or purchases: %+v", p)
 			}
 		})
+	}
+}
+
+func TestLeftoverUnderMatchingSlotRuleKeepsBothChips(t *testing.T) {
+	s := withRules(dinner(0), SlotRule{Tag: "pizza"})
+	in := baseInput([]Slot{s}, rcp(1, 2), rcp(2, 2, tags("pizza")))
+	in.Leftovers = []Leftover{leftoverOf(7, 2, 2, day(3))}
+	p := placementAt(t, mustPlan(t, in), key(0))
+	if p.Source != SourceLeftover || len(p.Why) < 2 || p.Why[0].Code != ReasonLeftover || p.Why[1].Code != ReasonSlotRule || p.Why[1].Tag != "pizza" {
+		t.Errorf("want leftover then slot_rule{pizza} chips, got %+v", p)
 	}
 }
 

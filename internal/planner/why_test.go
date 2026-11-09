@@ -17,7 +17,7 @@ func whyCodes(p Placement) []ReasonCode {
 
 func TestWhyChipsAreTheTopThreePositiveTerms(t *testing.T) {
 	// Recipe 2 (Yield 4: pasta 200, spinach 300) on day 0 scores:
-	//   Favourite 2 x 3 = 6, perishable use 0.5 x 4 = 2, extra portions fits 1, stock coverage 0.5 x 1 = 0.5 (+ jitter).
+	//   Favourite 2 x 2 = 4, perishable use 0.5 x 3 = 1.5, extra portions fits 1, stock coverage 0.5 x 0.75 = 0.375 (+ jitter).
 	// The top 3 are favourite, perishable use, leftover fits; stock coverage is cut.
 	in := baseInput([]Slot{dinner(0), dinner(1)}, rcp(1, 2, needs(need(chicken, 500))), rcp(2, 4, needs(need(pasta, 200), need(spinach, 300))))
 	w := WeightsFor(0.5)
@@ -29,8 +29,8 @@ func TestWhyChipsAreTheTopThreePositiveTerms(t *testing.T) {
 		t.Fatalf("recipe = %d, want 2", p.RecipeID)
 	}
 	want := []Why{
-		{Code: ReasonFavourite, Value: 6, MemberIDs: []MemberID{anna, ben}},
-		{Code: ReasonPerishableUse, Value: 2, IngredientID: spinach, Date: day(1)},
+		{Code: ReasonFavourite, Value: 4, MemberIDs: []MemberID{anna, ben}},
+		{Code: ReasonPerishableUse, Value: 1.5, IngredientID: spinach, Date: day(1)},
 		{Code: ReasonLeftoverFits, Value: 1, Date: day(1)},
 	}
 	if len(p.Why) != 3 {
