@@ -1,0 +1,143 @@
+# Feeder
+
+Meal planning for a single family: recipes, an automatically generated meal plan, leftovers, and a shopping list ticked off by scanning products in-store.
+
+## Language
+
+### People
+
+**Household**:
+The single family that one deployment serves; owns all recipes, plans and shops.
+_Avoid_: Family, tenant, account
+
+**Member**:
+A person who eats from the plan and counts towards portions; need not have a login.
+_Avoid_: Eater, person, diner
+
+**User**:
+Someone who signs in with Google to use the app; may be linked to a Member.
+_Avoid_: Account, login, member
+
+### Recipes
+
+**Recipe**:
+A dish the Household can plan, made from Ingredients, with a Yield and optional timed Steps.
+_Avoid_: Dish, meal
+
+**Yield**:
+The number of standard portions one Batch of a Recipe produces.
+_Avoid_: Servings, makes
+
+**Ready Meal**:
+A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack.
+_Avoid_: Convenience food, pre-made
+
+**Tag**:
+A household-defined label on Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to.
+_Avoid_: Category, label
+
+### Preferences
+
+**Favourite**:
+A Member's liking for a Recipe, which makes the planner more likely to choose it when they attend.
+_Avoid_: Star, like
+
+**Dislike**:
+A Member's soft aversion to a Recipe; the planner avoids it when they attend, but it may still appear.
+_Avoid_: Unfavourite
+
+**Exclusion**:
+A Member's hard ban on a Recipe or Ingredient (e.g. an allergy); the planner never chooses it when they attend.
+_Avoid_: Never, allergy, blacklist
+
+### Planning
+
+**Meal Slot**:
+A named eating occasion the Household defines for a particular day of the week (e.g. "Tuesday Dinner").
+_Avoid_: Meal time, occasion, slot type
+
+**Planned Meal**:
+The Recipe assigned to one Meal Slot on one date, either freshly cooked or served from a Leftover.
+_Avoid_: Meal, entry, booking
+
+**Cooked**:
+The state of a Planned Meal once someone has confirmed it was actually prepared; only then is Stock deducted.
+_Avoid_: Done, eaten, completed
+
+**Batch**:
+One preparation of a Recipe, producing its Yield; a Planned Meal cooks a whole number of Batches (or an explicit fraction).
+_Avoid_: Scale, run
+
+**Leftover**:
+Portions left from a Batch beyond what its Planned Meal's Attendance needs; these are served at later Meal Slots.
+_Avoid_: Surplus, remains
+
+**Use-by**:
+The last date a Leftover may be served; after it the Leftover is discarded and never planned.
+_Avoid_: Expiry, best-before
+
+**Cool-down**:
+The minimum number of days before the same Recipe may be planned again.
+_Avoid_: Rotation, repeat gap
+
+**Planning Horizon**:
+How many days ahead the planner keeps Meal Slots filled (default 7).
+_Avoid_: Window, lookahead
+
+**Pinned**:
+A Planned Meal set or confirmed by a User, which the planner never replaces.
+_Avoid_: Locked, fixed, manual
+
+**Ingredient Overlap**:
+The planner's preference for Recipes that use up what remains of Ingredients already bought or planned that week, so that fewer distinct Ingredients are needed.
+_Avoid_: Reuse, synergy
+
+**Slot Rule**:
+A standing rule that fixes a Meal Slot to a particular Recipe or Tag (e.g. "Friday Dinner = pizza").
+_Avoid_: Fixed meal, theme night
+
+**Variety Rule**:
+A limit on how often Recipes with a given Tag may appear (e.g. at most twice a week, never two days running).
+_Avoid_: Quota, balance rule
+
+**Portion Factor**:
+How much of a standard portion a Member eats; each Member has a default, which a Meal Slot may override.
+_Avoid_: Appetite, multiplier, serving size
+
+**Attendance**:
+The Members who eat at a given Meal Slot, each with their Portion Factor; it determines the portions that slot needs.
+_Avoid_: Guests, headcount
+
+### Food and shopping
+
+**Ingredient**:
+A generic food item that recipes call for and the shopping list is written in (e.g. "passata").
+_Avoid_: Item, food, product
+
+**Product**:
+A specific purchasable pack, identified by its barcode, that supplies exactly one Ingredient (e.g. "Mutti passata 700 g").
+_Avoid_: SKU, article, item
+
+**Base Unit**:
+The single unit (gram, millilitre or piece) in which an Ingredient's Stock and shopping quantities are counted.
+_Avoid_: Default unit, canonical unit
+
+**Unit Conversion**:
+An Ingredient-specific equivalence from another unit into its Base Unit (e.g. 1 clove garlic = 5 g).
+_Avoid_: Measure, ratio
+
+**Stock**:
+The quantity of each Ingredient the Household currently has at home.
+_Avoid_: Inventory, pantry, larder
+
+**Shopping List**:
+The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date, less Stock, plus any manual extras.
+_Avoid_: Grocery list, basket
+
+**Shop**:
+A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop.
+_Avoid_: Store, supermarket, retailer
+
+**Shop Barcode**:
+A barcode that identifies a Product only within one Shop (e.g. own-label or weighed goods).
+_Avoid_: Local code, in-store code
