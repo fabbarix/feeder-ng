@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -269,4 +270,22 @@ func TestAppRejectsCrossOriginAndNonJSONWrites(t *testing.T) {
 	if c := post("application/json", "http://feeder.example.test"); c != 204 {
 		t.Errorf("same-host Origin: %d, want 204", c)
 	}
+}
+
+func TestCloseWaitsForWorkersStartedWithDepsGo(t *testing.T) {
+	var stopped atomic.Bool
+	reg := app.NewRegistry()
+	reg.Register(app.Module{Name: "worker", Mount: func(_ *app.Router, d app.Deps) {
+		d.Go(func() {
+			<-d.Context.Done()
+			time.Sleep(30 * time.Millisecond) // a worker finishing its last step after the context ends
+			stopped.Store(true)
+		})
+	}})
+	h := build(t, spaFS, reg)
+	h.app.Close()
+	if !stopped.Load() {
+		t.Fatal("Close returned before the worker had stopped")
+	}
+	h.app.Close() // a second Close is harmless
 }
