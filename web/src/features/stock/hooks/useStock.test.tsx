@@ -43,7 +43,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const hooks = {
+const hooks: Record<string, () => unknown> = {
   useStockTotals: () => useStockTotals(),
   'useStockLots (an Ingredient selected)': () => useStockLots(7),
   'useStockLots (nothing selected)': () => useStockLots(null),

@@ -150,16 +150,38 @@ func (s *Store) Lots(ctx context.Context, ingredientID int64) ([]StoredLot, erro
 	return queryLots(ctx, s.db, ingredientID)
 }
 
+// Begin starts a transaction for callers that group several store calls
+// (UpdateTx) into one all-or-nothing change.
+func (s *Store) Begin(ctx context.Context) (*sql.Tx, error) {
+	return s.db.BeginTx(ctx, nil)
+}
+
 // Update runs fn on the Ingredient's current lots inside one transaction and
 // persists the Mutation it returns. If fn returns an error nothing changes and
 // the error is returned as is. The saved lots are returned (new lots with IDs).
 func (s *Store) Update(ctx context.Context, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	saved, err := s.UpdateTx(ctx, tx, ingredientID, fn)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return saved, nil
+}
+
+// UpdateTx is Update inside the caller's transaction: it never begins, commits
+// or rolls back, so the changes commit or roll back with tx. Used by Planning
+// to deduct Stock in the same transaction as the Planned Meal's Cooked change.
+// If fn returns an error, or any statement fails, the error is returned and the
+// caller is expected to roll tx back.
+func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) {
 	current, err := queryLots(ctx, tx, ingredientID)
 	if err != nil {
 		return nil, err
@@ -214,24 +236,7 @@ func (s *Store) Update(ctx context.Context, ingredientID int64, fn func([]stock.
 			return nil, err
 		}
 	}
-
-	saved, err := queryLots(ctx, tx, ingredientID)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return saved, nil
-}
-
-// UpdateTx is Update inside the caller's transaction: it never begins, commits
-// or rolls back, so the changes commit or roll back with tx. Used by Planning
-// to deduct Stock in the same transaction as the Planned Meal's Cooked change.
-// If fn returns an error, or any statement fails, the error is returned and the
-// caller is expected to roll tx back.
-func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) {
-	return nil, errors.New("stock store: UpdateTx not implemented") // STUB
+	return queryLots(ctx, tx, ingredientID)
 }
 
 // AddWaste records waste.

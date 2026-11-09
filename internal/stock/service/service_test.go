@@ -47,16 +47,18 @@ func (p *fakePub) Publish(topic string, data any) {
 func (p *fakePub) count() int { p.mu.Lock(); defer p.mu.Unlock(); return len(p.events) }
 
 // failingIngredients fails the lookup of one Ingredient with a database-style
-// error (not ErrUnknownIngredient), to stop a Cooked deduction partway.
+// error (not ErrUnknownIngredient), to stop a Cooked deduction partway. It only
+// fails while *armed is true, so the fixture can still add Stock first.
 type failingIngredients struct {
 	service.Ingredients
 	failID int64
+	armed  *bool
 }
 
 var errLookup = errors.New("ingredient lookup failed")
 
 func (f failingIngredients) Ingredient(ctx context.Context, id int64) (service.IngredientInfo, error) {
-	if id == f.failID {
+	if *f.armed && id == f.failID {
 		return service.IngredientInfo{}, errLookup
 	}
 	return f.Ingredients.Ingredient(ctx, id)
@@ -503,18 +505,21 @@ func assertUntouched(t *testing.T, f fixture) {
 
 // DeductForCooked is all-or-nothing across Ingredients (one transaction).
 func TestDeductForCookedIsAllOrNothingWhenALaterIngredientLookupFails(t *testing.T) {
+	armed := false
 	f := setupWith(t, func(f fixture, ings service.Ingredients) service.Ingredients {
-		return failingIngredients{Ingredients: ings, failID: f.eggs}
+		return failingIngredients{Ingredients: ings, failID: f.eggs, armed: &armed}
 	})
 	f.add(t, f.thighs, 600, "2026-11-08")
 	f.add(t, f.milk, 1000, "")
 	f.add(t, f.eggs, 6, "2026-11-09")
 	before := f.pub.count()
+	armed = true
 	_, err := f.svc.DeductForCooked(ctx, []stock.Need{
 		{IngredientID: f.thighs, Quantity: 200},
 		{IngredientID: f.milk, Quantity: 100},
 		{IngredientID: f.eggs, Quantity: 2},
 	})
+	armed = false
 	if !errors.Is(err, errLookup) {
 		t.Fatalf("err = %v, want the lookup failure", err)
 	}

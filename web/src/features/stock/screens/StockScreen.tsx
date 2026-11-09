@@ -13,12 +13,11 @@ import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
 import { StockTile } from '../components/StockTile'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
-import { useStockActions, useSpoiledLots, useStockLots, useStockTotals, useToday } from '../hooks/useStock'
+import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 
 export function StockScreen(): ReactElement | null {
-  const today = useToday()
   const totals = useStockTotals()
   const { system = 'metric' } = totals
   const spoiled = useSpoiledLots()
@@ -30,6 +29,8 @@ export function StockScreen(): ReactElement | null {
   const [adding, setAdding] = useState(false)
   const [failed, setFailed] = useState(false)
   const lots = useStockLots(selectedId)
+  // The household's date comes from the server with the lots; go-off wording uses it.
+  const today = spoiled.today ?? lots.today ?? ''
 
   const items = useMemo(() => sortTotals(totals.data ?? []), [totals.data])
   const selected = items.find((i) => i.ingredientId === selectedId) ?? null

@@ -161,7 +161,7 @@ func (a *api) lots(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"lots": lotsToJSON(vs)})
+	a.writeLots(w, r, vs)
 }
 
 type addLotBody struct {
@@ -237,7 +237,18 @@ func (a *api) spoiled(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"lots": lotsToJSON(vs)})
+	a.writeLots(w, r, vs)
+}
+
+// writeLots answers {today, lots}: the household's date, so the web app words
+// go-off dates against the server's day, and the lots with their flags.
+func (a *api) writeLots(w http.ResponseWriter, r *http.Request, vs []service.LotView) {
+	today, err := a.svc.Today(r.Context())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"today": string(today), "lots": lotsToJSON(vs)})
 }
 
 func (a *api) throwOut(w http.ResponseWriter, r *http.Request) {

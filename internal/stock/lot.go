@@ -250,7 +250,7 @@ func Totals(lots []Lot) map[int64]float64 {
 func Spoiled(lots []Lot, today Date) []Lot {
 	var out []Lot
 	for _, l := range lots {
-		if !l.GoesOff.IsNone() && l.GoesOff < today {
+		if IsSpoiled(l, today) {
 			out = append(out, l)
 		}
 	}

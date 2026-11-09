@@ -14,14 +14,23 @@ const UseSoonDays = 3
 // today. A lot is still fine on its go-off date; a lot with no go-off date is
 // never spoiled. This is the single definition the service and Spoiled share.
 func IsSpoiled(lot Lot, today Date) bool {
-	return false // STUB: Developer implements (tests first)
+	return !lot.GoesOff.IsNone() && lot.GoesOff < today
 }
 
 // IsUseSoon reports whether the lot should be used soon: it has a go-off date
 // from today up to today+UseSoonDays inclusive. A spoiled lot is not "use soon"
 // (it is spoiled), and a lot with no go-off date never is.
 func IsUseSoon(lot Lot, today Date) bool {
-	return false // STUB: Developer implements (tests first)
+	return useSoonWithin(lot, today, UseSoonDays)
+}
+
+// useSoonWithin is the use-soon window for any number of days: go-off from
+// today to today+days inclusive, and not spoiled.
+func useSoonWithin(lot Lot, today Date, days int) bool {
+	if lot.GoesOff.IsNone() || IsSpoiled(lot, today) {
+		return false
+	}
+	return lot.GoesOff <= today.AddDays(days)
 }
 
 // FormatQuantity writes a Base Unit quantity as text: "300 g", "1.5 ml",
@@ -80,13 +89,9 @@ func ShortfallMessage(name, base string, have, need float64) string {
 // UseSoon returns the lots that go off today or within days days (not yet
 // spoiled), ordered by go-off date then ID. Lots without a go-off date never qualify.
 func UseSoon(lots []Lot, today Date, days int) []Lot {
-	last := today.AddDays(days)
 	var out []Lot
 	for _, l := range lots {
-		if l.GoesOff.IsNone() {
-			continue
-		}
-		if l.GoesOff >= today && l.GoesOff <= last {
+		if useSoonWithin(l, today, days) {
 			out = append(out, l)
 		}
 	}

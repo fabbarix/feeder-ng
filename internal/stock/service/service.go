@@ -350,51 +350,27 @@ func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
 // DeductForCooked takes needs (Base Units) out of Stock when a Planned Meal is
 // Cooked. It never blocks: Stock floors at 0, unknown Ingredients and
 // non-positive needs are skipped, and each uncovered need yields a Warning.
+// The deduction runs in its own transaction across every Ingredient (all or
+// nothing) and the `stock` event is published only after it commits.
 func (s *Service) DeductForCooked(ctx context.Context, needs []stock.Need) ([]Warning, error) {
-	warnings := []Warning{}
-	var changedIDs []int64
-	for _, n := range needs {
-		if !(n.Quantity > 0) || math.IsInf(n.Quantity, 0) {
-			continue
-		}
-		ing, err := s.ingredient(ctx, n.IngredientID)
-		if errors.Is(err, ErrUnknownIngredient) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		var have, shortfall float64
-		changed := false
-		_, err = s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
-			have = stock.Total(lots)
-			res := stock.Deduct(lots, n.Quantity)
-			shortfall = res.Shortfall
-			changed = len(res.Taken) > 0
-			return store.Mutation{Lots: res.Lots}, nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		if changed {
-			changedIDs = append(changedIDs, ing.ID)
-		}
-		if shortfall > 0 {
-			warnings = append(warnings, Warning{
-				IngredientID: ing.ID,
-				Name:         ing.Name,
-				BaseUnit:     ing.BaseUnit,
-				Have:         have,
-				Need:         n.Quantity,
-				Shortfall:    shortfall,
-				Message:      stock.ShortfallMessage(ing.Name, ing.BaseUnit, have, n.Quantity),
-			})
-		}
+	todo, err := s.resolve(ctx, needs)
+	if err != nil {
+		return nil, err
 	}
-	if len(changedIDs) > 0 {
-		s.publish(map[string]any{"changed": "lots", "ingredientIds": changedIDs})
+	tx, err := s.st.Begin(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return warnings, nil
+	defer func() { _ = tx.Rollback() }()
+	d, err := s.apply(ctx, tx, todo)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	s.PublishDeduction(d)
+	return d.Warnings, nil
 }
 
 // Deduction is the outcome of DeductForCookedTx: the shortfall Warnings and the
@@ -411,14 +387,82 @@ type Deduction struct {
 // and leaves the caller to roll tx back, so Stock is all-or-nothing across every
 // Ingredient; a commit makes every deduction final. After a successful commit
 // the caller calls PublishDeduction. Behaviour per need is that of DeductForCooked.
+// Every Ingredient is resolved before the first write, so a lookup failure
+// writes nothing.
 func (s *Service) DeductForCookedTx(ctx context.Context, tx *sql.Tx, needs []stock.Need) (Deduction, error) {
-	return Deduction{}, errors.New("stock service: DeductForCookedTx not implemented") // STUB
+	todo, err := s.resolve(ctx, needs)
+	if err != nil {
+		return Deduction{}, err
+	}
+	return s.apply(ctx, tx, todo)
 }
 
 // PublishDeduction publishes the `stock` event for a committed Deduction (only
 // if some Stock changed). Call it after the caller's transaction commits, never before.
 func (s *Service) PublishDeduction(d Deduction) {
-	// STUB
+	if len(d.ChangedIngredientIDs) > 0 {
+		s.publish(map[string]any{"changed": "lots", "ingredientIds": d.ChangedIngredientIDs})
+	}
+}
+
+// deduction is one resolved need: the Ingredient looked up and the need to take out.
+type deduction struct {
+	ing  IngredientInfo
+	need stock.Need
+}
+
+// resolve looks up every Ingredient of the needs, skipping unknown Ingredients
+// and non-positive needs. Any other lookup error is returned before anything is written.
+func (s *Service) resolve(ctx context.Context, needs []stock.Need) ([]deduction, error) {
+	var out []deduction
+	for _, n := range needs {
+		if !(n.Quantity > 0) || math.IsInf(n.Quantity, 0) {
+			continue
+		}
+		ing, err := s.ingredient(ctx, n.IngredientID)
+		if errors.Is(err, ErrUnknownIngredient) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, deduction{ing: ing, need: n})
+	}
+	return out, nil
+}
+
+// apply takes each resolved need out of its Ingredient's lots inside tx.
+func (s *Service) apply(ctx context.Context, tx *sql.Tx, todo []deduction) (Deduction, error) {
+	d := Deduction{Warnings: []Warning{}}
+	for _, t := range todo {
+		var have, shortfall float64
+		changed := false
+		_, err := s.st.UpdateTx(ctx, tx, t.ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
+			have = stock.Total(lots)
+			res := stock.Deduct(lots, t.need.Quantity)
+			shortfall = res.Shortfall
+			changed = len(res.Taken) > 0
+			return store.Mutation{Lots: res.Lots}, nil
+		})
+		if err != nil {
+			return Deduction{}, err
+		}
+		if changed {
+			d.ChangedIngredientIDs = append(d.ChangedIngredientIDs, t.ing.ID)
+		}
+		if shortfall > 0 {
+			d.Warnings = append(d.Warnings, Warning{
+				IngredientID: t.ing.ID,
+				Name:         t.ing.Name,
+				BaseUnit:     t.ing.BaseUnit,
+				Have:         have,
+				Need:         t.need.Quantity,
+				Shortfall:    shortfall,
+				Message:      stock.ShortfallMessage(t.ing.Name, t.ing.BaseUnit, have, t.need.Quantity),
+			})
+		}
+	}
+	return d, nil
 }
 
 // Projected returns the current lots per Ingredient in consumption order.
@@ -488,7 +532,7 @@ func (s *Service) spoiledLot(ctx context.Context, lotID int64, today stock.Date)
 	if err != nil {
 		return store.StoredLot{}, err
 	}
-	if lot.GoesOff.IsNone() || lot.GoesOff >= today {
+	if !stock.IsSpoiled(lot.Lot, today) {
 		return store.StoredLot{}, ErrNotSpoiled
 	}
 	return lot, nil
@@ -527,12 +571,13 @@ func (s *Service) views(ctx context.Context, stored []store.StoredLot, today sto
 }
 
 func view(l store.StoredLot, ing IngredientInfo, today stock.Date) LotView {
-	v := LotView{StoredLot: l, IngredientName: ing.Name, BaseUnit: ing.BaseUnit}
-	if !l.GoesOff.IsNone() {
-		v.Spoiled = l.GoesOff < today
-		v.UseSoon = !v.Spoiled && l.GoesOff <= today.AddDays(stock.UseSoonDays)
+	return LotView{
+		StoredLot:      l,
+		IngredientName: ing.Name,
+		BaseUnit:       ing.BaseUnit,
+		Spoiled:        stock.IsSpoiled(l.Lot, today),
+		UseSoon:        stock.IsUseSoon(l.Lot, today),
 	}
-	return v
 }
 
 // summarise builds one Ingredient's Stock from its lots (none = empty Stock).
@@ -548,9 +593,9 @@ func summarise(ing IngredientInfo, lots []store.StoredLot, today stock.Date) Ing
 			out.NextGoesOff = l.GoesOff
 		}
 		switch {
-		case l.GoesOff < today:
+		case stock.IsSpoiled(l.Lot, today):
 			out.SpoiledCount++
-		case l.GoesOff <= today.AddDays(stock.UseSoonDays):
+		case stock.IsUseSoon(l.Lot, today):
 			out.UseSoon = true
 		}
 	}
