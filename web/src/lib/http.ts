@@ -3,12 +3,15 @@
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
+  /** Every other key of the response's `error` object (e.g. `field`, `reason`, `unit`), for typed handling. */
+  readonly details: Readonly<Record<string, unknown>>
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details: Record<string, unknown> = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.details = details
   }
 }
 
@@ -69,11 +72,12 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
 
 async function readError(res: Response): Promise<ApiError> {
   try {
-    const parsed = JSON.parse(await res.text()) as { error?: { code?: unknown; message?: unknown } }
+    const parsed = JSON.parse(await res.text()) as { error?: { code?: unknown; message?: unknown } & Record<string, unknown> }
     const code = parsed.error?.code
     if (typeof code === 'string') {
       const message = typeof parsed.error?.message === 'string' ? parsed.error.message : res.statusText
-      return new ApiError(res.status, code, message)
+      const { code: _code, message: _message, ...details } = parsed.error ?? {}
+      return new ApiError(res.status, code, message, details)
     }
   } catch {
     // Not the error shape; fall through.
