@@ -237,3 +237,36 @@ func TestNewFailsWithoutAdminEmail(t *testing.T) {
 		t.Fatal("app.New must refuse an empty AdminEmail")
 	}
 }
+
+func TestAppRejectsCrossOriginAndNonJSONWrites(t *testing.T) {
+	reg := app.NewRegistry()
+	reg.Register(app.Module{Name: "echo", Mount: func(r *app.Router, _ app.Deps) {
+		r.Public("POST /api/echo", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	}})
+	h := build(t, fstest.MapFS{"index.html": {Data: []byte("x")}}, reg)
+	post := func(ct, origin string) int {
+		req := httptest.NewRequest("POST", "/api/echo", strings.NewReader(`{}`))
+		req.Host = "feeder.example.test"
+		if ct != "" {
+			req.Header.Set("Content-Type", ct)
+		}
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		rec := httptest.NewRecorder()
+		h.app.Handler.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if c := post("application/json", ""); c != 204 {
+		t.Errorf("JSON, no Origin: %d", c)
+	}
+	if c := post("text/plain", ""); c != 415 {
+		t.Errorf("text/plain: %d, want 415", c)
+	}
+	if c := post("application/json", "https://evil.example"); c != 403 {
+		t.Errorf("foreign Origin: %d, want 403", c)
+	}
+	if c := post("application/json", "http://feeder.example.test"); c != 204 {
+		t.Errorf("same-host Origin: %d, want 204", c)
+	}
+}
