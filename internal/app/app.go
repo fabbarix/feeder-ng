@@ -70,7 +70,7 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	for _, m := range o.registry.Modules() {
 		m.Mount(r, deps)
 	}
-	return &App{Handler: recoverPanics(o.logger, mux), Deps: deps}, nil
+	return &App{Handler: recoverPanics(o.logger, httpx.CSRFGuard(cfg.BaseURL, mux)), Deps: deps}, nil
 }
 
 // eventStream serves GET /api/events for a signed-in request. The stream is

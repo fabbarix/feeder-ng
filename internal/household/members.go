@@ -1,0 +1,53 @@
+package household
+
+import (
+	"math"
+	"strings"
+)
+
+// Member is a person who eats from the plan.
+type Member struct {
+	ID            int64
+	Name          string
+	Colour        string // #rrggbb
+	Avatar        string // optional short text, e.g. an emoji
+	PortionFactor float64
+	UserID        *int64
+}
+
+// MemberInput is what an Admin supplies to create or change a Member.
+type MemberInput struct {
+	Name          string
+	Colour        string
+	Avatar        string
+	PortionFactor float64
+}
+
+// Normalized trims the name and avatar. It returns a copy.
+func (m MemberInput) Normalized() MemberInput {
+	m.Name = strings.TrimSpace(m.Name)
+	m.Avatar = strings.TrimSpace(m.Avatar)
+	return m
+}
+
+// ValidatePortionFactor accepts 0.25 to 3 in steps of 0.25.
+func ValidatePortionFactor(f float64) error {
+	if f < 0.25 || f > 3 || math.Abs(f*4-math.Round(f*4)) > 1e-9 {
+		return fieldError("portionFactor", "must be between 0.25 and 3 in steps of 0.25")
+	}
+	return nil
+}
+
+// Validate checks name, colour, avatar and Portion Factor.
+func (m MemberInput) Validate() error {
+	if n := nameLength(m.Name); n < 1 || n > 50 {
+		return fieldError("name", "must be between 1 and 50 characters")
+	}
+	if !validHex(m.Colour) {
+		return fieldError("colour", "must be a #rrggbb colour")
+	}
+	if nameLength(m.Avatar) > 4 {
+		return fieldError("avatar", "must be at most 4 characters")
+	}
+	return ValidatePortionFactor(m.PortionFactor)
+}
