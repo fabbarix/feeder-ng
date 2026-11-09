@@ -1,3 +1,6 @@
+import { useCallback, useState } from 'react'
+import { importApi } from '../api'
+
 export interface UseAgentPrompt {
   state: 'idle' | 'copying' | 'copied' | 'failed'
   /** Fetches the prompt and writes it to the clipboard; state follows. */
@@ -6,5 +9,16 @@ export interface UseAgentPrompt {
 
 /** Copy Agent Prompt: `importApi.agentPrompt()` then `navigator.clipboard.writeText`. A failure of either is state 'failed'. */
 export function useAgentPrompt(): UseAgentPrompt {
-  throw new Error('not implemented')
+  const [state, setState] = useState<UseAgentPrompt['state']>('idle')
+  const copy = useCallback(async () => {
+    setState('copying')
+    try {
+      const text = await importApi.agentPrompt()
+      await navigator.clipboard.writeText(text)
+      setState('copied')
+    } catch {
+      setState('failed')
+    }
+  }, [])
+  return { state, copy }
 }
