@@ -1,5 +1,6 @@
 // Weight Barcode Rule form: text inputs <-> WeightRule. Plain TypeScript, no React.
-import type { ValueKind, ValueUnit, WeightRule } from '../../scan/lib/barcode'
+import { validateRule, type ValueKind, type ValueUnit, type WeightRule } from '../../scan/lib/barcode'
+import { strings } from '../strings'
 
 /** Every field is the text of an input. unit is '' for a price rule. */
 export interface RuleFormValues {
@@ -15,12 +16,23 @@ export interface RuleFormValues {
 
 /** Defaults of a new rule: weight in g, item digits 3-7, value digits 8-12, 0 decimal places, empty prefix. */
 export function emptyRuleForm(): RuleFormValues {
-  throw new Error('TODO')
+  return {
+    prefix: '', kind: 'weight', unit: 'g',
+    itemStart: '3', itemLength: '5', valueStart: '8', valueLength: '5', decimalPlaces: '0',
+  }
 }
 
 export function ruleToForm(rule: WeightRule): RuleFormValues {
-  void rule
-  throw new Error('TODO')
+  return {
+    prefix: rule.prefix,
+    kind: rule.valueKind,
+    unit: rule.valueKind === 'price' ? '' : (rule.valueUnit ?? 'g'),
+    itemStart: String(rule.item.start),
+    itemLength: String(rule.item.length),
+    valueStart: String(rule.value.start),
+    valueLength: String(rule.value.length),
+    decimalPlaces: String(rule.decimalPlaces),
+  }
 }
 
 /**
@@ -28,24 +40,44 @@ export function ruleToForm(rule: WeightRule): RuleFormValues {
  * Everything else is kept.
  */
 export function setKind(v: RuleFormValues, kind: ValueKind): RuleFormValues {
-  void v; void kind
-  throw new Error('TODO')
+  return { ...v, kind, unit: kind === 'price' ? '' : 'g' }
+}
+
+function whole(text: string): number | null {
+  return /^\d+$/.test(text) ? Number(text) : null
 }
 
 /** null when any of the five numeric fields is not a whole number (empty counts). id is 0; a price rule has no valueUnit. */
 export function toRule(v: RuleFormValues): WeightRule | null {
-  void v
-  throw new Error('TODO')
+  const itemStart = whole(v.itemStart)
+  const itemLength = whole(v.itemLength)
+  const valueStart = whole(v.valueStart)
+  const valueLength = whole(v.valueLength)
+  const decimalPlaces = whole(v.decimalPlaces)
+  if (itemStart === null || itemLength === null || valueStart === null || valueLength === null || decimalPlaces === null) {
+    return null
+  }
+  const rule: WeightRule = {
+    id: 0,
+    prefix: v.prefix,
+    item: { start: itemStart, length: itemLength },
+    value: { start: valueStart, length: valueLength },
+    valueKind: v.kind,
+    decimalPlaces,
+  }
+  if (v.kind === 'weight') rule.valueUnit = v.unit === '' ? 'g' : v.unit
+  return rule
 }
 
 /** The message to show: strings.errNumber, else `validateRule`'s reason; null when the rule is fine. */
 export function ruleFormError(v: RuleFormValues): string | null {
-  void v
-  throw new Error('TODO')
+  const rule = toRule(v)
+  if (rule === null) return strings.errNumber
+  return validateRule(rule)
 }
 
 /** Choices for the unit select: weight -> g, kg, oz, lb; price -> one option ('' = the Currency's minor unit). */
 export function unitOptions(kind: ValueKind, currency: string): { value: '' | ValueUnit; label: string }[] {
-  void kind; void currency
-  throw new Error('TODO')
+  if (kind === 'price') return [{ value: '', label: strings.priceUnit(currency) }]
+  return (['g', 'kg', 'oz', 'lb'] as const).map((u) => ({ value: u, label: u }))
 }
