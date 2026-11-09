@@ -6,13 +6,14 @@ export interface ChipProps {
   tone?: ChipTone
   icon?: ReactNode
   selected?: boolean
+  disabled?: boolean
   onClick?: () => void
   'data-kind'?: string
   children: ReactNode
 }
 
 /** A pill. A button (with aria-pressed when selected is given) when clickable. */
-export function Chip({ tone = 'neutral', icon, selected, onClick, 'data-kind': kind, children }: ChipProps) {
+export function Chip({ tone = 'neutral', icon, selected, disabled, onClick, 'data-kind': kind, children }: ChipProps) {
   const content = (
     <>
       {icon ? <span className="chip__icon" aria-hidden="true">{icon}</span> : null}
@@ -27,6 +28,7 @@ export function Chip({ tone = 'neutral', icon, selected, onClick, 'data-kind': k
         data-tone={tone}
         data-kind={kind}
         aria-pressed={selected}
+        disabled={disabled}
         onClick={onClick}
       >
         {content}

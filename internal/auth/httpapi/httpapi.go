@@ -25,6 +25,9 @@ func me(u auth.User) meBody {
 }
 
 func mount(r *app.Router, d app.Deps) {
+	signInRoutes(r, d)
+	mountAllowlist(r, d)
+
 	r.User("GET /api/me", func(w http.ResponseWriter, req *http.Request) {
 		u, _ := auth.UserFrom(req.Context())
 		httpx.WriteJSON(w, http.StatusOK, me(u))

@@ -1,0 +1,153 @@
+/* Settings screens: layout only; colours come from the theme tokens. */
+.settings {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+}
+.settings__title {
+  margin: 0;
+  font-size: 1.75rem;
+}
+.settings__tile-title {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+}
+.settings__stack {
+  display: grid;
+  gap: 12px;
+}
+.settings__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.settings__row--between {
+  justify-content: space-between;
+}
+.settings__row--wrap-start {
+  align-items: flex-start;
+}
+.settings__heading {
+  margin: 8px 0 4px;
+  font-size: 1rem;
+}
+.settings__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.settings__muted {
+  margin: 0;
+  opacity: 0.75;
+}
+.settings__error {
+  margin: 0;
+  color: var(--color-on-surface);
+  font-weight: 600;
+}
+.settings__swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--color-outline);
+}
+.settings__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+.field__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.field__hint,
+.field__error {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.field__error {
+  font-weight: 600;
+}
+.field input[type='text'],
+.field input[type='email'],
+.field input[type='number'],
+.field input[type='time'],
+.field input[type='date'],
+.field select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-outline);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font: inherit;
+}
+.field input[type='color'] {
+  width: 56px;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--color-outline);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.field input[aria-invalid='true'] {
+  border-width: 2px;
+}
+.field input:disabled,
+.field select:disabled {
+  opacity: 0.7;
+}
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.choice-group legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.slider {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
+.slider-anchors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.attendance {
+  display: grid;
+  gap: 8px;
+}
+.attendance__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

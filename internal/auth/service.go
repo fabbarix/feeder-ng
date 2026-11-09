@@ -117,21 +117,9 @@ func (s *Service) AddUser(ctx context.Context, email, displayName string, isAdmi
 
 // UserByEmail looks a User up, case-insensitively. ErrNotFound if absent.
 func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
-	var (
-		u       User
-		created string
-	)
-	err := s.db.QueryRowContext(ctx,
+	return scanUser(s.db.QueryRowContext(ctx,
 		`SELECT id, email, display_name, is_admin, created_at FROM users WHERE email = ?`,
-		normalizeEmail(email)).Scan(&u.ID, &u.Email, &u.DisplayName, &u.IsAdmin, &created)
-	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, ErrNotFound
-	}
-	if err != nil {
-		return User{}, err
-	}
-	u.CreatedAt, err = time.Parse(timeFormat, created)
-	return u, err
+		normalizeEmail(email)))
 }
 
 // DeleteUser removes a User from the allowlist; their sessions go with them.
@@ -139,7 +127,7 @@ func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
 func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
-		return err
+		return lastAdminError(err)
 	}
 	n, err := res.RowsAffected()
 	if err != nil {
