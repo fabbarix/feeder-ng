@@ -1,0 +1,8 @@
+build/
+*.db
+*.db-shm
+*.db-wal
+.serena/
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
