@@ -3,48 +3,138 @@
 // store, respond. The module also wires everything at Mount: the Runner (with the
 // household, recipe, product and stock adapters), the invalidation subscription,
 // the PlannedChecker and the nightly job on app.Deps.Scheduler.
-//
-// This file is the Designer's stub: every route answers 501 until the Developer
-// fills it in.
 package httpapi
 
 import (
+	"context"
+	"errors"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
-	_ "github.com/fabbarix/feeder-ng/internal/plan/store" // registers the PlannedChecker "planning"
+	"github.com/fabbarix/feeder-ng/internal/plan"
+	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/plan/store"
 )
 
 func init() { app.Register(app.Module{Name: "planning", Mount: mount}) }
 
+// mount registers the routes. Every route needs a signed-in User; none is Admin-only (spec §2 lists the Admin duties
+// and Slot Rules, Variety Rules and the plan are not among them).
 func mount(r *app.Router, d app.Deps) {
-	// Every route needs a signed-in User; none is Admin-only (spec §2 lists the Admin duties and
-	// Slot Rules, Variety Rules and the plan are not among them).
-	for _, route := range []string{
-		"GET /api/plan",
-		"GET /api/plan/to-confirm",
-		"GET /api/plan/couldnt-plan",
-		"GET /api/plan/leftovers",
-		"POST /api/plan/regenerate",
-		"PUT /api/plan/{date}/{slotId}",
-		"POST /api/plan/{date}/{slotId}/confirm",
-		"POST /api/plan/{date}/{slotId}/unpin",
-		"GET /api/plan/{date}/{slotId}/alternatives",
-		"GET /api/plan/{date}/{slotId}/cook",
-		"POST /api/plan/{date}/{slotId}/cooked",
-		"POST /api/plan/{date}/{slotId}/not-cooked",
-		"GET /api/slot-rules",
-		"POST /api/slot-rules",
-		"DELETE /api/slot-rules/{id}",
-		"GET /api/variety-rules",
-		"PUT /api/variety-rules/{tag}",
-		"DELETE /api/variety-rules/{tag}",
-	} {
-		r.User(route, notImplemented)
+	src := runner.NewDBSources(d.DB, d.Clock, d.Logger)
+	st := store.New(d.DB, d.Clock)
+	run := runner.New(runner.Deps{
+		DB: d.DB, Clock: d.Clock, Store: st, Source: src,
+		Stock:  runner.NewStockService(d.DB, d.Clock, d.Events),
+		Events: d.Events, Logger: d.Logger,
+	})
+	if d.Context != nil {
+		go run.Subscribe(d.Context, d.Events)
+		go run.Start(d.Context)
 	}
+	d.Scheduler.SetZone(func(ctx context.Context) (*time.Location, error) {
+		_, loc, err := src.Settings(ctx)
+		return loc, err
+	})
+	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
+
+	a := &api{run: run, st: st, names: newNames(d)}
+	r.User("GET /api/plan", a.view)
+	r.User("GET /api/plan/to-confirm", a.toConfirm)
+	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
+	r.User("GET /api/plan/leftovers", a.leftovers)
+	r.User("POST /api/plan/regenerate", a.regenerate)
+	r.User("PUT /api/plan/{date}/{slotId}", a.setMeal)
+	r.User("POST /api/plan/{date}/{slotId}/confirm", a.confirm)
+	r.User("POST /api/plan/{date}/{slotId}/unpin", a.unpin)
+	r.User("GET /api/plan/{date}/{slotId}/alternatives", a.alternatives)
+	r.User("GET /api/plan/{date}/{slotId}/cook", a.cookPreview)
+	r.User("POST /api/plan/{date}/{slotId}/cooked", a.cooked)
+	r.User("POST /api/plan/{date}/{slotId}/not-cooked", a.notCooked)
+	r.User("GET /api/slot-rules", a.slotRules)
+	r.User("POST /api/slot-rules", a.addSlotRule)
+	r.User("DELETE /api/slot-rules/{id}", a.deleteSlotRule)
+	r.User("GET /api/variety-rules", a.varietyRules)
+	r.User("PUT /api/variety-rules/{tag}", a.setVarietyRule)
+	r.User("DELETE /api/variety-rules/{tag}", a.deleteVarietyRule)
 }
 
-func notImplemented(w http.ResponseWriter, _ *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "Planning is not implemented yet")
+type api struct {
+	run   *runner.Runner
+	st    *store.Store
+	names *names
+}
+
+// writeErr maps the runner's and store's errors to the API's error codes.
+func writeErr(w http.ResponseWriter, err error) {
+	writeFieldErr(w, err, "")
+}
+
+func writeFieldErr(w http.ResponseWriter, err error, field string) {
+	var status int
+	var code string
+	switch {
+	case errors.Is(err, runner.ErrNotFound), errors.Is(err, store.ErrNotFound):
+		status, code = http.StatusNotFound, "not_found"
+	case errors.Is(err, runner.ErrUnknownSlot):
+		status, code = http.StatusNotFound, "unknown_slot"
+	case errors.Is(err, runner.ErrInPast):
+		status, code = http.StatusUnprocessableEntity, "in_past"
+	case errors.Is(err, runner.ErrAlreadyResolved):
+		status, code = http.StatusConflict, "already_resolved"
+	case errors.Is(err, runner.ErrNotSwappable):
+		status, code = http.StatusConflict, "not_swappable"
+	case errors.Is(err, runner.ErrUnknownRecipe):
+		status, code = http.StatusUnprocessableEntity, "unknown_recipe"
+	case errors.Is(err, runner.ErrArchivedRecipe):
+		status, code = http.StatusUnprocessableEntity, "recipe_archived"
+	case errors.Is(err, runner.ErrInvalidBatches):
+		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "batches"
+	case errors.Is(err, plan.ErrInvalidLeftover):
+		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "leftoverPortions"
+	case errors.Is(err, store.ErrDuplicateRule):
+		status, code = http.StatusConflict, "duplicate_rule"
+	case errors.Is(err, store.ErrUnknownRef):
+		status, code = http.StatusUnprocessableEntity, "unknown_reference"
+	case errors.Is(err, store.ErrInvalid):
+		status, code = http.StatusUnprocessableEntity, "validation_failed"
+	default:
+		slog.Default().Error("planning request failed", "err", err)
+		httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong")
+		return
+	}
+	body := map[string]any{"code": code, "message": messageFor(code)}
+	if field != "" && code == "validation_failed" {
+		body["field"] = field
+	}
+	httpx.WriteJSON(w, status, map[string]any{"error": body})
+}
+
+func messageFor(code string) string {
+	switch code {
+	case "not_found":
+		return "There is no such planned meal or rule"
+	case "unknown_slot":
+		return "No such Meal Slot on that date"
+	case "in_past":
+		return "That day is already over"
+	case "already_resolved":
+		return "The planned meal is already cooked or skipped"
+	case "not_swappable":
+		return "A cooked or skipped meal cannot be swapped"
+	case "unknown_recipe":
+		return "No such Recipe"
+	case "recipe_archived":
+		return "That Recipe is archived"
+	case "duplicate_rule":
+		return "That rule already exists"
+	case "unknown_reference":
+		return "The Meal Slot or Recipe does not exist"
+	case "validation_failed":
+		return "The request is not valid"
+	}
+	return "Something went wrong"
 }
