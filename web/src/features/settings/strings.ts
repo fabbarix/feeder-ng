@@ -22,7 +22,7 @@ export const settingsStrings = {
     quietStart: 'Quiet hours start',
     quietEnd: 'Quiet hours end',
     location: 'Location',
-    locationHint: "A city, or coordinates such as 45.07, 7.69. Sets the kitchen board's sunset and sunrise dark mode.",
+    locationHint: "Coordinates such as 45.07, 7.69 are needed for the kitchen board's sunset and sunrise. A city alone keeps the 19:00 to 07:00 dark mode.",
     currency: 'Currency',
     save: 'Save household settings',
   },
