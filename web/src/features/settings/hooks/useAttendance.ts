@@ -1,4 +1,7 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { settingsApi } from '../api'
 import type { AttendanceEntry, DateAttendance } from '../types'
+import { settingsKeys } from './queryKeys'
 
 export interface AttendanceState {
   attendance: DateAttendance | undefined
@@ -12,6 +15,31 @@ export interface AttendanceState {
 }
 
 /** Does nothing (no request) while slotId or date is null. */
-export function useAttendance(_slotId: number | null, _date: string | null): AttendanceState {
-  throw new Error('not implemented')
+export function useAttendance(slotId: number | null, date: string | null): AttendanceState {
+  const queryClient = useQueryClient()
+  const enabled = slotId !== null && date !== null
+  const query = useQuery({
+    queryKey: settingsKeys.attendance(slotId ?? 0, date ?? ''),
+    queryFn: () => settingsApi.getAttendance(slotId!, date!),
+    enabled,
+  })
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: settingsKeys.attendance(slotId ?? 0, date ?? '') }),
+      queryClient.invalidateQueries({ queryKey: settingsKeys.slots }),
+    ])
+  }
+  const save = useMutation({
+    mutationFn: (attendance: AttendanceEntry[]) => settingsApi.saveAttendance(slotId!, date!, attendance),
+    onSuccess: refresh,
+  })
+  const reset = useMutation({ mutationFn: () => settingsApi.resetAttendance(slotId!, date!), onSuccess: refresh })
+  return {
+    attendance: query.data,
+    isPending: enabled && query.isPending,
+    isError: query.isError,
+    save: save.mutateAsync,
+    reset: () => reset.mutateAsync(),
+    saving: save.isPending || reset.isPending,
+  }
 }
