@@ -64,7 +64,7 @@ func TestExtrasStayUntilTickedOrDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got, _ = st.Extras(ctx, "2026-11-09"); len(got) != 2 || !got[0].Ticked {
-		t.Fatalf("a ticked extra stays listed (as done) on the day it was ticked: %+v", got)
+		t.Fatalf("a ticked extra stays listed (as ticked) on the day it was ticked: %+v", got)
 	}
 	if got, _ = st.Extras(ctx, "2026-11-10"); len(got) != 1 || got[0].ID != b.ID {
 		t.Fatalf("a ticked extra is dropped the next day: %+v", got)

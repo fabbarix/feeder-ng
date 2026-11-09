@@ -169,7 +169,7 @@ func TestLineCarriesThePackSuggestionOfTheProductLastBought(t *testing.T) {
 
 func TestWithoutAProductBoughtTheLineIsExactWithNoPack(t *testing.T) {
 	p := line(t, shopping.Derive(input(dinner("2026-11-09", 1, need(passata, 450)))), passata)
-	if p.Pack != nil || !near(p.Quantity, 450) || p.CostCents != nil {
+	if p.Pack != nil || !near(p.Quantity, 450) || p.EstimatedCostCents != nil {
 		t.Fatalf("Line = %+v, want exactly 450 g, no Pack, no cost", p)
 	}
 }
@@ -182,13 +182,13 @@ func TestEstimatedCostIsPacksTimesThePackPrice(t *testing.T) {
 	}
 	in.PackPrices = map[int64]int{7: 159} // no Price known for the milk; rice has no Product at all
 	l := shopping.Derive(in)
-	if p := line(t, l, passata); p.CostCents == nil || *p.CostCents != 318 {
-		t.Fatalf("passata cost = %v, want 318 (2 x 159)", p.CostCents)
+	if p := line(t, l, passata); p.EstimatedCostCents == nil || *p.EstimatedCostCents != 318 {
+		t.Fatalf("passata cost = %v, want 318 (2 x 159)", p.EstimatedCostCents)
 	}
-	if m := line(t, l, milk); m.CostCents != nil {
-		t.Fatalf("milk has no Price, cost = %v, want nil (shown as a dash)", *m.CostCents)
+	if m := line(t, l, milk); m.EstimatedCostCents != nil {
+		t.Fatalf("milk has no Price, cost = %v, want nil (shown as a dash)", *m.EstimatedCostCents)
 	}
-	if line(t, l, rice).CostCents != nil {
+	if line(t, l, rice).EstimatedCostCents != nil {
 		t.Fatalf("rice has no Product, want nil cost")
 	}
 	if l.EstimatedCostCents != 318 || l.UnpricedLines != 2 {
@@ -203,7 +203,7 @@ func TestTickedLinesAreKeptButLeaveTheCost(t *testing.T) {
 	in.Ticks = map[int64]shopping.Tick{passata: {IngredientID: passata, Needed: 700, By: "hand"}}
 	l := shopping.Derive(in)
 	p := line(t, l, passata)
-	if !p.Ticked || p.Pack != nil || p.CostCents != nil {
+	if !p.Ticked || p.Pack != nil || p.EstimatedCostCents != nil {
 		t.Fatalf("ticked passata = %+v, want Ticked, no Pack, no cost", p)
 	}
 	if l.EstimatedCostCents != 120 || l.UnpricedLines != 0 {
@@ -220,7 +220,7 @@ func TestATickedIngredientStaysEvenWhenStockNowCoversIt(t *testing.T) {
 	if !m.Ticked || !near(m.Quantity, 0) || !near(m.Need, 1000) {
 		t.Fatalf("tick-only Line = %+v, want Ticked, Quantity 0, Need 1000", m)
 	}
-	if l.Progress != (shopping.Progress{Done: 1, Total: 1}) || !l.Complete {
+	if l.Progress != (shopping.Progress{Ticked: 1, Total: 1}) || !l.Complete {
 		t.Fatalf("Progress/Complete = %+v/%v, want 1 of 1 and complete", l.Progress, l.Complete)
 	}
 }
@@ -267,7 +267,7 @@ func TestManualExtrasAreNotTiedToThePlan(t *testing.T) {
 	if e := l.Extras[2]; e.ID != 3 || !e.Ticked {
 		t.Fatalf("ticked extra = %+v, want it last", e)
 	}
-	if l.Progress != (shopping.Progress{Done: 1, Total: 3 + 1}) {
+	if l.Progress != (shopping.Progress{Ticked: 1, Total: 3 + 1}) {
 		t.Fatalf("Progress = %+v, want 1 of 4 (one plan Line, three extras)", l.Progress)
 	}
 }
@@ -277,11 +277,11 @@ func TestProgressAndCompleteCountLinesAndExtras(t *testing.T) {
 	in.Ticks = map[int64]shopping.Tick{rice: {IngredientID: rice, Needed: 100, By: "scan"}}
 	in.Extras = []shopping.Extra{{ID: 1, Text: "candles", Ticked: true}}
 	l := shopping.Derive(in)
-	if l.Progress != (shopping.Progress{Done: 2, Total: 3}) || l.Complete {
+	if l.Progress != (shopping.Progress{Ticked: 2, Total: 3}) || l.Complete {
 		t.Fatalf("Progress/Complete = %+v/%v, want 2 of 3, not complete", l.Progress, l.Complete)
 	}
 	in.Ticks[milk] = shopping.Tick{IngredientID: milk, Needed: 100, By: "hand"}
-	if l = shopping.Derive(in); l.Progress != (shopping.Progress{Done: 3, Total: 3}) || !l.Complete {
+	if l = shopping.Derive(in); l.Progress != (shopping.Progress{Ticked: 3, Total: 3}) || !l.Complete {
 		t.Fatalf("Progress/Complete = %+v/%v, want 3 of 3, complete", l.Progress, l.Complete)
 	}
 }

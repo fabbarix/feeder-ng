@@ -60,14 +60,14 @@ Feature: Shopping List
   Scenario: The estimated cost uses the latest Price at the selected Shop, else any Shop
     Given the shopping catalogue has the Product "Chicken thighs 500 g" of "chicken thighs" in g with pack size 500 and barcode "4000000000013"
     And the household last bought "Chicken thighs 500 g" at "Coop"
-    And "Chicken thighs 500 g" costs 450 cents at "Aldi"
+    And "Chicken thighs 500 g" has a Price of 450 cents at "Aldi"
     When I view the Shopping List at "Coop"
-    Then the line "chicken thighs" costs 1350 cents
+    Then the line "chicken thighs" has an estimated cost of 1350 cents
     And the line "rice" has no price
     And the Shopping List estimates 1350 cents
-    Given "Chicken thighs 500 g" costs 500 cents at "Coop"
+    Given "Chicken thighs 500 g" has a Price of 500 cents at "Coop"
     When I view the Shopping List at "Coop"
-    Then the line "chicken thighs" costs 1500 cents
+    Then the line "chicken thighs" has an estimated cost of 1500 cents
 
   Scenario: Manual extras are not tied to the plan and stay until deleted
     When I add the Shopping List extra "toilet paper"
@@ -104,4 +104,4 @@ Feature: Shopping List
     And I view the Shopping List
     Then the Shopping List progress is 3 of 3
     And the Shopping List is complete
-    And the Shopping List summary is 3 items, 0 cents spent and 3 Stock Lots added
+    And the Shopping List summary is 3 lines, 0 cents spent and 3 Stock Lots added

@@ -231,7 +231,7 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 	sc.Step(`^the shopping catalogue has the Product "([^"]*)" of "([^"]*)" in (g|ml|piece) with pack size (\d+) and no barcode$`, func(name, ing, base string, size int) error {
 		return product(name, ing, base, size, "")
 	})
-	sc.Step(`^"([^"]*)" costs (\d+) cents at "([^"]*)"$`, func(prod string, cents int, shop string) error {
+	sc.Step(`^"([^"]*)" has a Price of (\d+) cents at "([^"]*)"$`, func(prod string, cents int, shop string) error {
 		pid, err := productID(prod)
 		if err != nil {
 			return err
@@ -494,17 +494,17 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the line "([^"]*)" costs (\d+) cents$`, func(name string, want int) error {
+	sc.Step(`^the line "([^"]*)" has an estimated cost of (\d+) cents$`, func(name string, want int) error {
 		l := lineNamed(name)
-		if l == nil || ssNum(l["costCents"]) != float64(want) {
-			return fmt.Errorf("Line %q = %v, want cost %d", name, l, want)
+		if l == nil || ssNum(l["estimatedCostCents"]) != float64(want) {
+			return fmt.Errorf("Line %q = %v, want estimated cost %d", name, l, want)
 		}
 		return nil
 	})
 	sc.Step(`^the line "([^"]*)" has no price$`, func(name string) error {
 		l := lineNamed(name)
-		if l == nil || l["costCents"] != nil {
-			return fmt.Errorf("Line %q = %v, want no cost", name, l)
+		if l == nil || l["estimatedCostCents"] != nil {
+			return fmt.Errorf("Line %q = %v, want no estimated cost", name, l)
 		}
 		return nil
 	})
@@ -544,14 +544,14 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the Shopping List progress is (\d+) of (\d+)$`, func(done, total int) error {
+	sc.Step(`^the Shopping List progress is (\d+) of (\d+)$`, func(ticked, total int) error {
 		l, err := list()
 		if err != nil {
 			return err
 		}
 		p, _ := l["progress"].(map[string]any)
-		if ssNum(p["done"]) != float64(done) || ssNum(p["total"]) != float64(total) {
-			return fmt.Errorf("progress %v, want %d of %d", p, done, total)
+		if ssNum(p["ticked"]) != float64(ticked) || ssNum(p["total"]) != float64(total) {
+			return fmt.Errorf("progress %v, want %d of %d", p, ticked, total)
 		}
 		return nil
 	})
@@ -565,14 +565,14 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the Shopping List summary is (\d+) items, (\d+) cents spent and (\d+) Stock Lots added$`, func(n, spent, lots int) error {
+	sc.Step(`^the Shopping List summary is (\d+) lines, (\d+) cents spent and (\d+) Stock Lots added$`, func(n, spent, lots int) error {
 		l, err := list()
 		if err != nil {
 			return err
 		}
 		s, _ := l["summary"].(map[string]any)
-		if ssNum(s["items"]) != float64(n) || ssNum(s["spentCents"]) != float64(spent) || ssNum(s["lotsAdded"]) != float64(lots) {
-			return fmt.Errorf("summary %v, want %d items, %d cents, %d Lots", s, n, spent, lots)
+		if ssNum(s["lines"]) != float64(n) || ssNum(s["spentCents"]) != float64(spent) || ssNum(s["lotsAdded"]) != float64(lots) {
+			return fmt.Errorf("summary %v, want %d lines, %d cents, %d Lots", s, n, spent, lots)
 		}
 		return nil
 	})

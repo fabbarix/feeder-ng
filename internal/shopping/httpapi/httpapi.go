@@ -42,15 +42,15 @@ type packJSON struct {
 }
 
 type lineJSON struct {
-	IngredientID int64     `json:"ingredientId"`
-	Name         string    `json:"name"`
-	BaseUnit     string    `json:"baseUnit"`
-	Need         float64   `json:"need"`
-	Available    float64   `json:"available"`
-	Quantity     float64   `json:"quantity"`
-	Ticked       bool      `json:"ticked"`
-	Pack         *packJSON `json:"pack"`
-	CostCents    *int      `json:"costCents"`
+	IngredientID       int64     `json:"ingredientId"`
+	Name               string    `json:"name"`
+	BaseUnit           string    `json:"baseUnit"`
+	Need               float64   `json:"need"`
+	Available          float64   `json:"available"`
+	Quantity           float64   `json:"quantity"`
+	Ticked             bool      `json:"ticked"`
+	Pack               *packJSON `json:"pack"`
+	EstimatedCostCents *int      `json:"estimatedCostCents"`
 }
 
 type extraJSON struct {
@@ -81,12 +81,12 @@ type listJSON struct {
 }
 
 type progressJSON struct {
-	Done  int `json:"done"`
-	Total int `json:"total"`
+	Ticked int `json:"ticked"`
+	Total  int `json:"total"`
 }
 
 type summaryJSON struct {
-	Items      int `json:"items"`
+	Lines      int `json:"lines"`
 	SpentCents int `json:"spentCents"`
 	LotsAdded  int `json:"lotsAdded"`
 }
@@ -99,7 +99,7 @@ type tickJSON struct {
 
 func lineToJSON(l shopping.Line) lineJSON {
 	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, Need: l.Need, Available: l.Available,
-		Quantity: l.Quantity, Ticked: l.Ticked, CostCents: l.CostCents}
+		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents}
 	if l.Pack != nil {
 		out.Pack = &packJSON{ProductID: l.Pack.ProductID, Name: l.Pack.Name, Size: l.Pack.Size, Count: l.Pack.Count, Remainder: l.Pack.Remainder}
 	}
@@ -134,9 +134,9 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := listJSON{Today: v.Today, HorizonDays: v.HorizonDays, From: v.From, To: v.To, DefaultTo: v.DefaultTo, MaxTo: v.MaxTo,
-		Currency: v.Currency, Lines: []lineJSON{}, Extras: []extraJSON{}, Progress: progressJSON{Done: v.Progress.Done, Total: v.Progress.Total},
+		Currency: v.Currency, Lines: []lineJSON{}, Extras: []extraJSON{}, Progress: progressJSON{Ticked: v.Progress.Ticked, Total: v.Progress.Total},
 		EstimatedCostCents: v.EstimatedCostCents, UnpricedLines: v.UnpricedLines, Complete: v.Complete,
-		Summary: summaryJSON{Items: v.Summary.Items, SpentCents: v.Summary.SpentCents, LotsAdded: v.Summary.LotsAdded}}
+		Summary: summaryJSON{Lines: v.Summary.Lines, SpentCents: v.Summary.SpentCents, LotsAdded: v.Summary.LotsAdded}}
 	for _, l := range v.Lines {
 		out.Lines = append(out.Lines, lineToJSON(l))
 	}

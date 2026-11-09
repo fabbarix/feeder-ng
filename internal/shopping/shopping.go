@@ -80,13 +80,13 @@ type PackSuggestion struct {
 
 // Line is one Ingredient line of the Shopping List. Quantity is what is still to buy (0 for a tick-only line).
 type Line struct {
-	IngredientID    int64
-	Name, BaseUnit  string
-	Need, Available float64
-	Quantity        float64
-	Ticked          bool
-	Pack            *PackSuggestion
-	CostCents       *int
+	IngredientID       int64
+	Name, BaseUnit     string
+	Need, Available    float64
+	Quantity           float64
+	Ticked             bool
+	Pack               *PackSuggestion
+	EstimatedCostCents *int
 }
 
 // ExtraLine is a manual extra in the list; Quantity is the remaining amount of an Ingredient extra.
@@ -100,7 +100,7 @@ type ExtraLine struct {
 }
 
 // Progress is ticked over total (Ingredient Lines plus extras).
-type Progress struct{ Done, Total int }
+type Progress struct{ Ticked, Total int }
 
 // List is the derived Shopping List.
 type List struct {
@@ -126,7 +126,7 @@ func Derive(in Input) List {
 		if _, ok := lines[ing]; ok {
 			continue
 		}
-		// Covered by Stock (or by this range's scans) and kept as done.
+		// Covered by Stock (or by this range's scans) and kept as ticked.
 		info := in.Ingredients[ing]
 		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, Need: t.Needed, Available: t.Needed}
 	}
@@ -134,14 +134,14 @@ func Derive(in Input) List {
 		if ticked[ing] {
 			l.Ticked = true
 			l.Pack = nil
-			l.CostCents = nil
+			l.EstimatedCostCents = nil
 			lines[ing] = l
 		}
-		if !l.Ticked && l.CostCents == nil {
+		if !l.Ticked && l.EstimatedCostCents == nil {
 			out.UnpricedLines++
 		}
-		if !l.Ticked && l.CostCents != nil {
-			out.EstimatedCostCents += *l.CostCents
+		if !l.Ticked && l.EstimatedCostCents != nil {
+			out.EstimatedCostCents += *l.EstimatedCostCents
 		}
 	}
 	for _, l := range lines {
@@ -152,15 +152,15 @@ func Derive(in Input) List {
 	out.Progress = Progress{Total: len(out.Lines) + len(out.Extras)}
 	for _, l := range out.Lines {
 		if l.Ticked {
-			out.Progress.Done++
+			out.Progress.Ticked++
 		}
 	}
 	for _, e := range out.Extras {
 		if e.Ticked {
-			out.Progress.Done++
+			out.Progress.Ticked++
 		}
 	}
-	out.Complete = out.Progress.Total > 0 && out.Progress.Done == out.Progress.Total
+	out.Complete = out.Progress.Total > 0 && out.Progress.Ticked == out.Progress.Total
 	return out
 }
 
@@ -215,7 +215,7 @@ func derivedLines(in Input) map[int64]Line {
 			line.Pack = &s
 			if price, ok := in.PackPrices[p.ProductID]; ok {
 				c := s.Count * price
-				line.CostCents = &c
+				line.EstimatedCostCents = &c
 			}
 		}
 		out[ing] = line

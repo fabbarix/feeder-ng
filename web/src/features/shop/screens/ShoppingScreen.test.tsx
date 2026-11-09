@@ -25,9 +25,9 @@ beforeEach(() => {
 })
 
 describe('ShoppingScreen', () => {
-  it('shows progress, the estimated cost, the range and the items', () => {
-    show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 3, name: 'rice', quantity: 600, pack: null, costCents: null })], progress: { done: 0, total: 2 }, estimatedCostCents: 318, unpricedLines: 1 }))
-    expect(screen.getByRole('progressbar', { name: 'Items ticked' })).toHaveAttribute('aria-valuenow', '0')
+  it('shows progress, the estimated cost, the range and the Lines', () => {
+    show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 3, name: 'rice', quantity: 600, pack: null, estimatedCostCents: null })], progress: { ticked: 0, total: 2 }, estimatedCostCents: 318, unpricedLines: 1 }))
+    expect(screen.getByRole('progressbar', { name: 'Lines ticked' })).toHaveAttribute('aria-valuenow', '0')
     expect(screen.getByText('Estimated cost')).toBeInTheDocument()
     expect(screen.getByText('1 without a price')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Shop for' })).toBeInTheDocument()
@@ -46,29 +46,29 @@ describe('ShoppingScreen', () => {
   })
 
   it('ticks a free-text extra at once', async () => {
-    show(makeList({ lines: [], extras: [makeExtra()], progress: { done: 0, total: 1 } }))
+    show(makeList({ lines: [], extras: [makeExtra()], progress: { ticked: 0, total: 1 } }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick toilet paper' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(actions.tickExtra).toHaveBeenCalledWith(1, 0, 1)
   })
 
   it('asks how much for an Ingredient extra', async () => {
-    show(makeList({ lines: [], extras: [makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 })], progress: { done: 0, total: 1 } }))
+    show(makeList({ lines: [], extras: [makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 })], progress: { ticked: 0, total: 1 } }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick milk' }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick and add to Stock' }))
     expect(actions.tickExtra).toHaveBeenCalledWith(2, 2000, 1)
   })
 
-  it('ticked items sit in the Done group and can be unticked', async () => {
-    show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, costCents: null })], progress: { done: 1, total: 2 } }))
-    const done = screen.getByRole('group', { name: 'Done' })
-    await userEvent.click(within(done).getByRole('button', { name: 'Untick rice' }))
+  it('ticked Lines sit in the Ticked group and can be unticked', async () => {
+    show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 1, total: 2 } }))
+    const ticked = screen.getByRole('group', { name: 'Ticked' })
+    await userEvent.click(within(ticked).getByRole('button', { name: 'Untick rice' }))
     expect(actions.untick).toHaveBeenCalledWith(4, '2026-11-15')
     expect(screen.queryByRole('button', { name: 'Untick Passata' })).toBeNull()
   })
 
   it('extras can be deleted', async () => {
-    show(makeList({ lines: [], extras: [makeExtra()], progress: { done: 0, total: 1 } }))
+    show(makeList({ lines: [], extras: [makeExtra()], progress: { ticked: 0, total: 1 } }))
     await userEvent.click(screen.getByRole('button', { name: 'Delete toilet paper' }))
     expect(actions.deleteExtra).toHaveBeenCalledWith(1)
   })
@@ -88,7 +88,7 @@ describe('ShoppingScreen', () => {
   })
 
   it('celebrates when the list is complete', () => {
-    show(makeList({ lines: [makeLine({ ticked: true, quantity: 0, pack: null, costCents: null })], progress: { done: 1, total: 1 }, complete: true, summary: { items: 1, spentCents: 318, lotsAdded: 2 } }))
+    show(makeList({ lines: [makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 1, total: 1 }, complete: true, summary: { lines: 1, spentCents: 318, lotsAdded: 2 } }))
     expect(screen.getByRole('status')).toHaveTextContent('Shopping list complete')
     expect(screen.getByRole('status')).toHaveTextContent('$3.18 spent')
   })
@@ -99,7 +99,7 @@ describe('ShoppingScreen', () => {
   })
 
   it('says so when there is nothing to buy', () => {
-    show(makeList({ lines: [], extras: [], progress: { done: 0, total: 0 }, estimatedCostCents: 0 }))
+    show(makeList({ lines: [], extras: [], progress: { ticked: 0, total: 0 }, estimatedCostCents: 0 }))
     expect(screen.getByText('Nothing to buy')).toBeInTheDocument()
   })
 

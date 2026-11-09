@@ -10,7 +10,7 @@ export interface CelebrationTileProps {
 }
 
 /**
- * "Shopping list complete": an accent Tile with the heading, the item count, the money spent and the Stock Lots added.
+ * "Shopping list complete": an accent Tile with the heading, the Line count, the money spent and the Stock Lots added.
  * The celebration animation is a data attribute set only when the User does not prefer reduced motion.
  */
 export function CelebrationTile({ summary, currency }: CelebrationTileProps) {
@@ -25,7 +25,7 @@ export function CelebrationTile({ summary, currency }: CelebrationTileProps) {
     >
       <h2 className="celebration-tile__title">{shopStrings.celebrationTitle}</h2>
       <ul className="celebration-tile__facts">
-        <li>{shopStrings.celebrationItems(summary.items)}</li>
+        <li>{shopStrings.celebrationLines(summary.lines)}</li>
         <li>{shopStrings.celebrationSpent(formatMinor(summary.spentCents, currency))}</li>
         <li>{shopStrings.celebrationLots(summary.lotsAdded)}</li>
       </ul>

@@ -101,7 +101,7 @@ type Query struct {
 }
 
 // Summary feeds the "Shopping list complete" celebration.
-type Summary struct{ Items, SpentCents, LotsAdded int }
+type Summary struct{ Lines, SpentCents, LotsAdded int }
 
 // View is a derived list plus what the SPA needs around it.
 type View struct {
@@ -145,7 +145,7 @@ func (s *Service) List(ctx context.Context, q Query) (View, error) {
 		DefaultTo:   shopping.DefaultTo(today, horizon),
 		MaxTo:       shopping.LastPlannedDate(today, horizon),
 		Currency:    currency,
-		Summary:     Summary{Items: list.Progress.Total, SpentCents: spent, LotsAdded: ledgerLots + tickLots},
+		Summary:     Summary{Lines: list.Progress.Total, SpentCents: spent, LotsAdded: ledgerLots + tickLots},
 	}, nil
 }
 

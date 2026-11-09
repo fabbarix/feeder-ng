@@ -57,7 +57,7 @@ func TestListPrefersTheSelectedShopForPacksAndPrices(t *testing.T) {
 		t.Fatalf("Products asked for Shop %v / %v, want 2", e.products.lastBoughtShop, e.products.priceShop)
 	}
 	l := v.Lines[0]
-	if l.Pack == nil || l.Pack.Count != 2 || l.CostCents == nil || *l.CostCents != 318 || v.EstimatedCostCents != 318 {
+	if l.Pack == nil || l.Pack.Count != 2 || l.EstimatedCostCents == nil || *l.EstimatedCostCents != 318 || v.EstimatedCostCents != 318 {
 		t.Fatalf("Line = %+v, estimated %d; want 2 packs, 318", l, v.EstimatedCostCents)
 	}
 }
@@ -94,7 +94,7 @@ func TestListSubtractsProjectedStockAndShowsTicksAndExtras(t *testing.T) {
 	if len(v.Lines) != 1 || !v.Lines[0].Ticked || v.Lines[0].Quantity != 600 {
 		t.Fatalf("Lines = %+v, want milk ticked with 600 ml still to buy (400 ml were added by the tick)", v.Lines)
 	}
-	if len(v.Extras) != 1 || v.Extras[0].Text != "candles" || v.Progress.Total != 2 || v.Progress.Done != 1 {
+	if len(v.Extras) != 1 || v.Extras[0].Text != "candles" || v.Progress.Total != 2 || v.Progress.Ticked != 1 {
 		t.Fatalf("Extras/Progress = %+v / %+v", v.Extras, v.Progress)
 	}
 }
@@ -218,7 +218,7 @@ func TestTickingAnIngredientExtraAddsALotLikeAnyLine(t *testing.T) {
 		t.Fatalf("ticking a text extra adds no Lot: %+v, %v", res, err)
 	}
 	v, _ := e.svc.List(ctx, service.Query{})
-	if v.Progress.Done != 2 || v.Progress.Total != 2 || !v.Complete {
+	if v.Progress.Ticked != 2 || v.Progress.Total != 2 || !v.Complete {
 		t.Fatalf("Progress = %+v complete %v, want 2 of 2", v.Progress, v.Complete)
 	}
 	if err := e.svc.UntickExtra(ctx, text.ID); err != nil {
@@ -328,8 +328,8 @@ func TestSummaryAddsTheLedgerAndTheLotsOfTicksByHand(t *testing.T) {
 	_, _ = e.svc.Tick(ctx, service.TickInput{IngredientID: m, To: "2026-11-15", Quantity: 500})
 	_ = e.st.SetTick(ctx, "2026-11-15", shopping.Tick{IngredientID: pass, Needed: 700, By: "scan"}, nil)
 	v, _ := e.svc.List(ctx, service.Query{To: "2026-11-15"})
-	if !v.Complete || v.Summary.Items != 2 || v.Summary.SpentCents != 1590 || v.Summary.LotsAdded != 2 {
-		t.Fatalf("Summary = %+v complete %v, want items 2, spent 1590, lots 2 (one scanned, one by hand)", v.Summary, v.Complete)
+	if !v.Complete || v.Summary.Lines != 2 || v.Summary.SpentCents != 1590 || v.Summary.LotsAdded != 2 {
+		t.Fatalf("Summary = %+v complete %v, want lines 2, spent 1590, lots 2 (one scanned, one by hand)", v.Summary, v.Complete)
 	}
 }
 

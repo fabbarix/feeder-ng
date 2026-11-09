@@ -52,7 +52,7 @@ func TestAnEmptyListHasTheRangeTheCurrencyAndEmptyArrays(t *testing.T) {
 			t.Errorf("%s = %v, want []", k, v[k])
 		}
 	}
-	if p, _ := v["progress"].(map[string]any); p["done"] != float64(0) || p["total"] != float64(0) {
+	if p, _ := v["progress"].(map[string]any); p["ticked"] != float64(0) || p["total"] != float64(0) {
 		t.Errorf("progress = %v", v["progress"])
 	}
 }

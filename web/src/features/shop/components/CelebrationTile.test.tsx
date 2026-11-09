@@ -8,30 +8,30 @@ function motion(reduce: boolean) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('CelebrationTile', () => {
-  it('counts the items, the money spent and the Stock Lots added', () => {
+  it('counts the Lines, the money spent and the Stock Lots added', () => {
     motion(false)
-    render(<CelebrationTile summary={{ items: 12, spentCents: 4837, lotsAdded: 14 }} currency="USD" />)
+    render(<CelebrationTile summary={{ lines: 12, spentCents: 4837, lotsAdded: 14 }} currency="USD" />)
     const tile = screen.getByRole('status')
     expect(tile).toHaveTextContent('Shopping list complete')
-    expect(tile).toHaveTextContent('12 items')
+    expect(tile).toHaveTextContent('12 lines')
     expect(tile).toHaveTextContent('$48.37 spent')
     expect(tile).toHaveTextContent('14 Stock Lots added')
   })
 
   it('uses singular forms', () => {
     motion(false)
-    render(<CelebrationTile summary={{ items: 1, spentCents: 159, lotsAdded: 1 }} currency="USD" />)
-    expect(screen.getByRole('status')).toHaveTextContent('1 item')
+    render(<CelebrationTile summary={{ lines: 1, spentCents: 159, lotsAdded: 1 }} currency="USD" />)
+    expect(screen.getByRole('status')).toHaveTextContent('1 line')
     expect(screen.getByRole('status')).toHaveTextContent('1 Stock Lot added')
   })
 
   it('animates unless the User prefers reduced motion', () => {
     motion(false)
-    const { unmount } = render(<CelebrationTile summary={{ items: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
+    const { unmount } = render(<CelebrationTile summary={{ lines: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
     expect(screen.getByRole('status')).toHaveAttribute('data-celebrate')
     unmount()
     motion(true)
-    render(<CelebrationTile summary={{ items: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
+    render(<CelebrationTile summary={{ lines: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
     expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrate')
   })
 })

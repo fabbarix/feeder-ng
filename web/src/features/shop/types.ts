@@ -21,7 +21,7 @@ export interface ShoppingLine {
   ticked: boolean
   pack: PackSuggestion | null
   /** minor currency units for the suggested packs; null = no Price known ("—") */
-  costCents: number | null
+  estimatedCostCents: number | null
 }
 
 /** A manual extra: free text, or an Ingredient with a remaining quantity. */
@@ -36,7 +36,7 @@ export interface ShoppingExtra {
 }
 
 export interface ShoppingSummary {
-  items: number
+  lines: number
   spentCents: number
   lotsAdded: number
 }
@@ -51,7 +51,7 @@ export interface ShoppingList {
   currency: string
   lines: ShoppingLine[]
   extras: ShoppingExtra[]
-  progress: { done: number; total: number }
+  progress: { ticked: number; total: number }
   estimatedCostCents: number
   unpricedLines: number
   complete: boolean

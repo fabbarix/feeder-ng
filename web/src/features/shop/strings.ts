@@ -1,8 +1,8 @@
 // English UI strings for the Shop (Shopping List) screen.
 export const shopStrings = {
   title: 'Shop',
-  progress: 'Items ticked',
-  cost: 'Estimated cost',
+  progress: 'Lines ticked',
+  estimatedCost: 'Estimated cost',
   noPrice: '—',
   unpriced: (n: number) => `${n} without a price`,
   range: 'Shop for',
@@ -10,7 +10,7 @@ export const shopStrings = {
   rangeUntil: (label: string) => `Until ${label}`,
   empty: 'Nothing to buy',
   emptyHint: 'Plan some meals, or add an extra.',
-  done: 'Done',
+  ticked: 'Ticked',
   addExtra: 'Add an extra',
   extraText: 'Something to buy',
   extraIngredient: 'Ingredient',
@@ -22,7 +22,7 @@ export const shopStrings = {
   untick: (name: string) => `Untick ${name}`,
   deleteExtra: (name: string) => `Delete ${name}`,
   celebrationTitle: 'Shopping list complete',
-  celebrationItems: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
+  celebrationLines: (n: number) => `${n} ${n === 1 ? 'line' : 'lines'}`,
   celebrationSpent: (text: string) => `${text} spent`,
   celebrationLots: (n: number) => `${n} Stock ${n === 1 ? 'Lot' : 'Lots'} added`,
   packLine: (qty: string, count: number, name: string) => `${qty} · ${count} × ${name}`,
@@ -33,6 +33,6 @@ export const shopStrings = {
   mustBePositive: 'Enter a number above 0',
   enterAmount: 'Enter an amount',
   amountNegative: 'The amount cannot be negative',
-  doneGroup: (n: number) => `Done (${n})`,
+  tickedGroup: (n: number) => `Ticked (${n})`,
   deleteFailed: 'Could not save that. Try again.',
 }

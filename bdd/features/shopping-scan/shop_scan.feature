@@ -9,7 +9,6 @@ Feature: Scanning in a Shop
     And the shopping household has a Shop "Coop"
     And the shopping catalogue has the Product "Mutti passata 700 g" of "passata" in g with pack size 700 and barcode "8000500310427"
     And the shopping catalogue has the Product "Milk 1 l" of "milk" in ml with pack size 1000 and barcode "4000000000013"
-    And "Mutti passata 700 g" costs 159 cents at "Coop"
     And I add the Shopping List extra of 1400 g of "passata"
 
   Scenario: A scan adds a Stock Lot, records the Product at the Shop and reduces the line
@@ -34,20 +33,22 @@ Feature: Scanning in a Shop
     And the Shopping List is complete
 
   Scenario: The price is prefilled from the last Price at this Shop and can be edited
+    Given "Mutti passata 700 g" has a Price of 159 cents at "Coop"
     When I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
     Then scan "scan-0001" shows the price 159 cents
     When I change the price of scan "scan-0001" to 179 cents
     Then the response status is 200
     And the last Price of "Mutti passata 700 g" at "Coop" is 179 cents
 
-  Scenario: An item that is not on the list is still added to Stock
+  Scenario: A Product that is not on the list is still added to Stock
     When I scan the barcode "4000000000013" at "Coop" as scan "scan-0001"
     Then scan "scan-0001" was applied
     And scan "scan-0001" is not on the list
     And the shopping Stock total of "milk" is 1000 ml
 
-  Scenario: Undo reverses the Lot, the purchase and the tick
-    Given I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
+  Scenario: Undo reverses the Lot, the purchase, the tick and a link the scan added
+    Given "Mutti passata 700 g" is not sold at "Coop"
+    And I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
     And I scan the barcode "8000500310427" at "Coop" as scan "scan-0002"
     When I undo scan "scan-0002"
     Then the response status is 200
@@ -59,6 +60,14 @@ Feature: Scanning in a Shop
     Then the shopping Stock total of "passata" is 0 g
     And "Mutti passata 700 g" is not sold at "Coop"
     And there is no last bought Product for "passata"
+
+  Scenario: Undo keeps a link the Product already had to the Shop
+    Given "Mutti passata 700 g" has a Price of 159 cents at "Coop"
+    And "Mutti passata 700 g" is sold at "Coop"
+    And I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
+    When I undo scan "scan-0001"
+    Then the shopping Stock total of "passata" is 0 g
+    And "Mutti passata 700 g" is sold at "Coop"
 
   Scenario: Undo twice is harmless
     Given I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
@@ -73,14 +82,15 @@ Feature: Scanning in a Shop
     Then scan "scan-0001" was a duplicate
     And the shopping Stock has 1 Lots of "passata"
 
-  Scenario: The Shopping list complete celebration counts items, money and Lots
-    Given I add the Shopping List extra "candles"
+  Scenario: The Shopping list complete celebration counts Lines, money and Lots
+    Given "Mutti passata 700 g" has a Price of 159 cents at "Coop"
+    And I add the Shopping List extra "candles"
     And I tick the Shopping List extra "candles"
     When I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
     And I scan the barcode "8000500310427" at "Coop" as scan "scan-0002"
     And I view the Shopping List at "Coop"
     Then the Shopping List is complete
-    And the Shopping List summary is 2 items, 318 cents spent and 2 Stock Lots added
+    And the Shopping List summary is 2 lines, 318 cents spent and 2 Stock Lots added
 
   Scenario: A weighed barcode adds the decoded weight
     Given the shopping household has the Ingredient "carrots" in g

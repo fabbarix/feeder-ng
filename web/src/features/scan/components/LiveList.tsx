@@ -1,5 +1,5 @@
 import type { UnitSystem } from '../../../lib/units'
-import { listItems } from '../../shop/lib/lines'
+import { listEntries } from '../../shop/lib/lines'
 import type { ShoppingList } from '../../shop/types'
 import { scanStrings } from '../strings'
 
@@ -10,16 +10,16 @@ export interface LiveListProps {
 
 /** The compact Shopping List under the viewfinder: what is left, the ticked ones struck through. Read-only. */
 export function LiveList({ list, system }: LiveListProps) {
-  const { open, done } = listItems(list, system)
-  const left = list.progress.total - list.progress.done
+  const { open, ticked } = listEntries(list, system)
+  const left = list.progress.total - list.progress.ticked
   return (
     <section className="live-list">
       <p className="live-list__count">{scanStrings.left(left)}</p>
-      <ul aria-label="Shopping List" className="live-list__items">
-        {[...open, ...done].map((item) => (
-          <li key={item.key} className="live-list__item" data-state={item.ticked ? 'done' : 'open'}>
-            <span className="live-list__title">{item.title}</span>
-            {item.detail ? <span className="live-list__detail">{item.detail}</span> : null}
+      <ul aria-label="Shopping List" className="live-list__entries">
+        {[...open, ...ticked].map((entry) => (
+          <li key={entry.key} className="live-list__entry" data-state={entry.ticked ? 'ticked' : 'open'}>
+            <span className="live-list__title">{entry.title}</span>
+            {entry.detail ? <span className="live-list__detail">{entry.detail}</span> : null}
           </li>
         ))}
       </ul>

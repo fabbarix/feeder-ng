@@ -12,10 +12,10 @@ import { ShoppingBody } from '../components/ShoppingBody'
 import { TickSheet } from '../components/TickSheet'
 import { useShoppingActions } from '../hooks/useShoppingActions'
 import { useShoppingList } from '../hooks/useShoppingList'
-import type { ListItem } from '../lib/lines'
+import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 
-type Sheet = { kind: 'tick'; item: ListItem } | { kind: 'extra' } | null
+type Sheet = { kind: 'tick'; entry: ListEntry } | { kind: 'extra' } | null
 
 function errorMessage(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : shopStrings.deleteFailed
@@ -45,28 +45,28 @@ export function ShoppingScreen() {
     fn().catch((err: unknown) => setActionError(errorMessage(err)))
   }
 
-  const onTick = (item: ListItem) => {
-    if (item.kind === 'extra' && item.ingredientId === null) {
-      run(() => actions.tickExtra(item.extraId as number, 0, shopId))
+  const onTick = (entry: ListEntry) => {
+    if (entry.kind === 'extra' && entry.ingredientId === null) {
+      run(() => actions.tickExtra(entry.extraId as number, 0, shopId))
       return
     }
-    setSheet({ kind: 'tick', item })
+    setSheet({ kind: 'tick', entry })
   }
 
-  const onUntick = (item: ListItem) => {
+  const onUntick = (entry: ListEntry) => {
     if (!data) return
-    run(() => (item.kind === 'extra' ? actions.untickExtra(item.extraId as number) : actions.untick(item.ingredientId as number, data.to)))
+    run(() => (entry.kind === 'extra' ? actions.untickExtra(entry.extraId as number) : actions.untick(entry.ingredientId as number, data.to)))
   }
 
-  const onDelete = (item: ListItem) => run(() => actions.deleteExtra(item.extraId as number))
+  const onDelete = (entry: ListEntry) => run(() => actions.deleteExtra(entry.extraId as number))
 
-  const onTickSubmit = (item: ListItem, quantity: number) => {
+  const onTickSubmit = (entry: ListEntry, quantity: number) => {
     if (!data) return
     setSheet(null)
     run(() =>
-      item.kind === 'extra'
-        ? actions.tickExtra(item.extraId as number, quantity, shopId)
-        : actions.tick({ ingredientId: item.ingredientId as number, to: data.to, quantity, shopId }),
+      entry.kind === 'extra'
+        ? actions.tickExtra(entry.extraId as number, quantity, shopId)
+        : actions.tick({ ingredientId: entry.ingredientId as number, to: data.to, quantity, shopId }),
     )
   }
 
@@ -101,13 +101,13 @@ export function ShoppingScreen() {
       ) : null}
       {sheet?.kind === 'tick' && data ? (
         <TickSheet
-          key={sheet.item.key}
+          key={sheet.entry.key}
           open
           onClose={() => setSheet(null)}
-          name={sheet.item.title}
-          baseUnit={sheet.item.baseUnit ?? 'piece'}
-          defaultQuantity={sheet.item.quantity}
-          onSubmit={(quantity) => onTickSubmit(sheet.item, quantity)}
+          name={sheet.entry.title}
+          baseUnit={sheet.entry.baseUnit ?? 'piece'}
+          defaultQuantity={sheet.entry.quantity}
+          onSubmit={(quantity) => onTickSubmit(sheet.entry, quantity)}
         />
       ) : null}
       {sheet?.kind === 'extra' ? (

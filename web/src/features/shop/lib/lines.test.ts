@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeExtra, makeLine, makeList } from '../testData'
-import { costText, extraItem, lineItem, listItems, packText } from './lines'
+import { priceText, extraEntry, lineEntry, listEntries, packText } from './lines'
 
 describe('packText', () => {
   it('shows the quantity and the suggested packs, as in the spec', () => {
@@ -21,24 +21,24 @@ describe('packText', () => {
   })
 })
 
-describe('costText', () => {
+describe('priceText', () => {
   it('formats money in the household currency, and shows a dash without a Price', () => {
-    expect(costText(318, 'USD')).toBe('$3.18')
-    expect(costText(318, 'EUR')).toBe('€3.18')
-    expect(costText(null, 'USD')).toBe('—')
+    expect(priceText(318, 'USD')).toBe('$3.18')
+    expect(priceText(318, 'EUR')).toBe('€3.18')
+    expect(priceText(null, 'USD')).toBe('—')
   })
 })
 
-describe('lineItem / extraItem', () => {
+describe('lineEntry / extraEntry', () => {
   it('flattens an open Line', () => {
-    expect(lineItem(makeLine(), 'USD', 'metric')).toEqual({
+    expect(lineEntry(makeLine(), 'USD', 'metric')).toEqual({
       key: 'line:2',
       kind: 'line',
       ingredientId: 2,
       extraId: null,
       title: 'Passata',
       detail: '1400 g · 2 × Mutti 700 g',
-      cost: '$3.18',
+      estimatedCost: '$3.18',
       ticked: false,
       quantity: 1400,
       baseUnit: 'g',
@@ -46,13 +46,13 @@ describe('lineItem / extraItem', () => {
   })
 
   it('an unpriced open Line has a dash, a ticked Line shows no cost', () => {
-    expect(lineItem(makeLine({ costCents: null }), 'USD', 'metric').cost).toBe('—')
-    expect(lineItem(makeLine({ ticked: true, quantity: 0, pack: null, costCents: null }), 'USD', 'metric')).toMatchObject({ cost: null, ticked: true, quantity: 0 })
+    expect(lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric').estimatedCost).toBe('—')
+    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0 })
   })
 
   it('a free-text extra has no amount and an Ingredient extra shows what remains', () => {
-    expect(extraItem(makeExtra(), 'metric')).toMatchObject({ key: 'extra:1', kind: 'extra', extraId: 1, ingredientId: null, title: 'toilet paper', detail: '', cost: null, quantity: 0, baseUnit: null })
-    expect(extraItem(makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 }), 'metric')).toMatchObject({
+    expect(extraEntry(makeExtra(), 'metric')).toMatchObject({ key: 'extra:1', kind: 'extra', extraId: 1, ingredientId: null, title: 'toilet paper', detail: '', estimatedCost: null, quantity: 0, baseUnit: null })
+    expect(extraEntry(makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 }), 'metric')).toMatchObject({
       key: 'extra:2',
       title: 'milk',
       detail: '2000 ml',
@@ -63,18 +63,18 @@ describe('lineItem / extraItem', () => {
   })
 })
 
-describe('listItems', () => {
+describe('listEntries', () => {
   it('puts open Lines, then open extras, then everything ticked', () => {
     const list = makeList({
       lines: [makeLine({ ingredientId: 1, name: 'chicken thighs', ticked: true }), makeLine({ ingredientId: 2, name: 'Passata' })],
       extras: [makeExtra({ id: 1, text: 'candles', ticked: true }), makeExtra({ id: 2, text: 'toilet paper' })],
     })
-    const { open, done } = listItems(list, 'metric')
+    const { open, ticked } = listEntries(list, 'metric')
     expect(open.map((i) => i.title)).toEqual(['Passata', 'toilet paper'])
-    expect(done.map((i) => i.title)).toEqual(['chicken thighs', 'candles'])
+    expect(ticked.map((i) => i.title)).toEqual(['chicken thighs', 'candles'])
   })
 
   it('is empty for an empty list', () => {
-    expect(listItems(makeList({ lines: [], extras: [] }), 'metric')).toEqual({ open: [], done: [] })
+    expect(listEntries(makeList({ lines: [], extras: [] }), 'metric')).toEqual({ open: [], ticked: [] })
   })
 })

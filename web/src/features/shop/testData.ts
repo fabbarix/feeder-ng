@@ -10,7 +10,7 @@ export function makeLine(over: Partial<ShoppingLine> = {}): ShoppingLine {
     quantity: 1400,
     ticked: false,
     pack: { productId: 7, name: 'Mutti 700 g', size: 700, count: 2, remainder: 0 },
-    costCents: 318,
+    estimatedCostCents: 318,
     ...over,
   }
 }
@@ -30,11 +30,11 @@ export function makeList(over: Partial<ShoppingList> = {}): ShoppingList {
     currency: 'USD',
     lines: [makeLine()],
     extras: [],
-    progress: { done: 0, total: 1 },
+    progress: { ticked: 0, total: 1 },
     estimatedCostCents: 318,
     unpricedLines: 0,
     complete: false,
-    summary: { items: 0, spentCents: 0, lotsAdded: 0 },
+    summary: { lines: 0, spentCents: 0, lotsAdded: 0 },
     ...over,
   }
 }

@@ -44,7 +44,7 @@ function controller(over: Partial<ScanController> = {}): ScanController {
     toggleMute: vi.fn(),
     canVibrate: true,
     flow: flow(),
-    list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, costCents: null })], extras: [makeExtra()], progress: { done: 1, total: 3 } }),
+    list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], extras: [makeExtra()], progress: { ticked: 1, total: 3 } }),
     online: true,
     pendingCount: 0,
     notices: [],

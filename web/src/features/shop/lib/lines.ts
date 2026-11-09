@@ -4,7 +4,7 @@ import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
-export interface ListItem {
+export interface ListEntry {
   /** "line:<ingredientId>" or "extra:<id>" */
   key: string
   kind: 'line' | 'extra'
@@ -13,8 +13,8 @@ export interface ListItem {
   title: string
   /** "1400 g · 2 × Mutti 700 g", "1400 g", "2000 ml" or "" for free text */
   detail: string
-  /** "$3.18", "—" when unpriced; null where cost is not shown (extras, ticked lines) */
-  cost: string | null
+  /** "$3.18", "—" when unpriced; null where the estimated cost is not shown (extras, ticked lines) */
+  estimatedCost: string | null
   ticked: boolean
   /** the remaining amount in Base Units (what "How much?" is prefilled with); 0 for free text and covered lines */
   quantity: number
@@ -28,11 +28,11 @@ export function packText(line: Pick<ShoppingLine, 'quantity' | 'baseUnit' | 'pac
 }
 
 /** formatMinor(cents, currency), or "—" when cents is null. */
-export function costText(cents: number | null, currency: string): string {
+export function priceText(cents: number | null, currency: string): string {
   return cents === null ? '—' : formatMinor(cents, currency)
 }
 
-export function lineItem(line: ShoppingLine, currency: string, system: UnitSystem): ListItem {
+export function lineEntry(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry {
   return {
     key: `line:${line.ingredientId}`,
     kind: 'line',
@@ -40,14 +40,14 @@ export function lineItem(line: ShoppingLine, currency: string, system: UnitSyste
     extraId: null,
     title: line.name,
     detail: line.ticked ? '' : packText(line, system),
-    cost: line.ticked ? null : costText(line.costCents, currency),
+    estimatedCost: line.ticked ? null : priceText(line.estimatedCostCents, currency),
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,
     baseUnit: line.baseUnit,
   }
 }
 
-export function extraItem(extra: ShoppingExtra, system: UnitSystem): ListItem {
+export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry {
   const hasAmount = extra.quantity !== null && extra.baseUnit !== null
   return {
     key: `extra:${extra.id}`,
@@ -56,18 +56,18 @@ export function extraItem(extra: ShoppingExtra, system: UnitSystem): ListItem {
     extraId: extra.id,
     title: extra.text ?? extra.name ?? '',
     detail: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
-    cost: null,
+    estimatedCost: null,
     ticked: extra.ticked,
     quantity: hasAmount && !extra.ticked ? (extra.quantity ?? 0) : 0,
     baseUnit: extra.baseUnit,
   }
 }
 
-/** Open items first (Lines in server order, then extras), then ticked ones (the "Done" group), in the same order. */
-export function listItems(list: ShoppingList, system: UnitSystem): { open: ListItem[]; done: ListItem[] } {
-  const lines = list.lines.map((l) => lineItem(l, list.currency, system))
-  const extras = list.extras.map((e) => extraItem(e, system))
+/** Open entries first (Lines in server order, then extras), then ticked ones (the "Ticked" group), in the same order. */
+export function listEntries(list: ShoppingList, system: UnitSystem): { open: ListEntry[]; ticked: ListEntry[] } {
+  const lines = list.lines.map((l) => lineEntry(l, list.currency, system))
+  const extras = list.extras.map((e) => extraEntry(e, system))
   const all = [...lines.filter((i) => !i.ticked), ...extras.filter((i) => !i.ticked)]
-  const done = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
-  return { open: all, done }
+  const ticked = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
+  return { open: all, ticked }
 }
