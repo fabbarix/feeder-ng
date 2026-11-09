@@ -194,14 +194,19 @@ type Plan struct {
 //     Recipes with decision skip are not checked.
 //   - Warnings carry the image warnings in images.Warnings.
 func BuildPlan(f File, ex Existing, d Decisions, images ImageSet) Plan {
-	panic("not implemented") // Developer
+	return newReview(f, ex, d, images).plan()
 }
 
-// NotReadyError is returned by BuildCommit when the Plan still has open items.
+// NotReadyError is returned by BuildCommit when the Plan still has open answers.
 type NotReadyError struct{ Plan Plan }
 
 func (e *NotReadyError) Error() string        { return "import review is not finished" }
 func (e *NotReadyError) Is(target error) bool { return target == ErrNotReady }
+
+// ErrStale: an answer refers to something that no longer exists (a Recipe to
+// replace is no longer a conflict, an Ingredient to use is gone). The review
+// must be made again.
+var ErrStale = errors.New("the data changed since the review; review again")
 
 // ErrNotReady is matched by *NotReadyError.
 var ErrNotReady = errors.New("import review is not finished")
@@ -255,5 +260,13 @@ type Commit struct {
 // kept Recipe are created. Tags, Source and the cool-down / use-by overrides
 // are carried over; 0 days stays 0.
 func BuildCommit(f File, ex Existing, d Decisions, images ImageSet) (Commit, error) {
-	panic("not implemented") // Developer
+	r := newReview(f, ex, d, images)
+	if r.stale {
+		return Commit{}, ErrStale
+	}
+	p := r.plan()
+	if !p.Ready {
+		return Commit{}, &NotReadyError{Plan: p}
+	}
+	return r.commit(), nil
 }

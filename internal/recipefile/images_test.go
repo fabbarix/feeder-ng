@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -40,12 +41,20 @@ func pngBytes(t *testing.T, w, h int) []byte {
 	return raw
 }
 
+// fileWithImages builds the file without the schema check: the schema refuses
+// plain http image URLs (docs/spec), but ResolveImages must still turn such a
+// reference into a warning, not a crash.
 func fileWithImages(t *testing.T, recipeImg, stepImg string) recipefile.File {
 	t.Helper()
-	return mustParse(t, mutate(t, func(r map[string]any) {
+	data := mutate(t, func(r map[string]any) {
 		recipeAt(r, 0)["image"] = recipeImg
 		recipeAt(r, 0)["steps"].([]any)[1].(map[string]any)["image"] = stepImg
-	}))
+	})
+	var f recipefile.File
+	if err := json.Unmarshal(data, &f); err != nil {
+		t.Fatal(err)
+	}
+	return f
 }
 
 func TestResolveImagesDecodesDataURLsAndFetchesHTTPSURLs(t *testing.T) {

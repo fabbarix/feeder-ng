@@ -4,24 +4,329 @@
 package httpapi
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 
+	"github.com/fabbarix/feeder-ng/docs/spec"
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/auth"
+	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/recipefile"
+	"github.com/fabbarix/feeder-ng/internal/recipefile/imagefetch"
+	"github.com/fabbarix/feeder-ng/internal/recipefile/store"
 )
 
 func init() { app.Register(app.Module{Name: "recipefile", Mount: mount}) }
 
+// Live-update topics the SPA invalidates its caches on.
+const (
+	topicRecipes     = "recipes"
+	topicIngredients = "ingredients"
+)
+
 func mount(r *app.Router, d app.Deps) {
-	r.Public("GET /schema/recipe-file-v1.json", notImplemented)
-	r.User("GET /api/recipe-file/agent-prompt", notImplemented)
-	r.User("GET /api/recipe-file/export", notImplemented)
-	r.User("POST /api/imports", notImplemented)
-	r.User("POST /api/imports/{id}/plan", notImplemented)
-	r.User("POST /api/imports/{id}/confirm", notImplemented)
-	r.User("DELETE /api/imports/{id}", notImplemented)
+	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	prompt, promptErr := recipefile.ExtractTemplate(spec.RecipeFileMD)
+	a := &api{
+		store:    store.New(d.DB, d.Clock, images),
+		sessions: recipefile.NewSessions(d.Clock),
+		fetcher:  imagefetch.New(imagefetch.Options{}),
+		events:   d.Events,
+		prompt:   recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example)),
+		promptOK: promptErr == nil,
+	}
+	r.Public("GET /schema/recipe-file-v1.json", schema)
+	r.User("GET /api/recipe-file/agent-prompt", a.agentPrompt)
+	r.User("GET /api/recipe-file/export", a.export)
+	r.User("POST /api/imports", a.open)
+	r.User("POST /api/imports/{id}/plan", a.plan)
+	r.User("POST /api/imports/{id}/confirm", a.confirm)
+	r.User("DELETE /api/imports/{id}", a.close)
 }
 
-func notImplemented(w http.ResponseWriter, _ *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "Not implemented yet")
+type api struct {
+	store    *store.Store
+	sessions *recipefile.Sessions
+	fetcher  recipefile.Fetcher
+	events   *events.Bus
+	prompt   string
+	promptOK bool
+}
+
+// schema serves the embedded schema. It is public: the spec says the running
+// app serves it, and it is not secret.
+func schema(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_, _ = w.Write(spec.Schema)
+}
+
+func (a *api) agentPrompt(w http.ResponseWriter, _ *http.Request) {
+	if !a.promptOK {
+		httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"prompt": a.prompt})
+}
+
+// export answers GET /api/recipe-file/export?all=1 or ?ids=1,2 with the file.
+func (a *api) export(w http.ResponseWriter, r *http.Request) {
+	var ids []int64
+	all := r.URL.Query().Get("all") == "1"
+	if !all {
+		parsed, ok := parseIDs(r.URL.Query().Get("ids"))
+		if !ok {
+			httpx.WriteError(w, http.StatusBadRequest, "bad_request", "Give ids=1,2 or all=1")
+			return
+		}
+		ids = parsed
+	}
+	in, err := a.store.Exportable(r.Context(), ids)
+	if errors.Is(err, store.ErrNotFound) {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
+		return
+	}
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	if all && len(in.Recipes) == 0 {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "nothing_to_export", "There are no Recipes to export")
+		return
+	}
+	file, _ := recipefile.Build(in)
+	data, err := recipefile.Marshal(file)
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, recipefile.ExportFileName(in.Now)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// parseIDs reads "1,2,3": positive integers, no blanks.
+func parseIDs(s string) ([]int64, bool) {
+	if s == "" {
+		return nil, false
+	}
+	var ids []int64
+	for _, part := range strings.Split(s, ",") {
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil || id <= 0 {
+			return nil, false
+		}
+		ids = append(ids, id)
+	}
+	return ids, true
+}
+
+// open takes {"text": "..."}, parses and validates the file, resolves its
+// images and starts an Import Review.
+func (a *api) open(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, recipefile.MaxFileBytes)
+	var body struct {
+		Text *string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "The file is larger than 64 MB")
+			return
+		}
+		httpx.WriteError(w, http.StatusBadRequest, "bad_request", "The request body must be JSON with a text")
+		return
+	}
+	if body.Text == nil {
+		httpx.WriteError(w, http.StatusBadRequest, "bad_request", "The request body must be JSON with a text")
+		return
+	}
+	file, err := recipefile.Parse([]byte(*body.Text))
+	if err != nil {
+		writeParseError(w, err)
+		return
+	}
+	user, _ := auth.UserFrom(r.Context())
+	images := recipefile.ResolveImages(r.Context(), file, a.fetcher)
+	rv := a.sessions.Open(user.ID, file, images)
+	plan, err := a.planFor(r.Context(), rv, recipefile.Decisions{})
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, reviewJSON{ID: rv.ID, Plan: plan})
+}
+
+// plan answers the User's decisions with the current Import Review.
+func (a *api) plan(w http.ResponseWriter, r *http.Request) {
+	rv, ok := a.review(w, r)
+	if !ok {
+		return
+	}
+	d, ok := decisionsBody(w, r)
+	if !ok {
+		return
+	}
+	plan, err := a.planFor(r.Context(), rv, d)
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, reviewJSON{ID: rv.ID, Plan: plan})
+}
+
+// confirm writes the Recipes and Ingredients of a finished Import Review in one
+// transaction and closes the review.
+func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
+	rv, ok := a.review(w, r)
+	if !ok {
+		return
+	}
+	d, ok := decisionsBody(w, r)
+	if !ok {
+		return
+	}
+	existing, err := a.store.Existing(r.Context())
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	commit, err := recipefile.BuildCommit(rv.File, existing, d, rv.Images)
+	if errors.Is(err, recipefile.ErrStale) {
+		httpx.WriteError(w, http.StatusConflict, "import_stale", "The data changed since the review; review again")
+		return
+	}
+	var notReady *recipefile.NotReadyError
+	if errors.As(err, &notReady) {
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "import_not_ready", "message": "Finish the Import Review before confirming", "plan": notReady.Plan,
+		}})
+		return
+	}
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	res, err := a.store.Apply(r.Context(), commit)
+	if errors.Is(err, recipefile.ErrStale) {
+		httpx.WriteError(w, http.StatusConflict, "import_stale", "The data changed since the review; review again")
+		return
+	}
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	a.sessions.Close(rv.UserID, rv.ID)
+	a.published(res)
+	httpx.WriteJSON(w, http.StatusOK, confirmAnswer(res))
+}
+
+// close drops an owned Import Review.
+func (a *api) close(w http.ResponseWriter, r *http.Request) {
+	rv, ok := a.review(w, r)
+	if !ok {
+		return
+	}
+	a.sessions.Close(rv.UserID, rv.ID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// review finds the signed-in User's open Import Review; 404 otherwise.
+func (a *api) review(w http.ResponseWriter, r *http.Request) (recipefile.Review, bool) {
+	user, _ := auth.UserFrom(r.Context())
+	rv, ok := a.sessions.Get(user.ID, r.PathValue("id"))
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
+	}
+	return rv, ok
+}
+
+// planFor recomputes the Import Review from the current data.
+func (a *api) planFor(ctx context.Context, rv recipefile.Review, d recipefile.Decisions) (recipefile.Plan, error) {
+	existing, err := a.store.Existing(ctx)
+	if err != nil {
+		return recipefile.Plan{}, err
+	}
+	return recipefile.BuildPlan(rv.File, existing, d, rv.Images), nil
+}
+
+// published tells the SPA which caches the import changed.
+func (a *api) published(res store.Result) {
+	for _, rec := range res.Recipes {
+		a.events.Publish(topicRecipes, map[string]int64{"id": rec.ID})
+	}
+	if res.IngredientsCreated > 0 || res.ConversionsAdded > 0 {
+		a.events.Publish(topicIngredients, map[string]int{"created": res.IngredientsCreated, "conversions": res.ConversionsAdded})
+	}
+}
+
+// Bodies and shapes.
+
+type reviewJSON struct {
+	ID   string          `json:"id"`
+	Plan recipefile.Plan `json:"plan"`
+}
+
+// confirmJSON is the answer to a Confirm: what was written.
+type confirmJSON struct {
+	Recipes            []appliedJSON `json:"recipes"`
+	IngredientsCreated int           `json:"ingredientsCreated"`
+	ConversionsAdded   int           `json:"conversionsAdded"`
+}
+
+type appliedJSON struct {
+	Index  int    `json:"index"`
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Action string `json:"action"`
+}
+
+func confirmAnswer(res store.Result) confirmJSON {
+	out := confirmJSON{Recipes: []appliedJSON{}, IngredientsCreated: res.IngredientsCreated, ConversionsAdded: res.ConversionsAdded}
+	for _, r := range res.Recipes {
+		out.Recipes = append(out.Recipes, appliedJSON{Index: r.Index, ID: r.ID, Name: r.Name, Action: r.Action})
+	}
+	return out
+}
+
+// decisionsBody reads {"decisions": {...}}.
+func decisionsBody(w http.ResponseWriter, r *http.Request) (recipefile.Decisions, bool) {
+	var body struct {
+		Decisions recipefile.Decisions `json:"decisions"`
+	}
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return recipefile.Decisions{}, false
+	}
+	return body.Decisions, true
+}
+
+// writeParseError maps recipefile.Parse errors to their HTTP answers.
+func writeParseError(w http.ResponseWriter, err error) {
+	var version *recipefile.VersionError
+	var schema *recipefile.SchemaError
+	switch {
+	case errors.Is(err, recipefile.ErrTooLarge):
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "The file is larger than 64 MB")
+	case errors.As(err, &version):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "unsupported_version", "message": "This Feeder reads Recipe File version 1 only", "version": json.RawMessage(version.Version),
+		}})
+	case errors.As(err, &schema):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "invalid_recipe_file", "message": "The file does not match the Recipe File format", "errors": schema.Errors,
+		}})
+	case errors.Is(err, recipefile.ErrSyntax):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_json", "The file is not valid JSON")
+	default:
+		httpx.WriteAPIError(w, err)
+	}
 }

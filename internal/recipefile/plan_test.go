@@ -213,7 +213,8 @@ func TestUnconvertibleUnitIsPromptedOncePerIngredientAndUnit(t *testing.T) {
 			}
 		}
 		for _, s := range rc["steps"].([]any) {
-			for _, u := range s.(map[string]any)["uses"].([]any) {
+			uses, _ := s.(map[string]any)["uses"].([]any) // a Step may have no uses
+			for _, u := range uses {
 				if m := u.(map[string]any); m["ingredient"] == "spinach" {
 					m["quantity"], m["unit"] = 2, " Handful "
 				}
