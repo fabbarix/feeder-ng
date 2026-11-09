@@ -68,5 +68,40 @@ type View struct {
 // Step index to when it was marked done. Invalid batches return
 // schedule.ErrInvalidBatches.
 func BuildView(scope Scope, rs RecipeSteps, batches float64, marks map[int]time.Time) (View, error) {
-	panic("TODO")
+	if _, err := schedule.ScaleUses(nil, batches); err != nil {
+		return View{}, err
+	}
+	v := View{Scope: scope, RecipeID: rs.RecipeID, RecipeName: rs.Name, Batches: batches}
+	of := 0
+	for _, s := range rs.Steps {
+		if s.Kind != schedule.Advance {
+			of++
+		}
+	}
+	for i, s := range rs.Steps {
+		if s.Kind == schedule.Advance {
+			item := AdvanceItem{Step: i, Text: s.Text, LeadTimeMinutes: s.LeadTimeMinutes}
+			if at, ok := marks[i]; ok {
+				doneAt := at
+				item.Done, item.DoneAt = true, &doneAt
+			} else {
+				item.Warning = true
+			}
+			v.Advance = append(v.Advance, item)
+			continue
+		}
+		uses, err := schedule.ScaleUses(s.Uses, batches)
+		if err != nil {
+			return View{}, err
+		}
+		cs := CookStep{
+			Index: i, Number: len(v.Steps) + 1, Of: of, Kind: s.Kind, Text: s.Text,
+			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: uses,
+		}
+		if s.Kind == schedule.Passive {
+			cs.Timer = &StepTimer{Label: TimerLabel(cs.Number, s.Text), DurationSeconds: s.DurationMinutes * 60}
+		}
+		v.Steps = append(v.Steps, cs)
+	}
+	return v, nil
 }

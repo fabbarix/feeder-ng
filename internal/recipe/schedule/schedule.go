@@ -163,9 +163,10 @@ func Compute(steps []Step) (Schedule, error) {
 
 // Use is an Ingredient amount a Step needs (informational).
 type Use struct {
-	Ingredient string
-	Quantity   float64
-	Unit       string
+	IngredientID int64 // 0 when the Ingredient is not known (informational)
+	Ingredient   string
+	Quantity     float64
+	Unit         string
 }
 
 // ErrInvalidBatches is returned by ScaleUses for Batches that are <= 0, NaN or Inf.
