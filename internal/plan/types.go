@@ -208,9 +208,6 @@ type Changes struct {
 	ClearUnfilled []Key
 }
 
-// errNotImplemented marks the stubs the Developer replaces.
-var errNotImplemented = errors.New("plan: not implemented")
-
 // InvalidateTopic is the events topic modules publish on to say "the plan may be stale". Data is {"reason": Reason}.
 // The Runner also maps the existing topics of other modules (recipes, household, stock) through ReasonForEvent, so
 // those modules need no change; new modules call Invalidate.
