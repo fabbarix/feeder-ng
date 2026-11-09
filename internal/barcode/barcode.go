@@ -231,6 +231,10 @@ func Resolve(s Scanned, c Catalog) Resolution {
 			}
 			value := parseDigits(s.EAN13[rule.Value.Start-1 : lastDigit(rule.Value)])
 			if value == 0 {
+				if unknown != nil {
+					// a shorter rule's zero value does not override the unknown Product of a longer rule
+					continue
+				}
 				return Resolution{Outcome: OutcomeInvalid, Reason: "zero_value", Code: s.Code}
 			}
 			itemCode := s.EAN13[rule.Item.Start-1 : lastDigit(rule.Item)]
@@ -477,7 +481,10 @@ func digitalLink(s string) Scanned {
 	return gtin(gtinDigits)
 }
 
-// digitalLinkGTIN returns the 14 digits after a "01" path segment of an http(s) URL.
+// digitalLinkGTIN returns the key digits after the first "01" path segment of an
+// http(s) URL that is followed by a segment of 8, 12, 13 or 14 digits. The query
+// and fragment are ignored, one trailing slash is allowed, and every path segment
+// is percent-decoded first; a malformed escape gives ok false.
 func digitalLinkGTIN(s string) (string, bool) {
 	rest, ok := afterHTTPScheme(s)
 	if !ok {
@@ -491,12 +498,69 @@ func digitalLinkGTIN(s string) (string, bool) {
 		return "", false
 	}
 	segs := strings.Split(rest[i+1:], "/")
+	if n := len(segs); n > 0 && segs[n-1] == "" {
+		segs = segs[:n-1]
+	}
+	for j := range segs {
+		dec, ok := percentDecode(segs[j])
+		if !ok {
+			return "", false
+		}
+		segs[j] = dec
+	}
 	for j := 0; j+1 < len(segs); j++ {
-		if segs[j] == "01" && len(segs[j+1]) == 14 && isDigits(segs[j+1]) {
+		if segs[j] == "01" && isGTINKey(segs[j+1]) {
 			return segs[j+1], true
 		}
 	}
 	return "", false
+}
+
+// isGTINKey reports whether a Digital Link key is a GTIN-8, -12, -13 or -14 digit string.
+func isGTINKey(s string) bool {
+	switch len(s) {
+	case 8, 12, 13, 14:
+		return isDigits(s)
+	}
+	return false
+}
+
+// percentDecode decodes the %XX escapes of a path segment. ok is false for a malformed escape.
+func percentDecode(s string) (string, bool) {
+	if !strings.Contains(s, "%") {
+		return s, true
+	}
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] != '%' {
+			b.WriteByte(s[i])
+			continue
+		}
+		if i+2 >= len(s) {
+			return "", false
+		}
+		hi, okHi := unhex(s[i+1])
+		lo, okLo := unhex(s[i+2])
+		if !okHi || !okLo {
+			return "", false
+		}
+		b.WriteByte(hi<<4 | lo)
+		i += 2
+	}
+	return b.String(), true
+}
+
+// unhex returns the value of a hexadecimal digit.
+func unhex(c byte) (byte, bool) {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0', true
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10, true
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
 }
 
 // afterHTTPScheme returns what follows an http:// or https:// prefix (ASCII case-insensitive).

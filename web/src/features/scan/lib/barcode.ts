@@ -167,7 +167,11 @@ export function resolve(scanned: Scanned, catalog: Catalog): Resolution {
     for (const rule of rulesLongestPrefixFirst(catalog.weightRules ?? [])) {
       if (validateRule(rule) !== null || !ean13.startsWith(rule.prefix)) continue
       const value = Number(sliceSpan(ean13, rule.value))
-      if (value === 0) return { outcome: 'invalid', reason: 'zero_value', code }
+      if (value === 0) {
+        // a shorter rule's zero value does not override the unknown Product of a longer rule
+        if (unknown !== undefined) continue
+        return { outcome: 'invalid', reason: 'zero_value', code }
+      }
       const itemCode = sliceSpan(ean13, rule.item)
       const productId = lookup(catalog.weightProducts, weightProductKey(rule.id, itemCode))
       if (productId === undefined) {
@@ -381,7 +385,12 @@ function digitalLink(s: string): Scanned {
   return digits === null ? { kind: 'not_product' } : gtin(digits)
 }
 
-/** The 14 digits after a "01" path segment of an http(s) URL, or null. */
+/**
+ * The key digits after the first "01" path segment of an http(s) URL that is
+ * followed by a segment of 8, 12, 13 or 14 digits, or null. The query and
+ * fragment are ignored, one trailing slash is allowed, and every path segment is
+ * percent-decoded first; a malformed escape gives null.
+ */
 function digitalLinkGtin(s: string): string | null {
   const rest = afterHttpScheme(s)
   if (rest === null) return null
@@ -390,11 +399,40 @@ function digitalLinkGtin(s: string): string | null {
   const slash = path.indexOf('/')
   if (slash < 0) return null
   const segs = path.slice(slash + 1).split('/')
-  for (let j = 0; j + 1 < segs.length; j++) {
-    const next = segs[j + 1] ?? ''
-    if (segs[j] === '01' && next.length === 14 && isDigits(next)) return next
+  if (segs.length > 0 && segs[segs.length - 1] === '') segs.pop()
+  const decoded: string[] = []
+  for (const seg of segs) {
+    const d = percentDecode(seg)
+    if (d === null) return null
+    decoded.push(d)
+  }
+  for (let j = 0; j + 1 < decoded.length; j++) {
+    const key = decoded[j + 1] ?? ''
+    if (decoded[j] === '01' && isGtinKey(key)) return key
   }
   return null
+}
+
+/** GTIN-8, -12, -13 or -14 digits. */
+function isGtinKey(s: string): boolean {
+  return [8, 12, 13, 14].includes(s.length) && isDigits(s)
+}
+
+/** Decodes the %XX escapes of a path segment; null for a malformed escape. */
+function percentDecode(s: string): string | null {
+  let out = ''
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charAt(i)
+    if (c !== '%') {
+      out += c
+      continue
+    }
+    const hex = s.slice(i + 1, i + 3)
+    if (!/^[0-9A-Fa-f]{2}$/.test(hex)) return null
+    out += String.fromCharCode(parseInt(hex, 16))
+    i += 2
+  }
+  return out
 }
 
 /** What follows an http:// or https:// prefix (ASCII case-insensitive), or null. */
