@@ -1,24 +1,25 @@
+import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
 import { weekdayName } from './phrase'
 
 function join(parts: string[]): string {
   if (parts.length <= 1) return parts.join('')
-  return `${parts.slice(0, -1).join(', ')} or ${parts[parts.length - 1]}`
+  return s.listOr(parts.slice(0, -1).join(', '), parts[parts.length - 1]!)
 }
 
 /** "Couldn't plan Thursday dinner: every option was excluded or in Cool-down." */
 export function couldntPlanText(slot: PlanSlot): string {
-  const head = `Couldn't plan ${weekdayName(slot.date)} ${slot.name.toLowerCase()}`
+  const head = s.couldntPlanSlot(`${weekdayName(slot.date)} ${slot.name.toLowerCase()}`)
   const u = slot.unfilled
-  if (!u || u.reason === 'no_attendance') return `${head}: nobody is attending.`
-  if (u.slotRuleClaimed) return `${head}: nothing that matches its Slot Rule is available.`
+  if (!u || u.reason === 'no_attendance') return s.couldntNobodyAttending(head)
+  if (u.slotRuleClaimed) return s.couldntSlotRuleUnavailable(head)
   const e = u.eliminated
-  if (e.considered === 0) return `${head}: there are no Recipes to choose from.`
+  if (e.considered === 0) return s.couldntNoRecipes(head)
   const parts: string[] = []
-  if (e.exclusion > 0) parts.push('excluded')
-  if (e.coolDown > 0) parts.push('in Cool-down')
-  if (e.varietyRule > 0) parts.push('blocked by a Variety Rule')
-  if (e.advanceStep > 0) parts.push('needs an Advance Step that is already too late')
-  if (parts.length === 0) return `${head}: no Recipe fits.`
-  return `${head}: every option was ${join(parts)}.`
+  if (e.exclusion > 0) parts.push(s.couldntExcluded)
+  if (e.coolDown > 0) parts.push(s.couldntInCoolDown)
+  if (e.varietyRule > 0) parts.push(s.couldntVarietyRule)
+  if (e.advanceStep > 0) parts.push(s.couldntAdvanceStepLate)
+  if (parts.length === 0) return s.couldntNoRecipeFits(head)
+  return s.couldntEveryOption(head, join(parts))
 }

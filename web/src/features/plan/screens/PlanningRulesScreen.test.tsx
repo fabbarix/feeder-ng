@@ -44,7 +44,7 @@ describe('PlanningRulesScreen', () => {
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('At most 2 a week')
     await userEvent.type(screen.getAllByLabelText('Tag').at(-1)!, 'Pasta')
-    await userEvent.click(screen.getByLabelText('Never on consecutive days'))
+    await userEvent.click(screen.getByLabelText('Not on consecutive days'))
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 0, notConsecutiveDays: true }))
   })

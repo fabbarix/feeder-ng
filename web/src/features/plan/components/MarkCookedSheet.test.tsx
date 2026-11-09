@@ -21,7 +21,7 @@ describe('MarkCookedSheet', () => {
     setup()
     expect(screen.getByRole('dialog', { name: 'Mark as Cooked' })).toBeInTheDocument()
     expect(screen.getByText('Chicken')).toBeInTheDocument()
-    expect(screen.getByText(/1 Batch makes 4 portions/)).toBeInTheDocument()
+    expect(screen.getByText(/1 Batch yields 4 portions/)).toBeInTheDocument()
     expect(screen.getByText(/2 portions needed/)).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument() // the Stepper value
     expect(screen.getByText('Use by Thursday')).toBeInTheDocument()

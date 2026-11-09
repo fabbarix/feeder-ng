@@ -1,3 +1,4 @@
+import { planStrings as s } from '../strings'
 import type { Why } from '../types'
 
 const LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -23,26 +24,28 @@ export interface PhraseContext {
 export function phraseWhy(why: Why, ctx: PhraseContext): string {
   switch (why.code) {
     case 'ingredient_overlap':
-      return why.date && why.ingredient ? `uses ${weekdayName(why.date)}'s ${why.ingredient}` : 'uses up what is open'
+      return why.date && why.ingredient ? s.whyIngredientOverlap(weekdayName(why.date), why.ingredient) : s.whyOpenStock
     case 'favourite': {
       const m = why.members ?? []
-      if (m.length === 0) return 'a favourite'
-      if (m.length === 1) return `${m[0]}'s favourite`
-      if (m.length === 2) return `${m[0]} and ${m[1]}'s favourite`
-      return `a favourite of ${m.length}`
+      if (m.length === 0) return s.whyFavouriteAnyone
+      if (m.length === 1) return s.whyFavouriteOne(m[0]!)
+      if (m.length === 2) return s.whyFavouriteTwo(m[0]!, m[1]!)
+      return s.whyFavouriteMany(m.length)
     }
     case 'perishable_use':
-      return why.date ? `${why.ingredient ?? 'an ingredient'} goes off ${weekdayName(why.date, 'short')}` : `uses up the ${why.ingredient ?? 'ingredient'}`
+      return why.date
+        ? s.whyGoesOff(why.ingredient ?? s.whyUnnamedIngredient, weekdayName(why.date, 'short'))
+        : s.whyUsesUp(why.ingredient ?? s.whyUnnamedIngredientShort)
     case 'slot_rule':
-      return `Slot Rule: ${weekdayName(ctx.slotDate)}`
+      return s.whySlotRule(weekdayName(ctx.slotDate))
     case 'leftover':
-      return why.date ? `leftover from ${weekdayName(why.date, 'short')}` : 'leftover'
+      return why.date ? s.whyLeftoverFrom(weekdayName(why.date, 'short')) : s.whyLeftover
     case 'stock_coverage':
-      return 'already in Stock'
+      return s.whyInStock
     case 'leftover_fits':
-      return why.date ? `leftovers for ${weekdayName(why.date, 'short')}` : 'leftovers to come'
+      return why.date ? s.whyLeftoversFor(weekdayName(why.date, 'short')) : s.whyLeftoversToCome
     case 'best_available':
-      return 'best available'
+      return s.whyBestAvailable
     default:
       return ''
   }

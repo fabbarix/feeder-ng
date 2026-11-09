@@ -32,8 +32,8 @@ func mount(r *app.Router, d app.Deps) {
 		Events: d.Events, Logger: d.Logger,
 	})
 	if d.Context != nil {
-		go run.Subscribe(d.Context, d.Events)
-		go run.Start(d.Context)
+		d.Go(func() { run.Subscribe(d.Context, d.Events) })
+		d.Go(func() { run.Start(d.Context) })
 	}
 	d.Scheduler.SetZone(func(ctx context.Context) (*time.Location, error) {
 		_, loc, err := src.Settings(ctx)
@@ -116,21 +116,21 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 func messageFor(code string) string {
 	switch code {
 	case "not_found":
-		return "There is no such planned meal or rule"
+		return "There is no such Planned Meal or Rule"
 	case "unknown_slot":
 		return "No such Meal Slot on that date"
 	case "in_past":
 		return "That day is already over"
 	case "already_resolved":
-		return "The planned meal is already cooked or skipped"
+		return "The Planned Meal is already Cooked or skipped"
 	case "not_swappable":
-		return "A cooked or skipped meal cannot be swapped"
+		return "A Cooked or skipped Planned Meal cannot be swapped"
 	case "unknown_recipe":
 		return "No such Recipe"
 	case "recipe_archived":
 		return "That Recipe is archived"
 	case "duplicate_rule":
-		return "That rule already exists"
+		return "That Slot Rule already exists"
 	case "unknown_reference":
 		return "The Meal Slot or Recipe does not exist"
 	case "validation_failed":

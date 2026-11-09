@@ -1,3 +1,4 @@
+import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
 import { dayNumber, weekdayName } from './phrase'
 
@@ -11,15 +12,13 @@ export interface DayGroup {
   slots: PlanSlot[]
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 function labelFor(date: string, today: string): string {
   const diff = dayNumber(date) - dayNumber(today)
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  if (diff === -1) return 'Yesterday'
+  if (diff === 0) return s.today
+  if (diff === 1) return s.tomorrow
+  if (diff === -1) return s.yesterday
   const [, m, d] = date.split('-').map(Number)
-  return `${weekdayName(date, 'short')} ${d} ${MONTHS[(m ?? 1) - 1]}`
+  return s.dayMonth(weekdayName(date, 'short'), d, s.monthsShort[(m ?? 1) - 1]!)
 }
 
 /** Groups slots by date, chronologically (slots inside a day by time, then Meal Slot id). */

@@ -101,7 +101,7 @@ export interface VarietyRulesEditorProps {
   error: string | null
 }
 
-/** Lists the Variety Rules with Remove, and a form (Tag, weekly limit, never on consecutive days). */
+/** Lists the Variety Rules with Remove, and a form (Tag, weekly limit, not on consecutive days). */
 export function VarietyRulesEditor({ rules, onSave, onRemove, error }: VarietyRulesEditorProps): ReactNode {
   const form = useVarietyRuleForm(onSave)
   const message = form.error ?? error

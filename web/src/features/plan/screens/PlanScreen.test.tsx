@@ -78,7 +78,7 @@ describe('PlanScreen', () => {
     renderWithProviders(<PlanScreen />)
     const tomorrow = (await screen.findByRole('heading', { name: 'Tomorrow' })).closest('article')!
     await userEvent.click(within(tomorrow as HTMLElement).getByRole('button', { name: 'Swap' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Swap this meal' })
+    const dialog = await screen.findByRole('dialog', { name: 'Swap this Planned Meal' })
     expect(await within(dialog).findAllByRole('button', { name: /^Choose / })).toHaveLength(3)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Choose Pizza' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/3')[0]?.body).toEqual({ recipeId: 21 }))

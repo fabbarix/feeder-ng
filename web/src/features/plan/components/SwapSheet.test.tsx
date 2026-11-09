@@ -27,7 +27,7 @@ function setup(over: Partial<React.ComponentProps<typeof SwapSheet>> = {}) {
 describe('SwapSheet', () => {
   it('lists the three alternatives with their phrased why chips', () => {
     setup()
-    expect(screen.getByRole('dialog', { name: 'Swap this meal' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Swap this Planned Meal' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Choose / })).toHaveLength(3)
     expect(screen.getByText('carrots goes off Thu')).toBeInTheDocument()
     expect(screen.getByText('Slot Rule: Friday')).toBeInTheDocument() // the slot is on a Friday

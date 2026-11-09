@@ -20,7 +20,7 @@ export interface MarkCookedSheetProps {
 }
 
 /**
- * "Mark as Cooked": shows the Recipe, what the Batches make against what is needed, and (for a freshly cooked meal) a
+ * "Mark as Cooked": shows the Recipe, what the Batches yield against what is needed, and (for a freshly cooked meal) a
  * ± Stepper for the Leftover portions in half steps with the Use-by it would get. "Not cooked" is the other way out.
  */
 export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
@@ -35,7 +35,7 @@ export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
             {preview.fresh ? (
               <>
                 <p className="plan__muted">
-                  {`${planStrings.makes(planStrings.batches(preview.batches), formatPortions(preview.batches * preview.yield))}, ${planStrings.needed(formatPortions(preview.portionsNeeded))}`}
+                  {`${planStrings.yield(planStrings.batches(preview.batches), formatPortions(preview.batches * preview.yield))}, ${planStrings.needed(formatPortions(preview.portionsNeeded))}`}
                 </p>
                 <p className="plan-meal__slot">{planStrings.cookedQuestion}</p>
                 <Stepper

@@ -1,3 +1,4 @@
+import { planStrings as s } from '../strings'
 import type { SlotRule, VarietyRule } from '../types'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -9,14 +10,14 @@ export function normaliseTag(tag: string): string {
 
 /** "Recipe: Curry" or "Tag: pizza". */
 export function describeSlotRule(rule: SlotRule): string {
-  return rule.recipeId !== undefined ? `Recipe: ${rule.recipeName ?? ''}` : `Tag: ${rule.tag ?? ''}`
+  return rule.recipeId !== undefined ? s.ruleRecipe(rule.recipeName ?? '') : s.ruleTag(rule.tag ?? '')
 }
 
-/** "At most 2 a week", "Never on consecutive days", or both joined by ", ". */
+/** "At most 2 a week", "Not on consecutive days", or both joined by ", ". */
 export function describeVarietyRule(rule: VarietyRule): string {
   const parts: string[] = []
-  if (rule.maxPerWeek > 0) parts.push(`At most ${rule.maxPerWeek} a week`)
-  if (rule.notConsecutiveDays) parts.push(parts.length ? 'never on consecutive days' : 'Never on consecutive days')
+  if (rule.maxPerWeek > 0) parts.push(s.ruleAtMostPerWeek(rule.maxPerWeek))
+  if (rule.notConsecutiveDays) parts.push(parts.length ? s.ruleNotConsecutiveLower : s.ruleNotConsecutive)
   return parts.join(', ')
 }
 

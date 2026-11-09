@@ -18,8 +18,8 @@ describe('describeSlotRule', () => {
 describe('describeVarietyRule', () => {
   it('words the weekly cap, the consecutive-days ban, or both', () => {
     expect(describeVarietyRule({ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false })).toBe('At most 2 a week')
-    expect(describeVarietyRule({ tag: 'fish', maxPerWeek: 0, notConsecutiveDays: true })).toBe('Never on consecutive days')
-    expect(describeVarietyRule({ tag: 'fish', maxPerWeek: 1, notConsecutiveDays: true })).toBe('At most 1 a week, never on consecutive days')
+    expect(describeVarietyRule({ tag: 'fish', maxPerWeek: 0, notConsecutiveDays: true })).toBe('Not on consecutive days')
+    expect(describeVarietyRule({ tag: 'fish', maxPerWeek: 1, notConsecutiveDays: true })).toBe('At most 1 a week, not on consecutive days')
   })
 })
 
