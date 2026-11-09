@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BentoGrid, Button, Chip, EmptyState } from '../../../ui'
+import { RecipeFileActions } from '../../import/components/RecipeFileActions'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
 import { useRecipes } from '../hooks/useRecipes'
@@ -8,8 +9,8 @@ import { recipeStrings } from '../strings'
 import type { RecipeFilter } from '../types'
 
 /**
- * Route /recipes: search, Tag filter, archived toggle, "New Recipe" and the agent-prompt slot (filled by
- * a later team), then the Recipes as Tiles. Opening a Tile goes to /recipes/:id.
+ * Route /recipes: search, Tag filter, archived toggle, "New Recipe" and the Recipe File actions (Import,
+ * Export, Copy Agent Prompt), then the Recipes as Tiles. Opening a Tile goes to /recipes/:id.
  */
 export function RecipesScreen(): ReactNode {
   const navigate = useNavigate()
@@ -52,7 +53,7 @@ export function RecipesScreen(): ReactNode {
           {recipeStrings.showArchived}
         </Chip>
         <Button onClick={() => navigate('/recipes/new')}>{recipeStrings.newRecipe}</Button>
-        <div data-slot="agent-prompt" />
+        <RecipeFileActions />
       </div>
       <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
       {body}

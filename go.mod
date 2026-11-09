@@ -7,6 +7,7 @@ require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/cucumber/godog v0.16.0
 	github.com/google/uuid v1.6.0
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/image v0.48.0
 	golang.org/x/oauth2 v0.38.0
 	modernc.org/sqlite v1.62.0
@@ -27,6 +28,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect

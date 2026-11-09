@@ -74,15 +74,29 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
-	timing, err := recipe.TimingOf(clean.Steps)
-	if err != nil {
-		return recipe.Recipe{}, err
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
 	defer tx.Rollback()
+	id, err := s.CreateTx(ctx, tx, clean)
+	if err != nil {
+		return recipe.Recipe{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return recipe.Recipe{}, err
+	}
+	return s.Get(ctx, id)
+}
+
+// CreateTx inserts a Recipe whose Input is already validated (recipe.Input.Validate
+// with the Ingredients it uses) inside the caller's transaction. It checks no
+// image ids and commits nothing. Returns the new id.
+func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (int64, error) {
+	timing, err := recipe.TimingOf(clean.Steps)
+	if err != nil {
+		return 0, err
+	}
 	now := s.now()
 	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
 	        source_url, source_attribution, image, archived, total_minutes, advance_minutes, created_at, updated_at)
@@ -90,19 +104,16 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
 		clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, now, now)
 	if err != nil {
-		return recipe.Recipe{}, err
+		return 0, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return recipe.Recipe{}, err
+		return 0, err
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
-		return recipe.Recipe{}, err
+		return 0, err
 	}
-	if err := tx.Commit(); err != nil {
-		return recipe.Recipe{}, err
-	}
-	return s.Get(ctx, id)
+	return id, nil
 }
 
 // Get returns the Recipe; ErrNotFound.
@@ -117,21 +128,38 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
-	timing, err := recipe.TimingOf(clean.Steps)
-	if err != nil {
-		return recipe.Recipe{}, err
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
 	defer tx.Rollback()
-	if err := exists(ctx, tx, `SELECT 1 FROM recipes WHERE id = ?`, id, ErrNotFound); err != nil {
+	before, err := s.ReplaceTx(ctx, tx, id, clean)
+	if err != nil {
 		return recipe.Recipe{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return recipe.Recipe{}, err
+	}
+	s.dropUnreferenced(ctx, before)
+	return s.Get(ctx, id)
+}
+
+// ReplaceTx overwrites the Recipe id (keeping its archived flag and created_at)
+// with an already validated Input, inside the caller's transaction. ErrNotFound
+// when there is no such Recipe. It returns the image ids the Recipe referred to
+// before; the caller removes those no longer referenced (DropUnreferenced) after
+// the commit.
+func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recipe.Input) ([]string, error) {
+	timing, err := recipe.TimingOf(clean.Steps)
+	if err != nil {
+		return nil, err
+	}
+	if err := exists(ctx, tx, `SELECT 1 FROM recipes WHERE id = ?`, id, ErrNotFound); err != nil {
+		return nil, err
 	}
 	before, err := recipeImages(ctx, tx, id)
 	if err != nil {
-		return recipe.Recipe{}, err
+		return nil, err
 	}
 	for _, q := range []string{
 		`DELETE FROM recipe_step_uses WHERE recipe_id = ?`,
@@ -140,7 +168,7 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 		`DELETE FROM recipe_tags WHERE recipe_id = ?`,
 	} {
 		if _, err := tx.ExecContext(ctx, q, id); err != nil {
-			return recipe.Recipe{}, err
+			return nil, err
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET name = ?, description = ?, yield = ?, ready_meal = ?, cooldown_days = ?,
@@ -148,16 +176,18 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 	        updated_at = ? WHERE id = ?`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
 		clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, s.now(), id); err != nil {
-		return recipe.Recipe{}, err
+		return nil, err
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
-		return recipe.Recipe{}, err
+		return nil, err
 	}
-	if err := tx.Commit(); err != nil {
-		return recipe.Recipe{}, err
-	}
-	s.dropUnreferenced(ctx, before)
-	return s.Get(ctx, id)
+	return before, nil
+}
+
+// DropUnreferenced removes the stored photos in ids that no Recipe or Step uses
+// any more (best-effort, see dropUnreferenced).
+func (s *Store) DropUnreferenced(ctx context.Context, ids []string) {
+	s.dropUnreferenced(ctx, ids)
 }
 
 // ListFilter selects Recipes. Archived: "" or "no" = active only, "yes" = archived only, "all".

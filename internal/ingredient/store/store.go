@@ -59,16 +59,29 @@ type ShelfLifePatch struct{ Days *int }
 
 // Create validates in and inserts. ErrNameTaken when the normalised name exists.
 func (s *Store) Create(ctx context.Context, in ingredient.Input) (ingredient.Ingredient, error) {
-	clean, err := in.Validate()
-	if err != nil {
-		return ingredient.Ingredient{}, err
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	defer tx.Rollback()
 
+	created, err := s.CreateTx(ctx, tx, in)
+	if err != nil {
+		return ingredient.Ingredient{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ingredient.Ingredient{}, err
+	}
+	return s.Get(ctx, created.ID)
+}
+
+// CreateTx is Create inside the caller's transaction (nothing is committed here).
+// The returned Ingredient is read back inside tx.
+func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, in ingredient.Input) (ingredient.Ingredient, error) {
+	clean, err := in.Validate()
+	if err != nil {
+		return ingredient.Ingredient{}, err
+	}
 	if err := checkNameFree(ctx, tx, units.NormalizeName(clean.Name), 0); err != nil {
 		return ingredient.Ingredient{}, err
 	}
@@ -86,10 +99,7 @@ func (s *Store) Create(ctx context.Context, in ingredient.Input) (ingredient.Ing
 	if err := insertConversions(ctx, tx, id, clean.Conversions); err != nil {
 		return ingredient.Ingredient{}, err
 	}
-	if err := tx.Commit(); err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	return s.Get(ctx, id)
+	return loadOne(ctx, tx, id)
 }
 
 // Get returns the Ingredient with its Conversions, or ErrNotFound.
@@ -245,6 +255,17 @@ func (s *Store) SetConversion(ctx context.Context, id int64, c units.Conversion)
 	}
 	defer tx.Rollback()
 
+	if _, err := s.SetConversionTx(ctx, tx, id, c); err != nil {
+		return ingredient.Ingredient{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ingredient.Ingredient{}, err
+	}
+	return s.Get(ctx, id)
+}
+
+// SetConversionTx is SetConversion inside the caller's transaction (nothing is committed here).
+func (s *Store) SetConversionTx(ctx context.Context, tx *sql.Tx, id int64, c units.Conversion) (ingredient.Ingredient, error) {
 	cur, err := loadOne(ctx, tx, id)
 	if err != nil {
 		return ingredient.Ingredient{}, err
@@ -275,10 +296,41 @@ func (s *Store) SetConversion(ctx context.Context, id int64, c units.Conversion)
 	if err := touch(ctx, tx, id, s.now()); err != nil {
 		return ingredient.Ingredient{}, err
 	}
-	if err := tx.Commit(); err != nil {
-		return ingredient.Ingredient{}, err
+	return loadOne(ctx, tx, id)
+}
+
+// AddConversionTx adds the Unit Conversion c to the Ingredient inside the
+// caller's transaction, only when it has no Conversion for that unit yet. An
+// existing Conversion is never overwritten: added is false and nothing changes.
+func (s *Store) AddConversionTx(ctx context.Context, tx *sql.Tx, id int64, c units.Conversion) (added bool, err error) {
+	cur, err := loadOne(ctx, tx, id)
+	if err != nil {
+		return false, err
 	}
-	return s.Get(ctx, id)
+	want := units.NormalizeUnit(c.Unit)
+	for _, old := range cur.Conversions {
+		if old.Unit == want {
+			return false, nil
+		}
+	}
+	clean, err := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, Conversions: []units.Conversion{c}}.Validate()
+	if err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO ingredient_conversions (ingredient_id, unit, to_base) VALUES (?, ?, ?)`,
+		id, clean.Conversions[0].Unit, clean.Conversions[0].ToBase); err != nil {
+		return false, err
+	}
+	if err := touch(ctx, tx, id, s.now()); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// GetTx returns the Ingredient read inside the caller's transaction.
+func (s *Store) GetTx(ctx context.Context, tx *sql.Tx, id int64) (ingredient.Ingredient, error) {
+	return loadOne(ctx, tx, id)
 }
 
 // RemoveConversion removes it (idempotent when absent). ErrInUse when any registered
