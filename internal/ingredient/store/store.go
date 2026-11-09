@@ -299,6 +299,35 @@ func (s *Store) SetConversionTx(ctx context.Context, tx *sql.Tx, id int64, c uni
 	return loadOne(ctx, tx, id)
 }
 
+// AddConversionTx adds the Unit Conversion c to the Ingredient inside the
+// caller's transaction, only when it has no Conversion for that unit yet. An
+// existing Conversion is never overwritten: added is false and nothing changes.
+func (s *Store) AddConversionTx(ctx context.Context, tx *sql.Tx, id int64, c units.Conversion) (added bool, err error) {
+	cur, err := loadOne(ctx, tx, id)
+	if err != nil {
+		return false, err
+	}
+	want := units.NormalizeUnit(c.Unit)
+	for _, old := range cur.Conversions {
+		if old.Unit == want {
+			return false, nil
+		}
+	}
+	clean, err := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, Conversions: []units.Conversion{c}}.Validate()
+	if err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO ingredient_conversions (ingredient_id, unit, to_base) VALUES (?, ?, ?)`,
+		id, clean.Conversions[0].Unit, clean.Conversions[0].ToBase); err != nil {
+		return false, err
+	}
+	if err := touch(ctx, tx, id, s.now()); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // GetTx returns the Ingredient read inside the caller's transaction.
 func (s *Store) GetTx(ctx context.Context, tx *sql.Tx, id int64) (ingredient.Ingredient, error) {
 	return loadOne(ctx, tx, id)

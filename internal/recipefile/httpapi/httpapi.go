@@ -184,12 +184,19 @@ func (a *api) plan(w http.ResponseWriter, r *http.Request) {
 }
 
 // confirm writes the Recipes and Ingredients of a finished Import Review in one
-// transaction and closes the review.
+// transaction. The Review is taken first (single use: a second or parallel
+// confirm finds nothing) and put back on any failure, so the User can retry.
 func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
-	rv, ok := a.review(w, r)
+	rv, ok := a.take(w, r)
 	if !ok {
 		return
 	}
+	done := false
+	defer func() {
+		if !done {
+			a.sessions.Restore(rv)
+		}
+	}()
 	d, ok := decisionsBody(w, r)
 	if !ok {
 		return
@@ -224,7 +231,7 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	a.sessions.Close(rv.UserID, rv.ID)
+	done = true // imported: the Review stays closed
 	a.published(res)
 	httpx.WriteJSON(w, http.StatusOK, confirmAnswer(res))
 }
@@ -237,6 +244,17 @@ func (a *api) close(w http.ResponseWriter, r *http.Request) {
 	}
 	a.sessions.Close(rv.UserID, rv.ID)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// take removes the signed-in User's open Import Review from the store; 404
+// otherwise (unknown, expired, not theirs, or already taken by another confirm).
+func (a *api) take(w http.ResponseWriter, r *http.Request) (recipefile.Review, bool) {
+	user, _ := auth.UserFrom(r.Context())
+	rv, ok := a.sessions.Take(user.ID, r.PathValue("id"))
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
+	}
+	return rv, ok
 }
 
 // review finds the signed-in User's open Import Review; 404 otherwise.

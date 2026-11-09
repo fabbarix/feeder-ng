@@ -36,8 +36,18 @@ var (
 	ErrTooManyRedirects = errors.New("too many redirects")
 )
 
-// cgnat is the carrier-grade NAT range 100.64.0.0/10.
-var cgnat = netip.MustParsePrefix("100.64.0.0/10")
+// blockedPrefixes are the ranges not covered by net/netip's predicates:
+// carrier-grade NAT, "this network" (0.0.0.0/8), and the IPv6 forms that tunnel
+// an IPv4 address or are deprecated (NAT64, 6to4, IPv4-compatible, site-local).
+// Each is refused whatever address it embeds.
+var blockedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("100.64.0.0/10"), // carrier-grade NAT
+	netip.MustParsePrefix("0.0.0.0/8"),     // "this network"
+	netip.MustParsePrefix("64:ff9b::/96"),  // NAT64 well-known prefix (RFC 6052)
+	netip.MustParsePrefix("2002::/16"),     // 6to4
+	netip.MustParsePrefix("::/96"),         // IPv4-compatible (deprecated)
+	netip.MustParsePrefix("fec0::/10"),     // site-local (deprecated)
+}
 
 // Options tune a Fetcher. The zero value is the production policy.
 type Options struct {
@@ -55,11 +65,21 @@ type Options struct {
 // Blocked reports whether an address must never be fetched: unspecified (0.0.0.0,
 // ::), loopback, private (10/8, 172.16/12, 192.168/16, fc00::/7), link-local
 // (169.254/16 including the cloud metadata address, fe80::/10), carrier-grade
-// NAT 100.64/10, multicast, and IPv4-mapped IPv6 forms of any of these.
+// NAT 100.64/10, "this network" 0.0.0.0/8, multicast, the NAT64, 6to4,
+// IPv4-compatible and site-local ranges (see blockedPrefixes), and IPv4-mapped
+// IPv6 forms of any of these.
 func Blocked(a netip.Addr) bool {
 	a = a.Unmap()
-	return !a.IsValid() || a.IsUnspecified() || a.IsLoopback() || a.IsPrivate() ||
-		a.IsLinkLocalUnicast() || a.IsMulticast() || cgnat.Contains(a)
+	if !a.IsValid() || a.IsUnspecified() || a.IsLoopback() || a.IsPrivate() ||
+		a.IsLinkLocalUnicast() || a.IsMulticast() {
+		return true
+	}
+	for _, p := range blockedPrefixes {
+		if p.Contains(a) {
+			return true
+		}
+	}
+	return false
 }
 
 // Fetcher implements recipefile.Fetcher.

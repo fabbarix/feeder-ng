@@ -22,6 +22,12 @@ type ImageSet struct {
 	Warnings []Warning
 }
 
+// ImageFailedMessage is the text of every image_failed warning. It is the same
+// for every failure (refused address, unreachable host, bad type, too many
+// downloads...) and never carries the cause: an uploaded file must not be able
+// to map the server's network by the answers it gets.
+const ImageFailedMessage = "the photo could not be imported"
+
 // MaxImagesFetched caps how many https images one file may make the server
 // download (the rest are dropped with a warning).
 const MaxImagesFetched = 50
@@ -30,7 +36,7 @@ const MaxImagesFetched = 50
 // and pixel caps apply) and downloads https URLs through fetch (a nil fetch
 // refuses every URL). Every failure (bad data, wrong content type, refused
 // address, anything not https, over MaxImagesFetched) drops that image and
-// adds a WarnImageFailed warning with the image's JSON path
+// adds a WarnImageFailed warning with the image's JSON path and ImageFailedMessage
 // ("$.recipes[0].image", "$.recipes[0].steps[1].image"). A cancelled context
 // stops fetching and warns for the rest. Paths are returned for images that
 // worked only.
@@ -43,7 +49,8 @@ func ResolveImages(ctx context.Context, f File, fetch Fetcher) ImageSet {
 		}
 		res, err := resolveOne(ctx, ref, fetch, &fetched)
 		if err != nil {
-			set.Warnings = append(set.Warnings, Warning{Path: path, Code: WarnImageFailed, Message: err.Error()})
+			// The cause (err) is not shown: every failure gets ImageFailedMessage.
+			set.Warnings = append(set.Warnings, Warning{Path: path, Code: WarnImageFailed, Message: ImageFailedMessage})
 			return
 		}
 		set.Images[path] = res

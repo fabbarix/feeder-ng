@@ -211,16 +211,32 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 		return Result{}, nil, err
 	}
 	res := Result{IngredientsCreated: len(c.NewIngredients)}
+	// A Unit Conversion the Ingredient gained since the review wins: it is kept,
+	// the file's one is skipped and not counted.
 	for _, a := range c.AddedConversions {
-		if _, err := s.ingredients.SetConversionTx(ctx, tx, a.IngredientID, a.Conversion); err != nil {
+		added, err := s.ingredients.AddConversionTx(ctx, tx, a.IngredientID, a.Conversion)
+		if err != nil {
 			return Result{}, nil, staleOr(err)
 		}
-		res.ConversionsAdded++
+		if added {
+			res.ConversionsAdded++
+		}
+	}
+
+	names, err := recipeNames(ctx, tx)
+	if err != nil {
+		return Result{}, nil, err
+	}
+	replacing := map[int64]bool{}
+	for _, rc := range c.Recipes {
+		if rc.Action == recipefile.ActionReplace {
+			replacing[rc.ReplaceID] = true
+		}
 	}
 
 	var replaced []string
 	for _, rc := range c.Recipes {
-		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, imageIDs)
+		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, imageIDs, names, replacing)
 		if err != nil {
 			return Result{}, nil, err
 		}
@@ -231,6 +247,40 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 		return Result{}, nil, err
 	}
 	return res, replaced, nil
+}
+
+// nameIndex maps units.NormalizeName of Recipe names to the ids that have them.
+type nameIndex map[string][]int64
+
+// recipeNames reads every Recipe name inside tx (archived ones too).
+func recipeNames(ctx context.Context, tx *sql.Tx) (nameIndex, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id, name FROM recipes`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	idx := nameIndex{}
+	for rows.Next() {
+		var id int64
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		idx.add(units.NormalizeName(name), id)
+	}
+	return idx, rows.Err()
+}
+
+func (ni nameIndex) add(key string, id int64) { ni[key] = append(ni[key], id) }
+
+// taken reports whether a Recipe other than the ones being replaced has the key.
+func (ni nameIndex) taken(key string, replacing map[int64]bool) bool {
+	for _, id := range ni[key] {
+		if !replacing[id] {
+			return true
+		}
+	}
+	return false
 }
 
 // createIngredients inserts the new Ingredients and returns their ids by key.
@@ -250,7 +300,7 @@ func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.
 // Commit's resolution, and its Input is validated again against the Ingredients
 // as they are inside this transaction.
 func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit, rc recipefile.RecipeCommit,
-	created map[string]int64, imageIDs map[string]string) (AppliedRecipe, []string, error) {
+	created map[string]int64, imageIDs map[string]string, names nameIndex, replacing map[int64]bool) (AppliedRecipe, []string, error) {
 	in := rc.Input
 	idOf := func(key string) (int64, error) {
 		r, ok := c.Resolved[key]
@@ -298,7 +348,11 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 		return u, ok
 	})
 	if err != nil {
-		return AppliedRecipe{}, nil, fmt.Errorf("recipe %q no longer validates: %w", in.Name, err)
+		return AppliedRecipe{}, nil, fmt.Errorf("%w: recipe %q no longer validates: %v", ErrStale, in.Name, err)
+	}
+	key := units.NormalizeName(clean.Name)
+	if rc.Action != recipefile.ActionReplace && names.taken(key, replacing) {
+		return AppliedRecipe{}, nil, ErrStale // the name was taken since the review
 	}
 
 	if rc.Action == recipefile.ActionReplace {
@@ -315,6 +369,7 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 	if err != nil {
 		return AppliedRecipe{}, nil, err
 	}
+	names.add(key, id)
 	return AppliedRecipe{Index: rc.Index, ID: id, Name: clean.Name, Action: "created"}, nil, nil
 }
 
