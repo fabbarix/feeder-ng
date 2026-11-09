@@ -21,13 +21,14 @@ var ctx = context.Background()
 // fakeSources serves a fixed household: one Dinner Meal Slot on every weekday at 19:00,
 // two Members of Portion Factor 1 (so a slot needs 2 portions), UTC.
 type fakeSources struct {
-	mu        sync.Mutex
-	settings  plan.Settings
-	slots     []runner.MealSlotDef
-	attendees map[string][]plan.Attendee // by "slotID|date" for overrides
-	recipes   []planner.Recipe
-	prefs     map[int64]planner.Preferences
-	calls     int // Settings calls = planning runs started
+	mu         sync.Mutex
+	settings   plan.Settings
+	slots      []runner.MealSlotDef
+	attendees  map[string][]plan.Attendee // by "slotID|date" for overrides
+	recipes    []planner.Recipe
+	prefs      map[int64]planner.Preferences
+	calls      int   // Settings calls = planning runs started
+	recipesErr error // makes every planning run fail (see TestChangeRulesRollsTheRuleBackWhenTheReplanFails)
 }
 
 func (s *fakeSources) Settings(context.Context) (plan.Settings, *time.Location, error) {
@@ -48,6 +49,9 @@ func (s *fakeSources) Attendance(_ context.Context, slotID int64, date string) (
 func (s *fakeSources) Recipes(context.Context) ([]planner.Recipe, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.recipesErr != nil {
+		return nil, s.recipesErr
+	}
 	return append([]planner.Recipe(nil), s.recipes...), nil
 }
 func (s *fakeSources) Preferences(context.Context) (map[int64]planner.Preferences, error) {
@@ -115,6 +119,20 @@ func (f *fakeStock) PublishDeduction(d runner.Deduction) {
 	defer f.mu.Unlock()
 	f.published = append(f.published, d)
 }
+
+// txStock is a fakeStock that also records waste inside the caller's transaction (runner.TxWaster).
+type txStock struct{ *fakeStock }
+
+func (f txStock) RecordLeftoverWasteTx(_ context.Context, _ *sql.Tx, w runner.LeftoverWaste) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.wasteErr != nil {
+		return f.wasteErr
+	}
+	f.waste = append(f.waste, w)
+	return nil
+}
+
 func (f *fakeStock) RecordLeftoverWaste(_ context.Context, w runner.LeftoverWaste) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

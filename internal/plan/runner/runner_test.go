@@ -7,6 +7,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/plan/store"
 	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
@@ -271,5 +272,62 @@ func TestPlanClearsUnpinnedMealsThatBreakASlotRuleAndKeepsPinnedOnes(t *testing.
 	}
 	if got, err := e.st.Meal(ctx, e.key(10)); err == nil && got.RecipeID == tue.RecipeID {
 		t.Errorf("an unpinned meal that breaks the Slot Rule was kept: %+v", got)
+	}
+}
+
+func TestChangeRulesRollsTheRuleBackWhenTheReplanFails(t *testing.T) {
+	e := newEnv(t)
+	e.mustPlan()
+	slot := e.key(10).MealSlotID
+	if err := e.r.ChangeRules(ctx, func(st *store.Store) error {
+		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, RecipeID: e.rec["pasta"]})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rules, _ := e.st.SlotRules(ctx)
+	if len(rules) != 1 {
+		t.Fatalf("%d Slot Rules after a successful change, want 1", len(rules))
+	}
+	publishedBefore := e.bus.count("plan")
+
+	e.src.recipesErr = errBoom // every replan from now on fails
+	if err := e.r.ChangeRules(ctx, func(st *store.Store) error {
+		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, RecipeID: e.rec["soup"]})
+		return err
+	}); err == nil {
+		t.Fatal("ChangeRules succeeded although the replan failed")
+	}
+	if got, _ := e.st.SlotRules(ctx); len(got) != 1 {
+		t.Errorf("a Slot Rule was saved although the replan failed: %+v", got)
+	}
+	if err := e.r.ChangeRules(ctx, func(st *store.Store) error { return st.DeleteSlotRule(ctx, rules[0].ID) }); err == nil {
+		t.Fatal("deleting the Slot Rule succeeded although the replan failed")
+	}
+	if got, _ := e.st.SlotRules(ctx); len(got) != 1 {
+		t.Errorf("the Slot Rule was deleted although the replan failed: %+v", got)
+	}
+	if n := e.bus.count("plan"); n != publishedBefore {
+		t.Errorf("a failed change published %d plan events, want none", n-publishedBefore)
+	}
+}
+
+func TestDiscardExpiredPublishesStockWasteAfterAnInTransactionWaste(t *testing.T) {
+	e := newEnv(t)
+	tx := txStock{e.stock}
+	e.r = runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: tx, Events: e.bus})
+	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4]}
+	old, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 3, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
+	if n, err := e.r.DiscardExpired(ctx); err != nil || n != 1 {
+		t.Fatalf("DiscardExpired = %d, %v; want 1, nil", n, err)
+	}
+	if len(e.stock.waste) != 1 || e.stock.waste[0].LeftoverID != old.ID {
+		t.Errorf("waste = %+v, want the discarded Leftover recorded in the transaction", e.stock.waste)
+	}
+	if n := e.bus.count("stock"); n != 1 {
+		t.Errorf("published %d stock events, want 1 after the commit", n)
+	}
+	if n, _ := e.r.DiscardExpired(ctx); n != 0 || e.bus.count("stock") != 1 {
+		t.Errorf("a run that discards nothing published a stock event (or discarded %d)", n)
 	}
 }

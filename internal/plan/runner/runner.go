@@ -180,12 +180,24 @@ func (r *Runner) Regenerate(ctx context.Context) (Summary, error) {
 	return r.write(ctx, plan.ReasonRegenerate, runOpts{regenerate: true}, nil)
 }
 
+// ChangeRules applies a Slot Rule or Variety Rule change and replans, in ONE
+// transaction: when the replan fails the change is rolled back and nothing is
+// published. change runs against the transaction's store. Publishes topic "plan"
+// after the commit, like every write.
+func (r *Runner) ChangeRules(ctx context.Context, change func(st *store.Store) error) error {
+	_, err := r.write(ctx, plan.ReasonRulesChanged, runOpts{clearAll: true}, func(_ *sql.Tx, st *store.Store) (func(), error) {
+		return nil, change(st)
+	})
+	return err
+}
+
 // DiscardExpired discards the Leftovers whose Use-by is before today (household
 // date) and records each as waste (reason leftover_discarded). Pinned dependants
 // of a discarded Leftover are unpinned so the next run can replan them. Waste is
 // recorded in the same transaction when the Stock adapter supports it (TxWaster),
-// otherwise after the commit; a failure of the latter is logged and the Leftover
-// stays discarded. It returns how many were discarded.
+// and then the runner publishes the `stock` waste change after the commit;
+// otherwise the waste is recorded after the commit by the adapter, and a failure
+// there is logged and the Leftover stays discarded. It returns how many were discarded.
 func (r *Runner) DiscardExpired(ctx context.Context) (int, error) {
 	var discarded []plan.Leftover
 	var on string
@@ -201,6 +213,7 @@ func (r *Runner) DiscardExpired(ctx context.Context) (int, error) {
 		}
 		discarded = plan.ExpiredLeftovers(ls, on)
 		var deferred []LeftoverWaste
+		wastedInTx := false
 		txWaster, inTx := r.d.Stock.(TxWaster)
 		for _, l := range discarded {
 			if err := st.DiscardLeftover(ctx, l.ID, on); err != nil {
@@ -214,11 +227,16 @@ func (r *Runner) DiscardExpired(ctx context.Context) (int, error) {
 				if err := txWaster.RecordLeftoverWasteTx(ctx, tx, w); err != nil {
 					return nil, err
 				}
+				wastedInTx = true
 				continue
 			}
 			deferred = append(deferred, w)
 		}
 		return func() {
+			// The in-transaction waste publishes nothing itself (RecordWasteTx), so the runner announces it here.
+			if wastedInTx && r.d.Events != nil {
+				r.d.Events.Publish("stock", map[string]any{"changed": "waste"})
+			}
 			for _, w := range deferred {
 				if err := r.d.Stock.RecordLeftoverWaste(ctx, w); err != nil {
 					r.d.Logger.Error("recording Leftover waste failed", "leftover", w.LeftoverID, "err", err)

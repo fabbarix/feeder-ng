@@ -284,12 +284,12 @@ func (a *api) addSlotRule(w http.ResponseWriter, r *http.Request) {
 	if body.Tag != "" {
 		rule.Tag = recipe.TagKey(body.Tag)
 	}
-	added, err := a.st.AddSlotRule(r.Context(), rule)
+	var added plan.SlotRule
+	err := a.run.ChangeRules(r.Context(), func(st *store.Store) (err error) {
+		added, err = st.AddSlotRule(r.Context(), rule)
+		return err
+	})
 	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	if _, err := a.run.Plan(r.Context(), plan.ReasonRulesChanged); err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -307,11 +307,10 @@ func (a *api) deleteSlotRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, store.ErrNotFound)
 		return
 	}
-	if err := a.st.DeleteSlotRule(r.Context(), id); err != nil {
-		writeErr(w, err)
-		return
-	}
-	if _, err := a.run.Plan(r.Context(), plan.ReasonRulesChanged); err != nil {
+	err = a.run.ChangeRules(r.Context(), func(st *store.Store) error {
+		return st.DeleteSlotRule(r.Context(), id)
+	})
+	if err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -341,23 +340,22 @@ func (a *api) setVarietyRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := plan.VarietyRule{Tag: recipe.TagKey(r.PathValue("tag")), MaxPerWeek: body.MaxPerWeek, NotConsecutiveDays: body.NotConsecutiveDays}
-	if err := a.st.SetVarietyRule(r.Context(), v); err != nil {
+	err := a.run.ChangeRules(r.Context(), func(st *store.Store) error {
+		return st.SetVarietyRule(r.Context(), v)
+	})
+	if err != nil {
 		writeFieldErr(w, err, "maxPerWeek")
-		return
-	}
-	if _, err := a.run.Plan(r.Context(), plan.ReasonRulesChanged); err != nil {
-		writeErr(w, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, varietyOut{Tag: v.Tag, MaxPerWeek: v.MaxPerWeek, NotConsecutiveDays: v.NotConsecutiveDays})
 }
 
 func (a *api) deleteVarietyRule(w http.ResponseWriter, r *http.Request) {
-	if err := a.st.DeleteVarietyRule(r.Context(), recipe.TagKey(r.PathValue("tag"))); err != nil {
-		writeErr(w, err)
-		return
-	}
-	if _, err := a.run.Plan(r.Context(), plan.ReasonRulesChanged); err != nil {
+	tag := recipe.TagKey(r.PathValue("tag"))
+	err := a.run.ChangeRules(r.Context(), func(st *store.Store) error {
+		return st.DeleteVarietyRule(r.Context(), tag)
+	})
+	if err != nil {
 		writeErr(w, err)
 		return
 	}
