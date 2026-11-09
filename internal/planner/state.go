@@ -183,6 +183,7 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 		st.pend = append(st.pend, &pending{
 			actual:   true,
 			id:       lf.ID,
+			from:     lf.FromSlot,
 			seq:      -1,
 			recipe:   lf.RecipeID,
 			portions: lf.Portions,
@@ -279,8 +280,8 @@ func (st *state) applyFixed(i int, m ExistingMeal) {
 	}
 	day := st.days[i]
 	st.consumeNeeds(r, m.Batches, day)
-	if sur := m.Batches*r.Yield - portions; sur > eps {
-		st.addPending(i, r, sur, day)
+	if extra := m.Batches*r.Yield - portions; extra > eps {
+		st.addPending(i, r, extra, day)
 	}
 }
 
@@ -296,13 +297,15 @@ func (st *state) addPending(i int, r Recipe, portions float64, day int) {
 }
 
 // findSource returns the pending Leftover a meal is served from, if it still exists.
+// A LeftoverID names an actual Leftover; otherwise FromSlot matches the source
+// slot of an actual Leftover (its recorded FromSlot) or of a planned extra.
 func (st *state) findSource(src LeftoverSource) *pending {
 	for _, p := range st.pend {
 		if src.LeftoverID != 0 {
 			if p.actual && p.id == src.LeftoverID {
 				return p
 			}
-		} else if !p.actual && p.from == src.FromSlot {
+		} else if src.FromSlot != (SlotKey{}) && p.from == src.FromSlot {
 			return p
 		}
 	}
@@ -320,13 +323,16 @@ func (st *state) consumeLeftover(src LeftoverSource, portions float64) {
 }
 
 // leftoverValid: a Planned meal served from a Leftover is still valid when its
-// source covers the portions, is not past its Use-by, and nobody attending
-// excludes its Recipe.
+// source holds the same Recipe, covers the portions, is not past its Use-by,
+// and nobody attending excludes its Recipe.
 func (st *state) leftoverValid(i int) bool {
 	s := st.slots[i]
 	portions := PortionsNeeded(s.Attendance)
 	p := st.findSource(*s.Existing.From)
 	if p == nil || p.portions < portions-eps || st.days[i] > p.useBy {
+		return false
+	}
+	if p.recipe != s.Existing.RecipeID {
 		return false
 	}
 	r, ok := st.recipes[p.recipe]
@@ -483,10 +489,10 @@ func (st *state) placeFresh(i int, b breakdown, portions float64, rule *Why) Pla
 		Why:      buildWhy(b.chips, rule),
 	}
 	pl.Purchases = st.consumeNeeds(r, float64(b.batches), day)
-	if sur := float64(b.batches)*r.Yield - portions; sur > eps {
+	if extra := float64(b.batches)*r.Yield - portions; extra > eps {
 		useBy := day + st.useByDays(r)
-		pl.NewLeftover = &NewLeftover{Portions: sur, UseBy: dateOf(useBy)}
-		st.addPending(i, r, sur, day)
+		pl.NewLeftover = &NewLeftover{Portions: extra, UseBy: dateOf(useBy)}
+		st.addPending(i, r, extra, day)
 	}
 	st.history = append(st.history, fresh{day: day, seq: i, recipe: r.ID})
 	return pl

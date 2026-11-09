@@ -246,8 +246,8 @@ func (st *state) score(i int, r Recipe, portions float64) breakdown {
 	}
 
 	// Extra portions: fits a later slot, or is wasted.
-	if surplus := float64(batches)*r.Yield - portions; surplus > eps {
-		if fit, ok := st.fitsLater(i, r, surplus); ok {
+	if extra := float64(batches)*r.Yield - portions; extra > eps {
+		if fit, ok := st.fitsLater(i, r, extra); ok {
 			v := w.LeftoverFits
 			b.addTerm(TermLeftoverFits, v)
 			b.addChip(chip{value: v, why: Why{Code: ReasonLeftoverFits, Value: v, Date: dateOf(fit)}})
@@ -280,10 +280,10 @@ type lineFact struct {
 	day  int
 }
 
-// fitsLater reports the first later slot that can be served the surplus of
+// fitsLater reports the first later slot that can be served the extra of
 // recipe r cooked at slot i: still empty, not past r's Use-by, needing no more
-// than the surplus, matching its Slot Rules, and with no attendee excluding r.
-func (st *state) fitsLater(i int, r Recipe, surplus float64) (int, bool) {
+// than the extra, matching its Slot Rules, and with no attendee excluding r.
+func (st *state) fitsLater(i int, r Recipe, extra float64) (int, bool) {
 	useBy := st.days[i] + st.useByDays(r)
 	for j := i + 1; j < len(st.slots); j++ {
 		if st.roles[j] != roleEmpty || st.days[j] > useBy {
@@ -291,7 +291,7 @@ func (st *state) fitsLater(i int, r Recipe, surplus float64) (int, bool) {
 		}
 		s := st.slots[j]
 		portions := PortionsNeeded(s.Attendance)
-		if portions <= eps || portions > surplus+eps {
+		if portions <= eps || portions > extra+eps {
 			continue
 		}
 		if len(s.Rules) > 0 {
@@ -299,7 +299,7 @@ func (st *state) fitsLater(i int, r Recipe, surplus float64) (int, bool) {
 				continue
 			}
 		}
-		if st.excludes(s.Attendance, r, false) {
+		if st.excludes(s.Attendance, r, true) {
 			continue
 		}
 		return st.days[j], true
