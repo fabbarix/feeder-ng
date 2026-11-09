@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../../lib/http'
 import type { Ingredient, MergePreview } from '../types'
 
 const passata: Ingredient = { id: 4, name: 'passata', baseUnit: 'ml', shelfLifeDays: 5, conversions: [{ unit: 'jar', toBase: 700 }] }
@@ -62,5 +63,36 @@ describe('useMergeFlow', () => {
     act(() => result.current.selectTarget(puree))
     await waitFor(() => expect(result.current.preview).toBeDefined())
     expect(result.current.canMerge).toBe(false)
+  })
+  it('reloads the preview when the server reports merge conflicts', async () => {
+    const { result } = renderHook(() => useMergeFlow(4), { wrapper })
+    act(() => result.current.selectTarget(puree))
+    await waitFor(() => expect(result.current.preview).toBeDefined())
+    act(() => result.current.answer('conversion:jar', 690))
+    act(() => result.current.answer('shelfLife', null))
+    api.mergePreview.mockClear()
+    api.merge.mockRejectedValueOnce(new ApiError(409, 'merge_conflicts', 'changed'))
+    await act(async () => {
+      await expect(result.current.merge()).rejects.toThrow('changed')
+    })
+    await waitFor(() => expect(api.mergePreview).toHaveBeenCalledWith(4, 9))
+  })
+  it('reloads the preview on a base unit mismatch but not on other failures', async () => {
+    const { result } = renderHook(() => useMergeFlow(4), { wrapper })
+    act(() => result.current.selectTarget(puree))
+    await waitFor(() => expect(result.current.preview).toBeDefined())
+    act(() => result.current.answer('conversion:jar', 690))
+    act(() => result.current.answer('shelfLife', null))
+    api.mergePreview.mockClear()
+    api.merge.mockRejectedValueOnce(new ApiError(500, 'server_error', 'boom'))
+    await act(async () => {
+      await expect(result.current.merge()).rejects.toThrow('boom')
+    })
+    expect(api.mergePreview).not.toHaveBeenCalled()
+    api.merge.mockRejectedValueOnce(new ApiError(409, 'base_unit_mismatch', 'units differ'))
+    await act(async () => {
+      await expect(result.current.merge()).rejects.toThrow('units differ')
+    })
+    await waitFor(() => expect(api.mergePreview).toHaveBeenCalledWith(4, 9))
   })
 })

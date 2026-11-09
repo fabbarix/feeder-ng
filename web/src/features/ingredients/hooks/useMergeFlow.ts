@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { ApiError } from '../../../lib/http'
 import { ingredientsApi } from '../api'
 import { type Answers, buildMergeRequest, isResolved } from '../lib/mergeResolution'
 import { filterIngredients, normalizeName } from '../lib/names'
@@ -79,7 +80,16 @@ export function useMergeFlow(sourceId: number): UseMergeFlow {
     canMerge: preview !== undefined && preview.blocked === '' && isResolved(preview.conflicts, answers),
     merge: async () => {
       if (!target || !preview) throw new Error('Choose the Ingredient to keep first')
-      const survivor = await ingredientsApi.merge(sourceId, buildMergeRequest(target.id, preview.conflicts, answers))
+      let survivor: Ingredient
+      try {
+        survivor = await ingredientsApi.merge(sourceId, buildMergeRequest(target.id, preview.conflicts, answers))
+      } catch (e) {
+        // The server found conflicts (or a Base Unit mismatch) the preview did not show: reload it so the User sees them.
+        if (e instanceof ApiError && (e.code === 'merge_conflicts' || e.code === 'base_unit_mismatch')) {
+          void client.invalidateQueries({ queryKey: ['ingredients', sourceId, 'merge-preview'] })
+        }
+        throw e
+      }
       await client.invalidateQueries({ queryKey: ['ingredients'] })
       return survivor
     },

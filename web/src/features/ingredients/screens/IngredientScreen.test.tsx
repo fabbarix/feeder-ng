@@ -46,6 +46,7 @@ describe('IngredientScreen', () => {
     vi.clearAllMocks()
     hook.ingredient = base
     hook.error = null
+    hook.isLoading = false
     hook.referenceCount = 0
   })
   it('shows the name, Base Unit, Shelf Life and conversions', () => {
@@ -112,6 +113,27 @@ describe('IngredientScreen', () => {
     hook.ingredient = undefined
     hook.error = new ApiError(404, 'not_found', 'nope')
     setup()
+    expect(screen.getByText(strings.notFoundTitle)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: strings.title })).toHaveAttribute('href', '/ingredients')
+  })
+  it('shows a loading state, not "does not exist", while the Ingredient loads', () => {
+    hook.ingredient = undefined
+    hook.isLoading = true
+    setup()
+    expect(screen.getByRole('status')).toHaveTextContent(strings.loading)
+    expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
+  })
+  it('shows a failure, not "does not exist", when the load fails for another reason', () => {
+    hook.ingredient = undefined
+    hook.error = new ApiError(500, 'server_error', 'boom')
+    setup()
+    expect(screen.getByRole('alert')).toHaveTextContent(strings.actionFailed)
+    expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
+  })
+  it('groups its details into Bento tiles', () => {
+    setup()
+    expect(screen.getByRole('group', { name: strings.detailsLabel })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: strings.conversionsTitle })).toHaveClass('tile')
+    expect(screen.getByRole('region', { name: strings.mergeTitle })).toHaveClass('tile')
   })
 })

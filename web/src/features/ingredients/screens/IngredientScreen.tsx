@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BottomSheet, Button, Chip, EmptyState } from '../../../ui'
+import { ApiError } from '../../../lib/http'
+import type { BaseUnit } from '../../../lib/units'
+import { BentoGrid, BottomSheet, Button, Chip, EmptyState, Tile } from '../../../ui'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
 import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
@@ -8,16 +10,16 @@ import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useIngredient } from '../hooks/useIngredient'
 import { errorMessage } from '../lib/errorMessage'
 import { strings } from '../strings'
-import type { BaseUnit } from '../../../lib/units'
 
 const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']
 
 /**
- * Route /ingredients/:id. Heading = name; "Rename" (inline Name field + "Save name"); the Base Unit as a chip with
- * a "Change Base Unit" chip group disabled with strings.baseUnitLocked(n) while referenced; ShelfLifeEditor;
- * ConversionEditor; "Merge into another Ingredient" (MergeSheet, on success navigates to the survivor);
- * "Delete Ingredient" (disabled with strings.deleteLocked(n) while referenced; otherwise asks strings.deleteConfirm
- * in a sheet, then deletes and navigates to /ingredients). Unknown id shows an EmptyState with a link back.
+ * Route /ingredients/:id. Heading = name; "Rename" (inline Name field + "Save name"). Below it a BentoGrid of Tiles:
+ * Base Unit (chip group disabled with strings.baseUnitLocked(n) while referenced), Shelf Life (ShelfLifeEditor),
+ * Unit Conversions (ConversionEditor), Merge (opens MergeSheet; on success navigates to the survivor) and Delete
+ * (disabled with strings.deleteLocked(n) while referenced; otherwise asks strings.deleteConfirm in a sheet, then
+ * deletes and navigates to /ingredients). While loading shows strings.loading; an unknown id (404) shows an
+ * EmptyState with a link back.
  */
 export function IngredientScreen() {
   const { id: rawId } = useParams()
@@ -34,12 +36,11 @@ export function IngredientScreen() {
 
   const ingredient = ing.ingredient
   if (!ingredient) {
-    return (
-      <EmptyState
-        title={strings.notFoundTitle}
-        action={<Link to="/ingredients">{strings.title}</Link>}
-      />
-    )
+    if (ing.isLoading) return <p role="status">{strings.loading}</p>
+    if (ing.error instanceof ApiError && ing.error.status === 404) {
+      return <EmptyState title={strings.notFoundTitle} action={<Link to="/ingredients">{strings.title}</Link>} />
+    }
+    return <p role="alert">{strings.actionFailed}</p>
   }
 
   const locked = ing.referenceCount > 0
@@ -94,38 +95,54 @@ export function IngredientScreen() {
         </Button>
       )}
 
-      <section>
-        <Chip>{ingredient.baseUnit}</Chip>
-        <fieldset disabled={locked}>
-          <legend>{strings.baseUnitLabel}</legend>
-          {BASE_UNITS.map((b) => (
-            <Chip
-              key={b}
-              selected={ingredient.baseUnit === b}
-              onClick={() => {
-                if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
-              }}
-            >
-              {b}
-            </Chip>
-          ))}
-        </fieldset>
-        {locked ? <p>{strings.baseUnitLocked(ing.referenceCount)}</p> : null}
-      </section>
+      <BentoGrid columns={2} label={strings.detailsLabel}>
+        <Tile as="section" size="md" aria-label={strings.baseUnitLabel}>
+          <Chip>{ingredient.baseUnit}</Chip>
+          <fieldset disabled={locked}>
+            <legend>{strings.baseUnitLabel}</legend>
+            {BASE_UNITS.map((b) => (
+              <Chip
+                key={b}
+                selected={ingredient.baseUnit === b}
+                onClick={() => {
+                  if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
+                }}
+              >
+                {b}
+              </Chip>
+            ))}
+          </fieldset>
+          {locked ? <p>{strings.baseUnitLocked(ing.referenceCount)}</p> : null}
+        </Tile>
 
-      <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
+        <Tile as="section" size="md" aria-label={strings.shelfLifeLabel}>
+          <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
+        </Tile>
 
-      <ConversionEditor
-        conversions={ingredient.conversions}
-        base={ingredient.baseUnit}
-        system={system}
-        onAdd={(c) => void attempt(() => ing.setConversion(c))}
-        onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
-      />
+        <Tile as="section" size="full" aria-label={strings.conversionsTitle}>
+          <ConversionEditor
+            conversions={ingredient.conversions}
+            base={ingredient.baseUnit}
+            system={system}
+            onAdd={(c) => void attempt(() => ing.setConversion(c))}
+            onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
+          />
+        </Tile>
 
-      <Button variant="tonal" onClick={() => setMergeOpen(true)}>
-        {strings.mergeInto}
-      </Button>
+        <Tile as="section" size="md" aria-label={strings.mergeTitle}>
+          <Button variant="tonal" onClick={() => setMergeOpen(true)}>
+            {strings.mergeInto}
+          </Button>
+        </Tile>
+
+        <Tile as="section" size="md" aria-label={strings.deleteIngredient}>
+          <Button variant="ghost" disabled={locked} onClick={() => setDeleteOpen(true)}>
+            {strings.deleteIngredient}
+          </Button>
+          {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}
+        </Tile>
+      </BentoGrid>
+
       <MergeSheet
         open={mergeOpen}
         sourceId={id}
@@ -135,11 +152,6 @@ export function IngredientScreen() {
           navigate(`/ingredients/${targetId}`)
         }}
       />
-
-      <Button variant="ghost" disabled={locked} onClick={() => setDeleteOpen(true)}>
-        {strings.deleteIngredient}
-      </Button>
-      {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}
       <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title={strings.deleteIngredient}>
         <p>{strings.deleteConfirm(ingredient.name)}</p>
         <Button onClick={() => void remove()}>{strings.deleteIngredient}</Button>
