@@ -129,7 +129,8 @@ func (s *Scheduler) RunDue(ctx context.Context) (ran []string, err error) {
 			errs = append(errs, fmt.Errorf("scheduler: %s: last run: %w", j.name, err))
 			continue
 		}
-		if last == day {
+		// ">=": a job that already completed on a later household day (the zone moved west) is not run again.
+		if last >= day {
 			continue
 		}
 		if err := j.fn(ctx, day); err != nil {

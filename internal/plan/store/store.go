@@ -56,12 +56,6 @@ func (s *Store) InTx(ctx context.Context, fn func(tx *sql.Tx, st *Store) error) 
 	if err != nil {
 		return err
 	}
-	// Take the write lock first: a transaction that reads and then writes can fail at once (SQLITE_BUSY_SNAPSHOT)
-	// when another connection commits in between, instead of waiting for the lock.
-	if _, err := tx.ExecContext(ctx, `UPDATE plan_state SET generation = generation WHERE id = 1`); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
 	bound := &Store{db: s.db, q: tx, tx: tx, clk: s.clk}
 	if err := fn(tx, bound); err != nil {
 		_ = tx.Rollback()

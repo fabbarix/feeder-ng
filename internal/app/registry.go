@@ -31,6 +31,22 @@ type Deps struct {
 	// Context ends when the application is closed (App.Close): long-running workers a module starts (planning's
 	// invalidation worker and Events subscription) stop when it is done.
 	Context context.Context
+	// workers counts the goroutines started with Go; App.Close waits for them.
+	workers *sync.WaitGroup
+}
+
+// Go starts f on a goroutine that App.Close waits for, so a module's long-running
+// worker has finished (after Context is done) when Close returns.
+func (d Deps) Go(f func()) {
+	if d.workers == nil {
+		go f()
+		return
+	}
+	d.workers.Add(1)
+	go func() {
+		defer d.workers.Done()
+		f()
+	}()
 }
 
 // Module is one feature's HTTP surface.

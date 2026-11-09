@@ -197,3 +197,16 @@ func TestRunStoreMemory(t *testing.T) {
 		t.Fatalf("LastRun = %q", got)
 	}
 }
+
+func TestAWestwardZoneChangeDoesNotRerunAJobThatRanOnALaterDay(t *testing.T) {
+	// The job completed for the 11th while the household was east of here; now it is still the 10th
+	// in the household zone. The job must not run again today.
+	h := newHarness(t, time.Date(2026, 11, 10, 4, 0, 0, 0, time.UTC), time.UTC)
+	h.job("nightly", "03:00", nil)
+	if err := h.runs.MarkRun(context.Background(), "nightly", "2026-11-11"); err != nil {
+		t.Fatal(err)
+	}
+	if ran := h.runDue(t); len(ran) != 0 || len(h.log) != 0 {
+		t.Fatalf("ran %v (log %v) on the 10th after a run for the 11th; want nothing", ran, h.log)
+	}
+}
