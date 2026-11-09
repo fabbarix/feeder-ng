@@ -6,11 +6,9 @@ export interface BoardApi {
   board(): Promise<BoardData>
 }
 
-export function createBoardApi(_client: HttpClient): BoardApi {
+export function createBoardApi(client: HttpClient): BoardApi {
   return {
-    board: () => {
-      throw new Error('TODO')
-    },
+    board: () => client.get<BoardData>('/api/board'),
   }
 }
 
