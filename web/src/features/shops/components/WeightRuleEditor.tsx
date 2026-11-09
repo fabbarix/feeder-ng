@@ -74,7 +74,7 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
           <input {...c} type="text" inputMode="numeric" value={form.sample} onChange={(e) => form.setSample(e.target.value)} />
         )}
       </FormField>
-      <RulePreview preview={form.preview} currency={currency} />
+      <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
       {form.error ? <p className="pg__error">{form.error}</p> : null}
       {form.serverError ? (
         <p role="alert" className="pg__error">

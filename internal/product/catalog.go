@@ -8,7 +8,7 @@ import (
 
 // BuildCatalog: plain Shop Barcodes -> ShopBarcodes; weighed -> WeightProducts
 // (barcode.WeightProductKey); PricePerKgCents only for Products in WeightProducts
-// that have a price per kg; Global copied; Rules sorted by ID. Empty maps are nil
+// whose latest explicit price per kg is known (never derived from a pack size); Global copied; Rules sorted by ID. Empty maps are nil
 // so the JSON omits them. A home Catalog is BuildCatalog(CatalogRows{Global: g}).
 func BuildCatalog(r CatalogRows) barcode.Catalog {
 	var c barcode.Catalog
@@ -26,12 +26,7 @@ func BuildCatalog(r CatalogRows) barcode.Catalog {
 		c.WeightProducts[barcode.WeightProductKey(sb.RuleID, sb.ItemCode)] = sb.ProductID
 	}
 	for id := range weighedProducts(c.WeightProducts) {
-		price, ok := r.Latest[id]
-		if !ok {
-			continue
-		}
-		info := r.Info[id]
-		if cents, _, ok := PricePerKg(price, info.PackSize, info.Base); ok {
+		if cents, ok := LatestExplicitPricePerKg(r.Prices[id]); ok {
 			if c.PricePerKgCents == nil {
 				c.PricePerKgCents = map[int64]int{}
 			}

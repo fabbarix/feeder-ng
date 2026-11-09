@@ -1,5 +1,6 @@
 import { useMe } from '../../../app/useMe'
 import { ShopList } from '../components/ShopList'
+import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpdates'
 import { useShops } from '../hooks/useShops'
 import { strings } from '../strings'
 import '../../products/products.css'
@@ -8,6 +9,7 @@ import '../../products/products.css'
 export function ShopsScreen() {
   const me = useMe()
   const { shops, isLoading, error, add } = useShops()
+  useProductsLiveUpdates()
   return (
     <div className="pg">
       <h1 className="pg__title">{strings.shopsTitle}</h1>

@@ -43,11 +43,20 @@ export function decodeSample(rule: WeightRule, sample: string): RulePreview {
   return { state: 'ok', itemCode, priceCents: res.priceCents }
 }
 
+/** Grams in one unit of a weight rule (g is the default, so it is absent). */
+const GRAMS_PER_UNIT: Record<string, number> = { kg: 1000, oz: 28.349523125, lb: 453.59237 }
+
+/** Rounds to 3 decimals and drops trailing zeros: 1.500 -> "1.5", 680.3885 -> "680.389". */
+function shortNumber(n: number): string {
+  return String(Number(n.toFixed(3)))
+}
+
 /**
- * One line for the UI: "Item 00123 · 750 g", "Item 12345 · 680.389 g" or
+ * One line for the UI: "Item 00123 · 750 g", "Item 00123 · 0.5 kg (500 g)", "Item 12345 · 1.5 lb (680.389 g)"
+ * (weightUnit is the rule's unit: a non-gram unit shows the weight in that unit, then in grams), or
  * "Item 00123 · $4.50"; the message from strings for the other states.
  */
-export function previewText(p: RulePreview, currency: string, _weightUnit?: string): string {
+export function previewText(p: RulePreview, currency: string, weightUnit?: string): string {
   switch (p.state) {
     case 'idle':
       return strings.previewIdle
@@ -60,11 +69,18 @@ export function previewText(p: RulePreview, currency: string, _weightUnit?: stri
     case 'ok': {
       const value =
         p.weightGrams !== undefined
-          ? `${p.weightGrams} g`
+          ? weightText(p.weightGrams, weightUnit)
           : p.priceCents !== undefined
             ? formatMinor(p.priceCents, currency)
             : ''
       return value === '' ? strings.previewItem(p.itemCode) : `${strings.previewItem(p.itemCode)} · ${value}`
     }
   }
+}
+
+function weightText(grams: number, unit: string | undefined): string {
+  const perUnit = unit !== undefined ? GRAMS_PER_UNIT[unit] : undefined
+  const gramsText = `${shortNumber(grams)} g`
+  if (perUnit === undefined) return gramsText
+  return `${shortNumber(grams / perUnit)} ${unit} (${gramsText})`
 }

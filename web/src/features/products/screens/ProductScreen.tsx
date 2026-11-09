@@ -7,7 +7,9 @@ import { PriceEditor } from '../components/PriceEditor'
 import { PriceList } from '../components/PriceList'
 import { ProductBarcodes } from '../components/ProductBarcodes'
 import { ProductShops } from '../components/ProductShops'
+import { useAttempt } from '../hooks/useAttempt'
 import { useCurrency } from '../hooks/useCurrency'
+import { useProductsLiveUpdates } from '../hooks/useProductsLiveUpdates'
 import { useProduct } from '../hooks/useProduct'
 import { formatPackSize } from '../lib/names'
 import { todayIso } from '../lib/priceForm'
@@ -28,7 +30,8 @@ export function ProductScreen() {
   const [packText, setPackText] = useState<string | null>(null)
   const [pricing, setPricing] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { error, setError, attempt } = useAttempt()
+  useProductsLiveUpdates()
 
   const product = p.product
   if (!product) {
@@ -39,16 +42,6 @@ export function ProductScreen() {
     return <p role="alert">{strings.actionFailed}</p>
   }
 
-  const attempt = async (change: () => Promise<unknown>): Promise<boolean> => {
-    setError(null)
-    try {
-      await change()
-      return true
-    } catch (e) {
-      setError(errorText(e))
-      return false
-    }
-  }
   const packValue = packText ?? String(product.packSize)
   const packSize = parsePackSize(packValue)
 

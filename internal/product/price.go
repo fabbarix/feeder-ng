@@ -85,5 +85,18 @@ func LatestPrice(prices []Price) (Price, bool) {
 // is about weighed Products, whose nominal pack size says nothing about the price
 // of a price-labelled slice. No explicit price per kg -> ok=false.
 func LatestExplicitPricePerKg(prices []Price) (cents int, ok bool) {
-	return 0, false // stub: the Developer implements it
+	var best Price
+	found := false
+	for _, p := range prices {
+		if p.PricePerKgCents == nil {
+			continue
+		}
+		if !found || p.Date > best.Date || (p.Date == best.Date && p.ID > best.ID) {
+			best, found = p, true
+		}
+	}
+	if !found {
+		return 0, false
+	}
+	return *best.PricePerKgCents, true
 }

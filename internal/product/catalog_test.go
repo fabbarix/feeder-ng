@@ -6,7 +6,6 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/product"
-	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
 var (
@@ -25,14 +24,9 @@ func rows() product.CatalogRows {
 			{ID: 3, ShopID: 9, ProductID: 42, RuleID: 6, ItemCode: "00123"},
 		},
 		Global: map[string]int64{"08001234567897": 50, "05901234123457": 51},
-		Latest: map[int64]product.Price{
-			42: {ID: 8, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1800)},
-			40: {ID: 9, ProductID: 40, ShopID: 9, Date: "2026-11-01", PriceCents: ip(159)},
-		},
-		Info: map[int64]product.ProductInfo{
-			40: {PackSize: 700, Base: units.Gram},
-			41: {PackSize: 1000, Base: units.Gram},
-			42: {PackSize: 1000, Base: units.Gram},
+		Prices: map[int64][]product.Price{
+			42: {{ID: 8, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1800)}},
+			40: {{ID: 9, ProductID: 40, ShopID: 9, Date: "2026-11-01", PriceCents: ip(159)}},
 		},
 	}
 }
@@ -68,7 +62,6 @@ func TestBuildCatalogNeverDerivesPricePerKgFromAPackPrice(t *testing.T) {
 	// 41 is weighed, in grams, pack 1000, and its only Price is a pack price of 450:
 	// the nominal pack says nothing about a price-labelled slice, so no price per kg.
 	r := rows()
-	r.Latest = nil
 	r.Prices = map[int64][]product.Price{41: {{ID: 1, ProductID: 41, ShopID: 9, Date: "2026-11-01", PriceCents: ip(450)}}}
 	c := product.BuildCatalog(r)
 	if _, ok := c.PricePerKgCents[41]; ok {
@@ -79,8 +72,6 @@ func TestBuildCatalogNeverDerivesPricePerKgFromAPackPrice(t *testing.T) {
 func TestBuildCatalogPackOnlyPriceNeverMasksAnOlderExplicitPricePerKg(t *testing.T) {
 	// Cooked ham (g, pack 200): 1800/kg recorded after an ask_weight scan, then a pack-only 540.
 	r := rows()
-	r.Latest = nil
-	r.Info[42] = product.ProductInfo{PackSize: 200, Base: units.Gram}
 	r.Prices = map[int64][]product.Price{42: {
 		{ID: 1, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1800)},
 		{ID: 2, ProductID: 42, ShopID: 9, Date: "2026-11-05", PriceCents: ip(540)},
@@ -98,7 +89,6 @@ func TestBuildCatalogPackOnlyPriceNeverMasksAnOlderExplicitPricePerKg(t *testing
 
 func TestBuildCatalogTakesTheLatestExplicitPricePerKg(t *testing.T) {
 	r := rows()
-	r.Latest = nil
 	r.Prices = map[int64][]product.Price{42: { // deliberately unordered
 		{ID: 3, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1900)},
 		{ID: 1, ProductID: 42, ShopID: 9, Date: "2026-10-01", PricePerKgCents: ip(1500)},

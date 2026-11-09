@@ -39,7 +39,7 @@ describe('WeightRuleEditor', () => {
     await user.clear(dp)
     await user.type(dp, '3')
     await user.selectOptions(screen.getByLabelText(strings.valueUnitLabel), 'kg')
-    expect(preview()).toHaveTextContent('Item 00123 · 750 g') // 0.750 kg
+    expect(preview()).toHaveTextContent('Item 00123 · 0.75 kg (750 g)') // 0.750 kg, shown in the rule's unit then grams
   })
 
   it('reads a price rule in the Household currency', async () => {

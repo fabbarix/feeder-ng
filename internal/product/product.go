@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
-	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
 var (
@@ -118,18 +117,10 @@ type ShopBarcode struct {
 	ItemCode              string
 }
 
-// ProductInfo is what price-per-kg derivation needs about a Product.
-type ProductInfo struct {
-	PackSize float64
-	Base     units.Base
-}
-
 // CatalogRows is the raw material of one Shop's Catalog (all for that Shop).
 type CatalogRows struct {
 	Rules        []barcode.WeightRule
 	ShopBarcodes []ShopBarcode
-	Global       map[string]int64      // canonical code -> product id (all Products)
-	Latest       map[int64]Price       // DEPRECATED, replaced by Prices (the Developer removes it with Info)
-	Prices       map[int64][]Price     // product id -> every Price of it at this Shop (any order)
-	Info         map[int64]ProductInfo // product id -> pack size and Base Unit
+	Global       map[string]int64  // canonical code -> product id (all Products)
+	Prices       map[int64][]Price // product id -> every Price of it at this Shop (any order)
 }

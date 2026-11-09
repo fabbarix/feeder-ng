@@ -6,7 +6,8 @@ import { BentoGrid, BottomSheet, Button, EmptyState, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
-import { errorText } from '../../products/lib/productForm'
+import { useAttempt } from '../../products/hooks/useAttempt'
+import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpdates'
 import { AddShopBarcodeSheet } from '../components/AddShopBarcodeSheet'
 import { ShopBarcodeList } from '../components/ShopBarcodeList'
 import { ShopNameForm } from '../components/ShopList'
@@ -36,7 +37,8 @@ export function ShopScreen() {
   const [renaming, setRenaming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { error, attempt } = useAttempt()
+  useProductsLiveUpdates()
 
   if (!shop.shop) {
     if (shop.isLoading) return <p role="status">{strings.loading}</p>
@@ -46,14 +48,6 @@ export function ShopScreen() {
     return <p role="alert">{strings.actionFailed}</p>
   }
 
-  const attempt = async (change: () => Promise<unknown>) => {
-    setError(null)
-    try {
-      await change()
-    } catch (e) {
-      setError(errorText(e))
-    }
-  }
   const productName = (pid: number) => products.find((p) => p.id === pid)?.name ?? strings.unknownProduct
 
   return (

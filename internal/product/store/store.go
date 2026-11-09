@@ -1140,8 +1140,7 @@ func (s *Store) Catalog(ctx context.Context, shopID *int64) (barcode.Catalog, er
 	}
 	rows := product.CatalogRows{
 		Global: global,
-		Latest: map[int64]product.Price{},
-		Info:   map[int64]product.ProductInfo{},
+		Prices: map[int64][]product.Price{},
 	}
 	for _, r := range rules {
 		rows.Rules = append(rows.Rules, r.WeightRule)
@@ -1153,21 +1152,14 @@ func (s *Store) Catalog(ctx context.Context, shopID *int64) (barcode.Catalog, er
 		if sb.RuleID == 0 {
 			continue
 		}
-		if _, done := rows.Info[sb.ProductID]; done {
+		if _, done := rows.Prices[sb.ProductID]; done {
 			continue
 		}
-		pr, err := loadProduct(ctx, s.db, sb.ProductID)
-		if err != nil {
-			return barcode.Catalog{}, err
-		}
-		rows.Info[sb.ProductID] = product.ProductInfo{PackSize: pr.PackSize, Base: pr.BaseUnit}
 		list, err := pricesFor(ctx, s.db, sb.ProductID, shopID)
 		if err != nil {
 			return barcode.Catalog{}, err
 		}
-		if latest, ok := product.LatestPrice(list); ok {
-			rows.Latest[sb.ProductID] = latest
-		}
+		rows.Prices[sb.ProductID] = list
 	}
 	return product.BuildCatalog(rows), nil
 }

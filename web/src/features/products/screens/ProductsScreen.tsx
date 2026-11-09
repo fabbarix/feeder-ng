@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ProductList } from '../components/ProductList'
 import { useProducts } from '../hooks/useProducts'
+import { useProductsLiveUpdates } from '../hooks/useProductsLiveUpdates'
 import { strings } from '../strings'
 import '../products.css'
 
@@ -8,6 +9,7 @@ import '../products.css'
 export function ProductsScreen() {
   const [q, setQ] = useState('')
   const { products, isLoading, error } = useProducts(q)
+  useProductsLiveUpdates()
   return (
     <div className="pg">
       <h1 className="pg__title">{strings.productsTitle}</h1>
