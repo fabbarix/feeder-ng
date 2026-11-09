@@ -194,7 +194,7 @@ func (s *Service) resolve(ctx context.Context, token string) (u User, expiresAt 
 		return User{}, time.Time{}, false, ErrNoSession
 	}
 	var (
-		sessionID         int64
+		sessionID          int64
 		created, exp, seen string
 	)
 	err = s.db.QueryRowContext(ctx, `SELECT u.id, u.email, u.display_name, u.is_admin, u.created_at,

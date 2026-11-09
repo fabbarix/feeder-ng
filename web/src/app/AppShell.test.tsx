@@ -77,7 +77,7 @@ describe('avatar menu', () => {
   it('is closed at first and opens from the avatar button', async () => {
     setup()
     expect(screen.queryByRole('menu')).toBeNull()
-    const btn = screen.getByRole('button', { name: 'Account menu' })
+    const btn = screen.getByRole('button', { name: 'Your menu' })
     expect(btn).toHaveAttribute('aria-haspopup', 'menu')
     await userEvent.click(btn)
     const menu = screen.getByRole('menu')
@@ -87,7 +87,7 @@ describe('avatar menu', () => {
 
   it('links Stock and Settings to their pages', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     expect(screen.getByRole('menuitem', { name: 'Stock' })).toHaveAttribute('href', '/stock')
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', '/settings')
   })
@@ -99,7 +99,7 @@ describe('avatar menu', () => {
         { id: 'a', label: 'Household', path: '/settings/household', placement: 'menu', order: 1 },
       ],
     })
-    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     const items = within(screen.getByRole('menu')).getAllByRole('menuitem').map((i) => i.textContent?.trim())
     expect(items).toEqual(['Stock', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
   })
@@ -107,20 +107,20 @@ describe('avatar menu', () => {
   it('Sign out calls onSignOut', async () => {
     const onSignOut = vi.fn()
     setup({ onSignOut })
-    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
     expect(onSignOut).toHaveBeenCalledOnce()
   })
 
   it('closes on Escape', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it('shows the User as an Avatar', () => {
     setup()
-    expect(within(screen.getByRole('button', { name: 'Account menu' })).getByLabelText('Anna Rossi')).toHaveTextContent('AR')
+    expect(within(screen.getByRole('button', { name: 'Your menu' })).getByLabelText('Anna Rossi')).toHaveTextContent('AR')
   })
 })
