@@ -1,0 +1,16 @@
+// English UI strings for Today. Glossary terms only.
+export const todayStrings = {
+  title: 'Today',
+  gridLabel: 'Today',
+  loading: 'Loading',
+  emptyTitle: 'Nothing on the menu. The kitchen is yours.',
+  emptyHint: 'No meals to cook, no Leftovers waiting, nothing about to spoil. Put your feet up or plan something tasty.',
+  emptyAction: 'Open the Plan',
+  advanceStepsHeading: 'Advance Steps',
+  advanceStepDue: (slotTime: string) => `Now, for ${slotTime}`,
+  advanceStepUpcoming: (dueTime: string, slotTime: string) => `At ${dueTime}, for ${slotTime}`,
+  useSoonHeading: 'Use soon',
+  streakHeading: 'Zero-waste streak',
+  streak: (days: number) => (days === 1 ? '1 day without throwing food away' : `${days} days without throwing food away`),
+  streakCheer: 'Nothing wasted. Keep it going!',
+}
