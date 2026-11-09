@@ -31,6 +31,7 @@ T0 defines no auth route. Decision: the OAuth callback is **`GET /auth/google/ca
 5. Print console guidance for project ID (new Google Auth Platform pages):
    - Branding/consent screen: `https://console.cloud.google.com/auth/branding?project=ID`
    - Audience and test users: `https://console.cloud.google.com/auth/audience?project=ID`
+   - Data access (optional, `openid`, `email`, `profile` are non-sensitive, so no review): `https://console.cloud.google.com/auth/scopes?project=ID`
    - Create client: `https://console.cloud.google.com/auth/clients/create?project=ID`
    - Values: User type **External** (Internal needs a Google Workspace org); publishing status Testing, add the admin email (and every household member) as test users; scopes `openid`, `email`, `profile`; application type **Web application**; authorised JavaScript origins `http://localhost:8080` plus the base URL origin; authorised redirect URIs `http://localhost:8080/auth/google/callback` plus `<base-url>/auth/google/callback`. Note: Google only accepts non-localhost redirect URIs over https. Testing mode allows up to 100 test users.
 6. Obtain client id and secret (env, else prompt; empty value is an error).

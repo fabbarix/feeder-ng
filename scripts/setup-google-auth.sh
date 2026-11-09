@@ -170,7 +170,9 @@ Next, in the Google Cloud Console (project: $PROJECT):
    member as test users (Testing mode allows up to 100).
    https://console.cloud.google.com/auth/audience?project=$PROJECT
 
-3. Data access: add the scopes openid, email and profile. Nothing else.
+3. Data access (optional): openid, email and profile are non-sensitive scopes,
+   so this step needs no review. Add those three and nothing else.
+   https://console.cloud.google.com/auth/scopes?project=$PROJECT
 
 4. Clients: create a client of type "Web application".
    https://console.cloud.google.com/auth/clients/create?project=$PROJECT
