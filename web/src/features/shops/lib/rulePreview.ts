@@ -47,7 +47,7 @@ export function decodeSample(rule: WeightRule, sample: string): RulePreview {
  * One line for the UI: "Item 00123 · 750 g", "Item 12345 · 680.389 g" or
  * "Item 00123 · $4.50"; the message from strings for the other states.
  */
-export function previewText(p: RulePreview, currency: string): string {
+export function previewText(p: RulePreview, currency: string, _weightUnit?: string): string {
   switch (p.state) {
     case 'idle':
       return strings.previewIdle

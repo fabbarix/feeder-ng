@@ -129,6 +129,7 @@ type CatalogRows struct {
 	Rules        []barcode.WeightRule
 	ShopBarcodes []ShopBarcode
 	Global       map[string]int64      // canonical code -> product id (all Products)
-	Latest       map[int64]Price       // product id -> latest Price at this Shop
+	Latest       map[int64]Price       // DEPRECATED, replaced by Prices (the Developer removes it with Info)
+	Prices       map[int64][]Price     // product id -> every Price of it at this Shop (any order)
 	Info         map[int64]ProductInfo // product id -> pack size and Base Unit
 }

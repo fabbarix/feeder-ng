@@ -64,12 +64,85 @@ func TestBuildCatalogPricePerKgOnlyForWeighedProducts(t *testing.T) {
 	}
 }
 
-func TestBuildCatalogDerivesPricePerKgFromAPackPrice(t *testing.T) {
+func TestBuildCatalogNeverDerivesPricePerKgFromAPackPrice(t *testing.T) {
+	// 41 is weighed, in grams, pack 1000, and its only Price is a pack price of 450:
+	// the nominal pack says nothing about a price-labelled slice, so no price per kg.
 	r := rows()
-	r.Latest[41] = product.Price{ProductID: 41, PriceCents: ip(450)} // 450 cents for 1000 g
+	r.Latest = nil
+	r.Prices = map[int64][]product.Price{41: {{ID: 1, ProductID: 41, ShopID: 9, Date: "2026-11-01", PriceCents: ip(450)}}}
 	c := product.BuildCatalog(r)
-	if c.PricePerKgCents[41] != 450 {
-		t.Fatalf("got %v", c.PricePerKgCents)
+	if _, ok := c.PricePerKgCents[41]; ok {
+		t.Fatalf("a pack-only Price must not give a price per kg: %v", c.PricePerKgCents)
+	}
+}
+
+func TestBuildCatalogPackOnlyPriceNeverMasksAnOlderExplicitPricePerKg(t *testing.T) {
+	// Cooked ham (g, pack 200): 1800/kg recorded after an ask_weight scan, then a pack-only 540.
+	r := rows()
+	r.Latest = nil
+	r.Info[42] = product.ProductInfo{PackSize: 200, Base: units.Gram}
+	r.Prices = map[int64][]product.Price{42: {
+		{ID: 1, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1800)},
+		{ID: 2, ProductID: 42, ShopID: 9, Date: "2026-11-05", PriceCents: ip(540)},
+	}}
+	c := product.BuildCatalog(r)
+	if c.PricePerKgCents[42] != 1800 {
+		t.Fatalf("explicit 1800 must survive a newer pack-only Price, got %v", c.PricePerKgCents)
+	}
+	// 540 cents at 1800/kg = 300 g, not the 200 g a derived 2700/kg would read.
+	res := barcode.Resolve(barcode.Parse("2200123005403", barcode.FormatEAN13), c)
+	if res.Outcome != barcode.OutcomeWeighed || res.WeightGrams != 300 {
+		t.Errorf("540 cents = %+v", res)
+	}
+}
+
+func TestBuildCatalogTakesTheLatestExplicitPricePerKg(t *testing.T) {
+	r := rows()
+	r.Latest = nil
+	r.Prices = map[int64][]product.Price{42: { // deliberately unordered
+		{ID: 3, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1900)},
+		{ID: 1, ProductID: 42, ShopID: 9, Date: "2026-10-01", PricePerKgCents: ip(1500)},
+		{ID: 2, ProductID: 42, ShopID: 9, Date: "2026-11-01", PricePerKgCents: ip(1800)},
+		{ID: 4, ProductID: 42, ShopID: 9, Date: "2026-11-09", PriceCents: ip(540)},
+	}}
+	if got := product.BuildCatalog(r).PricePerKgCents[42]; got != 1900 {
+		t.Fatalf("same date: highest id wins; got %d", got)
+	}
+}
+
+func TestLatestExplicitPricePerKg(t *testing.T) {
+	cases := []struct {
+		name   string
+		prices []product.Price
+		want   int
+		ok     bool
+	}{
+		{"none", nil, 0, false},
+		{"pack-only", []product.Price{{ID: 1, Date: "2026-11-01", PriceCents: ip(540)}}, 0, false},
+		{"explicit", []product.Price{{ID: 1, Date: "2026-11-01", PricePerKgCents: ip(1800)}}, 1800, true},
+		{"newer pack-only does not mask", []product.Price{
+			{ID: 1, Date: "2026-11-01", PricePerKgCents: ip(1800)},
+			{ID: 2, Date: "2026-11-05", PriceCents: ip(540)},
+		}, 1800, true},
+		{"newest explicit wins", []product.Price{
+			{ID: 1, Date: "2026-10-01", PricePerKgCents: ip(1500)},
+			{ID: 2, Date: "2026-11-01", PricePerKgCents: ip(1800)},
+		}, 1800, true},
+		{"a Price with both counts by its explicit value", []product.Price{
+			{ID: 1, Date: "2026-11-01", PriceCents: ip(159), PricePerKgCents: ip(227)},
+		}, 227, true},
+		{"same date: highest id", []product.Price{
+			{ID: 2, Date: "2026-11-01", PricePerKgCents: ip(1800)},
+			{ID: 1, Date: "2026-11-01", PricePerKgCents: ip(1500)},
+		}, 1800, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, ok := product.LatestExplicitPricePerKg(c.prices)
+			if got != c.want || ok != c.ok {
+				t.Errorf("got %d, %v; want %d, %v", got, ok, c.want, c.ok)
+			}
+		})
 	}
 }
 

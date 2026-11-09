@@ -52,6 +52,14 @@ describe('previewText', () => {
     expect(previewText({ state: 'ok', itemCode: '00123', weightGrams: 750 }, 'USD')).toBe('Item 00123 · 750 g')
     expect(previewText({ state: 'ok', itemCode: '12345', weightGrams: 680.389 }, 'USD')).toBe('Item 12345 · 680.389 g')
   })
+  it("shows the weight in the rule's unit, then in grams: 0.5 kg (500 g)", () => {
+    expect(previewText({ state: 'ok', itemCode: '00123', weightGrams: 500 }, 'USD', 'kg')).toBe('Item 00123 · 0.5 kg (500 g)')
+    expect(previewText({ state: 'ok', itemCode: '00123', weightGrams: 750 }, 'USD', 'kg')).toBe('Item 00123 · 0.75 kg (750 g)')
+    expect(previewText({ state: 'ok', itemCode: '12345', weightGrams: 680.389 }, 'USD', 'lb')).toBe('Item 12345 · 1.5 lb (680.389 g)')
+  })
+  it('shows grams alone when the rule is in grams', () => {
+    expect(previewText({ state: 'ok', itemCode: '00123', weightGrams: 750 }, 'USD', 'g')).toBe('Item 00123 · 750 g')
+  })
   it('shows item and price in the Household currency', () => {
     expect(previewText({ state: 'ok', itemCode: '00123', priceCents: 450 }, 'USD')).toBe('Item 00123 · $4.50')
   })

@@ -356,6 +356,44 @@ func TestExplicitPricePerKgAndNoDerivationForMillilitres(t *testing.T) {
 	}
 }
 
+func TestCatalogPackOnlyPriceNeverMasksAnExplicitPricePerKg(t *testing.T) {
+	f := newFx(t)
+	shop := f.shop(t, "Butcher")
+	ham := f.prod(t, "Cooked ham", f.rice, 200) // g, nominal pack 200
+	r, _ := f.s.CreateRule(ctx, shop.ID, barcode.WeightRule{Prefix: "22", Item: barcode.Span{Start: 3, Length: 5}, Value: barcode.Span{Start: 8, Length: 5}, ValueKind: barcode.ValuePrice})
+	if _, err := f.s.AddWeighedShopBarcode(ctx, shop.ID, ham.ID, r.ID, "00123"); err != nil {
+		t.Fatal(err)
+	}
+	// Only a pack-only Price: nothing to read a weight from, the scan asks once.
+	if _, err := f.s.RecordPrice(ctx, ham.ID, product.PriceInput{ShopID: shop.ID, Date: "2026-10-20", PriceCents: ip(540)}); err != nil {
+		t.Fatal(err)
+	}
+	c, _ := f.s.Catalog(ctx, &shop.ID)
+	if _, ok := c.PricePerKgCents[ham.ID]; ok {
+		t.Fatalf("a pack-only Price gives no price per kg for a weighed Product: %v", c.PricePerKgCents)
+	}
+	res, _ := f.s.Resolve(ctx, "2200123005403", barcode.FormatEAN13, &shop.ID)
+	if res.Resolution.Outcome != barcode.OutcomeAskWeight {
+		t.Errorf("no explicit price per kg: ask the weight once: %+v", res.Resolution)
+	}
+
+	// 1800/kg recorded after the ask_weight scan, then a newer pack-only 540.
+	if _, err := f.s.RecordPrice(ctx, ham.ID, product.PriceInput{ShopID: shop.ID, Date: "2026-11-01", PricePerKgCents: ip(1800)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.RecordPrice(ctx, ham.ID, product.PriceInput{ShopID: shop.ID, Date: "2026-11-05", PriceCents: ip(540)}); err != nil {
+		t.Fatal(err)
+	}
+	c, _ = f.s.Catalog(ctx, &shop.ID)
+	if c.PricePerKgCents[ham.ID] != 1800 {
+		t.Fatalf("explicit 1800 must survive: %v", c.PricePerKgCents)
+	}
+	res, _ = f.s.Resolve(ctx, "2200123005403", barcode.FormatEAN13, &shop.ID)
+	if res.Resolution.Outcome != barcode.OutcomeWeighed || res.Resolution.WeightGrams != 300 || res.Resolution.PricePerKgCents != 1800 {
+		t.Errorf("540 cents at 1800/kg = 300 g (not 200 g from a derived 2700/kg): %+v", res.Resolution)
+	}
+}
+
 func TestCatalogForAShopCarriesWeighedProductsAndPricePerKg(t *testing.T) {
 	f := newFx(t)
 	shop := f.shop(t, "Butcher")

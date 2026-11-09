@@ -78,3 +78,12 @@ func LatestPrice(prices []Price) (Price, bool) {
 	}
 	return best, found
 }
+
+// LatestExplicitPricePerKg is the pricePerKgCents of the most recent Price (highest
+// Date, then highest ID) that HAS an explicit pricePerKgCents. A newer pack-only
+// Price never masks it, and a pack size is never used to derive one: the Catalog
+// is about weighed Products, whose nominal pack size says nothing about the price
+// of a price-labelled slice. No explicit price per kg -> ok=false.
+func LatestExplicitPricePerKg(prices []Price) (cents int, ok bool) {
+	return 0, false // stub: the Developer implements it
+}

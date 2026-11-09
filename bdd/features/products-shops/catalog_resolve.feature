@@ -75,6 +75,23 @@ Feature: Catalog and barcode resolution
     And the Products response value at "resolution.priceCents" is "450"
     And the Products response value at "product.name" is "Cooked ham"
 
+  Scenario: A newer pack-only Price doesn't mask an older explicit price per kg
+    Given the Product "Cooked ham" cost 1800 cents per kg at the Shop "Butcher" on 2026-11-01
+    And the Product "Cooked ham" cost 540 cents at the Shop "Butcher" on 2026-11-05
+    When I send GET "/api/catalog?shop={shop:Butcher}" for Products
+    Then the Products response value at "pricePerKgCents.{product:Cooked ham}" is "1800"
+    When I send GET "/api/resolve?barcode=2200123005403&format=ean_13&shop={shop:Butcher}" for Products
+    Then the Products response value at "resolution.outcome" is "weighed"
+    And the Products response value at "resolution.pricePerKgCents" is "1800"
+    And the Products response value at "resolution.weightGrams" is "300"
+
+  Scenario: A pack-only Price gives no price per kg, so the scan asks for the weight
+    Given the Product "Cooked ham" cost 540 cents at the Shop "Butcher" on 2026-11-05
+    When I send GET "/api/catalog?shop={shop:Butcher}" for Products
+    Then the Products response has no value at "pricePerKgCents"
+    When I send GET "/api/resolve?barcode=2200123005403&format=ean_13&shop={shop:Butcher}" for Products
+    Then the Products response value at "resolution.outcome" is "ask_weight"
+
   Scenario: A price per kg only at another Shop does not count
     Given the Product "Cooked ham" cost 2500 cents per kg at the Shop "Corner Market" on 2026-11-08
     When I send GET "/api/resolve?barcode=2200123004505&format=ean_13&shop={shop:Butcher}" for Products
