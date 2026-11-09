@@ -1,4 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
+import { recipesApi } from '../api'
 import type { RecipeFilter, RecipeSummary, TagCount } from '../types'
+import { useRecipeLiveUpdates } from './useRecipeLiveUpdates'
 
 export interface UseRecipes {
   recipes: RecipeSummary[]
@@ -10,6 +13,16 @@ export interface UseRecipes {
 }
 
 /** react-query ['recipes', filter] and ['tags']. Live: the SPA invalidates on SSE topic `recipes`. */
-export function useRecipes(_filter: RecipeFilter): UseRecipes {
-  throw new Error('TODO')
+export function useRecipes(filter: RecipeFilter): UseRecipes {
+  useRecipeLiveUpdates()
+  const list = useQuery({ queryKey: ['recipes', filter], queryFn: () => recipesApi.list(filter) })
+  const tags = useQuery({ queryKey: ['tags'], queryFn: recipesApi.tags })
+  const filtered = Boolean(filter.q || filter.tag || (filter.archived && filter.archived !== 'no'))
+  return {
+    recipes: list.data ?? [],
+    tags: tags.data ?? [],
+    isEmpty: list.isSuccess && list.data.length === 0 && !filtered,
+    isLoading: list.isLoading,
+    error: list.error,
+  }
 }
