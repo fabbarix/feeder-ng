@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -148,5 +150,55 @@ func TestResolveImagesStopsWhenTheContextIsCancelled(t *testing.T) {
 	set := recipefile.ResolveImages(ctx, f, ff)
 	if len(set.Warnings) != 2 || len(set.Images) != 0 {
 		t.Fatalf("set = %+v", set)
+	}
+}
+
+// leakyFetcher fails like imagefetch does when an address is refused, with the
+// resolved address in the error text.
+type leakyFetcher struct{ err error }
+
+func (f leakyFetcher) Fetch(context.Context, string) ([]byte, string, error) { return nil, "", f.err }
+
+// The image_failed warning is shown to the User and sent to the browser: it
+// must never say which address a name resolved to (that would let an uploaded
+// file map the server's network).
+func TestImageFailedWarningsNeverRevealTheResolvedAddress(t *testing.T) {
+	errs := map[string]error{
+		"refused address":   fmt.Errorf("address is private, loopback or link-local: 10.1.2.3"),
+		"metadata address":  fmt.Errorf("dial tcp 169.254.169.254:443: connect: connection refused"),
+		"ipv6":              fmt.Errorf("lookup db.internal on [fd00::5]:53: no such host"),
+		"mapped":            fmt.Errorf("blocked ::ffff:192.168.0.9"),
+		"wrapped sentinel":  fmt.Errorf("https://10.9.8.7/x.png: %w", errors.New("blocked 10.9.8.7")),
+		"plain http status": fmt.Errorf("unexpected HTTP status: 404 Not Found"),
+	}
+	leaks := []string{"10.1.2.3", "169.254", "fd00::5", "192.168.0.9", "10.9.8.7", "dial tcp", "lookup "}
+	var generic string
+	for name, e := range errs {
+		t.Run(name, func(t *testing.T) {
+			f := fileWithImages(t, "https://img.example.com/a.png", pngDataURL(t, 4, 4))
+			set := recipefile.ResolveImages(context.Background(), f, leakyFetcher{err: e})
+			if len(set.Warnings) != 1 || set.Warnings[0].Code != recipefile.WarnImageFailed {
+				t.Fatalf("warnings = %+v", set.Warnings)
+			}
+			msg := set.Warnings[0].Message
+			if msg == "" {
+				t.Fatal("the warning needs a message")
+			}
+			for _, l := range leaks {
+				if strings.Contains(msg, l) {
+					t.Errorf("message %q reveals %q", msg, l)
+				}
+			}
+			if ip := regexp.MustCompile(`\d+\.\d+\.\d+\.\d+|[0-9a-fA-F]*:[0-9a-fA-F]*:[0-9a-fA-F:]*`).FindString(msg); ip != "" {
+				t.Errorf("message %q contains an address-like token %q", msg, ip)
+			}
+			// The same text for every download failure: refused and unreachable
+			// must not be told apart (no oracle for internal hosts).
+			if generic == "" {
+				generic = msg
+			} else if msg != generic {
+				t.Errorf("message %q differs from %q: download failures share one generic message", msg, generic)
+			}
+		})
 	}
 }

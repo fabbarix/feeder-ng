@@ -40,6 +40,68 @@ func TestBlockedAddresses(t *testing.T) {
 	}
 }
 
+// Blocked also covers the forms that tunnel an IPv4 address (or a private
+// range) through IPv6, and the whole 0.0.0.0/8 "this network" block.
+func TestBlockedCoversTranslationTunnelAndLegacyRanges(t *testing.T) {
+	cases := []struct{ name, addr string }{
+		// NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) embeds an IPv4 address.
+		{"nat64 loopback", "64:ff9b::7f00:1"},
+		{"nat64 private 10/8", "64:ff9b::a00:1"},
+		{"nat64 metadata address", "64:ff9b::a9fe:a9fe"},
+		{"nat64 dotted form", "64:ff9b::192.168.1.1"},
+		{"nat64 first", "64:ff9b::"},
+		{"nat64 last", "64:ff9b::ffff:ffff"},
+		{"nat64 public embedded", "64:ff9b::808:808"}, // the whole prefix is refused
+		// 6to4 2002::/16 embeds an IPv4 address in bits 16-47.
+		{"6to4 loopback", "2002:7f00:1::1"},
+		{"6to4 private", "2002:c0a8:101::1"},
+		{"6to4 metadata address", "2002:a9fe:a9fe::1"},
+		{"6to4 first", "2002::"},
+		{"6to4 last", "2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff"},
+		{"6to4 public embedded", "2002:808:808::1"},
+		// IPv4-compatible ::/96 (deprecated).
+		{"v4-compatible loopback", "::7f00:1"},
+		{"v4-compatible private", "::a00:1"},
+		{"v4-compatible public", "::808:808"},
+		{"v4-compatible dotted", "::8.8.8.8"},
+		{"v4-compatible last", "::ffff:ffff"},
+		// Site-local fec0::/10 (deprecated, still routed on some networks).
+		{"site-local first", "fec0::"},
+		{"site-local", "fec0::1"},
+		{"site-local last", "feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"},
+		// 0.0.0.0/8 is "this network", not only 0.0.0.0.
+		{"this network", "0.1.2.3"},
+		{"this network last", "0.255.255.255"},
+		{"this network, mapped", "::ffff:0.1.2.3"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if !imagefetch.Blocked(netip.MustParseAddr(tc.addr)) {
+				t.Errorf("%s must be blocked", tc.addr)
+			}
+		})
+	}
+}
+
+// The new ranges must not swallow neighbouring public space.
+func TestBlockedLeavesNeighbouringPublicRangesAlone(t *testing.T) {
+	allowed := []struct{ name, addr string }{
+		{"just above 0.0.0.0/8", "1.0.0.1"},
+		{"outside the nat64 prefix", "64:ff9a::1"},
+		{"outside the nat64 prefix, above", "64:ff9c::1"},
+		{"2001 is not 6to4", "2001:4860:4860::8888"},
+		{"2003 is not 6to4", "2003::1"},
+		{"above the v4-compatible block", "::1:0:0"},
+	}
+	for _, tc := range allowed {
+		t.Run(tc.name, func(t *testing.T) {
+			if imagefetch.Blocked(netip.MustParseAddr(tc.addr)) {
+				t.Errorf("%s must stay allowed", tc.addr)
+			}
+		})
+	}
+}
+
 // png is a few bytes; the fetcher checks the Content-Type header, not the content.
 var body = []byte("\x89PNG\r\n\x1a\n-fake-")
 

@@ -73,6 +73,19 @@ func (s *Sessions) Get(userID int64, id string) (Review, bool) {
 	return Review{}, false
 }
 
+// Take atomically removes the User's Review and returns it: of any number of
+// concurrent Takes of one id exactly one gets ok == true. Confirm takes the
+// Review before it writes, so a double or parallel confirm imports once.
+// STUB (Designer): the Developer implements it.
+func (s *Sessions) Take(userID int64, id string) (Review, bool) {
+	return Review{}, false
+}
+
+// Restore puts a Review taken with Take back (same id and owner, idle timer
+// renewed, counted against MaxUserReviews) after a failed Confirm, so the User
+// can retry. STUB (Designer): the Developer implements it.
+func (s *Sessions) Restore(rv Review) {}
+
 // Close drops a Review (Confirm and DELETE). Closing an unknown id is a no-op.
 func (s *Sessions) Close(userID int64, id string) {
 	s.mu.Lock()

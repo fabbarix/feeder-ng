@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -453,6 +454,13 @@ func TestImageURLsOnPrivateAddressesAreNeverContacted(t *testing.T) {
 	if len(rev.Plan.Warnings) != len(urls)+1 || !rev.Plan.Ready {
 		t.Fatalf("every refused image is a warning and the import can go on: %+v", rev.Plan)
 	}
+	for _, w := range rev.Plan.Warnings {
+		for _, leak := range []string{"169.254", "10.1.2.3", "127.0.0.1", "::1", "dial tcp"} {
+			if strings.Contains(w.Message, leak) {
+				t.Errorf("warning %q at %s reveals %q", w.Message, w.Path, leak)
+			}
+		}
+	}
 	if hits.Load() != 0 {
 		t.Fatalf("the server on a loopback address received %d requests", hits.Load())
 	}
@@ -464,5 +472,102 @@ func TestOversizedUploadsAreRefused(t *testing.T) {
 	r := c.Do("POST", "/api/imports", []byte(`{"text":"`+huge+`"}`))
 	if r.Status != 413 || r.ErrorCode() != "file_too_large" {
 		t.Fatalf("got %d %s", r.Status, r.ErrorCode())
+	}
+}
+
+// A Review closes when its Confirm succeeds: a second Confirm (a double click,
+// a retry after a lost response) must not import everything again. Recipe
+// names have no UNIQUE constraint, so only the single-use Review prevents it.
+func TestConfirmingTwiceImportsOnce(t *testing.T) {
+	_, c := start(t)
+	rev := openReview(t, c, string(spec.Example))
+	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}), 200)
+	r := c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}})
+	if r.Status != 404 && r.Status != 409 {
+		t.Fatalf("second confirm = %d %s, want 404 or 409", r.Status, r.Body)
+	}
+	if n := countRecipes(t, c); n != 2 {
+		t.Fatalf("%d recipes, want 2", n)
+	}
+}
+
+func TestParallelConfirmsOfOneReviewImportEachRecipeOnce(t *testing.T) {
+	_, c := start(t)
+	rev := openReview(t, c, string(spec.Example))
+	const n = 12
+	statuses := make([]int, n)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			statuses[i] = c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}).Status
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+	ok := 0
+	for _, st := range statuses {
+		switch st {
+		case 200:
+			ok++
+		case 404, 409:
+		default:
+			t.Errorf("a losing confirm must answer 404 or 409, got %d (all: %v)", st, statuses)
+		}
+	}
+	if ok != 1 {
+		t.Fatalf("%d confirms succeeded, want exactly 1 (all: %v)", ok, statuses)
+	}
+	if got := countRecipes(t, c); got != 2 {
+		t.Fatalf("%d recipes, want 2: each Recipe is imported once", got)
+	}
+	var ings []obj
+	mustStatus(t, c.Get("/api/ingredients"), 200).MustJSON(t, &ings)
+	if len(ings) != 9 {
+		t.Fatalf("%d Ingredients, want 9", len(ings))
+	}
+}
+
+// A confirm that fails puts the Review back: the User fixes the cause and
+// confirms again without uploading the file once more.
+func TestAFailedConfirmLeavesTheReviewOpenForARetry(t *testing.T) {
+	_, c := start(t)
+	pancakes, _ := seed(t, c)
+	exported := mustStatus(t, c.Get("/api/recipe-file/export?ids="+fmt.Sprint(pancakes)), 200).Body
+	var f map[string]any
+	json.Unmarshal(exported, &f)
+	f["ingredients"] = append(f["ingredients"].([]any), obj{"name": "saffron", "baseUnit": "g"})
+	f["recipes"] = append(f["recipes"].([]any), obj{"name": "Golden rice", "yield": 2, "ingredients": []obj{{"ingredient": "saffron", "quantity": 1, "unit": "g"}}})
+	text, _ := json.Marshal(f)
+	rev := openReview(t, c, string(text))
+	d := obj{"recipes": []obj{{"index": 0, "action": "replace"}}}
+
+	// Not ready (no answer for the conflict) is refused and keeps the Review.
+	if r := c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}); r.Status != 422 {
+		t.Fatalf("confirm = %d %s", r.Status, r.Body)
+	}
+	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/plan", obj{"decisions": d}), 200)
+
+	// Stale (the Recipe to replace disappeared) is refused and keeps the Review.
+	mustStatus(t, c.Delete(fmt.Sprintf("/api/recipes/%d", pancakes)), 204)
+	r := c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": d})
+	if r.Status != 409 || r.ErrorCode() != "import_stale" {
+		t.Fatalf("confirm = %d %s", r.Status, r.Body)
+	}
+	var p reviewResp
+	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/plan", obj{"decisions": d}), 200).MustJSON(t, &p)
+	if !p.Plan.Ready {
+		t.Fatalf("the Review is recomputed from the current data and is ready again: %+v", p.Plan)
+	}
+	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}), 200)
+	if n := countRecipes(t, c); n != 3 { // Milk, Pancakes (created again), Golden rice
+		t.Fatalf("%d recipes, want 3", n)
+	}
+	// And now it is closed for good.
+	if r := c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}); r.Status != 404 && r.Status != 409 {
+		t.Fatalf("confirm after success = %d", r.Status)
 	}
 }

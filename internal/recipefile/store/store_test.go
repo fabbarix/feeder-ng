@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,4 +193,180 @@ func webpOf(t *testing.T, w, h int) []byte {
 		t.Fatal(err)
 	}
 	return r.WebP
+}
+
+// firstApply imports the spec example into an empty database and returns what exists afterwards.
+func (f *fixture) firstApply(t *testing.T) (store.Result, recipefile.Existing) {
+	t.Helper()
+	res, err := f.s.Apply(ctx, exampleCommit(t, recipefile.Existing{}, recipefile.Decisions{}, recipefile.ImageSet{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex, err := f.s.Existing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res, ex
+}
+
+func (f *fixture) sum(t *testing.T, query string) int64 {
+	t.Helper()
+	var n sql.NullInt64
+	if err := f.db.QueryRow(query).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n.Int64
+}
+
+// withoutConversions is Existing as it looked at review time, before the
+// Ingredients had their Unit Conversions: the Commit then adds the file's.
+func withoutConversions(ex recipefile.Existing) recipefile.Existing {
+	out := recipefile.Existing{Recipes: ex.Recipes}
+	for _, ing := range ex.Ingredients {
+		ing.Conversions = nil
+		out.Ingredients = append(out.Ingredients, ing)
+	}
+	return out
+}
+
+func replaceBoth() recipefile.Decisions {
+	return recipefile.Decisions{Recipes: []recipefile.RecipeDecision{
+		{Index: 0, Action: recipefile.ActionReplace}, {Index: 1, Action: recipefile.ActionReplace},
+	}}
+}
+
+// Decision (design note, "Existing conversion wins at write time"): a Unit
+// Conversion that the Ingredient gained after the review is KEPT and the
+// file's one is skipped. This is not an error: the import goes on, the
+// Conversion is not counted in ConversionsAdded, and nothing is overwritten.
+func TestApplyDoesNotOverwriteAConversionAddedAfterTheReview(t *testing.T) {
+	f := newFixture(t)
+	_, ex := f.firstApply(t)
+	reviewed := withoutConversions(ex)
+	c := exampleCommit(t, reviewed, replaceBoth(), recipefile.ImageSet{})
+	if len(c.AddedConversions) != 5 {
+		t.Fatalf("the review would add %d conversions, want 5 (precondition)", len(c.AddedConversions))
+	}
+	// Behind the review's back every conversion exists again, with another factor.
+	if _, err := f.db.Exec(`UPDATE ingredient_conversions SET to_base = to_base + 1000`); err != nil {
+		t.Fatal(err)
+	}
+	before := f.sum(t, `SELECT sum(to_base) FROM ingredient_conversions`)
+
+	res, err := f.s.Apply(ctx, c)
+	if err != nil {
+		t.Fatalf("a Conversion that appeared since the review is skipped, not an error: %v", err)
+	}
+	if res.ConversionsAdded != 0 {
+		t.Fatalf("ConversionsAdded = %d, want 0: the existing Conversions win", res.ConversionsAdded)
+	}
+	if after := f.sum(t, `SELECT sum(to_base) FROM ingredient_conversions`); after != before || f.count(t, "ingredient_conversions") != 5 {
+		t.Fatalf("conversions changed: sum %d -> %d, rows %d", before, after, f.count(t, "ingredient_conversions"))
+	}
+	if len(res.Recipes) != 2 || res.Recipes[0].Action != "replaced" {
+		t.Fatalf("the Recipes are still imported: %+v", res)
+	}
+}
+
+func TestApplyStillAddsConversionsTheIngredientStillLacks(t *testing.T) {
+	f := newFixture(t)
+	_, ex := f.firstApply(t)
+	c := exampleCommit(t, withoutConversions(ex), replaceBoth(), recipefile.ImageSet{})
+	if _, err := f.db.Exec(`DELETE FROM ingredient_conversions`); err != nil {
+		t.Fatal(err)
+	}
+	res, err := f.s.Apply(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ConversionsAdded != 5 || f.count(t, "ingredient_conversions") != 5 {
+		t.Fatalf("added %d, rows %d, want 5 and 5", res.ConversionsAdded, f.count(t, "ingredient_conversions"))
+	}
+}
+
+// Recipe names have no UNIQUE constraint, so Apply re-checks them inside its
+// transaction (compared as units.NormalizeName, archived Recipes included).
+func TestApplyRefusesACreatedRecipeWhoseNameWasTakenSinceTheReview(t *testing.T) {
+	f := newFixture(t)
+	_, ex := f.firstApply(t)
+	reviewed := ex
+	reviewed.Recipes = nil // at review time no Recipe had these names
+	c := exampleCommit(t, reviewed, recipefile.Decisions{}, recipefile.ImageSet{})
+	if len(c.Recipes) != 2 || c.Recipes[0].Action == recipefile.ActionReplace {
+		t.Fatalf("precondition: both Recipes are created, got %+v", c.Recipes)
+	}
+	if _, err := f.s.Apply(ctx, c); !errors.Is(err, store.ErrStale) {
+		t.Fatalf("got %v, want ErrStale", err)
+	}
+	if n := f.count(t, "recipes"); n != 2 {
+		t.Fatalf("%d recipes after a refused Apply, want the 2 that existed", n)
+	}
+}
+
+func TestApplyRefusesAKeepBothNameThatWasTakenSinceTheReview(t *testing.T) {
+	f := newFixture(t)
+	res, ex := f.firstApply(t)
+	d := recipefile.Decisions{Recipes: []recipefile.RecipeDecision{
+		{Index: 0, Action: recipefile.ActionKeepBoth}, {Index: 1, Action: recipefile.ActionSkip},
+	}}
+	c := exampleCommit(t, ex, d, recipefile.ImageSet{})
+	taken := c.Recipes[0].Input.Name
+	if !strings.HasSuffix(taken, " (2)") {
+		t.Fatalf("precondition: keep_both name = %q", taken)
+	}
+	// Someone renames the other Recipe to that name (different case and spacing) meanwhile.
+	if _, err := f.db.Exec(`UPDATE recipes SET name = ? WHERE id = ?`, strings.ToUpper(taken), res.Recipes[1].ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.Apply(ctx, c); !errors.Is(err, store.ErrStale) {
+		t.Fatalf("got %v, want ErrStale", err)
+	}
+	if n := f.count(t, "recipes"); n != 2 {
+		t.Fatalf("%d recipes, want 2", n)
+	}
+}
+
+func TestApplyReplaceDoesNotCountTheRecipeBeingReplacedAsANameClash(t *testing.T) {
+	f := newFixture(t)
+	_, ex := f.firstApply(t)
+	res, err := f.s.Apply(ctx, exampleCommit(t, ex, replaceBoth(), recipefile.ImageSet{}))
+	if err != nil || len(res.Recipes) != 2 || f.count(t, "recipes") != 2 {
+		t.Fatalf("replace both: %v %+v recipes=%d", err, res, f.count(t, "recipes"))
+	}
+}
+
+// A Recipe is validated again against the Ingredients as they are inside the
+// transaction. If it no longer passes (a Unit Conversion it needs was removed
+// since the review) the answer is ErrStale (409 import_stale), not a generic
+// error, and nothing is written.
+func TestApplyRefusesARecipeThatNoLongerValidates(t *testing.T) {
+	f := newFixture(t)
+	_, ex := f.firstApply(t)
+	c := exampleCommit(t, ex, replaceBoth(), recipefile.ImageSet{})
+	if _, err := f.db.Exec(`DELETE FROM ingredient_conversions`); err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	rows, _ := f.db.Query(`SELECT name FROM recipes ORDER BY id`)
+	for rows.Next() {
+		var n string
+		rows.Scan(&n)
+		names = append(names, n)
+	}
+	rows.Close()
+	_, err := f.s.Apply(ctx, c)
+	if !errors.Is(err, store.ErrStale) {
+		t.Fatalf("got %v, want ErrStale", err)
+	}
+	var again []string
+	rows, _ = f.db.Query(`SELECT name FROM recipes ORDER BY id`)
+	for rows.Next() {
+		var n string
+		rows.Scan(&n)
+		again = append(again, n)
+	}
+	rows.Close()
+	if strings.Join(names, "|") != strings.Join(again, "|") || f.imageFiles(t) != 0 {
+		t.Fatalf("recipes %v -> %v, image files %d: nothing may change", names, again, f.imageFiles(t))
+	}
 }
