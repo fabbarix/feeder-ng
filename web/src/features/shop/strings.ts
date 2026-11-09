@@ -27,4 +27,12 @@ export const shopStrings = {
   celebrationLots: (n: number) => `${n} Stock ${n === 1 ? 'Lot' : 'Lots'} added`,
   packLine: (qty: string, count: number, name: string) => `${qty} · ${count} × ${name}`,
   offlineList: 'Showing the last list you loaded',
+  save: 'Save',
+  required: 'Required',
+  pickOneNotBoth: 'Choose text or an Ingredient, not both',
+  mustBePositive: 'Enter a number above 0',
+  enterAmount: 'Enter an amount',
+  amountNegative: 'The amount cannot be negative',
+  doneGroup: (n: number) => `Done (${n})`,
+  deleteFailed: 'Could not save that. Try again.',
 }

@@ -1,5 +1,6 @@
-// Presentation helpers for the Shopping List (no React). Stubs until implemented.
-import type { UnitSystem } from '../../../lib/units'
+// Presentation helpers for the Shopping List (no React).
+import { formatMinor } from '../../products/lib/money'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
@@ -22,34 +23,51 @@ export interface ListItem {
 
 /** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
 export function packText(line: Pick<ShoppingLine, 'quantity' | 'baseUnit' | 'pack'>, system: UnitSystem): string {
-  void line
-  void system
-  throw new Error('not implemented')
+  const amount = formatQuantity(line.quantity, line.baseUnit, system)
+  return line.pack ? `${amount} · ${line.pack.count} × ${line.pack.name}` : amount
 }
 
 /** formatMinor(cents, currency), or "—" when cents is null. */
 export function costText(cents: number | null, currency: string): string {
-  void cents
-  void currency
-  throw new Error('not implemented')
+  return cents === null ? '—' : formatMinor(cents, currency)
 }
 
 export function lineItem(line: ShoppingLine, currency: string, system: UnitSystem): ListItem {
-  void line
-  void currency
-  void system
-  throw new Error('not implemented')
+  return {
+    key: `line:${line.ingredientId}`,
+    kind: 'line',
+    ingredientId: line.ingredientId,
+    extraId: null,
+    title: line.name,
+    detail: line.ticked ? '' : packText(line, system),
+    cost: line.ticked ? null : costText(line.costCents, currency),
+    ticked: line.ticked,
+    quantity: line.ticked ? 0 : line.quantity,
+    baseUnit: line.baseUnit,
+  }
 }
 
 export function extraItem(extra: ShoppingExtra, system: UnitSystem): ListItem {
-  void extra
-  void system
-  throw new Error('not implemented')
+  const hasAmount = extra.quantity !== null && extra.baseUnit !== null
+  return {
+    key: `extra:${extra.id}`,
+    kind: 'extra',
+    ingredientId: extra.ingredientId,
+    extraId: extra.id,
+    title: extra.text ?? extra.name ?? '',
+    detail: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
+    cost: null,
+    ticked: extra.ticked,
+    quantity: hasAmount && !extra.ticked ? (extra.quantity ?? 0) : 0,
+    baseUnit: extra.baseUnit,
+  }
 }
 
 /** Open items first (Lines in server order, then extras), then ticked ones (the "Done" group), in the same order. */
 export function listItems(list: ShoppingList, system: UnitSystem): { open: ListItem[]; done: ListItem[] } {
-  void list
-  void system
-  throw new Error('not implemented')
+  const lines = list.lines.map((l) => lineItem(l, list.currency, system))
+  const extras = list.extras.map((e) => extraItem(e, system))
+  const all = [...lines.filter((i) => !i.ticked), ...extras.filter((i) => !i.ticked)]
+  const done = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
+  return { open: all, done }
 }

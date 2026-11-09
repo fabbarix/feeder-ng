@@ -1,3 +1,8 @@
+import { useState } from 'react'
+import { BottomSheet } from '../../../ui/BottomSheet'
+import { Button } from '../../../ui/Button'
+import { checkExtraDraft, type ExtraDraftError } from '../lib/extraDraft'
+import { shopStrings } from '../strings'
 import type { ExtraInput } from '../types'
 
 export interface ExtraSheetProps {
@@ -8,14 +13,63 @@ export interface ExtraSheetProps {
   onSubmit: (input: ExtraInput) => void
 }
 
-/**
- * "Add an extra" (functional spec §9): a BottomSheet titled "Add an extra" with a field "Something to buy" for free
- * text, or an Ingredient choice ("Ingredient", a select of `ingredients`) with a "Quantity" (Base Units). "Save"
- * submits { text } when only the text is filled, { ingredientId, quantity } when an Ingredient and a quantity > 0 are
- * chosen; nothing filled, both filled, or an Ingredient without a quantity > 0 shows "Required" / "Enter a number
- * above 0" and does not submit. Stub until implemented.
- */
-export function ExtraSheet(props: ExtraSheetProps) {
-  void props
-  return null
+const errorText: Record<ExtraDraftError, string> = {
+  required: shopStrings.required,
+  bothFilled: shopStrings.pickOneNotBoth,
+  mustBePositive: shopStrings.mustBePositive,
+}
+
+/** "Add an extra": free text, or an Ingredient with a quantity. Checking the fields is lib/extraDraft's job. */
+export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetProps) {
+  const [text, setText] = useState('')
+  const [ingredientText, setIngredientText] = useState('')
+  const [quantityText, setQuantityText] = useState('')
+  const [error, setError] = useState<ExtraDraftError | null>(null)
+
+  const submit = () => {
+    const result = checkExtraDraft({
+      text,
+      ingredientId: ingredientText === '' ? null : Number(ingredientText),
+      quantityText,
+    })
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setError(null)
+    onSubmit(result.input)
+  }
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={shopStrings.addExtra}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <label className="field">
+          <span className="field__label">{shopStrings.extraText}</span>
+          <input className="field__input" value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field__label">{shopStrings.extraIngredient}</span>
+          <select className="field__input" value={ingredientText} onChange={(e) => setIngredientText(e.target.value)}>
+            <option value="" />
+            {ingredients.map((i) => (
+              <option key={i.id} value={String(i.id)}>
+                {i.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span className="field__label">{shopStrings.extraQuantity}</span>
+          <input className="field__input" inputMode="decimal" value={quantityText} onChange={(e) => setQuantityText(e.target.value)} />
+        </label>
+        {error ? <p className="field__error" role="alert">{errorText[error]}</p> : null}
+        <Button type="submit">{shopStrings.save}</Button>
+      </form>
+    </BottomSheet>
+  )
 }

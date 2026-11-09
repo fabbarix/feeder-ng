@@ -1,3 +1,7 @@
+import { prefersReducedMotion } from '../../../lib/motion'
+import { Tile } from '../../../ui/Tile'
+import { formatMinor } from '../../products/lib/money'
+import { shopStrings } from '../strings'
 import type { ShoppingSummary } from '../types'
 
 export interface CelebrationTileProps {
@@ -6,12 +10,25 @@ export interface CelebrationTileProps {
 }
 
 /**
- * "Shopping list complete" (functional spec §10.1): an accent Tile, role="status", with the heading, "<n> items"
- * (singular "1 item"), "<$ amount> spent" and "<n> Stock Lots added" ("1 Stock Lot"). The celebration animation is
- * a CSS class set only when the User does not prefer reduced motion (lib/motion prefersReducedMotion): with reduced
- * motion the tile has no `data-celebrate` attribute. Stub until implemented.
+ * "Shopping list complete": an accent Tile with the heading, the item count, the money spent and the Stock Lots added.
+ * The celebration animation is a data attribute set only when the User does not prefer reduced motion.
  */
-export function CelebrationTile(props: CelebrationTileProps) {
-  void props
-  return null
+export function CelebrationTile({ summary, currency }: CelebrationTileProps) {
+  const celebrate = !prefersReducedMotion()
+  return (
+    <Tile
+      as="section"
+      tone="accent"
+      role="status"
+      className="celebration-tile"
+      {...(celebrate ? { 'data-celebrate': '' } : {})}
+    >
+      <h2 className="celebration-tile__title">{shopStrings.celebrationTitle}</h2>
+      <ul className="celebration-tile__facts">
+        <li>{shopStrings.celebrationItems(summary.items)}</li>
+        <li>{shopStrings.celebrationSpent(formatMinor(summary.spentCents, currency))}</li>
+        <li>{shopStrings.celebrationLots(summary.lotsAdded)}</li>
+      </ul>
+    </Tile>
+  )
 }

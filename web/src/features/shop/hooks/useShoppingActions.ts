@@ -1,6 +1,11 @@
 // Mutations on the Shopping List: tick by hand, untick, manual extras. React hook; each success invalidates
-// shopKeys.all and, for a tick that added a Stock Lot, ['stock']. Stubs until implemented.
+// shopKeys.all and, for a tick that added a Stock Lot, ['stock']. A failed call rejects and refreshes nothing.
+import { useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { newClientUuid } from '../../scan/lib/queue'
+import { shopApi } from '../api'
 import type { ExtraInput, TickResult } from '../types'
+import { shopKeys } from './useShoppingList'
 
 export interface ShoppingActions {
   tick(input: { ingredientId: number; to: string; quantity: number; shopId?: number | null }): Promise<TickResult>
@@ -16,5 +21,41 @@ export interface ShoppingActions {
  * A failure rejects with the ApiError (the screen shows it) and invalidates nothing.
  */
 export function useShoppingActions(): ShoppingActions {
-  throw new Error('not implemented')
+  const queryClient = useQueryClient()
+
+  return useMemo<ShoppingActions>(() => {
+    const refreshList = () => queryClient.invalidateQueries({ queryKey: shopKeys.all })
+    const refreshStock = () => queryClient.invalidateQueries({ queryKey: ['stock'] })
+
+    return {
+      async tick(input) {
+        const result = await shopApi.tick({ ...input, clientUuid: newClientUuid() })
+        await refreshList()
+        if (result.created) await refreshStock()
+        return result
+      },
+      async untick(ingredientId, to) {
+        await shopApi.untick(ingredientId, to)
+        await refreshList()
+      },
+      async addExtra(input) {
+        await shopApi.addExtra(input)
+        await refreshList()
+      },
+      async deleteExtra(id) {
+        await shopApi.deleteExtra(id)
+        await refreshList()
+      },
+      async tickExtra(id, quantity, shopId) {
+        const result = await shopApi.tickExtra(id, quantity, shopId)
+        await refreshList()
+        if (result.created) await refreshStock()
+        return result
+      },
+      async untickExtra(id) {
+        await shopApi.untickExtra(id)
+        await refreshList()
+      },
+    }
+  }, [queryClient])
 }

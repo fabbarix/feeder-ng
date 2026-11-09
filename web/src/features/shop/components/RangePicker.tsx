@@ -1,3 +1,7 @@
+import { Chip } from '../../../ui/Chip'
+import { rangeChoices } from '../lib/range'
+import { shopStrings } from '../strings'
+
 export interface RangePickerProps {
   today: string
   /** the last date of the Planning Horizon */
@@ -7,12 +11,15 @@ export interface RangePickerProps {
   onChange: (to: string) => void
 }
 
-/**
- * "Shop for" — a row of pill chips (`ui/Chip`) from lib/range rangeChoices(today, maxTo): "Today", "Tomorrow",
- * "Thu 12", ... The chip for `to` is selected (aria-pressed true); the others call onChange(choice.to). The group is
- * labelled "Shop for". Render and wire only. Stub until implemented.
- */
-export function RangePicker(props: RangePickerProps) {
-  void props
-  return null
+/** "Shop for": one pill per day from today to the Planning Horizon; the range in use is pressed. */
+export function RangePicker({ today, maxTo, to, onChange }: RangePickerProps) {
+  return (
+    <div role="group" aria-label={shopStrings.range} className="range-picker">
+      {rangeChoices(today, maxTo).map((choice) => (
+        <Chip key={choice.to} selected={choice.to === to} onClick={() => onChange(choice.to)}>
+          {choice.label}
+        </Chip>
+      ))}
+    </div>
+  )
 }
