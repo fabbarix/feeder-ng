@@ -2,6 +2,7 @@ package ingredient_test
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -101,6 +102,8 @@ func TestApplyRejectsInvalidChoices(t *testing.T) {
 		"zero conversion":     {Conversions: map[string]float64{"jar": 0}, ShelfLifeSet: true, ShelfLifeDays: intp(5)},
 		"negative conversion": {Conversions: map[string]float64{"jar": -1}, ShelfLifeSet: true, ShelfLifeDays: intp(5)},
 		"zero shelf life":     {Conversions: map[string]float64{"jar": 690}, ShelfLifeSet: true, ShelfLifeDays: intp(0)},
+		"NaN conversion":      {Conversions: map[string]float64{"jar": math.NaN()}, ShelfLifeSet: true, ShelfLifeDays: intp(5)},
+		"infinite conversion": {Conversions: map[string]float64{"jar": math.Inf(1)}, ShelfLifeSet: true, ShelfLifeDays: intp(5)},
 	} {
 		if _, err := plan.Apply(res); !errors.Is(err, ingredient.ErrInvalid) {
 			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
@@ -115,5 +118,16 @@ func TestBaseMismatchBlocksTheMerge(t *testing.T) {
 	}
 	if _, err := plan.Apply(ingredient.Resolution{}); !errors.Is(err, ingredient.ErrBaseMismatch) {
 		t.Errorf("err = %v, want ErrBaseMismatch", err)
+	}
+}
+
+func TestApplyRejectsAConversionToTheBaseUnit(t *testing.T) {
+	// A conflicting Unit that is the Base Unit itself can never be a Unit Conversion.
+	source := ing("a", units.Gram, nil, units.Conversion{Unit: "g", ToBase: 1})
+	target := ing("b", units.Gram, nil, units.Conversion{Unit: "g", ToBase: 2})
+	plan := ingredient.PlanMerge(source, target)
+	_, err := plan.Apply(ingredient.Resolution{Conversions: map[string]float64{"g": 3}})
+	if !errors.Is(err, ingredient.ErrInvalid) {
+		t.Errorf("err = %v, want ErrInvalid", err)
 	}
 }
