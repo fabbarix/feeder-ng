@@ -48,8 +48,22 @@ func Canonical(raw string) (code string, ok bool) { panic("TODO") }
 type ValueKind string
 
 const (
-	ValueWeight ValueKind = "weight" // grams
-	ValuePrice  ValueKind = "price"  // cents
+	ValueWeight ValueKind = "weight"
+	ValuePrice  ValueKind = "price"
+)
+
+// ValueUnit is the unit a Weight Barcode Rule's value is written in. Weight
+// rules use g (default), kg, oz or lb; price rules use the household
+// currency's minor unit (cents for USD) and leave it empty. Resolutions are
+// always in grams and cents.
+type ValueUnit string
+
+const (
+	UnitDefault ValueUnit = ""   // g for a weight rule, minor currency unit for a price rule
+	UnitGram    ValueUnit = "g"  // 1 g
+	UnitKilo    ValueUnit = "kg" // 1000 g
+	UnitOunce   ValueUnit = "oz" // 28.349523125 g
+	UnitPound   ValueUnit = "lb" // 453.59237 g
 )
 
 // Span is a run of digits in the 13 digit barcode. Start is 1-based.
@@ -65,7 +79,8 @@ type WeightRule struct {
 	Item          Span      `json:"item"`
 	Value         Span      `json:"value"`
 	ValueKind     ValueKind `json:"valueKind"`
-	DecimalPlaces int       `json:"decimalPlaces"` // the value digits are divided by 10^DecimalPlaces
+	ValueUnit     ValueUnit `json:"valueUnit,omitempty"` // weight: g (default) kg oz lb; price: empty (minor currency unit)
+	DecimalPlaces int       `json:"decimalPlaces"`       // the value digits are divided by 10^DecimalPlaces, in ValueUnit
 }
 
 // Validate reports why a rule cannot be used (nil when fine).
@@ -114,7 +129,7 @@ type Resolution struct {
 	Code            string  `json:"code,omitempty"`
 	RuleID          int64   `json:"ruleId,omitempty"`
 	ItemCode        string  `json:"itemCode,omitempty"`
-	WeightGrams     float64 `json:"weightGrams,omitempty"`
+	WeightGrams     float64 `json:"weightGrams,omitempty"` // grams, rounded to the mg
 	PriceCents      int     `json:"priceCents,omitempty"`
 	PricePerKgCents int     `json:"pricePerKgCents,omitempty"`
 	Reason          string  `json:"reason,omitempty"` // invalid: Parse reasons | zero_value

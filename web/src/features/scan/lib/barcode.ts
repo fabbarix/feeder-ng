@@ -32,13 +32,22 @@ export interface Span {
   length: number
 }
 
+/**
+ * Unit of a rule's value. Weight rules: g (default), kg, oz, lb. Price rules:
+ * omitted, meaning the household currency's minor unit (cents for USD).
+ * Resolutions are always in grams and cents.
+ */
+export type ValueUnit = 'g' | 'kg' | 'oz' | 'lb'
+
 export interface WeightRule {
   id: number
   prefix: string
   item: Span
   value: Span
   valueKind: ValueKind
-  /** value digits are divided by 10^decimalPlaces (unit: g or cents) */
+  /** omitted: g (weight) or the minor currency unit (price) */
+  valueUnit?: ValueUnit
+  /** value digits are divided by 10^decimalPlaces, in valueUnit */
   decimalPlaces: number
 }
 
@@ -73,6 +82,7 @@ export interface Resolution {
   code?: string
   ruleId?: number
   itemCode?: string
+  /** grams, rounded to the mg */
   weightGrams?: number
   priceCents?: number
   pricePerKgCents?: number

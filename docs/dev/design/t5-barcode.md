@@ -18,7 +18,9 @@ Scope: pure barcode logic, implemented twice so the server and the offline phone
 - `Canonical(raw)` = `Parse(raw, "")`, accepting gtin or opaque; used when a user types a barcode into a Product or Shop Barcode form. **All stored barcodes (global and Shop) are in canonical form.**
 
 ## Weight Barcode Rule
-Fields: `id, prefix, item{start,length}, value{start,length}, valueKind weight|price, decimalPlaces`. Positions are **1-based** in the 13-digit string. `Validate` rejects: non-digit/empty prefix, unknown kind, spans with length < 1, starting inside the prefix, or ending beyond digit 12 (13 is the check digit), overlapping spans, `decimalPlaces` outside 0..value length. The value is `digits / 10^decimalPlaces`, in **grams** (weight) or **cents** (price) as in the spec (price rounded to a cent).
+Fields: `id, prefix, item{start,length}, value{start,length}, valueKind weight|price, valueUnit, decimalPlaces`. Positions are **1-based** in the 13-digit string. `Validate` rejects: non-digit/empty prefix, unknown kind, spans with length < 1, starting inside the prefix, or ending beyond digit 12 (13 is the check digit), overlapping spans, `decimalPlaces` outside 0..value length, a weight rule whose `valueUnit` is not `g|kg|oz|lb` (omitted = `g`), a price rule with any `valueUnit` (a price is always in the household currency's minor unit: cents by default, USD by default; the currency is a household setting and not this package's concern).
+
+The decoded value is `digits / 10^decimalPlaces` **in the rule's unit**: `0500` with 1 place and unit g is 50.0 g; with 3 places and unit kg it is 0.5 kg = 500 g. To grams: kg x 1000, oz x 28.349523125, lb x 453.59237. `weightGrams` is rounded to the mg (3 decimals) so Go and TS agree; prices are rounded to the minor unit (half up). Internally weights are grams and prices per weight are cents per kg (`pricePerKgCents`) whatever the rule's unit; imperial display is a UI-only conversion.
 
 ## Resolution (`Resolve(scanned, catalog) -> Resolution`)
 `Catalog` is exactly what the phone caches for one Shop (or for home): `shopBarcodes` (that Shop's), `weightRules` (that Shop's), `weightItems` (`"<ruleId>:<itemCode>"` -> product id), `pricePerKgCents` (product id -> last price per kg at that Shop), `globalBarcodes`. At home only `globalBarcodes` is filled. The Shop/Product team builds it from the DB: a Shop Barcode row with a rule id goes to `weightItems`, otherwise to `shopBarcodes`.
@@ -36,5 +38,5 @@ Order: not_product / invalid pass through; Shop Barcode (any kind of code, so Co
 - A global barcode may be an opaque code too (the unknown form offers global vs Shop-only for any code).
 - Check-digit failures are `invalid` (toast "couldn't read, try again"), never silently "unknown".
 
-## QUESTIONS (for the product owner; defaults above)
-1. "Value kind weight (g) or price (cents), with decimal places": I read decimal places as dividing the value digits (e.g. `0500` with 1 place = 50.0 g). If instead the digits are kg or euros with N decimals, say so and the vectors change.
+## Resolved questions
+1. Weight Barcode Rule values: each rule configures its value unit (see above). Answered by the product owner.
