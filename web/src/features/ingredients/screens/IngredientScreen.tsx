@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import type { BaseUnit } from '../../../lib/units'
 import { BentoGrid, BottomSheet, Button, Chip, EmptyState, Tile } from '../../../ui'
+import { IngredientProducts } from '../../products'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
 import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
@@ -128,6 +129,8 @@ export function IngredientScreen() {
             onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
           />
         </Tile>
+
+        <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} />
 
         <Tile as="section" size="md" aria-label={strings.mergeTitle}>
           <Button variant="tonal" onClick={() => setMergeOpen(true)}>
