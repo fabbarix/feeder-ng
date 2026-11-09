@@ -3,14 +3,11 @@ package bdd
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"net/textproto"
 	"regexp"
 	"strconv"
 	"strings"
@@ -199,32 +196,15 @@ func recipesSteps(sc *godog.ScenarioContext, w *World) {
 	sc.Step(`^the Recipe JSON "([^"]*)" is "([^"]*)"$`, func(path, want string) error { return recipeJSONIs(w, path, want) })
 
 	// Images.
-	upload := func(filename string, data []byte) {
-		env := w.Ensure()
-		var buf bytes.Buffer
-		mw := multipart.NewWriter(&buf)
-		h := textproto.MIMEHeader{}
-		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename=%q`, filename))
-		h.Set("Content-Type", "application/octet-stream")
-		part, _ := mw.CreatePart(h)
-		part.Write(data)
-		mw.Close()
-		req, _ := http.NewRequest("POST", env.URL()+"/api/images", &buf)
-		req.Header.Set("Content-Type", mw.FormDataContentType())
-		if c := w.Client.Cookie("feeder_session"); c != nil {
-			req.AddCookie(c)
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
-		w.Last = &testkit.Response{Status: resp.StatusCode, Header: resp.Header, Body: body}
+	// Photos travel as JSON data URLs (the Recipe File form): multipart bodies
+	// are refused by the CSRF guard.
+	upload := func(data []byte) {
+		body := map[string]string{"dataUrl": "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)}
+		w.Last = w.Client.Do("POST", "/api/images", body)
 		var v struct {
 			ID string `json:"id"`
 		}
-		if json.Unmarshal(body, &v) == nil && v.ID != "" {
+		if json.Unmarshal(w.Last.Body, &v) == nil && v.ID != "" {
 			w.Vars["image:last"] = v.ID
 		}
 	}
@@ -233,10 +213,10 @@ func recipesSteps(sc *godog.ScenarioContext, w *World) {
 		if err := png.Encode(&b, image.NewRGBA(image.Rect(0, 0, wd, ht))); err != nil {
 			panic(err)
 		}
-		upload("photo.png", b.Bytes())
+		upload(b.Bytes())
 	})
-	sc.Step(`^I upload the text "([^"]*)" as a Recipe image$`, func(text string) { upload("note.png", []byte(text)) })
-	sc.Step(`^I upload a Recipe image of (\d+) MB$`, func(mb int) { upload("huge.png", make([]byte, mb<<20)) })
+	sc.Step(`^I upload the text "([^"]*)" as a Recipe image$`, func(text string) { upload([]byte(text)) })
+	sc.Step(`^I upload a Recipe image of (\d+) MB$`, func(mb int) { upload(make([]byte, mb<<20)) })
 	sc.Step(`^I fetch the uploaded image$`, func() {
 		w.Last = w.Client.Get(fmt.Sprintf("/api/images/%v", w.Vars["image:last"]))
 	})
