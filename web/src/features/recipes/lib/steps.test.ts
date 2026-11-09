@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { afterOptions, changeKind, insertStep, moveStep, removeStep, type Ordered } from './steps'
+import { afterOptions, changeKind, insertStep, moveStep, newStepDraft, removeStep, toggleAfter, type Ordered } from './steps'
 
 const s = (kind: Ordered['kind'], after: number[] = [], label = ''): Ordered & { label: string } => ({ kind, after, label })
 
@@ -90,5 +90,43 @@ describe('afterOptions', () => {
     const steps = spec()
     steps[4] = s('advance', [], 'rice')
     expect(afterOptions(steps, 5)).toEqual([1, 2, 3])
+  })
+})
+
+describe('newStepDraft', () => {
+  it('is a blank Active Step with a fresh key each time', () => {
+    const a = newStepDraft()
+    const b = newStepDraft()
+    expect(a).toMatchObject({ text: '', kind: 'active', durationMinutes: '', leadTimeMinutes: '', after: [], uses: [], image: '' })
+    expect(a.key).not.toBe(b.key)
+    expect(a.after).not.toBe(b.after)
+  })
+})
+
+describe('toggleAfter', () => {
+  it('adds a dependency keeping the list sorted', () => {
+    const steps = [s('active'), s('active'), s('active'), s('passive', [2])]
+    expect(toggleAfter(steps, 3, 0, true)[3]!.after).toEqual([0, 2])
+    expect(toggleAfter(steps, 3, 1, true)[3]!.after).toEqual([1, 2])
+  })
+
+  it('does not duplicate an existing dependency', () => {
+    const steps = [s('active'), s('active'), s('passive', [0, 1])]
+    expect(toggleAfter(steps, 2, 1, true)[2]!.after).toEqual([0, 1])
+  })
+
+  it('removes a dependency when switched off, and ignores one that is absent', () => {
+    const steps = [s('active'), s('active'), s('passive', [0, 1])]
+    expect(toggleAfter(steps, 2, 0, false)[2]!.after).toEqual([1])
+    expect(toggleAfter(steps, 2, 5, false)[2]!.after).toEqual([0, 1])
+  })
+
+  it('does not mutate and leaves other Steps as the same objects', () => {
+    const steps = [s('active'), s('active'), s('passive', [0])]
+    const out = toggleAfter(steps, 2, 1, true)
+    expect(steps[2]!.after).toEqual([0])
+    expect(out[0]).toBe(steps[0])
+    expect(out[1]).toBe(steps[1])
+    expect(out[2]).not.toBe(steps[2])
   })
 })

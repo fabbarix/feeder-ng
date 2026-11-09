@@ -2,11 +2,16 @@ package bdd
 
 import (
 	"bytes"
+	"compress/zlib"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	hashcrc "hash/crc32"
 	"image"
+	"image/color"
+	"image/gif"
 	"image/png"
 	"regexp"
 	"strconv"
@@ -198,8 +203,8 @@ func recipesSteps(sc *godog.ScenarioContext, w *World) {
 	// Images.
 	// Photos travel as JSON data URLs (the Recipe File form): multipart bodies
 	// are refused by the CSRF guard.
-	upload := func(data []byte) {
-		body := map[string]string{"dataUrl": "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)}
+	uploadAs := func(mime string, data []byte) {
+		body := map[string]string{"dataUrl": "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)}
 		w.Last = w.Client.Do("POST", "/api/images", body)
 		var v struct {
 			ID string `json:"id"`
@@ -208,12 +213,30 @@ func recipesSteps(sc *godog.ScenarioContext, w *World) {
 			w.Vars["image:last"] = v.ID
 		}
 	}
+	upload := func(data []byte) { uploadAs("image/png", data) }
 	sc.Step(`^I upload a (\d+)x(\d+) PNG as a Recipe image$`, func(wd, ht int) {
 		var b bytes.Buffer
 		if err := png.Encode(&b, image.NewRGBA(image.Rect(0, 0, wd, ht))); err != nil {
 			panic(err)
 		}
 		upload(b.Bytes())
+	})
+	sc.Step(`^I upload a tiny PNG declaring (\d+)x(\d+) pixels as a Recipe image$`, func(wd, ht int) {
+		upload(bombPNG(wd, ht))
+	})
+	sc.Step(`^I upload a (\d+)x(\d+) PNG declared as "([^"]*)" as a Recipe image$`, func(wd, ht int, mime string) {
+		var b bytes.Buffer
+		if err := png.Encode(&b, image.NewRGBA(image.Rect(0, 0, wd, ht))); err != nil {
+			panic(err)
+		}
+		uploadAs(mime, b.Bytes())
+	})
+	sc.Step(`^I upload a (\d+)x(\d+) GIF as a Recipe image$`, func(wd, ht int) {
+		var b bytes.Buffer
+		if err := gif.Encode(&b, image.NewPaletted(image.Rect(0, 0, wd, ht), color.Palette{color.Black, color.White}), nil); err != nil {
+			panic(err)
+		}
+		uploadAs("image/gif", b.Bytes())
 	})
 	sc.Step(`^I upload the text "([^"]*)" as a Recipe image$`, func(text string) { upload([]byte(text)) })
 	sc.Step(`^I upload a Recipe image of (\d+) MB$`, func(mb int) { upload(make([]byte, mb<<20)) })
@@ -360,4 +383,33 @@ func recipeJSONIs(w *World, path, want string) error {
 		return fmt.Errorf("field %q = %q, want %q", path, got, want)
 	}
 	return nil
+}
+
+// bombPNG is a tiny PNG whose header declares wd x ht pixels (1-bit grey) with
+// a few bytes of pixel data: a decompression bomb.
+func bombPNG(wd, ht int) []byte {
+	var out bytes.Buffer
+	out.WriteString("\x89PNG\r\n\x1a\n")
+	chunk := func(kind string, data []byte) {
+		var n [4]byte
+		binary.BigEndian.PutUint32(n[:], uint32(len(data)))
+		out.Write(n[:])
+		out.WriteString(kind)
+		out.Write(data)
+		var c [4]byte
+		binary.BigEndian.PutUint32(c[:], hashcrc.ChecksumIEEE(append([]byte(kind), data...)))
+		out.Write(c[:])
+	}
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:], uint32(wd))
+	binary.BigEndian.PutUint32(ihdr[4:], uint32(ht))
+	ihdr[8], ihdr[9] = 1, 0
+	chunk("IHDR", ihdr)
+	var z bytes.Buffer
+	zw := zlib.NewWriter(&z)
+	_, _ = zw.Write(make([]byte, 64))
+	_ = zw.Close()
+	chunk("IDAT", z.Bytes())
+	chunk("IEND", nil)
+	return out.Bytes()
 }

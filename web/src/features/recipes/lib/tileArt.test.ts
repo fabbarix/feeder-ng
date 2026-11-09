@@ -16,10 +16,10 @@ describe('tileArt', () => {
     expect(tileArt('x', ['soup']).icon).toBe('soup')
   })
 
-  it('falls back to the plain dish icon', () => {
-    expect(tileArt('x', []).icon).toBe('dish')
-    expect(tileArt('x', ['weeknight']).icon).toBe('dish')
-    expect(tileArt('x', ['fishy']).icon).toBe('dish') // not a whole word
+  it('falls back to the plain plate icon', () => {
+    expect(tileArt('x', []).icon).toBe('plate')
+    expect(tileArt('x', ['weeknight']).icon).toBe('plate')
+    expect(tileArt('x', ['fishy']).icon).toBe('plate') // not a whole word
   })
 
   it('gives the same tone for the same name and always within range', () => {

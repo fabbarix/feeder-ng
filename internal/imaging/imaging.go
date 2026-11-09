@@ -26,6 +26,11 @@ const (
 	MaxSide      = 1600
 	MaxBytes     = 8 << 20  // upload size limit (8 MB, as for Recipe File data URLs)
 	MaxBodyBytes = 16 << 20 // request body that carries a data URL of at most MaxBytes
+
+	// Decompression-bomb caps, checked with image.DecodeConfig before any full decode:
+	// refused when the longest side exceeds MaxSidePixels or width*height exceeds MaxPixels.
+	MaxSidePixels = 12000
+	MaxPixels     = 50_000_000
 )
 
 // Errors.
@@ -33,6 +38,7 @@ var (
 	ErrUnsupportedFormat = errors.New("unsupported or corrupt image") // not JPEG, PNG, GIF or WebP, or undecodable
 	ErrTooLarge          = errors.New("image larger than 8 MB")
 	ErrEmpty             = errors.New("empty image")
+	ErrTooManyPixels     = errors.New("image dimensions too large") // STUB: not yet returned (see design note)
 )
 
 // Result is a processed image.

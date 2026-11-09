@@ -1,4 +1,5 @@
 import type { StepKind } from '../types'
+import type { StepDraft } from './draft'
 
 /** The part of a Step the ordering helpers care about. Generic so they work on drafts and wire Steps. */
 export interface Ordered {
@@ -72,4 +73,19 @@ export function afterOptions(steps: Ordered[], index: number): number[] {
   const out: number[] = []
   for (let j = 0; j < index; j++) if (steps[j]!.kind !== 'advance') out.push(j)
   return out
+}
+
+// ---- STUBS: the Developer implements them; StepsEditor goes through useRecipeEditor ----
+
+/** A new blank Step: kind 'active', empty texts/durations, no after, no uses, no image, fresh key. */
+export function newStepDraft(): StepDraft {
+  throw new Error('not implemented')
+}
+
+/**
+ * Adds (`on`) or removes dependency `j` in the `after` of the Step at `i`: no duplicates, sorted ascending.
+ * Returns new arrays; other Steps are untouched (same objects).
+ */
+export function toggleAfter<T extends Ordered>(_steps: T[], _i: number, _j: number, _on: boolean): T[] {
+  throw new Error('not implemented')
 }

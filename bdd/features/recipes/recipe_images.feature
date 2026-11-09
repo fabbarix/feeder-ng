@@ -35,6 +35,26 @@ Feature: Recipe images
     Then the response status is 413
     And the error code is "image_too_large"
 
+  Scenario: A tiny file that declares enormous dimensions is refused without decoding it
+    When I upload a tiny PNG declaring 30000x30000 pixels as a Recipe image
+    Then the response status is 422
+    And the error code is "image_too_large_pixels"
+
+  Scenario: A very long image is refused even when its pixel count is small
+    When I upload a tiny PNG declaring 12001x10 pixels as a Recipe image
+    Then the response status is 422
+    And the error code is "image_too_large_pixels"
+
+  Scenario: The declared type must match the actual format
+    When I upload a 100x100 PNG declared as "image/jpeg" as a Recipe image
+    Then the response status is 422
+    And the error code is "unsupported_image"
+
+  Scenario: GIF is not an accepted format
+    When I upload a 20x20 GIF as a Recipe image
+    Then the response status is 422
+    And the error code is "unsupported_image"
+
   Scenario: A Recipe and its Steps can carry uploaded images
     Given the Ingredient "flour" exists with Base Unit "g"
     And I upload a 400x300 PNG as a Recipe image

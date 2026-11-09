@@ -1,4 +1,4 @@
-import type { Recipe, RecipeInput, StepKind } from '../types'
+import type { IngredientRef, Recipe, RecipeInput, StepKind } from '../types'
 
 // The editor's form state: everything the User types is a string until draftToInput parses it.
 
@@ -247,4 +247,31 @@ export function serverErrorKey(field: string, reason: string): string {
     .replace(/\.ingredientId$/, '.ingredient')
     .replace('source.url', 'sourceUrl')
     .replace('source.attribution', 'sourceAttribution')
+}
+
+// ---- Pure draft operations (STUBS: the Developer implements them; RecipeEditorScreen goes through useRecipeEditor) ----
+
+/** A new, blank ingredient line with a fresh key. */
+export function newLineDraft(): LineDraft {
+  throw new Error('not implemented')
+}
+
+/** Appends a blank line. Returns a new draft; the input is not mutated. */
+export function addLine(_draft: RecipeDraft): RecipeDraft {
+  throw new Error('not implemented')
+}
+
+/** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */
+export function updateLine(_draft: RecipeDraft, _key: string, _patch: Partial<LineDraft>): RecipeDraft {
+  throw new Error('not implemented')
+}
+
+/** Chooses an Ingredient for the line with `key`: sets ingredientId, ingredientName and the unit to the Ingredient's Base Unit; quantity, optional and note are kept. */
+export function pickIngredient(_draft: RecipeDraft, _key: string, _ingredient: IngredientRef): RecipeDraft {
+  throw new Error('not implemented')
+}
+
+/** Removes the line with `key`; the others keep their order and keys. */
+export function removeLine(_draft: RecipeDraft, _key: string): RecipeDraft {
+  throw new Error('not implemented')
 }

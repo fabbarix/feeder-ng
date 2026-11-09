@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { draftFromRecipe, draftToInput, emptyDraft, parseNumber, validateDraft, type RecipeDraft } from './draft'
-import type { Recipe } from '../types'
+import { addLine, draftFromRecipe, draftToInput, emptyDraft, parseNumber, pickIngredient, removeLine, updateLine, validateDraft, type LineDraft, type RecipeDraft } from './draft'
+import type { IngredientRef, Recipe } from '../types'
 
 function filled(): RecipeDraft {
   return {
@@ -141,5 +141,50 @@ describe('validateDraft', () => {
     d.cooldownDays = '-1'
     d.leftoverUseByDays = 'soon'
     expect(validateDraft(d)).toEqual({ cooldownDays: 'cooldown_invalid', leftoverUseByDays: 'use_by_invalid' })
+  })
+})
+
+describe('line operations', () => {
+  const line = (key: string, extra: Partial<LineDraft> = {}): LineDraft => ({
+    key, ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '', ...extra,
+  })
+  const withLines = (...lines: LineDraft[]): RecipeDraft => ({ ...emptyDraft(), name: 'Pie', lines })
+  const flour: IngredientRef = { id: 7, name: 'Flour', baseUnit: 'g', conversions: [] }
+
+  it('addLine appends a blank line with a fresh key and does not mutate', () => {
+    const d = withLines(line('a'))
+    const out = addLine(d)
+    expect(d.lines).toHaveLength(1)
+    expect(out.lines).toHaveLength(2)
+    expect(out.lines[0]).toBe(d.lines[0])
+    expect(out.lines[1]).toMatchObject({ ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '' })
+    expect(out.lines[1]!.key).not.toBe('a')
+    expect(addLine(out).lines[2]!.key).not.toBe(out.lines[1]!.key)
+    expect(out.name).toBe('Pie')
+  })
+
+  it('updateLine patches only the line with that key', () => {
+    const a = line('a', { quantity: '1' })
+    const b = line('b', { quantity: '2' })
+    const out = updateLine(withLines(a, b), 'b', { quantity: '250', note: 'sifted' })
+    expect(out.lines[0]).toBe(a)
+    expect(out.lines[1]).toMatchObject({ key: 'b', quantity: '250', note: 'sifted', unit: '' })
+  })
+
+  it('updateLine with an unknown key changes nothing', () => {
+    const d = withLines(line('a'))
+    expect(updateLine(d, 'zzz', { quantity: '9' }).lines).toEqual(d.lines)
+  })
+
+  it('pickIngredient sets id, name and the Base Unit but keeps quantity, optional and note', () => {
+    const d = withLines(line('a', { quantity: '300', optional: true, note: 'plain', unit: 'cup' }))
+    const out = pickIngredient(d, 'a', flour)
+    expect(out.lines[0]).toEqual({ key: 'a', ingredientId: 7, ingredientName: 'Flour', quantity: '300', unit: 'g', optional: true, note: 'plain' })
+  })
+
+  it('removeLine drops the line and keeps the rest in order', () => {
+    const out = removeLine(withLines(line('a'), line('b'), line('c')), 'b')
+    expect(out.lines.map((l) => l.key)).toEqual(['a', 'c'])
+    expect(removeLine(out, 'nope').lines).toHaveLength(2)
   })
 })
