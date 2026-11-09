@@ -55,8 +55,8 @@ export interface Catalog {
   /** this Shop's Shop Barcodes: Scanned.code -> product id */
   shopBarcodes?: Record<string, number>
   weightRules?: WeightRule[]
-  /** weightItemKey(ruleId, itemCode) -> product id */
-  weightItems?: Record<string, number>
+  /** weightProductKey(ruleId, itemCode) -> product id */
+  weightProducts?: Record<string, number>
   /** product id -> last price per kg at this Shop (cents) */
   pricePerKgCents?: Record<string, number>
   /** Scanned.code -> product id */
@@ -67,7 +67,7 @@ export type Outcome =
   | 'product'
   | 'weighed'
   | 'ask_weight'
-  | 'unknown_weighed_item'
+  | 'unknown_weighed_product'
   | 'unknown'
   | 'not_product'
   | 'invalid'
@@ -148,7 +148,7 @@ export function validateRule(rule: WeightRule): string | null {
   return null
 }
 
-export function weightItemKey(ruleId: number, itemCode: string): string {
+export function weightProductKey(ruleId: number, itemCode: string): string {
   return `${ruleId}:${itemCode}`
 }
 
@@ -169,12 +169,12 @@ export function resolve(scanned: Scanned, catalog: Catalog): Resolution {
       const value = Number(sliceSpan(ean13, rule.value))
       if (value === 0) return { outcome: 'invalid', reason: 'zero_value', code }
       const itemCode = sliceSpan(ean13, rule.item)
-      const productId = lookup(catalog.weightItems, weightItemKey(rule.id, itemCode))
+      const productId = lookup(catalog.weightProducts, weightProductKey(rule.id, itemCode))
       if (productId === undefined) {
-        unknown ??= unknownItem(code, rule, itemCode, value)
+        unknown ??= unknownProduct(code, rule, itemCode, value)
         continue
       }
-      return matchedItem(code, rule, itemCode, productId, value, catalog)
+      return matchedProduct(code, rule, itemCode, productId, value, catalog)
     }
   }
 
@@ -203,7 +203,7 @@ export function pricePerKgFromWeight(
 
 // ---- resolution helpers -------------------------------------------------
 
-function matchedItem(
+function matchedProduct(
   code: string,
   rule: WeightRule,
   itemCode: string,
@@ -223,8 +223,8 @@ function matchedItem(
   return { ...base, priceCents: cents, pricePerKgCents: ppk, weightGrams: grams }
 }
 
-function unknownItem(code: string, rule: WeightRule, itemCode: string, value: number): Resolution {
-  const base: Resolution = { outcome: 'unknown_weighed_item', code, ruleId: rule.id, itemCode }
+function unknownProduct(code: string, rule: WeightRule, itemCode: string, value: number): Resolution {
+  const base: Resolution = { outcome: 'unknown_weighed_product', code, ruleId: rule.id, itemCode }
   if (rule.valueKind === 'weight') return { ...base, weightGrams: weightGrams(value, rule) }
   return { ...base, priceCents: priceCents(value, rule.decimalPlaces) }
 }

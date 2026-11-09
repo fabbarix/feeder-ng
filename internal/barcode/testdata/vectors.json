@@ -374,11 +374,13 @@
    }
   },
   {
-   "name": "url with 13 digit key is not a product code",
+   "name": "digital link with a GTIN-13 key",
    "raw": "https://id.gs1.org/01/4006381333931",
    "format": "qr_code",
    "expect": {
-    "kind": "not_product"
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
    }
   },
   {
@@ -411,6 +413,231 @@
    "format": "pdf417",
    "expect": {
     "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with a GTIN-8 key is zero padded",
+   "raw": "https://id.gs1.org/01/96385074",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "00000096385074",
+    "ean13": "0000096385074"
+   }
+  },
+  {
+   "name": "digital link with a GTIN-12 key is zero padded",
+   "raw": "https://id.gs1.org/01/036000291452",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "00036000291452",
+    "ean13": "0036000291452"
+   }
+  },
+  {
+   "name": "digital link with a GTIN-14 key (indicator digit 1)",
+   "raw": "https://id.gs1.org/01/10012345678902",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "10012345678902"
+   }
+  },
+  {
+   "name": "digital link GTIN-13 key with a bad check digit",
+   "raw": "https://id.gs1.org/01/4006381333932",
+   "format": "qr_code",
+   "expect": {
+    "kind": "invalid",
+    "reason": "check_digit"
+   }
+  },
+  {
+   "name": "digital link GTIN-8 key with a bad check digit",
+   "raw": "https://id.gs1.org/01/96385075",
+   "format": "qr_code",
+   "expect": {
+    "kind": "invalid",
+    "reason": "check_digit"
+   }
+  },
+  {
+   "name": "digital link with an 11 digit key is not a product code",
+   "raw": "https://id.gs1.org/01/12345678901",
+   "format": "qr_code",
+   "expect": {
+    "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with a 15 digit key is not a product code",
+   "raw": "https://id.gs1.org/01/040063813339310",
+   "format": "qr_code",
+   "expect": {
+    "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with a non digit key is not a product code",
+   "raw": "https://id.gs1.org/01/40063813339AB",
+   "format": "qr_code",
+   "expect": {
+    "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with percent-encoded AI segment",
+   "raw": "https://id.gs1.org/%30%31/04006381333931",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with percent-encoded key digits",
+   "raw": "https://id.gs1.org/01/%30400638133%33931",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a malformed percent escape is not a product code",
+   "raw": "https://id.gs1.org/01/%ZZ006381333931",
+   "format": "qr_code",
+   "expect": {
+    "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with a truncated percent escape is not a product code",
+   "raw": "https://id.gs1.org/01/4006381333931%",
+   "format": "qr_code",
+   "expect": {
+    "kind": "not_product"
+   }
+  },
+  {
+   "name": "digital link with 01 after a two segment path prefix",
+   "raw": "https://example.com/brand/products/01/04006381333931",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with 01 after a path prefix and a GTIN-13 key",
+   "raw": "https://example.com/p/01/4006381333931/10/LOT1",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a trailing slash",
+   "raw": "https://id.gs1.org/01/04006381333931/",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a trailing slash and a GTIN-13 key",
+   "raw": "https://id.gs1.org/01/4006381333931/",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a fragment",
+   "raw": "https://id.gs1.org/01/04006381333931#details",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a query and a fragment",
+   "raw": "https://id.gs1.org/01/4006381333931?17=261231#top",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "digital link with a fragment and no other path",
+   "raw": "https://id.gs1.org/01/036000291452/#x",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "00036000291452",
+    "ean13": "0036000291452"
+   }
+  },
+  {
+   "name": "http digital link",
+   "raw": "http://id.gs1.org/01/04006381333931",
+   "format": "qr_code",
+   "expect": {
+    "kind": "gtin",
+    "code": "04006381333931",
+    "ean13": "4006381333931"
+   }
+  },
+  {
+   "name": "gtin14 with a non zero indicator digit",
+   "raw": "10012345678902",
+   "format": "",
+   "expect": {
+    "kind": "gtin",
+    "code": "10012345678902"
+   }
+  },
+  {
+   "name": "gtin14 with a non zero indicator digit and bad check digit",
+   "raw": "10012345678903",
+   "format": "",
+   "expect": {
+    "kind": "invalid",
+    "reason": "check_digit"
+   }
+  },
+  {
+   "name": "upce expands (d6=2)",
+   "raw": "01234523",
+   "format": "upc_e",
+   "expect": {
+    "kind": "gtin",
+    "code": "00012200003453",
+    "ean13": "0012200003453"
+   }
+  },
+  {
+   "name": "upce expands (d6=5)",
+   "raw": "01234558",
+   "format": "upc_e",
+   "expect": {
+    "kind": "gtin",
+    "code": "00012345000058",
+    "ean13": "0012345000058"
    }
   }
  ],
@@ -817,6 +1044,132 @@
     "valueUnit": "cents"
    },
    "valid": false
+  },
+  {
+   "name": "value span starts inside the prefix",
+   "rule": {
+    "id": 9,
+    "prefix": "2123",
+    "item": {
+     "start": 5,
+     "length": 4
+    },
+    "value": {
+     "start": 3,
+     "length": 2
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 0
+   },
+   "valid": false
+  },
+  {
+   "name": "value span starts at the last prefix digit",
+   "rule": {
+    "id": 9,
+    "prefix": "212",
+    "item": {
+     "start": 4,
+     "length": 4
+    },
+    "value": {
+     "start": 3,
+     "length": 1
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 0
+   },
+   "valid": false
+  },
+  {
+   "name": "value span starts right after the prefix",
+   "rule": {
+    "id": 9,
+    "prefix": "212",
+    "item": {
+     "start": 8,
+     "length": 4
+    },
+    "value": {
+     "start": 4,
+     "length": 4
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 0
+   },
+   "valid": true
+  },
+  {
+   "name": "decimals equal to the value length",
+   "rule": {
+    "id": 9,
+    "prefix": "21",
+    "item": {
+     "start": 3,
+     "length": 5
+    },
+    "value": {
+     "start": 8,
+     "length": 5
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 5
+   },
+   "valid": true
+  },
+  {
+   "name": "decimals one more than the value length",
+   "rule": {
+    "id": 9,
+    "prefix": "21",
+    "item": {
+     "start": 3,
+     "length": 5
+    },
+    "value": {
+     "start": 8,
+     "length": 5
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 6
+   },
+   "valid": false
+  },
+  {
+   "name": "decimals equal to a one digit value length",
+   "rule": {
+    "id": 9,
+    "prefix": "21",
+    "item": {
+     "start": 3,
+     "length": 5
+    },
+    "value": {
+     "start": 8,
+     "length": 1
+    },
+    "valueKind": "weight",
+    "decimalPlaces": 1
+   },
+   "valid": true
+  },
+  {
+   "name": "price rule with decimals equal to the value length",
+   "rule": {
+    "id": 9,
+    "prefix": "21",
+    "item": {
+     "start": 3,
+     "length": 5
+    },
+    "value": {
+     "start": 8,
+     "length": 5
+    },
+    "valueKind": "price",
+    "decimalPlaces": 5
+   },
+   "valid": true
   }
  ],
  "catalogs": {
@@ -956,9 +1309,52 @@
      "valueKind": "weight",
      "decimalPlaces": 0,
      "valueUnit": "g"
+    },
+    {
+     "id": 10,
+     "prefix": "29",
+     "item": {
+      "start": 8,
+      "length": 5
+     },
+     "value": {
+      "start": 3,
+      "length": 5
+     },
+     "valueKind": "weight",
+     "decimalPlaces": 0
+    },
+    {
+     "id": 11,
+     "prefix": "290",
+     "item": {
+      "start": 4,
+      "length": 5
+     },
+     "value": {
+      "start": 9,
+      "length": 4
+     },
+     "valueKind": "weight",
+     "decimalPlaces": 0
+    },
+    {
+     "id": 12,
+     "prefix": "02",
+     "item": {
+      "start": 3,
+      "length": 5
+     },
+     "value": {
+      "start": 8,
+      "length": 5
+     },
+     "valueKind": "weight",
+     "decimalPlaces": 2,
+     "valueUnit": "lb"
     }
    ],
-   "weightItems": {
+   "weightProducts": {
     "1:12345": 101,
     "2:54321": 102,
     "2:99999": 103,
@@ -968,11 +1364,15 @@
     "6:44444": 112,
     "7:55555": 113,
     "8:66666": 114,
-    "9:77777": 115
+    "9:77777": 115,
+    "12:12345": 117,
+    "2:12121": 118,
+    "10:50750": 119
    },
    "pricePerKgCents": {
     "102": 1290,
-    "114": 1300
+    "114": 1300,
+    "118": 0
    },
    "globalBarcodes": {
     "04006381333931": 201,
@@ -1155,7 +1555,7 @@
    "raw": "2177777008008",
    "format": "ean_13",
    "expect": {
-    "outcome": "unknown_weighed_item",
+    "outcome": "unknown_weighed_product",
     "code": "02177777008008",
     "ruleId": 1,
     "itemCode": "77777",
@@ -1168,7 +1568,7 @@
    "raw": "2288888004503",
    "format": "ean_13",
    "expect": {
-    "outcome": "unknown_weighed_item",
+    "outcome": "unknown_weighed_product",
     "code": "02288888004503",
     "ruleId": 2,
     "itemCode": "88888",
@@ -1369,6 +1769,173 @@
     "pricePerKgCents": 1300,
     "weightGrams": 300
    }
+  },
+  {
+   "name": "us variable weight upc-a: rule prefix 02 addresses the 13 digit EAN form",
+   "catalog": "shopA",
+   "raw": "212345001509",
+   "format": "upc_a",
+   "expect": {
+    "outcome": "weighed",
+    "via": "weight_rule",
+    "productId": 117,
+    "code": "00212345001509",
+    "ruleId": 12,
+    "itemCode": "12345",
+    "weightGrams": 680.389
+   }
+  },
+  {
+   "name": "us variable weight upc-a read as ean_13 resolves the same",
+   "catalog": "shopA",
+   "raw": "0212345001509",
+   "format": "ean_13",
+   "expect": {
+    "outcome": "weighed",
+    "via": "weight_rule",
+    "productId": 117,
+    "code": "00212345001509",
+    "ruleId": 12,
+    "itemCode": "12345",
+    "weightGrams": 680.389
+   }
+  },
+  {
+   "name": "us variable weight upc-a at home is unknown",
+   "catalog": "home",
+   "raw": "212345001509",
+   "format": "upc_a",
+   "expect": {
+    "outcome": "unknown",
+    "code": "00212345001509"
+   }
+  },
+  {
+   "name": "us variable weight upc-a with an unknown item code",
+   "catalog": "shopA",
+   "raw": "244440001504",
+   "format": "upc_a",
+   "expect": {
+    "outcome": "unknown_weighed_product",
+    "code": "00244440001504",
+    "ruleId": 12,
+    "itemCode": "44440",
+    "weightGrams": 680.389
+   }
+  },
+  {
+   "name": "price rule where the Shop's price per kg is 0 asks for the weight",
+   "catalog": "shopA",
+   "raw": "2212121000458",
+   "format": "ean_13",
+   "expect": {
+    "outcome": "ask_weight",
+    "via": "weight_rule",
+    "productId": 118,
+    "code": "02212121000458",
+    "ruleId": 2,
+    "itemCode": "12121",
+    "priceCents": 45
+   }
+  },
+  {
+   "name": "gtin14 with a non zero indicator digit skips the weight rules",
+   "catalog": "shopA",
+   "raw": "12112345013005",
+   "format": "",
+   "expect": {
+    "outcome": "unknown",
+    "code": "12112345013005"
+   }
+  },
+  {
+   "name": "gtin14 with a non zero indicator digit is resolved by exact code",
+   "catalog": "shopA",
+   "raw": "10012345678902",
+   "format": "",
+   "expect": {
+    "outcome": "unknown",
+    "code": "10012345678902"
+   }
+  },
+  {
+   "name": "gtin14 with an indicator digit never applies a rule even when the rest looks like a weighed code",
+   "catalog": "home",
+   "raw": "12112345013005",
+   "format": "",
+   "expect": {
+    "outcome": "unknown",
+    "code": "12112345013005"
+   }
+  },
+  {
+   "name": "digital link with a GTIN-13 key resolves like the ean",
+   "catalog": "home",
+   "raw": "https://id.gs1.org/01/4006381333931",
+   "format": "qr_code",
+   "expect": {
+    "outcome": "product",
+    "via": "global",
+    "productId": 201,
+    "code": "04006381333931"
+   }
+  },
+  {
+   "name": "digital link with a GTIN-12 key, trailing slash and fragment resolves",
+   "catalog": "home",
+   "raw": "https://id.gs1.org/01/036000291452/#x",
+   "format": "qr_code",
+   "expect": {
+    "outcome": "product",
+    "via": "global",
+    "productId": 202,
+    "code": "00036000291452"
+   }
+  },
+  {
+   "name": "percent-encoded digital link resolves",
+   "catalog": "home",
+   "raw": "https://id.gs1.org/%30%31/%30%34006381333931",
+   "format": "data_matrix",
+   "expect": {
+    "outcome": "product",
+    "via": "global",
+    "productId": 201,
+    "code": "04006381333931"
+   }
+  },
+  {
+   "name": "digital link with an 11 digit key is not a product code",
+   "catalog": "home",
+   "raw": "https://id.gs1.org/01/12345678901",
+   "format": "qr_code",
+   "expect": {
+    "outcome": "not_product"
+   }
+  },
+  {
+   "name": "zero value of a shorter rule is skipped when a longer rule already matched an unknown product",
+   "catalog": "shopA",
+   "raw": "2900000507500",
+   "format": "ean_13",
+   "expect": {
+    "outcome": "unknown_weighed_product",
+    "code": "02900000507500",
+    "ruleId": 11,
+    "itemCode": "00005",
+    "weightGrams": 750
+   }
+  },
+  {
+   "name": "zero value of the longest matching rule is invalid even if a shorter rule would match",
+   "catalog": "shopA",
+   "raw": "2900000500006",
+   "format": "ean_13",
+   "expect": {
+    "outcome": "invalid",
+    "reason": "zero_value",
+    "code": "02900000500006"
+   }
   }
  ],
  "price": {
@@ -1409,6 +1976,38 @@
     "expect": {
      "ok": false
     }
+   },
+   {
+    "priceCents": 1,
+    "grams": 2000,
+    "expect": {
+     "ok": true,
+     "pricePerKgCents": 1
+    }
+   },
+   {
+    "priceCents": 3,
+    "grams": 400,
+    "expect": {
+     "ok": true,
+     "pricePerKgCents": 8
+    }
+   },
+   {
+    "priceCents": 5,
+    "grams": 800,
+    "expect": {
+     "ok": true,
+     "pricePerKgCents": 6
+    }
+   },
+   {
+    "priceCents": 1,
+    "grams": 800,
+    "expect": {
+     "ok": true,
+     "pricePerKgCents": 1
+    }
    }
   ],
   "weightFromPrice": [
@@ -1440,6 +2039,46 @@
     "pricePerKgCents": 1000,
     "expect": {
      "ok": false
+    }
+   },
+   {
+    "priceCents": 1,
+    "pricePerKgCents": 2000,
+    "expect": {
+     "ok": true,
+     "grams": 1
+    }
+   },
+   {
+    "priceCents": 3,
+    "pricePerKgCents": 2000,
+    "expect": {
+     "ok": true,
+     "grams": 2
+    }
+   },
+   {
+    "priceCents": 5,
+    "pricePerKgCents": 2000,
+    "expect": {
+     "ok": true,
+     "grams": 3
+    }
+   },
+   {
+    "priceCents": 7,
+    "pricePerKgCents": 2000,
+    "expect": {
+     "ok": true,
+     "grams": 4
+    }
+   },
+   {
+    "priceCents": 1,
+    "pricePerKgCents": 4000,
+    "expect": {
+     "ok": true,
+     "grams": 0
     }
    }
   ]

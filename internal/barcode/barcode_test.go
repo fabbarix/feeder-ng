@@ -107,8 +107,8 @@ func TestWeightRuleValidate(t *testing.T) {
 	}
 }
 
-func TestWeightItemKey(t *testing.T) {
-	if got := WeightItemKey(2, "54321"); got != "2:54321" {
+func TestWeightProductKey(t *testing.T) {
+	if got := WeightProductKey(2, "54321"); got != "2:54321" {
 		t.Errorf("got %q", got)
 	}
 }

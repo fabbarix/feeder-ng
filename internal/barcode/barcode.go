@@ -161,8 +161,8 @@ func (r WeightRule) Validate() error {
 	return nil
 }
 
-// WeightItemKey is the key of Catalog.WeightItems.
-func WeightItemKey(ruleID int64, itemCode string) string {
+// WeightProductKey is the key of Catalog.WeightProducts.
+func WeightProductKey(ruleID int64, itemCode string) string {
 	return fmt.Sprintf("%d:%s", ruleID, itemCode)
 }
 
@@ -171,7 +171,7 @@ func WeightItemKey(ruleID int64, itemCode string) string {
 type Catalog struct {
 	ShopBarcodes    map[string]int64 `json:"shopBarcodes,omitempty"`    // this Shop's Shop Barcodes: Scanned.Code -> product id
 	WeightRules     []WeightRule     `json:"weightRules,omitempty"`     // this Shop's rules
-	WeightItems     map[string]int64 `json:"weightItems,omitempty"`     // WeightItemKey(rule, item code) -> product id
+	WeightProducts  map[string]int64 `json:"weightProducts,omitempty"`  // WeightProductKey(rule, item code) -> product id
 	PricePerKgCents map[int64]int    `json:"pricePerKgCents,omitempty"` // product id -> last price per kg at this Shop
 	GlobalBarcodes  map[string]int64 `json:"globalBarcodes,omitempty"`  // Scanned.Code -> product id
 }
@@ -180,13 +180,13 @@ type Catalog struct {
 type Outcome string
 
 const (
-	OutcomeProduct            Outcome = "product"
-	OutcomeWeighed            Outcome = "weighed"              // product with a decoded WeightGrams
-	OutcomeAskWeight          Outcome = "ask_weight"           // price-valued, no price per kg known
-	OutcomeUnknownWeighedItem Outcome = "unknown_weighed_item" // rule prefix matched, item code unknown
-	OutcomeUnknown            Outcome = "unknown"
-	OutcomeNotProduct         Outcome = "not_product"
-	OutcomeInvalid            Outcome = "invalid"
+	OutcomeProduct               Outcome = "product"
+	OutcomeWeighed               Outcome = "weighed"                 // product with a decoded WeightGrams
+	OutcomeAskWeight             Outcome = "ask_weight"              // price-valued, no price per kg known
+	OutcomeUnknownWeighedProduct Outcome = "unknown_weighed_product" // rule prefix matched, item code unknown
+	OutcomeUnknown               Outcome = "unknown"
+	OutcomeNotProduct            Outcome = "not_product"
+	OutcomeInvalid               Outcome = "invalid"
 )
 
 // Source says which resolution step matched.
@@ -234,15 +234,15 @@ func Resolve(s Scanned, c Catalog) Resolution {
 				return Resolution{Outcome: OutcomeInvalid, Reason: "zero_value", Code: s.Code}
 			}
 			itemCode := s.EAN13[rule.Item.Start-1 : lastDigit(rule.Item)]
-			id, known := c.WeightItems[WeightItemKey(rule.ID, itemCode)]
+			id, known := c.WeightProducts[WeightProductKey(rule.ID, itemCode)]
 			if !known {
 				if unknown == nil {
-					r := unknownItem(s.Code, rule, itemCode, value)
+					r := unknownProduct(s.Code, rule, itemCode, value)
 					unknown = &r
 				}
 				continue
 			}
-			return matchedItem(s.Code, rule, itemCode, id, value, c)
+			return matchedProduct(s.Code, rule, itemCode, id, value, c)
 		}
 	}
 	if id, ok := c.GlobalBarcodes[s.Code]; ok {
@@ -272,8 +272,8 @@ func PricePerKgFromWeight(priceCents int, grams float64) (pricePerKgCents int, o
 	return int(math.Round(float64(priceCents) * 1000 / grams)), true
 }
 
-// matchedItem resolves a scan whose weight rule and item code are known.
-func matchedItem(code string, rule WeightRule, itemCode string, id int64, value int64, c Catalog) Resolution {
+// matchedProduct resolves a scan whose weight rule and item code are known.
+func matchedProduct(code string, rule WeightRule, itemCode string, id int64, value int64, c Catalog) Resolution {
 	base := Resolution{Via: ViaWeightRule, ProductID: id, Code: code, RuleID: rule.ID, ItemCode: itemCode}
 	if rule.ValueKind == ValueWeight {
 		base.Outcome = OutcomeWeighed
@@ -294,9 +294,9 @@ func matchedItem(code string, rule WeightRule, itemCode string, id int64, value 
 	return base
 }
 
-// unknownItem is the resolution when a rule's prefix matches but its item code is unknown.
-func unknownItem(code string, rule WeightRule, itemCode string, value int64) Resolution {
-	r := Resolution{Outcome: OutcomeUnknownWeighedItem, Code: code, RuleID: rule.ID, ItemCode: itemCode}
+// unknownProduct is the resolution when a rule's prefix matches but its item code is unknown.
+func unknownProduct(code string, rule WeightRule, itemCode string, value int64) Resolution {
+	r := Resolution{Outcome: OutcomeUnknownWeighedProduct, Code: code, RuleID: rule.ID, ItemCode: itemCode}
 	if rule.ValueKind == ValueWeight {
 		r.WeightGrams = weightGrams(value, rule)
 	} else {

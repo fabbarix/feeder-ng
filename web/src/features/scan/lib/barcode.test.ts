@@ -8,7 +8,7 @@ import {
   resolve,
   validateRule,
   weightFromPrice,
-  weightItemKey,
+  weightProductKey,
   type Catalog,
   type Format,
   type Resolution,
@@ -67,9 +67,9 @@ describe('validateRule (shared vectors)', () => {
   })
 })
 
-describe('weightItemKey', () => {
+describe('weightProductKey', () => {
   it('joins rule id and item code', () => {
-    expect(weightItemKey(2, '54321')).toBe('2:54321')
+    expect(weightProductKey(2, '54321')).toBe('2:54321')
   })
 })
 
