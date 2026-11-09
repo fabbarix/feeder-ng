@@ -4,4 +4,9 @@ export const uiStrings = {
   dismiss: 'Dismiss',
   decrease: (label: string) => `Decrease ${label}`,
   increase: (label: string) => `Increase ${label}`,
+  scanner: 'Scanner',
+  torchOn: 'Torch on',
+  torchOff: 'Torch off',
+  mute: 'Mute beep',
+  unmute: 'Unmute beep',
 }
