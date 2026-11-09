@@ -1,0 +1,3 @@
+# Single Go binary with embedded SPA, SQLite and files on one /data volume
+
+The app is one Go binary that serves an embedded React SPA (built with pnpm) and uses pure-Go SQLite (no cgo), shipped as a small multi-arch image to GHCR. All state lives in one mounted `/data` volume: the database, images as files (resized on upload) and nightly snapshots. Images are kept as files rather than BLOBs to keep the database small; Recipe Files carry them as data URLs (or https links fetched at import) so a single JSON document stays self-contained. The container speaks plain HTTP and expects the operator's HTTPS reverse proxy in front, because both camera access and Google sign-in require HTTPS and TLS is better handled by Caddy/Traefik than reimplemented.

@@ -18,6 +18,10 @@ _Avoid_: Eater, person, diner
 Someone who signs in with Google to use the app; may be linked to a Member.
 _Avoid_: Account, login, member
 
+**Admin**:
+A User who also manages who may sign in, the Members, Meal Slots, Shops and household settings.
+_Avoid_: Owner, superuser
+
 ### Recipes
 
 **Recipe**:
@@ -31,6 +35,34 @@ _Avoid_: Servings, makes
 **Ready Meal**:
 A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack.
 _Avoid_: Convenience food, pre-made
+
+**Step**:
+One instruction in a Recipe, optionally timed, illustrated and referring to the Ingredients it uses.
+_Avoid_: Instruction, direction
+
+**Passive Step**:
+A timed Step that needs no attention while it runs (e.g. simmering), so the cook can carry on with later Steps.
+_Avoid_: Background step, wait
+
+**Advance Step**:
+A Step to be done a set lead time before the Planned Meal's slot time (e.g. defrost 24 h before, marinate 4 h before).
+_Avoid_: Prep step, pre-step
+
+**Cook Mode**:
+The hands-free, step-by-step view used while cooking, which runs the Step timers.
+_Avoid_: Kitchen mode, guided mode
+
+**Recipe File**:
+A JSON document in the published exchange format holding one or more Recipes and the Ingredient definitions they use, with images embedded or linked.
+_Avoid_: Export, bundle, backup
+
+**Import Review**:
+The screen where a Recipe File's Ingredients and units are matched to existing ones (or created) before the Recipes are saved.
+_Avoid_: Import wizard, mapping
+
+**Agent Prompt**:
+The copyable instructions, including the exchange schema, that make an AI agent turn an arbitrary recipe into a valid Recipe File.
+_Avoid_: Parser prompt, AI import
 
 **Tag**:
 A household-defined label on Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to.
@@ -53,7 +85,7 @@ _Avoid_: Never, allergy, blacklist
 ### Planning
 
 **Meal Slot**:
-A named eating occasion the Household defines for a particular day of the week (e.g. "Tuesday Dinner").
+A named eating occasion the Household defines for a particular day of the week, with a usual time (e.g. "Tuesday Dinner, 19:30").
 _Avoid_: Meal time, occasion, slot type
 
 **Planned Meal**:
@@ -92,6 +124,10 @@ _Avoid_: Locked, fixed, manual
 The planner's preference for Recipes that use up what remains of Ingredients already bought or planned that week, so that fewer distinct Ingredients are needed.
 _Avoid_: Reuse, synergy
 
+**Planner Style**:
+The Household's single setting for what the planner leans towards, from using up what it already has, through variety, to Favourites.
+_Avoid_: Mode, profile, weights
+
 **Slot Rule**:
 A standing rule that fixes a Meal Slot to a particular Recipe or Tag (e.g. "Friday Dinner = pizza").
 _Avoid_: Fixed meal, theme night
@@ -129,6 +165,30 @@ _Avoid_: Measure, ratio
 **Stock**:
 The quantity of each Ingredient the Household currently has at home.
 _Avoid_: Inventory, pantry, larder
+
+**Shelf Life**:
+An optional number of days an Ingredient stays usable after purchase.
+_Avoid_: Expiry, best-before
+
+**Stock Lot**:
+One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) the date it goes off.
+_Avoid_: Batch, item, unit
+
+**Scan**:
+Reading a barcode with the phone; in a Shop it ticks the Shopping List and adds a Stock Lot; at home (Stock-take) it corrects Stock.
+_Avoid_: Check-off
+
+**Stock-take**:
+A scanning mode used at home to add or remove Stock without involving the Shopping List.
+_Avoid_: Inventory count, audit
+
+**Weight Barcode Rule**:
+A per-Shop rule describing how to read the Product and its weight (or price) from that Shop's variable-weight barcodes.
+_Avoid_: Barcode parser, PLU rule
+
+**Price**:
+What a Product cost at a given Shop on a given date, optionally recorded at Scan time.
+_Avoid_: Cost
 
 **Shopping List**:
 The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date, less Stock, plus any manual extras.

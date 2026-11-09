@@ -1,0 +1,82 @@
+{
+  "format": "feeder-recipe-file",
+  "version": 1,
+  "exportedAt": "2026-11-09T18:00:00Z",
+  "ingredients": [
+    { "name": "chicken thighs", "baseUnit": "g", "shelfLifeDays": 3 },
+    { "name": "greek yogurt", "baseUnit": "g", "conversions": [{ "unit": "tbsp", "toBase": 15 }], "shelfLifeDays": 10 },
+    { "name": "garam masala", "baseUnit": "g", "conversions": [{ "unit": "tbsp", "toBase": 6 }, { "unit": "tsp", "toBase": 2 }] },
+    { "name": "lemon", "baseUnit": "piece", "shelfLifeDays": 14 },
+    { "name": "onion", "baseUnit": "piece", "shelfLifeDays": 30 },
+    { "name": "red pepper", "baseUnit": "piece", "shelfLifeDays": 7 },
+    { "name": "spinach", "baseUnit": "g", "conversions": [{ "unit": "handful", "toBase": 30 }], "shelfLifeDays": 4 },
+    { "name": "basmati rice", "baseUnit": "g", "conversions": [{ "unit": "cup", "toBase": 185 }] },
+    { "name": "lasagne ready meal", "baseUnit": "piece", "shelfLifeDays": 5 }
+  ],
+  "recipes": [
+    {
+      "name": "Chicken tikka traybake",
+      "description": "Yogurt-marinated chicken roasted with onions and peppers, spinach stirred through at the end.",
+      "yield": 4,
+      "tags": ["chicken", "traybake", "weeknight"],
+      "cooldownDays": 10,
+      "leftoverUseByDays": 2,
+      "source": { "attribution": "Family recipe" },
+      "ingredients": [
+        { "ingredient": "chicken thighs", "quantity": 800, "unit": "g", "note": "boneless, skinless" },
+        { "ingredient": "greek yogurt", "quantity": 250, "unit": "g" },
+        { "ingredient": "garam masala", "quantity": 2, "unit": "tbsp" },
+        { "ingredient": "lemon", "quantity": 1, "unit": "piece" },
+        { "ingredient": "onion", "quantity": 2, "unit": "piece" },
+        { "ingredient": "red pepper", "quantity": 2, "unit": "piece" },
+        { "ingredient": "spinach", "quantity": 100, "unit": "g" },
+        { "ingredient": "basmati rice", "quantity": 300, "unit": "g" }
+      ],
+      "steps": [
+        {
+          "text": "Mix the yogurt, garam masala and the juice of the lemon; coat the chicken and leave it in the fridge.",
+          "kind": "advance",
+          "leadTimeMinutes": 240,
+          "uses": [
+            { "ingredient": "chicken thighs", "quantity": 800, "unit": "g" },
+            { "ingredient": "greek yogurt", "quantity": 250, "unit": "g" },
+            { "ingredient": "garam masala", "quantity": 2, "unit": "tbsp" },
+            { "ingredient": "lemon", "quantity": 1, "unit": "piece" }
+          ]
+        },
+        { "text": "Heat the oven to 220 °C.", "kind": "active", "durationMinutes": 2 },
+        {
+          "text": "Cut the onions and peppers into wedges.",
+          "kind": "active",
+          "durationMinutes": 8,
+          "uses": [
+            { "ingredient": "onion", "quantity": 2, "unit": "piece" },
+            { "ingredient": "red pepper", "quantity": 2, "unit": "piece" }
+          ]
+        },
+        { "text": "Spread the chicken and vegetables on a tray and roast.", "kind": "passive", "durationMinutes": 25, "after": [1, 2] },
+        {
+          "text": "Rinse the rice and simmer it.",
+          "kind": "passive",
+          "durationMinutes": 15,
+          "uses": [{ "ingredient": "basmati rice", "quantity": 300, "unit": "g" }]
+        },
+        {
+          "text": "Stir the spinach through the tray, rest 3 minutes and serve with the rice.",
+          "kind": "active",
+          "durationMinutes": 5,
+          "after": [3, 4],
+          "uses": [{ "ingredient": "spinach", "quantity": 100, "unit": "g" }]
+        }
+      ]
+    },
+    {
+      "name": "Lasagne (ready meal)",
+      "yield": 2,
+      "readyMeal": true,
+      "tags": ["ready meal", "pasta"],
+      "ingredients": [{ "ingredient": "lasagne ready meal", "quantity": 1, "unit": "piece" }],
+      "steps": [{ "text": "Bake from chilled at 190 °C.", "kind": "passive", "durationMinutes": 40 }]
+    }
+  ]
+}

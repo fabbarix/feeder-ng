@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://feeder.local/schema/recipe-file-v1.json",
+  "title": "Feeder Recipe File v1",
+  "description": "One or more Recipes plus the Ingredient definitions they use. See docs/spec/recipe-file.md for semantics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "recipes"],
+  "properties": {
+    "format": { "const": "feeder-recipe-file" },
+    "version": { "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "ingredients": {
+      "description": "Definitions for Ingredients referenced by the recipes. Optional: Ingredients not defined here are resolved at Import Review.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/ingredient" }
+    },
+    "recipes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/recipe" }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "\\S"
+    },
+    "unit": {
+      "description": "Base units, global units, or a unit defined in the Ingredient's conversions.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "image": {
+      "description": "A data URL (jpeg/png/webp, max ~8 MB decoded) or an https URL that the server downloads at import.",
+      "type": "string",
+      "anyOf": [
+        { "pattern": "^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$" },
+        { "pattern": "^https://\\S+$" }
+      ]
+    },
+    "ingredient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "baseUnit"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "baseUnit": { "enum": ["g", "ml", "piece"] },
+        "conversions": {
+          "description": "Ingredient-specific Unit Conversions into the base unit, e.g. {\"unit\":\"clove\",\"toBase\":5} for garlic in g.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["unit", "toBase"],
+            "properties": {
+              "unit": { "$ref": "#/$defs/unit" },
+              "toBase": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        },
+        "shelfLifeDays": {
+          "description": "Days the Ingredient stays usable after purchase; omit or null for non-perishables.",
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      }
+    },
+    "quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ingredient", "quantity", "unit"],
+      "properties": {
+        "ingredient": { "$ref": "#/$defs/name" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "$ref": "#/$defs/unit" },
+        "note": { "type": "string", "maxLength": 200 },
+        "optional": { "type": "boolean", "default": false }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "kind"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "kind": { "enum": ["active", "passive", "advance"] },
+        "durationMinutes": { "type": "number", "exclusiveMinimum": 0 },
+        "leadTimeMinutes": {
+          "description": "Advance Steps only: how long before the Planned Meal's slot time this Step must be done.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "after": {
+          "description": "Indexes (0-based, into this recipe's steps array) of earlier non-advance Steps that must be FINISHED before this one starts. Omitted = the cook is free: after the previous non-advance Step finishes if it is active, or as soon as it has started if it is passive.",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "image": { "$ref": "#/$defs/image" },
+        "uses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/quantity" }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "passive" } } }, "then": { "required": ["durationMinutes"] } },
+        { "if": { "properties": { "kind": { "const": "advance" } } }, "then": { "required": ["leadTimeMinutes"], "not": { "required": ["after"] } } }
+      ]
+    },
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "yield", "ingredients"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "type": "string", "maxLength": 4000 },
+        "yield": {
+          "description": "Standard portions produced by one Batch (for a Ready Meal: portions in one pack).",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "readyMeal": { "type": "boolean", "default": false },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 40 }
+        },
+        "cooldownDays": { "type": ["integer", "null"], "minimum": 0 },
+        "leftoverUseByDays": { "type": ["integer", "null"], "minimum": 0 },
+        "image": { "$ref": "#/$defs/image" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string", "format": "uri" },
+            "attribution": { "type": "string", "maxLength": 200 }
+          }
+        },
+        "ingredients": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/quantity" }
+        },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        }
+      },
+      "if": { "properties": { "readyMeal": { "const": true } }, "required": ["readyMeal"] },
+      "then": { "properties": { "ingredients": { "maxItems": 1 } } }
+    }
+  }
+}
