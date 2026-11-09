@@ -71,3 +71,24 @@ Feature: Allowlist management
     Then the response status is 200
     And there is exactly 1 Admin
     And "user@example.test" is an Admin
+
+  Scenario: Removing a User through the allowlist closes their live-update stream
+    Given a running Feeder
+    And "cook@example.test" is on the allowlist
+    And I am signed in as "cook@example.test"
+    And a live-update stream is open
+    And I am signed in as the Admin
+    When the Admin removes "cook@example.test" from the allowlist through the API
+    Then the response status is 204
+    And the live-update stream is closed without further events
+
+  Scenario: Two Admins cannot remove each other
+    Given a running Feeder
+    And I am signed in as the Admin
+    When the Admin sets Admin to true for "user@example.test" through the API
+    And the Admin removes "user@example.test" from the allowlist through the API
+    Then the response status is 204
+    When the Admin removes "admin@example.test" from the allowlist through the API
+    Then the response status is 409
+    And the error code is "last_admin"
+    And there is exactly 1 Admin

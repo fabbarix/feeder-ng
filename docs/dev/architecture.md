@@ -37,6 +37,7 @@ bdd/steps_<feature>_test.go        step defs for that feature, registered via in
 - Quantities: Base Units are `g`, `ml`, `piece`. Store quantities as REAL in Base Units. Money as integer cents. Dates as `YYYY-MM-DD` TEXT in household time; instants as RFC 3339 UTC TEXT.
 - IDs: INTEGER PRIMARY KEY for server rows; client-generated UUIDs only where the spec requires idempotency (offline scans).
 - Time: never call `time.Now()` in domain/store code; take a `clock.Clock` or explicit times.
+- CSRF: `httpx.CSRFGuard` (wired in `app.New`) answers state-changing `/api` requests (POST, PUT, PATCH, DELETE) with 415 unless a body is `application/json`, and 403 `cross_origin` when an `Origin` header does not match `FEEDER_BASE_URL` (or the request Host when unset); tests must send JSON.
 - JSON API under `/api/...`, camelCase fields. Errors: `{"error": {"code": "...", "message": "..."}}`.
 - Live updates: publish on `internal/events` with a topic (`plan`, `shopping`, `stock`, `timers`, ...); the SPA subscribes via one SSE connection.
 

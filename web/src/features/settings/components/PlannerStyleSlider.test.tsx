@@ -43,4 +43,15 @@ describe('PlannerStyleSlider', () => {
     expect(screen.getByRole('slider', { name: 'Planner Style' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Favourites' })).toBeDisabled()
   })
+
+  it('disables every anchor chip when disabled, and they do nothing', async () => {
+    const onChange = vi.fn()
+    render(<PlannerStyleSlider value={0.5} onChange={onChange} disabled />)
+    for (const name of ['Use what we have', 'Variety', 'Favourites']) {
+      const chip = screen.getByRole('button', { name })
+      expect(chip).toBeDisabled()
+      await userEvent.click(chip)
+    }
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

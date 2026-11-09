@@ -2,6 +2,8 @@ package bdd
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -12,6 +14,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/auth/authtest"
 	authhttp "github.com/fabbarix/feeder-ng/internal/auth/httpapi"
 	"github.com/fabbarix/feeder-ng/internal/config"
+	"github.com/fabbarix/feeder-ng/internal/testkit"
 )
 
 func init() { RegisterSteps("auth", authSteps) }
@@ -114,6 +117,31 @@ func authSteps(sc *godog.ScenarioContext, w *World) {
 		return nil
 	})
 
+	sc.Step(`^I POST "([^"]*)" with the header "([^"]*)" set to "([^"]*)" and JSON:$`, func(path, name, value string, body *godog.DocString) error {
+		env := w.Ensure()
+		req, err := http.NewRequest(http.MethodPost, env.URL()+path, strings.NewReader(body.Content))
+		if err != nil {
+			return err
+		}
+		value = strings.ReplaceAll(value, "{origin}", env.URL()) // the test server's own origin
+		req.Header.Set("Content-Type", "application/json")
+		if strings.EqualFold(name, "Content-Type") {
+			req.Header.Set("Content-Type", value)
+		} else {
+			req.Header.Set(name, value)
+		}
+		if ck := w.Client.Cookie(auth.CookieName); ck != nil {
+			req.AddCookie(ck)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		data, _ := io.ReadAll(resp.Body)
+		w.Last = &testkit.Response{Status: resp.StatusCode, Header: resp.Header, Body: data}
+		return nil
+	})
 	sc.Step(`^the Admin removes "([^"]*)" from the allowlist through the API$`, func(email string) error {
 		id, err := userID(w, email)
 		if err != nil {

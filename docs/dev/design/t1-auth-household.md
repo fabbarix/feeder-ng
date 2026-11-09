@@ -108,3 +108,16 @@ Shell files touched (minimal): `web/src/app/AppRoot.tsx` (signed-out branch rend
 Go: `internal/household/*_test.go`, `internal/household/store/store_test.go`, `internal/household/httpapi/*_test.go`, `internal/auth/{oauth,google,allowlist}_test.go`, `internal/auth/httpapi/{google,allowlist}_test.go`.
 Gherkin: `bdd/features/auth/{google_signin,allowlist}.feature`, `bdd/features/household/{settings,members,meal_slots,attendance,preferences}.feature`; steps in `bdd/steps_auth_test.go`, `bdd/steps_household_test.go` (registered as `auth` and `household`, step text specific to these features).
 Vitest: `lib/*.test.ts`, `hooks/*.test.tsx`, `components/*.test.tsx`, `signin/**/*.test.*`.
+
+## Review round 1 additions
+
+### Last-Admin guard is atomic (database-enforced)
+Check-then-write in Go (`guardLastAdmin` then `UPDATE`/`DELETE`) lets two Admins demoting or removing each other at once both pass the check. Decision: enforce it in SQLite so the guard and the write are one statement. Add migration `0101_last_admin_guard.sql` with two `AFTER` triggers on `users`: `AFTER UPDATE OF is_admin` and `AFTER DELETE`, each `SELECT RAISE(ABORT, 'last_admin') WHERE NOT EXISTS (SELECT 1 FROM users WHERE is_admin = 1)`. A statement that would leave zero Admins aborts and rolls back (also multi-row statements). `SetAdmin`, `RemoveUser` and `DeleteUser` map that error (message contains `last_admin`) to `ErrLastAdmin`; keep the Go pre-check only as a fast path, or drop it. Tests: `internal/auth/allowlist_test.go` (`TestTwoAdmins...`, `TestConcurrentAdminsNeverLeaveZeroAdmins`, `TestDatabaseRefusesToLeaveZeroAdmins`) and the BDD scenarios in `allowlist.feature`. Check nothing else (testkit, other tests) deletes or demotes the only Admin; if so, fix the caller, not the trigger.
+
+### CSRF hardening (`internal/httpx/csrf.go`, wired in `internal/app/app.go`)
+`httpx.CSRFGuard(baseURL string, next http.Handler) http.Handler` (stub exists, tests are red). Only POST/PUT/PATCH/DELETE under `/api/` are checked. (1) A request with a body (`ContentLength != 0`, so chunked counts) whose media type (`mime.ParseMediaType`, case-insensitive, parameters allowed) is not `application/json` -> 415 `unsupported_media_type`. (2) If `Origin` is present: with a base URL, its scheme://host[:port] must equal the base URL's origin; without one, its host must equal `r.Host`; else 403 `cross_origin` (`Origin: null` is refused). No `Origin` header (non-browser clients, curl, testkit) passes. Wrap the mux in `app.New` (inside `recoverPanics`) using `cfg.BaseURL`. The SPA's fetch helper must send `Content-Type: application/json` on every body-carrying request (check `web/src/lib` API client). `testkit.Client` already sends JSON with that header for any body.
+
+### Developer items (no new tests)
+- Move the inline labels/strings still in components in the Settings and sign-in features to the feature's `strings.ts`.
+- The Location hint says "weather"; it must say the Location sets the kitchen board's sunset and sunrise dark mode (see spec section on the kitchen board / Location).
+- New copy: the not-invited link reads "Use a different Google sign-in" (GLOSSARY `_Avoid_` forbids "account"); update `web/src/features/signin/strings.ts` and the comment in `NotInvitedPage.tsx`.

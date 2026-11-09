@@ -30,7 +30,7 @@ describe('NotInvitedPage', () => {
     render(<NotInvitedPage />)
     expect(screen.getByRole('heading', { level: 1, name: 'Not invited' })).toBeInTheDocument()
     expect(screen.getByText(/ask an Admin/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Try another Google account' })).toHaveAttribute('href', '/auth/google/login')
+    expect(screen.getByRole('link', { name: 'Use a different Google sign-in' })).toHaveAttribute('href', '/auth/google/login')
   })
 })
 

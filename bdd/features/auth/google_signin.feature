@@ -1,9 +1,9 @@
 Feature: Google sign-in
-  People sign in with Google only. A Google account whose email is not on the
+  People sign in with Google only. Someone whose Google email is not on the
   allowlist is refused with a "not invited" page and gets no session.
   The redirect URI is <FEEDER_BASE_URL>/auth/google/callback.
 
-  Scenario: An allowlisted Google account signs in
+  Scenario: An allowlisted Google email signs in
     Given a running Feeder with Google sign-in
     And Google knows "user@example.test" as "Una User"
     When I start Google sign-in
@@ -30,7 +30,7 @@ Feature: Google sign-in
     Then the sign-in redirect goes to "/"
     And I have a Feeder session
 
-  Scenario: A Google account that is not on the allowlist is not invited
+  Scenario: A Google email that is not on the allowlist is not invited
     Given a running Feeder with Google sign-in
     And Google knows "stranger@example.test" as "Stranger"
     When I start Google sign-in
