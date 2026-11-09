@@ -165,7 +165,9 @@ type Config struct {
 }
 
 // DefaultConfig returns the spec defaults (7, 3) and the planner constants (28, 2).
-func DefaultConfig() Config { panic("TODO") }
+func DefaultConfig() Config {
+	return Config{DefaultCooldownDays: 7, DefaultUseByDays: 3, RecencyDays: 28, PerishWindowDays: 2}
+}
 
 // Weights are the score weights (§7.2 step 3). Signs are part of the value:
 // Dislike, LeftoverWasted and Recency are negative in every preset.
