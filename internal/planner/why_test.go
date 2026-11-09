@@ -17,7 +17,7 @@ func whyCodes(p Placement) []ReasonCode {
 
 func TestWhyChipsAreTheTopThreePositiveTerms(t *testing.T) {
 	// Recipe 2 (Yield 4: pasta 200, spinach 300) on day 0 scores:
-	//   Favourite 2 x 3 = 6, perishable use 0.5 x 4 = 2, surplus fits 1, stock coverage 0.5 x 1 = 0.5 (+ jitter).
+	//   Favourite 2 x 3 = 6, perishable use 0.5 x 4 = 2, extra portions fits 1, stock coverage 0.5 x 1 = 0.5 (+ jitter).
 	// The top 3 are favourite, perishable use, leftover fits; stock coverage is cut.
 	in := baseInput([]Slot{dinner(0), dinner(1)}, rcp(1, 2, needs(need(chicken, 500))), rcp(2, 4, needs(need(pasta, 200), need(spinach, 300))))
 	w := WeightsFor(0.5)
@@ -141,7 +141,7 @@ func TestWhyChipForSlotRule(t *testing.T) {
 	})
 	t.Run("at most 3 chips including the Slot Rule", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{withRules(dinner(0), SlotRule{RecipeID: 2}), dinner(1)}, rcp(1, 2), rcp(2, 4, needs(need(spinach, 300)))),
-			Weights{Favourite: 3, StockCoverage: 2, SurplusFits: 1, PerishableUse: 4})
+			Weights{Favourite: 3, StockCoverage: 2, LeftoverFits: 1, PerishableUse: 4})
 		in = prefs(in, anna, Preferences{Favourites: []RecipeID{2}})
 		in.Lots = []StockLot{lot(1, spinach, 300, day(1))}
 		p := placementAt(t, mustPlan(t, in), key(0))

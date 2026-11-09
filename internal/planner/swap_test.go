@@ -100,11 +100,11 @@ func TestSwapFiltersAndContext(t *testing.T) {
 			t.Errorf("got %v, %v", recipeIDs(got), err)
 		}
 	})
-	t.Run("alternatives carry purchases and surplus like a placement", func(t *testing.T) {
+	t.Run("alternatives carry purchases and extra portions like a placement", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{withExisting(dinner(0), ExistingMeal{State: MealPlanned, RecipeID: 2, Batches: 1})},
 			rcp(1, 4, needs(need(chicken, 500))), rcp(2, 2)), Weights{})
 		got, _ := Swap(in, key(0))
-		if len(got) != 1 || got[0].Surplus == nil || got[0].Surplus.Portions != 2 || len(got[0].Purchases) != 1 {
+		if len(got) != 1 || got[0].NewLeftover == nil || got[0].NewLeftover.Portions != 2 || len(got[0].Purchases) != 1 {
 			t.Errorf("got %+v", got)
 		}
 	})

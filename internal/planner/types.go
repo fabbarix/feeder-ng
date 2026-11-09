@@ -64,7 +64,7 @@ const (
 
 // LeftoverSource names the Leftover a meal is served from. A non-zero
 // LeftoverID is an actual recorded Leftover (Input.Leftovers); otherwise the
-// Leftover is the surplus of the fresh meal planned at FromSlot.
+// Leftover is the extra portions of the fresh meal planned at FromSlot.
 type LeftoverSource struct {
 	LeftoverID int64
 	FromSlot   SlotKey
@@ -168,15 +168,15 @@ type Config struct {
 func DefaultConfig() Config { panic("TODO") }
 
 // Weights are the score weights (§7.2 step 3). Signs are part of the value:
-// Dislike, SurplusWasted and Recency are negative in every preset.
+// Dislike, LeftoverWasted and Recency are negative in every preset.
 type Weights struct {
 	Favourite         float64 // per attending Member who has it as Favourite
 	Dislike           float64 // per attending Member who dislikes it
 	PerishableUse     float64 // x share in [0,1]
 	IngredientOverlap float64 // x share in [0,1]
 	StockCoverage     float64 // x share in [0,1]
-	SurplusFits       float64
-	SurplusWasted     float64
+	LeftoverFits      float64
+	LeftoverWasted    float64
 	Recency           float64 // x recentness in [0,1]
 	Jitter            float64 // amplitude: the term is in [-Jitter, +Jitter]
 }
@@ -212,8 +212,8 @@ const (
 	SourceLeftover                   // served from a Leftover
 )
 
-// Surplus is the Leftover a placement will create.
-type Surplus struct {
+// NewLeftover is the Leftover a placement will create.
+type NewLeftover struct {
 	Portions float64
 	UseBy    Date
 }
@@ -237,8 +237,8 @@ const (
 	TermPerishableUse     TermCode = "perishable_use"
 	TermIngredientOverlap TermCode = "ingredient_overlap"
 	TermStockCoverage     TermCode = "stock_coverage"
-	TermSurplusFits       TermCode = "surplus_fits"
-	TermSurplusWasted     TermCode = "surplus_wasted"
+	TermLeftoverFits      TermCode = "leftover_fits"
+	TermLeftoverWasted    TermCode = "leftover_wasted"
 	TermRecency           TermCode = "recency"
 	TermJitter            TermCode = "jitter"
 )
@@ -259,7 +259,7 @@ const (
 	ReasonPerishableUse     ReasonCode = "perishable_use"     // IngredientID, Date = go-off date
 	ReasonIngredientOverlap ReasonCode = "ingredient_overlap" // IngredientID, Date = day the pack was planned for purchase
 	ReasonStockCoverage     ReasonCode = "stock_coverage"
-	ReasonLeftoverFits      ReasonCode = "leftover_fits" // Date = day the surplus will be served
+	ReasonLeftoverFits      ReasonCode = "leftover_fits" // Date = day the extra portions will be served
 	ReasonBestAvailable     ReasonCode = "best_available"
 )
 
@@ -277,13 +277,13 @@ type Why struct {
 
 // Placement is a slot the planner filled.
 type Placement struct {
-	Key      SlotKey
-	Source   SourceKind
-	RecipeID RecipeID
-	Batches  int     // 0 for a Leftover
-	Portions float64 // portions the slot needs
-	From     *LeftoverSource
-	Surplus  *Surplus // nil when Batches x Yield == Portions
+	Key         SlotKey
+	Source      SourceKind
+	RecipeID    RecipeID
+	Batches     int     // 0 for a Leftover
+	Portions    float64 // portions the slot needs
+	From        *LeftoverSource
+	NewLeftover *NewLeftover // nil when Batches x Yield == Portions
 	// Purchases are the planned purchases this placement caused.
 	Purchases []Purchase
 	Score     float64 // sum of Terms (0 for a Leftover)

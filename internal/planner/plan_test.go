@@ -192,7 +192,7 @@ func TestActualLeftoversAndReplanning(t *testing.T) {
 			t.Errorf("got %+v", p)
 		}
 	})
-	t.Run("a Pinned fresh meal's surplus is a pending Leftover", func(t *testing.T) {
+	t.Run("a Pinned fresh meal's extra portions is a pending Leftover", func(t *testing.T) {
 		pinned := withExisting(dinner(0), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1})
 		in := baseInput([]Slot{pinned, dinner(1)}, recipes...)
 		p := placementAt(t, mustPlan(t, in), key(1))

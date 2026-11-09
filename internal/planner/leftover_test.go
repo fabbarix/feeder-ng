@@ -69,8 +69,8 @@ func TestLeftoverFirst(t *testing.T) {
 			if p.Source != SourceLeftover || p.From == nil || p.From.LeftoverID != tt.wantLeftover || p.Batches != 0 {
 				t.Errorf("want served from Leftover %d, got %+v", tt.wantLeftover, p)
 			}
-			if p.Surplus != nil || len(p.Purchases) != 0 {
-				t.Errorf("a Leftover meal has no surplus or purchases: %+v", p)
+			if p.NewLeftover != nil || len(p.Purchases) != 0 {
+				t.Errorf("a Leftover meal has no extra portions or purchases: %+v", p)
 			}
 		})
 	}
@@ -105,19 +105,19 @@ func TestLeftoverFromAnEarlierPlannedMeal(t *testing.T) {
 		in := noCooldown(baseInput([]Slot{dinner(0), dinner(1)}, rcp(1, 4), rcp(2, 2)))
 		r := mustPlan(t, in)
 		first := placementAt(t, r, key(0))
-		if first.RecipeID != 1 || first.Batches != 1 || first.Surplus == nil || first.Surplus.Portions != 2 {
+		if first.RecipeID != 1 || first.Batches != 1 || first.NewLeftover == nil || first.NewLeftover.Portions != 2 {
 			t.Fatalf("day 0: %+v", first)
 		}
 		second := placementAt(t, r, key(1))
 		if second.Source != SourceLeftover || second.From == nil || second.From.LeftoverID != 0 || second.From.FromSlot != key(0) || second.RecipeID != 1 {
-			t.Errorf("day 1 should be served from day 0's surplus: %+v", second)
+			t.Errorf("day 1 should be served from day 0's extra portions: %+v", second)
 		}
 	})
-	t.Run("a later slot on the same day can use the lunch surplus", func(t *testing.T) {
+	t.Run("a later slot on the same day can use the lunch extra portions", func(t *testing.T) {
 		in := noCooldown(baseInput([]Slot{lunch(0), dinner(0)}, rcp(1, 4), rcp(2, 2)))
 		r := mustPlan(t, in)
 		if p := placementAt(t, r, SlotKey{day(0), dinnerSlot}); p.Source != SourceLeftover || p.From.FromSlot != (SlotKey{day(0), lunchSlot}) {
-			t.Errorf("dinner should reuse lunch's surplus: %+v", p)
+			t.Errorf("dinner should reuse lunch's extra portions: %+v", p)
 		}
 	})
 	t.Run("not after its Use-by", func(t *testing.T) {

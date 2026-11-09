@@ -79,7 +79,7 @@ func TestScorePerishableUse(t *testing.T) {
 		})
 	}
 
-	t.Run("needs scale with Batches", func(t *testing.T) {
+	t.Run("needs grow with Batches", func(t *testing.T) {
 		// 4 portions, Yield 2: 2 Batches need spinach 600; a 300 g at-risk lot covers half the line.
 		four := []Attendee{{1, 1}, {2, 1}, {3, 1}, {4, 1}}
 		in := weighted(baseInput([]Slot{dinner(0, four...)},
@@ -116,7 +116,7 @@ func TestScoreStockCoverage(t *testing.T) {
 			lots: []StockLot{lot(1, pasta, 50, ""), lot(2, pasta, 150, day(5))}, wantRecipe: 2, wantScore: 1,
 		},
 		{
-			name: "needs scale with Batches", recipe2: rcp(2, 2, needs(need(pasta, 200), need(spinach, 300))),
+			name: "needs grow with Batches", recipe2: rcp(2, 2, needs(need(pasta, 200), need(spinach, 300))),
 			attendance: []Attendee{{1, 1}, {2, 1}, {3, 1}, {4, 1}},
 			lots:       []StockLot{lot(1, pasta, 200, ""), lot(2, spinach, 150, "")}, wantRecipe: 2, wantScore: 0.375,
 		},
@@ -213,40 +213,40 @@ func TestScoreIngredientOverlap(t *testing.T) {
 	})
 }
 
-func TestScoreSurplus(t *testing.T) {
-	// Recipe 1 Yield 4 -> surplus 2 for a 2-portion slot; Recipe 3 Yield 3 -> surplus 1; Recipe 2 Yield 2 -> none.
+func TestScoreNewLeftover(t *testing.T) {
+	// Recipe 1 Yield 4 -> extra portions 2 for a 2-portion slot; Recipe 3 Yield 3 -> extra portions 1; Recipe 2 Yield 2 -> none.
 	// Recipe 2 is kept out of day 0 with a recent LastPlanned.
-	w := Weights{SurplusFits: 1, SurplusWasted: -1}
+	w := Weights{LeftoverFits: 1, LeftoverWasted: -1}
 	recipes := func(r1 ...recipeOpt) []Recipe {
 		return []Recipe{rcp(1, 4, r1...), rcp(2, 2)}
 	}
 	recent := map[RecipeID]Date{2: day(-1)}
 
-	t.Run("surplus that fits a later slot scores +1", func(t *testing.T) {
+	t.Run("extra portions that fits a later slot scores +1", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{dinner(0), dinner(1)}, rcp(1, 4), rcp(2, 2), rcp(3, 3)), w)
 		p := placementAt(t, mustPlan(t, in), key(0))
 		if p.RecipeID != 1 {
 			t.Fatalf("recipe = %d, want 1", p.RecipeID)
 		}
 		wantScore(t, p, 1)
-		if p.Surplus == nil || p.Surplus.Portions != 2 || p.Surplus.UseBy != day(3) {
-			t.Errorf("surplus = %+v", p.Surplus)
+		if p.NewLeftover == nil || p.NewLeftover.Portions != 2 || p.NewLeftover.UseBy != day(3) {
+			t.Errorf("extra portions = %+v", p.NewLeftover)
 		}
 	})
-	t.Run("surplus too small for any later slot is wasted", func(t *testing.T) {
+	t.Run("extra portions too small for any later slot is wasted", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{dinner(0), dinner(1)}, rcp(3, 3)), w)
 		p := placementAt(t, mustPlan(t, in), key(0))
 		wantScore(t, p, -1)
-		if p.Surplus == nil || p.Surplus.Portions != 1 {
-			t.Errorf("surplus = %+v", p.Surplus)
+		if p.NewLeftover == nil || p.NewLeftover.Portions != 1 {
+			t.Errorf("extra portions = %+v", p.NewLeftover)
 		}
 	})
-	t.Run("no surplus is neutral", func(t *testing.T) {
+	t.Run("no extra portions is neutral", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{dinner(0)}, rcp(2, 2)), w)
 		p := placementAt(t, mustPlan(t, in), key(0))
 		wantScore(t, p, 0)
-		if p.Surplus != nil {
-			t.Errorf("surplus = %+v, want nil", p.Surplus)
+		if p.NewLeftover != nil {
+			t.Errorf("extra portions = %+v, want nil", p.NewLeftover)
 		}
 	})
 
@@ -272,7 +272,7 @@ func TestScoreSurplus(t *testing.T) {
 			slots: []Slot{dinner(0), withExisting(dinner(1), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1})}, want: -1,
 		},
 		{
-			name: "next slot needs more portions than the surplus", slots: []Slot{dinner(0), dinner(1, Attendee{1, 1}, Attendee{2, 1}, Attendee{3, 1})}, want: -1,
+			name: "next slot needs more portions than the extra portions", slots: []Slot{dinner(0), dinner(1, Attendee{1, 1}, Attendee{2, 1}, Attendee{3, 1})}, want: -1,
 		},
 		{
 			name: "a later slot after an unfit one still fits", slots: []Slot{dinner(0), dinner(1, Attendee{1, 1}, Attendee{2, 1}, Attendee{3, 1}), dinner(2)}, want: 1,

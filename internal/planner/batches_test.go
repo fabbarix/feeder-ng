@@ -10,25 +10,25 @@ func attendees(factors ...float64) []Attendee {
 	return out
 }
 
-// §7.2 step 4: Batches = ceil(portions / Yield); surplus becomes a pending Leftover with its Use-by.
-func TestBatchesAndSurplus(t *testing.T) {
+// §7.2 step 4: Batches = ceil(portions / Yield); extra portions becomes a pending Leftover with its Use-by.
+func TestBatchesAndNewLeftover(t *testing.T) {
 	tests := []struct {
-		name        string
-		att         []Attendee
-		yield       float64
-		opts        []recipeOpt
-		slotDay     int
-		wantBatches int
-		wantSurplus float64 // 0 = nil
-		wantUseBy   Date
+		name            string
+		att             []Attendee
+		yield           float64
+		opts            []recipeOpt
+		slotDay         int
+		wantBatches     int
+		wantNewLeftover float64 // 0 = nil
+		wantUseBy       Date
 	}{
-		{name: "2 portions from a Yield of 4", att: attendees(1, 1), yield: 4, wantBatches: 1, wantSurplus: 2, wantUseBy: day(3)},
-		{name: "exact fit leaves no surplus", att: attendees(1, 1, 1, 1), yield: 4, wantBatches: 1},
-		{name: "5 portions need 2 Batches of 4", att: attendees(1, 1, 1, 1, 1), yield: 4, wantBatches: 2, wantSurplus: 3, wantUseBy: day(3)},
-		{name: "fractional Portion Factors", att: attendees(1, 0.5, 1.75), yield: 2, wantBatches: 2, wantSurplus: 0.75, wantUseBy: day(3)},
-		{name: "Recipe Use-by override", att: attendees(1, 1), yield: 4, opts: []recipeOpt{useByDays(5)}, wantBatches: 1, wantSurplus: 2, wantUseBy: day(5)},
-		{name: "Use-by counts from the slot date", att: attendees(1, 1), yield: 4, slotDay: 2, wantBatches: 1, wantSurplus: 2, wantUseBy: day(5)},
-		{name: "Yield larger than ever needed", att: attendees(1), yield: 6, wantBatches: 1, wantSurplus: 5, wantUseBy: day(3)},
+		{name: "2 portions from a Yield of 4", att: attendees(1, 1), yield: 4, wantBatches: 1, wantNewLeftover: 2, wantUseBy: day(3)},
+		{name: "exact fit leaves no extra portions", att: attendees(1, 1, 1, 1), yield: 4, wantBatches: 1},
+		{name: "5 portions need 2 Batches of 4", att: attendees(1, 1, 1, 1, 1), yield: 4, wantBatches: 2, wantNewLeftover: 3, wantUseBy: day(3)},
+		{name: "fractional Portion Factors", att: attendees(1, 0.5, 1.75), yield: 2, wantBatches: 2, wantNewLeftover: 0.75, wantUseBy: day(3)},
+		{name: "Recipe Use-by override", att: attendees(1, 1), yield: 4, opts: []recipeOpt{useByDays(5)}, wantBatches: 1, wantNewLeftover: 2, wantUseBy: day(5)},
+		{name: "Use-by counts from the slot date", att: attendees(1, 1), yield: 4, slotDay: 2, wantBatches: 1, wantNewLeftover: 2, wantUseBy: day(5)},
+		{name: "Yield larger than ever needed", att: attendees(1), yield: 6, wantBatches: 1, wantNewLeftover: 5, wantUseBy: day(3)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -40,14 +40,14 @@ func TestBatchesAndSurplus(t *testing.T) {
 			if !approx(p.Portions, PortionsNeeded(tt.att)) {
 				t.Errorf("Portions = %v, want %v", p.Portions, PortionsNeeded(tt.att))
 			}
-			if tt.wantSurplus == 0 {
-				if p.Surplus != nil {
-					t.Errorf("Surplus = %+v, want nil", p.Surplus)
+			if tt.wantNewLeftover == 0 {
+				if p.NewLeftover != nil {
+					t.Errorf("NewLeftover = %+v, want nil", p.NewLeftover)
 				}
 				return
 			}
-			if p.Surplus == nil || !approx(p.Surplus.Portions, tt.wantSurplus) || p.Surplus.UseBy != tt.wantUseBy {
-				t.Errorf("Surplus = %+v, want %v portions, Use-by %s", p.Surplus, tt.wantSurplus, tt.wantUseBy)
+			if p.NewLeftover == nil || !approx(p.NewLeftover.Portions, tt.wantNewLeftover) || p.NewLeftover.UseBy != tt.wantUseBy {
+				t.Errorf("NewLeftover = %+v, want %v portions, Use-by %s", p.NewLeftover, tt.wantNewLeftover, tt.wantUseBy)
 			}
 		})
 	}

@@ -8,14 +8,14 @@ import (
 func weightsClose(a, b Weights) bool {
 	return approx(a.Favourite, b.Favourite) && approx(a.Dislike, b.Dislike) &&
 		approx(a.PerishableUse, b.PerishableUse) && approx(a.IngredientOverlap, b.IngredientOverlap) &&
-		approx(a.StockCoverage, b.StockCoverage) && approx(a.SurplusFits, b.SurplusFits) &&
-		approx(a.SurplusWasted, b.SurplusWasted) && approx(a.Recency, b.Recency) && approx(a.Jitter, b.Jitter)
+		approx(a.StockCoverage, b.StockCoverage) && approx(a.LeftoverFits, b.LeftoverFits) &&
+		approx(a.LeftoverWasted, b.LeftoverWasted) && approx(a.Recency, b.Recency) && approx(a.Jitter, b.Jitter)
 }
 
 func TestWeightsFor(t *testing.T) {
-	useWhatWeHave := Weights{Favourite: 2, Dislike: -2, PerishableUse: 6, IngredientOverlap: 3, StockCoverage: 2, SurplusFits: 1, SurplusWasted: -1, Recency: -0.25, Jitter: 0.5}
-	middle := Weights{Favourite: 3, Dislike: -2, PerishableUse: 4, IngredientOverlap: 2, StockCoverage: 1, SurplusFits: 1, SurplusWasted: -1, Recency: -0.5, Jitter: 0.5}
-	favourites := Weights{Favourite: 5, Dislike: -2, PerishableUse: 2, IngredientOverlap: 1, StockCoverage: 0.5, SurplusFits: 1, SurplusWasted: -1, Recency: -0.25, Jitter: 0.5}
+	useWhatWeHave := Weights{Favourite: 2, Dislike: -2, PerishableUse: 6, IngredientOverlap: 3, StockCoverage: 2, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.25, Jitter: 0.5}
+	middle := Weights{Favourite: 3, Dislike: -2, PerishableUse: 4, IngredientOverlap: 2, StockCoverage: 1, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.5, Jitter: 0.5}
+	favourites := Weights{Favourite: 5, Dislike: -2, PerishableUse: 2, IngredientOverlap: 1, StockCoverage: 0.5, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.25, Jitter: 0.5}
 	tests := []struct {
 		name  string
 		style float64
@@ -24,8 +24,8 @@ func TestWeightsFor(t *testing.T) {
 		{"anchor Use what we have", 0, useWhatWeHave},
 		{"middle anchor is the spec weights", 0.5, middle},
 		{"anchor Favourites", 1, favourites},
-		{"halfway to the middle interpolates", 0.25, Weights{Favourite: 2.5, Dislike: -2, PerishableUse: 5, IngredientOverlap: 2.5, StockCoverage: 1.5, SurplusFits: 1, SurplusWasted: -1, Recency: -0.375, Jitter: 0.5}},
-		{"halfway to Favourites interpolates", 0.75, Weights{Favourite: 4, Dislike: -2, PerishableUse: 3, IngredientOverlap: 1.5, StockCoverage: 0.75, SurplusFits: 1, SurplusWasted: -1, Recency: -0.375, Jitter: 0.5}},
+		{"halfway to the middle interpolates", 0.25, Weights{Favourite: 2.5, Dislike: -2, PerishableUse: 5, IngredientOverlap: 2.5, StockCoverage: 1.5, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.375, Jitter: 0.5}},
+		{"halfway to Favourites interpolates", 0.75, Weights{Favourite: 4, Dislike: -2, PerishableUse: 3, IngredientOverlap: 1.5, StockCoverage: 0.75, LeftoverFits: 1, LeftoverWasted: -1, Recency: -0.375, Jitter: 0.5}},
 		{"below range clamps to 0", -3, useWhatWeHave},
 		{"above range clamps to 1", 7, favourites},
 		{"NaN means the middle", math.NaN(), middle},
