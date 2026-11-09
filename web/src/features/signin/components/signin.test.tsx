@@ -26,7 +26,7 @@ describe('SignInPage', () => {
 })
 
 describe('NotInvitedPage', () => {
-  it('says the account is not invited and how to get in', () => {
+  it('says the email is not invited and how to get in', () => {
     render(<NotInvitedPage />)
     expect(screen.getByRole('heading', { level: 1, name: 'Not invited' })).toBeInTheDocument()
     expect(screen.getByText(/ask an Admin/i)).toBeInTheDocument()
