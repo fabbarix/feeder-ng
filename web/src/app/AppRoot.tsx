@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { http } from '../lib/http'
-import { EmptyState } from '../ui'
+import { SignedOut } from '../features/signin/components/SignedOut'
 import { AppShell } from './AppShell'
 import type { NavItem } from './nav'
 import { shellStrings } from './strings'
@@ -17,9 +17,7 @@ export function AppRoot({ navItems }: AppRootProps) {
 
   if (me.isPending) return <p role="status">{shellStrings.loading}</p>
   if (me.isError) return <p role="alert">{shellStrings.loadError}</p>
-  if (!me.data) {
-    return <EmptyState title={shellStrings.signedOutTitle} description={shellStrings.signedOutText} />
-  }
+  if (!me.data) return <SignedOut />
 
   const signOut = async () => {
     await http.post('/api/logout')
