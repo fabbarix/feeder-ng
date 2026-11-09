@@ -27,7 +27,8 @@ func Open(path string) (*sql.DB, error) {
 	dsn := "file:" + path +
 		"?_pragma=journal_mode(WAL)" +
 		"&_pragma=foreign_keys(1)" +
-		"&_pragma=busy_timeout(5000)"
+		"&_pragma=busy_timeout(5000)" +
+		"&_txlock=immediate" // BEGIN IMMEDIATE: a transaction takes the write lock up front and waits for it, instead of failing with SQLITE_BUSY_SNAPSHOT when another one committed after its first read
 	d, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db: open %s: %w", path, err)
