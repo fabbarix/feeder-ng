@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"sync"
 	"testing"
 	"time"
 
@@ -360,7 +361,7 @@ func TestSweepFinishesDueTimersAndPublishesOnce(t *testing.T) {
 		t.Error("a finished timer is reported once")
 	}
 	evs := drain(ch)
-	if len(evs) != 1 || evs[0].Kind != "finished" || evs[0].TimerID != short.ID || evs[0].Label != "Eggs" {
+	if len(evs) != 1 || evs[0].Changed != "finished" || evs[0].TimerID != short.ID || evs[0].Label != "Eggs" || evs[0].RecipeName != "" {
 		t.Errorf("events = %+v", evs)
 	}
 }
@@ -375,7 +376,7 @@ func TestReadingTimersSettlesThemToo(t *testing.T) {
 	if err != nil || len(list) != 1 || list[0].ID != tm.ID || list[0].State != cook.Finished || !now.Equal(f.clk.Now()) {
 		t.Fatalf("list = %+v %v", list, err)
 	}
-	if evs := drain(ch); len(evs) != 1 || evs[0].Kind != "finished" {
+	if evs := drain(ch); len(evs) != 1 || evs[0].Changed != "finished" {
 		t.Errorf("events = %+v", evs)
 	}
 	_, _, _ = f.svc.Timers(ctx, "")
@@ -527,5 +528,175 @@ func TestBoardNextAdvanceStepOverPlannedMeals(t *testing.T) {
 	_, _ = f.svc.SetMark(ctx, "meal:2026-11-10/3", 0, true)
 	if b, _ = f.svc.Board(ctx); b.NextAdvance != nil {
 		t.Errorf("nothing left: %+v", b.NextAdvance)
+	}
+}
+
+// ---- a timer finishes exactly once ----
+
+// second returns another Service over the same store, bus and clock: two server instances.
+func (f *fixture) second() *service.Service {
+	return service.New(service.Config{Store: f.st, Clock: f.clk, Bus: f.bus, Recipes: fakeRecipes{12: stew()}, Meals: f.meals, Waste: f.waste, Household: f.hh})
+}
+
+func TestTheFinishedEventShapeCarriesTheRecipeName(t *testing.T) {
+	f := setup(t)
+	sub, cancelSub := f.bus.Subscribe(service.TopicTimers)
+	defer cancelSub()
+	tm, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: "recipe:12", Step: intp(2)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	drain(sub) // the started event
+	f.clk.Advance(46 * time.Minute)
+	if _, err := f.svc.Sweep(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var raw events.Event
+	select {
+	case raw = <-sub:
+	default:
+		t.Fatal("no event")
+	}
+	var got map[string]any
+	if err := json.Unmarshal(raw.Data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["changed"] != "finished" || got["timerId"] != float64(tm.ID) || got["label"] != "Step 3: Simmer the stew" || got["recipeName"] != "Chicken stew" {
+		t.Errorf("event = %v", got)
+	}
+}
+
+func TestTheFinishedEventForAMealScopeNamesItsRecipeAndAFreeTimerHasNone(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 2, State: "planned"}}
+	ch, cancel := service.SubscribeFinished(f.bus)
+	defer cancel()
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: "meal:2026-11-09/3", Step: intp(2)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 60})
+	f.clk.Advance(time.Hour)
+	_, _ = f.svc.Sweep(ctx)
+	got := map[int64]service.FinishedEvent{}
+	for i := 0; i < 2; i++ {
+		select {
+		case e := <-ch:
+			got[e.TimerID] = e
+		case <-time.After(2 * time.Second):
+			t.Fatalf("only %d finished events", i)
+		}
+	}
+	if got[meal.ID].RecipeName != "Chicken stew" || got[meal.ID].Scope != "meal:2026-11-09/3" {
+		t.Errorf("meal timer = %+v", got[meal.ID])
+	}
+	if got[free.ID].RecipeName != "" || got[free.ID].Label != "Eggs" {
+		t.Errorf("free timer = %+v", got[free.ID])
+	}
+}
+
+func TestTwoInstancesSharingOneStoreFinishEachTimerOnce(t *testing.T) {
+	f := setup(t)
+	other := f.second()
+	const n = 6
+	ids := map[int64]bool{}
+	for i := 0; i < n; i++ {
+		tm, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "t", DurationSeconds: 60})
+		ids[tm.ID] = true
+	}
+	ch, cancel := f.bus.Subscribe(service.TopicTimers)
+	defer cancel()
+	f.clk.Advance(2 * time.Minute)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	reported := 0
+	run := func(fn func()) {
+		wg.Add(1)
+		go func() { defer wg.Done(); fn() }()
+	}
+	for _, s := range []*service.Service{f.svc, other, f.svc, other} {
+		s := s
+		run(func() {
+			done, err := s.Sweep(ctx)
+			if err != nil {
+				t.Errorf("sweep: %v", err)
+			}
+			mu.Lock()
+			reported += len(done)
+			mu.Unlock()
+		})
+		run(func() {
+			if _, _, err := s.Timers(ctx, ""); err != nil {
+				t.Errorf("timers: %v", err)
+			}
+		}) // a request racing the sweeps
+	}
+	wg.Wait()
+
+	// A request may settle a timer before a sweep gets to it, so the sweeps report at most n.
+	if reported > n {
+		t.Errorf("sweeps reported %d finished timers for %d timers: some were finished twice", reported, n)
+	}
+	seen := map[int64]int{}
+	for _, e := range drain(ch) {
+		if e.Changed == "finished" {
+			seen[e.TimerID]++
+		}
+	}
+	for id := range ids {
+		if seen[id] != 1 {
+			t.Errorf("timer %d: %d finished events, want 1", id, seen[id])
+		}
+	}
+	if len(seen) != n {
+		t.Errorf("finished events for %d timers, want %d", len(seen), n)
+	}
+}
+
+func TestACancelRacingASweepPublishesFinishedAtMostOnce(t *testing.T) {
+	f := setup(t)
+	other := f.second()
+	tm, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 60})
+	ch, cancel := f.bus.Subscribe(service.TopicTimers)
+	defer cancel()
+	f.clk.Advance(2 * time.Minute)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); _, _ = f.svc.Sweep(ctx) }()
+	go func() { defer wg.Done(); _ = other.Cancel(ctx, tm.ID) }()
+	wg.Wait()
+	finished := 0
+	for _, e := range drain(ch) {
+		if e.Changed == "finished" {
+			finished++
+		}
+	}
+	if finished != 1 {
+		t.Errorf("%d finished events, want exactly 1", finished)
+	}
+}
+
+func TestAPauseThatLandedBeforeTheFinishIsNotOverwrittenByTheSweep(t *testing.T) {
+	f := setup(t)
+	tm, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
+	ch, cancel := f.bus.Subscribe(service.TopicTimers)
+	defer cancel()
+	f.clk.Advance(100 * time.Second)
+	if _, err := f.second().Pause(ctx, tm.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.clk.Advance(10 * time.Minute) // far past the original end
+	if done, _ := f.svc.Sweep(ctx); len(done) != 0 {
+		t.Errorf("sweep finished a paused timer: %+v", done)
+	}
+	_, list, _ := f.svc.Timers(ctx, "")
+	if len(list) != 1 || list[0].State != cook.Paused || list[0].RemainingMs != 200_000 {
+		t.Errorf("timer = %+v, want paused with 200 s left", list)
+	}
+	for _, e := range drain(ch) {
+		if e.Changed == "finished" {
+			t.Errorf("a paused timer was announced as finished: %+v", e)
+		}
 	}
 }

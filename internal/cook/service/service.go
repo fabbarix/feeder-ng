@@ -43,6 +43,9 @@ type TimerEvent struct {
 	TimerID int64  `json:"timerId"`
 	Scope   string `json:"scope"`
 	Label   string `json:"label"`
+	// RecipeName is set on the finished event only ({changed:"finished", timerId,
+	// label, recipeName}): the Recipe the timer's scope cooks, "" for a free timer.
+	RecipeName string `json:"recipeName,omitempty"`
 }
 
 // MarksEvent is the data of a `cook` event.
@@ -541,9 +544,10 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 
 // FinishedEvent is a timer that has just finished.
 type FinishedEvent struct {
-	TimerID int64
-	Scope   string
-	Label   string
+	TimerID    int64
+	Scope      string
+	Label      string
+	RecipeName string // resolved from the scope; "" for a free timer
 }
 
 // SubscribeFinished yields one FinishedEvent per `timers` event of kind finished

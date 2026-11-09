@@ -203,3 +203,45 @@ func TestDataSurvivesReopeningTheStore(t *testing.T) {
 		t.Errorf("a second Store over the same DB sees the timer: %v", err)
 	}
 }
+
+func TestFinishTimerIsAConditionalUpdateThatOnlyOneCallerWins(t *testing.T) {
+	st := setup(t)
+	tm, _ := st.InsertTimer(ctx, stepTimer(t, cook.RecipeScope(5), 1, 60))
+	won, err := st.FinishTimer(ctx, tm.ID)
+	if err != nil || !won {
+		t.Fatalf("first finish = %v %v, want true", won, err)
+	}
+	won, err = st.FinishTimer(ctx, tm.ID)
+	if err != nil || won {
+		t.Fatalf("second finish = %v %v, want false and no error", won, err)
+	}
+	back, _ := st.Timer(ctx, tm.ID)
+	if back.State != cook.Finished || !back.EndsAt.Equal(tm.EndsAt) {
+		t.Errorf("stored = %+v", back)
+	}
+}
+
+func TestFinishTimerNeverOverwritesAPauseThatLandedFirst(t *testing.T) {
+	st := setup(t)
+	tm, _ := st.InsertTimer(ctx, stepTimer(t, cook.RecipeScope(5), 1, 300))
+	stale, _ := st.Timer(ctx, tm.ID) // the sweep loaded it as running
+	paused, _ := tm.Pause(now.Add(100 * time.Second))
+	if err := st.SaveTimer(ctx, paused); err != nil { // a request paused it before the sweep saved
+		t.Fatal(err)
+	}
+	won, err := st.FinishTimer(ctx, stale.ID)
+	if err != nil || won {
+		t.Fatalf("finish after pause = %v %v, want false", won, err)
+	}
+	back, _ := st.Timer(ctx, tm.ID)
+	if back.State != cook.Paused || back.RemainingMs != 200_000 {
+		t.Errorf("the Pause was overwritten: %+v", back)
+	}
+}
+
+func TestFinishTimerOnAPausedOrMissingTimerChangesNothing(t *testing.T) {
+	st := setup(t)
+	if won, err := st.FinishTimer(ctx, 4242); err != nil || won {
+		t.Errorf("unknown timer = %v %v, want false and no error", won, err)
+	}
+}

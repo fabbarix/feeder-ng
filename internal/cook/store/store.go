@@ -105,6 +105,15 @@ func (s *Store) SaveTimer(ctx context.Context, t cook.Timer) error {
 	return affectedOrNotFound(res)
 }
 
+// FinishTimer marks a running timer finished with one conditional update
+// (state = 'finished' WHERE id = ? AND state = 'running') and reports whether
+// exactly one row changed. It is false, with no error, when the timer is no
+// longer running (somebody else finished, paused or cancelled it first).
+// STUB: the Developer implements it.
+func (s *Store) FinishTimer(ctx context.Context, id int64) (bool, error) {
+	return false, errors.New("FinishTimer: not implemented")
+}
+
 // DeleteTimer removes a timer (ErrNotFound).
 func (s *Store) DeleteTimer(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM cook_timers WHERE id = ?`, id)

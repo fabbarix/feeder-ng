@@ -29,10 +29,11 @@ describe('CookNavTiles', () => {
     expect(onMarkCooked).toHaveBeenCalledTimes(1)
   })
 
-  it('offers Done on the last Step of a Recipe', async () => {
+  it('offers Back to Recipe (never "Done", a word for Cooked) on the last Step of a Recipe', async () => {
     const onDone = vi.fn()
     render(<CookNavTiles {...base} isLast onDone={onDone} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Recipe' }))
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
