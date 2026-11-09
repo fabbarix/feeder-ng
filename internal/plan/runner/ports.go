@@ -68,9 +68,10 @@ type LeftoverWaste struct {
 }
 
 // StockPort is what the runner needs from Stock (T10). The real adapter wraps
-// stock/service: Projected -> Projected, DeductCookedTx -> DeductForCookedTx,
-// PublishDeduction -> PublishDeduction, RecordLeftoverWaste -> RecordWaste with
-// reason leftover_discarded (ingredient nil, quantity = portions).
+// stock/service: Lots reads the projection (inside the write's transaction when the
+// context carries one), DeductCookedTx -> DeductForCookedTx, PublishDeduction ->
+// PublishDeduction, RecordLeftoverWaste -> RecordWaste with reason leftover_discarded
+// (ingredient nil, quantity = portions); the adapter also implements TxWaster.
 type StockPort interface {
 	// Lots are the current Stock Lots in consumption order and the Shelf Life days per Ingredient.
 	Lots(ctx context.Context) ([]planner.StockLot, map[planner.IngredientID]int, error)
@@ -80,4 +81,10 @@ type StockPort interface {
 	PublishDeduction(d Deduction)
 	// RecordLeftoverWaste is called after the commit that discarded the Leftover.
 	RecordLeftoverWaste(ctx context.Context, w LeftoverWaste) error
+}
+
+// TxWaster is optionally implemented by a StockPort: the waste of a discarded Leftover is then recorded inside the
+// discard transaction (so a failure keeps the Leftover available). Without it the waste is recorded after the commit.
+type TxWaster interface {
+	RecordLeftoverWasteTx(ctx context.Context, tx *sql.Tx, w LeftoverWaste) error
 }
