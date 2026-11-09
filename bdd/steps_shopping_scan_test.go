@@ -107,6 +107,19 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		if v := id("product", name); v != 0 {
 			return v, nil
 		}
+		// A Product a scan created was never registered by a step: look it up by its name.
+		var all []struct {
+			ID   int64  `json:"id"`
+			Name string `json:"name"`
+		}
+		if err := w.Ensure().LoginUser(w.TB).Get("/api/products?q=" + url.QueryEscape(name)).JSON(&all); err == nil {
+			for _, p := range all {
+				if p.Name == name {
+					w.Vars["ss:product:"+name] = p.ID
+					return p.ID, nil
+				}
+			}
+		}
 		return 0, fmt.Errorf("Product %q was not set up in this scenario", name)
 	}
 	today := func() string { return w.Ensure().Clock.Now().Format("2006-01-02") }
@@ -935,6 +948,21 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 
 	lotsOf := func(name string) ([]map[string]any, error) {
 		iid := id("ingredient", name)
+		if iid == 0 {
+			// An Ingredient a scan created was never registered by a step: look it up by its name.
+			var all []struct {
+				ID   int64  `json:"id"`
+				Name string `json:"name"`
+			}
+			if err := me().Get("/api/ingredients").JSON(&all); err == nil {
+				for _, i := range all {
+					if strings.EqualFold(i.Name, name) {
+						iid = i.ID
+						w.Vars["ss:ingredient:"+name] = iid
+					}
+				}
+			}
+		}
 		if iid == 0 {
 			return nil, nil // never created: nothing in Stock
 		}
