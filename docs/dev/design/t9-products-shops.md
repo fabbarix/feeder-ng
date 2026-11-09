@@ -63,6 +63,8 @@ Shop `{id,name}`. Rule = `barcode.WeightRule` JSON plus `shopId` (`{id,shopId,pr
 | `GET /api/catalog[?shop=ID]` | User | `barcode.Catalog` JSON (home when `shop` omitted); 404 unknown Shop |
 | `GET /api/resolve?barcode=RAW[&format=ean_13...][&shop=ID]` | User | `{resolution: barcode.Resolution, product: Product\|null}` (`product` for outcomes carrying a `productId`) |
 
+Error codes: `ValidationError` fields map to `invalid_product` / `invalid_shop` / `invalid_price`, except field `date` -> `invalid_date`; `ErrInvalidBarcode` -> `invalid_barcode`; `ErrInvalidItemCode` -> `invalid_item_code`; `ErrUnknownIngredient` -> 400 `unknown_ingredient`; `ErrNotFound` -> 404 `not_found` (also for a Shop, Product or rule id inside a body, or a rule that belongs to another Shop). List endpoints return `[]`, never `null`; an absent optional map in the Catalog is omitted.
+
 Route clash: `GET /api/products/last-bought` is a literal and wins over `/api/products/{id}`.
 
 ## Go signatures (tests rely on these)
@@ -105,7 +107,7 @@ Two features, composed from `ui/` (Tile, BentoGrid, Chip, BottomSheet, Button, E
 - `lib/ruleForm.ts` (form strings <-> `WeightRule`, per-field errors via `validateRule`, unit options per kind), `lib/rulePreview.ts` (`decodeSample`), `hooks/{useShops,useShop,useWeightRules,useShopBarcodes,useRulePreview}.ts`, `components/{ShopList,ShopEditor,WeightRuleList,WeightRuleEditor,RulePreview,ShopBarcodeList,AddShopBarcodeSheet}.tsx`, `screens/{ShopsScreen,ShopScreen}.tsx`, `api.ts`, `types.ts`, `strings.ts`.
 
 `web/src/features/products/` (routes `/products`, `/products/:id`; menu item "Products", order 35): Products list with search; Product page with tiles for pack size, global barcodes, Shops that sell it, Shop Barcodes, Prices (latest per Shop, price per kg, add/edit Price, history).
-- `index.ts` also exports `IngredientProducts` (props `{ingredientId, baseUnit}`): a Tile listing the Ingredient's Products with "New Product" (BottomSheet form). **Integration point for T2's `IngredientScreen`**: render `<IngredientProducts ingredientId={id} baseUnit={ingredient.baseUnit}/>`. The "unknown barcode" sheet (scan team) uses `productsApi.create` and `lib/names.defaultProductName`.
+- `index.ts` also exports `IngredientProducts` (props `{ingredientId, ingredientName, baseUnit}`): a Tile listing the Ingredient's Products with "New Product" (BottomSheet form). **Integration point for T2's `IngredientScreen`**: render `<IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit}/>`. The "unknown barcode" sheet (scan team) uses `productsApi.create` and `lib/names.defaultProductName`.
 - `lib/money.ts` (`fractionDigits`, `formatMinor`, `parseMajor`, `formatPricePerKg`), `lib/names.ts` (`defaultProductName`, `formatPackSize`), `lib/productForm.ts` (`validateProductForm`, `toNewProduct`), `lib/priceForm.ts` (`validatePriceForm`, `toPriceBody`, `prefillPrice`), `hooks/{useProducts,useProduct,useIngredientProducts,usePrices,useCurrency}.ts`, `components/{ProductList,ProductForm,ProductBarcodes,ProductShops,PriceList,PriceEditor,IngredientProducts}.tsx`, `screens/{ProductsScreen,ProductScreen}.tsx`, `api.ts` (also `catalog(shopId?)`, `resolve`, `lastBought`, `recordPurchase`, `deletePurchase`), `types.ts`, `strings.ts`.
 - `useCurrency` reads `/api/household/settings` (T1) `.currency` (default `USD`), key `['household','settings']`.
 
