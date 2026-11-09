@@ -171,11 +171,12 @@ func TestSetTotalDecreaseTakesSoonestToSpoilFirst(t *testing.T) {
 	f := setup(t)
 	f.add(t, f.thighs, 500, "2026-11-08") // goes off 11-12
 	f.add(t, f.thighs, 300, "2026-11-06") // goes off 11-10
+	// 800 g -> 600 g removes 200 g from the soonest-to-spoil lot (300 g -> 100 g), leaving two lots.
 	got, err := f.svc.SetTotal(ctx, f.thighs, 600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Total != 600 || got.LotCount != 1 || got.NextGoesOff != "2026-11-12" {
+	if got.Total != 600 || got.LotCount != 2 || got.NextGoesOff != "2026-11-10" {
 		t.Fatalf("after = %+v", got)
 	}
 }
