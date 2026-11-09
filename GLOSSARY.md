@@ -155,7 +155,7 @@ A specific purchasable pack, identified by its barcode, that supplies exactly on
 _Avoid_: SKU, article, item
 
 **Base Unit**:
-The single unit (gram, millilitre or piece) in which an Ingredient's Stock and shopping quantities are counted.
+The single unit (gram, millilitre or piece) in which an Ingredient's Stock and shopping quantities are counted. Always metric internally; imperial is a per-User display conversion only.
 _Avoid_: Default unit, canonical unit
 
 **Unit Conversion**:
@@ -197,6 +197,7 @@ _Avoid_: Grocery list, basket
 **Shop**:
 A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop.
 _Avoid_: Store, supermarket, retailer
+_Note_: the phone bottom-bar label "Shop" names the shopping screen (Shopping List plus scanning), not this term.
 
 **Shop Barcode**:
 A barcode that identifies a Product only within one Shop (e.g. own-label or weighed goods).
