@@ -1,5 +1,3 @@
-//go:build t2merged
-
 package store_test
 
 import (

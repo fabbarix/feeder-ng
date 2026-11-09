@@ -7,6 +7,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
@@ -88,35 +90,284 @@ type Store struct {
 // New returns a Store.
 func New(db *sql.DB, clk clock.Clock) *Store { return &Store{db: db, clk: clk} }
 
+const lotColumns = `id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at`
+
 // AddLot inserts a lot. If ClientUUID is set and a lot with it exists, that lot
 // is returned with created=false and nothing is inserted (idempotent offline scans).
 func (s *Store) AddLot(ctx context.Context, n NewLot) (lot StoredLot, created bool, err error) {
-	panic("TODO")
+	if n.ClientUUID != "" {
+		existing, found, err := s.lotByUUID(ctx, s.db, n.ClientUUID)
+		if err != nil {
+			return StoredLot{}, false, err
+		}
+		if found {
+			if existing.IngredientID != n.IngredientID {
+				return StoredLot{}, false, ErrDuplicateUUID
+			}
+			return existing, false, nil
+		}
+	}
+	src := n.Source
+	if src == "" {
+		src = SourceManual
+	}
+	res, err := s.db.ExecContext(ctx, `INSERT INTO stock_lots
+		(ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		n.IngredientID, n.Quantity, string(n.Purchased), nullDate(n.GoesOff), string(src),
+		nullInt(n.ProductID), nullInt(n.ShopID), nullString(n.ClientUUID), s.now())
+	if err != nil {
+		if n.ClientUUID != "" && isUnique(err) {
+			// A concurrent scan with the same UUID won the race: return its lot.
+			existing, found, lerr := s.lotByUUID(ctx, s.db, n.ClientUUID)
+			if lerr == nil && found {
+				return existing, false, nil
+			}
+		}
+		return StoredLot{}, false, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return StoredLot{}, false, err
+	}
+	lot, err = s.Lot(ctx, id)
+	return lot, err == nil, err
 }
 
 // Lot returns one lot, or ErrNotFound.
-func (s *Store) Lot(ctx context.Context, id int64) (StoredLot, error) { panic("TODO") }
+func (s *Store) Lot(ctx context.Context, id int64) (StoredLot, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, id)
+	l, err := scanLot(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return StoredLot{}, ErrNotFound
+	}
+	return l, err
+}
 
 // Lots lists lots of one Ingredient (0 = every Ingredient), ordered by go-off
 // date (none last), then purchase date, then ID.
 func (s *Store) Lots(ctx context.Context, ingredientID int64) ([]StoredLot, error) {
-	panic("TODO")
+	return queryLots(ctx, s.db, ingredientID)
 }
 
 // Update runs fn on the Ingredient's current lots inside one transaction and
 // persists the Mutation it returns. If fn returns an error nothing changes and
 // the error is returned as is. The saved lots are returned (new lots with IDs).
 func (s *Store) Update(ctx context.Context, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) {
-	panic("TODO")
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	current, err := queryLots(ctx, tx, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	plain := make([]stock.Lot, len(current))
+	for i, l := range current {
+		plain[i] = l.Lot
+	}
+	m, err := fn(plain)
+	if err != nil {
+		return nil, err
+	}
+
+	kept := map[int64]bool{}
+	for _, l := range m.Lots {
+		if l.ID != 0 {
+			kept[l.ID] = true
+		}
+	}
+	for _, l := range current {
+		if !kept[l.ID] {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM stock_lots WHERE id = ? AND ingredient_id = ?`, l.ID, ingredientID); err != nil {
+				return nil, err
+			}
+		}
+	}
+	src := m.NewSource
+	if src == "" {
+		src = SourceManual
+	}
+	for _, l := range m.Lots {
+		if l.ID == 0 {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO stock_lots
+				(ingredient_id, quantity, purchased, goes_off, source, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+				ingredientID, l.Quantity, string(l.Purchased), nullDate(l.GoesOff), string(src), s.now()); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		res, err := tx.ExecContext(ctx, `UPDATE stock_lots SET quantity = ?, purchased = ?, goes_off = ?
+			WHERE id = ? AND ingredient_id = ?`,
+			l.Quantity, string(l.Purchased), nullDate(l.GoesOff), l.ID, ingredientID)
+		if err != nil {
+			return nil, err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return nil, ErrNotFound
+		}
+	}
+	for _, w := range m.Waste {
+		if _, err := insertWaste(ctx, tx, w, s.now()); err != nil {
+			return nil, err
+		}
+	}
+
+	saved, err := queryLots(ctx, tx, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return saved, nil
 }
 
 // AddWaste records waste.
 func (s *Store) AddWaste(ctx context.Context, w WasteRecord) (WasteRecord, error) {
-	panic("TODO")
+	return insertWaste(ctx, s.db, w, s.now())
 }
 
 // Waste lists waste records with WastedOn in [from, to] (an empty bound is
 // open), ordered by date then ID.
 func (s *Store) Waste(ctx context.Context, from, to stock.Date) ([]WasteRecord, error) {
-	panic("TODO")
+	rows, err := s.db.QueryContext(ctx, `SELECT id, ingredient_id, quantity, wasted_on, reason, lot_id
+		FROM stock_waste
+		WHERE (? = '' OR wasted_on >= ?) AND (? = '' OR wasted_on <= ?)
+		ORDER BY wasted_on, id`, string(from), string(from), string(to), string(to))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []WasteRecord{}
+	for rows.Next() {
+		var (
+			w      WasteRecord
+			ing    sql.NullInt64
+			lot    sql.NullInt64
+			on     string
+			reason string
+		)
+		if err := rows.Scan(&w.ID, &ing, &w.Quantity, &on, &reason, &lot); err != nil {
+			return nil, err
+		}
+		w.WastedOn = stock.Date(on)
+		w.Reason = Reason(reason)
+		w.IngredientID = optInt(ing)
+		w.LotID = optInt(lot)
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// queryer is satisfied by *sql.DB and *sql.Tx.
+type queryer interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+func queryLots(ctx context.Context, q queryer, ingredientID int64) ([]StoredLot, error) {
+	rows, err := q.QueryContext(ctx, `SELECT `+lotColumns+` FROM stock_lots
+		WHERE (? = 0 OR ingredient_id = ?)
+		ORDER BY (goes_off IS NULL), goes_off, purchased, id`, ingredientID, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []StoredLot{}
+	for rows.Next() {
+		l, err := scanLot(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) lotByUUID(ctx context.Context, q queryer, uuid string) (StoredLot, bool, error) {
+	row := q.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE client_uuid = ?`, uuid)
+	l, err := scanLot(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return StoredLot{}, false, nil
+	}
+	if err != nil {
+		return StoredLot{}, false, err
+	}
+	return l, true, nil
+}
+
+func insertWaste(ctx context.Context, q queryer, w WasteRecord, createdAt string) (WasteRecord, error) {
+	switch w.Reason {
+	case ReasonSpoiled, ReasonLeftoverExpired:
+	default:
+		return WasteRecord{}, fmt.Errorf("stock: unknown waste reason %q", w.Reason)
+	}
+	res, err := q.ExecContext(ctx, `INSERT INTO stock_waste
+		(ingredient_id, quantity, wasted_on, reason, lot_id, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		nullInt(w.IngredientID), w.Quantity, string(w.WastedOn), string(w.Reason), nullInt(w.LotID), createdAt)
+	if err != nil {
+		return WasteRecord{}, err
+	}
+	w.ID, err = res.LastInsertId()
+	return w, err
+}
+
+type scanner interface{ Scan(dest ...any) error }
+
+func scanLot(r scanner) (StoredLot, error) {
+	var (
+		l                     StoredLot
+		goesOff, client       sql.NullString
+		product, shop         sql.NullInt64
+		purchased, src, stamp string
+	)
+	if err := r.Scan(&l.ID, &l.IngredientID, &l.Quantity, &purchased, &goesOff, &src,
+		&product, &shop, &client, &stamp); err != nil {
+		return StoredLot{}, err
+	}
+	l.Purchased = stock.Date(purchased)
+	l.GoesOff = stock.Date(goesOff.String)
+	l.Source = Source(src)
+	l.ProductID = optInt(product)
+	l.ShopID = optInt(shop)
+	l.ClientUUID = client.String
+	created, err := time.Parse(time.RFC3339, stamp)
+	if err != nil {
+		return StoredLot{}, fmt.Errorf("stock: bad created_at %q: %w", stamp, err)
+	}
+	l.CreatedAt = created
+	return l, nil
+}
+
+func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
+
+func nullDate(d stock.Date) sql.NullString {
+	return sql.NullString{String: string(d), Valid: !d.IsNone()}
+}
+
+func nullInt(p *int64) sql.NullInt64 {
+	if p == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: *p, Valid: true}
+}
+
+func nullString(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
+}
+
+func optInt(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Int64
+	return &v
+}
+
+func isUnique(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
