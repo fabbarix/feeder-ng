@@ -9,8 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"image"
-	_ "image/gif" // decoders for the accepted formats
-	_ "image/jpeg"
+	_ "image/jpeg" // decoders for the accepted formats (JPEG, PNG, WebP)
 	_ "image/png"
 	"io"
 	"math"
@@ -35,10 +34,10 @@ const (
 
 // Errors.
 var (
-	ErrUnsupportedFormat = errors.New("unsupported or corrupt image") // not JPEG, PNG, GIF or WebP, or undecodable
+	ErrUnsupportedFormat = errors.New("unsupported or corrupt image") // not JPEG, PNG or WebP, not the declared type, or undecodable
 	ErrTooLarge          = errors.New("image larger than 8 MB")
 	ErrEmpty             = errors.New("empty image")
-	ErrTooManyPixels     = errors.New("image dimensions too large") // STUB: not yet returned (see design note)
+	ErrTooManyPixels     = errors.New("image dimensions too large") // decompression-bomb guard, see MaxSidePixels and MaxPixels
 )
 
 // Result is a processed image.
@@ -68,21 +67,44 @@ func clampMin1(n int) int {
 	return n
 }
 
-// Process reads at most MaxBytes (+1 to detect overflow) from r, decodes a
-// JPEG, PNG, GIF (first frame) or WebP, scales it with ScaledSize(…, MaxSide)
-// using a high-quality filter, and encodes lossless WebP. Errors:
-// ErrEmpty, ErrTooLarge, ErrUnsupportedFormat. EXIF orientation is not applied
-// in v1 (recorded in the design note).
+// acceptedFormats maps the image.DecodeConfig format names we accept to their declared MIME types.
+var acceptedFormats = map[string]string{"jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+
+// Process reads at most MaxBytes (+1 to detect overflow) from r and processes
+// it as processBytes does with no declared type. Errors: ErrEmpty, ErrTooLarge,
+// ErrUnsupportedFormat, ErrTooManyPixels.
 func Process(r io.Reader) (Result, error) {
 	data, err := io.ReadAll(io.LimitReader(r, MaxBytes+1))
 	if err != nil {
 		return Result{}, ErrUnsupportedFormat
 	}
+	return processBytes(data, "")
+}
+
+// processBytes checks the size, then reads only the header (image.DecodeConfig)
+// to refuse unsupported formats, a format that differs from declared (when
+// declared is not empty) and decompression bombs, before the full decode. It
+// scales the image with ScaledSize(…, MaxSide) using a high-quality filter and
+// encodes lossless WebP. EXIF orientation is not applied in v1 (known limit).
+func processBytes(data []byte, declared string) (Result, error) {
 	if len(data) == 0 {
 		return Result{}, ErrEmpty
 	}
 	if len(data) > MaxBytes {
 		return Result{}, ErrTooLarge
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return Result{}, ErrUnsupportedFormat
+	}
+	if _, ok := acceptedFormats[format]; !ok {
+		return Result{}, ErrUnsupportedFormat
+	}
+	if declared != "" && format != declared {
+		return Result{}, ErrUnsupportedFormat
+	}
+	if cfg.Width > MaxSidePixels || cfg.Height > MaxSidePixels || int64(cfg.Width)*int64(cfg.Height) > MaxPixels {
+		return Result{}, ErrTooManyPixels
 	}
 	src, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -103,23 +125,35 @@ func Process(r io.Reader) (Result, error) {
 	return Result{WebP: out.Bytes(), Width: w, Height: h}, nil
 }
 
-// ProcessDataURL decodes a data URL (`data:<type>;base64,<payload>`, the form
-// of the Recipe File and of the upload API) and processes it with Process.
-// Anything that is not a base64 data URL is ErrUnsupportedFormat.
+// ProcessDataURL decodes a data URL and processes it. Only
+// `data:image/(jpeg|png|webp);base64,<payload>` is accepted (the Recipe File
+// form); the format found in the bytes must match the declared type. Anything
+// else is ErrUnsupportedFormat.
 func ProcessDataURL(dataURL string) (Result, error) {
 	const marker = ";base64,"
 	i := strings.Index(dataURL, marker)
 	if !strings.HasPrefix(dataURL, "data:") || i < 0 {
 		return Result{}, ErrUnsupportedFormat
 	}
+	declared, ok := declaredFormat(dataURL[len("data:"):i])
+	if !ok {
+		return Result{}, ErrUnsupportedFormat
+	}
 	raw, err := base64.StdEncoding.DecodeString(dataURL[i+len(marker):])
 	if err != nil {
 		return Result{}, ErrUnsupportedFormat
 	}
-	if len(raw) > MaxBytes {
-		return Result{}, ErrTooLarge
+	return processBytes(raw, declared)
+}
+
+// declaredFormat maps a declared MIME type to its DecodeConfig format name.
+func declaredFormat(mime string) (string, bool) {
+	for format, m := range acceptedFormats {
+		if m == mime {
+			return format, true
+		}
 	}
-	return Process(bytes.NewReader(raw))
+	return "", false
 }
 
 // ErrNotFound is returned by Store.Open.

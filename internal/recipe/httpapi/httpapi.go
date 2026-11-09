@@ -582,7 +582,11 @@ func writeImageErr(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "image_too_large", "A photo must be 8 MB or smaller")
 		return
 	}
-	httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_image", "That is not a JPEG, PNG, GIF or WebP image")
+	if errors.Is(err, imaging.ErrTooManyPixels) {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "image_too_large_pixels", "A photo must be at most 12000 pixels on its longest side and 50 megapixels")
+		return
+	}
+	httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_image", "That is not a JPEG, PNG or WebP image")
 }
 
 // writeErr maps domain and store errors to responses.
