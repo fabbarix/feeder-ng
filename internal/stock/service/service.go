@@ -6,6 +6,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math"
@@ -103,6 +104,10 @@ type Warning struct {
 
 // topic is the live-update topic every Stock change is published on.
 const topic = "stock"
+
+// Today is the household's calendar date now. The lots and spoiled responses
+// carry it so the web app words go-off dates against the server's day, not the device's.
+func (s *Service) Today(ctx context.Context) (stock.Date, error) { return s.today(ctx) }
 
 // AddLot adds a Stock Lot. created is false when ClientUUID repeats an earlier scan.
 func (s *Service) AddLot(ctx context.Context, in AddInput) (LotView, bool, error) {
@@ -392,6 +397,30 @@ func (s *Service) DeductForCooked(ctx context.Context, needs []stock.Need) ([]Wa
 	return warnings, nil
 }
 
+// Deduction is the outcome of DeductForCookedTx: the shortfall Warnings and the
+// Ingredients whose Stock changed (their `stock` event is published later, see
+// PublishDeduction).
+type Deduction struct {
+	Warnings             []Warning
+	ChangedIngredientIDs []int64
+}
+
+// DeductForCookedTx is DeductForCooked inside the caller's transaction (Planning
+// calls it in the same transaction that marks the Planned Meal Cooked). It
+// begins, commits and publishes nothing: a failure anywhere returns the error
+// and leaves the caller to roll tx back, so Stock is all-or-nothing across every
+// Ingredient; a commit makes every deduction final. After a successful commit
+// the caller calls PublishDeduction. Behaviour per need is that of DeductForCooked.
+func (s *Service) DeductForCookedTx(ctx context.Context, tx *sql.Tx, needs []stock.Need) (Deduction, error) {
+	return Deduction{}, errors.New("stock service: DeductForCookedTx not implemented") // STUB
+}
+
+// PublishDeduction publishes the `stock` event for a committed Deduction (only
+// if some Stock changed). Call it after the caller's transaction commits, never before.
+func (s *Service) PublishDeduction(d Deduction) {
+	// STUB
+}
+
 // Projected returns the current lots per Ingredient in consumption order.
 func (s *Service) Projected(ctx context.Context) (stock.ProjectedStock, error) {
 	stored, err := s.st.Lots(ctx, 0)
@@ -405,13 +434,13 @@ func (s *Service) Projected(ctx context.Context) (stock.ProjectedStock, error) {
 	return stock.Project(plain), nil
 }
 
-// RecordWaste records waste directly (Planning: discarded Leftovers, reason leftover_expired).
+// RecordWaste records waste directly (Planning: discarded Leftovers, reason leftover_discarded).
 func (s *Service) RecordWaste(ctx context.Context, in store.WasteRecord) (store.WasteRecord, error) {
 	if math.IsNaN(in.Quantity) || math.IsInf(in.Quantity, 0) || in.Quantity < 0 {
 		return store.WasteRecord{}, invalid("waste quantity cannot be negative")
 	}
-	if in.Reason != store.ReasonSpoiled && in.Reason != store.ReasonLeftoverExpired {
-		return store.WasteRecord{}, invalid("reason must be spoiled or leftover_expired")
+	if in.Reason != store.ReasonSpoiled && in.Reason != store.ReasonLeftoverDiscarded {
+		return store.WasteRecord{}, invalid("reason must be spoiled or leftover_discarded")
 	}
 	today, err := s.today(ctx)
 	if err != nil {

@@ -27,4 +27,18 @@ describe('LotList', () => {
     render(<LotList today="2026-11-09" lots={[makeLot({ goesOff: '2026-11-05' })]} />)
     expect(screen.getByText('Went off 4 days ago').closest('[data-tone]')).toHaveAttribute('data-tone', 'spoil')
   })
+
+  it('takes the tone from the server flags: use soon is spoil, plain is neutral', () => {
+    render(
+      <LotList
+        today="2026-11-09"
+        lots={[
+          makeLot({ id: 1, goesOff: '2026-11-12', spoiled: false, useSoon: true }),
+          makeLot({ id: 2, goesOff: '2026-11-13', spoiled: false, useSoon: false }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('Goes off in 3 days').closest('[data-tone]')).toHaveAttribute('data-tone', 'spoil')
+    expect(screen.getByText('Goes off in 4 days').closest('[data-tone]')).toHaveAttribute('data-tone', 'neutral')
+  })
 })

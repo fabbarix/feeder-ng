@@ -17,6 +17,12 @@ export interface StockLot {
   useSoon: boolean
 }
 
+/** The lots and spoiled responses: the lots plus the household's date today (YYYY-MM-DD), which the server uses for the flags. */
+export interface StockLotsResponse {
+  lots: StockLot[]
+  today: string
+}
+
 /** One Ingredient's Stock. */
 export interface IngredientStock {
   ingredientId: number
@@ -44,7 +50,7 @@ export interface WasteRecord {
   ingredientId: number | null
   quantity: number
   wastedOn: string
-  reason: 'spoiled' | 'leftover_expired'
+  reason: 'spoiled' | 'leftover_discarded'
   lotId: number | null
 }
 
@@ -54,7 +60,7 @@ export interface AddLotInput {
   purchased?: string
 }
 
-/** An Ingredient the person can pick when adding a Stock Lot. */
+/** An Ingredient the User can pick when adding a Stock Lot. */
 export interface IngredientChoice {
   id: number
   name: string

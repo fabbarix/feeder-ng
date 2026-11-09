@@ -281,3 +281,71 @@ func TestStockChangesPublishOnStockTopic(t *testing.T) {
 		t.Fatal("no stock event after adding a Stock Lot")
 	}
 }
+
+func TestLotsAndSpoiledResponsesCarryHouseholdTodayAndFlags(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	thighs := seed(t, env, "chicken thighs", "g", 4)
+	milk := seed(t, env, "milk", "ml", nil)
+	var old, soon, far, none lot
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 100, "purchased": "2026-11-01"}).MustJSON(t, &old)  // off 11-05
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 200, "purchased": "2026-11-08"}).MustJSON(t, &soon) // off 11-12: today+3
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 300, "purchased": "2026-11-09"}).MustJSON(t, &far)  // off 11-13: today+4
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": milk, "quantity": 1000}).MustJSON(t, &none)
+
+	var all struct {
+		Today string `json:"today"`
+		Lots  []lot  `json:"lots"`
+	}
+	c.Get("/api/stock/lots").MustJSON(t, &all)
+	if all.Today != "2026-11-09" {
+		t.Fatalf("lots today = %q, want the household date 2026-11-09", all.Today)
+	}
+	want := map[int64][2]bool{old.ID: {true, false}, soon.ID: {false, true}, far.ID: {false, false}, none.ID: {false, false}}
+	if len(all.Lots) != 4 {
+		t.Fatalf("lots = %+v", all.Lots)
+	}
+	for _, l := range all.Lots {
+		if w := want[l.ID]; l.Spoiled != w[0] || l.UseSoon != w[1] {
+			t.Errorf("lot %d: spoiled=%v useSoon=%v, want %v", l.ID, l.Spoiled, l.UseSoon, w)
+		}
+	}
+
+	var sp struct {
+		Today string `json:"today"`
+		Lots  []lot  `json:"lots"`
+	}
+	c.Get("/api/stock/spoiled").MustJSON(t, &sp)
+	if sp.Today != "2026-11-09" || len(sp.Lots) != 1 || sp.Lots[0].ID != old.ID || !sp.Lots[0].Spoiled || sp.Lots[0].UseSoon {
+		t.Fatalf("spoiled = %+v", sp)
+	}
+
+	// An empty spoiled list still says what day it is.
+	c.Post(fmt.Sprintf("/api/stock/lots/%d/throw-out", old.ID), nil)
+	var none2 struct {
+		Today string `json:"today"`
+		Lots  []lot  `json:"lots"`
+	}
+	c.Get("/api/stock/spoiled").MustJSON(t, &none2)
+	if none2.Today != "2026-11-09" || len(none2.Lots) != 0 {
+		t.Fatalf("empty spoiled = %+v", none2)
+	}
+}
+
+func TestTotalsUseSoonAndSpoiledCountFollowTheServerRule(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	thighs := seed(t, env, "chicken thighs", "g", 4)
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 100, "purchased": "2026-11-01"}) // spoiled
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 100, "purchased": "2026-11-09"}) // off 11-13: not use soon
+	var list struct {
+		Ingredients []struct {
+			UseSoon      bool `json:"useSoon"`
+			SpoiledCount int  `json:"spoiledCount"`
+		} `json:"ingredients"`
+	}
+	c.Get("/api/stock").MustJSON(t, &list)
+	if len(list.Ingredients) != 1 || list.Ingredients[0].UseSoon || list.Ingredients[0].SpoiledCount != 1 {
+		t.Fatalf("totals = %+v", list)
+	}
+}

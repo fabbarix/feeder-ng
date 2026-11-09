@@ -17,7 +17,7 @@ function wrapper() {
 }
 
 beforeEach(() => {
-  api.spoiled.mockReset().mockResolvedValue([makeLot({ id: 3 })])
+  api.spoiled.mockReset().mockResolvedValue({ lots: [makeLot({ id: 3 })], today: '2026-11-09' })
   api.throwOut.mockReset().mockResolvedValue({ id: 1 })
   api.keep.mockReset().mockResolvedValue(makeLot({ id: 3 }))
 })
@@ -28,6 +28,13 @@ describe('useSpoiledLots', () => {
     const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.data).toHaveLength(1))
     expect(result.current.data?.[0]?.id).toBe(3)
+  })
+
+  it('exposes the household date the server sent', async () => {
+    const { Wrapper } = wrapper()
+    const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+    expect(result.current.today).toBe('2026-11-09')
   })
 
   it('throwOut calls the API and refreshes Stock', async () => {

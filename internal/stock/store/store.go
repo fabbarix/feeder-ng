@@ -28,8 +28,8 @@ const (
 type Reason string
 
 const (
-	ReasonSpoiled         Reason = "spoiled"
-	ReasonLeftoverExpired Reason = "leftover_expired"
+	ReasonSpoiled           Reason = "spoiled"
+	ReasonLeftoverDiscarded Reason = "leftover_discarded"
 )
 
 var (
@@ -225,6 +225,15 @@ func (s *Store) Update(ctx context.Context, ingredientID int64, fn func([]stock.
 	return saved, nil
 }
 
+// UpdateTx is Update inside the caller's transaction: it never begins, commits
+// or rolls back, so the changes commit or roll back with tx. Used by Planning
+// to deduct Stock in the same transaction as the Planned Meal's Cooked change.
+// If fn returns an error, or any statement fails, the error is returned and the
+// caller is expected to roll tx back.
+func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) {
+	return nil, errors.New("stock store: UpdateTx not implemented") // STUB
+}
+
 // AddWaste records waste.
 func (s *Store) AddWaste(ctx context.Context, w WasteRecord) (WasteRecord, error) {
 	return insertWaste(ctx, s.db, w, s.now())
@@ -302,7 +311,7 @@ func (s *Store) lotByUUID(ctx context.Context, q queryer, uuid string) (StoredLo
 
 func insertWaste(ctx context.Context, q queryer, w WasteRecord, createdAt string) (WasteRecord, error) {
 	switch w.Reason {
-	case ReasonSpoiled, ReasonLeftoverExpired:
+	case ReasonSpoiled, ReasonLeftoverDiscarded:
 	default:
 		return WasteRecord{}, fmt.Errorf("stock: unknown waste reason %q", w.Reason)
 	}

@@ -55,3 +55,24 @@ Feature: Spoiled Stock Lots
     When I throw out the newest Stock Lot of "chicken thighs"
     Then the response status is 409
     And the error code is "not_spoiled"
+
+  Scenario: The spoiled list carries the household's date and the spoiled flag
+    Given I add a Stock Lot of 200 g of "chicken thighs" bought on "2026-11-01"
+    When I list the spoiled Stock Lots
+    Then the response JSON field "today" is "2026-11-09"
+    And the Stock Lot of 200 g of "chicken thighs" is flagged spoiled
+    And the Stock Lot of 200 g of "chicken thighs" is not flagged use soon
+
+  Scenario: An empty spoiled list still carries the household's date
+    When I list the spoiled Stock Lots
+    Then the response JSON field "today" is "2026-11-09"
+    And the spoiled list has 0 Stock Lots
+
+  Scenario: Stock Lots flag use soon only within 3 days of the household's date
+    Given I add a Stock Lot of 200 g of "chicken thighs" bought on "2026-11-08"
+    And I add a Stock Lot of 300 g of "chicken thighs" bought on "2026-11-09"
+    When I list the Stock Lots of "chicken thighs"
+    Then the response JSON field "today" is "2026-11-09"
+    And the Stock Lot of 200 g of "chicken thighs" is flagged use soon
+    And the Stock Lot of 200 g of "chicken thighs" is not flagged spoiled
+    And the Stock Lot of 300 g of "chicken thighs" is not flagged use soon

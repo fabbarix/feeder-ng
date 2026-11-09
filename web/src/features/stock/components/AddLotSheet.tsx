@@ -23,7 +23,7 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
   const [purchased, setPurchased] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  // The first Ingredient is the default until the person picks one.
+  // The first Ingredient is the default until the User picks one.
   const chosen = choices.find((c) => c.id === pickedId) ?? choices[0]
 
   const submit = (e: FormEvent) => {

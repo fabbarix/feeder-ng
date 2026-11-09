@@ -292,6 +292,47 @@ func stockSteps(sc *godog.ScenarioContext, w *World) {
 		return nil
 	})
 
+	// Flags and the household date in the last lots / spoiled response.
+	sc.Step(`^I list the Stock Lots of "([^"]*)"$`, func(name string) error {
+		id, err := ingID(name)
+		if err != nil {
+			return err
+		}
+		w.Last = w.Client.Get(fmt.Sprintf("/api/stock/lots?ingredientId=%d", id))
+		return nil
+	})
+	flag := func(q, name, field string, want bool) error {
+		qty, _ := strconv.ParseFloat(q, 64)
+		id, err := ingID(name)
+		if err != nil {
+			return err
+		}
+		var out struct {
+			Lots []map[string]any `json:"lots"`
+		}
+		if err := json(&out); err != nil {
+			return err
+		}
+		for _, l := range out.Lots {
+			if int64(l["ingredientId"].(float64)) == id && l["quantity"].(float64) == qty {
+				if got, _ := l[field].(bool); got != want {
+					return fmt.Errorf("lot of %v %q: %s = %v, want %v; body %s", q, name, field, got, want, w.Last.Body)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("no Stock Lot of %s %q in %s", q, name, w.Last.Body)
+	}
+	for _, f := range []struct{ text, field string }{{"spoiled", "spoiled"}, {"use soon", "useSoon"}} {
+		field := f.field
+		sc.Step(`^the Stock Lot of ([\d.]+) (?:g|ml|piece) of "([^"]*)" is flagged `+f.text+`$`, func(q, name string) error {
+			return flag(q, name, field, true)
+		})
+		sc.Step(`^the Stock Lot of ([\d.]+) (?:g|ml|piece) of "([^"]*)" is not flagged `+f.text+`$`, func(q, name string) error {
+			return flag(q, name, field, false)
+		})
+	}
+
 	// Spoiled.
 	sc.Step(`^(\d+) days go by in the kitchen$`, func(n int) { w.Ensure().Clock.Advance(time.Duration(n) * 24 * time.Hour) })
 	sc.Step(`^I list the spoiled Stock Lots$`, func() { w.Ensure(); w.Last = w.Client.Get("/api/stock/spoiled") })

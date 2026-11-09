@@ -6,8 +6,23 @@ import (
 	"sort"
 )
 
-// UseSoonDays is how many days ahead a lot counts as "use soon".
+// UseSoonDays is how many days ahead a lot counts as "use soon": a lot that
+// goes off today or within the next 3 days (and has not gone off yet).
 const UseSoonDays = 3
+
+// IsSpoiled reports whether the lot has gone off: it has a go-off date before
+// today. A lot is still fine on its go-off date; a lot with no go-off date is
+// never spoiled. This is the single definition the service and Spoiled share.
+func IsSpoiled(lot Lot, today Date) bool {
+	return false // STUB: Developer implements (tests first)
+}
+
+// IsUseSoon reports whether the lot should be used soon: it has a go-off date
+// from today up to today+UseSoonDays inclusive. A spoiled lot is not "use soon"
+// (it is spoiled), and a lot with no go-off date never is.
+func IsUseSoon(lot Lot, today Date) bool {
+	return false // STUB: Developer implements (tests first)
+}
 
 // FormatQuantity writes a Base Unit quantity as text: "300 g", "1.5 ml",
 // "1 piece", "2 pieces". At most 2 decimals, trailing zeros trimmed.

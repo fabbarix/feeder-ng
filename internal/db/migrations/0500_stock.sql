@@ -18,7 +18,7 @@ CREATE TABLE stock_waste (
     ingredient_id INTEGER REFERENCES ingredients(id),
     quantity      REAL    NOT NULL CHECK (quantity >= 0),
     wasted_on     TEXT    NOT NULL,
-    reason        TEXT    NOT NULL CHECK (reason IN ('spoiled', 'leftover_expired')),
+    reason        TEXT    NOT NULL CHECK (reason IN ('spoiled', 'leftover_discarded')),
     lot_id        INTEGER,
     created_at    TEXT    NOT NULL
 );

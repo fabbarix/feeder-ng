@@ -48,7 +48,7 @@ Feature: Stock Lots
     Then the response status is 422
     And the error code is "unknown_ingredient"
 
-  Scenario: Stock is private to signed-in people
+  Scenario: Stock is private to Users
     Given I am not signed in
     When I GET "/api/stock"
     Then the response status is 401

@@ -231,7 +231,7 @@ func TestUpdateRecordsWasteInSameTransaction(t *testing.T) {
 func TestWasteRangeAndLeftoverWithoutIngredient(t *testing.T) {
 	f := setup(t)
 	for _, w := range []store.WasteRecord{
-		{Quantity: 2, WastedOn: "2026-11-01", Reason: store.ReasonLeftoverExpired},
+		{Quantity: 2, WastedOn: "2026-11-01", Reason: store.ReasonLeftoverDiscarded},
 		{IngredientID: &f.milk, Quantity: 300, WastedOn: "2026-11-05", Reason: store.ReasonSpoiled},
 		{IngredientID: &f.milk, Quantity: 100, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled},
 	} {
@@ -240,7 +240,7 @@ func TestWasteRangeAndLeftoverWithoutIngredient(t *testing.T) {
 		}
 	}
 	all, _ := f.st.Waste(ctx, "", "")
-	if len(all) != 3 || all[0].IngredientID != nil || all[0].Reason != store.ReasonLeftoverExpired {
+	if len(all) != 3 || all[0].IngredientID != nil || all[0].Reason != store.ReasonLeftoverDiscarded {
 		t.Fatalf("all = %+v", all)
 	}
 	mid, _ := f.st.Waste(ctx, "2026-11-05", "2026-11-09")
@@ -257,5 +257,98 @@ func TestAddWasteRejectsUnknownReason(t *testing.T) {
 	f := setup(t)
 	if _, err := f.st.AddWaste(ctx, store.WasteRecord{Quantity: 1, WastedOn: "2026-11-09", Reason: "boredom"}); err == nil {
 		t.Fatal("expected an error for an unknown reason")
+	}
+}
+
+// deductTx takes qty out of the Ingredient's lots inside tx.
+func (f fixture) deductTx(t *testing.T, tx *sql.Tx, ing int64, qty float64) {
+	t.Helper()
+	_, err := f.st.UpdateTx(ctx, tx, ing, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: stock.Deduct(lots, qty).Lots}, nil
+	})
+	if err != nil {
+		t.Fatalf("UpdateTx: %v", err)
+	}
+}
+
+func quantityOf(t *testing.T, f fixture, ing int64) float64 {
+	t.Helper()
+	lots, err := f.st.Lots(ctx, ing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sum float64
+	for _, l := range lots {
+		sum += l.Quantity
+	}
+	return sum
+}
+
+func TestUpdateTxCommitsWithTheCallersTransaction(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 300, "2026-11-01", "2026-11-12")
+	f.add(t, f.milk, 1000, "2026-11-01", stock.None)
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.deductTx(t, tx, f.thighs, 100)
+	f.deductTx(t, tx, f.milk, 250)
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if got := quantityOf(t, f, f.thighs); got != 200 {
+		t.Errorf("thighs = %v, want 200", got)
+	}
+	if got := quantityOf(t, f, f.milk); got != 750 {
+		t.Errorf("milk = %v, want 750", got)
+	}
+}
+
+func TestUpdateTxRollsBackWithTheCallersTransaction(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 300, "2026-11-01", "2026-11-12")
+	f.add(t, f.milk, 1000, "2026-11-01", stock.None)
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.deductTx(t, tx, f.thighs, 100)
+	f.deductTx(t, tx, f.milk, 250)
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if quantityOf(t, f, f.thighs) != 300 || quantityOf(t, f, f.milk) != 1000 {
+		t.Fatalf("rollback left thighs=%v milk=%v", quantityOf(t, f, f.thighs), quantityOf(t, f, f.milk))
+	}
+}
+
+func TestUpdateTxReturnsFnErrorAndRecordsWasteInTheCallersTransaction(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 300, "2026-11-01", "2026-11-12")
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := f.st.UpdateTx(ctx, tx, f.thighs, func([]stock.Lot) (store.Mutation, error) {
+		return store.Mutation{}, stock.ErrNegativeTotal
+	}); err != stock.ErrNegativeTotal {
+		t.Fatalf("err = %v, want fn's error as is", err)
+	}
+	ing := f.thighs
+	if _, err := f.st.UpdateTx(ctx, tx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: nil, Waste: []store.WasteRecord{{IngredientID: &ing, Quantity: 300, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled}}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if recs, _ := f.st.Waste(ctx, "", ""); len(recs) != 0 {
+		t.Fatalf("waste survived the rollback: %+v", recs)
+	}
+	if quantityOf(t, f, f.thighs) != 300 {
+		t.Fatal("lot changed despite rollback")
 	}
 }

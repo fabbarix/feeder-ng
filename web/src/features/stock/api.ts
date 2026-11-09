@@ -1,12 +1,12 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
-import type { AddLotInput, IngredientStock, StockLot, StockWarning, WasteRecord } from './types'
+import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse, StockWarning, WasteRecord } from './types'
 
 export interface StockApi {
   totals(): Promise<IngredientStock[]>
-  lots(ingredientId?: number): Promise<StockLot[]>
+  lots(ingredientId?: number): Promise<StockLotsResponse>
   addLot(input: AddLotInput): Promise<StockLot>
   setTotal(ingredientId: number, total: number): Promise<{ ingredient: IngredientStock; lots: StockLot[] }>
-  spoiled(): Promise<StockLot[]>
+  spoiled(): Promise<StockLotsResponse>
   throwOut(lotId: number): Promise<WasteRecord>
   keep(lotId: number): Promise<StockLot>
   cooked(needs: { ingredientId: number; quantity: number }[]): Promise<StockWarning[]>
@@ -18,9 +18,9 @@ export function createStockApi(client: HttpClient): StockApi {
     async totals() {
       return (await client.get<{ ingredients: IngredientStock[] }>('/api/stock')).ingredients
     },
-    async lots(ingredientId) {
+    lots(ingredientId) {
       const path = ingredientId === undefined ? '/api/stock/lots' : `/api/stock/lots?ingredientId=${ingredientId}`
-      return (await client.get<{ lots: StockLot[] }>(path)).lots
+      return client.get<StockLotsResponse>(path)
     },
     addLot(input) {
       return client.post<StockLot>('/api/stock/lots', input)
@@ -28,8 +28,8 @@ export function createStockApi(client: HttpClient): StockApi {
     setTotal(ingredientId, total) {
       return client.put<{ ingredient: IngredientStock; lots: StockLot[] }>(`/api/stock/ingredients/${ingredientId}/total`, { total })
     },
-    async spoiled() {
-      return (await client.get<{ lots: StockLot[] }>('/api/stock/spoiled')).lots
+    spoiled() {
+      return client.get<StockLotsResponse>('/api/stock/spoiled')
     },
     throwOut(lotId) {
       return client.post<WasteRecord>(`/api/stock/lots/${lotId}/throw-out`)

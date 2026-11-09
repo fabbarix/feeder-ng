@@ -16,7 +16,7 @@ export function LotList({ lots, today, system = 'metric' }: LotListProps): React
   return (
     <ul className="lot-list">
       {lots.map((lot) => {
-        const go = describeGoOff(lot.goesOff, today)
+        const go = describeGoOff(lot, today)
         return (
           <li key={lot.id} className="lot-list__row">
             <span className="lot-list__amount">{formatQuantity(lot.quantity, lot.baseUnit, system)}</span>

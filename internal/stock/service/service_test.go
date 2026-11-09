@@ -2,7 +2,9 @@ package service_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -44,7 +46,24 @@ func (p *fakePub) Publish(topic string, data any) {
 }
 func (p *fakePub) count() int { p.mu.Lock(); defer p.mu.Unlock(); return len(p.events) }
 
+// failingIngredients fails the lookup of one Ingredient with a database-style
+// error (not ErrUnknownIngredient), to stop a Cooked deduction partway.
+type failingIngredients struct {
+	service.Ingredients
+	failID int64
+}
+
+var errLookup = errors.New("ingredient lookup failed")
+
+func (f failingIngredients) Ingredient(ctx context.Context, id int64) (service.IngredientInfo, error) {
+	if id == f.failID {
+		return service.IngredientInfo{}, errLookup
+	}
+	return f.Ingredients.Ingredient(ctx, id)
+}
+
 type fixture struct {
+	db     *sql.DB
 	svc    *service.Service
 	st     *store.Store
 	pub    *fakePub
@@ -55,11 +74,17 @@ type fixture struct {
 
 func setup(t *testing.T) fixture {
 	t.Helper()
+	return setupWith(t, nil)
+}
+
+// setupWith builds the fixture; wrap, if set, wraps the Ingredient lookup (given the fixture's ids).
+func setupWith(t *testing.T, wrap func(f fixture, ings service.Ingredients) service.Ingredients) fixture {
+	t.Helper()
 	d := stocktest.NewDB(t)
 	st := store.New(d, clock.NewFake(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)))
 	four, twentyOne := 4, 21
 	f := fixture{
-		st: st, pub: &fakePub{},
+		db: d, st: st, pub: &fakePub{},
 		thighs: stocktest.SeedIngredient(t, d, "chicken thighs", "g", &four),
 		milk:   stocktest.SeedIngredient(t, d, "milk", "ml", nil),
 		eggs:   stocktest.SeedIngredient(t, d, "eggs", "piece", &twentyOne),
@@ -69,7 +94,11 @@ func setup(t *testing.T) fixture {
 		f.milk:   {ID: f.milk, Name: "milk", BaseUnit: "ml"},
 		f.eggs:   {ID: f.eggs, Name: "eggs", BaseUnit: "piece", ShelfLifeDays: &twentyOne},
 	}
-	f.svc = service.New(st, ings, func(context.Context) (stock.Date, error) { return today, nil }, f.pub)
+	var lookup service.Ingredients = ings
+	if wrap != nil {
+		lookup = wrap(f, ings)
+	}
+	f.svc = service.New(st, lookup, func(context.Context) (stock.Date, error) { return today, nil }, f.pub)
 	return f
 }
 
@@ -433,7 +462,7 @@ func TestProjectedGroupsLotsPerIngredient(t *testing.T) {
 
 func TestRecordWasteForExpiredLeftover(t *testing.T) {
 	f := setup(t)
-	rec, err := f.svc.RecordWaste(ctx, store.WasteRecord{Quantity: 2, WastedOn: today, Reason: store.ReasonLeftoverExpired})
+	rec, err := f.svc.RecordWaste(ctx, store.WasteRecord{Quantity: 2, WastedOn: today, Reason: store.ReasonLeftoverDiscarded})
 	if err != nil || rec.ID == 0 || rec.IngredientID != nil {
 		t.Fatalf("record = %+v %v", rec, err)
 	}
@@ -442,5 +471,182 @@ func TestRecordWasteForExpiredLeftover(t *testing.T) {
 	}
 	if _, err := f.svc.RecordWaste(ctx, store.WasteRecord{Quantity: 1, WastedOn: today, Reason: "boredom"}); !errors.Is(err, service.ErrInvalid) {
 		t.Errorf("bad reason: %v", err)
+	}
+}
+
+// failMilkUpdates makes any UPDATE of a milk lot abort, a database failure that
+// strikes after earlier Ingredients have already been written.
+func failMilkUpdates(t *testing.T, f fixture) {
+	t.Helper()
+	_, err := f.db.Exec(fmt.Sprintf(`CREATE TRIGGER fail_milk BEFORE UPDATE ON stock_lots
+		WHEN NEW.ingredient_id = %d BEGIN SELECT RAISE(ABORT, 'injected failure'); END`, f.milk))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func stocked(t *testing.T) fixture {
+	t.Helper()
+	f := setup(t)
+	f.add(t, f.thighs, 600, "2026-11-08")
+	f.add(t, f.milk, 1000, "")
+	f.add(t, f.eggs, 6, "2026-11-09")
+	return f
+}
+
+func assertUntouched(t *testing.T, f fixture) {
+	t.Helper()
+	if total(t, f, f.thighs) != 600 || total(t, f, f.milk) != 1000 || total(t, f, f.eggs) != 6 {
+		t.Fatalf("Stock changed: thighs=%v milk=%v eggs=%v", total(t, f, f.thighs), total(t, f, f.milk), total(t, f, f.eggs))
+	}
+}
+
+// DeductForCooked is all-or-nothing across Ingredients (one transaction).
+func TestDeductForCookedIsAllOrNothingWhenALaterIngredientLookupFails(t *testing.T) {
+	f := setupWith(t, func(f fixture, ings service.Ingredients) service.Ingredients {
+		return failingIngredients{Ingredients: ings, failID: f.eggs}
+	})
+	f.add(t, f.thighs, 600, "2026-11-08")
+	f.add(t, f.milk, 1000, "")
+	f.add(t, f.eggs, 6, "2026-11-09")
+	before := f.pub.count()
+	_, err := f.svc.DeductForCooked(ctx, []stock.Need{
+		{IngredientID: f.thighs, Quantity: 200},
+		{IngredientID: f.milk, Quantity: 100},
+		{IngredientID: f.eggs, Quantity: 2},
+	})
+	if !errors.Is(err, errLookup) {
+		t.Fatalf("err = %v, want the lookup failure", err)
+	}
+	assertUntouched(t, f)
+	if f.pub.count() != before {
+		t.Fatal("a failed deduction must publish nothing")
+	}
+}
+
+func TestDeductForCookedIsAllOrNothingWhenTheDatabaseFailsPartway(t *testing.T) {
+	f := stocked(t)
+	failMilkUpdates(t, f)
+	before := f.pub.count()
+	_, err := f.svc.DeductForCooked(ctx, []stock.Need{
+		{IngredientID: f.thighs, Quantity: 200}, // written first
+		{IngredientID: f.milk, Quantity: 100},   // aborts
+	})
+	if err == nil {
+		t.Fatal("want the injected failure")
+	}
+	assertUntouched(t, f)
+	if f.pub.count() != before {
+		t.Fatal("a failed deduction must publish nothing")
+	}
+}
+
+func TestDeductForCookedTxCommitsWithTheCaller(t *testing.T) {
+	f := stocked(t)
+	before := f.pub.count()
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := f.svc.DeductForCookedTx(ctx, tx, []stock.Need{
+		{IngredientID: f.thighs, Quantity: 200},
+		{IngredientID: f.milk, Quantity: 100},
+		{IngredientID: f.eggs, Quantity: 10}, // 4 short
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Warnings) != 1 || d.Warnings[0].IngredientID != f.eggs || d.Warnings[0].Shortfall != 4 {
+		t.Fatalf("warnings = %+v", d.Warnings)
+	}
+	if len(d.ChangedIngredientIDs) != 3 {
+		t.Fatalf("changed = %v, want all three Ingredients", d.ChangedIngredientIDs)
+	}
+	if f.pub.count() != before {
+		t.Fatal("the Tx variant must not publish; the caller does after commit")
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if total(t, f, f.thighs) != 400 || total(t, f, f.milk) != 900 || total(t, f, f.eggs) != 0 {
+		t.Fatalf("after commit: thighs=%v milk=%v eggs=%v", total(t, f, f.thighs), total(t, f, f.milk), total(t, f, f.eggs))
+	}
+	f.svc.PublishDeduction(d)
+	if f.pub.count() != before+1 {
+		t.Fatalf("events %d -> %d, want exactly one `stock` event", before, f.pub.count())
+	}
+}
+
+func TestDeductForCookedTxRollsBackWithTheCaller(t *testing.T) {
+	f := stocked(t)
+	before := f.pub.count()
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.DeductForCookedTx(ctx, tx, []stock.Need{
+		{IngredientID: f.thighs, Quantity: 200},
+		{IngredientID: f.milk, Quantity: 100},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	assertUntouched(t, f)
+	if f.pub.count() != before {
+		t.Fatal("nothing may be published for a rolled-back deduction")
+	}
+}
+
+func TestDeductForCookedTxFailureLeavesTheCallersTransactionToRollBack(t *testing.T) {
+	f := stocked(t)
+	failMilkUpdates(t, f)
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.svc.DeductForCookedTx(ctx, tx, []stock.Need{
+		{IngredientID: f.thighs, Quantity: 200},
+		{IngredientID: f.milk, Quantity: 100},
+	})
+	if err == nil {
+		t.Fatal("want the injected failure")
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatalf("the service must not have ended the caller's transaction: %v", err)
+	}
+	assertUntouched(t, f)
+}
+
+func TestDeductForCookedTxOnAClosedTransactionFails(t *testing.T) {
+	f := stocked(t)
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.DeductForCookedTx(ctx, tx, []stock.Need{{IngredientID: f.thighs, Quantity: 200}}); err == nil {
+		t.Fatal("want an error from a closed transaction")
+	}
+	assertUntouched(t, f)
+}
+
+func TestPublishDeductionIsSilentWhenNothingChanged(t *testing.T) {
+	f := setup(t)
+	before := f.pub.count()
+	f.svc.PublishDeduction(service.Deduction{})
+	if f.pub.count() != before {
+		t.Fatal("an empty Deduction must not publish")
+	}
+}
+
+func TestTodayIsTheHouseholdDate(t *testing.T) {
+	f := setup(t)
+	got, err := f.svc.Today(ctx)
+	if err != nil || got != today {
+		t.Fatalf("Today = %v %v", got, err)
 	}
 }

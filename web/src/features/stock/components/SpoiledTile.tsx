@@ -29,7 +29,7 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
           <li key={lot.id} className="spoiled-tile__row">
             <span className="spoiled-tile__name">{lot.ingredientName}</span>
             <span className="spoiled-tile__amount">{formatQuantity(lot.quantity, lot.baseUnit, system)}</span>
-            <span className="spoiled-tile__when">{describeGoOff(lot.goesOff, today).label}</span>
+            <span className="spoiled-tile__when">{describeGoOff(lot, today).label}</span>
             <Button variant="tonal" size="md" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
               {strings.throwOut}
             </Button>

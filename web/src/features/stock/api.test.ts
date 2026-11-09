@@ -18,10 +18,10 @@ describe('createStockApi', () => {
     expect(http.get).toHaveBeenCalledWith('/api/stock')
   })
 
-  it('lots unwraps {lots} and filters by Ingredient', async () => {
-    const get = vi.fn().mockResolvedValue({ lots: [{ id: 3 }] })
+  it('lots returns the lots with the household date and filters by Ingredient', async () => {
+    const get = vi.fn().mockResolvedValue({ lots: [{ id: 3 }], today: '2026-11-09' })
     const api = createStockApi({ get } as unknown as HttpClient)
-    expect(await api.lots(7)).toEqual([{ id: 3 }])
+    expect(await api.lots(7)).toEqual({ lots: [{ id: 3 }], today: '2026-11-09' })
     expect(get).toHaveBeenCalledWith('/api/stock/lots?ingredientId=7')
     await api.lots()
     expect(get).toHaveBeenLastCalledWith('/api/stock/lots')
@@ -38,10 +38,10 @@ describe('createStockApi', () => {
   })
 
   it('spoiled, throwOut, keep and cooked use the documented routes', async () => {
-    const get = vi.fn().mockResolvedValue({ lots: [] })
+    const get = vi.fn().mockResolvedValue({ lots: [], today: '2026-11-09' })
     const post = vi.fn().mockResolvedValueOnce({ id: 1 }).mockResolvedValueOnce({ id: 2 }).mockResolvedValueOnce({ warnings: [{ message: 'm' }] })
     const api = createStockApi({ get, post } as unknown as HttpClient)
-    expect(await api.spoiled()).toEqual([])
+    expect(await api.spoiled()).toEqual({ lots: [], today: '2026-11-09' })
     expect(get).toHaveBeenCalledWith('/api/stock/spoiled')
     await api.throwOut(4)
     expect(post).toHaveBeenCalledWith('/api/stock/lots/4/throw-out')

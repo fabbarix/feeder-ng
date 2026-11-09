@@ -117,3 +117,55 @@ func TestProjectedAvailableOnDate(t *testing.T) {
 		t.Errorf("unknown Ingredient = %v, want 0", got)
 	}
 }
+
+func TestIsSpoiledAndIsUseSoonPredicates(t *testing.T) {
+	today := Date("2026-11-09")
+	tests := []struct {
+		name    string
+		goesOff Date
+		spoiled bool
+		useSoon bool
+	}{
+		{"went off yesterday", "2026-11-08", true, false},
+		{"went off long ago", "2026-10-01", true, false},
+		{"goes off today is still fine, use soon", "2026-11-09", false, true},
+		{"tomorrow", "2026-11-10", false, true},
+		{"last day of the window (today+3)", "2026-11-12", false, true},
+		{"just outside the window (today+4)", "2026-11-13", false, false},
+		{"far away", "2027-01-01", false, false},
+		{"no go-off date", None, false, false},
+	}
+	for _, tc := range tests {
+		l := lot(1, 100, "2026-11-01", tc.goesOff)
+		if got := IsSpoiled(l, today); got != tc.spoiled {
+			t.Errorf("%s: IsSpoiled = %v, want %v", tc.name, got, tc.spoiled)
+		}
+		if got := IsUseSoon(l, today); got != tc.useSoon {
+			t.Errorf("%s: IsUseSoon = %v, want %v", tc.name, got, tc.useSoon)
+		}
+	}
+}
+
+func TestPredicatesAgreeWithSpoiledAndUseSoonLists(t *testing.T) {
+	today := Date("2026-11-09")
+	var lots []Lot
+	for i := -3; i <= 6; i++ {
+		lots = append(lots, lot(int64(i+10), 10, "2026-11-01", today.AddDays(i)))
+	}
+	lots = append(lots, lot(99, 10, "2026-11-01", None))
+	spoiled, soon := map[int64]bool{}, map[int64]bool{}
+	for _, l := range Spoiled(lots, today) {
+		spoiled[l.ID] = true
+	}
+	for _, l := range UseSoon(lots, today, UseSoonDays) {
+		soon[l.ID] = true
+	}
+	for _, l := range lots {
+		if IsSpoiled(l, today) != spoiled[l.ID] || IsUseSoon(l, today) != soon[l.ID] {
+			t.Errorf("lot %d (goes off %s): predicates disagree with Spoiled/UseSoon", l.ID, l.GoesOff)
+		}
+		if IsSpoiled(l, today) && IsUseSoon(l, today) {
+			t.Errorf("lot %d is both spoiled and use soon", l.ID)
+		}
+	}
+}

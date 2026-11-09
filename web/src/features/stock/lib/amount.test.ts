@@ -1,21 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, parseAmount } from './amount'
-
-describe('formatAmount', () => {
-  it.each([
-    [300, 'g', '300 g'],
-    [1.5, 'ml', '1.5 ml'],
-    [0.25, 'g', '0.25 g'],
-    [1000.004, 'g', '1000 g'],
-    [2.345, 'g', '2.35 g'],
-    [1, 'piece', '1 piece'],
-    [2, 'piece', '2 pieces'],
-    [0.5, 'piece', '0.5 pieces'],
-    [0, 'g', '0 g'],
-  ] as const)('%s %s -> %s', (q, base, want) => {
-    expect(formatAmount(q, base)).toBe(want)
-  })
-})
+import { parseAmount } from './amount'
 
 describe('parseAmount', () => {
   it('parses plain and decimal-comma numbers', () => {

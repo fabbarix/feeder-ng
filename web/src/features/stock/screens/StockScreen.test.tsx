@@ -6,8 +6,8 @@ import { StockScreen } from './StockScreen'
 
 const hooks = vi.hoisted(() => ({
   totals: { data: [] as unknown[], isLoading: false, error: null },
-  lots: { data: [] as unknown[], isLoading: false, error: null },
-  spoiled: { data: [] as unknown[], isLoading: false, error: null },
+  lots: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null },
+  spoiled: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null },
   throwOut: vi.fn(),
   keep: vi.fn(),
   addLot: vi.fn(),
@@ -15,7 +15,6 @@ const hooks = vi.hoisted(() => ({
 }))
 
 vi.mock('../hooks/useStock', () => ({
-  useToday: () => '2026-11-09',
   useStockTotals: () => hooks.totals,
   useStockLots: () => hooks.lots,
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: hooks.throwOut, keep: hooks.keep }),

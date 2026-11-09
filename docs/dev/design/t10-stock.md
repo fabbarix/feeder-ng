@@ -12,9 +12,12 @@ Scope: functional-spec §6 (Stock), ADR 0003, GLOSSARY *Stock*, *Stock Lot*, *St
 - **Go-off date** of a new lot = `stock.NewLot(purchased, Shelf Life)`; `purchased` defaults to today and may be set (past dates allowed, future rejected `validation_failed`).
 - **Idempotent scans**: `client_uuid` is UNIQUE and nullable. Adding a lot with a `clientUuid` that already exists returns the existing lot with status 200 (first time 201), no second lot, no event.
 - **Product / Shop** are plain nullable INTEGER columns (`product_id`, `shop_id`), no foreign keys (T5 owns those tables; the scan team fills them). The API stores and returns them untouched.
-- **Waste** table `stock_waste` (Ingredient, quantity, date, reason `spoiled | leftover_expired`, optional lot id). `RecordWaste` is also exposed to Planning for auto-discarded Leftovers (`leftover_expired`; `ingredient_id` is nullable for those, see QUESTIONS in the report). Throw out writes `spoiled`. The zero-waste streak reads this table later (not this team).
+- **Waste** table `stock_waste` (Ingredient, quantity, date, reason `spoiled | leftover_discarded`, optional lot id). `RecordWaste` is also exposed to Planning for auto-discarded Leftovers (`leftover_discarded`; `ingredient_id` is nullable for those, see QUESTIONS in the report). Throw out writes `spoiled`. The zero-waste streak reads this table later (not this team).
 - **Throw out / Keep** are only allowed on a spoiled lot (go-off before today): otherwise `409 not_spoiled`. Keep = `stock.Keep` (+1 day from the existing go-off date, so a lot several days overdue stays spoiled and is listed again).
 - **DeductForCooked never blocks**: unknown or non-positive needs are skipped, shortfalls become warnings, Stock floors at 0. It returns warnings, not an error, for short Stock; an error only for database failure. Idempotency (not deducting twice) is Planning's job (it calls once on the Cooked transition).
+- **DeductForCooked is all-or-nothing across Ingredients.** Every Ingredient's deduction runs in ONE transaction: if any step fails (a lookup error that is not "unknown Ingredient", a database error), nothing is written and nothing is published. `DeductForCookedTx(ctx, tx, needs)` is the same work inside the caller's transaction, for Planning to call in the transaction that marks the Planned Meal Cooked: it never begins, commits, rolls back or publishes; on error the caller rolls back; on commit the deductions are final, and the caller then calls `PublishDeduction(d)`. `DeductForCooked` = begin, `DeductForCookedTx`, commit, `PublishDeduction`. The store gains `UpdateTx(ctx, tx, ingredientID, fn)`, `Update` minus begin/commit (`Update` becomes begin + `UpdateTx` + commit). Developer hint: resolve all Ingredients before the first write, so a lookup failure does not even start writing, and never use another database handle while the write transaction is open if the pool is a single connection.
+- **Household "today" and flags come from the server.** `GET /api/stock/lots` and `GET /api/stock/spoiled` return `{lots, today}` with `today` the household date (`YYYY-MM-DD`, the same `Today` the service uses), even when `lots` is empty. Each lot carries `spoiled` and `useSoon`; each Ingredient total carries `useSoon` and `spoiledCount`. The web app words go-off dates against that `today` and takes the colour from the flags: it has no copy of the use-soon rule and no device-clock `useToday`.
+- **Predicates.** `stock.IsSpoiled(lot, today)` (go-off before today; a lot is fine on its go-off date; no go-off date is never spoiled) and `stock.IsUseSoon(lot, today)` (go-off from today to today+`UseSoonDays` inclusive, so 3 days; never for a spoiled lot or one with no go-off date) are the only definitions; the service's `LotView`, `IngredientStock`, `Spoiled`, `spoiledLot` and `stock.UseSoon`/`stock.Spoiled` agree with them.
 - **One-tap Stock correction** = the existing Set total route, prefilled by the SPA with the post-cook total (0 when floored). No separate endpoint. Dismissing the notice changes nothing (Stock is already floored).
 - **Use soon**: lot goes off today or within `stock.UseSoonDays` (3) days and is not yet spoiled. Shown with the fixed spoil status colour (`tone="spoil"`), never an accent colour.
 - **Projected lots** read model: `service.Projected(ctx)` / `GET /api/stock/projected` returns the current lots grouped by Ingredient in consumption order with go-off dates. Planner and Shopping List adjust it themselves (planned purchases and consumption); `stock.Project(lots).Available(ingredient, on)` gives the Shopping List's "lots still within their go-off date on the date each meal needs them".
@@ -40,7 +43,7 @@ CREATE TABLE stock_waste (
   ingredient_id INTEGER REFERENCES ingredients(id),
   quantity REAL NOT NULL CHECK (quantity >= 0),
   wasted_on TEXT NOT NULL,                           -- YYYY-MM-DD
-  reason TEXT NOT NULL CHECK (reason IN ('spoiled','leftover_expired')),
+  reason TEXT NOT NULL CHECK (reason IN ('spoiled','leftover_discarded')),
   lot_id INTEGER,                                    -- informational, no FK (the lot is gone)
   created_at TEXT NOT NULL);
 ```
@@ -48,7 +51,9 @@ CREATE TABLE stock_waste (
 ## Go layout and signatures (tests rely on these)
 ```go
 // internal/stock (pure) message.go
-const UseSoonDays = 3
+const UseSoonDays = 3                                                  // today..today+3 inclusive
+func IsSpoiled(lot Lot, today Date) bool                               // GoesOff set and < today
+func IsUseSoon(lot Lot, today Date) bool                               // GoesOff set, today <= GoesOff <= today+UseSoonDays
 func FormatQuantity(q float64, base string) string                      // "300 g", "1.5 ml", "1 piece", "2 pieces"; <= 2 decimals, trailing zeros trimmed
 func ShortfallMessage(name, base string, have, need float64) string     // "Stock shows only 300 g chicken thighs, the recipe uses 800 g"; have 0: "Stock shows no chicken thighs, the recipe uses 800 g"
 func UseSoon(lots []Lot, today Date, days int) []Lot                    // GoesOff in [today, today+days], ordered by go-off then ID
@@ -60,7 +65,7 @@ func (p ProjectedStock) Available(ingredientID int64, on Date) float64  // lots 
 type Source string                        // SourceScan, SourceStockTake, SourceManual
 type StoredLot struct{ stock.Lot; Source Source; ProductID, ShopID *int64; ClientUUID string; CreatedAt time.Time }
 type NewLot struct{ IngredientID int64; Quantity float64; Purchased, GoesOff stock.Date; Source Source; ProductID, ShopID *int64; ClientUUID string }
-type Reason string                        // ReasonSpoiled, ReasonLeftoverExpired
+type Reason string                        // ReasonSpoiled, ReasonLeftoverDiscarded
 type WasteRecord struct{ ID int64; IngredientID *int64; Quantity float64; WastedOn stock.Date; Reason Reason; LotID *int64 }
 type Mutation struct{ Lots []stock.Lot; NewSource Source; Waste []WasteRecord }
 var ErrNotFound, ErrDuplicateUUID error
@@ -69,6 +74,7 @@ func (s *Store) AddLot(ctx, NewLot) (lot StoredLot, created bool, err error)   /
 func (s *Store) Lot(ctx, id int64) (StoredLot, error)                         // ErrNotFound
 func (s *Store) Lots(ctx, ingredientID int64) ([]StoredLot, error)            // 0 = all; ordered by go-off (NULL last), purchased, id
 func (s *Store) Update(ctx, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error)
+func (s *Store) UpdateTx(ctx, tx *sql.Tx, ingredientID int64, fn func([]stock.Lot) (Mutation, error)) ([]StoredLot, error) // in the caller's transaction; never commits or rolls back
 func (s *Store) AddWaste(ctx, WasteRecord) (WasteRecord, error)
 func (s *Store) Waste(ctx, from, to stock.Date) ([]WasteRecord, error)       // inclusive, empty bound = open
 // mover.go (tag t2merged): type Mover; init() registers "stock lots" with ingredient store.RegisterMover
@@ -91,7 +97,11 @@ func (s *Service) Lots(ctx, ingredientID int64) ([]LotView, error)
 func (s *Service) Spoiled(ctx) ([]LotView, error)
 func (s *Service) ThrowOut(ctx, lotID int64) (store.WasteRecord, error)    // ErrNotFound, ErrNotSpoiled
 func (s *Service) Keep(ctx, lotID int64) (LotView, error)
-func (s *Service) DeductForCooked(ctx, needs []stock.Need) ([]Warning, error)
+func (s *Service) Today(ctx) (stock.Date, error)                             // household date
+type Deduction struct{ Warnings []Warning; ChangedIngredientIDs []int64 }
+func (s *Service) DeductForCooked(ctx, needs []stock.Need) ([]Warning, error)   // own transaction, all-or-nothing, publishes after commit
+func (s *Service) DeductForCookedTx(ctx, tx *sql.Tx, needs []stock.Need) (Deduction, error) // caller's transaction; publishes nothing
+func (s *Service) PublishDeduction(d Deduction)                              // after the caller's commit; silent if nothing changed
 func (s *Service) Projected(ctx) (stock.ProjectedStock, error)
 func (s *Service) RecordWaste(ctx, in store.WasteRecord) (store.WasteRecord, error)
 func (s *Service) Waste(ctx, from, to stock.Date) ([]store.WasteRecord, error)
@@ -105,10 +115,10 @@ Lot = `{id, ingredientId, ingredientName, baseUnit, quantity, purchased, goesOff
 | Route | Result |
 |---|---|
 | `GET /api/stock` | `{ingredients:[{ingredientId, name, baseUnit, total, lotCount, nextGoesOff\|null, useSoon, spoiledCount}]}` |
-| `GET /api/stock/lots[?ingredientId=]` | `{lots:[Lot]}` |
+| `GET /api/stock/lots[?ingredientId=]` | `{today, lots:[Lot]}` |
 | `POST /api/stock/lots` `{ingredientId, quantity, purchased?, source?, productId?, shopId?, clientUuid?}` | 201 Lot (200 same Lot on repeated `clientUuid`); 422 `validation_failed` (quantity <= 0, future date, bad source, bad date); 422 `unknown_ingredient` |
 | `PUT /api/stock/ingredients/{id}/total` `{total}` | 200 `{ingredient: IngredientStock, lots:[Lot]}`; 422 `validation_failed` (negative); 422 `unknown_ingredient` |
-| `GET /api/stock/spoiled` | `{lots:[Lot]}` ordered by go-off then id |
+| `GET /api/stock/spoiled` | `{today, lots:[Lot]}` ordered by go-off then id |
 | `POST /api/stock/lots/{id}/throw-out` | 200 waste record `{id, ingredientId, quantity, wastedOn, reason, lotId}`; 404 `not_found`; 409 `not_spoiled` |
 | `POST /api/stock/lots/{id}/keep` | 200 Lot; 404; 409 `not_spoiled` |
 | `POST /api/stock/cooked` `{needs:[{ingredientId, quantity}]}` | 200 `{warnings:[{ingredientId, name, baseUnit, have, need, shortfall, message}]}`; never 4xx for short Stock. (Planning calls the service directly; the route exists for BDD and the SPA.) |
@@ -118,8 +128,8 @@ Lot = `{id, ingredientId, ingredientName, baseUnit, quantity, purchased, goesOff
 ## Frontend (`web/src/features/stock`)
 Route `/stock` (the shell already has the fixed avatar-menu item "Stock", so `index.ts` exports routes only).
 - `api.ts` (`createStockApi(http)`, `stockApi`), `types.ts`, `strings.ts`.
-- `lib/` (pure): `amount.ts` (`formatAmount(q, base)` metric-only wording; swapped for T2's `formatQuantity` with the imperial preference when merged), `view.ts` (`describeGoOff(goesOff, today)` -> `{label, tone}` ("Goes off in 2 days", "Goes off today", "Went off 3 days ago"; tone `spoil` for use-soon and spoiled, `neutral` otherwise), `sortTotals`, `parseTotal(text)` -> number or error key), `shortfall.ts` (`correctionDefault(warning)`).
-- `hooks/`: `useStock` (totals), `useStockLots(ingredientId)`, `useSpoiledLots` (list + `throwOut`, `keep`), `useStockActions` (`addLot`, `setTotal`), all react-query, invalidating `['stock']` and subscribing to the `stock` SSE topic.
+- `lib/` (pure): `amount.ts` (`parseAmount`; amounts are shown with T2's `formatQuantity`, there is no `formatAmount`), `view.ts` (`describeGoOff({goesOff, spoiled, useSoon}, today)` -> `{label, tone}` ("Goes off in 2 days", "Goes off today", "Went off 3 days ago" worded against the server's `today`; tone `spoil` when the server flags the lot `spoiled` or `useSoon`, `neutral` otherwise; no use-soon constant), `sortTotals`, `parseTotal(text)` -> number or error key), `shortfall.ts` (`correctionDefault(warning)`).
+- `hooks/`: `useStockTotals` (totals), `useStockLots(ingredientId)` (`data`, `today`), `useSpoiledLots` (`data`, `today`, `throwOut`, `keep`), `useStockActions` (`addLot`, `setTotal`), all react-query and invalidating `['stock']`. `useStockTotals`, `useStockLots` and `useSpoiledLots` all call the one `useStockLiveUpdates` helper, so they share the `stock` SSE topic subscription and the refetch on reconnect; `api.lots()`/`api.spoiled()` return `{lots, today}`.
 - `components/` (render + wire only, composed from `Tile`, `BentoGrid`, `Chip`, `BottomSheet`, `Button`, `EmptyState`, `Stepper`, `Toast`): `StockTile` (Ingredient total + use-soon `Chip tone="spoil"`), `LotList` (lot detail rows), `AddLotSheet`, `SetTotalSheet`, `SpoiledTile` (**exported for Today**: props `lots`, `onThrowOut(id)`, `onKeep(id)`; heading "Throw out or keep?"; renders nothing when no lots; spoil tone), `ShortfallNotice` (the warning text with "Correct Stock" and "Dismiss").
 - `screens/StockScreen.tsx`: `BentoGrid` of `StockTile`s (use-soon first, `lg` size), `SpoiledTile` on top when there are spoiled lots, "Add" button -> `AddLotSheet`, tile tap -> `BottomSheet` with `LotList` + "Set total". `EmptyState` when nothing in Stock ("Nothing in Stock yet").
 - `index.ts` also re-exports `SpoiledTile` and `useSpoiledLots` for the Today team.
