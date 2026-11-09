@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -72,7 +73,30 @@ func (s *Scheduler) SetZone(z ZoneFunc) {
 func (s *Scheduler) Daily(name, at string, fn JobFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if name == "" {
+		panic("scheduler: empty job name")
+	}
+	if fn == nil {
+		panic("scheduler: nil job func for " + name)
+	}
+	if _, err := parseHHMM(at); err != nil {
+		panic("scheduler: job " + name + ": " + err.Error())
+	}
+	for _, j := range s.jobs {
+		if j.name == name {
+			panic("scheduler: duplicate job " + name)
+		}
+	}
 	s.jobs = append(s.jobs, job{name: name, at: at, fn: fn})
+}
+
+// parseHHMM returns the minutes after midnight of an "HH:MM" wall-clock time.
+func parseHHMM(hhmm string) (int, error) {
+	t, err := time.Parse("15:04", hhmm)
+	if err != nil || len(hhmm) != 5 {
+		return 0, fmt.Errorf("bad time %q: want HH:MM", hhmm)
+	}
+	return t.Hour()*60 + t.Minute(), nil
 }
 
 // RunDue runs, in registration order, every job whose time today (household
@@ -81,13 +105,65 @@ func (s *Scheduler) Daily(name, at string, fn JobFunc) {
 // returned joined; they do not stop the other jobs. It returns the names of the
 // jobs that completed.
 func (s *Scheduler) RunDue(ctx context.Context) (ran []string, err error) {
-	return nil, errors.New("scheduler: RunDue not implemented")
+	s.mu.Lock()
+	jobs := append([]job(nil), s.jobs...)
+	zone := s.zone
+	s.mu.Unlock()
+
+	loc, err := zone(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("scheduler: household zone: %w", err)
+	}
+	now := s.clk.Now().In(loc)
+	day := now.Format("2006-01-02")
+	nowMinutes := now.Hour()*60 + now.Minute()
+
+	var errs []error
+	for _, j := range jobs {
+		at, _ := parseHHMM(j.at) // validated by Daily
+		if nowMinutes < at {
+			continue
+		}
+		last, err := s.runs.LastRun(ctx, j.name)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("scheduler: %s: last run: %w", j.name, err))
+			continue
+		}
+		if last == day {
+			continue
+		}
+		if err := j.fn(ctx, day); err != nil {
+			s.logger.Error("scheduled job failed", "job", j.name, "day", day, "err", err)
+			errs = append(errs, fmt.Errorf("scheduler: %s: %w", j.name, err))
+			continue
+		}
+		if err := s.runs.MarkRun(ctx, j.name, day); err != nil {
+			errs = append(errs, fmt.Errorf("scheduler: %s: mark run: %w", j.name, err))
+			continue
+		}
+		ran = append(ran, j.name)
+	}
+	return ran, errors.Join(errs...)
 }
 
 // Run calls RunDue every tick (default one minute when tick <= 0) until ctx is
 // done. It also runs once immediately, so a restart after 03:00 catches up.
 func (s *Scheduler) Run(ctx context.Context, tick time.Duration) {
-	<-ctx.Done() // stub: the developer replaces this with the loop
+	if tick <= 0 {
+		tick = time.Minute
+	}
+	t := time.NewTicker(tick)
+	defer t.Stop()
+	for {
+		if _, err := s.RunDue(ctx); err != nil && ctx.Err() == nil {
+			s.logger.Error("scheduler tick", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
 
 // SQLRunStore keeps the last-run dates in the scheduler_runs table (migration 0601).
@@ -98,12 +174,19 @@ func NewSQLRunStore(d *sql.DB) *SQLRunStore { return &SQLRunStore{db: d} }
 
 // LastRun implements RunStore.
 func (s *SQLRunStore) LastRun(ctx context.Context, job string) (string, error) {
-	return "", errors.New("scheduler: SQLRunStore not implemented")
+	var day string
+	err := s.db.QueryRowContext(ctx, `SELECT ran_on FROM scheduler_runs WHERE job = ?`, job).Scan(&day)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return day, err
 }
 
 // MarkRun implements RunStore.
 func (s *SQLRunStore) MarkRun(ctx context.Context, job, day string) error {
-	return errors.New("scheduler: SQLRunStore not implemented")
+	_, err := s.db.ExecContext(ctx, `INSERT INTO scheduler_runs (job, ran_on) VALUES (?, ?)
+		ON CONFLICT (job) DO UPDATE SET ran_on = excluded.ran_on`, job, day)
+	return err
 }
 
 // MemRunStore is an in-memory RunStore for tests.
