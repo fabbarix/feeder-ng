@@ -146,6 +146,19 @@ check "missing client id with EOF input fails fast" rc_is 2
 setup; run --bogus
 check "unknown option is usage error" rc_is 2
 
+# --- round trip: hostile characters survive `set -a; . .env.local` byte-identical
+setup
+HID="id it's \$HOME \`whoami\` & a/b \\ end"
+HSEC="sec ret'\$(echo pwned)\`id\`&/\\ \"q\" \$X"
+FEEDER_GOOGLE_CLIENT_ID="$HID" FEEDER_GOOGLE_CLIENT_SECRET="$HSEC" INPUT="" run "${COMMON[@]}" "$ENVF"
+check "hostile values exit 0" rc_is 0
+RT_ID="$(unset FEEDER_GOOGLE_CLIENT_ID; set -a; . "$ENVF"; printf '%s' "$FEEDER_GOOGLE_CLIENT_ID")"
+RT_SEC="$(unset FEEDER_GOOGLE_CLIENT_SECRET; set -a; . "$ENVF"; printf '%s' "$FEEDER_GOOGLE_CLIENT_SECRET")"
+check "hostile client id round-trips byte-identical" test "$RT_ID" = "$HID"
+check "hostile secret round-trips byte-identical" test "$RT_SEC" = "$HSEC"
+check "hostile secret never printed" out_lacks "$HSEC"
+check "hostile secret never passed to gcloud" bash -c '! grep -qF -- "$1" "$2"' _ "$HSEC" "$GCLOUD_LOG"
+
 # --- syntax
 check "bash -n passes" bash -n "$SCRIPT"
 
