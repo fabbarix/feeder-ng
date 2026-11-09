@@ -68,7 +68,7 @@ export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin,
                     disabled={locked}
                     onChange={(e) => onSetAdmin(u.id, e.target.checked)}
                   />
-                  Admin
+                  {text.adminLabel}
                 </label>
                 {confirming === u.id ? (
                   <>
@@ -79,7 +79,7 @@ export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin,
                         onRemove(u.id)
                       }}
                     >
-                      Confirm
+                      {text.confirm}
                     </Button>
                     <Button variant="ghost" onClick={() => setConfirming(null)}>
                       {text.cancel}
@@ -87,7 +87,7 @@ export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin,
                   </>
                 ) : (
                   <Button variant="ghost" aria-label={text.remove(u.email)} disabled={locked} onClick={() => setConfirming(u.id)}>
-                    Remove
+                    {text.removeButton}
                   </Button>
                 )}
               </div>

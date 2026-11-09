@@ -37,7 +37,7 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
                 </div>
                 {canEdit ? (
                   <Button variant="tonal" aria-label={text.edit(m.name)} onClick={() => onEdit(m)}>
-                    Edit
+                    {text.editButton}
                   </Button>
                 ) : null}
               </div>

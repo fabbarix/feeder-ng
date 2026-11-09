@@ -127,7 +127,7 @@ func (s *Service) UserByEmail(ctx context.Context, email string) (User, error) {
 func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
-		return err
+		return lastAdminError(err)
 	}
 	n, err := res.RowsAffected()
 	if err != nil {

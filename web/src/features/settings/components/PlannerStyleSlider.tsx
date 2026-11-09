@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Chip } from '../../../ui'
 import { PLANNER_ANCHORS, plannerStyleLabel, snapPlannerStyle } from '../lib/plannerStyle'
 import { settingsStrings } from '../strings'
@@ -12,13 +13,14 @@ export interface PlannerStyleSliderProps {
 
 /** A slider named "Planner Style" with the three anchors as chips (Use what we have, Variety, Favourites). */
 export function PlannerStyleSlider({ value, onChange, disabled }: PlannerStyleSliderProps) {
+  const inputId = useId()
   return (
     <div className="settings__stack">
-      <label className="field__label" htmlFor="planner-style">
+      <label className="field__label" htmlFor={inputId}>
         {settingsStrings.plannerStyle}
       </label>
       <input
-        id="planner-style"
+        id={inputId}
         className="slider"
         type="range"
         min={0}

@@ -55,13 +55,8 @@ func (s *Service) SetAdmin(ctx context.Context, id int64, admin bool) (User, err
 	if err != nil {
 		return User{}, err
 	}
-	if !admin && u.IsAdmin {
-		if err := s.guardLastAdmin(ctx); err != nil {
-			return User{}, err
-		}
-	}
 	if _, err := s.db.ExecContext(ctx, `UPDATE users SET is_admin = ? WHERE id = ?`, admin, id); err != nil {
-		return User{}, err
+		return User{}, lastAdminError(err)
 	}
 	u.IsAdmin = admin
 	return u, nil
@@ -70,15 +65,6 @@ func (s *Service) SetAdmin(ctx context.Context, id int64, admin bool) (User, err
 // RemoveUser removes a User from the allowlist and ends their sessions at once
 // (via DeleteUser). ErrNotFound if absent; ErrLastAdmin for the only Admin.
 func (s *Service) RemoveUser(ctx context.Context, id int64) error {
-	u, err := s.userByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if u.IsAdmin {
-		if err := s.guardLastAdmin(ctx); err != nil {
-			return err
-		}
-	}
 	return s.DeleteUser(ctx, id)
 }
 
@@ -98,16 +84,13 @@ func (s *Service) SetDisplayName(ctx context.Context, id int64, name string) err
 	return nil
 }
 
-// guardLastAdmin returns ErrLastAdmin unless more than one Admin exists.
-func (s *Service) guardLastAdmin(ctx context.Context) error {
-	var n int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE is_admin = 1`).Scan(&n); err != nil {
-		return err
-	}
-	if n <= 1 {
+// lastAdminError maps the error raised by the last-Admin triggers (migration
+// 0101) to ErrLastAdmin. Other errors pass through unchanged.
+func lastAdminError(err error) error {
+	if err != nil && strings.Contains(err.Error(), "last_admin") {
 		return ErrLastAdmin
 	}
-	return nil
+	return err
 }
 
 func (s *Service) userByID(ctx context.Context, id int64) (User, error) {

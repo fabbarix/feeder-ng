@@ -52,11 +52,11 @@ export function MealSlotList({ slots, members, canEdit, onAdd, onEdit, onEditDat
                       <div className="settings__row">
                         {canEdit ? (
                           <Button variant="tonal" aria-label={text.edit(slot.name, group.name)} onClick={() => onEdit(slot)}>
-                            Edit
+                            {text.editButton}
                           </Button>
                         ) : null}
                         <Button variant="ghost" aria-label={text.changeDate(slot.name, group.name)} onClick={() => onEditDate(slot)}>
-                          Change a date
+                          {text.changeDateButton}
                         </Button>
                       </div>
                     </div>

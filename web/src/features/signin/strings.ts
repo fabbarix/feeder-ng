@@ -8,5 +8,5 @@ export const signinStrings = {
   notInvitedTitle: 'Not invited',
   notInvitedText:
     "This Google sign-in isn't invited yet. Ask an Admin to add your email to the allowlist, then sign in again.",
-  tryAnother: 'Try another Google account',
+  tryAnother: 'Use a different Google sign-in',
 }

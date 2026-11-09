@@ -3,7 +3,7 @@ import { signinStrings } from '../strings'
 import '../signin.css'
 import { GoogleLink } from './GoogleLink'
 
-/** Bento "Not invited" page: explains the allowlist and links "Try another Google account" to /auth/google/login. */
+/** Bento "Not invited" page: explains the allowlist and links "Use a different Google sign-in" to /auth/google/login. */
 export function NotInvitedPage() {
   return (
     <main className="signin">

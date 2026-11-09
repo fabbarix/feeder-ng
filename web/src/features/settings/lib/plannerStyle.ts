@@ -1,7 +1,11 @@
+import { settingsStrings } from '../strings'
+
+const anchors = settingsStrings.plannerStyleAnchor
+
 export const PLANNER_ANCHORS = [
-  { position: 0, label: 'Use what we have' },
-  { position: 0.5, label: 'Variety' },
-  { position: 1, label: 'Favourites' },
+  { position: 0, label: anchors.useWhatWeHave },
+  { position: 0.5, label: anchors.variety },
+  { position: 1, label: anchors.favourites },
 ] as const
 
 /** An anchor's label at an anchor, otherwise "Between <a> and <b>". */
@@ -11,7 +15,7 @@ export function plannerStyleLabel(position: number): string {
   const upper = PLANNER_ANCHORS.findIndex((a) => a.position > position)
   const hi = upper < 0 ? PLANNER_ANCHORS.length - 1 : upper
   const lo = Math.max(0, hi - 1)
-  return `Between ${PLANNER_ANCHORS[lo]!.label} and ${PLANNER_ANCHORS[hi]!.label}`
+  return settingsStrings.plannerStyleBetween(PLANNER_ANCHORS[lo]!.label, PLANNER_ANCHORS[hi]!.label)
 }
 
 /** Clamp to 0..1, round to 2 decimals, and snap to an anchor when within 0.04 of it. */
