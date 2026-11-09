@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { Button } from '../../../ui'
+import { cookStrings } from '../strings'
 
 export interface CookNavTilesProps {
   isFirst: boolean
@@ -17,6 +19,23 @@ export interface CookNavTilesProps {
  * Cooked" (when onMarkCooked is given) or "Done" (onDone); with neither, Next
  * stays but is disabled.
  */
-export function CookNavTiles(_props: CookNavTilesProps): ReactNode {
-  return null
+export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone }: CookNavTilesProps): ReactNode {
+  let forward: ReactNode
+  if (!isLast) {
+    forward = <Button size="lg" className="cook-nav__tile" onClick={onNext}>{cookStrings.next}</Button>
+  } else if (onMarkCooked) {
+    forward = <Button size="lg" className="cook-nav__tile" onClick={onMarkCooked}>{cookStrings.markAsCooked}</Button>
+  } else if (onDone) {
+    forward = <Button size="lg" className="cook-nav__tile" onClick={onDone}>{cookStrings.done}</Button>
+  } else {
+    forward = <Button size="lg" className="cook-nav__tile" disabled>{cookStrings.next}</Button>
+  }
+  return (
+    <div className="cook-nav">
+      <Button variant="tonal" size="lg" className="cook-nav__tile" disabled={isFirst} onClick={onBack}>
+        {cookStrings.back}
+      </Button>
+      {forward}
+    </div>
+  )
 }

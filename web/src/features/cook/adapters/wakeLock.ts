@@ -22,6 +22,36 @@ export interface WakeLockNavigator {
  * tab is hidden and fires `release` on the sentinel; the adapter then counts
  * as not held, so the next acquire() requests a fresh one.
  */
-export function createWakeLock(_nav?: WakeLockNavigator): WakeLockAdapter {
-  throw new Error('TODO')
+export function createWakeLock(nav: WakeLockNavigator = defaultNavigator()): WakeLockAdapter {
+  const api = nav.wakeLock
+  let sentinel: SentinelLike | null = null
+  return {
+    supported: api !== undefined,
+    async acquire() {
+      if (!api || sentinel) return
+      try {
+        const held = await api.request('screen')
+        sentinel = held
+        held.addEventListener('release', () => {
+          if (sentinel === held) sentinel = null
+        })
+      } catch {
+        // refused (battery saver, hidden tab): the screen simply may sleep
+      }
+    },
+    async release() {
+      const held = sentinel
+      sentinel = null
+      if (!held) return
+      try {
+        await held.release()
+      } catch {
+        // already released by the system
+      }
+    },
+  }
+}
+
+function defaultNavigator(): WakeLockNavigator {
+  return typeof navigator !== 'undefined' ? (navigator as unknown as WakeLockNavigator) : {}
 }

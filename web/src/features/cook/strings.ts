@@ -26,5 +26,6 @@ export const cookStrings = {
   loadError: 'Cook Mode could not be opened',
   notCookable: 'This meal has already been cooked or skipped',
   noSteps: 'No Steps to follow. Enjoy!',
+  passiveNote: (minutes: number) => `Runs for ${minutes} min. Carry on with the next Step meanwhile.`,
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
 } as const

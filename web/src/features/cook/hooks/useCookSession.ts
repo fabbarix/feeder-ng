@@ -1,5 +1,11 @@
-import type { AdvanceSummary } from '../lib/advance'
-import type { StepNav } from '../lib/steps'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ApiError } from '../../../lib/http'
+import { connectEvents } from '../../../lib/sse'
+import { cookApi } from '../api'
+import { advanceSummary, type AdvanceSummary } from '../lib/advance'
+import { scopeOf } from '../lib/scope'
+import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { CookSource, CookStep, CookView } from '../types'
 
 export interface UseCookSession {
@@ -27,6 +33,8 @@ export interface UseCookSession {
   scope: string
 }
 
+const VIEW_KEY = ['cook', 'view'] as const
+
 /**
  * Cook Mode state for one source. react-query ['cook','view',scope] fed by
  * cookApi.view(source). Refetches on SSE topic `cook` (marks changed elsewhere).
@@ -34,6 +42,90 @@ export interface UseCookSession {
  * its timer once per Step per session through cookApi.startTimer({scope, step: index})
  * (the server keeps one timer per Step, so a second device is safe too).
  */
-export function useCookSession(_source: CookSource): UseCookSession {
-  throw new Error('TODO')
+export function useCookSession(source: CookSource): UseCookSession {
+  const client = useQueryClient()
+  const scope = scopeOf(source)
+  const query = useQuery({
+    queryKey: [...VIEW_KEY, scope],
+    queryFn: () => cookApi.view(source),
+    retry: (count, err) => !(err instanceof ApiError) && count < 2,
+  })
+  const view = query.data
+  const steps = view?.steps ?? []
+
+  const [index, setIndex] = useState(0)
+  const [repeatCount, setRepeatCount] = useState(0)
+  const started = useRef<Set<number>>(new Set())
+  const nav = createNav(steps.length, index)
+  const step = steps[nav.index] ?? null
+
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return
+    const connection = connectEvents()
+    const refresh = () => void client.invalidateQueries({ queryKey: [...VIEW_KEY] })
+    const off = connection.subscribe('cook', refresh)
+    const offReconnect = connection.onReconnect(refresh)
+    return () => {
+      off()
+      offReconnect()
+      connection.close()
+    }
+  }, [client])
+
+  const startFor = useCallback(
+    async (s: CookStep) => {
+      if (!s.timer || started.current.has(s.index)) return
+      started.current.add(s.index)
+      try {
+        await cookApi.startTimer({ scope, step: s.index })
+        void client.invalidateQueries({ queryKey: ['cook', 'timers'] })
+      } catch {
+        started.current.delete(s.index)
+      }
+    },
+    [client, scope],
+  )
+
+  // Reaching a Passive Step starts its timer, once per Step.
+  useEffect(() => {
+    if (step) void startFor(step)
+  }, [step, startFor])
+
+  const total = steps.length
+  const markAdvanceDone = useCallback(
+    async (stepIndex: number) => {
+      await cookApi.setMark(scope, stepIndex, true)
+      await client.invalidateQueries({ queryKey: [...VIEW_KEY] })
+    },
+    [client, scope],
+  )
+
+  const startStepTimer = useCallback(async () => {
+    const s = steps[index]
+    if (s?.timer) {
+      started.current.add(s.index)
+      await cookApi.startTimer({ scope, step: s.index })
+      void client.invalidateQueries({ queryKey: ['cook', 'timers'] })
+    }
+  }, [client, index, scope, steps])
+
+  return {
+    view,
+    isLoading: query.isLoading,
+    error: query.error,
+    notCookable: query.error instanceof ApiError && query.error.code === 'not_cookable',
+    nav,
+    step,
+    next: () => setIndex((i) => goNext(createNav(total, i)).index),
+    back: () => setIndex((i) => goBack(createNav(total, i)).index),
+    repeatCount,
+    repeat: () => setRepeatCount((n) => n + 1),
+    advance: advanceSummary(view?.advance ?? []),
+    markAdvanceDone,
+    startStepTimer,
+    isFirst: isFirst(nav),
+    isLast: isLast(nav),
+    markCookedKey: view?.meal ? { date: view.meal.date, mealSlotId: view.meal.mealSlotId } : null,
+    scope,
+  }
 }

@@ -34,6 +34,59 @@ export interface SpeechWindow {
  * started, an `end` restarts it; a `not-allowed` or `service-not-allowed`
  * error stops for good. `supported` is false when neither constructor exists.
  */
-export function createBrowserSpeech(_win?: SpeechWindow): SpeechAdapter {
-  throw new Error('TODO')
+export function createBrowserSpeech(win: SpeechWindow = defaultWindow()): SpeechAdapter {
+  const Ctor = win.SpeechRecognition ?? win.webkitSpeechRecognition
+  let wanted = false
+  let refused = false
+  let current: RecognitionLike | null = null
+  return {
+    supported: Ctor !== undefined,
+    start(onTranscript) {
+      if (!Ctor || wanted) return
+      wanted = true
+      refused = false
+      const rec = new Ctor()
+      rec.continuous = true
+      rec.interimResults = false
+      rec.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const result = e.results[i]!
+          if (!result.isFinal) continue
+          const text = result[0]!.transcript.trim()
+          if (text) onTranscript(text)
+        }
+      }
+      rec.onend = () => {
+        if (!wanted || refused) return
+        try {
+          rec.start()
+        } catch {
+          // already running: nothing to do
+        }
+      }
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') refused = true
+      }
+      current = rec
+      try {
+        rec.start()
+      } catch {
+        // the browser refused to start; stays unlistened
+      }
+    },
+    stop() {
+      wanted = false
+      const rec = current
+      current = null
+      try {
+        rec?.stop()
+      } catch {
+        // already stopped
+      }
+    },
+  }
+}
+
+function defaultWindow(): SpeechWindow {
+  return typeof window !== 'undefined' ? (window as unknown as SpeechWindow) : {}
 }

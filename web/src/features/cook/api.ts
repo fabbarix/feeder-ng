@@ -17,11 +17,32 @@ export interface CookApi {
  * timers: GET /api/cook/timers[?scope=] (encoded); startTimer: POST /api/cook/timers;
  * pause/resume: POST /api/cook/timers/{id}/pause|resume; cancel: DELETE /api/cook/timers/{id}.
  */
-export function createCookApi(_client: HttpClient): CookApi {
-  const todo = (): never => {
-    throw new Error('TODO')
+export function createCookApi(client: HttpClient): CookApi {
+  return {
+    view(source) {
+      if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}`)
+      return client.get<CookView>(`/api/cook/recipes/${source.recipeId}?batches=${source.batches}`)
+    },
+    setMark(scope, step, done) {
+      return client.put('/api/cook/marks', { scope, step, done })
+    },
+    timers(scope) {
+      const query = scope ? `?scope=${encodeURIComponent(scope)}` : ''
+      return client.get<TimersResponse>(`/api/cook/timers${query}`)
+    },
+    startTimer(input) {
+      return client.post<CookTimer>('/api/cook/timers', input)
+    },
+    pauseTimer(id) {
+      return client.post<CookTimer>(`/api/cook/timers/${id}/pause`)
+    },
+    resumeTimer(id) {
+      return client.post<CookTimer>(`/api/cook/timers/${id}/resume`)
+    },
+    cancelTimer(id) {
+      return client.delete<void>(`/api/cook/timers/${id}`)
+    },
   }
-  return { view: todo, setMark: todo, timers: todo, startTimer: todo, pauseTimer: todo, resumeTimer: todo, cancelTimer: todo }
 }
 
 export const cookApi: CookApi = createCookApi(defaultHttp)
