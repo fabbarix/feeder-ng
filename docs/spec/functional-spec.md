@@ -14,6 +14,7 @@ Status: **draft for review** (2026-11-09). The terms in **bold** are defined in 
 - The `FEEDER_ADMIN_EMAIL` environment variable is mandatory: the container refuses to start without it. It seeds the allowlist with the first **Admin**.
 - **Admin** manages the allowlist, Members, Meal Slots, Shops, Weight Barcode Rules and household settings. Every **User** can do everything else.
 - A User may be linked to a **Member**. That link decides whose Favourites, Dislikes and Exclusions the User edits by default.
+- The Google sign-in redirect URI is `<FEEDER_BASE_URL>/auth/google/callback`.
 - Sessions: an HTTP-only, SameSite=Lax cookie with a 30-day sliding expiry. Removing a User from the allowlist ends their sessions immediately.
 
 ## 3. Household setup
@@ -25,7 +26,8 @@ Status: **draft for review** (2026-11-09). The terms in **bold** are defined in 
 | Default Cool-down | 7 days | Recipes can override it. |
 | Default Leftover Use-by | 3 days | Recipes can override it. |
 | Quiet hours | 22:00–07:00 | No push notifications in this window, except timers. |
-| Planner Style | middle (default preset) | A single slider with three anchors: "Use what we have" (boosts perishable use, **Ingredient Overlap** and stock coverage), "Variety" (boosts recency, dampens Favourites) and "Favourites" (boosts Favourites). Each anchor maps to a weight preset, and positions between anchors interpolate (§7.2). |
+| Planner Style | Variety (middle anchor) | A single slider with three anchors: "Use what we have" (boosts perishable use, **Ingredient Overlap** and stock coverage), "Variety" (the default; leans furthest into recency and dampens Favourites) and "Favourites" (boosts Favourites). Each anchor maps to a weight preset, and positions between anchors interpolate linearly (§7.2). |
+| Currency | USD | Admin-managed. Used for **Prices**, the estimated cost and price-valued Weight Barcode Rules. |
 | Location | none | City or coordinates, set by the Admin. Used to compute local sunset and sunrise for the kitchen board's dark mode (§11). Without one, the board uses 19:00–07:00. |
 
 **Members**: a name, a colour/avatar and a default **Portion Factor** (adult 1.0; any value from 0.25 to 3, in 0.25 steps).
@@ -50,7 +52,7 @@ These fields mirror the Recipe File ([recipe-file.md](recipe-file.md)): name, de
 
 **Shop**: a name. It has:
 - **Shop Barcodes**: a code mapped to a Product, valid only in that Shop;
-- **Weight Barcode Rules**: a barcode prefix (e.g. `21`), the digit positions of the item code, the digit positions of the value, whether the value is a weight (in g) or a price (in cents), and the decimal places. When the value is a price, the weight is derived from that Product's last known price per kg at that Shop. If there is no **Price** history, the app asks the user for the weight once, which also records the price per kg for next time;
+- **Weight Barcode Rules**: a barcode prefix (e.g. `21`), the digit positions of the item code, the digit positions of the value, whether the value is a weight or a price, its unit, and the decimal places. The unit is configured per rule: for a weight, g (default), kg, oz or lb; for a price, the household currency's minor unit (cents by default). The decoded value = digits ÷ 10^decimal places, in that unit. Internally all quantities are stored in metric Base Units (g, ml or piece) and price per weight is kept per kg. When the value is a price, the weight is derived from that Product's last known price per kg at that Shop. If there is no **Price** history, the app asks the user for the weight once, which also records the price per kg for next time;
 - **Prices**: a Price for a Product at a Shop on a date. The latest one prefills the next scan.
 
 **Barcode resolution** (at a Shop, in this order): that Shop's Shop Barcode → that Shop's Weight Barcode Rules → global Product barcode → unknown. When scanning at home (no Shop), only global barcodes apply.
@@ -61,7 +63,7 @@ These fields mirror the Recipe File ([recipe-file.md](recipe-file.md)): name, de
 - Lots are **added** by scanning at a Shop (pack size or decoded weight), by Stock-take, or by manual "add".
 - Lots are **deducted** only when a Planned Meal is marked **Cooked** ([ADR 0003](../adr/0003-stock-lots-deducted-on-cooked.md)): Batches × ingredient quantity (optional lines excluded), taken from the lot that goes off soonest first, then the oldest. Marking as Cooked never blocks. If Stock is short, it warns (e.g. "Stock shows only 300 g chicken thighs, the recipe uses 800 g") and offers a one-tap Stock correction. If the warning is dismissed, Stock floors at 0 and the missing amount is ignored.
 - **Stock-take** sets an Ingredient's total. A decrease removes quantity from the soonest-to-spoil lots first. An increase adds a new lot dated today.
-- Lots past their go-off date are listed as **spoiled** on Today ("Throw out or keep?"). "Throw out" removes the lot and records the waste, which feeds the zero-waste streak. "Keep" pushes the go-off date out by 1 day.
+- Lots past their go-off date are listed as **spoiled** on Today ("Throw out or keep?"). "Throw out" removes the lot and records the waste, which feeds the zero-waste streak. "Keep" pushes the lot's go-off date out by 1 day from its existing go-off date (not from today).
 
 ## 7. The planner
 
@@ -76,20 +78,31 @@ It never changes **Pinned** or **Cooked** Planned Meals. A Planned Meal becomes 
 The planner walks the empty slots in chronological order, keeping a **projected Stock** (current lots, plus planned purchases, minus planned consumption) and a list of **pending Leftovers**.
 
 For each slot:
-1. **Leftover first.** Take the pending Leftovers that fully cover the slot's portions, are still before their Use-by, and have no attending Member with an Exclusion on that Recipe or its Ingredients. If one exists and no Slot Rule claims the slot, place the one with the soonest Use-by. Dislikes are ignored for Leftovers.
+1. **Leftover first.** Take the pending Leftovers that fully cover the slot's portions, are still before their Use-by, and have no attending Member with an Exclusion on that Recipe or its Ingredients. If one exists and no Slot Rule claims the slot, place the one with the soonest Use-by. A Leftover may also fill a slot claimed by a Slot Rule if the Leftover's Recipe satisfies that rule (it is the named Recipe, or carries the Tag the rule names); otherwise the Slot Rule wins. Among several such Leftovers, the one with the soonest Use-by is placed. Dislikes are ignored for Leftovers.
 2. **Candidates.** Start from all non-archived Recipes, or only those a Slot Rule names (by Recipe or Tag). Remove any that:
    - have an Exclusion for an attending Member (on the Recipe or any of its Ingredients);
    - fall within their Cool-down (counted from the last planned or cooked date);
-   - would break a Variety Rule;
+   - would break a Variety Rule ("per week" means the ISO week, Monday to Sunday; Leftovers don't count towards Variety Rules);
    - have an Advance Step whose lead time has already passed for this slot.
-3. **Score** each candidate. The weights below are the default (middle) preset. They stay internal (in code and tests); the household only sets the **Planner Style** slider (§3), whose anchors each map to a weight preset, with positions in between interpolated:
-   - **+3** per attending Member's Favourite, **−2** per Dislike;
-   - **+4 × perishable use**: the share of the Recipe's base-unit needs covered by projected lots that go off before the next time those lots could be used, which rewards spending what would spoil;
-   - **+2 × Ingredient Overlap**: the share of needs covered by remainders of packs already planned for purchase in the horizon (e.g. the 600 g left from a 1 kg chicken pack);
-   - **+1 × stock coverage**: the share of needs covered by projected Stock overall;
-   - **+1** if the Batch surplus would fit a later slot as a Leftover; **−1** if it would be wasted (no slot fits before its Use-by);
-   - **−0.5 × (Recipes not cooked in a while)**, a recency term that is negative for recent ones, so Recipes not cooked for a while score higher;
-   - **± 0.5** jitter, seeded per generation so that Regenerate gives a genuinely different plan.
+3. **Score** each candidate. The weights come from the **Planner Style** preset (table below). They stay internal (in code and tests); the household only sets the slider (§3), and positions between anchors interpolate linearly. Terms:
+   - per attending Member's **Favourite**, per **Dislike**;
+   - **× perishable use**: the share of the Recipe's base-unit needs covered by projected lots that go off before the next time those lots could be used, which rewards spending what would spoil;
+   - **× Ingredient Overlap**: the share of needs covered by remainders of packs already planned for purchase in the horizon (e.g. the 600 g left from a 1 kg chicken pack);
+   - **× stock coverage**: the share of needs covered by projected Stock overall;
+   - **Leftover fits later slot / wasted**: + if the Batch surplus would fit a later slot as a Leftover; − if it would be wasted (no slot fits before its Use-by);
+   - **recency (per unit)**: weight × recentness, where recentness = 1 − min(days, 28) / 28 and days is the gap to the most recent fresh cook of that Recipe before the slot (never cooked → 0 recentness). The weight is negative, so recently cooked Recipes lose points;
+   - **jitter**: ± a random amount, seeded per generation so that Regenerate gives a genuinely different plan.
+
+   | Weight | Use what we have | Variety (default) | Favourites |
+   |---|---|---|---|
+   | per attending Member's Favourite | +2 | +2 | +5 |
+   | per Dislike | −2 | −2 | −3 |
+   | × perishable use | 6 | 3 | 2 |
+   | × Ingredient Overlap | 3 | 1.5 | 1 |
+   | × stock coverage | 2 | 0.75 | 0.5 |
+   | Leftover fits later slot / wasted | +1 / −1 | +1 / −1 | +1 / −1 |
+   | recency (per unit) | −0.25 | −1 | −0.25 |
+   | jitter | ±0.5 | ±0.75 | ±0.5 |
 4. **Pick** the top-scoring candidate. Batches = ceil(portions needed ÷ Yield). The surplus (Batches × Yield − portions needed) becomes a pending Leftover with its Use-by. Projected Stock is updated, and any shortfall is recorded as a planned purchase in pack units of the Product last bought for that Ingredient (at the chosen Shop if known). If no Product has been bought yet, exact amounts are assumed, with no pack remainder.
 5. **Why chips** are the 1–3 largest positive score terms, phrased for people: "uses Monday's chicken", "Anna's favourite", "spinach goes off Thu", "Slot Rule: Friday", "leftover from Tue".
 
@@ -128,7 +141,7 @@ On a resolved barcode:
 1. A Stock Lot is added (pack size, or the decoded weight).
 2. The Product is recorded as sold at this Shop.
 3. The matching Shopping List line's remaining quantity is reduced, and the line is ticked and slides away when it reaches ≤ 0.
-4. A toast shows "Passata +700 g · €1.59 ✎ · Undo". The price is prefilled from the last Price at this Shop. Tapping ✎ edits it, and leaving it as is confirms it. Undo reverses steps 1–3.
+4. A toast shows "Passata +700 g · $1.59 ✎ · Undo". The price is prefilled from the last Price at this Shop. Tapping ✎ edits it, and leaving it as is confirms it. Undo reverses steps 1–3.
 5. Off-list items are added to Stock just the same, with a toast saying "not on the list".
 
 On an **unknown barcode**, a bottom sheet asks:
@@ -184,8 +197,8 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 
 ## 14. Theming and layout
 
-- Each User sets light, dark or system mode, an accent colour and an optional secondary colour. The palette is derived from the accent (tinted surfaces, tonal steps) with automatic WCAG AA contrast checks. Status colours (spoil, leftover) are fixed and not derived from the accent.
-- Layout: Bento, as in the ux-brief. Phone uses a bottom bar (Today · Plan · Scan · Shop · Recipes); desktop uses a side rail with a wider grid; the tablet board is a separate route.
+- Each User sets light, dark or system mode, an accent colour and an optional secondary colour, plus metric (default) or imperial display. Imperial is a UI conversion only: metric Base Units (g, ml or piece) stay as stored and all stored values remain metric; it shows oz/lb and fl oz/cups/spoons where sensible. The palette is derived from the accent (tinted surfaces, tonal steps) with automatic WCAG AA contrast checks. Status colours (spoil, leftover) are fixed and not derived from the accent.
+- Layout: Bento, as in the ux-brief. Phone uses a bottom bar (Today · Plan · Scan · Shop · Recipes; "Shop" there is a UI label for the shopping screen, not the glossary **Shop**); desktop uses a side rail with a wider grid; the tablet board is a separate route.
 - `prefers-reduced-motion` turns off springs and the celebration animations.
 
 ## 15. Resolved decisions (2026-11-09)
@@ -194,9 +207,18 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 2. Sessions: HTTP-only SameSite=Lax cookie, 30-day sliding expiry; removing a User from the allowlist ends their sessions immediately (§2).
 3. A price-valued Weight Barcode Rule derives the weight from the Product's last known price per kg at that Shop; with no price history, the user is asked for the weight once (§5).
 4. Mark as Cooked never blocks; short Stock triggers a warning with a one-tap Stock correction, and dismissing floors Stock at 0 (§6, §8).
-5. Scoring weights stay internal; the household sets a single Planner Style slider with three anchors, and the current numbers are the middle preset (§3, §7.2).
+5. Superseded by 15.
 6. Both the recency preference and the seeded ±jitter stay (§7.2).
 7. Planned purchases use the pack size of the Product last bought (at the chosen Shop if known); with none bought, exact amounts and no remainder (§7.2, §9).
 8. A successful scan gives a beep and a haptic buzz, with a per-device mute; iOS Safari relies on the beep (§10.1).
 9. Barcode formats: EAN-13, EAN-8, UPC-A, UPC-E, Code 128, QR and DataMatrix; GS1 Digital Link URLs are read for their GTIN, other QR content is ignored (§10.4).
 10. The kitchen board goes dark at local sunset and light at sunrise from an Admin-set household Location, falling back to 19:00–07:00 (§3, §11).
+11. Weight Barcode Rules configure their value's unit: weight in g (default), kg, oz or lb; price in the currency's minor unit. Decoded value = digits ÷ 10^decimal places. Internally everything is in metric Base Units (g, ml or piece) and price per kg (§5).
+12. Currency is an Admin-managed household setting, default USD; examples use $ (§3, §10.1).
+13. Each User can choose metric (default) or imperial display; UI conversion only, stored values stay metric (§14).
+14. A Leftover may fill a Slot Rule's slot if its Recipe satisfies the rule (the named Recipe or one of its Tags); otherwise the Slot Rule wins (§7.2).
+15. Planner Style presets are the table in §7.2; the default is the middle anchor "Variety"; positions between anchors interpolate linearly (§3, §7.2).
+16. Stock "Keep" pushes the go-off date out by 1 day from the existing go-off date (§6).
+17. Variety Rule "per week" is the ISO week, Monday to Sunday; Leftovers don't count towards Variety Rules (§7.2).
+18. The phone bottom-bar item "Shop" is a UI label for the shopping screen (Shopping List plus scanning), not the glossary **Shop** (§14).
+19. The Google sign-in redirect URI is `<FEEDER_BASE_URL>/auth/google/callback` (§2).
