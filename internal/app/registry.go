@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -27,6 +28,9 @@ type Deps struct {
 	// Scheduler runs household-time daily jobs (planning's nightly run, later backups and
 	// notification sweeps). Modules register jobs in Mount; cmd/feeder starts it with Run.
 	Scheduler *scheduler.Scheduler
+	// Context ends when the application is closed (App.Close): long-running workers a module starts (planning's
+	// invalidation worker and Events subscription) stop when it is done.
+	Context context.Context
 }
 
 // Module is one feature's HTTP surface.

@@ -87,6 +87,9 @@ func Start(t TB, opts ...Option) *Env {
 		if env.server != nil {
 			env.server.Close()
 		}
+		if env.App != nil {
+			env.App.Close() // stops the planning workers
+		}
 	})
 	env.AddUser(t, UserEmail, "User", false)
 	return env
@@ -99,6 +102,9 @@ func (e *Env) boot(t TB) {
 	}
 	if e.server != nil {
 		e.server.Close()
+	}
+	if e.App != nil {
+		e.App.Close()
 	}
 	e.App = a
 	e.Auth = a.Deps.Auth

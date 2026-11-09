@@ -54,6 +54,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	defer a.Close()
 
 	go a.Deps.Scheduler.Run(ctx, time.Minute)
 
