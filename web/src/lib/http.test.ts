@@ -64,4 +64,11 @@ describe('createHttpClient', () => {
     await expect(http.get('/api/me')).rejects.toMatchObject({ status: 401 })
     expect(onUnauthenticated).toHaveBeenCalledOnce()
   })
+
+  it('keeps the extra keys of the error object as details', async () => {
+    const body = { error: { code: 'unknown_unit', message: 'no', field: 'lines[1].unit', unit: 'clove', ingredientId: 7 } }
+    const err = (await createHttpClient({ fetch: vi.fn().mockResolvedValue(json(422, body)) }).get('/api/x').catch((e) => e)) as ApiError
+    expect(err).toMatchObject({ status: 422, code: 'unknown_unit', message: 'no' })
+    expect(err.details).toEqual({ field: 'lines[1].unit', unit: 'clove', ingredientId: 7 })
+  })
 })
