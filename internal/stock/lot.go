@@ -19,6 +19,10 @@ const None Date = ""
 
 const dateLayout = "2006-01-02"
 
+// eps is the float tolerance for quantities: a lot at or below eps is empty,
+// and a difference at or below eps is no difference (Deduct and SetTotal).
+const eps = 1e-9
+
 // AddDays returns the date n days later (n may be negative). The receiver must
 // be a valid date.
 func (d Date) AddDays(n int) Date {
@@ -88,12 +92,13 @@ func consumptionLess(a, b Lot) bool {
 // Deduct takes need (Base Units) from lots: lots with a go-off date first,
 // soonest first, then lots without one; ties (and the undated lots) oldest
 // purchase first, then lowest ID. Stock floors at 0; the uncovered part is
-// reported as Shortfall. need <= 0 changes nothing. The input is not modified.
+// reported as Shortfall. need <= 0 or NaN/Inf changes nothing. Lots at or below
+// eps are dropped and a Shortfall at or below eps is 0. The input is not modified.
 func Deduct(lots []Lot, need float64) DeductResult {
 	remaining := make([]Lot, len(lots))
 	copy(remaining, lots)
 	var res DeductResult
-	if need <= 0 {
+	if need <= 0 || math.IsNaN(need) || math.IsInf(need, 0) {
 		res.Lots = remaining
 		return res
 	}
@@ -108,11 +113,11 @@ func Deduct(lots []Lot, need float64) DeductResult {
 
 	left := need
 	for _, idx := range order {
-		if left <= 0 {
+		if left <= eps {
 			break
 		}
 		l := &remaining[idx]
-		if l.Quantity <= 0 {
+		if l.Quantity <= eps {
 			continue
 		}
 		take := math.Min(left, l.Quantity)
@@ -120,13 +125,13 @@ func Deduct(lots []Lot, need float64) DeductResult {
 		l.Quantity -= take
 		left -= take
 	}
-	if left > 0 {
+	if left > eps {
 		res.Shortfall = left
 	}
 
 	res.Lots = make([]Lot, 0, len(remaining))
 	for _, l := range remaining {
-		if l.Quantity > 0 {
+		if l.Quantity > eps {
 			res.Lots = append(res.Lots, l)
 		}
 	}
@@ -191,7 +196,6 @@ func SetTotal(lots []Lot, ingredientID int64, total float64, today Date, shelfLi
 	}
 	current := Total(lots)
 	diff := total - current
-	const eps = 1e-9
 
 	switch {
 	case math.Abs(diff) < eps:

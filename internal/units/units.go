@@ -68,7 +68,16 @@ func (e *InvalidConversionError) Is(target error) bool {
 // checks run in that order, so the first failing one sets Reason.
 // Global units other than the Base Unit (e.g. "cup") are allowed: they override.
 func ValidateConversion(base Base, c Conversion) error {
-	panic("TODO")
+	unit := NormalizeUnit(c.Unit)
+	switch {
+	case unit == "":
+		return &InvalidConversionError{Unit: c.Unit, ToBase: c.ToBase, Base: base, Reason: ReasonEmptyUnit}
+	case unit == string(base):
+		return &InvalidConversionError{Unit: c.Unit, ToBase: c.ToBase, Base: base, Reason: ReasonBaseUnit}
+	case math.IsNaN(c.ToBase) || math.IsInf(c.ToBase, 0) || c.ToBase <= 0:
+		return &InvalidConversionError{Unit: c.Unit, ToBase: c.ToBase, Base: base, Reason: ReasonBadToBase}
+	}
+	return nil
 }
 
 // Imperial and US customary factors. They exist for Weight Barcode Rules and
@@ -89,7 +98,26 @@ const (
 // matched after NormalizeUnit). Any other unit, or a Piece base, is not found.
 // Recipe units are handled by GlobalFactor, never by this function.
 func DisplayFactor(base Base, unit string) (float64, bool) {
-	panic("TODO")
+	factors, ok := displayFactors[base]
+	if !ok {
+		return 0, false
+	}
+	f, ok := factors[NormalizeUnit(unit)]
+	return f, ok
+}
+
+// displayFactors lists the display-only units per Base Unit, keyed by normalised unit.
+var displayFactors = map[Base]map[string]float64{
+	Gram: {
+		"oz": GramsPerOunce,
+		"lb": GramsPerPound,
+	},
+	Millilitre: {
+		"fl oz":   MillilitresPerFluidOunce,
+		"us cup":  MillilitresPerUSCup,
+		"us tbsp": MillilitresPerUSTablespoon,
+		"us tsp":  MillilitresPerUSTeaspoon,
+	},
 }
 
 // Ingredient is the part of an Ingredient the unit maths needs.
@@ -174,14 +202,28 @@ func GlobalFactor(base Base, unit string) (float64, bool) {
 
 // Factor returns how many Base Units one `unit` of the Ingredient is. An
 // Ingredient-specific Unit Conversion wins over a global unit of the same name.
+// An invalid Unit Conversion is never used: its unit is not found, with no
+// fall-back to a global unit.
 func Factor(unit string, ing Ingredient) (float64, bool) {
 	u := NormalizeUnit(unit)
-	for _, c := range ing.Conversions {
-		if NormalizeUnit(c.Unit) == u {
-			return c.ToBase, true
+	if c, ok := findConversion(u, ing); ok {
+		if ValidateConversion(ing.Base, c) != nil {
+			return 0, false
 		}
+		return c.ToBase, true
 	}
 	return GlobalFactor(ing.Base, u)
+}
+
+// findConversion returns the first Unit Conversion whose unit matches the
+// normalised unit u.
+func findConversion(u string, ing Ingredient) (Conversion, bool) {
+	for _, c := range ing.Conversions {
+		if NormalizeUnit(c.Unit) == u {
+			return c, true
+		}
+	}
+	return Conversion{}, false
 }
 
 // IsConvertible reports whether unit can be converted to the Ingredient's Base Unit.
@@ -192,10 +234,16 @@ func IsConvertible(unit string, ing Ingredient) bool {
 
 // ToBase converts quantity of unit into the Ingredient's Base Unit.
 // It returns ErrInvalidQuantity for negative/NaN/Inf quantities (zero is fine)
-// and *UnconvertibleUnitError for a unit that cannot be converted.
+// and *UnconvertibleUnitError for a unit that cannot be converted. A unit whose
+// Unit Conversion is invalid returns that *InvalidConversionError.
 func ToBase(quantity float64, unit string, ing Ingredient) (float64, error) {
 	if math.IsNaN(quantity) || math.IsInf(quantity, 0) || quantity < 0 {
 		return 0, ErrInvalidQuantity
+	}
+	if c, ok := findConversion(NormalizeUnit(unit), ing); ok {
+		if err := ValidateConversion(ing.Base, c); err != nil {
+			return 0, err
+		}
 	}
 	f, ok := Factor(unit, ing)
 	if !ok {
