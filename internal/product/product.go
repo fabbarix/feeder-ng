@@ -6,6 +6,9 @@ package product
 
 import (
 	"errors"
+	"math"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/units"
@@ -19,6 +22,9 @@ var (
 	// ErrInvalidItemCode: wrong length or not digits for the rule's item span.
 	ErrInvalidItemCode = errors.New("invalid item code")
 )
+
+// maxNameRunes is the longest name a Product or Shop may have.
+const maxNameRunes = 100
 
 // ValidationError names the JSON field that is wrong.
 type ValidationError struct {
@@ -38,50 +44,70 @@ type Input struct {
 
 // Validate: name 1-100 runes after NormalizeName, IngredientID > 0, PackSize
 // finite and > 0. Field names: name, ingredientId, packSize.
-func (in Input) Validate() error { panic("TODO") }
+func (in Input) Validate() error {
+	if err := checkName(in.Name); err != nil {
+		return &ValidationError{Field: "name", Message: err.Error()}
+	}
+	if in.IngredientID <= 0 {
+		return &ValidationError{Field: "ingredientId", Message: "an Ingredient is required"}
+	}
+	if math.IsNaN(in.PackSize) || math.IsInf(in.PackSize, 0) || in.PackSize <= 0 {
+		return &ValidationError{Field: "packSize", Message: "pack size must be a positive number"}
+	}
+	return nil
+}
 
 // NormalizeName trims and collapses internal whitespace.
-func NormalizeName(s string) string { panic("TODO") }
+func NormalizeName(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // ValidateShopName: 1-100 runes after NormalizeName (field "name").
-func ValidateShopName(s string) error { panic("TODO") }
+func ValidateShopName(s string) error {
+	if err := checkName(s); err != nil {
+		return &ValidationError{Field: "name", Message: err.Error()}
+	}
+	return nil
+}
+
+func checkName(s string) error {
+	n := utf8.RuneCountInString(NormalizeName(s))
+	switch {
+	case n == 0:
+		return errors.New("a name is required")
+	case n > maxNameRunes:
+		return errors.New("a name can have at most 100 characters")
+	}
+	return nil
+}
 
 // NormalizeBarcode returns the canonical form (barcode.Canonical) or
 // ErrInvalidBarcode.
-func NormalizeBarcode(raw string) (string, error) { panic("TODO") }
+func NormalizeBarcode(raw string) (string, error) {
+	code, ok := barcode.Canonical(raw)
+	if !ok {
+		return "", ErrInvalidBarcode
+	}
+	return code, nil
+}
 
 // ValidateItemCode checks item is all digits with exactly rule.Item.Length digits.
-func ValidateItemCode(rule barcode.WeightRule, item string) error { panic("TODO") }
-
-// Price is a Product's Price at a Shop on a date. Amounts are minor currency units.
-type Price struct {
-	ID, ProductID, ShopID int64
-	Date                  string // YYYY-MM-DD, household time
-	PriceCents            *int   // what a pack cost
-	PricePerKgCents       *int   // explicit price per kg (weighed goods)
+func ValidateItemCode(rule barcode.WeightRule, item string) error {
+	if len(item) != rule.Item.Length || !allDigits(item) {
+		return ErrInvalidItemCode
+	}
+	return nil
 }
 
-// PriceInput is what recording a Price takes.
-type PriceInput struct {
-	ShopID          int64
-	Date            string
-	PriceCents      *int
-	PricePerKgCents *int
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
-
-// Validate: ShopID > 0, Date a real YYYY-MM-DD, at least one amount, every given amount > 0.
-// Fields: shopId, date, priceCents, pricePerKgCents.
-func (p PriceInput) Validate() error { panic("TODO") }
-
-// PricePerKg is the price per kg of a Price: the explicit value (derived=false),
-// else PriceCents*1000/packSize rounded half up when base is units.Gram and
-// packSize > 0 (derived=true), else ok=false.
-func PricePerKg(p Price, packSize float64, base units.Base) (cents int, derived bool, ok bool) {
-	panic("TODO")
-}
-
-// LatestPrice is the Price with the highest Date, ties broken by the highest ID.
-func LatestPrice(prices []Price) (Price, bool) { panic("TODO") }
 
 // ShopBarcode is a code valid only in one Shop. Plain: Code set, RuleID 0.
 // Weighed: RuleID and ItemCode set, Code empty.
@@ -106,9 +132,3 @@ type CatalogRows struct {
 	Latest       map[int64]Price       // product id -> latest Price at this Shop
 	Info         map[int64]ProductInfo // product id -> pack size and Base Unit
 }
-
-// BuildCatalog: plain Shop Barcodes -> ShopBarcodes; weighed -> WeightProducts
-// (barcode.WeightProductKey); PricePerKgCents only for Products in WeightProducts
-// that have a price per kg; Global copied; Rules sorted by ID. Empty maps are nil
-// so the JSON omits them. A home Catalog is BuildCatalog(CatalogRows{Global: g}).
-func BuildCatalog(r CatalogRows) barcode.Catalog { panic("TODO") }
