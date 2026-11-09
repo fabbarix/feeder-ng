@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,5 +116,55 @@ func TestContextWithUserRoundTrip(t *testing.T) {
 	got, ok := auth.UserFrom(auth.ContextWithUser(context.Background(), u))
 	if !ok || got != u {
 		t.Fatalf("got %+v %v", got, ok)
+	}
+}
+
+func TestRevocationHookReportsUserAndSessionKeys(t *testing.T) {
+	f := newFixture(t, false)
+	ctx := context.Background()
+	var keys []string
+	f.svc.OnRevoke(func(key string) { keys = append(keys, key) })
+	u, _ := f.svc.AddUser(ctx, "a@example.test", "A", false)
+	tok, _, _ := f.svc.CreateSession(ctx, u.ID)
+	other, _, _ := f.svc.CreateSession(ctx, u.ID)
+
+	// The key the middleware exposes for a request is the one the hook reports.
+	var sessionKey string
+	h := f.svc.RequireUser(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sessionKey = auth.SessionKeyFrom(r.Context())
+	}))
+	do(h, tok)
+	if sessionKey == "" || !strings.HasPrefix(sessionKey, "session:") {
+		t.Fatalf("session key = %q", sessionKey)
+	}
+
+	if err := f.svc.EndSession(ctx, tok); err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 1 || keys[0] != sessionKey {
+		t.Fatalf("EndSession reported %v, want [%s]", keys, sessionKey)
+	}
+
+	keys = nil
+	if err := f.svc.DeleteUser(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 1 || keys[0] != auth.UserKey(u.ID) || auth.UserKey(u.ID) != "user:"+strconv.FormatInt(u.ID, 10) {
+		t.Fatalf("DeleteUser reported %v, want [%s]", keys, auth.UserKey(u.ID))
+	}
+	_ = other
+}
+
+func TestExpiredSessionReportsRevocation(t *testing.T) {
+	f := newFixture(t, false)
+	ctx := context.Background()
+	var keys []string
+	f.svc.OnRevoke(func(key string) { keys = append(keys, key) })
+	u, _ := f.svc.AddUser(ctx, "a@example.test", "A", false)
+	tok, _, _ := f.svc.CreateSession(ctx, u.ID)
+	f.clk.Advance(auth.SessionTTL + time.Hour)
+	f.svc.Authenticate(ctx, tok)
+	if len(keys) != 1 || !strings.HasPrefix(keys[0], "session:") {
+		t.Fatalf("expiry reported %v, want one session key", keys)
 	}
 }

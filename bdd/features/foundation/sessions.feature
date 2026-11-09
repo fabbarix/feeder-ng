@@ -65,3 +65,18 @@ Feature: Sessions
     When the Feeder is restarted
     And I GET "/api/me"
     Then the response status is 200
+
+  Scenario: Removing a User closes their open live-update stream
+    Given a running Feeder
+    And "cook@example.test" is on the allowlist
+    And I am signed in as "cook@example.test"
+    And a live-update stream is open
+    When the User "cook@example.test" is removed from the allowlist
+    Then the live-update stream is closed without further events
+
+  Scenario: Signing out closes the live-update stream
+    Given a running Feeder
+    And I am signed in as the User
+    And a live-update stream is open
+    When I POST "/api/logout"
+    Then the live-update stream is closed without further events

@@ -8,7 +8,10 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 )
 
-type userKey struct{}
+type (
+	userKey    struct{}
+	sessionKey struct{}
+)
 
 // ContextWithUser returns ctx carrying u.
 func ContextWithUser(ctx context.Context, u User) context.Context {
@@ -21,6 +24,13 @@ func UserFrom(ctx context.Context) (User, bool) {
 	return u, ok
 }
 
+// SessionKeyFrom returns the SessionKey of the session that authenticated the
+// request in ctx, or "" when there is none.
+func SessionKeyFrom(ctx context.Context) string {
+	k, _ := ctx.Value(sessionKey{}).(string)
+	return k
+}
+
 // RequireUser rejects requests without a valid session with 401, and otherwise
 // passes the User on in the request context. A slid session cookie is re-sent.
 func (s *Service) RequireUser(next http.Handler) http.Handler {
@@ -29,7 +39,7 @@ func (s *Service) RequireUser(next http.Handler) http.Handler {
 		if c, err := r.Cookie(CookieName); err == nil {
 			token = c.Value
 		}
-		u, exp, slid, err := s.resolve(r.Context(), token)
+		res, err := s.resolve(r.Context(), token)
 		if errors.Is(err, ErrNoSession) {
 			httpx.WriteError(w, http.StatusUnauthorized, "unauthenticated", "Sign in to continue")
 			return
@@ -38,10 +48,11 @@ func (s *Service) RequireUser(next http.Handler) http.Handler {
 			httpx.WriteAPIError(w, err)
 			return
 		}
-		if slid {
-			http.SetCookie(w, s.SessionCookie(token, exp))
+		if res.slid {
+			http.SetCookie(w, s.SessionCookie(token, res.expiresAt))
 		}
-		next.ServeHTTP(w, r.WithContext(ContextWithUser(r.Context(), u)))
+		ctx := context.WithValue(r.Context(), sessionKey{}, SessionKey(res.sessionID))
+		next.ServeHTTP(w, r.WithContext(ContextWithUser(ctx, res.user)))
 	})
 }
 

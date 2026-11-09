@@ -3,7 +3,7 @@ export const shellStrings = {
   brand: 'Feeder',
   bottomBar: 'Bottom bar',
   sideRail: 'Side rail',
-  accountMenu: 'Account menu',
+  yourMenu: 'Your menu',
   signOut: 'Sign out',
   comingSoon: 'Coming soon',
   signedOutTitle: 'Sign in to Feeder',

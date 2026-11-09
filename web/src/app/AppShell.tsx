@@ -18,7 +18,7 @@ export function AppShell({ user, onSignOut, navItems = [] }: AppShellProps) {
     <div className="app-shell">
       <header className="top-bar">
         <span className="top-bar__brand">{shellStrings.brand}</span>
-        <AccountMenu user={user} items={[...MENU_NAV, ...sortByOrder(navItems)]} onSignOut={onSignOut} />
+        <YourMenu user={user} items={[...MENU_NAV, ...sortByOrder(navItems)]} onSignOut={onSignOut} />
       </header>
       <nav aria-label={shellStrings.sideRail} className="side-rail">
         {PRIMARY_NAV.map((item) => (
@@ -47,13 +47,13 @@ export function AppShell({ user, onSignOut, navItems = [] }: AppShellProps) {
   )
 }
 
-interface AccountMenuProps {
+interface YourMenuProps {
   user: AppShellProps['user']
   items: NavItem[]
   onSignOut: () => void
 }
 
-function AccountMenu({ user, items, onSignOut }: AccountMenuProps) {
+function YourMenu({ user, items, onSignOut }: YourMenuProps) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -66,11 +66,11 @@ function AccountMenu({ user, items, onSignOut }: AccountMenuProps) {
   }, [open])
 
   return (
-    <div className="account-menu-anchor">
+    <div className="your-menu-anchor">
       <button
         type="button"
-        className="account-menu-button"
-        aria-label={shellStrings.accountMenu}
+        className="your-menu-button"
+        aria-label={shellStrings.yourMenu}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -78,7 +78,7 @@ function AccountMenu({ user, items, onSignOut }: AccountMenuProps) {
         <Avatar name={user.displayName} imageUrl={user.imageUrl} size="sm" />
       </button>
       {open ? (
-        <div role="menu" className="account-menu">
+        <div role="menu" className="your-menu">
           {items.map((item) => (
             <Link key={item.id} role="menuitem" to={item.path} onClick={() => setOpen(false)}>
               {item.label}

@@ -1,12 +1,16 @@
 package bdd
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/cucumber/godog"
 
+	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/config"
 )
 
@@ -72,5 +76,68 @@ func foundationSteps(sc *godog.ScenarioContext, w *World) {
 			return fmt.Errorf("admin email = %q, want %q", got, want)
 		}
 		return nil
+	})
+}
+
+// Live-update stream steps. Step text is specific to this feature: godog does
+// not detect duplicate step text across files.
+func init() { RegisterSteps("foundation-stream", streamSteps) }
+
+type liveStream struct {
+	lines  chan string
+	cancel context.CancelFunc
+}
+
+func streamSteps(sc *godog.ScenarioContext, w *World) {
+	sc.Step(`^a live-update stream is open$`, func() error {
+		env := w.Ensure()
+		ck := w.Client.Cookie(auth.CookieName)
+		if ck == nil {
+			return fmt.Errorf("current client has no session cookie")
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		req, _ := http.NewRequestWithContext(ctx, "GET", env.URL()+"/api/events", nil)
+		req.AddCookie(ck)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil || resp.StatusCode != 200 {
+			cancel()
+			return fmt.Errorf("open stream: %v %v", resp, err)
+		}
+		lines := make(chan string, 64)
+		go func() {
+			defer resp.Body.Close()
+			sc := bufio.NewScanner(resp.Body)
+			for sc.Scan() {
+				lines <- sc.Text()
+			}
+			close(lines)
+		}()
+		w.TB.Cleanup(cancel)
+		if l := <-lines; l != ": connected" {
+			return fmt.Errorf("first line = %q", l)
+		}
+		w.Vars["stream"] = &liveStream{lines: lines, cancel: cancel}
+		return nil
+	})
+	sc.Step(`^the live-update stream is closed without further events$`, func() error {
+		s, _ := w.Vars["stream"].(*liveStream)
+		if s == nil {
+			return fmt.Errorf("no stream open")
+		}
+		w.Env.App.Deps.Events.Publish("plan", map[string]int{"week": 46}) // after revocation
+		deadline := time.After(2 * time.Second)
+		for {
+			select {
+			case l, ok := <-s.lines:
+				if !ok {
+					return nil
+				}
+				if strings.HasPrefix(l, "event:") {
+					return fmt.Errorf("received %q after revocation", l)
+				}
+			case <-deadline:
+				return fmt.Errorf("stream still open 2 s after revocation")
+			}
+		}
 	})
 }
