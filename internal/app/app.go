@@ -13,6 +13,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/config"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/scheduler"
 )
 
 type options struct {
@@ -52,7 +53,8 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	if _, err := authSvc.SeedAdmin(context.Background(), cfg.AdminEmail); err != nil {
 		return nil, fmt.Errorf("app: seed admin: %w", err)
 	}
-	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger}
+	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger,
+		Scheduler: scheduler.New(clk, scheduler.NewSQLRunStore(d), o.logger)}
 	// Removal and sign-out end the live-update streams of the affected User or session.
 	authSvc.OnRevoke(deps.Events.CloseOwner)
 

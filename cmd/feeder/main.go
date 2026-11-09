@@ -55,6 +55,8 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		return err
 	}
 
+	go a.Deps.Scheduler.Run(ctx, time.Minute)
+
 	srv := &http.Server{Addr: cfg.Addr, Handler: a.Handler, ReadHeaderTimeout: 10 * time.Second}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.ListenAndServe() }()

@@ -13,6 +13,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/config"
 	"github.com/fabbarix/feeder-ng/internal/events"
+	"github.com/fabbarix/feeder-ng/internal/scheduler"
 )
 
 // Deps are the shared services handed to every module when it mounts.
@@ -23,6 +24,9 @@ type Deps struct {
 	Events *events.Bus
 	Auth   *auth.Service
 	Logger *slog.Logger
+	// Scheduler runs household-time daily jobs (planning's nightly run, later backups and
+	// notification sweeps). Modules register jobs in Mount; cmd/feeder starts it with Run.
+	Scheduler *scheduler.Scheduler
 }
 
 // Module is one feature's HTTP surface.
