@@ -1,4 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
+import { planApi } from '../api'
 import type { PlanSlot, PlanView } from '../types'
+import { usePlanLiveUpdates } from './usePlanLiveUpdates'
 
 export interface UsePlan {
   view: PlanView | undefined
@@ -9,7 +12,24 @@ export interface UsePlan {
   error: Error | null
 }
 
+const NO_SLOTS: PlanSlot[] = []
+
 /** react-query ['plan', 'view'] (GET /api/plan). Live: refetches on SSE topic `plan` and after reconnects (usePlanLiveUpdates). */
 export function usePlan(): UsePlan {
-  return { view: undefined, slots: [], today: '', updating: false, isLoading: false, error: null }
+  usePlanLiveUpdates()
+  // While the planner is catching up, poll so the "Updating" note clears even if an event was missed.
+  const query = useQuery({
+    queryKey: ['plan', 'view'],
+    queryFn: () => planApi.view(),
+    refetchInterval: (q) => (q.state.data?.updating ? 2000 : false),
+  })
+  const view = query.data
+  return {
+    view,
+    slots: view?.slots ?? NO_SLOTS,
+    today: view?.today ?? '',
+    updating: view?.updating ?? false,
+    isLoading: query.isLoading,
+    error: query.error,
+  }
 }

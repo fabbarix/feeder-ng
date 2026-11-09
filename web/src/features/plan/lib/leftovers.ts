@@ -1,4 +1,6 @@
 import type { Leftover } from '../types'
+import { formatPortions } from './cook'
+import { dayNumber, weekdayName } from './phrase'
 
 export interface LeftoverRow {
   id: number
@@ -12,6 +14,17 @@ export interface LeftoverRow {
 
 /** The rows of the "Leftovers to use" tile, soonest Use-by first. */
 export function leftoverRows(leftovers: Leftover[], today: string): LeftoverRow[] {
-  void [leftovers, today]
-  throw new Error('TODO: developer')
+  return [...leftovers]
+    .sort((a, b) => a.useBy.localeCompare(b.useBy) || a.id - b.id)
+    .map((l) => {
+      const diff = dayNumber(l.useBy) - dayNumber(today)
+      const when = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : weekdayName(l.useBy, 'short')
+      return {
+        id: l.id,
+        recipeName: l.recipeName,
+        portions: formatPortions(l.portions),
+        useBy: `Use by ${when}`,
+        tone: diff <= 1 ? 'spoil' : 'leftover',
+      }
+    })
 }
