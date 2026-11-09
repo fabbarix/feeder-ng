@@ -1,0 +1,239 @@
+package app_test
+
+import (
+	"context"
+	"database/sql"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+	"testing/fstest"
+	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/auth"
+	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/config"
+	"github.com/fabbarix/feeder-ng/internal/db"
+)
+
+type harness struct {
+	app *app.App
+	db  *sql.DB
+	clk *clock.Fake
+}
+
+func build(t *testing.T, spa fstest.MapFS, reg *app.Registry) *harness {
+	t.Helper()
+	d, err := db.Open(filepath.Join(t.TempDir(), "feeder.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { d.Close() })
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	clk := clock.NewFake(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC))
+	cfg := config.Config{AdminEmail: "admin@example.test", DataDir: t.TempDir()}
+	a, err := app.New(cfg, d, clk, spa, app.WithRegistry(reg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &harness{app: a, db: d, clk: clk}
+}
+
+func (h *harness) get(path, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("GET", path, nil)
+	if token != "" {
+		req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
+	}
+	rec := httptest.NewRecorder()
+	h.app.Handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func (h *harness) token(t *testing.T, email string, admin bool) string {
+	t.Helper()
+	ctx := context.Background()
+	u, err := h.app.Deps.Auth.AddUser(ctx, email, "X", admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, _, err := h.app.Deps.Auth.CreateSession(ctx, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tok
+}
+
+var spaFS = fstest.MapFS{
+	"index.html":    {Data: []byte("<html>SPA index</html>")},
+	"assets/app.js": {Data: []byte("console.log('app')")},
+}
+
+func TestRegistryRejectsBadModules(t *testing.T) {
+	mount := func(*app.Router, app.Deps) {}
+	for name, f := range map[string]func(*app.Registry){
+		"empty name": func(g *app.Registry) { g.Register(app.Module{Mount: mount}) },
+		"nil mount":  func(g *app.Registry) { g.Register(app.Module{Name: "x"}) },
+		"duplicate": func(g *app.Registry) {
+			g.Register(app.Module{Name: "x", Mount: mount})
+			g.Register(app.Module{Name: "x", Mount: mount})
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("expected panic")
+				}
+			}()
+			f(app.NewRegistry())
+		})
+	}
+}
+
+func TestRegistryModulesSortedByName(t *testing.T) {
+	g := app.NewRegistry()
+	mount := func(*app.Router, app.Deps) {}
+	for _, n := range []string{"stock", "auth", "recipes"} {
+		g.Register(app.Module{Name: n, Mount: mount})
+	}
+	var names []string
+	for _, m := range g.Modules() {
+		names = append(names, m.Name)
+	}
+	if strings.Join(names, ",") != "auth,recipes,stock" {
+		t.Fatalf("names = %v", names)
+	}
+}
+
+func TestNewSeedsAdminAndHealth(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	if _, err := h.app.Deps.Auth.UserByEmail(context.Background(), "admin@example.test"); err != nil {
+		t.Fatalf("admin not seeded: %v", err)
+	}
+	rec := h.get("/api/health", "")
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"status":"ok"`) {
+		t.Fatalf("health = %d %s", rec.Code, rec.Body)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Fatalf("Content-Type = %q", ct)
+	}
+}
+
+func TestModulesMountWithPublicUserAndAdminRoutes(t *testing.T) {
+	reg := app.NewRegistry()
+	reg.Register(app.Module{Name: "demo", Mount: func(r *app.Router, d app.Deps) {
+		if d.DB == nil || d.Clock == nil || d.Events == nil || d.Auth == nil {
+			panic("Deps not fully populated")
+		}
+		r.Public("GET /api/demo/public", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("public")) })
+		r.User("GET /api/demo/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+			u, _ := auth.UserFrom(r.Context())
+			w.Write([]byte(u.Email + ":" + r.PathValue("id")))
+		})
+		r.Admin("GET /api/demo/admin", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("admin")) })
+	}})
+	h := build(t, spaFS, reg)
+	user := h.token(t, "user@example.test", false)
+	admin := h.token(t, "boss@example.test", true)
+
+	cases := []struct {
+		path, tok string
+		code      int
+		body      string
+	}{
+		{"/api/demo/public", "", 200, "public"},
+		{"/api/demo/user/42", "", 401, ""},
+		{"/api/demo/user/42", user, 200, "user@example.test:42"},
+		{"/api/demo/admin", "", 401, ""},
+		{"/api/demo/admin", user, 403, ""},
+		{"/api/demo/admin", admin, 200, "admin"},
+	}
+	for _, c := range cases {
+		rec := h.get(c.path, c.tok)
+		if rec.Code != c.code || (c.body != "" && rec.Body.String() != c.body) {
+			t.Errorf("GET %s: %d %q, want %d %q", c.path, rec.Code, rec.Body, c.code, c.body)
+		}
+	}
+}
+
+func TestUnknownAPIPathIsJSON404(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	rec := h.get("/api/nope", "")
+	if rec.Code != 404 || !strings.Contains(rec.Body.String(), `"not_found"`) {
+		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+	if strings.Contains(rec.Body.String(), "SPA index") {
+		t.Fatal("unknown /api paths must never fall back to the SPA")
+	}
+}
+
+func TestPanickingHandlerBecomesJSON500(t *testing.T) {
+	reg := app.NewRegistry()
+	reg.Register(app.Module{Name: "boom", Mount: func(r *app.Router, _ app.Deps) {
+		r.Public("GET /api/boom", func(http.ResponseWriter, *http.Request) { panic("kaboom") })
+	}})
+	h := build(t, spaFS, reg)
+	rec := h.get("/api/boom", "")
+	if rec.Code != 500 || !strings.Contains(rec.Body.String(), `"internal"`) || strings.Contains(rec.Body.String(), "kaboom") {
+		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestSPAServesFilesAndFallsBackToIndex(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	if rec := h.get("/assets/app.js", ""); rec.Code != 200 || rec.Body.String() != "console.log('app')" {
+		t.Fatalf("asset: %d %q", rec.Code, rec.Body)
+	}
+	for _, p := range []string{"/", "/plan", "/recipes/42/edit", "/assets/missing.js"} {
+		rec := h.get(p, "")
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), "SPA index") {
+			t.Errorf("%s: %d %q, want index.html fallback", p, rec.Code, rec.Body)
+		}
+	}
+	req := httptest.NewRequest("POST", "/plan", nil)
+	rec := httptest.NewRecorder()
+	h.app.Handler.ServeHTTP(rec, req)
+	if rec.Code == 200 {
+		t.Error("POST to an SPA path must not be served the index")
+	}
+}
+
+func TestFrontendNotBuilt(t *testing.T) {
+	for name, fsys := range map[string]fstest.MapFS{
+		"empty":            {},
+		"only placeholder": {".gitkeep": {Data: nil}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := build(t, fsys, app.NewRegistry())
+			rec := h.get("/", "")
+			body, _ := io.ReadAll(rec.Body)
+			if rec.Code != 503 || !strings.Contains(strings.ToLower(string(body)), "frontend not built") {
+				t.Fatalf("got %d %q", rec.Code, body)
+			}
+			if rec := h.get("/api/health", ""); rec.Code != 200 {
+				t.Fatalf("API must work without a frontend: %d", rec.Code)
+			}
+		})
+	}
+}
+
+func TestEventsEndpointRequiresUser(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	if rec := h.get("/api/events", ""); rec.Code != 401 {
+		t.Fatalf("anonymous /api/events = %d, want 401", rec.Code)
+	}
+}
+
+func TestNewFailsWithoutAdminEmail(t *testing.T) {
+	d, _ := db.Open(filepath.Join(t.TempDir(), "feeder.db"))
+	defer d.Close()
+	db.MigrateEmbedded(context.Background(), d)
+	_, err := app.New(config.Config{DataDir: t.TempDir()}, d, clock.System{}, spaFS, app.WithRegistry(app.NewRegistry()))
+	if err == nil {
+		t.Fatal("app.New must refuse an empty AdminEmail")
+	}
+}
