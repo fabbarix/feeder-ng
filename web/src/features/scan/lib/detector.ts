@@ -1,6 +1,6 @@
 // The camera's barcode reader behind an interface, so hooks and tests use a fake (functional spec §10.4).
 // BarcodeDetector where the browser has it, else ZXing (@zxing/browser). Plain TypeScript. Stubs until implemented.
-import type { Format, Scanned } from './barcode'
+import { parse, type Format, type Scanned } from './barcode'
 
 /** The seven formats the app reads. */
 export const SCAN_FORMATS: readonly Exclude<Format, ''>[] = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code', 'data_matrix']
@@ -27,8 +27,19 @@ export interface NativeBarcodeDetectorCtor {
  * Detections in any other format (itf, pdf417, ...) are dropped. Resolves to null when none of the seven is supported.
  */
 export async function createNativeDetector(Ctor: NativeBarcodeDetectorCtor): Promise<Detector | null> {
-  void Ctor
-  throw new Error('not implemented')
+  const supported = Ctor.getSupportedFormats ? await Ctor.getSupportedFormats() : undefined
+  const formats = supported ? SCAN_FORMATS.filter((f) => supported.includes(f)) : [...SCAN_FORMATS]
+  if (formats.length === 0) return null
+  const native = new Ctor({ formats: [...formats] })
+  const ours = new Set<string>(SCAN_FORMATS)
+  return {
+    async detect(frame) {
+      const found = await native.detect(frame)
+      return found
+        .filter((d) => ours.has(d.format))
+        .map((d) => ({ rawValue: d.rawValue, format: d.format as Exclude<Format, ''> }))
+    },
+  }
 }
 
 export interface DetectorEnv {
@@ -39,8 +50,11 @@ export interface DetectorEnv {
 
 /** Native when it exists and supports at least one format; otherwise ZXing. */
 export async function chooseDetector(env: DetectorEnv): Promise<Detector> {
-  void env
-  throw new Error('not implemented')
+  if (env.BarcodeDetector) {
+    const native = await createNativeDetector(env.BarcodeDetector)
+    if (native) return native
+  }
+  return env.createZxing()
 }
 
 /**
@@ -48,6 +62,5 @@ export async function chooseDetector(env: DetectorEnv): Promise<Detector> {
  * other QR content is `not_product`.
  */
 export function toScanned(d: Detection): Scanned {
-  void d
-  throw new Error('not implemented')
+  return parse(d.rawValue, d.format)
 }

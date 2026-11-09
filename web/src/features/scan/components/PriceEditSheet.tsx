@@ -1,3 +1,9 @@
+import { useState } from 'react'
+import { formatMajor, parseMajor } from '../../products/lib/money'
+import { BottomSheet } from '../../../ui/BottomSheet'
+import { Button } from '../../../ui/Button'
+import { scanStrings } from '../strings'
+
 export interface PriceEditSheetProps {
   open: boolean
   onClose: () => void
@@ -9,12 +15,38 @@ export interface PriceEditSheetProps {
   onSave: (priceCents: number) => void
 }
 
-/**
- * A BottomSheet titled "Price of <productName>" with a field labelled "Price" prefilled with the current price as
- * plain decimals (products/lib/money formatMajor) and a "Save price" button. Parses with parseMajor; an empty, zero
- * or unparsable entry shows "Enter a number above 0" and does not save. Stub until implemented.
- */
-export function PriceEditSheet(props: PriceEditSheetProps) {
-  void props
-  return null
+/** "Price of <product>": edits the Price a scan recorded. */
+export function PriceEditSheet({ open, onClose, productName, priceCents, currency, onSave }: PriceEditSheetProps) {
+  const [text, setText] = useState(priceCents === null ? '' : formatMajor(priceCents, currency))
+  const [error, setError] = useState(false)
+
+  const submit = () => {
+    const cents = parseMajor(text, currency)
+    if (cents === null || cents <= 0) {
+      setError(true)
+      return
+    }
+    setError(false)
+    onSave(cents)
+  }
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={`Price of ${productName}`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <div className="field">
+          <label className="field__label" htmlFor="price-edit-field">
+            {scanStrings.priceLabel}
+          </label>
+          <input id="price-edit-field" className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
+        {error ? <p className="field__error" role="alert">{scanStrings.mustBePositive}</p> : null}
+        <Button type="submit">{scanStrings.savePrice}</Button>
+      </form>
+    </BottomSheet>
+  )
 }

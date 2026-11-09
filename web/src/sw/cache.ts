@@ -1,6 +1,6 @@
 // Pure request classification for the service worker (functional spec §10.3). The worker precaches the app shell
 // and static assets only; data (the Shopping List, the offline bundle, the queue) lives in IndexedDB, owned by the
-// SPA. No DOM or worker globals here, so it is unit-tested. Stubs until implemented.
+// SPA. No DOM or worker globals here, so it is unit-tested.
 
 export type RequestClass =
   /** a page load: answer from the precached index.html when the network fails */
@@ -23,7 +23,11 @@ export interface RequestInfo {
 
 /** `origin` is the worker's own origin; cross-origin requests are bypassed. */
 export function classifyRequest(req: RequestInfo, origin: string): RequestClass {
-  void req
-  void origin
-  throw new Error('not implemented')
+  const url = new URL(req.url)
+  if (url.origin !== origin) return 'bypass'
+  if (req.method.toUpperCase() !== 'GET') return 'bypass'
+  if (url.pathname === '/api/events') return 'events'
+  if (url.pathname.startsWith('/api/')) return 'api'
+  if (req.mode === 'navigate') return 'navigation'
+  return 'static'
 }

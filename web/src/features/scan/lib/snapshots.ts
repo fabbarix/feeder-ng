@@ -10,7 +10,19 @@ export interface SnapshotStore {
 
 /** An in-memory store (tests, and the fallback where IndexedDB is unavailable). get returns a copy, never the stored object. */
 export function createMemorySnapshotStore(): SnapshotStore {
-  throw new Error('not implemented')
+  const data = new Map<string, string>()
+  return {
+    async get<T>(key: string) {
+      const raw = data.get(key)
+      return raw === undefined ? undefined : (JSON.parse(raw) as T)
+    },
+    async set<T>(key: string, value: T) {
+      data.set(key, JSON.stringify(value))
+    },
+    async delete(key: string) {
+      data.delete(key)
+    },
+  }
 }
 
 export const snapshotKeys = {

@@ -1,7 +1,9 @@
 // Runs the detector over the camera frames and reports each distinct read once. React hook; the reading itself is
-// the Detector interface (tests pass a fake). Stubs until implemented.
+// the Detector interface (tests pass a fake).
+import { useEffect, useRef, useState } from 'react'
 import type { Scanned } from '../lib/barcode'
-import type { Detection, Detector } from '../lib/detector'
+import { createCooldown } from '../lib/cooldown'
+import { toScanned, type Detection, type Detector } from '../lib/detector'
 
 export interface FrameSource {
   /** the current frame, or null while the camera is not ready */
@@ -33,6 +35,44 @@ export interface UseScannerResult {
  * Stops on unmount and when enabled turns false; the cooldown is cleared when it turns false.
  */
 export function useScanner(options: UseScannerOptions): UseScannerResult {
-  void options
-  throw new Error('not implemented')
+  const { detector, enabled, cooldownMs = 1500, intervalMs = 150 } = options
+  const [error, setError] = useState<string | null>(null)
+  const sourceRef = useRef(options.source)
+  const onScanRef = useRef(options.onScan)
+  sourceRef.current = options.source
+  onScanRef.current = options.onScan
+
+  useEffect(() => {
+    if (!enabled || !detector) return
+    const cooldown = createCooldown(cooldownMs)
+    let stopped = false
+    let busy = false
+    const timer = setInterval(() => {
+      const frame = sourceRef.current?.frame() ?? null
+      if (busy || stopped || !frame) return
+      busy = true
+      detector
+        .detect(frame)
+        .then((found) => {
+          if (stopped) return
+          for (const d of found) {
+            const scanned = toScanned(d)
+            if (cooldown.accept(`${d.format}:${d.rawValue}`)) onScanRef.current(scanned, d)
+          }
+        })
+        .catch((err: unknown) => {
+          if (!stopped) setError(err instanceof Error ? err.message : String(err))
+        })
+        .finally(() => {
+          busy = false
+        })
+    }, intervalMs)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      cooldown.reset()
+    }
+  }, [enabled, detector, cooldownMs, intervalMs])
+
+  return { error }
 }

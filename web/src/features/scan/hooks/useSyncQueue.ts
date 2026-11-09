@@ -1,8 +1,9 @@
 // Flushes the offline queue when the phone is online: on mount, on the window `online` event, and after each
-// enqueue (React hook; the queue and API are injected). Stubs until implemented.
+// enqueue (React hook; the queue and API are injected).
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { OfflineQueue, SyncApi } from '../lib/queue'
-import type { SyncNotice } from '../lib/notices'
-import type { ScanResult } from '../types'
+import { syncNotices, type SyncNotice } from '../lib/notices'
+import type { Op, ScanResult } from '../types'
 
 export interface UseSyncQueueOptions {
   queue: OfflineQueue
@@ -20,12 +21,70 @@ export interface UseSyncQueueResult {
   /** operations the server rejected */
   rejectedCount: number
   /** queues an operation and, when online, flushes */
-  enqueue(op: import('../types').Op): Promise<void>
+  enqueue(op: Op): Promise<void>
   /** flush now (no-op while offline) */
   flush(): Promise<void>
+  /** re-read the counts after the queue was changed elsewhere */
+  refresh(): Promise<void>
 }
 
+const defaultOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
+
 export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
-  void options
-  throw new Error('not implemented')
+  const queueRef = useRef(options.queue)
+  const apiRef = useRef(options.api)
+  const onResultsRef = useRef(options.onResults)
+  const isOnlineRef = useRef(options.isOnline ?? defaultOnline)
+  queueRef.current = options.queue
+  apiRef.current = options.api
+  onResultsRef.current = options.onResults
+  isOnlineRef.current = options.isOnline ?? defaultOnline
+
+  const [online, setOnline] = useState(() => isOnlineRef.current())
+  const [pendingCount, setPendingCount] = useState(0)
+  const [rejectedCount, setRejectedCount] = useState(0)
+
+  const refreshCounts = useCallback(async () => {
+    const [pending, rejected] = await Promise.all([queueRef.current.pending(), queueRef.current.rejected()])
+    setPendingCount(pending.length)
+    setRejectedCount(rejected.length)
+  }, [])
+
+  const flush = useCallback(async () => {
+    if (!isOnlineRef.current()) return
+    const { offline, results } = await queueRef.current.flush(apiRef.current)
+    if (offline || results.length === 0) {
+      await refreshCounts()
+      return
+    }
+    onResultsRef.current?.(results, syncNotices(results))
+    await refreshCounts()
+  }, [refreshCounts])
+
+  const enqueue = useCallback(
+    async (op: Op) => {
+      await queueRef.current.enqueue(op)
+      await refreshCounts()
+      await flush()
+    },
+    [flush, refreshCounts],
+  )
+
+  useEffect(() => {
+    void refreshCounts()
+    if (isOnlineRef.current()) void flush()
+    const goOnline = () => {
+      setOnline(true)
+      void flush()
+    }
+    const goOffline = () => setOnline(false)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, [flush, refreshCounts])
+
+  return { online, pendingCount, rejectedCount, enqueue, flush, refresh: refreshCounts }
 }

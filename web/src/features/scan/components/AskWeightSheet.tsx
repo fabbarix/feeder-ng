@@ -1,3 +1,9 @@
+import { useState } from 'react'
+import { BottomSheet } from '../../../ui/BottomSheet'
+import { Button } from '../../../ui/Button'
+import { parseAmount } from '../../stock/lib/amount'
+import { scanStrings } from '../strings'
+
 export interface AskWeightSheetProps {
   open: boolean
   onClose: () => void
@@ -8,13 +14,40 @@ export interface AskWeightSheetProps {
   onSubmit: (grams: number) => void
 }
 
-/**
- * A BottomSheet titled "How much does it weigh?" for a price-valued Weight Barcode Rule with no price per kg
- * (functional spec §5, §15 item 3): it names the Product and the label price, has a field "Weight (g)" and a
- * "Save" button; an empty, zero or unparsable weight shows "Enter a number above 0" and does not submit. The hint
- * "Weigh it once; the price per kg is remembered for next time." is shown. Stub until implemented.
- */
-export function AskWeightSheet(props: AskWeightSheetProps) {
-  void props
-  return null
+/** "How much does it weigh?": asked once for a price-valued code, so the price per kg can be worked out. */
+export function AskWeightSheet({ open, onClose, productName, priceText, onSubmit }: AskWeightSheetProps) {
+  const [text, setText] = useState('')
+  const [error, setError] = useState(false)
+
+  const submit = () => {
+    const parsed = parseAmount(text, 'positive')
+    if (!parsed.ok) {
+      setError(true)
+      return
+    }
+    setError(false)
+    onSubmit(parsed.value)
+  }
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={scanStrings.askWeightTitle}>
+      <p>{`${productName} has a label price of ${priceText}, so the weight is needed to work out the price per kg.`}</p>
+      <p className="field__hint">{scanStrings.weightHint}</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <div className="field">
+          <label className="field__label" htmlFor="ask-weight-field">
+            {scanStrings.weight}
+          </label>
+          <input id="ask-weight-field" className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
+        {error ? <p className="field__error" role="alert">{scanStrings.mustBePositive}</p> : null}
+        <Button type="submit">{scanStrings.save}</Button>
+      </form>
+    </BottomSheet>
+  )
 }

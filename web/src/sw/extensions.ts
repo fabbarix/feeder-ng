@@ -1,7 +1,6 @@
 // How other features add behaviour to the service worker without editing sw.ts: every module in
 // src/sw/extensions/*.ts may export `register(sw)`; sw.ts loads them all with import.meta.glob and calls
 // registerExtensions. The notifications team adds src/sw/extensions/push.ts (push, notificationclick) and nothing else.
-// Plain TypeScript. Stubs until implemented.
 
 export interface WorkerScope {
   addEventListener(type: string, listener: (event: never) => void): void
@@ -17,7 +16,16 @@ export interface SwExtension {
  * Returns the keys that registered.
  */
 export function registerExtensions(modules: Record<string, SwExtension>, sw: WorkerScope): string[] {
-  void modules
-  void sw
-  throw new Error('not implemented')
+  const registered: string[] = []
+  for (const key of Object.keys(modules).sort()) {
+    const register = modules[key]?.register
+    if (typeof register !== 'function') continue
+    try {
+      register(sw)
+      registered.push(key)
+    } catch (err) {
+      console.error(`service worker extension ${key} failed`, err)
+    }
+  }
+  return registered
 }

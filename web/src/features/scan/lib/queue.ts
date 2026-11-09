@@ -2,6 +2,7 @@
 // Operations are kept in the order they were made, survive a restart (IndexedDB via opStore.ts), and are sent to
 // POST /api/scan/sync in that order when the phone is back online. The server is idempotent on clientUuid, so
 // sending twice is safe. Stubs until the Developer implements them.
+import { ApiError } from '../../../lib/http'
 import type { Op, ScanResult } from '../types'
 
 export interface QueuedOp {
@@ -33,36 +34,60 @@ export interface FlushResult {
 }
 
 export function createMemoryOpStore(): OpStore {
-  throw new Error('not implemented')
+  const entries = new Map<string, QueuedOp>()
+  const copy = (e: QueuedOp): QueuedOp => ({ ...e, op: { ...e.op }, rejected: e.rejected ? { ...e.rejected } : undefined })
+  return {
+    async append(entry) {
+      entries.set(entry.op.clientUuid, copy(entry))
+    },
+    async all() {
+      return [...entries.values()].map(copy)
+    },
+    async put(entry) {
+      entries.set(entry.op.clientUuid, copy(entry))
+    },
+    async remove(clientUuid) {
+      entries.delete(clientUuid)
+    },
+  }
 }
 
 /** A fresh UUID v4 (crypto.randomUUID, with a Math.random fallback where it is missing). */
 export function newClientUuid(): string {
-  throw new Error('not implemented')
+  const c = globalThis.crypto as Partial<Crypto> | undefined
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID()
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
 }
 
+const isConnectivityError = (err: unknown): boolean =>
+  err instanceof ApiError && (err.status === 0 || err.status >= 500)
+
 export class OfflineQueue {
+  private inFlight: Promise<FlushResult> | null = null
+
   constructor(
     private readonly store: OpStore,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   /** Appends the operation; a clientUuid already in the queue is ignored (no duplicate). */
-  enqueue(op: Op): Promise<void> {
-    void this.store
-    void this.now
-    void op
-    throw new Error('not implemented')
+  async enqueue(op: Op): Promise<void> {
+    const existing = await this.store.all()
+    if (existing.some((e) => e.op.clientUuid === op.clientUuid)) return
+    await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0 })
   }
 
   /** Operations still to send, in order (rejected ones excluded). */
-  pending(): Promise<QueuedOp[]> {
-    throw new Error('not implemented')
+  async pending(): Promise<QueuedOp[]> {
+    return (await this.store.all()).filter((e) => !e.rejected)
   }
 
   /** Operations the server rejected, in order. */
-  rejected(): Promise<QueuedOp[]> {
-    throw new Error('not implemented')
+  async rejected(): Promise<QueuedOp[]> {
+    return (await this.store.all()).filter((e) => e.rejected)
   }
 
   /**
@@ -72,7 +97,34 @@ export class OfflineQueue {
    * With nothing pending the API is not called.
    */
   flush(api: SyncApi): Promise<FlushResult> {
-    void api
-    throw new Error('not implemented')
+    if (!this.inFlight) {
+      this.inFlight = this.run(api).finally(() => {
+        this.inFlight = null
+      })
+    }
+    return this.inFlight
+  }
+
+  private async run(api: SyncApi): Promise<FlushResult> {
+    const sent = await this.pending()
+    if (sent.length === 0) return { offline: false, results: [] }
+    let results: ScanResult[]
+    try {
+      results = await api.sync(sent.map((e) => e.op))
+    } catch (err) {
+      if (!isConnectivityError(err)) throw err
+      for (const entry of sent) await this.store.put({ ...entry, attempts: entry.attempts + 1 })
+      return { offline: true, results: [] }
+    }
+    for (const result of results) {
+      const entry = sent.find((e) => e.op.clientUuid === result.clientUuid)
+      if (!entry) continue
+      if (result.status === 'rejected') {
+        await this.store.put({ ...entry, rejected: { code: result.error?.code ?? 'rejected', message: result.error?.message ?? '' } })
+      } else {
+        await this.store.remove(entry.op.clientUuid)
+      }
+    }
+    return { offline: false, results }
   }
 }

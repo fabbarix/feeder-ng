@@ -28,6 +28,7 @@ export const scanStrings = {
   queued: (n: number) => `${n} ${n === 1 ? 'scan' : 'scans'} waiting to sync`,
   merged: (name: string) => `Someone already added this barcode; yours was merged into ${name}`,
   rejected: (message: string) => `Couldn't sync a scan: ${message}`,
+  rejectedAdd: (message: string) => `Couldn't add that scan: ${message}`,
   unknownTitle: 'What is this?',
   weighedTitle: 'What is this weighed item?',
   ingredient: 'Ingredient',
@@ -49,5 +50,9 @@ export const scanStrings = {
   minusPack: '−1 pack',
   setTotal: 'Set total',
   newTotal: 'New total',
+  enterAmount: 'Enter an amount',
+  amountNegative: 'The amount cannot be negative',
+  cameraError: 'The camera could not start. Try again.',
+  left: (n: number) => `${n} left`,
   askWeightTitle: 'How much does it weigh?',
 }

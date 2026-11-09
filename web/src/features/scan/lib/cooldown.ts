@@ -1,5 +1,5 @@
 // Continuous scanning reads the same barcode on every frame; this lets one read through per window.
-// Plain TypeScript. Stubs until implemented.
+// Plain TypeScript.
 
 export interface Cooldown {
   /** true when the code should be handled now; the same code inside the window is refused, any other code is accepted */
@@ -8,7 +8,16 @@ export interface Cooldown {
 }
 
 export function createCooldown(windowMs: number, now: () => number = () => Date.now()): Cooldown {
-  void windowMs
-  void now
-  throw new Error('not implemented')
+  let last: { code: string; at: number } | null = null
+  return {
+    accept(code) {
+      const t = now()
+      if (last && last.code === code && t - last.at < windowMs) return false
+      last = { code, at: t }
+      return true
+    },
+    reset() {
+      last = null
+    },
+  }
 }

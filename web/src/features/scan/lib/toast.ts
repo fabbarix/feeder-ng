@@ -1,6 +1,8 @@
 // Text of the line shown after a scan: "Passata +700 g · $1.59" (the buttons ✎ and Undo sit beside it).
 // Plain TypeScript, no React. Stubs until implemented.
-import type { UnitSystem } from '../../../lib/units'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { formatMinor } from '../../products/lib/money'
+import { scanStrings } from '../strings'
 import type { BaseUnit } from '../types'
 
 export interface FeedbackInput {
@@ -19,7 +21,8 @@ export interface FeedbackInput {
  * for an off-list scan. The Ingredient name is shown as stored (capitalised only when it already is).
  */
 export function feedbackText(input: FeedbackInput, system: UnitSystem = 'metric'): string {
-  void input
-  void system
-  throw new Error('not implemented')
+  const parts = [`${input.ingredientName} +${formatQuantity(input.quantity, input.baseUnit, system)}`]
+  if (input.priceCents !== null) parts.push(formatMinor(input.priceCents, input.currency))
+  if (!input.onList) parts.push(scanStrings.notOnList)
+  return parts.join(' · ')
 }
