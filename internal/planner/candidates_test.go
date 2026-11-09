@@ -170,6 +170,26 @@ func TestVarietyRules(t *testing.T) {
 			}
 		}
 	})
+	t.Run("the week is the ISO week, not a rolling seven days: Sunday then Monday", func(t *testing.T) {
+		pinned := withExisting(dinner(6), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1}) // Sunday
+		in := noCooldown(baseInput([]Slot{pinned, dinner(7)}, recipes...))                          // Monday
+		in.VarietyRules = []VarietyRule{{Tag: "fish", MaxPerWeek: 1}}
+		if got := placementAt(t, mustPlan(t, in), key(7)).RecipeID; got != 1 {
+			t.Errorf("Monday = %d, want 1 (a new ISO week, fish allowed again)", got)
+		}
+	})
+	t.Run("a fish meal served from a Leftover does not count towards the cap of a later fresh cook", func(t *testing.T) {
+		// Day 0 cooks fish (Yield 4), day 1 serves its extra portions, day 2 is the second fresh fish meal of the week.
+		in := noCooldown(baseInput([]Slot{dinner(0), dinner(1), dinner(2)}, rcp(1, 4, tags("fish")), rcp(3, 2)))
+		in.VarietyRules = []VarietyRule{{Tag: "fish", MaxPerWeek: 2}}
+		r := mustPlan(t, in)
+		if p := placementAt(t, r, key(1)); p.Source != SourceLeftover {
+			t.Fatalf("day 1 = %+v, want the fish Leftover", p)
+		}
+		if p := placementAt(t, r, key(2)); p.RecipeID != 1 || p.Source != SourceRecipe {
+			t.Errorf("day 2 = %+v, want a second fresh fish meal", p)
+		}
+	})
 	t.Run("max two per week allows a second fish meal", func(t *testing.T) {
 		in := noCooldown(baseInput([]Slot{dinner(0), dinner(2), dinner(4)}, recipes...))
 		in.VarietyRules = []VarietyRule{{Tag: "fish", MaxPerWeek: 2}}

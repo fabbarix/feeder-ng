@@ -265,6 +265,13 @@ func TestScoreNewLeftover(t *testing.T) {
 			extra: func(in *Input) { in.Members = map[MemberID]Preferences{carl: {ExcludedRecipes: []RecipeID{1}}} }, want: -1,
 		},
 		{
+			name: "next slot's Members exclude an Ingredient of the Recipe", slots: []Slot{dinner(0), dinner(1, Attendee{carl, 1}, Attendee{ben, 1})},
+			r1: []recipeOpt{needs(need(chicken, 500))},
+			extra: func(in *Input) {
+				in.Members = map[MemberID]Preferences{carl: {ExcludedIngredients: []IngredientID{chicken}}}
+			}, want: -1,
+		},
+		{
 			name: "next slot is claimed by a Slot Rule", slots: []Slot{dinner(0), withRules(dinner(1), SlotRule{RecipeID: 2})}, want: -1,
 		},
 		{

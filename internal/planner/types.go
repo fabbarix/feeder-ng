@@ -138,7 +138,11 @@ type Pack struct {
 
 // Leftover is an actual Leftover recorded when a Planned Meal was marked Cooked.
 type Leftover struct {
-	ID       int64
+	ID int64
+	// FromSlot is the slot of the Cooked meal that produced it. Dependants
+	// that were planned against that meal (LeftoverSource.FromSlot) are matched
+	// to this Leftover. The zero SlotKey means "not recorded".
+	FromSlot SlotKey
 	RecipeID RecipeID
 	Portions float64 // portions remaining
 	CookedOn Date

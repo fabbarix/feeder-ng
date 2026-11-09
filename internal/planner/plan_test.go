@@ -192,6 +192,41 @@ func TestActualLeftoversAndReplanning(t *testing.T) {
 			t.Errorf("got %+v", p)
 		}
 	})
+	t.Run("a Planned dependant of a Cooked source finds the actual Leftover through FromSlot", func(t *testing.T) {
+		cooked := withExisting(dinner(0), ExistingMeal{State: MealCooked, RecipeID: 2, Batches: 1})
+		dep := leftoverMeal(1, MealPlanned, LeftoverSource{FromSlot: key(0)})
+		in := noCooldown(baseInput([]Slot{cooked, dep}, recipes...))
+		in.Leftovers = []Leftover{{ID: 7, RecipeID: 2, Portions: 2, CookedOn: day(0), UseBy: day(3), FromSlot: key(0)}}
+		r := mustPlan(t, in)
+		if !keysOf(r.Kept)[key(1)] || len(r.Placements) != 0 {
+			t.Errorf("the dependant should be kept, not replanned: %+v", r)
+		}
+	})
+	t.Run("a Pinned dependant of a Cooked source consumes the actual Leftover once", func(t *testing.T) {
+		cooked := withExisting(dinner(0), ExistingMeal{State: MealCooked, RecipeID: 2, Batches: 1})
+		dep := leftoverMeal(1, MealPinned, LeftoverSource{FromSlot: key(0)})
+		in := noCooldown(baseInput([]Slot{cooked, dep, dinner(2)}, recipes...))
+		in.Leftovers = []Leftover{{ID: 7, RecipeID: 2, Portions: 2, CookedOn: day(0), UseBy: day(3), FromSlot: key(0)}}
+		r := mustPlan(t, in)
+		if p := placementAt(t, r, key(2)); p.Source != SourceRecipe {
+			t.Errorf("Leftover 7 is already served on day 1, day 2 must cook fresh: %+v", p)
+		}
+	})
+	t.Run("a Planned dependant is invalid when its source slot is replanned with a different Recipe", func(t *testing.T) {
+		// Day 0 (anna and ben) is a Planned Recipe 2 meal that ben now excludes, so it is replanned as Recipe 1.
+		// Day 1 (anna only) was planned to eat Recipe 2 from it.
+		src := withExisting(dinner(0), ExistingMeal{State: MealPlanned, RecipeID: 2, Batches: 1})
+		dep := withExisting(dinner(1, Attendee{anna, 1}), ExistingMeal{State: MealPlanned, RecipeID: 2, From: &LeftoverSource{FromSlot: key(0)}})
+		in := baseInput([]Slot{src, dep}, rcp(1, 4), rcp(2, 4))
+		in = prefs(in, ben, Preferences{ExcludedRecipes: []RecipeID{2}})
+		r := mustPlan(t, in)
+		if keysOf(r.Kept)[key(1)] {
+			t.Errorf("the Recipe 2 dependant must not be kept: %v", r.Kept)
+		}
+		if p := placementAt(t, r, key(1)); p.RecipeID == 2 {
+			t.Errorf("day 1 = %+v, must not be Recipe 2", p)
+		}
+	})
 	t.Run("a Pinned fresh meal's extra portions is a pending Leftover", func(t *testing.T) {
 		pinned := withExisting(dinner(0), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1})
 		in := baseInput([]Slot{pinned, dinner(1)}, recipes...)
