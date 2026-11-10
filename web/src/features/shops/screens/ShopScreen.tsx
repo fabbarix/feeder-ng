@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -52,13 +52,13 @@ export function ShopScreen() {
 
   return (
     <div className="pg">
-      <h1 className="pg__title">{shop.shop.name}</h1>
+      <PageHeader title={shop.shop.name} leading={<Link to="/settings/shops">{strings.backToShops}</Link>} />
       {isAdmin ? (
         <div className="pg__row">
-          <Button variant="tonal" onClick={() => setRenaming(true)}>
+          <Button variant="tertiary" onClick={() => setRenaming(true)}>
             {strings.renameShop}
           </Button>
-          <Button variant="ghost" onClick={() => setDeleting(true)}>
+          <Button variant="danger-tertiary" onClick={() => setDeleting(true)}>
             {strings.deleteShop}
           </Button>
         </div>
@@ -72,7 +72,7 @@ export function ShopScreen() {
       ) : null}
 
       <BentoGrid columns={2}>
-        <Tile as="section" size="full" aria-label={strings.shopBarcodesTitle}>
+        <Tile as="section" span="full" aria-label={strings.shopBarcodesTitle}>
           <h2 className="pg__tile-title">{strings.shopBarcodesTitle}</h2>
           <ShopBarcodeList
             barcodes={shop.barcodes}
@@ -80,12 +80,12 @@ export function ShopScreen() {
             products={products}
             onDelete={(bid) => void attempt(() => shop.deleteBarcode(bid))}
           />
-          <Button variant="tonal" onClick={() => setAdding(true)}>
+          <Button variant="tertiary" onClick={() => setAdding(true)}>
             {strings.addShopBarcode}
           </Button>
         </Tile>
 
-        <Tile as="section" size="full" aria-label={strings.weightRulesTitle}>
+        <Tile as="section" span="full" aria-label={strings.weightRulesTitle}>
           <h2 className="pg__tile-title">{strings.weightRulesTitle}</h2>
           <WeightRuleList
             rules={shop.rules}
@@ -97,19 +97,21 @@ export function ShopScreen() {
           />
         </Tile>
 
-        <Tile as="section" size="full" aria-label={strings.pricesTitle}>
+        <Tile as="section" span="full" aria-label={strings.pricesTitle}>
           <h2 className="pg__tile-title">{strings.pricesTitle}</h2>
           {prices.length === 0 ? (
             <p className="pg__muted">{strings.noPrices}</p>
           ) : (
-            <ul className="pg__list">
+            <ListGroup label={strings.pricesTitle}>
               {prices.map((p) => (
-                <li key={p.id}>
-                  <Link to={`/products/${p.productId}`}>{productName(p.productId)}</Link> · {p.date}
-                  {p.priceCents != null ? ` · ${formatMinor(p.priceCents, currency)}` : ''}
-                </li>
+                <ListRow
+                  key={p.id}
+                  title={`${productName(p.productId)} · ${p.date}${p.priceCents != null ? ` · ${formatMinor(p.priceCents, currency)}` : ''}`}
+                  chevron
+                  href={`/products/${p.productId}`}
+                />
               ))}
-            </ul>
+            </ListGroup>
           )}
         </Tile>
       </BentoGrid>
@@ -131,6 +133,7 @@ export function ShopScreen() {
       <AddShopBarcodeSheet
         open={adding}
         rules={shop.rules}
+        currency={currency}
         onClose={() => setAdding(false)}
         onAdd={async (body) => shop.addBarcode(body)}
       />
@@ -149,6 +152,7 @@ export function ShopScreen() {
       <BottomSheet open={deleting} onClose={() => setDeleting(false)} title={strings.deleteShop}>
         <p>{strings.deleteShopWarning}</p>
         <Button
+          variant="danger"
           onClick={() => {
             setDeleting(false)
             void attempt(async () => {

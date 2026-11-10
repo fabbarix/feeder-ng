@@ -36,22 +36,27 @@ export function toShopBarcodeBody(
   return { productId, code: v.code.trim() }
 }
 
-/** "rule 21 · item 00123" or the plain code, for listing. */
+/** "Weighed · prefix 21 · item 00123" (prefix omitted when unknown; a rule id is never shown) -- one wording for the
+ *  Shop page and the Product page. */
+export function weighedBarcodeLabel(prefix: string | undefined, itemCode: string): string {
+  return strings.weighedBarcode(prefix, itemCode)
+}
+
+/** The plain code, or the weighed label (see weighedBarcodeLabel), for listing. */
 export function shopBarcodeLabel(
   b: { code?: string; ruleId?: number; itemCode?: string },
   rules: ShopRule[],
 ): string {
   if (b.code !== undefined) return b.code
-  const prefix = rules.find((r) => r.id === b.ruleId)?.prefix ?? String(b.ruleId ?? '')
-  return `rule ${prefix} · item ${b.itemCode ?? ''}`
+  return weighedBarcodeLabel(rules.find((r) => r.id === b.ruleId)?.prefix, b.itemCode ?? '')
 }
 
-/** "21 · item 3-7 · value 8-12 · weight in kg, 3 decimals" (price: "price in USD minor units"). */
+/** "prefix 21 · item digits 3-7 · value digits 8-12 · weight in kg, 3 decimals" (price: "price in USD minor units"). */
 export function ruleSummary(rule: ShopRule, currency: string): string {
   const span = (s: { start: number; length: number }) => `${s.start}-${s.start + s.length - 1}`
   const what =
     rule.valueKind === 'price'
       ? strings.rulePrice(currency)
       : strings.ruleWeight(rule.valueUnit ?? 'g', rule.decimalPlaces)
-  return `${rule.prefix} · ${strings.rulePositions(span(rule.item), span(rule.value))} · ${what}`
+  return `prefix ${rule.prefix} · ${strings.rulePositions(span(rule.item), span(rule.value))} · ${what}`
 }

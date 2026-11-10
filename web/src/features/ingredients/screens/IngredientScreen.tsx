@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import type { BaseUnit } from '../../../lib/units'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, EmptyState, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
@@ -78,15 +78,12 @@ export function IngredientScreen() {
             void saveName()
           }}
         >
-          <label>
-            {strings.nameLabel}
-            <input value={nameText} onChange={(e) => setNameText(e.target.value)} />
-          </label>
+          <TextField label={strings.nameLabel} value={nameText} onChange={setNameText} />
           <Button type="submit">{strings.saveName}</Button>
         </form>
       ) : (
         <Button
-          variant="ghost"
+          variant="tertiary"
           onClick={() => {
             setNameText(ingredient.name)
             setRenaming(true)
@@ -97,7 +94,7 @@ export function IngredientScreen() {
       )}
 
       <BentoGrid columns={2} label={strings.detailsLabel}>
-        <Tile as="section" size="md" aria-label={strings.baseUnitLabel}>
+        <Tile as="section" aria-label={strings.baseUnitLabel}>
           <Chip>{ingredient.baseUnit}</Chip>
           <fieldset disabled={locked}>
             <legend>{strings.baseUnitLabel}</legend>
@@ -116,11 +113,11 @@ export function IngredientScreen() {
           {locked ? <p>{strings.baseUnitLocked(ing.referenceCount)}</p> : null}
         </Tile>
 
-        <Tile as="section" size="md" aria-label={strings.shelfLifeLabel}>
+        <Tile as="section" aria-label={strings.shelfLifeLabel}>
           <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
         </Tile>
 
-        <Tile as="section" size="full" aria-label={strings.conversionsTitle}>
+        <Tile as="section" span="full" aria-label={strings.conversionsTitle}>
           <ConversionEditor
             conversions={ingredient.conversions}
             base={ingredient.baseUnit}
@@ -132,14 +129,14 @@ export function IngredientScreen() {
 
         <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
 
-        <Tile as="section" size="md" aria-label={strings.mergeTitle}>
-          <Button variant="tonal" onClick={() => setMergeOpen(true)}>
+        <Tile as="section" aria-label={strings.mergeTitle}>
+          <Button variant="tertiary" onClick={() => setMergeOpen(true)}>
             {strings.mergeInto}
           </Button>
         </Tile>
 
-        <Tile as="section" size="md" aria-label={strings.deleteIngredient}>
-          <Button variant="ghost" disabled={locked} onClick={() => setDeleteOpen(true)}>
+        <Tile as="section" aria-label={strings.deleteIngredient}>
+          <Button variant="danger-tertiary" disabled={locked} onClick={() => setDeleteOpen(true)}>
             {strings.deleteIngredient}
           </Button>
           {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}

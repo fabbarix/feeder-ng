@@ -29,7 +29,7 @@ export const strings = {
   addConversion: 'Add conversion',
   removeConversion: (unit: string) => `Remove ${unit}`,
   deleteIngredient: 'Delete Ingredient',
-  deleteLocked: (n: number) => `Used in ${n} place${n === 1 ? '' : 's'}, so it can't be deleted`,
+  deleteLocked: (n: number) => `Used in ${n} place${n === 1 ? '' : 's'}, so it can't be removed`,
   deleteConfirm: (name: string) => `Delete ${name}?`,
   mergeInto: 'Merge into another Ingredient',
   mergeTitle: 'Merge Ingredient',

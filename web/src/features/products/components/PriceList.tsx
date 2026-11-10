@@ -1,4 +1,4 @@
-import { Button } from '../../../ui'
+import { IconButton, ListGroup, ListRow } from '../../../ui'
 import { formatMinor, formatPricePerKg } from '../lib/money'
 import { strings } from '../strings'
 import type { Price, Shop } from '../types'
@@ -16,7 +16,7 @@ export function PriceList({ prices, shops, currency, onDelete }: PriceListProps)
   if (prices.length === 0) return <p className="pg__muted">{strings.noPrices}</p>
   const shopName = (id: number) => shops.find((s) => s.id === id)?.name ?? strings.unknownShop
   return (
-    <ul className="pg__list">
+    <ListGroup label={strings.pricesTitle}>
       {prices.map((p) => {
         const parts = [shopName(p.shopId), p.date]
         if (p.priceCents != null) parts.push(formatMinor(p.priceCents, currency))
@@ -25,14 +25,13 @@ export function PriceList({ prices, shops, currency, onDelete }: PriceListProps)
           parts.push(p.pricePerKgDerived ? `${perKg} (${strings.derivedPerKg})` : perKg)
         }
         return (
-          <li key={p.id} className="pg__row pg__row--between">
-            <span>{parts.join(' · ')}</span>
-            <Button variant="ghost" aria-label={`${strings.deletePrice}: ${parts.slice(0, 2).join(' ')}`} onClick={() => onDelete(p.id)}>
-              {strings.deletePrice}
-            </Button>
-          </li>
+          <ListRow
+            key={p.id}
+            title={parts.join(' · ')}
+            trailing={<IconButton icon="delete" label={`${strings.deletePrice}: ${parts.slice(0, 2).join(' ')}`} onClick={() => onDelete(p.id)} />}
+          />
         )
       })}
-    </ul>
+    </ListGroup>
   )
 }

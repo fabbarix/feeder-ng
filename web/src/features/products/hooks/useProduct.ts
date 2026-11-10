@@ -1,5 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useQueries } from '@tanstack/react-query'
 import { shopsApi } from '../../shops/api'
+import type { ShopRule } from '../../shops/types'
 import { productsApi } from '../api'
 import type { Price, PriceBody, ProductDetail, Shop } from '../types'
 
@@ -20,7 +21,11 @@ export interface UseProduct {
   setSoldAt: (shopId: number, sells: boolean) => Promise<void>
   recordPrice: (body: PriceBody) => Promise<void>
   deletePrice: (priceId: number) => Promise<void>
-  /** Rejects with ApiError 409 in_use when the Product was bought. */
+  /** The weight rules of the Shops that hold weighed Shop Barcodes (labels name the prefix). */
+  rules: ShopRule[]
+  archive: () => Promise<void>
+  unarchive: () => Promise<void>
+  /** Rejects with ApiError 409 product_bought when the Product was bought (archive it instead). */
   remove: () => Promise<void>
 }
 
@@ -30,6 +35,12 @@ export function useProduct(id: number): UseProduct {
   const query = useQuery({ queryKey: ['products', id], queryFn: () => productsApi.get(id) })
   const shops = useQuery({ queryKey: ['shops'], queryFn: () => shopsApi.list() })
   const prices = useQuery({ queryKey: ['products', id, 'prices'], queryFn: () => productsApi.prices(id) })
+
+  const weighedShopIds = [...new Set((query.data?.shopBarcodes ?? []).filter((b) => b.ruleId !== undefined).map((b) => b.shopId))]
+  const ruleQueries = useQueries({
+    queries: weighedShopIds.map((shopId) => ({ queryKey: ['shops', shopId, 'rules'], queryFn: () => shopsApi.rules(shopId) })),
+  })
+  const rules = ruleQueries.flatMap((q) => q.data ?? [])
 
   const refresh = async () => {
     await Promise.all([
@@ -52,6 +63,9 @@ export function useProduct(id: number): UseProduct {
     shops: shops.data ?? [],
     latestByShop,
     prices: prices.data ?? [],
+    rules,
+    archive: () => changed(productsApi.archive(id)),
+    unarchive: () => changed(productsApi.unarchive(id)),
     rename: (name) => changed(productsApi.patch(id, { name })),
     setPackSize: (size) => changed(productsApi.patch(id, { packSize: size })),
     addBarcode: (raw) => changed(productsApi.addBarcode(id, raw)),

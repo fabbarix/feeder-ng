@@ -1,4 +1,5 @@
 import { useMe } from '../../../app/useMe'
+import { PageHeader } from '../../../ui'
 import { ShopList } from '../components/ShopList'
 import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpdates'
 import { useShops } from '../hooks/useShops'
@@ -12,7 +13,7 @@ export function ShopsScreen() {
   useProductsLiveUpdates()
   return (
     <div className="pg">
-      <h1 className="pg__title">{strings.shopsTitle}</h1>
+      <PageHeader title={strings.shopsTitle} />
       {error ? (
         <p role="alert">{strings.actionFailed}</p>
       ) : isLoading ? (

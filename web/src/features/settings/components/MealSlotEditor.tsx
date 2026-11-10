@@ -1,79 +1,103 @@
-import { useState, type FormEvent } from 'react'
-import { BottomSheet, Button } from '../../../ui'
-import { slotDraft, slotFromDraft, slotProblem } from '../lib/slotForm'
+import { useEffect, useState, type FormEvent } from 'react'
+import { BottomSheet, Button, MultiSelect, Select, TimeField, TextField } from '../../../ui'
+import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
 import { WEEKDAYS } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
 import type { MealSlot, MealSlotInput, Member } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
-import { Field } from './Field'
 import '../settings.css'
 
 export interface MealSlotEditorProps {
   open: boolean
   slot?: MealSlot
   members: Member[]
+  /** Add mode starts with these weekdays chosen (ISO 1..7), e.g. the weekday whose add button was pressed. */
+  defaultWeekdays?: number[]
   saving?: boolean
   error?: string
-  onSave: (input: MealSlotInput) => void | Promise<void>
+  /** Add mode may cover several weekdays, so this always receives an array (one body per weekday; editing gives one). */
+  onSave: (inputs: MealSlotInput[]) => void | Promise<void>
   onDelete?: () => void | Promise<void>
+  /** Editing only: opens the one-date Attendance for this slot ("Change a date"). */
+  onChangeDate?: () => void
   onClose: () => void
 }
 
 const text = settingsStrings.slot
+const WEEKDAY_OPTIONS = WEEKDAYS.map((d) => ({ value: d.id, label: d.name }))
 
-/** A BottomSheet "Add Meal Slot" / "Edit Meal Slot": Weekday select, Name, Usual time, AttendanceEditor;
- *  buttons "Save Meal Slot" and "Remove Meal Slot" (editing only). */
-export function MealSlotEditor({ open, slot, members, saving, error, onSave, onDelete, onClose }: MealSlotEditorProps) {
+/** A BottomSheet "Add Meal Slot" / "Edit Meal Slot": Weekdays (several when adding) or one Weekday (editing), Name,
+ *  Usual time (TimeField), AttendanceEditor; buttons "Save Meal Slot", "Change a date" and "Remove Meal Slot" (editing). */
+export function MealSlotEditor({ open, slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate, onClose }: MealSlotEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={slot ? text.editTitle : text.addTitle}>
-      <SlotForm key={slot?.id ?? 'new'} slot={slot} members={members} saving={saving} error={error} onSave={onSave} onDelete={onDelete} />
+      <SlotForm
+        key={slot?.id ?? 'new'}
+        slot={slot}
+        members={members}
+        defaultWeekdays={defaultWeekdays}
+        saving={saving}
+        error={error}
+        onSave={onSave}
+        onDelete={onDelete}
+        onChangeDate={onChangeDate}
+      />
     </BottomSheet>
   )
 }
 
-type FormProps = Pick<MealSlotEditorProps, 'slot' | 'members' | 'saving' | 'error' | 'onSave' | 'onDelete'>
+type FormProps = Pick<MealSlotEditorProps, 'slot' | 'members' | 'defaultWeekdays' | 'saving' | 'error' | 'onSave' | 'onDelete' | 'onChangeDate'>
 
-function SlotForm({ slot, members, saving, error, onSave, onDelete }: FormProps) {
+function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate }: FormProps) {
   const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot))
+  const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
+  // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
+  const weekdaysKey = (defaultWeekdays ?? []).join(',')
+  useEffect(() => {
+    if (!slot) setWeekdays(weekdaysKey === '' ? [] : weekdaysKey.split(',').map(Number))
+  }, [weekdaysKey, slot])
   const [problem, setProblem] = useState<string | null>(null)
   const set = (patch: Partial<MealSlotInput>) => setDraft((d) => ({ ...d, ...patch }))
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = slotProblem(draft)
+    const found = slot ? slotProblem(draft) : (weekdaysProblem(weekdays) ?? slotProblem(draft))
     setProblem(found)
-    if (!found) void onSave(slotFromDraft(draft))
+    if (found) return
+    void onSave(slot ? [slotFromDraft({ ...draft, weekday: weekdays[0]! })] : slotInputsForWeekdays(draft, weekdays))
   }
 
   return (
     <form className="settings__stack" onSubmit={submit} noValidate>
-      <Field label={text.weekday}>
-        {(c) => (
-          <select {...c} value={draft.weekday} onChange={(e) => set({ weekday: Number(e.target.value) })}>
-            {WEEKDAYS.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </Field>
-      <Field label={text.name} error={problem ?? undefined}>
-        {(c) => <input {...c} type="text" value={draft.name} onChange={(e) => set({ name: e.target.value })} />}
-      </Field>
-      <Field label={text.time}>{(c) => <input {...c} type="time" value={draft.time} onChange={(e) => set({ time: e.target.value })} />}</Field>
+      {slot ? (
+        <Select<number> label={text.weekday} options={WEEKDAY_OPTIONS} value={weekdays[0] ?? null} onChange={(day) => setWeekdays([day])} />
+      ) : (
+        <MultiSelect<number>
+          label={text.weekdays}
+          options={WEEKDAY_OPTIONS}
+          values={weekdays}
+          onChange={(days) => setWeekdays([...days].sort((a, b) => a - b))}
+        />
+      )}
+      <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
+      <TimeField label={text.time} value={draft.time} onChange={(time) => set({ time })} />
       <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
-      {error ? (
+      {problem ?? error ? (
         <p role="alert" className="settings__error">
-          {error}
+          {problem ?? error}
         </p>
       ) : null}
       <div className="settings__row">
         <Button type="submit" loading={saving}>
           {text.save}
         </Button>
+        {slot && onChangeDate ? (
+          <Button variant="tertiary" onClick={onChangeDate}>
+            {text.changeDateButton}
+          </Button>
+        ) : null}
         {slot && onDelete ? (
-          <Button variant="ghost" disabled={saving} onClick={() => void onDelete()}>
+          <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
             {text.remove}
           </Button>
         ) : null}

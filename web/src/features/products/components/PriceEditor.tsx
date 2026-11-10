@@ -1,8 +1,7 @@
-import { Button } from '../../../ui'
+import { Button, DateField, ShopSelect, TextField } from '../../../ui'
 import { usePriceForm } from '../hooks/usePriceForm'
 import { strings } from '../strings'
 import type { Price, PriceBody, Shop } from '../types'
-import { FormField } from './FormField'
 
 export interface PriceEditorProps {
   shops: Shop[]
@@ -17,10 +16,9 @@ export interface PriceEditorProps {
 }
 
 /**
- * Shop select, date, Price and Price per kg inputs (labels from strings). Choosing a
- * Shop prefills the amounts from `prefillPrice`. Save validates with lib/priceForm and
- * calls onSave(toPriceBody(...)); errors show under the fields; a rejection from onSave
- * is shown in an alert.
+ * Shop, date, Price and Price per kg fields (labels from strings). Choosing a Shop prefills the amounts
+ * from its latest Price. Save validates with lib/priceForm and calls onSave(toPriceBody(...)); errors show
+ * under the fields; a rejection from onSave is shown in an alert.
  */
 export function PriceEditor({ shops, latestByShop, currency, today, initialShopId, onSave, onCancel }: PriceEditorProps) {
   const form = usePriceForm({ latestByShop, currency, today, initialShopId, onSave })
@@ -33,45 +31,22 @@ export function PriceEditor({ shops, latestByShop, currency, today, initialShopI
         void form.submit()
       }}
     >
-      <FormField label={strings.shopLabel} error={form.errors.shopId}>
-        {(c) => (
-          <select
-            {...c}
-            value={form.values.shopId ?? ''}
-            onChange={(e) => form.chooseShop(e.target.value === '' ? null : Number(e.target.value))}
-          >
-            <option value="">{strings.none}</option>
-            {shops.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </FormField>
-      <FormField label={strings.dateLabel} error={form.errors.date}>
-        {(c) => <input {...c} type="date" value={form.values.date} onChange={(e) => form.setField('date', e.target.value)} />}
-      </FormField>
-      <FormField label={strings.priceLabel} error={form.errors.amount}>
-        {(c) => (
-          <input {...c} type="text" inputMode="decimal" value={form.values.price} onChange={(e) => form.setField('price', e.target.value)} />
-        )}
-      </FormField>
-      <FormField label={strings.pricePerKgLabel}>
-        {(c) => (
-          <input {...c} type="text" inputMode="decimal" value={form.values.perKg} onChange={(e) => form.setField('perKg', e.target.value)} />
-        )}
-      </FormField>
-      {form.serverError ? (
-        <p role="alert" className="pg__error">
-          {form.serverError}
-        </p>
-      ) : null}
+      <ShopSelect label={strings.shopLabel} shops={shops} value={form.values.shopId} onChange={form.chooseShop} error={form.errors.shopId} />
+      <DateField label={strings.dateLabel} value={form.values.date} onChange={(v) => form.setField('date', v)} error={form.errors.date} />
+      <TextField
+        label={strings.priceLabel}
+        inputMode="decimal"
+        value={form.values.price}
+        onChange={(v) => form.setField('price', v)}
+        error={form.errors.amount}
+      />
+      <TextField label={strings.pricePerKgLabel} inputMode="decimal" value={form.values.perKg} onChange={(v) => form.setField('perKg', v)} />
+      {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <div className="pg__row">
         <Button type="submit" loading={form.saving}>
           {strings.savePrice}
         </Button>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="tertiary" onClick={onCancel}>
           {strings.cancel}
         </Button>
       </div>
