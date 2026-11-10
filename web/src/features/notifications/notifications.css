@@ -1,0 +1,50 @@
+/* Notification settings: Bento tiles, Figtree, muted secondary text. */
+.notifications {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.notifications__title {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.notifications__heading {
+  font-size: 1.125rem;
+  margin: 0 0 8px;
+}
+.notifications__muted {
+  color: var(--color-muted, currentColor);
+  opacity: 0.8;
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+.notifications__this {
+  display: grid;
+  gap: 12px;
+}
+.notifications__types,
+.notifications__devices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.notifications__type,
+.notifications__device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.notifications__type-label {
+  font-weight: 600;
+}
+.notifications__type input[type='checkbox'] {
+  width: 44px;
+  height: 24px;
+  accent-color: var(--accent, currentColor);
+  flex: none;
+}

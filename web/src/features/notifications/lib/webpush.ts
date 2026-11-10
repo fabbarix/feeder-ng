@@ -1,8 +1,12 @@
 import type { PushSupport } from '../types'
 
-/** Converts a base64url VAPID public key to the bytes PushManager.subscribe wants. Not implemented yet. */
-export function urlBase64ToUint8Array(_key: string): Uint8Array {
-  throw new Error('urlBase64ToUint8Array: not implemented')
+/** Converts a base64url VAPID public key to the bytes PushManager.subscribe wants. Padding is optional. */
+export function urlBase64ToUint8Array(key: string): Uint8Array<ArrayBuffer> {
+  const padded = key.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(key.length / 4) * 4, '=')
+  const raw = atob(padded)
+  const out = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i)
+  return out
 }
 
 /** What the browser exposes, as plain data so the decision is testable. */
@@ -19,8 +23,10 @@ export interface PushEnvironment {
  * 'unsupported' without service workers, PushManager or Notification (an iOS browser tab
  * that is not installed also lacks PushManager: that case is 'needs-install' when isIos
  * and not standalone); 'denied' when permission is denied; otherwise 'supported'.
- * Not implemented yet.
  */
-export function pushSupport(_env: PushEnvironment): PushSupport {
-  throw new Error('pushSupport: not implemented')
+export function pushSupport(env: PushEnvironment): PushSupport {
+  if (!env.hasServiceWorker || !env.hasNotification) return 'unsupported'
+  if (!env.hasPushManager) return env.isIos && !env.isStandalone ? 'needs-install' : 'unsupported'
+  if (env.permission === 'denied') return 'denied'
+  return 'supported'
 }

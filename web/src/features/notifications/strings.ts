@@ -3,6 +3,9 @@ import type { NotificationType } from './types'
 
 export const notificationStrings = {
   title: 'Notifications',
+  linkLabel: 'Notifications',
+  linkHint: 'Choose what Feeder tells each of your devices about',
+  thisDeviceHeading: 'This device',
   loading: 'Loading',
   loadError: 'Notification settings could not load. Try again in a moment.',
   thisDevice: 'This device',
@@ -11,6 +14,7 @@ export const notificationStrings = {
   enabling: 'Turning on',
   disable: 'Turn off notifications on this device',
   remove: (label: string) => `Remove ${label}`,
+  removeShort: 'Remove',
   unsupported: 'This browser cannot receive push notifications.',
   needsInstall: 'On iPhone and iPad, add Feeder to your Home Screen first, then open it from there to turn on notifications.',
   denied: 'Notifications are blocked for Feeder in this browser. Allow them in the browser settings, then come back.',
