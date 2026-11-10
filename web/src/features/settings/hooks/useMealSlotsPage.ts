@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import { createSlotsSequentially } from '../lib/slotForm'
@@ -27,6 +27,8 @@ export function useMealSlotsPage() {
   const [editor, setEditor] = useState<SlotEditor | null>(null)
   const [dateEditor, setDateEditor] = useState<{ slot: MealSlot; date: string } | null>(null)
   const [error, setError] = useState<string>()
+  /** Weekdays already saved from the open add sheet: a retry after a partial save does not create them again. */
+  const savedWeekdays = useRef<number[]>([])
   const attendance = useAttendance(dateEditor?.slot.id ?? null, dateEditor?.date ?? null)
 
   const openDate = (slot: MealSlot) => setDateEditor({ slot, date: nextDateForWeekday(slot.weekday, todayIso()) })
@@ -54,14 +56,19 @@ export function useMealSlotsPage() {
       }
       return
     }
-    const result = await createSlotsSequentially(inputs, slots.create)
+    const pending = inputs.filter((input) => !savedWeekdays.current.includes(input.weekday))
+    const result = await createSlotsSequentially(pending, slots.create)
+    savedWeekdays.current = [...savedWeekdays.current, ...pending.slice(0, result.created).map((input) => input.weekday)]
     if (result.failedWeekday === undefined) {
+      savedWeekdays.current = []
       setError(undefined)
       setEditor(null)
       return
     }
     const reason = result.error instanceof Error ? result.error.message : errorMessage(result.error)
-    setError(settingsStrings.slot.partialSave(result.created, inputs.length, weekdayName(result.failedWeekday), reason))
+    // The sheet stays open on the weekdays still to save (the saved ones leave the selection), so a retry cannot duplicate.
+    setEditor({ defaultWeekdays: pending.slice(result.created).map((input) => input.weekday) })
+    setError(settingsStrings.slot.partialSave(savedWeekdays.current.length, inputs.length, weekdayName(result.failedWeekday), reason))
   }
 
   const remove = async () => {
@@ -104,10 +111,10 @@ export function useMealSlotsPage() {
     error,
     dateEditor,
     attendance,
-    add: () => (setError(undefined), setEditor({})),
-    addOn: (weekday: number) => (setError(undefined), setEditor({ defaultWeekdays: [weekday] })),
+    add: () => (setError(undefined), (savedWeekdays.current = []), setEditor({})),
+    addOn: (weekday: number) => (setError(undefined), (savedWeekdays.current = []), setEditor({ defaultWeekdays: [weekday] })),
     open,
-    closeEditor: () => setEditor(null),
+    closeEditor: () => (savedWeekdays.current = [], setEditor(null)),
     /** "Change a date" from the sheet: the sheet gives way to the one-date Attendance for the same slot. */
     changeDate: () => {
       const slot = editor?.item

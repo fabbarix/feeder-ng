@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { BottomSheet, Button, MultiSelect, Select, TimeField, TextField } from '../../../ui'
 import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
 import { WEEKDAYS } from '../lib/weekdays'
@@ -51,6 +51,11 @@ type FormProps = Pick<MealSlotEditorProps, 'slot' | 'members' | 'defaultWeekdays
 function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate }: FormProps) {
   const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot))
   const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
+  // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
+  const weekdaysKey = (defaultWeekdays ?? []).join(',')
+  useEffect(() => {
+    if (!slot) setWeekdays(weekdaysKey === '' ? [] : weekdaysKey.split(',').map(Number))
+  }, [weekdaysKey, slot])
   const [problem, setProblem] = useState<string | null>(null)
   const set = (patch: Partial<MealSlotInput>) => setDraft((d) => ({ ...d, ...patch }))
 

@@ -44,14 +44,10 @@
   border-radius: var(--radius-tile);
   border: 1px solid var(--color-outline);
 }
-/* A Member's colour: a 2 px ring and a tinted fill, both from the --member-colour custom property. */
+/* A Member's colour: the wrapper carries --member-colour; the Avatar draws the ring (its colour prop), so the fill is never repainted. */
 .member-avatar {
   display: inline-flex;
   border-radius: var(--radius-pill);
-  box-shadow: 0 0 0 2px var(--member-colour);
-}
-.member-avatar .avatar {
-  background: color-mix(in srgb, var(--member-colour) 22%, var(--color-surface));
 }
 .meal-week__day {
   display: grid;
