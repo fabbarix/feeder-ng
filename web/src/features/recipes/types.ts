@@ -48,8 +48,8 @@ export interface RecipeInput {
   tags: string[]
   cooldownDays: number | null
   leftoverUseByDays: number | null
-  /** R12: whole minutes (1 to 30) to reheat a Leftover of this Recipe; null = not set (Reheat uses its formula). TODO(developer): make required. */
-  reheatMinutes?: number | null
+  /** R12: whole minutes (1 to 30) to reheat a Leftover of this Recipe; null = not set (Reheat uses its formula). */
+  reheatMinutes: number | null
   source: RecipeSource
   image: string
   lines: RecipeLine[]

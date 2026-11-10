@@ -47,6 +47,7 @@ func Build(in ExportInput) (File, []Warning) {
 			Tags:              r.Tags,
 			CooldownDays:      copyInt(r.CooldownDays),
 			LeftoverUseByDays: copyInt(r.LeftoverUseByDays),
+			ReheatMinutes:     copyInt(r.ReheatMinutes),
 		}
 		if r.Source.URL != "" || r.Source.Attribution != "" {
 			out.Source = &Source{URL: r.Source.URL, Attribution: r.Source.Attribution}

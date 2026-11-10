@@ -47,7 +47,9 @@ Feature: A Recipe's reheat time
       {"name": "Pancakes", "yield": 4, "reheatMinutes": <minutes>, "lines": [{"ingredientId": <id:flour>, "quantity": 250, "unit": "g"}]}
       """
     Then the response status is 422
-    And the error code is "reheat_invalid"
+    And the error code is "validation_failed"
+    And the response JSON field "error.reason" is "reheat_invalid"
+    And the response JSON field "error.field" is "reheatMinutes"
 
     Examples:
       | minutes |

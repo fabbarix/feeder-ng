@@ -196,6 +196,7 @@ func mealFor(m plan.Meal, t table) *mealOut {
 			src.LeftoverID = &id
 		}
 		out.ServedFromLeftover = src
+		out.ReheatMinutes = t.recipeReheat[m.RecipeID]
 	}
 	return out
 }

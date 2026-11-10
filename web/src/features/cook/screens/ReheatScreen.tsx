@@ -40,7 +40,7 @@ interface ReheatBodyProps {
 
 /** The loaded screen; mounted only once the meal is known, so the default time comes from its portions. */
 function ReheatBody({ meal, slotKey: key, onLeave: home }: ReheatBodyProps): ReactNode {
-  const reheat = useReheat(key, meal.portions)
+  const reheat = useReheat(key, meal.portions, meal.reheatMinutes)
   const flow = useCookFlow()
   const { timer } = reheat
   const markCooked = async () => {
@@ -57,7 +57,7 @@ function ReheatBody({ meal, slotKey: key, onLeave: home }: ReheatBodyProps): Rea
       <header className="cook-screen__header">
         <h1 className="cook-screen__title">{meal.recipeName}</h1>
       </header>
-      <Tile variant="soft" overline={cookStrings.reheat} overlineIcon="timer" className="reheat-tile">
+      <Tile variant="soft" overline={cookStrings.reheat} overlineIcon="reheat" className="reheat-tile">
         <p className="reheat-time" role="timer" aria-label={cookStrings.reheat}>
           {formatTimer(timer ? reheat.secondsLeft : reheat.durationSeconds)}
         </p>

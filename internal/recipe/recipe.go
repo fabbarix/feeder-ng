@@ -201,6 +201,12 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 		}
 		out.LeftoverUseByDays = intPtr(*d)
 	}
+	if d := in.ReheatMinutes; d != nil {
+		if *d < MinReheatMinutes || *d > MaxReheatMinutes {
+			return Input{}, fieldErr("reheatMinutes", CodeReheatInvalid, "the reheat time must be 1 to 30 minutes")
+		}
+		out.ReheatMinutes = intPtr(*d)
+	}
 
 	src := strings.TrimSpace(in.Source.URL)
 	if src != "" {

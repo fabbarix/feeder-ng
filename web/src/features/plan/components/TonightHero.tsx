@@ -67,7 +67,7 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
             {heroCookLabel(meal)}
           </Button>
         ) : action === 'reheat' ? (
-          <Button variant="primary" icon="timer" onClick={() => onReheat?.(key)}>
+          <Button variant="primary" icon="reheat" onClick={() => onReheat?.(key)}>
             {s.reheat}
           </Button>
         ) : null
@@ -77,7 +77,7 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
             {s.yesCooked}
           </Button>
           {action === 'reheat' ? (
-            <Button variant="secondary" disabled={busy} onClick={() => onReheat?.(key)}>
+            <Button variant="secondary" icon="reheat" disabled={busy} onClick={() => onReheat?.(key)}>
               {s.reheat}
             </Button>
           ) : (

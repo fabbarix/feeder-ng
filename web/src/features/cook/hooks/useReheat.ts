@@ -23,11 +23,10 @@ export interface UseReheat {
 }
 
 /** Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing. */
-// TODO(developer, R12): pass `reheatMinutes` (the Planned Meal's Recipe reheat time) on to defaultReheatSeconds.
-export function useReheat(key: SlotKey, portions: number, _reheatMinutes?: number | null): UseReheat {
+export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number | null): UseReheat {
   const timers = useTimers()
   const scope = scopeOf({ kind: 'meal', date: key.date, mealSlotId: key.mealSlotId })
-  const [chosen, setChosen] = useState(() => defaultReheatSeconds(portions))
+  const [chosen, setChosen] = useState(() => defaultReheatSeconds(portions, reheatMinutes))
   const timer = reheatTimerOf(timers.timers, scope)
   const secondsLeft = timer ? (timers.items.find((i) => i.timer.id === timer.id)?.seconds ?? 0) : 0
 

@@ -72,7 +72,7 @@ func photoURL(id string) string {
 // load builds the names table. meals are the Meals about to be rendered: the source Meal Slot of the stored Leftovers
 // they are served from is looked up by id (N1).
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
-	t := table{recipes: map[int64]string{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
+	t := table{recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
 		members: map[int64]string{}, memberColour: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
 	if err != nil {
@@ -88,6 +88,7 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	for _, r := range rs {
 		t.recipes[r.ID] = r.Name
 		t.recipeMinutes[r.ID] = r.TotalMinutes
+		t.recipeReheat[r.ID] = r.ReheatMinutes
 		t.recipePhoto[r.ID] = photoURL(r.Image)
 	}
 	ms, err := n.hh.Members(ctx)
