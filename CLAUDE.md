@@ -39,6 +39,7 @@ Parallel-work rules:
 - **No native browser UI.** Buttons, selects, alerts and other controls (checkboxes, radios, date and number pickers) are always our own purpose-built, designed shared components, never the browser's default look or behaviour:
   - Never call `alert`, `confirm` or `prompt`. Use crafted dialogs built on the `<dialog>` element, and toasts for transient feedback.
   - Never use a native `<select>`. Our select boxes have crafted option layouts: thumbnails, subheaders, search and filter, sorting, as the use case needs.
+  - Icons come only from [Phosphor Icons](https://phosphoricons.com/), through our shared icon component.
   - Under the styling, components still use the right semantic element and ARIA (a real `<button>`, a `<dialog>`, listbox roles) so they stay keyboard- and screen-reader-accessible.
 
 ### Backend (Go)
