@@ -182,7 +182,7 @@ func (s *Service) SetTotal(ctx context.Context, ingredientID int64, total float6
 			return store.Mutation{}, invalid("total cannot be negative")
 		}
 		changed = len(res.Removed) > 0 || res.Added != nil
-		return store.Mutation{Lots: res.Lots, NewSource: store.SourceStockTake}, nil
+		return store.Mutation{Lots: res.Lots, NewSource: store.SourceStockTake, Today: today}, nil
 	})
 	if err != nil {
 		return IngredientStock{}, err
@@ -297,6 +297,9 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 		Reason:       store.ReasonSpoiled,
 		LotID:        &lotID,
 	}
+	if lot.GoesOff.AddDays(1) > lot.KeptOn { // the go-off was not forgiven by a Keep
+		rec.LotGoesOff = lot.GoesOff
+	}
 	_, err = s.st.Update(ctx, ingID, func(lots []stock.Lot) (store.Mutation, error) {
 		var rest []stock.Lot
 		found := false
@@ -310,7 +313,7 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 		if !found {
 			return store.Mutation{}, store.ErrNotFound
 		}
-		return store.Mutation{Lots: rest, Waste: []store.WasteRecord{rec}}, nil
+		return store.Mutation{Lots: rest, Waste: []store.WasteRecord{rec}, Today: today}, nil
 	})
 	if err != nil {
 		return store.WasteRecord{}, err
@@ -339,14 +342,14 @@ func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
 		for _, l := range lots {
 			if l.ID == lotID {
 				found = true
-				l = stock.Keep(l)
+				l = stock.KeepOn(l, today)
 			}
 			out = append(out, l)
 		}
 		if !found {
 			return store.Mutation{}, store.ErrNotFound
 		}
-		return store.Mutation{Lots: out}, nil
+		return store.Mutation{Lots: out, Today: today}, nil
 	})
 	if err != nil {
 		return LotView{}, err
@@ -447,6 +450,13 @@ func (s *Service) resolve(ctx context.Context, needs []stock.Need) ([]deduction,
 // apply takes each resolved need out of its Ingredient's lots inside tx.
 func (s *Service) apply(ctx context.Context, tx *sql.Tx, todo []deduction) (Deduction, error) {
 	d := Deduction{Warnings: []Warning{}}
+	if len(todo) == 0 {
+		return d, nil
+	}
+	today, err := s.today(ctx)
+	if err != nil {
+		return Deduction{}, err
+	}
 	for _, t := range todo {
 		var have, shortfall float64
 		changed := false
@@ -455,7 +465,7 @@ func (s *Service) apply(ctx context.Context, tx *sql.Tx, todo []deduction) (Dedu
 			res := stock.Deduct(lots, t.need.Quantity)
 			shortfall = res.Shortfall
 			changed = len(res.Taken) > 0
-			return store.Mutation{Lots: res.Lots}, nil
+			return store.Mutation{Lots: res.Lots, Today: today}, nil
 		})
 		if err != nil {
 			return Deduction{}, err
