@@ -59,6 +59,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	go a.Deps.Scheduler.Run(ctx, time.Minute)
 
 	srv := &http.Server{Addr: cfg.Addr, Handler: a.Handler, ReadHeaderTimeout: 10 * time.Second}
+	a.BindServer(srv)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.ListenAndServe() }()
 	logger.Info("feeder listening", "addr", cfg.Addr, "data", cfg.DataDir)
