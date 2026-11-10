@@ -32,7 +32,7 @@ export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, on
   }
   return (
     <div className="cook-nav">
-      <Button variant="tonal" size="lg" className="cook-nav__tile" disabled={isFirst} onClick={onBack}>
+      <Button variant="secondary" size="lg" className="cook-nav__tile" disabled={isFirst} onClick={onBack}>
         {cookStrings.back}
       </Button>
       {forward}

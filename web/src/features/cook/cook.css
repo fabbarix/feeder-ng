@@ -1,79 +1,136 @@
-/* Cook Mode: a single column on the phone, two columns of Bento tiles from the tablet width up. */
+/* Cook Mode: a single column on the phone, two columns from the tablet width up. Tokens only. */
 .cook-screen {
   display: grid;
-  gap: 16px;
-  padding: 16px;
+  gap: var(--space-4);
+  padding: var(--space-4);
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.cook-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cook-top__step {
+  display: inline-flex;
 }
 
 .cook-screen__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
 }
 
 .cook-screen__title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--text-title-1-size);
   flex: 1 1 auto;
 }
 
-.cook-step {
-  display: grid;
-  gap: 12px;
-  min-height: 40vh;
-  align-content: start;
-  font-size: 1.25rem;
-}
-
-.cook-step__count {
+.cook-screen__batches {
   margin: 0;
-  font-size: 1rem;
-  opacity: 0.8;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
 }
 
-.cook-step__text {
-  margin: 0;
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  line-height: 1.25;
-}
-
-.cook-step__uses {
-  margin: 0;
-  padding-left: 1.25em;
-  font-variant-numeric: tabular-nums;
-}
-
-.cook-step__note,
 .cook-screen__empty {
   margin: 0;
 }
 
+.cook-step {
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  min-height: 40vh;
+  align-content: start;
+}
+
+/* §2.7: 30/800 on the phone, 58/800 on the tablet (see the 768 px block). */
+.cook-step__text {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cook-step__uses {
+  margin: 0;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .cook-step__image {
   width: 100%;
-  border-radius: 20px;
+  border-radius: var(--radius-tile);
   object-fit: cover;
+}
+
+.cook-step__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  color: var(--color-muted);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cook-step__zone--back {
+  left: 0;
+  justify-content: flex-start;
+  padding-inline-start: var(--space-2);
+}
+
+.cook-step__zone--back svg {
+  transform: scaleX(-1);
+}
+
+.cook-step__zone--next {
+  right: 0;
+  justify-content: flex-end;
+  padding-inline-end: var(--space-2);
+}
+
+.cook-step__coach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+}
+
+.cook-step__coach p {
+  margin: 0;
 }
 
 .cook-nav {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-3);
 }
 
 .cook-nav__tile {
   width: 100%;
-  min-height: 72px;
-  font-size: 1.25rem;
+  min-height: 64px;
+}
+
+.cook-advance {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .cook-advance__heading,
 .cook-timers__heading {
-  margin: 0 0 8px;
-  font-size: 1rem;
+  margin: 0;
+  font-size: var(--text-label-size);
 }
 
 .cook-advance__list,
@@ -82,51 +139,81 @@
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.cook-advance__pending {
+.cook-advance__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cook-advance__row p,
+.cook-advance__done {
+  margin: 0;
+}
+
+.cook-advance__done {
+  color: var(--color-muted);
+}
+
+.cook-timers {
   display: grid;
-  gap: 6px;
+  gap: var(--space-2);
+}
+
+.cook-timers__list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cook-timers__item {
   display: grid;
-  gap: 6px;
-}
-
-@media (min-width: 768px) {
-  .cook-screen {
-    grid-template-columns: 1fr 1fr;
-  }
-  .cook-screen__header,
-  .cook-nav,
-  .cook-screen > .cook-screen__empty {
-    grid-column: 1 / -1;
-  }
+  gap: var(--space-1);
+  align-content: start;
 }
 
 .cook-timers__place {
-  font-size: 0.875rem;
-  opacity: 0.75;
-}
-
-.cook-timers__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
 }
 
 .cook-confirmation {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .cook-confirmation__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.cook-confirmation__recipe,
+.cook-confirmation__outcome {
   margin: 0;
 }
 
 .cook-confirmation__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */
+@media (min-width: 768px) {
+  .cook-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .cook-step {
+    flex: 1 0 auto;
+  }
+
+  .cook-step__text {
+    font-size: 3.625rem;
+  }
 }
