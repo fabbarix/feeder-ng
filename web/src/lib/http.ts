@@ -23,12 +23,17 @@ export interface HttpClientOptions {
   onUnauthenticated?: () => void
 }
 
+export interface RequestOptions {
+  /** aborts the request; an abort with a TimeoutError reason is raised as ApiError(0, 'timeout') */
+  signal?: AbortSignal
+}
+
 export interface HttpClient {
-  get<T>(path: string): Promise<T>
-  post<T>(path: string, body?: unknown): Promise<T>
-  put<T>(path: string, body?: unknown): Promise<T>
-  patch<T>(path: string, body?: unknown): Promise<T>
-  delete<T>(path: string): Promise<T>
+  get<T>(path: string, opts?: RequestOptions): Promise<T>
+  post<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  patch<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
+  delete<T>(path: string, opts?: RequestOptions): Promise<T>
 }
 
 // Resolved at call time so tests can stub the global fetch after import.
@@ -38,7 +43,7 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
   const doFetch = opts.fetch ?? globalFetch
   const baseUrl = opts.baseUrl ?? ''
 
-  async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async function request<T>(method: string, path: string, body?: unknown, reqOpts: RequestOptions = {}): Promise<T> {
     const headers: Record<string, string> = {}
     let payload: string | undefined
     if (body !== undefined) {
@@ -47,8 +52,9 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
     }
     let res: Response
     try {
-      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin' })
-    } catch {
+      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin', signal: reqOpts.signal })
+    } catch (err) {
+      if (isTimeoutError(err)) throw new ApiError(0, 'timeout', 'The request timed out')
       throw new ApiError(0, 'network', 'The network is unreachable')
     }
     if (!res.ok) {
@@ -62,13 +68,16 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
   }
 
   return {
-    get: <T>(path: string) => request<T>('GET', path),
-    post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-    put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-    patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
-    delete: <T>(path: string) => request<T>('DELETE', path),
+    get: <T>(path: string, opts?: RequestOptions) => request<T>('GET', path, undefined, opts),
+    post: <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>('POST', path, body, opts),
+    put: <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>('PUT', path, body, opts),
+    patch: <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>('PATCH', path, body, opts),
+    delete: <T>(path: string, opts?: RequestOptions) => request<T>('DELETE', path, undefined, opts),
   }
 }
+
+/** The reason of a signal that fired by timeout (AbortSignal.timeout), as fetch rejects with it. */
+const isTimeoutError = (err: unknown): boolean => (err as { name?: unknown } | null)?.name === 'TimeoutError'
 
 async function readError(res: Response): Promise<ApiError> {
   try {

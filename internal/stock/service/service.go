@@ -193,6 +193,19 @@ func (s *Service) SetTotal(ctx context.Context, ingredientID int64, total float6
 	return summarise(ing, saved, today), nil
 }
 
+// RemoveLot deletes one Stock Lot whole: the Undo of a scan (store.ErrNotFound for an unknown lot).
+func (s *Service) RemoveLot(ctx context.Context, lotID int64) error {
+	lot, err := s.st.Lot(ctx, lotID)
+	if err != nil {
+		return err
+	}
+	if err := s.st.DeleteLot(ctx, lotID); err != nil {
+		return err
+	}
+	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{lot.IngredientID}})
+	return nil
+}
+
 // Totals lists every Ingredient with Stock, those with spoiled or use-soon lots
 // first, then by name.
 func (s *Service) Totals(ctx context.Context) ([]IngredientStock, error) {
