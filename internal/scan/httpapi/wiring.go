@@ -30,7 +30,7 @@ func (p stockPort) AddLot(ctx context.Context, in service.StockAdd) (int64, bool
 	v, created, err := p.svc.AddLot(ctx, stockservice.AddInput{IngredientID: in.IngredientID, Quantity: in.Quantity,
 		Purchased: in.Purchased, Source: stockstore.SourceScan, ProductID: in.ProductID, ShopID: in.ShopID, ClientUUID: in.ClientUUID})
 	if err != nil {
-		return 0, false, err
+		return 0, false, stockDomainError(err)
 	}
 	return v.ID, created, nil
 }
@@ -41,13 +41,21 @@ func (p stockPort) RemoveLot(ctx context.Context, id int64) error {
 	if errors.Is(err, stockstore.ErrNotFound) {
 		return nil
 	}
+	return stockDomainError(err)
+}
+
+// stockDomainError maps Stock's unknown-Ingredient error to the scan service's sentinel (a rejected Result).
+func stockDomainError(err error) error {
+	if errors.Is(err, stockservice.ErrUnknownIngredient) {
+		return service.ErrUnknownIngredient
+	}
 	return err
 }
 
 func (p stockPort) Total(ctx context.Context, ingredientID int64) (float64, error) {
 	all, err := p.svc.Totals(ctx)
 	if err != nil {
-		return 0, err
+		return 0, stockDomainError(err)
 	}
 	for _, t := range all {
 		if t.IngredientID == ingredientID {
@@ -59,7 +67,7 @@ func (p stockPort) Total(ctx context.Context, ingredientID int64) (float64, erro
 
 func (p stockPort) SetTotal(ctx context.Context, ingredientID int64, total float64) error {
 	_, err := p.svc.SetTotal(ctx, ingredientID, total)
-	return err
+	return stockDomainError(err)
 }
 
 // catalogue is the Products and Shops port (T9).
@@ -101,6 +109,9 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	var taken *productstore.BarcodeTakenError
 	if errors.As(err, &taken) {
 		return service.ProductInfo{}, &service.BarcodeTakenError{ProductID: taken.ProductID}
+	}
+	if errors.Is(err, productstore.ErrUnknownIngredient) {
+		return service.ProductInfo{}, service.ErrUnknownIngredient
 	}
 	var invalid *product.ValidationError
 	if errors.As(err, &invalid) {

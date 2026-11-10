@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
@@ -177,8 +178,12 @@ type Deps struct {
 	Publisher   Publisher
 }
 
-// Service applies operations.
-type Service struct{ d Deps }
+// Service applies operations. mu serialises Apply, Undo and SetPrice: the app is one process on one SQLite file,
+// so one lock is enough to make a repeated or racing request see the first one's ledger row.
+type Service struct {
+	d  Deps
+	mu sync.Mutex
+}
 
 // New returns a Service.
 func New(d Deps) *Service { return &Service{d: d} }
@@ -193,6 +198,8 @@ type priceSnapshot struct {
 // Apply applies one operation. A bad operation is a Result with status rejected (and no side effects); the
 // error is only for infrastructure failures. A repeated client UUID answers status duplicate with the stored result.
 func (s *Service) Apply(ctx context.Context, op scan.Op) (scan.Result, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if err := op.Validate(); err != nil {
 		return rejected(op.ClientUUID, CodeValidation, err.Error()), nil
 	}
@@ -203,14 +210,32 @@ func (s *Service) Apply(ctx context.Context, op scan.Op) (scan.Result, error) {
 	if ok {
 		return duplicate(ev)
 	}
+	var res scan.Result
 	switch op.Kind {
 	case scan.KindStockTake:
-		return s.stockTake(ctx, op)
+		res, err = s.stockTake(ctx, op)
 	case scan.KindShopScan:
-		return s.shopScan(ctx, op)
+		res, err = s.shopScan(ctx, op)
 	default:
-		return s.shopUnknown(ctx, op)
+		res, err = s.shopUnknown(ctx, op)
 	}
+	if err != nil {
+		return domainRejection(op.ClientUUID, err)
+	}
+	return res, nil
+}
+
+// domainRejection turns a domain error raised by any step into that operation's rejected Result, so one stale
+// op (an Ingredient merged away while the phone was offline) does not fail the whole batch. Infrastructure
+// failures stay errors.
+func domainRejection(uuid string, err error) (scan.Result, error) {
+	switch {
+	case errors.Is(err, ErrUnknownIngredient):
+		return rejected(uuid, CodeUnknownIngr, "unknown Ingredient"), nil
+	case errors.Is(err, ErrProductGone):
+		return rejected(uuid, CodeUnknownProduct, "unknown Product"), nil
+	}
+	return scan.Result{}, err
 }
 
 // Sync applies the operations in the order given; results are in the same order.
@@ -508,8 +533,12 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 // UndoResult says whether this call reversed the scan or it was already undone.
 type UndoResult struct{ Undone, AlreadyUndone bool }
 
-// Undo reverses a Shop scan (ErrNotFound, ErrNotUndoable for a stock_take).
+// Undo reverses a Shop scan (ErrNotFound, ErrNotUndoable for a stock_take). The steps run in a fixed order and
+// each is recorded in the ledger when it succeeds, so a retry after a failure skips the steps already done and
+// UndoneAt is set only after the last one. Every step is also idempotent on its own.
 func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	ev, ok, err := s.d.Ledger.Get(ctx, clientUUID)
 	if err != nil {
 		return UndoResult{}, err
@@ -523,29 +552,57 @@ func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, erro
 	if ev.UndoneAt != "" {
 		return UndoResult{AlreadyUndone: true}, nil
 	}
+	done := map[string]bool{}
+	for _, st := range ev.UndoSteps {
+		done[st] = true
+	}
+	step := func(name string, run func() error) error {
+		if done[name] {
+			return nil
+		}
+		if err := run(); err != nil {
+			return err
+		}
+		return s.d.Ledger.MarkUndoStep(ctx, clientUUID, name)
+	}
+
 	ing := derefInt(ev.IngredientID)
-	if err := s.d.List.UndoLot(ctx, shopservice.UndoLotInput{IngredientID: ing, To: ev.RangeTo, Quantity: ev.Quantity,
-		Unmark: ev.Ticked, ExtraID: derefInt(ev.ExtraID)}); err != nil {
-		return UndoResult{}, err
+	steps := []struct {
+		name string
+		run  func() error
+	}{
+		{store.UndoStepList, func() error {
+			return s.d.List.UndoLot(ctx, shopservice.UndoLotInput{IngredientID: ing, To: ev.RangeTo, Quantity: ev.Quantity,
+				Unmark: ev.Ticked, ExtraID: derefInt(ev.ExtraID)})
+		}},
+		{store.UndoStepLot, func() error {
+			if ev.LotID == nil {
+				return nil
+			}
+			return s.d.Stock.RemoveLot(ctx, *ev.LotID)
+		}},
+		{store.UndoStepPurchase, func() error {
+			if ev.PurchaseID == nil {
+				return nil
+			}
+			return s.d.Catalogue.DeletePurchase(ctx, *ev.PurchaseID)
+		}},
+		// Restoring a Price re-links the Product to the Shop, so the sold-at link is removed after it.
+		{store.UndoStepPrice, func() error {
+			if ev.PriceID == nil || ev.ProductID == nil || ev.ShopID == nil {
+				return nil
+			}
+			return s.restorePrice(ctx, ev)
+		}},
+		{store.UndoStepSoldAt, func() error {
+			if !ev.SoldAtAdded || ev.ProductID == nil || ev.ShopID == nil {
+				return nil
+			}
+			return s.d.Catalogue.UnsetSoldAt(ctx, *ev.ProductID, *ev.ShopID)
+		}},
 	}
-	if ev.LotID != nil {
-		if err := s.d.Stock.RemoveLot(ctx, *ev.LotID); err != nil {
-			return UndoResult{}, err
-		}
-	}
-	if ev.PurchaseID != nil {
-		if err := s.d.Catalogue.DeletePurchase(ctx, *ev.PurchaseID); err != nil {
-			return UndoResult{}, err
-		}
-	}
-	// Restoring a Price re-links the Product to the Shop, so the sold-at link is removed after it.
-	if ev.PriceID != nil && ev.ProductID != nil && ev.ShopID != nil {
-		if err := s.restorePrice(ctx, ev); err != nil {
-			return UndoResult{}, err
-		}
-	}
-	if ev.SoldAtAdded && ev.ProductID != nil && ev.ShopID != nil {
-		if err := s.d.Catalogue.UnsetSoldAt(ctx, *ev.ProductID, *ev.ShopID); err != nil {
+	for _, st := range steps {
+		if err := step(st.name, st.run); err != nil {
 			return UndoResult{}, err
 		}
 	}
@@ -572,6 +629,8 @@ func (s *Service) restorePrice(ctx context.Context, ev store.Event) error {
 
 // SetPrice edits the Price a scan recorded ("✎"): ErrNotFound, ErrNotUndoable for a stock_take.
 func (s *Service) SetPrice(ctx context.Context, clientUUID string, cents int) (scan.Result, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	ev, ok, err := s.d.Ledger.Get(ctx, clientUUID)
 	if err != nil {
 		return scan.Result{}, err
@@ -581,6 +640,9 @@ func (s *Service) SetPrice(ctx context.Context, clientUUID string, cents int) (s
 	}
 	if ev.Kind == string(scan.KindStockTake) || ev.ProductID == nil || ev.ShopID == nil {
 		return scan.Result{}, ErrNotUndoable
+	}
+	if ev.UndoneAt != "" {
+		return scan.Result{}, ErrAlreadyUndone
 	}
 	if cents <= 0 {
 		return scan.Result{}, &scan.ValidationError{Field: "priceCents", Message: "a price must be more than 0"}

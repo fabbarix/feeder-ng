@@ -12,12 +12,13 @@ export interface ShoppingActions {
   untick(ingredientId: number, to: string): Promise<void>
   addExtra(input: ExtraInput): Promise<void>
   deleteExtra(id: number): Promise<void>
-  tickExtra(id: number, quantity: number, shopId?: number | null): Promise<TickResult>
+  tickExtra(id: number, quantity: number, shopId?: number | null, clientUuid?: string): Promise<TickResult>
   untickExtra(id: number): Promise<void>
 }
 
 /**
- * Every tick by hand is sent with a fresh clientUuid (lib newClientUuid), so a retried request adds one Lot.
+ * Every tick by hand (and every extra tick) is sent with a fresh clientUuid (lib newClientUuid), so a retried request
+ * adds one Lot.
  * A failure rejects with the ApiError (the screen shows it) and invalidates nothing.
  */
 export function useShoppingActions(): ShoppingActions {
@@ -46,8 +47,8 @@ export function useShoppingActions(): ShoppingActions {
         await shopApi.deleteExtra(id)
         await refreshList()
       },
-      async tickExtra(id, quantity, shopId) {
-        const result = await shopApi.tickExtra(id, quantity, shopId)
+      async tickExtra(id, quantity, shopId, clientUuid = newClientUuid()) {
+        const result = await shopApi.tickExtra(id, quantity, shopId, clientUuid)
         await refreshList()
         if (result.created) await refreshStock()
         return result

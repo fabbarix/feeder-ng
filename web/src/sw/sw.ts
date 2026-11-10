@@ -3,7 +3,7 @@
 // answers navigations from the precached index.html, leaves /api and the SSE stream to the network, and then loads
 // every extension in ./extensions (push for notifications later). Classification lives in ./cache.ts and extension
 // loading in ./extensions.ts; the cache is the Cache API directly, so no Workbox runtime is needed.
-import { classifyRequest } from './cache'
+import { classifyRequest, staleCacheUrls } from './cache'
 import { registerExtensions, type SwExtension, type WorkerScope } from './extensions'
 
 declare const self: ServiceWorkerGlobalScope
@@ -53,6 +53,10 @@ self.addEventListener('activate', (event) => {
       for (const key of await caches.keys()) {
         if (key !== SHELL_CACHE) await caches.delete(key)
       }
+      // Entries of an earlier build that the current manifest no longer lists go.
+      const cache = await caches.open(SHELL_CACHE)
+      const stale = staleCacheUrls((await cache.keys()).map((r) => r.url), manifest.map((e) => e.url), self.registration.scope)
+      await Promise.all(stale.map((url) => cache.delete(url)))
       await self.clients.claim()
     })(),
   )

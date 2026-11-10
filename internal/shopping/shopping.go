@@ -164,11 +164,13 @@ func Derive(in Input) List {
 	return out
 }
 
-// derivedLines builds the Lines that still need buying from the Planned Meals and the projected Stock.
+// derivedLines builds the Lines that still need buying from the Planned Meals and the projected Stock. Every
+// uncooked meal up to To counts, including one whose slot has passed and that waits in To confirm, and one dated
+// before From (it is simulated on the first day of the range, when its Stock is what is still good).
 func derivedLines(in Input) map[int64]Line {
 	meals := make([]Meal, 0, len(in.Meals))
 	for _, m := range in.Meals {
-		if m.Leftover || m.Date < in.From || m.Date > in.To || m.At.Before(in.Now) {
+		if m.Leftover || m.Date > in.To {
 			continue
 		}
 		meals = append(meals, m)
@@ -180,12 +182,13 @@ func derivedLines(in Input) map[int64]Line {
 		return meals[i].At.Before(meals[j].At)
 	})
 
-	lots := map[int64][]stock.Lot{}
+	usable := make([]stock.Lot, 0, len(in.Lots))
 	for _, l := range in.Lots {
 		if l.Quantity > eps {
-			lots[l.IngredientID] = append(lots[l.IngredientID], l)
+			usable = append(usable, l)
 		}
 	}
+	projected := stock.Project(usable)
 	need := map[int64]float64{}
 	short := map[int64]float64{}
 	for _, m := range meals {
@@ -198,7 +201,7 @@ func derivedLines(in Input) map[int64]Line {
 				continue
 			}
 			need[n.IngredientID] += q
-			short[n.IngredientID] += draw(lots, n.IngredientID, q, m.Date)
+			short[n.IngredientID] += draw(projected, n.IngredientID, q, drawDate(m.Date, in.From))
 		}
 	}
 
@@ -223,39 +226,30 @@ func derivedLines(in Input) map[int64]Line {
 	return out
 }
 
-// draw takes q from the Ingredient's lots usable on date (soonest go-off first, then oldest, then lowest id) and
-// returns the part Stock could not cover.
-func draw(lots map[int64][]stock.Lot, ing int64, q float64, date stock.Date) float64 {
-	list := lots[ing]
-	order := make([]int, 0, len(list))
-	for i, l := range list {
-		if l.GoesOff.IsNone() || l.GoesOff >= date {
-			order = append(order, i)
-		}
+// drawDate is the day a meal's Stock is taken on: its own date, or the first day of the range for an earlier meal.
+func drawDate(mealDate, from stock.Date) stock.Date {
+	if mealDate < from {
+		return from
 	}
-	sort.SliceStable(order, func(a, b int) bool {
-		la, lb := list[order[a]], list[order[b]]
-		if la.GoesOff.IsNone() != lb.GoesOff.IsNone() {
-			return !la.GoesOff.IsNone()
-		}
-		if la.GoesOff != lb.GoesOff {
-			return la.GoesOff < lb.GoesOff
-		}
-		if la.Purchased != lb.Purchased {
-			return la.Purchased < lb.Purchased
-		}
-		return la.ID < lb.ID
-	})
+	return mealDate
+}
+
+// draw takes q from the Ingredient's lots usable on date, in the Stock consumption order (stock.Project: soonest
+// go-off first, then oldest, then lowest id), and returns the part Stock could not cover.
+func draw(p stock.ProjectedStock, ing int64, q float64, date stock.Date) float64 {
 	left := q
-	for _, i := range order {
+	list := p[ing]
+	for i := range list {
 		if left <= eps {
 			break
+		}
+		if !list[i].GoesOff.IsNone() && list[i].GoesOff < date {
+			continue
 		}
 		take := math.Min(left, list[i].Quantity)
 		list[i].Quantity -= take
 		left -= take
 	}
-	lots[ing] = list
 	if left < eps {
 		return 0
 	}

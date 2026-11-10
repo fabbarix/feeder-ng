@@ -14,6 +14,7 @@ import { scanApi } from '../api'
 import { chooseDetector, type Detector } from '../lib/detector'
 import { createFeedback, webAudioBeep } from '../lib/feedback'
 import { appOpStore } from '../lib/idbStore'
+import { shouldRefreshOfflineData } from '../lib/offlineRefresh'
 import { OfflineQueue, type SyncApi } from '../lib/queue'
 import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
@@ -113,6 +114,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     onResults: (results, found) => {
       for (const r of results) resultsRef.current.set(r.clientUuid, r)
       if (found.length > 0) setNotices((prev) => [...prev, ...found])
+      // A Product created (or merged into one) by this batch: the cached offline data must learn its barcode.
+      if (shouldRefreshOfflineData(results)) void queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] })
       void queryClient.invalidateQueries({ queryKey: ['shopping'] })
       void queryClient.invalidateQueries({ queryKey: ['stock'] })
     },
@@ -125,13 +128,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     return resultsRef.current.get(op.clientUuid) ?? null
   }
 
-  const cancelQueued = async (clientUuid: string): Promise<boolean> => {
-    const pending = await queue.pending()
-    if (!pending.some((p) => p.op.clientUuid === clientUuid)) return false
-    await store.remove(clientUuid)
-    await sync.refresh()
-    return true
-  }
+  // true: the server has nothing for the scan (drop it here); false: the server applied it, so Undo goes there.
+  const cancelQueued = (clientUuid: string): Promise<boolean> => sync.cancel(clientUuid)
 
   const refreshLive = () => {
     void queryClient.invalidateQueries({ queryKey: ['shopping'] })

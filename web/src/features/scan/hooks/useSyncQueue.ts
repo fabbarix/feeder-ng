@@ -1,7 +1,7 @@
 // Flushes the offline queue when the phone is online: on mount, on the window `online` event, and after each
 // enqueue (React hook; the queue and API are injected).
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OfflineQueue, SyncApi } from '../lib/queue'
+import { backoffMs, type OfflineQueue, type SyncApi } from '../lib/queue'
 import { syncNotices, type SyncNotice } from '../lib/notices'
 import type { Op, ScanResult } from '../types'
 
@@ -47,6 +47,10 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   const [online, setOnline] = useState(() => isOnlineRef.current())
   const [pendingCount, setPendingCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
+  // Automatic retries after an unreachable server (network error or 5xx) while the phone thinks it is online.
+  const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const failuresRef = useRef(0)
+  const flushRef = useRef<() => Promise<void>>(async () => {})
 
   const refreshCounts = useCallback(async () => {
     const [pending, rejected] = await Promise.all([queueRef.current.pending(), queueRef.current.rejected()])
@@ -54,16 +58,32 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     setRejectedCount(rejected.length)
   }, [])
 
+  const clearRetry = useCallback(() => {
+    if (retryRef.current !== undefined) clearTimeout(retryRef.current)
+    retryRef.current = undefined
+  }, [])
+
   const flush = useCallback(async () => {
+    clearRetry()
     if (!isOnlineRef.current()) return
     const { offline, results } = await queueRef.current.flush(apiRef.current)
-    if (offline || results.length === 0) {
+    if (offline) {
+      failuresRef.current += 1
+      if (isOnlineRef.current()) {
+        retryRef.current = setTimeout(() => void flushRef.current(), backoffMs(failuresRef.current))
+      }
+      await refreshCounts()
+      return
+    }
+    failuresRef.current = 0
+    if (results.length === 0) {
       await refreshCounts()
       return
     }
     onResultsRef.current?.(results, syncNotices(results))
     await refreshCounts()
-  }, [refreshCounts])
+  }, [clearRetry, refreshCounts])
+  flushRef.current = flush
 
   const enqueue = useCallback(
     async (op: Op) => {
@@ -74,9 +94,19 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     [flush, refreshCounts],
   )
 
-  // Stubs: the Developer implements them (see the design note, "Client queue").
-  const dismissRejected = useCallback(async () => {}, [])
-  const cancel = useCallback((clientUuid: string) => queueRef.current.cancel(clientUuid), [])
+  const dismissRejected = useCallback(async () => {
+    queueRef.current.dismissRejected()
+    await refreshCounts()
+  }, [refreshCounts])
+
+  const cancel = useCallback(
+    async (clientUuid: string) => {
+      const serverHasNothing = await queueRef.current.cancel(clientUuid)
+      await refreshCounts()
+      return serverHasNothing
+    },
+    [refreshCounts],
+  )
 
   useEffect(() => {
     void refreshCounts()
@@ -89,10 +119,11 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     window.addEventListener('online', goOnline)
     window.addEventListener('offline', goOffline)
     return () => {
+      clearRetry()
       window.removeEventListener('online', goOnline)
       window.removeEventListener('offline', goOffline)
     }
-  }, [flush, refreshCounts])
+  }, [clearRetry, flush, refreshCounts])
 
   return { online, pendingCount, rejectedCount, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
 }

@@ -122,12 +122,14 @@ type plans struct {
 	sources *runner.DBSources
 }
 
-func (p plans) Meals(ctx context.Context, from, to stock.Date) ([]shopping.Meal, error) {
+func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, error) {
 	_, loc, err := p.sources.Settings(ctx)
 	if err != nil {
 		return nil, err
 	}
-	list, err := p.st.Meals(ctx, string(from), string(to))
+	// Every planned meal up to To, including those dated before From: a meal from before the range waiting in
+	// To confirm still counts (see shopping.Derive). The range's start is not a filter here.
+	list, err := p.st.Meals(ctx, "", string(to))
 	if err != nil {
 		return nil, err
 	}

@@ -368,7 +368,6 @@ func (s *Service) DeleteExtra(ctx context.Context, id int64) error {
 // idempotent: the same UUID adds no second Lot and counts the quantity into the extra's `got` only once.
 // (clientUUID is accepted but not used yet: the Developer implements the idempotency.)
 func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (TickResult, error) {
-	_ = clientUUID
 	today, _, err := s.household(ctx)
 	if err != nil {
 		return TickResult{}, err
@@ -379,12 +378,16 @@ func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, sho
 	}
 	var res TickResult
 	if extra.IngredientID != 0 && quantity > 0 {
-		lot, created, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: extra.IngredientID, Quantity: quantity, ShopID: shopID})
+		// The client UUID makes a retried tick find the same Lot (Stock answers created false); only the first
+		// answer counts the quantity into the extra's got.
+		lot, created, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: extra.IngredientID, Quantity: quantity, ShopID: shopID, ClientUUID: clientUUID})
 		if err != nil {
 			return TickResult{}, err
 		}
-		if _, err := s.st.AddGot(ctx, id, quantity); err != nil {
-			return TickResult{}, mapStoreErr(err)
+		if created {
+			if _, err := s.st.AddGot(ctx, id, quantity); err != nil {
+				return TickResult{}, mapStoreErr(err)
+			}
 		}
 		res.LotID, res.Created = &lot, created
 	}

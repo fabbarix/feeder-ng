@@ -31,3 +31,12 @@ export function classifyRequest(req: RequestInfo, origin: string): RequestClass 
   if (req.mode === 'navigate') return 'navigation'
   return 'static'
 }
+
+/**
+ * The cached URLs that the current precache manifest no longer lists: removed when the worker activates, so an old
+ * build's assets do not pile up. `manifestUrls` are as the manifest writes them (relative to `scope`).
+ */
+export function staleCacheUrls(cachedUrls: readonly string[], manifestUrls: readonly string[], scope: string): string[] {
+  const wanted = new Set(manifestUrls.map((u) => new URL(u, scope).href))
+  return cachedUrls.filter((u) => !wanted.has(u))
+}

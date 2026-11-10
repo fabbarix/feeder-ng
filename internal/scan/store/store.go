@@ -72,7 +72,7 @@ func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 
 const eventColumns = `client_uuid, kind, scanned_at, applied_at, seq, shop_id, product_id, ingredient_id, quantity,
 	price_cents, range_to, on_list, ticked, lot_id, purchase_id, sold_at_added, price_id, prev_price_json,
-	product_created, merged_into, extra_id, result_json, undone_at`
+	product_created, merged_into, extra_id, result_json, undone_at, undo_steps`
 
 // Insert records an applied operation (ErrDuplicate when the client UUID exists). It sets AppliedAt (now) and Seq (1, 2, ... in insert order).
 func (s *Store) Insert(ctx context.Context, e Event) (Event, error) {
@@ -110,13 +110,13 @@ func (s *Store) Get(ctx context.Context, clientUUID string) (Event, bool, error)
 	var (
 		e                                                                     Event
 		shop, product, ingredient, lot, purchase, price, merged, extra, cents sql.NullInt64
-		rangeTo, prevPrice, undone                                            sql.NullString
+		rangeTo, prevPrice, undone, steps                                     sql.NullString
 		onList, ticked, soldAt, created                                       bool
 		quantity                                                              sql.NullFloat64
 	)
 	err := row.Scan(&e.ClientUUID, &e.Kind, &e.ScannedAt, &e.AppliedAt, &e.Seq, &shop, &product, &ingredient, &quantity,
 		&cents, &rangeTo, &onList, &ticked, &lot, &purchase, &soldAt, &price, &prevPrice, &created, &merged, &extra,
-		&e.ResultJSON, &undone)
+		&e.ResultJSON, &undone, &steps)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Event{}, false, nil
 	}
@@ -135,6 +135,9 @@ func (s *Store) Get(ctx context.Context, clientUUID string) (Event, bool, error)
 	e.OnList, e.Ticked, e.SoldAtAdded, e.ProductCreated = onList, ticked, soldAt, created
 	e.PrevPriceJSON = prevPrice.String
 	e.UndoneAt = undone.String
+	if steps.String != "" {
+		e.UndoSteps = strings.Split(steps.String, ",")
+	}
 	return e, true, nil
 }
 
@@ -158,10 +161,28 @@ func (s *Store) MarkUndone(ctx context.Context, clientUUID string) (bool, error)
 	return false, nil
 }
 
-// MarkUndoStep records that an Undo step ran (idempotent: marking a step twice keeps one entry; ErrNotFound if unknown).
-// Not implemented yet: the Developer adds it (column undo_steps, migration 0802) and Get fills Event.UndoSteps.
+// MarkUndoStep records that an Undo step ran. Idempotent: a step already recorded keeps its one entry, so a
+// retried Undo never repeats it. ErrNotFound for an unknown client UUID.
 func (s *Store) MarkUndoStep(ctx context.Context, clientUUID, step string) error {
-	return errors.New("scan store: MarkUndoStep is not implemented")
+	res, err := s.db.ExecContext(ctx, `UPDATE scan_events
+		SET undo_steps = CASE WHEN undo_steps IS NULL OR undo_steps = '' THEN ? ELSE undo_steps || ',' || ? END
+		WHERE client_uuid = ? AND (undo_steps IS NULL OR undo_steps = ''
+			OR instr(',' || undo_steps || ',', ',' || ? || ',') = 0)`,
+		step, step, clientUUID, step)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return nil
+	}
+	_, ok, err := s.Get(ctx, clientUUID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // UpdatePrice sets the event's price (and the Price row it refers to; priceID nil keeps the one it has).

@@ -124,6 +124,8 @@ func writeError(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found.")
 	case errors.Is(err, service.ErrNotUndoable):
 		httpx.WriteError(w, http.StatusConflict, "not_undoable", "This scan cannot be undone.")
+	case errors.Is(err, service.ErrAlreadyUndone):
+		httpx.WriteError(w, http.StatusConflict, "already_undone", "This scan was undone; its price can no longer be edited.")
 	default:
 		httpx.WriteAPIError(w, err)
 	}

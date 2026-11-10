@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyRequest } from './cache'
+import { classifyRequest, staleCacheUrls } from './cache'
 
 const origin = 'https://feeder.example.test'
 const req = (path: string, over: { method?: string; mode?: string } = {}) => ({ url: origin + path, method: 'GET', mode: 'cors', ...over })
@@ -34,5 +34,17 @@ describe('classifyRequest', () => {
 
   it('an API path on another origin is not ours', () => {
     expect(classifyRequest({ url: 'https://elsewhere.test/api/events', method: 'GET', mode: 'cors' }, origin)).toBe('bypass')
+  })
+})
+
+describe('staleCacheUrls', () => {
+  it('lists the cached entries the current manifest no longer has, and keeps the rest', () => {
+    const cached = [`${origin}/index.html`, `${origin}/assets/index-old.js`, `${origin}/assets/index-new.js`]
+    const manifest = ['index.html', 'assets/index-new.js']
+    expect(staleCacheUrls(cached, manifest, `${origin}/`)).toEqual([`${origin}/assets/index-old.js`])
+  })
+
+  it('removes nothing when the cache matches the manifest', () => {
+    expect(staleCacheUrls([`${origin}/index.html`], ['index.html'], `${origin}/`)).toEqual([])
   })
 })
