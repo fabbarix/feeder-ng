@@ -316,7 +316,7 @@ describe('side rail pill (88 px rail)', () => {
     for (const link of links) {
       const pill = link.querySelector('span.side-rail__pill')
       expect(pill, link.textContent ?? '').not.toBeNull()
-      expect(pill!.querySelector('svg')).not.toBeNull()
+      expect(pill!.querySelector('[data-testid="icon"]')).not.toBeNull()
       expect(link.querySelector('.side-rail__label')).not.toBeNull()
     }
   })

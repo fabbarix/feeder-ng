@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { findNotice } from '../test/notices'
 import { AppRoot, type AppRootProps } from './AppRoot'
 
 vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
@@ -52,11 +53,12 @@ describe('AppRoot signed in', () => {
     mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }), {
       statusHooks: [() => ({ pendingScans: 2 }), () => ({}), () => ({ pendingScans: 1 })],
     })
-    expect(await screen.findByRole('status')).toHaveTextContent('3 Scans waiting to sync')
+    expect(await findNotice('status', '3 Scans waiting to sync')).toBeInTheDocument()
   })
 
   it('shows no pending line when no hook reports scans', async () => {
     mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }))
-    expect(await screen.findByRole('status')).not.toHaveTextContent(/waiting to sync/)
+    expect(await screen.findByText('plan page')).toBeInTheDocument()
+    expect(screen.queryByText(/waiting to sync/)).toBeNull()
   })
 })

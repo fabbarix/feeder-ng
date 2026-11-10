@@ -215,4 +215,8 @@ describe('review fixes: anchor, rows, rail pill, trigger', () => {
     const t = d('.your-menu-button')
     expect([t['width'], t['height'], t['border-radius']]).toEqual(['40px', '40px', '14px'])
   })
+  it('the avatar trigger paints a surface-2 square, so the round avatar sits inside a rounded square, not alone', () => {
+    const t = d('.your-menu-button')
+    expect(t['background']).toBe('var(--color-surface-2)')
+  })
 })

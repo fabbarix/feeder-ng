@@ -34,7 +34,7 @@ Spec: [ui-fix-plan.md](../../design/ui-fix-plan.md) 4.5, 5.17 and section 7 WP5,
 - **Rail order.** Scan first (spec: "at the top"), then Today, Plan, Shop, Recipes. The bar keeps Today, Plan, Scan, Shop, Recipes.
 - **Avatar menu (5.17).** Rows: Stock, Kitchen board, | divider |, Settings, feature items (by `order`, default icon `chevron`), Sign out (last, `data-tone="danger"`, danger-tertiary text).
   Each row has a 20 px `Icon`. Focus goes to the first item on open; Arrow Up/Down wrap, Home/End jump, Escape closes and returns focus to the avatar button.
-  A transparent `data-testid="menu-scrim"` button-less layer (`.your-menu-scrim`, `--scrim`) closes on click. The trigger is a 40 px, radius 14 square avatar.
+  A transparent `data-testid="menu-scrim"` button-less layer (`.your-menu-scrim`, `--scrim`) closes on click. The trigger is a 40 px, radius 14 square with a `var(--color-surface-2)` background holding the round avatar (the plan gives size and radius only; surface-2 is the Designer's choice so the square reads as a square, not a circle).
   The brand word is hidden below 1024.
 - **B2 (shell part): Kitchen board.** `/board` is linked from the avatar menu (a wall-display destination, not a daily tab, so it does not earn a bar slot).
   **Not in scope here:** the Cook Mode entry points on Planned Meals (Today/Plan) and on Recipe detail belong to the WP6/WP7/WP8 screen teams.
