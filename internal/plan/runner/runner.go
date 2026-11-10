@@ -44,6 +44,9 @@ type Deps struct {
 	Stock  StockPort
 	Events plan.Publisher // receives topic "plan" {"changed":"plan","reason":...}
 	Logger *slog.Logger
+	// OnResolved (optional) is called after the commit of Cooked and of NotCooked with the meal's key (N4: the cook
+	// feature cancels that meal's timers). A failure is logged, never returned.
+	OnResolved func(ctx context.Context, key plan.Key)
 }
 
 // Summary describes one planning run.

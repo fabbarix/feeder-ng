@@ -48,7 +48,7 @@ function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCance
         {items.map((item) => {
           const { label: name, id, state } = item.timer
           const actions = timerActions(state)
-          const place = showPlace ? timerPlace(item.timer.scope, scope) : ''
+          const place = showPlace ? timerPlace(item.timer.scope, scope, item.timer.recipeName) : ''
           const onToggle = actions.includes('pause')
             ? () => onPause(id)
             : actions.includes('resume')

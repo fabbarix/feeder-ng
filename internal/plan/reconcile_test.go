@@ -92,3 +92,21 @@ func TestReconcileLeavesUnconfirmedMealsWhoseSlotIsOverAlone(t *testing.T) {
 		t.Errorf("Deletes = %v; last night's unconfirmed meal must stay in To confirm", got.Deletes)
 	}
 }
+
+// N1: a placement served from a stored Leftover (planner.LeftoverSource with only LeftoverID) is stored with the
+// Leftover's source slot, so "Leftover from <day>" survives the replan after Cooked.
+func TestReconcileFillsTheSourceSlotOfAStoredLeftover(t *testing.T) {
+	s := baseSnapshot()
+	s.Slots = []plan.SlotInfo{slotInfo("2026-11-11", 1, "19:00", 1)}
+	s.Leftovers = []plan.Leftover{{ID: 8, RecipeID: 11, From: k("2026-11-10", 2), Portions: 2, Status: plan.LeftoverAvailable}}
+	res := planner.Result{Placements: []planner.Placement{
+		{Key: pk("2026-11-11", 1), Source: planner.SourceLeftover, RecipeID: 11, Portions: 2, From: &planner.LeftoverSource{LeftoverID: 8}},
+	}}
+	got := plan.Reconcile(s, res)
+	if len(got.Upserts) != 1 || got.Upserts[0].From == nil {
+		t.Fatalf("upserts = %+v", got.Upserts)
+	}
+	if want := (plan.Source{LeftoverID: 8, From: k("2026-11-10", 2)}); *got.Upserts[0].From != want {
+		t.Errorf("From = %+v, want %+v", *got.Upserts[0].From, want)
+	}
+}

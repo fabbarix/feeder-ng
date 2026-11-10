@@ -256,6 +256,14 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		}
 		if p.From != nil {
 			m.From = &Source{LeftoverID: p.From.LeftoverID, From: keyOf(p.From.FromSlot)}
+			if m.From.LeftoverID != 0 && m.From.From == (Key{}) {
+				for _, l := range s.Leftovers {
+					if l.ID == m.From.LeftoverID {
+						m.From.From = l.From
+						break
+					}
+				}
+			}
 		}
 		ch.Upserts = append(ch.Upserts, m)
 	}

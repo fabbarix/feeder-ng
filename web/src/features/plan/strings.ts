@@ -24,6 +24,8 @@ export const planStrings = {
   markCooked: 'Mark as Cooked',
   couldntPlanChip: "Couldn't plan",
   servedFromLeftover: (weekday: string) => `Leftover from ${weekday}`,
+  /** The Leftover chip when the source day is not known (N1). */
+  servedFromLeftoverUnknown: 'Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
   portionsNeeded: (n: number) => (n === 1 ? '1 portion' : `${n} portions`),
   extraPortions: (n: number) => `+${n} portion Leftover`,

@@ -1,5 +1,7 @@
 import type { IconName } from '../../../ui/icons'
 import { planStrings as s } from '../strings'
+import { heroMeal } from './days'
+import { dayNumber, weekdayName } from './phrase'
 import type { PlannedMeal, PlanSlot } from '../types'
 
 /** 'upcoming' before the slot time, 'awaiting' once it has passed (the hero then asks "... cooked?"). */
@@ -47,4 +49,36 @@ export function slotIcon(name: string): IconName {
     default:
       return 'other'
   }
+}
+
+/** What the Today hero offers: Cook (fresh meal due today), Yes, Cooked / Adjust come from the phase, or nothing. */
+export type HeroAction = 'cook' | 'leftover' | 'none'
+
+/** Which day the hero meal is on, relative to today. */
+export type HeroDay = 'today' | 'tomorrow' | 'later'
+
+export interface HeroSelection {
+  slot: PlanSlot
+  day: HeroDay
+  action: HeroAction
+}
+
+/** N3: the Today hero's meal and what it offers. See docs/dev/design/r10-qa-fixes.md. */
+export function heroSelection(slots: PlanSlot[], now: Date, today: string): HeroSelection | null {
+  const open = slots.filter((x) => x.meal?.state === 'planned')
+  const todays = heroMeal(open.filter((x) => x.date === today), now)
+  const pick = todays ?? heroMeal(open.filter((x) => x.date > today), now)
+  if (!pick?.meal) return null
+  const diff = dayNumber(pick.date) - dayNumber(today)
+  const day: HeroDay = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : 'later'
+  const action: HeroAction = pick.meal.servedFromLeftover ? 'leftover' : day === 'today' ? 'cook' : 'none'
+  return { slot: pick, day, action }
+}
+
+/** N3: the hero overline: "DINNER · 19:30" today, "TOMORROW · LUNCH" tomorrow, "WED · LUNCH" later. */
+export function heroDayOverline(sel: HeroSelection): string {
+  if (sel.day === 'today') return heroOverline(sel.slot)
+  const name = sel.slot.name.toUpperCase()
+  const day = sel.day === 'tomorrow' ? s.tomorrow.toUpperCase() : weekdayName(sel.slot.date, 'short').toUpperCase()
+  return `${day} · ${name}`
 }

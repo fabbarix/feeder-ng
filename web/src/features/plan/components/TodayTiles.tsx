@@ -92,6 +92,7 @@ export function LeftoversTile({ leftovers, today, onOpen }: LeftoversTileProps):
       as="section"
       variant="status"
       status="leftover"
+      className="plan-leftovers"
       overline={s.leftoversOverline}
       overlineIcon="leftover"
       stretched={onOpen ? { label: s.leftoversTitle, onActivate: onOpen } : undefined}
@@ -99,7 +100,7 @@ export function LeftoversTile({ leftovers, today, onOpen }: LeftoversTileProps):
       <h2 className="plan__tile-title">{s.leftoversTitle}</h2>
       <ListGroup label={s.leftoversTitle}>
         {rows.map((row) => (
-          <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} icon="leftover" />
+          <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} />
         ))}
       </ListGroup>
     </Tile>

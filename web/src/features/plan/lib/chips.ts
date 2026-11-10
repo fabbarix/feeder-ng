@@ -24,10 +24,10 @@ function stateChips(meal: PlannedMeal): PlanChip[] {
 }
 
 /** "Leftover from Mon" when the meal is served from a Leftover. */
-function leftoverChip(meal: PlannedMeal): PlanChip[] {
+export function leftoverChip(meal: PlannedMeal): PlanChip[] {
   const from = meal.servedFromLeftover
   if (!from) return []
-  return [{ key: 'status:leftover', kind: 'status', status: 'leftover', label: s.servedFromLeftover(weekdayName(from.date, 'short')) }]
+  return [{ key: 'status:leftover', kind: 'status', status: 'leftover', label: from.date ? s.servedFromLeftover(weekdayName(from.date, 'short')) : s.servedFromLeftoverUnknown }]
 }
 
 /**

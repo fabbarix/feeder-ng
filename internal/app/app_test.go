@@ -289,3 +289,19 @@ func TestCloseWaitsForWorkersStartedWithDepsGo(t *testing.T) {
 	}
 	h.app.Close() // a second Close is harmless
 }
+
+// N10: crawlers get a real robots.txt (disallow everything: a private household app), not the SPA index.
+func TestRobotsTxtIsServedNotTheSPAIndex(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	rec := h.get("/robots.txt", "")
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
+		t.Errorf("Content-Type = %q, want text/plain", ct)
+	}
+	body := rec.Body.String()
+	if strings.Contains(body, "SPA index") || !strings.Contains(body, "User-agent: *") || !strings.Contains(body, "Disallow: /") {
+		t.Errorf("body = %q", body)
+	}
+}

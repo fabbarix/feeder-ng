@@ -40,7 +40,7 @@ export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSu
           submit()
         }}
       >
-        <NumberField label={shopStrings.howMuch} value={value} onChange={setValue} min={0} unit={baseUnitLabel(baseUnit, 'metric')} error={error ?? undefined} />
+        <NumberField label={shopStrings.howMuch} value={value} onChange={setValue} min={0} unit={baseUnitLabel(baseUnit, 'metric', value ?? undefined)} error={error ?? undefined} />
         <Button type="submit">{shopStrings.tickSave}</Button>
         <Button variant="secondary" onClick={() => onSubmit(0)}>
           {shopStrings.tickOnly}

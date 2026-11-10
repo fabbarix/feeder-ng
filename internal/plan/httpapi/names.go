@@ -6,6 +6,9 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/app"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	"github.com/fabbarix/feeder-ng/internal/plan"
+	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -16,6 +19,7 @@ type names struct {
 	hh     *householdstore.Store
 	recipe *recipestore.Store
 	ing    *ingredientstore.Store
+	plan   *planstore.Store
 }
 
 func newNames(d app.Deps) *names {
@@ -24,6 +28,7 @@ func newNames(d app.Deps) *names {
 		hh:     householdstore.New(d.DB, d.Clock),
 		recipe: recipestore.New(d.DB, d.Clock, ingredientUnits{ing}),
 		ing:    ing,
+		plan:   planstore.New(d.DB, d.Clock),
 	}
 }
 
@@ -50,6 +55,9 @@ type table struct {
 	memberColour  map[int64]string
 	ingredients   map[int64]string
 	slots         map[int64]string
+	// leftoverFrom is the source Meal Slot of each stored Leftover by id (N1): a meal served from a stored Leftover
+	// takes its "Leftover from <day>" date from here when the meal row does not carry it.
+	leftoverFrom map[int64]plan.Key
 }
 
 // photoURL is the URL the image store serves an image id at (the recipe httpapi's imageURL).
@@ -60,7 +68,9 @@ func photoURL(id string) string {
 	return "/api/images/" + id
 }
 
-func (n *names) load(ctx context.Context) (table, error) {
+// load builds the names table. meals are the Meals about to be rendered: the source Meal Slot of the stored Leftovers
+// they are served from is looked up by id (N1).
+func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	t := table{recipes: map[int64]string{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
 		members: map[int64]string{}, memberColour: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
@@ -94,5 +104,31 @@ func (n *names) load(ctx context.Context) (table, error) {
 	for _, i := range is {
 		t.ingredients[i.ID] = i.Name
 	}
+	if t.leftoverFrom, err = n.plan.LeftoverSources(ctx, leftoverIDs(meals)); err != nil {
+		return t, err
+	}
 	return t, nil
+}
+
+// leftoverIDs are the distinct ids of the stored Leftovers the meals are served from.
+func leftoverIDs(meals []*plan.Meal) []int64 {
+	seen := map[int64]bool{}
+	var ids []int64
+	for _, m := range meals {
+		if m == nil || m.From == nil || m.From.LeftoverID == 0 || seen[m.From.LeftoverID] {
+			continue
+		}
+		seen[m.From.LeftoverID] = true
+		ids = append(ids, m.From.LeftoverID)
+	}
+	return ids
+}
+
+// viewMeals are the Meals of the slot views.
+func viewMeals(views []runner.SlotView) []*plan.Meal {
+	out := make([]*plan.Meal, 0, len(views))
+	for _, v := range views {
+		out = append(out, v.Meal)
+	}
+	return out
 }

@@ -58,6 +58,7 @@ describe('plan.css', () => {
   })
 
   it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
+    // No exemption, the Leftovers tile (N2) included: wp6 review rule (wp6-plan-today.md, CSS contract).
     expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
     for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
       expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
@@ -73,5 +74,35 @@ describe('plan.css', () => {
 
   it('does not restyle chips: they keep their own background in narrow tiles', () => {
     expect(css).not.toMatch(/\.chip\b/)
+  })
+})
+
+// N2: on a phone the Leftovers tile is half width; two or more rows must stack name over meta, wrap, and never overlap.
+describe('plan.css Leftovers tile (N2)', () => {
+  it('rows size to their content instead of the fixed 64 px height', () => {
+    const r = rule(".plan-leftovers .list-row[data-height]")
+    expect(r).toMatch(/block-size:\s*auto/)
+    expect(r).toMatch(/min-block-size/)
+    expect(r).toMatch(/padding-block/)
+  })
+
+  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks at word edges, hyphenating (never anywhere)', () => {
+    const r = rule('.plan-leftovers .list-row__title')
+    expect(r).toMatch(/white-space:\s*normal/)
+    expect(r).toMatch(/overflow-wrap:\s*break-word/)
+    expect(r).toMatch(/hyphens:\s*auto/)
+    expect(r).not.toMatch(/anywhere|nowrap/)
+  })
+
+  it('the meta line may wrap under the name', () => {
+    expect(rule('.plan-leftovers .list-row__meta')).toMatch(/flex-wrap:\s*wrap/)
+  })
+
+  it('the feature stylesheet does not override the ListRow lead: the icon is simply not rendered (see TodayTiles.test)', () => {
+    expect(css).not.toMatch(/\.list-row__lead/)
+  })
+
+  it('rows have 12 px or more of horizontal padding-free text room: padding-inline is at most space-3', () => {
+    expect(rule(".plan-leftovers .list-row[data-height]")).toMatch(/padding-inline:\s*var\(--space-3\)/)
   })
 })

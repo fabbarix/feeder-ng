@@ -182,7 +182,13 @@ func mealFor(m plan.Meal, t table) *mealOut {
 		out.CookMinutes = t.recipeMinutes[m.RecipeID]
 	}
 	if m.From != nil {
-		src := &leftoverSourceOut{Date: m.From.From.Date, MealSlotID: m.From.From.MealSlotID, RecipeName: t.recipes[m.RecipeID]}
+		from := m.From.From
+		if from.Date == "" && m.From.LeftoverID != 0 {
+			if k, ok := t.leftoverFrom[m.From.LeftoverID]; ok {
+				from = k
+			}
+		}
+		src := &leftoverSourceOut{Date: from.Date, MealSlotID: from.MealSlotID, RecipeName: t.recipes[m.RecipeID]}
 		if m.From.LeftoverID != 0 {
 			id := m.From.LeftoverID
 			src.LeftoverID = &id
