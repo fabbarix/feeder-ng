@@ -24,7 +24,7 @@ export interface UseCameraResult {
   torchOn: boolean
   /** applies { advanced: [{ torch }] } to the video track; does nothing when unsupported */
   toggleTorch(): Promise<void>
-  /** B4: tries again after a failure (denied, no_camera, in_use, error); no-op in other states. Stub until implemented. */
+  /** B4: tries again after a failure (denied, no_camera, in_use, error); no-op in other states. */
   retry(): void
   /** the frame source for useScanner: the video element while ready */
   frame(): CanvasImageSource | null
@@ -46,9 +46,30 @@ function defaultMediaDevices(): MediaDevicesLike | null {
   return (navigator.mediaDevices as MediaDevicesLike | undefined) ?? null
 }
 
+/** The status a failed getUserMedia call means (B4). */
+export function statusForCameraError(name: string): CameraStatus {
+  switch (name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'denied'
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'no_camera'
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'in_use'
+    default:
+      return 'error'
+  }
+}
+
+const FAILED: ReadonlySet<CameraStatus> = new Set<CameraStatus>(['denied', 'no_camera', 'in_use', 'error'])
+
 /**
  * Requests the rear camera when enabled and releases it (stops every track) when disabled or unmounted.
- * NotAllowedError/SecurityError -> `denied`; no mediaDevices or no getUserMedia -> `unsupported`; any other failure -> `error`.
+ * NotAllowedError/SecurityError -> `denied`; NotFoundError/DevicesNotFoundError -> `no_camera`;
+ * NotReadableError/TrackStartError -> `in_use`; no mediaDevices or no getUserMedia -> `unsupported`; any other failure -> `error`.
+ * retry() asks again after a failure.
  */
 export function useCamera(options: UseCameraOptions): UseCameraResult {
   const { enabled } = options
@@ -62,6 +83,7 @@ export function useCamera(options: UseCameraOptions): UseCameraResult {
   const [status, setStatus] = useState<CameraStatus>('idle')
   const [torchSupported, setTorchSupported] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!enabled) {
@@ -105,7 +127,7 @@ export function useCamera(options: UseCameraOptions): UseCameraResult {
       .catch((err: unknown) => {
         if (cancelled) return
         const name = err instanceof Error ? err.name : ''
-        setStatus(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'error')
+        setStatus(statusForCameraError(name))
       })
     return () => {
       cancelled = true
@@ -113,7 +135,12 @@ export function useCamera(options: UseCameraOptions): UseCameraResult {
       streamRef.current = null
       trackRef.current = null
     }
-  }, [enabled])
+    // attempt is only a trigger: retry() bumps it to open the camera again.
+  }, [enabled, attempt])
+
+  const retry = useCallback(() => {
+    if (enabled && FAILED.has(status)) setAttempt((n) => n + 1)
+  }, [enabled, status])
 
   const toggleTorch = useCallback(async () => {
     const track = trackRef.current
@@ -125,5 +152,5 @@ export function useCamera(options: UseCameraOptions): UseCameraResult {
 
   const frame = useCallback((): CanvasImageSource | null => (status === 'ready' ? videoRef.current : null), [status])
 
-  return { videoRef, status, torchSupported, torchOn, toggleTorch, retry: () => {}, frame }
+  return { videoRef, status, torchSupported, torchOn, toggleTorch, retry, frame }
 }

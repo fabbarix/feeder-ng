@@ -168,6 +168,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: plan.product.id, quantity: plan.quantity }
     if (plan.priceCents !== null) op.priceCents = plan.priceCents
     if (plan.pricePerKgCents !== undefined) op.pricePerKgCents = plan.pricePerKgCents
+    if (plan.weighed) op.weighed = true
     const result = await d.submit(op)
     await finish(
       op.clientUuid,
@@ -286,14 +287,34 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   }
 
   const openEditPrice = () => {
-    if (line && !line.queued) setSheet({ kind: 'edit_price' })
+    if (line) setSheet({ kind: 'edit_price' })
   }
 
+  /** B6: a still-queued scan is edited in the queue; once it left the queue (or was synced) the server edits it. */
   const editPrice = async (priceCents: number): Promise<void> => {
     if (!line) return
-    await depsRef.current.setPrice(line.clientUuid, priceCents)
+    const d = depsRef.current
+    const editedQueued = line.queued && d.setQueuedPrice ? await d.setQueuedPrice(line.clientUuid, priceCents) : false
+    if (!editedQueued) await d.setPrice(line.clientUuid, priceCents)
     setLine({ ...line, priceCents })
     setSheet(null)
+  }
+
+  /**
+   * B7: the Result of a sync flush settles the line of a scan that was waiting: applied or duplicate take the
+   * server's quantity, price and list state (no longer "waiting to sync"); rejected clears the line (the sync notice
+   * explains it). Results for other scans, and a line that is not waiting, are left alone.
+   */
+  const applySyncResults = (results: ScanResult[]): void => {
+    setLine((current) => {
+      if (!current || !current.queued) return current
+      const result = results.find((r) => r.clientUuid === current.clientUuid)
+      if (!result) return current
+      if (result.status === 'rejected') return null
+      const s = result.scan
+      if (!s) return { ...current, queued: false }
+      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName }
+    })
   }
 
   /** The server Undo; a 404 means the server never had the Op (not applied), which is as undone as it gets. */
@@ -318,7 +339,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   }
 
   const feedback: FlowFeedback | null = line
-    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: !line.queued }
+    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: true }
     : null
 
   return {
@@ -330,7 +351,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     saveUnknown,
     submitWeight,
     stockTakeAction,
-    applySyncResults: () => {},
+    applySyncResults,
     openEditPrice,
     editPrice,
     undo,

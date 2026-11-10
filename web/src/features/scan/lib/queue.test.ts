@@ -424,6 +424,7 @@ describe('updatePrice (an edit made offline, B6)', () => {
     let release: (r: ScanResult[]) => void = () => {}
     const slow = api(() => new Promise<ScanResult[]>((res) => (release = res)))
     const flushing = queue.flush(slow)
+    await vi.waitFor(() => expect(slow.sync).toHaveBeenCalledTimes(1)) // the send is under way (release is set)
     const update = queue.updatePrice('a', 179)
     release([applied('a')])
     await flushing

@@ -127,7 +127,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     }
   }, [clearRetry, flush, refreshCounts])
 
-  const updateQueuedPrice = useCallback(async (_clientUuid: string, _priceCents: number) => false, [])
+  const updateQueuedPrice = useCallback(async (clientUuid: string, priceCents: number) => queueRef.current.updatePrice(clientUuid, priceCents), [])
 
   return { online, pendingCount, rejectedCount, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
 }

@@ -111,11 +111,14 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const syncApi = useMemo<SyncApi>(() => ({ sync: (ops: Op[]) => scanApi.sync(ops) }), [])
   const [notices, setNotices] = useState<SyncNotice[]>([])
   const resultsRef = useRef(new Map<string, ScanResult>())
+  // The flow is created after the sync queue (it needs the queue's functions); the sync reaches it through this ref.
+  const flowRef = useRef<ScanFlow | null>(null)
   const sync = useSyncQueue({
     queue,
     api: syncApi,
     onResults: (results, found) => {
       for (const r of results) resultsRef.current.set(r.clientUuid, r)
+      flowRef.current?.applySyncResults(results)
       if (found.length > 0) setNotices((prev) => [...prev, ...found])
       // A Product created (or merged into one) by this batch: the cached offline data must learn its barcode.
       if (shouldRefreshOfflineData(results)) void queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] })
@@ -148,6 +151,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     rangeTo: mode === 'shop' ? shopList.data?.to : undefined,
     submit,
     cancelQueued,
+    setQueuedPrice: (clientUuid, priceCents) => sync.updateQueuedPrice(clientUuid, priceCents),
     undo: async (clientUuid) => {
       await scanApi.undo(clientUuid)
       refreshLive()
@@ -158,6 +162,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     },
     feedback,
   })
+  flowRef.current = flow
 
   const source = useMemo(() => ({ frame: camera.frame }), [camera.frame])
   const onScan = useRef(flow.onScan)
