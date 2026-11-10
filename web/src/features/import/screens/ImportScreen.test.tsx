@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ToastProvider } from '../../../ui'
 import { match, plan, prompt, recipe } from '../fixtures.test-helper'
 import { importStrings as s } from '../strings'
 import type { UseImportReview } from '../hooks/useImportReview'
@@ -18,11 +19,22 @@ function state(over: Partial<UseImportReview>): UseImportReview {
     confirm: vi.fn(), reset: vi.fn(), ...over,
   }
 }
-const view = () => render(<MemoryRouter><ImportScreen /></MemoryRouter>)
+vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
+const view = () => render(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
 
 describe('ImportScreen', () => {
   beforeEach(() => {
     hook.current = state({})
+  })
+  it('guides the import as numbered steps: Agent Prompt, then the file, then the review', () => {
+    view()
+    expect(screen.getByRole('heading', { level: 1, name: s.importTitle })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(1))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: s.stepOneTitle })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.copyAgentPrompt })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(3))).toBeInTheDocument()
   })
   it('starts with the source step and passes the text to the review', async () => {
     view()
@@ -34,7 +46,7 @@ describe('ImportScreen', () => {
   it('shows validation errors and no review tiles when the file is refused', () => {
     hook.current = state({ error: { kind: 'schema', errors: [{ path: '$.recipes', message: 'at least 1' }] } })
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent('$.recipes')
+    expect(screen.getByText(/\$\.recipes/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: s.confirm })).not.toBeInTheDocument()
   })
   it('shows a tile per open question while reviewing and wires the answers', async () => {
@@ -59,7 +71,8 @@ describe('ImportScreen', () => {
     expect(hook.current.chooseExisting).toHaveBeenCalledWith('onion', 5)
     await userEvent.click(screen.getByRole('button', { name: s.skip }))
     expect(hook.current.chooseRecipeAction).toHaveBeenCalledWith(0, 'skip')
-    await userEvent.type(screen.getByLabelText(s.unitAmountLabel('g')), '30')
+    await userEvent.type(screen.getByRole('spinbutton', { name: s.unitAmountLabel('g') }), '30')
+    await userEvent.tab()
     await userEvent.click(screen.getByRole('button', { name: s.saveConversion }))
     expect(hook.current.answerConversion).toHaveBeenCalledWith('spinach', 'handful', 30)
   })

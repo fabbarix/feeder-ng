@@ -9,6 +9,11 @@ export const importStrings = {
   agentPromptFailed: 'Could not copy the Agent Prompt',
   agentPromptHelp: 'Paste it into any AI assistant, add your recipe, then import the JSON it returns.',
 
+  stepOneTitle: 'Copy the Agent Prompt',
+  stepTwoTitle: 'Paste the Recipe File or choose a file',
+  stepThreeTitle: 'Review',
+  stepOverline: (n: number) => `Step ${n}`,
+  rejectedFile: 'That is not a Recipe File. Choose a .json file.',
   sourceTitle: 'Recipe File',
   uploadLabel: 'Choose a .feeder.json file',
   pasteLabel: 'Or paste the JSON',
@@ -61,7 +66,8 @@ export const importStrings = {
   startOver: 'Start over',
 
   exportPick: 'Choose Recipes',
-  exportAll: 'All Recipes',
+  allRecipes: 'All Recipes',
+  exportAll: 'Export all Recipes',
   exportSelected: (n: number) => `Export ${n} Recipe${n === 1 ? '' : 's'}`,
   selectAll: 'Select all',
   clearSelection: 'Clear',

@@ -7,6 +7,8 @@ import type { PreferenceState } from '../types'
 export interface PreferenceTogglesProps {
   state: PreferenceState
   onChange: (next: PreferenceState) => void
+  /** True until a Member is chosen: every toggle is disabled. */
+  disabled?: boolean
 }
 
 const options = [

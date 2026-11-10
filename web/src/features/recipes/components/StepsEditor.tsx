@@ -3,12 +3,16 @@ import { Button } from '../../../ui'
 import type { DraftErrors, StepDraft } from '../lib/draft'
 import { afterOptions, changeKind, moveStep, newStepDraft, removeStep, toggleAfter } from '../lib/steps'
 import { codeMessage, recipeStrings } from '../strings'
-import type { StepKind } from '../types'
+import type { IngredientRef, StepKind } from '../types'
 
 export interface StepsEditorProps {
   steps: StepDraft[]
   errors: DraftErrors
   onChange: (steps: StepDraft[]) => void
+  /** Every Ingredient, for the `uses` rows (IngredientSelect + UnitSelect). */
+  ingredients?: IngredientRef[]
+  /** Uploads a Step photo and resolves with its image id (null on failure; `error` then says why). */
+  imageUpload?: { upload: (file: File) => Promise<string | null>; uploading: boolean; error: string | null }
 }
 
 const kindOptions: { value: StepKind; label: string }[] = [

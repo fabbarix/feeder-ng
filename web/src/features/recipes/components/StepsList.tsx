@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 import { formatMinutes } from '../lib/time'
 import { recipeStrings } from '../strings'
-import type { RecipeStep, StepKind } from '../types'
+import type { IngredientRef, RecipeStep, StepKind } from '../types'
 
 export interface StepsListProps {
   steps: RecipeStep[]
+  /** Ingredients by id, to name what a Step uses. */
+  refs?: ReadonlyMap<number, IngredientRef>
 }
 
 const kindLabel: Record<StepKind, string> = {

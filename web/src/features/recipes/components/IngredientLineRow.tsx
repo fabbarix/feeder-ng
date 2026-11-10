@@ -11,9 +11,12 @@ export interface IngredientLineRowProps {
   errors: DraftErrors
   /** The picked Ingredient (unit choices come from it), once known. */
   ingredient: IngredientRef | undefined
-  /** Suggestions for this row while it is being searched. */
-  results: IngredientRef[]
-  onSearch: (text: string) => void
+  /** Every Ingredient, for the ui/IngredientSelect options (it searches and filters itself). Replaces `results`/`onSearch`. */
+  ingredients?: IngredientRef[]
+  /** @deprecated the IngredientSelect searches by itself; removed with the native input. */
+  results?: IngredientRef[]
+  /** @deprecated see `results`. */
+  onSearch?: (text: string) => void
   onPick: (ingredient: IngredientRef) => void
   onChange: (patch: Partial<LineDraft>) => void
   onRemove: () => void
@@ -28,8 +31,8 @@ export function IngredientLineRow({
   index,
   errors,
   ingredient,
-  results,
-  onSearch,
+  results = [],
+  onSearch = () => {},
   onPick,
   onChange,
   onRemove,
