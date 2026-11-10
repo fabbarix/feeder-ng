@@ -98,9 +98,21 @@
   min-inline-size: 0;
 }
 
-/* The detail hero photo is capped at 170 px tall; the image covers the box. */
-.recipe-detail__hero .recipe-thumb[data-size='hero'] {
+/* The detail hero is capped at 170 px on the shared media container (it keeps 16:9 otherwise);
+   the thumb fills it and the image covers the box. */
+.recipe-detail__hero .tile__media {
+  aspect-ratio: auto;
   max-block-size: 170px;
+}
+
+.recipe-detail__hero .recipe-thumb[data-size='hero'] {
+  block-size: 100%;
+  max-block-size: 170px;
+}
+
+/* A hero tile with nothing under the photo drops the bottom padding strip. */
+.recipe-detail__hero .tile[data-variant='media']:has(> .tile__media:last-child) {
+  padding-block-end: 0;
 }
 
 .preference-toggles {
