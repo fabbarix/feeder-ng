@@ -160,7 +160,9 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 	for i, s := range slots {
 		switch st.roles[i] {
 		case rolePinned, roleCooked:
-			st.history = append(st.history, fresh{day: st.days[i], seq: i, recipe: s.Existing.RecipeID})
+			if s.Existing.From == nil {
+				st.history = append(st.history, fresh{day: st.days[i], seq: i, recipe: s.Existing.RecipeID})
+			}
 		}
 	}
 	// Reservations are computed before the kept meals join the history; a kept
@@ -256,8 +258,14 @@ func (st *state) step(i int) {
 	switch st.roles[i] {
 	case roleEmpty:
 		st.fill(i)
-	case roleCooked, roleSkipped:
-		// Nothing to do: Stock was deducted at Cooked (ADR 0003); skipped has no effect.
+	case roleCooked:
+		// Stock was deducted at Cooked (ADR 0003). A Cooked meal served from a
+		// Leftover still eats that Leftover's portions, as a Pinned one does.
+		if s.Existing.From != nil {
+			st.consumeLeftover(*s.Existing.From, PortionsNeeded(s.Attendance))
+		}
+	case roleSkipped:
+		// Nothing to do: skipped has no effect.
 	case rolePinned:
 		st.applyFixed(i, *s.Existing)
 	case roleKept:
