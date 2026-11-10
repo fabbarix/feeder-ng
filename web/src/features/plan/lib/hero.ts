@@ -51,8 +51,11 @@ export function slotIcon(name: string): IconName {
   }
 }
 
-/** What the Today hero offers: Cook (fresh meal due today), Yes, Cooked / Adjust come from the phase, or nothing. */
-export type HeroAction = 'cook' | 'leftover' | 'none'
+/**
+ * What the Today hero offers: Cook (fresh meal due today), Reheat (R12: a meal of today served from a Leftover),
+ * 'leftover' (a later meal served from a Leftover: the chip only), or nothing. Yes, Cooked / Adjust come from the phase.
+ */
+export type HeroAction = 'cook' | 'reheat' | 'leftover' | 'none'
 
 /** Which day the hero meal is on, relative to today. */
 export type HeroDay = 'today' | 'tomorrow' | 'later'

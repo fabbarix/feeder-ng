@@ -15,6 +15,8 @@ export interface TonightHeroProps {
   onCook: (key: SlotKey) => void
   /** "Yes, Cooked": mark Cooked with the planned Leftover portions in one tap. */
   onYesCooked: (key: SlotKey) => void
+  /** R12 "Reheat": open the Reheat screen of a meal served from a Leftover (lib/hero action 'reheat'). */
+  onReheat?: (key: SlotKey) => void
   /** "Adjust": open the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
   /** True while a Yes, Cooked is being saved. */
