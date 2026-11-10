@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { BottomSheet, Chip, ErrorState, IconButton, ListGroup, ListRow, PageHeader, RecipeThumb, Skeleton, Tile } from '../../../ui'
 import { CookEntry } from '../components/CookEntry'
@@ -13,7 +14,6 @@ import { useMemberPicker } from '../hooks/useMemberPicker'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipePreferences } from '../hooks/useRecipePreferences'
-import { cookPath } from '../lib/cookEntry'
 import { recipeStrings } from '../strings'
 import type { PreferenceState } from '../types'
 import '../recipes.css'
@@ -38,7 +38,16 @@ export function RecipeDetailScreen(): ReactNode {
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
 
   if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
-  if (!r) return <ErrorState message={recipeStrings.loadError} />
+  if (!r)
+    return (
+      <section className="recipe-detail">
+        <PageHeader
+          title={recipeStrings.title}
+          leading={<IconButton icon="back" label={recipeStrings.back} onClick={() => navigate('/recipes')} />}
+        />
+        <ErrorState message={recipeStrings.loadError} onRetry={() => recipe.refetch()} />
+      </section>
+    )
 
   const current = prefs.stateOf(r.id)
   // The toggles report the next state; clearing a state re-taps the one it had.
@@ -85,7 +94,7 @@ export function RecipeDetailScreen(): ReactNode {
         <PreferenceToggles state={current} disabled={noMember} onChange={toggle} />
       </Tile>
       {actions.error ? <ErrorState message={actions.error} /> : null}
-      <CookEntry batches={batches} onBatchesChange={setBatches} yieldValue={r.yield} onStart={() => navigate(cookPath(r.id, batches))} />
+      <CookEntry batches={batches} onBatchesChange={setBatches} yieldValue={r.yield} onStart={() => navigate(cookRecipePath(r.id, batches))} />
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={recipeStrings.overflow.title}>
         <ListGroup label={recipeStrings.overflow.title}>
           <ListRow

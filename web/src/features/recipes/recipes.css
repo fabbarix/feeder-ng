@@ -9,15 +9,32 @@
   min-inline-size: 0;
 }
 
-/* Recipes list: the Tag filters scroll sideways with fade edges. */
+/* Recipes list: the Tag filters scroll sideways; the fade edges appear only once the row has been scrolled. */
 .tag-chips {
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
   scrollbar-width: none;
   padding-block: var(--space-1);
-  /* Fade edges: the mask is opaque (currentColor) in the middle and clear at both ends. */
+  /* The end fades out (Tags past the edge); the start fades only once the row has been scrolled (TagChips). */
+  mask-image: linear-gradient(to right, currentColor calc(100% - var(--space-4)), transparent 100%);
+}
+
+.tag-chips[data-scrolled='true'] {
   mask-image: linear-gradient(to right, transparent 0, currentColor var(--space-4), currentColor calc(100% - var(--space-4)), transparent 100%);
+}
+
+/* Recipes grid: BentoGrid renders 2 columns; 3 from 720 px and 4 from 1024 px. */
+@media (min-width: 720px) {
+  .recipes-screen .bento-grid[data-columns='2'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .recipes-screen .bento-grid[data-columns='2'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .tag-chips::-webkit-scrollbar {
@@ -79,6 +96,11 @@
 
 .recipe-detail__hero {
   min-inline-size: 0;
+}
+
+/* The detail hero photo is capped at 170 px tall; the image covers the box. */
+.recipe-detail__hero .recipe-thumb[data-size='hero'] {
+  max-block-size: 170px;
 }
 
 .preference-toggles {

@@ -41,15 +41,14 @@ export function ImportScreen(): ReactNode {
         <>
           <AgentPromptStep />
           {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
-          <section className="import-review">
-            <p className="import-review__overline">{s.stepOverline(3)}</p>
+          <Tile as="section" className="import-review" overline={s.stepOverline(3)}>
             <h2>{s.stepThreeTitle}</h2>
             {r.phase === 'reviewing' && r.plan ? (
               <Reviewing plan={r.plan} busy={r.busy} stale={r.stale} screen={r} />
             ) : (
               <p className="import-review__empty">{s.reviewEmpty}</p>
             )}
-          </section>
+          </Tile>
         </>
       )}
     </section>

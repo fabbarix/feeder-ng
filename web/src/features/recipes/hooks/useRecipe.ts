@@ -7,6 +7,8 @@ export interface UseRecipe {
   recipe: Recipe | undefined
   isLoading: boolean
   error: Error | null
+  /** Fetches the Recipe again (the error state's Try again). */
+  refetch: () => void
   /** Archive / unarchive; refreshes ['recipes'] and ['recipes', id]. */
   setArchived: (archived: boolean) => Promise<void>
   /** Hard delete. Rejects with ApiError code 'already_planned' when the Recipe was ever planned. */
@@ -32,6 +34,9 @@ export function useRecipe(id: number): UseRecipe {
     recipe: query.data,
     isLoading: query.isLoading,
     error: query.error,
+    refetch: () => {
+      void query.refetch()
+    },
     setArchived: async (archived) => {
       await archive.mutateAsync(archived)
     },

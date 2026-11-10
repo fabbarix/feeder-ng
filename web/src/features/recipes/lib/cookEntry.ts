@@ -1,18 +1,7 @@
-// The Cook / Batch entry of Recipe detail (QA B2, G2): how many Batches, and where Cook Mode opens. Plain TypeScript.
+// The Cook / Batch entry of Recipe detail (QA B2, G2): the Batch bounds and the portions text. Plain TypeScript.
 
 export const MIN_BATCHES = 1
 export const MAX_BATCHES = 10
-
-/** A whole number of Batches between MIN_BATCHES and MAX_BATCHES; anything else (NaN, fractions) rounds into range, NaN is 1. */
-export function clampBatches(n: number): number {
-  if (Number.isNaN(n)) return MIN_BATCHES
-  return Math.min(MAX_BATCHES, Math.max(MIN_BATCHES, Math.round(n)))
-}
-
-/** The Cook Mode route of a Recipe: /cook/recipe/:id?batches=N (the cook feature's scope.ts reads it). */
-export function cookPath(recipeId: number, batches: number): string {
-  return `/cook/recipe/${recipeId}?batches=${clampBatches(batches)}`
-}
 
 /** Portions of `batches` Batches of a Recipe with Yield `yieldValue`, as text without trailing zeros ("8", "7.5"). */
 export function batchPortions(yieldValue: number, batches: number): string {

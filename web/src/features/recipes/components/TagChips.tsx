@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Chip } from '../../../ui'
 import { tagKey } from '../lib/keys'
 import { recipeStrings } from '../strings'
@@ -14,8 +14,17 @@ export interface TagChipsProps {
 /** The Tag filter of the Recipes list: one horizontally scrolling group of filter Chips, "All Tags" first. */
 export function TagChips({ tags, selected, onSelect }: TagChipsProps): ReactNode {
   const selectedKey = selected ? tagKey(selected) : ''
+  const [scrolled, setScrolled] = useState(false)
   return (
-    <div role="group" aria-label={recipeStrings.allTags} className="tag-chips">
+    <div
+      role="group"
+      aria-label={recipeStrings.allTags}
+      className="tag-chips"
+      data-scrolled={scrolled ? 'true' : undefined}
+      onScroll={(e) => {
+        setScrolled(e.currentTarget.scrollLeft > 0)
+      }}
+    >
       <Chip kind="filter" selected={selectedKey === ''} onClick={() => onSelect('')}>
         {recipeStrings.allTags}
       </Chip>

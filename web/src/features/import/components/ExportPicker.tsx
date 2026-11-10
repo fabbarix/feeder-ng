@@ -16,8 +16,8 @@ export interface ExportPickerProps {
 
 /**
  * The Recipes to export: an "All Recipes" Switch (selects all or clears), one ListRow per Recipe with its thumbnail and
- * a Checkbox named after it, and the download link (importStrings.exportSelected(n), or exportAll when everything is
- * picked; absent while nothing is selected). importStrings.noRecipes when the list is empty.
+ * a Checkbox named after it, and the primary download action (importStrings.exportFile, styled as the shared primary
+ * Button; absent while nothing is selected). importStrings.noRecipes when the list is empty.
  */
 export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear, href }: ExportPickerProps): ReactNode {
   if (recipes.length === 0) {
@@ -51,8 +51,8 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
         ))}
       </ListGroup>
       {href ? (
-        <a className="import-link-button" href={href}>
-          {everything ? s.exportAll : s.exportSelected(selected.length)}
+        <a className="button" data-variant="primary" data-size="md" href={href}>
+          {s.exportFile}
         </a>
       ) : null}
     </Tile>

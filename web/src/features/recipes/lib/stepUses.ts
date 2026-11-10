@@ -1,9 +1,9 @@
 // Editing a Step's `uses` (Ingredient + quantity + unit) and photo in the Steps editor (G2). Pure; returns new arrays.
-import type { StepDraft, UseDraft } from './draft'
+import { newKey, type StepDraft, type UseDraft } from './draft'
 
 /** A blank use: no Ingredient, empty quantity and unit. */
 export function newUseDraft(): UseDraft {
-  return { ingredientId: null, ingredientName: '', quantity: '', unit: '' }
+  return { key: newKey('use'), ingredientId: null, ingredientName: '', quantity: '', unit: '' }
 }
 
 /** Maps only the Step at `step`; the other Steps stay the same objects. */

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, FileDrop, IconButton, IngredientSelect, NumberField, RecipeThumb, Segmented, TextArea, TextField, UnitSelect } from '../../../ui'
+import { Button, Chip, IconButton, IngredientSelect, NumberField, Segmented, TextArea, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, StepDraft, UseDraft } from '../lib/draft'
 import { numberText, numberValue } from '../lib/draft'
 import { afterOptions, changeKind, moveStep, newStepDraft, removeStep, toggleAfter } from '../lib/steps'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { addUse, removeUse, setStepImage, updateUse } from '../lib/stepUses'
 import { codeMessage, recipeStrings } from '../strings'
+import { StepPhoto } from './StepPhoto'
 import type { IngredientRef, StepKind } from '../types'
 
 export interface StepsEditorProps {
@@ -14,8 +15,6 @@ export interface StepsEditorProps {
   onChange: (steps: StepDraft[]) => void
   /** Every Ingredient, for the `uses` rows (IngredientSelect + UnitSelect). */
   ingredients?: IngredientRef[]
-  /** Uploads a Step photo and resolves with its image id (null on failure; `error` then says why). */
-  imageUpload?: { upload: (file: File) => Promise<string | null>; uploading: boolean; error: string | null }
 }
 
 const kindOptions: { value: StepKind; label: string }[] = [
@@ -31,7 +30,7 @@ const STEP_FIELDS = ['text', 'kind', 'durationMinutes', 'leadTimeMinutes', 'afte
  * Lead time (NumberField), "After" as filter Chips (lib/steps.afterOptions), its `uses` (Ingredient, quantity, unit)
  * and photo, plus reorder and remove. Every change goes through lib/steps and lib/stepUses; this only renders.
  */
-export function StepsEditor({ steps, errors, onChange, ingredients = [], imageUpload }: StepsEditorProps): ReactNode {
+export function StepsEditor({ steps, errors, onChange, ingredients = [] }: StepsEditorProps): ReactNode {
   const patch = (i: number, change: Partial<StepDraft>) => onChange(steps.map((s, j) => (j === i ? { ...s, ...change } : s)))
   const patchUse = (i: number, j: number, change: Partial<UseDraft>) => onChange(updateUse(steps, i, j, change))
   const pickUse = (i: number, j: number, ing: IngredientRef) =>
@@ -39,12 +38,6 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], imageUp
 
   /** Step-level problems; the fields of a use show their own. */
   const errorsFor = (i: number): string[] => STEP_FIELDS.map((field) => errors[`steps.${i}.${field}`]).filter((code): code is string => code !== undefined)
-
-  const upload = async (i: number, file: File) => {
-    if (!imageUpload) return
-    const id = await imageUpload.upload(file)
-    if (id) onChange(setStepImage(steps, i, id))
-  }
 
   return (
     <div className="steps-editor">
@@ -112,7 +105,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], imageUp
                 <ul className="step-card__use-list">
                   {s.uses.map((u, j) => (
                     <UseRow
-                      key={j}
+                      key={u.key}
                       use={u}
                       ingredients={ingredients}
                       errors={errors}
@@ -128,23 +121,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], imageUp
                 </Button>
               </div>
 
-              {imageUpload ? (
-                <div className="step-card__photo">
-                  {s.image ? <RecipeThumb name="" photoUrl={`/api/images/${s.image}`} size={72} label={recipeStrings.steps.image} /> : null}
-                  <FileDrop
-                    label={s.image ? recipeStrings.fields.replacePhoto : recipeStrings.steps.image}
-                    accept="image/*"
-                    disabled={imageUpload.uploading}
-                    error={imageUpload.error ?? undefined}
-                    onFiles={([file]) => void upload(i, file!)}
-                  />
-                  {s.image ? (
-                    <Button variant="tertiary" icon="delete" onClick={() => onChange(setStepImage(steps, i, ''))}>
-                      {recipeStrings.steps.removeImage}
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
+              <StepPhoto imageId={s.image} onChange={(id) => onChange(setStepImage(steps, i, id))} />
 
               {errorsFor(i).map((code) => (
                 <p role="alert" key={code} className="step-card__error">

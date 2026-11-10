@@ -17,6 +17,7 @@ export interface RecipeMetricsProps {
  */
 export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinutes }: RecipeMetricsProps): ReactNode {
   const time = timeSummary({ totalMinutes, advanceMinutes })
+  const ahead = time.ahead ? recipeStrings.aheadMetric(formatMinutes(advanceMinutes)) : null
   return (
     <BentoGrid columns={2}>
       <Tile variant="soft">
@@ -24,8 +25,11 @@ export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinut
         {readyMeal ? <Chip kind="tag">{recipeStrings.readyMeal}</Chip> : null}
       </Tile>
       <Tile variant="soft">
-        <p className="recipe-metric">{time.total ? recipeStrings.totalMetric(time.total) : recipeStrings.noSteps}</p>
-        {time.ahead ? <p className="recipe-metric__ahead">{recipeStrings.aheadMetric(formatMinutes(advanceMinutes))}</p> : null}
+        {time.total ? <p className="recipe-metric">{recipeStrings.totalMetric(time.total)}</p> : null}
+        {/* An Advance Step alone has no total: its lead is the metric, and "No Steps" is not said beside it. */}
+        {!time.total && ahead ? <p className="recipe-metric">{ahead}</p> : null}
+        {!time.total && !ahead ? <p className="recipe-metric">{recipeStrings.noSteps}</p> : null}
+        {time.total && ahead ? <p className="recipe-metric__ahead">{ahead}</p> : null}
       </Tile>
     </BentoGrid>
   )

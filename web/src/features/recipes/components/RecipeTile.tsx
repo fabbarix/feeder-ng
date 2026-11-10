@@ -26,10 +26,12 @@ export function RecipeTile({ recipe, onOpen }: RecipeTileProps): ReactNode {
     >
       <p className="recipe-tile__name">{recipe.name}</p>
       <div className="recipe-tile__meta">
-        <span className="recipe-tile__time">
-          <Icon name="duration" size={14} />
-          {time.total ?? recipeStrings.noSteps}
-        </span>
+        {time.total || !time.ahead ? (
+          <span className="recipe-tile__time">
+            <Icon name="duration" size={14} />
+            {time.total ?? recipeStrings.noSteps}
+          </span>
+        ) : null}
         {time.ahead ? (
           <Chip kind="status" status="leftover" icon="advanceStep">
             {time.ahead}

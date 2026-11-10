@@ -18,16 +18,6 @@
   margin: 0;
 }
 
-.import-review__overline {
-  margin: 0;
-  font-size: var(--text-overline-size);
-  line-height: var(--text-overline-line);
-  font-weight: var(--text-overline-weight);
-  letter-spacing: var(--text-overline-tracking);
-  text-transform: uppercase;
-  color: var(--color-accent-text);
-}
-
 .import-review__empty {
   margin: 0;
   color: var(--color-muted);

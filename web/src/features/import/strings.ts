@@ -14,6 +14,7 @@ export const importStrings = {
   stepThreeTitle: 'Review',
   stepOverline: (n: number) => `Step ${n}`,
   rejectedFile: 'That is not a Recipe File. Choose a .json file.',
+  readFailed: 'The file could not be read.',
   sourceTitle: 'Recipe File',
   uploadLabel: 'Choose a .feeder.json file',
   pasteLabel: 'Or paste the JSON',
@@ -67,8 +68,7 @@ export const importStrings = {
 
   exportPick: 'Choose Recipes',
   allRecipes: 'All Recipes',
-  exportAll: 'Export all Recipes',
-  exportSelected: (n: number) => `Export ${n} Recipe${n === 1 ? '' : 's'}`,
+  exportFile: 'Export Recipe File',
   selectAll: 'Select all',
   clearSelection: 'Clear',
   noRecipes: 'No Recipes to export yet',

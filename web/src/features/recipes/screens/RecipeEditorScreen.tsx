@@ -103,13 +103,7 @@ export function RecipeEditorScreen(): ReactNode {
       </Tile>
       <Tile as="section">
         <h2>{recipeStrings.stepsTitle}</h2>
-        <StepsEditor
-          steps={draft.steps}
-          errors={editor.errors}
-          onChange={editor.setSteps}
-          ingredients={ingredients}
-          imageUpload={{ upload: photo.upload, uploading: photo.uploading, error: photo.error }}
-        />
+        <StepsEditor steps={draft.steps} errors={editor.errors} onChange={editor.setSteps} ingredients={ingredients} />
       </Tile>
       {saveError ? <p role="alert">{saveError}</p> : null}
       {Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}

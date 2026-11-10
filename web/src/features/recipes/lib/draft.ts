@@ -14,6 +14,8 @@ export interface LineDraft {
 }
 
 export interface UseDraft {
+  /** Stable React key; never sent. */
+  key: string
   ingredientId: number | null
   ingredientName: string
   quantity: string
@@ -107,7 +109,7 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
       durationMinutes: minutesText(s.durationMinutes),
       leadTimeMinutes: minutesText(s.leadTimeMinutes),
       after: [...s.after],
-      uses: s.uses.map((u) => ({ ingredientId: u.ingredientId, ingredientName: '', quantity: String(u.quantity), unit: u.unit })),
+      uses: s.uses.map((u) => ({ key: newKey('use'), ingredientId: u.ingredientId, ingredientName: '', quantity: String(u.quantity), unit: u.unit })),
       image: s.image,
     })),
   }

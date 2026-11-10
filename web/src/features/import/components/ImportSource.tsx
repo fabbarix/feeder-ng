@@ -23,11 +23,16 @@ function readText(file: File): Promise<string> {
  */
 export function ImportSource({ busy, onSubmit }: ImportSourceProps): ReactNode {
   const [text, setText] = useState('')
-  const [rejected, setRejected] = useState(false)
+  /** Why the chosen file was refused (not JSON, or it could not be read), or null. */
+  const [error, setError] = useState<string | null>(null)
 
   const onFiles = async ([file]: File[]) => {
-    setRejected(false)
-    onSubmit(await readText(file!))
+    setError(null)
+    try {
+      onSubmit(await readText(file!))
+    } catch {
+      setError(s.readFailed)
+    }
   }
 
   return (
@@ -37,9 +42,9 @@ export function ImportSource({ busy, onSubmit }: ImportSourceProps): ReactNode {
         label={s.uploadLabel}
         accept=".json,application/json"
         disabled={busy}
-        error={rejected ? s.rejectedFile : undefined}
+        error={error ?? undefined}
         onFiles={(files) => void onFiles(files)}
-        onReject={() => setRejected(true)}
+        onReject={() => setError(s.rejectedFile)}
       />
       <TextArea label={s.pasteLabel} rows={6} value={text} disabled={busy} onChange={setText} />
       <Button disabled={busy || text.trim() === ''} onClick={() => onSubmit(text)}>
