@@ -12,9 +12,13 @@ build:
 	pnpm -C web build
 	$(GO) build -buildvcs=false -o build/feeder ./cmd/feeder
 
-# Needs BuildKit (the Dockerfile uses FROM --platform=$$BUILDPLATFORM); see docs/dev/deploy.md.
+# Uses buildx when it is installed (the Dockerfile uses FROM --platform=$$BUILDPLATFORM); otherwise falls back to plain docker build. See docs/dev/deploy.md.
 docker:
-	DOCKER_BUILDKIT=1 docker build -t feeder:dev .
+	@if docker buildx version >/dev/null 2>&1; then \
+		docker buildx build --load -t feeder:dev . ; \
+	else \
+		docker build -t feeder:dev . ; \
+	fi
 
 run: build
 	./build/feeder

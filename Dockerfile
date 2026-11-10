@@ -1,6 +1,10 @@
 # Feeder image: builds the SPA, embeds it in a static Go binary, and runs it as
 # a non-root user with the data on the /data volume.
 
+# Global ARG, declared before the first FROM so it can be used in FROM --platform.
+# BuildKit overrides it with the real build platform; the default only applies to legacy builds.
+ARG BUILDPLATFORM=linux/amd64
+
 # Stage 1: the frontend.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 RUN npm install -g pnpm@10.28.1
