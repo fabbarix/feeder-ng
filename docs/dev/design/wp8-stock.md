@@ -24,3 +24,11 @@ Spec: [ui-fix-plan.md](../../design/ui-fix-plan.md) 5.7, 2.6, 7 WP8, CLAUDE.md "
 - Append `web/src/features/stock` to every `fail_paths` line in `scripts/check-ui.rules`.
 - `ListRow` needs a meta colour (see request below); until it lands render the meta as the plain string.
 - The Stock-take button needs the Scan screen to honour `?mode=stocktake` (see request below).
+
+## Review round 1 additions (Designer)
+- **Throw out in the lot sheet (5.7).** `LotList` takes optional `onThrowOut(lotId)`; a `Button size="sm" variant="danger-tertiary" icon="throwOut"` (name "Throw out <name>") is the row's action **only when `lot.spoiled`** (PM ruling: Throw out is for spoiled lots only, spec 6 / API). No handler, no button. `StockScreen` wires it to a new `useStockActions().throwOut(lotId)` (invalidates `['stock']`); a failure shows the "That did not save. Try again." Toast.
+- **SpoiledTile** is `Tile variant="status" status="danger"` (3.1), icon stays `spoiled` (WarningCircle).
+- **`lib/display.ts`** (pure): `formatLotDate('2026-11-05')` -> "5 Nov" (en-GB, no time-zone shift); `capitalise('chicken thighs')` -> "Chicken thighs" (first letter only, display only). LotList meta = `Bought 5 Nov · Scanned`; `StockRow` title and `SpoiledTile` name are capitalised; accessible button names ("Throw out chicken thighs") keep the stored name. Stored data is never changed.
+- **Sheet field stack.** `AddLotSheet` and `SetTotalSheet` wrap their fields in `<div className="stock-sheet__fields">` with `display: grid; gap: var(--space-3)` in `stock.css`.
+- **Single space around the dot.** Rendered `.list-row__meta` text has no run of whitespace (`'1 Stock Lot · goes off Thu'`, `'Bought 5 Nov · Scanned'`).
+- `AddLotSheet` date test pins the clock (`vi.useFakeTimers({ shouldAdvanceTime: true })`, system time 2026-11-10) and asserts `purchased: '2026-11-07'`.

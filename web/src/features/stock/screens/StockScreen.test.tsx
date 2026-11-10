@@ -11,6 +11,7 @@ const hooks = vi.hoisted(() => ({
   lots: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn() },
   spoiled: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'empty' as Status, refetch: vi.fn() },
   throwOut: vi.fn(),
+  actionThrowOut: vi.fn(),
   keep: vi.fn(),
   addLot: vi.fn(),
   setTotal: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock('../hooks/useStock', () => ({
   useStockTotals: () => hooks.totals,
   useStockLots: () => hooks.lots,
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: hooks.throwOut, keep: hooks.keep }),
-  useStockActions: () => ({ addLot: hooks.addLot, setTotal: hooks.setTotal }),
+  useStockActions: () => ({ addLot: hooks.addLot, setTotal: hooks.setTotal, throwOut: hooks.actionThrowOut }),
 }))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => hooks.stockTake }))
 vi.mock('../hooks/useIngredientChoices', () => ({
@@ -40,7 +41,7 @@ beforeEach(() => {
   hooks.lots.data = [makeLot({ id: 5, quantity: 800, goesOff: '2026-11-11', spoiled: false, useSoon: true })]
   hooks.spoiled.data = []
   hooks.spoiled.status = 'empty'
-  for (const k of ['throwOut', 'keep', 'addLot', 'setTotal', 'stockTake'] as const) hooks[k].mockReset().mockResolvedValue(undefined)
+  for (const k of ['throwOut', 'actionThrowOut', 'keep', 'addLot', 'setTotal', 'stockTake'] as const) hooks[k].mockReset().mockResolvedValue(undefined)
   hooks.totals.refetch.mockReset()
 })
 
@@ -58,7 +59,7 @@ describe('StockScreen layout', () => {
     const list = screen.getByRole('list', { name: 'Stock' })
     expect(list.closest('.list-group')).not.toBeNull()
     const rows = within(list).getAllByRole('listitem')
-    expect(rows.map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['chicken thighs', 'feta', 'milk'])
+    expect(rows.map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['Chicken thighs', 'Feta', 'Milk'])
     expect(rows[0]).toHaveTextContent('800 g')
     expect(rows[0]).toHaveTextContent('2 Stock Lots · goes off Thu')
     expect(rows[2]).toHaveTextContent('1000 ml')
@@ -98,7 +99,7 @@ describe('StockScreen search and filters', () => {
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     const rows = within(screen.getByRole('list', { name: 'Stock' })).getAllByRole('listitem')
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toHaveTextContent('chicken thighs')
+    expect(rows[0]).toHaveTextContent('Chicken thighs')
   })
 
   it('searches by name', async () => {
@@ -106,7 +107,7 @@ describe('StockScreen search and filters', () => {
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Stock' }), 'fet')
     const rows = within(screen.getByRole('list', { name: 'Stock' })).getAllByRole('listitem')
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toHaveTextContent('feta')
+    expect(rows[0]).toHaveTextContent('Feta')
   })
 
   it('says so when nothing matches, and Stock is not empty', async () => {

@@ -10,6 +10,11 @@ function setup(initial = 800) {
 }
 
 describe('SetTotalSheet', () => {
+  it('puts its field in the same token-gap stack as the Add sheet', () => {
+    setup()
+    expect(screen.getByRole('dialog').querySelector('.stock-sheet__fields')).toContainElement(screen.getByLabelText('New total'))
+  })
+
   it('is titled for the Ingredient and prefilled, with the Base Unit as suffix, and has no native control but the field', () => {
     setup(0)
     expect(screen.getByRole('dialog', { name: 'Set total for chicken thighs' })).toBeInTheDocument()

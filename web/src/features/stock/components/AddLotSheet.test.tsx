@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddLotSheet } from './AddLotSheet'
 
 const choices = [
@@ -20,6 +20,13 @@ async function pickIngredient(name: string) {
   // Option names also carry the Base Unit badge, so match the Ingredient name as a part.
   await userEvent.click(await screen.findByRole('option', { name: new RegExp(name) }))
 }
+
+beforeEach(() => {
+  // Fixed clock: the DateField opens on the current month (November 2026).
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  vi.setSystemTime(new Date('2026-11-10T12:00:00'))
+})
+afterEach(() => vi.useRealTimers())
 
 describe('AddLotSheet', () => {
   it('uses the shared IngredientSelect, not a native select or date input', () => {
@@ -58,7 +65,7 @@ describe('AddLotSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: /Bought on/ }))
     await userEvent.click(await screen.findByRole('button', { name: /^7 November/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 7, quantity: 800, purchased: expect.stringMatching(/^\d{4}-11-07$/) })
+    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 7, quantity: 800, purchased: '2026-11-07' })
   })
 
   it('omits purchased when no date is chosen', async () => {
@@ -80,6 +87,15 @@ describe('AddLotSheet', () => {
     expect(screen.getByText(message)).toBeInTheDocument()
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('aria-invalid', 'true')
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('stacks its fields in a container with a token gap (no fields touching)', () => {
+    setup()
+    const sheet = screen.getByRole('dialog')
+    const stack = sheet.querySelector('.stock-sheet__fields')
+    expect(stack).not.toBeNull()
+    expect(stack).toContainElement(within(sheet).getByRole('combobox', { name: 'Ingredient' }))
+    expect(stack).toContainElement(within(sheet).getByLabelText('Quantity'))
   })
 
   it('has exactly one primary Button', () => {

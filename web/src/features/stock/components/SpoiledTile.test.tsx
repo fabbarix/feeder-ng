@@ -12,7 +12,7 @@ describe('SpoiledTile', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('asks "Throw out or keep?" in a spoil status Tile and lists each lot', () => {
+  it('asks "Throw out or keep?" in a danger status Tile and lists each lot', () => {
     render(
       <SpoiledTile
         today={today}
@@ -22,12 +22,19 @@ describe('SpoiledTile', () => {
       />,
     )
     expect(screen.getByText('Throw out or keep?')).toBeInTheDocument()
-    expect(screen.getByText('chicken thighs')).toBeInTheDocument()
+    expect(screen.getByText('Chicken thighs')).toBeInTheDocument()
     expect(screen.getByText('200 g')).toBeInTheDocument()
     expect(screen.getByText('Went off 4 days ago')).toBeInTheDocument()
     expect(screen.getByText('1000 ml')).toBeInTheDocument()
+    expect(screen.getByText('Milk')).toBeInTheDocument()
     expect(screen.getByText('Went off yesterday')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'spoil')
+    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'danger')
+  })
+
+  it('capitalises names for display only; the button names keep the stored name', () => {
+    render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
+    expect(document.querySelector('.spoiled-tile__name')).toHaveTextContent('Chicken thighs')
+    expect(screen.getByRole('button', { name: 'Throw out chicken thighs' })).toBeInTheDocument()
   })
 
   it('reports which lot is thrown out or kept', async () => {
@@ -40,7 +47,7 @@ describe('SpoiledTile', () => {
     expect(onKeep).toHaveBeenCalledWith(12)
   })
 
-  it('is a status Tile using the status tokens, with no legacy tone', () => {
+  it('is a danger status Tile using the status tokens, with no legacy tone', () => {
     render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
     const tile = screen.getByRole('region', { name: 'Throw out or keep?' })
     expect(tile).toHaveAttribute('data-variant', 'status')

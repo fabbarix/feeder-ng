@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import { makeLot } from '../testData'
 import { LotList } from './LotList'
 
@@ -20,9 +21,38 @@ describe('LotList', () => {
     expect(within(rows[0]!).getByText('500 g')).toBeInTheDocument()
     expect(within(rows[0]!).getByText('Goes off in 3 days')).toBeInTheDocument()
     expect(within(rows[0]!).getByText(/Scanned/)).toBeInTheDocument()
-    expect(within(rows[0]!).getByText(/Bought 2026-11-01/)).toBeInTheDocument()
+    expect(within(rows[0]!).getByText(/Bought 1 Nov/)).toBeInTheDocument()
     expect(within(rows[1]!).getByText('No go-off date')).toBeInTheDocument()
     expect(within(rows[1]!).getByText(/Stock-take/)).toBeInTheDocument()
+  })
+
+  it('formats the bought-on date en-GB and keeps a single space around the dot', () => {
+    render(<LotList today="2026-11-09" lots={[makeLot({ purchased: '2026-11-05', source: 'scan' })]} />)
+    const meta = document.querySelector('.list-row__meta')
+    expect(meta?.textContent).toBe('Bought 5 Nov · Scanned')
+    expect(meta?.textContent).not.toMatch(/\s{2,}/)
+  })
+
+  it('offers Throw out only on spoiled lot rows, and reports the lot', async () => {
+    const onThrowOut = vi.fn()
+    render(
+      <LotList
+        today="2026-11-09"
+        onThrowOut={onThrowOut}
+        lots={[makeLot({ id: 1, spoiled: true }), makeLot({ id: 2, spoiled: false, goesOff: '2026-11-12' }), makeLot({ id: 3, spoiled: false, goesOff: null })]}
+      />,
+    )
+    const rows = screen.getAllByRole('listitem')
+    expect(within(rows[0]!).getByRole('button', { name: /Throw out/ })).toBeInTheDocument()
+    expect(within(rows[1]!).queryByRole('button', { name: /Throw out/ })).toBeNull()
+    expect(within(rows[2]!).queryByRole('button', { name: /Throw out/ })).toBeNull()
+    await userEvent.click(within(rows[0]!).getByRole('button', { name: /Throw out/ }))
+    expect(onThrowOut).toHaveBeenCalledWith(1)
+  })
+
+  it('offers no Throw out at all without a handler', () => {
+    render(<LotList today="2026-11-09" lots={[makeLot({ spoiled: true })]} />)
+    expect(screen.queryByRole('button', { name: /Throw out/ })).toBeNull()
   })
 
   it('marks a lot that is going off with a spoil state chip', () => {

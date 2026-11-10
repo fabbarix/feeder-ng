@@ -11,10 +11,10 @@ describe('StockRow', () => {
   it('is a list row: name, total and lot count as separate texts, never run together', () => {
     inList(<StockRow today={today} item={makeTotal({ name: 'feta', total: 200, lotCount: 1 })} onOpen={() => {}} />)
     const row = screen.getByRole('listitem')
-    expect(within(row).getByText('feta')).toBeInTheDocument()
+    expect(within(row).getByText('Feta')).toBeInTheDocument()
     expect(within(row).getByText('200 g')).toBeInTheDocument()
     expect(within(row).getByText('1 Stock Lot')).toBeInTheDocument()
-    expect(row).not.toHaveTextContent('feta200')
+    expect(row).not.toHaveTextContent('Feta200')
   })
 
   it('shows when a use-soon Ingredient goes off, without a Use soon pill', () => {
@@ -22,6 +22,17 @@ describe('StockRow', () => {
     expect(screen.getByText('1 Stock Lot · goes off Thu')).toBeInTheDocument()
     expect(screen.queryByText('Use soon')).toBeNull()
     expect(document.querySelector('.chip')).toBeNull()
+  })
+
+  it('capitalises the name for display only', () => {
+    inList(<StockRow today={today} item={makeTotal({ name: 'chicken thighs' })} onOpen={() => {}} />)
+    expect(document.querySelector('.list-row__title')).toHaveTextContent(/^Chicken thighs$/)
+  })
+
+  it('separates the meta with a single space on each side of the dot', () => {
+    inList(<StockRow today={today} item={makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' })} onOpen={() => {}} />)
+    expect(document.querySelector('.list-row__meta')?.textContent).toBe('1 Stock Lot · goes off Thu')
+    expect(document.querySelector('.list-row__meta')?.textContent).not.toMatch(/\s{2,}/)
   })
 
   it('is not a Tile and has no tone', () => {
@@ -37,7 +48,7 @@ describe('StockRow', () => {
   it('opens the Ingredient', async () => {
     const onOpen = vi.fn()
     inList(<StockRow today={today} item={makeTotal({ ingredientId: 9, name: 'milk' })} onOpen={onOpen} />)
-    await userEvent.click(screen.getByRole('button', { name: 'milk' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Milk' }))
     expect(onOpen).toHaveBeenCalledWith(9)
   })
 })
