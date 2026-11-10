@@ -175,15 +175,20 @@ func TestFetchEnforcesTheSizeLimit(t *testing.T) {
 		}
 	})
 	t.Run("streamed without a length", func(t *testing.T) {
+		const streamCap = 64 << 20
 		var sent atomic.Int64
 		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "image/png")
-			chunk := make([]byte, 512)
-			for i := 0; i < 64; i++ {
+			// An effectively unbounded body: the loop only ends when a write
+			// fails (the client closed the connection) or at the cap. Kernel
+			// socket buffers hold a few MiB at most, so a fetcher that stops
+			// at the limit leaves sent far below the cap, whatever the timing.
+			chunk := make([]byte, 32<<10)
+			for sent.Load() < streamCap {
 				n, err := w.Write(chunk)
 				sent.Add(int64(n))
 				w.(http.Flusher).Flush()
-				if err != nil {
+				if err != nil || r.Context().Err() != nil {
 					return
 				}
 			}
@@ -192,8 +197,8 @@ func TestFetchEnforcesTheSizeLimit(t *testing.T) {
 		if _, _, err := f.Fetch(context.Background(), srv.URL); !errors.Is(err, imagefetch.ErrTooLarge) {
 			t.Fatalf("got %v", err)
 		}
-		if sent.Load() >= 64*512 {
-			t.Fatal("the fetcher must stop reading at the limit")
+		if got := sent.Load(); got >= streamCap/2 {
+			t.Fatalf("the fetcher must stop reading at the limit; server sent %d bytes", got)
 		}
 	})
 	t.Run("exactly the limit is fine", func(t *testing.T) {
