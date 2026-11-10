@@ -8,6 +8,8 @@ export interface AvatarProps {
   size?: 'sm' | 'md' | 'lg'
   /** WP3b: a Member's colour (a CSS colour value, e.g. the stored hex, or `var(--...)`) drawn as a 2 px ring. */
   colour?: string
+  /** R11a (type only for now): an emoji shown instead of the initials. */
+  glyph?: string
 }
 
 /** A person's picture, or their initials when there is no picture. */

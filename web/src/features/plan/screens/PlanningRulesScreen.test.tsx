@@ -83,15 +83,16 @@ describe('PlanningRulesScreen', () => {
     expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
   })
 
-  // R11a N8: the same shared back control as the Settings sub-pages; no stray link to Plan at the bottom.
-  it('leads the header with the shared BackLink to Settings and has no link to Plan', async () => {
+  // R11a: Breadcrumbs (Settings > Planning rules) like the other Settings sub-pages; no stray link to Plan at the bottom.
+  it('shows Settings > Planning rules above the h1 and has no link to Plan', async () => {
     mockApi(base)
-    const { container } = renderWithProviders(<PlanningRulesScreen />)
+    const { container } = renderWithProviders(<PlanningRulesScreen />, '/settings/planning')
     await screen.findByText('Tag: pizza')
-    const back = screen.getByRole('link', { name: 'Back to Settings' })
-    expect(back).toHaveAttribute('href', '/settings')
-    expect(back).toHaveClass('back-link')
-    expect(container.querySelector('.page-header__leading')).toContainElement(back)
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings')
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Planning rules')
+    expect(container.querySelector('.page-header')).toContainElement(nav)
+    expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Plan' })).toBeNull()
   })
 })

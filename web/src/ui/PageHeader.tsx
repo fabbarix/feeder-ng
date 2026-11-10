@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
+import type { Crumb } from './Breadcrumbs'
 import './PageHeader.css'
 
 export interface PageHeaderProps {
   /** The screen title, an h1 (title-1). */
   title: string
   subtitle?: string
+  /** R11a (type only for now): the Breadcrumbs trail, rendered on its own row above the title. */
+  breadcrumbs?: Crumb[]
   /** E.g. a back IconButton. */
   leading?: ReactNode
   /** Right-aligned actions (IconButtons, one Button). */

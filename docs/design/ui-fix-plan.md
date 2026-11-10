@@ -475,6 +475,19 @@ link" for the primary target, so inner buttons still work and content stays top-
   rail pattern), Scan as an accent 56 square at the top. ≥ 1440: expanded 240 rail with icon + label rows. The chromeless routes (board, Cook Mode)
   must not inherit the rail grid (fix `.app-shell--chromeless { display:block }`).
 
+- **Breadcrumbs (R11a; replaces the BackLink and every back IconButton that goes up a hierarchy).** `Breadcrumbs` is a shared primitive that
+  `PageHeader` renders on its own row above the `title-1`, under the app bar: `<nav aria-label="Breadcrumb"><ol>`, e.g. Settings › Meal Slots;
+  Recipes › Chicken & leek pie › Edit. Ancestors are links; the current page is plain text with `aria-current="page"`; the separator is the Phosphor
+  `CaretRight` (icon key `chevron`, 14 px, `aria-hidden`). Type `meta` (13), colour `--color-muted`, no underline at rest (underline and
+  `--color-accent-text` on hover and focus), 3 px accent focus ring, links at least 44 px tall on touch. **Phone (< 768): collapse to "‹ Parent"**,
+  the immediate parent only (Settings › Meal Slots shows "‹ Settings"; Recipes › Pie › Edit shows "‹ Pie"), via visually-hidden (not `display:none`)
+  items so screen readers keep the whole path; the row never wraps and never pushes the h1 down. From 768 the full trail shows, and a long name
+  truncates with an ellipsis. Crumb labels live in one route table (`app/breadcrumbs.ts`, read by `useBreadcrumbs(entityName?)`); screens never hand-build
+  them; entity pages show the entity's loaded name, or its GLOSSARY term ("Shop", "Recipe", "Ingredient", "Product") while it loads or is missing. Top-level
+  destinations (Today, Plan, Shop, Recipes, Stock, Settings, ...) have no trail. Used on all Settings sub-pages, Shop, Recipe detail and edit,
+  Import and Export, Ingredient and Product. `scripts/check-ui.sh` rule `back-link` keeps `BackLink`, "Back to ..." links and navigating back
+  IconButtons out. A back control that steps inside one screen (Scan's change-Shop, Cook's Back and Next) is not hierarchy and stays.
+
 ### 4.6 Dialog (and ConfirmDialog)
 - Built on `<dialog>` with `showModal()`; `::backdrop` = scrim; closes on Esc and backdrop click (except destructive confirms).
 - **Anatomy:** optional 48 px status icon circle → title `title-2` → body 15/22 muted (max 2 short paragraphs) → actions right-aligned
@@ -514,7 +527,9 @@ link" for the primary target, so inner buttons still work and content stays top-
 locale, never the browser's AM/PM), `DateField` (field + calendar popover, week starts Monday), `Checkbox` (22 px, radius 6, 2 px outline →
 accent fill + `Check` bold), `Switch` (52×32, for on/off settings such as the notification toggles), `RadioCards` / `Segmented` (Light · Dark · System;
 Metric · Imperial), `Slider` (Planner Style: 3 labelled stops, 6 px track soft-strong, 24 px thumb accent), `ColorSwatches` (accent presets as
-40 px circles + "Custom" opening a crafted picker), `FileDrop` (dashed outline zone, `FileArrowUp`, "Choose a file or drop it here").
+40 px circles that wrap onto further rows on phones + "Custom" shown as the `Palette` icon, named "Custom", opening a crafted picker),
+`EmojiPicker` (R11a: a wrapping radiogroup of 44 px emoji choices with a "None" (initials) first; the Member Avatar control), `StepperField` (R11a: a `Stepper` with a visible label and helper line,
+`aria-describedby`; Member Portion Factor), `FileDrop` (dashed outline zone, `FileArrowUp`, "Choose a file or drop it here").
 Shared anatomy: label 13/700 above, 48 h control, helper 13 muted, error 13 status-danger-fg with `WarningCircle` 14, `aria-describedby`.
 
 ### 4.11 Empty states
@@ -658,9 +673,10 @@ Use soon 2×1 (status-spoil), Tomorrow, streak. Padding 24, gap 16, radius 32. T
 **Problems:** one 10,800 px page; native time (12 h AM/PM), number, range, color, checkbox, radio, select; member avatars all accent green while
 the Member colour is a tiny dot; Meal Slot list repeats "Edit / Change a date" text buttons 11 times; links (Shops, Planning rules, Notifications)
 are underlined text. **Layout:** Settings index = grouped `ListRow`s with icons (Household, Members, Meal Slots, Planning rules, Shops, Barcodes,
-Notifications, Allowlist, Your preferences); each opens its own page. Members: rows with avatar ringed in Member colour, Portion Factor trailing.
+Notifications, Allowlist, Your preferences); each opens its own page. Members: rows with avatar ringed in Member colour (an emoji Avatar replaces the initials when set), Portion Factor trailing. Add/Edit Member sheet: Name, Colour (swatches + Custom), Avatar (emoji picker, optional), Portion Factor (labelled stepper with helper), Linked User.
 Meal Slots: week view (7 rows, slot chips with icon and time), tap → MealSlot sheet (`TimeField`, `MemberSelect` with Portion Factor overrides).
 Preferences: `Segmented` scheme/units, `ColorSwatches` accent with live preview tile.
+Every sub-page has the Breadcrumbs row (Settings › page) above its title (4.5); no "Back to Settings" link.
 
 ### 5.15 Ingredients, Products, Shops — `phone-light-ingredients.png`
 **Problems:** list bullets visible, native search, Base Unit and Shelf Life as loose bold words. **Layout:** search + `ListRow`s: name, meta

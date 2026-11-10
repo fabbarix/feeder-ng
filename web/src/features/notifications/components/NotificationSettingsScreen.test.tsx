@@ -1,4 +1,4 @@
-// R11a N8 (send-back): /settings/notifications has a PageHeader (h1 + shared BackLink to Settings), not a bare h1.
+// R11a: /settings/notifications has a PageHeader (Breadcrumbs Settings > Notifications above the h1), in every state.
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
@@ -7,17 +7,18 @@ import { NotificationSettingsScreen } from './NotificationSettingsScreen'
 afterEach(() => vi.unstubAllGlobals())
 
 describe('NotificationSettingsScreen', () => {
-  it('leads its h1 with the shared back control to Settings', async () => {
+  it('shows Settings > Notifications above its h1, and it stays once loading has finished', async () => {
     mockApi({})
     const { container } = renderWithProviders(<NotificationSettingsScreen />, '/settings/notifications')
-    expect(screen.getByRole('heading', { level: 1, name: 'Notifications' })).toBeInTheDocument()
-    const back = screen.getByRole('link', { name: 'Back to Settings' })
-    expect(back).toHaveAttribute('href', '/settings')
-    expect(back).toHaveClass('back-link')
-    expect(container.querySelector('.page-header__leading')).toContainElement(back)
-    expect(container.querySelector('.page-header')).toContainElement(screen.getByRole('heading', { level: 1 }))
-    // still there once loading has finished (here: the load failed)
+    const h1 = screen.getByRole('heading', { level: 1, name: 'Notifications' })
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings')
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Notifications')
+    expect(container.querySelector('.page-header')).toContainElement(nav)
+    expect(nav.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
+    // still there once the load has failed
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
   })
 })
