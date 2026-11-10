@@ -176,3 +176,27 @@ func TestEveryWritePublishesAShoppingEvent(t *testing.T) {
 		t.Fatal("the extra was added but no shopping event was published before the response")
 	}
 }
+
+func TestTickingAnExtraTwiceWithTheSameClientUUIDAddsOneLot(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	milk := seedIngredient(t, env, "milk", "ml")
+	var x struct {
+		ID int64 `json:"id"`
+	}
+	c.Post("/api/shopping/extras", map[string]any{"ingredientId": milk, "quantity": 3000}).MustJSON(t, &x)
+	for i := 0; i < 2; i++ {
+		if r := c.Post("/api/shopping/extras/"+itoa(x.ID)+"/tick", map[string]any{"quantity": 2000, "clientUuid": "tick-extra-1"}); r.Status != 200 {
+			t.Fatalf("tick %d = %d %s", i, r.Status, r.Body)
+		}
+	}
+	var lots struct {
+		Lots []struct {
+			Quantity float64 `json:"quantity"`
+		} `json:"lots"`
+	}
+	c.Get("/api/stock/lots").MustJSON(t, &lots)
+	if len(lots.Lots) != 1 || lots.Lots[0].Quantity != 2000 {
+		t.Fatalf("Stock Lots = %+v, want one Lot of 2000 ml", lots.Lots)
+	}
+}

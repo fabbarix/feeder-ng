@@ -24,6 +24,10 @@ export interface UseSyncQueueResult {
   enqueue(op: Op): Promise<void>
   /** flush now (no-op while offline) */
   flush(): Promise<void>
+  /** forgets the rejected operations (their count goes to 0) */
+  dismissRejected(): Promise<void>
+  /** OfflineQueue.cancel: true when the server has nothing for the operation, false when it must be Undone there */
+  cancel(clientUuid: string): Promise<boolean>
   /** re-read the counts after the queue was changed elsewhere */
   refresh(): Promise<void>
 }
@@ -70,6 +74,10 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     [flush, refreshCounts],
   )
 
+  // Stubs: the Developer implements them (see the design note, "Client queue").
+  const dismissRejected = useCallback(async () => {}, [])
+  const cancel = useCallback((clientUuid: string) => queueRef.current.cancel(clientUuid), [])
+
   useEffect(() => {
     void refreshCounts()
     if (isOnlineRef.current()) void flush()
@@ -86,5 +94,5 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     }
   }, [flush, refreshCounts])
 
-  return { online, pendingCount, rejectedCount, enqueue, flush, refresh: refreshCounts }
+  return { online, pendingCount, rejectedCount, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
 }

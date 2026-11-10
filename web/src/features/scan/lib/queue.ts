@@ -11,7 +11,10 @@ export interface QueuedOp {
   queuedAt: string
   /** how many sends were tried */
   attempts: number
-  /** set when the server rejected it; it stays for the User to see and is never resent */
+  /**
+   * set on the notes kept in memory for operations the server rejected (see OfflineQueue.rejected). A rejected
+   * operation is removed from the OpStore (IndexedDB) at once and never resent; the note lives until dismissed.
+   */
   rejected?: { code: string; message: string }
 }
 
@@ -62,6 +65,15 @@ export function newClientUuid(): string {
   })
 }
 
+/**
+ * How long to wait before the next automatic send after `attempt` failed ones in a row while the phone thinks it
+ * is online (network error or 5xx): 1 s, 2 s, 4 s, 8 s, 16 s, then 30 s every time. attempt < 1 counts as 1.
+ * Stub until the Developer implements it.
+ */
+export function backoffMs(_attempt: number): number {
+  return 0
+}
+
 const isConnectivityError = (err: unknown): boolean =>
   err instanceof ApiError && (err.status === 0 || err.status >= 500)
 
@@ -89,6 +101,24 @@ export class OfflineQueue {
   async rejected(): Promise<QueuedOp[]> {
     return (await this.store.all()).filter((e) => e.rejected)
   }
+
+  /**
+   * Drops an operation the User undid before the server heard of it. Answers true when the server has nothing for
+   * it (it was still waiting, or its send failed, or the server rejected it), so there is nothing to undo there;
+   * false when the server applied it (applied or duplicate), or it is no longer in the queue because an earlier
+   * flush sent it: the caller must ask the server to Undo it. An operation that is being sent right now is not
+   * removed under the send: cancel waits for that send to finish and then answers by its outcome, so the Undo is
+   * never lost. Stub: the Developer implements the in-flight case.
+   */
+  async cancel(clientUuid: string): Promise<boolean> {
+    const existing = (await this.store.all()).find((e) => e.op.clientUuid === clientUuid)
+    if (!existing) return false
+    await this.store.remove(clientUuid)
+    return true
+  }
+
+  /** Forgets the notes of rejected operations (the "N scans couldn't sync" line). Stub. */
+  dismissRejected(): void {}
 
   /**
    * Sends every pending operation in one call and settles the queue from the results: `applied` and `duplicate`

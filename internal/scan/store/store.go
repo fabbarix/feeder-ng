@@ -45,7 +45,19 @@ type Event struct {
 	ExtraID        *int64 // the manual extra the scan counted against
 	ResultJSON     string
 	UndoneAt       string // "" while not undone
+	// UndoSteps are the Undo steps that already ran (UndoStep* constants, in the order they ran), kept so a retried
+	// Undo skips them. Empty before Undo starts; UndoneAt is set after the last one.
+	UndoSteps []string
 }
+
+// The steps of an Undo, in the order the service runs them.
+const (
+	UndoStepList     = "list"     // the Shopping List line or extra gets the quantity back
+	UndoStepLot      = "lot"      // the Stock Lot is removed
+	UndoStepPurchase = "purchase" // the purchase is deleted
+	UndoStepPrice    = "price"    // the Price is deleted or the replaced one restored
+	UndoStepSoldAt   = "sold_at"  // the Product is un-sold at the Shop (only if this scan linked it)
+)
 
 // Store is the ledger.
 type Store struct {
@@ -144,6 +156,12 @@ func (s *Store) MarkUndone(ctx context.Context, clientUUID string) (bool, error)
 		return false, ErrNotFound
 	}
 	return false, nil
+}
+
+// MarkUndoStep records that an Undo step ran (idempotent: marking a step twice keeps one entry; ErrNotFound if unknown).
+// Not implemented yet: the Developer adds it (column undo_steps, migration 0802) and Get fills Event.UndoSteps.
+func (s *Store) MarkUndoStep(ctx context.Context, clientUUID, step string) error {
+	return errors.New("scan store: MarkUndoStep is not implemented")
 }
 
 // UpdatePrice sets the event's price (and the Price row it refers to; priceID nil keeps the one it has).

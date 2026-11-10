@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import type { Op, ScanResult } from '../types'
-import { createMemoryOpStore, newClientUuid, OfflineQueue, type SyncApi } from './queue'
+import { backoffMs, createMemoryOpStore, newClientUuid, OfflineQueue, type SyncApi } from './queue'
 
 const at = new Date('2026-11-09T12:00:00Z')
 
@@ -152,5 +152,162 @@ describe('OfflineQueue', () => {
     release()
     await Promise.all([first, second])
     expect(server.sync).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes a rejected operation from the store at once and keeps only a note in memory until it is dismissed', async () => {
+    const { store, queue } = setup()
+    await queue.enqueue(op('a'))
+    await queue.enqueue(op('bad'))
+    const server = api(async (ops) =>
+      ops.map((o) => (o.clientUuid === 'bad' ? { clientUuid: 'bad', status: 'rejected', error: { code: 'unknown_ingredient', message: 'gone' } } : applied(o.clientUuid))) as ScanResult[],
+    )
+    await queue.flush(server)
+    expect(await store.all()).toEqual([])
+    expect(await queue.rejected()).toHaveLength(1)
+    expect((await queue.rejected())[0]).toMatchObject({ op: { clientUuid: 'bad' }, rejected: { code: 'unknown_ingredient', message: 'gone' } })
+    expect(await new OfflineQueue(store).rejected()).toEqual([])
+    queue.dismissRejected()
+    expect(await queue.rejected()).toEqual([])
+  })
+
+  describe('a flush asked for while a send is in flight', () => {
+    function gated(offlineFirst = false) {
+      let release: () => void = () => {}
+      const gate = new Promise<void>((r) => (release = r))
+      let calls = 0
+      const server = api(async (ops) => {
+        calls += 1
+        if (calls === 1) {
+          await gate
+          if (offlineFirst) throw new ApiError(503, 'http_error', 'unavailable')
+        }
+        return ops.map((o) => applied(o.clientUuid))
+      })
+      return { server, release: () => release() }
+    }
+
+    it('sends what was enqueued meanwhile right after the first send, in a second call', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      const { server, release } = gated()
+      const first = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      await queue.enqueue(op('b'))
+      const second = queue.flush(server)
+      release()
+      const out = await second
+      await first
+      expect(server.sync).toHaveBeenCalledTimes(2)
+      expect(server.sync.mock.calls[0]?.[0].map((o: Op) => o.clientUuid)).toEqual(['a'])
+      expect(server.sync.mock.calls[1]?.[0].map((o: Op) => o.clientUuid)).toEqual(['b'])
+      expect(out.results.map((r) => r.clientUuid)).toEqual(['b'])
+      expect(await queue.pending()).toEqual([])
+    })
+
+    it('asks only once however many flushes were asked for', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      const { server, release } = gated()
+      const first = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      await queue.enqueue(op('b'))
+      const more = [queue.flush(server), queue.flush(server), queue.flush(server)]
+      release()
+      await Promise.all([first, ...more])
+      expect(server.sync).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not send again when the first send found the server unreachable (the caller backs off)', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      const { server, release } = gated(true)
+      const first = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      const second = queue.flush(server)
+      release()
+      expect(await first).toEqual({ offline: true, results: [] })
+      expect(await second).toEqual({ offline: true, results: [] })
+      expect(server.sync).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('cancel (Undo of a scan that may already be on its way)', () => {
+    it('drops an operation that has not been sent', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      expect(await queue.cancel('a')).toBe(true)
+      expect(await queue.pending()).toEqual([])
+    })
+
+    it('says false for an operation that is no longer queued because it was sent', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      await queue.flush(api(async (ops) => ops.map((o) => applied(o.clientUuid))))
+      expect(await queue.cancel('a')).toBe(false)
+    })
+
+    it('waits for the send that is under way and, when the server applied it, says false so the caller Undoes it there', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      let release: () => void = () => {}
+      const gate = new Promise<void>((r) => (release = r))
+      const server = api(async (ops) => {
+        await gate
+        return ops.map((o) => applied(o.clientUuid))
+      })
+      const flushing = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      let settled = false
+      const cancelled = queue.cancel('a').then((v) => ((settled = true), v))
+      await new Promise((r) => setTimeout(r, 20))
+      expect(settled).toBe(false)
+      release()
+      expect(await cancelled).toBe(false)
+      await flushing
+      expect(await queue.pending()).toEqual([])
+    })
+
+    it('says true when the send under way failed, and the operation is gone so it is never sent later', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      let fail: () => void = () => {}
+      const gate = new Promise<void>((_r, rej) => (fail = () => rej(new ApiError(0, 'network', 'offline'))))
+      const server = api(async () => gate.then(() => []))
+      const flushing = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      const cancelled = queue.cancel('a')
+      fail()
+      expect(await cancelled).toBe(true)
+      await flushing
+      expect(await queue.pending()).toEqual([])
+    })
+
+    it('says true when the server rejected the operation under way (nothing to undo there)', async () => {
+      const { queue } = setup()
+      await queue.enqueue(op('a'))
+      let release: () => void = () => {}
+      const gate = new Promise<void>((r) => (release = r))
+      const server = api(async (ops) => {
+        await gate
+        return ops.map((o) => ({ clientUuid: o.clientUuid, status: 'rejected', error: { code: 'unknown_product', message: 'gone' } }) as ScanResult)
+      })
+      const flushing = queue.flush(server)
+      await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
+      const cancelled = queue.cancel('a')
+      release()
+      expect(await cancelled).toBe(true)
+      await flushing
+    })
+  })
+})
+
+describe('backoffMs', () => {
+  it('doubles from one second up to thirty', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 50].map(backoffMs)).toEqual([1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
+  })
+
+  it('counts anything below one as the first failure', () => {
+    expect(backoffMs(0)).toBe(1000)
+    expect(backoffMs(-3)).toBe(1000)
   })
 })

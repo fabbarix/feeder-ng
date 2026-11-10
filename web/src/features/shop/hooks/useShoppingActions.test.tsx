@@ -42,6 +42,14 @@ describe('useShoppingActions', () => {
     expect(api.tick.mock.calls[0]?.[0].clientUuid).not.toBe(api.tick.mock.calls[1]?.[0].clientUuid)
   })
 
+  it('ticks an extra with a fresh client id too, so a retried request adds one Lot', async () => {
+    const { result } = setup()
+    await act(() => result.current.tickExtra(4, 2000, 1))
+    await act(() => result.current.tickExtra(5, 0, 1))
+    expect(api.tickExtra).toHaveBeenNthCalledWith(1, 4, 2000, 1, expect.stringMatching(/^[0-9a-f-]{36}$/))
+    expect(api.tickExtra.mock.calls[0]?.[3]).not.toBe(api.tickExtra.mock.calls[1]?.[3])
+  })
+
   it('a tick that adds nothing leaves Stock alone', async () => {
     api.tick.mockResolvedValue({ ticked: true, lotId: null, created: false })
     const { result, spy } = setup()

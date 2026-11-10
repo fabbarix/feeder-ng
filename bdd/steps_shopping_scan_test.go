@@ -389,6 +389,22 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		return fmt.Errorf("the planner did not finish within 5 s")
 	})
 
+	sc.Step(`^the shopping clock moves on (\d+) hours$`, func(hours int) error {
+		w.Ensure().Clock.Advance(time.Duration(hours) * time.Hour)
+		return nil
+	})
+	sc.Step(`^I mark the shopping dinner of `+ssDate+` as not cooked$`, func(date string) error {
+		wd, err := ssWeekday(date)
+		if err != nil {
+			return err
+		}
+		r := me().Post(fmt.Sprintf("/api/plan/%s/%d/not-cooked", date, id("slot", strconv.Itoa(wd))), nil)
+		if r.Status != 200 {
+			return fmt.Errorf("mark %s not cooked: %d %s", date, r.Status, r.Body)
+		}
+		return nil
+	})
+
 	// --- Viewing and editing the Shopping List ---
 
 	sc.Step(`^I view the Shopping List(?: at "([^"]*)")?(?: until `+ssDate+`)?$`, func(shop, until string) error { return view(shop, until) })

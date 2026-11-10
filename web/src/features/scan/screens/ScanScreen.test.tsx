@@ -47,6 +47,8 @@ function controller(over: Partial<ScanController> = {}): ScanController {
     list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], extras: [makeExtra()], progress: { ticked: 1, total: 3 } }),
     online: true,
     pendingCount: 0,
+    rejectedCount: 0,
+    dismissRejected: vi.fn(),
     notices: [],
     dismissNotice: vi.fn(),
     ingredients: [{ id: 1, name: 'passata', baseUnit: 'g' }],
@@ -88,6 +90,19 @@ describe('ScanScreen', () => {
     const list = screen.getByRole('list', { name: 'Shopping List' })
     expect(strip.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(scanSession.isActive()).toBe(true)
+  })
+
+  it('shows how many scans the server rejected, with a way to dismiss them', async () => {
+    const c = controller({ rejectedCount: 2 })
+    await startShopping(c)
+    expect(screen.getByText("2 scans couldn't sync")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(c.dismissRejected).toHaveBeenCalledTimes(1)
+  })
+
+  it('says nothing about rejected scans when there are none', async () => {
+    await startShopping(controller({ rejectedCount: 0 }))
+    expect(screen.queryByText(/couldn't sync/)).toBeNull()
   })
 
   it('the live list shows what is left, compactly', async () => {

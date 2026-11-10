@@ -88,17 +88,40 @@ func TestLeftoverMealsNeedNothing(t *testing.T) {
 	}
 }
 
-func TestMealsOutsideTheRangeOrAlreadyPastAreIgnored(t *testing.T) {
-	lunchGone := dinner("2026-11-09", 1, need(milk, 500))
-	lunchGone.At = time.Date(2026, 11, 9, 11, 30, 0, 0, time.UTC) // before Now
-	after := dinner("2026-11-16", 1, need(rice, 500))             // after To (2026-11-15)
-	before := dinner("2026-11-08", 1, need(chicken, 500))         // before From
-	lastDay := dinner("2026-11-15", 1, need(passata, 700))        // To is inclusive
-	l := shopping.Derive(input(lunchGone, after, before, lastDay))
-	noLine(t, l, milk)
+func TestMealsAfterTheRangeAreIgnoredAndTheLastDayIsIncluded(t *testing.T) {
+	after := dinner("2026-11-16", 1, need(rice, 500))      // after To (2026-11-15)
+	lastDay := dinner("2026-11-15", 1, need(passata, 700)) // To is inclusive
+	l := shopping.Derive(input(after, lastDay))
 	noLine(t, l, rice)
-	noLine(t, l, chicken)
 	line(t, l, passata)
+}
+
+// A Planned Meal whose slot has passed and that is still "planned" waits in To confirm. Its Stock is used only
+// when it is confirmed (Cooked) and it needs nothing once skipped, so until then it still counts towards what
+// the household must buy. The Planning adapter hands over every planned meal dated up to To, including those
+// dated before From; Derive does not drop them.
+func TestAMealWaitingInToConfirmStillCountsTowardsTheNeed(t *testing.T) {
+	waiting := dinner("2026-11-09", 1, need(milk, 500))
+	waiting.At = time.Date(2026, 11, 9, 8, 0, 0, 0, time.UTC) // four hours before Now
+	yesterday := dinner("2026-11-08", 2, need(chicken, 400))  // never confirmed, never skipped
+	l := shopping.Derive(input(waiting, yesterday))
+	if m := line(t, l, milk); !near(m.Need, 500) || !near(m.Quantity, 500) {
+		t.Fatalf("milk Need/Quantity = %v/%v, want 500/500 (the meal waits in To confirm)", m.Need, m.Quantity)
+	}
+	if c := line(t, l, chicken); !near(c.Need, 800) || !near(c.Quantity, 800) {
+		t.Fatalf("chicken Need/Quantity = %v/%v, want 800/800 (2 Batches of 400)", c.Need, c.Quantity)
+	}
+}
+
+// A meal waiting from an earlier day draws on the Stock that is good today, not on Stock that was good on its own day.
+func TestAMealFromBeforeTheRangeIsSimulatedOnTheFirstDay(t *testing.T) {
+	in := input(dinner("2026-11-08", 1, need(chicken, 500)))
+	in.Lots = []stock.Lot{{ID: 1, IngredientID: chicken, Quantity: 500, Purchased: "2026-11-04", GoesOff: "2026-11-08"}} // gone off before From
+	if c := line(t, shopping.Derive(in), chicken); !near(c.Quantity, 500) || !near(c.Available, 0) {
+		t.Fatalf("Quantity/Available = %v/%v, want 500/0 (the lot is no good from 2026-11-09 on)", c.Quantity, c.Available)
+	}
+	in.Lots = []stock.Lot{{ID: 1, IngredientID: chicken, Quantity: 500, Purchased: "2026-11-08", GoesOff: "2026-11-12"}}
+	noLine(t, shopping.Derive(in), chicken)
 }
 
 func TestAvailableIsLotsStillWithinTheirGoOffDateOnTheDayEachMealNeedsThem(t *testing.T) {

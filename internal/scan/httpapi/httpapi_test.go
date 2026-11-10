@@ -248,3 +248,57 @@ func TestTheOfflineDataHoldsTheCatalogTheProductsAndTheLastPrice(t *testing.T) {
 		t.Fatalf("unknown shop = %d %s", r.Status, r.Body)
 	}
 }
+
+func TestAPriceEditOnAnUndoneScanAnswers409(t *testing.T) {
+	f := newFixture(t)
+	f.user.Post("/api/scan", f.op("scan-0001"))
+	f.user.Post("/api/scan/scan-0001/undo", nil)
+	if r := f.user.Patch("/api/scan/scan-0001", map[string]any{"priceCents": 179}); r.Status != 409 || r.ErrorCode() != "already_undone" {
+		t.Fatalf("patch after undo = %d %s, want 409 already_undone", r.Status, r.Body)
+	}
+	var price struct {
+		PriceCents *int `json:"priceCents"`
+	}
+	r := f.user.Get("/api/products/" + strconv.FormatInt(f.product, 10) + "/prices/latest?shop=" + strconv.FormatInt(f.shop, 10))
+	r.MustJSON(t, &price)
+	if price.PriceCents != nil {
+		t.Fatalf("the refused edit left a Price: %s", r.Body)
+	}
+}
+
+// Sync never answers 500 for a domain error: an Ingredient merged away while the phone was offline rejects only
+// the op that creates a Product for it.
+func TestSyncRejectsAnOpWhoseIngredientWasMergedAwayAndAppliesTheRest(t *testing.T) {
+	f := newFixture(t)
+	res, err := f.env.DB.Exec(`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, created_at, updated_at)
+		VALUES ('tomato', 'tomato', 'g', NULL, '2026-11-09T12:00:00Z', '2026-11-09T12:00:00Z')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone, _ := res.LastInsertId()
+	if _, err := f.env.DB.Exec(`DELETE FROM ingredients WHERE id = ?`, gone); err != nil {
+		t.Fatal(err)
+	}
+	unknown := map[string]any{"clientUuid": "scan-0002", "scannedAt": "2026-11-09T12:00:00Z", "kind": "shop_unknown", "shopId": f.shop,
+		"barcode": "5012345678900", "scope": "global", "ingredient": map[string]any{"id": gone}, "productName": "Tomatoes 500 g", "packSize": 500, "quantity": 500, "rangeTo": "2026-11-15"}
+	var out struct {
+		Results []struct {
+			ClientUUID string `json:"clientUuid"`
+			Status     string `json:"status"`
+			Error      struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		} `json:"results"`
+	}
+	r := f.user.Post("/api/scan/sync", map[string]any{"ops": []any{f.op("scan-0001"), unknown, f.op("scan-0003")}})
+	r.MustJSON(t, &out)
+	if r.Status != 200 || len(out.Results) != 3 {
+		t.Fatalf("sync = %d %s; want 200 with three results", r.Status, r.Body)
+	}
+	if out.Results[0].Status != "applied" || out.Results[1].Status != "rejected" || out.Results[1].Error.Code != "unknown_ingredient" || out.Results[2].Status != "applied" {
+		t.Fatalf("results = %s", r.Body)
+	}
+	if r := f.user.Post("/api/scan", unknown); r.Status != 422 || r.ErrorCode() != "unknown_ingredient" {
+		t.Fatalf("the same op sent alone = %d %s, want 422 unknown_ingredient", r.Status, r.Body)
+	}
+}

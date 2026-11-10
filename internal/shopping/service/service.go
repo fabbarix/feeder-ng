@@ -364,8 +364,11 @@ func (s *Service) DeleteExtra(ctx context.Context, id int64) error {
 	return nil
 }
 
-// TickExtra ticks an extra; an Ingredient extra with quantity > 0 also adds a Stock Lot.
-func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64) (TickResult, error) {
+// TickExtra ticks an extra; an Ingredient extra with quantity > 0 also adds a Stock Lot. clientUUID makes a retry
+// idempotent: the same UUID adds no second Lot and counts the quantity into the extra's `got` only once.
+// (clientUUID is accepted but not used yet: the Developer implements the idempotency.)
+func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (TickResult, error) {
+	_ = clientUUID
 	today, _, err := s.household(ctx)
 	if err != nil {
 		return TickResult{}, err

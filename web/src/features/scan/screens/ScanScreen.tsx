@@ -116,7 +116,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
       ) : null}
       {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
 
-      <ScanNotices online={c.online} pendingCount={c.pendingCount} notices={c.notices} onDismiss={c.dismissNotice} />
+      <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
 
       {c.list ? <LiveList list={c.list} system={c.system} /> : null}
 

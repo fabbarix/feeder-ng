@@ -113,3 +113,30 @@ func TestUpdatePriceChangesTheTotal(t *testing.T) {
 		t.Fatalf("unknown: err = %v", err)
 	}
 }
+
+func TestUndoStepsAreRecordedOnceEachInTheOrderTheyRan(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	_, _ = st.Insert(ctx, event("a", 159, 1))
+	if got, _, _ := st.Get(ctx, "a"); len(got.UndoSteps) != 0 {
+		t.Fatalf("UndoSteps before Undo = %v, want none", got.UndoSteps)
+	}
+	for _, step := range []string{store.UndoStepList, store.UndoStepList, store.UndoStepLot} {
+		if err := st.MarkUndoStep(ctx, "a", step); err != nil {
+			t.Fatalf("MarkUndoStep(%s): %v", step, err)
+		}
+	}
+	got, _, _ := st.Get(ctx, "a")
+	if len(got.UndoSteps) != 2 || got.UndoSteps[0] != store.UndoStepList || got.UndoSteps[1] != store.UndoStepLot || got.UndoneAt != "" {
+		t.Fatalf("UndoSteps = %v, undoneAt %q; want [list lot] and not undone yet", got.UndoSteps, got.UndoneAt)
+	}
+	if _, err := st.MarkUndone(ctx, "a"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _, _ := st.Get(ctx, "a"); len(got.UndoSteps) != 2 {
+		t.Fatalf("UndoSteps after MarkUndone = %v, want them kept", got.UndoSteps)
+	}
+	if err := st.MarkUndoStep(ctx, "ghost", store.UndoStepList); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unknown uuid: err = %v, want ErrNotFound", err)
+	}
+}

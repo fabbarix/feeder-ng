@@ -23,7 +23,7 @@ type Need struct {
 // Meal is an uncooked, non-skipped Planned Meal in the range. A meal served from a Leftover (Leftover true) needs nothing.
 type Meal struct {
 	Date     stock.Date
-	At       time.Time // slot instant; a meal whose At is before Input.Now is ignored
+	At       time.Time // slot instant (informational; a meal whose slot has passed and waits in To confirm still counts)
 	Batches  float64
 	Leftover bool
 	Needs    []Need

@@ -132,6 +132,15 @@ describe('useScanFlow in a Shop', () => {
     expect(hook.result.current.feedback).toBeNull()
   })
 
+  it('Undo of a queued scan that was being sent asks the server to reverse it (cancelQueued answers false), so the Undo is not lost', async () => {
+    const { deps, hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false) })
+    await read(hook, '8000500310427')
+    await act(() => hook.result.current.undo())
+    expect(deps.cancelQueued).toHaveBeenCalledWith('uuid-1')
+    expect(deps.undo).toHaveBeenCalledWith('uuid-1')
+    expect(hook.result.current.feedback).toBeNull()
+  })
+
   it('editing the price saves it and updates the line', async () => {
     const { deps, hook } = setup()
     await read(hook, '8000500310427')

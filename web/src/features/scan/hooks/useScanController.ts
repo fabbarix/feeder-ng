@@ -53,6 +53,8 @@ export interface ScanController {
   list: ShoppingList | undefined
   online: boolean
   pendingCount: number
+  rejectedCount: number
+  dismissRejected: () => void
   notices: SyncNotice[]
   dismissNotice: (clientUuid: string) => void
   ingredients: IngredientChoice[]
@@ -186,6 +188,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     list: mode === 'shop' ? shopList.data : undefined,
     online: sync.online,
     pendingCount: sync.pendingCount,
+    rejectedCount: sync.rejectedCount,
+    dismissRejected: () => void sync.dismissRejected(),
     notices,
     dismissNotice: (clientUuid) => setNotices((prev) => prev.filter((n) => n.clientUuid !== clientUuid)),
     ingredients: ingredientChoices.choices,

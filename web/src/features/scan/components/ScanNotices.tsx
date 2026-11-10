@@ -6,6 +6,9 @@ import type { SyncNotice } from '../lib/notices'
 export interface ScanNoticesProps {
   online: boolean
   pendingCount: number
+  /** operations the server rejected (removed from the queue); shown with a way to dismiss them */
+  rejectedCount: number
+  onDismissRejected: () => void
   notices: SyncNotice[]
   onDismiss: (clientUuid: string) => void
 }

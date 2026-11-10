@@ -27,6 +27,7 @@ export const scanStrings = {
   offline: 'Offline: scans are kept and sent when you are back online',
   queued: (n: number) => `${n} ${n === 1 ? 'scan' : 'scans'} waiting to sync`,
   merged: (name: string) => `Someone already added this barcode; yours was merged into ${name}`,
+  rejectedCount: (n: number) => `${n} ${n === 1 ? 'scan' : 'scans'} couldn't sync`,
   rejected: (message: string) => `Couldn't sync a scan: ${message}`,
   rejectedAdd: (message: string) => `Couldn't add that scan: ${message}`,
   unknownTitle: 'What is this?',

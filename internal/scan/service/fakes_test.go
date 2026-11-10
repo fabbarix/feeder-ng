@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"testing"
@@ -18,7 +19,36 @@ import (
 
 var startTime = time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)
 
+// faults lets a test make the next call of a named method fail once. Embedded in the fakes.
+type faults struct {
+	fmu sync.Mutex
+	n   map[string]int
+}
+
+func (f *faults) failOnce(method string) {
+	f.fmu.Lock()
+	defer f.fmu.Unlock()
+	if f.n == nil {
+		f.n = map[string]int{}
+	}
+	f.n[method]++
+}
+
+func (f *faults) hit(method string) error {
+	f.fmu.Lock()
+	defer f.fmu.Unlock()
+	if f.n[method] > 0 {
+		f.n[method]--
+		return errors.New("injected failure of " + method)
+	}
+	return nil
+}
+
+// The fakes are safe for concurrent use; delay makes every call slow so two goroutines really overlap.
 type fakeStock struct {
+	faults
+	mu      sync.Mutex
+	delay   time.Duration
 	lots    map[int64]service.StockAdd
 	order   []int64
 	byUUID  map[string]int64
@@ -33,6 +63,9 @@ func newFakeStock() *fakeStock {
 }
 
 func (f *fakeStock) AddLot(_ context.Context, in service.StockAdd) (int64, bool, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if id, ok := f.byUUID[in.ClientUUID]; ok && in.ClientUUID != "" {
 		return id, false, nil
 	}
@@ -44,6 +77,12 @@ func (f *fakeStock) AddLot(_ context.Context, in service.StockAdd) (int64, bool,
 	return f.next, true, nil
 }
 func (f *fakeStock) RemoveLot(_ context.Context, id int64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("RemoveLot"); err != nil {
+		return err
+	}
 	if l, ok := f.lots[id]; ok {
 		f.totals[l.IngredientID] -= l.Quantity
 		delete(f.lots, id)
@@ -51,8 +90,16 @@ func (f *fakeStock) RemoveLot(_ context.Context, id int64) error {
 	}
 	return nil
 }
-func (f *fakeStock) Total(_ context.Context, ing int64) (float64, error) { return f.totals[ing], nil }
+func (f *fakeStock) Total(_ context.Context, ing int64) (float64, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.totals[ing], nil
+}
 func (f *fakeStock) SetTotal(_ context.Context, ing int64, total float64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.totals[ing] = total
 	f.sets = append(f.sets, total)
 	return nil
@@ -60,6 +107,10 @@ func (f *fakeStock) SetTotal(_ context.Context, ing int64, total float64) error 
 func (f *fakeStock) lotCount() int { return len(f.lots) }
 
 type fakeCatalogue struct {
+	faults
+	mu        sync.Mutex
+	delay     time.Duration
+	createErr error // returned by CreateProduct when set
 	shops     map[int64]bool
 	products  map[int64]service.ProductInfo
 	owners    map[string]int64 // barcode (or "rule:item") -> product id
@@ -89,9 +140,15 @@ func newFakeCatalogue() *fakeCatalogue {
 }
 
 func (f *fakeCatalogue) ShopExists(_ context.Context, id int64) (bool, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.shops[id], nil
 }
 func (f *fakeCatalogue) Product(_ context.Context, id int64) (service.ProductInfo, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	p, ok := f.products[id]
 	if !ok {
 		return service.ProductInfo{}, service.ErrProductGone
@@ -99,6 +156,12 @@ func (f *fakeCatalogue) Product(_ context.Context, id int64) (service.ProductInf
 	return p, nil
 }
 func (f *fakeCatalogue) CreateProduct(_ context.Context, in service.NewProduct) (service.ProductInfo, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.createErr != nil {
+		return service.ProductInfo{}, f.createErr
+	}
 	keys := append([]string(nil), in.Barcodes...)
 	for _, sb := range in.ShopBarcodes {
 		if sb.Code != "" {
@@ -122,23 +185,44 @@ func (f *fakeCatalogue) CreateProduct(_ context.Context, in service.NewProduct) 
 	return p, nil
 }
 func (f *fakeCatalogue) SoldAt(_ context.Context, p, s int64) (bool, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.soldAt[[2]int64{p, s}], nil
 }
 func (f *fakeCatalogue) SetSoldAt(_ context.Context, p, s int64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.soldAt[[2]int64{p, s}] = true
 	return nil
 }
 func (f *fakeCatalogue) UnsetSoldAt(_ context.Context, p, s int64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("UnsetSoldAt"); err != nil {
+		return err
+	}
 	delete(f.soldAt, [2]int64{p, s})
 	return nil
 }
 func (f *fakeCatalogue) RecordPurchase(_ context.Context, _ int64, _ *int64, date stock.Date) (int64, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.nextID++
 	f.purchases[f.nextID] = true
 	f.purchased = append(f.purchased, date)
 	return f.nextID, nil
 }
 func (f *fakeCatalogue) DeletePurchase(_ context.Context, id int64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("DeletePurchase"); err != nil {
+		return err
+	}
 	delete(f.purchases, id)
 	return nil
 }
@@ -152,9 +236,15 @@ func (f *fakeCatalogue) latest(p, s int64) *service.PriceInfo {
 	return best
 }
 func (f *fakeCatalogue) LatestPrice(_ context.Context, p, s int64) (*service.PriceInfo, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.latest(p, s), nil
 }
 func (f *fakeCatalogue) PriceOn(_ context.Context, p, s int64, d stock.Date) (*service.PriceInfo, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	for _, pr := range f.prices {
 		if f.priceProd[pr.ID] == p && f.priceShop[pr.ID] == s && pr.Date == d {
 			return pr, nil
@@ -163,6 +253,9 @@ func (f *fakeCatalogue) PriceOn(_ context.Context, p, s int64, d stock.Date) (*s
 	return nil, nil
 }
 func (f *fakeCatalogue) RecordPrice(_ context.Context, p int64, in service.PriceInput) (service.PriceInfo, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.recorded = append(f.recorded, in)
 	for _, pr := range f.prices { // the same day is replaced in place
 		if f.priceProd[pr.ID] == p && f.priceShop[pr.ID] == in.ShopID && pr.Date == in.Date {
@@ -177,6 +270,12 @@ func (f *fakeCatalogue) RecordPrice(_ context.Context, p int64, in service.Price
 	return *pr, nil
 }
 func (f *fakeCatalogue) DeletePrice(_ context.Context, id int64) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("DeletePrice"); err != nil {
+		return err
+	}
 	f.deleted = append(f.deleted, id)
 	for i, pr := range f.prices {
 		if pr.ID == id {
@@ -187,6 +286,9 @@ func (f *fakeCatalogue) DeletePrice(_ context.Context, id int64) error {
 	return nil
 }
 func (f *fakeCatalogue) OfflineData(_ context.Context, shop *int64) (service.OfflineData, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return service.OfflineData{ShopID: shop, ShopName: "Coop"}, nil
 }
 
@@ -222,6 +324,9 @@ func (f *fakeIngredients) Ensure(_ context.Context, name, _ string) (int64, erro
 
 // fakeList keeps "remaining to buy" per Ingredient like the real Shopping List does.
 type fakeList struct {
+	faults
+	mu        sync.Mutex
+	delay     time.Duration
 	remaining map[int64]float64
 	ticked    map[int64]bool
 	after     []shopservice.AfterLotInput
@@ -229,6 +334,9 @@ type fakeList struct {
 }
 
 func (f *fakeList) AfterLot(_ context.Context, in shopservice.AfterLotInput) (shopservice.Effect, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.after = append(f.after, in)
 	rem, on := f.remaining[in.IngredientID]
 	if !on {
@@ -247,6 +355,12 @@ func (f *fakeList) AfterLot(_ context.Context, in shopservice.AfterLotInput) (sh
 	return eff, nil
 }
 func (f *fakeList) UndoLot(_ context.Context, in shopservice.UndoLotInput) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("UndoLot"); err != nil {
+		return err
+	}
 	f.undo = append(f.undo, in)
 	if _, on := f.remaining[in.IngredientID]; on {
 		f.remaining[in.IngredientID] += in.Quantity

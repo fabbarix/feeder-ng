@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../../lib/http'
 import { createMemoryOpStore, OfflineQueue } from '../lib/queue'
 import type { Op, ScanResult } from '../types'
 import { useSyncQueue } from './useSyncQueue'
@@ -76,5 +77,110 @@ describe('useSyncQueue', () => {
     await act(() => result.current.enqueue(op('a')))
     await waitFor(() => expect(result.current.rejectedCount).toBe(1))
     expect(result.current.pendingCount).toBe(0)
+  })
+
+  it('dismissing the rejected operations resets their count and leaves what is still waiting alone', async () => {
+    const queue = new OfflineQueue(createMemoryOpStore())
+    const sync = async (ops: Op[]) => ops.map((o) => ({ clientUuid: o.clientUuid, status: 'rejected', error: { code: 'unknown_product', message: 'gone' } }) as ScanResult)
+    const { result } = renderHook(() => useSyncQueue({ queue, api: { sync }, isOnline: () => true }))
+    await act(() => result.current.enqueue(op('a')))
+    await waitFor(() => expect(result.current.rejectedCount).toBe(1))
+    await act(() => result.current.dismissRejected())
+    expect(result.current.rejectedCount).toBe(0)
+    expect(await queue.rejected()).toEqual([])
+  })
+
+  it('a scan enqueued while a send is in flight is sent right after it, not left waiting while online', async () => {
+    const queue = new OfflineQueue(createMemoryOpStore())
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    let calls = 0
+    const sync = vi.fn(async (ops: Op[]) => {
+      calls += 1
+      if (calls === 1) await gate
+      return ops.map((o) => ({ clientUuid: o.clientUuid, status: 'applied' }) as ScanResult)
+    })
+    const { result } = renderHook(() => useSyncQueue({ queue, api: { sync }, isOnline: () => true }))
+    let first: Promise<void> = Promise.resolve()
+    act(() => {
+      first = result.current.enqueue(op('a'))
+    })
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(1))
+    let second: Promise<void> = Promise.resolve()
+    act(() => {
+      second = result.current.enqueue(op('b'))
+    })
+    await waitFor(() => expect(result.current.pendingCount).toBe(2)) // b is queued; a's send is still in flight
+    release()
+    await act(async () => {
+      await Promise.all([first, second])
+    })
+    expect(sync).toHaveBeenCalledTimes(2)
+    expect(sync.mock.calls[1]?.[0].map((o) => o.clientUuid)).toEqual(['b'])
+    expect(result.current.pendingCount).toBe(0)
+  })
+
+  it('cancel passes the queue answer on: false for a scan the server applied', async () => {
+    const { hook } = setup(true)
+    await act(() => hook.result.current.enqueue(op('a')))
+    await waitFor(() => expect(hook.result.current.pendingCount).toBe(0))
+    expect(await hook.result.current.cancel('a')).toBe(false)
+  })
+})
+
+describe('useSyncQueue retries', () => {
+  afterEach(() => vi.useRealTimers())
+
+  const unavailable = () => new ApiError(503, 'http_error', 'unavailable')
+
+  it('retries with growing waits while online after a server error, and stops once the queue is sent', async () => {
+    vi.useFakeTimers()
+    const queue = new OfflineQueue(createMemoryOpStore())
+    const sync = vi
+      .fn<(ops: Op[]) => Promise<ScanResult[]>>()
+      .mockRejectedValueOnce(unavailable())
+      .mockRejectedValueOnce(unavailable())
+      .mockImplementation(async (ops) => ops.map((o) => ({ clientUuid: o.clientUuid, status: 'applied' }) as ScanResult))
+    const { result } = renderHook(() => useSyncQueue({ queue, api: { sync }, isOnline: () => true }))
+    const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)))
+
+    await act(async () => void (await result.current.enqueue(op('a'))))
+    expect(sync).toHaveBeenCalledTimes(1)
+    expect(result.current.pendingCount).toBe(1)
+    await advance(999)
+    expect(sync).toHaveBeenCalledTimes(1)
+    await advance(1) // 1 s after the first failure
+    expect(sync).toHaveBeenCalledTimes(2)
+    await advance(1999)
+    expect(sync).toHaveBeenCalledTimes(2)
+    await advance(1) // 2 s after the second
+    expect(sync).toHaveBeenCalledTimes(3)
+    expect(result.current.pendingCount).toBe(0)
+    await advance(120_000)
+    expect(sync).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not retry while the phone is offline', async () => {
+    vi.useFakeTimers()
+    const queue = new OfflineQueue(createMemoryOpStore())
+    const state = { online: true }
+    const sync = vi.fn<(ops: Op[]) => Promise<ScanResult[]>>().mockRejectedValue(unavailable())
+    const { result } = renderHook(() => useSyncQueue({ queue, api: { sync }, isOnline: () => state.online }))
+    await act(async () => void (await result.current.enqueue(op('a'))))
+    expect(sync).toHaveBeenCalledTimes(1)
+    state.online = false
+    await act(async () => void (await vi.advanceTimersByTimeAsync(120_000)))
+    expect(sync).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops retrying when the screen goes away', async () => {
+    vi.useFakeTimers()
+    const queue = new OfflineQueue(createMemoryOpStore())
+    const sync = vi.fn<(ops: Op[]) => Promise<ScanResult[]>>().mockRejectedValue(unavailable())
+    const { result, unmount } = renderHook(() => useSyncQueue({ queue, api: { sync }, isOnline: () => true }))
+    await act(async () => void (await result.current.enqueue(op('a'))))
+    unmount()
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(sync).toHaveBeenCalledTimes(1)
   })
 })

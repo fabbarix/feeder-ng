@@ -25,6 +25,11 @@ var (
 	ErrNotFound    = errors.New("scan: not found")
 	ErrNotUndoable = errors.New("scan: only a Shop scan can be undone")
 	ErrProductGone = errors.New("scan: unknown Product")
+	// ErrUnknownIngredient is what the Catalogue and Ingredients ports return for an Ingredient that no longer
+	// exists (for example merged away while the phone was offline). Apply turns it into a rejected Result.
+	ErrUnknownIngredient = errors.New("scan: unknown Ingredient")
+	// ErrAlreadyUndone is returned by SetPrice for a scan that was undone (the API answers 409 already_undone).
+	ErrAlreadyUndone = errors.New("scan: the scan was undone")
 )
 
 // Rejection codes in scan.ErrInfo.
@@ -116,9 +121,9 @@ type OfflineProduct struct {
 
 // OfflineData is what the phone caches to resolve and describe scans offline.
 type OfflineData struct {
-	ShopID   *int64          `json:"shopId"`
-	ShopName string          `json:"shopName"`
-	Catalog  barcode.Catalog `json:"catalog"`
+	ShopID   *int64           `json:"shopId"`
+	ShopName string           `json:"shopName"`
+	Catalog  barcode.Catalog  `json:"catalog"`
 	Products []OfflineProduct `json:"products"`
 }
 

@@ -188,8 +188,9 @@ func (a *api) deleteExtra(w http.ResponseWriter, r *http.Request) {
 }
 
 type tickExtraBody struct {
-	Quantity float64 `json:"quantity"`
-	ShopID   *int64  `json:"shopId"`
+	Quantity   float64 `json:"quantity"`
+	ShopID     *int64  `json:"shopId"`
+	ClientUUID string  `json:"clientUuid"`
 }
 
 func (a *api) tickExtra(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +205,7 @@ func (a *api) tickExtra(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if _, err := a.svc.TickExtra(r.Context(), id, body.Quantity, body.ShopID); err != nil {
+	if _, err := a.svc.TickExtra(r.Context(), id, body.Quantity, body.ShopID, body.ClientUUID); err != nil {
 		writeError(w, err)
 		return
 	}

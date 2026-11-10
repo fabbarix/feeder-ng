@@ -209,12 +209,12 @@ func TestTickingAnIngredientExtraAddsALotLikeAnyLine(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	x, _ := e.svc.AddExtra(ctx, service.ExtraInput{IngredientID: e.ids[milk], Quantity: 2000})
-	res, err := e.svc.TickExtra(ctx, x.ID, 2000, nil)
+	res, err := e.svc.TickExtra(ctx, x.ID, 2000, nil, "")
 	if err != nil || res.LotID == nil || len(e.stock.adds) != 1 || e.stock.adds[0].Quantity != 2000 {
 		t.Fatalf("TickExtra = %+v, %v, adds %+v", res, err, e.stock.adds)
 	}
 	text, _ := e.svc.AddExtra(ctx, service.ExtraInput{Text: "candles"})
-	if res, err := e.svc.TickExtra(ctx, text.ID, 0, nil); err != nil || res.LotID != nil || len(e.stock.adds) != 1 {
+	if res, err := e.svc.TickExtra(ctx, text.ID, 0, nil, ""); err != nil || res.LotID != nil || len(e.stock.adds) != 1 {
 		t.Fatalf("ticking a text extra adds no Lot: %+v, %v", res, err)
 	}
 	v, _ := e.svc.List(ctx, service.Query{})
@@ -338,10 +338,44 @@ func TestEveryWritePublishesAShoppingEvent(t *testing.T) {
 	ctx := context.Background()
 	x, _ := e.svc.AddExtra(ctx, service.ExtraInput{Text: "candles"})
 	n := e.bus.count(service.Topic)
-	_, _ = e.svc.TickExtra(ctx, x.ID, 0, nil)
+	_, _ = e.svc.TickExtra(ctx, x.ID, 0, nil, "")
 	_ = e.svc.UntickExtra(ctx, x.ID)
 	_ = e.svc.DeleteExtra(ctx, x.ID)
 	if got := e.bus.count(service.Topic); got != n+3 {
 		t.Fatalf("shopping events = %d, want %d", got, n+3)
+	}
+}
+
+// A retried tick (the answer was lost, the User taps again) carries the same client UUID: it adds no second Lot
+// and the quantity counts into the extra only once.
+func TestTickingAnExtraTwiceWithTheSameClientUUIDAddsOneLot(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	x, _ := e.svc.AddExtra(ctx, service.ExtraInput{IngredientID: e.ids[milk], Quantity: 3000})
+	first, err := e.svc.TickExtra(ctx, x.ID, 2000, nil, "tick-extra-1")
+	if err != nil || first.LotID == nil || !first.Created {
+		t.Fatalf("first tick = %+v, %v", first, err)
+	}
+	second, err := e.svc.TickExtra(ctx, x.ID, 2000, nil, "tick-extra-1")
+	if err != nil || second.LotID == nil || *second.LotID != *first.LotID || second.Created {
+		t.Fatalf("retry = %+v, %v; want the same Lot and not created", second, err)
+	}
+	if len(e.stock.adds) != 1 {
+		t.Fatalf("Stock adds = %+v, want one Lot", e.stock.adds)
+	}
+	v, _ := e.svc.List(ctx, service.Query{})
+	if len(v.Extras) != 1 || v.Extras[0].Quantity != 1000 {
+		t.Fatalf("extra = %+v; want 1000 ml still remaining (3000 - 2000 counted once)", v.Extras)
+	}
+}
+
+func TestTickingAnExtraWithADifferentClientUUIDIsANewTick(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	x, _ := e.svc.AddExtra(ctx, service.ExtraInput{IngredientID: e.ids[milk], Quantity: 3000})
+	_, _ = e.svc.TickExtra(ctx, x.ID, 1000, nil, "a")
+	_, _ = e.svc.TickExtra(ctx, x.ID, 1000, nil, "b")
+	if len(e.stock.adds) != 2 {
+		t.Fatalf("Stock adds = %d, want 2", len(e.stock.adds))
 	}
 }
