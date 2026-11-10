@@ -83,11 +83,15 @@ export function msUntil(nextChangeAt: string, nowMs: number): number {
 }
 
 /** "in 3 h", "in 45 min", "now" (due within a minute or overdue): how soon an Advance Step must start. */
-export function dueText(dueAt: string, nowMs: number): string {
-  const minutes = (Date.parse(dueAt) - nowMs) / MINUTE_MS
+export function dueText(dueAt: string, nowMs: number, timeZone = 'UTC'): string {
+  const due = Date.parse(dueAt)
+  const minutes = (due - nowMs) / MINUTE_MS
   if (minutes < 1) return 'now'
   if (minutes < 60) return `in ${Math.floor(minutes)} min`
-  return `in ${Math.floor(minutes / 60)} h`
+  if (due - nowMs < DAY_MS) return `in ${Math.floor(minutes / 60)} h`
+  const parts = new Intl.DateTimeFormat('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).formatToParts(due)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('weekday')} ${get('hour')}:${get('minute')}`
 }
 
 /**

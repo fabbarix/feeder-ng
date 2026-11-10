@@ -44,7 +44,6 @@
   position: relative;
   display: grid;
   gap: var(--space-3);
-  min-height: 40vh;
   align-content: start;
 }
 
@@ -210,6 +209,7 @@
   }
 
   .cook-step {
+    min-height: 40vh;
     flex: 1 0 auto;
   }
 

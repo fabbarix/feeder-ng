@@ -191,7 +191,7 @@ func (a *api) cookPreview(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(r.Context())
+	t, err := a.names.load(r.Context(), &p.Meal)
 	if err != nil {
 		writeErr(w, err)
 		return

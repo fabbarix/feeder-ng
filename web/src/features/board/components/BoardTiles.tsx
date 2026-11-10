@@ -62,12 +62,14 @@ export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
 export interface NextAdvanceTileProps {
   next: NextAdvance | null
   nowMs: number
+  /** Household IANA zone, for the "Sat 11:30" form beyond 24 h (R11b N7). */
+  timeZone?: string
   /** Marks it done (PUT /api/cook/marks) from the board. */
   onDone: (scope: string, step: number) => void
 }
 
 /** Heading "Next Advance Step", its text, the Recipe name, dueText; an "Overdue" spoil chip when overdue; a "Done" button. "Nothing to prepare ahead" when null. */
-export function NextAdvanceTile({ next, nowMs, onDone }: NextAdvanceTileProps): ReactNode {
+export function NextAdvanceTile({ next, nowMs, timeZone, onDone }: NextAdvanceTileProps): ReactNode {
   return (
     <Tile as="section" variant={next?.overdue ? 'status' : 'surface'} status={next?.overdue ? 'spoil' : undefined} className="board-next">
       <h2 className="board-tile__heading">{boardStrings.nextAdvance}</h2>
@@ -76,7 +78,7 @@ export function NextAdvanceTile({ next, nowMs, onDone }: NextAdvanceTileProps): 
           <p className="board-next__text">{next.text}</p>
           <p className="board-next__recipe">{`${next.recipeName} · ${next.slotName}`}</p>
           <p className="board-next__due">
-            {next.overdue ? <Chip kind="status" status="spoil">{boardStrings.overdue}</Chip> : boardStrings.due(dueText(next.dueAt, nowMs))}
+            {next.overdue ? <Chip kind="status" status="spoil">{boardStrings.overdue}</Chip> : boardStrings.due(dueText(next.dueAt, nowMs, timeZone))}
           </p>
           <Button variant="secondary" size="sm" onClick={() => onDone(next.scope, next.step)}>
             {boardStrings.markDone}

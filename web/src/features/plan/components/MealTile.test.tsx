@@ -113,6 +113,14 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(chipsOf(container)).toHaveLength(1)
   })
 
+  // R11b N6: the Cooked state is marked by the chip (success colours + check icon), not by dimming the tile.
+  it('the Cooked chip is a success state chip with an icon', () => {
+    setup(slot({ meal: meal({ state: 'cooked' }) }))
+    const chip = screen.getByText('Cooked').closest('.chip')!
+    expect(chip).toHaveAttribute('data-status', 'success')
+    expect(chip.querySelector('svg')).not.toBeNull()
+  })
+
   it('a Not cooked meal says so and has no icon buttons', () => {
     setup(slot({ meal: meal({ state: 'skipped' }) }))
     expect(screen.getByText('Not cooked')).toBeInTheDocument()
