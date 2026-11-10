@@ -93,17 +93,11 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
 
 /**
  * A persistent live region, always mounted so screen readers announce what is added to it. The region carries the role
- * and politeness; its toasts carry none. `data-status` mirrors the newest toast in the region.
+ * and politeness; its toasts carry none. aria-atomic is off so only the added toast is read, not the whole region.
  */
 function LiveRegion({ role, items, onDismiss }: { role: 'status' | 'alert'; items: ToastItem[]; onDismiss: (id: number) => void }) {
-  const newest = items[items.length - 1]
   return (
-    <div
-      role={role}
-      aria-live={role === 'alert' ? 'assertive' : 'polite'}
-      className="toast-live"
-      data-status={newest?.status}
-    >
+    <div role={role} aria-live={role === 'alert' ? 'assertive' : 'polite'} aria-atomic="false" className="toast-live">
       {items.map((t) => (
         <ToastView key={t.id} toast={t} onDismiss={() => onDismiss(t.id)} />
       ))}

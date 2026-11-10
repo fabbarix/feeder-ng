@@ -64,11 +64,18 @@ export function DateField({ label, helper, error, disabled, required, value, onC
     if (restoreFocus) triggerRef.current?.focus()
   }
 
-  // Focus follows the roving day on open and on keyboard moves (not on the month buttons).
+  // Latest roving day, read by the focus effect below. Effects run in order, so this is current when the tick fires.
+  const focusIsoRef = useRef(focusIso)
+  useEffect(() => {
+    focusIsoRef.current = focusIso
+  })
+
+  // Focus follows the roving day on open and on keyboard moves only (the tick), never on a month change: the month
+  // buttons keep focus.
   useEffect(() => {
     if (!open || focusTick === 0) return
-    gridRef.current?.querySelector<HTMLButtonElement>(`[data-iso="${focusIso}"]`)?.focus()
-  }, [open, focusTick, focusIso])
+    gridRef.current?.querySelector<HTMLButtonElement>(`[data-iso="${focusIsoRef.current}"]`)?.focus()
+  }, [focusTick])
 
   // Outside click closes the popover.
   useEffect(() => {

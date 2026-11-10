@@ -40,6 +40,8 @@ export function TimeField({ label, helper, error, disabled, required, value, onC
     if (next === null) return
     setPending(null)
     emit({ [segment]: next })
+    // Two digits complete the Hour, so focus moves on as the keyboard path does.
+    if (segment === 'hour' && e.target.value.replace(/\D/g, '').length >= 2) minuteRef.current?.focus()
   }
 
   const onSegmentKey = (segment: Segment) => (e: KeyboardEvent<HTMLInputElement>) => {
@@ -100,7 +102,6 @@ function Segment({ name, value, max, disabled, onKeyDown, onChange, segmentRef }
       inputMode="numeric"
       role="spinbutton"
       autoComplete="off"
-      maxLength={2}
       value={value === undefined ? PLACEHOLDER : String(value).padStart(2, '0')}
       data-empty={value === undefined || undefined}
       disabled={disabled}
