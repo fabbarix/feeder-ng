@@ -36,6 +36,11 @@ describe('Tile', () => {
     expect(screen.getByText('x')).toHaveAttribute('data-row-span', '2')
   })
 
+  it('accepts a ReactNode overline (WP10): markup inside the overline line, not only text', () => {
+    const { container } = render(<Tile overline={<span className="x">1 of 2</span>}>body</Tile>)
+    expect(container.querySelector('.tile__overline .x')).toHaveTextContent('1 of 2')
+  })
+
   it('renders an overline with an optional decorative icon, and a media header', () => {
     const { container } = render(
       <Tile overline="Use soon" overlineIcon="useSoon" media={<img alt="" src="/p.jpg" />}>body</Tile>,

@@ -24,7 +24,7 @@ export interface TileProps extends Omit<HTMLAttributes<HTMLElement>, 'onClick'> 
   /** Grid rows taken (board only). */
   rowSpan?: 1 | 2 | 3
   /** Small upper-case line above the content, optionally with an icon. */
-  overline?: string
+  overline?: ReactNode
   overlineIcon?: IconName
   /** Photo header of a `media` tile (16:9). */
   media?: ReactNode

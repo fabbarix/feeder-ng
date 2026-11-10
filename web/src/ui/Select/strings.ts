@@ -6,5 +6,6 @@ export const selectStrings = {
   createDefault: (query: string) => `Create "${query}"`,
   sort: (label: string) => `Sort: ${label}`,
   createIngredient: (query: string) => `Create Ingredient "${query}"`,
+  useUnit: (query: string) => `Use unit "${query}"`,
   baseUnitMeta: (unit: string) => `Base Unit: ${unit}`,
 }

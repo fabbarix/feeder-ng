@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import './BentoGrid.css'
 
 export interface BentoGridProps {
-  columns?: 2 | 3 | 4
+  columns?: 2 | 3 | 4 | 7
   label?: string
   children?: ReactNode
 }
