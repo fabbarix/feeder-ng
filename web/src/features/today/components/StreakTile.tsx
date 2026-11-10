@@ -14,7 +14,6 @@ export function StreakTile({ days }: StreakTileProps): ReactElement | null {
   const metric = streakMetric(days)
   return (
     <Tile as="section" variant="soft" aria-label={s.streakHeading}>
-      <h2 className="today__tile-title">{s.streakHeading}</h2>
       <TileMetric value={metric.value} label={metric.label} />
     </Tile>
   )

@@ -118,3 +118,30 @@ func TestPhotoURLIsTheImageStoreRoute(t *testing.T) {
 		t.Errorf("photoURL without an image = %q", got)
 	}
 }
+
+func TestLeftoverServedMealSendsNoCookMinutesOrStartBy(t *testing.T) {
+	view := runner.SlotView{
+		Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t), Portions: 3,
+		Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: 7, Batches: 0, Portions: 1, State: plan.StatePlanned,
+			From: &plan.Source{From: plan.Key{Date: "2026-11-09", MealSlotID: 2}, LeftoverID: 5}},
+	}
+	out := slotFor(view, fixture())
+	if out.Meal == nil || out.Meal.ServedFromLeftover == nil {
+		t.Fatalf("meal is not served from a Leftover: %+v", out.Meal)
+	}
+	if out.Meal.CookMinutes != 0 || out.Meal.StartBy != "" {
+		t.Errorf("a Leftover-served meal must not carry cookMinutes or startBy, got cookMinutes=%d startBy=%q", out.Meal.CookMinutes, out.Meal.StartBy)
+	}
+	raw, err := json.Marshal(out.Meal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"cookMinutes"`, `"startBy"`} {
+		if strings.Contains(string(raw), key) {
+			t.Errorf("JSON carries %s for a Leftover-served meal: %s", key, raw)
+		}
+	}
+	if out.Meal.PhotoURL == "" {
+		t.Error("the photo is still sent for a Leftover-served meal")
+	}
+}

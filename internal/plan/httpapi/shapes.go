@@ -174,9 +174,12 @@ func mealFor(m plan.Meal, t table) *mealOut {
 	out := &mealOut{
 		Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, RecipeID: m.RecipeID, RecipeName: t.recipes[m.RecipeID],
 		Batches: m.Batches, Portions: m.Portions, State: string(m.State), Pinned: m.Pinned,
-		Why:         whyFor(m.Why, t),
-		CookMinutes: t.recipeMinutes[m.RecipeID],
-		PhotoURL:    t.recipePhoto[m.RecipeID],
+		Why:      whyFor(m.Why, t),
+		PhotoURL: t.recipePhoto[m.RecipeID],
+	}
+	// A meal served from a Leftover is already cooked: no cook time, so no startBy either (slotFor).
+	if m.From == nil {
+		out.CookMinutes = t.recipeMinutes[m.RecipeID]
 	}
 	if m.From != nil {
 		src := &leftoverSourceOut{Date: m.From.From.Date, MealSlotID: m.From.From.MealSlotID, RecipeName: t.recipes[m.RecipeID]}

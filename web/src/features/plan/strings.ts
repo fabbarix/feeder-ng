@@ -74,6 +74,11 @@ export const planStrings = {
   errorTotal: 'Enter a number, 0 or more.',
   // Regenerate (lib/regenerate)
   regenerating: 'Regenerating…',
+  regenerateConfirmTitle: 'Regenerate the plan?',
+  regenerateNone: 'No Planned Meals will change. Empty Meal Slots may be filled.',
+  regenerateCount: (n: number) =>
+    `${n} unpinned Planned ${n === 1 ? 'Meal' : 'Meals'} will change. Pinned and Cooked ones stay as they are.`,
+  regenerateConfirmLabel: 'Regenerate',
   // Planning rules
   rulesTitle: 'Planning rules',
   rulesLinkHint: 'Slot Rules and Variety Rules',

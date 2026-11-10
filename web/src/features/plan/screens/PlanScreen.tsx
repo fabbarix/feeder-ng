@@ -25,7 +25,7 @@ export function PlanScreen(): ReactNode {
   const navigate = useNavigate()
   const columns = usePlanColumns()
   const { plan, actions, flow } = s
-  const days = groupByDay(plan.slots, plan.today)
+  const days = groupByDay(plan.slots, plan.today, columns)
   const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
 
@@ -45,6 +45,7 @@ export function PlanScreen(): ReactNode {
           <DayTile
             key={day.date}
             day={day}
+            compact={columns === 7}
             today={plan.today}
             onOpen={(k) => s.openPlanned(k)}
             onSwap={(k) => s.openSwap(k)}

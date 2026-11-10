@@ -30,12 +30,16 @@ function leftoverChip(meal: PlannedMeal): PlanChip[] {
   return [{ key: 'status:leftover', kind: 'status', status: 'leftover', label: s.servedFromLeftover(weekdayName(from.date, 'short')) }]
 }
 
-/** The why chips: phrased, 'best_available' never, a 'leftover' why dropped when the leftover chip says it, no duplicate labels. */
+/**
+ * The why chips: phrased, 'best_available' never, a 'leftover' why dropped when the leftover chip says it, an unnamed
+ * 'stock_coverage' never (the server does not send its Ingredient, so "uses what is in Stock" is noise), no duplicate labels.
+ */
 function whyChips(meal: PlannedMeal, ctx: PhraseContext): PlanChip[] {
   const out: PlanChip[] = []
   const seen = new Set<string>()
   for (const why of meal.why) {
     if (why.code === 'leftover' && meal.servedFromLeftover) continue
+    if (why.code === 'stock_coverage' && !why.ingredient) continue
     const label = phraseWhy(why, ctx)
     if (label === '' || seen.has(label)) continue
     seen.add(label)

@@ -62,7 +62,13 @@
 }
 .plan-day__title {
   margin: 0 0 8px;
-  font-size: 1.25rem;
+  min-width: 0;
+  font-size: 1.125rem;
+  overflow-wrap: break-word;
+}
+/* At 7 columns a day tile is narrow: its heading steps down a size so "Tomorrow" does not break mid-word. */
+.plan-grid[data-columns='7'] .plan-day__title {
+  font-size: 1rem;
 }
 
 /* A Planned Meal inside a day tile: compact, one chip at most. */
@@ -71,16 +77,20 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
+  margin-block: 6px;
 }
-/* Chips in a narrow day tile wrap inside it rather than spill past its edge. */
+/* Chips in a narrow day tile wrap inside it rather than spill past its edge, and sit at the start edge. */
 .plan-meal [data-kind] {
+  justify-self: start;
   block-size: auto;
   min-block-size: 28px;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
   text-align: start;
 }
-.plan-meal + .plan-meal {
+/* The divider between Planned Meals shows only on a day with 3 or more meals (data-dividers): a 1 px line. */
+.plan-day[data-dividers='true'] .plan-meal + .plan-meal {
   padding-top: 12px;
   border-top: 1px solid var(--color-outline);
 }
@@ -93,23 +103,40 @@
   border: 1px dashed var(--color-outline);
   border-radius: 16px;
 }
+/* The slot row keeps its Swap and Cook icon buttons on the same line, even in a one-column day tile. */
 .plan-meal__head {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 4px 8px;
   min-width: 0;
 }
+/* The slot label truncates with an ellipsis (the name inside), so it never pushes the Swap and Cook buttons off the row. */
 .plan-meal__slot {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.875rem;
   opacity: 0.8;
 }
+.plan-meal__slot > svg {
+  flex: none;
+}
+.plan-meal__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .plan-meal__actions {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 4px;
 }
 .plan-meal__recipe {
@@ -122,7 +149,8 @@
   font-size: 1.1rem;
   font-weight: 700;
   text-align: start;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -131,6 +159,7 @@
 .plan-meal__reason {
   margin: 0;
   font-size: 0.9rem;
+  overflow-wrap: break-word;
 }
 
 /* The Today hero: the photo and the text side by side, the actions below. */
@@ -156,7 +185,7 @@
 .plan-hero__name {
   margin: 0;
   font-size: 1.5rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .plan-hero__chips,
 .plan-hero__actions,
@@ -187,7 +216,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .plan-sheet__actions {
   display: grid;

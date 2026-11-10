@@ -38,7 +38,7 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook }: Meal
       <div className="plan-meal__head">
         <span className="plan-meal__slot">
           <Icon name={slotIcon(slot.name)} size={16} />
-          {slot.name}
+          <span className="plan-meal__name">{slot.name}</span>
         </span>
         {planned ? (
           <span className="plan-meal__actions">
