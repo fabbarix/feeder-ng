@@ -11,6 +11,10 @@ export interface ViewfinderStripProps {
   /** shown only when `supported` */
   torch?: { supported: boolean; on: boolean; onToggle: () => void }
   mute?: { muted: boolean; onToggle: () => void }
+  /** IP1 (declared, not yet implemented): accessible name of the region. Default "Scanner". The ImagePicker passes "Camera". */
+  label?: string
+  /** IP1 (declared, not yet implemented): `strip` (default, 140 px, with the barcode reticle) or `photo` (4:3, no reticle, sets data-size="photo"). */
+  size?: 'strip' | 'photo'
 }
 
 /**
