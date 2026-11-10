@@ -41,16 +41,28 @@ func (u ingredientUnits) Units(ctx context.Context, id int64) (units.Ingredient,
 	return ing.Units(), true, nil
 }
 
-// table is one snapshot of the names.
+// table is one snapshot of the names, plus the Recipe and Member facts the JSON carries next to them.
 type table struct {
-	recipes     map[int64]string
-	members     map[int64]string
-	ingredients map[int64]string
-	slots       map[int64]string
+	recipes       map[int64]string
+	recipeMinutes map[int64]int    // total time of a Recipe in minutes (0 when unknown)
+	recipePhoto   map[int64]string // photo URL of a Recipe ("" without one)
+	members       map[int64]string
+	memberColour  map[int64]string
+	ingredients   map[int64]string
+	slots         map[int64]string
+}
+
+// photoURL is the URL the image store serves an image id at (the recipe httpapi's imageURL).
+func photoURL(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "/api/images/" + id
 }
 
 func (n *names) load(ctx context.Context) (table, error) {
-	t := table{recipes: map[int64]string{}, members: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
+	t := table{recipes: map[int64]string{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
+		members: map[int64]string{}, memberColour: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
 	if err != nil {
 		return t, err
@@ -64,6 +76,8 @@ func (n *names) load(ctx context.Context) (table, error) {
 	}
 	for _, r := range rs {
 		t.recipes[r.ID] = r.Name
+		t.recipeMinutes[r.ID] = r.TotalMinutes
+		t.recipePhoto[r.ID] = photoURL(r.Image)
 	}
 	ms, err := n.hh.Members(ctx)
 	if err != nil {
@@ -71,6 +85,7 @@ func (n *names) load(ctx context.Context) (table, error) {
 	}
 	for _, m := range ms {
 		t.members[m.ID] = m.Name
+		t.memberColour[m.ID] = m.Colour
 	}
 	is, err := n.ing.List(ctx)
 	if err != nil {
