@@ -79,6 +79,21 @@ describe('DateField', () => {
     expect(screen.getByText('February 2027')).toBeInTheDocument()
   })
 
+  it('prev/next month moves the focused day too: exactly one day has tabindex 0', async () => {
+    render(<DateHarness initial="2026-11-10" />)
+    await userEvent.click(trigger())
+    const tabbable = () => within(screen.getByRole('grid')).getAllByRole('button').filter((b) => b.getAttribute('tabindex') === '0')
+    await userEvent.click(screen.getByRole('button', { name: 'Next month' }))
+    expect(screen.getByText('December 2026')).toBeInTheDocument()
+    expect(tabbable()).toHaveLength(1)
+    expect(tabbable()[0]).toHaveAccessibleName('10 December 2026')
+    await userEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+    expect(screen.getByText('October 2026')).toBeInTheDocument()
+    expect(tabbable()).toHaveLength(1)
+    expect(tabbable()[0]).toHaveAccessibleName('10 October 2026')
+  })
+
   it('clicking a day selects it', async () => {
     const onValue = vi.fn()
     render(<DateHarness onValue={onValue} />)

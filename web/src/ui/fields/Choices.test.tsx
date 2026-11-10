@@ -45,12 +45,12 @@ describe('Checkbox', () => {
 describe('Switch', () => {
   function Sw(props: { onChange?: (v: boolean) => void }) {
     const [on, setOn] = useState(false)
-    return <Switch label="Use a secondary colour" checked={on} onChange={(v) => { setOn(v); props.onChange?.(v) }} />
+    return <Switch label="Notify me" checked={on} onChange={(v) => { setOn(v); props.onChange?.(v) }} />
   }
   it('is a role=switch button toggled by click, Space and Enter', async () => {
     const onChange = vi.fn()
     render(<Sw onChange={onChange} />)
-    const sw = screen.getByRole('switch', { name: 'Use a secondary colour' })
+    const sw = screen.getByRole('switch', { name: 'Notify me' })
     expect(sw.tagName).toBe('BUTTON')
     expect(sw).toHaveAttribute('aria-checked', 'false')
     await userEvent.click(sw)

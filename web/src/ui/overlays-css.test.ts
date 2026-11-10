@@ -19,6 +19,12 @@ describe('Dialog.css', () => {
   })
 })
 
+describe('scroll lock behind a modal', () => {
+  it('Dialog.css locks the page scroll while any modal <dialog> (Dialog, BottomSheet) is open', () => {
+    expect(dialog).toMatch(/html:has\(\s*dialog:modal\s*\)\s*{[^}]*overflow:\s*hidden/)
+  })
+})
+
 describe('BottomSheet.css', () => {
   it('caps the height at 85dvh, scrolls the body, and becomes a centred dialog from 768px', () => {
     expect(bottomSheet).toMatch(/max-height:\s*85dvh/)

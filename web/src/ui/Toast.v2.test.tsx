@@ -1,5 +1,5 @@
 // New-API tests for Toast (plan 4.8). The behaviour of the old tests in Overlays.test.tsx (4 s default, action, dismiss, provider guard) is kept.
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider, useToast, type ToastOptions } from './Toast'
@@ -18,7 +18,7 @@ describe('Toast statuses', () => {
     const user = setup()
     render(<ToastProvider><Fire message="Saved" opts={{ status: 'success' }} /></ToastProvider>)
     await user.click(screen.getByText('fire'))
-    const toast = screen.getByRole('status')
+    const toast = screen.getByText('Saved').closest('[data-status]') as HTMLElement
     expect(toast).toHaveAttribute('data-status', 'success')
     expect(toast.querySelector('svg')).not.toBeNull()
     act(() => void vi.advanceTimersByTime(4100))
@@ -76,5 +76,47 @@ describe('Toast statuses', () => {
     render(<ToastProvider><Fire message="Hi" opts={{ tone: 'accent' }} /></ToastProvider>)
     await user.click(screen.getByText('fire'))
     expect(screen.getByRole('status')).toHaveAttribute('data-status', 'neutral')
+  })
+})
+
+describe('Toast live regions', () => {
+  const setup = () => userEvent.setup()
+  it('two persistent regions exist before any toast: status (polite) and alert (assertive)', () => {
+    render(<ToastProvider><Fire message="x" /></ToastProvider>)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(screen.getByRole('alert')).toBeEmptyDOMElement()
+  })
+
+  it('normal toasts render inside the status region, errors inside the alert region', async () => {
+    const user = setup()
+    render(
+      <ToastProvider>
+        <Fire message="Saved" opts={{ status: 'success' }} name="ok" />
+        <Fire message="Broke" opts={{ status: 'error' }} name="bad" />
+      </ToastProvider>,
+    )
+    await user.click(screen.getByText('ok'))
+    await user.click(screen.getByText('bad'))
+    expect(within(screen.getByRole('status')).getByText('Saved')).toBeInTheDocument()
+    expect(within(screen.getByRole('alert')).getByText('Broke')).toBeInTheDocument()
+    expect(within(screen.getByRole('status')).queryByText('Broke')).toBeNull()
+  })
+
+  it('individual toasts carry no role, so announcements never nest', async () => {
+    const user = setup()
+    render(
+      <ToastProvider>
+        <Fire message="Saved" name="ok" />
+        <Fire message="Broke" opts={{ status: 'error' }} name="bad" />
+      </ToastProvider>,
+    )
+    await user.click(screen.getByText('ok'))
+    await user.click(screen.getByText('bad'))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    for (const text of ['Saved', 'Broke']) {
+      const item = screen.getByText(text).closest('[data-status]') as HTMLElement
+      expect(item).not.toHaveAttribute('role')
+    }
   })
 })
