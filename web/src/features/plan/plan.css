@@ -244,3 +244,23 @@
     animation: none !important;
   }
 }
+
+/* N2: the Leftovers tile is half width on a phone: rows size to their content, the name wraps over the meta line. */
+.plan-leftovers .list-row[data-height] {
+  block-size: auto;
+  min-block-size: 64px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+}
+.plan-leftovers .list-row__title {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.plan-leftovers .list-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-1);
+}

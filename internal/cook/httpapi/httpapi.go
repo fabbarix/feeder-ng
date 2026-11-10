@@ -147,12 +147,20 @@ func (a *api) timers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	now, list, err := a.svc.Timers(r.Context(), scope)
+	now, list, err := a.svc.TimersWithRecipeNames(r.Context(), scope)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"now": instant(now), "timers": timersOf(list, now)})
+	plain := make([]cook.Timer, len(list))
+	for i, t := range list {
+		plain[i] = t.Timer
+	}
+	out := timersOf(plain, now)
+	for i, t := range list {
+		out[i].RecipeName = t.RecipeName
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"now": instant(now), "timers": out})
 }
 
 type startBody struct {
@@ -282,6 +290,8 @@ type timerDTO struct {
 	RemainingSeconds int     `json:"remainingSeconds"`
 	EndsAt           *string `json:"endsAt"`
 	StartedAt        string  `json:"startedAt"`
+	// RecipeName is the Recipe the timer's scope cooks (GET /api/cook/timers only; omitted for a free timer).
+	RecipeName string `json:"recipeName,omitempty"`
 }
 
 func timerOf(t cook.Timer, now time.Time) timerDTO {

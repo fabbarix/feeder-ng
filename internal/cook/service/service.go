@@ -220,6 +220,19 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 	return s.cfg.Recipes.Steps(ctx, recipeID)
 }
 
+// ScopeRecipeName is the name of the Recipe a scope cooks, "" for an empty or unknown scope (the timers list shows it
+// instead of "Tue Planned Meal").
+func (s *Service) ScopeRecipeName(ctx context.Context, scope cook.Scope) string {
+	if scope == "" {
+		return ""
+	}
+	rs, err := s.scopeSteps(ctx, scope)
+	if err != nil {
+		return ""
+	}
+	return rs.Name
+}
+
 // StartInput describes a timer to start. With Step set, Scope is required, the
 // Step must be a Passive Step of the scope's Recipe (ErrNotPassiveStep) and an
 // empty Label / zero DurationSeconds default from the Step (cook.TimerLabel,
@@ -373,6 +386,30 @@ func (s *Service) Cancel(ctx context.Context, id int64) error {
 	return nil
 }
 
+// CancelScope deletes every timer of scope (running, paused or finished) and publishes `cancelled` for each; it
+// returns how many it removed. Called when the scope's Planned Meal is marked Cooked or Not cooked (N4).
+func (s *Service) CancelScope(ctx context.Context, scope cook.Scope) (int, error) {
+	if scope == "" {
+		return 0, nil // never "all timers"
+	}
+	all, err := s.cfg.Store.Timers(ctx, scope)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, t := range all {
+		if err := s.cfg.Store.DeleteTimer(ctx, t.ID); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				continue
+			}
+			return n, err
+		}
+		s.publishTimer(kindCancelled, t)
+		n++
+	}
+	return n, nil
+}
+
 // Timers settles due timers (publishing `finished` once each) and lists the
 // scope's timers ("" = all): running by soonest end, then paused, then finished.
 func (s *Service) Timers(ctx context.Context, scope cook.Scope) (time.Time, []cook.Timer, error) {
@@ -386,6 +423,35 @@ func (s *Service) Timers(ctx context.Context, scope cook.Scope) (time.Time, []co
 	}
 	sortTimers(all)
 	return now, all, nil
+}
+
+// NamedTimer is a timer with the name of the Recipe its scope belongs to ("" for a free timer or an unknown scope).
+type NamedTimer struct {
+	cook.Timer
+	RecipeName string
+}
+
+// TimersWithRecipeNames is Timers with each timer's Recipe name resolved, one lookup per distinct scope.
+func (s *Service) TimersWithRecipeNames(ctx context.Context, scope cook.Scope) (time.Time, []NamedTimer, error) {
+	now, list, err := s.Timers(ctx, scope)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	names := map[cook.Scope]string{}
+	out := make([]NamedTimer, len(list))
+	for i, t := range list {
+		out[i].Timer = t
+		if t.Scope == "" {
+			continue
+		}
+		name, ok := names[t.Scope]
+		if !ok {
+			name = s.ScopeRecipeName(ctx, t.Scope)
+			names[t.Scope] = name
+		}
+		out[i].RecipeName = name
+	}
+	return now, out, nil
 }
 
 // sortTimers orders running timers by their end, then paused by what is left,

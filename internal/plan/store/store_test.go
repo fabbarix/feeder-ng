@@ -478,3 +478,36 @@ func TestPlannedCheckerKnowsRecipesThatWereEverPlanned(t *testing.T) {
 		}
 	}
 }
+
+// N1 review fix: LeftoverSources looks up only the requested ids (it must not read the whole leftovers table on every
+// render), whatever their status. Signature: LeftoverSources(ctx, ids []int64) (map[int64]plan.Key, error). It is
+// asserted through a func-typed conversion so the package still compiles while the old signature is in place.
+func TestLeftoverSourcesLooksUpOnlyTheRequestedIds(t *testing.T) {
+	f := newFixture(t)
+	a, _ := f.st.AddLeftover(ctx, plan.Leftover{RecipeID: f.chicken, From: f.key("2026-11-10", f.dinner), Portions: 2, CookedOn: "2026-11-10", UseBy: "2026-11-13"})
+	b, _ := f.st.AddLeftover(ctx, plan.Leftover{RecipeID: f.pasta, From: f.key("2026-11-09", f.dinner), Portions: 3, CookedOn: "2026-11-09", UseBy: "2026-11-11"})
+	c, _ := f.st.AddLeftover(ctx, plan.Leftover{RecipeID: f.soup, From: f.key("2026-11-08", f.lunch), Portions: 1, CookedOn: "2026-11-08", UseBy: "2026-11-10"})
+	if err := f.st.DiscardLeftover(ctx, b.ID, "2026-11-12"); err != nil {
+		t.Fatal(err)
+	}
+
+	var fn any = f.st.LeftoverSources
+	lookup, ok := fn.(func(context.Context, []int64) (map[int64]plan.Key, error))
+	if !ok {
+		t.Fatalf("LeftoverSources has type %T, want func(ctx, ids []int64) (map[int64]plan.Key, error)", fn)
+	}
+	got, err := lookup(ctx, []int64{a.ID, b.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[int64]plan.Key{a.ID: f.key("2026-11-10", f.dinner), b.ID: f.key("2026-11-09", f.dinner)} // b is discarded: still answered
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("LeftoverSources(a, b) = %v, want %v (c = #%d must not be read)", got, want, c.ID)
+	}
+	if got, err := lookup(ctx, []int64{999, c.ID, c.ID}); err != nil || !reflect.DeepEqual(got, map[int64]plan.Key{c.ID: f.key("2026-11-08", f.lunch)}) {
+		t.Errorf("LeftoverSources(unknown, c, c) = %v, %v; unknown ids are absent, duplicates harmless", got, err)
+	}
+	if got, err := lookup(ctx, nil); err != nil || len(got) != 0 {
+		t.Errorf("LeftoverSources(nil) = %v, %v; want an empty map without touching the table", got, err)
+	}
+}

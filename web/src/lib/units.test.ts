@@ -147,3 +147,23 @@ describe('formatLineQuantity (B9: "2 tbsp" must not become "0.4 oz")', () => {
     expect(formatLineQuantity(NaN, 'g', 'imperial')).toBe('')
   })
 })
+
+// R10: "2 piece" -> "2 pieces". Only the piece Base Unit has a plural; g, ml, oz, fl oz never do.
+describe('baseUnitLabel with a count', () => {
+  it.each([
+    [1, 'piece'],
+    [2, 'pieces'],
+    [0, 'pieces'],
+    [0.5, 'pieces'],
+    [12, 'pieces'],
+  ])('piece x %s reads %s', (count, label) => {
+    expect(baseUnitLabel('piece', 'metric', count)).toBe(label)
+    expect(baseUnitLabel('piece', 'imperial', count)).toBe(label)
+  })
+
+  it('leaves g, ml, oz and fl oz alone, and the label without a count as it was', () => {
+    expect(baseUnitLabel('g', 'metric', 2)).toBe('g')
+    expect(baseUnitLabel('ml', 'imperial', 2)).toBe('fl oz')
+    expect(baseUnitLabel('piece', 'metric')).toBe('piece')
+  })
+})

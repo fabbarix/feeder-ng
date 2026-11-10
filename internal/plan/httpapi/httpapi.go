@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/cook"
+	cookservice "github.com/fabbarix/feeder-ng/internal/cook/service"
+	cookstore "github.com/fabbarix/feeder-ng/internal/cook/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
@@ -26,10 +29,17 @@ func init() { app.Register(app.Module{Name: "planning", Mount: mount}) }
 func mount(r *app.Router, d app.Deps) {
 	src := runner.NewDBSources(d.DB, d.Clock, d.Logger)
 	st := store.New(d.DB, d.Clock)
+	// N4: resolving a meal cancels its Cook timers (the cook service needs only the store, the clock and the bus here).
+	timers := cookservice.New(cookservice.Config{Store: cookstore.New(d.DB), Clock: d.Clock, Bus: d.Events})
 	run := runner.New(runner.Deps{
 		DB: d.DB, Clock: d.Clock, Store: st, Source: src,
 		Stock:  runner.NewStockService(d.DB, d.Clock, d.Events),
 		Events: d.Events, Logger: d.Logger,
+		OnResolved: func(ctx context.Context, key plan.Key) {
+			if _, err := timers.CancelScope(ctx, cook.MealScope(key.Date, key.MealSlotID)); err != nil && d.Logger != nil {
+				d.Logger.Warn("cancelling the timers of a resolved meal", "date", key.Date, "slot", key.MealSlotID, "err", err)
+			}
+		},
 	})
 	if d.Context != nil {
 		d.Go(func() { run.Subscribe(d.Context, d.Events) })

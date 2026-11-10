@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -712,5 +713,110 @@ func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
 	f.clk.Set(time.Date(2026, 11, 9, 23, 30, 0, 0, time.UTC)) // 00:30 on the 10th in Rome
 	if v, _ = f.svc.MealView(ctx, "2026-11-10", 3); v.Today != "2026-11-10" {
 		t.Errorf("Today = %q after local midnight, want 2026-11-10 (household zone, not UTC)", v.Today)
+	}
+}
+
+// N4: marking a Planned Meal Cooked or Not cooked cancels that meal's timers, whatever their state, and only that meal's.
+func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{
+		{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"},
+		{Date: "2026-11-10", MealSlotID: 3, RecipeID: 12, State: "planned"},
+	}
+	meal := cook.MealScope("2026-11-09", 3)
+	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Simmer", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	paused, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Rest", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Pause(ctx, paused.ID); err != nil {
+		t.Fatal(err)
+	}
+	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3), Label: "Other", DurationSeconds: 600})
+	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
+	ch, cancel := f.bus.Subscribe(service.TopicTimers)
+	defer cancel()
+
+	n, err := f.svc.CancelScope(ctx, meal)
+	if err != nil || n != 2 {
+		t.Fatalf("CancelScope = %d, %v; want 2, nil", n, err)
+	}
+	_, left, _ := f.svc.Timers(ctx, "")
+	if len(left) != 2 {
+		t.Fatalf("%d timers left, want the other meal's and the free one: %+v", len(left), left)
+	}
+	for _, tm := range left {
+		if tm.ID == running.ID || tm.ID == paused.ID {
+			t.Errorf("timer %d of the cancelled scope survived", tm.ID)
+		}
+		if tm.ID != other.ID && tm.ID != free.ID {
+			t.Errorf("unexpected timer %d", tm.ID)
+		}
+	}
+	cancelled := 0
+	for _, e := range drain(ch) {
+		if e.Kind == "cancelled" {
+			cancelled++
+		}
+	}
+	if cancelled != 2 {
+		t.Errorf("%d cancelled events, want 2", cancelled)
+	}
+	if n, err := f.svc.CancelScope(ctx, meal); err != nil || n != 0 {
+		t.Errorf("second CancelScope = %d, %v; want 0, nil", n, err)
+	}
+}
+
+func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
+	for scope, want := range map[cook.Scope]string{
+		cook.MealScope("2026-11-09", 3): "Chicken stew",
+		cook.RecipeScope(12):            "Chicken stew",
+		cook.MealScope("2026-11-20", 1): "",
+		cook.RecipeScope(99):            "",
+		"":                              "",
+	} {
+		if got := f.svc.ScopeRecipeName(ctx, scope); got != want {
+			t.Errorf("ScopeRecipeName(%q) = %q, want %q", scope, got, want)
+		}
+	}
+}
+
+// N4 review fix: the Recipe name of each timer's scope is resolved in the service (one lookup per distinct scope), so
+// the HTTP handler stays thin. Contract: `TimersWithRecipeNames(ctx, scope) (time.Time, []service.NamedTimer, error)`,
+// `NamedTimer{cook.Timer; RecipeName string}` (embedded), same filter and order as Timers. It is called by reflection
+// so the package compiles until the Developer adds it.
+func TestTimersWithRecipeNamesResolvesTheNameOfEachScope(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3), Label: "Rest", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.RecipeScope(12), Label: "Simmer", DurationSeconds: 600})
+	gone, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.RecipeScope(99), Label: "Orphan", DurationSeconds: 600})
+	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
+
+	m := reflect.ValueOf(f.svc).MethodByName("TimersWithRecipeNames")
+	if !m.IsValid() {
+		t.Fatal("service.Service has no TimersWithRecipeNames(ctx, scope) method")
+	}
+	out := m.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(cook.Scope(""))})
+	if len(out) != 3 || !out[2].IsNil() {
+		t.Fatalf("TimersWithRecipeNames returned %v, want (now, timers, nil)", out)
+	}
+	list := out[1]
+	names := map[int64]string{}
+	for i := 0; i < list.Len(); i++ {
+		el := list.Index(i)
+		names[el.FieldByName("ID").Int()] = el.FieldByName("RecipeName").String()
+	}
+	want := map[int64]string{meal.ID: "Chicken stew", rec.ID: "Chicken stew", gone.ID: "", free.ID: ""}
+	if !reflect.DeepEqual(names, want) {
+		t.Errorf("Recipe names by timer = %v, want %v (unknown scope and free timer: empty)", names, want)
 	}
 }

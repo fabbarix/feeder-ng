@@ -99,3 +99,20 @@ describe('timerPlace (B14)', () => {
     expect(timerPlace(null, 'recipe:7')).toBe('')
   })
 })
+
+describe('timerPlace with the Recipe name (R10)', () => {
+  it('names the Recipe instead of "Tue Planned Meal" when it is known', () => {
+    expect(timerPlace('meal:2026-11-10/3', 'recipe:7', 'Roast chicken')).toBe('Roast chicken')
+    expect(timerPlace('recipe:9', 'recipe:7', 'Lentil soup')).toBe('Lentil soup')
+  })
+
+  it('falls back to the old wording when the name is unknown or empty', () => {
+    expect(timerPlace('meal:2026-11-10/3', 'recipe:7', '')).toBe('Tue Planned Meal')
+    expect(timerPlace('meal:2026-11-10/3', 'recipe:7', undefined)).toBe('Tue Planned Meal')
+  })
+
+  it('says nothing for this scope or a free timer, even with a name', () => {
+    expect(timerPlace('recipe:7', 'recipe:7', 'Roast chicken')).toBe('')
+    expect(timerPlace(null, 'recipe:7', 'Roast chicken')).toBe('')
+  })
+})

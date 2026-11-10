@@ -77,6 +77,15 @@ describe('CookTimerStrip', () => {
     expect(within(other).getByText('Tue Planned Meal')).toBeInTheDocument()
   })
 
+  it('R10: another Cook\'s timer shows its Recipe name when the server sent it', () => {
+    const named = item(2, 'running', 90, 'Step 1: Boil', 'meal:2026-11-10/3')
+    named.timer.recipeName = 'Roast chicken'
+    strip([item(1, 'running', 60, 'Step 2: Simmer', HERE), named])
+    const other = screen.getByRole('region', { name: 'Other timers' })
+    expect(within(other).getByText('Roast chicken')).toBeInTheDocument()
+    expect(within(other).queryByText('Tue Planned Meal')).not.toBeInTheDocument()
+  })
+
   it('B14: with no timer for this scope the others still show', () => {
     strip([item(2, 'running', 90, 'Step 1: Boil', 'meal:2026-11-10/3')])
     expect(screen.queryByRole('region', { name: 'Timers' })).not.toBeInTheDocument()

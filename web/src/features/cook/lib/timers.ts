@@ -86,8 +86,9 @@ export function timerActions(state: CookTimer['state']): TimerAction[] {
  * Where a timer from another scope belongs, for a hint next to its label: "" for a free timer or this scope,
  * "Tue Planned Meal" for meal:2026-11-10/3, "another Recipe" for recipe:7.
  */
-export function timerPlace(timerScope: string | null, currentScope: string): string {
+export function timerPlace(timerScope: string | null, currentScope: string, recipeName?: string): string {
   if (!timerScope || timerScope === currentScope) return ''
+  if (recipeName) return recipeName
   const meal = /^meal:(\d{4}-\d{2}-\d{2})\//.exec(timerScope)
   if (meal) return `${weekdayName(meal[1]!, 'short')} Planned Meal`
   return 'another Recipe'

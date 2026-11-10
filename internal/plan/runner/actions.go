@@ -248,6 +248,13 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 	return r.meal(ctx, key)
 }
 
+// resolved tells Deps.OnResolved (if any) that the meal at key was resolved; it runs after the commit.
+func (r *Runner) resolved(ctx context.Context, key plan.Key) {
+	if r.d.OnResolved != nil {
+		r.d.OnResolved(ctx, key)
+	}
+}
+
 // Confirm Pins the Planned Meal as it is and replans the unpinned slots after it. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) Confirm(ctx context.Context, key plan.Key) (plan.Meal, error) {
 	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
@@ -561,6 +568,7 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	if publish != nil {
 		publish()
 	}
+	r.resolved(ctx, key)
 	return CookedResult{Meal: cooked, Leftover: leftover, Warnings: warnings, PlannedFor: plannedFor}, nil
 }
 
@@ -616,5 +624,6 @@ func (r *Runner) NotCooked(ctx context.Context, key plan.Key) (plan.Meal, error)
 	if err != nil {
 		return plan.Meal{}, err
 	}
+	r.resolved(ctx, key)
 	return r.meal(ctx, key)
 }

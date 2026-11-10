@@ -15,6 +15,11 @@ func spaHandler(spa fs.FS) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if r.URL.Path == "/robots.txt" {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = w.Write([]byte("User-agent: *\nDisallow: /\n"))
+			return
+		}
 		if spa == nil {
 			http.Error(w, "frontend not built", http.StatusServiceUnavailable)
 			return

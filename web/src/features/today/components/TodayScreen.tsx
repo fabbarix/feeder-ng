@@ -40,7 +40,7 @@ export function TodayScreen(): ReactElement {
   const hero = data.nextSlot
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
-      <TonightHero slot={hero} now={data.now} onCook={cookMeal} onYesCooked={yesCooked} onAdjust={flow.open} busy={flow.quickBusy !== null} />
+      <TonightHero slot={hero} now={data.now} day={data.nextDay} action={data.nextAction} onCook={cookMeal} onYesCooked={yesCooked} onAdjust={flow.open} busy={flow.quickBusy !== null} />
     ) : null,
     spoiled: (
       <SpoiledTile

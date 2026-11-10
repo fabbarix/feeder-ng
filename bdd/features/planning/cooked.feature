@@ -182,3 +182,42 @@ Feature: Cooked, Not cooked and Leftovers
   Scenario: Cooked with no Leftover reports nothing planned
     When I mark the slot on 2026-11-09 as Cooked with 0 Leftover portions
     Then the plan JSON "plannedFor" has 0 items
+
+  # N1 (QA round 2): the meal served from a stored Leftover says which day it comes from.
+  Scenario: After Cooked with a Leftover, the served meal reports the source date of the Leftover over the API
+    Given planning Stock holds 1000 g of "chicken thighs"
+    And planning Stock holds 1000 g of "rice"
+    When I mark the slot on 2026-11-09 as Cooked
+    And I view the plan from 2026-11-10 to 2026-11-10
+    Then the plan JSON "slots.0.meal.servedFromLeftover.date" is "2026-11-09"
+    When I view the plan
+    Then the plan slot on 2026-11-10 is served from the Leftover of 2026-11-09
+
+  # N4 (QA round 2): Marking a meal Cooked or Not cooked cancels the Cook timers of that Planned Meal, however they stand.
+  Scenario: Marking a meal as Cooked cancels its Cook timers, paused ones too, and leaves other meals' and free timers alone
+    Given planning Stock holds 1000 g of "chicken thighs"
+    And planning Stock holds 1000 g of "rice"
+    And I start the timer "Rest the chicken" for 600 seconds on the meal of 2026-11-09
+    And I start the timer "Simmer the rice" for 900 seconds on the meal of 2026-11-09
+    And I pause the Cook timer "Simmer the rice"
+    And I start the timer "Tuesday marinade" for 600 seconds on the meal of 2026-11-10
+    And I start the free timer "Eggs" for 300 seconds
+    When I mark the slot on 2026-11-09 as Cooked
+    Then the response status is 200
+    And the Cook timers are exactly "Eggs, Tuesday marinade"
+
+  Scenario: Marking a meal as Not cooked cancels its Cook timers, paused ones too, and leaves other meals' and free timers alone
+    Given I start the timer "Rest the chicken" for 600 seconds on the meal of 2026-11-09
+    And I start the timer "Simmer the rice" for 900 seconds on the meal of 2026-11-09
+    And I pause the Cook timer "Simmer the rice"
+    And I start the timer "Tuesday marinade" for 600 seconds on the meal of 2026-11-10
+    And I start the free timer "Eggs" for 300 seconds
+    When I mark the slot on 2026-11-09 as Not cooked
+    Then the response status is 200
+    And the Cook timers are exactly "Eggs, Tuesday marinade"
+
+  Scenario: A refused Mark as Cooked keeps the Cook timers
+    Given I start the timer "Rest the chicken" for 600 seconds on the meal of 2026-11-09
+    When I mark the slot on 2026-11-09 as Cooked with 5 Leftover portions
+    Then the response status is 422
+    And the Cook timers are exactly "Rest the chicken"

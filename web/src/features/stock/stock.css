@@ -70,7 +70,7 @@
 .spoiled-tile__detail {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0;
+  column-gap: var(--space-2);
   font-size: var(--text-meta-size);
   font-weight: var(--text-meta-weight);
   line-height: var(--text-meta-line);
@@ -81,8 +81,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.spoiled-tile__when::before {
-  content: '· ';
+.spoiled-tile__when {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
 }
 
 .spoiled-tile__actions {

@@ -39,6 +39,8 @@ export interface CookTimer {
   id: number
   scope: string | null
   step: number | null
+  /** Name of the Recipe the timer's scope cooks ("" or absent for a free timer). */
+  recipeName?: string
   label: string
   durationSeconds: number
   state: TimerState

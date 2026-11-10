@@ -183,7 +183,10 @@ type env struct {
 var simpleRecipes = []string{"pasta", "soup", "curry", "pizza", "stew"}
 
 // newEnv starts on Monday 2026-11-09 12:00 UTC with a 3-day Planning Horizon (Mon 9, Tue 10, Wed 11).
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+// newEnvWith is newEnv with a last chance to adjust the Runner's Deps.
+func newEnvWith(t *testing.T, tweak func(*runner.Deps)) *env {
 	t.Helper()
 	d := plantest.NewDB(t)
 	clk := newClock(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC))
@@ -208,7 +211,11 @@ func newEnv(t *testing.T) *env {
 		{IngredientID: 13, Quantity: 250},                // rice
 	}})
 	e.src = src
-	e.r = runner.New(runner.Deps{DB: d, Clock: clk, Store: e.st, Source: src, Stock: e.stock, Events: e.bus})
+	deps := runner.Deps{DB: d, Clock: clk, Store: e.st, Source: src, Stock: e.stock, Events: e.bus}
+	if tweak != nil {
+		tweak(&deps)
+	}
+	e.r = runner.New(deps)
 	return e
 }
 

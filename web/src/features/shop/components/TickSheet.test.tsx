@@ -9,6 +9,18 @@ function setup(defaultQuantity = 1400) {
   return onSubmit
 }
 
+describe('TickSheet unit label (R10)', () => {
+  it('pluralises the piece unit with the amount typed', async () => {
+    render(<TickSheet open onClose={() => {}} name="Onion" baseUnit="piece" defaultQuantity={2} onSubmit={() => {}} />)
+    expect(screen.getByText('pieces')).toBeInTheDocument()
+    const field = screen.getByRole('spinbutton', { name: 'How much?' })
+    await userEvent.clear(field)
+    await userEvent.type(field, '1')
+    await userEvent.tab() // NumberField commits on blur
+    expect(screen.getByText('piece')).toBeInTheDocument()
+  })
+})
+
 describe('TickSheet', () => {
   it('asks how much with a NumberField (unit shown), prefilled with the Line quantity', () => {
     setup()
