@@ -91,7 +91,15 @@ func Migrate(ctx context.Context, d *sql.DB, fsys fs.FS) error {
 	return nil
 }
 
+// foreignKeysOffDirective, as the first line of a migration, runs it with foreign keys OFF (a table
+// rebuild must not cascade into its children). PRAGMA foreign_keys is a no-op inside a transaction, so
+// that migration gets one dedicated connection: pragma first, then the transaction.
+const foreignKeysOffDirective = "-- feeder:foreign-keys=off"
+
 func applyOne(ctx context.Context, d *sql.DB, name, body string) error {
+	if first, _, _ := strings.Cut(body, "\n"); strings.TrimSpace(first) == foreignKeysOffDirective {
+		return applyForeignKeysOff(ctx, d, name, body)
+	}
 	tx, err := d.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -105,4 +113,68 @@ func applyOne(ctx context.Context, d *sql.DB, name, body string) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// applyForeignKeysOff runs one migration on a dedicated connection with foreign_keys OFF. Before the commit it
+// checks foreign_key_check and rolls back (naming the offending table) on any violation. foreign_keys is set
+// back ON by a defer, so the connection returns to the pool with the pool-wide setting, also on failure.
+func applyForeignKeysOff(ctx context.Context, d *sql.DB, name, body string) (err error) {
+	conn, err := d.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close() // returns the connection to the pool; runs after the foreign_keys reset below
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+		return err
+	}
+	defer func() {
+		if _, e := conn.ExecContext(context.Background(), `PRAGMA foreign_keys=ON`); e != nil && err == nil {
+			err = e
+		}
+	}()
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+	if _, err := tx.ExecContext(ctx, body); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(name) VALUES (?)`, name); err != nil {
+		return err
+	}
+	if err := checkForeignKeys(ctx, tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+// checkForeignKeys fails with the first violation foreign_key_check reports (table and row id).
+func checkForeignKeys(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, `PRAGMA foreign_key_check`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var table, parent string
+		var rowid sql.NullInt64
+		var fkid int
+		if err := rows.Scan(&table, &rowid, &parent, &fkid); err != nil {
+			return err
+		}
+		return fmt.Errorf("foreign key violation in %s (row %d, parent %s)", table, rowid.Int64, parent)
+	}
+	return rows.Err()
 }

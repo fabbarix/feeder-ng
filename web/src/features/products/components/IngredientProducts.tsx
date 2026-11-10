@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { UnitSystem } from '../../../lib/units'
 import { BottomSheet, Button, Tile } from '../../../ui'
 import { useIngredientProducts } from '../hooks/useIngredientProducts'
 import { strings } from '../strings'
@@ -11,6 +12,8 @@ export interface IngredientProductsProps {
   ingredientId: number
   ingredientName: string
   baseUnit: BaseUnit
+  /** The User's display system, passed by the Ingredient screen (useDisplayUnitSystem). */
+  system?: UnitSystem
 }
 
 /**
@@ -19,13 +22,13 @@ export interface IngredientProductsProps {
  * EmptyState when there are none, and a "New Product" button opening a BottomSheet
  * with ProductForm. A successful create closes the sheet.
  */
-export function IngredientProducts({ ingredientId, ingredientName, baseUnit }: IngredientProductsProps) {
+export function IngredientProducts({ ingredientId, ingredientName, baseUnit, system = 'metric' }: IngredientProductsProps) {
   const { products, create } = useIngredientProducts(ingredientId)
   const [open, setOpen] = useState(false)
   return (
     <Tile as="section" size="full" aria-label={strings.ingredientProductsTitle}>
       <h2 className="pg__tile-title">{strings.ingredientProductsTitle}</h2>
-      {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} />}
+      {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} />}
       <Button variant="tonal" onClick={() => setOpen(true)}>
         {strings.newProduct}
       </Button>

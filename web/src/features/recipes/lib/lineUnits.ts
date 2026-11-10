@@ -1,4 +1,4 @@
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { formatLineQuantity, formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, IngredientRef } from '../types'
 
 /**
@@ -36,31 +36,16 @@ export function isKnownUnit(unit: string, ingredient: IngredientRef): boolean {
   return u !== '' && selectableUnits(ingredient).includes(u)
 }
 
-/**
- * How many Base Units one `unit` of the Ingredient is, or null when it cannot be converted. An
- * Ingredient's own Unit Conversion wins over a global unit of the same name.
- */
-export function baseFactor(unit: string, ingredient: IngredientRef): number | null {
-  const u = norm(unit)
-  const own = ingredient.conversions.find((c) => norm(c.unit) === u)
-  if (own) return own.toBase
-  return GLOBAL_UNITS[ingredient.baseUnit][u] ?? null
-}
-
 const trimNumber = (n: number) => String(Number(n.toFixed(2)))
 
 /**
- * A line's quantity in the User's display system. Metric shows the unit as typed (the Base Unit is
- * formatted by formatQuantity). Imperial converts to the Base Unit and formats it, so "250 g" reads
- * "8.8 oz". Without the Ingredient (not loaded yet) or without a conversion, the unit is shown as typed.
+ * A line's quantity in the User's display system. Without the Ingredient (not loaded yet) the use is shown
+ * as typed. A use in the Ingredient's Base Unit is formatted as that Base Unit ("4 piece" reads "4 pieces").
+ * Every other unit goes through lib/units formatLineQuantity: only metric mass and volume convert to imperial
+ * ("250 g" reads "8.8 oz"); spoons, cups and Unit Conversions stay as written ("2 tbsp").
  */
 export function quantityText(quantity: number, unit: string, ingredient: IngredientRef | undefined, system: UnitSystem): string {
-  const asTyped = `${trimNumber(quantity)} ${unit}`
-  if (!ingredient) return asTyped
-  const base = ingredient.baseUnit
-  if (system === 'metric') {
-    return norm(unit) === base ? formatQuantity(quantity, base, 'metric') : asTyped
-  }
-  const factor = baseFactor(unit, ingredient)
-  return factor === null ? asTyped : formatQuantity(quantity * factor, base, 'imperial')
+  if (!ingredient) return `${trimNumber(quantity)} ${unit}`
+  if (unit.trim().toLowerCase() === ingredient.baseUnit) return formatQuantity(quantity, ingredient.baseUnit, system)
+  return formatLineQuantity(quantity, unit, system)
 }

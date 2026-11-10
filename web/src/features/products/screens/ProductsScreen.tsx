@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ProductList } from '../components/ProductList'
+import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { useProducts } from '../hooks/useProducts'
 import { useProductsLiveUpdates } from '../hooks/useProductsLiveUpdates'
 import { strings } from '../strings'
@@ -10,6 +11,7 @@ export function ProductsScreen() {
   const [q, setQ] = useState('')
   const { products, isLoading, error } = useProducts(q)
   useProductsLiveUpdates()
+  const system = useDisplayUnitSystem()
   return (
     <div className="pg">
       <h1 className="pg__title">{strings.productsTitle}</h1>
@@ -25,7 +27,7 @@ export function ProductsScreen() {
       ) : isLoading ? (
         <p role="status">{strings.loading}</p>
       ) : (
-        <ProductList products={products} />
+        <ProductList products={products} system={system} />
       )}
     </div>
   )

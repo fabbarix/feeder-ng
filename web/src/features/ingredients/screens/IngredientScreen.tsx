@@ -130,7 +130,7 @@ export function IngredientScreen() {
           />
         </Tile>
 
-        <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} />
+        <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
 
         <Tile as="section" size="md" aria-label={strings.mergeTitle}>
           <Button variant="tonal" onClick={() => setMergeOpen(true)}>

@@ -17,6 +17,25 @@ describe('formatPackSize', () => {
   })
 })
 
+describe('formatPackSize imperial (B9: pack sizes use the shared formatter)', () => {
+  it.each([
+    [700, 'g', '1 lb 9 oz'],
+    [250, 'g', '8.8 oz'],
+    [500, 'ml', '2 cups'],
+    [1000, 'ml', '4.25 cups'],
+    [6, 'piece', '6 pieces'],
+    [1, 'piece', '1 piece'],
+  ] as const)('%s %s -> %s', (size, base, want) => {
+    expect(formatPackSize(size, base, 'imperial')).toBe(want)
+  })
+  it('metric stays as stored', () => {
+    expect(formatPackSize(700, 'g', 'metric')).toBe('700 g')
+  })
+  it('default Product names stay metric whatever the display system', () => {
+    expect(defaultProductName('tomato passata', 700, 'g')).toBe('Tomato passata 700 g')
+  })
+})
+
 describe('defaultProductName', () => {
   it('is the Ingredient and the pack size', () => {
     expect(defaultProductName('tomato passata', 700, 'g')).toBe('Tomato passata 700 g')
