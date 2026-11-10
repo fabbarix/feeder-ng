@@ -1,4 +1,4 @@
-// Everything the Scan screen needs, composed from the smaller hooks: the Shop's offline bundle (cached on the device),
+// Everything the Scan screen needs, composed from the smaller hooks: the Shop's offline data (cached on the device),
 // the camera, the detector, the scanner loop, the offline queue and sync, the flow, the live Shopping List and the
 // feedback. The screen only renders this view model.
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
@@ -19,7 +19,7 @@ import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
 import type { IngredientChoice } from '../lib/unknownForm'
 import type { Op, ScanResult } from '../types'
-import { useBundle } from './useBundle'
+import { useOfflineData } from './useOfflineData'
 import { useCamera, type CameraStatus } from './useCamera'
 import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
@@ -34,7 +34,7 @@ export interface ScanControllerOptions {
 }
 
 export interface ScanController {
-  /** loading the bundle; error when it is neither online nor cached */
+  /** loading the offline data; error when it is neither online nor cached */
   status: 'loading' | 'ready' | 'error'
   error: string | null
   camera: {
@@ -67,7 +67,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const { mode } = options
   const shopId = options.shop?.id ?? null
   const queryClient = useQueryClient()
-  const bundle = useBundle(shopId)
+  const offline = useOfflineData(shopId)
   const currency = useCurrency()
   const system = useDisplayUnitSystem()
   const ingredientChoices = useIngredientChoices()
@@ -139,7 +139,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const flow = useScanFlow({
     mode,
     shop: options.shop,
-    bundle: bundle.bundle,
+    offline: offline.offline,
     currency,
     system,
     rangeTo: mode === 'shop' ? shopList.data?.to : undefined,
@@ -162,13 +162,13 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const scanner = useScanner({
     detector,
     source,
-    enabled: !flow.paused && camera.status === 'ready' && bundle.status === 'ready',
+    enabled: !flow.paused && camera.status === 'ready' && offline.status === 'ready',
     onScan: (scanned) => void onScan.current(scanned),
   })
 
   return {
-    status: bundle.status,
-    error: bundle.error ?? scanner.error,
+    status: offline.status,
+    error: offline.error ?? scanner.error,
     camera: {
       status: camera.status,
       videoRef: camera.videoRef,

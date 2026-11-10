@@ -103,8 +103,8 @@ type PriceInput struct {
 	PricePerKgCents *int
 }
 
-// BundleProduct is a Product as the phone caches it.
-type BundleProduct struct {
+// OfflineProduct is a Product as the phone caches it.
+type OfflineProduct struct {
 	ID             int64   `json:"id"`
 	Name           string  `json:"name"`
 	IngredientID   int64   `json:"ingredientId"`
@@ -114,12 +114,12 @@ type BundleProduct struct {
 	LastPriceCents *int    `json:"lastPriceCents"`
 }
 
-// Bundle is what the phone caches to resolve and describe scans offline.
-type Bundle struct {
+// OfflineData is what the phone caches to resolve and describe scans offline.
+type OfflineData struct {
 	ShopID   *int64          `json:"shopId"`
 	ShopName string          `json:"shopName"`
 	Catalog  barcode.Catalog `json:"catalog"`
-	Products []BundleProduct `json:"products"`
+	Products []OfflineProduct `json:"products"`
 }
 
 // Catalogue is the Products/Shops port (T9).
@@ -137,7 +137,7 @@ type Catalogue interface {
 	PriceOn(ctx context.Context, productID, shopID int64, date stock.Date) (*PriceInfo, error)
 	RecordPrice(ctx context.Context, productID int64, in PriceInput) (PriceInfo, error)
 	DeletePrice(ctx context.Context, id int64) error
-	Bundle(ctx context.Context, shopID *int64) (Bundle, error)
+	OfflineData(ctx context.Context, shopID *int64) (OfflineData, error)
 }
 
 // Ingredients finds or creates an Ingredient by name (name key), returning its id.
@@ -614,10 +614,10 @@ func (s *Service) SetPrice(ctx context.Context, clientUUID string, cents int) (s
 	return res, nil
 }
 
-// Bundle returns the offline bundle for a Shop (nil = home).
-func (s *Service) Bundle(ctx context.Context, shopID *int64) (Bundle, error) {
-	b, err := s.d.Catalogue.Bundle(ctx, shopID)
-	return Bundle(b), err
+// OfflineData returns the offline data for a Shop (nil = home).
+func (s *Service) OfflineData(ctx context.Context, shopID *int64) (OfflineData, error) {
+	b, err := s.d.Catalogue.OfflineData(ctx, shopID)
+	return OfflineData(b), err
 }
 
 func (s *Service) household(ctx context.Context) (stock.Date, int, error) {

@@ -178,33 +178,33 @@ func priceInfo(p productstore.Price) *service.PriceInfo {
 	return &service.PriceInfo{ID: p.ID, Date: stock.Date(p.Date), PriceCents: p.PriceCents, PricePerKgCents: p.PricePerKgCents}
 }
 
-// Bundle is the offline bundle: the barcode Catalog of the Shop (or home), the Products and the latest Price per Product there.
-func (c catalogue) Bundle(ctx context.Context, shopID *int64) (service.Bundle, error) {
+// OfflineData is the offline data: the barcode Catalog of the Shop (or home), the Products and the latest Price per Product there.
+func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.OfflineData, error) {
 	catalog, err := c.st.Catalog(ctx, shopID)
 	if errors.Is(err, productstore.ErrNotFound) {
-		return service.Bundle{}, service.ErrNotFound
+		return service.OfflineData{}, service.ErrNotFound
 	}
 	if err != nil {
-		return service.Bundle{}, err
+		return service.OfflineData{}, err
 	}
-	out := service.Bundle{ShopID: shopID, Catalog: catalog, Products: []service.BundleProduct{}}
+	out := service.OfflineData{ShopID: shopID, Catalog: catalog, Products: []service.OfflineProduct{}}
 	if shopID != nil {
 		shop, err := c.st.Shop(ctx, *shopID)
 		if err != nil {
-			return service.Bundle{}, err
+			return service.OfflineData{}, err
 		}
 		out.ShopName = shop.Name
 	}
 	products, err := c.st.Products(ctx, productstore.Filter{})
 	if err != nil {
-		return service.Bundle{}, err
+		return service.OfflineData{}, err
 	}
 	for _, p := range products {
-		bp := service.BundleProduct{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
+		bp := service.OfflineProduct{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
 			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize}
 		if shopID != nil {
 			if latest, err := c.LatestPrice(ctx, p.ID, *shopID); err != nil {
-				return service.Bundle{}, err
+				return service.OfflineData{}, err
 			} else if latest != nil {
 				bp.LastPriceCents = latest.PriceCents
 			}

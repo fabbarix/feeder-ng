@@ -25,10 +25,10 @@ describe('createMemorySnapshotStore', () => {
 })
 
 describe('snapshotKeys', () => {
-  it('keys lists by Shop and range and bundles by Shop', () => {
+  it('keys lists by Shop and range and offline data by Shop', () => {
     expect(snapshotKeys.list(2, '2026-11-15')).toBe('list:2:2026-11-15')
     expect(snapshotKeys.list(null, '2026-11-15')).toBe('list:home:2026-11-15')
-    expect(snapshotKeys.bundle(2)).toBe('bundle:2')
-    expect(snapshotKeys.bundle(null)).toBe('bundle:home')
+    expect(snapshotKeys.offline(2)).toBe('offline:2')
+    expect(snapshotKeys.offline(null)).toBe('offline:home')
   })
 })

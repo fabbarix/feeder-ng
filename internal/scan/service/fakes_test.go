@@ -186,8 +186,8 @@ func (f *fakeCatalogue) DeletePrice(_ context.Context, id int64) error {
 	}
 	return nil
 }
-func (f *fakeCatalogue) Bundle(_ context.Context, shop *int64) (service.Bundle, error) {
-	return service.Bundle{ShopID: shop, ShopName: "Coop"}, nil
+func (f *fakeCatalogue) OfflineData(_ context.Context, shop *int64) (service.OfflineData, error) {
+	return service.OfflineData{ShopID: shop, ShopName: "Coop"}, nil
 }
 
 func (f *fakeCatalogue) addProduct(id int64, name string, ing int64, ingName string, size float64) {

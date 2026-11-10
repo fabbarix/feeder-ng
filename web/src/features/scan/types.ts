@@ -63,7 +63,7 @@ export interface ScanResult {
   scan?: ScanApplied
 }
 
-export interface BundleProduct {
+export interface OfflineProduct {
   id: number
   name: string
   ingredientId: number
@@ -74,9 +74,9 @@ export interface BundleProduct {
 }
 
 /** What the phone caches to resolve and describe a scan offline. */
-export interface Bundle {
+export interface OfflineData {
   shopId: number | null
   shopName: string
   catalog: Catalog
-  products: BundleProduct[]
+  products: OfflineProduct[]
 }

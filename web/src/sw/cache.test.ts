@@ -12,7 +12,7 @@ describe('classifyRequest', () => {
 
   it('API calls are never cached, and the event stream is left alone', () => {
     expect(classifyRequest(req('/api/shopping/list?to=2026-11-15'), origin)).toBe('api')
-    expect(classifyRequest(req('/api/scan/bundle'), origin)).toBe('api')
+    expect(classifyRequest(req('/api/scan/offline'), origin)).toBe('api')
     expect(classifyRequest(req('/api/events'), origin)).toBe('events')
     expect(classifyRequest(req('/api/events?topics=shopping'), origin)).toBe('events')
   })

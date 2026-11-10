@@ -1,8 +1,8 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
-import type { Bundle, Op, ScanResult } from './types'
+import type { OfflineData, Op, ScanResult } from './types'
 
 export interface ScanApi {
-  bundle(shopId?: number | null): Promise<Bundle>
+  offlineData(shopId?: number | null): Promise<OfflineData>
   /** A rejected operation answers 422 `{status:'rejected', error:{code}}`, which lib/http raises as an ApiError with that code. */
   apply(op: Op): Promise<ScanResult>
   sync(ops: Op[]): Promise<ScanResult[]>
@@ -13,7 +13,7 @@ export interface ScanApi {
 /** Typed calls for /api/scan. */
 export function createScanApi(client: HttpClient): ScanApi {
   return {
-    bundle: (shopId) => client.get<Bundle>(`/api/scan/bundle${shopId != null ? `?shop=${shopId}` : ''}`),
+    offlineData: (shopId) => client.get<OfflineData>(`/api/scan/offline${shopId != null ? `?shop=${shopId}` : ''}`),
     apply: (op) => client.post<ScanResult>('/api/scan', op),
     async sync(ops) {
       return (await client.post<{ results: ScanResult[] }>('/api/scan/sync', { ops })).results

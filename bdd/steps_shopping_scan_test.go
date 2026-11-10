@@ -1021,22 +1021,22 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 
 	// --- Offline: the phone keeps a queue and sends it in order ---
 
-	sc.Step(`^the phone caches the bundle for "([^"]*)"$`, func(shop string) error {
+	sc.Step(`^the phone caches the offline data for "([^"]*)"$`, func(shop string) error {
 		sid, err := shopID(shop)
 		if err != nil {
 			return err
 		}
-		w.Last = me().Get(fmt.Sprintf("/api/scan/bundle?shop=%d", sid))
+		w.Last = me().Get(fmt.Sprintf("/api/scan/offline?shop=%d", sid))
 		if w.Last.Status != 200 {
-			return fmt.Errorf("bundle: %d %s", w.Last.Status, w.Last.Body)
+			return fmt.Errorf("offline: %d %s", w.Last.Status, w.Last.Body)
 		}
 		var doc map[string]any
 		_ = json.Unmarshal(w.Last.Body, &doc)
-		w.Vars["ss:bundle"] = doc
+		w.Vars["ss:offline"] = doc
 		return nil
 	})
-	sc.Step(`^the bundle knows the barcode "([^"]*)" as "([^"]*)" with pack size (\d+)$`, func(code, prod string, size int) error {
-		doc, _ := w.Vars["ss:bundle"].(map[string]any)
+	sc.Step(`^the offline data knows the barcode "([^"]*)" as "([^"]*)" with pack size (\d+)$`, func(code, prod string, size int) error {
+		doc, _ := w.Vars["ss:offline"].(map[string]any)
 		cat, _ := doc["catalog"].(map[string]any)
 		global, _ := cat["globalBarcodes"].(map[string]any)
 		pid, ok := global[ssGTIN14(code)]
@@ -1052,15 +1052,15 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 				return nil
 			}
 		}
-		return fmt.Errorf("bundle products lack %v", pid)
+		return fmt.Errorf("offline products lack %v", pid)
 	})
 	queue := func(op map[string]any) {
 		ops, _ := w.Vars["ss:queue"].([]map[string]any)
 		w.Vars["ss:queue"] = append(ops, op)
 	}
 	sc.Step(`^the phone queues the scan of "([^"]*)" at "([^"]*)" as "([^"]*)"(?: on `+ssDate+`)?$`, func(code, shop, uuid, on string) error {
-		// Offline the phone resolves from the cached bundle only: canonical code -> global Product id -> pack size.
-		doc, _ := w.Vars["ss:bundle"].(map[string]any)
+		// Offline the phone resolves from the cached offline only: canonical code -> global Product id -> pack size.
+		doc, _ := w.Vars["ss:offline"].(map[string]any)
 		cat, _ := doc["catalog"].(map[string]any)
 		global, _ := cat["globalBarcodes"].(map[string]any)
 		pid, ok := global[ssGTIN14(code)]

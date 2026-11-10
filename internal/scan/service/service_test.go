@@ -441,10 +441,10 @@ func TestStockTakeSetTotalIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestBundleComesFromTheCatalogue(t *testing.T) {
+func TestOfflineDataComesFromTheCatalogue(t *testing.T) {
 	e := newEnv(t)
-	b, err := e.svc.Bundle(context.Background(), i64(1))
+	b, err := e.svc.OfflineData(context.Background(), i64(1))
 	if err != nil || b.ShopName != "Coop" || b.ShopID == nil || *b.ShopID != 1 {
-		t.Fatalf("Bundle = %+v, %v", b, err)
+		t.Fatalf("OfflineData = %+v, %v", b, err)
 	}
 }

@@ -9,14 +9,14 @@ import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
 import { feedbackText } from '../lib/toast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
-import type { Bundle, BundleProduct, Op, ScanResult, StockTakeAction } from '../types'
+import type { OfflineData, OfflineProduct, Op, ScanResult, StockTakeAction } from '../types'
 
 export interface ScanFlowDeps {
   mode: 'shop' | 'stocktake'
   /** required in shop mode */
   shop: { id: number; name: string } | null
-  /** the cached bundle of the Shop (or home); scans are ignored until it is there */
-  bundle: Bundle | null
+  /** the cached offline data of the Shop (or home); scans are ignored until it is there */
+  offline: OfflineData | null
   currency: string
   system: UnitSystem
   /** the Shopping List range the scans count against */
@@ -35,7 +35,7 @@ export interface ScanFlowDeps {
 export type FlowSheet =
   | { kind: 'unknown'; mode: UnknownMode; target: UnknownTarget; priceText?: string }
   | { kind: 'ask_weight'; plan: Extract<ScanPlan, { kind: 'ask_weight' }> }
-  | { kind: 'stock_take'; product: BundleProduct }
+  | { kind: 'stock_take'; product: OfflineProduct }
   | { kind: 'edit_price' }
 
 export interface FlowFeedback {
@@ -99,7 +99,7 @@ interface Fallback {
 const nowIso = (d: ScanFlowDeps) => (d.now ? d.now() : new Date()).toISOString()
 
 /**
- * Shop mode: planScan(scanned, bundle). known -> build a shop_scan Op (new clientUuid, scannedAt = now, shopId,
+ * Shop mode: planScan(scanned, offline). known -> build a shop_scan Op (new clientUuid, scannedAt = now, shopId,
  * rangeTo, productId, quantity, priceCents when known), call feedback.confirm(), submit, then show the feedback
  * line from the Result (price = result price, else the plan's; "not on the list" when result.onList is false; no
  * such words when queued). A rejected Result shows a warn banner with its message and feedback.reject(). unknown ->
@@ -188,10 +188,10 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
   const onScan = async (scanned: Scanned): Promise<void> => {
     const d = depsRef.current
-    if (!d.bundle) return
+    if (!d.offline) return
     const stockTake = d.mode === 'stocktake'
     setBanner(null)
-    const plan = planScan(scanned, d.bundle)
+    const plan = planScan(scanned, d.offline)
     switch (plan.kind) {
       case 'known':
         if (stockTake) setSheet({ kind: 'stock_take', product: plan.product })

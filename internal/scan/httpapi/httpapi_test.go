@@ -46,7 +46,7 @@ func TestEveryScanRouteRequiresSignIn(t *testing.T) {
 	env := testkit.Start(t)
 	anon := env.Anonymous()
 	for _, rt := range []struct{ method, path string }{
-		{"GET", "/api/scan/bundle"}, {"POST", "/api/scan"}, {"POST", "/api/scan/sync"}, {"POST", "/api/scan/u-1/undo"}, {"PATCH", "/api/scan/u-1"},
+		{"GET", "/api/scan/offline"}, {"POST", "/api/scan"}, {"POST", "/api/scan/sync"}, {"POST", "/api/scan/u-1/undo"}, {"PATCH", "/api/scan/u-1"},
 	} {
 		var body any
 		if rt.method != "GET" {
@@ -211,7 +211,7 @@ func TestEditingThePriceKeepsTheScanAndChangesThePrice(t *testing.T) {
 	}
 }
 
-func TestTheBundleHoldsTheCatalogTheProductsAndTheLastPrice(t *testing.T) {
+func TestTheOfflineDataHoldsTheCatalogTheProductsAndTheLastPrice(t *testing.T) {
 	f := newFixture(t)
 	f.user.Post("/api/scan", f.op("scan-0001"))
 	var b struct {
@@ -229,10 +229,10 @@ func TestTheBundleHoldsTheCatalogTheProductsAndTheLastPrice(t *testing.T) {
 			LastPriceCents *int    `json:"lastPriceCents"`
 		} `json:"products"`
 	}
-	r := f.user.Get("/api/scan/bundle?shop=" + strconv.FormatInt(f.shop, 10))
+	r := f.user.Get("/api/scan/offline?shop=" + strconv.FormatInt(f.shop, 10))
 	r.MustJSON(t, &b)
 	if r.Status != 200 || b.ShopName != "Coop" || b.Catalog.GlobalBarcodes["08000500310427"] != f.product || len(b.Products) != 1 {
-		t.Fatalf("bundle = %d %s", r.Status, r.Body)
+		t.Fatalf("offline = %d %s", r.Status, r.Body)
 	}
 	if p := b.Products[0]; p.ID != f.product || p.Name != "Mutti passata 700 g" || p.IngredientName != "passata" || p.BaseUnit != "g" || p.PackSize != 700 || p.LastPriceCents == nil || *p.LastPriceCents != 159 {
 		t.Fatalf("product = %+v", p)
@@ -240,11 +240,11 @@ func TestTheBundleHoldsTheCatalogTheProductsAndTheLastPrice(t *testing.T) {
 	var home struct {
 		ShopID *int64 `json:"shopId"`
 	}
-	f.user.Get("/api/scan/bundle").MustJSON(t, &home)
+	f.user.Get("/api/scan/offline").MustJSON(t, &home)
 	if home.ShopID != nil {
-		t.Fatalf("home bundle shopId = %v, want null", home.ShopID)
+		t.Fatalf("home offline data shopId = %v, want null", home.ShopID)
 	}
-	if r := f.user.Get("/api/scan/bundle?shop=9999"); r.Status != 404 || r.ErrorCode() != "not_found" {
+	if r := f.user.Get("/api/scan/offline?shop=9999"); r.Status != 404 || r.ErrorCode() != "not_found" {
 		t.Fatalf("unknown shop = %d %s", r.Status, r.Body)
 	}
 }

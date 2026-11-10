@@ -18,7 +18,7 @@ func init() { app.Register(app.Module{Name: "scan", Mount: mount}) }
 // mount registers the routes listed in docs/dev/design/t13-shopping-scan.md (all r.User).
 func mount(r *app.Router, d app.Deps) {
 	a := &api{svc: newService(d)}
-	r.User("GET /api/scan/bundle", a.bundle)
+	r.User("GET /api/scan/offline", a.offline)
 	r.User("POST /api/scan", a.apply)
 	r.User("POST /api/scan/sync", a.sync)
 	r.User("POST /api/scan/{clientUuid}/undo", a.undo)
@@ -27,7 +27,7 @@ func mount(r *app.Router, d app.Deps) {
 
 type api struct{ svc *service.Service }
 
-func (a *api) bundle(w http.ResponseWriter, r *http.Request) {
+func (a *api) offline(w http.ResponseWriter, r *http.Request) {
 	var shopID *int64
 	if raw := r.URL.Query().Get("shop"); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
@@ -37,7 +37,7 @@ func (a *api) bundle(w http.ResponseWriter, r *http.Request) {
 		}
 		shopID = &id
 	}
-	b, err := a.svc.Bundle(r.Context(), shopID)
+	b, err := a.svc.OfflineData(r.Context(), shopID)
 	if err != nil {
 		writeError(w, err)
 		return

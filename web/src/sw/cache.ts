@@ -1,5 +1,5 @@
 // Pure request classification for the service worker (functional spec §10.3). The worker precaches the app shell
-// and static assets only; data (the Shopping List, the offline bundle, the queue) lives in IndexedDB, owned by the
+// and static assets only; data (the Shopping List, the offline data, the queue) lives in IndexedDB, owned by the
 // SPA. No DOM or worker globals here, so it is unit-tested.
 
 export type RequestClass =

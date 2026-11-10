@@ -2,10 +2,10 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { parse } from '../lib/barcode'
 import { emptyForm } from '../lib/unknownForm'
-import type { Bundle, Op, ScanApplied, ScanResult } from '../types'
+import type { OfflineData, Op, ScanApplied, ScanResult } from '../types'
 import { useScanFlow, type ScanFlowDeps } from './useScanFlow'
 
-const bundle: Bundle = {
+const offline: OfflineData = {
   shopId: 1,
   shopName: 'Coop',
   products: [
@@ -44,7 +44,7 @@ function setup(over: Partial<ScanFlowDeps> = {}) {
   const deps: ScanFlowDeps = {
     mode: 'shop',
     shop: { id: 1, name: 'Coop' },
-    bundle,
+    offline,
     currency: 'USD',
     system: 'metric',
     rangeTo: '2026-11-15',
@@ -201,8 +201,8 @@ describe('useScanFlow in a Shop', () => {
     expect(deps.feedback.reject).toHaveBeenCalled()
   })
 
-  it('ignores reads until the bundle has loaded', async () => {
-    const { deps, hook } = setup({ bundle: null })
+  it('ignores reads until the offline data has loaded', async () => {
+    const { deps, hook } = setup({ offline: null })
     await read(hook, '8000500310427')
     expect(deps.submit).not.toHaveBeenCalled()
     expect(hook.result.current.feedback).toBeNull()

@@ -1,6 +1,6 @@
 // The Scan screen (centre button, route /scan). First "Where are you shopping?" (ShopPicker over useShops(), the
 // last Shop used first); then the session for that choice: the camera strip, the live list (Shop mode), the scan
-// line, notices and the sheets. The session view is its own component, so the camera and the bundle start only
+// line, notices and the sheets. The session view is its own component, so the camera and the offline data start only
 // once a Shop or Stock-take is chosen.
 import { useState } from 'react'
 import { useShops } from '../../shops/hooks/useShops'
