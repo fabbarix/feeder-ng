@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
+import './Skeleton.css'
 
 export interface SkeletonProps {
   variant?: 'tile' | 'row' | 'line' | 'circle'
@@ -10,7 +11,20 @@ export interface SkeletonProps {
   label?: string
 }
 
-/** STUB (WP4 designer). Shimmering placeholder blocks, delayed so quick loads never flash. */
-export function Skeleton(_props: SkeletonProps): ReactNode {
-  throw new Error('not implemented')
+/** Shimmering placeholder blocks, delayed so quick loads never flash. The blocks are decorative; one status announces the wait. */
+export function Skeleton({ variant = 'line', count = 1, delayMs = 300, label = 'Loading' }: SkeletonProps) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), delayMs)
+    return () => clearTimeout(timer)
+  }, [delayMs])
+  if (!shown) return null
+  return (
+    <div role="status" aria-busy="true" className="skeleton-group">
+      <span className="visually-hidden">{label}</span>
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i} className="skeleton" data-variant={variant} aria-hidden="true" />
+      ))}
+    </div>
+  )
 }

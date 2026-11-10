@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useMemo } from 'react'
+import { MultiSelect } from './Select'
 import type { SelectFieldProps } from './Select'
-import type { MemberChoice } from './options'
+import { memberOptions, type MemberChoice } from './options'
 
 export interface MemberSelectProps extends SelectFieldProps {
   members: MemberChoice[]
@@ -8,7 +9,8 @@ export interface MemberSelectProps extends SelectFieldProps {
   onChange: (ids: number[]) => void
 }
 
-/** STUB (WP4 designer). Multi-select with avatars. */
-export function MemberSelect(_props: MemberSelectProps): ReactNode {
-  throw new Error('not implemented')
+/** Several Members, each with an Avatar. */
+export function MemberSelect({ members, values, onChange, ...field }: MemberSelectProps) {
+  const options = useMemo(() => memberOptions(members), [members])
+  return <MultiSelect<number> {...field} entityName="Member" options={options} values={values} onChange={onChange} />
 }

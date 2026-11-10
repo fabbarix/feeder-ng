@@ -16,6 +16,8 @@ export interface RecipeThumbProps {
   size?: RecipeThumbSize
   /** When given the thumb is an img with this accessible name; otherwise it is decorative (the name is shown next to it). */
   label?: string
+  /** The generated tile's initial. Default true; a Select option passes false so its text is the Recipe name alone. */
+  initial?: boolean
 }
 
 const TAG_ICON_SIZE: Record<RecipeThumbSize, 16 | 20 | 24 | 28> = { 40: 16, 48: 20, 72: 24, hero: 28 }
@@ -24,7 +26,7 @@ const TAG_ICON_SIZE: Record<RecipeThumbSize, 16 | 20 | 24 | 28> = { 40: 16, 48: 
  * A photo (`object-fit: cover`) or, without a photo or when it fails to load, the generated tile:
  * soft fill, Tag icon at 40 % in accent-text, and the initial. Generated tiles carry data-generated and data-tag-icon.
  */
-export function RecipeThumb({ name, photoUrl, tags, size = 48, label }: RecipeThumbProps) {
+export function RecipeThumb({ name, photoUrl, tags, size = 48, label, initial = true }: RecipeThumbProps) {
   const [failedUrl, setFailedUrl] = useState<string>()
   if (photoUrl && failedUrl !== photoUrl) {
     return (
@@ -40,7 +42,7 @@ export function RecipeThumb({ name, photoUrl, tags, size = 48, label }: RecipeTh
       <span className="recipe-thumb__icon" aria-hidden="true">
         <Icon name={icon} size={TAG_ICON_SIZE[size]} />
       </span>
-      <span className="recipe-thumb__initial">{recipeInitial(name)}</span>
+      {initial ? <span className="recipe-thumb__initial">{recipeInitial(name)}</span> : null}
     </span>
   )
 }

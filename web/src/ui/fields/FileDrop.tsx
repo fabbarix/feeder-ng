@@ -1,21 +1,78 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
+import { Icon } from '../Icon'
+import { FieldFrame, useFieldIds } from './FieldFrame'
+import type { FieldProps } from './Field'
+import { acceptsFile } from './accept'
+import { fieldStrings } from './strings'
+import './Field.css'
+import './FileDrop.css'
 
-export interface FileDropProps {
-  label: string
-  /** Called with the accepted files (only the first when not `multiple`). */
-  onFiles: (files: File[]) => void
-  /** Files dropped or chosen that failed `accept`. */
-  onReject?: (files: File[]) => void
+export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
+  /** An accept string: ".json,image/*". */
   accept?: string
   multiple?: boolean
-  /** Name of the file already chosen, shown under the zone. */
+  /** The chosen file's name, shown under the zone. */
   fileName?: string
-  helper?: string
-  error?: string
-  disabled?: boolean
+  /** Accepted files (only the first unless `multiple`). */
+  onFiles: (files: File[]) => void
+  /** Files that do not match `accept`. */
+  onReject?: (files: File[]) => void
 }
 
-/** STUB (WP4 designer). Dashed zone; a hidden native file input inside; drag and drop. */
-export function FileDrop(_props: FileDropProps): ReactNode {
-  throw new Error('not implemented')
+/** A dashed drop zone with a "Choose a file or drop it here" button. The native file input stays inside this primitive. */
+export function FileDrop({ label, helper, error, disabled, accept, multiple, fileName, onFiles, onReject }: FileDropProps) {
+  const ids = useFieldIds()
+  const input = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
+
+  const distribute = (files: File[]) => {
+    const accepted = files.filter((f) => acceptsFile(f, accept))
+    const rejected = files.filter((f) => !acceptsFile(f, accept))
+    if (rejected.length > 0) onReject?.(rejected)
+    const chosen = multiple ? accepted : accepted.slice(0, 1)
+    if (chosen.length > 0) onFiles(chosen)
+  }
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragging(false)
+    if (disabled) return
+    distribute(Array.from(e.dataTransfer?.files ?? []))
+  }
+
+  return (
+    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+      <div
+        data-testid="file-drop-zone"
+        className="file-drop"
+        data-dragging={dragging || undefined}
+        data-disabled={disabled || undefined}
+        onDragEnter={(e) => {
+          e.preventDefault()
+          if (!disabled) setDragging(true)
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+      >
+        <Icon name="file" size={24} />
+        <button type="button" className="file-drop__button" disabled={disabled} onClick={() => input.current?.click()}>
+          {fieldStrings.chooseFile}
+        </button>
+        {fileName ? <p className="file-drop__name">{fileName}</p> : null}
+        <input
+          ref={input}
+          type="file"
+          hidden
+          accept={accept}
+          multiple={multiple}
+          disabled={disabled}
+          onChange={(e) => {
+            distribute(Array.from(e.target.files ?? []))
+            e.target.value = ''
+          }}
+        />
+      </div>
+    </FieldFrame>
+  )
 }

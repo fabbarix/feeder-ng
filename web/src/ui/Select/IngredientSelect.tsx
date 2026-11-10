@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
-import type { SelectFieldProps } from './Select'
-import type { IngredientChoice } from './options'
+import { useMemo } from 'react'
+import { Select, type SelectFieldProps } from './Select'
+import { ingredientOptions, type IngredientChoice } from './options'
+import { selectStrings } from './strings'
 
 export interface IngredientSelectProps extends SelectFieldProps {
   ingredients: IngredientChoice[]
@@ -10,7 +11,18 @@ export interface IngredientSelectProps extends SelectFieldProps {
   onCreate?: (query: string) => void
 }
 
-/** STUB (WP4 designer). Thin domain wrapper over Select: maps data with options.tsx, no fetching. */
-export function IngredientSelect(_props: IngredientSelectProps): ReactNode {
-  throw new Error('not implemented')
+/** Ingredients with a Base Unit badge and meta; "Create Ingredient" for an unknown query when onCreate is given. */
+export function IngredientSelect({ ingredients, value, onChange, onCreate, ...field }: IngredientSelectProps) {
+  const options = useMemo(() => ingredientOptions(ingredients), [ingredients])
+  return (
+    <Select<number>
+      {...field}
+      entityName="Ingredient"
+      options={options}
+      value={value}
+      onChange={onChange}
+      onCreate={onCreate}
+      createLabel={selectStrings.createIngredient}
+    />
+  )
 }

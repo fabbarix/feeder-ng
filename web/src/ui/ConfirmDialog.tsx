@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Button } from './Button'
+import { Dialog } from './Dialog'
+import { overlayStrings } from './overlayStrings'
 
 export interface ConfirmOptions {
   title: string
@@ -28,17 +31,95 @@ export interface ConfirmApi {
   choose: (options: ConfirmOptions) => Promise<ConfirmChoice>
 }
 
-/** STUB (WP4 designer). Controlled confirmation built on Dialog. */
-export function ConfirmDialog(_props: ConfirmDialogProps): ReactNode {
-  throw new Error('not implemented')
+/** Controlled confirmation built on Dialog. Danger confirms focus Cancel and ignore the backdrop; Escape always cancels. */
+export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = overlayStrings.cancel, tone = 'default', alternateLabel, onConfirm, onCancel, onAlternate }: ConfirmDialogProps): ReactNode {
+  const danger = tone === 'danger'
+  return (
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      title={title}
+      tone={tone}
+      icon={danger ? 'delete' : undefined}
+      dismissOnBackdrop={!danger}
+      actions={
+        <>
+          <Button variant="tertiary" onClick={onCancel} data-autofocus={danger || undefined}>
+            {cancelLabel}
+          </Button>
+          {alternateLabel ? (
+            <Button variant="secondary" onClick={onAlternate}>
+              {alternateLabel}
+            </Button>
+          ) : null}
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} data-autofocus={!danger || undefined}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      {body ? <p>{body}</p> : null}
+    </Dialog>
+  )
 }
 
-/** STUB. Hosts the single ConfirmDialog behind useConfirm(). Mounted once in the app shell. */
-export function ConfirmProvider(_props: { children?: ReactNode }): ReactNode {
-  throw new Error('not implemented')
+interface Request {
+  id: number
+  options: ConfirmOptions
+  settle: (choice: ConfirmChoice) => void
 }
 
-/** STUB. Replaces window.confirm. Throws outside a ConfirmProvider. */
+const ConfirmContext = createContext<ConfirmApi | null>(null)
+
+/** Hosts the single ConfirmDialog behind useConfirm(). Requests queue; each one mounts its own dialog. */
+export function ConfirmProvider({ children }: { children?: ReactNode }) {
+  const [queue, setQueue] = useState<Request[]>([])
+  const nextId = useRef(1)
+
+  const request = useCallback(
+    (options: ConfirmOptions) =>
+      new Promise<ConfirmChoice>((resolve) => {
+        const id = nextId.current++
+        setQueue((items) => [...items, { id, options, settle: resolve }])
+      }),
+    [],
+  )
+
+  const api = useMemo<ConfirmApi>(
+    () => ({
+      choose: request,
+      confirm: async (options) => (await request(options)) === 'confirm',
+    }),
+    [request],
+  )
+
+  const head = queue[0]
+  const settle = (choice: ConfirmChoice) => {
+    if (!head) return
+    head.settle(choice)
+    setQueue((items) => items.filter((item) => item.id !== head.id))
+  }
+
+  return (
+    <ConfirmContext.Provider value={api}>
+      {children}
+      {head ? (
+        <ConfirmDialog
+          key={head.id}
+          open
+          {...head.options}
+          onConfirm={() => settle('confirm')}
+          onCancel={() => settle('cancel')}
+          onAlternate={() => settle('alternate')}
+        />
+      ) : null}
+    </ConfirmContext.Provider>
+  )
+}
+
+/** Replaces window.confirm. Throws outside a ConfirmProvider. */
 export function useConfirm(): ConfirmApi {
-  throw new Error('not implemented')
+  const api = useContext(ConfirmContext)
+  if (!api) throw new Error('useConfirm must be used inside a ConfirmProvider')
+  return api
 }

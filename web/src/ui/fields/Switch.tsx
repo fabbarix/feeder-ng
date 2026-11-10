@@ -1,14 +1,32 @@
-import type { ReactNode } from 'react'
+import { useId } from 'react'
+import './Switch.css'
 
 export interface SwitchProps {
   label: string
   checked: boolean
-  onChange: (checked: boolean) => void
-  description?: string
   disabled?: boolean
+  onChange: (checked: boolean) => void
 }
 
-/** STUB (WP4 designer). A button role=switch, 52x32. */
-export function Switch(_props: SwitchProps): ReactNode {
-  throw new Error('not implemented')
+/** An on/off setting: a role=switch button (52 x 32) named by its label. */
+export function Switch({ label, checked, disabled, onChange }: SwitchProps) {
+  const labelId = useId()
+  return (
+    <div className="switch-row">
+      <span id={labelId} className="switch-row__label">
+        {label}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-labelledby={labelId}
+        disabled={disabled}
+        className="switch"
+        onClick={() => onChange(!checked)}
+      >
+        <span className="switch__thumb" aria-hidden="true" />
+      </button>
+    </div>
+  )
 }

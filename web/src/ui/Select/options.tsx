@@ -1,3 +1,7 @@
+import { Avatar } from '../Avatar'
+import { Icon } from '../Icon'
+import { RecipeThumb } from '../RecipeThumb'
+import { mealSlotIcon } from '../lib/mealSlotIcon'
 import type { SelectOption } from './lib'
 
 export interface RecipeChoice {
@@ -40,26 +44,65 @@ export interface MemberChoice {
 export const ENGLISH_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 /** meta "35 min"; keywords = tags; leading = RecipeThumb. */
-export function recipeOptions(_recipes: RecipeChoice[]): SelectOption<number>[] {
-  throw new Error('not implemented')
+export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
+  return recipes.map((r) => ({
+    value: r.id,
+    label: r.name,
+    meta: r.totalMinutes !== undefined ? `${r.totalMinutes} min` : undefined,
+    keywords: r.tags,
+    leading: <RecipeThumb name={r.name} photoUrl={r.imageUrl} tags={r.tags} size={40} initial={false} />,
+  }))
 }
+
 /** leading = Base Unit badge, meta "Base Unit: g". */
-export function ingredientOptions(_ingredients: IngredientChoice[]): SelectOption<number>[] {
-  throw new Error('not implemented')
+export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number>[] {
+  return ingredients.map((i) => ({
+    value: i.id,
+    label: i.name,
+    meta: `Base Unit: ${i.baseUnit}`,
+    leading: <span className="select__badge">{i.baseUnit}</span>,
+  }))
 }
+
 /** Groups "Base Unit", "Unit Conversions" (meta "1 clove = 5 g"), "Units"; a unit never repeats across groups. */
-export function unitOptions(_units: UnitChoices): SelectOption<string>[] {
-  throw new Error('not implemented')
+export function unitOptions(units: UnitChoices): SelectOption<string>[] {
+  const out: SelectOption<string>[] = [{ value: units.baseUnit, label: units.baseUnit, group: 'Base Unit' }]
+  const seen = new Set<string>([units.baseUnit])
+  for (const c of units.conversions) {
+    if (seen.has(c.unit)) continue
+    seen.add(c.unit)
+    out.push({ value: c.unit, label: c.unit, meta: `1 ${c.unit} = ${c.toBase} ${units.baseUnit}`, group: 'Unit Conversions' })
+  }
+  for (const unit of units.globalUnits) {
+    if (seen.has(unit)) continue
+    seen.add(unit)
+    out.push({ value: unit, label: unit, group: 'Units' })
+  }
+  return out
 }
+
 /** Input order; leading = Storefront icon. */
-export function shopOptions(_shops: ShopChoice[]): SelectOption<number>[] {
-  throw new Error('not implemented')
+export function shopOptions(shops: ShopChoice[]): SelectOption<number>[] {
+  return shops.map((s) => ({ value: s.id, label: s.name, leading: <Icon name="shops" size={20} /> }))
 }
+
 /** Grouped by weekday name, ordered by weekday then time; label = name, meta = time; leading = slot icon. */
-export function mealSlotOptions(_slots: MealSlotChoice[], _weekdayNames?: string[]): SelectOption<number>[] {
-  throw new Error('not implemented')
+export function mealSlotOptions(slots: MealSlotChoice[], weekdayNames: string[] = ENGLISH_WEEKDAYS): SelectOption<number>[] {
+  const ordered = [...slots].sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time))
+  return ordered.map((s) => ({
+    value: s.id,
+    label: s.name,
+    meta: s.time,
+    group: weekdayNames[s.weekday - 1] ?? String(s.weekday),
+    leading: <Icon name={mealSlotIcon(s.name)} size={20} />,
+  }))
 }
+
 /** leading = Avatar. */
-export function memberOptions(_members: MemberChoice[]): SelectOption<number>[] {
-  throw new Error('not implemented')
+export function memberOptions(members: MemberChoice[]): SelectOption<number>[] {
+  return members.map((m) => ({
+    value: m.id,
+    label: m.name,
+    leading: <Avatar name={m.name} imageUrl={m.imageUrl} size="sm" />,
+  }))
 }

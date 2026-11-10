@@ -1,15 +1,17 @@
-import type { ReactNode } from 'react'
-import type { SelectFieldProps } from './Select'
-import type { MealSlotChoice } from './options'
+import { useMemo } from 'react'
+import { Select, type SelectFieldProps } from './Select'
+import { mealSlotOptions, type MealSlotChoice } from './options'
 
 export interface MealSlotSelectProps extends SelectFieldProps {
   slots: MealSlotChoice[]
   value: number | null
   onChange: (id: number) => void
-
+  /** Localised weekday names, Monday first. Default English. */
+  weekdayNames?: string[]
 }
 
-/** STUB (WP4 designer). Thin domain wrapper over Select: maps data with options.tsx, no fetching. */
-export function MealSlotSelect(_props: MealSlotSelectProps): ReactNode {
-  throw new Error('not implemented')
+/** Meal Slots grouped by weekday, the time as meta, and each slot's icon. */
+export function MealSlotSelect({ slots, value, onChange, weekdayNames, ...field }: MealSlotSelectProps) {
+  const options = useMemo(() => mealSlotOptions(slots, weekdayNames), [slots, weekdayNames])
+  return <Select<number> {...field} entityName="Meal Slot" options={options} value={value} onChange={onChange} />
 }
