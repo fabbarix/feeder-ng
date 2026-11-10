@@ -1,6 +1,7 @@
 import { Tile } from '../../../ui'
 import { signinStrings } from '../strings'
 import '../signin.css'
+import { FeederMark } from './FeederMark'
 import { GoogleLink } from './GoogleLink'
 
 export interface SignInPageProps {
@@ -11,7 +12,8 @@ export interface SignInPageProps {
 export function SignInPage({ reason }: SignInPageProps) {
   return (
     <main className="signin">
-      <Tile size="lg" tone="accent" as="section" className="signin__tile">
+      <Tile variant="hero" as="section" className="signin__tile">
+        <FeederMark />
         <h1 className="signin__title">{signinStrings.title}</h1>
         <p className="signin__text">{signinStrings.intro}</p>
         {reason ? (

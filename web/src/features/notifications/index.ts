@@ -6,5 +6,4 @@ const feature: FeatureModule = { routes: [{ path: '/settings/notifications', ele
 
 export const routes = feature.routes
 
-export { NotificationSettingsLink } from './components/NotificationSettingsLink'
 // For the service worker (T13 calls it from its entry): import from './sw/push'.

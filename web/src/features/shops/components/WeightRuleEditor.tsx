@@ -1,5 +1,4 @@
-import { Button } from '../../../ui'
-import { FormField } from '../../products/components/FormField'
+import { Button, Select, TextField } from '../../../ui'
 import type { ValueKind } from '../../scan/lib/barcode'
 import type { RuleBody } from '../api'
 import { useRuleForm } from '../hooks/useRuleForm'
@@ -20,20 +19,16 @@ export interface WeightRuleEditorProps {
 
 /**
  * Form for one Weight Barcode Rule (labels from strings): prefix, item start/length, value
- * start/length, value kind select (weight | price), unit select (unitOptions), decimal places,
- * and a "Sample barcode" input whose live decode is shown through RulePreview in
- * an element with role="status". The Save button is disabled while ruleFormError is not null,
- * and the error is shown. All logic lives in lib/ruleForm and lib/rulePreview (via useRuleForm).
+ * start/length, value kind (Select: weight | price), unit (Select, unitOptions), decimal places,
+ * and a "Sample barcode" field whose live decode is shown through RulePreview in an element with
+ * role="status". The Save button is disabled while ruleFormError is not null, and the error is shown.
+ * All logic lives in lib/ruleForm and lib/rulePreview (via useRuleForm).
  */
 export function WeightRuleEditor({ initial, currency, onSave, onCancel }: WeightRuleEditorProps) {
   const form = useRuleForm(initial, onSave)
   const v = form.values
   const text = (label: string, field: 'prefix' | 'itemStart' | 'itemLength' | 'valueStart' | 'valueLength' | 'decimalPlaces') => (
-    <FormField label={label}>
-      {(c) => (
-        <input {...c} type="text" inputMode="numeric" value={v[field]} onChange={(e) => form.setField(field, e.target.value)} />
-      )}
-    </FormField>
+    <TextField label={label} inputMode="numeric" value={v[field]} onChange={(value) => form.setField(field, value)} />
   )
   return (
     <form
@@ -49,31 +44,23 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
       {text(strings.itemLengthLabel, 'itemLength')}
       {text(strings.valueStartLabel, 'valueStart')}
       {text(strings.valueLengthLabel, 'valueLength')}
-      <FormField label={strings.valueKindLabel}>
-        {(c) => (
-          <select {...c} value={v.kind} onChange={(e) => form.setField('kind', e.target.value as ValueKind)}>
-            <option value="weight">{strings.kindWeight}</option>
-            <option value="price">{strings.kindPrice}</option>
-          </select>
-        )}
-      </FormField>
-      <FormField label={strings.valueUnitLabel}>
-        {(c) => (
-          <select {...c} value={v.unit} onChange={(e) => form.setField('unit', e.target.value)}>
-            {unitOptions(v.kind, currency).map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        )}
-      </FormField>
+      <Select<ValueKind>
+        label={strings.valueKindLabel}
+        options={[
+          { value: 'weight', label: strings.kindWeight },
+          { value: 'price', label: strings.kindPrice },
+        ]}
+        value={v.kind}
+        onChange={(kind) => form.setField('kind', kind)}
+      />
+      <Select
+        label={strings.valueUnitLabel}
+        options={unitOptions(v.kind, currency).map((o) => ({ value: o.value, label: o.label }))}
+        value={v.unit}
+        onChange={(unit) => form.setField('unit', unit)}
+      />
       {text(strings.decimalPlacesLabel, 'decimalPlaces')}
-      <FormField label={strings.sampleLabel} hint={strings.sampleHint}>
-        {(c) => (
-          <input {...c} type="text" inputMode="numeric" value={form.sample} onChange={(e) => form.setSample(e.target.value)} />
-        )}
-      </FormField>
+      <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" value={form.sample} onChange={form.setSample} />
       <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
       {form.error ? <p className="pg__error">{form.error}</p> : null}
       {form.serverError ? (
@@ -85,7 +72,7 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
         <Button type="submit" disabled={form.error !== null} loading={form.saving}>
           {strings.saveRule}
         </Button>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="tertiary" onClick={onCancel}>
           {strings.cancel}
         </Button>
       </div>

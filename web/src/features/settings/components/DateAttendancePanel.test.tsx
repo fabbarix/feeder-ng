@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { DateAttendance } from '../types'
@@ -45,9 +45,11 @@ describe('DateAttendancePanel', () => {
     expect(screen.getByRole('button', { name: 'Reset to usual Attendance' })).toBeDisabled()
   })
 
-  it('changing the date asks for that date', () => {
+  it('changing the date (DateField calendar) asks for that date', async () => {
     const { onChangeDate } = setup()
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-11-19' } })
+    expect(document.querySelector('input[type=date]')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /Date/ }))
+    await userEvent.click(screen.getByRole('button', { name: '19 November 2026' }))
     expect(onChangeDate).toHaveBeenCalledWith('2026-11-19')
   })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { memberDraft, memberFromDraft, memberProblem } from './memberForm'
+import { availableUsers, memberDraft, memberFromDraft, memberProblem } from './memberForm'
 
 describe('memberDraft', () => {
   it('starts a new Member at Portion Factor 1 with no name', () => {
@@ -28,5 +28,23 @@ describe('memberProblem', () => {
 describe('memberFromDraft', () => {
   it('trims the name and avatar', () => {
     expect(memberFromDraft({ name: ' Anna ', colour: '#112233', avatar: ' ', portionFactor: 1 })).toEqual({ name: 'Anna', colour: '#112233', avatar: '', portionFactor: 1 })
+  })
+})
+
+describe('availableUsers (WP11)', () => {
+  const users = [{ id: 1, displayName: 'Admin' }, { id: 2, displayName: 'Cook' }, { id: 3, displayName: 'Guest' }]
+  const members = [{ id: 10, userId: 2 }, { id: 11, userId: null }, { id: 12, userId: 3 }]
+
+  it('leaves out Users linked to another Member', () => {
+    expect(availableUsers(users, members, { id: 11 }).map((u) => u.id)).toEqual([1])
+  })
+  it('keeps the User linked to the Member being edited', () => {
+    expect(availableUsers(users, members, { id: 10 }).map((u) => u.id)).toEqual([1, 2])
+  })
+  it('when adding, offers only Users nobody is linked to', () => {
+    expect(availableUsers(users, members).map((u) => u.id)).toEqual([1])
+  })
+  it('keeps the order and the extra fields of the input', () => {
+    expect(availableUsers(users, [], undefined)).toEqual(users)
   })
 })

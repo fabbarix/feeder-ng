@@ -15,4 +15,3 @@ export const routes = feature.routes
 export const navItems = feature.navItems
 
 /** Integration point for the household feature: render inside SettingsPage. */
-export { ShopsSettingsLink } from './components/ShopsSettingsLink'

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { pickOption } from '../../settings/test-utils'
 import { strings } from '../strings'
 import type { ShopRule } from '../types'
 import { WeightRuleEditor } from './WeightRuleEditor'
@@ -14,6 +15,13 @@ function setup(over: { initial?: ShopRule; currency?: string } = {}) {
 const preview = () => screen.getByRole('status')
 
 describe('WeightRuleEditor', () => {
+  it('has no native <select> (value kind and unit are Selects)', () => {
+    setup()
+    expect(document.querySelector('select')).toBeNull()
+    expect(screen.getByRole('combobox', { name: strings.valueKindLabel })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: strings.valueUnitLabel })).toBeInTheDocument()
+  })
+
   it('starts with the common EAN layout and asks for a sample', () => {
     setup()
     expect(screen.getByLabelText(strings.itemStartLabel)).toHaveValue('3')
@@ -38,14 +46,14 @@ describe('WeightRuleEditor', () => {
     expect(preview()).toHaveTextContent('Item 00123 · 75 g') // 00750 / 10
     await user.clear(dp)
     await user.type(dp, '3')
-    await user.selectOptions(screen.getByLabelText(strings.valueUnitLabel), 'kg')
+    await pickOption(strings.valueUnitLabel, 'kg')
     expect(preview()).toHaveTextContent('Item 00123 · 0.75 kg (750 g)') // 0.750 kg, shown in the rule's unit then grams
   })
 
   it('reads a price rule in the Household currency', async () => {
     const { user } = setup()
-    await user.selectOptions(screen.getByLabelText(strings.valueKindLabel), 'price')
-    expect(screen.getByLabelText(strings.valueUnitLabel)).toHaveDisplayValue(strings.priceUnit('USD'))
+    await pickOption(strings.valueKindLabel, 'price')
+    expect(screen.getByRole('combobox', { name: strings.valueUnitLabel })).toHaveTextContent(strings.priceUnit('USD'))
     await user.type(screen.getByLabelText(strings.prefixLabel), '22')
     await user.type(screen.getByLabelText(strings.sampleLabel), '2200123004505')
     expect(preview()).toHaveTextContent('Item 00123 · $4.50')
@@ -76,7 +84,7 @@ describe('WeightRuleEditor', () => {
   it('saves the rule without an id', async () => {
     const { user, onSave } = setup()
     await user.type(screen.getByLabelText(strings.prefixLabel), '21')
-    await user.selectOptions(screen.getByLabelText(strings.valueUnitLabel), 'kg')
+    await pickOption(strings.valueUnitLabel, 'kg')
     const dp = screen.getByLabelText(strings.decimalPlacesLabel)
     await user.clear(dp)
     await user.type(dp, '3')
@@ -94,7 +102,7 @@ describe('WeightRuleEditor', () => {
       initial: { id: 4, shopId: 1, prefix: '02', item: { start: 3, length: 5 }, value: { start: 8, length: 5 }, valueKind: 'weight', valueUnit: 'lb', decimalPlaces: 2 },
     })
     expect(screen.getByLabelText(strings.prefixLabel)).toHaveValue('02')
-    expect(screen.getByLabelText(strings.valueUnitLabel)).toHaveValue('lb')
+    expect(screen.getByRole('combobox', { name: strings.valueUnitLabel })).toHaveTextContent('lb')
     expect(screen.getByLabelText(strings.decimalPlacesLabel)).toHaveValue('2')
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Ingredient } from '../types'
-import { filterIngredients, normalizeName } from './names'
+import { displayName, filterIngredients, ingredientMeta, normalizeName } from './names'
 
 const ing = (id: number, name: string): Ingredient => ({ id, name, baseUnit: 'g', shelfLifeDays: null, conversions: [] })
 
@@ -26,5 +26,28 @@ describe('filterIngredients', () => {
     const copy = [...list]
     expect(filterIngredients(list, 'xyz')).toEqual([])
     expect(list).toEqual(copy)
+  })
+})
+
+describe('displayName (sentence case in the UI)', () => {
+  it('capitalises the first letter only', () => {
+    expect(displayName('garlic')).toBe('Garlic')
+    expect(displayName('olive oil')).toBe('Olive oil')
+    expect(displayName('Parmigiano Reggiano')).toBe('Parmigiano Reggiano')
+  })
+  it('handles accents, blanks and a leading space', () => {
+    expect(displayName('èpices')).toBe('Èpices')
+    expect(displayName('')).toBe('')
+    expect(displayName('  egg')).toBe('Egg')
+  })
+})
+
+describe('ingredientMeta', () => {
+  it('joins the Base Unit and the Shelf Life with a middle dot', () => {
+    expect(ingredientMeta('g', 30)).toBe('g · keeps 30 days')
+    expect(ingredientMeta('g', 1)).toBe('g · keeps 1 day')
+  })
+  it('is the Base Unit alone without a Shelf Life', () => {
+    expect(ingredientMeta('fl oz', null)).toBe('fl oz')
   })
 })

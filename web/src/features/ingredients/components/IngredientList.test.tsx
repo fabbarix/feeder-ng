@@ -10,27 +10,28 @@ const list: Ingredient[] = [
   { id: 3, name: 'egg', baseUnit: 'piece', shelfLifeDays: null, conversions: [] },
 ]
 
-describe('IngredientList', () => {
-  it('shows a button per Ingredient with its Base Unit chip', () => {
+describe('IngredientList (ListRows, 5.15)', () => {
+  it('is a named list with a tappable row per Ingredient, names capitalised', () => {
     render(<IngredientList ingredients={list} system="metric" onOpen={() => {}} />)
-    expect(screen.getByRole('button', { name: /garlic/ })).toHaveTextContent('g')
-    expect(screen.getByRole('button', { name: /milk/ })).toHaveTextContent('ml')
-    expect(screen.getByRole('button', { name: /egg/ })).toHaveTextContent('piece')
+    expect(screen.getByRole('list', { name: 'Ingredients' })).toBeInTheDocument()
+    for (const name of ['Garlic', 'Milk', 'Egg']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'garlic' })).toBeNull()
   })
-  it('shows the Shelf Life chip only when set', () => {
+  it('shows the Base Unit and the Shelf Life on one meta line ("g · keeps 30 days")', () => {
     render(<IngredientList ingredients={list} system="metric" onOpen={() => {}} />)
-    expect(screen.getByRole('button', { name: /garlic/ })).toHaveTextContent('30 days')
-    expect(screen.getByRole('button', { name: /milk/ })).not.toHaveTextContent('day')
+    expect(screen.getByRole('button', { name: 'Garlic' }).closest('li')).toHaveTextContent('g · keeps 30 days')
+    expect(screen.getByRole('button', { name: 'Milk' }).closest('li')).toHaveTextContent(/^Milkml$/)
+    expect(screen.getByRole('button', { name: 'Egg' }).closest('li')).toHaveTextContent('piece')
   })
   it('labels Base Units in the User\'s system', () => {
     render(<IngredientList ingredients={list} system="imperial" onOpen={() => {}} />)
-    expect(screen.getByRole('button', { name: /garlic/ })).toHaveTextContent('oz')
-    expect(screen.getByRole('button', { name: /milk/ })).toHaveTextContent('fl oz')
+    expect(screen.getByRole('button', { name: 'Garlic' }).closest('li')).toHaveTextContent('oz')
+    expect(screen.getByRole('button', { name: 'Milk' }).closest('li')).toHaveTextContent('fl oz')
   })
   it('opens the clicked Ingredient', async () => {
     const onOpen = vi.fn()
     render(<IngredientList ingredients={list} system="metric" onOpen={onOpen} />)
-    await userEvent.click(screen.getByRole('button', { name: /milk/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Milk' }))
     expect(onOpen).toHaveBeenCalledWith(2)
   })
 })

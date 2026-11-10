@@ -8,8 +8,11 @@ export interface UseProducts {
   error: Error | null
 }
 
-/** All Products, filtered by name text on the server (key ['products', { q }]). */
-export function useProducts(q: string): UseProducts {
-  const query = useQuery({ queryKey: ['products', { q }], queryFn: () => productsApi.list({ q: q.trim() }) })
+/** Products filtered by name text on the server (key ['products', { q, includeArchived }]). Archived Products only when asked (WP11). */
+export function useProducts(q: string, includeArchived = false): UseProducts {
+  const query = useQuery({
+    queryKey: ['products', { q, includeArchived }],
+    queryFn: () => productsApi.list({ q: q.trim(), includeArchived: includeArchived || undefined }),
+  })
   return { products: query.data ?? [], isLoading: query.isLoading, error: query.error }
 }

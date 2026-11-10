@@ -1,4 +1,4 @@
-import { Button } from '../../../ui'
+import { Button, TextField } from '../../../ui'
 import { useShelfLifeForm } from '../hooks/useIngredientForms'
 import { strings } from '../strings'
 
@@ -19,15 +19,12 @@ export function ShelfLifeEditor({ days, onSave }: ShelfLifeEditorProps) {
           form.submit()
         }}
       >
-        <label>
-          {strings.shelfLifeLabel}
-          <input inputMode="numeric" value={form.text} onChange={(e) => form.setText(e.target.value)} />
-        </label>
-        <Button type="submit" variant="tonal">
+        <TextField label={strings.shelfLifeLabel} inputMode="numeric" value={form.text} onChange={form.setText} />
+        <Button type="submit" variant="tertiary">
           {strings.saveShelfLife}
         </Button>
         {days !== null ? (
-          <Button variant="ghost" onClick={form.clear}>
+          <Button variant="tertiary" onClick={form.clear}>
             {strings.clearShelfLife}
           </Button>
         ) : null}

@@ -4,13 +4,17 @@
   gap: 16px;
   padding-top: 16px;
 }
-.settings__title {
-  margin: 0;
-  font-size: 1.75rem;
+.settings__group {
+  display: grid;
+  gap: 8px;
 }
-.settings__tile-title {
-  margin: 0 0 12px;
-  font-size: 1.25rem;
+.settings__overline {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 .settings__stack {
   display: grid;
@@ -22,22 +26,8 @@
   align-items: center;
   gap: 8px;
 }
-.settings__row--between {
-  justify-content: space-between;
-}
 .settings__row--wrap-start {
   align-items: flex-start;
-}
-.settings__heading {
-  margin: 8px 0 4px;
-  font-size: 1rem;
-}
-.settings__list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 .settings__muted {
   margin: 0;
@@ -48,97 +38,33 @@
   color: var(--color-on-surface);
   font-weight: 600;
 }
-.settings__swatch {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+.settings__accent-preview {
+  block-size: 48px;
+  inline-size: 100%;
+  border-radius: var(--radius-tile);
   border: 1px solid var(--color-outline);
 }
-.settings__dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.chip:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.field {
-  display: grid;
-  gap: 4px;
-}
-.field__label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.field__hint,
-.field__error {
-  margin: 0;
-  font-size: 0.85rem;
-}
-.field__error {
-  font-weight: 600;
-}
-.field input[type='text'],
-.field input[type='email'],
-.field input[type='number'],
-.field input[type='time'],
-.field input[type='date'],
-.field select {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--color-outline);
-  border-radius: 14px;
-  background: var(--color-surface);
-  color: var(--color-on-surface);
-  font: inherit;
-}
-.field input[type='color'] {
-  width: 56px;
-  height: 44px;
-  padding: 2px;
-  border: 1px solid var(--color-outline);
-  border-radius: 14px;
-  background: var(--color-surface);
-}
-.field input[aria-invalid='true'] {
-  border-width: 2px;
-}
-.field input:disabled,
-.field select:disabled {
-  opacity: 0.7;
-}
-.choice-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.choice-group legend {
-  padding: 0;
-  margin-bottom: 4px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.choice {
+/* A Member's colour: the wrapper carries --member-colour; the Avatar draws the ring (its colour prop), so the fill is never repainted. */
+.member-avatar {
   display: inline-flex;
+  border-radius: var(--radius-pill);
+}
+.meal-week__day {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr auto;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  padding-block: 8px;
 }
-.slider {
-  width: 100%;
-  accent-color: var(--color-primary);
+.meal-week__name {
+  font-weight: 600;
 }
-.slider-anchors {
+.meal-week__slots {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 .attendance {
   display: grid;

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BottomSheet, Button } from '../../../ui'
+import { BottomSheet, Button, TextField } from '../../../ui'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useMergeFlow } from '../hooks/useMergeFlow'
 import { errorMessage } from '../lib/errorMessage'
@@ -41,14 +41,11 @@ export function MergeSheet({ open, sourceId, onClose, onMerged }: MergeSheetProp
     <BottomSheet open={open} onClose={onClose} title={strings.mergeTitle}>
       {target === null ? (
         <>
-          <label>
-            {strings.mergeFindLabel}
-            <input value={flow.query} onChange={(e) => flow.setQuery(e.target.value)} />
-          </label>
+          <TextField label={strings.mergeFindLabel} value={flow.query} onChange={flow.setQuery} />
           <ul>
             {flow.candidates.map((c) => (
               <li key={c.id}>
-                <Button variant="tonal" onClick={() => flow.selectTarget(c)}>
+                <Button variant="tertiary" onClick={() => flow.selectTarget(c)}>
                   {c.name}
                 </Button>
               </li>
@@ -74,7 +71,7 @@ export function MergeSheet({ open, sourceId, onClose, onMerged }: MergeSheetProp
               {strings.mergeConfirm}
             </Button>
           ) : null}
-          <Button variant="ghost" onClick={() => flow.selectTarget(null)}>
+          <Button variant="tertiary" onClick={() => flow.selectTarget(null)}>
             {strings.mergeChangeTarget}
           </Button>
           {error ? <p role="alert">{error}</p> : null}

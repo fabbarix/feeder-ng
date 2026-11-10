@@ -38,16 +38,16 @@ describe('IngredientsScreen', () => {
   it('lists the Ingredients under a heading', () => {
     setup()
     expect(screen.getByRole('heading', { name: strings.title })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /garlic/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Garlic' })).toBeInTheDocument()
   })
   it('opens an Ingredient page', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: /garlic/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Garlic' }))
     expect(screen.getByText('detail page')).toBeInTheDocument()
   })
   it('passes the search text to the hook', async () => {
     setup()
-    await userEvent.type(screen.getByLabelText(strings.searchLabel), 'gar')
+    await userEvent.type(screen.getByRole('searchbox', { name: strings.searchLabel }), 'gar')
     expect(state.query).toBe('gar')
   })
   it('invites the first Ingredient when there are none', () => {
@@ -61,6 +61,12 @@ describe('IngredientsScreen', () => {
     state.isEmpty = false
     setup()
     expect(screen.getByText(strings.noMatches)).toBeInTheDocument()
+  })
+  it('searches with the shared SearchField, not a native search input', () => {
+    setup()
+    expect(document.querySelector('input[type=search]:not(.search-field input)')).toBeNull()
+    expect(document.querySelector('.search-field input[type=search]')).not.toBeNull()
+    expect(screen.getByRole('searchbox', { name: strings.searchLabel })).toBeInTheDocument()
   })
   it('opens the New Ingredient sheet', async () => {
     setup()

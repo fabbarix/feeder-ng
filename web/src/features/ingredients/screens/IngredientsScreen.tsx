@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, EmptyState } from '../../../ui'
+import { Button, EmptyState, PageHeader, SearchField } from '../../../ui'
 import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
@@ -22,29 +22,15 @@ export function IngredientsScreen() {
   } else if (list.ingredients.length > 0) {
     body = <IngredientList ingredients={list.ingredients} system={system} onOpen={(id) => navigate(`/ingredients/${id}`)} />
   } else if (list.isEmpty) {
-    body = (
-      <EmptyState
-        title={strings.emptyTitle}
-        description={strings.emptyText}
-        action={<Button onClick={openNew}>{strings.newIngredient}</Button>}
-      />
-    )
+    body = <EmptyState title={strings.emptyTitle} description={strings.emptyText} action={<Button onClick={openNew}>{strings.newIngredient}</Button>} />
   } else {
     body = <p>{strings.noMatches}</p>
   }
 
   return (
     <section>
-      <h1>{strings.title}</h1>
-      <div>
-        <label>
-          {strings.searchLabel}
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <Button variant="tonal" onClick={openNew}>
-          {strings.newIngredient}
-        </Button>
-      </div>
+      <PageHeader title={strings.title} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />
+      <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
       {body}
       <NewIngredientSheet open={creating} onClose={() => setCreating(false)} onCreate={list.create} />
     </section>

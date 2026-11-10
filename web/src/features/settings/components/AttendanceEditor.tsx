@@ -1,4 +1,5 @@
-import { Stepper } from '../../../ui'
+import { Checkbox, Stepper } from '../../../ui'
+import { MemberAvatar } from './MemberAvatar'
 import { effectiveFactor, formatPortionsNeeded, MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP, portionsNeeded, withFactor } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, Member } from '../types'
@@ -28,10 +29,10 @@ export function AttendanceEditor({ members, value, onChange }: AttendanceEditorP
         const entry = value.find((e) => e.memberId === m.id)
         return (
           <div key={m.id} className="attendance__row">
-            <label className="choice">
-              <input type="checkbox" checked={Boolean(entry)} onChange={(e) => toggle(m, e.target.checked)} />
-              {m.name}
-            </label>
+            <span className="settings__row">
+              <MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} size="sm" />
+              <Checkbox label={m.name} checked={Boolean(entry)} onChange={(attending) => toggle(m, attending)} />
+            </span>
             {entry ? (
               <Stepper
                 label={text.portionFactorFor(m.name)}

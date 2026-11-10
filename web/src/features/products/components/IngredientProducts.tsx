@@ -26,10 +26,10 @@ export function IngredientProducts({ ingredientId, ingredientName, baseUnit, sys
   const { products, create } = useIngredientProducts(ingredientId)
   const [open, setOpen] = useState(false)
   return (
-    <Tile as="section" size="full" aria-label={strings.ingredientProductsTitle}>
+    <Tile as="section" span="full" aria-label={strings.ingredientProductsTitle}>
       <h2 className="pg__tile-title">{strings.ingredientProductsTitle}</h2>
-      {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} />}
-      <Button variant="tonal" onClick={() => setOpen(true)}>
+      {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} showIngredient={false} />}
+      <Button variant="tertiary" onClick={() => setOpen(true)}>
         {strings.newProduct}
       </Button>
       <BottomSheet open={open} onClose={() => setOpen(false)} title={strings.newProduct}>

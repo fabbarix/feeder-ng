@@ -1,5 +1,6 @@
-import { Chip, Tile } from '../../../ui'
+import { ListGroup, ListRow } from '../../../ui'
 import { baseUnitLabel, type UnitSystem } from '../../../lib/units'
+import { displayName, ingredientMeta } from '../lib/names'
 import { strings } from '../strings'
 import type { Ingredient } from '../types'
 
@@ -9,19 +10,19 @@ export interface IngredientListProps {
   onOpen: (id: number) => void
 }
 
-/** One tile-row per Ingredient: name, a Base Unit chip (g/oz, ml/fl oz, piece), a Shelf Life chip when set. The row is a button named by the Ingredient. */
+/** The Ingredients as a ListGroup of ListRows: the capitalised name, meta "g · keeps 30 days" (Base Unit, Shelf Life). A row opens the Ingredient. */
 export function IngredientList({ ingredients, system, onOpen }: IngredientListProps) {
   return (
-    <ul className="ingredient-list">
+    <ListGroup label={strings.title}>
       {ingredients.map((ingredient) => (
-        <li key={ingredient.id}>
-          <Tile as="div" size="wide" onClick={() => onOpen(ingredient.id)}>
-            <span>{ingredient.name}</span>
-            <Chip>{baseUnitLabel(ingredient.baseUnit, system)}</Chip>
-            {ingredient.shelfLifeDays !== null ? <Chip>{strings.shelfLife(ingredient.shelfLifeDays)}</Chip> : null}
-          </Tile>
-        </li>
+        <ListRow
+          key={ingredient.id}
+          title={displayName(ingredient.name)}
+          meta={ingredientMeta(baseUnitLabel(ingredient.baseUnit, system), ingredient.shelfLifeDays)}
+          chevron
+          onActivate={() => onOpen(ingredient.id)}
+        />
       ))}
-    </ul>
+    </ListGroup>
   )
 }

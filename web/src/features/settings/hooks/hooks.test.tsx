@@ -1,11 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ADMIN_ME, mockApi, USER_ME, wrapper } from '../test-utils'
+import { ADMIN_ME, mockApi, routerWrapper, USER_ME, wrapper } from '../test-utils'
 import type { HouseholdSettings, Member, MealSlot } from '../types'
 import { useAllowlist } from './useAllowlist'
 import { useAttendance } from './useAttendance'
 import { useHouseholdSettings } from './useHouseholdSettings'
 import { useMealSlots } from './useMealSlots'
+import { useMealSlotsPage } from './useMealSlotsPage'
 import { useMembers } from './useMembers'
 import { usePreferences } from './usePreferences'
 import { usePreferenceTheme } from './usePreferenceTheme'
@@ -206,5 +207,39 @@ describe('usePreferenceTheme', () => {
     await waitFor(() => expect(result.current.accent).toBe('#3366cc'))
     // An old server may still send "secondary": it is dropped, not passed to the theme.
     expect(result.current).toStrictEqual({ accent: '#3366cc', scheme: 'dark' })
+  })
+})
+
+describe('useMealSlotsPage: a partial multi-weekday save', () => {
+  it('drops the saved weekdays from the sheet, so a retry creates only the rest (no duplicates)', async () => {
+    let posts = 0
+    const api = mockApi({
+      'GET /api/me': ADMIN_ME,
+      'GET /api/members': [sam],
+      'GET /api/meal-slots': [],
+      'GET /api/household/settings': settings,
+      'POST /api/meal-slots': (call: { body: unknown }) => {
+        posts += 1
+        // the 2nd POST (Tuesday) fails the first time round
+        if (posts === 2) return { status: 500, json: { error: { code: 'boom', message: 'server down' } } }
+        return { status: 201, json: { ...dinner, id: 10 + posts, weekday: (call.body as { weekday: number }).weekday } }
+      },
+    })
+    const { result } = renderHook(() => useMealSlotsPage(), { wrapper: routerWrapper })
+    await waitFor(() => expect(result.current.isAdmin).toBe(true))
+    act(() => result.current.add())
+    const input = (weekday: number) => ({ weekday, name: 'Lunch', time: '12:00', attendance: [] })
+
+    await act(() => result.current.save([input(1), input(2), input(3)]))
+    expect(result.current.error).toBe('Saved 1 of 3 Meal Slots. Tuesday failed: server down')
+    expect(result.current.editor).not.toBeNull() // the sheet stays open
+    // Monday is saved: it leaves the selection; Tuesday (failed) and Wednesday (never tried) remain
+    expect(result.current.editor?.defaultWeekdays).toEqual([2, 3])
+
+    // retrying with the sheet's full original list must not create Monday again
+    await act(() => result.current.save([input(1), input(2), input(3)]))
+    const bodies = api.callsTo('POST', '/api/meal-slots').map((c) => (c.body as { weekday: number }).weekday)
+    expect(bodies).toEqual([1, 2, 2, 3])
+    expect(result.current.editor).toBeNull() // all saved: the sheet closes
   })
 })
