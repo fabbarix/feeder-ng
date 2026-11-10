@@ -135,7 +135,12 @@ export function StockScreen(): ReactElement | null {
           </Button>
         }
       >
-        <LotList lots={lots.data ?? []} today={today} system={system} />
+        <LotList
+          lots={lots.data ?? []}
+          today={today}
+          system={system}
+          onThrowOut={(id) => void attempt(() => actions.throwOut(id))}
+        />
       </BottomSheet>
 
       {selected && settingTotal ? (

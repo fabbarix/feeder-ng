@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { BottomSheet, Button, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
+import '../stock.css'
 import type { BaseUnit } from '../types'
 import { stockStrings as strings } from '../strings'
 
@@ -40,23 +41,25 @@ export function SetTotalSheet({ open, onClose, name, baseUnit, initial, onSubmit
       title={strings.setTotalTitle(name)}
       footer={<Button onClick={submit}>{strings.save}</Button>}
     >
-      <TextField
-        label={strings.newTotal}
-        inputMode="decimal"
-        value={text}
-        onChange={(value) => {
-          setText(value)
-          setError(null)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        suffix={baseUnit}
-        error={error ?? undefined}
-      />
+      <div className="stock-sheet__fields">
+        <TextField
+          label={strings.newTotal}
+          inputMode="decimal"
+          value={text}
+          onChange={(value) => {
+            setText(value)
+            setError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          suffix={baseUnit}
+          error={error ?? undefined}
+        />
+      </div>
     </BottomSheet>
   )
 }

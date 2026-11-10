@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { ListRow } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { rowMeta } from '../lib/filter'
+import { capitalise } from '../lib/display'
 import type { IngredientStock } from '../types'
 
 export interface StockRowProps {
@@ -21,7 +22,7 @@ export interface StockRowProps {
 export function StockRow({ item, today, onOpen, system = 'metric' }: StockRowProps): ReactElement | null {
   return (
     <ListRow
-      title={item.name}
+      title={capitalise(item.name)}
       meta={rowMeta(item, today)}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
       chevron

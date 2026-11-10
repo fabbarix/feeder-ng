@@ -126,14 +126,19 @@ function statusOf(query: { data: unknown; isLoading: boolean; error: Error | nul
   })
 }
 
-/** Writes: manual add and Set total. Both invalidate ['stock']. */
+/** Writes: manual add, Set total and Throw out (a spoiled lot). All invalidate ['stock']. */
 export function useStockActions(): {
   addLot(input: AddLotInput): Promise<void>
   setTotal(ingredientId: number, total: number): Promise<void>
+  throwOut(lotId: number): Promise<void>
 } {
   const client = useQueryClient()
   const addLot = useMutation({
     mutationFn: (input: AddLotInput) => stockApi.addLot(input),
+    onSuccess: () => refreshStock(client),
+  })
+  const throwOut = useMutation({
+    mutationFn: (lotId: number) => stockApi.throwOut(lotId),
     onSuccess: () => refreshStock(client),
   })
   const setTotal = useMutation({
@@ -146,6 +151,9 @@ export function useStockActions(): {
     },
     setTotal: async (ingredientId, total) => {
       await setTotal.mutateAsync({ ingredientId, total })
+    },
+    throwOut: async (lotId) => {
+      await throwOut.mutateAsync(lotId)
     },
   }
 }

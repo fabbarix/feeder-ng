@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, DateField, IngredientSelect, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
+import '../stock.css'
 import type { IngredientChoice } from '../types'
 import { stockStrings as strings } from '../strings'
 
@@ -58,25 +59,27 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
         </Button>
       }
     >
-      <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null} onChange={setPickedId} />
-      <TextField
-        label={strings.quantity}
-        inputMode="decimal"
-        value={quantity}
-        onChange={(value) => {
-          setQuantity(value)
-          setError(null)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        suffix={chosen?.baseUnit}
-        error={error ?? undefined}
-      />
-      <DateField label={strings.purchased} value={purchased} onChange={setPurchased} />
+      <div className="stock-sheet__fields">
+        <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null} onChange={setPickedId} />
+        <TextField
+          label={strings.quantity}
+          inputMode="decimal"
+          value={quantity}
+          onChange={(value) => {
+            setQuantity(value)
+            setError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          suffix={chosen?.baseUnit}
+          error={error ?? undefined}
+        />
+        <DateField label={strings.purchased} value={purchased} onChange={setPurchased} />
+      </div>
     </BottomSheet>
   )
 }
