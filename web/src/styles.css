@@ -1,30 +1,199 @@
-/* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider. */
+/* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider (apply.ts).
+   The Basil defaults below are the first paint, before ThemeProvider runs (plan 3.1 to 3.3). */
 :root {
-  --color-background: #f6f2ee;
-  --color-surface: #f6f2ee;
-  --color-surface-container: #efe8e2;
-  --color-on-surface: #1d1b19;
-  --color-primary: #3f7d58;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #cfe8d8;
-  --color-on-primary-container: #0b2016;
-  --color-outline: #7d7770;
+  /* Colour: Basil light (default) */
+  --color-bg: #e7f4eb;
+  --color-surface: #fafffc;
+  --color-surface-2: #daecdf;
+  --color-surface-3: #c8e0cf;
+  --color-line: #c2d7c9;
+  --color-outline: #677a6d;
+  --color-text: #131d17;
+  --color-muted: #4b5a4f;
+  --color-accent: #34724e;
+  --color-on-accent: #ffffff;
+  --color-accent-text: #135533;
+  --color-soft: #bfebcd;
+  --color-soft-strong: #9addb2;
+
+  /* Status: fixed, never derived from the accent (plan 3.1) */
+  --status-leftover-fg: #065353;
+  --status-leftover-bg: #c2f3f2;
+  --status-leftover-solid: #027879;
+  --status-spoil-fg: #6d3706;
+  --status-spoil-bg: #fee1cf;
+  --status-spoil-solid: #9e5106;
+  --status-danger-fg: #742e2b;
+  --status-danger-bg: #ffe0dc;
+  --status-danger-solid: #ab413e;
+  --status-success-fg: #115629;
+  --status-success-bg: #d1f2d7;
+  --status-success-solid: #0a7e3a;
+  --status-pinned-fg: #3e3f7c;
+  --status-pinned-bg: #e3e6fe;
+  --status-pinned-solid: #5b5cb7;
+
+  /* Old Material names, kept for unmigrated screens (removed after WP6 to WP11) */
+  --color-background: var(--color-bg);
+  --color-on-background: var(--color-text);
+  --color-surface-container-low: var(--color-surface);
+  --color-surface-container: var(--color-surface-2);
+  --color-surface-container-high: var(--color-surface-3);
+  --color-on-surface: var(--color-text);
+  --color-on-surface-variant: var(--color-muted);
+  --color-primary: var(--color-accent);
+  --color-on-primary: var(--color-on-accent);
+  --color-primary-container: var(--color-soft);
+  --color-on-primary-container: var(--color-accent-text);
+  --color-secondary: var(--color-accent);
+  --color-on-secondary: var(--color-on-accent);
+  --color-secondary-container: var(--color-soft);
+  --color-on-secondary-container: var(--color-accent-text);
+
+  /* Type (plan 3.2): size / line / weight */
+  --text-display-size: 34px;
+  --text-display-line: 38px;
+  --text-display-weight: 800;
+  --text-title-1-size: 28px;
+  --text-title-1-line: 32px;
+  --text-title-1-weight: 800;
+  --text-title-2-size: 22px;
+  --text-title-2-line: 26px;
+  --text-title-2-weight: 800;
+  --text-title-3-size: 18px;
+  --text-title-3-line: 22px;
+  --text-title-3-weight: 800;
+  --text-body-strong-size: 15px;
+  --text-body-strong-line: 20px;
+  --text-body-strong-weight: 700;
+  --text-body-size: 15px;
+  --text-body-line: 22px;
+  --text-body-weight: 500;
+  --text-meta-size: 13px;
+  --text-meta-line: 18px;
+  --text-meta-weight: 500;
+  --text-label-size: 13px;
+  --text-label-line: 16px;
+  --text-label-weight: 700;
+  --text-overline-size: 12px;
+  --text-overline-line: 16px;
+  --text-overline-weight: 800;
+  --text-overline-tracking: 0.04em;
+  --text-chip-size: 12px;
+  --text-nav-size: 11px;
+  --text-nav-weight: 800;
+
+  /* Spacing (4-pt, plan 3.3). Phone values; tablet and desktop override below. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --gutter: 16px;
+  --bento-gap: 10px;
+  --tile-pad: 16px;
+
+  /* Radii (plan 3.3) */
+  --radius-chip: 999px;
+  --radius-control: 14px;
+  --radius-button: 16px;
+  --radius-button-lg: 20px;
+  --radius-tile-sm: 20px;
   --radius-tile: 24px;
+  --radius-hero: 28px;
+  --radius-board: 32px;
+  --radius-sheet: 28px;
+  --radius-dialog: 28px;
+  --radius-thumb: 12px;
+  --radius-thumb-lg: 16px;
+  --radius-nav: 24px;
   --radius-pill: 999px;
+
+  /* Elevation (light only) and scrim */
+  --elev-0: none;
+  --elev-1: 0 1px 2px rgb(16 24 20 / .06), 0 0 0 1px rgb(16 24 20 / .03);
+  --elev-2: 0 6px 20px rgb(16 24 20 / .12);
+  --elev-3: 0 -8px 32px rgb(0 0 0 / .18);
+  --scrim: rgb(8 12 10 / .45);
+
+  /* Motion (plan 3.3) */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 240ms;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
   --motion-fast: 180ms;
+
   --bar-height: 72px;
   font-family: 'Figtree', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-background: #161412;
-    --color-surface: #161412;
-    --color-surface-container: #26221f;
-    --color-on-surface: #ece6e1;
-    --color-outline: #958e87;
+/* Tablet and desktop rhythm (plan 3.3) */
+@media (min-width: 768px) {
+  :root {
+    --gutter: 24px;
+    --bento-gap: 12px;
+    --tile-pad: 20px;
   }
+}
+
+@media (min-width: 1200px) {
+  :root {
+    --gutter: 32px;
+    --bento-gap: 16px;
+    --tile-pad: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 120ms;
+    --dur-2: 120ms;
+    --dur-3: 120ms;
+  }
+}
+
+/* Dark before ThemeProvider runs: Basil dark values, no drop shadows (elevation = tone step + hairline). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-scheme='light']) {
+    --color-bg: #090f0b;
+    --color-surface: #131c16;
+    --color-surface-2: #1e2a22;
+    --color-surface-3: #28372d;
+    --color-line: #303f35;
+    --color-outline: #788c7f;
+    --color-text: #e9f1ec;
+    --color-muted: #aebbb2;
+    --color-accent: #89c8a0;
+    --color-on-accent: #051b0e;
+    --color-accent-text: #a2e3b9;
+    --color-soft: #143c25;
+    --color-soft-strong: #144f30;
+    --status-leftover-fg: #85e4e3;
+    --status-leftover-bg: #043535;
+    --status-spoil-fg: #fec39b;
+    --status-spoil-bg: #44250c;
+    --status-danger-fg: #febfb9;
+    --status-danger-bg: #47211e;
+    --status-success-fg: #a7e2b2;
+    --status-success-bg: #14361d;
+    --status-pinned-fg: #c7cdff;
+    --status-pinned-bg: #282a4b;
+    --elev-1: none;
+    --elev-2: none;
+    --elev-3: none;
+  }
+}
+
+:root[data-scheme='dark'] {
+  --elev-1: none;
+  --elev-2: none;
+  --elev-3: none;
 }
 
 * {
@@ -269,13 +438,13 @@ button.tile:hover {
 }
 
 .tile[data-tone='spoil'] {
-  background: #ffdad1;
-  color: #5c1a00;
+  background: var(--status-spoil-bg);
+  color: var(--status-spoil-fg);
 }
 
 .tile[data-tone='leftover'] {
-  background: #fff0b3;
-  color: #4d3b00;
+  background: var(--status-leftover-bg);
+  color: var(--status-leftover-fg);
 }
 
 .chip {
