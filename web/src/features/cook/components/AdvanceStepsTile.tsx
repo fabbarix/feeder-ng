@@ -10,26 +10,26 @@ export interface AdvanceStepsTileProps {
 }
 
 /**
- * Listed above the Step: each done Advance Step as "Done: <text>", each pending
- * one as a warning "Not done yet: <text> (start <lead time> ahead)" (lib/advance.formatLeadTime)
- * with a button "Mark "<text>" as done". Renders nothing when there are no Advance Steps.
+ * The spoil status tile of Advance Steps: each pending one as "<text> · <lead time> ahead" with a "Done" button; the
+ * done ones as "Done: <text>". Renders nothing when nothing is pending (Cook Mode shows it only before Step 1, see
+ * lib/advance.advanceOnScreen).
  */
 export function AdvanceStepsTile({ summary, onMarkDone }: AdvanceStepsTileProps): ReactNode {
-  if (summary.done.length === 0 && summary.pending.length === 0) return null
+  if (summary.pending.length === 0) return null
   return (
-    <Tile as="section" className="cook-advance">
+    <Tile as="section" variant="status" status="spoil" span="full" className="cook-advance">
       <h2 className="cook-advance__heading">{cookStrings.advanceHeading}</h2>
       <ul className="cook-advance__list">
         {summary.done.map((item) => (
-          <li key={item.step}>
-            <p>{cookStrings.advanceDone(item.text)}</p>
+          <li key={item.step} className="cook-advance__done">
+            {cookStrings.advanceDone(item.text)}
           </li>
         ))}
         {summary.pending.map((item) => (
-          <li key={item.step} className="cook-advance__pending">
-            <p role="alert">{cookStrings.advanceWarning(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
-            <Button variant="tonal" size="md" onClick={() => onMarkDone(item.step)}>
-              {cookStrings.markAdvanceDone(item.text)}
+          <li key={item.step} className="cook-advance__row">
+            <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
+            <Button variant="secondary" size="sm" onClick={() => onMarkDone(item.step)}>
+              {cookStrings.markAdvanceDoneShort}
             </Button>
           </li>
         ))}

@@ -138,8 +138,22 @@ describe('MemberSelect', () => {
     render(<MemberSelect label="Members" members={members} values={[1]} onChange={onChange} />)
     expect(screen.getByRole('combobox', { name: /Members/ })).toHaveTextContent('Fabio')
     await open('Members')
-    expect(screen.getAllByRole('img', { name: 'Lucia Maria Bernadette' })).not.toHaveLength(0)
+    expect(screen.getAllByRole('img', { name: 'Lucia Maria Bernadette', hidden: true })).not.toHaveLength(0)
     await userEvent.click(screen.getByRole('option', { name: /Lucia/ }))
     expect(onChange).toHaveBeenCalledWith([1, 2])
+  })
+})
+
+describe('option accessible names', () => {
+  it('names a Member option by its label only (the decorative Avatar is hidden)', async () => {
+    render(<MemberSelect label="Members" members={[{ id: 1, name: 'Anna' }]} values={[]} onChange={() => {}} />)
+    await open('Members')
+    expect(screen.getByRole('option', { name: 'Anna' })).toBeInTheDocument()
+  })
+  it('names an Ingredient option by its label only and exposes the meta as the description', async () => {
+    render(<IngredientSelect label="Ingredient" ingredients={[{ id: 1, name: 'eggs', baseUnit: 'piece' }]} value={null} onChange={() => {}} />)
+    await open('Ingredient')
+    const option = screen.getByRole('option', { name: 'eggs' })
+    expect(option).toHaveAccessibleDescription('Base Unit: piece')
   })
 })

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatMajor, parseMajor } from '../../products/lib/money'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { TextField } from '../../../ui/fields/TextField'
 import { scanStrings } from '../strings'
 
 export interface PriceEditSheetProps {
@@ -15,9 +16,12 @@ export interface PriceEditSheetProps {
   onSave: (priceCents: number) => void
 }
 
-/** "Price of <product>": edits the Price a scan recorded. */
+/**
+ * "Price of <product>": edits the Price a scan recorded. A TextField, not a NumberField: what is typed is checked as it
+ * is (parseMajor: "1.59" or "1,59"), so a wrong entry is refused rather than replaced by the old Price.
+ */
 export function PriceEditSheet({ open, onClose, productName, priceCents, currency, onSave }: PriceEditSheetProps) {
-  const [text, setText] = useState(priceCents === null ? '' : formatMajor(priceCents, currency))
+  const [text, setText] = useState(() => (priceCents === null ? '' : formatMajor(priceCents, currency)))
   const [error, setError] = useState(false)
 
   const submit = () => {
@@ -38,13 +42,7 @@ export function PriceEditSheet({ open, onClose, productName, priceCents, currenc
           submit()
         }}
       >
-        <div className="field">
-          <label className="field__label" htmlFor="price-edit-field">
-            {scanStrings.priceLabel}
-          </label>
-          <input id="price-edit-field" className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
-        </div>
-        {error ? <p className="field__error" role="alert">{scanStrings.mustBePositive}</p> : null}
+        <TextField label={scanStrings.priceLabel} value={text} onChange={setText} inputMode="decimal" error={error ? scanStrings.mustBePositive : undefined} />
         <Button type="submit">{scanStrings.savePrice}</Button>
       </form>
     </BottomSheet>

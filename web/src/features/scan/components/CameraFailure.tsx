@@ -1,6 +1,7 @@
 // What the Scan screen offers when the camera does not work (B4): the reason, "try the camera again" (when a retry
-// can help) and typing the barcode. Built from the shared Button; the screen team restyles it (ui-fix-plan §5.6, §4).
+// can help) and typing the barcode.
 import { Button } from '../../../ui/Button'
+import { ErrorState } from '../../../ui/ErrorState'
 import type { CameraRecovery } from '../hooks/useCameraRecovery'
 import { scanStrings } from '../strings'
 import { ManualBarcodeEntry } from './ManualBarcodeEntry'
@@ -14,20 +15,13 @@ export function CameraFailure({ recovery }: CameraFailureProps) {
   if (!failure) return null
   return (
     <div className="camera-failure">
-      <p className="camera-failure__message">{failure.message}</p>
+      <ErrorState message={failure.message} onRetry={failure.canRetry ? () => recovery.retry() : undefined} retryLabel={scanStrings.retryCamera} />
       {recovery.manualOpen ? (
         <ManualBarcodeEntry recovery={recovery} />
       ) : (
-        <div className="camera-failure__actions">
-          {failure.canRetry ? (
-            <Button variant="tonal" onClick={() => recovery.retry()}>
-              {scanStrings.retryCamera}
-            </Button>
-          ) : null}
-          <Button variant="ghost" onClick={() => recovery.openManual()}>
-            {scanStrings.enterBarcode}
-          </Button>
-        </div>
+        <Button variant="secondary" icon="scan" onClick={() => recovery.openManual()}>
+          {scanStrings.enterBarcode}
+        </Button>
       )}
     </div>
   )

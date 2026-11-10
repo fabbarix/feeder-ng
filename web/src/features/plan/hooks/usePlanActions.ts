@@ -5,11 +5,16 @@ import type { SlotKey } from '../types'
 import { invalidatePlan } from './planCache'
 
 export interface UsePlanActions {
-  regenerate: () => Promise<void>
+  /** Redoes the unpinned Planned Meals; resolves true when the plan was regenerated. */
+  regenerate: () => Promise<boolean>
   regenerating: boolean
-  setMeal: (key: SlotKey, recipeId: number) => Promise<void>
-  confirm: (key: SlotKey) => Promise<void>
-  unpin: (key: SlotKey) => Promise<void>
+  /** Sets the Recipe of a slot (and pins it, on the server). Resolves true on success. */
+  setMeal: (key: SlotKey, recipeId: number) => Promise<boolean>
+  /** Pin the Planned Meal (POST .../confirm on the server; the UI word is Pin). */
+  pin: (key: SlotKey) => Promise<boolean>
+  unpin: (key: SlotKey) => Promise<boolean>
+  /** Undo of a Swap: the previous Recipe back, unpinned again when it was not Pinned before. */
+  restore: (key: SlotKey, recipeId: number, pinned: boolean) => Promise<boolean>
   /** Message of the last failed action, or null. */
   error: string | null
 }
@@ -21,14 +26,16 @@ export function usePlanActions(): UsePlanActions {
   const [error, setError] = useState<string | null>(null)
 
   const run = useCallback(
-    async (call: () => Promise<unknown>) => {
+    async (call: () => Promise<unknown>): Promise<boolean> => {
       setError(null)
       try {
         await call()
         await invalidatePlan(client)
+        return true
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e))
         await invalidatePlan(client)
+        return false
       }
     },
     [client],
@@ -37,7 +44,7 @@ export function usePlanActions(): UsePlanActions {
   const regenerate = useCallback(async () => {
     setRegenerating(true)
     try {
-      await run(() => planApi.regenerate())
+      return await run(() => planApi.regenerate())
     } finally {
       setRegenerating(false)
     }
@@ -47,8 +54,13 @@ export function usePlanActions(): UsePlanActions {
     regenerate,
     regenerating,
     setMeal: (key, recipeId) => run(() => planApi.setMeal(key, recipeId)),
-    confirm: (key) => run(() => planApi.confirm(key)),
+    pin: (key) => run(() => planApi.confirm(key)),
     unpin: (key) => run(() => planApi.unpin(key)),
+    restore: (key, recipeId, pinned) =>
+      run(async () => {
+        await planApi.setMeal(key, recipeId)
+        if (!pinned) await planApi.unpin(key)
+      }),
     error,
   }
 }

@@ -1,5 +1,4 @@
-import { Button } from '../../../ui/Button'
-import { Tile } from '../../../ui/Tile'
+import { ListGroup, ListRow } from '../../../ui/ListRow'
 import { scanStrings } from '../strings'
 
 export interface ShopPickerShop {
@@ -16,28 +15,25 @@ export interface ShopPickerProps {
   onStockTake: () => void
 }
 
-/** "Where are you shopping?": the last Shop first, the others by name, then Stock-take at home. */
+/** "Where are you shopping?": a list of the Shops, the last one used first and marked, then "Stock-take at home". */
 export function ShopPicker({ shops, lastShopId, onPick, onStockTake }: ShopPickerProps) {
   const last = shops.find((s) => s.id === lastShopId) ?? null
   const others = shops.filter((s) => s.id !== last?.id).sort((a, b) => a.name.localeCompare(b.name))
+  const ordered = last ? [last, ...others] : others
   return (
     <section className="shop-picker">
       <h1 className="shop-picker__title">{scanStrings.pickShop}</h1>
       <p className="shop-picker__hint">{scanStrings.pickShopHint}</p>
       {shops.length === 0 ? <p className="shop-picker__empty">No Shops yet. Your Admin adds Shops in Settings.</p> : null}
-      {last ? (
-        <Tile as="section" tone="accent" onClick={() => onPick(last)} className="shop-picker__tile">
-          {`${last.name} (last used)`}
-        </Tile>
-      ) : null}
-      {others.map((shop) => (
-        <Tile key={shop.id} onClick={() => onPick(shop)} className="shop-picker__tile">
-          {shop.name}
-        </Tile>
-      ))}
-      <Button variant="tonal" onClick={onStockTake}>
-        {scanStrings.stockTakeAtHome}
-      </Button>
+      <ListGroup label={scanStrings.shopsList}>
+        {ordered.map((shop) => {
+          const isLast = shop.id === last?.id
+          return (
+            <ListRow key={shop.id} title={shop.name} icon="shops" meta={isLast ? scanStrings.lastUsed : undefined} selected={isLast} onActivate={() => onPick(shop)} />
+          )
+        })}
+        <ListRow title={scanStrings.stockTakeAtHome} icon="household" onActivate={onStockTake} />
+      </ListGroup>
     </section>
   )
 }

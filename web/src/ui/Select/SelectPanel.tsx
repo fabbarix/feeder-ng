@@ -51,15 +51,25 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         role="option"
         aria-selected={isSelected}
         aria-disabled={option.disabled || undefined}
+        aria-labelledby={`${p.optionId(i)}-label`}
+        aria-describedby={option.meta ? `${p.optionId(i)}-meta` : undefined}
         data-active={i === p.active || undefined}
         className="select__option"
         onClick={() => p.onPick(i)}
         onMouseEnter={() => p.onHover(i)}
       >
-        {option.leading ? <span className="select__leading">{option.leading}</span> : null}
+        {option.leading ? <span className="select__leading" aria-hidden="true">
+            {option.leading}
+          </span> : null}
         <span className="select__text">
-          <span className="select__label">{option.label}</span>
-          {option.meta ? <span className="select__meta">{option.meta}</span> : null}
+          <span id={`${p.optionId(i)}-label`} className="select__label">
+            {option.label}
+          </span>
+          {option.meta ? (
+            <span id={`${p.optionId(i)}-meta`} className="select__meta">
+              {option.meta}
+            </span>
+          ) : null}
         </span>
         {isSelected ? <Icon name="tick" size={20} weight="fill" /> : null}
       </div>
@@ -121,16 +131,19 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
             id={p.optionId(createIndex)}
             role="option"
             aria-selected={false}
+            aria-labelledby={`${p.optionId(createIndex)}-label`}
             data-active={createIndex === p.active || undefined}
             className="select__option select__option--create"
             onClick={() => p.onPick(createIndex)}
             onMouseEnter={() => p.onHover(createIndex)}
           >
-            <span className="select__leading">
+            <span className="select__leading" aria-hidden="true">
               <Icon name="add" size={20} />
             </span>
             <span className="select__text">
-              <span className="select__label">{p.list.createText}</span>
+              <span id={`${p.optionId(createIndex)}-label`} className="select__label">
+                {p.list.createText}
+              </span>
             </span>
           </div>
         ) : null}

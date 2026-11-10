@@ -13,9 +13,14 @@ const feature: FeatureModule = {
 
 export const routes = feature.routes
 
-// Small components Today embeds (docs/dev/design/t11-planning.md, "Exports for Today").
-export { CouldntPlanNotice, LeftoversTile, NextMealTile, ToConfirmTile } from './components/TodayTiles'
-export { nextMeal } from './lib/days'
+// Small components and hooks Today and others embed (docs/dev/design/t11-planning.md, "Exports for Today").
+export { CouldntPlanNotice, LeftoversTile, ToConfirmTile } from './components/TodayTiles'
+export { TonightHero } from './components/TonightHero'
+export { CookFlowSheets } from './components/CookFlowSheets'
+export { useCookFlow, useNotCooked } from './hooks/useCookFlow'
+export type { CookFlow } from './hooks/useCookFlow'
+export { cookPath } from './lib/cook'
+export { heroMeal } from './lib/days'
 export { useCouldntPlan, useLeftovers, useToConfirm } from './hooks/useTodayTiles'
 export { usePlan } from './hooks/usePlan'
 export { useMarkCooked } from './hooks/useMarkCooked'

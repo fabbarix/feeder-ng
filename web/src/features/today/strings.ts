@@ -12,9 +12,8 @@ export const todayStrings = {
   advanceStepUpcoming: (dueTime: string, slotTime: string) => `At ${dueTime}, for ${slotTime}`,
   useSoonHeading: 'Use soon',
   streakHeading: 'Zero-waste streak',
-  streak: (days: number) => (days === 1 ? '1 day without throwing food away' : `${days} days without throwing food away`),
-  streakCheer: 'Nothing wasted. Keep it going!',
-  goesOffToday: 'Goes off today',
-  goesOffTomorrow: 'Goes off tomorrow',
-  goesOffIn: (days: number) => `Goes off in ${days} days`,
+  streakLabel: 'zero-waste streak',
+  whenToday: 'today',
+  whenTomorrow: 'tomorrow',
+  useSoonMore: (n: number) => `+${n} more`,
 }

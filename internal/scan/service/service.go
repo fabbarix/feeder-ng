@@ -41,6 +41,8 @@ const (
 	CodeUnknownProduct = "unknown_product"
 	CodeUnknownShop    = "unknown_shop"
 	CodeUnknownIngr    = "unknown_ingredient"
+	// CodeBarcodeArchived rejects a shop_unknown whose barcode belongs to an archived Product (R8): the phone offers to unarchive it.
+	CodeBarcodeArchived = "barcode_archived"
 )
 
 // StockAdd asks Stock for a Lot (source scan). Purchased is the household date of the scan.
@@ -89,7 +91,11 @@ type NewProduct struct {
 }
 
 // BarcodeTakenError is returned by CreateProduct when someone created the barcode first.
-type BarcodeTakenError struct{ ProductID int64 }
+// Archived: the owner is an archived Product, so the Op is rejected with CodeBarcodeArchived instead of merged (WP7).
+type BarcodeTakenError struct {
+	ProductID int64
+	Archived  bool
+}
 
 func (e *BarcodeTakenError) Error() string {
 	return "barcode already belongs to product " + itoa(e.ProductID)
@@ -321,6 +327,10 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	p, err := s.d.Catalogue.CreateProduct(ctx, np)
 	var taken *BarcodeTakenError
 	if errors.As(err, &taken) {
+		// WP7 / R8: an archived owner is never merged into (its Stock would be added to a retired pack); the phone offers to unarchive it.
+		if taken.Archived {
+			return rejected(op.ClientUUID, CodeBarcodeArchived, taken.Error()), nil
+		}
 		created = false
 		if p, err = s.d.Catalogue.Product(ctx, taken.ProductID); err != nil {
 			return scan.Result{}, err

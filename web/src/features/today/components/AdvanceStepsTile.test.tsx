@@ -23,6 +23,13 @@ describe('AdvanceStepsTile', () => {
     expect(screen.getByText('Now, for 19:30')).toBeInTheDocument()
   })
 
+  it('is a half surface tile showing the due time big, with the alarm icon', () => {
+    const { container } = render(<AdvanceStepsTile steps={[due]} />)
+    expect(container.querySelector('[data-variant="surface"]')).toHaveAttribute('data-span', '1')
+    expect(screen.getByText('15:30')).toBeInTheDocument()
+    expect(container.querySelector('svg')).not.toBeNull()
+  })
+
   it('shows an upcoming step with its due time', () => {
     render(<AdvanceStepsTile steps={[{ ...due, state: 'upcoming', description: 'Prove the dough', dueTime: '14:00', slotTime: '20:00' }]} />)
     expect(screen.getByText('At 14:00, for 20:00')).toBeInTheDocument()

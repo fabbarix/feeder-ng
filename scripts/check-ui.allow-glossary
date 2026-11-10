@@ -31,3 +31,5 @@ web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal
 
 # "cannot be deleted" is the copy of the Delete action on a bought Product (the server rule), not the Archived term; the test pins it.
 web/src/features/products/strings.ts deleted  # Delete Product copy: a bought Product cannot be deleted (the action, not the Archived state)
+# "Done" (board:markDone) is the Advance Step state on the kitchen board's Next Advance Step tile, not a Planned Meal (as on Cook).
+web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal

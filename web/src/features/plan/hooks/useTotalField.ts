@@ -1,23 +1,21 @@
 import { useState } from 'react'
-import { parseTotal } from '../lib/cook'
 import { planStrings } from '../strings'
 
-/** The Stock total text field: its text, a validation message, and the parsed number on submit. */
+/** The Stock total field: its number (null while empty), a validation message, and the number on submit. */
 export function useTotalField(initial: number, onSave: (total: number) => void) {
-  const [text, setText] = useState(String(initial))
+  const [value, setValue] = useState<number | null>(initial)
   const [error, setError] = useState<string | null>(null)
   return {
-    text,
-    setText,
+    value,
+    setValue,
     error,
     submit: () => {
-      const total = parseTotal(text)
-      if (total === null) {
+      if (value === null || value < 0) {
         setError(planStrings.errorTotal)
         return
       }
       setError(null)
-      onSave(total)
+      onSave(value)
     },
   }
 }
