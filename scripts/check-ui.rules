@@ -1,16 +1,17 @@
 # UI guard modes (read by scripts/check-ui.sh). One line per rule: warn | fail.
 # A WP that fixes a rule flips it to fail here. To flip only some folders first, add
-#   <rule>.fail_paths=web/src/ui web/src/features/plan
+#   <rule>.fail_paths=web/src/ui web/src/features/plan web/src/features/shop web/src/features/scan
 # (space separated path prefixes): violations under them fail, the rest still warn.
 native-ui=warn
-native-ui.fail_paths=web/src/ui web/src/app
+native-ui.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan
 phosphor=fail
 colour-literals=warn
-colour-literals.fail_paths=web/src/ui web/src/app
+colour-literals.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan
 class-hooks=warn
-class-hooks.fail_paths=web/src/ui web/src/app
+class-hooks.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan
 sizing=warn
-sizing.fail_paths=web/src/ui web/src/app
+sizing.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan
 glossary=warn
+glossary.fail_paths=web/src/features/shop web/src/features/scan
 native-search=warn
-native-search.fail_paths=web/src/ui
+native-search.fail_paths=web/src/ui web/src/features/shop web/src/features/scan

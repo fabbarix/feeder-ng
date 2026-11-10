@@ -6,6 +6,7 @@ import { ApiError } from '../../../lib/http'
 import { appSnapshots } from '../../scan/lib/idbStore'
 import { snapshotKeys, type SnapshotStore } from '../../scan/lib/snapshots'
 import { shopApi } from '../api'
+import { liveRefreshFor } from '../lib/liveRefresh'
 import type { ShoppingList } from '../types'
 
 export const shopKeys = {
@@ -39,6 +40,15 @@ export interface UseShoppingListResult {
   retry: () => void
 }
 
+/** The screen state of a list: ready, empty (no Lines and no extras) or offline (the saved snapshot). */
+function listStatus(data: ShoppingList | undefined, stale: boolean, error: Error | null): UseShoppingListResult['status'] {
+  if (data) {
+    if (stale) return 'offline'
+    return data.lines.length === 0 && data.extras.length === 0 ? 'empty' : 'ready'
+  }
+  return error ? 'error' : 'loading'
+}
+
 interface Fetched {
   list: ShoppingList | undefined
   stale: boolean
@@ -49,7 +59,8 @@ interface Fetched {
  * a snapshot; when the fetch fails with a network error (ApiError status 0) the saved snapshot is returned with
  * stale = true (and an error is reported only when there is none). Live updates: the `shopping`, `plan`, `stock`
  * and `products` topics, and a reconnect, ask liveRefreshFor(queryClient).request() (WP7: one refetch per burst, see
- * lib/liveRefresh); they no longer invalidate directly. Does nothing where there is no EventSource.
+ * lib/liveRefresh); they no longer invalidate directly. Does nothing where there is no EventSource. `status` is what the
+ * screen renders (loading, error, offline, empty or ready).
  */
 export function useShoppingList(options: UseShoppingListOptions): UseShoppingListResult {
   const { shopId, to } = options
@@ -77,7 +88,7 @@ export function useShoppingList(options: UseShoppingListOptions): UseShoppingLis
   useEffect(() => {
     if (typeof EventSource === 'undefined') return
     const connection = connectEvents()
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: shopKeys.all })
+    const refresh = () => liveRefreshFor(queryClient).request()
     const offs = LIVE_TOPICS.map((topic) => connection.subscribe(topic, refresh))
     const offReconnect = connection.onReconnect(refresh)
     return () => {
@@ -87,12 +98,14 @@ export function useShoppingList(options: UseShoppingListOptions): UseShoppingLis
     }
   }, [queryClient])
 
+  const data = query.data?.list
+  const stale = query.data?.stale ?? false
   return {
-    data: query.data?.list,
+    data,
     isLoading: query.isLoading,
     error: query.error,
-    stale: query.data?.stale ?? false,
-    status: 'loading',
-    retry: () => {},
+    stale,
+    status: listStatus(data, stale, query.error),
+    retry: () => void query.refetch(),
   }
 }

@@ -1,4 +1,5 @@
-// The toast after a Stock-take action (QA: "-1 pack gives no toast"). Plain TypeScript. WP7 stub.
+// The toast after a Stock-take action (QA: "-1 pack gives no toast"). Plain TypeScript.
+import { scanStrings } from '../strings'
 import type { StockTakeAction } from '../types'
 
 /**
@@ -6,8 +7,7 @@ import type { StockTakeAction } from '../types'
  * "Passata: 1500 g in Stock" for set_total. `totalText` is the formatted new total.
  */
 export function stockTakeMessage(action: StockTakeAction, ingredientName: string, totalText: string): string {
-  void action
-  void ingredientName
-  void totalText
-  return ''
+  if (action === 'set_total') return scanStrings.inStock(ingredientName, totalText)
+  const change = action === 'plus_pack' ? scanStrings.plusPack : scanStrings.minusPack
+  return `${change}: ${ingredientName}, ${totalText} in Stock`
 }

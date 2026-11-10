@@ -284,6 +284,20 @@ describe('ScanScreen', () => {
     expect(f.createNewInstead).toHaveBeenCalledTimes(1)
   })
 
+  it('?mode=stocktake (the Stock-take button of the Shopping List) skips the Shop picker into Stock-take', () => {
+    window.history.replaceState(null, '', '/scan?mode=stocktake')
+    try {
+      lastShop.getLastShopId.mockReturnValue(2)
+      open(controller({ list: undefined }))
+      expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
+      expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
+      expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+      expect(scanSession.isActive()).toBe(false)
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
   it('shows a Skeleton while the Shops load, neither the picker (which would flash) nor a session', async () => {
     shopsState.loading = true
     open(controller())

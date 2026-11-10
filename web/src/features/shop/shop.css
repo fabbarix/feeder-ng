@@ -1,0 +1,171 @@
+/* The Shop screen (WP7, ui-fix-plan 5.5). Tokens only: no colours here, no hex. */
+
+.shop-screen {
+  display: grid;
+  gap: var(--bento-gap);
+}
+
+.shop-screen__controls {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .shop-screen__controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.shop-screen__stale {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.shop-ticked {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.shop-ticked__title {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+}
+
+/* One entry: a Bento tile at least 96 px high, the tick control as the leading target. */
+.line-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 96px;
+  padding: var(--tile-pad);
+}
+
+.line-tile__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 2px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-on-primary-container);
+  cursor: pointer;
+}
+
+.line-tile__tick[aria-pressed='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.line-tile__tick:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.line-tile__body {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.line-tile__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-strong-size);
+  font-weight: 700;
+  line-height: var(--text-body-strong-line);
+  overflow-wrap: anywhere;
+}
+
+.line-tile[data-state='ticked'] .line-tile__title {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.line-tile__quantity {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-title-3-size);
+  font-weight: 800;
+  line-height: var(--text-title-3-line);
+}
+
+.line-tile__pack {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.line-tile__extra-icon {
+  display: inline-flex;
+  color: var(--color-muted);
+}
+
+.line-tile__estimated-cost {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The estimated total. */
+.cost-tile {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.cost-tile__label,
+.cost-tile__caption,
+.cost-tile__unpriced {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.cost-tile__value {
+  color: var(--color-text);
+  font-size: var(--text-display-size);
+  font-weight: var(--text-display-weight);
+  line-height: var(--text-display-line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Completion: the celebration sits above every tile. */
+.celebration-tile {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.celebration-tile__title {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  font-weight: var(--text-title-2-weight);
+  line-height: var(--text-title-2-line);
+}
+
+.celebration-tile__facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}

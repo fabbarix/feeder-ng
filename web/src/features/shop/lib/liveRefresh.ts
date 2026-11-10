@@ -15,15 +15,33 @@ export interface LiveRefresh {
 /** Burst window in ms: long enough for the server's follow-up events, short enough to feel instant. */
 export const LIVE_REFRESH_WINDOW_MS = 250
 
-/** Calls `invalidate` once, `windowMs` after the first of any number of `request()` calls (trailing only). WP7 stub. */
+/** Calls `invalidate` once, `windowMs` after the first of any number of `request()` calls (trailing only). */
 export function createLiveRefresh(invalidate: () => void, windowMs: number = LIVE_REFRESH_WINDOW_MS): LiveRefresh {
-  void invalidate
-  void windowMs
-  return { request() {}, cancel() {} }
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return {
+    request() {
+      if (timer !== null) return
+      timer = setTimeout(() => {
+        timer = null
+        invalidate()
+      }, windowMs)
+    },
+    cancel() {
+      if (timer === null) return
+      clearTimeout(timer)
+      timer = null
+    },
+  }
 }
 
-/** The scheduler shared by everything that uses `queryClient` (one per client). It invalidates ['shopping'] with cancelRefetch: false. WP7 stub. */
+const schedulers = new WeakMap<QueryClient, LiveRefresh>()
+
+/** The scheduler shared by everything that uses `queryClient` (one per client). It invalidates ['shopping'] with cancelRefetch: false. */
 export function liveRefreshFor(queryClient: QueryClient): LiveRefresh {
-  void queryClient
-  return { request() {}, cancel() {} }
+  let scheduler = schedulers.get(queryClient)
+  if (!scheduler) {
+    scheduler = createLiveRefresh(() => void queryClient.invalidateQueries({ queryKey: ['shopping'] }, { cancelRefetch: false }))
+    schedulers.set(queryClient, scheduler)
+  }
+  return scheduler
 }

@@ -60,9 +60,7 @@ export interface RangeOption {
   label: string
 }
 
-/** The options of the "Shop for" Select: rangeChoices(today, maxTo), each labelled by describeRange. WP7 stub. */
+/** The options of the "Shop for" Select: rangeChoices(today, maxTo), each labelled by describeRange. */
 export function rangeOptions(today: string, maxTo: string): RangeOption[] {
-  void today
-  void maxTo
-  return []
+  return rangeChoices(today, maxTo).map((choice) => ({ value: choice.to, label: describeRange(choice.to, today) }))
 }

@@ -1,5 +1,7 @@
-// R8: "Unarchive <Product>?" offered when an Archived Product owns the scanned barcode. WP7 stub: the Developer builds it
-// on BottomSheet (title, body text, primary "Unarchive <name>", secondary "Create a new Product instead").
+// R8: "Unarchive <Product>?" offered when an Archived Product owns the scanned barcode.
+import { BottomSheet } from '../../../ui/BottomSheet'
+import { Button } from '../../../ui/Button'
+import { scanStrings } from '../strings'
 
 export interface UnarchiveProductSheetProps {
   open: boolean
@@ -11,7 +13,17 @@ export interface UnarchiveProductSheetProps {
   onCreateNew: () => void
 }
 
-export function UnarchiveProductSheet(props: UnarchiveProductSheetProps) {
-  void props
-  return null
+/** The R8 offer: "Unarchive <name>" (primary) or "Create a new Product instead" (secondary). */
+export function UnarchiveProductSheet({ open, onClose, productName, busy = false, onUnarchive, onCreateNew }: UnarchiveProductSheetProps) {
+  return (
+    <BottomSheet open={open} onClose={onClose} title={scanStrings.archivedTitle(productName)}>
+      <p>{scanStrings.archivedBody}</p>
+      <Button loading={busy} onClick={onUnarchive}>
+        {scanStrings.unarchiveAction(productName)}
+      </Button>
+      <Button variant="secondary" disabled={busy} onClick={onCreateNew}>
+        {scanStrings.createNewInstead}
+      </Button>
+    </BottomSheet>
+  )
 }

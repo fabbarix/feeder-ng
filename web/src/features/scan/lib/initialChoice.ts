@@ -1,4 +1,4 @@
-// What the Scan screen starts with (QA: the picker re-asked although a last-used Shop existed). Plain TypeScript. WP7 stub.
+// What the Scan screen starts with (QA: the picker re-asked although a last-used Shop existed). Plain TypeScript.
 
 export type ScanChoice = { kind: 'shop'; shop: { id: number; name: string } } | { kind: 'stocktake' }
 
@@ -7,7 +7,7 @@ export type ScanChoice = { kind: 'shop'; shop: { id: number; name: string } } | 
  * becomes "straight to it"); otherwise null = show the picker. Never starts a Stock-take by itself.
  */
 export function initialChoice(shops: { id: number; name: string }[], lastShopId: number | null): ScanChoice | null {
-  void shops
-  void lastShopId
-  return null
+  if (lastShopId === null) return null
+  const shop = shops.find((s) => s.id === lastShopId)
+  return shop ? { kind: 'shop', shop: { id: shop.id, name: shop.name } } : null
 }

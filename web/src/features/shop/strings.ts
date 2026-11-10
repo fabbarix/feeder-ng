@@ -1,12 +1,9 @@
 // English UI strings for the Shop (Shopping List) screen.
 export const shopStrings = {
   title: 'Shop',
-  progress: 'Lines ticked',
-  estimatedCost: 'Estimated cost',
-  /** @deprecated WP7 removes the dash; delete with CostTile's last use */
-  noPrice: '—',
   // WP7 copy (ui-fix-plan 5.5)
   leftToGet: 'Left to get',
+  estimatedTotal: 'Est. total',
   estimatedAt: (shop: string) => `est. at ${shop}`,
   estimatedAnyShop: 'est.',
   scan: 'Scan',
@@ -19,7 +16,7 @@ export const shopStrings = {
   rangeToday: 'Today',
   rangeUntil: (label: string) => `Until ${label}`,
   empty: 'Nothing to buy',
-  emptyHint: 'Plan some meals, or add an extra.',
+  emptyHint: 'Plan the week, or add an extra.',
   ticked: 'Ticked',
   addExtra: 'Add an extra',
   extraText: 'Something to buy',

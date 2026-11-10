@@ -1,8 +1,6 @@
 // English UI strings for the Scan feature.
 export const scanStrings = {
   title: 'Scan',
-  shopMode: 'Shop mode',
-  stockTakeMode: 'Stock-take',
   pickShop: 'Where are you shopping?',
   pickShopHint: 'Pick the Shop so prices and barcodes match.',
   stockTakeAtHome: 'Stock-take at home',
@@ -69,6 +67,8 @@ export const scanStrings = {
   unarchiveAction: (name: string) => `Unarchive ${name}`,
   createNewInstead: 'Create a new Product instead',
   unarchivedScanAgain: (name: string) => `Unarchived ${name}. Scan it again.`,
+  unarchiveFailed: 'Could not unarchive that Product. Try again.',
+  createIngredientRow: (query: string) => `Create Ingredient "${query}"`,
   archivedOwner: (name: string) => `This barcode belongs to the archived Product ${name}. Unarchive it in Products.`,
   editPriceLabel: 'Edit price',
   weight: 'Weight (g)',

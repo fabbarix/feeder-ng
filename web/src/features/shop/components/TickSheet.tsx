@@ -1,8 +1,8 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
+import { baseUnitLabel } from '../../../lib/units'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
-import { baseUnitLabel } from '../../../lib/units'
-import { parseAmount } from '../../stock/lib/amount'
+import { NumberField } from '../../../ui/fields/NumberField'
 import { shopStrings } from '../strings'
 import type { BaseUnit } from '../types'
 
@@ -17,20 +17,18 @@ export interface TickSheetProps {
   onSubmit: (quantity: number) => void
 }
 
-/** "How much?" before a tick by hand: a field prefilled with the remaining quantity, then add to Stock or tick only. */
+/** "How much?" before a tick by hand: a NumberField prefilled with the remaining quantity, then add to Stock or tick only. */
 export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSubmit }: TickSheetProps) {
-  const [text, setText] = useState(String(defaultQuantity))
+  const [value, setValue] = useState<number | null>(defaultQuantity)
   const [error, setError] = useState<string | null>(null)
-  const fieldId = useId()
 
   const submit = () => {
-    const parsed = parseAmount(text, 'nonNegative')
-    if (!parsed.ok) {
-      setError(parsed.error === 'negative' ? shopStrings.amountNegative : shopStrings.enterAmount)
+    if (value === null) {
+      setError(shopStrings.enterAmount)
       return
     }
     setError(null)
-    onSubmit(parsed.value)
+    onSubmit(value)
   }
 
   return (
@@ -41,18 +39,9 @@ export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSu
           submit()
         }}
       >
-        <div className="field">
-          <label className="field__label" htmlFor={fieldId}>
-            {shopStrings.howMuch}
-          </label>
-          <div className="field__row">
-            <input id={fieldId} className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
-            <span className="field__unit">{baseUnitLabel(baseUnit, 'metric')}</span>
-          </div>
-        </div>
-        {error ? <p className="field__error" role="alert">{error}</p> : null}
+        <NumberField label={shopStrings.howMuch} value={value} onChange={setValue} min={0} unit={baseUnitLabel(baseUnit, 'metric')} error={error ?? undefined} />
         <Button type="submit">{shopStrings.tickSave}</Button>
-        <Button variant="tonal" onClick={() => onSubmit(0)}>
+        <Button variant="secondary" onClick={() => onSubmit(0)}>
           {shopStrings.tickOnly}
         </Button>
       </form>

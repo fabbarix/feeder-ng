@@ -30,12 +30,15 @@ const files = [...walk(`${cwd}/src/features/shop`), ...walk(`${cwd}/src/features
 const forbidden: [string, RegExp][] = [
   ['native <select>', /<select\b/],
   ['native <input> or <textarea> (use TextField / NumberField / SearchField / Checkbox)', /<(input|textarea)\b/],
-  ['native alert/confirm/prompt', /\b(window\.)?(alert|confirm|prompt)\(/],
+  // a bare or window.-qualified call; member calls such as feedback.confirm() (the Feedback API) are not native dialogs
+  // a call, bare or window.-qualified (not a member such as feedback.confirm(), nor a method declaration `confirm(): void`)
+  ['native alert/confirm/prompt', /(?<![\w$.])(window\.)?(alert|confirm|prompt)\((?!\)\s*(:|\{))/],
   ['legacy Button variant tonal/ghost', /variant=["'](tonal|ghost)["']/],
   ['legacy Chip/Tile tone prop', /(?<![-\w])tone=/],
   ['legacy Tile size prop', /<Tile\b[^>]*\ssize=/],
   ['legacy EmptyState illustration', /illustration=/],
-  ['glyph characters instead of icons (x, pencil)', /[×✎]/],
+  // a close or pencil glyph as the text of an element; the multiplication sign in pack text ("2 × Mutti") is not an icon
+  ['glyph characters instead of icons (x, pencil)', />\s*[×✎]\s*</],
   ['a dash for "no value"', /—/],
   ['Phosphor imported outside ui/', /@phosphor-icons/],
   ['inline <svg>', /<svg\b/],

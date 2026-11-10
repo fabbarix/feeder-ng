@@ -1,5 +1,6 @@
-import { Chip } from '../../../ui/Chip'
-import { rangeChoices } from '../lib/range'
+import { useMemo } from 'react'
+import { Select } from '../../../ui/Select/Select'
+import { rangeOptions } from '../lib/range'
 import { shopStrings } from '../strings'
 
 export interface RangePickerProps {
@@ -11,15 +12,8 @@ export interface RangePickerProps {
   onChange: (to: string) => void
 }
 
-/** "Shop for": one pill per day from today to the Planning Horizon; the range in use is pressed. */
+/** "Shop for": one Select of the days from today to the Planning Horizon; it shows the range in use ("Until Thu 12"). */
 export function RangePicker({ today, maxTo, to, onChange }: RangePickerProps) {
-  return (
-    <div role="group" aria-label={shopStrings.range} className="range-picker">
-      {rangeChoices(today, maxTo).map((choice) => (
-        <Chip key={choice.to} selected={choice.to === to} onClick={() => onChange(choice.to)}>
-          {choice.label}
-        </Chip>
-      ))}
-    </div>
-  )
+  const options = useMemo(() => rangeOptions(today, maxTo), [today, maxTo])
+  return <Select<string> label={shopStrings.range} options={options} value={to} onChange={onChange} />
 }

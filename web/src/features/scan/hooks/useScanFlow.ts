@@ -4,10 +4,11 @@
 import { useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { ArchivedProduct } from '../lib/archivedProduct'
 import type { Scanned } from '../lib/barcode'
 import type { Feedback } from '../lib/feedback'
+import { archivedOwnerId, type ArchivedProduct } from '../lib/archivedProduct'
 import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
+import { stockTakeMessage } from '../lib/stockTakeToast'
 import { feedbackText } from '../lib/toast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
@@ -43,6 +44,7 @@ export interface ScanFlowDeps {
   fetchProduct?: (id: number) => Promise<ArchivedProduct>
   /** R8: scanApi.unarchiveProduct(id) (the controller also refreshes ['products'], ['catalog'] and the offline data) */
   unarchive?: (productId: number) => Promise<void>
+  /** R8, not an error path: the message of an unarchive that failed is shown through notify */
   newUuid?: () => string
   now?: () => Date
 }
@@ -125,6 +127,9 @@ interface Fallback {
 
 const nowIso = (d: ScanFlowDeps) => (d.now ? d.now() : new Date()).toISOString()
 
+/** The message of a failed call, for a toast. */
+const failureText = (err: unknown) => (err instanceof Error ? err.message : scanStrings.unarchiveFailed)
+
 /**
  * Shop mode: planScan(scanned, offline). known -> build a shop_scan Op (new clientUuid, scannedAt = now, shopId,
  * rangeTo, productId, quantity, priceCents when known), call feedback.confirm(), submit, then show the feedback
@@ -141,6 +146,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const [line, setLine] = useState<Line | null>(null)
   const [banner, setBanner] = useState<FlowBanner | null>(null)
   const [sheet, setSheet] = useState<FlowSheet | null>(null)
+  // R8: after "Create a new Product instead" the same barcode is not offered the archived Product again (a second rejection warns).
+  const offeredArchivedRef = useRef(false)
 
   const text = (l: Pick<Line, 'ingredientName' | 'baseUnit' | 'quantity' | 'priceCents' | 'onList'>) =>
     feedbackText({ ingredientName: l.ingredientName, quantity: l.quantity, baseUnit: l.baseUnit, priceCents: l.priceCents, currency: depsRef.current.currency, onList: l.onList }, depsRef.current.system)
@@ -214,11 +221,23 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     setSheet({ kind: 'unknown', mode: 'weighed', target })
   }
 
+  /** R8: the Archived Product that owns `code` at this Shop, or null (also when the server cannot be reached: no offer). */
+  const findArchivedOwner = async (code: string, shopId: number): Promise<ArchivedProduct | null> => {
+    const find = depsRef.current.findArchived
+    if (!find) return null
+    try {
+      return await find(code, shopId)
+    } catch {
+      return null
+    }
+  }
+
   const onScan = async (scanned: Scanned): Promise<void> => {
     const d = depsRef.current
     if (!d.offline) return
     const stockTake = d.mode === 'stocktake'
     setBanner(null)
+    offeredArchivedRef.current = false
     const plan = planScan(scanned, d.offline)
     switch (plan.kind) {
       case 'known':
@@ -229,10 +248,19 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
         setSheet({ kind: 'ask_weight', plan })
         return
       case 'unknown':
-      case 'unknown_weighed':
-        if (stockTake) setBanner({ tone: 'info', text: scanStrings.unknownAtHome })
-        else openUnknown(plan)
+      case 'unknown_weighed': {
+        if (stockTake) {
+          setBanner({ tone: 'info', text: scanStrings.unknownAtHome })
+          return
+        }
+        const owner = plan.kind === 'unknown' && d.shop ? await findArchivedOwner(plan.code, d.shop.id) : null
+        if (plan.kind === 'unknown' && owner) {
+          setSheet({ kind: 'unarchive', product: owner, target: { mode: 'pack', code: plan.code } })
+          return
+        }
+        openUnknown(plan)
         return
+      }
       case 'not_product':
         setBanner({ tone: 'info', text: scanStrings.notProduct })
         return
@@ -243,13 +271,35 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     }
   }
 
+  /** R8: a barcode_archived rejection opens the unarchive offer (or, after "Create a new Product instead", a warning). */
+  const archivedRejection = async (ownerId: number, target: UnknownTarget): Promise<void> => {
+    const d = depsRef.current
+    const owner = await d.fetchProduct?.(ownerId).catch(() => null)
+    if (!owner) {
+      setBanner({ tone: 'warn', text: scanStrings.archivedOwner(`#${ownerId}`) })
+      return
+    }
+    if (offeredArchivedRef.current) {
+      setBanner({ tone: 'warn', text: scanStrings.archivedOwner(owner.name) })
+      return
+    }
+    setBanner(null)
+    setSheet({ kind: 'unarchive', product: owner, target })
+  }
+
   const saveUnknown = async (values: UnknownFormValues): Promise<void> => {
     const d = depsRef.current
     if (!sheet || sheet.kind !== 'unknown' || !d.shop) return
     if (Object.keys(validateUnknownForm(values, sheet.mode)).length > 0) return
-    const op = toUnknownOp(values, sheet.target, { clientUuid: uuid(), scannedAt: nowIso(d), shopId: d.shop.id, rangeTo: d.rangeTo })
+    const target = sheet.target
+    const op = toUnknownOp(values, target, { clientUuid: uuid(), scannedAt: nowIso(d), shopId: d.shop.id, rangeTo: d.rangeTo })
     const result = await d.submit(op)
     setSheet(null)
+    const ownerId = archivedOwnerId(result)
+    if (ownerId !== null) {
+      await archivedRejection(ownerId, target)
+      return
+    }
     await finish(
       op.clientUuid,
       result,
@@ -293,19 +343,56 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     setSheet(null)
     const result = await d.submit(op)
     if (result === null) {
-      setBanner({ tone: 'info', text: scanStrings.waitingToSync })
+      d.notify?.(scanStrings.waitingToSync, 'info')
       return
     }
     if (result.status === 'rejected') {
       d.feedback.reject()
-      setBanner({ tone: 'warn', text: scanStrings.rejectedAdd(result.error?.message ?? '') })
+      d.notify?.(scanStrings.rejectedAdd(result.error?.message ?? ''), 'error')
       return
     }
     d.feedback.confirm()
     const s = result.scan
     if (s?.total !== undefined) {
-      setBanner({ tone: 'info', text: scanStrings.inStock(s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system)) })
+      d.notify?.(stockTakeMessage(action, s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system)), 'success')
     }
+  }
+
+  /**
+   * R8: the unarchive sheet's primary action. A failure keeps the sheet and says why. A pack is then scanned as a known
+   * Product (one pack, no price); a weighed target only says to scan it again (the Catalog changes on the next sync).
+   */
+  const unarchiveProduct = async (): Promise<void> => {
+    if (!sheet || sheet.kind !== 'unarchive') return
+    const d = depsRef.current
+    const { product, target } = sheet
+    if (!d.unarchive) return
+    try {
+      await d.unarchive(product.id)
+    } catch (err) {
+      d.notify?.(failureText(err), 'error')
+      return
+    }
+    setSheet(null)
+    if (target.mode !== 'pack') {
+      d.notify?.(scanStrings.unarchivedScanAgain(product.name), 'success')
+      return
+    }
+    const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: product.id, quantity: product.packSize }
+    const result = await d.submit(op)
+    await finish(
+      op.clientUuid,
+      result,
+      { ingredientName: product.ingredientName, baseUnit: product.baseUnit, quantity: product.packSize, priceCents: null, productName: product.name },
+      product.name,
+    )
+  }
+
+  /** R8: "Create a new Product instead" shows the unknown sheet for the same barcode. */
+  const createNewInstead = (): void => {
+    if (!sheet || sheet.kind !== 'unarchive') return
+    offeredArchivedRef.current = true
+    setSheet({ kind: 'unknown', mode: 'pack', target: sheet.target })
   }
 
   const openEditPrice = () => {
@@ -380,7 +467,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     undo,
     dismissFeedback: () => setLine(null),
     closeSheet: () => setSheet(null),
-    unarchiveProduct: async () => {},
-    createNewInstead: () => {},
+    unarchiveProduct,
+    createNewInstead,
   }
 }

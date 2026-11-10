@@ -1,4 +1,4 @@
-// R8: a Product that owns a barcode but is Archived. Plain TypeScript. WP7 stub.
+// R8: a Product that owns a barcode but is Archived. Plain TypeScript.
 import type { ScanResult } from '../types'
 
 /** The Product JSON the server sends in resolve's `archivedProduct` and from GET /api/products/{id}. */
@@ -17,6 +17,7 @@ export interface ArchivedProduct {
  * "barcode already belongs to product 9". null for any other result.
  */
 export function archivedOwnerId(result: ScanResult | null): number | null {
-  void result
-  return null
+  if (!result || result.status !== 'rejected' || result.error?.code !== 'barcode_archived') return null
+  const match = /belongs to product (\d+)/.exec(result.error.message)
+  return match ? Number(match[1]) : null
 }
