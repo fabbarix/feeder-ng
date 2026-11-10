@@ -4,15 +4,38 @@ The Feeder is one container: a static Go binary with the web app embedded, and a
 
 ## Image
 
-Tagged releases are published to GHCR for `linux/amd64` and `linux/arm64`:
+The image is public on GHCR, so it pulls anonymously (no `docker login`):
 
-```
-ghcr.io/fabbarix/feeder-ng:1.0.0     exact version
-ghcr.io/fabbarix/feeder-ng:1.0       latest patch of 1.0
-ghcr.io/fabbarix/feeder-ng:latest    latest stable release
+```sh
+docker pull ghcr.io/fabbarix/feeder-ng:latest
 ```
 
-`.github/workflows/release.yml` builds and pushes them when a tag `v*` is pushed (after `scripts/check.sh` passes); `.github/workflows/ci.yml` runs `scripts/check.sh` on every pull request.
+| Tag | Published on | Meaning |
+|---|---|---|
+| `main` | every push to `main` | latest development build |
+| `sha-<short>` | every push to `main` | one exact commit |
+| `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
+| `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release |
+
+All tags are multi-arch (`linux/amd64`, `linux/arm64`) and carry the OCI label `org.opencontainers.image.source`, which links the package to this repository.
+
+Workflows:
+
+- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests and on pushes to `main`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR.
+- `.github/workflows/release.yml` ("Publish"): on pushes to `main` and on `v*` tags, runs the checks, then builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). On `v*` tags it then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`.
+
+To release: `git tag v1.0.0 && git push origin v1.0.0`.
+
+### One-time GitHub steps (after the first push)
+
+GHCR creates packages as **private**, even in a public repository. Once, after the first workflow run has pushed both packages:
+
+1. Open `https://github.com/fabbarix?tab=packages` (or the repository's *Packages* sidebar), then each package: `feeder-ng` (the image) and `charts/feeder` (the chart).
+2. *Package settings* -> *Danger Zone* -> *Change visibility* -> **Public**. Anonymous `docker pull` and `helm install` only work after this.
+3. Still in *Package settings*, check *Connect repository* / "Linked repository" shows `fabbarix/feeder-ng`. The image links itself through the `org.opencontainers.image.source` label; the chart package usually has to be linked by hand (*Connect repository*). Linking also lets the workflow's `GITHUB_TOKEN` keep pushing new versions.
+4. If a push is denied with 403 later, in *Package settings* -> *Manage Actions access* add the repository with the *Write* role.
+
+There is no `gh api` call to do this: to my knowledge GitHub's REST API has no endpoint to change a package's visibility or to link a package to a repository (it can list, get and delete packages and versions, `GET /user/packages/container/feeder-ng` for example), so those steps are done in the web UI. I am not certain this is still true; if a visibility endpoint has been added, the call would need a classic PAT with `write:packages` and `read:packages`. Do not put such a PAT in the workflows.
 
 ## Building the image locally
 
@@ -49,7 +72,7 @@ docker run -d --name feeder --restart unless-stopped \
   ghcr.io/fabbarix/feeder-ng:1
 ```
 
-The image runs as user `nonroot` (uid/gid 65532). A named volume works as is; for a bind mount, make the directory writable by that user: `sudo chown 65532:65532 /srv/feeder`.
+The image runs as user `nonroot` (uid/gid 65532). A named volume works as is; a bind mount (`-v /srv/feeder:/data`) must be writable by uid 65532 or the container cannot create its database: `sudo chown 65532:65532 /srv/feeder`. (The Helm chart does this with `fsGroup: 65532`.)
 
 ## docker compose
 
@@ -72,6 +95,37 @@ volumes:
 ```
 
 The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy probe `GET /` instead.
+
+## Kubernetes (Helm)
+
+The chart is public too, published as an OCI artifact; installing it needs no login:
+
+```sh
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
+  --namespace feeder --create-namespace \
+  --set adminEmail=you@example.com \
+  --set baseUrl=https://feeder.example.com \
+  --set ingress.enabled=true --set ingress.className=nginx \
+  --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
+```
+
+The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `appVersion` `1.0.0`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://... --version X`. Source and the values table: `deploy/helm/feeder/README.md`.
+
+- **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
+- **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). The pod runs as uid/gid 65532 with `fsGroup: 65532`, so the volume is writable. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
+- **Google sign-in.** Create the OAuth client with `scripts/setup-google-auth.sh` (it prints the redirect URI `$baseUrl/auth/google/callback` and saves the client id and secret to `.env.local`). Put them in a Secret and reference it, so the secret never sits in values or shell history:
+
+  ```sh
+  kubectl -n feeder create secret generic feeder-google \
+    --from-literal=client-id=... --from-literal=client-secret=...
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --reuse-values \
+    --set google.existingSecret=feeder-google
+  ```
+
+  Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.clientSecretKey`). For a quick trial you can instead pass `google.clientId` and `google.clientSecret`, and the chart creates the Secret.
+- **Ingress.** The default annotations target ingress-nginx and make `/api/events` (server-sent events) work: `proxy-buffering: "off"`, one-hour `proxy-read-timeout` and `proxy-send-timeout`, `proxy-body-size: 10m`. Override single keys under `ingress.annotations` for other controllers.
+- **Probes.** All three probes call `GET /api/health`.
+- **Backups** still land in `/data/backups` on the PVC; copy them off the cluster as described below.
 
 ## Reverse proxy
 
