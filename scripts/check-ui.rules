@@ -3,15 +3,15 @@
 #   <rule>.fail_paths=web/src/ui web/src/features/plan web/src/features/shop web/src/features/scan
 # (space separated path prefixes): violations under them fail, the rest still warn.
 native-ui=warn
-native-ui.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+native-ui.fail_paths=web/src/ui web/src/app web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 phosphor=fail
 colour-literals=warn
-colour-literals.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+colour-literals.fail_paths=web/src/ui web/src/app web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 class-hooks=warn
-class-hooks.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+class-hooks.fail_paths=web/src/ui web/src/app web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 sizing=warn
-sizing.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+sizing.fail_paths=web/src/ui web/src/app web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 glossary=warn
-glossary.fail_paths=web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+glossary.fail_paths=web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 native-search=warn
-native-search.fail_paths=web/src/ui web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
+native-search.fail_paths=web/src/ui web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today

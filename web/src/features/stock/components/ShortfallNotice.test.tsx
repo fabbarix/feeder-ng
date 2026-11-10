@@ -30,4 +30,14 @@ describe('ShortfallNotice', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1)
     expect(onCorrect).not.toHaveBeenCalled()
   })
+
+  it('is a spoil status Tile; Correct Stock is secondary, Dismiss tertiary', () => {
+    render(<ShortfallNotice warning={warning} onCorrect={() => {}} onDismiss={() => {}} />)
+    const tile = screen.getByText(warning.message).closest('.tile')
+    expect(tile).toHaveAttribute('data-variant', 'status')
+    expect(tile).toHaveAttribute('data-status', 'spoil')
+    expect(tile).not.toHaveAttribute('data-tone')
+    expect(screen.getByRole('button', { name: 'Correct Stock' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute('data-variant', 'tertiary')
+  })
 })

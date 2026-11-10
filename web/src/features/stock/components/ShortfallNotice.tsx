@@ -13,16 +13,16 @@ export interface ShortfallNoticeProps {
   system?: UnitSystem
 }
 
-/** Shows the shortfall sentence with a "Correct Stock" button (one tap -> onCorrect) and "Dismiss". */
+/** A spoil status Tile (variant="status"); Correct Stock secondary, Dismiss tertiary. Shows the shortfall sentence with a "Correct Stock" button (one tap -> onCorrect) and "Dismiss". */
 export function ShortfallNotice({ warning, onCorrect, onDismiss, system = 'metric' }: ShortfallNoticeProps): ReactElement | null {
   return (
-    <Tile as="section" tone="spoil">
+    <Tile as="section" variant="status" status="spoil">
       <p className="shortfall-notice__text">{shortfallMessage(warning, system)}</p>
       <div className="shortfall-notice__actions">
-        <Button variant="tonal" onClick={() => onCorrect(warning)}>
+        <Button variant="secondary" onClick={() => onCorrect(warning)}>
           {strings.correctStock}
         </Button>
-        <Button variant="ghost" onClick={onDismiss}>
+        <Button variant="tertiary" onClick={onDismiss}>
           {uiStrings.dismiss}
         </Button>
       </div>
