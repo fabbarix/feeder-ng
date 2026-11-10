@@ -1,6 +1,6 @@
 // B4 state machine: when the camera fails, offer "try again" and manual barcode entry. Typed barcodes go through
 // validateManualBarcode and then to onScan exactly like a camera read. React hook; the camera and the flow are injected.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Scanned } from '../lib/barcode'
 import { cameraFailure, type CameraFailure } from '../lib/cameraFailure'
 import { validateManualBarcode, type ManualBarcodeError } from '../lib/manualBarcode'
@@ -37,6 +37,15 @@ export function useCameraRecovery(options: UseCameraRecoveryOptions): CameraReco
   const [manualOpen, setManualOpen] = useState(false)
   const [text, setTextValue] = useState('')
   const [error, setError] = useState<ManualBarcodeError | null>(null)
+
+  // when the camera recovers, the manual entry closes and its text and error are cleared
+  const recovered = failure === null
+  useEffect(() => {
+    if (!recovered) return
+    setManualOpen(false)
+    setTextValue('')
+    setError(null)
+  }, [recovered])
 
   const setText = (value: string) => {
     setTextValue(value)

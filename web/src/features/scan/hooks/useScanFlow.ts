@@ -296,7 +296,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     const d = depsRef.current
     const editedQueued = line.queued && d.setQueuedPrice ? await d.setQueuedPrice(line.clientUuid, priceCents) : false
     if (!editedQueued) await d.setPrice(line.clientUuid, priceCents)
-    setLine({ ...line, priceCents })
+    // functional: the line may have changed while the awaits ran (a flush settled it, or it was undone)
+    setLine((current) => (current?.clientUuid === line.clientUuid ? { ...current, priceCents } : current))
     setSheet(null)
   }
 
