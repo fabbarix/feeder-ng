@@ -1,10 +1,10 @@
 name: Publish
 
-# Pushes to main publish the `main` and `sha-<short>` image tags. Pushing a tag such as v1.0.0
-# publishes the semver image tags (and `latest` for stable releases), then the Helm chart.
+# Publishes only on v* tags: pushing a tag such as v1.0.0 publishes the semver image tags
+# (and `latest` for stable releases only), then the Helm chart.
+# Pushes to branches never publish. A failed release is re-run from its tag's run.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
 
 permissions:
@@ -63,8 +63,6 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
