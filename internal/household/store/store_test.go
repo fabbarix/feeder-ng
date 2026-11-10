@@ -298,22 +298,16 @@ func TestPreferencesDefaultThenRoundTrip(t *testing.T) {
 	f := newFx(t)
 	u, _ := f.auth.AddUser(f.ctx, "anna@example.test", "Anna", false)
 	got, err := f.st.Preferences(f.ctx, u.ID)
-	if err != nil || got.Scheme != "system" || got.Accent != "#3f7d58" || got.Secondary != nil || got.Units != "metric" {
+	if err != nil || got.Scheme != "system" || got.Accent != "#3f7d58" || got.Units != "metric" {
 		t.Fatalf("defaults = %+v, %v", got, err)
 	}
-	sec := "#ffb4a2"
-	want := household.Preferences{Scheme: "dark", Accent: "#3366cc", Secondary: &sec, Units: "imperial"}
+	want := household.Preferences{Scheme: "dark", Accent: "#3366cc", Units: "imperial"}
 	if err := f.st.SavePreferences(f.ctx, u.ID, want); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = f.st.Preferences(f.ctx, u.ID)
-	if got.Scheme != "dark" || got.Accent != "#3366cc" || got.Secondary == nil || *got.Secondary != sec || got.Units != "imperial" {
+	if got.Scheme != "dark" || got.Accent != "#3366cc" || got.Units != "imperial" {
 		t.Fatalf("round trip = %+v", got)
-	}
-	want.Secondary = nil
-	f.st.SavePreferences(f.ctx, u.ID, want)
-	if got, _ = f.st.Preferences(f.ctx, u.ID); got.Secondary != nil {
-		t.Errorf("secondary not cleared: %+v", got)
 	}
 	other, _ := f.auth.AddUser(f.ctx, "marco@example.test", "Marco", false)
 	if got, _ = f.st.Preferences(f.ctx, other.ID); got.Scheme != "system" {

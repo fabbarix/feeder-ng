@@ -2,10 +2,9 @@ package household
 
 // Preferences are one User's display preferences (spec §14).
 type Preferences struct {
-	Scheme    string  // light | dark | system
-	Accent    string  // #rrggbb
-	Secondary *string // #rrggbb, optional
-	Units     string  // metric | imperial
+	Scheme string // light | dark | system
+	Accent string // #rrggbb
+	Units  string // metric | imperial
 }
 
 // DefaultPreferences are the preferences of a User who has not chosen any.
@@ -22,9 +21,6 @@ func (p Preferences) Validate() error {
 	}
 	if !validHex(p.Accent) {
 		return fieldError("accent", "must be a #rrggbb colour")
-	}
-	if p.Secondary != nil && !validHex(*p.Secondary) {
-		return fieldError("secondary", "must be a #rrggbb colour")
 	}
 	switch p.Units {
 	case "metric", "imperial":

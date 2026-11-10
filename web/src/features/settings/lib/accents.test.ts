@@ -21,6 +21,6 @@ describe('isHexColour', () => {
 
 describe('DEFAULT_PREFERENCES', () => {
   it('matches the server defaults', () => {
-    expect(DEFAULT_PREFERENCES).toEqual({ scheme: 'system', accent: '#3f7d58', secondary: null, units: 'metric' })
+    expect(DEFAULT_PREFERENCES).toEqual({ scheme: 'system', accent: '#3f7d58', units: 'metric' })
   })
 })

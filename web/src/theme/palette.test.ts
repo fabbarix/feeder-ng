@@ -11,6 +11,7 @@ import {
   statusVarName,
   toCssVars,
   type ColorToken,
+  type ThemeInput,
   type Scheme,
 } from './palette'
 import { ACCENT_PRESETS } from '../features/settings/lib/accents'
@@ -74,10 +75,12 @@ describe('generatePalette: shape', () => {
     expect(() => generatePalette({ accent: 'banana' }, 'light')).toThrow(/hex/i)
   })
 
-  it('ignores the deprecated secondary', () => {
-    expect(generatePalette({ accent: '#3f7d58', secondary: '#2e86ab' }, 'light')).toEqual(
-      generatePalette({ accent: '#3f7d58' }, 'light'),
-    )
+  it('has no secondary input: ThemeInput is the accent only (removed 2026-11-10)', () => {
+    // @ts-expect-error secondary is not part of ThemeInput any more
+    const input: ThemeInput = { accent: '#3f7d58', secondary: '#2e86ab' }
+    expect(Object.keys({ accent: input.accent })).toEqual(['accent'])
+    const light = generatePalette({ accent: '#3f7d58' }, 'light')
+    expect(Object.keys(light.colors)).not.toContain('secondary')
   })
 
   it('a different accent gives a different accent token and tint', () => {

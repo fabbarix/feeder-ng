@@ -5,7 +5,6 @@ import { usePreferences } from './usePreferences'
 
 export interface PreferenceTheme {
   accent: string
-  secondary?: string
   scheme: ColourMode
 }
 
@@ -15,5 +14,5 @@ export function usePreferenceTheme(): PreferenceTheme {
   const me = useMe()
   const { preferences } = usePreferences(Boolean(me.data))
   const p = me.data ? preferences : DEFAULT_PREFERENCES
-  return { accent: p.accent, secondary: p.secondary ?? undefined, scheme: p.scheme }
+  return { accent: p.accent, scheme: p.scheme }
 }

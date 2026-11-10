@@ -16,12 +16,10 @@ function setup(value: Preferences = DEFAULT_PREFERENCES) {
 
 describe('PreferencesForm', () => {
   it('shows the current choices', () => {
-    setup({ scheme: 'dark', accent: '#3366cc', secondary: null, units: 'imperial' })
+    setup({ scheme: 'dark', accent: '#3366cc', units: 'imperial' })
     expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Imperial' })).toBeChecked()
     expect(screen.getByLabelText('Custom accent colour')).toHaveValue('#3366cc')
-    expect(screen.getByRole('checkbox', { name: 'Use a secondary colour' })).not.toBeChecked()
-    expect(screen.queryByLabelText('Secondary colour')).toBeNull()
   })
 
   it('defaults to system mode and metric', () => {
@@ -62,19 +60,19 @@ describe('PreferencesForm', () => {
     expect(onSave).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, accent: '#aa3366' })
   })
 
-  it('adds, edits and drops the optional secondary colour', async () => {
+  it('has no secondary colour control (removed 2026-11-10)', () => {
+    setup()
+    expect(screen.queryByRole('checkbox', { name: /secondary/i })).toBeNull()
+    expect(screen.queryByRole('switch', { name: /secondary/i })).toBeNull()
+    expect(screen.queryByLabelText(/secondary/i)).toBeNull()
+    expect(screen.queryByText(/secondary/i)).toBeNull()
+  })
+
+  it('saves only scheme, accent and units', async () => {
     const onSave = setup()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Use a secondary colour' }))
-    const secondary = screen.getByLabelText('Secondary colour')
-    // jest-dom's toHaveValue cannot take an asymmetric matcher, so compare the string directly.
-    expect((secondary as HTMLInputElement).value).toMatch(/^#[0-9a-f]{6}$/i)
-    fireEvent.change(secondary, { target: { value: '#ffb4a2' } })
+    await userEvent.click(screen.getByRole('radio', { name: 'Dark' }))
     await userEvent.click(save())
-    expect(onSave).toHaveBeenLastCalledWith({ ...DEFAULT_PREFERENCES, secondary: '#ffb4a2' })
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Use a secondary colour' }))
-    expect(screen.queryByLabelText('Secondary colour')).toBeNull()
-    await userEvent.click(screen.getByRole('radio', { name: 'Dark' })) // make the form dirty again
-    await userEvent.click(save())
-    expect(onSave).toHaveBeenLastCalledWith({ ...DEFAULT_PREFERENCES, scheme: 'dark', secondary: null })
+    const saved = onSave.mock.calls[0]![0] as Record<string, unknown>
+    expect(Object.keys(saved).sort()).toEqual(['accent', 'scheme', 'units'])
   })
 })

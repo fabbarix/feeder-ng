@@ -13,12 +13,12 @@ export function useBoardPalette(dark: boolean): void {
   const restore = useRef<() => void>(() => {})
   restore.current = () => {
     const userScheme: PaletteScheme = pref.scheme === 'system' ? systemScheme() : pref.scheme
-    applyTheme(document.documentElement, { accent: pref.accent, secondary: pref.secondary }, userScheme)
+    applyTheme(document.documentElement, { accent: pref.accent }, userScheme)
   }
 
   useEffect(() => {
-    applyTheme(document.documentElement, { accent: pref.accent, secondary: pref.secondary }, dark ? 'dark' : 'light')
-  }, [dark, pref.accent, pref.secondary])
+    applyTheme(document.documentElement, { accent: pref.accent }, dark ? 'dark' : 'light')
+  }, [dark, pref.accent])
 
   useEffect(() => () => restore.current(), [])
 }

@@ -76,6 +76,5 @@ export type ColourMode = 'light' | 'dark' | 'system'
 export interface Preferences {
   scheme: ColourMode
   accent: string
-  secondary: string | null
   units: 'metric' | 'imperial'
 }

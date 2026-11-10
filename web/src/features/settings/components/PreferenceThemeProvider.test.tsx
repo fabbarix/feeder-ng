@@ -35,7 +35,7 @@ describe('PreferenceThemeProvider', () => {
   it('applies the signed-in User\'s mode and accent', async () => {
     mockApi({
       'GET /api/me': USER_ME,
-      'GET /api/me/preferences': { scheme: 'dark', accent: '#3366cc', secondary: null, units: 'metric' },
+      'GET /api/me/preferences': { scheme: 'dark', accent: '#3366cc', units: 'metric' },
     })
     mount()
     const before = primary()
