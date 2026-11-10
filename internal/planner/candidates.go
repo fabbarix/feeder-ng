@@ -73,6 +73,9 @@ func (st *state) evaluate(i int, portions float64, opts evalOpts) ([]breakdown, 
 		if opts.hasExclude && opts.exclude == id {
 			continue
 		}
+		if st.reservedFor(i, r) {
+			continue
+		}
 		elim.Considered++
 		switch {
 		case st.excludes(slot.Attendance, r, true):

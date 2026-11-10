@@ -76,6 +76,8 @@ type state struct {
 	nextLot   int64
 	purchases map[IngredientID]*Purchase
 
+	reservations []reservation // Slot Rule reservations (reserve.go)
+
 	placements []Placement
 	unfilled   []Unfilled
 	kept       []SlotKey
@@ -157,10 +159,19 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 	}
 	for i, s := range slots {
 		switch st.roles[i] {
-		case rolePinned, roleCooked, roleKept:
+		case rolePinned, roleCooked:
 			if s.Existing.From == nil {
 				st.history = append(st.history, fresh{day: st.days[i], seq: i, recipe: s.Existing.RecipeID})
 			}
+		}
+	}
+	// Reservations are computed before the kept meals join the history; a kept
+	// meal that falls inside one is replanned, the rest are history.
+	st.computeReservations()
+	st.dropBlockedKept()
+	for i, s := range slots {
+		if st.roles[i] == roleKept && s.Existing.From == nil {
+			st.history = append(st.history, fresh{day: st.days[i], seq: i, recipe: s.Existing.RecipeID})
 		}
 	}
 
@@ -248,7 +259,9 @@ func (st *state) step(i int) {
 	case roleEmpty:
 		st.fill(i)
 	case roleCooked, roleSkipped:
-		// Nothing to do: Stock was deducted at Cooked (ADR 0003); skipped has no effect.
+		// Cooked: stock was deducted and a Leftover's portions were reduced at
+		// Cooked time (ADR 0003), so Input.Leftovers already reflects them.
+		// Skipped has no effect.
 	case rolePinned:
 		st.applyFixed(i, *s.Existing)
 	case roleKept:
