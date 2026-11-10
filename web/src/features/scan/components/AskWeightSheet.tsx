@@ -31,14 +31,13 @@ export function AskWeightSheet({ open, onClose, productName, priceText, onSubmit
   return (
     <BottomSheet open={open} onClose={onClose} title={scanStrings.askWeightTitle}>
       <p>{`${productName} has a label price of ${priceText}, so the weight is needed to work out the price per kg.`}</p>
-      <p className="field__hint">{scanStrings.weightHint}</p>
       <form
         onSubmit={(e) => {
           e.preventDefault()
           submit()
         }}
       >
-        <NumberField label={scanStrings.weight} value={grams} onChange={setGrams} min={0} error={error ? scanStrings.mustBePositive : undefined} />
+        <NumberField label={scanStrings.weight} helper={scanStrings.weightHint} value={grams} onChange={setGrams} min={0} error={error ? scanStrings.mustBePositive : undefined} />
         <Button type="submit">{scanStrings.save}</Button>
       </form>
     </BottomSheet>
