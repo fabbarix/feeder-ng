@@ -117,6 +117,41 @@ describe('an offline scan (B6)', () => {
     expect(hook.result.current.feedback?.priceCents).toBe(700)
   })
 
+  it('a queued edit that loses the race to a flush keeps the line synced, with the new price (B7 stale write-back)', async () => {
+    let resolveQueued: (edited: boolean) => void = () => {}
+    const setQueuedPrice = vi.fn(() => new Promise<boolean>((resolve) => (resolveQueued = resolve)))
+    const { deps, hook } = setup({ setQueuedPrice })
+    await read(hook, '2112345008509')
+    let edit: Promise<void> = Promise.resolve()
+    act(() => {
+      edit = hook.result.current.editPrice(700) // waits on the queue lock while a flush runs
+    })
+    act(() => hook.result.current.applySyncResults([{ clientUuid: 'uuid-1', status: 'applied', scan: applied({ priceCents: 764 }) }]))
+    expect(hook.result.current.feedback?.queued).toBe(false)
+    await act(async () => {
+      resolveQueued(false) // the Op already left the queue: the edit goes to the server
+      await edit
+    })
+    expect(deps.setPrice).toHaveBeenCalledWith('uuid-1', 700)
+    expect(hook.result.current.feedback).toMatchObject({ queued: false, priceCents: 700 })
+  })
+
+  it('a queued edit that resolves after a rejection does not bring the line back', async () => {
+    let resolveQueued: (edited: boolean) => void = () => {}
+    const { hook } = setup({ setQueuedPrice: vi.fn(() => new Promise<boolean>((resolve) => (resolveQueued = resolve))) })
+    await read(hook, '2112345008509')
+    let edit: Promise<void> = Promise.resolve()
+    act(() => {
+      edit = hook.result.current.editPrice(700)
+    })
+    act(() => hook.result.current.applySyncResults([{ clientUuid: 'uuid-1', status: 'rejected', error: { code: 'unknown_product', message: 'gone' } }]))
+    await act(async () => {
+      resolveQueued(false)
+      await edit
+    })
+    expect(hook.result.current.feedback).toBeNull()
+  })
+
   it('an applied (online) scan edits on the server only', async () => {
     const { deps, hook } = setup({ submit: vi.fn(async (op: Op) => ({ clientUuid: op.clientUuid, status: 'applied', scan: applied() }) as ScanResult) })
     await read(hook, '2112345008509')

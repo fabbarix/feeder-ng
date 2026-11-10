@@ -51,6 +51,16 @@ describe('useCameraRecovery', () => {
     expect(hook.result.current).toMatchObject({ manualOpen: false, text: '', error: null })
   })
 
+  it('manual entry closes, with its text and error cleared, when the camera recovers', () => {
+    const { hook } = setup('denied')
+    act(() => hook.result.current.openManual())
+    act(() => hook.result.current.setText('123'))
+    act(() => void hook.result.current.submit())
+    expect(hook.result.current).toMatchObject({ manualOpen: true, error: 'length' })
+    hook.rerender({ status: 'ready' })
+    expect(hook.result.current).toMatchObject({ failure: null, manualOpen: false, text: '', error: null })
+  })
+
   it('a valid typed barcode goes to onScan once, like a camera read, and clears the entry', () => {
     const { hook, onScan } = setup()
     act(() => hook.result.current.openManual())
