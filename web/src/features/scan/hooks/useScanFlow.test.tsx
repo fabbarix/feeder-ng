@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../../lib/http'
 import { parse } from '../lib/barcode'
 import { emptyForm } from '../lib/unknownForm'
 import type { OfflineData, Op, ScanApplied, ScanResult } from '../types'
@@ -139,6 +140,39 @@ describe('useScanFlow in a Shop', () => {
     expect(deps.cancelQueued).toHaveBeenCalledWith('uuid-1')
     expect(deps.undo).toHaveBeenCalledWith('uuid-1')
     expect(hook.result.current.feedback).toBeNull()
+  })
+
+  it('a 404 from the server Undo of a queued scan means the server never had it: done, feedback cleared', async () => {
+    const undo = vi.fn(async () => {
+      throw new ApiError(404, 'not_found', 'no such scan')
+    })
+    const { deps, hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false), undo })
+    await read(hook, '8000500310427')
+    await act(() => hook.result.current.undo())
+    expect(deps.undo).toHaveBeenCalledWith('uuid-1')
+    expect(hook.result.current.feedback).toBeNull()
+  })
+
+  it('a 404 from the server Undo of an applied scan also clears the feedback', async () => {
+    const undo = vi.fn(async () => {
+      throw new ApiError(404, 'not_found', 'no such scan')
+    })
+    const { hook } = setup({ undo })
+    await read(hook, '8000500310427')
+    await act(() => hook.result.current.undo())
+    expect(hook.result.current.feedback).toBeNull()
+  })
+
+  it('any other Undo error still fails and keeps the feedback', async () => {
+    const undo = vi.fn(async () => {
+      throw new ApiError(500, 'http_error', 'boom')
+    })
+    const { hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false), undo })
+    await read(hook, '8000500310427')
+    await act(async () => {
+      await expect(hook.result.current.undo()).rejects.toBeInstanceOf(ApiError)
+    })
+    expect(hook.result.current.feedback).not.toBeNull()
   })
 
   it('editing the price saves it and updates the line', async () => {

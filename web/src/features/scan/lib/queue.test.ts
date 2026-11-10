@@ -267,7 +267,7 @@ describe('OfflineQueue', () => {
       expect(await queue.pending()).toEqual([])
     })
 
-    it('says true when the send under way failed, and the operation is gone so it is never sent later', async () => {
+    it('says false when the send under way failed (the batch may have been applied), and the operation is gone so it is never sent later', async () => {
       const { queue } = setup()
       await queue.enqueue(op('a'))
       let fail: () => void = () => {}
@@ -277,7 +277,7 @@ describe('OfflineQueue', () => {
       await vi.waitFor(() => expect(server.sync).toHaveBeenCalledTimes(1))
       const cancelled = queue.cancel('a')
       fail()
-      expect(await cancelled).toBe(true)
+      expect(await cancelled).toBe(false)
       await flushing
       expect(await queue.pending()).toEqual([])
     })
@@ -297,6 +297,35 @@ describe('OfflineQueue', () => {
       release()
       expect(await cancelled).toBe(true)
       await flushing
+    })
+
+    describe('an entry whose send failed or timed out (attempts > 0) may already be applied', () => {
+      it('is removed locally and cancel says false so the caller does a server Undo', async () => {
+        const { queue } = setup()
+        await queue.enqueue(op('a'))
+        const result = await queue.flush(api(async () => Promise.reject(new ApiError(0, 'timeout', 'timed out'))))
+        expect(result.offline).toBe(true)
+        expect((await queue.pending())[0]?.attempts).toBe(1)
+        expect(await queue.cancel('a')).toBe(false)
+        expect(await queue.pending()).toEqual([])
+      })
+
+      it('a 5xx counts the same: attempts > 0 answers false', async () => {
+        const { queue } = setup()
+        await queue.enqueue(op('a'))
+        await queue.flush(api(async () => Promise.reject(new ApiError(503, 'http_error', 'down'))))
+        expect(await queue.cancel('a')).toBe(false)
+        expect(await queue.pending()).toEqual([])
+      })
+
+      it('only the entry that was sent answers false; one enqueued after the failure still answers true', async () => {
+        const { queue } = setup()
+        await queue.enqueue(op('a'))
+        await queue.flush(api(async () => Promise.reject(new ApiError(0, 'network', 'offline'))))
+        await queue.enqueue(op('b'))
+        expect(await queue.cancel('b')).toBe(true)
+        expect(await queue.cancel('a')).toBe(false)
+      })
     })
 
     describe('cancel racing the start of a send (before the batch is marked)', () => {

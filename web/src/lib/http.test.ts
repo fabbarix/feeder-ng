@@ -71,4 +71,37 @@ describe('createHttpClient', () => {
     expect(err).toMatchObject({ status: 422, code: 'unknown_unit', message: 'no' })
     expect(err.details).toEqual({ field: 'lines[1].unit', unit: 'clove', ingredientId: 7 })
   })
+
+  describe('request timeout (a signal passed as the third argument of post)', () => {
+    const hangingFetch = () =>
+      vi.fn((_url: string, init?: RequestInit) => {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal!.reason))
+        })
+      })
+
+    it('forwards the signal to fetch', async () => {
+      const fetch = vi.fn().mockResolvedValue(json(200, {}))
+      const signal = new AbortController().signal
+      await createHttpClient({ fetch }).post('/api/a', { x: 1 }, { signal })
+      expect(fetch.mock.calls[0]![1].signal).toBe(signal)
+    })
+
+    it('raises ApiError(0, "timeout") when the signal fires with a TimeoutError', async () => {
+      const controller = new AbortController()
+      const http = createHttpClient({ fetch: hangingFetch() })
+      const pending = http.post('/api/a', {}, { signal: controller.signal }).catch((e) => e)
+      controller.abort(new DOMException('signal timed out', 'TimeoutError'))
+      const err = (await pending) as ApiError
+      expect(err).toBeInstanceOf(ApiError)
+      expect(err.status).toBe(0)
+      expect(err.code).toBe('timeout')
+    })
+
+    it('a plain network failure is still ApiError(0, "network")', async () => {
+      const http = createHttpClient({ fetch: vi.fn().mockRejectedValue(new TypeError('failed')) })
+      const err = (await http.post('/api/a', {}, { signal: new AbortController().signal }).catch((e) => e)) as ApiError
+      expect(err.code).toBe('network')
+    })
+  })
 })
