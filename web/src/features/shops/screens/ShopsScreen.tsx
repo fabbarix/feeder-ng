@@ -1,5 +1,5 @@
 import { useMe } from '../../../app/useMe'
-import { PageHeader } from '../../../ui'
+import { BackLink, PageHeader } from '../../../ui'
 import { ShopList } from '../components/ShopList'
 import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpdates'
 import { useShops } from '../hooks/useShops'
@@ -13,7 +13,7 @@ export function ShopsScreen() {
   useProductsLiveUpdates()
   return (
     <div className="pg">
-      <PageHeader title={strings.shopsTitle} />
+      <PageHeader title={strings.shopsTitle} leading={<BackLink to="/settings" label="Settings" />} />
       {error ? (
         <p role="alert">{strings.actionFailed}</p>
       ) : isLoading ? (

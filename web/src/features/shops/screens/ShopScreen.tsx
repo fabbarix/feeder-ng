@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
+import { BackLink, BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -43,7 +43,7 @@ export function ShopScreen() {
   if (!shop.shop) {
     if (shop.isLoading) return <p role="status">{strings.loading}</p>
     if (shop.error instanceof ApiError && shop.error.status === 404) {
-      return <EmptyState title={strings.notFoundTitle} action={<Link to="/settings/shops">{strings.backToShops}</Link>} />
+      return <EmptyState title={strings.notFoundTitle} action={<BackLink to="/settings/shops" label="Shops" />} />
     }
     return <p role="alert">{strings.actionFailed}</p>
   }
@@ -52,7 +52,7 @@ export function ShopScreen() {
 
   return (
     <div className="pg">
-      <PageHeader title={shop.shop.name} leading={<Link to="/settings/shops">{strings.backToShops}</Link>} />
+      <PageHeader title={shop.shop.name} leading={<BackLink to="/settings/shops" label="Shops" />} />
       {isAdmin ? (
         <div className="pg__row">
           <Button variant="tertiary" onClick={() => setRenaming(true)}>

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { Tile } from '../../../ui'
+import { BackLink, PageHeader, Tile } from '../../../ui'
 import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { notificationStrings as s } from '../strings'
 import { NotificationSettingsView } from './NotificationSettingsView'
@@ -14,7 +14,7 @@ export function NotificationSettingsScreen(): ReactElement {
   const state = useNotificationSettings()
   return (
     <main className="notifications">
-      <h1 className="notifications__title">{s.title}</h1>
+      <PageHeader title={s.title} leading={<BackLink to="/settings" label="Settings" />} />
       {state.loading ? (
         <Tile as="section" span="full">
           <p className="notifications__muted">{s.loading}</p>
