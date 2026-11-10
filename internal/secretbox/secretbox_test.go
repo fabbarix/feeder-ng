@@ -308,3 +308,48 @@ func TestNoFileIsEverCreated(t *testing.T) {
 		t.Fatalf("secretbox created files: %v %v", entries, err)
 	}
 }
+
+// A Box dereferenced to a value (fmt.Print(*box), a struct field holding a
+// Box by value) must print redacted as well: the methods have value receivers.
+func TestABoxValuePrintsRedactedUnderEveryVerb(t *testing.T) {
+	raw := rawKey(t)
+	p, err := secretbox.New(master(t, raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bv := *p
+	type holder struct{ B secretbox.Box }
+	for _, v := range []any{bv, &bv, holder{B: bv}, &holder{B: bv}, []secretbox.Box{bv}, map[string]secretbox.Box{"k": bv}} {
+		for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%d"} {
+			out := fmt.Sprintf(verb, v)
+			if !strings.Contains(out, "[redacted]") && !strings.Contains(out, "redacted") {
+				t.Errorf("%s of %T = %q, want it redacted", verb, v, out)
+			}
+			if strings.Contains(out, "0x") || strings.Contains(out, "{") && !strings.Contains(out, "redacted") {
+				t.Errorf("%s of %T prints internals: %q", verb, v, out)
+			}
+		}
+	}
+	if got := fmt.Sprint(bv); got != "[redacted]" {
+		t.Errorf("fmt.Sprint(*box) = %q", got)
+	}
+	if got := fmt.Sprintf("%+v", bv); got != "[redacted]" {
+		t.Errorf("%%+v of a Box value = %q", got)
+	}
+	if bv.String() != "[redacted]" {
+		t.Errorf("String() on a Box value = %q", bv.String())
+	}
+	var buf bytes.Buffer
+	slog.New(slog.NewTextHandler(&buf, nil)).Info("start", "box", bv, slog.Any("grp", holder{B: bv}))
+	if strings.Contains(buf.String(), "0x") || strings.Contains(buf.String(), "aead") || !strings.Contains(buf.String(), "[redacted]") {
+		t.Errorf("slog output = %q", buf.String())
+	}
+	// A value Box is still a working box.
+	blob, err := bv.Seal([]byte("sk-x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pt, err := bv.Open(blob); err != nil || string(pt) != "sk-x" {
+		t.Fatalf("round trip on a Box value: %q %v", pt, err)
+	}
+}

@@ -39,6 +39,9 @@ var (
 	ErrStatus           = errors.New("unexpected HTTP status")
 	ErrTooManyRedirects = errors.New("too many redirects")
 	ErrCredentials      = errors.New("credentials in URLs are refused")
+	// ErrPolicy: the Policy is unusable (MaxBytes or Timeout not positive); no
+	// request is made. STUB: the developer returns it from Fetch.
+	ErrPolicy = errors.New("fetch policy needs a positive MaxBytes and Timeout")
 )
 
 // Options are the test hooks; the zero value is the production policy.

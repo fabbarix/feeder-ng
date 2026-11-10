@@ -1,6 +1,6 @@
 # Recipe Assistant core: WP-A (pure backend) and WP-B (safehttp)
 
-Status: tests written first (red), stubs compile. Pipeline step 1 of WP-A/WP-B of [ai-recipe-import.md](ai-recipe-import.md) (plan v2) and [ADR 0006](../../adr/0006-recipe-assistant-calls-anthropic-from-the-server.md). Branch `team/ra-ab-core`.
+Status: tests written first (red), stubs compile. Review send-back round (plan v3): `KeyFor`, `Limiter.Check`, `ExtractAddendum` tests, the `Finish` non-array guard, imagefetch wording, more `safehttp.Blocked` ranges and an unusable `Policy`, `Box` value redaction, `collectRecipes` order, flat-text fallback. Pipeline step 1 of WP-A/WP-B of [ai-recipe-import.md](ai-recipe-import.md) (plan v3) and [ADR 0006](../../adr/0006-recipe-assistant-calls-anthropic-from-the-server.md). Branch `team/ra-ab-core`.
 
 Out of this round (still WP-A in the plan, own pipeline later): `recipeassistant.PreparePhotos` and `imaging.PrepareForModel` (2,576 px, JPEG q90, auto-orient), `internal/config` `FEEDER_SECRET_KEY`, the catalogue/status files (`catalogue.go`, `models.go`). No SDK, store, routes, migration or UI (WP-C/D/E).
 
@@ -9,13 +9,13 @@ Out of this round (still WP-A in the plan, own pipeline later): `recipeassistant
 | Path | Role | Files here |
 |---|---|---|
 | `internal/secretbox` | AES-256-GCM, HKDF subkey; no IO, no logging | `secretbox.go`, `secretbox_test.go` |
-| `internal/recipeassistant` | pure domain: errors, settings, limiter, prompt wrapper, output schema, finisher | `errors.go settings.go limiter.go prompt.go outputschema.go finish.go` + `*_test.go`, `testdata/output-schema.golden.json` (generate with `-update`) |
+| `internal/recipeassistant` | pure domain: errors, settings (+`KeyFor`), limiter (+`Check`), prompt wrapper (+`ExtractAddendum`), output schema, finisher | `errors.go settings.go limiter.go prompt.go outputschema.go finish.go` + `*_test.go` (new: `keyfor_test.go limiter_check_test.go addendum_test.go`), `testdata/agent-prompt-template.golden.txt` (`ExtractTemplate` output of main's `recipe-file.md` before the new section), `testdata/output-schema.golden.json` (generate with `-update`) |
 | `internal/recipeassistant/source` | HTML to text, JSON-LD Recipe nodes, image URLs | `extract.go`, `extract_test.go`, `testdata/pages/*.html` |
 | `internal/recipefile` | + `CheckFile` | `check.go`, `check_test.go` |
 | `internal/safehttp` | SSRF-guarded client extracted from imagefetch | `safehttp.go`, `safehttp_test.go` |
 | `internal/recipefile/imagefetch` | thin wrapper, API unchanged | existing tests untouched; `wrapper_test.go` added |
 
-Pure packages import no `net/http`, `database/sql` or SDK. `recipeassistant` imports `recipefile` and `docs/spec` only. Developer notes: add `golang.org/x/net` (html, `html/charset`) to `go.mod` (module cache has v0.62.0); `crypto/hkdf` is stdlib (Go 1.24+).
+Pure packages import no `net/http`, `database/sql` or SDK. `recipeassistant` imports `recipefile`, `docs/spec` and, since plan v3, `recipeassistant/source` (accepted: `BuildSourceText` uses `source.IsComplete`, and `source` stays a leaf with no import back). Developer notes: add `golang.org/x/net` (html, `html/charset`) to `go.mod` (module cache has v0.62.0); `crypto/hkdf` is stdlib (Go 1.24+).
 
 ## Signatures
 
@@ -25,10 +25,11 @@ Pure packages import no `net/http`, `database/sql` or SDK. `recipeassistant` imp
 
 `recipeassistant` (all expected failures are `*Error{Code, Message, RetryAfterSeconds, Model, Paths}`; `CodeOf(err)`):
 - `ValidateBaseURL(raw) (normalised, error)`, `OriginOf`, `OriginChanged`, `ValidateModelID`, `Last4`, `Secret` (redacting string), `DefaultSettings()`.
+- `KeyFor(saved Settings, savedKey Secret, baseURL, typedKey string) (Secret, error)` (plan §1.7): the saved key is bound to the saved origin. `baseURL` is validated first (`base_url_invalid`, `base_url_has_version`); no `baseURL` or the same origin (default port dropped, path ignored): a typed key (trimmed; blank counts as none; malformed `api_key_invalid`) else the saved key; another origin: the typed key is required, else `key_required_for_new_base_url` and the saved key is never returned; no key saved or typed: `api_key_required`. Agrees with `ApplyUpdate` on which updates need a new key.
 - `ApplyUpdate(cur Settings, in Update, secretKeyAvailable bool) (Applied{Settings, NewKey, Changes}, error)`, `ApplyKeyRemoval(cur) Applied`.
-- `NewLimiter(now) *Limiter`, `Limiter.Acquire(Caller{UserID, HouseholdID, Admin}) (release func(), error)`.
+- `NewLimiter(now) *Limiter`, `Limiter.Acquire(Caller{UserID, HouseholdID, Admin}) (release func(), error)`, `Limiter.Check(Caller) error` (same 409 `read_in_progress` / 429 `too_many_reads` with `retryAfterSeconds` as `Acquire`, in the same order, Admins exempt from the hourly limit, but holds and counts nothing; the handler calls it before reading the body).
 - `ClassifyAPIFailure(APIFailure) *Error`, `ClassifyStopReason(stop, model) *Error`, `RetryWithinBudget(retryAfter, remaining) bool`. `APIFailure{Status, Type, Message, RetryAfterSeconds, Transport}` is plain data; the SDK adapter (WP-C) fills it from `*anthropic.Error`.
-- `Addendum`, `SystemPrompt(agent)`, `ValidateText`, `Neutralise`, `BuildSourceText(Source) (string, error)`.
+- `ExtractAddendum(md) (string, error)` (`ErrNoAddendum` for a missing section, unclosed fence, a fence only under another `## ` heading, an empty or blank block), `Addendum` (var from the spec), `SystemPrompt(agent)`, `ValidateText`, `Neutralise`, `BuildSourceText(Source) (string, error)`.
 - `OutputSchema(canonical []byte) ([]byte, error)`.
 - `Finish(raw, FinishInput) (Finished{File, Warnings}, error)`, `RepairPrompt([]PathError) string`, `TextImageURLs(text) []string`.
 
@@ -63,3 +64,15 @@ source (about 25): text of a real page, skipped elements, article/main/body pref
 ## Acceptance (from the plan)
 
 All §6.2 pure tests green; golden output schema committed; `go vet` clean; pure packages import no `net/http`/`database/sql`; `CheckFile` agrees with `BuildPlan` on shared fixtures; secretbox creates no files; every existing imagefetch test passes unchanged; T12 BDD green.
+
+## Plan v3 send-back: decisions
+
+- `KeyFor` and `Check` are stubs (`"", nil` and `nil`); every other new test targets existing code that is wrong or missing behaviour (Finish non-array `recipes`, `ExtractAddendum` empty block, imagefetch wording, `Blocked` ranges, zero `Policy`, `Box` value receivers, `collectRecipes` order, `flatText` after a void element).
+- `Finish`: a non-array `recipes` is `assistant_invalid_output` on every kind of read, never a panic; an empty array is `no_recipe_found`, also with a `FallbackImage`; non-object entries are reported by the schema. On a page read a non-https `PageURL` is dropped from every Recipe's `source.url` and attribution is kept.
+- `url` attribute: `&` is escaped first (`&amp;`), then `"`, `<`, `>`.
+- `ExtractTemplate` is pinned by a golden (`testdata/agent-prompt-template.golden.txt`) generated from main's `recipe-file.md` before the "## Recipe Assistant" section existed.
+- imagefetch keeps its old user-visible texts: `ErrTooLarge` "image is larger than 10 MB", `ErrContentType` "response is not a JPEG, PNG or WebP image", credentials "credentials in image URLs are refused"; `errors.Is` still matches the imagefetch and the safehttp sentinels (a wrapping error whose `Is` reports both; the safehttp texts stay generic).
+- `safehttp.Blocked` also refuses `64:ff9b:1::/48`, `2001::/32`, `198.18.0.0/15`, `240.0.0.0/4`, `192.0.0.0/24` (and their IPv4-mapped forms), and keeps neighbouring public space reachable.
+- **Zero-value `Policy` is validated, not defaulted**: `Fetch` returns `safehttp.ErrPolicy` before any request when `MaxBytes` or `Timeout` is not positive. (A silent default would hide a caller bug and could pick a cap the caller never meant.)
+- `secretbox.Box` formatting methods have value receivers, so `fmt.Print(*box)`, a struct holding a `Box` and `slog` all print `[redacted]`.
+- `source`: Recipe nodes are collected in sorted key order (deterministic); the flat-text fallback no longer lets a void skipped element (`<input>`) swallow the text after it.

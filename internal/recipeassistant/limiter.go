@@ -35,6 +35,13 @@ func NewLimiter(now func() time.Time) *Limiter {
 	return &Limiter{now: now, running: map[int64]uint64{}, accepted: map[int64][]time.Time{}}
 }
 
+// Check reports what Acquire would report (*Error CodeReadInProgress, checked
+// first, or CodeTooManyReads with RetryAfterSeconds, Admins exempt from the
+// hourly limit) without holding a slot or counting a read; nil when Acquire
+// would accept now. The handler calls it before reading the request body
+// (design §1.5). STUB (red tests first): the developer implements it.
+func (l *Limiter) Check(c Caller) error { return nil }
+
 // Acquire accepts a read or refuses it with *Error CodeReadInProgress (the
 // User already has a read running; checked first) or CodeTooManyReads (with
 // RetryAfterSeconds: whole seconds, rounded up, until the oldest counted read

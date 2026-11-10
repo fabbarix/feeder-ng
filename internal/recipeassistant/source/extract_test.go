@@ -335,3 +335,65 @@ func TestTitleIsTrimmedAndDecoded(t *testing.T) {
 		t.Errorf("title = %q", got)
 	}
 }
+
+// ---- review send-back: determinism, flat fallback after a void element --------
+
+// Recipe nodes found under several keys come out in sorted key order, the same
+// on every run (Go randomises map iteration).
+func TestRecipesUnderSeveralKeysAreInSortedKeyOrderEveryTime(t *testing.T) {
+	keys := []string{"zeta", "mu", "alpha", "omega", "beta", "kappa", "delta", "gamma"}
+	var parts []string
+	for _, k := range keys { // document order is deliberately not sorted
+		parts = append(parts, fmt.Sprintf(`%q:{"@type":"Recipe","name":"R-%s","recipeIngredient":["x"]}`, k, k))
+	}
+	page := `<html><head><script type="application/ld+json">{` + strings.Join(parts, ",") + `}</script></head><body>x</body></html>`
+	sorted := []string{"alpha", "beta", "delta", "gamma", "kappa", "mu", "omega", "zeta"}
+	for run := 0; run < 40; run++ {
+		p := extract(page)
+		if len(p.Recipes) != len(sorted) {
+			t.Fatalf("run %d: %d recipes", run, len(p.Recipes))
+		}
+		for i, k := range sorted {
+			if got := node(t, p.Recipes[i])["name"]; got != "R-"+k {
+				t.Fatalf("run %d: recipe %d = %v, want R-%s (sorted keys)", run, i, got, k)
+			}
+		}
+	}
+}
+
+func TestImageURLsFollowTheSameDeterministicRecipeOrder(t *testing.T) {
+	page := `<script type="application/ld+json">{"b":{"@type":"Recipe","name":"B","image":"https://example.com/b.jpg"},"a":{"@type":"Recipe","name":"A","image":"https://example.com/a.jpg"}}</script>`
+	for run := 0; run < 30; run++ {
+		p := extract(page)
+		if len(p.ImageURLs) < 2 || p.ImageURLs[0] != "https://example.com/a.jpg" || p.ImageURLs[1] != "https://example.com/b.jpg" {
+			t.Fatalf("run %d: %v", run, p.ImageURLs)
+		}
+	}
+}
+
+// Past the parser's nesting limit (over 512 open elements) the flat tokenizer
+// takes over. Void elements it skips (input) have no end tag and must not
+// swallow the text that follows.
+func TestFlatFallbackKeepsTheTextAfterAVoidElement(t *testing.T) {
+	open, shut := strings.Repeat("<div>", 600), strings.Repeat("</div>", 600)
+	for name, void := range map[string]string{
+		"input":              `<input name="q">`,
+		"self-closing input": `<input name="q"/>`,
+		"input in a form":    `<form><input type="text"></form>`,
+		"two inputs":         `<input><input>`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := extract(open + "before " + void + " after-the-input " + shut + "<p>and a later paragraph</p>")
+			for _, want := range []string{"before", "after-the-input"} {
+				if !strings.Contains(p.Text, want) {
+					t.Errorf("text lost %q: %q", want, p.Text)
+				}
+			}
+		})
+	}
+	// Skipped elements with content still skip it in the fallback.
+	p := extract(open + "keep <script>drop()</script> <button>drop</button> keep2 " + shut)
+	if strings.Contains(p.Text, "drop") || !strings.Contains(p.Text, "keep2") {
+		t.Errorf("fallback text: %q", p.Text)
+	}
+}

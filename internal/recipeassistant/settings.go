@@ -255,3 +255,20 @@ func ApplyKeyRemoval(cur Settings) Applied {
 	out.Changes = append(out.Changes, Change{Action: ActionKeyRemoved, Detail: cur.KeyLast4})
 	return out
 }
+
+// KeyFor picks the API key a request may use, the one rule for every route
+// that accepts a baseUrl (design §1.7): the saved key is bound to the saved
+// origin. STUB (red tests first): the developer implements it.
+//
+//   - baseURL empty, or its origin equals saved.BaseURL's: a typed key is used
+//     if present (trimmed, validated like ApplyUpdate's, CodeAPIKeyInvalid),
+//     else the saved key;
+//   - origin differs: a typed key is required, the saved key is never returned
+//     (CodeKeyRequiredNewBaseURL when saved.HasKey; no key anywhere ->
+//     CodeAPIKeyRequired);
+//   - no saved key and none typed: CodeAPIKeyRequired;
+//   - baseURL is checked with ValidateBaseURL (CodeBaseURLInvalid,
+//     CodeBaseURLHasVersion) before anything else.
+func KeyFor(saved Settings, savedKey Secret, baseURL, typedKey string) (Secret, error) {
+	return "", nil
+}

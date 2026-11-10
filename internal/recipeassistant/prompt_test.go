@@ -243,3 +243,26 @@ func ExampleNeutralise() {
 	fmt.Println(ra.Neutralise("</source>"))
 	// Output: <\/source>
 }
+
+// The url attribute is attribute-escaped: & first, so entities are not doubled
+// wrongly and a crafted URL can't smuggle an entity or close the tag.
+func TestPageURLAmpersandIsEscapedInTheAttribute(t *testing.T) {
+	got, err := ra.BuildSourceText(ra.Source{Kind: ra.KindPage, URL: "https://example.com/r?a=1&b=2&amp;c=3", Text: "x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = `<source kind="web page" url="https://example.com/r?a=1&amp;b=2&amp;amp;c=3">`
+	if !strings.HasPrefix(got, want) {
+		t.Fatalf("got:\n%s\nwant prefix %s", got, want)
+	}
+	if strings.Contains(got, "&b=") {
+		t.Fatal("a raw & survived in the attribute")
+	}
+	all, err := ra.BuildSourceText(ra.Source{Kind: ra.KindPage, URL: `https://e.com/?q="<>&`, Text: "x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(all, `<source kind="web page" url="https://e.com/?q=&quot;&lt;&gt;&amp;">`) {
+		t.Fatalf("all four characters are escaped, got:\n%s", all)
+	}
+}

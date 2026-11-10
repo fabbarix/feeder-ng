@@ -321,3 +321,95 @@ Quoted "https://example.com/q.webp"; end https://example.com/e.jpg?x=1&y=2.`
 		t.Fatal("expected none")
 	}
 }
+
+// ---- review send-back: non-array recipes, empty array, page URL rules ---------
+
+// A model answer whose "recipes" is not an array must be a clean
+// assistant_invalid_output, never a panic, with or without a fallback image.
+func TestFinishNonArrayRecipesIsInvalidOutputNotAPanic(t *testing.T) {
+	const og = "https://example.com/og.jpg"
+	inputs := map[string]ra.FinishInput{
+		"page with fallback image": {Kind: ra.KindPage, PageURL: "https://example.com/final", SourceImageURLs: []string{og}, FallbackImage: og},
+		"page without fallback":    pageIn,
+		"text":                     {Kind: ra.KindText},
+		"photo":                    {Kind: ra.KindPhoto},
+	}
+	answers := map[string]string{
+		"string":  `{"recipes":"x"}`,
+		"number":  `{"recipes":3}`,
+		"object":  `{"recipes":{"name":"Soup"}}`,
+		"boolean": `{"recipes":true}`,
+	}
+	for iname, in := range inputs {
+		for aname, raw := range answers {
+			t.Run(iname+"/"+aname, func(t *testing.T) {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Fatalf("Finish panicked: %v", r)
+					}
+				}()
+				_, err := ra.Finish([]byte(raw), in)
+				if ra.CodeOf(err) != ra.CodeInvalidOutput {
+					t.Fatalf("got %v, want assistant_invalid_output", err)
+				}
+			})
+		}
+	}
+}
+
+func TestFinishEmptyRecipesArrayWithFallbackImageIsNoRecipeFound(t *testing.T) {
+	in := ra.FinishInput{Kind: ra.KindPage, PageURL: "https://example.com/final", FallbackImage: "https://example.com/og.jpg",
+		SourceImageURLs: []string{"https://example.com/og.jpg"}}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Finish panicked: %v", r)
+		}
+	}()
+	for _, raw := range []string{`{"recipes":[]}`, `{"recipes":null}`, `{}`} {
+		if _, err := ra.Finish([]byte(raw), in); ra.CodeOf(err) != ra.CodeNoRecipeFound {
+			t.Errorf("%s: got %v, want no_recipe_found", raw, err)
+		}
+	}
+}
+
+func TestFinishRecipesWithNonObjectEntriesAndFallbackImageDoNotPanic(t *testing.T) {
+	in := ra.FinishInput{Kind: ra.KindPage, PageURL: "https://example.com/final", FallbackImage: "https://example.com/og.jpg",
+		SourceImageURLs: []string{"https://example.com/og.jpg"}}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Finish panicked: %v", r)
+		}
+	}()
+	for _, raw := range []string{`{"recipes":[1]}`, `{"recipes":[null]}`, `{"recipes":["x"]}`, `{"recipes":[[]]}`} {
+		if _, err := ra.Finish([]byte(raw), in); ra.CodeOf(err) != ra.CodeInvalidOutput {
+			t.Errorf("%s: got %v, want assistant_invalid_output", raw, err)
+		}
+	}
+}
+
+// On a page read a final URL that is not https is not trusted: it is dropped
+// from every Recipe's source.url (design §4.4).
+func TestFinishPageReadWithANonHTTPSPageURLDropsSourceURLFromEveryRecipe(t *testing.T) {
+	raw := answer(t, func(r map[string]any) {
+		recipe(r, 0)["source"] = map[string]any{"url": "https://model-wrote.example/x", "attribution": "Nonna"}
+		recipe(r, 1)["source"] = map[string]any{"url": "https://model-wrote.example/y"}
+	})
+	for _, bad := range []string{"http://example.com/final", "ftp://example.com/x", "javascript:alert(1)", "", "example.com/final"} {
+		got := mustFinish(t, raw, ra.FinishInput{Kind: ra.KindPage, PageURL: bad})
+		for i, rec := range got.File.Recipes {
+			if rec.Source != nil && rec.Source.URL != "" {
+				t.Errorf("PageURL %q, recipe %d: source.url = %q, want dropped", bad, i, rec.Source.URL)
+			}
+		}
+		if got.File.Recipes[0].Source == nil || got.File.Recipes[0].Source.Attribution != "Nonna" {
+			t.Errorf("PageURL %q: attribution must be kept", bad)
+		}
+	}
+	// And the https one is set on every Recipe, including one the model gave no source.
+	got := mustFinish(t, answer(t, func(r map[string]any) { delete(recipe(r, 0), "source"); delete(recipe(r, 1), "source") }), pageIn)
+	for i, rec := range got.File.Recipes {
+		if rec.Source == nil || rec.Source.URL != "https://example.com/final" {
+			t.Errorf("recipe %d: %+v", i, rec.Source)
+		}
+	}
+}

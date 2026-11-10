@@ -456,3 +456,66 @@ func TestFetchPageAppliesTheGuardOnlyHTTPSAndRedirects(t *testing.T) {
 		t.Errorf("redirect to a private address: got %v", err)
 	}
 }
+
+// ---- review send-back: more reserved ranges, unusable policy -----------------
+
+func TestBlockedRefusesTheRemainingReservedRanges(t *testing.T) {
+	blocked := map[string][]string{
+		"64:ff9b:1::/48 (local-use NAT64)":  {"64:ff9b:1::", "64:ff9b:1::1", "64:ff9b:1:ffff:ffff:ffff:ffff:ffff", "64:ff9b:1::a00:1"},
+		"2001::/32 (Teredo)":                {"2001::", "2001::1", "2001:0:4136:e378:8000:63bf:3fff:fdd2", "2001:0:ffff:ffff:ffff:ffff:ffff:ffff"},
+		"198.18.0.0/15 (benchmarking)":      {"198.18.0.0", "198.18.0.1", "198.19.255.255", "::ffff:198.18.5.5"},
+		"240.0.0.0/4 (reserved)":            {"240.0.0.0", "240.0.0.1", "250.1.2.3", "255.255.255.254", "255.255.255.255", "::ffff:240.0.0.1"},
+		"192.0.0.0/24 (IETF protocol assg)": {"192.0.0.0", "192.0.0.1", "192.0.0.255", "::ffff:192.0.0.8"},
+	}
+	for name, addrs := range blocked {
+		for _, s := range addrs {
+			if !safehttp.Blocked(netip.MustParseAddr(s)) {
+				t.Errorf("%s: %s must be blocked", name, s)
+			}
+		}
+	}
+	// Neighbouring public space stays reachable.
+	for _, s := range []string{
+		"198.17.255.255", "198.20.0.0", "8.8.4.4",
+		"192.0.1.1", "191.255.255.255", "193.0.0.1",
+		"2001:1::1", "2001:4860:4860::8888", "2606:4700::1",
+		"64:ff9b:2::1", "64:ff9a:1::1",
+		"223.255.255.255",
+	} {
+		if safehttp.Blocked(netip.MustParseAddr(s)) {
+			t.Errorf("%s must stay allowed", s)
+		}
+	}
+}
+
+// A zero-value (or half-filled) Policy is refused with ErrPolicy before any
+// request is made: no unlimited body, no unlimited wait.
+func TestFetchRefusesAnUnusablePolicyWithoutMakingARequest(t *testing.T) {
+	var hits atomic.Int32
+	s := serve(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Header().Set("Content-Type", "image/png")
+		w.Write([]byte("png!"))
+	}))
+	c := client(t, safehttp.Options{}, s)
+	for name, p := range map[string]safehttp.Policy{
+		"zero value":       {},
+		"no byte cap":      {AllowedTypes: []string{"image/png"}, Timeout: time.Second},
+		"no timeout":       {AllowedTypes: []string{"image/png"}, MaxBytes: 1 << 10},
+		"negative cap":     {AllowedTypes: []string{"image/png"}, MaxBytes: -1, Timeout: time.Second},
+		"negative timeout": {AllowedTypes: []string{"image/png"}, MaxBytes: 1 << 10, Timeout: -time.Second},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := c.Fetch(context.Background(), s.URL, p); !errors.Is(err, safehttp.ErrPolicy) {
+				t.Fatalf("got %v, want ErrPolicy", err)
+			}
+		})
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("%d request(s) reached the server", hits.Load())
+	}
+	// A usable policy still works.
+	if _, err := c.Fetch(context.Background(), s.URL, imagePolicy); err != nil {
+		t.Fatal(err)
+	}
+}
