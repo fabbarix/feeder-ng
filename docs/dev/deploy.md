@@ -4,34 +4,46 @@ The Feeder is one container: a static Go binary with the web app embedded, and a
 
 ## Image
 
-The image is public on GHCR, so it pulls anonymously (no `docker login`):
+The image is published on GHCR and pulls anonymously once its package is public (no `docker login`):
 
 ```sh
-docker pull ghcr.io/fabbarix/feeder-ng:latest
+docker pull ghcr.io/fabbarix/feeder-ng:1.0.0
 ```
 
 | Tag | Published on | Meaning |
 |---|---|---|
-| `main` | every push to `main` | latest development build |
-| `sha-<short>` | every push to `main` | one exact commit |
+| `1.0.0-dev` | tag `v1.0.0-dev` | pre-release: use before the first stable tag; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
-| `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release |
+| `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
+
+Nothing is published from branches, and there is no moving branch tag. A semver tag already names one exact commit, and the image carries the commit in its OCI revision label.
 
 All tags are multi-arch (`linux/amd64`, `linux/arm64`) and carry the OCI label `org.opencontainers.image.source`, which links the package to this repository.
 
 Workflows:
 
-- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests and on pushes to `main`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR.
-- `.github/workflows/release.yml` ("Publish"): on pushes to `main` and on `v*` tags, runs the checks, then builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). On `v*` tags it then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`.
+- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests and on pushes to `main`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR. It never publishes.
+- `.github/workflows/release.yml` ("Publish"): runs only on `v*` tags. It runs the checks, then builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). It then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`. A failed release is re-run with *Re-run jobs* on the tag's run, which keeps the tag.
+
+Images and the chart are published from `v*` tags only. `latest` is set only on stable tags (no `-` in the tag).
 
 To release: `git tag v1.0.0 && git push origin v1.0.0`.
 
-### One-time GitHub steps (after the first push)
+Before the first stable tag, release a pre-release instead: `git tag v1.0.0-dev && git push origin v1.0.0-dev` publishes image `1.0.0-dev` and chart `1.0.0-dev`, and never sets `latest`.
 
-GHCR creates packages as **private**, even in a public repository. Once, after the first workflow run has pushed both packages:
+### Verify anonymous pull after the first push
+
+Packages inherit visibility from the repository, and this repository is public, so the packages are usually public from their first push. The make-public step is usually unnecessary. After the first tag push (for example `v1.0.0-dev`), check from a machine with no `docker login` or `helm registry login`:
+
+```sh
+docker pull ghcr.io/fabbarix/feeder-ng:1.0.0-dev
+helm pull oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-dev
+```
+
+If either pull fails with 401 or "denied", the package is still private. Make it public by hand, once, in the web UI:
 
 1. Open `https://github.com/fabbarix?tab=packages` (or the repository's *Packages* sidebar), then each package: `feeder-ng` (the image) and `charts/feeder` (the chart).
-2. *Package settings* -> *Danger Zone* -> *Change visibility* -> **Public**. Anonymous `docker pull` and `helm install` only work after this. Making a package public cannot be undone: a public package cannot be made private again, so do this once the image and chart are ready to be public.
+2. *Package settings* -> *Danger Zone* -> *Change visibility* -> **Public**. Making a package public cannot be undone: a public package cannot be made private again, so do this once the image and chart are ready to be public.
 3. Still in *Package settings*, check *Connect repository* / "Linked repository" shows `fabbarix/feeder-ng`. The image links itself through the `org.opencontainers.image.source` label; the chart package usually has to be linked by hand (*Connect repository*). Linking also lets the workflow's `GITHUB_TOKEN` keep pushing new versions.
 4. If a push is denied with 403 later, in *Package settings* -> *Manage Actions access* add the repository with the *Write* role.
 

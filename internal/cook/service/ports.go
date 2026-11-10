@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/cook"
-	"github.com/fabbarix/feeder-ng/internal/stock"
 	"github.com/fabbarix/feeder-ng/internal/sun"
 )
 
@@ -48,10 +47,9 @@ type Meals interface {
 	Upcoming(ctx context.Context, fromDate string) ([]MealInfo, error)
 }
 
-// Waste gives the two dates the zero-waste streak needs (stock.None when unknown).
+// Waste gives what the zero-waste streak needs (Today is left for the caller to set).
 type Waste interface {
-	LastWaste(ctx context.Context) (stock.Date, error)
-	FirstActivity(ctx context.Context) (stock.Date, error)
+	StreakInput(ctx context.Context) (cook.StreakInput, error)
 }
 
 // Household gives the time zone and Location.

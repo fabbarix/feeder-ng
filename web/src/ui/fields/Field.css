@@ -1,5 +1,10 @@
 /* Shared field anatomy (docs/design/ui-fix-plan.md 4.10): label 13/700 above, 48 px control, helper 13 muted,
    error 13 in status-danger-fg with WarningCircle 14. Tokens only. */
+/* One inner inline padding for every field control (TextField, Select, DateField, TimeField). */
+:root {
+  --field-pad-inline: var(--space-3);
+}
+
 .ui-field {
   display: grid;
   gap: var(--space-1);
@@ -19,7 +24,7 @@
   align-items: center;
   gap: var(--space-2);
   min-block-size: 48px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--field-pad-inline);
   border: 1.5px solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
@@ -58,7 +63,10 @@
   inline-size: 0;
   min-inline-size: 0;
   block-size: 46px;
+  padding: 0;
   border: 0;
+  -webkit-appearance: none;
+  appearance: none;
   background: transparent;
   color: inherit;
   font: inherit;
