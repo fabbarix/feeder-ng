@@ -7,4 +7,4 @@ export const routes: RouteObject[] = [{ path: '/stock', element: createElement(S
 
 // For the Today screen (a later team).
 export { SpoiledTile } from './components/SpoiledTile'
-export { useSpoiledLots } from './hooks/useStock'
+export { useSpoiledLots, useStockTotals } from './hooks/useStock'

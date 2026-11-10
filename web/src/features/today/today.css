@@ -1,0 +1,41 @@
+/* Today: Bento tiles on the shared grid, Figtree, tabular numerals for times. */
+.today {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+.today__title {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.today__slot {
+  display: contents;
+}
+.today__tile-title {
+  font-size: 1.125rem;
+  margin: 0 0 8px;
+}
+.today__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.today__row {
+  display: grid;
+  gap: 2px;
+}
+.today__recipe {
+  font-weight: 600;
+}
+.today__muted {
+  opacity: 0.8;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.today__streak {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}

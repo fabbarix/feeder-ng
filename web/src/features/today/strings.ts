@@ -13,4 +13,7 @@ export const todayStrings = {
   streakHeading: 'Zero-waste streak',
   streak: (days: number) => (days === 1 ? '1 day without throwing food away' : `${days} days without throwing food away`),
   streakCheer: 'Nothing wasted. Keep it going!',
+  goesOffToday: 'Goes off today',
+  goesOffTomorrow: 'Goes off tomorrow',
+  goesOffIn: (days: number) => `Goes off in ${days} days`,
 }

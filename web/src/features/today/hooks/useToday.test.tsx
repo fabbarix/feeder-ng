@@ -22,7 +22,10 @@ const step = {
 }
 
 beforeEach(() => {
+  // Reset every seam: a value set by one test must not leak into the next (vitest keeps mockReturnValue).
   vi.mocked(seams.useScanSessionActive).mockReturnValue(false)
+  vi.mocked(seams.useTodayPlan).mockReturnValue({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
+  vi.mocked(seams.useTodayStock).mockReturnValue({ spoiled: 0, useSoon: [], loading: false })
 })
 afterEach(() => vi.unstubAllGlobals())
 
