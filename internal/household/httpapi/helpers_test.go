@@ -60,10 +60,9 @@ type dateAttendanceBody struct {
 }
 
 type prefsBody struct {
-	Scheme    string  `json:"scheme"`
-	Accent    string  `json:"accent"`
-	Secondary *string `json:"secondary"`
-	Units     string  `json:"units"`
+	Scheme string `json:"scheme"`
+	Accent string `json:"accent"`
+	Units  string `json:"units"`
 }
 
 func f64(v float64) *float64 { return &v }
