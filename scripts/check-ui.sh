@@ -74,14 +74,6 @@ src_files() {
     ! -name '*.test.*' ! -name '*.spec.*' ! -name 'test-utils.*' ! -name '*.test-helper.*' ! -path "$SRC/test/*" | LC_ALL=C sort
 }
 
-# Drops whole-line // and /* ... */ comments from a TS/TSX file, keeping line numbers: "N:text".
-code_lines() { awk '
-  { l=$0 }
-  inblk { if (index(l,"*/")) { inblk=0 } next }
-  l ~ /^[ \t]*\/\// { next }
-  l ~ /^[ \t]*\/\*/ { if (!index(l,"*/")) inblk=1; next }
-  { print NR ":" $0 }' "$1"; }
-
 # CSS declarations / selectors. Emits "S<TAB>line<TAB>selector" per block opened and
 # "D<TAB>line<TAB>selector<TAB>prop<TAB>value" per declaration (innermost selector).
 css_scan() { awk '
@@ -149,9 +141,40 @@ rule_native_ui() {
   code_match native-ui "native <select>; use the Select primitive" '<select([ \t>/]|$)' <<<"$files"
   code_match native-ui "window.alert/confirm/prompt; use ConfirmDialog/Toast" 'window\.(alert|confirm|prompt)[^A-Za-z0-9_]' <<<"$files"
   code_match native-ui "bare alert()/confirm()/prompt(); use ConfirmDialog/Toast" '([(!;={,&|?:]|return)[ \t]*(alert|confirm|prompt)\(|^[ \t]*(alert|confirm|prompt)\(["\047`]' <<<"$files"
-  code_match native-ui "native <input type=...>; use a field primitive" \
-    '<input[^>]*type=[{]?[ \t]*["\047`]?(checkbox|radio|date|time|number|range|color|file|datetime-local|month|week)["\047`}> \t/]' <<<"$files"
+  while IFS= read -r f; do [ -n "$f" ] && native_inputs "$f"; done <<<"$files"
 }
+
+# Each <input ...> tag, however many lines it spans: the tag ends at the first '>' outside
+# braces and quotes (so `onChange={() => x}` is fine). Flags a type= of a native control.
+native_inputs() { awk -v FILE="$1" '
+  { l = $0
+    if (inblk) { if (index(l, "*/")) inblk = 0; l = "" }
+    else if (l ~ /^[ \t]*\/\//) l = ""
+    else if (l ~ /^[ \t]*\/\*/) { if (!index(l, "*/")) inblk = 1; l = "" }
+    gsub(/\/\*[^*]*\*\//, "", l)   # inline {/* ... */} comments on one line
+    text = text l "\n" }
+  END {
+    n = length(text); pos = 1
+    while ((p = index(substr(text, pos), "<input")) > 0) {
+      at = pos + p - 1; pos = at + 6
+      if (substr(text, at + 6, 1) !~ /[[:space:]\/>]/) continue
+      d = 0; q = ""
+      for (i = at + 6; i <= n; i++) {
+        c = substr(text, i, 1)
+        if (q != "") { if (c == q) q = ""; continue }
+        if (c == "\"" || c == "\047" || c == "\140") { q = c; continue }
+        if (c == "{") d++
+        else if (c == "}") d--
+        else if (c == ">" && d == 0) break
+      }
+      tag = substr(text, at, i - at + 1)
+      if (tag ~ /[[:space:]]type[[:space:]]*=[[:space:]]*[{]?[[:space:]]*["\047\140]?(checkbox|radio|date|time|number|range|color|file|datetime-local|month|week)(["\047\140}\/>]|[[:space:]])/) {
+        pre = substr(text, 1, at); ln = gsub(/\n/, "&", pre) + 1
+        print "native-ui\t" FILE "\t" ln "\tnative <input type=...>; use a field primitive"
+      }
+      pos = i + 1
+    }
+  }' "$1" >>"$VIOL"; }
 
 # ------------------------------------------------------------------ rule 2
 rule_phosphor() {
@@ -167,18 +190,32 @@ rule_phosphor() {
 
 # ------------------------------------------------------------------ rule 3
 COLOUR_RE='#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})([^0-9A-Za-z_-]|$)|(rgba?|hsla?|oklch|oklab|lab|lch)\([ \t]*[0-9.]'
+# CSS named colours (lower-case; matched case-insensitively). `transparent`, `currentColor`
+# and `inherit` are not colours and are deliberately absent. A word preceded by `-` (as in
+# var(--white)) is a custom property name, not a colour.
+NAMED_COLOURS='white|black|red|green|blue|yellow|orange|purple|pink|brown|gr[ae]y|silver|gold|navy|teal|maroon|olive|lime|aqua|cyan|magenta|fuchsia|indigo|violet|beige|ivory|tan|khaki|coral|salmon|crimson|tomato|orchid|plum|lavender|turquoise|chocolate|sienna|wheat|linen|azure|bisque'
+# Properties whose values are never colours (font names, content strings, animation names...).
+NON_COLOUR_PROP='^(font|content|animation|transition|grid|counter|quotes|list-style|src|unicode-range)'
+
 rule_colour_literals() {
   local f
   while IFS= read -r f; do
     case "$f" in $SRC/theme/*) continue ;; esac
-    css_scan "$f" | RE="$COLOUR_RE" awk -F'\t' -v F="$f" '
-      BEGIN { RE = ENVIRON["RE"] }
+    css_scan "$f" | RE="$COLOUR_RE" NAMED="(^|[^a-z0-9_-])($NAMED_COLOURS)([^a-z0-9_-]|\$)" NONCOL="$NON_COLOUR_PROP" awk -F'\t' -v F="$f" '
+      BEGIN { RE = ENVIRON["RE"]; NAMED = ENVIRON["NAMED"]; NONCOL = ENVIRON["NONCOL"] }
       $1 == "D" && $3 !~ /^(:root|html)/ && $3 !~ /\[data-theme/ && $5 ~ RE {
-        print "colour-literals\t" F "\t" $2 "\tcolour literal in \047" $4 ": " $5 "\047; use var(--...)" }' >>"$VIOL"
+        print "colour-literals\t" F "\t" $2 "\tcolour literal in \047" $4 ": " $5 "\047; use var(--...)" }
+      $1 == "D" && $3 !~ /^(:root|html)/ && $3 !~ /\[data-theme/ && $4 !~ NONCOL && tolower($5) ~ NAMED {
+        print "colour-literals\t" F "\t" $2 "\tnamed colour in \047" $4 ": " $5 "\047; use var(--...)" }' >>"$VIOL"
   done < <(src_files css)
   src_files tsx | grep -v "^$SRC/theme/" |
     code_match colour-literals "colour literal in component; use var(--...)" \
       '["\047`]#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["\047`;) ]|(rgba?|hsla?|oklch)\([ \t]*[0-9.]'
+  # Named colours only where a colour is being set (style props, colour attributes), so UI copy
+  # such as "Black pepper" is not a violation.
+  src_files tsx | grep -v "^$SRC/theme/" |
+    code_match colour-literals "named colour in component; use var(--...)" \
+      "[A-Za-z-]*([Cc]olou?r|[Bb]ackground|[Ff]ill|[Ss]troke|[Bb]order|[Oo]utline|[Ss]hadow)[A-Za-z-]*[ \t]*[:=][ \t]*[\"'\`]($NAMED_COLOURS)[\"'\`]"
 }
 
 # ------------------------------------------------------------------ rule 4
@@ -295,7 +332,7 @@ rule_glossary() {
   awk -F'\t' 'NR==FNR { term[$0]=1; next } !($1 in term)' "$TMP/terms.txt" "$TMP/avoid.raw" >"$TMP/avoid.txt"
   local f
   while IFS= read -r f; do
-    code_lines "$f" | awk -v FILE="$f" -v TERMS="$TMP/terms.txt" -v AVOID="$TMP/avoid.txt" -v ALLOW="$ALLOW_GLOSSARY" '
+    awk -v FILE="$f" -v TERMS="$TMP/terms.txt" -v AVOID="$TMP/avoid.txt" -v ALLOW="$ALLOW_GLOSSARY" '
       function isw(c) { return c ~ /[a-z0-9-]/ }
       function has(s, w,   p, r, b, a) {
         r = s
@@ -315,11 +352,30 @@ rule_glossary() {
           allowp[++nal] = substr(l, 1, sp - 1); w = substr(l, sp + 1); gsub(/^[ \t]+|[ \t]+$/, "", w); alloww[nal] = tolower(w) }
       }
       {
-        ln = $0; sub(/^[0-9]+:/, "", ln); lineno = $0; sub(/:.*/, "", lineno)
-        # keep only quoted segments
-        out = ""; rest = ln
-        while (match(rest, /\047[^\047]*\047|"[^"]*"|`[^`]*`/)) { out = out " " substr(rest, RSTART + 1, RLENGTH - 2); rest = substr(rest, RSTART + RLENGTH) }
-        out = tolower(out); gsub(/\$\{[^}]*\}/, " ", out)
+        lineno = FNR
+        # Tokenise: keep only the text inside quotes. A quote ends only at its own kind, so an
+        # apostrophe inside a backtick string is content; \x escapes are kept as x; ${...} is
+        # code and is skipped (brace-counted, may span lines); // and /* */ outside quotes are
+        # comments. An unterminated "/\047 is dropped at end of line; a template keeps its quote
+        # state and its text so far is checked on this line.
+        out = ""; l = $0; n = length(l)
+        for (i = 1; i <= n; i++) {
+          c = substr(l, i, 1); c2 = substr(l, i + 1, 1)
+          if (blk) { if (c == "*" && c2 == "/") { blk = 0; i++ } ; continue }
+          if (ed > 0) { if (c == "{") ed++; else if (c == "}") ed--; continue }
+          if (q == "") {
+            if (c == "/" && c2 == "/") break
+            if (c == "/" && c2 == "*") { blk = 1; i++; continue }
+            if (c == "\047" || c == "\"" || c == "`") { q = c; seg = ""; continue }
+            continue
+          }
+          if (c == "\\") { seg = seg c2; i++; continue }
+          if (q == "`" && c == "$" && c2 == "{") { ed = 1; seg = seg " "; i++; continue }
+          if (c == q) { out = out " " seg; seg = ""; q = ""; continue }
+          seg = seg c
+        }
+        if (q == "`") { out = out " " seg; seg = "" } else { q = ""; seg = "" }
+        out = tolower(out)
         for (i = 1; i <= nt; i++) { while ((p = index(out, terms[i])) > 0) out = substr(out, 1, p - 1) " " substr(out, p + length(terms[i])) }
         for (i = 1; i <= na; i++) {
           if (!has(out, aw[i]) || (lineno SUBSEP aw[i]) in done) continue
@@ -330,7 +386,7 @@ rule_glossary() {
         }
       }
       function allow_match(p, f) { return p == "*" || index(f, p) > 0 }
-    ' | while IFS=$'\t' read -r file n msg; do viol glossary "$file" "$n" "$msg"; done
+    ' "$f" | while IFS=$'\t' read -r file n msg; do viol glossary "$file" "$n" "$msg"; done
   done < <(src_files ts | grep '/strings\.ts$')
 }
 

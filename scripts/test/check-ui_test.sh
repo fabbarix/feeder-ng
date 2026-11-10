@@ -66,6 +66,19 @@ run_ui "$FIX/sizing/fail" "$(rules_file sizing warn)"
 run_ui "$FIX/glossary/fail" "$(rules_file glossary warn)"
 [ "$(count_of glossary)" = 2 ] && ok || bad "glossary: expected 2 (dish, meal), got $(count_of glossary)"
 
+# --- hardening cases: a pass and a fail fixture each, exact count for the fail one
+harden() { # rule fixture-dir expected-count-in-fail-fixture
+  run_ui "$FIX/$2/pass" "$(rules_file "$1" fail)"
+  [ "$RC" -eq 0 ] && [ "$(count_of "$1")" = 0 ] && ok || bad "$2: pass fixture must be clean in fail mode (rc $RC): $OUTPUT"
+  run_ui "$FIX/$2/fail" "$(rules_file "$1" fail)"
+  [ "$RC" -eq 1 ] && [ "$(count_of "$1")" = "$3" ] && ok || bad "$2: fail fixture must report $3 in fail mode (rc $RC, got $(count_of "$1"))"
+  run_ui "$FIX/$2/fail" "$(rules_file "$1" warn)"
+  [ "$RC" -eq 0 ] && [ "$(count_of "$1")" = "$3" ] && ok || bad "$2: same fixture in warn mode must exit 0 with $3 (rc $RC, got $(count_of "$1"))"
+}
+harden native-ui native-ui-multiline 3   # <input> tags split across lines, incl. braces with '>'
+harden colour-literals colour-named 5    # named colours in CSS declarations and style props
+harden glossary glossary-quoting 4       # apostrophes in backtick strings, \' escapes, multi-line templates
+
 # --- an allowlisted entry is what makes the pass fixtures pass ---------------
 for r in class-hooks glossary; do
   run_ui "$FIX/$r/pass" "$(rules_file "$r" fail)"
