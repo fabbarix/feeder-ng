@@ -41,3 +41,7 @@
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
+
+.today-streak {
+  align-self: start;
+}

@@ -71,7 +71,7 @@ export function BoardScreen(): ReactNode {
           <ClockTile now={clock} timeZone={zone} />
         </Cell>
         <Cell id="nextAdvance">
-          <NextAdvanceTile next={data.nextAdvance} nowMs={clock.getTime()} onDone={markDone} />
+          <NextAdvanceTile next={data.nextAdvance} nowMs={clock.getTime()} timeZone={zone} onDone={markDone} />
         </Cell>
         <Cell id="leftovers">
           <BoardLeftoversTile rows={leftoverRows(leftovers, 5)} />

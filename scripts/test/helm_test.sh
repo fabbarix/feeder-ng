@@ -195,7 +195,24 @@ done
 grep -Eqi 'cannot be undone|can.t be undone|irreversible|cannot be made private' "$DEPLOY_MD" && ok || bad "deploy.md must say making a package public cannot be undone"
 if grep -Eqi 'to my knowledge|i am not certain|i think|i believe|i am not sure' "$DEPLOY_MD"; then bad "deploy.md must not hedge in the first person"; else ok; fi
 grep -Eqi 'no .?latest.? (image|tag)[^.]*(until|before)[^.]*(stable|v\*)|latest[^.]*(only|not)[^.]*(exist|published)[^.]*(until|before)' "$README" \
-  && grep -q 'image.tag=main' "$README" && ok || bad "chart README must say no latest image exists until the first stable v* tag, and to use image.tag=main before then"
+  && ok || bad "chart README must say no latest image exists until the first stable v* tag"
+
+# --- d2-release-tags: only v* tags publish; no :main image anywhere ---
+REL="$ROOT/.github/workflows/release.yml"
+for f in "$DEPLOY_MD" "$README" "$REL" "$ROOT/.github/workflows/ci.yml"; do
+  b="$(basename "$f")"
+  if grep -Eq 'feeder-ng:main|image\.tag[= ]main|tag[ =]main\b|\| `main` \||sha-<short>' "$f"; then bad "$b must not reference a main or sha-<short> image"; else ok; fi
+done
+grep -q 'image.tag=v1.0.0-dev\|v1.0.0-dev' "$README" && ok || bad "chart README must tell users to use a pre-release tag such as v1.0.0-dev before the first stable tag"
+grep -Eq 'v1\.0\.0-dev' "$DEPLOY_MD" && ok || bad "deploy.md must name a pre-release tag such as v1.0.0-dev for use before the first stable tag"
+grep -Eqi 'git tag v[0-9.]+(-[a-z0-9.]+)? && git push origin v' "$DEPLOY_MD" && ok || bad "deploy.md must show the release as pushing a v* tag"
+grep -Eqi 'only (on|from|for)[^.]*`?v\*`? tags?|tags? only|only[^.]*tagged' "$DEPLOY_MD" && ok || bad "deploy.md must say images are published from v* tags only"
+grep -Eqi 'latest[^.]*(only|just)[^.]*stable|stable[^.]*only[^.]*latest' "$DEPLOY_MD" && ok || bad "deploy.md must say latest comes only from stable tags"
+grep -Eqi 'usually (not needed|unnecessary)|not usually needed' "$DEPLOY_MD" && ok || bad "deploy.md must say the make-public step is usually unnecessary for a public repository"
+grep -Eqi 'inherit' "$DEPLOY_MD" && ok || bad "deploy.md must say packages inherit visibility from a public repository"
+grep -Eqi 'verify[^.]*anonymous' "$DEPLOY_MD" && ok || bad "deploy.md must tell the reader to verify an anonymous pull after the first push"
+grep -Eqi '401' "$DEPLOY_MD" && ok || bad "deploy.md must keep the make-public steps as a fallback for a 401/denied pull"
+if grep -Eqi 'GHCR creates packages as \*\*private\*\*, even in a public' "$DEPLOY_MD"; then bad "deploy.md must no longer claim packages are always private in a public repository"; else ok; fi
 
 # probe path registered in the Go code
 grep -rq '"GET /api/health"' "$CHART/../../../internal" --include=*.go && ok || bad "the probe path /api/health must be registered in internal/"

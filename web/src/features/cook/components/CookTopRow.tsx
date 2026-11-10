@@ -26,7 +26,7 @@ export function CookTopRow({ number, of, speechSupported, voiceOn, onVoiceChange
       </Button>
       {number > 0 ? (
         <span className="cook-top__step" role="status">
-          <Chip kind="state" status="pinned" icon="cook">
+          <Chip kind="tag" icon="cook">
             {cookStrings.stepOf(number, of)}
           </Chip>
         </span>

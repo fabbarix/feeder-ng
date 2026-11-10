@@ -52,6 +52,11 @@ describe('NextAdvanceTile', () => {
     expect(screen.getByText('Start in 3 h')).toBeInTheDocument()
     expect(screen.queryByText('Overdue')).not.toBeInTheDocument()
   })
+  it('R11b N7: a Step more than 24 h away says the day and time in the household zone', () => {
+    render(<NextAdvanceTile next={{ ...next, dueAt: '2026-11-13T10:30:00Z' }} nowMs={NOW} timeZone="Europe/Rome" onDone={() => {}} />)
+    expect(screen.getByText('Start Fri 11:30')).toBeInTheDocument()
+    expect(screen.queryByText(/\d+ h$/)).not.toBeInTheDocument()
+  })
   it('flags an overdue Step', () => {
     render(<NextAdvanceTile next={{ ...next, overdue: true, dueAt: '2026-11-09T15:00:00Z' }} nowMs={NOW} onDone={() => {}} />)
     expect(screen.getByText('Overdue')).toBeInTheDocument()
