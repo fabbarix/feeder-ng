@@ -137,7 +137,7 @@ describe('ScanScreen', () => {
   it('shows how many scans the server rejected, with a way to dismiss them', async () => {
     const c = controller({ rejectedCount: 2 })
     await startShopping(c)
-    expect(screen.getByText("2 Scans couldn't sync")).toBeInTheDocument()
+    expect(screen.getByText("2 scans couldn't sync")).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(c.dismissRejected).toHaveBeenCalledTimes(1)
   })
@@ -222,7 +222,7 @@ describe('ScanScreen', () => {
   it('says when the phone is offline and how many scans wait', async () => {
     await startShopping(controller({ online: false, pendingCount: 2 }))
     expect(screen.getByText('Offline: scans are kept and sent when you are back online')).toBeInTheDocument()
-    expect(screen.getByText('2 Scans waiting to sync')).toBeInTheDocument()
+    expect(screen.getByText('2 scans waiting to sync')).toBeInTheDocument()
   })
 
   it('shows sync notices and lets the User dismiss them', async () => {
