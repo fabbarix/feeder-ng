@@ -253,5 +253,24 @@ func (a *DB) StreakInput(ctx context.Context) (cook.StreakInput, error) {
 		w.LotID, w.WastedOn, w.LotGoesOff = id.Int64, stock.Date(on), stock.Date(g.String)
 		in.Waste = append(in.Waste, w)
 	}
-	return in, waste.Err()
+	if err := waste.Err(); err != nil {
+		return in, err
+	}
+	offs, err := a.db.QueryContext(ctx, `SELECT lot_id, goes_off FROM stock_go_offs`)
+	if err != nil {
+		return in, err
+	}
+	defer offs.Close()
+	for offs.Next() {
+		var (
+			g  cook.GoOffEvent
+			on string
+		)
+		if err := offs.Scan(&g.LotID, &on); err != nil {
+			return in, err
+		}
+		g.GoesOff = stock.Date(on)
+		in.GoOffs = append(in.GoOffs, g)
+	}
+	return in, offs.Err()
 }

@@ -101,8 +101,25 @@ type GoOffRecord struct {
 	RecordedOn stock.Date // household date it was recorded (Mutation.Today)
 }
 
-// GoOffs lists the go-off records, oldest go-off first (R11c). Stub: the developer implements it.
-func (s *Store) GoOffs(ctx context.Context) ([]GoOffRecord, error) { return nil, nil }
+// GoOffs lists the go-off records, oldest go-off first (R11c).
+func (s *Store) GoOffs(ctx context.Context) ([]GoOffRecord, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT lot_id, goes_off, recorded_on FROM stock_go_offs ORDER BY goes_off, lot_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []GoOffRecord
+	for rows.Next() {
+		var r GoOffRecord
+		var g, on string
+		if err := rows.Scan(&r.LotID, &g, &on); err != nil {
+			return nil, err
+		}
+		r.GoesOff, r.RecordedOn = stock.Date(g), stock.Date(on)
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
 
 // Store is the Stock repository.
 type Store struct {
@@ -230,8 +247,23 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 			kept[l.ID] = true
 		}
 	}
+	thrown := map[int64]bool{}
+	for _, w := range m.Waste {
+		if w.LotID != nil {
+			thrown[*w.LotID] = true
+		}
+	}
 	for _, l := range current {
 		if !kept[l.ID] {
+			// A Lot that had gone off unforgiven keeps its go-off for the streak (R11c); a Throw
+			// out counts through its waste record instead.
+			if e := l.GoesOff.AddDays(1); !m.Today.IsNone() && !l.GoesOff.IsNone() && !thrown[l.ID] &&
+				e <= m.Today && e > l.KeptOn {
+				if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO stock_go_offs (lot_id, goes_off, recorded_on) VALUES (?, ?, ?)`,
+					l.ID, string(l.GoesOff), string(m.Today)); err != nil {
+					return nil, err
+				}
+			}
 			if _, err := tx.ExecContext(ctx, `DELETE FROM stock_lots WHERE id = ? AND ingredient_id = ?`, l.ID, ingredientID); err != nil {
 				return nil, err
 			}

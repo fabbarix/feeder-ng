@@ -36,12 +36,13 @@ type StreakInput struct {
 	GoOffs  []GoOffEvent // go-offs of Lots no longer in Stock and not thrown out
 }
 
-// ZeroWasteStreak is the zero-waste streak in days (R11c, spec section 6): today minus the newest
+// ZeroWasteStreak is the zero-waste streak in days (R11c, spec section 6.1): today minus the newest
 // waste-event day, but never more than the Household's age (Today minus Created).
 func ZeroWasteStreak(in StreakInput) int {
 	if in.Created.IsNone() || in.Today.IsNone() {
 		return 0
 	}
+	// gone: Lots already counted through a waste record (thrown out); a Lot is never counted twice.
 	gone := map[int64]bool{}
 	for _, w := range in.Waste {
 		if w.LotID != 0 {
@@ -70,6 +71,11 @@ func ZeroWasteStreak(in StreakInput) int {
 			}
 		}
 		see(e)
+	}
+	for _, g := range in.GoOffs {
+		if !g.GoesOff.IsNone() && !gone[g.LotID] {
+			see(g.GoesOff.AddDays(1))
+		}
 	}
 	t, errT := time.Parse("2006-01-02", string(in.Today))
 	r, errR := time.Parse("2006-01-02", string(newest))
