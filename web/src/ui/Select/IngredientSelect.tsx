@@ -5,8 +5,8 @@ import { selectStrings } from './strings'
 
 export interface IngredientSelectProps extends SelectFieldProps {
   ingredients: IngredientChoice[]
-  value: number | null
-  onChange: (id: number) => void
+  value: number | string | null
+  onChange: (id: number | string) => void
   /** Adds the "Create Ingredient" row. */
   onCreate?: (query: string) => void
 }
@@ -15,7 +15,7 @@ export interface IngredientSelectProps extends SelectFieldProps {
 export function IngredientSelect({ ingredients, value, onChange, onCreate, ...field }: IngredientSelectProps) {
   const options = useMemo(() => ingredientOptions(ingredients), [ingredients])
   return (
-    <Select<number>
+    <Select<number | string>
       {...field}
       entityName="Ingredient"
       options={options}

@@ -4,7 +4,7 @@ Scope: `web/src/ui/**` plus the colour allowlist in `scripts/`. All changes are 
 
 | # | Decision |
 |---|---|
-| 1 | `ListRow` with `href`: `useInRouterContext()` ? react-router-dom `Link` (class `list-row__target`) : `<a>`. |
+| 1 | `ListRow` with `href`: inside a Router an `<a class="list-row__target">` built with `useHref` + `useLinkClickHandler` (accepted deviation from `Link`: `aria-current` stays explicit), outside a Router a plain `<a>`. The test asserts the router location changes (not `defaultPrevented`, which an anchor listener sees before React's delegated handler). |
 | 2 | `aria-label?` overrides the target's name (default `title`); `data-*` props go to the `li` (typed `data-${string}`); `data-height`/`data-selected` stay ours. |
 | 3 | `metaStatus?: ChipStatus` sets `data-status` on `.list-row__meta` (colour `var(--status-<s>-fg)`; `pinned`/`success` too) and shows the chip default icon (goesOff, leftover, ...) at 14 px; `metaIcon?: IconName` overrides it and works without a status. Icon is decorative. |
 | 4 | Two trailing actions: pattern, no new prop. `trailing` may hold two `IconButton`s; `.list-row__trailing` becomes `display:flex; align-items:center; gap:var(--space-1)`; buttons already sit above the stretched target. `children` = extra content (Chips) in `.list-row__extra` (flex-wrap, gap 6) inside `.list-row__text`; such a row has `data-height="auto"` (min 64, grows). |
@@ -22,3 +22,12 @@ Scope: `web/src/ui/**` plus the colour allowlist in `scripts/`. All changes are 
 | 16 | `ViewfinderStrip` renders `IconButton`s (`torch`, `mute`), keeping names `Torch on/off`, `Mute beep`/`Unmute beep` and `aria-pressed`; no `.button`, no tonal/ghost. |
 
 Red tests until implemented: ListRow 1-4 (not the no-Router case), UnitSelect create, clear row, hero chip/button rules, BentoGrid 7, Avatar colour, Slider caption, TimerTile, ViewfinderStrip, the colour-allow guard fixtures. Icons, the barrel exports, `MemberSelect single` and the prop types are already in place (stubs).
+
+## Follow-ups from the screen reviewers
+
+| # | Decision |
+|---|---|
+| 17 | `IngredientSelect` accepts a not-yet-saved choice: `IngredientChoice` has `id?: number` and `key?: string` (temporary key); the option value is `id ?? key`, so `value` is `number \| string \| null` and `onChange(id: number \| string)`. The Base Unit is shown **once**: as meta via `selectStrings.baseUnitMeta(unit)`; the unit badge (`leading`) is dropped. |
+| 18 | `ViewfinderStrip` (ui-fix-plan 2.5, 5.6): `.viewfinder-strip__picture` is `height: 140px` (no `aspect-ratio`). Frame and reticle use new tokens in `styles.css` `:root`, defined once and never redefined for dark: `--viewfinder-frame: #10131a`, `--viewfinder-reticle: #ffffff`. The reticle border is `2px solid var(--viewfinder-reticle)`; `--color-on-accent` (near-black in dark mode) is no longer used. |
+
+Red: `ui/Select/options.test.tsx` (two), `ui/Select/DomainSelects.test.tsx` (not-yet-saved choice), `ui/ViewfinderStrip.icons.test.tsx` (two).

@@ -18,15 +18,12 @@ const inRouter = (row: React.ReactNode) =>
 const inList = (row: React.ReactNode) => render(<ListGroup label="Stock">{row}</ListGroup>)
 
 describe('WP3b #1: ListRow href is a router Link inside a Router', () => {
-  it('navigates client-side (no default action, location changes)', async () => {
+  it('navigates client-side (the location changes without a page load)', async () => {
     inRouter(<ListRow title="Milk" href="/stock/7" />)
     const link = screen.getByRole('link', { name: 'Milk' })
     expect(link).toHaveAttribute('href', '/stock/7')
     expect(link).toHaveClass('list-row__target')
-    let prevented = false
-    link.addEventListener('click', (e) => (prevented = e.defaultPrevented))
-    await userEvent.click(link)
-    expect(prevented).toBe(true) // a plain <a> would not be prevented: that is a full page load
+    await userEvent.click(link) // a plain <a> would leave the router location unchanged
     expect(screen.getByTestId('where')).toHaveTextContent('/stock/7')
   })
 
