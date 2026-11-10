@@ -655,3 +655,46 @@ func TestTodayIsTheHouseholdDate(t *testing.T) {
 		t.Fatalf("Today = %v %v", got, err)
 	}
 }
+
+// R11c: Keep records the household date of the Keep on the Lot, so the streak forgives the go-offs so far.
+func TestKeepRecordsTheKeepDate(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05
+	if _, err := f.svc.Keep(ctx, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Lot(ctx, l.ID)
+	if err != nil || got.KeptOn != today {
+		t.Fatalf("lot = %+v %v, want KeptOn %s", got, err, today)
+	}
+}
+
+// R11c: Throw out of a Lot that had already gone off records its go-off date, so the
+// streak counts the waste from the day it went off and not a second time on the throw-out day.
+func TestThrowOutOfAGoneOffLotRecordsItsGoOffDate(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05, gone off 11-06
+	rec, err := f.svc.ThrowOut(ctx, l.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.LotGoesOff != "2026-11-05" || rec.WastedOn != today {
+		t.Fatalf("record = %+v, want LotGoesOff 2026-11-05 and WastedOn %s", rec, today)
+	}
+}
+
+// R11c: a Lot whose go-off was forgiven by Keep and is then thrown out counts on the throw-out day.
+func TestThrowOutAfterKeepCountsOnTheThrowOutDay(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05; Keep -> 11-06, still past
+	if _, err := f.svc.Keep(ctx, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	rec, err := f.svc.ThrowOut(ctx, l.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.LotGoesOff != stock.None || rec.WastedOn != today {
+		t.Fatalf("record = %+v, want no LotGoesOff and WastedOn %s", rec, today)
+	}
+}

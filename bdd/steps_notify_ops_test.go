@@ -512,6 +512,65 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 			id, date, w.Env.Clock.Now().UTC().Format(time.RFC3339))
 		return err
 	})
+	// R11c: household age, go-off, Keep and Throw out for the zero-waste streak.
+	sc.Step(`^a day passes$`, func() { w.Ensure().Clock.Advance(24 * time.Hour) })
+	sc.Step(`^the Household was created on "([^"]*)"$`, func(date string) error {
+		_, err := w.Ensure().DB.Exec(`UPDATE household_settings SET created_at = ? WHERE id = 1`, date+"T08:00:00Z")
+		return err
+	})
+	sc.Step(`^the Household's time zone is "([^"]*)"$`, func(zone string) error {
+		var cur map[string]any
+		if err := w.Client.Get("/api/household/settings").JSON(&cur); err != nil {
+			return err
+		}
+		delete(cur, "timeZoneConfigured")
+		cur["timeZone"] = zone
+		if r := w.Client.Do("PUT", "/api/household/settings", cur); r.Status != 200 {
+			return fmt.Errorf("save settings: %d %s", r.Status, r.Body)
+		}
+		return nil
+	})
+	sc.Step(`^Stock knows the Ingredient "([^"]*)" with a Shelf Life of (\d+) days for Today$`, func(name string, days int) error {
+		r := w.Client.Do("POST", "/api/ingredients", map[string]any{"name": name, "baseUnit": "g", "shelfLifeDays": days})
+		var out struct {
+			ID int64 `json:"id"`
+		}
+		if r.Status != 201 || r.JSON(&out) != nil {
+			return fmt.Errorf("create Ingredient: %d %s", r.Status, r.Body)
+		}
+		w.Vars["today.ing."+name] = out.ID
+		return nil
+	})
+	goneOffLot := func(name string) (int64, error) {
+		id, _ := w.Vars["today.ing."+name].(int64)
+		var out struct {
+			Lots []struct {
+				ID           int64 `json:"id"`
+				IngredientID int64 `json:"ingredientId"`
+			} `json:"lots"`
+		}
+		if err := w.Client.Get("/api/stock/spoiled").JSON(&out); err != nil {
+			return 0, err
+		}
+		for _, l := range out.Lots {
+			if l.IngredientID == id {
+				return l.ID, nil
+			}
+		}
+		return 0, fmt.Errorf("no gone-off Stock Lot of %q", name)
+	}
+	for _, act := range []struct{ verb, path string }{{"throw out", "throw-out"}, {"keep", "keep"}} {
+		sc.Step(`^I `+act.verb+` the gone-off Stock Lot of "([^"]*)"$`, func(name string) error {
+			id, err := goneOffLot(name)
+			if err != nil {
+				return err
+			}
+			if r := w.Client.Do("POST", fmt.Sprintf("/api/stock/lots/%d/%s", id, act.path), nil); r.Status != 200 {
+				return fmt.Errorf("%s: %d %s", act.verb, r.Status, r.Body)
+			}
+			return nil
+		})
+	}
 	sc.Step(`^I ask for the zero-waste streak$`, func() { w.Last = w.Client.Get("/api/today/streak") })
 	sc.Step(`^the streak is (\d+) days?$`, func(n int) error {
 		var out struct {

@@ -352,3 +352,43 @@ func TestUpdateTxReturnsFnErrorAndRecordsWasteInTheCallersTransaction(t *testing
 		t.Fatal("lot changed despite rollback")
 	}
 }
+
+// R11c: a Keep is persisted on the Lot (kept_on) and survives Update/reads.
+func TestUpdatePersistsKeptOn(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 500, "2026-11-01", "2026-11-05")
+	if l.KeptOn != stock.None {
+		t.Fatalf("new lot KeptOn = %q", l.KeptOn)
+	}
+	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: []stock.Lot{stock.KeepOn(lots[0], "2026-11-09")}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Lot(ctx, l.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.GoesOff != "2026-11-06" || got.KeptOn != "2026-11-09" {
+		t.Errorf("lot = %+v, want GoesOff 2026-11-06 and KeptOn 2026-11-09", got)
+	}
+}
+
+// R11c: a waste record keeps the go-off date of the Lot that had already gone off.
+func TestWasteRecordKeepsTheLotGoOffDate(t *testing.T) {
+	f := setup(t)
+	ing, lot := f.thighs, int64(42)
+	if _, err := f.st.AddWaste(ctx, store.WasteRecord{IngredientID: &ing, Quantity: 200, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled, LotID: &lot, LotGoesOff: "2026-11-03"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.st.AddWaste(ctx, store.WasteRecord{IngredientID: &ing, Quantity: 5, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Waste(ctx, "", "")
+	if err != nil || len(got) != 2 {
+		t.Fatalf("waste = %+v %v", got, err)
+	}
+	if got[0].LotGoesOff != "2026-11-03" || got[1].LotGoesOff != stock.None {
+		t.Errorf("LotGoesOff = %q, %q; want 2026-11-03 and none", got[0].LotGoesOff, got[1].LotGoesOff)
+	}
+}

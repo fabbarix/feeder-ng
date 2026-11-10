@@ -217,3 +217,11 @@ func (a *DB) zone(ctx context.Context) (*time.Location, error) {
 	}
 	return time.UTC, nil
 }
+
+// StreakInput gathers what cook.ZeroWasteStreak needs (R11c): the Household's creation date in the
+// household zone, the Lots not forgiven by Keep with their go-off dates, and the waste records.
+// today is left for the caller to set.
+// STUB (R11c test author): returns an empty input; the developer implements it.
+func (a *DB) StreakInput(ctx context.Context) (cook.StreakInput, error) {
+	return cook.StreakInput{}, nil
+}

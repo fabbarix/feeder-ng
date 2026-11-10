@@ -70,6 +70,10 @@ type WasteRecord struct {
 	WastedOn     stock.Date
 	Reason       Reason
 	LotID        *int64
+	// LotGoesOff is the thrown-out Lot's go-off date when it had already gone off
+	// and was not forgiven by a Keep (R11c); None otherwise. The streak counts
+	// such waste on LotGoesOff+1, the day the Lot went off, not on WastedOn.
+	LotGoesOff stock.Date
 }
 
 // Mutation is what Update persists: the Ingredient's resulting lots (same ID =
