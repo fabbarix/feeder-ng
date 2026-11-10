@@ -83,6 +83,8 @@ type runOpts struct {
 	after      *plan.Key // Swap, set, confirm: unpinned meals after this slot are treated as empty
 	regenerate bool      // bump the generation and redo every unpinned meal (planner.Regenerate)
 	skipPlan   bool      // the write does not plan (DiscardExpired)
+	// afterPlan runs inside the transaction once the replan is written (not after the commit).
+	afterPlan func(ctx context.Context, st *store.Store) error
 }
 
 // txKey carries the transaction of a write through the context, so the Stock
@@ -117,6 +119,11 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 		if !o.skipPlan {
 			if sum, err = r.planIn(withTx(ctx, tx), st, reason, o); err != nil {
 				return err
+			}
+			if o.afterPlan != nil {
+				if err := o.afterPlan(withTx(ctx, tx), st); err != nil {
+					return err
+				}
 			}
 		}
 		return r.pruneStaleChips(ctx, st)

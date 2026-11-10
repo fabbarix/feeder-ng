@@ -242,14 +242,9 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 		leftover = leftoverFor(*res.Leftover, t)
 	}
 	plannedFor := make([]plannedForOut, 0, len(res.PlannedFor))
-	for _, pk := range res.PlannedFor {
-		m, err := a.st.Meal(r.Context(), pk)
-		if err != nil {
-			writeErr(w, err)
-			return
-		}
-		plannedFor = append(plannedFor, plannedForOut{Date: pk.Date, MealSlotID: pk.MealSlotID,
-			MealSlotName: t.slots[pk.MealSlotID], RecipeName: t.recipes[m.RecipeID]})
+	for _, p := range res.PlannedFor {
+		plannedFor = append(plannedFor, plannedForOut{Date: p.Date, MealSlotID: p.MealSlotID,
+			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName})
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"meal": mealFor(res.Meal, t), "leftover": leftover,
 		"warnings": warnings, "plannedFor": plannedFor})

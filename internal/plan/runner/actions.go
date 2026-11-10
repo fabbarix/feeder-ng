@@ -394,9 +394,35 @@ type CookedResult struct {
 	Meal     plan.Meal
 	Leftover *plan.Leftover // the actual Leftover recorded; nil when none
 	Warnings []Warning      // Stock shortfalls; never an error
-	// PlannedFor lists the later Planned Meals served from the recorded Leftover after the replan (plan.LeftoverPlannedFor);
-	// empty when the Leftover is kept or there is none.
-	PlannedFor []plan.Key
+	// PlannedFor lists the later Planned Meals served from the recorded Leftover after the replan, in date then slot
+	// order; empty when the Leftover is kept or there is none.
+	PlannedFor []PlannedForMeal
+}
+
+// PlannedForMeal is one later Planned Meal served from a Leftover, with the names a caller shows.
+type PlannedForMeal struct {
+	Date         string
+	MealSlotID   int64
+	MealSlotName string
+	RecipeID     int64
+	RecipeName   string
+}
+
+// plannedForMeals lists the meals served from the Leftover made at src (plan.LeftoverPlannedFor), with their names.
+func plannedForMeals(in info, recipes []planner.Recipe, meals []plan.Meal, src plan.Key) []PlannedForMeal {
+	byKey := make(map[plan.Key]plan.Meal, len(meals))
+	for _, m := range meals {
+		byKey[m.Key] = m
+	}
+	var out []PlannedForMeal
+	for _, k := range plan.LeftoverPlannedFor(src, meals) {
+		m := byKey[k]
+		def, _ := in.slotDef(k)
+		rc, _ := recipeOf(recipes, m.RecipeID)
+		out = append(out, PlannedForMeal{Date: k.Date, MealSlotID: k.MealSlotID, MealSlotName: def.Name,
+			RecipeID: m.RecipeID, RecipeName: rc.Name})
+	}
+	return out
 }
 
 // Cooked marks the Planned Meal Cooked (spec §8), in ONE transaction:
@@ -415,7 +441,31 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	var warnings []Warning
 	var leftover *plan.Leftover
 	var publish func()
-	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	var cooked plan.Meal
+	var plannedFor []PlannedForMeal
+	// After the replan, inside the transaction: a Leftover that shrank may have lost its dependants, so the result is
+	// read here, where a failure rolls the Cooked back instead of turning a success into an error.
+	afterReplan := func(ctx context.Context, st *store.Store) error {
+		in, err := r.info(ctx)
+		if err != nil {
+			return err
+		}
+		recipes, err := r.d.Source.Recipes(ctx)
+		if err != nil {
+			return err
+		}
+		cooked, err = st.Meal(ctx, key)
+		if err != nil {
+			return mapStoreErr(err)
+		}
+		later, err := st.Meals(ctx, key.Date, "")
+		if err != nil {
+			return err
+		}
+		plannedFor = plannedForMeals(in, recipes, later, key)
+		return nil
+	}
+	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -511,16 +561,7 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	if publish != nil {
 		publish()
 	}
-	m, err := r.meal(ctx, key)
-	if err != nil {
-		return CookedResult{}, err
-	}
-	// After the replan: a Leftover that shrank may have lost its dependants.
-	later, err := r.d.Store.Meals(ctx, key.Date, "")
-	if err != nil {
-		return CookedResult{}, err
-	}
-	return CookedResult{Meal: m, Leftover: leftover, Warnings: warnings, PlannedFor: plan.LeftoverPlannedFor(key, later)}, nil
+	return CookedResult{Meal: cooked, Leftover: leftover, Warnings: warnings, PlannedFor: plannedFor}, nil
 }
 
 // eps absorbs float noise in portion arithmetic.

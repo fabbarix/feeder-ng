@@ -663,8 +663,12 @@ func TestCookedReportsTheMealsTheLeftoverIsPlannedFor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []plan.Key{e.key(10)}; !reflect.DeepEqual(res.PlannedFor, want) {
-		t.Errorf("PlannedFor = %v, want %v (Tuesday is served from it)", res.PlannedFor, want)
+	var got []plan.Key
+	for _, p := range res.PlannedFor {
+		got = append(got, plan.Key{Date: p.Date, MealSlotID: p.MealSlotID})
+	}
+	if want := []plan.Key{e.key(10)}; !reflect.DeepEqual(got, want) {
+		t.Errorf("PlannedFor = %v, want %v (Tuesday is served from it)", got, want)
 	}
 	// 4 portions: Tuesday takes 2, the other 2 are kept.
 	e2 := newEnv(t)
