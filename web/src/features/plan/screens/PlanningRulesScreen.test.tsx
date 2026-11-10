@@ -70,7 +70,7 @@ describe('PlanningRulesScreen', () => {
     await userEvent.click(await screen.findByRole('option', { name: /pasta/ }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Not on consecutive days' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 0, notConsecutiveDays: true }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 1, notConsecutiveDays: true }))
   })
 
   it('shows the server message when a Slot Rule already exists', async () => {
@@ -81,5 +81,17 @@ describe('PlanningRulesScreen', () => {
     await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
+  })
+
+  // R11a N8: the same shared back control as the Settings sub-pages; no stray link to Plan at the bottom.
+  it('leads the header with the shared BackLink to Settings and has no link to Plan', async () => {
+    mockApi(base)
+    const { container } = renderWithProviders(<PlanningRulesScreen />)
+    await screen.findByText('Tag: pizza')
+    const back = screen.getByRole('link', { name: 'Back to Settings' })
+    expect(back).toHaveAttribute('href', '/settings')
+    expect(back).toHaveClass('back-link')
+    expect(container.querySelector('.page-header__leading')).toContainElement(back)
+    expect(screen.queryByRole('link', { name: 'Plan' })).toBeNull()
   })
 })

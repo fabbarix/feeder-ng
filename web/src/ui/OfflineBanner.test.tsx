@@ -29,11 +29,11 @@ describe('OfflineBanner', () => {
     expect(screen.getByRole('status')).not.toHaveTextContent(/saved at/)
   })
 
-  it('counts scans waiting to sync, singular and plural, hidden at 0', () => {
+  it('counts Scans waiting to sync, singular and plural, hidden at 0', () => {
     const { rerender } = render(<OfflineBanner offline pendingScans={3} />)
-    expect(screen.getByRole('status')).toHaveTextContent('3 scans waiting to sync')
+    expect(screen.getByRole('status')).toHaveTextContent('3 Scans waiting to sync')
     rerender(<OfflineBanner offline pendingScans={1} />)
-    expect(screen.getByRole('status')).toHaveTextContent('1 scan waiting to sync')
+    expect(screen.getByRole('status')).toHaveTextContent('1 Scan waiting to sync')
     rerender(<OfflineBanner offline pendingScans={0} />)
     expect(screen.getByRole('status')).not.toHaveTextContent(/waiting to sync/)
   })
