@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button } from './Button'
+import { IconButton } from './IconButton'
 import { uiStrings } from './strings'
 import './ViewfinderStrip.css'
 
@@ -27,24 +27,11 @@ export function ViewfinderStrip({ children, status, torch, mute }: ViewfinderStr
       </div>
       <div className="viewfinder-strip__controls">
         {torch?.supported ? (
-          <Button
-            variant="tonal"
-            aria-pressed={torch.on}
-            aria-label={torch.on ? uiStrings.torchOn : uiStrings.torchOff}
-            onClick={torch.onToggle}
-          >
-            {torch.on ? uiStrings.torchOn : uiStrings.torchOff}
-          </Button>
+          <IconButton icon="torch" label={torch.on ? uiStrings.torchOn : uiStrings.torchOff} pressed={torch.on} onClick={torch.onToggle} />
         ) : null}
         {mute ? (
-          <Button
-            variant="ghost"
-            aria-pressed={mute.muted}
-            aria-label={mute.muted ? uiStrings.unmute : uiStrings.mute}
-            onClick={mute.onToggle}
-          >
-            {mute.muted ? uiStrings.unmute : uiStrings.mute}
-          </Button>
+          // One speaker glyph (the bundle budget): `pressed` shows the muted state, the name says what a press does.
+          <IconButton icon="mute" label={mute.muted ? uiStrings.unmute : uiStrings.mute} pressed={mute.muted} onClick={mute.onToggle} />
         ) : null}
       </div>
     </section>

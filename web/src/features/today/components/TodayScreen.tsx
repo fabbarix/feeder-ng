@@ -1,23 +1,24 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../../ui'
-import { CouldntPlanNotice, LeftoversTile, NextMealTile, ToConfirmTile } from '../../plan'
+import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useNotCooked } from '../../plan'
+import type { SlotKey } from '../../plan/types'
 import { SpoiledTile } from '../../stock'
 import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
+import { todayHeading } from '../lib/heading'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
 import { todayStrings } from '../strings'
 import type { TileId } from '../types'
-import { TodayView } from './TodayView'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
 import { StreakTile } from './StreakTile'
+import { TodayView } from './TodayView'
 import { UseSoonTile } from './UseSoonTile'
 
 /**
- * The Today route: builds one element per tile id from the owning features' components
- * (Planning's NextMealTile, ToConfirmTile, CouldntPlanNotice, LeftoversTile; Stock's
- * SpoiledTile; this feature's AdvanceStepsTile, UseSoonTile, StreakTile) and hands them
- * to TodayView with the layout. Cooking, confirming and "not cooked" open the Plan, where
- * their sheets live.
+ * The Today route: builds one element per tile id from the owning features' components (Plan's TonightHero,
+ * ToConfirmTile, CouldntPlanNotice, LeftoversTile and the Mark as Cooked flow; Stock's SpoiledTile; this feature's
+ * AdvanceStepsTile, UseSoonTile, StreakTile) and hands them to TodayView with the layout. Cooking, Yes, Cooked and
+ * Adjust happen right here; the Leftovers tile opens the Plan.
  */
 export function TodayScreen(): ReactElement {
   const navigate = useNavigate()
@@ -31,9 +32,16 @@ export function TodayScreen(): ReactElement {
   const data = useTodayTileData()
   const steps = useAdvanceStepsDue()
   const streak = useZeroWasteStreak()
+  const flow = useCookFlow()
+  const notCooked = useNotCooked()
+  const cookMeal = (key: SlotKey) => navigate(cookPath(key))
+  const yesCooked = (key: SlotKey) => void flow.quickCook(key)
 
+  const hero = data.nextSlot
   const tiles: Partial<Record<TileId, ReactNode>> = {
-    nextMeal: <NextMealTile slot={data.nextSlot} onOpen={openPlan} />,
+    nextMeal: hero ? (
+      <TonightHero slot={hero} now={data.now} onCook={cookMeal} onYesCooked={yesCooked} onAdjust={flow.open} busy={flow.quickBusy !== null} />
+    ) : null,
     spoiled: (
       <SpoiledTile
         lots={data.spoiled}
@@ -44,12 +52,24 @@ export function TodayScreen(): ReactElement {
       />
     ),
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,
-    toConfirm: <ToConfirmTile slots={data.toConfirm} onCooked={openPlan} onNotCooked={openPlan} />,
+    toConfirm: <ToConfirmTile slots={data.toConfirm} onYesCooked={yesCooked} onAdjust={flow.open} onNotCooked={(key) => void notCooked(key)} />,
     couldntPlan: <CouldntPlanNotice slots={data.couldntPlan} />,
-    leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} />,
+    leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
     streak: <StreakTile days={streak.days} />,
   }
 
-  return <TodayView layout={layout} loading={loading} tiles={tiles} shopping={<ShoppingListSeam />} onOpenPlan={openPlan} />
+  return (
+    <>
+      <TodayView
+        layout={layout}
+        loading={loading}
+        dateLabel={todayHeading(data.planToday)}
+        tiles={tiles}
+        shopping={<ShoppingListSeam />}
+        onOpenPlan={openPlan}
+      />
+      {layout.mode === 'today' ? <CookFlowSheets flow={flow} /> : null}
+    </>
+  )
 }

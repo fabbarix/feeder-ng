@@ -21,6 +21,13 @@ describe('ShortfallNotice', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(onDismiss).toHaveBeenCalledWith(warning)
   })
+
+  it('is a danger-spoil status tile; Correct Stock is secondary, Dismiss tertiary', () => {
+    render(<ShortfallNotice warning={warning} onCorrect={() => {}} onDismiss={() => {}} />)
+    expect(screen.getByRole('alert')).toHaveAttribute('data-variant', 'status')
+    expect(screen.getByRole('button', { name: 'Correct Stock' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute('data-variant', 'tertiary')
+  })
 })
 
 describe('StockCorrectionSheet', () => {
@@ -30,7 +37,7 @@ describe('StockCorrectionSheet', () => {
     const onSave = vi.fn()
     render(<StockCorrectionSheet open onClose={() => {}} correction={correction} onSave={onSave} busy={false} error={null} />)
     expect(screen.getByRole('dialog', { name: 'How much chicken thighs do you have?' })).toBeInTheDocument()
-    const input = screen.getByLabelText('Total in Stock')
+    const input = screen.getByRole('spinbutton', { name: 'Total in Stock' }) // a NumberField, not a native text input
     expect(input).toHaveValue('0')
     await userEvent.clear(input)
     await userEvent.type(input, '250')
@@ -38,14 +45,22 @@ describe('StockCorrectionSheet', () => {
     expect(onSave).toHaveBeenCalledWith(250)
   })
 
-  it('refuses a total that is not a number', async () => {
+  it('refuses an empty total', async () => {
     const onSave = vi.fn()
     render(<StockCorrectionSheet open onClose={() => {}} correction={correction} onSave={onSave} busy={false} error={null} />)
-    const input = screen.getByLabelText('Total in Stock')
-    await userEvent.clear(input)
-    await userEvent.type(input, 'lots')
+    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Total in Stock' }))
     await userEvent.click(screen.getByRole('button', { name: 'Set total' }))
     expect(onSave).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a number, 0 or more.')
+  })
+
+  it('accepts a comma as the decimal mark', async () => {
+    const onSave = vi.fn()
+    render(<StockCorrectionSheet open onClose={() => {}} correction={correction} onSave={onSave} busy={false} error={null} />)
+    const input = screen.getByRole('spinbutton', { name: 'Total in Stock' })
+    await userEvent.clear(input)
+    await userEvent.type(input, '2,5')
+    await userEvent.click(screen.getByRole('button', { name: 'Set total' }))
+    expect(onSave).toHaveBeenCalledWith(2.5)
   })
 })

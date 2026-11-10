@@ -38,7 +38,19 @@
 }
 
 .ui-field__control:has(:disabled) {
-  opacity: 0.38;
+  color: var(--color-muted);
+}
+
+.ui-field__control:has(:disabled) .ui-field__input {
+  color: var(--color-muted);
+}
+
+.ui-field__control:has(:disabled) .ui-field__suffix {
+  color: var(--color-muted);
+}
+
+.ui-field:has(.ui-field__control:has(:disabled)) .ui-field__label {
+  color: var(--color-muted);
 }
 
 .ui-field__input {

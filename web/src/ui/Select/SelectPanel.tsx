@@ -43,7 +43,7 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
     items: group.options.map((option) => ({ option, index: index++ })),
   }))
   const renderOption = (option: SelectOption<V>, i: number) => {
-    const isSelected = p.selected.includes(option.value)
+    const isSelected = option.clear ? p.selected.length === 0 : p.selected.includes(option.value)
     return (
       <div
         key={`${i}-${option.label}`}

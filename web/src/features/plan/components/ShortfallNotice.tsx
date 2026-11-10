@@ -13,14 +13,14 @@ export interface ShortfallNoticeProps {
 /** The Stock shortfall warning with a one-tap "Correct Stock" and "Dismiss" (Stock stays floored at 0). */
 export function ShortfallNotice({ warning, onCorrect, onDismiss }: ShortfallNoticeProps): ReactNode {
   return (
-    <Tile tone="spoil" size="sm" role="alert">
+    <Tile variant="status" status="danger" span="full" role="alert">
       <div className="plan__stack">
         <p className="plan__error">{warning.message}</p>
         <div className="plan__row">
-          <Button variant="tonal" onClick={() => onCorrect(warning)}>
+          <Button variant="secondary" size="sm" onClick={() => onCorrect(warning)}>
             {planStrings.correctStock}
           </Button>
-          <Button variant="ghost" onClick={() => onDismiss(warning)}>
+          <Button variant="tertiary" size="sm" onClick={() => onDismiss(warning)}>
             {planStrings.dismiss}
           </Button>
         </div>

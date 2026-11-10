@@ -22,3 +22,8 @@
   height: 56px;
   font-size: 1.2rem;
 }
+
+/* WP3b: a Member's colour as a 2 px ring (not a fill), so the initials keep their contrast on any colour. */
+.avatar[data-coloured='true'] {
+  box-shadow: 0 0 0 2px var(--avatar-colour);
+}

@@ -58,6 +58,21 @@ describe('IngredientSelect', () => {
     await userEvent.click(screen.getByRole('option', { name: /Milk/ }))
     expect(onChange).toHaveBeenCalledWith(2)
   })
+  it('accepts a not-yet-saved choice (no id, temporary key) and shows its Base Unit once', async () => {
+    const onChange = vi.fn()
+    const withNew = [...ingredients, { key: 'new-1', name: 'Saffron', baseUnit: 'g' }]
+    render(<IngredientSelect label="Ingredient" ingredients={withNew} value="new-1" onChange={onChange} />)
+    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('Saffron')
+    await open('Ingredient')
+    const row = screen.getByRole('option', { name: /Saffron/ })
+    expect(row.querySelector('.select__badge')).toBeNull() // meta only: no extra unit badge
+    expect(row).toHaveTextContent('Base Unit: g')
+    await userEvent.click(screen.getByRole('option', { name: /Milk/ }))
+    expect(onChange).toHaveBeenCalledWith(2)
+    await open('Ingredient')
+    await userEvent.click(screen.getByRole('option', { name: /Saffron/ }))
+    expect(onChange).toHaveBeenLastCalledWith('new-1')
+  })
   it('creates from the typed query', async () => {
     const onCreate = vi.fn()
     const many = Array.from({ length: 9 }, (_, i) => ({ id: i + 10, name: `Thing ${i}`, baseUnit: 'g' }))

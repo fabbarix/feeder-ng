@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CookedResult, Leftover, StockWarning } from '../types'
-import { adjustLeftover, correctionFor, formatPortions, leftoverOutcome, leftoverOutcomeText, parseTotal } from './cook'
+import { adjustLeftover, cookPath, cookedSuccessText, correctionFor, formatPortions, leftoverOutcome, leftoverOutcomeText, parseTotal } from './cook'
 
 describe('adjustLeftover', () => {
   it('moves by half a portion and clamps to 0..max', () => {
@@ -76,5 +76,36 @@ describe('leftoverOutcome (B13)', () => {
     const o = leftoverOutcome(result({ leftover: leftover(1) }))
     expect(o).toEqual({ kind: 'kept', portions: 1, useBy: '2026-11-12' })
     expect(leftoverOutcomeText(o)).toBe('1 portion kept, good until Thu')
+  })
+})
+
+describe('cookPath (B2: Cook Mode from a Planned Meal)', () => {
+  it('is /cook/meal/<date>/<mealSlotId>', () => {
+    expect(cookPath({ date: '2026-11-10', mealSlotId: 3 })).toBe('/cook/meal/2026-11-10/3')
+  })
+})
+
+describe('cookedSuccessText (the one-tap Yes, Cooked toast)', () => {
+  const tue = { date: '2026-11-10', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
+  const wed = { date: '2026-11-11', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
+  const base: CookedResult = {
+    meal: { date: '2026-11-09', mealSlotId: 2, recipeId: 7, recipeName: 'Chicken', batches: 1, portions: 2, state: 'cooked', pinned: true, servedFromLeftover: null, why: [] },
+    leftover: null, warnings: [], plannedFor: [],
+  }
+  const withLeftover = (portions: number): Leftover => ({
+    id: 1, recipeId: 7, recipeName: 'Chicken', portions, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2,
+  })
+
+  it('no Leftover: just the cheer', () => {
+    expect(cookedSuccessText(base)).toBe('Cooked, nice one!')
+  })
+
+  it('planned: says where the Leftover went', () => {
+    expect(cookedSuccessText({ ...base, leftover: withLeftover(2), plannedFor: [tue] })).toBe('Cooked, nice one! 2 portions → Tue Dinner')
+    expect(cookedSuccessText({ ...base, leftover: withLeftover(4), plannedFor: [tue, wed] })).toBe('Cooked, nice one! 4 portions → Tue Dinner and Wed Dinner')
+  })
+
+  it('kept: says it is kept and until when', () => {
+    expect(cookedSuccessText({ ...base, leftover: withLeftover(1) })).toBe('Cooked, nice one! 1 portion kept, good until Thu')
   })
 })

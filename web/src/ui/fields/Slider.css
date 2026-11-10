@@ -67,3 +67,11 @@
   color: var(--color-text);
   font-weight: var(--text-label-weight);
 }
+
+/* WP3b: the value as text above the track (only with valueText). */
+.slider__caption {
+  color: var(--color-text);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+}
