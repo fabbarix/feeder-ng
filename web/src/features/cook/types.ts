@@ -55,6 +55,8 @@ export interface CookView {
   recipeName: string
   batches: number
   meal: { date: string; mealSlotId: number } | null
+  /** Household date (YYYY-MM-DD); a Planned Meal after it cannot be marked Cooked yet. */
+  today: string
   advance: AdvanceItem[]
   steps: CookStep[]
   timers: CookTimer[]

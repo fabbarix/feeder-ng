@@ -394,6 +394,9 @@ type CookedResult struct {
 	Meal     plan.Meal
 	Leftover *plan.Leftover // the actual Leftover recorded; nil when none
 	Warnings []Warning      // Stock shortfalls; never an error
+	// PlannedFor lists the later Planned Meals served from the recorded Leftover after the replan (plan.LeftoverPlannedFor);
+	// empty when the Leftover is kept or there is none.
+	PlannedFor []plan.Key
 }
 
 // Cooked marks the Planned Meal Cooked (spec §8), in ONE transaction:

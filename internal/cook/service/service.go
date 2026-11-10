@@ -82,6 +82,8 @@ type CookView struct {
 	Meal   *MealInfo // nil for a Recipe scope
 	Timers []cook.Timer
 	Now    time.Time
+	// Today is the household date (zone of the Household), so the client knows whether a Planned Meal may be marked Cooked.
+	Today string
 }
 
 // MealView is Cook Mode for a Planned Meal (ErrNotFound; ErrNotCookable unless state is planned).

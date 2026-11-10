@@ -13,6 +13,8 @@ export interface MealTileProps {
   onConfirm: (key: SlotKey) => void
   onUnpin: (key: SlotKey) => void
   onMarkCooked: (key: SlotKey) => void
+  /** Household date; Mark as Cooked is offered only when lib/resolve mayResolve(slot.date, today). */
+  today: string
 }
 
 /**

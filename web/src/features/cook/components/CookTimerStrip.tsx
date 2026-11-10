@@ -4,6 +4,8 @@ import { Button, TimerTile } from '../../../ui'
 import { cookStrings } from '../strings'
 
 export interface CookTimerStripProps {
+  /** The scope Cook Mode is open for: its timers come first under "Timers"; the rest under "Other timers". */
+  scope: string
   items: TimerItem[]
   onPause: (id: number) => void
   onResume: (id: number) => void
@@ -17,7 +19,7 @@ export interface CookTimerStripProps {
  * (finished ones "Dismiss <label>"). A finished timer shows "<label> is ready".
  * Renders nothing when there are no timers.
  */
-export function CookTimerStrip({ items, onPause, onResume, onCancel }: CookTimerStripProps): ReactNode {
+export function CookTimerStrip({ scope: _scope, items, onPause, onResume, onCancel }: CookTimerStripProps): ReactNode {
   if (items.length === 0) return null
   const tap = (item: TimerItem) => {
     const { id, state } = item.timer

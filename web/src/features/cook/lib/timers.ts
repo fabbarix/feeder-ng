@@ -52,3 +52,30 @@ export function newlyFinished(before: number[] | null, now: number[]): number[] 
   if (before === null) return []
   return now.filter((id) => !before.includes(id))
 }
+
+/** Splits timer items into this scope's and the others' (other Steps' or Recipes', and free timers with no scope). Keeps order. STUB. */
+export function partitionByScope<T extends { timer: CookTimer }>(items: T[], scope: string): { here: T[]; elsewhere: T[] } {
+  void scope
+  return { here: items, elsewhere: [] }
+}
+
+export type TimerAction = 'pause' | 'resume' | 'cancel' | 'dismiss'
+
+/**
+ * The explicit controls a timer in this state offers, in display order:
+ * running -> pause, cancel; paused -> resume, cancel; finished -> dismiss. STUB.
+ */
+export function timerActions(state: CookTimer['state']): TimerAction[] {
+  void state
+  return []
+}
+
+/**
+ * Where a timer from another scope belongs, for a hint next to its label: "" for a free timer or this scope,
+ * "Tue meal" for meal:2026-11-10/3, "another Recipe" for recipe:7. STUB.
+ */
+export function timerPlace(timerScope: string | null, currentScope: string): string {
+  void timerScope
+  void currentScope
+  return ''
+}

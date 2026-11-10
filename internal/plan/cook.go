@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"errors"
 	"math"
 	"sort"
 	"time"
@@ -111,3 +112,22 @@ func ToConfirm(items []Timed, now time.Time) []Timed {
 	})
 	return out
 }
+
+// ErrFutureMeal: a Planned Meal whose slot date is after today cannot be marked Cooked or Not cooked (409 future_meal).
+var ErrFutureMeal = errors.New("plan: the Planned Meal is in the future")
+
+// MayResolve reports whether a Planned Meal on date (YYYY-MM-DD) may be marked Cooked or Not cooked on today
+// (household date): its date is today or earlier. Unparseable dates are false.
+// STUB (red tests): the Developer implements it.
+func MayResolve(date, today string) bool { return true }
+
+// PruneStaleLeftoverChips returns copies of the meals whose stored "leftover_fits" chips are stale: a chip dated D is
+// stale unless some meal on D is served from this meal (Meal.From.From == its Key) and is not skipped. Only changed
+// meals are returned, with the stale chips removed and every other chip kept in order.
+// STUB (red tests): the Developer implements it.
+func PruneStaleLeftoverChips(meals []Meal) []Meal { return nil }
+
+// LeftoverPlannedFor lists the Keys of the meals served from the Leftover made at src (Meal.From.From == src), not
+// skipped, in date then Meal Slot id order: where the Leftover went (B13).
+// STUB (red tests): the Developer implements it.
+func LeftoverPlannedFor(src Key, meals []Meal) []Key { return nil }

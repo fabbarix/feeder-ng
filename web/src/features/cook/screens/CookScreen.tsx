@@ -99,6 +99,7 @@ export function CookScreen(): ReactNode {
         <p className="cook-screen__empty">{cookStrings.noSteps}</p>
       )}
       <CookTimerStrip
+        scope={session.scope}
         items={timers.items}
         onPause={(id) => void timers.pause(id)}
         onResume={(id) => void timers.resume(id)}

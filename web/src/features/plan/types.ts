@@ -138,10 +138,20 @@ export interface Leftover {
   fromMealSlotId: number
 }
 
+/** A later Planned Meal the new Leftover is planned for (R4 B13). */
+export interface PlannedForMeal {
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  recipeName: string
+}
+
 export interface CookedResult {
   meal: PlannedMeal
   leftover: Leftover | null
   warnings: StockWarning[]
+  /** The later Planned Meals served from the recorded Leftover after the replan; empty when it is kept (or none). */
+  plannedFor: PlannedForMeal[]
 }
 
 export interface VarietyRule {
