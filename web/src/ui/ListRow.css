@@ -66,8 +66,11 @@
   background: var(--color-soft);
 }
 
-/* The whole row is the target: content is click-through, only interactive trailing content catches the pointer. */
+/* The whole row is the target: content is click-through, only interactive trailing content catches the pointer.
+   The lift is mandatory: the absolute target has opaque hover, press and selected backgrounds, so content must paint above it. */
 .list-row > :not(.list-row__target) {
+  position: relative;
+  z-index: 1;
   pointer-events: none;
 }
 

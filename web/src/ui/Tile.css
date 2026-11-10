@@ -130,8 +130,7 @@
 }
 
 /* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer. */
-.tile button:not(a):not(.tile__stretch):not(.list-row__target),
-.tile a:not(.tile__stretch):not(.list-row__target) {
+.tile :is(button, a):not(.tile__stretch):not(.list-row__target) {
   position: relative;
   z-index: 1;
 }
