@@ -64,7 +64,7 @@ describe('RecipeDetailScreen breadcrumbs', () => {
     view('/recipes/3')
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument()
   })
 
   it('the error state keeps the trail (Recipes > Recipe) and no Back button', () => {

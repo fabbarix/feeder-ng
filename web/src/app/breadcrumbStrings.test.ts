@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { breadcrumbStrings } from './breadcrumbStrings'
 import { ROUTE_CRUMBS } from './breadcrumbs'
 
+// Shortened on purpose: only the GLOSSARY `_Avoid_` words that could plausibly appear in a crumb label (the full
+// list is enforced by the check-ui glossary rule over all UI copy).
 const AVOID = ['store', 'supermarket', 'retailer', 'dish', 'item', 'sku', 'category', 'pantry', 'inventory', 'family']
 
 function values(o: unknown): string[] {

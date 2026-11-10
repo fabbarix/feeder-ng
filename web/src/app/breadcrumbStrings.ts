@@ -1,3 +1,5 @@
+// Titles come from the Import feature so the crumb and the h1 cannot drift.
+import { importStrings } from '../features/import/strings'
 // English crumb labels for the hierarchical routes (the Settings pages take their titles from settingsStrings).
 export const breadcrumbStrings = {
   roots: {
@@ -14,7 +16,7 @@ export const breadcrumbStrings = {
     product: 'Product',
   },
   newRecipe: 'New Recipe',
-  importRecipes: 'Import Recipes',
-  exportRecipes: 'Export Recipes',
+  importRecipes: importStrings.importTitle,
+  exportRecipes: importStrings.exportTitle,
   edit: 'Edit',
 }

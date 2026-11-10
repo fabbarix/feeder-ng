@@ -1,5 +1,4 @@
-// R11a: BackLink is gone. Breadcrumbs are the one way up a hierarchy. Recipe and Import screens are covered by their own
-// (deferred) tests until R12 merges; scripts/check-ui.sh (rule back-link) guards the whole tree.
+// R11a: BackLink is gone. Breadcrumbs are the one way up a hierarchy; scripts/check-ui.sh (rule back-link) guards the whole tree.
 import { describe, expect, it } from 'vitest'
 import * as ui from './index'
 
@@ -31,9 +30,8 @@ describe('BackLink is removed', () => {
     expect(existsSync(`${cwd}/src/ui/BackLink.css`)).toBe(false)
   })
 
-  it('no source file outside the (deferred) Recipe and Import features mentions BackLink, back-link or uiStrings.backTo', () => {
+  it('no source file mentions BackLink, back-link or uiStrings.backTo', () => {
     const offenders = sources(`${cwd}/src`)
-      .filter((p) => !/\/features\/(recipes|import)\//.test(p))
       .filter((p) => /BackLink|back-link|backTo\(/.test(readFileSync(p, 'utf8')))
     expect(offenders).toEqual([])
   })
