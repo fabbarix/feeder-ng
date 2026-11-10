@@ -27,13 +27,15 @@ type subscriber struct {
 	topics  map[string]struct{} // nil means every topic
 	owners  []string            // revocation keys this stream belongs to
 	ch      chan Event
+	closed  bool          // ch has been closed; guarded by Bus.mu
 	revoked chan struct{} // closed by CloseOwner
 }
 
 // Bus fans published events out to subscribers. Publish never blocks.
 type Bus struct {
-	mu   sync.Mutex
-	subs map[*subscriber]struct{}
+	mu     sync.Mutex
+	subs   map[*subscriber]struct{}
+	closed bool // set by Close; later subscriptions end at once
 }
 
 // NewBus returns an empty bus.
@@ -79,9 +81,23 @@ func (b *Bus) subscribe(owners []string, topics []string) *subscriber {
 		}
 	}
 	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.closed {
+		s.closed = true
+		close(s.ch)
+		return s
+	}
 	b.subs[s] = struct{}{}
-	b.mu.Unlock()
 	return s
+}
+
+// removeLocked drops s from the bus and closes its channel once. b.mu must be held.
+func (b *Bus) removeLocked(s *subscriber) {
+	delete(b.subs, s)
+	if !s.closed {
+		s.closed = true
+		close(s.ch)
+	}
 }
 
 func (b *Bus) cancelFunc(s *subscriber) func() {
@@ -90,8 +106,7 @@ func (b *Bus) cancelFunc(s *subscriber) func() {
 		once.Do(func() {
 			b.mu.Lock()
 			defer b.mu.Unlock()
-			delete(b.subs, s)
-			close(s.ch)
+			b.removeLocked(s)
 		})
 	}
 }
@@ -204,4 +219,15 @@ func (b *Bus) Handler(opts ...HandlerOption) http.Handler {
 			}
 		}
 	})
+}
+
+// Close ends every open stream and makes later subscriptions end at once, so
+// a server shutdown does not wait on SSE connections. Idempotent.
+func (b *Bus) Close() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.closed = true
+	for s := range b.subs {
+		b.removeLocked(s)
+	}
 }
