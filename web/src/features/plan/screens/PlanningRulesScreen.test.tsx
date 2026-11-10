@@ -4,6 +4,16 @@ import { describe, expect, it } from 'vitest'
 import { mockApi, renderWithProviders } from '../test-utils'
 import { PlanningRulesScreen } from './PlanningRulesScreen'
 
+// The app shell keeps two always-mounted live regions (status, alert); pick the one carrying this notice.
+const noticeWith = (role: 'status' | 'alert', text: string) =>
+  screen.getAllByRole(role).find((el) => el.textContent?.includes(text))
+const findNotice = (role: 'status' | 'alert', text: string) =>
+  waitFor(() => {
+    const el = noticeWith(role, text)
+    if (!el) throw new Error(`no ${role} with "${text}"`)
+    return el
+  })
+
 const base = {
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, tag: 'pizza' }],
   'GET /api/variety-rules': [{ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false }],
@@ -56,6 +66,6 @@ describe('PlanningRulesScreen', () => {
     await userEvent.selectOptions(screen.getByLabelText('Meal Slot'), 'Friday Dinner')
     await userEvent.selectOptions(await screen.findByLabelText('Recipe'), 'Curry')
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('That Slot Rule already exists.')
+    expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
   })
 })

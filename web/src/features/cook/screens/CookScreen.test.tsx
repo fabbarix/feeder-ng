@@ -11,6 +11,16 @@ vi.mock('../../../lib/sse', () => ({
   connectEvents: () => ({ subscribe: () => () => {}, onReconnect: () => () => {}, close: () => {} }),
 }))
 
+// The app shell keeps two always-mounted live regions (status, alert); pick the one carrying this notice.
+const noticeWith = (role: 'status' | 'alert', text: string) =>
+  screen.getAllByRole(role).find((el) => el.textContent?.includes(text))
+const findNotice = (role: 'status' | 'alert', text: string) =>
+  waitFor(() => {
+    const el = noticeWith(role, text)
+    if (!el) throw new Error(`no ${role} with "${text}"`)
+    return el
+  })
+
 const mealView: CookView = {
   scope: 'meal:2026-11-09/2', recipeId: 7, recipeName: 'Chicken', batches: 1,
   meal: { date: '2026-11-09', mealSlotId: 2 }, today: '2026-11-09', advance: [],
@@ -68,7 +78,7 @@ describe('CookScreen: Mark as Cooked', () => {
     renderMeal()
     await confirmCooked()
     expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('2 portions planned for Tue Dinner')
+    expect(await findNotice('status', '2 portions planned for Tue Dinner')).toHaveTextContent('2 portions planned for Tue Dinner')
     expect(screen.queryByText('Home page')).not.toBeInTheDocument()
     expect(api.callsTo('POST', '/api/plan/2026-11-09/2/cooked')).toHaveLength(1)
     await userEvent.click(screen.getByRole('button', { name: 'Back to Today' }))
@@ -79,14 +89,14 @@ describe('CookScreen: Mark as Cooked', () => {
     mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([], { leftover: { ...leftover2, portions: 1 } }) })
     renderMeal()
     await confirmCooked()
-    expect(await screen.findByRole('status')).toHaveTextContent('1 portion kept, good until Thu')
+    expect(await findNotice('status', '1 portion kept, good until Thu')).toHaveTextContent('1 portion kept, good until Thu')
   })
 
   it('B13: reports no Leftovers when none were recorded', async () => {
     mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([]) })
     renderMeal()
     await confirmCooked()
-    expect(await screen.findByRole('status')).toHaveTextContent('No Leftovers')
+    expect(await findNotice('status', 'No Leftovers')).toHaveTextContent('No Leftovers')
   })
 
   it('B13: Mark as Cooked is not offered again, even when the Step view is refreshed as no longer cookable', async () => {
@@ -113,7 +123,7 @@ describe('CookScreen: Mark as Cooked', () => {
     await confirmCooked()
 
     expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    const notice = await screen.findByRole('alert')
+    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
     expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
 
     await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
@@ -133,9 +143,9 @@ describe('CookScreen: Mark as Cooked', () => {
     const api = mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([shortfall]) })
     renderMeal()
     await confirmCooked()
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(await findNotice('alert', 'Stock shows only 300 g chicken thighs')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
     expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
