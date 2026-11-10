@@ -14,9 +14,15 @@ export interface AppRootProps {
 }
 
 /** Gatekeeper: shows the shell for a signed-in User, and a signed-out page otherwise. */
-export function AppRoot({ navItems, statusHooks }: AppRootProps) {
+export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
   const me = useMe()
   const queryClient = useQueryClient()
+  // The statusHooks list comes from the eager glob, so it is fixed for the app's life: calling the hooks in a loop
+  // keeps their order stable from render to render. They run before the early returns below, so every render calls them.
+  let pendingScans = 0
+  for (const useStatus of statusHooks) {
+    pendingScans += useStatus().pendingScans ?? 0
+  }
 
   if (me.isPending) return <p role="status">{shellStrings.loading}</p>
   if (me.isError) return <p role="alert">{shellStrings.loadError}</p>
@@ -26,5 +32,12 @@ export function AppRoot({ navItems, statusHooks }: AppRootProps) {
     await http.post('/api/logout')
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }
-  return <AppShell user={{ displayName: me.data.displayName }} onSignOut={signOut} navItems={navItems} />
+  return (
+    <AppShell
+      user={{ displayName: me.data.displayName }}
+      onSignOut={signOut}
+      navItems={navItems}
+      pendingScans={pendingScans}
+    />
+  )
 }

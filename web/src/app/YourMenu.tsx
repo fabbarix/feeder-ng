@@ -57,6 +57,12 @@ export function YourMenu({ user, items, onSignOut }: YourMenuProps) {
       case 'End':
         go(last)
         break
+      case 'Tab':
+        // Tab leaves the menu: it closes, and focus returns to the avatar button rather than falling to the page.
+        e.preventDefault()
+        setOpen(false)
+        buttonRef.current?.focus()
+        break
     }
   }
 

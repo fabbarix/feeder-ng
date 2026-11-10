@@ -30,6 +30,7 @@ export interface CollectedFeatures {
 export function collectFeatures(modules: Record<string, FeatureModule>): CollectedFeatures {
   const routes: RouteObject[] = []
   const navItems: NavItem[] = []
+  const statusHooks: ShellStatusHook[] = []
   const owners = new Map<string, string>()
   for (const key of Object.keys(modules).sort()) {
     const mod = modules[key]!
@@ -43,8 +44,9 @@ export function collectFeatures(modules: Record<string, FeatureModule>): Collect
       routes.push(route)
     }
     navItems.push(...(mod.navItems ?? []))
+    if (mod.useShellStatus) statusHooks.push(mod.useShellStatus)
   }
-  return { routes, navItems: sortByOrder(navItems), statusHooks: [] }
+  return { routes, navItems: sortByOrder(navItems), statusHooks }
 }
 
 /** Shell routes: every feature route, plus a "coming soon" page for each core destination no feature provides. */

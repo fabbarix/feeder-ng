@@ -135,6 +135,8 @@
 
   .app-shell:not(.app-shell--chromeless) {
     display: grid;
+    /* Rows take their content height: the rail and the page start at the top, not stretched to fill the frame. */
+    align-content: start;
     padding-bottom: var(--space-6);
   }
 
@@ -173,8 +175,20 @@
   }
 
   .side-rail__link[aria-current='page'] {
-    background: var(--color-soft);
     color: var(--color-accent-text);
+  }
+
+  /* The 88 px rail: the soft pill is a 56 x 32 span behind the icon. */
+  .side-rail__pill {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 32px;
+    border-radius: var(--radius-button);
+  }
+
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    background: var(--color-soft);
   }
 
   .side-rail__link[data-accent='true'] {
@@ -206,6 +220,15 @@
     height: 56px;
   }
 
+  /* From 1440 the whole row is the current pill; the icon span stops being one. */
+  .side-rail__link[aria-current='page'] {
+    background: var(--color-soft);
+  }
+
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    background: none;
+  }
+
   .side-rail__label {
     font-size: var(--text-body-strong-size);
     line-height: var(--text-body-strong-line);
@@ -216,6 +239,8 @@
 /* Avatar menu (5.17): trigger, scrim and popover */
 .your-menu-anchor {
   position: relative;
+  /* Phones: one item in the top bar, pushed to the right edge (the brand word is hidden there). */
+  margin-left: auto;
 }
 
 .your-menu-button {

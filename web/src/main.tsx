@@ -13,10 +13,11 @@ import { AppProviders } from './app/providers'
 import { RouteErrorBoundary } from './app/PageErrorBoundary'
 
 const modules = discoverFeatures()
+const { navItems, statusHooks } = collectFeatures(modules)
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <AppRoot navItems={collectFeatures(modules).navItems} />,
+    element: <AppRoot navItems={navItems} statusHooks={statusHooks} />,
     errorElement: <RouteErrorBoundary />,
     children: buildRoutes(modules),
   },

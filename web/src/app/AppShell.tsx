@@ -53,7 +53,9 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans }: AppSh
           >
             {({ isActive }) => (
               <>
-                <Icon name={item.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
+                <span className="side-rail__pill">
+                  <Icon name={item.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
+                </span>
                 <span className="side-rail__label">{item.label}</span>
               </>
             )}

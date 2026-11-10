@@ -15,10 +15,13 @@
         html:not([data-scheme='light']) { background: #090f0b; }
       }
       html[data-scheme='dark'] { background: #090f0b; }
+      /* Centred Feeder mark until React mounts. The rule matches only while the mark is in #root, so the app is unaffected. */
+      #root:has(> .boot-mark) { display: grid; place-items: center; min-height: 100dvh; }
+      .boot-mark { display: grid; justify-items: center; gap: 8px; font-weight: 700; }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-mark" role="img" aria-label="Feeder"><svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span aria-hidden="true">Feeder</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
