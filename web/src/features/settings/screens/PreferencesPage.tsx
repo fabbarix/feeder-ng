@@ -1,7 +1,24 @@
-/**
- * STUB (WP11). Route /settings/preferences. `PageHeader` with an h1 and a back link "Back to Settings" (href /settings), then ONE concern
- * composed from its form/list components; data and actions from the settings hooks (split the old useSettingsPage per page).
- */
+import { Tile } from '../../../ui'
+import { PreferencesForm } from '../components/PreferencesForm'
+import { SettingsHeader } from '../components/SettingsHeader'
+import { usePreferencesPage } from '../hooks/usePreferencesPage'
+import { settingsStrings } from '../strings'
+import '../settings.css'
+
+/** /settings/preferences: the signed-in User's own colour mode, units and accent. */
 export function PreferencesPage() {
-  return null
+  const page = usePreferencesPage()
+  return (
+    <div className="settings">
+      <SettingsHeader title={settingsStrings.preferences} />
+      <Tile as="section" span="full" aria-label={settingsStrings.preferences}>
+        <PreferencesForm
+          key={JSON.stringify(page.preferences.preferences)}
+          value={page.preferences.preferences}
+          saving={page.preferences.saving}
+          onSave={page.save}
+        />
+      </Tile>
+    </div>
+  )
 }

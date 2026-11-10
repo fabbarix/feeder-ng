@@ -1,9 +1,7 @@
-import { Link } from 'react-router-dom'
-import { EmptyState, Tile } from '../../../ui'
+import { ListGroup, ListRow, Chip, EmptyState } from '../../../ui'
 import { formatPackSize } from '../lib/names'
 import { strings } from '../strings'
 import type { Product } from '../types'
-import '../products.css'
 
 export interface ProductListProps {
   products: Product[]
@@ -11,25 +9,30 @@ export interface ProductListProps {
   system?: 'metric' | 'imperial'
   /** WP11: the Archived filter is on and the list is empty -> "No archived Products". */
   showingArchived?: boolean
+  /** The Ingredient is in the meta line ("Tomato passata · 700 g"); off on an Ingredient's own page ("700 g"). Default on. */
+  showIngredient?: boolean
 }
 
-/** Tiles with the name and formatted pack size, each linking to /products/:id; EmptyState when none. */
-export function ProductList({ products, system = 'metric' }: ProductListProps) {
+/** Products as a ListGroup of ListRows: name, "Ingredient · pack size" meta, chevron, an Archived chip when archived. Each links to /products/:id. */
+export function ProductList({ products, system = 'metric', showingArchived = false, showIngredient = true }: ProductListProps) {
   if (products.length === 0) {
-    return <EmptyState title={strings.productsEmpty} description={strings.productsEmptyHint} />
+    return showingArchived ? <EmptyState title={strings.noArchivedProducts} /> : <EmptyState title={strings.productsEmpty} description={strings.productsEmptyHint} />
   }
   return (
-    <ul className="pg__list">
-      {products.map((p) => (
-        <li key={p.id}>
-          <Tile size="wide">
-            <div className="pg__row pg__row--between">
-              <Link to={`/products/${p.id}`}>{p.name}</Link>
-              <span>{formatPackSize(p.packSize, p.baseUnit, system)}</span>
-            </div>
-          </Tile>
-        </li>
-      ))}
-    </ul>
+    <ListGroup label={strings.productsTitle}>
+      {products.map((p) => {
+        const size = formatPackSize(p.packSize, p.baseUnit, system)
+        return (
+          <ListRow
+            key={p.id}
+            title={p.name}
+            meta={showIngredient && p.ingredientName ? `${p.ingredientName} · ${size}` : size}
+            chevron
+            href={`/products/${p.id}`}
+            trailing={p.archived ? <Chip kind="tag">{strings.archivedChip}</Chip> : undefined}
+          />
+        )
+      })}
+    </ListGroup>
   )
 }

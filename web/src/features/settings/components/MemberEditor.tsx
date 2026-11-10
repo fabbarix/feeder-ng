@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { BottomSheet, Button, Stepper } from '../../../ui'
-import { memberDraft, memberFromDraft, memberProblem } from '../lib/memberForm'
+import { BottomSheet, Button, ColorSwatches, Select, Stepper, TextField } from '../../../ui'
+import { availableUsers, MEMBER_COLOURS, memberDraft, memberFromDraft, memberProblem } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
-import { Field } from './Field'
 import '../settings.css'
 
 export interface MemberEditorProps {
@@ -22,24 +21,35 @@ export interface MemberEditorProps {
 }
 
 const text = settingsStrings.member
+const NO_USER = ''
 
-/** A BottomSheet "Add Member" / "Edit Member": Name, Colour, Avatar (optional), Portion Factor stepper
- *  (0.25..3, step 0.25), Linked User select; buttons "Save Member" and "Remove Member" (editing only). */
-export function MemberEditor({ open, member, users, saving, error, onSave, onDelete, onClose }: MemberEditorProps) {
+/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (optional), Portion Factor
+ *  stepper (0.25..3, step 0.25), Linked User Select; buttons "Save Member" and "Remove Member" (editing only). */
+export function MemberEditor({ open, member, users, members, saving, error, onSave, onDelete, onClose }: MemberEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={member ? text.editTitle : text.addTitle}>
-      <MemberForm key={member?.id ?? 'new'} member={member} users={users} saving={saving} error={error} onSave={onSave} onDelete={onDelete} />
+      <MemberForm
+        key={member?.id ?? 'new'}
+        member={member}
+        users={users}
+        members={members}
+        saving={saving}
+        error={error}
+        onSave={onSave}
+        onDelete={onDelete}
+      />
     </BottomSheet>
   )
 }
 
-type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'saving' | 'error' | 'onSave' | 'onDelete'>
+type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'saving' | 'error' | 'onSave' | 'onDelete'>
 
-function MemberForm({ member, users, saving, error, onSave, onDelete }: FormProps) {
+function MemberForm({ member, users, members, saving, error, onSave, onDelete }: FormProps) {
   const [draft, setDraft] = useState<MemberInput>(() => memberDraft(member))
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
   const [problem, setProblem] = useState<string | null>(null)
   const set = (patch: Partial<MemberInput>) => setDraft((d) => ({ ...d, ...patch }))
+  const offered = availableUsers(users, members, member)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -50,37 +60,26 @@ function MemberForm({ member, users, saving, error, onSave, onDelete }: FormProp
 
   return (
     <form className="settings__stack" onSubmit={submit} noValidate>
-      <Field label={text.name} error={problem ?? undefined}>
-        {(c) => <input {...c} type="text" value={draft.name} onChange={(e) => set({ name: e.target.value })} />}
-      </Field>
-      <Field label={text.colour}>{(c) => <input {...c} type="color" value={draft.colour} onChange={(e) => set({ colour: e.target.value })} />}</Field>
-      <Field label={text.avatar}>{(c) => <input {...c} type="text" value={draft.avatar} onChange={(e) => set({ avatar: e.target.value })} />}</Field>
-      <div className="settings__stack">
-        <span className="field__label">{text.portionFactorLabel}</span>
-        <Stepper
-          label={text.portionFactorLabel}
-          value={draft.portionFactor}
-          min={MIN_PORTION_FACTOR}
-          max={MAX_PORTION_FACTOR}
-          step={PORTION_STEP}
-          onChange={(portionFactor) => set({ portionFactor })}
-        />
-      </div>
-      <Field label={text.linkedUser}>
-        {(c) => (
-          <select {...c} value={userId ?? ''} onChange={(e) => setUserId(e.target.value === '' ? null : Number(e.target.value))}>
-            <option value="">{text.noLinkedUser}</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.displayName}
-              </option>
-            ))}
-          </select>
-        )}
-      </Field>
-      {error ? (
+      <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
+      <ColorSwatches label={text.colour} swatches={[...MEMBER_COLOURS]} value={draft.colour} onChange={(colour) => set({ colour })} allowCustom />
+      <TextField label={text.avatar} value={draft.avatar} onChange={(avatar) => set({ avatar })} />
+      <Stepper
+        label={text.portionFactorLabel}
+        value={draft.portionFactor}
+        min={MIN_PORTION_FACTOR}
+        max={MAX_PORTION_FACTOR}
+        step={PORTION_STEP}
+        onChange={(portionFactor) => set({ portionFactor })}
+      />
+      <Select
+        label={text.linkedUser}
+        options={[{ value: NO_USER, label: text.noLinkedUser }, ...offered.map((u) => ({ value: String(u.id), label: u.displayName }))]}
+        value={userId === null ? NO_USER : String(userId)}
+        onChange={(v) => setUserId(v === NO_USER ? null : Number(v))}
+      />
+      {problem ?? error ? (
         <p role="alert" className="settings__error">
-          {error}
+          {problem ?? error}
         </p>
       ) : null}
       <div className="settings__row">
@@ -88,7 +87,7 @@ function MemberForm({ member, users, saving, error, onSave, onDelete }: FormProp
           {text.save}
         </Button>
         {member && onDelete ? (
-          <Button variant="ghost" disabled={saving} onClick={() => void onDelete()}>
+          <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
             {text.remove}
           </Button>
         ) : null}

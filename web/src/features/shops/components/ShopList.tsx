@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { BottomSheet, Button, EmptyState, Tile } from '../../../ui'
-import { FormField } from '../../products/components/FormField'
+import { BottomSheet, Button, EmptyState, ListGroup, ListRow, TextField } from '../../../ui'
 import { errorText } from '../../products/lib/productForm'
 import { strings } from '../strings'
 import type { Shop } from '../types'
@@ -13,7 +11,7 @@ export interface ShopListProps {
   onAdd: (name: string) => Promise<void>
 }
 
-/** Tiles per Shop linking to /settings/shops/:id; EmptyState when none; an Admin also gets "Add Shop" (BottomSheet with a name field), a non-Admin sees strings.adminOnly instead. */
+/** A ListGroup of Shops, each row linking to /settings/shops/:id; EmptyState when none; an Admin also gets "Add Shop" (BottomSheet with a name field), a non-Admin sees strings.adminOnly instead. */
 export function ShopList({ shops, isAdmin, onAdd }: ShopListProps) {
   const [open, setOpen] = useState(false)
   return (
@@ -21,23 +19,30 @@ export function ShopList({ shops, isAdmin, onAdd }: ShopListProps) {
       {shops.length === 0 ? (
         <EmptyState title={strings.shopsEmpty} />
       ) : (
-        <ul className="pg__list">
+        <ListGroup label={strings.shopsTitle}>
           {shops.map((s) => (
-            <li key={s.id}>
-              <Tile size="wide">
-                <Link to={`/settings/shops/${s.id}`}>{s.name}</Link>
-              </Tile>
-            </li>
+            <ListRow key={s.id} title={s.name} chevron href={`/settings/shops/${s.id}`} />
           ))}
-        </ul>
+        </ListGroup>
       )}
       {isAdmin ? (
-        <Button onClick={() => setOpen(true)}>{strings.addShop}</Button>
+        <Button variant="tertiary" onClick={() => setOpen(true)}>
+          {strings.addShop}
+        </Button>
       ) : (
         <p className="pg__muted">{strings.adminOnly}</p>
       )}
       <BottomSheet open={open} onClose={() => setOpen(false)} title={strings.addShop}>
-        {open ? <ShopNameForm submitLabel={strings.saveShop} initial="" onSubmit={async (name) => { await onAdd(name); setOpen(false) }} /> : null}
+        {open ? (
+          <ShopNameForm
+            submitLabel={strings.saveShop}
+            initial=""
+            onSubmit={async (name) => {
+              await onAdd(name)
+              setOpen(false)
+            }}
+          />
+        ) : null}
       </BottomSheet>
     </div>
   )
@@ -66,9 +71,7 @@ export function ShopNameForm({ initial, submitLabel, onSubmit }: ShopNameFormPro
           .finally(() => setSaving(false))
       }}
     >
-      <FormField label={strings.shopNameLabel}>
-        {(c) => <input {...c} type="text" value={name} onChange={(e) => setName(e.target.value)} />}
-      </FormField>
+      <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
       {error ? (
         <p role="alert" className="pg__error">
           {error}

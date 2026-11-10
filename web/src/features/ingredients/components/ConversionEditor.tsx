@@ -1,4 +1,4 @@
-import { Button } from '../../../ui'
+import { Button, TextField } from '../../../ui'
 import { baseUnitLabel, formatConversion, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { useConversionForm } from '../hooks/useIngredientForms'
 import { strings } from '../strings'
@@ -31,7 +31,7 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove }:
           {conversions.map((c) => (
             <li key={c.unit}>
               <span>{formatConversion(c.unit, c.toBase, base, system)}</span>{' '}
-              <Button variant="ghost" onClick={() => onRemove(c.unit)}>
+              <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
                 {strings.removeConversion(c.unit)}
               </Button>
             </li>
@@ -44,15 +44,9 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove }:
           form.submit()
         }}
       >
-        <label>
-          {strings.conversionUnitLabel}
-          <input value={form.unit} onChange={(e) => form.setUnit(e.target.value)} />
-        </label>
-        <label>
-          {amountLabel}
-          <input inputMode="decimal" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} />
-        </label>
-        <Button type="submit" variant="tonal">
+        <TextField label={strings.conversionUnitLabel} value={form.unit} onChange={form.setUnit} />
+        <TextField label={amountLabel} inputMode="decimal" value={form.amount} onChange={form.setAmount} />
+        <Button type="submit" variant="tertiary">
           {strings.addConversion}
         </Button>
         {form.error ? <p role="alert">{form.error}</p> : null}

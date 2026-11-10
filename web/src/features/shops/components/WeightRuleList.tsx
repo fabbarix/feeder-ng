@@ -1,4 +1,4 @@
-import { Button } from '../../../ui'
+import { Button, IconButton, ListGroup, ListRow } from '../../../ui'
 import { ruleSummary } from '../lib/shopBarcodeForm'
 import { strings } from '../strings'
 import type { ShopRule } from '../types'
@@ -13,33 +13,32 @@ export interface WeightRuleListProps {
   onAdd: () => void
 }
 
-/** One row per rule: "21 · item 3-7 · value 8-12 · weight in kg, 3 decimals" (price: "price in USD minor units"). Admin-only actions. */
+/** One row per rule: "prefix 21 · item digits 3-7 · value digits 8-12 · weight in kg, 3 decimals". Admin-only actions. */
 export function WeightRuleList({ rules, currency, isAdmin, onEdit, onDelete, onAdd }: WeightRuleListProps) {
   return (
     <div className="pg__stack">
       {rules.length === 0 ? (
         <p className="pg__muted">{strings.noWeightRules}</p>
       ) : (
-        <ul className="pg__list">
+        <ListGroup label={strings.weightRulesTitle}>
           {rules.map((r) => (
-            <li key={r.id} className="pg__row pg__row--between">
-              <span>{ruleSummary(r, currency)}</span>
-              {isAdmin ? (
-                <span className="pg__row">
-                  <Button variant="tonal" onClick={() => onEdit(r)}>
-                    {strings.editRule}
-                  </Button>
-                  <Button variant="ghost" onClick={() => onDelete(r)}>
-                    {strings.deleteRule}
-                  </Button>
-                </span>
-              ) : null}
-            </li>
+            <ListRow
+              key={r.id}
+              title={ruleSummary(r, currency)}
+              trailing={
+                isAdmin ? (
+                  <span className="pg__row">
+                    <IconButton icon="edit" label={strings.editRule} onClick={() => onEdit(r)} />
+                    <IconButton icon="delete" label={strings.deleteRule} onClick={() => onDelete(r)} />
+                  </span>
+                ) : undefined
+              }
+            />
           ))}
-        </ul>
+        </ListGroup>
       )}
       {isAdmin ? (
-        <Button variant="tonal" onClick={onAdd}>
+        <Button variant="tertiary" onClick={onAdd}>
           {strings.addRule}
         </Button>
       ) : null}

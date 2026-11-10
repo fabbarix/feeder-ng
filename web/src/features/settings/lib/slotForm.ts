@@ -21,16 +21,18 @@ export function slotFromDraft(draft: MealSlotInput): MealSlotInput {
 
 /** WP11: adding a Meal Slot can cover several weekdays at once. The message when none is chosen, else null. */
 export function weekdaysProblem(weekdays: number[]): string | null {
-  void weekdays
-  throw new Error('not implemented: WP11 weekdaysProblem')
+  return weekdays.length === 0 ? 'Choose at least one weekday.' : null
 }
 
 /** WP11: one request body per chosen weekday (ISO 1..7), ascending and de-duplicated, each a copy of the draft
  *  with that weekday, the name trimmed and the Attendance copied (not shared). */
 export function slotInputsForWeekdays(draft: MealSlotInput, weekdays: number[]): MealSlotInput[] {
-  void draft
-  void weekdays
-  throw new Error('not implemented: WP11 slotInputsForWeekdays')
+  const days = [...new Set(weekdays)].sort((a, b) => a - b)
+  return days.map((weekday) => ({
+    ...slotFromDraft(draft),
+    weekday,
+    attendance: draft.attendance.map((a) => ({ ...a })),
+  }))
 }
 
 /** WP11: creating several Meal Slots one after another. Stops at the first failure; `created` is how many were saved
@@ -44,7 +46,14 @@ export async function createSlotsSequentially(
   inputs: MealSlotInput[],
   create: (input: MealSlotInput) => Promise<unknown>,
 ): Promise<CreateManyResult> {
-  void inputs
-  void create
-  throw new Error('not implemented: WP11 createSlotsSequentially')
+  let created = 0
+  for (const input of inputs) {
+    try {
+      await create(input)
+      created += 1
+    } catch (error) {
+      return { created, failedWeekday: input.weekday, error }
+    }
+  }
+  return { created }
 }

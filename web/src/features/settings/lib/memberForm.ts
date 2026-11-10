@@ -39,8 +39,6 @@ export function memberFromDraft(draft: MemberInput): MemberInput {
 /** WP11 (QA: "Linked User" offered already-linked Users): the Users a Member may be linked to, in the given order.
  *  A User linked to ANOTHER Member is left out; the User linked to `editing` (and every unlinked User) stays. */
 export function availableUsers<U extends { id: number }>(users: U[], members: Pick<Member, 'id' | 'userId'>[], editing?: Pick<Member, 'id'>): U[] {
-  void users
-  void members
-  void editing
-  throw new Error('not implemented: WP11 availableUsers')
+  const linked = new Set(members.filter((m) => m.id !== editing?.id && m.userId !== null).map((m) => m.userId))
+  return users.filter((u) => !linked.has(u.id))
 }

@@ -1,8 +1,7 @@
-import { Button } from '../../../ui'
+import { Button, TextField } from '../../../ui'
 import { useProductForm } from '../hooks/useProductForm'
 import { strings } from '../strings'
 import type { BaseUnit, NewProduct } from '../types'
-import { FormField } from './FormField'
 
 export interface ProductFormProps {
   ingredientId: number
@@ -28,30 +27,16 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, onSubmit }
         void form.submit()
       }}
     >
-      <FormField label={strings.nameLabel} error={form.errors.name}>
-        {(c) => <input {...c} type="text" value={form.values.name} onChange={(e) => form.setName(e.target.value)} />}
-      </FormField>
-      <FormField label={strings.packSizeLabel(baseUnit)} error={form.errors.packSize}>
-        {(c) => (
-          <input
-            {...c}
-            type="text"
-            inputMode="decimal"
-            value={form.values.packSize}
-            onChange={(e) => form.setPackSize(e.target.value)}
-          />
-        )}
-      </FormField>
-      <FormField label={strings.barcodeLabel} error={form.errors.barcode}>
-        {(c) => (
-          <input {...c} type="text" inputMode="numeric" value={form.values.barcode} onChange={(e) => form.setBarcode(e.target.value)} />
-        )}
-      </FormField>
-      {form.serverError ? (
-        <p role="alert" className="pg__error">
-          {form.serverError}
-        </p>
-      ) : null}
+      <TextField label={strings.nameLabel} value={form.values.name} onChange={form.setName} error={form.errors.name} />
+      <TextField
+        label={strings.packSizeLabel(baseUnit)}
+        inputMode="decimal"
+        value={form.values.packSize}
+        onChange={form.setPackSize}
+        error={form.errors.packSize}
+      />
+      <TextField label={strings.barcodeLabel} inputMode="numeric" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
+      {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <Button type="submit" loading={form.saving}>
         {strings.saveProduct}
       </Button>

@@ -16,11 +16,11 @@ export function NotificationSettingsScreen(): ReactElement {
     <main className="notifications">
       <h1 className="notifications__title">{s.title}</h1>
       {state.loading ? (
-        <Tile as="section" size="full">
+        <Tile as="section" span="full">
           <p className="notifications__muted">{s.loading}</p>
         </Tile>
       ) : state.error ? (
-        <Tile as="section" size="full">
+        <Tile as="section" span="full">
           <p role="alert">{s.loadError}</p>
         </Tile>
       ) : (

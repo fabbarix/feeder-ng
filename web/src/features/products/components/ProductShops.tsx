@@ -9,7 +9,7 @@ export interface ProductShopsProps {
   onToggle: (shopId: number, sells: boolean) => void
 }
 
-/** One selectable Chip per Shop; selected = known to sell the Product. */
+/** One filter Chip per Shop; selected = known to sell the Product. */
 export function ProductShops({ allShops, soldAt, onToggle }: ProductShopsProps) {
   if (allShops.length === 0) return <p className="pg__muted">{strings.noShopsHint}</p>
   return (
@@ -17,7 +17,7 @@ export function ProductShops({ allShops, soldAt, onToggle }: ProductShopsProps) 
       {allShops.map((s) => {
         const sells = soldAt.some((x) => x.id === s.id)
         return (
-          <Chip key={s.id} selected={sells} tone={sells ? 'accent' : 'neutral'} onClick={() => onToggle(s.id, !sells)}>
+          <Chip key={s.id} kind="filter" selected={sells} onClick={() => onToggle(s.id, !sells)}>
             {s.name}
           </Chip>
         )

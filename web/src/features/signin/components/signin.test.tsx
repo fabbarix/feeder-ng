@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import css from '../signin.css?raw'
+// vitest blanks CSS imports (even ?raw), so the stylesheet is read as text, as the ui tests do (ui/test-utils.ts).
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
+const css = readFileSync(`${cwd}/src/features/signin/signin.css`, 'utf8')
 import { NotInvitedPage } from './NotInvitedPage'
 import { SignedOut } from './SignedOut'
 import { SignInPage } from './SignInPage'

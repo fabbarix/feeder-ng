@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { BottomSheet, Button, Chip } from '../../../ui'
+import { BottomSheet, Button, Chip, TextField } from '../../../ui'
 import type { BaseUnit } from '../../../lib/units'
 import { errorMessage } from '../lib/errorMessage'
 import { strings } from '../strings'
+import '../ingredients.css'
 import type { NewIngredient } from '../types'
 
 export interface NewIngredientSheetProps {
@@ -53,18 +54,14 @@ function NewIngredientForm({ onClose, onCreate }: Pick<NewIngredientSheetProps, 
         void submit()
       }}
     >
-      <label>
-        {strings.nameLabel}
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <fieldset>
-        <legend>{strings.baseUnitLabel}</legend>
+      <TextField label={strings.nameLabel} value={name} onChange={setName} />
+      <div role="group" aria-label={strings.baseUnitLabel} className="new-ingredient__units">
         {BASE_UNITS.map((b) => (
-          <Chip key={b} selected={baseUnit === b} onClick={() => setBaseUnit(b)}>
+          <Chip key={b} kind="filter" selected={baseUnit === b} onClick={() => setBaseUnit(b)}>
             {b}
           </Chip>
         ))}
-      </fieldset>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
       <Button type="submit" disabled={!canCreate}>
         {strings.createIngredient}

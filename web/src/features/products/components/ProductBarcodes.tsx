@@ -1,21 +1,26 @@
 import { useState } from 'react'
-import { Button, Chip } from '../../../ui'
+import { Button, Chip, IconButton, ListGroup, ListRow, TextField } from '../../../ui'
 import { barcodeError, errorText } from '../lib/productForm'
+import { formatBarcode } from '../lib/barcodeFormat'
+import { shopBarcodeLabel } from '../../shops/lib/shopBarcodeForm'
+import type { ShopRule } from '../../shops/types'
 import { strings } from '../strings'
 import type { Shop, ShopBarcode } from '../types'
-import { FormField } from './FormField'
 import '../products.css'
 
 export interface ProductBarcodesProps {
   barcodes: string[]
   shopBarcodes: ShopBarcode[]
   shops: Shop[]
+  /** The weight rules of the Shops that hold weighed codes (names the prefix, never the rule id). */
+  rules: ShopRule[]
   onAdd: (raw: string) => Promise<void>
+  /** Gets the stored code (the label on screen is the human form). */
   onRemove: (code: string) => void
 }
 
-/** Global barcodes as chips with remove, an add input (validated with scan/lib canonical), and the Shop Barcodes read-only per Shop. */
-export function ProductBarcodes({ barcodes, shopBarcodes, shops, onAdd, onRemove }: ProductBarcodesProps) {
+/** Global barcodes as Chips with remove, an add field (validated with scan/lib canonical), and the Shop Barcodes read-only per Shop. */
+export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, onRemove }: ProductBarcodesProps) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -41,10 +46,8 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, onAdd, onRemove
         <div className="pg__row">
           {barcodes.map((code) => (
             <span key={code} className="pg__row">
-              <Chip>{code}</Chip>
-              <Button variant="ghost" aria-label={strings.removeBarcode(code)} onClick={() => onRemove(code)}>
-                ×
-              </Button>
+              <Chip kind="tag">{formatBarcode(code)}</Chip>
+              <IconButton icon="close" label={strings.removeBarcode(formatBarcode(code))} onClick={() => onRemove(code)} />
             </span>
           ))}
         </div>
@@ -57,10 +60,8 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, onAdd, onRemove
           void add()
         }}
       >
-        <FormField label={strings.barcodeLabel} error={error ?? undefined}>
-          {(c) => <input {...c} type="text" inputMode="numeric" value={text} onChange={(e) => setText(e.target.value)} />}
-        </FormField>
-        <Button type="submit" variant="tonal">
+        <TextField label={strings.barcodeLabel} inputMode="numeric" value={text} onChange={setText} error={error ?? undefined} />
+        <Button type="submit" variant="tertiary">
           {strings.addBarcode}
         </Button>
       </form>
@@ -68,13 +69,11 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, onAdd, onRemove
       {shopBarcodes.length === 0 ? (
         <p className="pg__muted">{strings.noShopBarcodes}</p>
       ) : (
-        <ul className="pg__list">
+        <ListGroup label={strings.shopBarcodesTitle}>
           {shopBarcodes.map((b) => (
-            <li key={b.id}>
-              {shopName(b.shopId)} · {b.code ?? strings.shopBarcodeWeighed(b.ruleId ?? 0, b.itemCode ?? '')}
-            </li>
+            <ListRow key={b.id} title={`${shopName(b.shopId)} · ${shopBarcodeLabel(b, rules)}`} />
           ))}
-        </ul>
+        </ListGroup>
       )}
     </div>
   )

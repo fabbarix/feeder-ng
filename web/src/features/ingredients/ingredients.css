@@ -1,0 +1,6 @@
+/* Ingredients screens: layout only. */
+.new-ingredient__units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

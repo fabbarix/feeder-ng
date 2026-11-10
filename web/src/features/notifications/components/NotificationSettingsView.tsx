@@ -1,5 +1,5 @@
-import { useId, type ReactElement } from 'react'
-import { Button, Tile } from '../../../ui'
+import type { ReactElement } from 'react'
+import { Button, ListRow, Switch, Tile } from '../../../ui'
 import { notificationStrings as s } from '../strings'
 import { NOTIFICATION_TYPES, type NotificationType, type PushDevice, type PushSupport } from '../types'
 import '../notifications.css'
@@ -34,14 +34,14 @@ export function NotificationSettingsView(props: NotificationSettingsViewProps): 
   const message = SUPPORT_MESSAGE[props.support]
   if (message) {
     return (
-      <Tile as="section" size="full" aria-label={s.title}>
+      <Tile as="section" span="full" aria-label={s.title}>
         <p className="notifications__muted">{message}</p>
       </Tile>
     )
   }
   const { thisDevice } = props
   return (
-    <Tile as="section" size="full" aria-label={s.title}>
+    <Tile as="section" span="full" aria-label={s.title}>
       {thisDevice ? (
         <ThisDevice device={thisDevice} busy={props.busy} onSetType={props.onSetType} onDisable={props.onDisable} />
       ) : (
@@ -76,7 +76,7 @@ function ThisDevice({
           <TypeSwitch key={type} type={type} on={device.types[type]} onChange={(on) => onSetType(device.id, type, on)} />
         ))}
       </ul>
-      <Button type="button" variant="tonal" onClick={onDisable} disabled={busy}>
+      <Button type="button" variant="tertiary" onClick={onDisable} disabled={busy}>
         {s.disable}
       </Button>
     </div>
@@ -84,27 +84,13 @@ function ThisDevice({
 }
 
 function TypeSwitch({ type, on, onChange }: { type: NotificationType; on: boolean; onChange: (on: boolean) => void }) {
-  const labelId = useId()
-  const hintId = useId()
   const copy = s.types[type]
   return (
     <li className="notifications__type">
       <div>
-        <span id={labelId} className="notifications__type-label">
-          {copy.label}
-        </span>
-        <p id={hintId} className="notifications__muted">
-          {copy.hint}
-        </p>
+        <p className="notifications__muted">{copy.hint}</p>
       </div>
-      <input
-        type="checkbox"
-        role="switch"
-        checked={on}
-        aria-labelledby={labelId}
-        aria-describedby={hintId}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      <Switch label={copy.label} checked={on} onChange={onChange} />
     </li>
   )
 }
@@ -115,12 +101,15 @@ function OtherDevices({ devices, onRemove }: { devices: PushDevice[]; onRemove: 
       <h2 className="notifications__heading">{s.otherDevices}</h2>
       <ul className="notifications__devices">
         {devices.map((d) => (
-          <li key={d.id} className="notifications__device">
-            <span>{d.label}</span>
-            <Button type="button" variant="ghost" onClick={() => onRemove(d.id)} aria-label={s.remove(d.label)}>
-              {s.removeShort}
-            </Button>
-          </li>
+          <ListRow
+            key={d.id}
+            title={d.label}
+            trailing={
+              <Button type="button" variant="tertiary" onClick={() => onRemove(d.id)} aria-label={s.remove(d.label)}>
+                {s.removeShort}
+              </Button>
+            }
+          />
         ))}
       </ul>
     </section>

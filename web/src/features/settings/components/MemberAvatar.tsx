@@ -1,4 +1,6 @@
-import type { AvatarProps } from '../../../ui'
+import { Avatar, type AvatarProps } from '../../../ui'
+import type { CSSProperties } from 'react'
+import '../settings.css'
 
 export interface MemberAvatarProps extends Pick<AvatarProps, 'size'> {
   name: string
@@ -9,10 +11,20 @@ export interface MemberAvatarProps extends Pick<AvatarProps, 'size'> {
 }
 
 /**
- * STUB (WP11). The shared Avatar wrapped in `<span class="member-avatar" data-member-colour={colour} style={{'--member-colour': colour}}>`;
- * CSS (feature CSS, tokens + the custom property) draws the ring and a tinted fill. An emoji `avatar` replaces the initials.
- * Replaced by an Avatar `colour` prop if the PM accepts the PRIMITIVE REQUEST.
+ * The shared Avatar inside a ring in the Member colour: `<span data-member-colour style="--member-colour">`; the feature
+ * CSS draws the 2 px ring from the custom property. An emoji `avatar` replaces the initials.
  */
-export function MemberAvatar(_props: MemberAvatarProps) {
-  return null
+export function MemberAvatar({ name, colour, avatar, size = 'md' }: MemberAvatarProps) {
+  const style = { '--member-colour': colour } as CSSProperties
+  return (
+    <span className="member-avatar" data-member-colour={colour} style={style}>
+      {avatar ? (
+        <span className="avatar" data-size={size} role="img" aria-label={name}>
+          {avatar}
+        </span>
+      ) : (
+        <Avatar name={name} size={size} />
+      )}
+    </span>
+  )
 }

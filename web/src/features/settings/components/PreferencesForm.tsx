@@ -1,11 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Button, Chip } from '../../../ui'
+import { Button, ColorSwatches, Segmented } from '../../../ui'
 import { ACCENT_PRESETS } from '../lib/accents'
 import { preferencesChanged } from '../lib/preferencesForm'
 import { settingsStrings } from '../strings'
 import type { ColourMode, Preferences } from '../types'
-import { Field } from './Field'
-import { RadioGroup } from './RadioGroup'
 import '../settings.css'
 
 export interface PreferencesFormProps {
@@ -26,8 +24,8 @@ const UNITS: ReadonlyArray<{ value: Preferences['units']; label: string }> = [
   { value: 'imperial', label: text.imperial },
 ]
 
-/** Radio groups "Colour mode" (Light, Dark, System) and "Units" (Metric, Imperial); accent presets as chips plus
- *  "Custom accent colour"; "Save preferences" (disabled until something changes). */
+/** Segmented "Colour mode" (Light, Dark, System) and "Units" (Metric, Imperial); the accent as ColorSwatches (presets and
+ *  Custom) with a live preview tile; "Save preferences" (disabled until something changes). */
 export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps) {
   const [draft, setDraft] = useState<Preferences>(value)
   const set = (patch: Partial<Preferences>) => setDraft((d) => ({ ...d, ...patch }))
@@ -38,26 +36,16 @@ export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps)
 
   return (
     <form className="settings__stack" onSubmit={submit}>
-      <RadioGroup legend={text.colourMode} name="scheme" value={draft.scheme} options={MODES} onChange={(scheme) => set({ scheme })} />
-      <RadioGroup legend={text.units} name="units" value={draft.units} options={UNITS} onChange={(units) => set({ units })} />
-      <div className="settings__stack">
-        <span className="field__label">{text.accent}</span>
-        <div className="settings__row">
-          {ACCENT_PRESETS.map((p) => (
-            <Chip
-              key={p.hex}
-              selected={p.hex.toLowerCase() === draft.accent.toLowerCase()}
-              icon={<span className="settings__swatch" style={{ background: p.hex }} />}
-              onClick={() => set({ accent: p.hex })}
-            >
-              {p.name}
-            </Chip>
-          ))}
-        </div>
-        <Field label={text.customAccent}>
-          {(c) => <input {...c} type="color" value={draft.accent} onChange={(e) => set({ accent: e.target.value })} />}
-        </Field>
-      </div>
+      <Segmented label={text.colourMode} options={[...MODES]} value={draft.scheme} onChange={(scheme) => set({ scheme })} />
+      <Segmented label={text.units} options={[...UNITS]} value={draft.units} onChange={(units) => set({ units })} />
+      <ColorSwatches
+        label={text.accent}
+        swatches={ACCENT_PRESETS.map((p) => ({ value: p.hex, name: p.name }))}
+        value={draft.accent}
+        onChange={(accent) => set({ accent })}
+        allowCustom
+      />
+      <div className="settings__accent-preview" data-testid="accent-preview" data-accent={draft.accent} style={{ background: draft.accent }} aria-hidden="true" />
       <Button type="submit" loading={saving} disabled={!preferencesChanged(value, draft)}>
         {text.save}
       </Button>

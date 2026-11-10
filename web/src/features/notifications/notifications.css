@@ -32,19 +32,9 @@
   display: grid;
   gap: 8px;
 }
-.notifications__type,
-.notifications__device {
+.notifications__type {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-.notifications__type-label {
-  font-weight: 600;
-}
-.notifications__type input[type='checkbox'] {
-  width: 44px;
-  height: 24px;
-  accent-color: var(--accent, currentColor);
-  flex: none;
 }

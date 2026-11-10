@@ -39,9 +39,7 @@ export function toShopBarcodeBody(
 /** "Weighed · prefix 21 · item 00123" (prefix omitted when unknown; a rule id is never shown) -- one wording for the
  *  Shop page and the Product page. */
 export function weighedBarcodeLabel(prefix: string | undefined, itemCode: string): string {
-  void prefix
-  void itemCode
-  throw new Error('not implemented: WP11 weighedBarcodeLabel')
+  return strings.weighedBarcode(prefix, itemCode)
 }
 
 /** The plain code, or the weighed label (see weighedBarcodeLabel), for listing. */
@@ -60,5 +58,5 @@ export function ruleSummary(rule: ShopRule, currency: string): string {
     rule.valueKind === 'price'
       ? strings.rulePrice(currency)
       : strings.ruleWeight(rule.valueUnit ?? 'g', rule.decimalPlaces)
-  return `${rule.prefix} · ${strings.rulePositions(span(rule.item), span(rule.value))} · ${what}`
+  return `prefix ${rule.prefix} · ${strings.rulePositions(span(rule.item), span(rule.value))} · ${what}`
 }

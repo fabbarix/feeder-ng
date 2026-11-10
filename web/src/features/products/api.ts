@@ -8,6 +8,8 @@ export interface ProductFilter {
   q?: string
   ingredient?: number
   barcode?: string
+  /** R8: archived Products too (`includeArchived=1`); off by default. Appended last. */
+  includeArchived?: boolean
 }
 
 function query(f: ProductFilter): string {
@@ -15,6 +17,7 @@ function query(f: ProductFilter): string {
   if (f.q) p.set('q', f.q)
   if (f.ingredient) p.set('ingredient', String(f.ingredient))
   if (f.barcode) p.set('barcode', f.barcode)
+  if (f.includeArchived) p.set('includeArchived', '1')
   const s = p.toString()
   return s ? `?${s}` : ''
 }
@@ -25,6 +28,8 @@ export const productsApi = {
   create: (body: NewProduct) => http.post<ProductDetail>(base, body),
   patch: (id: number, body: { name?: string; packSize?: number }) => http.patch<ProductDetail>(`${base}/${id}`, body),
   remove: (id: number) => http.delete<void>(`${base}/${id}`),
+  archive: (id: number) => http.post<ProductDetail>(`${base}/${id}/archive`, {}),
+  unarchive: (id: number) => http.post<ProductDetail>(`${base}/${id}/unarchive`, {}),
   addBarcode: (id: number, code: string) => http.post<void>(`${base}/${id}/barcodes`, { code }),
   removeBarcode: (id: number, code: string) => http.delete<void>(`${base}/${id}/barcodes/${encodeURIComponent(code)}`),
   setSoldAt: (id: number, shopId: number) => http.put<void>(`${base}/${id}/shops/${shopId}`, {}),
