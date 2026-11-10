@@ -15,6 +15,9 @@ export interface TonightHeroProps {
   onCook: (key: SlotKey) => void
   /** "Yes, Cooked": mark Cooked with the planned Leftover portions in one tap. */
   onYesCooked: (key: SlotKey) => void
+  /** R12 "Reheat": open the Reheat screen of a meal served from a Leftover (lib/hero action 'reheat'). */
+  /** Required for the Reheat action: without it the Reheat button is not shown. */
+  onReheat?: (key: SlotKey) => void
   /** "Adjust": open the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
   /** True while a Yes, Cooked is being saved. */
@@ -30,11 +33,12 @@ export interface TonightHeroProps {
  * "Cook · 45 min", a photo thumb when there is one. After the slot time (lib/hero heroPhase): "<Recipe> cooked?" with
  * primary "Yes, Cooked" and secondary "Adjust". The Cook button is the only primary in the tile.
  */
-export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
+export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
   const meal = slot.meal
   if (!meal) return null
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const phase = heroPhase(slot, now)
+  const canReheat = action === 'reheat' && onReheat !== undefined
   const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
   // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
   const chips = [...leftoverChip(meal), ...heroChips(meal, { slotDate: slot.date })].slice(0, 2)
@@ -64,15 +68,25 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = f
           <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
             {heroCookLabel(meal)}
           </Button>
+        ) : canReheat ? (
+          <Button variant="primary" icon="reheat" onClick={() => onReheat(key)}>
+            {s.reheat}
+          </Button>
         ) : null
       ) : (
         <div className="plan-hero__actions">
           <Button variant="primary" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
             {s.yesCooked}
           </Button>
-          <Button variant="secondary" disabled={busy} onClick={() => onAdjust(key)}>
-            {s.adjust}
-          </Button>
+          {canReheat ? (
+            <Button variant="secondary" icon="reheat" disabled={busy} onClick={() => onReheat(key)}>
+              {s.reheat}
+            </Button>
+          ) : (
+            <Button variant="secondary" disabled={busy} onClick={() => onAdjust(key)}>
+              {s.adjust}
+            </Button>
+          )}
         </div>
       )}
     </Tile>

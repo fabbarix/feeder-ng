@@ -24,11 +24,20 @@ func spaHandler(spa fs.FS) http.HandlerFunc {
 			http.Error(w, "frontend not built", http.StatusServiceUnavailable)
 			return
 		}
+		clean := path.Clean("/" + r.URL.Path)
+		if clean == "/.well-known" || strings.HasPrefix(clean, "/.well-known/") {
+			http.NotFound(w, r)
+			return
+		}
 		if name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/"); name != "" {
 			if info, err := fs.Stat(spa, name); err == nil && !info.IsDir() {
 				http.ServeFileFS(w, r, spa, name)
 				return
 			}
+		}
+		if path.Ext(clean) != "" {
+			http.NotFound(w, r)
+			return
 		}
 		index, err := fs.ReadFile(spa, "index.html")
 		if err != nil {

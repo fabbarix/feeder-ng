@@ -31,7 +31,11 @@ describe('MemberAvatar', () => {
     expect(screen.getByRole('img', { name: 'Anna' })).toHaveAttribute('data-size', 'lg')
   })
 
-  // FOLLOW-UP (Avatar primitive request): an emoji avatar needs primitive support (e.g. Avatar `glyph?: string` shown
-  // instead of initials). Until then MemberAvatar shows initials and ignores `avatar`; it must not hand-roll markup.
-  it.todo('shows the Member\'s emoji avatar through the Avatar primitive once it supports a glyph')
+  // R11a: the Avatar primitive has a glyph slot now; MemberAvatar passes the Member's emoji through it (no hand-rolled markup).
+  it('shows the Member\'s emoji avatar through the Avatar primitive, and initials when there is none', () => {
+    const { rerender } = render(<MemberAvatar name="Sam" colour="#81b29a" avatar="🦊" />)
+    expect(screen.getByRole('img', { name: 'Sam' })).toHaveTextContent('🦊')
+    rerender(<MemberAvatar name="Sam" colour="#81b29a" avatar="" />)
+    expect(screen.getByRole('img', { name: 'Sam' })).toHaveTextContent('S')
+  })
 })

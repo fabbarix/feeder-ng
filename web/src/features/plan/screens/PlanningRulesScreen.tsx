@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { PageHeader, Tile } from '../../../ui'
 import { SlotRulesEditor, VarietyRulesEditor } from '../components/RulesEditors'
 import { useSlotRules, useVarietyRules } from '../hooks/useRules'
@@ -13,6 +13,7 @@ import '../plan.css'
  * Settings links here (small change in features/settings, listed in the report).
  */
 export function PlanningRulesScreen(): ReactNode {
+  const breadcrumbs = useBreadcrumbs()
   const slotRules = useSlotRules()
   const varietyRules = useVarietyRules()
   const tags = useTagChoices()
@@ -25,7 +26,7 @@ export function PlanningRulesScreen(): ReactNode {
   }
   return (
     <div className="plan">
-      <PageHeader title={planStrings.rulesTitle} />
+      <PageHeader title={planStrings.rulesTitle} breadcrumbs={breadcrumbs} />
       <Tile as="section" span="full">
         <h2 className="plan__tile-title">{planStrings.slotRulesTitle}</h2>
         <SlotRulesEditor
@@ -48,7 +49,6 @@ export function PlanningRulesScreen(): ReactNode {
           error={varietyRules.error}
         />
       </Tile>
-      <Link to="/plan">{planStrings.title}</Link>
     </div>
   )
 }

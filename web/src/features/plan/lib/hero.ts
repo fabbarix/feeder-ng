@@ -51,8 +51,11 @@ export function slotIcon(name: string): IconName {
   }
 }
 
-/** What the Today hero offers: Cook (fresh meal due today), Yes, Cooked / Adjust come from the phase, or nothing. */
-export type HeroAction = 'cook' | 'leftover' | 'none'
+/**
+ * What the Today hero offers: Cook (fresh meal due today), Reheat (R12: a meal of today served from a Leftover),
+ * 'leftover' (a later meal served from a Leftover: the chip only), or nothing. Yes, Cooked / Adjust come from the phase.
+ */
+export type HeroAction = 'cook' | 'reheat' | 'leftover' | 'none'
 
 /** Which day the hero meal is on, relative to today. */
 export type HeroDay = 'today' | 'tomorrow' | 'later'
@@ -71,7 +74,7 @@ export function heroSelection(slots: PlanSlot[], now: Date, today: string): Hero
   if (!pick?.meal) return null
   const diff = dayNumber(pick.date) - dayNumber(today)
   const day: HeroDay = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : 'later'
-  const action: HeroAction = pick.meal.servedFromLeftover ? 'leftover' : day === 'today' ? 'cook' : 'none'
+  const action: HeroAction = pick.meal.servedFromLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
   return { slot: pick, day, action }
 }
 

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
 import type { BaseUnit } from '../../../lib/units'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, EmptyState, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
@@ -10,6 +11,7 @@ import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useIngredient } from '../hooks/useIngredient'
 import { errorMessage } from '../lib/errorMessage'
+import { displayName } from '../lib/names'
 import { strings } from '../strings'
 
 const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']
@@ -20,7 +22,7 @@ const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']
  * Unit Conversions (ConversionEditor), Merge (opens MergeSheet; on success navigates to the survivor) and Delete
  * (disabled with strings.deleteLocked(n) while referenced; otherwise asks strings.deleteConfirm in a sheet, then
  * deletes and navigates to /ingredients). While loading shows strings.loading; an unknown id (404) shows an
- * EmptyState with a link back.
+ * EmptyState under a PageHeader with the trail.
  */
 export function IngredientScreen() {
   const { id: rawId } = useParams()
@@ -36,10 +38,16 @@ export function IngredientScreen() {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const ingredient = ing.ingredient
+  const breadcrumbs = useBreadcrumbs(ingredient && displayName(ingredient.name))
   if (!ingredient) {
     if (ing.isLoading) return <p role="status">{strings.loading}</p>
     if (ing.error instanceof ApiError && ing.error.status === 404) {
-      return <EmptyState title={strings.notFoundTitle} action={<Link to="/ingredients">{strings.title}</Link>} />
+      return (
+        <section>
+          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+          <EmptyState title={strings.notFoundTitle} />
+        </section>
+      )
     }
     return <p role="alert">{strings.actionFailed}</p>
   }
@@ -68,7 +76,7 @@ export function IngredientScreen() {
 
   return (
     <section>
-      <h1>{ingredient.name}</h1>
+      <PageHeader title={displayName(ingredient.name)} breadcrumbs={breadcrumbs} />
       {error ? <p role="alert">{error}</p> : null}
 
       {renaming ? (
@@ -143,15 +151,17 @@ export function IngredientScreen() {
         </Tile>
       </BentoGrid>
 
-      <MergeSheet
-        open={mergeOpen}
-        sourceId={id}
-        onClose={() => setMergeOpen(false)}
-        onMerged={(targetId) => {
-          setMergeOpen(false)
-          navigate(`/ingredients/${targetId}`)
-        }}
-      />
+      {mergeOpen ? (
+        <MergeSheet
+          open
+          sourceId={id}
+          onClose={() => setMergeOpen(false)}
+          onMerged={(targetId) => {
+            setMergeOpen(false)
+            navigate(`/ingredients/${targetId}`)
+          }}
+        />
+      ) : null}
       <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title={strings.deleteIngredient}>
         <p>{strings.deleteConfirm(ingredient.name)}</p>
         <Button onClick={() => void remove()}>{strings.deleteIngredient}</Button>

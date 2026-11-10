@@ -14,6 +14,8 @@ export interface SelectOption<V extends string | number = string> {
   leading?: ReactNode
   /** WP3b: the clear row of a Select with `clearLabel`; it is chosen while nothing is (value null). Built by buildList only. */
   clear?: boolean
+  /** R11a: what the closed trigger shows for this option when it differs from `label` ("Tue · Dinner"). */
+  triggerLabel?: string
 }
 
 export interface OptionGroup<V extends string | number = string> {

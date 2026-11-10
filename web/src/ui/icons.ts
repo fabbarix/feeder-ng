@@ -38,6 +38,7 @@ import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
 import { DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsThreeVertical'
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
 import { FileArrowUpIcon } from '@phosphor-icons/react/dist/csr/FileArrowUp'
+import { FireIcon } from '@phosphor-icons/react/dist/csr/Fire'
 import { FishIcon } from '@phosphor-icons/react/dist/csr/Fish'
 import { FlashlightIcon } from '@phosphor-icons/react/dist/csr/Flashlight'
 import { ForkKnifeIcon } from '@phosphor-icons/react/dist/csr/ForkKnife'
@@ -163,6 +164,7 @@ export const icons = {
   price: CoinsIcon,
   extra: NotePencilIcon,
   timer: TimerIcon,
+  reheat: FireIcon, // R12: the Reheat button and screen (a Leftover warmed up before it is marked Cooked)
   pause: PauseIcon,
   resume: PlayIcon,
   addMinute: PlusCircleIcon,

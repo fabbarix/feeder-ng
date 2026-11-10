@@ -54,7 +54,6 @@ export const strings = {
   loading: 'Loading…',
   actionFailed: 'That did not work. Try again.',
   notFoundTitle: 'Product not found',
-  backToProducts: 'Back to Products',
   packSizeTitle: 'Pack size',
   savePackSize: 'Save pack size',
   renameLabel: 'Rename',

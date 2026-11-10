@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/cucumber/godog"
 
@@ -112,6 +113,34 @@ func householdSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		n, _ := strconv.ParseInt(uid, 10, 64)
 		w.Last = w.Client.Put(fmt.Sprintf("/api/members/%d/user", mid), map[string]any{"userId": n})
+		return nil
+	})
+	sc.Step(`^the Member "([^"]*)" is linked to the User "([^"]*)"$`, func(name, email string) error {
+		uid, err := userID(w, email)
+		if err != nil {
+			return err
+		}
+		var list []struct {
+			Name   string `json:"name"`
+			UserID *int64 `json:"userId"`
+		}
+		if err := admin().Get("/api/members").JSON(&list); err != nil {
+			return err
+		}
+		for _, m := range list {
+			if m.Name == name {
+				if m.UserID == nil || strconv.FormatInt(*m.UserID, 10) != uid {
+					return fmt.Errorf("%s is not linked to %s (user id %s): %v", name, email, uid, m.UserID)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("no Member %q", name)
+	})
+	sc.Step(`^the error message mentions "([^"]*)"$`, func(text string) error {
+		if !strings.Contains(string(w.Last.Body), text) {
+			return fmt.Errorf("error body %s does not mention %q", w.Last.Body, text)
+		}
 		return nil
 	})
 	sc.Step(`^the Member "([^"]*)" is not linked to any User$`, func(name string) error {

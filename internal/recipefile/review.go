@@ -584,6 +584,7 @@ func (r *review) recipeInput(i int, rec Recipe) recipe.Input {
 		Tags:              rec.Tags,
 		CooldownDays:      rec.CooldownDays,
 		LeftoverUseByDays: rec.LeftoverUseByDays,
+		ReheatMinutes:     rec.ReheatMinutes,
 	}
 	if rec.Source != nil {
 		in.Source = recipe.Source{URL: rec.Source.URL, Attribution: rec.Source.Attribution}

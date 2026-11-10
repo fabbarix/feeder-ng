@@ -46,6 +46,8 @@ export interface PlannedMeal {
   why: Why[]
   /** WP6 (optional until the API sends them): minutes the Recipe takes, "HH:MM" to start by, a photo, the Recipe's Tags. */
   cookMinutes?: number
+  /** R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when the Recipe has one. */
+  reheatMinutes?: number
   startBy?: string
   photoUrl?: string
   tags?: string[]

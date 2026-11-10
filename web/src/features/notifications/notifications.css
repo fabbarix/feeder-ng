@@ -6,10 +6,6 @@
   max-width: 640px;
   margin: 0 auto;
 }
-.notifications__title {
-  font-size: 1.5rem;
-  margin: 0;
-}
 .notifications__heading {
   font-size: 1.125rem;
   margin: 0 0 8px;

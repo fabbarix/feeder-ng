@@ -52,6 +52,7 @@ type Recipe struct {
 	Tags              []string `json:"tags,omitempty"`
 	CooldownDays      *int     `json:"cooldownDays,omitempty"`
 	LeftoverUseByDays *int     `json:"leftoverUseByDays,omitempty"`
+	ReheatMinutes     *int     `json:"reheatMinutes,omitempty"`
 	Image             string   `json:"image,omitempty"`
 	Source            *Source  `json:"source,omitempty"`
 	Ingredients       []Line   `json:"ingredients"`

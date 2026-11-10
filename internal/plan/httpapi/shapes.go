@@ -53,6 +53,8 @@ type mealOut struct {
 	CookMinutes int    `json:"cookMinutes,omitempty"`
 	StartBy     string `json:"startBy,omitempty"`
 	PhotoURL    string `json:"photoUrl,omitempty"`
+	// R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when set.
+	ReheatMinutes int `json:"reheatMinutes,omitempty"`
 }
 
 type eliminationsOut struct {
@@ -194,6 +196,7 @@ func mealFor(m plan.Meal, t table) *mealOut {
 			src.LeftoverID = &id
 		}
 		out.ServedFromLeftover = src
+		out.ReheatMinutes = t.recipeReheat[m.RecipeID]
 	}
 	return out
 }

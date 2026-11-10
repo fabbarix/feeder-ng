@@ -24,9 +24,9 @@ export interface CookFlow {
   /**
    * "Yes, Cooked" in one tap: GET .../cook for the proposal, POST .../cooked with proposedLeftover (nothing for a meal
    * served from a Leftover), invalidate the plan, toast (success) with lib/cook cookedSuccessText. A failure toasts the
-   * cookedError copy (error) and changes nothing.
+   * cookedError copy (error) and changes nothing. Resolves true on success, false on failure.
    */
-  quickCook: (key: SlotKey) => Promise<void>
+  quickCook: (key: SlotKey) => Promise<boolean>
   /** Key being saved by quickCook, or null. */
   quickBusy: SlotKey | null
   /** Stock shortfall warnings still to show, from either path. */
@@ -61,8 +61,10 @@ export function useCookFlow(): CookFlow {
         setQuick(result.warnings)
         toast.show(cookedSuccessText(result), { status: 'success' })
         await invalidatePlan(client)
+        return true
       } catch {
         toast.show(planStrings.cookedError, { status: 'error' })
+        return false
       } finally {
         setQuickBusy(null)
       }

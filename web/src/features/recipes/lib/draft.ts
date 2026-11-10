@@ -41,6 +41,8 @@ export interface RecipeDraft {
   tags: string[]
   cooldownDays: string
   leftoverUseByDays: string
+  /** R12: whole minutes 1 to 30 as typed; blank = not set. */
+  reheatMinutes: string
   sourceUrl: string
   sourceAttribution: string
   image: string
@@ -69,6 +71,7 @@ export function emptyDraft(): RecipeDraft {
     tags: [],
     cooldownDays: '',
     leftoverUseByDays: '',
+    reheatMinutes: '',
     sourceUrl: '',
     sourceAttribution: '',
     image: '',
@@ -90,6 +93,7 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     tags: [...recipe.tags],
     cooldownDays: numText(recipe.cooldownDays),
     leftoverUseByDays: numText(recipe.leftoverUseByDays),
+    reheatMinutes: numText(recipe.reheatMinutes),
     sourceUrl: recipe.source.url,
     sourceAttribution: recipe.source.attribution,
     image: recipe.image,
@@ -171,6 +175,7 @@ export function draftToInput(draft: RecipeDraft): RecipeInput {
     tags: [...draft.tags],
     cooldownDays: overrideOf(draft.cooldownDays),
     leftoverUseByDays: overrideOf(draft.leftoverUseByDays),
+    reheatMinutes: overrideOf(draft.reheatMinutes),
     source: { url: draft.sourceUrl.trim(), attribution: draft.sourceAttribution.trim() },
     image: draft.image,
     lines: draft.lines
@@ -203,7 +208,7 @@ const isWhole = (n: number) => Number.isInteger(n)
  *  name: name_required; yield: yield_invalid;
  *  lines: lines_required (none) | ready_meal_lines (Ready Meal without exactly one);
  *  lines.N.ingredient: ingredient_required; lines.N.quantity: quantity_invalid; lines.N.unit: unit_required;
- *  cooldownDays: cooldown_invalid; leftoverUseByDays: use_by_invalid;
+ *  cooldownDays: cooldown_invalid; leftoverUseByDays: use_by_invalid; reheatMinutes: reheat_invalid;
  *  steps.N.text: step_text_required; steps.N.durationMinutes: passive_needs_duration;
  *  steps.N.leadTimeMinutes: advance_needs_lead_time; steps.N.uses.M.ingredient|quantity|unit as the lines.
  */
@@ -228,6 +233,10 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
   const useBy = overrideOf(draft.leftoverUseByDays)
   if (draft.leftoverUseByDays.trim() !== '' && (useBy === null || useBy < 0 || useBy > 30 || !isWhole(useBy))) {
     errors.leftoverUseByDays = 'use_by_invalid'
+  }
+  const reheat = overrideOf(draft.reheatMinutes)
+  if (draft.reheatMinutes.trim() !== '' && (reheat === null || reheat < 1 || reheat > 30 || !isWhole(reheat))) {
+    errors.reheatMinutes = 'reheat_invalid'
   }
 
   draft.steps.forEach((s, i) => {

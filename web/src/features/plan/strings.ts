@@ -33,6 +33,7 @@ export const planStrings = {
   startBy: (time: string) => `start ${time}`,
   askCooked: (recipe: string) => `${recipe} cooked?`,
   yesCooked: 'Yes, Cooked',
+  reheat: 'Reheat',
   adjust: 'Adjust',
   toConfirmTitle: 'To confirm',
   couldntPlanTitle: "Couldn't plan",
