@@ -97,8 +97,12 @@ export class OfflineQueue {
   private inFlight: Promise<FlushResult> | null = null
   /** the flush asked for while a send is under way: answered by the send that follows it */
   private followUp: Deferred<FlushResult> | null = null
-  /** the client UUIDs of the batch being sent */
-  private inBatch = new Set<string>()
+  /**
+   * Tail of the queue's lock: every send and every cancel runs after the one before it settles. A send reads the
+   * store, sends and writes the outcomes inside its turn, so a cancel never falls in the gap between a read and
+   * the batch being known.
+   */
+  private lock: Promise<unknown> = Promise.resolve()
   /** how the server answered each operation sent in this session */
   private outcomes = new Map<string, 'applied' | 'rejected'>()
   /** notes for rejected operations, kept in memory until dismissed (they are not resent) */
@@ -138,16 +142,22 @@ export class OfflineQueue {
    * the server to Undo it. An operation being sent right now is not removed under the send: cancel waits for that
    * send to settle and answers by its outcome.
    */
-  async cancel(clientUuid: string): Promise<boolean> {
-    if (this.inBatch.has(clientUuid) && this.inFlight) {
-      await this.inFlight.catch(() => undefined)
-    }
-    const queued = (await this.store.all()).some((e) => e.op.clientUuid === clientUuid)
-    if (queued) {
-      await this.store.remove(clientUuid)
-      return true
-    }
-    return this.outcomes.get(clientUuid) === 'rejected'
+  cancel(clientUuid: string): Promise<boolean> {
+    return this.exclusive(async () => {
+      const queued = (await this.store.all()).some((e) => e.op.clientUuid === clientUuid)
+      if (queued) {
+        await this.store.remove(clientUuid)
+        return true
+      }
+      return this.outcomes.get(clientUuid) === 'rejected'
+    })
+  }
+
+  /** Runs `fn` after every earlier send and cancel has settled, one at a time, in the order asked. */
+  private exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.lock.then(fn, fn)
+    this.lock = run.catch(() => undefined)
+    return run
   }
 
   /**
@@ -172,11 +182,11 @@ export class OfflineQueue {
   private async runLoop(api: SyncApi): Promise<FlushResult> {
     let waiting: Deferred<FlushResult> | null = null
     try {
-      let result = await this.send(api)
+      let result = await this.sendExclusive(api)
       while (this.followUp && !result.offline) {
         waiting = this.followUp
         this.followUp = null
-        result = await this.send(api)
+        result = await this.sendExclusive(api)
         waiting.resolve(result)
         waiting = null
       }
@@ -193,36 +203,35 @@ export class OfflineQueue {
     }
   }
 
+  private sendExclusive(api: SyncApi): Promise<FlushResult> {
+    return this.exclusive(() => this.send(api))
+  }
+
   private async send(api: SyncApi): Promise<FlushResult> {
     const sent = await this.pending()
     if (sent.length === 0) return { offline: false, results: [] }
-    this.inBatch = new Set(sent.map((e) => e.op.clientUuid))
+    let results: ScanResult[]
     try {
-      let results: ScanResult[]
-      try {
-        results = await api.sync(sent.map((e) => e.op))
-      } catch (err) {
-        if (!isConnectivityError(err)) throw err
-        for (const entry of sent) await this.store.put({ ...entry, attempts: entry.attempts + 1 })
-        return { offline: true, results: [] }
-      }
-      for (const result of results) {
-        const entry = sent.find((e) => e.op.clientUuid === result.clientUuid)
-        if (!entry) continue
-        await this.store.remove(entry.op.clientUuid)
-        if (result.status === 'rejected') {
-          this.outcomes.set(entry.op.clientUuid, 'rejected')
-          this.notes.set(entry.op.clientUuid, {
-            ...entry,
-            rejected: { code: result.error?.code ?? 'rejected', message: result.error?.message ?? '' },
-          })
-        } else {
-          this.outcomes.set(entry.op.clientUuid, 'applied')
-        }
-      }
-      return { offline: false, results }
-    } finally {
-      this.inBatch = new Set()
+      results = await api.sync(sent.map((e) => e.op))
+    } catch (err) {
+      if (!isConnectivityError(err)) throw err
+      for (const entry of sent) await this.store.put({ ...entry, attempts: entry.attempts + 1 })
+      return { offline: true, results: [] }
     }
+    for (const result of results) {
+      const entry = sent.find((e) => e.op.clientUuid === result.clientUuid)
+      if (!entry) continue
+      await this.store.remove(entry.op.clientUuid)
+      if (result.status === 'rejected') {
+        this.outcomes.set(entry.op.clientUuid, 'rejected')
+        this.notes.set(entry.op.clientUuid, {
+          ...entry,
+          rejected: { code: result.error?.code ?? 'rejected', message: result.error?.message ?? '' },
+        })
+      } else {
+        this.outcomes.set(entry.op.clientUuid, 'applied')
+      }
+    }
+    return { offline: false, results }
   }
 }

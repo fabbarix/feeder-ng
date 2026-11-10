@@ -535,7 +535,9 @@ type UndoResult struct{ Undone, AlreadyUndone bool }
 
 // Undo reverses a Shop scan (ErrNotFound, ErrNotUndoable for a stock_take). The steps run in a fixed order and
 // each is recorded in the ledger when it succeeds, so a retry after a failure skips the steps already done and
-// UndoneAt is set only after the last one. Every step is also idempotent on its own.
+// UndoneAt is set only after the last one. The steps are not all idempotent on their own: List.UndoLot gives the
+// quantity back and is not, so the journal is what stops a recorded step running twice. Removing a missing Lot,
+// purchase or Price is a no-op, but a crash between a step and its record can repeat that step on retry.
 func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
