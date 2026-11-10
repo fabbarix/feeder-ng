@@ -258,14 +258,10 @@ func (st *state) step(i int) {
 	switch st.roles[i] {
 	case roleEmpty:
 		st.fill(i)
-	case roleCooked:
-		// Stock was deducted at Cooked (ADR 0003). A Cooked meal served from a
-		// Leftover still eats that Leftover's portions, as a Pinned one does.
-		if s.Existing.From != nil {
-			st.consumeLeftover(*s.Existing.From, PortionsNeeded(s.Attendance))
-		}
-	case roleSkipped:
-		// Nothing to do: skipped has no effect.
+	case roleCooked, roleSkipped:
+		// Cooked: stock was deducted and a Leftover's portions were reduced at
+		// Cooked time (ADR 0003), so Input.Leftovers already reflects them.
+		// Skipped has no effect.
 	case rolePinned:
 		st.applyFixed(i, *s.Existing)
 	case roleKept:
