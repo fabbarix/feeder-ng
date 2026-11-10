@@ -9,6 +9,8 @@ export interface ProductListProps {
   products: Product[]
   /** Display unit system; defaults to metric. Callers pass useDisplayUnitSystem(). */
   system?: 'metric' | 'imperial'
+  /** WP11: the Archived filter is on and the list is empty -> "No archived Products". */
+  showingArchived?: boolean
 }
 
 /** Tiles with the name and formatted pack size, each linking to /products/:id; EmptyState when none. */

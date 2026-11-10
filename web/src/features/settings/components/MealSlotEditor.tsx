@@ -12,10 +12,15 @@ export interface MealSlotEditorProps {
   open: boolean
   slot?: MealSlot
   members: Member[]
+  /** WP11: add mode starts with these weekdays chosen (ISO 1..7), e.g. the weekday whose add button was pressed. */
+  defaultWeekdays?: number[]
   saving?: boolean
   error?: string
-  onSave: (input: MealSlotInput) => void | Promise<void>
+  /** WP11: add mode may cover several weekdays, so this always receives an array (one body per weekday; editing gives one). */
+  onSave: (inputs: MealSlotInput[]) => void | Promise<void>
   onDelete?: () => void | Promise<void>
+  /** WP11: editing only: opens the one-date Attendance for this slot ("Change a date"). */
+  onChangeDate?: () => void
   onClose: () => void
 }
 
@@ -42,7 +47,7 @@ function SlotForm({ slot, members, saving, error, onSave, onDelete }: FormProps)
     e.preventDefault()
     const found = slotProblem(draft)
     setProblem(found)
-    if (!found) void onSave(slotFromDraft(draft))
+    if (!found) void onSave([slotFromDraft(draft)])
   }
 
   return (

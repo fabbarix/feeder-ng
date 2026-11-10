@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { pickOption } from '../../settings/test-utils'
 import { strings } from '../strings'
 import type { Price, Shop } from '../types'
 import { PriceEditor } from './PriceEditor'
@@ -24,20 +25,24 @@ function renderIt(over: Partial<ComponentProps<typeof PriceEditor>> = {}) {
 }
 
 describe('PriceEditor', () => {
-  it('prefills the Price from the latest one at the chosen Shop', async () => {
-    const user = userEvent.setup()
+  it('has no native select or date input: ShopSelect and DateField', () => {
     renderIt()
-    await user.selectOptions(screen.getByLabelText(strings.shopLabel), 'Corner Market')
+    expect(document.querySelector('select, input[type=date]')).toBeNull()
+    expect(screen.getByRole('combobox', { name: strings.shopLabel })).toBeInTheDocument()
+  })
+
+  it('prefills the Price from the latest one at the chosen Shop', async () => {
+    renderIt()
+    await pickOption(strings.shopLabel, 'Corner Market')
     expect(screen.getByLabelText(strings.priceLabel)).toHaveValue('1.59')
     expect(screen.getByLabelText(strings.pricePerKgLabel)).toHaveValue('')
-    expect(screen.getByLabelText(strings.dateLabel)).toHaveValue('2026-11-09')
+    expect(screen.getByRole('button', { name: new RegExp(strings.dateLabel) })).toHaveTextContent('9 November 2026')
   })
 
   it('clears the prefill when the chosen Shop has no Price', async () => {
-    const user = userEvent.setup()
     renderIt({ initialShopId: 2 })
     expect(screen.getByLabelText(strings.priceLabel)).toHaveValue('1.59')
-    await user.selectOptions(screen.getByLabelText(strings.shopLabel), 'Big Mart')
+    await pickOption(strings.shopLabel, 'Big Mart')
     expect(screen.getByLabelText(strings.priceLabel)).toHaveValue('')
   })
 

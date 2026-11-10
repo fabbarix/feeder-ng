@@ -11,6 +11,12 @@ const conflicts: Conflict[] = [
 ]
 
 describe('MergeConflictList', () => {
+  it('uses RadioCards, not native radio inputs, and groups each conflict', () => {
+    const { container } = render(<MergeConflictList conflicts={conflicts} base="ml" system="metric" answers={{}} onAnswer={() => {}} />)
+    expect(container.querySelector('input[type=radio], input[type=checkbox]')).toBeNull()
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(2)
+  })
+
   it('offers both sides of every conflict, nothing preselected', () => {
     render(<MergeConflictList conflicts={conflicts} base="ml" system="metric" answers={{}} onAnswer={() => {}} />)
     expect(screen.getByText(strings.mergeConflictConversion('jar'))).toBeInTheDocument()

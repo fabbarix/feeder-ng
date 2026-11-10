@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { ConfirmProvider } from '../../../ui'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { admin, cook } from './fixtures'
@@ -9,7 +10,11 @@ function setup(over: Partial<React.ComponentProps<typeof AllowlistPanel>> = {}) 
     users: [admin, cook], currentUserId: 1,
     onAdd: vi.fn().mockResolvedValue(undefined), onSetAdmin: vi.fn(), onRemove: vi.fn(), ...over,
   }
-  render(<AllowlistPanel {...props} />)
+  render(
+    <ConfirmProvider>
+      <AllowlistPanel {...props} />
+    </ConfirmProvider>,
+  )
   return props
 }
 
@@ -57,19 +62,23 @@ describe('AllowlistPanel', () => {
     expect(onSetAdmin).toHaveBeenCalledWith(2, true)
   })
 
-  it('removes a User only after confirming', async () => {
+  it('removes a User only after a ConfirmDialog (no inline two-step button)', async () => {
     const { onRemove } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Remove cook@example.test' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Remove cook@example.test?' })
+    expect(within(dialog).getByText(/no longer be able to sign in/i)).toBeInTheDocument()
     expect(onRemove).not.toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm remove cook@example.test' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove' }))
     expect(onRemove).toHaveBeenCalledWith(2)
+    expect(screen.queryByRole('button', { name: 'Confirm remove cook@example.test' })).toBeNull()
   })
 
   it('can back out of a removal', async () => {
     const { onRemove } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Remove cook@example.test' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.queryByRole('button', { name: 'Confirm remove cook@example.test' })).toBeNull()
+    const dialog = await screen.findByRole('dialog', { name: 'Remove cook@example.test?' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(onRemove).not.toHaveBeenCalled()
   })
 

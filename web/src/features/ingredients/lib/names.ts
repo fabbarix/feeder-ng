@@ -14,3 +14,17 @@ export function filterIngredients(list: readonly Ingredient[], query: string): I
     .sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : 0))
     .map(({ ingredient }) => ingredient)
 }
+
+/** WP11 (copy fix, section 6): the display form of a stored lower-case name, first letter capitalised ("garlic" -> "Garlic",
+ *  "olive oil" -> "Olive oil"). Only the first character changes; blank input stays blank. */
+export function displayName(name: string): string {
+  void name
+  throw new Error('not implemented: WP11 displayName')
+}
+
+/** WP11: the row meta of the Ingredients list: Base Unit label and, when set, "keeps N days" ("g · keeps 30 days", "ml"). */
+export function ingredientMeta(baseUnitLabel: string, shelfLifeDays: number | null): string {
+  void baseUnitLabel
+  void shelfLifeDays
+  throw new Error('not implemented: WP11 ingredientMeta')
+}

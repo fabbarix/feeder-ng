@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import css from '../signin.css?raw'
 import { NotInvitedPage } from './NotInvitedPage'
 import { SignedOut } from './SignedOut'
 import { SignInPage } from './SignInPage'
@@ -22,6 +23,33 @@ describe('SignInPage', () => {
   it('explains a failed sign-in', () => {
     render(<SignInPage reason="failed" />)
     expect(screen.getByRole('alert')).toHaveTextContent(/did not work/i)
+  })
+})
+
+describe('SignInPage look (5.16)', () => {
+  it('shows the Feeder mark above the title', () => {
+    render(<SignInPage />)
+    const mark = screen.getByRole('img', { name: 'Feeder' })
+    const title = screen.getByRole('heading', { level: 1, name: 'Sign in to Feeder' })
+    expect(mark.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('the Google button is a white outlined link with the Google "G" before its label', () => {
+    render(<SignInPage />)
+    const link = screen.getByRole('link', { name: 'Continue with Google' })
+    expect(link.querySelector('[data-google-g]')).not.toBeNull()
+    expect(link.querySelector('[data-google-g]')).toHaveAttribute('aria-hidden', 'true')
+    expect(link).toHaveAttribute('data-variant', 'google')
+    expect(link).toHaveAttribute('href', '/auth/google/login')
+  })
+
+  it('centres the card at max-width 400', () => {
+    expect(css).toMatch(/max-width:\s*400px/)
+    expect(css).toMatch(/margin-inline:\s*auto|margin:\s*0 auto|place-items:\s*center|justify-content:\s*center/)
+  })
+
+  it('uses no colour literals in its CSS (tokens only; the Google G is an inline SVG)', () => {
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(/)
   })
 })
 

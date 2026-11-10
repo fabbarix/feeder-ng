@@ -12,6 +12,8 @@ export interface MemberEditorProps {
   /** Absent = adding a new Member. */
   member?: Member
   users: Pick<AllowedUser, 'id' | 'displayName' | 'email'>[]
+  /** WP11: every Member, so Users already linked to another Member are not offered (availableUsers). */
+  members: Pick<Member, 'id' | 'userId'>[]
   saving?: boolean
   error?: string
   onSave: (input: MemberInput, userId: number | null) => void | Promise<void>
