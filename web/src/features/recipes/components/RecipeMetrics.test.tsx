@@ -20,6 +20,11 @@ describe('RecipeMetrics', () => {
     expect(screen.getByText('No Steps')).toBeInTheDocument()
     expect(screen.queryByText(/ahead/)).toBeNull()
   })
+  it('does not say "No Steps" next to the ahead line when the only Step is an Advance Step', () => {
+    render(<RecipeMetrics {...props} totalMinutes={0} advanceMinutes={120} />)
+    expect(screen.getByText('+ 2 h ahead')).toBeInTheDocument()
+    expect(screen.queryByText('No Steps')).toBeNull()
+  })
   it('marks a Ready Meal', () => {
     render(<RecipeMetrics {...props} readyMeal />)
     expect(screen.getByText('Ready Meal')).toBeInTheDocument()

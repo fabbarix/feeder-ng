@@ -23,7 +23,7 @@ describe('useRecipeEditor: unknown unit in a Step use (G2)', () => {
         ...d,
         name: 'Aioli',
         lines: [{ key: 'l', ingredientId: 7, ingredientName: 'garlic', quantity: '3', unit: 'clove', optional: false, note: '' }],
-        steps: [{ key: 's', text: 'Crush', kind: 'active', durationMinutes: '', leadTimeMinutes: '', after: [], image: '', uses: [{ ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'head' }] }],
+        steps: [{ key: 's', text: 'Crush', kind: 'active', durationMinutes: '', leadTimeMinutes: '', after: [], image: '', uses: [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'head' }] }],
       })),
     )
     api.create.mockRejectedValueOnce(

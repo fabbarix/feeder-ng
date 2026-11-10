@@ -42,6 +42,30 @@ describe('ImportSource (step 2)', () => {
     expect(screen.getByText(s.rejectedFile)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
+  it('shows an error, and does not submit or throw, when the file cannot be read', async () => {
+    const onSubmit = vi.fn()
+    const { container } = render(<ImportSource busy={false} onSubmit={onSubmit} />)
+    const read = vi.spyOn(FileReader.prototype, 'readAsText').mockImplementation(function (this: FileReader) {
+      queueMicrotask(() => this.onerror?.(new ProgressEvent('error') as ProgressEvent<FileReader>))
+    })
+    await userEvent.upload(fileInput(container), new File(['{}'], 'soup.feeder.json', { type: 'application/json' }))
+    expect(await screen.findByText('The file could not be read.')).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+    read.mockRestore()
+  })
+  it('clears the read error when the next file is chosen', async () => {
+    const onSubmit = vi.fn()
+    const { container } = render(<ImportSource busy={false} onSubmit={onSubmit} />)
+    const read = vi.spyOn(FileReader.prototype, 'readAsText').mockImplementationOnce(function (this: FileReader) {
+      queueMicrotask(() => this.onerror?.(new ProgressEvent('error') as ProgressEvent<FileReader>))
+    })
+    await userEvent.upload(fileInput(container), new File(['{}'], 'a.json', { type: 'application/json' }))
+    await screen.findByText('The file could not be read.')
+    read.mockRestore()
+    await userEvent.upload(fileInput(container), new File(['{"a":1}'], 'b.json', { type: 'application/json' }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('{"a":1}'))
+    expect(screen.queryByText('The file could not be read.')).toBeNull()
+  })
   it('is disabled while busy', async () => {
     render(<ImportSource busy onSubmit={vi.fn()} />)
     await userEvent.click(screen.getByLabelText(s.pasteLabel))

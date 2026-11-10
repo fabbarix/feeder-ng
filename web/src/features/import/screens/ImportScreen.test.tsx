@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -35,6 +35,16 @@ describe('ImportScreen', () => {
     expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
     expect(screen.getByText(s.stepOverline(3))).toBeInTheDocument()
+  })
+  it('step 3 is a Tile with an overline and its heading, like steps 1 and 2 (before and during the review)', () => {
+    const { rerender } = view()
+    const tileOf = (n: number) => screen.getByText(s.stepOverline(n)).closest('.tile')
+    for (const n of [1, 2, 3]) expect(tileOf(n), `step ${n}`).not.toBeNull()
+    expect(within(tileOf(3) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(3))).toHaveClass('tile__overline')
+    hook.current = state({ phase: 'reviewing', plan: plan() })
+    rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
+    expect(within(tileOf(3) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
   })
   it('starts with the source step and passes the text to the review', async () => {
     view()

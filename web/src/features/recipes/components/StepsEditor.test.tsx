@@ -1,16 +1,21 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
+
+// Each Step owns its photo upload (usePhotoUpload inside the Step's picker); the editor takes no `imageUpload` prop.
+const api = vi.hoisted(() => ({ uploadImage: vi.fn() }))
+vi.mock('../api', () => ({ recipesApi: api }))
+
 import type { StepDraft } from '../lib/draft'
 import { StepsEditor, type StepsEditorProps } from './StepsEditor'
 
 const step = (over: Partial<StepDraft> = {}): StepDraft => ({
   key: 'k', text: 'Chop', kind: 'active', durationMinutes: '5', leadTimeMinutes: '', after: [], uses: [], image: '', ...over,
 })
-const imageUpload = (over: Partial<NonNullable<StepsEditorProps['imageUpload']>> = {}) => ({ upload: vi.fn().mockResolvedValue('img9'), uploading: false, error: null, ...over })
 const props = (steps: StepDraft[], over: Partial<StepsEditorProps> = {}): StepsEditorProps => ({
-  steps, errors: {}, onChange: vi.fn(), ingredients: [garlic, flour], imageUpload: imageUpload(), ...over,
+  steps, errors: {}, onChange: vi.fn(), ingredients: [garlic, flour], ...over,
 })
 const rows = () => screen.getAllByRole('listitem').filter((li) => li.matches('ol > li'))
 
@@ -102,11 +107,11 @@ describe('StepsEditor: Step uses (G2)', () => {
     const p = props([step()])
     render(<StepsEditor {...p} />)
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient use' }))
-    expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.uses).toEqual([{ ingredientId: null, ingredientName: '', quantity: '', unit: '' }])
+    expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.uses).toEqual([{ key: expect.any(String), ingredientId: null, ingredientName: '', quantity: '', unit: '' }])
   })
 
   it('edits a use with the Ingredient, quantity and unit fields', async () => {
-    const uses = [{ ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]
+    const uses = [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]
     const p = props([step({ uses })])
     render(<StepsEditor {...p} />)
     expect(screen.getByRole('combobox', { name: 'Ingredient used' })).toHaveTextContent('garlic')
@@ -117,7 +122,7 @@ describe('StepsEditor: Step uses (G2)', () => {
   })
 
   it('picking an Ingredient for a use sets its Base Unit', async () => {
-    const p = props([step({ uses: [{ ingredientId: null, ingredientName: '', quantity: '1', unit: '' }] })])
+    const p = props([step({ uses: [{ key: 'u1', ingredientId: null, ingredientName: '', quantity: '1', unit: '' }] })])
     render(<StepsEditor {...p} />)
     await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient used' }))
     await userEvent.click(screen.getByRole('option', { name: /flour/ }))
@@ -125,7 +130,7 @@ describe('StepsEditor: Step uses (G2)', () => {
   })
 
   it('removes a use', async () => {
-    const uses = [{ ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]
+    const uses = [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]
     const p = props([step({ uses })])
     render(<StepsEditor {...p} />)
     await userEvent.click(screen.getByRole('button', { name: 'Remove ingredient use' }))
@@ -133,21 +138,25 @@ describe('StepsEditor: Step uses (G2)', () => {
   })
 
   it('says a custom unit will need a Unit Conversion', () => {
-    const uses = [{ ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'head' }]
+    const uses = [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'head' }]
     render(<StepsEditor {...props([step({ uses })])} />)
     expect(screen.getByText('Feeder will ask how much 1 head is when you save.')).toBeInTheDocument()
   })
 })
 
+const png = () => new File(['x'], 'step.png', { type: 'image/png' })
+const fileInputs = (c: HTMLElement) => [...c.querySelectorAll<HTMLInputElement>('input[type=file]')]
+
 describe('StepsEditor: Step photo (G2)', () => {
   it('uploads a photo through FileDrop and stores its id on the Step', async () => {
+    api.uploadImage.mockResolvedValue({ id: 'img9' })
     const p = props([step()])
     const { container } = render(<StepsEditor {...p} />)
     expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
-    const input = container.querySelector('input[type=file]') as HTMLInputElement
+    const input = fileInputs(container)[0]!
     expect(input).toHaveAttribute('accept', 'image/*')
-    await userEvent.upload(input, new File(['x'], 'step.png', { type: 'image/png' }))
-    await vi.waitFor(() => expect(vi.mocked(p.onChange).mock.calls.at(-1)![0][0]!.image).toBe('img9'))
+    await userEvent.upload(input, png())
+    await waitFor(() => expect(vi.mocked(p.onChange).mock.calls.at(-1)![0][0]!.image).toBe('img9'))
   })
 
   it('shows the current photo and removes it', async () => {
@@ -158,8 +167,38 @@ describe('StepsEditor: Step photo (G2)', () => {
     expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.image).toBe('')
   })
 
-  it('shows an upload failure', () => {
-    render(<StepsEditor {...props([step()], { imageUpload: imageUpload({ error: 'The photo could not be added.' }) })} />)
-    expect(screen.getByText('The photo could not be added.')).toBeInTheDocument()
+  it('shows an upload failure on the Step that failed, and on no other Step', async () => {
+    api.uploadImage.mockRejectedValue(new Error('boom'))
+    const { container } = render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
+    await userEvent.upload(fileInputs(container)[0]!, png())
+    expect(await within(rows()[0]!).findByText('The photo could not be added.')).toBeInTheDocument()
+    expect(within(rows()[1]!).queryByText('The photo could not be added.')).toBeNull()
+  })
+
+  it('one Step uploading does not disable the photo zones of the other Steps', async () => {
+    api.uploadImage.mockReturnValue(new Promise(() => {}))
+    const { container } = render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
+    await userEvent.upload(fileInputs(container)[0]!, png())
+    await waitFor(() => expect(fileInputs(container)[0]).toBeDisabled())
+    expect(fileInputs(container)[1]).toBeEnabled()
+    expect(within(rows()[1]!).getByRole('button', { name: 'Choose a file or drop it here' })).toBeEnabled()
+  })
+})
+
+describe('StepsEditor: stable keys for use rows', () => {
+  it('removing an earlier use keeps the focused field of a later use mounted (no index keys)', async () => {
+    function Harness() {
+      const [steps, setSteps] = useState([
+        step({ uses: [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'clove' }, { key: 'u2', ingredientId: 8, ingredientName: 'flour', quantity: '2', unit: 'g' }] }),
+      ])
+      return <StepsEditor {...props(steps, { onChange: setSteps })} />
+    }
+    render(<Harness />)
+    const second = screen.getAllByRole('textbox', { name: 'Quantity used' })[1]!
+    second.focus()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Remove ingredient use' })[0]!)
+    const left = screen.getByRole('textbox', { name: 'Quantity used' })
+    expect(left).toHaveValue('2')
+    expect(left).toBe(second)
   })
 })

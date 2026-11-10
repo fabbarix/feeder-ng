@@ -12,4 +12,7 @@ describe('timeSummary', () => {
     expect(timeSummary({ totalMinutes: 0, advanceMinutes: 0 })).toEqual({ total: null, ahead: null })
     expect(timeSummary({ totalMinutes: 0, advanceMinutes: 1440 })).toEqual({ total: null, ahead: '+1 d ahead' })
   })
+  it('an Advance Step alone has an ahead part and no total, so callers must not add "No Steps"', () => {
+    expect(timeSummary({ totalMinutes: 0, advanceMinutes: 120 })).toEqual({ total: null, ahead: '+2 h ahead' })
+  })
 })

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider } from '../../../ui'
+import { cookRecipePath } from '../../cook'
 import { garlic, recipe } from '../fixtures.test-helper'
 
 const h = vi.hoisted(() => ({
@@ -62,10 +63,20 @@ describe('RecipeDetailScreen: layout', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/3/edit')
   })
-  it('shows the loading and error states with the shared primitives', () => {
-    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x') }
+  it('shows the error state with the shared primitive', () => {
+    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() }
     view()
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+  })
+  it('the error state keeps a PageHeader with Back, and Try again calls onRetry (refetch)', async () => {
+    const refetch = vi.fn()
+    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch }
+    view()
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(refetch).toHaveBeenCalledOnce()
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/recipes')
   })
 })
 
@@ -73,14 +84,15 @@ describe('RecipeDetailScreen: Cook / Batch entry (B2)', () => {
   it('starts Cook Mode for one Batch by default', async () => {
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Start Cook Mode' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/cook/recipe/3?batches=1')
+    expect(screen.getByTestId('where').textContent).toBe(cookRecipePath(3, 1))
   })
   it('starts Cook Mode with the chosen Batch count', async () => {
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Increase Batches' }))
     await userEvent.click(screen.getByRole('button', { name: 'Increase Batches' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start Cook Mode' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/cook/recipe/3?batches=3')
+    expect(screen.getByTestId('where').textContent).toBe(cookRecipePath(3, 3))
+    expect(cookRecipePath(3, 3)).toBe('/cook/recipe/3?batches=3')
   })
 })
 

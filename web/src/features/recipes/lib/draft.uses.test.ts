@@ -13,10 +13,10 @@ const draftWith = (uses: StepDraft['uses']): RecipeDraft => ({
 
 describe('validateDraft: Step uses', () => {
   it('accepts a complete use', () => {
-    expect(validateDraft(draftWith([{ ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]))).toEqual({})
+    expect(validateDraft(draftWith([{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]))).toEqual({})
   })
   it('asks for the Ingredient, the quantity and the unit of each use', () => {
-    const errors = validateDraft(draftWith([{ ingredientId: null, ingredientName: '', quantity: '0', unit: '' }]))
+    const errors = validateDraft(draftWith([{ key: 'u1', ingredientId: null, ingredientName: '', quantity: '0', unit: '' }]))
     expect(errors).toMatchObject({
       'steps.0.uses.0.ingredient': 'ingredient_required',
       'steps.0.uses.0.quantity': 'quantity_invalid',
@@ -26,8 +26,8 @@ describe('validateDraft: Step uses', () => {
   it('reports the use that is wrong, not its neighbours', () => {
     const errors = validateDraft(
       draftWith([
-        { ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'clove' },
-        { ingredientId: 7, ingredientName: 'garlic', quantity: 'x', unit: 'clove' },
+        { key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'clove' },
+        { key: 'u2', ingredientId: 7, ingredientName: 'garlic', quantity: 'x', unit: 'clove' },
       ]),
     )
     expect(Object.keys(errors)).toEqual(['steps.0.uses.1.quantity'])

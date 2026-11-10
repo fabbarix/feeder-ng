@@ -41,13 +41,21 @@ describe('ExportPicker', () => {
     await userEvent.click(screen.getByRole('switch', { name: s.allRecipes }))
     expect(p.onClear).toHaveBeenCalledOnce()
   })
-  it('links to the download for the pick', () => {
+  it('links to the download for the pick, reading "Export Recipe File" (5.11)', () => {
     render(<ExportPicker {...props()} selected={[1]} href="/api/recipe-file/export?ids=1" />)
-    expect(screen.getByRole('link', { name: s.exportSelected(1) })).toHaveAttribute('href', '/api/recipe-file/export?ids=1')
+    expect(screen.getByRole('link', { name: 'Export Recipe File' })).toHaveAttribute('href', '/api/recipe-file/export?ids=1')
   })
-  it('names the link for everything when all are picked', () => {
+  it('reads the same when everything is picked', () => {
     render(<ExportPicker {...props()} selected={[1, 2]} href="/api/recipe-file/export?all=1" />)
-    expect(screen.getByRole('link', { name: s.exportAll })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Export Recipe File' })).toHaveAttribute('href', '/api/recipe-file/export?all=1')
+  })
+  it('is styled as the shared primary Button (an anchor wearing its classes), not a private pill', () => {
+    render(<ExportPicker {...props()} selected={[1]} href="/api/recipe-file/export?ids=1" />)
+    const link = screen.getByRole('link', { name: 'Export Recipe File' })
+    expect(link).toHaveClass('button')
+    expect(link).toHaveAttribute('data-variant', 'primary')
+    expect(link).toHaveAttribute('data-size')
+    expect(link).not.toHaveClass('import-link-button')
   })
   it('says so when there is nothing to export', () => {
     render(<ExportPicker {...props()} recipes={[]} />)

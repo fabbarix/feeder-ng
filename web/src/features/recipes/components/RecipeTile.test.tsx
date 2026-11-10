@@ -35,6 +35,12 @@ describe('RecipeTile', () => {
     expect(screen.queryByText(/ahead/)).toBeNull()
   })
 
+  it('does not say "No Steps" next to the ahead chip when the only Step is an Advance Step', () => {
+    render(<RecipeTile recipe={{ ...base, totalMinutes: 0, advanceMinutes: 120 }} onOpen={() => {}} />)
+    expect(screen.getByText('+2 h ahead')).toBeInTheDocument()
+    expect(screen.queryByText('No Steps')).toBeNull()
+  })
+
   it('shows the photo through RecipeThumb when there is one', () => {
     const { container } = render(<RecipeTile recipe={{ ...base, imageUrl: '/api/images/abc' }} onOpen={() => {}} />)
     expect(container.querySelector('img')).toHaveAttribute('src', '/api/images/abc')

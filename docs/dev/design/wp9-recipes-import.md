@@ -56,3 +56,16 @@ Pure: `lib/{cookEntry,timeSummary,memberPick,stepUses,lineUnits.wp9,draft.uses}.
 screens `RecipesScreen`, `RecipeDetailScreen` (Cook/Batch route, ConfirmDialog with `window.confirm` throwing, Member picker), `RecipeEditorScreen`; import `ImportSource`, `CopyAgentPromptButton`, `RecipeFileActions`, `ExportPicker`, `UnitPromptTile`, `ImportScreen`.
 `recipes/native-controls.test.ts` scans both features' production files: no alert/confirm/prompt, no `<select>`/`<datalist>`/pickable `<input type>`, no bare `<input>`/`<textarea>`/`<label>`, no legacy Tile/Chip/Button/EmptyState props.
 `IngredientLineRow.customUnit.test.tsx` needs PRIMITIVE REQUEST 1. Not unit-testable (verify in the browser, 390/820/1280, light/dark): no horizontal overflow, 2-line name clamp, scroll fade of the Tag row, sticky CookEntry above the nav, long-name seed.
+
+## Review round: contracts the new tests pin
+- **Cook route.** `lib/cookEntry` keeps only `MIN/MAX_BATCHES` and `batchPortions`; `cookPath` and `clampBatches` are gone. The detail screen navigates with `cookRecipePath(id, batches)` from `features/cook` (`/cook/recipe/3` for one Batch, `?batches=N` above one).
+- **Recipes grid** (`recipes.css.test.ts`): `.recipes-screen .bento-grid[data-columns='2']` has no override on a phone (2 columns), `repeat(3, minmax(0, 1fr))` from one min-width breakpoint (600 to <1100 px) and `repeat(4, ...)` from a larger one (at most 1100 px).
+- **Independent photo pickers.** `StepsEditor` has no `imageUpload` prop: each Step renders its own photo picker (`StepPhoto`) that calls `usePhotoUpload()` itself, as the Recipe `PhotoPicker` does in the screen. Error and disabled state are per picker (`StepsEditor.test`, `RecipeEditorScreen.photos.test`).
+- **Hero cap.** A rule whose selector contains `.recipe-detail__hero` sets `max-block-size: 170px` outside any media query.
+- **Import step 3** is a `Tile` whose `.tile__overline` reads `stepOverline(3)`, with the h2 inside it, before and during the review.
+- **Export action** reads "Export Recipe File" for any selection (`exportAll`/`exportSelected` are dropped) and is an anchor carrying `class="button"`, `data-variant="primary"`, `data-size` (no `import-link-button`).
+- **Detail error state** keeps a `PageHeader` (h1, Back to /recipes) and passes `onRetry={recipe.refetch}` to `ErrorState` ("Try again").
+- **ImportSource read failure**: a `FileReader` error shows "The file could not be read." (`importStrings.readFailed`), submits nothing, and the next chosen file clears it.
+- **Stable use keys**: `UseDraft.key: string` (`newUseDraft` makes a unique one, `updateUse`/`removeUse` keep them); `UseRow` is keyed by it, so removing an earlier use keeps later rows mounted.
+- **Advance-only Recipe**: `timeSummary` returns `{ total: null, ahead: "+2 h ahead" }` (the lead is NOT dropped); `RecipeTile` and `RecipeMetrics` omit "No Steps" when `ahead` is present. "No Steps" shows only when both are null.
+- **Tag row fade**: `TagChips` sets `data-scrolled="true"` on the group while `scrollLeft > 0` (updated on scroll). `.tag-chips` fades only the end; `.tag-chips[data-scrolled='true']` adds the start fade.
