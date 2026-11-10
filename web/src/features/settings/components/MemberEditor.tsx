@@ -13,6 +13,8 @@ export interface MemberEditorProps {
   users: Pick<AllowedUser, 'id' | 'displayName' | 'email'>[]
   /** WP11: every Member, so Users already linked to another Member are not offered (availableUsers). */
   members: Pick<Member, 'id' | 'userId'>[]
+  /** R11a: the signed-in User's id. Their entry in Linked User reads "<name> (you)" and a "This is me" button links them. */
+  currentUserId?: number
   saving?: boolean
   error?: string
   onSave: (input: MemberInput, userId: number | null) => void | Promise<void>

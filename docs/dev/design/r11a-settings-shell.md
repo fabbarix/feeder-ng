@@ -102,3 +102,27 @@ User requests (authoritative): the underlined "Back to Settings" beside the h1 i
 ### Files (this extension)
 Production to write: `ui/{Breadcrumbs.tsx,Breadcrumbs.css,PageHeader.tsx,PageHeader.css,Avatar.tsx,Icon.tsx (className),Stepper.tsx (describedBy),index.ts,strings.ts}`, `ui/fields/{EmojiPicker.tsx,EmojiPicker.css,StepperField.tsx}`, `app/{breadcrumbs.ts,useBreadcrumbs.ts}`, the screens listed above, `settings/{lib/memberForm.ts,strings.ts,components/{MemberEditor,MemberAvatar,SettingsHeader}.tsx}`, `scripts/{check-ui.sh,check-ui.rules}`; delete `ui/BackLink.*`. Check `scripts/check-ui.allow-classnames` is not needed for the new classes (each has a CSS rule).
 Tests written (red): see the section above. Existing tests rewritten: `SettingsHeader`, `NotificationSettingsScreen`, `ShopsScreens` (renamed), `settingsBreadcrumbs` (replaces `settingsBackLinks`), `PlanningRulesScreen`, `SettingsPages`, `MemberAvatar`; deleted: `ui/BackLink.test.tsx`.
+
+
+## Linking an Admin to a Member ("This is me")
+
+User bug (high priority): "a member can be also an admin: I don't see a way to link a member to my admin user."
+
+### Cause (traced, not guessed)
+The server and the picker do **not** exclude Admins. Traced path: `GET /api/allowlist` (`auth.ListUsers`, `SELECT ... FROM users ORDER BY id`) returns every User; the env admin is a normal `users` row (`SeedAdmin` -> `AddUser`, `is_admin = 1`, display name = the part of the email before the `@`); `useMembersPage` feeds all of them to `MemberEditor`; `availableUsers` removes only Users linked to *another* Member; `store.LinkUser` has no Admin rule; `PUT /api/members/:id/user` is Admin-only, which the Admin passes. The existing tests already offered "Admin" in the picker, and the new Go tests below are green on the current code for that reason (they lock the requirement in). What the user actually hits is three things in the Member sheet:
+1. **The Admin's entry is unrecognisable.** The env-seeded Admin's display name is an email local part ("mrwho") (changed only by a Google sign-in whose name differs), the option shows nothing else, and nothing says which entry is the signed-in User. The user does not find "my admin user" in the list.
+2. **A User linked to another Member silently disappears** from the picker (`availableUsers`), with no hint where the link is. If the Admin is already linked (for example to a test Member), the picker looks as if Admins are not offered.
+3. **No shortcut**, although "link me to this Member" is the common case.
+Could not be reproduced as a filter bug; the fix therefore makes the Admin's entry findable and gives a one-tap path, and the refusal explains itself.
+
+### Fix
+- `MemberEditor` gets `currentUserId?: number` (type-only prop added now). `MembersPage`/`useMembersPage` pass `useMe().data?.id`.
+- Picker label for the signed-in User: `"<displayName> (you)"` (`settingsStrings.member.you(name)`); other Users unchanged. `MemberList` shows the same `(you)` suffix in its linked-User text (`linkedUserNames`).
+- **"This is me"**: a `Button variant="tertiary"` named `This is me` right under the Linked User Select (`settingsStrings.member.thisIsMe`). Click = `setUserId(currentUserId)`; no request until Save, so Save does PATCH then `PUT /api/members/:id/user {userId}` as today. Shown only when `currentUserId` is known, no Member other than the one being edited is linked to it, and the draft's `userId` is not already `currentUserId` (it disappears after use). Pure helper `canLinkMe(members, editing, userId, currentUserId)` in `lib/memberForm.ts` (domain rule, unit-testable; the component only renders).
+- **Clear refusal** (`internal/household/httpapi/httpapi.go`, `writeErr`/`linkUser` only; **no store change**): on `ErrUserLinked` the handler looks up the Member who has that User via `a.st.Members` and answers 409 `user_already_linked` with `"That User is already linked to <Member name>"`. Code unchanged. The sheet shows `errorMessage(err)` already.
+- One User, one Member stays enforced by `store.LinkUser` (check + unique index). `internal/household/store/store.go` does **not** need to change, so R11c's edit does not conflict. If the developer prefers the owner name from the store, a new file (e.g. `store/linkowner.go`) with `LinkOwner(ctx, userID) (Member, bool, error)` avoids touching `store.go`; the handler approach above is simpler.
+
+### Tests
+- Go `internal/household/httpapi/members_link_test.go`: the allowlist lists the env Admin and a plain User (green guard); an Admin links themself, relinks idempotently and unlinks (green guard); linking a User already linked elsewhere is 409 `user_already_linked` and **names the other Member** (red).
+- BDD `bdd/features/household/members.feature` "Admin links themself to a Member" (red on the last step; new steps `the Member "X" is linked to the User "e"`, `the error message mentions "X"` in `bdd/steps_household_test.go`).
+- Web `MemberEditor.thisIsMe.test.tsx` (picker offers `mrwho (you)`, "This is me" links on Save for new and existing Members, hidden after use / when linked to another Member / when the signed-in User is unknown) and `screens/MembersPage.thisIsMe.test.tsx` (end to end: Save PUTs `{userId: <my id>}`; hidden when I am linked; the row shows "(you)").
