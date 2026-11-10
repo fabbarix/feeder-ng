@@ -41,5 +41,14 @@ lacks "$REL" '(PAT|personal)' "release.yml must not use a personal access token"
 lacks "$CI"  '(ghp_|password:\s*[^$ ])' "ci.yml contains a literal credential"
 lacks "$REL" '(ghp_|password:\s*[^$ ])' "release.yml contains a literal credential"
 
+# Every action is pinned to a full commit SHA with its tag in a comment.
+for f in "$CI" "$REL"; do
+  if grep -E 'uses:' "$f" | grep -Ev '@[0-9a-f]{40} # v[0-9]' >/dev/null; then
+    bad "$(basename "$f") has an action not pinned to a full commit SHA"
+  else
+    ok
+  fi
+done
+
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
