@@ -1,11 +1,16 @@
-// The Scan screen (centre button, route /scan). First "Where are you shopping?" (ShopPicker over useShops(), the
-// last Shop used first); then the session for that choice: the camera strip, the live list (Shop mode), the scan
-// line, notices and the sheets. The session view is its own component, so the camera and the offline data start only
-// once a Shop or Stock-take is chosen.
+// The Scan screen (centre button, route /scan). The session starts at once with the last Shop used (lib/initialChoice),
+// or with Stock-take when the URL asks for it (?mode=stocktake, linked from the Stock-take button); otherwise the picker
+// "Where are you shopping?" (ShopPicker over useShops(), the last Shop used first). The session is then the camera strip,
+// the live list (Shop mode), the scan line, notices and the sheets. The session view is its own component, so the camera
+// and the offline data start only once a Shop or Stock-take is chosen.
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useShops } from '../../shops/hooks/useShops'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
+import { IconButton } from '../../../ui/IconButton'
+import { PageHeader } from '../../../ui/PageHeader'
+import { Skeleton } from '../../../ui/Skeleton'
 import { formatMinor } from '../../products/lib/money'
 import { formatQuantity } from '../../../lib/units'
 import { AskWeightSheet } from '../components/AskWeightSheet'
@@ -16,13 +21,16 @@ import { ScanFeedback } from '../components/ScanFeedback'
 import { ScanNotices } from '../components/ScanNotices'
 import { ShopPicker } from '../components/ShopPicker'
 import { StockTakeSheet } from '../components/StockTakeSheet'
+import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
 import { UnknownBarcodeSheet } from '../components/UnknownBarcodeSheet'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
+import { initialChoice, type ScanChoice } from '../lib/initialChoice'
 import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import { scanStrings } from '../strings'
+import '../scan.css'
 
-type Choice = { kind: 'shop'; shop: { id: number; name: string } } | { kind: 'stocktake' }
+type Choice = ScanChoice
 
 function localStorageOrNull(): Storage | null {
   try {
@@ -48,10 +56,24 @@ function cameraText(status: ScanController['camera']['status']): string | undefi
 }
 
 export function ScanScreen() {
-  const { shops } = useShops()
+  const { shops, isLoading } = useShops()
   const [lastShopId] = useState(() => getLastShopId(localStorageOrNull()))
-  const [choice, setChoice] = useState<Choice | null>(null)
+  const [params] = useSearchParams()
+  const stockTakeLink = params.get('mode') === 'stocktake'
+  // undefined: not chosen yet (the starting choice applies); null: the picker is shown; otherwise the chosen session.
+  const [picked, setPicked] = useState<Choice | null | undefined>(undefined)
 
+  // While the Shops load neither the picker (it would flash) nor a session is shown.
+  if (isLoading) {
+    return (
+      <section className="scan-screen">
+        <Skeleton variant="tile" count={2} />
+      </section>
+    )
+  }
+
+  const choice = picked !== undefined ? picked : stockTakeLink ? { kind: 'stocktake' as const } : initialChoice(shops, lastShopId)
+  const backToPicker = () => setPicked(null)
   if (!choice) {
     return (
       <ShopPicker
@@ -59,16 +81,16 @@ export function ScanScreen() {
         lastShopId={lastShopId}
         onPick={(shop) => {
           setLastShopId(localStorageOrNull(), shop.id)
-          setChoice({ kind: 'shop', shop: { id: shop.id, name: shop.name } })
+          setPicked({ kind: 'shop', shop: { id: shop.id, name: shop.name } })
         }}
-        onStockTake={() => setChoice({ kind: 'stocktake' })}
+        onStockTake={() => setPicked({ kind: 'stocktake' })}
       />
     )
   }
   return choice.kind === 'shop' ? (
-    <ScanSession mode="shop" shop={choice.shop} onChangeShop={() => setChoice(null)} />
+    <ScanSession mode="shop" shop={choice.shop} onChangeShop={backToPicker} />
   ) : (
-    <ScanSession mode="stocktake" shop={null} onChangeShop={() => setChoice(null)} />
+    <ScanSession mode="stocktake" shop={null} onChangeShop={backToPicker} />
   )
 }
 
@@ -91,6 +113,15 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
 
   return (
     <section className="scan-screen">
+      {shop ? (
+        <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={onChangeShop}>{scanStrings.changeShop}</Button>} />
+      ) : (
+        <PageHeader
+          title={scanStrings.stockTakeHeading}
+          subtitle={scanStrings.stockTakeHint}
+          leading={<IconButton icon="back" label={scanStrings.back} onClick={onChangeShop} />}
+        />
+      )}
       <ViewfinderStrip
         status={viewfinderStatus}
         torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}
@@ -99,14 +130,6 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
         <video ref={c.camera.videoRef} playsInline muted autoPlay />
       </ViewfinderStrip>
       <CameraFailure recovery={c.recovery} />
-
-      {mode === 'shop' ? (
-        <div className="scan-screen__shop">
-          <Button variant="ghost" onClick={onChangeShop}>
-            {scanStrings.changeShop}
-          </Button>
-        </div>
-      ) : null}
 
       {fb ? (
         <ScanFeedback
@@ -153,6 +176,16 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
           currentStockText={formatQuantity(c.stockTotal?.(product.ingredientId) ?? 0, product.baseUnit, c.system)}
           packText={formatQuantity(product.packSize, product.baseUnit, c.system)}
           onAction={(action, total) => void flow.stockTakeAction(action, total)}
+        />
+      ) : null}
+      {sheet?.kind === 'unarchive' ? (
+        <UnarchiveProductSheet
+          open
+          onClose={flow.closeSheet}
+          productName={sheet.product.name}
+          busy={flow.unarchiving}
+          onUnarchive={() => void flow.unarchiveProduct()}
+          onCreateNew={flow.createNewInstead}
         />
       ) : null}
       {sheet?.kind === 'edit_price' ? (

@@ -108,7 +108,7 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	d, err := c.st.CreateProduct(ctx, np)
 	var taken *productstore.BarcodeTakenError
 	if errors.As(err, &taken) {
-		return service.ProductInfo{}, &service.BarcodeTakenError{ProductID: taken.ProductID}
+		return service.ProductInfo{}, &service.BarcodeTakenError{ProductID: taken.ProductID, Archived: taken.Archived}
 	}
 	if errors.Is(err, productstore.ErrUnknownIngredient) {
 		return service.ProductInfo{}, service.ErrUnknownIngredient

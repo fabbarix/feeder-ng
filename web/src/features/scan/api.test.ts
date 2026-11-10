@@ -74,3 +74,27 @@ describe('createScanApi.sync timeout', () => {
     expect((await queue.pending()).map((e) => e.attempts)).toEqual([1])
   })
 })
+
+describe('createScanApi, archived Products (R8)', () => {
+  const product = { id: 9, name: 'Old passata 500 g', ingredientId: 2, ingredientName: 'Passata', baseUnit: 'g', packSize: 500, archived: true }
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
+
+  it('findArchived asks resolve for the code at the Shop and returns archivedProduct (null when none)', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(json({ resolution: {}, product: null, archivedProduct: product })).mockResolvedValueOnce(json({ resolution: {}, product: null, archivedProduct: null }))
+    const api = createScanApi(createHttpClient({ fetch }))
+    expect(await api.findArchived('05012345678900', 1)).toEqual(product)
+    expect(String(fetch.mock.calls[0]![0])).toBe('/api/resolve?barcode=05012345678900&shop=1')
+    expect(await api.findArchived('05012345678900', null)).toBeNull()
+    expect(String(fetch.mock.calls[1]![0])).toBe('/api/resolve?barcode=05012345678900')
+  })
+
+  it('unarchiveProduct POSTs /api/products/{id}/unarchive and product GETs the Product', async () => {
+    const fetch = vi.fn().mockImplementation(async () => json(product))
+    const api = createScanApi(createHttpClient({ fetch }))
+    expect(await api.unarchiveProduct(9)).toEqual(product)
+    expect(String(fetch.mock.calls[0]![0])).toBe('/api/products/9/unarchive')
+    expect(fetch.mock.calls[0]![1].method).toBe('POST')
+    expect(await api.product(9)).toEqual(product)
+    expect(String(fetch.mock.calls[1]![0])).toBe('/api/products/9')
+  })
+})

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
-import { parseAmount, type AmountError } from '../../stock/lib/amount'
+import { NumberField } from '../../../ui/fields/NumberField'
 import { scanStrings } from '../strings'
 import type { StockTakeAction } from '../types'
 
@@ -18,41 +18,33 @@ export interface StockTakeSheetProps {
   onAction: (action: StockTakeAction, total?: number) => void
 }
 
-const amountError: Record<AmountError, string> = {
-  empty: scanStrings.enterAmount,
-  invalid: scanStrings.enterAmount,
-  negative: scanStrings.amountNegative,
-  notPositive: scanStrings.enterAmount,
-}
-
-/** The Stock-take sheet: +1 pack, -1 pack, or set the total of the Ingredient's Stock. */
+/** The Stock-take sheet: +1 pack, -1 pack, or set the total of the Ingredient's Stock (a NumberField that never goes negative). */
 export function StockTakeSheet({ open, onClose, productName, ingredientName, currentStockText, packText, onAction }: StockTakeSheetProps) {
   const [settingTotal, setSettingTotal] = useState(false)
-  const [text, setText] = useState('')
+  const [total, setTotal] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const saveTotal = () => {
-    const parsed = parseAmount(text, 'nonNegative')
-    if (!parsed.ok) {
-      setError(amountError[parsed.error])
+    if (total === null) {
+      setError(scanStrings.enterAmount)
       return
     }
     setError(null)
-    onAction('set_total', parsed.value)
+    onAction('set_total', total)
   }
 
   return (
     <BottomSheet open={open} onClose={onClose} title={scanStrings.stockTakeTitle(productName)}>
       <p>{scanStrings.currentStock(currentStockText)}</p>
-      <p className="field__hint">{`${ingredientName} · ${packText}`}</p>
+      <p className="stock-take__pack">{`${ingredientName} · ${packText}`}</p>
       <div className="stock-take__actions">
-        <Button variant="tonal" onClick={() => onAction('plus_pack')}>
+        <Button variant="secondary" icon="add" onClick={() => onAction('plus_pack')}>
           {scanStrings.plusPack}
         </Button>
-        <Button variant="tonal" onClick={() => onAction('minus_pack')}>
+        <Button variant="secondary" icon="minus" onClick={() => onAction('minus_pack')}>
           {scanStrings.minusPack}
         </Button>
-        <Button variant="ghost" onClick={() => setSettingTotal(true)}>
+        <Button variant="tertiary" onClick={() => setSettingTotal(true)}>
           {scanStrings.setTotal}
         </Button>
       </div>
@@ -63,13 +55,7 @@ export function StockTakeSheet({ open, onClose, productName, ingredientName, cur
             saveTotal()
           }}
         >
-          <div className="field">
-            <label className="field__label" htmlFor="stock-take-total">
-              {scanStrings.newTotal}
-            </label>
-            <input id="stock-take-total" className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
-          </div>
-          {error ? <p className="field__error" role="alert">{error}</p> : null}
+          <NumberField label={scanStrings.newTotal} value={total} onChange={setTotal} min={0} error={error ?? undefined} />
           <Button type="submit">{scanStrings.save}</Button>
         </form>
       ) : null}

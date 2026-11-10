@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
@@ -30,9 +30,10 @@ describe('useShoppingActions', () => {
     const { result, spy } = setup()
     await act(() => result.current.tick({ ingredientId: 2, to: '2026-11-15', quantity: 1400, shopId: 1 }))
     expect(api.tick).toHaveBeenCalledWith({ ingredientId: 2, to: '2026-11-15', quantity: 1400, shopId: 1, clientUuid: expect.stringMatching(/^[0-9a-f-]{36}$/) })
-    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0])
-    expect(keys).toContain('shopping')
-    expect(keys).toContain('stock')
+    const keys = () => spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0])
+    expect(keys()).toContain('stock')
+    // the list is refreshed through the shared scheduler (lib/liveRefresh): once, a little later
+    await waitFor(() => expect(keys()).toContain('shopping'))
   })
 
   it('uses a different client id for each tick', async () => {
@@ -67,13 +68,16 @@ describe('useShoppingActions', () => {
     expect(api.addExtra).toHaveBeenCalledWith({ text: 'candles' })
     expect(api.deleteExtra).toHaveBeenCalledWith(4)
     expect(api.untickExtra).toHaveBeenCalledWith(4)
-    expect(spy).toHaveBeenCalledTimes(4)
+    // four actions inside one burst window refresh the list once
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['shopping'] }, { cancelRefetch: false }))
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   it('a failed call rejects and refreshes nothing', async () => {
     api.addExtra.mockRejectedValue(new ApiError(422, 'validation_failed', 'bad'))
     const { result, spy } = setup()
     await expect(act(() => result.current.addExtra({ text: ' ' }))).rejects.toMatchObject({ code: 'validation_failed' })
+    await new Promise((resolve) => setTimeout(resolve, 400))
     expect(spy).not.toHaveBeenCalled()
   })
 })

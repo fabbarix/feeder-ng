@@ -1,4 +1,5 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
+import type { ArchivedProduct } from './lib/archivedProduct'
 import type { OfflineData, Op, ScanResult } from './types'
 
 export interface ScanApi {
@@ -8,6 +9,12 @@ export interface ScanApi {
   sync(ops: Op[]): Promise<ScanResult[]>
   undo(clientUuid: string): Promise<{ undone: boolean; alreadyUndone?: boolean }>
   setPrice(clientUuid: string, priceCents: number): Promise<ScanResult>
+  /** R8: GET /api/resolve?barcode=&shop=; `archivedProduct` is set when only an archived Product owns the code */
+  findArchived(barcode: string, shopId: number | null): Promise<ArchivedProduct | null>
+  /** R8: GET /api/products/{id} (an archived Product is served too), for its name */
+  product(id: number): Promise<ArchivedProduct>
+  /** R8: POST /api/products/{id}/unarchive; answers the Product */
+  unarchiveProduct(id: number): Promise<ArchivedProduct>
 }
 
 export interface ScanApiOptions {
@@ -30,6 +37,13 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
     },
     undo: (uuid) => client.post(`/api/scan/${encodeURIComponent(uuid)}/undo`),
     setPrice: (uuid, priceCents) => client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, { priceCents }),
+    async findArchived(barcode, shopId) {
+      const q = new URLSearchParams({ barcode })
+      if (shopId != null) q.set('shop', String(shopId))
+      return (await client.get<{ archivedProduct: ArchivedProduct | null }>(`/api/resolve?${q}`)).archivedProduct
+    },
+    product: (id) => client.get<ArchivedProduct>(`/api/products/${id}`),
+    unarchiveProduct: (id) => client.post<ArchivedProduct>(`/api/products/${id}/unarchive`),
   }
 }
 

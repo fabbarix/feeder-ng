@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ShopPicker } from './ShopPicker'
@@ -8,37 +8,51 @@ const shops = [
   { id: 2, name: 'Coop' },
 ]
 
-describe('ShopPicker', () => {
-  it('puts the last used Shop first and picks it', async () => {
+const rows = () => within(screen.getByRole('list', { name: 'Shops' })).getAllByRole('listitem')
+
+describe('ShopPicker (ListRows, ui-fix-plan 5.6)', () => {
+  it('puts the last used Shop first, marked with a check and "Last used", and picks it', async () => {
     const onPick = vi.fn()
     render(<ShopPicker shops={shops} lastShopId={2} onPick={onPick} onStockTake={() => {}} />)
-    const buttons = screen.getAllByRole('button').map((b) => b.textContent)
-    expect(buttons[0]).toContain('Coop (last used)')
-    expect(buttons).toContain('Aldi')
-    await userEvent.click(screen.getByRole('button', { name: 'Coop (last used)' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Where are you shopping?' })).toBeInTheDocument()
+    expect(rows()[0]).toHaveTextContent('Coop')
+    expect(rows()[0]).toHaveTextContent('Last used')
+    expect(rows()[0]).toHaveAttribute('data-selected', 'true')
+    expect(within(rows()[0]!).getByRole('button', { name: 'Coop' })).toHaveAttribute('aria-current', 'true')
+    expect(rows()[1]).not.toHaveAttribute('data-selected')
+    expect(rows()[1]).toHaveTextContent('Aldi')
+    await userEvent.click(within(rows()[0]!).getByRole('button'))
     expect(onPick).toHaveBeenCalledWith({ id: 2, name: 'Coop' })
   })
 
-  it('lists the Shops alphabetically when none was used yet', () => {
+  it('lists the Shops alphabetically when none was used yet, with a storefront icon each', () => {
     render(<ShopPicker shops={[...shops].reverse()} lastShopId={null} onPick={() => {}} onStockTake={() => {}} />)
-    expect(screen.getAllByRole('button').map((b) => b.textContent).slice(0, 2)).toEqual(['Aldi', 'Coop'])
+    expect(rows().slice(0, 2).map((r) => r.textContent)).toEqual([expect.stringContaining('Aldi'), expect.stringContaining('Coop')])
+    expect(rows()[0]!.querySelector('svg')).not.toBeNull()
   })
 
   it('ignores a last Shop that no longer exists', () => {
     render(<ShopPicker shops={shops} lastShopId={99} onPick={() => {}} onStockTake={() => {}} />)
-    expect(screen.queryByText(/last used/)).toBeNull()
+    expect(screen.queryByText('Last used')).toBeNull()
   })
 
-  it('starts a Stock-take at home', async () => {
+  it('"Stock-take at home" is the final row', async () => {
     const onStockTake = vi.fn()
     render(<ShopPicker shops={shops} lastShopId={null} onPick={() => {}} onStockTake={onStockTake} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Stock-take at home' }))
+    const last = rows()[rows().length - 1]!
+    expect(last).toHaveTextContent('Stock-take at home')
+    await userEvent.click(within(last).getByRole('button'))
     expect(onStockTake).toHaveBeenCalledTimes(1)
   })
 
-  it('still offers the Stock-take with no Shops', () => {
+  it('still offers the Stock-take with no Shops, and says where Shops come from', () => {
     render(<ShopPicker shops={[]} lastShopId={null} onPick={() => {}} onStockTake={() => {}} />)
     expect(screen.getByText(/Admin adds Shops/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Stock-take at home/ })).toBeInTheDocument()
+  })
+
+  it('has no Tile-as-button and no Button of its own (rows are the targets)', () => {
+    const { container } = render(<ShopPicker shops={shops} lastShopId={2} onPick={() => {}} onStockTake={() => {}} />)
+    expect(container.querySelector('.tile[role=button]')).toBeNull()
   })
 })

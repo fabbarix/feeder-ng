@@ -1,28 +1,53 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import { CostTile } from './CostTile'
 
+const base = { unpriced: 0, currency: 'USD', shopName: 'Coop' as string | null, onScan: () => {} }
+
 describe('CostTile', () => {
-  it('shows the estimate in the household currency', () => {
-    render(<CostTile estimatedCostCents={1350} unpriced={0} currency="USD" />)
-    expect(screen.getByText('Estimated cost')).toBeInTheDocument()
+  it('shows the estimate in the household currency, "est. at <Shop>"', () => {
+    render(<CostTile {...base} estimatedCostCents={1350} />)
     expect(screen.getByText('$13.50')).toBeInTheDocument()
-    expect(screen.queryByText(/without a price/)).toBeNull()
+    expect(screen.getByText('est. at Coop')).toBeInTheDocument()
+    expect(screen.queryByText(/lines? (have|has) no Price yet/)).toBeNull()
+  })
+
+  it('says only "est." when no Shop is picked', () => {
+    render(<CostTile {...base} shopName={null} estimatedCostCents={1350} />)
+    expect(screen.getByText('est.')).toBeInTheDocument()
   })
 
   it('says how many Lines have no Price', () => {
-    render(<CostTile estimatedCostCents={1350} unpriced={2} currency="EUR" />)
+    render(<CostTile {...base} currency="EUR" unpriced={2} estimatedCostCents={1350} />)
     expect(screen.getByText('€13.50')).toBeInTheDocument()
-    expect(screen.getByText('2 without a price')).toBeInTheDocument()
+    expect(screen.getByText('2 lines have no Price yet')).toBeInTheDocument()
   })
 
-  it('shows a dash when nothing is priced', () => {
-    render(<CostTile estimatedCostCents={0} unpriced={3} currency="USD" />)
-    expect(screen.getByText('—')).toBeInTheDocument()
+  it('uses the singular for one unpriced Line', () => {
+    render(<CostTile {...base} unpriced={1} estimatedCostCents={1350} />)
+    expect(screen.getByText('1 line has no Price yet')).toBeInTheDocument()
   })
 
-  it('shows zero for an empty list', () => {
-    render(<CostTile estimatedCostCents={0} unpriced={0} currency="USD" />)
-    expect(screen.getByText('$0.00')).toBeInTheDocument()
+  it('QA: with no Price at all there is no amount, no "Estimated cost" and no dash', () => {
+    const { container } = render(<CostTile {...base} unpriced={3} estimatedCostCents={0} />)
+    expect(container).not.toHaveTextContent('$0.00')
+    expect(container).not.toHaveTextContent('—')
+    expect(screen.queryByText('Estimated cost')).toBeNull()
+    expect(screen.getByText('3 lines have no Price yet')).toBeInTheDocument()
+  })
+
+  it('QA: an empty list shows no "$0.00" either', () => {
+    const { container } = render(<CostTile {...base} unpriced={0} estimatedCostCents={0} />)
+    expect(container).not.toHaveTextContent('$0.00')
+  })
+
+  it('always offers Scan (a small accent-secondary Button)', async () => {
+    const onScan = vi.fn()
+    render(<CostTile {...base} estimatedCostCents={0} onScan={onScan} />)
+    const scan = screen.getByRole('button', { name: 'Scan' })
+    expect(scan).toHaveAttribute('data-variant', 'accent-secondary')
+    await userEvent.click(scan)
+    expect(onScan).toHaveBeenCalledTimes(1)
   })
 })
