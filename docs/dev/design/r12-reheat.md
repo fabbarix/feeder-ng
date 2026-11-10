@@ -155,7 +155,7 @@ Red, added in revision 2 (reheat time and icon):
 
 Green regression guards (backend already behaves this way): `app/chromeless.test.ts` row for `/cook/reheat/...`, and `bdd/features/planning/reheat.feature` (steps in `bdd/steps_reheat_test.go`): a Leftover meal is `not_cookable` in Cook Mode; the Reheat timer is scoped to the meal; Cooked consumes the Leftover, leaves Stock alone and cancels the meal's timers (not free timers); cancelling the timer changes nothing else; Not cooked cancels it too.
 
-## Docs to apply (after R11c merges, except where marked; do not edit GLOSSARY.md or functional-spec.md now)
+## Docs to apply (APPLIED in round 3: GLOSSARY.md, functional-spec.md sections 4, 8, 11, 13, wp2-icons.md; recipe-file.md and strings.ts are applied by the feature code)
 
 **GLOSSARY.md**, in the Cook Mode area, after `Cook Mode`:
 
@@ -203,4 +203,9 @@ In the Agent Prompt template, after rule 11 (rule 11 stays as is):
 2. Reheat is offered only for today's meal, not tomorrow's Leftover meal.
 3. *(Answered by the user, R3)* A Recipe may carry its own reheat time; the formula (2 min + 1 min per extra portion, cap 10) is only the fallback.
 4. *(Answered by the user, R4)* Dedicated `reheat` icon (Phosphor `Fire`); done.
-5. A Recipe time is flat for the Planned Meal: it does not grow with the number of portions. Say if it should (the time is for one portion today).
+5. *(Confirmed by the user)* A Recipe time is flat for the Planned Meal: it does not grow with the number of portions. Say if it should (the time is for one portion today).
+
+## Decisions recorded (round 3)
+
+- The per-Recipe Reheat time is flat for the Planned Meal (user confirmed); Reheat clamps it to the screen's 30 s to 30 min range.
+- Validation errors use `validation_failed` with `reason: reheat_invalid`, `field: reheatMinutes`.
