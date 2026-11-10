@@ -184,13 +184,13 @@ and in section 13 "Import and export" a sentence: "A Recipe's Reheat time travel
 **docs/spec/recipe-file.md** (not under review elsewhere; the developer applies it, the test `TestRecipeFileMDDocumentsReheatMinutes` and `TestTheAgentPromptTellsTheAgentAboutReheatMinutes` pin it). In the Recipes table, after the `leftoverUseByDays` row:
 
 ```
-| `reheatMinutes` | Optional. Whole minutes (1 to 30) to reheat a portion of this Recipe's Leftover; Reheat uses it as its default timer. Omit it (or `null`) when unknown: Reheat then uses its own formula. An optional, backwards compatible addition to version 1: files without it stay valid, so the version stays `1`; only a Feeder older than this field rejects a file that has it (unknown properties are not allowed). |
+| `reheatMinutes` | Optional. Whole minutes (1 to 30) to reheat a typical serving of this Recipe's Leftover; Reheat uses it as its default timer. Omit it (or `null`) when unknown: Reheat then uses its own formula. An optional, backwards compatible addition to version 1: files without it stay valid, so the version stays `1`; only a Feeder older than this field rejects a file that has it (unknown properties are not allowed). |
 ```
 
 In the Agent Prompt template, after rule 11 (rule 11 stays as is):
 
 ```
-12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat one Leftover portion. Omit it when the source does not say; never guess.
+12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
 ```
 
 **web/src/features/recipes/strings.ts** (exact strings the tests use): `fields.reheat: 'Reheat time (minutes)'`, `fields.reheatHint: 'Blank: Reheat works it out from the portions'`, `codeMessage` `reheat_invalid: 'Reheat time must be 1 to 30 minutes.'`.

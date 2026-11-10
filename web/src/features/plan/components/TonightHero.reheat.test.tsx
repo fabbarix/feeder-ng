@@ -49,4 +49,12 @@ describe('TonightHero: Reheat (R12)', () => {
     setup(before, 'leftover')
     expect(screen.queryByRole('button', { name: 'Reheat' })).not.toBeInTheDocument()
   })
+
+  it('without an onReheat handler the Reheat button is not shown, before or after the slot time', () => {
+    for (const now of [before, after]) {
+      const { unmount } = render(<TonightHero slot={served} now={now} action="reheat" onCook={vi.fn()} onYesCooked={vi.fn()} onAdjust={vi.fn()} />)
+      expect(screen.queryByRole('button', { name: 'Reheat' })).not.toBeInTheDocument()
+      unmount()
+    }
+  })
 })

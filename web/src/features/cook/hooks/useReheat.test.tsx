@@ -81,4 +81,53 @@ describe('useReheat (R12)', () => {
     await act(() => result.current.cancel())
     expect(api.cancelTimer).toHaveBeenCalledWith(5)
   })
+
+  it('two start() calls before the refetch post exactly one timer', async () => {
+    const { result } = setup()
+    await waitFor(() => expect(api.timers).toHaveBeenCalled())
+    let release: (t: CookTimer) => void = () => {}
+    api.startTimer.mockReturnValue(new Promise<CookTimer>((r) => { release = r }))
+    let first: Promise<void> = Promise.resolve()
+    let second: Promise<void> = Promise.resolve()
+    act(() => {
+      first = result.current.start()
+      second = result.current.start()
+    })
+    expect(result.current.starting).toBe(true)
+    await act(async () => {
+      release(timer())
+      await Promise.all([first, second])
+    })
+    expect(api.startTimer).toHaveBeenCalledTimes(1)
+    expect(result.current.starting).toBe(false)
+  })
+
+  it('a failed start reports through onError, clears starting and does not reject', async () => {
+    api.timers.mockResolvedValue({ now: NOW, timers: [] })
+    api.startTimer.mockRejectedValue(new Error('boom'))
+    const onError = vi.fn()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const { result } = renderHook(() => useReheat(key, 2, null, onError), { wrapper })
+    await waitFor(() => expect(api.timers).toHaveBeenCalled())
+    await act(() => result.current.start())
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(result.current.starting).toBe(false)
+  })
+
+  it('failed pause, resume and cancel report through onError and do not reject', async () => {
+    api.timers.mockResolvedValue({ now: NOW, timers: [timer()] })
+    api.pauseTimer.mockRejectedValue(new Error('x'))
+    api.resumeTimer.mockRejectedValue(new Error('x'))
+    api.cancelTimer.mockRejectedValue(new Error('x'))
+    const onError = vi.fn()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const { result } = renderHook(() => useReheat(key, 2, null, onError), { wrapper })
+    await waitFor(() => expect(result.current.timer?.id).toBe(5))
+    await act(() => result.current.pause())
+    await act(() => result.current.resume())
+    await act(() => result.current.cancel())
+    expect(onError).toHaveBeenCalledTimes(3)
+  })
 })

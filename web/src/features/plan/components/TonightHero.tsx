@@ -16,6 +16,7 @@ export interface TonightHeroProps {
   /** "Yes, Cooked": mark Cooked with the planned Leftover portions in one tap. */
   onYesCooked: (key: SlotKey) => void
   /** R12 "Reheat": open the Reheat screen of a meal served from a Leftover (lib/hero action 'reheat'). */
+  /** Required for the Reheat action: without it the Reheat button is not shown. */
   onReheat?: (key: SlotKey) => void
   /** "Adjust": open the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
@@ -37,6 +38,7 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   if (!meal) return null
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const phase = heroPhase(slot, now)
+  const canReheat = action === 'reheat' && onReheat !== undefined
   const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
   // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
   const chips = [...leftoverChip(meal), ...heroChips(meal, { slotDate: slot.date })].slice(0, 2)
@@ -66,8 +68,8 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
           <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
             {heroCookLabel(meal)}
           </Button>
-        ) : action === 'reheat' ? (
-          <Button variant="primary" icon="reheat" onClick={() => onReheat?.(key)}>
+        ) : canReheat ? (
+          <Button variant="primary" icon="reheat" onClick={() => onReheat(key)}>
             {s.reheat}
           </Button>
         ) : null
@@ -76,8 +78,8 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
           <Button variant="primary" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
             {s.yesCooked}
           </Button>
-          {action === 'reheat' ? (
-            <Button variant="secondary" icon="reheat" disabled={busy} onClick={() => onReheat?.(key)}>
+          {canReheat ? (
+            <Button variant="secondary" icon="reheat" disabled={busy} onClick={() => onReheat(key)}>
               {s.reheat}
             </Button>
           ) : (

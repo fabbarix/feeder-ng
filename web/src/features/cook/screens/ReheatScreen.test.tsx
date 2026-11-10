@@ -127,4 +127,45 @@ describe('ReheatScreen (R12)', () => {
     renderReheat()
     expect(await screen.findByText('This Planned Meal has already been cooked or skipped')).toBeInTheDocument()
   })
+
+  it('a finished Reheat timer says it is ready and offers Dismiss, which deletes it', async () => {
+    const finished: CookTimer = { ...running, state: 'finished', remainingSeconds: 0 }
+    const api = mockApi({ ...base(), 'GET /api/cook/timers': timers([finished]), 'DELETE /api/cook/timers/5': { status: 204 } })
+    renderReheat()
+    expect(await screen.findByText('Reheat is ready')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancel timer' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/5')).toHaveLength(1))
+  })
+
+  it('a paused Reheat timer offers Resume', async () => {
+    mockApi({ ...base(), 'GET /api/cook/timers': timers([{ ...running, state: 'paused' }]) })
+    renderReheat()
+    expect(await screen.findByRole('button', { name: 'Resume' })).toBeInTheDocument()
+  })
+
+  it('a failed Start timer shows the error toast', async () => {
+    mockApi({ ...base(), 'POST /api/cook/timers': { status: 500, json: { error: { code: 'internal', message: 'x' } } } })
+    renderReheat()
+    await userEvent.click(await screen.findByRole('button', { name: 'Start timer' }))
+    expect(await findNotice('alert', 'That did not work. Try again.')).toBeInTheDocument()
+  })
+
+  it('never flashes the already-cooked message while leaving after Mark as Cooked', async () => {
+    let plan = planView()
+    mockApi({
+      ...base(),
+      'GET /api/plan': () => plan,
+      'GET /api/plan/2026-11-10/2/cook': preview,
+      'POST /api/plan/2026-11-10/2/cooked': () => {
+        plan = planView({ state: 'cooked' })
+        return cooked
+      },
+    })
+    renderReheat()
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark as Cooked' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(screen.queryByText('This Planned Meal has already been cooked or skipped')).not.toBeInTheDocument()
+  })
 })

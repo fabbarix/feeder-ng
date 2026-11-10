@@ -32,6 +32,8 @@ export const cookStrings = {
   pause: 'Pause',
   resume: 'Resume',
   cancelTimer: 'Cancel timer',
+  dismissTimer: 'Dismiss',
+  reheatError: 'That did not work. Try again.',
   add30: 'Add 30 seconds',
   remove30: 'Remove 30 seconds',
   notALeftover: 'This Planned Meal is not served from a Leftover',

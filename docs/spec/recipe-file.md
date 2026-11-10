@@ -55,7 +55,7 @@ Anything else is an **unconvertible unit**. Import Review asks for the conversio
 | `tags` | Free labels, matched by name to the household's Tags and created if missing. |
 | `cooldownDays` | Overrides the household default Cool-down. |
 | `leftoverUseByDays` | Overrides the household default Leftover Use-by. `0` means leftovers must be eaten the same day. |
-| `reheatMinutes` | Optional. Whole minutes (1 to 30) to reheat a portion of this Recipe's Leftover; Reheat uses it as its default timer. Omit it (or `null`) when unknown: Reheat then uses its own formula. An optional, backwards compatible addition to version 1: files without it stay valid, so the version stays `1`; only a Feeder older than this field rejects a file that has it (unknown properties are not allowed). |
+| `reheatMinutes` | Optional. Whole minutes (1 to 30) to reheat a typical serving of this Recipe's Leftover; Reheat uses it as its default timer. Omit it (or `null`) when unknown: Reheat then uses its own formula. An optional, backwards compatible addition to version 1: files without it stay valid, so the version stays `1`; only a Feeder older than this field rejects a file that has it (unknown properties are not allowed). |
 | `image` | Recipe photo (see Images). |
 | `source` | `url` and/or `attribution` of where the recipe came from. |
 | `ingredients` | Quantities for **one Batch**. `optional: true` lines are shown but not added to the Shopping List. |
@@ -124,7 +124,7 @@ Rules:
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".
 11. Several recipes in the input become several entries in "recipes", sharing one "ingredients" list.
-12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat one Leftover portion. Omit it when the source does not say; never guess.
+12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
 
 JSON Schema:
 {{SCHEMA}}
