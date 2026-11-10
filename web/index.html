@@ -3,12 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#3f7d58" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7f4eb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090f0b" />
     <meta name="description" content="Feeder: family meal planning" />
     <title>Feeder</title>
+    <!-- Boot paint: the page background in the right scheme before React mounts (no white flash in dark). Background only. -->
+    <style>
+      html { background: #e7f4eb; }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-scheme='light']) { background: #090f0b; }
+      }
+      html[data-scheme='dark'] { background: #090f0b; }
+      /* Centred Feeder mark until React mounts. The rule matches only while the mark is in #root, so the app is unaffected. */
+      #root:has(> .boot-mark) { display: grid; place-items: center; min-height: 100dvh; }
+      .boot-mark { display: grid; justify-items: center; gap: 8px; font-weight: 700; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-mark" role="img" aria-label="Feeder"><svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span aria-hidden="true">Feeder</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

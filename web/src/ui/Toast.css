@@ -1,9 +1,9 @@
 /* Toast (docs/design/ui-fix-plan.md 4.8): inverse surface, radius 16, padding 12 16, region above the nav
-   (98 px plus the safe area), max-width 420, stack of 2. Tokens only. */
+   (--nav-clearance, which already holds the safe area, plus a gap), max-width 420, stack of 2. Tokens only. */
 .toast-region {
   position: fixed;
   inset-inline: 16px;
-  bottom: calc(98px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--nav-clearance) + var(--space-3));
   z-index: 30;
   display: flex;
   flex-direction: column;

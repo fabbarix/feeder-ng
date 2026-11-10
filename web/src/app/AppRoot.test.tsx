@@ -2,15 +2,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AppRoot } from './AppRoot'
+import { findNotice } from '../test/notices'
+import { AppRoot, type AppRootProps } from './AppRoot'
+
+vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
 
 afterEach(() => vi.unstubAllGlobals())
 
-function mount(path: string, me: Response) {
+function mount(path: string, me: Response, props: AppRootProps = {}) {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(me))
   // A catch-all child stands in for the signin feature's routes, which the real app mounts under AppRoot.
   const router = createMemoryRouter(
-    [{ path: '/', element: <AppRoot />, children: [{ path: 'plan', element: <p>plan page</p> }, { path: '*', element: <p>other page</p> }] }],
+    [{ path: '/', element: <AppRoot {...props} />, children: [{ path: 'plan', element: <p>plan page</p> }, { path: '*', element: <p>other page</p> }] }],
     { initialEntries: [path] },
   )
   render(
@@ -44,5 +47,18 @@ describe('AppRoot signed in', () => {
     mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }))
     expect(await screen.findByText('plan page')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Your menu' })).toBeInTheDocument()
+  })
+
+  it('calls every feature useShellStatus hook and shows the summed pendingScans in the banner', async () => {
+    mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }), {
+      statusHooks: [() => ({ pendingScans: 2 }), () => ({}), () => ({ pendingScans: 1 })],
+    })
+    expect(await findNotice('status', '3 Scans waiting to sync')).toBeInTheDocument()
+  })
+
+  it('shows no pending line when no hook reports scans', async () => {
+    mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }))
+    expect(await screen.findByText('plan page')).toBeInTheDocument()
+    expect(screen.queryByText(/waiting to sync/)).toBeNull()
   })
 })

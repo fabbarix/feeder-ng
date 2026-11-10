@@ -1,0 +1,312 @@
+/* App shell (docs/design/ui-fix-plan.md 4.5, 5.17; docs/dev/design/wp5-shell.md). Tokens only: no colour or px font-size literals. */
+
+:root {
+  --nav-height: 70px;
+  --nav-inset: 12px;
+  /* Content clearance above the floating bottom bar: nothing ends up behind it. Zero from 1024 (no bottom bar). */
+  --nav-clearance: calc(var(--nav-height) + var(--nav-inset) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Frame */
+.app-shell {
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+/* Kitchen board and Cook Mode: the page alone, full viewport, never the rail grid (B3). */
+.app-shell--chromeless {
+  display: block;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 64px;
+  padding-inline: var(--gutter);
+}
+
+/* The brand word is dropped on phones (the bar is narrow); the avatar stays top right. */
+.top-bar__brand {
+  display: none;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+.app-status {
+  grid-column: 1 / -1;
+}
+
+.app-main {
+  min-width: 0;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  padding-bottom: var(--nav-clearance);
+}
+
+.app-main--full {
+  max-width: none;
+  margin: 0;
+  padding-inline: 0;
+  padding-bottom: 0;
+}
+
+/* Phone: floating bottom bar, inset 12 px plus the safe area, centred up to 480 px. */
+.bottom-bar {
+  position: fixed;
+  left: var(--nav-inset);
+  right: var(--nav-inset);
+  bottom: calc(var(--nav-inset) + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  height: var(--nav-height);
+  max-width: 480px;
+  margin-inline: auto;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-nav);
+  box-shadow: var(--elev-2);
+}
+
+.bottom-bar__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 62px;
+  height: 54px;
+  border-radius: var(--radius-button);
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.bottom-bar__link[aria-current='page'] {
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+/* Scan: the accent button, in the bar (not raised). Rules after the current-tab rule so the accent wins. */
+.bottom-bar__link[data-accent='true'] {
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius-button-lg);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.bottom-bar__link[data-accent='true'][aria-current='page'] {
+  box-shadow: 0 0 0 3px var(--color-soft);
+}
+
+.bottom-bar__label {
+  font-size: var(--text-nav-size);
+  line-height: 1;
+  font-weight: var(--text-nav-weight);
+}
+
+/* Side rail: hidden on phones; the grid column and the rail appear from 1024. */
+.side-rail {
+  display: none;
+}
+
+.side-rail__label {
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+}
+
+/* Tablet landscape and desktop */
+@media (min-width: 1024px) {
+  :root {
+    --nav-clearance: 0px;
+  }
+
+  .app-shell {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .app-shell:not(.app-shell--chromeless) {
+    display: grid;
+    /* Rows take their content height: the rail and the page start at the top, not stretched to fill the frame. */
+    align-content: start;
+    padding-bottom: var(--space-6);
+  }
+
+  .top-bar {
+    grid-column: 1 / -1;
+  }
+
+  .top-bar__brand {
+    display: block;
+  }
+
+  .side-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100dvh;
+    padding-block: var(--space-3);
+  }
+
+  .side-rail__link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 56px;
+    height: 56px;
+    margin-inline: auto;
+    border-radius: var(--radius-button);
+    color: var(--color-muted);
+    text-decoration: none;
+  }
+
+  .side-rail__link[aria-current='page'] {
+    color: var(--color-accent-text);
+  }
+
+  /* The 88 px rail: the soft pill is a 56 x 32 span behind the icon. */
+  .side-rail__pill {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 32px;
+    border-radius: var(--radius-button);
+  }
+
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    background: var(--color-soft);
+  }
+
+  .side-rail__link[data-accent='true'] {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .bottom-bar {
+    display: none;
+  }
+}
+
+/* Expanded rail: icon and label in rows */
+@media (min-width: 1440px) {
+  .app-shell:not(.app-shell--chromeless) {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .side-rail__link {
+    flex-direction: row;
+    justify-content: flex-start;
+    height: 48px;
+    padding-inline: var(--space-4);
+    width: auto;
+    margin-inline: var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .side-rail__link[data-accent='true'] {
+    height: 56px;
+  }
+
+  /* From 1440 the whole row is the current pill; the icon span stops being one. */
+  .side-rail__link[aria-current='page'] {
+    background: var(--color-soft);
+  }
+
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    background: none;
+  }
+
+  .side-rail__label {
+    font-size: var(--text-body-strong-size);
+    line-height: var(--text-body-strong-line);
+    font-weight: var(--text-body-strong-weight);
+  }
+}
+
+/* Avatar menu (5.17): trigger, scrim and popover */
+.your-menu-anchor {
+  position: relative;
+  /* Phones: one item in the top bar, pushed to the right edge (the brand word is hidden there). */
+  margin-left: auto;
+}
+
+.your-menu-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface-2);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.your-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: var(--scrim);
+}
+
+.your-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: var(--space-2);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+  box-shadow: var(--elev-2);
+}
+
+.your-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.your-menu__item:hover {
+  background: var(--color-soft);
+}
+
+.your-menu__item[data-tone='danger'] {
+  color: var(--status-danger-fg);
+}
+
+.your-menu__divider {
+  height: 1px;
+  margin-block: var(--space-2);
+  background: var(--color-line);
+}

@@ -3,22 +3,34 @@
 import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { ComingSoon } from './ComingSoon'
+import { NotFound } from './NotFound'
 import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
+
+/** What a feature tells the shell's status slot. The scan feature will export one from features/scan/index.ts. */
+export interface ShellStatusInfo {
+  pendingScans?: number
+}
+export type ShellStatusHook = () => ShellStatusInfo
 
 export interface FeatureModule {
   routes: RouteObject[]
   navItems?: NavItem[]
+  /** A React hook the shell calls on every render, in a fixed order (see AppRoot). */
+  useShellStatus?: ShellStatusHook
 }
 
 export interface CollectedFeatures {
   routes: RouteObject[]
   navItems: NavItem[]
+  /** The features' useShellStatus hooks, in module key order. */
+  statusHooks: ShellStatusHook[]
 }
 
 /** Merges feature modules. Modules are read in key order, so the result does not depend on object order. */
 export function collectFeatures(modules: Record<string, FeatureModule>): CollectedFeatures {
   const routes: RouteObject[] = []
   const navItems: NavItem[] = []
+  const statusHooks: ShellStatusHook[] = []
   const owners = new Map<string, string>()
   for (const key of Object.keys(modules).sort()) {
     const mod = modules[key]!
@@ -32,8 +44,9 @@ export function collectFeatures(modules: Record<string, FeatureModule>): Collect
       routes.push(route)
     }
     navItems.push(...(mod.navItems ?? []))
+    if (mod.useShellStatus) statusHooks.push(mod.useShellStatus)
   }
-  return { routes, navItems: sortByOrder(navItems) }
+  return { routes, navItems: sortByOrder(navItems), statusHooks }
 }
 
 /** Shell routes: every feature route, plus a "coming soon" page for each core destination no feature provides. */
@@ -43,7 +56,8 @@ export function buildRoutes(modules: Record<string, FeatureModule>): RouteObject
   const placeholders: RouteObject[] = [...PRIMARY_NAV, ...MENU_NAV]
     .filter((dest) => !provided.has(dest.path))
     .map((dest) => ({ path: dest.path, element: createElement(ComingSoon, { title: dest.label }) }))
-  return [...routes, ...placeholders]
+  // Catch-all last: any path no route claims shows Page not found inside the shell.
+  return [...routes, ...placeholders, { path: '*', element: createElement(NotFound) }]
 }
 
 /** The discovered feature modules, keyed by file path. */

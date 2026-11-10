@@ -30,6 +30,7 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | ingredients | `Carrot` |
 | products | `ShoppingBagOpen` |
 | shops | `Storefront` |
+| board | `Monitor` |
 | settings | `GearSix` |
 | signOut | `SignOut` |
 | household | `HouseLine` |
