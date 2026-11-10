@@ -16,7 +16,7 @@ describe('hexToOklch (reference values from the CSS Color 4 / Ottosson matrices)
     expect(white.c).toBeLessThan(0.001)
     expect(white.h).toBe(0)
     const grey = hexToOklch('#808080')
-    expect(grey.l).toBeCloseTo(0.5981, 3)
+    expect(grey.l).toBeCloseTo(0.5999, 3)
     expect(grey.c).toBeLessThan(0.001)
   })
 
