@@ -1,7 +1,6 @@
 import { http } from '../../lib/http'
 import type {
   IngredientRef,
-  IngredientSearch,
   MemberPreferences,
   PreferenceState,
   Recipe,
@@ -44,12 +43,6 @@ export const recipesApi = {
   tags: () => http.get<TagCount[]>('/api/tags'),
   /** Sends the photo as a JSON data URL (the server refuses multipart bodies). */
   uploadImage: async (file: File) => http.post<UploadedImage>('/api/images', { dataUrl: await readDataUrl(file) }),
-  /** Ingredient search for the line picker: the exact match first, then close suggestions. */
-  findIngredients: async (q: string): Promise<IngredientRef[]> => {
-    const res = await http.get<IngredientSearch>(`/api/ingredients/search?q=${encodeURIComponent(q)}`)
-    const found = [...(res.exact ? [res.exact] : []), ...res.suggestions.map((s) => s.ingredient)]
-    return found.filter((ing, i) => found.findIndex((other) => other.id === ing.id) === i)
-  },
   /** All Ingredients, with their Base Units and Unit Conversions (for unit pickers and quantities). */
   ingredients: () => http.get<IngredientRef[]>('/api/ingredients'),
   saveConversion: async (ingredientId: number, unit: string, toBase: number): Promise<void> => {

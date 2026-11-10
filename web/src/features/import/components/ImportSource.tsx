@@ -1,5 +1,5 @@
-import { useId, useState, type ChangeEvent, type ReactNode } from 'react'
-import { Button, Tile } from '../../../ui'
+import { useState, type ReactNode } from 'react'
+import { Button, FileDrop, Tile, TextArea } from '../../../ui'
 import { importStrings as s } from '../strings'
 
 export interface ImportSourceProps {
@@ -17,26 +17,36 @@ function readText(file: File): Promise<string> {
   })
 }
 
-/** Upload a .feeder.json file (labelled importStrings.uploadLabel; choosing one submits its text) or paste JSON (importStrings.pasteLabel) and press Review (disabled when blank or busy). */
+/**
+ * Step 2 of the import: a FileDrop for a .feeder.json file (choosing one submits its text; a file that is not JSON is
+ * refused with importStrings.rejectedFile) or pasted JSON in a text area, then Review (disabled when blank or busy).
+ */
 export function ImportSource({ busy, onSubmit }: ImportSourceProps): ReactNode {
   const [text, setText] = useState('')
-  const pasteId = useId()
-  const uploadId = useId()
+  /** Why the chosen file was refused (not JSON, or it could not be read), or null. */
+  const [error, setError] = useState<string | null>(null)
 
-  async function onFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    onSubmit(await readText(file))
+  const onFiles = async ([file]: File[]) => {
+    setError(null)
+    try {
+      onSubmit(await readText(file!))
+    } catch {
+      setError(s.readFailed)
+    }
   }
 
   return (
-    <Tile size="wide" as="section" aria-label={s.sourceTitle}>
-      <h2>{s.sourceTitle}</h2>
-      <label htmlFor={uploadId}>{s.uploadLabel}</label>
-      <input id={uploadId} type="file" accept=".json,application/json" disabled={busy} onChange={onFile} />
-      <label htmlFor={pasteId}>{s.pasteLabel}</label>
-      <textarea id={pasteId} rows={8} value={text} onChange={(e) => setText(e.target.value)} />
+    <Tile as="section" overline={s.stepOverline(2)} overlineIcon="import">
+      <h2>{s.stepTwoTitle}</h2>
+      <FileDrop
+        label={s.uploadLabel}
+        accept=".json,application/json"
+        disabled={busy}
+        error={error ?? undefined}
+        onFiles={(files) => void onFiles(files)}
+        onReject={() => setError(s.rejectedFile)}
+      />
+      <TextArea label={s.pasteLabel} rows={6} value={text} disabled={busy} onChange={setText} />
       <Button disabled={busy || text.trim() === ''} onClick={() => onSubmit(text)}>
         {s.review}
       </Button>

@@ -20,6 +20,9 @@ web/src/features/settings/strings.ts mode  # dark mode / Colour mode are colour 
 # "never" (recipes:98) is plain English in "Excluded Ingredients are never planned"; the term is Exclusion.
 web/src/features/recipes/strings.ts never  # ordinary adverb inside a sentence that uses Exclusion
 
+# "Export" (import:4-74) is the verb of the Export action, which downloads a Recipe File; the noun is always "Recipe File" (GLOSSARY: Recipe File avoids Export). The tests name the links Export.
+web/src/features/import/strings.ts export  # verb of the Export action, not the Recipe File noun
+
 # "wait" (recipes:123-124) is the verb in "A Step can only wait for an earlier Step" (a dependency rule), not a Passive Step label.
 web/src/features/recipes/strings.ts wait  # verb in a Step dependency message
 

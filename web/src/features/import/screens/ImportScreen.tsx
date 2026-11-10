@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { BentoGrid, Button, Tile } from '../../../ui'
+import { Link, useNavigate } from 'react-router-dom'
+import { BentoGrid, Button, IconButton, PageHeader, Tile } from '../../../ui'
+import { AgentPromptStep } from '../components/AgentPromptStep'
 import { ConfirmTile } from '../components/ConfirmTile'
 import { ImageWarningsTile } from '../components/ImageWarningsTile'
 import { ImportSource } from '../components/ImportSource'
@@ -12,30 +13,45 @@ import { useImportReview } from '../hooks/useImportReview'
 import { canConfirm, openCount } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { Plan } from '../types'
+import '../import.css'
 
 /**
- * Route /recipes/import. Phase 'source': ImportSource (+ ValidationErrorsTile when opening failed).
- * Phase 'reviewing': a BentoGrid of step tiles from lib/reviewSummary.reviewSteps: problems (list of Problem paths), IngredientMatchTile per
- * Ingredient, UnitPromptTile per prompt, RecipeConflictTile per conflicting Recipe, ImageWarningsTile, then ConfirmTile.
- * Phase 'done': importStrings.done(n), links "Open Recipes" (/recipes) and "Start over". `stale` shows importStrings.stale with "Start over".
- * All state comes from useImportReview.
+ * Route /recipes/import: three numbered steps. 1: the Agent Prompt. 2: the Recipe File (FileDrop or pasted JSON).
+ * 3: the review (from useImportReview): a tile per open question (Ingredient match, Unit Conversion, Recipe conflict),
+ * image warnings, and the sticky Confirm bar. Phase 'done' says what was imported. All state comes from useImportReview.
  */
 export function ImportScreen(): ReactNode {
+  const navigate = useNavigate()
   const r = useImportReview()
   return (
-    <main>
-      <h1>{s.importTitle}</h1>
+    <section className="import-screen">
+      <PageHeader title={s.importTitle} leading={<IconButton icon="back" label={s.back} onClick={() => navigate('/recipes')} />} />
       {r.error ? <ValidationErrorsTile error={r.error} /> : null}
-      {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
-      {r.phase === 'reviewing' && r.plan ? <Reviewing plan={r.plan} busy={r.busy} stale={r.stale} screen={r} /> : null}
       {r.phase === 'done' ? (
-        <Tile size="wide" as="section">
+        <Tile as="section" className="import-done">
           <p>{s.done(r.result?.recipes.length ?? 0)}</p>
-          <Link className="button" data-variant="primary" to="/recipes">{s.openRecipes}</Link>
-          <Button variant="ghost" onClick={() => void r.reset()}>{s.startOver}</Button>
+          <Link className="import-link-button" to="/recipes">
+            {s.openRecipes}
+          </Link>
+          <Button variant="tertiary" onClick={() => void r.reset()}>
+            {s.startOver}
+          </Button>
         </Tile>
-      ) : null}
-    </main>
+      ) : (
+        <>
+          <AgentPromptStep />
+          {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
+          <Tile as="section" className="import-review" overline={s.stepOverline(3)}>
+            <h2>{s.stepThreeTitle}</h2>
+            {r.phase === 'reviewing' && r.plan ? (
+              <Reviewing plan={r.plan} busy={r.busy} stale={r.stale} screen={r} />
+            ) : (
+              <p className="import-review__empty">{s.reviewEmpty}</p>
+            )}
+          </Tile>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -50,14 +66,16 @@ function Reviewing({ plan, busy, stale, screen }: ReviewingProps): ReactNode {
   return (
     <>
       {stale ? (
-        <Tile tone="spoil" role="alert" as="section">
+        <Tile variant="status" status="danger" role="alert" as="section">
           <p>{s.stale}</p>
-          <Button variant="ghost" onClick={() => void screen.reset()}>{s.startOver}</Button>
+          <Button variant="tertiary" onClick={() => void screen.reset()}>
+            {s.startOver}
+          </Button>
         </Tile>
       ) : null}
       {plan.problems.length > 0 ? (
-        <Tile tone="spoil" as="section">
-          <h2>{s.errorsTitle}</h2>
+        <Tile variant="status" status="spoil" as="section">
+          <h3>{s.errorsTitle}</h3>
           <ul>
             {plan.problems.map((p, i) => (
               <li key={`${p.path}-${i}`}>
@@ -69,12 +87,7 @@ function Reviewing({ plan, busy, stale, screen }: ReviewingProps): ReactNode {
       ) : null}
       <BentoGrid columns={2} label={s.ingredientsTitle}>
         {plan.ingredients.map((m) => (
-          <IngredientMatchTile
-            key={m.key}
-            match={m}
-            onUseExisting={(id) => screen.chooseExisting(m.key, id)}
-            onCreate={(opts) => screen.chooseCreate(m.key, opts)}
-          />
+          <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
         ))}
       </BentoGrid>
       {plan.unitPrompts.length > 0 ? (

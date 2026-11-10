@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Chip } from '../../../ui'
+import { IconButton } from '../../../ui'
 import type { UnitSystem } from '../../../lib/units'
 import { quantityText } from '../lib/lineUnits'
 import { recipeStrings } from '../strings'
@@ -14,26 +14,31 @@ export interface IngredientLinesListProps {
   exclusions?: { isExcluded: (ingredientId: number) => boolean; onToggle: (ingredientId: number) => void }
 }
 
-/** The ingredient lines of a Recipe in the User's display system, each with an Exclusion toggle when given. */
+/** The ingredient lines of a Recipe in the User's display system, as a two-column grid (quantity | name), each with an Exclusion toggle when given. */
 export function IngredientLinesList({ lines, refs, system, exclusions }: IngredientLinesListProps): ReactNode {
   return (
-    <ul>
-      {lines.map((l, i) => (
-        <li key={`${l.ingredientId}-${i}`}>
-          <span>{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</span> <span>{l.ingredient}</span>
-          {l.optional ? <span> ({recipeStrings.optional})</span> : null}
-          {l.note ? <span> {l.note}</span> : null}
-          {exclusions ? (
-            <Chip
-              tone="spoil"
-              selected={exclusions.isExcluded(l.ingredientId)}
-              onClick={() => exclusions.onToggle(l.ingredientId)}
-            >
-              {recipeStrings.excludeIngredient(l.ingredient ?? '')}
-            </Chip>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <dl className="ingredient-lines">
+      {lines.map((l, i) => {
+        const name = l.ingredient ?? ''
+        return (
+          <div key={`${l.ingredientId}-${i}`} className="ingredient-lines__row">
+            <dt className="ingredient-lines__quantity">{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</dt>
+            <dd className="ingredient-lines__name">
+              <span>{name}</span>
+              {l.optional ? <span className="ingredient-lines__tag">{recipeStrings.optional}</span> : null}
+              {l.note ? <span className="ingredient-lines__note">{l.note}</span> : null}
+              {exclusions ? (
+                <IconButton
+                  icon="exclusion"
+                  label={recipeStrings.excludeIngredient(name)}
+                  pressed={exclusions.isExcluded(l.ingredientId)}
+                  onClick={() => exclusions.onToggle(l.ingredientId)}
+                />
+              ) : null}
+            </dd>
+          </div>
+        )
+      })}
+    </dl>
   )
 }

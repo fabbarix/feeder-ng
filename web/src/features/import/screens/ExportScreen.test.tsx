@@ -19,7 +19,7 @@ describe('ExportScreen', () => {
     hook.current = base
     render(<MemoryRouter><ExportScreen /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: s.exportTitle })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: s.exportAll })).toHaveAttribute('href', '/api/recipe-file/export?all=1')
+    expect(screen.getByRole('link', { name: 'Export Recipe File' })).toHaveAttribute('href', '/api/recipe-file/export?all=1')
   })
   it('shows loading and error states', () => {
     hook.current = { ...base, recipes: [], isLoading: true }

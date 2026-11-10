@@ -49,3 +49,27 @@ export function quantityText(quantity: number, unit: string, ingredient: Ingredi
   if (unit.trim().toLowerCase() === ingredient.baseUnit) return formatQuantity(quantity, ingredient.baseUnit, system)
   return formatLineQuantity(quantity, unit, system)
 }
+
+/** What `ui/UnitSelect` takes for an Ingredient: Base Unit, its Unit Conversions, and the remaining global units of its Base Unit. */
+export interface UnitChoicesOf {
+  baseUnit: BaseUnit
+  conversions: { unit: string; toBase: number }[]
+  globalUnits: string[]
+}
+
+/** selectableUnits split into the three UnitSelect groups: globalUnits excludes the Base Unit and every conversion unit. */
+export function unitChoicesOf(ingredient: IngredientRef): UnitChoicesOf {
+  const conversions = ingredient.conversions.map((c) => ({ unit: c.unit, toBase: c.toBase }))
+  const taken = new Set<string>([ingredient.baseUnit, ...conversions.map((c) => norm(c.unit))])
+  const globalUnits = Object.keys(GLOBAL_UNITS[ingredient.baseUnit]).filter((u) => !taken.has(u))
+  return { baseUnit: ingredient.baseUnit, conversions, globalUnits }
+}
+
+/**
+ * True when a line or Step use has a unit the Ingredient does not know yet (the User typed a custom one): the
+ * server will answer 422 unknown_unit and the Unit Conversion prompt follows. False for blank units and while the Ingredient is unknown.
+ */
+export function needsConversion(unit: string, ingredient: IngredientRef | undefined): boolean {
+  if (!ingredient || norm(unit) === '') return false
+  return !isKnownUnit(unit, ingredient)
+}

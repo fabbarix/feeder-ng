@@ -6,7 +6,7 @@ import type { FileError } from '../types'
 /** A Tile (tone 'spoil', role alert) titled importStrings.errorsTitle: for a schema error one list item per error with the JSON path in <code> and the message; for the other kinds the matching sentence (importStrings.unsupportedVersion / notJson / tooLarge / the message). */
 export function ValidationErrorsTile({ error }: { error: FileError }): ReactNode {
   return (
-    <Tile tone="spoil" role="alert" as="section">
+    <Tile variant="status" status="danger" role="alert" as="section">
       <h2>{s.errorsTitle}</h2>
       <p>{s.errorsHelp}</p>
       {error.kind === 'schema' ? (

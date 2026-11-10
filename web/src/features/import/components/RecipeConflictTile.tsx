@@ -18,9 +18,9 @@ export function RecipeConflictTile({ recipe, onChoose }: RecipeConflictTileProps
   return (
     <Tile as="section">
       <h2>{s.conflictTitle(recipe.name)}</h2>
-      <div>
+      <div className="import-chips">
         {options.map((o) => (
-          <Chip key={o.action} selected={recipe.action === o.action} onClick={() => onChoose(o.action)}>
+          <Chip key={o.action} kind="filter" selected={recipe.action === o.action} onClick={() => onChoose(o.action)}>
             {o.label}
           </Chip>
         ))}

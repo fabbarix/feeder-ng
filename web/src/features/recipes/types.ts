@@ -98,12 +98,6 @@ export interface IngredientRef {
   conversions: { unit: string; toBase: number }[]
 }
 
-/** GET /api/ingredients/search: the exact match and close suggestions. */
-export interface IngredientSearch {
-  exact: IngredientRef | null
-  suggestions: { ingredient: IngredientRef; score: number }[]
-}
-
 export interface UploadedImage {
   id: string
   url: string

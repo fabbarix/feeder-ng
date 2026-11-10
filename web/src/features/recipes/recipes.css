@@ -1,0 +1,450 @@
+/* Recipes feature (WP9, ui-fix-plan 5.8 to 5.10). Layout and text on tokens only; the primitives carry their own look. */
+
+.recipes-screen,
+.recipe-detail,
+.recipe-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* Recipes list: the Tag filters scroll sideways; the fade edges appear only once the row has been scrolled. */
+.tag-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block: var(--space-1);
+  /* The end fades out (Tags past the edge); the start fades only once the row has been scrolled (TagChips). */
+  mask-image: linear-gradient(to right, currentColor calc(100% - var(--space-4)), transparent 100%);
+}
+
+.tag-chips[data-scrolled='true'] {
+  mask-image: linear-gradient(to right, transparent 0, currentColor var(--space-4), currentColor calc(100% - var(--space-4)), transparent 100%);
+}
+
+/* Recipes grid: BentoGrid renders 2 columns; 3 from 720 px and 4 from 1024 px. */
+@media (min-width: 720px) {
+  .recipes-screen .bento-grid[data-columns='2'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .recipes-screen .bento-grid[data-columns='2'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tag-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.recipe-tile {
+  min-inline-size: 0;
+}
+
+.recipe-tile__name {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.recipe-tile__meta,
+.recipe-tile__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.recipe-tile__meta {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.recipe-tile__time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Recipe detail */
+.recipe-detail__hint,
+.recipe-metric__ahead {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.recipe-metric {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  overflow-wrap: anywhere;
+}
+
+.recipe-detail__hero {
+  min-inline-size: 0;
+}
+
+/* The detail hero is capped at 170 px on the shared media container (it keeps 16:9 otherwise);
+   the thumb fills it and the image covers the box. */
+.recipe-detail__hero .tile__media {
+  aspect-ratio: auto;
+  max-block-size: 170px;
+}
+
+.recipe-detail__hero .recipe-thumb[data-size='hero'] {
+  block-size: 100%;
+  max-block-size: 170px;
+}
+
+/* A hero tile with nothing under the photo drops the bottom padding strip. */
+.recipe-detail__hero[data-variant='media']:has(> .tile__media:last-child) {
+  padding-block-end: 0;
+}
+
+.preference-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.recipes-overflow__archive {
+  padding-block: var(--space-2);
+}
+
+/* Ingredient lines: quantity and name in two columns, no bullets. */
+.ingredient-lines {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ingredient-lines__row {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.ingredient-lines__row dt,
+.ingredient-lines__row dd {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.ingredient-lines__quantity {
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.ingredient-lines__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.ingredient-lines__tag,
+.ingredient-lines__note {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+/* Steps: numbered rows with a soft badge. */
+.steps-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps-list__item {
+  display: flex;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.steps-list__number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-chip);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-list__body {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.steps-list__text {
+  margin: 0;
+  font-weight: var(--text-body-strong-weight);
+  overflow-wrap: anywhere;
+}
+
+.steps-list__meta,
+.steps-list__uses {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.steps-list__photo {
+  inline-size: 72px;
+  margin-block-start: var(--space-1);
+}
+
+/* Editor: a card per Step and per ingredient line. */
+.recipe-details,
+.steps-editor,
+.steps-editor__list,
+.recipe-editor__lines {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.recipe-editor__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-input {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.tag-input__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+}
+
+.line-row,
+.step-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface-2);
+  min-inline-size: 0;
+}
+
+.line-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.line-row__ingredient {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.line-row__amount,
+.line-row__extras {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.line-row__amount {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.line-row__extras {
+  grid-column: 1 / -1;
+  align-items: end;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.line-row__hint,
+.use-row__hint,
+.steps-editor__empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.step-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.step-card__number {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-chip);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.step-card__moves {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.step-card__label {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.step-card__after,
+.step-card__uses {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.step-card__after {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-card__use-list,
+.step-card__error {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.use-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.step-card__photo {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.step-card__photo > :first-child:not(.ui-field) {
+  inline-size: 96px;
+}
+
+.step-card__error {
+  color: var(--status-danger-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.unit-prompt__actions,
+.recipe-editor__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The editor's footer sticks above the navigation. */
+.recipe-editor__footer {
+  position: sticky;
+  bottom: var(--nav-clearance);
+  z-index: 1;
+  padding-block: var(--space-3);
+  background: var(--color-bg);
+}
+
+/* Cook / Batch entry: sticky above the navigation on Recipe detail. */
+.cook-entry {
+  position: sticky;
+  bottom: var(--nav-clearance);
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  box-shadow: var(--elev-2);
+}
+
+.cook-entry__batches {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.cook-entry__hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.recipe-tile,
+.recipe-detail__hero,
+.photo-picker,
+.export-picker {
+  min-inline-size: 0;
+}
+
+.export-picker__check {
+  display: inline-flex;
+}
+
+/* The row's Checkbox names the Recipe for assistive tech; the row title shows it. */
+.export-picker__check .checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .steps-list,
+  .recipe-detail,
+  .recipe-editor {
+    max-inline-size: 760px;
+  }
+}
