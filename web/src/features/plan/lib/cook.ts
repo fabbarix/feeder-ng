@@ -1,4 +1,4 @@
-import type { CookedResult, StockWarning } from '../types'
+import type { CookedResult, SlotKey, StockWarning } from '../types'
 import { weekdayName } from './phrase'
 
 export const LEFTOVER_STEP = 0.5
@@ -68,4 +68,17 @@ export function leftoverOutcomeText(outcome: LeftoverOutcome): string {
       return `${formatPortions(outcome.portions)} planned for ${meals}`
     }
   }
+}
+
+/** The Cook Mode route of a Planned Meal: /cook/meal/<date>/<mealSlotId>. */
+export function cookPath(_key: SlotKey): string {
+  throw new Error('not implemented (WP6)')
+}
+
+/**
+ * The success toast after Cooked: "Cooked, nice one!" plus where the Leftover went: "... 2 portions → Tue Dinner"
+ * (planned), "... 1 portion kept, good until Thu" (kept), nothing more when there is no Leftover.
+ */
+export function cookedSuccessText(_result: CookedResult): string {
+  throw new Error('not implemented (WP6)')
 }

@@ -11,8 +11,9 @@ const alt = (id: number, name: string, extra: Partial<Alternative> = {}): Altern
 
 const alternatives = [
   alt(1, 'Stew', { batches: 2, newLeftoverPortions: 2, newLeftoverUseBy: '2026-11-13', why: [{ code: 'perishable_use', ingredient: 'carrots', date: '2026-11-12' }] }),
-  alt(2, 'Pizza', { why: [{ code: 'slot_rule', tag: 'pizza' }, { code: 'favourite', members: ['Ben'] }] }),
+  alt(2, 'Pizza', { photoUrl: '/img/pizza.jpg', why: [{ code: 'slot_rule', tag: 'pizza' }, { code: 'favourite', members: ['Ben'] }] }),
   alt(3, 'Soup', { why: [{ code: 'best_available' }] }),
+  alt(4, 'Fourth', {}),
 ]
 
 function setup(over: Partial<React.ComponentProps<typeof SwapSheet>> = {}) {
@@ -24,27 +25,42 @@ function setup(over: Partial<React.ComponentProps<typeof SwapSheet>> = {}) {
   return { onPick, onClose }
 }
 
-describe('SwapSheet', () => {
-  it('lists the three alternatives with their phrased why chips', () => {
+describe('SwapSheet (rows are the buttons)', () => {
+  it('is titled "Swap for…" without a subtitle', () => {
     setup()
-    expect(screen.getByRole('dialog', { name: 'Swap this Planned Meal' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /^Choose / })).toHaveLength(3)
-    expect(screen.getByText('carrots goes off Thu')).toBeInTheDocument()
-    expect(screen.getByText('Slot Rule: Friday')).toBeInTheDocument() // the slot is on a Friday
-    expect(screen.getByText("Ben's favourite")).toBeInTheDocument()
-    expect(screen.getByText('best available')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Swap for…' })).toBeInTheDocument()
+    expect(screen.queryByText('The best alternatives under the same scoring')).not.toBeInTheDocument()
   })
 
-  it('shows the Batches and the Leftover an alternative would leave', () => {
+  it('shows three alternatives as list rows, each with a thumb and its reason as meta', () => {
     setup()
-    expect(screen.getByText('2 Batches')).toBeInTheDocument()
-    expect(screen.getByText('+2 Leftover')).toBeInTheDocument()
+    const list = screen.getByRole('list', { name: 'Alternatives' })
+    expect(list.querySelectorAll('li')).toHaveLength(3)
+    expect(screen.queryByText('Fourth')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stew' })).toBeInTheDocument()
+    expect(screen.getByText(/uses carrots before Thu/)).toBeInTheDocument()
+    expect(screen.getByText(/Slot Rule: Friday/)).toBeInTheDocument() // the slot is on a Friday
+    expect(screen.queryByText(/best available/)).not.toBeInTheDocument()
+    expect(list.querySelectorAll('.recipe-thumb').length).toBe(3)
   })
 
-  it('choosing an alternative reports its Recipe', async () => {
+  it('names the Leftover an alternative would leave, with the glossary word and a singular unit', () => {
+    setup()
+    expect(screen.getByText(/\+2 portion Leftover/)).toBeInTheDocument()
+  })
+
+  it('tapping a row picks that Recipe (swap and pin in one tap)', async () => {
     const { onPick } = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Choose Pizza' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Pizza' }))
     expect(onPick).toHaveBeenCalledWith(2)
+  })
+
+  it('"Keep it" is a tertiary button that closes the sheet', async () => {
+    const { onClose } = setup()
+    const keep = screen.getByRole('button', { name: 'Keep it' })
+    expect(keep).toHaveAttribute('data-variant', 'tertiary')
+    await userEvent.click(keep)
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('says so while loading and when nothing else fits', () => {

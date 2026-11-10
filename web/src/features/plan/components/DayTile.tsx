@@ -1,23 +1,17 @@
 import type { ReactNode } from 'react'
-import { Tile } from '../../../ui'
 import type { DayGroup } from '../lib/days'
-import { MealTile, type MealTileProps } from './MealTile'
+import type { MealTileProps } from './MealTile'
 import '../plan.css'
 
 export interface DayTileProps extends Omit<MealTileProps, 'slot'> {
   day: DayGroup
 }
 
-/** A day of the plan: today spans both columns of the grid (Tile size "full"), other days one (size "md"). */
-export function DayTile({ day, ...handlers }: DayTileProps): ReactNode {
-  return (
-    <Tile as="article" size={day.span === 2 ? 'full' : 'md'} tone={day.isToday ? 'accent' : 'neutral'}>
-      <h2 className="plan__day-title">{day.label}</h2>
-      <div className="plan__stack">
-        {day.slots.map((slot) => (
-          <MealTile key={`${slot.date}/${slot.mealSlotId}`} slot={slot} {...handlers} />
-        ))}
-      </div>
-    </Tile>
-  )
+/**
+ * A day of the plan: Tile variant surface, overline = day.overline ("WED 11"), h2 = day.title, MealTiles inside.
+ * Today spans 2 columns (span=2) and carries data-today (a 2 px accent ring in CSS, not another fill). Cooked days
+ * stay readable; no divider line between meals unless there are 3 or more.
+ */
+export function DayTile(_props: DayTileProps): ReactNode {
+  throw new Error('not implemented (WP6)')
 }

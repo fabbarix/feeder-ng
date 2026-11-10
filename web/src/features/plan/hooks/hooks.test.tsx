@@ -116,11 +116,11 @@ describe('usePlanActions', () => {
     expect(api.callsTo('PUT', '/api/plan/2026-11-10/3')[0]?.body).toEqual({ recipeId: 9 })
   })
 
-  it('confirm and unpin post to their routes', async () => {
+  it('pin (the old confirm) and unpin post to their routes', async () => {
     const api = mockApi({ 'POST /api/plan/2026-11-10/3/confirm': preview.meal, 'POST /api/plan/2026-11-10/3/unpin': preview.meal })
     const { result } = renderHook(() => usePlanActions(), { wrapper })
     await act(async () => {
-      await result.current.confirm({ date: '2026-11-10', mealSlotId: 3 })
+      await result.current.pin({ date: '2026-11-10', mealSlotId: 3 })
       await result.current.unpin({ date: '2026-11-10', mealSlotId: 3 })
     })
     expect(api.calls.map((c) => c.path)).toEqual(['/api/plan/2026-11-10/3/confirm', '/api/plan/2026-11-10/3/unpin'])

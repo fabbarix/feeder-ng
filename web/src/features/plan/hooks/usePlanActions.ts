@@ -8,7 +8,8 @@ export interface UsePlanActions {
   regenerate: () => Promise<void>
   regenerating: boolean
   setMeal: (key: SlotKey, recipeId: number) => Promise<void>
-  confirm: (key: SlotKey) => Promise<void>
+  /** Pin the Planned Meal (POST .../confirm on the server; the UI word is Pin). Replaces `confirm`. */
+  pin: (key: SlotKey) => Promise<void>
   unpin: (key: SlotKey) => Promise<void>
   /** Message of the last failed action, or null. */
   error: string | null
@@ -47,7 +48,7 @@ export function usePlanActions(): UsePlanActions {
     regenerate,
     regenerating,
     setMeal: (key, recipeId) => run(() => planApi.setMeal(key, recipeId)),
-    confirm: (key) => run(() => planApi.confirm(key)),
+    pin: (key) => run(() => planApi.confirm(key)),
     unpin: (key) => run(() => planApi.unpin(key)),
     error,
   }

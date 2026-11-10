@@ -3,13 +3,15 @@ import { Button } from '../../../ui'
 import { useSlotRuleForm, useVarietyRuleForm } from '../hooks/useRuleForms'
 import { describeSlotRule, describeVarietyRule, mealSlotLabel } from '../lib/rules'
 import { planStrings } from '../strings'
-import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
+import type { MealSlotChoice, RecipeChoice, SlotRule, TagChoice, VarietyRule } from '../types'
 import '../plan.css'
 
 export interface SlotRulesEditorProps {
   rules: SlotRule[]
   mealSlots: MealSlotChoice[]
   recipes: RecipeChoice[]
+  /** The existing Tags: the Tag of a Slot Rule is picked, never typed. */
+  tags: TagChoice[]
   onAdd: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => void
   onRemove: (id: number) => void
   error: string | null
@@ -96,6 +98,8 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, onAdd, onRemove, er
 
 export interface VarietyRulesEditorProps {
   rules: VarietyRule[]
+  /** The existing Tags: the Variety Rule Tag is picked with a Select, never typed. */
+  tags: TagChoice[]
   onSave: (rule: VarietyRule) => void
   onRemove: (tag: string) => void
   error: string | null

@@ -31,3 +31,13 @@ export function useSoonItems(totals: IngredientStock[], today: string): UseSoonI
   rows.sort((a, b) => a.days - b.days || a.name.localeCompare(b.name))
   return rows.map(({ days: _days, ...item }) => item)
 }
+
+export interface UseSoonSplit {
+  rows: UseSoonItem[]
+  /** Items beyond the first `max`; the tile says "+2 more". */
+  more: number
+}
+
+export function splitUseSoon(_items: UseSoonItem[], _max = 3): UseSoonSplit {
+  throw new Error('not implemented (WP6)')
+}

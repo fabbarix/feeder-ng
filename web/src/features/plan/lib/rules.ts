@@ -1,5 +1,5 @@
 import { planStrings as s } from '../strings'
-import type { SlotRule, VarietyRule } from '../types'
+import type { SlotRule, TagChoice, VarietyRule } from '../types'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -23,27 +23,16 @@ export function describeVarietyRule(rule: VarietyRule): string {
 
 export interface VarietyDraft {
   tag: string
-  /** Text of the weekly limit field; '' = no cap. */
-  maxPerWeek: string
+  /** Value of the weekly limit NumberField; null = no cap. */
+  maxPerWeek: number | null
   notConsecutiveDays: boolean
 }
 
 export type VarietyDraftError = 'tag_required' | 'nothing_limited' | 'max_range'
 
 /** Validates the form: a Tag, and a weekly limit of 1 to 21 and/or consecutive days forbidden. Returns the rule or the first error. */
-export function toVarietyRule(draft: VarietyDraft): { rule: VarietyRule } | { error: VarietyDraftError } {
-  const tag = normaliseTag(draft.tag)
-  if (!tag) return { error: 'tag_required' }
-  const text = draft.maxPerWeek.trim()
-  let max = 0
-  if (text !== '') {
-    if (!/^-?\d+$/.test(text)) return { error: 'max_range' }
-    max = Number(text)
-    if (max < 1 || max > 21) return { error: 'max_range' }
-  } else if (!draft.notConsecutiveDays) {
-    return { error: 'nothing_limited' }
-  }
-  return { rule: { tag, maxPerWeek: max, notConsecutiveDays: draft.notConsecutiveDays } }
+export function toVarietyRule(_draft: VarietyDraft): { rule: VarietyRule } | { error: VarietyDraftError } {
+  throw new Error('not implemented (WP6)')
 }
 
 /** "Friday Dinner" from weekday 5 (ISO, 1 = Monday) and the Meal Slot name. */
@@ -73,4 +62,16 @@ export function toSlotRuleBody(
   if (!draft.recipeId) return { error: 'recipe_required' }
   if (!draft.mealSlotId) return { error: 'meal_slot_required' }
   return { body: { mealSlotId: Number(draft.mealSlotId), recipeId: Number(draft.recipeId) } }
+}
+
+export interface TagOption {
+  value: string
+  label: string
+  /** "3 Recipes" / "1 Recipe". */
+  meta: string
+}
+
+/** Options of the Tag selects: the existing Tags, sorted by name, each with its Recipe count as meta. */
+export function toTagOptions(_tags: TagChoice[]): TagOption[] {
+  throw new Error('not implemented (WP6)')
 }

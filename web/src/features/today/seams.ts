@@ -17,6 +17,8 @@ export { useScanSessionActive } from '../scan'
 export const ShoppingListSeam = ShoppingScreen
 
 export interface TodayPlanCounts {
+  /** Household date (YYYY-MM-DD), for the date under the title. */
+  today: string
   hasNextMeal: boolean
   toConfirm: number
   couldntPlan: number
@@ -32,6 +34,8 @@ export interface TodayStock {
 
 /** Everything the Today tiles display, read from the owning features. */
 export interface TodayTileData {
+  /** The clock the hero judges 'upcoming' or 'awaiting' by. */
+  now: Date
   nextSlot: PlanSlot | null
   toConfirm: PlanSlot[]
   couldntPlan: PlanSlot[]
@@ -56,6 +60,7 @@ export function useTodayTileData(): TodayTileData {
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
   return {
+    now: new Date(),
     nextSlot: nextMeal(plan.slots, new Date()),
     toConfirm: toConfirm.slots,
     couldntPlan: couldntPlan.slots,
@@ -76,6 +81,7 @@ export function useTodayTileData(): TodayTileData {
 export function useTodayPlan(): TodayPlanCounts {
   const d = useTodayTileData()
   return {
+    today: d.planToday,
     hasNextMeal: d.nextSlot !== null,
     toConfirm: d.toConfirm.length,
     couldntPlan: d.couldntPlan.length,

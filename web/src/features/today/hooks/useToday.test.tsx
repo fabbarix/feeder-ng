@@ -6,7 +6,7 @@ import { useAdvanceStepsDue, useToday } from './useToday'
 
 vi.mock('../seams', () => ({
   useScanSessionActive: vi.fn(() => false),
-  useTodayPlan: vi.fn(() => ({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })),
+  useTodayPlan: vi.fn(() => ({ today: '2026-11-09', hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })),
   useTodayStock: vi.fn(() => ({ spoiled: 0, useSoon: [], loading: false })),
 }))
 
@@ -24,22 +24,23 @@ const step = {
 beforeEach(() => {
   // Reset every seam: a value set by one test must not leak into the next (vitest keeps mockReturnValue).
   vi.mocked(seams.useScanSessionActive).mockReturnValue(false)
-  vi.mocked(seams.useTodayPlan).mockReturnValue({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
+  vi.mocked(seams.useTodayPlan).mockReturnValue({ today: '2026-11-09', hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
   vi.mocked(seams.useTodayStock).mockReturnValue({ spoiled: 0, useSoon: [], loading: false })
 })
 afterEach(() => vi.unstubAllGlobals())
 
 describe('useToday', () => {
   it('composes the layout from seam counts, Advance Steps and the streak', async () => {
-    vi.mocked(seams.useTodayPlan).mockReturnValue({ hasNextMeal: true, toConfirm: 1, couldntPlan: 0, leftovers: 2, loading: false })
+    vi.mocked(seams.useTodayPlan).mockReturnValue({ today: '2026-11-09', hasNextMeal: true, toConfirm: 1, couldntPlan: 0, leftovers: 2, loading: false })
     vi.mocked(seams.useTodayStock).mockReturnValue({ spoiled: 1, useSoon: [], loading: false })
     mockApi({ 'GET /api/today/advance-steps': { steps: [step] }, 'GET /api/today/streak': { days: 4 } })
     const { result } = renderHook(() => useToday(), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))
     const layout = result.current.layout
+    expect(result.current.today).toBe('2026-11-09')
     expect(layout.mode).toBe('today')
     if (layout.mode === 'today') {
-      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'spoiled', 'advanceSteps', 'toConfirm', 'leftovers', 'streak'])
+      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'toConfirm', 'advanceSteps', 'leftovers', 'streak', 'spoiled'])
     }
   })
 
@@ -51,7 +52,7 @@ describe('useToday', () => {
   })
 
   it('is loading until the plan, stock and own queries have answered', async () => {
-    vi.mocked(seams.useTodayPlan).mockReturnValue({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: true })
+    vi.mocked(seams.useTodayPlan).mockReturnValue({ today: '2026-11-09', hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: true })
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
     const { result } = renderHook(() => useToday(), { wrapper })
     await new Promise((r) => setTimeout(r, 20))
@@ -59,7 +60,7 @@ describe('useToday', () => {
   })
 
   it('treats a failing own endpoint as nothing to show rather than breaking Today', async () => {
-    vi.mocked(seams.useTodayPlan).mockReturnValue({ hasNextMeal: true, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
+    vi.mocked(seams.useTodayPlan).mockReturnValue({ today: '2026-11-09', hasNextMeal: true, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
     mockApi({
       'GET /api/today/advance-steps': { status: 500, json: { error: { code: 'boom', message: 'x' } } },
       'GET /api/today/streak': { status: 500, json: { error: { code: 'boom', message: 'x' } } },

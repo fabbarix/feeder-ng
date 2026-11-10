@@ -44,6 +44,11 @@ export interface PlannedMeal {
   pinned: boolean
   servedFromLeftover: LeftoverSource | null
   why: Why[]
+  /** WP6 (optional until the API sends them): minutes the Recipe takes, "HH:MM" to start by, a photo, the Recipe's Tags. */
+  cookMinutes?: number
+  startBy?: string
+  photoUrl?: string
+  tags?: string[]
 }
 
 export type UnfilledReason = 'no_attendance' | 'no_candidates'
@@ -70,6 +75,13 @@ export interface SlotRule {
   tag?: string
 }
 
+/** A Member attending a Planned Meal (shown as an Avatar in the Planned Meal sheet). */
+export interface AttendanceMember {
+  id: number
+  name: string
+  imageUrl?: string
+}
+
 export interface PlanSlot {
   date: string
   mealSlotId: number
@@ -80,6 +92,8 @@ export interface PlanSlot {
   meal: PlannedMeal | null
   unfilled: Unfilled | null
   rules: SlotRule[]
+  /** WP6: optional until the API sends it. */
+  attendance?: AttendanceMember[]
 }
 
 export interface PlanView {
@@ -103,6 +117,8 @@ export interface Alternative {
   newLeftoverUseBy: string
   score: number
   why: Why[]
+  /** WP6: optional until the API sends it. */
+  photoUrl?: string
 }
 
 export interface CookPreview {
@@ -160,9 +176,19 @@ export interface VarietyRule {
   notConsecutiveDays: boolean
 }
 
+/** Structurally compatible with ui/Select RecipeChoice. */
 export interface RecipeChoice {
   id: number
   name: string
+  tags: string[]
+  imageUrl?: string
+  totalMinutes?: number
+}
+
+/** An existing Tag with the number of Recipes that carry it (GET /api/tags). */
+export interface TagChoice {
+  name: string
+  recipes: number
 }
 
 export interface MealSlotChoice {

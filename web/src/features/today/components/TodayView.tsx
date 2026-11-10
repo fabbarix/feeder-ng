@@ -7,6 +7,8 @@ import '../today.css'
 export interface TodayViewProps {
   layout: TodayLayout
   loading?: boolean
+  /** Subtitle under the title, lib/heading todayHeading(today), e.g. "Tue 10 Nov". */
+  dateLabel?: string
   /** One element per tile id (built by TodayScreen from the owning features' components). */
   tiles: Partial<Record<TileId, ReactNode>>
   /** The Shopping List screen, shown instead of the grid while a scan session is active. */
