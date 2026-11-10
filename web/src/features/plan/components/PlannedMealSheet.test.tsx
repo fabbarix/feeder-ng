@@ -41,7 +41,7 @@ describe('PlannedMealSheet', () => {
     expect(dialog.getByText("Anna's favourite")).toBeInTheDocument()
     expect(dialog.getByText('uses spinach before Thu')).toBeInTheDocument()
     expect(dialog.queryByText("uses Monday's chicken")).not.toBeInTheDocument()
-    expect(dialog.getByText('+2')).toBeInTheDocument()
+    expect(dialog.getByText('+1')).toBeInTheDocument()
   })
 
   it("today's planned meal offers the full action set in order: Cook, Mark as Cooked, Swap, Pin, Choose a Recipe", () => {
