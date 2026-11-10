@@ -25,14 +25,12 @@ describe('CookTimerStrip', () => {
     expect(screen.getByRole('timer', { name: 'Rice' })).toHaveAttribute('data-state', 'paused')
   })
 
-  it('pauses a running timer, resumes a paused one and dismisses a finished one by tapping the tile', async () => {
-    const h = strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice'), item(3, 'finished', 0, 'Pasta')])
+  it('keeps tiles as non-interactive timers: tapping one calls no handler', async () => {
+    const h = strip([item(1, 'running', 60, 'Eggs')])
     await userEvent.click(screen.getByRole('timer', { name: 'Eggs' }))
-    expect(h.onPause).toHaveBeenCalledWith(1)
-    await userEvent.click(screen.getByRole('timer', { name: 'Rice' }))
-    expect(h.onResume).toHaveBeenCalledWith(2)
-    await userEvent.click(screen.getByRole('timer', { name: 'Pasta' }))
-    expect(h.onCancel).toHaveBeenCalledWith(3)
+    expect(h.onPause).not.toHaveBeenCalled()
+    expect(h.onResume).not.toHaveBeenCalled()
+    expect(h.onCancel).not.toHaveBeenCalled()
   })
 
   it('B14: has explicit Pause, Resume, Cancel and Dismiss buttons', async () => {
