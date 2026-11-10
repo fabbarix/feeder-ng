@@ -9,14 +9,13 @@ import (
 
 // prefsBody is one User's preferences as the API shows them.
 type prefsBody struct {
-	Scheme    string  `json:"scheme"`
-	Accent    string  `json:"accent"`
-	Secondary *string `json:"secondary"`
-	Units     string  `json:"units"`
+	Scheme string `json:"scheme"`
+	Accent string `json:"accent"`
+	Units  string `json:"units"`
 }
 
 func prefsOut(p household.Preferences) prefsBody {
-	return prefsBody{Scheme: p.Scheme, Accent: p.Accent, Secondary: p.Secondary, Units: p.Units}
+	return prefsBody{Scheme: p.Scheme, Accent: p.Accent, Units: p.Units}
 }
 
 func (a *api) getPreferences(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +33,7 @@ func (a *api) putPreferences(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	p := household.Preferences{Scheme: in.Scheme, Accent: in.Accent, Secondary: in.Secondary, Units: in.Units}
+	p := household.Preferences{Scheme: in.Scheme, Accent: in.Accent, Units: in.Units}
 	if err := p.Validate(); err != nil {
 		writeErr(w, err)
 		return

@@ -5,7 +5,7 @@ import { mockApi, renderWithProviders, ADMIN_ME, USER_ME } from '../test-utils'
 import { admin, anna, cook, householdSettings, marco, mondayLunch, sam, thursdayDinner } from './fixtures'
 import { SettingsPage } from './SettingsPage'
 
-const prefs = { scheme: 'system', accent: '#3f7d58', secondary: null, units: 'metric' }
+const prefs = { scheme: 'system', accent: '#3f7d58', units: 'metric' }
 
 function routes(me: typeof ADMIN_ME, extra: Record<string, unknown> = {}) {
   return mockApi({

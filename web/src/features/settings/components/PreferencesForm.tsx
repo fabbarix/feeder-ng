@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Button, Chip } from '../../../ui'
 import { ACCENT_PRESETS } from '../lib/accents'
-import { preferencesChanged, DEFAULT_SECONDARY } from '../lib/preferencesForm'
+import { preferencesChanged } from '../lib/preferencesForm'
 import { settingsStrings } from '../strings'
 import type { ColourMode, Preferences } from '../types'
 import { Field } from './Field'
@@ -27,8 +27,7 @@ const UNITS: ReadonlyArray<{ value: Preferences['units']; label: string }> = [
 ]
 
 /** Radio groups "Colour mode" (Light, Dark, System) and "Units" (Metric, Imperial); accent presets as chips plus
- *  "Custom accent colour"; checkbox "Use a secondary colour" with "Secondary colour"; "Save preferences"
- *  (disabled until something changes). */
+ *  "Custom accent colour"; "Save preferences" (disabled until something changes). */
 export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps) {
   const [draft, setDraft] = useState<Preferences>(value)
   const set = (patch: Partial<Preferences>) => setDraft((d) => ({ ...d, ...patch }))
@@ -59,19 +58,6 @@ export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps)
           {(c) => <input {...c} type="color" value={draft.accent} onChange={(e) => set({ accent: e.target.value })} />}
         </Field>
       </div>
-      <label className="choice">
-        <input
-          type="checkbox"
-          checked={draft.secondary !== null}
-          onChange={(e) => set({ secondary: e.target.checked ? DEFAULT_SECONDARY : null })}
-        />
-        {text.useSecondary}
-      </label>
-      {draft.secondary !== null ? (
-        <Field label={text.secondary}>
-          {(c) => <input {...c} type="color" value={draft.secondary ?? DEFAULT_SECONDARY} onChange={(e) => set({ secondary: e.target.value })} />}
-        </Field>
-      ) : null}
       <Button type="submit" loading={saving} disabled={!preferencesChanged(value, draft)}>
         {text.save}
       </Button>

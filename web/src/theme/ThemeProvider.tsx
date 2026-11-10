@@ -4,7 +4,6 @@ import type { Hex, Scheme } from './palette'
 
 export interface ThemeProviderProps {
   accent: Hex
-  secondary?: Hex
   /** 'system' follows prefers-color-scheme. */
   scheme: Scheme | 'system'
   children: ReactNode
@@ -17,10 +16,10 @@ function resolveScheme(scheme: Scheme | 'system'): Scheme {
 }
 
 /** Applies the accent palette to the document element whenever its inputs change. */
-export function ThemeProvider({ accent, secondary, scheme, children }: ThemeProviderProps) {
+export function ThemeProvider({ accent, scheme, children }: ThemeProviderProps) {
   const resolved = resolveScheme(scheme)
   useEffect(() => {
-    applyTheme(document.documentElement, { accent, secondary }, resolved)
-  }, [accent, secondary, resolved])
+    applyTheme(document.documentElement, { accent }, resolved)
+  }, [accent, resolved])
   return <>{children}</>
 }

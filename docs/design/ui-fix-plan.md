@@ -512,7 +512,7 @@ link" for the primary target, so inner buttons still work and content stays top-
 ### 4.10 Form fields
 `TextField`, `TextArea`, `NumberField` (with `Stepper` ±, tabular, unit suffix), `TimeField` (24 h, hh:mm segments, follows the Household
 locale, never the browser's AM/PM), `DateField` (field + calendar popover, week starts Monday), `Checkbox` (22 px, radius 6, 2 px outline →
-accent fill + `Check` bold), `Switch` (52×32, for settings like "Use a secondary colour"), `RadioCards` / `Segmented` (Light · Dark · System;
+accent fill + `Check` bold), `Switch` (52×32, for on/off settings such as the notification toggles), `RadioCards` / `Segmented` (Light · Dark · System;
 Metric · Imperial), `Slider` (Planner Style: 3 labelled stops, 6 px track soft-strong, 24 px thumb accent), `ColorSwatches` (accent presets as
 40 px circles + "Custom" opening a crafted picker), `FileDrop` (dashed outline zone, `FileArrowUp`, "Choose a file or drop it here").
 Shared anatomy: label 13/700 above, 48 h control, helper 13 muted, error 13 status-danger-fg with `WarningCircle` 14, `aria-describedby`.
