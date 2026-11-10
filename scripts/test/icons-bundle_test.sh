@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards the icon bundle budget (docs/design/ui-fix-plan.md WP2): the registered icons, built on their own
-# through web/src/ui/icons.ts (react external), must weigh < 40 kB gzipped, and icons.ts must import each
+# through web/src/ui/icons.ts (react external), must weigh < 64 kB gzipped, and icons.ts must import each
 # icon from its own /dist/csr/<Name> module (never the barrel, which would drag in ~9,000 modules).
 # Builds a tiny library entry into a temporary dir; leaves web/dist alone.
 set -uo pipefail
@@ -8,7 +8,10 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB="$HERE/../../web"
 ICONS="$WEB/src/ui/icons.ts"
-BUDGET=40960
+# Budget 64 kB (65,536 B). Each @phosphor-icons/react csr glyph module ships all six weights, about 0.7 kB gz
+# per glyph (87 glyphs measured 62,367 B). PM decision: keep per-icon csr imports (CLAUDE.md) and accept the
+# one-time cost (self-hosted PWA, shell precached). Headroom is ~3 kB, so adding glyphs carelessly trips it.
+BUDGET=65536
 MIN_MODULES=87   # distinct Phosphor icons in docs/dev/design/wp2-icons.md
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT

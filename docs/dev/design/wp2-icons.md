@@ -137,7 +137,7 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 - `web/src/ui/Icon.test.tsx`: weight default by size (14/16 bold, 20..64 regular), explicit override, four distinct weights, size attributes, currentColor, aria decorative vs labelled.
 - `web/src/ui/icons.test.tsx`: exhaustive registry (keys equal the table exactly; each renders a path; same Phosphor glyph => same svg, different glyph => different svg, without importing Phosphor in a test).
 - `web/src/ui/lib/mealSlotIcon.test.ts`, `tagIcon.test.ts`: mapping tables and fallbacks.
-- `scripts/test/icons-bundle_test.sh` (picked up by `scripts/check.sh`): icons.ts has no barrel import, >= 87 per-icon imports, and a lib-mode build of `icons.ts` alone (react external) gzips to < 40 kB. This measures the icon payload directly, a stricter and faster proxy than diffing two full builds.
+- `scripts/test/icons-bundle_test.sh` (picked up by `scripts/check.sh`): icons.ts has no barrel import, >= 87 per-icon imports, and a lib-mode build of `icons.ts` alone (react external) gzips to < 64 kB (65,536 B). This measures the icon payload directly, a stricter and faster proxy than diffing two full builds.
 
 ## Developer plan
 1. Fill `icons.ts` from the table (one import per distinct Phosphor glyph; aliases point to the same component).
@@ -145,3 +145,6 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 3. Implement the two helpers.
 4. Flip `phosphor=warn` to `phosphor=fail` in `scripts/check-ui.rules` (one line; no other change).
 5. `scripts/check.sh` must pass.
+
+## Decision: bundle budget raised to 64 kB gz
+The 40 kB estimate assumed one weight per glyph. Each `@phosphor-icons/react` csr glyph module carries all six weights, so 87 glyphs measure 62,367 B gz (about 0.7 kB per glyph). PM decision: keep per-icon csr imports (CLAUDE.md rule; `@phosphor-icons/core` SVGs would break it) and set the budget to 64 kB gz (65,536 B). The app is a self-hosted PWA with a precached shell, so this is a one-time cost. About 3 kB of headroom remains, so each new glyph must be justified.
