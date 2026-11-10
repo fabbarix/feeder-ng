@@ -78,7 +78,7 @@ export function NextAdvanceTile({ next, nowMs, onDone }: NextAdvanceTileProps): 
           <p className="board-next__due">
             {next.overdue ? <Chip kind="status" status="spoil">{boardStrings.overdue}</Chip> : boardStrings.due(dueText(next.dueAt, nowMs))}
           </p>
-          <Button variant="secondary" onClick={() => onDone(next.scope, next.step)}>
+          <Button variant="secondary" size="sm" onClick={() => onDone(next.scope, next.step)}>
             {boardStrings.markDone}
           </Button>
         </>
@@ -129,21 +129,32 @@ export function UseSoonTile({ rows }: { rows: StockTotalLike[] }): ReactNode {
   )
 }
 
-/** Heading "Timers", a TimerTile per timer (label, seconds, running = state running); "No timers running" when empty. Read-only: no handlers. */
+/** Most timers the board lists; the rest become a "+n more" line so no row is clipped in the cell. */
+export const BOARD_TIMER_CAP = 2
+
+/**
+ * Heading "Timers", a TimerTile per timer (label, seconds, running = state running), at most BOARD_TIMER_CAP of them
+ * (items are already soonest first), then "+n more" for the rest; "No timers running" when empty. Read-only: no handlers.
+ */
 export function BoardTimersTile({ items }: { items: TimerItem[] }): ReactNode {
+  const shown = items.slice(0, BOARD_TIMER_CAP)
+  const hidden = items.length - shown.length
   return (
     <Tile as="section" className="board-timers">
       <h2 className="board-tile__heading">{boardStrings.timers}</h2>
       {items.length === 0 ? (
         <p>{boardStrings.timersNone}</p>
       ) : (
-        <ul className="board-list">
-          {items.map(({ timer, seconds }) => (
-            <li key={timer.id}>
-              <TimerTile label={timer.label} seconds={seconds} running={timer.state === 'running'} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="board-list">
+            {shown.map(({ timer, seconds }) => (
+              <li key={timer.id}>
+                <TimerTile label={timer.label} seconds={seconds} running={timer.state === 'running'} />
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 ? <p className="board-timers__more">{boardStrings.timersMore(hidden)}</p> : null}
+        </>
       )}
     </Tile>
   )

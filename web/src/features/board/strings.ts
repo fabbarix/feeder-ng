@@ -12,6 +12,8 @@ export const boardStrings = {
   useSoonNone: 'Nothing to use up',
   timers: 'Timers',
   timersNone: 'No timers running',
+  /** Shown under the first 2 timers when more run (BoardTimersTile). */
+  timersMore: (n: number) => `+${n} more`,
   tomorrow: 'Tomorrow',
   tomorrowNone: 'Nothing planned tomorrow',
   streak: 'Zero-waste streak',

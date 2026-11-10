@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -181,7 +180,11 @@ describe('UseSoonTile layout', () => {
 })
 
 // Layout contract at 1280 x 800 (cells are 240 px high): long text clamps instead of clipping.
-const boardCss = readFileSync(`${process.cwd()}/src/features/board/board.css`, 'utf8')
+// @types/node is not installed, so read the stylesheet through an untyped dynamic import of node:fs (as tokens.css.test does).
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
+const boardCss = readFileSync(`${cwd}/src/features/board/board.css`, 'utf8')
 const rule = (selector: string): string => {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const m = new RegExp(`(?:^|[},\\s])${esc}\\s*\\{([^}]*)\\}`, 'm').exec(boardCss)

@@ -24,6 +24,7 @@
 .board-cell > .tile {
   box-sizing: border-box;
   height: 100%;
+  padding: 16px 20px;
   border-radius: var(--radius-board);
   font-size: 1.5rem;
   overflow: hidden;
@@ -39,14 +40,26 @@
 }
 
 .board-tile__heading {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: 1.125rem;
   font-weight: 600;
   opacity: 0.8;
 }
 
 .board-clock {
   justify-content: center;
+}
+
+/* Next Advance Step at 1280 x 800 (cell 240 px, 208 px of content): heading, the Step text (2 lines), the Recipe line (2 lines),
+   the due line and Done (36 px) all fit. Only the due line and the button hold their height. */
+.board-next {
+  gap: 4px;
+}
+
+.board-next .board-tile__heading,
+.board-next__due,
+.board-next .button {
+  flex-shrink: 0;
 }
 
 .board-clock__time {
@@ -68,23 +81,47 @@
   align-items: flex-start;
 }
 
-.board-tonight__recipe,
-.board-next__text {
+.board-tonight__recipe {
   margin: 0;
   font-size: 3rem;
   line-height: 1.1;
   font-weight: 700;
 }
 
+/* Next Advance Step: the Step text and the Recipe line clamp to 2 lines so the tile fits 240 px (1280 x 800). */
 .board-next__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  flex-shrink: 0;
+  height: 4.2rem; /* 2 lines at line-height 1.05 */
+  margin: 0;
   font-size: 2rem;
+  line-height: 1.05;
+  font-weight: 700;
 }
 
-.board-tonight__slot,
-.board-next__recipe,
-.board-next__due {
+.board-next__recipe {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  flex-shrink: 0;
+  height: 2.7rem; /* 2 lines at 1.125rem, line-height 1.2 */
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+.board-tonight__slot {
   margin: 8px 0 0;
   font-size: 1.75rem;
+}
+
+.board-next__due {
+  margin: 0;
+  font-size: 1.25rem;
 }
 
 .board-tonight__cook {
@@ -116,9 +153,33 @@
 
 .board-timers .board-list {
   overflow: hidden;
+  gap: 4px;
+}
+
+/* Compact rows: at most 2 fit under the heading with the "+n more" line (208 px of content at 1280 x 800). */
+.board-timers .timer-tile {
+  padding: 10px 14px;
+  gap: 4px;
+}
+
+/* Timer labels stay on one line; a long label ends in an ellipsis instead of pushing the row. */
+.board-timers .timer-tile__label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.board-timers__more {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  opacity: 0.8;
 }
 
 .board-screen .timer-tile__time {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }

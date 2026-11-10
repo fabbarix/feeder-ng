@@ -44,7 +44,7 @@ export function TimerTile({ label, seconds, running = false, totalSeconds, onTog
       role={onClick ? undefined : 'timer'}
       aria-label={label}
       data-state={state}
-      overline={label}
+      overline={<span className="timer-tile__label">{label}</span>}
       overlineIcon={overlineIcon}
       onClick={onClick}
     >
