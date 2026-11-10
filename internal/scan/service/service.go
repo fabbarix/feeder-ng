@@ -14,11 +14,13 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/product"
 	"github.com/fabbarix/feeder-ng/internal/scan"
 	"github.com/fabbarix/feeder-ng/internal/scan/store"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
 	shopservice "github.com/fabbarix/feeder-ng/internal/shopping/service"
 	"github.com/fabbarix/feeder-ng/internal/stock"
+	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
 // Errors.
@@ -334,6 +336,35 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	return s.purchase(ctx, op, p, &created, merged)
 }
 
+// weighedPrice prices a weighed scan (r3-scan-fixes B5): the scanned grams at the price per kg the phone sent, else
+// the latest Price at the Shop. It returns the price and the price per kg it was taken from (explicit or derived), so
+// the recorded Price carries both. Nothing when there is no basis.
+func (s *Service) weighedPrice(ctx context.Context, op scan.Op, p ProductInfo, shop int64) (*int, *int, error) {
+	base := units.Base(p.BaseUnit)
+	basis := product.Price{PricePerKgCents: op.PricePerKgCents}
+	if op.PricePerKgCents == nil {
+		latest, err := s.d.Catalogue.LatestPrice(ctx, p.ID, shop)
+		if err != nil {
+			return nil, nil, err
+		}
+		if latest == nil {
+			return nil, nil, nil
+		}
+		basis = product.Price{PriceCents: latest.PriceCents, PricePerKgCents: latest.PricePerKgCents}
+	}
+	cents, ok := product.PriceForWeight(basis, p.PackSize, base, op.Quantity)
+	if !ok {
+		return nil, nil, nil
+	}
+	perKg := basis.PricePerKgCents
+	if perKg == nil {
+		if k, _, ok := product.PricePerKg(basis, p.PackSize, base); ok {
+			perKg = &k
+		}
+	}
+	return &cents, perKg, nil
+}
+
 // purchase is the Shop-scan core: Stock Lot, sold-at link, purchase, Price, Shopping List line, ledger row.
 // Every step that writes is undone in reverse order when a later step fails.
 func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, created *bool, merged *scan.Merged) (scan.Result, error) {
@@ -383,7 +414,12 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 	undo = append(undo, func(ctx context.Context) { _ = s.d.Catalogue.DeletePurchase(ctx, purchaseID) })
 
 	price, perKg := op.PriceCents, op.PricePerKgCents
-	if price == nil && perKg == nil {
+	if op.Weighed && price == nil {
+		price, perKg, err = s.weighedPrice(ctx, op, p, shop)
+		if err != nil {
+			return fail(err)
+		}
+	} else if price == nil && perKg == nil {
 		latest, err := s.d.Catalogue.LatestPrice(ctx, pid, shop)
 		if err != nil {
 			return fail(err)

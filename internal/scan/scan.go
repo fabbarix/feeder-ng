@@ -100,6 +100,9 @@ func (o Op) Validate() error {
 	if _, err := time.Parse(time.RFC3339, o.ScannedAt); err != nil {
 		return &ValidationError{Field: "scannedAt", Message: "scannedAt must be an RFC 3339 time"}
 	}
+	if o.Weighed && o.Kind != KindShopScan {
+		return &ValidationError{Field: "weighed", Message: "only a shop scan can be weighed"}
+	}
 	switch o.Kind {
 	case KindShopScan:
 		return o.validateShopScan()
