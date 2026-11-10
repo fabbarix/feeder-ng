@@ -30,7 +30,7 @@ func ids(list []store.Product) []int64 {
 	return out
 }
 
-func TestArchivedProductIsHiddenFromListsUnlessIncluded(t *testing.T) {
+func TestArchivedProductIsLeftOutOfListsUnlessIncluded(t *testing.T) {
 	f := newFx(t)
 	a := f.prod(t, "Alpha", f.tomato, 700, "8001234567897")
 	b := f.prod(t, "Beta", f.tomato, 400)
@@ -206,10 +206,10 @@ func TestResolveTreatsAnArchivedProductAsUnknownAndNamesIt(t *testing.T) {
 		shop   *int64
 		want   barcode.Outcome
 	}{
-		"global at a Shop": {"8001234567897", barcode.FormatEAN13, &shop.ID, barcode.OutcomeUnknown},
-		"global at home":   {"8001234567897", barcode.FormatEAN13, nil, barcode.OutcomeUnknown},
-		"Shop Barcode":     {"PRIVATE-77", barcode.FormatCode128, &shop.ID, barcode.OutcomeUnknown},
-		"weighed item":     {"2100123007509", barcode.FormatEAN13, &shop.ID, barcode.OutcomeUnknownWeighedProduct},
+		"global at a Shop":     {"8001234567897", barcode.FormatEAN13, &shop.ID, barcode.OutcomeUnknown},
+		"global at home":       {"8001234567897", barcode.FormatEAN13, nil, barcode.OutcomeUnknown},
+		"Shop Barcode":         {"PRIVATE-77", barcode.FormatCode128, &shop.ID, barcode.OutcomeUnknown},
+		"weighed Shop Barcode": {"2100123007509", barcode.FormatEAN13, &shop.ID, barcode.OutcomeUnknownWeighedProduct},
 	} {
 		got, err := f.s.Resolve(ctx, c.raw, c.format, c.shop)
 		if err != nil {

@@ -1,6 +1,6 @@
 Feature: Archiving Products
   A bought Product cannot be deleted, but it can be archived and later unarchived.
-  An archived Product is hidden from lists and pickers, is not matched by scans, is
+  An archived Product is left out of lists and pickers, is not matched by scans, is
   never suggested as the Product last bought, and keeps its purchase history, Prices
   and barcodes (so no new Product can claim them). A Product never bought can be deleted.
 
@@ -20,7 +20,7 @@ Feature: Archiving Products
     And the Product "Mutti passata" was bought at the Shop "Corner Market" on 2026-11-02
     And I am signed in as the User
 
-  Scenario: Archive hides the Product from the default list
+  Scenario: Archiving leaves the Product out of the default list
     When I send POST "/api/products/{product:Mutti passata}/archive" for Products with JSON:
       """
       {}
@@ -123,7 +123,7 @@ Feature: Archiving Products
     Then the Products response value at "resolution.outcome" is "unknown"
     And the Products response value at "archivedProduct.name" is "Mutti passata"
 
-  Scenario: A weighed item of an archived Product is an unknown weighed Product
+  Scenario: A weighed Shop Barcode of an archived Product is an unknown weighed Product
     Given the Product "Ham" is archived
     When I send GET "/api/resolve?barcode=2100123007509&format=ean_13&shop={shop:Butcher}" for Products
     Then the Products response value at "resolution.outcome" is "unknown_weighed_product"

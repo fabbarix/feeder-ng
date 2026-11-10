@@ -125,7 +125,7 @@ type Resolved struct {
 	Resolution barcode.Resolution `json:"resolution"`
 	Product    *Product           `json:"product"`
 	// ArchivedProduct is set when the resolution is unknown (or an unknown weighed
-	// item) only because the code belongs to an archived Product.
+	// Shop Barcode) only because the code belongs to an archived Product.
 	ArchivedProduct *Product `json:"archivedProduct"`
 }
 
@@ -1241,7 +1241,7 @@ func (s *Store) Resolve(ctx context.Context, raw string, format barcode.Format, 
 }
 
 // archivedOwner names the archived Product that owns an unknown code (or the
-// weighed item of an unknown rule), so the scan UI can offer to unarchive it.
+// weighed Shop Barcode of an unknown rule), so the scan UI can offer to unarchive it.
 func (s *Store) archivedOwner(ctx context.Context, res barcode.Resolution, shopID *int64) (*Product, error) {
 	var ids []int64
 	collect := func(query string, args ...any) error {
@@ -1291,7 +1291,7 @@ func (s *Store) archivedOwner(ctx context.Context, res barcode.Resolution, shopI
 }
 
 // SetArchived archives (true) or restores (false) a Product. Idempotent. An archived
-// Product is hidden from lists (unless Filter.IncludeArchived), left out of the
+// Product is left out of lists (unless Filter.IncludeArchived), left out of the
 // Catalog, Resolve and LastBought, but keeps its barcodes, purchases and Prices.
 // ErrNotFound for an unknown id.
 func (s *Store) SetArchived(ctx context.Context, id int64, archived bool) (Detail, error) {
