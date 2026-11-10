@@ -26,7 +26,7 @@ export interface SpoiledTileProps {
 export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric' }: SpoiledTileProps): ReactElement | null {
   if (lots.length === 0) return null
   return (
-    <Tile as="section" variant="status" status="danger" aria-label={strings.spoiledHeading} overline={strings.spoiledHeading} overlineIcon="spoiled">
+    <Tile as="section" variant="status" status="danger" span="full" aria-label={strings.spoiledHeading} overline={strings.spoiledHeading} overlineIcon="spoiled">
       <ul className="spoiled-tile__list">
         {lots.map((lot) => (
           <li key={lot.id} className="spoiled-tile__row">

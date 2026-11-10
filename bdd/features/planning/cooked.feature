@@ -221,3 +221,13 @@ Feature: Cooked, Not cooked and Leftovers
     When I mark the slot on 2026-11-09 as Cooked with 5 Leftover portions
     Then the response status is 422
     And the Cook timers are exactly "Rest the chicken"
+
+  # R11b (R10 review): the Cook preview of a meal served from a stored Leftover names the day it comes from too.
+  Scenario: The Cook preview of a meal served from a stored Leftover reports the source date of the Leftover
+    Given planning Stock holds 1000 g of "chicken thighs"
+    And planning Stock holds 1000 g of "rice"
+    When I mark the slot on 2026-11-09 as Cooked
+    And the stored meal on 2026-11-10 has lost its Leftover source date
+    And I preview Cooking the slot on 2026-11-10
+    Then the response status is 200
+    And the plan JSON "meal.servedFromLeftover.date" is "2026-11-09"

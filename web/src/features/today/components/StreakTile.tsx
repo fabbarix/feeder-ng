@@ -13,7 +13,7 @@ export function StreakTile({ days }: StreakTileProps): ReactElement | null {
   if (days <= 0) return null
   const metric = streakMetric(days)
   return (
-    <Tile as="section" variant="soft" aria-label={s.streakHeading}>
+    <Tile as="section" variant="soft" className="today-streak" aria-label={s.streakHeading}>
       <TileMetric value={metric.value} label={metric.label} />
     </Tile>
   )
