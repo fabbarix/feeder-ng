@@ -31,3 +31,14 @@ Red tests until implemented: ListRow 1-4 (not the no-Router case), UnitSelect cr
 | 18 | `ViewfinderStrip` (ui-fix-plan 2.5, 5.6): `.viewfinder-strip__picture` is `height: 140px` (no `aspect-ratio`). Frame and reticle use new tokens in `styles.css` `:root`, defined once and never redefined for dark: `--viewfinder-frame: #10131a`, `--viewfinder-reticle: #ffffff`. The reticle border is `2px solid var(--viewfinder-reticle)`; `--color-on-accent` (near-black in dark mode) is no longer used. |
 
 Red: `ui/Select/options.test.tsx` (two), `ui/Select/DomainSelects.test.tsx` (not-yet-saved choice), `ui/ViewfinderStrip.icons.test.tsx` (two).
+
+## NumberField requests (screen teams)
+
+| # | Decision |
+|---|---|
+| 19 | Enter in a `NumberField` inside a `<form>` commits (parse, clamp, `onChange`, rewrite the text) **before** the implicit submit, so a submit handler sees the new value in parent state and in `FormData` (`2,5` posts `2.5`; `150` with `max=100` posts `100`). Current code already commits on Enter, and in jsdom both new tests pass: they pin the contract, but the WP6 symptom is **not reproduced** (a real-browser/Playwright check is needed; likely the submit reads a stale closure). Do not `preventDefault` Enter. |
+| 20 | Colour contrast (plan 3.1: text pairs >= 4.5). Stepper buttons (text / surface-2 on surface-2 field), placeholder and suffix (muted / surface-2: 5.9 light, 7.5 dark) are fine when enabled. The failure is the **disabled** state: `.ui-field__control:has(:disabled)` applies `opacity: 0.38` to the whole control, and the unit suffix (a plain span, not a disabled element, so axe does check it) drops far below 4.5. Fix: no `opacity` on that rule; dim disabled via the field's own tokens, keep the suffix at `var(--color-muted)` on `var(--color-surface-2)`. |
+
+Item 10 is already pinned in both halves by `ui/requests.test.tsx` (hero `.button[data-variant='primary']` and `.chip[data-kind='why']`: `background: var(--color-surface)`, `color: var(--color-accent-text)`), and the implementation is green; nothing added.
+
+Red: `fields/NumberField.test.tsx` WP3b #20 (two). #19 tests are green regression pins.
