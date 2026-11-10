@@ -28,6 +28,12 @@ export const PRIMARY_NAV: readonly PrimaryNavItem[] = [
   { id: 'recipes', label: 'Recipes', path: '/recipes', icon: 'recipes' },
 ]
 
+/** The side rail lists Scan first (the accent button at the top), then the other destinations in bar order. */
+export const RAIL_NAV: readonly PrimaryNavItem[] = [
+  ...PRIMARY_NAV.filter((item) => item.accent),
+  ...PRIMARY_NAV.filter((item) => !item.accent),
+]
+
 export const MENU_NAV: readonly NavItem[] = [
   { id: 'stock', label: 'Stock', path: '/stock', icon: 'stock', placement: 'menu' },
   // B2: /board was linked from nowhere. It is a destination in its own right (a wall display), so it lives in the menu.

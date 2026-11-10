@@ -10,12 +10,14 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppRoot } from './app/AppRoot'
 import { buildRoutes, collectFeatures, discoverFeatures } from './app/features'
 import { AppProviders } from './app/providers'
+import { RouteErrorBoundary } from './app/PageErrorBoundary'
 
 const modules = discoverFeatures()
 const router = createBrowserRouter([
   {
     path: '/',
     element: <AppRoot navItems={collectFeatures(modules).navItems} />,
+    errorElement: <RouteErrorBoundary />,
     children: buildRoutes(modules),
   },
   // Dev-only catalogue of the shared primitives; stripped from production builds.

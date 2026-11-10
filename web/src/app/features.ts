@@ -3,6 +3,7 @@
 import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { ComingSoon } from './ComingSoon'
+import { NotFound } from './NotFound'
 import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
 
 export interface FeatureModule {
@@ -43,7 +44,8 @@ export function buildRoutes(modules: Record<string, FeatureModule>): RouteObject
   const placeholders: RouteObject[] = [...PRIMARY_NAV, ...MENU_NAV]
     .filter((dest) => !provided.has(dest.path))
     .map((dest) => ({ path: dest.path, element: createElement(ComingSoon, { title: dest.label }) }))
-  return [...routes, ...placeholders]
+  // Catch-all last: any path no route claims shows Page not found inside the shell.
+  return [...routes, ...placeholders, { path: '*', element: createElement(NotFound) }]
 }
 
 /** The discovered feature modules, keyed by file path. */
