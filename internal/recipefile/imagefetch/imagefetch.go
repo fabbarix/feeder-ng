@@ -8,15 +8,11 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
-	"io"
-	"mime"
-	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
-	"strconv"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/safehttp"
 )
 
 // Defaults.
@@ -26,27 +22,36 @@ const (
 	MaxRedirects = 3
 )
 
-// Errors (matched with errors.Is).
+// Errors (matched with errors.Is). The shared safehttp errors keep their
+// generic texts; these three read as they did before the extraction, and
+// errors.Is matches both the imagefetch and the safehttp sentinel.
 var (
-	ErrNotHTTPS         = errors.New("only https URLs are fetched")
-	ErrBlocked          = errors.New("address is private, loopback or link-local")
-	ErrTooLarge         = errors.New("image is larger than 10 MB")
-	ErrContentType      = errors.New("response is not a JPEG, PNG or WebP image")
-	ErrStatus           = errors.New("unexpected HTTP status")
-	ErrTooManyRedirects = errors.New("too many redirects")
+	ErrNotHTTPS         = safehttp.ErrNotHTTPS
+	ErrBlocked          = safehttp.ErrBlocked
+	ErrTooLarge         = &imageError{"image is larger than 10 MB", safehttp.ErrTooLarge}
+	ErrContentType      = &imageError{"response is not a JPEG, PNG or WebP image", safehttp.ErrContentType}
+	ErrStatus           = safehttp.ErrStatus
+	ErrTooManyRedirects = safehttp.ErrTooManyRedirects
+	ErrCredentials      = &imageError{"credentials in image URLs are refused", safehttp.ErrCredentials}
 )
 
-// blockedPrefixes are the ranges not covered by net/netip's predicates:
-// carrier-grade NAT, "this network" (0.0.0.0/8), and the IPv6 forms that tunnel
-// an IPv4 address or are deprecated (NAT64, 6to4, IPv4-compatible, site-local).
-// Each is refused whatever address it embeds.
-var blockedPrefixes = []netip.Prefix{
-	netip.MustParsePrefix("100.64.0.0/10"), // carrier-grade NAT
-	netip.MustParsePrefix("0.0.0.0/8"),     // "this network"
-	netip.MustParsePrefix("64:ff9b::/96"),  // NAT64 well-known prefix (RFC 6052)
-	netip.MustParsePrefix("2002::/16"),     // 6to4
-	netip.MustParsePrefix("::/96"),         // IPv4-compatible (deprecated)
-	netip.MustParsePrefix("fec0::/10"),     // site-local (deprecated)
+// imageError is an image-worded error that also reports the shared sentinel.
+type imageError struct {
+	text   string
+	shared error
+}
+
+func (e *imageError) Error() string        { return e.text }
+func (e *imageError) Is(target error) bool { return target == e.shared }
+
+// reword replaces the generic safehttp errors with their image-worded form.
+func reword(err error) error {
+	for _, e := range []*imageError{ErrTooLarge, ErrContentType, ErrCredentials} {
+		if errors.Is(err, e.shared) {
+			return e
+		}
+	}
+	return err
 }
 
 // Options tune a Fetcher. The zero value is the production policy.
@@ -62,29 +67,13 @@ type Options struct {
 	TLSConfig *tls.Config
 }
 
-// Blocked reports whether an address must never be fetched: unspecified (0.0.0.0,
-// ::), loopback, private (10/8, 172.16/12, 192.168/16, fc00::/7), link-local
-// (169.254/16 including the cloud metadata address, fe80::/10), carrier-grade
-// NAT 100.64/10, "this network" 0.0.0.0/8, multicast, the NAT64, 6to4,
-// IPv4-compatible and site-local ranges (see blockedPrefixes), and IPv4-mapped
-// IPv6 forms of any of these.
-func Blocked(a netip.Addr) bool {
-	a = a.Unmap()
-	if !a.IsValid() || a.IsUnspecified() || a.IsLoopback() || a.IsPrivate() ||
-		a.IsLinkLocalUnicast() || a.IsMulticast() {
-		return true
-	}
-	for _, p := range blockedPrefixes {
-		if p.Contains(a) {
-			return true
-		}
-	}
-	return false
-}
+// Blocked reports whether an address must never be fetched (see safehttp.Blocked).
+func Blocked(a netip.Addr) bool { return safehttp.Blocked(a) }
 
 // Fetcher implements recipefile.Fetcher.
 type Fetcher struct {
-	opts Options
+	opts   Options
+	client *safehttp.Client
 }
 
 // New returns a Fetcher.
@@ -95,129 +84,22 @@ func New(o Options) *Fetcher {
 	if o.Timeout <= 0 {
 		o.Timeout = Timeout
 	}
-	if o.LookupIP == nil {
-		o.LookupIP = defaultLookup
-	}
-	if o.Allow == nil {
-		o.Allow = func(ap netip.AddrPort) bool { return !Blocked(ap.Addr()) }
-	}
-	if o.TLSConfig == nil {
-		o.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
-	}
-	return &Fetcher{opts: o}
+	return &Fetcher{opts: o, client: safehttp.New(safehttp.Options{LookupIP: o.LookupIP, Allow: o.Allow, TLSConfig: o.TLSConfig})}
 }
 
-func defaultLookup(ctx context.Context, host string) ([]netip.Addr, error) {
-	return net.DefaultResolver.LookupNetIP(ctx, "ip", host)
-}
+var imageTypes = []string{"image/jpeg", "image/png", "image/webp"}
 
-var allowedTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
-
-// Fetch downloads rawURL. The URL must be https (ErrNotHTTPS, also for a
-// redirect to http). The host is resolved by the Fetcher itself, EVERY resolved
-// address must be allowed (ErrBlocked otherwise), and the connection is made to
-// a validated address, so a DNS answer cannot change between check and use.
-// Redirects (at most MaxRedirects) are followed with the same checks. A status
-// other than 200 is ErrStatus. The Content-Type must be image/jpeg, image/png
-// or image/webp (ErrContentType); a body over MaxBytes, declared or streamed,
-// is ErrTooLarge. No proxy is used, no cookies, no credentials in URLs.
+// Fetch downloads rawURL: https only, SSRF-guarded, an image of at most
+// MaxBytes within Timeout. See safehttp.Client.Fetch for the guard.
 func (f *Fetcher) Fetch(ctx context.Context, rawURL string) ([]byte, string, error) {
-	if err := checkURL(rawURL); err != nil {
-		return nil, "", err
-	}
-	ctx, cancel := context.WithTimeout(ctx, f.opts.Timeout)
-	defer cancel()
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy:               nil,
-			DialContext:         f.dial,
-			TLSClientConfig:     f.opts.TLSConfig,
-			DisableKeepAlives:   true,
-			TLSHandshakeTimeout: f.opts.Timeout,
-		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > MaxRedirects {
-				return ErrTooManyRedirects
-			}
-			return checkURL(req.URL.String())
-		},
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	r, err := f.client.Fetch(ctx, rawURL, safehttp.Policy{
+		AllowedTypes: imageTypes,
+		MaxBytes:     f.opts.MaxBytes,
+		Timeout:      f.opts.Timeout,
+		Header:       http.Header{"Accept": {"image/jpeg, image/png, image/webp"}},
+	})
 	if err != nil {
-		return nil, "", err
+		return nil, "", reword(err)
 	}
-	req.Header.Set("Accept", "image/jpeg, image/png, image/webp")
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("%w: %s", ErrStatus, resp.Status)
-	}
-	ct, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-	if !allowedTypes[ct] {
-		return nil, "", fmt.Errorf("%w: %q", ErrContentType, resp.Header.Get("Content-Type"))
-	}
-	if resp.ContentLength > f.opts.MaxBytes {
-		return nil, "", ErrTooLarge
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, f.opts.MaxBytes+1))
-	// A deadline that fires mid-body can surface as a clean EOF, so the
-	// truncated bytes must not pass as a complete image.
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		return nil, "", ctxErr
-	}
-	if err != nil {
-		return nil, "", err
-	}
-	if int64(len(data)) > f.opts.MaxBytes {
-		return nil, "", ErrTooLarge
-	}
-	if resp.ContentLength >= 0 && int64(len(data)) < resp.ContentLength {
-		return nil, "", fmt.Errorf("body is %d bytes, declared %d: %w", len(data), resp.ContentLength, io.ErrUnexpectedEOF)
-	}
-	return data, ct, nil
-}
-
-// checkURL allows only an https URL without credentials.
-func checkURL(raw string) error {
-	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return ErrNotHTTPS
-	}
-	if u.User != nil {
-		return errors.New("credentials in image URLs are refused")
-	}
-	return nil
-}
-
-// dial resolves the host, requires every address to be allowed and connects to
-// the first validated address. The name is never looked up a second time.
-func (f *Fetcher) dial(ctx context.Context, _, addr string) (net.Conn, error) {
-	host, portText, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-	port, err := strconv.ParseUint(portText, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-	ips, err := f.opts.LookupIP(ctx, host)
-	if err != nil {
-		return nil, err
-	}
-	if len(ips) == 0 {
-		return nil, fmt.Errorf("%s has no addresses", host)
-	}
-	for _, ip := range ips {
-		ip = ip.Unmap()
-		if !f.opts.Allow(netip.AddrPortFrom(ip, uint16(port))) {
-			return nil, fmt.Errorf("%w: %s resolves to %s", ErrBlocked, host, ip)
-		}
-	}
-	d := net.Dialer{}
-	return d.DialContext(ctx, "tcp", netip.AddrPortFrom(ips[0].Unmap(), uint16(port)).String())
+	return r.Body, r.ContentType, nil
 }

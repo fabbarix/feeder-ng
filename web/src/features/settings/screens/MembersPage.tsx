@@ -25,6 +25,7 @@ export function MembersPage() {
         open={page.editor !== null}
         member={page.editor?.item}
         users={page.users}
+        currentUserId={page.currentUserId}
         members={page.members.members}
         saving={page.members.saving}
         error={page.error}

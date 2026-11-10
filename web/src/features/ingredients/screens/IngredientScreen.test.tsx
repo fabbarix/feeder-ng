@@ -52,7 +52,7 @@ describe('IngredientScreen', () => {
   })
   it('shows the name, Base Unit, Shelf Life and conversions', () => {
     setup()
-    expect(screen.getByRole('heading', { name: 'garlic' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Garlic' })).toBeInTheDocument()
     expect(screen.getByText('30 days')).toBeInTheDocument()
     expect(screen.getByText('1 clove = 5 g')).toBeInTheDocument()
   })

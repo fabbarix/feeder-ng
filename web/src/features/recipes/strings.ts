@@ -42,7 +42,6 @@ export const recipeStrings = {
 
   deleteBlocked: 'This Recipe was planned, so it can only be archived.',
   edit: 'Edit',
-  back: 'Back',
   save: 'Save Recipe',
   saving: 'Saving…',
   cancel: 'Cancel',

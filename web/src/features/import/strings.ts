@@ -73,6 +73,5 @@ export const importStrings = {
   clearSelection: 'Clear',
   noRecipes: 'No Recipes to export yet',
   loading: 'Loading…',
-  back: 'Back',
   reviewEmpty: 'Choose a Recipe File in step 2 and the review appears here.',
 } as const

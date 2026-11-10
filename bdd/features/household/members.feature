@@ -56,6 +56,21 @@ Feature: Members
     Then the response status is 409
     And the error code is "user_already_linked"
 
+  Scenario: Admin links themself to a Member
+    A User who is an Admin can also be a Member: any User can be linked, the Admin
+    included (the one named by FEEDER_ADMIN_EMAIL too), to exactly one Member.
+    Given a running Feeder
+    And the Household has the Member "Anna" with Portion Factor 1
+    And the Household has the Member "Marco" with Portion Factor 1
+    And I am signed in as the Admin
+    When I link the Member "Anna" to the User "admin@example.test"
+    Then the response status is 200
+    And the Member "Anna" is linked to the User "admin@example.test"
+    When I link the Member "Marco" to the User "admin@example.test"
+    Then the response status is 409
+    And the error code is "user_already_linked"
+    And the error message mentions "Anna"
+
   Scenario: Removing a User keeps their Member
     Given a running Feeder
     And the Household has the Member "Anna" with Portion Factor 1

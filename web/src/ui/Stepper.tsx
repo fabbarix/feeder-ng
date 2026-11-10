@@ -12,10 +12,12 @@ export interface StepperProps {
   max?: number
   step?: number
   unit?: string
+  /** The id(s) of the helper/error line that describes the control. */
+  describedBy?: string
 }
 
 /** A − value + control for small amounts. Accessible: a group named by `label`, the value is a spinbutton (arrows, Home, End). */
-export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit }: StepperProps) {
+export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, describedBy }: StepperProps) {
   const bounds = { step, min, max }
   const move = (next: number) => {
     if (next !== value) onChange(next)
@@ -33,7 +35,7 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit }
     }
   }
   return (
-    <div role="group" aria-label={label} className="stepper">
+    <div role="group" aria-label={label} aria-describedby={describedBy} className="stepper">
       <IconButton
         icon="minus"
         label={uiStrings.decrease(label)}
@@ -44,6 +46,7 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit }
         role="spinbutton"
         tabIndex={0}
         aria-label={label}
+        aria-describedby={describedBy}
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={value}

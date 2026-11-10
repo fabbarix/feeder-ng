@@ -67,7 +67,7 @@ describe('useScanFlow Stock-take toasts', () => {
     const rejected: ScanResult = { clientUuid: 'uuid-1', status: 'rejected', error: { code: 'unknown_product', message: 'no such Product' } }
     const { deps, hook, notify } = await setup(vi.fn(async () => rejected))
     await act(() => hook.result.current.stockTakeAction('plus_pack'))
-    expect(notify).toHaveBeenCalledWith("Couldn't add that scan: no such Product", 'error')
+    expect(notify).toHaveBeenCalledWith("Couldn't add that Scan: no such Product", 'error')
     expect(deps.feedback.reject).toHaveBeenCalled()
   })
 })

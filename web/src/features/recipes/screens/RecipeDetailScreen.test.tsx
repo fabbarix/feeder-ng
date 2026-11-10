@@ -68,15 +68,13 @@ describe('RecipeDetailScreen: layout', () => {
     view()
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
   })
-  it('the error state keeps a PageHeader with Back, and Try again calls onRetry (refetch)', async () => {
+  it('the error state keeps a PageHeader, and Try again calls onRetry (refetch)', async () => {
     const refetch = vi.fn()
     h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch }
     view()
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(refetch).toHaveBeenCalledOnce()
-    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/recipes')
   })
 })
 
