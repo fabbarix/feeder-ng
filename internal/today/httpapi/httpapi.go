@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/cook/service"
 	hstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/notify"
 	notifyapi "github.com/fabbarix/feeder-ng/internal/notify/httpapi"
 	"github.com/fabbarix/feeder-ng/internal/plan"
-	"github.com/fabbarix/feeder-ng/internal/today"
+	"github.com/fabbarix/feeder-ng/internal/stock"
 )
 
 func init() { app.Register(app.Module{Name: "today", Mount: mount}) }
@@ -84,17 +85,13 @@ func (a *api) streak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	waste := service.NewDB(a.d.DB, a.d.Clock).Waste()
-	last, err := waste.LastWaste(ctx)
+	in, err := waste.StreakInput(ctx)
 	if err != nil {
 		a.fail(w, err)
 		return
 	}
-	first, err := waste.FirstActivity(ctx)
-	if err != nil {
-		a.fail(w, err)
-		return
-	}
-	days := today.Streak(plan.Today(now, loc), string(last), string(first))
+	in.Today = stock.Date(plan.Today(now, loc))
+	days := cook.ZeroWasteStreak(in)
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"days": days})
 }
 

@@ -43,6 +43,7 @@ type Lot struct {
 	Quantity     float64 // Base Units, > 0 for a stored lot
 	Purchased    Date
 	GoesOff      Date // purchase date + Shelf Life, or None
+	KeptOn       Date // the household date of the last Keep, or None (R11c: a Kept lot's earlier go-offs never reset the streak)
 }
 
 // NewLot builds a Lot; shelfLifeDays nil means the Ingredient has no Shelf
@@ -270,5 +271,16 @@ func Keep(lot Lot) Lot {
 		return lot
 	}
 	lot.GoesOff = lot.GoesOff.AddDays(1)
+	return lot
+}
+
+// KeepOn is Keep that also records the household date the user chose Keep, so
+// the zero-waste streak forgives every go-off up to that day (R11c).
+func KeepOn(lot Lot, today Date) Lot {
+	if lot.GoesOff.IsNone() {
+		return lot
+	}
+	lot = Keep(lot)
+	lot.KeptOn = today
 	return lot
 }
