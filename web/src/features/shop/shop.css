@@ -5,6 +5,12 @@
   gap: var(--bento-gap);
 }
 
+/* The sheet forms (TickSheet, ExtraSheet): one column, the fields and buttons spaced by the gap token. */
+.shop-sheet-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .shop-screen__controls {
   display: grid;
   gap: var(--space-3);

@@ -4,6 +4,7 @@
 // the live list (Shop mode), the scan line, notices and the sheets. The session view is its own component, so the camera
 // and the offline data start only once a Shop or Stock-take is chosen.
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useShops } from '../../shops/hooks/useShops'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
@@ -57,7 +58,8 @@ function cameraText(status: ScanController['camera']['status']): string | undefi
 export function ScanScreen() {
   const { shops, isLoading } = useShops()
   const [lastShopId] = useState(() => getLastShopId(localStorageOrNull()))
-  const [stockTakeLink] = useState(() => new URLSearchParams(window.location.search).get('mode') === 'stocktake')
+  const [params] = useSearchParams()
+  const stockTakeLink = params.get('mode') === 'stocktake'
   // undefined: not chosen yet (the starting choice applies); null: the picker is shown; otherwise the chosen session.
   const [picked, setPicked] = useState<Choice | null | undefined>(undefined)
 
@@ -181,6 +183,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
           open
           onClose={flow.closeSheet}
           productName={sheet.product.name}
+          busy={flow.unarchiving}
           onUnarchive={() => void flow.unarchiveProduct()}
           onCreateNew={flow.createNewInstead}
         />

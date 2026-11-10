@@ -11,6 +11,7 @@ export interface ManualBarcodeEntryProps {
 export function ManualBarcodeEntry({ recovery }: ManualBarcodeEntryProps) {
   return (
     <form
+      className="scan-sheet-form"
       onSubmit={(event) => {
         event.preventDefault()
         recovery.submit()

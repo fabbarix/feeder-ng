@@ -6,6 +6,7 @@ import { NumberField } from '../../../ui/fields/NumberField'
 import { RadioCards } from '../../../ui/fields/RadioCards'
 import { TextField } from '../../../ui/fields/TextField'
 import { Select } from '../../../ui/Select/Select'
+import { selectStrings } from '../../../ui/Select/strings'
 import { UnitSelect } from '../../../ui/Select/UnitSelect'
 import { ingredientPickerOptions } from '../../shop/lib/ingredientOptions'
 import { emptyForm, suggestedName, unitOptions, validateUnknownForm, type FormErrors, type IngredientChoice, type UnknownFormValues, type UnknownMode } from '../lib/unknownForm'
@@ -71,7 +72,7 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
   const ingredientOptions = useMemo(() => {
     const options = ingredientPickerOptions(ingredients)
     if (effective && effective.id === undefined) {
-      options.push({ value: NEW_INGREDIENT, label: effective.name, meta: `Base Unit: ${effective.baseUnit}` })
+      options.push({ value: NEW_INGREDIENT, label: effective.name, meta: selectStrings.baseUnitMeta(effective.baseUnit) })
     }
     return options
   }, [ingredients, effective])
@@ -89,6 +90,7 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
   return (
     <BottomSheet open={open} onClose={onClose} title={weighed ? scanStrings.weighedTitle : scanStrings.unknownTitle}>
       <form
+        className="scan-sheet-form"
         onSubmit={(e) => {
           e.preventDefault()
           save()

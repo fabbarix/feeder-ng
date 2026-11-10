@@ -34,6 +34,7 @@ export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSu
   return (
     <BottomSheet open={open} onClose={onClose} title={shopStrings.tickTitle(name)}>
       <form
+        className="shop-sheet-form"
         onSubmit={(e) => {
           e.preventDefault()
           submit()

@@ -45,6 +45,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
   return (
     <BottomSheet open={open} onClose={onClose} title={shopStrings.addExtra}>
       <form
+        className="shop-sheet-form"
         onSubmit={(e) => {
           e.preventDefault()
           submit()
