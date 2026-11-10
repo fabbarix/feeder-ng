@@ -63,6 +63,20 @@ has "$REL" '--version' "helm package must set --version from the tag"
 has "$REL" '--app-version' "helm package must set --app-version from the tag"
 has "$REL" 'helm push .*oci://ghcr\.io/.*/charts' "the chart job must helm push to oci://ghcr.io/<owner>/charts"
 has "$REL" 'helm registry login ghcr\.io' "the chart job must log in to ghcr.io"
+
+# Review fixes: the chart is published only after the image, from one tag-derived version.
+python3 - "$REL" <<'PY' && ok || bad "the chart job must declare needs: image"
+import sys, re
+t = open(sys.argv[1]).read()
+m = re.search(r"^  chart:\n(.*?)(?=^  \w[\w-]*:\n|\Z)", t, re.S | re.M)
+sys.exit(0 if m and re.search(r"needs:\s*(\[?\s*image\s*\]?|\n\s*-\s*image)", m.group(1)) else 1)
+PY
+VERS="$(grep -Eo '\-\-version[ =]+\S+' "$REL" | head -1 | sed -E 's/--version[ =]+//')"
+APPV="$(grep -Eo '\-\-app-version[ =]+\S+' "$REL" | head -1 | sed -E 's/--app-version[ =]+//')"
+if [ -n "$VERS" ] && [ "$VERS" = "$APPV" ]; then ok; else bad "--version and --app-version must use the same tag-derived value (got '$VERS' / '$APPV')"; fi
+has "$REL" 'TAG:\s*\$\{\{\s*github\.ref_name' "TAG must come from github.ref_name"
+has "$REL" 'VERSION="?\$\{TAG#v\}' "VERSION must be the tag without the leading v"
+has "$REL" '--password-stdin' "helm registry login must read the token with --password-stdin"
 # Each publishing job declares its own permissions; the workflow default stays read-only.
 if [ "$(grep -Ec '^\s+packages:\s*write' "$REL")" -ge 2 ]; then ok; else bad "release.yml: image and chart jobs each need packages: write"; fi
 has "$REL" '^permissions:\s*$' "release.yml must declare top-level permissions"

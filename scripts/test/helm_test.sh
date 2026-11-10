@@ -82,10 +82,10 @@ qq defaults 'any(p["containerPort"] == 8080 and p["name"] == "http" for p in c["
 qq defaults 'len(kind("ServiceAccount")) == 1 and pod["serviceAccountName"]' "a ServiceAccount"
 
 # --- image tag override, extra env ---
-render tag --set image.tag=9.9.9 --set env.FEEDER_ADDR=:9090 \
-  --set 'extraEnv[0].name=TZ' --set 'extraEnv[0].value=Europe/Rome'
+render tag --set image.tag=9.9.9 --set env.TZ=Europe/Rome \
+  --set 'extraEnv[0].name=LANG' --set 'extraEnv[0].value=C.UTF-8'
 qq tag 'c["image"] == "ghcr.io/fabbarix/feeder-ng:9.9.9"' "image.tag must override the appVersion"
-qq tag 'env["FEEDER_ADDR"]["value"] == ":9090" and env["TZ"]["value"] == "Europe/Rome"' "env and extraEnv must be rendered"
+qq tag 'env["TZ"]["value"] == "Europe/Rome" and env["LANG"]["value"] == "C.UTF-8"' "env and extraEnv must be rendered"
 
 # --- ingress + TLS ---
 render ingress --set ingress.enabled=true --set ingress.className=nginx \
@@ -138,6 +138,67 @@ neg bad-type "a wrong type must be rejected by the schema" "${BASE[@]}" --set-st
 grep -qi 'sqlite' "$CHART/README.md" 2>/dev/null && ok || bad "chart README must say it cannot be scaled (SQLite)"
 grep -q 'oci://ghcr.io/fabbarix/charts/feeder' "$CHART/README.md" 2>/dev/null && ok || bad "chart README must show the anonymous helm install from oci://ghcr.io/fabbarix/charts/feeder"
 grep -q 'helm' "$CHART/templates/NOTES.txt" 2>/dev/null && ok || bad "NOTES.txt must tell the user what to do next"
+
+# --- review fixes (d1-deploy) ---
+ROOT="$CHART/../../.."
+DEPLOY_MD="$ROOT/docs/dev/deploy.md"
+DESIGN_MD="$ROOT/docs/dev/design/d1-deploy.md"
+README="$CHART/README.md"
+
+# lint with the CI values file
+if helm lint "$CHART" -f "$CHART/ci/lint-values.yaml" >"$OUT/lint-ci.txt" 2>&1; then ok
+else bad "helm lint with ci/lint-values.yaml must pass (file missing or invalid): $(head -c 300 "$OUT/lint-ci.txt")"; fi
+
+# the schema must allow the Helm-reserved global key; Google values must come as a pair
+render global --set global.foo=1
+neg google-id-only "setting only google.clientId must fail rendering" "${BASE[@]}" --set google.clientId=cid
+neg google-secret-only "setting only google.clientSecret must fail rendering" "${BASE[@]}" --set google.clientSecret=csec
+
+# FEEDER_ADDR is fixed at :8080 under the chart (port, Service and probes are hardcoded)
+for f in "$CHART/values.yaml" "$README" "$DESIGN_MD"; do
+  if grep -E '(e\.g\.|example|such as)[^.]*FEEDER_ADDR' "$f" >/dev/null 2>&1; then bad "$(basename "$f") must not offer FEEDER_ADDR as an example extra env"; else ok; fi
+done
+grep -E 'FEEDER_ADDR[^.]*(must|stay|remain)[^.]*:8080|(must|stay|remain)[^.]*:8080[^.]*FEEDER_ADDR' "$README" >/dev/null 2>&1 \
+  && ok || bad "chart README must state FEEDER_ADDR must stay :8080 under the chart"
+
+# every helm upgrade names the namespace; ones with --set or --version reuse values
+upgrade_check() { # FILE
+  python3 - "$1" <<'PY'
+import re, sys
+text = open(sys.argv[1]).read().replace("\\\n", " ")
+bad = []
+for m in re.finditer(r"helm upgrade[^\n`]*", text):
+    cmd = m.group(0)
+    if "--namespace feeder" not in cmd and "-n feeder" not in cmd:
+        bad.append("no --namespace feeder: " + cmd)
+    if ("--set" in cmd or "--version" in cmd) and "--reuse-values" not in cmd:
+        bad.append("no --reuse-values: " + cmd)
+if not re.search(r"helm upgrade", text):
+    bad.append("no helm upgrade found")
+print("\n".join(bad)); sys.exit(1 if bad else 0)
+PY
+}
+for f in "$DEPLOY_MD" "$README"; do
+  if r="$(upgrade_check "$f" 2>&1)"; then ok; else bad "$(basename "$f"): helm upgrade commands: $r"; fi
+done
+
+# /data ownership: fsGroup alone is not enough on every volume type
+for f in "$DEPLOY_MD" "$README"; do
+  b="$(basename "$f")"
+  grep -Eq '/data[^.]*writable[^.]*65532|65532[^.]*writable' "$f" && ok || bad "$b must state /data must be writable by uid/gid 65532"
+  grep -Eqi 'existingClaim[^.]*(ignore|does not honou?r)[^.]*fsGroup|fsGroup[^.]*(ignor|not honou?r)[^.]*(hostPath|NFS|CSI)' "$f" && ok || bad "$b must warn that an existingClaim whose volume ignores fsGroup (hostPath, NFS, some CSI) needs care"
+  grep -Eq 'chown[^.]*65532:65532' "$f" && ok || bad "$b must say to chown 65532:65532 beforehand"
+  if grep -Eqi 'fsGroup[^.]*(alone|by itself)[^.]*(makes|is enough|suffices)|fsGroup (makes|makes the volume) writable' "$f"; then bad "$b must not claim fsGroup alone makes the volume writable"; else ok; fi
+done
+
+# docs: package visibility is irreversible, no first-person hedging, latest tag caveat
+grep -Eqi 'cannot be undone|can.t be undone|irreversible|cannot be made private' "$DEPLOY_MD" && ok || bad "deploy.md must say making a package public cannot be undone"
+if grep -Eqi 'to my knowledge|i am not certain|i think|i believe|i am not sure' "$DEPLOY_MD"; then bad "deploy.md must not hedge in the first person"; else ok; fi
+grep -Eqi 'no .?latest.? (image|tag)[^.]*(until|before)[^.]*(stable|v\*)|latest[^.]*(only|not)[^.]*(exist|published)[^.]*(until|before)' "$README" \
+  && grep -q 'image.tag=main' "$README" && ok || bad "chart README must say no latest image exists until the first stable v* tag, and to use image.tag=main before then"
+
+# probe path registered in the Go code
+grep -rq '"GET /api/health"' "$CHART/../../../internal" --include=*.go && ok || bad "the probe path /api/health must be registered in internal/"
 
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

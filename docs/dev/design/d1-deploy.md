@@ -61,6 +61,16 @@ The code writes only under `FEEDER_DATA_DIR` (`/data`: database, WAL, `images/` 
 
 `scripts/test/helm_test.sh` (skips with a message when `helm` or `python3 -c 'import yaml'` is missing): lint and template for defaults, ingress+TLS, `google.existingSecret`, inline Google values, `existingClaim`, and negative cases (no adminEmail, schema violation, `replicaCount`). `scripts/test/workflows_test.sh` is extended for the new workflow expectations. kind/kubectl are not available, so no install test runs here.
 
+## Review fixes (tests first; the developer applies the docs and chart changes)
+
+- `FEEDER_ADDR` is fixed at `:8080` under the chart (container port, Service and probes are hardcoded). It must not be offered as an example extra `env` in `values.yaml`, the chart README or this note; the README states it must stay `:8080`. The extra-env test uses `TZ`.
+- Every `helm upgrade` in `docs/dev/deploy.md` and the chart README carries `--namespace feeder`; any upgrade with `--set` or `--version` also carries `--reuse-values` (same form as `templates/NOTES.txt`).
+- Docs state `/data` must be writable by uid/gid 65532, that an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI) must be `chown 65532:65532` beforehand, and never claim `fsGroup` alone makes it writable.
+- `deploy/helm/feeder/ci/lint-values.yaml` (new) makes `helm lint ... -f` pass; the schema allows the Helm-reserved `global` key; setting only one of `google.clientId` / `google.clientSecret` fails rendering.
+- Workflow: the chart job `needs: image`; `VERSION="${TAG#v}"` from `github.ref_name` feeds both `--version` and `--app-version`; `--password-stdin` is used.
+- Docs: making a package public cannot be undone; no first-person hedging in `deploy.md`; the README says no `latest` image exists until the first stable `v*` tag (use `image.tag=main` before then).
+- `helm_test.sh` cross-checks that `GET /api/health` is registered in `internal/`.
+
 ## Decisions
 
 - `release.yml` keeps its name; "Publish" is its display name.
