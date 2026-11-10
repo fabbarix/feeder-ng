@@ -49,6 +49,7 @@ func (u ingredientUnits) Units(ctx context.Context, id int64) (units.Ingredient,
 // table is one snapshot of the names, plus the Recipe and Member facts the JSON carries next to them.
 type table struct {
 	recipes       map[int64]string
+	recipeReheat  map[int64]int    // R12: reheat time of a Recipe in minutes (0 when none)
 	recipeMinutes map[int64]int    // total time of a Recipe in minutes (0 when unknown)
 	recipePhoto   map[int64]string // photo URL of a Recipe ("" without one)
 	members       map[int64]string

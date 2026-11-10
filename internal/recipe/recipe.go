@@ -26,6 +26,8 @@ const (
 	MaxTagRunes         = 40
 	MaxCooldownDays     = 365
 	MaxUseByDays        = 30
+	MinReheatMinutes    = 1  // R12: per-Recipe reheat time, whole minutes
+	MaxReheatMinutes    = 30 // the Reheat timer's own upper limit (30 minutes)
 	MaxNoteRunes        = 200
 	MaxStepTextRunes    = 2000
 	MaxMinutes          = 10080 // one week, for durations and lead times
@@ -43,6 +45,7 @@ const (
 	CodeTooManyTags     = "too_many_tags"
 	CodeCooldownInvalid = "cooldown_invalid"
 	CodeUseByInvalid    = "use_by_invalid"
+	CodeReheatInvalid   = "reheat_invalid"
 	CodeSourceInvalid   = "source_invalid"
 	CodeLinesRequired   = "lines_required"
 	CodeReadyMealLines  = "ready_meal_lines" // a Ready Meal has exactly one ingredient line
@@ -135,6 +138,7 @@ type Input struct {
 	Tags              []string
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
+	ReheatMinutes     *int // nil = no reheat time (Reheat uses its formula); else 1..30 whole minutes (R12)
 	Source            Source
 	Image             string // image id, "" = none
 	Lines             []Line
@@ -435,6 +439,7 @@ type Summary struct {
 	Archived       bool
 	TotalMinutes   int
 	AdvanceMinutes int
+	ReheatMinutes  int // 0 = none (R12)
 }
 
 // State is a Member's preference for a Recipe. A Member has exactly one state

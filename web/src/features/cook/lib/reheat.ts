@@ -15,7 +15,8 @@ const PER_PORTION_SECONDS = 60
 const DEFAULT_CAP_SECONDS = 600
 
 /** The default reheating time for a Planned Meal of `portions` Leftover portions. */
-export function defaultReheatSeconds(portions: number): number {
+// TODO(developer, R12): when `reheatMinutes` (the Recipe's own reheat time, 1 to 30) is a usable number, return reheatMinutes * 60.
+export function defaultReheatSeconds(portions: number, _reheatMinutes?: number | null): number {
   if (!Number.isFinite(portions) || portions < 1) return BASE_SECONDS
   const extra = Math.ceil(portions) - 1
   return Math.min(DEFAULT_CAP_SECONDS, BASE_SECONDS + extra * PER_PORTION_SECONDS)

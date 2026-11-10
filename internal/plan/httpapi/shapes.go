@@ -53,6 +53,8 @@ type mealOut struct {
 	CookMinutes int    `json:"cookMinutes,omitempty"`
 	StartBy     string `json:"startBy,omitempty"`
 	PhotoURL    string `json:"photoUrl,omitempty"`
+	// R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when set.
+	ReheatMinutes int `json:"reheatMinutes,omitempty"`
 }
 
 type eliminationsOut struct {

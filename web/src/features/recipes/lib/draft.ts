@@ -41,6 +41,8 @@ export interface RecipeDraft {
   tags: string[]
   cooldownDays: string
   leftoverUseByDays: string
+  /** R12: whole minutes 1 to 30 as typed; blank = not set. TODO(developer): make required, add to emptyDraft, draftFromRecipe, draftToInput, validateDraft. */
+  reheatMinutes?: string
   sourceUrl: string
   sourceAttribution: string
   image: string

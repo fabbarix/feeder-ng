@@ -21,6 +21,7 @@
       "tags": ["chicken", "traybake", "weeknight"],
       "cooldownDays": 10,
       "leftoverUseByDays": 2,
+      "reheatMinutes": 4,
       "source": { "attribution": "Family recipe" },
       "ingredients": [
         { "ingredient": "chicken thighs", "quantity": 800, "unit": "g", "note": "boneless, skinless" },
