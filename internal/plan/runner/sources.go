@@ -153,7 +153,7 @@ func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 		if err != nil {
 			return nil, err
 		}
-		pr := planner.Recipe{ID: planner.RecipeID(rec.ID), Yield: rec.Yield, Archived: rec.Archived,
+		pr := planner.Recipe{ID: planner.RecipeID(rec.ID), Name: rec.Name, Yield: rec.Yield, Archived: rec.Archived,
 			CooldownDays: rec.CooldownDays, UseByDays: rec.LeftoverUseByDays}
 		for _, t := range rec.Tags {
 			pr.Tags = append(pr.Tags, planner.Tag(t))

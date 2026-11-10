@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MarkCookedSheet, ShortfallNotice, StockCorrectionSheet, useMarkCooked, useStockSheet } from '../../plan'
+import { mayResolve } from '../../plan/lib/resolve'
+import { leftoverOutcomeText } from '../../plan/lib/cook'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
 import { createWebAudioAlarm } from '../adapters/alarm'
 import { AdvanceStepsTile } from '../components/AdvanceStepsTile'
 import { CookNavTiles } from '../components/CookNavTiles'
+import { CookedConfirmation } from '../components/CookedConfirmation'
 import { CookTimerStrip } from '../components/CookTimerStrip'
 import { StepTile } from '../components/StepTile'
 import { VoiceToggle } from '../components/VoiceToggle'
@@ -22,14 +25,15 @@ import '../cook.css'
 
 /**
  * Cook Mode. Routes: /cook/meal/:date/:slotId and /cook/recipe/:id (?batches=, default 1).
- * Composes (render + wire only) useCookSession, useTimers(scope), useTimerAlarm,
+ * Composes (render + wire only) useCookSession, useTimers() (every household timer), useTimerAlarm,
  * useWakeLock(createWakeLock()), useVoiceCommands(createBrowserSpeech()) with
  * useVoicePreference, and: AdvanceStepsTile, StepTile (tapZones on a tablet-width
  * viewport), CookTimerStrip, CookNavTiles, VoiceToggle. Voice commands: next/back
  * call the session, repeat bumps repeat, startTimer calls startStepTimer, pauseTimer
  * pauses the first running timer. Mark as Cooked opens T11's MarkCookedSheet through
- * useMarkCooked(markCookedKey) from features/plan; a finished cook returns to "/".
- * A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
+ * useMarkCooked(markCookedKey) from features/plan. A Planned Meal is offered Mark as Cooked only once it is due
+ * (mayResolve). After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with "Back to
+ * Today" (no timed redirect). A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
  */
 export function CookScreen(): ReactNode {
   const params = useParams() as CookRouteParams
@@ -39,7 +43,7 @@ export function CookScreen(): ReactNode {
   const source = useMemo(() => cookSourceFrom(params, batches), [params, batches])
 
   const session = useCookSession(source)
-  const timers = useTimers(session.scope)
+  const timers = useTimers()
   const alarm = useMemo(() => createWebAudioAlarm(), [])
   const speech = useMemo(() => createBrowserSpeech(), [])
   const wake = useMemo(() => createWakeLock(), [])
@@ -52,11 +56,6 @@ export function CookScreen(): ReactNode {
   const formatUse = useFormatUse()
   const [sheetOpen, setSheetOpen] = useState(false)
   const finishCook = () => navigate('/')
-  // Stay while Stock warnings are on screen; leave once Correct Stock or Dismiss has cleared the last one.
-  const cookedClear = marked.result !== null && marked.warnings.length === 0
-  useEffect(() => {
-    if (cookedClear) finishCook()
-  }, [cookedClear])
 
   const onCommand = (command: VoiceCommand) => {
     if (command === 'next') session.next()
@@ -70,6 +69,25 @@ export function CookScreen(): ReactNode {
   }
   useVoiceCommands({ adapter: speech, enabled: voiceOn, onCommand })
 
+  if (marked.result && marked.outcome) {
+    return (
+      <div className="cook-screen">
+        <CookedConfirmation recipeName={marked.result.meal.recipeName} outcomeText={leftoverOutcomeText(marked.outcome)} onLeave={finishCook}>
+          {marked.warnings.map((w) => (
+            <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => marked.dismissWarning(x.ingredientId)} />
+          ))}
+          <StockCorrectionSheet
+            open={stock.correction !== null}
+            onClose={stock.close}
+            correction={stock.correction}
+            onSave={(t) => void stock.save(t)}
+            busy={stock.busy}
+            error={stock.error}
+          />
+        </CookedConfirmation>
+      </div>
+    )
+  }
   if (session.notCookable) {
     return <EmptyState title={cookStrings.notCookable} action={<Button variant="tonal" onClick={() => navigate('/')}>{cookStrings.back}</Button>} />
   }
@@ -99,6 +117,7 @@ export function CookScreen(): ReactNode {
         <p className="cook-screen__empty">{cookStrings.noSteps}</p>
       )}
       <CookTimerStrip
+        scope={session.scope}
         items={timers.items}
         onPause={(id) => void timers.pause(id)}
         onResume={(id) => void timers.resume(id)}
@@ -109,7 +128,7 @@ export function CookScreen(): ReactNode {
         isLast={session.isLast}
         onBack={session.back}
         onNext={session.next}
-        onMarkCooked={view.meal ? () => setSheetOpen(true) : undefined}
+        onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
         onDone={view.meal ? undefined : () => navigate(`/recipes/${view.recipeId}`)}
       />
       {view.meal ? (
@@ -130,17 +149,6 @@ export function CookScreen(): ReactNode {
           error={marked.error}
         />
       ) : null}
-      {marked.warnings.map((w) => (
-        <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => marked.dismissWarning(x.ingredientId)} />
-      ))}
-      <StockCorrectionSheet
-        open={stock.correction !== null}
-        onClose={stock.close}
-        correction={stock.correction}
-        onSave={(t) => void stock.save(t)}
-        busy={stock.busy}
-        error={stock.error}
-      />
     </div>
   )
 }

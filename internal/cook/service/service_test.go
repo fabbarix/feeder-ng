@@ -700,3 +700,17 @@ func TestAPauseThatLandedBeforeTheFinishIsNotOverwrittenByTheSweep(t *testing.T)
 		}
 	}
 }
+
+// R4 B10: the view carries the household date so the client can hide Mark as Cooked on a future meal.
+func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-10", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned"}}
+	v, err := f.svc.MealView(ctx, "2026-11-10", 3)
+	if err != nil || v.Today != "2026-11-09" {
+		t.Errorf("Today = %q, %v; want 2026-11-09 (Rome, 13:00 local)", v.Today, err)
+	}
+	f.clk.Set(time.Date(2026, 11, 9, 23, 30, 0, 0, time.UTC)) // 00:30 on the 10th in Rome
+	if v, _ = f.svc.MealView(ctx, "2026-11-10", 3); v.Today != "2026-11-10" {
+		t.Errorf("Today = %q after local midnight, want 2026-11-10 (household zone, not UTC)", v.Today)
+	}
+}

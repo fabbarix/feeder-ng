@@ -187,11 +187,13 @@ func TestAlternativesRefuseCookedAndSkippedMealsAndUnknownSlots(t *testing.T) {
 	e := newEnv(t)
 	e.mustPlan()
 	e.r.Cooked(ctx, e.key(9), nil)
+	if _, err := e.r.Alternatives(ctx, e.key(9)); !errors.Is(err, runner.ErrNotSwappable) {
+		t.Errorf("Cooked: err = %v, want ErrNotSwappable", err)
+	}
+	e.clk.Set(time.Date(2026, 11, 10, 8, 0, 0, 0, time.UTC))
 	e.r.NotCooked(ctx, e.key(10))
-	for name, key := range map[string]plan.Key{"Cooked": e.key(9), "skipped": e.key(10)} {
-		if _, err := e.r.Alternatives(ctx, key); !errors.Is(err, runner.ErrNotSwappable) {
-			t.Errorf("%s: err = %v, want ErrNotSwappable", name, err)
-		}
+	if _, err := e.r.Alternatives(ctx, e.key(10)); !errors.Is(err, runner.ErrNotSwappable) {
+		t.Errorf("skipped: err = %v, want ErrNotSwappable", err)
 	}
 	if _, err := e.r.Alternatives(ctx, plan.Key{Date: "2026-11-10", MealSlotID: e.slotIDs[1]}); !errors.Is(err, runner.ErrUnknownSlot) {
 		t.Errorf("wrong weekday: err = %v, want ErrUnknownSlot", err)
@@ -399,6 +401,7 @@ func TestCookingAMealServedFromALeftoverDeductsNothingAndUsesUpItsPortions(t *te
 	e := newEnv(t)
 	chickenOnMonday(t, e)
 	first, _ := e.r.Cooked(ctx, e.key(9), nil)
+	e.clk.Set(time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)) // Tuesday: its slot is due
 	res, err := e.r.Cooked(ctx, e.key(10), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -564,5 +567,123 @@ func TestPlanAfterARuleChangeReplansUnpinnedMealsThatBreakIt(t *testing.T) {
 	}
 	if gen, _ := e.st.Generation(ctx); gen != 1 {
 		t.Errorf("generation = %d; a rule edit must not reshuffle (no Regenerate)", gen)
+	}
+}
+
+// ---- R4 (QA round 2) ----
+
+// B8: the planner stores a "leftovers for <day>" chip on the meal that makes the Leftover. When the dependant is
+// replanned, the chip must go (or stay when the dependant stays).
+func withFitsChip(t *testing.T, e *env, day int, fitDate string) {
+	t.Helper()
+	m := e.meal(day)
+	m.Why = append(m.Why, plan.Why{Code: "leftover_fits", Value: 1, Date: fitDate})
+	if _, err := e.st.SaveMeal(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func hasFitsChip(m plan.Meal, date string) bool {
+	for _, w := range m.Why {
+		if w.Code == "leftover_fits" && w.Date == date {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCookedWithASmallerLeftoverDropsTheStaleLeftoversForChipOnTheSourceMeal(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e)
+	withFitsChip(t, e, 9, "2026-11-10")
+	if _, err := e.r.Cooked(ctx, e.key(9), f64(1)); err != nil { // Tuesday needs 2: replanned fresh
+		t.Fatal(err)
+	}
+	if mon := e.meal(9); hasFitsChip(mon, "2026-11-10") {
+		t.Errorf("Monday still says leftovers for Tuesday: %+v", mon.Why)
+	}
+}
+
+func TestCookedWithAnAdequateLeftoverKeepsTheLeftoversForChip(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e)
+	withFitsChip(t, e, 9, "2026-11-10")
+	if _, err := e.r.Cooked(ctx, e.key(9), nil); err != nil {
+		t.Fatal(err)
+	}
+	if mon := e.meal(9); !hasFitsChip(mon, "2026-11-10") {
+		t.Errorf("Monday lost its leftovers-for-Tuesday chip although Tuesday is still served from it: %+v", mon.Why)
+	}
+}
+
+func TestNotCookedAlsoDropsLeftoversForChipsWithNoDependant(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e)
+	withFitsChip(t, e, 9, "2026-11-10")
+	if _, err := e.r.NotCooked(ctx, e.key(9)); err != nil {
+		t.Fatal(err)
+	}
+	if mon := e.meal(9); hasFitsChip(mon, "2026-11-10") {
+		t.Errorf("a skipped meal keeps a leftovers chip: %+v", mon.Why)
+	}
+}
+
+// B10: only meals whose slot date is today or earlier (household zone) may be resolved.
+func TestCookedAndNotCookedRefuseAFutureMealAndChangeNothing(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e) // clock: Monday 12:00; Tuesday is a future date
+	if _, err := e.r.Cooked(ctx, e.key(10), nil); !errors.Is(err, plan.ErrFutureMeal) {
+		t.Errorf("Cooked(future): err = %v, want plan.ErrFutureMeal", err)
+	}
+	if _, err := e.r.NotCooked(ctx, e.key(10)); !errors.Is(err, plan.ErrFutureMeal) {
+		t.Errorf("NotCooked(future): err = %v, want plan.ErrFutureMeal", err)
+	}
+	if m := e.meal(10); m.State != plan.StatePlanned {
+		t.Errorf("a refused future meal changed state: %+v", m)
+	}
+	if len(e.stock.deductions) != 0 {
+		t.Error("a refused Cooked deducted Stock")
+	}
+}
+
+func TestTodayEvenLaterInTheEveningMayBeCooked(t *testing.T) {
+	e := newEnv(t)
+	e.mustPlan()
+	e.clk.Set(time.Date(2026, 11, 9, 7, 0, 0, 0, time.UTC)) // before the 19:00 slot
+	if _, err := e.r.Cooked(ctx, e.key(9), nil); err != nil {
+		t.Errorf("today's dinner at 07:00: %v; the date is what counts, not the time", err)
+	}
+}
+
+// B13: the Cooked result says where the Leftover went.
+func TestCookedReportsTheMealsTheLeftoverIsPlannedFor(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e)
+	res, err := e.r.Cooked(ctx, e.key(9), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []plan.Key
+	for _, p := range res.PlannedFor {
+		got = append(got, plan.Key{Date: p.Date, MealSlotID: p.MealSlotID})
+	}
+	if want := []plan.Key{e.key(10)}; !reflect.DeepEqual(got, want) {
+		t.Errorf("PlannedFor = %v, want %v (Tuesday is served from it)", got, want)
+	}
+	// 4 portions: Tuesday takes 2, the other 2 are kept.
+	e2 := newEnv(t)
+	chickenOnMonday(t, e2)
+	res, _ = e2.r.Cooked(ctx, e2.key(9), f64(4))
+	if res.Leftover == nil || len(res.PlannedFor) != 1 {
+		t.Errorf("result = %+v; want a Leftover planned for Tuesday only", res)
+	}
+}
+
+func TestCookedWithASmallerLeftoverPlansItForNothingElse(t *testing.T) {
+	e := newEnv(t)
+	chickenOnMonday(t, e)
+	res, err := e.r.Cooked(ctx, e.key(9), f64(1))
+	if err != nil || res.Leftover == nil || len(res.PlannedFor) != 0 {
+		t.Errorf("result = %+v, %v; want 1 kept portion planned for no meal", res, err)
 	}
 }

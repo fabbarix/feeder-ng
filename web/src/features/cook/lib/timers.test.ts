@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CookTimer } from '../types'
-import { finishedIds, measureSkew, newlyFinished, remainingSeconds, sortTimers } from './timers'
+import { finishedIds, measureSkew, newlyFinished, partitionByScope, remainingSeconds, sortTimers, timerActions, timerPlace } from './timers'
 
 const T0 = Date.parse('2026-11-09T18:00:00Z')
 
@@ -67,5 +67,35 @@ describe('finished timers', () => {
 
   it('the first look at the page never rings (null before)', () => {
     expect(newlyFinished(null, [1, 2])).toEqual([])
+  })
+})
+
+describe('partitionByScope (B14)', () => {
+  const item = (id: number, scope: string | null) => ({ timer: timer({ id, scope }) })
+  it('puts this scope first and everything else (other scopes, free timers) apart, keeping order', () => {
+    const items = [item(1, 'recipe:7'), item(2, 'meal:2026-11-10/3'), item(3, 'recipe:7'), item(4, null)]
+    const { here, elsewhere } = partitionByScope(items, 'recipe:7')
+    expect(here.map((i) => i.timer.id)).toEqual([1, 3])
+    expect(elsewhere.map((i) => i.timer.id)).toEqual([2, 4])
+  })
+  it('handles nothing', () => {
+    expect(partitionByScope([], 'recipe:7')).toEqual({ here: [], elsewhere: [] })
+  })
+})
+
+describe('timerActions (B14)', () => {
+  it('offers pause and cancel while running, resume and cancel while paused, dismiss when finished', () => {
+    expect(timerActions('running')).toEqual(['pause', 'cancel'])
+    expect(timerActions('paused')).toEqual(['resume', 'cancel'])
+    expect(timerActions('finished')).toEqual(['dismiss'])
+  })
+})
+
+describe('timerPlace (B14)', () => {
+  it('names where another timer belongs, and nothing for this scope or a free timer', () => {
+    expect(timerPlace('meal:2026-11-10/3', 'recipe:7')).toBe('Tue Planned Meal')
+    expect(timerPlace('recipe:9', 'recipe:7')).toBe('another Recipe')
+    expect(timerPlace('recipe:7', 'recipe:7')).toBe('')
+    expect(timerPlace(null, 'recipe:7')).toBe('')
   })
 })

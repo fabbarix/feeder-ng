@@ -43,6 +43,7 @@ export function PlanScreen(): ReactNode {
             onConfirm={(k) => void actions.confirm(k)}
             onUnpin={(k) => void actions.unpin(k)}
             onMarkCooked={s.openCook}
+            today={plan.today}
           />
         ))}
       </BentoGrid>

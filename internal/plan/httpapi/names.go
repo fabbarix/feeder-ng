@@ -46,10 +46,18 @@ type table struct {
 	recipes     map[int64]string
 	members     map[int64]string
 	ingredients map[int64]string
+	slots       map[int64]string
 }
 
 func (n *names) load(ctx context.Context) (table, error) {
-	t := table{recipes: map[int64]string{}, members: map[int64]string{}, ingredients: map[int64]string{}}
+	t := table{recipes: map[int64]string{}, members: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
+	ss, err := n.hh.Slots(ctx)
+	if err != nil {
+		return t, err
+	}
+	for _, s := range ss {
+		t.slots[s.ID] = s.Name
+	}
 	rs, err := n.recipe.List(ctx, recipestore.ListFilter{Archived: "all"})
 	if err != nil {
 		return t, err

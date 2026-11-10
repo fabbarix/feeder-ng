@@ -4,7 +4,7 @@ import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { meal, mockApi, renderWithProviders } from '../../plan/test-utils'
 import type { CookedResult, CookPreview } from '../../plan/types'
-import type { CookView } from '../types'
+import type { CookTimer, CookView } from '../types'
 import { CookScreen } from './CookScreen'
 
 vi.mock('../../../lib/sse', () => ({
@@ -13,11 +13,11 @@ vi.mock('../../../lib/sse', () => ({
 
 const mealView: CookView = {
   scope: 'meal:2026-11-09/2', recipeId: 7, recipeName: 'Chicken', batches: 1,
-  meal: { date: '2026-11-09', mealSlotId: 2 }, advance: [],
+  meal: { date: '2026-11-09', mealSlotId: 2 }, today: '2026-11-09', advance: [],
   steps: [{ index: 0, number: 1, of: 1, kind: 'active', text: 'Roast the chicken', durationMinutes: 40, imageUrl: '', uses: [], timer: null }],
   timers: [],
 }
-const recipeView: CookView = { ...mealView, scope: 'recipe:7', meal: null }
+const recipeView: CookView = { ...mealView, scope: 'recipe:7', meal: null, today: '2026-11-09' }
 const timers = { now: '2026-11-09T12:00:00Z', timers: [] }
 const preview: CookPreview = {
   meal: meal({ date: '2026-11-09', mealSlotId: 2, recipeName: 'Chicken' }), fresh: true, batches: 1, yield: 4, portionsNeeded: 2,
@@ -27,11 +27,15 @@ const shortfall = {
   ingredientId: 11, name: 'chicken thighs', baseUnit: 'g' as const, have: 300, need: 400, shortfall: 100,
   message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g',
 }
-const cooked = (warnings: CookedResult['warnings']): CookedResult => ({ meal: meal({ state: 'cooked' }), leftover: null, warnings })
+const tuesday = { date: '2026-11-10', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
+const cooked = (warnings: CookedResult['warnings'], over: Partial<CookedResult> = {}): CookedResult => ({
+  meal: meal({ state: 'cooked' }), leftover: null, warnings, plannedFor: [], ...over,
+})
+const leftover2 = { id: 3, recipeId: 7, recipeName: 'Chicken', portions: 2, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2 }
 
 const mealRoutes = {
   'GET /api/cook/meals/2026-11-09/2': mealView,
-  'GET /api/cook/timers?scope=meal%3A2026-11-09%2F2': timers,
+  'GET /api/cook/timers': timers,
   'GET /api/plan/2026-11-09/2/cook': preview,
 }
 
@@ -56,15 +60,50 @@ beforeEach(() => {
 })
 
 describe('CookScreen: Mark as Cooked', () => {
-  it('leaves at once when nothing is short in Stock', async () => {
-    const api = mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([]) })
+  it('B13: confirms where the Leftover went, then leaves on Back to Today', async () => {
+    const api = mockApi({
+      ...mealRoutes,
+      'POST /api/plan/2026-11-09/2/cooked': cooked([], { leftover: leftover2, plannedFor: [tuesday] }),
+    })
     renderMeal()
     await confirmCooked()
-    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('2 portions planned for Tue Dinner')
+    expect(screen.queryByText('Home page')).not.toBeInTheDocument()
     expect(api.callsTo('POST', '/api/plan/2026-11-09/2/cooked')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Today' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
   })
 
-  it('stays with the Stock warning, and leaves only once Correct Stock has fixed it', async () => {
+  it('B13: says a Leftover nothing is planned for is kept, and when there is none', async () => {
+    mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([], { leftover: { ...leftover2, portions: 1 } }) })
+    renderMeal()
+    await confirmCooked()
+    expect(await screen.findByRole('status')).toHaveTextContent('1 portion kept, good until Thu')
+  })
+
+  it('B13: reports no Leftovers when none were recorded', async () => {
+    mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([]) })
+    renderMeal()
+    await confirmCooked()
+    expect(await screen.findByRole('status')).toHaveTextContent('No Leftovers')
+  })
+
+  it('B13: Mark as Cooked is not offered again, even when the Step view is refreshed as no longer cookable', async () => {
+    let viewCalls = 0
+    mockApi({
+      ...mealRoutes,
+      'GET /api/cook/meals/2026-11-09/2': () => (++viewCalls === 1 ? mealView : { status: 409, json: { error: { code: 'not_cookable', message: 'x' } } }),
+      'POST /api/plan/2026-11-09/2/cooked': cooked([]),
+    })
+    renderMeal()
+    await confirmCooked()
+    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
+    expect(screen.queryByText('This meal has already been cooked or skipped')).not.toBeInTheDocument()
+  })
+
+  it('stays with the Stock warning next to the confirmation, and shows Back to Today as well', async () => {
     const api = mockApi({
       ...mealRoutes,
       'POST /api/plan/2026-11-09/2/cooked': cooked([shortfall]),
@@ -73,9 +112,9 @@ describe('CookScreen: Mark as Cooked', () => {
     renderMeal()
     await confirmCooked()
 
+    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
     const notice = await screen.findByRole('alert')
     expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
-    expect(screen.queryByText('Home page')).not.toBeInTheDocument()
 
     await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
     const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
@@ -84,17 +123,20 @@ describe('CookScreen: Mark as Cooked', () => {
     await userEvent.type(input, '250')
     await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    // The confirmation stays until the User leaves.
+    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Today' }))
     expect(await screen.findByText('Home page')).toBeInTheDocument()
   })
 
-  it('leaves once the last warning is dismissed, leaving Stock alone', async () => {
+  it('dismissing a warning leaves Stock alone and keeps the confirmation', async () => {
     const api = mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/cooked': cooked([shortfall]) })
     renderMeal()
     await confirmCooked()
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    expect(screen.queryByText('Home page')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
 
@@ -107,11 +149,48 @@ describe('CookScreen: Mark as Cooked', () => {
     expect(await screen.findByText('Home page')).toBeInTheDocument()
     expect(api.callsTo('POST', '/api/plan/2026-11-09/2/not-cooked')).toHaveLength(1)
   })
+
+  it('B10: a Planned Meal for a later day cannot be marked Cooked', async () => {
+    const future = { ...mealView, scope: 'meal:2026-11-10/3', meal: { date: '2026-11-10', mealSlotId: 3 }, today: '2026-11-09' }
+    mockApi({ 'GET /api/cook/meals/2026-11-10/3': future, 'GET /api/cook/timers': timers })
+    renderWithProviders(
+      <Routes>
+        <Route path="/cook/meal/:date/:slotId" element={<CookScreen />} />
+      </Routes>,
+      '/cook/meal/2026-11-10/3',
+    )
+    await screen.findByRole('article', { name: 'Step 1 of 1' })
+    expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
+  })
+})
+
+describe('CookScreen: timers (B14)', () => {
+  const t = (over: Partial<CookTimer>): CookTimer => ({
+    id: 1, scope: 'meal:2026-11-09/2', step: 3, label: 'Step 3: Simmer', durationSeconds: 600, state: 'running', remainingSeconds: 600,
+    endsAt: '2026-11-09T12:10:00Z', startedAt: '2026-11-09T12:00:00Z', ...over,
+  })
+
+  it('shows this scope\'s timers and the household\'s other running timers, with pause and cancel', async () => {
+    const api = mockApi({
+      ...mealRoutes,
+      'GET /api/cook/timers': { now: '2026-11-09T12:00:00Z', timers: [t({}), t({ id: 2, scope: 'recipe:9', step: 1, label: 'Step 1: Boil rice', remainingSeconds: 300, endsAt: '2026-11-09T12:05:00Z' })] },
+      'POST /api/cook/timers/2/pause': t({ id: 2, state: 'paused' }),
+      'DELETE /api/cook/timers/1': undefined,
+    })
+    renderMeal()
+    expect(await screen.findByRole('region', { name: 'Timers' })).toBeInTheDocument()
+    const other = await screen.findByRole('region', { name: 'Other timers' })
+    expect(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).toBeInTheDocument()
+    await userEvent.click(within(other).getByRole('button', { name: 'Pause Step 1: Boil rice' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers/2/pause')).toHaveLength(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel timer Step 3: Simmer' }))
+    await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/1')).toHaveLength(1))
+  })
 })
 
 describe('CookScreen: a Recipe scope', () => {
   it('finishes with Back to Recipe, never Done', async () => {
-    mockApi({ 'GET /api/cook/recipes/7?batches=1': recipeView, 'GET /api/cook/timers?scope=recipe%3A7': timers })
+    mockApi({ 'GET /api/cook/recipes/7?batches=1': recipeView, 'GET /api/cook/timers': timers })
     renderWithProviders(
       <Routes>
         <Route path="/cook/recipe/:id" element={<CookScreen />} />

@@ -103,6 +103,7 @@ type AdvanceStep struct{ Lead time.Duration }
 // Recipe is the planner's view of a Recipe.
 type Recipe struct {
 	ID       RecipeID
+	Name     string  // for display only; the planner never reads it
 	Yield    float64 // portions per Batch; Recipes with Yield <= 0 are ignored
 	Tags     []Tag
 	Archived bool

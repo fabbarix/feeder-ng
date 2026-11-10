@@ -22,6 +22,14 @@ type whyOut struct {
 	Date         string   `json:"date,omitempty"`
 }
 
+// plannedForOut is one later meal the Cooked Leftover is planned for (the Cooked response's plannedFor).
+type plannedForOut struct {
+	Date         string `json:"date"`
+	MealSlotID   int64  `json:"mealSlotId"`
+	MealSlotName string `json:"mealSlotName"`
+	RecipeName   string `json:"recipeName"`
+}
+
 type leftoverSourceOut struct {
 	LeftoverID *int64 `json:"leftoverId"`
 	Date       string `json:"date"`

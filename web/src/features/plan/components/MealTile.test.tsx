@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { favourite, meal, slot } from '../test-utils'
 import { MealTile } from './MealTile'
 
-function setup(s = slot()) {
+function setup(s = slot(), today = '2026-11-10') {
   const handlers = { onSwap: vi.fn(), onChoose: vi.fn(), onConfirm: vi.fn(), onUnpin: vi.fn(), onMarkCooked: vi.fn() }
-  render(<MealTile slot={s} {...handlers} />)
+  render(<MealTile slot={s} today={today} {...handlers} />)
   return handlers
 }
 
@@ -91,5 +91,25 @@ describe('MealTile', () => {
     setup(slot({ meal: null }))
     expect(screen.getByText('Nothing planned')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Choose a Recipe' })).toBeInTheDocument()
+  })
+
+  describe('B10: only meals due today or earlier can be resolved', () => {
+    it('hides Mark as Cooked for a future meal but keeps Swap and Confirm', () => {
+      setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10')
+      expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument()
+    })
+
+    it("offers it for today's meal and for a past one still waiting", async () => {
+      const h = setup(slot({ date: '2026-11-10' }), '2026-11-10')
+      await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
+      expect(h.onMarkCooked).toHaveBeenCalledWith(key)
+    })
+
+    it('offers it for a past meal', () => {
+      setup(slot({ date: '2026-11-08', meal: meal({ date: '2026-11-08' }) }), '2026-11-10')
+      expect(screen.getByRole('button', { name: 'Mark as Cooked' })).toBeInTheDocument()
+    })
   })
 })

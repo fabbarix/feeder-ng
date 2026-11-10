@@ -1,9 +1,12 @@
 package plan
 
 import (
+	"errors"
 	"math"
 	"sort"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
 // eps absorbs float noise in Base Unit and portion arithmetic.
@@ -108,6 +111,75 @@ func ToConfirm(items []Timed, now time.Time) []Timed {
 			return out[i].At.Before(out[j].At)
 		}
 		return out[i].Meal.Key.MealSlotID < out[j].Meal.Key.MealSlotID
+	})
+	return out
+}
+
+// ErrFutureMeal: a Planned Meal whose slot date is after today cannot be marked Cooked or Not cooked (409 future_meal).
+var ErrFutureMeal = errors.New("plan: the Planned Meal is in the future")
+
+// MayResolve reports whether a Planned Meal on date (YYYY-MM-DD) may be marked Cooked or Not cooked on today
+// (household date): its date is today or earlier. Unparseable dates are false.
+func MayResolve(date, today string) bool {
+	d, err := time.Parse(dateLayout, date)
+	if err != nil {
+		return false
+	}
+	t, err := time.Parse(dateLayout, today)
+	if err != nil {
+		return false
+	}
+	return !d.After(t)
+}
+
+// PruneStaleLeftoverChips returns copies of the meals whose stored "leftover_fits" chips are stale: a chip dated D is
+// stale unless some meal on D is served from this meal (Meal.From.From == its Key) and is not skipped. Only changed
+// meals are returned, with the stale chips removed and every other chip kept in order.
+func PruneStaleLeftoverChips(meals []Meal) []Meal {
+	var out []Meal
+	for _, m := range meals {
+		var kept []Why
+		changed := false
+		for _, w := range m.Why {
+			if w.Code == string(planner.ReasonLeftoverFits) && !servesOn(meals, m.Key, w.Date) {
+				changed = true
+				continue
+			}
+			kept = append(kept, w)
+		}
+		if changed {
+			c := m
+			c.Why = kept
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// servesOn reports whether a meal not skipped on date is served from the Leftover of src.
+func servesOn(meals []Meal, src Key, date string) bool {
+	for _, d := range meals {
+		if d.Key.Date == date && d.From != nil && d.From.From == src && d.State != StateSkipped {
+			return true
+		}
+	}
+	return false
+}
+
+// LeftoverPlannedFor lists the Keys of the meals served from the Leftover made at src (Meal.From.From == src), not
+// skipped, in date then Meal Slot id order: where the Leftover went (B13).
+func LeftoverPlannedFor(src Key, meals []Meal) []Key {
+	var out []Key
+	for _, m := range meals {
+		if m.From != nil && m.From.From == src && m.State != StateSkipped {
+			out = append(out, m.Key)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Date != out[j].Date {
+			return out[i].Date < out[j].Date
+		}
+		return out[i].MealSlotID < out[j].MealSlotID
 	})
 	return out
 }
