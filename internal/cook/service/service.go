@@ -38,14 +38,14 @@ const (
 // TimerEvent is the data of a `timers` event. Kind is started, paused,
 // resumed, cancelled or finished.
 type TimerEvent struct {
-	Changed string `json:"changed"` // always "timer"
+	Changed string `json:"changed"` // "timer", or "finished" for the finished event
 	Kind    string `json:"kind"`
 	TimerID int64  `json:"timerId"`
 	Scope   string `json:"scope"`
 	Label   string `json:"label"`
-	// RecipeName is set on the finished event only ({changed:"finished", timerId,
-	// label, recipeName}): the Recipe the timer's scope cooks, "" for a free timer.
-	RecipeName string `json:"recipeName,omitempty"`
+	// RecipeName is set on the finished event only: the Recipe the timer's scope
+	// cooks, "" for a free timer or when the Recipe is gone.
+	RecipeName string `json:"recipeName"`
 }
 
 // MarksEvent is the data of a `cook` event.
@@ -299,10 +299,7 @@ func (s *Service) Pause(ctx context.Context, id int64) (cook.Timer, error) {
 		return cook.Timer{}, err
 	}
 	now := s.now()
-	t, finished := s.settle(ctx, t, now)
-	if finished {
-		s.publishTimer(kindFinished, t)
-	}
+	t = s.settleAndAnnounce(ctx, t, now)
 	p, err := t.Pause(now)
 	if errors.Is(err, cook.ErrNotRunning) {
 		return cook.Timer{}, ErrNotRunning
@@ -343,10 +340,7 @@ func (s *Service) Cancel(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	t, finished := s.settle(ctx, t, s.now())
-	if finished {
-		s.publishTimer(kindFinished, t)
-	}
+	t = s.settleAndAnnounce(ctx, t, s.now())
 	if err := s.cfg.Store.DeleteTimer(ctx, id); err != nil {
 		return mapStoreErr(err)
 	}
@@ -363,11 +357,7 @@ func (s *Service) Timers(ctx context.Context, scope cook.Scope) (time.Time, []co
 		return time.Time{}, nil, err
 	}
 	for i := range all {
-		var finished bool
-		all[i], finished = s.settle(ctx, all[i], now)
-		if finished {
-			s.publishTimer(kindFinished, all[i])
-		}
+		all[i] = s.settleAndAnnounce(ctx, all[i], now)
 	}
 	sortTimers(all)
 	return now, all, nil
@@ -402,11 +392,10 @@ func (s *Service) Sweep(ctx context.Context) ([]cook.Timer, error) {
 		if t.State != cook.Running {
 			continue
 		}
-		var finished bool
-		t, finished = s.settle(ctx, t, now)
+		settled, finished := s.settle(ctx, t, now)
 		if finished {
-			done = append(done, t)
-			s.publishTimer(kindFinished, t)
+			done = append(done, settled)
+			s.announceFinished(ctx, settled)
 		}
 	}
 	if _, err := s.cfg.Store.PurgeOlderThan(ctx, now.Add(-purgeAfter)); err != nil {
@@ -415,16 +404,47 @@ func (s *Service) Sweep(ctx context.Context) ([]cook.Timer, error) {
 	return done, nil
 }
 
-// settle stores a running timer that has ended as finished. The bool reports whether it changed.
+// settle finishes a running timer that has ended. The bool is true only for the
+// caller whose conditional update won, so the finished event is published once
+// however many readers and sweeps race. When another writer got there first
+// (a Pause, a Cancel, another finish) the stored timer is returned as it is now.
 func (s *Service) settle(ctx context.Context, t cook.Timer, now time.Time) (cook.Timer, bool) {
 	settled, changed := t.Settle(now)
 	if !changed {
 		return t, false
 	}
-	if err := s.cfg.Store.SaveTimer(ctx, settled); err != nil {
+	won, err := s.cfg.Store.FinishTimer(ctx, t.ID)
+	if err != nil {
+		return t, false
+	}
+	if !won {
+		if cur, err := s.cfg.Store.Timer(ctx, t.ID); err == nil {
+			return cur, false
+		}
 		return t, false
 	}
 	return settled, true
+}
+
+// settleAndAnnounce settles a timer and publishes its finished event when this call finished it.
+func (s *Service) settleAndAnnounce(ctx context.Context, t cook.Timer, now time.Time) cook.Timer {
+	settled, finished := s.settle(ctx, t, now)
+	if finished {
+		s.announceFinished(ctx, settled)
+	}
+	return settled
+}
+
+// announceFinished publishes the finished event of a timer, with the name of
+// the Recipe its scope cooks (empty for a free timer).
+func (s *Service) announceFinished(ctx context.Context, t cook.Timer) {
+	ev := TimerEvent{Changed: "finished", Kind: kindFinished, TimerID: t.ID, Scope: string(t.Scope), Label: t.Label}
+	if t.Scope != "" {
+		if rs, err := s.scopeSteps(ctx, t.Scope); err == nil {
+			ev.RecipeName = rs.Name
+		}
+	}
+	s.publish(TopicTimers, ev)
 }
 
 func (s *Service) load(ctx context.Context, id int64) (cook.Timer, error) {
@@ -560,11 +580,11 @@ func SubscribeFinished(bus *events.Bus) (<-chan FinishedEvent, func()) {
 		defer close(out)
 		for ev := range src {
 			var te TimerEvent
-			if err := json.Unmarshal(ev.Data, &te); err != nil || te.Kind != kindFinished {
+			if err := json.Unmarshal(ev.Data, &te); err != nil || te.Changed != "finished" {
 				continue
 			}
 			select {
-			case out <- FinishedEvent{TimerID: te.TimerID, Scope: te.Scope, Label: te.Label}:
+			case out <- FinishedEvent{TimerID: te.TimerID, Scope: te.Scope, Label: te.Label, RecipeName: te.RecipeName}:
 			case <-done:
 				return
 			}
