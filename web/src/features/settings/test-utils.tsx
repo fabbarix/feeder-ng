@@ -85,3 +85,14 @@ export function openOptionNames(): string[] {
       return (id ? document.getElementById(id)?.textContent : null) ?? o.textContent ?? ''
     })
 }
+
+/** renderHook wrapper for page hooks: Query, Toast and Router providers. */
+export function routerWrapper({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={newQueryClient()}>
+      <ToastProvider>
+        <MemoryRouter>{children}</MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>
+  )
+}
