@@ -79,6 +79,15 @@ describe('DateField', () => {
     expect(screen.getByText('February 2027')).toBeInTheDocument()
   })
 
+  it('clicking Next month keeps focus on the month button, not the day', async () => {
+    render(<DateHarness initial="2026-11-10" />)
+    await userEvent.click(trigger())
+    const next = screen.getByRole('button', { name: 'Next month' })
+    await userEvent.click(next)
+    expect(screen.getByText('December 2026')).toBeInTheDocument()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next month' }))
+  })
+
   it('prev/next month moves the focused day too: exactly one day has tabindex 0', async () => {
     render(<DateHarness initial="2026-11-10" />)
     await userEvent.click(trigger())

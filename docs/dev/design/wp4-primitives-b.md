@@ -84,3 +84,10 @@ Each site below is removed from the feature; the Developer of the screen WP repl
 | Any `BottomSheet` consumer | unchanged call (`open onClose title`); optionally `footer` for actions |
 | `Toast` consumers | `show(message, { status })`; errors also inline in the form |
 | Offline / loading / error regions | `OfflineBanner` in the shell (WP5), `Skeleton`, `ErrorState` |
+
+## Review round 1: added tests
+
+- TimeField: sequential keypad digits ("1" -> "01", then "014") give 14; segments must not cap input at two characters.
+- DateField: after Next month, focus stays on the month button.
+- Toast: both live regions are `aria-atomic="false"` and carry no `data-status`; the neutral-tone test targets the `.toast` element.
+- Shared `web/src/test/notices.ts` (`noticeWith`, `findNotice`) replaces three duplicated helpers.

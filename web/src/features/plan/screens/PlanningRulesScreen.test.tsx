@@ -3,16 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { mockApi, renderWithProviders } from '../test-utils'
 import { PlanningRulesScreen } from './PlanningRulesScreen'
-
-// The app shell keeps two always-mounted live regions (status, alert); pick the one carrying this notice.
-const noticeWith = (role: 'status' | 'alert', text: string) =>
-  screen.getAllByRole(role).find((el) => el.textContent?.includes(text))
-const findNotice = (role: 'status' | 'alert', text: string) =>
-  waitFor(() => {
-    const el = noticeWith(role, text)
-    if (!el) throw new Error(`no ${role} with "${text}"`)
-    return el
-  })
+import { findNotice } from '../../../test/notices'
 
 const base = {
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, tag: 'pizza' }],

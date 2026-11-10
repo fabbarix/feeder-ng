@@ -4,16 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { PlanScreen } from './PlanScreen'
 import { meal, mockApi, renderWithProviders, slot } from '../test-utils'
 import type { CookedResult, CookPreview, PlanView } from '../types'
-
-// The app shell keeps two always-mounted live regions (status, alert); pick the one carrying this notice.
-const noticeWith = (role: 'status' | 'alert', text: string) =>
-  screen.getAllByRole(role).find((el) => el.textContent?.includes(text))
-const findNotice = (role: 'status' | 'alert', text: string) =>
-  waitFor(() => {
-    const el = noticeWith(role, text)
-    if (!el) throw new Error(`no ${role} with "${text}"`)
-    return el
-  })
+import { noticeWith, findNotice } from '../../../test/notices'
 
 const view = (over: Partial<PlanView> = {}): PlanView => ({
   today: '2026-11-09', horizonDays: 3, updating: false,

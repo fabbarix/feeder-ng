@@ -120,5 +120,24 @@ describe('TimeField (24 h)', () => {
       fireEvent.change(minute(), { target: { value: 'ab' } })
       expect(onValue).not.toHaveBeenCalled()
     })
+    it('sequential keypad digits: "1" then "4" on a segment already holding the padded "01" gives 14', () => {
+      const onValue = vi.fn()
+      render(<Time initial="" onValue={onValue} />)
+      fireEvent.change(hour(), { target: { value: '1' } })
+      expect(onValue).toHaveBeenLastCalledWith('01:00')
+      expect(hour()).toHaveValue('01')
+      // Second digit: the browser appends to the displayed "01", so the input now holds "014".
+      fireEvent.change(hour(), { target: { value: '014' } })
+      expect(onValue).toHaveBeenLastCalledWith('14:00')
+      expect(hour()).toHaveValue('14')
+    })
+
+    it('segments allow a third character, so an appended keypad digit is not truncated by the browser', () => {
+      render(<Time />)
+      for (const seg of [hour(), minute()]) {
+        const max = seg.getAttribute('maxlength')
+        expect(max === null || Number(max) >= 3).toBe(true)
+      }
+    })
   })
 })

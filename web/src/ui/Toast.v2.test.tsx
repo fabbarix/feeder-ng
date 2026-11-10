@@ -75,7 +75,7 @@ describe('Toast statuses', () => {
     const user = setup()
     render(<ToastProvider><Fire message="Hi" opts={{ tone: 'accent' }} /></ToastProvider>)
     await user.click(screen.getByText('fire'))
-    expect(screen.getByRole('status')).toHaveAttribute('data-status', 'neutral')
+    expect(screen.getByText('Hi').closest('.toast')).toHaveAttribute('data-status', 'neutral')
   })
 })
 
@@ -85,6 +85,22 @@ describe('Toast live regions', () => {
     render(<ToastProvider><Fire message="x" /></ToastProvider>)
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
     expect(screen.getByRole('alert')).toBeEmptyDOMElement()
+  })
+
+  it('both regions are aria-atomic=false and carry no data-status', () => {
+    render(<ToastProvider><Fire message="x" /></ToastProvider>)
+    for (const region of [screen.getByRole('status'), screen.getByRole('alert')]) {
+      expect(region).toHaveAttribute('aria-atomic', 'false')
+      expect(region).not.toHaveAttribute('data-status')
+    }
+  })
+
+  it('a toast does not put data-status on its region', async () => {
+    const user = setup()
+    render(<ToastProvider><Fire message="Saved" opts={{ status: 'success' }} /></ToastProvider>)
+    await user.click(screen.getByText('fire'))
+    expect(screen.getByRole('status')).not.toHaveAttribute('data-status')
+    expect(screen.getByText('Saved').closest('.toast')).toHaveAttribute('data-status', 'success')
   })
 
   it('normal toasts render inside the status region, errors inside the alert region', async () => {
