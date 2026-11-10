@@ -1,4 +1,4 @@
-// Colour maths: hex parsing, HSL conversion, WCAG relative luminance and contrast.
+// Colour maths: hex parsing, HSL and OKLCH conversion, WCAG relative luminance and contrast.
 // Pure TypeScript, unit-tested through contrast.test.ts and palette.test.ts.
 
 export type Hex = string
@@ -80,3 +80,25 @@ export function contrastRatio(a: Hex, b: Hex): number {
 
 /** Luminance above which black text beats white text on that background. */
 export const BLACK_WHITE_CROSSOVER = 0.179
+
+export interface Oklch {
+  /** Perceptual lightness, 0 (black) .. 1 (white). */
+  l: number
+  /** Chroma, 0 (grey) .. about 0.32 inside sRGB. */
+  c: number
+  /** Hue in degrees, 0..360. 0 for achromatic colours. */
+  h: number
+}
+
+/** sRGB hex -> OKLCH (Ottosson). Achromatic colours (c < 1e-4) return h = 0. */
+export function hexToOklch(_hex: Hex): Oklch {
+  throw new Error('WP1: hexToOklch not implemented')
+}
+
+/**
+ * OKLCH -> sRGB hex. If the colour is outside the sRGB gamut, chroma is reduced
+ * (binary search, lightness and hue kept) until it fits, then channels are rounded.
+ */
+export function oklchToHex(_color: Oklch): Hex {
+  throw new Error('WP1: oklchToHex not implemented')
+}
