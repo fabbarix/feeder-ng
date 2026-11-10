@@ -1,13 +1,15 @@
 # Feeder UI review 2: post-redesign punch list (Bento)
 
-Status: review, 2026-11-10. Author: design review (opus). Scope: the whole web SPA on `main` @ `09a891e`, with a focus on what nobody
+Status: spec, 2026-11-10. Author: design review (opus). Scope: the whole web SPA on `main` @ `09a891e`, with a focus on what nobody
 had looked at yet: **screens wider than 1280 px, the iPad sizes, and the redesign as a design (not as a function)**.
+Revised after review on `main` @ `8c1c72e` (U1 TimeField, R11c zero-waste streak and D2 release tags merged): adds the New Ingredient
+sheet (F-09), records the user's decisions (section 3.7) and updates K1/K3/L-11.
 Inputs: [ux-brief.md](ux-brief.md) (direction **Bento**), [ui-fix-plan.md](ui-fix-plan.md) (the pre-redesign review this one checks against),
 [GLOSSARY.md](../../GLOSSARY.md), [CLAUDE.md](../../CLAUDE.md), [architecture.md](../dev/architecture.md), the QA round-2 report.
 
 ## How this was reviewed
 
-- `make build` of `main` in the `design/ui-review-2` worktree; the binary ran detached on `127.0.0.1:18477` with `FEEDER_DEV_LOGIN=1`,
+- `make build` of `main` in the `design/ui-review-2` worktree; the binary ran detached on this worktree's own port (`127.0.0.1:18477`) with `FEEDER_DEV_LOGIN=1`,
   `admin@example.test` and a scratch `FEEDER_DATA_DIR` in `build/`. Seeded through the API (the QA round-2 seeder): 4 Members including
   "Lucia Maria Bernadette", 12 Meal Slots with attendance, 25 Ingredients, 10 Recipes (8 with photos, one very long name, one Ready Meal,
   Advance/Passive Steps, a Step photo), 3 Shops with a weight barcode rule, 8 Products with Prices (one archived), 11 Stock Lots including
@@ -25,7 +27,8 @@ Inputs: [ux-brief.md](ux-brief.md) (direction **Bento**), [ui-fix-plan.md](ui-fi
 - A draft layout guard ([ui-review-2/check-page-layout.draft.mjs](ui-review-2/check-page-layout.draft.mjs), section 6) was run against
   the same server: **228 failures** today (P2 centring 12, P3 max width 64, P4 short fields 125, P5 collapsed field 6, P6 sticky bars 18,
   P7 rail contrast 3).
-- Screenshots (WebP, 0.7 MB in total) are in [ui-review-2/](ui-review-2/); ids below refer to them.
+- Screenshots (WebP, 0.7 MB in total) are in [ui-review-2/](ui-review-2/); ids below refer to them. Screen 41 is the user's own
+  capture of the New Ingredient sheet (F-09).
 
 **A note on "2000 px".** The user's New Recipe screenshot (`4b6bc764-image.png`) is 2420 physical px wide but shows the compact 88 px rail,
 which only renders below 1440 CSS px: it is a ~1210 CSS px viewport on a 2× display. So the "empty right side" is not a 4K-only problem:
@@ -56,10 +59,15 @@ container. The result, from biggest to smallest:
 5. **Inconsistent action placement**: Save on the left in some sheets and on the right in others, centred tertiary text links for adds
    and saves, full-width primary buttons on desktop (09, 12, 14, 19, 26, 27, 28).
 
-**Counts (new items):** High 7, Medium 12, Low 13 (32). Plus 5 already-reported items consolidated in section 2.
+6. **The New Ingredient sheet** (41) shows all of the above in one small sheet: a doubled focus ring, unlabelled Base Unit chips with no
+   visible selection, a disabled Create button with no reason, no spacing rhythm.
+
+**Counts (new items):** High 8, Medium 12, Low 12 (32 open; 33 raised, of which L-11 is decided with no action). Plus 5
+already-reported items consolidated in section 2.
 
 **Top 10, in fix order:** L-01 page widths, L-03 sticky action bar, F-01 field sizes, E-01 Recipe editor, L-04 Scan rail contrast,
-F-02 Allowlist, L-02 detail/editor centring, F-04 form actions, L-06 list widths, L-05 Plan at wide sizes.
+F-02 Allowlist, **F-09 New Ingredient sheet** (focus ring in R2-F, sheet in R14), L-02 detail/editor centring, F-04 form actions, L-06 list
+widths. (L-05 Plan at wide sizes moves to 11th.)
 
 ---
 
@@ -67,9 +75,9 @@ F-02 Allowlist, L-02 detail/editor centring, F-04 form actions, L-06 list widths
 
 | Id | Item | Owner | Status / what this review adds |
 |---|---|---|---|
-| K1 | TimeField clipped ("22 : 0C") on iPad | **U1** (`ui/fields/TimeField.css`, `Field.css`) | Fix on `team/u1-timefield`, not on main. Reproduced in Chromium **and WebKit**, at every width (390–2560), on Household quiet hours and the Meal Slot sheet (09, 34, 35). High. |
+| K1 | TimeField clipped ("22 : 0C") on iPad | **U1** (`ui/fields/TimeField.css`, `Field.css`) | **Merged to main at `8c1c72e`.** Was reproduced in Chromium and WebKit at every width on Household quiet hours and the Meal Slot sheet (09, 34, 35). Re-checked against main's CSS (no browser): segments are `3ch` with `padding: 0`, `appearance: none` (no WebKit chrome), tabular numerals; the focus ring is a rounded rect (`--radius-control`, `outline-offset: 0`), not a circle over the digits; `.time-field` is `flex`, full width, with the new shared `--field-pad-inline` that TextField, Select and DateField also use; `field-css.test.ts` pins it. **Left:** (a) not yet seen in a real engine after the merge: confirm at 820/1180 in WebKit with the layout guard run of R2-F; (b) the TimeField has no control-level focus (`.time-field` has no `:focus-within`), so it shows a third focus style (accent outline on the segment) next to the doubled ring of other fields: fold into F-09's single focus ring (R2-F); (c) it now stretches to the container, so "19:30" sits in a 500+ px box: give it `size="sm"` in F-01 (R2-F); (d) disabled TimeField still uses `opacity: .38` while the other fields use muted colours (WP3b): align in R2-F. None of these is High any more. |
 | K2 | Breadcrumbs replace "Back to Settings" | **R11a** (`ui/Breadcrumbs`, `PageHeader`) | In progress on `team/r11a-settings-shell`. Also needed on Recipe detail/edit, Import, the /recipes/export screen, Ingredient, Product, Shop detail (R11a's note covers "everywhere there is hierarchy"; Ingredient detail has no back control at all today, 13). **Side rail at 1024–1280: not clipped** (88 px rail, labels fit at 1024, 1100, 1180, 1280; the 240 px rail fits from 1440). Medium. |
-| K3 | Member sheet: Custom swatch overflow, unlabelled stepper, Avatar without hint | **R11a** | Confirmed (26): the stepper "− 1 +" has no label; Save Member is left-aligned while Add a Stock Lot's Save is right-aligned (see F-04). Medium. |
+| K3 | Member sheet: Custom swatch overflow, unlabelled stepper, Avatar without hint | **R11a** | Confirmed (26): the stepper "− 1 +" has no label; Save Member is left-aligned while Add a Stock Lot's Save is right-aligned (see F-04). **Decided (user):** a Member's avatar is a photo, an emoji or initials. Emoji and initials now (R11a: a choice "Initials · Emoji", with Photo added as a third option only once it works; initials default from the name, the colour swatch stays as the background); photo later through the shared `ImagePicker` primitive (the same one F-09 uses for an Ingredient photo), not a Member-only upload. Medium. |
 | K4 | "Couldn't plan" as one pink danger tile with nine identical lines | **future Couldn't-plan team** (Today, Plan, board) | Not reproduced here (the seed plans every Meal Slot). User's direction stands: group by cause, warn/info tone, one fix action per cause, a first-run setup checklist, attendance defaulting to everyone. Fold L-05 and L-07 into that team. High. |
 | K5 | Rail lists Scan above Today | **R11a** (fixed on its branch) | Still on main (`RAIL_NAV` in `app/nav.ts`). Add L-04 to the same change. Medium. |
 
@@ -147,8 +155,9 @@ List is 2 columns of 500 px tiles holding "eggs / 2 pieces". **Fix:** in a wide 
 **L-10 Low: the kitchen board on a phone.** Screen 24. `/board` is reachable from the avatar menu at 390 and keeps 4 columns: "Chick",
 "15:2", "Tues" clipped. **Fix:** 2 columns below 600 px (hero full width), or hide the menu item below 768.
 
-**L-11 Low (question): the board ignores the dark scheme by day.** Screen 39 (dark scheme, 15:28): light tiles. This follows the
-"dims to dark after sunset" rule; confirm that the kitchen board should not also follow a User who chose Dark.
+**L-11 Decided, no action (not counted): the board ignores the dark scheme by day.** Screen 39 (dark scheme, 15:28): light tiles.
+**Decided (user):** the kitchen board follows sunset only ("dims to dark after sunset"), never a User's Dark choice: it is a shared
+Household screen, not one User's. Current behaviour is correct; removed from R2-4.
 
 **L-12 Low: top bar and content drift apart at ≥ 1920.** Screens 05, 32. The avatar sits at the viewport's right edge, 300–640 px from
 the page's right edge, and the brand word sits above the rail. Acceptable app-shell convention; if it bothers, put the brand in the rail's
@@ -212,6 +221,53 @@ labelled preview tile ("Preview" overline, a sample chip, a primary and a soft b
 digits" shows before anything was typed. **Fix:** two `FieldRow`s of `xs` NumberFields under "Item code" and "Value" subheads, a
 13-cell barcode diagram that highlights the ranges live (the sample barcode preview already exists), validation on blur/submit only.
 
+**F-09 High: the New Ingredient sheet.** Screen 41 (the user's capture; `features/ingredients/components/NewIngredientSheet.tsx`). It is
+the sheet a User meets when an Ingredient is missing, including from a Recipe line, so it is a first impression. What is wrong:
+1. **Double focus ring** on the Name field: a pale green halo outside a dark green border. This is the field primitive, so it shows on
+   every TextField, NumberField and SearchField: `ui/fields/Field.css` `.ui-field__control:focus-within` sets `border-color:
+   var(--color-accent)` **and** `outline: 3px solid var(--color-soft-strong); outline-offset: 1px` (SearchField repeats the halo);
+   the inner `.ui-field__input` has `outline: none`, so the inner input is not the culprit. U1 (merged, `8c1c72e`) did not touch this
+   rule: it added `--field-pad-inline`, reset the input's padding and appearance, and gave the TimeField *segment* its own rounded ring
+   (accent outline, `outline-offset: 0`), which is a third focus style.
+2. **Base Unit has no label**: three `filter` Chips "g · ml · piece" with no "Base Unit" label on screen (only an `aria-label`), no
+   helper explaining what it decides, none preselected and no visible selected state in the capture; they sit flush under the input.
+3. **Create Ingredient is jammed** under the chips with no gap, left-aligned and full colour-block, unlike other sheets' action rows.
+4. **The disabled Create Ingredient** is pale green on near-white text (low contrast) and gives no reason why it is disabled.
+5. **No vertical rhythm**: label, field, chips and button touch; the sheet then ends in a large empty area.
+6. **Only one field**: Shelf Life and a picture, which the User expects to set here, are missing (Shelf Life is only on the Ingredient
+   page afterwards).
+
+**Fix:**
+- **One focus ring, in the primitive (R2-F):** a token `--focus-ring` in `styles.css` (one 2 px accent ring, e.g. `box-shadow: 0 0 0 2px
+  var(--color-accent)` on the control with `border-color: var(--color-accent)`, or an outline; not both a border change and a halo) used by
+  `.ui-field__control:focus-within`, `.search-field__control:focus-within`, `.select__trigger`, `.date-field__trigger` and a new
+  `.time-field:focus-within` (the segment then shows only a soft fill, no outline of its own). Contrast of the ring ≥ 3:1 against the
+  sheet surface in both schemes. `field-css.test.ts` gets one assertion per control: the same token, no second outline.
+- **Labelled sections with spacing tokens:** the form is a `ui-stack` with `gap: var(--space-5)` between fields, `--space-1` label to
+  control, `--space-2` control to helper; no bare `<div>`s with zero gap.
+- **Base Unit as a `Segmented`** with its own visible label "Base Unit", an icon per option (Phosphor `Scales` g, `Drop` ml, `Cube`
+  piece; register them in `Icon` if missing) and the text, a clear selected state (filled `--color-accent` segment with
+  `--color-on-accent` text and a check, not only a shade change), and a helper: "How Stock and Shopping Lists count it. It can't change
+  once the Ingredient is used." This reuses the F-05 Segmented + fieldset reset.
+- **A sensible default:** preselect `g`; when the sheet is opened from a Recipe line or a Scan that already has a unit (ml, piece),
+  preselect the matching Base Unit. With a default there is never a "no Base Unit" state.
+- **Shelf Life:** an optional NumberField `xs` with a "days" suffix and the helper "Leave blank if it keeps." (GLOSSARY: Shelf Life is
+  optional).
+- **Picture:** an optional Ingredient photo through the shared `ImagePicker` (also used for the Member avatar photo, K3). The Ingredient
+  has no image field today (`features/ingredients/types.ts`), so this needs a backend field and a short spec; ship the sheet without it
+  first and add it when the field exists.
+- **Action bar aligned with the other sheets:** the sheet footer uses `FormActions` (F-04): tertiary Cancel, primary "Create Ingredient"
+  right-aligned from 600 px, full width on phone, separated from the form by `--space-6` and a hairline when the sheet scrolls.
+- **Inline validation, not a disabled button:** Create Ingredient stays enabled; on submit with an empty Name the field shows the error
+  "Give the Ingredient a name" under it and takes focus; a taken name shows the existing `nameTaken` message as the field's error, not a
+  loose `<p role="alert">` above the button. If a disabled state is ever kept (while saving), it uses the WP3b muted disabled contrast
+  and a spinner label "Creating…".
+- **Height:** the sheet is content-height; on ≥ 768 the dialog has no empty block under the actions.
+Owners: the **inline-Ingredient-creation team (R14)** for the sheet (`NewIngredientSheet.tsx`, its test, `ingredients/strings.ts`, the
+`.new-ingredient__*` rules in `ingredients.css`); **R2-F** for the focus ring and the `Segmented` label/fieldset reset in `ui/fields`. R14
+uses `FormActions` and the single focus ring once R2-F merges; until then it builds the layout and validation against the current
+primitives. `ingredients.css` is also touched by R2-3 (F-05): the PM serialises those two.
+
 ### 3.3 Recipe editor (E) and Recipe detail (D)
 
 **E-01 High: the Recipe editor layout and density.** Screens 01, 02, 03, 04, 38. 760 px left-aligned column (L-02); 7,300 px tall at 1920;
@@ -224,7 +280,8 @@ height and field sizing, not width; a second column would split attention, compl
 - Details: Name `lg`, Description full; a `FieldRow` of Yield `xs` stepper · Cool-down `xs` (helper "blank = household default") ·
   Leftover Use-by `xs`; Ready Meal checkbox; Tags as chip input `md`; Source link `lg`, Attribution `md` in a row.
 - `IngredientLineRow` as **one row from 720 px**: drag handle 24 · `IngredientSelect` 1fr · Quantity `xs` 88 · Unit `sm` 120 · Note 1fr
-  (placeholder "note") · "optional" checkbox (icon + tooltip) · remove IconButton. Phone: 2 rows (Ingredient full; Quantity · Unit · more).
+  (placeholder "note") · "Optional" as a visible toggle chip (or a checkbox with a visible "Optional" label; never an icon whose meaning
+  lives only in a tooltip, which touch screens cannot show) · remove IconButton. Phone: 2 rows (Ingredient full; Quantity · Unit · more).
   Expected height: 56 px per line instead of 250.
 - `StickyActionBar` (L-03). Breadcrumbs "Recipes › Chicken tikka traybake › Edit" (R11a).
 Owner: **future Recipe-editor-features team** (`RecipeEditorScreen`, `IngredientLineRow`, `IngredientSelect`, `StepsEditor`), after R12
@@ -266,7 +323,8 @@ Ingredients, Products and Shops show the default `chevron` (`MENU_NAV` falls bac
 
 **S-02 Low: Ingredient names are lowercase in some places.** Screens 31, 18. Shopping List tiles ("aubergine", "basmati rice"),
 Recipe detail Ingredients, Import Review, Product meta ("spaghetti · 500 g"). Stock, Ingredients and Plan already use `displayName`.
-Use it in Shop, Recipes, Import and Products (data stays as stored).
+Use it in Shop, Recipes, Import and Products (data stays as stored). Split by owner: recipes part in R2-1, Products part in R2-3,
+Shop and Import parts in R2-4.
 
 **S-03 Low: rule and conversion forms are always open.** Screens 28, 13. Planning rules, Unit Conversions and Shop Barcodes show an empty
 state line and then the full add form. **Fix:** list first (empty state with one "Add Slot Rule" secondary button), the form in a sheet;
@@ -286,8 +344,23 @@ matters, scale the step type with `clamp()` on the container width.
 - Sign-in at all sizes (centred card, max 400); the 404 page; offline states were not re-tested (QA round 2 covered them).
 - Rail at 1024–1280 (not clipped, K2), bottom bar centred at 820 (max 480), avatar menu inside the viewport at all sizes.
 - Dialogs ≥ 768 are 560 px and centred (P8: 0 failures); the Shop range and Meal Slot selects open as anchored popovers from 820.
-- Dark mode: tiles, status tiles, chips and the hero hold up at all sizes; no light-only colours found (except L-04 and the board, L-11).
+- Dark mode: tiles, status tiles, chips and the hero hold up at all sizes; no light-only colours found (except L-04; the board's light
+  tiles by day are intended, L-11).
 - No sideways scroll on any route at any width (P1: 0 failures); the Recipes Tag row scrolls by design with a fade edge.
+
+### 3.7 Decided (user)
+
+Decisions taken after the first draft of this review. They are part of the spec; teams do not reopen them.
+
+| Topic | Decision | Owner |
+|---|---|---|
+| Kitchen board scheme (L-11) | Follows sunset only, never a User's Dark choice. No action. | — |
+| Member avatar (K3) | Photo, emoji or initials. Emoji and initials now; photo later via the shared `ImagePicker`. | R11a now; photo with `ImagePicker` |
+| Meal Slots: multi-day edit | Editing a Meal Slot "on several days" changes the **matching** Meal Slots: those with the **same Meal Slot name on each chosen weekday**. A chosen weekday with no Meal Slot of that name is **skipped** (nothing is created), and the sheet says so after saving, e.g. "Updated Dinner on Mon, Tue, Thu. Wed has no Dinner, so it was skipped." | Meal Slots team (R15) |
+| Meal Slots: weekday choice | A shared `ui/WeekdayPicker` primitive renders the seven weekdays as filter **chips** (multi-select, Monday first per locale, short labels "Mon"…, full names as accessible labels). Used by the Meal Slot sheet and anywhere else a set of weekdays is chosen (Slot Rules); no screen builds its own. | R15 builds it in `ui/` (PM-serialised shared file) |
+| Meal Slots overview: attendees | Each Meal Slot row on the Meal Slots overview shows its Attendance as Member **pills** (avatar + first name, `+N` past four), so the User sees who eats when without opening the sheet. | R15 |
+| Recipe editor "Optional" (E-01) | A visible label or chip, never a tooltip-only icon. | R2-1 |
+| Import ownership | `features/import/**` is serialised: the Recipe Assistant's **WP-E and WP-G first**, then R2-4's import items (S-02 import part, S-05). | PM |
 
 ---
 
@@ -301,7 +374,7 @@ matters, scale the step type with `clamp()` on the container width.
 | 4.4 tiles content-sized, never a button | Done |
 | 4.5 rail 88 / 240, bottom bar, chromeless | Done; L-04 contrast at ≥ 1440; rail order (K5) |
 | 4.6 / 4.7 Dialog, sheet as dialog ≥ 768 | Done; G-02 handle |
-| 4.9 / 4.10 crafted fields, no native controls | Done (QA: 0 native controls), but no sizing (F-01) and one native fieldset frame (F-05); TimeField (K1) |
+| 4.9 / 4.10 crafted fields, no native controls | Done (QA: 0 native controls), but no sizing (F-01), one native fieldset frame (F-05) and a doubled focus ring (F-09); TimeField fixed by U1 (K1) |
 | 4.13 ListRow | Done; rows too wide on desktop (L-06) |
 | 2.4 Plan 2 / 4 / 7 columns | Done; 7 columns too narrow in 1036 px (L-05) |
 | 5.9 Recipe detail sticky Start Cook Mode | Done; detached bar (L-03), single column on desktop (D-01) |
@@ -321,24 +394,31 @@ they already own; two new packages build the primitives; screen adoption then ru
 | WP | Items | Files | Owner |
 |---|---|---|---|
 | **now: R11a** (add to its branch) | K2, K3, K5, **L-04** | `app/nav.ts`, `app/shell.css` (rail rule only), `ui/Breadcrumbs`, `PageHeader`, settings pages, `IngredientScreen.tsx` (h1) | R11a |
-| **now: U1** | K1 | `ui/fields/{Field,TimeField,DateField}.css`, `ui/Select/Select.css` | U1 |
+| ~~now: U1~~ **merged `8c1c72e`** | K1 | `ui/fields/{Field,TimeField,DateField}.css`, `ui/Select/Select.css` | U1 (done; K1 follow-ups (b)–(d) go to R2-F) |
 | **now: A1** | **F-02** (Allowlist page) | `features/settings/…/Allowlist*`, `features/access/**` | A1 (PM to confirm) |
 | **now: R12** | (no new items; it must merge before E-01, L-07, L-08 because it edits `TonightHero`, Cook, `recipes/lib/draft.ts`) | | R12 |
-| **R2-F Field sizing** (new, "UI foundations" team) | F-01 (primitives), F-03, F-04 (`FormActions`), G-02 | `ui/fields/FieldFrame.tsx` + `Field.css` (`data-size`), `ui/fields/NumberField.tsx`, `ui/Stepper.*`, new `ui/fields/FieldRow.*`, `ui/Button.*` (`block`), new `ui/FormActions.*`, `ui/BottomSheet.css`, `ui/Dialog.tsx` (footer), `ui/index.ts`, `ui/Gallery*` | new team, **after U1 merges** |
+| **R14 inline Ingredient creation** | **F-09** (sheet layout, Base Unit `Segmented` with default, Shelf Life, inline validation, `FormActions`; photo when the backend field exists) | `features/ingredients/components/NewIngredientSheet.*`, `features/ingredients/strings.ts`, `.new-ingredient__*` in `ingredients.css` | R14; adopts R2-F's focus ring and `FormActions` when R2-F merges; **serialise with R2-3 on `ingredients.css`** |
+| **R15 Meal Slots** | Decisions in 3.7: multi-day edit by matching name, `ui/WeekdayPicker`, attendee pills on the overview | `features/settings/**` Meal Slots screens and sheet, new `ui/WeekdayPicker.*`, `ui/index.ts` | R15; `ui/index.ts` serialised with R2-F/R2-L by the PM; Meal Slots files serialised with R2-3 |
+| **R2-F Field sizing** (new, "UI foundations" team) | F-01 (primitives), F-03, F-04 (`FormActions`), G-02, **F-09 focus ring** (`--focus-ring`, one ring for every field control), Segmented label + fieldset reset (F-05/F-09), K1 follow-ups (TimeField `sm`, group focus, disabled colours) | `styles.css` (`--focus-ring`), `ui/fields/FieldFrame.tsx` + `Field.css` (`data-size`, focus), `ui/fields/{SearchField,DateField,TimeField,Segmented}.css`, `ui/Select/Select.css`, `ui/fields/field-css.test.ts`, `ui/fields/NumberField.tsx`, `ui/Stepper.*`, new `ui/fields/FieldRow.*`, `ui/Button.*` (`block`), new `ui/FormActions.*`, `ui/BottomSheet.css`, `ui/Dialog.tsx` (footer), `ui/index.ts`, `ui/Gallery*` | new team; **can start now** (U1 merged) |
 | **R2-L Page layout** (same team, after R2-F) | L-01, L-03 (`StickyActionBar`), G-01 (`Menu`), L-12 | `styles.css` (page tokens), `app/shell.css` (`.app-main` width), `app/AppShell.tsx` (if the brand moves), new `ui/Page.*`, `ui/StickyActionBar.*`, `ui/Menu.*`, `ui/index.ts` | same team, **after R11a and A1 merge** (they edit `PageHeader`, `nav.ts`, `AppShell.tsx`, `YourMenu.tsx`) |
 | **R2-1 Recipes** | L-02, E-01, E-02, E-03, D-01, D-02, F-01 adoption in the editor, S-02 (recipes part) | `features/recipes/**` | **future Recipe-editor-features team**, after R12 + R2-F + R2-L |
 | **R2-2 Today + Plan** | L-05, L-07, K4 | `features/today/**`, `features/plan/**` (not `PlanningRulesScreen`/`RulesEditors`) | **future Couldn't-plan team**, after R12 + R2-L |
-| **R2-3 Settings + catalogue** | L-06 (settings, ingredients, products), F-05, F-06, F-07, F-08, S-01, S-03, S-04, F-01 adoption | `features/settings/**`, `features/ingredients/**`, `features/products/**`, `features/shops/**`, `features/notifications/**`, `plan/screens/PlanningRulesScreen.tsx`, `plan/components/RulesEditors.tsx`, `app/nav.ts`/`YourMenu.tsx` (S-01) | R11a's follow-up (or a new team), after R11a + A1 + R2-F + R2-L; **serialise with R2-2 on `plan/plan.css`** |
-| **R2-4 Stock, Shop, Scan, Import, Cook, board** | L-06 (Stock two-column, Scan picker, the /recipes/export screen), L-08, L-09, L-10, L-11, S-02 (shop/import), S-05 | `features/stock/**`, `features/shop/**`, `features/scan/**`, `features/import/**`, `features/cook/**`, `features/board/**` | small new team, after R2-L; Cook part after R12; Import part coordinated with the AI Recipe import work |
+| **R2-3 Settings + catalogue** | L-06 (settings, ingredients, products), F-05, F-06, F-07, F-08, S-01, S-03, S-04, S-02 (Products part), F-01 adoption | `features/settings/**`, `features/ingredients/**`, `features/products/**`, `features/shops/**`, `features/notifications/**`, `plan/screens/PlanningRulesScreen.tsx`, `plan/components/RulesEditors.tsx`, `app/nav.ts`/`YourMenu.tsx` (S-01) | R11a's follow-up (or a new team), after R11a + A1 + R2-F + R2-L; **serialise with R2-2 on `plan/plan.css`** |
+| **R2-4 Stock, Shop, Scan, Import, Cook, board** | L-06 (Stock two-column, Scan picker, the /recipes/export screen), L-08, L-09, L-10, S-02 (Shop and Import parts), S-05 | `features/stock/**`, `features/shop/**`, `features/scan/**`, `features/import/**`, `features/cook/**`, `features/board/**` | small new team, after R2-L; Cook part after R12; **Import part after the Recipe Assistant's WP-E and WP-G** (both own `features/import/**`; serialised, Recipe Assistant first) |
 
 **Serialisation order**
 
-1. In parallel, as planned: **U1**, **R11a** (+ L-04), **A1** (+ F-02), **R12**.
-2. After U1: **R2-F** field sizing (shared `ui/fields`, `ui/index.ts`).
+1. In parallel, as planned: **R11a** (+ L-04, K3 emoji/initials), **A1** (+ F-02), **R12**, **R14** (+ F-09 sheet), **R15** (Meal Slots
+   decisions). **U1 is merged** (`8c1c72e`).
+2. Now (U1 merged): **R2-F** field sizing and the single focus ring (shared `ui/fields`, `styles.css`, `ui/index.ts`). R15's
+   `ui/WeekdayPicker` export and R2-F both edit `ui/index.ts`: the PM serialises those commits. R14 adopts the focus ring and
+   `FormActions` after R2-F.
 3. After R11a + A1 + R2-F: **R2-L** page layout (`styles.css`, `app/shell.css`, `ui/index.ts`). R2-F and R2-L are one team in sequence
    because both edit `ui/index.ts` and the Gallery.
 4. After R2-L (and R12 for 4a/4b and the Cook part of 4d), in parallel: **4a R2-1 Recipes**, **4b R2-2 Today + Plan**, **4c R2-3 Settings +
-   catalogue**, **4d R2-4 Stock/Shop/Scan/Import/Cook/board**. 4b and 4c share `plan/plan.css`: the PM serialises those two commits.
+   catalogue**, **4d R2-4 Stock/Shop/Scan/Import/Cook/board**. 4b and 4c share `plan/plan.css`: the PM serialises those two commits. 4c and R14
+   share `ingredients.css`, 4c and R15 the Meal Slots settings files: serialised. 4d's import items wait for the Recipe Assistant's
+   WP-E and WP-G (`features/import/**`).
 5. Guards: add `check-page-layout` in **warn** mode with R2-L; each adoption WP flips its routes to **fail** when it merges.
 
 ---
@@ -367,6 +447,7 @@ script, no new dependency, not wired into `check.sh`). Per route × 390/820/1180
 | P8 | ≥ 768: open dialog ≤ 600 px and centred ± 2 | 0 |
 
 To make it a check: it needs a seeded server, so run it from a `scripts/test/page-layout_test.sh` that builds, starts the binary
-detached on a worktree-unique port with a temp `FEEDER_DATA_DIR`, seeds via a small fixture script (the review seeder, committed under
+detached on a worktree-unique port (derived from the worktree path; the draft has no default port and requires `--url`) with a temp
+`FEEDER_DATA_DIR`, seeds via a small fixture script (the review seeder, committed under
 `scripts/test/fixtures/`), runs the guard, and stops the server; warn-only until R2-L lands. The route→width table in the script is the
 contract that `ui/Page` implements; P6 starts passing only once `ui/Page` sets `data-page-width`.

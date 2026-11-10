@@ -3,9 +3,12 @@
 // Page-layout guards for wide screens: complements scripts/check-shell-layout.mjs (which fakes the API and checks the shell).
 // This one runs against a REAL server with seeded data, because field sizing and sticky bars only exist on loaded screens.
 //
-//   FEEDER_DEV_LOGIN=1 FEEDER_ADMIN_EMAIL=admin@example.test FEEDER_DATA_DIR=build/data FEEDER_ADDR=127.0.0.1:18477 \
+// Port: worktree-unique, never a shared fixed number (other teams run servers in parallel). Derive it from the worktree path:
+//   PORT=$(( 20000 + $(printf '%s' "$PWD" | cksum | cut -d' ' -f1) % 20000 ))
+//   FEEDER_DEV_LOGIN=1 FEEDER_ADMIN_EMAIL=admin@example.test FEEDER_DATA_DIR=build/data FEEDER_ADDR=127.0.0.1:$PORT \
 //     setsid nohup build/feeder > build/server.log 2>&1 &          (seed it first, see ui-review-2.md "How this was reviewed")
-//   node docs/design/ui-review-2/check-page-layout.draft.mjs --url http://127.0.0.1:18477 [--chrome /usr/bin/google-chrome] [--email admin@example.test]
+//   node docs/design/ui-review-2/check-page-layout.draft.mjs --url http://127.0.0.1:$PORT [--chrome /usr/bin/google-chrome] [--email admin@example.test]
+// --url is required (no default port), so two worktrees can never probe each other's server by accident.
 //
 // For every route x viewport (390, 820, 1180, 1440, 1920, 2560) it asserts:
 //   P1 no sideways scroll and no visible element past the viewport's right edge (horizontal scrollers excluded);
@@ -27,7 +30,12 @@ const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
   return i > 0 ? process.argv[i + 1] : fallback
 }
-const base = arg('url', 'http://127.0.0.1:18477').replace(/\/$/, '')
+const rawUrl = arg('url', process.env.FEEDER_URL)
+if (!rawUrl) {
+  console.error('check-page-layout: pass --url http://127.0.0.1:<worktree-unique port> (or FEEDER_URL); there is no default port')
+  process.exit(2)
+}
+const base = rawUrl.replace(/\/$/, '')
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const email = arg('email', 'admin@example.test')
 
