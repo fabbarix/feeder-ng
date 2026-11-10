@@ -36,6 +36,10 @@ Parallel-work rules:
   - **libraries/modules** (plain TypeScript, no React imports): pure domain functions, which are unit-tested on their own.
 - Components get data and callbacks from hooks or props; they never call the API or compute domain values inline.
 - Build Bento tiles, chips, timers and the scanner viewfinder as shared primitives, and compose screens from them. Never copy markup between screens.
+- **No native browser UI.** Buttons, selects, alerts and other controls (checkboxes, radios, date and number pickers) are always our own purpose-built, designed shared components, never the browser's default look or behaviour:
+  - Never call `alert`, `confirm` or `prompt`. Use crafted dialogs built on the `<dialog>` element, and toasts for transient feedback.
+  - Never use a native `<select>`. Our select boxes have crafted option layouts: thumbnails, subheaders, search and filter, sorting, as the use case needs.
+  - Under the styling, components still use the right semantic element and ARIA (a real `<button>`, a `<dialog>`, listbox roles) so they stay keyboard- and screen-reader-accessible.
 
 ### Backend (Go)
 - Apply the same rule: HTTP handlers are thin (parse, call, respond). Domain logic lives in packages with no HTTP or SQL concerns, and those packages are unit-tested directly.
