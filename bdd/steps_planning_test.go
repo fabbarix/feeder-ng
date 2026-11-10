@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -622,6 +623,79 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 			return err
 		}
 		post(path, nil)
+		return nil
+	})
+	// ---- Cook timers around Mark as Cooked (N4) ----
+	cookTimers := func() ([]map[string]any, error) {
+		r := w.Client.Get("/api/cook/timers")
+		if r.Status != 200 {
+			return nil, fmt.Errorf("GET /api/cook/timers: %d %s", r.Status, r.Body)
+		}
+		var out struct {
+			Timers []map[string]any `json:"timers"`
+		}
+		return out.Timers, r.JSON(&out)
+	}
+	startCookTimer := func(body map[string]any) error {
+		r := w.Client.Post("/api/cook/timers", body)
+		if r.Status != 201 {
+			return fmt.Errorf("start timer %v: %d %s", body, r.Status, r.Body)
+		}
+		return nil
+	}
+	sc.Step(`^I start the timer "([^"]*)" for (\d+) seconds on the meal of `+planDate+`$`, func(label string, secs int, date string) error {
+		slot, err := slotOn(date)
+		if err != nil {
+			return err
+		}
+		return startCookTimer(map[string]any{"scope": fmt.Sprintf("meal:%s/%d", date, slot), "label": label, "durationSeconds": secs})
+	})
+	sc.Step(`^I start the free timer "([^"]*)" for (\d+) seconds$`, func(label string, secs int) error {
+		return startCookTimer(map[string]any{"label": label, "durationSeconds": secs})
+	})
+	sc.Step(`^I pause the Cook timer "([^"]*)"$`, func(label string) error {
+		l, err := cookTimers()
+		if err != nil {
+			return err
+		}
+		for _, t := range l {
+			if t["label"] == label {
+				if r := w.Client.Post(fmt.Sprintf("/api/cook/timers/%v/pause", t["id"]), nil); r.Status != 200 {
+					return fmt.Errorf("pause %q: %d %s", label, r.Status, r.Body)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("no Cook timer %q", label)
+	})
+	sc.Step(`^the Cook timers are exactly "([^"]*)"$`, func(want string) error {
+		l, err := cookTimers()
+		if err != nil {
+			return err
+		}
+		var got []string
+		for _, t := range l {
+			got = append(got, fmt.Sprint(t["label"]))
+		}
+		sort.Strings(got)
+		wanted := []string{}
+		for _, x := range strings.Split(want, ",") {
+			wanted = append(wanted, strings.TrimSpace(x))
+		}
+		sort.Strings(wanted)
+		if strings.Join(got, "|") != strings.Join(wanted, "|") {
+			return fmt.Errorf("Cook timers = %v, want %v", got, wanted)
+		}
+		return nil
+	})
+	sc.Step(`^there are no Cook timers$`, func() error {
+		l, err := cookTimers()
+		if err != nil {
+			return err
+		}
+		if len(l) != 0 {
+			return fmt.Errorf("%d Cook timers left: %v", len(l), l)
+		}
 		return nil
 	})
 	sc.Step(`^I preview Cooking the slot on `+planDate+`$`, func(date string) error {

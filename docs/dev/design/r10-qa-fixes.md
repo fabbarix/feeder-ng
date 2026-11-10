@@ -7,13 +7,15 @@ Cause: the planner emits `LeftoverSource{LeftoverID}` with a zero `FromSlot` for
 - `internal/plan/plan.go` `Reconcile`: when `p.From.LeftoverID != 0` and its slot is zero, fill `From.From` from `s.Leftovers[id].From`. Test: `TestReconcileFillsTheSourceSlotOfAStoredLeftover`.
 - `internal/plan/httpapi/shapes.go` `mealFor`: fallback for rows already stored empty: `table.leftoverFrom[LeftoverID]` (field added in names.go). `names.load` (or the handlers' table builder) fills it by `store.Leftover(ctx, id)` for each distinct LeftoverID of the meals being rendered (consumed Leftovers are not in `Leftovers()`, so look up by id). Tests: `TestMealServedFromAStoredLeftover...`, `TestMealServedFromAPlannedExtra...`.
 - `web/src/features/plan/lib/chips.ts` + `strings.ts`: an empty date gives the chip "Leftover" (never a weekday). Test: chips.test.ts "N1".
-- Files: plan.go, shapes.go, names.go, plan/lib/chips.ts, plan/strings.ts (+ tests).
+- BDD (planning/cooked.feature): after Cooked with a Leftover, `GET /api/plan?from=2026-11-10&to=2026-11-10` reports `servedFromLeftover.date` = 2026-11-09 for the served meal.
+- `store.LeftoverSources(ctx, ids []int64) (map[int64]plan.Key, error)`: queries only the given ids (any status; empty ids returns an empty map without a query; duplicates and unknown ids are harmless). `names.load` passes the distinct LeftoverIDs of the rendered meals. Test: `TestLeftoverSourcesLooksUpOnlyTheRequestedIds` (red until the signature changes).
+- Files: plan.go, shapes.go, names.go, store.go, plan/lib/chips.ts, plan/strings.ts (+ tests).
 
 ## N2 phone Leftovers tile (Medium)
 Cause: ListRow's fixed 64 px height, nowrap/ellipsis title and 40 px lead icon in a half-width (about 170 px) cell.
 Layout: stacked name over meta, name wraps, meta wraps, no lead icon (the tile overline carries it), rows auto-height.
 - `TodayTiles.tsx`: `LeftoversTile` Tile gets `className="plan-leftovers"`.
-- `plan.css`: `.plan-leftovers .list-row[data-height]` (block-size auto, min-block-size 64px, padding-block space-2, padding-inline space-3), `.plan-leftovers .list-row__title` (white-space normal, overflow-wrap anywhere, no ellipsis), `.plan-leftovers .list-row__meta` (flex-wrap wrap), `.plan-leftovers .list-row__lead` (display none). Contract: plan-css.test.ts "N2"; TodayTiles.test.tsx.
+- `plan.css`: `.plan-leftovers .list-row[data-height]` (block-size auto, min-block-size 64px, padding-block space-2, padding-inline space-3), `.plan-leftovers .list-row__title` (white-space normal, `overflow-wrap: break-word` + `hyphens: auto`, no ellipsis; **never `anywhere`**, the wp6 review rule has no exemption), `.plan-leftovers .list-row__meta` (flex-wrap wrap). **No `.list-row__lead` override**: `LeftoversTile` renders its `ListRow`s without `icon="leftover"` (the overline carries it). Contract: plan-css.test.ts "N2" (and the unexempted "no mid-word breaks" test); TodayTiles.test.tsx (no `.list-row__lead` in the tile).
 - Files: TodayTiles.tsx, plan.css.
 
 ## N3 Today hero selection (Medium)
@@ -36,6 +38,7 @@ Decision: remember the last successful `/api/me` in **localStorage** key `feeder
 ## N4 timers survive Mark as Cooked (Low)
 Rule: Cooked or Not cooked cancels that meal's scope timers (`meal:<date>/<slot>`), explicitly in the same flow, not via an event.
 - `cook/service`: `CancelScope(ctx, scope) (int, error)` deletes the scope's timers and publishes `cancelled` for each.
+- BDD (planning/cooked.feature, steps in steps_planning_test.go): Cooked and Not cooked each cancel the paused and running timers of that meal's scope while another meal's timer and a free timer stay; a refused Cooked (422) keeps them. Mutation-checked: removing the `OnResolved` closure turns the two scenarios red.
 - `plan/runner`: `Deps.OnResolved func(ctx, key)`, called after the commit by `Cooked` and `NotCooked` (not on error or `ErrAlreadyResolved`).
 - `plan/httpapi` mount builds a cook service (store + clock + bus only is enough) and passes `OnResolved` that calls `CancelScope(MealScope(key))`, logging failures.
 - Files: cook/service/service.go, plan/runner/runner.go + actions.go, plan/httpapi/httpapi.go.
@@ -43,8 +46,8 @@ Rule: Cooked or Not cooked cancels that meal's scope timers (`meal:<date>/<slot>
 ## Copy (Low)
 - Unit plurals: `baseUnitLabel(base, system, count?)`: piece is "pieces" unless count is 1 (so "2 pieces"); `TickSheet` passes the typed value; the Unit Conversion question always uses the plural ("How many pieces is 1 cup of onion?"), via `recipeStrings.unitConversion.question`/`promptQuestion`. Files: lib/units.ts, shop/components/TickSheet.tsx, recipes/lib/unitPrompt.ts.
 - Scans: `scanStrings.queued/rejectedCount` -> "1 Scan / 2 Scans ..." (also ScanScreen). File: scan/strings.ts.
-- Timer label: `CookTimer.recipeName` (server adds it to `GET /api/cook/timers` items via `Service.ScopeRecipeName`); `timerPlace(scope, current, recipeName?)` returns the name, else the old wording. Files: cook/service/service.go, cook/httpapi/httpapi.go (timerDTO), cook/lib/timers.ts, cook/components/CookTimerStrip.tsx, cook/types.ts.
+- Timer label: `CookTimer.recipeName` (server adds it to `GET /api/cook/timers` items via `Service.ScopeRecipeName`); `timerPlace(scope, current, recipeName?)` returns the name, else the old wording. `Service.TimersWithRecipeNames(ctx, scope) (time.Time, []NamedTimer, error)` with `NamedTimer{cook.Timer; RecipeName string}` (embedded) replaces the lookup loop in the `timers` handler (one lookup per distinct scope; `ScopeRecipeName` stays); the handler only maps to DTOs. Test: `TestTimersWithRecipeNamesResolvesTheNameOfEachScope` (red). Files: cook/service/service.go, cook/httpapi/httpapi.go (timerDTO), cook/lib/timers.ts, cook/components/CookTimerStrip.tsx, cook/types.ts.
 - Stray "· ": drop `.spoiled-tile__when::before`; `.spoiled-tile__detail` uses `column-gap: var(--space-2)` and wraps. File: stock/stock.css.
 
 ## robots.txt (N10)
-`internal/app/spa.go`: `GET /robots.txt` returns `text/plain` `User-agent: *\nDisallow: /\n` before the SPA fallback (a private household app). Test: `TestRobotsTxtIsServedNotTheSPAIndex`. No BDD: HTTP unit tests and component tests cover every item.
+`internal/app/spa.go`: `GET /robots.txt` returns `text/plain` `User-agent: *\nDisallow: /\n` before the SPA fallback (a private household app). Test: `TestRobotsTxtIsServedNotTheSPAIndex`. BDD covers N1 and N4 (above); HTTP unit tests and component tests cover the rest.

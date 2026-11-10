@@ -80,6 +80,13 @@ describe('LeftoversTile', () => {
     expect(container.querySelectorAll('.plan-leftovers .list-row')).toHaveLength(2)
   })
 
+  it('N2: the rows are rendered without the lead icon (the tile overline carries it), freeing the half-width cell', () => {
+    const { container } = render(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
+    expect(container.querySelectorAll('.plan-leftovers .list-row')).toHaveLength(2)
+    expect(container.querySelector('.plan-leftovers .list-row__lead')).toBeNull()
+    expect(container.querySelector('.plan-leftovers .list-row__leading')).toBeNull()
+  })
+
   it('lists the soonest Use-by first', () => {
     render(<LeftoversTile leftovers={[...leftovers].reverse()} today="2026-11-09" />)
     const rows = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')

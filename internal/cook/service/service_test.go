@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -782,5 +783,40 @@ func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 		if got := f.svc.ScopeRecipeName(ctx, scope); got != want {
 			t.Errorf("ScopeRecipeName(%q) = %q, want %q", scope, got, want)
 		}
+	}
+}
+
+// N4 review fix: the Recipe name of each timer's scope is resolved in the service (one lookup per distinct scope), so
+// the HTTP handler stays thin. Contract: `TimersWithRecipeNames(ctx, scope) (time.Time, []service.NamedTimer, error)`,
+// `NamedTimer{cook.Timer; RecipeName string}` (embedded), same filter and order as Timers. It is called by reflection
+// so the package compiles until the Developer adds it.
+func TestTimersWithRecipeNamesResolvesTheNameOfEachScope(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3), Label: "Rest", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.RecipeScope(12), Label: "Simmer", DurationSeconds: 600})
+	gone, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.RecipeScope(99), Label: "Orphan", DurationSeconds: 600})
+	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
+
+	m := reflect.ValueOf(f.svc).MethodByName("TimersWithRecipeNames")
+	if !m.IsValid() {
+		t.Fatal("service.Service has no TimersWithRecipeNames(ctx, scope) method")
+	}
+	out := m.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(cook.Scope(""))})
+	if len(out) != 3 || !out[2].IsNil() {
+		t.Fatalf("TimersWithRecipeNames returned %v, want (now, timers, nil)", out)
+	}
+	list := out[1]
+	names := map[int64]string{}
+	for i := 0; i < list.Len(); i++ {
+		el := list.Index(i)
+		names[el.FieldByName("ID").Int()] = el.FieldByName("RecipeName").String()
+	}
+	want := map[int64]string{meal.ID: "Chicken stew", rec.ID: "Chicken stew", gone.ID: "", free.ID: ""}
+	if !reflect.DeepEqual(names, want) {
+		t.Errorf("Recipe names by timer = %v, want %v (unknown scope and free timer: empty)", names, want)
 	}
 }

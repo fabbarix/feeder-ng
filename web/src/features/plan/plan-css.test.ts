@@ -58,8 +58,8 @@ describe('plan.css', () => {
   })
 
   it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
-    // The half-width Leftovers tile (N2) is the one place that must break long words anywhere.
-    expect(css.replace(/\.plan-leftovers[^{]*\{[^}]*\}/g, '')).not.toMatch(/overflow-wrap:\s*anywhere/)
+    // No exemption, the Leftovers tile (N2) included: wp6 review rule (wp6-plan-today.md, CSS contract).
+    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
     for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
       expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
       expect(rule(sel)).toMatch(/hyphens:\s*auto/)
@@ -86,19 +86,20 @@ describe('plan.css Leftovers tile (N2)', () => {
     expect(r).toMatch(/padding-block/)
   })
 
-  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks long words', () => {
+  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks at word edges, hyphenating (never anywhere)', () => {
     const r = rule('.plan-leftovers .list-row__title')
     expect(r).toMatch(/white-space:\s*normal/)
-    expect(r).toMatch(/overflow-wrap:\s*anywhere/)
-    expect(r).not.toMatch(/nowrap/)
+    expect(r).toMatch(/overflow-wrap:\s*break-word/)
+    expect(r).toMatch(/hyphens:\s*auto/)
+    expect(r).not.toMatch(/anywhere|nowrap/)
   })
 
   it('the meta line may wrap under the name', () => {
     expect(rule('.plan-leftovers .list-row__meta')).toMatch(/flex-wrap:\s*wrap/)
   })
 
-  it('the 40 px lead icon is dropped (the overline already carries it), freeing the narrow cell', () => {
-    expect(rule('.plan-leftovers .list-row__lead')).toMatch(/display:\s*none/)
+  it('the feature stylesheet does not override the ListRow lead: the icon is simply not rendered (see TodayTiles.test)', () => {
+    expect(css).not.toMatch(/\.list-row__lead/)
   })
 
   it('rows have 12 px or more of horizontal padding-free text room: padding-inline is at most space-3', () => {
