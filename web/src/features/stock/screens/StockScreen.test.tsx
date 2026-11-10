@@ -214,8 +214,15 @@ describe('StockScreen actions', () => {
     const rows = within(sheet).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]!).queryByRole('button', { name: /Throw out/ })).toBeNull()
-    await userEvent.click(within(rows[1]!).getByRole('button', { name: /Throw out/ }))
+    await userEvent.click(within(rows[1]!).getByRole('button', { name: 'Throw out chicken thighs lot' }))
     expect(hooks.actionThrowOut).toHaveBeenCalledWith(6)
+  })
+
+  it('lot sheet title is the capitalised name', async () => {
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    expect(screen.getByRole('dialog', { name: 'Chicken thighs' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'chicken thighs' })).toBeNull()
   })
 
   it('lot sheet: a failed Throw out shows the error toast', async () => {

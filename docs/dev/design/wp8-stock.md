@@ -32,3 +32,10 @@ Spec: [ui-fix-plan.md](../../design/ui-fix-plan.md) 5.7, 2.6, 7 WP8, CLAUDE.md "
 - **Sheet field stack.** `AddLotSheet` and `SetTotalSheet` wrap their fields in `<div className="stock-sheet__fields">` with `display: grid; gap: var(--space-3)` in `stock.css`.
 - **Single space around the dot.** Rendered `.list-row__meta` text has no run of whitespace (`'1 Stock Lot · goes off Thu'`, `'Bought 5 Nov · Scanned'`).
 - `AddLotSheet` date test pins the clock (`vi.useFakeTimers({ shouldAdvanceTime: true })`, system time 2026-11-10) and asserts `purchased: '2026-11-07'`.
+
+## Review round 2 (spoiled lot row at 390 px, sheet title)
+
+- **Throw out in the lot sheet is icon-only.** The 268 px actions block left a 38 px text column in the fixed 64 px `ListRow`. In `LotList` the row action becomes `IconButton icon="throwOut" label="Throw out <lot.ingredientName> lot"` (stored name, e.g. "Throw out chicken thighs lot"), placed after the state chip inside `.lot-list__actions`, only when `lot.spoiled && onThrowOut`. No text `Button` remains in `LotList`. The row keeps 64 px. The `SpoiledTile` buttons are unchanged (text `Button`s, they have room).
+- **CSS contract:** `.lot-list__actions { display:flex; align-items:center; flex-shrink:0; gap:var(--space-2) }`, no `flex-wrap`. Chip plus 44 px hit area is at most about 120 px, leaving the text column wide enough for amount and meta.
+- **Sheet title** uses `capitalise(selected.name)` ("Chicken thighs"), like `StockRow`; the stored name is untouched.
+- Tests: `LotList.test` (IconButton, name, no text, in chip container), `StockScreen.test` (button name, capitalised dialog title), `hygiene.test` (CSS contract, no `<Button` in LotList). jsdom has no layout, so the 120 px bound is the CSS contract plus a manual 390 px screenshot check by the Developer.

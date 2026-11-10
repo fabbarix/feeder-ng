@@ -50,6 +50,21 @@ describe('LotList', () => {
     expect(onThrowOut).toHaveBeenCalledWith(1)
   })
 
+  it('Throw out is an icon-only IconButton named "Throw out <name> lot" next to the chip (390 px fit)', () => {
+    render(<LotList today="2026-11-09" onThrowOut={vi.fn()} lots={[makeLot({ id: 1, ingredientName: 'chicken thighs', spoiled: true })]} />)
+    const button = screen.getByRole('button', { name: 'Throw out chicken thighs lot' })
+    expect(button).toHaveClass('icon-button')
+    expect(button).toHaveAttribute('aria-label', 'Throw out chicken thighs lot')
+    expect(button.textContent).toBe('')
+    expect(button.querySelector('svg')).not.toBeNull()
+    expect(button.closest('.list-row')).not.toBeNull()
+    const actions = button.closest('.lot-list__actions') as HTMLElement
+    expect(actions).not.toBeNull()
+    expect(actions.querySelector('.chip')).not.toBeNull()
+    expect(actions.querySelector('.btn, .button')).toBeNull() // no text Button left in the actions
+    expect(actions.textContent).not.toMatch(/Throw out/)
+  })
+
   it('offers no Throw out at all without a handler', () => {
     render(<LotList today="2026-11-09" lots={[makeLot({ spoiled: true })]} />)
     expect(screen.queryByRole('button', { name: /Throw out/ })).toBeNull()

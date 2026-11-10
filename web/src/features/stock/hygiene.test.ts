@@ -50,4 +50,15 @@ describe('Stock feature hygiene (WP8)', () => {
   it('has no StockTile left', () => {
     expect(sources.some((f) => /StockTile/.test(f) || /StockTile/.test(read(f)))).toBe(false)
   })
+
+  it('lot-row actions stay narrow at 390 px: no wrap-driven width, no text Throw out Button in LotList', () => {
+    const rule = /\.lot-list__actions\s*\{([^}]*)\}/.exec(stockCss)?.[1] ?? ''
+    expect(rule).toMatch(/display:\s*flex/)
+    expect(rule).toMatch(/align-items:\s*center/)
+    expect(rule).toMatch(/flex-shrink:\s*0/)
+    expect(rule).not.toMatch(/flex-wrap:\s*wrap/)
+    const lotList = read('./components/LotList.tsx')
+    expect(lotList).toMatch(/<IconButton[^>]*icon="throwOut"/)
+    expect(lotList).not.toMatch(/<Button\b/)
+  })
 })
