@@ -38,6 +38,32 @@ describe('dayChip: at most one chip per Planned Meal on a day tile', () => {
   })
 })
 
+describe('an unnamed stock_coverage chip is noise (the server never sends an Ingredient)', () => {
+  const unnamed: Why = { code: 'stock_coverage' }
+  const named: Why = { code: 'stock_coverage', ingredient: 'rice' }
+
+  it('dayChip never shows "uses what is in Stock", the next chip wins', () => {
+    expect(dayChip(meal({ why: [unnamed] }), ctx)).toBeNull()
+    expect(dayChip(meal({ why: [unnamed, favourite('Anna')] }), ctx)).toMatchObject({ label: "Anna's favourite" })
+  })
+
+  it('heroChips skips it and still fills the two places from the others', () => {
+    const chips = heroChips(meal({ why: [unnamed, favourite('Anna'), named] }), ctx)
+    expect(chips.map((c) => c.label)).toEqual(["Anna's favourite", 'uses Stock: rice'])
+  })
+
+  it('sheetChips drops it too, so it is nowhere in chips (the copy stays in phraseWhy only)', () => {
+    const { chips, overflow } = sheetChips(meal({ why: [unnamed, favourite('Anna')] }), ctx)
+    expect(chips.map((c) => c.label)).toEqual(["Anna's favourite"])
+    expect(overflow).toBe(0)
+    expect(sheetChips(meal({ why: [unnamed] }), ctx)).toEqual({ chips: [], overflow: 0 })
+  })
+
+  it('a NAMED stock_coverage still makes a chip', () => {
+    expect(dayChip(meal({ why: [named] }), ctx)).toMatchObject({ kind: 'why', label: 'uses Stock: rice' })
+  })
+})
+
 describe('sheetChips: at most three, the rest as a count', () => {
   const whys: Why[] = [
     favourite('Anna'),

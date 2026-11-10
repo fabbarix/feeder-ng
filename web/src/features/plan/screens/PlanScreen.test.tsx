@@ -84,6 +84,17 @@ describe('PlanScreen layout (5.2)', () => {
     expect(screen.getByRole('group', { name: 'Plan' })).toHaveAttribute('data-columns', columns)
   })
 
+  it('at 1280px (7 columns) today takes one column, keeps its ring, and weekday headings are short', async () => {
+    widthStub(1280)
+    mockApi({ 'GET /api/plan': view() })
+    renderWithProviders(<PlanScreen />)
+    const today = await tile('Today')
+    expect(today).toHaveAttribute('data-span', '1')
+    expect(today).toHaveAttribute('data-today', 'true')
+    expect(screen.getByRole('heading', { name: 'Wed' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Wednesday' })).not.toBeInTheDocument()
+  })
+
   it('says when the planner is catching up', async () => {
     mockApi({ 'GET /api/plan': view({ updating: true }) })
     renderWithProviders(<PlanScreen />)

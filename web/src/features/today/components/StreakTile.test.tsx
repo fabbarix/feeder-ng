@@ -12,6 +12,12 @@ describe('StreakTile', () => {
     expect(screen.queryByText(/without throwing food away/)).not.toBeInTheDocument()
   })
 
+  it('does not say the metric label twice: no heading, the label appears once', () => {
+    render(<StreakTile days={21} />)
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+    expect(screen.getAllByText(/zero-waste streak/i)).toHaveLength(1)
+  })
+
   it('is named for assistive technology', () => {
     render(<StreakTile days={5} />)
     expect(screen.getByRole('region', { name: 'Zero-waste streak' })).toBeInTheDocument()

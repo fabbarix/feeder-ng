@@ -35,6 +35,42 @@ describe('plan.css', () => {
     expect(rule(".plan-meal[data-unfilled]")).toMatch(/dashed/)
   })
 
+  it('the divider between meals is a 1 px line and only on a tile flagged data-dividers (3 or more meals)', () => {
+    const rules = css.split('}').filter((r) => /\.plan-meal\s*\+\s*\.plan-meal/.test(r))
+    expect(rules.length).toBeGreaterThan(0)
+    for (const r of rules) {
+      expect(r).toMatch(/\[data-dividers/)
+      expect(r).toMatch(/border-top:\s*1px solid/)
+    }
+  })
+
+  it('chips hug the start of the block instead of stretching (justify-self: start)', () => {
+    expect(rule('.plan-meal [data-kind]')).toMatch(/justify-self:\s*start/)
+  })
+
+  it('the swap button stays beside the slot label: the head does not wrap, the actions do not shrink, the label truncates', () => {
+    const head = rule('.plan-meal__head')
+    expect(head).not.toMatch(/flex-wrap:\s*wrap/)
+    expect(rule('.plan-meal__actions')).toMatch(/flex:\s*none|flex-shrink:\s*0/)
+    const slot = rule('.plan-meal__slot')
+    expect(slot).toMatch(/min-width:\s*0/)
+    expect(slot).toMatch(/text-overflow:\s*ellipsis/)
+  })
+
+  it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
+    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
+    for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
+      expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
+      expect(rule(sel)).toMatch(/hyphens:\s*auto/)
+    }
+  })
+
+  it('the day title is never clipped: it wraps, with no overflow hidden, ellipsis or nowrap', () => {
+    const r = rule('.plan-day__title')
+    expect(r).toMatch(/overflow-wrap:\s*break-word/)
+    expect(r).not.toMatch(/overflow:\s*hidden|text-overflow|white-space:\s*nowrap/)
+  })
+
   it('does not restyle chips: they keep their own background in narrow tiles', () => {
     expect(css).not.toMatch(/\.chip\b/)
   })

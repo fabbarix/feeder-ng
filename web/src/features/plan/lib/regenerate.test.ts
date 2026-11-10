@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { planStrings } from '../strings'
+import { readSource } from '../test-css'
 import { meal, slot } from '../test-utils'
 import { regenerateConfirmCopy, regenerateImpact } from './regenerate'
 
@@ -19,6 +21,22 @@ describe('regenerateImpact', () => {
 
   it('is 0 for an empty plan', () => {
     expect(regenerateImpact([], today)).toBe(0)
+  })
+})
+
+describe('Regenerate copy lives in strings.ts', () => {
+  it('planStrings carries the dialog title, the confirm label and both bodies', () => {
+    expect(planStrings.regenerateConfirmTitle).toBe('Regenerate the plan?')
+    expect(planStrings.regenerateConfirmLabel).toBe('Regenerate')
+    expect(planStrings.regenerateNone).toBe('No Planned Meals will change. Empty Meal Slots may be filled.')
+    expect(planStrings.regenerateCount(1)).toBe('1 unpinned Planned Meal will change. Pinned and Cooked ones stay as they are.')
+    expect(planStrings.regenerateCount(3)).toBe('3 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.')
+  })
+
+  it('regenerate.ts holds no copy of its own', () => {
+    const source = readSource('features/plan/lib/regenerate.ts')
+    expect(source).not.toBe('')
+    expect(source).not.toMatch(/Planned Meal|Regenerate the plan|Empty Meal Slots/)
   })
 })
 
