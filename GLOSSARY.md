@@ -154,6 +154,10 @@ _Avoid_: Item, food, product
 A specific purchasable pack, identified by its barcode, that supplies exactly one Ingredient (e.g. "Mutti passata 700 g").
 _Avoid_: SKU, article, item
 
+**Archived**:
+The state of a Recipe or Product that was used (planned, or bought) and so cannot be deleted, but is retired: left out of lists and pickers and ignored by the planner and by Scans, while its history stays. It can be unarchived.
+_Avoid_: Deleted, disabled, hidden, inactive
+
 **Base Unit**:
 The single unit (gram, millilitre or piece) in which an Ingredient's Stock and shopping quantities are counted. Always metric internally; imperial is a per-User display conversion only.
 _Avoid_: Default unit, canonical unit
