@@ -73,7 +73,7 @@ describe('UnknownBarcodeSheet', () => {
 
   it('a weighed code asks only for the Ingredient and the Product name', async () => {
     const onSave = setup('weighed')
-    expect(screen.getByRole('dialog', { name: 'What is this weighed item?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'What is this weighed Product?' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Pack size')).toBeNull()
     expect(screen.queryByLabelText('Unit')).toBeNull()
     expect(screen.queryByRole('radio', { name: 'This Shop only' })).toBeNull()

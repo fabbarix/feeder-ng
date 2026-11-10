@@ -30,7 +30,7 @@ export const scanStrings = {
   rejected: (message: string) => `Couldn't sync a scan: ${message}`,
   rejectedAdd: (message: string) => `Couldn't add that scan: ${message}`,
   unknownTitle: 'What is this?',
-  weighedTitle: 'What is this weighed item?',
+  weighedTitle: 'What is this weighed Product?',
   ingredient: 'Ingredient',
   ingredientSearch: 'Search or create an Ingredient',
   createIngredient: (name: string) => `Create "${name}"`,
