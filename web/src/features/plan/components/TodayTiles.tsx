@@ -1,72 +1,54 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, Tile, WhyChip } from '../../../ui'
+import { Button, ListGroup, ListRow, Tile } from '../../../ui'
 import { couldntPlanText } from '../lib/couldnt'
 import { leftoverRows } from '../lib/leftovers'
-import { phraseAll, weekdayName } from '../lib/phrase'
-import { planStrings } from '../strings'
+import { weekdayName } from '../lib/phrase'
+import { planStrings as s } from '../strings'
 import type { Leftover, PlanSlot, SlotKey } from '../types'
 import '../plan.css'
 
-const keyOf = (s: PlanSlot): SlotKey => ({ date: s.date, mealSlotId: s.mealSlotId })
-
-export interface NextMealTileProps {
-  /** From lib/days.nextMeal; null shows "Nothing planned". */
-  slot: PlanSlot | null
-  onOpen?: (key: SlotKey) => void
-}
-
-/** Today: the next meal to cook, with its Recipe, Meal Slot, time and first why chip. */
-export function NextMealTile({ slot, onOpen }: NextMealTileProps): ReactNode {
-  const onClick = slot && onOpen ? () => onOpen(keyOf(slot)) : undefined
-  const why = slot?.meal ? phraseAll(slot.meal.why, { slotDate: slot.date })[0] : undefined
-  return (
-    <Tile size="md" tone="accent" onClick={onClick} aria-label={onClick ? planStrings.nextMealTitle : undefined}>
-      <p className="plan-meal__slot">{planStrings.nextMealTitle}</p>
-      {slot?.meal ? (
-        <div className="plan__stack">
-          <p className="plan-meal__recipe">{slot.meal.recipeName}</p>
-          <p className="plan-meal__slot">
-            {slot.name} · {slot.time}
-          </p>
-          {why ? <WhyChip reason={why} /> : null}
-        </div>
-      ) : (
-        <p className="plan-meal__recipe">{planStrings.nextMealNone}</p>
-      )}
-    </Tile>
-  )
-}
-
 export interface ToConfirmTileProps {
   slots: PlanSlot[]
-  onCooked: (key: SlotKey) => void
+  /** "Yes, Cooked": one tap, planned Leftover portions. */
+  onYesCooked: (key: SlotKey) => void
+  /** "Adjust": the Mark as Cooked sheet. */
+  onAdjust: (key: SlotKey) => void
   onNotCooked: (key: SlotKey) => void
 }
 
-/** Today: meals still unconfirmed two hours after their slot time. Renders nothing when there are none. */
-export function ToConfirmTile({ slots, onCooked, onNotCooked }: ToConfirmTileProps): ReactNode {
+/**
+ * Today: Planned Meals still unconfirmed two hours after their slot time. Tile variant surface, span full, h2 "To
+ * confirm", per meal the Recipe name and slot line with secondary "Yes, Cooked" and "Adjust" and tertiary "Not cooked".
+ * Renders nothing when there are none.
+ */
+export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked }: ToConfirmTileProps): ReactNode {
   if (slots.length === 0) return null
   return (
-    <Tile as="section" size="full">
-      <h2 className="plan__tile-title">{planStrings.toConfirmTitle}</h2>
-      <p className="plan__muted">{planStrings.toConfirmHelp}</p>
+    <Tile as="section" span="full">
+      <h2 className="plan__tile-title">{s.toConfirmTitle}</h2>
       <ul className="plan__list">
-        {slots.map((s) => (
-          <li key={`${s.date}/${s.mealSlotId}`}>
-            <div className="plan__stack">
-              <p className="plan-meal__recipe">{s.meal?.recipeName}</p>
-              <p className="plan-meal__slot">{planStrings.mealLabel(weekdayName(s.date), s.name.toLowerCase())}</p>
-            </div>
-            <div className="plan__row">
-              <Button variant="tonal" onClick={() => onCooked(keyOf(s))}>
-                {planStrings.markCooked}
-              </Button>
-              <Button variant="ghost" onClick={() => onNotCooked(keyOf(s))}>
-                {planStrings.notCooked}
-              </Button>
-            </div>
-          </li>
-        ))}
+        {slots.map((slot) => {
+          const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+          return (
+            <li key={`${slot.date}/${slot.mealSlotId}`} className="plan-confirm">
+              <div className="plan__stack">
+                <p className="plan-sheet__recipe">{slot.meal?.recipeName ?? ''}</p>
+                <p className="plan__muted">{`${weekdayName(slot.date, 'short')} ${slot.name}`}</p>
+              </div>
+              <div className="plan__row">
+                <Button variant="secondary" size="sm" onClick={() => onYesCooked(key)}>
+                  {s.yesCooked}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => onAdjust(key)}>
+                  {s.adjust}
+                </Button>
+                <Button variant="tertiary" size="sm" onClick={() => onNotCooked(key)}>
+                  {s.notCooked}
+                </Button>
+              </div>
+            </li>
+          )
+        })}
       </ul>
     </Tile>
   )
@@ -80,7 +62,7 @@ export interface CouldntPlanNoticeProps {
 export function CouldntPlanNotice({ slots }: CouldntPlanNoticeProps): ReactNode {
   if (slots.length === 0) return null
   return (
-    <Tile size="full" tone="spoil" role="status">
+    <Tile variant="status" status="danger" span="full" role="status">
       <ul className="plan__list">
         {slots.map((s) => (
           <li key={`${s.date}/${s.mealSlotId}`}>{couldntPlanText(s)}</li>
@@ -93,24 +75,33 @@ export function CouldntPlanNotice({ slots }: CouldntPlanNoticeProps): ReactNode 
 export interface LeftoversTileProps {
   leftovers: Leftover[]
   today: string
+  /** Makes the whole tile open the Plan (stretched target named "Leftovers to use"). */
+  onOpen?: () => void
 }
 
-/** Today: the Leftovers to use, soonest Use-by first. Renders nothing when there are none. */
-export function LeftoversTile({ leftovers, today }: LeftoversTileProps): ReactNode {
-  if (leftovers.length === 0) return null
+/**
+ * Today: the Leftovers to use, soonest Use-by first. Half tile, variant status leftover, overline "LEFTOVERS" with the
+ * leftover icon, a row per Leftover "Chicken curry" with meta "2 portions · Use by Thu" (the spoil tone when due
+ * today or tomorrow). Renders nothing when there are none.
+ */
+export function LeftoversTile({ leftovers, today, onOpen }: LeftoversTileProps): ReactNode {
+  const rows = leftoverRows(leftovers, today)
+  if (rows.length === 0) return null
   return (
-    <Tile as="section" size="md">
-      <h2 className="plan__tile-title">{planStrings.leftoversTitle}</h2>
-      <ul className="plan__list">
-        {leftoverRows(leftovers, today).map((r) => (
-          <li key={r.id}>
-            <span>
-              <strong>{r.recipeName}</strong> <span className="plan__muted">{r.portions}</span>
-            </span>
-            <Chip tone={r.tone}>{r.useBy}</Chip>
-          </li>
+    <Tile
+      as="section"
+      variant="status"
+      status="leftover"
+      overline={s.leftoversOverline}
+      overlineIcon="leftover"
+      stretched={onOpen ? { label: s.leftoversTitle, onActivate: onOpen } : undefined}
+    >
+      <h2 className="plan__tile-title">{s.leftoversTitle}</h2>
+      <ListGroup label={s.leftoversTitle}>
+        {rows.map((row) => (
+          <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} icon="leftover" />
         ))}
-      </ul>
+      </ListGroup>
     </Tile>
   )
 }
