@@ -4,7 +4,7 @@ import { groupByDay } from '../lib/days'
 import { slot } from '../test-utils'
 import { DayTile } from './DayTile'
 
-const handlers = { onSwap: vi.fn(), onChoose: vi.fn(), onConfirm: vi.fn(), onUnpin: vi.fn(), onMarkCooked: vi.fn() }
+const handlers = { onSwap: vi.fn(), onChoose: vi.fn(), onConfirm: vi.fn(), onUnpin: vi.fn(), onMarkCooked: vi.fn(), today: '2026-11-09' }
 
 describe('DayTile', () => {
   const days = groupByDay(

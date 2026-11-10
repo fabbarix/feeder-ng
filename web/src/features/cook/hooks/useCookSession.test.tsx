@@ -19,6 +19,7 @@ const view: CookView = {
   recipeName: 'Chicken stew',
   batches: 2,
   meal: { date: '2026-11-09', mealSlotId: 3 },
+  today: '2026-11-09',
   advance: [
     { step: 0, text: 'Marinate the chicken', leadTimeMinutes: 240, done: true, doneAt: '2026-11-09T08:00:00Z', warning: false },
     { step: 3, text: 'Soak the beans', leadTimeMinutes: 480, done: false, doneAt: null, warning: true },

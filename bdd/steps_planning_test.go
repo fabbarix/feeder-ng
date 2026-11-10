@@ -633,6 +633,65 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 	})
 	sc.Step(`^I list the slots the planner could not plan$`, func() { w.Last = w.Client.Get("/api/plan/couldnt-plan") })
 	sc.Step(`^I list the Leftovers$`, func() { w.Last = w.Client.Get("/api/plan/leftovers") })
+	sc.Step(`^the plan JSON "([^"]*)" has (\d+) items$`, func(path, n string) error {
+		v, err := planJSON(w.Last.Body, path)
+		if err != nil {
+			return err
+		}
+		list, ok := v.([]any)
+		if !ok {
+			return fmt.Errorf("%s is not a list; body: %s", path, w.Last.Body)
+		}
+		if want, _ := strconv.Atoi(n); len(list) != want {
+			return fmt.Errorf("%s has %d items, want %s; body: %s", path, len(list), n, w.Last.Body)
+		}
+		return nil
+	})
+	// B8: every "leftover_fits" why chip must name a day whose meal is really served from that chip's meal.
+	sc.Step(`^no "leftover_fits" why chip names a day that is not served from its meal$`, func() error {
+		r := w.Client.Get("/api/plan?from=2026-11-01&to=2026-12-31")
+		slots, err := planJSON(r.Body, "slots")
+		if err != nil {
+			return err
+		}
+		list, _ := slots.([]any)
+		servedFrom := map[string]string{} // "date/slot" of a dependant -> "date/slot" of its source
+		for _, it := range list {
+			sl := it.(map[string]any)
+			m, _ := sl["meal"].(map[string]any)
+			if m == nil {
+				continue
+			}
+			if src, _ := m["servedFromLeftover"].(map[string]any); src != nil {
+				servedFrom[fmt.Sprintf("%v/%v", sl["date"], sl["mealSlotId"])] = fmt.Sprintf("%v/%v", src["date"], src["mealSlotId"])
+			}
+		}
+		for _, it := range list {
+			sl := it.(map[string]any)
+			m, _ := sl["meal"].(map[string]any)
+			if m == nil {
+				continue
+			}
+			chips, _ := m["why"].([]any)
+			for _, c := range chips {
+				chip := c.(map[string]any)
+				if chip["code"] != "leftover_fits" {
+					continue
+				}
+				me := fmt.Sprintf("%v/%v", sl["date"], sl["mealSlotId"])
+				ok := false
+				for dep, src := range servedFrom {
+					if src == me && strings.HasPrefix(dep, fmt.Sprint(chip["date"])+"/") {
+						ok = true
+					}
+				}
+				if !ok {
+					return fmt.Errorf("meal %s has a stale leftover_fits chip for %v; plan: %s", me, chip["date"], r.Body)
+				}
+			}
+		}
+		return nil
+	})
 	sc.Step(`^the plan has no Leftovers$`, func() error {
 		v, err := planJSON(w.Last.Body, "leftovers")
 		if err != nil {

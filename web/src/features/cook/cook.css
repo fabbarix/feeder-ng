@@ -105,3 +105,28 @@
     grid-column: 1 / -1;
   }
 }
+
+.cook-timers__place {
+  font-size: 0.875rem;
+  opacity: 0.75;
+}
+
+.cook-timers__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cook-confirmation {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cook-confirmation__title {
+  margin: 0;
+}
+
+.cook-confirmation__actions {
+  display: flex;
+  justify-content: flex-end;
+}

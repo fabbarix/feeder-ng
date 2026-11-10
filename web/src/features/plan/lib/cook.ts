@@ -1,4 +1,5 @@
-import type { StockWarning } from '../types'
+import type { CookedResult, StockWarning } from '../types'
+import { weekdayName } from './phrase'
 
 export const LEFTOVER_STEP = 0.5
 
@@ -29,4 +30,42 @@ export function parseTotal(text: string): number | null {
   const t = text.trim().replace(',', '.')
   if (!/^\d+(\.\d+)?$/.test(t)) return null
   return Number(t)
+}
+
+/** Where the Leftover of a Cooked meal went (R4 B13). */
+export type LeftoverOutcome =
+  | { kind: 'none' }
+  | { kind: 'kept'; portions: number; useBy: string }
+  | { kind: 'planned'; portions: number; useBy: string; meals: { date: string; mealSlotName: string; recipeName: string }[] }
+
+/** none: no Leftover recorded; planned: at least one later meal is served from it; kept: recorded and planned for nothing. */
+export function leftoverOutcome(result: CookedResult): LeftoverOutcome {
+  const left = result.leftover
+  if (!left) return { kind: 'none' }
+  if (result.plannedFor.length === 0) return { kind: 'kept', portions: left.portions, useBy: left.useBy }
+  return {
+    kind: 'planned',
+    portions: left.portions,
+    useBy: left.useBy,
+    meals: result.plannedFor.map((m) => ({ date: m.date, mealSlotName: m.mealSlotName, recipeName: m.recipeName })),
+  }
+}
+
+/**
+ * The sentence the confirmation shows (short weekday names, the Meal Slot name as stored):
+ * none: "No Leftovers";
+ * kept: "1 portion kept, good until Thu";
+ * planned: "2 portions planned for Tue Dinner" (several meals: "... for Tue Dinner and Wed Dinner").
+ */
+export function leftoverOutcomeText(outcome: LeftoverOutcome): string {
+  switch (outcome.kind) {
+    case 'none':
+      return 'No Leftovers'
+    case 'kept':
+      return `${formatPortions(outcome.portions)} kept, good until ${weekdayName(outcome.useBy, 'short')}`
+    case 'planned': {
+      const meals = outcome.meals.map((m) => `${weekdayName(m.date, 'short')} ${m.mealSlotName}`).join(' and ')
+      return `${formatPortions(outcome.portions)} planned for ${meals}`
+    }
+  }
 }

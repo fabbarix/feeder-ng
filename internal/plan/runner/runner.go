@@ -83,6 +83,8 @@ type runOpts struct {
 	after      *plan.Key // Swap, set, confirm: unpinned meals after this slot are treated as empty
 	regenerate bool      // bump the generation and redo every unpinned meal (planner.Regenerate)
 	skipPlan   bool      // the write does not plan (DiscardExpired)
+	// afterPlan runs inside the transaction once the replan is written (not after the commit).
+	afterPlan func(ctx context.Context, st *store.Store) error
 }
 
 // txKey carries the transaction of a write through the context, so the Stock
@@ -114,11 +116,17 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 				return err
 			}
 		}
-		if o.skipPlan {
-			return nil
+		if !o.skipPlan {
+			if sum, err = r.planIn(withTx(ctx, tx), st, reason, o); err != nil {
+				return err
+			}
+			if o.afterPlan != nil {
+				if err := o.afterPlan(withTx(ctx, tx), st); err != nil {
+					return err
+				}
+			}
 		}
-		sum, err = r.planIn(withTx(ctx, tx), st, reason, o)
-		return err
+		return r.pruneStaleChips(ctx, st)
 	})
 	if err != nil {
 		return Summary{}, err
@@ -130,6 +138,21 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 		r.d.Events.Publish("plan", map[string]any{"changed": "plan", "reason": reason})
 	}
 	return sum, nil
+}
+
+// pruneStaleChips drops the "leftovers for <day>" chips that no longer name a meal served from their source (B8) and
+// saves the changed meals. It runs at the end of every write, inside its transaction.
+func (r *Runner) pruneStaleChips(ctx context.Context, st *store.Store) error {
+	meals, err := st.Meals(ctx, "", "")
+	if err != nil {
+		return err
+	}
+	for _, m := range plan.PruneStaleLeftoverChips(meals) {
+		if err := st.SetWhy(ctx, m.Key, m.Why); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // planIn runs the planner over the snapshot and writes its output with st (bound to the write's transaction).
