@@ -11,7 +11,7 @@ export interface IngredientSelectProps extends SelectFieldProps {
   onCreate?: (query: string) => void
 }
 
-/** Ingredients with a Base Unit badge and meta; "Create Ingredient" for an unknown query when onCreate is given. */
+/** Ingredients with their Base Unit as meta (shown once); "Create Ingredient" for an unknown query when onCreate is given. */
 export function IngredientSelect({ ingredients, value, onChange, onCreate, ...field }: IngredientSelectProps) {
   const options = useMemo(() => ingredientOptions(ingredients), [ingredients])
   return (

@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { TimerTile } from './TimerTile'
 
+describe('WP10: TimerTile wraps its label for the board clamp', () => {
+  it('the label sits in span.timer-tile__label inside the overline', () => {
+    const { container } = render(<TimerTile label="Rice" seconds={90} running />)
+    expect(container.querySelector('.tile__overline > .timer-tile__label')).toHaveTextContent('Rice')
+  })
+})
+
 describe('WP3b #14: TimerTile control names carry the timer label', () => {
   it('names each control after the timer, so several timers are distinguishable', () => {
     render(<TimerTile label="Rice" seconds={90} running onToggle={() => {}} onAddMinute={() => {}} onDismiss={() => {}} onCancel={() => {}} />)
