@@ -52,7 +52,15 @@ Feature: A Slot Rule reserves its Recipe
     And the plan slot on 2026-11-12 does not have the Recipe "pizza"
 
   Scenario: Swap does not offer the reserved Recipe on an earlier day
-    Given I pin the plan slot on 2026-11-09 as "pasta"
+    Two more Recipes leave real alternatives on Tuesday. Pizza stays out of them. Once Friday
+    holds pizza its Cool-down already keeps it out, so this scenario is an end-to-end guard only;
+    the reservation itself is pinned by TestSwapRespectsReservations (Friday still empty).
+
+    Given the planning Recipes:
+      | name    | yield | tags | needs         |
+      | risotto | 2     |      | 150 g rice    |
+      | salad   | 2     |      | 100 g lettuce |
+    And I pin the plan slot on 2026-11-09 as "pasta"
     And I pin the plan slot on 2026-11-10 as "soup"
     And I add a Slot Rule for the Dinner on Friday with the Recipe "pizza"
     And the planner has finished
