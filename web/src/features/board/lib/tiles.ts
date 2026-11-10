@@ -83,7 +83,8 @@ export function msUntil(nextChangeAt: string, nowMs: number): number {
 }
 
 /** "in 3 h", "in 45 min", "now" (due within a minute or overdue): how soon an Advance Step must start. */
-export function dueText(dueAt: string, nowMs: number): string {
+// R11b stub: `timeZone` is accepted but not used yet (N7 board time is red until the developer implements it).
+export function dueText(dueAt: string, nowMs: number, _timeZone = 'UTC'): string {
   const minutes = (Date.parse(dueAt) - nowMs) / MINUTE_MS
   if (minutes < 1) return 'now'
   if (minutes < 60) return `in ${Math.floor(minutes)} min`

@@ -12,6 +12,12 @@ describe('SpoiledTile', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  // R11b N8: a half-width spoil tile left an empty column beside it on the phone (screenshot 01); it spans the row.
+  it('spans the full grid row', () => {
+    const { container } = render(<SpoiledTile lots={[makeLot({ id: 1 })]} today={today} onThrowOut={() => {}} onKeep={() => {}} />)
+    expect(container.querySelector('.tile')).toHaveAttribute('data-span', 'full')
+  })
+
   it('asks "Throw out or keep?" in a danger status Tile and lists each lot', () => {
     render(
       <SpoiledTile

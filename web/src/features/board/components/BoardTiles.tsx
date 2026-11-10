@@ -62,6 +62,8 @@ export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
 export interface NextAdvanceTileProps {
   next: NextAdvance | null
   nowMs: number
+  /** Household IANA zone, for the "Sat 11:30" form beyond 24 h (R11b N7; stub: not used yet). */
+  timeZone?: string
   /** Marks it done (PUT /api/cook/marks) from the board. */
   onDone: (scope: string, step: number) => void
 }

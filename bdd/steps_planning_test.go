@@ -698,6 +698,17 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	// R11b: a meal stored before R10 has a Leftover id but no source date or slot (what Reconcile now fills in).
+	sc.Step(`^the stored meal on `+planDate+` has lost its Leftover source date$`, func(date string) error {
+		res, err := w.Env.DB.Exec(`UPDATE planned_meals SET from_date = '', from_meal_slot_id = 0 WHERE date = ? AND from_leftover_id IS NOT NULL`, date)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return fmt.Errorf("no stored meal on %s is served from a Leftover", date)
+		}
+		return nil
+	})
 	sc.Step(`^I preview Cooking the slot on `+planDate+`$`, func(date string) error {
 		path, err := slotPath(date, "/cook")
 		if err != nil {

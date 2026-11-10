@@ -100,7 +100,42 @@ describe('time text', () => {
     expect(dueText('2026-11-09T18:45:00Z', now)).toBe('in 45 min')
     expect(dueText('2026-11-09T18:00:30Z', now)).toBe('now')
     expect(dueText('2026-11-09T12:00:00Z', now)).toBe('now')
-    expect(dueText('2026-11-10T18:00:00Z', now)).toBe('in 24 h')
+    expect(dueText('2026-11-10T17:59:00Z', now)).toBe('in 23 h')
+  })
+
+  // R11b N7: 24 h or more ahead the board says the day and time ("Sat 11:30") in the household zone, not "in 92 h".
+  describe('dueText beyond 24 h (N7)', () => {
+    const rome = 'Europe/Rome'
+    const now = Date.parse('2026-11-09T18:00:00Z') // Mon 19:00 in Rome (CET)
+    it('stays relative just under 24 h', () => {
+      expect(dueText('2026-11-10T17:59:59Z', now, rome)).toBe('in 23 h')
+    })
+    it('is the weekday and time from exactly 24 h', () => {
+      expect(dueText('2026-11-10T18:00:00Z', now, rome)).toBe('Tue 19:00')
+    })
+    it('four days ahead reads "Fri 15:00", in the household zone', () => {
+      expect(dueText('2026-11-13T14:00:00Z', now, rome)).toBe('Fri 15:00')
+    })
+    it('uses the zone for the day change: 23:30 UTC is already the next day in Rome', () => {
+      expect(dueText('2026-11-14T23:30:00Z', now, rome)).toBe('Sun 00:30')
+      expect(dueText('2026-11-14T23:30:00Z', now, 'UTC')).toBe('Sat 23:30')
+    })
+    it('is 24-hour with a leading zero', () => {
+      expect(dueText('2026-11-11T06:05:00Z', now, 'UTC')).toBe('Wed 06:05')
+    })
+    it('is DST-safe: the clocks go back in Rome on Sun 25 Oct 2026 03:00, the wall time stays right', () => {
+      const sat = Date.parse('2026-10-24T09:00:00Z') // Sat 11:00 CEST
+      expect(dueText('2026-10-25T09:00:00Z', sat, rome)).toBe('Sun 10:00') // 24 h later is 10:00 CET
+      expect(dueText('2026-10-26T10:30:00Z', sat, rome)).toBe('Mon 11:30')
+    })
+    it('is DST-safe: the clocks go forward on Sun 29 Mar 2026 02:00', () => {
+      const sat = Date.parse('2026-03-28T10:00:00Z') // Sat 11:00 CET
+      expect(dueText('2026-03-29T10:00:00Z', sat, rome)).toBe('Sun 12:00') // 24 h later is 12:00 CEST
+    })
+    it('"now" and minutes are unchanged', () => {
+      expect(dueText('2026-11-09T18:20:00Z', now, rome)).toBe('in 20 min')
+      expect(dueText('2026-11-09T17:00:00Z', now, rome)).toBe('now')
+    })
   })
 })
 

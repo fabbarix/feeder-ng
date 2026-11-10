@@ -22,9 +22,10 @@ describe('plan.css', () => {
     expect(r).not.toMatch(/background/)
   })
 
-  it('Cooked and Not cooked meals are muted to 55 %', () => {
-    expect(rule(".plan-meal[data-state='cooked']")).toMatch(/opacity:\s*0?\.55/)
-    expect(rule(".plan-meal[data-state='skipped']")).toMatch(/opacity:\s*0?\.55/)
+  // R11b N6 replaces the old "muted to 55 %" rule: dimming by opacity broke WCAG AA (see cookedContrast.test.ts).
+  it('Cooked and Not cooked meals are not dimmed with opacity', () => {
+    expect(rule(".plan-meal[data-state='cooked']")).not.toMatch(/opacity/)
+    expect(rule(".plan-meal[data-state='skipped']")).not.toMatch(/opacity/)
   })
 
   it('the Recipe name clamps to two lines', () => {

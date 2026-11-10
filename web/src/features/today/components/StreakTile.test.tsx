@@ -12,6 +12,12 @@ describe('StreakTile', () => {
     expect(screen.queryByText(/without throwing food away/)).not.toBeInTheDocument()
   })
 
+  // R11b N8: the streak tile must not stretch to the height of the row (a big empty block next to Use soon).
+  it('carries the class that opts out of row stretching', () => {
+    const { container } = render(<StreakTile days={21} />)
+    expect(container.querySelector('.tile')).toHaveClass('today-streak')
+  })
+
   it('does not say the metric label twice: no heading, the label appears once', () => {
     render(<StreakTile days={21} />)
     expect(screen.queryByRole('heading')).not.toBeInTheDocument()

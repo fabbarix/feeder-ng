@@ -18,6 +18,15 @@ describe('CookTopRow (2.7)', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Step 2 of 5')
   })
 
+  // R11b N9: indigo (the Pinned state chip) means Pinned; the progress pill is a neutral tag.
+  it('the Step pill is not the Pinned chip: a neutral tag chip, no status colour', () => {
+    render(<CookTopRow {...base} number={2} of={5} />)
+    const chip = screen.getByRole('status').querySelector('.chip')!
+    expect(chip).not.toHaveAttribute('data-status', 'pinned')
+    expect(chip).not.toHaveAttribute('data-kind', 'state')
+    expect(chip).toHaveAttribute('data-kind', 'tag')
+  })
+
   it('leaves the pill out when there are no Steps', () => {
     render(<CookTopRow {...base} number={0} of={0} />)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
