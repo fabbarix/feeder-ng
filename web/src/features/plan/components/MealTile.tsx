@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Button, Chip, Icon, IconButton } from '../../../ui'
 import { couldntPlanText } from '../lib/couldnt'
 import { dayChip } from '../lib/chips'
-import { mayCook } from '../lib/resolve'
+import { compactAction, mayCook } from '../lib/resolve'
 import { slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
@@ -18,6 +18,8 @@ export interface MealTileProps {
   onChoose: (key: SlotKey) => void
   /** B2: Cook Mode from the tile. */
   onCook: (key: SlotKey) => void
+  /** 7-column week: head row = slot icon + time, at most one action (Cook today, Swap future). */
+  compact?: boolean
 }
 
 /**
@@ -27,20 +29,38 @@ export interface MealTileProps {
  * (data-state) and have no icon buttons. An empty slot is a dashed block (data-unfilled) with a danger chip
  * "Couldn't plan", the reason text and a tertiary "Choose a Recipe". No Mark as Cooked, Pin or Confirm here: the sheet has them.
  */
-export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook }: MealTileProps): ReactNode {
+export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compact = false }: MealTileProps): ReactNode {
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const meal = slot.meal
   const planned = meal?.state === 'planned'
   const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
+  const action = compact ? (planned ? compactAction(slot.date, today) : null) : null
 
   return (
     <div className="plan-meal" data-state={meal && meal.state !== 'planned' ? meal.state : undefined} data-unfilled={meal ? undefined : ''}>
       <div className="plan-meal__head">
-        <span className="plan-meal__slot">
-          <Icon name={slotIcon(slot.name)} size={16} />
-          <span className="plan-meal__name">{slot.name}</span>
-        </span>
-        {planned ? (
+        {compact ? (
+          <span className="plan-meal__slot" aria-label={slot.name}>
+            <Icon name={slotIcon(slot.name)} size={16} />
+            <span className="plan-meal__name">{slot.time}</span>
+          </span>
+        ) : (
+          <span className="plan-meal__slot">
+            <Icon name={slotIcon(slot.name)} size={16} />
+            <span className="plan-meal__name">{slot.name}</span>
+          </span>
+        )}
+        {compact ? (
+          action ? (
+            <span className="plan-meal__actions">
+              {action === 'cook' ? (
+                <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(key)} />
+              ) : (
+                <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap(key)} />
+              )}
+            </span>
+          ) : null
+        ) : planned ? (
           <span className="plan-meal__actions">
             <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap(key)} />
             {mayCook(slot.date, today) ? <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(key)} /> : null}

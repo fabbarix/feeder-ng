@@ -19,3 +19,13 @@ export function mayResolve(date: string, today: string): boolean {
 export function mayCook(date: string, today: string): boolean {
   return isDate(date) && isDate(today) && date === today
 }
+
+/**
+ * The one icon action a compact Planned Meal shows (7-column week): Cook on today's planned meal, Swap on a future
+ * planned meal, none otherwise (a past planned meal has none; the sheet still has its actions).
+ */
+export function compactAction(date: string, today: string): 'cook' | 'swap' | null {
+  if (mayCook(date, today)) return 'cook'
+  if (isDate(date) && isDate(today) && date > today) return 'swap'
+  return null
+}

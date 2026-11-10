@@ -29,7 +29,7 @@ export function DayTile({ day, compact = false, ...handlers }: DayTileProps): Re
     >
       <h2 className="plan-day__title">{compact ? day.shortTitle : day.title}</h2>
       {day.slots.map((slot) => (
-        <MealTile key={slot.mealSlotId} slot={slot} {...handlers} />
+        <MealTile key={slot.mealSlotId} slot={slot} compact={compact} {...handlers} />
       ))}
     </Tile>
   )

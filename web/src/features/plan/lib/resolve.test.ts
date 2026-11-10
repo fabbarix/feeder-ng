@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mayCook, mayResolve } from './resolve'
+import { compactAction, mayCook, mayResolve } from './resolve'
 
 describe('mayResolve (B10)', () => {
   it('is true for today and for the past', () => {
@@ -29,5 +29,14 @@ describe('mayCook (B2: Cook Mode only for today)', () => {
   it('is false for something that is not a date', () => {
     expect(mayCook('', '2026-11-09')).toBe(false)
     expect(mayCook('2026-11-09', '')).toBe(false)
+  })
+})
+
+describe('compactAction (7-column week: one icon action per Planned Meal)', () => {
+  it('Cook on today, Swap on a future date, nothing on a past date or a non-date', () => {
+    expect(compactAction('2026-11-10', '2026-11-10')).toBe('cook')
+    expect(compactAction('2026-11-11', '2026-11-10')).toBe('swap')
+    expect(compactAction('2026-11-09', '2026-11-10')).toBeNull()
+    expect(compactAction('soon', '2026-11-10')).toBeNull()
   })
 })

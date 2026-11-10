@@ -70,6 +70,10 @@
 .plan-grid[data-columns='7'] .plan-day__title {
   font-size: 1rem;
 }
+/* A ~135 px day tile: a narrower inner padding leaves the compact head row room for the slot icon, the time and one action. */
+.plan-grid[data-columns='7'] .plan-day {
+  --tile-pad: 14px;
+}
 
 /* A Planned Meal inside a day tile: compact, one chip at most. */
 .plan-meal {
