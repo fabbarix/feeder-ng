@@ -24,6 +24,9 @@ var (
 	ErrInUse             = errors.New("in use")
 	ErrDuplicatePrefix   = errors.New("duplicate prefix")
 	ErrUnknownIngredient = errors.New("unknown ingredient")
+	// ErrBought: the Product was bought (or Stock refers to it), so it cannot be
+	// deleted; archive it instead (SetArchived). errors.Is(ErrBought, ErrInUse).
+	ErrBought = fmt.Errorf("product was bought, archive it instead: %w", ErrInUse)
 )
 
 // BarcodeTakenError: the code already belongs to ProductID (global), or is
@@ -31,6 +34,9 @@ var (
 type BarcodeTakenError struct {
 	Code      string
 	ProductID int64
+	// Archived: the owner is an archived Product. It still owns its barcodes; the
+	// caller offers to unarchive it instead of creating a duplicate.
+	Archived bool
 }
 
 func (e *BarcodeTakenError) Error() string {
@@ -57,6 +63,7 @@ type Product struct {
 	IngredientName string     `json:"ingredientName"`
 	BaseUnit       units.Base `json:"baseUnit"`
 	PackSize       float64    `json:"packSize"`
+	Archived       bool       `json:"archived"`
 }
 
 // ShopBarcode as stored.
@@ -109,12 +116,17 @@ type Filter struct {
 	Query        string // normalised substring of the name
 	IngredientID int64
 	Barcode      string
+	// IncludeArchived lists archived Products too (default: active only).
+	IncludeArchived bool
 }
 
 // Resolved is the outcome of Store.Resolve.
 type Resolved struct {
 	Resolution barcode.Resolution `json:"resolution"`
 	Product    *Product           `json:"product"`
+	// ArchivedProduct is set when the resolution is unknown (or an unknown weighed
+	// item) only because the code belongs to an archived Product.
+	ArchivedProduct *Product `json:"archivedProduct"`
 }
 
 // UsageCounter reports how many rows of another feature reference a Product.
@@ -1198,4 +1210,12 @@ func (s *Store) Resolve(ctx context.Context, raw string, format barcode.Format, 
 		out.Product = &p
 	}
 	return out, nil
+}
+
+// SetArchived archives (true) or restores (false) a Product. Idempotent. An archived
+// Product is hidden from lists (unless Filter.IncludeArchived), left out of the
+// Catalog, Resolve and LastBought, but keeps its barcodes, purchases and Prices.
+// ErrNotFound for an unknown id.
+func (s *Store) SetArchived(ctx context.Context, id int64, archived bool) (Detail, error) {
+	return Detail{}, errors.New("not implemented")
 }
