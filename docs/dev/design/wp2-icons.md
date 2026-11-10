@@ -124,6 +124,11 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | celebration | `Confetti` |
 | planEmpty | `CalendarBlank` |
 | cameraOff | `CameraSlash` |
+| camera | `Camera` (UF1) |
+| clipboard | `ClipboardText` (UF1) |
+| link | `LinkSimple` (UF1) |
+| rotateRight | `ArrowClockwise` (UF1) |
+| rotateLeft | `ArrowCounterClockwise` (UF1; same glyph as `undo`/`unarchive`) |
 | pasta | `BowlSteam` |
 | fish | `Fish` |
 | chicken | `Bird` |
@@ -152,3 +157,9 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 The 40 kB estimate assumed one weight per glyph. Each `@phosphor-icons/react` csr glyph module carries all six weights, so 87 glyphs measure 62,367 B gz (about 0.7 kB per glyph). PM decision: keep per-icon csr imports (CLAUDE.md rule; `@phosphor-icons/core` SVGs would break it) and set the budget to 64 kB gz (65,536 B). The app is a self-hosted PWA with a precached shell, so this is a one-time cost. About 3 kB of headroom remains, so each new glyph must be justified.
 
 R12 adds `reheat` -> `Fire` (+928 B gz): 65,505 B gz of the 65,536 B budget, 93 modules. 31 B of headroom is left, so the next glyph must raise the budget.
+
+## UF1 update: weights slimmed, budget 42 kB gz
+The 64 kB budget above is superseded. `@phosphor-icons/react` modules carry six weights per glyph but the app uses
+four (`regular`, `bold`, `fill`, `duotone`), so UF1 strips `thin` and `light` at build time
+(`web/vite.phosphor-weights.ts`, see [uf1-icons.md](uf1-icons.md)). 97 glyphs now measure ~41.3 kB gz; the budget is
+**43,008 B (42 kB)** and `MIN_MODULES` is 97. UF1 adds `camera`, `clipboard`, `link`, `rotateRight` and `rotateLeft`.
