@@ -2,6 +2,7 @@
 // and the line shown afterwards with ✎ and Undo (functional spec §10.1, §10.2). React hook; every side effect is
 // injected so tests use fakes.
 import { useRef, useState } from 'react'
+import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { Scanned } from '../lib/barcode'
 import type { Feedback } from '../lib/feedback'
@@ -291,14 +292,23 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     setSheet(null)
   }
 
+  /** The server Undo; a 404 means the server never had the Op (not applied), which is as undone as it gets. */
+  const serverUndo = async (clientUuid: string): Promise<void> => {
+    try {
+      await depsRef.current.undo(clientUuid)
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 404)) throw err
+    }
+  }
+
   const undo = async (): Promise<void> => {
     if (!line) return
     const d = depsRef.current
     if (line.queued) {
       const removed = await d.cancelQueued(line.clientUuid)
-      if (!removed) await d.undo(line.clientUuid)
+      if (!removed) await serverUndo(line.clientUuid)
     } else {
-      await d.undo(line.clientUuid)
+      await serverUndo(line.clientUuid)
     }
     setLine(null)
   }

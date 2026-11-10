@@ -137,17 +137,17 @@ export class OfflineQueue {
 
   /**
    * Drops an operation the User undid before the server heard of it. Answers true when the server has nothing for
-   * it (it was still waiting, its send failed, or the server rejected it), so there is nothing to undo there;
-   * false when the server applied it, or it left the queue because an earlier flush sent it: the caller must ask
-   * the server to Undo it. An operation being sent right now is not removed under the send: cancel waits for that
-   * send to settle and answers by its outcome.
+   * it (never sent, so attempts is 0), so there is nothing to undo there; false when it was sent before (attempts
+   * > 0: the send failed or timed out, so the server may have applied it), when the server applied it, or when it
+   * left the queue because an earlier flush sent it: the caller must ask the server to Undo it. An operation being
+   * sent right now is not removed under the send: cancel waits for that send to settle and answers by its outcome.
    */
   cancel(clientUuid: string): Promise<boolean> {
     return this.exclusive(async () => {
-      const queued = (await this.store.all()).some((e) => e.op.clientUuid === clientUuid)
+      const queued = (await this.store.all()).find((e) => e.op.clientUuid === clientUuid)
       if (queued) {
         await this.store.remove(clientUuid)
-        return true
+        return queued.attempts === 0
       }
       return this.outcomes.get(clientUuid) === 'rejected'
     })
