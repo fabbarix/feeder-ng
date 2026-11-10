@@ -42,6 +42,13 @@ describe('DayTile', () => {
     expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument()
   })
 
+  it('compact passes through to the Planned Meals: one action each, slot shown as time', () => {
+    render(<DayTile day={days[0]!} compact {...handlers} />)
+    expect(screen.getAllByRole('button', { name: 'Cook' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Lunch')).not.toBeInTheDocument()
+  })
+
   it('the divider flag appears only with 3 or more meals', () => {
     const many = (n: number) =>
       groupByDay(Array.from({ length: n }, (_, i) => slot({ date: '2026-11-10', mealSlotId: i + 1, name: `Slot ${i + 1}`, time: `${8 + i * 4}:00` })), '2026-11-09')[0]!

@@ -52,7 +52,8 @@ describe('PlanScreen layout (5.2)', () => {
     expect(regenerate.querySelector('svg')).not.toBeNull()
   })
 
-  it('shows a day tile per day, today first and spanning two columns', async () => {
+  it('on a phone (2 columns) shows a day tile per day, today first and spanning two columns', async () => {
+    phone()
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const today = await tile('Today')
@@ -93,6 +94,28 @@ describe('PlanScreen layout (5.2)', () => {
     expect(today).toHaveAttribute('data-today', 'true')
     expect(screen.getByRole('heading', { name: 'Wed' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Wednesday' })).not.toBeInTheDocument()
+  })
+
+  it('at 1280px (7 columns) a day tile is compact: Recipe name on its own line, ONE action (Cook today, Swap otherwise)', async () => {
+    widthStub(1280)
+    mockApi({ 'GET /api/plan': view() })
+    renderWithProviders(<PlanScreen />)
+    const today = await tile('Today')
+    expect(today.querySelectorAll('.plan-meal__actions button')).toHaveLength(1)
+    expect(within(today).getByRole('button', { name: 'Cook' })).toBeInTheDocument()
+    expect(within(today).queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
+    const tomorrow = await tile('Tomorrow')
+    expect(within(tomorrow).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+    expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+  })
+
+  it('at 1280px the Planned Meal sheet still offers Swap on today (the action the tile gave up)', async () => {
+    widthStub(1280)
+    mockApi({ 'GET /api/plan': view() })
+    renderWithProviders(<PlanScreen />)
+    const sheet = await openSheet('Today', 'Chicken')
+    expect(within(sheet).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Cook' })).toBeInTheDocument()
   })
 
   it('says when the planner is catching up', async () => {

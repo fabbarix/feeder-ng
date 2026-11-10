@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { favourite, meal, slot } from '../test-utils'
 import { MealTile } from './MealTile'
 
-function setup(s = slot(), today = '2026-11-10') {
+function setup(s = slot(), today = '2026-11-10', compact = false) {
   const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn() }
-  const view = render(<MealTile slot={s} today={today} {...handlers} />)
+  const view = render(<MealTile slot={s} today={today} compact={compact} {...handlers} />)
   return { ...handlers, container: view.container }
 }
 
@@ -138,5 +138,46 @@ describe('MealTile (compact, on a day tile)', () => {
     setup(slot({ meal: null }))
     expect(screen.getByText('Nothing planned')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Choose a Recipe' })).toBeInTheDocument()
+  })
+
+  describe('compact (7-column week, ~135 px tile; ui-fix-plan 5.2)', () => {
+    it('row 1 is the Meal Slot icon and the time, the slot name is only the accessible name', () => {
+      const { container } = setup(slot(), '2026-11-10', true)
+      const head = container.querySelector('.plan-meal__slot') as HTMLElement
+      expect(head.querySelector('svg')).not.toBeNull()
+      expect(head).toHaveTextContent('19:00')
+      expect(head).toHaveAccessibleName(/Dinner/)
+      expect(screen.queryByText('Dinner')).not.toBeInTheDocument()
+    })
+
+    it("today's planned meal keeps ONE action, Cook, and gives Swap to the sheet", async () => {
+      const h = setup(slot(), '2026-11-10', true)
+      expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+      expect(h.onCook).toHaveBeenCalledWith(key)
+    })
+
+    it('a future planned meal keeps ONE action, Swap', async () => {
+      const h = setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10', true)
+      expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
+      expect(h.onSwap).toHaveBeenCalledWith({ date: '2026-11-11', mealSlotId: 2 })
+    })
+
+    it('never more than one icon button in the head row', () => {
+      const { container } = setup(slot(), '2026-11-10', true)
+      expect(container.querySelectorAll('.plan-meal__head button')).toHaveLength(1)
+    })
+
+    it('the Recipe name is still the button that opens the sheet', async () => {
+      const h = setup(slot(), '2026-11-10', true)
+      await userEvent.click(screen.getByRole('button', { name: /Chicken curry/ }))
+      expect(h.onOpen).toHaveBeenCalledWith(key)
+    })
+
+    it('an empty slot and a Cooked meal are unchanged apart from the head row', () => {
+      const { container } = setup(slot({ meal: meal({ state: 'cooked' }) }), '2026-11-10', true)
+      expect(container.querySelectorAll('.plan-meal__head button')).toHaveLength(0)
+    })
   })
 })
