@@ -5,7 +5,9 @@ import { AlarmIcon } from '@phosphor-icons/react/dist/csr/Alarm'
 import { ArchiveIcon } from '@phosphor-icons/react/dist/csr/Archive'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowCounterClockwise'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
+import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+import { ArrowUpIcon } from '@phosphor-icons/react/dist/csr/ArrowUp'
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockwise'
 import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
 import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
@@ -76,6 +78,7 @@ import { ShuffleIcon } from '@phosphor-icons/react/dist/csr/Shuffle'
 import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
 import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/csr/SlidersHorizontal'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
+import { SpeakerSlashIcon } from '@phosphor-icons/react/dist/csr/SpeakerSlash'
 import { SparkleIcon } from '@phosphor-icons/react/dist/csr/Sparkle'
 import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack'
 import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
@@ -151,6 +154,9 @@ export const icons = {
   agentPrompt: RobotIcon,
   file: FileArrowUpIcon,
   torch: FlashlightIcon,
+  moveUp: ArrowUpIcon,
+  moveDown: ArrowDownIcon,
+  mute: SpeakerSlashIcon,
   stockTake: HouseLineIcon,
   unknownBarcode: QuestionIcon,
   weigh: ScalesIcon,

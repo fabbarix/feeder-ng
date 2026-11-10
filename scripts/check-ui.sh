@@ -12,6 +12,10 @@
 #   glossary         6  GLOSSARY.md _Avoid_ words in strings.ts (or in the allowlist)
 #   native-search    7  no <input type="search"> outside web/src/ui (use the SearchField primitive)
 #
+# colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
+# one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
+# without a reason is ignored; an entry matches every colour-literals violation in each file it is a substring of.
+#
 # Output: counts per rule and the first few violations; every violation goes to
 # <root>/build/check-ui.txt (override with CHECK_UI_OUT). Exit 1 only if a rule in
 # `fail` mode (or a violation under that rule's fail_paths) has violations.
@@ -38,6 +42,7 @@ cd "$ROOT" || exit 2
 SRC=web/src
 ALLOW_CLASSES="$ALLOW_DIR/check-ui.allow-classnames"
 ALLOW_GLOSSARY="$ALLOW_DIR/check-ui.allow-glossary"
+ALLOW_COLOURS="$ALLOW_DIR/check-ui.allow-colours"
 OUT="${CHECK_UI_OUT:-$ROOT/build/check-ui.txt}"
 mkdir -p "$(dirname "$OUT")"
 TMP="$(mktemp -d)"
@@ -413,6 +418,24 @@ rule_class_hooks
 rule_sizing
 rule_glossary
 rule_native_search
+
+# File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
+if [ -f "$ALLOW_COLOURS" ]; then
+  awk -F'\t' -v ALLOW="$ALLOW_COLOURS" '
+    BEGIN {
+      n = 0
+      while ((getline l < ALLOW) > 0) {
+        h = index(l, "#"); if (!h) continue
+        p = substr(l, 1, h - 1); r = substr(l, h + 1)
+        gsub(/^[ \t]+|[ \t]+$/, "", p); gsub(/^[ \t]+|[ \t]+$/, "", r)
+        if (p != "" && r != "") paths[++n] = p
+      }
+    }
+    {
+      if ($1 == "colour-literals") for (i = 1; i <= n; i++) if (index($2, paths[i]) > 0) next
+      print
+    }' "$VIOL" >"$TMP/violations.kept" && mv "$TMP/violations.kept" "$VIOL"
+fi
 
 LC_ALL=C sort -t$'\t' -k1,1 -k2,2 -k3,3n "$VIOL" >"$OUT"
 

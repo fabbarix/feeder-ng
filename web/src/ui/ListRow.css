@@ -123,7 +123,10 @@
 }
 
 .list-row__trailing {
+  display: flex;
   flex: none;
+  align-items: center;
+  gap: var(--space-1);
   font-variant-numeric: tabular-nums;
   text-align: end;
 }
@@ -132,4 +135,45 @@
   display: grid;
   flex: none;
   color: var(--color-muted);
+}
+
+/* WP3b: a status colours the meta line (spoil, leftover, ...); the icon before it is decorative. */
+.list-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.list-row__meta[data-status='spoil'] {
+  color: var(--status-spoil-fg);
+}
+
+.list-row__meta[data-status='leftover'] {
+  color: var(--status-leftover-fg);
+}
+
+.list-row__meta[data-status='danger'] {
+  color: var(--status-danger-fg);
+}
+
+.list-row__meta[data-status='success'] {
+  color: var(--status-success-fg);
+}
+
+.list-row__meta[data-status='pinned'] {
+  color: var(--status-pinned-fg);
+}
+
+/* Extra content (Chips) under the meta line; wraps inside the text column. */
+.list-row__extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: var(--space-1);
+}
+
+.list-row[data-height='auto'] {
+  block-size: auto;
+  min-block-size: 64px;
+  padding-block: var(--space-2);
 }

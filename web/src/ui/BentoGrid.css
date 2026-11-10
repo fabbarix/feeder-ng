@@ -18,3 +18,8 @@
 .bento-grid[data-columns='4'] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+
+/* WP3b (plan 4.4): the week strip, one column per day. */
+.bento-grid[data-columns='7'] {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
