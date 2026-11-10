@@ -110,10 +110,12 @@ describe('ListRow whole-row target (plan 4.13: the row is the tap target)', () =
   // jsdom does no hit-testing, so the contract is in the stylesheet: content is click-through, only
   // interactive trailing content catches the pointer.
   const css = readUiCss('ListRow.css')
-  it('non-target children are click-through and not lifted above the target', () => {
+  it('non-target children are click-through and painted above the target', () => {
     const d = declarations(css, '.list-row > :not(.list-row__target)')
     expect(d['pointer-events']).toBe('none')
-    expect(d['z-index']).toBeUndefined()
+    // the absolute target has opaque hover/press/selected backgrounds: without a stacking lift it paints over the content
+    expect(d.position).toBe('relative')
+    expect(d['z-index']).toBe('1')
   })
   it('only interactive content inside .list-row__trailing is lifted and clickable', () => {
     const lifted = ruleBlocks(css).filter(

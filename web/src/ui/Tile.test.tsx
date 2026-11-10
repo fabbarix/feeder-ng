@@ -176,9 +176,9 @@ describe('Tile styling (plan 4.4)', () => {
     expect(declarations(css, '.tile__stretch')['z-index']).toBe('0')
   })
   it('the interactive-content lift does not apply to a ListRow target inside a tile', () => {
-    const lifts = ruleBlocks(css).filter((b) => /position\s*:\s*relative/.test(b.body) && b.selectors.some((s) => /button/.test(s) && /\ba\b/.test(s)))
+    const lifts = ruleBlocks(css).filter((b) => /position\s*:\s*relative/.test(b.body) && b.selectors.some((s) => /(^|[\s(,:])(button|a)(?![\w-])/.test(s)))
     expect(lifts.length).toBeGreaterThan(0)
-    for (const b of lifts) for (const s of b.selectors) expect(s).toContain(':not(.list-row__target)')
+    for (const b of lifts) for (const s of b.selectors.filter((x) => /(^|[\s(,:])(button|a)(?![\w-])/.test(x))) expect(s).toContain(':not(.list-row__target)')
   })
   it('the overline gap is a token', () => {
     expect(declarations(css, '.tile__overline').gap).toMatch(/^var\(--/)

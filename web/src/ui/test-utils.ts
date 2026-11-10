@@ -36,7 +36,7 @@ export function declarations(css: string, selector: string): Record<string, stri
   const out: Record<string, string> = {}
   let found = false
   for (const m of flat.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const selectors = m[1]!.split(',').map(norm)
+    const selectors = splitSelectors(m[1]!)
     if (!selectors.includes(norm(selector))) continue
     found = true
     for (const d of m[2]!.split(';')) {
@@ -61,7 +61,24 @@ export function readStylesCss(): string {
 export function ruleBlocks(css: string): { selectors: string[]; body: string }[] {
   const noComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
   return [...noComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-    selectors: m[1]!.split(',').map(norm),
+    selectors: splitSelectors(m[1]!),
     body: m[2]!,
   }))
+}
+
+/** Splits a selector list on top-level commas only (commas inside parentheses, as in :is(a, b), are kept). */
+function splitSelectors(list: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let cur = ''
+  for (const ch of list) {
+    if (ch === '(') depth++
+    else if (ch === ')') depth--
+    if (ch === ',' && depth === 0) {
+      out.push(cur)
+      cur = ''
+    } else cur += ch
+  }
+  out.push(cur)
+  return out.map(norm)
 }

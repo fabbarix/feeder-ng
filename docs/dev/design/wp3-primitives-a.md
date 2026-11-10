@@ -59,10 +59,10 @@ therefore fails `check-ui` until the Developer finishes; that is the red state.
 - Hit areas of 44 px on `sm` buttons, compact IconButtons and filter chips use a `::after` pseudo-element, not size.
 
 ## Review follow-ups (tests first, then code)
-- **ListRow target.** The whole row is the tap target: in `ListRow.css` every child except the target is `pointer-events: none` and is not lifted (`.list-row > :not(.list-row__target)` has no `z-index`);
-  only interactive elements inside `.list-row__trailing` (`button`, `a`, `input`, `select`, `[role=button]`) get `pointer-events: auto; position: relative; z-index: 1`. A click on title, lead or chevron
+- **ListRow target.** The whole row is the tap target: in `ListRow.css` every child except the target is `pointer-events: none; position: relative; z-index: 1` (`.list-row > :not(.list-row__target)`): the lift is mandatory, because the absolute target has opaque hover, press and selected backgrounds that would otherwise paint over lead, title and chevron, and `pointer-events: none` keeps the lift from catching clicks;
+  only interactive elements inside `.list-row__trailing` (`button`, `a`, `input`, `select`, `textarea`, `label`, `[role=button]`, `[role=checkbox]`, `[role=switch]`) get `pointer-events: auto; position: relative; z-index: 1`. A click on title, lead or chevron
   therefore reaches the target (jsdom cannot hit-test: CSS contract test plus a click test on the target).
-- **Tile inside a tile.** The Tile.css rule lifting inner `button`/`a` is `.tile :is(button, a):not(.tile__stretch):not(.list-row__target)`, so a ListRow keeps its absolute target.
+- **Tile inside a tile.** The Tile.css rule lifting inner `button`/`a` is `.tile :is(button, a):not(.tile__stretch):not(.list-row__target)`, so a ListRow keeps its absolute target (any selector targeting `button`/`a` is fine; no `button:not(a)` workaround needed).
 - **Danger button.** Text is `--status-danger-on-solid`, white in light and both dark blocks of `styles.css` (AA on the dark solid too), replacing `--color-surface`.
 - **Palette.** `styles.css` holds one light block, `:root, [data-scheme='light']`; the non-colour `:root` tokens stay in a separate `:root` block.
 - **ListGroup** carries `data-primary-scope` on `.list-group`.
