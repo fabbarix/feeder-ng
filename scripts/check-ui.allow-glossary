@@ -1,0 +1,4 @@
+# Rule glossary: avoid-words that are legitimate in a given strings.ts.
+# Format: <path substring or *> <avoid word>   (say why in a comment)
+# "Item code" is the printed barcode term on a Shop receipt, not an Ingredient/Product synonym.
+web/src/features/shops/strings.ts item

@@ -1,0 +1,4 @@
+.card, .card--wide { padding: 0; }
+.badge--ok { opacity: 1; }
+@media (min-width: 600px) { .icon-on:hover, .icon-off { opacity: 1; } }
+.badge { opacity: 1; }

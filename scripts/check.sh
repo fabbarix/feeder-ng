@@ -21,6 +21,13 @@ step() {
   fi
 }
 
+# UI guards first: they are instant. Each rule's mode lives in scripts/check-ui.rules.
+step "UI guards (scripts/check-ui.sh)" bash "$ROOT/scripts/check-ui.sh"
+if [ "${CHECK_ONLY:-}" = ui ]; then # used by scripts/test/check-ui_test.sh
+  printf '\nCHECK PASSED (ui guards only)\n' | tee -a "$LOG"
+  exit 0
+fi
+
 step "pnpm install (frozen lockfile)" pnpm -C web install --frozen-lockfile
 step "typecheck" pnpm -C web typecheck
 step "vitest" pnpm -C web test

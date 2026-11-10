@@ -1,0 +1,2 @@
+# Rule class-hooks: className tokens that are intentionally unstyled (JS/test hooks,
+# third-party classes). One token per line; a trailing * allows a prefix. Say why.

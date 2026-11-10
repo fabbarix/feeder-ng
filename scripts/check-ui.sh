@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+# UI guards (docs/design/ui-fix-plan.md section 7, WP0). Grep/awk based, no dependencies.
+#
+#   scripts/check-ui.sh [--root DIR] [--rules FILE] [--verbose]
+#
+# Rules (names are the keys in scripts/check-ui.rules, which holds each rule's mode):
+#   native-ui        1  no <select>, window.alert/confirm/prompt, native input types outside web/src/ui
+#   phosphor         2  @phosphor-icons/react only in web/src/ui/icons.ts, only via /dist/csr/<Name>
+#   colour-literals  3  no hex/rgb/hsl/oklch literals in feature/ui/app CSS and in .tsx (use var(--...))
+#   class-hooks      4  every className token used in .tsx has a CSS rule (or is in the allowlist)
+#   sizing           5  no min-height on .tile variants; no px font sizes (use the type tokens)
+#   glossary         6  GLOSSARY.md _Avoid_ words in strings.ts (or in the allowlist)
+#
+# Output: counts per rule and the first few violations; every violation goes to
+# <root>/build/check-ui.txt (override with CHECK_UI_OUT). Exit 1 only if a rule in
+# `fail` mode (or a violation under that rule's fail_paths) has violations.
+# Test files (*.test.*, test-utils.*, web/src/test/) are never scanned.
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+RULES_FILE="${CHECK_UI_RULES:-$SCRIPT_DIR/check-ui.rules}"
+ALLOW_DIR="${CHECK_UI_ALLOW_DIR:-$SCRIPT_DIR}"
+VERBOSE=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --root) ROOT="$(cd "$2" && pwd)"; shift 2 ;;
+    --rules) RULES_FILE="$2"; shift 2 ;;
+    --verbose) VERBOSE=1; shift ;;
+    *) echo "check-ui: unknown argument $1" >&2; exit 2 ;;
+  esac
+done
+cd "$ROOT" || exit 2
+
+SRC=web/src
+ALLOW_CLASSES="$ALLOW_DIR/check-ui.allow-classnames"
+ALLOW_GLOSSARY="$ALLOW_DIR/check-ui.allow-glossary"
+OUT="${CHECK_UI_OUT:-$ROOT/build/check-ui.txt}"
+mkdir -p "$(dirname "$OUT")"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
+: >"$VIOL"
+
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary)
+
+# ---------------------------------------------------------------- rules file
+declare -A MODE FAIL_PATHS
+for r in "${RULE_NAMES[@]}"; do MODE[$r]=warn; FAIL_PATHS[$r]=""; done
+if [ -f "$RULES_FILE" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    [ -z "${line//[[:space:]]/}" ] && continue
+    key="${line%%=*}"; val="${line#*=}"
+    key="${key//[[:space:]]/}"; val="${val#"${val%%[![:space:]]*}"}"; val="${val%"${val##*[![:space:]]}"}"
+    case "$key" in
+      *.fail_paths) name="${key%.fail_paths}"; [ -n "${MODE[$name]+x}" ] || { echo "check-ui: unknown rule '$name' in $RULES_FILE" >&2; exit 2; }
+                    FAIL_PATHS[$name]="$val" ;;
+      *) [ -n "${MODE[$key]+x}" ] || { echo "check-ui: unknown rule '$key' in $RULES_FILE" >&2; exit 2; }
+         case "$val" in warn|fail) MODE[$key]="$val" ;; *) echo "check-ui: rule '$key' must be warn or fail, got '$val'" >&2; exit 2 ;; esac ;;
+    esac
+  done <"$RULES_FILE"
+fi
+
+# ------------------------------------------------------------------- helpers
+viol() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" >>"$VIOL"; }
+
+# Source files of the given extensions under web/src, minus tests. One path per line, sorted.
+src_files() {
+  [ -d "$SRC" ] || return 0
+  local args=() e
+  for e in "$@"; do args+=(-o -name "*.$e"); done
+  find "$SRC" -type f \( "${args[@]:1}" \) \
+    ! -name '*.test.*' ! -name '*.spec.*' ! -name 'test-utils.*' ! -name '*.test-helper.*' ! -path "$SRC/test/*" | LC_ALL=C sort
+}
+
+# Drops whole-line // and /* ... */ comments from a TS/TSX file, keeping line numbers: "N:text".
+code_lines() { awk '
+  { l=$0 }
+  inblk { if (index(l,"*/")) { inblk=0 } next }
+  l ~ /^[ \t]*\/\// { next }
+  l ~ /^[ \t]*\/\*/ { if (!index(l,"*/")) inblk=1; next }
+  { print NR ":" $0 }' "$1"; }
+
+# CSS declarations / selectors. Emits "S<TAB>line<TAB>selector" per block opened and
+# "D<TAB>line<TAB>selector<TAB>prop<TAB>value" per declaration (innermost selector).
+css_scan() { awk '
+  function trim(s) { gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", s); return s }
+  function flush(   t, p, prop, val) {
+    t = trim(buf)
+    if (t != "" && depth > 0 && index(t, ":")) {
+      p = index(t, ":"); prop = trim(substr(t, 1, p - 1)); val = trim(substr(t, p + 1))
+      gsub(/[ \t\r\n]+/, " ", val)
+      print "D\t" sline "\t" sel[depth] "\t" prop "\t" val
+    }
+    buf = ""; sline = 0
+  }
+  { text = text $0 "\n" }
+  END {
+    n = length(text); line = 1; depth = 0; par = 0; q = ""; buf = ""; sline = 0
+    for (i = 1; i <= n; i++) {
+      c = substr(text, i, 1)
+      if (c == "\n") line++
+      if (q != "") { buf = buf c; if (c == q) q = ""; continue }
+      if (c == "/" && substr(text, i + 1, 1) == "*") {
+        j = index(substr(text, i + 2), "*/")
+        seg = (j ? substr(text, i, j + 3) : substr(text, i))
+        k = split(seg, tmp, "\n"); line += k - 1
+        i += (j ? j + 3 : n) - 1; buf = buf " "; continue
+      }
+      if (c == "\"" || c == "\047") { q = c; if (!sline) sline = line; buf = buf c; continue }
+      if (c == "(") par++
+      if (c == ")" && par > 0) par--
+      if (par == 0 && c == "{") {
+        s = trim(buf); depth++; sel[depth] = s; gsub(/[ \t\r\n]+/, " ", sel[depth])
+        print "S\t" (sline ? sline : line) "\t" sel[depth]
+        buf = ""; sline = 0; continue
+      }
+      if (par == 0 && c == ";") { flush(); continue }
+      if (par == 0 && c == "}") { flush(); if (depth > 0) depth--; continue }
+      if (!sline && c !~ /[ \t\r\n]/) sline = line
+      buf = buf c
+    }
+  }' "$1"; }
+
+# True when a CSS selector belongs to a token block (:root / html[data-theme]) where colour literals live.
+is_token_selector() { case "$1" in :root*|html*|*"[data-theme"*) return 0 ;; esac; return 1; }
+
+# code_match RULE MESSAGE REGEX < file-list : awk pass over TS/TSX files (comment lines skipped),
+# one violation per matching line. REGEX is POSIX ERE (no \b).
+code_match() {
+  local rule="$1" msg="$2" re="$3" files=()
+  mapfile -t files
+  [ "${#files[@]}" -gt 0 ] || return 0
+  [ -n "${files[0]}" ] || return 0
+  RE="$re" awk -v RULE="$rule" -v MSG="$msg" '
+    BEGIN { RE = ENVIRON["RE"] }
+    FNR == 1 { inblk = 0 }
+    inblk { if (index($0, "*/")) inblk = 0; next }
+    $0 ~ /^[ \t]*\/\// { next }
+    $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    $0 ~ RE { print RULE "\t" FILENAME "\t" FNR "\t" MSG }' "${files[@]}" >>"$VIOL"
+}
+
+# ------------------------------------------------------------------ rule 1
+rule_native_ui() {
+  local files
+  files="$(src_files tsx ts | grep -v "^$SRC/ui/")"
+  code_match native-ui "native <select>; use the Select primitive" '<select([ \t>/]|$)' <<<"$files"
+  code_match native-ui "window.alert/confirm/prompt; use ConfirmDialog/Toast" 'window\.(alert|confirm|prompt)[^A-Za-z0-9_]' <<<"$files"
+  code_match native-ui "bare alert()/confirm()/prompt(); use ConfirmDialog/Toast" '([(!;={,&|?:]|return)[ \t]*(alert|confirm|prompt)\(|^[ \t]*(alert|confirm|prompt)\(["\047`]' <<<"$files"
+  code_match native-ui "native <input type=...>; use a field primitive" \
+    '<input[^>]*type=[{]?[ \t]*["\047`]?(checkbox|radio|date|time|number|range|color|file|datetime-local|month|week)["\047`}> \t/]' <<<"$files"
+}
+
+# ------------------------------------------------------------------ rule 2
+rule_phosphor() {
+  src_files tsx ts | grep -v "^$SRC/ui/icons.ts$" |
+    code_match phosphor "@phosphor-icons/react outside web/src/ui/icons.ts; use <Icon>" '@phosphor-icons/react'
+  if [ -f "$SRC/ui/icons.ts" ]; then
+    awk -v RULE=phosphor '
+      /^[ \t]*\/\// { next }
+      /@phosphor-icons\/react/ && $0 !~ /@phosphor-icons\/react\/dist\/csr\/[A-Za-z0-9]+["\047]/ {
+        print RULE "\t" FILENAME "\t" FNR "\timport via @phosphor-icons/react/dist/csr/<Name> only (no barrel import)" }' "$SRC/ui/icons.ts" >>"$VIOL"
+  fi
+}
+
+# ------------------------------------------------------------------ rule 3
+COLOUR_RE='#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})([^0-9A-Za-z_-]|$)|(rgba?|hsla?|oklch|oklab|lab|lch)\([ \t]*[0-9.]'
+rule_colour_literals() {
+  local f
+  while IFS= read -r f; do
+    case "$f" in $SRC/theme/*) continue ;; esac
+    css_scan "$f" | RE="$COLOUR_RE" awk -F'\t' -v F="$f" '
+      BEGIN { RE = ENVIRON["RE"] }
+      $1 == "D" && $3 !~ /^(:root|html)/ && $3 !~ /\[data-theme/ && $5 ~ RE {
+        print "colour-literals\t" F "\t" $2 "\tcolour literal in \047" $4 ": " $5 "\047; use var(--...)" }' >>"$VIOL"
+  done < <(src_files css)
+  src_files tsx | grep -v "^$SRC/theme/" |
+    code_match colour-literals "colour literal in component; use var(--...)" \
+      '["\047`]#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["\047`;) ]|(rgba?|hsla?|oklch)\([ \t]*[0-9.]'
+}
+
+# ------------------------------------------------------------------ rule 4
+# className tokens in .tsx, one "token<TAB>file<TAB>line" per use. Tokens ending in '*'
+# come from template literals like `tile--${x}` and only need a CSS class with that prefix.
+classname_tokens() { awk -v FILE="$1" '
+  function isword(t) { return t ~ /^-?[A-Za-z_][A-Za-z0-9_-]*$/ }
+  function emit(t, pre) { if (isword(t)) print t (pre ? "*" : "") "\t" FILE "\t" ln }
+  function words(s, headDyn, tailDyn,   a, m, k, t, startsWs, endsWs) {
+    startsWs = (s ~ /^[ \t\n]/); endsWs = (s ~ /[ \t\n]$/)
+    m = split(s, a, /[ \t\n]+/)
+    for (k = 1; k <= m; k++) {
+      t = a[k]; if (t == "") continue
+      if (k == 1 && headDyn && !startsWs) continue
+      if (k == m && tailDyn && !endsWs) { emit(t, 1); continue }
+      emit(t, 0)
+    }
+  }
+  function expr(s,   i, n, c, q, j, d, buf, inner, headDyn) {
+    n = length(s); i = 1
+    while (i <= n) {
+      c = substr(s, i, 1)
+      if (c == "\047" || c == "\"") {
+        j = i + 1; while (j <= n && substr(s, j, 1) != c) j++
+        words(substr(s, i + 1, j - i - 1), 0, 0); i = j + 1
+      } else if (c == "`") {
+        i++; buf = ""; headDyn = 0
+        while (i <= n && substr(s, i, 1) != "`") {
+          if (substr(s, i, 2) == "${") {
+            words(buf, headDyn, 1); buf = ""
+            d = 1; j = i + 2
+            while (j <= n && d > 0) { cc = substr(s, j, 1); if (cc == "{") d++; else if (cc == "}") d--; j++ }
+            expr(substr(s, i + 2, j - i - 3)); i = j; headDyn = 1
+          } else { buf = buf substr(s, i, 1); i++ }
+        }
+        words(buf, headDyn, 0); i++
+      } else i++
+    }
+  }
+  { text = text $0 "\n"; starts[NR] = length(text) - length($0) }
+  END {
+    n = length(text); pos = 1
+    while ((p = index(substr(text, pos), "className=")) > 0) {
+      at = pos + p - 1 + 10
+      ln = 1; for (k = 1; k <= NR && starts[k] < at; k++) ln = k
+      c = substr(text, at, 1)
+      if (c == "\"") { j = index(substr(text, at + 1), "\""); words(substr(text, at + 1, j - 1), 0, 0); pos = at + j + 1 }
+      else if (c == "{") {
+        d = 1; j = at + 1
+        while (j <= n && d > 0) { cc = substr(text, j, 1); if (cc == "{") d++; else if (cc == "}") d--; j++ }
+        expr(substr(text, at + 1, j - at - 2)); pos = j
+      } else pos = at
+    }
+  }' "$1"; }
+
+rule_class_hooks() {
+  local f kind line sel
+  : >"$TMP/css-classes"
+  while IFS= read -r f; do
+    css_scan "$f" | while IFS=$'\t' read -r kind line sel _; do
+      [ "$kind" = S ] || continue
+      case "$sel" in @*) continue ;; esac
+      grep -oE '\.-?[A-Za-z_][A-Za-z0-9_-]*' <<<"$sel" | sed 's/^\.//'
+    done >>"$TMP/css-classes"
+  done < <(src_files css)
+  [ -f "$ALLOW_CLASSES" ] && sed -e 's/#.*//' -e 's/[[:space:]]//g' "$ALLOW_CLASSES" | grep -v '^$' >>"$TMP/css-classes"
+  LC_ALL=C sort -u "$TMP/css-classes" -o "$TMP/css-classes"
+  : >"$TMP/uses"
+  while IFS= read -r f; do classname_tokens "$f" >>"$TMP/uses"; done < <(src_files tsx)
+  # First use of each undefined token only.
+  awk -F'\t' '
+    NR == FNR { known[$0] = 1; list[++nk] = $0; next }
+    {
+      t = $1; if (seen[t]++) next
+      if (sub(/\*$/, "", t)) { ok = 0; for (i = 1; i <= nk; i++) if (index(list[i], t) == 1) { ok = 1; break }; if (ok) next; t = t "<dynamic>" }
+      else if (t in known) next
+      print t "\t" $2 "\t" $3
+    }' "$TMP/css-classes" "$TMP/uses" | while IFS=$'\t' read -r tok file ln; do
+      viol class-hooks "$file" "$ln" "className '$tok' has no CSS rule (add one, or list it in scripts/check-ui.allow-classnames)"
+    done
+}
+
+# ------------------------------------------------------------------ rule 5
+rule_sizing() {
+  local f
+  while IFS= read -r f; do
+    css_scan "$f" | awk -F'\t' -v F="$f" '
+      $1 != "D" { next }
+      ($4 == "min-height" || $4 == "min-block-size") {
+        n = split($3, parts, ",")
+        for (i = 1; i <= n; i++) {
+          p = parts[i]; gsub(/^[ \t]+/, "", p)
+          if (p ~ /(^|[^A-Za-z0-9_-])\.tile([-_]|[^A-Za-z0-9_-]|$)/) { print "sizing\t" F "\t" $2 "\t" $4 " on tile variant \047" p "\047; tiles size to content"; break }
+        }
+      }
+      ($4 == "font-size" || $4 == "font") && $3 !~ /^(:root|html)/ && $5 ~ /(^|[^A-Za-z0-9_.-])[0-9.]+px/ {
+        if ($4 == "font-size" || $5 ~ /[0-9.]+px[ \t]*(\/|[A-Za-z"\047])/) print "sizing\t" F "\t" $2 "\tpx " $4 " \047" $5 "\047; use a type token"
+      }' >>"$VIOL"
+  done < <(src_files css)
+  src_files tsx | code_match sizing "px fontSize in component; use a type token" \
+    'fontSize:[ \t]*["\047`]?[0-9.]+(px)?["\047`]?[ \t]*[,}]'
+}
+
+# ------------------------------------------------------------------ rule 6
+rule_glossary() {
+  [ -f GLOSSARY.md ] || return 0
+  # terms.txt: every glossary term, lower-case; avoid.txt: "word<TAB>term" (words that are terms are dropped).
+  awk '
+    /^\*\*[^*]+\*\*:/ { t = $0; sub(/^\*\*/, "", t); sub(/\*\*:.*/, "", t); term = t; print tolower(t) > TERMS }
+    /^_Avoid_:/ { s = $0; sub(/^_Avoid_:[ ]*/, "", s); n = split(s, a, /,[ ]*/)
+      for (i = 1; i <= n; i++) { w = tolower(a[i]); gsub(/^[ ]+|[ ]+$/, "", w); if (w != "") print w "\t" term > AVOID } }
+  ' TERMS="$TMP/terms.txt" AVOID="$TMP/avoid.raw" GLOSSARY.md
+  [ -s "$TMP/avoid.raw" ] || return 0
+  awk -F'\t' 'NR==FNR { term[$0]=1; next } !($1 in term)' "$TMP/terms.txt" "$TMP/avoid.raw" >"$TMP/avoid.txt"
+  local f
+  while IFS= read -r f; do
+    code_lines "$f" | awk -v FILE="$f" -v TERMS="$TMP/terms.txt" -v AVOID="$TMP/avoid.txt" -v ALLOW="$ALLOW_GLOSSARY" '
+      function isw(c) { return c ~ /[a-z0-9-]/ }
+      function has(s, w,   p, r, b, a) {
+        r = s
+        while ((p = index(r, w)) > 0) {
+          b = (p == 1) ? " " : substr(r, p - 1, 1)
+          a = substr(r, p + length(w), 1); if (a == "s" || a == "e" && substr(r, p + length(w) + 1, 1) == "s") a = " "
+          if (!isw(b) && !isw(a == "" ? " " : a)) return 1
+          r = substr(r, p + 1)
+        }
+        return 0
+      }
+      BEGIN {
+        while ((getline l < TERMS) > 0) terms[++nt] = l
+        for (i = 1; i <= nt; i++) for (j = i + 1; j <= nt; j++) if (length(terms[j]) > length(terms[i])) { x = terms[i]; terms[i] = terms[j]; terms[j] = x }
+        while ((getline l < AVOID) > 0) { split(l, pp, "\t"); aw[++na] = pp[1]; at[na] = pp[2] }
+        while ((getline l < ALLOW) > 0) { sub(/#.*/, "", l); if (l ~ /^[ \t]*$/) continue; sub(/^[ \t]+/, "", l); sp = index(l, " "); if (!sp) continue
+          allowp[++nal] = substr(l, 1, sp - 1); w = substr(l, sp + 1); gsub(/^[ \t]+|[ \t]+$/, "", w); alloww[nal] = tolower(w) }
+      }
+      {
+        ln = $0; sub(/^[0-9]+:/, "", ln); lineno = $0; sub(/:.*/, "", lineno)
+        # keep only quoted segments
+        out = ""; rest = ln
+        while (match(rest, /\047[^\047]*\047|"[^"]*"|`[^`]*`/)) { out = out " " substr(rest, RSTART + 1, RLENGTH - 2); rest = substr(rest, RSTART + RLENGTH) }
+        out = tolower(out); gsub(/\$\{[^}]*\}/, " ", out)
+        for (i = 1; i <= nt; i++) { while ((p = index(out, terms[i])) > 0) out = substr(out, 1, p - 1) " " substr(out, p + length(terms[i])) }
+        for (i = 1; i <= na; i++) {
+          if (!has(out, aw[i]) || (lineno SUBSEP aw[i]) in done) continue
+          done[lineno, aw[i]] = 1
+          skip = 0
+          for (k = 1; k <= nal; k++) if (allow_match(allowp[k], FILE) && alloww[k] == aw[i]) skip = 1
+          if (!skip) print FILE "\t" lineno "\t" "avoid word \"" aw[i] "\" (use \"" at[i] "\")"
+        }
+      }
+      function allow_match(p, f) { return p == "*" || index(f, p) > 0 }
+    ' | while IFS=$'\t' read -r file n msg; do viol glossary "$file" "$n" "$msg"; done
+  done < <(src_files ts | grep '/strings\.ts$')
+}
+
+# --------------------------------------------------------------------- run
+rule_native_ui
+rule_phosphor
+rule_colour_literals
+rule_class_hooks
+rule_sizing
+rule_glossary
+
+LC_ALL=C sort -t$'\t' -k1,1 -k2,2 -k3,3n "$VIOL" >"$OUT"
+
+in_fail_paths() { # rule file
+  local p
+  for p in ${FAIL_PATHS[$1]}; do case "$2" in "$p"|"$p"/*) return 0 ;; esac; done
+  return 1
+}
+
+total_fail=0
+echo "UI guards (docs/design/ui-fix-plan.md section 7):"
+for r in "${RULE_NAMES[@]}"; do
+  count=0; failing=0
+  while IFS=$'\t' read -r rule file line msg; do
+    [ "$rule" = "$r" ] || continue
+    count=$((count + 1))
+    if [ "${MODE[$r]}" = fail ] || in_fail_paths "$r" "$file"; then failing=$((failing + 1)); fi
+  done <"$OUT"
+  total_fail=$((total_fail + failing))
+  eff="${MODE[$r]}"
+  [ "$eff" = warn ] && [ -n "${FAIL_PATHS[$r]}" ] && eff="warn; fail in ${FAIL_PATHS[$r]}"
+  printf '  %-16s %4d violations  [%s]\n' "$r" "$count" "$eff"
+  if [ "$count" -gt 0 ]; then
+    if [ "$VERBOSE" = 1 ]; then limit=100000; else limit=5; fi
+    awk -F'\t' -v r="$r" -v lim="$limit" '$1 == r && ++n <= lim { printf "      %s:%s: %s\n", $2, $3, $4 } END { if (n > lim) printf "      ... %d more (see %s)\n", n - lim, OUTF }' OUTF="${OUT#"$ROOT"/}" "$OUT"
+  fi
+done
+echo "  full list: ${OUT#"$ROOT"/}"
+if [ "$total_fail" -gt 0 ]; then
+  echo "UI guards FAILED: $total_fail violation(s) in fail mode"
+  exit 1
+fi
+echo "UI guards OK (warn-mode violations do not fail the check)"
