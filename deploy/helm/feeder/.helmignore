@@ -1,0 +1,16 @@
+# Patterns ignored when packaging the chart.
+.DS_Store
+.git/
+.gitignore
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.project
+.idea/
+*.tmproj
+.vscode/
+README.md.gotmpl
+# Lint fixtures, not part of the chart package.
+ci/

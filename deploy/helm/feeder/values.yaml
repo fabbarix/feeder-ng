@@ -1,0 +1,118 @@
+# Default values for the Feeder chart. Contract: docs/dev/design/d1-deploy.md.
+# The Feeder keeps its state in one SQLite file on one volume, so there is no
+# replicaCount: the Deployment always runs exactly one pod.
+
+image:
+  repository: ghcr.io/fabbarix/feeder-ng
+  # Empty means .Chart.AppVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Only needed for a private image. The public image pulls anonymously.
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Required. Email of the first Admin (FEEDER_ADMIN_EMAIL).
+adminEmail: ""
+# Required. Public https URL without a trailing slash (FEEDER_BASE_URL).
+baseUrl: ""
+
+google:
+  # Inline values: the chart creates Secret <fullname>-google. Prefer existingSecret.
+  clientId: ""
+  clientSecret: ""
+  # Name of a Secret you created. When set, the chart creates no Secret.
+  existingSecret: ""
+  # Keys inside the Secret (existing or created).
+  clientIdKey: client-id
+  clientSecretKey: client-secret
+
+# Extra plain environment variables, e.g. TZ. Never set FEEDER_DEV_LOGIN.
+# FEEDER_ADDR must stay :8080: the port, Service and probes are fixed at 8080.
+env: {}
+# Raw container env entries, e.g. with valueFrom.
+extraEnv: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  # Defaults suit ingress-nginx and keep server-sent events (/api/events) working.
+  # Maps merge, so override single keys.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+  # Empty means the host of baseUrl.
+  host: ""
+  tls:
+    enabled: false
+    # Empty means no secretName (cert-manager or the controller's default certificate).
+    secretName: ""
+
+persistence:
+  # false mounts an emptyDir at /data (data is lost on restart; trials only).
+  enabled: true
+  # Use an existing PVC instead of creating one.
+  existingClaim: ""
+  # Empty uses the cluster default; "-" renders storageClassName: "".
+  storageClass: ""
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podLabels: {}
+
+serviceAccount:
+  create: true
+  # Empty means the fullname (when created) or the namespace's default account.
+  name: ""
+  annotations: {}
+  automount: false
+
+# All three probes call GET /api/health on the http port.
+probes:
+  startup:
+    periodSeconds: 2
+    failureThreshold: 30
+    timeoutSeconds: 3
+  liveness:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 3
+  readiness:
+    periodSeconds: 5
+    failureThreshold: 3
+    timeoutSeconds: 3

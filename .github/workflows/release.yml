@@ -1,8 +1,10 @@
-name: Release
+name: Publish
 
-# Pushing a tag such as v1.0.0 builds the multi-arch image and publishes it to GHCR.
+# Pushes to main publish the `main` and `sha-<short>` image tags. Pushing a tag such as v1.0.0
+# publishes the semver image tags (and `latest` for stable releases), then the Helm chart.
 on:
   push:
+    branches: [main]
     tags: ["v*"]
 
 permissions:
@@ -61,10 +63,14 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Build and push (linux/amd64, linux/arm64)
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -77,3 +83,27 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+
+  chart:
+    name: Publish the Helm chart
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # helm is preinstalled on ubuntu-latest, so no third-party setup action is needed.
+      - name: Package and push the chart
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          printf '%s' "$REGISTRY_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          helm package deploy/helm/feeder --version "$VERSION" --app-version "$VERSION" --destination "$RUNNER_TEMP/chart"
+          helm push "$RUNNER_TEMP/chart/feeder-$VERSION.tgz" "oci://ghcr.io/${OWNER,,}/charts"
