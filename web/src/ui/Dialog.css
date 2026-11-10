@@ -1,0 +1,88 @@
+/* Dialog (docs/design/ui-fix-plan.md 4.6): min(400, 100vw - 32) wide, padding 24, radius 28, elev-3, enter 240 ms scale .96 -> 1 + fade. Tokens only. */
+.dialog {
+  inline-size: min(400px, 100vw - 32px);
+  max-inline-size: calc(100vw - 32px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--elev-3);
+  animation: dialog-in var(--dur-3) var(--ease-out);
+}
+
+/* Scroll lock while any modal <dialog> is open (Dialog and BottomSheet). */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
+
+.dialog::backdrop {
+  background: var(--scrim);
+  animation: scrim-in var(--dur-3) var(--ease-out);
+}
+
+.dialog__panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.dialog__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.dialog[data-tone='danger'] .dialog__icon {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.dialog__title {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  font-weight: var(--text-title-2-weight);
+  line-height: var(--text-title-2-line);
+}
+
+.dialog__title:focus {
+  outline: none;
+}
+
+.dialog__body {
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog,
+  .dialog::backdrop {
+    animation: none;
+  }
+}

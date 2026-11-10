@@ -60,3 +60,7 @@ Scope: functional-spec §13, recipe-file.md in full (Import Review, Images, Agen
 - Reviews live in memory (a restart or 1 h idle drops them).
 - Image downloads happen at upload time, one at a time, up to 50 per file, each limited to 15 s.
 - EXIF orientation is not applied (as for uploaded photos).
+
+## Test note: imagefetch timeouts
+The two timeout tests no longer assert a wall-clock upper bound; handlers block until the client gives up (or the test ends) and the test checks `context.DeadlineExceeded`, with a 30 s watchdog only to catch a missing timeout.
+The slow-body test uses a 2 s timeout and fails unless the response headers were delivered first, so it proves the timeout covers the body read. It caught a real bug: when the deadline fired mid-body, `io.ReadAll` could return the truncated bytes with a nil error (a clean EOF), so a partial image was accepted. Fixed: after reading, `Fetch` returns the context error if the context is done, and a body shorter than a declared `Content-Length` is an `io.ErrUnexpectedEOF` error.

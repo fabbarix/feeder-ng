@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { Button } from './Button'
+import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import { PRIMARY_SCOPE_ATTR } from './Button'
+import { IconButton } from './IconButton'
 import { uiStrings } from './strings'
+import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import './BottomSheet.css'
 
 export interface BottomSheetProps {
@@ -8,43 +10,42 @@ export interface BottomSheetProps {
   onClose: () => void
   title: string
   children?: ReactNode
+  /** Sticky action row under the scrolling body. */
+  footer?: ReactNode
+  /** Element to focus on open (default: the first interactive element of the body or footer, else the title). */
+  initialFocusRef?: RefObject<HTMLElement | null>
 }
 
-/** A modal panel that rises from the bottom. Escape, backdrop and Close all dismiss it. */
-export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
+/** A modal panel that rises from the bottom (a `<dialog>`); a centred dialog from 768 px. Escape, backdrop and Close dismiss it. */
+export function BottomSheet(props: BottomSheetProps) {
+  return props.open ? <SheetSurface {...props} /> : null
+}
+
+function SheetSurface({ onClose, title, children, footer, initialFocusRef }: Omit<BottomSheetProps, 'open'>) {
+  const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const { onBackdropClick } = useModalDialog(ref, {
+    onClose,
+    dismissOnBackdrop: true,
+    initialFocus: (dialog) =>
+      initialFocusRef?.current ??
+      dialog.querySelector<HTMLElement>(`.sheet__body ${INTERACTIVE_SELECTOR}, .sheet__footer ${INTERACTIVE_SELECTOR}`) ??
+      dialog.querySelector<HTMLElement>('.sheet__title'),
+  })
 
-  useEffect(() => {
-    if (!open) return
-    dialogRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-
-  if (!open) return null
   return (
-    <div className="sheet-layer">
-      <div data-testid="bottom-sheet-backdrop" className="sheet-backdrop" onClick={onClose} />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="sheet"
-      >
-        <h2 id={titleId} className="sheet__title">
-          {title}
-        </h2>
+    <dialog ref={ref} className="sheet" aria-labelledby={titleId} {...{ [PRIMARY_SCOPE_ATTR]: '' }} onClick={onBackdropClick}>
+      <div className="sheet__panel">
+        <span className="sheet__grip" aria-hidden="true" />
+        <header className="sheet__header">
+          <h2 id={titleId} className="sheet__title" tabIndex={-1}>
+            {title}
+          </h2>
+          <IconButton icon="close" label={uiStrings.close} onClick={onClose} />
+        </header>
         <div className="sheet__body">{children}</div>
-        <Button variant="ghost" onClick={onClose}>
-          {uiStrings.close}
-        </Button>
+        {footer ? <div className="sheet__footer">{footer}</div> : null}
       </div>
-    </div>
+    </dialog>
   )
 }

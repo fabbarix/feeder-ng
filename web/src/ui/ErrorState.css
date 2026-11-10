@@ -1,0 +1,25 @@
+/* ErrorState (docs/design/ui-fix-plan.md 4.14): danger status tile. Tokens only. */
+.error-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-tile-sm);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.error-state__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.error-state__message {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+}

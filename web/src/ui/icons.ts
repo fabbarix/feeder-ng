@@ -49,6 +49,7 @@ import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
+import { MinusIcon } from '@phosphor-icons/react/dist/csr/Minus'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
 import { MicrophoneSlashIcon } from '@phosphor-icons/react/dist/csr/MicrophoneSlash'
@@ -125,6 +126,7 @@ export const icons = {
   chooseRecipe: MagnifyingGlassIcon,
   regenerate: ArrowsClockwiseIcon,
   add: PlusIcon,
+  minus: MinusIcon,
   edit: PencilSimpleIcon,
   archive: ArchiveIcon,
   unarchive: ArrowCounterClockwiseIcon,

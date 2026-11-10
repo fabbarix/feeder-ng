@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -214,35 +215,70 @@ func TestFetchEnforcesTheSizeLimit(t *testing.T) {
 	})
 }
 
+// stuck returns a channel closed when the test ends, so a handler that blocks
+// on it never outlives the test and never depends on a wall-clock sleep.
+func stuck(t *testing.T) <-chan struct{} {
+	t.Helper()
+	done := make(chan struct{})
+	t.Cleanup(func() { close(done) })
+	return done
+}
+
+// fetchWithin runs Fetch and fails the test only if it has not returned after a
+// very generous watchdog, so a missing timeout hangs for 30 s instead of forever.
+// There is no upper bound on how fast a loaded machine must be.
+func fetchWithin(t *testing.T, f *imagefetch.Fetcher, u string) error {
+	t.Helper()
+	errc := make(chan error, 1)
+	go func() { _, _, err := f.Fetch(context.Background(), u); errc <- err }()
+	select {
+	case err := <-errc:
+		return err
+	case <-time.After(30 * time.Second):
+		t.Fatal("Fetch did not return: the timeout is not enforced")
+		return nil
+	}
+}
+
 func TestFetchTimesOut(t *testing.T) {
+	release := stuck(t)
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
+		select { // never answers until the client gives up or the test ends
 		case <-r.Context().Done():
-		case <-time.After(5 * time.Second):
+		case <-release:
 		}
 	})
-	srv, f := server(t, h, imagefetch.Options{Timeout: 150 * time.Millisecond})
-	start := time.Now()
-	_, _, err := f.Fetch(context.Background(), srv.URL)
-	if err == nil || time.Since(start) > 3*time.Second {
-		t.Fatalf("err=%v after %v, want a quick timeout", err, time.Since(start))
+	srv, f := server(t, h, imagefetch.Options{Timeout: 300 * time.Millisecond})
+	if err := fetchWithin(t, f, srv.URL); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err=%v, want a deadline exceeded", err)
 	}
 }
 
 func TestFetchTimeoutAlsoCoversASlowBody(t *testing.T) {
+	release := stuck(t)
+	headersSent := make(chan struct{})
+	var once sync.Once
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		w.Write([]byte("x"))
 		w.(http.Flusher).Flush()
-		select {
+		once.Do(func() { close(headersSent) })
+		select { // the body never ends until the client gives up or the test ends
 		case <-r.Context().Done():
-		case <-time.After(5 * time.Second):
+		case <-release:
 		}
 	})
-	srv, f := server(t, h, imagefetch.Options{Timeout: 150 * time.Millisecond})
-	start := time.Now()
-	if _, _, err := f.Fetch(context.Background(), srv.URL); err == nil || time.Since(start) > 3*time.Second {
-		t.Fatalf("err=%v after %v", err, time.Since(start))
+	// A generous timeout: under load the TLS handshake and headers may be slow,
+	// and the test is only meaningful once the response headers were delivered.
+	srv, f := server(t, h, imagefetch.Options{Timeout: 2 * time.Second})
+	err := fetchWithin(t, f, srv.URL)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err=%v, want a deadline exceeded while reading the body", err)
+	}
+	select {
+	case <-headersSent:
+	default:
+		t.Fatal("the timeout fired before the response headers arrived; the slow body was not exercised")
 	}
 }
 

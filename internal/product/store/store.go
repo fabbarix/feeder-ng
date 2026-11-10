@@ -24,6 +24,9 @@ var (
 	ErrInUse             = errors.New("in use")
 	ErrDuplicatePrefix   = errors.New("duplicate prefix")
 	ErrUnknownIngredient = errors.New("unknown ingredient")
+	// ErrBought: the Product was bought (or Stock refers to it), so it cannot be
+	// deleted; archive it instead (SetArchived). errors.Is(ErrBought, ErrInUse).
+	ErrBought = fmt.Errorf("product was bought, archive it instead: %w", ErrInUse)
 )
 
 // BarcodeTakenError: the code already belongs to ProductID (global), or is
@@ -31,6 +34,9 @@ var (
 type BarcodeTakenError struct {
 	Code      string
 	ProductID int64
+	// Archived: the owner is an archived Product. It still owns its barcodes; the
+	// caller offers to unarchive it instead of creating a duplicate.
+	Archived bool
 }
 
 func (e *BarcodeTakenError) Error() string {
@@ -57,6 +63,7 @@ type Product struct {
 	IngredientName string     `json:"ingredientName"`
 	BaseUnit       units.Base `json:"baseUnit"`
 	PackSize       float64    `json:"packSize"`
+	Archived       bool       `json:"archived"`
 }
 
 // ShopBarcode as stored.
@@ -109,12 +116,17 @@ type Filter struct {
 	Query        string // normalised substring of the name
 	IngredientID int64
 	Barcode      string
+	// IncludeArchived lists archived Products too (default: active only).
+	IncludeArchived bool
 }
 
 // Resolved is the outcome of Store.Resolve.
 type Resolved struct {
 	Resolution barcode.Resolution `json:"resolution"`
 	Product    *Product           `json:"product"`
+	// ArchivedProduct is set when the resolution is unknown (or an unknown weighed
+	// Shop Barcode) only because the code belongs to an archived Product.
+	ArchivedProduct *Product `json:"archivedProduct"`
 }
 
 // UsageCounter reports how many rows of another feature reference a Product.
@@ -430,15 +442,25 @@ func (s *Store) Rules(ctx context.Context, shopID int64) ([]Rule, error) {
 
 // ---- Products ----
 
-const productSelect = `SELECT p.id, p.name, p.ingredient_id, i.name, i.base_unit, p.pack_size
+const productSelect = `SELECT p.id, p.name, p.ingredient_id, i.name, i.base_unit, p.pack_size,
+	CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END
 	FROM products p JOIN ingredients i ON i.id = p.ingredient_id`
 
 func scanProduct(sc interface{ Scan(...any) error }) (Product, error) {
 	var p Product
 	var base string
-	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize)
+	var archived int
+	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived)
 	p.BaseUnit = units.Base(base)
+	p.Archived = archived == 1
 	return p, err
+}
+
+// isArchived reports whether the Product exists and is archived.
+func isArchived(ctx context.Context, q Querier, id int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT CASE WHEN archived_at IS NULL THEN 0 ELSE 1 END FROM products WHERE id = ?`, id).Scan(&n)
+	return n == 1, err
 }
 
 func loadProduct(ctx context.Context, q Querier, id int64) (Product, error) {
@@ -514,6 +536,15 @@ func canonicalList(raw []string) ([]string, error) {
 	return out, nil
 }
 
+// takenBy is the BarcodeTakenError for a code owned by another Product, flagging an archived owner.
+func takenBy(ctx context.Context, q Querier, code string, owner int64) error {
+	archived, err := isArchived(ctx, q, owner)
+	if err != nil {
+		return err
+	}
+	return &BarcodeTakenError{Code: code, ProductID: owner, Archived: archived}
+}
+
 // addGlobalBarcode adds a global barcode; *BarcodeTakenError when another Product owns it.
 func addGlobalBarcode(ctx context.Context, tx *sql.Tx, productID int64, code string) error {
 	var owner int64
@@ -522,7 +553,7 @@ func addGlobalBarcode(ctx context.Context, tx *sql.Tx, productID int64, code str
 		if owner == productID {
 			return nil
 		}
-		return &BarcodeTakenError{Code: code, ProductID: owner}
+		return takenBy(ctx, tx, code, owner)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return err
@@ -549,7 +580,7 @@ func addShopBarcode(ctx context.Context, tx *sql.Tx, shopID, productID int64, co
 		var owner int64
 		e := tx.QueryRowContext(ctx, `SELECT product_id FROM shop_barcodes WHERE shop_id = ? AND code = ?`, shopID, code).Scan(&owner)
 		if e == nil {
-			return ShopBarcode{}, &BarcodeTakenError{Code: code, ProductID: owner}
+			return ShopBarcode{}, takenBy(ctx, tx, code, owner)
 		}
 		if !errors.Is(e, sql.ErrNoRows) {
 			return ShopBarcode{}, e
@@ -576,7 +607,7 @@ func addShopBarcode(ctx context.Context, tx *sql.Tx, shopID, productID int64, co
 		var owner int64
 		e = tx.QueryRowContext(ctx, `SELECT product_id FROM shop_barcodes WHERE rule_id = ? AND item_code = ?`, ruleID, itemCode).Scan(&owner)
 		if e == nil {
-			return ShopBarcode{}, &BarcodeTakenError{Code: itemCode, ProductID: owner}
+			return ShopBarcode{}, takenBy(ctx, tx, itemCode, owner)
 		}
 		if !errors.Is(e, sql.ErrNoRows) {
 			return ShopBarcode{}, e
@@ -674,6 +705,9 @@ func (s *Store) Product(ctx context.Context, id int64) (Detail, error) {
 func (s *Store) Products(ctx context.Context, f Filter) ([]Product, error) {
 	var where []string
 	var args []any
+	if !f.IncludeArchived {
+		where = append(where, "p.archived_at IS NULL")
+	}
 	if q := strings.ToLower(product.NormalizeName(f.Query)); q != "" {
 		where = append(where, "instr(lower(p.name), ?) > 0")
 		args = append(args, q)
@@ -738,7 +772,8 @@ func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packS
 	return s.Product(ctx, id)
 }
 
-// DeleteProduct: ErrInUse while a purchase exists or a registered UsageCounter > 0.
+// DeleteProduct: ErrBought while a purchase exists or a registered UsageCounter > 0
+// (archive it instead); a never-bought Product can be deleted, archived or not.
 func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
 	return s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := requireProduct(ctx, tx, id); err != nil {
@@ -749,7 +784,7 @@ func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
 			return err
 		}
 		if n > 0 {
-			return ErrInUse
+			return ErrBought
 		}
 		for _, count := range allUsages() {
 			k, err := count(ctx, tx, id)
@@ -757,7 +792,7 @@ func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
 				return err
 			}
 			if k > 0 {
-				return ErrInUse
+				return ErrBought
 			}
 		}
 		_, err := tx.ExecContext(ctx, `DELETE FROM products WHERE id = ?`, id)
@@ -1084,7 +1119,7 @@ func (s *Store) LastBought(ctx context.Context, ingredientID int64, shopID *int6
 }
 
 func lastBoughtOne(ctx context.Context, q Querier, ingredientID int64, shopID *int64) (Product, bool, error) {
-	query := productSelect + ` JOIN purchases pu ON pu.product_id = p.id WHERE p.ingredient_id = ?`
+	query := productSelect + ` JOIN purchases pu ON pu.product_id = p.id WHERE p.ingredient_id = ? AND p.archived_at IS NULL`
 	args := []any{ingredientID}
 	if shopID != nil {
 		query += ` AND pu.shop_id = ?`
@@ -1134,7 +1169,7 @@ func (s *Store) Catalog(ctx context.Context, shopID *int64) (barcode.Catalog, er
 	if err != nil {
 		return barcode.Catalog{}, err
 	}
-	sbs, err := s.ShopBarcodes(ctx, *shopID)
+	sbs, err := s.activeShopBarcodes(ctx, *shopID)
 	if err != nil {
 		return barcode.Catalog{}, err
 	}
@@ -1165,7 +1200,8 @@ func (s *Store) Catalog(ctx context.Context, shopID *int64) (barcode.Catalog, er
 }
 
 func (s *Store) globalBarcodes(ctx context.Context) (map[string]int64, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT code, product_id FROM product_barcodes`)
+	rows, err := s.db.QueryContext(ctx, `SELECT pb.code, pb.product_id FROM product_barcodes pb
+		JOIN products p ON p.id = pb.product_id WHERE p.archived_at IS NULL`)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,6 +1232,104 @@ func (s *Store) Resolve(ctx context.Context, raw string, format barcode.Format, 
 			return Resolved{}, err
 		}
 		out.Product = &p
+		return out, nil
+	}
+	if out.ArchivedProduct, err = s.archivedOwner(ctx, res, shopID); err != nil {
+		return Resolved{}, err
 	}
 	return out, nil
+}
+
+// archivedOwner names the archived Product that owns an unknown code (or the
+// weighed Shop Barcode of an unknown rule), so the scan UI can offer to unarchive it.
+func (s *Store) archivedOwner(ctx context.Context, res barcode.Resolution, shopID *int64) (*Product, error) {
+	var ids []int64
+	collect := func(query string, args ...any) error {
+		rows, err := s.db.QueryContext(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			ids = append(ids, id)
+		}
+		return rows.Err()
+	}
+	switch res.Outcome {
+	case barcode.OutcomeUnknownWeighedProduct:
+		if shopID != nil {
+			if err := collect(`SELECT sb.product_id FROM shop_barcodes sb JOIN products p ON p.id = sb.product_id
+				WHERE sb.shop_id = ? AND sb.rule_id = ? AND sb.item_code = ? AND p.archived_at IS NOT NULL`,
+				*shopID, res.RuleID, res.ItemCode); err != nil {
+				return nil, err
+			}
+		}
+	case barcode.OutcomeUnknown:
+		if err := collect(`SELECT pb.product_id FROM product_barcodes pb JOIN products p ON p.id = pb.product_id
+			WHERE pb.code = ? AND p.archived_at IS NOT NULL`, res.Code); err != nil {
+			return nil, err
+		}
+		if shopID != nil {
+			if err := collect(`SELECT sb.product_id FROM shop_barcodes sb JOIN products p ON p.id = sb.product_id
+				WHERE sb.shop_id = ? AND sb.code = ? AND p.archived_at IS NOT NULL`, *shopID, res.Code); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	p, err := loadProduct(ctx, s.db, ids[0])
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// SetArchived archives (true) or restores (false) a Product. Idempotent. An archived
+// Product is left out of lists (unless Filter.IncludeArchived), left out of the
+// Catalog, Resolve and LastBought, but keeps its barcodes, purchases and Prices.
+// ErrNotFound for an unknown id.
+func (s *Store) SetArchived(ctx context.Context, id int64, archived bool) (Detail, error) {
+	err := s.withTx(ctx, func(tx *sql.Tx) error {
+		if err := requireProduct(ctx, tx, id); err != nil {
+			return err
+		}
+		var err error
+		if archived {
+			// keep the first archive time when already archived
+			_, err = tx.ExecContext(ctx, `UPDATE products SET archived_at = COALESCE(archived_at, ?) WHERE id = ?`, s.now(), id)
+		} else {
+			_, err = tx.ExecContext(ctx, `UPDATE products SET archived_at = NULL WHERE id = ?`, id)
+		}
+		return err
+	})
+	if err != nil {
+		return Detail{}, err
+	}
+	return s.Product(ctx, id)
+}
+
+// activeShopBarcodes lists the Shop Barcodes of a Shop whose Product is not archived (the Catalog).
+func (s *Store) activeShopBarcodes(ctx context.Context, shopID int64) ([]ShopBarcode, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT sb.id, sb.shop_id, sb.product_id, sb.code, sb.rule_id, sb.item_code
+		FROM shop_barcodes sb JOIN products p ON p.id = sb.product_id
+		WHERE sb.shop_id = ? AND p.archived_at IS NULL ORDER BY sb.id`, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ShopBarcode{}
+	for rows.Next() {
+		sb, err := scanShopBarcode(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, sb)
+	}
+	return out, rows.Err()
 }

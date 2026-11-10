@@ -1,0 +1,50 @@
+/* Skeleton (docs/design/ui-fix-plan.md 4.14): tile-shaped blocks in surface-2 with a 1.2 s shimmer, off with reduced motion. Tokens only. */
+.skeleton-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton {
+  display: block;
+  inline-size: 100%;
+  border-radius: var(--radius-tile-sm);
+  background: linear-gradient(90deg, var(--color-surface-2) 0%, var(--color-surface-3) 50%, var(--color-surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+
+.skeleton[data-variant='tile'] {
+  block-size: 120px;
+  border-radius: var(--radius-tile);
+}
+
+.skeleton[data-variant='row'] {
+  block-size: 56px;
+}
+
+.skeleton[data-variant='line'] {
+  block-size: 16px;
+  inline-size: 60%;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton[data-variant='circle'] {
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

@@ -11,6 +11,7 @@ import { RecipeThumb } from './RecipeThumb'
 import { Tile, TileMetric } from './Tile'
 import { TimerTile } from './TimerTile'
 import { WhyChip } from './WhyChip'
+import { OverlayGalleryGroups } from './GalleryOverlays'
 import './Gallery.css'
 
 /**
@@ -281,6 +282,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <ProgressGroup />
       <TimerGroup />
       <EmptyStateGroup />
+      <OverlayGalleryGroups />
     </section>
   )
 }

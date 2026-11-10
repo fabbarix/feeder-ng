@@ -13,3 +13,4 @@ sizing=warn
 sizing.fail_paths=web/src/ui web/src/app
 glossary=warn
 native-search=warn
+native-search.fail_paths=web/src/ui
