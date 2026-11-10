@@ -5,7 +5,7 @@ export const cookStrings = {
   next: 'Next',
   repeat: 'Repeat',
   markAsCooked: 'Mark as Cooked',
-  done: 'Done',
+  done: 'Back to Recipe',
   stepOf: (n: number, of: number) => `Step ${n} of ${of}`,
   advanceHeading: 'Advance Steps',
   advanceDone: (text: string) => `Done: ${text}`,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { MarkCookedSheet, useMarkCooked } from '../../plan'
+import { MarkCookedSheet, ShortfallNotice, StockCorrectionSheet, useMarkCooked, useStockSheet } from '../../plan'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
 import { createWebAudioAlarm } from '../adapters/alarm'
@@ -11,6 +11,7 @@ import { CookTimerStrip } from '../components/CookTimerStrip'
 import { StepTile } from '../components/StepTile'
 import { VoiceToggle } from '../components/VoiceToggle'
 import { useCookSession } from '../hooks/useCookSession'
+import { useFormatUse } from '../hooks/useFormatUse'
 import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
 import { useTimers } from '../hooks/useTimers'
 import { cookSourceFrom, type CookRouteParams } from '../lib/scope'
@@ -47,7 +48,15 @@ export function CookScreen(): ReactNode {
   const [voiceOn, setVoiceOn] = useVoicePreference()
   const tapZones = useMediaQuery('(min-width: 768px)')
   const marked = useMarkCooked(session.markCookedKey)
+  const stock = useStockSheet((id) => marked.dismissWarning(id))
+  const formatUse = useFormatUse()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const finishCook = () => navigate('/')
+  // Stay while Stock warnings are on screen; leave once Correct Stock or Dismiss has cleared the last one.
+  const cookedClear = marked.result !== null && marked.warnings.length === 0
+  useEffect(() => {
+    if (cookedClear) finishCook()
+  }, [cookedClear])
 
   const onCommand = (command: VoiceCommand) => {
     if (command === 'next') session.next()
@@ -68,7 +77,6 @@ export function CookScreen(): ReactNode {
   const view = session.view
   if (!view) return <EmptyState title={cookStrings.loading} />
 
-  const finishCook = () => navigate('/')
   return (
     <div className="cook-screen">
       <header className="cook-screen__header">
@@ -82,6 +90,7 @@ export function CookScreen(): ReactNode {
         <StepTile
           key={`${session.step.index}-${session.repeatCount}`}
           step={session.step}
+          formatUse={formatUse}
           tapZones={tapZones}
           onBack={session.back}
           onNext={session.next}
@@ -112,7 +121,7 @@ export function CookScreen(): ReactNode {
           leftover={marked.leftover}
           onLeftoverChange={marked.setLeftover}
           onConfirm={async () => {
-            if (await marked.confirm()) finishCook()
+            if (await marked.confirm()) setSheetOpen(false)
           }}
           onNotCooked={async () => {
             if (await marked.notCooked()) finishCook()
@@ -121,6 +130,17 @@ export function CookScreen(): ReactNode {
           error={marked.error}
         />
       ) : null}
+      {marked.warnings.map((w) => (
+        <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => marked.dismissWarning(x.ingredientId)} />
+      ))}
+      <StockCorrectionSheet
+        open={stock.correction !== null}
+        onClose={stock.close}
+        correction={stock.correction}
+        onSave={(t) => void stock.save(t)}
+        busy={stock.busy}
+        error={stock.error}
+      />
     </div>
   )
 }
