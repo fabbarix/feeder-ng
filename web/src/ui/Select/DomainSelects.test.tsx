@@ -138,7 +138,7 @@ describe('MemberSelect', () => {
     render(<MemberSelect label="Members" members={members} values={[1]} onChange={onChange} />)
     expect(screen.getByRole('combobox', { name: /Members/ })).toHaveTextContent('Fabio')
     await open('Members')
-    expect(screen.getAllByRole('img', { name: 'Lucia Maria Bernadette' })).not.toHaveLength(0)
+    expect(screen.getAllByRole('img', { name: 'Lucia Maria Bernadette', hidden: true })).not.toHaveLength(0)
     await userEvent.click(screen.getByRole('option', { name: /Lucia/ }))
     expect(onChange).toHaveBeenCalledWith([1, 2])
   })
