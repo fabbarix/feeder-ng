@@ -17,7 +17,6 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/cook/store"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
-	"github.com/fabbarix/feeder-ng/internal/stock"
 	"github.com/fabbarix/feeder-ng/internal/sun"
 )
 
@@ -56,10 +55,9 @@ func (f *fakeMeals) Upcoming(_ context.Context, from string) ([]service.MealInfo
 	return out, nil
 }
 
-type fakeWaste struct{ last, first stock.Date }
+type fakeWaste struct{ in cook.StreakInput }
 
-func (f *fakeWaste) LastWaste(context.Context) (stock.Date, error)     { return f.last, nil }
-func (f *fakeWaste) FirstActivity(context.Context) (stock.Date, error) { return f.first, nil }
+func (f *fakeWaste) StreakInput(context.Context) (cook.StreakInput, error) { return f.in, nil }
 
 type fakeHousehold struct {
 	zone     *time.Location
@@ -482,17 +480,17 @@ func TestBoardWithCoordinatesFollowsTheSun(t *testing.T) {
 
 func TestBoardStreakFromWasteDates(t *testing.T) {
 	f := setup(t)
-	f.waste.first = "2026-11-01"
+	f.waste.in = cook.StreakInput{Created: "2026-11-01"}
 	b, _ := f.svc.Board(ctx)
 	if b.StreakDays != 8 {
 		t.Errorf("no waste: streak = %d, want 8", b.StreakDays)
 	}
-	f.waste.last = "2026-11-07"
+	f.waste.in.Waste = []cook.WasteEvent{{WastedOn: "2026-11-07"}}
 	b, _ = f.svc.Board(ctx)
 	if b.StreakDays != 2 {
 		t.Errorf("waste on the 7th: streak = %d, want 2", b.StreakDays)
 	}
-	f.waste.last = "2026-11-09"
+	f.waste.in.Waste = []cook.WasteEvent{{WastedOn: "2026-11-09"}}
 	b, _ = f.svc.Board(ctx)
 	if b.StreakDays != 0 {
 		t.Errorf("waste today: streak = %d, want 0", b.StreakDays)
