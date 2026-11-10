@@ -65,6 +65,9 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['agentPrompt', 'Robot'],
   ['file', 'FileArrowUp'],
   ['torch', 'Flashlight'],
+  ['moveUp', 'ArrowUp'], // WP3b: reorder Recipe Steps
+  ['moveDown', 'ArrowDown'],
+  ['mute', 'SpeakerSlash'], // WP3b: ViewfinderStrip mute (pressed = muted); one glyph keeps the bundle budget
   ['stockTake', 'HouseLine'],
   ['unknownBarcode', 'Question'],
   ['weigh', 'Scales'],

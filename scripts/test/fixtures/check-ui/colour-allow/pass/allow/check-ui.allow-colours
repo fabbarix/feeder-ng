@@ -1,0 +1,2 @@
+# file-level allowlist for brand assets
+features/x/GoogleG.tsx   # Google "G": colours fixed by Google's brand guidelines

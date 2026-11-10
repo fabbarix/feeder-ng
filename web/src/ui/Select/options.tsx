@@ -3,6 +3,7 @@ import { Icon } from '../Icon'
 import { RecipeThumb } from '../RecipeThumb'
 import { mealSlotIcon } from '../lib/mealSlotIcon'
 import type { SelectOption } from './lib'
+import { selectStrings } from './strings'
 
 export interface RecipeChoice {
   id: number
@@ -14,7 +15,10 @@ export interface RecipeChoice {
   lastCookedAt?: string | null
 }
 export interface IngredientChoice {
-  id: number
+  /** Absent for a not-yet-saved Ingredient; then `key` identifies it. */
+  id?: number
+  /** Temporary key of a not-yet-saved Ingredient (WP3b follow-up). */
+  key?: string
   name: string
   baseUnit: string
 }
@@ -54,13 +58,12 @@ export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
   }))
 }
 
-/** leading = Base Unit badge, meta "Base Unit: g". */
-export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number>[] {
+/** Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once, no badge). */
+export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number | string>[] {
   return ingredients.map((i) => ({
-    value: i.id,
+    value: (i.id ?? i.key)!,
     label: i.name,
-    meta: `Base Unit: ${i.baseUnit}`,
-    leading: <span className="select__badge">{i.baseUnit}</span>,
+    meta: selectStrings.baseUnitMeta(i.baseUnit),
   }))
 }
 

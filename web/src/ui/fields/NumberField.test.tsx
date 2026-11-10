@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { NumberField } from './NumberField'
+import { declarations, readUiCss } from '../test-utils'
 
 function Num(props: Partial<React.ComponentProps<typeof NumberField>> & { initial?: number | null; onValue?: (v: number | null) => void }) {
   const [value, setValue] = useState<number | null>(props.initial === undefined ? 4 : props.initial)
@@ -104,5 +105,51 @@ describe('NumberField', () => {
     expect(input()).toHaveAccessibleDescription(/Per serving/)
     expect(input()).toHaveAccessibleDescription(/Too many/)
     expect(input()).toHaveAttribute('aria-invalid', 'true')
+  })
+})
+
+describe('WP3b #19: Enter commits before the form submits', () => {
+  function Form({ onSubmitValues, max }: { onSubmitValues: (state: number | null, posted: FormDataEntryValue | null) => void; max?: number }) {
+    const [value, setValue] = useState<number | null>(4)
+    const latest = { current: value }
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSubmitValues(latest.current, new FormData(e.currentTarget).get('qty'))
+        }}
+      >
+        <NumberField label="Portions" name="qty" max={max} value={value} onChange={(v) => { latest.current = v; setValue(v) }} />
+        <button type="submit">Save</button>
+      </form>
+    )
+  }
+
+  it('the submit handler sees the typed value (decimal comma) in state and in FormData', async () => {
+    const seen = vi.fn()
+    render(<Form onSubmitValues={seen} />)
+    await userEvent.clear(input())
+    await userEvent.type(input(), '2,5{Enter}')
+    expect(seen).toHaveBeenCalledTimes(1)
+    expect(seen).toHaveBeenCalledWith(2.5, '2.5')
+  })
+
+  it('the submit handler sees the clamped value, not the raw text', async () => {
+    const seen = vi.fn()
+    render(<Form max={100} onSubmitValues={seen} />)
+    await userEvent.clear(input())
+    await userEvent.type(input(), '150{Enter}')
+    expect(seen).toHaveBeenCalledWith(100, '100')
+  })
+})
+
+describe('WP3b #20: NumberField colour contrast (plan 3.1: text pairs >= 4.5)', () => {
+  const css = readUiCss('fields/Field.css')
+  it('a disabled field is not dimmed with opacity (it would drop the unit suffix, not a disabled element, below AA)', () => {
+    expect(declarations(css, '.ui-field__control:has(:disabled)')).not.toHaveProperty('opacity')
+  })
+  it('a disabled field keeps the muted / surface-2 pair (5.9 light, 7.5 dark) for the suffix', () => {
+    expect(declarations(css, '.ui-field__control:has(:disabled) .ui-field__suffix')).toMatchObject({ color: 'var(--color-muted)' })
+    expect(declarations(css, '.ui-field__control')).toMatchObject({ background: 'var(--color-surface-2)' })
   })
 })

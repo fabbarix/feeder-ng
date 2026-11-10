@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { selectStrings } from './strings'
 import { ingredientOptions, memberOptions, mealSlotOptions, recipeOptions, shopOptions, unitOptions } from './options'
 
 describe('recipeOptions', () => {
@@ -14,11 +15,15 @@ describe('recipeOptions', () => {
 })
 
 describe('ingredientOptions', () => {
-  it('shows the Base Unit as a badge and as meta', () => {
+  it('shows the Base Unit once, as meta (selectStrings.baseUnitMeta), with no badge', () => {
     const [opt] = ingredientOptions([{ id: 3, name: 'Garlic', baseUnit: 'g' }])
-    expect(opt).toMatchObject({ value: 3, label: 'Garlic', meta: 'Base Unit: g' })
-    render(<>{opt?.leading}</>)
-    expect(screen.getByText('g')).toBeInTheDocument()
+    expect(opt).toMatchObject({ value: 3, label: 'Garlic', meta: selectStrings.baseUnitMeta('g') })
+    expect(opt?.leading).toBeUndefined()
+  })
+  it('a not-yet-saved Ingredient (no id) is keyed by its temporary key', () => {
+    const [opt] = ingredientOptions([{ key: 'new-1', name: 'Saffron', baseUnit: 'g' }])
+    expect(opt).toMatchObject({ value: 'new-1', label: 'Saffron', meta: 'Base Unit: g' })
+    expect(opt?.leading).toBeUndefined()
   })
 })
 

@@ -22,6 +22,8 @@ export interface ListInput<V extends string | number> {
   sortIndex: number
   createLabel?: (query: string) => string
   canCreate: boolean
+  /** WP3b: label of the clear row (e.g. "Any Shop"); it leads the list and is filtered by the query like an option. */
+  clearLabel?: string
 }
 
 export interface BuiltList<V extends string | number> {
@@ -42,7 +44,11 @@ export function buildList<V extends string | number>(input: ListInput<V>): Built
   const filtered = filterOptions(input.options, input.query).filter((o) => chosen.every((f) => f.predicate(o)))
   const sort = input.sorts[input.sortIndex]
   const sorted = sort ? [...filtered].sort(sort.compare) : filtered
-  const groups = groupOptions(sorted)
+  const clearRow: SelectOption<V>[] =
+    input.clearLabel !== undefined && filterOptions([{ value: '' as V, label: input.clearLabel, clear: true }], input.query).length > 0
+      ? [{ value: '' as V, label: input.clearLabel, clear: true }]
+      : []
+  const groups = [...(clearRow.length > 0 ? [{ group: null, options: clearRow }] : []), ...groupOptions(sorted)]
   const flat = groups.flatMap((g) => g.options)
   const trimmed = input.query.trim()
   const duplicate = input.options.some((o) => normalise(o.label) === normalise(trimmed))
