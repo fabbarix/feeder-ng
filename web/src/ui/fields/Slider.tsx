@@ -18,6 +18,8 @@ export interface SliderProps extends Omit<FieldProps, 'name' | 'required'> {
   step?: number
   /** Labelled positions under the track (Planner Style: Familiar, Balanced, Adventurous). */
   stops?: SliderStop[]
+  /** WP3b: text for a value, used as aria-valuetext and as a visible caption above the track ("45 min"). Wins over a stop label. */
+  valueText?: (value: number) => string
 }
 
 /** A role=slider on a 6 px track. Pointer press or drag snaps to the nearest step; the keys step, Home/End jump. */

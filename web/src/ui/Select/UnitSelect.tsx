@@ -6,6 +6,10 @@ export interface UnitSelectProps extends SelectFieldProps {
   units: UnitChoices
   value: string | null
   onChange: (unit: string) => void
+  /** WP3b: forwarded to Select. Offers a create row for an unknown typed unit. */
+  onCreate?: (query: string) => void
+  /** WP3b: default `Use unit "<typed>"`. */
+  createLabel?: (query: string) => string
 }
 
 /** Units grouped: Base Unit, Unit Conversions (with the conversion as meta), then the global Units. */

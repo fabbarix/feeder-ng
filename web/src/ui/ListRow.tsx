@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { ChipStatus } from './Chip'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import './ListRow.css'
@@ -16,10 +17,21 @@ interface ListRowBase {
   /** Shows a CaretRight chevron. */
   chevron?: boolean
   selected?: boolean
+  /** WP3b: overrides the accessible name of the row's target (default: `title`). */
+  'aria-label'?: string
+  /** WP3b: colours the meta line with a status (spoil, leftover, ...); needs `meta`. */
+  metaStatus?: ChipStatus
+  /** WP3b: icon before the meta text (14 px); defaults to the status icon when `metaStatus` is set. */
+  metaIcon?: IconName
+  /** WP3b: extra content (e.g. Chips) under the meta line. Makes the row auto-height (`data-height="auto"`). */
+  children?: ReactNode
 }
 
+/** WP3b: `data-*` attributes (e.g. `data-testid`) are passed through to the `li`. */
+type DataAttributes = { [K in `data-${string}`]?: string }
+
 /** The row's tap target: `href` or `onActivate`, never both; neither makes a static row. */
-export type ListRowProps = ListRowBase & ({ href?: string; onActivate?: never } | { href?: never; onActivate?: () => void })
+export type ListRowProps = ListRowBase & DataAttributes & ({ href?: string; onActivate?: never } | { href?: never; onActivate?: () => void })
 
 export interface ListGroupProps {
   /** Accessible name of the list. */

@@ -5,6 +5,8 @@ export interface AvatarProps {
   name: string
   imageUrl?: string
   size?: 'sm' | 'md' | 'lg'
+  /** WP3b: a Member's colour (a CSS colour value, e.g. the stored hex, or `var(--...)`) drawn as a 2 px ring. */
+  colour?: string
 }
 
 /** A person's picture, or their initials when there is no picture. */

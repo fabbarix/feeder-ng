@@ -37,6 +37,12 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
 export interface SelectProps<V extends string | number = string> extends SelectBaseProps<V> {
   value: V | null
   onChange: (value: V) => void
+  /**
+   * WP3b: e.g. "Any Shop". The list starts with a clear row (selected while `value` is null); picking it calls
+   * `onClear` (not `onChange`), closes the list, and the trigger shows this label while nothing is chosen.
+   */
+  clearLabel?: string
+  onClear?: () => void
 }
 
 export interface MultiSelectProps<V extends string | number = string> extends SelectBaseProps<V> {
@@ -49,7 +55,7 @@ const OPEN_KEYS = ['Enter', ' ', 'ArrowDown', 'ArrowUp']
 const KEY_CLICK_WINDOW_MS = 500
 
 /** Single select: a combobox trigger, a popover from 768 px and a bottom sheet below. Picking closes it. */
-export function Select<V extends string | number = string>({ value, onChange, ...rest }: SelectProps<V>): ReactNode {
+export function Select<V extends string | number = string>({ value, onChange, clearLabel: _clearLabel, onClear: _onClear, ...rest }: SelectProps<V>): ReactNode {
   return (
     <SelectCore<V>
       {...rest}
