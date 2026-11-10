@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -195,3 +196,25 @@ func (s *Sender) Send(ctx context.Context, to notify.Target, p notify.Payload) e
 }
 
 var _ notify.Sender = (*Sender)(nil)
+
+// LookupFunc resolves a host name to IP address strings (net.Resolver.LookupHost).
+type LookupFunc func(ctx context.Context, host string) ([]string, error)
+
+// PublicOnlyControl is a net.Dialer.Control function that refuses any
+// connection to a non-public address: loopback, private (RFC 1918 and fc00::/7),
+// link-local (incl. 169.254.169.254), CGNAT 100.64.0.0/10, unspecified,
+// multicast, and IPv4-mapped forms of those. It runs at connect time on the
+// resolved address, so DNS rebinding cannot get past it.
+// STUB: the Developer implements it.
+func PublicOnlyControl(network, address string, _ syscall.RawConn) error { return nil }
+
+// NewHTTPClient is the production Web Push HTTP client: 10 s timeout, a dialer
+// whose Control is PublicOnlyControl, and CheckRedirect returning
+// http.ErrUseLastResponse (a redirect is never followed). lookup resolves host
+// names (nil = the system resolver); tests inject one to simulate DNS.
+// STUB: the Developer implements it.
+func NewHTTPClient(lookup LookupFunc) *http.Client { return &http.Client{} }
+
+// NewSender returns a Sender that uses NewHTTPClient(nil).
+// STUB: the Developer implements it.
+func NewSender(v VAPID, subject string) *Sender { return &Sender{VAPID: v, Subject: subject} }

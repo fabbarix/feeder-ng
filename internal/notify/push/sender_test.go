@@ -19,7 +19,9 @@ func newSender(t *testing.T) *push.Sender {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &push.Sender{VAPID: v, Subject: "mailto:admin@example.test"}
+	// An explicit plain client: these tests talk to httptest servers on loopback,
+	// which the production client refuses (see ssrf_test.go).
+	return &push.Sender{VAPID: v, Subject: "mailto:admin@example.test", Client: &http.Client{}}
 }
 
 func target(t *testing.T, url string) notify.Target {

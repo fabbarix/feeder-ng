@@ -216,3 +216,38 @@ func TestCandidatesAreOrderedByDueTime(t *testing.T) {
 		t.Errorf("want advance step, start cooking, confirm; got %d", len(cs))
 	}
 }
+
+func TestCandidatesDeepLinkToTheScreenThatActsOnThem(t *testing.T) {
+	rome := zone(t, "Europe/Rome")
+	f := notify.Facts{
+		Meals:     []notify.MealFact{curry(rome)},
+		Leftovers: []notify.LeftoverFact{{ID: 5, RecipeName: "Chicken curry", Portions: 2, UseBy: "2026-11-09"}},
+		Lots:      []notify.LotFact{{ID: 9, IngredientName: "Spinach", GoesOff: "2026-11-10"}},
+	}
+	cs := notify.Compute(f, rome)
+	want := map[notify.Type]string{
+		notify.AdvanceStep: "/plan", notify.StartCooking: "/plan", notify.ConfirmCooked: "/plan",
+		notify.LeftoverUseBy: "/plan", notify.StockSpoil: "/stock",
+	}
+	for typ, url := range want {
+		if got := only(t, cs, typ).URL; got != url {
+			t.Errorf("%s URL = %q, want %q", typ, got, url)
+		}
+	}
+}
+
+func TestNotificationTextUsesGlossaryTerms(t *testing.T) {
+	rome := zone(t, "Europe/Rome")
+	f := notify.Facts{
+		Meals:     []notify.MealFact{curry(rome)},
+		Leftovers: []notify.LeftoverFact{{ID: 5, RecipeName: "Chicken curry", Portions: 2, UseBy: "2026-11-09"}},
+		Lots:      []notify.LotFact{{ID: 9, IngredientName: "Spinach", GoesOff: "2026-11-10"}},
+	}
+	for _, c := range notify.Compute(f, rome) {
+		for _, bad := range []string{"prep-ahead", "prep ahead", " dish", "meal plan"} {
+			if strings.Contains(strings.ToLower(c.Title+" "+c.Body), bad) {
+				t.Errorf("%s text %q %q contains %q", c.Type, c.Title, c.Body, bad)
+			}
+		}
+	}
+}

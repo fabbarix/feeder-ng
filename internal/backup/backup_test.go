@@ -171,3 +171,75 @@ func TestNightlyJobRunsBeforePlanning(t *testing.T) {
 		t.Errorf("DefaultPolicy = %+v", backup.DefaultPolicy)
 	}
 }
+
+func TestSnapshotFolderIs0700AndFilesAre0600(t *testing.T) {
+	d := openDB(t)
+	dir := filepath.Join(t.TempDir(), "backups") // created by Snapshot
+	info, err := backup.Snapshot(context.Background(), d, dir, "2026-11-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := st.Mode().Perm(); got != 0o700 {
+		t.Errorf("backups folder mode = %o, want 700", got)
+	}
+	fi, err := os.Stat(filepath.Join(dir, info.Name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fi.Mode().Perm(); got != 0o600 {
+		t.Errorf("snapshot mode = %o, want 600 (it holds every password hash and session)", got)
+	}
+}
+
+// The nightly job and an Admin's POST can overlap: they must queue, not collide
+// on the temporary file or prune each other's snapshot.
+func TestJobRunsSerialisedWhenCalledConcurrently(t *testing.T) {
+	d := openDB(t)
+	dir := filepath.Join(t.TempDir(), "backups")
+	job := backup.Job(d, dir)
+	for round := 0; round < 5; round++ {
+		const callers = 8
+		errs := make(chan error, callers)
+		start := make(chan struct{})
+		for i := 0; i < callers; i++ {
+			go func() {
+				<-start
+				errs <- job(context.Background(), "2026-11-09")
+			}()
+		}
+		close(start)
+		for i := 0; i < callers; i++ {
+			if err := <-errs; err != nil {
+				t.Fatalf("round %d: concurrent Job: %v", round, err)
+			}
+		}
+		entries, _ := os.ReadDir(dir)
+		if len(entries) != 1 || entries[0].Name() != "feeder-2026-11-09.db" {
+			var names []string
+			for _, e := range entries {
+				names = append(names, e.Name())
+			}
+			t.Fatalf("round %d: dir has %v, want only feeder-2026-11-09.db", round, names)
+		}
+	}
+}
+
+// Two Jobs built separately (the nightly registration and the Admin handler)
+// share one lock for the same folder.
+func TestSeparateJobsForTheSameFolderShareOneLock(t *testing.T) {
+	d := openDB(t)
+	dir := filepath.Join(t.TempDir(), "backups")
+	a, b := backup.Job(d, dir), backup.Job(d, dir)
+	errs := make(chan error, 2)
+	go func() { errs <- a(context.Background(), "2026-11-09") }()
+	go func() { errs <- b(context.Background(), "2026-11-09") }()
+	for i := 0; i < 2; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("overlapping Jobs: %v", err)
+		}
+	}
+}

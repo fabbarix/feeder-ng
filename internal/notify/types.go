@@ -146,6 +146,10 @@ type TimerEvent struct {
 	TimerID    int64
 	Label      string
 	RecipeName string
+	// EndedAt is the instant this run of the timer ended (cook_timers.ends_at).
+	// It is part of the dedupe key because SQLite reuses the id of a deleted
+	// timer, so the id alone would silence a later timer's push.
+	EndedAt time.Time
 }
 
 // ErrGone is returned by a Sender when the push service says the subscription

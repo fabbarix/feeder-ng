@@ -218,6 +218,40 @@ func TestTimerFinishedIsImmediateIgnoresQuietHoursAndIsSentOnce(t *testing.T) {
 	}
 }
 
+func TestTimerFinishedIsNotSilencedWhenSQLiteReusesADeletedTimersID(t *testing.T) {
+	r := newRig(t, utc(2026, 11, 9, 14, 30, 0))
+	r.subs.byType[notify.TimerFinished] = []notify.Target{phone}
+	first := notify.TimerEvent{TimerID: 3, Label: "Pasta", EndedAt: utc(2026, 11, 9, 14, 0, 0)}
+	reused := notify.TimerEvent{TimerID: 3, Label: "Rice", EndedAt: utc(2026, 11, 9, 14, 20, 0)} // same id, a later run
+	ctx := context.Background()
+	if n, err := r.d.TimerFinished(ctx, first); err != nil || n != 1 {
+		t.Fatalf("first = %d, %v", n, err)
+	}
+	if n, err := r.d.TimerFinished(ctx, first); err != nil || n != 0 {
+		t.Errorf("the same run pushed again: %d, %v", n, err)
+	}
+	if n, err := r.d.TimerFinished(ctx, reused); err != nil || n != 1 {
+		t.Fatalf("a reused id with a new end instant must push: %d, %v", n, err)
+	}
+	if n, _ := r.d.TimerFinished(ctx, reused); n != 0 {
+		t.Errorf("the reused run pushed twice")
+	}
+	if last := r.sender.sent[len(r.sender.sent)-1]; last.p.Body != "Rice" || last.p.Tag == r.sender.sent[0].p.Tag {
+		t.Errorf("last push = %+v, want body Rice and a tag different from the first run's", last)
+	}
+}
+
+func TestPushDeepLinks(t *testing.T) {
+	r := newRig(t, utc(2026, 11, 9, 14, 30, 0))
+	r.subs.byType[notify.TimerFinished] = []notify.Target{phone}
+	if _, err := r.d.TimerFinished(context.Background(), notify.TimerEvent{TimerID: 1, Label: "Rice", EndedAt: utc(2026, 11, 9, 14, 30, 0)}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.sender.sent[0].p.URL; got != "/board" {
+		t.Errorf("Timer finished URL = %q, want /board", got)
+	}
+}
+
 func TestRunTicksUntilTheContextEnds(t *testing.T) {
 	r := newRig(t, utc(2026, 11, 9, 14, 30, 0))
 	ctx, cancel := context.WithCancel(context.Background())
