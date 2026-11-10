@@ -165,11 +165,19 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string) ([]byte, string, err
 		return nil, "", ErrTooLarge
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, f.opts.MaxBytes+1))
+	// A deadline that fires mid-body can surface as a clean EOF, so the
+	// truncated bytes must not pass as a complete image.
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, "", ctxErr
+	}
 	if err != nil {
 		return nil, "", err
 	}
 	if int64(len(data)) > f.opts.MaxBytes {
 		return nil, "", ErrTooLarge
+	}
+	if resp.ContentLength >= 0 && int64(len(data)) < resp.ContentLength {
+		return nil, "", fmt.Errorf("body is %d bytes, declared %d: %w", len(data), resp.ContentLength, io.ErrUnexpectedEOF)
 	}
 	return data, ct, nil
 }

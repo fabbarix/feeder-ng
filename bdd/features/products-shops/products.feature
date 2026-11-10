@@ -124,13 +124,14 @@ Feature: Products
     When I send GET "/api/products/{product:Mutti passata}" for Products
     Then the response status is 404
 
-  Scenario: A bought Product cannot be deleted
+  Scenario: A bought Product cannot be deleted, the error says to archive it
     Given the Household shops at "Corner Market"
     And the Product "Mutti passata" of Ingredient "tomato passata" with pack size 700 exists
     And the Product "Mutti passata" was bought at the Shop "Corner Market" on 2026-11-08
     When I send DELETE "/api/products/{product:Mutti passata}" for Products
     Then the response status is 409
-    And the error code is "in_use"
+    And the error code is "product_bought"
+    And the Products response text contains "archive"
 
   Scenario: Signed-out visitors cannot list Products
     Given I am not signed in
