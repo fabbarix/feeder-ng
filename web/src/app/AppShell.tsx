@@ -11,6 +11,8 @@ export interface AppShellProps {
   onSignOut: () => void
   /** Extra avatar-menu entries contributed by features. */
   navItems?: NavItem[]
+  /** Scans waiting to sync, shown by the OfflineBanner slot (fed by the scan feature's queue). */
+  pendingScans?: number
 }
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
@@ -49,7 +51,7 @@ export function AppShell({ user, onSignOut, navItems = [] }: AppShellProps) {
             to={item.path}
             end
             className="bottom-bar__link"
-            data-raised={item.raised ? 'true' : undefined}
+            data-accent={item.accent ? 'true' : undefined}
           >
             {item.label}
           </NavLink>
