@@ -14,6 +14,14 @@ ghcr.io/fabbarix/feeder-ng:latest    latest stable release
 
 `.github/workflows/release.yml` builds and pushes them when a tag `v*` is pushed (after `scripts/check.sh` passes); `.github/workflows/ci.yml` runs `scripts/check.sh` on every pull request.
 
+## Building the image locally
+
+```sh
+make docker        # DOCKER_BUILDKIT=1 docker build -t feeder:dev .
+```
+
+The Dockerfile needs **BuildKit** (the default builder since Docker 23; on older engines set `DOCKER_BUILDKIT=1` or use `docker buildx build`): its stages use `FROM --platform=$BUILDPLATFORM` so the Go binary cross-compiles natively for each target architecture instead of running under emulation, and the legacy builder cannot parse that. The web stage builds with `web/tsconfig.build.json`, which excludes test files (they are still type-checked by `scripts/check.sh`); the Go build uses `-buildvcs=false`, because the image has no `.git` and the binary does not need VCS stamping.
+
 ## Environment
 
 | Variable | Required | Meaning |

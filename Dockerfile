@@ -8,6 +8,7 @@ WORKDIR /src/web
 COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY web/ ./
+# pnpm build type-checks with tsconfig.build.json, which excludes tests, so test data outside web/ is not needed.
 RUN pnpm build
 
 # Stage 2: the server binary, with the SPA embedded. It runs on the build machine and
@@ -22,7 +23,7 @@ COPY . .
 COPY --from=web /src/web/dist ./web/dist
 RUN mkdir -p /out/data \
  && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags="-s -w" -o /out/feeder ./cmd/feeder
+    go build -buildvcs=false -trimpath -ldflags="-s -w" -o /out/feeder ./cmd/feeder
 
 # Stage 3: the runtime image. No shell, no root.
 FROM gcr.io/distroless/static:nonroot
