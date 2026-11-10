@@ -23,9 +23,9 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
           <li key={`${i}-${crumb.label}`} className="breadcrumbs__item" data-parent={i === last - 1 ? 'true' : undefined}>
             {i < last && crumb.to ? (
               <>
-                {i === last - 1 ? <Icon name="chevron" size={14} className="breadcrumbs__back" /> : null}
                 <Link className="breadcrumbs__link" to={crumb.to}>
-                  {crumb.label}
+                  {i === last - 1 ? <Icon name="chevron" size={14} className="breadcrumbs__back" /> : null}
+                  <span className="breadcrumbs__label">{crumb.label}</span>
                 </Link>
                 <Icon name="chevron" size={14} className="breadcrumbs__sep" />
               </>

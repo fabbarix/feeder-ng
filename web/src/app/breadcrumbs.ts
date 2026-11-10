@@ -1,5 +1,6 @@
 // The ONE place that says which routes have a hierarchy and what their crumbs are called. Plain TypeScript, no React.
 import { settingsStrings } from '../features/settings/strings'
+import { breadcrumbStrings as S } from './breadcrumbStrings'
 import type { Crumb } from '../ui/Breadcrumbs'
 
 export interface RouteCrumb {
@@ -15,10 +16,10 @@ export interface RouteCrumb {
 
 /** Roots have no trail of their own; they only appear as the first crumb of their children. */
 const ROOTS: Record<string, string> = {
-  '/settings': 'Settings',
-  '/recipes': 'Recipes',
-  '/ingredients': 'Ingredients',
-  '/products': 'Products',
+  '/settings': S.roots.settings,
+  '/recipes': S.roots.recipes,
+  '/ingredients': S.roots.ingredients,
+  '/products': S.roots.products,
 }
 
 const sections = settingsStrings.index.sections
@@ -32,14 +33,14 @@ export const ROUTE_CRUMBS: RouteCrumb[] = [
   { path: '/settings/preferences', label: sections.preferences.title, parent: '/settings' },
   { path: '/settings/notifications', label: sections.notifications.title, parent: '/settings' },
   { path: '/settings/allowlist', label: sections.allowlist.title, parent: '/settings' },
-  { path: '/settings/shops/:id', label: 'Shop', parent: '/settings/shops', entity: true },
-  { path: '/recipes/new', label: 'New Recipe', parent: '/recipes' },
-  { path: '/recipes/import', label: 'Import Recipes', parent: '/recipes' },
-  { path: '/recipes/export', label: 'Export Recipes', parent: '/recipes' },
-  { path: '/recipes/:id', label: 'Recipe', parent: '/recipes', entity: true },
-  { path: '/recipes/:id/edit', label: 'Edit', parent: '/recipes/:id' },
-  { path: '/ingredients/:id', label: 'Ingredient', parent: '/ingredients', entity: true },
-  { path: '/products/:id', label: 'Product', parent: '/products', entity: true },
+  { path: '/settings/shops/:id', label: S.entity.shop, parent: '/settings/shops', entity: true },
+  { path: '/recipes/new', label: S.newRecipe, parent: '/recipes' },
+  { path: '/recipes/import', label: S.importRecipes, parent: '/recipes' },
+  { path: '/recipes/export', label: S.exportRecipes, parent: '/recipes' },
+  { path: '/recipes/:id', label: S.entity.recipe, parent: '/recipes', entity: true },
+  { path: '/recipes/:id/edit', label: S.edit, parent: '/recipes/:id' },
+  { path: '/ingredients/:id', label: S.entity.ingredient, parent: '/ingredients', entity: true },
+  { path: '/products/:id', label: S.entity.product, parent: '/products', entity: true },
 ]
 
 const segments = (path: string) => path.split('/').filter(Boolean)

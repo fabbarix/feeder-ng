@@ -13,6 +13,7 @@
   margin: 0;
   padding: 0;
   min-inline-size: 0;
+  gap: var(--space-1);
 }
 
 .breadcrumbs__item {
@@ -22,12 +23,26 @@
   min-inline-size: 0;
 }
 
+/* Ancestors shrink and truncate; the current crumb already does. */
+.breadcrumbs__item:not(:last-child) {
+  flex: 0 1 auto;
+}
+
 .breadcrumbs__link {
   display: inline-flex;
   align-items: center;
   min-block-size: 44px;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 16rem;
   text-decoration: none;
   color: inherit;
+}
+
+.breadcrumbs__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .breadcrumbs__link:hover,
@@ -76,5 +91,9 @@
 
   .breadcrumbs__back {
     display: inline-block;
+  }
+
+  .breadcrumbs__link {
+    max-inline-size: 100%;
   }
 }

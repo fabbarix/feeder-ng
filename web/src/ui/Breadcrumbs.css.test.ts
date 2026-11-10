@@ -70,6 +70,18 @@ describe('Breadcrumbs.css', () => {
     expect(declarations(css, '.breadcrumbs__item')['min-inline-size']).toBe('0')
   })
 
+  it('ancestor links truncate with an ellipsis and a max width, with even spacing around the separator', () => {
+    const link = declarations(css, '.breadcrumbs__link')
+    expect(link['max-inline-size']).toBeTruthy()
+    expect(link['min-inline-size']).toBe('0')
+    const label = declarations(css, '.breadcrumbs__label')
+    expect(label['overflow']).toBe('hidden')
+    expect(label['text-overflow']).toBe('ellipsis')
+    expect(label['white-space']).toBe('nowrap')
+    expect(declarations(css, '.breadcrumbs__list')['gap']).toMatch(/var\(--space-/)
+    expect(declarations(css, '.breadcrumbs__item')['gap']).toMatch(/var\(--space-/)
+  })
+
   it('phone (max-width 767 px or less): only the parent crumb shows, as "‹ Parent"; the rest stay readable to screen readers', () => {
     const phone = media(PHONE)
     expect(phone, 'a phone @media block').not.toBe('')

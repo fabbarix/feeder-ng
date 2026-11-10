@@ -17,6 +17,17 @@ describe('ColorSwatches.css', () => {
   })
 })
 
+describe('picker rings are not clipped by a scrolling sheet body', () => {
+  // The checked ring is a 5px box-shadow and the focus outline 3px + 3px offset; BottomSheet's body is overflow-y: auto,
+  // so the first column needs inline padding of at least 6px (--space-2 or more) or the ring is cut off.
+  it.each([
+    ['.colour-swatches', swatches],
+    ['.emoji-picker', emoji],
+  ])('%s has inline padding of at least --space-2', (selector, css) => {
+    expect(declarations(css, selector)['padding-inline']).toMatch(/var\(--space-([2-9]|1\d)\)/)
+  })
+})
+
 describe('EmojiPicker.css', () => {
   it('exists, tokens only', () => {
     expect(emoji.trim().length).toBeGreaterThan(0)

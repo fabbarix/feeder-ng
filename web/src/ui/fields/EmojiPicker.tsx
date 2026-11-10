@@ -1,3 +1,4 @@
+import { fieldStrings } from './strings'
 import { FieldFrame, describedBy, useFieldIds } from './FieldFrame'
 import { useRovingRadios } from './useRovingRadios'
 import './Field.css'
@@ -45,7 +46,7 @@ export function EmojiPicker({ label, helper, noneLabel, options, value, onChange
             onClick={() => onChange(o.value)}
             onKeyDown={(e) => roving.onKeyDown(e, o.value)}
           >
-            {o.value === '' ? 'Aa' : o.value}
+            {o.value === '' ? fieldStrings.initialsGlyph : o.value}
           </button>
         ))}
       </div>

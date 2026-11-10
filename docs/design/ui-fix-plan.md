@@ -528,7 +528,7 @@ locale, never the browser's AM/PM), `DateField` (field + calendar popover, week 
 accent fill + `Check` bold), `Switch` (52×32, for on/off settings such as the notification toggles), `RadioCards` / `Segmented` (Light · Dark · System;
 Metric · Imperial), `Slider` (Planner Style: 3 labelled stops, 6 px track soft-strong, 24 px thumb accent), `ColorSwatches` (accent presets as
 40 px circles that wrap onto further rows on phones + "Custom" shown as the `Palette` icon, named "Custom", opening a crafted picker),
-`EmojiPicker` (R11a: a wrapping radiogroup of 44 px emoji choices with a "None" (initials) first; the Member Avatar control), `StepperField` (R11a: a `Stepper` with a visible label and helper line,
+`EmojiPicker` (R11a: a wrapping radiogroup of 44 px emoji choices with an "Initials" choice first; the Member Avatar control), `StepperField` (R11a: a `Stepper` with a visible label and helper line,
 `aria-describedby`; Member Portion Factor), `FileDrop` (dashed outline zone, `FileArrowUp`, "Choose a file or drop it here").
 Shared anatomy: label 13/700 above, 48 h control, helper 13 muted, error 13 status-danger-fg with `WarningCircle` 14, `aria-describedby`.
 

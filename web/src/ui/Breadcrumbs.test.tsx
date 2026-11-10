@@ -80,6 +80,17 @@ describe('Breadcrumbs', () => {
     expect(caret).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('the back caret is inside the parent link, so the whole "‹ Parent" is the tap target', () => {
+    const { container } = show(two)
+    const link = container.querySelector('[data-parent="true"] a.breadcrumbs__link')!
+    expect(link.querySelector('.breadcrumbs__back')).not.toBeNull()
+  })
+
+  it('the label is its own truncating span inside the link', () => {
+    const { container } = show(two)
+    expect(container.querySelector('a.breadcrumbs__link .breadcrumbs__label')).toHaveTextContent('Settings')
+  })
+
   it('the full trail stays in the DOM (collapsing is CSS, so screen readers keep every crumb)', () => {
     show(three)
     for (const label of ['Recipes', 'Chicken & leek pie', 'Edit']) expect(screen.getByText(label)).toBeInTheDocument()

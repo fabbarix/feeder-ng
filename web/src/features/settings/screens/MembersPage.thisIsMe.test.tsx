@@ -45,4 +45,17 @@ describe('MembersPage: the Admin links themself', () => {
     // the row's button is an empty overlay named by the title; the meta line is in the <li> around it
     await waitFor(() => expect(row.closest('li')).toHaveTextContent(/Admin \(you\)/))
   })
+
+  it('shows the server message, which names the Member, when the User is already linked (409)', async () => {
+    routes([anna, marco, sam], {
+      'PATCH /api/members/3': sam,
+      'PUT /api/members/3/user': { status: 409, json: { error: { code: 'user_already_linked', message: 'That User is already linked to Anna.' } } },
+    })
+    renderWithProviders(<MembersPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Sam' }))
+    const dialog = screen.getByRole('dialog', { name: 'Edit Member' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'This is me' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Member' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('That User is already linked to Anna.')
+  })
 })
