@@ -9,6 +9,8 @@ export interface Product {
   baseUnit: BaseUnit
   /** in the Ingredient's Base Unit */
   packSize: number
+  /** R8: archived Products are left out of default lists (`?includeArchived=1` lists them) */
+  archived?: boolean
 }
 
 export interface Shop {

@@ -108,6 +108,17 @@ func productsShopsSteps(sc *godog.ScenarioContext, w *World) {
 		return create("purchase", prod+"/home/"+date, "/api/purchases", fmt.Sprintf(`{"productId":{product:%s},"date":%q}`, prod, date))
 	})
 
+	sc.Step(`^the Product "([^"]*)" is archived$`, func(prod string) error {
+		p, err := expand("/api/products/{product:" + prod + "}/archive")
+		if err != nil {
+			return err
+		}
+		if res := admin().Do("POST", p, []byte(`{}`)); res.Status != 200 {
+			return fmt.Errorf("archiving %q: status %d: %s", prod, res.Status, res.Body)
+		}
+		return nil
+	})
+
 	// ---- requests with placeholders ----
 	sc.Step(`^I send (GET|DELETE) "([^"]*)" for Products$`, func(method, path string) error {
 		p, err := expand(path)
@@ -175,6 +186,16 @@ func productsShopsSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		if len(arr) != n {
 			return fmt.Errorf("%d entries, want %d; body: %s", len(arr), n, w.Last.Body)
+		}
+		return nil
+	})
+	sc.Step(`^the Products response text contains "([^"]*)"$`, func(want string) error {
+		want, err := expand(want)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(w.Last.Body), want) {
+			return fmt.Errorf("body does not contain %q: %s", want, w.Last.Body)
 		}
 		return nil
 	})
