@@ -4,7 +4,7 @@ import { connectEvents, resetSharedEvents, type EventSourceLike } from './sse'
 class FakeEventSource implements EventSourceLike {
   static all: FakeEventSource[] = []
   static get last() {
-    return FakeEventSource.all[FakeEventSource.all.length - 1]
+    return FakeEventSource.all[FakeEventSource.all.length - 1]!
   }
   listeners = new Map<string, Set<(e: MessageEvent) => void>>()
   closed = false

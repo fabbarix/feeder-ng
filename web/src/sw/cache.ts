@@ -46,7 +46,13 @@ export function staleCacheUrls(cachedUrls: readonly string[], manifestUrls: read
  * Cache.addAll rejects with InvalidStateError on duplicate requests, which stops the worker from installing.
  */
 export function uniquePrecacheUrls(manifestUrls: readonly string[], scope: string): string[] {
-  void manifestUrls
-  void scope
-  return [] // stub: implemented by the Developer
+  const seen = new Set<string>()
+  const urls: string[] = []
+  for (const u of manifestUrls) {
+    const href = new URL(u, scope).href
+    if (seen.has(href)) continue
+    seen.add(href)
+    urls.push(href)
+  }
+  return urls
 }
