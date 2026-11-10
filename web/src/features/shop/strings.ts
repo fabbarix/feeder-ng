@@ -11,7 +11,7 @@ export const shopStrings = {
   anyShop: 'Any Shop',
   loadFailed: 'The Shopping List could not be loaded.',
   extraTick: (name: string) => `Tick ${name}`,
-  unpriced: (n: number) => `${n} lines have no Price yet`,
+  unpriced: (n: number) => n === 1 ? '1 line has no Price yet' : `${n} lines have no Price yet`,
   range: 'Shop for',
   rangeToday: 'Today',
   rangeUntil: (label: string) => `Until ${label}`,
