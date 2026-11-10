@@ -3,7 +3,7 @@
 // answers navigations from the precached index.html, leaves /api and the SSE stream to the network, and then loads
 // every extension in ./extensions (push for notifications later). Classification lives in ./cache.ts and extension
 // loading in ./extensions.ts; the cache is the Cache API directly, so no Workbox runtime is needed.
-import { classifyRequest, staleCacheUrls } from './cache'
+import { classifyRequest, staleCacheUrls, uniquePrecacheUrls } from './cache'
 import { registerExtensions, type SwExtension, type WorkerScope } from './extensions'
 
 declare const self: ServiceWorkerGlobalScope
@@ -20,7 +20,11 @@ const manifest: ManifestEntry[] = (self as unknown as { __WB_MANIFEST?: Manifest
 
 async function precache(): Promise<void> {
   const cache = await caches.open(SHELL_CACHE)
-  await cache.addAll(manifest.map((entry) => new Request(entry.url, { cache: 'reload' })))
+  const urls = uniquePrecacheUrls(
+    manifest.map((entry) => entry.url),
+    self.registration.scope,
+  )
+  await cache.addAll(urls.map((url) => new Request(url, { cache: 'reload' })))
 }
 
 async function networkFirstPage(request: Request): Promise<Response> {
