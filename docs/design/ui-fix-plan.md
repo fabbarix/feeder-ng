@@ -725,9 +725,12 @@ Order: **guards → tokens → icons → primitives → shell → screens**. `we
   3. no hex/rgb colour literals in `web/src/features/**/*.css` and components (only `var(--…)`);
   4. **every `className` token used in `.tsx` has a CSS rule** (the 96 gaps found here), with an allowlist file for intentional hooks;
   5. no `min-height` on `.tile` variants; no `px` font sizes outside the token file.
-  6. glossary lint: _Avoid_ words from GLOSSARY.md (parsed) in `strings.ts`, with an allowlist.
+  6. glossary lint: _Avoid_ words from GLOSSARY.md (parsed) in `strings.ts`, with an allowlist (`scripts/check-ui.allow-glossary`, one `path word  # reason` per line; matches the whole file).
+  7. `native-search` (warn): no `<input type="search">` outside `web/src/ui/` (use the styled `SearchField` primitive).
+  Requires **bash 4+** (associative arrays; macOS ships 3.2, so install a newer bash there). `--root`/`--rules` without a value exit 2 with a usage
+  message; a `fail_paths` prefix works with or without a trailing slash.
   Start it in **warn** mode listing violations; flip each rule to **fail** when the WP that fixes it merges.
-- vitest `theme/contrast.test.ts` extended: for all 7 presets × light/dark, assert the pair table in 3.1 (text ≥ 4.5, controls ≥ 3).
+- vitest `theme/contrast.test.ts` extended (skipped only while the old palette is in place; once any Bento-only key exists, all keys must, or it fails): for all 7 presets × light/dark, assert the pair table in 3.1 (text ≥ 4.5, controls ≥ 3).
 - **Acceptance:** `make check` prints the current violation counts; the shell test covers each rule with a passing and failing fixture.
 
 ### WP1 Tokens and theme (one team) — `web/src/theme/{color.ts,palette.ts,apply.ts,contrast.ts}` + tests, `web/src/styles.css` (`:root` token block only)

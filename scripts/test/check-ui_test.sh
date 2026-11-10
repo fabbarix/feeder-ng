@@ -66,6 +66,18 @@ run_ui "$FIX/sizing/fail" "$(rules_file sizing warn)"
 run_ui "$FIX/glossary/fail" "$(rules_file glossary warn)"
 [ "$(count_of glossary)" = 2 ] && ok || bad "glossary: expected 2 (dish, meal), got $(count_of glossary)"
 
+# native-search (warn-level by default): kept apart so that, until it exists, only these cases are red.
+sf="$TMP/rules-search-warn"; { cat "$(rules_file sizing warn)"; echo "native-search=warn"; } >"$sf"
+run_ui "$FIX/native-search/fail" "$sf"
+[ "$RC" -eq 0 ] && [ "$(count_of native-search)" = 2 ] && ok || bad "native-search: expected 2 (single line, multi-line single-quoted) and exit 0 in warn mode (rc $RC, got $(count_of native-search))"
+run_ui "$FIX/native-search/pass" "$sf"
+[ "$RC" -eq 0 ] && [ "$(count_of native-search)" = 0 ] && ok || bad "native-search: pass fixture (SearchField, web/src/ui, tests, text input) must report 0 (rc $RC)"
+sf="$TMP/rules-search-fail"; { cat "$(rules_file sizing warn)"; echo "native-search=fail"; } >"$sf"
+run_ui "$FIX/native-search/fail" "$sf"
+[ "$RC" -eq 1 ] && ok || bad "native-search=fail must exit 1 on the fail fixture (got $RC)"
+grep -Eq "^native-search=(warn|fail)\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set native-search (warn)"
+grep -Eq "^native-search=warn\$" "$SCRIPTS/check-ui.rules" && ok || bad "native-search must start at warn in check-ui.rules"
+
 # --- hardening cases: a pass and a fail fixture each, exact count for the fail one
 harden() { # rule fixture-dir expected-count-in-fail-fixture
   run_ui "$FIX/$2/pass" "$(rules_file "$1" fail)"
@@ -95,6 +107,29 @@ cp "$(rules_file sizing warn)" "$TMP/rules-fp-here"
 echo "sizing.fail_paths=web/src/features/x" >>"$TMP/rules-fp-here"
 run_ui "$FIX/sizing/fail" "$TMP/rules-fp-here"
 [ "$RC" -eq 1 ] && ok || bad "fail_paths covering the violations must fail"
+
+# A trailing slash on a prefix must behave exactly like the slash-less form.
+for suffix in "" "/"; do
+  cp "$(rules_file sizing warn)" "$TMP/rules-fp-slash"
+  echo "sizing.fail_paths=web/src/features/x$suffix" >>"$TMP/rules-fp-slash"
+  run_ui "$FIX/sizing/fail" "$TMP/rules-fp-slash"
+  [ "$RC" -eq 1 ] && ok || bad "fail_paths 'web/src/features/x$suffix' covering the violations must fail (got $RC)"
+done
+cp "$(rules_file sizing warn)" "$TMP/rules-fp-slash2"
+echo "sizing.fail_paths=web/src/ui/ web/src/features/x/" >>"$TMP/rules-fp-slash2"
+run_ui "$FIX/sizing/fail" "$TMP/rules-fp-slash2"
+[ "$RC" -eq 1 ] && ok || bad "fail_paths with several trailing-slash prefixes must fail when one covers the violations (got $RC)"
+
+# --- a flag without its value is a usage error, never a hang ------------------
+for flag in --root --rules; do
+  OUTPUT="$(timeout 5 bash "$SCRIPTS/check-ui.sh" "$flag" 2>&1)"; RC=$?
+  [ "$RC" -eq 2 ] && ok || bad "$flag without a value must exit 2 (got $RC; 124 means it hung)"
+  grep -qi "usage" <<<"$OUTPUT" && ok || bad "$flag without a value must print a usage message (got: $OUTPUT)"
+done
+
+# --- every glossary allowlist entry says why --------------------------------
+awk '!/^[ \t]*(#|$)/ && !/#[ \t]*[^ \t]/ { print FILENAME ":" FNR ": " $0; bad = 1 } END { exit bad }' "$SCRIPTS/check-ui.allow-glossary" >"$TMP/noreason.txt"
+[ $? -eq 0 ] && ok || bad "allow-glossary entries need a '# reason': $(cat "$TMP/noreason.txt")"
 
 # --- bad rules file is rejected ---------------------------------------------
 echo "sizing=maybe" >"$TMP/rules-bad"

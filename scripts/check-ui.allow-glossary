@@ -1,4 +1,30 @@
 # Rule glossary: avoid-words that are legitimate in a given strings.ts.
-# Format: <path substring or *> <avoid word>   (say why in a comment)
+# Format: <path substring or *> <avoid word>   # reason (required: the test fails without one)
+# Entries match the whole file, not a line, so keep them to the file that was reviewed.
+# Every entry was checked against GLOSSARY.md.
+
 # "Item code" is the printed barcode term on a Shop receipt, not an Ingredient/Product synonym.
-web/src/features/shops/strings.ts item
+web/src/features/shops/strings.ts item  # "Item code" is a Shop receipt term
+
+# "unit" meaning a measurement unit (g, ml, piece; currency minor unit), not a Stock Lot ("Units" is not a glossary term).
+web/src/features/import/strings.ts unit  # 'Units' title: measurement units
+web/src/features/ingredients/strings.ts unit  # conversion unit label/errors: measurement unit
+web/src/features/recipes/strings.ts unit  # recipe line unit label and validation: measurement unit
+web/src/features/scan/strings.ts unit  # pack unit label: measurement unit
+web/src/features/settings/strings.ts unit  # 'Units' setting: metric/imperial measurement units
+web/src/features/shops/strings.ts unit  # value unit label, currency minor unit: measurement unit
+
+# "dark mode" (settings:25) is the colour scheme, not Planner Style. Also covers the setting 'Colour mode' (settings:100), same sense.
+web/src/features/settings/strings.ts mode  # dark mode / Colour mode are colour schemes, not Planner Style
+
+# "never" (recipes:98) is plain English in "Excluded Ingredients are never planned"; the term is Exclusion.
+web/src/features/recipes/strings.ts never  # ordinary adverb inside a sentence that uses Exclusion
+
+# "wait" (recipes:123-124) is the verb in "A Step can only wait for an earlier Step" (a dependency rule), not a Passive Step label.
+web/src/features/recipes/strings.ts wait  # verb in a Step dependency message
+
+# "Runs" (cook:29) is the verb "Runs for N min" for a Passive Step's timer, not a Batch.
+web/src/features/cook/strings.ts run  # verb for how long a timer runs
+
+# "Done:" (cook:11-13) is the Advance Step status; the spec (docs/design/ui-fix-plan.md, Cook and Board rows) keeps "done" for Advance Steps. Cooked applies to a Planned Meal.
+web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal

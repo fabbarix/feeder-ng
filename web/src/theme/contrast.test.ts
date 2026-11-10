@@ -73,7 +73,8 @@ describe('ensureContrast', () => {
 // the old Material-style keys the whole block is skipped (reported as skipped,
 // never red). TODO(WP1): once generatePalette emits the keys below the gate
 // opens by itself and these become live. If WP1 names the keys differently,
-// edit TOKEN_KEYS here (one line) rather than weakening the pairs.
+// edit TOKEN_KEYS here (one line) rather than weakening the pairs. If only some keys
+// exist the block still runs, so the missing ones fail loudly instead of staying skipped.
 // ---------------------------------------------------------------------------
 
 /** Palette keys, camelCase of the CSS variables --color-bg, --color-surface-2, ... */
@@ -98,7 +99,21 @@ const BENTO_PAIRS: ReadonlyArray<readonly [BentoKey, BentoKey, number, string]> 
 const colourMap = (accent: string, scheme: Scheme) =>
   generatePalette({ accent }, scheme).colors as unknown as Record<string, string>
 
-const hasBentoTokens = TOKEN_KEYS.every((k) => k in colourMap('#3f7d58', 'light'))
+const presentKeys = TOKEN_KEYS.filter((k) => k in colourMap('#3f7d58', 'light'))
+// The old palette already has `surface` and `outline`, so "any key present" is not a signal.
+// These keys exist only in the Bento set: while none of them exist the old palette is in place
+// and the contract is skipped. Once any appears, every key must (below) or this goes red, so a
+// half-done WP1 can never leave the contract skipped for good.
+const BENTO_ONLY_KEYS: readonly BentoKey[] = ['surface2', 'surface3', 'onAccent', 'accentText', 'soft', 'softStrong']
+const hasBentoTokens = BENTO_ONLY_KEYS.some((k) => presentKeys.includes(k))
+
+it.skipIf(!hasBentoTokens || presentKeys.length === TOKEN_KEYS.length)(
+  'Bento palette exposes every token key (all or none)',
+  () => {
+    const missing = TOKEN_KEYS.filter((k) => !presentKeys.includes(k))
+    expect(missing, `generatePalette lacks Bento keys: ${missing.join(', ')}`).toEqual([])
+  },
+)
 
 describe.skipIf(!hasBentoTokens)('Bento palette contract (TODO(WP1): enabled when tokens land)', () => {
   const cases = ACCENT_PRESETS.flatMap((p) =>
