@@ -6,6 +6,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/access"
@@ -67,6 +69,9 @@ func (s *Store) Insert(ctx context.Context, r access.Request, tokenHash string) 
 		`INSERT INTO access_requests (email, name, picture, token_hash, requested_at, last_seen_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		r.Email, r.Name, r.Picture, tokenHash, ts(r.RequestedAt), ts(r.LastSeenAt), ts(r.ExpiresAt))
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return access.Request{}, access.ErrRequestExists
+		}
 		return access.Request{}, err
 	}
 	r.ID, err = res.LastInsertId()
@@ -80,12 +85,23 @@ func (s *Store) Refresh(ctx context.Context, id int64, name, picture, tokenHash 
 }
 
 func (s *Store) Delete(ctx context.Context, id int64) (bool, error) {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE id = ?`, id)
-	return true, err // STUB: must report rows affected
+	res, err := s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE id = ?`, id)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
-// PruneEvents STUB: must delete access_events older than before.
-func (s *Store) PruneEvents(_ context.Context, _ time.Time) (int, error) { return 0, nil }
+// PruneEvents deletes audit entries older than before.
+func (s *Store) PruneEvents(ctx context.Context, before time.Time) (int, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM access_events WHERE at < ?`, ts(before))
+	if err != nil {
+		return 0, err
+	}
+	n, err := res.RowsAffected()
+	return int(n), err
+}
 
 func (s *Store) list(ctx context.Context, where string, arg any) ([]access.Request, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+reqCols+` FROM access_requests WHERE `+where+` ORDER BY requested_at, id`, arg)
@@ -114,13 +130,28 @@ func (s *Store) CountPending(ctx context.Context, now time.Time) (int, error) {
 	return n, err
 }
 
+// DeleteExpired removes the expired rows and returns them in one statement, so each row goes to exactly one caller.
 func (s *Store) DeleteExpired(ctx context.Context, now time.Time) ([]access.Request, error) {
-	gone, err := s.list(ctx, `expires_at <= ?`, ts(now))
-	if err != nil || len(gone) == 0 {
-		return gone, err
+	rows, err := s.db.QueryContext(ctx, `DELETE FROM access_requests WHERE expires_at <= ? RETURNING `+reqCols, ts(now))
+	if err != nil {
+		return nil, err
 	}
-	_, err = s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE expires_at <= ?`, ts(now))
-	return gone, err
+	defer rows.Close()
+	var out []access.Request
+	for rows.Next() {
+		q, err := scanReq(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].RequestedAt.Equal(out[j].RequestedAt) {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].RequestedAt.Before(out[j].RequestedAt)
+	})
+	return out, rows.Err()
 }
 
 func (s *Store) AddEvent(ctx context.Context, e access.Event) error {

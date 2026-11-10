@@ -31,6 +31,11 @@ const (
 	historyLimit = 50
 )
 
+// ClearCookie is an expired waiting-page cookie (same name and path), sent when the visitor signs in.
+func ClearCookie(secure bool) *http.Cookie {
+	return &http.Cookie{Name: CookieName, Value: "", Path: CookiePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode}
+}
+
 // Cookie is the waiting-page cookie for token, valid until expires.
 func Cookie(token string, expires time.Time, secure bool) *http.Cookie {
 	return &http.Cookie{Name: CookieName, Value: token, Path: CookiePath, Expires: expires, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode}
@@ -60,6 +65,10 @@ func (a *api) changed() { a.d.Events.Publish(topic, map[string]string{"changed":
 func fail(w http.ResponseWriter, err error) {
 	if errors.Is(err, access.ErrNotFound) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "That request was already answered or has expired")
+		return
+	}
+	if errors.Is(err, access.ErrAlreadyUser) {
+		httpx.WriteError(w, http.StatusConflict, "already_a_user", "That person already has a sign-in")
 		return
 	}
 	if errors.Is(err, access.ErrMemberUnavailable) {

@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
@@ -29,10 +30,10 @@ var (
 	// (including a Member linked between the picker opening and the approval). Nothing is created or linked.
 	ErrMemberUnavailable = errors.New("access: member unavailable")
 	// ErrAlreadyUser is returned by Deny when the address is already a User: the request is cleared without a
-	// "denied" event (HTTP 409 already_a_user). STUB: not returned yet.
+	// "denied" event (HTTP 409 already_a_user).
 	ErrAlreadyUser = errors.New("access: address is already a user")
 	// ErrRequestExists is returned by Store.Insert when a request for the address already exists (UNIQUE conflict,
-	// two first sign-ins racing). SignIn re-reads and treats it as a repeat sign-in. STUB: not used yet.
+	// two first sign-ins racing). SignIn re-reads and treats it as a repeat sign-in.
 	ErrRequestExists = errors.New("access: request already exists")
 )
 
@@ -191,6 +192,10 @@ type Service struct {
 	limits  Limits
 	onReq   []func(Request)
 
+	// answerMu serialises every answering path (Approve, ApproveLinked, Deny and the List/Count cleanup) so a request is
+	// answered once. One process owns the SQLite file, so a mutex is enough.
+	answerMu sync.Mutex
+
 	mu     sync.Mutex
 	ipHits map[string][]time.Time // submissions that reached the queue, per IP (in memory: a restart only forgives)
 }
@@ -236,6 +241,9 @@ func (s *Service) SignIn(ctx context.Context, ip string, id auth.Identity) (Deci
 			if err := s.members.LinkUser(ctx, ref.ID, u.ID); err != nil {
 				return Decision{}, err
 			}
+			if err := s.recordMemberSignIn(ctx, email, CleanName(id.Name, email), ref); err != nil {
+				return Decision{}, err
+			}
 			return Decision{Kind: SignedIn, User: u}, nil
 		}
 	}
@@ -257,16 +265,7 @@ func (s *Service) SignIn(ctx context.Context, ip string, id auth.Identity) (Deci
 		found = false
 	}
 	if found {
-		token, hash, err := newToken()
-		if err != nil {
-			return Decision{}, err
-		}
-		if err := s.store.Refresh(ctx, req.ID, name, picture, hash, now); err != nil {
-			return Decision{}, err
-		}
-		req.Name, req.Picture, req.LastSeenAt = name, picture, now
-		s.recordIP(ip, now)
-		return Decision{Kind: Pending, Request: req, Token: token}, nil
+		return s.refresh(ctx, req, name, picture, ip, now)
 	}
 
 	if last, ok, err := s.store.LastEvent(ctx, email, EventDenied); err != nil {
@@ -297,6 +296,17 @@ func (s *Service) SignIn(ctx context.Context, ip string, id auth.Identity) (Deci
 		Email: email, Name: name, Picture: picture,
 		RequestedAt: now, LastSeenAt: now, ExpiresAt: now.Add(s.limits.TTL),
 	}, hash)
+	if errors.Is(err, ErrRequestExists) {
+		// Lost the race with another first sign-in of this address: carry on as a repeat sign-in.
+		existing, ok, err := s.store.ByEmail(ctx, email)
+		if err != nil {
+			return Decision{}, err
+		}
+		if !ok {
+			return Decision{}, ErrRequestExists
+		}
+		return s.refresh(ctx, existing, name, picture, ip, now)
+	}
 	if err != nil {
 		return Decision{}, err
 	}
@@ -310,14 +320,85 @@ func (s *Service) SignIn(ctx context.Context, ip string, id auth.Identity) (Deci
 	return Decision{Kind: Pending, Request: req, Token: token}, nil
 }
 
-// List returns the pending requests, oldest first (expired ones are not listed).
-func (s *Service) List(ctx context.Context) ([]Request, error) {
-	return s.store.ListPending(ctx, s.clk.Now())
+// refresh updates an existing pending request and issues a new waiting-page token.
+func (s *Service) refresh(ctx context.Context, req Request, name, picture, ip string, now time.Time) (Decision, error) {
+	token, hash, err := newToken()
+	if err != nil {
+		return Decision{}, err
+	}
+	if err := s.store.Refresh(ctx, req.ID, name, picture, hash, now); err != nil {
+		return Decision{}, err
+	}
+	req.Name, req.Picture, req.LastSeenAt = name, picture, now
+	s.recordIP(ip, now)
+	return Decision{Kind: Pending, Request: req, Token: token}, nil
 }
 
-// Count is the number of pending requests (the badge).
+// recordMemberSignIn audits a Member-email sign-in as an "approved" event with no actor and clears any pending
+// request for the address.
+func (s *Service) recordMemberSignIn(ctx context.Context, email, name string, m MemberRef) error {
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
+	if r, ok, err := s.store.ByEmail(ctx, email); err != nil {
+		return err
+	} else if ok {
+		if _, err := s.store.Delete(ctx, r.ID); err != nil {
+			return err
+		}
+	}
+	return s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: email, Name: name, MemberID: m.ID, MemberName: m.Name})
+}
+
+// isUser reports whether the address already has a User.
+func (s *Service) isUser(ctx context.Context, email string) (bool, error) {
+	_, err := s.users.UserByEmail(ctx, email)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, auth.ErrNotFound) {
+		return false, nil
+	}
+	return false, err
+}
+
+// livePending lists the unexpired requests and clears (no event) those whose address is already a User. The caller
+// holds answerMu.
+func (s *Service) livePending(ctx context.Context) ([]Request, error) {
+	all, err := s.store.ListPending(ctx, s.clk.Now())
+	if err != nil {
+		return nil, err
+	}
+	out := all[:0:0]
+	for _, r := range all {
+		user, err := s.isUser(ctx, r.Email)
+		if err != nil {
+			return nil, err
+		}
+		if user {
+			if _, err := s.store.Delete(ctx, r.ID); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// List returns the pending requests, oldest first (expired ones are not listed; requests whose address became a User
+// are cleared and not listed).
+func (s *Service) List(ctx context.Context) ([]Request, error) {
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
+	return s.livePending(ctx)
+}
+
+// Count is the number of pending requests (the badge), after the same cleanup as List.
 func (s *Service) Count(ctx context.Context) (int, error) {
-	return s.store.CountPending(ctx, s.clk.Now())
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
+	rs, err := s.livePending(ctx)
+	return len(rs), err
 }
 
 // pending loads an unexpired request or returns ErrNotFound.
@@ -332,22 +413,42 @@ func (s *Service) pending(ctx context.Context, id int64) (Request, error) {
 	return r, nil
 }
 
-// Approve adds the requester as a non-Admin User named after their Google name, removes the request and records who
-// approved. Any User may approve. ErrNotFound for an unknown or expired request. If the address became a User in the
-// meantime the request is simply removed.
-func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.User, error) {
-	r, err := s.pending(ctx, id)
+// claim removes the request; false means someone else answered, purged or expired it first.
+func (s *Service) claim(ctx context.Context, id int64) error {
+	removed, err := s.store.Delete(ctx, id)
 	if err != nil {
-		return auth.User{}, err
+		return err
 	}
+	if !removed {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// addUser creates the User for a request, or returns the existing one.
+func (s *Service) addUser(ctx context.Context, r Request) (auth.User, error) {
 	u, err := s.users.AddUser(ctx, r.Email, CleanName(r.Name, r.Email), false)
 	if errors.Is(err, auth.ErrEmailTaken) {
 		u, err = s.users.UserByEmail(ctx, r.Email)
 	}
+	return u, err
+}
+
+// Approve adds the requester as a non-Admin User named after their Google name, removes the request and records who
+// approved. Any User may approve. ErrNotFound for an unknown, expired or already answered request. If the address
+// became a User in the meantime the request is simply removed. Order: read, claim, AddUser, AddEvent.
+func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.User, error) {
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
+	r, err := s.pending(ctx, id)
 	if err != nil {
 		return auth.User{}, err
 	}
-	if _, err := s.store.Delete(ctx, r.ID); err != nil {
+	if err := s.claim(ctx, r.ID); err != nil {
+		return auth.User{}, err
+	}
+	u, err := s.addUser(ctx, r)
+	if err != nil {
 		return auth.User{}, err
 	}
 	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email})
@@ -356,9 +457,12 @@ func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.
 
 // ApproveLinked is Approve plus "link to Member" in one step: the new User is linked to the unlinked Member
 // memberID. The Member is checked first (ErrMemberUnavailable when it is not among Members.Unlinked, or when there
-// is no Members port) before anything is created, so a refusal leaves the request pending. The audit event records
-// the Member. If the address became a User meanwhile, that User is the one linked.
+// is no Members port) before anything is created, so such a refusal leaves the request pending. If LinkUser fails
+// after the User was created, the approval stands: the request is cleared, "approved" is recorded without a Member and
+// ErrMemberUnavailable is returned.
 func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, memberID int64) (auth.User, error) {
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
 	r, err := s.pending(ctx, id)
 	if err != nil {
 		return auth.User{}, err
@@ -381,32 +485,42 @@ func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, 
 	if !found {
 		return auth.User{}, ErrMemberUnavailable
 	}
-	u, err := s.users.AddUser(ctx, r.Email, CleanName(r.Name, r.Email), false)
-	if errors.Is(err, auth.ErrEmailTaken) {
-		u, err = s.users.UserByEmail(ctx, r.Email)
+	if err := s.claim(ctx, r.ID); err != nil {
+		return auth.User{}, err
 	}
+	u, err := s.addUser(ctx, r)
 	if err != nil {
 		return auth.User{}, err
 	}
+	ev := Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email}
 	if err := s.members.LinkUser(ctx, member.ID, u.ID); err != nil {
-		return auth.User{}, err
+		if aerr := s.store.AddEvent(ctx, ev); aerr != nil {
+			return auth.User{}, aerr
+		}
+		return auth.User{}, ErrMemberUnavailable
 	}
-	if _, err := s.store.Delete(ctx, r.ID); err != nil {
-		return auth.User{}, err
-	}
-	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID,
-		ActorEmail: actor.Email, MemberID: member.ID, MemberName: member.Name})
-	return u, err
+	ev.MemberID, ev.MemberName = member.ID, member.Name
+	return u, s.store.AddEvent(ctx, ev)
 }
 
-// Deny removes the request and records who denied. The address may ask again after DenyCooldown.
+// Deny removes the request and records who denied. The address may ask again after DenyCooldown. If the address is
+// already a User the request is cleared without an event and ErrAlreadyUser is returned.
 func (s *Service) Deny(ctx context.Context, id int64, actor auth.User) error {
+	s.answerMu.Lock()
+	defer s.answerMu.Unlock()
 	r, err := s.pending(ctx, id)
 	if err != nil {
 		return err
 	}
-	if _, err := s.store.Delete(ctx, r.ID); err != nil {
+	user, err := s.isUser(ctx, r.Email)
+	if err != nil {
 		return err
+	}
+	if err := s.claim(ctx, r.ID); err != nil {
+		return err
+	}
+	if user {
+		return ErrAlreadyUser
 	}
 	return s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventDenied, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email})
 }
@@ -439,6 +553,9 @@ func (s *Service) Purge(ctx context.Context) (int, error) {
 			return 0, err
 		}
 	}
+	if _, err := s.store.PruneEvents(ctx, now.AddDate(-1, 0, 0)); err != nil {
+		return 0, err
+	}
 	return len(gone), nil
 }
 
@@ -448,7 +565,8 @@ func (s *Service) History(ctx context.Context, limit int) ([]Event, error) {
 }
 
 func (s *Service) expire(ctx context.Context, r Request, now time.Time) error {
-	if _, err := s.store.Delete(ctx, r.ID); err != nil {
+	removed, err := s.store.Delete(ctx, r.ID)
+	if err != nil || !removed {
 		return err
 	}
 	return s.store.AddEvent(ctx, Event{At: now, Kind: EventExpired, Email: r.Email, Name: r.Name})
@@ -538,27 +656,36 @@ func CleanPicture(u string) string {
 	return u
 }
 
-// ClientIP is the visitor's address for rate limiting. With trustProxy it is the last X-Forwarded-For entry (the one
-// the operator's own reverse proxy appended); otherwise the host part of remoteAddr.
+// ClientIP is the visitor's rate-limit key. With trustProxy the address is the last X-Forwarded-For entry (the one the
+// operator's own reverse proxy appended; see JoinForwardedFor); otherwise the host part of remoteAddr. An unparsable
+// entry falls back to the peer. IPv4 is returned as is, an IPv4-mapped IPv6 address as IPv4, and any other IPv6
+// address as its /64 network in CIDR form.
 func ClientIP(remoteAddr, forwardedFor string, trustProxy bool) string {
+	host := remoteAddr
+	if h, _, err := net.SplitHostPort(remoteAddr); err == nil {
+		host = h
+	}
 	if trustProxy {
 		parts := strings.Split(forwardedFor, ",")
 		last := strings.TrimSpace(parts[len(parts)-1])
-		if net.ParseIP(last) != nil {
-			return last
+		if _, err := netip.ParseAddr(last); err == nil {
+			host = last
 		}
 	}
-	if host, _, err := net.SplitHostPort(remoteAddr); err == nil {
+	a, err := netip.ParseAddr(host)
+	if err != nil {
 		return host
 	}
-	return remoteAddr
+	a = a.WithZone("")
+	if a.Is4In6() {
+		return a.Unmap().String()
+	}
+	if a.Is6() {
+		return netip.PrefixFrom(a, 64).Masked().String()
+	}
+	return a.String()
 }
 
-// JoinForwardedFor joins every X-Forwarded-For header line with "," so ClientIP sees the last entry of the last line
-// (the one the operator's proxy appended). STUB: returns only the first line, like Header.Get.
-func JoinForwardedFor(lines []string) string {
-	if len(lines) == 0 {
-		return ""
-	}
-	return lines[0]
-}
+// JoinForwardedFor joins every X-Forwarded-For header line with "," verbatim so ClientIP sees the last entry of the
+// last line (the one the operator's proxy appended); Header.Get would return the first line, which the client wrote.
+func JoinForwardedFor(lines []string) string { return strings.Join(lines, ",") }

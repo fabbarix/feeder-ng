@@ -94,7 +94,7 @@ func signInRoutes(r *app.Router, d app.Deps) {
 			http.Redirect(w, req, "/sign-in?error=failed", http.StatusFound)
 			return
 		}
-		ip := access.ClientIP(req.RemoteAddr, req.Header.Get("X-Forwarded-For"), d.Config.TrustProxy)
+		ip := access.ClientIP(req.RemoteAddr, access.JoinForwardedFor(req.Header.Values("X-Forwarded-For")), d.Config.TrustProxy)
 		dec, err := d.Access.SignIn(req.Context(), ip, id)
 		if err != nil {
 			d.Logger.Error("google sign-in decision failed", "err", err)
@@ -116,6 +116,7 @@ func signInRoutes(r *app.Router, d app.Deps) {
 			http.Redirect(w, req, "/waiting-for-approval?state=full", http.StatusFound)
 			return
 		}
+		http.SetCookie(w, accesshttp.ClearCookie(secure))
 		u := dec.User
 		// The first sign-in replaces the default name (the e-mail's local part)
 		// with Google's name; a name the Admin chose is never overwritten.
