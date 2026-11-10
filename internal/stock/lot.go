@@ -276,7 +276,11 @@ func Keep(lot Lot) Lot {
 
 // KeepOn is Keep that also records the household date the user chose Keep, so
 // the zero-waste streak forgives every go-off up to that day (R11c).
-// STUB (R11c test author): returns the lot unchanged; the developer implements it.
 func KeepOn(lot Lot, today Date) Lot {
+	if lot.GoesOff.IsNone() {
+		return lot
+	}
+	lot = Keep(lot)
+	lot.KeptOn = today
 	return lot
 }

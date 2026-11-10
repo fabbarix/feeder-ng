@@ -496,7 +496,14 @@ func nullFloat(f *float64) sql.NullFloat64 {
 
 // Created is when the Household was created in Feeder (R11c): household_settings.created_at, stamped
 // with the clock on first read when still NULL (a fresh install).
-// STUB (R11c test author): returns the zero time; the developer implements it.
 func (s *Store) Created(ctx context.Context) (time.Time, error) {
-	return time.Time{}, nil
+	if _, err := s.db.ExecContext(ctx, `UPDATE household_settings SET created_at = ? WHERE id = 1 AND created_at IS NULL`,
+		s.clk.Now().UTC().Format(time.RFC3339)); err != nil {
+		return time.Time{}, err
+	}
+	var at string
+	if err := s.db.QueryRowContext(ctx, `SELECT created_at FROM household_settings WHERE id = 1`).Scan(&at); err != nil {
+		return time.Time{}, err
+	}
+	return time.Parse(time.RFC3339, at)
 }

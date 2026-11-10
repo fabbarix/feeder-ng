@@ -297,6 +297,9 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 		Reason:       store.ReasonSpoiled,
 		LotID:        &lotID,
 	}
+	if lot.GoesOff.AddDays(1) > lot.KeptOn { // the go-off was not forgiven by a Keep
+		rec.LotGoesOff = lot.GoesOff
+	}
 	_, err = s.st.Update(ctx, ingID, func(lots []stock.Lot) (store.Mutation, error) {
 		var rest []stock.Lot
 		found := false
@@ -339,7 +342,7 @@ func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
 		for _, l := range lots {
 			if l.ID == lotID {
 				found = true
-				l = stock.Keep(l)
+				l = stock.KeepOn(l, today)
 			}
 			out = append(out, l)
 		}

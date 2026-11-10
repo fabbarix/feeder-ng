@@ -519,13 +519,14 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 		return err
 	})
 	sc.Step(`^the Household's time zone is "([^"]*)"$`, func(zone string) error {
+		adm := w.Ensure().LoginAdmin(w.TB) // saving settings is Admin-only
 		var cur map[string]any
-		if err := w.Client.Get("/api/household/settings").JSON(&cur); err != nil {
+		if err := adm.Get("/api/household/settings").JSON(&cur); err != nil {
 			return err
 		}
 		delete(cur, "timeZoneConfigured")
 		cur["timeZone"] = zone
-		if r := w.Client.Do("PUT", "/api/household/settings", cur); r.Status != 200 {
+		if r := adm.Do("PUT", "/api/household/settings", cur); r.Status != 200 {
 			return fmt.Errorf("save settings: %d %s", r.Status, r.Body)
 		}
 		return nil

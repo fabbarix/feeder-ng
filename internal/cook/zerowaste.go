@@ -1,6 +1,10 @@
 package cook
 
-import "github.com/fabbarix/feeder-ng/internal/stock"
+import (
+	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/stock"
+)
 
 // LotGoOff is a Stock Lot still in Stock, as the zero-waste streak sees it (R11c).
 type LotGoOff struct {
@@ -26,7 +30,46 @@ type StreakInput struct {
 
 // ZeroWasteStreak is the zero-waste streak in days (R11c, spec section 6): today minus the newest
 // waste-event day, but never more than the Household's age (Today minus Created).
-// STUB (R11c test author): returns 0; the developer implements it and removes Streak.
 func ZeroWasteStreak(in StreakInput) int {
+	if in.Created.IsNone() || in.Today.IsNone() {
+		return 0
+	}
+	gone := map[int64]bool{}
+	for _, w := range in.Waste {
+		if w.LotID != 0 {
+			gone[w.LotID] = true
+		}
+	}
+	newest := in.Created
+	see := func(d stock.Date) {
+		if d <= in.Today && d > newest {
+			newest = d
+		}
+	}
+	for _, l := range in.Lots {
+		if l.GoesOff.IsNone() || gone[l.ID] {
+			continue
+		}
+		if e := l.GoesOff.AddDays(1); e > l.KeptOn { // None sorts first
+			see(e)
+		}
+	}
+	for _, w := range in.Waste {
+		e := w.WastedOn
+		if !w.LotGoesOff.IsNone() {
+			if g := w.LotGoesOff.AddDays(1); g < e {
+				e = g
+			}
+		}
+		see(e)
+	}
+	t, errT := time.Parse("2006-01-02", string(in.Today))
+	r, errR := time.Parse("2006-01-02", string(newest))
+	if errT != nil || errR != nil {
+		return 0
+	}
+	if days := int(t.Sub(r).Hours() / 24); days > 0 {
+		return days
+	}
 	return 0
 }

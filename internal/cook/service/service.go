@@ -596,15 +596,12 @@ func (s *Service) Board(ctx context.Context) (Board, error) {
 	default:
 		b.ThemeReason = "no_location"
 	}
-	last, err := s.cfg.Waste.LastWaste(ctx)
+	in, err := s.cfg.Waste.StreakInput(ctx)
 	if err != nil {
 		return Board{}, err
 	}
-	first, err := s.cfg.Waste.FirstActivity(ctx)
-	if err != nil {
-		return Board{}, err
-	}
-	b.StreakDays = cook.Streak(stock.Date(b.Today), last, first)
+	in.Today = stock.Date(b.Today)
+	b.StreakDays = cook.ZeroWasteStreak(in)
 	b.NextAdvance, err = s.nextAdvance(ctx, b.Today, now)
 	if err != nil {
 		return Board{}, err

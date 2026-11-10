@@ -161,25 +161,9 @@ func scanMeal(sc scanner, loc *time.Location) (MealInfo, error) {
 
 type dbWaste struct{ a *DB }
 
-// LastWaste implements Waste: the newest waste date, stock.None when there is none.
-func (w dbWaste) LastWaste(ctx context.Context) (stock.Date, error) {
-	return w.a.maxDate(ctx, `SELECT MAX(wasted_on) FROM stock_waste`)
-}
-
-// FirstActivity implements Waste: the earliest Stock Lot purchase date.
-func (w dbWaste) FirstActivity(ctx context.Context) (stock.Date, error) {
-	return w.a.maxDate(ctx, `SELECT MIN(purchased) FROM stock_lots`)
-}
-
-func (a *DB) maxDate(ctx context.Context, query string) (stock.Date, error) {
-	var d sql.NullString
-	if err := a.db.QueryRowContext(ctx, query).Scan(&d); err != nil {
-		return stock.None, err
-	}
-	if !d.Valid {
-		return stock.None, nil
-	}
-	return stock.Date(d.String), nil
+// StreakInput implements Waste (see DB.StreakInput).
+func (w dbWaste) StreakInput(ctx context.Context) (cook.StreakInput, error) {
+	return w.a.StreakInput(ctx)
 }
 
 type dbHousehold struct{ a *DB }
@@ -221,7 +205,53 @@ func (a *DB) zone(ctx context.Context) (*time.Location, error) {
 // StreakInput gathers what cook.ZeroWasteStreak needs (R11c): the Household's creation date in the
 // household zone, the Lots not forgiven by Keep with their go-off dates, and the waste records.
 // today is left for the caller to set.
-// STUB (R11c test author): returns an empty input; the developer implements it.
 func (a *DB) StreakInput(ctx context.Context) (cook.StreakInput, error) {
-	return cook.StreakInput{}, nil
+	var in cook.StreakInput
+	loc, err := a.zone(ctx)
+	if err != nil {
+		return in, err
+	}
+	created, err := a.hh.Created(ctx)
+	if err != nil {
+		return in, err
+	}
+	in.Created = stock.Date(created.In(loc).Format("2006-01-02"))
+	lots, err := a.db.QueryContext(ctx, `SELECT id, goes_off, kept_on FROM stock_lots WHERE goes_off IS NOT NULL`)
+	if err != nil {
+		return in, err
+	}
+	defer lots.Close()
+	for lots.Next() {
+		var (
+			l    cook.LotGoOff
+			g, k sql.NullString
+		)
+		if err := lots.Scan(&l.ID, &g, &k); err != nil {
+			return in, err
+		}
+		l.GoesOff, l.KeptOn = stock.Date(g.String), stock.Date(k.String)
+		in.Lots = append(in.Lots, l)
+	}
+	if err := lots.Err(); err != nil {
+		return in, err
+	}
+	waste, err := a.db.QueryContext(ctx, `SELECT lot_id, wasted_on, lot_goes_off FROM stock_waste`)
+	if err != nil {
+		return in, err
+	}
+	defer waste.Close()
+	for waste.Next() {
+		var (
+			w  cook.WasteEvent
+			id sql.NullInt64
+			g  sql.NullString
+			on string
+		)
+		if err := waste.Scan(&id, &on, &g); err != nil {
+			return in, err
+		}
+		w.LotID, w.WastedOn, w.LotGoesOff = id.Int64, stock.Date(on), stock.Date(g.String)
+		in.Waste = append(in.Waste, w)
+	}
+	return in, waste.Err()
 }

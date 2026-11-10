@@ -94,7 +94,7 @@ type Store struct {
 // New returns a Store.
 func New(db *sql.DB, clk clock.Clock) *Store { return &Store{db: db, clk: clk} }
 
-const lotColumns = `id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at`
+const lotColumns = `id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, kept_on`
 
 // AddLot inserts a lot. If ClientUUID is set and a lot with it exists, that lot
 // is returned with created=false and nothing is inserted (idempotent offline scans).
@@ -231,9 +231,9 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 			}
 			continue
 		}
-		res, err := tx.ExecContext(ctx, `UPDATE stock_lots SET quantity = ?, purchased = ?, goes_off = ?
+		res, err := tx.ExecContext(ctx, `UPDATE stock_lots SET quantity = ?, purchased = ?, goes_off = ?, kept_on = ?
 			WHERE id = ? AND ingredient_id = ?`,
-			l.Quantity, string(l.Purchased), nullDate(l.GoesOff), l.ID, ingredientID)
+			l.Quantity, string(l.Purchased), nullDate(l.GoesOff), nullDate(l.KeptOn), l.ID, ingredientID)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +274,7 @@ func (s *Store) AddWasteTx(ctx context.Context, tx *sql.Tx, w WasteRecord) (Wast
 // Waste lists waste records with WastedOn in [from, to] (an empty bound is
 // open), ordered by date then ID.
 func (s *Store) Waste(ctx context.Context, from, to stock.Date) ([]WasteRecord, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, ingredient_id, quantity, wasted_on, reason, lot_id
+	rows, err := s.db.QueryContext(ctx, `SELECT id, ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off
 		FROM stock_waste
 		WHERE (? = '' OR wasted_on >= ?) AND (? = '' OR wasted_on <= ?)
 		ORDER BY wasted_on, id`, string(from), string(from), string(to), string(to))
@@ -288,16 +288,18 @@ func (s *Store) Waste(ctx context.Context, from, to stock.Date) ([]WasteRecord, 
 			w      WasteRecord
 			ing    sql.NullInt64
 			lot    sql.NullInt64
+			goes   sql.NullString
 			on     string
 			reason string
 		)
-		if err := rows.Scan(&w.ID, &ing, &w.Quantity, &on, &reason, &lot); err != nil {
+		if err := rows.Scan(&w.ID, &ing, &w.Quantity, &on, &reason, &lot, &goes); err != nil {
 			return nil, err
 		}
 		w.WastedOn = stock.Date(on)
 		w.Reason = Reason(reason)
 		w.IngredientID = optInt(ing)
 		w.LotID = optInt(lot)
+		w.LotGoesOff = stock.Date(goes.String)
 		out = append(out, w)
 	}
 	return out, rows.Err()
@@ -348,8 +350,8 @@ func insertWaste(ctx context.Context, q queryer, w WasteRecord, createdAt string
 		return WasteRecord{}, fmt.Errorf("stock: unknown waste reason %q", w.Reason)
 	}
 	res, err := q.ExecContext(ctx, `INSERT INTO stock_waste
-		(ingredient_id, quantity, wasted_on, reason, lot_id, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		nullInt(w.IngredientID), w.Quantity, string(w.WastedOn), string(w.Reason), nullInt(w.LotID), createdAt)
+		(ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		nullInt(w.IngredientID), w.Quantity, string(w.WastedOn), string(w.Reason), nullInt(w.LotID), nullDate(w.LotGoesOff), createdAt)
 	if err != nil {
 		return WasteRecord{}, err
 	}
@@ -362,16 +364,17 @@ type scanner interface{ Scan(dest ...any) error }
 func scanLot(r scanner) (StoredLot, error) {
 	var (
 		l                     StoredLot
-		goesOff, client       sql.NullString
+		goesOff, client, kept sql.NullString
 		product, shop         sql.NullInt64
 		purchased, src, stamp string
 	)
 	if err := r.Scan(&l.ID, &l.IngredientID, &l.Quantity, &purchased, &goesOff, &src,
-		&product, &shop, &client, &stamp); err != nil {
+		&product, &shop, &client, &stamp, &kept); err != nil {
 		return StoredLot{}, err
 	}
 	l.Purchased = stock.Date(purchased)
 	l.GoesOff = stock.Date(goesOff.String)
+	l.KeptOn = stock.Date(kept.String)
 	l.Source = Source(src)
 	l.ProductID = optInt(product)
 	l.ShopID = optInt(shop)
