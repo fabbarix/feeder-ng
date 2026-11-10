@@ -111,7 +111,7 @@
 }
 
 /* A hero tile with nothing under the photo drops the bottom padding strip. */
-.recipe-detail__hero .tile[data-variant='media']:has(> .tile__media:last-child) {
+.recipe-detail__hero[data-variant='media']:has(> .tile__media:last-child) {
   padding-block-end: 0;
 }
 

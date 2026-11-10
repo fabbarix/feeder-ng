@@ -74,6 +74,11 @@ describe('recipes.css', () => {
     expect(box.some((r) => r.minWidth === 0)).toBe(true)
   })
 
+  it('drops the hero tile bottom padding strip when the tile has only the photo', () => {
+    const r = find((x) => x.selector.includes('.recipe-detail__hero') && x.selector.includes(':has(> .tile__media:last-child)'))
+    expect(r.some((x) => /padding-block-end:\s*0/.test(x.body))).toBe(true)
+  })
+
   it('lets the hero thumb fill the capped container', () => {
     const thumb = find((r) => r.selector.includes(".recipe-detail__hero .recipe-thumb[data-size='hero']"))
     expect(thumb.some((r) => /(block-size|height):\s*100%/.test(r.body))).toBe(true)
