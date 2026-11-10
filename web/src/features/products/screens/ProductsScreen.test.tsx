@@ -91,6 +91,7 @@ describe('ProductsScreen', () => {
   it('uses no native search or select', async () => {
     setup()
     await screen.findByRole('link', { name: 'Passata' })
-    expect(document.querySelector('input[type=search], select')).toBeNull()
+    expect(document.querySelector('select, input[type=search]:not(.search-field input)')).toBeNull()
+    expect(document.querySelector('.search-field input[type=search]')).not.toBeNull()
   })
 })

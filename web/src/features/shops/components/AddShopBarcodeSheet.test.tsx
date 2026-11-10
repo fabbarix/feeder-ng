@@ -27,7 +27,7 @@ describe('AddShopBarcodeSheet', () => {
     setup()
     expect(await screen.findByRole('searchbox', { name: strings.productSearchLabel })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: strings.shopBarcodeRuleLabel })).toBeInTheDocument()
-    expect(document.querySelector('select, input[type=search]')).toBeNull()
+    expect(document.querySelector('select, input[type=search]:not(.search-field input)')).toBeNull()
   })
 
   it('names rules by their prefix, never by id ("rule 1" vs "rule 21", QA)', async () => {

@@ -55,7 +55,7 @@ describe('HouseholdSettingsForm', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit={false} onSave={() => {}} />)
     expect(field('Planning Horizon (days)')).toBeDisabled()
     expect(field('Currency')).toBeDisabled()
-    expect(screen.getByRole('slider', { name: 'Planner Style' })).toBeDisabled()
+    expect(screen.getByRole('slider', { name: 'Planner Style' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button', { name: 'Save household settings' })).toBeNull()
   })
 

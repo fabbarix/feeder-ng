@@ -20,7 +20,7 @@ describe('MealSlotWeek (5.14: a week of 7 rows, slots as chips)', () => {
   })
 
   it('puts each Meal Slot in its weekday as a chip with its name and 24 h time, earliest first', () => {
-    setup({ slots: [{ ...mondayLunch, id: 20, name: 'Breakfast', time: '07:30' }, mondayLunch] })
+    setup({ slots: [{ ...mondayLunch, id: 20, name: 'Breakfast', time: '07:30' }, mondayLunch, tuesdayDinner] })
     const monday = screen.getByRole('group', { name: 'Monday' })
     expect(within(monday).getAllByRole('button', { name: /^(Breakfast|Lunch) / }).map((b) => b.textContent)).toEqual(['Breakfast 07:30', 'Lunch 12:30'])
     expect(within(screen.getByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' })).toBeInTheDocument()

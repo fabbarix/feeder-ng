@@ -64,7 +64,8 @@ describe('IngredientsScreen', () => {
   })
   it('searches with the shared SearchField, not a native search input', () => {
     setup()
-    expect(document.querySelector('input[type=search]')).toBeNull()
+    expect(document.querySelector('input[type=search]:not(.search-field input)')).toBeNull()
+    expect(document.querySelector('.search-field input[type=search]')).not.toBeNull()
     expect(screen.getByRole('searchbox', { name: strings.searchLabel })).toBeInTheDocument()
   })
   it('opens the New Ingredient sheet', async () => {

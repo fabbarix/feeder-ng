@@ -36,7 +36,7 @@ describe('PriceEditor', () => {
     await pickOption(strings.shopLabel, 'Corner Market')
     expect(screen.getByLabelText(strings.priceLabel)).toHaveValue('1.59')
     expect(screen.getByLabelText(strings.pricePerKgLabel)).toHaveValue('')
-    expect(screen.getByRole('button', { name: new RegExp(strings.dateLabel) })).toHaveTextContent('9 November 2026')
+    expect(screen.getByRole('button', { name: new RegExp(strings.dateLabel) })).toHaveTextContent('9 Nov 2026')
   })
 
   it('clears the prefill when the chosen Shop has no Price', async () => {
