@@ -213,6 +213,7 @@
     justify-content: flex-start;
     height: 48px;
     padding-inline: var(--space-4);
+    width: auto;
     margin-inline: var(--space-3);
     gap: var(--space-3);
   }
