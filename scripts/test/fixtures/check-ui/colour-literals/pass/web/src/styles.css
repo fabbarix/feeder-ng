@@ -1,0 +1,2 @@
+:root { --color-bg: #ffffff; }
+.x { color: var(--color-bg); }

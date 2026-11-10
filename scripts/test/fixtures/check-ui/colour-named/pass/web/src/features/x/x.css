@@ -1,0 +1,5 @@
+.x { color: transparent; }
+.y { background: currentColor; }
+.z { color: inherit; border-color: var(--white); }
+.white { color: var(--color-text); }
+.t { font-family: "Tan Sans", sans-serif; }
