@@ -5,18 +5,29 @@ import { useLeftovers, usePlan } from '../../plan'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import { useHouseholdSettings } from '../../settings/hooks/useHouseholdSettings'
 import { BentoGrid, EmptyState } from '../../../ui'
-import { StartCookTile, TonightTile, ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile, TomorrowTile, StreakTile } from '../components/BoardTiles'
+import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile, TomorrowTile, StreakTile, TonightTile } from '../components/BoardTiles'
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
+import { BOARD_LAYOUT, type BoardCell } from '../lib/layout'
 import { leftoverRows, startCookPath, tomorrowMeals, tonightMeal, useSoonRows } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import '../board.css'
 
+/** Places one tile on its BOARD_LAYOUT cell. */
+function Cell({ id, children }: { id: BoardCell['id']; children: ReactNode }): ReactNode {
+  const cell = BOARD_LAYOUT.find((c) => c.id === id)
+  const style = cell ? { gridColumn: `${cell.col} / span ${cell.colSpan}`, gridRow: `${cell.row} / span ${cell.rowSpan}` } : undefined
+  return (
+    <div className="board-cell" style={style}>
+      {children}
+    </div>
+  )
+}
+
 /**
- * The kitchen board (`/board`, tablet). A `BentoGrid columns={4}`, 4x3:
- * row 1: ClockTile (wide), TonightTile (wide, accent);
- * row 2: NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile;
- * row 3: TomorrowTile (wide), StreakTile, StartCookTile.
+ * The kitchen board (`/board`, wall display). A `BentoGrid columns={4}` of 12 cells placed by lib/layout
+ * BOARD_LAYOUT (4 x 3 at 1280 x 800, no overlap): Tonight is the 2 x 2 hero with the big "Cook" button (starts Cook
+ * Mode); the clock, Next Advance Step, Leftovers, Timers, Use soon (2 x 1), Tomorrow and the streak fill the rest.
  * Data: useBoard (theme, streak, nextAdvance), usePlan (slots, today) and
  * useLeftovers from features/plan (import after the branch is synced with
  * main), Stock totals via features/stock's api (useSoonRows), useTimers() for
@@ -26,7 +37,7 @@ import '../board.css'
  * route only) and sets `data-board` for board.css (>= 3rem clock and meal names,
  * >= 1.5rem body text, readable from 2 m). Loading and error states use
  * EmptyState. NextAdvanceTile's Done calls cookApi.setMark and refetches.
- * StartCookTile navigates to lib/tiles.startCookPath.
+ * The Cook button navigates to lib/tiles.startCookPath.
  */
 export function BoardScreen(): ReactNode {
   const board = useBoard()
@@ -53,15 +64,30 @@ export function BoardScreen(): ReactNode {
   return (
     <div className="board-screen" data-board="true">
       <BentoGrid columns={4}>
-        <ClockTile now={clock} timeZone={zone} showFallbackHint={data.theme.source === 'fallback'} />
-        <TonightTile slot={tonight} />
-        <NextAdvanceTile next={data.nextAdvance} nowMs={clock.getTime()} onDone={markDone} />
-        <BoardLeftoversTile rows={leftoverRows(leftovers, 5)} />
-        <UseSoonTile rows={useSoonRows(totals.data ?? [], 5)} />
-        <BoardTimersTile items={timers.items} />
-        <TomorrowTile slots={tomorrowMeals(plan.slots, data.today)} />
-        <StreakTile days={data.streak.days} />
-        <StartCookTile onStart={startPath ? () => navigate(startPath) : undefined} />
+        <Cell id="tonight">
+          <TonightTile slot={tonight} onCook={startPath ? () => navigate(startPath) : undefined} />
+        </Cell>
+        <Cell id="clock">
+          <ClockTile now={clock} timeZone={zone} />
+        </Cell>
+        <Cell id="nextAdvance">
+          <NextAdvanceTile next={data.nextAdvance} nowMs={clock.getTime()} onDone={markDone} />
+        </Cell>
+        <Cell id="leftovers">
+          <BoardLeftoversTile rows={leftoverRows(leftovers, 5)} />
+        </Cell>
+        <Cell id="timers">
+          <BoardTimersTile items={timers.items} />
+        </Cell>
+        <Cell id="tomorrow">
+          <TomorrowTile slots={tomorrowMeals(plan.slots, data.today)} />
+        </Cell>
+        <Cell id="useSoon">
+          <UseSoonTile rows={useSoonRows(totals.data ?? [], 5)} />
+        </Cell>
+        <Cell id="streak">
+          <StreakTile days={data.streak.days} />
+        </Cell>
       </BentoGrid>
     </div>
   )
