@@ -47,6 +47,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/products/{id}", a.getProduct)
 	r.User("PATCH /api/products/{id}", a.patchProduct)
 	r.User("DELETE /api/products/{id}", a.deleteProduct)
+	r.User("POST /api/products/{id}/archive", a.archiveProduct)
+	r.User("POST /api/products/{id}/unarchive", a.unarchiveProduct)
 	r.User("POST /api/products/{id}/barcodes", a.addBarcode)
 	r.User("DELETE /api/products/{id}/barcodes/{code}", a.removeBarcode)
 	r.User("PUT /api/products/{id}/shops/{shopId}", a.setSoldAt)
@@ -291,6 +293,9 @@ type codeBody struct {
 func (a *api) listProducts(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	f := store.Filter{Query: q.Get("q"), Barcode: q.Get("barcode")}
+	if raw := q.Get("includeArchived"); raw != "" {
+		f.IncludeArchived = raw == "1" || raw == "true"
+	}
 	if raw := q.Get("ingredient"); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
@@ -413,6 +418,29 @@ func (a *api) deleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	a.changed("products")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// archiveProduct and unarchiveProduct set the archived flag (idempotent). The body is ignored.
+func (a *api) archiveProduct(w http.ResponseWriter, r *http.Request) {
+	a.setArchived(w, r, true)
+}
+
+func (a *api) unarchiveProduct(w http.ResponseWriter, r *http.Request) {
+	a.setArchived(w, r, false)
+}
+
+func (a *api) setArchived(w http.ResponseWriter, r *http.Request, archived bool) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	d, err := a.store.SetArchived(r.Context(), id, archived)
+	if err != nil {
+		writeErr(w, err, "product")
+		return
+	}
+	a.changed("products")
+	httpx.WriteJSON(w, http.StatusOK, d)
 }
 
 func (a *api) addBarcode(w http.ResponseWriter, r *http.Request) {
@@ -695,6 +723,8 @@ func writeErr(w http.ResponseWriter, err error, kind string) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_item_code", "The item code must have the rule's item digits")
 	case errors.Is(err, store.ErrUnknownIngredient):
 		httpx.WriteError(w, http.StatusBadRequest, "unknown_ingredient", "No such Ingredient")
+	case errors.As(err, &taken) && taken.Archived:
+		httpx.WriteError(w, http.StatusConflict, "barcode_archived", err.Error())
 	case errors.As(err, &taken):
 		httpx.WriteError(w, http.StatusConflict, "barcode_taken", err.Error())
 	case errors.Is(err, store.ErrNotFound):
@@ -703,6 +733,8 @@ func writeErr(w http.ResponseWriter, err error, kind string) {
 		httpx.WriteError(w, http.StatusConflict, "name_taken", "A Shop with that name already exists")
 	case errors.Is(err, store.ErrDuplicatePrefix):
 		httpx.WriteError(w, http.StatusConflict, "duplicate_prefix", "This Shop already has a rule with that prefix")
+	case errors.Is(err, store.ErrBought):
+		httpx.WriteError(w, http.StatusConflict, "product_bought", "This Product was bought, so it cannot be deleted; archive it instead.")
 	case errors.Is(err, store.ErrInUse):
 		httpx.WriteError(w, http.StatusConflict, "in_use", "It is still in use")
 	case errors.Is(err, product.ErrInvalid):
