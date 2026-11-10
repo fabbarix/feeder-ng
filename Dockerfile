@@ -2,7 +2,7 @@
 # a non-root user with the data on the /data volume.
 
 # Stage 1: the frontend.
-FROM node:24-alpine AS web
+FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 RUN npm install -g pnpm@10.28.1
 WORKDIR /src/web
 COPY web/package.json web/pnpm-lock.yaml ./
@@ -10,8 +10,9 @@ RUN pnpm install --frozen-lockfile
 COPY web/ ./
 RUN pnpm build
 
-# Stage 2: the server binary, with the SPA embedded.
-FROM golang:1.26 AS build
+# Stage 2: the server binary, with the SPA embedded. It runs on the build machine and
+# cross-compiles for TARGETOS/TARGETARCH, so a multi-arch build needs no emulation.
+FROM --platform=$BUILDPLATFORM golang:1.26 AS build
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
