@@ -1,0 +1,63 @@
+/* Switch (docs/design/ui-fix-plan.md 4.10): 52 x 32 track, 26 thumb. Tokens only. */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: 44px;
+}
+
+.switch-row__label {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  inline-size: 52px;
+  block-size: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-outline);
+  cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+
+.switch[aria-checked='true'] {
+  background: var(--color-accent);
+}
+
+.switch__thumb {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.switch[aria-checked='true'] .switch__thumb {
+  transform: translateX(20px);
+}
+
+.switch:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .switch__thumb {
+    transition: none;
+  }
+}

@@ -1,41 +1,106 @@
-/* BottomSheet: moved from styles.css unrestyled (WP4 rebuilds it on <dialog>). The scrim is the scrim token. */
-.sheet-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-}
-
-.sheet-backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--scrim);
-}
-
+/* BottomSheet (docs/design/ui-fix-plan.md 4.7): a <dialog>. Radius 28 top, grab handle 36x4 centred 8 px from the top,
+   padding 20 + safe area, max-height 85dvh, the body scrolls, the footer is sticky. Tokens only. */
 .sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 85vh;
-  overflow: auto;
-  padding: 24px 20px 32px;
-  border-radius: 28px 28px 0 0;
+  position: fixed;
+  inset: auto 0 0 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
-  animation: sheet-in var(--motion-fast) ease-out;
+  color: var(--color-text);
+  box-shadow: var(--elev-3);
+  overflow: hidden;
+  animation: sheet-in var(--dur-3) var(--ease-out);
+}
+
+.sheet::backdrop {
+  background: var(--scrim);
+  animation: sheet-scrim var(--dur-3) var(--ease-out);
+}
+
+.sheet__panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+  padding: 8px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.sheet__grip {
+  align-self: center;
+  inline-size: 36px;
+  block-size: 4px;
+  margin-block-end: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+}
+
+.sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  font-weight: var(--text-title-2-weight);
+  line-height: var(--text-title-2-line);
+}
+
+.sheet__title:focus {
+  outline: none;
+}
+
+.sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet__footer {
+  position: sticky;
+  inset-block-end: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  background: var(--color-surface);
 }
 
 @keyframes sheet-in {
   from {
+    opacity: 0;
     transform: translateY(40px);
+  }
+}
+
+@keyframes sheet-scrim {
+  from {
     opacity: 0;
   }
 }
 
-.sheet__title {
-  margin: 0 0 12px;
-  font-size: 1.25rem;
+@media (min-width: 768px) {
+  .sheet {
+    inset: 0;
+    margin: auto;
+    inline-size: min(560px, 100vw - 48px);
+    max-height: 85dvh;
+    border-radius: var(--radius-dialog);
+  }
 }
 
-.sheet__body {
-  display: block;
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop {
+    animation: none;
+  }
 }

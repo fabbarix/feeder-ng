@@ -1,0 +1,19 @@
+/* OfflineBanner (docs/design/ui-fix-plan.md 4.14): 40 px pill, surface-2, CloudSlash 16. Tokens only. */
+.offline-banner {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-block-size: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+}
+
+.offline-banner__queue {
+  color: var(--color-muted);
+}

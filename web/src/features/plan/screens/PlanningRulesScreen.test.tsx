@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { mockApi, renderWithProviders } from '../test-utils'
 import { PlanningRulesScreen } from './PlanningRulesScreen'
+import { findNotice } from '../../../test/notices'
 
 const base = {
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, tag: 'pizza' }],
@@ -56,6 +57,6 @@ describe('PlanningRulesScreen', () => {
     await userEvent.selectOptions(screen.getByLabelText('Meal Slot'), 'Friday Dinner')
     await userEvent.selectOptions(await screen.findByLabelText('Recipe'), 'Curry')
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('That Slot Rule already exists.')
+    expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
   })
 })

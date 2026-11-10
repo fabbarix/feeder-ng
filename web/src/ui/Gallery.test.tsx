@@ -82,4 +82,10 @@ describe('Gallery (dev catalogue)', () => {
     expect(main).toMatch(/Gallery/)
     expect(screen).toBeDefined()
   })
+
+  it('the Switch example no longer mentions the removed secondary colour feature', () => {
+    render(<Gallery />)
+    expect(screen.queryByText(/secondary colour/i)).toBeNull()
+    expect(screen.getAllByRole('switch', { name: 'Notify me' }).length).toBeGreaterThan(0)
+  })
 })

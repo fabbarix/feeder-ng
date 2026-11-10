@@ -1,3 +1,6 @@
+import type { KeyboardEvent } from 'react'
+import { IconButton } from './IconButton'
+import { stepValue } from './lib/stepValue'
 import { uiStrings } from './strings'
 import './Stepper.css'
 
@@ -11,33 +14,51 @@ export interface StepperProps {
   unit?: string
 }
 
-/** A − value + control for small whole-number amounts. Clamps to its bounds. */
+/** A − value + control for small amounts. Accessible: a group named by `label`, the value is a spinbutton (arrows, Home, End). */
 export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit }: StepperProps) {
-  const upper = max ?? Number.POSITIVE_INFINITY
-  const decreaseDisabled = value <= min
-  const increaseDisabled = value >= upper
+  const bounds = { step, min, max }
+  const move = (next: number) => {
+    if (next !== value) onChange(next)
+  }
+  const onKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      move(stepValue(value, e.key === 'ArrowUp' ? 1 : -1, bounds))
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      move(min)
+    } else if (e.key === 'End' && max !== undefined) {
+      e.preventDefault()
+      move(max)
+    }
+  }
   return (
-    <div className="stepper">
-      <button
-        type="button"
-        className="stepper__button"
-        aria-label={uiStrings.decrease(label)}
-        disabled={decreaseDisabled}
-        onClick={() => onChange(Math.max(min, value - step))}
+    <div role="group" aria-label={label} className="stepper">
+      <IconButton
+        icon="minus"
+        label={uiStrings.decrease(label)}
+        disabled={value <= min}
+        onClick={() => move(stepValue(value, -1, bounds))}
+      />
+      <span
+        role="spinbutton"
+        tabIndex={0}
+        aria-label={label}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        className="stepper__value"
+        onKeyDown={onKeyDown}
       >
-        −
-      </button>
-      <span className="stepper__value">{value}</span>
+        {String(value)}
+      </span>
       {unit ? <span className="stepper__unit">{unit}</span> : null}
-      <button
-        type="button"
-        className="stepper__button"
-        aria-label={uiStrings.increase(label)}
-        disabled={increaseDisabled}
-        onClick={() => onChange(Math.min(upper, value + step))}
-      >
-        +
-      </button>
+      <IconButton
+        icon="add"
+        label={uiStrings.increase(label)}
+        disabled={max !== undefined && value >= max}
+        onClick={() => move(stepValue(value, 1, bounds))}
+      />
     </div>
   )
 }

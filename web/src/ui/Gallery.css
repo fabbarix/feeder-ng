@@ -1,6 +1,7 @@
 /* Dev catalogue (/_gallery). Each scheme section carries its own tokens, so light and dark sit side by side. */
 .gallery {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   padding: var(--space-4);
 }
@@ -45,4 +46,10 @@
   gap: var(--space-3);
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   inline-size: 100%;
+}
+
+.gallery__stack {
+  display: grid;
+  gap: var(--space-3);
+  inline-size: min(360px, 100vw - 64px);
 }

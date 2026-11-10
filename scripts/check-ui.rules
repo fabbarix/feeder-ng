@@ -3,6 +3,7 @@
 #   <rule>.fail_paths=web/src/ui web/src/features/plan
 # (space separated path prefixes): violations under them fail, the rest still warn.
 native-ui=warn
+native-ui.fail_paths=web/src/ui
 phosphor=fail
 colour-literals=warn
 colour-literals.fail_paths=web/src/ui
@@ -12,3 +13,4 @@ sizing=warn
 sizing.fail_paths=web/src/ui
 glossary=warn
 native-search=warn
+native-search.fail_paths=web/src/ui
