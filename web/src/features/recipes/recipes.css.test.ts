@@ -65,10 +65,18 @@ describe('recipes.css', () => {
     })
   })
 
-  it('caps the detail hero at 170 px (5.9)', () => {
-    const capped = find((r) => r.selector.includes('.recipe-detail__hero') && /max-(block-size|height):\s*170px/.test(r.body))
-    expect(capped.length).toBeGreaterThan(0)
-    expect(capped.some((r) => r.minWidth === 0)).toBe(true)
+  it('caps the detail hero at 170 px on the shared media container (5.9)', () => {
+    const box = find((r) => r.selector.includes('.recipe-detail__hero .tile__media'))
+    expect(box.length).toBeGreaterThan(0)
+    const body = box.map((r) => r.body).join(' ')
+    expect(body).toMatch(/aspect-ratio:\s*auto/)
+    expect(body).toMatch(/max-(block-size|height):\s*170px/)
+    expect(box.some((r) => r.minWidth === 0)).toBe(true)
+  })
+
+  it('lets the hero thumb fill the capped container', () => {
+    const thumb = find((r) => r.selector.includes(".recipe-detail__hero .recipe-thumb[data-size='hero']"))
+    expect(thumb.some((r) => /(block-size|height):\s*100%/.test(r.body))).toBe(true)
   })
 
   describe('the Tag row fade (5.8)', () => {
