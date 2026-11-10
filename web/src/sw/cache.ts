@@ -40,3 +40,19 @@ export function staleCacheUrls(cachedUrls: readonly string[], manifestUrls: read
   const wanted = new Set(manifestUrls.map((u) => new URL(u, scope).href))
   return cachedUrls.filter((u) => !wanted.has(u))
 }
+
+/**
+ * The precache manifest URLs without duplicates (first occurrence wins, order kept), resolved against `scope`.
+ * Cache.addAll rejects with InvalidStateError on duplicate requests, which stops the worker from installing.
+ */
+export function uniquePrecacheUrls(manifestUrls: readonly string[], scope: string): string[] {
+  const seen = new Set<string>()
+  const urls: string[] = []
+  for (const u of manifestUrls) {
+    const href = new URL(u, scope).href
+    if (seen.has(href)) continue
+    seen.add(href)
+    urls.push(href)
+  }
+  return urls
+}
