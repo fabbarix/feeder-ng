@@ -1,0 +1,89 @@
+/* The kitchen board: a wall display, read from two metres. Big type, four columns. */
+.board-screen {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--color-surface, #111);
+  color: var(--color-on-surface, #eee);
+}
+
+.board-screen .bento-grid {
+  gap: 20px;
+}
+
+/* A "wide" tile is two of the four columns here, not the full row. */
+.board-screen .tile[data-size='wide'] {
+  grid-column: span 2;
+}
+
+.board-screen .tile {
+  min-height: 180px;
+  font-size: 1.5rem;
+}
+
+.board-tile__heading {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.board-clock__time {
+  margin: 0;
+  font-size: 9rem;
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-clock__date {
+  margin: 8px 0 0;
+  font-size: 2rem;
+}
+
+.board-tonight__recipe,
+.board-next__text {
+  margin: 0;
+  font-size: 3rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.board-tonight__slot,
+.board-next__recipe,
+.board-next__due {
+  margin: 8px 0 0;
+  font-size: 1.75rem;
+}
+
+.board-streak__days {
+  margin: 0;
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-list,
+.board-chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.board-chips {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.board-start__button {
+  width: 100%;
+  min-height: 140px;
+  font-size: 2rem;
+}
+
+.board-screen .timer-tile__time {
+  font-size: 2.5rem;
+  font-variant-numeric: tabular-nums;
+}
