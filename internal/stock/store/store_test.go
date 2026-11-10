@@ -352,3 +352,215 @@ func TestUpdateTxReturnsFnErrorAndRecordsWasteInTheCallersTransaction(t *testing
 		t.Fatal("lot changed despite rollback")
 	}
 }
+
+// R11c: a Keep is persisted on the Lot (kept_on) and survives Update/reads.
+func TestUpdatePersistsKeptOn(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 500, "2026-11-01", "2026-11-05")
+	if l.KeptOn != stock.None {
+		t.Fatalf("new lot KeptOn = %q", l.KeptOn)
+	}
+	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: []stock.Lot{stock.KeepOn(lots[0], "2026-11-09")}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Lot(ctx, l.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.GoesOff != "2026-11-06" || got.KeptOn != "2026-11-09" {
+		t.Errorf("lot = %+v, want GoesOff 2026-11-06 and KeptOn 2026-11-09", got)
+	}
+}
+
+// R11c: a waste record keeps the go-off date of the Lot that had already gone off.
+func TestWasteRecordKeepsTheLotGoOffDate(t *testing.T) {
+	f := setup(t)
+	ing, lot := f.thighs, int64(42)
+	if _, err := f.st.AddWaste(ctx, store.WasteRecord{IngredientID: &ing, Quantity: 200, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled, LotID: &lot, LotGoesOff: "2026-11-03"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.st.AddWaste(ctx, store.WasteRecord{IngredientID: &ing, Quantity: 5, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Waste(ctx, "", "")
+	if err != nil || len(got) != 2 {
+		t.Fatalf("waste = %+v %v", got, err)
+	}
+	if got[0].LotGoesOff != "2026-11-03" || got[1].LotGoesOff != stock.None {
+		t.Errorf("LotGoesOff = %q, %q; want 2026-11-03 and none", got[0].LotGoesOff, got[1].LotGoesOff)
+	}
+}
+
+// ---- R11c: go-off records for Lots that leave Stock without a Throw out ----
+
+func (f fixture) removeAll(t *testing.T, ing int64, today stock.Date) {
+	t.Helper()
+	if _, err := f.st.Update(ctx, ing, func([]stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Today: today}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (f fixture) goOffs(t *testing.T) []store.GoOffRecord {
+	t.Helper()
+	got, err := f.st.GoOffs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// A gone-off, unforgiven Lot that is deleted by any Update (Cooked, Stock-take) leaves its go-off behind.
+func TestUpdateRecordsTheGoOffOfADeletedGoneOffLot(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01", "2026-11-03") // went off 11-04
+	f.removeAll(t, f.thighs, "2026-11-06")
+	got := f.goOffs(t)
+	if len(got) != 1 || got[0].LotID != l.ID || got[0].GoesOff != "2026-11-03" || got[0].RecordedOn != "2026-11-06" {
+		t.Fatalf("go-offs = %+v, want one record of lot %d (goes off 2026-11-03, recorded 2026-11-06)", got, l.ID)
+	}
+}
+
+func TestUpdateRecordsNothingForLotsThatDidNotGoOffUnforgiven(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 100, "2026-11-01", "2026-11-09") // goes off today: still fine, goes off tomorrow
+	f.add(t, f.thighs, 100, "2026-11-01", "2026-11-20") // far ahead
+	f.add(t, f.thighs, 100, "2026-11-01", stock.None)   // never goes off
+	kept := f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		out := make([]stock.Lot, len(lots))
+		for i, l := range lots {
+			out[i] = l
+			if l.ID == kept.ID {
+				out[i] = stock.KeepOn(l, "2026-11-08") // go-off 11-04 forgiven
+			}
+		}
+		return store.Mutation{Lots: out}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.removeAll(t, f.thighs, "2026-11-09")
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none (fine today, future, undated, Kept)", got)
+	}
+}
+
+// A Kept Lot whose new go-off date has passed again is an unforgiven go-off, recorded on removal.
+func TestUpdateRecordsTheGoOffOfAKeptLotThatWentOffAgain(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: []stock.Lot{stock.KeepOn(lots[0], "2026-11-04")}}, nil // now 11-04, kept 11-04
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.removeAll(t, f.thighs, "2026-11-09") // went off again on 11-05, after the Keep
+	got := f.goOffs(t)
+	if len(got) != 1 || got[0].LotID != l.ID || got[0].GoesOff != "2026-11-04" {
+		t.Fatalf("go-offs = %+v, want lot %d with go-off 2026-11-04", got, l.ID)
+	}
+}
+
+// Without Today the store cannot tell whether a Lot had gone off: it records nothing.
+func TestUpdateWithoutTodayRecordsNoGoOff(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	f.removeAll(t, f.thighs, stock.None)
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none", got)
+	}
+}
+
+// A partial deduction keeps the Lot, so nothing is recorded yet; emptying it later records it once.
+func TestPartialDeductionRecordsNothingUntilTheLotIsGone(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 200, "2026-11-01", "2026-11-03")
+	part := func(need float64) {
+		if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+			return store.Mutation{Lots: stock.Deduct(lots, need).Lots, Today: "2026-11-09"}, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	part(50)
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Fatalf("go-offs after a partial deduction = %+v, want none", got)
+	}
+	part(150)
+	if got := f.goOffs(t); len(got) != 1 {
+		t.Fatalf("go-offs after emptying = %+v, want 1", got)
+	}
+}
+
+// A Lot thrown out (its waste record carries the LotID) is counted by the waste record, not twice.
+// This also covers a Lot partly used first and Thrown out later: the go-off counts once.
+func TestThrowOutOfAPartlyUsedGoneOffLotRecordsNoGoOff(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01", "2026-11-03")
+	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Lots: stock.Deduct(lots, 50).Lots, Today: "2026-11-06"}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ing, id := f.thighs, l.ID
+	if _, err := f.st.Update(ctx, f.thighs, func([]stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Today: "2026-11-09", Waste: []store.WasteRecord{{
+			IngredientID: &ing, Quantity: 150, WastedOn: "2026-11-09", Reason: store.ReasonSpoiled, LotID: &id, LotGoesOff: "2026-11-03",
+		}}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none (the waste record counts it)", got)
+	}
+	if w, _ := f.st.Waste(ctx, "", ""); len(w) != 1 {
+		t.Errorf("waste = %+v, want one record", w)
+	}
+}
+
+// The ledger is not waste: no quantity, never in the waste list.
+func TestGoOffRecordsAreNotListedAsWaste(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	f.removeAll(t, f.thighs, "2026-11-09")
+	if w, err := f.st.Waste(ctx, "", ""); err != nil || len(w) != 0 {
+		t.Errorf("waste = %+v %v, want none", w, err)
+	}
+}
+
+// The record commits or rolls back with the caller's transaction (Cooked deducts inside one).
+func TestGoOffRecordRollsBackWithTheCallersTransaction(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	tx, err := f.st.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.st.UpdateTx(ctx, tx, f.thighs, func([]stock.Lot) (store.Mutation, error) {
+		return store.Mutation{Today: "2026-11-09"}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_ = tx.Rollback()
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v after rollback, want none", got)
+	}
+	if lots, _ := f.st.Lots(ctx, f.thighs); len(lots) != 1 {
+		t.Errorf("lots = %d after rollback, want 1", len(lots))
+	}
+}
+
+// Undo of a scan corrects a mistake: the Lot never counted, so no go-off is recorded.
+func TestDeleteLotRecordsNoGoOff(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
+	if err := f.st.DeleteLot(ctx, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none", got)
+	}
+}

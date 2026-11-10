@@ -1,16 +1,17 @@
 /* TimeField: two spinbutton segments in the shared 48 px control. Tabular numerals. Tokens only. */
 .time-field {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-1);
   min-block-size: 48px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--field-pad-inline);
   border: 1.5px solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
-  align-self: start;
+  align-self: stretch;
+  inline-size: 100%;
 }
 
 .time-field[data-disabled] {
@@ -19,12 +20,16 @@
 
 .time-field__segment {
   display: inline-block;
-  inline-size: 2.2ch;
-  min-inline-size: 2.2ch;
+  inline-size: 3ch;
+  min-inline-size: 3ch;
+  block-size: 40px;
   margin: 0;
-  padding: var(--space-1) var(--space-1);
+  padding: 0;
   border: 0;
-  border-radius: var(--radius-chip);
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: var(--radius-control);
+  font-variant-numeric: tabular-nums;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -44,8 +49,9 @@
 
 .time-field__segment:focus-visible {
   background: var(--color-soft);
+  border-radius: var(--radius-control);
   outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: 0;
 }
 
 .time-field__segment[aria-valuenow] {

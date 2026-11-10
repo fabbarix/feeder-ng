@@ -19,6 +19,8 @@ Status: **draft for review** (2026-11-09). The terms in **bold** are defined in 
 
 ## 3. Household setup
 
+The Household records the moment it was created in Feeder (never edited, not a setting). It only feeds the zero-waste streak's age cap (§6.1). An install that predates this takes the earliest of its first User, Member or Stock Lot.
+
 | Setting | Default | Notes |
 |---|---|---|
 | Time zone | from the browser at first setup | All slot times and reminders use it. |
@@ -70,7 +72,21 @@ A purchase or Price that arrives late for an archived Product (an offline phone 
 - Lots are **added** by scanning at a Shop (pack size or decoded weight), by Stock-take, or by manual "add".
 - Lots are **deducted** only when a Planned Meal is marked **Cooked** ([ADR 0003](../adr/0003-stock-lots-deducted-on-cooked.md)): Batches × ingredient quantity (optional lines excluded), taken from the lot that goes off soonest first, then the oldest. Marking as Cooked never blocks. If Stock is short, it warns (e.g. "Stock shows only 300 g chicken thighs, the recipe uses 800 g") and offers a one-tap Stock correction. If the warning is dismissed, Stock floors at 0 and the missing amount is ignored.
 - **Stock-take** sets an Ingredient's total. A decrease removes quantity from the soonest-to-spoil lots first. An increase adds a new lot dated today.
-- Lots past their go-off date are listed as **spoiled** on Today ("Throw out or keep?"). "Throw out" removes the lot and records the waste, which feeds the zero-waste streak. "Keep" pushes the lot's go-off date out by 1 day from its existing go-off date (not from today).
+- Lots past their go-off date are listed as **spoiled** on Today ("Throw out or keep?"). "Throw out" removes the lot and records the waste. "Keep" pushes the lot's go-off date out by 1 day from its existing go-off date (not from today) and records the day it was chosen. Both feed the zero-waste streak (below). Throw out and Keep are offered only for a Lot that has gone off.
+
+### 6.1 Zero-waste streak
+The streak is the number of whole household days (household time zone, §3) since the last **waste event**, never more than the Household's age. It is shown on Today and on the Kitchen board (§11); both show the same number.
+
+- **Go-off day.** A Lot is still fine on its go-off date; it **goes off** on the next household day (go-off date + 1), the first day it is listed as spoiled. A Lot with no go-off date never goes off.
+- **Waste events.** A waste event counts on one household day:
+  1. *A Lot going off.* The day it went off, whether or not anyone has acted on it yet. It counts the moment the day starts, so a Lot that went off today makes the streak 0 today.
+  2. *A Throw out of a Lot that had already gone off* is the same event as (1): it counts on the day the Lot went off, **not** on the day of the Throw out. It is never a second event. So a Lot that went off Monday and is thrown out on Thursday resets the streak on Monday.
+  3. *Waste of anything not covered by (1)*: a Leftover discarded after its Use-by (§8) counts on the day it was discarded; a Lot thrown out that was **not** an unforgiven go-off (see Keep) counts on the day of the Throw out. Waste of such a Lot on the day it is recorded makes the streak 0 that day.
+- **The go-off persists.** Once a Lot has gone off unforgiven, the event stays on its day however the Lot later leaves Stock: Throw out (see 2), used up by a Cooked meal (Cooked deducts the soonest-to-go-off Lot first, so spoiled Lots go first), counted away by a Stock-take, or any other removal except Undo of a scan (a correction, not a go-off). A partly used Lot still counts once. The event is kept as a go-off record with no quantity: it is not waste and does not appear in waste lists or reports.
+- **Keep.** Choosing Keep means the Lot did not go off: every go-off of that Lot up to and including the day of the Keep is forgiven, even when the pushed go-off date is still in the past (Keep moves it by one day only, so the Lot stays on the spoiled list and may be kept again). If the Lot then goes off again after the day of the Keep, that is a new waste event on that new go-off day. Throwing out a Lot whose go-off was forgiven counts as in 3, on the day of the Throw out.
+- **Household age cap.** The streak is at most the number of days since the Household was created in Feeder (household date of creation, in the household time zone). Go-offs and waste dated before the Household existed (backdated purchase dates, imported dates) do not reduce it below the cap and never raise it above it. Purchase dates alone never lengthen the streak.
+- **No Lots at all.** The streak is the Household's age: days since creation (0 on the creation day). Having no Stock is not waste.
+- Waste events dated in the future are ignored. All dates are household dates, so around midnight the same instant can be two different days for two time zones.
 
 ## 7. The planner
 

@@ -48,21 +48,24 @@ Feature: Kitchen board
     And I open the kitchen board
     Then the kitchen board is dark using the sun
 
-  Scenario: The zero-waste streak counts the days since the last waste
-    Given the kitchen knows the Ingredient "chicken" in g with a Shelf Life of 4 days
+  # R11c: a Lot going off is the waste event; the throw-out of a gone-off Lot is not a second one.
+  Scenario: The zero-waste streak counts the days since a Lot went off
+    Given the Household was created on "2026-10-01"
+    And the kitchen knows the Ingredient "chicken" in g with a Shelf Life of 4 days
     And the kitchen has a Stock Lot of "chicken" bought on "2026-11-01"
     When I open the kitchen board
-    Then the kitchen board shows a zero-waste streak of 8 days
+    Then the kitchen board shows a zero-waste streak of 3 days
     When the kitchen throws out every spoiled Stock Lot
     And I open the kitchen board
-    Then the kitchen board shows a zero-waste streak of 0 days
+    Then the kitchen board shows a zero-waste streak of 3 days
     When 3 days pass
     And I open the kitchen board
-    Then the kitchen board shows a zero-waste streak of 3 days
+    Then the kitchen board shows a zero-waste streak of 6 days
 
-  Scenario: Nothing in Stock yet is no streak
+  Scenario: Nothing in Stock yet is the age of the Household
+    Given the Household was created on "2026-11-02"
     When I open the kitchen board
-    Then the kitchen board shows a zero-waste streak of 0 days
+    Then the kitchen board shows a zero-waste streak of 7 days
 
   Scenario: The next Advance Step comes from the Planned Meals
     Given the kitchen has the Recipe "Chicken stew" yielding 4 with these Steps:

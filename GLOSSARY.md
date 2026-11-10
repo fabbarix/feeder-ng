@@ -178,6 +178,14 @@ _Avoid_: Expiry, best-before
 One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) the date it goes off.
 _Avoid_: Batch, item, unit
 
+**Zero-waste streak**:
+The number of whole days since the Household last wasted food (a Stock Lot going off, a Throw out, or a discarded Leftover), never more than the Household's age.
+_Avoid_: Clean run, no-waste counter
+
+**Throw out / Keep**:
+The two choices for a spoiled Stock Lot: Throw out removes it and records the waste; Keep pushes its go-off date out by a day and means it did not go off.
+_Avoid_: Discard, bin, extend, snooze
+
 **Scan**:
 Reading a barcode with the phone; in a Shop it ticks the Shopping List and adds a Stock Lot; at home (Stock-take) it corrects Stock.
 _Avoid_: Check-off
