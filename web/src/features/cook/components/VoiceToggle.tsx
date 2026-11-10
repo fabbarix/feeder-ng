@@ -9,18 +9,18 @@ export interface VoiceToggleProps {
 }
 
 /**
- * A pressed `IconButton` (microphone; microphone-slash while off), aria-pressed = enabled, labelled "Voice commands
- * on" / "Voice commands off". Where speech is unsupported it is disabled and the label is "Voice commands are not
- * available in this browser".
+ * A pressed `IconButton` (microphone; microphone-slash while off) with ONE stable name, "Voice commands"; aria-pressed
+ * carries on/off. Where speech is unsupported it is disabled, keeps the same name and gets the explanation as its
+ * description (title), never a changed name.
  */
 export function VoiceToggle({ supported, enabled, onChange }: VoiceToggleProps): ReactNode {
-  const label = !supported ? cookStrings.voiceUnsupported : enabled ? cookStrings.voiceOn : cookStrings.voiceOff
   return (
     <IconButton
       icon={enabled ? 'voice' : 'voiceOff'}
-      label={label}
+      label={cookStrings.voice}
       pressed={enabled}
       disabled={!supported}
+      title={supported ? undefined : cookStrings.voiceUnsupported}
       onClick={() => onChange(!enabled)}
     />
   )
