@@ -35,10 +35,13 @@ has "$ROOT/Makefile" 'go build|\$\(GO\) build' "Makefile has no go build"
 grep -E '\$\(GO\) build' "$ROOT/Makefile" | grep -q -- '-buildvcs=false' && ok || bad "Makefile go build must pass -buildvcs=false"
 grep -E 'go build' "$ROOT/Dockerfile" | grep -q -- '-buildvcs=false' && ok || bad "Dockerfile go build must pass -buildvcs=false"
 
-# BuildKit is documented and make docker uses it.
+# The Dockerfile parses on the legacy builder (global BUILDPLATFORM default before
+# the first FROM --platform) and make docker falls back when buildx is missing.
 has "$ROOT/Makefile" '^docker:' "Makefile needs a docker target"
-grep -A2 '^docker:' "$ROOT/Makefile" | grep -Eq 'DOCKER_BUILDKIT=1|buildx build' && ok || bad "make docker must use BuildKit"
-has "$ROOT/docs/dev/deploy.md" 'BuildKit' "deploy.md must document the BuildKit requirement"
+awk '/^ARG BUILDPLATFORM=/{a=NR} /^FROM --platform=\$BUILDPLATFORM/{if(!f)f=NR} END{exit !(a&&f&&a<f)}' "$ROOT/Dockerfile" \
+  && ok || bad "Dockerfile needs a global ARG BUILDPLATFORM= default before the first FROM --platform=\$BUILDPLATFORM"
+grep -A6 '^docker:' "$ROOT/Makefile" | grep -q 'docker buildx version' && ok || bad "make docker must fall back to docker build when 'docker buildx version' fails"
+has "$ROOT/docs/dev/deploy.md" 'buildx' "deploy.md must document buildx for multi-arch images"
 grep -Eq '^COPY .*testdata' "$ROOT/Dockerfile" && bad "Dockerfile must not copy testdata into the image"
 
 # The Go build works here, which may be a linked worktree (the original failure).
