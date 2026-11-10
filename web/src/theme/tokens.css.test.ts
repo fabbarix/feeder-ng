@@ -158,3 +158,41 @@ describe('Figtree 800 is imported', () => {
     for (const w of [400, 500, 600, 700, 800]) expect(main).toContain(`@fontsource/figtree/${w}.css`)
   })
 })
+
+/** Declarations of the first rule whose selector is exactly `selector`. */
+function ruleBody(selector: string): string {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = new RegExp(`(^|\\n)${esc}\\s*\\{([^}]*)\\}`).exec(css)
+  expect(m, `${selector} rule`).not.toBeNull()
+  return m![2]!
+}
+
+describe('tile tones use status foreground tokens (WCAG contrast in dark mode)', () => {
+  it.each([
+    ['spoil', 'spoil'],
+    ['leftover', 'leftover'],
+  ])(".tile[data-tone='%s'] pairs its bg token with its fg token", (tone, name) => {
+    const body = ruleBody(`.tile[data-tone='${tone}']`)
+    expect(body).toMatch(new RegExp(`background:\\s*var\\(--status-${name}-bg\\)`))
+    expect(body).toMatch(new RegExp(`color:\\s*var\\(--status-${name}-fg\\)`))
+  })
+  it('no hex literals remain in the spoil or leftover tile rules', () => {
+    for (const tone of ['spoil', 'leftover']) {
+      expect(ruleBody(`.tile[data-tone='${tone}']`), tone).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+    }
+  })
+})
+
+describe('dark OS fallback respects the ThemeProvider scheme attribute', () => {
+  it('apply.ts writes the scheme to data-scheme on the root element', () => {
+    const apply = readFileSync(`${cwd}/src/theme/apply.ts`, 'utf8')
+    expect(apply).toMatch(/root\.dataset\.scheme\s*=\s*scheme/)
+  })
+  it('the dark fallback is not guarded by data-theme (nothing sets it)', () => {
+    expect(css).not.toMatch(/data-theme/)
+  })
+  it("the dark fallback is skipped when data-scheme='light'", () => {
+    const m = /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-scheme='light'\]\)\s*\{/.exec(css)
+    expect(m, "dark fallback guarded by :not([data-scheme='light'])").not.toBeNull()
+  })
+})

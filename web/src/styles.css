@@ -160,7 +160,7 @@
 
 /* Dark before ThemeProvider runs: Basil dark values, no drop shadows (elevation = tone step + hairline). */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-scheme='light']) {
     --color-bg: #090f0b;
     --color-surface: #131c16;
     --color-surface-2: #1e2a22;
@@ -439,12 +439,12 @@ button.tile:hover {
 
 .tile[data-tone='spoil'] {
   background: var(--status-spoil-bg);
-  color: #5c1a00;
+  color: var(--status-spoil-fg);
 }
 
 .tile[data-tone='leftover'] {
   background: var(--status-leftover-bg);
-  color: #4d3b00;
+  color: var(--status-leftover-fg);
 }
 
 .chip {
