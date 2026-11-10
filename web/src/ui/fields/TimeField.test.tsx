@@ -141,3 +141,16 @@ describe('TimeField (24 h)', () => {
     })
   })
 })
+
+describe('TimeField segments share one class (U1)', () => {
+  it('Hour and Minute render as inputs with the shared time-field__segment class inside the time-field group', () => {
+    render(<Time />)
+    const group = screen.getByRole('group', { name: 'Start time' })
+    expect(group).toHaveClass('time-field')
+    for (const seg of [hour(), minute()]) {
+      expect(seg).toBeInstanceOf(HTMLInputElement)
+      expect(seg).toHaveClass('time-field__segment')
+    }
+    expect(group.querySelectorAll('.time-field__segment')).toHaveLength(2)
+  })
+})
