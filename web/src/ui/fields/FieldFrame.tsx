@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { Icon } from '../Icon'
+import type { FieldSize } from './Field'
 
 /** The ids a field needs: its label, helper line and error line (aria-describedby is built from the last two). */
 export interface FieldIds {
@@ -28,6 +29,8 @@ export interface FieldFrameProps {
   error?: string
   /** Extra class for the outer frame. */
   className?: string
+  /** Max inline size token; sets data-size on the frame. Type-only until the Developer step. */
+  size?: FieldSize
   children: ReactNode
 }
 

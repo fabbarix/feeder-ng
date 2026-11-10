@@ -3,12 +3,12 @@ import { Icon } from '../Icon'
 import { IconButton } from '../IconButton'
 import { addMonths, monthMatrix, moveIso, parseIsoDate, toIsoDate } from './calendar'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './DateField.css'
 
-export interface DateFieldProps extends FieldProps {
+export interface DateFieldProps extends FieldProps, FieldSizeProps {
   /** ISO "YYYY-MM-DD" or "" for none. */
   value: string
   onChange: (value: string) => void

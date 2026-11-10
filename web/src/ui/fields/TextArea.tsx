@@ -1,9 +1,9 @@
 import type { TextareaHTMLAttributes } from 'react'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import './Field.css'
 
-export interface TextAreaProps extends FieldProps, Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'name' | 'disabled' | 'required'> {
+export interface TextAreaProps extends FieldProps, FieldSizeProps, Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'name' | 'disabled' | 'required'> {
   value: string
   onChange: (value: string) => void
   /** Visible lines. Default 3. */

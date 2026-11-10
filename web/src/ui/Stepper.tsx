@@ -14,6 +14,8 @@ export interface StepperProps {
   unit?: string
   /** The id(s) of the helper/error line that describes the control. */
   describedBy?: string
+  /** 'sm' is the compact group (40 px buttons, never stretched). Type-only until the Developer step. */
+  size?: 'md' | 'sm'
 }
 
 /** A − value + control for small amounts. Accessible: a group named by `label`, the value is a spinbutton (arrows, Home, End). */

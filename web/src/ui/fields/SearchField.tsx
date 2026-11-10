@@ -1,11 +1,12 @@
 import { useImperativeHandle, useRef, type ComponentPropsWithoutRef, type KeyboardEvent, type Ref } from 'react'
 import { IconButton } from '../IconButton'
 import { Icon } from '../Icon'
+import type { FieldSizeProps } from './Field'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './SearchField.css'
 
-export interface SearchFieldProps extends Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'value' | 'onChange' | 'onSubmit' | 'size'> {
+export interface SearchFieldProps extends FieldSizeProps, Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'value' | 'onChange' | 'onSubmit' | 'size'> {
   label: string
   value: string
   onChange: (value: string) => void
@@ -18,7 +19,7 @@ export interface SearchFieldProps extends Omit<ComponentPropsWithoutRef<'input'>
  * The only `type="search"` input: a searchbox with a magnifier, a "Clear search" button (refocuses) and Escape to clear.
  * `onKeyDown` runs first; a handler that calls preventDefault() keeps SearchField from its own Escape and Enter.
  */
-export function SearchField({ label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, ...rest }: SearchFieldProps) {
+export function SearchField({ size: _size, label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, ...rest }: SearchFieldProps) {
   const inner = useRef<HTMLInputElement>(null)
   useImperativeHandle(ref, () => inner.current as HTMLInputElement)
   const clear = () => {

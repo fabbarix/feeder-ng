@@ -13,6 +13,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   loading?: boolean
   icon?: IconName
+  /** Full width: 'phone' below 600 px, 'always', or 'never' (default). Type-only until the Developer step. */
+  block?: 'phone' | 'always' | 'never'
 }
 
 /** Attribute that scopes the single-primary dev warning; Tile, BottomSheet and Dialog set it. */

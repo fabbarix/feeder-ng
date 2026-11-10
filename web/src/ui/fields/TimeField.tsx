@@ -1,12 +1,12 @@
 import { useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type RefObject } from 'react'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import { applyDigit, formatTime, parseTime, segmentFromText, stepSegment, type TimeParts } from './time'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './TimeField.css'
 
-export interface TimeFieldProps extends FieldProps {
+export interface TimeFieldProps extends FieldProps, FieldSizeProps {
   /** "HH:mm" or "" for none. */
   value: string
   onChange: (value: string) => void

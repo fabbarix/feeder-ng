@@ -1,9 +1,9 @@
 import type { InputHTMLAttributes } from 'react'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import './Field.css'
 
-export interface TextFieldProps extends FieldProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'name' | 'disabled' | 'required' | 'size'> {
+export interface TextFieldProps extends FieldProps, FieldSizeProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'name' | 'disabled' | 'required' | 'size'> {
   value: string
   /** Called on every keystroke with the new text. */
   onChange: (value: string) => void
@@ -12,7 +12,7 @@ export interface TextFieldProps extends FieldProps, Omit<InputHTMLAttributes<HTM
 }
 
 /** A single-line text input in the shared field frame. Controlled: onChange(value) per keystroke. */
-export function TextField({ label, helper, error, disabled, required, name, value, onChange, suffix, type = 'text', id, ...rest }: TextFieldProps) {
+export function TextField({ size: _size, label, helper, error, disabled, required, name, value, onChange, suffix, type = 'text', id, ...rest }: TextFieldProps) {
   const ids = useFieldIds()
   const inputId = id ?? `${ids.labelId}-input`
   return (

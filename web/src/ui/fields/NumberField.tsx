@@ -2,11 +2,11 @@ import { useEffect, useState, type KeyboardEvent } from 'react'
 import { IconButton } from '../IconButton'
 import { uiStrings } from '../strings'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import { clamp, parseNumber, stepValue } from './number'
 import './Field.css'
 
-export interface NumberFieldProps extends FieldProps {
+export interface NumberFieldProps extends FieldProps, FieldSizeProps {
   value: number | null
   onChange: (value: number | null) => void
   min?: number
