@@ -6,7 +6,7 @@ export interface PrimaryNavItem {
   label: string
   path: string
   icon: IconName
-  /** The accent-filled Scan button (58 px in the bottom bar, 56 px at the top of the rail). Not raised: it sits in the bar. */
+  /** The accent-filled Scan button (58 px in the bottom bar, 56 px in the rail). Not raised: it sits in the bar. */
   accent?: boolean
 }
 
@@ -28,11 +28,8 @@ export const PRIMARY_NAV: readonly PrimaryNavItem[] = [
   { id: 'recipes', label: 'Recipes', path: '/recipes', icon: 'recipes' },
 ]
 
-/** The side rail lists Scan first (the accent button at the top), then the other destinations in bar order. */
-export const RAIL_NAV: readonly PrimaryNavItem[] = [
-  ...PRIMARY_NAV.filter((item) => item.accent),
-  ...PRIMARY_NAV.filter((item) => !item.accent),
-]
+/** The side rail lists the destinations in the same order as the bottom bar. */
+export const RAIL_NAV: readonly PrimaryNavItem[] = PRIMARY_NAV
 
 export const MENU_NAV: readonly NavItem[] = [
   { id: 'stock', label: 'Stock', path: '/stock', icon: 'stock', placement: 'menu' },

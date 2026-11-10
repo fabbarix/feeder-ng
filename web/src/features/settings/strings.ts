@@ -22,7 +22,6 @@ export const settingsStrings = {
     },
   },
   loading: 'Loading',
-  backToSettings: 'Back to Settings',
   loadError: 'Settings could not load. Try again in a moment.',
   householdSaved: 'Household settings saved.',
   preferencesSaved: 'Preferences saved.',

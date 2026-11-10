@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { PageHeader, Tile } from '../../../ui'
+import { BackLink, PageHeader, Tile } from '../../../ui'
 import { SlotRulesEditor, VarietyRulesEditor } from '../components/RulesEditors'
 import { useSlotRules, useVarietyRules } from '../hooks/useRules'
 import { useTagChoices } from '../hooks/useTagChoices'
@@ -25,7 +24,7 @@ export function PlanningRulesScreen(): ReactNode {
   }
   return (
     <div className="plan">
-      <PageHeader title={planStrings.rulesTitle} />
+      <PageHeader title={planStrings.rulesTitle} leading={<BackLink to="/settings" label="Settings" />} />
       <Tile as="section" span="full">
         <h2 className="plan__tile-title">{planStrings.slotRulesTitle}</h2>
         <SlotRulesEditor
@@ -48,7 +47,6 @@ export function PlanningRulesScreen(): ReactNode {
           error={varietyRules.error}
         />
       </Tile>
-      <Link to="/plan">{planStrings.title}</Link>
     </div>
   )
 }

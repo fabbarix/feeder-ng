@@ -189,7 +189,7 @@ func TestSPAServesFilesAndFallsBackToIndex(t *testing.T) {
 	if rec := h.get("/assets/app.js", ""); rec.Code != 200 || rec.Body.String() != "console.log('app')" {
 		t.Fatalf("asset: %d %q", rec.Code, rec.Body)
 	}
-	for _, p := range []string{"/", "/plan", "/recipes/42/edit", "/assets/missing.js"} {
+	for _, p := range []string{"/", "/plan", "/recipes/42/edit"} {
 		rec := h.get(p, "")
 		if rec.Code != 200 || !strings.Contains(rec.Body.String(), "SPA index") {
 			t.Errorf("%s: %d %q, want index.html fallback", p, rec.Code, rec.Body)

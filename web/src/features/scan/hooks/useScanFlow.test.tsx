@@ -110,7 +110,7 @@ describe('useScanFlow in a Shop', () => {
     const rejected: ScanResult = { clientUuid: 'uuid-1', status: 'rejected', error: { code: 'unknown_product', message: 'that Product was deleted' } }
     const { deps, hook } = setup({ submit: vi.fn(async () => rejected) })
     await read(hook, '8000500310427')
-    expect(hook.result.current.banner).toEqual({ tone: 'warn', text: "Couldn't add that scan: that Product was deleted" })
+    expect(hook.result.current.banner).toEqual({ tone: 'warn', text: "Couldn't add that Scan: that Product was deleted" })
     expect(hook.result.current.feedback).toBeNull()
     expect(deps.feedback.reject).toHaveBeenCalled()
   })

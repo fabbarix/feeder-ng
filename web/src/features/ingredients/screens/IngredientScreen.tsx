@@ -10,6 +10,7 @@ import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useIngredient } from '../hooks/useIngredient'
 import { errorMessage } from '../lib/errorMessage'
+import { displayName } from '../lib/names'
 import { strings } from '../strings'
 
 const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']
@@ -68,7 +69,7 @@ export function IngredientScreen() {
 
   return (
     <section>
-      <h1>{ingredient.name}</h1>
+      <h1>{displayName(ingredient.name)}</h1>
       {error ? <p role="alert">{error}</p> : null}
 
       {renaming ? (

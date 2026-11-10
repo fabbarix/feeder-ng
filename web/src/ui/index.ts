@@ -1,4 +1,6 @@
 // Barrel for the shared Bento primitives. Import screens' building blocks from here.
+export { BackLink } from './BackLink'
+export type { BackLinkProps } from './BackLink'
 export { Avatar } from './Avatar'
 export type { AvatarProps } from './Avatar'
 export { BentoGrid } from './BentoGrid'

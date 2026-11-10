@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom'
+import { Icon } from './Icon'
+import { uiStrings } from './strings'
+import './BackLink.css'
 
 export interface BackLinkProps {
   /** Where back goes (a path). */
@@ -7,7 +10,12 @@ export interface BackLinkProps {
   label: string
 }
 
-// R11a stub: the developer implements it (design note docs/dev/design/r11a-settings-shell.md, "Back control").
+/** The one back control of a sub-page: arrow and destination name, no underline. */
 export function BackLink({ to, label }: BackLinkProps) {
-  return <Link to={to}>{label}</Link>
+  return (
+    <Link className="back-link" to={to} aria-label={uiStrings.backTo(label)}>
+      <Icon name="back" size={20} />
+      <span>{label}</span>
+    </Link>
+  )
 }
