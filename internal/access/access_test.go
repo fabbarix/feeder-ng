@@ -384,25 +384,7 @@ func TestApproveLinkedRefusesAnUnknownMemberAndWorksWithoutAMembersPort(t *testi
 	}
 }
 
-func TestApproveLinkedWhenTheMemberWasLinkedMeanwhileKeepsTheRequestPending(t *testing.T) {
-	w := newWorld(t)
-	withMembers(w)
-	w.members.linkErr = access.ErrMemberUnavailable // another Admin linked Nonna between the check and the link
-	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
-	if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 7); !errors.Is(err, access.ErrMemberUnavailable) {
-		t.Fatalf("err = %v, want ErrMemberUnavailable", err)
-	}
-	if n, _ := w.svc.Count(ctx); n != 1 {
-		t.Fatalf("the request must stay pending so the approver can choose again, count = %d", n)
-	}
-	w.members.linkErr = nil
-	if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 8); err != nil { // retry with another Member (and the User may exist already)
-		t.Fatalf("retry: %v", err)
-	}
-	if w.members.links[8] == 0 {
-		t.Fatalf("links = %v", w.members.links)
-	}
-}
+// (moved to answer_test.go: a failed link after the User was created is audited, decision A9b)
 
 func TestApproveLinkedOfAnUnknownOrExpiredRequestIsNotFound(t *testing.T) {
 	w := newWorld(t)
@@ -681,12 +663,42 @@ func TestClientIP(t *testing.T) {
 		{"10.0.0.2:4000", "198.51.100.1", true, "198.51.100.1"},
 		{"10.0.0.2:4000", "6.6.6.6, 198.51.100.1", true, "198.51.100.1"}, // the proxy appended the last one; earlier ones are client-supplied
 		{"10.0.0.2:4000", "", true, "10.0.0.2"},
-		{"[2001:db8::1]:443", "", false, "2001:db8::1"},
+		// IPv6 clients are bucketed per /64 (one subscriber holds a whole /64): the key is the network in CIDR form.
+		{"[2001:db8::1]:443", "", false, "2001:db8::/64"},
+		{"[2001:db8:1:2:aaaa:bbbb:cccc:dddd]:443", "", false, "2001:db8:1:2::/64"},
+		{"[2001:db8:1:2:1111:2222:3333:4444]:443", "", false, "2001:db8:1:2::/64"},
+		{"[2001:db8:1:3::1]:443", "", false, "2001:db8:1:3::/64"},
+		{"10.0.0.2:4000", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", true, "2001:db8:1:2::/64"},
+		{"[::ffff:203.0.113.9]:443", "", false, "203.0.113.9"}, // an IPv4-mapped peer is an IPv4 client
+		{"10.0.0.2:4000", "6.6.6.6,198.51.100.1", true, "198.51.100.1"},
+		{"10.0.0.2:4000", "6.6.6.6, 7.7.7.7,198.51.100.1", true, "198.51.100.1"},
 		{"10.0.0.2:4000", "not an ip", true, "10.0.0.2"},
 	}
 	for _, c := range cases {
 		if got := access.ClientIP(c.remote, c.xff, c.trust); got != c.want {
 			t.Errorf("ClientIP(%q, %q, %v) = %q, want %q", c.remote, c.xff, c.trust, got, c.want)
 		}
+	}
+}
+
+// The handler joins every X-Forwarded-For header line (Header.Get would return only the first, which the client
+// wrote): proxies such as HAProxy and Envoy append their own line.
+func TestJoinForwardedForKeepsEveryHeaderLineInOrder(t *testing.T) {
+	cases := []struct {
+		lines []string
+		want  string
+	}{
+		{nil, ""},
+		{[]string{"1.1.1.1"}, "1.1.1.1"},
+		{[]string{"6.6.6.6", "198.51.100.1"}, "6.6.6.6,198.51.100.1"},
+		{[]string{"6.6.6.6, 7.7.7.7", "198.51.100.1"}, "6.6.6.6, 7.7.7.7,198.51.100.1"},
+	}
+	for _, c := range cases {
+		if got := access.JoinForwardedFor(c.lines); got != c.want {
+			t.Errorf("JoinForwardedFor(%q) = %q, want %q", c.lines, got, c.want)
+		}
+	}
+	if got := access.ClientIP("10.0.0.2:4000", access.JoinForwardedFor([]string{"6.6.6.6", "198.51.100.1"}), true); got != "198.51.100.1" {
+		t.Errorf("ClientIP over two header lines = %q, want the proxy's own line", got)
 	}
 }

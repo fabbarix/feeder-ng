@@ -28,6 +28,12 @@ var (
 	// ErrMemberUnavailable is returned by ApproveLinked when the chosen Member does not exist or already has a User
 	// (including a Member linked between the picker opening and the approval). Nothing is created or linked.
 	ErrMemberUnavailable = errors.New("access: member unavailable")
+	// ErrAlreadyUser is returned by Deny when the address is already a User: the request is cleared without a
+	// "denied" event (HTTP 409 already_a_user). STUB: not returned yet.
+	ErrAlreadyUser = errors.New("access: address is already a user")
+	// ErrRequestExists is returned by Store.Insert when a request for the address already exists (UNIQUE conflict,
+	// two first sign-ins racing). SignIn re-reads and treats it as a repeat sign-in. STUB: not used yet.
+	ErrRequestExists = errors.New("access: request already exists")
 )
 
 // Request is one pending Access Request. Name and Picture come from Google and are untrusted display text.
@@ -91,7 +97,8 @@ type Store interface {
 	Insert(ctx context.Context, r Request, tokenHash string) (Request, error)
 	// Refresh updates name, picture, last seen and the token hash of a pending request; it never moves ExpiresAt.
 	Refresh(ctx context.Context, id int64, name, picture, tokenHash string, seen time.Time) error
-	Delete(ctx context.Context, id int64) error
+	// Delete removes the request and reports whether a row was removed (false: already answered, purged or expired).
+	Delete(ctx context.Context, id int64) (bool, error)
 	// ListPending returns the requests not yet expired at now, oldest first.
 	ListPending(ctx context.Context, now time.Time) ([]Request, error)
 	CountPending(ctx context.Context, now time.Time) (int, error)
@@ -102,6 +109,8 @@ type Store interface {
 	LastEvent(ctx context.Context, email string, kind EventKind) (time.Time, bool, error)
 	// Events returns the newest entries first.
 	Events(ctx context.Context, limit int) ([]Event, error)
+	// PruneEvents deletes audit entries older than before and returns how many went.
+	PruneEvents(ctx context.Context, before time.Time) (int, error)
 }
 
 // Users is the allowlist (satisfied by *auth.Service).
@@ -338,7 +347,7 @@ func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.
 	if err != nil {
 		return auth.User{}, err
 	}
-	if err := s.store.Delete(ctx, r.ID); err != nil {
+	if _, err := s.store.Delete(ctx, r.ID); err != nil {
 		return auth.User{}, err
 	}
 	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email})
@@ -382,7 +391,7 @@ func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, 
 	if err := s.members.LinkUser(ctx, member.ID, u.ID); err != nil {
 		return auth.User{}, err
 	}
-	if err := s.store.Delete(ctx, r.ID); err != nil {
+	if _, err := s.store.Delete(ctx, r.ID); err != nil {
 		return auth.User{}, err
 	}
 	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID,
@@ -396,7 +405,7 @@ func (s *Service) Deny(ctx context.Context, id int64, actor auth.User) error {
 	if err != nil {
 		return err
 	}
-	if err := s.store.Delete(ctx, r.ID); err != nil {
+	if _, err := s.store.Delete(ctx, r.ID); err != nil {
 		return err
 	}
 	return s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventDenied, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email})
@@ -439,7 +448,7 @@ func (s *Service) History(ctx context.Context, limit int) ([]Event, error) {
 }
 
 func (s *Service) expire(ctx context.Context, r Request, now time.Time) error {
-	if err := s.store.Delete(ctx, r.ID); err != nil {
+	if _, err := s.store.Delete(ctx, r.ID); err != nil {
 		return err
 	}
 	return s.store.AddEvent(ctx, Event{At: now, Kind: EventExpired, Email: r.Email, Name: r.Name})
@@ -543,4 +552,13 @@ func ClientIP(remoteAddr, forwardedFor string, trustProxy bool) string {
 		return host
 	}
 	return remoteAddr
+}
+
+// JoinForwardedFor joins every X-Forwarded-For header line with "," so ClientIP sees the last entry of the last line
+// (the one the operator's proxy appended). STUB: returns only the first line, like Header.Get.
+func JoinForwardedFor(lines []string) string {
+	if len(lines) == 0 {
+		return ""
+	}
+	return lines[0]
 }

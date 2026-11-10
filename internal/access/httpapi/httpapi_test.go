@@ -547,3 +547,68 @@ func rawPost(t *testing.T, env *testkit.Env, c *testkit.Client, path, body strin
 }
 
 func idString(id int64) string { return fmt.Sprint(id) }
+
+// --- review send-back ---
+
+// A9: the address got in (Admin allowlist) after the request was made. Denying it must not "succeed".
+func TestDenyOfARequestWhoseAddressIsAlreadyAUserIs409AlreadyAUser(t *testing.T) {
+	g := start(t)
+	g.ask("zia@example.test", "Zia")
+	admin := g.env.LoginAdmin(t)
+	id := g.idOf(admin, "zia@example.test")
+	if r := admin.Post("/api/allowlist", map[string]any{"email": "zia@example.test"}); r.Status != 201 {
+		t.Fatalf("allowlist add = %d %s", r.Status, r.Body)
+	}
+	r := admin.Post(fmt.Sprintf("/api/access-requests/%d/deny", id), nil)
+	if r.Status != 409 || r.ErrorCode() != "already_a_user" {
+		t.Fatalf("deny = %d %s, want 409 already_a_user", r.Status, r.Body)
+	}
+	if g.pending(admin).Count != 0 {
+		t.Fatal("the request must be cleared")
+	}
+	var h struct {
+		Events []struct{ Kind, Email string } `json:"events"`
+	}
+	admin.Get("/api/access-requests/history").MustJSON(t, &h)
+	for _, e := range h.Events {
+		if e.Kind == "denied" {
+			t.Fatalf("history has a denied line for a User: %+v", h.Events)
+		}
+	}
+	if _, cb := g.ask("zia@example.test", "Zia"); where(cb) != "/" {
+		t.Fatalf("the new User must sign in, callback -> %q", where(cb))
+	}
+}
+
+func TestTheListDropsARequestWhoseAddressIsAlreadyAUser(t *testing.T) {
+	g := start(t)
+	g.ask("zia@example.test", "Zia")
+	g.ask("rex@example.test", "Rex")
+	admin := g.env.LoginAdmin(t)
+	admin.Post("/api/allowlist", map[string]any{"email": "zia@example.test"})
+	l := g.pending(admin)
+	if l.Count != 1 || len(l.Requests) != 1 || l.Requests[0].Email != "rex@example.test" {
+		t.Fatalf("list = %+v, want only Rex", l)
+	}
+}
+
+// Nit: once the person is in, the waiting-page cookie is dead weight. The SignedIn callback clears it.
+func TestSigningInClearsTheWaitingPageCookie(t *testing.T) {
+	g := start(t)
+	g.ask("zia@example.test", "Zia")
+	admin := g.env.LoginAdmin(t)
+	admin.Post(approvePath(g.idOf(admin, "zia@example.test")), nil)
+	_, cb := g.ask("zia@example.test", "Zia")
+	if where(cb) != "/" {
+		t.Fatalf("callback -> %q", where(cb))
+	}
+	var cleared *http.Cookie
+	for _, ck := range (&http.Response{Header: cb.Header}).Cookies() {
+		if ck.Name == cookie {
+			cleared = ck
+		}
+	}
+	if cleared == nil || cleared.Value != "" || cleared.MaxAge >= 0 || cleared.Path != "/api/access-request" || !cleared.HttpOnly {
+		t.Fatalf("feeder_access cookie on sign-in = %+v, want an expiring empty cookie on the same path", cleared)
+	}
+}

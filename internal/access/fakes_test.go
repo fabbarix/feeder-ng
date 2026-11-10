@@ -22,6 +22,8 @@ type memStore struct {
 	reqs   map[int64]access.Request
 	hashes map[int64]string
 	events []access.Event
+	// delay widens the read-then-write window of the answering paths so a missing lock shows up reliably.
+	delay time.Duration
 }
 
 func newMemStore() *memStore {
@@ -50,13 +52,20 @@ func (m *memStore) ByTokenHash(_ context.Context, h string) (access.Request, boo
 }
 func (m *memStore) ByID(_ context.Context, id int64) (access.Request, bool, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	r, ok := m.reqs[id]
+	d := m.delay
+	m.mu.Unlock()
+	time.Sleep(d)
 	return r, ok, nil
 }
 func (m *memStore) Insert(_ context.Context, r access.Request, h string) (access.Request, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	for _, x := range m.reqs { // UNIQUE (email COLLATE NOCASE), like the real table
+		if strings.EqualFold(x.Email, r.Email) {
+			return access.Request{}, access.ErrRequestExists
+		}
+	}
 	m.next++
 	r.ID = m.next
 	m.reqs[r.ID], m.hashes[r.ID] = r, h
@@ -70,12 +79,13 @@ func (m *memStore) Refresh(_ context.Context, id int64, name, pic, h string, see
 	m.reqs[id], m.hashes[id] = r, h
 	return nil
 }
-func (m *memStore) Delete(_ context.Context, id int64) error {
+func (m *memStore) Delete(_ context.Context, id int64) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	_, ok := m.reqs[id]
 	delete(m.reqs, id)
 	delete(m.hashes, id)
-	return nil
+	return ok, nil
 }
 func (m *memStore) ListPending(_ context.Context, now time.Time) ([]access.Request, error) {
 	m.mu.Lock()
@@ -149,6 +159,46 @@ func (m *memStore) Events(_ context.Context, limit int) ([]access.Event, error) 
 	return out, nil
 }
 
+func (m *memStore) PruneEvents(_ context.Context, before time.Time) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	kept, n := m.events[:0:0], 0
+	for _, e := range m.events {
+		if e.At.Before(before) {
+			n++
+			continue
+		}
+		kept = append(kept, e)
+	}
+	m.events = kept
+	return n, nil
+}
+
+// count returns how many events of kind were recorded for email.
+func (m *memStore) count(kind access.EventKind, email string) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, e := range m.events {
+		if e.Kind == kind && strings.EqualFold(e.Email, email) {
+			n++
+		}
+	}
+	return n
+}
+
+// last returns the newest event of kind for email.
+func (m *memStore) last(kind access.EventKind, email string) (access.Event, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for i := len(m.events) - 1; i >= 0; i-- {
+		if m.events[i].Kind == kind && strings.EqualFold(m.events[i].Email, email) {
+			return m.events[i], true
+		}
+	}
+	return access.Event{}, false
+}
+
 // kinds returns the audit kinds recorded so far, oldest first.
 func (m *memStore) kinds() []access.EventKind {
 	m.mu.Lock()
@@ -162,6 +212,7 @@ func (m *memStore) kinds() []access.EventKind {
 
 // memUsers is an in-memory access.Users.
 type memUsers struct {
+	mu      sync.Mutex
 	byEmail map[string]auth.User
 	next    int64
 }
@@ -169,12 +220,16 @@ type memUsers struct {
 func newMemUsers() *memUsers { return &memUsers{byEmail: map[string]auth.User{}} }
 
 func (u *memUsers) UserByEmail(_ context.Context, email string) (auth.User, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	if x, ok := u.byEmail[strings.ToLower(strings.TrimSpace(email))]; ok {
 		return x, nil
 	}
 	return auth.User{}, auth.ErrNotFound
 }
 func (u *memUsers) AddUser(_ context.Context, email, name string, admin bool) (auth.User, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	email = strings.ToLower(strings.TrimSpace(email))
 	if _, ok := u.byEmail[email]; ok {
 		return auth.User{}, auth.ErrEmailTaken
@@ -185,8 +240,16 @@ func (u *memUsers) AddUser(_ context.Context, email, name string, admin bool) (a
 	return x, nil
 }
 
+// size is how many Users exist.
+func (u *memUsers) size() int {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return len(u.byEmail)
+}
+
 // memMembers is an in-memory access.Members.
 type memMembers struct {
+	mu      sync.Mutex
 	byEmail map[string]access.MemberRef
 	all     []access.MemberRef // every Member, linked or not, in list order
 	links   map[int64]int64    // member -> user
@@ -195,6 +258,8 @@ type memMembers struct {
 
 // Unlinked lists the Members without a User.
 func (m *memMembers) Unlinked(_ context.Context) ([]access.MemberRef, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var out []access.MemberRef
 	for _, r := range m.all {
 		if _, linked := m.links[r.ID]; !linked {
@@ -209,6 +274,8 @@ func (m *memMembers) ByEmail(_ context.Context, email string) (access.MemberRef,
 	return r, ok, nil
 }
 func (m *memMembers) LinkUser(_ context.Context, member, user int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.linkErr != nil {
 		return m.linkErr
 	}

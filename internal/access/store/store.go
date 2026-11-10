@@ -79,10 +79,13 @@ func (s *Store) Refresh(ctx context.Context, id int64, name, picture, tokenHash 
 	return err
 }
 
-func (s *Store) Delete(ctx context.Context, id int64) error {
+func (s *Store) Delete(ctx context.Context, id int64) (bool, error) {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE id = ?`, id)
-	return err
+	return true, err // STUB: must report rows affected
 }
+
+// PruneEvents STUB: must delete access_events older than before.
+func (s *Store) PruneEvents(_ context.Context, _ time.Time) (int, error) { return 0, nil }
 
 func (s *Store) list(ctx context.Context, where string, arg any) ([]access.Request, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+reqCols+` FROM access_requests WHERE `+where+` ORDER BY requested_at, id`, arg)

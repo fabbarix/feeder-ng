@@ -3,7 +3,10 @@ package store_test
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -121,7 +124,7 @@ func TestListCountAndExpiry(t *testing.T) {
 	if _, ok, _ := s.ByEmail(ctx, "old@example.test"); ok {
 		t.Fatal("expired row must be deleted")
 	}
-	if err := s.Delete(ctx, l[0].ID); err != nil {
+	if _, err := s.Delete(ctx, l[0].ID); err != nil {
 		t.Fatal(err)
 	}
 	if n, _ := s.CountPending(ctx, now); n != 1 {
@@ -194,5 +197,72 @@ func TestAnApprovedEventKeepsTheLinkedMember(t *testing.T) {
 	}
 	if ev, _ := s.Events(ctx, 10); len(ev) != 2 || ev[1].MemberName != "Nonna" {
 		t.Errorf("after the Member is deleted: %+v", ev)
+	}
+}
+
+// --- review send-back ---
+
+func TestDeleteReportsWhetherARowWasRemoved(t *testing.T) {
+	s, _ := open(t)
+	got, _ := s.Insert(ctx, req("zia@example.test", now), "h1")
+	if ok, err := s.Delete(ctx, got.ID); err != nil || !ok {
+		t.Fatalf("first Delete = %v, %v, want true", ok, err)
+	}
+	if ok, err := s.Delete(ctx, got.ID); err != nil || ok {
+		t.Fatalf("second Delete = %v, %v, want false (nothing left to remove)", ok, err)
+	}
+}
+
+func TestInsertOfAnAddressThatAlreadyHasARequestIsErrRequestExists(t *testing.T) {
+	s, _ := open(t)
+	if _, err := s.Insert(ctx, req("zia@example.test", now), "h1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Insert(ctx, req("ZIA@Example.Test", now), "h2"); !errors.Is(err, access.ErrRequestExists) {
+		t.Fatalf("duplicate Insert = %v, want ErrRequestExists", err)
+	}
+}
+
+func TestDeleteExpiredHandsEachRowToOneCaller(t *testing.T) {
+	s, _ := open(t)
+	for i := range 5 {
+		s.Insert(ctx, req(fmt.Sprintf("old%d@example.test", i), now.Add(-30*24*time.Hour)), fmt.Sprintf("h%d", i))
+	}
+	var mu sync.Mutex
+	total := 0
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gone, err := s.DeleteExpired(ctx, now)
+			if err != nil {
+				t.Error(err)
+			}
+			mu.Lock()
+			total += len(gone)
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	if total != 5 {
+		t.Fatalf("callers were handed %d rows in all, want 5 (each row once, so each is logged once)", total)
+	}
+}
+
+func TestPruneEventsDeletesOnlyOlderEntries(t *testing.T) {
+	s, d := open(t)
+	cutoff := now.AddDate(-1, 0, 0)
+	s.AddEvent(ctx, access.Event{At: cutoff.Add(-time.Hour), Kind: access.EventDenied, Email: "old@example.test"})
+	s.AddEvent(ctx, access.Event{At: cutoff, Kind: access.EventDenied, Email: "edge@example.test"})
+	s.AddEvent(ctx, access.Event{At: now, Kind: access.EventRequested, Email: "new@example.test"})
+	n, err := s.PruneEvents(ctx, cutoff)
+	if err != nil || n != 1 {
+		t.Fatalf("PruneEvents = %d, %v, want 1", n, err)
+	}
+	var left int
+	d.QueryRow(`SELECT count(*) FROM access_events`).Scan(&left)
+	if left != 2 {
+		t.Fatalf("%d events left, want 2", left)
 	}
 }
