@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Avatar } from '../ui'
+import { isChromeless } from './chromeless'
 import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, sortByOrder } from './nav'
 import { shellStrings } from './strings'
@@ -14,6 +15,17 @@ export interface AppShellProps {
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [] }: AppShellProps) {
+  const { pathname } = useLocation()
+  if (isChromeless(pathname)) {
+    // The kitchen board and Cook Mode: the page alone, no bars and no avatar menu.
+    return (
+      <div className="app-shell app-shell--chromeless">
+        <main className="app-main">
+          <Outlet />
+        </main>
+      </div>
+    )
+  }
   return (
     <div className="app-shell">
       <header className="top-bar">

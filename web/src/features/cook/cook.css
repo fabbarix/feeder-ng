@@ -1,0 +1,107 @@
+/* Cook Mode: a single column on the phone, two columns of Bento tiles from the tablet width up. */
+.cook-screen {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.cook-screen__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.cook-screen__title {
+  margin: 0;
+  font-size: 1.5rem;
+  flex: 1 1 auto;
+}
+
+.cook-step {
+  display: grid;
+  gap: 12px;
+  min-height: 40vh;
+  align-content: start;
+  font-size: 1.25rem;
+}
+
+.cook-step__count {
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.cook-step__text {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  line-height: 1.25;
+}
+
+.cook-step__uses {
+  margin: 0;
+  padding-left: 1.25em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cook-step__note,
+.cook-screen__empty {
+  margin: 0;
+}
+
+.cook-step__image {
+  width: 100%;
+  border-radius: 20px;
+  object-fit: cover;
+}
+
+.cook-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cook-nav__tile {
+  width: 100%;
+  min-height: 72px;
+  font-size: 1.25rem;
+}
+
+.cook-advance__heading,
+.cook-timers__heading {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.cook-advance__list,
+.cook-timers__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.cook-advance__pending {
+  display: grid;
+  gap: 6px;
+}
+
+.cook-timers__item {
+  display: grid;
+  gap: 6px;
+}
+
+@media (min-width: 768px) {
+  .cook-screen {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cook-screen__header,
+  .cook-nav,
+  .cook-screen > .cook-screen__empty {
+    grid-column: 1 / -1;
+  }
+}
