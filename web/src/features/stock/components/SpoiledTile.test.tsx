@@ -12,7 +12,7 @@ describe('SpoiledTile', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('asks "Throw out or keep?" in the spoil tone and lists each lot', () => {
+  it('asks "Throw out or keep?" in a spoil status Tile and lists each lot', () => {
     render(
       <SpoiledTile
         today={today}
@@ -27,7 +27,7 @@ describe('SpoiledTile', () => {
     expect(screen.getByText('Went off 4 days ago')).toBeInTheDocument()
     expect(screen.getByText('1000 ml')).toBeInTheDocument()
     expect(screen.getByText('Went off yesterday')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-tone', 'spoil')
+    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'spoil')
   })
 
   it('reports which lot is thrown out or kept', async () => {
@@ -38,5 +38,29 @@ describe('SpoiledTile', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Keep milk' }))
     expect(onThrowOut).toHaveBeenCalledWith(11)
     expect(onKeep).toHaveBeenCalledWith(12)
+  })
+
+  it('is a status Tile using the status tokens, with no legacy tone', () => {
+    render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
+    const tile = screen.getByRole('region', { name: 'Throw out or keep?' })
+    expect(tile).toHaveAttribute('data-variant', 'status')
+    expect(tile).not.toHaveAttribute('data-tone')
+  })
+
+  it('Throw out is a danger tertiary with a Trash icon; Keep is a secondary with a Check icon', () => {
+    render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
+    const out = screen.getByRole('button', { name: 'Throw out chicken thighs' })
+    const keep = screen.getByRole('button', { name: 'Keep chicken thighs' })
+    expect(out).toHaveAttribute('data-variant', 'danger-tertiary')
+    expect(keep).toHaveAttribute('data-variant', 'secondary')
+    expect(out.querySelector('svg')).not.toBeNull()
+    expect(keep.querySelector('svg')).not.toBeNull()
+    expect(out).toHaveTextContent('Throw out')
+    expect(keep).toHaveTextContent('Keep')
+  })
+
+  it('has no primary Button (the screen header owns the primary)', () => {
+    render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
+    expect(document.querySelector('button[data-variant="primary"]')).toBeNull()
   })
 })

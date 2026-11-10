@@ -14,15 +14,18 @@ export interface SpoiledTileProps {
 }
 
 /**
- * "Throw out or keep?" for spoiled Stock Lots, in the fixed spoil colour. Each row
- * shows name, amount and go-off wording, with "Throw out" and "Keep" buttons
- * (accessible names "Throw out <name>" / "Keep <name>"). Renders nothing when lots is empty.
- * Exported for the Today screen to embed.
+ * "Throw out or keep?" for spoiled Stock Lots: `Tile variant="status" status="spoil" as="section"` (so
+ * bg/fg are --status-spoil-bg/-fg in both schemes; no `tone`, no `--status-spoil-solid` as a surface, which is
+ * what glared in dark) with an `overline` "Throw out or keep?" + overlineIcon `spoiled`. One row per lot:
+ * name, amount, go-off wording, then two icon+label `Button size="sm"`s: Throw out = variant `danger-tertiary`
+ * icon `throwOut` (Trash), Keep = variant `secondary` icon `tick` (Check). Accessible names stay
+ * "Throw out <name>" / "Keep <name>". Renders nothing when lots is empty. Exported for the Today screen.
+ * Legacy Tile `tone`, Button `tonal`/`ghost` are gone.
  */
 export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric' }: SpoiledTileProps): ReactElement | null {
   if (lots.length === 0) return null
   return (
-    <Tile as="section" tone="spoil" aria-label={strings.spoiledHeading}>
+    <Tile as="section" variant="status" status="spoil" aria-label={strings.spoiledHeading}>
       <h2 className="spoiled-tile__title">{strings.spoiledHeading}</h2>
       <ul className="spoiled-tile__list">
         {lots.map((lot) => (
@@ -30,10 +33,10 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
             <span className="spoiled-tile__name">{lot.ingredientName}</span>
             <span className="spoiled-tile__amount">{formatQuantity(lot.quantity, lot.baseUnit, system)}</span>
             <span className="spoiled-tile__when">{describeGoOff(lot, today).label}</span>
-            <Button variant="tonal" size="md" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
+            <Button variant="danger-tertiary" icon="throwOut" size="sm" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
               {strings.throwOut}
             </Button>
-            <Button variant="ghost" size="md" aria-label={strings.keepLabel(lot.ingredientName)} onClick={() => onKeep(lot.id)}>
+            <Button variant="secondary" icon="tick" size="sm" aria-label={strings.keepLabel(lot.ingredientName)} onClick={() => onKeep(lot.id)}>
               {strings.keep}
             </Button>
           </li>

@@ -4,12 +4,20 @@ import { connectEvents } from '../../../lib/sse'
 import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { stockApi } from '../api'
+import type { StockStatus } from '../lib/status'
 import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse } from '../types'
 
 export interface QueryState<T> {
   data: T | undefined
   isLoading: boolean
   error: Error | null
+  /**
+   * 'loading' | 'error' | 'offline' | 'empty' | 'ready' from resolveStockStatus (lib/status.ts).
+   * offline = navigator.onLine === false; held data wins over offline and error; empty = received and no rows.
+   */
+  status: StockStatus
+  /** Refetches this query ("Try again"). */
+  refetch: () => Promise<unknown>
 }
 
 /** A lots query: the lots plus the household's date from the server (undefined until loaded). */
@@ -51,7 +59,8 @@ export function useStockTotals(): QueryState<IngredientStock[]> & { system: Unit
   useStockLiveUpdates()
   const system = useDisplayUnitSystem()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'totals'], queryFn: () => stockApi.totals() })
-  return { data: query.data, isLoading: query.isLoading, error: query.error, system }
+  // TODO(developer): status via resolveStockStatus, refetch: query.refetch
+  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status: 'loading', refetch: query.refetch }
 }
 
 /** The lots of one Ingredient (disabled while ingredientId is null). Refetches on `stock` events. */
@@ -98,6 +107,9 @@ function lotsState(query: { data: StockLotsResponse | undefined; isLoading: bool
     today: query.data?.today,
     isLoading: query.isLoading,
     error: query.error,
+    // TODO(developer): status via resolveStockStatus (empty = data.lots is []), refetch: query.refetch
+    status: 'loading',
+    refetch: async () => undefined,
   }
 }
 

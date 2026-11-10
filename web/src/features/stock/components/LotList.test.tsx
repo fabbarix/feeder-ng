@@ -4,31 +4,35 @@ import { makeLot } from '../testData'
 import { LotList } from './LotList'
 
 describe('LotList', () => {
-  it('shows amount, purchase date, go-off wording and source for each lot', () => {
+  it('is a labelled ListGroup with one ListRow per lot: amount, bought-on and source, go-off wording', () => {
     render(
       <LotList
         today="2026-11-09"
         lots={[
-          makeLot({ id: 1, quantity: 500, goesOff: '2026-11-12', source: 'scan', spoiled: false, useSoon: true }),
+          makeLot({ id: 1, quantity: 500, goesOff: '2026-11-12', source: 'scan', spoiled: false, useSoon: true, purchased: '2026-11-01' }),
           makeLot({ id: 2, quantity: 300, goesOff: null, source: 'stock_take', purchased: '2026-11-09', spoiled: false }),
         ]}
       />,
     )
+    expect(screen.getByRole('list', { name: 'Stock Lots' })).toBeInTheDocument()
     const rows = screen.getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]!).getByText('500 g')).toBeInTheDocument()
     expect(within(rows[0]!).getByText('Goes off in 3 days')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('Scanned')).toBeInTheDocument()
+    expect(within(rows[0]!).getByText(/Scanned/)).toBeInTheDocument()
+    expect(within(rows[0]!).getByText(/Bought 2026-11-01/)).toBeInTheDocument()
     expect(within(rows[1]!).getByText('No go-off date')).toBeInTheDocument()
-    expect(within(rows[1]!).getByText('Stock-take')).toBeInTheDocument()
+    expect(within(rows[1]!).getByText(/Stock-take/)).toBeInTheDocument()
   })
 
-  it('marks a lot that is going off with the spoil tone', () => {
+  it('marks a lot that is going off with a spoil state chip', () => {
     render(<LotList today="2026-11-09" lots={[makeLot({ goesOff: '2026-11-05' })]} />)
-    expect(screen.getByText('Went off 4 days ago').closest('[data-tone]')).toHaveAttribute('data-tone', 'spoil')
+    const chip = screen.getByText('Went off 4 days ago').closest('.chip')
+    expect(chip).toHaveAttribute('data-status', 'spoil')
+    expect(chip).toHaveAttribute('data-kind', 'state')
   })
 
-  it('takes the tone from the server flags: use soon is spoil, plain is neutral', () => {
+  it('takes the colour from the server flags: use soon is spoil, plain is a neutral tag', () => {
     render(
       <LotList
         today="2026-11-09"
@@ -38,7 +42,9 @@ describe('LotList', () => {
         ]}
       />,
     )
-    expect(screen.getByText('Goes off in 3 days').closest('[data-tone]')).toHaveAttribute('data-tone', 'spoil')
-    expect(screen.getByText('Goes off in 4 days').closest('[data-tone]')).toHaveAttribute('data-tone', 'neutral')
+    expect(screen.getByText('Goes off in 3 days').closest('.chip')).toHaveAttribute('data-status', 'spoil')
+    const plain = screen.getByText('Goes off in 4 days').closest('.chip')
+    expect(plain).toHaveAttribute('data-kind', 'tag')
+    expect(plain).not.toHaveAttribute('data-status')
   })
 })
