@@ -39,12 +39,14 @@ type App struct {
 	workers *sync.WaitGroup
 }
 
-// Close ends Deps.Context and waits until the workers the modules started with Deps.Go have returned.
+// Close ends Deps.Context, ends the live-update streams and waits until the workers the modules started with
+// Deps.Go have returned.
 // Safe to call more than once.
 func (a *App) Close() {
 	if a.stop != nil {
 		a.stop()
 	}
+	a.Deps.Events.Close()
 	a.workers.Wait()
 }
 
@@ -127,6 +129,5 @@ func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
 // waiting for them (http.Server.Shutdown does not close hijacked or long-lived
 // handlers on its own).
 func (a *App) BindServer(srv *http.Server) {
-	// stub: implemented by the Developer
-	_ = srv
+	srv.RegisterOnShutdown(a.Deps.Events.Close)
 }
