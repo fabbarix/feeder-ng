@@ -74,6 +74,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['price', 'Coins'],
   ['extra', 'NotePencil'],
   ['timer', 'Timer'],
+  ['reheat', 'Fire'], // R12: Reheat button and screen
   ['pause', 'Pause'],
   ['resume', 'Play'],
   ['addMinute', 'PlusCircle'],

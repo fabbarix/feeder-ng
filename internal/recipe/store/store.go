@@ -99,10 +99,10 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 	}
 	now := s.now()
 	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
-	        source_url, source_attribution, image, archived, total_minutes, advance_minutes, created_at, updated_at)
-	        VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?)`,
+	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, created_at, updated_at)
+	        VALUES (?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, now, now)
+		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, now, now)
 	if err != nil {
 		return 0, err
 	}
@@ -172,10 +172,10 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET name = ?, description = ?, yield = ?, ready_meal = ?, cooldown_days = ?,
-	        leftover_use_by_days = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
+	        leftover_use_by_days = ?, reheat_minutes = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
 	        updated_at = ? WHERE id = ?`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, s.now(), id); err != nil {
+		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, s.now(), id); err != nil {
 		return nil, err
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
@@ -213,7 +213,7 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 		        WHERE rt.recipe_id = r.id AND t.key = ?)`)
 		args = append(args, recipe.TagKey(f.Tag))
 	}
-	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes FROM recipes r`
+	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes FROM recipes r`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -228,9 +228,11 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	for rows.Next() {
 		var sum recipe.Summary
 		var ready, archived int64
-		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes); err != nil {
+		var reheat sql.NullInt64
+		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat); err != nil {
 			return nil, err
 		}
+		sum.ReheatMinutes = int(reheat.Int64)
 		if needle != "" && !strings.Contains(strings.ToLower(sum.Name), needle) {
 			continue
 		}
@@ -573,11 +575,11 @@ func upsertTag(ctx context.Context, tx *sql.Tx, name string) (int64, error) {
 func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) {
 	var r recipe.Recipe
 	var ready, archived int64
-	var cool, useBy sql.NullInt64
+	var cool, useBy, reheat sql.NullInt64
 	var created, updated string
 	err := q.QueryRowContext(ctx, `SELECT name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
-	        source_url, source_attribution, image, archived, created_at, updated_at FROM recipes WHERE id = ?`, id).
-		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &r.Source.URL, &r.Source.Attribution, &r.Image,
+	        reheat_minutes, source_url, source_attribution, image, archived, created_at, updated_at FROM recipes WHERE id = ?`, id).
+		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &reheat, &r.Source.URL, &r.Source.Attribution, &r.Image,
 			&archived, &created, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return recipe.Recipe{}, ErrNotFound
@@ -593,6 +595,9 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	}
 	if useBy.Valid {
 		r.LeftoverUseByDays = intPtr(int(useBy.Int64))
+	}
+	if reheat.Valid {
+		r.ReheatMinutes = intPtr(int(reheat.Int64))
 	}
 	if r.CreatedAt, err = time.Parse(time.RFC3339, created); err != nil {
 		return recipe.Recipe{}, err

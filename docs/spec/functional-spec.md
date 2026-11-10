@@ -40,10 +40,11 @@ The Household records the moment it was created in Feeder (never edited, not a s
 
 ## 4. Recipes
 
-These fields mirror the Recipe File ([recipe-file.md](recipe-file.md)): name, description, **Yield**, Ready Meal flag, **Tags**, Cool-down and Use-by overrides, image, source, ingredient lines (for one **Batch**) and **Steps** (active, passive or **Advance Step**, with an optional duration, image, `after` dependencies and `uses`).
+These fields mirror the Recipe File ([recipe-file.md](recipe-file.md)): name, description, **Yield**, Ready Meal flag, **Tags**, Cool-down and Use-by overrides, **Reheat time** (optional, 1 to 30 whole minutes), image, source, ingredient lines (for one **Batch**) and **Steps** (active, passive or **Advance Step**, with an optional duration, image, `after` dependencies and `uses`).
 
 - **Total time** is the critical path of the schedule (recipe-file.md, *Steps and timing*), shown on Recipe tiles. Advance Steps show separately ("+4 h marinate").
 - Recipes can be **archived**: they are excluded from planning but kept for history. Hard delete is only possible if the Recipe was never planned.
+- A Recipe's **Reheat time** is optional. It is a whole number of minutes from 1 to 30; blank means not set. The Recipe editor shows it as a compact number field after the Use-by field. It is flat for the Planned Meal (it does not grow with the number of portions) and Reheat clamps it to its own 30 seconds to 30 minutes range. A value outside 1 to 30 is refused with `validation_failed`, `reason: reheat_invalid`, `field: reheatMinutes`.
 - Recipe editor: an ingredient line's unit is validated against the Ingredient's units, and an unknown unit prompts for a **Unit Conversion** inline.
 
 ## 5. Ingredients, Products, Shops
@@ -148,6 +149,7 @@ If no candidate survives, the slot stays empty and Today shows "Couldn't plan Th
   2. records the actual Leftover with its Use-by = cooked date + the Use-by days;
   3. replans: if the actual Leftover is smaller than what was already placed, the affected Leftover meals are unpinned and replanned; if it is larger, the extra becomes a pending Leftover.
 - **Not cooked** ("we had takeaway") marks the meal as skipped: no Stock change and no Leftovers, and the Leftover meals that depended on it are replanned.
+- A Planned Meal served from a Leftover that is due today offers **Reheat** on Today. Reheat opens a screen with a reheating timer scoped to that Planned Meal. The timer starts at the Recipe's Reheat time when it has one; otherwise at 2 minutes for one portion plus 1 minute for each further portion, at most 10 minutes. Either start is adjustable by 30 seconds, from 30 seconds to 30 minutes. Mark as Cooked then takes the portions off the Leftover and leaves Stock unchanged (Stock was deducted when the Batch was Cooked); like any Cooked or Not cooked, it cancels the Planned Meal's timers, the Reheat timer included. Leaving the screen early keeps the timer running and consumes nothing.
 - A Planned Meal that is still unconfirmed 2 h after its slot time appears in Today's "To confirm" tile and triggers a reminder.
 - Leftovers past their Use-by are discarded automatically and count as waste.
 
@@ -198,7 +200,7 @@ The camera uses the `BarcodeDetector` API where available, otherwise a WASM fall
 
 ## 11. Cook Mode and the kitchen board
 
-- **Cook Mode** opens for a Planned Meal (or a Recipe with a chosen Batch count). Steps are shown one at a time, with the `uses` amounts scaled to the Batches. Completed Advance Steps are listed above as done; ones not done show a warning.
+- **Cook Mode** opens for a Planned Meal (or a Recipe with a chosen Batch count). Steps are shown one at a time, with the `uses` amounts scaled to the Batches. Completed Advance Steps are listed above as done; ones not done show a warning. A Planned Meal served from a Leftover has no Steps and does not open Cook Mode; it uses Reheat (section 8).
 - Passive Steps start a **timer** when the Step is reached. Timers keep running across Steps and are shown as tiles, with an alarm sound plus a push notification when one ends. Timers are synced, so the phone and the tablet show the same timers.
 - **Navigation:** Back/Next tiles; on a tablet, tapping the left or right half of the step tile also works. Optional voice commands ("next", "back", "repeat", "start timer", "pause timer") use the browser's speech recognition where available, and are off by default.
 - The screen stays awake (Wake Lock). The last Step offers **Mark as Cooked** (§8).
@@ -223,6 +225,7 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 
 - **Export:** pick one or more Recipes, or all of them, and download a `.feeder.json` file with images embedded ([recipe-file.md](recipe-file.md)).
 - **Import:** upload or paste JSON, then go through Import Review (recipe-file.md, *Import Review*).
+- A Recipe's Reheat time travels in the Recipe File as the optional `reheatMinutes`; files without it stay valid (the format is still version 1).
 - **Copy Agent Prompt:** copies the prompt template with the schema and example inlined.
 
 ## 14. Theming and layout

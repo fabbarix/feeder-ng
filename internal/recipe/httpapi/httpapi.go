@@ -118,6 +118,7 @@ type recipeJSON struct {
 	Tags              []string      `json:"tags"`
 	CooldownDays      *int          `json:"cooldownDays"`
 	LeftoverUseByDays *int          `json:"leftoverUseByDays"`
+	ReheatMinutes     *int          `json:"reheatMinutes"`
 	Source            sourceJSON    `json:"source"`
 	Image             string        `json:"image"`
 	ImageURL          string        `json:"imageUrl"`
@@ -164,6 +165,7 @@ type recipeBody struct {
 	Tags              []string   `json:"tags"`
 	CooldownDays      *int       `json:"cooldownDays"`
 	LeftoverUseByDays *int       `json:"leftoverUseByDays"`
+	ReheatMinutes     *int       `json:"reheatMinutes"`
 	Source            sourceJSON `json:"source"`
 	Image             string     `json:"image"`
 	Lines             []lineBody `json:"lines"`
@@ -197,6 +199,7 @@ func (b recipeBody) input() recipe.Input {
 		Tags:              b.Tags,
 		CooldownDays:      b.CooldownDays,
 		LeftoverUseByDays: b.LeftoverUseByDays,
+		ReheatMinutes:     b.ReheatMinutes,
 		Source:            recipe.Source{URL: b.Source.URL, Attribution: b.Source.Attribution},
 		Image:             b.Image,
 	}
@@ -534,7 +537,7 @@ func nonNil(s []string) []string {
 func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 	out := recipeJSON{
 		ID: rec.ID, Name: rec.Name, Description: rec.Description, Yield: rec.Yield, ReadyMeal: rec.ReadyMeal,
-		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays,
+		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays, ReheatMinutes: rec.ReheatMinutes,
 		Source: sourceJSON{URL: rec.Source.URL, Attribution: rec.Source.Attribution},
 		Image:  rec.Image, ImageURL: imageURL(rec.Image), Archived: rec.Archived,
 		Lines: []lineJSON{}, Steps: []stepJSON{}, Advance: []advanceJSON{},
