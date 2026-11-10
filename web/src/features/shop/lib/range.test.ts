@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayLabel, describeRange, rangeChoices } from './range'
+import { dayLabel, describeRange, rangeChoices, rangeOptions } from './range'
 
 describe('dayLabel', () => {
   it('names today and tomorrow, then the weekday and day of month', () => {
@@ -36,5 +36,18 @@ describe('rangeChoices', () => {
     const c = rangeChoices('2026-11-09', '2026-12-31')
     expect(c).toHaveLength(14)
     expect(c[13]?.to).toBe('2026-11-22')
+  })
+})
+
+describe('rangeOptions', () => {
+  it('has one option per day to the horizon, labelled as the range reads', () => {
+    const options = rangeOptions('2026-11-09', '2026-11-15')
+    expect(options.map((o) => o.value)).toEqual(['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15'])
+    expect(options.map((o) => o.label)).toEqual(['Today', 'Until tomorrow', 'Until Wed 11', 'Until Thu 12', 'Until Fri 13', 'Until Sat 14', 'Until Sun 15'])
+  })
+
+  it('is capped at 14 options and never empty', () => {
+    expect(rangeOptions('2026-11-09', '2026-12-31')).toHaveLength(14)
+    expect(rangeOptions('2026-11-09', '2026-11-01').map((o) => o.value)).toEqual(['2026-11-09'])
   })
 })

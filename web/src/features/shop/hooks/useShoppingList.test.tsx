@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import { createMemorySnapshotStore } from '../../scan/lib/snapshots'
 import { makeList } from '../testData'
 
-const api = vi.hoisted(() => ({ list: vi.fn() }))
+const api = vi.hoisted(() => ({ list: vi.fn(), tick: vi.fn() }))
 vi.mock('../api', () => ({ shopApi: api }))
 
 const sse = vi.hoisted(() => {
@@ -27,6 +27,7 @@ const sse = vi.hoisted(() => {
 })
 vi.mock('../../../lib/sse', () => ({ connectEvents: sse.connectEvents }))
 
+import { useShoppingActions } from './useShoppingActions'
 import { useShoppingList } from './useShoppingList'
 
 function wrapper() {
@@ -70,7 +71,53 @@ describe('useShoppingList', () => {
     await waitFor(() => expect(sse.connection.subscribe).toHaveBeenCalledWith(topic, expect.any(Function)))
     spy.mockClear()
     sse.handlers[topic]?.()
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['shopping'] }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['shopping'] }), { cancelRefetch: false }))
+  })
+
+  // WP7 (QA: about 4 requests per tick). A tick makes the server publish shopping + stock + plan + products events at once.
+  it('a burst of events and a local change give ONE refetch, not one per event', async () => {
+    const { Wrapper } = wrapper()
+    const { result } = renderHook(() => ({ list: useShoppingList({ shopId: 2, snapshots: createMemorySnapshotStore() }), actions: useShoppingActions() }), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.list.data).toBeDefined())
+    await waitFor(() => expect(sse.connection.subscribe).toHaveBeenCalledWith('products', expect.any(Function)))
+    expect(api.list).toHaveBeenCalledTimes(1)
+    api.tick.mockResolvedValue({ ticked: true, lotId: 5, created: true })
+    await act(() => result.current.actions.tick({ ingredientId: 2, to: '2026-11-15', quantity: 1400, shopId: 2 }))
+    for (const topic of ['shopping', 'stock', 'plan', 'products']) sse.handlers[topic]?.()
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    expect(api.list).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports a status for the screen: loading, then ready, empty, offline or error', async () => {
+    const { Wrapper } = wrapper()
+    const { result } = renderHook(() => useShoppingList({ shopId: 2, snapshots: createMemorySnapshotStore() }), { wrapper: Wrapper })
+    expect(result.current.status).toBe('loading')
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    api.list.mockReset().mockResolvedValue(makeList({ lines: [], extras: [], progress: { ticked: 0, total: 0 } }))
+    const empty = wrapper()
+    const e = renderHook(() => useShoppingList({ shopId: 3, snapshots: createMemorySnapshotStore() }), { wrapper: empty.Wrapper })
+    await waitFor(() => expect(e.result.current.status).toBe('empty'))
+
+    api.list.mockReset().mockRejectedValue(new ApiError(404, 'not_found', 'no such Shop'))
+    const bad = wrapper()
+    const b = renderHook(() => useShoppingList({ shopId: 4, snapshots: createMemorySnapshotStore() }), { wrapper: bad.Wrapper })
+    await waitFor(() => expect(b.result.current.status).toBe('error'))
+    api.list.mockReset().mockResolvedValue(makeList())
+    b.result.current.retry()
+    await waitFor(() => expect(b.result.current.status).toBe('ready'))
+  })
+
+  it('status is offline while the saved snapshot is shown', async () => {
+    const snapshots = createMemorySnapshotStore()
+    const first = wrapper()
+    const online = renderHook(() => useShoppingList({ shopId: 2, to: '2026-11-15', snapshots }), { wrapper: first.Wrapper })
+    await waitFor(() => expect(online.result.current.status).toBe('ready'))
+    online.unmount()
+    api.list.mockReset().mockRejectedValue(new ApiError(0, 'network', 'offline'))
+    const second = wrapper()
+    const offline = renderHook(() => useShoppingList({ shopId: 2, to: '2026-11-15', snapshots }), { wrapper: second.Wrapper })
+    await waitFor(() => expect(offline.result.current.status).toBe('offline'))
   })
 
   it('refetches after the stream reconnects, and closes it on unmount', async () => {
@@ -79,7 +126,7 @@ describe('useShoppingList', () => {
     await waitFor(() => expect(sse.connection.onReconnect).toHaveBeenCalled())
     spy.mockClear()
     sse.reconnect.fn()
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['shopping'] }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['shopping'] }), { cancelRefetch: false }))
     unmount()
     expect(sse.connection.close).toHaveBeenCalled()
   })

@@ -10,10 +10,17 @@ function setup(initial = 800) {
 }
 
 describe('SetTotalSheet', () => {
-  it('is titled for the Ingredient and prefilled', () => {
+  it('puts its field in the same token-gap stack as the Add sheet', () => {
+    setup()
+    expect(screen.getByRole('dialog').querySelector('.stock-sheet__fields')).toContainElement(screen.getByLabelText('New total'))
+  })
+
+  it('is titled for the Ingredient and prefilled, with the Base Unit as suffix, and has no native control but the field', () => {
     setup(0)
     expect(screen.getByRole('dialog', { name: 'Set total for chicken thighs' })).toBeInTheDocument()
     expect(screen.getByLabelText('New total')).toHaveValue('0')
+    expect(screen.getByRole('dialog').querySelector('select, input[type="number"], input[type="date"]')).toBeNull()
+    expect(screen.getByText('g', { selector: '.ui-field__suffix' })).toBeInTheDocument()
   })
 
   it('submits the typed total as a number', async () => {
@@ -41,6 +48,7 @@ describe('SetTotalSheet', () => {
     await userEvent.type(input, '-5')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByText('The amount cannot be negative')).toBeInTheDocument()
+    expect(screen.getByLabelText('New total')).toHaveAttribute('aria-invalid', 'true')
     expect(onSubmit).not.toHaveBeenCalled()
   })
 

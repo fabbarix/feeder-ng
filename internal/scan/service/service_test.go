@@ -514,3 +514,21 @@ func TestAPackScanStillTakesThePackPriceEvenForAWeighedProduct(t *testing.T) {
 		t.Fatalf("PriceCents = %d, want 899", *res.Scan.PriceCents)
 	}
 }
+
+// WP7 / R8: a barcode owned by an ARCHIVED Product is not merged into silently (that would add Stock to a retired
+// pack). The Op is rejected with barcode_archived and the message keeps "barcode already belongs to product N", so the
+// phone can offer "Unarchive <Product>" (POST /api/products/{id}/unarchive) and then scan again.
+func TestABarcodeOwnedByAnArchivedProductIsRejectedNotMerged(t *testing.T) {
+	e := newEnv(t)
+	e.cat.createErr = &service.BarcodeTakenError{ProductID: 9, Archived: true}
+	res := apply(t, e, unknownPack("scan-0100", scan.ScopeGlobal))
+	if res.Status != scan.StatusRejected || res.Error == nil || res.Error.Code != service.CodeBarcodeArchived {
+		t.Fatalf("Result = %+v, want rejected barcode_archived", res)
+	}
+	if res.Error.Message != "barcode already belongs to product 9" {
+		t.Fatalf("message = %q, want the owner id kept for the client", res.Error.Message)
+	}
+	if len(e.stock.lots) != 0 {
+		t.Fatalf("Lots = %v, want none: nothing was bought", e.stock.lots)
+	}
+}

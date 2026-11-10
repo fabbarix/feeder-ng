@@ -11,9 +11,13 @@ export interface ListEntry {
   ingredientId: number | null
   extraId: number | null
   title: string
-  /** "1400 g · 2 × Mutti 700 g", "1400 g", "2000 ml" or "" for free text */
+  /** "1400 g · 2 × Mutti 700 g", "1400 g", "2000 ml" or "" for free text (the Scan live list shows this) */
   detail: string
-  /** "$3.18", "—" when unpriced; null where the estimated cost is not shown (extras, ticked lines) */
+  /** the quantity of the tile ("1400 g", "2000 ml"); "" for free text and ticked entries (WP7) */
+  quantityText: string
+  /** the muted pack line ("2 × Mutti 700 g"); "" when there is no pack suggestion or the entry is ticked (WP7) */
+  packLine: string
+  /** "$3.18"; null when the Line has no Price (nothing is shown, never a dash) or where no estimate applies (extras, ticked lines) */
   estimatedCost: string | null
   ticked: boolean
   /** the remaining amount in Base Units (what "How much?" is prefilled with); 0 for free text and covered lines */
@@ -27,9 +31,9 @@ export function packText(line: Pick<ShoppingLine, 'quantity' | 'baseUnit' | 'pac
   return line.pack ? `${amount} · ${line.pack.count} × ${line.pack.name}` : amount
 }
 
-/** formatMinor(cents, currency), or "—" when cents is null. */
-export function priceText(cents: number | null, currency: string): string {
-  return cents === null ? '—' : formatMinor(cents, currency)
+/** formatMinor(cents, currency), or null when cents is null (WP7: nothing is shown for a missing Price, never a dash). */
+export function priceText(cents: number | null, currency: string): string | null {
+  return cents === null ? null : formatMinor(cents, currency)
 }
 
 export function lineEntry(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry {
@@ -40,6 +44,8 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     extraId: null,
     title: line.name,
     detail: line.ticked ? '' : packText(line, system),
+    quantityText: line.ticked ? '' : formatQuantity(line.quantity, line.baseUnit, system),
+    packLine: line.ticked || !line.pack ? '' : `${line.pack.count} × ${line.pack.name}`,
     estimatedCost: line.ticked ? null : priceText(line.estimatedCostCents, currency),
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,
@@ -56,6 +62,8 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     extraId: extra.id,
     title: extra.text ?? extra.name ?? '',
     detail: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
+    quantityText: hasAmount && !extra.ticked ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
+    packLine: '',
     estimatedCost: null,
     ticked: extra.ticked,
     quantity: hasAmount && !extra.ticked ? (extra.quantity ?? 0) : 0,

@@ -8,8 +8,14 @@ import { findNotice } from '../../../test/notices'
 const base = {
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, tag: 'pizza' }],
   'GET /api/variety-rules': [{ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false }],
-  'GET /api/meal-slots': [{ id: 5, weekday: 5, name: 'Dinner' }],
-  'GET /api/recipes': [{ id: 3, name: 'Curry' }],
+  'GET /api/meal-slots': [{ id: 5, weekday: 5, name: 'Dinner', time: '19:00' }],
+  'GET /api/recipes': [{ id: 3, name: 'Curry', tags: [] }],
+  'GET /api/tags': [{ name: 'fish', recipes: 2 }, { name: 'pasta', recipes: 4 }],
+}
+
+async function pick(field: string, option: string | RegExp) {
+  await userEvent.click(screen.getByRole('combobox', { name: field }))
+  await userEvent.click(await screen.findByRole('option', { name: option }))
 }
 
 describe('PlanningRulesScreen', () => {
@@ -22,12 +28,27 @@ describe('PlanningRulesScreen', () => {
     expect(await screen.findByText('At most 2 a week')).toBeInTheDocument()
   })
 
+  it('has no native <select>', async () => {
+    mockApi(base)
+    const { container } = renderWithProviders(<PlanningRulesScreen />)
+    await screen.findByText('Tag: pizza')
+    expect(container.querySelector('select')).toBeNull()
+  })
+
+  it('reads the existing Tags once for the Tag selects (read-only use of the recipes API)', async () => {
+    const api = mockApi(base)
+    renderWithProviders(<PlanningRulesScreen />)
+    await screen.findByText('Tag: pizza')
+    await waitFor(() => expect(api.callsTo('GET', '/api/tags').length).toBeGreaterThanOrEqual(1))
+    expect(api.calls.filter((c) => c.method !== 'GET')).toHaveLength(0)
+  })
+
   it('adding a Slot Rule posts it', async () => {
     const api = mockApi({ ...base, 'POST /api/slot-rules': { id: 10, mealSlotId: 5, recipeId: 3 } })
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('Tag: pizza')
-    await userEvent.selectOptions(screen.getByLabelText('Meal Slot'), 'Friday Dinner')
-    await userEvent.selectOptions(await screen.findByLabelText('Recipe'), 'Curry')
+    await pick('Meal Slot', /Dinner/)
+    await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/slot-rules')[0]?.body).toEqual({ mealSlotId: 5, recipeId: 3 }))
   })
@@ -40,12 +61,14 @@ describe('PlanningRulesScreen', () => {
     await waitFor(() => expect(api.callsTo('DELETE', '/api/slot-rules/9')).toHaveLength(1))
   })
 
-  it('saving a Variety Rule puts it under its normalised Tag', async () => {
+  it('saving a Variety Rule puts it under the picked Tag', async () => {
     const api = mockApi({ ...base, 'PUT /api/variety-rules/pasta': { tag: 'pasta', maxPerWeek: 0, notConsecutiveDays: true } })
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('At most 2 a week')
-    await userEvent.type(screen.getAllByLabelText('Tag').at(-1)!, 'Pasta')
-    await userEvent.click(screen.getByLabelText('Not on consecutive days'))
+    const varietyTag = screen.getAllByRole('combobox', { name: 'Tag' }).at(-1)!
+    await userEvent.click(varietyTag)
+    await userEvent.click(await screen.findByRole('option', { name: /pasta/ }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Not on consecutive days' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 0, notConsecutiveDays: true }))
   })
@@ -54,8 +77,8 @@ describe('PlanningRulesScreen', () => {
     mockApi({ ...base, 'POST /api/slot-rules': { status: 409, json: { error: { code: 'duplicate_rule', message: 'dup' } } } })
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('Tag: pizza')
-    await userEvent.selectOptions(screen.getByLabelText('Meal Slot'), 'Friday Dinner')
-    await userEvent.selectOptions(await screen.findByLabelText('Recipe'), 'Curry')
+    await pick('Meal Slot', /Dinner/)
+    await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
   })

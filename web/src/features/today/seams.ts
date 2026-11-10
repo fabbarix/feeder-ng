@@ -2,7 +2,7 @@
 // scan session (T13). Tests mock this module. Only this file imports other
 // features' hooks, so Today's own components and hooks stay decoupled.
 import type { UnitSystem } from '../../lib/units'
-import { nextMeal, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
+import { heroMeal, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
 import type { Leftover, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
 import type { StockLot } from '../stock/types'
@@ -17,6 +17,8 @@ export { useScanSessionActive } from '../scan'
 export const ShoppingListSeam = ShoppingScreen
 
 export interface TodayPlanCounts {
+  /** Household date (YYYY-MM-DD), for the date under the title. */
+  today: string
   hasNextMeal: boolean
   toConfirm: number
   couldntPlan: number
@@ -32,6 +34,8 @@ export interface TodayStock {
 
 /** Everything the Today tiles display, read from the owning features. */
 export interface TodayTileData {
+  /** The clock the hero judges 'upcoming' or 'awaiting' by. */
+  now: Date
   nextSlot: PlanSlot | null
   toConfirm: PlanSlot[]
   couldntPlan: PlanSlot[]
@@ -49,6 +53,7 @@ export interface TodayTileData {
 
 /** T11 and T10 data for the Today tiles. */
 export function useTodayTileData(): TodayTileData {
+  const now = new Date()
   const plan = usePlan()
   const toConfirm = useToConfirm()
   const couldntPlan = useCouldntPlan()
@@ -56,7 +61,8 @@ export function useTodayTileData(): TodayTileData {
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
   return {
-    nextSlot: nextMeal(plan.slots, new Date()),
+    now,
+    nextSlot: heroMeal(plan.slots, now),
     toConfirm: toConfirm.slots,
     couldntPlan: couldntPlan.slots,
     leftovers: leftovers.leftovers,
@@ -76,6 +82,7 @@ export function useTodayTileData(): TodayTileData {
 export function useTodayPlan(): TodayPlanCounts {
   const d = useTodayTileData()
   return {
+    today: d.planToday,
     hasNextMeal: d.nextSlot !== null,
     toConfirm: d.toConfirm.length,
     couldntPlan: d.couldntPlan.length,

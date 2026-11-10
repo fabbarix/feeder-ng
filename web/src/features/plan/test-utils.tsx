@@ -4,7 +4,7 @@ import { render, type RenderResult } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
-import { ToastProvider } from '../../ui'
+import { ConfirmProvider, ToastProvider } from '../../ui'
 
 export interface RecordedCall {
   method: string
@@ -40,15 +40,24 @@ export function newQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
 }
 
+/** Query client, Toasts and the Confirm host (WP6: Regenerate confirms, Cooked toasts). */
 export function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={newQueryClient()}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={newQueryClient()}>
+      <ToastProvider>
+        <ConfirmProvider>{children}</ConfirmProvider>
+      </ToastProvider>
+    </QueryClientProvider>
+  )
 }
 
 export function renderWithProviders(ui: ReactElement, route = '/'): RenderResult {
   return render(
     <QueryClientProvider client={newQueryClient()}>
       <ToastProvider>
-        <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+        <ConfirmProvider>
+          <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+        </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>,
   )

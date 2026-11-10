@@ -1,5 +1,3 @@
-import type { TileSize, TileTone } from '../../ui'
-
 export type TileId =
   | 'nextMeal'
   | 'spoiled'
@@ -23,10 +21,9 @@ export interface TodayData {
   streakDays: number
 }
 
+/** Order and presence only: each tile component fixes its own Tile variant and span (ui-fix-plan 5.1). */
 export interface TileSpec {
   id: TileId
-  size: TileSize
-  tone: TileTone
 }
 
 export type TodayLayout =
@@ -48,6 +45,6 @@ export interface AdvanceStepDue {
 export interface UseSoonItem {
   ingredientId: number
   name: string
-  /** ready-to-show wording, e.g. "Goes off in 2 days" */
+  /** short day wording for the row "Spinach · Thu": "today", "tomorrow" or the short weekday */
   when: string
 }
