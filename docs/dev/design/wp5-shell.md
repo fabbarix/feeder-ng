@@ -26,6 +26,9 @@ Spec: [ui-fix-plan.md](../../design/ui-fix-plan.md) 4.5, 5.17 and section 7 WP5,
   Bar max width 480, centred, so it is a pill on a portrait tablet (820).
 - **Chromeless (B3).** `.app-shell--chromeless { display: block; padding: 0; min-height: 100dvh }` and `.app-main--full { max-width: none; margin: 0; padding-bottom: 0 }`.
   The grid rules apply to `.app-shell:not(.app-shell--chromeless)` so no media query can re-apply them. The tests assert both the classes in the DOM and the CSS.
+- **Main width (review fix).** In the grid, `.app-main` is `width: 100%` with `max-width: 1100px; margin: 0 auto`, so it fills its column up to 1100 and centres beyond; without `width` the auto margins shrink it to its content (565 px at 1280, 163 px at 1440).
+  The browser check asserts `<main>` is >= min(1100, column width) - 1 at >= 1024.
+- **Expanded rail inset.** From 1440 the rail rows have `margin-inline: var(--space-3)` so they do not touch x=0; a row must not be `width: 100%` (it would overflow the 240 rail by the margins), use `align-self: stretch` or the flex default.
 - **Clearance.** `:root { --nav-height: 70px; --nav-inset: 12px; --nav-clearance: calc(var(--nav-height) + var(--nav-inset) + var(--space-4) + env(safe-area-inset-bottom, 0px)) }`
   (98 px + safe area). `.app-main { padding-bottom: var(--nav-clearance) }`; from 1024 `--nav-clearance: 0`. Toast (WP4) and sticky action bars should use `var(--nav-clearance)`
   instead of `98px`; `index.html` already has `viewport-fit=cover`.

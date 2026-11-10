@@ -11,6 +11,7 @@
 //   5. an unknown route shows "Page not found" and not the router's dev error page;
 //   6. (ordinary routes) the avatar trigger sits on the right half of the top bar below 1024;
 //   7. (ordinary routes) at >= 1024 the side rail and <main> start within 120 px of the top (the grid rows must not stretch);
+//   9. (ordinary routes) at >= 1024 <main> is at least min(1100, its grid column width) - 1 wide (it must not shrink to its content);
 //   8. (on /) the open avatar menu popover lies fully inside the viewport.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
@@ -124,6 +125,7 @@ const page = `
   const last = main ? main.lastElementChild : null
   return {
     innerWidth, clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth,
+    mainColumn: main && main.parentElement ? Math.round(Math.min(1100, main.parentElement.getBoundingClientRect().width - (rail && visible(rail) ? rail.getBoundingClientRect().width : 0))) : null,
     mainWidth: main ? Math.round(main.getBoundingClientRect().width) : null,
     avatarCenterX: q('.your-menu-button') ? Math.round(q('.your-menu-button').getBoundingClientRect().left + q('.your-menu-button').getBoundingClientRect().width / 2) : null,
     railTop: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().top) : null,
@@ -167,6 +169,7 @@ for (const vp of VIEWPORTS) {
     if (phone && m.avatarCenterX !== null && m.avatarCenterX < m.innerWidth / 2) fail(`${tag}: avatar trigger is on the left half (centre x ${m.avatarCenterX} of ${m.innerWidth})`)
     if (!phone) {
       if (m.railTop !== null && m.railTop > 120) fail(`${tag}: side rail starts ${m.railTop}px from the top (grid rows stretch)`)
+      if (m.mainWidth !== null && m.mainColumn !== null && m.mainWidth < m.mainColumn - 1) fail(`${tag}: <main> is ${m.mainWidth}px wide, narrower than its column (${m.mainColumn}px): it shrinks to its content`)
       if (m.mainTop !== null && m.mainTop > 120) fail(`${tag}: <main> starts ${m.mainTop}px from the top (grid rows stretch)`)
     }
     if (route === '/') {

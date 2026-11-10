@@ -67,6 +67,17 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     expect(d('.app-main')['min-width']).toBe('0')
     expect(d('.app-main')['max-width']).toBeDefined()
   })
+  it('<main> fills its grid column up to 1100 px: width 100% (or justify-self stretch) with max-width 1100, not shrink-to-content', () => {
+    const m = d('.app-main')
+    expect(m['max-width']).toBe('1100px')
+    expect(`${m['width'] ?? ''}|${m['justify-self'] ?? ''}`).toMatch(/100%|stretch/)
+  })
+  it('the expanded rail (from 1440) insets its rows: margin-inline var(--space-3), and a row never overflows the 240 px rail', () => {
+    const wide = media('min-width: 1440px')
+    const link = /\.side-rail__link\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
+    expect(link).toMatch(/margin-inline\s*:\s*var\(--space-3\)/)
+    expect(link).not.toMatch(/(^|[;\s])width\s*:\s*100%/)
+  })
 })
 
 describe('bottom bar (plan 4.5)', () => {
