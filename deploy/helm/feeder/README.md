@@ -13,7 +13,7 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
 
 Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reuse-values`. The chart version equals the release, and the image tag defaults to `appVersion`, so both match the release. Upgrades with `--set` or `--version` add `--reuse-values` so existing settings survive; the form matches `templates/NOTES.txt`.
 
-No `latest` image exists until the first stable `v*` tag is published. Before then, install or upgrade with `--set image.tag=main`, which is the latest development build.
+No `latest` image exists until the first stable `v*` tag is published. Before then, use a pre-release tag such as `v1.0.0-dev`, which publishes image `1.0.0-dev` and chart `1.0.0-dev`: install with `--version 1.0.0-dev` (or add `--set image.tag=1.0.0-dev` to pin the image explicitly). Only tags publish; there are no branch builds.
 
 Lint the chart with the CI values: `helm lint deploy/helm/feeder -f deploy/helm/feeder/ci/lint-values.yaml`. The `ci/` folder is excluded from the packaged chart by `.helmignore`.
 

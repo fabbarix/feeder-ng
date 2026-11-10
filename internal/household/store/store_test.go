@@ -314,3 +314,19 @@ func TestPreferencesDefaultThenRoundTrip(t *testing.T) {
 		t.Errorf("preferences are per User: %+v", got)
 	}
 }
+
+// R11c: the Household's creation time is stamped with the clock on first read and then stays.
+func TestCreatedIsStampedOnFirstReadAndStays(t *testing.T) {
+	f := newFx(t)
+	first, err := f.st.Created(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !first.Equal(testkit.StartTime) {
+		t.Fatalf("Created = %v, want the clock's %v", first, testkit.StartTime)
+	}
+	again, err := f.st.Created(f.ctx)
+	if err != nil || !again.Equal(first) {
+		t.Fatalf("second read = %v %v, want %v", again, err, first)
+	}
+}
