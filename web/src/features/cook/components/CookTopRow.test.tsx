@@ -26,7 +26,7 @@ describe('CookTopRow (2.7)', () => {
   it('has the voice switch as an icon button, not a chip', async () => {
     const onVoiceChange = vi.fn()
     render(<CookTopRow {...base} onVoiceChange={onVoiceChange} />)
-    const voice = screen.getByRole('button', { name: 'Voice commands off' })
+    const voice = screen.getByRole('button', { name: 'Voice commands' })
     expect(voice).toHaveClass('icon-button')
     expect(voice).toHaveAttribute('aria-pressed', 'false')
     await userEvent.click(voice)

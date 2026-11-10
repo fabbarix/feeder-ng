@@ -33,20 +33,20 @@ describe('CookTimerStrip', () => {
     expect(h.onCancel).not.toHaveBeenCalled()
   })
 
-  it('B14: each TimerTile has its own Pause, Resume and Dismiss controls (icon buttons)', async () => {
+  it('B14: each TimerTile has its own Pause, Resume, Cancel or Dismiss control, named after its timer (icon buttons)', async () => {
     const h = strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice'), item(3, 'finished', 0, 'Pasta')])
     const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
     const rice = within(screen.getByRole('timer', { name: 'Rice' }))
     const pasta = within(screen.getByRole('timer', { name: 'Pasta' }))
-    await userEvent.click(eggs.getByRole('button', { name: 'Pause' }))
+    await userEvent.click(eggs.getByRole('button', { name: 'Pause Eggs' }))
     expect(h.onPause).toHaveBeenCalledWith(1)
-    await userEvent.click(rice.getByRole('button', { name: 'Resume' }))
+    await userEvent.click(rice.getByRole('button', { name: 'Resume Rice' }))
     expect(h.onResume).toHaveBeenCalledWith(2)
-    await userEvent.click(eggs.getByRole('button', { name: 'Dismiss timer' }))
+    await userEvent.click(eggs.getByRole('button', { name: 'Cancel Eggs' }))
     expect(h.onCancel).toHaveBeenCalledWith(1)
-    await userEvent.click(rice.getByRole('button', { name: 'Dismiss timer' }))
+    await userEvent.click(rice.getByRole('button', { name: 'Cancel Rice' }))
     expect(h.onCancel).toHaveBeenCalledWith(2)
-    await userEvent.click(pasta.getByRole('button', { name: 'Dismiss timer' }))
+    await userEvent.click(pasta.getByRole('button', { name: 'Dismiss Pasta' }))
     expect(h.onCancel).toHaveBeenCalledWith(3)
   })
 
@@ -61,8 +61,10 @@ describe('CookTimerStrip', () => {
     strip([item(1, 'running', 60, 'Eggs'), item(3, 'finished', 0, 'Pasta')])
     const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
     const pasta = within(screen.getByRole('timer', { name: 'Pasta' }))
-    expect(eggs.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument()
-    expect(pasta.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
+    expect(eggs.queryByRole('button', { name: 'Resume Eggs' })).not.toBeInTheDocument()
+    expect(pasta.queryByRole('button', { name: 'Pause Pasta' })).not.toBeInTheDocument()
+    expect(pasta.queryByRole('button', { name: 'Cancel Pasta' })).not.toBeInTheDocument()
+    expect(eggs.queryByRole('button', { name: 'Dismiss Eggs' })).not.toBeInTheDocument()
   })
 
   it('B14: timers of other Steps or Recipes are listed apart under "Other timers", with where they belong', () => {

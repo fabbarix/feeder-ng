@@ -192,15 +192,26 @@ const rule = (selector: string): string => {
   return m![1]!
 }
 describe('board text truncation contract', () => {
-  it.each(['.board-next__text', '.board-next__recipe'])('%s clamps to 2 lines with an ellipsis and may shrink', (sel) => {
+  it.each([['.board-next__text', 2], ['.board-next__recipe', 1]])('%s clamps to %i line(s) with an ellipsis and may shrink', (sel, lines) => {
     const body = rule(sel)
-    expect(body).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(body).toMatch(new RegExp(`-webkit-line-clamp:\\s*${lines}\\b`))
     expect(body).toMatch(/display:\s*-webkit-box/)
     expect(body).toMatch(/-webkit-box-orient:\s*vertical/)
     expect(body).toMatch(/overflow:\s*hidden/)
   })
   it('the Next Advance Step text is at most 2rem so 2 lines + recipe + Done fit 240 px', () => {
     expect(rule('.board-next__text')).toMatch(/font-size:\s*(1\.\d+|2)rem/)
+  })
+  it('the hero Cook button keeps the board size: its rule outranks .button[data-size=\'xl\'] (0,2,0)', () => {
+    const body = rule('.board-screen .board-tonight .board-tonight__cook')
+    expect(body).toMatch(/font-size:\s*1\.75rem/)
+    expect(rule('.board-tonight__recipe')).toMatch(/font-size:\s*3\.25rem/)
+    expect(rule('.board-tonight__recipe')).toMatch(/font-weight:\s*800/)
+  })
+  it('headings and meta lines are at full strength and board scale (no 0.8 opacity)', () => {
+    expect(rule('.board-tile__heading')).not.toMatch(/opacity/)
+    expect(rule('.board-tile__heading')).toMatch(/font-size:\s*1\.3125rem/)
+    expect(rule('.board-screen .board-use-soon .chip')).toMatch(/block-size:\s*40px/)
   })
   it('timer rows in the Timers tile are compact and clamp their label to 1 line', () => {
     expect(rule('.board-timers .board-list')).toMatch(/gap:\s*(4|8)px/)

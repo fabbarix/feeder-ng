@@ -12,5 +12,6 @@ class-hooks.fail_paths=web/src/ui web/src/app web/src/features/cook web/src/feat
 sizing=warn
 sizing.fail_paths=web/src/ui web/src/app web/src/features/cook web/src/features/board
 glossary=warn
+glossary.fail_paths=web/src/features/cook web/src/features/board
 native-search=warn
 native-search.fail_paths=web/src/ui web/src/features/cook web/src/features/board

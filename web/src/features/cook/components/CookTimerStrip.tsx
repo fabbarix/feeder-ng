@@ -16,7 +16,8 @@ export interface CookTimerStripProps {
 /**
  * The household's timers as shared `TimerTile`s (role timer, named by the label), two to a row: this scope's under
  * "Timers", the others under "Other timers" with where they belong. Each tile carries its own controls: pause or
- * resume (lib/timers timerActions) and "Dismiss timer", which cancels. Renders nothing when there are no timers.
+ * resume (lib/timers timerActions); a running or paused timer has "Cancel <label>" (stops it), a finished one
+ * "Dismiss <label>" (clears it). Both end the timer through onCancel. Renders nothing when there are no timers.
  */
 export function CookTimerStrip({ scope, items, onPause, onResume, onCancel }: CookTimerStripProps): ReactNode {
   if (items.length === 0) return null
@@ -53,6 +54,8 @@ function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCance
             : actions.includes('resume')
               ? () => onResume(id)
               : undefined
+          const onCancelTimer = actions.includes('cancel') ? () => onCancel(id) : undefined
+          const onDismissTimer = actions.includes('dismiss') ? () => onCancel(id) : undefined
           return (
             <li key={id} className="cook-timers__item">
               <TimerTile
@@ -60,7 +63,8 @@ function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCance
                 seconds={item.seconds}
                 running={state === 'running'}
                 onToggle={onToggle}
-                onDismiss={() => onCancel(id)}
+                onCancel={onCancelTimer}
+                onDismiss={onDismissTimer}
               />
               {place ? <span className="cook-timers__place">{place}</span> : null}
               {state === 'finished' ? <p role="status">{cookStrings.timerFinished(name)}</p> : null}

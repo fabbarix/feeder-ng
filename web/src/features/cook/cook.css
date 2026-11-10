@@ -48,9 +48,10 @@
   align-content: start;
 }
 
+/* §2.7: 30/800 on the phone, 58/800 on the tablet (see the 768 px block). */
 .cook-step__text {
   margin: 0;
-  font-size: clamp(1.5rem, 4vw, 3.6rem);
+  font-size: 1.875rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -200,15 +201,19 @@
   justify-content: flex-end;
 }
 
+/* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */
 @media (min-width: 768px) {
   .cook-screen {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
-  .cook-top,
-  .cook-screen__header,
-  .cook-nav,
-  .cook-screen > .cook-screen__empty {
-    grid-column: 1 / -1;
+  .cook-step {
+    flex: 1 0 auto;
+  }
+
+  .cook-step__text {
+    font-size: 3.625rem;
   }
 }

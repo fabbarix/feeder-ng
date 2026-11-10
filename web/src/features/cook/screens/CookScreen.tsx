@@ -104,7 +104,7 @@ export function CookScreen(): ReactNode {
     <div className="cook-screen">
       <CookTopRow
         number={session.step?.number ?? 0}
-        of={view.steps.length}
+        of={session.step?.of ?? 0}
         speechSupported={speech.supported}
         voiceOn={voiceOn}
         onVoiceChange={setVoiceOn}
