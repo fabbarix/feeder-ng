@@ -217,3 +217,22 @@
     font-size: 3.625rem;
   }
 }
+
+/* Reheat: the timer-only screen of a Planned Meal served from a Leftover. */
+.reheat-time {
+  margin: 0;
+  font-size: 3.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.reheat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.reheat-tile {
+  display: grid;
+  gap: var(--space-3);
+}

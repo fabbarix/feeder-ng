@@ -52,6 +52,14 @@ _Avoid_: Prep step, pre-step
 The hands-free, step-by-step view used while cooking, which runs the Step timers.
 _Avoid_: Kitchen mode, guided mode
 
+**Reheat**:
+Warming a Leftover for the Planned Meal it is served at, with a short timer before the meal is marked Cooked; a Leftover has no Steps, so it uses its own screen rather than Cook Mode. The timer starts at the Recipe's Reheat time when it has one.
+_Avoid_: Microwave, warm up
+
+**Reheat time**:
+The optional number of minutes (1 to 30) a Recipe says its Leftover takes to reheat; Reheat starts its timer there. Without one, Reheat works the time out from the portions.
+_Avoid_: Warm-up time, microwave time
+
 **Recipe File**:
 A JSON document in the published exchange format holding one or more Recipes and the Ingredient definitions they use, with images embedded or linked.
 _Avoid_: Export, bundle, backup

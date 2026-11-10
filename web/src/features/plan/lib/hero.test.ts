@@ -64,11 +64,11 @@ describe('heroSelection (N3)', () => {
     expect(sel?.action).toBe('none')
   })
 
-  it('a Leftover-served meal offers the Leftover action and never Cook, today or tomorrow', () => {
+  it('a Leftover-served meal never offers Cook: tomorrow keeps the Leftover chip, today offers Reheat (R12)', () => {
     const tomorrow = heroSelection([served('2026-11-11', 1, '13:00')], noon, today)
     expect(tomorrow).toMatchObject({ day: 'tomorrow', action: 'leftover' })
     const todays = heroSelection([served(today, 2, '19:00')], noon, today)
-    expect(todays).toMatchObject({ day: 'today', action: 'leftover' })
+    expect(todays).toMatchObject({ day: 'today', action: 'reheat' })
   })
 
   it('keeps an unconfirmed meal of today as the hero for two hours after its slot, then moves on', () => {
