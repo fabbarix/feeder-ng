@@ -319,32 +319,25 @@ func (s *Store) ClearDateAttendance(ctx context.Context, slotID int64, date stri
 
 // Preferences returns the User's preferences, or DefaultPreferences when none are saved.
 func (s *Store) Preferences(ctx context.Context, userID int64) (household.Preferences, error) {
-	var (
-		p         = household.DefaultPreferences()
-		secondary sql.NullString
-	)
-	err := s.db.QueryRowContext(ctx, `SELECT scheme, accent, secondary, units FROM user_preferences WHERE user_id = ?`,
-		userID).Scan(&p.Scheme, &p.Accent, &secondary, &p.Units)
+	p := household.DefaultPreferences()
+	err := s.db.QueryRowContext(ctx, `SELECT scheme, accent, units FROM user_preferences WHERE user_id = ?`,
+		userID).Scan(&p.Scheme, &p.Accent, &p.Units)
 	if errors.Is(err, sql.ErrNoRows) {
 		return household.DefaultPreferences(), nil
 	}
 	if err != nil {
 		return household.Preferences{}, err
 	}
-	if secondary.Valid {
-		v := secondary.String
-		p.Secondary = &v
-	}
 	return p, nil
 }
 
 // SavePreferences stores the User's preferences, replacing any earlier ones.
 func (s *Store) SavePreferences(ctx context.Context, userID int64, p household.Preferences) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO user_preferences (user_id, scheme, accent, secondary, units)
-		VALUES (?, ?, ?, ?, ?)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO user_preferences (user_id, scheme, accent, units)
+		VALUES (?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE SET scheme = excluded.scheme, accent = excluded.accent,
-			secondary = excluded.secondary, units = excluded.units`,
-		userID, p.Scheme, p.Accent, nullString(p.Secondary), p.Units)
+			units = excluded.units`,
+		userID, p.Scheme, p.Accent, p.Units)
 	return err
 }
 
@@ -499,11 +492,4 @@ func nullFloat(f *float64) sql.NullFloat64 {
 		return sql.NullFloat64{}
 	}
 	return sql.NullFloat64{Float64: *f, Valid: true}
-}
-
-func nullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: *s, Valid: true}
 }

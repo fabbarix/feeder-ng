@@ -10,8 +10,6 @@ export type Scheme = 'light' | 'dark'
 
 export interface ThemeInput {
   accent: Hex
-  /** Deprecated: ignored by the Bento palette, kept so existing callers compile. */
-  secondary?: Hex
 }
 
 /** camelCase of the CSS variables --color-bg, --color-surface-2, --color-on-accent, ... */
