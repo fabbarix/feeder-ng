@@ -24,6 +24,11 @@ describe('CostTile', () => {
     expect(screen.getByText('2 lines have no Price yet')).toBeInTheDocument()
   })
 
+  it('uses the singular for one unpriced Line', () => {
+    render(<CostTile {...base} unpriced={1} estimatedCostCents={1350} />)
+    expect(screen.getByText('1 line has no Price yet')).toBeInTheDocument()
+  })
+
   it('QA: with no Price at all there is no amount, no "Estimated cost" and no dash', () => {
     const { container } = render(<CostTile {...base} unpriced={3} estimatedCostCents={0} />)
     expect(container).not.toHaveTextContent('$0.00')
