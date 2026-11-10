@@ -37,12 +37,8 @@ has "$REL" 'needs:\s*check' "release.yml must gate the image on the checks"
 lacks "$REL" 'pull_request' "release.yml must not run on pull requests"
 lacks "$REL" '(PAT|personal)' "release.yml must not use a personal access token"
 
-# D1: publish on main and on tags; PRs build without pushing.
-has "$REL" 'branches:\s*\[main\]' "release.yml must also trigger on pushes to main"
+# D1: PRs build without pushing. D2: publishing happens on v* tags only.
 has "$CI"  'branches:\s*\[main\]' "ci.yml must run on pushes to main"
-has "$REL" 'type=raw,value=main|type=ref,event=branch' "release.yml must tag main pushes as main"
-has "$REL" 'type=sha' "release.yml must add a sha-<short> tag"
-has "$REL" 'prefix=sha-' "the sha tag must be prefixed sha-"
 has "$REL" "type=raw,value=latest,enable=.*refs/tags/v" "latest must be enabled only for v* tags"
 has "$REL" 'org\.opencontainers\.image\.source' "release.yml must set org.opencontainers.image.source"
 has "$REL" 'cache-from:\s*type=gha' "release.yml must read the GHA cache"
@@ -55,6 +51,24 @@ has "$CI"  'docker/build-push-action' "ci.yml must build the image on pull reque
 has "$CI"  'push:\s*false' "ci.yml's image build must not push"
 has "$CI"  "github\.event_name\s*==\s*'pull_request'" "ci.yml's image build must be limited to pull requests"
 lacks "$CI" 'docker/login-action' "ci.yml must not log in to a registry"
+# D2: publish only tagged versions. No branch trigger, no main/sha image tags, no manual or scheduled runs.
+lacks "$REL" '^\s*branches(-ignore)?:' "release.yml must have no branch push trigger (tags only)"
+lacks "$REL" 'refs/heads/' "release.yml must not refer to branch refs"
+lacks "$REL" 'type=ref,event=(branch|pr)' "release.yml must not tag images from branches or PRs"
+lacks "$REL" 'type=raw,value=main' "release.yml must not publish a main image tag"
+lacks "$REL" 'type=sha|prefix=sha-' "release.yml must not publish sha-<short> tags (semver tags only)"
+lacks "$REL" '^\s*(workflow_dispatch|schedule|workflow_run):' "release.yml runs on v* tags only (re-run a failed release from the Actions UI)"
+lacks "$REL" '^# .*(Pushes to main|push(es)? to main)' "release.yml header must not say main pushes publish"
+has "$REL" '^# .*(only|just).*v\*' "release.yml header must say it publishes v* tags only"
+has "$REL" 'type=semver,pattern=\{\{version\}\}' "release.yml must publish the exact semver tag"
+# every tags: rule in release.yml is a semver or latest rule enabled for tags
+if grep -E '^\s+type=' "$REL" | grep -Ev 'enable=.*refs/tags/v' >/dev/null; then bad "every image tag rule must be enabled only for v* tags"; else ok; fi
+# ci.yml: checks only on PRs and main; never publishes.
+has "$CI" '^\s*pull_request:' "ci.yml must still run on pull_request"
+has "$CI" '^\s*push:\s*$' "ci.yml must still run on push"
+lacks "$CI" 'push:\s*true' "ci.yml must never push an image"
+lacks "$CI" 'registry:|ghcr\.io' "ci.yml must not touch a registry"
+lacks "$CI" 'helm (push|registry)' "ci.yml must not publish a chart"
 # Chart job: only on v* tags, pushes to the owner's charts namespace on GHCR.
 has "$REL" '^\s*chart:' "release.yml must have a chart job"
 has "$REL" "if:\s*startsWith\(github\.ref,\s*'refs/tags/v'\)" "the chart job must run only on v* tags"
