@@ -1,0 +1,48 @@
+/* Dev catalogue (/_gallery). Each scheme section carries its own tokens, so light and dark sit side by side. */
+.gallery {
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-4);
+}
+
+.gallery__scheme {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-4);
+  border-radius: var(--radius-tile);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.gallery__group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.gallery__cells {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.gallery__cell {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  max-inline-size: 100%;
+}
+
+.gallery__caption {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  font-weight: var(--text-overline-weight);
+  color: var(--color-muted);
+}
+
+.gallery__grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  inline-size: 100%;
+}

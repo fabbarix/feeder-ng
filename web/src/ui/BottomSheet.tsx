@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Button } from './Button'
 import { uiStrings } from './strings'
+import './BottomSheet.css'
 
 export interface BottomSheetProps {
   open: boolean

@@ -1,0 +1,27 @@
+/* Toast: moved from styles.css unrestyled (WP4 rebuilds it). Tokens only. */
+.toast-region {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--bar-height) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-on-surface);
+  color: var(--color-background);
+}
+
+.toast__message {
+  flex: 1;
+}

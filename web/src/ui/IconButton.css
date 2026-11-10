@@ -1,0 +1,59 @@
+/* IconButton (docs/design/ui-fix-plan.md 4.2): 40 visual / 44 hit, radius 12; compact 32 / 44 hit. Tokens only. */
+.icon-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-thumb);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
+}
+
+.icon-button[data-size='compact'] {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
+/* Hit area: 44 px, without changing the visual size. */
+.icon-button::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.icon-button[aria-pressed='true'] {
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.icon-button:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.icon-button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
+  transform: scale(0.97);
+}
+
+.icon-button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.icon-button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button,
+  .icon-button:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+}

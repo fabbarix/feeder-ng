@@ -1,5 +1,7 @@
 import { formatTimer } from '../lib/format'
+import { IconButton } from './IconButton'
 import { Tile } from './Tile'
+import './TimerTile.css'
 
 export interface TimerTileProps {
   label: string
@@ -11,28 +13,56 @@ export interface TimerTileProps {
   onToggle?: () => void
   onAddMinute?: () => void
   onDismiss?: () => void
-  /** @deprecated use `stretched`-less TimerTile with controls; kept for unmigrated screens. */
+  /** @deprecated use the controls above; kept for unmigrated screens (a clickable tile, role button). */
   onClick?: () => void
 }
 
 /** running; paused; finished = exactly 0 (success, Bell); overdue = below 0, counts up shown as "+m:ss" (spoil). */
 export type TimerState = 'running' | 'paused' | 'finished' | 'overdue'
 
-/** STUB (WP3 designer, old behaviour retained until the Developer lands the spec). A `soft` Tile counting a cook timer, announced as a timer. */
-export function TimerTile({ label, seconds, running = false, onClick }: TimerTileProps) {
-  const state: TimerState = seconds < 0 ? 'overdue' : seconds === 0 ? 'finished' : running ? 'running' : 'paused'
+function stateOf(seconds: number, running: boolean): TimerState {
+  if (seconds < 0) return 'overdue'
+  if (seconds === 0) return 'finished'
+  return running ? 'running' : 'paused'
+}
+
+/** A cook timer, announced as a timer (docs/design/ui-fix-plan.md 4.12). */
+export function TimerTile({ label, seconds, running = false, totalSeconds, onToggle, onAddMinute, onDismiss, onClick }: TimerTileProps) {
+  const state = stateOf(seconds, running)
+  const variant = state === 'running' ? 'soft' : state === 'paused' ? 'surface' : 'status'
+  const status = state === 'finished' ? 'success' : state === 'overdue' ? 'spoil' : undefined
+  const display = seconds < 0 ? `+${formatTimer(-seconds)}` : formatTimer(seconds)
+  const share = totalSeconds && totalSeconds > 0 ? Math.min(Math.max((totalSeconds - seconds) / totalSeconds, 0), 1) : 0
+  const hasControls = Boolean(onToggle || onAddMinute || onDismiss)
+  const overlineIcon = state === 'paused' ? 'pause' : state === 'finished' ? 'notifications' : undefined
+
   return (
     <Tile
-      size="sm"
-      tone={state === 'finished' || state === 'overdue' ? 'spoil' : 'neutral'}
+      variant={variant}
+      status={status}
       className="timer-tile"
       role="timer"
       aria-label={label}
       data-state={state}
+      overline={label}
+      overlineIcon={overlineIcon}
       onClick={onClick}
     >
-      <span className="timer-tile__time">{formatTimer(seconds)}</span>
-      <p className="timer-tile__label">{label}</p>
+      <span className="timer-tile__time">{display}</span>
+      {totalSeconds ? (
+        <span className="timer-tile__bar" aria-hidden="true">
+          <span className="timer-tile__fill" style={{ width: `${share * 100}%` }} />
+        </span>
+      ) : null}
+      {hasControls ? (
+        <div className="timer-tile__controls">
+          {onToggle ? (
+            <IconButton size="compact" icon={running ? 'pause' : 'resume'} label={running ? 'Pause' : 'Resume'} onClick={onToggle} />
+          ) : null}
+          {onAddMinute ? <IconButton size="compact" icon="addMinute" label="Add a minute" onClick={onAddMinute} /> : null}
+          {onDismiss ? <IconButton size="compact" icon="close" label="Dismiss timer" onClick={onDismiss} /> : null}
+        </div>
+      ) : null}
     </Tile>
   )
 }

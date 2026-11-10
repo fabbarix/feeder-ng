@@ -1,0 +1,64 @@
+/* RecipeThumb (docs/design/ui-fix-plan.md 4.15). Tokens only. */
+.recipe-thumb {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  flex: none;
+  aspect-ratio: 1;
+  border-radius: var(--radius-thumb);
+}
+
+.recipe-thumb[data-size='40'] {
+  inline-size: 40px;
+  border-radius: var(--radius-thumb);
+}
+
+.recipe-thumb[data-size='48'] {
+  inline-size: 48px;
+  border-radius: var(--radius-thumb);
+}
+
+.recipe-thumb[data-size='72'] {
+  inline-size: 72px;
+  border-radius: var(--radius-thumb-lg);
+}
+
+.recipe-thumb[data-size='hero'] {
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: inherit;
+}
+
+.recipe-thumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recipe-thumb[data-generated] {
+  display: grid;
+  place-items: center;
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.recipe-thumb__icon {
+  position: absolute;
+  inset-block-end: 6%;
+  inset-inline-end: 8%;
+  display: grid;
+  opacity: 0.4;
+}
+
+.recipe-thumb__initial {
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+.recipe-thumb[data-size='hero'] .recipe-thumb__initial {
+  font-size: var(--text-title-1-size);
+  line-height: var(--text-title-1-line);
+  font-weight: var(--text-title-1-weight);
+}

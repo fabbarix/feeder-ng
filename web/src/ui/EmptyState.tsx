@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { Icon } from './Icon'
 import type { IconName } from './icons'
+import './EmptyState.css'
 
 export interface EmptyStateProps {
   title: string
@@ -13,12 +15,19 @@ export interface EmptyStateProps {
   action?: ReactNode
 }
 
-/** STUB (WP3 designer, old behaviour retained). Inside the empty region, not a page takeover. */
-export function EmptyState({ title, description, illustration, action }: EmptyStateProps) {
+/** Inside the empty region, not a page takeover (docs/design/ui-fix-plan.md 4.11). */
+export function EmptyState({ title, description, icon, illustration, headingLevel = 2, action }: EmptyStateProps) {
+  const Heading = headingLevel === 3 ? 'h3' : 'h2'
   return (
     <section className="empty-state">
-      {illustration ? <div className="empty-state__art">{illustration}</div> : null}
-      <h2 className="empty-state__title">{title}</h2>
+      {icon ? (
+        <div className="empty-state__art">
+          <Icon name={icon} size={64} weight="duotone" />
+        </div>
+      ) : illustration ? (
+        <div className="empty-state__art">{illustration}</div>
+      ) : null}
+      <Heading className="empty-state__title">{title}</Heading>
       {description ? <p className="empty-state__text">{description}</p> : null}
       {action ? <div className="empty-state__action">{action}</div> : null}
     </section>

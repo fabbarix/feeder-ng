@@ -10,31 +10,57 @@ export type LegacyTileSize = 'sm' | 'md' | 'lg' | 'wide' | 'full'
 export type LegacyTileTone = 'neutral' | 'accent' | 'spoil' | 'leftover'
 
 /** tonal -> secondary, ghost -> tertiary; new variants pass through. */
-export function resolveButtonVariant(_variant: ButtonVariant | LegacyButtonVariant | undefined): ButtonVariant {
-  throw new Error('not implemented')
+export function resolveButtonVariant(variant: ButtonVariant | LegacyButtonVariant | undefined): ButtonVariant {
+  if (variant === 'tonal') return 'secondary'
+  if (variant === 'ghost') return 'tertiary'
+  return variant ?? 'primary'
 }
 
 /**
  * `kind` wins. Otherwise a clickable chip is a `filter`; else tone neutral -> tag, accent -> why,
  * spoil / leftover -> status with that status.
  */
-export function resolveChip(_input: { kind?: ChipKind; status?: ChipStatus; tone?: LegacyChipTone; clickable: boolean }): {
+export function resolveChip(input: { kind?: ChipKind; status?: ChipStatus; tone?: LegacyChipTone; clickable: boolean }): {
   kind: ChipKind
   status?: ChipStatus
 } {
-  throw new Error('not implemented')
+  if (input.kind) return input.status ? { kind: input.kind, status: input.status } : { kind: input.kind }
+  if (input.clickable) return { kind: 'filter' }
+  switch (input.tone) {
+    case 'accent':
+      return { kind: 'why' }
+    case 'spoil':
+    case 'leftover':
+      return { kind: 'status', status: input.tone }
+    default:
+      return { kind: 'tag' }
+  }
 }
 
 /**
  * `variant` / `status` / `span` win. Otherwise tone neutral -> surface, accent -> soft, spoil / leftover -> status
  * with that status; size wide / full -> span 'full', anything else -> 1.
  */
-export function resolveTile(_input: {
+export function resolveTile(input: {
   variant?: TileVariant
   status?: ChipStatus
   span?: TileSpan
   tone?: LegacyTileTone
   size?: LegacyTileSize
 }): { variant: TileVariant; status?: ChipStatus; span: TileSpan } {
-  throw new Error('not implemented')
+  const span: TileSpan = input.span ?? (input.size === 'wide' || input.size === 'full' ? 'full' : 1)
+  if (input.variant) {
+    return input.variant === 'status' && input.status
+      ? { variant: 'status', status: input.status, span }
+      : { variant: input.variant, span }
+  }
+  switch (input.tone) {
+    case 'accent':
+      return { variant: 'soft', span }
+    case 'spoil':
+    case 'leftover':
+      return { variant: 'status', status: input.tone, span }
+    default:
+      return { variant: 'surface', span }
+  }
 }

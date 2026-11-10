@@ -1,5 +1,5 @@
 import { Chip } from './Chip'
-import type { WhyCause } from './lib/whyIcon'
+import { whyIcon, type WhyCause } from './lib/whyIcon'
 
 export interface WhyChipProps {
   /** The planner's reason, shown as the chip text. */
@@ -9,10 +9,10 @@ export interface WhyChipProps {
   onClick?: () => void
 }
 
-/** STUB (WP3 designer, existing implementation retained). A `why` Chip that explains a planner decision. */
-export function WhyChip({ reason, onClick }: WhyChipProps) {
+/** A `why` Chip that explains a planner decision. */
+export function WhyChip({ reason, cause, onClick }: WhyChipProps) {
   return (
-    <Chip tone="accent" data-kind="why" onClick={onClick}>
+    <Chip kind="why" icon={whyIcon(cause)} onClick={onClick}>
       {reason}
     </Chip>
   )

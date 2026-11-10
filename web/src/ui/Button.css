@@ -1,0 +1,147 @@
+/* Button (docs/design/ui-fix-plan.md 4.2). Tokens only. */
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-inline-size: 0;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
+}
+
+/* Sizes: sm 36 high (hit area padded to 44 by ::after), md 44, lg 52, xl 64. */
+.button[data-size='sm'] {
+  block-size: 36px;
+  padding-inline: 14px;
+  border-radius: var(--radius-thumb);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+}
+
+.button[data-size='sm']::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.button[data-size='md'] {
+  block-size: 44px;
+  padding-inline: 18px;
+  border-radius: var(--radius-button);
+}
+
+.button[data-size='lg'] {
+  block-size: 52px;
+  padding-inline: 20px;
+  border-radius: var(--radius-button);
+  font-size: var(--text-body-strong-size);
+  font-weight: 800;
+}
+
+.button[data-size='xl'] {
+  block-size: 64px;
+  padding-inline: 24px;
+  border-radius: var(--radius-button-lg);
+  font-size: var(--text-title-3-size);
+  font-weight: var(--text-title-3-weight);
+}
+
+/* Variants */
+.button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button[data-variant='secondary'] {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.tile[data-variant='hero'] .button[data-variant='secondary'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button[data-variant='accent-secondary'] {
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.button[data-variant='tertiary'] {
+  background: transparent;
+  color: var(--color-accent-text);
+}
+
+.button[data-variant='tertiary']:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.button[data-variant='danger'] {
+  background: var(--status-danger-solid);
+  color: var(--color-surface);
+}
+
+.button[data-variant='danger-tertiary'] {
+  background: transparent;
+  color: var(--status-danger-fg);
+}
+
+/* States: hover overlay 8 %, pressed 12 % and scale .97, focus ring 3 px in accent with a 2 px offset. */
+.button:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
+  transform: scale(0.97);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.button[aria-busy='true'] {
+  cursor: progress;
+}
+
+/* Loading: the spinner replaces the icon; the label stays. */
+.button__spinner {
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-inline-color: transparent;
+  animation: button-spin 800ms linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .button:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+
+  .button__spinner {
+    animation: none;
+  }
+}

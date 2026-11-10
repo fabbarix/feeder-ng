@@ -1,7 +1,9 @@
-import type { ElementType, HTMLAttributes, ReactNode } from 'react'
+import type { ElementType, HTMLAttributes, KeyboardEvent, ReactNode } from 'react'
 import type { ChipStatus } from './Chip'
+import { Icon } from './Icon'
 import type { IconName } from './icons'
-import type { LegacyTileSize, LegacyTileTone } from './lib/legacy'
+import { resolveTile, type LegacyTileSize, type LegacyTileTone } from './lib/legacy'
+import './Tile.css'
 
 export type TileVariant = 'surface' | 'hero' | 'soft' | 'status' | 'media' | 'action'
 export type TileSpan = 1 | 2 | 'full'
@@ -41,22 +43,78 @@ export interface TileProps extends Omit<HTMLAttributes<HTMLElement>, 'onClick'> 
 }
 
 /**
- * STUB (WP3 designer, existing implementation retained so unmigrated screens keep working).
- * Spec: docs/dev/design/wp3-primitives-a.md.
+ * A layout container, never a `<button>` (docs/design/ui-fix-plan.md 4.4). Height is its content; tiles in one
+ * Bento row stretch to the tallest. A stretched tile is an `<article>` whose primary target covers it.
  */
-export function Tile({ size = 'md', tone = 'neutral', onClick, as = 'div', className, children, ...rest }: TileProps) {
-  const classes = ['tile', className].filter(Boolean).join(' ')
-  if (onClick) {
-    return (
-      <button type="button" className={classes} data-size={size} data-tone={tone} onClick={onClick} {...(rest as object)}>
-        {children}
-      </button>
+export function Tile({
+  variant,
+  status,
+  span,
+  rowSpan,
+  overline,
+  overlineIcon,
+  media,
+  stretched,
+  onClick,
+  size,
+  tone,
+  as = 'div',
+  className,
+  children,
+  ...rest
+}: TileProps) {
+  const resolved = resolveTile({ variant, status, span, tone, size })
+  const Tag: ElementType = stretched ? 'article' : onClick ? 'div' : as
+  const onKeyDown = onClick
+    ? (e: KeyboardEvent<HTMLElement>) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }
+    : undefined
+
+  const body = (
+    <>
+      {media ? <div className="tile__media">{media}</div> : null}
+      {overline ? (
+        <p className="tile__overline">
+          {overlineIcon ? <Icon name={overlineIcon} size={16} /> : null}
+          {overline}
+        </p>
+      ) : null}
+      {children}
+    </>
+  )
+
+  let stretch: ReactNode = null
+  if (stretched) {
+    stretch = stretched.href ? (
+      <a className="tile__stretch" href={stretched.href} aria-label={stretched.label} />
+    ) : (
+      <button type="button" className="tile__stretch" aria-label={stretched.label} onClick={stretched.onActivate} />
     )
   }
-  const Tag: ElementType = as
+
   return (
-    <Tag className={classes} data-size={size} data-tone={tone} {...rest}>
-      {children}
+    <Tag
+      {...rest}
+      className={['tile', className].filter(Boolean).join(' ')}
+      data-variant={resolved.variant}
+      data-status={resolved.status}
+      data-span={resolved.span}
+      data-row-span={rowSpan}
+      data-tone={tone}
+      data-size={size}
+      data-primary-scope=""
+      role={onClick ? (rest.role ?? 'button') : rest.role}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+    >
+      {body}
+      {stretch}
     </Tag>
   )
 }
@@ -68,7 +126,12 @@ export interface TileMetricProps {
   label: string
 }
 
-/** STUB. A `display` number with its label, for metric tiles. */
-export function TileMetric(_props: TileMetricProps): never {
-  throw new Error('not implemented')
+/** A `display` number with its label, for metric tiles. */
+export function TileMetric({ value, label }: TileMetricProps) {
+  return (
+    <span className="tile-metric">
+      <span className="tile-metric__value">{value}</span>
+      <span className="tile-metric__label">{label}</span>
+    </span>
+  )
 }

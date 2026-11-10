@@ -1,0 +1,33 @@
+/* Stepper: moved from styles.css unrestyled (WP4 rebuilds it). Tokens only. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper__button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.stepper__button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stepper__value {
+  min-width: 2ch;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stepper__unit {
+  color: var(--color-muted);
+}
