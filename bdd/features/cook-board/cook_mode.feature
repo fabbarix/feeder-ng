@@ -102,3 +102,11 @@ Feature: Cook Mode
   Scenario: Cook Mode needs a signed-in User
     When the signed-out visitor asks for Cook Mode
     Then the response status is 401
+
+  # R4 B10: the Cook Mode view carries the household date, so Mark as Cooked can be hidden for a future meal.
+  Scenario: Cook Mode for a Planned Meal says what the household date is
+    Given the kitchen has a Dinner Meal Slot on Monday at 19:00
+    And the Recipe "Chicken stew" is planned for tonight's Dinner with 1 Batch
+    When I open Cook Mode for tonight's Planned Meal
+    Then the response status is 200
+    And the response JSON field "today" is "2026-11-09"

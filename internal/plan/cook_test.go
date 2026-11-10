@@ -147,3 +147,89 @@ func TestToConfirmListsUnconfirmedMealsTwoHoursAfterTheSlotTime(t *testing.T) {
 		t.Errorf("ToConfirm = %v, want %v", keys, want)
 	}
 }
+
+// ---- R4 (QA round 2) ----
+
+func TestMayResolveIsTrueFromTheMealsDateOn(t *testing.T) {
+	for _, tc := range []struct {
+		date, today string
+		want        bool
+	}{
+		{"2026-11-08", "2026-11-09", true},
+		{"2026-11-09", "2026-11-09", true},
+		{"2026-11-10", "2026-11-09", false},
+		{"2027-01-01", "2026-12-31", false},
+		{"bad", "2026-11-09", false},
+	} {
+		if got := plan.MayResolve(tc.date, tc.today); got != tc.want {
+			t.Errorf("MayResolve(%q, %q) = %v, want %v", tc.date, tc.today, got, tc.want)
+		}
+	}
+	if !errors.Is(plan.ErrFutureMeal, plan.ErrFutureMeal) || plan.ErrFutureMeal.Error() == "" {
+		t.Error("ErrFutureMeal must be a real sentinel error")
+	}
+}
+
+func mealOn(date string, slot int64, from *plan.Key, why ...plan.Why) plan.Meal {
+	m := plan.Meal{Key: k(date, slot), State: plan.StatePlanned, Why: why}
+	if from != nil {
+		m.From = &plan.Source{From: *from}
+	}
+	return m
+}
+
+func TestPruneStaleLeftoverChipsDropsChipsWhoseDependantIsGone(t *testing.T) {
+	src := k("2026-11-09", 1)
+	fits := func(date string) plan.Why { return plan.Why{Code: "leftover_fits", Value: 1, Date: date} }
+	other := plan.Why{Code: "favourite", MemberIDs: []int64{1}}
+	t.Run("the dependant was replanned fresh", func(t *testing.T) {
+		meals := []plan.Meal{mealOn("2026-11-09", 1, nil, fits("2026-11-10"), other), mealOn("2026-11-10", 1, nil)}
+		got := plan.PruneStaleLeftoverChips(meals)
+		if len(got) != 1 || got[0].Key != src || !reflect.DeepEqual(got[0].Why, []plan.Why{other}) {
+			t.Errorf("got %+v; want only the source meal, keeping its other chips", got)
+		}
+	})
+	t.Run("the dependant still exists", func(t *testing.T) {
+		meals := []plan.Meal{mealOn("2026-11-09", 1, nil, fits("2026-11-10")), mealOn("2026-11-10", 1, &src)}
+		if got := plan.PruneStaleLeftoverChips(meals); len(got) != 0 {
+			t.Errorf("got %+v; nothing is stale", got)
+		}
+	})
+	t.Run("the dependant was cooked, so the chip stays (it did serve them)", func(t *testing.T) {
+		dep := mealOn("2026-11-10", 1, &src)
+		dep.State = plan.StateCooked
+		if got := plan.PruneStaleLeftoverChips([]plan.Meal{mealOn("2026-11-09", 1, nil, fits("2026-11-10")), dep}); len(got) != 0 {
+			t.Errorf("got %+v", got)
+		}
+	})
+	t.Run("no dependant row at all (the slot is empty)", func(t *testing.T) {
+		got := plan.PruneStaleLeftoverChips([]plan.Meal{mealOn("2026-11-09", 1, nil, fits("2026-11-10"))})
+		if len(got) != 1 || len(got[0].Why) != 0 {
+			t.Errorf("got %+v; the chip must go", got)
+		}
+	})
+	t.Run("a chip dated for a day served from another meal is stale too", func(t *testing.T) {
+		elsewhere := k("2026-11-08", 1)
+		meals := []plan.Meal{mealOn("2026-11-09", 1, nil, fits("2026-11-10")), mealOn("2026-11-10", 1, &elsewhere)}
+		if got := plan.PruneStaleLeftoverChips(meals); len(got) != 1 {
+			t.Errorf("got %+v; Tuesday is served from Sunday's meal, not Monday's", got)
+		}
+	})
+}
+
+func TestLeftoverPlannedForListsTheMealsServedFromItInDateOrder(t *testing.T) {
+	src := k("2026-11-09", 1)
+	other := k("2026-11-08", 1)
+	meals := []plan.Meal{
+		mealOn("2026-11-12", 1, &src), mealOn("2026-11-10", 1, &src), mealOn("2026-11-11", 1, &other),
+		mealOn("2026-11-13", 1, &src),
+	}
+	meals[3].State = plan.StateSkipped
+	got := plan.LeftoverPlannedFor(src, meals)
+	if want := []plan.Key{k("2026-11-10", 1), k("2026-11-12", 1)}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v (skipped and other-source meals are not listed)", got, want)
+	}
+	if got := plan.LeftoverPlannedFor(k("2026-11-20", 1), meals); len(got) != 0 {
+		t.Errorf("got %v, want none", got)
+	}
+}

@@ -101,3 +101,45 @@ describe('useCamera', () => {
     expect(container.querySelector('video')?.srcObject).toBe(stream)
   })
 })
+
+describe('useCamera failures and retry (B4)', () => {
+  const failing = (name: string) => ({ getUserMedia: () => Promise.reject(Object.assign(new Error('no'), { name })) })
+
+  it.each([
+    ['NotFoundError', 'no_camera'],
+    ['DevicesNotFoundError', 'no_camera'],
+    ['NotReadableError', 'in_use'],
+    ['TrackStartError', 'in_use'],
+    ['OverconstrainedError', 'error'],
+  ] as const)('%s becomes %s', async (name, status) => {
+    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: failing(name) }))
+    await waitFor(() => expect(result.current.status).toBe(status))
+  })
+
+  it('retry asks the camera again and becomes ready when it works this time', async () => {
+    const { stream } = fakeStream()
+    const getUserMedia = vi
+      .fn()
+      .mockRejectedValueOnce(Object.assign(new Error('no'), { name: 'NotAllowedError' }))
+      .mockResolvedValueOnce(stream)
+    const md = { getUserMedia }
+    const { result } = renderHook(() => useCamera({ enabled: true, mediaDevices: md }))
+    await waitFor(() => expect(result.current.status).toBe('denied'))
+    act(() => result.current.retry())
+    expect(result.current.status).toBe('starting')
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(getUserMedia).toHaveBeenCalledTimes(2)
+  })
+
+  it('retry does not reopen a camera that is already ready or while disabled', async () => {
+    const md = devices(Promise.resolve(fakeStream().stream))
+    const ready = renderHook(() => useCamera({ enabled: true, mediaDevices: md }))
+    await waitFor(() => expect(ready.result.current.status).toBe('ready'))
+    act(() => ready.result.current.retry())
+    expect(md.getUserMedia).toHaveBeenCalledTimes(1)
+    const off = devices(Promise.resolve(fakeStream().stream))
+    const disabled = renderHook(() => useCamera({ enabled: false, mediaDevices: off }))
+    act(() => disabled.result.current.retry())
+    expect(off.getUserMedia).not.toHaveBeenCalled()
+  })
+})

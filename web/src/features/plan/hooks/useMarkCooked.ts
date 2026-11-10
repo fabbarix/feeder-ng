@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { planApi } from '../api'
 import { planStrings } from '../strings'
+import { leftoverOutcome, type LeftoverOutcome } from '../lib/cook'
 import type { CookedResult, CookPreview, SlotKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
 
@@ -17,6 +18,8 @@ export interface MarkCookedController {
   busy: boolean
   error: string | null
   result: CookedResult | null
+  /** Where the Leftover went, from the Cooked result (lib/cook leftoverOutcome); null before Mark as Cooked succeeds. */
+  outcome: LeftoverOutcome | null
   /** Shortfall warnings still on screen (dismissed ones are removed). */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
@@ -88,6 +91,7 @@ export function useMarkCooked(key: SlotKey | null): MarkCookedController {
   }, [key, refresh])
 
   const warnings = result ? result.warnings.filter((w) => !dismissed.includes(w.ingredientId)) : NO_WARNINGS
+  const outcome = useMemo(() => (result ? leftoverOutcome(result) : null), [result])
 
   return {
     preview,
@@ -99,6 +103,7 @@ export function useMarkCooked(key: SlotKey | null): MarkCookedController {
     busy,
     error,
     result,
+    outcome,
     warnings,
     dismissWarning: (id) => setDismissed((d) => [...d, id]),
   }

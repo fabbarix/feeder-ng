@@ -20,6 +20,7 @@ const cooked: CookedResult = {
     { ingredientId: 11, name: 'chicken thighs', baseUnit: 'g', have: 300, need: 400, shortfall: 100, message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g' },
     { ingredientId: 13, name: 'rice', baseUnit: 'g', have: 0, need: 250, shortfall: 250, message: 'Stock shows no rice, the recipe uses 250 g' },
   ],
+  plannedFor: [{ date: '2026-11-10', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }],
 }
 
 describe('useMarkCooked', () => {
@@ -51,6 +52,19 @@ describe('useMarkCooked', () => {
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([11, 13])
     act(() => result.current.dismissWarning(11))
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([13])
+  })
+
+  it('B13: exposes where the Leftover went once Mark as Cooked succeeded', async () => {
+    mockApi({ 'GET /api/plan/2026-11-09/2/cook': preview, 'POST /api/plan/2026-11-09/2/cooked': cooked })
+    const { result } = renderHook(() => useMarkCooked(key), { wrapper })
+    await waitFor(() => expect(result.current.preview).not.toBeNull())
+    expect(result.current.outcome).toBeNull()
+    await act(async () => {
+      await result.current.confirm()
+    })
+    expect(result.current.outcome).toEqual({
+      kind: 'planned', portions: 2.5, useBy: '2026-11-12', meals: [{ date: '2026-11-10', mealSlotName: 'Dinner', recipeName: 'Chicken' }],
+    })
   })
 
   it('a failed confirmation reports it and keeps the sheet usable', async () => {

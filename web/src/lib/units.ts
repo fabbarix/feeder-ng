@@ -59,7 +59,50 @@ export function baseUnitLabel(base: BaseUnit, system: UnitSystem): string {
  * "1 clove = 0.2 oz" (imperial; 1 decimal via formatQuantity), "1 bunch = 2 pieces".
  */
 export function formatConversion(unit: string, toBase: number, base: BaseUnit, system: UnitSystem): string {
+  if (system === 'imperial' && base !== 'piece') return `1 ${unit} = ${imperialBaseSide(toBase, base)}`
   return `1 ${unit} = ${formatQuantity(toBase, base, system)}`
+}
+
+/**
+ * A quantity as the author wrote it, in the User's display system (recipe lines, Step uses).
+ * Rule: only metric mass and volume units (g, kg, ml, l, dl, cl) are converted to imperial, through
+ * formatQuantity ("250 g" -> "8.8 oz", "1 l" -> "4.25 cups"). Everything else (tsp, tbsp, cup, piece,
+ * an Ingredient's own conversion unit such as "clove") is shown as written, in both systems:
+ * "2 tbsp" stays "2 tbsp". Metric shows g and ml via formatQuantity and the rest as written.
+ * Numbers: at most 2 decimals, trailing zeros dropped. Unit matching is trimmed and case-insensitive.
+ */
+export function formatLineQuantity(quantity: number, unit: string, system: UnitSystem): string {
+  if (!Number.isFinite(quantity)) return ''
+  const u = unit.trim().toLowerCase()
+  const metric = LINE_METRIC_UNITS[u]
+  if (metric && (system === 'imperial' || u === 'g' || u === 'ml')) {
+    return formatQuantity(quantity * metric.factor, metric.base, system)
+  }
+  return `${trim(quantity, 2)} ${u}`
+}
+
+/** Metric mass and volume units a recipe line may be written in, with their factor to the Base Unit. */
+const LINE_METRIC_UNITS: Record<string, { base: BaseUnit; factor: number }> = {
+  g: { base: 'g', factor: 1 },
+  kg: { base: 'g', factor: 1000 },
+  ml: { base: 'ml', factor: 1 },
+  l: { base: 'ml', factor: 1000 },
+  dl: { base: 'ml', factor: 100 },
+  cl: { base: 'ml', factor: 10 },
+}
+
+/**
+ * The imperial base side of a Unit Conversion: oz for g, fl oz for ml, 1 decimal (2 when 1 would
+ * show 0, so a positive amount never reads 0). Never tsp, tbsp, cup or lb.
+ */
+function imperialBaseSide(toBase: number, base: BaseUnit): string {
+  const perOunce = base === 'g' ? GRAMS_PER_OUNCE : ML_PER_FL_OZ
+  const unit = base === 'g' ? 'oz' : 'fl oz'
+  return withSign(toBase, (abs) => {
+    const oz = abs / perOunce
+    const digits = Number(oz.toFixed(1)) === 0 && oz !== 0 ? 2 : 1
+    return `${trim(oz, digits)} ${unit}`
+  })
 }
 
 /** Applies the sign of amount to the body formatted from its absolute value. */

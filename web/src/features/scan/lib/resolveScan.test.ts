@@ -112,3 +112,55 @@ describe('applyAskedWeight', () => {
     expect(() => applyAskedWeight(ask, -5)).toThrow()
   })
 })
+
+// r3-scan-fixes B5: weight-valued barcodes are priced by weight; the pack Price is only the basis for a price per kg.
+describe('planScan: a weighed barcode costs weight x price per kg', () => {
+  // Rule 21 Product: 1 kg pack last sold at 8.99, no explicit price per kg
+  const rule21Product = (over: Partial<OfflineProduct> = {}) => ({ ...product(22, 'Rule 21 Product', 1000, 899, 'carrots'), ...over })
+  const data = (products: OfflineProduct[], catalog: Partial<OfflineData['catalog']> = {}) => {
+    const o = offline({ weightProducts: { '3:12345': 22 }, pricePerKgCents: {}, ...catalog })
+    return { ...o, products: [...o.products, ...products] }
+  }
+
+  it('850 g of a 1 kg Product at 8.99 is 7.64, with 8.99 per kg derived and the weighed flag', () => {
+    const plan = planScan(ean('2112345008509'), data([rule21Product()]))
+    expect(plan).toMatchObject({ kind: 'known', quantity: 850, priceCents: 764, pricePerKgCents: 899, weighed: true })
+  })
+
+  it('450 g is 4.05 (404.55 rounds half up)', () => {
+    const plan = planScan(ean('2112345004501'), data([rule21Product()]))
+    expect(plan).toMatchObject({ kind: 'known', quantity: 450, priceCents: 405 })
+  })
+
+  it('derives the price per kg from a pack that is not 1 kg: 500 g at 3.00, 450 g is 2.70', () => {
+    const plan = planScan(ean('2112345004501'), data([rule21Product({ packSize: 500, lastPriceCents: 300 })]))
+    expect(plan).toMatchObject({ priceCents: 270, pricePerKgCents: 600 })
+  })
+
+  it('an explicit price per kg in the catalog wins over the pack price', () => {
+    const plan = planScan(ean('2112345008509'), data([rule21Product()], { pricePerKgCents: { '22': 1000 } }))
+    expect(plan).toMatchObject({ priceCents: 850, pricePerKgCents: 1000 })
+  })
+
+  it('no price known: no price and no price per kg (the server then records nothing)', () => {
+    const plan = planScan(ean('2112345008509'), data([rule21Product({ lastPriceCents: null })]))
+    expect(plan).toMatchObject({ kind: 'known', quantity: 850, priceCents: null, weighed: true })
+    expect(plan).not.toHaveProperty('pricePerKgCents')
+  })
+
+  it('a pack price on a millilitre Product is no basis for a weight price', () => {
+    const plan = planScan(ean('2112345008509'), data([rule21Product({ baseUnit: 'ml' })]))
+    expect(plan).toMatchObject({ priceCents: null })
+  })
+
+  it('a price-valued barcode keeps the price it carries and is flagged weighed', () => {
+    const plan = planScan(ean('2200007002009'), offline({ pricePerKgCents: { '21': 500 } }))
+    expect(plan).toMatchObject({ kind: 'known', quantity: 400, priceCents: 200, pricePerKgCents: 500, weighed: true })
+  })
+
+  it('a pack barcode is not weighed', () => {
+    const plan = planScan(ean('8000500310427'), offline())
+    expect(plan).toMatchObject({ kind: 'known', quantity: 700, priceCents: 159 })
+    expect(plan).not.toHaveProperty('weighed')
+  })
+})

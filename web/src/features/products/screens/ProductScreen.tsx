@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import { BentoGrid, BottomSheet, Button, EmptyState, Tile } from '../../../ui'
+import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { FormField } from '../components/FormField'
 import { PriceEditor } from '../components/PriceEditor'
 import { PriceList } from '../components/PriceList'
@@ -26,6 +27,7 @@ export function ProductScreen() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
   const currency = useCurrency()
+  const system = useDisplayUnitSystem()
   const p = useProduct(id)
   const [packText, setPackText] = useState<string | null>(null)
   const [pricing, setPricing] = useState(false)
@@ -60,7 +62,7 @@ export function ProductScreen() {
       <h1 className="pg__title">{product.name}</h1>
       <p className="pg__muted">
         <Link to={`/ingredients/${product.ingredientId}`}>{product.ingredientName}</Link> ·{' '}
-        {formatPackSize(product.packSize, product.baseUnit)}
+        {formatPackSize(product.packSize, product.baseUnit, system)}
       </p>
       {error ? (
         <p role="alert" className="pg__error">

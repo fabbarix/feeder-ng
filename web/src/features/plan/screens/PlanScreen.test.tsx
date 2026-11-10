@@ -24,6 +24,16 @@ const preview: CookPreview = {
 }
 
 describe('PlanScreen', () => {
+  it("B10: Mark as Cooked is offered for today's meal only, not for tomorrow's", async () => {
+    mockApi({ 'GET /api/plan': view() })
+    renderWithProviders(<PlanScreen />)
+    const today = (await screen.findByRole('heading', { name: 'Today' })).closest('article')!
+    const tomorrow = screen.getByRole('heading', { name: 'Tomorrow' }).closest('article')!
+    expect(within(today as HTMLElement).getByRole('button', { name: 'Mark as Cooked' })).toBeInTheDocument()
+    expect(within(tomorrow as HTMLElement).queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
+    expect(within(tomorrow as HTMLElement).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+  })
+
   it('shows a day tile per day, today first, with its meals', async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
@@ -100,7 +110,7 @@ describe('PlanScreen', () => {
 
   it('Mark as Cooked: edit the Leftover, confirm, then correct a Stock shortfall in one tap', async () => {
     const cooked: CookedResult = {
-      meal: meal({ state: 'cooked' }), leftover: null,
+      meal: meal({ state: 'cooked' }), leftover: null, plannedFor: [],
       warnings: [{ ingredientId: 11, name: 'chicken thighs', baseUnit: 'g', have: 300, need: 400, shortfall: 100, message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g' }],
     }
     const api = mockApi({
@@ -130,7 +140,7 @@ describe('PlanScreen', () => {
 
   it('dismissing the shortfall leaves Stock alone', async () => {
     const cooked: CookedResult = {
-      meal: meal({ state: 'cooked' }), leftover: null,
+      meal: meal({ state: 'cooked' }), leftover: null, plannedFor: [],
       warnings: [{ ingredientId: 11, name: 'chicken thighs', baseUnit: 'g', have: 300, need: 400, shortfall: 100, message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g' }],
     }
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-09/2/cook': preview, 'POST /api/plan/2026-11-09/2/cooked': cooked })

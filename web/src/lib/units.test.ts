@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baseUnitLabel, formatConversion, formatQuantity } from './units'
+import { baseUnitLabel, formatConversion, formatLineQuantity, formatQuantity } from './units'
 
 describe('formatQuantity metric', () => {
   it.each([
@@ -94,6 +94,56 @@ describe('formatConversion', () => {
   })
   it('shows imperial in oz and fl oz', () => {
     expect(formatConversion('clove', 5, 'g', 'imperial')).toBe('1 clove = 0.2 oz')
-    expect(formatConversion('splash', 30, 'ml', 'imperial')).toBe('1 splash = 2 tbsp')
+    expect(formatConversion('splash', 30, 'ml', 'imperial')).toBe('1 splash = 1 fl oz')
+  })
+})
+
+describe('formatConversion imperial shows the base side as oz or fl oz, never as a recipe unit (B9)', () => {
+  it.each([
+    ['cup', 240, 'ml', '1 cup = 8.1 fl oz'], // was "1 cup = 1 cup"
+    ['splash', 30, 'ml', '1 splash = 1 fl oz'],
+    ['jar', 700, 'ml', '1 jar = 23.7 fl oz'],
+    ['pinch', 1, 'ml', '1 pinch = 0.03 fl oz'], // positive never reads 0
+    ['clove', 5, 'g', '1 clove = 0.2 oz'],
+    ['tub', 500, 'g', '1 tub = 17.6 oz'], // no lb switch inside a conversion label
+    ['bunch', 2, 'piece', '1 bunch = 2 pieces'],
+  ] as const)('%s %s %s -> %s', (unit, toBase, base, text) => {
+    expect(formatConversion(unit, toBase, base, 'imperial')).toBe(text)
+  })
+  it('metric is unchanged', () => {
+    expect(formatConversion('cup', 240, 'ml', 'metric')).toBe('1 cup = 240 ml')
+  })
+})
+
+describe('formatLineQuantity (B9: "2 tbsp" must not become "0.4 oz")', () => {
+  it.each([
+    [2, 'tbsp', '2 tbsp'],
+    [1.5, 'tsp', '1.5 tsp'],
+    [0.5, 'cup', '0.5 cup'],
+    [3, 'clove', '3 clove'],
+    [1, 'piece', '1 piece'],
+    [2.333, 'tbsp', '2.33 tbsp'],
+    [2, ' TBSP ', '2 tbsp'],
+  ] as const)('%s %s is shown as written in imperial: %s', (q, unit, text) => {
+    expect(formatLineQuantity(q, unit, 'imperial')).toBe(text)
+  })
+  it.each([
+    [250, 'g', '8.8 oz'],
+    [1, 'kg', '2 lb 3 oz'],
+    [250, 'ml', '1 cup'],
+    [1, 'l', '4.25 cups'],
+    [2, 'dl', '0.75 cups'],
+    [3, 'cl', '2 tbsp'],
+  ] as const)('%s %s metric mass or volume converts in imperial: %s', (q, unit, text) => {
+    expect(formatLineQuantity(q, unit, 'imperial')).toBe(text)
+  })
+  it('metric shows everything as written, g and ml through formatQuantity', () => {
+    expect(formatLineQuantity(2, 'tbsp', 'metric')).toBe('2 tbsp')
+    expect(formatLineQuantity(250, 'g', 'metric')).toBe('250 g')
+    expect(formatLineQuantity(1.5, 'kg', 'metric')).toBe('1.5 kg')
+    expect(formatLineQuantity(3, 'clove', 'metric')).toBe('3 clove')
+  })
+  it('returns an empty string for non-finite input', () => {
+    expect(formatLineQuantity(NaN, 'g', 'imperial')).toBe('')
   })
 })
