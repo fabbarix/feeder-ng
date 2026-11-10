@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook, waitFor } from '@testing-library/react'
-import type { ReactNode } from 'react'
+import { act, render, renderHook, waitFor } from '@testing-library/react'
+import { type ReactNode, useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import type { Ingredient, MergePreview } from '../types'
@@ -19,7 +19,8 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../api', () => ({ ingredientsApi: api }))
 
-import { useMergeFlow } from './useMergeFlow'
+import { useIngredient } from './useIngredient'
+import { type UseMergeFlow, useMergeFlow } from './useMergeFlow'
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>
@@ -62,6 +63,52 @@ describe('useMergeFlow after a merge (B11)', () => {
     })
     expect(spy).toHaveBeenCalled()
     expect(client.getQueryState(['ingredients', 9])?.isInvalidated ?? true).toBe(true)
+  })
+})
+
+// Realistic screen: the source Ingredient page (detail + merge flow mounted) navigates to the survivor and unmounts.
+describe('merge from a mounted source screen (B11)', () => {
+  it('navigates to the survivor first and never refetches the removed source or its preview', async () => {
+    let list = [passata, puree]
+    api.list.mockImplementation(async () => list)
+    api.get.mockImplementation(async (id: number) => (id === 4 ? passata : puree))
+    api.mergePreview.mockResolvedValue({ ...preview, conflicts: [] })
+    api.merge.mockImplementation(async () => {
+      list = [puree] // after the merge the server list no longer has the source
+      return puree
+    })
+    const navigate = vi.fn()
+    let flow!: UseMergeFlow
+    function SourceScreen() {
+      useIngredient(4)
+      flow = useMergeFlow(4)
+      return null
+    }
+    function Screen() {
+      const [route, setRoute] = useState(4)
+      navigate.mockImplementation((id: number) => setRoute(id))
+      return route === 4 ? <SourceScreen /> : null
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <Screen />
+      </QueryClientProvider>,
+    )
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith(4))
+    act(() => flow.selectTarget(puree))
+    await waitFor(() => expect(flow.canMerge).toBe(true))
+    api.get.mockClear()
+    api.mergePreview.mockClear()
+    await act(async () => {
+      // merge() takes an onMerged callback that runs right after the POST, before the source queries are dropped.
+      // @ts-expect-error the second parameter does not exist yet (red)
+      await flow.merge((survivor: Ingredient) => navigate(survivor.id))
+    })
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(9))
+    expect(api.get).not.toHaveBeenCalledWith(4)
+    expect(api.mergePreview).not.toHaveBeenCalled()
+    expect(client.getQueryCache().findAll({ queryKey: ['ingredients', 4] })).toEqual([])
   })
 })
 
