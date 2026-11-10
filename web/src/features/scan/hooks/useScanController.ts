@@ -22,6 +22,7 @@ import type { IngredientChoice } from '../lib/unknownForm'
 import type { Op, ScanResult } from '../types'
 import { useOfflineData } from './useOfflineData'
 import { useCamera, type CameraStatus } from './useCamera'
+import { useCameraRecovery, type CameraRecovery } from './useCameraRecovery'
 import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
 import { useSyncQueue } from './useSyncQueue'
@@ -45,6 +46,8 @@ export interface ScanController {
     torchOn: boolean
     toggleTorch: () => void
   }
+  /** B4: what to offer when the camera fails (retry, type the barcode) */
+  recovery: CameraRecovery
   muted: boolean
   toggleMute: () => void
   /** false on iOS: the beep is the only confirmation */
@@ -166,7 +169,10 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     onScan: (scanned) => void onScan.current(scanned),
   })
 
+  const recovery = useCameraRecovery({ status: camera.status, retryCamera: camera.retry, onScan: (scanned) => void onScan.current(scanned) })
+
   return {
+    recovery,
     status: offline.status,
     error: offline.error ?? scanner.error,
     camera: {

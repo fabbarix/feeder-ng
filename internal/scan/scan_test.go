@@ -189,3 +189,18 @@ func TestResultJSONIsCamelCase(t *testing.T) {
 		t.Errorf("result JSON = %s", b)
 	}
 }
+
+// r3-scan-fixes B5: the Weighed flag belongs to a shop_scan only.
+func TestWeighedFlagOnlyOnAShopScan(t *testing.T) {
+	op := shopScan()
+	op.Weighed = true
+	if err := op.Validate(); err != nil {
+		t.Fatalf("a weighed shop scan: %v", err)
+	}
+	for name, bad := range map[string]scan.Op{"stock-take": stockTake(), "unknown pack": unknownPack()} {
+		bad.Weighed = true
+		if got := field(t, bad.Validate()); got != "weighed" {
+			t.Errorf("%s: field = %q, want weighed", name, got)
+		}
+	}
+}

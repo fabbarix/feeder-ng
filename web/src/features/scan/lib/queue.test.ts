@@ -388,3 +388,45 @@ describe('backoffMs', () => {
     expect(backoffMs(-3)).toBe(1000)
   })
 })
+
+describe('updatePrice (an edit made offline, B6)', () => {
+  it('changes the price of the queued operation and keeps everything else and the order', async () => {
+    const { queue } = setup()
+    await queue.enqueue(op('a', { priceCents: 159 }))
+    await queue.enqueue(op('b'))
+    expect(await queue.updatePrice('a', 179)).toBe(true)
+    const pending = (await queue.pending()).map((e) => e.op)
+    expect(pending.map((o) => o.clientUuid)).toEqual(['a', 'b'])
+    expect(pending[0]).toMatchObject({ priceCents: 179, productId: 7, quantity: 700 })
+    expect(pending[1]?.priceCents).toBeUndefined()
+  })
+
+  it('the edited price is what gets sent', async () => {
+    const { queue } = setup()
+    await queue.enqueue(op('a', { priceCents: 159 }))
+    await queue.updatePrice('a', 179)
+    const a = api(async (ops) => ops.map((o) => applied(o.clientUuid)))
+    await queue.flush(a)
+    expect(a.sync.mock.calls[0]?.[0][0]).toMatchObject({ clientUuid: 'a', priceCents: 179 })
+  })
+
+  it('answers false for an operation that already left the queue or never was in it', async () => {
+    const { queue } = setup()
+    await queue.enqueue(op('a'))
+    await queue.flush(api(async (ops) => ops.map((o) => applied(o.clientUuid))))
+    expect(await queue.updatePrice('a', 179)).toBe(false)
+    expect(await queue.updatePrice('nope', 179)).toBe(false)
+  })
+
+  it('waits for a send under way and answers by its outcome', async () => {
+    const { queue } = setup()
+    await queue.enqueue(op('a'))
+    let release: (r: ScanResult[]) => void = () => {}
+    const slow = api(() => new Promise<ScanResult[]>((res) => (release = res)))
+    const flushing = queue.flush(slow)
+    const update = queue.updatePrice('a', 179)
+    release([applied('a')])
+    await flushing
+    expect(await update).toBe(false)
+  })
+})

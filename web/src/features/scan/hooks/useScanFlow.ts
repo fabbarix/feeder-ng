@@ -28,6 +28,8 @@ export interface ScanFlowDeps {
   cancelQueued: (clientUuid: string) => Promise<boolean>
   undo: (clientUuid: string) => Promise<void>
   setPrice: (clientUuid: string, priceCents: number) => Promise<void>
+  /** B6: an edit of a still-queued scan: sync.updateQueuedPrice; true when the queue took it, false when it already left */
+  setQueuedPrice?: (clientUuid: string, priceCents: number) => Promise<boolean>
   feedback: Pick<Feedback, 'confirm' | 'reject'>
   newUuid?: () => string
   now?: () => Date
@@ -68,6 +70,8 @@ export interface ScanFlow {
   saveUnknown(values: UnknownFormValues): Promise<void>
   submitWeight(grams: number): Promise<void>
   stockTakeAction(action: StockTakeAction, total?: number): Promise<void>
+  /** B7: the Results of a sync flush; the line of a scan that was waiting follows its Result (synced, or gone) */
+  applySyncResults(results: ScanResult[]): void
   openEditPrice(): void
   editPrice(priceCents: number): Promise<void>
   undo(): Promise<void>
@@ -326,6 +330,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     saveUnknown,
     submitWeight,
     stockTakeAction,
+    applySyncResults: () => {},
     openEditPrice,
     editPrice,
     undo,

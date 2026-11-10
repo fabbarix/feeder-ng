@@ -5,7 +5,7 @@ import { pricePerKgFromWeight, resolve, type Scanned } from './barcode'
 
 export type ScanPlan =
   /** a Product (pack size, or the decoded weight) ready to become a Stock Lot */
-  | { kind: 'known'; product: OfflineProduct; quantity: number; priceCents: number | null; pricePerKgCents?: number }
+  | { kind: 'known'; product: OfflineProduct; quantity: number; priceCents: number | null; pricePerKgCents?: number; weighed?: true }
   /** a price-valued Weight Barcode Rule with no price per kg yet: ask the weight once */
   | { kind: 'ask_weight'; product: OfflineProduct; priceCents: number }
   /** nothing matched: the full "what is this?" form for this canonical code */

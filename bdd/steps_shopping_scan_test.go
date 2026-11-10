@@ -647,7 +647,7 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 			p, _ := doc["product"].(map[string]any)
 			op["productId"], op["quantity"] = res["productId"], p["packSize"]
 		case "weighed":
-			op["productId"], op["quantity"] = res["productId"], res["weightGrams"]
+			op["productId"], op["quantity"], op["weighed"] = res["productId"], res["weightGrams"], true
 			if res["priceCents"] != nil {
 				op["priceCents"] = res["priceCents"]
 			}
@@ -678,7 +678,7 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		price := int(ssNum(res["priceCents"]))
 		op := opBase(uuid, "shop_scan")
 		sid, _ := shopID(shop)
-		op["shopId"], op["productId"], op["quantity"], op["priceCents"] = sid, res["productId"], grams, price
+		op["shopId"], op["productId"], op["quantity"], op["priceCents"], op["weighed"] = sid, res["productId"], grams, price, true
 		op["pricePerKgCents"] = (price*1000 + grams/2) / grams // PricePerKgFromWeight, half up
 		return send(op)
 	})

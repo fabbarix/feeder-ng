@@ -120,6 +120,17 @@ export class OfflineQueue {
     await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0 })
   }
 
+  /**
+   * B6: sets priceCents on the still-queued operation (an edit made offline). true when it was in the queue and
+   * changed; false when it already left it (sent, applied or rejected): the caller then uses the server's SetPrice.
+   * Runs in the queue's lock, so it never falls between a send's read and its outcome. Stub until implemented.
+   */
+  updatePrice(clientUuid: string, priceCents: number): Promise<boolean> {
+    void clientUuid
+    void priceCents
+    return Promise.resolve(false)
+  }
+
   /** Operations still to send, in order. */
   async pending(): Promise<QueuedOp[]> {
     return this.store.all()

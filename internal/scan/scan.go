@@ -60,6 +60,9 @@ type Op struct {
 	Quantity        float64 `json:"quantity,omitempty"`
 	PriceCents      *int    `json:"priceCents,omitempty"`
 	PricePerKgCents *int    `json:"pricePerKgCents,omitempty"`
+	// Weighed marks a shop_scan whose Quantity was decoded from a weight-valued Weight Barcode (r3-scan-fixes B5):
+	// with no PriceCents the server prices it as Quantity x the price per kg (PricePerKgCents, else the latest Price).
+	Weighed bool `json:"weighed,omitempty"`
 
 	// shop_unknown: the unknown-barcode form. Either Barcode (canonical), or RuleID + ItemCode for a weighed code.
 	Barcode     string         `json:"barcode,omitempty"`

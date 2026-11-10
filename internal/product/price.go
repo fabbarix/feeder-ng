@@ -100,3 +100,11 @@ func LatestExplicitPricePerKg(prices []Price) (cents int, ok bool) {
 	}
 	return *best.PricePerKgCents, true
 }
+
+// PriceForWeight is what grams of a weighed Product cost: the explicit price per kg x grams / 1000, else (a pack
+// Price on a Product in units.Gram with packSize > 0) PriceCents x grams / packSize; rounded half up to the minor
+// unit, computed once (no rounding of an intermediate price per kg). ok=false when there is no basis or the result
+// is below 1. Stub until implemented (r3-scan-fixes B5).
+func PriceForWeight(p Price, packSize float64, base units.Base, grams float64) (cents int, ok bool) {
+	return 0, false
+}

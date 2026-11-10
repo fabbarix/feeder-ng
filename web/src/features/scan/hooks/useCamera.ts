@@ -2,7 +2,7 @@
 // API is injected so tests use a fake.
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 
-export type CameraStatus = 'idle' | 'starting' | 'ready' | 'denied' | 'unsupported' | 'error'
+export type CameraStatus = 'idle' | 'starting' | 'ready' | 'denied' | 'unsupported' | 'no_camera' | 'in_use' | 'error'
 
 export interface MediaDevicesLike {
   getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream>
@@ -24,6 +24,8 @@ export interface UseCameraResult {
   torchOn: boolean
   /** applies { advanced: [{ torch }] } to the video track; does nothing when unsupported */
   toggleTorch(): Promise<void>
+  /** B4: tries again after a failure (denied, no_camera, in_use, error); no-op in other states. Stub until implemented. */
+  retry(): void
   /** the frame source for useScanner: the video element while ready */
   frame(): CanvasImageSource | null
 }
@@ -123,5 +125,5 @@ export function useCamera(options: UseCameraOptions): UseCameraResult {
 
   const frame = useCallback((): CanvasImageSource | null => (status === 'ready' ? videoRef.current : null), [status])
 
-  return { videoRef, status, torchSupported, torchOn, toggleTorch, frame }
+  return { videoRef, status, torchSupported, torchOn, toggleTorch, retry: () => {}, frame }
 }
