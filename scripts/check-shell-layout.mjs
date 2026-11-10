@@ -3,7 +3,7 @@
 //   pnpm -C web dev --port 5199 &            (start it detached, log to build/)
 //   node scripts/check-shell-layout.mjs --url http://localhost:5199 [--chrome /usr/bin/google-chrome]
 // It drives Chrome over the DevTools protocol (no extra dependency; Node 22+ has WebSocket), fakes GET /api/me so the shell renders,
-// and for every route at 390, 820 and 1280 px wide asserts:
+// and for every route at 390, 820, 1280 and 1440 px wide asserts:
 //   1. document.documentElement.scrollWidth <= clientWidth (= innerWidth without a scrollbar): no sideways scroll;
 //   2. scrolled to the end, the last element of the page ends above the nav (bottom bar < 1024, none hidden behind it);
 //   3. /board and /cook/* have no nav and their <main> spans the viewport width (>= 900: the old 220 px column is gone);
@@ -12,6 +12,7 @@
 //   6. (ordinary routes) the avatar trigger sits on the right half of the top bar below 1024;
 //   7. (ordinary routes) at >= 1024 the side rail and <main> start within 120 px of the top (the grid rows must not stretch);
 //   9. (ordinary routes) at >= 1024 <main> is at least min(1100, its grid column width) - 1 wide (it must not shrink to its content);
+//  10. (ordinary routes) at >= 1440 every .side-rail__link sits inside the rail (left > 0, right < rail right) and its labels do not overflow (scrollWidth <= clientWidth);
 //   8. (on /) the open avatar menu popover lies fully inside the viewport.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
@@ -29,6 +30,7 @@ const VIEWPORTS = [
   { width: 390, height: 844, mobile: true },
   { width: 820, height: 1180, mobile: false },
   { width: 1280, height: 800, mobile: false },
+  { width: 1440, height: 900, mobile: false },
 ]
 const ROUTES = ['/', '/plan', '/scan', '/shop', '/recipes', '/stock', '/settings', '/board', '/cook/1', '/this-route-does-not-exist']
 const CHROMELESS = /^\/(board|cook)(\/|$)/
@@ -135,6 +137,8 @@ const page = `
     navTop: nav ? Math.round(nav.getBoundingClientRect().top) : null,
     current: [...document.querySelectorAll('nav [aria-current="page"]')].map((a) => a.textContent.trim()),
     notFound: /Page not found/.test(document.body.innerText),
+    railLinks: rail && visible(rail) ? [...rail.querySelectorAll('.side-rail__link')].map((a) => { const r = a.getBoundingClientRect(); return { text: a.textContent.trim(), left: Math.round(r.left), right: Math.round(r.right), sw: a.scrollWidth, cw: a.clientWidth } }) : [],
+    railRight: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().right) : null,
     devErrorPage: /Unexpected Application Error|Hey developer/.test(document.body.innerText),
   }
 })()`
@@ -171,6 +175,13 @@ for (const vp of VIEWPORTS) {
       if (m.railTop !== null && m.railTop > 120) fail(`${tag}: side rail starts ${m.railTop}px from the top (grid rows stretch)`)
       if (m.mainWidth !== null && m.mainColumn !== null && m.mainWidth < m.mainColumn - 1) fail(`${tag}: <main> is ${m.mainWidth}px wide, narrower than its column (${m.mainColumn}px): it shrinks to its content`)
       if (m.mainTop !== null && m.mainTop > 120) fail(`${tag}: <main> starts ${m.mainTop}px from the top (grid rows stretch)`)
+    }
+    if (vp.width >= 1440) {
+      if (m.railLinks.length === 0) fail(`${tag}: no .side-rail__link found in the rail`)
+      for (const l of m.railLinks) {
+        if (!(l.left > 0 && l.right < m.railRight)) fail(`${tag}: rail link "${l.text}" (${l.left}-${l.right}) is not inside the rail (right edge ${m.railRight})`)
+        if (l.sw > l.cw) fail(`${tag}: rail link "${l.text}" overflows (scrollWidth ${l.sw} > clientWidth ${l.cw})`)
+      }
     }
     if (route === '/') {
       const box = await evaluate(menuProbe).catch(() => null)

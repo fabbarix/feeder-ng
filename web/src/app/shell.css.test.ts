@@ -77,6 +77,8 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     const link = /\.side-rail__link\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
     expect(link).toMatch(/margin-inline\s*:\s*var\(--space-3\)/)
     expect(link).not.toMatch(/(^|[;\s])width\s*:\s*100%/)
+    // The >=1024 block sets width: 56px; the expanded rows must override it, or the labels overflow.
+    expect(link).toMatch(/(^|[;\s])width\s*:\s*(auto|stretch|-webkit-fill-available)\s*(;|$)/)
   })
 })
 
