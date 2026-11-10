@@ -1,6 +1,6 @@
 Feature: Per-User preferences
-  Each User chooses light, dark or system mode, an accent and an optional
-  secondary colour, and metric (the default) or imperial display.
+  Each User chooses light, dark or system mode, an accent colour, and metric
+  (the default) or imperial display. There is no secondary colour.
 
   Scenario: A new User gets the defaults
     Given a running Feeder
@@ -15,7 +15,7 @@ Feature: Per-User preferences
     And I am signed in as the User
     When I PUT "/api/me/preferences" with JSON:
       """
-      {"scheme": "dark", "accent": "#3366cc", "secondary": "#ffb4a2", "units": "imperial"}
+      {"scheme": "dark", "accent": "#3366cc", "units": "imperial"}
       """
     Then the response status is 200
     When I am signed in as the Admin
@@ -26,7 +26,20 @@ Feature: Per-User preferences
     And I GET "/api/me/preferences"
     Then the response JSON field "scheme" is "dark"
     And the response JSON field "units" is "imperial"
-    And the response JSON field "secondary" is "#ffb4a2"
+    And the response JSON field "accent" is "#3366cc"
+
+  Scenario: A secondary colour sent by an old client is ignored
+    Given a running Feeder
+    And I am signed in as the User
+    When I PUT "/api/me/preferences" with JSON:
+      """
+      {"scheme": "light", "accent": "#3366cc", "secondary": "#ffb4a2", "units": "metric"}
+      """
+    Then the response status is 200
+    And the response JSON has no field "secondary"
+    When I GET "/api/me/preferences"
+    Then the response JSON field "scheme" is "light"
+    And the response JSON has no field "secondary"
 
   Scenario Outline: Preferences are validated
     Given a running Feeder

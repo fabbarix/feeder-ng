@@ -1,0 +1,38 @@
+/* ProgressTile (docs/design/ui-fix-plan.md 4.4): a soft tile with a bar. Tokens only. */
+.progress-tile {
+  gap: var(--space-2);
+}
+
+.progress-tile__bar {
+  block-size: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-soft-strong);
+  overflow: hidden;
+}
+
+.progress-tile__fill {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: inline-size var(--dur-2) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-tile__fill {
+    transition: none;
+  }
+}
+
+.progress-tile__label {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+}
+
+.progress-tile__value {
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+  font-weight: var(--text-title-2-weight);
+  font-variant-numeric: tabular-nums;
+}

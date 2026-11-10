@@ -106,8 +106,6 @@ export const settingsStrings = {
     imperial: 'Imperial',
     accent: 'Accent colour',
     customAccent: 'Custom accent colour',
-    useSecondary: 'Use a secondary colour',
-    secondary: 'Secondary colour',
     save: 'Save preferences',
   },
 }

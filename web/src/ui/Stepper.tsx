@@ -1,4 +1,5 @@
 import { uiStrings } from './strings'
+import './Stepper.css'
 
 export interface StepperProps {
   value: number

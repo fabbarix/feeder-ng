@@ -178,10 +178,10 @@ describe('useAllowlist', () => {
 
 describe('usePreferences', () => {
   it('starts from the defaults, then shows the saved value', async () => {
-    const saved = { scheme: 'dark', accent: '#3366cc', secondary: null, units: 'imperial' }
+    const saved = { scheme: 'dark', accent: '#3366cc', units: 'imperial' }
     const api = mockApi({ 'GET /api/me/preferences': saved, 'PUT /api/me/preferences': (c: { body: unknown }) => c.body })
     const { result } = renderHook(() => usePreferences(), { wrapper })
-    expect(result.current.preferences).toEqual({ scheme: 'system', accent: '#3f7d58', secondary: null, units: 'metric' })
+    expect(result.current.preferences).toEqual({ scheme: 'system', accent: '#3f7d58', units: 'metric' })
     await waitFor(() => expect(result.current.preferences).toEqual(saved))
     await act(() => result.current.save({ ...result.current.preferences, units: 'metric' }))
     expect(api.callsTo('PUT', '/api/me/preferences')[0]!.body).toMatchObject({ units: 'metric' })
@@ -193,7 +193,7 @@ describe('usePreferenceTheme', () => {
     const api = mockApi({ 'GET /api/me': { status: 401, json: { error: { code: 'unauthenticated', message: 'x' } } } })
     const { result } = renderHook(() => usePreferenceTheme(), { wrapper })
     await waitFor(() => expect(api.callsTo('GET', '/api/me')).toHaveLength(1))
-    expect(result.current).toEqual({ accent: '#3f7d58', secondary: undefined, scheme: 'system' })
+    expect(result.current).toEqual({ accent: '#3f7d58', scheme: 'system' })
     expect(api.callsTo('GET', '/api/me/preferences')).toHaveLength(0)
   })
 
@@ -204,6 +204,7 @@ describe('usePreferenceTheme', () => {
     })
     const { result } = renderHook(() => usePreferenceTheme(), { wrapper })
     await waitFor(() => expect(result.current.accent).toBe('#3366cc'))
-    expect(result.current).toEqual({ accent: '#3366cc', secondary: '#ffb4a2', scheme: 'dark' })
+    // An old server may still send "secondary": it is dropped, not passed to the theme.
+    expect(result.current).toStrictEqual({ accent: '#3366cc', scheme: 'dark' })
   })
 })

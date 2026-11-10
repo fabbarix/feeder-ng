@@ -1,33 +1,80 @@
 import type { ReactNode } from 'react'
+import { Icon } from './Icon'
+import type { IconName } from './icons'
+import { resolveChip, type LegacyChipTone } from './lib/legacy'
+import './Chip.css'
 
-export type ChipTone = 'neutral' | 'accent' | 'spoil' | 'leftover'
+export type ChipKind = 'why' | 'state' | 'status' | 'tag' | 'filter' | 'count'
+/** Fixed status palette (plan 3.1): `--status-<name>-fg|bg|solid`. */
+export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned'
+/** @deprecated use `kind` (+ `status`). */
+export type ChipTone = LegacyChipTone
 
 export interface ChipProps {
+  /** Default `tag`; a clickable chip without a kind is a `filter`. */
+  kind?: ChipKind
+  /** Colour of `state` and `status` chips. */
+  status?: ChipStatus
+  /** @deprecated use `kind` (+ `status`). */
   tone?: ChipTone
-  icon?: ReactNode
+  /** An IconName; a ReactNode is still accepted for unmigrated call sites (deprecated). */
+  icon?: IconName | ReactNode
+  /** Filter chips: on/off. Renders aria-pressed and a Check icon when on. */
   selected?: boolean
   disabled?: boolean
   onClick?: () => void
-  'data-kind'?: string
   children: ReactNode
 }
 
-/** A pill. A button (with aria-pressed when selected is given) when clickable. */
-export function Chip({ tone = 'neutral', icon, selected, disabled, onClick, 'data-kind': kind, children }: ChipProps) {
+/** Icon a `state` or `status` chip shows when none is given (docs/design/ui-fix-plan.md 4.3). */
+const DEFAULT_ICON: Partial<Record<ChipStatus, { state: IconName; status: IconName }>> = {
+  pinned: { state: 'pinned', status: 'pinned' },
+  success: { state: 'cooked', status: 'cooked' },
+  danger: { state: 'notCooked', status: 'spoiled' },
+  leftover: { state: 'leftover', status: 'leftover' },
+  spoil: { state: 'goesOff', status: 'goesOff' },
+}
+
+function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
+  return typeof icon === 'string' ? <Icon name={icon as IconName} size={size} /> : icon
+}
+
+/**
+ * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
+ * a filter chip shows aria-pressed and a Check while selected.
+ */
+export function Chip({ kind, status, tone, icon, selected, disabled, onClick, children }: ChipProps) {
+  const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
+  let finalKind = resolved.kind
+  if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
+    if (import.meta.env.DEV) console.warn(`Chip kind "${finalKind}" needs a status; rendering it as a tag.`)
+    finalKind = 'tag'
+  }
+  const finalStatus = finalKind === 'state' || finalKind === 'status' ? resolved.status : undefined
+
+  let leading: ReactNode = null
+  if (icon) leading = renderIcon(icon, 14)
+  else if (finalKind === 'filter' && selected) leading = <Icon name="tick" size={14} />
+  else if (finalStatus) {
+    const fallback = DEFAULT_ICON[finalStatus]?.[finalKind === 'state' ? 'state' : 'status']
+    if (fallback) leading = <Icon name={fallback} size={14} />
+  }
+
   const content = (
     <>
-      {icon ? <span className="chip__icon" aria-hidden="true">{icon}</span> : null}
+      {leading}
       {children}
     </>
   )
-  if (onClick) {
+  const attrs = { 'data-kind': finalKind, 'data-status': finalStatus, 'data-tone': tone }
+
+  if (onClick || finalKind === 'filter') {
     return (
       <button
         type="button"
-        className="chip chip--button"
-        data-tone={tone}
-        data-kind={kind}
-        aria-pressed={selected}
+        className="chip"
+        {...attrs}
+        aria-pressed={finalKind === 'filter' ? selected : undefined}
         disabled={disabled}
         onClick={onClick}
       >
@@ -36,7 +83,7 @@ export function Chip({ tone = 'neutral', icon, selected, disabled, onClick, 'dat
     )
   }
   return (
-    <span className="chip" data-tone={tone} data-kind={kind}>
+    <span className="chip" {...attrs}>
       {content}
     </span>
   )

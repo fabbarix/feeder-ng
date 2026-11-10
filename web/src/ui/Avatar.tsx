@@ -1,4 +1,5 @@
 import { initials } from '../lib/format'
+import './Avatar.css'
 
 export interface AvatarProps {
   name: string

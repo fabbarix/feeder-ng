@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button } from './Button'
 import { uiStrings } from './strings'
+import './Toast.css'
 
 export interface ToastOptions {
   tone?: 'neutral' | 'accent'

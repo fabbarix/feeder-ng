@@ -512,7 +512,7 @@ link" for the primary target, so inner buttons still work and content stays top-
 ### 4.10 Form fields
 `TextField`, `TextArea`, `NumberField` (with `Stepper` ±, tabular, unit suffix), `TimeField` (24 h, hh:mm segments, follows the Household
 locale, never the browser's AM/PM), `DateField` (field + calendar popover, week starts Monday), `Checkbox` (22 px, radius 6, 2 px outline →
-accent fill + `Check` bold), `Switch` (52×32, for settings like "Use a secondary colour"), `RadioCards` / `Segmented` (Light · Dark · System;
+accent fill + `Check` bold), `Switch` (52×32, for on/off settings such as the notification toggles), `RadioCards` / `Segmented` (Light · Dark · System;
 Metric · Imperial), `Slider` (Planner Style: 3 labelled stops, 6 px track soft-strong, 24 px thumb accent), `ColorSwatches` (accent presets as
 40 px circles + "Custom" opening a crafted picker), `FileDrop` (dashed outline zone, `FileArrowUp`, "Choose a file or drop it here").
 Shared anatomy: label 13/700 above, 48 h control, helper 13 muted, error 13 status-danger-fg with `WarningCircle` 14, `aria-describedby`.
@@ -743,8 +743,8 @@ Order: **guards → tokens → icons → primitives → shell → screens**. `we
 
 ### WP2 Icon wrapper (one team; after WP1 or in parallel, it touches different files except `package.json`) — `web/package.json`, lockfile, `web/src/ui/icons.ts`, `web/src/ui/Icon.tsx`, `web/src/ui/lib/mealSlotIcon.ts`, `web/src/ui/lib/tagIcon.ts`, tests
 - Add `@phosphor-icons/react`; register every icon in 3.4; `Icon` per 4.1; pure helpers with unit tests.
-- **Acceptance:** guard rule 2 fails on any other import; production bundle contains only the registered icons (check `dist` size delta < 64 kB gz; each csr glyph ships all 6 weights
-  for ~90 icons); `Icon` tests cover default weight by size and aria.
+- **Acceptance:** guard rule 2 fails on any other import; the production bundle contains only the registered icons (each `csr` glyph module carries all six weights, so the ~90 icons
+  must add less than 64 kB gz to `dist`; measure the delta); `Icon` tests cover default weight by size and aria.
 
 ### WP3 Primitives A: actions, chips, tiles, layout (one team; serial with WP4 on `ui/index.ts` and `styles.css`) — `ui/Button.tsx`, new `ui/IconButton.tsx`, `ui/Chip.tsx`, `ui/WhyChip.tsx`, `ui/Tile.tsx`, `ui/BentoGrid.tsx`, new `ui/PageHeader.tsx`, `ui/ProgressTile.tsx`, `ui/TimerTile.tsx`, new `ui/ListRow.tsx`, new `ui/RecipeThumb.tsx`, `ui/EmptyState.tsx`, CSS moved to `ui/*.css` per component
 - Variants and states from 4.2–4.4, 4.11–4.13, 4.15. `Tile` never renders `<button>`; add `stretched` link pattern. `Chip kind` replaces `tone`

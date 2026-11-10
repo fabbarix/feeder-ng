@@ -197,7 +197,7 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 
 ## 14. Theming and layout
 
-- Each User sets light, dark or system mode, an accent colour and an optional secondary colour, plus metric (default) or imperial display. Imperial is a UI conversion only: metric Base Units (g, ml or piece) stay as stored and all stored values remain metric; it shows oz/lb and fl oz/cups/spoons where sensible. The palette is derived from the accent (tinted surfaces, tonal steps) with automatic WCAG AA contrast checks. Status colours (spoil, leftover) are fixed and not derived from the accent.
+- Each User sets light, dark or system mode, an accent colour, plus metric (default) or imperial display. Imperial is a UI conversion only: metric Base Units (g, ml or piece) stay as stored and all stored values remain metric; it shows oz/lb and fl oz/cups/spoons where sensible. The palette is derived from the accent (tinted surfaces, tonal steps) with automatic WCAG AA contrast checks. Status colours (spoil, leftover) are fixed and not derived from the accent.
 - Layout: Bento, as in the ux-brief. Phone uses a bottom bar (Today · Plan · Scan · Shop · Recipes; "Shop" there is a UI label for the shopping screen, not the glossary **Shop**); desktop uses a side rail with a wider grid; the tablet board is a separate route.
 - `prefers-reduced-motion` turns off springs and the celebration animations.
 
@@ -222,3 +222,4 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 17. Variety Rule "per week" is the ISO week, Monday to Sunday; Leftovers don't count towards Variety Rules (§7.2).
 18. The phone bottom-bar item "Shop" is a UI label for the shopping screen (Shopping List plus scanning), not the glossary **Shop** (§14).
 19. The Google sign-in redirect URI is `<FEEDER_BASE_URL>/auth/google/callback` (§2).
+20. (2026-11-10) The per-User optional secondary colour is removed: a User's palette is derived from the accent alone. The Preferences API ignores a `secondary` field sent by an old client and never returns it, and the stored column is dropped (§14).

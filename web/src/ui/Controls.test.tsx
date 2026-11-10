@@ -14,7 +14,7 @@ describe('Button', () => {
     const onClick = vi.fn()
     render(<Button variant="tonal" onClick={onClick}>Go</Button>)
     const b = screen.getByRole('button', { name: 'Go' })
-    expect(b).toHaveAttribute('data-variant', 'tonal')
+    expect(b).toHaveAttribute('data-variant', 'secondary') // tonal is a deprecated alias; the rendered name is always the new one
     await userEvent.click(b)
     expect(onClick).toHaveBeenCalledOnce()
   })

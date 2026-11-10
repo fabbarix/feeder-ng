@@ -5,7 +5,10 @@
 native-ui=warn
 phosphor=fail
 colour-literals=warn
+colour-literals.fail_paths=web/src/ui
 class-hooks=warn
+class-hooks.fail_paths=web/src/ui
 sizing=warn
+sizing.fail_paths=web/src/ui
 glossary=warn
 native-search=warn

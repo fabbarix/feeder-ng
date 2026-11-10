@@ -28,6 +28,16 @@ type slotJSON struct {
 }
 
 func householdSteps(sc *godog.ScenarioContext, w *World) {
+	sc.Step(`^the response JSON has no field "([^"]*)"$`, func(key string) error {
+		var doc map[string]any
+		if err := w.Last.JSON(&doc); err != nil {
+			return fmt.Errorf("response is not a JSON object: %v; body: %s", err, w.Last.Body)
+		}
+		if _, ok := doc[key]; ok {
+			return fmt.Errorf("field %q present; body: %s", key, w.Last.Body)
+		}
+		return nil
+	})
 	admin := func() *testkit.Client {
 		env := w.Ensure()
 		if c, ok := w.Clients["household-admin"]; ok {

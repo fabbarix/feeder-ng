@@ -8,7 +8,7 @@ describe('preferencesChanged', () => {
     expect(preferencesChanged(DEFAULT_PREFERENCES, { ...DEFAULT_PREFERENCES, accent: '#3F7D58' })).toBe(false)
   })
 
-  it.each([{ scheme: 'dark' }, { units: 'imperial' }, { accent: '#112233' }, { secondary: '#ffb4a2' }])('is true for %o', (patch) => {
+  it.each([{ scheme: 'dark' }, { units: 'imperial' }, { accent: '#112233' }])('is true for %o', (patch) => {
     expect(preferencesChanged(DEFAULT_PREFERENCES, { ...DEFAULT_PREFERENCES, ...patch } as typeof DEFAULT_PREFERENCES)).toBe(true)
   })
 })

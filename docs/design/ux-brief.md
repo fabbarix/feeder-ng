@@ -8,7 +8,7 @@ Inputs for the UI/UX proposals. Domain terms are defined in [GLOSSARY.md](../../
 
 ## Visual language
 - **Type:** rounded geometric sans (Nunito or Figtree class), with tabular numerals for timers and quantities.
-- **Colour:** accent-tinted everything (Material You style). Each User's accent (plus an optional secondary) generates tonal light and dark palettes, and every surface takes a tint from it. Contrast is checked against WCAG AA. Status colours (spoiling soon, leftover) are reserved and are not derived from the accent.
+- **Colour:** accent-tinted everything (Material You style). Each User's accent generates tonal light and dark palettes, and every surface takes a tint from it. Contrast is checked against WCAG AA. Status colours (spoiling soon, leftover) are reserved and are not derived from the accent.
 - **Imagery:** the Recipe photo when there is one; otherwise a generated illustrated tile (Tag icon + initial on an accent tone).
 - **Shape & motion:** soft, generous rounding (16–24 px cards, pill chips); springy but short motion (≤ 250 ms); `prefers-reduced-motion` respected.
 

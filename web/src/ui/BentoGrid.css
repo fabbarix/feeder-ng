@@ -1,0 +1,20 @@
+/* BentoGrid (docs/design/ui-fix-plan.md 4.4): one gap token; rows stretch to their tallest tile. */
+.bento-grid {
+  display: grid;
+  gap: var(--bento-gap);
+  align-items: stretch;
+  grid-auto-rows: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bento-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bento-grid[data-columns='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bento-grid[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}

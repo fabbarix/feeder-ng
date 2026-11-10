@@ -124,23 +124,20 @@ func TestValidateAttendanceDate(t *testing.T) {
 
 func TestPreferences(t *testing.T) {
 	d := household.DefaultPreferences()
-	if d.Scheme != "system" || d.Accent != "#3f7d58" || d.Secondary != nil || d.Units != "metric" {
+	if d.Scheme != "system" || d.Accent != "#3f7d58" || d.Units != "metric" {
 		t.Fatalf("defaults = %+v", d)
 	}
 	if err := d.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	sec := "#ffb4a2"
-	good := household.Preferences{Scheme: "dark", Accent: "#3366cc", Secondary: &sec, Units: "imperial"}
+	good := household.Preferences{Scheme: "dark", Accent: "#3366cc", Units: "imperial"}
 	if err := good.Validate(); err != nil {
 		t.Fatalf("good rejected: %v", err)
 	}
-	badSec := "red"
 	tests := map[string]household.Preferences{
-		"scheme":    {Scheme: "sepia", Accent: "#3366cc", Units: "metric"},
-		"accent":    {Scheme: "dark", Accent: "blue", Units: "metric"},
-		"secondary": {Scheme: "dark", Accent: "#3366cc", Secondary: &badSec, Units: "metric"},
-		"units":     {Scheme: "dark", Accent: "#3366cc", Units: "furlongs"},
+		"scheme": {Scheme: "sepia", Accent: "#3366cc", Units: "metric"},
+		"accent": {Scheme: "dark", Accent: "blue", Units: "metric"},
+		"units":  {Scheme: "dark", Accent: "#3366cc", Units: "furlongs"},
 	}
 	for field, p := range tests {
 		if got := fieldOf(p.Validate()); got != field {

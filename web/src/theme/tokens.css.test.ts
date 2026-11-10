@@ -11,13 +11,17 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const css = readFileSync(`${cwd}/src/styles.css`, 'utf8')
 const main = readFileSync(`${cwd}/src/main.tsx`, 'utf8')
 
-/** Declarations of the first top-level `:root { ... }` rule. */
+/**
+ * Declarations of the top-level light `:root` rules, merged in source order: the static tokens block and the
+ * single palette block `:root, [data-scheme='light']` (WP3 merged the palette there). Dark and media rules are skipped.
+ */
 function rootBlock(): Record<string, string> {
-  const start = css.indexOf(':root {')
-  expect(start, 'styles.css has a :root block').toBeGreaterThanOrEqual(0)
-  const end = css.indexOf('\n}', start)
   const out: Record<string, string> = {}
-  for (const m of css.slice(start + 7, end).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[m[1]!] = m[2]!.trim()
+  for (const m of css.matchAll(/(^|\n)(:root\b[^{]*)\{([^}]*)\}/g)) {
+    if (/dark/.test(m[2]!)) continue
+    for (const d of m[3]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[d[1]!] = d[2]!.trim()
+  }
+  expect(Object.keys(out).length, 'styles.css has :root tokens').toBeGreaterThan(0)
   return out
 }
 const root = rootBlock()
@@ -160,25 +164,27 @@ describe('Figtree 800 is imported', () => {
 })
 
 /** Declarations of the first rule whose selector is exactly `selector`. */
-function ruleBody(selector: string): string {
+function ruleBody(selector: string, source = css): string {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const m = new RegExp(`(^|\\n)${esc}\\s*\\{([^}]*)\\}`).exec(css)
+  const m = new RegExp(`(^|\\n)${esc}\\s*\\{([^}]*)\\}`).exec(source)
   expect(m, `${selector} rule`).not.toBeNull()
   return m![2]!
 }
 
+// The tile tones moved from styles.css to ui/Tile.css (WP3): the same status pairs, on the variant/status attributes.
+const tileCss = readFileSync(`${cwd}/src/ui/Tile.css`, 'utf8')
 describe('tile tones use status foreground tokens (WCAG contrast in dark mode)', () => {
   it.each([
     ['spoil', 'spoil'],
     ['leftover', 'leftover'],
-  ])(".tile[data-tone='%s'] pairs its bg token with its fg token", (tone, name) => {
-    const body = ruleBody(`.tile[data-tone='${tone}']`)
+  ])(".tile[data-variant='status'][data-status='%s'] pairs its bg token with its fg token", (tone, name) => {
+    const body = ruleBody(`.tile[data-variant='status'][data-status='${tone}']`, tileCss)
     expect(body).toMatch(new RegExp(`background:\\s*var\\(--status-${name}-bg\\)`))
     expect(body).toMatch(new RegExp(`color:\\s*var\\(--status-${name}-fg\\)`))
   })
   it('no hex literals remain in the spoil or leftover tile rules', () => {
     for (const tone of ['spoil', 'leftover']) {
-      expect(ruleBody(`.tile[data-tone='${tone}']`), tone).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+      expect(ruleBody(`.tile[data-variant='status'][data-status='${tone}']`, tileCss), tone).not.toMatch(/#[0-9a-f]{3,8}\b/i)
     }
   })
 })
