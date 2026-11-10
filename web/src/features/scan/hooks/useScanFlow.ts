@@ -4,6 +4,7 @@
 import { useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import type { ArchivedProduct } from '../lib/archivedProduct'
 import type { Scanned } from '../lib/barcode'
 import type { Feedback } from '../lib/feedback'
 import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
@@ -31,6 +32,17 @@ export interface ScanFlowDeps {
   /** B6: an edit of a still-queued scan: sync.updateQueuedPrice; true when the queue took it, false when it already left */
   setQueuedPrice?: (clientUuid: string, priceCents: number) => Promise<boolean>
   feedback: Pick<Feedback, 'confirm' | 'reject'>
+  /**
+   * WP7: a transient message (Toast). Stock-take outcomes (+1 pack, -1 pack, Set total, waiting to sync, rejected) go
+   * here instead of the inline banner (QA: "-1 pack gives no toast"); lib/stockTakeToast.stockTakeMessage builds the text.
+   */
+  notify?: (message: string, status: 'success' | 'info' | 'error') => void
+  /** R8, online only: scanApi.findArchived(code, shopId). A network error (ApiError 0) or a missing dep means "no archived owner known". */
+  findArchived?: (barcode: string, shopId: number) => Promise<ArchivedProduct | null>
+  /** R8: scanApi.product(id), for the owner named by a barcode_archived rejection */
+  fetchProduct?: (id: number) => Promise<ArchivedProduct>
+  /** R8: scanApi.unarchiveProduct(id) (the controller also refreshes ['products'], ['catalog'] and the offline data) */
+  unarchive?: (productId: number) => Promise<void>
   newUuid?: () => string
   now?: () => Date
 }
@@ -40,6 +52,8 @@ export type FlowSheet =
   | { kind: 'ask_weight'; plan: Extract<ScanPlan, { kind: 'ask_weight' }> }
   | { kind: 'stock_take'; product: OfflineProduct }
   | { kind: 'edit_price' }
+  /** R8: an Archived Product owns the barcode; offered before (or after a barcode_archived rejection of) a new Product */
+  | { kind: 'unarchive'; product: ArchivedProduct; target: UnknownTarget }
 
 export interface FlowFeedback {
   clientUuid: string
@@ -77,6 +91,14 @@ export interface ScanFlow {
   undo(): Promise<void>
   dismissFeedback(): void
   closeSheet(): void
+  /**
+   * R8: unarchive sheet -> deps.unarchive(product.id), then a shop_scan Op for it (productId, quantity = packSize, no
+   * price) as if it had been known; the sheet closes and the scan line shows. A failure keeps the sheet and notifies an error.
+   * For a weighed target no Op is made: it notifies "Unarchived <name>. Scan it again." (the Catalog changes on sync).
+   */
+  unarchiveProduct(): Promise<void>
+  /** R8: "Create a new Product instead" -> the unknown sheet for the same target; a second barcode_archived is then a warn banner, not another prompt. */
+  createNewInstead(): void
 }
 
 /** The line of the last scan, as the flow keeps it (the text is derived when shown). */
@@ -358,5 +380,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     undo,
     dismissFeedback: () => setLine(null),
     closeSheet: () => setSheet(null),
+    unarchiveProduct: async () => {},
+    createNewInstead: () => {},
   }
 }

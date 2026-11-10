@@ -9,7 +9,7 @@ export interface ExtraSheetProps {
   open: boolean
   onClose: () => void
   /** the Ingredients to pick from for an Ingredient extra */
-  ingredients: { id: number; name: string }[]
+  ingredients: { id: number; name: string; baseUnit: string }[]
   onSubmit: (input: ExtraInput) => void
 }
 

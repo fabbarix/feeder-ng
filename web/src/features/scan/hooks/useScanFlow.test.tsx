@@ -278,7 +278,7 @@ describe('useScanFlow in Stock-take', () => {
     expect(op).toMatchObject({ kind: 'stock_take', productId: 7, action: 'plus_pack' })
     expect(op).not.toHaveProperty('shopId')
     expect(hook.result.current.sheet).toBeNull()
-    expect(hook.result.current.banner).toEqual({ tone: 'info', text: 'Passata: 1400 g in Stock' })
+    expect(hook.result.current.banner).toBeNull() // WP7: the outcome is a toast, see useScanFlow.stocktake.test.tsx
   })
 
   it('Set total carries the total', async () => {

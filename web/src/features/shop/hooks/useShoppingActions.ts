@@ -1,5 +1,6 @@
-// Mutations on the Shopping List: tick by hand, untick, manual extras. React hook; each success invalidates
-// shopKeys.all and, for a tick that added a Stock Lot, ['stock']. A failed call rejects and refreshes nothing.
+// Mutations on the Shopping List: tick by hand, untick, manual extras. React hook; each success asks for a list refresh
+// through liveRefreshFor(queryClient) (WP7: one refetch per burst; stub below still invalidates directly) and, for a
+// tick that added a Stock Lot, invalidates ['stock']. A failed call rejects and refreshes nothing.
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { newClientUuid } from '../../scan/lib/queue'

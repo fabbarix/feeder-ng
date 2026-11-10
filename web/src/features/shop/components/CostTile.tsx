@@ -8,6 +8,10 @@ export interface CostTileProps {
   /** Lines with no Price ("—") */
   unpriced: number
   currency: string
+  /** the Shop the list is priced at; null = none picked ("est.") */
+  shopName?: string | null
+  /** opens the Scan screen */
+  onScan?: () => void
 }
 
 /** The estimated estimatedCost: the amount, or "—" when nothing is priced yet, and how many Lines have no Price. */

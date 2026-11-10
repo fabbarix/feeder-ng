@@ -25,6 +25,20 @@ describe('CelebrationTile', () => {
     expect(screen.getByRole('status')).toHaveTextContent('1 Stock Lot added')
   })
 
+  it('is a soft Tile with a celebration icon, on the new Tile API (no legacy tone)', () => {
+    motion(false)
+    render(<CelebrationTile summary={{ lines: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
+    const tile = screen.getByRole('status')
+    expect(tile).toHaveAttribute('data-variant', 'soft')
+    expect(tile.querySelector('svg')).not.toBeNull()
+  })
+
+  it('QA: says nothing about money when nothing was spent', () => {
+    motion(false)
+    render(<CelebrationTile summary={{ lines: 3, spentCents: 0, lotsAdded: 0 }} currency="USD" />)
+    expect(screen.getByRole('status')).not.toHaveTextContent('$0.00')
+  })
+
   it('animates unless the User prefers reduced motion', () => {
     motion(false)
     const { unmount } = render(<CelebrationTile summary={{ lines: 1, spentCents: 0, lotsAdded: 0 }} currency="USD" />)

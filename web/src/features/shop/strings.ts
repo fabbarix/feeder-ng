@@ -3,7 +3,17 @@ export const shopStrings = {
   title: 'Shop',
   progress: 'Lines ticked',
   estimatedCost: 'Estimated cost',
+  /** @deprecated WP7 removes the dash; delete with CostTile's last use */
   noPrice: '—',
+  // WP7 copy (ui-fix-plan 5.5)
+  leftToGet: 'Left to get',
+  estimatedAt: (shop: string) => `est. at ${shop}`,
+  estimatedAnyShop: 'est.',
+  scan: 'Scan',
+  shopLabel: 'Shop',
+  anyShop: 'Any Shop',
+  loadFailed: 'The Shopping List could not be loaded.',
+  extraTick: (name: string) => `Tick ${name}`,
   unpriced: (n: number) => `${n} without a price`,
   range: 'Shop for',
   rangeToday: 'Today',
