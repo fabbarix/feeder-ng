@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../../ui'
 import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useNotCooked } from '../../plan'
 import type { SlotKey } from '../../plan/types'
+import { cookReheatPath } from '../../cook/lib/reheat'
 import { SpoiledTile } from '../../stock'
 import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
 import { todayHeading } from '../lib/heading'
@@ -35,12 +36,13 @@ export function TodayScreen(): ReactElement {
   const flow = useCookFlow()
   const notCooked = useNotCooked()
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
+  const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
 
   const hero = data.nextSlot
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
-      <TonightHero slot={hero} now={data.now} day={data.nextDay} action={data.nextAction} onCook={cookMeal} onYesCooked={yesCooked} onAdjust={flow.open} busy={flow.quickBusy !== null} />
+      <TonightHero slot={hero} now={data.now} day={data.nextDay} action={data.nextAction} onCook={cookMeal} onYesCooked={yesCooked} onReheat={reheatMeal} onAdjust={flow.open} busy={flow.quickBusy !== null} />
     ) : null,
     spoiled: (
       <SpoiledTile

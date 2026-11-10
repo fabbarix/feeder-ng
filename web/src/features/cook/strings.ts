@@ -27,5 +27,13 @@ export const cookStrings = {
   usesLine: (items: string[]) => `Uses ${items.join(', ')}`,
   coachMark: 'Tap the right side for next, the left side for back',
   coachMarkDismiss: 'Got it',
+  reheat: 'Reheat',
+  startTimer: 'Start timer',
+  pause: 'Pause',
+  resume: 'Resume',
+  cancelTimer: 'Cancel timer',
+  add30: 'Add 30 seconds',
+  remove30: 'Remove 30 seconds',
+  notALeftover: 'This Planned Meal is not served from a Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
 } as const

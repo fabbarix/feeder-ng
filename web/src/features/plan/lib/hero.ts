@@ -74,7 +74,7 @@ export function heroSelection(slots: PlanSlot[], now: Date, today: string): Hero
   if (!pick?.meal) return null
   const diff = dayNumber(pick.date) - dayNumber(today)
   const day: HeroDay = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : 'later'
-  const action: HeroAction = pick.meal.servedFromLeftover ? 'leftover' : day === 'today' ? 'cook' : 'none'
+  const action: HeroAction = pick.meal.servedFromLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
   return { slot: pick, day, action }
 }
 

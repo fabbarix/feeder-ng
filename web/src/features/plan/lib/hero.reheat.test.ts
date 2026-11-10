@@ -17,7 +17,7 @@ describe('heroSelection: Reheat (R12)', () => {
   })
 
   it('offers reheat after the slot time too (the hero then also asks Yes, Cooked)', () => {
-    const late = new Date('2026-11-10T21:00:00Z')
+    const late = new Date('2026-11-10T20:30:00Z')
     expect(heroSelection([served('2026-11-10')], late, today)?.action).toBe('reheat')
   })
 

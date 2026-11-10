@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import type { SlotKey } from '../../plan/types'
+import { adjustReheatSeconds, defaultReheatSeconds, REHEAT_LABEL, reheatTimerOf } from '../lib/reheat'
+import { scopeOf } from '../lib/scope'
 import type { CookTimer } from '../types'
+import { useTimers } from './useTimers'
 
 export interface UseReheat {
   /** The chosen reheating time before the timer starts (seconds). */
@@ -18,10 +22,33 @@ export interface UseReheat {
   cancel: () => Promise<void>
 }
 
-/**
- * Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing.
- * R12 STUB: the developer implements it; useReheat.test.tsx is red.
- */
-export function useReheat(_key: SlotKey, _portions: number): UseReheat {
-  throw new Error('R12: useReheat is not implemented')
+/** Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing. */
+export function useReheat(key: SlotKey, portions: number): UseReheat {
+  const timers = useTimers()
+  const scope = scopeOf({ kind: 'meal', date: key.date, mealSlotId: key.mealSlotId })
+  const [chosen, setChosen] = useState(() => defaultReheatSeconds(portions))
+  const timer = reheatTimerOf(timers.timers, scope)
+  const secondsLeft = timer ? (timers.items.find((i) => i.timer.id === timer.id)?.seconds ?? 0) : 0
+
+  return {
+    durationSeconds: chosen,
+    adjust: (delta) => {
+      if (!timer) setChosen((c) => adjustReheatSeconds(c, delta))
+    },
+    timer,
+    secondsLeft,
+    start: async () => {
+      if (timer) return
+      await timers.start({ scope, label: REHEAT_LABEL, durationSeconds: chosen })
+    },
+    pause: async () => {
+      if (timer) await timers.pause(timer.id)
+    },
+    resume: async () => {
+      if (timer) await timers.resume(timer.id)
+    },
+    cancel: async () => {
+      if (timer) await timers.cancel(timer.id)
+    },
+  }
 }

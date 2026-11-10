@@ -32,7 +32,7 @@ export interface TonightHeroProps {
  * "Cook · 45 min", a photo thumb when there is one. After the slot time (lib/hero heroPhase): "<Recipe> cooked?" with
  * primary "Yes, Cooked" and secondary "Adjust". The Cook button is the only primary in the tile.
  */
-export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
+export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
   const meal = slot.meal
   if (!meal) return null
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
@@ -66,15 +66,25 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = f
           <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
             {heroCookLabel(meal)}
           </Button>
+        ) : action === 'reheat' ? (
+          <Button variant="primary" icon="timer" onClick={() => onReheat?.(key)}>
+            {s.reheat}
+          </Button>
         ) : null
       ) : (
         <div className="plan-hero__actions">
           <Button variant="primary" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
             {s.yesCooked}
           </Button>
-          <Button variant="secondary" disabled={busy} onClick={() => onAdjust(key)}>
-            {s.adjust}
-          </Button>
+          {action === 'reheat' ? (
+            <Button variant="secondary" disabled={busy} onClick={() => onReheat?.(key)}>
+              {s.reheat}
+            </Button>
+          ) : (
+            <Button variant="secondary" disabled={busy} onClick={() => onAdjust(key)}>
+              {s.adjust}
+            </Button>
+          )}
         </div>
       )}
     </Tile>
