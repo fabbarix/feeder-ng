@@ -70,7 +70,7 @@ describe('ShoppingScreen', () => {
     // the total is in the CostTile; the Passata line shows the same $3.18 in its own tile (LineTile test), so query the tile
     expect(document.querySelector('.cost-tile__value')).toHaveTextContent('$3.18')
     expect(screen.getByText('est. at Coop')).toBeInTheDocument()
-    expect(screen.getByText('1 lines have no Price yet')).toBeInTheDocument()
+    expect(screen.getByText('1 line has no Price yet')).toBeInTheDocument()
     expect(screen.getByText('2 × Mutti 700 g')).toBeInTheDocument()
     expect(screen.getByText('600 g')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('—')
