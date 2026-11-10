@@ -1,0 +1,71 @@
+/* Access Requests: layout only; colours come from the theme tokens. */
+.access {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+.access__stack {
+  display: grid;
+  gap: var(--space-3);
+}
+.access__overline {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-overline-size);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-on-surface-variant);
+}
+.access__muted {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+}
+.access__error {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+.access__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.access__when {
+  color: var(--color-on-surface-variant);
+}
+.access__you {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface-container);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.access__you-name {
+  font-weight: 700;
+}
+.access__you-label {
+  font-size: var(--text-meta-size);
+  color: var(--color-on-surface-variant);
+}
+
+/* The count badge on the avatar button: the shell's .your-menu-anchor is its positioned parent. */
+.access-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-meta-size);
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}

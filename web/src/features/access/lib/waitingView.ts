@@ -4,6 +4,7 @@ import type { WaitingKind } from '../types'
 export const WAITING_PATH = '/waiting-for-approval'
 
 /** Which message the waiting page shows, from its query string (?state=limited|full); anything else is 'waiting'. */
-export function waitingKind(_search: string): WaitingKind {
-  return 'full'
+export function waitingKind(search: string): WaitingKind {
+  const state = new URLSearchParams(search).get('state')
+  return state === 'limited' || state === 'full' ? state : 'waiting'
 }

@@ -205,8 +205,8 @@ func TestAPendingVisitorGetsNoHouseholdData(t *testing.T) {
 	c, _ := g.ask("zia@example.test", "Zia")
 	paths := []string{
 		"/api/me", "/api/members", "/api/household/settings", "/api/meal-slots", "/api/allowlist", "/api/access-requests",
-		"/api/access-requests/history", "/api/recipes", "/api/ingredients", "/api/shopping-list", "/api/stock", "/api/events",
-		"/api/notifications/devices", "/api/plan", "/api/today",
+		"/api/access-requests/history", "/api/recipes", "/api/ingredients", "/api/shopping/list", "/api/stock", "/api/events",
+		"/api/notifications/devices", "/api/plan", "/api/today/streak",
 	}
 	for _, p := range paths {
 		if r := c.Get(p); r.Status != http.StatusUnauthorized {
@@ -332,7 +332,7 @@ func TestApproveAndDenyCarryCSRFProtection(t *testing.T) {
 			t.Fatalf("a refused %s must leave the request pending", action)
 		}
 	}
-	if r := rawPost(t, g.env, user, fmt.Sprintf("/api/access-requests/%d/approve", id), "", map[string]string{"Origin": g.env.URL()}); r.Status != 200 {
+	if r := rawPost(t, g.env, user, fmt.Sprintf("/api/access-requests/%d/approve", id), "", map[string]string{"Origin": "https://feeder.example"}); r.Status != 200 {
 		t.Errorf("approve from the app's own origin = %d %s", r.Status, r.Body)
 	}
 }

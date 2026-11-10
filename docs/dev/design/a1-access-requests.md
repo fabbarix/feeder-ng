@@ -86,6 +86,8 @@ All JSON; errors use `{"error":{"code","message"}}`. Authentication in brackets.
 Event topic `access`: `{"changed":"requests"}`.
 
 ## 5. Data model: migration `internal/db/migrations/1200_access_requests.sql`
+
+**Split (phase 1 / phase 2).** Phase 1 ships `1200_access_requests.sql` WITHOUT the `members.email` column and its unique index (both tables use `AUTOINCREMENT`, like 1100). They move to `1210_member_email.sql`, applied with the household changes in phase 2 (statements below marked `-- phase 2`). The Go service already has the `Members` port; the app passes `nil` until then, so the Member-email sign-in is off.
 ```sql
 -- A1: Access Requests, their audit trail, Member email, and the accessRequest push type.
 CREATE TABLE access_requests (
@@ -111,6 +113,7 @@ CREATE TABLE access_events (
 );
 CREATE INDEX access_events_email ON access_events (email, kind, at);
 
+-- phase 2 (1210_member_email.sql):
 ALTER TABLE members ADD COLUMN email TEXT COLLATE NOCASE;
 CREATE UNIQUE INDEX members_email ON members (email) WHERE email IS NOT NULL;
 

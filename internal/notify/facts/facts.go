@@ -10,6 +10,7 @@ import (
 	"errors"
 	"time"
 
+	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/notify"
@@ -31,6 +32,7 @@ type Source struct {
 	recipes *recipestore.Store
 	stock   *stockstore.Store
 	ings    *ingredientstore.Store
+	access  *accessstore.Store
 }
 
 // New returns the production fact source over d.
@@ -43,6 +45,7 @@ func New(d *sql.DB, clk clock.Clock) *Source {
 		recipes: recipestore.New(d, clk, nil),
 		stock:   stockstore.New(d, clk),
 		ings:    ingredientstore.New(d, clk),
+		access:  accessstore.New(d),
 	}
 }
 
@@ -146,6 +149,13 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			ID: l.ID, IngredientName: name, GoesOff: string(l.GoesOff),
 			UsedByPlan: ok && usedBy <= string(l.GoesOff),
 		})
+	}
+	pending, err := s.access.ListPending(ctx, now)
+	if err != nil {
+		return notify.Facts{}, err
+	}
+	for _, p := range pending {
+		out.AccessRequests = append(out.AccessRequests, notify.AccessRequestFact{ID: p.ID, Name: p.Name, Email: p.Email, RequestedAt: p.RequestedAt})
 	}
 	return out, nil
 }

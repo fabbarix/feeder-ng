@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/access"
@@ -18,38 +19,156 @@ var _ access.Store = (*Store)(nil)
 // New returns a Store on db.
 func New(db *sql.DB) *Store { return &Store{db: db} }
 
-func (s *Store) ByEmail(context.Context, string) (access.Request, bool, error) {
-	return access.Request{}, false, access.ErrNotImplemented
+const reqCols = `id, email, name, picture, requested_at, last_seen_at, expires_at`
+
+func ts(t time.Time) string { return t.UTC().Format(time.RFC3339) }
+
+type scanner interface{ Scan(...any) error }
+
+func scanReq(r scanner) (access.Request, error) {
+	var q access.Request
+	var req, seen, exp string
+	if err := r.Scan(&q.ID, &q.Email, &q.Name, &q.Picture, &req, &seen, &exp); err != nil {
+		return access.Request{}, err
+	}
+	var err error
+	if q.RequestedAt, err = time.Parse(time.RFC3339, req); err != nil {
+		return q, err
+	}
+	if q.LastSeenAt, err = time.Parse(time.RFC3339, seen); err != nil {
+		return q, err
+	}
+	q.ExpiresAt, err = time.Parse(time.RFC3339, exp)
+	return q, err
 }
-func (s *Store) ByTokenHash(context.Context, string) (access.Request, bool, error) {
-	return access.Request{}, false, access.ErrNotImplemented
+
+func (s *Store) one(ctx context.Context, where string, arg any) (access.Request, bool, error) {
+	q, err := scanReq(s.db.QueryRowContext(ctx, `SELECT `+reqCols+` FROM access_requests WHERE `+where, arg))
+	if errors.Is(err, sql.ErrNoRows) {
+		return access.Request{}, false, nil
+	}
+	return q, err == nil, err
 }
-func (s *Store) ByID(context.Context, int64) (access.Request, bool, error) {
-	return access.Request{}, false, access.ErrNotImplemented
+
+func (s *Store) ByEmail(ctx context.Context, email string) (access.Request, bool, error) {
+	return s.one(ctx, `email = ?`, email)
 }
-func (s *Store) Insert(context.Context, access.Request, string) (access.Request, error) {
-	return access.Request{}, access.ErrNotImplemented
+
+func (s *Store) ByTokenHash(ctx context.Context, hash string) (access.Request, bool, error) {
+	return s.one(ctx, `token_hash = ?`, hash)
 }
-func (s *Store) Refresh(context.Context, int64, string, string, string, time.Time) error {
-	return access.ErrNotImplemented
+
+func (s *Store) ByID(ctx context.Context, id int64) (access.Request, bool, error) {
+	return s.one(ctx, `id = ?`, id)
 }
-func (s *Store) Delete(context.Context, int64) error { return access.ErrNotImplemented }
-func (s *Store) ListPending(context.Context, time.Time) ([]access.Request, error) {
-	return nil, access.ErrNotImplemented
+
+func (s *Store) Insert(ctx context.Context, r access.Request, tokenHash string) (access.Request, error) {
+	res, err := s.db.ExecContext(ctx,
+		`INSERT INTO access_requests (email, name, picture, token_hash, requested_at, last_seen_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		r.Email, r.Name, r.Picture, tokenHash, ts(r.RequestedAt), ts(r.LastSeenAt), ts(r.ExpiresAt))
+	if err != nil {
+		return access.Request{}, err
+	}
+	r.ID, err = res.LastInsertId()
+	return r, err
 }
-func (s *Store) CountPending(context.Context, time.Time) (int, error) {
-	return 0, access.ErrNotImplemented
+
+func (s *Store) Refresh(ctx context.Context, id int64, name, picture, tokenHash string, seen time.Time) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE access_requests SET name = ?, picture = ?, token_hash = ?, last_seen_at = ? WHERE id = ?`,
+		name, picture, tokenHash, ts(seen), id)
+	return err
 }
-func (s *Store) DeleteExpired(context.Context, time.Time) ([]access.Request, error) {
-	return nil, access.ErrNotImplemented
+
+func (s *Store) Delete(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE id = ?`, id)
+	return err
 }
-func (s *Store) AddEvent(context.Context, access.Event) error { return access.ErrNotImplemented }
-func (s *Store) CountEvents(context.Context, string, access.EventKind, time.Time) (int, error) {
-	return 0, access.ErrNotImplemented
+
+func (s *Store) list(ctx context.Context, where string, arg any) ([]access.Request, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+reqCols+` FROM access_requests WHERE `+where+` ORDER BY requested_at, id`, arg)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []access.Request
+	for rows.Next() {
+		q, err := scanReq(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	return out, rows.Err()
 }
-func (s *Store) LastEvent(context.Context, string, access.EventKind) (time.Time, bool, error) {
-	return time.Time{}, false, access.ErrNotImplemented
+
+func (s *Store) ListPending(ctx context.Context, now time.Time) ([]access.Request, error) {
+	return s.list(ctx, `expires_at > ?`, ts(now))
 }
-func (s *Store) Events(context.Context, int) ([]access.Event, error) {
-	return nil, access.ErrNotImplemented
+
+func (s *Store) CountPending(ctx context.Context, now time.Time) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM access_requests WHERE expires_at > ?`, ts(now)).Scan(&n)
+	return n, err
+}
+
+func (s *Store) DeleteExpired(ctx context.Context, now time.Time) ([]access.Request, error) {
+	gone, err := s.list(ctx, `expires_at <= ?`, ts(now))
+	if err != nil || len(gone) == 0 {
+		return gone, err
+	}
+	_, err = s.db.ExecContext(ctx, `DELETE FROM access_requests WHERE expires_at <= ?`, ts(now))
+	return gone, err
+}
+
+func (s *Store) AddEvent(ctx context.Context, e access.Event) error {
+	var actor any
+	if e.ActorUserID != 0 {
+		actor = e.ActorUserID
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO access_events (at, kind, email, name, actor_user_id, actor_email) VALUES (?, ?, ?, ?, ?, ?)`,
+		ts(e.At), string(e.Kind), e.Email, e.Name, actor, e.ActorEmail)
+	return err
+}
+
+func (s *Store) CountEvents(ctx context.Context, email string, kind access.EventKind, since time.Time) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM access_events WHERE email = ? AND kind = ? AND at >= ?`,
+		email, string(kind), ts(since)).Scan(&n)
+	return n, err
+}
+
+func (s *Store) LastEvent(ctx context.Context, email string, kind access.EventKind) (time.Time, bool, error) {
+	var at sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT max(at) FROM access_events WHERE email = ? AND kind = ?`, email, string(kind)).Scan(&at)
+	if err != nil || !at.Valid {
+		return time.Time{}, false, err
+	}
+	t, err := time.Parse(time.RFC3339, at.String)
+	return t, err == nil, err
+}
+
+func (s *Store) Events(ctx context.Context, limit int) ([]access.Event, error) {
+	if limit <= 0 {
+		limit = -1
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, at, kind, email, name, COALESCE(actor_user_id, 0), actor_email FROM access_events ORDER BY id DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []access.Event
+	for rows.Next() {
+		var e access.Event
+		var at, kind string
+		if err := rows.Scan(&e.ID, &at, &kind, &e.Email, &e.Name, &e.ActorUserID, &e.ActorEmail); err != nil {
+			return nil, err
+		}
+		e.Kind = access.EventKind(kind)
+		if e.At, err = time.Parse(time.RFC3339, at); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }

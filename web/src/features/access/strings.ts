@@ -1,5 +1,48 @@
 // English copy for Access Requests. Terms follow GLOSSARY.md ("Access Request", "User").
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 export const accessStrings = {
   title: 'Access Requests',
+  menuItem: 'Sign-in requests',
+  backToSettings: 'Back to Settings',
   empty: 'Nobody is waiting to join.',
+  approvalNote: 'Approving lets them sign in as a User. Any User can approve or deny.',
+  approve: 'Approve',
+  deny: 'Deny',
+  approveLabel: (email: string) => `Approve ${email}`,
+  denyLabel: (email: string) => `Deny ${email}`,
+  confirmDenyTitle: (email: string) => `Deny ${email}?`,
+  confirmDenyBody: 'They can ask again after 24 hours.',
+  asked: (ago: string) => `asked ${ago}`,
+  daysLeft: (n: number) => `${plural(n, 'day', 'days')} left`,
+  ago: {
+    justNow: 'just now',
+    minutes: (n: number) => `${plural(n, 'minute', 'minutes')} ago`,
+    hours: (n: number) => `${plural(n, 'hour', 'hours')} ago`,
+    days: (n: number) => `${plural(n, 'day', 'days')} ago`,
+  },
+  waitingLabel: (n: number) => `${plural(n, 'sign-in request', 'sign-in requests')} waiting`,
+  alreadyAnswered: 'That request was already answered.',
+  genericError: 'Something went wrong. Please try again.',
+  history: 'Recent activity',
+  historyEmpty: 'Nothing yet.',
+  historyLine: {
+    requested: (email: string) => `${email} asked to join`,
+    approved: (actor: string, email: string) => `${actor} approved ${email}`,
+    denied: (actor: string, email: string) => `${actor} denied ${email}`,
+    expired: (email: string) => `The request from ${email} expired`,
+  },
+  waiting: {
+    title: 'Waiting for approval',
+    text: 'Someone in the household needs to approve your request before you can sign in. It can take a while: you can close this page and come back.',
+    signedInAs: 'Asking as',
+    otherAccount: 'Use a different Google sign-in',
+    answeredTitle: 'Request answered',
+    answeredText: 'Your request has been answered. Sign in with Google to continue.',
+    signIn: 'Sign in with Google',
+    limitedTitle: 'Please try again later',
+    limitedText: 'Too many tries for now. Please try again in a little while.',
+    fullTitle: 'Too many requests right now',
+    fullText: 'Feeder cannot take new requests at the moment. Ask someone in the household to add you directly, then sign in again.',
+  },
 }

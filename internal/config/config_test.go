@@ -52,6 +52,15 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestTrustProxyDefaultsToTrueAndCanBeSwitchedOff(t *testing.T) {
+	for val, want := range map[string]bool{"": true, "true": true, "1": true, "false": false, "0": false, "FALSE": false, "no": false} {
+		c, err := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test", "FEEDER_TRUST_PROXY": val}))
+		if err != nil || c.TrustProxy != want {
+			t.Errorf("FEEDER_TRUST_PROXY=%q: TrustProxy = %v, %v; want %v", val, c.TrustProxy, err, want)
+		}
+	}
+}
+
 func TestLoadReadsAllVariables(t *testing.T) {
 	c, err := config.Load(env(map[string]string{
 		"FEEDER_ADMIN_EMAIL":          "a@example.test",
@@ -68,7 +77,7 @@ func TestLoadReadsAllVariables(t *testing.T) {
 	want := config.Config{
 		AdminEmail: "a@example.test", DataDir: "/srv/feeder", Addr: "127.0.0.1:9000",
 		BaseURL: "https://feeder.example.test", GoogleClientID: "id", GoogleClientSecret: "secret",
-		DevLogin: true,
+		DevLogin: true, TrustProxy: true,
 	}
 	if c != want {
 		t.Fatalf("got %+v, want %+v", c, want)

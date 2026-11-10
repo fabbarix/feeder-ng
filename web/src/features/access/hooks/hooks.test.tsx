@@ -81,7 +81,7 @@ describe('useAccessBadge', () => {
 
 describe('useWaitingStatus', () => {
   it('reads the visitor status', async () => {
-    mockApi({ 'GET /api/access-request/status': { status: 'pending', email: 'zia@example.test', name: 'Zia Rosa' } })
+    mockApi({ 'GET /api/access-request/status': { json: { status: 'pending', email: 'zia@example.test', name: 'Zia Rosa' } } })
     const { result } = renderHook(() => useWaitingStatus(), { wrapper })
     await waitFor(() => expect(result.current.status?.status).toBe('pending'))
     expect(result.current.status?.email).toBe('zia@example.test')
