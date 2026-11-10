@@ -1,6 +1,7 @@
 // Client for the server's single Server-Sent Events stream. Plain TypeScript.
 
 export interface EventSourceLike {
+  readonly readyState?: number
   addEventListener(type: string, listener: (e: MessageEvent) => void): void
   removeEventListener(type: string, listener: (e: MessageEvent) => void): void
   close(): void
@@ -59,4 +60,9 @@ export function connectEvents(opts: ConnectEventsOptions = {}): EventsConnection
       source.close()
     },
   }
+}
+
+/** Test hook: drops the shared connection so each test starts clean. */
+export function resetSharedEvents(): void {
+  // stub: implemented by the Developer
 }

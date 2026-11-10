@@ -122,3 +122,11 @@ func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// BindServer makes srv.Shutdown end the open event streams promptly instead of
+// waiting for them (http.Server.Shutdown does not close hijacked or long-lived
+// handlers on its own).
+func (a *App) BindServer(srv *http.Server) {
+	// stub: implemented by the Developer
+	_ = srv
+}

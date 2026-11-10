@@ -205,3 +205,9 @@ func (b *Bus) Handler(opts ...HandlerOption) http.Handler {
 		}
 	})
 }
+
+// Close ends every open stream and makes later subscriptions end at once, so
+// a server shutdown does not wait on SSE connections. Idempotent.
+func (b *Bus) Close() {
+	// stub: implemented by the Developer
+}
