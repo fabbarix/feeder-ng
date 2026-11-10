@@ -33,12 +33,47 @@ type Config struct {
 }
 
 // HasSecretKey reports whether FEEDER_SECRET_KEY was set (and valid).
-// TODO(ra-c developer): implement; compare SecretKey with its zero value.
-func (c Config) HasSecretKey() bool { return false }
+func (c Config) HasSecretKey() bool { return c.SecretKey != secretbox.MasterKey{} }
+
+// redacted is what a secret field prints as.
+const redacted = "[redacted]"
 
 // LogValue redacts every secret field so a Config can be logged.
-// TODO(ra-c developer): implement.
-func (c Config) LogValue() slog.Value { return slog.AnyValue(c) }
+func (c Config) LogValue() slog.Value {
+	secret := func(v string) slog.Value {
+		if v == "" {
+			return slog.StringValue("")
+		}
+		return slog.StringValue(redacted)
+	}
+	return slog.GroupValue(
+		slog.String("AdminEmail", c.AdminEmail),
+		slog.String("DataDir", c.DataDir),
+		slog.String("Addr", c.Addr),
+		slog.String("BaseURL", c.BaseURL),
+		slog.String("GoogleClientID", c.GoogleClientID),
+		slog.Any("GoogleClientSecret", secret(c.GoogleClientSecret)),
+		slog.Bool("DevLogin", c.DevLogin),
+		slog.String("SecretKey", redacted),
+	)
+}
+
+// String and Format print the redacted form under every verb, so a Config never leaks a secret through fmt.
+func (c Config) String() string { return c.redactedString() }
+
+// Format prints the redacted form under every verb.
+func (c Config) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte(c.redactedString())) }
+
+func (c Config) redactedString() string {
+	secret := func(v string) string {
+		if v == "" {
+			return ""
+		}
+		return redacted
+	}
+	return fmt.Sprintf("{AdminEmail:%s DataDir:%s Addr:%s BaseURL:%s GoogleClientID:%s GoogleClientSecret:%s DevLogin:%t SecretKey:%s}",
+		c.AdminEmail, c.DataDir, c.Addr, c.BaseURL, c.GoogleClientID, secret(c.GoogleClientSecret), c.DevLogin, redacted)
+}
 
 // Load reads the configuration through getenv (os.Getenv in production).
 func Load(getenv func(string) string) (Config, error) {
@@ -53,6 +88,13 @@ func Load(getenv func(string) string) (Config, error) {
 		BaseURL:            getenv("FEEDER_BASE_URL"),
 		GoogleClientID:     getenv("FEEDER_GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: getenv("FEEDER_GOOGLE_CLIENT_SECRET"),
+	}
+	if v := strings.TrimSpace(getenv("FEEDER_SECRET_KEY")); v != "" {
+		mk, err := secretbox.ParseMasterKey(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: %w", ErrSecretKeyMalformed)
+		}
+		c.SecretKey = mk
 	}
 	switch strings.ToLower(getenv("FEEDER_DEV_LOGIN")) {
 	case "1", "true":

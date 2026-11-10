@@ -104,6 +104,7 @@ func (s *Sessions) Restore(rv Review) {
 		list = list[over:]
 	}
 	s.byUser[rv.UserID] = list
+	enforcePhotoBound(list)
 }
 
 // Close drops a Review (Confirm and DELETE). Closing an unknown id is a no-op.

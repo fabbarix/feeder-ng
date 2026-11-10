@@ -20,8 +20,8 @@ import (
 type obj = map[string]any
 
 const (
-	masterA = "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s="     // 32 x 0x5b
-	masterB = "XFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFw=" // 32 x 0x5c
+	masterA = "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s=" // 32 x 0x5b
+	masterB = "XFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFw=" // 32 x 0x5c
 	apiKey  = "sk-ant-api03-VERYSECRETVALUE-w9z1"
 )
 

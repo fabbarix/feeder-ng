@@ -33,7 +33,7 @@ func init() { RegisterSteps("recipe-assistant", recipeAssistantSteps) }
 
 const (
 	raMasterA = "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s="
-	raMasterB = "XFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFw="
+	raMasterB = "XFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFw="
 )
 
 // raState lives in w.Vars["ra"]. Responses seen so far are kept to assert that no secret ever appeared.
@@ -111,7 +111,7 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 		if r.Status != 200 {
 			panic(fmt.Sprintf("turning the Recipe Assistant on: %d %s", r.Status, r.Body))
 		}
-		w.Client = w.Env.Anonymous()
+		w.Client = admin() // the scenarios go on with Admin-only settings steps; those that need a User sign in as one
 	})
 	sc.Step(`^the Recipe Assistant is turned off$`, func() {
 		r := admin().Put("/api/recipe-assistant/settings", map[string]any{"enabled": false, "baseUrl": st.fake.URL, "model": "claude-haiku-5-5"})

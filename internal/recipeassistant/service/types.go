@@ -125,10 +125,14 @@ type Photos interface {
 	Prepare(ctx context.Context, in []PhotoInput) ([]PreparedPhoto, error)
 }
 
+// PhotoRef describes one candidate photo of a Review (the bytes stay in the session).
+type PhotoRef struct{ Index, Width, Height int }
+
 // ReviewRef is an opened Import Review.
 type ReviewRef struct {
-	ID   string
-	Plan recipefile.Plan
+	ID     string
+	Plan   recipefile.Plan
+	Photos []PhotoRef
 }
 
 // Sink opens the Import Review for a finished read (recipefile/httpapi implements it over Sessions and BuildPlan).
