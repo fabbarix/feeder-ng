@@ -19,7 +19,9 @@ CREATE TABLE access_events (
     email         TEXT NOT NULL COLLATE NOCASE,
     name          TEXT NOT NULL DEFAULT '',
     actor_user_id INTEGER,                    -- deliberately no foreign key: the audit trail outlives the User
-    actor_email   TEXT NOT NULL DEFAULT ''
+    actor_email   TEXT NOT NULL DEFAULT '',
+    member_id     INTEGER,                    -- the Member an approval linked; snapshot, no foreign key
+    member_name   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX access_events_email ON access_events (email, kind, at);
 

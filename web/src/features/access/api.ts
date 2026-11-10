@@ -11,8 +11,9 @@ export interface AllowedUserBody {
 
 export const accessApi = {
   list: () => http.get<AccessRequestList>('/api/access-requests'),
-  // STUB (A3): POST body {memberId} when a Member is chosen, nothing otherwise. The Developer sends it.
-  approve: (id: number, _memberId?: number) => http.post<AllowedUserBody>(`/api/access-requests/${id}/approve`),
+  /** `memberId` links the new User to that unlinked Member in the same step; without it no body is sent. */
+  approve: (id: number, memberId?: number) =>
+    http.post<AllowedUserBody>(`/api/access-requests/${id}/approve`, memberId === undefined ? undefined : { memberId }),
   members: () => http.get<AccessMember[]>('/api/members'),
   deny: (id: number) => http.post<void>(`/api/access-requests/${id}/deny`),
   history: () => http.get<{ events: AccessEvent[] }>('/api/access-requests/history'),

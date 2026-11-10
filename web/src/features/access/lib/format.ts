@@ -24,7 +24,7 @@ export function historyLine(e: AccessEvent): string {
   const t = accessStrings.historyLine
   switch (e.kind) {
     case 'approved':
-      return t.approved(e.actorEmail, e.email)
+      return e.memberName ? t.approvedAndLinked(e.actorEmail, e.email, e.memberName) : t.approved(e.actorEmail, e.email)
     case 'denied':
       return t.denied(e.actorEmail, e.email)
     case 'expired':
@@ -37,5 +37,6 @@ export function historyLine(e: AccessEvent): string {
 /** The message for a failed approve or deny: a 404 means somebody else answered first. */
 export function answerErrorMessage(err: unknown): string {
   if (err instanceof ApiError && err.status === 404) return accessStrings.alreadyAnswered
+  if (err instanceof ApiError && err.status === 409 && err.code === 'member_unavailable') return accessStrings.memberTaken
   return accessStrings.genericError
 }

@@ -28,8 +28,6 @@ var (
 	// ErrMemberUnavailable is returned by ApproveLinked when the chosen Member does not exist or already has a User
 	// (including a Member linked between the picker opening and the approval). Nothing is created or linked.
 	ErrMemberUnavailable = errors.New("access: member unavailable")
-	// ErrNotImplemented marks the skeleton the Developer replaces.
-	ErrNotImplemented = errors.New("access: not implemented")
 )
 
 // Request is one pending Access Request. Name and Picture come from Google and are untrusted display text.
@@ -339,7 +337,44 @@ func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.
 // is no Members port) before anything is created, so a refusal leaves the request pending. The audit event records
 // the Member. If the address became a User meanwhile, that User is the one linked.
 func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, memberID int64) (auth.User, error) {
-	return auth.User{}, ErrNotImplemented
+	r, err := s.pending(ctx, id)
+	if err != nil {
+		return auth.User{}, err
+	}
+	if s.members == nil {
+		return auth.User{}, ErrMemberUnavailable
+	}
+	free, err := s.members.Unlinked(ctx)
+	if err != nil {
+		return auth.User{}, err
+	}
+	var member MemberRef
+	found := false
+	for _, m := range free {
+		if m.ID == memberID {
+			member, found = m, true
+			break
+		}
+	}
+	if !found {
+		return auth.User{}, ErrMemberUnavailable
+	}
+	u, err := s.users.AddUser(ctx, r.Email, CleanName(r.Name, r.Email), false)
+	if errors.Is(err, auth.ErrEmailTaken) {
+		u, err = s.users.UserByEmail(ctx, r.Email)
+	}
+	if err != nil {
+		return auth.User{}, err
+	}
+	if err := s.members.LinkUser(ctx, member.ID, u.ID); err != nil {
+		return auth.User{}, err
+	}
+	if err := s.store.Delete(ctx, r.ID); err != nil {
+		return auth.User{}, err
+	}
+	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID,
+		ActorEmail: actor.Email, MemberID: member.ID, MemberName: member.Name})
+	return u, err
 }
 
 // Deny removes the request and records who denied. The address may ask again after DenyCooldown.

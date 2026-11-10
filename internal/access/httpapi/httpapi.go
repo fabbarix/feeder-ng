@@ -5,9 +5,12 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/access"
@@ -57,6 +60,10 @@ func (a *api) changed() { a.d.Events.Publish(topic, map[string]string{"changed":
 func fail(w http.ResponseWriter, err error) {
 	if errors.Is(err, access.ErrNotFound) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "That request was already answered or has expired")
+		return
+	}
+	if errors.Is(err, access.ErrMemberUnavailable) {
+		httpx.WriteError(w, http.StatusConflict, "member_unavailable", "That Member already has a sign-in or no longer exists")
 		return
 	}
 	httpx.WriteAPIError(w, err)
@@ -117,10 +124,11 @@ func (a *api) history(w http.ResponseWriter, r *http.Request) {
 		Name       string `json:"name"`
 		At         string `json:"at"`
 		ActorEmail string `json:"actorEmail"`
+		MemberName string `json:"memberName"`
 	}
 	out := make([]eventJSON, 0, len(evs))
 	for _, e := range evs {
-		out = append(out, eventJSON{Kind: string(e.Kind), Email: e.Email, Name: e.Name, At: rfc(e.At), ActorEmail: e.ActorEmail})
+		out = append(out, eventJSON{Kind: string(e.Kind), Email: e.Email, Name: e.Name, At: rfc(e.At), ActorEmail: e.ActorEmail, MemberName: e.MemberName})
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"events": out})
 }
@@ -130,14 +138,47 @@ func requestID(r *http.Request) (int64, bool) {
 	return id, err == nil && id > 0
 }
 
+// approveBody reads the optional {"memberId"} body. A non-zero status is the refusal to send; a nil memberID means
+// "approve without a Member".
+func approveBody(r *http.Request) (memberID *int64, status int, code, msg string) {
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		return nil, http.StatusBadRequest, "bad_request", "The request body must be JSON"
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		return nil, 0, "", ""
+	}
+	var body struct {
+		MemberID *int64 `json:"memberId"`
+	}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, http.StatusBadRequest, "bad_request", "The request body must be JSON with an optional memberId"
+	}
+	if body.MemberID != nil && *body.MemberID <= 0 {
+		return nil, http.StatusUnprocessableEntity, "validation_failed", "memberId must be a positive number"
+	}
+	return body.MemberID, 0, "", ""
+}
+
 func (a *api) approve(w http.ResponseWriter, r *http.Request) {
 	id, ok := requestID(r)
 	if !ok {
 		fail(w, access.ErrNotFound)
 		return
 	}
+	memberID, status, code, msg := approveBody(r)
+	if status != 0 {
+		httpx.WriteError(w, status, code, msg)
+		return
+	}
 	actor, _ := auth.UserFrom(r.Context())
-	u, err := a.d.Access.Approve(r.Context(), id, actor)
+	var u auth.User
+	var err error
+	if memberID != nil {
+		u, err = a.d.Access.ApproveLinked(r.Context(), id, actor, *memberID)
+	} else {
+		u, err = a.d.Access.Approve(r.Context(), id, actor)
+	}
 	if err != nil {
 		fail(w, err)
 		return

@@ -13,6 +13,15 @@ export const accessStrings = {
   denyLabel: (email: string) => `Deny ${email}`,
   confirmDenyTitle: (email: string) => `Deny ${email}?`,
   confirmDenyBody: 'They can ask again after 24 hours.',
+  approveSheet: {
+    explain: (name: string) => `Approving lets ${name} sign in as a User.`,
+    memberLabel: 'Link to a Member (optional)',
+    dontLink: "Don't link",
+    noFreeMembers: 'Every Member already has a User.',
+    membersFailed: 'Could not load the Members. You can still approve without linking.',
+    cancel: 'Cancel',
+  },
+  memberTaken: 'That Member already has a User. Pick another, or approve without linking.',
   asked: (ago: string) => `asked ${ago}`,
   daysLeft: (n: number) => `${plural(n, 'day', 'days')} left`,
   ago: {
@@ -29,6 +38,7 @@ export const accessStrings = {
   historyLine: {
     requested: (email: string) => `${email} asked to join`,
     approved: (actor: string, email: string) => `${actor} approved ${email}`,
+    approvedAndLinked: (actor: string, email: string, member: string) => `${actor} approved ${email} and linked them to ${member}`,
     denied: (actor: string, email: string) => `${actor} denied ${email}`,
     expired: (email: string) => `The request from ${email} expired`,
   },

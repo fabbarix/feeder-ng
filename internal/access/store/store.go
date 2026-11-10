@@ -125,8 +125,13 @@ func (s *Store) AddEvent(ctx context.Context, e access.Event) error {
 	if e.ActorUserID != 0 {
 		actor = e.ActorUserID
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO access_events (at, kind, email, name, actor_user_id, actor_email) VALUES (?, ?, ?, ?, ?, ?)`,
-		ts(e.At), string(e.Kind), e.Email, e.Name, actor, e.ActorEmail)
+	var member any
+	if e.MemberID != 0 {
+		member = e.MemberID
+	}
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO access_events (at, kind, email, name, actor_user_id, actor_email, member_id, member_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		ts(e.At), string(e.Kind), e.Email, e.Name, actor, e.ActorEmail, member, e.MemberName)
 	return err
 }
 
@@ -152,7 +157,7 @@ func (s *Store) Events(ctx context.Context, limit int) ([]access.Event, error) {
 		limit = -1
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, at, kind, email, name, COALESCE(actor_user_id, 0), actor_email FROM access_events ORDER BY id DESC LIMIT ?`, limit)
+		`SELECT id, at, kind, email, name, COALESCE(actor_user_id, 0), actor_email, COALESCE(member_id, 0), member_name FROM access_events ORDER BY id DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +166,7 @@ func (s *Store) Events(ctx context.Context, limit int) ([]access.Event, error) {
 	for rows.Next() {
 		var e access.Event
 		var at, kind string
-		if err := rows.Scan(&e.ID, &at, &kind, &e.Email, &e.Name, &e.ActorUserID, &e.ActorEmail); err != nil {
+		if err := rows.Scan(&e.ID, &at, &kind, &e.Email, &e.Name, &e.ActorUserID, &e.ActorEmail, &e.MemberID, &e.MemberName); err != nil {
 			return nil, err
 		}
 		e.Kind = access.EventKind(kind)

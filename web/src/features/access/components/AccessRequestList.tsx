@@ -1,4 +1,5 @@
-import { Avatar, Button, ListGroup, ListRow } from '../../../ui'
+import { Button, ListGroup, ListRow } from '../../../ui'
+import { RequestAvatar } from './RequestAvatar'
 import { agoText } from '../lib/format'
 import { daysLeft } from '../lib/requests'
 import { accessStrings } from '../strings'
@@ -33,7 +34,7 @@ export function AccessRequestList({ requests, now = new Date(), error, onApprove
                 key={r.id}
                 title={r.name}
                 meta={r.email}
-                leading={<Avatar name={r.name} imageUrl={r.picture || undefined} size="md" />}
+                leading={<RequestAvatar name={r.name} picture={r.picture} size="md" />}
                 trailing={
                   <span className="access__actions">
                     <Button variant="tertiary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
