@@ -60,7 +60,12 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
       }
     >
       <div className="stock-sheet__fields">
-        <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null} onChange={setPickedId} />
+        <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null}
+          onChange={(id) => {
+            // Stock offers only saved Ingredients (numeric ids); a string key never comes from here.
+            if (typeof id === 'number') setPickedId(id)
+          }}
+        />
         <TextField
           label={strings.quantity}
           inputMode="decimal"
