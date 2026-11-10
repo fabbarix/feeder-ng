@@ -700,6 +700,7 @@ func TestCookedAndNotCookedCallOnResolvedOncePerMeal(t *testing.T) {
 	if _, err := e.r.Cooked(ctx, e.key(9), nil); err != nil {
 		t.Fatal(err)
 	}
+	e.clk.Set(time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC)) // Tuesday: its meal may be resolved
 	if _, err := e.r.NotCooked(ctx, e.key(10)); err != nil {
 		t.Fatal(err)
 	}

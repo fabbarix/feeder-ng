@@ -7,6 +7,7 @@ import (
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/plan"
+	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -17,6 +18,7 @@ type names struct {
 	hh     *householdstore.Store
 	recipe *recipestore.Store
 	ing    *ingredientstore.Store
+	plan   *planstore.Store
 }
 
 func newNames(d app.Deps) *names {
@@ -25,6 +27,7 @@ func newNames(d app.Deps) *names {
 		hh:     householdstore.New(d.DB, d.Clock),
 		recipe: recipestore.New(d.DB, d.Clock, ingredientUnits{ing}),
 		ing:    ing,
+		plan:   planstore.New(d.DB, d.Clock),
 	}
 }
 
@@ -97,6 +100,9 @@ func (n *names) load(ctx context.Context) (table, error) {
 	}
 	for _, i := range is {
 		t.ingredients[i.ID] = i.Name
+	}
+	if t.leftoverFrom, err = n.plan.LeftoverSources(ctx); err != nil {
+		return t, err
 	}
 	return t, nil
 }

@@ -58,7 +58,8 @@ describe('plan.css', () => {
   })
 
   it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
-    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
+    // The half-width Leftovers tile (N2) is the one place that must break long words anywhere.
+    expect(css.replace(/\.plan-leftovers[^{]*\{[^}]*\}/g, '')).not.toMatch(/overflow-wrap:\s*anywhere/)
     for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
       expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
       expect(rule(sel)).toMatch(/hyphens:\s*auto/)

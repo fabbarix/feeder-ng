@@ -16,6 +16,7 @@ describe('TickSheet unit label (R10)', () => {
     const field = screen.getByRole('spinbutton', { name: 'How much?' })
     await userEvent.clear(field)
     await userEvent.type(field, '1')
+    await userEvent.tab() // NumberField commits on blur
     expect(screen.getByText('piece')).toBeInTheDocument()
   })
 })

@@ -409,6 +409,26 @@ func (s *Store) Leftovers(ctx context.Context) ([]plan.Leftover, error) {
 	return out, rows.Err()
 }
 
+// LeftoverSources returns the source Meal Slot of every Leftover of any status, by id (a consumed Leftover's meal still
+// says "Leftover from <day>").
+func (s *Store) LeftoverSources(ctx context.Context) (map[int64]plan.Key, error) {
+	rows, err := s.q.QueryContext(ctx, `SELECT id, from_date, from_meal_slot_id FROM leftovers`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]plan.Key{}
+	for rows.Next() {
+		var id int64
+		var k plan.Key
+		if err := rows.Scan(&id, &k.Date, &k.MealSlotID); err != nil {
+			return nil, err
+		}
+		out[id] = k
+	}
+	return out, rows.Err()
+}
+
 // LeftoverFrom returns the available Leftover produced by the Cooked meal at key, if any.
 func (s *Store) LeftoverFrom(ctx context.Context, key plan.Key) (plan.Leftover, bool, error) {
 	l, err := scanLeftover(s.q.QueryRowContext(ctx, `SELECT `+leftoverCols+` FROM leftovers

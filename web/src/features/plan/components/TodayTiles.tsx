@@ -92,6 +92,7 @@ export function LeftoversTile({ leftovers, today, onOpen }: LeftoversTileProps):
       as="section"
       variant="status"
       status="leftover"
+      className="plan-leftovers"
       overline={s.leftoversOverline}
       overlineIcon="leftover"
       stretched={onOpen ? { label: s.leftoversTitle, onActivate: onOpen } : undefined}

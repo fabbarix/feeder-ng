@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, RecipeThumb, Tile } from '../../../ui'
-import { heroChips } from '../lib/chips'
+import { heroChips, leftoverChip } from '../lib/chips'
 import type { HeroAction, HeroDay } from '../lib/hero'
-import { heroCookLabel, heroOverline, heroPhase, heroStartBy, slotIcon } from '../lib/hero'
+import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
 import '../plan.css'
@@ -30,22 +30,25 @@ export interface TonightHeroProps {
  * "Cook · 45 min", a photo thumb when there is one. After the slot time (lib/hero heroPhase): "<Recipe> cooked?" with
  * primary "Yes, Cooked" and secondary "Adjust". The Cook button is the only primary in the tile.
  */
-export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = false }: TonightHeroProps): ReactNode {
+export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
   const meal = slot.meal
   if (!meal) return null
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const phase = heroPhase(slot, now)
   const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
-  const chips = heroChips(meal, { slotDate: slot.date })
+  // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
+  const chips = [...leftoverChip(meal), ...heroChips(meal, { slotDate: slot.date })].slice(0, 2)
+  // Yes, Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
+  const awaiting = phase === 'awaiting' && day === 'today'
 
   return (
-    <Tile variant="hero" span="full" overline={heroOverline(slot)} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+    <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
           {startBy ? <p className="plan-hero__start">{startBy}</p> : null}
-          <h2 className="plan-hero__name">{phase === 'awaiting' ? s.askCooked(meal.recipeName) : meal.recipeName}</h2>
-          {phase === 'upcoming' && chips.length > 0 ? (
+          <h2 className="plan-hero__name">{awaiting ? s.askCooked(meal.recipeName) : meal.recipeName}</h2>
+          {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
               {chips.map((c) => (
                 <Chip key={c.key} kind={c.kind}>
@@ -56,10 +59,12 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onAdjust, busy = f
           ) : null}
         </div>
       </div>
-      {phase === 'upcoming' ? (
-        <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
-          {heroCookLabel(meal)}
-        </Button>
+      {!awaiting ? (
+        action === 'cook' ? (
+          <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
+            {heroCookLabel(meal)}
+          </Button>
+        ) : null
       ) : (
         <div className="plan-hero__actions">
           <Button variant="primary" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>

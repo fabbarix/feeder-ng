@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
+import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
 import type { NavItem } from './nav'
@@ -29,6 +30,7 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
   if (!me.data) return <SignedOut />
 
   const signOut = async () => {
+    clearCachedMe() // forget the remembered User first: signing out must never leave it behind
     await http.post('/api/logout')
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }

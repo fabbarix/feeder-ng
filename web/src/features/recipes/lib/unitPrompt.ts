@@ -1,4 +1,5 @@
 import { ApiError } from '../../../lib/http'
+import { baseUnitLabel } from '../../../lib/units'
 import type { BaseUnit } from '../types'
 import { recipeStrings } from '../strings'
 import { parseNumber } from './draft'
@@ -54,7 +55,7 @@ export function parseUnknownUnit(err: unknown): UnitPrompt | null {
 
 /** "How many g is 1 clove of garlic?" text parts for the prompt. */
 export function promptQuestion(p: UnitPrompt): string {
-  return recipeStrings.unitConversion.question(p.unit, p.ingredientName, p.baseUnit)
+  return recipeStrings.unitConversion.question(p.unit, p.ingredientName, baseUnitLabel(p.baseUnit, 'metric', 2))
 }
 
 /** The typed conversion: a number > 0 (parseNumber rules), else null. */

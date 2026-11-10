@@ -223,7 +223,14 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 // ScopeRecipeName is the name of the Recipe a scope cooks, "" for an empty or unknown scope (the timers list shows it
 // instead of "Tue Planned Meal").
 func (s *Service) ScopeRecipeName(ctx context.Context, scope cook.Scope) string {
-	panic("not implemented: copy fix")
+	if scope == "" {
+		return ""
+	}
+	rs, err := s.scopeSteps(ctx, scope)
+	if err != nil {
+		return ""
+	}
+	return rs.Name
 }
 
 // StartInput describes a timer to start. With Step set, Scope is required, the
@@ -382,7 +389,25 @@ func (s *Service) Cancel(ctx context.Context, id int64) error {
 // CancelScope deletes every timer of scope (running, paused or finished) and publishes `cancelled` for each; it
 // returns how many it removed. Called when the scope's Planned Meal is marked Cooked or Not cooked (N4).
 func (s *Service) CancelScope(ctx context.Context, scope cook.Scope) (int, error) {
-	panic("not implemented: N4")
+	if scope == "" {
+		return 0, nil // never "all timers"
+	}
+	all, err := s.cfg.Store.Timers(ctx, scope)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, t := range all {
+		if err := s.cfg.Store.DeleteTimer(ctx, t.ID); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				continue
+			}
+			return n, err
+		}
+		s.publishTimer(kindCancelled, t)
+		n++
+	}
+	return n, nil
 }
 
 // Timers settles due timers (publishing `finished` once each) and lists the

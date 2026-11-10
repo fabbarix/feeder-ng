@@ -718,20 +718,23 @@ func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
 // N4: marking a Planned Meal Cooked or Not cooked cancels that meal's timers, whatever their state, and only that meal's.
 func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.T) {
 	f := setup(t)
+	f.meals.meals = []service.MealInfo{
+		{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"},
+		{Date: "2026-11-10", MealSlotID: 3, RecipeID: 12, State: "planned"},
+	}
 	meal := cook.MealScope("2026-11-09", 3)
-	one, two := 1, 2
-	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Step: &one, Label: "Simmer", DurationSeconds: 600})
+	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Simmer", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
 	}
-	paused, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Step: &two, Label: "Rest", DurationSeconds: 600})
+	paused, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Rest", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.svc.Pause(ctx, paused.ID); err != nil {
 		t.Fatal(err)
 	}
-	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3), Step: &one, Label: "Other", DurationSeconds: 600})
+	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3), Label: "Other", DurationSeconds: 600})
 	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
 	ch, cancel := f.bus.Subscribe(service.TopicTimers)
 	defer cancel()
@@ -754,7 +757,7 @@ func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.
 	}
 	cancelled := 0
 	for _, e := range drain(ch) {
-		if e.Changed == "cancelled" {
+		if e.Kind == "cancelled" {
 			cancelled++
 		}
 	}

@@ -109,10 +109,12 @@ describe('AppRoot offline cold reload (R10)', () => {
 
   it('signing out forgets the remembered User', async () => {
     mount('/plan', new Response(JSON.stringify(me), { status: 200 }))
+    // Each call gets its own Response (a body can be read once): /api/me, then the sign-out POST.
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify(me), { status: 200 })))
     expect(await screen.findByText('plan page')).toBeInTheDocument()
     expect(localStorage.getItem(ME_CACHE_KEY)).not.toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
-    await userEvent.click(await screen.findByRole('button', { name: /sign out/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
     await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
   })
 })
