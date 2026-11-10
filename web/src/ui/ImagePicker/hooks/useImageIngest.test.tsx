@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
-import { fakeApi, fakeEngine, hugeFile, ID_A, ID_B, pngFile, stored } from '../testing'
+import { fakeApi, fakeEngine, heicFile, hugeFile, ID_A, ID_B, pngFile, stored } from '../testing'
 import { useImageIngest } from './useImageIngest'
 
 function setup(over: { api?: ReturnType<typeof fakeApi>; engine?: ReturnType<typeof fakeEngine> } = {}) {
@@ -76,6 +76,15 @@ describe('useImageIngest: files', () => {
     await act(() => result.current.ingestBlob(pngFile(), 'file'))
     expect(result.current.problem).toBeNull()
     expect(onStored).toHaveBeenCalledWith(ID_B)
+  })
+
+  it('HEIC goes to the server untouched (no decode, no re-encode), declared as image/heic; the stored result is a WebP like any other', async () => {
+    const { result, api, engine, onStored } = setup()
+    await act(() => result.current.ingestBlob(heicFile(), 'file'))
+    expect(engine.decode).not.toHaveBeenCalled()
+    expect(engine.encode).not.toHaveBeenCalled()
+    expect((api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
+    expect(onStored).toHaveBeenCalledWith(ID_A)
   })
 
   it('a picture the browser cannot decode is unreadable', async () => {

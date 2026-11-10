@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -303,4 +305,80 @@ func TestSweepKeepsAStepPhoto(t *testing.T) {
 	env.Clock.Set(testkit.StartTime.Add(72 * time.Hour))
 	_, _ = env.App.Deps.Scheduler.RunDue(context.Background())
 	mustStatus(t, c.Get(stepPhoto.URL), 200)
+}
+
+// ---- HEIC/HEIF and EXIF orientation: converted by internal/imaging, same contract and limits ----
+
+func fixture(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "imaging", "testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func TestUploadConvertsAnIPhonePhotoToWebP(t *testing.T) {
+	_, c := start(t)
+	for _, mime := range []string{"image/heic", "image/heif"} {
+		var u uploaded
+		mustStatus(t, c.Post("/api/images", obj{"dataUrl": dataURL(mime, fixture(t, "pantry-128x96.heic"))}), 201).MustJSON(t, &u)
+		if u.Width != 128 || u.Height != 96 || u.URL != "/api/images/"+u.ID {
+			t.Errorf("%s: response = %+v, want 128x96", mime, u)
+		}
+		r := mustStatus(t, c.Get(u.URL), 200)
+		if r.Header.Get("Content-Type") != "image/webp" {
+			t.Errorf("%s: served as %q, want image/webp", mime, r.Header.Get("Content-Type"))
+		}
+		if w, h := webpSize(t, r); w != 128 || h != 96 {
+			t.Errorf("%s: served %dx%d", mime, w, h)
+		}
+	}
+}
+
+func TestUploadRefusesBrokenHEICAndHEICOverTheLimits(t *testing.T) {
+	_, c := start(t)
+	heic := fixture(t, "pantry-128x96.heic")
+	cases := []struct {
+		name   string
+		data   []byte
+		status int
+		code   string
+	}{
+		{"truncated", heic[:100], 422, "unsupported_image"},
+		{"too many pixels", fixture(t, "too-wide-12100x64.heic"), 422, "image_too_large_pixels"},
+		{"over 8 MB", append(append([]byte{}, heic...), make([]byte, 9<<20)...), 413, "image_too_large"},
+	}
+	for _, tc := range cases {
+		r := mustStatus(t, c.Post("/api/images", obj{"dataUrl": dataURL("image/heic", tc.data)}), tc.status)
+		if !strings.Contains(string(r.Body), tc.code) {
+			t.Errorf("%s: body %s, want code %s", tc.name, r.Body, tc.code)
+		}
+	}
+}
+
+func TestFromURLConvertsAnIPhonePhoto(t *testing.T) {
+	_, c := start(t)
+	f := &fakeFetcher{data: fixture(t, "pantry-128x96.heic"), ct: "image/heic"}
+	defer httpapi.UseFetcher(f)()
+	var u uploaded
+	mustStatus(t, c.Post("/api/images/from-url", obj{"url": "https://photos.example/IMG_0001.heic"}), 201).MustJSON(t, &u)
+	if u.Width != 128 || u.Height != 96 {
+		t.Errorf("response = %+v, want 128x96", u)
+	}
+	if w, h := webpSize(t, mustStatus(t, c.Get(u.URL), 200)); w != 128 || h != 96 {
+		t.Errorf("served %dx%d", w, h)
+	}
+}
+
+func TestUploadTurnsASidewaysPhotoUpright(t *testing.T) {
+	_, c := start(t)
+	var u uploaded
+	mustStatus(t, c.Post("/api/images", obj{"dataUrl": dataURL("image/jpeg", fixture(t, "sideways-6.jpg"))}), 201).MustJSON(t, &u)
+	if u.Width != 32 || u.Height != 64 {
+		t.Fatalf("response = %+v, want the upright 32x64 (stored 64x32, EXIF orientation 6)", u)
+	}
+	if w, h := webpSize(t, mustStatus(t, c.Get(u.URL), 200)); w != 32 || h != 64 {
+		t.Errorf("served %dx%d, want 32x64", w, h)
+	}
 }

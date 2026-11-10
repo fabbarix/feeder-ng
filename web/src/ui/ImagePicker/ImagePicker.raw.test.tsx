@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ImagePicker } from './ImagePicker'
-import { fakeDeps, fakeEngine, paste, pngFile } from './testing'
+import { fakeDeps, fakeEngine, heicFile, paste, pngFile } from './testing'
 import type { RawImage } from './types'
 
 const user = userEvent.setup({ applyAccept: false })
@@ -110,5 +110,21 @@ describe('ImagePicker, raw mode (Recipe Assistant "Read from a photo")', () => {
     setup({ value: { kind: 'url', url: 'https://x.example/a.png' } })
     expect(screen.queryByRole('button', { name: 'Rotate right' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rotate left' })).not.toBeInTheDocument()
+  })
+
+  it('an iPhone photo (HEIC) is converted by the browser when it can (Safari) and refused with a clear message when it cannot', async () => {
+    const { onChange, input, deps } = setup()
+    await user.upload(input, heicFile())
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
+    expect(onChange.mock.calls[0]![0]).toMatchObject({ kind: 'blob', type: 'image/jpeg', width: 2576, height: 1932 })
+    expect(deps.api.uploadDataUrl).not.toHaveBeenCalled() // raw mode never uses the server's HEIC conversion
+  })
+
+  it('a HEIC this browser cannot decode says so (raw mode cannot ask the server to convert it)', async () => {
+    const { onChange, input, deps } = setup()
+    deps.engine.decode.mockRejectedValue(new Error('no HEIC'))
+    await user.upload(input, heicFile())
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot read that image/)
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

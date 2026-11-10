@@ -7,11 +7,18 @@ const file = (type: string, size = 100) => ({ type, size })
 const MB = 1 << 20
 
 describe('checkImageFile', () => {
-  it.each(['image/jpeg', 'image/png', 'image/webp'])('%s is fine', (type) => expect(checkImageFile(file(type))).toBeNull())
+  it.each(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'])('%s is fine', (type) => expect(checkImageFile(file(type))).toBeNull())
 
-  it.each(['image/gif', 'image/svg+xml', 'image/heic', 'image/heif', 'application/pdf', 'text/plain', ''])('%j is unsupported', (type) =>
+  it.each(['image/gif', 'image/svg+xml', 'image/avif', 'application/pdf', 'text/plain', ''])('%j is unsupported', (type) =>
     expect(checkImageFile(file(type))).toBe('unsupported'),
   )
+
+  it('a HEIC file with no type (Windows and Chrome often report none) is recognised by its name', () => {
+    for (const name of ['IMG_0001.HEIC', 'IMG_0001.heic', 'photo.heif', 'photo.HEIF']) expect(checkImageFile({ type: '', size: 100, name }), name).toBeNull()
+    for (const name of ['notes.txt', 'photo.heic.exe', 'heic', '']) expect(checkImageFile({ type: '', size: 100, name }), name).toBe('unsupported')
+  })
+
+  it('a name never overrules a known type', () => expect(checkImageFile({ type: 'application/pdf', size: 100, name: 'x.heic' })).toBe('unsupported'))
 
   it('an empty file is empty', () => expect(checkImageFile(file('image/png', 0))).toBe('empty'))
 
@@ -68,7 +75,7 @@ describe('problemMessage', () => {
 
   it('the size message names the limit, the type message names the formats, the blocked message says private', () => {
     expect(problemMessage('too_large')).toMatch(/8 MB/)
-    expect(problemMessage('unsupported')).toMatch(/JPEG, PNG or WebP/)
+    expect(problemMessage('unsupported')).toMatch(/JPEG, PNG, WebP or HEIC/)
     expect(problemMessage('link_blocked')).toMatch(/private/i)
     expect(problemMessage('link_invalid')).toMatch(/https/)
   })

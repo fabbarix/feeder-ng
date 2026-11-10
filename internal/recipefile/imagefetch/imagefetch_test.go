@@ -152,6 +152,16 @@ func TestFetchReturnsTheBodyAndContentType(t *testing.T) {
 	}
 }
 
+func TestFetchAcceptsHEICAndHEIF(t *testing.T) {
+	// iPhone photos: the images service converts them to WebP, so the fetcher must let them through.
+	for _, c := range []string{"image/heic", "image/heif", "image/heic; charset=binary"} {
+		srv, f := server(t, serve(c, body), imagefetch.Options{})
+		if _, _, err := f.Fetch(context.Background(), srv.URL); err != nil {
+			t.Errorf("%s must be accepted: %v", c, err)
+		}
+	}
+}
+
 func TestFetchRefusesOtherContentTypes(t *testing.T) {
 	for _, c := range []string{"text/html", "image/svg+xml", "image/gif", "application/octet-stream", ""} {
 		srv, f := server(t, serve(c, body), imagefetch.Options{})

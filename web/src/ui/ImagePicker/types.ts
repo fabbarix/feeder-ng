@@ -1,5 +1,6 @@
 import type { ImageEngine } from './lib/prepare'
 import type { ClipboardLike } from './lib/clipboard'
+import type { CropAspect } from './lib/crop'
 
 /** Where a picture can come from; `sources` on the picker chooses which buttons exist. */
 export type ImageSource = 'file' | 'paste' | 'link' | 'camera'
@@ -58,6 +59,13 @@ interface ImagePickerCommon {
   sources?: readonly ImageSource[]
   /** `dialog` also listens for paste on the enclosing <dialog>/BottomSheet, so Ctrl+V works wherever focus is inside it. Default `picker`. */
   listenOn?: 'picker' | 'dialog'
+  /**
+   * Shape of the Crop tool: a number (`width / height`, e.g. CROP_ASPECTS.landscape = 4/3 for Recipe and Ingredient images, CROP_ASPECTS.square = 1 for
+   * a Member avatar) locks it; 'free' lets the user choose. Default: 4/3 in upload mode, 'free' in raw mode.
+   */
+  aspect?: CropAspect
+  /** Offer the Crop button next to Rotate. Default true. */
+  crop?: boolean
   /** Preview size. Default `hero`. */
   size?: 'hero' | 72
   deps?: Partial<ImagePickerDeps>

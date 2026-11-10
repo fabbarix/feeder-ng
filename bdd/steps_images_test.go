@@ -9,6 +9,8 @@ import (
 	"image"
 	"image/png"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/cucumber/godog"
@@ -86,6 +88,21 @@ func imagesSteps(sc *godog.ScenarioContext, w *World) {
 		body := map[string]string{"dataUrl": "data:image/png;base64," + b64(pngOf(wd, ht))}
 		w.Last = w.Client.Do("POST", "/api/images", body)
 		remember(name)
+	})
+	addFixture := func(file, mime, name string) error {
+		data, err := os.ReadFile(filepath.Join("..", "internal", "imaging", "testdata", file))
+		if err != nil {
+			return err
+		}
+		w.Last = w.Client.Do("POST", "/api/images", map[string]string{"dataUrl": "data:" + mime + ";base64," + b64(data)})
+		remember(name)
+		return nil
+	}
+	sc.Step(`^I add the iPhone photo "([^"]*)"$`, func(name string) error {
+		return addFixture("pantry-128x96.heic", "image/heic", name)
+	})
+	sc.Step(`^I add the sideways photo "([^"]*)"$`, func(name string) error {
+		return addFixture("sideways-6.jpg", "image/jpeg", name)
 	})
 	sc.Step(`^I save the Recipe "([^"]*)" with the image "([^"]*)"$`, func(recipe, name string) error {
 		id, err := idOfImage(name)

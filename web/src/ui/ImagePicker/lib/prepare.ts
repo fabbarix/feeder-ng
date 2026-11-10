@@ -1,3 +1,4 @@
+import type { Rect } from './crop'
 import type { ImageProblemCode } from './problems'
 
 export type Turns = 0 | 1 | 2 | 3
@@ -14,13 +15,27 @@ export interface ImageEngine {
   /** Rejects when the browser cannot decode the blob (HEIC, corrupt). */
   decode(blob: Blob): Promise<DecodedImage>
   /** Draws the picture rotated `turns` quarter turns clockwise into width x height (the already turned and scaled size) and encodes it. */
-  encode(image: DecodedImage, o: { width: number; height: number; turns: Turns; type: 'image/jpeg' | 'image/png'; quality: number }): Promise<Blob>
+  encode(
+    image: DecodedImage,
+    o: {
+      /** The output size. */
+      width: number
+      height: number
+      turns: Turns
+      /** Optional crop, in pixels of the TURNED picture; the output shows only that area, scaled to width x height. */
+      crop?: Rect
+      type: 'image/jpeg' | 'image/png'
+      quality: number
+    },
+  ): Promise<Blob>
 }
 
 export interface PrepareOptions {
   maxSide: number
   maxBytes: number
   turns?: Turns
+  /** Keep only this area (turned-image pixels; clamped to the picture). The long edge of the OUTPUT is limited to maxSide. A crop that is the whole picture is no crop. */
+  crop?: Rect
   /** First JPEG quality tried, 0.9 by default; lowered in steps of 0.1 down to 0.6 while over maxBytes. */
   quality?: number
   /** Re-encode even when nothing needs to change (camera frames). */

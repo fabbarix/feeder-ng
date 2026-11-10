@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/http'
 import { ImagePicker } from './ImagePicker'
-import { drop, fakeApi, fakeDeps, gifFile, heicFile, hugeFile, ID_A, ID_B, pngFile, stored } from './testing'
+import { drop, fakeApi, fakeDeps, gifFile, heicFile, hugeFile, pdfFile, ID_A, ID_B, pngFile, stored } from './testing'
 
 const user = userEvent.setup({ applyAccept: false })
 
@@ -33,13 +33,38 @@ describe('ImagePicker, from a file', () => {
 
   it.each([
     ['a GIF', gifFile],
-    ['a HEIC photo', heicFile],
+    ['a PDF', pdfFile],
   ])('%s is refused with the formats message, and nothing is sent', async (_n, make) => {
     const { deps, onChange } = setup()
     drop(screen.getByTestId('file-drop-zone'), [make()])
-    expect(await screen.findByRole('alert')).toHaveTextContent(/JPEG, PNG or WebP/)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/JPEG, PNG, WebP or HEIC/)
     expect(deps.api.uploadDataUrl).not.toHaveBeenCalled()
     expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('an iPhone photo (HEIC) is sent as it is - the browser may not read it, the server converts it - and nothing is decoded here', async () => {
+    const { deps, onChange, input } = setup()
+    await user.upload(input, heicFile())
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(ID_A))
+    expect((deps.api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
+    expect(deps.engine.decode).not.toHaveBeenCalled()
+  })
+
+  it('a HEIF file, or a HEIC the browser gives no type for, is accepted too (declared by its name)', async () => {
+    const { deps, onChange, input } = setup()
+    await user.upload(input, new File([new Uint8Array(16)], 'IMG_0002.HEIC', { type: '' }))
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(ID_A))
+    expect((deps.api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
+    await user.upload(input, new File([new Uint8Array(16)], 'a.heif', { type: 'image/heif' }))
+    await waitFor(() => expect(deps.api.uploadDataUrl).toHaveBeenCalledTimes(2))
+    expect((deps.api.uploadDataUrl.mock.calls[1] as unknown as [string])[0]).toMatch(/^data:image\/heif;base64,/)
+  })
+
+  it('a HEIC over 8 MB shows the size message (it cannot be shrunk here) and is not sent', async () => {
+    const { deps, input } = setup()
+    await user.upload(input, new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'big.heic', { type: 'image/heic' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/8 MB/)
+    expect(deps.api.uploadDataUrl).not.toHaveBeenCalled()
   })
 
   it('a picture over 8 MB shows the size limit message and is not sent', async () => {

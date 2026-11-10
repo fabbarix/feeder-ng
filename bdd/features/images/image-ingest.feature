@@ -16,6 +16,18 @@ Feature: Adding an image from a link, and cleaning up images that were never sav
     When I fetch the uploaded image
     Then the fetched image is a WebP of 1600x1067
 
+  Scenario: An iPhone photo (HEIC) is converted to WebP
+    When I add the iPhone photo "pantry.heic"
+    Then the response status is 201
+    When I fetch the uploaded image
+    Then the fetched image is a WebP of 128x96
+
+  Scenario: A photo taken sideways is stored upright
+    When I add the sideways photo "stew.jpg"
+    Then the response status is 201
+    When I fetch the uploaded image
+    Then the fetched image is a WebP of 32x64
+
   Scenario Outline: Links that Feeder will not download
     When I add the image from the link "<link>"
     Then the response status is <status>

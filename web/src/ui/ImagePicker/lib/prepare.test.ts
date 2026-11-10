@@ -116,3 +116,68 @@ describe('prepareImage', () => {
     expect(bad.decoded[0]!.close).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('prepareImage: crop', () => {
+  const opts = { maxSide: 2576, maxBytes: 8 * MB }
+
+  it('keeps only the crop: the output is the crop size and the engine is told which area to draw', async () => {
+    const engine = fakeEngine({ width: 4000, height: 3000 })
+    const out = await prepareImage(blob(), { ...opts, crop: { x: 500, y: 250, width: 2000, height: 1500 } }, engine)
+    expect(engine.encode).toHaveBeenCalledTimes(1)
+    expect(engine.encode.mock.calls[0]![1]).toMatchObject({ width: 2000, height: 1500, turns: 0, crop: { x: 500, y: 250, width: 2000, height: 1500 }, type: 'image/jpeg' })
+    expect(out).toMatchObject({ width: 2000, height: 1500, reencoded: true })
+  })
+
+  it('downscales the CROP (not the whole picture) to the long edge', async () => {
+    const engine = fakeEngine({ width: 4000, height: 3000 })
+    const out = await prepareImage(blob(), { ...opts, crop: { x: 0, y: 0, width: 3600, height: 3000 } }, engine)
+    expect(engine.encode.mock.calls[0]![1]).toMatchObject({ width: 2576, height: 2147 })
+    expect(out).toMatchObject({ width: 2576, height: 2147 })
+  })
+
+  it('a small crop of a huge picture is not scaled up', async () => {
+    const engine = fakeEngine({ width: 8000, height: 6000 })
+    const out = await prepareImage(blob(), { ...opts, maxSide: 3200, crop: { x: 100, y: 100, width: 640, height: 480 } }, engine)
+    expect(out).toMatchObject({ width: 640, height: 480 })
+  })
+
+  it('the crop is in turned pixels: 4000x1000 turned once is 1000x4000, and the engine gets the turn and the crop together', async () => {
+    const engine = fakeEngine({ width: 4000, height: 1000 })
+    const out = await prepareImage(blob(), { ...opts, turns: 1, crop: { x: 0, y: 1000, width: 1000, height: 2000 } }, engine)
+    expect(engine.encode.mock.calls[0]![1]).toMatchObject({ turns: 1, crop: { x: 0, y: 1000, width: 1000, height: 2000 }, width: 1000, height: 2000 })
+    expect(out).toMatchObject({ width: 1000, height: 2000 })
+  })
+
+  it('a crop that is the whole picture is no crop: an untouched small picture is returned as it is', async () => {
+    const engine = fakeEngine({ width: 800, height: 600 })
+    const original = blob('image/png', 5000)
+    const out = await prepareImage(original, { ...opts, crop: { x: 0, y: 0, width: 800, height: 600 } }, engine)
+    expect(out.blob).toBe(original)
+    expect(out.reencoded).toBe(false)
+    expect(engine.encode).not.toHaveBeenCalled()
+  })
+
+  it('a crop that sticks out is shifted back inside the picture', async () => {
+    const engine = fakeEngine({ width: 800, height: 600 })
+    await prepareImage(blob(), { ...opts, crop: { x: 700, y: 0, width: 500, height: 600 } }, engine)
+    expect(engine.encode.mock.calls[0]![1]).toMatchObject({ crop: { x: 300, y: 0, width: 500, height: 600 }, width: 500, height: 600 })
+  })
+
+  it('a PNG stays a PNG when cropped; the quality ladder still applies', async () => {
+    const png = fakeEngine({ width: 800, height: 600 })
+    expect((await prepareImage(blob('image/png'), { ...opts, crop: { x: 0, y: 0, width: 400, height: 300 } }, png)).type).toBe('image/png')
+    const jpg = fakeEngine({ width: 800, height: 600 })
+    const sizes = [9 * MB, 1 * MB]
+    jpg.encode.mockImplementation(async (_i: unknown, o: { type: string }) => blob(o.type, sizes.shift()!))
+    await prepareImage(blob('image/jpeg', 9 * MB), { ...opts, crop: { x: 0, y: 0, width: 400, height: 300 } }, jpg)
+    expect(jpg.encode.mock.calls.map((c) => c[1].quality)).toEqual([0.9, 0.8])
+  })
+
+  it('a HEIC the browser can decode (Safari) is re-encoded as JPEG; one it cannot is unreadable', async () => {
+    const ok = fakeEngine({ width: 4000, height: 3000 })
+    expect((await prepareImage(blob('image/heic'), opts, ok)).type).toBe('image/jpeg')
+    const bad = fakeEngine()
+    bad.decode.mockRejectedValue(new Error('no HEIC'))
+    await expect(prepareImage(blob('image/heic'), opts, bad)).rejects.toMatchObject({ code: 'unreadable' })
+  })
+})

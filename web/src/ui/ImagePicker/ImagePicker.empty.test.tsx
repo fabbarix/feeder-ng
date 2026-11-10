@@ -11,7 +11,7 @@ describe('ImagePicker, empty', () => {
     render(<ImagePicker label="Recipe photo" value="" onChange={noop} deps={fakeDeps()} />)
     expect(group()).toBeInTheDocument()
     expect(screen.getByText('Recipe photo')).toBeInTheDocument()
-    expect(screen.getByText(/JPEG, PNG or WebP, up to 8 MB/)).toBeInTheDocument()
+    expect(screen.getByText(/JPEG, PNG, WebP or HEIC, up to 8 MB/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Choose a file or drop it here/ })).toBeInTheDocument()
     expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
   })
@@ -58,9 +58,9 @@ describe('ImagePicker, empty', () => {
     expect(container.querySelector('input:not([hidden])')).toBeNull()
   })
 
-  it('accepts only the formats the server decodes', () => {
+  it('accepts only the formats the server decodes (HEIC/HEIF by type and by extension, for browsers that report no type)', () => {
     const { container } = render(<ImagePicker label="Recipe photo" value="" onChange={noop} deps={fakeDeps()} />)
-    expect(container.querySelector('input[type=file]')).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp')
+    expect(container.querySelector('input[type=file]')).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif')
   })
 
   it('disabled disables every action', () => {

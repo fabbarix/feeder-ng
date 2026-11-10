@@ -2,11 +2,11 @@ import { MAX_UPLOAD_BYTES } from './limits'
 
 /** Every way picking a picture can fail. The message for each is in ../strings.ts. */
 export type ImageProblemCode =
-  | 'unsupported' // not JPEG, PNG or WebP
+  | 'unsupported' // not JPEG, PNG, WebP or HEIC/HEIF
   | 'too_large' // over the byte limit
   | 'too_many_pixels'
   | 'empty'
-  | 'unreadable' // the browser cannot decode it (HEIC, corrupt)
+  | 'unreadable' // the browser cannot decode it (corrupt; HEIC in raw mode on a browser without HEIC support)
   | 'link_empty'
   | 'link_invalid' // not https, credentials, not a URL
   | 'link_blocked' // the server refused a private address
@@ -27,8 +27,8 @@ export class ImageProblemError extends Error {
   }
 }
 
-/** IP1 stub. The Developer implements: unsupported for a type outside JPEG/PNG/WebP, empty for size 0, too_large above maxBytes; null when fine. */
-export function checkImageFile(_file: { type: string; size: number }, _maxBytes: number = MAX_UPLOAD_BYTES): ImageProblemCode | null {
+/** IP1 stub. The Developer implements: unsupported for a type outside JPEG/PNG/WebP/HEIC/HEIF (a file with no type but a .heic/.heif name is HEIC), empty for size 0, too_large above maxBytes; null when fine. */
+export function checkImageFile(_file: { type: string; size: number; name?: string }, _maxBytes: number = MAX_UPLOAD_BYTES): ImageProblemCode | null {
   return 'failed'
 }
 
