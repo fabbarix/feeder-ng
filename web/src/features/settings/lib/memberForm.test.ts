@@ -8,7 +8,7 @@ describe('memberDraft', () => {
   })
 
   it('copies an existing Member', () => {
-    const m = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: 2 }
+    const m = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: 2, email: null }
     expect(memberDraft(m)).toEqual({ name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, email: '' })
   })
 })

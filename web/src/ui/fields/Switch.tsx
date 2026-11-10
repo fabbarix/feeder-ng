@@ -3,7 +3,7 @@ import './Switch.css'
 
 export interface SwitchProps {
   label: string
-  /** F-02 (A1) stub: overrides the accessible name while `label` stays the visible text ("Admin" visible, "Admin: cook@x" announced). Developer implements. */
+  /** Overrides the accessible name while `label` stays the visible text ("Admin" visible, "Admin: cook@x" announced). */
   'aria-label'?: string
   checked: boolean
   disabled?: boolean
@@ -11,7 +11,7 @@ export interface SwitchProps {
 }
 
 /** An on/off setting: a role=switch button (52 x 32) named by its label. */
-export function Switch({ label, checked, disabled, onChange }: SwitchProps) {
+export function Switch({ label, 'aria-label': ariaLabel, checked, disabled, onChange }: SwitchProps) {
   const labelId = useId()
   return (
     <div className="switch-row">
@@ -22,7 +22,8 @@ export function Switch({ label, checked, disabled, onChange }: SwitchProps) {
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-labelledby={labelId}
+        aria-labelledby={ariaLabel ? undefined : labelId}
+        aria-label={ariaLabel}
         disabled={disabled}
         className="switch"
         onClick={() => onChange(!checked)}

@@ -17,7 +17,7 @@ const settings: HouseholdSettings = {
   timeZone: 'UTC', timeZoneConfigured: false, planningHorizonDays: 7, defaultCooldownDays: 7, defaultLeftoverUseByDays: 3,
   quietHours: { start: '22:00', end: '07:00' }, plannerStyle: 0.5, location: null, currency: 'USD',
 }
-const sam: Member = { id: 3, name: 'Sam', colour: '#e07a5f', avatar: '', portionFactor: 0.5, userId: null }
+const sam: Member = { id: 3, name: 'Sam', colour: '#e07a5f', avatar: '', portionFactor: 0.5, userId: null, email: null }
 const dinner: MealSlot = { id: 1, weekday: 4, name: 'Dinner', time: '19:00', attendance: [{ memberId: 3, portionFactorOverride: null }], portionsNeeded: 0.5 }
 
 describe('useHouseholdSettings', () => {
@@ -75,9 +75,9 @@ describe('useMembers', () => {
     })
     const { result } = renderHook(() => useMembers(), { wrapper })
     await waitFor(() => expect(result.current.members).toHaveLength(1))
-    await act(() => result.current.create({ name: 'Anna', colour: '#3366cc', avatar: '', portionFactor: 1 }))
+    await act(() => result.current.create({ name: 'Anna', colour: '#3366cc', avatar: '', portionFactor: 1, email: null }))
     await waitFor(() => expect(result.current.members).toHaveLength(2))
-    await act(() => result.current.update(3, { name: 'Samuel', colour: '#e07a5f', avatar: '', portionFactor: 0.75 }))
+    await act(() => result.current.update(3, { name: 'Samuel', colour: '#e07a5f', avatar: '', portionFactor: 0.75, email: null }))
     expect(api.callsTo('PATCH', '/api/members/3')[0]!.body).toMatchObject({ name: 'Samuel', portionFactor: 0.75 })
     await act(() => result.current.linkUser(3, 2))
     expect(api.callsTo('PUT', '/api/members/3/user')[0]!.body).toEqual({ userId: 2 })

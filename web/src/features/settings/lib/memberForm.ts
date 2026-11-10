@@ -38,8 +38,8 @@ export const MEMBER_AVATARS: ReadonlyArray<{ value: string; name: string }> = [
 /** The editor's starting state: an existing Member, or a new one at Portion Factor 1. */
 export function memberDraft(member?: Member): MemberInput {
   return member
-    ? { name: member.name, colour: member.colour, avatar: member.avatar, portionFactor: member.portionFactor }
-    : { name: '', colour: DEFAULT_MEMBER_COLOUR, avatar: '', portionFactor: 1 }
+    ? { name: member.name, colour: member.colour, avatar: member.avatar, portionFactor: member.portionFactor, email: member.email ?? '' }
+    : { name: '', colour: DEFAULT_MEMBER_COLOUR, avatar: '', portionFactor: 1, email: '' }
 }
 
 /** The first thing wrong with the draft, or null. */
@@ -48,12 +48,12 @@ export function memberProblem(draft: MemberInput): string | null {
   if (draft.portionFactor < MIN_PORTION_FACTOR || draft.portionFactor > MAX_PORTION_FACTOR) {
     return `Portion Factor must be between ${MIN_PORTION_FACTOR} and ${MAX_PORTION_FACTOR}.`
   }
-  return null
+  return memberEmailProblem(draft.email ?? '')
 }
 
-/** The request body: name and avatar trimmed. */
+/** The request body: name, avatar and email trimmed; a blank email is sent as null (a PATCH replaces the Member, so null clears it). */
 export function memberFromDraft(draft: MemberInput): MemberInput {
-  return { ...draft, name: draft.name.trim(), avatar: draft.avatar.trim() }
+  return { ...draft, name: draft.name.trim(), avatar: draft.avatar.trim(), email: draft.email?.trim() || null }
 }
 
 /** WP11 (QA: "Linked User" offered already-linked Users): the Users a Member may be linked to, in the given order.
@@ -75,8 +75,11 @@ export function canLinkMe(
   return !members.some((m) => m.id !== editing?.id && m.userId === currentUserId)
 }
 
-/** A1 phase 2 stub (Developer implements): the problem with the typed Member email, or null. '' and blanks are fine
- *  (the email is optional); otherwise `name@host.tld` without spaces, at most 254 characters, the message names "email". */
-export function memberEmailProblem(_email: string): string | null {
+/** The problem with the typed Member email, or null. Blank is fine (the email is optional); otherwise `name@host.tld`
+ *  without spaces or a second `@`, at most 254 characters. */
+export function memberEmailProblem(email: string): string | null {
+  const value = email.trim()
+  if (value === '') return null
+  if (value.length > 254 || !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(value)) return 'Enter a valid email address, such as name@example.com.'
   return null
 }

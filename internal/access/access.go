@@ -458,8 +458,8 @@ func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.
 // ApproveLinked is Approve plus "link to Member" in one step: the new User is linked to the unlinked Member
 // memberID. The Member is checked first (ErrMemberUnavailable when it is not among Members.Unlinked, or when there
 // is no Members port) before anything is created, so such a refusal leaves the request pending. If LinkUser fails
-// after the User was created, the approval stands: the request is cleared, "approved" is recorded without a Member and
-// ErrMemberUnavailable is returned.
+// after the User was created, the approval stands: the request is cleared and "approved" is recorded without a Member;
+// ErrMemberUnavailable is returned when that is why it failed, any other error is returned as it is.
 func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, memberID int64) (auth.User, error) {
 	s.answerMu.Lock()
 	defer s.answerMu.Unlock()
@@ -497,7 +497,10 @@ func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, 
 		if aerr := s.store.AddEvent(ctx, ev); aerr != nil {
 			return auth.User{}, aerr
 		}
-		return auth.User{}, ErrMemberUnavailable
+		if errors.Is(err, ErrMemberUnavailable) {
+			return auth.User{}, ErrMemberUnavailable
+		}
+		return auth.User{}, err
 	}
 	ev.MemberID, ev.MemberName = member.ID, member.Name
 	return u, s.store.AddEvent(ctx, ev)

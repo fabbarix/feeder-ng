@@ -28,6 +28,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
   { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
+  { group: 'household', id: 'accessRequests', ...copy.accessRequests, icon: 'allowlist', path: '/settings/access-requests' },
   { group: 'you', id: 'preferences', ...copy.preferences, icon: 'appearance', path: '/settings/preferences' },
   { group: 'you', id: 'notifications', ...copy.notifications, icon: 'notifications', path: '/settings/notifications' },
   { group: 'admin', id: 'allowlist', ...copy.allowlist, icon: 'allowlist', path: '/settings/allowlist', adminOnly: true },
@@ -41,16 +42,15 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
 
 /**
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
- *   Household: Household, Members, Meal Slots, Planning rules, Shops   (/settings/household, /members, /meal-slots, /planning, /shops)
+ *   Household: Household, Members, Meal Slots, Planning rules, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /shops, /access-requests)
  *   You:       Your preferences, Notifications                          (/settings/preferences, /notifications)
  *   Admin:     Allowlist (Admins only)                                  (/settings/allowlist)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
  */
-export function settingsGroups(isAdmin: boolean, _pendingAccessRequests = 0): SettingsGroup[] {
-  // A1 phase 2 stub: the Developer adds the 'accessRequests' row (Household group, every User, last) and uses the count as its meta.
+export function settingsGroups(isAdmin: boolean, pendingAccessRequests = 0): SettingsGroup[] {
   return GROUP_ORDER.map((group) => ({
     id: group.id,
     title: group.title,
-    sections: SECTIONS.filter((s) => s.group === group.id && (isAdmin || !s.adminOnly)).map(({ group: _group, ...section }) => section),
+    sections: SECTIONS.filter((s) => s.group === group.id && (isAdmin || !s.adminOnly)).map(({ group: _group, ...section }) => (section.id === 'accessRequests' && pendingAccessRequests > 0 ? { ...section, meta: settingsStrings.index.waiting(pendingAccessRequests) } : section)),
   })).filter((group) => group.sections.length > 0)
 }

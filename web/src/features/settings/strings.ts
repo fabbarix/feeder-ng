@@ -10,6 +10,7 @@ export const settingsStrings = {
   index: {
     title: 'Settings',
     groups: { household: 'Household', you: 'You', admin: 'Admin' },
+    waiting: (n: number) => `${n} waiting`,
     sections: {
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
@@ -17,6 +18,7 @@ export const settingsStrings = {
       planningRules: { title: 'Planning rules', meta: 'Planner Style, Cool-down, Leftover Use-by' },
       shops: { title: 'Shops', meta: 'Where you buy, and their barcodes' },
       preferences: { title: 'Your preferences', meta: 'Colour mode, units, accent' },
+      accessRequests: { title: 'Sign-in requests', meta: 'Who asked to join' },
       notifications: { title: 'Notifications', meta: 'Which alerts reach this device' },
       allowlist: { title: 'Allowlist', meta: 'Who may sign in to Feeder' },
     },
@@ -64,6 +66,8 @@ export const settingsStrings = {
     avatarHelper: "Optional. Shown next to the Member's name; without one the initials are used.",
     avatarNone: 'Initials',
     portionFactorLabel: 'Portion Factor',
+    email: 'Email',
+    emailHelper: 'Lets this person sign in with Google without asking',
     portionFactorHelper: 'How much of a standard portion this Member eats. An adult is 1.',
     thisIsMe: 'This is me',
     you: (name: string) => `${name} (you)`,
@@ -109,6 +113,7 @@ export const settingsStrings = {
     add: 'Add to allowlist',
     badEmail: 'Enter a valid email address.',
     you: '(you)',
+    youMeta: 'You',
     admin: (email: string) => `Admin: ${email}`,
     lastAdmin: 'Last Admin',
     adminLabel: 'Admin',
@@ -118,6 +123,8 @@ export const settingsStrings = {
     confirmRemoveTitle: (email: string) => `Remove ${email}?`,
     confirmRemoveBody: 'They will no longer be able to sign in. Their own data stays.',
     cancel: 'Cancel',
+    askToJoinHint: 'People can also ask to join. Their requests wait in',
+    signInRequests: 'Sign-in requests',
   },
 
   prefs: {

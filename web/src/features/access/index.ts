@@ -7,4 +7,6 @@ import { AccessRequestsPage } from './screens/AccessRequestsPage'
 export const routes: RouteObject[] = [{ path: ACCESS_REQUESTS_PATH, element: createElement(AccessRequestsPage) }]
 
 // The shell's status slot calls this on every screen: how many sign-in requests wait.
+export { useAccessBadge } from './hooks/useAccessBadge'
+export { AccessBadge } from './components/AccessBadge'
 export { useShellStatus } from './hooks/useShellStatus'

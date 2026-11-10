@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Button, Checkbox, Chip, ListGroup, ListRow, TextField, useConfirm } from '../../../ui'
+import { Link } from 'react-router-dom'
+import { Button, IconButton, ListGroup, ListRow, Switch, TextField, useConfirm } from '../../../ui'
 import { isEmail, isLastAdmin } from '../lib/allowlist'
 import { settingsStrings } from '../strings'
 import type { AllowedUser } from '../types'
@@ -9,8 +10,10 @@ export interface AllowlistPanelProps {
   users: AllowedUser[]
   currentUserId: number
   error?: string
-  /** F-02 stub: the refusal of the Add (409 email_taken), shown under the email field. */
+  /** The refusal of the Add (409 email_taken), shown under the email field; the page clears it when the text changes. */
   addError?: string
+  /** Called when the Admin edits the email field, so the page can clear `addError`. */
+  onEmailEdit?: () => void
   /** Resolves when added; the panel clears its field then, and keeps the text if it rejects. */
   onAdd: (email: string) => Promise<unknown>
   onSetAdmin: (id: number, isAdmin: boolean) => void
@@ -19,10 +22,10 @@ export interface AllowlistPanelProps {
 
 const text = settingsStrings.allowlistPanel
 
-/** The email field "Email to allow" with "Add to allowlist"; a ListGroup row per User: the email (meta "(you)"), a chip
- *  "Last Admin" for the only Admin, an Admin checkbox "Admin: <email>" and "Remove <email>", which asks in a danger
- *  ConfirmDialog. The only Admin's controls are locked. */
-export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin, onRemove }: AllowlistPanelProps) {
+/** The add form (email field "Email to allow" and "Add to allowlist"), a hint linking to Sign-in requests, and a ListGroup
+ *  row per User: the email, meta "You" / "Last Admin", an Admin Switch and an icon-only "Remove <email>", which asks in a
+ *  danger ConfirmDialog. The only Admin's controls are locked. */
+export function AllowlistPanel({ users, currentUserId, error, addError, onEmailEdit, onAdd, onSetAdmin, onRemove }: AllowlistPanelProps) {
   const [email, setEmail] = useState('')
   const [badEmail, setBadEmail] = useState(false)
   const dialogs = useConfirm()
@@ -45,25 +48,27 @@ export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin,
 
   return (
     <div className="settings__stack">
-      <form className="settings__row settings__row--wrap-start" onSubmit={submit} noValidate>
-        <TextField
-          label={text.emailLabel}
-          type="email"
-          value={email}
-          onChange={(value) => {
-            setEmail(value)
-            setBadEmail(false)
-          }}
-        />
-        <Button type="submit" variant="tertiary">
+      <form className="allowlist__add" onSubmit={submit} noValidate>
+        <div className="allowlist__field">
+          <TextField
+            label={text.emailLabel}
+            type="email"
+            error={badEmail ? text.badEmail : addError}
+            value={email}
+            onChange={(value) => {
+              setEmail(value)
+              setBadEmail(false)
+              onEmailEdit?.()
+            }}
+          />
+        </div>
+        <Button type="submit" variant="tertiary" className="allowlist__button">
           {text.add}
         </Button>
-        {badEmail ? (
-          <p role="alert" className="settings__error">
-            {text.badEmail}
-          </p>
-        ) : null}
       </form>
+      <p className="settings__muted">
+        {text.askToJoinHint} <Link to="/settings/access-requests">{text.signInRequests}</Link>.
+      </p>
       {error ? (
         <p role="alert" className="settings__error">
           {error}
@@ -72,22 +77,20 @@ export function AllowlistPanel({ users, currentUserId, error, onAdd, onSetAdmin,
       <ListGroup label={settingsStrings.allowlist}>
         {users.map((u) => {
           const locked = isLastAdmin(users, u)
+          const you = u.id === currentUserId
+          const meta = [you ? text.youMeta : null, locked ? text.lastAdmin : null].filter(Boolean).join(' · ')
           return (
             <ListRow
               key={u.id}
               title={u.email}
-              meta={u.id === currentUserId ? text.you : undefined}
+              meta={meta || undefined}
               trailing={
-                <span className="settings__row">
-                  <Checkbox label={text.admin(u.email)} checked={u.isAdmin} disabled={locked} onChange={(isAdmin) => onSetAdmin(u.id, isAdmin)} />
-                  <Button variant="tertiary" aria-label={text.remove(u.email)} disabled={locked} onClick={() => void askRemove(u)}>
-                    {text.removeButton}
-                  </Button>
+                <span className="allowlist__actions">
+                  <Switch label={text.adminLabel} aria-label={text.admin(u.email)} checked={u.isAdmin} disabled={locked} onChange={(isAdmin) => onSetAdmin(u.id, isAdmin)} />
+                  <IconButton icon="delete" label={text.remove(u.email)} disabled={locked} onClick={() => void askRemove(u)} />
                 </span>
               }
-            >
-              {locked ? <Chip kind="tag">{text.lastAdmin}</Chip> : null}
-            </ListRow>
+            />
           )
         })}
       </ListGroup>

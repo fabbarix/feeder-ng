@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
 import { AccessRequestList } from '../components/AccessRequestList'
 import { ApproveSheet } from '../components/ApproveSheet'
@@ -12,7 +12,7 @@ export function AccessRequestsPage() {
   const page = useAccessRequestsPage()
   return (
     <div className="access">
-      <PageHeader title={accessStrings.title} leading={<Link to="/settings">{accessStrings.backToSettings}</Link>} />
+      <PageHeader title={accessStrings.title} breadcrumbs={useBreadcrumbs()} />
       <Tile as="section" span="full" aria-label={accessStrings.title}>
         <AccessRequestList requests={page.requests} now={page.now} onApprove={page.approve} onDeny={page.deny} />
       </Tile>

@@ -16,7 +16,7 @@ const base = css.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
 /** Declarations of every top-level rule whose selector list contains `selector` exactly, merged. */
 function rule(selector: string, source = base): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const m of source.matchAll(/(^|\})\s*([^{}@]+)\{([^{}]*)\}/g)) {
+  for (const m of source.matchAll(/(?<=^|\})()\s*([^{}@]+)\{([^{}]*)\}/g)) {
     if (!m[2]!.split(',').map((x) => x.trim()).includes(selector)) continue
     for (const d of m[3]!.split(';')) {
       const i = d.indexOf(':')

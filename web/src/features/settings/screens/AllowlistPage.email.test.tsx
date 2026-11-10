@@ -5,6 +5,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { admin, cook } from '../components/fixtures'
+import { findNotice, noticeWith } from '../../../test/notices'
 import { ADMIN_ME, mockApi, renderWithProviders } from '../test-utils'
 import { AllowlistPage } from './AllowlistPage'
 
@@ -20,8 +21,7 @@ describe('AllowlistPage: add an address', () => {
     await userEvent.type(input, 'anna@example.test')
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/allowlist')).toHaveLength(1))
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('That email already belongs to a Member, a User or the allowlist.')
+    const alert = await findNotice('alert', 'That email already belongs to a Member, a User or the allowlist.')
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input.getAttribute('aria-describedby')).toContain(alert.id)
     expect(input).toHaveValue('anna@example.test')
@@ -33,9 +33,9 @@ describe('AllowlistPage: add an address', () => {
     const input = await screen.findByLabelText('Email to allow')
     await userEvent.type(input, 'anna@example.test')
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
-    await screen.findByRole('alert')
+    await findNotice('alert', 'That email already belongs')
     await userEvent.type(input, 'x')
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(noticeWith('alert', 'That email already belongs')).toBeUndefined()
     expect(input).not.toHaveAttribute('aria-invalid')
   })
 
@@ -47,7 +47,7 @@ describe('AllowlistPage: add an address', () => {
     })
     renderWithProviders(<AllowlistPage />, '/settings/allowlist')
     await userEvent.click(await screen.findByRole('switch', { name: 'Admin: cook@example.test' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/at least one Admin/i)
+    expect(await findNotice('alert', 'at least one Admin')).toBeInTheDocument()
     expect(screen.getByLabelText('Email to allow')).not.toHaveAttribute('aria-invalid')
   })
 

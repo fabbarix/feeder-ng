@@ -2,9 +2,8 @@
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 export const accessStrings = {
-  title: 'Access Requests',
+  title: 'Sign-in requests',
   menuItem: 'Sign-in requests',
-  backToSettings: 'Back to Settings',
   empty: 'Nobody is waiting to join.',
   approvalNote: 'Approving lets them sign in as a User. Any User can approve or deny.',
   approve: 'Approve',

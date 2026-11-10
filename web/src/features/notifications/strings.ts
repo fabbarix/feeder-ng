@@ -26,5 +26,6 @@ export const notificationStrings = {
     leftoverUseBy: { label: 'Leftover Use-by', hint: 'At 10:00 on the Use-by date' },
     stockSpoil: { label: 'Stock about to spoil', hint: 'At 10:00 the day before, if no plan uses it' },
     timerFinished: { label: 'Timer finished', hint: 'Straight away, even in quiet hours' },
+    accessRequest: { label: 'Sign-in request', hint: 'When someone asks to sign in and waits for approval' },
   } satisfies Record<NotificationType, { label: string; hint: string }>,
 }

@@ -11,16 +11,20 @@ The single family that one deployment serves; owns all recipes, plans and shops.
 _Avoid_: Family, tenant, account
 
 **Member**:
-A person who eats from the plan and counts towards portions; need not have a login.
+A person who eats from the plan and counts towards portions; need not have a login. May carry an email, so that person can sign in as a User.
 _Avoid_: Eater, person, diner
 
 **User**:
-Someone who signs in with Google to use the app; may be linked to a Member.
+Someone who signs in with Google to use the app, because an Admin added their email, a Member carries it, or a User approved their Access Request; may be linked to a Member.
 _Avoid_: Account, login, member
 
 **Admin**:
 A User who also manages who may sign in, the Members, Meal Slots, Shops and household settings.
 _Avoid_: Owner, superuser
+
+**Access Request**:
+A verified Google account's request to sign in, waiting for any User to approve or deny it; it expires after 14 days.
+_Avoid_: Invite, join request, signup, application
 
 ### Recipes
 
