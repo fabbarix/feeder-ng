@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -177,4 +178,58 @@ func TestSSEHandlerUnsubscribesWhenClientLeaves(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("Publish blocked after client left")
 	}
+}
+
+func TestCloseEndsOpenStreams(t *testing.T) {
+	b := events.NewBus()
+	srv := httptest.NewServer(b.Handler())
+	defer srv.Close()
+	defer srv.CloseClientConnections() // runs first: a red run must not hang on the open stream
+	resp, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	br := bufio.NewReader(resp.Body)
+	if _, err := br.ReadString('\n'); err != nil { // ": connected"
+		t.Fatal(err)
+	}
+	b.Close()
+	done := make(chan error, 1)
+	go func() { _, err := io.Copy(io.Discard, resp.Body); done <- err }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("stream should end cleanly, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream still open after Close")
+	}
+}
+
+func TestCloseIsIdempotentAndLaterSubscriptionsEndAtOnce(t *testing.T) {
+	b := events.NewBus()
+	ch, cancel := b.Subscribe()
+	b.Close()
+	b.Close()
+	select {
+	case _, open := <-ch:
+		if open {
+			t.Fatal("channel should be closed after Close")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("channel not closed by Close")
+	}
+	cancel() // must not panic after Close
+	late, cancelLate := b.Subscribe()
+	defer cancelLate()
+	select {
+	case _, open := <-late:
+		if open {
+			t.Fatal("unexpected event")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("subscription after Close should be closed")
+	}
+	b.Publish("x", 1) // must not panic
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyRequest, staleCacheUrls } from './cache'
+import { classifyRequest, staleCacheUrls, uniquePrecacheUrls } from './cache'
 
 const origin = 'https://feeder.example.test'
 const req = (path: string, over: { method?: string; mode?: string } = {}) => ({ url: origin + path, method: 'GET', mode: 'cors', ...over })
@@ -46,5 +46,22 @@ describe('staleCacheUrls', () => {
 
   it('removes nothing when the cache matches the manifest', () => {
     expect(staleCacheUrls([`${origin}/index.html`], ['index.html'], `${origin}/`)).toEqual([])
+  })
+})
+
+describe('uniquePrecacheUrls', () => {
+  const scope = 'https://feeder.test/'
+  it('drops duplicate URLs, keeping the first and the order', () => {
+    expect(uniquePrecacheUrls(['index.html', 'manifest.webmanifest', 'a.js', 'manifest.webmanifest'], scope)).toEqual([
+      'https://feeder.test/index.html',
+      'https://feeder.test/manifest.webmanifest',
+      'https://feeder.test/a.js',
+    ])
+  })
+  it('treats relative and absolute spellings of one URL as duplicates', () => {
+    expect(uniquePrecacheUrls(['a.js', '/a.js', 'https://feeder.test/a.js'], scope)).toEqual(['https://feeder.test/a.js'])
+  })
+  it('returns an empty list for an empty manifest', () => {
+    expect(uniquePrecacheUrls([], scope)).toEqual([])
   })
 })

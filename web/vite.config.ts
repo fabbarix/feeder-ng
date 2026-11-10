@@ -23,7 +23,8 @@ export default defineConfig({
         background_color: '#1d1b20',
       },
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2,webmanifest}'],
+        // not webmanifest: the PWA plugin adds the manifest to the precache itself; listing it twice breaks Cache.addAll
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
       },
     }),
   ],
