@@ -1,15 +1,25 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { CopyAgentPromptButton } from './CopyAgentPromptButton'
+import { ListGroup, ListRow } from '../../../ui'
+import { useAgentPrompt } from '../hooks/useAgentPrompt'
 import { importStrings as s } from '../strings'
+import { AgentPromptNotice } from './CopyAgentPromptButton'
 
-/** The Recipes list slot: Import (link to /recipes/import), Export (link to /recipes/export) and CopyAgentPromptButton. */
+/** The Recipe File actions as the rows of one list (in the More sheet): Import and Export link to their screens, Copy Agent Prompt copies. */
 export function RecipeFileActions(): ReactNode {
+  const { state, copy } = useAgentPrompt()
   return (
-    <div className="recipe-file-actions">
-      <Link className="button" data-variant="tonal" to="/recipes/import">{s.importAction}</Link>
-      <Link className="button" data-variant="tonal" to="/recipes/export">{s.exportAction}</Link>
-      <CopyAgentPromptButton />
-    </div>
+    <>
+      <ListGroup label={s.sourceTitle}>
+        <ListRow title={s.importAction} icon="import" href="/recipes/import" chevron />
+        <ListRow title={s.exportAction} icon="export" href="/recipes/export" chevron />
+        <ListRow
+          title={s.copyAgentPrompt}
+          icon="agentPrompt"
+          meta={s.agentPromptHelp}
+          onActivate={() => void copy()}
+        />
+      </ListGroup>
+      {state === 'copied' || state === 'failed' ? <AgentPromptNotice outcome={state} /> : null}
+    </>
   )
 }

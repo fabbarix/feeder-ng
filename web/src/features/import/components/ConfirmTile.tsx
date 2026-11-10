@@ -13,7 +13,7 @@ export interface ConfirmTileProps {
 /** A wide Tile with the Confirm button (importStrings.confirm; "Saving…" while busy). Disabled unless canConfirm; when open > 0 says importStrings.confirmOpen(open). */
 export function ConfirmTile({ canConfirm, busy, open, onConfirm }: ConfirmTileProps): ReactNode {
   return (
-    <Tile size="wide" as="section">
+    <Tile as="section" className="import-confirm">
       {open > 0 ? <p>{s.confirmOpen(open)}</p> : null}
       <Button size="lg" disabled={!canConfirm || busy} loading={busy} onClick={onConfirm}>
         {busy ? s.confirming : s.confirm}

@@ -142,6 +142,12 @@ export function parseNumber(text: string): number | null {
   return Number.isFinite(value) ? value : null
 }
 
+/** A number field's value for a draft string: null when blank or unparsable. */
+export const numberValue = (text: string): number | null => parseNumber(text)
+
+/** A number field's committed value back into draft text: '' for null (the household default or not given). */
+export const numberText = (n: number | null): string => (n === null ? '' : String(n))
+
 /** Parses an optional number: blank means 0 (the field is not given). */
 const numberOrZero = (text: string): number => parseNumber(text) ?? 0
 
@@ -197,7 +203,7 @@ const isWhole = (n: number) => Number.isInteger(n)
  *  lines.N.ingredient: ingredient_required; lines.N.quantity: quantity_invalid; lines.N.unit: unit_required;
  *  cooldownDays: cooldown_invalid; leftoverUseByDays: use_by_invalid;
  *  steps.N.text: step_text_required; steps.N.durationMinutes: passive_needs_duration;
- *  steps.N.leadTimeMinutes: advance_needs_lead_time.
+ *  steps.N.leadTimeMinutes: advance_needs_lead_time; steps.N.uses.M.ingredient|quantity|unit as the lines.
  */
 export function validateDraft(draft: RecipeDraft): DraftErrors {
   const errors: DraftErrors = {}
@@ -226,6 +232,13 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
     if (s.text.trim() === '') errors[`steps.${i}.text`] = 'step_text_required'
     if (s.kind === 'passive' && numberOrZero(s.durationMinutes) <= 0) errors[`steps.${i}.durationMinutes`] = 'passive_needs_duration'
     if (s.kind === 'advance' && numberOrZero(s.leadTimeMinutes) <= 0) errors[`steps.${i}.leadTimeMinutes`] = 'advance_needs_lead_time'
+    s.uses.forEach((u, j) => {
+      const base = `steps.${i}.uses.${j}`
+      if (u.ingredientId === null) errors[`${base}.ingredient`] = 'ingredient_required'
+      const q = parseNumber(u.quantity)
+      if (q === null || q <= 0) errors[`${base}.quantity`] = 'quantity_invalid'
+      if (u.unit.trim() === '') errors[`${base}.unit`] = 'unit_required'
+    })
   })
   return errors
 }

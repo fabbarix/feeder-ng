@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
-import { BottomSheet, Button } from '../../../ui'
+import { BottomSheet, Button, NumberField } from '../../../ui'
 import { parseToBase, promptQuestion, type UnitPrompt } from '../lib/unitPrompt'
+import { numberText } from '../lib/draft'
 import { recipeStrings } from '../strings'
 
 export interface UnitConversionPromptProps {
@@ -10,17 +11,17 @@ export interface UnitConversionPromptProps {
 }
 
 /**
- * The inline Unit Conversion prompt of the Recipe editor (a ui/BottomSheet): the question from
- * promptQuestion, one number field labelled "Amount in <base unit>", Save and Cancel. A value
- * parseToBase rejects shows strings.unitConversion.invalid and does not call onSave.
+ * The inline Unit Conversion prompt of the Recipe editor (a BottomSheet): the question from promptQuestion, one number
+ * field "Amount in <base unit>", Save and Cancel. A value parseToBase rejects shows strings.unitConversion.invalid and
+ * does not call onSave.
  */
 export function UnitConversionPrompt({ prompt, onSave, onCancel }: UnitConversionPromptProps): ReactNode {
-  const [text, setText] = useState('')
+  const [value, setValue] = useState<number | null>(null)
   const [invalid, setInvalid] = useState(false)
-  const label = `Amount in ${prompt.baseUnit}`
+  const c = recipeStrings.unitConversion
 
   const save = () => {
-    const toBase = parseToBase(text)
+    const toBase = parseToBase(numberText(value))
     if (toBase === null) {
       setInvalid(true)
       return
@@ -30,22 +31,22 @@ export function UnitConversionPrompt({ prompt, onSave, onCancel }: UnitConversio
   }
 
   return (
-    <BottomSheet open title={recipeStrings.unitConversion.title} onClose={onCancel}>
+    <BottomSheet open title={c.title} onClose={onCancel}>
       <p>{promptQuestion(prompt)}</p>
-      <label>
-        {label}
-        <input
-          inputMode="decimal"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          aria-invalid={invalid || undefined}
-        />
-      </label>
-      {invalid ? <p role="alert">{recipeStrings.unitConversion.invalid}</p> : null}
-      <div>
-        <Button onClick={save}>{recipeStrings.unitConversion.save}</Button>
-        <Button variant="ghost" onClick={onCancel}>
-          {recipeStrings.unitConversion.cancel}
+      <NumberField
+        label={c.amount(prompt.baseUnit)}
+        hideStepper
+        value={value}
+        error={invalid ? c.invalid : undefined}
+        onChange={(n) => {
+          setValue(n)
+          setInvalid(false)
+        }}
+      />
+      <div className="unit-prompt__actions">
+        <Button onClick={save}>{c.save}</Button>
+        <Button variant="tertiary" onClick={onCancel}>
+          {c.cancel}
         </Button>
       </div>
     </BottomSheet>

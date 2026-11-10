@@ -1,4 +1,6 @@
 // The time facts of a Recipe for tiles and the detail metrics (ui-fix-plan 5.8, 5.9). Plain TypeScript.
+import { recipeStrings } from '../strings'
+import { formatMinutes } from './time'
 
 export interface TimeSummary {
   /** "45 min", or null when the Recipe has no timeline Steps. */
@@ -9,6 +11,8 @@ export interface TimeSummary {
 
 /** Total time (critical path, Advance Steps excluded) and the Advance lead time, formatted with formatMinutes. */
 export function timeSummary(r: { totalMinutes: number; advanceMinutes: number }): TimeSummary {
-  void r
-  throw new Error('not implemented')
+  return {
+    total: r.totalMinutes > 0 ? formatMinutes(r.totalMinutes) : null,
+    ahead: r.advanceMinutes > 0 ? recipeStrings.advanceChip(formatMinutes(r.advanceMinutes), recipeStrings.advanceWord) : null,
+  }
 }

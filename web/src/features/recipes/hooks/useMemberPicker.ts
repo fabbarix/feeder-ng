@@ -1,4 +1,8 @@
+import { useMemo, useState } from 'react'
+import { useMe } from '../../../app/useMe'
 import type { MemberChoice } from '../../../ui/Select/options'
+import { useMembers } from '../../settings/hooks/useMembers'
+import { selectedMemberId, singleMember } from '../lib/memberPick'
 
 export interface UseMemberPicker {
   members: MemberChoice[]
@@ -16,5 +20,17 @@ export interface UseMemberPicker {
  * Recipe detail's preferences. The pick lives in component state; it starts unset.
  */
 export function useMemberPicker(): UseMemberPicker {
-  throw new Error('not implemented')
+  const settings = useMembers()
+  const me = useMe()
+  const [chosen, setChosen] = useState<number | undefined>(undefined)
+  const members = useMemo(() => settings.members.map((m) => ({ id: m.id, name: m.name })), [settings.members])
+  const refs = useMemo(() => settings.members.map((m) => ({ id: m.id, name: m.name, userId: m.userId })), [settings.members])
+  const selectedId = selectedMemberId(refs, me.data?.id ?? null, chosen)
+  return {
+    members,
+    selectedId,
+    memberId: chosen,
+    select: (ids) => setChosen(singleMember(selectedId, ids) ?? undefined),
+    isLoading: settings.isPending || me.isLoading,
+  }
 }

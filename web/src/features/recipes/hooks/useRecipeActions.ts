@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { ApiError } from '../../../lib/http'
+import { useConfirm } from '../../../ui'
+import { codeMessage, recipeStrings } from '../strings'
 import type { UseRecipe } from './useRecipe'
 
 export interface UseRecipeActions {
@@ -18,8 +22,46 @@ export function useRecipeActions(
   meta: { name: string; archived: boolean },
   onDeleted: () => void,
 ): UseRecipeActions {
-  void recipe
-  void meta
-  void onDeleted
-  throw new Error('not implemented')
+  const confirm = useConfirm()
+  const [error, setError] = useState<string | null>(null)
+
+  const fail = (err: unknown) => setError(err instanceof ApiError ? codeMessage(err.code) : recipeStrings.generic)
+
+  const archive = async () => {
+    setError(null)
+    try {
+      await recipe.setArchived(!meta.archived)
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  const remove = async () => {
+    setError(null)
+    const d = recipeStrings.deleteDialog
+    const choice = await confirm.choose({
+      title: d.title(meta.name),
+      body: d.body,
+      tone: 'danger',
+      confirmLabel: d.confirm,
+      alternateLabel: d.alternate,
+    })
+    if (choice === 'cancel') return
+    if (choice === 'alternate') {
+      try {
+        await recipe.setArchived(true)
+      } catch (err) {
+        fail(err)
+      }
+      return
+    }
+    try {
+      await recipe.remove()
+      onDeleted()
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  return { archive, remove, error }
 }

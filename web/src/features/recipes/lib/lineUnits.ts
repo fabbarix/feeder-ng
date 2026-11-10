@@ -59,8 +59,10 @@ export interface UnitChoicesOf {
 
 /** selectableUnits split into the three UnitSelect groups: globalUnits excludes the Base Unit and every conversion unit. */
 export function unitChoicesOf(ingredient: IngredientRef): UnitChoicesOf {
-  void ingredient
-  throw new Error('not implemented')
+  const conversions = ingredient.conversions.map((c) => ({ unit: c.unit, toBase: c.toBase }))
+  const taken = new Set<string>([ingredient.baseUnit, ...conversions.map((c) => norm(c.unit))])
+  const globalUnits = Object.keys(GLOBAL_UNITS[ingredient.baseUnit]).filter((u) => !taken.has(u))
+  return { baseUnit: ingredient.baseUnit, conversions, globalUnits }
 }
 
 /**
@@ -68,7 +70,6 @@ export function unitChoicesOf(ingredient: IngredientRef): UnitChoicesOf {
  * server will answer 422 unknown_unit and the Unit Conversion prompt follows. False for blank units and while the Ingredient is unknown.
  */
 export function needsConversion(unit: string, ingredient: IngredientRef | undefined): boolean {
-  void unit
-  void ingredient
-  throw new Error('not implemented')
+  if (!ingredient || norm(unit) === '') return false
+  return !isKnownUnit(unit, ingredient)
 }

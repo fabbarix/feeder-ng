@@ -1,5 +1,5 @@
-import { useId, useState, type ReactNode } from 'react'
-import { Button, Chip, Tile } from '../../../ui'
+import { useState, type ReactNode } from 'react'
+import { Button, Chip, Tile, TextField } from '../../../ui'
 import { ingredientOptions } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { BaseUnit, IngredientMatch, IngredientStatus } from '../types'
@@ -18,6 +18,15 @@ const statusLabel: Record<IngredientStatus, string> = {
   conflict: s.statusConflict,
 }
 
+/** The colour of each status Chip: a match is a success, a conflict a spoil, an undefined Ingredient a danger. */
+const statusColour: Record<IngredientStatus, 'success' | 'pinned' | 'leftover' | 'danger' | 'spoil'> = {
+  exact: 'success',
+  suggested: 'pinned',
+  new: 'leftover',
+  undefined: 'danger',
+  conflict: 'spoil',
+}
+
 const baseUnits: BaseUnit[] = ['g', 'ml', 'piece']
 
 /**
@@ -33,14 +42,16 @@ export function IngredientMatchTile({ match, onUseExisting, onCreate }: Ingredie
   return (
     <Tile as="section" aria-label={match.name}>
       <h2>{match.name}</h2>
-      <Chip>{statusLabel[match.status]}</Chip>
+      <Chip kind="status" status={statusColour[match.status]}>
+        {statusLabel[match.status]}
+      </Chip>
       {match.status === 'exact' && match.match ? <p>{match.match.name}</p> : null}
       {match.status === 'undefined' ? <BaseUnitChoices onCreate={onCreate} /> : null}
       {match.status === 'conflict' && match.conflict ? <p>{s.conflictText(match.conflict.file, match.conflict.existing)}</p> : null}
       {match.status !== 'conflict' ? <Options match={match} onUseExisting={onUseExisting} onCreate={onCreate} /> : null}
       {match.status === 'conflict' && match.match ? (
         <>
-          <Button variant="tonal" onClick={() => onUseExisting(match.match!.id)}>
+          <Button variant="secondary" onClick={() => onUseExisting(match.match!.id)}>
             {s.useExisting(match.match.name)}
           </Button>
           <NewName onCreate={onCreate} />
@@ -52,9 +63,9 @@ export function IngredientMatchTile({ match, onUseExisting, onCreate }: Ingredie
 
 function BaseUnitChoices({ onCreate }: { onCreate: IngredientMatchTileProps['onCreate'] }): ReactNode {
   return (
-    <div>
+    <div className="import-chips">
       {baseUnits.map((u) => (
-        <Chip key={u} onClick={() => onCreate({ baseUnit: u })}>
+        <Chip key={u} kind="filter" onClick={() => onCreate({ baseUnit: u })}>
           {u}
         </Chip>
       ))}
@@ -67,10 +78,11 @@ function Options({ match, onUseExisting, onCreate }: IngredientMatchTileProps): 
   // An exact match is already named above, so only suggestions are offered as choices.
   const choices = ingredientOptions(match).filter((o) => o.kind === 'suggestion')
   return (
-    <div>
+    <div className="import-chips">
       {choices.map((o) => (
         <Chip
           key={`${o.kind}-${o.id}`}
+          kind="filter"
           selected={match.effective?.action === 'use' && match.effective.ingredientId === o.id}
           onClick={() => onUseExisting(o.id!)}
         >
@@ -78,7 +90,7 @@ function Options({ match, onUseExisting, onCreate }: IngredientMatchTileProps): 
         </Chip>
       ))}
       {match.status === 'undefined' ? null : (
-        <Chip selected={match.effective?.action === 'create'} onClick={() => onCreate()}>
+        <Chip kind="filter" selected={match.effective?.action === 'create'} onClick={() => onCreate()}>
           {s.createNew}
         </Chip>
       )}
@@ -89,13 +101,11 @@ function Options({ match, onUseExisting, onCreate }: IngredientMatchTileProps): 
 /** A name field and "Create under this name", disabled while the name is blank. */
 function NewName({ onCreate }: { onCreate: IngredientMatchTileProps['onCreate'] }): ReactNode {
   const [name, setName] = useState('')
-  const id = useId()
   const trimmed = name.trim()
   return (
     <>
-      <label htmlFor={id}>{s.newNameLabel}</label>
-      <input id={id} type="text" value={name} onChange={(e) => setName(e.target.value)} />
-      <Button variant="tonal" disabled={trimmed === ''} onClick={() => onCreate({ name: trimmed })}>
+      <TextField label={s.newNameLabel} value={name} onChange={setName} />
+      <Button variant="secondary" disabled={trimmed === ''} onClick={() => onCreate({ name: trimmed })}>
         {s.createUnder}
       </Button>
     </>

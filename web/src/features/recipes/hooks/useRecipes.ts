@@ -10,6 +10,8 @@ export interface UseRecipes {
   isEmpty: boolean
   isLoading: boolean
   error: Error | null
+  /** Refetches the list (the error state's retry). */
+  refetch: () => void
 }
 
 /** react-query ['recipes', filter] and ['tags']. Live: the SPA invalidates on SSE topic `recipes`. */
@@ -24,5 +26,6 @@ export function useRecipes(filter: RecipeFilter): UseRecipes {
     isEmpty: list.isSuccess && list.data.length === 0 && !filtered,
     isLoading: list.isLoading,
     error: list.error,
+    refetch: () => void list.refetch(),
   }
 }

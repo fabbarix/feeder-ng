@@ -1,34 +1,49 @@
 import type { ReactNode } from 'react'
-import { formatMinutes } from '../lib/time'
-import { recipeStrings } from '../strings'
+import { Icon, RecipeThumb } from '../../../ui'
+import type { UnitSystem } from '../../../lib/units'
+import { stepMeta, usesText } from '../lib/stepText'
 import type { IngredientRef, RecipeStep, StepKind } from '../types'
 
 export interface StepsListProps {
   steps: RecipeStep[]
   /** Ingredients by id, to name what a Step uses. */
   refs?: ReadonlyMap<number, IngredientRef>
+  system?: UnitSystem
 }
 
-const kindLabel: Record<StepKind, string> = {
-  active: recipeStrings.steps.active,
-  passive: recipeStrings.steps.passive,
-  advance: recipeStrings.steps.advance,
+const stepIcon: Record<StepKind, 'activeStep' | 'passiveStep' | 'advanceStep'> = {
+  active: 'activeStep',
+  passive: 'passiveStep',
+  advance: 'advanceStep',
 }
 
-/** The Steps of a Recipe, numbered as their `after` references count them, with timing where it applies. */
-export function StepsList({ steps }: StepsListProps): ReactNode {
+/** The Steps of a Recipe as numbered rows: a soft number badge, the text, the kind and timing in a meta line, what it uses, its photo. */
+export function StepsList({ steps, refs = new Map(), system = 'metric' }: StepsListProps): ReactNode {
   return (
-    <ol>
-      {steps.map((s, i) => (
-        <li key={i}>
-          <span>{s.text}</span>{' '}
-          <span>
-            ({kindLabel[s.kind]}
-            {s.kind === 'advance' ? `, ${formatMinutes(s.leadTimeMinutes)} before` : s.durationMinutes > 0 ? `, ${formatMinutes(s.durationMinutes)}` : ''})
-          </span>
-          {s.imageUrl ? <img src={s.imageUrl} alt="" className="recipe-step-photo" loading="lazy" /> : null}
-        </li>
-      ))}
+    <ol className="steps-list">
+      {steps.map((s, i) => {
+        const uses = usesText(s.uses, refs, system)
+        return (
+          <li key={i} className="steps-list__item">
+            <span className="steps-list__number" data-step-number="">
+              {i + 1}
+            </span>
+            <div className="steps-list__body">
+              <p className="steps-list__text">{s.text}</p>
+              <p className="steps-list__meta" data-kind={s.kind}>
+                <Icon name={stepIcon[s.kind]} size={14} />
+                {stepMeta(s)}
+              </p>
+              {uses ? <p className="steps-list__uses">{uses}</p> : null}
+              {s.imageUrl ? (
+                <div className="steps-list__photo">
+                  <RecipeThumb name="" photoUrl={s.imageUrl} size={72} />
+                </div>
+              ) : null}
+            </div>
+          </li>
+        )
+      })}
     </ol>
   )
 }

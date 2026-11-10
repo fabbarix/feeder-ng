@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { Chip, Tile } from '../../../ui'
-import { formatMinutes } from '../lib/time'
-import { tileArt } from '../lib/tileArt'
+import { Chip, Icon, RecipeThumb, Tile } from '../../../ui'
+import { timeSummary } from '../lib/timeSummary'
 import { recipeStrings } from '../strings'
 import type { RecipeSummary } from '../types'
 
@@ -11,31 +10,38 @@ export interface RecipeTileProps {
 }
 
 /**
- * A Bento Tile (ui/Tile, Chip) for the Recipes list. Photo (`imageUrl`) or the generated illustrated
- * tile from lib/tileArt (Tag icon + initial on an accent tone). Shows the name, the total time
- * (formatMinutes; "No Steps" when 0), an "+4 h advance" Chip for Advance Steps and a Ready Meal /
- * Archived Chip. The whole tile is one button named after the Recipe.
+ * A `media` Tile for the Recipes list: the photo or the generated RecipeThumb, the name (2-line clamp) and a separate
+ * meta row with the total time ("No Steps" when none) and the "+4 h ahead" Chip. The whole tile is one link-like
+ * button named after the Recipe. Ready Meal and Archived are tag Chips.
  */
 export function RecipeTile({ recipe, onOpen }: RecipeTileProps): ReactNode {
-  const art = tileArt(recipe.name, recipe.tags)
+  const time = timeSummary(recipe)
+  const thumb = <RecipeThumb name={recipe.name} photoUrl={recipe.imageUrl || undefined} tags={recipe.tags} size="hero" />
   return (
-    <Tile size="md" tone={recipe.archived ? 'neutral' : 'accent'} onClick={() => onOpen(recipe.id)} className="recipe-tile">
-      {recipe.imageUrl ? (
-        <img src={recipe.imageUrl} alt="" className="recipe-tile__photo" loading="lazy" />
-      ) : (
-        <div className="recipe-tile__art" data-testid="recipe-art" data-icon={art.icon} data-tone={art.tone}>
-          <span aria-hidden="true">{art.initial}</span>
+    <Tile
+      variant="media"
+      className="recipe-tile"
+      media={thumb}
+      stretched={{ label: recipe.name, onActivate: () => onOpen(recipe.id) }}
+    >
+      <p className="recipe-tile__name">{recipe.name}</p>
+      <div className="recipe-tile__meta">
+        <span className="recipe-tile__time">
+          <Icon name="duration" size={14} />
+          {time.total ?? recipeStrings.noSteps}
+        </span>
+        {time.ahead ? (
+          <Chip kind="status" status="leftover" icon="advanceStep">
+            {time.ahead}
+          </Chip>
+        ) : null}
+      </div>
+      {recipe.readyMeal || recipe.archived ? (
+        <div className="recipe-tile__tags">
+          {recipe.readyMeal ? <Chip kind="tag">{recipeStrings.readyMeal}</Chip> : null}
+          {recipe.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
         </div>
-      )}
-      <span className="recipe-tile__name">{recipe.name}</span>
-      <span className="recipe-tile__time">
-        {recipe.totalMinutes > 0 ? <span>{formatMinutes(recipe.totalMinutes)}</span> : <span>{recipeStrings.noSteps}</span>}
-      </span>
-      {recipe.advanceMinutes > 0 ? (
-        <Chip tone="leftover">{recipeStrings.advanceChip(formatMinutes(recipe.advanceMinutes), recipeStrings.advanceWord)}</Chip>
       ) : null}
-      {recipe.readyMeal ? <Chip>{recipeStrings.readyMeal}</Chip> : null}
-      {recipe.archived ? <Chip>{recipeStrings.archived}</Chip> : null}
     </Tile>
   )
 }

@@ -12,10 +12,9 @@ export interface MemberRef {
  * (the API then defaults to the linked Member itself, so "no pick" is sent as undefined).
  */
 export function selectedMemberId(members: MemberRef[], meUserId: number | null, chosen: number | undefined): number | null {
-  void members
-  void meUserId
-  void chosen
-  throw new Error('not implemented')
+  if (chosen !== undefined) return chosen
+  if (meUserId === null) return null
+  return members.find((m) => m.userId === meUserId)?.id ?? null
 }
 
 /**
@@ -24,7 +23,7 @@ export function selectedMemberId(members: MemberRef[], meUserId: number | null, 
  * (deselecting the only value keeps it), or null when the list is empty and there was no previous value.
  */
 export function singleMember(previous: number | null, next: number[]): number | null {
-  void previous
-  void next
-  throw new Error('not implemented')
+  const added = next.find((id) => id !== previous)
+  if (added !== undefined) return added
+  return previous
 }
