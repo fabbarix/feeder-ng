@@ -15,10 +15,10 @@ const defaultWeight = (size: IconSize): IconWeight => (size <= 16 ? 'bold' : 're
 
 /**
  * Renders a registered Phosphor icon (docs/design/ui-fix-plan.md 4.1). Colour is currentColor.
- * Decorative unless `label` is given, in which case it is announced as an image.
+ * Decorative unless a non-empty `label` is given (`label=""` counts as decorative), in which case it is announced as an image.
  */
 export function Icon({ name, size = 20, weight, label }: IconProps) {
   const Glyph = icons[name]
-  const a11y = label === undefined ? { 'aria-hidden': true as const } : { role: 'img' as const, 'aria-label': label }
+  const a11y = label === undefined || label === '' ? { 'aria-hidden': true as const } : { role: 'img' as const, 'aria-label': label }
   return <Glyph size={size} weight={weight ?? defaultWeight(size)} color="currentColor" {...a11y} />
 }

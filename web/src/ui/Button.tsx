@@ -1,13 +1,25 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes } from 'react'
+import type { IconName } from './icons'
+import type { LegacyButtonVariant } from './lib/legacy'
+
+export type ButtonVariant = 'primary' | 'secondary' | 'accent-secondary' | 'tertiary' | 'danger' | 'danger-tertiary'
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'tonal' | 'ghost'
-  size?: 'md' | 'lg'
+  /** `tonal` and `ghost` are deprecated aliases of `secondary` and `tertiary`. */
+  variant?: ButtonVariant | LegacyButtonVariant
+  size?: ButtonSize
   loading?: boolean
-  icon?: ReactNode
+  icon?: IconName
 }
 
-/** A button. type="button" unless told otherwise, so it never submits a form by accident. */
+/** Attribute that scopes the single-primary dev warning; Tile, BottomSheet and Dialog set it. */
+export const PRIMARY_SCOPE_ATTR = 'data-primary-scope'
+
+/**
+ * STUB (WP3 designer, existing implementation retained so unmigrated screens keep working).
+ * Spec: docs/dev/design/wp3-primitives-a.md.
+ */
 export function Button({
   variant = 'primary',
   size = 'md',

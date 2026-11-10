@@ -69,4 +69,12 @@ describe('Icon aria', () => {
     expect(screen.getByRole('img', { name: 'Today' })).toBe(container.querySelector('svg'))
     expect(container.querySelector('svg')).not.toHaveAttribute('aria-hidden')
   })
+
+  it('treats an empty label as decorative', () => {
+    const { container } = render(<Icon name="today" label="" />)
+    const svg = container.querySelector('svg')
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    expect(svg).not.toHaveAttribute('role')
+    expect(svg).not.toHaveAttribute('aria-label')
+  })
 })
