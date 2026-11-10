@@ -47,7 +47,6 @@ export const strings = {
   deleteBarcode: 'Delete',
   actionFailed: 'That did not work. Try again.',
   notFoundTitle: 'Shop not found',
-  backToShops: 'Back to Shops',
   confirmDeleteShop: 'Yes, delete Shop',
   rulePositions: (item: string, value: string) => `item digits ${item} · value digits ${value}`,
   ruleWeight: (unit: string, dp: number) => `weight in ${unit}, ${dp} ${dp === 1 ? 'decimal' : 'decimals'}`,

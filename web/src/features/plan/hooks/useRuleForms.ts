@@ -67,7 +67,7 @@ export interface VarietyRuleForm {
 
 export function useVarietyRuleForm(onSave: (rule: VarietyRule) => void): VarietyRuleForm {
   const [tag, setTag] = useState('')
-  const [maxPerWeek, setMaxPerWeek] = useState<number | null>(null)
+  const [maxPerWeek, setMaxPerWeek] = useState<number | null>(1)
   const [notConsecutiveDays, setNotConsecutiveDays] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,7 +80,7 @@ export function useVarietyRuleForm(onSave: (rule: VarietyRule) => void): Variety
     setError(null)
     onSave(res.rule)
     setTag('')
-    setMaxPerWeek(null)
+    setMaxPerWeek(1)
     setNotConsecutiveDays(false)
   }
   return { tag, maxPerWeek, notConsecutiveDays, setTag, setMaxPerWeek, setNotConsecutiveDays, error, submit }

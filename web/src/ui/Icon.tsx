@@ -8,6 +8,7 @@ export interface IconProps {
   size?: IconSize
   weight?: IconWeight
   label?: string
+  className?: string
 }
 
 /** Weight follows size: dense chips and meta (14/16 px) read bold, larger glyphs regular. */
@@ -17,8 +18,8 @@ const defaultWeight = (size: IconSize): IconWeight => (size <= 16 ? 'bold' : 're
  * Renders a registered Phosphor icon (docs/design/ui-fix-plan.md 4.1). Colour is currentColor.
  * Decorative unless a non-empty `label` is given (`label=""` counts as decorative), in which case it is announced as an image.
  */
-export function Icon({ name, size = 20, weight, label }: IconProps) {
+export function Icon({ name, size = 20, weight, label, className }: IconProps) {
   const Glyph = icons[name]
   const a11y = label === undefined || label === '' ? { 'aria-hidden': true as const } : { role: 'img' as const, 'aria-label': label }
-  return <Glyph size={size} weight={weight ?? defaultWeight(size)} color="currentColor" {...a11y} />
+  return <Glyph size={size} weight={weight ?? defaultWeight(size)} color="currentColor" className={className} {...a11y} />
 }

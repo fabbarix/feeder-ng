@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
@@ -121,10 +122,28 @@ func (a *api) linkUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m, err := a.st.LinkUser(r.Context(), id, in.UserID)
+	if errors.Is(err, household.ErrUserLinked) {
+		a.writeLinkedErr(w, r, in.UserID)
+		return
+	}
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	a.changed("members")
 	httpx.WriteJSON(w, http.StatusOK, memberOut(m))
+}
+
+// writeLinkedErr answers 409 user_already_linked, naming the Member who already has the User when it can be found.
+func (a *api) writeLinkedErr(w http.ResponseWriter, r *http.Request, userID *int64) {
+	msg := "That User is already linked to another Member"
+	if members, err := a.st.Members(r.Context()); err == nil && userID != nil {
+		for _, m := range members {
+			if m.UserID != nil && *m.UserID == *userID {
+				msg = "That User is already linked to " + m.Name
+				break
+			}
+		}
+	}
+	httpx.WriteError(w, http.StatusConflict, "user_already_linked", msg)
 }

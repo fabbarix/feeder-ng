@@ -1,0 +1,99 @@
+/* Breadcrumbs: one line, muted meta type, 44 px link targets. Phones collapse to "‹ Parent" (rest visually hidden). Tokens only. */
+.breadcrumbs {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.breadcrumbs__list {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+  gap: var(--space-1);
+}
+
+.breadcrumbs__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* Ancestors shrink and truncate; the current crumb already does. */
+.breadcrumbs__item:not(:last-child) {
+  flex: 0 1 auto;
+}
+
+.breadcrumbs__link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 16rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.breadcrumbs__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumbs__link:hover,
+.breadcrumbs__link:focus-visible {
+  text-decoration: underline;
+  color: var(--color-accent-text);
+}
+
+.breadcrumbs__link:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-button);
+}
+
+.breadcrumbs__current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-on-surface);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.breadcrumbs__sep {
+  flex: none;
+}
+
+.breadcrumbs__back {
+  display: none;
+  flex: none;
+  transform: scaleX(-1);
+}
+
+@media (max-width: 767px) {
+  .breadcrumbs__item:not([data-parent='true']) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .breadcrumbs__sep {
+    display: none;
+  }
+
+  .breadcrumbs__back {
+    display: inline-block;
+  }
+
+  .breadcrumbs__link {
+    max-inline-size: 100%;
+  }
+}

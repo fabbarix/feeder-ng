@@ -189,7 +189,7 @@ func TestSPAServesFilesAndFallsBackToIndex(t *testing.T) {
 	if rec := h.get("/assets/app.js", ""); rec.Code != 200 || rec.Body.String() != "console.log('app')" {
 		t.Fatalf("asset: %d %q", rec.Code, rec.Body)
 	}
-	for _, p := range []string{"/", "/plan", "/recipes/42/edit", "/assets/missing.js"} {
+	for _, p := range []string{"/", "/plan", "/recipes/42/edit"} {
 		rec := h.get(p, "")
 		if rec.Code != 200 || !strings.Contains(rec.Body.String(), "SPA index") {
 			t.Errorf("%s: %d %q, want index.html fallback", p, rec.Code, rec.Body)
@@ -303,5 +303,60 @@ func TestRobotsTxtIsServedNotTheSPAIndex(t *testing.T) {
 	body := rec.Body.String()
 	if strings.Contains(body, "SPA index") || !strings.Contains(body, "User-agent: *") || !strings.Contains(body, "Disallow: /") {
 		t.Errorf("body = %q", body)
+	}
+}
+
+// R11a N10: only SPA client routes (no file extension) fall back to index.html. A missing file (a favicon, a stale hashed
+// asset) or anything under /.well-known/ is a real 404, never the app shell with 200.
+func TestMissingFilesAndWellKnownAre404NotTheSPAIndex(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	for _, p := range []string{
+		"/favicon.ico", "/assets/index-STALE.js", "/assets/old.css", "/apple-touch-icon.png", "/sitemap.xml",
+		"/.well-known/security.txt", "/.well-known/assetlinks.json", "/.well-known/anything-at-all", "/.well-known/",
+	} {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			req := httptest.NewRequest(method, p, nil)
+			rec := httptest.NewRecorder()
+			h.app.Handler.ServeHTTP(rec, req)
+			if rec.Code != 404 {
+				t.Errorf("%s %s: status = %d, want 404", method, p, rec.Code)
+			}
+			if strings.Contains(rec.Body.String(), "SPA index") {
+				t.Errorf("%s %s: body is the SPA index", method, p)
+			}
+		}
+	}
+}
+
+func TestClientRoutesWithoutAnExtensionStillGetTheSPAIndex(t *testing.T) {
+	h := build(t, spaFS, app.NewRegistry())
+	for _, p := range []string{"/", "/plan", "/settings/planning", "/recipes/42", "/shop"} {
+		rec := h.get(p, "")
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), "SPA index") {
+			t.Errorf("%s: %d %q, want the index.html fallback", p, rec.Code, rec.Body)
+		}
+	}
+}
+
+// R11a N10: the brand favicon is a real file of the built frontend (web/public/favicon.svg), served with its own type.
+func TestFaviconSVGIsServedAsAnImage(t *testing.T) {
+	fs := fstest.MapFS{
+		"index.html":  {Data: []byte("<html>SPA index</html>")},
+		"favicon.svg": {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>`)},
+	}
+	h := build(t, fs, app.NewRegistry())
+	rec := h.get("/favicon.svg", "")
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "image/svg+xml") {
+		t.Errorf("Content-Type = %q, want image/svg+xml", ct)
+	}
+	if strings.Contains(rec.Body.String(), "SPA index") {
+		t.Errorf("body is the SPA index")
+	}
+	// the decision: SVG only; there is no /favicon.ico, so it is a plain 404
+	if rec := h.get("/favicon.ico", ""); rec.Code != 404 {
+		t.Errorf("/favicon.ico status = %d, want 404", rec.Code)
 	}
 }

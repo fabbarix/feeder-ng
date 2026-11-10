@@ -115,10 +115,10 @@ describe('bottom bar (phone)', () => {
 })
 
 describe('side rail (tablet landscape / desktop)', () => {
-  it('puts Scan first as the accent button, then Today, Plan, Shop, Recipes', () => {
+  it('lists the same order as the bottom bar (R11a N8): Today first, then Plan, Scan (accent), Shop, Recipes', () => {
     setup()
     const rail = sideRail()
-    expect(labels(rail)).toEqual(['Scan', 'Today', 'Plan', 'Shop', 'Recipes'])
+    expect(labels(rail)).toEqual(['Today', 'Plan', 'Scan', 'Shop', 'Recipes'])
     expect(within(rail).getByRole('link', { name: 'Scan' })).toHaveAttribute('data-accent', 'true')
   })
 

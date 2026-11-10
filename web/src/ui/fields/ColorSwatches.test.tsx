@@ -71,4 +71,14 @@ describe('ColorSwatches', () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.getByRole('radio', { name: 'Custom' })).toHaveFocus()
   })
+
+  // R11a N8: the 7-character "Custom" overline did not fit the 40 px circle. The circle shows the Phosphor palette icon; the
+  // word stays as the accessible name.
+  it('the Custom swatch shows an icon, not text that could overflow its circle', () => {
+    render(<ColorSwatches label="Accent" swatches={swatches} value="#2a7f62" allowCustom onChange={() => {}} />)
+    const custom = screen.getByRole('radio', { name: 'Custom' })
+    expect(custom.querySelector('svg')).not.toBeNull()
+    expect(custom.textContent).toBe('')
+    expect(custom.querySelector('.colour-swatch__text')).toBeNull()
+  })
 })

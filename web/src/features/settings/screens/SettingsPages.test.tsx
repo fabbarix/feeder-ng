@@ -1,4 +1,4 @@
-// The Settings sub-pages (5.14): each page is one concern with a PageHeader, a "Back to Settings" link and the
+// The Settings sub-pages (5.14): each page is one concern with a PageHeader, Settings breadcrumbs and the
 // scenarios that used to live on the single long /settings page. All controls are ui primitives.
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -34,16 +34,17 @@ afterEach(() => {
 
 describe('every Settings sub-page', () => {
   it.each([
-    ['Household', HouseholdPage],
-    ['Members', MembersPage],
-    ['Meal Slots', MealSlotsPage],
-    ['Allowlist', AllowlistPage],
-    ['Your preferences', PreferencesPage],
-  ] as const)('%s has its own h1 and a way back to the Settings index', async (title, Page) => {
+    ['Household', HouseholdPage, '/settings/household'],
+    ['Members', MembersPage, '/settings/members'],
+    ['Meal Slots', MealSlotsPage, '/settings/meal-slots'],
+    ['Allowlist', AllowlistPage, '/settings/allowlist'],
+    ['Your preferences', PreferencesPage, '/settings/preferences'],
+  ] as const)('%s has its own h1 and a Settings breadcrumb to the index', async (title, Page, path) => {
     routes(ADMIN_ME)
-    renderWithProviders(<Page />)
+    renderWithProviders(<Page />, path)
     expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to Settings' })).toHaveAttribute('href', '/settings')
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+    expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
     // other concerns are not on this page
     for (const other of ['Household', 'Members', 'Meal Slots', 'Allowlist', 'Your preferences'].filter((t) => t !== title)) {
       expect(screen.queryByRole('heading', { level: 1, name: other })).toBeNull()
@@ -132,7 +133,7 @@ describe('MembersPage', () => {
     await userEvent.click(within(screen.getByRole('dialog', { name: 'Edit Member' })).getByRole('combobox', { name: /Linked User/ }))
     const names = openOptionNames()
     expect(names).not.toContain('Cook')
-    expect(names).toContain('Admin')
+    expect(names).toContain('Admin (you)') // ADMIN_ME is the signed-in User
   })
 
   it('is read-only for a plain User: no add, rows are not buttons', async () => {

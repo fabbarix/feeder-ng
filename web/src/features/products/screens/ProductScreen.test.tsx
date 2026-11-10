@@ -75,7 +75,7 @@ describe('ProductScreen archive (R8)', () => {
     const api = setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Archive Product' }))
     const dialog = await screen.findByRole('dialog', { name: 'Archive Passata 700 g?' })
-    expect(within(dialog).getByText(/left out of lists and Scans/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/left out of lists and Scans/)).toBeInTheDocument()
     expect(within(dialog).getByText(/history stays/i)).toBeInTheDocument()
     expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(0)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))

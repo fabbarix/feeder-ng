@@ -15,6 +15,26 @@ export const MEMBER_COLOURS: ReadonlyArray<{ value: string; name: string }> = [
   { value: '#475569', name: 'Slate' },
 ]
 
+/** The Avatar emoji on offer (one code point each, so well within the API's 4-character limit). */
+export const MEMBER_AVATARS: ReadonlyArray<{ value: string; name: string }> = [
+  { value: '🦊', name: 'Fox' },
+  { value: '🐻', name: 'Bear' },
+  { value: '🐼', name: 'Panda' },
+  { value: '🦁', name: 'Lion' },
+  { value: '🐸', name: 'Frog' },
+  { value: '🐙', name: 'Octopus' },
+  { value: '🦉', name: 'Owl' },
+  { value: '🐢', name: 'Turtle' },
+  { value: '🐰', name: 'Rabbit' },
+  { value: '🐶', name: 'Dog' },
+  { value: '🐱', name: 'Cat' },
+  { value: '🐝', name: 'Bee' },
+  { value: '🌻', name: 'Sunflower' },
+  { value: '🍕', name: 'Pizza' },
+  { value: '🥕', name: 'Carrot' },
+  { value: '🍓', name: 'Strawberry' },
+]
+
 /** The editor's starting state: an existing Member, or a new one at Portion Factor 1. */
 export function memberDraft(member?: Member): MemberInput {
   return member
@@ -41,4 +61,16 @@ export function memberFromDraft(draft: MemberInput): MemberInput {
 export function availableUsers<U extends { id: number }>(users: U[], members: Pick<Member, 'id' | 'userId'>[], editing?: Pick<Member, 'id'>): U[] {
   const linked = new Set(members.filter((m) => m.id !== editing?.id && m.userId !== null).map((m) => m.userId))
   return users.filter((u) => !linked.has(u.id))
+}
+
+/** Whether "This is me" is offered: the signed-in User is known, no Member other than `editing` is linked to them,
+ *  and the draft is not already linked to them. */
+export function canLinkMe(
+  members: Pick<Member, 'id' | 'userId'>[],
+  editing: Pick<Member, 'id'> | undefined,
+  userId: number | null,
+  currentUserId: number | undefined,
+): boolean {
+  if (currentUserId === undefined || userId === currentUserId) return false
+  return !members.some((m) => m.id !== editing?.id && m.userId === currentUserId)
 }
