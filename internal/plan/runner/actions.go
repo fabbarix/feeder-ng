@@ -427,6 +427,9 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		if m.State != plan.StatePlanned {
 			return nil, ErrAlreadyResolved
 		}
+		if !plan.MayResolve(key.Date, in.today) {
+			return nil, plan.ErrFutureMeal
+		}
 		def, ok := in.slotDef(key)
 		if !ok {
 			return nil, ErrUnknownSlot
@@ -512,7 +515,12 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	if err != nil {
 		return CookedResult{}, err
 	}
-	return CookedResult{Meal: m, Leftover: leftover, Warnings: warnings}, nil
+	// After the replan: a Leftover that shrank may have lost its dependants.
+	later, err := r.d.Store.Meals(ctx, key.Date, "")
+	if err != nil {
+		return CookedResult{}, err
+	}
+	return CookedResult{Meal: m, Leftover: leftover, Warnings: warnings, PlannedFor: plan.LeftoverPlannedFor(key, later)}, nil
 }
 
 // eps absorbs float noise in portion arithmetic.
@@ -555,6 +563,9 @@ func (r *Runner) NotCooked(ctx context.Context, key plan.Key) (plan.Meal, error)
 		}
 		if m.State != plan.StatePlanned {
 			return nil, ErrAlreadyResolved
+		}
+		if !plan.MayResolve(key.Date, in.today) {
+			return nil, plan.ErrFutureMeal
 		}
 		if err := st.MarkResolved(ctx, key, plan.StateSkipped); err != nil {
 			return nil, mapStoreErr(err)

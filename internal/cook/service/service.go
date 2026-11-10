@@ -86,6 +86,18 @@ type CookView struct {
 	Today string
 }
 
+// today is the household date of now (the Household's zone, UTC when unset).
+func (s *Service) today(ctx context.Context, now time.Time) (string, error) {
+	zone, err := s.cfg.Household.Zone(ctx)
+	if err != nil {
+		return "", err
+	}
+	if zone == nil {
+		zone = time.UTC
+	}
+	return now.In(zone).Format("2006-01-02"), nil
+}
+
 // MealView is Cook Mode for a Planned Meal (ErrNotFound; ErrNotCookable unless state is planned).
 // A Planned Meal served from a Leftover (Batches 0) has nothing to cook and is not cookable either.
 func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (CookView, error) {
@@ -113,7 +125,11 @@ func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (
 	if err != nil {
 		return CookView{}, err
 	}
-	return CookView{View: view, Meal: &meal, Timers: timers, Now: now}, nil
+	today, err := s.today(ctx, now)
+	if err != nil {
+		return CookView{}, err
+	}
+	return CookView{View: view, Meal: &meal, Timers: timers, Now: now, Today: today}, nil
 }
 
 // RecipeView is Cook Mode for a Recipe with a chosen Batch count (ErrNotFound;
@@ -136,7 +152,11 @@ func (s *Service) RecipeView(ctx context.Context, recipeID int64, batches float6
 	if err != nil {
 		return CookView{}, err
 	}
-	return CookView{View: view, Timers: timers, Now: now}, nil
+	today, err := s.today(ctx, now)
+	if err != nil {
+		return CookView{}, err
+	}
+	return CookView{View: view, Timers: timers, Now: now, Today: today}, nil
 }
 
 // Mark is the result of SetMark.

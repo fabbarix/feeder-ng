@@ -87,6 +87,8 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code = http.StatusConflict, "already_resolved"
 	case errors.Is(err, runner.ErrNotSwappable):
 		status, code = http.StatusConflict, "not_swappable"
+	case errors.Is(err, plan.ErrFutureMeal):
+		status, code = http.StatusConflict, "future_meal"
 	case errors.Is(err, runner.ErrUnknownRecipe):
 		status, code = http.StatusUnprocessableEntity, "unknown_recipe"
 	case errors.Is(err, runner.ErrArchivedRecipe):
@@ -125,6 +127,8 @@ func messageFor(code string) string {
 		return "The Planned Meal is already Cooked or skipped"
 	case "not_swappable":
 		return "A Cooked or skipped Planned Meal cannot be swapped"
+	case "future_meal":
+		return "This meal is not due yet"
 	case "unknown_recipe":
 		return "No such Recipe"
 	case "recipe_archived":

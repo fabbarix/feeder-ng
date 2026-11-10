@@ -204,6 +204,17 @@ func (s *Store) SetPinned(ctx context.Context, key plan.Key, pinned bool) error 
 		v, s.now(), key.Date, key.MealSlotID)
 }
 
+// SetWhy replaces only the why chips of the Planned Meal at key (a resolved meal keeps its resolution instant);
+// ErrNotFound if the slot is empty.
+func (s *Store) SetWhy(ctx context.Context, key plan.Key, why []plan.Why) error {
+	enc, err := plan.EncodeWhy(why)
+	if err != nil {
+		return err
+	}
+	return s.affectOne(ctx, `UPDATE planned_meals SET why_json = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ?`,
+		enc, s.now(), key.Date, key.MealSlotID)
+}
+
 // MarkResolved sets State (cooked or skipped) and the resolution instant (the clock's now).
 func (s *Store) MarkResolved(ctx context.Context, key plan.Key, state plan.State) error {
 	now := s.now()

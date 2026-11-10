@@ -358,12 +358,14 @@ type viewDTO struct {
 	Steps      []stepDTO    `json:"steps"`
 	Timers     []timerDTO   `json:"timers"`
 	Now        string       `json:"now"`
+	Today      string       `json:"today"` // household date
 }
 
 func viewOf(v service.CookView) viewDTO {
 	d := viewDTO{
 		Scope: string(v.Scope), RecipeID: v.RecipeID, RecipeName: v.RecipeName, Batches: v.Batches,
 		Advance: []advanceDTO{}, Steps: []stepDTO{}, Timers: timersOf(v.Timers, v.Now), Now: instant(v.Now),
+		Today: v.Today,
 	}
 	if v.Meal != nil {
 		d.Meal = &mealDTO{Date: v.Meal.Date, MealSlotID: v.Meal.MealSlotID, SlotName: v.Meal.SlotName, At: instant(v.Meal.At)}
