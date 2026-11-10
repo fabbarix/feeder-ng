@@ -14,7 +14,7 @@
  * "Stock could not be loaded." with onRetry = refetch; offline -> `EmptyState` "Stock is not saved on this device
  * yet" (icon `offline`); empty -> `EmptyState` "Nothing in Stock yet" + hint + action; ready -> the list.
  * A failed change shows a `useToast` error toast "That did not save. Try again." (no inline role=alert paragraph).
- * No `<main>`: the shell provides it. No tile grid, no BentoGrid of StockTiles.
+ * No `<main>`: the shell provides it. No tile grid.
  */
 import type { ReactElement } from 'react'
 
