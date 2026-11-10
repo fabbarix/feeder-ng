@@ -327,6 +327,10 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	p, err := s.d.Catalogue.CreateProduct(ctx, np)
 	var taken *BarcodeTakenError
 	if errors.As(err, &taken) {
+		// WP7 / R8: an archived owner is never merged into (its Stock would be added to a retired pack); the phone offers to unarchive it.
+		if taken.Archived {
+			return rejected(op.ClientUUID, CodeBarcodeArchived, taken.Error()), nil
+		}
 		created = false
 		if p, err = s.d.Catalogue.Product(ctx, taken.ProductID); err != nil {
 			return scan.Result{}, err
