@@ -1,0 +1,65 @@
+/* TimerTile (docs/design/ui-fix-plan.md 4.12). Tokens only; the pulse is dropped under reduced motion. */
+.timer-tile {
+  gap: var(--space-2);
+}
+
+.timer-tile[data-state='paused'] {
+  background: var(--color-surface-2);
+}
+
+.timer-tile[data-state='paused'] .timer-tile__time {
+  color: var(--color-muted);
+}
+
+.timer-tile[data-state='finished'] {
+  animation: timer-pulse var(--dur-1) var(--ease-out) 2;
+}
+
+@keyframes timer-pulse {
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.timer-tile__time {
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
+  font-weight: var(--text-display-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-tile__bar {
+  display: block;
+  block-size: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-soft-strong);
+  overflow: hidden;
+}
+
+.timer-tile__fill {
+  display: block;
+  block-size: 100%;
+  background: var(--color-accent);
+  transition: inline-size var(--dur-2) var(--ease-out);
+}
+
+.timer-tile[data-state='overdue'] .timer-tile__fill {
+  background: var(--status-spoil-solid);
+}
+
+.timer-tile__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-tile[data-state='finished'] {
+    animation: none;
+  }
+
+  .timer-tile__fill {
+    transition: none;
+  }
+}

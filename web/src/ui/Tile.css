@@ -1,0 +1,160 @@
+/* Tile (docs/design/ui-fix-plan.md 4.4). Height follows content (no fixed heights). Tokens only. */
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: var(--tile-pad);
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--elev-1);
+  text-align: start;
+}
+
+/* Variants */
+.tile[data-variant='hero'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-radius: var(--radius-hero);
+}
+
+.tile[data-variant='soft'] {
+  background: var(--color-soft);
+  color: var(--color-text);
+}
+
+.tile[data-variant='soft'] .tile__overline {
+  color: var(--color-accent-text);
+}
+
+.tile[data-variant='action'] {
+  background: var(--color-surface-2);
+  justify-content: center;
+}
+
+.tile[data-variant='status'][data-status='leftover'] {
+  background: var(--status-leftover-bg);
+  color: var(--status-leftover-fg);
+}
+
+.tile[data-variant='status'][data-status='spoil'] {
+  background: var(--status-spoil-bg);
+  color: var(--status-spoil-fg);
+}
+
+.tile[data-variant='status'][data-status='danger'] {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.tile[data-variant='status'][data-status='success'] {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+}
+
+.tile[data-variant='status'][data-status='pinned'] {
+  background: var(--status-pinned-bg);
+  color: var(--status-pinned-fg);
+}
+
+/* Media tile: photo header at 16:9, the text below keeps the tile padding. */
+.tile[data-variant='media'] {
+  padding: 0 0 var(--tile-pad);
+  overflow: hidden;
+}
+
+.tile[data-variant='media'] > :not(.tile__media):not(.tile__stretch) {
+  margin-inline: var(--tile-pad);
+}
+
+.tile__media {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.tile__media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tile__overline {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--tile-overline-gap);
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+}
+
+/* Spans and rows: the grid decides the width, the tile decides its height. */
+.tile[data-span='2'] {
+  grid-column: span 2;
+}
+
+.tile[data-span='full'] {
+  grid-column: 1 / -1;
+}
+
+.tile[data-row-span='2'] {
+  grid-row: span 2;
+}
+
+.tile[data-row-span='3'] {
+  grid-row: span 3;
+}
+
+/* The stretched target covers the whole tile; inner buttons and links sit above it. */
+.tile__stretch {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  border-radius: inherit;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tile__stretch:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+/* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer. */
+.tile :is(button, a):not(.tile__stretch):not(.list-row__target) {
+  position: relative;
+  z-index: 1;
+}
+
+.tile[role='button'] {
+  cursor: pointer;
+}
+
+/* Metric: a display number with its label. */
+.tile-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tile-metric__value {
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
+  font-weight: var(--text-display-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-metric__label {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}

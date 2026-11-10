@@ -1,0 +1,135 @@
+/* ListRow and ListGroup (docs/design/ui-fix-plan.md 4.13). Tokens only. */
+.list-group {
+  background: var(--color-surface);
+  border-radius: var(--radius-tile-sm);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+
+.list-group__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+}
+
+.list-row[data-height='56'] {
+  block-size: 56px;
+}
+
+.list-row[data-height='64'] {
+  block-size: 64px;
+}
+
+.list-row[data-height='72'] {
+  block-size: 72px;
+}
+
+.list-row + .list-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+/* The whole row is the target: a stretched link or button under the content. */
+.list-row__target {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.list-row__target:hover {
+  background: var(--color-surface-2);
+}
+
+.list-row__target:active {
+  background: var(--color-surface-3);
+}
+
+.list-row__target:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+.list-row[data-selected='true'] .list-row__target {
+  background: var(--color-soft);
+}
+
+/* The whole row is the target: content is click-through, only interactive trailing content catches the pointer.
+   The lift is mandatory: the absolute target has opaque hover, press and selected backgrounds, so content must paint above it. */
+.list-row > :not(.list-row__target) {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.list-row__trailing button,
+.list-row__trailing a,
+.list-row__trailing input,
+.list-row__trailing select,
+.list-row__trailing [role='button'] {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.list-row__lead {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-thumb);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.list-row__leading {
+  display: grid;
+  flex: none;
+}
+
+.list-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.list-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.list-row__meta {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.list-row__trailing {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.list-row__chevron {
+  display: grid;
+  flex: none;
+  color: var(--color-muted);
+}

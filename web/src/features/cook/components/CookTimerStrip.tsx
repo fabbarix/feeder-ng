@@ -15,8 +15,7 @@ export interface CookTimerStripProps {
 
 /**
  * The household's timers as shared `TimerTile`s (role timer, named by the label): this scope's under "Timers", the
- * others under "Other timers" with where they belong. Tapping a running tile pauses it, a paused one resumes it, a
- * finished one dismisses it. Each timer also has explicit buttons from lib/timers timerActions. Renders nothing when
+ * others under "Other timers" with where they belong. The tile itself is not clickable; each timer has explicit buttons from lib/timers timerActions. Renders nothing when
  * there are no timers.
  */
 export function CookTimerStrip({ scope, items, onPause, onResume, onCancel }: CookTimerStripProps): ReactNode {
@@ -41,12 +40,6 @@ interface TimerGroupProps extends Omit<CookTimerStripProps, 'items'> {
 
 /** One region of timers: a list of tiles, each with its controls. */
 function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCancel }: TimerGroupProps): ReactNode {
-  const tap = (item: TimerItem) => {
-    const { id, state } = item.timer
-    if (state === 'running') onPause(id)
-    else if (state === 'paused') onResume(id)
-    else onCancel(id)
-  }
   const run = (action: TimerAction, item: TimerItem) => {
     const { id, label: name } = item.timer
     switch (action) {
@@ -69,7 +62,7 @@ function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCance
           const place = showPlace ? timerPlace(item.timer.scope, scope) : ''
           return (
             <li key={id} className="cook-timers__item">
-              <TimerTile label={name} seconds={item.seconds} running={state === 'running'} onClick={() => tap(item)} />
+              <TimerTile label={name} seconds={item.seconds} running={state === 'running'} />
               {place ? <span className="cook-timers__place">{place}</span> : null}
               {state === 'finished' ? <p role="status">{cookStrings.timerFinished(name)}</p> : null}
               <div className="cook-timers__actions">{timerActions(state).map((a) => run(a, item))}</div>

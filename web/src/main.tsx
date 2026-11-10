@@ -18,6 +18,10 @@ const router = createBrowserRouter([
     element: <AppRoot navItems={collectFeatures(modules).navItems} />,
     children: buildRoutes(modules),
   },
+  // Dev-only catalogue of the shared primitives; stripped from production builds.
+  ...(import.meta.env.DEV
+    ? [{ path: '/_gallery', lazy: async () => ({ Component: (await import('./ui/Gallery')).Gallery }) }]
+    : []),
 ])
 
 createRoot(document.getElementById('root')!).render(

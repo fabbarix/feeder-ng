@@ -1,4 +1,5 @@
 import { Tile } from './Tile'
+import './ProgressTile.css'
 
 export interface ProgressTileProps {
   label: string
@@ -8,12 +9,12 @@ export interface ProgressTileProps {
   valueLabel?: string
 }
 
-/** A Tile showing progress through a known total, as an accessible progressbar. */
+/** A soft Tile showing progress through a known total, as an accessible progressbar. */
 export function ProgressTile({ label, value, max, valueLabel }: ProgressTileProps) {
   const clamped = Math.min(Math.max(value, 0), Math.max(max, 0))
   const percent = max > 0 ? (clamped / max) * 100 : 0
   return (
-    <Tile size="sm" className="progress-tile">
+    <Tile variant="soft" className="progress-tile">
       <div
         role="progressbar"
         aria-label={label}

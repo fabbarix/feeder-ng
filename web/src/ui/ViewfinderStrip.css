@@ -3,7 +3,7 @@
   gap: 8px;
   border-radius: 24px;
   padding: 8px;
-  background: var(--surface-container, #1d1b20);
+  background: var(--color-surface-2);
 }
 
 .viewfinder-strip__picture {
@@ -11,7 +11,7 @@
   aspect-ratio: 16 / 6;
   overflow: hidden;
   border-radius: 20px;
-  background: #000;
+  background: var(--scrim);
 }
 
 .viewfinder-strip__picture video {
@@ -23,7 +23,7 @@
 .viewfinder-strip__reticle {
   position: absolute;
   inset: 22% 28%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--color-on-accent);
   border-radius: 12px;
   pointer-events: none;
 }
@@ -32,7 +32,7 @@
   position: absolute;
   inset: auto 12px 10px;
   margin: 0;
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.9rem;
   text-align: center;
 }
