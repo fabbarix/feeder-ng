@@ -286,7 +286,12 @@ func TestReserveLeftoverMealIsNotAFreshCook(t *testing.T) {
 	t.Run("a Cooked Leftover of R does not void a reservation either", func(t *testing.T) {
 		slots := fridayRule(SlotRule{RecipeID: pizzaR})
 		slots[0] = withExisting(slots[0], ExistingMeal{State: MealCooked, RecipeID: pizzaR, From: &LeftoverSource{LeftoverID: 7}})
-		r := mustPlan(t, withLeftover(slots))
+		// The runner reduces a Leftover's portions when the meal is Cooked, and the planner no longer
+		// consumes Cooked Leftover meals (to avoid double-consuming). So Input.Leftovers carries the
+		// already-reduced value: the Cooked Monday meal used Leftover 7's 2 portions, leaving 0.
+		in := baseInput(slots, fiveRecipes()...)
+		in.Leftovers = []Leftover{leftoverOf(7, pizzaR, 0, day(3))}
+		r := mustPlan(t, in)
 		if got := placementAt(t, r, key(4)).RecipeID; got != pizzaR {
 			t.Errorf("Friday = Recipe %d, want pizza (reservation stays)", got)
 		}
