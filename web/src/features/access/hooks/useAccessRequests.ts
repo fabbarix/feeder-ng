@@ -9,7 +9,8 @@ export interface AccessRequestsState {
   requests: AccessRequest[]
   isPending: boolean
   isError: boolean
-  approve: (id: number) => Promise<unknown>
+  /** `memberId`: link the new User to this unlinked Member in the same step (decision A3). */
+  approve: (id: number, memberId?: number) => Promise<unknown>
   deny: (id: number) => Promise<unknown>
 }
 
@@ -22,13 +23,13 @@ export function useAccessRequests(): AccessRequestsState {
   const query = useQuery({ queryKey: accessKeys.list, queryFn: accessApi.list, select: (list) => oldestFirst(list.requests) })
   // Success or failure, the answer may have changed what is pending (a 404 means somebody else answered first).
   const settled = () => queryClient.invalidateQueries({ queryKey: [...accessKeys.all] })
-  const approve = useMutation({ mutationFn: accessApi.approve, onSettled: settled })
+  const approve = useMutation({ mutationFn: (v: { id: number; memberId?: number }) => accessApi.approve(v.id, v.memberId), onSettled: settled })
   const deny = useMutation({ mutationFn: accessApi.deny, onSettled: settled })
   return {
     requests: query.data ?? NONE,
     isPending: query.isPending,
     isError: query.isError,
-    approve: approve.mutateAsync,
+    approve: (id, memberId) => approve.mutateAsync({ id, memberId }),
     deny: deny.mutateAsync,
   }
 }

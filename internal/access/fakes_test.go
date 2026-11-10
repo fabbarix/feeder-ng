@@ -188,7 +188,20 @@ func (u *memUsers) AddUser(_ context.Context, email, name string, admin bool) (a
 // memMembers is an in-memory access.Members.
 type memMembers struct {
 	byEmail map[string]access.MemberRef
-	links   map[int64]int64 // member -> user
+	all     []access.MemberRef // every Member, linked or not, in list order
+	links   map[int64]int64    // member -> user
+	linkErr error              // returned by LinkUser (simulates a Member linked meanwhile)
+}
+
+// Unlinked lists the Members without a User.
+func (m *memMembers) Unlinked(_ context.Context) ([]access.MemberRef, error) {
+	var out []access.MemberRef
+	for _, r := range m.all {
+		if _, linked := m.links[r.ID]; !linked {
+			out = append(out, r)
+		}
+	}
+	return out, nil
 }
 
 func (m *memMembers) ByEmail(_ context.Context, email string) (access.MemberRef, bool, error) {
@@ -196,6 +209,9 @@ func (m *memMembers) ByEmail(_ context.Context, email string) (access.MemberRef,
 	return r, ok, nil
 }
 func (m *memMembers) LinkUser(_ context.Context, member, user int64) error {
+	if m.linkErr != nil {
+		return m.linkErr
+	}
 	m.links[member] = user
 	return nil
 }

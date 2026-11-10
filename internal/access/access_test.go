@@ -298,6 +298,143 @@ func TestApproveWhenTheAddressWasAddedMeanwhileJustClearsTheRequest(t *testing.T
 	}
 }
 
+// --- approve with "link to Member" (decision A3: one step, any User approves) ---
+
+// withMembers puts Nonna (7) and Sam (8) in the Household, both without a User.
+func withMembers(w *world) {
+	w.members.all = []access.MemberRef{{ID: 7, Name: "Nonna"}, {ID: 8, Name: "Sam"}}
+}
+
+func TestApproveLinkedAddsTheUserAndLinksTheChosenMember(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia Rosa")).Request
+	w.clk.Advance(time.Hour)
+	plain := auth.User{ID: 99, Email: "plain@example.test"} // a non-Admin approves
+	u, err := w.svc.ApproveLinked(ctx, req.ID, plain, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Email != "zia@example.test" || u.IsAdmin || u.DisplayName != "Zia Rosa" {
+		t.Fatalf("new User = %+v", u)
+	}
+	if w.members.links[7] != u.ID || len(w.members.links) != 1 {
+		t.Fatalf("Member 7 must be linked to User %d, links = %v", u.ID, w.members.links)
+	}
+	if n, _ := w.svc.Count(ctx); n != 0 {
+		t.Fatalf("count = %d after approval", n)
+	}
+	h, _ := w.svc.History(ctx, 10)
+	if len(h) < 1 || h[0].Kind != access.EventApproved || h[0].ActorEmail != plain.Email || h[0].MemberID != 7 || h[0].MemberName != "Nonna" {
+		t.Fatalf("the audit event must name the approver and the linked Member: %+v", h)
+	}
+}
+
+func TestApproveWithoutAMemberStillWorksAndLinksNothing(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	if _, err := w.svc.Approve(ctx, req.ID, w.user); err != nil {
+		t.Fatal(err)
+	}
+	if len(w.members.links) != 0 {
+		t.Fatalf("no Member was chosen, links = %v", w.members.links)
+	}
+	if h, _ := w.svc.History(ctx, 1); len(h) != 1 || h[0].MemberID != 0 || h[0].MemberName != "" {
+		t.Fatalf("an approval without a Member records none: %+v", h)
+	}
+}
+
+func TestApproveLinkedRefusesAMemberWhoAlreadyHasAUser(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	w.members.links[8] = w.user.ID // Sam is linked
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	_, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 8)
+	if !errors.Is(err, access.ErrMemberUnavailable) {
+		t.Fatalf("linked Member: err = %v, want ErrMemberUnavailable", err)
+	}
+	if _, err := w.users.UserByEmail(ctx, "zia@example.test"); err == nil {
+		t.Fatal("a refused link must not create the User")
+	}
+	if n, _ := w.svc.Count(ctx); n != 1 {
+		t.Fatalf("the request must stay pending, count = %d", n)
+	}
+	if len(w.store.kinds()) != 1 { // only "requested"
+		t.Fatalf("nothing is audited for a refusal: %v", w.store.kinds())
+	}
+}
+
+func TestApproveLinkedRefusesAnUnknownMemberAndWorksWithoutAMembersPort(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	for _, id := range []int64{0, -1, 999} {
+		if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, id); !errors.Is(err, access.ErrMemberUnavailable) {
+			t.Errorf("Member %d: err = %v, want ErrMemberUnavailable", id, err)
+		}
+	}
+	// Phase 1 runs with no Members port at all: a Member cannot be chosen, but approving still works.
+	bare := access.NewService(w.store, w.users, nil, w.clk, access.DefaultLimits())
+	if _, err := bare.ApproveLinked(ctx, req.ID, w.user, 7); !errors.Is(err, access.ErrMemberUnavailable) {
+		t.Errorf("no Members port: err = %v, want ErrMemberUnavailable", err)
+	}
+	if _, err := bare.Approve(ctx, req.ID, w.user); err != nil {
+		t.Errorf("Approve without a Members port: %v", err)
+	}
+}
+
+func TestApproveLinkedWhenTheMemberWasLinkedMeanwhileKeepsTheRequestPending(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	w.members.linkErr = access.ErrMemberUnavailable // another Admin linked Nonna between the check and the link
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 7); !errors.Is(err, access.ErrMemberUnavailable) {
+		t.Fatalf("err = %v, want ErrMemberUnavailable", err)
+	}
+	if n, _ := w.svc.Count(ctx); n != 1 {
+		t.Fatalf("the request must stay pending so the approver can choose again, count = %d", n)
+	}
+	w.members.linkErr = nil
+	if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 8); err != nil { // retry with another Member (and the User may exist already)
+		t.Fatalf("retry: %v", err)
+	}
+	if w.members.links[8] == 0 {
+		t.Fatalf("links = %v", w.members.links)
+	}
+}
+
+func TestApproveLinkedOfAnUnknownOrExpiredRequestIsNotFound(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	if _, err := w.svc.ApproveLinked(ctx, 404, w.user, 7); !errors.Is(err, access.ErrNotFound) {
+		t.Fatalf("unknown: %v", err)
+	}
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	w.clk.Advance(14*24*time.Hour + time.Second)
+	if _, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 7); !errors.Is(err, access.ErrNotFound) {
+		t.Fatalf("expired: %v", err)
+	}
+	if len(w.members.links) != 0 {
+		t.Fatalf("links = %v", w.members.links)
+	}
+}
+
+// --- Member email must not hijack a User (decision A1; the household side is in internal/access/httpapi/member_email_test.go) ---
+
+// Regression guard (green today): the User row wins over a Member email.
+func TestAMemberEmailThatAlreadyBelongsToAUserSignsInAsThatUser(t *testing.T) {
+	w := newWorld(t)
+	w.members.byEmail[w.user.Email] = access.MemberRef{ID: 7, Name: "Nonna"} // must not happen (the API refuses it), but sign-in must still be safe
+	d := w.signIn("1.1.1.1", ident(w.user.Email, "Someone Else"))
+	if d.Kind != access.SignedIn || d.User.ID != w.user.ID {
+		t.Fatalf("decision = %+v, want the existing User %d", d, w.user.ID)
+	}
+	if len(w.members.links) != 0 {
+		t.Fatalf("the Member must not be linked to an existing User through its email: %v", w.members.links)
+	}
+}
+
 func TestDenyRemovesTheRequestAndRecordsWho(t *testing.T) {
 	w := newWorld(t)
 	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request

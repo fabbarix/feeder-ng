@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AccessRequest } from '../types'
@@ -40,6 +40,15 @@ describe('AccessRequestList', () => {
     expect(onApprove).toHaveBeenCalledWith(5)
     await userEvent.click(screen.getByRole('button', { name: 'Deny rex@example.test' }))
     expect(onDeny).toHaveBeenCalledWith(6)
+  })
+
+  it('shows the Google photo and falls back to the initials when it fails to load (A8)', () => {
+    render(<AccessRequestList requests={[{ ...zia, picture: 'https://lh3.googleusercontent.com/a/zia' }]} now={now} onApprove={vi.fn()} onDeny={vi.fn()} />)
+    const photo = screen.getByRole('img', { name: 'Zia Rosa' })
+    expect(photo.tagName).toBe('IMG')
+    fireEvent.error(photo)
+    expect(screen.getByRole('img', { name: 'Zia Rosa' })).toHaveTextContent('ZR')
+    expect(document.querySelector('img')).toBeNull()
   })
 
   it('says what approving means', () => {

@@ -164,3 +164,35 @@ func TestEventsCountLastAndOrder(t *testing.T) {
 		t.Fatalf("events after removing the actor = %d, want 4", len(ev))
 	}
 }
+
+// An approval that linked a Member keeps the Member's id and name in the audit trail (decision A3). This needs
+// member_id / member_name columns on access_events (migration 1200 may be edited: nothing is released).
+func TestAnApprovedEventKeepsTheLinkedMember(t *testing.T) {
+	s, d := open(t)
+	err := s.AddEvent(ctx, access.Event{At: now, Kind: access.EventApproved, Email: "zia@example.test", Name: "Zia",
+		ActorUserID: 3, ActorEmail: "user@example.test", MemberID: 7, MemberName: "Nonna"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddEvent(ctx, access.Event{At: now.Add(time.Minute), Kind: access.EventApproved, Email: "rex@example.test", Name: "Rex",
+		ActorUserID: 3, ActorEmail: "user@example.test"}); err != nil {
+		t.Fatal(err)
+	}
+	ev, err := s.Events(ctx, 10)
+	if err != nil || len(ev) != 2 {
+		t.Fatalf("Events = %+v, %v", ev, err)
+	}
+	if ev[1].MemberID != 7 || ev[1].MemberName != "Nonna" {
+		t.Errorf("linked approval = %+v, want Member 7 Nonna", ev[1])
+	}
+	if ev[0].MemberID != 0 || ev[0].MemberName != "" {
+		t.Errorf("approval without a Member = %+v, want none", ev[0])
+	}
+	// Snapshot, no foreign key: the Member can be deleted afterwards.
+	if _, err := d.Exec(`DELETE FROM members`); err != nil {
+		t.Fatal(err)
+	}
+	if ev, _ := s.Events(ctx, 10); len(ev) != 2 || ev[1].MemberName != "Nonna" {
+		t.Errorf("after the Member is deleted: %+v", ev)
+	}
+}

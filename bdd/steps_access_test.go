@@ -253,4 +253,55 @@ func accessSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return fmt.Errorf("no %q of %s by %s in %s", kind, email, actor, r.Body)
 	})
+
+	// --- "link to Member" while approving, and the Member email rules (decisions A1 and A3; phase 2) ---
+	memberID := func(name string) (int64, error) {
+		var ms []struct {
+			ID   int64  `json:"id"`
+			Name string `json:"name"`
+		}
+		if err := w.Env.LoginAdmin(w.TB).Get("/api/members").JSON(&ms); err != nil {
+			return 0, err
+		}
+		for _, m := range ms {
+			if m.Name == name {
+				return m.ID, nil
+			}
+		}
+		return 0, fmt.Errorf("no Member named %s", name)
+	}
+	sc.Step(`^the User "([^"]*)" approves the Access Request from "([^"]*)" and links the Member "([^"]*)"$`, func(who, email, member string) error {
+		id, err := idOf(email)
+		if err != nil {
+			return err
+		}
+		mid, err := memberID(member)
+		if err != nil {
+			return err
+		}
+		w.Last = user(who).Post(fmt.Sprintf("/api/access-requests/%d/approve", id), map[string]any{"memberId": mid})
+		return nil
+	})
+	sc.Step(`^the Admin saves a new Member "([^"]*)" with the email "([^"]*)"$`, func(name, email string) {
+		w.Last = w.Env.LoginAdmin(w.TB).Post("/api/members", map[string]any{"name": name, "colour": "#3366cc", "portionFactor": 1, "email": email})
+	})
+	sc.Step(`^the access history shows that the approval of "([^"]*)" linked the Member "([^"]*)"$`, func(email, member string) error {
+		var h struct {
+			Events []struct {
+				Kind       string `json:"kind"`
+				Email      string `json:"email"`
+				MemberName string `json:"memberName"`
+			} `json:"events"`
+		}
+		r := user(testkit.UserEmail).Get("/api/access-requests/history")
+		if err := r.JSON(&h); err != nil {
+			return fmt.Errorf("history: %d %s", r.Status, r.Body)
+		}
+		for _, e := range h.Events {
+			if e.Kind == "approved" && e.Email == email && e.MemberName == member {
+				return nil
+			}
+		}
+		return fmt.Errorf("no approval of %s that linked %s in %s", email, member, r.Body)
+	})
 }

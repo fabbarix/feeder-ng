@@ -22,6 +22,16 @@ export interface AccessEvent {
   at: string
   /** Who approved or denied; '' for requested and expired. */
   actorEmail: string
+  /** The Member the approval linked the new User to (decision A3); '' or absent when none. */
+  memberName?: string
+}
+
+/** A Member as GET /api/members returns it; the approve sheet offers those with `userId === null`. */
+export interface AccessMember {
+  id: number
+  name: string
+  avatar?: string
+  userId: number | null
 }
 
 /** What the waiting page may know: only the visitor's own Google details. */

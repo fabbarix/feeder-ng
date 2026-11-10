@@ -146,3 +146,44 @@ Feature: Access Requests
     When the visitor "zia@example.test" tries to approve their own Access Request
     Then the response status is 401
     And "zia@example.test" is not a User
+
+  # --- Decision A3: approving can link the person to a Member in the same step (PHASE 2: red until the household adapter) ---
+
+  Scenario: Approving can link the new User to a Member in one step
+    Given the household has the Member "Nonna" without a sign-in
+    And the household has the Member "Sam" without a sign-in
+    And the visitor "zia@example.test" signs in with Google as "Zia Rosa"
+    When the User "user@example.test" approves the Access Request from "zia@example.test" and links the Member "Nonna"
+    Then the response status is 200
+    And the response JSON field "isAdmin" is false
+    And the Member "Nonna" is linked to the User "zia@example.test"
+    And the Member "Sam" is not linked to any User
+    And the access history shows that the approval of "zia@example.test" linked the Member "Nonna"
+
+  Scenario: A Member who already has a User cannot be chosen
+    Given the household has the Member "Sam" linked to "user@example.test"
+    And the visitor "zia@example.test" signs in with Google as "Zia Rosa"
+    When the User "admin@example.test" approves the Access Request from "zia@example.test" and links the Member "Sam"
+    Then the response status is 409
+    And the error code is "member_unavailable"
+    And there are 1 pending Access Requests
+    And "zia@example.test" is not a User
+
+  # --- Decision A1: a Member email must not hijack a User and is unique (PHASE 2) ---
+
+  Scenario: A Member email cannot be the address of an existing User
+    Given "nonna@example.test" is on the allowlist
+    When the Admin saves a new Member "Nonna" with the email "Nonna@Example.test"
+    Then the response status is 409
+    And the error code is "email_taken"
+
+  Scenario: Two Members cannot share an email
+    Given the Household has a Member "Nonna" with the email "nonna@example.test"
+    When the Admin saves a new Member "Another Nonna" with the email "NONNA@example.test"
+    Then the response status is 409
+    And the error code is "email_taken"
+
+  Scenario: A Member email must be an address
+    When the Admin saves a new Member "Nonna" with the email "not an address"
+    Then the response status is 422
+    And the error code is "validation_failed"

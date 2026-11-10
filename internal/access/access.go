@@ -25,6 +25,9 @@ import (
 var (
 	// ErrNotFound is returned when an Access Request does not exist (or has expired).
 	ErrNotFound = errors.New("access: request not found")
+	// ErrMemberUnavailable is returned by ApproveLinked when the chosen Member does not exist or already has a User
+	// (including a Member linked between the picker opening and the approval). Nothing is created or linked.
+	ErrMemberUnavailable = errors.New("access: member unavailable")
 	// ErrNotImplemented marks the skeleton the Developer replaces.
 	ErrNotImplemented = errors.New("access: not implemented")
 )
@@ -76,6 +79,10 @@ type Event struct {
 	Name        string
 	ActorUserID int64
 	ActorEmail  string
+	// MemberID and MemberName are set for "approved" events that linked the new User to a Member (0 and "" otherwise).
+	// Like ActorEmail they are a snapshot with no foreign key.
+	MemberID   int64
+	MemberName string
 }
 
 // Store is the persistence port (SQLite in access/store). Tokens are stored hashed (SHA-256 hex).
@@ -111,10 +118,14 @@ type MemberRef struct {
 	Name string
 }
 
-// Members looks Members up by e-mail (satisfied by an adapter over the household store; may be nil in tests).
+// Members is the Household side of sign-in (satisfied by an adapter over the household store, phase 2; may be nil).
 type Members interface {
 	// ByEmail returns the Member whose e-mail is email and who has no User yet.
 	ByEmail(ctx context.Context, email string) (MemberRef, bool, error)
+	// Unlinked lists the Members that have no User yet, in the Members list order.
+	Unlinked(ctx context.Context) ([]MemberRef, error)
+	// LinkUser links an unlinked Member to a User. It returns ErrMemberUnavailable when the Member is gone or was
+	// linked meanwhile.
 	LinkUser(ctx context.Context, memberID, userID int64) error
 }
 
@@ -321,6 +332,14 @@ func (s *Service) Approve(ctx context.Context, id int64, actor auth.User) (auth.
 	}
 	err = s.store.AddEvent(ctx, Event{At: s.clk.Now(), Kind: EventApproved, Email: r.Email, Name: r.Name, ActorUserID: actor.ID, ActorEmail: actor.Email})
 	return u, err
+}
+
+// ApproveLinked is Approve plus "link to Member" in one step: the new User is linked to the unlinked Member
+// memberID. The Member is checked first (ErrMemberUnavailable when it is not among Members.Unlinked, or when there
+// is no Members port) before anything is created, so a refusal leaves the request pending. The audit event records
+// the Member. If the address became a User meanwhile, that User is the one linked.
+func (s *Service) ApproveLinked(ctx context.Context, id int64, actor auth.User, memberID int64) (auth.User, error) {
+	return auth.User{}, ErrNotImplemented
 }
 
 // Deny removes the request and records who denied. The address may ask again after DenyCooldown.
