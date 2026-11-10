@@ -96,3 +96,27 @@ func TestStreakInputWithNoLotsIsTheHouseholdAge(t *testing.T) {
 		t.Errorf("streak = %d, want 7", got)
 	}
 }
+
+// R11c: the go-off ledger (Lots used up or counted away after they went off) feeds the input, so
+// the streak keeps the reset when the spoiled Lot is no longer in stock_lots.
+func TestStreakInputReadsTheGoOffLedger(t *testing.T) {
+	d := stocktest.NewDB(t)
+	clk := clock.NewFake(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC))
+	exec(t, d, `UPDATE household_settings SET created_at = '2026-10-01T09:00:00Z' WHERE id = 1`)
+	exec(t, d, `INSERT INTO stock_go_offs(lot_id, goes_off, recorded_on) VALUES (5,'2026-11-03','2026-11-06'), (6,'2026-11-01','2026-11-08')`)
+	in, err := service.NewDB(d, clk).StreakInput(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[int64]stock.Date{}
+	for _, g := range in.GoOffs {
+		got[g.LotID] = g.GoesOff
+	}
+	if len(got) != 2 || got[5] != "2026-11-03" || got[6] != "2026-11-01" {
+		t.Fatalf("GoOffs = %+v", in.GoOffs)
+	}
+	in.Today = "2026-11-09"
+	if s := cook.ZeroWasteStreak(in); s != 5 { // newest go-off 11-03 went off 11-04
+		t.Errorf("streak = %d, want 5", s)
+	}
+}

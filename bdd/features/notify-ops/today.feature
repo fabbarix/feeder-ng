@@ -85,6 +85,22 @@ Feature: Today screen data
     And I ask for the zero-waste streak
     Then the streak is 2 days
 
+  Scenario: Cooked uses up a gone-off Lot - streak stays reset
+    Given the Household was created on "2026-10-01"
+    And Stock knows the Ingredient "chicken" with a Shelf Life of 5 days for Today
+    And I bought a Stock Lot of "chicken" on "2026-11-01"
+    When a meal is Cooked using up the "chicken" in Stock
+    And I ask for the zero-waste streak
+    Then the streak is 2 days
+
+  Scenario: Stock-take removes a gone-off Lot - streak stays reset
+    Given the Household was created on "2026-10-01"
+    And Stock knows the Ingredient "chicken" with a Shelf Life of 5 days for Today
+    And I bought a Stock Lot of "chicken" on "2026-11-01"
+    When I do a Stock-take of "chicken" to nothing
+    And I ask for the zero-waste streak
+    Then the streak is 2 days
+
   Scenario: The streak is capped at the Household's age despite backdated purchases
     Given the Household was created on "2026-11-05"
     And Stock knows the Ingredient "chicken" with a Shelf Life of 5 days for Today

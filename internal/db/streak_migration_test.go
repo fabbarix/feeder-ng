@@ -54,3 +54,16 @@ func TestStreakMigrationLeavesAFreshHouseholdUnstamped(t *testing.T) {
 	// The waste column exists and is nullable.
 	mustExec(t, d, `INSERT INTO stock_waste(quantity, wasted_on, reason, created_at, lot_goes_off) VALUES (1, '2026-11-09', 'spoiled', '2026-11-09T00:00:00Z', NULL)`)
 }
+
+// The go-off ledger: a Lot that left Stock unthrown after it went off. Exists on a fresh install,
+// keyed by lot id (one record per Lot).
+func TestStreakMigrationCreatesTheGoOffLedger(t *testing.T) {
+	d, _ := openTemp(t)
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	mustExec(t, d, `INSERT INTO stock_go_offs(lot_id, goes_off, recorded_on) VALUES (7, '2026-11-03', '2026-11-06')`)
+	if _, err := d.Exec(`INSERT INTO stock_go_offs(lot_id, goes_off, recorded_on) VALUES (7, '2026-11-03', '2026-11-06')`); err == nil {
+		t.Error("a second record for the same Lot was accepted, want one per Lot")
+	}
+}

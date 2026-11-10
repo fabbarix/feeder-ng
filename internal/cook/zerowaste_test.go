@@ -65,6 +65,18 @@ func TestZeroWasteStreak(t *testing.T) {
 				Lots:  []cook.LotGoOff{{ID: 1, GoesOff: "2026-11-01"}},
 				Waste: []cook.WasteEvent{{WastedOn: "2026-11-07"}}}, 2},
 
+		// a spoiled Lot that left Stock without a Throw out (used up by Cooked, counted away by a Stock-take)
+		{"a go-off kept after the Lot was used up still resets on the day it went off",
+			cook.StreakInput{Today: today, Created: old, GoOffs: []cook.GoOffEvent{{LotID: 1, GoesOff: "2026-11-03"}}}, 5}, // went off 11-04
+		{"a recorded go-off dated after today is ignored",
+			cook.StreakInput{Today: today, Created: "2026-11-01", GoOffs: []cook.GoOffEvent{{LotID: 1, GoesOff: "2026-11-09"}}}, 8},
+		{"a recorded go-off before the Household existed does not inflate or reset",
+			cook.StreakInput{Today: today, Created: "2026-11-05", GoOffs: []cook.GoOffEvent{{LotID: 1, GoesOff: "2026-10-01"}}}, 4},
+		{"the newest of recorded and in-stock go-offs wins",
+			cook.StreakInput{Today: today, Created: old,
+				Lots:   []cook.LotGoOff{{ID: 2, GoesOff: "2026-11-01"}},
+				GoOffs: []cook.GoOffEvent{{LotID: 1, GoesOff: "2026-11-06"}}}, 2},
+
 		// household-age cap
 		{"the streak never exceeds the Household's age (waste long ago)",
 			cook.StreakInput{Today: today, Created: "2026-11-05", Waste: []cook.WasteEvent{{WastedOn: "2026-09-01"}}}, 4},

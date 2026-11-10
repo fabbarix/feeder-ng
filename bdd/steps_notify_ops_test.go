@@ -572,6 +572,23 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 			return nil
 		})
 	}
+	// R11c: the 100 g Lot bought by "I bought a Stock Lot" leaves Stock by Cooked or by a Stock-take.
+	sc.Step(`^a meal is Cooked using up the "([^"]*)" in Stock$`, func(name string) error {
+		id, _ := w.Vars["today.ing."+name].(int64)
+		r := w.Client.Do("POST", "/api/stock/cooked", map[string]any{"needs": []map[string]any{{"ingredientId": id, "quantity": 100}}})
+		if r.Status != 200 {
+			return fmt.Errorf("Cooked: %d %s", r.Status, r.Body)
+		}
+		return nil
+	})
+	sc.Step(`^I do a Stock-take of "([^"]*)" to nothing$`, func(name string) error {
+		id, _ := w.Vars["today.ing."+name].(int64)
+		r := w.Client.Do("PUT", fmt.Sprintf("/api/stock/ingredients/%d/total", id), map[string]any{"total": 0})
+		if r.Status != 200 {
+			return fmt.Errorf("Stock-take: %d %s", r.Status, r.Body)
+		}
+		return nil
+	})
 	sc.Step(`^I ask for the zero-waste streak$`, func() { w.Last = w.Client.Get("/api/today/streak") })
 	sc.Step(`^the streak is (\d+) days?$`, func(n int) error {
 		var out struct {

@@ -20,12 +20,20 @@ type WasteEvent struct {
 	LotGoesOff stock.Date // go-off date of a Lot that had already gone off unforgiven, else None
 }
 
+// GoOffEvent is a Lot that went off unforgiven and then left Stock without a Throw out (used up by
+// Cooked or counted away by a Stock-take). It counts on GoesOff+1 like any go-off (R11c).
+type GoOffEvent struct {
+	LotID   int64
+	GoesOff stock.Date
+}
+
 // StreakInput is everything ZeroWasteStreak needs. All dates are household dates.
 type StreakInput struct {
 	Today   stock.Date
 	Created stock.Date // the day the Household was created in Feeder; None when unknown
 	Lots    []LotGoOff
 	Waste   []WasteEvent
+	GoOffs  []GoOffEvent // go-offs of Lots no longer in Stock and not thrown out
 }
 
 // ZeroWasteStreak is the zero-waste streak in days (R11c, spec section 6): today minus the newest

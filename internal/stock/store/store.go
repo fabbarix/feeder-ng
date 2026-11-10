@@ -79,11 +79,30 @@ type WasteRecord struct {
 // Mutation is what Update persists: the Ingredient's resulting lots (same ID =
 // update, ID missing = delete, ID 0 = insert with NewSource) and waste to record,
 // all in one transaction.
+//
+// Today (R11c) is the household date. When set, every deleted Lot that had already gone off
+// unforgiven on that date (GoesOff+1 <= Today and GoesOff+1 > KeptOn) and is not the LotID of a
+// Waste record of this Mutation gets a go-off record (see GoOffs), however it was removed. Left
+// None, no go-off is recorded.
 type Mutation struct {
 	Lots      []stock.Lot
 	NewSource Source
 	Waste     []WasteRecord
+	Today     stock.Date
 }
+
+// GoOffRecord is the persisted go-off of a Lot that was removed from Stock without a Throw out
+// (used up by Cooked or counted away by a Stock-take) after it had gone off unforgiven (R11c).
+// The zero-waste streak counts it on GoesOff+1. It is not waste: it has no quantity and never
+// appears in Waste.
+type GoOffRecord struct {
+	LotID      int64
+	GoesOff    stock.Date // the Lot's go-off date when it was removed
+	RecordedOn stock.Date // household date it was recorded (Mutation.Today)
+}
+
+// GoOffs lists the go-off records, oldest go-off first (R11c). Stub: the developer implements it.
+func (s *Store) GoOffs(ctx context.Context) ([]GoOffRecord, error) { return nil, nil }
 
 // Store is the Stock repository.
 type Store struct {

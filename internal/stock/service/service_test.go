@@ -698,3 +698,104 @@ func TestThrowOutAfterKeepCountsOnTheThrowOutDay(t *testing.T) {
 		t.Fatalf("record = %+v, want no LotGoesOff and WastedOn %s", rec, today)
 	}
 }
+
+// ---- R11c: a gone-off Lot that leaves Stock by any route but Throw out keeps its go-off ----
+
+func (f fixture) goOffs(t *testing.T) []store.GoOffRecord {
+	t.Helper()
+	got, err := f.st.GoOffs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// Cooked consumes the soonest-go-off Lot first, so it uses up spoiled Lots first.
+func TestCookedUsingUpAGoneOffLotRecordsItsGoOff(t *testing.T) {
+	f := setup(t)
+	old := f.add(t, f.thighs, 200, "2026-11-01") // goes off 11-05, went off 11-06
+	f.add(t, f.thighs, 500, "2026-11-08")        // goes off 11-12
+	if _, err := f.svc.DeductForCooked(ctx, []stock.Need{{IngredientID: f.thighs, Quantity: 300}}); err != nil {
+		t.Fatal(err)
+	}
+	got := f.goOffs(t)
+	if len(got) != 1 || got[0].LotID != old.ID || got[0].GoesOff != "2026-11-05" || got[0].RecordedOn != today {
+		t.Fatalf("go-offs = %+v, want one record of lot %d (goes off 2026-11-05, recorded %s)", got, old.ID, today)
+	}
+}
+
+func TestStockTakeToZeroRecordsTheGoOffOfAGoneOffLot(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01")
+	if _, err := f.svc.SetTotal(ctx, f.thighs, 0); err != nil {
+		t.Fatal(err)
+	}
+	got := f.goOffs(t)
+	if len(got) != 1 || got[0].LotID != l.ID || got[0].GoesOff != "2026-11-05" {
+		t.Fatalf("go-offs = %+v, want one record of lot %d", got, l.ID)
+	}
+}
+
+func TestStockTakeDecreaseRecordsOnlyTheLotsThatLeftStock(t *testing.T) {
+	f := setup(t)
+	gone := f.add(t, f.thighs, 100, "2026-11-01") // gone off, removed whole
+	part := f.add(t, f.thighs, 100, "2026-11-02") // goes off 11-06 -> gone off 11-07, only reduced
+	if _, err := f.svc.SetTotal(ctx, f.thighs, 50); err != nil {
+		t.Fatal(err)
+	}
+	got := f.goOffs(t)
+	if len(got) != 1 || got[0].LotID != gone.ID {
+		t.Fatalf("go-offs = %+v, want only lot %d (lot %d is still in Stock)", got, gone.ID, part.ID)
+	}
+}
+
+func TestLeavingStockRecordsNothingForLotsThatHaveNotGoneOffOrWereKept(t *testing.T) {
+	f := setup(t)
+	f.add(t, f.thighs, 100, "2026-11-05")       // goes off 11-09 = today: still fine
+	f.add(t, f.thighs, 100, "2026-11-08")       // future
+	f.add(t, f.milk, 100, "2026-11-01")         // no Shelf Life
+	kept := f.add(t, f.eggs, 100, "2026-10-01") // eggs off 10-22, long gone
+	if _, err := f.svc.Keep(ctx, kept.ID); err != nil {
+		t.Fatal(err)
+	}
+	// The Kept eggs now go off 10-23: still past, but forgiven up to today.
+	for _, ing := range []int64{f.thighs, f.milk, f.eggs} {
+		if _, err := f.svc.SetTotal(ctx, ing, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none", got)
+	}
+}
+
+// Thrown out is counted by its waste record alone, also after part of it was used.
+func TestThrowOutRecordsNoSeparateGoOffEvenAfterAPartialUse(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01")
+	if _, err := f.svc.DeductForCooked(ctx, []stock.Need{{IngredientID: f.thighs, Quantity: 50}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Fatalf("go-offs after a partial use = %+v, want none", got)
+	}
+	rec, err := f.svc.ThrowOut(ctx, l.ID)
+	if err != nil || rec.LotGoesOff != "2026-11-05" {
+		t.Fatalf("ThrowOut = %+v %v", rec, err)
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none (the waste record counts once)", got)
+	}
+}
+
+// Undo of a scan is a correction, not a go-off.
+func TestRemoveLotRecordsNoGoOff(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 100, "2026-11-01")
+	if err := f.svc.RemoveLot(ctx, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.goOffs(t); len(got) != 0 {
+		t.Errorf("go-offs = %+v, want none", got)
+	}
+}
