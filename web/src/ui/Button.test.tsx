@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
+import { declarations, readStylesCss, readUiCss, ruleBlocks } from './test-utils'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -97,5 +98,23 @@ describe('Button single-primary dev warning (plan 4.2 "max one per tile/sheet")'
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     render(<div {...{ [PRIMARY_SCOPE_ATTR]: '' }}><Button>One</Button><Button variant="tonal">Two</Button></div>)
     expect(warned(spy)).toBe(false)
+  })
+})
+
+describe('Button styling contract (review fixes)', () => {
+  const css = readUiCss('Button.css')
+  it('danger text is the fixed on-solid token, not a surface colour that goes dark', () => {
+    expect(declarations(css, ".button[data-variant='danger']")).toMatchObject({
+      background: 'var(--status-danger-solid)',
+      color: 'var(--status-danger-on-solid)',
+    })
+  })
+  it('--status-danger-on-solid is white in every palette block that sets the solid', () => {
+    const blocks = ruleBlocks(readStylesCss()).filter((b) => /--status-danger-solid\s*:/.test(b.body))
+    expect(blocks.length).toBeGreaterThanOrEqual(2) // light and dark
+    for (const b of blocks) expect(b.body, b.selectors.join(',')).toMatch(/--status-danger-on-solid\s*:\s*(#fff|#ffffff)\s*;/i)
+  })
+  it('font weights are tokens, no numeric literal', () => {
+    for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/font-weight\s*:\s*([^;]+);/g)) expect(m[1]).toMatch(/^var\(--/)
   })
 })

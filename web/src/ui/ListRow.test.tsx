@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { IconButton } from './IconButton'
 import { ListGroup, ListRow } from './ListRow'
-import { declarations, readUiCss } from './test-utils'
+import { declarations, readUiCss, ruleBlocks } from './test-utils'
 
 const inList = (row: React.ReactNode) => render(<ListGroup label="Stock">{row}</ListGroup>)
 
@@ -90,6 +90,41 @@ describe('ListRow (plan 4.13)', () => {
     // @ts-expect-error a row has at most one target
     const bad = () => <ListRow title="x" href="/a" onActivate={() => {}} />
     expect(bad).toBeTypeOf('function')
+  })
+})
+
+describe('ListGroup scope', () => {
+  it('carries data-primary-scope so a primary Button in a row is checked against the list', () => {
+    const { container } = inList(<ListRow title="Milk" />)
+    expect(container.querySelector('.list-group')).toHaveAttribute('data-primary-scope')
+  })
+})
+
+describe('ListRow whole-row target (plan 4.13: the row is the tap target)', () => {
+  it('a click on the target activates the row', async () => {
+    const onActivate = vi.fn()
+    inList(<ListRow title="Milk" meta="2 L" icon="stock" chevron onActivate={onActivate} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Milk' }))
+    expect(onActivate).toHaveBeenCalledOnce()
+  })
+  // jsdom does no hit-testing, so the contract is in the stylesheet: content is click-through, only
+  // interactive trailing content catches the pointer.
+  const css = readUiCss('ListRow.css')
+  it('non-target children are click-through and not lifted above the target', () => {
+    const d = declarations(css, '.list-row > :not(.list-row__target)')
+    expect(d['pointer-events']).toBe('none')
+    expect(d['z-index']).toBeUndefined()
+  })
+  it('only interactive content inside .list-row__trailing is lifted and clickable', () => {
+    const lifted = ruleBlocks(css).filter(
+      (b) => b.selectors.every((s) => s.startsWith('.list-row__trailing ')) && /pointer-events\s*:\s*auto/.test(b.body) && /z-index\s*:\s*1\b/.test(b.body),
+    )
+    expect(lifted.length).toBeGreaterThan(0)
+    for (const b of lifted) expect(b.selectors.join(','), 'targets interactive elements only').toMatch(/button|\ba\b|input|select|role/)
+    // lead, title, meta and chevron never get pointer-events: auto
+    for (const sel of ['.list-row__lead', '.list-row__leading', '.list-row__text', '.list-row__title', '.list-row__chevron']) {
+      expect(declarations(css, sel)['pointer-events'], sel).not.toBe('auto')
+    }
   })
 })
 

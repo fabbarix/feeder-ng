@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { BentoGrid } from './BentoGrid'
 import { ProgressTile } from './ProgressTile'
 import { Tile, TileMetric } from './Tile'
-import { declarations, readUiCss } from './test-utils'
+import { declarations, readUiCss, ruleBlocks } from './test-utils'
 import { TimerTile } from './TimerTile'
 
 describe('Tile', () => {
@@ -175,6 +175,17 @@ describe('Tile styling (plan 4.4)', () => {
     expect(declarations(css, '.tile__stretch')).toMatchObject({ position: 'absolute', inset: '0' })
     expect(declarations(css, '.tile__stretch')['z-index']).toBe('0')
   })
+  it('the interactive-content lift does not apply to a ListRow target inside a tile', () => {
+    const lifts = ruleBlocks(css).filter((b) => /position\s*:\s*relative/.test(b.body) && b.selectors.some((s) => /button/.test(s) && /\ba\b/.test(s)))
+    expect(lifts.length).toBeGreaterThan(0)
+    for (const b of lifts) for (const s of b.selectors) expect(s).toContain(':not(.list-row__target)')
+  })
+  it('the overline gap is a token', () => {
+    expect(declarations(css, '.tile__overline').gap).toMatch(/^var\(--/)
+  })
+  it('a legacy clickable tile (role=button) shows a pointer', () => {
+    expect(declarations(css, ".tile[role='button']").cursor).toBe('pointer')
+  })
   it('spans full row with data-span=full', () => {
     expect(declarations(css, ".tile[data-span='full']")['grid-column']).toBe('1 / -1')
   })
@@ -237,6 +248,19 @@ describe('ProgressTile', () => {
 })
 
 describe('TimerTile (plan 4.12)', () => {
+  // Decision: a timer with the deprecated onClick is a button (the focusable element must be operable);
+  // role=timer is not kept on it. data-state and the time text stay.
+  it('with onClick the focusable element is a button, not a timer', async () => {
+    const onClick = vi.fn()
+    render(<TimerTile label="Rice" seconds={30} running onClick={onClick} />)
+    expect(screen.queryByRole('timer')).toBeNull()
+    const el = screen.getByRole('button', { name: 'Rice' })
+    expect(el).toHaveAttribute('data-state', 'running')
+    expect(el).toHaveTextContent('0:30')
+    await userEvent.click(el)
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
   it('shows the formatted time in a labelled timer', () => {
     render(<TimerTile label="Simmer sauce" seconds={605} running />)
     const t = screen.getByRole('timer', { name: 'Simmer sauce' })

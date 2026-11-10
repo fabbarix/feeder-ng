@@ -1,7 +1,7 @@
 // Per-component stylesheets (plan 7 WP3): tokens only. Mirrors the check-ui guards (sizing, colour-literals)
 // so a violation fails vitest as well as scripts/check-ui.sh.
 import { describe, expect, it } from 'vitest'
-import { readAllUiCss } from './test-utils'
+import { readAllUiCss, readStylesCss, ruleBlocks } from './test-utils'
 
 const EXPECTED = [
   'BentoGrid.css',
@@ -41,6 +41,12 @@ describe('ui/*.css', () => {
 
   it('Tile.css has no min-height on any tile variant', () => {
     expect(code(files['Tile.css'] ?? '')).not.toMatch(/min-(block-size|height)/)
+  })
+
+  it('styles.css has a single light palette block, `:root, [data-scheme=light]`', () => {
+    const light = ruleBlocks(readStylesCss()).filter((b) => /--color-bg\s*:/.test(b.body) && !b.selectors.some((s) => s.includes('dark')))
+    expect(light).toHaveLength(1)
+    expect(light[0]!.selectors).toEqual([':root', "[data-scheme='light']"])
   })
 
   it('styles.css no longer holds the moved component rules', async () => {

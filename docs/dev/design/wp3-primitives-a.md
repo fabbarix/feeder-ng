@@ -58,6 +58,19 @@ therefore fails `check-ui` until the Developer finishes; that is the red state.
 - **Type** uses `--text-*` tokens (chip `--text-chip-size`, label, overline, display for TileMetric and the timer); no px font sizes.
 - Hit areas of 44 px on `sm` buttons, compact IconButtons and filter chips use a `::after` pseudo-element, not size.
 
+## Review follow-ups (tests first, then code)
+- **ListRow target.** The whole row is the tap target: in `ListRow.css` every child except the target is `pointer-events: none` and is not lifted (`.list-row > :not(.list-row__target)` has no `z-index`);
+  only interactive elements inside `.list-row__trailing` (`button`, `a`, `input`, `select`, `[role=button]`) get `pointer-events: auto; position: relative; z-index: 1`. A click on title, lead or chevron
+  therefore reaches the target (jsdom cannot hit-test: CSS contract test plus a click test on the target).
+- **Tile inside a tile.** The Tile.css rule lifting inner `button`/`a` is `.tile :is(button, a):not(.tile__stretch):not(.list-row__target)`, so a ListRow keeps its absolute target.
+- **Danger button.** Text is `--status-danger-on-solid`, white in light and both dark blocks of `styles.css` (AA on the dark solid too), replacing `--color-surface`.
+- **Palette.** `styles.css` holds one light block, `:root, [data-scheme='light']`; the non-colour `:root` tokens stay in a separate `:root` block.
+- **ListGroup** carries `data-primary-scope` on `.list-group`.
+- **Nits.** `Button.css` `font-weight` is a token (lg uses `--text-title-3-weight`); `.tile__overline` gap is a token; `.tile[role='button']` has `cursor: pointer`.
+- **TimerTile with `onClick`** (deprecated): the focusable element is `role="button"` named by the label, keeping `data-state` and the time text; `role="timer"` is dropped there
+  (a focusable operable element must expose its action; a timer role on it would hide it). Without `onClick` the tile stays `role="timer"`.
+- **Accepted deviation.** The ListRow divider is full width (a 1 px `--color-line` between rows), not inset as plan 4.13 sketches; accepted by the reviewer.
+
 ## Public signatures the tests rely on
 See the stubs: `ButtonProps`, `PRIMARY_SCOPE_ATTR` (`'data-primary-scope'`), `IconButtonProps`, `ChipProps`/`ChipKind`/`ChipStatus`, `WhyChipProps`/`WhyCause`,
 `TileProps`/`TileVariant`/`TileSpan`/`TileStretched`/`TileMetric`, `PageHeaderProps`, `ListRowProps`/`ListGroupProps`, `RecipeThumbProps`, `TimerTileProps`/`TimerState`,

@@ -47,3 +47,21 @@ export function declarations(css: string, selector: string): Record<string, stri
   if (!found) throw new Error(`no CSS rule for ${selector}`)
   return out
 }
+
+/** Text of web/src/styles.css ('' when unreadable). */
+export function readStylesCss(): string {
+  try {
+    return readFileSync(`${cwd}/src/styles.css`, 'utf8')
+  } catch {
+    return ''
+  }
+}
+
+/** Innermost rule blocks of a stylesheet (comments dropped, @media wrappers unwrapped): selector list and body. */
+export function ruleBlocks(css: string): { selectors: string[]; body: string }[] {
+  const noComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
+  return [...noComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+    selectors: m[1]!.split(',').map(norm),
+    body: m[2]!,
+  }))
+}
