@@ -48,9 +48,9 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div role="status" aria-live="polite" className="toast-region">
+      <div aria-live="polite" className="toast-region">
         {toasts.map((t) => (
-          <div key={t.id} className="toast" data-tone={t.tone ?? 'neutral'}>
+          <div key={t.id} role="status" className="toast" data-tone={t.tone ?? 'neutral'}>
             <span className="toast__message">{t.message}</span>
             {t.actionLabel ? (
               <Button

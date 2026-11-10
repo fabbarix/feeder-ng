@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, WhyChip } from '../../../ui'
 import { couldntPlanText } from '../lib/couldnt'
+import { mayResolve } from '../lib/resolve'
 import { phraseAll, weekdayName } from '../lib/phrase'
 import { planStrings } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
@@ -22,7 +23,7 @@ export interface MealTileProps {
  * not cooked) and the actions that fit the state. An empty slot shows its "couldn't plan" reason and "Choose a Recipe".
  * Renders and wires events only; the wording comes from lib/.
  */
-export function MealTile({ slot, onSwap, onChoose, onConfirm, onUnpin, onMarkCooked }: MealTileProps): ReactNode {
+export function MealTile({ slot, today, onSwap, onChoose, onConfirm, onUnpin, onMarkCooked }: MealTileProps): ReactNode {
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const meal = slot.meal
   const heading = (
@@ -83,9 +84,11 @@ export function MealTile({ slot, onSwap, onChoose, onConfirm, onUnpin, onMarkCoo
               {planStrings.confirm}
             </Button>
           )}
-          <Button variant="tonal" onClick={() => onMarkCooked(key)}>
-            {planStrings.markCooked}
-          </Button>
+          {mayResolve(slot.date, today) ? (
+            <Button variant="tonal" onClick={() => onMarkCooked(key)}>
+              {planStrings.markCooked}
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>
