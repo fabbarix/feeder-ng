@@ -743,7 +743,7 @@ Order: **guards → tokens → icons → primitives → shell → screens**. `we
 
 ### WP2 Icon wrapper (one team; after WP1 or in parallel, it touches different files except `package.json`) — `web/package.json`, lockfile, `web/src/ui/icons.ts`, `web/src/ui/Icon.tsx`, `web/src/ui/lib/mealSlotIcon.ts`, `web/src/ui/lib/tagIcon.ts`, tests
 - Add `@phosphor-icons/react`; register every icon in 3.4; `Icon` per 4.1; pure helpers with unit tests.
-- **Acceptance:** guard rule 2 fails on any other import; production bundle contains only the registered icons (check `dist` size delta < 40 kB gz
+- **Acceptance:** guard rule 2 fails on any other import; production bundle contains only the registered icons (check `dist` size delta < 64 kB gz; each csr glyph ships all 6 weights
   for ~90 icons); `Icon` tests cover default weight by size and aria.
 
 ### WP3 Primitives A: actions, chips, tiles, layout (one team; serial with WP4 on `ui/index.ts` and `styles.css`) — `ui/Button.tsx`, new `ui/IconButton.tsx`, `ui/Chip.tsx`, `ui/WhyChip.tsx`, `ui/Tile.tsx`, `ui/BentoGrid.tsx`, new `ui/PageHeader.tsx`, `ui/ProgressTile.tsx`, `ui/TimerTile.tsx`, new `ui/ListRow.tsx`, new `ui/RecipeThumb.tsx`, `ui/EmptyState.tsx`, CSS moved to `ui/*.css` per component
