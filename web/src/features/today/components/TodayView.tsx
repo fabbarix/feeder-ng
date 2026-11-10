@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react'
-import { BentoGrid, Button, EmptyState } from '../../../ui'
+import { BentoGrid, Button, EmptyState, PageHeader } from '../../../ui'
 import { todayStrings as s } from '../strings'
-import type { TileId, TodayLayout } from '../types'
+import type { TodayLayout, TileId } from '../types'
 import '../today.css'
 
 export interface TodayViewProps {
@@ -19,29 +19,24 @@ export interface TodayViewProps {
 
 /**
  * Renders a layout. Heading "Today". Mode shopping: only `shopping`. Mode today: a
- * BentoGrid (labelled "Today") with a slot per tile in layout order, each carrying the
- * spec's size and tone. When layout.empty, the EmptyState shows above the grid (so
- * any streak tile stays visible). While loading, "Loading" and no empty state.
+ * BentoGrid (labelled "Today") with a slot per tile in layout order; each slot carries data-tile. When layout.empty,
+ * the EmptyState shows above the grid (so any streak tile stays visible). While loading, "Loading" and no empty state.
  */
-export function TodayView({ layout, loading = false, tiles, shopping, onOpenPlan }: TodayViewProps): ReactElement {
+export function TodayView({ layout, loading = false, dateLabel, tiles, shopping, onOpenPlan }: TodayViewProps): ReactElement {
   if (layout.mode === 'shopping') return <>{shopping}</>
   return (
     <section className="today">
-      <h1 className="today__title">{s.title}</h1>
+      <PageHeader title={s.title} subtitle={dateLabel} />
       {loading ? <p className="today__muted">{s.loading}</p> : null}
       {layout.empty && !loading ? (
-        <EmptyState
-          title={s.emptyTitle}
-          description={s.emptyHint}
-          action={<Button onClick={onOpenPlan}>{s.emptyAction}</Button>}
-        />
+        <EmptyState title={s.emptyTitle} description={s.emptyHint} action={<Button onClick={onOpenPlan}>{s.emptyAction}</Button>} />
       ) : null}
       <BentoGrid label={s.gridLabel}>
         {layout.tiles.map((spec) => {
           const node = tiles[spec.id]
           if (!node) return null
           return (
-            <div key={spec.id} className="today__slot" data-size={spec.size} data-tone={spec.tone}>
+            <div key={spec.id} className="today__slot" data-tile={spec.id}>
               {node}
             </div>
           )

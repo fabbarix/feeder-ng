@@ -2,7 +2,7 @@
 // scan session (T13). Tests mock this module. Only this file imports other
 // features' hooks, so Today's own components and hooks stay decoupled.
 import type { UnitSystem } from '../../lib/units'
-import { nextMeal, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
+import { heroMeal, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
 import type { Leftover, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
 import type { StockLot } from '../stock/types'
@@ -53,6 +53,7 @@ export interface TodayTileData {
 
 /** T11 and T10 data for the Today tiles. */
 export function useTodayTileData(): TodayTileData {
+  const now = new Date()
   const plan = usePlan()
   const toConfirm = useToConfirm()
   const couldntPlan = useCouldntPlan()
@@ -60,8 +61,8 @@ export function useTodayTileData(): TodayTileData {
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
   return {
-    now: new Date(),
-    nextSlot: nextMeal(plan.slots, new Date()),
+    now,
+    nextSlot: heroMeal(plan.slots, now),
     toConfirm: toConfirm.slots,
     couldntPlan: couldntPlan.slots,
     leftovers: leftovers.leftovers,

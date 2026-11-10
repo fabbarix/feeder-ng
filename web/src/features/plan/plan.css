@@ -1,19 +1,8 @@
-/* Planning screens: layout only; colours come from the theme tokens. */
+/* Plan: the week grid, day tiles, Planned Meal blocks and sheets. Layout here; colours come from the theme tokens. */
 .plan {
   display: grid;
   gap: 16px;
   padding-top: 16px;
-}
-.plan__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.plan__title {
-  margin: 0;
-  font-size: 1.75rem;
 }
 .plan__note,
 .plan__muted {
@@ -25,7 +14,6 @@
   margin: 0;
   font-weight: 600;
 }
-.plan__day-title,
 .plan__tile-title {
   margin: 0 0 12px;
   font-size: 1.25rem;
@@ -48,71 +36,175 @@
   padding: 0;
   list-style: none;
 }
-.plan__list > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+
+/* The week grid: 2 phone, 4 tablet, 7 desktop columns (a true week). */
+.plan-grid {
+  display: grid;
+  gap: 16px;
 }
+.plan-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.plan-grid[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.plan-grid[data-columns='7'] {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.plan-day {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  min-width: 0;
+}
+.plan-day[data-today='true'] {
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+.plan-day__title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+/* A Planned Meal inside a day tile: compact, one chip at most. */
 .plan-meal {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
+}
+/* Chips in a narrow day tile wrap inside it rather than spill past its edge. */
+.plan-meal [data-kind] {
+  block-size: auto;
+  min-block-size: 28px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
 }
 .plan-meal + .plan-meal {
   padding-top: 12px;
   border-top: 1px solid var(--color-outline);
 }
+.plan-meal[data-state='cooked'],
+.plan-meal[data-state='skipped'] {
+  opacity: 0.55;
+}
+.plan-meal[data-unfilled] {
+  padding: 12px;
+  border: 1px dashed var(--color-outline);
+  border-radius: 16px;
+}
+.plan-meal__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+}
 .plan-meal__slot {
-  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.875rem;
   opacity: 0.8;
 }
+.plan-meal__actions {
+  display: inline-flex;
+  gap: 4px;
+}
 .plan-meal__recipe {
   margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: 1.1rem;
   font-weight: 700;
+  text-align: start;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .plan-meal__reason {
   margin: 0;
   font-size: 0.9rem;
 }
+
+/* The Today hero: the photo and the text side by side, the actions below. */
+.plan-hero {
+  display: grid;
+  gap: 16px;
+}
+.plan-hero__body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.plan-hero__text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.plan-hero__start {
+  margin: 0;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.plan-hero__name {
+  margin: 0;
+  font-size: 1.5rem;
+  overflow-wrap: anywhere;
+}
+.plan-hero__chips,
+.plan-hero__actions,
+.plan-sheet__chips,
+.plan-sheet__attendance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Sheets: meta lines, facts and the footer actions. */
+.plan-sheet {
+  display: grid;
+  gap: 12px;
+}
+.plan-sheet__meta,
+.plan-sheet__facts {
+  margin: 0;
+}
+.plan-sheet__meta {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+.plan-sheet__facts {
+  font-variant-numeric: tabular-nums;
+}
+.plan-sheet__recipe {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.plan-sheet__actions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+  gap: 8px;
+}
+.plan-confirm {
+  display: grid;
+  gap: 8px;
+}
 .plan-form {
   display: grid;
   gap: 12px;
 }
-.plan-field {
-  display: grid;
-  gap: 4px;
-}
-.plan-field__label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.plan-field input[type='text'],
-.plan-field select {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--color-outline);
-  border-radius: 14px;
-  background: var(--color-surface);
-  color: var(--color-on-surface);
-  font: inherit;
-  min-width: 0;
-  width: 100%;
-}
-.plan-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-}
-.plan-check input {
-  width: 22px;
-  height: 22px;
-}
+
 @media (prefers-reduced-motion: reduce) {
   .plan * {
     transition: none !important;

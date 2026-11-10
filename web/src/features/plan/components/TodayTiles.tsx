@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
-import { Tile } from '../../../ui'
+import { Button, ListGroup, ListRow, Tile } from '../../../ui'
 import { couldntPlanText } from '../lib/couldnt'
+import { leftoverRows } from '../lib/leftovers'
+import { weekdayName } from '../lib/phrase'
+import { planStrings as s } from '../strings'
 import type { Leftover, PlanSlot, SlotKey } from '../types'
 import '../plan.css'
 
@@ -18,8 +21,37 @@ export interface ToConfirmTileProps {
  * confirm", per meal the Recipe name and slot line with secondary "Yes, Cooked" and "Adjust" and tertiary "Not cooked".
  * Renders nothing when there are none.
  */
-export function ToConfirmTile(_props: ToConfirmTileProps): ReactNode {
-  throw new Error('not implemented (WP6)')
+export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked }: ToConfirmTileProps): ReactNode {
+  if (slots.length === 0) return null
+  return (
+    <Tile as="section" span="full">
+      <h2 className="plan__tile-title">{s.toConfirmTitle}</h2>
+      <ul className="plan__list">
+        {slots.map((slot) => {
+          const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+          return (
+            <li key={`${slot.date}/${slot.mealSlotId}`} className="plan-confirm">
+              <div className="plan__stack">
+                <p className="plan-sheet__recipe">{slot.meal?.recipeName ?? ''}</p>
+                <p className="plan__muted">{`${weekdayName(slot.date, 'short')} ${slot.name}`}</p>
+              </div>
+              <div className="plan__row">
+                <Button variant="secondary" size="sm" onClick={() => onYesCooked(key)}>
+                  {s.yesCooked}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => onAdjust(key)}>
+                  {s.adjust}
+                </Button>
+                <Button variant="tertiary" size="sm" onClick={() => onNotCooked(key)}>
+                  {s.notCooked}
+                </Button>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </Tile>
+  )
 }
 
 export interface CouldntPlanNoticeProps {
@@ -30,7 +62,7 @@ export interface CouldntPlanNoticeProps {
 export function CouldntPlanNotice({ slots }: CouldntPlanNoticeProps): ReactNode {
   if (slots.length === 0) return null
   return (
-    <Tile size="full" tone="spoil" role="status">
+    <Tile variant="status" status="danger" span="full" role="status">
       <ul className="plan__list">
         {slots.map((s) => (
           <li key={`${s.date}/${s.mealSlotId}`}>{couldntPlanText(s)}</li>
@@ -52,6 +84,24 @@ export interface LeftoversTileProps {
  * leftover icon, a row per Leftover "Chicken curry" with meta "2 portions · Use by Thu" (the spoil tone when due
  * today or tomorrow). Renders nothing when there are none.
  */
-export function LeftoversTile(_props: LeftoversTileProps): ReactNode {
-  throw new Error('not implemented (WP6)')
+export function LeftoversTile({ leftovers, today, onOpen }: LeftoversTileProps): ReactNode {
+  const rows = leftoverRows(leftovers, today)
+  if (rows.length === 0) return null
+  return (
+    <Tile
+      as="section"
+      variant="status"
+      status="leftover"
+      overline={s.leftoversOverline}
+      overlineIcon="leftover"
+      stretched={onOpen ? { label: s.leftoversTitle, onActivate: onOpen } : undefined}
+    >
+      <h2 className="plan__tile-title">{s.leftoversTitle}</h2>
+      <ListGroup label={s.leftoversTitle}>
+        {rows.map((row) => (
+          <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} icon="leftover" />
+        ))}
+      </ListGroup>
+    </Tile>
+  )
 }

@@ -16,6 +16,6 @@ export function mayResolve(date: string, today: string): boolean {
 }
 
 /** Cook Mode is offered for a Planned Meal dated today only (household dates, YYYY-MM-DD). */
-export function mayCook(_date: string, _today: string): boolean {
-  throw new Error('not implemented (WP6)')
+export function mayCook(date: string, today: string): boolean {
+  return isDate(date) && isDate(today) && date === today
 }

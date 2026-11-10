@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { planStrings } from '../strings'
 import '../plan.css'
 
 export interface PlanGridProps {
@@ -11,6 +12,10 @@ export interface PlanGridProps {
  * The week grid of day tiles: a labelled group (name "Plan") with data-columns. BentoGrid only knows 2 to 4 columns,
  * so the Plan owns this grid (PRIMITIVE REQUEST: BentoGrid columns 7 would replace it).
  */
-export function PlanGrid(_props: PlanGridProps): ReactNode {
-  throw new Error('not implemented (WP6)')
+export function PlanGrid({ columns, children }: PlanGridProps): ReactNode {
+  return (
+    <div className="plan-grid" role="group" aria-label={planStrings.title} data-columns={columns}>
+      {children}
+    </div>
+  )
 }

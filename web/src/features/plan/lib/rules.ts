@@ -31,8 +31,13 @@ export interface VarietyDraft {
 export type VarietyDraftError = 'tag_required' | 'nothing_limited' | 'max_range'
 
 /** Validates the form: a Tag, and a weekly limit of 1 to 21 and/or consecutive days forbidden. Returns the rule or the first error. */
-export function toVarietyRule(_draft: VarietyDraft): { rule: VarietyRule } | { error: VarietyDraftError } {
-  throw new Error('not implemented (WP6)')
+export function toVarietyRule(draft: VarietyDraft): { rule: VarietyRule } | { error: VarietyDraftError } {
+  const tag = normaliseTag(draft.tag)
+  if (!tag) return { error: 'tag_required' }
+  const limit = draft.maxPerWeek
+  if (limit === null && !draft.notConsecutiveDays) return { error: 'nothing_limited' }
+  if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > 21)) return { error: 'max_range' }
+  return { rule: { tag, maxPerWeek: limit ?? 0, notConsecutiveDays: draft.notConsecutiveDays } }
 }
 
 /** "Friday Dinner" from weekday 5 (ISO, 1 = Monday) and the Meal Slot name. */
@@ -72,6 +77,8 @@ export interface TagOption {
 }
 
 /** Options of the Tag selects: the existing Tags, sorted by name, each with its Recipe count as meta. */
-export function toTagOptions(_tags: TagChoice[]): TagOption[] {
-  throw new Error('not implemented (WP6)')
+export function toTagOptions(tags: TagChoice[]): TagOption[] {
+  return [...tags]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({ value: t.name, label: t.name, meta: s.recipeCount(t.recipes) }))
 }

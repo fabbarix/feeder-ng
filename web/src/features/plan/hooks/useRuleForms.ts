@@ -55,10 +55,11 @@ export function useSlotRuleForm(
 
 export interface VarietyRuleForm {
   tag: string
-  maxPerWeek: string
+  /** The weekly limit; null = no cap. */
+  maxPerWeek: number | null
   notConsecutiveDays: boolean
   setTag: (v: string) => void
-  setMaxPerWeek: (v: string) => void
+  setMaxPerWeek: (v: number | null) => void
   setNotConsecutiveDays: (v: boolean) => void
   error: string | null
   submit: () => void
@@ -66,7 +67,7 @@ export interface VarietyRuleForm {
 
 export function useVarietyRuleForm(onSave: (rule: VarietyRule) => void): VarietyRuleForm {
   const [tag, setTag] = useState('')
-  const [maxPerWeek, setMaxPerWeek] = useState('')
+  const [maxPerWeek, setMaxPerWeek] = useState<number | null>(null)
   const [notConsecutiveDays, setNotConsecutiveDays] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,7 +80,7 @@ export function useVarietyRuleForm(onSave: (rule: VarietyRule) => void): Variety
     setError(null)
     onSave(res.rule)
     setTag('')
-    setMaxPerWeek('')
+    setMaxPerWeek(null)
     setNotConsecutiveDays(false)
   }
   return { tag, maxPerWeek, notConsecutiveDays, setTag, setMaxPerWeek, setNotConsecutiveDays, error, submit }

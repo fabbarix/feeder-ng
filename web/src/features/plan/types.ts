@@ -75,10 +75,12 @@ export interface SlotRule {
   tag?: string
 }
 
-/** A Member attending a Planned Meal (shown as an Avatar in the Planned Meal sheet). */
+/** A Member attending a Meal Slot (shown as an Avatar in the Planned Meal sheet). */
 export interface AttendanceMember {
   id: number
   name: string
+  /** #rrggbb, the Member's colour. */
+  colour?: string
   imageUrl?: string
 }
 
@@ -193,6 +195,9 @@ export interface TagChoice {
 
 export interface MealSlotChoice {
   id: number
+  /** ISO weekday: 1 Monday .. 7 Sunday. */
   weekday: number
   name: string
+  /** "HH:mm". */
+  time: string
 }
