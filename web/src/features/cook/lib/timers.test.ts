@@ -93,7 +93,7 @@ describe('timerActions (B14)', () => {
 
 describe('timerPlace (B14)', () => {
   it('names where another timer belongs, and nothing for this scope or a free timer', () => {
-    expect(timerPlace('meal:2026-11-10/3', 'recipe:7')).toBe('Tue meal')
+    expect(timerPlace('meal:2026-11-10/3', 'recipe:7')).toBe('Tue Planned Meal')
     expect(timerPlace('recipe:9', 'recipe:7')).toBe('another Recipe')
     expect(timerPlace('recipe:7', 'recipe:7')).toBe('')
     expect(timerPlace(null, 'recipe:7')).toBe('')

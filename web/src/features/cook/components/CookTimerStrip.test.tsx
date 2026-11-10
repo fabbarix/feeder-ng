@@ -63,7 +63,7 @@ describe('CookTimerStrip', () => {
     expect(within(here).getByRole('timer', { name: 'Step 2: Simmer' })).toBeInTheDocument()
     expect(within(other).getByRole('timer', { name: 'Step 1: Boil' })).toBeInTheDocument()
     expect(within(other).getByRole('timer', { name: 'Eggs' })).toBeInTheDocument()
-    expect(within(other).getByText('Tue meal')).toBeInTheDocument()
+    expect(within(other).getByText('Tue Planned Meal')).toBeInTheDocument()
   })
 
   it('B14: with no timer for this scope the others still show', () => {

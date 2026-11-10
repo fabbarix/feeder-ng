@@ -128,7 +128,7 @@ func messageFor(code string) string {
 	case "not_swappable":
 		return "A Cooked or skipped Planned Meal cannot be swapped"
 	case "future_meal":
-		return "This meal is not due yet"
+		return "This Planned Meal is not due yet"
 	case "unknown_recipe":
 		return "No such Recipe"
 	case "recipe_archived":
