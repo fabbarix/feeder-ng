@@ -35,13 +35,15 @@ export function LineTile({ entry, onTick, onUntick, onDelete }: LineTileProps) {
         {entry.quantityText ? <p className="line-tile__quantity">{entry.quantityText}</p> : null}
         {entry.packLine ? <p className="line-tile__pack">{entry.packLine}</p> : null}
       </div>
-      {entry.kind === 'extra' ? (
-        <span className="line-tile__extra-icon" aria-hidden="true">
-          <Icon name="extra" size={20} />
-        </span>
-      ) : null}
-      {entry.estimatedCost !== null ? <span className="line-tile__estimated-cost">{entry.estimatedCost}</span> : null}
-      {entry.kind === 'extra' && onDelete ? <IconButton icon="delete" size="compact" label={shopStrings.deleteExtra(entry.title)} onClick={() => onDelete(entry)} /> : null}
+      <span className="line-tile__end">
+        {entry.kind === 'extra' ? (
+          <span className="line-tile__extra-icon" aria-hidden="true">
+            <Icon name="extra" size={20} />
+          </span>
+        ) : null}
+        {entry.estimatedCost !== null ? <span className="line-tile__estimated-cost">{entry.estimatedCost}</span> : null}
+        {entry.kind === 'extra' && onDelete ? <IconButton icon="delete" size="compact" label={shopStrings.deleteExtra(entry.title)} onClick={() => onDelete(entry)} /> : null}
+      </span>
     </Tile>
   )
 }

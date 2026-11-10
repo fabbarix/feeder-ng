@@ -109,6 +109,22 @@
   line-height: var(--text-meta-line);
 }
 
+.shop-lines .bento-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .shop-lines .bento-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.line-tile__end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .line-tile__extra-icon {
   display: inline-flex;
   color: var(--color-muted);

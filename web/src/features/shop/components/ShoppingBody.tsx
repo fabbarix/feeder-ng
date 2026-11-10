@@ -31,20 +31,24 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
         <CostTile estimatedCostCents={list.estimatedCostCents} unpriced={list.unpricedLines} currency={list.currency} shopName={shopName} onScan={onScan} />
       </BentoGrid>
       {empty ? <EmptyState title={shopStrings.empty} description={shopStrings.emptyHint} /> : null}
-      <BentoGrid columns={2}>
-        {open.map((entry) => (
-          <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} onDelete={entry.kind === 'extra' ? onDelete : undefined} />
-        ))}
-      </BentoGrid>
+      <div className="shop-lines">
+        <BentoGrid columns={2}>
+          {open.map((entry) => (
+            <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} onDelete={entry.kind === 'extra' ? onDelete : undefined} />
+          ))}
+        </BentoGrid>
+      </div>
       {ticked.length > 0 ? (
         <section className="shop-ticked">
           <h2 className="shop-ticked__title">{shopStrings.tickedGroup(ticked.length)}</h2>
           <div role="group" aria-label={shopStrings.ticked}>
-            <BentoGrid columns={2}>
-              {ticked.map((entry) => (
-                <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} />
-              ))}
-            </BentoGrid>
+            <div className="shop-lines">
+              <BentoGrid columns={2}>
+                {ticked.map((entry) => (
+                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} />
+                ))}
+              </BentoGrid>
+            </div>
           </div>
         </section>
       ) : null}
