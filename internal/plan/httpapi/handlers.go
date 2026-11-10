@@ -41,7 +41,7 @@ func (a *api) view(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(ctx)
+	t, err := a.names.load(ctx, viewMeals(v.Slots)...)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -58,7 +58,7 @@ func (a *api) slotList(w http.ResponseWriter, r *http.Request, list func(context
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(r.Context())
+	t, err := a.names.load(r.Context(), viewMeals(views)...)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -107,7 +107,7 @@ func (a *api) mealReply(w http.ResponseWriter, r *http.Request, m plan.Meal, err
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(r.Context())
+	t, err := a.names.load(r.Context(), &m)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -225,7 +225,7 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(r.Context())
+	t, err := a.names.load(r.Context(), &res.Meal)
 	if err != nil {
 		writeErr(w, err)
 		return

@@ -147,23 +147,18 @@ func (a *api) timers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	now, list, err := a.svc.Timers(r.Context(), scope)
+	now, list, err := a.svc.TimersWithRecipeNames(r.Context(), scope)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	out := timersOf(list, now)
-	names := map[cook.Scope]string{} // one lookup per scope
+	plain := make([]cook.Timer, len(list))
 	for i, t := range list {
-		if t.Scope == "" {
-			continue
-		}
-		name, ok := names[t.Scope]
-		if !ok {
-			name = a.svc.ScopeRecipeName(r.Context(), t.Scope)
-			names[t.Scope] = name
-		}
-		out[i].RecipeName = name
+		plain[i] = t.Timer
+	}
+	out := timersOf(plain, now)
+	for i, t := range list {
+		out[i].RecipeName = t.RecipeName
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"now": instant(now), "timers": out})
 }

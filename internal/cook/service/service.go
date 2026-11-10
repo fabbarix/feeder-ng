@@ -425,6 +425,35 @@ func (s *Service) Timers(ctx context.Context, scope cook.Scope) (time.Time, []co
 	return now, all, nil
 }
 
+// NamedTimer is a timer with the name of the Recipe its scope belongs to ("" for a free timer or an unknown scope).
+type NamedTimer struct {
+	cook.Timer
+	RecipeName string
+}
+
+// TimersWithRecipeNames is Timers with each timer's Recipe name resolved, one lookup per distinct scope.
+func (s *Service) TimersWithRecipeNames(ctx context.Context, scope cook.Scope) (time.Time, []NamedTimer, error) {
+	now, list, err := s.Timers(ctx, scope)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	names := map[cook.Scope]string{}
+	out := make([]NamedTimer, len(list))
+	for i, t := range list {
+		out[i].Timer = t
+		if t.Scope == "" {
+			continue
+		}
+		name, ok := names[t.Scope]
+		if !ok {
+			name = s.ScopeRecipeName(ctx, t.Scope)
+			names[t.Scope] = name
+		}
+		out[i].RecipeName = name
+	}
+	return now, out, nil
+}
+
 // sortTimers orders running timers by their end, then paused by what is left,
 // then finished ones by when they ended.
 func sortTimers(ts []cook.Timer) {
