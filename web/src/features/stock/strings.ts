@@ -10,6 +10,7 @@ export const stockStrings = {
   throwOut: 'Throw out',
   keep: 'Keep',
   throwOutLabel: (name: string) => `Throw out ${name}`,
+  throwOutLotLabel: (name: string) => `Throw out ${name} lot`,
   keepLabel: (name: string) => `Keep ${name}`,
   setTotal: 'Set total',
   setTotalTitle: (name: string) => `Set total for ${name}`,

@@ -26,6 +26,7 @@ import { StockRow } from '../components/StockRow'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
 import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
+import { capitalise } from '../lib/display'
 import { filterTotals, STOCK_FILTERS, type StockFilter } from '../lib/filter'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
@@ -128,7 +129,7 @@ export function StockScreen(): ReactElement | null {
       <BottomSheet
         open={selected !== null && !settingTotal}
         onClose={closeDetail}
-        title={selected?.name ?? ''}
+        title={selected ? capitalise(selected.name) : ''}
         footer={
           <Button variant="secondary" onClick={() => setSettingTotal(true)}>
             {strings.setTotal}

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { Button, Chip, ListGroup, ListRow } from '../../../ui'
+import { Chip, IconButton, ListGroup, ListRow } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { formatLotDate } from '../lib/display'
 import { describeGoOff } from '../lib/view'
@@ -19,7 +19,7 @@ export interface LotListProps {
  * Lot detail as a `ListGroup label="Stock Lots"` of `ListRow`s (separators come from the group): title = amount
  * (formatQuantity), meta = "Bought <purchased, en-GB day and month> · <source label>", trailing = go-off wording as
  * `Chip kind="state" status="spoil"` when describeGoOff says spoil, else a plain `Chip kind="tag"`. A spoiled lot
- * also gets a `Button variant="danger-tertiary"` "Throw out" when `onThrowOut` is given.
+ * also gets an icon-only `IconButton` (throwOut icon, labelled "Throw out <name> lot") when `onThrowOut` is given.
  */
 export function LotList({ lots, today, system = 'metric', onThrowOut }: LotListProps): ReactElement | null {
   return (
@@ -41,9 +41,7 @@ export function LotList({ lots, today, system = 'metric', onThrowOut }: LotListP
                   <Chip kind="tag">{go.label}</Chip>
                 )}
                 {lot.spoiled && onThrowOut ? (
-                  <Button variant="danger-tertiary" icon="throwOut" size="sm" onClick={() => onThrowOut(lot.id)}>
-                    {strings.throwOut}
-                  </Button>
+                  <IconButton icon="throwOut" label={strings.throwOutLotLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)} />
                 ) : null}
               </span>
             }
