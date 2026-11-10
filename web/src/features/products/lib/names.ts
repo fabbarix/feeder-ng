@@ -1,9 +1,13 @@
 // Product naming helpers. Plain TypeScript, no React.
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit } from '../types'
 
-/** "700 g", "500 ml", "1 piece", "6 pieces"; at most 2 decimals, trailing zeros dropped; no kg/l promotion. */
-export function formatPackSize(size: number, base: BaseUnit, system: 'metric' | 'imperial' = 'metric'): string {
-  void system // TODO(developer): imperial goes through lib/units formatQuantity
+/**
+ * "700 g", "500 ml", "1 piece", "6 pieces" in metric: at most 2 decimals, trailing zeros dropped, no kg/l promotion.
+ * Imperial goes through lib/units formatQuantity ("700 g" reads "1 lb 9 oz", "500 ml" reads "2 cups").
+ */
+export function formatPackSize(size: number, base: BaseUnit, system: UnitSystem = 'metric'): string {
+  if (system === 'imperial') return formatQuantity(size, base, 'imperial')
   const n = Number(size.toFixed(2))
   const unit = base === 'piece' ? (n === 1 ? 'piece' : 'pieces') : base
   return `${n} ${unit}`

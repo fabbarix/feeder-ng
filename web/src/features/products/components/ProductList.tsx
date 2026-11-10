@@ -12,7 +12,7 @@ export interface ProductListProps {
 }
 
 /** Tiles with the name and formatted pack size, each linking to /products/:id; EmptyState when none. */
-export function ProductList({ products }: ProductListProps) {
+export function ProductList({ products, system = 'metric' }: ProductListProps) {
   if (products.length === 0) {
     return <EmptyState title={strings.productsEmpty} description={strings.productsEmptyHint} />
   }
@@ -23,7 +23,7 @@ export function ProductList({ products }: ProductListProps) {
           <Tile size="wide">
             <div className="pg__row pg__row--between">
               <Link to={`/products/${p.id}`}>{p.name}</Link>
-              <span>{formatPackSize(p.packSize, p.baseUnit)}</span>
+              <span>{formatPackSize(p.packSize, p.baseUnit, system)}</span>
             </div>
           </Tile>
         </li>
