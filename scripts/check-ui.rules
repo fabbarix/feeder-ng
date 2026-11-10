@@ -8,3 +8,4 @@ colour-literals=warn
 class-hooks=warn
 sizing=warn
 glossary=warn
+native-search=warn

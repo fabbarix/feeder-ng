@@ -10,6 +10,7 @@
 #   class-hooks      4  every className token used in .tsx has a CSS rule (or is in the allowlist)
 #   sizing           5  no min-height on .tile variants; no px font sizes (use the type tokens)
 #   glossary         6  GLOSSARY.md _Avoid_ words in strings.ts (or in the allowlist)
+#   native-search    7  no <input type="search"> outside web/src/ui (use the SearchField primitive)
 #
 # Output: counts per rule and the first few violations; every violation goes to
 # <root>/build/check-ui.txt (override with CHECK_UI_OUT). Exit 1 only if a rule in
@@ -24,8 +25,10 @@ ALLOW_DIR="${CHECK_UI_ALLOW_DIR:-$SCRIPT_DIR}"
 VERBOSE=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --root) ROOT="$(cd "$2" && pwd)"; shift 2 ;;
-    --rules) RULES_FILE="$2"; shift 2 ;;
+    --root|--rules)
+      [ $# -ge 2 ] || { echo "check-ui: usage: check-ui.sh [--root DIR] [--rules FILE] [--verbose] ($1 needs a value)" >&2; exit 2; }
+      if [ "$1" = --root ]; then ROOT="$(cd "$2" && pwd)"; else RULES_FILE="$2"; fi
+      shift 2 ;;
     --verbose) VERBOSE=1; shift ;;
     *) echo "check-ui: unknown argument $1" >&2; exit 2 ;;
   esac
@@ -42,7 +45,7 @@ trap 'rm -rf "$TMP"' EXIT
 VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
-RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary)
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search)
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
@@ -55,7 +58,8 @@ if [ -f "$RULES_FILE" ]; then
     key="${key//[[:space:]]/}"; val="${val#"${val%%[![:space:]]*}"}"; val="${val%"${val##*[![:space:]]}"}"
     case "$key" in
       *.fail_paths) name="${key%.fail_paths}"; [ -n "${MODE[$name]+x}" ] || { echo "check-ui: unknown rule '$name' in $RULES_FILE" >&2; exit 2; }
-                    FAIL_PATHS[$name]="$val" ;;
+                    norm=""; for p in $val; do norm+="${p%/} "; done   # "web/ui/" behaves like "web/ui"
+                    FAIL_PATHS[$name]="$norm" ;;
       *) [ -n "${MODE[$key]+x}" ] || { echo "check-ui: unknown rule '$key' in $RULES_FILE" >&2; exit 2; }
          case "$val" in warn|fail) MODE[$key]="$val" ;; *) echo "check-ui: rule '$key' must be warn or fail, got '$val'" >&2; exit 2 ;; esac ;;
     esac
@@ -141,12 +145,23 @@ rule_native_ui() {
   code_match native-ui "native <select>; use the Select primitive" '<select([ \t>/]|$)' <<<"$files"
   code_match native-ui "window.alert/confirm/prompt; use ConfirmDialog/Toast" 'window\.(alert|confirm|prompt)[^A-Za-z0-9_]' <<<"$files"
   code_match native-ui "bare alert()/confirm()/prompt(); use ConfirmDialog/Toast" '([(!;={,&|?:]|return)[ \t]*(alert|confirm|prompt)\(|^[ \t]*(alert|confirm|prompt)\(["\047`]' <<<"$files"
-  while IFS= read -r f; do [ -n "$f" ] && native_inputs "$f"; done <<<"$files"
+  while IFS= read -r f; do [ -n "$f" ] && native_inputs "$f" native-ui "$NATIVE_UI_TYPES" "native <input type=...>; use a field primitive"; done <<<"$files"
 }
 
+# ------------------------------------------------------------------ rule 7
+rule_native_search() {
+  local f
+  src_files tsx | grep -v "^$SRC/ui/" | while IFS= read -r f; do
+    [ -n "$f" ] && native_inputs "$f" native-search search 'native <input type="search">; use the SearchField primitive'
+  done
+}
+
+NATIVE_UI_TYPES='checkbox|radio|date|time|number|range|color|file|datetime-local|month|week'
+
 # Each <input ...> tag, however many lines it spans: the tag ends at the first '>' outside
-# braces and quotes (so `onChange={() => x}` is fine). Flags a type= of a native control.
-native_inputs() { awk -v FILE="$1" '
+# braces and quotes (so `onChange={() => x}` is fine). Flags a type= in TYPES (ERE alternation).
+# native_inputs FILE RULE TYPES MESSAGE
+native_inputs() { awk -v FILE="$1" -v RULE="$2" -v TYPES="$3" -v MSG="$4" '
   { l = $0
     if (inblk) { if (index(l, "*/")) inblk = 0; l = "" }
     else if (l ~ /^[ \t]*\/\//) l = ""
@@ -168,9 +183,9 @@ native_inputs() { awk -v FILE="$1" '
         else if (c == ">" && d == 0) break
       }
       tag = substr(text, at, i - at + 1)
-      if (tag ~ /[[:space:]]type[[:space:]]*=[[:space:]]*[{]?[[:space:]]*["\047\140]?(checkbox|radio|date|time|number|range|color|file|datetime-local|month|week)(["\047\140}\/>]|[[:space:]])/) {
+      if (tag ~ ("[[:space:]]type[[:space:]]*=[[:space:]]*[{]?[[:space:]]*[\"\047\140]?(" TYPES ")([\"\047\140}\\/>]|[[:space:]])")) {
         pre = substr(text, 1, at); ln = gsub(/\n/, "&", pre) + 1
-        print "native-ui\t" FILE "\t" ln "\tnative <input type=...>; use a field primitive"
+        print RULE "\t" FILE "\t" ln "\t" MSG
       }
       pos = i + 1
     }
@@ -397,6 +412,7 @@ rule_colour_literals
 rule_class_hooks
 rule_sizing
 rule_glossary
+rule_native_search
 
 LC_ALL=C sort -t$'\t' -k1,1 -k2,2 -k3,3n "$VIOL" >"$OUT"
 
