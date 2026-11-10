@@ -8,6 +8,12 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
 
+// Deep links (Payload.URL): the screen that acts on each notification.
+const (
+	planURL  = "/plan"
+	stockURL = "/stock"
+)
+
 // ConfirmAfter is how long after the slot time an unconfirmed Planned Meal is
 // asked about (spec §8, Confirm Cooked).
 const ConfirmAfter = 2 * time.Hour
@@ -38,6 +44,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 					At:    at,
 					Title: "Advance Step",
 					Body:  fmt.Sprintf("%s now for %s", s.Description, slot),
+					URL:   planURL,
 				})
 			}
 			if m.TotalTime > 0 {
@@ -48,6 +55,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 					At:    at,
 					Title: "Start cooking",
 					Body:  fmt.Sprintf("Start cooking %s now to eat at %s", m.RecipeName, slot),
+					URL:   planURL,
 				})
 			}
 		}
@@ -58,6 +66,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    at,
 			Title: "Confirm Cooked",
 			Body:  fmt.Sprintf("Did you cook %s?", m.RecipeName),
+			URL:   planURL,
 		})
 	}
 	for _, l := range f.Leftovers {
@@ -71,6 +80,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    day,
 			Title: "Leftover",
 			Body:  fmt.Sprintf("Use up the %s (%s) today", l.RecipeName, portions(l.Portions)),
+			URL:   planURL,
 		})
 	}
 	for _, lot := range f.Lots {
@@ -88,6 +98,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    at,
 			Title: "Stock about to spoil",
 			Body:  fmt.Sprintf("%s goes off tomorrow and no Planned Meal uses it", lot.IngredientName),
+			URL:   stockURL,
 		})
 	}
 	sortCandidates(out)

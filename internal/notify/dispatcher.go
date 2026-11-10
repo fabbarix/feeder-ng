@@ -73,6 +73,9 @@ func (d *Dispatcher) Tick(ctx context.Context) (int, error) {
 	return sent, errors.Join(errs...)
 }
 
+// boardURL is where a Timer finished notification leads: the kitchen board shows every running timer.
+const boardURL = "/board"
+
 // TimerFinished pushes a "Timer finished" to every device opted in to
 // TimerFinished, immediately and ignoring quiet hours. A timer is pushed once.
 func (d *Dispatcher) TimerFinished(ctx context.Context, ev TimerEvent) (int, error) {
@@ -81,10 +84,12 @@ func (d *Dispatcher) TimerFinished(ctx context.Context, ev TimerEvent) (int, err
 		body = fmt.Sprintf("%s (%s)", ev.Label, ev.RecipeName)
 	}
 	c := Candidate{
-		Key:   fmt.Sprintf("%s:%d", TimerFinished, ev.TimerID),
+		// The end instant is part of the key: SQLite reuses the id of a deleted timer.
+		Key:   fmt.Sprintf("%s:%d@%s", TimerFinished, ev.TimerID, ev.EndedAt.UTC().Format(time.RFC3339Nano)),
 		Type:  TimerFinished,
 		Title: "Timer finished",
 		Body:  body,
+		URL:   boardURL,
 	}
 	n, err := d.deliver(ctx, d.config(), c)
 	return n, errors.Join(err...)

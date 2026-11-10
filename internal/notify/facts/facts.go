@@ -75,7 +75,8 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		return notify.Facts{}, err
 	}
 	var out notify.Facts
-	planned := map[int64]string{} // Ingredient -> earliest fresh Planned Meal use from today on
+	recipes := map[int64]recipeEntry{} // each Recipe is read once per call
+	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
 	for _, m := range meals {
 		hhmm, ok := slotTime[m.Key.MealSlotID]
 		if !ok {
@@ -85,7 +86,7 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		if err != nil {
 			continue
 		}
-		rec, err := s.recipe(ctx, m.RecipeID)
+		rec, err := s.recipe(ctx, m.RecipeID, recipes)
 		if errors.Is(err, recipestore.ErrNotFound) {
 			continue
 		}
@@ -118,7 +119,7 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		return notify.Facts{}, err
 	}
 	for _, l := range leftovers {
-		rec, err := s.recipe(ctx, l.RecipeID)
+		rec, err := s.recipe(ctx, l.RecipeID, recipes)
 		if errors.Is(err, recipestore.ErrNotFound) {
 			continue
 		}
@@ -149,8 +150,19 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	return out, nil
 }
 
-func (s *Source) recipe(ctx context.Context, id int64) (recipe.Recipe, error) {
-	return s.recipes.Get(ctx, id)
+// recipeEntry is one cached read of a Recipe (its error too: a missing Recipe is missing for every meal).
+type recipeEntry struct {
+	rec recipe.Recipe
+	err error
+}
+
+func (s *Source) recipe(ctx context.Context, id int64, cache map[int64]recipeEntry) (recipe.Recipe, error) {
+	if e, ok := cache[id]; ok {
+		return e.rec, e.err
+	}
+	rec, err := s.recipes.Get(ctx, id)
+	cache[id] = recipeEntry{rec: rec, err: err}
+	return rec, err
 }
 
 func (s *Source) name(ctx context.Context, id int64, cache map[int64]string) (string, error) {

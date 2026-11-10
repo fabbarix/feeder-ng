@@ -73,7 +73,7 @@ func mount(r *app.Router, d app.Deps) {
 	disp := notify.NewDispatcher(notify.Config{
 		Clock: d.Clock, Facts: facts.New(d.DB, d.Clock), Settings: settings{hs},
 		Subs: st, Sent: st, Logger: d.Logger,
-		Sender: &push.Sender{VAPID: vapid, Subject: "mailto:" + d.Config.AdminEmail},
+		Sender: push.NewSender(vapid, "mailto:"+d.Config.AdminEmail),
 	})
 	dispatchers.Store(d.DB, disp)
 
@@ -106,7 +106,7 @@ func announceTimers(ctx context.Context, bus *events.Bus, disp *notify.Dispatche
 			if !ok {
 				return
 			}
-			if _, err := disp.TimerFinished(ctx, notify.TimerEvent{TimerID: ev.TimerID, Label: ev.Label, RecipeName: ev.RecipeName}); err != nil && ctx.Err() == nil {
+			if _, err := disp.TimerFinished(ctx, notify.TimerEvent{TimerID: ev.TimerID, Label: ev.Label, RecipeName: ev.RecipeName, EndedAt: ev.EndsAt}); err != nil && ctx.Err() == nil {
 				logger.Error("timer finished push failed", "err", err)
 			}
 		}

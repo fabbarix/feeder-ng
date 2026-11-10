@@ -153,7 +153,7 @@ func decodeB64(s string) ([]byte, error) {
 type Sender struct {
 	VAPID   VAPID
 	Subject string       // VAPID "sub", e.g. mailto:admin@example.com
-	Client  *http.Client // nil = a client with a 10 s timeout
+	Client  *http.Client // nil = NewHTTPClient(nil), which refuses non-public addresses
 	TTL     int          // seconds the push service may hold a message; 0 = 3600
 }
 
@@ -166,7 +166,7 @@ func (s *Sender) Send(ctx context.Context, to notify.Target, p notify.Payload) e
 	}
 	client := s.Client
 	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = safeClient
 	}
 	ttl := s.TTL
 	if ttl == 0 {
@@ -200,21 +200,83 @@ var _ notify.Sender = (*Sender)(nil)
 // LookupFunc resolves a host name to IP address strings (net.Resolver.LookupHost).
 type LookupFunc func(ctx context.Context, host string) ([]string, error)
 
+// cgnat is 100.64.0.0/10, the carrier-grade NAT range (not covered by IsPrivate).
+var cgnat = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
+
 // PublicOnlyControl is a net.Dialer.Control function that refuses any
 // connection to a non-public address: loopback, private (RFC 1918 and fc00::/7),
 // link-local (incl. 169.254.169.254), CGNAT 100.64.0.0/10, unspecified,
 // multicast, and IPv4-mapped forms of those. It runs at connect time on the
 // resolved address, so DNS rebinding cannot get past it.
-// STUB: the Developer implements it.
-func PublicOnlyControl(network, address string, _ syscall.RawConn) error { return nil }
+func PublicOnlyControl(network, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("push: refusing connection to %q", address)
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("push: refusing connection to non-IP address %q", host)
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsUnspecified() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() {
+		return fmt.Errorf("push: refusing connection to non-public address %s", host)
+	}
+	if ip4 := ip.To4(); ip4 != nil && cgnat.Contains(ip4) {
+		return fmt.Errorf("push: refusing connection to non-public address %s", host)
+	}
+	return nil
+}
 
 // NewHTTPClient is the production Web Push HTTP client: 10 s timeout, a dialer
 // whose Control is PublicOnlyControl, and CheckRedirect returning
 // http.ErrUseLastResponse (a redirect is never followed). lookup resolves host
 // names (nil = the system resolver); tests inject one to simulate DNS.
-// STUB: the Developer implements it.
-func NewHTTPClient(lookup LookupFunc) *http.Client { return &http.Client{} }
+// The proxy from the environment is not used: it would hide the real address
+// from PublicOnlyControl.
+func NewHTTPClient(lookup LookupFunc) *http.Client {
+	if lookup == nil {
+		lookup = func(ctx context.Context, host string) ([]string, error) {
+			return net.DefaultResolver.LookupHost(ctx, host)
+		}
+	}
+	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: PublicOnlyControl}
+	dial := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		if net.ParseIP(host) != nil {
+			return dialer.DialContext(ctx, network, addr)
+		}
+		ips, err := lookup(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		var lastErr error = &net.DNSError{Err: "no addresses", Name: host}
+		for _, ip := range ips {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip, port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		return nil, lastErr
+	}
+	return &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			DialContext:         dial,
+			Proxy:               nil,
+			TLSHandshakeTimeout: 10 * time.Second,
+		},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+}
+
+// safeClient is the default client of a Sender with no Client of its own.
+var safeClient = NewHTTPClient(nil)
 
 // NewSender returns a Sender that uses NewHTTPClient(nil).
-// STUB: the Developer implements it.
-func NewSender(v VAPID, subject string) *Sender { return &Sender{VAPID: v, Subject: subject} }
+func NewSender(v VAPID, subject string) *Sender {
+	return &Sender{VAPID: v, Subject: subject, Client: NewHTTPClient(nil)}
+}
