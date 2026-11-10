@@ -29,6 +29,14 @@ describe('Stock feature hygiene (WP8)', () => {
     for (const f of sources) expect(read(f), f).not.toMatch(/@phosphor-icons/)
   })
 
+  it('stacks sheet fields with a token gap (.stock-sheet__fields)', () => {
+    const css = Object.entries(raw).filter(([f]) => f.endsWith('.css')).map(([, t]) => t).join('\n')
+    const rule = /\.stock-sheet__fields\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(rule).toMatch(/display:\s*(grid|flex)/)
+    expect(rule).toMatch(/gap:\s*var\(--space-\d+\)/)
+    for (const f of ['./components/AddLotSheet.tsx', './components/SetTotalSheet.tsx']) expect(read(f), f).toContain('stock-sheet__fields')
+  })
+
   it('has no StockTile left', () => {
     expect(sources.some((f) => /StockTile/.test(f) || /StockTile/.test(read(f)))).toBe(false)
   })

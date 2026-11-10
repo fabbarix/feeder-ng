@@ -192,7 +192,7 @@ describe('StockScreen actions', () => {
 
   it('opens lot detail for an Ingredient and sets its total', async () => {
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'chicken thighs' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
     const sheet = screen.getByRole('dialog')
     expect(within(sheet).getByText('Goes off in 2 days')).toBeInTheDocument()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Set total' }))
@@ -201,6 +201,30 @@ describe('StockScreen actions', () => {
     await userEvent.type(input, '500')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(hooks.setTotal).toHaveBeenCalledWith(7, 500)
+  })
+
+  it('lot sheet: Throw out appears only on spoiled lot rows and throws that lot out', async () => {
+    hooks.lots.data = [
+      makeLot({ id: 5, quantity: 800, goesOff: '2026-11-11', spoiled: false, useSoon: true }),
+      makeLot({ id: 6, quantity: 100, goesOff: '2026-11-05', spoiled: true }),
+    ]
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    const sheet = screen.getByRole('dialog')
+    const rows = within(sheet).getAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    expect(within(rows[0]!).queryByRole('button', { name: /Throw out/ })).toBeNull()
+    await userEvent.click(within(rows[1]!).getByRole('button', { name: /Throw out/ }))
+    expect(hooks.actionThrowOut).toHaveBeenCalledWith(6)
+  })
+
+  it('lot sheet: a failed Throw out shows the error toast', async () => {
+    hooks.lots.data = [makeLot({ id: 6, spoiled: true })]
+    hooks.actionThrowOut.mockRejectedValue(new Error('500'))
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Throw out/ }))
+    expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
   })
 
   it('adds a Stock Lot by hand through the shared selects', async () => {
