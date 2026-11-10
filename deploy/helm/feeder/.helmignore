@@ -12,3 +12,5 @@
 *.tmproj
 .vscode/
 README.md.gotmpl
+# Lint fixtures, not part of the chart package.
+ci/

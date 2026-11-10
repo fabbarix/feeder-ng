@@ -1,0 +1,4 @@
+# Values used by `helm lint` in CI (scripts/test/helm_test.sh and the check).
+# They satisfy the required keys; nothing here is deployed.
+adminEmail: ci@example.com
+baseUrl: https://feeder.example.com

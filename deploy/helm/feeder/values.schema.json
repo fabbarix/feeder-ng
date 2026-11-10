@@ -38,6 +38,10 @@
         "properties": { "name": { "type": "string", "minLength": 1 } }
       }
     },
+    "global": {
+      "type": "object",
+      "description": "Helm-reserved key for parent charts and subcharts. Not used by this chart."
+    },
     "nameOverride": { "type": "string" },
     "fullnameOverride": { "type": "string" },
     "adminEmail": {

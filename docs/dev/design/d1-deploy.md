@@ -30,7 +30,7 @@ Release name `feeder` renders resources named `feeder` (fullname helper: release
 | `google.clientId`, `google.clientSecret` | `""` | when either is set and `existingSecret` is empty, the chart creates Secret `<fullname>-google` |
 | `google.existingSecret` | `""` | name of a Secret; no Secret is created |
 | `google.clientIdKey`, `google.clientSecretKey` | `client-id`, `client-secret` | keys inside the Secret (existing or created) |
-| `env` | `{}` | map of extra plain env (e.g. `FEEDER_ADDR`); `FEEDER_DEV_LOGIN` is never set by default |
+| `env` | `{}` | map of extra plain env (e.g. `TZ`); `FEEDER_DEV_LOGIN` is never set by default |
 | `extraEnv` | `[]` | raw container env entries (may use `valueFrom`) |
 | `service.type` / `port` | `ClusterIP` / `80` | targets container port `http` 8080 |
 | `ingress.enabled` | `false` | |

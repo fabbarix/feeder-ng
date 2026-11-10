@@ -11,13 +11,19 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --reuse-values`. The chart version equals the release, and the image tag defaults to `appVersion`, so both match the release.
+Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reuse-values`. The chart version equals the release, and the image tag defaults to `appVersion`, so both match the release. Upgrades with `--set` or `--version` add `--reuse-values` so existing settings survive; the form matches `templates/NOTES.txt`.
+
+No `latest` image exists until the first stable `v*` tag is published. Before then, install or upgrade with `--set image.tag=main`, which is the latest development build.
+
+Lint the chart with the CI values: `helm lint deploy/helm/feeder -f deploy/helm/feeder/ci/lint-values.yaml`. The `ci/` folder is excluded from the packaged chart by `.helmignore`.
 
 ## Constraints
 
 - **Never scale it.** The state is one SQLite file on one volume. The Deployment is fixed at `replicas: 1` with the `Recreate` strategy, and there is no `replicaCount` value (the schema rejects it).
 - **Single-writer storage.** The default PVC is `ReadWriteOnce`. Set `persistence.existingClaim` to reuse one.
 - **Read-only root filesystem.** The app writes only to `/data` (the volume) and `/tmp` (an emptyDir). Runs as uid/gid 65532 with `fsGroup: 65532`.
+- **`/data` ownership.** `/data` must be writable by uid/gid 65532. `fsGroup: 65532` makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory.
+- **Fixed port.** `FEEDER_ADDR` must stay `:8080` under the chart: the container port, the Service target and the probes are hardcoded to 8080.
 - **HTTPS in front.** Camera scanning, Web Push and Google sign-in need HTTPS, so `baseUrl` is the public https URL and an ingress or proxy must terminate TLS.
 
 ## Google sign-in
@@ -27,7 +33,7 @@ Preferred: create the Secret yourself, so the secret never sits in values or she
 ```sh
 kubectl -n feeder create secret generic feeder-google \
   --from-literal=client-id=... --from-literal=client-secret=...
-helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --reuse-values \
+helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --namespace feeder --reuse-values \
   --set google.existingSecret=feeder-google
 ```
 
@@ -50,7 +56,7 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 | `google.existingSecret` | `""` | Name of an existing Secret with the client id and secret. No Secret is created when set. |
 | `google.clientIdKey` | `client-id` | Key of the client id inside the Secret. |
 | `google.clientSecretKey` | `client-secret` | Key of the client secret inside the Secret. |
-| `env` | `{}` | Extra plain environment variables, e.g. `FEEDER_ADDR`. Never set `FEEDER_DEV_LOGIN`. |
+| `env` | `{}` | Extra plain environment variables, e.g. `TZ`. `FEEDER_ADDR` must stay `:8080`. Never set `FEEDER_DEV_LOGIN`. |
 | `extraEnv` | `[]` | Raw container env entries (may use `valueFrom`). |
 | `service.type` | `ClusterIP` | Service type. |
 | `service.port` | `80` | Service port. Targets the container's `http` port (8080). |

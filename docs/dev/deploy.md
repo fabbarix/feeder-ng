@@ -31,11 +31,11 @@ To release: `git tag v1.0.0 && git push origin v1.0.0`.
 GHCR creates packages as **private**, even in a public repository. Once, after the first workflow run has pushed both packages:
 
 1. Open `https://github.com/fabbarix?tab=packages` (or the repository's *Packages* sidebar), then each package: `feeder-ng` (the image) and `charts/feeder` (the chart).
-2. *Package settings* -> *Danger Zone* -> *Change visibility* -> **Public**. Anonymous `docker pull` and `helm install` only work after this.
+2. *Package settings* -> *Danger Zone* -> *Change visibility* -> **Public**. Anonymous `docker pull` and `helm install` only work after this. Making a package public cannot be undone: a public package cannot be made private again, so do this once the image and chart are ready to be public.
 3. Still in *Package settings*, check *Connect repository* / "Linked repository" shows `fabbarix/feeder-ng`. The image links itself through the `org.opencontainers.image.source` label; the chart package usually has to be linked by hand (*Connect repository*). Linking also lets the workflow's `GITHUB_TOKEN` keep pushing new versions.
 4. If a push is denied with 403 later, in *Package settings* -> *Manage Actions access* add the repository with the *Write* role.
 
-There is no `gh api` call to do this: to my knowledge GitHub's REST API has no endpoint to change a package's visibility or to link a package to a repository (it can list, get and delete packages and versions, `GET /user/packages/container/feeder-ng` for example), so those steps are done in the web UI. I am not certain this is still true; if a visibility endpoint has been added, the call would need a classic PAT with `write:packages` and `read:packages`. Do not put such a PAT in the workflows.
+These steps are done in the web UI. The GitHub REST API lists, reads and deletes packages and versions (for example `GET /user/packages/container/feeder-ng`), but it does not change a package's visibility or link a package to a repository. Any token used for package API calls needs the classic PAT scopes `write:packages` and `read:packages`. Never put such a PAT in the workflows; the workflows use `GITHUB_TOKEN` only.
 
 ## Building the image locally
 
@@ -72,7 +72,7 @@ docker run -d --name feeder --restart unless-stopped \
   ghcr.io/fabbarix/feeder-ng:1
 ```
 
-The image runs as user `nonroot` (uid/gid 65532). A named volume works as is; a bind mount (`-v /srv/feeder:/data`) must be writable by uid 65532 or the container cannot create its database: `sudo chown 65532:65532 /srv/feeder`. (The Helm chart does this with `fsGroup: 65532`.)
+The image runs as user `nonroot` (uid/gid 65532). A named volume works as is; a bind mount (`-v /srv/feeder:/data`) must be writable by uid 65532 or the container cannot create its database: `sudo chown 65532:65532 /srv/feeder`. (The Helm chart sets `fsGroup: 65532`; see the Kubernetes section for volumes that ignore it.)
 
 ## docker compose
 
@@ -109,16 +109,16 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `appVersion` `1.0.0`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://... --version X`. Source and the values table: `deploy/helm/feeder/README.md`.
+The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `appVersion` `1.0.0`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reuse-values`. Source and the values table: `deploy/helm/feeder/README.md`.
 
 - **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
-- **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). The pod runs as uid/gid 65532 with `fsGroup: 65532`, so the volume is writable. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
+- **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). `/data` must be writable by uid/gid 65532. The pod sets `fsGroup: 65532`, which makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
 - **Google sign-in.** Create the OAuth client with `scripts/setup-google-auth.sh` (it prints the redirect URI `$baseUrl/auth/google/callback` and saves the client id and secret to `.env.local`). Put them in a Secret and reference it, so the secret never sits in values or shell history:
 
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --namespace feeder --reuse-values \
     --set google.existingSecret=feeder-google
   ```
 
