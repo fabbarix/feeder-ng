@@ -93,6 +93,7 @@ interface CoreProps<V extends string | number> extends SelectBaseProps<V> {
 }
 
 function SelectCore<V extends string | number>({
+  size = 'md',
   label,
   helper,
   error,
@@ -294,7 +295,7 @@ function SelectCore<V extends string | number>({
   )
 
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
       <div ref={anchor} className="select">
         <button
           ref={trigger}

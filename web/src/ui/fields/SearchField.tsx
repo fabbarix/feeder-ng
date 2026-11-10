@@ -19,7 +19,7 @@ export interface SearchFieldProps extends FieldSizeProps, Omit<ComponentPropsWit
  * The only `type="search"` input: a searchbox with a magnifier, a "Clear search" button (refocuses) and Escape to clear.
  * `onKeyDown` runs first; a handler that calls preventDefault() keeps SearchField from its own Escape and Enter.
  */
-export function SearchField({ size: _size, label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, ...rest }: SearchFieldProps) {
+export function SearchField({ size = 'full', label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, ...rest }: SearchFieldProps) {
   const inner = useRef<HTMLInputElement>(null)
   useImperativeHandle(ref, () => inner.current as HTMLInputElement)
   const clear = () => {
@@ -38,7 +38,7 @@ export function SearchField({ size: _size, label, value, onChange, onSubmit, onK
     }
   }
   return (
-    <div className={['search-field', className].filter(Boolean).join(' ')}>
+    <div className={['search-field', className].filter(Boolean).join(' ')} data-size={size}>
       <span className="visually-hidden">{label}</span>
       <span className="search-field__control">
         <Icon name="search" size={20} />

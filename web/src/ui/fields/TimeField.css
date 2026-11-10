@@ -11,11 +11,24 @@
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
   align-self: stretch;
-  inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.time-field:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
 }
 
 .time-field[data-disabled] {
-  opacity: 0.38;
+  color: var(--color-muted);
+}
+
+.ui-field:has(.time-field[data-disabled]) .ui-field__label {
+  color: var(--color-muted);
+}
+
+.time-field[data-disabled] .time-field__segment[aria-valuenow] {
+  color: var(--color-muted);
 }
 
 .time-field__segment {
@@ -44,14 +57,14 @@
 }
 
 .time-field__segment:disabled {
+  color: var(--color-muted);
   cursor: default;
 }
 
 .time-field__segment:focus-visible {
   background: var(--color-soft);
   border-radius: var(--radius-control);
-  outline: 3px solid var(--color-accent);
-  outline-offset: 0;
+  outline: none;
 }
 
 .time-field__segment[aria-valuenow] {

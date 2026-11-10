@@ -1,0 +1,16 @@
+/* FieldRow: short fields on one row; each starts from the xs width, grows to its own cap and wraps when full. Tokens only. */
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.field-row > * {
+  flex: 1 1 var(--field-size-xs);
+  min-inline-size: 0;
+}
+
+.field-row[data-align='end'] {
+  align-items: flex-end;
+}

@@ -29,16 +29,16 @@ export interface FieldFrameProps {
   error?: string
   /** Extra class for the outer frame. */
   className?: string
-  /** Max inline size token; sets data-size on the frame. Type-only until the Developer step. */
+  /** Max inline size token; sets data-size on the frame. */
   size?: FieldSize
   children: ReactNode
 }
 
 /** Label above the control, helper and error below (docs/design/ui-fix-plan.md 4.10). */
-export function FieldFrame({ ids, label, labelFor, helper, error, className, children }: FieldFrameProps) {
+export function FieldFrame({ ids, label, labelFor, helper, error, className, size, children }: FieldFrameProps) {
   const frameClass = ['ui-field', className].filter(Boolean).join(' ')
   return (
-    <div className={frameClass} data-invalid={error ? '' : undefined}>
+    <div className={frameClass} data-size={size} data-invalid={error ? '' : undefined}>
       {labelFor ? (
         <label id={ids.labelId} htmlFor={labelFor} className="ui-field__label">
           {label}

@@ -3,12 +3,54 @@
 /* One inner inline padding for every field control (TextField, Select, DateField, TimeField). */
 :root {
   --field-pad-inline: var(--space-3);
+  --field-size-xs: 112px;
+  --field-size-sm: 168px;
+  --field-size-md: 320px;
+  --field-size-lg: 480px;
+  --field-size-xs-stepper: 136px;
 }
 
 .ui-field {
   display: grid;
   gap: var(--space-1);
+  inline-size: 100%;
   min-inline-size: 0;
+}
+
+.ui-field[data-size='xs'] {
+  max-inline-size: var(--field-size-xs);
+}
+
+.ui-field[data-size='sm'] {
+  max-inline-size: var(--field-size-sm);
+}
+
+.ui-field[data-size='md'] {
+  max-inline-size: var(--field-size-md);
+}
+
+.ui-field[data-size='lg'] {
+  max-inline-size: var(--field-size-lg);
+}
+
+.ui-field[data-size='full'] {
+  max-inline-size: 100%;
+}
+
+.ui-field--stepper[data-size='xs'] {
+  max-inline-size: var(--field-size-xs-stepper);
+}
+
+fieldset.ui-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+legend.ui-field__label {
+  padding: 0;
+  margin-block-end: var(--space-1);
 }
 
 .ui-field__label {
@@ -34,12 +76,25 @@
 
 .ui-field__control:focus-within {
   border-color: var(--color-accent);
-  outline: 3px solid var(--color-soft-strong);
-  outline-offset: 1px;
+  box-shadow: var(--focus-ring);
 }
 
 .ui-field[data-invalid] .ui-field__control {
   border-color: var(--status-danger-fg);
+}
+
+.ui-field[data-invalid] .ui-field__control:focus-within {
+  border-color: var(--status-danger-fg);
+}
+
+.ui-field--stepper .icon-button {
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.ui-field--stepper .ui-field__number {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-field__control:has(:disabled) {

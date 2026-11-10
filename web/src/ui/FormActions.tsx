@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import './FormActions.css'
 
 export interface FormActionsProps {
   /** The one primary Button (submit). Rendered last in the DOM. */
@@ -11,7 +12,14 @@ export interface FormActionsProps {
   destructive?: ReactNode
 }
 
-/** Consistent action row for pages, sheets and dialogs. Type-only stub: the Developer step implements it. */
-export function FormActions(_props: FormActionsProps) {
-  return <div />
+/** Consistent action row for pages, sheets and dialogs. */
+export function FormActions({ primary, secondary, tertiary, destructive }: FormActionsProps) {
+  return (
+    <div className="form-actions">
+      {destructive ? <div className="form-actions__destructive">{destructive}</div> : null}
+      {tertiary ? <div className="form-actions__tertiary">{tertiary}</div> : null}
+      {secondary ? <div className="form-actions__secondary">{secondary}</div> : null}
+      <div className="form-actions__primary">{primary}</div>
+    </div>
+  )
 }

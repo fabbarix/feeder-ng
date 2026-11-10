@@ -22,7 +22,7 @@ type Segment = 'hour' | 'minute'
  * 24 h time as two segments (Hour, Minute) in a group. Arrows wrap without carry; two digits (or a first digit that cannot
  * start a two-digit value) set a segment. Never AM/PM and never the browser's time input.
  */
-export function TimeField({ label, helper, error, disabled, required, value, onChange, minuteStep = 1 }: TimeFieldProps) {
+export function TimeField({ size = 'sm', label, helper, error, disabled, required, value, onChange, minuteStep = 1 }: TimeFieldProps) {
   const ids = useFieldIds()
   const parts = parseTime(value)
   const [pending, setPending] = useState<{ segment: Segment; digit: number } | null>(null)
@@ -62,7 +62,7 @@ export function TimeField({ label, helper, error, disabled, required, value, onC
 
   const describe = describedBy(ids, helper, error)
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
       <div role="group" aria-labelledby={ids.labelId} aria-describedby={describe} aria-required={required || undefined} className="time-field" data-disabled={disabled || undefined}>
         <Segment name={fieldStrings.hour} value={parts?.hour} max={23} disabled={disabled} onKeyDown={onSegmentKey('hour')} onChange={onSegmentText('hour')} />
         <span className="time-field__colon" aria-hidden="true">

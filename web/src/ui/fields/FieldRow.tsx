@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import './FieldRow.css'
 
 export interface FieldRowProps {
   children: ReactNode
@@ -8,7 +9,11 @@ export interface FieldRowProps {
   align?: 'start' | 'end'
 }
 
-/** Several short fields on one row, wrapping on phones. Type-only stub: the Developer step implements it. */
-export function FieldRow(_props: FieldRowProps) {
-  return <div />
+/** Several short fields on one row, wrapping on phones. */
+export function FieldRow({ children, label, align = 'start' }: FieldRowProps) {
+  return (
+    <div className="field-row" role={label ? 'group' : undefined} aria-label={label} data-align={align === 'end' ? 'end' : undefined}>
+      {children}
+    </div>
+  )
 }

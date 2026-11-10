@@ -5,6 +5,16 @@ import { Chip, type ChipStatus } from './Chip'
 import { EmptyState } from './EmptyState'
 import { IconButton } from './IconButton'
 import { ListGroup, ListRow } from './ListRow'
+import { FormActions } from './FormActions'
+import { DateField } from './fields/DateField'
+import { FieldRow } from './fields/FieldRow'
+import { NumberField } from './fields/NumberField'
+import { SearchField } from './fields/SearchField'
+import { TextField } from './fields/TextField'
+import { TimeField } from './fields/TimeField'
+import { Select } from './Select/Select'
+import { Stepper } from './Stepper'
+import type { FieldSize } from './fields/Field'
 import { PageHeader } from './PageHeader'
 import { ProgressTile } from './ProgressTile'
 import { RecipeThumb } from './RecipeThumb'
@@ -266,6 +276,91 @@ function EmptyStateGroup() {
   )
 }
 
+const FIELD_SIZES: FieldSize[] = ['xs', 'sm', 'md', 'lg', 'full']
+const FRUITS = [
+  { value: 'apple', label: 'Apple' },
+  { value: 'pear', label: 'Pear' },
+]
+
+function WideCell({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <div className="gallery__cell gallery__cell--wide" {...{ [PRIMARY_SCOPE_ATTR]: '' }}>
+      {children}
+      <p className="gallery__caption">{caption}</p>
+    </div>
+  )
+}
+
+function FieldSizesGroup() {
+  return (
+    <Group name="Field sizes">
+      {FIELD_SIZES.map((size) => (
+        <WideCell key={size} caption={`TextField size ${size}`}>
+          <TextField label={`Name (${size})`} value="Tomato soup" onChange={noop} size={size} />
+        </WideCell>
+      ))}
+      <WideCell caption="NumberField xs with stepper (136 px)">
+        <NumberField label="Servings" value={4} onChange={noop} size="xs" />
+      </WideCell>
+      <WideCell caption="Stepper size sm">
+        <Stepper label="portions" value={4} onChange={noop} size="sm" />
+      </WideCell>
+      <WideCell caption="Select (md)">
+        <Select label="Fruit" options={FRUITS} value="apple" onChange={noop} />
+      </WideCell>
+      <WideCell caption="DateField (md)">
+        <DateField label="Day" value="2026-11-10" onChange={noop} />
+      </WideCell>
+      <WideCell caption="TimeField (sm)">
+        <TimeField label="From" value="19:30" onChange={noop} />
+      </WideCell>
+      <WideCell caption="TimeField disabled (muted, not dimmed)">
+        <TimeField label="Until" value="21:00" onChange={noop} disabled />
+      </WideCell>
+      <WideCell caption="SearchField (full)">
+        <SearchField label="Search" value="" onChange={noop} />
+      </WideCell>
+      <WideCell caption="Focus ring, shown statically">
+        <div data-gallery-focus="">
+          <TextField label="Focused" value="Ring" onChange={noop} />
+        </div>
+      </WideCell>
+      <WideCell caption="Button block always">
+        <Button block="always">Save</Button>
+      </WideCell>
+    </Group>
+  )
+}
+
+function FieldRowGroup() {
+  return (
+    <Group name="FieldRow">
+      <WideCell caption="Three xs NumberFields wrap on a phone">
+        <FieldRow>
+          <NumberField label="Yield" value={4} onChange={noop} size="xs" />
+          <NumberField label="Cool-down" value={30} onChange={noop} size="xs" unit="min" />
+          <NumberField label="Leftover Use-by" value={3} onChange={noop} size="xs" unit="days" />
+        </FieldRow>
+      </WideCell>
+    </Group>
+  )
+}
+
+function FormActionsGroup() {
+  return (
+    <Group name="FormActions">
+      <WideCell caption="Destructive, tertiary, secondary, primary">
+        <FormActions
+          destructive={<Button variant="danger-tertiary">Delete</Button>}
+          tertiary={<Button variant="tertiary">Cancel</Button>}
+          secondary={<Button variant="secondary">Save and add</Button>}
+          primary={<Button>Save</Button>}
+        />
+      </WideCell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -282,6 +377,9 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <ProgressGroup />
       <TimerGroup />
       <EmptyStateGroup />
+      <FieldSizesGroup />
+      <FieldRowGroup />
+      <FormActionsGroup />
       <OverlayGalleryGroups />
     </section>
   )

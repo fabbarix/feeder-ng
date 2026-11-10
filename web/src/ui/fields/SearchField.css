@@ -13,8 +13,7 @@
 
 .search-field__control:focus-within {
   color: var(--color-text);
-  outline: 3px solid var(--color-soft-strong);
-  outline-offset: 1px;
+  box-shadow: var(--focus-ring);
 }
 
 .search-field__input {
@@ -44,5 +43,26 @@
 
 .search-field {
   display: grid;
+  inline-size: 100%;
   min-inline-size: 0;
+}
+
+.search-field[data-size='xs'] {
+  max-inline-size: var(--field-size-xs);
+}
+
+.search-field[data-size='sm'] {
+  max-inline-size: var(--field-size-sm);
+}
+
+.search-field[data-size='md'] {
+  max-inline-size: var(--field-size-md);
+}
+
+.search-field[data-size='lg'] {
+  max-inline-size: var(--field-size-lg);
+}
+
+.search-field[data-size='full'] {
+  max-inline-size: 100%;
 }

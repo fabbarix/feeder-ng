@@ -13,7 +13,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   loading?: boolean
   icon?: IconName
-  /** Full width: 'phone' below 600 px, 'always', or 'never' (default). Type-only until the Developer step. */
+  /** Full width: 'phone' below 600 px, 'always', or 'never' (default). */
   block?: 'phone' | 'always' | 'never'
 }
 
@@ -40,6 +40,7 @@ export function Button({
   size = 'md',
   loading = false,
   icon,
+  block = 'never',
   type = 'button',
   disabled,
   className,
@@ -61,6 +62,7 @@ export function Button({
       className={['button', className].filter(Boolean).join(' ')}
       data-variant={resolved}
       data-size={size}
+      data-block={block === 'never' ? undefined : block}
       data-spinner={loading || undefined}
       disabled={disabled || loading}
       aria-busy={loading ? true : undefined}

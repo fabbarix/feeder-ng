@@ -12,11 +12,11 @@ export interface TextFieldProps extends FieldProps, FieldSizeProps, Omit<InputHT
 }
 
 /** A single-line text input in the shared field frame. Controlled: onChange(value) per keystroke. */
-export function TextField({ size: _size, label, helper, error, disabled, required, name, value, onChange, suffix, type = 'text', id, ...rest }: TextFieldProps) {
+export function TextField({ size = 'md', label, helper, error, disabled, required, name, value, onChange, suffix, type = 'text', id, ...rest }: TextFieldProps) {
   const ids = useFieldIds()
   const inputId = id ?? `${ids.labelId}-input`
   return (
-    <FieldFrame ids={ids} label={label} labelFor={inputId} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} label={label} labelFor={inputId} helper={helper} error={error}>
       <span className="ui-field__control">
         <input
           {...rest}
