@@ -90,6 +90,8 @@ export function useMergeFlow(sourceId: number): UseMergeFlow {
         }
         throw e
       }
+      // Drop the deleted source first (its detail, merge preview and any sub-key), so nothing refetches a 404.
+      client.removeQueries({ queryKey: ['ingredients', sourceId] })
       await client.invalidateQueries({ queryKey: ['ingredients'] })
       return survivor
     },
