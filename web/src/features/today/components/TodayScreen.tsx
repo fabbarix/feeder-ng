@@ -1,9 +1,11 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useToast } from '../../../ui'
 import { CouldntPlanNotice, LeftoversTile, NextMealTile, ToConfirmTile } from '../../plan'
 import { SpoiledTile } from '../../stock'
 import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
+import { todayStrings } from '../strings'
 import type { TileId } from '../types'
 import { TodayView } from './TodayView'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
@@ -20,6 +22,11 @@ import { UseSoonTile } from './UseSoonTile'
 export function TodayScreen(): ReactElement {
   const navigate = useNavigate()
   const openPlan = () => navigate('/plan')
+  const toast = useToast()
+  // A failed throw out or keep is shown, never swallowed.
+  const act = (run: () => Promise<void>) => {
+    run().catch(() => toast.show(todayStrings.actionFailed))
+  }
   const { layout, loading } = useToday()
   const data = useTodayTileData()
   const steps = useAdvanceStepsDue()
@@ -32,8 +39,8 @@ export function TodayScreen(): ReactElement {
         lots={data.spoiled}
         today={data.stockToday}
         system={data.system}
-        onThrowOut={(id) => void data.throwOut(id)}
-        onKeep={(id) => void data.keep(id)}
+        onThrowOut={(id) => act(() => data.throwOut(id))}
+        onKeep={(id) => act(() => data.keep(id))}
       />
     ),
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,

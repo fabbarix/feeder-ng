@@ -6,3 +6,5 @@ import { ShoppingScreen } from './screens/ShoppingScreen'
 export const routes: RouteObject[] = [{ path: '/shop', element: createElement(ShoppingScreen) }]
 
 export { useShoppingList } from './hooks/useShoppingList'
+// The Shopping List screen, which Today shows while a scan session is active.
+export { ShoppingScreen } from './screens/ShoppingScreen'

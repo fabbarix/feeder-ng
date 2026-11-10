@@ -1,24 +1,20 @@
 // The seams where Today reads other features: Planning (T11), Stock (T10) and the
 // scan session (T13). Tests mock this module. Only this file imports other
 // features' hooks, so Today's own components and hooks stay decoupled.
-import type { ReactNode } from 'react'
 import type { UnitSystem } from '../../lib/units'
 import { nextMeal, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
 import type { Leftover, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
 import type { StockLot } from '../stock/types'
+import { ShoppingScreen } from '../shop'
 import { useSoonItems } from './lib/useSoon'
 import type { UseSoonItem } from './types'
 
-/** T13: true while a scan session is active. Replace with the export from `features/scan` once merged. */
-export function useScanSessionActive(): boolean {
-  return false
-}
+/** T13: true while a scan session is active (Today then shows the Shopping List instead of the tiles). */
+export { useScanSessionActive } from '../scan'
 
-/** T13: the Shopping List screen Today shows during a scan session. Null until T13 is merged. */
-export function ShoppingListSeam(): ReactNode {
-  return null
-}
+/** T13: the Shopping List screen Today shows during a scan session. */
+export const ShoppingListSeam = ShoppingScreen
 
 export interface TodayPlanCounts {
   hasNextMeal: boolean
