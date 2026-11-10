@@ -4,13 +4,23 @@ import type { BaseUnit } from '../../../lib/units'
 import { errorMessage } from '../lib/errorMessage'
 import { strings } from '../strings'
 import '../ingredients.css'
-import type { NewIngredient } from '../types'
+import type { Ingredient, NewIngredient, SearchResult } from '../types'
 
 export interface NewIngredientSheetProps {
   open: boolean
   onClose: () => void
   /** Rejects with ApiError; code 'name_taken' shows strings.nameTaken, 'invalid_ingredient' shows the server message. */
   onCreate: (body: NewIngredient) => Promise<unknown>
+  /** R14: the name to prefill (quick create from a Recipe line). */
+  initialName?: string
+  /** R14: a unit already known (Recipe line, Scan); lib/newIngredient.defaultBaseUnit turns it into the preselected Base Unit. */
+  unitHint?: string
+  /** R14: near-duplicate lookup; default ingredientsApi.search (the matcher Import Review uses). A rejection is ignored. */
+  findSimilar?: (name: string) => Promise<SearchResult>
+  /** R14: offered next to "Did you mean" and "already exists"; picking calls it with the Ingredient and closes the sheet. Without it those rows only warn. */
+  onUseExisting?: (ingredient: Ingredient) => void
+  /** R14: when set, Create is disabled and this reason is shown (offline). */
+  disabledReason?: string
 }
 
 const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']

@@ -16,6 +16,13 @@ export interface IngredientLineRowProps {
   onPick: (ingredient: IngredientRef) => void
   onChange: (patch: Partial<LineDraft>) => void
   onRemove: () => void
+  /** R14: "Create Ingredient '<query>'" was chosen in the picker. Without it the picker has no create row. */
+  onQuickCreate?: (query: string) => void
+  /** R14: when set, the create row is shown disabled with this reason (offline). */
+  quickCreateDisabledReason?: string
+  /** R14: take focus in the Quantity field now (after a quick create); calls onAmountFocused once it has. */
+  focusAmount?: boolean
+  onAmountFocused?: () => void
 }
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)

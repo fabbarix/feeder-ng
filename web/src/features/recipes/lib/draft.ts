@@ -11,6 +11,12 @@ export interface LineDraft {
   unit: string
   optional: boolean
   note: string
+  /**
+   * R14: the line was made by the Ready Meal rule (lib/readyMeal). While `auto` is set the line follows the Recipe's name;
+   * with ingredientId null it is the pending line "a new Ingredient called <Recipe name>", which the server creates on save.
+   * Any edit by the User (picking another Ingredient, changing quantity or unit) clears it.
+   */
+  auto?: boolean
 }
 
 export interface UseDraft {
@@ -298,4 +304,12 @@ export function pickIngredient(draft: RecipeDraft, key: string, ingredient: Ingr
 /** Removes the line with `key`; the others keep their order and keys. */
 export function removeLine(draft: RecipeDraft, key: string): RecipeDraft {
   return { ...draft, lines: draft.lines.filter((l) => l.key !== key) }
+}
+
+/**
+ * R14: like pickIngredient for an Ingredient made from the picker's "Create Ingredient": the line keeps the unit it already has
+ * (the Ingredient was made to fit it), and only an empty unit becomes the Base Unit. Clears `auto`.
+ */
+export function pickCreatedIngredient(draft: RecipeDraft, key: string, ingredient: IngredientRef): RecipeDraft {
+  return pickIngredient(draft, key, ingredient)
 }

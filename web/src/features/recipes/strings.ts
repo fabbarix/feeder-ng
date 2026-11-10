@@ -96,6 +96,22 @@ export const recipeStrings = {
     unitNeedsConversion: (unit: string) => `Feeder will ask how much 1 ${unit} is when you save.`,
     useUnit: (unit: string) => `Use unit "${unit}"`,
   },
+  /** R14: creating an Ingredient from the picker of an ingredient line. */
+  quickCreate: {
+    /** Shown on the disabled "Create Ingredient" option while the phone is offline. */
+    offlineReason: 'Needs a connection to create an Ingredient',
+  },
+  /** R14: a Ready Meal and the Ingredient Feeder keeps for it. */
+  readyMealIngredient: {
+    helper: (name: string) => `Feeder adds an Ingredient called '${name}' so you can stock and buy it`,
+    newBadge: 'New Ingredient',
+    changeIngredient: 'Choose another Ingredient',
+    renameTitle: 'Rename the Ingredient too?',
+    renameBody: (from: string, to: string) => `The Ingredient '${from}' will be called '${to}', so Stock and Shopping Lists use the new name.`,
+    renameConfirm: 'Rename Ingredient',
+    renameKeep: 'Keep the old name',
+    renameFailed: 'The Recipe was saved, but the Ingredient could not be renamed.',
+  },
   steps: {
     add: 'Add Step',
     remove: 'Remove Step',

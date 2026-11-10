@@ -18,6 +18,7 @@ import {
   type StepDraft,
 } from '../lib/draft'
 import { parseUnknownUnit, type UnitPrompt } from '../lib/unitPrompt'
+import type { RenameOffer } from '../lib/readyMeal'
 import type { IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
@@ -45,10 +46,21 @@ export interface UseRecipeEditor {
   removeLine: (key: string) => void
   /** Replaces the Steps (the StepsEditor computes the new list with lib/steps). */
   setSteps: (steps: StepDraft[]) => void
+  /** R14: choose an Ingredient made from the picker (keeps the line's unit, see lib/draft.pickCreatedIngredient). */
+  pickCreatedIngredient: (key: string, ingredient: IngredientRef) => void
+  /** R14: the rename question for a stored Ready Meal whose name changed (lib/readyMeal.renameOffer); null otherwise. Stays set after a successful save so the screen can ask. */
+  renameOffer: RenameOffer | null
+  /** R14: PATCHes the linked Ingredient to the new name (recipesApi.renameIngredient), refreshes ['ingredients']. Rejects on failure; the Recipe stays saved. */
+  renameLinkedIngredient: () => Promise<void>
 }
 
-/** `recipeId` undefined = a new Recipe; otherwise the draft loads from ['recipes', id]. */
-export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
+/**
+ * `recipeId` undefined = a new Recipe; otherwise the draft loads from ['recipes', id].
+ * R14: `ingredients` (every Ingredient, as the screen's picker has them) feeds the Ready Meal rule: after each change of the name, the Ready Meal flag
+ * or the lines the draft goes through lib/readyMeal.syncReadyMealLine. draftToInput sends `lines: []` for a pending auto line (the server creates the Ingredient).
+ */
+export function useRecipeEditor(recipeId?: number, ingredients: readonly IngredientRef[] = []): UseRecipeEditor {
+  void ingredients
   const client = useQueryClient()
   const existing = useQuery({
     queryKey: ['recipes', recipeId],
@@ -130,5 +142,8 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
     pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
     removeLine: (key) => setDraft((d) => removeLine(d, key)),
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
+    pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
+    renameOffer: null,
+    renameLinkedIngredient: async () => {},
   }
 }
