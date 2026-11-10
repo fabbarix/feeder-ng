@@ -87,7 +87,7 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--tile-overline-gap);
   font-size: var(--text-overline-size);
   line-height: var(--text-overline-line);
   font-weight: var(--text-overline-weight);
@@ -129,9 +129,15 @@
   outline-offset: -3px;
 }
 
-.tile :is(button, a):not(.tile__stretch) {
+/* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer. */
+.tile button:not(a):not(.tile__stretch):not(.list-row__target),
+.tile a:not(.tile__stretch):not(.list-row__target) {
   position: relative;
   z-index: 1;
+}
+
+.tile[role='button'] {
+  cursor: pointer;
 }
 
 /* Metric: a display number with its label. */

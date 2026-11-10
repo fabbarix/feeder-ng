@@ -66,10 +66,19 @@
   background: var(--color-soft);
 }
 
-/* Everything except the target sits above it; a trailing IconButton works on its own. */
+/* The whole row is the target: content is click-through, only interactive trailing content catches the pointer. */
 .list-row > :not(.list-row__target) {
+  pointer-events: none;
+}
+
+.list-row__trailing button,
+.list-row__trailing a,
+.list-row__trailing input,
+.list-row__trailing select,
+.list-row__trailing [role='button'] {
   position: relative;
   z-index: 1;
+  pointer-events: auto;
 }
 
 .list-row__lead {

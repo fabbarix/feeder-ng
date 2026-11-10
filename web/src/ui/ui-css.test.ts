@@ -44,7 +44,8 @@ describe('ui/*.css', () => {
   })
 
   it('styles.css has a single light palette block, `:root, [data-scheme=light]`', () => {
-    const light = ruleBlocks(readStylesCss()).filter((b) => /--color-bg\s*:/.test(b.body) && !b.selectors.some((s) => s.includes('dark')))
+    // the OS-dark fallback is `:root:not([data-scheme='light'])` (inside a media query): not a light block
+    const light = ruleBlocks(readStylesCss()).filter((b) => /--color-bg\s*:/.test(b.body) && !b.selectors.some((s) => /dark|:not\(/.test(s)))
     expect(light).toHaveLength(1)
     expect(light[0]!.selectors).toEqual([':root', "[data-scheme='light']"])
   })

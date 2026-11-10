@@ -43,7 +43,7 @@
   padding-inline: 20px;
   border-radius: var(--radius-button);
   font-size: var(--text-body-strong-size);
-  font-weight: 800;
+  font-weight: var(--text-title-3-weight);
 }
 
 .button[data-size='xl'] {
@@ -86,7 +86,7 @@
 
 .button[data-variant='danger'] {
   background: var(--status-danger-solid);
-  color: var(--color-surface);
+  color: var(--status-danger-on-solid);
 }
 
 .button[data-variant='danger-tertiary'] {

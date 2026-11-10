@@ -11,13 +11,17 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const css = readFileSync(`${cwd}/src/styles.css`, 'utf8')
 const main = readFileSync(`${cwd}/src/main.tsx`, 'utf8')
 
-/** Declarations of the first top-level `:root { ... }` rule. */
+/**
+ * Declarations of the top-level light `:root` rules, merged in source order: the static tokens block and the
+ * single palette block `:root, [data-scheme='light']` (WP3 merged the palette there). Dark and media rules are skipped.
+ */
 function rootBlock(): Record<string, string> {
-  const start = css.indexOf(':root {')
-  expect(start, 'styles.css has a :root block').toBeGreaterThanOrEqual(0)
-  const end = css.indexOf('\n}', start)
   const out: Record<string, string> = {}
-  for (const m of css.slice(start + 7, end).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[m[1]!] = m[2]!.trim()
+  for (const m of css.matchAll(/(^|\n)(:root\b[^{]*)\{([^}]*)\}/g)) {
+    if (/dark/.test(m[2]!)) continue
+    for (const d of m[3]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[d[1]!] = d[2]!.trim()
+  }
+  expect(Object.keys(out).length, 'styles.css has :root tokens').toBeGreaterThan(0)
   return out
 }
 const root = rootBlock()

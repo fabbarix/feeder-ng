@@ -65,7 +65,7 @@ export function ListRow({ title, meta, icon, leading, trailing, chevron, selecte
 /** A `ul` inside a surface tile (radius 20, no padding) holding ListRows, with inset dividers. */
 export function ListGroup({ label, children }: ListGroupProps) {
   return (
-    <div className="list-group">
+    <div className="list-group" data-primary-scope="">
       <ul className="list-group__list" aria-label={label}>
         {children}
       </ul>

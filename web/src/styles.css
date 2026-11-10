@@ -1,55 +1,6 @@
 /* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider (apply.ts).
    The Basil defaults below are the first paint, before ThemeProvider runs (plan 3.1 to 3.3). */
 :root {
-  /* Colour: Basil light (default) */
-  --color-bg: #e7f4eb;
-  --color-surface: #fafffc;
-  --color-surface-2: #daecdf;
-  --color-surface-3: #c8e0cf;
-  --color-line: #c2d7c9;
-  --color-outline: #677a6d;
-  --color-text: #131d17;
-  --color-muted: #4b5a4f;
-  --color-accent: #34724e;
-  --color-on-accent: #ffffff;
-  --color-accent-text: #135533;
-  --color-soft: #bfebcd;
-  --color-soft-strong: #9addb2;
-
-  /* Status: fixed, never derived from the accent (plan 3.1) */
-  --status-leftover-fg: #065353;
-  --status-leftover-bg: #c2f3f2;
-  --status-leftover-solid: #027879;
-  --status-spoil-fg: #6d3706;
-  --status-spoil-bg: #fee1cf;
-  --status-spoil-solid: #9e5106;
-  --status-danger-fg: #742e2b;
-  --status-danger-bg: #ffe0dc;
-  --status-danger-solid: #ab413e;
-  --status-success-fg: #115629;
-  --status-success-bg: #d1f2d7;
-  --status-success-solid: #0a7e3a;
-  --status-pinned-fg: #3e3f7c;
-  --status-pinned-bg: #e3e6fe;
-  --status-pinned-solid: #5b5cb7;
-
-  /* Old Material names, kept for unmigrated screens (removed after WP6 to WP11) */
-  --color-background: var(--color-bg);
-  --color-on-background: var(--color-text);
-  --color-surface-container-low: var(--color-surface);
-  --color-surface-container: var(--color-surface-2);
-  --color-surface-container-high: var(--color-surface-3);
-  --color-on-surface: var(--color-text);
-  --color-on-surface-variant: var(--color-muted);
-  --color-primary: var(--color-accent);
-  --color-on-primary: var(--color-on-accent);
-  --color-primary-container: var(--color-soft);
-  --color-on-primary-container: var(--color-accent-text);
-  --color-secondary: var(--color-accent);
-  --color-on-secondary: var(--color-on-accent);
-  --color-secondary-container: var(--color-soft);
-  --color-on-secondary-container: var(--color-accent-text);
-
   /* Type (plan 3.2): size / line / weight */
   --text-display-size: 34px;
   --text-display-line: 38px;
@@ -96,6 +47,7 @@
   --gutter: 16px;
   --bento-gap: 10px;
   --tile-pad: 16px;
+  --tile-overline-gap: 6px;
 
   /* Radii (plan 3.3) */
   --radius-chip: 999px;
@@ -135,7 +87,6 @@
 
 :root,
 [data-scheme='light'] {
-  /* Light scheme section of the dev Gallery: the same light colours as :root. */
   --color-bg: #e7f4eb;
   --color-surface: #fafffc;
   --color-surface-2: #daecdf;
@@ -158,6 +109,7 @@
   --status-danger-fg: #742e2b;
   --status-danger-bg: #ffe0dc;
   --status-danger-solid: #ab413e;
+  --status-danger-on-solid: #fff;
   --status-success-fg: #115629;
   --status-success-bg: #d1f2d7;
   --status-success-solid: #0a7e3a;
@@ -209,6 +161,8 @@
 /* Dark before ThemeProvider runs: Basil dark values, no drop shadows (elevation = tone step + hairline). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-scheme='light']) {
+    --status-danger-solid: #ab413e;
+    --status-danger-on-solid: #fff;
     --color-bg: #090f0b;
     --color-surface: #131c16;
     --color-surface-2: #1e2a22;
@@ -259,6 +213,8 @@
   --status-spoil-bg: #44250c;
   --status-danger-fg: #febfb9;
   --status-danger-bg: #47211e;
+  --status-danger-solid: #ab413e;
+  --status-danger-on-solid: #fff;
   --status-success-fg: #a7e2b2;
   --status-success-bg: #14361d;
   --status-pinned-fg: #c7cdff;
