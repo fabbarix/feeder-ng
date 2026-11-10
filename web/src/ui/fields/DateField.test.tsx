@@ -30,7 +30,7 @@ describe('DateField', () => {
     expect(within(calendar).getByText('November 2026')).toBeInTheDocument()
     const headers = within(calendar).getAllByRole('columnheader').map((h) => h.textContent)
     expect(headers).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-    expect(within(calendar).getAllByRole('row')).toHaveLength(6) // header + 5 weeks
+    expect(within(calendar).getAllByRole('row')).toHaveLength(7) // header + 6 weeks (November 2026 needs six)
     expect(day('26 October 2026')).toHaveAttribute('data-outside', 'true')
     expect(day('10 November 2026').closest('[role=gridcell]')).toHaveAttribute('aria-selected', 'true')
   })

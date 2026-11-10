@@ -1,9 +1,12 @@
 // CSS contracts of the WP4 primitives (read as text; jsdom has no layout). Component CSS lives next to the component.
 import { describe, expect, it } from 'vitest'
-import bottomSheet from './BottomSheet.css?raw'
-import dialog from './Dialog.css?raw'
-import skeleton from './Skeleton.css?raw'
-import toast from './Toast.css?raw'
+import { readUiCss } from './test-utils'
+
+// ?raw imports of CSS are blanked by vitest, so the files are read through test-utils (same text, same assertions).
+const bottomSheet = readUiCss('BottomSheet.css')
+const dialog = readUiCss('Dialog.css')
+const skeleton = readUiCss('Skeleton.css')
+const toast = readUiCss('Toast.css')
 
 describe('Dialog.css', () => {
   it('paints the scrim on ::backdrop and uses motion/radius tokens', () => {

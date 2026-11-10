@@ -25,14 +25,14 @@ describe('iso dates', () => {
 })
 
 describe('monthMatrix (weeks start on Monday)', () => {
-  it('November 2026 starts on a Sunday: 5 weeks beginning Monday 26 October', () => {
+  it('November 2026 starts on a Sunday: 6 weeks beginning Monday 26 October (30 Nov is a Monday)', () => {
     const weeks = monthMatrix(2026, 11)
-    expect(weeks).toHaveLength(5)
+    expect(weeks).toHaveLength(6)
     expect(weeks.every((w) => w.length === 7)).toBe(true)
     expect(weeks[0]?.[0]).toEqual({ iso: '2026-10-26', day: 26, inMonth: false })
     expect(weeks[0]?.[6]).toEqual({ iso: '2026-11-01', day: 1, inMonth: true })
-    expect(weeks[4]?.[0]).toEqual({ iso: '2026-11-30', day: 30, inMonth: true })
-    expect(weeks[4]?.[6]).toEqual({ iso: '2026-12-06', day: 6, inMonth: false })
+    expect(weeks[5]?.[0]).toEqual({ iso: '2026-11-30', day: 30, inMonth: true })
+    expect(weeks[5]?.[6]).toEqual({ iso: '2026-12-06', day: 6, inMonth: false })
   })
   it('February 2027 starts on a Monday and needs only 4 weeks', () => {
     const weeks = monthMatrix(2027, 2)

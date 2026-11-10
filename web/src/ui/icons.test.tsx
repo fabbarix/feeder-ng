@@ -7,6 +7,7 @@ import { icons, type IconName } from './icons'
 // Names that share a glyph (delete/throwOut, keep/tick/confirm, ...) must resolve to the same one.
 const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['today', 'House'],
+  ['minus', 'Minus'], // WP4: Stepper and NumberField decrease
   ['plan', 'CalendarDots'],
   ['scan', 'Barcode'],
   ['shop', 'Basket'],
