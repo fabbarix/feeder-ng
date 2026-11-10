@@ -40,7 +40,7 @@ var (
 	ErrTooManyRedirects = errors.New("too many redirects")
 	ErrCredentials      = errors.New("credentials in URLs are refused")
 	// ErrPolicy: the Policy is unusable (MaxBytes or Timeout not positive); no
-	// request is made. STUB: the developer returns it from Fetch.
+	// request is made.
 	ErrPolicy = errors.New("fetch policy needs a positive MaxBytes and Timeout")
 )
 
@@ -86,6 +86,11 @@ var blockedPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("2002::/16"),
 	netip.MustParsePrefix("::/96"),
 	netip.MustParsePrefix("fec0::/10"),
+	netip.MustParsePrefix("64:ff9b:1::/48"), // local-use NAT64
+	netip.MustParsePrefix("2001::/32"),      // Teredo
+	netip.MustParsePrefix("198.18.0.0/15"),  // benchmarking
+	netip.MustParsePrefix("240.0.0.0/4"),    // reserved (includes broadcast)
+	netip.MustParsePrefix("192.0.0.0/24"),   // IETF protocol assignments
 }
 
 // Blocked reports whether an address must never be fetched: unspecified,
@@ -152,6 +157,9 @@ func (c *Client) Fetch(ctx context.Context, rawURL string, p Policy) (Response, 
 }
 
 func (c *Client) fetch(ctx context.Context, rawURL string, p Policy) (fetched, error) {
+	if p.MaxBytes <= 0 || p.Timeout <= 0 {
+		return fetched{}, ErrPolicy
+	}
 	if err := checkURL(rawURL); err != nil {
 		return fetched{}, err
 	}

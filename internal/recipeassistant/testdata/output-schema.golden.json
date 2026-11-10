@@ -125,6 +125,17 @@
         "readyMeal": {
           "type": "boolean"
         },
+        "reheatMinutes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Minutes to reheat a Leftover portion of this Recipe; omit or null when not set."
+        },
         "source": {
           "additionalProperties": false,
           "properties": {

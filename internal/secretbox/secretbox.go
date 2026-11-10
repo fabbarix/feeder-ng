@@ -126,10 +126,10 @@ func (b *Box) OpenAAD(aad string, blob []byte) ([]byte, error) {
 }
 
 // String returns "[redacted]"; Box has no other printable state.
-func (b *Box) String() string { return redacted }
+func (b Box) String() string { return redacted }
 
 // Format prints "[redacted]" under every verb.
-func (b *Box) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte(redacted)) }
+func (b Box) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte(redacted)) }
 
 // LogValue returns the string "[redacted]".
-func (b *Box) LogValue() slog.Value { return slog.StringValue(redacted) }
+func (b Box) LogValue() slog.Value { return slog.StringValue(redacted) }

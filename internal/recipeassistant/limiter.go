@@ -39,8 +39,36 @@ func NewLimiter(now func() time.Time) *Limiter {
 // first, or CodeTooManyReads with RetryAfterSeconds, Admins exempt from the
 // hourly limit) without holding a slot or counting a read; nil when Acquire
 // would accept now. The handler calls it before reading the request body
-// (design §1.5). STUB (red tests first): the developer implements it.
-func (l *Limiter) Check(c Caller) error { return nil }
+// (design §1.5).
+func (l *Limiter) Check(c Caller) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.refusal(c)
+}
+
+// refusal is the shared policy; the caller holds l.mu. It prunes expired
+// counts, which changes nothing observable.
+func (l *Limiter) refusal(c Caller) error {
+	if _, busy := l.running[c.UserID]; busy {
+		return &Error{Code: CodeReadInProgress}
+	}
+	if c.Admin {
+		return nil
+	}
+	now := l.now()
+	kept := l.accepted[c.HouseholdID][:0]
+	for _, t := range l.accepted[c.HouseholdID] {
+		if now.Sub(t) < LimiterWindow {
+			kept = append(kept, t)
+		}
+	}
+	l.accepted[c.HouseholdID] = kept
+	if len(kept) >= HourlyReadLimit {
+		wait := kept[0].Add(LimiterWindow).Sub(now)
+		return &Error{Code: CodeTooManyReads, RetryAfterSeconds: int(math.Ceil(wait.Seconds()))}
+	}
+	return nil
+}
 
 // Acquire accepts a read or refuses it with *Error CodeReadInProgress (the
 // User already has a read running; checked first) or CodeTooManyReads (with
@@ -52,23 +80,11 @@ func (l *Limiter) Check(c Caller) error { return nil }
 func (l *Limiter) Acquire(c Caller) (release func(), err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if _, busy := l.running[c.UserID]; busy {
-		return nil, &Error{Code: CodeReadInProgress}
+	if err := l.refusal(c); err != nil {
+		return nil, err
 	}
-	now := l.now()
 	if !c.Admin {
-		kept := l.accepted[c.HouseholdID][:0]
-		for _, t := range l.accepted[c.HouseholdID] {
-			if now.Sub(t) < LimiterWindow {
-				kept = append(kept, t)
-			}
-		}
-		l.accepted[c.HouseholdID] = kept
-		if len(kept) >= HourlyReadLimit {
-			wait := kept[0].Add(LimiterWindow).Sub(now)
-			return nil, &Error{Code: CodeTooManyReads, RetryAfterSeconds: int(math.Ceil(wait.Seconds()))}
-		}
-		l.accepted[c.HouseholdID] = append(kept, now)
+		l.accepted[c.HouseholdID] = append(l.accepted[c.HouseholdID], l.now())
 	}
 	l.seq++
 	token := l.seq

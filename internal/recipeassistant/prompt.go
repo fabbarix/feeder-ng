@@ -51,7 +51,11 @@ func ExtractAddendum(recipeFileMD string) (string, error) {
 			continue
 		}
 		if trimmed == fenceClose {
-			return strings.Join(body, "\n"), nil
+			text := strings.Join(body, "\n")
+			if strings.TrimSpace(text) == "" {
+				return "", ErrNoAddendum
+			}
+			return text, nil
 		}
 		body = append(body, line)
 	}

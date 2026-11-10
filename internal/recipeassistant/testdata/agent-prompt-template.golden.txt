@@ -19,6 +19,7 @@ Rules:
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".
 11. Several recipes in the input become several entries in "recipes", sharing one "ingredients" list.
+12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
 
 JSON Schema:
 {{SCHEMA}}

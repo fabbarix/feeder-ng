@@ -56,7 +56,11 @@ func Finish(raw []byte, in FinishInput) (Finished, error) {
 		return Finished{}, &Error{Code: CodeNoRecipeFound}
 	}
 	recipes, isList := root["recipes"].([]any)
-	if root["recipes"] == nil || (isList && len(recipes) == 0) {
+	if root["recipes"] != nil && !isList {
+		return Finished{}, &Error{Code: CodeInvalidOutput, Message: "recipes is not a list",
+			Paths: []recipefile.PathError{{Path: "$.recipes", Message: "must be an array"}}}
+	}
+	if len(recipes) == 0 {
 		return Finished{}, &Error{Code: CodeNoRecipeFound}
 	}
 	if len(recipes) > MaxRecipes {
@@ -108,7 +112,7 @@ func Finish(raw []byte, in FinishInput) (Finished, error) {
 			}
 		}
 	}
-	if in.Kind == KindPage && in.FallbackImage != "" {
+	if in.Kind == KindPage && in.FallbackImage != "" && len(recipes) > 0 {
 		if first, ok := recipes[0].(map[string]any); ok {
 			if img, _ := first["image"].(string); img == "" {
 				first["image"] = in.FallbackImage

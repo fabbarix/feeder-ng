@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/url"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -345,8 +346,13 @@ func collectRecipes(v any, depth int, out *[]map[string]any) {
 			*out = append(*out, x)
 			return
 		}
-		for _, e := range x {
-			collectRecipes(e, depth+1, out)
+		keys := make([]string, 0, len(x))
+		for k := range x {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			collectRecipes(x[k], depth+1, out)
 		}
 	}
 }
@@ -434,7 +440,9 @@ func flatText(body []byte) string {
 			if skipped[a] {
 				switch tt.Type {
 				case html.StartTagToken:
-					skip++
+					if a != atom.Input { // <input> is void: it never has an end tag
+						skip++
+					}
 				case html.EndTagToken:
 					if skip > 0 {
 						skip--

@@ -7,6 +7,7 @@ package imagefetch
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/netip"
 	"time"
@@ -21,16 +22,37 @@ const (
 	MaxRedirects = 3
 )
 
-// Errors (matched with errors.Is); the values are the shared safehttp ones.
+// Errors (matched with errors.Is). The shared safehttp errors keep their
+// generic texts; these three read as they did before the extraction, and
+// errors.Is matches both the imagefetch and the safehttp sentinel.
 var (
 	ErrNotHTTPS         = safehttp.ErrNotHTTPS
 	ErrBlocked          = safehttp.ErrBlocked
-	ErrTooLarge         = safehttp.ErrTooLarge
-	ErrContentType      = safehttp.ErrContentType
+	ErrTooLarge         = &imageError{"image is larger than 10 MB", safehttp.ErrTooLarge}
+	ErrContentType      = &imageError{"response is not a JPEG, PNG or WebP image", safehttp.ErrContentType}
 	ErrStatus           = safehttp.ErrStatus
 	ErrTooManyRedirects = safehttp.ErrTooManyRedirects
-	ErrCredentials      = safehttp.ErrCredentials
+	ErrCredentials      = &imageError{"credentials in image URLs are refused", safehttp.ErrCredentials}
 )
+
+// imageError is an image-worded error that also reports the shared sentinel.
+type imageError struct {
+	text   string
+	shared error
+}
+
+func (e *imageError) Error() string        { return e.text }
+func (e *imageError) Is(target error) bool { return target == e.shared }
+
+// reword replaces the generic safehttp errors with their image-worded form.
+func reword(err error) error {
+	for _, e := range []*imageError{ErrTooLarge, ErrContentType, ErrCredentials} {
+		if errors.Is(err, e.shared) {
+			return e
+		}
+	}
+	return err
+}
 
 // Options tune a Fetcher. The zero value is the production policy.
 type Options struct {
@@ -77,7 +99,7 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string) ([]byte, string, err
 		Header:       http.Header{"Accept": {"image/jpeg, image/png, image/webp"}},
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, "", reword(err)
 	}
 	return r.Body, r.ContentType, nil
 }
