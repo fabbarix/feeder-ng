@@ -268,3 +268,63 @@ func TestSwapRespectsReservations(t *testing.T) {
 		}
 	})
 }
+
+func TestReserveLeftoverMealIsNotAFreshCook(t *testing.T) {
+	leftoverPizza := ExistingMeal{State: MealPinned, RecipeID: pizzaR, From: &LeftoverSource{LeftoverID: 7}}
+	withLeftover := func(slots []Slot) Input {
+		in := baseInput(slots, fiveRecipes()...)
+		in.Leftovers = []Leftover{leftoverOf(7, pizzaR, 2, day(3))}
+		return in
+	}
+	t.Run("a Pinned Leftover of R starts no Cool-down: the next day can still take R", func(t *testing.T) {
+		slots := []Slot{withExisting(dinner(0), leftoverPizza), dinner(1)}
+		r := mustPlan(t, withLeftover(slots))
+		if got := placementAt(t, r, key(1)).RecipeID; got != pizzaR {
+			t.Errorf("Tuesday = Recipe %d, want 1 (a Leftover is not a fresh cook)", got)
+		}
+	})
+	t.Run("a Cooked Leftover of R does not void a reservation either", func(t *testing.T) {
+		slots := fridayRule(SlotRule{RecipeID: pizzaR})
+		slots[0] = withExisting(slots[0], ExistingMeal{State: MealCooked, RecipeID: pizzaR, From: &LeftoverSource{LeftoverID: 7}})
+		r := mustPlan(t, withLeftover(slots))
+		if got := placementAt(t, r, key(4)).RecipeID; got != pizzaR {
+			t.Errorf("Friday = Recipe %d, want pizza (reservation stays)", got)
+		}
+		for _, n := range []int{1, 2, 3} {
+			if got := placementAt(t, r, key(n)).RecipeID; got == pizzaR {
+				t.Errorf("day %d = pizza, reserved for Friday", n)
+			}
+		}
+	})
+	t.Run("a Pinned Leftover of R does not void a reservation", func(t *testing.T) {
+		slots := fridayRule(SlotRule{RecipeID: pizzaR})
+		slots[0] = withExisting(slots[0], leftoverPizza)
+		r := mustPlan(t, withLeftover(slots))
+		if got := placementAt(t, r, key(4)).RecipeID; got != pizzaR {
+			t.Errorf("Friday = Recipe %d, want pizza (reservation stays); unfilled %+v", got, r.Unfilled)
+		}
+		for _, n := range []int{1, 2, 3} {
+			if got := placementAt(t, r, key(n)).RecipeID; got == pizzaR {
+				t.Errorf("day %d = pizza, reserved for Friday", n)
+			}
+		}
+	})
+}
+
+func TestReserveUsesTheRuleSlotsOwnAttendance(t *testing.T) {
+	// Ben excludes pizza. He attends Monday but not Friday, so Friday's rule can still take pizza and
+	// reserves it: Tuesday to Thursday (Anna only) must not use it up. Monday is attended by Ben, so
+	// pizza is not an option there anyway.
+	anna1 := Attendee{anna, 1}
+	slots := []Slot{dinner(0), dinner(1, anna1), dinner(2, anna1), dinner(3, anna1), withRules(dinner(4, anna1), SlotRule{RecipeID: pizzaR})}
+	in := prefs(baseInput(slots, fiveRecipes()...), ben, Preferences{ExcludedRecipes: []RecipeID{pizzaR}})
+	r := mustPlan(t, in)
+	if got := placementAt(t, r, key(4)).RecipeID; got != pizzaR {
+		t.Errorf("Friday = Recipe %d, want pizza; unfilled %+v", got, r.Unfilled)
+	}
+	for _, n := range []int{0, 1, 2, 3} {
+		if got := placementAt(t, r, key(n)).RecipeID; got == pizzaR {
+			t.Errorf("day %d = pizza, reserved for Friday", n)
+		}
+	}
+}
