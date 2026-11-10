@@ -161,5 +161,5 @@ R12 adds `reheat` -> `Fire` (+928 B gz): 65,505 B gz of the 65,536 B budget, 93 
 ## UF1 update: weights slimmed, budget 42 kB gz
 The 64 kB budget above is superseded. `@phosphor-icons/react` modules carry six weights per glyph but the app uses
 four (`regular`, `bold`, `fill`, `duotone`), so UF1 strips `thin` and `light` at build time
-(`web/vite.phosphor-weights.ts`, see [uf1-icons.md](uf1-icons.md)). 97 glyphs now measure ~41.3 kB gz; the budget is
+(`web/vite.phosphor-weights.ts`, see [uf1-icons.md](uf1-icons.md)). 97 glyphs now measure ~41.0 kB gz (40,952 B, ~2.0 kB headroom); the budget is
 **43,008 B (42 kB)** and `MIN_MODULES` is 97. UF1 adds `camera`, `clipboard`, `link`, `rotateRight` and `rotateLeft`.

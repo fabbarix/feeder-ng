@@ -2,7 +2,7 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { phosphorWeights } from './vite.phosphor-weights'
+import { phosphorWeights } from './vite.phosphor-weights.ts'
 
 // The PWA: src/sw/sw.ts is the worker (injectManifest, so it can be extended); registration is ours
 // (features/scan/registerSw.ts), so injectRegister is off.

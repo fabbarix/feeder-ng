@@ -25,11 +25,11 @@ Measured with the real build (lib mode, react external, minified, `gzip -9`) in 
 | (b1) Vite plugin: drop `thin` and `light` (keep 4) | **Chosen.** Safe for every `IconName` at every weight the type allows. | 39,676 B |
 | (b2) plugin: keep regular/bold/fill only | Breaks EmptyState and CelebrationTile (duotone). Rejected. | 34,918 B |
 | (b3) plugin: 3 weights + duotone for an allowlist of EmptyState glyphs | Saves only 0.5 kB over (b1)'s duotone and needs a hand-kept list that fails silently (empty svg) for a new EmptyState icon. Rejected. | 35,440 B |
-| (b1) with the 5 new glyphs (97 glyphs; `rotateLeft` reuses a glyph) | Expected final state | **41,256 B** |
+| (b1) with the 5 new glyphs (97 glyphs; `rotateLeft` reuses a glyph) | Expected final state | **40,952 B** |
 | No plugin, 97 glyphs | What the old mechanism would cost | 68,255 B |
 
 Chosen: **(b1)**, a build-time transform. It keeps the CLAUDE.md rule (Phosphor only, per-icon `csr` imports, through `ui/icons.ts` and `<Icon>`): no screen changes and `icons.ts` keeps one import per glyph.
-Expected: 65,505 B -> 41,256 B (-37%) including the four new glyphs; ~427 B per glyph, so the 43,008 B budget leaves ~1.7 kB (about four more glyphs).
+Expected: 65,505 B -> 40,952 B (-37%) including the four new glyphs; ~427 B per glyph, so the 43,008 B budget leaves ~2.0 kB (about four more glyphs).
 
 ## Design
 - `web/vite.phosphor-weights.ts` exports `phosphorWeights(options?)`: a Vite plugin (`enforce: 'pre'`, `name: 'feeder:phosphor-weights'`).
@@ -40,9 +40,10 @@ Expected: 65,505 B -> 41,256 B (-37%) including the four new glyphs; ~427 B per 
 - `web/tsconfig.json` `include`: add `vite.phosphor-weights.ts`.
 - `web/src/ui/icons.ts`: add the five keys and four imports (`Camera`, `ClipboardText`, `LinkSimple`, `ArrowClockwise`; `rotateLeft: ArrowCounterClockwiseIcon`). Update the header comment. `Icon.tsx` unchanged.
 - `scripts/check-ui.sh` rule `phosphor` (mode `fail` in `check-ui.rules`, covered by `scripts/test/check-ui_test.sh`) already forbids `@phosphor-icons/react` outside `web/src/ui/icons.ts` and any barrel import. No new guard needed; the plugin file lives outside `web/src` and only mentions the package path as a string.
+- Scope of the stripping: it applies to `vite build` and to vitest (via `server.deps.inline`). The dev server pre-bundles dependencies and serves all weights, so thin and light still render there.
 - Update `scripts/test/icons-bundle_test.sh` header numbers only if the measured size moves.
 
 ## Tests (red now)
-- `scripts/test/icons-bundle_test.sh`: needs `web/vite.phosphor-weights.ts`; budget **43,008 B** (expected 41,256 B + ~1.7 kB headroom); `MIN_MODULES=97`; the chunk must contain no `"thin"`/`"light"` and must contain `regular`, `bold`, `fill`, `duotone`.
+- `scripts/test/icons-bundle_test.sh`: needs `web/vite.phosphor-weights.ts`; budget **43,008 B** (expected 40,952 B + ~2.0 kB headroom); `MIN_MODULES=97`; the chunk must contain no `"thin"`/`"light"` and must contain `regular`, `bold`, `fill`, `duotone`.
 - `web/src/ui/icons.test.tsx`: rows `camera`/`Camera`, `clipboard`/`ClipboardText`, `link`/`LinkSimple`, `rotateRight`/`ArrowClockwise`, `rotateLeft`/`ArrowCounterClockwise` (same svg as `undo`).
 - `web/src/ui/icons.weights.test.tsx`: every registry icon draws at regular, bold, fill, duotone (green now, the guard against empty glyphs after stripping); `thin` and `light` render nothing (red until the plugin and `server.deps.inline` land).
