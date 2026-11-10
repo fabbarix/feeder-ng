@@ -5,12 +5,11 @@
 // the model's answer. No net/http, no database/sql, no Anthropic SDK types:
 // adapters translate to the plain types defined here.
 // See docs/dev/design/ra-ab-core.md and docs/dev/design/ai-recipe-import.md.
-//
-// STUB: the Developer implements the functions marked "not implemented".
 package recipeassistant
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
@@ -81,12 +80,73 @@ type APIFailure struct {
 }
 
 // ClassifyAPIFailure maps an API failure to a read error (design §1.4 table).
-func ClassifyAPIFailure(f APIFailure) *Error { return &Error{} }
+func ClassifyAPIFailure(f APIFailure) *Error {
+	if f.Transport {
+		return &Error{Code: CodeUnreachable}
+	}
+	status := f.Status
+	if status == 0 {
+		switch f.Type {
+		case "authentication_error":
+			status = 401
+		case "billing_error":
+			status = 402
+		case "permission_error":
+			status = 403
+		case "not_found_error":
+			status = 404
+		case "request_too_large":
+			status = 413
+		case "rate_limit_error":
+			status = 429
+		case "overloaded_error", "api_error":
+			status = 529
+		case "invalid_request_error":
+			status = 400
+		default:
+			return &Error{Code: CodeUnreachable}
+		}
+	}
+	switch {
+	case status == 401:
+		return &Error{Code: CodeBadKey}
+	case status == 402:
+		return &Error{Code: CodeBilling}
+	case status == 403:
+		return &Error{Code: CodeForbidden}
+	case status == 404:
+		// A missing model names the model; any other 404 is a wrong base URL.
+		if strings.Contains(strings.ToLower(f.Message), "model") {
+			return &Error{Code: CodeModelUnavailable}
+		}
+		return &Error{Code: CodeRequestRejected}
+	case status == 413:
+		return &Error{Code: CodeSourceTooLong}
+	case status == 429:
+		return &Error{Code: CodeRateLimited, RetryAfterSeconds: f.RetryAfterSeconds}
+	case status >= 500:
+		return &Error{Code: CodeBusy}
+	}
+	return &Error{Code: CodeRequestRejected}
+}
 
 // ClassifyStopReason maps a response's stop_reason: "refusal" is CodeDeclined
 // (with model), "max_tokens" is CodeOutputTooLong, normal reasons are nil.
-func ClassifyStopReason(stopReason, model string) *Error { return &Error{} }
+func ClassifyStopReason(stopReason, model string) *Error {
+	switch stopReason {
+	case "refusal":
+		return &Error{Code: CodeDeclined, Model: model}
+	case "max_tokens":
+		return &Error{Code: CodeOutputTooLong}
+	}
+	return nil
+}
 
 // RetryWithinBudget reports whether waiting retryAfter fits in the time left
 // of the read's deadline; if not, the read stops with CodeRateLimited.
-func RetryWithinBudget(retryAfter, remaining time.Duration) bool { return true }
+func RetryWithinBudget(retryAfter, remaining time.Duration) bool {
+	if retryAfter <= 0 {
+		return true
+	}
+	return remaining > 0 && retryAfter <= remaining
+}

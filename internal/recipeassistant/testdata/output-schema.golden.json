@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "image": {
+      "description": "an https image URL that appears in the source text",
+      "type": "string"
+    },
+    "ingredient": {
+      "additionalProperties": false,
+      "properties": {
+        "baseUnit": {
+          "enum": [
+            "g",
+            "ml",
+            "piece"
+          ]
+        },
+        "conversions": {
+          "description": "Ingredient-specific Unit Conversions into the base unit, e.g. {\"unit\":\"clove\",\"toBase\":5} for garlic in g.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "toBase": {
+                "type": "number"
+              },
+              "unit": {
+                "$ref": "#/$defs/unit"
+              }
+            },
+            "required": [
+              "unit",
+              "toBase"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "shelfLifeDays": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Days the Ingredient stays usable after purchase; omit or null for non-perishables."
+        }
+      },
+      "required": [
+        "name",
+        "baseUnit"
+      ],
+      "type": "object"
+    },
+    "name": {
+      "type": "string"
+    },
+    "quantity": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient": {
+          "$ref": "#/$defs/name"
+        },
+        "note": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "required": [
+        "ingredient",
+        "quantity",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "recipe": {
+      "additionalProperties": false,
+      "properties": {
+        "cooldownDays": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "image": {
+          "$ref": "#/$defs/image"
+        },
+        "ingredients": {
+          "items": {
+            "$ref": "#/$defs/quantity"
+          },
+          "type": "array"
+        },
+        "leftoverUseByDays": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "readyMeal": {
+          "type": "boolean"
+        },
+        "source": {
+          "additionalProperties": false,
+          "properties": {
+            "attribution": {
+              "type": "string"
+            },
+            "url": {
+              "format": "uri",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/step"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "yield": {
+          "description": "Standard portions produced by one Batch (for a Ready Meal: portions in one pack).",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "yield",
+        "ingredients"
+      ],
+      "type": "object"
+    },
+    "step": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "Indexes (0-based, into this recipe's steps array) of earlier non-advance Steps that must be FINISHED before this one starts. Omitted = the cook is free: after the previous non-advance Step finishes if it is active, or as soon as it has started if it is passive.",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "image": {
+          "$ref": "#/$defs/image"
+        },
+        "kind": {
+          "enum": [
+            "active",
+            "passive",
+            "advance"
+          ]
+        },
+        "leadTimeMinutes": {
+          "description": "Advance Steps only: how long before the Planned Meal's slot time this Step must be done.",
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        },
+        "uses": {
+          "items": {
+            "$ref": "#/$defs/quantity"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "unit": {
+      "description": "Base units, global units, or a unit defined in the Ingredient's conversions.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One or more Recipes plus the Ingredient definitions they use. See docs/spec/recipe-file.md for semantics.",
+  "properties": {
+    "format": {
+      "const": "feeder-recipe-file"
+    },
+    "ingredients": {
+      "description": "Definitions for Ingredients referenced by the recipes. Optional: Ingredients not defined here are resolved at Import Review.",
+      "items": {
+        "$ref": "#/$defs/ingredient"
+      },
+      "type": "array"
+    },
+    "noRecipe": {
+      "description": "true when the source contains no recipe; then recipes is empty",
+      "type": "boolean"
+    },
+    "recipes": {
+      "items": {
+        "$ref": "#/$defs/recipe"
+      },
+      "type": "array"
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "recipes"
+  ],
+  "type": "object"
+}

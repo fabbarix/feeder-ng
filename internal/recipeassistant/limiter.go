@@ -1,6 +1,10 @@
 package recipeassistant
 
-import "time"
+import (
+	"math"
+	"sync"
+	"time"
+)
 
 // Rate limits (design §1.5).
 const (
@@ -18,10 +22,18 @@ type Caller struct {
 // Limiter is the in-memory policy: one running read per User (Admins
 // included) and 30 accepted reads per rolling hour per Household for
 // non-Admins; Admin reads are not counted. The clock is injected.
-type Limiter struct{}
+type Limiter struct {
+	now      func() time.Time
+	mu       sync.Mutex
+	running  map[int64]uint64 // by User; the value identifies the acquisition
+	seq      uint64
+	accepted map[int64][]time.Time
+}
 
 // NewLimiter returns a Limiter reading time from now.
-func NewLimiter(now func() time.Time) *Limiter { return &Limiter{} }
+func NewLimiter(now func() time.Time) *Limiter {
+	return &Limiter{now: now, running: map[int64]uint64{}, accepted: map[int64][]time.Time{}}
+}
 
 // Acquire accepts a read or refuses it with *Error CodeReadInProgress (the
 // User already has a read running; checked first) or CodeTooManyReads (with
@@ -30,4 +42,35 @@ func NewLimiter(now func() time.Time) *Limiter { return &Limiter{} }
 // outcome. The returned release frees the User's running slot; it is safe to
 // call more than once. Refusals count nothing and hold nothing. Safe for
 // concurrent use.
-func (l *Limiter) Acquire(c Caller) (release func(), err error) { return func() {}, nil }
+func (l *Limiter) Acquire(c Caller) (release func(), err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if _, busy := l.running[c.UserID]; busy {
+		return nil, &Error{Code: CodeReadInProgress}
+	}
+	now := l.now()
+	if !c.Admin {
+		kept := l.accepted[c.HouseholdID][:0]
+		for _, t := range l.accepted[c.HouseholdID] {
+			if now.Sub(t) < LimiterWindow {
+				kept = append(kept, t)
+			}
+		}
+		l.accepted[c.HouseholdID] = kept
+		if len(kept) >= HourlyReadLimit {
+			wait := kept[0].Add(LimiterWindow).Sub(now)
+			return nil, &Error{Code: CodeTooManyReads, RetryAfterSeconds: int(math.Ceil(wait.Seconds()))}
+		}
+		l.accepted[c.HouseholdID] = append(kept, now)
+	}
+	l.seq++
+	token := l.seq
+	l.running[c.UserID] = token
+	return func() {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		if l.running[c.UserID] == token {
+			delete(l.running, c.UserID)
+		}
+	}, nil
+}
