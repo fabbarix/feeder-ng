@@ -35,6 +35,11 @@ const DEFAULT_ICON: Partial<Record<ChipStatus, { state: IconName; status: IconNa
   spoil: { state: 'goesOff', status: 'goesOff' },
 }
 
+/** The icon a status shows by default (a `state` chip's glyph; the status chip and ListRow meta use the same). */
+export function defaultStatusIcon(status: ChipStatus): IconName | undefined {
+  return DEFAULT_ICON[status]?.status
+}
+
 function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
   return typeof icon === 'string' ? <Icon name={icon as IconName} size={size} /> : icon
 }
