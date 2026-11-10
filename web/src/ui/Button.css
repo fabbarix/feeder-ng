@@ -70,6 +70,12 @@
   color: var(--color-text);
 }
 
+/* WP3b (plan 4.3, 5.1): the primary action on the accent hero is a surface button with accent text. */
+.tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
 .button[data-variant='accent-secondary'] {
   background: var(--color-soft);
   color: var(--color-accent-text);

@@ -21,6 +21,15 @@
   }
 }
 
+/* The label is one line (the board clamps it); the full name stays in aria-label. */
+.timer-tile__label {
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .timer-tile__time {
   font-size: var(--text-display-size);
   line-height: var(--text-display-line);

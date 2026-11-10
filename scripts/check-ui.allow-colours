@@ -1,0 +1,5 @@
+# Rule colour-literals: files that may hold colour literals because the colours are a third party's brand asset
+# (fixed by their guidelines, never themed). Format: <path substring>   # reason (required: an entry without a
+# reason is ignored). Entries match the whole file, so keep them to the one file holding the asset and never use
+# one for a feature screen or a primitive.
+web/src/features/signin/components/GoogleG.tsx   # Google "G" mark: four brand colours required by Google's sign-in branding guidelines
