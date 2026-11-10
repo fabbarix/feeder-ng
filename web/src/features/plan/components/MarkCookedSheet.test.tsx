@@ -23,8 +23,26 @@ describe('MarkCookedSheet', () => {
     expect(screen.getByText('Chicken')).toBeInTheDocument()
     expect(screen.getByText(/1 Batch yields 4 portions/)).toBeInTheDocument()
     expect(screen.getByText(/2 portions needed/)).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument() // the Stepper value
-    expect(screen.getByText('Use by Thursday')).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: 'Leftover portions' })).toHaveAttribute('aria-valuenow', '2')
+    expect(screen.getByText('Use by Thu')).toBeInTheDocument() // meta from leftoverUseBy, short weekday
+  })
+
+  it('the actions live in the sticky footer: Mark as Cooked is the one primary, full width', () => {
+    setup()
+    const footer = document.querySelector('.sheet__footer') as HTMLElement
+    expect(footer).not.toBeNull()
+    const confirm = screen.getByRole('button', { name: 'Mark as Cooked' })
+    expect(footer).toContainElement(confirm)
+    expect(confirm).toHaveAttribute('data-variant', 'primary')
+    expect(document.querySelectorAll('.sheet button[data-variant="primary"]')).toHaveLength(1)
+  })
+
+  it('"No Leftover" is a secondary button that sets the Leftover to none', async () => {
+    const h = setup()
+    const none = screen.getByRole('button', { name: 'No Leftover' })
+    expect(none).toHaveAttribute('data-variant', 'secondary')
+    await userEvent.click(none)
+    expect(h.onLeftoverChange).toHaveBeenCalledWith(0)
   })
 
   it('the ± control moves the Leftover in half portions', async () => {
@@ -44,19 +62,23 @@ describe('MarkCookedSheet', () => {
     setup({ leftover: 0 })
     expect(screen.getByRole('button', { name: 'Decrease Leftover portions' })).toBeDisabled()
     expect(screen.getByText('No Leftover')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'No Leftover' })).not.toBeInTheDocument() // nothing left to clear
     expect(screen.queryByText(/Use by/)).not.toBeInTheDocument()
   })
 
   it('a meal served from a Leftover has no stepper', () => {
     setup({ preview: { ...preview, fresh: false, batches: 0, proposedLeftover: 0, maxLeftover: 0 } })
     expect(screen.queryByRole('button', { name: /Leftover portions/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'No Leftover' })).not.toBeInTheDocument()
   })
 
   it('confirming and "Not cooked" report to the caller', async () => {
     const h = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
     expect(h.onConfirm).toHaveBeenCalledTimes(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Not cooked' }))
+    const not = screen.getByRole('button', { name: 'Not cooked' })
+    expect(not).toHaveAttribute('data-variant', 'tertiary')
+    await userEvent.click(not)
     expect(h.onNotCooked).toHaveBeenCalledTimes(1)
   })
 

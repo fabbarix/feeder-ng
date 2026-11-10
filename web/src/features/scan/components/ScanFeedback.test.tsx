@@ -5,8 +5,8 @@ import { ScanFeedback } from './ScanFeedback'
 
 function setup(over: Partial<React.ComponentProps<typeof ScanFeedback>> = {}) {
   const props = { text: 'Passata +700 g · $1.59', canEditPrice: true, onEditPrice: vi.fn(), onUndo: vi.fn(), onDismiss: vi.fn(), ...over }
-  render(<ScanFeedback {...props} />)
-  return props
+  const view = render(<ScanFeedback {...props} />)
+  return { ...props, view }
 }
 
 describe('ScanFeedback', () => {
@@ -15,12 +15,17 @@ describe('ScanFeedback', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Passata +700 g · $1.59')
   })
 
-  it('edits the price with ✎ and undoes with Undo', async () => {
+  it('edits the price and undoes, with labelled icon buttons instead of glyph characters', async () => {
     const p = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Edit price' }))
+    const edit = screen.getByRole('button', { name: 'Edit price' })
+    expect(edit.textContent).toBe('')
+    expect(edit.querySelector('svg')).not.toBeNull()
+    await userEvent.click(edit)
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(p.onEditPrice).toHaveBeenCalledTimes(1)
     expect(p.onUndo).toHaveBeenCalledTimes(1)
+    expect(p.view.container).not.toHaveTextContent('✎')
+    expect(p.view.container).not.toHaveTextContent('×')
   })
 
   it('offers no price edit when there is no price to edit', () => {
@@ -34,9 +39,11 @@ describe('ScanFeedback', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Waiting to sync')
   })
 
-  it('can be dismissed', async () => {
+  it('can be dismissed with an icon button', async () => {
     const p = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    const dismiss = screen.getByRole('button', { name: 'Dismiss' })
+    expect(dismiss.textContent).toBe('')
+    await userEvent.click(dismiss)
     expect(p.onDismiss).toHaveBeenCalledTimes(1)
   })
 })

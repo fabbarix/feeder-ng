@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { BottomSheet, Button } from '../../../ui'
+import { BottomSheet, Button, NumberField } from '../../../ui'
 import type { Correction } from '../lib/cook'
+import { keepEnterInFields } from './RulesEditors'
 import { useTotalField } from '../hooks/useTotalField'
 import { planStrings } from '../strings'
 import '../plan.css'
@@ -20,15 +21,13 @@ function TotalForm({ correction, onSave, busy, error }: Pick<StockCorrectionShee
   return (
     <form
       className="plan-form"
+      onKeyDown={keepEnterInFields}
       onSubmit={(e) => {
         e.preventDefault()
         field.submit()
       }}
     >
-      <label className="plan-field">
-        <span className="plan-field__label">{planStrings.correctAmount}</span>
-        <input type="text" inputMode="decimal" value={field.text} onChange={(e) => field.setText(e.target.value)} />
-      </label>
+      <NumberField label={planStrings.correctAmount} value={field.value} onChange={field.setValue} min={0} />
       {message ? (
         <p role="alert" className="plan__error">
           {message}

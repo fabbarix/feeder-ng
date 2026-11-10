@@ -27,4 +27,11 @@ describe('CookedConfirmation (B13)', () => {
     )
     expect(screen.getByText('Stock notice')).toBeInTheDocument()
   })
+
+  it('restyle: a success status tile with the CheckCircle icon and a primary 56 px Back to Today', () => {
+    const { container } = render(<CookedConfirmation recipeName="Chicken" outcomeText="No Leftovers" onLeave={() => {}} />)
+    expect(container.querySelector('[data-variant="status"][data-status="success"]')).not.toBeNull()
+    expect(container.querySelector('svg')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Back to Today' })).toHaveAttribute('data-size', 'lg')
+  })
 })

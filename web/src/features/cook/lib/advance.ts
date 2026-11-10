@@ -26,3 +26,12 @@ export function formatLeadTime(minutes: number): string {
   const dayText = days === 1 ? '1 day' : `${days} days`
   return hours === 0 ? dayText : `${dayText} ${hours} h`
 }
+
+/**
+ * The Advance Steps Cook Mode shows on the screen at a given Step: only before Step 1 (index 0), and only what is
+ * still pending. From Step 1 on, or once everything is done, nothing is shown.
+ */
+export function advanceOnScreen(summary: AdvanceSummary, stepIndex: number): AdvanceSummary {
+  if (stepIndex !== 0) return { done: [], pending: [] }
+  return summary
+}

@@ -1,4 +1,5 @@
 import { Button } from '../../../ui/Button'
+import { IconButton } from '../../../ui/IconButton'
 import { uiStrings } from '../../../ui/strings'
 import { scanStrings } from '../strings'
 
@@ -7,30 +8,26 @@ export interface ScanFeedbackProps {
   text: string
   /** the scan sits in the offline queue, not yet on the server */
   queued?: boolean
-  /** show the ✎ (edit price) button */
+  /** offers the Edit price IconButton */
   canEditPrice: boolean
   onEditPrice: () => void
   onUndo: () => void
   onDismiss: () => void
 }
 
-/** The line shown after a scan: its text, the ✎ and Undo buttons and a dismiss control. Announced politely. */
+/** The line shown after a scan: its text, the Edit price and Undo actions and a dismiss control. Announced politely. */
 export function ScanFeedback({ text, queued = false, canEditPrice, onEditPrice, onUndo, onDismiss }: ScanFeedbackProps) {
   return (
     <div role="status" aria-live="polite" className="scan-feedback">
       <p className="scan-feedback__text">{text}</p>
       {queued ? <span className="scan-feedback__queued">{scanStrings.waitingToSync}</span> : null}
-      {canEditPrice ? (
-        <Button variant="ghost" aria-label={scanStrings.editPrice} onClick={onEditPrice}>
-          ✎
+      <div className="scan-feedback__actions">
+        {canEditPrice ? <IconButton icon="edit" label={scanStrings.editPrice} onClick={onEditPrice} /> : null}
+        <Button variant="tertiary" onClick={onUndo}>
+          {scanStrings.undo}
         </Button>
-      ) : null}
-      <Button variant="ghost" onClick={onUndo}>
-        {scanStrings.undo}
-      </Button>
-      <Button variant="ghost" aria-label={uiStrings.dismiss} onClick={onDismiss}>
-        ×
-      </Button>
+        <IconButton icon="close" label={uiStrings.dismiss} onClick={onDismiss} />
+      </div>
     </div>
   )
 }

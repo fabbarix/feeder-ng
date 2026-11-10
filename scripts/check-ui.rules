@@ -3,15 +3,15 @@
 #   <rule>.fail_paths=web/src/ui web/src/features/plan web/src/features/recipes web/src/features/import
 # (space separated path prefixes): violations under them fail, the rest still warn.
 native-ui=warn
-native-ui.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import
+native-ui.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 phosphor=fail
 colour-literals=warn
-colour-literals.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import
+colour-literals.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 class-hooks=warn
-class-hooks.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import
+class-hooks.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 sizing=warn
-sizing.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import
+sizing.fail_paths=web/src/ui web/src/app web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 glossary=warn
-glossary.fail_paths=web/src/features/recipes web/src/features/import
+glossary.fail_paths=web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today
 native-search=warn
-native-search.fail_paths=web/src/ui web/src/features/recipes web/src/features/import
+native-search.fail_paths=web/src/ui web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today

@@ -1,6 +1,7 @@
-import { useId, useState, type FormEvent, type ReactElement } from 'react'
-import { BottomSheet, Button } from '../../../ui'
+import { useEffect, useState, type ReactElement } from 'react'
+import { BottomSheet, Button, DateField, IngredientSelect, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
+import '../stock.css'
 import type { IngredientChoice } from '../types'
 import { stockStrings as strings } from '../strings'
 
@@ -12,12 +13,13 @@ export interface AddLotSheetProps {
 }
 
 /**
- * BottomSheet "Add a Stock Lot": a select labelled "Ingredient", an input labelled
- * "Quantity" (parseAmount 'positive'; the unit is shown from the chosen Ingredient's
- * Base Unit), an optional date "Bought on", and Save. Invalid entry shows the error and does not submit.
+ * BottomSheet "Add a Stock Lot" with: `IngredientSelect` labelled "Ingredient" (searchable, no onCreate; the first
+ * Ingredient is the default until picked), `TextField` labelled "Quantity" (inputMode decimal, `suffix` = the chosen
+ * Ingredient's Base Unit, parseAmount 'positive', error shown inline via the field's `error`), `DateField` labelled
+ * "Bought on" (optional; empty = omit `purchased`), and a primary Save in the sheet `footer`.
+ * No native select/date input, no `role="alert"` paragraph (the field error is the message).
  */
 export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetProps): ReactElement | null {
-  const ids = { ingredient: useId(), quantity: useId(), purchased: useId() }
   const [pickedId, setPickedId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState('')
   const [purchased, setPurchased] = useState('')
@@ -26,8 +28,16 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
   // The first Ingredient is the default until the User picks one.
   const chosen = choices.find((c) => c.id === pickedId) ?? choices[0]
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
+  // The sheet's state outlives each opening (the screen keeps it mounted), so start clean every time it closes.
+  useEffect(() => {
+    if (open) return
+    setPickedId(null)
+    setQuantity('')
+    setPurchased('')
+    setError(null)
+  }, [open])
+
+  const submit = () => {
     const amount = parseAmount(quantity, 'positive')
     if (!amount.ok) {
       setError(strings.errors[amount.error])
@@ -39,26 +49,42 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={strings.addTitle}>
-      <form className="stock-form" onSubmit={submit}>
-        <label htmlFor={ids.ingredient}>{strings.ingredient}</label>
-        <select id={ids.ingredient} value={chosen ? String(chosen.id) : ''} onChange={(e) => setPickedId(Number(e.target.value))}>
-          {choices.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <label htmlFor={ids.quantity}>{strings.quantity}</label>
-        <span className="stock-form__amount">
-          <input id={ids.quantity} inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-          {chosen ? <span className="stock-form__unit">{chosen.baseUnit}</span> : null}
-        </span>
-        <label htmlFor={ids.purchased}>{strings.purchased}</label>
-        <input id={ids.purchased} type="date" value={purchased} onChange={(e) => setPurchased(e.target.value)} />
-        {error ? <p role="alert">{error}</p> : null}
-        <Button type="submit">{strings.save}</Button>
-      </form>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={strings.addTitle}
+      footer={
+        <Button onClick={submit}>
+          {strings.save}
+        </Button>
+      }
+    >
+      <div className="stock-sheet__fields">
+        <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null}
+          onChange={(id) => {
+            // Stock offers only saved Ingredients (numeric ids); a string key never comes from here.
+            if (typeof id === 'number') setPickedId(id)
+          }}
+        />
+        <TextField
+          label={strings.quantity}
+          inputMode="decimal"
+          value={quantity}
+          onChange={(value) => {
+            setQuantity(value)
+            setError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          suffix={chosen?.baseUnit}
+          error={error ?? undefined}
+        />
+        <DateField label={strings.purchased} value={purchased} onChange={setPurchased} />
+      </div>
     </BottomSheet>
   )
 }

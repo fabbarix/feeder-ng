@@ -119,3 +119,29 @@ func TestWhyJSONRoundTrip(t *testing.T) {
 		t.Error("DecodeWhy must reject malformed JSON")
 	}
 }
+
+func TestStartByIsTheSlotLessTheCookingTimeInTheHouseholdZone(t *testing.T) {
+	slot, err := plan.SlotInstant("2026-11-10", "19:30", rome(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := plan.StartBy(slot, 45); got != "18:45" {
+		t.Errorf("StartBy 45 min = %q, want 18:45", got)
+	}
+	if got := plan.StartBy(slot, 90); got != "18:00" {
+		t.Errorf("StartBy 90 min = %q, want 18:00", got)
+	}
+}
+
+func TestStartByCrossesMidnightAndIsEmptyWhenUnknown(t *testing.T) {
+	slot, err := plan.SlotInstant("2026-11-10", "00:20", rome(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := plan.StartBy(slot, 60); got != "23:20" {
+		t.Errorf("StartBy across midnight = %q, want 23:20", got)
+	}
+	if got := plan.StartBy(slot, 0); got != "" {
+		t.Errorf("StartBy without a cooking time = %q, want empty", got)
+	}
+}

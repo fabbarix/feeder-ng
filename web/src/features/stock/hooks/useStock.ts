@@ -4,12 +4,20 @@ import { connectEvents } from '../../../lib/sse'
 import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { stockApi } from '../api'
+import { resolveStockStatus, type StockStatus } from '../lib/status'
 import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse } from '../types'
 
 export interface QueryState<T> {
   data: T | undefined
   isLoading: boolean
   error: Error | null
+  /**
+   * 'loading' | 'error' | 'offline' | 'empty' | 'ready' from resolveStockStatus (lib/status.ts).
+   * offline = navigator.onLine === false; held data wins over offline and error; empty = received and no rows.
+   */
+  status: StockStatus
+  /** Refetches this query ("Try again"). */
+  refetch: () => Promise<unknown>
 }
 
 /** A lots query: the lots plus the household's date from the server (undefined until loaded). */
@@ -51,7 +59,8 @@ export function useStockTotals(): QueryState<IngredientStock[]> & { system: Unit
   useStockLiveUpdates()
   const system = useDisplayUnitSystem()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'totals'], queryFn: () => stockApi.totals() })
-  return { data: query.data, isLoading: query.isLoading, error: query.error, system }
+  const status = statusOf(query, query.data !== undefined && query.data.length === 0)
+  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status, refetch: query.refetch }
 }
 
 /** The lots of one Ingredient (disabled while ingredientId is null). Refetches on `stock` events. */
@@ -92,23 +101,44 @@ export function useSpoiledLots(): LotsState & {
   }
 }
 
-function lotsState(query: { data: StockLotsResponse | undefined; isLoading: boolean; error: Error | null }): LotsState {
+function lotsState(query: { data: StockLotsResponse | undefined; isLoading: boolean; error: Error | null; refetch: () => Promise<unknown> }): LotsState {
   return {
     data: query.data?.lots,
     today: query.data?.today,
     isLoading: query.isLoading,
     error: query.error,
+    status: statusOf(query, query.data !== undefined && query.data.lots.length === 0),
+    refetch: query.refetch,
   }
 }
 
-/** Writes: manual add and Set total. Both invalidate ['stock']. */
+/**
+ * The screen status of one query. Offline is read when the hook renders; the query re-renders on its own
+ * changes, so a dropped connection shows on the next fetch result.
+ */
+function statusOf(query: { data: unknown; isLoading: boolean; error: Error | null }, isEmpty: boolean): StockStatus {
+  return resolveStockStatus({
+    isLoading: query.isLoading,
+    error: query.error,
+    hasData: query.data !== undefined,
+    isEmpty,
+    offline: typeof navigator !== 'undefined' && navigator.onLine === false,
+  })
+}
+
+/** Writes: manual add, Set total and Throw out (a spoiled lot). All invalidate ['stock']. */
 export function useStockActions(): {
   addLot(input: AddLotInput): Promise<void>
   setTotal(ingredientId: number, total: number): Promise<void>
+  throwOut(lotId: number): Promise<void>
 } {
   const client = useQueryClient()
   const addLot = useMutation({
     mutationFn: (input: AddLotInput) => stockApi.addLot(input),
+    onSuccess: () => refreshStock(client),
+  })
+  const throwOut = useMutation({
+    mutationFn: (lotId: number) => stockApi.throwOut(lotId),
     onSuccess: () => refreshStock(client),
   })
   const setTotal = useMutation({
@@ -121,6 +151,9 @@ export function useStockActions(): {
     },
     setTotal: async (ingredientId, total) => {
       await setTotal.mutateAsync({ ingredientId, total })
+    },
+    throwOut: async (lotId) => {
+      await throwOut.mutateAsync(lotId)
     },
   }
 }

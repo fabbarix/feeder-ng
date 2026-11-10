@@ -8,16 +8,29 @@ import { LineTile } from './LineTile'
 const line = lineEntry(makeLine(), 'USD', 'metric')
 
 describe('LineTile', () => {
-  it('shows the title, the pack suggestion and the estimated cost', () => {
-    render(<LineTile entry={line} onTick={() => {}} onUntick={() => {}} />)
-    expect(screen.getByText('Passata')).toBeInTheDocument()
-    expect(screen.getByText('1400 g · 2 × Mutti 700 g')).toBeInTheDocument()
+  it('shows the quantity, the name, the pack suggestion and the estimated cost (ui-fix-plan 5.5)', () => {
+    const { container } = render(<LineTile entry={line} onTick={() => {}} onUntick={() => {}} />)
+    expect(container.querySelector('.line-tile__quantity')).toHaveTextContent('1400 g')
+    expect(container.querySelector('.line-tile__title')).toHaveTextContent('Passata')
+    expect(container.querySelector('.line-tile__pack')).toHaveTextContent('2 × Mutti 700 g')
     expect(screen.getByText('$3.18')).toBeInTheDocument()
   })
 
-  it('shows a dash when there is no Price', () => {
-    render(<LineTile entry={lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric')} onTick={() => {}} onUntick={() => {}} />)
-    expect(screen.getByText('—')).toBeInTheDocument()
+  it('shows no cost and no dash when there is no Price', () => {
+    const { container } = render(<LineTile entry={lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric')} onTick={() => {}} onUntick={() => {}} />)
+    expect(container.querySelector('.line-tile__estimated-cost')).toBeNull()
+    expect(container).not.toHaveTextContent('—')
+  })
+
+  it('an open entry shows an empty tick control; a ticked one shows a check mark and the title is struck through', () => {
+    const open = render(<LineTile entry={line} onTick={() => {}} onUntick={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Tick Passata' }).querySelector('svg')).toBeNull()
+    expect(open.container.querySelector('.line-tile')).toHaveAttribute('data-state', 'open')
+    open.unmount()
+    const ticked = lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')
+    const view = render(<LineTile entry={ticked} onTick={() => {}} onUntick={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Untick Passata' }).querySelector('svg')).not.toBeNull()
+    expect(view.container.querySelector('.line-tile')).toHaveAttribute('data-state', 'ticked')
   })
 
   it('ticks an open entry', async () => {
@@ -39,11 +52,16 @@ describe('LineTile', () => {
     expect(onUntick).toHaveBeenCalledWith(ticked)
   })
 
-  it('extras can be deleted, Lines cannot', async () => {
+  it('extras show a note icon and a labelled Delete IconButton (no bare ×); Lines cannot be deleted', async () => {
     const onDelete = vi.fn()
     const extra = extraEntry(makeExtra(), 'metric')
-    const { rerender } = render(<LineTile entry={extra} onTick={() => {}} onUntick={() => {}} onDelete={onDelete} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Delete toilet paper' }))
+    const { rerender, container } = render(<LineTile entry={extra} onTick={() => {}} onUntick={() => {}} onDelete={onDelete} />)
+    const del = screen.getByRole('button', { name: 'Delete toilet paper' })
+    expect(del).toHaveAttribute('data-size', 'compact')
+    expect(del.textContent).toBe('')
+    expect(container).not.toHaveTextContent('×')
+    expect(container.querySelector('.line-tile__extra-icon svg')).not.toBeNull()
+    await userEvent.click(del)
     expect(onDelete).toHaveBeenCalledWith(extra)
     rerender(<LineTile entry={line} onTick={() => {}} onUntick={() => {}} onDelete={onDelete} />)
     expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull()

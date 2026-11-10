@@ -54,3 +54,12 @@ export function describeUse(use: StepUse): string {
   const amount = Number.isInteger(use.quantity) ? String(use.quantity) : String(Math.round(use.quantity * 100) / 100)
   return `${amount} ${use.unit} ${use.ingredient}`
 }
+
+/**
+ * The overline of the Step tile: "Active", "Passive · 15 min timer" (a Passive Step), upper-cased by CSS. An
+ * Active Step with a duration reads "Active · 10 min".
+ */
+export function stepOverline(step: { kind: 'active' | 'passive' | string; durationMinutes: number }): string {
+  if (step.kind === 'passive') return `Passive · ${step.durationMinutes} min timer`
+  return step.durationMinutes > 0 ? `Active · ${step.durationMinutes} min` : 'Active'
+}

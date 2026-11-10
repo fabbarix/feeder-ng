@@ -11,6 +11,7 @@ import type {
   RecipeChoice,
   SlotKey,
   SlotRule,
+  TagChoice,
   VarietyRule,
 } from './types'
 
@@ -52,9 +53,11 @@ export const planApi = {
 
   /** Recipes to choose from when setting a meal or a Slot Rule. */
   recipeChoices: async (): Promise<RecipeChoice[]> => {
-    const list = await http.get<{ id: number; name: string }[]>('/api/recipes')
-    return list.map((r) => ({ id: r.id, name: r.name }))
+    const list = await http.get<{ id: number; name: string; tags?: string[]; imageUrl?: string; totalMinutes?: number }[]>('/api/recipes')
+    return list.map((r) => ({ id: r.id, name: r.name, tags: r.tags ?? [], imageUrl: r.imageUrl || undefined, totalMinutes: r.totalMinutes }))
   },
+  /** Read-only use of the recipes API: the existing Tags, for the Tag selects of the planning rules. */
+  tags: () => http.get<TagChoice[]>('/api/tags'),
   mealSlots: () => http.get<MealSlotChoice[]>('/api/meal-slots'),
   /** One-tap Stock correction: T10's Set total. */
   setStockTotal: (ingredientId: number, total: number) => http.put<unknown>(`/api/stock/ingredients/${ingredientId}/total`, { total }),

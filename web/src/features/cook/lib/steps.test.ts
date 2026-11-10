@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNav, goBack, goNext, isFirst, isLast, tapAction } from './steps'
+import { createNav, goBack, goNext, isFirst, isLast, stepOverline, tapAction } from './steps'
 
 describe('step navigation', () => {
   it('starts on the first Step', () => {
@@ -55,5 +55,13 @@ describe('tablet tap zones', () => {
     expect(tapAction(99, rect)).toBeNull()
     expect(tapAction(501, rect)).toBeNull()
     expect(tapAction(100, { left: 100, width: 0 })).toBeNull()
+  })
+})
+
+describe('stepOverline', () => {
+  it('names the kind and, on a Passive Step, its timer', () => {
+    expect(stepOverline({ kind: 'passive', durationMinutes: 15 })).toBe('Passive · 15 min timer')
+    expect(stepOverline({ kind: 'active', durationMinutes: 10 })).toBe('Active · 10 min')
+    expect(stepOverline({ kind: 'active', durationMinutes: 0 })).toBe('Active')
   })
 })

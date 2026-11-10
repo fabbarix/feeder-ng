@@ -12,8 +12,8 @@ const tiles = {
 }
 const shopping = <p>Shopping List screen</p>
 
-function layout(ids: Array<[string, string, string]>, empty = false): TodayLayout {
-  return { mode: 'today', empty, tiles: ids.map(([id, size, tone]) => ({ id, size, tone })) as never }
+function layout(ids: string[], empty = false): TodayLayout {
+  return { mode: 'today', empty, tiles: ids.map((id) => ({ id })) as never }
 }
 
 describe('TodayView', () => {
@@ -27,7 +27,7 @@ describe('TodayView', () => {
   it('renders the tiles in layout order inside a labelled Bento grid', () => {
     render(
       <TodayView
-        layout={layout([['nextMeal', 'lg', 'accent'], ['spoiled', 'full', 'spoil'], ['leftovers', 'md', 'leftover']])}
+        layout={layout(['nextMeal', 'spoiled', 'leftovers'])}
         tiles={tiles}
         shopping={shopping}
         onOpenPlan={() => {}}
@@ -40,12 +40,16 @@ describe('TodayView', () => {
     expect(texts.indexOf('Spinach went off')).toBeLessThan(texts.indexOf('2 portions of soup'))
   })
 
-  it('gives each tile the size and tone of its spec', () => {
-    const { container } = render(
-      <TodayView layout={layout([['nextMeal', 'lg', 'accent'], ['spoiled', 'full', 'spoil']])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />,
-    )
-    expect(container.querySelector('[data-size="lg"][data-tone="accent"]')).not.toBeNull()
-    expect(container.querySelector('[data-size="full"][data-tone="spoil"]')).not.toBeNull()
+  it('wraps each tile in a slot named by its id', () => {
+    const { container } = render(<TodayView layout={layout(['nextMeal', 'spoiled'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(container.querySelector('[data-tile="nextMeal"]')).not.toBeNull()
+    expect(container.querySelector('[data-tile="spoiled"]')).not.toBeNull()
+  })
+
+  it('puts the date under the title when given', () => {
+    render(<TodayView layout={layout(['nextMeal'])} dateLabel="Tue 10 Nov" tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument()
+    expect(screen.getByText('Tue 10 Nov')).toBeInTheDocument()
   })
 
   it('shows the witty empty state and opens the Plan from its button', async () => {
@@ -57,7 +61,7 @@ describe('TodayView', () => {
   })
 
   it('still shows the streak tile under the empty state', () => {
-    render(<TodayView layout={layout([['streak', 'sm', 'accent']], true)} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    render(<TodayView layout={layout(['streak'], true)} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
     expect(screen.getByText('Nothing on the menu. The kitchen is yours.')).toBeInTheDocument()
     expect(screen.getByText('5 days')).toBeInTheDocument()
   })

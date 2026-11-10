@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { BottomSheet, Button, Chip, WhyChip } from '../../../ui'
+import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../ui'
+import { swapMeta } from '../lib/choose'
 import { phraseAll } from '../lib/phrase'
-import { planStrings } from '../strings'
+import { planStrings as s } from '../strings'
 import type { Alternative, PlanSlot } from '../types'
 import '../plan.css'
 
@@ -15,36 +16,28 @@ export interface SwapSheetProps {
   onPick: (recipeId: number) => void
 }
 
-/** Bottom sheet with the top 3 alternatives, each with its phrased why chips; choosing one pins it. */
+/** Bottom sheet with the top 3 alternatives as rows (thumb, Recipe, first reason and the Leftover); a tap swaps and pins. */
 export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick }: SwapSheetProps): ReactNode {
   const slotDate = slot?.date ?? ''
+  const rows = alternatives.slice(0, 3)
   return (
-    <BottomSheet open={open} onClose={onClose} title={planStrings.swapTitle}>
+    <BottomSheet open={open} onClose={onClose} title={s.swapTitle} footer={<Button variant="tertiary" onClick={onClose}>{s.swapKeep}</Button>}>
       <div className="plan__stack">
-        <p className="plan__muted">{planStrings.swapHelp}</p>
-        {isLoading ? <p className="plan__muted">{planStrings.swapLoading}</p> : null}
-        {!isLoading && alternatives.length === 0 ? <p className="plan__muted">{planStrings.swapNone}</p> : null}
-        <ul className="plan__list">
-          {alternatives.map((a) => (
-            <li key={a.recipeId}>
-              <div className="plan__stack">
-                <p className="plan-meal__recipe">{a.recipeName}</p>
-                <div className="plan__row">
-                  <Chip>{planStrings.batches(a.batches)}</Chip>
-                  {a.newLeftoverPortions > 0 ? (
-                    <Chip tone="leftover">{planStrings.extraPortions(a.newLeftoverPortions)}</Chip>
-                  ) : null}
-                  {phraseAll(a.why, { slotDate }).map((p) => (
-                    <WhyChip key={p} reason={p} />
-                  ))}
-                </div>
-              </div>
-              <Button variant="tonal" aria-label={planStrings.swapPick(a.recipeName)} onClick={() => onPick(a.recipeId)}>
-                {planStrings.swap}
-              </Button>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? <p className="plan__muted">{s.swapLoading}</p> : null}
+        {!isLoading && rows.length === 0 ? <p className="plan__muted">{s.swapNone}</p> : null}
+        {rows.length > 0 ? (
+          <ListGroup label={s.swapAlternatives}>
+            {rows.map((a) => (
+              <ListRow
+                key={a.recipeId}
+                title={a.recipeName}
+                meta={swapMeta(phraseAll(a.why, { slotDate })[0], a.newLeftoverPortions > 0 ? s.extraPortions(a.newLeftoverPortions) : '')}
+                leading={<RecipeThumb name={a.recipeName} photoUrl={a.photoUrl} size={48} initial={false} />}
+                onActivate={() => onPick(a.recipeId)}
+              />
+            ))}
+          </ListGroup>
+        ) : null}
       </div>
     </BottomSheet>
   )
