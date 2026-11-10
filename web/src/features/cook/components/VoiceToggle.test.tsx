@@ -27,3 +27,12 @@ describe('VoiceToggle', () => {
     expect(screen.getByRole('button', { name: 'Voice commands are not available in this browser' })).toBeDisabled()
   })
 })
+
+describe('VoiceToggle look (2.7)', () => {
+  it('is an IconButton (microphone), pressed while on, never a Chip', () => {
+    render(<VoiceToggle supported enabled onChange={() => {}} />)
+    const b = screen.getByRole('button', { name: 'Voice commands on' })
+    expect(b).toHaveClass('icon-button')
+    expect(b.textContent).toBe('')
+  })
+})

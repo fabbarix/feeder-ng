@@ -12,6 +12,9 @@ export interface StepTileProps {
   onNext: () => void
   /** Formats one scaled use for display, e.g. "4 piece onion" (the User's unit system is the hook's business). */
   formatUse?: (use: StepUse) => string
+  /** Tablet: shows the one-time coach mark (cookStrings.coachMark) with a "Got it" button that calls onCoachDismiss. */
+  coachMark?: boolean
+  onCoachDismiss?: () => void
 }
 
 /**

@@ -34,5 +34,12 @@ export const cookStrings = {
   notCookable: 'This meal has already been cooked or skipped',
   noSteps: 'No Steps to follow. Enjoy!',
   passiveNote: (minutes: number) => `Runs for ${minutes} min. Carry on with the next Step meanwhile.`,
+  exit: 'Exit',
+  /** "Uses 250 g flour, 2 piece onion": the Step's scaled amounts on one muted line. */
+  usesLine: (items: string[]) => `Uses ${items.join(', ')}`,
+  coachMark: 'Tap the right side for next, the left side for back',
+  coachMarkDismiss: 'Got it',
+  advanceAhead: (text: string, leadTime: string) => `${text} · ${leadTime} ahead`,
+  markAdvanceDoneShort: 'Done',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
 } as const

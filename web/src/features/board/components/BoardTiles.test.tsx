@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
-import { BoardLeftoversTile, BoardTimersTile, ClockTile, NextAdvanceTile, StartCookTile, StreakTile, TomorrowTile, TonightTile, UseSoonTile } from './BoardTiles'
+import { BoardLeftoversTile, BoardTimersTile, ClockTile, NextAdvanceTile, StreakTile, TomorrowTile, TonightTile, UseSoonTile } from './BoardTiles'
 
 const slot = (id: number, name: string, recipe: string, time: string): SlotLike => ({
   date: '2026-11-09',
@@ -21,9 +21,9 @@ describe('ClockTile', () => {
     expect(screen.getByText('Monday 9 November')).toBeInTheDocument()
     expect(screen.queryByText(/coordinates/i)).not.toBeInTheDocument()
   })
-  it('hints at adding coordinates when it falls back to 19:00-07:00', () => {
+  it('never shows the coordinates hint on the wall display (it lives in Settings)', () => {
     render(<ClockTile now={new Date('2026-11-09T17:42:00Z')} timeZone="UTC" showFallbackHint />)
-    expect(screen.getByText('Add coordinates in Settings so the board follows the sunset')).toBeInTheDocument()
+    expect(screen.queryByText(/coordinates/i)).not.toBeInTheDocument()
   })
 })
 
@@ -87,7 +87,7 @@ describe('UseSoonTile', () => {
   it('shows a spoil-tone chip per Ingredient', () => {
     render(<UseSoonTile rows={[row]} />)
     const chip = screen.getByText('milk')
-    expect(chip.closest('[data-tone]')).toHaveAttribute('data-tone', 'spoil')
+    expect(chip.closest('[data-status]')).toHaveAttribute('data-status', 'spoil')
   })
   it('says when nothing needs using up', () => {
     render(<UseSoonTile rows={[]} />)
@@ -136,15 +136,34 @@ describe('StreakTile', () => {
   })
 })
 
-describe('StartCookTile', () => {
-  it('is a big button that starts Cook Mode', async () => {
-    const onStart = vi.fn()
-    render(<StartCookTile onStart={onStart} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Start Cook Mode' }))
-    expect(onStart).toHaveBeenCalledTimes(1)
+describe('TonightTile hero Cook button (5.13)', () => {
+  it('has a big "Cook" button that starts Cook Mode, replacing the separate Start Cook Mode tile', async () => {
+    const onCook = vi.fn()
+    render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} onCook={onCook} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    expect(onCook).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Start Cook Mode')).not.toBeInTheDocument()
   })
-  it('is disabled when there is nothing to cook', () => {
-    render(<StartCookTile />)
-    expect(screen.getByRole('button', { name: 'Start Cook Mode' })).toBeDisabled()
+  it('has no Cook button when nothing is planned or no handler is given', () => {
+    const { rerender } = render(<TonightTile slot={null} onCook={() => {}} />)
+    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    rerender(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
+    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+  })
+  it('is the accent hero tile, 2 x 2', () => {
+    const { container } = render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
+    const tile = container.firstElementChild
+    expect(tile).toHaveAttribute('data-variant', 'accent')
+    expect(tile).toHaveAttribute('data-span', '2')
+    expect(tile).toHaveAttribute('data-row-span', '2')
+  })
+})
+
+describe('UseSoonTile layout', () => {
+  it('spans two columns and uses spoil status chips (not the deprecated tone)', () => {
+    const { container } = render(<UseSoonTile rows={[{ ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 500, nextGoesOff: '2026-11-11', useSoon: true, spoiledCount: 0 }]} />)
+    expect(container.firstElementChild).toHaveAttribute('data-span', '2')
+    expect(container.querySelector('[data-tone]')).toBeNull()
+    expect(container.querySelector('[data-status="spoil"]')).not.toBeNull()
   })
 })

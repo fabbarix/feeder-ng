@@ -182,9 +182,9 @@ describe('CookScreen: timers (B14)', () => {
     expect(await screen.findByRole('region', { name: 'Timers' })).toBeInTheDocument()
     const other = await screen.findByRole('region', { name: 'Other timers' })
     expect(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).toBeInTheDocument()
-    await userEvent.click(within(other).getByRole('button', { name: 'Pause Step 1: Boil rice' }))
+    await userEvent.click(within(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).getByRole('button', { name: 'Pause' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers/2/pause')).toHaveLength(1))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel timer Step 3: Simmer' }))
+    await userEvent.click(within(screen.getByRole('timer', { name: 'Step 3: Simmer' })).getByRole('button', { name: 'Dismiss timer' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/1')).toHaveLength(1))
   })
 })
@@ -203,5 +203,97 @@ describe('CookScreen: a Recipe scope', () => {
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Back to Recipe' }))
     expect(await screen.findByText('Recipe page')).toBeInTheDocument()
+  })
+})
+
+const twoSteps = (over: Partial<CookView> = {}): CookView => ({
+  ...mealView,
+  advance: [{ step: 4, text: 'Marinate the chicken', leadTimeMinutes: 240, done: false, doneAt: null, warning: true }],
+  steps: [
+    { index: 0, number: 1, of: 2, kind: 'active', text: 'Chop the onion', durationMinutes: 5, imageUrl: '', uses: [{ ingredientId: 1, ingredient: 'onion', quantity: 4, unit: 'piece' }], timer: null },
+    { index: 1, number: 2, of: 2, kind: 'passive', text: 'Simmer', durationMinutes: 15, imageUrl: '', uses: [], timer: { label: 'Step 2: Simmer', durationSeconds: 900 } },
+  ],
+  ...over,
+})
+const twoStepRoutes = { ...mealRoutes, 'GET /api/cook/meals/2026-11-09/2': twoSteps() }
+
+describe('CookScreen: layout (2.7, 5.12)', () => {
+  it('has the top row: Exit, the Step pill and the voice icon button', async () => {
+    mockApi(twoStepRoutes)
+    renderMeal()
+    await screen.findByRole('article', { name: 'Step 1 of 2' })
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Step 1 of 2')
+    expect(screen.getByRole('button', { name: 'Voice commands off' })).toHaveClass('icon-button')
+  })
+
+  it('Exit leaves a Planned Meal for Today and a Recipe for the Recipe', async () => {
+    mockApi(twoStepRoutes)
+    renderMeal()
+    await userEvent.click(await screen.findByRole('button', { name: 'Exit' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+  })
+
+  it('Exit from a Recipe session goes to /recipes/:id', async () => {
+    mockApi({ 'GET /api/cook/recipes/7?batches=2': { ...twoSteps(), scope: 'recipe:7', meal: null, batches: 2 }, 'GET /api/cook/timers': timers })
+    renderWithProviders(
+      <Routes>
+        <Route path="/cook/recipe/:id" element={<CookScreen />} />
+        <Route path="/recipes/:id" element={<p>Recipe page</p>} />
+      </Routes>,
+      '/cook/recipe/7?batches=2',
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Exit' }))
+    expect(await screen.findByText('Recipe page')).toBeInTheDocument()
+  })
+
+  it('opens a Recipe with its Batch count and shows it (route /cook/recipe/:id?batches=2)', async () => {
+    const api = mockApi({ 'GET /api/cook/recipes/7?batches=2': { ...twoSteps(), scope: 'recipe:7', meal: null, batches: 2 }, 'GET /api/cook/timers': timers })
+    renderWithProviders(<Routes><Route path="/cook/recipe/:id" element={<CookScreen />} /></Routes>, '/cook/recipe/7?batches=2')
+    expect(await screen.findByText('2 Batches')).toBeInTheDocument()
+    expect(api.callsTo('GET', '/api/cook/recipes/7?batches=2')).toHaveLength(1)
+  })
+
+  it('shows the Step amounts on a Uses line', async () => {
+    mockApi(twoStepRoutes)
+    renderMeal()
+    expect(await screen.findByText(/^Uses/)).toHaveTextContent(/onion/)
+  })
+
+  it('shows the pending Advance Step as a status tile before Step 1 only', async () => {
+    const api = mockApi({ ...twoStepRoutes, 'PUT /api/cook/marks': { scope: 'meal:2026-11-09/2', step: 4, done: true, doneAt: '2026-11-09T12:00:00Z' } })
+    renderMeal()
+    expect(await screen.findByText('Marinate the chicken · 4 h ahead')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/cook/marks')).toHaveLength(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(await screen.findByRole('article', { name: 'Step 2 of 2' })).toBeInTheDocument()
+    expect(screen.queryByText(/Marinate the chicken/)).not.toBeInTheDocument()
+  })
+
+  it('does not show the Advance tile once everything is done', async () => {
+    mockApi({ ...mealRoutes, 'GET /api/cook/meals/2026-11-09/2': twoSteps({ advance: [{ step: 4, text: 'Marinate the chicken', leadTimeMinutes: 240, done: true, doneAt: '2026-11-09T08:00:00Z', warning: false }] }) })
+    renderMeal()
+    await screen.findByRole('article', { name: 'Step 1 of 2' })
+    expect(screen.queryByText(/Marinate the chicken/)).not.toBeInTheDocument()
+  })
+
+  it('has no Screen-stays-awake chip and no Batches chip for one Batch', async () => {
+    mockApi(twoStepRoutes)
+    renderMeal()
+    await screen.findByRole('article', { name: 'Step 1 of 2' })
+    expect(screen.queryByText('Screen stays awake')).not.toBeInTheDocument()
+    expect(screen.queryByText('1 Batch')).not.toBeInTheDocument()
+  })
+
+  it('tablet: shows tap zones and a one-time coach mark', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener: () => {}, removeEventListener: () => {} }))
+    localStorage.clear()
+    mockApi(twoStepRoutes)
+    renderMeal()
+    const step = await screen.findByRole('article', { name: 'Step 1 of 2' })
+    expect(step.querySelectorAll('[data-zone]')).toHaveLength(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByText('Tap the right side for next, the left side for back')).not.toBeInTheDocument()
   })
 })

@@ -13,7 +13,8 @@ export interface ClockTileProps {
   now: Date
   timeZone: string
   /** True when the dark/light switch uses the 19:00-07:00 fallback: shows a small Chip with strings.fallbackHint. */
-  showFallbackHint: boolean
+  /** @deprecated the hint moved to Settings (5.13); nothing is shown. */
+  showFallbackHint?: boolean
 }
 
 /** The clock (clockText) in very large type, the date (dateText) under it, and the fallback hint Chip when asked. */
@@ -29,6 +30,8 @@ export function ClockTile({ now, timeZone, showFallbackHint }: ClockTileProps): 
 
 export interface TonightTileProps {
   slot: SlotLike | null
+  /** Shows the big "Cook" button (76 px) when given; the tile's own button replaces StartCookTile. */
+  onCook?: () => void
 }
 
 /** Heading "Tonight", the Recipe name, and "<Meal Slot> · <time>"; "Nothing planned tonight" when null. */
