@@ -1,6 +1,10 @@
-// TYPE-ONLY STUB (R11a test-first). The developer implements this; see docs/dev/design/r11a-settings-shell.md.
+import { useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { Crumb } from '../ui/Breadcrumbs'
+import { crumbsFor } from './breadcrumbs'
 
-export function useBreadcrumbs(_entityName?: string): Crumb[] {
-  return []
+/** The Breadcrumbs trail of the current route (`entityName` fills an entity crumb once it is known). */
+export function useBreadcrumbs(entityName?: string): Crumb[] {
+  const { pathname } = useLocation()
+  return useMemo(() => crumbsFor(pathname, entityName), [pathname, entityName])
 }

@@ -133,7 +133,7 @@ describe('MembersPage', () => {
     await userEvent.click(within(screen.getByRole('dialog', { name: 'Edit Member' })).getByRole('combobox', { name: /Linked User/ }))
     const names = openOptionNames()
     expect(names).not.toContain('Cook')
-    expect(names).toContain('Admin')
+    expect(names).toContain('Admin (you)') // ADMIN_ME is the signed-in User
   })
 
   it('is read-only for a plain User: no add, rows are not buttons', async () => {

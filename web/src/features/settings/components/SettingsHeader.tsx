@@ -1,6 +1,7 @@
-import { BackLink, PageHeader } from '../../../ui'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { PageHeader } from '../../../ui'
 
-/** The title row of a Settings sub-page: its h1 and a way back to the Settings index. */
+/** The title row of a Settings sub-page: its h1 and its Breadcrumbs trail (Settings > title). */
 export function SettingsHeader({ title }: { title: string }) {
-  return <PageHeader title={title} leading={<BackLink to="/settings" label="Settings" />} />
+  return <PageHeader title={title} breadcrumbs={useBreadcrumbs()} />
 }

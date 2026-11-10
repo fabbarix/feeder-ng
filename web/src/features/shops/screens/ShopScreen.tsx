@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BackLink, BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -30,6 +31,7 @@ export function ShopScreen() {
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const currency = useCurrency()
   const shop = useShop(id)
+  const breadcrumbs = useBreadcrumbs(shop.shop?.name)
   const { products } = useProducts('')
   const prices = useShopPrices(id, [...new Set(shop.barcodes.map((b) => b.productId))])
 
@@ -43,7 +45,12 @@ export function ShopScreen() {
   if (!shop.shop) {
     if (shop.isLoading) return <p role="status">{strings.loading}</p>
     if (shop.error instanceof ApiError && shop.error.status === 404) {
-      return <EmptyState title={strings.notFoundTitle} action={<BackLink to="/settings/shops" label="Shops" />} />
+      return (
+        <div className="pg">
+          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+          <EmptyState title={strings.notFoundTitle} />
+        </div>
+      )
     }
     return <p role="alert">{strings.actionFailed}</p>
   }
@@ -52,7 +59,7 @@ export function ShopScreen() {
 
   return (
     <div className="pg">
-      <PageHeader title={shop.shop.name} leading={<BackLink to="/settings/shops" label="Shops" />} />
+      <PageHeader title={shop.shop.name} breadcrumbs={breadcrumbs} />
       {isAdmin ? (
         <div className="pg__row">
           <Button variant="tertiary" onClick={() => setRenaming(true)}>

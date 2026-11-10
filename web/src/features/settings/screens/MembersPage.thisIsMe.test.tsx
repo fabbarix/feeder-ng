@@ -42,6 +42,7 @@ describe('MembersPage: the Admin links themself', () => {
     routes([{ ...anna, userId: ADMIN_ME.id }, marco, sam])
     renderWithProviders(<MembersPage />)
     const row = await screen.findByRole('button', { name: 'Anna' })
-    expect(row).toHaveTextContent(/Admin \(you\)/)
+    // the row's button is an empty overlay named by the title; the meta line is in the <li> around it
+    await waitFor(() => expect(row.closest('li')).toHaveTextContent(/Admin \(you\)/))
   })
 })

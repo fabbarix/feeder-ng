@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
-import { BackLink, PageHeader, Tile } from '../../../ui'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { PageHeader, Tile } from '../../../ui'
 import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { notificationStrings as s } from '../strings'
 import { NotificationSettingsView } from './NotificationSettingsView'
@@ -12,9 +13,10 @@ import '../notifications.css'
  */
 export function NotificationSettingsScreen(): ReactElement {
   const state = useNotificationSettings()
+  const breadcrumbs = useBreadcrumbs()
   return (
     <main className="notifications">
-      <PageHeader title={s.title} leading={<BackLink to="/settings" label="Settings" />} />
+      <PageHeader title={s.title} breadcrumbs={breadcrumbs} />
       {state.loading ? (
         <Tile as="section" span="full">
           <p className="notifications__muted">{s.loading}</p>

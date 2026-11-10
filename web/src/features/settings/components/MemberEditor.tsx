@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { BottomSheet, Button, ColorSwatches, Select, Stepper, TextField } from '../../../ui'
-import { availableUsers, MEMBER_COLOURS, memberDraft, memberFromDraft, memberProblem } from '../lib/memberForm'
+import { BottomSheet, Button, ColorSwatches, EmojiPicker, Select, StepperField, TextField } from '../../../ui'
+import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberFromDraft, memberProblem } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
@@ -25,9 +25,9 @@ export interface MemberEditorProps {
 const text = settingsStrings.member
 const NO_USER = ''
 
-/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (optional), Portion Factor
+/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (emoji, optional), Portion Factor
  *  stepper (0.25..3, step 0.25), Linked User Select; buttons "Save Member" and "Remove Member" (editing only). */
-export function MemberEditor({ open, member, users, members, saving, error, onSave, onDelete, onClose }: MemberEditorProps) {
+export function MemberEditor({ open, member, users, members, currentUserId, saving, error, onSave, onDelete, onClose }: MemberEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={member ? text.editTitle : text.addTitle}>
       <MemberForm
@@ -35,6 +35,7 @@ export function MemberEditor({ open, member, users, members, saving, error, onSa
         member={member}
         users={users}
         members={members}
+        currentUserId={currentUserId}
         saving={saving}
         error={error}
         onSave={onSave}
@@ -44,9 +45,9 @@ export function MemberEditor({ open, member, users, members, saving, error, onSa
   )
 }
 
-type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'saving' | 'error' | 'onSave' | 'onDelete'>
+type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'saving' | 'error' | 'onSave' | 'onDelete'>
 
-function MemberForm({ member, users, members, saving, error, onSave, onDelete }: FormProps) {
+function MemberForm({ member, users, members, currentUserId, saving, error, onSave, onDelete }: FormProps) {
   const [draft, setDraft] = useState<MemberInput>(() => memberDraft(member))
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -64,9 +65,17 @@ function MemberForm({ member, users, members, saving, error, onSave, onDelete }:
     <form className="settings__stack" onSubmit={submit} noValidate>
       <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
       <ColorSwatches label={text.colour} swatches={[...MEMBER_COLOURS]} value={draft.colour} onChange={(colour) => set({ colour })} allowCustom />
-      <TextField label={text.avatar} value={draft.avatar} onChange={(avatar) => set({ avatar })} />
-      <Stepper
+      <EmojiPicker
+        label={text.avatar}
+        helper={text.avatarHelper}
+        noneLabel={text.avatarNone}
+        options={[...MEMBER_AVATARS]}
+        value={draft.avatar}
+        onChange={(avatar) => set({ avatar })}
+      />
+      <StepperField
         label={text.portionFactorLabel}
+        helper={text.portionFactorHelper}
         value={draft.portionFactor}
         min={MIN_PORTION_FACTOR}
         max={MAX_PORTION_FACTOR}
@@ -75,10 +84,15 @@ function MemberForm({ member, users, members, saving, error, onSave, onDelete }:
       />
       <Select
         label={text.linkedUser}
-        options={[{ value: NO_USER, label: text.noLinkedUser }, ...offered.map((u) => ({ value: String(u.id), label: u.displayName }))]}
+        options={[{ value: NO_USER, label: text.noLinkedUser }, ...offered.map((u) => ({ value: String(u.id), label: u.id === currentUserId ? text.you(u.displayName) : u.displayName }))]}
         value={userId === null ? NO_USER : String(userId)}
         onChange={(v) => setUserId(v === NO_USER ? null : Number(v))}
       />
+      {canLinkMe(members, member, userId, currentUserId) ? (
+        <Button variant="tertiary" onClick={() => setUserId(currentUserId ?? null)}>
+          {text.thisIsMe}
+        </Button>
+      ) : null}
       {problem ?? error ? (
         <p role="alert" className="settings__error">
           {problem ?? error}
