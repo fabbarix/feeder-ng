@@ -561,7 +561,7 @@ func TestTheFinishedEventShapeCarriesTheRecipeName(t *testing.T) {
 	if err := json.Unmarshal(raw.Data, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got["changed"] != "finished" || got["timerId"] != float64(tm.ID) || got["label"] != "Step 3: Simmer the stew" || got["recipeName"] != "Chicken stew" {
+	if got["changed"] != "finished" || got["timerId"] != float64(tm.ID) || got["label"] != "Step 2: Simmer the stew" || got["recipeName"] != "Chicken stew" {
 		t.Errorf("event = %v", got)
 	}
 }
