@@ -1,16 +1,18 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../../ui'
-import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useNotCooked } from '../../plan'
+import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useCouldntFix, useCouldntPlanNotice, useNotCooked } from '../../plan'
 import type { SlotKey } from '../../plan/types'
 import { cookReheatPath } from '../../cook'
 import { SpoiledTile } from '../../stock'
+import { useSetupChecklist } from '../hooks/useSetupChecklist'
 import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
 import { todayHeading } from '../lib/heading'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
 import { todayStrings } from '../strings'
 import type { TileId } from '../types'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
+import { SetupChecklistTile } from './SetupChecklistTile'
 import { StreakTile } from './StreakTile'
 import { TodayView } from './TodayView'
 import { UseSoonTile } from './UseSoonTile'
@@ -35,6 +37,9 @@ export function TodayScreen(): ReactElement {
   const streak = useZeroWasteStreak()
   const flow = useCookFlow()
   const notCooked = useNotCooked()
+  const notice = useCouldntPlanNotice(data.couldntPlan, data.planSlots ?? data.couldntPlan)
+  const fixCouldnt = useCouldntFix()
+  const setup = useSetupChecklist()
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
@@ -55,7 +60,8 @@ export function TodayScreen(): ReactElement {
     ),
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,
     toConfirm: <ToConfirmTile slots={data.toConfirm} onYesCooked={yesCooked} onAdjust={flow.open} onNotCooked={(key) => void notCooked(key)} />,
-    couldntPlan: <CouldntPlanNotice slots={data.couldntPlan} />,
+    couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} />,
+    setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
     streak: <StreakTile days={streak.days} />,

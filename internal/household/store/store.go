@@ -91,15 +91,24 @@ func (s *Store) Member(ctx context.Context, id int64) (household.Member, error) 
 	return getMember(ctx, s.db, id)
 }
 
-// CreateMember adds a Member with no User link.
+// CreateMember adds a Member with no User link. The new Member attends every existing Meal Slot
+// (no Portion Factor override); date Attendance is never touched.
 func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (household.Member, error) {
 	now := s.clk.Now().UTC().Truncate(time.Second).Format(time.RFC3339)
-	res, err := s.db.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, portion_factor, created_at)
-		VALUES (?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.PortionFactor, now)
-	if err != nil {
-		return household.Member{}, err
-	}
-	id, err := res.LastInsertId()
+	var id int64
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, portion_factor, created_at)
+			VALUES (?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.PortionFactor, now)
+		if err != nil {
+			return err
+		}
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO meal_slot_attendees (slot_id, member_id, portion_factor_override)
+			SELECT id, ?, NULL FROM meal_slots`, id)
+		return err
+	})
 	if err != nil {
 		return household.Member{}, err
 	}
@@ -219,6 +228,11 @@ func (s *Store) CreateSlot(ctx context.Context, in household.MealSlotInput) (hou
 			return mapSlotError(err)
 		}
 		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+		if in.Attendance == nil { // not given: everyone attends; an empty list means nobody
+			_, err = tx.ExecContext(ctx, `INSERT INTO meal_slot_attendees (slot_id, member_id, portion_factor_override)
+				SELECT ?, id, NULL FROM members`, id)
 			return err
 		}
 		return insertAttendees(ctx, tx, id, in.Attendance)

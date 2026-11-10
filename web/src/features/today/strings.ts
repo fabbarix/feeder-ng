@@ -16,4 +16,15 @@ export const todayStrings = {
   whenToday: 'today',
   whenTomorrow: 'tomorrow',
   useSoonMore: (n: number) => `+${n} more`,
+  // R13: the first-run setup checklist
+  setupTitle: 'Set up your Household',
+  setupProgress: (done: number, total: number) => `${done} of ${total} done. Then the planner takes over.`,
+  setupStepsLabel: 'Setup steps',
+  setupDone: 'Done',
+  setupSteps: {
+    members: { label: 'Add your Members', action: 'Add Members', hint: 'Everyone who eats from the plan.' },
+    attendance: { label: 'Set up Meal Slots and attendance', action: 'Set up Meal Slots', hint: 'When you eat, and who is at the table.' },
+    recipes: { label: 'Add Recipes', action: 'Add a Recipe', hint: 'The planner picks from these. A handful is enough to start.' },
+    plan: { label: 'Get your first plan', action: 'Open the Plan', hint: 'The planner fills the week once the steps above are set up.' },
+  },
 }

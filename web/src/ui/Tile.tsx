@@ -105,7 +105,7 @@ export function Tile({
       data-status={resolved.status}
       data-span={resolved.span}
       data-row-span={rowSpan}
-      data-tone={tone}
+      data-tone={tone ?? (rest as Record<string, unknown>)['data-tone']}
       data-size={size}
       data-primary-scope=""
       role={onClick ? (rest.role ?? 'button') : rest.role}

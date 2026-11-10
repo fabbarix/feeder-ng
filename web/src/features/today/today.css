@@ -45,3 +45,21 @@
 .today-streak {
   align-self: start;
 }
+
+/* R13: the first-run setup checklist. */
+.today__setup {
+  margin-top: 12px;
+}
+.today__setup-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.today__setup-step[data-done='true'] .today__row {
+  color: var(--color-on-surface-variant, inherit);
+}
+.today__setup-step > .btn,
+.today__setup-step > .chip {
+  grid-column: 3;
+}

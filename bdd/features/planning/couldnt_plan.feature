@@ -29,7 +29,7 @@ Feature: Couldn't plan, and attendance that defaults to everyone
     Given the Household has the Member "Cleo" with Portion Factor 0.5
     And the planner has finished
     When I view the plan
-    Then the plan slot on 2026-11-09 has 3 portions
+    Then the plan slot on 2026-11-09 has 2.5 portions
 
   Scenario: Everyone opted out of a date: Couldn't plan keeps the unchanged reason
     When nobody attends the Dinner on 2026-11-10
@@ -39,8 +39,8 @@ Feature: Couldn't plan, and attendance that defaults to everyone
     And the plan JSON "slots.0.unfilled.reason" is "no_attendance"
 
   Scenario: Meal Slots made for nobody are all listed with the same reason
-    Given the Admin adds a Meal Slot "Supper" on Monday at 21:00 for nobody
-    And the Admin adds a Meal Slot "Supper" on Tuesday at 21:00 for nobody
+    Given the Admin adds the Meal Slot "Supper" on Monday at 21:00 for nobody
+    And the Admin adds the Meal Slot "Supper" on Tuesday at 21:00 for nobody
     And the planner has finished
     When I list the slots the planner could not plan
     Then the plan JSON "slots" has 2 items

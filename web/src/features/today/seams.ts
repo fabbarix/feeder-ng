@@ -43,6 +43,8 @@ export interface TodayTileData {
   nextAction?: HeroAction
   toConfirm: PlanSlot[]
   couldntPlan: PlanSlot[]
+  /** R13: the whole plan, so "every dinner" is measured against it. */
+  planSlots?: PlanSlot[]
   leftovers: Leftover[]
   planToday: string
   spoiled: StockLot[]
@@ -72,6 +74,7 @@ export function useTodayTileData(): TodayTileData {
     nextAction: hero?.action,
     toConfirm: toConfirm.slots,
     couldntPlan: couldntPlan.slots,
+    planSlots: plan.slots,
     leftovers: leftovers.leftovers,
     planToday: plan.today,
     spoiled: spoiled.data ?? [],

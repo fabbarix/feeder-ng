@@ -5,6 +5,7 @@ Feature: Attendance defaults to everyone
 
   Background:
     Given a running Feeder
+    And I am signed in as the Admin
     And the Household has the Member "Anna" with Portion Factor 1
     And the Household has the Member "Sam" with Portion Factor 0.5
 

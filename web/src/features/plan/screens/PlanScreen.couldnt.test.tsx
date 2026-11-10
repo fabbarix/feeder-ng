@@ -24,7 +24,7 @@ const dayTile = (name: string) => screen.findByRole('heading', { name }).then((h
 const nobodyAttends = view([
   unplanned('2026-11-10', 2),
   unplanned('2026-11-11', 2),
-  slot({ date: '2026-11-12', mealSlotId: 2, meal: meal({ date: '2026-11-12', recipeName: 'Stew' }) }),
+  slot({ date: '2026-11-12', mealSlotId: 3, name: 'Lunch', meal: meal({ date: '2026-11-12', mealSlotId: 3, recipeName: 'Stew' }) }), // a different Meal Slot: both Dinners are affected, so "every dinner"
 ])
 
 describe('PlanScreen: Couldn\'t plan', () => {
@@ -53,7 +53,7 @@ describe('PlanScreen: Couldn\'t plan', () => {
     const today = await dayTile('Today')
     expect(within(today).getByText('Not planned').closest('.chip')).toHaveAttribute('data-kind', 'tag')
     expect(within(await dayTile('Tomorrow')).getByText('Not planned')).toBeInTheDocument()
-    expect(within(await dayTile('Thursday')).queryByText('Not planned')).not.toBeInTheDocument()
+    expect(within(await dayTile('Thu')).queryByText('Not planned')).not.toBeInTheDocument()
   })
 
   it('the fix action goes to the Meal Slots', async () => {

@@ -82,21 +82,24 @@ describe('useCouldntFix: the one fix action of a cause', () => {
 
   it('a link cause goes where it is fixed', () => {
     const t = setup()
-    act(() => t.fix.current(group('no_attendance')))
+    const g = group('no_attendance') // built outside act: a nested renderHook would not commit inside it
+    act(() => t.fix.current(g))
     expect(t.path()).toBe('/settings/meal-slots')
   })
 
   it('"Choose a Recipe" opens the chooser for the first affected meal', () => {
     const onChoose = vi.fn()
     const t = setup(onChoose)
-    act(() => t.fix.current(group('no_candidates', { considered: 2, advanceStep: 2 })))
+    const g = group('no_candidates', { considered: 2, advanceStep: 2 })
+    act(() => t.fix.current(g))
     expect(onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 })
     expect(t.path()).toBe('/')
   })
 
   it('"Choose a Recipe" without a chooser (Today) opens the Plan', () => {
     const t = setup()
-    act(() => t.fix.current(group('no_candidates', { considered: 2 })))
+    const g = group('no_candidates', { considered: 2 })
+    act(() => t.fix.current(g))
     expect(t.path()).toBe('/plan')
   })
 })
