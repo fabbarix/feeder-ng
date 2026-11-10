@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite" // the "sqlite" driver used to verify a copy
@@ -58,18 +59,48 @@ func ParseName(name string) (day string, ok bool) {
 	return m[1], true
 }
 
+// folderLocks serialises the jobs that write to one backup folder: the nightly
+// job and an Admin's "back up now" can overlap, and must queue rather than
+// collide on the temporary file or prune each other's snapshot. Keyed by the
+// cleaned folder name, so every caller for the same folder shares one lock.
+var (
+	folderLocksMu sync.Mutex
+	folderLocks   = map[string]*sync.Mutex{}
+)
+
+func lockFolder(dir string) (unlock func()) {
+	key := filepath.Clean(dir)
+	folderLocksMu.Lock()
+	m, ok := folderLocks[key]
+	if !ok {
+		m = &sync.Mutex{}
+		folderLocks[key] = m
+	}
+	folderLocksMu.Unlock()
+	m.Lock()
+	return m.Unlock
+}
+
 // Snapshot writes a consistent copy of db to <dir>/feeder-<day>.db: VACUUM INTO
 // a temporary file in dir, check it with PRAGMA integrity_check, then rename
 // into place (replacing a same-day snapshot). dir is created when missing. A
-// failed snapshot leaves no partial file behind.
+// failed snapshot leaves no partial file behind. The folder is 0700 and the
+// snapshot 0600: it holds every password hash and session.
 func Snapshot(ctx context.Context, db *sql.DB, dir, day string) (Info, error) {
+	unlock := lockFolder(dir)
+	defer unlock()
+	return snapshot(ctx, db, dir, day)
+}
+
+// snapshot is Snapshot without the folder lock (the caller holds it).
+func snapshot(ctx context.Context, db *sql.DB, dir, day string) (Info, error) {
 	if !validDay(day) {
 		return Info{}, fmt.Errorf("backup: day %q is not a YYYY-MM-DD date", day)
 	}
 	if err := ctx.Err(); err != nil {
 		return Info{}, err
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return Info{}, fmt.Errorf("backup: create %s: %w", dir, err)
 	}
 	tmp := filepath.Join(dir, "."+FileName(day)+".tmp")
@@ -78,6 +109,10 @@ func Snapshot(ctx context.Context, db *sql.DB, dir, day string) (Info, error) {
 	if _, err := db.ExecContext(ctx, `VACUUM INTO ?`, tmp); err != nil {
 		_ = os.Remove(tmp)
 		return Info{}, fmt.Errorf("backup: copy: %w", err)
+	}
+	if err := os.Chmod(tmp, 0o600); err != nil {
+		_ = os.Remove(tmp)
+		return Info{}, fmt.Errorf("backup: protect copy: %w", err)
 	}
 	if err := verify(ctx, tmp); err != nil {
 		_ = os.Remove(tmp)
@@ -217,7 +252,9 @@ func List(dir string) ([]Info, error) {
 // Prune with DefaultPolicy.
 func Job(db *sql.DB, dir string) func(ctx context.Context, day string) error {
 	return func(ctx context.Context, day string) error {
-		if _, err := Snapshot(ctx, db, dir, day); err != nil {
+		unlock := lockFolder(dir)
+		defer unlock()
+		if _, err := snapshot(ctx, db, dir, day); err != nil {
 			return err
 		}
 		_, err := Prune(dir, day, DefaultPolicy)
