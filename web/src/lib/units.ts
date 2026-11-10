@@ -62,6 +62,19 @@ export function formatConversion(unit: string, toBase: number, base: BaseUnit, s
   return `1 ${unit} = ${formatQuantity(toBase, base, system)}`
 }
 
+/**
+ * A quantity as the author wrote it, in the User's display system (recipe lines, Step uses).
+ * Rule: only metric mass and volume units (g, kg, ml, l, dl, cl) are converted to imperial, through
+ * formatQuantity ("250 g" -> "8.8 oz", "1 l" -> "4.25 cups"). Everything else (tsp, tbsp, cup, piece,
+ * an Ingredient's own conversion unit such as "clove") is shown as written, in both systems:
+ * "2 tbsp" stays "2 tbsp". Metric shows g and ml via formatQuantity and the rest as written.
+ * Numbers: at most 2 decimals, trailing zeros dropped. Unit matching is trimmed and case-insensitive.
+ */
+export function formatLineQuantity(quantity: number, unit: string, system: UnitSystem): string {
+  void quantity; void unit; void system // TODO(developer): implement
+  return ''
+}
+
 /** Applies the sign of amount to the body formatted from its absolute value. */
 function withSign(amount: number, body: (abs: number) => string): string {
   return (amount < 0 ? '-' : '') + body(Math.abs(amount))

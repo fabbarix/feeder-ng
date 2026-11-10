@@ -2,7 +2,8 @@
 import type { BaseUnit } from '../types'
 
 /** "700 g", "500 ml", "1 piece", "6 pieces"; at most 2 decimals, trailing zeros dropped; no kg/l promotion. */
-export function formatPackSize(size: number, base: BaseUnit): string {
+export function formatPackSize(size: number, base: BaseUnit, system: 'metric' | 'imperial' = 'metric'): string {
+  void system // TODO(developer): imperial goes through lib/units formatQuantity
   const n = Number(size.toFixed(2))
   const unit = base === 'piece' ? (n === 1 ? 'piece' : 'pieces') : base
   return `${n} ${unit}`

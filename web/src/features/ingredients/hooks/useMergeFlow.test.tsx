@@ -25,6 +25,46 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>
 )
 
+describe('useMergeFlow after a merge (B11)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    api.list.mockResolvedValue([passata, puree])
+    api.mergePreview.mockResolvedValue({ ...preview, conflicts: [] })
+    api.merge.mockResolvedValue(puree)
+    api.get.mockResolvedValue(puree)
+  })
+  it('drops every cached query of the deleted source and never refetches it', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const w = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    client.setQueryData(['ingredients', 4], passata)
+    client.setQueryData(['ingredients', 9], puree)
+    const { result } = renderHook(() => useMergeFlow(4), { wrapper: w })
+    act(() => result.current.selectTarget(puree))
+    await waitFor(() => expect(result.current.canMerge).toBe(true))
+    api.mergePreview.mockClear()
+    await act(async () => {
+      await result.current.merge()
+    })
+    expect(client.getQueryCache().find({ queryKey: ['ingredients', 4] })).toBeUndefined()
+    expect(client.getQueryCache().findAll({ queryKey: ['ingredients', 4], exact: false })).toEqual([])
+    expect(api.get).not.toHaveBeenCalledWith(4)
+    expect(api.mergePreview).not.toHaveBeenCalled()
+  })
+  it('still refreshes the target and the list', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const w = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const { result } = renderHook(() => useMergeFlow(4), { wrapper: w })
+    act(() => result.current.selectTarget(puree))
+    await waitFor(() => expect(result.current.canMerge).toBe(true))
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    await act(async () => {
+      await result.current.merge()
+    })
+    expect(spy).toHaveBeenCalled()
+    expect(client.getQueryState(['ingredients', 9])?.isInvalidated ?? true).toBe(true)
+  })
+})
+
 describe('useMergeFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()

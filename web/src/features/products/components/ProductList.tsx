@@ -7,6 +7,8 @@ import '../products.css'
 
 export interface ProductListProps {
   products: Product[]
+  /** Display unit system; defaults to metric. Callers pass useDisplayUnitSystem(). */
+  system?: 'metric' | 'imperial'
 }
 
 /** Tiles with the name and formatted pack size, each linking to /products/:id; EmptyState when none. */
