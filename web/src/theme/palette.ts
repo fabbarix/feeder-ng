@@ -1,7 +1,8 @@
 // Accent -> Bento palette for light and dark schemes, generated in OKLCH from the tone table in
 // docs/design/ui-fix-plan.md section 3.1 (see docs/dev/design/wp1-tokens.md). Every text pair is
 // checked to meet WCAG AA by contrast.test.ts. Status colours are fixed and never derived.
-import { normalizeHex, type Hex } from './color'
+import { ensureContrast } from './contrast'
+import { hexToOklch, normalizeHex, oklchToHex, type Hex, type Oklch } from './color'
 
 export type { Hex } from './color'
 
@@ -82,12 +83,57 @@ export const COLOR_ALIASES: Readonly<Record<string, ColorToken>> = {
   'on-secondary-container': 'accentText',
 }
 
-/** STUB (WP1 Developer replaces): returns the accent for every token so the contract tests are red. */
+/** Tone table (plan 3.1): [L, C] per token. 'C' = the accent's chroma clamped to 0.04..0.16. */
+type Tone = readonly [l: number, c: number | 'C']
+const TONES: Record<Scheme, Record<Exclude<ColorToken, 'onAccent'>, Tone>> = {
+  light: {
+    bg: [0.955, 0.018], surface: [0.995, 0.006], surface2: [0.925, 0.025], surface3: [0.885, 0.035],
+    line: [0.86, 0.03], outline: [0.56, 0.03], text: [0.22, 0.02], muted: [0.45, 0.025],
+    accent: [0.5, 'C'], accentText: [0.4, 'C'], soft: [0.9, 0.06], softStrong: [0.84, 0.09],
+  },
+  dark: {
+    bg: [0.16, 0.012], surface: [0.215, 0.018], surface2: [0.27, 0.022], surface3: [0.32, 0.026],
+    line: [0.35, 0.025], outline: [0.62, 0.03], text: [0.95, 0.01], muted: [0.78, 0.02],
+    accent: [0.78, 'C'], accentText: [0.86, 'C'], soft: [0.32, 0.06], softStrong: [0.38, 0.08],
+  },
+}
+/** Fixed on-accent colours: white in light, a dark tinted ink in dark (plan 3.1). */
+const ON_ACCENT: Record<Scheme, Tone | Hex> = { light: '#ffffff', dark: [0.2, 0.04] }
+
+const MIN_TEXT = 4.5
+const MIN_BOUNDARY = 3
+
+/** Safety net (plan 3.1): lifts fg until it meets min against every background. A no-op for the 7 presets. */
+function guard(fg: Hex, backgrounds: Hex[], min: number): Hex {
+  return backgrounds.reduce((current, bg) => ensureContrast(current, bg, min), fg)
+}
+
+/** Generates the Bento palette for an accent in one scheme (plan 3.1: OKLCH tones, accent hue, clamped chroma). */
 export function generatePalette(input: ThemeInput, scheme: Scheme): Palette {
   const accent = normalizeHex(input.accent)
-  const colors = Object.fromEntries(COLOR_TOKENS.map((t) => [t, accent])) as Record<ColorToken, Hex>
+  const accentOklch = hexToOklch(accent)
+  const hue = accentOklch.h
+  const chroma = Math.min(0.16, Math.max(0.04, accentOklch.c))
+  const at = ([l, c]: Tone): Hex => oklchToHex({ l, c: c === 'C' ? chroma : c, h: hue } satisfies Oklch)
+
+  const raw = Object.fromEntries(
+    (Object.keys(TONES[scheme]) as Exclude<ColorToken, 'onAccent'>[]).map((t) => [t, at(TONES[scheme][t])]),
+  ) as Record<Exclude<ColorToken, 'onAccent'>, Hex>
+  const onAccent = typeof ON_ACCENT[scheme] === 'string' ? (ON_ACCENT[scheme] as Hex) : at(ON_ACCENT[scheme] as Tone)
+
+  const c: Record<ColorToken, Hex> = {
+    ...raw,
+    onAccent,
+    text: guard(raw.text, [raw.bg, raw.surface, raw.surface2, raw.surface3], MIN_TEXT),
+    muted: guard(raw.muted, [raw.surface, raw.surface2], MIN_TEXT),
+    accent: guard(raw.accent, [raw.surface], MIN_BOUNDARY),
+    accentText: guard(raw.accentText, [raw.surface, raw.soft, raw.softStrong], MIN_TEXT),
+    outline: guard(raw.outline, [raw.surface, raw.surface2], MIN_BOUNDARY),
+  }
+  c.onAccent = guard(c.onAccent, [c.accent], MIN_TEXT)
+
   const status = Object.fromEntries(STATUS_NAMES.map((n) => [n, STATUS_PALETTE[n][scheme]])) as Record<StatusName, StatusColors>
-  return { scheme, colors, status }
+  return { scheme, colors: c, status }
 }
 
 /** Maps a token to its CSS custom property, e.g. onAccent -> --color-on-accent, surface2 -> --color-surface-2. */
@@ -101,12 +147,15 @@ export function statusVarName(name: StatusName, part: keyof StatusColors): strin
 }
 
 /**
- * STUB (WP1 Developer replaces): must emit, as a flat name -> value map,
- * (a) every --color-<token>, (b) every alias in COLOR_ALIASES as --color-<old> with the aliased value,
- * (c) every --status-<name>-fg|bg|solid.
+ * Flat name -> value map for apply.ts: (a) every --color-<token>, (b) every alias in COLOR_ALIASES as
+ * --color-<old> with the aliased value, (c) every --status-<name>-fg|bg|solid.
  */
 export function toCssVars(palette: Palette): Record<string, string> {
   const vars: Record<string, string> = {}
   for (const token of COLOR_TOKENS) vars[cssVarName(token)] = palette.colors[token]
+  for (const [old, token] of Object.entries(COLOR_ALIASES)) vars[`--color-${old}`] = palette.colors[token]
+  for (const name of STATUS_NAMES) {
+    for (const part of ['fg', 'bg', 'solid'] as const) vars[statusVarName(name, part)] = palette.status[name][part]
+  }
   return vars
 }
