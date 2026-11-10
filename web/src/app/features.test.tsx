@@ -83,6 +83,23 @@ describe('buildRoutes', () => {
   })
 })
 
+describe('collectFeatures useShellStatus', () => {
+  it('gathers the hooks of features that export one, in module key order, and skips the rest', () => {
+    const useB = () => ({ pendingScans: 2 })
+    const useA = () => ({ pendingScans: 1 })
+    const { statusHooks } = collectFeatures({
+      '../features/scan/index.ts': { routes: [route('/scan', 's')], useShellStatus: useB },
+      '../features/plan/index.ts': { routes: [route('/plan', 'p')] },
+      '../features/alpha/index.ts': { routes: [route('/alpha', 'a')], useShellStatus: useA },
+    })
+    expect(statusHooks).toEqual([useA, useB])
+  })
+
+  it('has no hooks when no feature exports one', () => {
+    expect(collectFeatures({ '../features/a/index.ts': { routes: [route('/a', 'a')] } }).statusHooks).toEqual([])
+  })
+})
+
 describe('loadFeatures', () => {
   it('discovers src/features/*/index.ts via import.meta.glob without throwing', () => {
     const f = loadFeatures()

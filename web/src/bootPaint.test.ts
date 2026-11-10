@@ -46,6 +46,15 @@ describe('web/index.html boot paint', () => {
     expect(inlineStyle).not.toMatch(/font-family|(^|[;{\s])color\s*:/)
   })
 
+  it('puts a centred Feeder mark inside #root for React to replace (spec 4.14)', () => {
+    const root = /<div id="root">([\s\S]*?)<\/div>\s*(?:<script|<\/body)/.exec(html)?.[1] ?? ''
+    expect(root).toMatch(/<svg|<img|class="boot-mark"/)
+    expect(root).toMatch(/Feeder/)
+    expect(inlineStyle).toMatch(/#root[^{}]*\{[^}]*(display\s*:\s*grid|display\s*:\s*flex)[^}]*\}/)
+    expect(inlineStyle).toMatch(/place-items\s*:\s*center|justify-content\s*:\s*center/)
+    expect(inlineStyle).toMatch(/min-height\s*:\s*100d?vh/)
+  })
+
   it('keeps viewport-fit=cover (the safe-area insets depend on it)', () => {
     expect(html).toMatch(/viewport-fit=cover/)
   })

@@ -6,14 +6,24 @@ import { ComingSoon } from './ComingSoon'
 import { NotFound } from './NotFound'
 import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
 
+/** What a feature tells the shell's status slot. The scan feature will export one from features/scan/index.ts. */
+export interface ShellStatusInfo {
+  pendingScans?: number
+}
+export type ShellStatusHook = () => ShellStatusInfo
+
 export interface FeatureModule {
   routes: RouteObject[]
   navItems?: NavItem[]
+  /** A React hook the shell calls on every render, in a fixed order (see AppRoot). */
+  useShellStatus?: ShellStatusHook
 }
 
 export interface CollectedFeatures {
   routes: RouteObject[]
   navItems: NavItem[]
+  /** The features' useShellStatus hooks, in module key order. */
+  statusHooks: ShellStatusHook[]
 }
 
 /** Merges feature modules. Modules are read in key order, so the result does not depend on object order. */
@@ -34,7 +44,7 @@ export function collectFeatures(modules: Record<string, FeatureModule>): Collect
     }
     navItems.push(...(mod.navItems ?? []))
   }
-  return { routes, navItems: sortByOrder(navItems) }
+  return { routes, navItems: sortByOrder(navItems), statusHooks: [] }
 }
 
 /** Shell routes: every feature route, plus a "coming soon" page for each core destination no feature provides. */

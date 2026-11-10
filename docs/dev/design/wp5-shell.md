@@ -54,6 +54,16 @@ Spec: [ui-fix-plan.md](../../design/ui-fix-plan.md) 4.5, 5.17 and section 7 WP5,
 - **Guards.** `check-ui.rules`: `native-ui`, `colour-literals`, `class-hooks`, `sizing` now also `fail_paths=web/src/ui web/src/app`. Today `check-ui` fails on `app-shell--chromeless` (no rule) and the
   `providers.tsx` hex: the red state until the Developer finishes. `phosphor` is already `fail`; `native-search` has no sites in `app`.
 
+## Review round 2 (Designer additions)
+- **`useShellStatus` extension point.** `FeatureModule.useShellStatus?: () => { pendingScans?: number }` (exported types `ShellStatusInfo`, `ShellStatusHook`). `collectFeatures` returns
+  `statusHooks` (module key order, only features that export one). `AppRoot` takes a `statusHooks` prop (main.tsx passes `collectFeatures(modules).statusHooks`), calls each hook every render and
+  sums `pendingScans` into `AppShell`. The list is fixed for the app's life (eager glob), so calling hooks in a loop keeps hook order stable; AppRoot must say so in a comment.
+  The scan team later exports `useShellStatus` (from `useSyncQueue`) in `features/scan/index.ts`; no shell edit needed then.
+- **Boot paint mark.** `#root` contains a centred Feeder mark (inline SVG or text with the word Feeder; `#root` is a min-height 100vh centring grid in the inline style) that React replaces on mount.
+- **Layout fixes tested.** Avatar anchored right (`margin-left:auto` on `.your-menu-anchor`); rail/main grid rows do not stretch at >= 1024 (`align-content:start`); Tab closes the avatar menu;
+  rail icons sit in a `span.side-rail__pill` (56 x 32 at 88 px, soft when `aria-current`); trigger 40 px square radius 14; Toast's bottom is `var(--nav-clearance)` plus a gap (no 98 px).
+- **Browser check** also asserts: menu popover inside the viewport, avatar on the right half below 1024, rail and `<main>` within 120 px of the top at >= 1024.
+
 ## Tests (all red until implemented unless noted)
 `AppShell.test` (bar and rail structure and order, icon name/size/weight, aria-current moving on navigation, Scan accent not raised, status slot position and `pendingScans`, avatar menu entries, icons,
 divider, danger Sign out, focus on open, arrow keys, Escape focus return, scrim); `AppShell.chromeless.test` (no bars, full-viewport classes, ordinary routes keep the bars);

@@ -8,7 +8,10 @@
 //   2. scrolled to the end, the last element of the page ends above the nav (bottom bar < 1024, none hidden behind it);
 //   3. /board and /cook/* have no nav and their <main> spans the viewport width (>= 900: the old 220 px column is gone);
 //   4. ordinary routes: the current tab has aria-current="page"; the bottom bar (< 1024) or side rail (>= 1024) is visible, not both;
-//   5. an unknown route shows "Page not found" and not the router's dev error page.
+//   5. an unknown route shows "Page not found" and not the router's dev error page;
+//   6. (ordinary routes) the avatar trigger sits on the right half of the top bar below 1024;
+//   7. (ordinary routes) at >= 1024 the side rail and <main> start within 120 px of the top (the grid rows must not stretch);
+//   8. (on /) the open avatar menu popover lies fully inside the viewport.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -90,6 +93,20 @@ listeners.push(({ method, params, sessionId: sid }) => {
   }).catch(() => {})
 })
 
+// Opens the avatar menu and reports the popover's box (null when it did not open).
+const menuProbe = `
+(async () => {
+  window.scrollTo(0, 0)
+  const btn = document.querySelector('.your-menu-button')
+  if (!btn) return null
+  btn.click()
+  await new Promise((r) => setTimeout(r, 200))
+  const menu = document.querySelector('[role="menu"]')
+  if (!menu) return null
+  const r = menu.getBoundingClientRect()
+  return { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), w: innerWidth, h: innerHeight }
+})()`
+
 const page = `
 (() => {
   const q = (s) => document.querySelector(s)
@@ -108,6 +125,9 @@ const page = `
   return {
     innerWidth, clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth,
     mainWidth: main ? Math.round(main.getBoundingClientRect().width) : null,
+    avatarCenterX: q('.your-menu-button') ? Math.round(q('.your-menu-button').getBoundingClientRect().left + q('.your-menu-button').getBoundingClientRect().width / 2) : null,
+    railTop: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().top) : null,
+    mainTop: main ? Math.round(main.getBoundingClientRect().top + window.scrollY) : null,
     hasBar: !!bar, barVisible: visible(bar), railVisible: visible(rail),
     lastBottom: last ? Math.round(last.getBoundingClientRect().bottom) : null,
     navTop: nav ? Math.round(nav.getBoundingClientRect().top) : null,
@@ -144,6 +164,18 @@ for (const vp of VIEWPORTS) {
       fail(`${tag}: no tab has aria-current="page"`)
     }
     const phone = vp.width < 1024
+    if (phone && m.avatarCenterX !== null && m.avatarCenterX < m.innerWidth / 2) fail(`${tag}: avatar trigger is on the left half (centre x ${m.avatarCenterX} of ${m.innerWidth})`)
+    if (!phone) {
+      if (m.railTop !== null && m.railTop > 120) fail(`${tag}: side rail starts ${m.railTop}px from the top (grid rows stretch)`)
+      if (m.mainTop !== null && m.mainTop > 120) fail(`${tag}: <main> starts ${m.mainTop}px from the top (grid rows stretch)`)
+    }
+    if (route === '/') {
+      const box = await evaluate(menuProbe).catch(() => null)
+      if (!box) fail(`${tag}: the avatar menu did not open`)
+      else if (box.left < 0 || box.top < 0 || box.right > box.w || box.bottom > box.h) {
+        fail(`${tag}: avatar menu popover (${box.left},${box.top})-(${box.right},${box.bottom}) leaves the ${box.w}x${box.h} viewport`)
+      }
+    }
     if (phone && (!m.barVisible || m.railVisible)) fail(`${tag}: expected the bottom bar only (bar ${m.barVisible}, rail ${m.railVisible})`)
     if (!phone && (m.barVisible || !m.railVisible)) fail(`${tag}: expected the side rail only (bar ${m.barVisible}, rail ${m.railVisible})`)
     if (phone && m.navTop !== null && m.lastBottom !== null && m.lastBottom > m.navTop) {

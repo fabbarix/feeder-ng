@@ -192,3 +192,27 @@ describe('top bar', () => {
     expect(media('min-width: 1024px')).toMatch(/\.top-bar__brand\s*\{[^}]*display\s*:\s*(block|inline)/)
   })
 })
+
+describe('review fixes: anchor, rows, rail pill, trigger', () => {
+  it('the avatar anchor is pushed to the right of the top bar (margin-left:auto or equivalent)', () => {
+    const a = d('.your-menu-anchor')
+    expect(`${a['margin-left'] ?? ''} ${a['margin-inline-start'] ?? ''} ${a['margin-inline'] ?? ''}`).toMatch(/auto/)
+  })
+  it('from 1024 the grid rows do not stretch: align-content start or auto rows', () => {
+    const wide = media('min-width: 1024px')
+    const rule = /\.app-shell:not\(\.app-shell--chromeless\)\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
+    expect(rule).toMatch(/align-content\s*:\s*start|grid-template-rows\s*:\s*auto\s+auto\s+1fr|grid-auto-rows\s*:\s*(auto|min-content|max-content)/)
+  })
+  it('at 88 px the active destination is a 56 x 32 soft pill span behind the icon, not the whole link', () => {
+    const wide = media('min-width: 1024px')
+    const pill = /\.side-rail__pill\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
+    expect(pill).toMatch(/width\s*:\s*56px/)
+    expect(pill).toMatch(/height\s*:\s*32px/)
+    expect(wide).toMatch(/\.side-rail__link\[aria-current='page'\]\s+\.side-rail__pill\s*\{[^}]*background\s*:\s*var\(--color-soft\)/)
+    expect(wide).not.toMatch(/\.side-rail__link\[aria-current='page'\]\s*\{[^}]*background/)
+  })
+  it('the avatar trigger is a 40 px square with radius 14', () => {
+    const t = d('.your-menu-button')
+    expect([t['width'], t['height'], t['border-radius']]).toEqual(['40px', '40px', '14px'])
+  })
+})

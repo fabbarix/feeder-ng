@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
+import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
 import type { NavItem } from './nav'
 import { shellStrings } from './strings'
@@ -8,10 +9,12 @@ import { ME_QUERY_KEY, useMe } from './useMe'
 
 export interface AppRootProps {
   navItems?: NavItem[]
+  /** The features' useShellStatus hooks (collectFeatures().statusHooks). */
+  statusHooks?: ShellStatusHook[]
 }
 
 /** Gatekeeper: shows the shell for a signed-in User, and a signed-out page otherwise. */
-export function AppRoot({ navItems }: AppRootProps) {
+export function AppRoot({ navItems, statusHooks }: AppRootProps) {
   const me = useMe()
   const queryClient = useQueryClient()
 

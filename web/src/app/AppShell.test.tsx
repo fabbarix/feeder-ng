@@ -281,6 +281,13 @@ describe('avatar menu', () => {
     expect(screen.getByRole('button', { name: 'Your menu' })).toHaveFocus()
   })
 
+  it('closes on Tab (focus leaves the menu, the menu does not stay open behind it)', async () => {
+    setup()
+    await open()
+    await userEvent.tab()
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
   it('has a scrim: a click outside the menu closes it (the menu no longer floats over content unannounced)', async () => {
     setup()
     await open()
@@ -299,5 +306,18 @@ describe('avatar menu', () => {
   it('shows the User as an Avatar', () => {
     setup()
     expect(within(screen.getByRole('button', { name: 'Your menu' })).getByLabelText('Anna Rossi')).toHaveTextContent('AR')
+  })
+})
+
+describe('side rail pill (88 px rail)', () => {
+  it('wraps each rail icon in a .side-rail__pill span, so the active pill sits behind the icon', () => {
+    setup()
+    const links = within(sideRail()).getAllByRole('link')
+    for (const link of links) {
+      const pill = link.querySelector('span.side-rail__pill')
+      expect(pill, link.textContent ?? '').not.toBeNull()
+      expect(pill!.querySelector('svg')).not.toBeNull()
+      expect(link.querySelector('.side-rail__label')).not.toBeNull()
+    }
   })
 })
