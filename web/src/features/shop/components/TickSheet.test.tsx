@@ -57,4 +57,9 @@ describe('TickSheet', () => {
     await userEvent.tab()
     expect(field).toHaveValue('0')
   })
+
+  it('the field stack is a form with the shop-sheet-form class (CSS contract)', () => {
+    setup()
+    expect(screen.getByRole('dialog').querySelector('form')).toHaveClass('shop-sheet-form')
+  })
 })

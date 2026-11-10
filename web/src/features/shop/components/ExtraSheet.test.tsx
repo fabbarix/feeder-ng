@@ -27,7 +27,7 @@ describe('ExtraSheet', () => {
 
   it('adds a free-text extra', async () => {
     const onSubmit = setup()
-    expect(screen.getByRole('dialog', { name: 'Add an extra' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Add to Shopping List' })).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Something to buy'), '  toilet paper ')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSubmit).toHaveBeenCalledWith({ text: 'toilet paper' })
@@ -66,5 +66,10 @@ describe('ExtraSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByText('Choose text or an Ingredient, not both')).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('the field stack is a form with the shop-sheet-form class (CSS contract)', () => {
+    setup()
+    expect(screen.getByRole('dialog').querySelector('form')).toHaveClass('shop-sheet-form')
   })
 })

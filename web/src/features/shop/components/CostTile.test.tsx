@@ -10,7 +10,7 @@ describe('CostTile', () => {
     render(<CostTile {...base} estimatedCostCents={1350} />)
     expect(screen.getByText('$13.50')).toBeInTheDocument()
     expect(screen.getByText('est. at Coop')).toBeInTheDocument()
-    expect(screen.queryByText(/without a price/)).toBeNull()
+    expect(screen.queryByText(/lines? (have|has) no Price yet/)).toBeNull()
   })
 
   it('says only "est." when no Shop is picked', () => {
@@ -21,7 +21,7 @@ describe('CostTile', () => {
   it('says how many Lines have no Price', () => {
     render(<CostTile {...base} currency="EUR" unpriced={2} estimatedCostCents={1350} />)
     expect(screen.getByText('€13.50')).toBeInTheDocument()
-    expect(screen.getByText('2 without a price')).toBeInTheDocument()
+    expect(screen.getByText('2 lines have no Price yet')).toBeInTheDocument()
   })
 
   it('QA: with no Price at all there is no amount, no "Estimated cost" and no dash', () => {
@@ -29,7 +29,7 @@ describe('CostTile', () => {
     expect(container).not.toHaveTextContent('$0.00')
     expect(container).not.toHaveTextContent('—')
     expect(screen.queryByText('Estimated cost')).toBeNull()
-    expect(screen.getByText('3 without a price')).toBeInTheDocument()
+    expect(screen.getByText('3 lines have no Price yet')).toBeInTheDocument()
   })
 
   it('QA: an empty list shows no "$0.00" either', () => {

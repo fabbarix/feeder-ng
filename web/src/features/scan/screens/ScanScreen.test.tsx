@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeExtra, makeLine, makeList } from '../../shop/testData'
 import { scanSession } from '../hooks/useScanSessionActive'
@@ -34,6 +35,7 @@ function flow(over: Partial<ScanFlow> = {}): ScanFlow {
     closeSheet: vi.fn(),
     applySyncResults: vi.fn(),
     unarchiveProduct: vi.fn(),
+    unarchiving: false,
     createNewInstead: vi.fn(),
     ...over,
   }
@@ -63,9 +65,20 @@ function controller(over: Partial<ScanController> = {}): ScanController {
   }
 }
 
-function open(c: ScanController) {
+/** Stands in for a link elsewhere in the app: a client-side navigation while ScanScreen stays mounted. */
+function Go({ to }: { to: string }) {
+  const navigate = useNavigate()
+  return <button onClick={() => navigate(to)}>go {to}</button>
+}
+
+function open(c: ScanController, entry = '/scan') {
   controllerHook.useScanController.mockReturnValue(c)
-  return render(<ScanScreen />)
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Go to="/scan?mode=stocktake" />
+      <ScanScreen />
+    </MemoryRouter>,
+  )
 }
 
 /** QA: with a last-used Shop the picker is skipped, the session starts at once. */
@@ -285,17 +298,27 @@ describe('ScanScreen', () => {
   })
 
   it('?mode=stocktake (the Stock-take button of the Shopping List) skips the Shop picker into Stock-take', () => {
-    window.history.replaceState(null, '', '/scan?mode=stocktake')
-    try {
-      lastShop.getLastShopId.mockReturnValue(2)
-      open(controller({ list: undefined }))
-      expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
-      expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
-      expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
-      expect(scanSession.isActive()).toBe(false)
-    } finally {
-      window.history.replaceState(null, '', '/')
-    }
+    lastShop.getLastShopId.mockReturnValue(2)
+    open(controller({ list: undefined }), '/scan?mode=stocktake')
+    expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
+    expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(scanSession.isActive()).toBe(false)
+  })
+
+  it('?mode=stocktake applied by a client-side navigation while the screen is mounted (useSearchParams)', async () => {
+    lastShop.getLastShopId.mockReturnValue(null)
+    open(controller({ list: undefined }))
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'go /scan?mode=stocktake' }))
+    expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
+  })
+
+  it('the Unarchive sheet is busy while the flow is unarchiving', () => {
+    open(controller({ flow: flow({ unarchiving: true, sheet: { kind: 'unarchive', product: { id: 9, name: 'Old passata 500 g', ingredientId: 2, ingredientName: 'Passata', baseUnit: 'g', packSize: 500, archived: true }, target: { mode: 'pack', code: '05012345678900' } } }) }))
+    expect(screen.getByRole('button', { name: 'Create a new Product instead' })).toBeDisabled()
   })
 
   it('shows a Skeleton while the Shops load, neither the picker (which would flash) nor a session', async () => {

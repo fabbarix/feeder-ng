@@ -21,7 +21,7 @@ The WP3/WP4 primitives are used as they are (Select family, fields, Stepper-less
 | `shop/hooks/useShoppingActions.ts` | change | list refresh through `liveRefreshFor(qc).request()`; `['stock']` still invalidated at once |
 | `shop/hooks/useShopChoice.ts` | new (G3) | `useShopChoice(storage?) -> { shops, shopId, setShopId, isLoading }` over `useShops` + `scan/lib/lastShop` (same "last Shop used" as Scan) |
 | `shop/components/LineTile.tsx` | change | tile per mockup: quantity 18/800, name 14/700, pack 11 muted, cost (only when priced), tick control 44 px, extras: `extra` icon + compact `IconButton` "Delete <name>" |
-| `shop/components/CostTile.tsx` | change | `{estimatedCostCents, unpriced, currency, shopName?, onScan?}`: "$13.50" + "est. at Coop" / "est."; no amount and no "Estimated cost" caption when nothing is priced; "N without a price"; `Button variant="accent-secondary" size="sm"` "Scan" |
+| `shop/components/CostTile.tsx` | change | `{estimatedCostCents, unpriced, currency, shopName?, onScan?}`: "$13.50" + "est. at Coop" / "est."; no amount and no "Estimated cost" caption when nothing is priced; "N lines have no Price yet"; `Button variant="accent-secondary" size="sm"` "Scan" |
 | `shop/components/CelebrationTile.tsx` | change | `Tile variant="soft"` with the `celebration` icon; no "$0.00 spent" |
 | `shop/components/RangePicker.tsx` | change | one `Select` (label "Shop for", trigger shows "Until Thu 12") over `rangeOptions` |
 | `shop/components/TickSheet.tsx` | change | `NumberField` "How much?" (min 0, unit suffix), primary "Tick and add to Stock", secondary "Tick without adding" |
@@ -48,10 +48,10 @@ The WP3/WP4 primitives are used as they are (Select family, fields, Stepper-less
 | `scripts/check-ui.rules` | change (shared) | the Developer appends `web/src/features/shop` and `web/src/features/scan` to every rule's `fail_paths` |
 
 ## Shop screen (ShoppingScreen)
-`PageHeader title="Shop"` with `actions` = `IconButton icon="add" label="Add an extra"`. Under it, a row with the range `Select` ("Shop for") and a `ShopSelect` ("Shop", placeholder "Any Shop", G3). Then, by `status`:
+`PageHeader title="Shop"` with `actions` = `IconButton icon="add" label="Add to Shopping List"`. Under it, a row with the range `Select` ("Shop for") and a `ShopSelect` ("Shop", placeholder "Any Shop", G3). Then, by `status`:
 `loading` -> `Skeleton`; `error` -> `ErrorState "The Shopping List could not be loaded." onRetry=retry`; otherwise, **in this order**: `CelebrationTile` (when `complete`, QA: on top, before every tile), the offline note
 (`stale`: "Showing the last list you loaded"; the global `OfflineBanner` is the shell's, WP5), then `ShoppingBody` (hero "Left to get" + `CostTile` with Scan, open tiles, the Ticked group), or `EmptyState` "Nothing to buy" for `empty`.
-Scan shortcut: `useNavigate()('/scan')`. The old bottom "Add an extra" button is gone (header action). A pick in the `ShopSelect` calls `setShopId` and changes the `shopId` the list is fetched and priced for.
+Scan shortcut: `useNavigate()('/scan')`. The old bottom "Add to Shopping List" button is gone (header action). A pick in the `ShopSelect` calls `setShopId` and changes the `shopId` the list is fetched and priced for.
 
 **Ticks are visible (QA):** the tick control is a `button aria-pressed` (name "Tick X" / "Untick X"), 44 x 44 px (`.line-tile__tick`, CSS contract test), an empty ring when open and a filled `tick` icon when ticked; a ticked tile has `data-state="ticked"`, title struck through and muted.
 
@@ -105,3 +105,10 @@ Not unit-testable here: real camera, the `<video>`, torch, vibration; verify in 
 - Coalescing window 250 ms, trailing only: a tick refreshes the list about a quarter of a second later; judged invisible next to the request time.
 - The toast for Stock-take uses the shell `ToastProvider` (`useToast`); `ScanSession` must render under it (it does in the app; the ScanScreen tests mock the controller).
 - Weighed codes and archived Products: scope cut as described above (offer + rescan), recorded as a deliberate limit.
+
+## Review round 2 (copy and contracts)
+- Copy (§6): "N lines have no Price yet" (CostTile), "Add to Shopping List" (header IconButton and the ExtraSheet title), "Shopping List complete" (CelebrationTile). "Basket" is an _Avoid_ word.
+- `useScanFlow.unarchiveProduct` has a pending guard: a double tap records the scan once; `ScanScreen` passes it as `busy` to `UnarchiveProductSheet`.
+- Sheet field stacks: the `<form>` of `TickSheet` and `ExtraSheet` has class `shop-sheet-form` (rule in `shop/shop.css`), that of `UnknownBarcodeSheet` and `ManualBarcodeEntry` has `scan-sheet-form` (rule in `scan/scan.css`); each rule is `display: flex` + `flex-direction: column` with `gap: var(--space-N)` (a token, never a literal).
+- `ScanScreen` reads `?mode=stocktake` with `useSearchParams`, so a client-side navigation while mounted applies it (tests render it under a `MemoryRouter`).
+- `wp7.sources.test.ts` glyph guard: `✎` banned everywhere; `×` only as a whole string literal or standalone JSX text (`{'×'}`, `"×"`, `>×<`); "2 × Mutti 700 g" stays allowed.

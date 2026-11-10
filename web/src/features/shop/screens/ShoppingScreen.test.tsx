@@ -40,12 +40,12 @@ beforeEach(() => {
 })
 
 describe('ShoppingScreen', () => {
-  it('has a header with the range Select, the Shop picker (G3) and an Add an extra IconButton', () => {
+  it('has a header with the range Select, the Shop picker (G3) and an Add to Shopping List IconButton', () => {
     show(makeList())
     expect(screen.getByRole('heading', { level: 1, name: 'Shop' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /Shop for/ })).toHaveTextContent('Until Sun 15')
     expect(screen.getByRole('combobox', { name: /^Shop\b(?! for)/ })).toHaveTextContent('Coop')
-    expect(screen.getByRole('button', { name: 'Add an extra' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add to Shopping List' })).toBeInTheDocument()
     expect(document.querySelector('select, input[type=checkbox], input[type=radio]')).toBeNull()
   })
 
@@ -70,7 +70,7 @@ describe('ShoppingScreen', () => {
     // the total is in the CostTile; the Passata line shows the same $3.18 in its own tile (LineTile test), so query the tile
     expect(document.querySelector('.cost-tile__value')).toHaveTextContent('$3.18')
     expect(screen.getByText('est. at Coop')).toBeInTheDocument()
-    expect(screen.getByText('1 without a price')).toBeInTheDocument()
+    expect(screen.getByText('1 lines have no Price yet')).toBeInTheDocument()
     expect(screen.getByText('2 × Mutti 700 g')).toBeInTheDocument()
     expect(screen.getByText('600 g')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('—')
@@ -125,7 +125,7 @@ describe('ShoppingScreen', () => {
 
   it('adds an extra from the sheet', async () => {
     show(makeList())
-    await userEvent.click(screen.getByRole('button', { name: 'Add an extra' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add to Shopping List' }))
     await userEvent.type(screen.getByLabelText('Something to buy'), 'candles')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(actions.addExtra).toHaveBeenCalledWith({ text: 'candles' })
@@ -141,7 +141,7 @@ describe('ShoppingScreen', () => {
   it('QA: the celebration sits on top, before every tile', () => {
     show(makeList({ lines: [makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), makeLine({ ingredientId: 5, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 2, total: 2 }, complete: true, summary: { lines: 2, spentCents: 318, lotsAdded: 2 } }))
     const celebration = screen.getByRole('status')
-    expect(celebration).toHaveTextContent('Shopping list complete')
+    expect(celebration).toHaveTextContent('Shopping List complete')
     expect(celebration).toHaveTextContent('$3.18 spent')
     for (const article of document.querySelectorAll('article')) {
       expect(celebration.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -150,7 +150,7 @@ describe('ShoppingScreen', () => {
 
   it('does not celebrate an unfinished list', () => {
     show(makeList())
-    expect(screen.queryByText('Shopping list complete')).toBeNull()
+    expect(screen.queryByText('Shopping List complete')).toBeNull()
   })
 
   it('says so when there is nothing to buy', () => {

@@ -12,7 +12,7 @@ describe('CelebrationTile', () => {
     motion(false)
     render(<CelebrationTile summary={{ lines: 12, spentCents: 4837, lotsAdded: 14 }} currency="USD" />)
     const tile = screen.getByRole('status')
-    expect(tile).toHaveTextContent('Shopping list complete')
+    expect(tile).toHaveTextContent('Shopping List complete')
     expect(tile).toHaveTextContent('12 lines')
     expect(tile).toHaveTextContent('$48.37 spent')
     expect(tile).toHaveTextContent('14 Stock Lots added')

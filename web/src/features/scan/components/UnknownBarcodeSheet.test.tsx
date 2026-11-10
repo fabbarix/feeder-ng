@@ -129,4 +129,9 @@ describe('UnknownBarcodeSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({ weightText: '500' })
   })
+
+  it('the field stack is a form with the scan-sheet-form class (CSS contract)', () => {
+    setup()
+    expect(screen.getByRole('dialog').querySelector('form')).toHaveClass('scan-sheet-form')
+  })
 })

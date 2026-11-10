@@ -67,6 +67,37 @@ describe('useScanFlow, archived Product owns the barcode', () => {
     expect(hook.result.current.feedback?.text).toContain('Passata')
   })
 
+  it('a double tap on Unarchive records the scan once (pending guard)', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => { release = r })
+    const { deps, hook } = setup({ unarchive: vi.fn(async () => { await gate }) })
+    await read(hook)
+    let first: Promise<void> = Promise.resolve()
+    let second: Promise<void> = Promise.resolve()
+    act(() => {
+      first = hook.result.current.unarchiveProduct()
+      second = hook.result.current.unarchiveProduct()
+    })
+    await act(async () => {
+      release()
+      await Promise.all([first, second])
+    })
+    expect(deps.unarchive).toHaveBeenCalledTimes(1)
+    expect(deps.submit).toHaveBeenCalledTimes(1)
+  })
+
+  it('exposes the pending state so the sheet can show busy', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => { release = r })
+    const { hook } = setup({ unarchive: vi.fn(async () => { await gate }) })
+    await read(hook)
+    let pending: Promise<void> = Promise.resolve()
+    act(() => { pending = hook.result.current.unarchiveProduct() })
+    expect(hook.result.current.unarchiving).toBe(true)
+    await act(async () => { release(); await pending })
+    expect(hook.result.current.unarchiving).toBe(false)
+  })
+
   it('Create a new Product instead shows the unknown sheet for the same code', async () => {
     const { deps, hook } = setup()
     await read(hook)

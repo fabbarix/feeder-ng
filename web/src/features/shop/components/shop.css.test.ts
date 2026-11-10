@@ -42,4 +42,11 @@ describe('shop.css', () => {
   it('has no rule for the old unstyled pill', () => {
     expect(css()).not.toContain('line-tile__check')
   })
+
+  it('the sheet form stacks its fields with a token gap (TickSheet, ExtraSheet)', () => {
+    const d = declarations(css(), '.shop-sheet-form')
+    expect(d['display']).toMatch(/^(flex|grid)$/)
+    if (d['display'] === 'flex') expect(d['flex-direction']).toBe('column')
+    expect(d['gap']).toMatch(/^var\(--space-\d+\)$/)
+  })
 })
