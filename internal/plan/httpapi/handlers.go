@@ -241,7 +241,13 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 	if res.Leftover != nil {
 		leftover = leftoverFor(*res.Leftover, t)
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"meal": mealFor(res.Meal, t), "leftover": leftover, "warnings": warnings})
+	plannedFor := make([]plannedForOut, 0, len(res.PlannedFor))
+	for _, p := range res.PlannedFor {
+		plannedFor = append(plannedFor, plannedForOut{Date: p.Date, MealSlotID: p.MealSlotID,
+			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName})
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"meal": mealFor(res.Meal, t), "leftover": leftover,
+		"warnings": warnings, "plannedFor": plannedFor})
 }
 
 func (a *api) notCooked(w http.ResponseWriter, r *http.Request) {

@@ -26,6 +26,8 @@ export interface UseSyncQueueResult {
   flush(): Promise<void>
   /** forgets the rejected operations (their count goes to 0) */
   dismissRejected(): Promise<void>
+  /** OfflineQueue.updatePrice: true when the queued operation took the new price (B6) */
+  updateQueuedPrice(clientUuid: string, priceCents: number): Promise<boolean>
   /** OfflineQueue.cancel: true when the server has nothing for the operation, false when it must be Undone there */
   cancel(clientUuid: string): Promise<boolean>
   /** re-read the counts after the queue was changed elsewhere */
@@ -125,5 +127,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     }
   }, [clearRetry, flush, refreshCounts])
 
-  return { online, pendingCount, rejectedCount, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
+  const updateQueuedPrice = useCallback(async (clientUuid: string, priceCents: number) => queueRef.current.updatePrice(clientUuid, priceCents), [])
+
+  return { online, pendingCount, rejectedCount, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
 }

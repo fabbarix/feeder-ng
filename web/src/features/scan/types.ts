@@ -25,6 +25,8 @@ export interface Op {
   quantity?: number
   priceCents?: number
   pricePerKgCents?: number
+  /** shop_scan whose quantity is a weight decoded from a weight-valued barcode: the server prices it by weight (B5) */
+  weighed?: boolean
   /** canonical code */
   barcode?: string
   ruleId?: number

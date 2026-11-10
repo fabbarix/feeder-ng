@@ -131,3 +131,54 @@ Feature: Cooked, Not cooked and Leftovers
     And the scheduler runs its due jobs
     And I list the Leftovers
     Then the plan JSON "leftovers.0.portions" is "4"
+
+  # B8 (QA round 2): the "leftovers for <day>" chip on the source meal must follow reality after a replan.
+  Scenario: After a smaller Leftover no Planned Meal keeps a "leftovers for" chip for a day that no longer eats it
+    When I mark the slot on 2026-11-09 as Cooked with 1 Leftover portions
+    And I view the plan
+    Then the plan slot on 2026-11-10 is cooked fresh
+    And no "leftover_fits" why chip names a day that is not served from its meal
+
+  # B10 (QA round 2): only meals whose date is today or earlier can be resolved.
+  Scenario: A future Planned Meal cannot be marked Cooked
+    When I mark the slot on 2026-11-10 as Cooked
+    Then the response status is 409
+    And the error code is "future_meal"
+    When I view the plan
+    Then the plan slot on 2026-11-10 is planned
+
+  Scenario: A future Planned Meal cannot be marked Not cooked
+    When I mark the slot on 2026-11-10 as Not cooked
+    Then the response status is 409
+    And the error code is "future_meal"
+
+  Scenario: Today's dinner can be marked Cooked in the morning
+    Given the household clock is 2026-11-09 07:00 UTC
+    When I mark the slot on 2026-11-09 as Cooked
+    Then the response status is 200
+
+  Scenario: Tomorrow's Planned Meal can be marked Cooked once tomorrow comes
+    Given the household clock is 2026-11-10 08:00 UTC
+    And I mark the slot on 2026-11-09 as Cooked
+    When I mark the slot on 2026-11-10 as Cooked
+    Then the response status is 200
+
+  # B13 (QA round 2): the Cooked response says where the Leftover went.
+  Scenario: Cooked tells which later Planned Meal the Leftover is planned for
+    When I mark the slot on 2026-11-09 as Cooked
+    Then the response status is 200
+    And the plan JSON "plannedFor" has 1 items
+    And the plan JSON "plannedFor.0.date" is "2026-11-10"
+    And the plan JSON "plannedFor.0.mealSlotName" is "Dinner"
+    And the plan JSON "plannedFor.0.recipeName" is "chicken"
+    And the plan JSON "leftover.portions" is "2"
+
+  Scenario: A Leftover nothing is planned for is reported as kept
+    When I mark the slot on 2026-11-09 as Cooked with 1 Leftover portions
+    Then the response status is 200
+    And the plan JSON "leftover.portions" is "1"
+    And the plan JSON "plannedFor" has 0 items
+
+  Scenario: Cooked with no Leftover reports nothing planned
+    When I mark the slot on 2026-11-09 as Cooked with 0 Leftover portions
+    Then the plan JSON "plannedFor" has 0 items

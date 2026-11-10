@@ -5,7 +5,7 @@ import { pricePerKgFromWeight, resolve, type Scanned } from './barcode'
 
 export type ScanPlan =
   /** a Product (pack size, or the decoded weight) ready to become a Stock Lot */
-  | { kind: 'known'; product: OfflineProduct; quantity: number; priceCents: number | null; pricePerKgCents?: number }
+  | { kind: 'known'; product: OfflineProduct; quantity: number; priceCents: number | null; pricePerKgCents?: number; weighed?: true }
   /** a price-valued Weight Barcode Rule with no price per kg yet: ask the weight once */
   | { kind: 'ask_weight'; product: OfflineProduct; priceCents: number }
   /** nothing matched: the full "what is this?" form for this canonical code */
@@ -16,6 +16,32 @@ export type ScanPlan =
   | { kind: 'not_product' }
   /** unreadable (bad check digit, wrong length, zero value) */
   | { kind: 'invalid'; reason: string }
+
+const roundHalfUp = (x: number): number => Math.floor(x + 0.5)
+
+/** The price per kg a Product's last pack Price implies (gram Products with a pack size only), or undefined. */
+function derivedPricePerKg(product: OfflineProduct): number | undefined {
+  if (product.lastPriceCents === null || product.baseUnit !== 'g' || !(product.packSize > 0)) return undefined
+  const perKg = roundHalfUp((product.lastPriceCents * 1000) / product.packSize)
+  return perKg >= 1 ? perKg : undefined
+}
+
+/**
+ * What the weighed grams cost, mirroring product.PriceForWeight on the server: explicit price per kg x grams / 1000,
+ * else the pack price x grams / pack size (gram Products only). Rounded half up once; null with no basis.
+ */
+function weightPrice(grams: number, explicitPerKg: number | undefined, product: OfflineProduct): number | null {
+  let cents: number
+  if (explicitPerKg !== undefined) {
+    cents = (explicitPerKg * grams) / 1000
+  } else if (product.lastPriceCents !== null && product.baseUnit === 'g' && product.packSize > 0) {
+    cents = (product.lastPriceCents * grams) / product.packSize
+  } else {
+    return null
+  }
+  const r = roundHalfUp(cents)
+  return r >= 1 ? r : null
+}
 
 /**
  * Resolves with barcode.resolve against offline.catalog and looks the Product up in offline.products.
@@ -36,13 +62,16 @@ export function planScan(scanned: Scanned, offline: OfflineData): ScanPlan {
     case 'weighed': {
       const product = offline.products.find((p) => p.id === r.productId)
       if (!product || r.weightGrams === undefined) return unknown
-      const pricePerKg = r.pricePerKgCents ?? offline.catalog.pricePerKgCents?.[String(product.id)]
-      const priceCents = r.priceCents ?? (pricePerKg !== undefined ? Math.round((pricePerKg * r.weightGrams) / 1000) : null)
+      const explicit = r.pricePerKgCents ?? offline.catalog.pricePerKgCents?.[String(product.id)]
+      const derived = explicit === undefined ? derivedPricePerKg(product) : undefined
+      const pricePerKg = explicit ?? derived
+      const priceCents = r.priceCents ?? weightPrice(r.weightGrams, explicit, product)
       return {
         kind: 'known',
         product,
         quantity: r.weightGrams,
         priceCents,
+        weighed: true,
         ...(pricePerKg !== undefined ? { pricePerKgCents: pricePerKg } : {}),
       }
     }

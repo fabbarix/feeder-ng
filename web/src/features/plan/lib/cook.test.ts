@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { StockWarning } from '../types'
-import { adjustLeftover, correctionFor, formatPortions, parseTotal } from './cook'
+import type { CookedResult, Leftover, StockWarning } from '../types'
+import { adjustLeftover, correctionFor, formatPortions, leftoverOutcome, leftoverOutcomeText, parseTotal } from './cook'
 
 describe('adjustLeftover', () => {
   it('moves by half a portion and clamps to 0..max', () => {
@@ -41,5 +41,40 @@ describe('parseTotal', () => {
 
   it('refuses anything else', () => {
     for (const bad of ['', 'abc', '-1', '1e', '12 g']) expect(parseTotal(bad)).toBeNull()
+  })
+})
+
+describe('leftoverOutcome (B13)', () => {
+  const leftover = (portions: number): Leftover => ({
+    id: 3, recipeId: 7, recipeName: 'Chicken', portions, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2,
+  })
+  const result = (over: Partial<CookedResult>): CookedResult => ({
+    meal: {} as CookedResult['meal'], leftover: null, warnings: [], plannedFor: [], ...over,
+  })
+  const tue = { date: '2026-11-10', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
+  const wed = { date: '2026-11-11', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
+
+  it('none: no Leftover was recorded', () => {
+    expect(leftoverOutcome(result({}))).toEqual({ kind: 'none' })
+    expect(leftoverOutcomeText({ kind: 'none' })).toBe('No Leftovers')
+  })
+
+  it('planned: the later meals served from it', () => {
+    const o = leftoverOutcome(result({ leftover: leftover(2), plannedFor: [tue] }))
+    expect(o).toEqual({
+      kind: 'planned', portions: 2, useBy: '2026-11-12', meals: [{ date: '2026-11-10', mealSlotName: 'Dinner', recipeName: 'Chicken' }],
+    })
+    expect(leftoverOutcomeText(o)).toBe('2 portions planned for Tue Dinner')
+  })
+
+  it('planned for several meals', () => {
+    const o = leftoverOutcome(result({ leftover: leftover(4), plannedFor: [tue, wed] }))
+    expect(leftoverOutcomeText(o)).toBe('4 portions planned for Tue Dinner and Wed Dinner')
+  })
+
+  it('kept: recorded but planned for nothing, with its Use-by', () => {
+    const o = leftoverOutcome(result({ leftover: leftover(1) }))
+    expect(o).toEqual({ kind: 'kept', portions: 1, useBy: '2026-11-12' })
+    expect(leftoverOutcomeText(o)).toBe('1 portion kept, good until Thu')
   })
 })

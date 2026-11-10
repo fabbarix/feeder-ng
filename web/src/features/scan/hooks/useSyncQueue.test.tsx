@@ -184,3 +184,29 @@ describe('useSyncQueue retries', () => {
     expect(sync).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('updateQueuedPrice (B6)', () => {
+  it('edits a scan that is still waiting offline and sends the edited price once back online', async () => {
+    const { hook, state, sync } = setup(false)
+    await act(() => hook.result.current.enqueue({ ...op('a'), priceCents: 159 }))
+    let took = false
+    await act(async () => {
+      took = await hook.result.current.updateQueuedPrice('a', 179)
+    })
+    expect(took).toBe(true)
+    state.online = true
+    act(() => void window.dispatchEvent(new Event('online')))
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(1))
+    expect(sync.mock.calls[0]?.[0][0]).toMatchObject({ clientUuid: 'a', priceCents: 179 })
+  })
+
+  it('answers false once the scan was sent', async () => {
+    const { hook } = setup(true)
+    await act(() => hook.result.current.enqueue(op('a')))
+    let took = true
+    await act(async () => {
+      took = await hook.result.current.updateQueuedPrice('a', 179)
+    })
+    expect(took).toBe(false)
+  })
+})
