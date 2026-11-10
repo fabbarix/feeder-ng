@@ -1,4 +1,5 @@
 import { BentoGrid, Tile } from '../../../ui'
+import { NotificationSettingsLink } from '../../notifications'
 import { PlanningSettingsLink } from '../../plan'
 import { ShopsSettingsLink } from '../../shops'
 import { useSettingsPage } from '../hooks/useSettingsPage'
@@ -78,6 +79,7 @@ export function SettingsPage() {
 
         <ShopsSettingsLink />
         <PlanningSettingsLink />
+        <NotificationSettingsLink />
 
         <Tile size="full" as="section">
           <h2 className="settings__tile-title">{settingsStrings.preferences}</h2>

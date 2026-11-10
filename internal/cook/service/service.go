@@ -46,6 +46,9 @@ type TimerEvent struct {
 	// RecipeName is set on the finished event only: the Recipe the timer's scope
 	// cooks, "" for a free timer or when the Recipe is gone.
 	RecipeName string `json:"recipeName"`
+	// EndsAt is the instant this run of the timer ended. Set on the finished
+	// event only; consumers use it to tell a later run of a reused id apart.
+	EndsAt time.Time `json:"endsAt,omitempty"`
 }
 
 // MarksEvent is the data of a `cook` event.
@@ -438,7 +441,7 @@ func (s *Service) settleAndAnnounce(ctx context.Context, t cook.Timer, now time.
 // announceFinished publishes the finished event of a timer, with the name of
 // the Recipe its scope cooks (empty for a free timer).
 func (s *Service) announceFinished(ctx context.Context, t cook.Timer) {
-	ev := TimerEvent{Changed: "finished", Kind: kindFinished, TimerID: t.ID, Scope: string(t.Scope), Label: t.Label}
+	ev := TimerEvent{Changed: "finished", Kind: kindFinished, TimerID: t.ID, Scope: string(t.Scope), Label: t.Label, EndsAt: t.EndsAt}
 	if t.Scope != "" {
 		if rs, err := s.scopeSteps(ctx, t.Scope); err == nil {
 			ev.RecipeName = rs.Name
@@ -567,7 +570,8 @@ type FinishedEvent struct {
 	TimerID    int64
 	Scope      string
 	Label      string
-	RecipeName string // resolved from the scope; "" for a free timer
+	RecipeName string    // resolved from the scope; "" for a free timer
+	EndsAt     time.Time // the instant this run ended
 }
 
 // SubscribeFinished yields one FinishedEvent per `timers` event of kind finished
@@ -584,7 +588,7 @@ func SubscribeFinished(bus *events.Bus) (<-chan FinishedEvent, func()) {
 				continue
 			}
 			select {
-			case out <- FinishedEvent{TimerID: te.TimerID, Scope: te.Scope, Label: te.Label, RecipeName: te.RecipeName}:
+			case out <- FinishedEvent{TimerID: te.TimerID, Scope: te.Scope, Label: te.Label, RecipeName: te.RecipeName, EndsAt: te.EndsAt}:
 			case <-done:
 				return
 			}
