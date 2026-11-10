@@ -15,10 +15,16 @@ type memberBody struct {
 	Avatar        string  `json:"avatar"`
 	PortionFactor float64 `json:"portionFactor"`
 	UserID        *int64  `json:"userId"`
+	Email         *string `json:"email"`
 }
 
 func memberOut(m household.Member) memberBody {
-	return memberBody{ID: m.ID, Name: m.Name, Colour: m.Colour, Avatar: m.Avatar, PortionFactor: m.PortionFactor, UserID: m.UserID}
+	b := memberBody{ID: m.ID, Name: m.Name, Colour: m.Colour, Avatar: m.Avatar, PortionFactor: m.PortionFactor, UserID: m.UserID}
+	if m.Email != "" {
+		e := m.Email
+		b.Email = &e
+	}
+	return b
 }
 
 // memberIn is what an Admin sends to create or change a Member.
@@ -27,11 +33,12 @@ type memberIn struct {
 	Colour        string  `json:"colour"`
 	Avatar        string  `json:"avatar"`
 	PortionFactor float64 `json:"portionFactor"`
+	Email         string  `json:"email"`
 }
 
 // input decodes and validates a memberIn, returning the normalised input.
 func (in memberIn) input() (household.MemberInput, error) {
-	m := household.MemberInput{Name: in.Name, Colour: in.Colour, Avatar: in.Avatar, PortionFactor: in.PortionFactor}.Normalized()
+	m := household.MemberInput{Name: in.Name, Colour: in.Colour, Avatar: in.Avatar, PortionFactor: in.PortionFactor, Email: in.Email}.Normalized()
 	return m, m.Validate()
 }
 
@@ -59,9 +66,13 @@ func (a *api) createMember(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	if err := a.checkEmail(r.Context(), v.Email, nil); err != nil {
+		memberErr(w, err)
+		return
+	}
 	m, err := a.st.CreateMember(r.Context(), v)
 	if err != nil {
-		writeErr(w, err)
+		memberErr(w, err)
 		return
 	}
 	a.changed("members")
@@ -84,9 +95,18 @@ func (a *api) updateMember(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	m, err := a.st.UpdateMember(r.Context(), id, v)
+	cur, err := a.st.Member(r.Context(), id)
 	if err != nil {
 		writeErr(w, err)
+		return
+	}
+	if err := a.checkEmail(r.Context(), v.Email, cur.UserID); err != nil {
+		memberErr(w, err)
+		return
+	}
+	m, err := a.st.UpdateMember(r.Context(), id, v)
+	if err != nil {
+		memberErr(w, err)
 		return
 	}
 	a.changed("members")

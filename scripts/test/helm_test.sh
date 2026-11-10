@@ -98,6 +98,14 @@ qq ingress-override 'kind("Ingress")[0]["metadata"]["annotations"]["nginx.ingres
 render ingress-host --set ingress.enabled=true
 qq ingress-host 'kind("Ingress")[0]["spec"]["rules"][0]["host"] == "feeder.example.com"' "ingress host falls back to the baseUrl host"
 
+# --- FEEDER_TRUST_PROXY: automatic from ingress.enabled, explicit values override ---
+qq defaults 'env["FEEDER_TRUST_PROXY"]["value"] == "false"' "FEEDER_TRUST_PROXY must be false by default (no ingress)"
+qq ingress 'env["FEEDER_TRUST_PROXY"]["value"] == "true"' "FEEDER_TRUST_PROXY must be true automatically when the ingress is enabled"
+render trust-true --set trustProxy=true
+qq trust-true 'env["FEEDER_TRUST_PROXY"]["value"] == "true"' "trustProxy=true must win without an ingress"
+render trust-false --set ingress.enabled=true --set trustProxy=false
+qq trust-false 'env["FEEDER_TRUST_PROXY"]["value"] == "false"' "trustProxy=false must win with the ingress enabled"
+
 # --- google.existingSecret ---
 render existing-secret --set google.existingSecret=my-google
 qq existing-secret 'env["FEEDER_GOOGLE_CLIENT_ID"]["valueFrom"]["secretKeyRef"] == {"name": "my-google", "key": "client-id"} and env["FEEDER_GOOGLE_CLIENT_SECRET"]["valueFrom"]["secretKeyRef"] == {"name": "my-google", "key": "client-secret"}' "Google env must reference the existing Secret with the default keys"

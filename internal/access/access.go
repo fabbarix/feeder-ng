@@ -127,6 +127,19 @@ type Members interface {
 	LinkUser(ctx context.Context, memberID, userID int64) error
 }
 
+// MemberEmails is an optional extra of a Members adapter: whether any Member carries an address.
+type MemberEmails interface {
+	HasEmail(ctx context.Context, email string) (bool, error)
+}
+
+// MemberEmailTaken reports whether a Member carries the address, so the allowlist can refuse it.
+func (s *Service) MemberEmailTaken(ctx context.Context, email string) (bool, error) {
+	if me, ok := s.members.(MemberEmails); ok {
+		return me.HasEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
+	}
+	return false, nil
+}
+
 // DecisionKind is what a Google sign-in leads to.
 type DecisionKind int
 
