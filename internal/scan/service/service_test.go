@@ -448,3 +448,69 @@ func TestOfflineDataComesFromTheCatalogue(t *testing.T) {
 		t.Fatalf("OfflineData = %+v, %v", b, err)
 	}
 }
+
+// r3-scan-fixes B5: a weighed scan costs weight x price per kg, not the pack Price.
+func weighedScan(uuid string, product int64, grams float64) scan.Op {
+	op := packScan(uuid, product, grams)
+	op.Weighed = true
+	return op
+}
+
+func TestAWeighedScanIsPricedByWeightFromThePackPrice(t *testing.T) {
+	for _, c := range []struct {
+		grams float64
+		want  int
+	}{{850, 764}, {450, 405}} {
+		e := newEnv(t)
+		e.cat.addProduct(20, "Rule 21 Product", 4, "carrots", 1000)
+		e.cat.seedPrice(20, 1, "2026-11-02", 899)
+		res := apply(t, e, weighedScan("scan-0001", 20, c.grams))
+		if res.Scan.PriceCents == nil || *res.Scan.PriceCents != c.want {
+			t.Fatalf("%v g: PriceCents = %v, want %d (not the pack Price 899)", c.grams, res.Scan.PriceCents, c.want)
+		}
+		last := e.cat.recorded[len(e.cat.recorded)-1]
+		if *last.PriceCents != c.want || last.PricePerKgCents == nil || *last.PricePerKgCents != 899 {
+			t.Fatalf("recorded Price = %+v, want %d with 899 per kg", last, c.want)
+		}
+	}
+}
+
+func TestAWeighedScanUsesThePricePerKgFromThePhone(t *testing.T) {
+	e := newEnv(t)
+	e.cat.addProduct(20, "Rule 21 Product", 4, "carrots", 1000)
+	e.cat.seedPrice(20, 1, "2026-11-02", 899)
+	op := weighedScan("scan-0001", 20, 850)
+	op.PricePerKgCents = ip(1000)
+	if res := apply(t, e, op); *res.Scan.PriceCents != 850 {
+		t.Fatalf("PriceCents = %d, want 850 (1000 per kg x 850 g)", *res.Scan.PriceCents)
+	}
+}
+
+func TestAWeighedScanKeepsAPriceTheScanCarries(t *testing.T) {
+	e := newEnv(t)
+	e.cat.addProduct(20, "Rule 21 Product", 4, "carrots", 1000)
+	e.cat.seedPrice(20, 1, "2026-11-02", 899)
+	op := weighedScan("scan-0001", 20, 500)
+	op.PriceCents, op.PricePerKgCents = ip(250), ip(500) // a price-valued barcode, or a price edited offline
+	if res := apply(t, e, op); *res.Scan.PriceCents != 250 {
+		t.Fatalf("PriceCents = %d, want the decoded 250", *res.Scan.PriceCents)
+	}
+}
+
+func TestAWeighedScanWithoutAnyPriceRecordsNothing(t *testing.T) {
+	e := newEnv(t)
+	e.cat.addProduct(20, "Rule 21 Product", 4, "carrots", 1000)
+	res := apply(t, e, weighedScan("scan-0001", 20, 850))
+	if res.Scan.PriceCents != nil || len(e.cat.recorded) != 0 {
+		t.Fatalf("price %v, recorded %v; want none", res.Scan.PriceCents, e.cat.recorded)
+	}
+}
+
+func TestAPackScanStillTakesThePackPriceEvenForAWeighedProduct(t *testing.T) {
+	e := newEnv(t)
+	e.cat.addProduct(20, "Rule 21 Product", 4, "carrots", 1000)
+	e.cat.seedPrice(20, 1, "2026-11-02", 899)
+	if res := apply(t, e, packScan("scan-0001", 20, 1000)); *res.Scan.PriceCents != 899 {
+		t.Fatalf("PriceCents = %d, want 899", *res.Scan.PriceCents)
+	}
+}

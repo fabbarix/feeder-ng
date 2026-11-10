@@ -9,6 +9,7 @@ import { Button } from '../../../ui/Button'
 import { formatMinor } from '../../products/lib/money'
 import { formatQuantity } from '../../../lib/units'
 import { AskWeightSheet } from '../components/AskWeightSheet'
+import { CameraFailure } from '../components/CameraFailure'
 import { LiveList } from '../components/LiveList'
 import { PriceEditSheet } from '../components/PriceEditSheet'
 import { ScanFeedback } from '../components/ScanFeedback'
@@ -85,16 +86,19 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
   const sheet = flow.sheet
   const shopName = shop?.name ?? ''
   const product = sheet?.kind === 'stock_take' ? sheet.product : null
+  // A camera failure is explained by CameraFailure below; the strip only carries the starting text.
+  const viewfinderStatus = c.recovery.failure ? undefined : cameraText(c.camera.status)
 
   return (
     <section className="scan-screen">
       <ViewfinderStrip
-        status={cameraText(c.camera.status)}
+        status={viewfinderStatus}
         torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}
         mute={{ muted: c.muted, onToggle: c.toggleMute }}
       >
         <video ref={c.camera.videoRef} playsInline muted autoPlay />
       </ViewfinderStrip>
+      <CameraFailure recovery={c.recovery} />
 
       {mode === 'shop' ? (
         <div className="scan-screen__shop">

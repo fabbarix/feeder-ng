@@ -28,6 +28,8 @@ export interface ScanFlowDeps {
   cancelQueued: (clientUuid: string) => Promise<boolean>
   undo: (clientUuid: string) => Promise<void>
   setPrice: (clientUuid: string, priceCents: number) => Promise<void>
+  /** B6: an edit of a still-queued scan: sync.updateQueuedPrice; true when the queue took it, false when it already left */
+  setQueuedPrice?: (clientUuid: string, priceCents: number) => Promise<boolean>
   feedback: Pick<Feedback, 'confirm' | 'reject'>
   newUuid?: () => string
   now?: () => Date
@@ -68,6 +70,8 @@ export interface ScanFlow {
   saveUnknown(values: UnknownFormValues): Promise<void>
   submitWeight(grams: number): Promise<void>
   stockTakeAction(action: StockTakeAction, total?: number): Promise<void>
+  /** B7: the Results of a sync flush; the line of a scan that was waiting follows its Result (synced, or gone) */
+  applySyncResults(results: ScanResult[]): void
   openEditPrice(): void
   editPrice(priceCents: number): Promise<void>
   undo(): Promise<void>
@@ -164,6 +168,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: plan.product.id, quantity: plan.quantity }
     if (plan.priceCents !== null) op.priceCents = plan.priceCents
     if (plan.pricePerKgCents !== undefined) op.pricePerKgCents = plan.pricePerKgCents
+    if (plan.weighed) op.weighed = true
     const result = await d.submit(op)
     await finish(
       op.clientUuid,
@@ -282,14 +287,35 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   }
 
   const openEditPrice = () => {
-    if (line && !line.queued) setSheet({ kind: 'edit_price' })
+    if (line) setSheet({ kind: 'edit_price' })
   }
 
+  /** B6: a still-queued scan is edited in the queue; once it left the queue (or was synced) the server edits it. */
   const editPrice = async (priceCents: number): Promise<void> => {
     if (!line) return
-    await depsRef.current.setPrice(line.clientUuid, priceCents)
-    setLine({ ...line, priceCents })
+    const d = depsRef.current
+    const editedQueued = line.queued && d.setQueuedPrice ? await d.setQueuedPrice(line.clientUuid, priceCents) : false
+    if (!editedQueued) await d.setPrice(line.clientUuid, priceCents)
+    // functional: the line may have changed while the awaits ran (a flush settled it, or it was undone)
+    setLine((current) => (current?.clientUuid === line.clientUuid ? { ...current, priceCents } : current))
     setSheet(null)
+  }
+
+  /**
+   * B7: the Result of a sync flush settles the line of a scan that was waiting: applied or duplicate take the
+   * server's quantity, price and list state (no longer "waiting to sync"); rejected clears the line (the sync notice
+   * explains it). Results for other scans, and a line that is not waiting, are left alone.
+   */
+  const applySyncResults = (results: ScanResult[]): void => {
+    setLine((current) => {
+      if (!current || !current.queued) return current
+      const result = results.find((r) => r.clientUuid === current.clientUuid)
+      if (!result) return current
+      if (result.status === 'rejected') return null
+      const s = result.scan
+      if (!s) return { ...current, queued: false }
+      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName }
+    })
   }
 
   /** The server Undo; a 404 means the server never had the Op (not applied), which is as undone as it gets. */
@@ -314,7 +340,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   }
 
   const feedback: FlowFeedback | null = line
-    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: !line.queued }
+    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: true }
     : null
 
   return {
@@ -326,6 +352,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     saveUnknown,
     submitWeight,
     stockTakeAction,
+    applySyncResults,
     openEditPrice,
     editPrice,
     undo,

@@ -31,6 +31,7 @@ function flow(over: Partial<ScanFlow> = {}): ScanFlow {
     undo: vi.fn(),
     dismissFeedback: vi.fn(),
     closeSheet: vi.fn(),
+    applySyncResults: vi.fn(),
     ...over,
   }
 }
@@ -40,6 +41,7 @@ function controller(over: Partial<ScanController> = {}): ScanController {
     status: 'ready',
     error: null,
     camera: { status: 'ready', videoRef: { current: null }, torchSupported: true, torchOn: false, toggleTorch: vi.fn() },
+    recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
     muted: false,
     toggleMute: vi.fn(),
     canVibrate: true,
@@ -194,6 +196,20 @@ describe('ScanScreen', () => {
     c.camera.status = 'denied'
     await startShopping(c)
     expect(screen.getByText('The camera is blocked. Allow it in the browser settings to scan.')).toBeInTheDocument()
+  })
+
+  it('B4: a failed camera offers a retry and typing the barcode, wired to the recovery', async () => {
+    const recovery = { ...controller().recovery, failure: { status: 'denied' as const, canRetry: true, message: 'The camera is blocked. Allow it in the browser settings to scan.' } }
+    await startShopping(controller({ camera: { ...controller().camera, status: 'denied' }, recovery }))
+    await userEvent.click(screen.getByRole('button', { name: 'Try the camera again' }))
+    expect(recovery.retry).toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Type the barcode instead' }))
+    expect(recovery.openManual).toHaveBeenCalled()
+  })
+
+  it('B4: a working camera shows no retry or manual entry', async () => {
+    await startShopping()
+    expect(screen.queryByRole('button', { name: 'Type the barcode instead' })).toBeNull()
   })
 
   it('toggles the beep mute', async () => {

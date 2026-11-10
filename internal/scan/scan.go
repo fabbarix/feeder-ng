@@ -60,6 +60,9 @@ type Op struct {
 	Quantity        float64 `json:"quantity,omitempty"`
 	PriceCents      *int    `json:"priceCents,omitempty"`
 	PricePerKgCents *int    `json:"pricePerKgCents,omitempty"`
+	// Weighed marks a shop_scan whose Quantity was decoded from a weight-valued Weight Barcode (r3-scan-fixes B5):
+	// with no PriceCents the server prices it as Quantity x the price per kg (PricePerKgCents, else the latest Price).
+	Weighed bool `json:"weighed,omitempty"`
 
 	// shop_unknown: the unknown-barcode form. Either Barcode (canonical), or RuleID + ItemCode for a weighed code.
 	Barcode     string         `json:"barcode,omitempty"`
@@ -96,6 +99,9 @@ func (o Op) Validate() error {
 	}
 	if _, err := time.Parse(time.RFC3339, o.ScannedAt); err != nil {
 		return &ValidationError{Field: "scannedAt", Message: "scannedAt must be an RFC 3339 time"}
+	}
+	if o.Weighed && o.Kind != KindShopScan {
+		return &ValidationError{Field: "weighed", Message: "only a shop scan can be weighed"}
 	}
 	switch o.Kind {
 	case KindShopScan:

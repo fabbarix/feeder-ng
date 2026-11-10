@@ -88,3 +88,36 @@ func TestLatestPrice(t *testing.T) {
 		t.Fatalf("got %+v, want the highest id on the latest date (3)", got)
 	}
 }
+
+// r3-scan-fixes B5: what a weighed scan costs.
+func TestPriceForWeight(t *testing.T) {
+	cases := []struct {
+		name     string
+		price    product.Price
+		packSize float64
+		base     units.Base
+		grams    float64
+		want     int
+		ok       bool
+	}{
+		{"1 kg pack at 8.99, 850 g", product.Price{PriceCents: ip(899)}, 1000, units.Gram, 850, 764, true},
+		{"1 kg pack at 8.99, 450 g (404.55 rounds up)", product.Price{PriceCents: ip(899)}, 1000, units.Gram, 450, 405, true},
+		{"half up at exactly .5: 1 cent a kg x 500 g", product.Price{PricePerKgCents: ip(1)}, 1000, units.Gram, 500, 1, true},
+		{"explicit price per kg wins over the pack price", product.Price{PriceCents: ip(300), PricePerKgCents: ip(1800)}, 500, units.Gram, 250, 450, true},
+		{"500 g pack at 3.00, 450 g: no double rounding", product.Price{PriceCents: ip(300)}, 500, units.Gram, 450, 270, true},
+		{"fractional grams", product.Price{PricePerKgCents: ip(899)}, 1000, units.Gram, 850.5, 765, true},
+		{"no price at all", product.Price{}, 1000, units.Gram, 850, 0, false},
+		{"pack price on a millilitre Product has no weight basis", product.Price{PriceCents: ip(899)}, 1000, units.Millilitre, 850, 0, false},
+		{"pack price without a pack size", product.Price{PriceCents: ip(899)}, 0, units.Gram, 850, 0, false},
+		{"zero grams", product.Price{PriceCents: ip(899)}, 1000, units.Gram, 0, 0, false},
+		{"under one cent", product.Price{PricePerKgCents: ip(1)}, 1000, units.Gram, 100, 0, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, ok := product.PriceForWeight(c.price, c.packSize, c.base, c.grams)
+			if ok != c.ok || got != c.want {
+				t.Fatalf("PriceForWeight = %d, %v; want %d, %v", got, ok, c.want, c.ok)
+			}
+		})
+	}
+}
