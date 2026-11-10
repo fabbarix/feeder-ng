@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import type { Op, ScanResult } from '../types'
-import { backoffMs, createMemoryOpStore, newClientUuid, OfflineQueue, type SyncApi } from './queue'
+import { backoffMs, createMemoryOpStore, newClientUuid, OfflineQueue, type OpStore, type SyncApi } from './queue'
 
 const at = new Date('2026-11-09T12:00:00Z')
 
@@ -297,6 +297,54 @@ describe('OfflineQueue', () => {
       release()
       expect(await cancelled).toBe(true)
       await flushing
+    })
+
+    describe('cancel racing the start of a send (before the batch is marked)', () => {
+      /** A store whose next all() call (once armed) returns its snapshot only when released. */
+      function heldReadStore() {
+        const inner = createMemoryOpStore()
+        let armed = false
+        let release: () => void = () => {}
+        let held = false
+        const store: OpStore = {
+          ...inner,
+          async all() {
+            const snapshot = await inner.all()
+            if (!armed) return snapshot
+            armed = false
+            held = true
+            await new Promise<void>((r) => (release = r))
+            return snapshot
+          },
+        }
+        return { store, arm: () => (armed = true), isHeld: () => held, release: () => release() }
+      }
+
+      it('does not remove an operation a send has already read: cancel says false once the server applied it', async () => {
+        const held = heldReadStore()
+        const queue = new OfflineQueue(held.store, () => at)
+        await queue.enqueue(op('a'))
+        const server = api(async (ops) => ops.map((o) => applied(o.clientUuid)))
+        held.arm()
+        const flushing = queue.flush(server)
+        await vi.waitFor(() => expect(held.isHeld()).toBe(true)) // the send read A and is held before marking its batch
+        const cancelled = queue.cancel('a')
+        await new Promise((r) => setTimeout(r, 20))
+        held.release() // the send goes on with A in its snapshot and the server applies it
+        await flushing
+        expect(server.sync).toHaveBeenCalledTimes(1)
+        expect(await cancelled).toBe(false) // the caller must Undo it on the server
+      })
+
+      it('does not send an operation a flush started after cancel removed it', async () => {
+        const { queue } = setup()
+        await queue.enqueue(op('a'))
+        expect(await queue.cancel('a')).toBe(true)
+        const server = api(async (ops) => ops.map((o) => applied(o.clientUuid)))
+        const result = await queue.flush(server)
+        expect(server.sync).not.toHaveBeenCalled()
+        expect(result).toEqual({ offline: false, results: [] })
+      })
     })
   })
 })
