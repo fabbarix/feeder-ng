@@ -24,8 +24,12 @@ export interface UseMergeFlow {
   answer: (key: string, value: number | null) => void
   /** Preview loaded, not blocked, every conflict answered. */
   canMerge: boolean
-  /** POSTs the merge, refreshes caches, resolves with the surviving Ingredient. */
-  merge: () => Promise<Ingredient>
+  /**
+   * POSTs the merge, then calls `onMerged` with the survivor at once (the caller navigates away from the source),
+   * drops the source's cached queries, and refreshes the list without waiting for it.
+   * Resolves with the surviving Ingredient.
+   */
+  merge: (onMerged?: (survivor: Ingredient) => void) => Promise<Ingredient>
 }
 
 export function useMergeFlow(sourceId: number): UseMergeFlow {
@@ -78,7 +82,7 @@ export function useMergeFlow(sourceId: number): UseMergeFlow {
     answers,
     answer: (k, value) => setAnswers((a) => ({ ...a, [k]: value })),
     canMerge: preview !== undefined && preview.blocked === '' && isResolved(preview.conflicts, answers),
-    merge: async () => {
+    merge: async (onMerged) => {
       if (!target || !preview) throw new Error('Choose the Ingredient to keep first')
       let survivor: Ingredient
       try {
@@ -90,9 +94,12 @@ export function useMergeFlow(sourceId: number): UseMergeFlow {
         }
         throw e
       }
-      // Drop the deleted source first (its detail, merge preview and any sub-key), so nothing refetches a 404.
+      // Navigate first: the source screen unmounts before anything can refetch the deleted source.
+      onMerged?.(survivor)
+      // Drop the deleted source (its detail, merge preview and any sub-key), so nothing refetches a 404.
       client.removeQueries({ queryKey: ['ingredients', sourceId] })
-      await client.invalidateQueries({ queryKey: ['ingredients'] })
+      // Not awaited: nothing waits on the list refresh.
+      void client.invalidateQueries({ queryKey: ['ingredients'] })
       return survivor
     },
   }

@@ -102,7 +102,6 @@ describe('merge from a mounted source screen (B11)', () => {
     api.mergePreview.mockClear()
     await act(async () => {
       // merge() takes an onMerged callback that runs right after the POST, before the source queries are dropped.
-      // @ts-expect-error the second parameter does not exist yet (red)
       await flow.merge((survivor: Ingredient) => navigate(survivor.id))
     })
     await waitFor(() => expect(navigate).toHaveBeenCalledWith(9))

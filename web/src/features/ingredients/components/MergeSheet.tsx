@@ -30,8 +30,8 @@ export function MergeSheet({ open, sourceId, onClose, onMerged }: MergeSheetProp
   const merge = async () => {
     setError(null)
     try {
-      const survivor = await flow.merge()
-      onMerged(survivor.id)
+      // Navigates to the survivor as soon as the merge succeeds, before the source's cache is dropped.
+      await flow.merge((survivor) => onMerged(survivor.id))
     } catch (e) {
       setError(errorMessage(e))
     }

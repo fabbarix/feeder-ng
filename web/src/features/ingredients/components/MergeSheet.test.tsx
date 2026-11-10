@@ -14,7 +14,7 @@ const preview: MergePreview = {
 const flow = {
   query: '', setQuery: vi.fn(), candidates: [puree], target: null as Ingredient | null, selectTarget: vi.fn(),
   preview: undefined as MergePreview | undefined, isLoading: false, answers: {}, answer: vi.fn(),
-  canMerge: false, merge: vi.fn().mockResolvedValue(puree),
+  canMerge: false, merge: vi.fn((onMerged?: (s: Ingredient) => void) => { onMerged?.(puree); return Promise.resolve(puree) }),
 }
 vi.mock('../hooks/useMergeFlow', () => ({ useMergeFlow: () => flow }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
