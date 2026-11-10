@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, RecipeThumb, Tile } from '../../../ui'
 import { heroChips } from '../lib/chips'
+import type { HeroAction, HeroDay } from '../lib/hero'
 import { heroCookLabel, heroOverline, heroPhase, heroStartBy, slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
@@ -18,6 +19,9 @@ export interface TonightHeroProps {
   onAdjust: (key: SlotKey) => void
   /** True while a Yes, Cooked is being saved. */
   busy?: boolean
+  /** N3: from lib/hero heroSelection. Default 'today' and 'cook'. */
+  day?: HeroDay
+  action?: HeroAction
 }
 
 /**

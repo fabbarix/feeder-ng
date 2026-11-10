@@ -48,7 +48,7 @@ export function formatQuantity(amount: number, base: BaseUnit, system: UnitSyste
 }
 
 /** The label of a Base Unit in the system: g/oz, ml/fl oz, piece/piece. */
-export function baseUnitLabel(base: BaseUnit, system: UnitSystem): string {
+export function baseUnitLabel(base: BaseUnit, system: UnitSystem, _count?: number): string {
   if (base === 'piece') return 'piece'
   if (base === 'g') return system === 'imperial' ? 'oz' : 'g'
   return system === 'imperial' ? 'fl oz' : 'ml'

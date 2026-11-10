@@ -74,6 +74,12 @@ describe('LeftoversTile', () => {
     expect(screen.getByText('3 portions · Use by Thu')).toBeInTheDocument()
   })
 
+  it('N2: the tile carries the plan-leftovers class, which lays the rows out as a stacked list', () => {
+    const { container } = render(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
+    expect(container.querySelector('.plan-leftovers[data-status="leftover"]')).not.toBeNull()
+    expect(container.querySelectorAll('.plan-leftovers .list-row')).toHaveLength(2)
+  })
+
   it('lists the soonest Use-by first', () => {
     render(<LeftoversTile leftovers={[...leftovers].reverse()} today="2026-11-09" />)
     const rows = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')

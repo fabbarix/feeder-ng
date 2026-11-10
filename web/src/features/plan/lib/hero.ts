@@ -48,3 +48,25 @@ export function slotIcon(name: string): IconName {
       return 'other'
   }
 }
+
+/** What the Today hero offers: Cook (fresh meal due today), Yes, Cooked / Adjust come from the phase, or nothing. */
+export type HeroAction = 'cook' | 'leftover' | 'none'
+
+/** Which day the hero meal is on, relative to today. */
+export type HeroDay = 'today' | 'tomorrow' | 'later'
+
+export interface HeroSelection {
+  slot: PlanSlot
+  day: HeroDay
+  action: HeroAction
+}
+
+/** N3: the Today hero's meal and what it offers. See docs/dev/design/r10-qa-fixes.md. */
+export function heroSelection(_slots: PlanSlot[], _now: Date, _today: string): HeroSelection | null {
+  throw new Error('not implemented: N3')
+}
+
+/** N3: the hero overline: "DINNER · 19:30" today, "TOMORROW · LUNCH" tomorrow, "WED · LUNCH" later. */
+export function heroDayOverline(_sel: HeroSelection): string {
+  throw new Error('not implemented: N3')
+}

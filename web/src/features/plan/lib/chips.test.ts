@@ -98,3 +98,18 @@ describe('heroChips: at most two why chips', () => {
     expect(chips.every((c) => c.kind === 'why')).toBe(true)
   })
 })
+
+// N1: a stored Leftover's served meal can arrive with no source date; never turn "" into a weekday.
+describe('the Leftover chip without a source date (N1)', () => {
+  const ctx = { slotDate: '2026-11-11' }
+  const served = (date: string) => meal({ date: '2026-11-11', servedFromLeftover: { date, mealSlotId: 0, recipeName: 'Pie', leftoverId: 5 } })
+
+  it('says just "Leftover" when the date is empty', () => {
+    expect(dayChip(served(''), ctx)?.label).toBe('Leftover')
+    expect(sheetChips(served(''), ctx).chips.map((c) => c.label)).toContain('Leftover')
+  })
+
+  it('still names the weekday when the date is known', () => {
+    expect(dayChip(served('2026-11-10'), ctx)?.label).toBe('Leftover from Tue')
+  })
+})

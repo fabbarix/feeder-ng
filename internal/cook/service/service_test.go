@@ -714,3 +714,70 @@ func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
 		t.Errorf("Today = %q after local midnight, want 2026-11-10 (household zone, not UTC)", v.Today)
 	}
 }
+
+// N4: marking a Planned Meal Cooked or Not cooked cancels that meal's timers, whatever their state, and only that meal's.
+func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.T) {
+	f := setup(t)
+	meal := cook.MealScope("2026-11-09", 3)
+	one, two := 1, 2
+	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Step: &one, Label: "Simmer", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	paused, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Step: &two, Label: "Rest", DurationSeconds: 600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Pause(ctx, paused.ID); err != nil {
+		t.Fatal(err)
+	}
+	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3), Step: &one, Label: "Other", DurationSeconds: 600})
+	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
+	ch, cancel := f.bus.Subscribe(service.TopicTimers)
+	defer cancel()
+
+	n, err := f.svc.CancelScope(ctx, meal)
+	if err != nil || n != 2 {
+		t.Fatalf("CancelScope = %d, %v; want 2, nil", n, err)
+	}
+	_, left, _ := f.svc.Timers(ctx, "")
+	if len(left) != 2 {
+		t.Fatalf("%d timers left, want the other meal's and the free one: %+v", len(left), left)
+	}
+	for _, tm := range left {
+		if tm.ID == running.ID || tm.ID == paused.ID {
+			t.Errorf("timer %d of the cancelled scope survived", tm.ID)
+		}
+		if tm.ID != other.ID && tm.ID != free.ID {
+			t.Errorf("unexpected timer %d", tm.ID)
+		}
+	}
+	cancelled := 0
+	for _, e := range drain(ch) {
+		if e.Changed == "cancelled" {
+			cancelled++
+		}
+	}
+	if cancelled != 2 {
+		t.Errorf("%d cancelled events, want 2", cancelled)
+	}
+	if n, err := f.svc.CancelScope(ctx, meal); err != nil || n != 0 {
+		t.Errorf("second CancelScope = %d, %v; want 0, nil", n, err)
+	}
+}
+
+func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
+	f := setup(t)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
+	for scope, want := range map[cook.Scope]string{
+		cook.MealScope("2026-11-09", 3): "Chicken stew",
+		cook.RecipeScope(12):            "Chicken stew",
+		cook.MealScope("2026-11-20", 1): "",
+		cook.RecipeScope(99):            "",
+		"":                              "",
+	} {
+		if got := f.svc.ScopeRecipeName(ctx, scope); got != want {
+			t.Errorf("ScopeRecipeName(%q) = %q, want %q", scope, got, want)
+		}
+	}
+}

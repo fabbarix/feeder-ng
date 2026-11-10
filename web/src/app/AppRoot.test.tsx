@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../test/notices'
 import { AppRoot, type AppRootProps } from './AppRoot'
+import { ME_CACHE_KEY } from './meCache'
 
 vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
 
@@ -60,5 +62,57 @@ describe('AppRoot signed in', () => {
     mount('/plan', new Response(JSON.stringify({ id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }), { status: 200 }))
     expect(await screen.findByText('plan page')).toBeInTheDocument()
     expect(screen.queryByText(/waiting to sync/)).toBeNull()
+  })
+})
+
+// R10: offline cold reload. The service worker serves the shell, but /api/me fails: the shell must open from the
+// remembered User with the OfflineBanner (useConnectivity is mocked offline above), not stay on "Loading".
+describe('AppRoot offline cold reload (R10)', () => {
+  const me = { id: 1, email: 'a@example.test', displayName: 'Anna Rossi', isAdmin: false }
+
+  function mountDown(path: string) {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const router = createMemoryRouter(
+      [{ path: '/', element: <AppRoot />, children: [{ path: 'plan', element: <p>plan page</p> }, { path: '*', element: <p>other page</p> }] }],
+      { initialEntries: [path] },
+    )
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+  }
+
+  beforeEach(() => localStorage.clear())
+
+  it('renders the shell, the routed page and the offline banner from the remembered User', async () => {
+    localStorage.setItem(ME_CACHE_KEY, JSON.stringify(me))
+    mountDown('/plan')
+    expect(await screen.findByText('plan page')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Your menu' })).toBeInTheDocument()
+    expect(await findNotice('status', 'Offline')).toBeInTheDocument()
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+  })
+
+  it('with nothing remembered, says it cannot load (an alert), never the sign-in page', async () => {
+    mountDown('/plan')
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+  })
+
+  it('a 401 while a User is remembered still goes to sign-in and forgets the User', async () => {
+    localStorage.setItem(ME_CACHE_KEY, JSON.stringify(me))
+    mount('/', unauthenticated())
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toBeInTheDocument()
+    expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull()
+  })
+
+  it('signing out forgets the remembered User', async () => {
+    mount('/plan', new Response(JSON.stringify(me), { status: 200 }))
+    expect(await screen.findByText('plan page')).toBeInTheDocument()
+    expect(localStorage.getItem(ME_CACHE_KEY)).not.toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
+    await userEvent.click(await screen.findByRole('button', { name: /sign out/i }))
+    await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
   })
 })

@@ -1,6 +1,7 @@
 package runner_test
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -685,5 +686,27 @@ func TestCookedWithASmallerLeftoverPlansItForNothingElse(t *testing.T) {
 	res, err := e.r.Cooked(ctx, e.key(9), f64(1))
 	if err != nil || res.Leftover == nil || len(res.PlannedFor) != 0 {
 		t.Errorf("result = %+v, %v; want 1 kept portion planned for no meal", res, err)
+	}
+}
+
+// N4: Cooked and Not cooked call Deps.OnResolved once, after the commit, with the meal's key; a refused or repeated
+// resolution calls nothing.
+func TestCookedAndNotCookedCallOnResolvedOncePerMeal(t *testing.T) {
+	var got []plan.Key
+	e := newEnvWith(t, func(d *runner.Deps) {
+		d.OnResolved = func(_ context.Context, k plan.Key) { got = append(got, k) }
+	})
+	e.mustPlan()
+	if _, err := e.r.Cooked(ctx, e.key(9), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.r.NotCooked(ctx, e.key(10)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.r.Cooked(ctx, e.key(9), nil); !errors.Is(err, runner.ErrAlreadyResolved) {
+		t.Fatalf("second Cooked: %v", err)
+	}
+	if want := []plan.Key{e.key(9), e.key(10)}; !reflect.DeepEqual(got, want) {
+		t.Errorf("OnResolved keys = %v, want %v", got, want)
 	}
 }

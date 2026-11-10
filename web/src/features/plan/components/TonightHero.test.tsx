@@ -74,3 +74,38 @@ describe('TonightHero after the slot time', () => {
     expect(screen.getByRole('button', { name: 'Adjust' })).toBeDisabled()
   })
 })
+
+// N3
+describe('TonightHero day and action (N3)', () => {
+  const lunch = (over = {}) =>
+    slot({ date: '2026-11-11', mealSlotId: 1, name: 'Lunch', time: '13:00', at: '2026-11-11T13:00:00Z', meal: meal({ date: '2026-11-11', mealSlotId: 1, ...over }) })
+  const leftoverMeal = { servedFromLeftover: { date: '2026-11-10', mealSlotId: 2, recipeName: 'Chicken curry', leftoverId: 5 } }
+
+  function render2(s: PlanSlot, props: { day: 'today' | 'tomorrow' | 'later'; action: 'cook' | 'leftover' | 'none' }) {
+    const h = { onCook: vi.fn(), onYesCooked: vi.fn(), onAdjust: vi.fn() }
+    render(<TonightHero slot={s} now={before} {...props} {...h} />)
+    return h
+  }
+
+  it('tomorrow: a day label overline "TOMORROW · LUNCH" instead of the slot time', () => {
+    render2(lunch(), { day: 'tomorrow', action: 'none' })
+    expect(screen.getByText('TOMORROW · LUNCH')).toBeInTheDocument()
+    expect(screen.queryByText(/13:00/)).not.toBeInTheDocument()
+  })
+
+  it('a Leftover-served meal shows "Leftover from Tue" and no Cook button', () => {
+    render2(lunch(leftoverMeal), { day: 'tomorrow', action: 'leftover' })
+    expect(screen.getByText('Leftover from Tue')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
+  })
+
+  it('action none (a fresh meal not due today) has no Cook button either', () => {
+    render2(lunch(), { day: 'tomorrow', action: 'none' })
+    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
+  })
+
+  it('action cook keeps the Cook button', () => {
+    render2(dinner(), { day: 'today', action: 'cook' })
+    expect(screen.getByRole('button', { name: 'Cook · 45 min' })).toBeInTheDocument()
+  })
+})

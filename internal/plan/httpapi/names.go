@@ -6,6 +6,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/app"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	"github.com/fabbarix/feeder-ng/internal/plan"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -50,6 +51,9 @@ type table struct {
 	memberColour  map[int64]string
 	ingredients   map[int64]string
 	slots         map[int64]string
+	// leftoverFrom is the source Meal Slot of each stored Leftover by id (N1): a meal served from a stored Leftover
+	// takes its "Leftover from <day>" date from here when the meal row does not carry it.
+	leftoverFrom map[int64]plan.Key
 }
 
 // photoURL is the URL the image store serves an image id at (the recipe httpapi's imageURL).

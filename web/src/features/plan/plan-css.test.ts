@@ -75,3 +75,32 @@ describe('plan.css', () => {
     expect(css).not.toMatch(/\.chip\b/)
   })
 })
+
+// N2: on a phone the Leftovers tile is half width; two or more rows must stack name over meta, wrap, and never overlap.
+describe('plan.css Leftovers tile (N2)', () => {
+  it('rows size to their content instead of the fixed 64 px height', () => {
+    const r = rule(".plan-leftovers .list-row[data-height]")
+    expect(r).toMatch(/block-size:\s*auto/)
+    expect(r).toMatch(/min-block-size/)
+    expect(r).toMatch(/padding-block/)
+  })
+
+  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks long words', () => {
+    const r = rule('.plan-leftovers .list-row__title')
+    expect(r).toMatch(/white-space:\s*normal/)
+    expect(r).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(r).not.toMatch(/nowrap/)
+  })
+
+  it('the meta line may wrap under the name', () => {
+    expect(rule('.plan-leftovers .list-row__meta')).toMatch(/flex-wrap:\s*wrap/)
+  })
+
+  it('the 40 px lead icon is dropped (the overline already carries it), freeing the narrow cell', () => {
+    expect(rule('.plan-leftovers .list-row__lead')).toMatch(/display:\s*none/)
+  })
+
+  it('rows have 12 px or more of horizontal padding-free text room: padding-inline is at most space-3', () => {
+    expect(rule(".plan-leftovers .list-row[data-height]")).toMatch(/padding-inline:\s*var\(--space-3\)/)
+  })
+})

@@ -33,6 +33,13 @@ describe('promptQuestion', () => {
   })
 })
 
+describe('promptQuestion plural (R10)', () => {
+  it('asks "How many pieces", never "How many piece"', () => {
+    const p = parseUnknownUnit(unknownUnit({ field: 'lines[0].unit', ingredientId: 3, ingredient: 'onion', unit: 'cup', baseUnit: 'piece' }))!
+    expect(promptQuestion(p)).toBe('How many pieces is 1 cup of onion?')
+  })
+})
+
 describe('parseToBase', () => {
   it('accepts positive numbers', () => {
     expect(parseToBase('5')).toBe(5)

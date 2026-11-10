@@ -145,3 +145,33 @@ func TestLeftoverServedMealSendsNoCookMinutesOrStartBy(t *testing.T) {
 		t.Error("the photo is still sent for a Leftover-served meal")
 	}
 }
+
+// N1: once a Leftover is stored the meal row's own source date is empty; the "Leftover from <day>" date comes from the
+// Leftover's source Meal Slot.
+func TestMealServedFromAStoredLeftoverTakesItsDateFromTheLeftoversSource(t *testing.T) {
+	tb := fixture()
+	tb.leftoverFrom = map[int64]plan.Key{5: {Date: "2026-11-10", MealSlotID: 2}}
+	m := plan.Meal{Key: plan.Key{Date: "2026-11-11", MealSlotID: 1}, RecipeID: 7, Portions: 2, State: plan.StatePlanned,
+		From: &plan.Source{LeftoverID: 5}}
+	out := mealFor(m, tb)
+	if out.ServedFromLeftover == nil {
+		t.Fatal("servedFromLeftover missing")
+	}
+	if got := out.ServedFromLeftover.Date; got != "2026-11-10" {
+		t.Errorf("servedFromLeftover.date = %q, want 2026-11-10 (the Leftover's source)", got)
+	}
+	if got := out.ServedFromLeftover.MealSlotID; got != 2 {
+		t.Errorf("servedFromLeftover.mealSlotId = %d, want 2", got)
+	}
+	if out.ServedFromLeftover.LeftoverID == nil || *out.ServedFromLeftover.LeftoverID != 5 {
+		t.Errorf("leftoverId = %v, want 5", out.ServedFromLeftover.LeftoverID)
+	}
+}
+
+func TestMealServedFromAPlannedExtraKeepsItsOwnSourceDate(t *testing.T) {
+	m := plan.Meal{Key: plan.Key{Date: "2026-11-11", MealSlotID: 1}, RecipeID: 7, State: plan.StatePlanned,
+		From: &plan.Source{From: plan.Key{Date: "2026-11-10", MealSlotID: 2}}}
+	if got := mealFor(m, fixture()).ServedFromLeftover.Date; got != "2026-11-10" {
+		t.Errorf("date = %q, want 2026-11-10", got)
+	}
+}
