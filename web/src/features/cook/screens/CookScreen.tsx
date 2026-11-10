@@ -11,24 +11,27 @@ import { AdvanceStepsTile } from '../components/AdvanceStepsTile'
 import { CookNavTiles } from '../components/CookNavTiles'
 import { CookedConfirmation } from '../components/CookedConfirmation'
 import { CookTimerStrip } from '../components/CookTimerStrip'
+import { CookTopRow } from '../components/CookTopRow'
 import { StepTile } from '../components/StepTile'
-import { VoiceToggle } from '../components/VoiceToggle'
+import { useCoachMark } from '../hooks/useCoachMark'
 import { useCookSession } from '../hooks/useCookSession'
 import { useFormatUse } from '../hooks/useFormatUse'
 import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
 import { useTimers } from '../hooks/useTimers'
-import { cookSourceFrom, type CookRouteParams } from '../lib/scope'
+import { advanceOnScreen } from '../lib/advance'
+import { cookSourceFrom, exitPathFor, type CookRouteParams } from '../lib/scope'
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
-import { Button, Chip, EmptyState } from '../../../ui'
+import { Button, EmptyState } from '../../../ui'
 import '../cook.css'
 
 /**
  * Cook Mode. Routes: /cook/meal/:date/:slotId and /cook/recipe/:id (?batches=, default 1).
  * Composes (render + wire only) useCookSession, useTimers() (every household timer), useTimerAlarm,
  * useWakeLock(createWakeLock()), useVoiceCommands(createBrowserSpeech()) with
- * useVoicePreference, and: AdvanceStepsTile, StepTile (tapZones on a tablet-width
- * viewport), CookTimerStrip, CookNavTiles, VoiceToggle. Voice commands: next/back
+ * useVoicePreference, useCoachMark, and: CookTopRow (Exit, the Step pill, voice), AdvanceStepsTile (before Step 1
+ * only), StepTile (tapZones and the coach mark on a tablet-width viewport), CookTimerStrip, CookNavTiles.
+ * Exit goes to exitPathFor(source). Voice commands: next/back
  * call the session, repeat bumps repeat, startTimer calls startStepTimer, pauseTimer
  * pauses the first running timer. Mark as Cooked opens T11's MarkCookedSheet through
  * useMarkCooked(markCookedKey) from features/plan. A Planned Meal is offered Mark as Cooked only once it is due
@@ -51,11 +54,13 @@ export function CookScreen(): ReactNode {
   useTimerAlarm(timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
   const tapZones = useMediaQuery('(min-width: 768px)')
+  const [coachOn, dismissCoach] = useCoachMark()
   const marked = useMarkCooked(session.markCookedKey)
   const stock = useStockSheet((id) => marked.dismissWarning(id))
   const formatUse = useFormatUse()
   const [sheetOpen, setSheetOpen] = useState(false)
   const finishCook = () => navigate('/')
+  const leaveCook = () => navigate(exitPathFor(source))
 
   const onCommand = (command: VoiceCommand) => {
     if (command === 'next') session.next()
@@ -89,7 +94,7 @@ export function CookScreen(): ReactNode {
     )
   }
   if (session.notCookable) {
-    return <EmptyState title={cookStrings.notCookable} action={<Button variant="tonal" onClick={() => navigate('/')}>{cookStrings.back}</Button>} />
+    return <EmptyState title={cookStrings.notCookable} action={<Button variant="secondary" onClick={() => navigate('/')}>{cookStrings.back}</Button>} />
   }
   if (session.error) return <EmptyState title={cookStrings.loadError} />
   const view = session.view
@@ -97,19 +102,30 @@ export function CookScreen(): ReactNode {
 
   return (
     <div className="cook-screen">
+      <CookTopRow
+        number={session.step?.number ?? 0}
+        of={session.step?.of ?? 0}
+        speechSupported={speech.supported}
+        voiceOn={voiceOn}
+        onVoiceChange={setVoiceOn}
+        onExit={leaveCook}
+      />
       <header className="cook-screen__header">
         <h1 className="cook-screen__title">{view.recipeName}</h1>
-        <Chip>{cookStrings.batches(view.batches)}</Chip>
-        <VoiceToggle supported={speech.supported} enabled={voiceOn} onChange={setVoiceOn} />
-        {wake.supported ? <Chip>{cookStrings.wakeLockOn}</Chip> : null}
+        {view.batches > 1 ? <p className="cook-screen__batches">{cookStrings.batches(view.batches)}</p> : null}
       </header>
-      <AdvanceStepsTile summary={session.advance} onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)} />
+      <AdvanceStepsTile
+        summary={advanceOnScreen(session.advance, session.nav.index)}
+        onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)}
+      />
       {session.step ? (
         <StepTile
           key={`${session.step.index}-${session.repeatCount}`}
           step={session.step}
           formatUse={formatUse}
           tapZones={tapZones}
+          coachMark={tapZones && coachOn}
+          onCoachDismiss={dismissCoach}
           onBack={session.back}
           onNext={session.next}
         />

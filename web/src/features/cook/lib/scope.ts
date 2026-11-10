@@ -26,3 +26,27 @@ export function cookSourceFrom(params: CookRouteParams, batches: string | null):
   }
   return { kind: 'recipe', recipeId: Number(params.id), batches: batchesFrom(batches) }
 }
+
+/**
+ * The route that opens Cook Mode for a Recipe with a Batch count (Recipe detail's Cook/Batch entry links here):
+ * `/cook/recipe/<id>?batches=<n>`. batches defaults to 1 and is left out when it is 1; a count that is not a number
+ * above zero counts as 1; the number is written plainly (1.5, 2), never in exponent form.
+ */
+export function cookRecipePath(recipeId: number, batches = 1): string {
+  const count = Number.isFinite(batches) && batches > 0 ? batches : 1
+  const base = `/cook/recipe/${recipeId}`
+  if (count === 1) return base
+  // Intl keeps the number plain (no exponent form), e.g. 1.5 or 2.
+  const plain = new Intl.NumberFormat('en-US', { useGrouping: false, maximumFractionDigits: 20 }).format(count)
+  return `${base}?batches=${plain}`
+}
+
+/** The route that opens Cook Mode for a Planned Meal: `/cook/meal/<YYYY-MM-DD>/<mealSlotId>`. */
+export function cookMealPath(date: string, mealSlotId: number): string {
+  return `/cook/meal/${date}/${mealSlotId}`
+}
+
+/** Where Exit goes: a Recipe session leaves to `/recipes/<id>`, a Planned Meal session to Today (`/`). */
+export function exitPathFor(source: CookSource): string {
+  return source.kind === 'recipe' ? `/recipes/${source.recipeId}` : '/'
+}

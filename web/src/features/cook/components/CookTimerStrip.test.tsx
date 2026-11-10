@@ -33,25 +33,38 @@ describe('CookTimerStrip', () => {
     expect(h.onCancel).not.toHaveBeenCalled()
   })
 
-  it('B14: has explicit Pause, Resume, Cancel and Dismiss buttons', async () => {
+  it('B14: each TimerTile has its own Pause, Resume, Cancel or Dismiss control, named after its timer (icon buttons)', async () => {
     const h = strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice'), item(3, 'finished', 0, 'Pasta')])
-    await userEvent.click(screen.getByRole('button', { name: 'Pause Eggs' }))
+    const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
+    const rice = within(screen.getByRole('timer', { name: 'Rice' }))
+    const pasta = within(screen.getByRole('timer', { name: 'Pasta' }))
+    await userEvent.click(eggs.getByRole('button', { name: 'Pause Eggs' }))
     expect(h.onPause).toHaveBeenCalledWith(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Resume Rice' }))
+    await userEvent.click(rice.getByRole('button', { name: 'Resume Rice' }))
     expect(h.onResume).toHaveBeenCalledWith(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel timer Eggs' }))
+    await userEvent.click(eggs.getByRole('button', { name: 'Cancel Eggs' }))
     expect(h.onCancel).toHaveBeenCalledWith(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel timer Rice' }))
+    await userEvent.click(rice.getByRole('button', { name: 'Cancel Rice' }))
     expect(h.onCancel).toHaveBeenCalledWith(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss Pasta' }))
+    await userEvent.click(pasta.getByRole('button', { name: 'Dismiss Pasta' }))
     expect(h.onCancel).toHaveBeenCalledWith(3)
+  })
+
+  it('QA: no aria text is printed as visible text (no "Cancel timer Eggs" label on screen)', () => {
+    strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice')])
+    expect(screen.queryByText(/Cancel timer/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Pause /)).not.toBeInTheDocument()
+    screen.getAllByRole('button').forEach((b) => expect(b).toHaveClass('icon-button'))
   })
 
   it('offers only the controls that fit the state', () => {
     strip([item(1, 'running', 60, 'Eggs'), item(3, 'finished', 0, 'Pasta')])
-    expect(screen.queryByRole('button', { name: 'Resume Eggs' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Pause Pasta' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cancel timer Pasta' })).not.toBeInTheDocument()
+    const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
+    const pasta = within(screen.getByRole('timer', { name: 'Pasta' }))
+    expect(eggs.queryByRole('button', { name: 'Resume Eggs' })).not.toBeInTheDocument()
+    expect(pasta.queryByRole('button', { name: 'Pause Pasta' })).not.toBeInTheDocument()
+    expect(pasta.queryByRole('button', { name: 'Cancel Pasta' })).not.toBeInTheDocument()
+    expect(eggs.queryByRole('button', { name: 'Dismiss Eggs' })).not.toBeInTheDocument()
   })
 
   it('B14: timers of other Steps or Recipes are listed apart under "Other timers", with where they belong', () => {

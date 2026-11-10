@@ -28,3 +28,6 @@ web/src/features/cook/strings.ts run  # verb for how long a timer runs
 
 # "Done:" (cook:11-13) is the Advance Step status; the spec (docs/design/ui-fix-plan.md, Cook and Board rows) keeps "done" for Advance Steps. Cooked applies to a Planned Meal.
 web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal
+
+# "Done" (board:markDone) is the Advance Step state on the kitchen board's Next Advance Step tile, not a Planned Meal (as on Cook).
+web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
