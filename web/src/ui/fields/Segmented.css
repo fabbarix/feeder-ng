@@ -1,0 +1,42 @@
+/* Segmented / RadioCards: a radiogroup of buttons. Tokens only. */
+.segmented {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+}
+
+.segmented[data-disabled] {
+  opacity: 0.38;
+}
+
+.segmented__option {
+  flex: 1;
+  min-block-size: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-thumb);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  cursor: pointer;
+}
+
+.segmented__option[aria-checked='true'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--elev-1);
+}
+
+.segmented__option:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.segmented__option:disabled {
+  opacity: 0.38;
+  cursor: default;
+}

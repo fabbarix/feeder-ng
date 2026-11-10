@@ -1,0 +1,49 @@
+/* ColorSwatches: 40 px circles in a radiogroup; the checked one gets a ring. Tokens only. */
+.colour-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.colour-swatch {
+  position: relative;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.colour-swatch[aria-checked='true'] {
+  box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-accent);
+}
+
+.colour-swatch:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.colour-swatch:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.colour-swatch--custom {
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--color-outline);
+  background: var(--color-surface-2);
+}
+
+.colour-swatch__text {
+  color: var(--color-muted);
+  font-size: var(--text-overline-size);
+  font-weight: var(--text-overline-weight);
+}
+
+.colour-swatches__picker {
+  display: grid;
+  gap: var(--space-4);
+}

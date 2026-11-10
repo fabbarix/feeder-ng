@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { PlanScreen } from './PlanScreen'
 import { meal, mockApi, renderWithProviders, slot } from '../test-utils'
 import type { CookedResult, CookPreview, PlanView } from '../types'
+import { noticeWith, findNotice } from '../../../test/notices'
 
 const view = (over: Partial<PlanView> = {}): PlanView => ({
   today: '2026-11-09', horizonDays: 3, updating: false,
@@ -62,7 +63,7 @@ describe('PlanScreen', () => {
   it('a failed load says so', async () => {
     mockApi({ 'GET /api/plan': { status: 500, json: { error: { code: 'internal', message: 'x' } } } })
     renderWithProviders(<PlanScreen />)
-    expect(await screen.findByRole('alert')).toHaveTextContent('The plan could not be loaded.')
+    expect(await findNotice('alert', 'The plan could not be loaded.')).toHaveTextContent('The plan could not be loaded.')
   })
 
   it('Regenerate posts and reloads the plan', async () => {
@@ -127,7 +128,7 @@ describe('PlanScreen', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark as Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 }))
 
-    const notice = await screen.findByRole('alert')
+    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
     expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
     await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
     const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
@@ -150,7 +151,7 @@ describe('PlanScreen', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
 

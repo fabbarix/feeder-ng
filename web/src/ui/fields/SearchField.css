@@ -1,0 +1,48 @@
+/* SearchField: the native search input keeps its role; the browser's own cancel glyph is hidden (the Clear search IconButton replaces it). Tokens only. */
+.search-field__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 48px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}
+
+.search-field__control:focus-within {
+  color: var(--color-text);
+  outline: 3px solid var(--color-soft-strong);
+  outline-offset: 1px;
+}
+
+.search-field__input {
+  flex: 1 1 0;
+  inline-size: 0;
+  min-inline-size: 0;
+  block-size: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  outline: none;
+}
+
+.search-field__input::-webkit-search-cancel-button,
+.search-field__input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.search-field__input::placeholder {
+  color: var(--color-muted);
+}
+
+.search-field {
+  display: grid;
+  min-inline-size: 0;
+}
