@@ -24,7 +24,7 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   options: SelectOption<V>[]
   /** Singular entity for copy: "No Recipe matches 'xyz'", search label "Search Recipe". Default: the label. */
   entityName?: string
-  /** Default: shown when there are more than 8 options. */
+  /** Default: shown when there are more than 8 options, or whenever `onCreate` is given. */
   searchable?: boolean
   filters?: SelectFilter<V>[]
   /** The first is the default. A sort IconButton "Sort: <label>" cycles through them. */
@@ -55,10 +55,12 @@ const OPEN_KEYS = ['Enter', ' ', 'ArrowDown', 'ArrowUp']
 const KEY_CLICK_WINDOW_MS = 500
 
 /** Single select: a combobox trigger, a popover from 768 px and a bottom sheet below. Picking closes it. */
-export function Select<V extends string | number = string>({ value, onChange, clearLabel: _clearLabel, onClear: _onClear, ...rest }: SelectProps<V>): ReactNode {
+export function Select<V extends string | number = string>({ value, onChange, clearLabel, onClear, ...rest }: SelectProps<V>): ReactNode {
   return (
     <SelectCore<V>
       {...rest}
+      clearLabel={clearLabel}
+      onClear={onClear}
       multi={false}
       selected={value === null ? [] : [value]}
       onPick={(picked) => onChange(picked)}
@@ -85,6 +87,8 @@ interface CoreProps<V extends string | number> extends SelectBaseProps<V> {
   selected: V[]
   onPick: (value: V) => void
   closeOnPick: boolean
+  clearLabel?: string
+  onClear?: () => void
 }
 
 function SelectCore<V extends string | number>({
@@ -105,6 +109,8 @@ function SelectCore<V extends string | number>({
   selected,
   onPick,
   closeOnPick,
+  clearLabel,
+  onClear,
 }: CoreProps<V>) {
   const ids = useFieldIds()
   const baseId = useId()
@@ -112,7 +118,8 @@ function SelectCore<V extends string | number>({
   const optionId = (index: number) => `${baseId}-option-${index}`
   const phone = !useMediaQuery('(min-width: 768px)')
   const entity = entityName ?? label
-  const showSearch = searchable ?? options.length > SEARCH_THRESHOLD
+  // A create row needs a query to be typed, so a Select that can create is searchable whatever its size.
+  const showSearch = searchable ?? (Boolean(onCreate) || options.length > SEARCH_THRESHOLD)
 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -127,7 +134,7 @@ function SelectCore<V extends string | number>({
   const list = useRef<HTMLDivElement>(null)
 
   const build = (q: string, filterIds: string[], sort: number) =>
-    buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate) })
+    buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate), clearLabel })
   const current = build(query, activeFilters, sortIndex)
 
   const close = (restoreFocus: boolean) => {
@@ -140,7 +147,7 @@ function SelectCore<V extends string | number>({
     const fresh = build('', [], sortIndex)
     setQuery('')
     setActiveFilters([])
-    const selectedAt = fresh.flat.findIndex((o) => selected.includes(o.value))
+    const selectedAt = fresh.flat.findIndex((o) => isChosen(o, selected))
     setActive(selectedAt >= 0 ? selectedAt : fresh.firstEnabled)
     setOpen(true)
   }
@@ -150,6 +157,11 @@ function SelectCore<V extends string | number>({
     if (!option || option.disabled) return
     if (current.createText !== null && index === current.flat.length) {
       onCreate?.(query.trim())
+      close(true)
+      return
+    }
+    if (option.clear) {
+      onClear?.()
       close(true)
       return
     }
@@ -249,7 +261,7 @@ function SelectCore<V extends string | number>({
         .filter((o) => selected.includes(o.value))
         .map((o) => o.label)
         .join(', ')
-    : (selectedOption?.label ?? '')
+    : (selectedOption?.label ?? clearLabel ?? '')
   const activeId = open && active >= 0 ? optionId(active) : undefined
   const panel = (
     <SelectPanel<V>
@@ -317,6 +329,11 @@ function SelectCore<V extends string | number>({
       </div>
     </FieldFrame>
   )
+}
+
+/** Whether an option is the current choice; the clear row is chosen while nothing is. */
+function isChosen<V extends string | number>(option: SelectOption<V>, selected: V[]): boolean {
+  return option.clear ? selected.length === 0 : selected.includes(option.value)
 }
 
 function lastEnabledIndex<V extends string | number>(options: SelectOption<V>[]): number {

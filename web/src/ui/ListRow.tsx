@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import type { ChipStatus } from './Chip'
+import { useHref, useInRouterContext, useLinkClickHandler } from 'react-router-dom'
+import { defaultStatusIcon, type ChipStatus } from './Chip'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import './ListRow.css'
@@ -39,19 +40,46 @@ export interface ListGroupProps {
   children: ReactNode
 }
 
-/** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title`. */
-export function ListRow({ title, meta, icon, leading, trailing, chevron, selected, href, onActivate }: ListRowProps) {
-  const height = leading ? 72 : meta ? 64 : 56
+/**
+ * A router link that keeps `aria-current` explicit. react-router's `Link` only sets aria-current while its route is
+ * active, so a selected row whose href is not the current location would lose it. Same navigation as `Link`.
+ */
+function RouterTarget({ to, label, current }: { to: string; label: string; current?: 'true' }) {
+  const href = useHref(to)
+  const onClick = useLinkClickHandler(to)
+  return <a className="list-row__target" href={href} onClick={onClick} aria-label={label} aria-current={current} />
+}
+
+/** Plain anchor for a row outside a Router (no client-side navigation). */
+function PlainTarget({ href, label, current }: { href: string; label: string; current?: 'true' }) {
+  return <a className="list-row__target" href={href} aria-label={label} aria-current={current} />
+}
+
+/** `data-*` attributes from the row props, for the `li` (never data-height / data-selected, which are ours). */
+function passthroughData(props: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(props)) {
+    if (key.startsWith('data-') && typeof value === 'string' && key !== 'data-height' && key !== 'data-selected') out[key] = value
+  }
+  return out
+}
+
+/** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`). */
+export function ListRow(props: ListRowProps) {
+  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, children, metaStatus, metaIcon } = props
+  const inRouter = useInRouterContext()
+  const height = children ? 'auto' : leading ? 72 : meta ? 64 : 56
   const current = selected ? 'true' : undefined
-  const label = title
+  const label = props['aria-label'] ?? title
+  const metaGlyph: IconName | undefined = metaIcon ?? (metaStatus ? defaultStatusIcon(metaStatus) : undefined)
   let target: ReactNode = null
   if (href !== undefined) {
-    target = <a className="list-row__target" href={href} aria-label={label} aria-current={current} />
+    target = inRouter ? <RouterTarget to={href} label={label} current={current} /> : <PlainTarget href={href} label={label} current={current} />
   } else if (onActivate) {
     target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} onClick={onActivate} />
   }
   return (
-    <li className="list-row" data-height={height} data-selected={selected ? 'true' : undefined}>
+    <li {...passthroughData(props as unknown as Record<string, unknown>)} className="list-row" data-height={height} data-selected={selected ? 'true' : undefined}>
       {target}
       {leading ? (
         <span className="list-row__leading">{leading}</span>
@@ -62,7 +90,13 @@ export function ListRow({ title, meta, icon, leading, trailing, chevron, selecte
       ) : null}
       <span className="list-row__text">
         <span className="list-row__title">{title}</span>
-        {meta ? <span className="list-row__meta">{meta}</span> : null}
+        {meta ? (
+          <span className="list-row__meta" data-status={metaStatus}>
+            {metaGlyph ? <Icon name={metaGlyph} size={14} /> : null}
+            {meta}
+          </span>
+        ) : null}
+        {children ? <span className="list-row__extra">{children}</span> : null}
       </span>
       {trailing ? <span className="list-row__trailing">{trailing}</span> : null}
       {chevron ? (

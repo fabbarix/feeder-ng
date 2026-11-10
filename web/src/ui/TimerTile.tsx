@@ -9,7 +9,7 @@ export interface TimerTileProps {
   running?: boolean
   /** Length the timer started with; when given a progress bar (aria-hidden) shows the elapsed share. */
   totalSeconds?: number
-  /** Controls, each an IconButton, rendered only when its handler is given: pause/resume, +1 min, dismiss. */
+  /** Controls, each an IconButton named after the timer (e.g. "Pause Rice"), rendered only when its handler is given. */
   onToggle?: () => void
   onAddMinute?: () => void
   onDismiss?: () => void
@@ -59,10 +59,16 @@ export function TimerTile({ label, seconds, running = false, totalSeconds, onTog
       {hasControls ? (
         <div className="timer-tile__controls">
           {onToggle ? (
-            <IconButton size="compact" icon={running ? 'pause' : 'resume'} label={running ? 'Pause' : 'Resume'} onClick={onToggle} />
+            <IconButton
+              size="compact"
+              icon={running ? 'pause' : 'resume'}
+              label={`${running ? 'Pause' : 'Resume'} ${label}`}
+              onClick={onToggle}
+            />
           ) : null}
-          {onAddMinute ? <IconButton size="compact" icon="addMinute" label="Add a minute" onClick={onAddMinute} /> : null}
-          {onDismiss ? <IconButton size="compact" icon="close" label="Dismiss timer" onClick={onDismiss} /> : null}
+          {onAddMinute ? <IconButton size="compact" icon="addMinute" label={`Add a minute to ${label}`} onClick={onAddMinute} /> : null}
+          {onCancel ? <IconButton size="compact" icon="close" label={`Cancel ${label}`} onClick={onCancel} /> : null}
+          {onDismiss ? <IconButton size="compact" icon="close" label={`Dismiss ${label}`} onClick={onDismiss} /> : null}
         </div>
       ) : null}
     </Tile>

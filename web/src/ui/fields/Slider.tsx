@@ -23,13 +23,13 @@ export interface SliderProps extends Omit<FieldProps, 'name' | 'required'> {
 }
 
 /** A role=slider on a 6 px track. Pointer press or drag snaps to the nearest step; the keys step, Home/End jump. */
-export function Slider({ label, helper, error, disabled, value, onChange, min, max, step = 1, stops }: SliderProps) {
+export function Slider({ label, helper, error, disabled, value, onChange, min, max, step = 1, stops, valueText: describe }: SliderProps) {
   const ids = useFieldIds()
   const track = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
   const fraction = max === min ? 0 : (clamp(value, min, max) - min) / (max - min)
   const stopLabel = stops?.find((s) => s.value === value)?.label
-  const valueText = stopLabel ?? String(value)
+  const valueText = describe ? describe(value) : (stopLabel ?? String(value))
 
   const emit = (next: number) => {
     if (disabled || next === value) return
@@ -77,6 +77,7 @@ export function Slider({ label, helper, error, disabled, value, onChange, min, m
   return (
     <FieldFrame ids={ids} label={label} helper={helper} error={error}>
       <div className="ui-slider" data-disabled={disabled || undefined}>
+        {describe ? <span className="slider__caption">{valueText}</span> : null}
         <div
           ref={track}
           className="slider__track"

@@ -35,6 +35,12 @@ button.chip:focus-visible {
   color: var(--color-accent-text);
 }
 
+/* WP3b (plan 4.3, 5.1): on the accent hero the why chip is a surface chip, so it reads on the accent fill. */
+.tile[data-variant='hero'] .chip[data-kind='why'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
 .chip[data-kind='tag'] {
   background: var(--color-surface-2);
   color: var(--color-muted);
