@@ -24,6 +24,9 @@ export interface Member {
   avatar: string
   portionFactor: number
   userId: number | null
+  /** A1 phase 2 (docs/dev/design/a1-access-requests.md 2.6): the optional Member email. Stub: the Developer makes it
+   *  `email: string | null` (required) and adds `email: null` to the fixtures. */
+  email?: string | null
 }
 
 export interface MemberInput {
@@ -31,6 +34,8 @@ export interface MemberInput {
   colour: string
   avatar: string
   portionFactor: number
+  /** Sent as `email` on POST/PATCH /api/members; '' is sent as null. Stub: the Developer makes it `string | null`. */
+  email?: string | null
 }
 
 export interface AttendanceEntry {

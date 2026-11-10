@@ -115,26 +115,7 @@ func accessSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the Member "([^"]*)" is linked to the User "([^"]*)"$`, func(member, email string) error {
-		u, err := w.Env.Auth.UserByEmail(contextBG(), email)
-		if err != nil {
-			return err
-		}
-		var members []struct {
-			Name   string `json:"name"`
-			UserID *int64 `json:"userId"`
-		}
-		r := w.Env.LoginAdmin(w.TB).Get("/api/members")
-		if err := r.JSON(&members); err != nil {
-			return err
-		}
-		for _, m := range members {
-			if m.Name == member && m.UserID != nil && *m.UserID == u.ID {
-				return nil
-			}
-		}
-		return fmt.Errorf("Member %q is not linked to %s: %s", member, email, r.Body)
-	})
+	// "the Member ... is linked to the User ..." is defined in steps_household_test.go (same wording; a second definition was ambiguous).
 
 	sc.Step(`^"([^"]*)" is now a User$`, func(email string) error {
 		_, err := w.Env.Auth.UserByEmail(contextBG(), email)

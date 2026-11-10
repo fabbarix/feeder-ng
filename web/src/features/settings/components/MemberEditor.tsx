@@ -17,6 +17,8 @@ export interface MemberEditorProps {
   currentUserId?: number
   saving?: boolean
   error?: string
+  /** A1 phase 2 stub (unused until the Developer step): a server refusal of the email (422 / 409 email_taken), shown under the Email field. */
+  emailError?: string
   onSave: (input: MemberInput, userId: number | null) => void | Promise<void>
   onDelete?: () => void | Promise<void>
   onClose: () => void

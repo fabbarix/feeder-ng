@@ -3,6 +3,8 @@ import './Switch.css'
 
 export interface SwitchProps {
   label: string
+  /** F-02 (A1) stub: overrides the accessible name while `label` stays the visible text ("Admin" visible, "Admin: cook@x" announced). Developer implements. */
+  'aria-label'?: string
   checked: boolean
   disabled?: boolean
   onChange: (checked: boolean) => void

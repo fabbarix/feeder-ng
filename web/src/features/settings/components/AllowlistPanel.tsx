@@ -9,6 +9,8 @@ export interface AllowlistPanelProps {
   users: AllowedUser[]
   currentUserId: number
   error?: string
+  /** F-02 stub: the refusal of the Add (409 email_taken), shown under the email field. */
+  addError?: string
   /** Resolves when added; the panel clears its field then, and keeps the text if it rejects. */
   onAdd: (email: string) => Promise<unknown>
   onSetAdmin: (id: number, isAdmin: boolean) => void

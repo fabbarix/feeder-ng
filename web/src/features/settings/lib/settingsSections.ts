@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'preferences' | 'notifications' | 'allowlist'
+  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -46,7 +46,8 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
  *   Admin:     Allowlist (Admins only)                                  (/settings/allowlist)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
  */
-export function settingsGroups(isAdmin: boolean): SettingsGroup[] {
+export function settingsGroups(isAdmin: boolean, _pendingAccessRequests = 0): SettingsGroup[] {
+  // A1 phase 2 stub: the Developer adds the 'accessRequests' row (Household group, every User, last) and uses the count as its meta.
   return GROUP_ORDER.map((group) => ({
     id: group.id,
     title: group.title,

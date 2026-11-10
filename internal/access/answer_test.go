@@ -237,6 +237,34 @@ func TestApproveLinkedWhenTheLinkFailsStillRecordsTheApprovalWithoutAMember(t *t
 	}
 }
 
+// Review nit: only the "Member was taken meanwhile" failure of LinkUser maps to ErrMemberUnavailable (409 member_unavailable,
+// "pick another"). Any other failure (a database error, say) must come back as itself, so the handler answers 500 instead of
+// telling the approver to pick another Member. The approval still stands and is still recorded, with no Member.
+func TestApproveLinkedWhenLinkUserFailsForAnotherReasonReturnsThatError(t *testing.T) {
+	w := newWorld(t)
+	withMembers(w)
+	boom := errors.New("database is locked")
+	w.members.linkErr = boom
+	req := w.signIn("1.1.1.1", ident("zia@example.test", "Zia")).Request
+	_, err := w.svc.ApproveLinked(ctx, req.ID, w.user, 7)
+	if !errors.Is(err, boom) {
+		t.Fatalf("err = %v, want the original error", err)
+	}
+	if errors.Is(err, access.ErrMemberUnavailable) {
+		t.Fatalf("err = %v, a database failure must not read as ErrMemberUnavailable", err)
+	}
+	if _, uerr := w.users.UserByEmail(ctx, "zia@example.test"); uerr != nil {
+		t.Fatalf("the User was created and stays: %v", uerr)
+	}
+	e, ok := w.store.last(access.EventApproved, "zia@example.test")
+	if !ok || e.ActorEmail != w.user.Email || e.MemberID != 0 || e.MemberName != "" {
+		t.Fatalf("approved event = %+v (found %v), want one by %s with no Member", e, ok, w.user.Email)
+	}
+	if len(w.members.links) != 0 {
+		t.Fatalf("links = %v", w.members.links)
+	}
+}
+
 // --- nits ---
 
 func TestPurgePrunesAuditEntriesOlderThanOneYear(t *testing.T) {

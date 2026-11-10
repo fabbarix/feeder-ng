@@ -74,3 +74,9 @@ export function canLinkMe(
   if (currentUserId === undefined || userId === currentUserId) return false
   return !members.some((m) => m.id !== editing?.id && m.userId === currentUserId)
 }
+
+/** A1 phase 2 stub (Developer implements): the problem with the typed Member email, or null. '' and blanks are fine
+ *  (the email is optional); otherwise `name@host.tld` without spaces, at most 254 characters, the message names "email". */
+export function memberEmailProblem(_email: string): string | null {
+  return null
+}

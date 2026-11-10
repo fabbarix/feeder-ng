@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { ConfirmProvider } from '../../../ui'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -11,9 +12,11 @@ function setup(over: Partial<React.ComponentProps<typeof AllowlistPanel>> = {}) 
     onAdd: vi.fn().mockResolvedValue(undefined), onSetAdmin: vi.fn(), onRemove: vi.fn(), ...over,
   }
   render(
-    <ConfirmProvider>
-      <AllowlistPanel {...props} />
-    </ConfirmProvider>,
+    <MemoryRouter>
+      <ConfirmProvider>
+        <AllowlistPanel {...props} />
+      </ConfirmProvider>
+    </MemoryRouter>,
   )
   return props
 }
@@ -24,9 +27,9 @@ describe('AllowlistPanel', () => {
     const rows = screen.getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]!).getByText('admin@example.test')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('(you)')).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'Admin: admin@example.test' })).toBeChecked()
-    expect(screen.getByRole('checkbox', { name: 'Admin: cook@example.test' })).not.toBeChecked()
+    expect(within(rows[0]!).getByText(/^You/)).toBeInTheDocument() // F-02: meta "You" (was "(you)")
+    expect(screen.getByRole('switch', { name: 'Admin: admin@example.test' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Admin: cook@example.test' })).not.toBeChecked()
   })
 
   it('adds an email and clears the field', async () => {
@@ -58,7 +61,7 @@ describe('AllowlistPanel', () => {
 
   it('makes someone an Admin', async () => {
     const { onSetAdmin } = setup()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Admin: cook@example.test' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Admin: cook@example.test' }))
     expect(onSetAdmin).toHaveBeenCalledWith(2, true)
   })
 
@@ -84,15 +87,15 @@ describe('AllowlistPanel', () => {
 
   it('locks the only Admin', () => {
     setup()
-    expect(screen.getByRole('checkbox', { name: 'Admin: admin@example.test' })).toBeDisabled()
+    expect(screen.getByRole('switch', { name: 'Admin: admin@example.test' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Remove admin@example.test' })).toBeDisabled()
-    expect(screen.getByText('Last Admin')).toBeInTheDocument()
+    expect(screen.getByText('You · Last Admin')).toBeInTheDocument() // F-02: one meta line, no Chip
   })
 
   it('unlocks Admins when there are two', () => {
     setup({ users: [admin, { ...cook, isAdmin: true }] })
-    expect(screen.getByRole('checkbox', { name: 'Admin: admin@example.test' })).toBeEnabled()
-    expect(screen.queryByText('Last Admin')).toBeNull()
+    expect(screen.getByRole('switch', { name: 'Admin: admin@example.test' })).toBeEnabled()
+    expect(screen.queryByText(/Last Admin/)).toBeNull()
   })
 
   it('shows a server error', () => {
