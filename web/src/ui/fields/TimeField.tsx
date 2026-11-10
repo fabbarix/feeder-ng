@@ -1,7 +1,7 @@
-import { useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type RefObject } from 'react'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
 import type { FieldProps } from './Field'
-import { applyDigit, formatTime, parseTime, stepSegment, type TimeParts } from './time'
+import { applyDigit, formatTime, parseTime, segmentFromText, stepSegment, type TimeParts } from './time'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './TimeField.css'
@@ -26,7 +26,7 @@ export function TimeField({ label, helper, error, disabled, required, value, onC
   const ids = useFieldIds()
   const parts = parseTime(value)
   const [pending, setPending] = useState<{ segment: Segment; digit: number } | null>(null)
-  const minuteRef = useRef<HTMLSpanElement>(null)
+  const minuteRef = useRef<HTMLInputElement>(null)
 
   const emit = (next: Partial<TimeParts>) => {
     const merged = { hour: next.hour ?? parts?.hour ?? 0, minute: next.minute ?? parts?.minute ?? 0 }
@@ -34,7 +34,15 @@ export function TimeField({ label, helper, error, disabled, required, value, onC
     if (formatted !== value) onChange(formatted)
   }
 
-  const onSegmentKey = (segment: Segment) => (e: KeyboardEvent<HTMLSpanElement>) => {
+  // Keypad or paste: the text in the segment is the new value (non-digits ignored, clamped), never the pending keystroke state.
+  const onSegmentText = (segment: Segment) => (e: ChangeEvent<HTMLInputElement>) => {
+    const next = segmentFromText(e.target.value, segment)
+    if (next === null) return
+    setPending(null)
+    emit({ [segment]: next })
+  }
+
+  const onSegmentKey = (segment: Segment) => (e: KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
@@ -54,11 +62,19 @@ export function TimeField({ label, helper, error, disabled, required, value, onC
   return (
     <FieldFrame ids={ids} label={label} helper={helper} error={error}>
       <div role="group" aria-labelledby={ids.labelId} aria-describedby={describe} aria-required={required || undefined} className="time-field" data-disabled={disabled || undefined}>
-        <Segment name={fieldStrings.hour} value={parts?.hour} max={23} disabled={disabled} onKeyDown={onSegmentKey('hour')} />
+        <Segment name={fieldStrings.hour} value={parts?.hour} max={23} disabled={disabled} onKeyDown={onSegmentKey('hour')} onChange={onSegmentText('hour')} />
         <span className="time-field__colon" aria-hidden="true">
           :
         </span>
-        <Segment name={fieldStrings.minute} value={parts?.minute} max={59} disabled={disabled} onKeyDown={onSegmentKey('minute')} segmentRef={minuteRef} />
+        <Segment
+          name={fieldStrings.minute}
+          value={parts?.minute}
+          max={59}
+          disabled={disabled}
+          onKeyDown={onSegmentKey('minute')}
+          onChange={onSegmentText('minute')}
+          segmentRef={minuteRef}
+        />
       </div>
     </FieldFrame>
   )
@@ -69,25 +85,34 @@ interface SegmentProps {
   value: number | undefined
   max: number
   disabled?: boolean
-  onKeyDown: (e: KeyboardEvent<HTMLSpanElement>) => void
-  segmentRef?: RefObject<HTMLSpanElement | null>
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void
+  segmentRef?: RefObject<HTMLInputElement | null>
 }
 
-function Segment({ name, value, max, disabled, onKeyDown, segmentRef }: SegmentProps) {
+/** A text input (numeric keypad on phones) with spinbutton semantics. Its whole text is selected on focus so a digit replaces it. */
+function Segment({ name, value, max, disabled, onKeyDown, onChange, segmentRef }: SegmentProps) {
+  const focusAll = (e: FocusEvent<HTMLInputElement>) => e.currentTarget.select()
   return (
-    <span
+    <input
       ref={segmentRef}
+      type="text"
+      inputMode="numeric"
       role="spinbutton"
-      tabIndex={disabled ? -1 : 0}
+      autoComplete="off"
+      maxLength={2}
+      value={value === undefined ? PLACEHOLDER : String(value).padStart(2, '0')}
+      data-empty={value === undefined || undefined}
+      disabled={disabled}
       aria-label={name}
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
       aria-disabled={disabled || undefined}
       className="time-field__segment"
+      onFocus={focusAll}
       onKeyDown={onKeyDown}
-    >
-      {value === undefined ? PLACEHOLDER : String(value).padStart(2, '0')}
-    </span>
+      onChange={onChange}
+    />
   )
 }

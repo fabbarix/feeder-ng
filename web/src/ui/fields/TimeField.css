@@ -19,13 +19,27 @@
 
 .time-field__segment {
   display: inline-block;
+  inline-size: 2.2ch;
   min-inline-size: 2.2ch;
+  margin: 0;
   padding: var(--space-1) var(--space-1);
+  border: 0;
   border-radius: var(--radius-chip);
-  text-align: center;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-size: var(--text-title-3-size);
   font-weight: var(--text-title-3-weight);
+  text-align: center;
   cursor: text;
+}
+
+.time-field__segment[data-empty] {
+  color: var(--color-muted);
+}
+
+.time-field__segment:disabled {
+  cursor: default;
 }
 
 .time-field__segment:focus-visible {

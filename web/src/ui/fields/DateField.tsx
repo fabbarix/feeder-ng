@@ -40,8 +40,7 @@ export function DateField({ label, helper, error, disabled, required, value, onC
   const [open, setOpen] = useState(false)
   const [focusIso, setFocusIso] = useState(value || today || todayIso())
   const [view, setView] = useState(() => {
-    const d = localDate(value || today || todayIso())
-    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+    return viewOf(value || today || todayIso())
   })
   const [focusTick, setFocusTick] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -56,8 +55,7 @@ export function DateField({ label, helper, error, disabled, required, value, onC
   const openCalendar = () => {
     const start = value || todayValue
     setFocusIso(start)
-    const d = localDate(start)
-    setView({ year: d.getFullYear(), month: d.getMonth() + 1 })
+    setView(viewOf(start))
     setFocusTick((t) => t + 1)
     setOpen(true)
   }
@@ -87,6 +85,13 @@ export function DateField({ label, helper, error, disabled, required, value, onC
     const d = localDate(iso)
     setView({ year: d.getFullYear(), month: d.getMonth() + 1 })
     setFocusTick((t) => t + 1)
+  }
+
+  // The month buttons move the roving day too (clamped), so exactly one day stays tabbable. DOM focus stays on the button.
+  const shiftMonth = (months: number) => {
+    const next = addMonths(focusIso, months)
+    setFocusIso(next)
+    setView(viewOf(next))
   }
 
   const onGridKey = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -137,11 +142,11 @@ export function DateField({ label, helper, error, disabled, required, value, onC
         {open ? (
           <div role="dialog" aria-labelledby={ids.labelId} className="date-field__popover" onKeyDown={onGridKey}>
             <div className="date-field__header">
-              <IconButton icon="back" label={fieldStrings.previousMonth} size="compact" onClick={() => setView((v) => shiftView(v, -1))} />
+              <IconButton icon="back" label={fieldStrings.previousMonth} size="compact" onClick={() => shiftMonth(-1)} />
               <span id={headingId} className="date-field__month" aria-live="polite">
                 {monthName.format(new Date(view.year, view.month - 1, 1))}
               </span>
-              <IconButton icon="next" label={fieldStrings.nextMonth} size="compact" onClick={() => setView((v) => shiftView(v, 1))} />
+              <IconButton icon="next" label={fieldStrings.nextMonth} size="compact" onClick={() => shiftMonth(1)} />
             </div>
             <div ref={gridRef}>
               <table role="grid" aria-labelledby={headingId} className="date-field__grid">
@@ -190,8 +195,7 @@ export function DateField({ label, helper, error, disabled, required, value, onC
   )
 }
 
-function shiftView(view: { year: number; month: number }, months: number) {
-  const next = addMonths(toIsoDate(view.year, view.month, 1), months)
-  const d = localDate(next)
+function viewOf(iso: string): { year: number; month: number } {
+  const d = localDate(iso)
   return { year: d.getFullYear(), month: d.getMonth() + 1 }
 }

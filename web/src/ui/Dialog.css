@@ -12,6 +12,11 @@
   animation: dialog-in var(--dur-3) var(--ease-out);
 }
 
+/* Scroll lock while any modal <dialog> is open (Dialog and BottomSheet). */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
+
 .dialog::backdrop {
   background: var(--scrim);
   animation: scrim-in var(--dur-3) var(--ease-out);

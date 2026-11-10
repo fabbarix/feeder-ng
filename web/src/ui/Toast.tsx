@@ -83,16 +83,35 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div aria-live="polite" className="toast-region">
-        {toasts.map((t) => (
-          <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
-        ))}
+      <div className="toast-region">
+        <LiveRegion role="status" items={toasts.filter((t) => t.status !== 'error')} onDismiss={dismiss} />
+        <LiveRegion role="alert" items={toasts.filter((t) => t.status === 'error')} onDismiss={dismiss} />
       </div>
     </ToastContext.Provider>
   )
 }
 
-/** One toast. Swipe down (pointer) dismisses it. Errors use role=alert, everything else role=status. */
+/**
+ * A persistent live region, always mounted so screen readers announce what is added to it. The region carries the role
+ * and politeness; its toasts carry none. `data-status` mirrors the newest toast in the region.
+ */
+function LiveRegion({ role, items, onDismiss }: { role: 'status' | 'alert'; items: ToastItem[]; onDismiss: (id: number) => void }) {
+  const newest = items[items.length - 1]
+  return (
+    <div
+      role={role}
+      aria-live={role === 'alert' ? 'assertive' : 'polite'}
+      className="toast-live"
+      data-status={newest?.status}
+    >
+      {items.map((t) => (
+        <ToastView key={t.id} toast={t} onDismiss={() => onDismiss(t.id)} />
+      ))}
+    </div>
+  )
+}
+
+/** One toast. Swipe down (pointer) dismisses it. No role: the enclosing live region announces it. */
 function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
   const startY = useRef<number | null>(null)
   const icon = STATUS_ICON[toast.status]
@@ -105,7 +124,6 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
   }
   return (
     <div
-      role={toast.status === 'error' ? 'alert' : 'status'}
       className="toast"
       data-status={toast.status}
       onPointerDown={onPointerDown}

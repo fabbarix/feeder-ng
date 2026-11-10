@@ -183,7 +183,7 @@ function FieldsDemo() {
       <TimeField label="Start time" value={time} onChange={setTime} minuteStep={5} />
       <DateField label="Best before" value={date} onChange={setDate} today="2026-11-10" />
       <Checkbox label="Pin this Meal" description="Keeps it through regeneration" checked={checked} onChange={setChecked} />
-      <Switch label="Use a secondary colour" checked={on} onChange={setOn} />
+      <Switch label="Notify me" checked={on} onChange={setOn} />
       <Segmented label="Theme" options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} value={theme} onChange={setTheme} />
       <RadioCards label="Units" options={[{ value: 'metric', title: 'Metric', description: 'grams, millilitres' }, { value: 'imperial', title: 'Imperial', description: 'ounces, cups' }]} value={units} onChange={setUnits} />
       <Slider label="Planner Style" min={0} max={2} step={1} value={planner} onChange={setPlanner} stops={[{ value: 0, label: 'Familiar' }, { value: 1, label: 'Balanced' }, { value: 2, label: 'Adventurous' }]} />

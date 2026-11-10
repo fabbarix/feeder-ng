@@ -43,3 +43,14 @@ export function applyDigit(pending: number | null, digit: number, segment: 'hour
   if (cannotStartTwoDigits) return { value: digit, pending: null, advance: true }
   return { value: digit, pending: digit, advance: false }
 }
+
+/**
+ * Text typed into a segment (an on-screen keypad or a paste): non-digits are ignored, the last two digits count, and the
+ * result is clamped to the segment's maximum. Returns null when there is no digit at all (nothing to apply).
+ */
+export function segmentFromText(raw: string, segment: 'hour' | 'minute'): number | null {
+  const digits = raw.replace(/\D/g, '').slice(-2)
+  if (digits === '') return null
+  const max = segment === 'hour' ? 23 : 59
+  return Math.min(max, Number(digits))
+}
