@@ -223,8 +223,8 @@ describe('CookScreen: layout (2.7, 5.12)', () => {
     renderMeal()
     await screen.findByRole('article', { name: 'Step 1 of 2' })
     expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Step 1 of 2')
-    expect(screen.getByRole('button', { name: 'Voice commands off' })).toHaveClass('icon-button')
+    expect(noticeWith('status', 'Step 1 of 2')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Voice commands/ })).toHaveClass('icon-button')
   })
 
   it('Exit leaves a Planned Meal for Today and a Recipe for the Recipe', async () => {

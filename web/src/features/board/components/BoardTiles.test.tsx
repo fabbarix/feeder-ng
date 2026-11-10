@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -105,6 +106,17 @@ describe('BoardTimersTile', () => {
     expect(within(screen.getByRole('timer', { name: 'Eggs' })).getByText('1:35')).toBeInTheDocument()
     expect(screen.getByRole('timer', { name: 'Rice' })).toHaveAttribute('data-state', 'paused')
   })
+  it('lists at most 2 timers and says "+n more" for the rest (they never clip inside the cell)', () => {
+    render(<BoardTimersTile items={[item(1, 'Eggs', 95, 'running'), item(2, 'Rice', 30, 'running'), item(3, 'Pasta', 20, 'running'), item(4, 'Tea', 10, 'running')]} />)
+    expect(screen.getAllByRole('timer')).toHaveLength(2)
+    expect(screen.getByRole('timer', { name: 'Eggs' })).toBeInTheDocument()
+    expect(screen.getByRole('timer', { name: 'Rice' })).toBeInTheDocument()
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
+  })
+  it('shows no "+n more" when 2 or fewer timers run', () => {
+    render(<BoardTimersTile items={[item(1, 'Eggs', 95, 'running'), item(2, 'Rice', 30, 'running')]} />)
+    expect(screen.queryByText(/more$/)).not.toBeInTheDocument()
+  })
   it('says when none are running', () => {
     render(<BoardTimersTile items={[]} />)
     expect(screen.getByText('No timers running')).toBeInTheDocument()
@@ -150,10 +162,10 @@ describe('TonightTile hero Cook button (5.13)', () => {
     rerender(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
     expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
   })
-  it('is the accent hero tile, 2 x 2', () => {
+  it('is the hero tile, 2 x 2', () => {
     const { container } = render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
     const tile = container.firstElementChild
-    expect(tile).toHaveAttribute('data-variant', 'accent')
+    expect(tile).toHaveAttribute('data-variant', 'hero')
     expect(tile).toHaveAttribute('data-span', '2')
     expect(tile).toHaveAttribute('data-row-span', '2')
   })
@@ -165,5 +177,31 @@ describe('UseSoonTile layout', () => {
     expect(container.firstElementChild).toHaveAttribute('data-span', '2')
     expect(container.querySelector('[data-tone]')).toBeNull()
     expect(container.querySelector('[data-status="spoil"]')).not.toBeNull()
+  })
+})
+
+// Layout contract at 1280 x 800 (cells are 240 px high): long text clamps instead of clipping.
+const boardCss = readFileSync(`${process.cwd()}/src/features/board/board.css`, 'utf8')
+const rule = (selector: string): string => {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = new RegExp(`(?:^|[},\\s])${esc}\\s*\\{([^}]*)\\}`, 'm').exec(boardCss)
+  expect(m, `${selector} rule`).not.toBeNull()
+  return m![1]!
+}
+describe('board text truncation contract', () => {
+  it.each(['.board-next__text', '.board-next__recipe'])('%s clamps to 2 lines with an ellipsis and may shrink', (sel) => {
+    const body = rule(sel)
+    expect(body).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(body).toMatch(/display:\s*-webkit-box/)
+    expect(body).toMatch(/-webkit-box-orient:\s*vertical/)
+    expect(body).toMatch(/overflow:\s*hidden/)
+  })
+  it('the Next Advance Step text is at most 2rem so 2 lines + recipe + Done fit 240 px', () => {
+    expect(rule('.board-next__text')).toMatch(/font-size:\s*(1\.\d+|2)rem/)
+  })
+  it('timer rows in the Timers tile are compact and clamp their label to 1 line', () => {
+    expect(rule('.board-timers .board-list')).toMatch(/gap:\s*(4|8)px/)
+    expect(rule('.board-timers .timer-tile__label')).toMatch(/-webkit-line-clamp:\s*1|text-overflow:\s*ellipsis/)
+    expect(rule('.board-timers__more')).toMatch(/font-size:\s*1\.\d+rem/)
   })
 })

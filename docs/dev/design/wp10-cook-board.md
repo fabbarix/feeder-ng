@@ -22,3 +22,9 @@ Top row `CookTopRow` (new): Exit secondary button (X), pill "Step n of N" (Chip 
 
 ## Tests (red)
 `scope.test`, `steps.test` (stepOverline), `CookTopRow.test`, `VoiceToggle.test`, `StepTile.test`, `AdvanceStepsTile.test`, `CookTimerStrip.test`, `CookedConfirmation.test`, `useCoachMark.test`, `CookScreen.test` (layout, Exit, Batches route, Uses line, Advance tile), board `BoardTiles.test`, `lib/layout.test`.
+
+## Board layout rules at 1280 x 800 (cells 240 px high)
+- Hero is `data-variant="hero"` (the Tile primitive's name), not accent.
+- Next Advance Step: the Step text (2rem) and the "Recipe · Slot" line each clamp to 2 lines with an ellipsis (`-webkit-line-clamp: 2`); the due line and Done button never shrink.
+- Timers tile: lists at most 2 timers (already sorted, soonest first), then a `+n more` line (`board-timers__more`, n = hidden count). Rows use an 8 px gap or less and the TimerTile label clamps to 1 line. No timer is ever clipped.
+- Tests: `BoardTiles.test.tsx` (behaviour and CSS contract on `board.css`).
