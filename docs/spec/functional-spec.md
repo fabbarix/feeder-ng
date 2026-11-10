@@ -91,6 +91,13 @@ For each slot:
    - fall within their Cool-down (counted from the last planned or cooked date);
    - would break a Variety Rule ("per week" means the ISO week, Monday to Sunday; Leftovers don't count towards Variety Rules);
    - have an Advance Step whose lead time has already passed for this slot.
+   - are **reserved** for a later Slot Rule slot (see *Slot Rule reservation* below).
+**Slot Rule reservation.** A Slot Rule's Recipe is kept for its slot. While the planner walks an earlier slot, it removes a Recipe R from the candidates if R is *reserved* for a later slot S and placing R here would put S inside R's Cool-down (the gap in days between the two slots is less than R's Cool-down; slots on the same day count as a gap of 0).
+- **Which reservations exist.** S reserves R when S has a Slot Rule and R is the only Recipe it can still take: the rule names R directly, or the rules' Recipes and Tags together match exactly one eligible Recipe (not archived, no Exclusion for a Member attending S). When several eligible Recipes match (a Tag carried by two Recipes), nothing is reserved, because the others can fill S. S must still be open: a Pinned, Cooked or skipped meal in S reserves nothing. An unpinned Planned (kept) meal in S counts as open: it is replaced if the rule calls for it, so it still reserves.
+- **Window.** The Cool-down of R before S, anywhere in the Planning Horizon, including slots whose meal Plan would otherwise keep: an unpinned Planned Meal of R inside the window is replanned, and its slot takes another Recipe. Regenerate behaves the same.
+- **Pinned wins.** A Pinned or Cooked meal of R (or a cook before the horizon) already inside S's Cool-down makes the rule unmeetable, so no reservation is made: nothing else is held back, and S stays empty with its usual reason ("Couldn't plan Friday dinner: every option was excluded or in cool-down."). If two open Slot Rule slots reserve the same Recipe inside each other's Cool-down, the earlier slot keeps it and the later one stays empty.
+- **Swap.** Swap applies the reservation too: it does not offer R as an alternative for a slot where it would block S. For S itself Swap still ignores the Slot Rule (§7.3). Choosing a Recipe elsewhere (pinning it) always works, as above.
+
 3. **Score** each candidate. The weights come from the **Planner Style** preset (table below). They stay internal (in code and tests); the household only sets the slider (§3), and positions between anchors interpolate linearly. Terms:
    - per attending Member's **Favourite**, per **Dislike**;
    - **× perishable use**: the share of the Recipe's base-unit needs covered by projected lots that go off before the next time those lots could be used, which rewards spending what would spoil;
@@ -116,7 +123,7 @@ For each slot:
 If no candidate survives, the slot stays empty and Today shows "Couldn't plan Thursday dinner: every option was excluded or in cool-down."
 
 ### 7.3 Swap
-**Swap** shows the top 3 alternatives under the same scoring (excluding the current Recipe), each with its why chips. Choosing one pins it and replans the downstream unpinned slots, because Leftovers and Overlap may change.
+**Swap** shows the top 3 alternatives under the same scoring (excluding the current Recipe and any Recipe reserved for a later Slot Rule slot, §7.2), each with its why chips. Choosing one pins it and replans the downstream unpinned slots, because Leftovers and Overlap may change.
 
 ## 8. Cooked and Leftovers
 
@@ -231,3 +238,4 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 19. The Google sign-in redirect URI is `<FEEDER_BASE_URL>/auth/google/callback` (§2).
 20. (2026-11-10) The per-User optional secondary colour is removed: a User's palette is derived from the accent alone. The Preferences API ignores a `secondary` field sent by an old client and never returns it, and the stored column is dropped (§14).
 21. (2026-11-10) A bought Product cannot be deleted but can be archived and unarchived; archived Products are left out of lists and pickers, unknown to Scans, never suggested as last bought, and keep their history and barcodes (a new Product cannot claim them: unarchive the owner) (§5).
+22. (2026-11-10) Slot Rule reservation: the planner keeps a Slot Rule's Recipe for its slot and does not place it on earlier slots where its Cool-down would block the rule's slot ("Friday dinner = pizza" never lands on Tuesday). It applies to a Recipe rule, and to a Tag rule when exactly one eligible Recipe carries the Tag; the window is the Recipe's Cool-down, and it also replans unpinned Planned Meals inside it. Pinned always wins, and the rule slot then shows its usual couldn't-plan reason. Swap does not offer the reserved Recipe on those earlier slots (§7.2, §7.3).

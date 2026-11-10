@@ -576,6 +576,18 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	sc.Step(`^no alternative is the Recipe "([^"]*)"$`, func(name string) error {
+		v, err := planJSON(w.Last.Body, "alternatives")
+		if err != nil {
+			return err
+		}
+		for _, a := range v.([]any) {
+			if a.(map[string]any)["recipeName"] == name {
+				return fmt.Errorf("%q is offered as an alternative although it is reserved for a Slot Rule", name)
+			}
+		}
+		return nil
+	})
 	sc.Step(`^every alternative has at least one why chip with a code$`, func() error {
 		v, _ := planJSON(w.Last.Body, "alternatives")
 		for _, a := range v.([]any) {
