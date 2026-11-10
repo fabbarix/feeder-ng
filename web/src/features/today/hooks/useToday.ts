@@ -6,6 +6,8 @@ import type { AdvanceStepDue, TodayLayout } from '../types'
 
 export interface UseToday {
   layout: TodayLayout
+  /** Household date, YYYY-MM-DD ('' until the plan has loaded). */
+  today: string
   loading: boolean
 }
 
@@ -31,7 +33,7 @@ export function useToday(): UseToday {
     useSoon: stock.useSoon.length,
     streakDays: streak.days,
   })
-  return { layout, loading: plan.loading || stock.loading || steps.loading || streak.loading }
+  return { layout, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading }
 }
 
 export interface AdvanceStepsState {

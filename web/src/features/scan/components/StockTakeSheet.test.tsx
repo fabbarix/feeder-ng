@@ -16,17 +16,23 @@ describe('StockTakeSheet', () => {
     expect(screen.getByText('In Stock now: 1400 g')).toBeInTheDocument()
   })
 
-  it('adds or removes one pack at once', async () => {
+  it('adds or removes one pack at once, with icons on the buttons', async () => {
     const onAction = setup()
-    await userEvent.click(screen.getByRole('button', { name: '+1 pack' }))
-    await userEvent.click(screen.getByRole('button', { name: '−1 pack' }))
+    const plus = screen.getByRole('button', { name: '+1 pack' })
+    const minus = screen.getByRole('button', { name: '−1 pack' })
+    expect(plus.querySelector('svg')).not.toBeNull()
+    expect(minus.querySelector('svg')).not.toBeNull()
+    await userEvent.click(plus)
+    await userEvent.click(minus)
     expect(onAction.mock.calls).toEqual([['plus_pack'], ['minus_pack']])
   })
 
-  it('sets the total', async () => {
+  it('sets the total with a NumberField', async () => {
     const onAction = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Set total' }))
-    await userEvent.type(screen.getByLabelText('New total'), '1500')
+    const field = screen.getByRole('spinbutton', { name: 'New total' })
+    expect(field).not.toHaveAttribute('type', 'number')
+    await userEvent.type(field, '1500')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onAction).toHaveBeenCalledWith('set_total', 1500)
   })
@@ -34,19 +40,20 @@ describe('StockTakeSheet', () => {
   it('accepts a total of zero', async () => {
     const onAction = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Set total' }))
-    await userEvent.type(screen.getByLabelText('New total'), '0')
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'New total' }), '0')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onAction).toHaveBeenCalledWith('set_total', 0)
   })
 
-  it('refuses a negative or empty total', async () => {
+  it('refuses an empty total, and the field never holds a negative one', async () => {
     const onAction = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Set total' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByText('Enter an amount')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('New total'), '-5')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByText('The amount cannot be negative')).toBeInTheDocument()
+    const field = screen.getByRole('spinbutton', { name: 'New total' })
+    await userEvent.type(field, '-5')
+    await userEvent.tab()
+    expect(field).toHaveValue('0')
     expect(onAction).not.toHaveBeenCalled()
   })
 })

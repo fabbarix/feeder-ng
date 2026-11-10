@@ -1,22 +1,24 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { RangePicker } from './RangePicker'
 
-describe('RangePicker', () => {
-  it('has a chip for every day up to the horizon, with the current range selected', () => {
-    render(<RangePicker today="2026-11-09" maxTo="2026-11-15" to="2026-11-12" onChange={() => {}} />)
-    const group = screen.getByRole('group', { name: 'Shop for' })
-    expect(group.querySelectorAll('button')).toHaveLength(7)
-    expect(screen.getByRole('button', { name: 'Thu 12' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Tomorrow' })).toBeInTheDocument()
+describe('RangePicker (a Select, not seven chips)', () => {
+  it('is one combobox named "Shop for" that shows the range in use', () => {
+    const { container } = render(<RangePicker today="2026-11-09" maxTo="2026-11-15" to="2026-11-12" onChange={() => {}} />)
+    const trigger = screen.getByRole('combobox', { name: /Shop for/ })
+    expect(trigger).toHaveTextContent('Until Thu 12')
+    expect(container.querySelectorAll('.chip')).toHaveLength(0)
   })
 
-  it('chooses another last date', async () => {
+  it('lists a day per option up to the horizon and chooses another last date', async () => {
     const onChange = vi.fn()
     render(<RangePicker today="2026-11-09" maxTo="2026-11-15" to="2026-11-15" onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Tomorrow' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /Shop for/ }))
+    const list = screen.getByRole('listbox')
+    expect(within(list).getAllByRole('option')).toHaveLength(7)
+    expect(within(list).getByRole('option', { name: 'Today' })).toBeInTheDocument()
+    await userEvent.click(within(list).getByRole('option', { name: 'Until tomorrow' }))
     expect(onChange).toHaveBeenCalledWith('2026-11-10')
   })
 })

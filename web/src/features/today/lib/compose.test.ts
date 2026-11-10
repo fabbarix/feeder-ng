@@ -38,19 +38,23 @@ describe('composeToday', () => {
     expect(composeToday({ ...quiet, scanSessionActive: true })).toEqual({ mode: 'shopping' })
   })
 
-  it('orders tiles by urgency and sizes them', () => {
+  it('orders tiles by the Today hierarchy: the hero first, housekeeping last', () => {
     const { tiles, empty } = tilesOf(busy)
     expect(empty).toBe(false)
     expect(tiles).toEqual([
-      { id: 'nextMeal', size: 'lg', tone: 'accent' },
-      { id: 'spoiled', size: 'full', tone: 'spoil' },
-      { id: 'advanceSteps', size: 'wide', tone: 'neutral' },
-      { id: 'toConfirm', size: 'md', tone: 'neutral' },
-      { id: 'couldntPlan', size: 'wide', tone: 'neutral' },
-      { id: 'leftovers', size: 'md', tone: 'leftover' },
-      { id: 'useSoon', size: 'md', tone: 'spoil' },
-      { id: 'streak', size: 'sm', tone: 'accent' },
+      { id: 'nextMeal' },
+      { id: 'toConfirm' },
+      { id: 'advanceSteps' },
+      { id: 'leftovers' },
+      { id: 'useSoon' },
+      { id: 'streak' },
+      { id: 'spoiled' },
+      { id: 'couldntPlan' },
     ])
+  })
+
+  it("tonight's dinner is first even when there is a lot of housekeeping", () => {
+    expect(tilesOf({ ...busy, spoiled: 9, toConfirm: 3 }).tiles[0]).toEqual({ id: 'nextMeal' })
   })
 
   it('drops tiles that have nothing to show', () => {
@@ -74,7 +78,7 @@ describe('composeToday', () => {
     expect(tilesOf({ ...quiet, advanceSteps: 1 }).empty).toBe(false)
   })
 
-  it('puts spoiled lots first when there is no next meal', () => {
-    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['spoiled', 'leftovers'])
+  it('without a next meal the rest keeps its order, spoiled lots after the half tiles', () => {
+    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
   })
 })

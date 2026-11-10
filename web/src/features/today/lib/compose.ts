@@ -1,26 +1,25 @@
-import type { TodayData, TodayLayout, TileSpec } from '../types'
+import type { TileId, TodayData, TodayLayout } from '../types'
 
 /**
- * Decides what Today shows. While a scan session is active it is the Shopping List.
- * Otherwise tiles with something to show, in this order and size: next Planned Meal
- * (lg, accent), spoiled "Throw out or keep?" (full, spoil), Advance Steps (wide),
- * To confirm (md), couldn't-plan notice (wide), Leftovers (md, leftover), use-soon
- * (md, spoil), zero-waste streak (sm, only from one day on). `empty` is true when no
- * tile other than the streak would show.
+ * Decides what Today shows. While a scan session is active it is the Shopping List. Otherwise the tiles with
+ * something to show, in the hierarchy of ui-fix-plan 5.1: nextMeal (the hero, first), toConfirm, advanceSteps,
+ * leftovers, useSoon, streak (only from one day on), spoiled ("Throw out or keep?"), couldntPlan. `empty` is true
+ * when no tile other than the streak would show.
  */
 export function composeToday(d: TodayData): TodayLayout {
   if (d.scanSessionActive) return { mode: 'shopping' }
-  const tiles: TileSpec[] = []
-  const add = (id: TileSpec['id'], show: boolean, size: TileSpec['size'], tone: TileSpec['tone']) => {
-    if (show) tiles.push({ id, size, tone })
+  const ids: TileId[] = []
+  if (d.hasNextMeal) ids.push('nextMeal')
+  if (d.toConfirm > 0) ids.push('toConfirm')
+  if (d.advanceSteps > 0) ids.push('advanceSteps')
+  if (d.leftovers > 0) ids.push('leftovers')
+  if (d.useSoon > 0) ids.push('useSoon')
+  if (d.streakDays >= 1) ids.push('streak')
+  if (d.spoiled > 0) ids.push('spoiled')
+  if (d.couldntPlan > 0) ids.push('couldntPlan')
+  return {
+    mode: 'today',
+    tiles: ids.map((id) => ({ id })),
+    empty: ids.every((id) => id === 'streak'),
   }
-  add('nextMeal', d.hasNextMeal, 'lg', 'accent')
-  add('spoiled', d.spoiled > 0, 'full', 'spoil')
-  add('advanceSteps', d.advanceSteps > 0, 'wide', 'neutral')
-  add('toConfirm', d.toConfirm > 0, 'md', 'neutral')
-  add('couldntPlan', d.couldntPlan > 0, 'wide', 'neutral')
-  add('leftovers', d.leftovers > 0, 'md', 'leftover')
-  add('useSoon', d.useSoon > 0, 'md', 'spoil')
-  add('streak', d.streakDays > 0, 'sm', 'accent')
-  return { mode: 'today', tiles, empty: tiles.every((t) => t.id === 'streak') }
 }

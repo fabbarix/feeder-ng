@@ -48,6 +48,11 @@ type mealOut struct {
 	Pinned             bool               `json:"pinned"`
 	ServedFromLeftover *leftoverSourceOut `json:"servedFromLeftover"`
 	Why                []whyOut           `json:"why"`
+	// Optional, additive (WP6): the Recipe's total time in minutes, the "HH:MM" to start cooking by (slot time less the
+	// total time, household zone; slot views only) and the Recipe photo. Omitted when unknown.
+	CookMinutes int    `json:"cookMinutes,omitempty"`
+	StartBy     string `json:"startBy,omitempty"`
+	PhotoURL    string `json:"photoUrl,omitempty"`
 }
 
 type eliminationsOut struct {
@@ -68,6 +73,9 @@ type attendeeOut struct {
 	MemberID int64   `json:"memberId"`
 	Name     string  `json:"name"`
 	Factor   float64 `json:"factor"`
+	// Optional, additive (WP6): the Member as an Avatar: id, name and colour (#rrggbb).
+	ID     int64  `json:"id"`
+	Colour string `json:"colour"`
 }
 
 type ruleOut struct {
@@ -138,6 +146,8 @@ type alternativeOut struct {
 	NewLeftoverUseBy    string   `json:"newLeftoverUseBy"`
 	Score               float64  `json:"score"`
 	Why                 []whyOut `json:"why"`
+	// Optional, additive (WP6): the Recipe photo.
+	PhotoURL string `json:"photoUrl,omitempty"`
 }
 
 type varietyOut struct {
@@ -164,7 +174,12 @@ func mealFor(m plan.Meal, t table) *mealOut {
 	out := &mealOut{
 		Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, RecipeID: m.RecipeID, RecipeName: t.recipes[m.RecipeID],
 		Batches: m.Batches, Portions: m.Portions, State: string(m.State), Pinned: m.Pinned,
-		Why: whyFor(m.Why, t),
+		Why:      whyFor(m.Why, t),
+		PhotoURL: t.recipePhoto[m.RecipeID],
+	}
+	// A meal served from a Leftover is already cooked: no cook time, so no startBy either (slotFor).
+	if m.From == nil {
+		out.CookMinutes = t.recipeMinutes[m.RecipeID]
 	}
 	if m.From != nil {
 		src := &leftoverSourceOut{Date: m.From.From.Date, MealSlotID: m.From.From.MealSlotID, RecipeName: t.recipes[m.RecipeID]}
@@ -195,15 +210,24 @@ func slotFor(s runner.SlotView, t table) slotOut {
 		At: s.At.Format(time.RFC3339), Portions: s.Portions, Attendance: []attendeeOut{}, Rules: rulesFor(s.Rules, t),
 	}
 	for _, a := range s.Attendance {
-		out.Attendance = append(out.Attendance, attendeeOut{MemberID: a.MemberID, Name: t.members[a.MemberID], Factor: a.Factor})
+		out.Attendance = append(out.Attendance, attendeeOut{MemberID: a.MemberID, Name: t.members[a.MemberID], Factor: a.Factor,
+			ID: a.MemberID, Colour: t.memberColour[a.MemberID]})
 	}
 	if s.Meal != nil {
 		out.Meal = mealFor(*s.Meal, t)
+		out.Meal.StartBy = plan.StartBy(s.At, out.Meal.CookMinutes)
 	}
 	if s.Unfilled != nil {
 		out.Unfilled = unfilledFor(*s.Unfilled)
 	}
 	return out
+}
+
+// alternativeFor is one alternative of the Swap sheet.
+func alternativeFor(alt runner.Alternative, t table) alternativeOut {
+	return alternativeOut{RecipeID: alt.RecipeID, RecipeName: t.recipes[alt.RecipeID], Batches: alt.Batches,
+		NewLeftoverPortions: alt.NewLeftoverPortions, NewLeftoverUseBy: alt.NewLeftoverUseBy, Score: alt.Score,
+		Why: whyFor(alt.Why, t), PhotoURL: t.recipePhoto[alt.RecipeID]}
 }
 
 func unfilledFor(u plan.Unfilled) *unfilledOut {

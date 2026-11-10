@@ -22,10 +22,10 @@ describe('packText', () => {
 })
 
 describe('priceText', () => {
-  it('formats money in the household currency, and shows a dash without a Price', () => {
+  it('formats money in the household currency, and is null (never a dash) without a Price', () => {
     expect(priceText(318, 'USD')).toBe('$3.18')
     expect(priceText(318, 'EUR')).toBe('€3.18')
-    expect(priceText(null, 'USD')).toBe('—')
+    expect(priceText(null, 'USD')).toBeNull()
   })
 })
 
@@ -38,6 +38,8 @@ describe('lineEntry / extraEntry', () => {
       extraId: null,
       title: 'Passata',
       detail: '1400 g · 2 × Mutti 700 g',
+      quantityText: '1400 g',
+      packLine: '2 × Mutti 700 g',
       estimatedCost: '$3.18',
       ticked: false,
       quantity: 1400,
@@ -45,17 +47,20 @@ describe('lineEntry / extraEntry', () => {
     })
   })
 
-  it('an unpriced open Line has a dash, a ticked Line shows no cost', () => {
-    expect(lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric').estimatedCost).toBe('—')
-    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0 })
+  it('an unpriced open Line has no cost (null, not a dash), a ticked Line shows no cost or pack', () => {
+    expect(lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric').estimatedCost).toBeNull()
+    expect(lineEntry(makeLine({ pack: null }), 'USD', 'metric')).toMatchObject({ quantityText: '1400 g', packLine: '' })
+    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0, quantityText: '', packLine: '' })
   })
 
   it('a free-text extra has no amount and an Ingredient extra shows what remains', () => {
-    expect(extraEntry(makeExtra(), 'metric')).toMatchObject({ key: 'extra:1', kind: 'extra', extraId: 1, ingredientId: null, title: 'toilet paper', detail: '', estimatedCost: null, quantity: 0, baseUnit: null })
+    expect(extraEntry(makeExtra(), 'metric')).toMatchObject({ key: 'extra:1', kind: 'extra', extraId: 1, ingredientId: null, title: 'toilet paper', detail: '', quantityText: '', packLine: '', estimatedCost: null, quantity: 0, baseUnit: null })
     expect(extraEntry(makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 }), 'metric')).toMatchObject({
       key: 'extra:2',
       title: 'milk',
       detail: '2000 ml',
+      quantityText: '2000 ml',
+      packLine: '',
       quantity: 2000,
       ingredientId: 3,
       baseUnit: 'ml',

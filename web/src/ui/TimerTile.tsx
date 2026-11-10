@@ -9,10 +9,12 @@ export interface TimerTileProps {
   running?: boolean
   /** Length the timer started with; when given a progress bar (aria-hidden) shows the elapsed share. */
   totalSeconds?: number
-  /** Controls, each an IconButton, rendered only when its handler is given: pause/resume, +1 min, dismiss. */
+  /** Controls, each an IconButton named after the timer (e.g. "Pause Rice"), rendered only when its handler is given. */
   onToggle?: () => void
   onAddMinute?: () => void
   onDismiss?: () => void
+  /** WP3b: a separate "Cancel <label>" control (stop a timer still going); Dismiss clears a finished one. */
+  onCancel?: () => void
   /** @deprecated use the controls above; kept for unmigrated screens (a clickable tile, role button). */
   onClick?: () => void
 }
@@ -27,13 +29,13 @@ function stateOf(seconds: number, running: boolean): TimerState {
 }
 
 /** A cook timer, announced as a timer (docs/design/ui-fix-plan.md 4.12). */
-export function TimerTile({ label, seconds, running = false, totalSeconds, onToggle, onAddMinute, onDismiss, onClick }: TimerTileProps) {
+export function TimerTile({ label, seconds, running = false, totalSeconds, onToggle, onAddMinute, onDismiss, onCancel, onClick }: TimerTileProps) {
   const state = stateOf(seconds, running)
   const variant = state === 'running' ? 'soft' : state === 'paused' ? 'surface' : 'status'
   const status = state === 'finished' ? 'success' : state === 'overdue' ? 'spoil' : undefined
   const display = seconds < 0 ? `+${formatTimer(-seconds)}` : formatTimer(seconds)
   const share = totalSeconds && totalSeconds > 0 ? Math.min(Math.max((totalSeconds - seconds) / totalSeconds, 0), 1) : 0
-  const hasControls = Boolean(onToggle || onAddMinute || onDismiss)
+  const hasControls = Boolean(onToggle || onAddMinute || onDismiss || onCancel)
   const overlineIcon = state === 'paused' ? 'pause' : state === 'finished' ? 'notifications' : undefined
 
   return (
@@ -44,7 +46,7 @@ export function TimerTile({ label, seconds, running = false, totalSeconds, onTog
       role={onClick ? undefined : 'timer'}
       aria-label={label}
       data-state={state}
-      overline={label}
+      overline={<span className="timer-tile__label">{label}</span>}
       overlineIcon={overlineIcon}
       onClick={onClick}
     >
@@ -57,10 +59,16 @@ export function TimerTile({ label, seconds, running = false, totalSeconds, onTog
       {hasControls ? (
         <div className="timer-tile__controls">
           {onToggle ? (
-            <IconButton size="compact" icon={running ? 'pause' : 'resume'} label={running ? 'Pause' : 'Resume'} onClick={onToggle} />
+            <IconButton
+              size="compact"
+              icon={running ? 'pause' : 'resume'}
+              label={`${running ? 'Pause' : 'Resume'} ${label}`}
+              onClick={onToggle}
+            />
           ) : null}
-          {onAddMinute ? <IconButton size="compact" icon="addMinute" label="Add a minute" onClick={onAddMinute} /> : null}
-          {onDismiss ? <IconButton size="compact" icon="close" label="Dismiss timer" onClick={onDismiss} /> : null}
+          {onAddMinute ? <IconButton size="compact" icon="addMinute" label={`Add a minute to ${label}`} onClick={onAddMinute} /> : null}
+          {onCancel ? <IconButton size="compact" icon="close" label={`Cancel ${label}`} onClick={onCancel} /> : null}
+          {onDismiss ? <IconButton size="compact" icon="close" label={`Dismiss ${label}`} onClick={onDismiss} /> : null}
         </div>
       ) : null}
     </Tile>

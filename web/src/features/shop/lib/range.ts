@@ -52,3 +52,15 @@ export function describeRange(to: string, today: string): string {
   if (label === 'Tomorrow') return 'Until tomorrow'
   return `Until ${label}`
 }
+
+export interface RangeOption {
+  /** YYYY-MM-DD, the last day of the range */
+  value: string
+  /** describeRange: "Today", "Until tomorrow", "Until Thu 12" (the Select shows it) */
+  label: string
+}
+
+/** The options of the "Shop for" Select: rangeChoices(today, maxTo), each labelled by describeRange. */
+export function rangeOptions(today: string, maxTo: string): RangeOption[] {
+  return rangeChoices(today, maxTo).map((choice) => ({ value: choice.to, label: describeRange(choice.to, today) }))
+}

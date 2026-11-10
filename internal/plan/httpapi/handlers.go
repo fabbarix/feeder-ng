@@ -175,9 +175,7 @@ func (a *api) alternatives(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]alternativeOut, 0, len(alts))
 	for _, alt := range alts {
-		out = append(out, alternativeOut{RecipeID: alt.RecipeID, RecipeName: t.recipes[alt.RecipeID], Batches: alt.Batches,
-			NewLeftoverPortions: alt.NewLeftoverPortions, NewLeftoverUseBy: alt.NewLeftoverUseBy, Score: alt.Score,
-			Why: whyFor(alt.Why, t)})
+		out = append(out, alternativeFor(alt, t))
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"alternatives": out})
 }

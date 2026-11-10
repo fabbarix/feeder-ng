@@ -30,6 +30,16 @@ func HorizonDates(today string, days int) []string {
 	return out
 }
 
+// StartBy is the household "HH:MM" by which cooking must start for the slot at `at` to be on time: the slot
+// instant less the Recipe's total time, read in the instant's own zone (the household zone for slot instants). It
+// returns "" when the time is not known (cookMinutes <= 0).
+func StartBy(at time.Time, cookMinutes int) string {
+	if cookMinutes <= 0 {
+		return ""
+	}
+	return at.Add(-time.Duration(cookMinutes) * time.Minute).Format("15:04")
+}
+
 // SlotInstant is the instant of date plus hhmm in zone. ErrBadTime for a malformed time.
 func SlotInstant(date, hhmm string, zone *time.Location) (time.Time, error) {
 	if _, err := parseHHMM(hhmm); err != nil {

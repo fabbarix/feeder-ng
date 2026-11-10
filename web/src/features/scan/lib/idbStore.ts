@@ -6,6 +6,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { OpStore, QueuedOp } from './queue'
 import { createMemoryOpStore } from './queue'
 import { createMemorySnapshotStore, type SnapshotStore } from './snapshots'
+import { withChangeEvents } from './queueEvents'
 
 export interface Stores {
   ops: OpStore
@@ -106,9 +107,9 @@ export function appSnapshots(): SnapshotStore {
   }
 }
 
-/** The app's operation queue store (IndexedDB, memory when unavailable). */
+/** The app's operation queue store (IndexedDB, memory when unavailable), wrapped so every change is announced (queueEvents). */
 export function appOpStore(): OpStore {
-  return {
+  return withChangeEvents({
     async append(entry) {
       await (await sharedStores()).ops.append(entry)
     },
@@ -121,5 +122,5 @@ export function appOpStore(): OpStore {
     async remove(clientUuid) {
       await (await sharedStores()).ops.remove(clientUuid)
     },
-  }
+  })
 }

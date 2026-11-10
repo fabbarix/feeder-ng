@@ -1,0 +1,160 @@
+/* The Scan screen (WP7, ui-fix-plan 5.6). Tokens only: no colours here, no hex. */
+
+.scan-screen {
+  display: grid;
+  gap: var(--bento-gap);
+}
+
+.scan-screen__banner {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.scan-screen__banner[data-tone='warn'] {
+  color: var(--status-danger-fg);
+}
+
+.scan-feedback {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--tile-pad);
+  border-radius: var(--radius-tile);
+  background: var(--color-soft);
+}
+
+.scan-feedback__text {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-strong-size);
+  font-weight: 700;
+  line-height: var(--text-body-strong-line);
+}
+
+.scan-feedback__queued {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.scan-feedback__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scan-notices {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.scan-notices p {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.scan-notices__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.scan-notices__offline,
+.scan-notices__queued {
+  color: var(--color-muted);
+}
+
+.camera-failure {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.live-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.live-list__count {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  font-weight: 800;
+  line-height: var(--text-title-3-line);
+}
+
+.live-list__entries {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-list__entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.live-list__entry[data-state='ticked'] {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.live-list__title {
+  font-weight: 700;
+}
+
+.live-list__detail {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+}
+
+.shop-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.shop-picker__title {
+  margin: 0;
+  font-size: var(--text-title-1-size);
+  font-weight: var(--text-title-1-weight);
+  line-height: var(--text-title-1-line);
+}
+
+.shop-picker__hint,
+.shop-picker__empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.stock-take__pack {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.stock-take__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The sheet forms (ManualBarcodeEntry, UnknownBarcodeSheet): one column, the fields and buttons spaced by the gap token. */
+.scan-sheet-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.unknown-sheet__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}

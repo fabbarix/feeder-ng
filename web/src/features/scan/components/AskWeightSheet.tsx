@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
-import { parseAmount } from '../../stock/lib/amount'
+import { NumberField } from '../../../ui/fields/NumberField'
 import { scanStrings } from '../strings'
 
 export interface AskWeightSheetProps {
@@ -16,17 +16,16 @@ export interface AskWeightSheetProps {
 
 /** "How much does it weigh?": asked once for a price-valued code, so the price per kg can be worked out. */
 export function AskWeightSheet({ open, onClose, productName, priceText, onSubmit }: AskWeightSheetProps) {
-  const [text, setText] = useState('')
+  const [grams, setGrams] = useState<number | null>(null)
   const [error, setError] = useState(false)
 
   const submit = () => {
-    const parsed = parseAmount(text, 'positive')
-    if (!parsed.ok) {
+    if (grams === null || grams <= 0) {
       setError(true)
       return
     }
     setError(false)
-    onSubmit(parsed.value)
+    onSubmit(grams)
   }
 
   return (
@@ -39,13 +38,7 @@ export function AskWeightSheet({ open, onClose, productName, priceText, onSubmit
           submit()
         }}
       >
-        <div className="field">
-          <label className="field__label" htmlFor="ask-weight-field">
-            {scanStrings.weight}
-          </label>
-          <input id="ask-weight-field" className="field__input" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
-        </div>
-        {error ? <p className="field__error" role="alert">{scanStrings.mustBePositive}</p> : null}
+        <NumberField label={scanStrings.weight} value={grams} onChange={setGrams} min={0} error={error ? scanStrings.mustBePositive : undefined} />
         <Button type="submit">{scanStrings.save}</Button>
       </form>
     </BottomSheet>

@@ -34,18 +34,16 @@ export function phraseWhy(why: Why, ctx: PhraseContext): string {
     }
     case 'perishable_use':
       return why.date
-        ? s.whyGoesOff(why.ingredient ?? s.whyUnnamedIngredient, weekdayName(why.date, 'short'))
+        ? s.whyUsesBefore(why.ingredient ?? s.whyUnnamedIngredientShort, weekdayName(why.date, 'short'))
         : s.whyUsesUp(why.ingredient ?? s.whyUnnamedIngredientShort)
     case 'slot_rule':
       return s.whySlotRule(weekdayName(ctx.slotDate))
     case 'leftover':
       return why.date ? s.whyLeftoverFrom(weekdayName(why.date, 'short')) : s.whyLeftover
     case 'stock_coverage':
-      return s.whyInStock
+      return why.ingredient ? s.whyStock(why.ingredient) : s.whyStockAny
     case 'leftover_fits':
-      return why.date ? s.whyLeftoversFor(weekdayName(why.date, 'short')) : s.whyLeftoversToCome
-    case 'best_available':
-      return s.whyBestAvailable
+      return why.date ? s.whyLeftoverFor(weekdayName(why.date, 'short')) : s.whyLeftoversToCome
     default:
       return ''
   }

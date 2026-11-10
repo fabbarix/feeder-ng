@@ -6,6 +6,8 @@ import { ScanScreen } from './screens/ScanScreen'
 export const routes: RouteObject[] = [{ path: '/scan', element: createElement(ScanScreen) }]
 
 export { useScanSession, useScanSessionActive } from './hooks/useScanSessionActive'
+// The shell's status banner calls this on every screen (docs/dev/design/wp5-shell.md).
+export { useShellStatus } from './hooks/useShellStatus'
 
 import { registerServiceWorker } from './registerSw'
 

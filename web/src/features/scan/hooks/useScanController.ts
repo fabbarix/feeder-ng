@@ -6,7 +6,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useShoppingList } from '../../shop/hooks/useShoppingList'
+import { liveRefreshFor } from '../../shop/lib/liveRefresh'
 import type { ShoppingList } from '../../shop/types'
+import { useToast } from '../../../ui/Toast'
 import { useIngredientChoices } from '../../stock/hooks/useIngredientChoices'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import type { UnitSystem } from '../../../lib/units'
@@ -26,8 +28,6 @@ import { useCameraRecovery, type CameraRecovery } from './useCameraRecovery'
 import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
 import { useSyncQueue } from './useSyncQueue'
-
-
 
 export interface ScanControllerOptions {
   mode: 'shop' | 'stocktake'
@@ -73,6 +73,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const { mode } = options
   const shopId = options.shop?.id ?? null
   const queryClient = useQueryClient()
+  const toast = useToast()
   const offline = useOfflineData(shopId)
   const currency = useCurrency()
   const system = useDisplayUnitSystem()
@@ -122,7 +123,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
       if (found.length > 0) setNotices((prev) => [...prev, ...found])
       // A Product created (or merged into one) by this batch: the cached offline data must learn its barcode.
       if (shouldRefreshOfflineData(results)) void queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] })
-      void queryClient.invalidateQueries({ queryKey: ['shopping'] })
+      liveRefreshFor(queryClient).request()
       void queryClient.invalidateQueries({ queryKey: ['stock'] })
     },
   })
@@ -138,8 +139,18 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const cancelQueued = (clientUuid: string): Promise<boolean> => sync.cancel(clientUuid)
 
   const refreshLive = () => {
-    void queryClient.invalidateQueries({ queryKey: ['shopping'] })
+    liveRefreshFor(queryClient).request()
     void queryClient.invalidateQueries({ queryKey: ['stock'] })
+  }
+
+  /** R8: the Product is unarchived on the server; the Catalog and the offline data learn it at once. */
+  const unarchive = async (productId: number): Promise<void> => {
+    await scanApi.unarchiveProduct(productId)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['products'] }),
+      queryClient.invalidateQueries({ queryKey: ['catalog'] }),
+      queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] }),
+    ])
   }
 
   const flow = useScanFlow({
@@ -161,6 +172,10 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
       refreshLive()
     },
     feedback,
+    notify: (message, status) => toast.show(message, { status }),
+    findArchived: (code, shopId) => scanApi.findArchived(code, shopId),
+    fetchProduct: (id) => scanApi.product(id),
+    unarchive,
   })
   flowRef.current = flow
 

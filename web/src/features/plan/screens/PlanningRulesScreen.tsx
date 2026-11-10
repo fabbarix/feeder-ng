@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Tile } from '../../../ui'
+import { PageHeader, Tile } from '../../../ui'
 import { SlotRulesEditor, VarietyRulesEditor } from '../components/RulesEditors'
 import { useSlotRules, useVarietyRules } from '../hooks/useRules'
+import { useTagChoices } from '../hooks/useTagChoices'
 import { planStrings } from '../strings'
 import '../plan.css'
 
@@ -14,6 +15,7 @@ import '../plan.css'
 export function PlanningRulesScreen(): ReactNode {
   const slotRules = useSlotRules()
   const varietyRules = useVarietyRules()
+  const tags = useTagChoices()
   if (slotRules.isLoading || varietyRules.isLoading) {
     return (
       <div className="plan">
@@ -23,22 +25,24 @@ export function PlanningRulesScreen(): ReactNode {
   }
   return (
     <div className="plan">
-      <h1 className="plan__title">{planStrings.rulesTitle}</h1>
-      <Tile as="section" size="full">
+      <PageHeader title={planStrings.rulesTitle} />
+      <Tile as="section" span="full">
         <h2 className="plan__tile-title">{planStrings.slotRulesTitle}</h2>
         <SlotRulesEditor
           rules={slotRules.rules}
           mealSlots={slotRules.mealSlots}
           recipes={slotRules.recipes}
+          tags={tags.tags}
           onAdd={(b) => void slotRules.add(b)}
           onRemove={(id) => void slotRules.remove(id)}
           error={slotRules.error}
         />
       </Tile>
-      <Tile as="section" size="full">
+      <Tile as="section" span="full">
         <h2 className="plan__tile-title">{planStrings.varietyRulesTitle}</h2>
         <VarietyRulesEditor
           rules={varietyRules.rules}
+          tags={tags.tags}
           onSave={(r) => void varietyRules.save(r)}
           onRemove={(t) => void varietyRules.remove(t)}
           error={varietyRules.error}

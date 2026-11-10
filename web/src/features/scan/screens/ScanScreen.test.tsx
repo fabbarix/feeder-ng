@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeExtra, makeLine, makeList } from '../../shop/testData'
 import { scanSession } from '../hooks/useScanSessionActive'
@@ -8,10 +9,11 @@ import type { ScanFlow } from '../hooks/useScanFlow'
 
 const controllerHook = vi.hoisted(() => ({ useScanController: vi.fn() }))
 vi.mock('../hooks/useScanController', () => controllerHook)
+const shopsState = vi.hoisted(() => ({ loading: false }))
 vi.mock('../../shops/hooks/useShops', () => ({
-  useShops: () => ({ shops: [{ id: 1, name: 'Aldi' }, { id: 2, name: 'Coop' }], isLoading: false, error: null, add: vi.fn() }),
+  useShops: () => ({ shops: shopsState.loading ? [] : [{ id: 1, name: 'Aldi' }, { id: 2, name: 'Coop' }], isLoading: shopsState.loading, error: null, add: vi.fn() }),
 }))
-const lastShop = vi.hoisted(() => ({ getLastShopId: vi.fn(() => 2), setLastShopId: vi.fn(), LAST_SHOP_KEY: 'x' }))
+const lastShop = vi.hoisted(() => ({ getLastShopId: vi.fn((): number | null => 2), setLastShopId: vi.fn(), LAST_SHOP_KEY: 'x' }))
 vi.mock('../lib/lastShop', () => lastShop)
 
 import { ScanScreen } from './ScanScreen'
@@ -32,6 +34,9 @@ function flow(over: Partial<ScanFlow> = {}): ScanFlow {
     dismissFeedback: vi.fn(),
     closeSheet: vi.fn(),
     applySyncResults: vi.fn(),
+    unarchiveProduct: vi.fn(),
+    unarchiving: false,
+    createNewInstead: vi.fn(),
     ...over,
   }
 }
@@ -60,32 +65,67 @@ function controller(over: Partial<ScanController> = {}): ScanController {
   }
 }
 
-function open(c: ScanController) {
-  controllerHook.useScanController.mockReturnValue(c)
-  return render(<ScanScreen />)
+/** Stands in for a link elsewhere in the app: a client-side navigation while ScanScreen stays mounted. */
+function Go({ to }: { to: string }) {
+  const navigate = useNavigate()
+  return <button onClick={() => navigate(to)}>go {to}</button>
 }
 
+function open(c: ScanController, entry = '/scan') {
+  controllerHook.useScanController.mockReturnValue(c)
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Go to="/scan?mode=stocktake" />
+      <ScanScreen />
+    </MemoryRouter>,
+  )
+}
+
+/** QA: with a last-used Shop the picker is skipped, the session starts at once. */
 async function startShopping(c = controller()) {
+  return open(c)
+}
+
+/** With no last-used Shop the picker asks; "Coop" is then chosen by hand. */
+async function pickCoop(c = controller()) {
+  lastShop.getLastShopId.mockReturnValue(null)
   const view = open(c)
-  await userEvent.click(screen.getByRole('button', { name: 'Coop (last used)' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Coop' }))
   return view
 }
 
 beforeEach(() => {
   controllerHook.useScanController.mockReset()
   lastShop.setLastShopId.mockClear()
+  lastShop.getLastShopId.mockReturnValue(2)
+  shopsState.loading = false
 })
 
 describe('ScanScreen', () => {
-  it('starts by asking where you are shopping, with the last Shop first', () => {
+  it('QA: a last-used Shop skips the picker and starts the session, under a header naming the Shop', async () => {
+    await startShopping()
+    expect(screen.queryByText('Where are you shopping?')).toBeNull()
+    expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'shop', shop: { id: 2, name: 'Coop' } })
+    expect(screen.getByRole('heading', { level: 1, name: 'Coop' })).toBeInTheDocument()
+    expect(scanSession.isActive()).toBe(true)
+  })
+
+  it('without a last-used Shop it asks where you are shopping, Stock-take at home last', () => {
+    lastShop.getLastShopId.mockReturnValue(null)
     open(controller())
-    expect(screen.getByText('Where are you shopping?')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Coop (last used)' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Aldi' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Stock-take at home/ })).toBeInTheDocument()
+  })
+
+  it('a last-used Shop that was deleted asks as well', () => {
+    lastShop.getLastShopId.mockReturnValue(99)
+    open(controller())
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
   })
 
   it('picking a Shop remembers it, shows the viewfinder strip above the live list and marks a session active', async () => {
-    await startShopping()
+    await pickCoop()
     expect(lastShop.setLastShopId).toHaveBeenCalledWith(expect.anything(), 2)
     expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'shop', shop: { id: 2, name: 'Coop' } })
     const strip = screen.getByRole('region', { name: 'Scanner' })
@@ -117,8 +157,9 @@ describe('ScanScreen', () => {
   })
 
   it('Stock-take has the camera but no list and no session', async () => {
+    lastShop.getLastShopId.mockReturnValue(null)
     const view = open(controller({ list: undefined }))
-    await userEvent.click(screen.getByRole('button', { name: 'Stock-take at home' }))
+    await userEvent.click(screen.getByRole('button', { name: /Stock-take at home/ }))
     expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
     expect(screen.getByRole('region', { name: 'Scanner' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Shopping List' })).toBeNull()
@@ -159,8 +200,9 @@ describe('ScanScreen', () => {
       paused: true,
       sheet: { kind: 'stock_take', product: { id: 7, name: 'Mutti passata 700 g', ingredientId: 2, ingredientName: 'Passata', baseUnit: 'g', packSize: 700, lastPriceCents: 159 } },
     })
+    lastShop.getLastShopId.mockReturnValue(null)
     open(controller({ flow: f, list: undefined }))
-    await userEvent.click(screen.getByRole('button', { name: 'Stock-take at home' }))
+    await userEvent.click(screen.getByRole('button', { name: /Stock-take at home/ }))
     expect(screen.getByRole('dialog', { name: 'Stock-take: Mutti passata 700 g' })).toBeInTheDocument()
   })
 
@@ -219,9 +261,71 @@ describe('ScanScreen', () => {
     expect(c.toggleMute).toHaveBeenCalledTimes(1)
   })
 
-  it('changing the Shop goes back to the picker', async () => {
+  it('changing the Shop goes back to the picker, even with a last-used Shop', async () => {
     await startShopping()
     await userEvent.click(screen.getByRole('button', { name: 'Change Shop' }))
-    expect(screen.getByText('Where are you shopping?')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
+    expect(scanSession.isActive()).toBe(false)
+  })
+
+  it('QA: Stock-take has a heading and a Back button that returns to the picker', async () => {
+    lastShop.getLastShopId.mockReturnValue(null)
+    open(controller({ list: undefined }))
+    await userEvent.click(screen.getByRole('button', { name: /Stock-take at home/ }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
+  })
+
+  it('B4: the typed-barcode form appears with the recovery state wired to it', async () => {
+    const base = controller()
+    const recovery = { ...base.recovery, failure: { status: 'denied' as const, canRetry: true, message: 'The camera is blocked. Allow it in the browser settings to scan.' }, manualOpen: true, text: '8000500310427' }
+    await startShopping(controller({ camera: { ...base.camera, status: 'denied' }, recovery }))
+    expect(screen.getByRole('textbox', { name: 'Barcode' })).toHaveValue('8000500310427')
+    await userEvent.click(screen.getByRole('button', { name: 'Use this barcode' }))
+    expect(recovery.submit).toHaveBeenCalled()
+  })
+
+  it('R8: an Archived Product that owns the barcode opens the unarchive offer, wired to the flow', async () => {
+    const product = { id: 9, name: 'Old passata 500 g', ingredientId: 2, ingredientName: 'Passata', baseUnit: 'g' as const, packSize: 500, archived: true }
+    const f = flow({ paused: true, sheet: { kind: 'unarchive', product, target: { mode: 'pack', code: '05012345678900' } } })
+    await startShopping(controller({ flow: f }))
+    expect(screen.getByRole('dialog', { name: 'Unarchive Old passata 500 g?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Unarchive Old passata 500 g' }))
+    expect(f.unarchiveProduct).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Create a new Product instead' }))
+    expect(f.createNewInstead).toHaveBeenCalledTimes(1)
+  })
+
+  it('?mode=stocktake (the Stock-take button of the Shopping List) skips the Shop picker into Stock-take', () => {
+    lastShop.getLastShopId.mockReturnValue(2)
+    open(controller({ list: undefined }), '/scan?mode=stocktake')
+    expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
+    expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(scanSession.isActive()).toBe(false)
+  })
+
+  it('?mode=stocktake applied by a client-side navigation while the screen is mounted (useSearchParams)', async () => {
+    lastShop.getLastShopId.mockReturnValue(null)
+    open(controller({ list: undefined }))
+    expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'go /scan?mode=stocktake' }))
+    expect(screen.queryByRole('heading', { name: 'Where are you shopping?' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Stock-take at home' })).toBeInTheDocument()
+    expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
+  })
+
+  it('the Unarchive sheet is busy while the flow is unarchiving', () => {
+    open(controller({ flow: flow({ unarchiving: true, sheet: { kind: 'unarchive', product: { id: 9, name: 'Old passata 500 g', ingredientId: 2, ingredientName: 'Passata', baseUnit: 'g', packSize: 500, archived: true }, target: { mode: 'pack', code: '05012345678900' } } }) }))
+    expect(screen.getByRole('button', { name: 'Create a new Product instead' })).toBeDisabled()
+  })
+
+  it('shows a Skeleton while the Shops load, neither the picker (which would flash) nor a session', async () => {
+    shopsState.loading = true
+    open(controller())
+    expect(await screen.findByText('Loading')).toBeInTheDocument()
+    expect(screen.queryByText('Where are you shopping?')).toBeNull()
+    expect(controllerHook.useScanController).not.toHaveBeenCalled()
   })
 })
