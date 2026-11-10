@@ -1,0 +1,25 @@
+Feeder is installed as release "{{ .Release.Name }}" in namespace {{ .Release.Namespace }}.
+
+Wait for the pod to become ready:
+
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "feeder.fullname" . }}
+
+{{- if .Values.ingress.enabled }}
+
+Open {{ .Values.baseUrl }} in a browser. Admin email: {{ .Values.adminEmail }}.
+{{- else }}
+
+No Ingress is configured. To reach the app from this machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "feeder.fullname" . }} 8080:{{ .Values.service.port }}
+
+Then open http://127.0.0.1:8080. Note that the browser must reach baseUrl ({{ .Values.baseUrl }}) for sign-in and Web Push to work.
+{{- end }}
+
+The Feeder keeps its database on one volume, so the deployment runs exactly one replica and must not be scaled.
+
+Upgrade or change settings with:
+
+  helm upgrade {{ .Release.Name }} oci://ghcr.io/fabbarix/charts/feeder --namespace {{ .Release.Namespace }} --reuse-values
+
+Chart values: deploy/helm/feeder/README.md in https://github.com/fabbarix/feeder-ng.

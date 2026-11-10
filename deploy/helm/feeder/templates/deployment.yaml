@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "feeder.fullname" . }}
+  labels:
+    {{- include "feeder.labels" . | nindent 4 }}
+spec:
+  # SQLite on one volume: exactly one pod, never scaled. Recreate avoids two pods on the volume during upgrades.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "feeder.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "feeder.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "feeder.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: feeder
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: FEEDER_ADMIN_EMAIL
+              value: {{ required "adminEmail is required: the first Admin's email" .Values.adminEmail | quote }}
+            - name: FEEDER_BASE_URL
+              value: {{ required "baseUrl is required: the public https URL" .Values.baseUrl | quote }}
+            {{- range $name, $value := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if eq (include "feeder.googleEnabled" .) "true" }}
+            - name: FEEDER_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "feeder.googleSecretName" . }}
+                  key: {{ .Values.google.clientIdKey }}
+            - name: FEEDER_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "feeder.googleSecretName" . }}
+                  key: {{ .Values.google.clientSecretKey }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            {{- toYaml .Values.probes.startup | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "feeder.claimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

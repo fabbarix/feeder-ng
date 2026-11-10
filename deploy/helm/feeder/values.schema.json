@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Feeder chart values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["adminEmail", "baseUrl"],
+  "$defs": {
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "periodSeconds": { "type": "integer", "minimum": 1 },
+        "failureThreshold": { "type": "integer", "minimum": 1 },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "properties": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "adminEmail": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Email of the first Admin (FEEDER_ADMIN_EMAIL). Required."
+    },
+    "baseUrl": {
+      "type": "string",
+      "pattern": "^https?://[^/\\s]+",
+      "description": "Public https URL, no trailing slash (FEEDER_BASE_URL). Required."
+    },
+    "google": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientSecret": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "clientIdKey": { "type": "string", "minLength": 1 },
+        "clientSecretKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "env": { "$ref": "#/$defs/stringMap" },
+    "extraEnv": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "$ref": "#/$defs/stringMap" },
+        "host": { "type": "string" },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secretName": { "type": "string" }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "size": { "type": "string", "minLength": 1 },
+        "accessModes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["ReadWriteOnce", "ReadWriteOncePod"] }
+        },
+        "annotations": { "$ref": "#/$defs/stringMap" }
+      }
+    },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "resources": { "type": "object" },
+    "nodeSelector": { "$ref": "#/$defs/stringMap" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" },
+    "podAnnotations": { "$ref": "#/$defs/stringMap" },
+    "podLabels": { "$ref": "#/$defs/stringMap" },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "$ref": "#/$defs/stringMap" },
+        "automount": { "type": "boolean" }
+      }
+    },
+    "probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "startup": { "$ref": "#/$defs/probe" },
+        "liveness": { "$ref": "#/$defs/probe" },
+        "readiness": { "$ref": "#/$defs/probe" }
+      }
+    }
+  }
+}
