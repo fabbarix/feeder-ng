@@ -19,6 +19,9 @@ export interface StatusInput {
  * otherwise offline -> 'offline' (even when the fetch failed because of it), error -> 'error',
  * loading -> 'loading'. 'empty' only when data was received and is empty.
  */
-export function resolveStockStatus(_input: StatusInput): StockStatus {
-  throw new Error('not implemented')
+export function resolveStockStatus(input: StatusInput): StockStatus {
+  if (input.hasData) return input.isEmpty ? 'empty' : 'ready'
+  if (input.offline) return 'offline'
+  if (input.error) return 'error'
+  return 'loading'
 }

@@ -1,0 +1,91 @@
+/* Stock feature (WP8). Tokens only: no colour literals, no px font sizes (ui-fix-plan 3.2, 4.4). */
+
+.stock-screen {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.stock-screen__list {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.stock-screen__controls {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.stock-screen__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Spoiled Stock Lots: "Throw out or keep?" (status tile, spoil tokens only). */
+.spoiled-tile__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spoiled-tile__row {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.spoiled-tile__info {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.spoiled-tile__name {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  overflow-wrap: anywhere;
+}
+
+.spoiled-tile__detail {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+}
+
+.spoiled-tile__amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.spoiled-tile__when::before {
+  content: '· ';
+}
+
+.spoiled-tile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Plan's shortfall warning, as this feature's Tile (variant status, spoil). */
+.shortfall-notice__text {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  overflow-wrap: anywhere;
+}
+
+.shortfall-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

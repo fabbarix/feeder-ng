@@ -17,7 +17,8 @@ function setup() {
 /** Opens the IngredientSelect and picks an option by name. */
 async function pickIngredient(name: string) {
   await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient' }))
-  await userEvent.click(await screen.findByRole('option', { name }))
+  // Option names also carry the Base Unit badge, so match the Ingredient name as a part.
+  await userEvent.click(await screen.findByRole('option', { name: new RegExp(name) }))
 }
 
 describe('AddLotSheet', () => {
@@ -55,7 +56,7 @@ describe('AddLotSheet', () => {
     const onSubmit = setup()
     await userEvent.type(screen.getByLabelText('Quantity'), '800')
     await userEvent.click(screen.getByRole('button', { name: /Bought on/ }))
-    await userEvent.click(await screen.findByRole('button', { name: /7 November/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /^7 November/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 7, quantity: 800, purchased: expect.stringMatching(/^\d{4}-11-07$/) })
   })

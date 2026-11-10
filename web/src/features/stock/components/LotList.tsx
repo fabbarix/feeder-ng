@@ -1,6 +1,9 @@
 import type { ReactElement } from 'react'
-import type { UnitSystem } from '../../../lib/units'
+import { Chip, ListGroup, ListRow } from '../../../ui'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { describeGoOff } from '../lib/view'
 import type { StockLot } from '../types'
+import { stockStrings as strings } from '../strings'
 
 export interface LotListProps {
   lots: StockLot[]
@@ -12,8 +15,29 @@ export interface LotListProps {
  * Lot detail as a `ListGroup label="Stock Lots"` of `ListRow`s (separators come from the group): title = amount
  * (formatQuantity), meta = "Bought <purchased> · <source label>", trailing = go-off wording as
  * `Chip kind="state" status="spoil"` when describeGoOff says spoil, else a plain `Chip kind="tag"`.
- * No more `data-tone`; the chip's `data-status` carries the colour.
  */
-export function LotList(_props: LotListProps): ReactElement | null {
-  throw new Error('not implemented')
+export function LotList({ lots, today, system = 'metric' }: LotListProps): ReactElement | null {
+  return (
+    <ListGroup label={strings.lots}>
+      {lots.map((lot) => {
+        const go = describeGoOff(lot, today)
+        return (
+          <ListRow
+            key={lot.id}
+            title={formatQuantity(lot.quantity, lot.baseUnit, system)}
+            meta={`${strings.boughtOn(lot.purchased)} · ${strings.source[lot.source]}`}
+            trailing={
+              go.tone === 'spoil' ? (
+                <Chip kind="state" status="spoil">
+                  {go.label}
+                </Chip>
+              ) : (
+                <Chip kind="tag">{go.label}</Chip>
+              )
+            }
+          />
+        )
+      })}
+    </ListGroup>
+  )
 }

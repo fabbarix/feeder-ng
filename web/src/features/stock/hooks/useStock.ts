@@ -4,7 +4,7 @@ import { connectEvents } from '../../../lib/sse'
 import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { stockApi } from '../api'
-import type { StockStatus } from '../lib/status'
+import { resolveStockStatus, type StockStatus } from '../lib/status'
 import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse } from '../types'
 
 export interface QueryState<T> {
@@ -59,8 +59,8 @@ export function useStockTotals(): QueryState<IngredientStock[]> & { system: Unit
   useStockLiveUpdates()
   const system = useDisplayUnitSystem()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'totals'], queryFn: () => stockApi.totals() })
-  // TODO(developer): status via resolveStockStatus, refetch: query.refetch
-  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status: 'loading', refetch: query.refetch }
+  const status = statusOf(query, query.data !== undefined && query.data.length === 0)
+  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status, refetch: query.refetch }
 }
 
 /** The lots of one Ingredient (disabled while ingredientId is null). Refetches on `stock` events. */
@@ -101,16 +101,29 @@ export function useSpoiledLots(): LotsState & {
   }
 }
 
-function lotsState(query: { data: StockLotsResponse | undefined; isLoading: boolean; error: Error | null }): LotsState {
+function lotsState(query: { data: StockLotsResponse | undefined; isLoading: boolean; error: Error | null; refetch: () => Promise<unknown> }): LotsState {
   return {
     data: query.data?.lots,
     today: query.data?.today,
     isLoading: query.isLoading,
     error: query.error,
-    // TODO(developer): status via resolveStockStatus (empty = data.lots is []), refetch: query.refetch
-    status: 'loading',
-    refetch: async () => undefined,
+    status: statusOf(query, query.data !== undefined && query.data.lots.length === 0),
+    refetch: query.refetch,
   }
+}
+
+/**
+ * The screen status of one query. Offline is read when the hook renders; the query re-renders on its own
+ * changes, so a dropped connection shows on the next fetch result.
+ */
+function statusOf(query: { data: unknown; isLoading: boolean; error: Error | null }, isEmpty: boolean): StockStatus {
+  return resolveStockStatus({
+    isLoading: query.isLoading,
+    error: query.error,
+    hasData: query.data !== undefined,
+    isEmpty,
+    offline: typeof navigator !== 'undefined' && navigator.onLine === false,
+  })
 }
 
 /** Writes: manual add and Set total. Both invalidate ['stock']. */

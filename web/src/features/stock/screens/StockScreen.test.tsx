@@ -82,7 +82,9 @@ describe('StockScreen layout', () => {
 
   it('has no native controls', () => {
     view()
-    expect(document.querySelector('select, input[type="date"], input[type="number"], input[type="search"]')).toBeNull()
+    expect(document.querySelector('select, input[type="date"], input[type="number"]')).toBeNull()
+    // The only search input is the shared SearchField's own input.
+    expect(document.querySelector('input[type="search"]:not(.search-field__input)')).toBeNull()
   })
 })
 
@@ -128,7 +130,8 @@ describe('StockScreen status', () => {
     hooks.totals.status = 'error'
     hooks.totals.data = undefined as never
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent('Stock could not be loaded.')
+    // ToastProvider keeps an empty role=alert region, so find the ErrorState by its message.
+    expect(screen.getByText('Stock could not be loaded.').closest('[role="alert"]')).not.toBeNull()
     expect(screen.queryByText('Nothing in Stock yet')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(hooks.totals.refetch).toHaveBeenCalledTimes(1)
