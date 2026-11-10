@@ -47,6 +47,6 @@ describe('syncNotices', () => {
 
   it('reports a rejected operation with the server message', () => {
     const notices = syncNotices([{ clientUuid: 'x', status: 'rejected', error: { code: 'unknown_product', message: 'that Product was deleted' } }])
-    expect(notices).toEqual([{ kind: 'rejected', clientUuid: 'x', text: "Couldn't sync a scan: that Product was deleted" }])
+    expect(notices).toEqual([{ kind: 'rejected', clientUuid: 'x', text: "Couldn't sync a Scan: that Product was deleted" }])
   })
 })

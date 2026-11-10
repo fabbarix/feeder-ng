@@ -1,7 +1,8 @@
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
-import { Button, IconButton, PageHeader, Skeleton, Tile } from '../../../ui'
+import { Button, PageHeader, Skeleton, Tile } from '../../../ui'
 import { IngredientLineRow } from '../components/IngredientLineRow'
 import { PhotoPicker } from '../components/PhotoPicker'
 import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
@@ -29,6 +30,7 @@ export function RecipeEditorScreen(): ReactNode {
   const [saveError, setSaveError] = useState<string | null>(null)
   const ingredients = useMemo(() => Array.from(refs.byId.values()), [refs.byId])
 
+  const crumbs = useBreadcrumbs(editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
   const draft = editor.draft
   const setDraft = (change: (d: RecipeDraft) => RecipeDraft) => editor.setDraft(change)
@@ -65,7 +67,7 @@ export function RecipeEditorScreen(): ReactNode {
     <section className="recipe-editor">
       <PageHeader
         title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe}
-        leading={<IconButton icon="back" label={recipeStrings.back} onClick={() => navigate(-1)} />}
+        breadcrumbs={crumbs}
       />
       <Tile as="section">
         <h2>{recipeStrings.fields.details}</h2>

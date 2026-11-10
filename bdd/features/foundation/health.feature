@@ -18,3 +18,14 @@ Feature: Health and unknown routes
     Given a running Feeder
     When I GET "/plan"
     Then the response status is 200
+
+  Scenario Outline: A missing file or a /.well-known path is a 404, not the app shell
+    Given a running Feeder
+    When I GET "<path>"
+    Then the response status is 404
+
+    Examples:
+      | path                        |
+      | /favicon.ico                |
+      | /assets/index-STALE.js      |
+      | /.well-known/security.txt   |

@@ -78,6 +78,22 @@ run_ui "$FIX/native-search/fail" "$sf"
 grep -Eq "^native-search=(warn|fail)\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set native-search (warn)"
 grep -Eq "^native-search=warn\$" "$SCRIPTS/check-ui.rules" && ok || bad "native-search must start at warn in check-ui.rules"
 
+# back-link (R11a): BackLink, "Back to ..." links and IconButtons that navigate back are replaced by Breadcrumbs.
+# Kept apart like native-search so that only these cases are red until the rule exists.
+bf="$TMP/rules-backlink-warn"; { cat "$(rules_file sizing warn)"; echo "back-link=warn"; } >"$bf"
+run_ui "$FIX/back-link/fail" "$bf"
+[ "$RC" -eq 0 ] && [ "$(count_of back-link)" = 4 ] && ok || bad "back-link: expected 4 (BackLink import, <BackLink>, <Link>Back to ..., IconButton icon=back + navigate) and exit 0 in warn mode (rc $RC, got $(count_of back-link))"
+run_ui "$FIX/back-link/pass" "$bf"
+[ "$RC" -eq 0 ] && [ "$(count_of back-link)" = 0 ] && ok || bad "back-link: pass fixture (Breadcrumbs, comment, test file, back IconButton that is not navigation, Button 'Back to Today') must report 0 (rc $RC, got $(count_of back-link))"
+bf="$TMP/rules-backlink-fail"; { cat "$(rules_file sizing warn)"; echo "back-link=fail"; } >"$bf"
+run_ui "$FIX/back-link/fail" "$bf"
+[ "$RC" -eq 1 ] && ok || bad "back-link=fail must exit 1 on the fail fixture (got $RC)"
+bf="$TMP/rules-backlink-fp"; { cat "$(rules_file sizing warn)"; echo "back-link=warn"; echo "back-link.fail_paths=web/src/features/x"; } >"$bf"
+run_ui "$FIX/back-link/fail" "$bf"
+[ "$RC" -eq 1 ] && ok || bad "back-link.fail_paths covering the violations must exit 1 (got $RC)"
+grep -Eq "^back-link=(warn|fail)\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set back-link (warn, or fail with fail_paths while Recipe and Import still carry theirs)"
+grep -q "back-link" "$SCRIPTS/check-ui.sh" && ok || bad "check-ui.sh must document and implement the back-link rule"
+
 # --- hardening cases: a pass and a fail fixture each, exact count for the fail one
 harden() { # rule fixture-dir expected-count-in-fail-fixture
   run_ui "$FIX/$2/pass" "$(rules_file "$1" fail)"

@@ -32,7 +32,7 @@ export const browserPushPort: PushPort = {
     permission: 'Notification' in window ? Notification.permission : 'denied',
     isIos: /iPhone|iPad|iPod/.test(navigator.userAgent),
     isStandalone:
-      window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true,
+      window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true,
   }),
   userAgent: () => navigator.userAgent,
   currentSubscription: async () => {

@@ -70,7 +70,7 @@ describe('PlanningRulesScreen', () => {
     await userEvent.click(await screen.findByRole('option', { name: /pasta/ }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Not on consecutive days' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 0, notConsecutiveDays: true }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/variety-rules/pasta')[0]?.body).toEqual({ maxPerWeek: 1, notConsecutiveDays: true }))
   })
 
   it('shows the server message when a Slot Rule already exists', async () => {
@@ -81,5 +81,18 @@ describe('PlanningRulesScreen', () => {
     await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     expect(await findNotice('alert', 'That Slot Rule already exists.')).toHaveTextContent('That Slot Rule already exists.')
+  })
+
+  // R11a: Breadcrumbs (Settings > Planning rules) like the other Settings sub-pages; no stray link to Plan at the bottom.
+  it('shows Settings > Planning rules above the h1 and has no link to Plan', async () => {
+    mockApi(base)
+    const { container } = renderWithProviders(<PlanningRulesScreen />, '/settings/planning')
+    await screen.findByText('Tag: pizza')
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings')
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Planning rules')
+    expect(container.querySelector('.page-header')).toContainElement(nav)
+    expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Plan' })).toBeNull()
   })
 })

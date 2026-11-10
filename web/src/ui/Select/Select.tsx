@@ -261,7 +261,7 @@ function SelectCore<V extends string | number>({
         .filter((o) => selected.includes(o.value))
         .map((o) => o.label)
         .join(', ')
-    : (selectedOption?.label ?? clearLabel ?? '')
+    : (selectedOption?.triggerLabel ?? selectedOption?.label ?? clearLabel ?? '')
   const activeId = open && active >= 0 ? optionId(active) : undefined
   const panel = (
     <SelectPanel<V>

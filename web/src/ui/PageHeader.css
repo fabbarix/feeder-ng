@@ -1,6 +1,16 @@
 /* PageHeader (docs/design/ui-fix-plan.md 4.5): title-1 with optional leading and trailing actions. Tokens only. */
 .page-header {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.page-header__crumbs {
+  min-inline-size: 0;
+}
+
+.page-header__row {
+  display: flex;
   align-items: center;
   gap: var(--space-3);
 }

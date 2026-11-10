@@ -109,16 +109,40 @@ describe('VarietyRulesEditor', () => {
     render(<VarietyRulesEditor rules={[]} tags={tags} onSave={onSave} onRemove={() => {}} error={null} />)
     await pick('Tag', /fish/)
     const max = screen.getByRole('spinbutton', { name: 'At most per week' })
+    await userEvent.clear(max)
     await userEvent.type(max, '2{Enter}')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Not on consecutive days' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     expect(onSave).toHaveBeenCalledWith({ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: true })
   })
 
+  // R11a N5: the weekly limit starts at its minimum (1), not blank/0. Clearing it still means "no cap".
+  it('"At most per week" starts at 1, and is back at 1 after a rule is saved', async () => {
+    const onSave = vi.fn()
+    render(<VarietyRulesEditor rules={[]} tags={tags} onSave={onSave} onRemove={() => {}} error={null} />)
+    const max = screen.getByRole('spinbutton', { name: 'At most per week' })
+    expect(max).toHaveValue('1')
+    await pick('Tag', /fish/)
+    await userEvent.clear(max)
+    await userEvent.type(max, '3{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
+    expect(onSave).toHaveBeenCalledWith({ tag: 'fish', maxPerWeek: 3, notConsecutiveDays: false })
+    expect(screen.getByRole('spinbutton', { name: 'At most per week' })).toHaveValue('1')
+  })
+
+  it('saves a default rule with a limit of 1', async () => {
+    const onSave = vi.fn()
+    render(<VarietyRulesEditor rules={[]} tags={tags} onSave={onSave} onRemove={() => {}} error={null} />)
+    await pick('Tag', /fish/)
+    await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
+    expect(onSave).toHaveBeenCalledWith({ tag: 'fish', maxPerWeek: 1, notConsecutiveDays: false })
+  })
+
   it('names the first problem and saves nothing', async () => {
     const onSave = vi.fn()
     render(<VarietyRulesEditor rules={[]} tags={tags} onSave={onSave} onRemove={() => {}} error={null} />)
     await pick('Tag', /fish/)
+    await userEvent.clear(screen.getByRole('spinbutton', { name: 'At most per week' })) // empty = no cap
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     expect(onSave).not.toHaveBeenCalled()
     expect(screen.getByRole('alert')).toHaveTextContent('Choose a weekly limit or not on consecutive days.')

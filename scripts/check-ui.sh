@@ -11,6 +11,7 @@
 #   sizing           5  no min-height on .tile variants; no px font sizes (use the type tokens)
 #   glossary         6  GLOSSARY.md _Avoid_ words in strings.ts (or in the allowlist)
 #   native-search    7  no <input type="search"> outside web/src/ui (use the SearchField primitive)
+#   back-link        8  no BackLink, no <Link>/<a> reading "Back to ...", no <IconButton icon="back"> that navigates (use Breadcrumbs)
 #
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
@@ -50,7 +51,7 @@ trap 'rm -rf "$TMP"' EXIT
 VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
-RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search)
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link)
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
@@ -418,6 +419,13 @@ rule_class_hooks
 rule_sizing
 rule_glossary
 rule_native_search
+
+# ------------------------------------------------------------------ rule 8
+rule_back_link() {
+  src_files tsx ts | code_match back-link "back-link; use Breadcrumbs (PageHeader breadcrumbs={useBreadcrumbs()})" \
+    '(^|[^A-Za-z0-9_])BackLink([^A-Za-z0-9_]|$)|<(Link|a)[ \t][^>]*>[ \t]*Back to|<IconButton[^<]*icon="back"[^<]*navigate\('
+}
+rule_back_link
 
 # File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
 if [ -f "$ALLOW_COLOURS" ]; then

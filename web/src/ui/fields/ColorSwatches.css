@@ -3,7 +3,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  padding-block: var(--space-1);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-2); /* room for the 5px ring and 3px+3px focus outline inside a clipping scroll container */
 }
 
 .colour-swatch {
@@ -37,10 +38,8 @@
   background: var(--color-surface-2);
 }
 
-.colour-swatch__text {
+.colour-swatch--custom {
   color: var(--color-muted);
-  font-size: var(--text-overline-size);
-  font-weight: var(--text-overline-weight);
 }
 
 .colour-swatches__picker {

@@ -9,6 +9,7 @@ export const fieldStrings = {
   minute: 'Minute',
   chooseFile: 'Choose a file or drop it here',
   custom: 'Custom',
+  initialsGlyph: 'Aa',
   customColour: 'Custom colour',
   hue: 'Hue',
   hexColour: 'Hex colour',
