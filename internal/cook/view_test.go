@@ -114,3 +114,26 @@ func TestBuildViewReadyMealHasNoSteps(t *testing.T) {
 		t.Errorf("v = %+v err = %v", v, err)
 	}
 }
+
+// Cook Mode holds Next on a Step until the Steps in its `after` are done, so the view carries them.
+func TestBuildViewCarriesAfter(t *testing.T) {
+	rs := cook.RecipeSteps{RecipeID: 3, Name: "Roast", Steps: []cook.Step{
+		{Kind: schedule.Passive, Text: "Pre-heat the oven", DurationMinutes: 15},
+		{Kind: schedule.Active, Text: "Season the meat", DurationMinutes: 5},
+		{Kind: schedule.Passive, Text: "Put the meat in the oven", DurationMinutes: 60, After: []int{0, 1}},
+	}}
+	v, err := cook.BuildView(cook.RecipeScope(3), rs, 1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := v.Steps[2].After; len(got) != 2 || got[0] != 0 || got[1] != 1 {
+		t.Fatalf("after = %v, want [0 1]", got)
+	}
+	if v.Steps[0].After == nil || len(v.Steps[0].After) != 0 {
+		t.Fatalf("a Step with no after has [] (never nil), got %#v", v.Steps[0].After)
+	}
+	rs.Steps[2].After[0] = 9
+	if v.Steps[2].After[0] != 0 {
+		t.Error("the view shares the input's slice")
+	}
+}

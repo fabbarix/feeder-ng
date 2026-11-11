@@ -42,3 +42,17 @@ describe('CookNavTiles', () => {
     expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
   })
 })
+
+describe('CookNavTiles: Next held by a timer', () => {
+  it('disables Next and says why, linked as its description', () => {
+    render(<CookNavTiles isFirst={false} isLast={false} onBack={() => {}} onNext={() => {}} heldText="Next waits for Step 1 · Pre-heat the oven: 4:12 left." />)
+    const next = screen.getByRole('button', { name: 'Next' })
+    expect(next).toBeDisabled()
+    expect(next).toHaveAccessibleDescription('Next waits for Step 1 · Pre-heat the oven: 4:12 left.')
+  })
+  it('leaves the last Step\'s Mark as Cooked alone', () => {
+    render(<CookNavTiles isFirst={false} isLast onBack={() => {}} onNext={() => {}} onMarkCooked={() => {}} heldText="held" />)
+    expect(screen.getByRole('button', { name: 'Mark as Cooked' })).toBeEnabled()
+    expect(screen.queryByText('held')).toBeNull()
+  })
+})

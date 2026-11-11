@@ -4,10 +4,24 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0-beta.2] - 2026-11-11
+
+Any User can add a Shop, Feeder finds the Shop you are in, and Cook Mode follows the order of the Steps.
+
 ### Added
 
 - **Any User adds a Shop.** Add a Shop from Settings, from the Shop select on the Shop screen, or with "Add the Shop I am in" on the Scan picker. Renaming and deleting a Shop stay with the Admin.
 - **Shop Location.** Adding a Shop offers to save where you are as its Shop Location, and any User can save it later on the Shop's page. Feeder then finds the Shop you are in: the Scan picker lists it first, a Scan session started with another Shop offers to switch, and the Shop screen prices the list there (with Undo). Feeder asks for your location only when you tap, unless your browser already allows it, and your position itself is not stored.
+
+### Fixed
+
+- **Cook Mode follows Step order.** Next is held while a Step that the next one depends on (its "After step" setting) still has its timer running, for example "Put the meat in the oven" while "Pre-heat the oven" counts down. A line says what Next is held for and how long is left; cancelling that timer, or letting it finish, frees Next.
+
+### Upgrading
+
+No new settings. The database gains the Shop Location columns on start (migration 1320). Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.2 --namespace feeder --reset-then-reuse-values`. Feeder asks for the phone's location only over HTTPS (or on localhost).
 
 ## [1.0.0-beta.1] - 2026-11-10
 

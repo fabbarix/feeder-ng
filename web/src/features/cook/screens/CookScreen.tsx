@@ -17,6 +17,7 @@ import { useCoachMark } from '../hooks/useCoachMark'
 import { useCookSession } from '../hooks/useCookSession'
 import { useFormatUse } from '../hooks/useFormatUse'
 import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
+import { useStepGate } from '../hooks/useStepGate'
 import { useTimers } from '../hooks/useTimers'
 import { advanceOnScreen } from '../lib/advance'
 import { cookSourceFrom, exitPathFor, type CookRouteParams } from '../lib/scope'
@@ -34,8 +35,9 @@ import '../cook.css'
  * Exit goes to exitPathFor(source). Voice commands: next/back
  * call the session, repeat bumps repeat, startTimer calls startStepTimer, pauseTimer
  * pauses the first running timer. Mark as Cooked opens T11's MarkCookedSheet through
- * useMarkCooked(markCookedKey) from features/plan. A Planned Meal is offered Mark as Cooked only once it is due
- * (mayResolve). After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with "Back to
+ * useMarkCooked(markCookedKey) from features/plan. useStepGate holds Next (tile, tap zone and voice) while the next
+ * Step waits for a Step whose timer is still counting down; cancelling that timer frees it. A Planned Meal is offered
+ * Mark as Cooked only once it is due (mayResolve). After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with "Back to
  * Today" (no timed redirect). A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
  */
 export function CookScreen(): ReactNode {
@@ -47,6 +49,7 @@ export function CookScreen(): ReactNode {
 
   const session = useCookSession(source)
   const timers = useTimers()
+  const gate = useStepGate(session.view?.steps ?? [], session.nav.index, timers.items, session.scope, session.next)
   const alarm = useMemo(() => createWebAudioAlarm(), [])
   const speech = useMemo(() => createBrowserSpeech(), [])
   const wake = useMemo(() => createWakeLock(), [])
@@ -63,7 +66,7 @@ export function CookScreen(): ReactNode {
   const leaveCook = () => navigate(exitPathFor(source))
 
   const onCommand = (command: VoiceCommand) => {
-    if (command === 'next') session.next()
+    if (command === 'next') gate.next()
     else if (command === 'back') session.back()
     else if (command === 'repeat') session.repeat()
     else if (command === 'startTimer') void session.startStepTimer()
@@ -127,7 +130,7 @@ export function CookScreen(): ReactNode {
           coachMark={tapZones && coachOn}
           onCoachDismiss={dismissCoach}
           onBack={session.back}
-          onNext={session.next}
+          onNext={gate.next}
         />
       ) : (
         <p className="cook-screen__empty">{cookStrings.noSteps}</p>
@@ -143,7 +146,8 @@ export function CookScreen(): ReactNode {
         isFirst={session.isFirst}
         isLast={session.isLast}
         onBack={session.back}
-        onNext={session.next}
+        onNext={gate.next}
+        heldText={gate.heldText}
         onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
         onDone={view.meal ? undefined : () => navigate(`/recipes/${view.recipeId}`)}
       />

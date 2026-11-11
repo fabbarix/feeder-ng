@@ -76,6 +76,7 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 	for _, st := range rec.Steps {
 		step := cook.Step{
 			Kind: st.Kind, Text: st.Text, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes,
+			After: st.After,
 		}
 		if st.Image != "" {
 			step.ImageURL = images.URL(st.Image)

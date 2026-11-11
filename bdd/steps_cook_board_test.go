@@ -264,6 +264,20 @@ func cookBoardSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	sc.Step(`^the cooking Step (\d+) waits for the Recipe Steps "([^"]*)"$`, func(n int, want string) error {
+		items, err := list(body(), fmt.Sprintf("steps.%d.after", n-1))
+		if err != nil {
+			return err
+		}
+		got := make([]string, 0, len(items))
+		for _, it := range items {
+			got = append(got, fmt.Sprint(it))
+		}
+		if strings.Join(got, ",") != want {
+			return fmt.Errorf("after = %v, want %s", got, want)
+		}
+		return nil
+	})
 	sc.Step(`^the Advance Step "([^"]*)" is listed as (done|not done)$`, func(text, state string) error {
 		items, err := list(body(), "advance")
 		if err != nil {

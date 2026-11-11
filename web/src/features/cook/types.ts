@@ -24,6 +24,8 @@ export interface CookStep {
   uses: StepUse[]
   /** Set on Passive Steps only. */
   timer: { label: string; durationSeconds: number } | null
+  /** Recipe Step indexes this Step waits for (it starts once they finish); absent in older fixtures = none. */
+  after?: number[]
 }
 
 export interface AdvanceItem {
