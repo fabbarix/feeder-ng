@@ -32,7 +32,9 @@ type IngredientInfo struct {
 	Name          string
 	BaseUnit      string // g, ml or piece
 	ShelfLifeDays *int
-	ImageURL      string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
+	// FrozenShelfLifeDays is the Shelf Life in a Freezer (Storage Place of kind freezer); nil = no different.
+	FrozenShelfLifeDays *int
+	ImageURL            string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
 }
 
 // Ingredients looks Ingredients up (adapter over the Ingredient store).
@@ -69,6 +71,9 @@ type AddInput struct {
 	ProductID    *int64
 	ShopID       *int64
 	ClientUUID   string
+	// StoragePlaceID puts the Lot in that Storage Place (and remembers it for the Ingredient); nil = where the
+	// Ingredient was last put, else the default Storage Place, else none.
+	StoragePlaceID *int64
 }
 
 // LotView is a Stock Lot with the Ingredient facts the screens need.
@@ -78,6 +83,8 @@ type LotView struct {
 	BaseUnit       string
 	Spoiled        bool // GoesOff before today
 	UseSoon        bool // GoesOff within stock.UseSoonDays
+	// IngredientImageURL is the Ingredient's Picture ("" without one).
+	IngredientImageURL string
 }
 
 // IngredientStock is one Ingredient's Stock: the total and its soonest go-off date.
@@ -141,22 +148,36 @@ func (s *Service) AddLot(ctx context.Context, in AddInput) (LotView, bool, error
 	if err != nil {
 		return LotView{}, false, err
 	}
-	planned := stock.NewLot(0, ing.ID, in.Quantity, purchased, ing.ShelfLifeDays)
+	place, err := s.placeFor(ctx, ing.ID, in.StoragePlaceID)
+	if err != nil {
+		return LotView{}, false, err
+	}
+	kind, placeID := stock.KindNone, (*int64)(nil)
+	if place != nil {
+		kind, placeID = place.Kind, &place.ID
+	}
+	planned := stock.NewLot(0, ing.ID, in.Quantity, purchased, stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays))
 	saved, created, err := s.st.AddLot(ctx, store.NewLot{
-		IngredientID: ing.ID,
-		Quantity:     in.Quantity,
-		Purchased:    purchased,
-		GoesOff:      planned.GoesOff,
-		Source:       src,
-		ProductID:    in.ProductID,
-		ShopID:       in.ShopID,
-		ClientUUID:   in.ClientUUID,
+		StoragePlaceID: placeID,
+		IngredientID:   ing.ID,
+		Quantity:       in.Quantity,
+		Purchased:      purchased,
+		GoesOff:        planned.GoesOff,
+		Source:         src,
+		ProductID:      in.ProductID,
+		ShopID:         in.ShopID,
+		ClientUUID:     in.ClientUUID,
 	})
 	if errors.Is(err, store.ErrDuplicateUUID) {
 		return LotView{}, false, invalid("clientUuid is already used for another Ingredient")
 	}
 	if err != nil {
 		return LotView{}, false, err
+	}
+	if created && in.StoragePlaceID != nil {
+		if err := s.st.RememberPlace(ctx, ing.ID, *in.StoragePlaceID); err != nil {
+			return LotView{}, false, err
+		}
 	}
 	if created {
 		s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
@@ -177,9 +198,18 @@ func (s *Service) SetTotal(ctx context.Context, ingredientID int64, total float6
 	if err != nil {
 		return IngredientStock{}, err
 	}
+	// An increase is a new Lot in the remembered Storage Place, so a Freezer's Shelf Life applies to it.
+	place, err := s.st.RememberedPlace(ctx, ing.ID)
+	if err != nil {
+		return IngredientStock{}, err
+	}
+	shelfLife := ing.ShelfLifeDays
+	if place != nil {
+		shelfLife = stock.ShelfLifeIn(place.Kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+	}
 	changed := false
 	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
-		res, err := stock.SetTotal(lots, ing.ID, total, today, ing.ShelfLifeDays)
+		res, err := stock.SetTotal(lots, ing.ID, total, today, shelfLife)
 		if err != nil {
 			return store.Mutation{}, invalid("total cannot be negative")
 		}
@@ -629,11 +659,12 @@ func (s *Service) views(ctx context.Context, stored []store.StoredLot, today sto
 
 func view(l store.StoredLot, ing IngredientInfo, today stock.Date) LotView {
 	return LotView{
-		StoredLot:      l,
-		IngredientName: ing.Name,
-		BaseUnit:       ing.BaseUnit,
-		Spoiled:        stock.IsSpoiled(l.Lot, today),
-		UseSoon:        stock.IsUseSoon(l.Lot, today),
+		StoredLot:          l,
+		IngredientName:     ing.Name,
+		BaseUnit:           ing.BaseUnit,
+		Spoiled:            stock.IsSpoiled(l.Lot, today),
+		UseSoon:            stock.IsUseSoon(l.Lot, today),
+		IngredientImageURL: ing.ImageURL,
 	}
 }
 
@@ -673,4 +704,94 @@ func checkDate(d stock.Date, field string) error {
 		return invalid("%s must be a date as YYYY-MM-DD", field)
 	}
 	return nil
+}
+
+// placeFor is the Storage Place a new Lot goes to: the one asked for (it must exist), else the remembered one.
+func (s *Service) placeFor(ctx context.Context, ingredientID int64, asked *int64) (*store.StoragePlace, error) {
+	if asked == nil {
+		return s.st.RememberedPlace(ctx, ingredientID)
+	}
+	p, err := s.st.StoragePlace(ctx, *asked)
+	if errors.Is(err, store.ErrPlaceNotFound) {
+		return nil, invalid("storagePlaceId names no Storage Place")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// StoragePlaces lists the Storage Places by name.
+func (s *Service) StoragePlaces(ctx context.Context) ([]store.StoragePlace, error) {
+	return s.st.StoragePlaces(ctx)
+}
+
+// CreateStoragePlace adds a Storage Place (any User).
+func (s *Service) CreateStoragePlace(ctx context.Context, name string, kind stock.Kind, def bool) (store.StoragePlace, error) {
+	p, err := s.st.CreateStoragePlace(ctx, name, kind, def)
+	if err == nil {
+		s.publish(map[string]any{"changed": "storagePlaces"})
+	}
+	return p, err
+}
+
+// UpdateStoragePlace renames it, changes its kind or its default flag.
+func (s *Service) UpdateStoragePlace(ctx context.Context, id int64, p store.PlacePatch) (store.StoragePlace, error) {
+	out, err := s.st.UpdateStoragePlace(ctx, id, p)
+	if err == nil {
+		s.publish(map[string]any{"changed": "storagePlaces"})
+	}
+	return out, err
+}
+
+// DeleteStoragePlace removes it; its Lots stay in Stock, not sorted.
+func (s *Service) DeleteStoragePlace(ctx context.Context, id int64) error {
+	err := s.st.DeleteStoragePlace(ctx, id)
+	if err == nil {
+		s.publish(map[string]any{"changed": "storagePlaces"})
+	}
+	return err
+}
+
+// MoveLot moves a Stock Lot, or quantity of it (0 = all), to a Storage Place. Its go-off date follows
+// stock.GoOffAfterMove: into a Freezer it restarts on the frozen Shelf Life, out of one on the ordinary Shelf Life.
+func (s *Service) MoveLot(ctx context.Context, lotID, placeID int64, quantity float64) (LotView, error) {
+	if math.IsNaN(quantity) || math.IsInf(quantity, 0) || quantity < 0 {
+		return LotView{}, invalid("quantity cannot be negative")
+	}
+	lot, err := s.st.Lot(ctx, lotID)
+	if err != nil {
+		return LotView{}, err
+	}
+	if quantity > lot.Quantity+1e-9 {
+		return LotView{}, invalid("cannot move more than the Lot holds")
+	}
+	to, err := s.st.StoragePlace(ctx, placeID)
+	if errors.Is(err, store.ErrPlaceNotFound) {
+		return LotView{}, invalid("storagePlaceId names no Storage Place")
+	}
+	if err != nil {
+		return LotView{}, err
+	}
+	from := stock.KindNone
+	if lot.StoragePlaceID != nil {
+		if p, err := s.st.StoragePlace(ctx, *lot.StoragePlaceID); err == nil {
+			from = p.Kind
+		}
+	}
+	ing, err := s.ingredient(ctx, lot.IngredientID)
+	if err != nil {
+		return LotView{}, err
+	}
+	today, err := s.today(ctx)
+	if err != nil {
+		return LotView{}, err
+	}
+	goesOff := stock.GoOffAfterMove(lot.GoesOff, from, to.Kind, today, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+	moved, err := s.st.MoveLot(ctx, store.Move{LotID: lotID, PlaceID: placeID, Quantity: quantity, GoesOff: goesOff})
+	if err != nil {
+		return LotView{}, err
+	}
+	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
+	return view(moved, ing, today), nil
 }

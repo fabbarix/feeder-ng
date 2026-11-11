@@ -33,6 +33,12 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/stock/cooked", a.cooked)
 	r.User("GET /api/stock/projected", a.projected)
 	r.User("GET /api/stock/waste", a.waste)
+	// Pantry: Storage Places (any User manages them) and moving a Lot between them.
+	r.User("POST /api/stock/lots/{id}/move", a.moveLot)
+	r.User("GET /api/storage-places", a.listPlaces)
+	r.User("POST /api/storage-places", a.createPlace)
+	r.User("PATCH /api/storage-places/{id}", a.updatePlace)
+	r.User("DELETE /api/storage-places/{id}", a.deletePlace)
 }
 
 type api struct{ svc *service.Service }
@@ -52,21 +58,27 @@ type lotJSON struct {
 	ShopID         *int64  `json:"shopId"`
 	Spoiled        bool    `json:"spoiled"`
 	UseSoon        bool    `json:"useSoon"`
+	// StoragePlaceID is the Storage Place the Lot is in; null = not sorted.
+	StoragePlaceID *int64 `json:"storagePlaceId"`
+	// IngredientImageURL is the Ingredient's Picture ("" without one), for the Pantry list.
+	IngredientImageURL string `json:"ingredientImageUrl"`
 }
 
 func lotToJSON(v service.LotView) lotJSON {
 	out := lotJSON{
-		ID:             v.ID,
-		IngredientID:   v.IngredientID,
-		IngredientName: v.IngredientName,
-		BaseUnit:       v.BaseUnit,
-		Quantity:       v.Quantity,
-		Purchased:      string(v.Purchased),
-		Source:         string(v.Source),
-		ProductID:      v.ProductID,
-		ShopID:         v.ShopID,
-		Spoiled:        v.Spoiled,
-		UseSoon:        v.UseSoon,
+		ID:                 v.ID,
+		IngredientID:       v.IngredientID,
+		IngredientName:     v.IngredientName,
+		BaseUnit:           v.BaseUnit,
+		Quantity:           v.Quantity,
+		Purchased:          string(v.Purchased),
+		Source:             string(v.Source),
+		ProductID:          v.ProductID,
+		ShopID:             v.ShopID,
+		Spoiled:            v.Spoiled,
+		UseSoon:            v.UseSoon,
+		StoragePlaceID:     v.StoragePlaceID,
+		IngredientImageURL: v.IngredientImageURL,
 	}
 	if !v.GoesOff.IsNone() {
 		g := string(v.GoesOff)
@@ -174,6 +186,8 @@ type addLotBody struct {
 	ProductID    *int64  `json:"productId"`
 	ShopID       *int64  `json:"shopId"`
 	ClientUUID   string  `json:"clientUuid"`
+	// StoragePlaceID puts the Lot there (and remembers it); absent = where the Ingredient was last put.
+	StoragePlaceID *int64 `json:"storagePlaceId"`
 }
 
 func (a *api) addLot(w http.ResponseWriter, r *http.Request) {
@@ -183,13 +197,14 @@ func (a *api) addLot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, created, err := a.svc.AddLot(r.Context(), service.AddInput{
-		IngredientID: body.IngredientID,
-		Quantity:     body.Quantity,
-		Purchased:    stock.Date(body.Purchased),
-		Source:       store.Source(body.Source),
-		ProductID:    body.ProductID,
-		ShopID:       body.ShopID,
-		ClientUUID:   body.ClientUUID,
+		IngredientID:   body.IngredientID,
+		Quantity:       body.Quantity,
+		Purchased:      stock.Date(body.Purchased),
+		Source:         store.Source(body.Source),
+		ProductID:      body.ProductID,
+		ShopID:         body.ShopID,
+		ClientUUID:     body.ClientUUID,
+		StoragePlaceID: body.StoragePlaceID,
 	})
 	if err != nil {
 		writeError(w, err)
@@ -399,6 +414,12 @@ func mapError(err error) error {
 		return &httpx.APIError{Status: http.StatusUnprocessableEntity, Code: "validation_failed", Message: msg}
 	case errors.Is(err, service.ErrNotSpoiled):
 		return &httpx.APIError{Status: http.StatusConflict, Code: "not_spoiled", Message: "Only a spoiled Stock Lot can be thrown out or kept"}
+	case errors.Is(err, store.ErrPlaceNotFound):
+		return &httpx.APIError{Status: http.StatusNotFound, Code: "not_found", Message: "Storage Place not found"}
+	case errors.Is(err, store.ErrPlaceNameTaken):
+		return &httpx.APIError{Status: http.StatusConflict, Code: "name_taken", Message: "A Storage Place with that name already exists"}
+	case errors.Is(err, store.ErrInvalidPlace):
+		return &httpx.APIError{Status: http.StatusUnprocessableEntity, Code: "validation_failed", Message: "A Storage Place needs a name (up to 60 characters) and a kind: pantry, fridge or freezer"}
 	case errors.Is(err, store.ErrNotFound):
 		return &httpx.APIError{Status: http.StatusNotFound, Code: "not_found", Message: "Stock Lot not found"}
 	}
@@ -406,3 +427,100 @@ func mapError(err error) error {
 }
 
 func writeError(w http.ResponseWriter, err error) { httpx.WriteAPIError(w, mapError(err)) }
+
+// ---- Pantry: Storage Places and moves ----
+
+type moveBody struct {
+	StoragePlaceID int64   `json:"storagePlaceId"`
+	Quantity       float64 `json:"quantity"` // 0 or absent = the whole Lot
+}
+
+func (a *api) moveLot(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Stock Lot not found")
+		return
+	}
+	var body moveBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	v, err := a.svc.MoveLot(r.Context(), id, body.StoragePlaceID, body.Quantity)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, lotToJSON(v))
+}
+
+func (a *api) listPlaces(w http.ResponseWriter, r *http.Request) {
+	list, err := a.svc.StoragePlaces(r.Context())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, list)
+}
+
+type placeBody struct {
+	Name    *string     `json:"name"`
+	Kind    *stock.Kind `json:"kind"`
+	Default *bool       `json:"default"`
+}
+
+func (a *api) createPlace(w http.ResponseWriter, r *http.Request) {
+	var body placeBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	name, kind, def := "", stock.KindPantry, false
+	if body.Name != nil {
+		name = *body.Name
+	}
+	if body.Kind != nil {
+		kind = *body.Kind
+	}
+	if body.Default != nil {
+		def = *body.Default
+	}
+	p, err := a.svc.CreateStoragePlace(r.Context(), name, kind, def)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, p)
+}
+
+func (a *api) updatePlace(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Storage Place not found")
+		return
+	}
+	var body placeBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	p, err := a.svc.UpdateStoragePlace(r.Context(), id, store.PlacePatch{Name: body.Name, Kind: body.Kind, Default: body.Default})
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, p)
+}
+
+func (a *api) deletePlace(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Storage Place not found")
+		return
+	}
+	if err := a.svc.DeleteStoragePlace(r.Context(), id); err != nil {
+		writeError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

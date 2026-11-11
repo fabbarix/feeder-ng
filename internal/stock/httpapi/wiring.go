@@ -25,11 +25,12 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (service.Ing
 		return service.IngredientInfo{}, err
 	}
 	return service.IngredientInfo{
-		ID:            ing.ID,
-		Name:          ing.Name,
-		BaseUnit:      string(ing.Base),
-		ShelfLifeDays: ing.ShelfLifeDays,
-		ImageURL:      images.URL(ing.Image),
+		ID:                  ing.ID,
+		Name:                ing.Name,
+		BaseUnit:            string(ing.Base),
+		ShelfLifeDays:       ing.ShelfLifeDays,
+		FrozenShelfLifeDays: ing.FrozenShelfLifeDays,
+		ImageURL:            images.URL(ing.Image),
 	}, nil
 }
 

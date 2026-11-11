@@ -1,4 +1,8 @@
 /**
+ * The Pantry screen (route /stock; the page is called Pantry, its contents are Stock): by default every Stock Lot
+ * grouped by Storage Place (usePantry, PantryFilters, PantryLotRow, LotSheet with "Move to"), or "By Ingredient" the
+ * per-Ingredient totals below.
+ *
  * The Stock screen, reached from the avatar menu (a top-level destination: the bars stay, so no back button).
  *
  * Layout (ui-fix-plan 2.6, 5.7), top to bottom:
@@ -19,9 +23,15 @@
  * No `<main>`: the shell provides it. No tile grid.
  */
 import { useMemo, useState, type ReactElement } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { LotList } from '../components/LotList'
+import { LotSheet } from '../components/LotSheet'
+import { PantryFilters } from '../components/PantryFilters'
+import { PantryLotRow } from '../components/PantryLotRow'
+import { usePantry } from '../hooks/usePantry'
+import type { StockLot } from '../types'
 import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
 import { StockRow } from '../components/StockRow'
@@ -42,6 +52,10 @@ export function StockScreen(): ReactElement | null {
   const choices = useIngredientChoices()
   const toast = useToast()
   const openStockTake = useStockTakeEntry()
+  const pantry = usePantry()
+  const navigate = useNavigate()
+  const { mode, setMode } = pantry
+  const [openLot, setOpenLot] = useState<StockLot | null>(null)
 
   const [filter, setFilter] = useState<StockFilter>('all')
   const [query, setQuery] = useState('')
@@ -50,7 +64,7 @@ export function StockScreen(): ReactElement | null {
   const [adding, setAdding] = useState(false)
   const lots = useStockLots(selectedId)
   // The household's date comes from the server with the lots; go-off wording uses it.
-  const today = spoiled.today ?? lots.today ?? ''
+  const today = spoiled.today ?? lots.today ?? pantry.lots.today ?? ''
 
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
@@ -104,14 +118,40 @@ export function StockScreen(): ReactElement | null {
             />
             {ready ? (
               <div className="stock-screen__controls">
-                <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
+                <div className="stock-screen__filters" role="group" aria-label={strings.view.label}>
+                  {(['places', 'ingredients'] as const).map((m) => (
+                    <Chip key={m} kind="filter" selected={mode === m} onClick={() => setMode(m)}>
+                      {strings.view[m]}
+                    </Chip>
+                  ))}
+                </div>
+                <SearchField
+                  label={strings.searchLabel}
+                  value={query}
+                  onChange={(q) => {
+                    setQuery(q)
+                    pantry.setView({ query: q })
+                  }}
+                />
                 <div className="stock-screen__filters" role="group" aria-label={strings.filtersLabel}>
                   {STOCK_FILTERS.map((f) => (
-                    <Chip key={f} kind="filter" selected={filter === f} onClick={() => setFilter(f)}>
+                    <Chip
+                      key={f}
+                      kind="filter"
+                      selected={filter === f}
+                      onClick={() => {
+                        setFilter(f)
+                        pantry.setView({ status: f })
+                      }}
+                    >
                       {strings.filters[f]}
                     </Chip>
                   ))}
                 </div>
+                {mode === 'places' ? <PantryFilters view={pantry.view} places={pantry.places} onChange={pantry.setView} /> : null}
+                <Button variant="tertiary" size="sm" icon="settings" onClick={() => navigate('/settings/storage-places')}>
+                  {strings.managePlaces}
+                </Button>
               </div>
             ) : null}
           </aside>
@@ -128,6 +168,30 @@ export function StockScreen(): ReactElement | null {
             <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
           ) : totals.status === 'empty' ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
+          ) : mode === 'places' ? (
+            pantry.groups.length === 0 ? (
+              <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
+            ) : (
+              <div className="pantry-groups">
+                {pantry.groups.map((g) => {
+                  const name = g.key === -1 ? strings.lotsLabel : (g.place?.name ?? strings.unsorted)
+                  return (
+                    <ListGroup key={g.key} label={strings.groupLabel(name, g.lots.length)}>
+                      {g.lots.map((lot) => (
+                        <PantryLotRow
+                          key={lot.id}
+                          lot={lot}
+                          today={today}
+                          system={system}
+                          placeName={pantry.view.groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
+                          onOpen={setOpenLot}
+                        />
+                      ))}
+                    </ListGroup>
+                  )
+                })}
+              </div>
+            )
           ) : items.length === 0 ? (
             <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
           ) : (
@@ -173,10 +237,31 @@ export function StockScreen(): ReactElement | null {
         />
       ) : null}
 
+      <LotSheet
+        lot={openLot}
+        places={pantry.places}
+        today={today}
+        system={system}
+        onClose={() => setOpenLot(null)}
+        onMove={(lot, placeId, quantity) => {
+          setOpenLot(null)
+          const place = pantry.places.find((p) => p.id === placeId)
+          void attempt(async () => {
+            await actions.moveLot(lot.id, placeId, quantity)
+            toast.show(strings.moved(lot.ingredientName, place?.name ?? ''), { status: 'success' })
+          })
+        }}
+        onSeeIngredient={(id) => {
+          setOpenLot(null)
+          setSelectedId(id)
+        }}
+      />
+
       <AddLotSheet
         open={adding}
         onClose={() => setAdding(false)}
         choices={choices.choices}
+        places={pantry.places}
         onSubmit={(input) => {
           setAdding(false)
           void attempt(() => actions.addLot(input))

@@ -9,7 +9,7 @@ export const STOCK_FILTERS: readonly StockFilter[] = ['all', 'useSoon', 'spoiled
 const WORD_SEPARATOR = /\s+/
 
 /** Lower case, accents stripped, so "Crème" matches "creme". */
-function fold(text: string): string {
+export function fold(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 

@@ -87,6 +87,13 @@ export function useStockLots(ingredientId: number | null): LotsState {
   return lotsState(query)
 }
 
+/** Pantry: every Stock Lot (all Ingredients) with the household's date. Refetches on `stock` events. */
+export function useAllLots(): LotsState {
+  useStockLiveUpdates()
+  const query = useQuery({ queryKey: [...STOCK_KEY, 'lots', 'all'], queryFn: () => stockApi.lots() })
+  return lotsState(query)
+}
+
 /** Spoiled lots plus the two answers to "Throw out or keep?". Both invalidate ['stock']; refetches on `stock` events. */
 export function useSpoiledLots(): LotsState & {
   throwOut(lotId: number): Promise<void>
@@ -144,8 +151,14 @@ export function useStockActions(): {
   addLot(input: AddLotInput): Promise<void>
   setTotal(ingredientId: number, total: number): Promise<void>
   throwOut(lotId: number): Promise<void>
+  /** Pantry: moves a Lot, or `quantity` of it, to a Storage Place. */
+  moveLot(lotId: number, storagePlaceId: number, quantity?: number): Promise<void>
 } {
   const client = useQueryClient()
+  const moveLot = useMutation({
+    mutationFn: ({ lotId, placeId, quantity }: { lotId: number; placeId: number; quantity?: number }) => stockApi.moveLot(lotId, placeId, quantity),
+    onSuccess: () => refreshStock(client),
+  })
   const addLot = useMutation({
     mutationFn: (input: AddLotInput) => stockApi.addLot(input),
     onSuccess: () => refreshStock(client),
@@ -167,6 +180,9 @@ export function useStockActions(): {
     },
     throwOut: async (lotId) => {
       await throwOut.mutateAsync(lotId)
+    },
+    moveLot: async (lotId, placeId, quantity) => {
+      await moveLot.mutateAsync({ lotId, placeId, quantity })
     },
   }
 }

@@ -15,6 +15,28 @@ export interface StockLot {
   shopId: number | null
   spoiled: boolean
   useSoon: boolean
+  /** Pantry: the Storage Place it is in; null = not sorted (absent in older fixtures). */
+  storagePlaceId?: number | null
+  /** Pantry: the Ingredient's Picture, '' = none. */
+  ingredientImageUrl?: string
+}
+
+/** Pantry: a Storage Place's kind; a Freezer uses the Ingredient's frozen Shelf Life. */
+export type StorageKind = 'pantry' | 'fridge' | 'freezer'
+
+/** Pantry: where the Household keeps Stock (Kitchen Pantry, Garage Freezer, ...). */
+export interface StoragePlace {
+  id: number
+  name: string
+  kind: StorageKind
+  /** New Lots of an Ingredient never put anywhere go here. */
+  default: boolean
+}
+
+export interface StoragePlaceInput {
+  name?: string
+  kind?: StorageKind
+  default?: boolean
 }
 
 /** The lots and spoiled responses: the lots plus the household's date today (YYYY-MM-DD), which the server uses for the flags. */
@@ -60,6 +82,8 @@ export interface AddLotInput {
   ingredientId: number
   quantity: number
   purchased?: string
+  /** Pantry: the Storage Place; absent = where the Ingredient was last put. */
+  storagePlaceId?: number
 }
 
 /** An Ingredient the User can pick when adding a Stock Lot. */

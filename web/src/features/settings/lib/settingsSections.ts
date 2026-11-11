@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
+  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -28,6 +28,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
   { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
+  { group: 'household', id: 'storagePlaces', ...copy.storagePlaces, icon: 'stock', path: '/settings/storage-places' },
   { group: 'household', id: 'accessRequests', ...copy.accessRequests, icon: 'timer', path: '/settings/access-requests' },
   { group: 'you', id: 'preferences', ...copy.preferences, icon: 'appearance', path: '/settings/preferences' },
   { group: 'you', id: 'notifications', ...copy.notifications, icon: 'notifications', path: '/settings/notifications' },

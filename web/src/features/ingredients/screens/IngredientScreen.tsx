@@ -124,6 +124,14 @@ export function IngredientScreen() {
           <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
         </Tile>
 
+        <Tile as="section" className="ingredient__tile" aria-label={strings.frozenShelfLifeLabel}>
+          <ShelfLifeEditor
+            variant="frozen"
+            days={ingredient.frozenShelfLifeDays ?? null}
+            onSave={(days) => void attempt(() => ing.setFrozenShelfLife(days))}
+          />
+        </Tile>
+
         <Tile as="section" span="full" aria-labelledby="ingredient-picture-heading">
           <h2 id="ingredient-picture-heading">{strings.pictureLabel}</h2>
           <ImagePicker

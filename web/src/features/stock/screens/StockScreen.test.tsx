@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
@@ -24,12 +25,25 @@ vi.mock('../hooks/useStock', () => ({
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: hooks.throwOut, keep: hooks.keep }),
   useStockActions: () => ({ addLot: hooks.addLot, setTotal: hooks.setTotal, throwOut: hooks.actionThrowOut }),
 }))
+// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list.
+vi.mock('../hooks/usePantry', () => ({
+  usePantry: () => ({
+    mode: 'ingredients',
+    setMode: vi.fn(),
+    lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    places: [],
+    view: { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true },
+    setView: vi.fn(),
+    groups: [],
+    placeOf: () => null,
+  }),
+}))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => hooks.stockTake }))
 vi.mock('../hooks/useIngredientChoices', () => ({
   useIngredientChoices: () => ({ choices: [{ id: 7, name: 'chicken thighs', baseUnit: 'g' }], isLoading: false }),
 }))
 
-const view = () => render(<ToastProvider><StockScreen /></ToastProvider>)
+const view = () => render(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
   hooks.totals.data = [
@@ -48,7 +62,7 @@ beforeEach(() => {
 describe('StockScreen layout', () => {
   it('has a PageHeader h1 and no back button or own <main>', () => {
     view()
-    expect(screen.getByRole('heading', { level: 1, name: 'Stock' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Pantry' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /back/i })).toBeNull()
     expect(document.querySelector('main')).toBeNull()
     expect(document.querySelector('header.page-header')).not.toBeNull()
@@ -172,7 +186,7 @@ describe('StockScreen actions', () => {
     expect(screen.queryByText('Throw out or keep?')).toBeNull()
     hooks.spoiled.data = [makeLot({ id: 42 })]
     hooks.spoiled.status = 'ready'
-    rerender(<ToastProvider><StockScreen /></ToastProvider>)
+    rerender(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
     expect(screen.getByText('Throw out or keep?')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Throw out chicken thighs' }))
     expect(hooks.throwOut).toHaveBeenCalledWith(42)

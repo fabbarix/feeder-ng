@@ -1,6 +1,7 @@
 // R2-4 L-06: Stock is a two-column screen from 1280 px: the "Throw out or keep?" tile, the search and the filter chips in a sticky aside,
 // the Stock list beside it. The DOM order is the phone order (tile, search, chips, list), so one tree serves both.
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
 import { makeLot, makeTotal } from '../testData'
@@ -17,10 +18,23 @@ vi.mock('../hooks/useStock', () => ({
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: vi.fn(), keep: vi.fn() }),
   useStockActions: () => ({ addLot: vi.fn(), setTotal: vi.fn(), throwOut: vi.fn() }),
 }))
+// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list.
+vi.mock('../hooks/usePantry', () => ({
+  usePantry: () => ({
+    mode: 'ingredients',
+    setMode: vi.fn(),
+    lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    places: [],
+    view: { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true },
+    setView: vi.fn(),
+    groups: [],
+    placeOf: () => null,
+  }),
+}))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => vi.fn() }))
 vi.mock('../hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 
-const view = () => render(<ToastProvider><StockScreen /></ToastProvider>)
+const view = () => render(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
   hooks.totals.data = [makeTotal({ ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 1000 }), makeTotal({ ingredientId: 3, name: 'feta', total: 200 })]

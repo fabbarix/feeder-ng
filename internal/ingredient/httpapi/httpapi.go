@@ -58,23 +58,26 @@ type conversionJSON struct {
 }
 
 type ingredientJSON struct {
-	ID            int64            `json:"id"`
-	Name          string           `json:"name"`
-	BaseUnit      string           `json:"baseUnit"`
-	ShelfLifeDays *int             `json:"shelfLifeDays"`
-	Conversions   []conversionJSON `json:"conversions"`
-	Image         string           `json:"image"`
-	ImageURL      string           `json:"imageUrl"`
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	BaseUnit      string `json:"baseUnit"`
+	ShelfLifeDays *int   `json:"shelfLifeDays"`
+	// FrozenShelfLifeDays is the Shelf Life in a Freezer; null = the Freezer does not change the go-off date.
+	FrozenShelfLifeDays *int             `json:"frozenShelfLifeDays"`
+	Conversions         []conversionJSON `json:"conversions"`
+	Image               string           `json:"image"`
+	ImageURL            string           `json:"imageUrl"`
 }
 
 func toJSON(i ingredient.Ingredient) ingredientJSON {
 	out := ingredientJSON{
-		ID:            i.ID,
-		Name:          i.Name,
-		BaseUnit:      string(i.Base),
-		ShelfLifeDays: i.ShelfLifeDays,
-		Conversions:   []conversionJSON{},
-		Image:         i.Image,
+		ID:                  i.ID,
+		Name:                i.Name,
+		BaseUnit:            string(i.Base),
+		ShelfLifeDays:       i.ShelfLifeDays,
+		FrozenShelfLifeDays: i.FrozenShelfLifeDays,
+		Conversions:         []conversionJSON{},
+		Image:               i.Image,
 	}
 	if i.Image != "" {
 		out.ImageURL = images.URL(i.Image)
@@ -153,18 +156,21 @@ type conversionIn struct {
 }
 
 type createBody struct {
-	Name          string         `json:"name"`
-	BaseUnit      string         `json:"baseUnit"`
-	ShelfLifeDays *int           `json:"shelfLifeDays"`
-	Conversions   []conversionIn `json:"conversions"`
-	Image         string         `json:"image"`
+	Name                string         `json:"name"`
+	BaseUnit            string         `json:"baseUnit"`
+	ShelfLifeDays       *int           `json:"shelfLifeDays"`
+	FrozenShelfLifeDays *int           `json:"frozenShelfLifeDays"`
+	Conversions         []conversionIn `json:"conversions"`
+	Image               string         `json:"image"`
 }
 
 type patchBody struct {
 	Name          *string        `json:"name"`
 	BaseUnit      *string        `json:"baseUnit"`
 	ShelfLifeDays shelfLifeField `json:"shelfLifeDays"`
-	Image         *string        `json:"image"` // nil = keep, "" = remove
+	// FrozenShelfLifeDays is presence-aware like shelfLifeDays: absent keeps it, null clears it.
+	FrozenShelfLifeDays shelfLifeField `json:"frozenShelfLifeDays"`
+	Image               *string        `json:"image"` // nil = keep, "" = remove
 }
 
 type mergeBody struct {
@@ -222,7 +228,7 @@ func (a *api) create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays, Image: body.Image}
+	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays, FrozenShelfLifeDays: body.FrozenShelfLifeDays, Image: body.Image}
 	for _, c := range body.Conversions {
 		in.Conversions = append(in.Conversions, units.Conversion{Unit: c.Unit, ToBase: c.ToBase})
 	}
@@ -270,6 +276,9 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.ShelfLifeDays.set {
 		p.ShelfLife = &store.ShelfLifePatch{Days: body.ShelfLifeDays.days}
+	}
+	if body.FrozenShelfLifeDays.set {
+		p.FrozenShelfLife = &store.ShelfLifePatch{Days: body.FrozenShelfLifeDays.days}
 	}
 	updated, err := a.store.Update(r.Context(), id, p)
 	if err != nil {

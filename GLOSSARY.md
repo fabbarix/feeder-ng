@@ -198,7 +198,16 @@ _Avoid_: Measure, ratio
 
 **Stock**:
 The quantity of each Ingredient the Household currently has at home.
-_Avoid_: Inventory, pantry, larder
+_Avoid_: Inventory, larder
+_Note_: "Pantry" names the page that shows Stock (and the pantry kind of Storage Place); the things on it are still Stock and Stock Lots.
+
+**Storage Place**:
+Where the Household keeps Stock (Kitchen Pantry, Garage Fridge, Garage Freezer), of one kind: pantry, fridge or freezer. A Stock Lot is in one Storage Place, or not sorted.
+_Avoid_: Storage location, shelf, compartment
+
+**Frozen Shelf Life**:
+An optional number of days an Ingredient keeps in a Storage Place of kind freezer; a Stock Lot moved into a Freezer is good for this long from that day.
+_Avoid_: Freezer life, frozen expiry
 
 **Shelf Life**:
 An optional number of days an Ingredient stays usable after purchase.

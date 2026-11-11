@@ -20,6 +20,7 @@ export const settingsStrings = {
       mealSlots: { title: 'Meal Slots', meta: 'When the Household eats, by weekday' },
       planningRules: { title: 'Planning rules', meta: 'Planner Style, Cool-down, Leftover Use-by' },
       shops: { title: 'Shops', meta: 'Where you buy, and their barcodes' },
+      storagePlaces: { title: 'Storage Places', meta: 'Where you keep Stock: pantry, fridge, freezer' },
       preferences: { title: 'Your preferences', meta: 'Colour mode, units, accent' },
       accessRequests: { title: 'Sign-in requests', meta: 'Who asked to join' },
       notifications: { title: 'Notifications', meta: 'Which alerts reach this device' },

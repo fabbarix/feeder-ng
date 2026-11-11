@@ -10,6 +10,8 @@ export interface Ingredient {
   name: string
   baseUnit: BaseUnit
   shelfLifeDays: number | null
+  /** Pantry: the Shelf Life in a Freezer; null = the Freezer does not change the go-off date (absent in older fixtures). */
+  frozenShelfLifeDays?: number | null
   conversions: Conversion[]
   /** IM2: the picture's image id, '' = none. The server always sends it (optional here so older fixtures compile). */
   image?: string
@@ -77,6 +79,8 @@ export interface IngredientPatch {
   baseUnit?: BaseUnit
   /** null clears it. */
   shelfLifeDays?: number | null
+  /** Pantry: null clears it. */
+  frozenShelfLifeDays?: number | null
   /** IM2: an image id sets the picture, '' removes it, absent leaves it. */
   image?: string
 }
