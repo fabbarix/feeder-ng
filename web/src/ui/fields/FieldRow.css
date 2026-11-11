@@ -1,4 +1,4 @@
-/* FieldRow: short fields on one row; each starts from the xs width, grows to its own cap and wraps when full. Tokens only. */
+/* FieldRow: short fields on one row; each is its own size (cap from data-size), never grown or shrunk below it; the row wraps when full. Tokens only. */
 .field-row {
   display: flex;
   flex-wrap: wrap;
@@ -7,7 +7,7 @@
 }
 
 .field-row > * {
-  flex: 1 1 var(--field-size-xs);
+  flex: 0 1 auto;
   min-inline-size: 0;
 }
 

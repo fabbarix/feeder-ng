@@ -14,7 +14,8 @@ Tokens, defined once in `Field.css` `:root` (or `styles.css`):
 | `--field-size-sm` | 168px | up to 4 digits plus a unit; a time |
 | `--field-size-md` | 320px | a name, a time zone, an email, a date |
 | `--field-size-lg` | 480px | a long line (URL) |
-| `--field-size-xs-stepper` | 136px | `xs` NumberField with its stepper |
+| `--field-size-xs-stepper` | 136px | `xs` NumberField with its stepper (value only, up to 2 digits) |
+| `--field-size-sm-stepper` | 192px | `sm` NumberField with its stepper, up to 3 digits plus a unit such as "people" |
 
 Rendering: `FieldFrame` takes `size` and writes `data-size` on the outer `.ui-field` (no attribute when `size` is undefined, so `FieldFrame` alone keeps its container width). CSS:
 
@@ -33,11 +34,11 @@ Defaults (the primitive passes them to `FieldFrame`):
 `size` is destructured by every primitive, so `<input size>` never appears. `Select` takes it through `SelectFieldProps`; `MultiSelect` and the domain selects inherit it.
 
 ### Compact NumberField and Stepper
-- `NumberField` with a stepper (not `hideStepper`) puts `ui-field--stepper` on its frame; the control is `[-] 7 [+]` with 40 px buttons (`.ui-field--stepper .icon-button`), the value centred and tabular, the unit inside. At `xs` the frame is 136 px.
+- `NumberField` with a stepper (not `hideStepper`) puts `ui-field--stepper` on its frame; the control is `[-] 7 [+]` with 40 px buttons and tight spacing (`padding: 0 --space-1`, `gap: --space-1`, input `min-inline-size: 3ch`, so the value never collapses; a width-budget test in `stepperBudget.css.test.ts` computes it from the tokens) (`.ui-field--stepper .icon-button`), the value centred and tabular, the unit inside. At `xs` the frame is 136 px.
 - `Stepper` gets `size?: 'md' | 'sm'` (default `md`), written as `data-size` on `.stepper`; `sm` is the compact variant (gap `--space-1`, value `title-3`), inline-flex, never stretched. `StepperField` is unchanged.
 
 ### FieldRow (`ui/fields/FieldRow.tsx`, `FieldRow.css`)
-`<FieldRow label? align?>children</FieldRow>`. `div.field-row`: `display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-start`. Children `.field-row > * { flex: 1 1 var(--field-size-xs); min-inline-size: 0 }`: each field starts from the xs width, grows up to its own `max-inline-size` and wraps when the row is full, so no media query is needed (three xs fields wrap 2 + 1 on a 360 px phone). `label` makes it `role="group"` with that name; `align="end"` sets `data-align="end"` (`align-items: flex-end`, for a trailing Button).
+`<FieldRow label? align?>children</FieldRow>`. `div.field-row`: `display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-start`. Children `.field-row > * { flex: 0 1 auto; min-inline-size: 0 }`: each field is its own size (the `data-size` cap, incl. the 136 px and 192 px stepper tokens), is never grown and wraps before it would shrink, so no media query is needed (three xs steppers wrap 2 + 1 on a 360 px phone). A shared 112 px basis was wrong: it squeezed steppers and sm fields below their size and overlapped at 1920. `label` makes it `role="group"` with that name; `align="end"` sets `data-align="end"` (`align-items: flex-end`, for a trailing Button).
 
 ## 2. Buttons: `block` and FormActions (F-03, F-04)
 
@@ -49,6 +50,12 @@ Defaults (the primitive passes them to `FieldFrame`):
 - Base (phone first): `.form-actions { display: flex; inline-size: 100%; gap: var(--space-2) }`; `@media (max-width: 599px)`: `flex-direction: column-reverse`, `.form-actions .button { inline-size: 100% }` so the primary is on top, full width, and the destructive action is last.
 - `@media (min-width: 600px)`: one row, `justify-content: flex-end`, `.form-actions__destructive { margin-inline-end: auto }` (far left), no full-width button (primary is never full width on desktop).
 - `inline-size: 100%` lets it fill the `.sheet__footer` and `.dialog__actions` it sits in; those two keep their own flex rules so a legacy footer with bare Buttons is unchanged. Pages use it directly. The sticky bar (R2-L `StickyActionBar`) will wrap it.
+
+**Focus order decision.** DOM order stays destructive, tertiary, secondary, primary. On desktop (one row) Tab order then equals the visual left-to-right order (WCAG 2.4.3). On phones `column-reverse` shows the primary on top while it is last in the DOM, so Tab goes bottom-up; rendering the primary first with `row-reverse` on desktop would instead make Tab start at the visually last (rightmost) button on desktop, the layout with more keyboard use. We keep the desktop-correct order and accept the phone mismatch (touch is the main phone input).
+
+**Full-width-only primitives.** `Segmented`, `RadioCards`, `StepperField` and `Slider` take no `size`; they fill their container (a radiogroup or track needs its width). Use a `FieldRow` or a width-limited parent when one must be narrower. A `Stepper size="sm"` box does not stretch (`justify-self: start`).
+
+**Disabled Segmented.** Besides the muted text (the unselected options already use `--color-muted` at rest), a disabled group has a transparent track with an outline border and a flat selected pill (no fill, no shadow). The enabled track carries a transparent border of the same width, so nothing shifts.
 
 ## 3. One focus ring (F-09, K1 (b))
 
@@ -65,7 +72,7 @@ On focus a field control gets `border-color: var(--color-accent); box-shadow: va
 | TimeField | `.time-field:focus-within` (new) | focus-within |
 | Stepper value | `.stepper__value:focus-visible` | keyboard |
 
-Inner inputs keep `outline: none`. The TimeField segment's focus is a soft fill only (`background: var(--color-soft)`, no outline, no shadow). An invalid field keeps `border-color: var(--status-danger-fg)` while focused. The 3 px `--color-soft-strong` halo is removed from `Field.css` and `SearchField.css`. Not changed (out of the review's list): `Button` and `IconButton` (their hover overlay is also a `box-shadow`), Segmented options, calendar day buttons, which keep their 3 px accent outline.
+Inner inputs keep `outline: none`. The TimeField segment's focus is a soft fill only (`background: var(--color-soft-strong)`, visible against the surface-2 control, no outline, no shadow). An invalid field keeps `border-color: var(--status-danger-fg)` while focused. The 3 px `--color-soft-strong` halo is removed from `Field.css` and `SearchField.css`. Not changed (out of the review's list): `Button` and `IconButton` (their hover overlay is also a `box-shadow`), Segmented options, calendar day buttons, which keep their 3 px accent outline.
 
 ### Contrast (WCAG 1.4.11, ring `--color-accent` against what it touches; computed by `theme/contrast.ts` in `focusRing.css.test.ts`)
 

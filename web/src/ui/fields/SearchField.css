@@ -56,7 +56,7 @@
 }
 
 .search-field[data-size='md'] {
-  max-inline-size: var(--field-size-md);
+  max-inline-size: min(var(--field-size-md), 100%);
 }
 
 .search-field[data-size='lg'] {

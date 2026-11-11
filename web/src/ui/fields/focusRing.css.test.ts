@@ -78,7 +78,7 @@ describe('focus ring on the other field parts', () => {
 })
 
 describe('ring contrast, WCAG 1.4.11 non-text >= 3:1, every golden palette', () => {
-  const cases = Object.entries(GOLDEN_PALETTES).flatMap(([preset, schemes]) =>
+  const cases = Object.entries(GOLDEN_PALETTES).flatMap(([preset]) =>
     (['light', 'dark'] as const).flatMap((scheme) => (['surface', 'surface2', 'surface3', 'bg'] as const).map((surface) => [preset, scheme, surface] as const)),
   )
   it.each(cases)('%s %s: ring vs %s', (preset, scheme, surface) => {

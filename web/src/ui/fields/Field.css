@@ -8,6 +8,7 @@
   --field-size-md: 320px;
   --field-size-lg: 480px;
   --field-size-xs-stepper: 136px;
+  --field-size-sm-stepper: 192px;
 }
 
 .ui-field {
@@ -26,7 +27,7 @@
 }
 
 .ui-field[data-size='md'] {
-  max-inline-size: var(--field-size-md);
+  max-inline-size: min(var(--field-size-md), 100%);
 }
 
 .ui-field[data-size='lg'] {
@@ -39,6 +40,10 @@
 
 .ui-field--stepper[data-size='xs'] {
   max-inline-size: var(--field-size-xs-stepper);
+}
+
+.ui-field--stepper[data-size='sm'] {
+  max-inline-size: var(--field-size-sm-stepper);
 }
 
 fieldset.ui-field {
@@ -85,6 +90,15 @@ legend.ui-field__label {
 
 .ui-field[data-invalid] .ui-field__control:focus-within {
   border-color: var(--status-danger-fg);
+}
+
+.ui-field--stepper .ui-field__control {
+  padding: 0 var(--space-1);
+  gap: var(--space-1);
+}
+
+.ui-field--stepper .ui-field__input {
+  min-inline-size: 3ch;
 }
 
 .ui-field--stepper .icon-button {

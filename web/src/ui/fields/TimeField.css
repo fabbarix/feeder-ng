@@ -62,7 +62,7 @@
 }
 
 .time-field__segment:focus-visible {
-  background: var(--color-soft);
+  background: var(--color-soft-strong);
   border-radius: var(--radius-control);
   outline: none;
 }

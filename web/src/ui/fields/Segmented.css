@@ -3,12 +3,20 @@
   display: flex;
   gap: var(--space-1);
   padding: var(--space-1);
+  border: 1.5px solid transparent;
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
 }
 
 .segmented[data-disabled] {
+  border-color: var(--color-outline);
+  background: transparent;
   color: var(--color-muted);
+}
+
+.segmented[data-disabled] .segmented__option[aria-checked='true'] {
+  background: transparent;
+  box-shadow: none;
 }
 
 .segmented__option {

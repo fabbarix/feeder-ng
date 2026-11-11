@@ -40,18 +40,18 @@ describe('compact stepper width budget', () => {
   })
 
   it('"99" fits the xs stepper (no unit)', () => {
-    expect(remaining('--field-size-xs-stepper', '')).toBeGreaterThanOrEqual(2 * CH)
+    expect(remaining('var(--field-size-xs-stepper)', '')).toBeGreaterThanOrEqual(2 * CH)
   })
 
   it('"999" with the unit "people" fits the sm stepper', () => {
-    expect(remaining('--field-size-sm-stepper', 'people')).toBeGreaterThanOrEqual(3 * CH)
+    expect(remaining('var(--field-size-sm-stepper)', 'people')).toBeGreaterThanOrEqual(3 * CH)
   })
 
   it('"999" with a short unit (g, min) fits the xs stepper too', () => {
-    expect(remaining('--field-size-xs-stepper', 'g')).toBeGreaterThanOrEqual(3 * CH - 6)
+    expect(remaining('var(--field-size-xs-stepper)', 'g')).toBeGreaterThanOrEqual(3 * CH - 6)
   })
 
   it('the reserved min value width itself fits the sm budget', () => {
-    expect(remaining('--field-size-sm-stepper', 'people')).toBeGreaterThanOrEqual(minValue)
+    expect(remaining('var(--field-size-sm-stepper)', 'people')).toBeGreaterThanOrEqual(minValue)
   })
 })
