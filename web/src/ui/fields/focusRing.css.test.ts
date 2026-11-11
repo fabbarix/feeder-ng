@@ -3,6 +3,7 @@
 // the control fill and the page in light and dark, computed with the project's helper.
 import { describe, expect, it } from 'vitest'
 import { contrastRatio } from '../../theme/contrast'
+import { GOLDEN_PALETTES } from '../../theme/palette.golden'
 import { declarations, readStylesCss, readUiCss } from '../test-utils'
 
 const styles = readStylesCss()
@@ -60,9 +61,9 @@ describe('focus ring on the other field parts', () => {
     expect(declarations(search, '.search-field__input')['outline']).toBe('none')
   })
 
-  it('the TimeField segment shows only a soft fill on focus, no outline of its own (K1 (b))', () => {
+  it('the TimeField segment shows only a soft-strong fill (visible against surface-2) on focus, no outline of its own (K1 (b))', () => {
     const d = declarations(time, '.time-field__segment:focus-visible')
-    expect(d['background']).toBe('var(--color-soft)')
+    expect(d['background']).toBe('var(--color-soft-strong)')
     expect(d['outline'] ?? 'none').toBe('none')
     expect(d['box-shadow'] ?? 'none').toBe('none')
   })
@@ -76,15 +77,19 @@ describe('focus ring on the other field parts', () => {
   })
 })
 
-describe('ring contrast, WCAG 1.4.11 non-text >= 3:1', () => {
-  const ring = (scheme: Record<string, string>) => scheme['--color-accent']!
-  for (const [name, scheme] of [['light', light], ['dark', dark]] as const) {
-    it.each(['--color-surface', '--color-surface-2', '--color-surface-3', '--color-bg'])(`${name}: ring vs %s`, (surface) => {
-      expect(scheme['--color-accent'], 'accent resolved').toMatch(/^#/)
-      const ratio = contrastRatio(ring(scheme), scheme[surface]!)
-      expect(ratio, `${name} ${surface}`).toBeGreaterThanOrEqual(3)
-    })
-  }
+describe('ring contrast, WCAG 1.4.11 non-text >= 3:1, every golden palette', () => {
+  const cases = Object.entries(GOLDEN_PALETTES).flatMap(([preset, schemes]) =>
+    (['light', 'dark'] as const).flatMap((scheme) => (['surface', 'surface2', 'surface3', 'bg'] as const).map((surface) => [preset, scheme, surface] as const)),
+  )
+  it.each(cases)('%s %s: ring vs %s', (preset, scheme, surface) => {
+    const p = GOLDEN_PALETTES[preset as keyof typeof GOLDEN_PALETTES][scheme]
+    expect(contrastRatio(p.accent, p[surface]), `${preset} ${scheme} ${surface}`).toBeGreaterThanOrEqual(3)
+  })
+
+  it('the default scheme tokens in styles.css resolve to hex (the token maps are readable)', () => {
+    expect(light['--color-accent']).toMatch(/^#/)
+    expect(dark['--color-accent']).toMatch(/^#/)
+  })
 
   it('the ring colour is the accent token itself (a change of accent re-runs this check)', () => {
     const token = styles.match(/--focus-ring\s*:\s*([^;]+);/)?.[1] ?? ''

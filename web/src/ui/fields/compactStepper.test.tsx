@@ -58,6 +58,10 @@ describe('Stepper size="sm" (compact)', () => {
     expect(declarations(stepper, '.stepper')['display']).toBe('inline-flex')
   })
 
+  it('the sm box does not stretch inside a grid/flex field frame (justify-self start)', () => {
+    expect(declarations(stepper, ".stepper[data-size='sm']")['justify-self']).toBe('start')
+  })
+
   it('the Stepper value uses the single focus ring token, not its own outline', () => {
     const d = declarations(stepper, '.stepper__value:focus-visible')
     expect(d['box-shadow']).toBe('var(--focus-ring)')

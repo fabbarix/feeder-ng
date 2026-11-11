@@ -21,7 +21,12 @@ describe('field size tokens', () => {
 describe('data-size rules cap the inline size with the tokens', () => {
   it.each(['xs', 'sm', 'md', 'lg'])('.ui-field[data-size=%s] -> max-inline-size: var(--field-size-%s)', (size) => {
     const d = declarations(field, `.ui-field[data-size='${size}']`)
-    expect(d['max-inline-size']).toBe(`var(--field-size-${size})`)
+    expect(d['max-inline-size']).toBe(size === 'md' ? 'min(var(--field-size-md), 100%)' : `var(--field-size-${size})`)
+  })
+
+  it('md is capped at the container too, so phone right edges align (min(token, 100%))', () => {
+    expect(declarations(field, ".ui-field[data-size='md']")['max-inline-size']).toBe('min(var(--field-size-md), 100%)')
+    expect(declarations(search, ".search-field[data-size='md']")['max-inline-size']).toBe('min(var(--field-size-md), 100%)')
   })
 
   it('full is 100 %', () => {
@@ -40,9 +45,14 @@ describe('data-size rules cap the inline size with the tokens', () => {
     expect(d['max-inline-size']).toBe('var(--field-size-xs-stepper)')
   })
 
+  it('the sm stepper NumberField has its own token, wide enough for value + unit', () => {
+    expect(all).toMatch(/--field-size-sm-stepper\s*:\s*192px\s*;/)
+    expect(declarations(field, ".ui-field--stepper[data-size='sm']")['max-inline-size']).toBe('var(--field-size-sm-stepper)')
+  })
+
   it('SearchField carries the same data-size rules with the same tokens', () => {
     for (const size of ['xs', 'sm', 'md', 'lg']) {
-      expect(declarations(search + field, `.search-field[data-size='${size}']`)['max-inline-size'], size).toBe(`var(--field-size-${size})`)
+      expect(declarations(search + field, `.search-field[data-size='${size}']`)['max-inline-size'], size).toBe(size === 'md' ? 'min(var(--field-size-md), 100%)' : `var(--field-size-${size})`)
     }
     expect(declarations(search + field, ".search-field[data-size='full']")['max-inline-size']).toBe('100%')
   })
