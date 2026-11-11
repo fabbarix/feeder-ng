@@ -43,16 +43,26 @@ describe('E-01: section cards and the section index', () => {
   })
 })
 
-describe('E-01: an ingredient line is one row from 720 px', () => {
-  const FROM = 720
-  it('has a header row of captions from 720 px, hidden below', () => {
-    expect(valueFor('.recipe-editor__lines-head', 'display', 719)).toBe('none')
-    expect(valueFor('.recipe-editor__lines-head', 'display', 720)).toBe('grid')
+// Why 900 and not 720: the one-row line has 382 px of fixed tracks (88 + 120 + 90 + 84) plus five 12 px gaps, the drag handle sits inside the
+// Ingredient cell, and the page has side padding. At 820 px that left the Ingredient picker about 126 px ("T…"). From 900 px the two 1fr tracks
+// are each about 180 px, so the picker keeps >= 180 px (and Note >= 160, the page-layout guard's P5 floor). Between 720 and 899 px the
+// two-row phone layout is used, where the picker spans the whole row. The header and the rows switch together at the same width.
+describe('E-01: an ingredient line is one row from 900 px', () => {
+  const FROM = 900
+  it('between 720 and 899 px the line still uses the two-row layout, so the picker is never cramped', () => {
+    for (const w of [720, 820, 899]) {
+      expect(valueFor('.line-row', 'grid-template-areas', w), `@${w}`).toMatch(/ingredient ingredient/)
+      expect(valueFor('.recipe-editor__lines-head', 'display', w), `@${w}`).toBe('none')
+    }
+  })
+  it('has a header row of captions from 900 px, hidden below', () => {
+    expect(valueFor('.recipe-editor__lines-head', 'display', 899)).toBe('none')
+    expect(valueFor('.recipe-editor__lines-head', 'display', 900)).toBe('grid')
   })
   it('.line-row: Ingredient 1fr · Quantity 88 · Unit 120 · Note 1fr · Optional · remove, on one grid row', () => {
     const cols = valueFor('.line-row', 'grid-template-columns', FROM)
     expect(cols).toMatch(/^minmax\(0, 1fr\) 88px 120px minmax\(0, 1fr\) \d+px \d+px$/)
-    expect(valueFor('.line-row', 'grid-template-columns', 719)).not.toMatch(/120px/)
+    expect(valueFor('.line-row', 'grid-template-columns', 899)).not.toMatch(/120px/)
   })
   it('the header uses the same columns so the captions sit over the fields', () => {
     expect(valueFor('.recipe-editor__lines-head', 'grid-template-columns', FROM)).toBe(valueFor('.line-row', 'grid-template-columns', FROM))
@@ -71,26 +81,26 @@ describe('E-01: an ingredient line is one row from 720 px', () => {
     expect(valueFor('.recipe-editor__lines-head', 'padding-inline', FROM)).toBe('var(--space-3)')
     expect(valueFor('.line-row', 'padding', FROM) ?? valueFor('.line-row', 'padding-inline', FROM)).toMatch(/var\(--space-3\)/)
   })
-  it('the cells are direct grid items; from 720 each goes to the next track (no named areas)', () => {
+  it('the cells are direct grid items; from 900 each goes to the next track (no named areas)', () => {
     expect(valueFor('.line-row', 'grid-template-areas', FROM)).toBe('none')
     for (const c of ['ingredient', 'quantity', 'unit', 'note', 'optional', 'remove']) {
       expect(valueFor(`.line-row__${c}`, 'grid-area', FROM), c).toBe('auto')
     }
     for (const sel of ['.line-row__amount', '.line-row__extras']) expect(rulesFor(sel), sel).toEqual([])
   })
-  it('from 720 the field labels in a row are visually hidden (kept for assistive tech); the header names the columns', () => {
-    const body = rulesFor('.line-row .ui-field__label').filter((r) => r.minWidth === 720)
+  it('from 900 the field labels in a row are visually hidden (kept for assistive tech); the header names the columns', () => {
+    const body = rulesFor('.line-row .ui-field__label').filter((r) => r.minWidth === 900)
     expect(body.length).toBeGreaterThan(0)
     expect(body.map((r) => r.body).join(' ')).toMatch(/clip-path:\s*inset\(50%\)/)
     expect(body.map((r) => r.body).join(' ')).toMatch(/position:\s*absolute/)
   })
-  it('a row has no card background of its own from 720 (it is a hairline-separated line)', () => {
+  it('a row has no card background of its own from 900 (it is a hairline-separated line)', () => {
     expect(valueFor('.line-row', 'background', FROM)).toBe('none')
     expect(valueFor('.line-row', 'border-block-end', FROM)).toMatch(/var\(--color-line\)/)
   })
 })
 
-describe('E-01: an ingredient line is two rows on a phone (below 720 px)', () => {
+describe('E-01: an ingredient line is two rows on a phone (below 900 px)', () => {
   const rows = (w: number) => [...(valueFor('.line-row', 'grid-template-areas', w) ?? '').matchAll(/["']([^"']+)["']/g)].map((m) => m[1]!.trim().split(/\s+/))
   it('has named areas: Ingredient on its own first row', () => {
     const r = rows(0)
