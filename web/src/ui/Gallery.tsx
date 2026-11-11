@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { BentoGrid } from './BentoGrid'
 import { Button, PRIMARY_SCOPE_ATTR, type ButtonVariant } from './Button'
 import { Chip, type ChipStatus } from './Chip'
@@ -14,6 +14,9 @@ import { Segmented } from './fields/Segmented'
 import { TextField } from './fields/TextField'
 import { TimeField } from './fields/TimeField'
 import { Select } from './Select/Select'
+import { CourseMultiSelect, CourseSelect } from './Select/CourseSelect'
+import { CoursePicker, type CoursePickerProps } from './CoursePicker/CoursePicker'
+import type { CourseChoice } from '../lib/courses'
 import { Stepper } from './Stepper'
 import type { FieldSize } from './fields/Field'
 import { Page } from './Page'
@@ -500,6 +503,61 @@ function MenuGroup() {
   )
 }
 
+const COURSES: CourseChoice[] = [
+  { id: 1, name: 'Main', main: true },
+  { id: 2, name: 'Side', main: false },
+  { id: 3, name: 'Starter', main: false },
+  { id: 4, name: 'Dessert', main: false },
+]
+
+/** A picker that keeps its own value, so the samples can be clicked. */
+function ControlledCoursePicker({ initial, ...rest }: Omit<CoursePickerProps, 'value' | 'onChange'> & { initial: number[] }) {
+  const [value, setValue] = useState(initial)
+  return <CoursePicker {...rest} value={value} onChange={setValue} />
+}
+
+function CoursePickerGroup() {
+  return (
+    <Group name="CoursePicker">
+      <WideCell caption="Ordered: chosen Courses in the slot's order, with a row extra and a helper">
+        <ControlledCoursePicker
+          label="Courses"
+          courses={COURSES}
+          initial={[2, 1]}
+          helper="Drag to set the order."
+          renderRowExtras={() => (
+            <span data-testid="course-row-extra-sample">
+              <Chip kind="tag">Optional</Chip>
+            </span>
+          )}
+        />
+      </WideCell>
+      <WideCell caption="Unordered (a Recipe's Courses): household order">
+        <ControlledCoursePicker label="Courses" courses={COURSES} initial={[4, 1]} ordered={false} />
+      </WideCell>
+      <WideCell caption="Empty choice: the error">
+        <ControlledCoursePicker label="Courses" courses={COURSES} initial={[]} />
+      </WideCell>
+      <WideCell caption="Disabled">
+        <ControlledCoursePicker label="Courses" courses={COURSES} initial={[1, 2]} disabled />
+      </WideCell>
+    </Group>
+  )
+}
+
+function CourseSelectGroup() {
+  return (
+    <Group name="CourseSelect">
+      <WideCell caption="CourseSelect (one Course, main marked)">
+        <CourseSelect label="Replacement Course" courses={COURSES} value={1} onChange={noop} />
+      </WideCell>
+      <WideCell caption="CourseMultiSelect (filter)">
+        <CourseMultiSelect label="Courses" courses={COURSES} values={[2, 4]} onChange={noop} />
+      </WideCell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -524,6 +582,8 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <WeekdayPickerGroup />
       <MemberPillGroup />
       <MenuGroup />
+      <CoursePickerGroup />
+      <CourseSelectGroup />
       <OverlayGalleryGroups />
     </section>
   )
