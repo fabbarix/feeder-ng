@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -17,6 +18,12 @@ import (
 // streams, so a long answer is no longer cut at one attempt's 120 s; 300 s leaves room for it and one repair.
 const DefaultOverall = 300 * time.Second
 
+// CourseSource lists the Household's active Courses for the Agent Prompt, in household order (crs-e1). The prompt
+// is built from it for every read, so a renamed or added Course reaches the model at once.
+type CourseSource interface {
+	PromptCourses(ctx context.Context) ([]recipefile.PromptCourse, error)
+}
+
 // Deps are the ports. Zero Overall means DefaultOverall.
 type Deps struct {
 	Store    *store.Store
@@ -29,6 +36,7 @@ type Deps struct {
 	Clock    clock.Clock
 	Logger   *slog.Logger
 	Overall  time.Duration
+	Courses  CourseSource // nil: no Courses are listed in the prompt
 }
 
 // Service is safe for concurrent use.
@@ -72,7 +80,7 @@ func buildPrompt() (prompt string, schema []byte, err error) {
 	if err != nil {
 		return "", nil, err
 	}
-	return recipeassistant.SystemPrompt(recipefile.AgentPrompt(tmpl, string(spec.Schema), string(spec.Example))), schema, nil
+	return recipeassistant.SystemPrompt(recipefile.AgentPrompt(tmpl, string(spec.Schema), string(spec.Example), nil)), schema, nil
 }
 
 // Actor is who changes settings.

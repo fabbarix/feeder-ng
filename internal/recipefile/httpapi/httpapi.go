@@ -42,7 +42,7 @@ func mount(r *app.Router, d app.Deps) {
 		sessions:  recipefile.NewSessions(d.Clock),
 		fetcher:   imagefetch.New(imagefetch.Options{}),
 		events:    d.Events,
-		prompt:    recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example)),
+		prompt:    recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example), nil),
 		promptOK:  promptErr == nil,
 		assistant: service.For(d, claude.Factory(d.Logger)),
 	}
@@ -318,6 +318,8 @@ type confirmJSON struct {
 	Recipes            []appliedJSON `json:"recipes"`
 	IngredientsCreated int           `json:"ingredientsCreated"`
 	ConversionsAdded   int           `json:"conversionsAdded"`
+	CoursesCreated     int           `json:"coursesCreated"`
+	CoursesUnarchived  int           `json:"coursesUnarchived"`
 }
 
 type appliedJSON struct {
@@ -328,7 +330,8 @@ type appliedJSON struct {
 }
 
 func confirmAnswer(res store.Result) confirmJSON {
-	out := confirmJSON{Recipes: []appliedJSON{}, IngredientsCreated: res.IngredientsCreated, ConversionsAdded: res.ConversionsAdded}
+	out := confirmJSON{Recipes: []appliedJSON{}, IngredientsCreated: res.IngredientsCreated, ConversionsAdded: res.ConversionsAdded,
+		CoursesCreated: res.CoursesCreated, CoursesUnarchived: res.CoursesUnarchived}
 	for _, r := range res.Recipes {
 		out.Recipes = append(out.Recipes, appliedJSON{Index: r.Index, ID: r.ID, Name: r.Name, Action: r.Action})
 	}

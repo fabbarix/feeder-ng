@@ -150,6 +150,8 @@ type Result struct {
 	IngredientsCreated int
 	ConversionsAdded   int
 	PicturesAdded      int // IM3: existing Ingredients that took the file's picture
+	CoursesCreated     int // crs-e1: Courses added by an Admin's answer
+	CoursesUnarchived  int // crs-e1: archived Courses brought back by an Admin's answer
 }
 
 // AppliedRecipe is one written Recipe.
