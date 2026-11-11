@@ -377,13 +377,13 @@
   min-inline-size: 0;
 }
 
-/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note and Optional below. The last column holds the trash icon and the Optional chip. */
+/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note below. The last column holds the actions menu and the trash icon. */
 .line-row {
   grid-template-columns: 72px minmax(0, 1fr) auto;
   grid-template-areas:
     'ingredient ingredient ingredient'
     'quantity unit remove'
-    'note note optional';
+    'note note note';
   align-items: end;
 }
 
@@ -410,6 +410,23 @@
   min-inline-size: 0;
 }
 
+/* The picker keeps a 180 px basis; the Optional chip sits after it, or wraps under it when the cell is narrow. */
+.line-row__ingredient-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.line-row__ingredient-body > :first-child {
+  flex: 1 1 180px;
+  min-inline-size: 0;
+}
+
+.line-row__ingredient-body > .chip {
+  flex: none;
+}
+
 .line-row__pending-body {
   display: grid;
   gap: var(--space-1);
@@ -428,12 +445,6 @@
   grid-area: note;
 }
 
-.line-row__optional {
-  grid-area: optional;
-  align-self: center;
-  justify-self: end;
-}
-
 .line-row__remove {
   grid-area: remove;
   display: flex;
@@ -446,7 +457,6 @@
 .line-row__quantity,
 .line-row__unit,
 .line-row__note,
-.line-row__optional,
 .line-row__remove {
   min-inline-size: 0;
 }
@@ -661,9 +671,9 @@
   white-space: nowrap;
 }
 
-/* Ingredient lines: one row from 900 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions.
-   Below 900 px the picker would get under 180 px beside the drag handle, so the two-row layout stays up to 899 px.
-   Optional is on a second row under the Ingredient: a sixth track left the picker about 120 px beside the drag handle.
+/* Ingredient lines: one row from 900 px (Ingredient, Quantity, Unit, Note, actions + remove) under a row of captions.
+   Below 900 px the picker would get under 180 px beside the drag handle, so the multi-row layout stays up to 899 px.
+   Optional is a Menu item plus a chip inside the Ingredient cell (it wraps under the picker), so it needs no track.
    Every track is a fixed width except the two flexible ones: an `auto` track is empty in the header, so it collapsed and the captions drifted. */
 @media (min-width: 900px) {
   .recipe-editor__lines-head,
@@ -700,20 +710,13 @@
     grid-row: 1;
   }
 
-  .line-row__optional {
-    grid-area: auto;
-    grid-row: 2;
-    grid-column: 1;
-    justify-self: start;
-  }
-
   .line-row__remove {
     justify-self: start;
   }
 
   .line-row__hint {
     grid-column: 1 / -1;
-    grid-row: 3;
+    grid-row: 2;
   }
 
   .line-row[data-state='dragging'],

@@ -42,7 +42,7 @@ const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMess
 
 /**
  * One ingredient line of the editor: Ingredient (IngredientSelect), Quantity (text, so "1 1/2" stays typeable), Unit
- * (UnitSelect with the Ingredient's units and a typed custom unit), Note and the "Optional" chip, with remove; one row from 720 px. A unit the
+ * (UnitSelect with the Ingredient's units and a typed custom unit), Note and remove; one row from 900 px. "Optional" is a checkable item of the actions Menu and shows as a tag chip in the Ingredient cell. A unit the
  * Ingredient does not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
  */
 export function IngredientLineRow({
@@ -80,19 +80,22 @@ export function IngredientLineRow({
     <li {...itemProps} className={rowClass('line-row', itemProps)}>
       <div className="line-row__ingredient">
         {handle ? <div className="line-row__handle">{handle}</div> : null}
-        <IngredientSelect
-          size="full"
-          label={recipeStrings.lines.ingredient}
-          ingredients={ingredients}
-          value={line.ingredientId}
-          error={fieldError(errors, `lines.${index}.ingredient`)}
-          onCreate={onQuickCreate}
-          createDisabledReason={onQuickCreate ? quickCreateDisabledReason : undefined}
-          onChange={(id) => {
-            const picked = ingredients.find((ing) => ing.id === id)
-            if (picked) onPick(picked)
-          }}
-        />
+        <div className="line-row__ingredient-body">
+          <IngredientSelect
+            size="full"
+            label={recipeStrings.lines.ingredient}
+            ingredients={ingredients}
+            value={line.ingredientId}
+            error={fieldError(errors, `lines.${index}.ingredient`)}
+            onCreate={onQuickCreate}
+            createDisabledReason={onQuickCreate ? quickCreateDisabledReason : undefined}
+            onChange={(id) => {
+              const picked = ingredients.find((ing) => ing.id === id)
+              if (picked) onPick(picked)
+            }}
+          />
+          {line.optional ? <Chip kind="tag">{recipeStrings.lines.optional}</Chip> : null}
+        </div>
       </div>
       <div ref={amountRef} className="line-row__quantity">
         <TextField
@@ -128,38 +131,36 @@ export function IngredientLineRow({
           onChange={(note) => onChange({ note })}
         />
       </div>
-      <div className="line-row__optional">
-        <Chip
-          kind="filter"
-          selected={line.optional}
-          label={recipeStrings.lines.optionalLine(who)}
-          onClick={() => onChange({ optional: !line.optional })}
-        >
-          {recipeStrings.lines.optional}
-        </Chip>
-      </div>
       <div className="line-row__remove">
-        {onMove ? (
-          <Menu
-            label={recipeStrings.lines.actions(who)}
-            items={[
-              {
-                id: 'up',
-                label: recipeStrings.lines.up,
-                icon: 'moveUp',
-                disabled: index === 0,
-                onSelect: () => onMove(-1),
-              },
-              {
-                id: 'down',
-                label: recipeStrings.lines.down,
-                icon: 'moveDown',
-                disabled: count !== undefined && index >= count - 1,
-                onSelect: () => onMove(1),
-              },
-            ]}
-          />
-        ) : null}
+        <Menu
+          label={recipeStrings.lines.actions(who)}
+          items={[
+            ...(onMove
+              ? [
+                  {
+                    id: 'up',
+                    label: recipeStrings.lines.up,
+                    icon: 'moveUp' as const,
+                    disabled: index === 0,
+                    onSelect: () => onMove(-1),
+                  },
+                  {
+                    id: 'down',
+                    label: recipeStrings.lines.down,
+                    icon: 'moveDown' as const,
+                    disabled: count !== undefined && index >= count - 1,
+                    onSelect: () => onMove(1),
+                  },
+                ]
+              : []),
+            {
+              id: 'optional',
+              label: recipeStrings.lines.optional,
+              checked: line.optional,
+              onSelect: () => onChange({ optional: !line.optional }),
+            },
+          ]}
+        />
         <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
       </div>
     </li>

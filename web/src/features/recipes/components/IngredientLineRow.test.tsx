@@ -124,7 +124,7 @@ describe('IngredientLineRow: structure for the two-row phone layout', () => {
     const row = container.querySelector('li.line-row')!
     const cells = ['ingredient', 'quantity', 'unit', 'note', 'remove']
     expect([...row.children].map((c) => c.className)).toEqual(cells.map((c) => `line-row__${c}`))
-    expect(row.querySelector('.line-row__remove button')).toHaveAccessibleName('Remove ingredient garlic')
+    expect(row.querySelector('.line-row__remove button[aria-label="Remove ingredient garlic"]')).not.toBeNull()
     expect(row.querySelector('.line-row__optional')).toBeNull()
     expect(row.querySelector('.line-row__remove button[aria-haspopup="menu"]')).toHaveAccessibleName('Actions for garlic')
   })
