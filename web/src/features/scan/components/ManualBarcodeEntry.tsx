@@ -1,5 +1,6 @@
 // The typed-barcode form offered when the camera does not work (B4). Renders and wires events only.
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { TextField } from '../../../ui/fields/TextField'
 import type { CameraRecovery } from '../hooks/useCameraRecovery'
 import { scanStrings } from '../strings'
@@ -27,10 +28,14 @@ export function ManualBarcodeEntry({ recovery }: ManualBarcodeEntryProps) {
         value={recovery.text}
         onChange={(text) => recovery.setText(text)}
       />
-      <Button type="submit">{scanStrings.useBarcode}</Button>
-      <Button variant="tertiary" onClick={() => recovery.closeManual()}>
-        {scanStrings.closeManual}
-      </Button>
+      <FormActions
+        primary={<Button type="submit">{scanStrings.useBarcode}</Button>}
+        tertiary={
+          <Button variant="tertiary" onClick={() => recovery.closeManual()}>
+            {scanStrings.closeManual}
+          </Button>
+        }
+      />
     </form>
   )
 }

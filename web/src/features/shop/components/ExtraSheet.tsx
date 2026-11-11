@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { TextField } from '../../../ui/fields/TextField'
 import { Select } from '../../../ui/Select/Select'
@@ -74,7 +75,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
             error={error === 'mustBePositive' ? errorText.mustBePositive : undefined}
           />
         ) : null}
-        <Button type="submit">{shopStrings.save}</Button>
+        <FormActions primary={<Button type="submit">{shopStrings.save}</Button>} />
       </form>
     </BottomSheet>
   )

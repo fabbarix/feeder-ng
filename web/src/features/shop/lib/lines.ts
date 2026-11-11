@@ -1,5 +1,6 @@
 // Presentation helpers for the Shopping List (no React).
 import { formatMinor } from '../../products/lib/money'
+import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 
@@ -42,7 +43,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     kind: 'line',
     ingredientId: line.ingredientId,
     extraId: null,
-    title: line.name,
+    title: displayName(line.name),
     detail: line.ticked ? '' : packText(line, system),
     quantityText: line.ticked ? '' : formatQuantity(line.quantity, line.baseUnit, system),
     packLine: line.ticked || !line.pack ? '' : `${line.pack.count} × ${line.pack.name}`,
@@ -60,7 +61,7 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     kind: 'extra',
     ingredientId: extra.ingredientId,
     extraId: extra.id,
-    title: extra.text ?? extra.name ?? '',
+    title: extra.text ?? (extra.name ? displayName(extra.name) : ''),
     detail: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
     quantityText: hasAmount && !extra.ticked ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
     packLine: '',

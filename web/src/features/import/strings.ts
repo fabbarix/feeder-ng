@@ -68,6 +68,8 @@ export const importStrings = {
 
   exportPick: 'Choose Recipes',
   allRecipes: 'All Recipes',
+  importActions: 'Import actions',
+  exportActions: 'Export actions',
   exportFile: 'Export Recipe File',
   selectAll: 'Select all',
   clearSelection: 'Clear',

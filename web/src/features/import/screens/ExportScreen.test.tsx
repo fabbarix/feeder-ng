@@ -21,10 +21,10 @@ describe('ExportScreen', () => {
     expect(screen.getByRole('heading', { name: s.exportTitle })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Export Recipe File' })).toHaveAttribute('href', '/api/recipe-file/export?all=1')
   })
-  it('shows loading and error states', () => {
+  it('shows loading and error states', async () => {
     hook.current = { ...base, recipes: [], isLoading: true }
     const { rerender } = render(<MemoryRouter><ExportScreen /></MemoryRouter>)
-    expect(screen.getByText(s.loading)).toBeInTheDocument()
+    expect(await screen.findByRole('status')).toBeInTheDocument()
     hook.current = { ...base, recipes: [], error: new Error('x') }
     rerender(<MemoryRouter><ExportScreen /></MemoryRouter>)
     expect(screen.getByRole('alert')).toBeInTheDocument()
