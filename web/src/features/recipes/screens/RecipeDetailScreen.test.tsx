@@ -97,7 +97,7 @@ describe('RecipeDetailScreen: Cook / Batch entry (B2)', () => {
 describe('RecipeDetailScreen: delete and archive (ConfirmDialog, no window.confirm)', () => {
   const openDelete = async () => {
     await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' })) // R2-1 (G-01): a Menu, not a sheet
   }
   it('asks in a dialog with three choices, then deletes', async () => {
     view()
@@ -124,7 +124,7 @@ describe('RecipeDetailScreen: delete and archive (ConfirmDialog, no window.confi
   it('archives from the overflow without a dialog', async () => {
     view()
     await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Archive' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
     expect(h.recipe.setArchived).toHaveBeenCalledWith(true)
   })
 })

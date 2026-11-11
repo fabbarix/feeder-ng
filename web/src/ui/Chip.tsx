@@ -6,7 +6,7 @@ import './Chip.css'
 
 export type ChipKind = 'why' | 'state' | 'status' | 'tag' | 'filter' | 'count'
 /** Fixed status palette (plan 3.1): `--status-<name>-fg|bg|solid`. */
-export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned'
+export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned' | 'info'
 /** @deprecated use `kind` (+ `status`). */
 export type ChipTone = LegacyChipTone
 
@@ -23,12 +23,15 @@ export interface ChipProps {
   selected?: boolean
   disabled?: boolean
   onClick?: () => void
+  /** Accessible name of a clickable chip when it must say more than its text (it should start with the visible text). */
+  label?: string
   children: ReactNode
 }
 
 /** Icon a `state` or `status` chip shows when none is given (docs/design/ui-fix-plan.md 4.3). */
 const DEFAULT_ICON: Partial<Record<ChipStatus, { state: IconName; status: IconName }>> = {
   pinned: { state: 'pinned', status: 'pinned' },
+  info: { state: 'info', status: 'info' },
   success: { state: 'cooked', status: 'cooked' },
   danger: { state: 'notCooked', status: 'spoiled' },
   leftover: { state: 'leftover', status: 'leftover' },
@@ -48,7 +51,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, tone, icon, selected, disabled, onClick, children }: ChipProps) {
+export function Chip({ kind, status, tone, icon, selected, disabled, onClick, label, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -80,6 +83,7 @@ export function Chip({ kind, status, tone, icon, selected, disabled, onClick, ch
         className="chip"
         {...attrs}
         aria-pressed={finalKind === 'filter' ? selected : undefined}
+        aria-label={label}
         disabled={disabled}
         onClick={onClick}
       >

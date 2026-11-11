@@ -22,7 +22,7 @@ interface Metrics {
   vw: number; scrollW: number; clientW: number; over: string[]
   content: { x: number; r: number }; railR: number; container: { x: number; r: number }
   pageWidthAttr: string | null
-  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean }[]
+  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean; inline?: boolean }[]
   bars: { cls: string; x: number; r: number; bgAlpha: number }[]
   railContrast: number | null
   dialog: { x: number; w: number; vw: number } | null
@@ -77,6 +77,11 @@ describe('evaluateMetrics', () => {
   })
   it('P5 collapsed text field (< 160 px)', () => {
     expect(run(ok({ fields: [{ label: 'Name', type: 'text', short: false, segment: false, size: '', w: 100 }] }))).toContain('P5')
+  })
+  it('P5 exempts a field that sits in an inline-flow control (data-size-intent="inline")', () => {
+    const f = { label: 'Add tag', type: 'text', short: false, segment: false, size: '', w: 100 }
+    expect(run(ok({ fields: [f] }))).toContain('P5')
+    expect(run(ok({ fields: [{ ...f, inline: true }] }))).not.toContain('P5')
   })
   it('P6 sticky bar: transparent, or either edge off the page container by more than 4 px (the draft only failed when BOTH were off)', () => {
     const bar = { cls: 'sticky-action-bar', x: 440, r: 1240, bgAlpha: 1 }
@@ -153,6 +158,7 @@ describe('the guard script and rules carry no label exemption', () => {
     const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
     const script = readFileSync(`${cwd}/../scripts/check-page-layout.mjs`, 'utf8')
     expect(script).toContain('data-size-intent')
+    expect(script).toContain('[data-size-intent="inline"]')
     expect(script).toContain("matches('.sticky-action-bar')") // the bar spans the container: it is not page content (P3)
     expect(readFileSync(`${cwd}/../scripts/lib/page-layout-rules.mjs`, 'utf8')).not.toMatch(/barcode/i)
   })

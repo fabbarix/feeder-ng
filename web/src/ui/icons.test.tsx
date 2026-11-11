@@ -106,7 +106,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['duration', 'Clock'],
   ['success', 'CheckCircle'],
   ['info', 'Info'],
-  ['warning', 'HourglassMedium'],
+  ['warning', 'Warning'], // R2-1: was the hourglass (shared with useSoon); a warning is a triangle, an error stays the circle
   ['error', 'WarningCircle'],
   ['offline', 'CloudSlash'],
   ['streak', 'Leaf'],

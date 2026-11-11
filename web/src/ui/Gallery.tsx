@@ -19,6 +19,7 @@ import type { FieldSize } from './fields/Field'
 import { Page } from './Page'
 import { PageHeader } from './PageHeader'
 import { StickyActionBar } from './StickyActionBar'
+import { Menu } from './Menu'
 import { MemberPill } from './MemberPill/MemberPill'
 import { WeekdayPicker } from './WeekdayPicker/WeekdayPicker'
 import { ProgressTile } from './ProgressTile'
@@ -103,26 +104,38 @@ function ChipGroup() {
   return (
     <Group name="Chip">
       <Cell caption="why">
-        <Chip kind="why" icon="ingredientOverlap">uses Monday's chicken</Chip>
+        <Chip kind="why" icon="ingredientOverlap">
+          uses Monday's chicken
+        </Chip>
       </Cell>
       {STATUSES.map((s) => (
         <Cell key={`state-${s}`} caption={`state ${s}`}>
-          <Chip kind="state" status={s}>{s}</Chip>
+          <Chip kind="state" status={s}>
+            {s}
+          </Chip>
         </Cell>
       ))}
       {STATUSES.map((s) => (
         <Cell key={`status-${s}`} caption={`status ${s}`}>
-          <Chip kind="status" status={s} icon="leftover">Leftover from Mon</Chip>
+          <Chip kind="status" status={s} icon="leftover">
+            Leftover from Mon
+          </Chip>
         </Cell>
       ))}
       <Cell caption="tag">
-        <Chip kind="tag" icon="tag">pasta</Chip>
+        <Chip kind="tag" icon="tag">
+          pasta
+        </Chip>
       </Cell>
       <Cell caption="filter off">
-        <Chip kind="filter" selected={false} onClick={noop}>Use soon</Chip>
+        <Chip kind="filter" selected={false} onClick={noop}>
+          Use soon
+        </Chip>
       </Cell>
       <Cell caption="filter on">
-        <Chip kind="filter" selected onClick={noop}>Use soon</Chip>
+        <Chip kind="filter" selected onClick={noop}>
+          Use soon
+        </Chip>
       </Cell>
       <Cell caption="count">
         <Chip kind="count">+2</Chip>
@@ -170,7 +183,9 @@ function TileGroup() {
       <Cell caption="stretched">
         <Tile stretched={{ label: 'Open Lasagne', onActivate: noop }}>
           <h4>Lasagne</h4>
-          <Button size="sm" variant="tertiary" onClick={noop}>Keep it</Button>
+          <Button size="sm" variant="tertiary" onClick={noop}>
+            Keep it
+          </Button>
         </Tile>
       </Cell>
       <Cell caption="metric">
@@ -274,7 +289,11 @@ function EmptyStateGroup() {
           icon="planEmpty"
           title="The week is wide open"
           description="Add Meal Slots and a few Recipes, and Feeder fills it in."
-          action={<Button variant="secondary" size="sm" onClick={noop}>Open Settings</Button>}
+          action={
+            <Button variant="secondary" size="sm" onClick={noop}>
+              Open Settings
+            </Button>
+          }
         />
       </Cell>
     </Group>
@@ -323,7 +342,16 @@ function FieldSizesGroup() {
         <TimeField label="Until" value="21:00" onChange={noop} disabled />
       </WideCell>
       <WideCell caption="Segmented disabled (outlined track, selected option ringed)">
-        <Segmented label="Theme" options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} value="dark" onChange={noop} disabled />
+        <Segmented
+          label="Theme"
+          options={[
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+          value="dark"
+          onChange={noop}
+          disabled
+        />
       </WideCell>
       <WideCell caption="SearchField (full)">
         <SearchField label="Search" value="" onChange={noop} />
@@ -373,7 +401,10 @@ function PageGroup() {
   return (
     <Group name="Page">
       {(['narrow', 'default', 'wide'] as const).map((w) => (
-        <WideCell key={w} caption={`width="${w}": content ${w === 'narrow' ? 720 : w === 'default' ? 1120 : 1480} px plus the gutters, centred`}>
+        <WideCell
+          key={w}
+          caption={`width="${w}": content ${w === 'narrow' ? 720 : w === 'default' ? 1120 : 1480} px plus the gutters, centred`}
+        >
           <div className="gallery__frame">
             <Page width={w} header={<PageHeader title={`Page ${w}`} />}>
               <Tile>
@@ -451,6 +482,24 @@ function MemberPillGroup() {
   )
 }
 
+function MenuGroup() {
+  return (
+    <Group name="Menu">
+      <Cell caption="Popover from 768 px, sheet below">
+        <Menu
+          label="More actions"
+          title="More"
+          items={[
+            { id: 'archive', label: 'Archive', icon: 'archive' },
+            { separator: true },
+            { id: 'delete', label: 'Delete', icon: 'delete', tone: 'danger' },
+          ]}
+        />
+      </Cell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -474,6 +523,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <StickyActionBarGroup />
       <WeekdayPickerGroup />
       <MemberPillGroup />
+      <MenuGroup />
       <OverlayGalleryGroups />
     </section>
   )

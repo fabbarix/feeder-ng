@@ -96,7 +96,7 @@ describe('IngredientLineRow: the pending Ready Meal line', () => {
   })
   it('can still be removed', async () => {
     const p = view(props({ line: pendingLine }))
-    await userEvent.click(screen.getByRole('button', { name: recipeStrings.lines.remove }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove ingredient Fish pie pack' }))
     expect(p.onRemove).toHaveBeenCalled()
   })
   it('a reused Ingredient (ingredientId set) is an ordinary, editable row', () => {

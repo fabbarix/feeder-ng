@@ -82,3 +82,39 @@ Feature: Ingredient pictures
     Then the review lists the Ingredient "saffron" as "new"
     When I confirm the review with no answers
     Then the Ingredient "saffron" shows an imported picture
+
+  # IM3: on import, an existing Ingredient with no picture takes the Recipe File's picture; an existing picture is never replaced.
+
+  Scenario: Importing a Recipe File gives an existing Ingredient without a picture the file's picture
+    Given the household already has the Ingredient "Garlic" with Base Unit "g"
+    When I review a Recipe File whose Ingredient "Garlic" has a picture
+    Then the review lists the Ingredient "Garlic" as "exact"
+    And the review says it adds a picture to the Ingredient "Garlic"
+    When I confirm the review with no answers
+    Then the Ingredient "Garlic" shows an imported picture
+    And the household stores 1 image
+
+  Scenario: Importing a Recipe File never replaces the picture an Ingredient has
+    When I add a 40x30 PNG image named "my-garlic"
+    And I create the Ingredient "Garlic" with the image "my-garlic"
+    And I review a Recipe File whose Ingredient "Garlic" has a picture
+    Then the review lists the Ingredient "Garlic" as "exact"
+    And the review adds no picture to the Ingredient "Garlic"
+    When I confirm the review with no answers
+    Then the Ingredient "Garlic" shows the picture "my-garlic"
+    And the household stores 1 image
+
+  Scenario: A picture set while the review is open wins, and the file's picture is not kept
+    Given the household already has the Ingredient "Garlic" with Base Unit "g"
+    When I review a Recipe File whose Ingredient "Garlic" has a picture
+    Then the review says it adds a picture to the Ingredient "Garlic"
+    When I add a 40x30 PNG image named "my-garlic"
+    And I set the picture of the Ingredient "Garlic" to the image "my-garlic"
+    And I confirm the review with no answers
+    Then the Ingredient "Garlic" shows the picture "my-garlic"
+    And the household stores 1 image
+
+  Scenario: A new Ingredient with a picture is not described as adding a picture
+    When I review a Recipe File whose new Ingredient "saffron" has a picture
+    Then the review lists the Ingredient "saffron" as "new"
+    And the review adds no picture to the Ingredient "saffron"
