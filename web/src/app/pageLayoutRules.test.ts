@@ -22,7 +22,7 @@ interface Metrics {
   vw: number; scrollW: number; clientW: number; over: string[]
   content: { x: number; r: number }; railR: number; container: { x: number; r: number }
   pageWidthAttr: string | null
-  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number }[]
+  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean }[]
   bars: { cls: string; x: number; r: number; bgAlpha: number }[]
   railContrast: number | null
   dialog: { x: number; w: number; vw: number } | null
@@ -68,6 +68,12 @@ describe('evaluateMetrics', () => {
     expect(run(ok({ fields: [{ ...f, size: 'full' }] }))).not.toContain('P4')
     expect(run(ok({ fields: [{ ...f, segment: true }] }))).not.toContain('P4')
     expect(run(ok({ fields: [f], vw: 390, scrollW: 390, clientW: 390 }), 390)).not.toContain('P4')
+  })
+  it('P4 exempts a field that says its width is intended (data-size-intent="long"), by marker and not by label', () => {
+    const f = { label: 'Barcode', type: 'text', short: true, segment: false, size: 'md', w: 300 }
+    expect(run(ok({ fields: [f] }))).toContain('P4') // a Barcode label alone is no longer enough
+    expect(run(ok({ fields: [{ ...f, long: true }] }))).not.toContain('P4')
+    expect(run(ok({ fields: [{ ...f, label: 'Servings', long: true }] }))).not.toContain('P4')
   })
   it('P5 collapsed text field (< 160 px)', () => {
     expect(run(ok({ fields: [{ label: 'Name', type: 'text', short: false, segment: false, size: '', w: 100 }] }))).toContain('P5')
@@ -137,5 +143,15 @@ describe('modeFor (scripts/check-page-layout.modes)', () => {
     expect(rules.modeFor(t, '/recipes/3')).toBe('fail')
     expect(rules.modeFor(t, '/recipes/3/edit')).toBe('warn')
     expect(rules.modeFor(t, '/shop')).toBe('warn')
+  })
+})
+
+describe('the guard script and rules carry no label exemption', () => {
+  const nodeFs = 'node:fs'
+  it('reads data-size-intent in the browser and does not match labels against /barcode/', async () => {
+    const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+    const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
+    expect(readFileSync(`${cwd}/../scripts/check-page-layout.mjs`, 'utf8')).toContain('data-size-intent')
+    expect(readFileSync(`${cwd}/../scripts/lib/page-layout-rules.mjs`, 'utf8')).not.toMatch(/barcode/i)
   })
 })

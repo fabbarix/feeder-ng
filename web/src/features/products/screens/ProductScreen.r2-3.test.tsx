@@ -4,6 +4,7 @@
 //   - Add barcode: the field (md) and its button share one FieldRow (button aligned to the control).
 //   - Archive / Delete: FormActions, Delete (danger) as the destructive action at the far left.
 import { screen } from '@testing-library/react'
+import { rule, stylesheet } from '../../../test/cssRules'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
@@ -79,5 +80,17 @@ describe('ProductScreen (R2-3)', () => {
     setup()
     expect((await screen.findByRole('button', { name: 'Delete Product' })).closest('.form-actions__destructive')).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Archive Product' }).closest('.form-actions')).not.toBeNull()
+  })
+
+  it('marks the Barcode field as intentionally long for the layout guard (no label exemption)', async () => {
+    setup()
+    expect(await screen.findByLabelText('Barcode')).toHaveAttribute('data-size-intent', 'long')
+  })
+
+  it('left-aligns Add Price (a button in a Tile column does not stretch)', async () => {
+    setup()
+    const button = await screen.findByRole('button', { name: 'Add Price' })
+    expect(button).toHaveClass('pg__add-price')
+    expect(rule(stylesheet('src/features/products/products.css').base, '.pg__add-price')['align-self']).toBe('flex-start')
   })
 })

@@ -77,6 +77,7 @@ describe('IngredientScreen Base Unit (F-05)', () => {
     const row = screen.getByTestId('base-unit-value')
     expect(row).toHaveTextContent(strings.baseUnitLabel)
     expect(row).toHaveTextContent('g')
+    expect(row.textContent).toBe('Base Unit · g')
     expect(screen.getByText(strings.baseUnitLocked(3))).toBeInTheDocument()
     expect(screen.getAllByText(/^g$/)).toHaveLength(1)
   })
