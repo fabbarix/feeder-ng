@@ -16,9 +16,17 @@ export interface Product {
   imageUrl?: string
 }
 
+/** Where a Shop is (Shop Location), in WGS84 degrees. */
+export interface ShopLocation {
+  lat: number
+  lon: number
+}
+
 export interface Shop {
   id: number
   name: string
+  /** The Shop Location; null (or absent in older fixtures) = not saved. */
+  location?: ShopLocation | null
 }
 
 export interface ShopBarcode {

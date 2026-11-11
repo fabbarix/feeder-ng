@@ -17,12 +17,14 @@ import { TickSheet } from '../components/TickSheet'
 import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
 import type { ListEntry } from '../lib/lines'
 import { useShopChoice } from '../hooks/useShopChoice'
+import { useShopHere } from '../hooks/useShopHere'
+import { AddShopSheet } from '../../shops/components/AddShopSheet'
 import { useShoppingActions } from '../hooks/useShoppingActions'
 import { useShoppingList } from '../hooks/useShoppingList'
 import { shopStrings } from '../strings'
 import '../shop.css'
 
-type Sheet = { kind: 'tick'; entry: ListEntry } | { kind: 'extra' } | null
+type Sheet = { kind: 'tick'; entry: ListEntry } | { kind: 'extra' } | { kind: 'addShop'; name: string } | null
 
 function errorMessage(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : shopStrings.deleteFailed
@@ -37,6 +39,7 @@ export function ShoppingScreen() {
   const [actionError, setActionError] = useState<string | null>(null)
   const list = useShoppingList({ shopId: choice.shopId, to })
   const actions = useShoppingActions()
+  const here = useShopHere({ shopId: choice.shopId, setShopId: choice.setShopId, onAddHere: () => setSheet({ kind: 'addShop', name: '' }) })
   const ingredients = useIngredientChoices()
   const data = list.data
   const shopName = choice.shops.find((s) => s.id === choice.shopId)?.name ?? null
@@ -85,13 +88,25 @@ export function ShoppingScreen() {
       />
       <div className="shop-screen__controls">
         {data ? <RangePicker today={data.today} maxTo={data.maxTo} to={data.to} onChange={setTo} /> : null}
-        <ShopSelect
-          label={shopStrings.shopLabel}
-          shops={shopOptions}
-          value={choice.shopId ?? ANY_SHOP_ID}
-          onChange={(id) => choice.setShopId(id === ANY_SHOP_ID ? null : id)}
-          disabled={choice.isLoading}
-        />
+        <div className="shop-screen__shop">
+          <ShopSelect
+            label={shopStrings.shopLabel}
+            shops={shopOptions}
+            value={choice.shopId ?? ANY_SHOP_ID}
+            onChange={(id) => choice.setShopId(id === ANY_SHOP_ID ? null : id)}
+            disabled={choice.isLoading}
+            onCreate={(name) => setSheet({ kind: 'addShop', name })}
+            createLabel={shopStrings.addShopNamed}
+          />
+          {here.anyLocated ? (
+            <IconButton
+              icon="location"
+              label={here.status === 'locating' ? shopStrings.findingShopHere : shopStrings.findShopHere}
+              onClick={here.find}
+              disabled={here.status === 'locating'}
+            />
+          ) : null}
+        </div>
       </div>
       {list.status === 'loading' ? <Skeleton variant="tile" count={2} /> : null}
       {list.status === 'error' ? <ErrorState message={shopStrings.loadFailed} onRetry={list.retry} /> : null}
@@ -120,6 +135,15 @@ export function ShoppingScreen() {
           onSubmit={(quantity) => onTickSubmit(sheet.entry, quantity)}
         />
       ) : null}
+      <AddShopSheet
+        open={sheet?.kind === 'addShop'}
+        initialName={sheet?.kind === 'addShop' ? sheet.name : ''}
+        onClose={() => setSheet(null)}
+        onAdded={(shop) => {
+          setSheet(null)
+          choice.setShopId(shop.id)
+        }}
+      />
       {sheet?.kind === 'extra' ? (
         <ExtraSheet open onClose={() => setSheet(null)} ingredients={ingredients.choices} onSubmit={onExtraSubmit} />
       ) : null}

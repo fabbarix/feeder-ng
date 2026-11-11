@@ -63,6 +63,7 @@ import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
 import { MinusIcon } from '@phosphor-icons/react/dist/csr/Minus'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
+import { MapPinIcon } from '@phosphor-icons/react/dist/csr/MapPin'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
 import { MicrophoneSlashIcon } from '@phosphor-icons/react/dist/csr/MicrophoneSlash'
 import { MonitorIcon } from '@phosphor-icons/react/dist/csr/Monitor'
@@ -115,6 +116,7 @@ export const icons = {
   ingredients: CarrotIcon,
   products: ShoppingBagOpenIcon,
   shops: StorefrontIcon,
+  location: MapPinIcon,
   board: MonitorIcon,
   settings: GearSixIcon,
   signOut: SignOutIcon,

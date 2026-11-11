@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { BottomSheet, Button, EmptyState, ListGroup, ListRow, TextField } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListRow, TextField } from '../../../ui'
+import { AddShopSheet } from './AddShopSheet'
 import { errorText } from '../../products/lib/productForm'
 import { strings } from '../strings'
 import type { Shop } from '../types'
@@ -7,12 +8,10 @@ import '../../products/products.css'
 
 export interface ShopListProps {
   shops: Shop[]
-  isAdmin: boolean
-  onAdd: (name: string) => Promise<void>
 }
 
-/** A ListGroup of Shops, each row linking to /settings/shops/:id; EmptyState when none; an Admin also gets "Add Shop" (BottomSheet with a name field), a non-Admin sees strings.adminOnly instead. */
-export function ShopList({ shops, isAdmin, onAdd }: ShopListProps) {
+/** A ListGroup of Shops, each row linking to /settings/shops/:id (a pin icon when its Shop Location is saved); EmptyState when none; "Add Shop" for every User (AddShopSheet). */
+export function ShopList({ shops }: ShopListProps) {
   const [open, setOpen] = useState(false)
   return (
     <div className="pg__stack">
@@ -21,29 +20,14 @@ export function ShopList({ shops, isAdmin, onAdd }: ShopListProps) {
       ) : (
         <ListGroup label={strings.shopsTitle}>
           {shops.map((s) => (
-            <ListRow key={s.id} title={s.name} chevron href={`/settings/shops/${s.id}`} />
+            <ListRow key={s.id} title={s.name} chevron href={`/settings/shops/${s.id}`} metaIcon={s.location ? 'location' : undefined} meta={s.location ? strings.locationTitle : undefined} />
           ))}
         </ListGroup>
       )}
-      {isAdmin ? (
-        <Button variant="tertiary" onClick={() => setOpen(true)}>
-          {strings.addShop}
-        </Button>
-      ) : (
-        <p className="pg__muted">{strings.adminOnly}</p>
-      )}
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={strings.addShop}>
-        {open ? (
-          <ShopNameForm
-            submitLabel={strings.saveShop}
-            initial=""
-            onSubmit={async (name) => {
-              await onAdd(name)
-              setOpen(false)
-            }}
-          />
-        ) : null}
-      </BottomSheet>
+      <Button variant="tertiary" onClick={() => setOpen(true)}>
+        {strings.addShop}
+      </Button>
+      <AddShopSheet open={open} onClose={() => setOpen(false)} onAdded={() => setOpen(false)} />
     </div>
   )
 }

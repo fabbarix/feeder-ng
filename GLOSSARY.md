@@ -241,9 +241,13 @@ The Ingredients and quantities still needed for uncooked Planned Meals up to a c
 _Avoid_: Grocery list, basket
 
 **Shop**:
-A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop.
+A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop. Any User adds one; only the Admin renames or deletes one.
 _Avoid_: Store, supermarket, retailer
 _Note_: the phone bottom-bar label "Shop" names the shopping screen (Shopping List plus scanning), not this term.
+
+**Shop Location**:
+Where a Shop is (latitude and longitude), saved by a User standing in it; the phone uses it to pick the nearest Shop.
+_Avoid_: Geofence
 
 **Shop Barcode**:
 A barcode that identifies a Product only within one Shop (e.g. own-label or weighed goods).

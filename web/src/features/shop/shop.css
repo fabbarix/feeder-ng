@@ -23,6 +23,18 @@
   }
 }
 
+/* The Shop select with "Find the Shop I am in" beside it, bottom-aligned with the field. */
+.shop-screen__shop {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.shop-screen__shop > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .shop-screen__stale {
   margin: 0;
   color: var(--color-muted);

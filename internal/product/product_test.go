@@ -1,6 +1,7 @@
 package product_test
 
 import (
+	"math"
 	"errors"
 	"strings"
 	"testing"
@@ -69,6 +70,21 @@ func TestValidateShopName(t *testing.T) {
 	for _, bad := range []string{"", "   ", strings.Repeat("x", 101)} {
 		if err := product.ValidateShopName(bad); !errors.Is(err, product.ErrInvalid) {
 			t.Fatalf("%q: got %v", bad, err)
+		}
+	}
+}
+
+func TestValidateLocation(t *testing.T) {
+	for _, ok := range []product.Location{{Lat: 45.4642, Lon: 9.19}, {Lat: -90, Lon: -180}, {Lat: 90, Lon: 180}, {}} {
+		if err := product.ValidateLocation(ok); err != nil {
+			t.Errorf("%+v: %v", ok, err)
+		}
+	}
+	for _, bad := range []product.Location{{Lat: 90.01}, {Lat: -91}, {Lon: 180.5}, {Lon: -181}, {Lat: math.NaN()}, {Lon: math.Inf(1)}} {
+		err := product.ValidateLocation(bad)
+		var ve *product.ValidationError
+		if !errors.As(err, &ve) || ve.Field != "location" {
+			t.Errorf("%+v: got %v, want a location ValidationError", bad, err)
 		}
 	}
 }

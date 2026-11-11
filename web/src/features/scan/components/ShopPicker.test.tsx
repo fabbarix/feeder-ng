@@ -47,12 +47,50 @@ describe('ShopPicker (ListRows, ui-fix-plan 5.6)', () => {
 
   it('still offers the Stock-take with no Shops, and says where Shops come from', () => {
     render(<ShopPicker shops={[]} lastShopId={null} onPick={() => {}} onStockTake={() => {}} />)
-    expect(screen.getByText(/Admin adds Shops/)).toBeInTheDocument()
+    expect(screen.getByText(/Add the Shop you are in/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Stock-take at home/ })).toBeInTheDocument()
   })
 
   it('has no Tile-as-button and no Button of its own (rows are the targets)', () => {
     const { container } = render(<ShopPicker shops={shops} lastShopId={2} onPick={() => {}} onStockTake={() => {}} />)
     expect(container.querySelector('.tile[role=button]')).toBeNull()
+  })
+})
+
+describe('ShopPicker: Shop Location', () => {
+  const idle = { nearest: null, status: 'idle' as const, failure: null, anyLocated: true, onFind: () => {} }
+
+  it('puts the Shop the User is in first, marked "You are here", ahead of the last used', () => {
+    render(<ShopPicker shops={shops} lastShopId={2} onPick={() => {}} onStockTake={() => {}} nearby={{ ...idle, status: 'ready', nearest: { id: 1, distance: '40 m' } }} />)
+    expect(rows()[0]).toHaveTextContent('Aldi')
+    expect(rows()[0]).toHaveTextContent('You are here · 40 m')
+    expect(rows()[0]).toHaveAttribute('data-selected', 'true')
+    expect(rows()[1]).toHaveTextContent('Last used')
+    expect(screen.queryByText('Find the Shop I am in')).toBeNull()
+  })
+
+  it('offers "Find the Shop I am in" when some Shop has a location, and reports what it found', async () => {
+    const onFind = vi.fn()
+    const { rerender } = render(<ShopPicker shops={shops} lastShopId={null} onPick={() => {}} onStockTake={() => {}} nearby={{ ...idle, onFind }} />)
+    await userEvent.click(screen.getByRole('button', { name: /Find the Shop I am in/ }))
+    expect(onFind).toHaveBeenCalled()
+    rerender(<ShopPicker shops={shops} lastShopId={null} onPick={() => {}} onStockTake={() => {}} nearby={{ ...idle, status: 'ready' }} />)
+    expect(screen.getByText('No saved Shop is near you')).toBeInTheDocument()
+    rerender(<ShopPicker shops={shops} lastShopId={null} onPick={() => {}} onStockTake={() => {}} nearby={{ ...idle, status: 'failed', failure: 'denied' }} />)
+    expect(screen.getByText('Location is off for Feeder')).toBeInTheDocument()
+  })
+
+  it('hides "Find" while no Shop has a location', () => {
+    render(<ShopPicker shops={shops} lastShopId={null} onPick={() => {}} onStockTake={() => {}} nearby={{ ...idle, anyLocated: false }} />)
+    expect(screen.queryByText('Find the Shop I am in')).toBeNull()
+  })
+
+  it('lets any User add the Shop they are in, before the Stock-take row', async () => {
+    const onAddShop = vi.fn()
+    render(<ShopPicker shops={[]} lastShopId={null} onPick={() => {}} onStockTake={() => {}} onAddShop={onAddShop} />)
+    const all = rows()
+    expect(all[all.length - 2]).toHaveTextContent('Add the Shop I am in')
+    await userEvent.click(within(all[all.length - 2]!).getByRole('button'))
+    expect(onAddShop).toHaveBeenCalled()
   })
 })

@@ -49,6 +49,8 @@ func (e *BarcodeTakenError) Error() string {
 type Shop struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
+	// Location is the Shop Location; nil (JSON null) = not saved.
+	Location *product.Location `json:"location"`
 }
 
 // Rule is a Weight Barcode Rule of a Shop.
@@ -347,12 +349,20 @@ func requireProduct(ctx context.Context, q Querier, id int64) error {
 func shopKey(name string) string { return units.NormalizeName(product.NormalizeName(name)) }
 
 // CreateShop: ErrNameTaken when the normalised name exists; *product.ValidationError.
-func (s *Store) CreateShop(ctx context.Context, name string) (Shop, error) {
+// CreateShop adds a Shop; loc is its Shop Location, nil = not saved.
+func (s *Store) CreateShop(ctx context.Context, name string, loc *product.Location) (Shop, error) {
 	if err := product.ValidateShopName(name); err != nil {
 		return Shop{}, err
 	}
+	if loc != nil {
+		if err := product.ValidateLocation(*loc); err != nil {
+			return Shop{}, err
+		}
+	}
 	clean := product.NormalizeName(name)
-	res, err := s.db.ExecContext(ctx, `INSERT INTO shops(name, name_key, created_at) VALUES (?, ?, ?)`, clean, shopKey(clean), s.now())
+	lat, lon := locationArgs(loc)
+	res, err := s.db.ExecContext(ctx, `INSERT INTO shops(name, name_key, created_at, lat, lon) VALUES (?, ?, ?, ?, ?)`,
+		clean, shopKey(clean), s.now(), lat, lon)
 	if isUnique(err) {
 		return Shop{}, ErrNameTaken
 	}
@@ -363,7 +373,43 @@ func (s *Store) CreateShop(ctx context.Context, name string) (Shop, error) {
 	if err != nil {
 		return Shop{}, err
 	}
-	return Shop{ID: id, Name: clean}, nil
+	return Shop{ID: id, Name: clean, Location: loc}, nil
+}
+
+// SetShopLocation saves where the Shop is, replacing any earlier Shop Location.
+func (s *Store) SetShopLocation(ctx context.Context, id int64, loc product.Location) (Shop, error) {
+	if err := product.ValidateLocation(loc); err != nil {
+		return Shop{}, err
+	}
+	res, err := s.db.ExecContext(ctx, `UPDATE shops SET lat = ?, lon = ? WHERE id = ?`, loc.Lat, loc.Lon, id)
+	if err != nil {
+		return Shop{}, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return Shop{}, ErrNotFound
+	}
+	return s.Shop(ctx, id)
+}
+
+// locationArgs gives the lat and lon column values; nil gives SQL NULLs.
+func locationArgs(loc *product.Location) (any, any) {
+	if loc == nil {
+		return nil, nil
+	}
+	return loc.Lat, loc.Lon
+}
+
+// scanShop reads id, name, lat, lon.
+func scanShop(sc interface{ Scan(...any) error }) (Shop, error) {
+	var sh Shop
+	var lat, lon sql.NullFloat64
+	if err := sc.Scan(&sh.ID, &sh.Name, &lat, &lon); err != nil {
+		return Shop{}, err
+	}
+	if lat.Valid && lon.Valid {
+		sh.Location = &product.Location{Lat: lat.Float64, Lon: lon.Float64}
+	}
+	return sh, nil
 }
 
 func (s *Store) RenameShop(ctx context.Context, id int64, name string) (Shop, error) {
@@ -381,12 +427,11 @@ func (s *Store) RenameShop(ctx context.Context, id int64, name string) (Shop, er
 	if n, _ := res.RowsAffected(); n == 0 {
 		return Shop{}, ErrNotFound
 	}
-	return Shop{ID: id, Name: clean}, nil
+	return s.Shop(ctx, id)
 }
 
 func (s *Store) Shop(ctx context.Context, id int64) (Shop, error) {
-	var sh Shop
-	err := s.db.QueryRowContext(ctx, `SELECT id, name FROM shops WHERE id = ?`, id).Scan(&sh.ID, &sh.Name)
+	sh, err := scanShop(s.db.QueryRowContext(ctx, `SELECT id, name, lat, lon FROM shops WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Shop{}, ErrNotFound
 	}
@@ -395,15 +440,15 @@ func (s *Store) Shop(ctx context.Context, id int64) (Shop, error) {
 
 // Shops is ordered by normalised name.
 func (s *Store) Shops(ctx context.Context) ([]Shop, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name FROM shops ORDER BY name_key, id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, lat, lon FROM shops ORDER BY name_key, id`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []Shop{}
 	for rows.Next() {
-		var sh Shop
-		if err := rows.Scan(&sh.ID, &sh.Name); err != nil {
+		sh, err := scanShop(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, sh)

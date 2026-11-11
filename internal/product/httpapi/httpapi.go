@@ -30,9 +30,11 @@ func mount(r *app.Router, d app.Deps) {
 	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
 	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB)))), events: d.Events}
 
-	// Shops and Weight Barcode Rules: the Admin writes, every User reads.
+	// Shops: every User reads, adds one (standing in it, from the Shop or Scan screen) and saves its Shop Location;
+	// the Admin renames and deletes. Weight Barcode Rules: the Admin writes, every User reads.
 	r.User("GET /api/shops", a.listShops)
-	r.Admin("POST /api/shops", a.createShop)
+	r.User("POST /api/shops", a.createShop)
+	r.User("PUT /api/shops/{id}/location", a.setShopLocation)
 	r.Admin("PATCH /api/shops/{id}", a.renameShop)
 	r.Admin("DELETE /api/shops/{id}", a.deleteShop)
 	r.User("GET /api/shops/{id}/weight-rules", a.listRules)
@@ -89,6 +91,8 @@ func (a *api) changed(what string) {
 
 type shopBody struct {
 	Name string `json:"name"`
+	// Location is optional on create (absent or null = not saved); renames ignore it.
+	Location *product.Location `json:"location"`
 }
 
 func (a *api) listShops(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +109,7 @@ func (a *api) createShop(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	sh, err := a.store.CreateShop(r.Context(), body.Name)
+	sh, err := a.store.CreateShop(r.Context(), body.Name, body.Location)
 	if err != nil {
 		writeErr(w, err, "shop")
 		return
@@ -124,6 +128,24 @@ func (a *api) renameShop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sh, err := a.store.RenameShop(r.Context(), id, body.Name)
+	if err != nil {
+		writeErr(w, err, "shop")
+		return
+	}
+	a.changed("shops")
+	httpx.WriteJSON(w, http.StatusOK, sh)
+}
+
+func (a *api) setShopLocation(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	var body product.Location
+	if !decode(w, r, &body) {
+		return
+	}
+	sh, err := a.store.SetShopLocation(r.Context(), id, body)
 	if err != nil {
 		writeErr(w, err, "shop")
 		return

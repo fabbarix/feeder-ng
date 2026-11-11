@@ -81,6 +81,24 @@ func ValidateShopName(s string) error {
 	return nil
 }
 
+// Location is where a Shop is, in WGS84 degrees (Shop Location). The phone compares it with its own position to pick
+// the nearest Shop; it never leaves the server except to the Household's own phones.
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
+// ValidateLocation: Lat and Lon finite, Lat in [-90, 90], Lon in [-180, 180] (field "location").
+func ValidateLocation(l Location) error {
+	switch {
+	case math.IsNaN(l.Lat) || math.IsInf(l.Lat, 0) || l.Lat < -90 || l.Lat > 90:
+		return &ValidationError{Field: "location", Message: "the latitude must be between -90 and 90"}
+	case math.IsNaN(l.Lon) || math.IsInf(l.Lon, 0) || l.Lon < -180 || l.Lon > 180:
+		return &ValidationError{Field: "location", Message: "the longitude must be between -180 and 180"}
+	}
+	return nil
+}
+
 func checkName(s string) error {
 	n := utf8.RuneCountInString(NormalizeName(s))
 	switch {

@@ -12,6 +12,7 @@ import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpda
 import { AddShopBarcodeSheet } from '../components/AddShopBarcodeSheet'
 import { ShopBarcodeList } from '../components/ShopBarcodeList'
 import { ShopNameForm } from '../components/ShopList'
+import { ShopLocationTile } from '../components/ShopLocationTile'
 import { WeightRuleEditor } from '../components/WeightRuleEditor'
 import { WeightRuleList } from '../components/WeightRuleList'
 import { useShop } from '../hooks/useShop'
@@ -23,7 +24,8 @@ import '../../products/products.css'
 /**
  * /settings/shops/:id: BentoGrid with a Weight Barcode Rules tile (WeightRuleList + WeightRuleEditor in a
  * BottomSheet, Admin edits), a Shop Barcodes tile (ShopBarcodeList), rename/delete (Admin; delete asks to confirm
- * with strings.deleteShopWarning). Hooks: useShop, useCurrency (products feature), useMe.
+ * with strings.deleteShopWarning), and the Shop Location tile (any User saves it). Hooks: useShop, useCurrency (products
+ * feature), useMe.
  */
 export function ShopScreen() {
   const id = Number(useParams().id)
@@ -79,6 +81,8 @@ export function ShopScreen() {
       ) : null}
 
       <BentoGrid columns={2}>
+        <ShopLocationTile location={shop.shop.location} onSave={shop.saveLocation} />
+
         <Tile as="section" span="full" aria-label={strings.shopBarcodesTitle}>
           <h2 className="pg__tile-title">{strings.shopBarcodesTitle}</h2>
           <ShopBarcodeList

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/http'
 import { shopsApi, type RuleBody } from '../api'
-import type { Shop, ShopBarcode, ShopRule } from '../types'
+import type { Shop, ShopBarcode, ShopLocation, ShopRule } from '../types'
 
 export interface UseShop {
   shop: Shop | undefined
@@ -11,6 +11,8 @@ export interface UseShop {
   /** ApiError with status 404 when the id does not exist. */
   error: Error | null
   rename: (name: string) => Promise<void>
+  /** any User: saves where the Shop is */
+  saveLocation: (location: ShopLocation) => Promise<void>
   remove: () => Promise<void>
   addRule: (body: RuleBody) => Promise<void>
   updateRule: (id: number, body: RuleBody) => Promise<void>
@@ -43,6 +45,7 @@ export function useShop(id: number): UseShop {
     isLoading: list.isLoading,
     error: missing ? new ApiError(404, 'not_found', 'Shop not found') : list.error,
     rename: (name) => changed(shopsApi.rename(id, name)),
+    saveLocation: (location) => changed(shopsApi.setLocation(id, location)),
     remove: async () => {
       await shopsApi.remove(id)
       client.removeQueries({ queryKey: ['shops', id] })
