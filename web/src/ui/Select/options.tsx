@@ -95,6 +95,7 @@ export function mealSlotOptions(slots: MealSlotChoice[], weekdayNames: string[] 
   return ordered.map((s) => ({
     value: s.id,
     label: s.name,
+    triggerLabel: `${(weekdayNames[s.weekday - 1] ?? String(s.weekday)).slice(0, 3)} · ${s.name}`,
     meta: s.time,
     group: weekdayNames[s.weekday - 1] ?? String(s.weekday),
     leading: <Icon name={mealSlotIcon(s.name)} size={20} />,

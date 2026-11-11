@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, IconButton, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, EmptyState, PageHeader, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { PriceEditor } from '../components/PriceEditor'
 import { PriceList } from '../components/PriceList'
@@ -26,7 +27,6 @@ import '../products.css'
  */
 export function ProductScreen() {
   const id = Number(useParams().id)
-  const navigate = useNavigate()
   const currency = useCurrency()
   const system = useDisplayUnitSystem()
   const p = useProduct(id)
@@ -37,10 +37,16 @@ export function ProductScreen() {
   useProductsLiveUpdates()
 
   const product = p.product
+  const breadcrumbs = useBreadcrumbs(product?.name)
   if (!product) {
     if (p.isLoading) return <p role="status">{strings.loading}</p>
     if (p.error instanceof ApiError && p.error.status === 404) {
-      return <EmptyState title={strings.notFoundTitle} action={<Link to="/products">{strings.backToProducts}</Link>} />
+      return (
+        <div className="pg">
+          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+          <EmptyState title={strings.notFoundTitle} />
+        </div>
+      )
     }
     return <p role="alert">{strings.actionFailed}</p>
   }
@@ -52,10 +58,7 @@ export function ProductScreen() {
 
   return (
     <div className="pg">
-      <PageHeader
-        title={product.name}
-        leading={<IconButton icon="back" label={strings.backToProducts} onClick={() => navigate('/products')} />}
-      />
+      <PageHeader title={product.name} breadcrumbs={breadcrumbs} />
       <p className="pg__muted">
         <Link to={`/ingredients/${product.ingredientId}`}>{product.ingredientName}</Link> · {formatPackSize(product.packSize, product.baseUnit, system)}
       </p>

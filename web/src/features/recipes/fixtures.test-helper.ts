@@ -11,7 +11,7 @@ export function summary(over: Partial<RecipeSummary> = {}): RecipeSummary {
 
 export function recipe(over: Partial<Recipe> = {}): Recipe {
   return {
-    id: 3, name: 'Roast tray', description: '', yield: 4, readyMeal: false, tags: ['roast'], cooldownDays: null, leftoverUseByDays: null,
+    id: 3, name: 'Roast tray', description: '', yield: 4, readyMeal: false, tags: ['roast'], cooldownDays: null, leftoverUseByDays: null, reheatMinutes: null,
     source: { url: '', attribution: '' }, image: '', imageUrl: '', archived: false,
     lines: [{ ingredientId: 7, ingredient: 'garlic', quantity: 3, unit: 'clove', optional: false, note: '' }],
     steps: [

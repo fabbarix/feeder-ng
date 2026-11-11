@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { BentoGrid, Button, IconButton, PageHeader, Tile } from '../../../ui'
+import { Link } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
 import { AgentPromptStep } from '../components/AgentPromptStep'
 import { ConfirmTile } from '../components/ConfirmTile'
 import { ImageWarningsTile } from '../components/ImageWarningsTile'
@@ -21,11 +22,10 @@ import '../import.css'
  * image warnings, and the sticky Confirm bar. Phase 'done' says what was imported. All state comes from useImportReview.
  */
 export function ImportScreen(): ReactNode {
-  const navigate = useNavigate()
   const r = useImportReview()
   return (
     <section className="import-screen">
-      <PageHeader title={s.importTitle} leading={<IconButton icon="back" label={s.back} onClick={() => navigate('/recipes')} />} />
+      <PageHeader title={s.importTitle} breadcrumbs={useBreadcrumbs()} />
       {r.error ? <ValidationErrorsTile error={r.error} /> : null}
       {r.phase === 'done' ? (
         <Tile as="section" className="import-done">

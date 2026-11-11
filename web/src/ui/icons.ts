@@ -1,9 +1,11 @@
 // The ONLY file allowed to import from @phosphor-icons/react, one /dist/csr/<Name> module per icon
 // (docs/design/ui-fix-plan.md 3.4; guard rule `phosphor`). Registry: docs/dev/design/wp2-icons.md.
+// Weights: web/vite.phosphor-weights.ts strips thin and light at build time (docs/dev/design/uf1-icons.md).
 // Never import the barrel: it pulls in ~9,000 modules and blows the icon bundle budget.
 import { AlarmIcon } from '@phosphor-icons/react/dist/csr/Alarm'
 import { ArchiveIcon } from '@phosphor-icons/react/dist/csr/Archive'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowCounterClockwise'
+import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowClockwise'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
@@ -20,6 +22,7 @@ import { BowlSteamIcon } from '@phosphor-icons/react/dist/csr/BowlSteam'
 import { CalendarBlankIcon } from '@phosphor-icons/react/dist/csr/CalendarBlank'
 import { CalendarCheckIcon } from '@phosphor-icons/react/dist/csr/CalendarCheck'
 import { CalendarDotsIcon } from '@phosphor-icons/react/dist/csr/CalendarDots'
+import { CameraIcon } from '@phosphor-icons/react/dist/csr/Camera'
 import { CameraSlashIcon } from '@phosphor-icons/react/dist/csr/CameraSlash'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { CaretUpDownIcon } from '@phosphor-icons/react/dist/csr/CaretUpDown'
@@ -28,6 +31,7 @@ import { ChartPieSliceIcon } from '@phosphor-icons/react/dist/csr/ChartPieSlice'
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
+import { ClipboardTextIcon } from '@phosphor-icons/react/dist/csr/ClipboardText'
 import { CloudSlashIcon } from '@phosphor-icons/react/dist/csr/CloudSlash'
 import { CoffeeIcon } from '@phosphor-icons/react/dist/csr/Coffee'
 import { CoinsIcon } from '@phosphor-icons/react/dist/csr/Coins'
@@ -38,6 +42,7 @@ import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
 import { DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsThreeVertical'
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
 import { FileArrowUpIcon } from '@phosphor-icons/react/dist/csr/FileArrowUp'
+import { FireIcon } from '@phosphor-icons/react/dist/csr/Fire'
 import { FishIcon } from '@phosphor-icons/react/dist/csr/Fish'
 import { FlashlightIcon } from '@phosphor-icons/react/dist/csr/Flashlight'
 import { ForkKnifeIcon } from '@phosphor-icons/react/dist/csr/ForkKnife'
@@ -51,6 +56,7 @@ import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
+import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
 import { MinusIcon } from '@phosphor-icons/react/dist/csr/Minus'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
@@ -149,6 +155,11 @@ export const icons = {
   chevron: CaretRightIcon,
   copy: CopyIcon,
   undo: ArrowCounterClockwiseIcon,
+  camera: CameraIcon,
+  clipboard: ClipboardTextIcon,
+  link: LinkSimpleIcon,
+  rotateRight: ArrowClockwiseIcon,
+  rotateLeft: ArrowCounterClockwiseIcon,
   import: DownloadSimpleIcon,
   export: UploadSimpleIcon,
   agentPrompt: RobotIcon,
@@ -163,6 +174,7 @@ export const icons = {
   price: CoinsIcon,
   extra: NotePencilIcon,
   timer: TimerIcon,
+  reheat: FireIcon, // R12: the Reheat button and screen (a Leftover warmed up before it is marked Cooked)
   pause: PauseIcon,
   resume: PlayIcon,
   addMinute: PlusCircleIcon,

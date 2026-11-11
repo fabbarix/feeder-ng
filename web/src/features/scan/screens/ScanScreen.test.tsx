@@ -221,7 +221,7 @@ describe('ScanScreen', () => {
 
   it('says when the phone is offline and how many scans wait', async () => {
     await startShopping(controller({ online: false, pendingCount: 2 }))
-    expect(screen.getByText('Offline: scans are kept and sent when you are back online')).toBeInTheDocument()
+    expect(screen.getByText('Offline: Scans are kept and sent when you are back online')).toBeInTheDocument()
     expect(screen.getByText('2 Scans waiting to sync')).toBeInTheDocument()
   })
 

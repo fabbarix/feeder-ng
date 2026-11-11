@@ -130,6 +130,12 @@
         },
         "cooldownDays": { "type": ["integer", "null"], "minimum": 0 },
         "leftoverUseByDays": { "type": ["integer", "null"], "minimum": 0 },
+        "reheatMinutes": {
+          "description": "Minutes to reheat a Leftover portion of this Recipe; omit or null when not set.",
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 30
+        },
         "image": { "$ref": "#/$defs/image" },
         "source": {
           "type": "object",

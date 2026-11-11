@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { BottomSheet, Chip, ErrorState, IconButton, ListGroup, ListRow, PageHeader, RecipeThumb, Skeleton, Tile } from '../../../ui'
@@ -35,16 +36,14 @@ export function RecipeDetailScreen(): ReactNode {
   const [batches, setBatches] = useState(1)
   const [sheetOpen, setSheetOpen] = useState(false)
   const r = recipe.recipe
+  const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
 
   if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
   if (!r)
     return (
       <section className="recipe-detail">
-        <PageHeader
-          title={recipeStrings.title}
-          leading={<IconButton icon="back" label={recipeStrings.back} onClick={() => navigate('/recipes')} />}
-        />
+        <PageHeader title={recipeStrings.title} breadcrumbs={crumbs} />
         <ErrorState message={recipeStrings.loadError} onRetry={() => recipe.refetch()} />
       </section>
     )
@@ -62,7 +61,7 @@ export function RecipeDetailScreen(): ReactNode {
     <section className="recipe-detail">
       <PageHeader
         title={r.name}
-        leading={<IconButton icon="back" label={recipeStrings.back} onClick={() => navigate('/recipes')} />}
+        breadcrumbs={crumbs}
         actions={
           <>
             <IconButton icon="edit" label={recipeStrings.edit} onClick={() => navigate(`/recipes/${r.id}/edit`)} />

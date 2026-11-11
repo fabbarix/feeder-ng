@@ -74,6 +74,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['price', 'Coins'],
   ['extra', 'NotePencil'],
   ['timer', 'Timer'],
+  ['reheat', 'Fire'], // R12: Reheat button and screen
   ['pause', 'Pause'],
   ['resume', 'Play'],
   ['addMinute', 'PlusCircle'],
@@ -112,6 +113,11 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['celebration', 'Confetti'],
   ['planEmpty', 'CalendarBlank'],
   ['cameraOff', 'CameraSlash'],
+  ['camera', 'Camera'], // UF1: ImagePicker take-a-photo
+  ['clipboard', 'ClipboardText'], // UF1: ImagePicker paste
+  ['link', 'LinkSimple'], // UF1: ImagePicker from a link
+  ['rotateRight', 'ArrowClockwise'], // UF1: ImagePicker crop rotate
+  ['rotateLeft', 'ArrowCounterClockwise'], // UF1: shares the glyph of undo/unarchive
   ['pasta', 'BowlSteam'],
   ['fish', 'Fish'],
   ['chicken', 'Bird'],

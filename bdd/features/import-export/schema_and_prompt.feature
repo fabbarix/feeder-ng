@@ -24,3 +24,8 @@ Feature: Published Recipe File schema and Agent Prompt
     And the Agent Prompt starts with "You convert recipes into a Feeder Recipe File"
     And the Agent Prompt contains the schema and the example
     And the Agent Prompt has no template placeholders left
+
+  Scenario: The Agent Prompt asks for the optional reheat time
+    Given I am signed in as the User
+    When I GET "/api/recipe-file/agent-prompt"
+    Then the Agent Prompt mentions "reheatMinutes" at least 3 times

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
+import { Icon } from '../Icon'
 import { FieldFrame, useFieldIds } from './FieldFrame'
 import type { FieldProps } from './Field'
 import { fieldStrings } from './strings'
@@ -78,7 +79,7 @@ export function ColorSwatches({ label, helper, error, disabled, swatches, value,
             onClick={() => setCustomOpen(true)}
             onKeyDown={(e) => roving.onKeyDown(e, CUSTOM)}
           >
-            <span className="colour-swatch__text">{fieldStrings.custom}</span>
+            <Icon name="appearance" size={20} />
           </button>
         ) : null}
       </div>

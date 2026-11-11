@@ -26,6 +26,8 @@ const (
 	MaxTagRunes         = 40
 	MaxCooldownDays     = 365
 	MaxUseByDays        = 30
+	MinReheatMinutes    = 1  // R12: per-Recipe reheat time, whole minutes
+	MaxReheatMinutes    = 30 // the Reheat timer's own upper limit (30 minutes)
 	MaxNoteRunes        = 200
 	MaxStepTextRunes    = 2000
 	MaxMinutes          = 10080 // one week, for durations and lead times
@@ -43,6 +45,7 @@ const (
 	CodeTooManyTags     = "too_many_tags"
 	CodeCooldownInvalid = "cooldown_invalid"
 	CodeUseByInvalid    = "use_by_invalid"
+	CodeReheatInvalid   = "reheat_invalid"
 	CodeSourceInvalid   = "source_invalid"
 	CodeLinesRequired   = "lines_required"
 	CodeReadyMealLines  = "ready_meal_lines" // a Ready Meal has exactly one ingredient line
@@ -135,6 +138,7 @@ type Input struct {
 	Tags              []string
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
+	ReheatMinutes     *int // nil = no reheat time (Reheat uses its formula); else 1..30 whole minutes (R12)
 	Source            Source
 	Image             string // image id, "" = none
 	Lines             []Line
@@ -196,6 +200,12 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 			return Input{}, fieldErr("leftoverUseByDays", CodeUseByInvalid, "the use-by must be 0 to 30 days")
 		}
 		out.LeftoverUseByDays = intPtr(*d)
+	}
+	if d := in.ReheatMinutes; d != nil {
+		if *d < MinReheatMinutes || *d > MaxReheatMinutes {
+			return Input{}, fieldErr("reheatMinutes", CodeReheatInvalid, "the reheat time must be 1 to 30 minutes")
+		}
+		out.ReheatMinutes = intPtr(*d)
 	}
 
 	src := strings.TrimSpace(in.Source.URL)
@@ -435,6 +445,7 @@ type Summary struct {
 	Archived       bool
 	TotalMinutes   int
 	AdvanceMinutes int
+	ReheatMinutes  int // 0 = none (R12)
 }
 
 // State is a Member's preference for a Recipe. A Member has exactly one state

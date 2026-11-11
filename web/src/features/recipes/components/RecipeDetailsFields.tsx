@@ -12,7 +12,7 @@ export interface RecipeDetailsFieldsProps {
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
-/** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, and the source of a Recipe: field primitives only. */
+/** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
 export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
   return (
@@ -43,6 +43,14 @@ export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFi
         value={numberValue(draft.leftoverUseByDays)}
         error={fieldError(errors, 'leftoverUseByDays')}
         onChange={(n) => onChange({ leftoverUseByDays: numberText(n) })}
+      />
+      <NumberField
+        label={f.reheat}
+        helper={f.reheatHint}
+        hideStepper
+        value={numberValue(draft.reheatMinutes)}
+        error={fieldError(errors, 'reheatMinutes')}
+        onChange={(n) => onChange({ reheatMinutes: numberText(n) })}
       />
       <TextField type="url" label={f.sourceUrl} value={draft.sourceUrl} error={fieldError(errors, 'sourceUrl')} onChange={(sourceUrl) => onChange({ sourceUrl })} />
       <TextField label={f.attribution} value={draft.sourceAttribution} onChange={(sourceAttribution) => onChange({ sourceAttribution })} />
