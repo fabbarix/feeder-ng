@@ -24,7 +24,8 @@ type fakeSources struct {
 	mu         sync.Mutex
 	settings   plan.Settings
 	slots      []runner.MealSlotDef
-	attendees  map[string][]plan.Attendee // by "slotID|date" for overrides
+	attendees  map[string][]plan.Attendee   // by "slotID|date" for overrides
+	courses    map[string][]plan.SlotCourse // by "slotID|date"; "slotID|" serves every date; none: the slot has no Courses
 	recipes    []planner.Recipe
 	prefs      map[int64]planner.Preferences
 	calls      int   // Settings calls = planning runs started
@@ -45,6 +46,14 @@ func (s *fakeSources) Attendance(_ context.Context, slotID int64, date string) (
 		return a, nil
 	}
 	return []plan.Attendee{{MemberID: 1, Factor: 1}, {MemberID: 2, Factor: 1}}, nil
+}
+func (s *fakeSources) SlotCourses(_ context.Context, slotID int64, date string) ([]plan.SlotCourse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if c, ok := s.courses[attKey(slotID, date)]; ok {
+		return append([]plan.SlotCourse(nil), c...), nil
+	}
+	return append([]plan.SlotCourse(nil), s.courses[attKey(slotID, "")]...), nil
 }
 func (s *fakeSources) Recipes(context.Context) ([]planner.Recipe, error) {
 	s.mu.Lock()

@@ -300,6 +300,9 @@ type Alternative struct {
 	NewLeftoverUseBy    string
 	Score               float64
 	Why                 []plan.Why
+	// Relaxed marks an alternative that is inside its Cool-down or breaks a Variety Rule (offered after the
+	// strict ones, its relaxed chip last; ADR 0009). STUB: Alternatives does not set it yet.
+	Relaxed bool
 }
 
 // Alternatives returns the top 3 alternatives for the slot under the same scoring (excluding the current Recipe), each

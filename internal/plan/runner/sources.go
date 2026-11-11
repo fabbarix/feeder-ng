@@ -127,6 +127,12 @@ func (s *DBSources) Attendance(ctx context.Context, mealSlotID int64, date strin
 	return out, nil
 }
 
+// SlotCourses implements Sources. STUB (crs-b developer): reads household CoursesOn and resolves each Course's
+// Attendance to effective Portion Factors.
+func (s *DBSources) SlotCourses(ctx context.Context, mealSlotID int64, date string) ([]plan.SlotCourse, error) {
+	return nil, nil
+}
+
 func (s *DBSources) members(ctx context.Context) (map[int64]household.Member, error) {
 	list, err := s.hh.Members(ctx)
 	if err != nil {
