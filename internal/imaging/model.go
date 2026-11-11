@@ -26,7 +26,20 @@ type ModelImage struct {
 // re-encode drops EXIF and every other metadata. Errors: ErrEmpty, ErrTooLarge, ErrUnsupportedFormat,
 // ErrTooManyPixels.
 func PrepareForModel(data []byte) (ModelImage, error) {
-	img, w, h, err := decodeUpright(data, "", ModelMaxSide)
+	return PrepareForModelAs(data, "")
+}
+
+// PrepareForModelAs is PrepareForModel for bytes with a declared MIME type (image/jpeg, png, webp, heic, heif;
+// "" for none): the format found in the bytes must match it, else ErrUnsupportedFormat.
+func PrepareForModelAs(data []byte, mime string) (ModelImage, error) {
+	declared := ""
+	if mime != "" {
+		var ok bool
+		if declared, ok = declaredFormat(mime); !ok {
+			return ModelImage{}, ErrUnsupportedFormat
+		}
+	}
+	img, w, h, err := decodeUpright(data, declared, ModelMaxSide)
 	if err != nil {
 		return ModelImage{}, err
 	}

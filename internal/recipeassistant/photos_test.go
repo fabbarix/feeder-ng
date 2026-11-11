@@ -8,7 +8,6 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
-	"image/png"
 	"testing"
 
 	ra "github.com/fabbarix/feeder-ng/internal/recipeassistant"
@@ -104,12 +103,6 @@ func TestPreparePhotosErrorsMapToThePlansCodes(t *testing.T) {
 	var big bytes.Buffer
 	big.Write(good)
 	big.Write(make([]byte, 8<<20))
-	bomb := func() []byte {
-		var b bytes.Buffer
-		_ = png.Encode(&b, image.NewGray(image.Rect(0, 0, 4, 4)))
-		return b.Bytes()
-	}
-	_ = bomb
 	tests := map[string]struct {
 		in      ra.PhotoSource
 		fetcher ra.Fetcher
