@@ -189,6 +189,16 @@ describe('Ready Meal creates its Ingredient', () => {
     expect(rApi.create.mock.calls[0]![0]).toMatchObject({ name: 'Fish pie pack', readyMeal: true, lines: [] })
     expect(await screen.findByTestId('where')).toHaveTextContent('/recipes/40')
   })
+  it('says so when a lost name race is rejected with 409 name_taken', async () => {
+    rApi.create.mockRejectedValue(new ApiError(409, 'name_taken', 'An Ingredient with that name was just created; save again'))
+    view()
+    await userEvent.type(recipeName(), 'Fish pie pack')
+    await tickReadyMeal()
+    await userEvent.click(screen.getByRole('button', { name: recipeStrings.save }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("An Ingredient with this Recipe's name was just added. Save again.")
+    expect(alert).not.toHaveTextContent(recipeStrings.generic)
+  })
   it('keeps the helper in step with the name', async () => {
     view()
     await tickReadyMeal()
