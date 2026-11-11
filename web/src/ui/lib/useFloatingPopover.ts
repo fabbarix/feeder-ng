@@ -57,6 +57,19 @@ export function useFloatingPopover(open: boolean, anchor: RefObject<HTMLElement 
       window.removeEventListener('resize', onMove)
     }
   }, [open, anchor, popover])
+
+  // A popover opened while its dialog is still sliding in was measured mid-animation: place again once the dialog's own
+  // animation ends. Only the dialog's own animationend counts (its children's animations bubble up too).
+  useEffect(() => {
+    if (!open) return
+    const dialog = anchor.current?.closest('dialog')
+    if (!dialog) return
+    const onAnimationEnd = (e: Event) => {
+      if (e.target === dialog) place(anchor.current, popover.current)
+    }
+    dialog.addEventListener('animationend', onAnimationEnd)
+    return () => dialog.removeEventListener('animationend', onAnimationEnd)
+  }, [open, anchor, popover])
 }
 
 function place(anchorEl: HTMLElement | null, el: HTMLElement | null): void {

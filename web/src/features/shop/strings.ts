@@ -37,7 +37,6 @@ export const shopStrings = {
   extraIngredient: 'Ingredient',
   extraQuantity: 'Quantity',
   extraChooseIngredient: 'Choose an Ingredient',
-  cancel: 'Cancel',
   howMuch: 'How much?',
   tickTitle: (name: string) => `Tick ${name}`,
   tickSave: 'Tick and add to Stock',

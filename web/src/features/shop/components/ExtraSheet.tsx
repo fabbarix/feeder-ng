@@ -5,6 +5,7 @@ import { FormActions } from '../../../ui/FormActions'
 import { Segmented } from '../../../ui/fields/Segmented'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { TextField } from '../../../ui/fields/TextField'
+import { fieldStrings } from '../../../ui/fields/strings'
 import { Select } from '../../../ui/Select/Select'
 import { ingredientPickerOptions } from '../lib/ingredientOptions'
 import { checkExtraDraft, type ExtraDraftError, type ExtraDraftField, type ExtraMode } from '../lib/extraDraft'
@@ -39,8 +40,9 @@ const KIND_OPTIONS = (hasIngredients: boolean) => [
 export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetProps) {
   const formId = useId()
   const hasIngredients = ingredients.length > 0
-  const startMode = (): ExtraMode => (hasIngredients ? 'ingredient' : 'note')
-  const [mode, setMode] = useState<ExtraMode>(startMode)
+  // The mode is the User's pick, or else the starting choice, which follows the Ingredients as they load.
+  const [chosen, setChosen] = useState<ExtraMode | null>(null)
+  const mode: ExtraMode = chosen ?? (hasIngredients ? 'ingredient' : 'note')
   const [text, setText] = useState('')
   const [ingredientId, setIngredientId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState<number | null>(null)
@@ -52,16 +54,15 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
   // The sheet's state outlives each opening (the screen keeps it mounted), so start clean every time it closes.
   useEffect(() => {
     if (open) return
-    setMode(startMode())
+    setChosen(null)
     setText('')
     setIngredientId(null)
     setQuantity(null)
     setError(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on close only; startMode follows the Ingredients at that moment
   }, [open])
 
   const chooseMode = (next: ExtraMode) => {
-    setMode(next)
+    setChosen(next)
     setError(null)
   }
 
@@ -86,7 +87,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
         <FormActions
           tertiary={
             <Button variant="tertiary" onClick={onClose}>
-              {shopStrings.cancel}
+              {fieldStrings.cancel}
             </Button>
           }
           primary={

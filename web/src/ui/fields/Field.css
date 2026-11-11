@@ -113,6 +113,12 @@ legend.ui-field__label {
   block-size: 40px;
 }
 
+/* The 44 px hit area (40 + 2 x 4) stays inside the control: 4 px is the room the 48 px min-block-size leaves
+   around a 40 px button, and under the 1.5 px border + 4 px inline padding. The sheet body then has no scrollbars. */
+.ui-field--stepper .icon-button::after {
+  inset: -4px;
+}
+
 .ui-field--stepper .ui-field__number {
   text-align: center;
   font-variant-numeric: tabular-nums;
