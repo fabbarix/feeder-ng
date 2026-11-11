@@ -37,8 +37,12 @@ func (f *fixture) ck(date string, slot, course int64) plan.Key {
 
 func (f *fixture) rawCourse(t *testing.T, table, where string, args ...any) int64 {
 	t.Helper()
+	col := "course_id"
+	if table == "leftovers" {
+		col = "from_course_id"
+	}
 	var id int64
-	if err := f.db.QueryRow(`SELECT course_id FROM `+table+` WHERE `+where, args...).Scan(&id); err != nil {
+	if err := f.db.QueryRow(`SELECT `+col+` FROM `+table+` WHERE `+where, args...).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	return id

@@ -48,13 +48,16 @@ func TestSnapshotNamedWritesAVerifiedPrivateCopy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer snap.Close()
 	var email, res string
 	if err := snap.QueryRow(`SELECT email FROM users`).Scan(&email); err != nil || email != "anna@example.test" {
 		t.Errorf("snapshot has %q, %v", email, err)
 	}
 	if err := snap.QueryRow(`PRAGMA integrity_check`).Scan(&res); err != nil || res != "ok" {
 		t.Errorf("integrity_check = %q, %v", res, err)
+	}
+	// Close the handle first: db.Open forces WAL, which would add -wal and -shm files to the listing.
+	if err := snap.Close(); err != nil {
+		t.Fatal(err)
 	}
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
