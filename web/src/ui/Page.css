@@ -1,0 +1,34 @@
+/* Page (R2-L, L-01): one centred content column per screen. The token is the CONTENT width; the cap adds the two gutters. */
+.page {
+  --page-max: calc(var(--page-default) + 2 * var(--page-gutter));
+  inline-size: 100%;
+  max-inline-size: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  box-sizing: border-box;
+  min-inline-size: 0;
+}
+
+.page[data-page-width='narrow'] {
+  --page-max: calc(var(--page-narrow) + 2 * var(--page-gutter));
+}
+
+.page[data-page-width='default'] {
+  --page-max: calc(var(--page-default) + 2 * var(--page-gutter));
+}
+
+.page[data-page-width='wide'] {
+  --page-max: calc(var(--page-wide) + 2 * var(--page-gutter));
+}
+
+.page[data-page-width='full'] {
+  --page-max: none;
+}
+
+.page__body {
+  min-inline-size: 0;
+}
+
+.page__header {
+  min-inline-size: 0;
+}
