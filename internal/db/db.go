@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -178,3 +179,25 @@ func checkForeignKeys(ctx context.Context, tx *sql.Tx) error {
 	}
 	return rows.Err()
 }
+
+// Migration1400 is the Courses migration (docs/dev/design/crs-plan.md §1.1).
+const Migration1400 = "1400_courses.sql"
+
+// Pending reports whether schema_migrations does not record the migration called name yet. A missing
+// schema_migrations table (a brand-new file) counts as pending.
+//
+// Stub of team A's design step (docs/dev/design/crs-a.md): returns ErrNotImplemented until filled in.
+func Pending(ctx context.Context, d *sql.DB, name string) (bool, error) {
+	return false, ErrNotImplemented
+}
+
+// NeedsPre1400Snapshot reports whether 1400 is pending and a planned_meals table exists with at least
+// one row: the only case in which start-up takes the verified snapshot feeder-pre-1400.db first.
+//
+// Stub of team A's design step: returns ErrNotImplemented until filled in.
+func NeedsPre1400Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
+	return false, ErrNotImplemented
+}
+
+// ErrNotImplemented marks the stubs of the Courses design step.
+var ErrNotImplemented = errors.New("db: not implemented")

@@ -276,6 +276,10 @@ type ListFilter struct {
 	Archived string
 	Tag      string // TagKey match; "" = any
 	Query    string // case-insensitive substring of the name; "" = any
+	// CourseID keeps Recipes marked with the Course, NotCourseID those not marked with it (0 = any); the
+	// Couldn't plan fix uses the second.
+	CourseID    int64
+	NotCourseID int64
 }
 
 // List returns Summaries ordered by name (case-insensitive), then id.

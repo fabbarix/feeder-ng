@@ -15,6 +15,9 @@ type SlotChange struct {
 	Name       *string
 	Time       *string
 	Attendance *[]Attendee
+	// Courses replaces the slot's Courses with the same shape and rules as MealSlotInput.Courses; a
+	// Member who does not attend the Matching Meal Slot is ignored in the opt-outs here.
+	Courses *[]SlotCourseInput
 }
 
 // BatchInput edits every Meal Slot named Match on the chosen weekdays (R15, ui-review-2 §3.7).
@@ -22,12 +25,16 @@ type BatchInput struct {
 	Match    string
 	Weekdays []int
 	Change   SlotChange
+	// DryRun computes the result (and Removes) without writing anything.
+	DryRun bool
 }
 
 // BatchResult lists the updated Meal Slots (weekday order) and the weekdays skipped for lack of a match.
 type BatchResult struct {
 	Updated []MealSlot
 	Skipped []int
+	// Removes is what taking Courses off the Matching Meal Slots removes (or, with DryRun, would remove).
+	Removes Removals
 }
 
 // Normalized trims names, de-duplicates and sorts Weekdays. It returns a copy.

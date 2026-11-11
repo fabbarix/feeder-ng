@@ -56,6 +56,8 @@ const (
 	CodeStepTextMissing = "step_text_required"
 	CodeStepTextLong    = "step_text_too_long"
 	CodeMinutesInvalid  = "minutes_invalid"
+	CodeCoursesEmpty    = "courses_empty"  // field "courses": a non-nil empty CourseIDs (spec §4)
+	CodeCourseUnknown   = "course_unknown" // field "courses": an unknown or archived Course id (checked by the store)
 )
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
@@ -131,10 +133,17 @@ type Step struct {
 
 // Input is what a User supplies to create or fully replace a Recipe.
 type Input struct {
-	Name              string
-	Description       string
-	Yield             float64
-	ReadyMeal         bool
+	Name        string
+	Description string
+	Yield       float64
+	ReadyMeal   bool
+	// CourseIDs are the Recipe's Courses (ADR 0008). nil: absent (a create gets the main Course; an update keeps
+	// the stored ones); a non-nil empty list is CodeCoursesEmpty. Validate drops repeated ids, keeping order.
+	// A stored Recipe lists them in household order.
+	CourseIDs []int64
+	// WholeMeal: nil is absent (a create gets DefaultWholeMeal; an update keeps the stored value). A stored
+	// Recipe always has it set.
+	WholeMeal         *bool
 	Tags              []string
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
@@ -428,10 +437,17 @@ func TimingOf(steps []Step) (Timing, error) {
 type Recipe struct {
 	ID int64
 	Input
+	Courses   []CourseRef // CourseIDs with their names, in household order (read only)
 	Archived  bool
 	Timing    Timing
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// CourseRef is a Course as a Recipe shows it.
+type CourseRef struct {
+	ID   int64
+	Name string
 }
 
 // Summary is one row of the Recipes list.
@@ -440,6 +456,8 @@ type Summary struct {
 	Name           string
 	Yield          float64
 	ReadyMeal      bool
+	CourseIDs      []int64 // household order; never nil
+	WholeMeal      bool
 	Tags           []string
 	Image          string
 	Archived       bool
@@ -472,3 +490,11 @@ func ParseState(s string) (State, bool) {
 	}
 	return "", false
 }
+
+// DefaultWholeMeal is the Whole meal value of a create that does not say: true for a Ready Meal whose
+// Courses include the main Course, false otherwise (spec §4).
+func DefaultWholeMeal(readyMeal bool, courseIDs []int64, mainID int64) bool { return false }
+
+// LostCourses returns the Course ids in before that are not in after, in before's order: the Courses a
+// Recipe loses on save (spec §4, "A Recipe that loses a Course").
+func LostCourses(before, after []int64) []int64 { return nil }

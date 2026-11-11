@@ -261,3 +261,20 @@ func Job(db *sql.DB, dir string) func(ctx context.Context, day string) error {
 		return err
 	}
 }
+
+// PreSnapshotFile is the name of the snapshot taken before migration 1400 (docs/dev/design/crs-plan.md §1.3).
+const PreSnapshotFile = "feeder-pre-1400.db"
+
+// SnapshotNamed writes a consistent copy of db to <dir>/<name> exactly like Snapshot (VACUUM INTO a
+// temporary file in dir, integrity_check, 0600, rename, same folder lock), for a name matching
+// ^feeder-pre-\d{4}\.db$ only; anything else is an error, so it can never overwrite a daily snapshot. An
+// existing file of that name is replaced. The result has Name set, Day empty. The file is not listed by
+// List and never pruned (nameRE does not match it).
+//
+// Stub of team A's design step (docs/dev/design/crs-a.md): returns ErrNotImplemented until filled in.
+func SnapshotNamed(ctx context.Context, db *sql.DB, dir, name string) (Info, error) {
+	return Info{}, ErrNotImplemented
+}
+
+// ErrNotImplemented marks the stubs of the Courses design step.
+var ErrNotImplemented = errors.New("backup: not implemented")
