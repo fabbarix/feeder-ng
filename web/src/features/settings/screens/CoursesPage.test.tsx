@@ -1,7 +1,7 @@
 // /settings/courses (CRS D2): the Courses list, add, rename, Make main, reorder, Delete / Archive and Unarchive.
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Course } from '../../../lib/courses'
 import { findNotice, noticeWith } from '../../../test/notices'
 import { activeCourses, allCourses, brunchCourse, sideImpact } from '../components/courseFixtures'
@@ -171,6 +171,24 @@ describe('CoursesPage: Rename and Make main', () => {
     expect(api.callsTo('PATCH', '/api/courses/2')[0]!.body).toEqual({ name: 'Sides' })
     await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename Side' })).toBeNull())
     expect(await findNotice('status', 'Renamed to Sides.')).toBeInTheDocument()
+    // Focus returns to the row's actions button (named after the new name), never to <body>.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Sides' })).toHaveFocus())
+  })
+
+  it('focus returns to "Actions for <name>" after Escape too', async () => {
+    routes()
+    await show()
+    await menuFor('Side', 'Rename')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Rename Side' }), 'x{Escape}')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Side' })).toHaveFocus())
+  })
+
+  it('focus returns to "Actions for <name>" after the Cancel button', async () => {
+    routes()
+    await show()
+    await menuFor('Side', 'Rename')
+    await userEvent.click(within(rowOf('Side')).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Side' })).toHaveFocus())
   })
 
   it('Escape cancels the rename without a request', async () => {
@@ -233,6 +251,9 @@ describe('CoursesPage: reorder', () => {
   })
 })
 
+const deleted = { value: false }
+beforeEach(() => { deleted.value = false })
+
 describe('CoursesPage: Delete and Archive', () => {
   const impactRoute = { 'GET /api/courses/2/impact': sideImpact }
 
@@ -249,6 +270,47 @@ describe('CoursesPage: Delete and Archive', () => {
     await waitFor(() => expect(api.callsTo('DELETE', '/api/courses/2?replacement=1')).toHaveLength(1))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(await findNotice('status', 'Deleted Side.')).toBeInTheDocument()
+  })
+
+  // Rule (design note 3.2): after a removal focus goes to the Actions button of the row that takes the removed row's place
+  // (the next one), else the previous row, else the list itself (tabIndex -1).
+  it('after Delete, focus is on the Actions button of the next row', async () => {
+    routes(ADMIN_ME, { ...impactRoute, 'DELETE /api/courses/2?replacement=1': { status: 204 } }, () => allCourses.filter((c) => c.id !== 2 || deleted.value === false))
+    await show()
+    await menuFor('Side', 'Delete')
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Side?' })
+    deleted.value = true
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Delete Course' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Starter' })).toHaveFocus())
+  })
+
+  it('after Delete of the last row, focus is on the previous row\'s Actions button', async () => {
+    routes(ADMIN_ME, { 'GET /api/courses/4/impact': { ...sideImpact, plannedMeals: [] }, 'DELETE /api/courses/4?replacement=1': { status: 204 } }, () => allCourses.filter((c) => c.id !== 4 || deleted.value === false))
+    await show()
+    await menuFor('Dessert', 'Delete')
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Dessert?' })
+    deleted.value = true
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Delete Course' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Starter' })).toHaveFocus())
+  })
+
+  it('after Archive, focus is on the Actions button of the next row', async () => {
+    routes(ADMIN_ME, {
+      ...impactRoute,
+      'DELETE /api/courses/2?replacement=1': { status: 409, json: { error: { code: 'course_planned', message: 'planned' } } },
+      'POST /api/courses/2/archive': { ...activeCourses[1], archived: true },
+    }, () => allCourses.map((c) => (c.id === 2 && deleted.value ? { ...c, archived: true } : c)))
+    await show()
+    await menuFor('Side', 'Delete')
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Side?' })
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Delete Course' }))
+    const archive = await screen.findByRole('dialog', { name: 'Archive Side?' })
+    deleted.value = true
+    await userEvent.click(within(archive).getByRole('button', { name: 'Archive Course' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Starter' })).toHaveFocus())
   })
 
   it('a Course that was planned offers Archive with the same replacement', async () => {

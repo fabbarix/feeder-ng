@@ -16,7 +16,8 @@ function setup(over: Partial<React.ComponentProps<typeof DateAttendancePanel>> =
   return { ...props, onSave: props.onSave as unknown as Mock }
 }
 const section = () => screen.getByRole('region', { name: 'Courses' })
-const eaters = (course: string) => within(screen.getByRole('group', { name: `Who eats ${course} on this date` }))
+// Each Course's group is named by its visible Course name (aria-labelledby), not by an invisible aria-label.
+const eaters = (course: string) => within(screen.getByRole('group', { name: course }))
 const pill = (course: string, name: string) => eaters(course).getByRole('button', { name })
 const overrideOf = (id: number, optOut: number[]): DateAttendance => ({
   ...dateWithCourses,
@@ -26,11 +27,25 @@ const overrideOf = (id: number, optOut: number[]): DateAttendance => ({
 describe('Courses section: what it shows', () => {
   it('has one group per Course of the slot, in its order, over that date\'s Attendance', () => {
     setup()
-    expect(within(section()).getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Who eats Main on this date', 'Who eats Side on this date', 'Who eats Dessert on this date'])
+    expect(within(section()).getAllByRole('group').map((g) => g.getAttribute('aria-labelledby') && document.getElementById(g.getAttribute('aria-labelledby')!)?.textContent)).toEqual(['Main', 'Side', 'Dessert'])
     expect(eaters('Dessert').getAllByRole('button').map((b) => [b.getAttribute('aria-label') ?? b.textContent, b.getAttribute('aria-pressed')])).toEqual([
       ['Anna', 'true'], ['Marco', 'true'], ['Sam', 'false'],
     ])
     expect(screen.getByText('Dessert · without Sam')).toBeInTheDocument()
+  })
+
+  it('shows a visible "Courses" heading and a visible name for each Course, which names its group (aria-labelledby)', () => {
+    setup()
+    expect(within(section()).getByRole('heading', { name: 'Courses' })).toBeVisible()
+    for (const name of ['Main', 'Side', 'Dessert']) {
+      const group = screen.getByRole('group', { name })
+      expect(group).not.toHaveAttribute('aria-label')
+      const label = document.getElementById(group.getAttribute('aria-labelledby') ?? '')
+      expect(label).not.toBeNull()
+      expect(label).toBeVisible()
+      expect(label!.textContent).toBe(name)
+      expect(label!.tagName).not.toBe('BUTTON')
+    }
   })
 
   it('is absent when the slot serves one Course, or the date carries no Courses', () => {

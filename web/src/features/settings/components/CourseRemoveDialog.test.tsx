@@ -141,3 +141,10 @@ describe('CourseRemoveDialog: no native UI', () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 })
+
+describe('CourseRemoveDialog: the planned-refusal sentence is announced', () => {
+  it('in Archive mode it is a role="status" sentence', () => {
+    show(state({ mode: 'archive' }))
+    expect(screen.getAllByRole('status').some((n) => /cannot be deleted/.test(n.textContent ?? ''))).toBe(true)
+  })
+})
