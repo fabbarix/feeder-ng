@@ -39,9 +39,12 @@ type Ingredient struct {
 	ID            int64
 	Name          string
 	Base          units.Base
-	ShelfLifeDays *int               // nil = does not spoil / unknown
-	Conversions   []units.Conversion // sorted by Unit
-	Image         string             // IM2: image id (internal/imaging), "" = no picture
+	ShelfLifeDays *int // nil = does not spoil / unknown
+	// FrozenShelfLifeDays is how long it keeps in a Freezer (a Storage Place of kind freezer); nil = the Freezer
+	// does not change its go-off date.
+	FrozenShelfLifeDays *int
+	Conversions         []units.Conversion // sorted by Unit
+	Image               string             // IM2: image id (internal/imaging), "" = no picture
 }
 
 // Key is the matching key: units.NormalizeName(Name).
@@ -54,11 +57,12 @@ func (i Ingredient) Units() units.Ingredient {
 
 // Input is what a User supplies to create or fully describe an Ingredient.
 type Input struct {
-	Name          string
-	Base          units.Base
-	ShelfLifeDays *int
-	Conversions   []units.Conversion
-	Image         string // IM2: image id, "" = none; Validate trims it and refuses anything but "" or a well-formed id (imaging.ValidID)
+	Name                string
+	Base                units.Base
+	ShelfLifeDays       *int
+	FrozenShelfLifeDays *int // nil or 1..MaxShelfLifeDays (field frozenShelfLifeDays)
+	Conversions         []units.Conversion
+	Image               string // IM2: image id, "" = none; Validate trims it and refuses anything but "" or a well-formed id (imaging.ValidID)
 }
 
 // Validate returns the cleaned Input or a *ValidationError.
@@ -81,6 +85,9 @@ func (in Input) Validate() (Input, error) {
 	}
 	if d := in.ShelfLifeDays; d != nil && (*d < 1 || *d > MaxShelfLifeDays) {
 		return Input{}, &ValidationError{Field: "shelfLifeDays", Message: fmt.Sprintf("The Shelf Life must be between 1 and %d days", MaxShelfLifeDays)}
+	}
+	if d := in.FrozenShelfLifeDays; d != nil && (*d < 1 || *d > MaxShelfLifeDays) {
+		return Input{}, &ValidationError{Field: "frozenShelfLifeDays", Message: fmt.Sprintf("The frozen Shelf Life must be between 1 and %d days", MaxShelfLifeDays)}
 	}
 
 	image := strings.TrimSpace(in.Image)
@@ -106,7 +113,7 @@ func (in Input) Validate() (Input, error) {
 	}
 	sort.Slice(cs, func(i, j int) bool { return cs[i].Unit < cs[j].Unit })
 
-	return Input{Name: name, Base: in.Base, ShelfLifeDays: in.ShelfLifeDays, Conversions: cs, Image: image}, nil
+	return Input{Name: name, Base: in.Base, ShelfLifeDays: in.ShelfLifeDays, FrozenShelfLifeDays: in.FrozenShelfLifeDays, Conversions: cs, Image: image}, nil
 }
 
 // conversionMessage explains a rejected Unit Conversion for the UI.

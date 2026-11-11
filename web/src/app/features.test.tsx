@@ -63,7 +63,7 @@ describe('buildRoutes', () => {
     ['/scan', 'Scan'],
     ['/shop', 'Shop'],
     ['/recipes', 'Recipes'],
-    ['/stock', 'Stock'],
+    ['/stock', 'Pantry'],
     ['/settings', 'Settings'],
   ])('shows a "coming soon" placeholder at %s', (path, title) => {
     renderAt({}, path)

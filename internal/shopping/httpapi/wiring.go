@@ -99,7 +99,7 @@ func (l stockIngredients) Ingredient(ctx context.Context, id int64) (stockservic
 	if err != nil {
 		return stockservice.IngredientInfo{}, err
 	}
-	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays}, nil
+	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays, FrozenShelfLifeDays: ing.FrozenShelfLifeDays}, nil
 }
 
 // NewService builds the Shopping List service over the real adapters. The Scan module shares it.

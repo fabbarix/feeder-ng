@@ -30,6 +30,7 @@ export const ROUTE_CRUMBS: RouteCrumb[] = [
   { path: '/settings/meal-slots', label: sections.mealSlots.title, parent: '/settings' },
   { path: '/settings/planning', label: sections.planningRules.title, parent: '/settings' },
   { path: '/settings/shops', label: sections.shops.title, parent: '/settings' },
+  { path: '/settings/storage-places', label: sections.storagePlaces.title, parent: '/settings' },
   { path: '/settings/preferences', label: sections.preferences.title, parent: '/settings' },
   { path: '/settings/access-requests', label: sections.accessRequests.title, parent: '/settings' },
   { path: '/settings/notifications', label: sections.notifications.title, parent: '/settings' },

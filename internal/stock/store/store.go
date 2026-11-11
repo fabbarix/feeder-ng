@@ -47,6 +47,8 @@ type StoredLot struct {
 	ShopID     *int64
 	ClientUUID string // "" when none
 	CreatedAt  time.Time
+	// StoragePlaceID is the Storage Place the Lot is in; nil = not sorted.
+	StoragePlaceID *int64
 }
 
 // NewLot is a Stock Lot to insert. GoesOff is computed by the caller (stock.NewLot).
@@ -59,6 +61,8 @@ type NewLot struct {
 	ProductID    *int64
 	ShopID       *int64
 	ClientUUID   string
+	// StoragePlaceID is where it goes (the caller resolves the remembered place); nil = not sorted.
+	StoragePlaceID *int64
 }
 
 // WasteRecord is one wasted quantity. IngredientID is nil only for discarded
@@ -130,7 +134,7 @@ type Store struct {
 // New returns a Store.
 func New(db *sql.DB, clk clock.Clock) *Store { return &Store{db: db, clk: clk} }
 
-const lotColumns = `id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, kept_on`
+const lotColumns = `id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, kept_on, storage_place_id`
 
 // AddLot inserts a lot. If ClientUUID is set and a lot with it exists, that lot
 // is returned with created=false and nothing is inserted (idempotent offline scans).
@@ -152,10 +156,10 @@ func (s *Store) AddLot(ctx context.Context, n NewLot) (lot StoredLot, created bo
 		src = SourceManual
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO stock_lots
-		(ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		(ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, storage_place_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		n.IngredientID, n.Quantity, string(n.Purchased), nullDate(n.GoesOff), string(src),
-		nullInt(n.ProductID), nullInt(n.ShopID), nullString(n.ClientUUID), s.now())
+		nullInt(n.ProductID), nullInt(n.ShopID), nullString(n.ClientUUID), s.now(), nullInt(n.StoragePlaceID))
 	if err != nil {
 		if n.ClientUUID != "" && isUnique(err) {
 			// A concurrent scan with the same UUID won the race: return its lot.
@@ -275,9 +279,10 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 	}
 	for _, l := range m.Lots {
 		if l.ID == 0 {
+			// A Stock-take increase goes where the Ingredient was last put (or the default Storage Place).
 			if _, err := tx.ExecContext(ctx, `INSERT INTO stock_lots
-				(ingredient_id, quantity, purchased, goes_off, source, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-				ingredientID, l.Quantity, string(l.Purchased), nullDate(l.GoesOff), string(src), s.now()); err != nil {
+				(ingredient_id, quantity, purchased, goes_off, source, created_at, storage_place_id) VALUES (?, ?, ?, ?, ?, ?, `+rememberedPlaceSQL+`)`,
+				ingredientID, l.Quantity, string(l.Purchased), nullDate(l.GoesOff), string(src), s.now(), ingredientID); err != nil {
 				return nil, err
 			}
 			continue
@@ -416,11 +421,11 @@ func scanLot(r scanner) (StoredLot, error) {
 	var (
 		l                     StoredLot
 		goesOff, client, kept sql.NullString
-		product, shop         sql.NullInt64
+		product, shop, place  sql.NullInt64
 		purchased, src, stamp string
 	)
 	if err := r.Scan(&l.ID, &l.IngredientID, &l.Quantity, &purchased, &goesOff, &src,
-		&product, &shop, &client, &stamp, &kept); err != nil {
+		&product, &shop, &client, &stamp, &kept, &place); err != nil {
 		return StoredLot{}, err
 	}
 	l.Purchased = stock.Date(purchased)
@@ -429,6 +434,7 @@ func scanLot(r scanner) (StoredLot, error) {
 	l.Source = Source(src)
 	l.ProductID = optInt(product)
 	l.ShopID = optInt(shop)
+	l.StoragePlaceID = optInt(place)
 	l.ClientUUID = client.String
 	created, err := time.Parse(time.RFC3339, stamp)
 	if err != nil {

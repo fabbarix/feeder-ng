@@ -32,7 +32,7 @@ export const PRIMARY_NAV: readonly PrimaryNavItem[] = [
 export const RAIL_NAV: readonly PrimaryNavItem[] = PRIMARY_NAV
 
 export const MENU_NAV: readonly NavItem[] = [
-  { id: 'stock', label: 'Stock', path: '/stock', icon: 'stock', placement: 'menu' },
+  { id: 'stock', label: 'Pantry', path: '/stock', icon: 'stock', placement: 'menu' },
   // B2: /board was linked from nowhere. It is a destination in its own right (a wall display), so it lives in the menu.
   { id: 'board', label: 'Kitchen board', path: '/board', icon: 'board', placement: 'menu' },
   { id: 'settings', label: 'Settings', path: '/settings', icon: 'settings', placement: 'menu' },

@@ -15,6 +15,8 @@ export interface UseIngredient {
   setBaseUnit: (base: BaseUnit) => Promise<Ingredient>
   /** null clears the Shelf Life. */
   setShelfLife: (days: number | null) => Promise<Ingredient>
+  /** Pantry: the Shelf Life in a Freezer; null clears it. */
+  setFrozenShelfLife: (days: number | null) => Promise<Ingredient>
   /** IM2: the picture's image id; '' removes it. */
   setImage: (imageId: string) => Promise<Ingredient>
   setConversion: (c: Conversion) => Promise<Ingredient>
@@ -45,6 +47,7 @@ export function useIngredient(id: number): UseIngredient {
     rename: (name) => changed(ingredientsApi.patch(id, { name })),
     setBaseUnit: (baseUnit) => changed(ingredientsApi.patch(id, { baseUnit })),
     setShelfLife: (shelfLifeDays) => changed(ingredientsApi.patch(id, { shelfLifeDays })),
+    setFrozenShelfLife: (frozenShelfLifeDays) => changed(ingredientsApi.patch(id, { frozenShelfLifeDays })),
     setImage: (image) => changed(ingredientsApi.patch(id, { image })),
     setConversion: (c) => changed(ingredientsApi.setConversion(id, c)),
     removeConversion: (unit) => changed(ingredientsApi.removeConversion(id, unit)),

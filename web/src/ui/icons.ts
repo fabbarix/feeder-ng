@@ -88,6 +88,7 @@ import { ShoppingBagOpenIcon } from '@phosphor-icons/react/dist/csr/ShoppingBagO
 import { ShuffleIcon } from '@phosphor-icons/react/dist/csr/Shuffle'
 import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
 import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/csr/SlidersHorizontal'
+import { SnowflakeIcon } from '@phosphor-icons/react/dist/csr/Snowflake'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
 import { SpeakerSlashIcon } from '@phosphor-icons/react/dist/csr/SpeakerSlash'
 import { SparkleIcon } from '@phosphor-icons/react/dist/csr/Sparkle'
@@ -96,6 +97,7 @@ import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
 import { SunIcon } from '@phosphor-icons/react/dist/csr/Sun'
 import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
 import { ThumbsDownIcon } from '@phosphor-icons/react/dist/csr/ThumbsDown'
+import { ThermometerColdIcon } from '@phosphor-icons/react/dist/csr/ThermometerCold'
 import { TimerIcon } from '@phosphor-icons/react/dist/csr/Timer'
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple'
@@ -113,6 +115,9 @@ export const icons = {
   shop: BasketIcon,
   recipes: BookOpenTextIcon,
   stock: PackageIcon,
+  // Pantry: Storage Place kinds (a pantry uses `stock`)
+  fridge: ThermometerColdIcon,
+  freezer: SnowflakeIcon,
   ingredients: CarrotIcon,
   products: ShoppingBagOpenIcon,
   shops: StorefrontIcon,

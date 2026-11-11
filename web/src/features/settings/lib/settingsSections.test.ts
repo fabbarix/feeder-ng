@@ -7,7 +7,7 @@ const ids = (isAdmin: boolean) => settingsGroups(isAdmin).map((g) => [g.id, g.se
 describe('settingsGroups', () => {
   it('shows an Admin three groups in order', () => {
     expect(ids(true)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'accessRequests']],
+      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
       ['admin', ['allowlist', 'recipeAssistant']],
     ])
@@ -15,7 +15,7 @@ describe('settingsGroups', () => {
 
   it('hides the Allowlist and the Recipe Assistant, and their whole group, from a plain User', () => {
     expect(ids(false)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'accessRequests']],
+      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
     ])
   })
@@ -28,6 +28,7 @@ describe('settingsGroups', () => {
       mealSlots: '/settings/meal-slots',
       planningRules: '/settings/planning',
       shops: '/settings/shops',
+      storagePlaces: '/settings/storage-places',
       preferences: '/settings/preferences',
       notifications: '/settings/notifications',
       accessRequests: '/settings/access-requests',
@@ -46,7 +47,7 @@ describe('settingsGroups', () => {
 
   it('uses GLOSSARY wording for titles', () => {
     const titles = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.title))
-    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
+    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Storage Places', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
   })
 
   it('A1: "Sign-in requests" is a Household row for every User, after Shops', () => {

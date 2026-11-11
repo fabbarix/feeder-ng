@@ -64,6 +64,8 @@ type Patch struct {
 	Name      *string
 	Base      *units.Base
 	ShelfLife *ShelfLifePatch
+	// FrozenShelfLife: like ShelfLife, for the Shelf Life in a Freezer.
+	FrozenShelfLife *ShelfLifePatch
 	// Image: nil = unchanged, &"" = remove the picture, &id = set it (IM2).
 	Image *string
 }
@@ -104,8 +106,8 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, in ingredient.Input) (
 	}
 	now := s.now()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), nullDays(clean.ShelfLifeDays), clean.Image, now, now)
+		`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, frozen_shelf_life_days, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), clean.Image, now, now)
 	if err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
@@ -139,7 +141,7 @@ func (s *Store) ByName(ctx context.Context, name string) (ingredient.Ingredient,
 
 // List returns all Ingredients ordered by normalised name, with Conversions.
 func (s *Store) List(ctx context.Context) ([]ingredient.Ingredient, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, base_unit, shelf_life_days, image FROM ingredients ORDER BY name_key`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, base_unit, shelf_life_days, frozen_shelf_life_days, image FROM ingredients ORDER BY name_key`)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +228,7 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	if err != nil {
 		return ingredient.Ingredient{}, err
 	}
-	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, Conversions: cur.Conversions, Image: cur.Image}
+	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, FrozenShelfLifeDays: cur.FrozenShelfLifeDays, Conversions: cur.Conversions, Image: cur.Image}
 	if p.Name != nil {
 		in.Name = *p.Name
 	}
@@ -235,6 +237,9 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	}
 	if p.ShelfLife != nil {
 		in.ShelfLifeDays = p.ShelfLife.Days
+	}
+	if p.FrozenShelfLife != nil {
+		in.FrozenShelfLifeDays = p.FrozenShelfLife.Days
 	}
 	if p.Image != nil {
 		in.Image = *p.Image
@@ -262,8 +267,8 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 		return ingredient.Ingredient{}, err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
-		clean.Name, key, string(clean.Base), nullDays(clean.ShelfLifeDays), clean.Image, s.now(), id); err != nil {
+		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, shelf_life_days = ?, frozen_shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
+		clean.Name, key, string(clean.Base), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), clean.Image, s.now(), id); err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -510,9 +515,14 @@ func (s *Store) Merge(ctx context.Context, sourceID, targetID int64, res ingredi
 	if image == "" {
 		image, dropped = src.Image, ""
 	}
+	// Likewise the frozen Shelf Life: the target's, or the source's when the target has none.
+	frozen := tgt.FrozenShelfLifeDays
+	if frozen == nil {
+		frozen = src.FrozenShelfLifeDays
+	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
-		nullDays(merged.ShelfLifeDays), image, s.now(), targetID); err != nil {
+		`UPDATE ingredients SET shelf_life_days = ?, frozen_shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
+		nullDays(merged.ShelfLifeDays), nullDays(frozen), image, s.now(), targetID); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredient_conversions WHERE ingredient_id = ?`, targetID); err != nil {
@@ -629,11 +639,12 @@ type rowScanner interface{ Scan(dest ...any) error }
 
 func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 	var (
-		i    ingredient.Ingredient
-		base string
-		days sql.NullInt64
+		i      ingredient.Ingredient
+		base   string
+		days   sql.NullInt64
+		frozen sql.NullInt64
 	)
-	if err := r.Scan(&i.ID, &i.Name, &base, &days, &i.Image); err != nil {
+	if err := r.Scan(&i.ID, &i.Name, &base, &days, &frozen, &i.Image); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	i.Base = units.Base(base)
@@ -641,12 +652,16 @@ func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 		d := int(days.Int64)
 		i.ShelfLifeDays = &d
 	}
+	if frozen.Valid {
+		f := int(frozen.Int64)
+		i.FrozenShelfLifeDays = &f
+	}
 	return i, nil
 }
 
 // loadOne reads one Ingredient with its Conversions, or ErrNotFound.
 func loadOne(ctx context.Context, q Querier, id int64) (ingredient.Ingredient, error) {
-	row := q.QueryRowContext(ctx, `SELECT id, name, base_unit, shelf_life_days, image FROM ingredients WHERE id = ?`, id)
+	row := q.QueryRowContext(ctx, `SELECT id, name, base_unit, shelf_life_days, frozen_shelf_life_days, image FROM ingredients WHERE id = ?`, id)
 	i, err := scanIngredient(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ingredient.Ingredient{}, ErrNotFound

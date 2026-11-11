@@ -189,13 +189,13 @@ describe('avatar menu', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false')
     const menu = await open()
     expect(btn).toHaveAttribute('aria-expanded', 'true')
-    expect(texts(menu)).toEqual(['Stock', 'Kitchen board', 'Settings', 'Sign out'])
+    expect(texts(menu)).toEqual(['Pantry', 'Kitchen board', 'Settings', 'Sign out'])
   })
 
   it('links Stock, Kitchen board and Settings to their pages', async () => {
     setup()
     await open()
-    expect(screen.getByRole('menuitem', { name: 'Stock' })).toHaveAttribute('href', '/stock')
+    expect(screen.getByRole('menuitem', { name: 'Pantry' })).toHaveAttribute('href', '/stock')
     expect(screen.getByRole('menuitem', { name: 'Kitchen board' })).toHaveAttribute('href', '/board')
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', '/settings')
   })
@@ -204,7 +204,7 @@ describe('avatar menu', () => {
     setup()
     const menu = await open()
     for (const [label, name] of [
-      ['Stock', 'stock'],
+      ['Pantry', 'stock'],
       ['Kitchen board', 'board'],
       ['Settings', 'settings'],
       ['Sign out', 'signOut'],
@@ -232,7 +232,7 @@ describe('avatar menu', () => {
       ],
     })
     const menu = await open()
-    expect(texts(menu)).toEqual(['Stock', 'Kitchen board', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
+    expect(texts(menu)).toEqual(['Pantry', 'Kitchen board', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Weight Barcode Rules' })).name).toBe('barcodes')
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Household' })).name).toBe('chevron')
   })
@@ -245,7 +245,7 @@ describe('avatar menu', () => {
     const signOut = items[items.length - 1]!
     expect(signOut).toHaveTextContent('Sign out')
     expect(signOut).toHaveAttribute('data-tone', 'danger')
-    expect(within(menu).getByRole('menuitem', { name: 'Stock' })).not.toHaveAttribute('data-tone')
+    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).not.toHaveAttribute('data-tone')
     await userEvent.click(signOut)
     expect(onSignOut).toHaveBeenCalledOnce()
     expect(screen.queryByRole('menu')).toBeNull()
@@ -254,7 +254,7 @@ describe('avatar menu', () => {
   it('moves focus to the first item on open (not Sign out), and nothing is highlighted as selected', async () => {
     setup()
     const menu = await open()
-    expect(within(menu).getByRole('menuitem', { name: 'Stock' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
     for (const item of within(menu).getAllByRole('menuitem')) expect(item).not.toHaveAttribute('aria-current')
   })
 
@@ -266,11 +266,11 @@ describe('avatar menu', () => {
     await userEvent.keyboard('{End}')
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{ArrowDown}')
-    expect(within(menu).getByRole('menuitem', { name: 'Stock' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
     await userEvent.keyboard('{ArrowUp}')
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{Home}')
-    expect(within(menu).getByRole('menuitem', { name: 'Stock' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
   })
 
   it('closes on Escape and returns focus to the avatar button', async () => {

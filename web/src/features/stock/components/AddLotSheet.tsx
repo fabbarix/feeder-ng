@@ -1,15 +1,17 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { BottomSheet, Button, FormActions, DateField, IngredientSelect, TextField } from '../../../ui'
+import { BottomSheet, Button, FormActions, DateField, IngredientSelect, Select, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
 import '../stock.css'
-import type { IngredientChoice } from '../types'
+import type { IngredientChoice, StoragePlace } from '../types'
 import { stockStrings as strings } from '../strings'
 
 export interface AddLotSheetProps {
   open: boolean
   onClose: () => void
   choices: IngredientChoice[]
-  onSubmit: (input: { ingredientId: number; quantity: number; purchased?: string }) => void
+  onSubmit: (input: { ingredientId: number; quantity: number; purchased?: string; storagePlaceId?: number }) => void
+  /** Pantry: offers a Storage Place; left on "Where it usually goes", the server picks the remembered one. */
+  places?: StoragePlace[]
 }
 
 /**
@@ -20,10 +22,11 @@ export interface AddLotSheetProps {
  * No native select/date input, no separate `role="alert"` paragraph: the field's own error line is the alert (FieldFrame
  * renders it with role="alert"), so there is one message.
  */
-export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetProps): ReactElement | null {
+export function AddLotSheet({ open, onClose, choices, onSubmit, places = [] }: AddLotSheetProps): ReactElement | null {
   const [pickedId, setPickedId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState('')
   const [purchased, setPurchased] = useState('')
+  const [placeId, setPlaceId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // The first Ingredient is the default until the User picks one.
@@ -35,6 +38,7 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
     setPickedId(null)
     setQuantity('')
     setPurchased('')
+    setPlaceId(null)
     setError(null)
   }, [open])
 
@@ -46,7 +50,12 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
     }
     if (!chosen) return
     setError(null)
-    onSubmit(purchased ? { ingredientId: chosen.id, quantity: amount.value, purchased } : { ingredientId: chosen.id, quantity: amount.value })
+    onSubmit({
+      ingredientId: chosen.id,
+      quantity: amount.value,
+      ...(purchased ? { purchased } : {}),
+      ...(placeId !== null ? { storagePlaceId: placeId } : {}),
+    })
   }
 
   return (
@@ -83,6 +92,17 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
           error={error ?? undefined}
         />
         <DateField label={strings.purchased} value={purchased} onChange={setPurchased} />
+        {places.length > 0 ? (
+          <Select<number>
+            label={strings.addPlaceTo}
+            entityName="Storage Place"
+            options={places.map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind] }))}
+            value={placeId}
+            onChange={setPlaceId}
+            clearLabel={strings.usualPlace}
+            onClear={() => setPlaceId(null)}
+          />
+        ) : null}
       </div>
     </BottomSheet>
   )
