@@ -135,6 +135,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
       {fb ? (
         <ScanFeedback
           text={fb.text}
+          imageUrl={fb.imageUrl}
           queued={fb.queued}
           canEditPrice={fb.canEditPrice}
           onEditPrice={flow.openEditPrice}
@@ -155,6 +156,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
           mode={sheet.mode}
           shopName={shopName}
           ingredients={c.ingredients}
+          canUpload={c.online}
           findSimilar={c.online ? (name) => ingredientsApi.search(name) : undefined}
           priceText={sheet.mode === 'weighed_price' && sheet.target.mode === 'weighed_price' ? formatMinor(sheet.target.priceCents, c.currency) : undefined}
           onSave={(values) => void flow.saveUnknown(values)}

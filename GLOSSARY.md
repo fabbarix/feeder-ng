@@ -70,7 +70,7 @@ The optional number of minutes (1 to 30) a Recipe says its Leftover takes to reh
 _Avoid_: Warm-up time, microwave time
 
 **Photo**:
-The one picture a Recipe, a Step or a Member may have, added through the image picker. An Ingredient's picture is called its **Picture**.
+The one picture a Recipe, a Step or a Member may have, added through the image picker. An Ingredient's or a Product's picture is called its **Picture**.
 _Avoid_: Thumbnail, upload
 
 **Recipe File**:
@@ -180,8 +180,8 @@ A generic food item that recipes call for and the shopping list is written in (e
 _Avoid_: Item, food, product
 
 **Product**:
-A specific purchasable pack, identified by its barcode, that supplies exactly one Ingredient (e.g. "Mutti passata 700 g").
-_Avoid_: SKU, article, item
+A specific purchasable pack, identified by its barcode, that supplies exactly one Ingredient (e.g. "Mutti passata 700 g"). May carry a **Picture** (see **Photo**) of the pack, so it can be told from another brand at a glance.
+_Avoid_: SKU, article, item, pack shot, product photo
 
 **Archived**:
 The state of a Recipe or Product that was used (planned, or bought) and so cannot be deleted, but is retired: left out of lists and pickers and ignored by the planner and by Scans, while its history stays. It can be unarchived.

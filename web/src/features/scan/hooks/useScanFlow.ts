@@ -66,6 +66,8 @@ export interface FlowFeedback {
   productName: string
   priceCents: number | null
   canEditPrice: boolean
+  /** PP: the Product's Picture ("/api/images/<id>"), from the Result or, for a queued scan, the offline Product; absent when none */
+  imageUrl?: string
 }
 
 export interface FlowBanner {
@@ -115,6 +117,7 @@ interface Line {
   onList: boolean
   queued: boolean
   productName: string
+  imageUrl?: string
 }
 
 type BaseUnit = 'g' | 'ml' | 'piece'
@@ -125,6 +128,8 @@ interface Fallback {
   quantity: number
   priceCents: number | null
   productName: string
+  /** PP: the offline Product's Picture, used while the scan is queued */
+  imageUrl?: string
 }
 
 const nowIso = (d: ScanFlowDeps) => (d.now ? d.now() : new Date()).toISOString()
@@ -163,7 +168,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     if (result === null) {
       d.feedback.confirm()
       setBanner(null)
-      setLine({ clientUuid, ingredientName: fallback.ingredientName, baseUnit: fallback.baseUnit, quantity: fallback.quantity, priceCents: fallback.priceCents, onList: true, queued: true, productName })
+      setLine({ clientUuid, ingredientName: fallback.ingredientName, baseUnit: fallback.baseUnit, quantity: fallback.quantity, priceCents: fallback.priceCents, onList: true, queued: true, productName, ...(fallback.imageUrl ? { imageUrl: fallback.imageUrl } : {}) })
       return
     }
     if (result.status === 'rejected') {
@@ -184,6 +189,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       onList: s?.onList ?? true,
       queued: false,
       productName: s?.productName ?? productName,
+      // The server is right: a Result without a picture shows none, whatever the cache had.
+      ...((s ? s.productImageUrl : fallback.imageUrl) ? { imageUrl: s ? s.productImageUrl : fallback.imageUrl } : {}),
     })
   }
 
@@ -207,7 +214,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     await finish(
       op.clientUuid,
       result,
-      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: plan.quantity, priceCents: plan.priceCents, productName: plan.product.name },
+      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: plan.quantity, priceCents: plan.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl },
       plan.product.name,
     )
   }
@@ -335,7 +342,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     await finish(
       op.clientUuid,
       result,
-      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: asked.quantity, priceCents: asked.priceCents, productName: plan.product.name },
+      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: asked.quantity, priceCents: asked.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl },
       plan.product.name,
     )
   }
@@ -436,7 +443,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       if (result.status === 'rejected') return null
       const s = result.scan
       if (!s) return { ...current, queued: false }
-      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName }
+      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName, imageUrl: s.productImageUrl }
     })
   }
 
@@ -462,7 +469,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   }
 
   const feedback: FlowFeedback | null = line
-    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: true }
+    ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: true, ...(line.imageUrl ? { imageUrl: line.imageUrl } : {}) }
     : null
 
   return {

@@ -4,8 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"path/filepath"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	ingredient "github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/product"
@@ -78,7 +82,7 @@ type catalogue struct {
 
 func productInfo(p productstore.Product) service.ProductInfo {
 	return service.ProductInfo{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize}
+		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL}
 }
 
 func (c catalogue) ShopExists(ctx context.Context, id int64) (bool, error) {
@@ -101,7 +105,7 @@ func (c catalogue) Product(ctx context.Context, id int64) (service.ProductInfo, 
 }
 
 func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (service.ProductInfo, error) {
-	np := productstore.NewProduct{Input: product.Input{Name: in.Name, IngredientID: in.IngredientID, PackSize: in.PackSize}, Barcodes: in.Barcodes}
+	np := productstore.NewProduct{Input: product.Input{Name: in.Name, IngredientID: in.IngredientID, PackSize: in.PackSize, Image: in.Image}, Barcodes: in.Barcodes}
 	for _, sb := range in.ShopBarcodes {
 		np.ShopBarcodes = append(np.ShopBarcodes, productstore.NewShopBarcode{ShopID: sb.ShopID, Code: sb.Code, RuleID: sb.RuleID, ItemCode: sb.ItemCode})
 	}
@@ -212,7 +216,7 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 	}
 	for _, p := range products {
 		bp := service.OfflineProduct{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize}
+			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL}
 		if shopID != nil {
 			if latest, err := c.LatestPrice(ctx, p.ID, *shopID); err != nil {
 				return service.OfflineData{}, err
@@ -256,7 +260,7 @@ func newService(d app.Deps) *service.Service {
 	return service.New(service.Deps{
 		Ledger:      scanstore.New(d.DB, d.Clock),
 		Stock:       stockPort{svc: shoppinghttpapi.NewStock(d)},
-		Catalogue:   catalogue{db: d.DB, st: productstore.New(d.DB, d.Clock)},
+		Catalogue:   catalogue{db: d.DB, st: productstore.New(d.DB, d.Clock, productstore.WithImages(images.NewGuarded(imaging.NewStore(filepath.Join(d.Config.DataDir, "images")), refs.New(d.DB))))},
 		Ingredients: ingredientsPort{st: ingredientstore.New(d.DB, d.Clock)},
 		List:        shoppinghttpapi.NewService(d),
 		Household:   hh,

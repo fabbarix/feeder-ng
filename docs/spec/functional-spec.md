@@ -63,6 +63,8 @@ The **New Ingredient** sheet asks for a name, a Base Unit (g, ml or piece, g unl
 
 **Product**: a name, the Ingredient it supplies, its pack size (in the Ingredient's Base Unit), optional global barcodes (EAN/UPC) and the Shops known to sell it. Products are created only through the "what is this?" form during scanning, or from an Ingredient's page.
 
+A Product may also have one optional **Picture** (the same word as an Ingredient's; GLOSSARY: Photo), so a person in the shop can tell "Mutti passata" from "own-brand passata" at a glance. It is added with the shared image picker (4:3 crop) in three places: the **Product sheet** (the form that creates a Product from an Ingredient's page), the **Picture Tile** on the Product page (first Tile; it saves at once and may be changed or removed at any time, also while the Product is bought or archived) and the "what is this?" sheet (§10.1). It is shown as a small thumbnail at the start of every Product row (the Products screen and an Ingredient's Products list) and of the scan line (§10.1); rows without a Picture keep the same empty slot so the names line up. A Picture is stored as an image id (`image`, with the read-only `imageUrl`, both always sent, `""` when none); `POST /api/products` takes `image`, and `PATCH /api/products/{id}` takes it presence-aware (absent keeps it, `""` removes it, an id sets it). An id that is malformed or was never uploaded is `400 invalid_product` on field `image`. Replacing or removing the Picture, or deleting the Product, removes the old file unless some other record still uses it; archiving keeps it. The nightly clean-up keeps every Product Picture (§13, §15).
+
 **Shop**: a name. It has:
 - **Shop Barcodes**: a code mapped to a Product, valid only in that Shop;
 - **Weight Barcode Rules**: a barcode prefix (e.g. `21`), the digit positions of the item code, the digit positions of the value, whether the value is a weight or a price, its unit, and the decimal places. The unit is configured per rule: for a weight, g (default), kg, oz or lb; for a price, the household currency's minor unit (cents by default). The decoded value = digits ÷ 10^decimal places, in that unit. Internally all quantities are stored in metric Base Units (g, ml or piece) and price per weight is kept per kg. When the value is a price, the weight is derived from that Product's last known price per kg at that Shop. If there is no **Price** history, the app asks the user for the weight once, which also records the price per kg for next time;
@@ -215,9 +217,10 @@ On an **unknown barcode**, a bottom sheet asks:
 - which Ingredient it is (searchable, or create a new one);
 - the pack size and unit;
 - a Product name (prefilled as "<Ingredient> <size>");
-- whether it's a global or a Shop-only barcode.
+- whether it's a global or a Shop-only barcode;
+- an optional **Picture** of the pack (the shared image picker, 4:3), only while online because it uploads (it is left out of a form filled in offline).
 
-Saving creates the Product (and Shop Barcode) and then proceeds as for a resolved barcode. A barcode matching a Shop's Weight Barcode Rule prefix whose item code is unknown asks only for the Ingredient and Product name.
+Saving creates the Product (and Shop Barcode) and then proceeds as for a resolved barcode. A scan line shows the Product's Picture as a small thumbnail before its text: the scan result carries it (`productImageUrl`, absent when none) and the phone's offline data carries it per Product (`imageUrl`) so a queued scan shows it too. If the barcode was meanwhile created by someone else, the form's Picture is ignored and the existing Product keeps its own (§10.3). A barcode matching a Shop's Weight Barcode Rule prefix whose item code is unknown asks only for the Ingredient and Product name.
 
 When the list is empty, the **Shopping list complete** celebration appears with the number of items, the total spent and the number of Stock Lots added.
 
@@ -262,8 +265,9 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 - **Export:** pick one or more Recipes, or all of them, and download a `.feeder.json` file with images embedded ([recipe-file.md](recipe-file.md)).
 - **Import:** upload or paste JSON, then go through Import Review (recipe-file.md, *Import Review*).
 - A Recipe's Reheat time travels in the Recipe File as the optional `reheatMinutes`; files without it stay valid (the format is still version 1).
+- A Product's Picture is not part of a Recipe File (it holds Recipes and their Ingredients, not Products).
 - An Ingredient's picture travels in the Recipe File as the optional `image` of its definition (a data URL on export, a data URL or https URL on import, handled like a Recipe photo); files without it stay valid (still version 1). Import gives the picture to an Ingredient it **creates**, and to an Ingredient the Household already has that has **no picture**; an existing picture is never replaced. Import Review says so on the row ("Adds a picture to Garlic"). Nothing else about an existing Ingredient changes except the missing Unit Conversions it adds. A picture that cannot be fetched is dropped with an `image_failed` warning at `$.ingredients[i].image`. Member photos are not part of a Recipe File.
-- **One image path.** Every image field (Recipe photo, Step photo, Ingredient picture, Member photo) uses the same image picker and the same server endpoints (`/api/images`); a scripted guard (`image-input` in `scripts/check-ui.sh`) fails the build when a screen builds its own image input. The nightly clean-up keeps every image that a Recipe, Step, Ingredient or Member uses (§15, decision 25).
+- **One image path.** Every image field (Recipe photo, Step photo, Ingredient picture, Product picture, Member photo) uses the same image picker and the same server endpoints (`/api/images`); a scripted guard (`image-input` in `scripts/check-ui.sh`) fails the build when a screen builds its own image input. The nightly clean-up keeps every image that a Recipe, Step, Ingredient, Product or Member uses (§15, decision 25).
 - **Copy Agent Prompt:** copies the prompt template with the schema and example inlined.
 
 ## 14. Theming and layout
@@ -300,3 +304,4 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 24. (2026-11-10) Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down (§2).
 25. (2026-11-10) Meal Slots can be edited on several weekdays at once: the change applies to the Matching Meal Slot (same name) on each chosen weekday, skipped days are reported, nothing is created, and the edit is atomic (`PATCH /api/meal-slots/batch`). Weekdays are chosen with the shared WeekdayPicker chips; the overview shows attendee pills and, from 1024 px, a week table (§3).
 26. (2026-11-10) Pictures for Ingredients and Members (IM2): an Ingredient may have one picture and a Member one photo, both kept in the shared image store and by the nightly clean-up; a Member's avatar is photo, else emoji, else initials; every image field uses the one image picker (§3, §5, §13).
+27. (2026-11-10) Pictures for Products (PP): a Product may have one Picture (4:3), added in the Product sheet, on the Product page and in the "what is this?" sheet; it is shown as a thumbnail on Product rows and on the scan line, is kept by the nightly clean-up, and is not part of a Recipe File (§5, §10.1, §13).
