@@ -156,6 +156,9 @@ func TestHEICSecondIrefCannotLowerTheTileCount(t *testing.T) {
 	if got := inspectHEIC(out).MaxTiles; got != 272 {
 		t.Errorf("decoy first: MaxTiles = %d, want 272", got)
 	}
+	if _, err := Process(bytes.NewReader(out)); !errors.Is(err, ErrHEICTooManyTiles) {
+		t.Errorf("decoy first: Process error = %v, want ErrHEICTooManyTiles", err)
+	}
 }
 
 func TestHEICBoxesBeyondTheReaderCapFailClosed(t *testing.T) {

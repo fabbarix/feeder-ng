@@ -102,7 +102,7 @@ type heicInfo struct {
 }
 
 // inspectHEIC reads the item references and properties of a HEIC container: no picture data is touched, and
-// every offset and count is bounds-checked. Malformed metadata gives the zero heicInfo (the decoder refuses it).
+// every offset and count is bounds-checked. Malformed metadata gives a heicInfo with Refused set (callers fail closed).
 func inspectHEIC(data []byte) heicInfo {
 	var info heicInfo
 	// get splits boxes and notes when the reader's cap cut the list short: what lies beyond is unseen.

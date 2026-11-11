@@ -33,7 +33,7 @@ iPhones save photos as HEIC. Most browsers cannot decode them, so the server con
 | amd64 | 21,635,234 B (20.6 MiB) | 22,245,538 B (21.2 MiB) | +610,304 B (+0.6 MiB, +2.8%) |
 | arm64 | 20,250,786 B (19.3 MiB) | 20,840,610 B (19.9 MiB) | +589,824 B (+0.6 MiB, +2.9%) |
 
-**Third-party notice** (also recorded in `THIRD_PARTY_NOTICES.md` once that file exists on main):
+**Third-party notice** (also recorded in `THIRD_PARTY_NOTICES.md`):
 
 | Module | Version | Licence | Carried notices |
 |---|---|---|---|
