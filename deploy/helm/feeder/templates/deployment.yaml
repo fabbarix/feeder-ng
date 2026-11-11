@@ -49,6 +49,14 @@ spec:
             {{- if not (kindIs "invalid" .Values.trustProxy) }}{{ $trust = .Values.trustProxy }}{{ end }}
             - name: FEEDER_TRUST_PROXY
               value: {{ $trust | quote }}
+            {{- include "feeder.secretKeyGuard" . }}
+            {{- if include "feeder.secretKeySecretName" . }}
+            - name: FEEDER_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "feeder.secretKeySecretName" . }}
+                  key: {{ include "feeder.secretKeyKey" . }}
+            {{- end }}
             {{- range $name, $value := .Values.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}

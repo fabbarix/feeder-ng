@@ -29,6 +29,18 @@ google:
   clientIdKey: client-id
   clientSecretKey: client-secret
 
+# FEEDER_SECRET_KEY: 32 random bytes (base64) that encrypt the Recipe Assistant's API key at rest. It always comes from a
+# Secret, never from a value: there is no inline field. Losing or changing it means an Admin re-enters the API key.
+secretKey:
+  # true: the chart creates Secret <fullname>-secret-key on install with a random key, keeps it on upgrade (lookup) and on
+  # uninstall (helm.sh/resource-policy: keep). Under helm template, client --dry-run, Argo CD or Flux offline renders lookup finds
+  # nothing and every render makes a new key: set existingSecret there. false with no existingSecret: no key, no Recipe Assistant.
+  generate: true
+  # Name of a Secret you created (openssl rand -base64 32). Wins over generate; the chart creates no Secret.
+  existingSecret: ""
+  # Key inside the Secret (existing or generated).
+  key: secret-key
+
 # Extra plain environment variables, e.g. TZ. Never set FEEDER_DEV_LOGIN.
 # FEEDER_ADDR must stay :8080: the port, Service and probes are fixed at 8080.
 env: {}
@@ -52,7 +64,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
   # Empty means the host of baseUrl.
   host: ""
   tls:
