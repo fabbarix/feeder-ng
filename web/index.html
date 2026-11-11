@@ -7,7 +7,13 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7f4eb" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090f0b" />
     <meta name="description" content="Feeder: family meal planning" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#34724e" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>Feeder</title>
     <!-- Boot paint: the page background in the right scheme before React mounts (no white flash in dark). Background only. -->
     <style>
@@ -16,13 +22,13 @@
         html:not([data-scheme='light']) { background: #090f0b; }
       }
       html[data-scheme='dark'] { background: #090f0b; }
-      /* Centred Feeder mark until React mounts. The rule matches only while the mark is in #root, so the app is unaffected. */
+      /* Centred Family Pot mark until React mounts. The rule matches only while the mark is in #root, so the app is unaffected. */
       #root:has(> .boot-mark) { display: grid; place-items: center; min-height: 100dvh; }
       .boot-mark { display: grid; justify-items: center; gap: 8px; font-weight: 700; }
     </style>
   </head>
   <body>
-    <div id="root"><div class="boot-mark" role="img" aria-label="Feeder"><svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span aria-hidden="true">Feeder</span></div></div>
+    <div id="root"><div class="boot-mark" role="img" aria-label="Feeder"><svg viewBox="0 0 512 512" width="48" height="48" aria-hidden="true" fill="currentColor"><g id="symbol" transform="translate(-36.71 -15.55) scale(1.1434)"><path fill="currentColor" d="M100 214 A156 52 0 0 1 412 214 Z M100 204 H412 A12 12 0 0 1 424 216 V216 A12 12 0 0 1 412 228 H100 A12 12 0 0 1 88 216 V216 A12 12 0 0 1 100 204 Z M172 250 H340 A56 56 0 0 1 396 306 V362 A56 56 0 0 1 340 418 H172 A56 56 0 0 1 116 362 V306 A56 56 0 0 1 172 250 Z M92 270 H116 A20 20 0 0 1 136 290 V290 A20 20 0 0 1 116 310 H92 A20 20 0 0 1 72 290 V290 A20 20 0 0 1 92 270 Z M396 270 H420 A20 20 0 0 1 440 290 V290 A20 20 0 0 1 420 310 H396 A20 20 0 0 1 376 290 V290 A20 20 0 0 1 396 270 Z"/><path fill="currentColor" d="M 256 146 C 196 110 196 62 226 58 C 242 56 252 66 256 76 C 260 66 270 56 286 58 C 316 62 316 110 256 146 Z"/></g></svg><span aria-hidden="true">Feeder</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -8,9 +8,21 @@ import (
 	"strings"
 )
 
+// iconFiles are the Family Pot icons at the root of the built frontend. They keep stable, unhashed URLs, so they are
+// cached for a day rather than forever; the service worker precache refetches them with cache: 'reload' on update.
+var iconFiles = map[string]bool{
+	"favicon.ico": true, "favicon.svg": true, "favicon-16.png": true, "favicon-32.png": true,
+	"apple-touch-icon.png": true, "icon-192.png": true, "icon-512.png": true,
+	"icon-maskable-192.png": true, "icon-maskable-512.png": true, "safari-pinned-tab.svg": true,
+}
+
 func init() {
 	// The manifest needs its own type; without it http.ServeFileFS falls back to text/plain and Chrome does not offer to install.
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	// The icons' types are set here, not left to the host's /etc/mime.types.
+	_ = mime.AddExtensionType(".ico", "image/x-icon")
+	_ = mime.AddExtensionType(".svg", "image/svg+xml")
+	_ = mime.AddExtensionType(".png", "image/png")
 }
 
 // spaHandler serves files from the built frontend, and index.html for any other
@@ -37,6 +49,13 @@ func spaHandler(spa fs.FS) http.HandlerFunc {
 		}
 		if name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/"); name != "" {
 			if info, err := fs.Stat(spa, name); err == nil && !info.IsDir() {
+				switch {
+				case iconFiles[name]:
+					w.Header().Set("Cache-Control", "public, max-age=86400")
+				case name == "manifest.webmanifest":
+					// install metadata must revalidate
+					w.Header().Set("Cache-Control", "no-cache")
+				}
 				http.ServeFileFS(w, r, spa, name)
 				return
 			}
