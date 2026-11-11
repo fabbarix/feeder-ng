@@ -68,6 +68,12 @@ export const settingsStrings = {
     avatar: 'Avatar',
     avatarHelper: "Optional. Shown next to the Member's name; without one the initials are used.",
     avatarNone: 'Initials',
+    // IM2: the Avatar choice is Initials, Emoji or Photo (a Segmented named `avatar`).
+    avatarInitials: 'Initials',
+    avatarEmoji: 'Emoji',
+    avatarPhoto: 'Photo',
+    photoLabel: 'Member photo',
+    photoHelper: 'Shown next to the name instead of the initials. A square picture works best.',
     portionFactorLabel: 'Portion Factor',
     email: 'Email',
     emailHelper: 'Lets them sign in with Google without asking',

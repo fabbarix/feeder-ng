@@ -8,6 +8,8 @@ export interface MemberAvatarProps extends Pick<AvatarProps, 'size'> {
   colour: string
   /** Optional emoji, shown instead of the initials. */
   avatar?: string
+  /** IM2: the photo's image id ('' or absent = none). Shown instead of the emoji; if it cannot load, the Avatar falls back to the emoji, then the initials. */
+  photo?: string
 }
 
 /**

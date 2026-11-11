@@ -11,6 +11,10 @@ export interface Ingredient {
   baseUnit: BaseUnit
   shelfLifeDays: number | null
   conversions: Conversion[]
+  /** IM2: the picture's image id, '' = none. The server always sends it (optional here so older fixtures compile). */
+  image?: string
+  /** IM2: '/api/images/<image>' or ''. */
+  imageUrl?: string
 }
 
 /** GET /api/ingredients/{id}: the Ingredient plus what other features use it (label -> count). */
@@ -64,6 +68,8 @@ export interface NewIngredient {
   baseUnit: BaseUnit
   shelfLifeDays?: number | null
   conversions?: Conversion[]
+  /** IM2: image id from the ImagePicker; leave out for no picture. */
+  image?: string
 }
 
 export interface IngredientPatch {
@@ -71,4 +77,6 @@ export interface IngredientPatch {
   baseUnit?: BaseUnit
   /** null clears it. */
   shelfLifeDays?: number | null
+  /** IM2: an image id sets the picture, '' removes it, absent leaves it. */
+  image?: string
 }

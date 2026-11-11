@@ -40,6 +40,7 @@ type Ingredient struct {
 	Base          units.Base
 	ShelfLifeDays *int               // nil = does not spoil / unknown
 	Conversions   []units.Conversion // sorted by Unit
+	Image         string             // IM2: image id (internal/imaging), "" = no picture
 }
 
 // Key is the matching key: units.NormalizeName(Name).
@@ -56,6 +57,7 @@ type Input struct {
 	Base          units.Base
 	ShelfLifeDays *int
 	Conversions   []units.Conversion
+	Image         string // IM2: image id, "" = none; Validate trims it and refuses anything but "" or a well-formed id (imaging.ValidID)
 }
 
 // Validate returns the cleaned Input or a *ValidationError.

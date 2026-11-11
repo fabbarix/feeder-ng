@@ -25,6 +25,7 @@ An Ingredient is identified by its **name**. Matching is case-insensitive, with 
 | `baseUnit` | `g`, `ml` or `piece`. All Stock and shopping maths happens in this unit. |
 | `conversions` | Ingredient-specific Unit Conversions: `{ "unit": "clove", "toBase": 5 }` means 1 clove = 5 of the base unit. |
 | `shelfLifeDays` | Days usable after purchase; omit or set to `null` for non-perishables. |
+| `image` | Optional picture of the Ingredient (see Images). Import uses it only for an Ingredient it creates; an Ingredient the household already has keeps what it has. |
 
 ### Units
 
@@ -80,7 +81,7 @@ The Recipe's **total time** is the end of the last Step on this schedule (the cr
 
 ### Images
 
-`image` (on a Recipe or a Step) is either:
+`image` (on a Recipe, a Step or an Ingredient definition) is either:
 
 - a **data URL**: `data:image/jpeg|png|webp;base64,…`, at most 8 MB decoded. Export always writes this form, so files are self-contained;
 - an **https URL**: downloaded by the server during Import Review (10 MB limit, content-type checked, 15 s timeout). If the download fails, the image is dropped and Import Review shows a warning.

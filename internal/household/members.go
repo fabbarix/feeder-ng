@@ -15,6 +15,7 @@ type Member struct {
 	PortionFactor float64
 	UserID        *int64
 	Email         string // optional sign-in address, lower case; empty when none
+	Photo         string // IM2: image id (internal/imaging), "" = none. The avatar shows photo, else Avatar, else initials.
 }
 
 // MemberInput is what an Admin supplies to create or change a Member.
@@ -24,6 +25,7 @@ type MemberInput struct {
 	Avatar        string
 	PortionFactor float64
 	Email         string // optional; empty clears it
+	Photo         string // IM2: image id, "" = none (clears it)
 }
 
 // Normalized trims the name and avatar. It returns a copy.

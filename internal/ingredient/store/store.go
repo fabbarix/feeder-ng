@@ -29,7 +29,19 @@ type Store struct {
 	db     *sql.DB
 	clk    clock.Clock
 	movers *Movers
+	images Images
 }
+
+// Images is the part of the image store the Ingredient Store needs (IM2): the same shape as recipe/store.Images.
+// Without WithImages, image ids are not checked and replaced pictures are not removed.
+type Images interface {
+	Exists(id string) bool
+	Delete(id string) error
+}
+
+// WithImages makes the Store refuse a picture that was never uploaded (a *ingredient.ValidationError on field "image")
+// and delete the file of a picture that no Ingredient uses any more after a change (IM2 design note).
+func WithImages(im Images) Option { return func(s *Store) { _ = im } } // TODO(im2): store im in s.images
 
 // Option configures New.
 type Option func(*Store)
@@ -52,6 +64,8 @@ type Patch struct {
 	Name      *string
 	Base      *units.Base
 	ShelfLife *ShelfLifePatch
+	// Image: nil = unchanged, &"" = remove the picture, &id = set it (IM2).
+	Image *string
 }
 
 // ShelfLifePatch distinguishes "set to n" (Days != nil) from "clear" (Days == nil).
