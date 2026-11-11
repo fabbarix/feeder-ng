@@ -112,7 +112,7 @@ func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (
 	if err != nil {
 		return CookView{}, err
 	}
-	scope := cook.MealScope(date, mealSlotID)
+	scope := cook.MealScope(date, mealSlotID, 0)
 	marks, err := s.cfg.Store.Marks(ctx, scope)
 	if err != nil {
 		return CookView{}, err
@@ -630,7 +630,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			}
 			steps[m.RecipeID] = rs
 		}
-		scope := cook.MealScope(m.Date, m.MealSlotID)
+		scope := cook.MealScope(m.Date, m.MealSlotID, 0)
 		marks, err := s.cfg.Store.Marks(ctx, scope)
 		if err != nil {
 			return nil, err
