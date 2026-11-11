@@ -101,4 +101,8 @@ describe('ruleFormErrorField (the field a validation reason is about)', () => {
   it('decimal places beyond the value length is decimalPlaces', () => {
     expect(ruleFormErrorField({ ...base(), prefix: '21', decimalPlaces: '9' })).toBe('decimalPlaces')
   })
+  it('a span reaching the check digit points at the field that is too long', () => {
+    expect(ruleFormErrorField({ ...base(), prefix: '21', itemLength: '11' })).toBe('itemLength')
+    expect(ruleFormErrorField({ ...base(), prefix: '21', valueLength: '9' })).toBe('valueLength')
+  })
 })
