@@ -44,8 +44,18 @@ type Images interface {
 	Delete(id string) error
 }
 
+// ReadyMealIngredients lets the Store derive a Ready Meal's single line when the
+// request carries none (recipe.NeedsReadyMealIngredient): it lists the existing
+// Ingredients and creates the missing one inside the Recipe's transaction.
+type ReadyMealIngredients interface {
+	Candidates(ctx context.Context) ([]recipe.ReadyMealCandidate, error)
+	// CreatePieceTx creates the Ingredient name (Base Unit piece, no Shelf Life) in tx and returns its id.
+	CreatePieceTx(ctx context.Context, tx *sql.Tx, name string) (int64, error)
+}
+
 // Store is the Recipe repository.
 type Store struct {
+	ready   ReadyMealIngredients
 	db      *sql.DB
 	clk     clock.Clock
 	src     IngredientSource
@@ -65,12 +75,66 @@ func (s *Store) WithImages(im Images) *Store {
 	return s
 }
 
+// WithReadyMeal enables the Ready Meal rule: a Ready Meal saved without a line gets
+// 1 piece of the Ingredient named like the Recipe, created in the same transaction.
+func (s *Store) WithReadyMeal(r ReadyMealIngredients) *Store {
+	s.ready = r
+	return s
+}
+
+// pendingIngredient is the placeholder id a to-be-created Ready Meal Ingredient has while validating.
+const pendingIngredient int64 = -1
+
+// prepare derives the Ready Meal line when needed (create: name of the Ingredient to create in
+// the transaction, empty otherwise), then validates.
+func (s *Store) prepare(ctx context.Context, in recipe.Input) (clean recipe.Input, create string, err error) {
+	if s.ready == nil || !recipe.NeedsReadyMealIngredient(in) {
+		clean, err = s.validate(ctx, in, nil)
+		return clean, "", err
+	}
+	cands, err := s.ready.Candidates(ctx)
+	if err != nil {
+		return recipe.Input{}, "", err
+	}
+	choice := recipe.ChooseReadyMealIngredient(in.Name, cands)
+	switch {
+	case choice.Conflict:
+		return recipe.Input{}, "", &recipe.ValidationError{Field: "lines", Code: recipe.CodeReadyMealUnit,
+			Message: "an Ingredient with the Recipe's name already exists but is not counted in pieces; name the pack Ingredient in the line"}
+	case choice.Create != "":
+		in.Lines = []recipe.Line{choice.Line}
+		in.Lines[0].IngredientID = pendingIngredient
+		clean, err = s.validate(ctx, in, map[int64]units.Ingredient{
+			pendingIngredient: {Name: choice.Create, Base: units.Piece},
+		})
+		return clean, choice.Create, err
+	case choice.ReuseID != 0:
+		in.Lines = []recipe.Line{choice.Line}
+	}
+	clean, err = s.validate(ctx, in, nil)
+	return clean, "", err
+}
+
+// createReadyMealIngredient creates the pending Ingredient and points the derived line at it.
+func (s *Store) createReadyMealIngredient(ctx context.Context, tx *sql.Tx, clean *recipe.Input, name string) error {
+	if name == "" {
+		return nil
+	}
+	id, err := s.ready.CreatePieceTx(ctx, tx, name)
+	if err != nil {
+		return err
+	}
+	clean.Lines = append([]recipe.Line(nil), clean.Lines...)
+	clean.Lines[0].IngredientID = id
+	return nil
+}
+
 // Create validates (recipe.Input.Validate, with the Ingredients of the lines and
 // Step uses looked up via the IngredientSource) and stores a new Recipe with
 // its Tags (created on use). Returns the stored Recipe with Timing filled in.
 // Errors: *recipe.ValidationError, *recipe.UnknownUnitError.
 func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, error) {
-	clean, err := s.validate(ctx, in)
+	clean, create, err := s.prepare(ctx, in)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -79,6 +143,9 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 		return recipe.Recipe{}, err
 	}
 	defer tx.Rollback()
+	if err := s.createReadyMealIngredient(ctx, tx, &clean, create); err != nil {
+		return recipe.Recipe{}, err
+	}
 	id, err := s.CreateTx(ctx, tx, clean)
 	if err != nil {
 		return recipe.Recipe{}, err
@@ -124,7 +191,7 @@ func (s *Store) Get(ctx context.Context, id int64) (recipe.Recipe, error) {
 // Update replaces every field, line and Step (PUT semantics), keeping id,
 // archived flag and created_at. Same errors as Create, plus ErrNotFound.
 func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.Recipe, error) {
-	clean, err := s.validate(ctx, in)
+	clean, create, err := s.prepare(ctx, in)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -133,6 +200,9 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 		return recipe.Recipe{}, err
 	}
 	defer tx.Rollback()
+	if err := s.createReadyMealIngredient(ctx, tx, &clean, create); err != nil {
+		return recipe.Recipe{}, err
+	}
 	before, err := s.ReplaceTx(ctx, tx, id, clean)
 	if err != nil {
 		return recipe.Recipe{}, err
@@ -447,8 +517,11 @@ func (s *Store) MemberForUser(ctx context.Context, userID int64) (int64, error) 
 
 // validate looks up the Ingredients a Recipe uses, then runs recipe validation and
 // the image checks.
-func (s *Store) validate(ctx context.Context, in recipe.Input) (recipe.Input, error) {
+func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]units.Ingredient) (recipe.Input, error) {
 	found := map[int64]units.Ingredient{}
+	for id, ing := range preset {
+		found[id] = ing
+	}
 	var ids []int64
 	for _, l := range in.Lines {
 		ids = append(ids, l.IngredientID)

@@ -7,6 +7,7 @@ import {
   draftFromRecipe,
   draftToInput,
   emptyDraft,
+  pickCreatedIngredient,
   pickIngredient,
   removeLine,
   serverErrorKey,
@@ -18,6 +19,7 @@ import {
   type StepDraft,
 } from '../lib/draft'
 import { parseUnknownUnit, type UnitPrompt } from '../lib/unitPrompt'
+import { renameOffer as renameOfferOf, syncReadyMealLine, type RenameOffer } from '../lib/readyMeal'
 import type { IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
@@ -45,10 +47,22 @@ export interface UseRecipeEditor {
   removeLine: (key: string) => void
   /** Replaces the Steps (the StepsEditor computes the new list with lib/steps). */
   setSteps: (steps: StepDraft[]) => void
+  /** R14: choose an Ingredient made from the picker (keeps the line's unit, see lib/draft.pickCreatedIngredient). */
+  pickCreatedIngredient: (key: string, ingredient: IngredientRef) => void
+  /** R14: the rename question for a stored Ready Meal whose name changed (lib/readyMeal.renameOffer); null otherwise. Stays set after a successful save so the screen can ask. */
+  renameOffer: RenameOffer | null
+  /** R14: PATCHes the linked Ingredient to the new name (recipesApi.renameIngredient), refreshes ['ingredients']. Rejects on failure; the Recipe stays saved. */
+  renameLinkedIngredient: () => Promise<void>
 }
 
-/** `recipeId` undefined = a new Recipe; otherwise the draft loads from ['recipes', id]. */
-export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
+const NO_INGREDIENTS: readonly IngredientRef[] = []
+
+/**
+ * `recipeId` undefined = a new Recipe; otherwise the draft loads from ['recipes', id].
+ * R14: `ingredients` (every Ingredient, as the screen's picker has them) feeds the Ready Meal rule: after each change of the name, the Ready Meal flag
+ * or the lines the draft goes through lib/readyMeal.syncReadyMealLine. draftToInput sends `lines: []` for a pending auto line (the server creates the Ingredient).
+ */
+export function useRecipeEditor(recipeId?: number, ingredients: readonly IngredientRef[] = NO_INGREDIENTS): UseRecipeEditor {
   const client = useQueryClient()
   const existing = useQuery({
     queryKey: ['recipes', recipeId],
@@ -60,7 +74,10 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
   const [errors, setErrors] = useState<DraftErrors>({})
   const [saving, setSaving] = useState(false)
   const [unitPrompt, setUnitPrompt] = useState<UnitPrompt | null>(null)
+  const [keptOffer, setKeptOffer] = useState<RenameOffer | null>(null)
   const loaded = useRef(false)
+  const known = useRef(ingredients)
+  known.current = ingredients
 
   // The stored Recipe fills the draft once; later refetches must not overwrite what the User typed.
   useEffect(() => {
@@ -70,9 +87,17 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
     }
   }, [existing.data])
 
+  // Every change goes through the Ready Meal rule, which keeps the one pack line in step with the name and the flag.
   const setDraft = (next: RecipeDraft | ((d: RecipeDraft) => RecipeDraft)) => {
-    setDraftState((d) => (typeof next === 'function' ? next(d) : next))
+    setDraftState((d) => syncReadyMealLine(typeof next === 'function' ? next(d) : next, known.current))
   }
+
+  // Ingredients that load (or are created) after the box was ticked can turn the pending line into a selected one.
+  useEffect(() => {
+    setDraftState((d) => syncReadyMealLine(d, ingredients))
+  }, [ingredients])
+
+  const liveOffer = renameOfferOf(existing.data, draft, ingredients)
 
   const refreshLists = () => {
     void client.invalidateQueries({ queryKey: ['recipes'] })
@@ -89,7 +114,9 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
       const saved = recipeId === undefined ? await recipesApi.create(input) : await recipesApi.replace(recipeId, input)
       setErrors({})
       setUnitPrompt(null)
+      setKeptOffer(renameOfferOf(existing.data, d, known.current))
       refreshLists()
+      void client.invalidateQueries({ queryKey: ['ingredients'] }) // a Ready Meal may have made its Ingredient
       return saved
     } catch (err) {
       const prompt = parseUnknownUnit(err)
@@ -130,5 +157,15 @@ export function useRecipeEditor(recipeId?: number): UseRecipeEditor {
     pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
     removeLine: (key) => setDraft((d) => removeLine(d, key)),
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
+    pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
+    renameOffer: keptOffer ?? liveOffer,
+    renameLinkedIngredient: async () => {
+      const offer = keptOffer ?? liveOffer
+      if (!offer) return
+      await recipesApi.renameIngredient(offer.ingredientId, offer.to)
+      setKeptOffer(null)
+      void client.invalidateQueries({ queryKey: ['ingredients'] })
+      void client.invalidateQueries({ queryKey: ['recipes'] })
+    },
   }
 }

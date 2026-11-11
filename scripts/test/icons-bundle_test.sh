@@ -13,7 +13,7 @@ ICONS="$WEB/src/ui/icons.ts"
 # Budget 42 kB (43,008 B). UF1 measured 40,952 B with 97 glyphs and the plugin (68,255 B without it, which is
 # why the old 64 kB budget could not take the four ImagePicker glyphs). Headroom ~2.0 kB (~4 glyphs at ~0.43 kB).
 BUDGET=43008
-MIN_MODULES=97   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1: Camera, ClipboardText, LinkSimple, ArrowClockwise)
+MIN_MODULES=100   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then
   echo "FAIL: $PLUGIN missing (exports phosphorWeights(), strips thin and light from the Phosphor defs)"; exit 1

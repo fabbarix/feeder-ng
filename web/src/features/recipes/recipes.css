@@ -270,6 +270,23 @@
   min-inline-size: 0;
 }
 
+.line-row--pending {
+  align-items: start;
+}
+
+.line-row__pending-name,
+.line-row__pending-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.line-row__pending-amount {
+  color: var(--color-muted);
+}
+
 .line-row__amount,
 .line-row__extras {
   display: grid;

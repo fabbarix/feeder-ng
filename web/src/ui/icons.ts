@@ -39,8 +39,10 @@ import { ConfettiIcon } from '@phosphor-icons/react/dist/csr/Confetti'
 import { CookieIcon } from '@phosphor-icons/react/dist/csr/Cookie'
 import { CookingPotIcon } from '@phosphor-icons/react/dist/csr/CookingPot'
 import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
+import { CubeIcon } from '@phosphor-icons/react/dist/csr/Cube'
 import { DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsThreeVertical'
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
+import { DropIcon } from '@phosphor-icons/react/dist/csr/Drop'
 import { FileArrowUpIcon } from '@phosphor-icons/react/dist/csr/FileArrowUp'
 import { FireIcon } from '@phosphor-icons/react/dist/csr/Fire'
 import { FishIcon } from '@phosphor-icons/react/dist/csr/Fish'
@@ -54,6 +56,7 @@ import { HourglassSimpleIcon } from '@phosphor-icons/react/dist/csr/HourglassSim
 import { HouseIcon } from '@phosphor-icons/react/dist/csr/House'
 import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
+import { KeyIcon } from '@phosphor-icons/react/dist/csr/Key'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
@@ -219,6 +222,11 @@ export const icons = {
   pizza: PizzaIcon,
   soup: BowlFoodIcon,
   vegetarian: LeafIcon,
+  liquid: DropIcon, // R14: Base Unit ml
+  piece: CubeIcon, // R14: Base Unit piece
+  key: KeyIcon, // WP-D
+  assistant: RobotIcon, // WP-D
+  refresh: ArrowsClockwiseIcon, // WP-D
 } as const
 
 export type IconName = keyof typeof icons
