@@ -7,6 +7,7 @@ require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/anthropics/anthropic-sdk-go v1.66.0
 	github.com/cucumber/godog v0.16.0
+	github.com/gen2brain/h265 v0.2.4
 	github.com/google/uuid v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/image v0.48.0

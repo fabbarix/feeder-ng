@@ -14,6 +14,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/product"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -64,6 +65,9 @@ type Product struct {
 	BaseUnit       units.Base `json:"baseUnit"`
 	PackSize       float64    `json:"packSize"`
 	Archived       bool       `json:"archived"`
+	// Image is the Picture's image id ("" = none) and ImageURL its address "/api/images/<id>" ("" = none); both are always sent (PP).
+	Image    string `json:"image"`
+	ImageURL string `json:"imageUrl"`
 }
 
 // ShopBarcode as stored.
@@ -175,11 +179,82 @@ func allUsages() []UsageCounter {
 
 // Store is the SQLite-backed store.
 type Store struct {
-	db  *sql.DB
-	clk clock.Clock
+	db     *sql.DB
+	clk    clock.Clock
+	images Images
 }
 
-func New(d *sql.DB, clk clock.Clock) *Store { return &Store{db: d, clk: clk} }
+func New(d *sql.DB, clk clock.Clock, opts ...Option) *Store {
+	s := &Store{db: d, clk: clk}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
+}
+
+// Images is the part of the image store the Product Store needs (PP): the same two methods as ingredient/store.Images.
+// Production passes images.NewGuarded(files, refs.New(db)), so Delete never removes a file some record still uses.
+type Images interface {
+	Exists(id string) bool
+	Delete(ctx context.Context, id string) error
+}
+
+// Option configures a Store.
+type Option func(*Store)
+
+// WithImages makes the Store refuse a Picture that was never uploaded (a *product.ValidationError on field "image") and
+// delete a file no Product uses any more after it is replaced, cleared, or its Product deleted.
+func WithImages(im Images) Option { return func(s *Store) { s.images = im } }
+
+// SetImage sets (id), replaces or clears ("") the Picture of a Product, then deletes the replaced file when no Product uses it.
+// ErrNotFound for an unknown Product, a *product.ValidationError on field "image" for a malformed or never-uploaded id.
+func (s *Store) SetImage(ctx context.Context, id int64, image string) (Detail, error) {
+	image = strings.TrimSpace(image)
+	if err := s.checkImage(image); err != nil {
+		return Detail{}, err
+	}
+	var old string
+	err := s.withTx(ctx, func(tx *sql.Tx) error {
+		if err := tx.QueryRowContext(ctx, `SELECT image FROM products WHERE id = ?`, id).Scan(&old); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `UPDATE products SET image=?, updated_at=? WHERE id=?`, image, s.now(), id)
+		return err
+	})
+	if err != nil {
+		return Detail{}, err
+	}
+	if old != image {
+		s.dropUnreferenced(ctx, old)
+	}
+	return s.Product(ctx, id)
+}
+
+// checkImage refuses a Picture id that is malformed or was never uploaded (the upload check only when WithImages was given).
+func (s *Store) checkImage(id string) error {
+	if id == "" {
+		return nil
+	}
+	if !imaging.ValidID(id) || (s.images != nil && !s.images.Exists(id)) {
+		return &product.ValidationError{Field: "image", Message: "The picture was not uploaded"}
+	}
+	return nil
+}
+
+// dropUnreferenced deletes the file of a Picture no Product uses any more (best effort, after the commit).
+func (s *Store) dropUnreferenced(ctx context.Context, id string) {
+	if id == "" || s.images == nil {
+		return
+	}
+	var n int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM products WHERE image = ?`, id).Scan(&n); err != nil || n > 0 {
+		return
+	}
+	_ = s.images.Delete(ctx, id)
+}
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 
@@ -443,15 +518,18 @@ func (s *Store) Rules(ctx context.Context, shopID int64) ([]Rule, error) {
 // ---- Products ----
 
 const productSelect = `SELECT p.id, p.name, p.ingredient_id, i.name, i.base_unit, p.pack_size,
-	CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END
+	CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END, p.image
 	FROM products p JOIN ingredients i ON i.id = p.ingredient_id`
 
 func scanProduct(sc interface{ Scan(...any) error }) (Product, error) {
 	var p Product
 	var base string
 	var archived int
-	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived)
+	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived, &p.Image)
 	p.BaseUnit = units.Base(base)
+	if p.Image != "" {
+		p.ImageURL = "/api/images/" + p.Image
+	}
 	p.Archived = archived == 1
 	return p, err
 }
@@ -483,6 +561,7 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 	if err != nil {
 		return Detail{}, err
 	}
+	image := strings.TrimSpace(in.Image)
 	var id int64
 	err = s.withTx(ctx, func(tx *sql.Tx) error {
 		var ok bool
@@ -493,8 +572,8 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 			return ErrUnknownIngredient
 		}
 		name := product.NormalizeName(in.Name)
-		res, err := tx.ExecContext(ctx, `INSERT INTO products(name, ingredient_id, pack_size, created_at, updated_at) VALUES (?,?,?,?,?)`,
-			name, in.IngredientID, in.PackSize, s.now(), s.now())
+		res, err := tx.ExecContext(ctx, `INSERT INTO products(name, ingredient_id, pack_size, image, created_at, updated_at) VALUES (?,?,?,?,?,?)`,
+			name, in.IngredientID, in.PackSize, image, s.now(), s.now())
 		if err != nil {
 			return err
 		}
@@ -511,7 +590,8 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 				return err
 			}
 		}
-		return nil
+		// After the barcode checks, so a taken barcode is reported (and merged by a scan) before a missing Picture.
+		return s.checkImage(image)
 	})
 	if err != nil {
 		return Detail{}, err
@@ -747,6 +827,21 @@ func (s *Store) Products(ctx context.Context, f Filter) ([]Product, error) {
 
 // UpdateProduct changes name and/or pack size (nil = keep). The Ingredient is fixed.
 func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packSize *float64) (Detail, error) {
+	return s.PatchProduct(ctx, id, name, packSize, nil)
+}
+
+// PatchProduct changes name, pack size and/or Picture (nil = keep; "" image clears it) in one transaction, so a refused
+// Picture (a *product.ValidationError on field "image") leaves the Product untouched. The replaced file is deleted when
+// no Product uses it any more.
+func (s *Store) PatchProduct(ctx context.Context, id int64, name *string, packSize *float64, image *string) (Detail, error) {
+	var newImage string
+	if image != nil {
+		newImage = strings.TrimSpace(*image)
+		if err := s.checkImage(newImage); err != nil {
+			return Detail{}, err
+		}
+	}
+	var old string
 	err := s.withTx(ctx, func(tx *sql.Tx) error {
 		cur, err := loadProduct(ctx, tx, id)
 		if err != nil {
@@ -762,12 +857,24 @@ func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packS
 		if err := in.Validate(); err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE products SET name=?, pack_size=?, updated_at=? WHERE id=?`,
-			product.NormalizeName(in.Name), in.PackSize, s.now(), id)
+		if _, err = tx.ExecContext(ctx, `UPDATE products SET name=?, pack_size=?, updated_at=? WHERE id=?`,
+			product.NormalizeName(in.Name), in.PackSize, s.now(), id); err != nil {
+			return err
+		}
+		if image == nil {
+			return nil
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT image FROM products WHERE id = ?`, id).Scan(&old); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE products SET image=? WHERE id=?`, newImage, id)
 		return err
 	})
 	if err != nil {
 		return Detail{}, err
+	}
+	if image != nil && old != newImage {
+		s.dropUnreferenced(ctx, old)
 	}
 	return s.Product(ctx, id)
 }
@@ -775,8 +882,12 @@ func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packS
 // DeleteProduct: ErrBought while a purchase exists or a registered UsageCounter > 0
 // (archive it instead); a never-bought Product can be deleted, archived or not.
 func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
-	return s.withTx(ctx, func(tx *sql.Tx) error {
+	var old string
+	err := s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := requireProduct(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT image FROM products WHERE id = ?`, id).Scan(&old); err != nil {
 			return err
 		}
 		var n int
@@ -798,6 +909,10 @@ func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
 		_, err := tx.ExecContext(ctx, `DELETE FROM products WHERE id = ?`, id)
 		return err
 	})
+	if err == nil {
+		s.dropUnreferenced(ctx, old)
+	}
+	return err
 }
 
 // AddBarcode adds a global barcode (raw, canonicalised). *BarcodeTakenError when

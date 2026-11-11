@@ -11,6 +11,9 @@ export interface Product {
   packSize: number
   /** R8: archived Products are left out of default lists (`?includeArchived=1` lists them) */
   archived?: boolean
+  /** PP: the Picture's image id and its address "/api/images/<id>"; both "" when there is none (the server always sends them) */
+  image?: string
+  imageUrl?: string
 }
 
 export interface Shop {
@@ -54,6 +57,8 @@ export interface NewProduct {
   packSize: number
   /** raw barcodes; the server canonicalises */
   barcodes: string[]
+  /** PP: the Picture's image id from the ImagePicker; left out when there is none */
+  image?: string
   shopBarcodes?: ({ shopId: number; code: string } | { shopId: number; ruleId: number; itemCode: string })[]
 }
 

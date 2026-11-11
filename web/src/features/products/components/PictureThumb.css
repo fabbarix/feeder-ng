@@ -1,0 +1,29 @@
+/* PictureThumb: a Product's Picture, or an empty slot of the same box. Tokens only. */
+.picture-thumb {
+  display: block;
+  overflow: hidden;
+  flex: none;
+  aspect-ratio: 1;
+  border-radius: var(--radius-thumb);
+  background: var(--color-soft);
+}
+
+.picture-thumb[data-size='40'] {
+  inline-size: 40px;
+}
+
+.picture-thumb[data-size='48'] {
+  inline-size: 48px;
+}
+
+.picture-thumb[data-size='72'] {
+  inline-size: 72px;
+  border-radius: var(--radius-thumb-lg);
+}
+
+.picture-thumb img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}

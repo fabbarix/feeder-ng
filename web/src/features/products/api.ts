@@ -26,7 +26,7 @@ export const productsApi = {
   list: (f: ProductFilter = {}) => http.get<Product[]>(`${base}${query(f)}`),
   get: (id: number) => http.get<ProductDetail>(`${base}/${id}`),
   create: (body: NewProduct) => http.post<ProductDetail>(base, body),
-  patch: (id: number, body: { name?: string; packSize?: number }) => http.patch<ProductDetail>(`${base}/${id}`, body),
+  patch: (id: number, body: { name?: string; packSize?: number; image?: string }) => http.patch<ProductDetail>(`${base}/${id}`, body),
   remove: (id: number) => http.delete<void>(`${base}/${id}`),
   archive: (id: number) => http.post<ProductDetail>(`${base}/${id}/archive`, {}),
   unarchive: (id: number) => http.post<ProductDetail>(`${base}/${id}/unarchive`, {}),

@@ -28,6 +28,7 @@ export function useProductForm(
     })
   }
   const setBarcode = (barcode: string) => setValues((v) => ({ ...v, barcode }))
+  const setImage = (image: string) => setValues((v) => ({ ...v, image }))
 
   const submit = async () => {
     const found = validateProductForm(values)
@@ -44,5 +45,5 @@ export function useProductForm(
     }
   }
 
-  return { values, errors, serverError, saving, setName, setPackSize, setBarcode, submit }
+  return { values, errors, serverError, saving, setName, setPackSize, setBarcode, setImage, submit }
 }

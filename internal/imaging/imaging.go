@@ -123,7 +123,8 @@ func decodeUpright(data []byte, declared string, maxSide int) (image.Image, int,
 		if err != nil {
 			return nil, 0, 0, ErrUnsupportedFormat
 		}
-		if _, ok := acceptedFormats[format]; !ok {
+		// "heic" can be registered by the decoder package, but only isHEIC (above) lets a file in.
+		if _, ok := acceptedFormats[format]; !ok || format == "heic" {
 			return nil, 0, 0, ErrUnsupportedFormat
 		}
 	}
@@ -134,8 +135,10 @@ func decodeUpright(data []byte, declared string, maxSide int) (image.Image, int,
 		return nil, 0, 0, ErrTooManyPixels
 	}
 	var src image.Image
+	orientation := 1
 	if format == "heic" {
-		src, err = decodeHEIC(data)
+		// decodeHEIC applied the HEIC's own irot/imir; orientation is the EXIF fallback when it had none.
+		src, orientation, err = decodeHEIC(data)
 	} else {
 		src, _, err = image.Decode(bytes.NewReader(data))
 	}
@@ -145,9 +148,9 @@ func decodeUpright(data []byte, declared string, maxSide int) (image.Image, int,
 		}
 		return nil, 0, 0, ErrUnsupportedFormat
 	}
-	// EXIF orientation (JPEG only) is applied to the upright picture: the size is computed for the upright
-	// shape, the stored pixels are scaled to the matching stored shape, and the small result is turned.
-	orientation := 1
+	// EXIF orientation (a JPEG's, or a HEIC's when it has no irot/imir) is applied to the upright picture: the size
+	// is computed for the upright shape, the stored pixels are scaled to the matching stored shape, and the small
+	// result is turned.
 	if format == "jpeg" {
 		orientation = jpegOrientation(data)
 	}

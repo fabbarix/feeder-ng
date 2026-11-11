@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
 // Kind is the operation kind.
@@ -70,8 +72,11 @@ type Op struct {
 	ItemCode    string         `json:"itemCode,omitempty"`
 	Ingredient  *IngredientRef `json:"ingredient,omitempty"`
 	ProductName string         `json:"productName,omitempty"`
-	PackSize    float64        `json:"packSize,omitempty"` // Base Units; weighed codes default to Quantity
-	Scope       Scope          `json:"scope,omitempty"`
+	// ProductImage is the Picture of the Product this shop_unknown creates: an image id from /api/images, "" = none (PP).
+	// A malformed or never-uploaded id is rejected (code "validation", field productImage). Ignored when the barcode already belongs to a Product.
+	ProductImage string  `json:"productImage,omitempty"`
+	PackSize     float64 `json:"packSize,omitempty"` // Base Units; weighed codes default to Quantity
+	Scope        Scope   `json:"scope,omitempty"`
 
 	// stock_take
 	Action Action   `json:"action,omitempty"`
@@ -102,6 +107,14 @@ func (o Op) Validate() error {
 	}
 	if o.Weighed && o.Kind != KindShopScan {
 		return &ValidationError{Field: "weighed", Message: "only a shop scan can be weighed"}
+	}
+	if img := strings.TrimSpace(o.ProductImage); img != "" {
+		if !imaging.ValidID(img) {
+			return &ValidationError{Field: "productImage", Message: "the picture is not a valid image"}
+		}
+		if o.Kind != KindShopUnknown {
+			return &ValidationError{Field: "productImage", Message: "only an unknown barcode can carry a picture"}
+		}
 	}
 	switch o.Kind {
 	case KindShopScan:
@@ -275,20 +288,22 @@ type Merged struct {
 
 // Applied is what an operation did.
 type Applied struct {
-	IngredientID   int64    `json:"ingredientId"`
-	IngredientName string   `json:"ingredientName"`
-	BaseUnit       string   `json:"baseUnit"`
-	ProductID      int64    `json:"productId"`
-	ProductName    string   `json:"productName"`
-	Quantity       float64  `json:"quantity"`
-	LotID          *int64   `json:"lotId"`
-	PriceCents     *int     `json:"priceCents"`
-	OnList         bool     `json:"onList"`
-	Remaining      float64  `json:"remaining"`
-	Ticked         bool     `json:"ticked"`
-	ProductCreated bool     `json:"productCreated"`
-	Merged         *Merged  `json:"merged,omitempty"`
-	Total          *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
+	IngredientID   int64  `json:"ingredientId"`
+	IngredientName string `json:"ingredientName"`
+	BaseUnit       string `json:"baseUnit"`
+	ProductID      int64  `json:"productId"`
+	ProductName    string `json:"productName"`
+	// ProductImageURL is "/api/images/<id>" of the Product's Picture; absent when it has none (PP).
+	ProductImageURL string   `json:"productImageUrl,omitempty"`
+	Quantity        float64  `json:"quantity"`
+	LotID           *int64   `json:"lotId"`
+	PriceCents      *int     `json:"priceCents"`
+	OnList          bool     `json:"onList"`
+	Remaining       float64  `json:"remaining"`
+	Ticked          bool     `json:"ticked"`
+	ProductCreated  bool     `json:"productCreated"`
+	Merged          *Merged  `json:"merged,omitempty"`
+	Total           *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
 }
 
 // Result is the outcome of one operation.
