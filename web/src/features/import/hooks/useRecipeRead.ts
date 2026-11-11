@@ -53,9 +53,18 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
     timer.current = undefined
     inFlight.current?.abort()
     inFlight.current = undefined
+    readId.current = undefined
   }, [])
 
-  useEffect(() => stopWork, [stopWork])
+  // Leaving the page or screen mid-read frees the User's running slot: a best-effort DELETE that may outlive the page.
+  useEffect(
+    () => () => {
+      const id = readId.current
+      if (busy.current && id) void importApi.cancelRead(id, { keepalive: true }).catch(() => undefined)
+      stopWork()
+    },
+    [stopWork],
+  )
 
   // The seconds counter of "Still working…".
   useEffect(() => {
@@ -170,7 +179,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
       } catch (e) {
         if (mine !== token.current) return
         stopWork()
-        fail(errorFromApi(e))
+        fail(errorFromApi(e, 'start'))
       }
     },
     [poll, fail, stopWork],

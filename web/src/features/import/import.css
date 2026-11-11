@@ -14,6 +14,16 @@
   min-inline-size: 0;
 }
 
+.import-screen h2[tabindex='-1'] {
+  scroll-margin-block-start: var(--space-6);
+  outline: none;
+}
+
+.import-screen h2[tabindex='-1']:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .import-review h2 {
   margin: 0;
 }
@@ -117,54 +127,11 @@
   min-inline-size: 0;
 }
 
-/* The input choice: a radiogroup of buttons in the look of Segmented. */
-.read-source {
-  display: grid;
-  gap: var(--space-1);
-}
-
+/* The label of a radiogroup that is not a Segmented (the photo thumbnails in the review). */
 .read-source__label {
   color: var(--color-text);
   font-size: var(--text-label-size);
   font-weight: var(--text-label-weight);
-}
-
-.read-source__options {
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  border-radius: var(--radius-control);
-  background: var(--color-surface-2);
-}
-
-.read-source__option {
-  flex: 1;
-  min-block-size: 40px;
-  padding: 0 var(--space-3);
-  border: 0;
-  border-radius: var(--radius-thumb);
-  background: transparent;
-  color: var(--color-muted);
-  font: inherit;
-  font-size: var(--text-label-size);
-  font-weight: var(--text-label-weight);
-  cursor: pointer;
-}
-
-.read-source__option[aria-checked='true'] {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--elev-1);
-}
-
-.read-source__option:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.read-source__option:disabled {
-  color: var(--color-muted);
-  cursor: default;
 }
 
 .read-photos {
@@ -233,28 +200,24 @@
   font-weight: var(--text-label-weight);
 }
 
-.read-progress__steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+.read-progress__step {
   margin: 0;
-  padding: 0;
-  list-style: none;
   color: var(--color-muted);
 }
 
-.read-progress__steps [aria-current='step'] {
-  color: var(--color-text);
-  font-weight: var(--text-label-weight);
-}
-
-.read-progress__steps [data-done] {
-  text-decoration: line-through;
+/* The progress and the error tile take focus from code; they are not controls, so no ring. */
+.read-progress:focus,
+.read-error:focus {
+  outline: none;
 }
 
 .read-progress__note {
   margin: 0;
   color: var(--color-muted);
+}
+
+.read-error {
+  display: contents;
 }
 
 .read-error__hint {
@@ -295,6 +258,7 @@
 }
 
 .photo-choice__radio {
+  position: relative;
   padding: 0;
   border: 2px solid transparent;
   border-radius: var(--radius-control);
@@ -311,6 +275,21 @@
 
 .photo-choice__radio[aria-checked='true'] {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+/* The chosen thumbnail also carries a check, so the choice does not rest on colour alone. */
+.photo-choice__check {
+  position: absolute;
+  inset-block-start: var(--space-1);
+  inset-inline-end: var(--space-1);
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .photo-choice__radio:focus-visible {

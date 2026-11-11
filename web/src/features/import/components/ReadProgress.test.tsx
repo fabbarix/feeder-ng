@@ -1,5 +1,5 @@
 // WP-E/G: progress per read state with Cancel; a live region (ra-e-import.md section 6.2, accessibility).
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'

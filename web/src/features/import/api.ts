@@ -24,5 +24,5 @@ export const importApi = {
   /** GET /api/recipe-assistant/reads/{id}. 404 = lost (expired or restarted). */
   getRead: (id: string, opts?: { signal?: AbortSignal }) => http.get<ReadView>(`/api/recipe-assistant/reads/${encodeURIComponent(id)}`, opts),
   /** DELETE /api/recipe-assistant/reads/{id}: 204, cancels a running read. */
-  cancelRead: (id: string) => http.delete<void>(`/api/recipe-assistant/reads/${encodeURIComponent(id)}`),
+  cancelRead: (id: string, opts?: { keepalive?: boolean }) => http.delete<void>(`/api/recipe-assistant/reads/${encodeURIComponent(id)}`, opts),
 }

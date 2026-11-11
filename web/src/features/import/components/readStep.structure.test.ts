@@ -11,7 +11,7 @@ describe('Read a recipe structure', () => {
     expect(step).not.toMatch(/useDescribedBy|ReadSourceChoice/)
   })
   it('passes the reason to the fields as aria-describedby', () => {
-    expect(readSource('features/import/components/ReadRecipeStep.tsx')).toMatch(/aria-describedby=\{reason/)
+    expect(readSource('features/import/components/ReadRecipeStep.tsx')).toMatch(/aria-describedby=\{describedBy\}/)
   })
   it('no file of the import feature imports from ui/ below the barrel', () => {
     for (const f of ['ReadRecipeStep', 'ReadPhotoPanel', 'ReviewPhotoChoice', 'ReadProgress', 'ReadErrorTile']) {

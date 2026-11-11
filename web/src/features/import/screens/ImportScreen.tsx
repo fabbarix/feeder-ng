@@ -80,9 +80,9 @@ export function ImportScreen(): ReactNode {
       ) : (
         <>
           {r.phase === 'source' ? <ReadRecipeStep read={read} availability={availability} headingRef={readHeading} /> : null}
-          <AgentPromptStep />
+          <AgentPromptStep step={r.phase === 'source' ? 2 : 1} />
           {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
-          <Tile as="section" className="import-review" overline={s.stepOverline(4)}>
+          <Tile as="section" className="import-review" overline={s.stepOverline(r.phase === 'source' ? 4 : 2)}>
             <h2 ref={reviewHeading} tabIndex={-1}>
               {s.stepThreeTitle}
             </h2>

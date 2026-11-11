@@ -8,6 +8,8 @@ export interface SegmentedOption<V extends string> {
   value: V
   label: string
   disabled?: boolean
+  /** The id of the element that says why the option is off; becomes the radio's aria-describedby. */
+  describedBy?: string
 }
 
 export interface SegmentedProps<V extends string> extends Omit<FieldProps, 'name'> {
@@ -32,6 +34,7 @@ export function Segmented<V extends string>({ label, helper, error, disabled, op
               type="button"
               role="radio"
               aria-checked={checked}
+              aria-describedby={option.describedBy}
               tabIndex={option.value === roving.tabStop ? 0 : -1}
               disabled={disabled || option.disabled}
               className="segmented__option"

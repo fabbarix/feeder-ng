@@ -1,6 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { Select, Switch, Tile } from '../../../ui'
-import { useRovingRadios } from '../../../ui/fields/useRovingRadios'
+import { Icon, Select, Switch, Tile, useRovingRadios } from '../../../ui'
 import { photoUrl, type PhotoChoice, type PhotoRecipeOption } from '../lib/photoChoice'
 import { readStrings as t } from '../strings'
 import type { ReviewPhoto } from '../types'
@@ -80,6 +79,11 @@ function PhotoRadios({ importId, photos, value, onChange }: PhotoRadiosProps): R
               onKeyDown={(e) => roving.onKeyDown(e, key)}
             >
               <img src={photoUrl(importId, p.index)} alt={t.photoLabel(p.index + 1)} width={p.width} height={p.height} />
+              {p.index === value ? (
+                <span className="photo-choice__check" aria-hidden="true">
+                  <Icon name="tick" size={16} />
+                </span>
+              ) : null}
             </button>
           )
         })}

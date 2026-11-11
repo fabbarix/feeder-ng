@@ -1,7 +1,6 @@
-import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, TextArea, TextField, Tile } from '../../../ui'
-import { useDescribedBy } from '../hooks/useDescribedBy'
+import { Button, Segmented, TextArea, TextField, Tile } from '../../../ui'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 import { filledPhotos, emptySlots, setSlot, type PhotoSlots } from '../lib/photoSlots'
@@ -12,7 +11,6 @@ import type { ReadInput } from '../types'
 import { ReadErrorTile } from './ReadErrorTile'
 import { ReadPhotoPanel } from './ReadPhotoPanel'
 import { ReadProgress } from './ReadProgress'
-import { ReadSourceChoice } from './ReadSourceChoice'
 
 export interface ReadRecipeStepProps {
   read: UseRecipeRead
@@ -34,8 +32,9 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const [text, setText] = useState('')
   const [slots, setSlots] = useState<PhotoSlots>(emptySlots)
   const lastInput = useRef<ReadInput | undefined>(undefined)
-  const panel = useRef<HTMLDivElement>(null)
+  const errorTile = useRef<HTMLDivElement>(null)
   const ids = useId()
+  const readButtonId = `${ids}-read`
   const reasonId = `${ids}-reason`
   const photosReasonId = `${ids}-photos`
 
@@ -43,7 +42,20 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const current: Tab = read.busy && read.kind ? read.kind : tab === 'photo' && !availability.photos ? 'url' : tab
   const locked = availability.loading || !availability.enabled || read.busy
   const reason = !availability.loading && !availability.enabled ? availability.message : undefined
-  useDescribedBy(panel, reason ? reasonId : undefined)
+  const describedBy = reason ? reasonId : undefined
+
+  // The button that started a read is replaced by the progress, which takes focus. When the read ends, focus goes back to the
+  // Read button (cancelled) or to the error tile (failed), unless the User has already moved somewhere else.
+  const wasBusy = useRef(read.busy)
+  useEffect(() => {
+    const was = wasBusy.current
+    wasBusy.current = read.busy
+    if (!was || read.busy) return
+    const active = document.activeElement
+    if (active && active !== document.body && active.isConnected) return
+    if (read.phase === 'failed') errorTile.current?.focus()
+    else document.getElementById(readButtonId)?.focus()
+  }, [read.busy, read.phase, readButtonId])
 
   const counter = textCounter(text)
   const photos = filledPhotos(slots)
@@ -66,7 +78,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
       <h2 ref={headingRef} tabIndex={-1}>
         {t.stepTitle}
       </h2>
-      <ReadSourceChoice
+      <Segmented
         label={t.readFrom}
         value={current}
         disabled={locked}
@@ -85,7 +97,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
           {availability.photosMessage}
         </p>
       ) : null}
-      <div ref={panel} className="read-step__panel">
+      <div className="read-step__panel">
         {current === 'url' ? (
           <TextField
             type="url"
@@ -94,6 +106,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
             autoComplete="off"
             value={url}
             disabled={locked}
+            aria-describedby={describedBy}
             onChange={(v) => {
               clearFailure()
               setUrl(v)
@@ -112,6 +125,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
             rows={8}
             value={text}
             disabled={locked}
+            aria-describedby={describedBy}
             helper={counter.label}
             error={counter.over ? t.textTooLong : undefined}
             onChange={(v) => {
@@ -150,7 +164,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
       {read.busy ? (
         <ReadProgress kind={read.kind ?? current} state={read.state} elapsedSeconds={read.elapsedSeconds} onCancel={() => void read.cancel()} />
       ) : (
-        <Button icon="assistant" disabled={!canRead} aria-describedby={reason ? reasonId : undefined} onClick={submit}>
+        <Button id={readButtonId} icon="assistant" disabled={!canRead} aria-describedby={describedBy} onClick={submit}>
           {t.readAction}
         </Button>
       )}
@@ -158,6 +172,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
         <ReadErrorTile
           error={withModelName(read.error, { id: availability.modelId, name: availability.modelName })}
           isAdmin={availability.isAdmin}
+          focusRef={errorTile}
           onRetry={() => lastInput.current && void read.start(lastInput.current)}
         />
       ) : null}

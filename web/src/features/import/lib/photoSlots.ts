@@ -20,3 +20,18 @@ export function setSlot(slots: PhotoSlots, i: number, image: RawImage | null): P
 export function filledPhotos(slots: PhotoSlots): RawImage[] {
   return slots.filter((s): s is RawImage => s !== null)
 }
+
+let nextKey = 0
+const keys = new WeakMap<object, string>()
+/** One React key per slot: a photo keeps its key for as long as it is the same picture, so removing another photo does not remount its picker. */
+export function slotKeys(slots: PhotoSlots): string[] {
+  return slots.map((image, i) => {
+    if (image === null) return `empty-${i}`
+    let key = keys.get(image)
+    if (!key) {
+      key = `photo-${++nextKey}`
+      keys.set(image, key)
+    }
+    return key
+  })
+}

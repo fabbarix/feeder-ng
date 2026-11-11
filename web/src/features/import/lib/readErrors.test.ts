@@ -91,7 +91,7 @@ describe('result errors', () => {
 
 describe('input errors (start refused with 4xx)', () => {
   it.each([
-    ['url_invalid', 'Enter a web address, like https://example.com/soup.'],
+    ['url_invalid', 'Enter a web address, for example https://example.com/soup.'],
     ['text_empty', 'Paste the recipe text first.'],
     ['text_too_long', 'That text is over 50,000 characters. Paste a shorter part.'],
     ['photos_empty', 'Add at least one photo.'],

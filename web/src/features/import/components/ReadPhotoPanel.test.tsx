@@ -76,7 +76,7 @@ describe('ReadPhotoPanel', () => {
     setup()
     expect(lastPickerProps('Photo 1')?.size).toBe('hero')
     const original = window.matchMedia
-    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia
+    window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia
     try {
       pickerRenders.length = 0
       cleanup()
