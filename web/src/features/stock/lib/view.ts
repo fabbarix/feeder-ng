@@ -23,8 +23,8 @@ export type GoOffLot = Pick<StockLot, 'goesOff' | 'spoiled' | 'useSoon'>
 
 /**
  * Words for a lot's go-off date relative to today (the household's date from the
- * server, YYYY-MM-DD): null -> "No go-off date"; past -> "Went off yesterday" /
- * "Went off 3 days ago"; 0 -> "Goes off today"; 1 -> "Goes off tomorrow";
+ * server, YYYY-MM-DD): null -> "No go-off date"; past -> "Went off today" (go-off date
+ * yesterday, §6.1) / "Went off yesterday" / "Went off 3 days ago"; 0 -> "Goes off today"; 1 -> "Goes off tomorrow";
  * further -> "Goes off in 12 days". The tone is "spoil" when the server flags the
  * lot `spoiled` or `useSoon`, otherwise "neutral"; the use-soon window is the
  * server's rule and is not repeated here.
@@ -33,7 +33,8 @@ export function describeGoOff(lot: GoOffLot, today: string): GoOffDescription {
   const tone: GoOffTone = lot.spoiled || lot.useSoon ? 'spoil' : 'neutral'
   if (lot.goesOff === null) return { label: 'No go-off date', tone }
   const n = daysBetween(today, lot.goesOff)
-  if (n < 0) return { label: n === -1 ? 'Went off yesterday' : `Went off ${-n} days ago`, tone }
+  // §6.1: a Lot goes off the day after its go-off date, so the date n days back went off n - 1 days ago.
+  if (n < 0) return { label: n === -1 ? 'Went off today' : n === -2 ? 'Went off yesterday' : `Went off ${-n - 1} days ago`, tone }
   if (n === 0) return { label: 'Goes off today', tone }
   if (n === 1) return { label: 'Goes off tomorrow', tone }
   return { label: `Goes off in ${n} days`, tone }

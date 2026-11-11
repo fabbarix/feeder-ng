@@ -23,6 +23,12 @@ describe('PlannedMealSheet', () => {
     expect(screen.getByText('1 Batch · 3.5 portions')).toBeInTheDocument()
   })
 
+  it('shows only the portions, no Batch count, for a meal served from a Leftover (it needs no cooking, §5)', () => {
+    setup(slot({ meal: meal({ batches: 0, portions: 2.75, servedFromLeftover: { leftoverId: 4, date: '2026-11-08', mealSlotId: 2, recipeName: 'Chicken curry' } }) }))
+    expect(screen.getByText('2.75 portions')).toBeInTheDocument()
+    expect(screen.queryByText(/Batch/)).not.toBeInTheDocument()
+  })
+
   it('shows the Attendance avatars when the slot has them', () => {
     setup(slot({ attendance: [{ id: 1, name: 'Anna' }, { id: 2, name: 'Ben' }] }))
     expect(screen.getByRole('img', { name: 'Anna' })).toBeInTheDocument()

@@ -40,15 +40,17 @@ function utcDate(iso: string): Date {
 
 /**
  * Pure. The go-off phrase for the row meta, relative to the household's `today` (YYYY-MM-DD):
- * null -> '' ; -1 'went off yesterday'; < -1 'went off 3 days ago'; 0 'goes off today'; 1 'goes off tomorrow';
+ * null -> '' ; -1 'went off today'; -2 'went off yesterday'; < -2 'went off 3 days ago' (go-off date + 1, §6.1); 0 'goes off today'; 1 'goes off tomorrow';
  * 2..6 'goes off Thu' (en-GB short weekday); >= 7 'goes off 20 Nov'.
  */
 export function goOffPhrase(goesOff: string | null, today: string): string {
   // No date, or no household date yet (the spoiled query still loading): nothing to say.
   if (goesOff === null || today === '') return ''
   const n = daysBetween(today, goesOff)
-  if (n < -1) return strings.goesOff.ago(-n)
-  if (n === -1) return strings.goesOff.yesterday
+  // §6.1: a Lot goes off the day after its go-off date, so the date n days back went off n - 1 days ago.
+  if (n < -2) return strings.goesOff.ago(-n - 1)
+  if (n === -2) return strings.goesOff.yesterday
+  if (n === -1) return strings.goesOff.wentOffToday
   if (n === 0) return strings.goesOff.today
   if (n === 1) return strings.goesOff.tomorrow
   if (n <= 6) return strings.goesOff.on(WEEKDAY.format(utcDate(goesOff)))

@@ -60,6 +60,14 @@ describe.each(Object.entries(hooks))('%s', (_name, useHook) => {
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
   })
 
+  it('also refetches the zero-waste streak, so Today on another device updates', () => {
+    const { Wrapper, spy } = wrapper()
+    renderHook(useHook, { wrapper: Wrapper })
+    spy.mockClear()
+    sse.handlers['stock']?.()
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['today', 'streak'] }))
+  })
+
   it('refetches Stock after the stream reconnects and closes the connection on unmount', () => {
     const { Wrapper } = wrapper()
     const { unmount } = renderHook(useHook, { wrapper: Wrapper })

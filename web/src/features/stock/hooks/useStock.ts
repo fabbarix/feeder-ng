@@ -27,8 +27,21 @@ export interface LotsState extends QueryState<StockLot[]> {
 
 const STOCK_KEY = ['stock'] as const
 
+/** Stock changed (here or on another device): refetch it and the zero-waste streak, which a go-off or Throw out moves. */
 function refreshStock(client: QueryClient): Promise<void> {
-  return client.invalidateQueries({ queryKey: [...STOCK_KEY] })
+  return Promise.all([
+    client.invalidateQueries({ queryKey: [...STOCK_KEY] }),
+    client.invalidateQueries({ queryKey: ['today', 'streak'] }),
+  ]).then(() => undefined)
+}
+
+/** Keep and Throw out move the zero-waste streak, so Today's tile and the board's refetch it too. */
+async function refreshSpoiledOutcome(client: QueryClient): Promise<void> {
+  await Promise.all([
+    refreshStock(client),
+    client.invalidateQueries({ queryKey: ['today', 'streak'] }),
+    client.invalidateQueries({ queryKey: ['board'] }),
+  ])
 }
 
 /**
@@ -84,11 +97,11 @@ export function useSpoiledLots(): LotsState & {
   const query = useQuery({ queryKey: [...STOCK_KEY, 'spoiled'], queryFn: () => stockApi.spoiled() })
   const throwOut = useMutation({
     mutationFn: (lotId: number) => stockApi.throwOut(lotId),
-    onSuccess: () => refreshStock(client),
+    onSuccess: () => refreshSpoiledOutcome(client),
   })
   const keep = useMutation({
     mutationFn: (lotId: number) => stockApi.keep(lotId),
-    onSuccess: () => refreshStock(client),
+    onSuccess: () => refreshSpoiledOutcome(client),
   })
   return {
     ...lotsState(query),

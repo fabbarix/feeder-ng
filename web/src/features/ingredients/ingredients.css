@@ -121,3 +121,11 @@
 
 /* .new-ingredient__picture: reserved for the later Ingredient picture (ImagePicker); nothing renders it yet. */
 
+
+/* L4: a half-width tile on a phone is narrower than the Shelf Life stepper (two 40 px buttons, the number and "days"), so the
+   Base Unit and Shelf Life tiles stack below 560 px. */
+@media (max-width: 559px) {
+  .ingredient__tile {
+    grid-column: 1 / -1;
+  }
+}

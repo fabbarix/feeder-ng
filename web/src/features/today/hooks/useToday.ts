@@ -6,11 +6,15 @@ import { useScanSessionActive, useTodayPlan, useTodayStock } from '../seams'
 import { useSetupFacts } from '../setupSeam'
 import type { AdvanceStepDue, TodayLayout } from '../types'
 
+const noop = (): void => {}
+
 export interface UseToday {
   layout: TodayLayout
   /** Household date, YYYY-MM-DD ('' until the plan has loaded). */
   today: string
   loading: boolean
+  /** Refetch what failed. */
+  retry: () => void
 }
 
 /**
@@ -36,8 +40,9 @@ export function useToday(): UseToday {
     leftovers: plan.leftovers,
     useSoon: stock.useSoon.length,
     streakDays: streak.days,
+    loadFailed: plan.failed === true || stock.failed === true,
   })
-  return { layout, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading || setup.loading }
+  return { layout, retry: plan.retry ?? noop, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading || setup.loading }
 }
 
 export interface AdvanceStepsState {

@@ -95,7 +95,9 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 		if !ok {
 			continue
 		}
-		at := goes.AddDate(0, 0, -1)
+		// A Lot is fine on its go-off date and goes off the day after (functional-spec 6.1):
+		// "the day before it goes off" is the go-off date itself.
+		at := goes
 		out = append(out, Candidate{
 			Key:   candidateKey(StockSpoil, fmt.Sprint(lot.ID), at),
 			Type:  StockSpoil,

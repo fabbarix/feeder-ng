@@ -17,3 +17,9 @@ export function shortMonth(date: string): string {
 export function dayOfMonth(date: string): number {
   return Number(date.split('-')[2])
 }
+
+/** The device's calendar date as YYYY-MM-DD: Today's fallback while the household date is not known (offline). */
+export function localDate(now: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}

@@ -66,6 +66,19 @@ describe('IngredientLineRow: focus returns to the amount', () => {
   })
 })
 
+describe('IngredientLineRow: focus goes to the Ingredient picker of a new line (L13)', () => {
+  it('focuses the Ingredient picker when asked, and tells the screen once', () => {
+    const onIngredientFocused = vi.fn()
+    view(props({ focusIngredient: true, onIngredientFocused }))
+    expect(ingredientBox()).toHaveFocus()
+    expect(onIngredientFocused).toHaveBeenCalledOnce()
+  })
+  it('does not steal focus when not asked', () => {
+    view(props())
+    expect(ingredientBox()).not.toHaveFocus()
+  })
+})
+
 describe('IngredientLineRow: the unit of a freshly created Ingredient', () => {
   it('reuses the G2 hint when the line unit is not convertible for it', () => {
     const fresh = { id: 99, name: 'Saffron', baseUnit: 'g' as const, conversions: [] }

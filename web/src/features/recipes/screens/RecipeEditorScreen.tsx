@@ -51,6 +51,9 @@ export function RecipeEditorScreen(): ReactNode {
     },
   })
   // PE: pickers that are uploading right now ('photo' and one 'step:<key>' per Step); Save waits for the set to empty.
+  // L13: set by Add ingredient so the new line's Ingredient picker takes focus.
+  const [addedLine, setAddedLine] = useState(false)
+  const clearAddedLine = useCallback(() => setAddedLine(false), [])
   const [busyPickers, setBusyPickers] = useState<ReadonlySet<string>>(new Set())
   const setPickerBusy = useCallback((id: string, busy: boolean) => {
     setBusyPickers((cur) => {
@@ -171,10 +174,19 @@ export function RecipeEditorScreen(): ReactNode {
                   quickCreateDisabledReason={quick.disabledReason}
                   focusAmount={quick.focusLineKey === line.key}
                   onAmountFocused={quick.amountFocused}
+                  focusIngredient={addedLine && i === draft.lines.length - 1}
+                  onIngredientFocused={clearAddedLine}
                 />
               )}
             />
-            <Button variant="secondary" icon="add" onClick={editor.addLine}>
+            <Button
+              variant="secondary"
+              icon="add"
+              onClick={() => {
+                editor.addLine()
+                setAddedLine(true)
+              }}
+            >
               {recipeStrings.lines.add}
             </Button>
           </Tile>

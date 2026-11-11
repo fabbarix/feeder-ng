@@ -32,8 +32,9 @@ describe('filterTotals', () => {
 describe('goOffPhrase', () => {
   it.each([
     [null, ''],
-    ['2026-11-08', 'went off yesterday'],
-    ['2026-11-05', 'went off 4 days ago'],
+    ['2026-11-08', 'went off today'],
+    ['2026-11-07', 'went off yesterday'],
+    ['2026-11-05', 'went off 3 days ago'],
     ['2026-11-09', 'goes off today'],
     ['2026-11-10', 'goes off tomorrow'],
     ['2026-11-12', 'goes off Thu'],
@@ -52,7 +53,7 @@ describe('rowMeta', () => {
     expect(rowMeta(makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' }), today)).toBe('1 Stock Lot · goes off Thu')
   })
   it('says went off for spoiled items', () => {
-    expect(rowMeta(makeTotal({ lotCount: 2, spoiledCount: 1, nextGoesOff: '2026-11-05' }), today)).toBe('2 Stock Lots · went off 4 days ago')
+    expect(rowMeta(makeTotal({ lotCount: 2, spoiledCount: 1, nextGoesOff: '2026-11-05' }), today)).toBe('2 Stock Lots · went off 3 days ago')
   })
   it('has no suffix without a date', () => {
     expect(rowMeta(makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: null }), today)).toBe('1 Stock Lot')
