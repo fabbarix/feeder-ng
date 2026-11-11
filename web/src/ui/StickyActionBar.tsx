@@ -6,8 +6,8 @@ export interface StickyActionBarProps {
   children: ReactNode
   /** Accessible name of the group (default "Actions"). */
   label?: string
-  /** Where the inner row aligns: the whole Page column (default) or the narrow form column. */
-  column?: 'page' | 'narrow'
+  /** Where the inner row aligns: the whole Page column (default), the narrow form column (720) or the editor form column (840). */
+  column?: 'page' | 'narrow' | 'form'
 }
 
 /**

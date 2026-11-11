@@ -105,3 +105,9 @@ button.chip:focus-visible {
   background: var(--status-pinned-bg);
   color: var(--status-pinned-fg);
 }
+
+.chip[data-kind="state"][data-status="info"],
+.chip[data-kind="status"][data-status="info"] {
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}

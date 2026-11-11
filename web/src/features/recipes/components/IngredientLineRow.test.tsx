@@ -23,7 +23,9 @@ describe('IngredientLineRow', () => {
     expect(document.querySelector('select, datalist')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('garlic')
     expect(screen.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('clove')
-    expect(screen.getByRole('checkbox', { name: 'optional' })).not.toBeChecked()
+    // R2-1 (E-01): "Optional" is a visible toggle chip, not a checkbox.
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Optional: garlic' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('picks an Ingredient from the IngredientSelect', async () => {
@@ -68,7 +70,7 @@ describe('IngredientLineRow', () => {
 
   it('toggles optional and edits the note', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'optional' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Optional: garlic' }))
     expect(p.onChange).toHaveBeenCalledWith({ optional: true })
     await userEvent.type(screen.getByRole('textbox', { name: 'Note' }), 'x')
     expect(p.onChange).toHaveBeenLastCalledWith({ note: 'x' })
@@ -76,7 +78,7 @@ describe('IngredientLineRow', () => {
 
   it('removes with an IconButton', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('button', { name: 'Remove ingredient' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove ingredient garlic' }))
     expect(p.onRemove).toHaveBeenCalledOnce()
   })
 
@@ -94,5 +96,38 @@ describe('IngredientLineRow', () => {
   it('says nothing for a known unit', () => {
     view()
     expect(screen.queryByText(/Feeder will ask/)).toBeNull()
+  })
+})
+
+describe('IngredientLineRow: unique button names across lines', () => {
+  it('Optional and Remove name their Ingredient, or their line number before one is picked', () => {
+    render(
+      <ul>
+        <IngredientLineRow {...props()} />
+        <IngredientLineRow {...props({ line: line({ key: 'l2', ingredientId: 8, ingredientName: 'flour' }), ingredient: flour, index: 1 })} />
+        <IngredientLineRow {...props({ line: line({ key: 'l3', ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined, index: 2 })} />
+      </ul>,
+    )
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim())
+    const own = names.filter((n) => /^(Optional|Remove ingredient)/.test(n ?? ''))
+    expect(new Set(own).size).toBe(own.length)
+    for (const n of ['Optional: garlic', 'Remove ingredient garlic', 'Optional: flour', 'Remove ingredient flour', 'Optional: line 3', 'Remove ingredient line 3']) {
+      expect(own, n).toContain(n)
+    }
+  })
+})
+
+describe('IngredientLineRow: structure for the two-row phone layout', () => {
+  it('Ingredient, Quantity, Unit, Note, Optional and remove are direct children of the row, each in its own cell', () => {
+    const { container } = render(<ul><IngredientLineRow {...props()} /></ul>)
+    const row = container.querySelector('li.line-row')!
+    const cells = ['ingredient', 'quantity', 'unit', 'note', 'optional', 'remove']
+    expect([...row.children].map((c) => c.className)).toEqual(cells.map((c) => `line-row__${c}`))
+    expect(row.querySelector('.line-row__remove button')).toHaveAccessibleName('Remove ingredient garlic')
+    expect(row.querySelector('.line-row__optional button')).toHaveAccessibleName('Optional: garlic')
+  })
+  it('the unit-conversion hint sits between the cells as its own full-width item', () => {
+    const { container } = render(<ul><IngredientLineRow {...props({ line: line({ unit: 'bunch' }) })} /></ul>)
+    expect(container.querySelector('li.line-row > .line-row__hint')).not.toBeNull()
   })
 })

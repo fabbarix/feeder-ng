@@ -14,9 +14,9 @@ export function useFieldIds(): FieldIds {
   return { labelId: `${base}-label`, helperId: `${base}-helper`, errorId: `${base}-error` }
 }
 
-/** aria-describedby for the helper and error lines that are shown, then any `extra` ids the caller passed (e.g. why the field is off). */
-export function describedBy(ids: FieldIds, helper?: string, error?: string, extra?: string): string | undefined {
-  const parts = [helper ? ids.helperId : null, error ? ids.errorId : null, extra?.trim() || null].filter(Boolean)
+/** aria-describedby for the `lead` id (a unit or suffix, announced first), the helper and error lines that are shown, then any `extra` ids the caller passed (e.g. why the field is off). */
+export function describedBy(ids: FieldIds, helper?: string, error?: string, extra?: string, lead?: string): string | undefined {
+  const parts = [lead?.trim() || null, helper ? ids.helperId : null, error ? ids.errorId : null, extra?.trim() || null].filter(Boolean)
   return parts.length > 0 ? parts.join(' ') : undefined
 }
 
