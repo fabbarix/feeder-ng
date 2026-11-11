@@ -110,7 +110,7 @@ describe('SlotCoursesField: editing', () => {
 
   it('keeps the opt-outs of a Member who does not attend, though no pill shows', () => {
     render(<Harness initial={[{ ...main, optOutMemberIds: [3] }]} attendance={[{ memberId: 1, portionFactorOverride: null }]} />)
-    expect(screen.queryByText(/without/)).toBeNull()
+    expect(screen.queryByText(/without Sam/)).toBeNull()
     expect(latest).toEqual([{ ...main, optOutMemberIds: [3] }])
   })
 

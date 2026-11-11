@@ -10,6 +10,7 @@ import {
   coursesProblem,
   eatersSummary,
   newSlotCourses,
+  overviewCourseLine,
   removalPreview,
   slotCourseInputs,
   withCourseIds,
@@ -174,5 +175,19 @@ describe('courseRemovals and removalPreview', () => {
 
   it('has no lines and nothing Pinned when nothing is removed', () => {
     expect(removalPreview([], { plannedMeals: [], slotRules: [] }, 'en')).toEqual({ lines: [], pinned: [] })
+  })
+})
+
+describe('overviewCourseLine (a lone main Course shows nothing)', () => {
+  const attending = tuesdayDinner.attendance
+  it('is hidden for a slot whose only Course is the main Course', () => {
+    expect(overviewCourseLine([tuesdayCourses[0]!], members, attending)).toBe('')
+  })
+  it('is shown for two or more Courses', () => {
+    expect(overviewCourseLine(tuesdayCourses, members, attending)).toBe('Main · Side · Dessert (optional) without Sam')
+    expect(overviewCourseLine(tuesdayCourses.slice(0, 2), members, attending)).toBe('Main · Side')
+  })
+  it('is shown for a single Course that is not main', () => {
+    expect(overviewCourseLine([tuesdayCourses[1]!], members, attending)).toBe('Side')
   })
 })
