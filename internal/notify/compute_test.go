@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/notify"
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 )
 
 func zone(t *testing.T, name string) *time.Location {
@@ -22,8 +23,9 @@ func slot1930(loc *time.Location) time.Time { return time.Date(2026, 11, 9, 19, 
 
 func curry(loc *time.Location) notify.MealFact {
 	return notify.MealFact{
-		Date: "2026-11-09", MealSlotID: 3, RecipeName: "Chicken curry",
-		SlotAt: slot1930(loc), State: notify.MealPlanned, TotalTime: 45 * time.Minute,
+		Date: "2026-11-09", MealSlotID: 3, CourseID: 5, RecipeName: "Chicken curry",
+		SlotAt: slot1930(loc), State: notify.MealPlanned,
+		Steps:        []schedule.Step{{Kind: schedule.Advance, LeadTimeMinutes: 240}, {Kind: schedule.Active, DurationMinutes: 45}},
 		AdvanceSteps: []notify.AdvanceStepFact{{ID: 11, Description: "Marinate the chicken", Lead: 4 * time.Hour}},
 	}
 }
@@ -74,10 +76,10 @@ func TestStartCookingIsDueSlotTimeMinusTotalTime(t *testing.T) {
 	}
 }
 
-func TestStartCookingIsSkippedWhenTotalTimeUnknown(t *testing.T) {
+func TestStartCookingIsSkippedWhenTheTimelineIsEmpty(t *testing.T) {
 	rome := zone(t, "Europe/Rome")
 	m := curry(rome)
-	m.TotalTime = 0
+	m.Steps = nil
 	cs := notify.Compute(notify.Facts{Meals: []notify.MealFact{m}}, rome)
 	if got := byType(cs, notify.StartCooking); len(got) != 0 {
 		t.Errorf("want no Start cooking, got %+v", got)

@@ -308,9 +308,14 @@ func TestMigration1400RewritesPlannedMealScopesOnly(t *testing.T) {
 	if _, err := u.d.Exec(`INSERT INTO cook_timers(scope,step,label,duration_seconds,state,started_at,ends_at) VALUES (?,2,'again',60,'running','t','t')`, "meal:2026-11-10/4/"+main); err == nil {
 		t.Error("a second timer for the same (scope, Step) was accepted")
 	}
-	// push_sent is 1410's job.
-	if got := rows(t, u.d, `SELECT subscription_id,key,sent_at FROM push_sent ORDER BY key`); !equalRows(got, u.before["push_sent"]) {
-		t.Errorf("push_sent changed by 1400: %v", got)
+	// push_sent is 1410's job, and upgrade() runs 1410 too: the only change is the Advance Step key gaining the main
+	// Course; the Start cooking and Confirm Cooked keys, and every sent_at, are untouched.
+	wantSent := make([]string, len(u.before["push_sent"]))
+	for i, r := range u.before["push_sent"] {
+		wantSent[i] = strings.Replace(r, "advanceStep:2026-11-12/4/17@", "advanceStep:2026-11-12/4/"+main+"/17@", 1)
+	}
+	if got := rows(t, u.d, `SELECT subscription_id,key,sent_at FROM push_sent ORDER BY key`); !equalRows(got, wantSent) {
+		t.Errorf("push_sent = %v, want %v (only the Advance Step key gains the main Course)", got, wantSent)
 	}
 }
 
@@ -533,5 +538,27 @@ func TestMigration1400FailureRollsBackAndNamesTheFile(t *testing.T) {
 	}
 	if got := rows(t, d, `SELECT id FROM planned_meals ORDER BY id`); len(got) != 5 {
 		t.Errorf("planned_meals after the failure = %v, want the 5 original rows", got)
+	}
+}
+
+func TestMigration1400LeavesAnAlreadyThreePartMealScopeUntouched(t *testing.T) {
+	d, _ := openTemp(t)
+	ctx := context.Background()
+	if err := db.Migrate(ctx, d, upTo(t, "1400_")); err != nil {
+		t.Fatal(err)
+	}
+	mustExec(t, d, `INSERT INTO cook_timers(id,scope,step,label,duration_seconds,state,started_at,ends_at) VALUES
+		(51,'meal:2026-11-10/4',1,'two part',60,'running',?,?),(52,'meal:2026-11-10/4/9',1,'three part',60,'running',?,?)`,
+		mts, mts, mts, mts)
+	mustExec(t, d, `INSERT INTO advance_step_marks(scope,step,done_at) VALUES ('meal:2026-11-10/4',0,?),('meal:2026-11-10/6/9',0,?)`, mts, mts)
+	if err := db.MigrateEmbedded(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	main := fmt.Sprint(mainCourse(t, d))
+	if got := rows(t, d, `SELECT id,scope FROM cook_timers ORDER BY id`); !equalRows(got, []string{"51|meal:2026-11-10/4/" + main, "52|meal:2026-11-10/4/9"}) {
+		t.Errorf("cook_timers scopes = %v", got)
+	}
+	if got := rows(t, d, `SELECT scope FROM advance_step_marks ORDER BY scope`); !equalRows(got, []string{"meal:2026-11-10/4/" + main, "meal:2026-11-10/6/9"}) {
+		t.Errorf("advance_step_marks scopes = %v", got)
 	}
 }
