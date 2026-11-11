@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { BottomSheet, Chip, ErrorState, IconButton, ListGroup, ListRow, PageHeader, RecipeThumb, Skeleton, Tile } from '../../../ui'
+import { Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
 import { CookEntry } from '../components/CookEntry'
 import { IngredientLinesList } from '../components/IngredientLinesList'
 import { MemberPicker } from '../components/MemberPicker'
@@ -22,7 +22,7 @@ import '../recipes.css'
 /**
  * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines with the
  * Member's Exclusions, the Steps, the Member's preferences (picked Member first), and "Start Cook Mode" with the Batch
- * count. Edit is in the header; Archive and Delete are in the More sheet (Delete asks in a ConfirmDialog).
+ * count. Edit is in the header; Archive and Delete are in the More actions Menu (Delete asks in a ConfirmDialog). From 1280 px the left column holds the photo, metrics, Ingredients and the Cook entry; below, the Cook entry is a StickyActionBar.
  */
 export function RecipeDetailScreen(): ReactNode {
   const navigate = useNavigate()
@@ -34,7 +34,7 @@ export function RecipeDetailScreen(): ReactNode {
   const refs = useIngredientRefs()
   const system = useDisplayUnitSystem()
   const [batches, setBatches] = useState(1)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const wide = useMediaQuery('(min-width: 1280px)')
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
@@ -55,6 +55,14 @@ export function RecipeDetailScreen(): ReactNode {
     if (tapped !== 'none') void prefs.toggleRecipe(r.id, tapped)
   }
   const noMember = picker.selectedId === null || prefs.noMember
+  const cook = (
+    <CookEntry
+      batches={batches}
+      onBatchesChange={setBatches}
+      yieldValue={r.yield}
+      onStart={() => navigate(cookRecipePath(r.id, batches))}
+    />
+  )
   const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
 
   return (
@@ -65,55 +73,72 @@ export function RecipeDetailScreen(): ReactNode {
         actions={
           <>
             <IconButton icon="edit" label={recipeStrings.edit} onClick={() => navigate(`/recipes/${r.id}/edit`)} />
-            <IconButton icon="more" label={recipeStrings.more} onClick={() => setSheetOpen(true)} />
+            <Menu
+              label={recipeStrings.more}
+              title={recipeStrings.overflow.title}
+              items={[
+                {
+                  id: 'archive',
+                  label: r.archived ? recipeStrings.unarchive : recipeStrings.archive,
+                  icon: r.archived ? 'unarchive' : 'archive',
+                  onSelect: () => void actions.archive(),
+                },
+                {
+                  id: 'delete',
+                  label: recipeStrings.delete,
+                  icon: 'delete',
+                  tone: 'danger',
+                  onSelect: () => void actions.remove(),
+                },
+              ]}
+            />
           </>
         }
       />
-      <Tile variant="media" className="recipe-detail__hero" media={thumb}>
-        {r.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
-      </Tile>
-      <RecipeMetrics yieldText={String(r.yield)} readyMeal={r.readyMeal} totalMinutes={r.totalMinutes} advanceMinutes={r.advanceMinutes} />
-      <Tile as="section">
-        <h2>{recipeStrings.ingredients}</h2>
-        <IngredientLinesList
-          lines={r.lines}
-          refs={refs.byId}
-          system={system}
-          exclusions={noMember ? undefined : { isExcluded: prefs.isExcluded, onToggle: (ingredientId) => void prefs.toggleIngredient(ingredientId) }}
-        />
-      </Tile>
-      <Tile as="section">
-        <h2>{recipeStrings.stepsTitle}</h2>
-        {r.steps.length === 0 ? <p>{recipeStrings.steps.empty}</p> : <StepsList steps={r.steps} refs={refs.byId} system={system} />}
-      </Tile>
-      <Tile as="section">
-        <h2>{recipeStrings.preferences}</h2>
-        <MemberPicker members={picker.members} selectedId={picker.selectedId} onPick={picker.select} />
-        {noMember ? <p className="recipe-detail__hint">{recipeStrings.memberPicker.pickFirst}</p> : null}
-        <PreferenceToggles state={current} disabled={noMember} onChange={toggle} />
-      </Tile>
+      <div className="recipe-detail__layout">
+        <div className="recipe-detail__aside">
+          <Tile variant="media" className="recipe-detail__hero" media={thumb}>
+            {r.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
+          </Tile>
+          <RecipeMetrics
+            yieldText={String(r.yield)}
+            readyMeal={r.readyMeal}
+            totalMinutes={r.totalMinutes}
+            advanceMinutes={r.advanceMinutes}
+          />
+          <Tile as="section">
+            <h2>{recipeStrings.ingredients}</h2>
+            <IngredientLinesList
+              lines={r.lines}
+              refs={refs.byId}
+              system={system}
+              exclusions={
+                noMember
+                  ? undefined
+                  : {
+                      isExcluded: prefs.isExcluded,
+                      onToggle: (ingredientId) => void prefs.toggleIngredient(ingredientId),
+                    }
+              }
+            />
+          </Tile>
+          {wide ? cook : null}
+        </div>
+        <div className="recipe-detail__main">
+          <Tile as="section">
+            <h2>{recipeStrings.stepsTitle}</h2>
+            {r.steps.length === 0 ? <p>{recipeStrings.steps.empty}</p> : <StepsList steps={r.steps} refs={refs.byId} system={system} />}
+          </Tile>
+          <Tile as="section">
+            <h2>{recipeStrings.preferences}</h2>
+            <MemberPicker members={picker.members} selectedId={picker.selectedId} onPick={picker.select} />
+            {noMember ? <p className="recipe-detail__hint">{recipeStrings.memberPicker.pickFirst}</p> : null}
+            <PreferenceToggles state={current} disabled={noMember} onChange={toggle} />
+          </Tile>
+        </div>
+      </div>
       {actions.error ? <ErrorState message={actions.error} /> : null}
-      <CookEntry batches={batches} onBatchesChange={setBatches} yieldValue={r.yield} onStart={() => navigate(cookRecipePath(r.id, batches))} />
-      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={recipeStrings.overflow.title}>
-        <ListGroup label={recipeStrings.overflow.title}>
-          <ListRow
-            title={r.archived ? recipeStrings.unarchive : recipeStrings.archive}
-            icon={r.archived ? 'unarchive' : 'archive'}
-            onActivate={() => {
-              setSheetOpen(false)
-              void actions.archive()
-            }}
-          />
-          <ListRow
-            title={recipeStrings.delete}
-            icon="delete"
-            onActivate={() => {
-              setSheetOpen(false)
-              void actions.remove()
-            }}
-          />
-        </ListGroup>
-      </BottomSheet>
+      {wide ? null : <StickyActionBar label={recipeStrings.cook.barLabel}>{cook}</StickyActionBar>}
     </section>
   )
 }

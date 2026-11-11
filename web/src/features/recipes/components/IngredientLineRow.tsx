@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Button, Checkbox, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
+import { Button, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
@@ -29,7 +29,7 @@ const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMess
 
 /**
  * One ingredient line of the editor: Ingredient (IngredientSelect), Quantity (text, so "1 1/2" stays typeable), Unit
- * (UnitSelect with the Ingredient's units and a typed custom unit), optional and Note, with remove. A unit the
+ * (UnitSelect with the Ingredient's units and a typed custom unit), Note and the "Optional" chip, with remove; one row from 720 px. A unit the
  * Ingredient does not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
  */
 export function IngredientLineRow({
@@ -54,14 +54,16 @@ export function IngredientLineRow({
   }, [focusAmount, onAmountFocused])
 
   if (line.auto && line.ingredientId === null) {
-    return <PendingLine line={line} onChange={onChange} onRemove={onRemove} />
+    return <PendingLine line={line} index={index} onChange={onChange} onRemove={onRemove} />
   }
   const units = ingredient ? unitChoicesOf(ingredient) : { baseUnit: line.unit, conversions: [], globalUnits: [] }
   const asks = needsConversion(line.unit, ingredient)
+  const who = (line.ingredientName || ingredient?.name || '').trim() || recipeStrings.lines.lineLabel(index + 1)
   return (
     <li className="line-row">
       <div className="line-row__ingredient">
         <IngredientSelect
+          size="full"
           label={recipeStrings.lines.ingredient}
           ingredients={ingredients}
           value={line.ingredientId}
@@ -74,8 +76,9 @@ export function IngredientLineRow({
           }}
         />
       </div>
-      <div ref={amountRef} className="line-row__amount">
+      <div ref={amountRef} className="line-row__quantity">
         <TextField
+          size="xs"
           label={recipeStrings.lines.quantity}
           inputMode="decimal"
           helper={line.auto && line.quantity.trim() === '' && line.ingredientId !== null ? recipeStrings.lines.packSizeHint : undefined}
@@ -83,7 +86,10 @@ export function IngredientLineRow({
           error={fieldError(errors, `lines.${index}.quantity`)}
           onChange={(quantity) => onChange({ quantity })}
         />
+      </div>
+      <div className="line-row__unit">
         <UnitSelect
+          size="sm"
           label={recipeStrings.lines.unit}
           units={units}
           value={line.unit || null}
@@ -95,11 +101,23 @@ export function IngredientLineRow({
         />
       </div>
       {asks ? <p className="line-row__hint">{recipeStrings.lines.unitNeedsConversion(line.unit)}</p> : null}
-      <div className="line-row__extras">
-        <Checkbox label={recipeStrings.optional} checked={line.optional} onChange={(optional) => onChange({ optional })} />
-        <TextField label={recipeStrings.lines.note} value={line.note} onChange={(note) => onChange({ note })} />
+      <div className="line-row__note">
+        <TextField
+          size="full"
+          label={recipeStrings.lines.note}
+          placeholder="note"
+          value={line.note}
+          onChange={(note) => onChange({ note })}
+        />
       </div>
-      <IconButton icon="delete" label={recipeStrings.lines.remove} onClick={onRemove} />
+      <div className="line-row__optional">
+        <Chip kind="filter" selected={line.optional} label={recipeStrings.lines.optionalLine(who)} onClick={() => onChange({ optional: !line.optional })}>
+          {recipeStrings.lines.optional}
+        </Chip>
+      </div>
+      <div className="line-row__remove">
+        <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
+      </div>
     </li>
   )
 }
@@ -108,7 +126,7 @@ export function IngredientLineRow({
  * The Ready Meal's pack when its Ingredient does not exist yet: a read-only summary. Feeder makes the Ingredient when the Recipe is saved.
  * "Choose another Ingredient" turns the line into an ordinary blank one.
  */
-function PendingLine({ line, onChange, onRemove }: Pick<IngredientLineRowProps, 'line' | 'onChange' | 'onRemove'>): ReactNode {
+function PendingLine({ line, index, onChange, onRemove }: Pick<IngredientLineRowProps, 'line' | 'index' | 'onChange' | 'onRemove'>): ReactNode {
   const text = recipeStrings.readyMealIngredient
   return (
     <li className="line-row line-row--pending">
@@ -124,7 +142,7 @@ function PendingLine({ line, onChange, onRemove }: Pick<IngredientLineRowProps, 
           {text.changeIngredient}
         </Button>
       </div>
-      <IconButton icon="delete" label={recipeStrings.lines.remove} onClick={onRemove} />
+      <IconButton icon="delete" label={recipeStrings.lines.removeLine(line.ingredientName.trim() || recipeStrings.lines.lineLabel(index + 1))} onClick={onRemove} />
     </li>
   )
 }

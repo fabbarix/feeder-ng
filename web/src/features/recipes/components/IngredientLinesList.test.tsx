@@ -14,8 +14,8 @@ describe('IngredientLinesList', () => {
   it('lays quantity and name out as separate cells of a two-column grid, not run together', () => {
     const { container } = render(<IngredientLinesList lines={lines} refs={refs} system="metric" />)
     expect(screen.getByText('3 clove')).toBeInTheDocument()
-    expect(screen.getByText('garlic')).toBeInTheDocument()
-    expect(screen.getByText('garlic')).not.toBe(screen.getByText('3 clove'))
+    expect(screen.getByText('Garlic')).toBeInTheDocument()
+    expect(screen.getByText('Garlic')).not.toBe(screen.getByText('3 clove'))
     expect(container.querySelector('ul > li')).toBeNull() // the grid is a description list, no bullets
     expect(container.querySelector('dl')).not.toBeNull()
   })

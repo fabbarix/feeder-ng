@@ -38,6 +38,23 @@ describe('TextField', () => {
     render(<Text suffix="min" />)
     expect(screen.getByText('min')).toBeInTheDocument()
   })
+  it('announces the suffix: it is part of the accessible description', () => {
+    render(<Text suffix="min" />)
+    expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('min')
+  })
+  it('announces the suffix before the helper text, then any caller-supplied description', () => {
+    render(
+      <>
+        <span id="why">Because</span>
+        <Text suffix="min" helper="Time to reheat" aria-describedby="why" />
+      </>,
+    )
+    expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('min Time to reheat Because')
+  })
+  it('has no description without a suffix, helper or error', () => {
+    render(<Text />)
+    expect(screen.getByLabelText('Name')).not.toHaveAttribute('aria-describedby')
+  })
 })
 
 describe('TextArea', () => {

@@ -164,6 +164,10 @@
   color: var(--status-pinned-fg);
 }
 
+.list-row__meta[data-status="info"] {
+  color: var(--color-info-fg);
+}
+
 /* Extra content (Chips) under the meta line; wraps inside the text column. */
 .list-row__extra {
   display: flex;

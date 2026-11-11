@@ -9,9 +9,11 @@ describe('SecretKeyMissingTile', () => {
       'To turn on the Recipe Assistant, the server needs a secret key (FEEDER_SECRET_KEY). Whoever runs your server sets it once; see the deploy guide.',
     )
   })
-  it('shows the deploy guide as plain text until WP-F gives it a page (no dead link)', () => {
+  it('links the deploy guide to its repository page (the app does not serve docs/dev/deploy.md)', () => {
     render(<SecretKeyMissingTile />)
-    expect(screen.queryByRole('link')).toBeNull()
+    const link = screen.getByRole('link', { name: 'deploy guide' })
+    expect(link).toHaveAttribute('href', 'https://github.com/fabbarix/feeder-ng/blob/main/docs/dev/deploy.md')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
     expect(screen.getByRole('status')).toHaveTextContent('see the deploy guide.')
   })
   it('is a warning status, announced', () => {

@@ -99,6 +99,7 @@ import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple'
 import { UserPlusIcon } from '@phosphor-icons/react/dist/csr/UserPlus'
 import { UsersThreeIcon } from '@phosphor-icons/react/dist/csr/UsersThree'
+import { WarningIcon } from '@phosphor-icons/react/dist/csr/Warning'
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { XCircleIcon } from '@phosphor-icons/react/dist/csr/XCircle'
@@ -209,7 +210,7 @@ export const icons = {
   duration: ClockIcon,
   success: CheckCircleIcon,
   info: InfoIcon,
-  warning: HourglassMediumIcon,
+  warning: WarningIcon,
   error: WarningCircleIcon,
   offline: CloudSlashIcon,
   streak: LeafIcon,

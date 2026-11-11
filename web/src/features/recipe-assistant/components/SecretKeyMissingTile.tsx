@@ -10,8 +10,10 @@ export function SecretKeyMissingTile() {
         <Icon name="warning" size={20} />
         <span>
           {raStrings.secretKeyBefore}
-          {/* TODO(release team): link "deploy guide" once they define where the deploy docs are served (docs/dev/deploy.md is not served by the app; the old /docs/deploy target was dead). */}
-          {raStrings.deployGuide}.
+          <a className="ra__link" href={raStrings.deployGuideUrl} target="_blank" rel="noopener noreferrer">
+            {raStrings.deployGuide}
+          </a>
+          .
         </span>
       </p>
     </Tile>

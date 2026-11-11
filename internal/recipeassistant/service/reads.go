@@ -109,9 +109,10 @@ func (s *Service) Available(ctx context.Context) error {
 
 // job is one read in flight or finished.
 type job struct {
-	id     string
-	userID int64
-	cancel context.CancelFunc
+	id      string
+	userID  int64
+	cancel  context.CancelFunc
+	release func() // frees the Limiter slot; idempotent, set once before the job is published
 
 	mu         sync.Mutex
 	state      string
@@ -302,14 +303,14 @@ func (s *Service) StartRead(c recipeassistant.Caller, in ReadInput, sink Sink) (
 		overall = DefaultOverall
 	}
 	jctx, cancel := context.WithTimeout(ctx, overall)
-	j := &job{id: newJobID(), userID: c.UserID, cancel: cancel, state: first, states: []string{first}}
+	var once sync.Once
+	releaseOnce := func() { once.Do(release) }
+	j := &job{id: newJobID(), userID: c.UserID, cancel: cancel, release: releaseOnce, state: first, states: []string{first}}
 	s.mu.Lock()
 	s.pruneLocked(c.UserID)
 	s.jobs[c.UserID] = append(s.jobs[c.UserID], j)
 	s.mu.Unlock()
 	view := j.view()
-	var once sync.Once
-	releaseOnce := func() { once.Do(release) }
 	go func() {
 		defer releaseOnce() // safety net; run releases before it publishes the terminal state
 		defer cancel()
@@ -386,6 +387,7 @@ func (s *Service) CancelJob(userID int64, id string) bool {
 		}
 		j.mu.Unlock()
 		j.cancel()
+		j.release() // the slot is free as soon as the cancel is acknowledged; run's own release is then a no-op
 		return true
 	}
 	return false
