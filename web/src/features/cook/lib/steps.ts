@@ -1,5 +1,5 @@
 // Step navigation for Cook Mode. Plain TypeScript, no React.
-import type { StepUse } from '../types'
+import type { CookStep, CookTimer, StepUse } from '../types'
 
 export interface StepNav {
   /** 0-based index of the Step shown. */
@@ -62,4 +62,15 @@ export function describeUse(use: StepUse): string {
 export function stepOverline(step: { kind: 'active' | 'passive' | string; durationMinutes: number }): string {
   if (step.kind === 'passive') return `Passive · ${step.durationMinutes} min timer`
   return step.durationMinutes > 0 ? `Active · ${step.durationMinutes} min` : 'Active'
+}
+
+/**
+ * The timers holding `step` back (spec: a Step starts once every Step in its `after` has finished): this scope's timers
+ * of those Steps that still have time left, running or paused. A finished timer (or one past its end), a cancelled or
+ * dismissed one (gone from the list), or a Step whose timer never started holds nothing. Keeps the order of `items`.
+ */
+export function holdingTimers<T extends { timer: CookTimer; seconds: number }>(step: Pick<CookStep, 'after'> | null, items: T[], scope: string): T[] {
+  const after = step?.after ?? []
+  if (after.length === 0) return []
+  return items.filter((i) => i.timer.scope === scope && i.timer.step !== null && after.includes(i.timer.step) && i.timer.state !== 'finished' && i.seconds > 0)
 }

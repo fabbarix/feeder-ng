@@ -3,6 +3,9 @@ export const cookStrings = {
   title: 'Cook Mode',
   back: 'Back',
   next: 'Next',
+  /** Next is held while a Step the next one waits for still has its timer counting down. */
+  nextHeld: (label: string, time: string) => `Next waits for ${label}: ${time} left. Cancel its timer to go on now.`,
+  nextHeldMany: (count: number, time: string) => `Next waits for ${count} timers: ${time} left. Cancel them to go on now.`,
   markAsCooked: 'Mark as Cooked',
   done: 'Back to Recipe',
   exit: 'Exit',

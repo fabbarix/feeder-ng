@@ -340,6 +340,8 @@ type stepDTO struct {
 	ImageURL        string        `json:"imageUrl"`
 	Uses            []useDTO      `json:"uses"`
 	Timer           *stepTimerDTO `json:"timer"`
+	// After lists the Recipe Step indexes this Step waits for; Cook Mode holds Next while their timers run.
+	After []int `json:"after"`
 }
 
 type advanceDTO struct {
@@ -391,7 +393,7 @@ func viewOf(v service.CookView) viewDTO {
 	for _, s := range v.Steps {
 		step := stepDTO{
 			Index: s.Index, Number: s.Number, Of: s.Of, Kind: string(s.Kind), Text: s.Text,
-			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: []useDTO{},
+			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: []useDTO{}, After: append([]int{}, s.After...),
 		}
 		for _, u := range s.Uses {
 			step.Uses = append(step.Uses, useDTO{IngredientID: u.IngredientID, Ingredient: u.Ingredient, Quantity: u.Quantity, Unit: u.Unit})

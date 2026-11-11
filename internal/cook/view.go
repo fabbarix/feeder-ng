@@ -14,6 +14,7 @@ type Step struct {
 	LeadTimeMinutes int
 	Uses            []schedule.Use // Ingredient = name
 	ImageURL        string
+	After           []int // indexes of the earlier Steps that must finish before this one starts
 }
 
 // RecipeSteps is a Recipe's name and Steps.
@@ -49,6 +50,7 @@ type CookStep struct {
 	ImageURL        string
 	Uses            []schedule.Use // scaled by the Batches
 	Timer           *StepTimer     // Passive Steps only
+	After           []int          // Recipe Step indexes this Step waits for (never nil)
 }
 
 // View is Cook Mode for one scope.
@@ -96,7 +98,7 @@ func BuildView(scope Scope, rs RecipeSteps, batches float64, marks map[int]time.
 		}
 		cs := CookStep{
 			Index: i, Number: len(v.Steps) + 1, Of: of, Kind: s.Kind, Text: s.Text,
-			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: uses,
+			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: uses, After: append([]int{}, s.After...),
 		}
 		if s.Kind == schedule.Passive {
 			cs.Timer = &StepTimer{Label: TimerLabel(cs.Number, s.Text), DurationSeconds: s.DurationMinutes * 60}

@@ -4,7 +4,9 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **Cook Mode follows Step order.** Next is held while a Step that the next one depends on (its "After step" setting) still has its timer running, for example "Put the meat in the oven" while "Pre-heat the oven" counts down. A line says what Next is held for and how long is left; cancelling that timer, or letting it finish, frees Next.
 
 ## [1.0.0-beta.1] - 2026-11-10
 

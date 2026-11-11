@@ -13,7 +13,7 @@ Feature: Cook Mode
         {"text": "Marinate the chicken", "kind": "advance", "leadTimeMinutes": 240},
         {"text": "Chop the onions", "kind": "active", "durationMinutes": 10, "uses": [{"ingredientId": <id:onion>, "quantity": 2, "unit": "piece"}]},
         {"text": "Simmer the stew", "kind": "passive", "durationMinutes": 45},
-        {"text": "Plate up", "kind": "active", "durationMinutes": 5}
+        {"text": "Plate up", "kind": "active", "durationMinutes": 5, "after": [2]}
       ]
       """
 
@@ -42,6 +42,11 @@ Feature: Cook Mode
     Then the cooking Step 1 offers no timer
     And the cooking Step 2 offers a timer of 2700 seconds
     And the cooking Step 3 offers no timer
+
+  Scenario: A Step lists the Steps it waits for, so Cook Mode can hold Next until their timers end
+    When I open Cook Mode for the Recipe "Chicken stew" with 1 Batch
+    Then the cooking Step 3 waits for the Recipe Steps "2"
+    And the cooking Step 2 waits for the Recipe Steps ""
 
   Scenario: An Advance Step that is not done shows a warning until it is marked done
     When I open Cook Mode for the Recipe "Chicken stew" with 1 Batch
