@@ -16,6 +16,12 @@ describe('ListPage.css', () => {
     expect(d['gap']).toMatch(/^var\(--space-(3|4|5|6)\)$/)
   })
 
+  it('stacks the several children of the list slot (intro, list, action) with a token gap of at least --space-3', () => {
+    const d = declarations(css, '.list-page__list')
+    expect(d['display']).toBe('grid')
+    expect(d['gap']).toMatch(/^var\(--space-(3|4|5|6)\)$/)
+  })
+
   it('does not collapse its columns', () => {
     expect(declarations(css, '.list-page')['min-inline-size']).toBe('0')
   })

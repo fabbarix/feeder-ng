@@ -31,4 +31,16 @@ describe('ListPage', () => {
     expect(root.classList.contains('list-page')).toBe(true)
     expect(root.classList.contains('recipes-screen')).toBe(true)
   })
+
+  it('keeps several children of the list slot as direct children of the one gapped .list-page__list', () => {
+    const { container } = render(
+      <ListPage header={<h1>Places</h1>}>
+        <p className="pg__muted">intro</p>
+        <ul><li>Pantry</li></ul>
+        <button>Add</button>
+      </ListPage>,
+    )
+    const slot = container.querySelector('.list-page__list')!
+    expect(Array.from(slot.children).map((c) => c.tagName)).toEqual(['P', 'UL', 'BUTTON'])
+  })
 })
