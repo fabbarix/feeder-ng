@@ -90,3 +90,230 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---- Read a recipe (Recipe Assistant, WP-E/G). Tokens only. ---- */
+.import-text-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--color-accent);
+  font-weight: var(--text-label-weight);
+}
+
+.import-text-link:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.read-step__muted {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.read-step__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+/* The input choice: a radiogroup of buttons in the look of Segmented. */
+.read-source {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.read-source__label {
+  color: var(--color-text);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+}
+
+.read-source__options {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+}
+
+.read-source__option {
+  flex: 1;
+  min-block-size: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-thumb);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  cursor: pointer;
+}
+
+.read-source__option[aria-checked='true'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--elev-1);
+}
+
+.read-source__option:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.read-source__option:disabled {
+  color: var(--color-muted);
+  cursor: default;
+}
+
+.read-photos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.read-photos__note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.read-photos__error {
+  margin: 0;
+  color: var(--status-danger-fg);
+}
+
+.read-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* Indeterminate: no fake percentage. */
+.read-progress__bar {
+  position: relative;
+  inline-size: 100%;
+  block-size: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-thumb);
+  background: var(--color-surface-2);
+}
+
+.read-progress__bar::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  animation: read-progress-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes read-progress-slide {
+  from {
+    inset-inline-start: -40%;
+  }
+  to {
+    inset-inline-start: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .read-progress__bar::after {
+    inset-inline-start: 0;
+    inline-size: 100%;
+    opacity: 0.4;
+    animation: none;
+  }
+}
+
+.read-progress__stage {
+  margin: 0;
+  font-weight: var(--text-label-weight);
+}
+
+.read-progress__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-muted);
+}
+
+.read-progress__steps [aria-current='step'] {
+  color: var(--color-text);
+  font-weight: var(--text-label-weight);
+}
+
+.read-progress__steps [data-done] {
+  text-decoration: line-through;
+}
+
+.read-progress__note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.read-error__hint {
+  margin: 0;
+}
+
+.read-error__details {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.photo-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.photo-choice h3 {
+  margin: 0;
+}
+
+.photo-choice__thumb {
+  max-inline-size: min(100%, 320px);
+  block-size: auto;
+  border-radius: var(--radius-control);
+}
+
+.photo-choice__group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.photo-choice__radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.photo-choice__radio {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.photo-choice__radio img {
+  display: block;
+  inline-size: 96px;
+  block-size: auto;
+}
+
+.photo-choice__radio[aria-checked='true'] {
+  border-color: var(--color-accent);
+}
+
+.photo-choice__radio:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}

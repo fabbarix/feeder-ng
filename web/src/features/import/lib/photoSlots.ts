@@ -4,18 +4,19 @@ import type { RawImage } from '../../../ui/ImagePicker'
 
 export type PhotoSlots = Array<RawImage | null>
 
+const MAX_PHOTOS = 4
+
 /** One empty slot. */
 export function emptySlots(): PhotoSlots {
-  throw new Error('TODO(ra-e developer): not implemented')
+  return [null]
 }
 /** Sets slot `i` (null removes it). The result has the filled slots in order, then one empty slot unless 4 are filled. */
 export function setSlot(slots: PhotoSlots, i: number, image: RawImage | null): PhotoSlots {
-  void slots
-  void i
-  void image
-  throw new Error('TODO(ra-e developer): not implemented')
+  const next = slots.slice()
+  next[i] = image
+  const filled = next.filter((s): s is RawImage => s !== null)
+  return filled.length < MAX_PHOTOS ? [...filled, null] : filled
 }
 export function filledPhotos(slots: PhotoSlots): RawImage[] {
-  void slots
-  throw new Error('TODO(ra-e developer): not implemented')
+  return slots.filter((s): s is RawImage => s !== null)
 }

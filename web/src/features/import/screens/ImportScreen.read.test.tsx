@@ -76,7 +76,8 @@ describe('ImportScreen: Read a recipe', () => {
   it('shows progress with Cancel while reading', async () => {
     hook.read = idle({ phase: 'running', busy: true, kind: 'url', state: 'fetching' })
     at()
-    expect(screen.getByRole('status')).toHaveTextContent('Opening the page…')
+    // The ToastProvider's own (empty) polite region is a status too: pick the progress one.
+    expect(screen.getAllByRole('status').map((r) => r.textContent)).toContain('Opening the page…')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(hook.read.cancel).toHaveBeenCalledOnce()
   })

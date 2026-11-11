@@ -14,7 +14,7 @@ describe('configuration errors: Admins get the fix, Users get "Ask an Admin."', 
   it.each([
     ['assistant_bad_key', "The Recipe Assistant's API key was refused.", 'Replace the key in Settings.', 'settings'],
     ['assistant_forbidden', "This API key may not use the Recipe Assistant's model.", 'Check the Anthropic workspace.', 'settings'],
-    ['assistant_billing', 'The Anthropic account has a billing problem.', 'Check it with Anthropic.', 'settings'],
+    ['assistant_billing', 'Anthropic reports a billing problem.', 'Check it with Anthropic.', 'settings'],
     ['assistant_model_unavailable', 'The chosen model is no longer available.', 'Pick another model in Settings.', 'chooseModel'],
     ['assistant_request_rejected', 'The request was refused.', 'Check the base URL in Settings.', 'settings'],
   ] as const)('%s', (code, message, adminHint, adminAction) => {

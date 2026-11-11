@@ -73,5 +73,45 @@ export const importStrings = {
   clearSelection: 'Clear',
   noRecipes: 'No Recipes to export yet',
   loading: 'Loading…',
-  reviewEmpty: 'Choose a Recipe File in step 2 and the review appears here.',
+  reviewEmpty: 'Choose a Recipe File in step 3 and the review appears here.',
+} as const
+
+/** Copy of the Recipe Assistant reads (WP-E/G). Glossary words only; the tests pin these literals. */
+export const readStrings = {
+  stepTitle: 'Read a recipe',
+  readFrom: 'Read from',
+  tabPage: 'Web page',
+  tabText: 'Text',
+  tabPhoto: 'Photo',
+  pageLabel: 'Page address',
+  pagePlaceholder: 'https://example.com/soup',
+  textLabel: 'Recipe text',
+  textTooLong: 'That text is over 50,000 characters. Paste a shorter part.',
+  readAction: 'Read recipe',
+  checkAgain: 'Check again',
+  settingsLink: 'Open Recipe Assistant settings',
+  chooseModelLink: 'Choose another model',
+  tryAgain: 'Try again',
+  cancel: 'Cancel',
+  steps: 'Steps',
+  progressLabel: 'Reading the recipe',
+  photoLabel: (n: number) => `Photo ${n}`,
+  photoHelp: 'A cookbook page or a handwritten card. Up to 4 photos, in page order.',
+  photoPrivacy: 'Photos are sent to Anthropic to read the recipe. They are only kept if you choose to use one for the Recipe.',
+  readByModel: (name: string) => `Read by ${name}`,
+  readByAssistant: 'Read by the Recipe Assistant',
+  structuredHint: "The page's recipe data was used as a hint",
+
+  photoChoiceTitle: 'Photo for the Recipe',
+  photoSwitch: 'Use this photo for the Recipe',
+  photoKept: 'Photos are only kept if you choose to use one for the Recipe.',
+  photoNoRecipe: 'Every Recipe is skipped, so there is nothing to give the photo to.',
+  photoGroup: 'Photo to keep',
+  photoRecipe: 'Recipe',
+  photoOnlyOne: 'Only the chosen photo is kept. The others are discarded.',
+
+  // errors
+  loadFailed: 'Could not check the Recipe Assistant. Try again.',
+  askAdmin: 'Ask an Admin.',
+  genericError: 'The recipe could not be read. Try again.',
 } as const
