@@ -16,7 +16,7 @@ export interface UseProduct {
   prices: Price[]
   rename: (name: string) => Promise<void>
   setPackSize: (size: number) => Promise<void>
-  /** PP: saves the Picture at once ("" removes it). STUB: does nothing yet. */
+  /** PP: saves the Picture at once ("" removes it). */
   setImage: (image: string) => Promise<void>
   addBarcode: (raw: string) => Promise<void>
   removeBarcode: (code: string) => Promise<void>
@@ -70,7 +70,7 @@ export function useProduct(id: number): UseProduct {
     unarchive: () => changed(productsApi.unarchive(id)),
     rename: (name) => changed(productsApi.patch(id, { name })),
     setPackSize: (size) => changed(productsApi.patch(id, { packSize: size })),
-    setImage: async () => {},
+    setImage: (image) => changed(productsApi.patch(id, { image })),
     addBarcode: (raw) => changed(productsApi.addBarcode(id, raw)),
     removeBarcode: (code) => changed(productsApi.removeBarcode(id, code)),
     setSoldAt: (shopId, sells) => changed(sells ? productsApi.setSoldAt(id, shopId) : productsApi.unsetSoldAt(id, shopId)),

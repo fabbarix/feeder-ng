@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
 // Kind is the operation kind.
@@ -105,6 +107,14 @@ func (o Op) Validate() error {
 	}
 	if o.Weighed && o.Kind != KindShopScan {
 		return &ValidationError{Field: "weighed", Message: "only a shop scan can be weighed"}
+	}
+	if img := strings.TrimSpace(o.ProductImage); img != "" {
+		if !imaging.ValidID(img) {
+			return &ValidationError{Field: "productImage", Message: "the picture is not a valid image"}
+		}
+		if o.Kind != KindShopUnknown {
+			return &ValidationError{Field: "productImage", Message: "only an unknown barcode can carry a picture"}
+		}
 	}
 	switch o.Kind {
 	case KindShopScan:

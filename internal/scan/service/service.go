@@ -309,7 +309,8 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	}
 	shop := *op.ShopID
 	weighed := op.RuleID != 0
-	np := NewProduct{Name: strings.Join(strings.Fields(op.ProductName), " "), IngredientID: ingredientID, PackSize: op.PackSize}
+	np := NewProduct{Name: strings.Join(strings.Fields(op.ProductName), " "), IngredientID: ingredientID, PackSize: op.PackSize,
+		Image: strings.TrimSpace(op.ProductImage)}
 	switch {
 	case weighed:
 		np.PackSize = op.Quantity
@@ -482,7 +483,7 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 	})
 
 	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit,
-		ProductID: pid, ProductName: p.Name, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
+		ProductID: pid, ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
 		OnList: eff.OnList, Remaining: eff.Remaining, Ticked: eff.Ticked, Merged: merged}
 	if created != nil {
 		applied.ProductCreated = *created
@@ -563,7 +564,7 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 	}
 	pid := p.ID
 	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit, ProductID: pid,
-		ProductName: p.Name, Quantity: quantity, LotID: lotID, Total: &after}
+		ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: quantity, LotID: lotID, Total: &after}
 	res := scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied, Scan: &applied}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

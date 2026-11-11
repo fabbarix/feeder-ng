@@ -19,6 +19,7 @@ var Default = []Column{
 	{"recipe_steps", "image"},
 	{"ingredients", "image"},
 	{"members", "photo"},
+	{"products", "image"},
 }
 
 // Columns implements images.Referencer over SQL.

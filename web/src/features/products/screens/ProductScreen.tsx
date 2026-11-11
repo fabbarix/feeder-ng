@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, FormActions, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
@@ -76,6 +76,16 @@ export function ProductScreen() {
       ) : null}
 
       <BentoGrid columns={2}>
+        <Tile as="section" span="full" aria-label={strings.pictureLabel}>
+          <h2 className="pg__tile-title">{strings.pictureLabel}</h2>
+          <ImagePicker
+            label={strings.pictureLabel}
+            value={product.image ?? ''}
+            onChange={(id) => void attempt(() => p.setImage(id))}
+            aspect={CROP_ASPECTS.landscape}
+          />
+        </Tile>
+
         <Tile as="section" span="full" aria-label={strings.packSizeTitle}>
           <h2 className="pg__tile-title">{strings.packSizeTitle}</h2>
           <form

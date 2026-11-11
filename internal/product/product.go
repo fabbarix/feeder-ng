@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
 var (
@@ -40,7 +41,7 @@ type Input struct {
 	IngredientID int64
 	PackSize     float64 // in the Ingredient's Base Unit
 	// Image is the Product's Picture: an image id from internal/imaging, "" = none (PP). Validate trims it and accepts ""
-	// or a well-formed id (imaging.ValidID), else a *ValidationError{Field: "image"}. STUB: not validated yet.
+	// or a well-formed id (imaging.ValidID), else a *ValidationError{Field: "image"}.
 	Image string
 }
 
@@ -55,6 +56,9 @@ func (in Input) Validate() error {
 	}
 	if math.IsNaN(in.PackSize) || math.IsInf(in.PackSize, 0) || in.PackSize <= 0 {
 		return &ValidationError{Field: "packSize", Message: "pack size must be a positive number"}
+	}
+	if image := strings.TrimSpace(in.Image); image != "" && !imaging.ValidID(image) {
+		return &ValidationError{Field: "image", Message: "the picture is not a valid image"}
 	}
 	return nil
 }

@@ -50,6 +50,7 @@ export function toNewProduct(v: ProductFormValues, ingredientId: number): NewPro
     ingredientId,
     packSize: parsePackSize(v.packSize) ?? 0,
     barcodes: barcode === '' ? [] : [barcode],
+    ...(v.image ? { image: v.image } : {}),
   }
 }
 

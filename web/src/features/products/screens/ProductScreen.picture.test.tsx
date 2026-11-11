@@ -90,7 +90,8 @@ describe('ProductScreen: Picture', () => {
   it('shows the server message in an alert when saving fails', async () => {
     setup(plain, { 'PATCH /api/products/5': { status: 400, json: { error: { code: 'invalid_product', message: 'image: The picture was not uploaded' } } } })
     await userEvent.click(await screen.findByRole('button', { name: `pick ${strings.pictureLabel}` }))
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    // renderWithProviders always mounts an (empty) toast live region with role=alert, so match the screen's own alert by its text.
+    expect(await screen.findByText('image: The picture was not uploaded')).toHaveAttribute('role', 'alert')
   })
 
   it('an archived Product can still change its picture', async () => {

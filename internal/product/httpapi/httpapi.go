@@ -6,6 +6,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,9 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/product"
 	"github.com/fabbarix/feeder-ng/internal/product/store"
 )
@@ -23,7 +27,8 @@ func init() { app.Register(app.Module{Name: "products", Mount: mount}) }
 const topic = "products"
 
 func mount(r *app.Router, d app.Deps) {
-	a := &api{store: store.New(d.DB, d.Clock), events: d.Events}
+	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB)))), events: d.Events}
 
 	// Shops and Weight Barcode Rules: the Admin writes, every User reads.
 	r.User("GET /api/shops", a.listShops)
@@ -277,6 +282,7 @@ type productBody struct {
 	Name         string          `json:"name"`
 	IngredientID int64           `json:"ingredientId"`
 	PackSize     float64         `json:"packSize"`
+	Image        string          `json:"image"`
 	Barcodes     []string        `json:"barcodes"`
 	ShopBarcodes []shopBarcodeIn `json:"shopBarcodes"`
 }
@@ -284,6 +290,7 @@ type productBody struct {
 type productPatch struct {
 	Name     *string  `json:"name"`
 	PackSize *float64 `json:"packSize"`
+	Image    *string  `json:"image"` // absent keeps, "" removes, an id sets
 }
 
 type codeBody struct {
@@ -318,7 +325,7 @@ func (a *api) createProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := store.NewProduct{
-		Input:    product.Input{Name: body.Name, IngredientID: body.IngredientID, PackSize: body.PackSize},
+		Input:    product.Input{Name: body.Name, IngredientID: body.IngredientID, PackSize: body.PackSize, Image: body.Image},
 		Barcodes: body.Barcodes,
 	}
 	for _, sb := range body.ShopBarcodes {
@@ -398,10 +405,19 @@ func (a *api) patchProduct(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	d, err := a.store.UpdateProduct(r.Context(), id, body.Name, body.PackSize)
-	if err != nil {
-		writeErr(w, err, "product")
-		return
+	var d store.Detail
+	var err error
+	if body.Name != nil || body.PackSize != nil || body.Image == nil {
+		if d, err = a.store.UpdateProduct(r.Context(), id, body.Name, body.PackSize); err != nil {
+			writeErr(w, err, "product")
+			return
+		}
+	}
+	if body.Image != nil {
+		if d, err = a.store.SetImage(r.Context(), id, *body.Image); err != nil {
+			writeErr(w, err, "product")
+			return
+		}
 	}
 	a.changed("products")
 	httpx.WriteJSON(w, http.StatusOK, d)
