@@ -22,6 +22,8 @@ export interface ShoppingLine {
   pack: PackSuggestion | null
   /** minor currency units for the suggested packs; null = no Price known ("—") */
   estimatedCostCents: number | null
+  /** PE: "/api/images/<id>" of the Ingredient's Picture, '' = none (the server always sends it). */
+  imageUrl?: string
 }
 
 /** A manual extra: free text, or an Ingredient with a remaining quantity. */
@@ -33,6 +35,8 @@ export interface ShoppingExtra {
   baseUnit: BaseUnit | null
   quantity: number | null
   ticked: boolean
+  /** PE: the Ingredient's Picture of an Ingredient extra. */
+  imageUrl?: string
 }
 
 export interface ShoppingSummary {

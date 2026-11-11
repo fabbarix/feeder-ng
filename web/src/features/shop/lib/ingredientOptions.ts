@@ -5,6 +5,6 @@ import type { SelectOption } from '../../../ui/Select/lib'
 import { selectStrings } from '../../../ui/Select/strings'
 
 /** One option per Ingredient that has an id (an Ingredient still to be created has none and is not listed). */
-export function ingredientPickerOptions(ingredients: { id?: number; name: string; baseUnit: string }[]): SelectOption<number>[] {
+export function ingredientPickerOptions(ingredients: { id?: number; name: string; baseUnit: string; imageUrl?: string }[]): SelectOption<number>[] {
   return ingredients.flatMap((i) => (i.id === undefined ? [] : [{ value: i.id, label: i.name, meta: selectStrings.baseUnitMeta(i.baseUnit) }]))
 }

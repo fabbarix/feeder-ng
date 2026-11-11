@@ -5,7 +5,7 @@ import type { ImagePickerProps } from './types'
 
 export const PICKED_ID = 'f'.repeat(32)
 
-/** A group named by `label`. Exposes the props a host sets (data-value, data-aspect, data-size, data-mode) and two buttons: pick -> onChange(PICKED_ID), remove -> onChange(''). */
+/** A group named by `label`. Exposes the props a host sets (data-value, data-aspect, data-size, data-mode) and four buttons: pick -> onChange(PICKED_ID), remove -> onChange(''), start upload -> onBusyChange(true), finish upload -> onBusyChange(false). */
 export function FakeImagePicker(props: ImagePickerProps) {
   const onChange = props.onChange as (v: string) => void
   return (
@@ -23,6 +23,13 @@ export function FakeImagePicker(props: ImagePickerProps) {
       </button>
       <button type="button" onClick={() => onChange('')}>
         {`remove ${props.label}`}
+      </button>
+      {/* PE: lets a host test drive onBusyChange: "start upload" -> true, "finish upload" -> false. */}
+      <button type="button" onClick={() => props.onBusyChange?.(true)}>
+        {`start upload ${props.label}`}
+      </button>
+      <button type="button" onClick={() => props.onBusyChange?.(false)}>
+        {`finish upload ${props.label}`}
       </button>
     </div>
   )

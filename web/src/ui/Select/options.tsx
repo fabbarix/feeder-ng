@@ -21,6 +21,8 @@ export interface IngredientChoice {
   key?: string
   name: string
   baseUnit: string
+  /** PE: the Ingredient's Picture address; the option draws a Thumb (an empty slot without it). */
+  imageUrl?: string
 }
 export interface UnitChoices {
   baseUnit: string
@@ -42,7 +44,13 @@ export interface MealSlotChoice {
 export interface MemberChoice {
   id: number
   name: string
+  /** @deprecated use photoUrl (kept so older callers compile). */
   imageUrl?: string
+  /** PE: the Member's Photo address, then `avatar` (emoji), then the initials. */
+  photoUrl?: string
+  avatar?: string
+  /** PE: the Member colour, "#rrggbb" (the Avatar's ring). */
+  colour?: string
 }
 
 export const ENGLISH_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

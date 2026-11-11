@@ -33,6 +33,8 @@ export interface IngredientStock {
   nextGoesOff: string | null
   useSoon: boolean
   spoiledCount: number
+  /** PE: "/api/images/<id>" of the Ingredient's Picture, '' = none. */
+  imageUrl?: string
 }
 
 export interface StockWarning {
@@ -65,4 +67,6 @@ export interface IngredientChoice {
   id: number
   name: string
   baseUnit: BaseUnit
+  /** PE: the Ingredient's Picture address ('' or absent = none). */
+  imageUrl?: string
 }

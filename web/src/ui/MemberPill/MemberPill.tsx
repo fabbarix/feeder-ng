@@ -8,6 +8,8 @@ export interface MemberPillProps {
   colour: string
   /** Optional emoji; without one the Avatar shows initials. */
   glyph?: string
+  /** PE: the Member's Photo address ("/api/images/<id>"); shown first, then the emoji, then the initials. */
+  photoUrl?: string
 }
 
 /** Avatar (sm, Member colour ring) + first name in a pill. A shared primitive. */
