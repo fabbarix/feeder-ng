@@ -1,4 +1,4 @@
-// CSS contract of the Recipes screens (jsdom does not lay out): ui-fix-plan 5.8 (2/3/4 columns, Tag row fade) and 5.9 (hero cap).
+// CSS contract of the Recipes screens (jsdom does not lay out): ui-fix-plan 5.8 (2/3/4 columns, Tag row fade); the hero is 16:9 since R2-1 (D-02). The R2-1 layout contract is recipes.layout.css.test.ts.
 import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
 
@@ -65,12 +65,12 @@ describe('recipes.css', () => {
     })
   })
 
-  it('caps the detail hero at 170 px on the shared media container (5.9)', () => {
+  it('keeps the detail hero on the shared media container at 16:9 (R2-1 D-02; the 170 px strip of 5.9 is gone)', () => {
     const box = find((r) => r.selector.includes('.recipe-detail__hero .tile__media'))
     expect(box.length).toBeGreaterThan(0)
     const body = box.map((r) => r.body).join(' ')
-    expect(body).toMatch(/aspect-ratio:\s*auto/)
-    expect(body).toMatch(/max-(block-size|height):\s*170px/)
+    expect(body).toMatch(/aspect-ratio:\s*16\s*\/\s*9/)
+    expect(body).not.toMatch(/max-(block-size|height):\s*170px/)
     expect(box.some((r) => r.minWidth === 0)).toBe(true)
   })
 
@@ -79,9 +79,10 @@ describe('recipes.css', () => {
     expect(r.some((x) => /padding-block-end:\s*0/.test(x.body))).toBe(true)
   })
 
-  it('lets the hero thumb fill the capped container', () => {
+  it('lets the hero thumb fill the 16:9 container', () => {
     const thumb = find((r) => r.selector.includes(".recipe-detail__hero .recipe-thumb[data-size='hero']"))
     expect(thumb.some((r) => /(block-size|height):\s*100%/.test(r.body))).toBe(true)
+    expect(thumb.some((r) => /max-block-size:\s*170px/.test(r.body))).toBe(false)
   })
 
   describe('the Tag row fade (5.8)', () => {

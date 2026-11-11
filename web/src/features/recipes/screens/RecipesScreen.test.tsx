@@ -68,9 +68,10 @@ describe('RecipesScreen', () => {
   it('opens the overflow: Import, Export, Copy Agent Prompt and Show archived', async () => {
     view()
     await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
-    expect(screen.getByRole('link', { name: /Import/ })).toHaveAttribute('href', '/recipes/import')
-    expect(screen.getByRole('link', { name: /Export/ })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('switch', { name: 'Show archived' }))
+    // R2-1 (G-01): a Menu popover; links are menuitems.
+    expect(screen.getByRole('menuitem', { name: /Import/ })).toHaveAttribute('href', '/recipes/import')
+    expect(screen.getByRole('menuitem', { name: /Export/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Show archived' }))
     expect(lastFilter().archived).toBe('all')
   })
 

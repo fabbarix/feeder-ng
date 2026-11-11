@@ -23,7 +23,9 @@ describe('IngredientLineRow', () => {
     expect(document.querySelector('select, datalist')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('garlic')
     expect(screen.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('clove')
-    expect(screen.getByRole('checkbox', { name: 'optional' })).not.toBeChecked()
+    // R2-1 (E-01): "Optional" is a visible toggle chip, not a checkbox.
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Optional' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('picks an Ingredient from the IngredientSelect', async () => {
@@ -68,7 +70,7 @@ describe('IngredientLineRow', () => {
 
   it('toggles optional and edits the note', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'optional' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Optional' }))
     expect(p.onChange).toHaveBeenCalledWith({ optional: true })
     await userEvent.type(screen.getByRole('textbox', { name: 'Note' }), 'x')
     expect(p.onChange).toHaveBeenLastCalledWith({ note: 'x' })

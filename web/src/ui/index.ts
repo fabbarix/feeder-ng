@@ -114,3 +114,6 @@ export { tagIcon } from './lib/tagIcon'
 export { ImagePicker } from './ImagePicker/ImagePicker'
 export { CROP_ASPECTS } from './ImagePicker/lib/crop'
 export type { ImagePickerProps, RawImage, ImageSource } from './ImagePicker/types'
+// Menu (R2-1, G-01).
+export { Menu, useMenuKeys } from './Menu'
+export type { MenuEntry, MenuItem, MenuProps, MenuSeparator, UseMenuKeysOptions } from './Menu'

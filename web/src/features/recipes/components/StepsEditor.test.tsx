@@ -87,13 +87,15 @@ describe('StepsEditor', () => {
     expect(next[1]!.after).toEqual([0])
   })
 
-  it('moves Steps with IconButtons (first cannot go up, last cannot go down)', async () => {
+  it('moves Steps from the Step actions menu (first cannot go up, last cannot go down)', async () => {
     const p = props([step({ key: 'a', text: 'one' }), step({ key: 'b', text: 'two' })])
     render(<StepsEditor {...p} />)
-    expect(within(rows()[0]!).getByRole('button', { name: 'Move Step up' })).toBeDisabled()
-    expect(within(rows()[1]!).getByRole('button', { name: 'Move Step down' })).toBeDisabled()
-    await userEvent.click(within(rows()[0]!).getByRole('button', { name: 'Move Step down' }))
+    await userEvent.click(within(rows()[0]!).getByRole('button', { name: 'Step actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Move Step up' })).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Move Step down' }))
     expect(vi.mocked(p.onChange).mock.calls[0]![0].map((s) => s.text)).toEqual(['two', 'one'])
+    await userEvent.click(within(rows()[1]!).getByRole('button', { name: 'Step actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Move Step down' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('shows the message for a Step error', () => {
