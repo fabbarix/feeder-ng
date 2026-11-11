@@ -557,18 +557,7 @@ func exists(ctx context.Context, q dbtx, query string, args ...any) (bool, error
 
 // today is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
 func (s *Store) today(ctx context.Context, q dbtx) (string, error) {
-	loc := time.UTC
-	var tz string
-	err := q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if err == nil {
-		if l, lerr := time.LoadLocation(tz); lerr == nil {
-			loc = l
-		}
-	}
-	return s.clk.Now().In(loc).Format("2006-01-02"), nil
+	return clock.HouseholdToday(ctx, q, s.clk)
 }
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
