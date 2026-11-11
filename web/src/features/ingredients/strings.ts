@@ -23,7 +23,10 @@ export const strings = {
     alreadyExists: (name: string) => `${name} already exists`,
     createAnyway: (name: string) => `Create '${name}' anyway`,
     offlineReason: 'Needs a connection to create an Ingredient',
+    pictureLabel: 'Picture',
   },
+  /** IM2: the Ingredient page's picture Tile. */
+  pictureLabel: 'Picture',
   emptyTitle: 'No Ingredients yet',
   emptyText: 'Ingredients appear here as you add Recipes, or you can create one now.',
   noMatches: 'No Ingredient matches that search',

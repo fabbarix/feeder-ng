@@ -6,12 +6,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
 import { emptyDraft } from '../lib/draft'
 
-const h = vi.hoisted(() => ({ editor: {} as Record<string, unknown>, upload: vi.fn() }))
+const h = vi.hoisted(() => ({ editor: {} as Record<string, unknown> }))
 vi.mock('../hooks/useRecipeEditor', () => ({ useRecipeEditor: () => h.editor }))
 vi.mock('../hooks/useIngredientRefs', () => ({
   useIngredientRefs: () => ({ byId: new Map([[7, garlic], [8, flour]]), isLoading: false }),
 }))
-vi.mock('../hooks/usePhotoUpload', () => ({ usePhotoUpload: () => ({ upload: h.upload, uploading: false, error: null }) }))
+vi.mock('../../../ui', async (orig) => ({
+  ...(await orig<object>()),
+  ImagePicker: (await import('../../../ui/ImagePicker/fake.test-helper')).FakeImagePicker,
+}))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
 
@@ -45,7 +48,9 @@ describe('RecipeEditorScreen', () => {
   it('has a section per concern: Details, Photo, Ingredients, Steps', () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: 'New Recipe' })).toBeInTheDocument()
-    for (const name of ['Photo', 'Ingredients', 'Steps']) expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument()
+    for (const name of ['Ingredients', 'Steps']) expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument()
+    // IM2: the Photo section is the shared ImagePicker, whose group carries the heading.
+    expect(screen.getByRole('group', { name: 'Photo' })).toBeInTheDocument()
   })
 
   it('uses no native select, checkbox, file or search control (primitives only)', () => {
@@ -82,8 +87,8 @@ describe('RecipeEditorScreen', () => {
     expect(await screen.findByRole('status', {}, { timeout: 1500 })).toHaveAttribute('aria-busy', 'true')
   })
 
-  it('has a photo zone for the Recipe and one for each Step', () => {
-    const { container } = view()
-    expect(container.querySelectorAll('input[type=file]')).toHaveLength(2)
+  it('has an image picker for the Recipe and one for each Step', () => {
+    view()
+    expect(screen.getAllByTestId('fake-image-picker')).toHaveLength(2)
   })
 })

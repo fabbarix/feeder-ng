@@ -11,7 +11,7 @@ export interface TextAreaProps extends FieldProps, FieldSizeProps, Omit<Textarea
 }
 
 /** A multi-line text input in the shared field frame. */
-export function TextArea({ size = 'full', label, helper, error, disabled, required, name, value, onChange, rows = 3, id, ...rest }: TextAreaProps) {
+export function TextArea({ size = 'full', label, helper, error, disabled, required, name, value, onChange, rows = 3, id, 'aria-describedby': extraDescribedBy, ...rest }: TextAreaProps) {
   const ids = useFieldIds()
   const areaId = id ?? `${ids.labelId}-input`
   return (
@@ -27,7 +27,7 @@ export function TextArea({ size = 'full', label, helper, error, disabled, requir
           disabled={disabled}
           aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(ids, helper, error)}
+          aria-describedby={describedBy(ids, helper, error, extraDescribedBy)}
           onChange={(e) => onChange(e.target.value)}
         />
       </span>

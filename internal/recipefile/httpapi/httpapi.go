@@ -19,6 +19,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
+	"github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
 	"github.com/fabbarix/feeder-ng/internal/recipefile/imagefetch"
 	"github.com/fabbarix/feeder-ng/internal/recipefile/store"
@@ -36,12 +38,13 @@ func mount(r *app.Router, d app.Deps) {
 	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
 	prompt, promptErr := recipefile.ExtractTemplate(spec.RecipeFileMD)
 	a := &api{
-		store:    store.New(d.DB, d.Clock, images),
-		sessions: recipefile.NewSessions(d.Clock),
-		fetcher:  imagefetch.New(imagefetch.Options{}),
-		events:   d.Events,
-		prompt:   recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example)),
-		promptOK: promptErr == nil,
+		store:     store.New(d.DB, d.Clock, images),
+		sessions:  recipefile.NewSessions(d.Clock),
+		fetcher:   imagefetch.New(imagefetch.Options{}),
+		events:    d.Events,
+		prompt:    recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example)),
+		promptOK:  promptErr == nil,
+		assistant: service.For(d, claude.Factory(d.Logger)),
 	}
 	r.Public("GET /schema/recipe-file-v1.json", schema)
 	r.User("GET /api/recipe-file/agent-prompt", a.agentPrompt)
@@ -50,6 +53,11 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/imports/{id}/plan", a.plan)
 	r.User("POST /api/imports/{id}/confirm", a.confirm)
 	r.User("DELETE /api/imports/{id}", a.close)
+	r.User("GET /api/imports/{id}/photos/{index}", a.photo)
+	// The Recipe Assistant's reads end in an Import Review, so this package, which owns the sessions, serves them.
+	r.User("POST /api/recipe-assistant/reads", a.startRead)
+	r.User("GET /api/recipe-assistant/reads/{id}", a.getRead)
+	r.User("DELETE /api/recipe-assistant/reads/{id}", a.cancelRead)
 }
 
 type api struct {
@@ -59,6 +67,8 @@ type api struct {
 	events   *events.Bus
 	prompt   string
 	promptOK bool
+	// assistant is the one Recipe Assistant service of the application (shared with its settings module).
+	assistant *service.Service
 }
 
 // schema serves the embedded schema. It is public: the spec says the running
@@ -197,16 +207,26 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 			a.sessions.Restore(rv)
 		}
 	}()
-	d, ok := decisionsBody(w, r)
+	d, choice, ok := confirmBody(w, r)
 	if !ok {
 		return
+	}
+	file, images := rv.File, rv.Images
+	if choice != nil {
+		var err error
+		if file, images, err = recipefile.WithPhoto(file, images, rv.Photos, *choice); err != nil {
+			httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+				"code": "validation_failed", "message": "That photo cannot be used for this Recipe", "field": "photo",
+			}})
+			return
+		}
 	}
 	existing, err := a.store.Existing(r.Context())
 	if err != nil {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	commit, err := recipefile.BuildCommit(rv.File, existing, d, rv.Images)
+	commit, err := recipefile.BuildCommit(file, existing, d, images)
 	if errors.Is(err, recipefile.ErrStale) {
 		httpx.WriteError(w, http.StatusConflict, "import_stale", "The data changed since the review; review again")
 		return
@@ -313,6 +333,25 @@ func confirmAnswer(res store.Result) confirmJSON {
 		out.Recipes = append(out.Recipes, appliedJSON{Index: r.Index, ID: r.ID, Name: r.Name, Action: r.Action})
 	}
 	return out
+}
+
+// confirmBody reads {"decisions": {...}, "photo": {"index", "recipe"}?}.
+func confirmBody(w http.ResponseWriter, r *http.Request) (recipefile.Decisions, *recipefile.PhotoChoice, bool) {
+	var body struct {
+		Decisions recipefile.Decisions `json:"decisions"`
+		Photo     *struct {
+			Index  int `json:"index"`
+			Recipe int `json:"recipe"`
+		} `json:"photo"`
+	}
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return recipefile.Decisions{}, nil, false
+	}
+	if body.Photo == nil {
+		return body.Decisions, nil, true
+	}
+	return body.Decisions, &recipefile.PhotoChoice{Index: body.Photo.Index, Recipe: body.Photo.Recipe}, true
 }
 
 // decisionsBody reads {"decisions": {...}}.

@@ -13,6 +13,7 @@
   font-weight: var(--text-body-strong-weight);
 }
 
+
 .image-picker__preview {
   overflow: hidden;
   border-radius: var(--radius-tile-sm);
@@ -22,6 +23,7 @@
 
 .image-picker__preview[data-size='hero'] {
   inline-size: 100%;
+  max-inline-size: 480px;
   aspect-ratio: 16 / 9;
 }
 

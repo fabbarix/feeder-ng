@@ -17,6 +17,8 @@ type Column struct{ Table, Column string }
 var Default = []Column{
 	{"recipes", "image"},
 	{"recipe_steps", "image"},
+	{"ingredients", "image"},
+	{"members", "photo"},
 }
 
 // Columns implements images.Referencer over SQL.
@@ -63,4 +65,22 @@ func (c *Columns) ReferencedIDs(ctx context.Context) (map[string]bool, error) {
 		rows.Close()
 	}
 	return out, nil
+}
+
+// IsReferenced reports whether id is held by any listed column, with one targeted query per column.
+func (c *Columns) IsReferenced(ctx context.Context, id string) (bool, error) {
+	for _, col := range c.cols {
+		if !ident.MatchString(col.Table) || !ident.MatchString(col.Column) {
+			return false, fmt.Errorf("refs: unsafe identifier %q.%q", col.Table, col.Column)
+		}
+		q := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM %s WHERE %s = ?)`, col.Table, col.Column)
+		var found bool
+		if err := c.db.QueryRowContext(ctx, q, id).Scan(&found); err != nil {
+			return false, fmt.Errorf("refs: %s.%s: %w", col.Table, col.Column, err)
+		}
+		if found {
+			return true, nil
+		}
+	}
+	return false, nil
 }

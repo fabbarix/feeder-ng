@@ -56,6 +56,9 @@ type fakeRefs struct {
 }
 
 func (r *fakeRefs) ReferencedIDs(context.Context) (map[string]bool, error) { return r.ids, r.err }
+func (r *fakeRefs) IsReferenced(_ context.Context, id string) (bool, error) {
+	return r.ids[id], r.err
+}
 
 type env struct {
 	svc   *images.Service
@@ -417,6 +420,11 @@ func (r *lateRefs) ReferencedIDs(context.Context) (map[string]bool, error) {
 	return map[string]bool{}, nil
 }
 
+func (r *lateRefs) IsReferenced(ctx context.Context, id string) (bool, error) {
+	m, err := r.ReferencedIDs(ctx)
+	return m[id], err
+}
+
 func TestSweepRechecksReferencesRightBeforeEachDelete(t *testing.T) {
 	e := newEnv(t)
 	old := seed(t, e, 25*time.Hour)
@@ -436,5 +444,34 @@ func TestDiscardRechecksReferencesRightBeforeDeleting(t *testing.T) {
 	svc := images.NewService(e.store, e.fetch, &lateRefs{id: got.ID, calls: 1}, e.clk)
 	if err := svc.Discard(context.Background(), got.ID); !errors.Is(err, images.ErrInUse) || !e.store.Exists(got.ID) {
 		t.Errorf("Discard = %v, exists = %v; want ErrInUse and the image kept", err, e.store.Exists(got.ID))
+	}
+}
+
+// ---- guarded store (IM2: file cleanup goes through the references) ----
+
+func TestGuardedDeleteKeepsAnImageAnotherRecordReferences(t *testing.T) {
+	e := newEnv(t)
+	got, _ := e.svc.IngestDataURL(pngDataURL(t, 8, 8))
+	g := images.NewGuarded(e.store, e.refs)
+	e.refs.ids[got.ID] = true
+	if err := g.Delete(context.Background(), got.ID); err != nil {
+		t.Errorf("a referenced image is kept without an error, got %v", err)
+	}
+	if !g.Exists(got.ID) {
+		t.Fatal("a referenced image must stay")
+	}
+	delete(e.refs.ids, got.ID)
+	if err := g.Delete(context.Background(), got.ID); err != nil || g.Exists(got.ID) {
+		t.Errorf("an unreferenced image is deleted: err = %v, exists = %v", err, g.Exists(got.ID))
+	}
+}
+
+func TestGuardedDeleteIsFailClosed(t *testing.T) {
+	e := newEnv(t)
+	got, _ := e.svc.IngestDataURL(pngDataURL(t, 8, 8))
+	g := images.NewGuarded(e.store, e.refs)
+	e.refs.err = errors.New("db down")
+	if err := g.Delete(context.Background(), got.ID); err == nil || !g.Exists(got.ID) {
+		t.Errorf("a failing Referencer must delete nothing: err = %v, exists = %v", err, g.Exists(got.ID))
 	}
 }

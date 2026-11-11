@@ -43,7 +43,7 @@ type IngredientSource interface {
 // (internal/imaging.Store implements it).
 type Images interface {
 	Exists(id string) bool
-	Delete(id string) error
+	Delete(ctx context.Context, id string) error
 }
 
 // ReadyMealIngredients lets the Store derive a Ready Meal's single line when the
@@ -597,7 +597,7 @@ func (s *Store) dropUnreferenced(ctx context.Context, ids []string) {
 		err := s.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM recipes WHERE image = ?) + (SELECT count(*) FROM recipe_steps WHERE image = ?)`,
 			id, id).Scan(&n)
 		if err == nil && n == 0 {
-			_ = s.images.Delete(id)
+			_ = s.images.Delete(ctx, id)
 		}
 	}
 }

@@ -14,12 +14,34 @@ import (
 
 // Store reads and writes the household tables (migration 0100_household.sql).
 type Store struct {
-	db  *sql.DB
-	clk clock.Clock
+	db     *sql.DB
+	clk    clock.Clock
+	images Images
+}
+
+// Images is the image file store as the Store needs it: a Delete that keeps any file some record still references
+// (images.Guarded).
+type Images interface {
+	Delete(ctx context.Context, id string) error
 }
 
 // New returns a Store over an open, migrated database.
 func New(d *sql.DB, clk clock.Clock) *Store { return &Store{db: d, clk: clk} }
+
+// WithImages lets the Store remove the file of a Member photo that is no longer used (ReleasePhoto).
+func (s *Store) WithImages(im Images) *Store {
+	s.images = im
+	return s
+}
+
+// ReleasePhoto deletes the file of a Member photo that nothing uses any more (best effort, call it after the change is
+// saved). The file store decides "nothing uses": it checks every table, not only Members.
+func (s *Store) ReleasePhoto(ctx context.Context, id string) {
+	if id == "" || s.images == nil {
+		return
+	}
+	_ = s.images.Delete(ctx, id)
+}
 
 // querier is satisfied by *sql.DB and *sql.Tx.
 type querier interface {
@@ -97,8 +119,8 @@ func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (hou
 	now := s.clk.Now().UTC().Truncate(time.Second).Format(time.RFC3339)
 	var id int64
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, portion_factor, email, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.PortionFactor, nullEmail(in.Email), now)
+		res, err := tx.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, photo, portion_factor, email, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.Photo, in.PortionFactor, nullEmail(in.Email), now)
 		if err != nil {
 			return err
 		}
@@ -118,10 +140,10 @@ func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (hou
 	return s.Member(ctx, id)
 }
 
-// UpdateMember changes name, colour, avatar, Portion Factor and email, keeping the User link.
+// UpdateMember changes name, colour, avatar, photo, Portion Factor and email, keeping the User link.
 func (s *Store) UpdateMember(ctx context.Context, id int64, in household.MemberInput) (household.Member, error) {
-	res, err := s.db.ExecContext(ctx, `UPDATE members SET name = ?, colour = ?, avatar = ?, portion_factor = ?, email = ?
-		WHERE id = ?`, in.Name, in.Colour, in.Avatar, in.PortionFactor, nullEmail(in.Email), id)
+	res, err := s.db.ExecContext(ctx, `UPDATE members SET name = ?, colour = ?, avatar = ?, photo = ?, portion_factor = ?, email = ?
+		WHERE id = ?`, in.Name, in.Colour, in.Avatar, in.Photo, in.PortionFactor, nullEmail(in.Email), id)
 	if isUnique(err) {
 		return household.Member{}, household.ErrEmailTaken
 	}
@@ -375,7 +397,7 @@ func (s *Store) inTx(ctx context.Context, fn func(*sql.Tx) error) error {
 }
 
 func queryMembers(ctx context.Context, q querier) ([]household.Member, error) {
-	rows, err := q.QueryContext(ctx, `SELECT id, name, colour, avatar, portion_factor, user_id, email FROM members ORDER BY id`)
+	rows, err := q.QueryContext(ctx, `SELECT id, name, colour, avatar, photo, portion_factor, user_id, email FROM members ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +415,7 @@ func queryMembers(ctx context.Context, q querier) ([]household.Member, error) {
 
 func getMember(ctx context.Context, q querier, id int64) (household.Member, error) {
 	m, err := scanMember(q.QueryRowContext(ctx,
-		`SELECT id, name, colour, avatar, portion_factor, user_id, email FROM members WHERE id = ?`, id))
+		`SELECT id, name, colour, avatar, photo, portion_factor, user_id, email FROM members WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return household.Member{}, household.ErrNotFound
 	}
@@ -408,7 +430,7 @@ func scanMember(r scanner) (household.Member, error) {
 		user  sql.NullInt64
 		email sql.NullString
 	)
-	if err := r.Scan(&m.ID, &m.Name, &m.Colour, &m.Avatar, &m.PortionFactor, &user, &email); err != nil {
+	if err := r.Scan(&m.ID, &m.Name, &m.Colour, &m.Avatar, &m.Photo, &m.PortionFactor, &user, &email); err != nil {
 		return household.Member{}, err
 	}
 	m.Email = email.String
