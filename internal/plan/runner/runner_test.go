@@ -400,3 +400,41 @@ func TestStartupReplanClearsStaleUnfilledRows(t *testing.T) {
 		t.Errorf("Tuesday was not planned by the startup replan: %v", err)
 	}
 }
+
+func TestPendingRulesChangedIsNotDowngradedByLaterReasons(t *testing.T) {
+	e := newEnv(t) // no worker started: the invalidations stay pending
+	e.r.Invalidate(plan.ReasonRulesChanged)
+	e.r.Invalidate(plan.ReasonAttendanceChanged)
+	e.r.Invalidate(plan.ReasonStockTake)
+	if got := e.r.PendingReason(); got != plan.ReasonRulesChanged {
+		t.Fatalf("pending reason = %q, want %q (it clears all unpinned meals)", got, plan.ReasonRulesChanged)
+	}
+}
+
+func TestOrdinaryReasonsStillReplaceEachOther(t *testing.T) {
+	e := newEnv(t)
+	e.r.Invalidate(plan.ReasonRecipeChanged)
+	e.r.Invalidate(plan.ReasonAttendanceChanged)
+	if got := e.r.PendingReason(); got != plan.ReasonAttendanceChanged {
+		t.Fatalf("pending reason = %q, want the last one, %q", got, plan.ReasonAttendanceChanged)
+	}
+	e.r.Invalidate(plan.ReasonRulesChanged)
+	if got := e.r.PendingReason(); got != plan.ReasonRulesChanged {
+		t.Fatalf("pending reason = %q, want %q", got, plan.ReasonRulesChanged)
+	}
+}
+
+func TestRulesChangedDoesNotOutliveItsRun(t *testing.T) {
+	e := newEnv(t)
+	c, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go e.r.Start(c)
+	e.r.Invalidate(plan.ReasonRulesChanged)
+	if err := e.r.WaitIdle(c); err != nil {
+		t.Fatal(err)
+	}
+	e.r.Invalidate(plan.ReasonAttendanceChanged)
+	if got := e.r.PendingReason(); got != plan.ReasonAttendanceChanged {
+		t.Fatalf("pending reason = %q, want %q: a finished rules_changed run must not stick", got, plan.ReasonAttendanceChanged)
+	}
+}
