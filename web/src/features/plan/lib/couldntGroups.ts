@@ -1,4 +1,5 @@
 import type { IconName } from '../../../ui/icons'
+import { slotHash } from '../../settings/lib/slotAnchor'
 import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
 import { weekdayName } from './phrase'
@@ -35,8 +36,13 @@ export interface CauseGroup {
 /** Display order: setup gaps first, then rule conflicts. */
 const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'slot_rule', 'excluded', 'cool_down', 'variety_rule', 'advance_step', 'no_fit']
 
-const META: Record<Cause, { tone: Tone; icon: IconName; fix: (label: string) => FixAction }> = {
-  nobody_attending: { tone: 'info', icon: 'attendance', fix: (label) => ({ kind: 'link', label, to: '/settings/meal-slots' }) },
+const META: Record<Cause, { tone: Tone; icon: IconName; fix: (label: string, group: PlanSlot[]) => FixAction }> = {
+  // R15: deep link to the earliest affected Meal Slot (the group is sorted by date and time).
+  nobody_attending: {
+    tone: 'info',
+    icon: 'attendance',
+    fix: (label, group) => ({ kind: 'link', label, to: `/settings/meal-slots${group[0] ? slotHash(group[0].mealSlotId) : ''}` }),
+  },
   no_recipes: { tone: 'info', icon: 'recipes', fix: (label) => ({ kind: 'link', label, to: '/recipes' }) },
   slot_rule: { tone: 'warn', icon: 'slotRule', fix: (label) => ({ kind: 'link', label, to: '/settings/planning' }) },
   excluded: { tone: 'warn', icon: 'exclusion', fix: (label) => ({ kind: 'link', label, to: '/recipes' }) },
@@ -109,7 +115,7 @@ export function groupByCause(slots: PlanSlot[]): CauseGroup[] {
       hint: s.couldntHint[cause],
       tone: meta.tone,
       icon: meta.icon,
-      fix: meta.fix(s.couldntFix[cause]),
+      fix: meta.fix(s.couldntFix[cause], list),
       adminOnly: ADMIN_ONLY.has(cause),
     }
   })

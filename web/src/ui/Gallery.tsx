@@ -19,6 +19,8 @@ import type { FieldSize } from './fields/Field'
 import { Page } from './Page'
 import { PageHeader } from './PageHeader'
 import { StickyActionBar } from './StickyActionBar'
+import { MemberPill } from './MemberPill/MemberPill'
+import { WeekdayPicker } from './WeekdayPicker/WeekdayPicker'
 import { ProgressTile } from './ProgressTile'
 import { RecipeThumb } from './RecipeThumb'
 import { Tile, TileMetric } from './Tile'
@@ -414,6 +416,41 @@ function StickyActionBarGroup() {
   )
 }
 
+function WeekdayPickerGroup() {
+  return (
+    <Group name="WeekdayPicker">
+      <WideCell caption="Selected days (Mon, Wed, Fri) with a helper">
+        <WeekdayPicker label="Apply to" value={[1, 3, 5]} onChange={noop} helper="The same change is made on each chosen day." />
+      </WideCell>
+      <WideCell caption="Error, and a week that starts on Sunday">
+        <WeekdayPicker label="Days" value={[]} onChange={noop} error="Choose at least one weekday." weekStart={7} />
+      </WideCell>
+      <WideCell caption="Disabled">
+        <WeekdayPicker label="Locked" value={[2]} onChange={noop} disabled />
+      </WideCell>
+    </Group>
+  )
+}
+
+/** A Member colour is user data ("#rrggbb"), not a theme colour; built here so the file holds no colour literal. */
+const memberColour = (r: number, g: number, b: number) => `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`
+
+function MemberPillGroup() {
+  return (
+    <Group name="MemberPill">
+      <Cell caption="Initials">
+        <MemberPill name="Anna" colour={memberColour(51, 102, 204)} />
+      </Cell>
+      <Cell caption="Emoji">
+        <MemberPill name="Sam" colour={memberColour(129, 178, 154)} glyph="🦊" />
+      </Cell>
+      <Cell caption="First name only">
+        <MemberPill name="Lucia Maria Bernadette" colour={memberColour(224, 122, 95)} />
+      </Cell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -435,6 +472,8 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <FormActionsGroup />
       <PageGroup />
       <StickyActionBarGroup />
+      <WeekdayPickerGroup />
+      <MemberPillGroup />
       <OverlayGalleryGroups />
     </section>
   )

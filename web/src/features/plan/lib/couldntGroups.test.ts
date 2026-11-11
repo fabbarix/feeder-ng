@@ -94,7 +94,7 @@ describe('every cause: copy, fix action, tone and icon', () => {
   const group = (cause: string) => groupByCause([sample[cause]!])[0]!
 
   it.each([
-    ['nobody_attending', "Couldn't plan 1 Meal Slot. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots', 'info', 'attendance'],
+    ['nobody_attending', "Couldn't plan 1 Meal Slot. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots#meal-slot-1', 'info', 'attendance'],
     ['no_recipes', "Couldn't plan 1 Meal Slot. There are no Recipes to choose from.", 'Add Recipes', '/recipes', 'info', 'recipes'],
     ['slot_rule', "Couldn't plan 1 Meal Slot. Nothing that matches its Slot Rule is available.", 'Review Slot Rules', '/settings/planning', 'warn', 'slotRule'],
     ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/recipes', 'warn', 'exclusion'],

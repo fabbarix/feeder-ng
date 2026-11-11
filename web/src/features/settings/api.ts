@@ -7,6 +7,8 @@ import type {
   HouseholdSettings,
   MealSlot,
   MealSlotInput,
+  SlotBatchRequest,
+  SlotBatchResult,
   Member,
   MemberInput,
   Preferences,
@@ -24,6 +26,7 @@ export const settingsApi = {
   listMealSlots: () => http.get<MealSlot[]>('/api/meal-slots'),
   createMealSlot: (body: MealSlotInput) => http.post<MealSlot>('/api/meal-slots', body),
   updateMealSlot: (id: number, body: MealSlotInput) => http.patch<MealSlot>(`/api/meal-slots/${id}`, body),
+  batchUpdateMealSlots: (body: SlotBatchRequest) => http.patch<SlotBatchResult>('/api/meal-slots/batch', body),
   deleteMealSlot: (id: number) => http.delete<void>(`/api/meal-slots/${id}`),
   getAttendance: (slotId: number, date: string) =>
     http.get<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`),

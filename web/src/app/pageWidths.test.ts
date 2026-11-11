@@ -25,7 +25,7 @@ describe('pageWidthFor: the per-route width table', () => {
     ['/settings', 'narrow'],
     ['/settings/household', 'narrow'],
     ['/settings/members', 'narrow'],
-    ['/settings/meal-slots', 'narrow'],
+    ['/settings/meal-slots', 'default'],
     ['/settings/planning', 'narrow'],
     ['/settings/shops', 'narrow'],
     ['/settings/shops/7', 'narrow'],

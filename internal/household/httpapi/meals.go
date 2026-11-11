@@ -139,6 +139,61 @@ func (a *api) updateSlot(w http.ResponseWriter, r *http.Request) {
 	a.writeSlot(w, r, http.StatusOK, s)
 }
 
+// batchIn is the body of PATCH /api/meal-slots/batch. Only the fields present change.
+type batchIn struct {
+	Match    string `json:"match"`
+	Weekdays []int  `json:"weekdays"`
+	Set      struct {
+		Name       *string        `json:"name"`
+		Time       *string        `json:"time"`
+		Attendance []attendeeBody `json:"attendance"`
+	} `json:"set"`
+}
+
+type skippedBody struct {
+	Weekday int    `json:"weekday"`
+	Reason  string `json:"reason"`
+}
+
+func (a *api) updateSlotsBatch(w http.ResponseWriter, r *http.Request) {
+	var in batchIn
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		writeErr(w, err)
+		return
+	}
+	b := household.BatchInput{Match: in.Match, Weekdays: in.Weekdays,
+		Change: household.SlotChange{Name: in.Set.Name, Time: in.Set.Time}}
+	if in.Set.Attendance != nil { // [] = nobody, absent = untouched
+		att := attendeesIn(in.Set.Attendance)
+		b.Change.Attendance = &att
+	}
+	b = b.Normalized()
+	if err := b.Validate(); err != nil {
+		writeErr(w, err)
+		return
+	}
+	res, err := a.st.UpdateSlotsBatch(r.Context(), b)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed("mealSlots")
+	updated := make([]slotBody, 0, len(res.Updated))
+	for _, s := range res.Updated {
+		body, err := a.slotOut(r, s)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		updated = append(updated, body)
+	}
+	skipped := make([]skippedBody, 0, len(res.Skipped))
+	for _, d := range res.Skipped {
+		skipped = append(skipped, skippedBody{Weekday: d, Reason: "no_slot"})
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"match": b.Match, "updated": updated, "skipped": skipped})
+}
+
 func (a *api) writeSlot(w http.ResponseWriter, r *http.Request, status int, s household.MealSlot) {
 	b, err := a.slotOut(r, s)
 	if err != nil {

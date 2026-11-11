@@ -1,5 +1,6 @@
-import { Tile } from '../../../ui'
+import { Tile, useMediaQuery } from '../../../ui'
 import { DateAttendancePanel } from '../components/DateAttendancePanel'
+import { MealSlotGrid } from '../components/MealSlotGrid'
 import { MealSlotEditor } from '../components/MealSlotEditor'
 import { MealSlotWeek } from '../components/MealSlotWeek'
 import { SettingsHeader } from '../components/SettingsHeader'
@@ -11,6 +12,8 @@ import '../settings.css'
  *  (Admin) or the one-date Attendance (plain User). */
 export function MealSlotsPage() {
   const page = useMealSlotsPage()
+  const Overview = useMediaQuery('(min-width: 1024px)') ? MealSlotGrid : MealSlotWeek
+  const overview = { slots: page.slots.slots, members: page.members.members, canEdit: page.isAdmin, addDisabled: page.members.isPending, onAdd: page.addOn, onOpen: page.open }
   const { editor, dateEditor, attendance } = page
   return (
     <div className="settings">
@@ -19,7 +22,7 @@ export function MealSlotsPage() {
         {page.slots.isPending ? (
           <p role="status">{settingsStrings.loading}</p>
         ) : (
-          <MealSlotWeek slots={page.slots.slots} members={page.members.members} canEdit={page.isAdmin} addDisabled={page.members.isPending} onAdd={page.addOn} onOpen={page.open} />
+          <Overview {...overview} />
         )}
       </Tile>
       <MealSlotEditor
@@ -27,9 +30,12 @@ export function MealSlotsPage() {
         slot={editor?.item}
         members={page.members.members}
         defaultWeekdays={editor?.defaultWeekdays}
+        defaultName={editor?.defaultName}
         saving={page.slots.saving}
         error={page.error}
         onSave={page.save}
+        slots={page.slots.slots}
+        onApply={page.apply}
         onDelete={page.remove}
         onChangeDate={editor?.item ? page.changeDate : undefined}
         onClose={page.closeEditor}
