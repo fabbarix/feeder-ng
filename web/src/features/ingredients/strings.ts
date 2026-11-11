@@ -5,6 +5,8 @@ export const strings = {
   newIngredient: 'New Ingredient',
   createIngredient: 'Create Ingredient',
   nameLabel: 'Name',
+  /** PT: the Ingredient page's Tile of the Members who exclude it (rx-pt.md section 5.4). */
+  excludedBy: 'Excluded by',
   baseUnitLabel: 'Base Unit',
   /** R14 / F-09: the New Ingredient sheet. */
   sheet: {

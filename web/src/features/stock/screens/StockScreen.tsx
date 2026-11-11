@@ -1,5 +1,5 @@
 /**
- * The Pantry screen (route /stock; the page is called Pantry, its contents are Stock): by default every Stock Lot
+ * The Pantry screen (route /pantry, with /stock redirecting to it; the page is called Pantry, its contents are Stock): by default every Stock Lot
  * grouped by Storage Place (usePantry, PantryFilters, PantryLotRow, LotSheet with "Move to"), or "By Ingredient" the
  * per-Ingredient totals below.
  *
