@@ -97,7 +97,7 @@ describe('every cause: copy, fix action, tone and icon', () => {
     ['nobody_attending', "Couldn't plan 1 Meal Slot. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots', 'info', 'attendance'],
     ['no_recipes', "Couldn't plan 1 Meal Slot. There are no Recipes to choose from.", 'Add Recipes', '/recipes', 'info', 'recipes'],
     ['slot_rule', "Couldn't plan 1 Meal Slot. Nothing that matches its Slot Rule is available.", 'Review Slot Rules', '/settings/planning', 'warn', 'slotRule'],
-    ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/settings/preferences', 'warn', 'exclusion'],
+    ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/recipes', 'warn', 'exclusion'],
     ['cool_down', "Couldn't plan 1 Meal Slot. Every Recipe is in Cool-down.", 'Review Cool-down', '/settings/household', 'warn', 'duration'],
     ['variety_rule', "Couldn't plan 1 Meal Slot. Every Recipe is blocked by a Variety Rule.", 'Review Variety Rules', '/settings/planning', 'warn', 'varietyRule'],
     ['advance_step', "Couldn't plan 1 Meal Slot. Every Recipe needs an Advance Step that is already too late.", 'Choose a Recipe', '/plan', 'warn', 'advanceStep'],

@@ -333,7 +333,7 @@ func TestDiscardExpiredPublishesStockWasteAfterAnInTransactionWaste(t *testing.T
 }
 
 // R13: migration 1230 fixes Attendance, but plan_unfilled rows written before it stay until a replan. With ReplanOnStart
-// the Runner invalidates itself with ReasonAttendanceChanged when it starts, so the stale rows are cleared at once.
+// the Runner invalidates itself with ReasonStartup when it starts, so the stale rows are cleared at once.
 func TestStartupReplanClearsStaleUnfilledRows(t *testing.T) {
 	e := newEnv(t)
 	e.mustPlan()
@@ -356,6 +356,9 @@ func TestStartupReplanClearsStaleUnfilledRows(t *testing.T) {
 	boot := runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: e.stock, Events: e.bus, ReplanOnStart: true})
 	if !boot.Updating() {
 		t.Fatal("a Runner with ReplanOnStart must be pending before its worker starts")
+	}
+	if got := boot.PendingReason(); got != plan.ReasonStartup {
+		t.Fatalf("startup replan reason = %q, want %q", got, plan.ReasonStartup)
 	}
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -74,5 +75,22 @@ describe('SetupChecklistTile: the first-run Today', () => {
   it('renders nothing when the checklist is not visible', () => {
     const { container } = render(<SetupChecklistTile checklist={setupChecklist(null)} onAction={() => {}} />)
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('R13: the step button carries the class today.css lays out, and the CSS never targets a class Button does not render', () => {
+    setup()
+    const button = screen.getByRole('button', { name: 'Add Members' })
+    expect(button).toHaveClass('today__setup-action')
+    expect(button.parentElement).toHaveClass('today__setup-step')
+    const css = readFileSync(new URL('../today.css', import.meta.url), 'utf8')
+    expect(css).toContain('.today__setup-step > .today__setup-action')
+    expect(css).not.toMatch(/\.today__setup-step > \.btn\b/)
+  })
+
+  it('R13: a plain User gets the button on the first open step they can act on', () => {
+    setup(fresh, false)
+    expect(screen.queryByRole('button', { name: 'Add Members' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add a Recipe' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 })
