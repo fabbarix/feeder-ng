@@ -117,5 +117,21 @@ for f in "$CI" "$REL"; do
   fi
 done
 
+# One Go toolchain version everywhere: go.mod, CI/release (via go-version-file) and the Dockerfile builder.
+GOVER="1.26.11"
+GOMOD="$HERE/../../go.mod"
+DOCKERFILE="$HERE/../../Dockerfile"
+has "$GOMOD" "^go ${GOVER//./\\.}\$" "go.mod go directive is not ${GOVER}"
+if grep -Eq '^toolchain ' "$GOMOD"; then
+  has "$GOMOD" "^toolchain go${GOVER//./\\.}\$" "go.mod toolchain line is not go${GOVER}"
+else
+  ok
+fi
+has "$CI"  'go-version-file:\s*go\.mod' "ci.yml setup-go must read the Go version from go.mod"
+has "$REL" 'go-version-file:\s*go\.mod' "release.yml setup-go must read the Go version from go.mod"
+lacks "$CI"  '^\s*go-version:' "ci.yml pins a literal go-version instead of go.mod"
+lacks "$REL" '^\s*go-version:' "release.yml pins a literal go-version instead of go.mod"
+has "$DOCKERFILE" "^FROM .*golang:${GOVER//./\\.}([-@ ]|\$)" "Dockerfile builder image is not golang:${GOVER}"
+
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

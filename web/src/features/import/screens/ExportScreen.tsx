@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { ErrorState, PageHeader } from '../../../ui'
+import { ErrorState, PageHeader, Skeleton } from '../../../ui'
 import { ExportPicker } from '../components/ExportPicker'
 import { useExportPicker } from '../hooks/useExportPicker'
 import { importStrings as s } from '../strings'
@@ -12,7 +12,11 @@ export function ExportScreen(): ReactNode {
   return (
     <section className="import-screen">
       <PageHeader title={s.exportTitle} breadcrumbs={useBreadcrumbs()} />
-      {p.isLoading ? <p>{s.loading}</p> : null}
+      {p.isLoading ? (
+        <div aria-busy="true">
+          <Skeleton variant="row" count={5} />
+        </div>
+      ) : null}
       {p.error ? <ErrorState message={p.error.message} /> : null}
       {!p.isLoading && !p.error ? (
         <ExportPicker recipes={p.recipes} selected={p.selected} onToggle={p.toggle} onSelectAll={p.selectAll} onClear={p.clear} href={p.href} />

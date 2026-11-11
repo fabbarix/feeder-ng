@@ -29,17 +29,16 @@ describe('SpoiledTile', () => {
     )
     expect(screen.getByText('Throw out or keep?')).toBeInTheDocument()
     expect(screen.getByText('Chicken thighs')).toBeInTheDocument()
-    expect(screen.getByText('200 g')).toBeInTheDocument()
-    expect(screen.getByText('Went off 4 days ago')).toBeInTheDocument()
-    expect(screen.getByText('1000 ml')).toBeInTheDocument()
+    // L-07: each lot is a ListRow; the meta line carries the amount and the go-off wording.
+    expect(screen.getByText('200 g · Went off 4 days ago')).toBeInTheDocument()
+    expect(screen.getByText('1000 ml · Went off yesterday')).toBeInTheDocument()
     expect(screen.getByText('Milk')).toBeInTheDocument()
-    expect(screen.getByText('Went off yesterday')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'danger')
   })
 
   it('capitalises names for display only; the button names keep the stored name', () => {
     render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
-    expect(document.querySelector('.spoiled-tile__name')).toHaveTextContent('Chicken thighs')
+    expect(document.querySelector('.list-row__title')).toHaveTextContent('Chicken thighs')
     expect(screen.getByRole('button', { name: 'Throw out chicken thighs' })).toBeInTheDocument()
   })
 

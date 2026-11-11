@@ -1,6 +1,4 @@
 # Per-route mode of the page-layout guard (scripts/check-page-layout.sh). warn = findings are printed, the run passes.
 # An adoption package flips its routes to fail when it merges (patterns: exact, :id, trailing /*).
 default=warn
-fail_routes=/recipes/:id /recipes/:id/edit /recipes/new
-# warn_routes win over fail_routes: /recipes/:id would otherwise also match /recipes/import and /recipes/export (R2-4 and the Recipe Assistant own those).
-warn_routes=/recipes/import /recipes/export
+fail_routes=/stock /shop /scan /recipes/import /recipes/export /board /cook/* /recipes/:id /recipes/:id/edit /recipes/new
