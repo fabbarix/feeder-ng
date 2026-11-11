@@ -106,7 +106,7 @@ func TestTheAgentPromptTellsTheAgentAboutReheatMinutes(t *testing.T) {
 			t.Errorf("the reheatMinutes rule should mention %q", want)
 		}
 	}
-	prompt := recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example))
+	prompt := recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example), nil)
 	// the schema and the example are inlined too, so the key shows up there as well
 	if strings.Count(prompt, "reheatMinutes") < 3 {
 		t.Fatalf("expected the rule, the schema and the example to mention reheatMinutes, got %d", strings.Count(prompt, "reheatMinutes"))

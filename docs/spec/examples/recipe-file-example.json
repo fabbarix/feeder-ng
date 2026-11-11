@@ -18,6 +18,8 @@
       "name": "Chicken tikka traybake",
       "description": "Yogurt-marinated chicken roasted with onions and peppers, spinach stirred through at the end.",
       "yield": 4,
+      "courses": ["Main"],
+      "wholeMeal": true,
       "tags": ["chicken", "traybake", "weeknight"],
       "cooldownDays": 10,
       "leftoverUseByDays": 2,
@@ -75,6 +77,8 @@
       "name": "Lasagne (ready meal)",
       "yield": 2,
       "readyMeal": true,
+      "courses": ["Main"],
+      "wholeMeal": true,
       "tags": ["ready meal", "pasta"],
       "ingredients": [{ "ingredient": "lasagne ready meal", "quantity": 1, "unit": "piece" }],
       "steps": [{ "text": "Bake from chilled at 190 °C.", "kind": "passive", "durationMinutes": 40 }]

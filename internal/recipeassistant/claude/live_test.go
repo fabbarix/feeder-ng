@@ -55,7 +55,7 @@ func TestLiveReadStreamsARecipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	system := recipeassistant.SystemPrompt(recipefile.AgentPrompt(tmpl, string(spec.Schema), string(spec.Example)))
+	system := recipeassistant.SystemPrompt(recipefile.AgentPrompt(tmpl, string(spec.Schema), string(spec.Example), nil))
 	source := liveText
 	if t := os.Getenv("FEEDER_LIVE_TEXT"); t != "" {
 		source = t // a smaller recipe, to tell the schema's cost from the answer's

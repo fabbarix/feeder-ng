@@ -46,10 +46,15 @@ type Source struct {
 // pointers so that 0 ("same day") differs from absent. Image is a data URL or
 // an https URL.
 type Recipe struct {
-	Name              string   `json:"name"`
-	Description       string   `json:"description,omitempty"`
-	Yield             float64  `json:"yield"`
-	ReadyMeal         bool     `json:"readyMeal,omitempty"`
+	Name        string  `json:"name"`
+	Description string  `json:"description,omitempty"`
+	Yield       float64 `json:"yield"`
+	ReadyMeal   bool    `json:"readyMeal,omitempty"`
+	// Courses are Course names (crs-e1): written in household order, matched on import with course.NameKey.
+	// Empty means the main Course.
+	Courses []string `json:"courses,omitempty"`
+	// WholeMeal is a pointer so that false differs from absent; absent and null both mean "use the default".
+	WholeMeal         *bool    `json:"wholeMeal,omitempty"`
 	Tags              []string `json:"tags,omitempty"`
 	CooldownDays      *int     `json:"cooldownDays,omitempty"`
 	LeftoverUseByDays *int     `json:"leftoverUseByDays,omitempty"`

@@ -28,6 +28,7 @@ type review struct {
 
 	recipes  []RecipeStatus
 	kept     []bool
+	courses  *courseState // crs-e1: nil when the caller knows no Courses
 	imported []string
 	cleaned  map[int]recipe.Input
 
@@ -87,6 +88,7 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		r.takenNames[e.Key()] = true
 	}
 	r.buildRecipeRows()
+	r.buildCourses()
 	r.buildIngredientRows()
 	r.resolveRows()
 	r.checkUnits()
@@ -665,10 +667,17 @@ func (r *review) plan() Plan {
 		Ingredients: []IngredientMatch{},
 		UnitPrompts: append([]UnitPrompt{}, r.prompts...),
 		Recipes:     append([]RecipeStatus{}, r.recipes...),
+		Courses:     []CourseMatch{},
 		Problems:    append([]Problem{}, r.problems...),
 		Warnings:    append([]Warning{}, r.warnings...),
 	}
 	ready := len(r.problems) == 0
+	if r.courses != nil {
+		p.Courses = append(p.Courses, r.courses.rows...)
+		for _, c := range r.courses.rows {
+			ready = ready && c.Resolved
+		}
+	}
 	adopts := r.adoptions()
 	for _, row := range r.rows {
 		m := IngredientMatch{
@@ -696,6 +705,10 @@ func (r *review) plan() Plan {
 // commit is the write set of a ready review.
 func (r *review) commit() Commit {
 	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings}
+	if r.courses != nil {
+		c.NewCourses = r.courses.newCourses
+		c.UnarchiveCourses = r.courses.unarchive
+	}
 	adopts := r.adoptions()
 	for _, row := range r.rows {
 		t := row.target
@@ -763,6 +776,16 @@ func (r *review) recipeCommit(i int, rec Recipe) RecipeCommit {
 	if p := fmt.Sprintf("$.recipes[%d].image", i); r.hasImage(p) {
 		rc.ImagePath = p
 	}
+	if st := r.courses; st != nil {
+		w := st.recipeWhol[i]
+		in.CourseIDs = st.recipeIDs[i]
+		in.WholeMeal = &w
+		rc.NewCourseKeys = st.recipeNew[i]
+	} else if rec.WholeMeal != nil {
+		w := *rec.WholeMeal
+		in.WholeMeal = &w
+	}
+	rc.Input = in
 	return rc
 }
 
