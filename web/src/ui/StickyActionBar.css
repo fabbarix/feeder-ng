@@ -1,0 +1,44 @@
+/* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-clearance is 0 from 1024). */
+:root {
+  /* Room a focused field keeps above the bar (WCAG 2.4.11). */
+  --sticky-bar-clearance: 96px;
+}
+
+html:has(.sticky-action-bar) {
+  scroll-padding-block-end: var(--sticky-bar-clearance);
+}
+
+.sticky-action-bar {
+  position: sticky;
+  bottom: var(--nav-clearance);
+  z-index: 5;
+  margin-inline: calc(-1 * var(--page-gutter));
+  padding-inline: var(--page-gutter);
+  padding-block: var(--space-3);
+  background: var(--color-surface);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.sticky-action-bar[data-stuck='true'] {
+  box-shadow: var(--elev-2);
+}
+
+.sticky-action-bar__sentinel {
+  display: block;
+  block-size: 0;
+  pointer-events: none;
+}
+
+.sticky-action-bar__inner {
+  margin-inline: auto;
+}
+
+.sticky-action-bar[data-column='narrow'] .sticky-action-bar__inner {
+  max-inline-size: var(--page-narrow);
+}
+
+@media (min-width: 1024px) {
+  .sticky-action-bar {
+    padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+}

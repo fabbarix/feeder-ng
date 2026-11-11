@@ -47,6 +47,11 @@
   --space-10: 40px;
   --space-14: 56px;
   --gutter: 16px;
+  /* Page content widths (L-01): ui/Page adds the two gutters. One table per route: app/pageWidths.ts. */
+  --page-narrow: 720px;
+  --page-default: 1120px;
+  --page-wide: 1480px;
+  --page-gutter: var(--gutter);
   --bento-gap: 10px;
   --tile-pad: 16px;
   --tile-overline-gap: 6px;
@@ -121,6 +126,8 @@
   --status-pinned-fg: #3e3f7c;
   --status-pinned-bg: #e3e6fe;
   --status-pinned-solid: #5b5cb7;
+  --color-info-fg: #1b4a7a;
+  --color-info-bg: #d9e9fb;
   --color-background: var(--color-bg);
   --color-on-background: var(--color-text);
   --color-surface-container-low: var(--color-surface);
@@ -191,6 +198,8 @@
     --status-success-bg: #14361d;
     --status-pinned-fg: #c7cdff;
     --status-pinned-bg: #282a4b;
+    --color-info-fg: #a9d0f5;
+    --color-info-bg: #14304c;
     --elev-1: none;
     --elev-2: none;
     --elev-3: none;
@@ -224,6 +233,8 @@
   --status-success-bg: #14361d;
   --status-pinned-fg: #c7cdff;
   --status-pinned-bg: #282a4b;
+  --color-info-fg: #a9d0f5;
+  --color-info-bg: #14304c;
   --elev-1: none;
   --elev-2: none;
   --elev-3: none;
