@@ -6,7 +6,6 @@ package httpapi
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"path/filepath"
