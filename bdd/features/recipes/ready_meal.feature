@@ -105,3 +105,14 @@ Feature: A Ready Meal and its Ingredient
     Then the response status is 200
     And the Recipe JSON "lines.0.ingredient" is "Lasagne pack"
     And the household has 1 Ingredients
+
+  Scenario: A Step cannot use an Ingredient that does not exist
+    When I create a Recipe with JSON:
+      """
+      {"name": "Lasagne pack", "yield": 2, "readyMeal": true, "lines": [],
+       "steps": [{"text": "Heat", "kind": "active", "durationMinutes": 5,
+                  "uses": [{"ingredientId": -1, "quantity": 1, "unit": "piece"}]}]}
+      """
+    Then the response status is 422
+    And the Recipe JSON "error.reason" is "unknown_ingredient"
+    And the household has no Ingredient "Lasagne pack"

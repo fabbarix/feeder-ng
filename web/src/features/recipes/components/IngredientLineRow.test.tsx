@@ -40,6 +40,15 @@ describe('IngredientLineRow', () => {
     expect(p.onChange).toHaveBeenCalledWith({ unit: 'kg' })
   })
 
+  it('asks for the pack size when a reused g or ml Ingredient leaves the Ready Meal quantity blank', () => {
+    view(props({ line: line({ auto: true, ingredientId: 7, ingredientName: 'garlic', quantity: '', unit: 'g' }) }))
+    expect(screen.getByText('Enter the pack size')).toBeInTheDocument()
+  })
+  it('gives no pack size hint once a quantity is typed or for an ordinary line', () => {
+    view(props({ line: line({ auto: true, quantity: '500', unit: 'g' }) }))
+    expect(screen.queryByText('Enter the pack size')).toBeNull()
+  })
+
   it('has no Unit choice before an Ingredient is picked', () => {
     view(props({ line: line({ ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined }))
     expect(screen.getByRole('combobox', { name: 'Unit' })).toBeDisabled()

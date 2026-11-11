@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
@@ -56,6 +56,18 @@ describe('NewIngredientSheet: layout (F-09)', () => {
   it('leaves room for the later picture field without rendering one', () => {
     setup()
     expect(document.querySelector('input[type=file]')).toBeNull()
+  })
+})
+
+describe('NewIngredientSheet: while creating', () => {
+  it('disables the Base Unit options until the create settles', async () => {
+    let finish: (i: Ingredient) => void = () => {}
+    setup({ initialName: 'Saffron', onCreate: vi.fn(() => new Promise<Ingredient>((r) => { finish = r })) })
+    await userEvent.click(create())
+    await waitFor(() => expect(unit('ml')).toBeDisabled())
+    expect(unit('g')).toBeDisabled()
+    expect(unit('piece')).toBeDisabled()
+    finish(created)
   })
 })
 
