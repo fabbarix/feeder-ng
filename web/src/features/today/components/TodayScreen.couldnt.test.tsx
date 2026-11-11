@@ -92,7 +92,7 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     // a tile in the Bento grid at the right size (two columns), warm info tone, never the pink danger tile
     const tile = slotEl.querySelector('[data-cause="nobody_attending"]') as HTMLElement
     expect(tile).toHaveAttribute('data-span', '2')
-    expect(tile).toHaveAttribute('data-variant', 'soft')
+    expect(tile).toHaveAttribute('data-variant', 'status')
     expect(slotEl.querySelector('[data-status="danger"]')).toBeNull()
   })
 

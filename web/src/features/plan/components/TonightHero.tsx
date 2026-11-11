@@ -65,25 +65,29 @@ export function TonightHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
       </div>
       {!awaiting ? (
         action === 'cook' ? (
-          <Button variant="primary" icon="cook" onClick={() => onCook(key)}>
-            {heroCookLabel(meal)}
-          </Button>
+          <div className="plan-hero__actions">
+            <Button variant="primary" size="lg" block="phone" icon="cook" onClick={() => onCook(key)}>
+              {heroCookLabel(meal)}
+            </Button>
+          </div>
         ) : canReheat ? (
-          <Button variant="primary" icon="reheat" onClick={() => onReheat(key)}>
-            {s.reheat}
-          </Button>
+          <div className="plan-hero__actions">
+            <Button variant="primary" size="lg" block="phone" icon="reheat" onClick={() => onReheat(key)}>
+              {s.reheat}
+            </Button>
+          </div>
         ) : null
       ) : (
         <div className="plan-hero__actions">
-          <Button variant="primary" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
+          <Button variant="primary" size="lg" block="phone" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
             {s.yesCooked}
           </Button>
           {canReheat ? (
-            <Button variant="secondary" icon="reheat" disabled={busy} onClick={() => onReheat(key)}>
+            <Button variant="secondary" size="lg" icon="reheat" disabled={busy} onClick={() => onReheat(key)}>
               {s.reheat}
             </Button>
           ) : (
-            <Button variant="secondary" disabled={busy} onClick={() => onAdjust(key)}>
+            <Button variant="secondary" size="lg" disabled={busy} onClick={() => onAdjust(key)}>
               {s.adjust}
             </Button>
           )}

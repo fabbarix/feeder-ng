@@ -146,11 +146,11 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 2 })
   })
 
-  it('R13: a setup gap (nobody attends) is the neutral info chip with its reason', () => {
+  it('R13: a setup gap (nobody attends) is the blue info chip with its reason', () => {
     setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
     const chip = screen.getByText('Not planned').closest('.chip')!
-    expect(chip).toHaveAttribute('data-kind', 'tag')
-    expect(chip).not.toHaveAttribute('data-status')
+    expect(chip).toHaveAttribute('data-kind', 'status')
+    expect(chip).toHaveAttribute('data-status', 'info')
     expect(screen.getByText('Nobody is set to attend.')).toBeInTheDocument()
   })
 

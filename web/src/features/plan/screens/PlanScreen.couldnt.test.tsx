@@ -51,9 +51,9 @@ describe('PlanScreen: Couldn\'t plan', () => {
     mockApi({ 'GET /api/plan': nobodyAttends })
     renderWithProviders(<PlanScreen />)
     const today = await dayTile('Today')
-    expect(within(today).getByText('Not planned').closest('.chip')).toHaveAttribute('data-kind', 'tag')
+    expect(within(today).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'info')
     expect(within(await dayTile('Tomorrow')).getByText('Not planned')).toBeInTheDocument()
-    expect(within(await dayTile('Thu')).queryByText('Not planned')).not.toBeInTheDocument()
+    expect(within(await dayTile('Thursday')).queryByText('Not planned')).not.toBeInTheDocument()
   })
 
   it('the fix action goes to the Meal Slots', async () => {

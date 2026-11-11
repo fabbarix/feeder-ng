@@ -47,6 +47,12 @@ describe('today.css at desktop widths', () => {
     expect(tile).toMatch(/\.tile\[data-span='full'\]\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/)
   })
 
+  it('a hero with no other tile falls back to the full row (no hole in the third column)', () => {
+    const r = inMedia(css, /min-width:\s*1280px/, ':only-child').join('\n')
+    expect(r).toMatch(/\.plan-hero/)
+    expect(r).toMatch(/grid-column:\s*1\s*\/\s*-1/)
+  })
+
   it('the .today container adds no side padding of its own (the Page already has the gutters)', () => {
     const rule = css.slice(css.indexOf('.today {'), css.indexOf('}', css.indexOf('.today {')))
     expect(rule).not.toMatch(/padding:\s*\d+px\s*;/) // a shorthand pads all four sides

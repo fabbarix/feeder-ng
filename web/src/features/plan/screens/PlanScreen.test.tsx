@@ -29,11 +29,19 @@ const preview: CookPreview = {
 
 const phone = () =>
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }))
+/** The week grid's container is `width` px wide: a ResizeObserver that reports it as soon as it observes (R2-2, L-05). */
 const widthStub = (width: number) =>
-  vi.stubGlobal('matchMedia', (query: string) => {
-    const min = /min-width:\s*(\d+)px/.exec(query)
-    return { matches: min ? width >= Number(min[1]) : false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }
-  })
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(private cb: (entries: Array<{ contentRect: { width: number }; target: Element }>) => void) {}
+      observe(target: Element) {
+        this.cb([{ contentRect: { width }, target }])
+      }
+      unobserve() {}
+      disconnect() {}
+    },
+  )
 
 const tile = async (name: string) => ((await screen.findByRole('heading', { name })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
@@ -74,10 +82,11 @@ describe('PlanScreen layout (5.2)', () => {
   })
 
   it.each([
-    [390, '2'],
-    [820, '4'],
-    [1280, '7'],
-  ])('at %ipx the week grid has %s columns', async (width, columns) => {
+    [358, '2'],
+    [640, '4'],
+    [1160, '4'],
+    [1480, '7'],
+  ])('at a %ipx container the week grid has %s columns', async (width, columns) => {
     widthStub(width)
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
@@ -85,8 +94,8 @@ describe('PlanScreen layout (5.2)', () => {
     expect(screen.getByRole('group', { name: 'Plan' })).toHaveAttribute('data-columns', columns)
   })
 
-  it('at 1280px (7 columns) today takes one column, keeps its ring, and weekday headings are short', async () => {
-    widthStub(1280)
+  it('at a 1480px container (7 columns) today takes one column, keeps its ring, and weekday headings are short', async () => {
+    widthStub(1480)
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const today = await tile('Today')
@@ -96,8 +105,8 @@ describe('PlanScreen layout (5.2)', () => {
     expect(screen.queryByRole('heading', { name: 'Wednesday' })).not.toBeInTheDocument()
   })
 
-  it('at 1280px (7 columns) a day tile is compact: Recipe name on its own line, ONE action (Cook today, Swap otherwise)', async () => {
-    widthStub(1280)
+  it('at a 1480px container (7 columns) a day tile is compact: Recipe name on its own line, ONE action (Cook today, Swap otherwise)', async () => {
+    widthStub(1480)
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const today = await tile('Today')
@@ -109,8 +118,8 @@ describe('PlanScreen layout (5.2)', () => {
     expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
   })
 
-  it('at 1280px the Planned Meal sheet still offers Swap on today (the action the tile gave up)', async () => {
-    widthStub(1280)
+  it('at a 1480px container the Planned Meal sheet still offers Swap on today (the action the tile gave up)', async () => {
+    widthStub(1480)
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const sheet = await openSheet('Today', 'Chicken')

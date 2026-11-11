@@ -69,11 +69,12 @@ describe('CouldntPlanTile: one compact tile per cause', () => {
     expect(screen.getAllByRole('button').filter((b) => !/Show all|Hide/.test(b.textContent ?? ''))).toHaveLength(1)
   })
 
-  it('a setup gap (info) is a soft tile with an icon, not the danger colour', () => {
+  it('a setup gap (info) is a blue info status tile with an icon, not the danger colour', () => {
     const { container } = setup().view
     const tile = container.querySelector('[data-cause="nobody_attending"]') as HTMLElement
     expect(tile).toHaveAttribute('data-couldnt-tone', 'info')
-    expect(tile).toHaveAttribute('data-variant', 'soft')
+    expect(tile).toHaveAttribute('data-variant', 'status')
+    expect(tile).toHaveAttribute('data-status', 'info')
     expect(tile.querySelector('[data-status="danger"]')).toBeNull()
     expect(tile).not.toHaveAttribute('data-status', 'danger')
     expect(tile.querySelector('.tile__overline svg')).not.toBeNull()

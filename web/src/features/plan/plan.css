@@ -283,3 +283,20 @@
 .plan-meal[data-state='skipped'] .plan-meal__slot {
   color: var(--color-muted);
 }
+
+/* R2-2 (L-05): the box the container-width columns are measured on. */
+.plan__grid-box {
+  min-width: 0;
+}
+
+/* R2-2 (L-07): the hero actions sit at the tile's end on a wide screen; the button keeps its own width. */
+@media (min-width: 820px) {
+  .plan-hero__actions {
+    justify-content: flex-end;
+  }
+  .plan-confirm {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+  }
+}

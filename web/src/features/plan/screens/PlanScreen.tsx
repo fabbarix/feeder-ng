@@ -11,7 +11,7 @@ import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
 import { SwapSheet } from '../components/SwapSheet'
 import { useCouldntFix } from '../hooks/useCouldntFix'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
-import { usePlanColumns } from '../hooks/usePlanColumns'
+import { useContainerColumns } from '../hooks/useContainerColumns'
 import { usePlanScreen } from '../hooks/usePlanScreen'
 import { unplannedOf } from '../lib/couldntGroups'
 import { dateRange, groupByDay } from '../lib/days'
@@ -28,7 +28,7 @@ import '../plan.css'
 export function PlanScreen(): ReactNode {
   const s = usePlanScreen()
   const navigate = useNavigate()
-  const columns = usePlanColumns()
+  const { ref: gridRef, columns } = useContainerColumns()
   const { plan, actions, flow } = s
   const days = groupByDay(plan.slots, plan.today, columns)
   const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
@@ -90,7 +90,9 @@ export function PlanScreen(): ReactNode {
           <CouldntPlanNotice groups={notice.groups} onFix={fix} />
         </BentoGrid>
       )}
-      {body}
+      <div ref={gridRef} className="plan__grid-box">
+        {body}
+      </div>
       <PlannedMealSheet
         open={s.plannedOpen}
         onClose={s.closePlanned}
