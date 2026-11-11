@@ -22,6 +22,8 @@ export interface ChipProps {
   /** Filter chips: on/off. Renders aria-pressed and a Check icon when on. */
   selected?: boolean
   disabled?: boolean
+  /** A TagColourId (spec 4.1): a `tag` or `filter` chip is tinted (a filter only while selected) and shows a leading dot. Unknown ids are ignored. */
+  tagColour?: string
   onClick?: () => void
   /** Accessible name of a clickable chip when it must say more than its text (it should start with the visible text). */
   label?: string
