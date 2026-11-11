@@ -82,7 +82,7 @@ func TestBuildViewSeparatesAdvanceStepsAndNumbersTheRest(t *testing.T) {
 
 func TestBuildViewMarksAndWarnings(t *testing.T) {
 	doneAt := time.Date(2026, 11, 8, 20, 0, 0, 0, time.UTC)
-	v, _ := cook.BuildView(cook.MealScope("2026-11-09", 3), carbonara(), 1, map[int]time.Time{0: doneAt})
+	v, _ := cook.BuildView(cook.MealScope("2026-11-09", 3, 0), carbonara(), 1, map[int]time.Time{0: doneAt})
 	a, b := v.Advance[0], v.Advance[1]
 	if !a.Done || a.Warning || a.DoneAt == nil || !a.DoneAt.Equal(doneAt) {
 		t.Errorf("marked Advance Step = %+v", a)
@@ -91,7 +91,7 @@ func TestBuildViewMarksAndWarnings(t *testing.T) {
 		t.Errorf("unmarked Advance Step must warn: %+v", b)
 	}
 	// A mark on a non-Advance Step index is ignored.
-	v, _ = cook.BuildView(cook.MealScope("2026-11-09", 3), carbonara(), 1, map[int]time.Time{1: doneAt})
+	v, _ = cook.BuildView(cook.MealScope("2026-11-09", 3, 0), carbonara(), 1, map[int]time.Time{1: doneAt})
 	if !v.Advance[0].Warning {
 		t.Error("marks only apply to Advance Steps")
 	}

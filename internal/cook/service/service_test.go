@@ -721,7 +721,7 @@ func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.
 		{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"},
 		{Date: "2026-11-10", MealSlotID: 3, RecipeID: 12, State: "planned"},
 	}
-	meal := cook.MealScope("2026-11-09", 3)
+	meal := cook.MealScope("2026-11-09", 3, 0)
 	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Simmer", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
@@ -733,7 +733,7 @@ func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.
 	if _, err := f.svc.Pause(ctx, paused.ID); err != nil {
 		t.Fatal(err)
 	}
-	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3), Label: "Other", DurationSeconds: 600})
+	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3, 0), Label: "Other", DurationSeconds: 600})
 	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
 	ch, cancel := f.bus.Subscribe(service.TopicTimers)
 	defer cancel()
@@ -772,11 +772,11 @@ func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 	f := setup(t)
 	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
 	for scope, want := range map[cook.Scope]string{
-		cook.MealScope("2026-11-09", 3): "Chicken stew",
-		cook.RecipeScope(12):            "Chicken stew",
-		cook.MealScope("2026-11-20", 1): "",
-		cook.RecipeScope(99):            "",
-		"":                              "",
+		cook.MealScope("2026-11-09", 3, 0): "Chicken stew",
+		cook.RecipeScope(12):               "Chicken stew",
+		cook.MealScope("2026-11-20", 1, 0): "",
+		cook.RecipeScope(99):               "",
+		"":                                 "",
 	} {
 		if got := f.svc.ScopeRecipeName(ctx, scope); got != want {
 			t.Errorf("ScopeRecipeName(%q) = %q, want %q", scope, got, want)
@@ -791,7 +791,7 @@ func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 func TestTimersWithRecipeNamesResolvesTheNameOfEachScope(t *testing.T) {
 	f := setup(t)
 	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
-	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3), Label: "Rest", DurationSeconds: 600})
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3, 0), Label: "Rest", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,10 +15,13 @@ import (
 // appears in the "To confirm" list (spec §8).
 const ConfirmAfter = 2 * time.Hour
 
-// Key identifies one Meal Slot on one date (YYYY-MM-DD, household time).
+// Key identifies one Course of one Meal Slot on one date (YYYY-MM-DD, household
+// time). CourseID 0 is the transition shim: until the planner and handlers
+// switch over, it means the main Course (ADR 0008).
 type Key struct {
 	Date       string
 	MealSlotID int64
+	CourseID   int64
 }
 
 // State is the state of a Planned Meal. Pinned is a separate flag on a planned meal.
@@ -88,6 +91,7 @@ type Leftover struct {
 type SlotRule struct {
 	ID         int64
 	MealSlotID int64
+	CourseID   int64 // 0: the main Course (transition shim)
 	RecipeID   int64
 	Tag        string
 }
