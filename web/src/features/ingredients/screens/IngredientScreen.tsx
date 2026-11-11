@@ -100,7 +100,7 @@ export function IngredientScreen() {
       )}
 
       <BentoGrid columns={2} label={strings.detailsLabel}>
-        <Tile as="section" aria-label={strings.baseUnitLabel}>
+        <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
           {locked ? (
             <>
               <div className="base-unit__value" data-testid="base-unit-value">
@@ -120,7 +120,7 @@ export function IngredientScreen() {
           )}
         </Tile>
 
-        <Tile as="section" aria-label={strings.shelfLifeTile}>
+        <Tile as="section" className="ingredient__tile" aria-label={strings.shelfLifeTile}>
           <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
         </Tile>
 
