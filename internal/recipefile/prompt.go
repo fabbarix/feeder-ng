@@ -55,10 +55,21 @@ type PromptCourse struct {
 // "- <name>", the main Course as "- <name> (default)"; no Course gives
 // "(no Courses defined)". The result is what "Copy Agent Prompt" copies.
 func AgentPrompt(template, schema, example string, courses []PromptCourse) string {
-	_ = courses // STUB (crs-e1): the developer renders the list; until then the placeholder is replaced by nothing
 	schema = strings.TrimRight(schema, "\r\n")
 	example = strings.TrimRight(example, "\r\n")
+	list := "(no Courses defined)"
+	if len(courses) > 0 {
+		lines := make([]string, 0, len(courses))
+		for _, c := range courses {
+			line := "- " + c.Name
+			if c.Main {
+				line += " (default)"
+			}
+			lines = append(lines, line)
+		}
+		list = strings.Join(lines, "\n")
+	}
 	// One pass, so text inserted for one placeholder is never expanded again.
-	r := strings.NewReplacer("{{SCHEMA}}", schema, "{{EXAMPLE}}", example, "{{COURSES}}", "")
+	r := strings.NewReplacer("{{SCHEMA}}", schema, "{{EXAMPLE}}", example, "{{COURSES}}", list)
 	return r.Replace(template)
 }

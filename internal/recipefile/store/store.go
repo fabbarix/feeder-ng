@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	imgs "github.com/fabbarix/feeder-ng/internal/images"
 	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
@@ -37,6 +39,7 @@ type Store struct {
 	images      *imaging.Store
 	ingredients *ingstore.Store
 	recipes     *recipestore.Store
+	courses     *coursestore.Store
 	guarded     *imgs.Guarded
 }
 
@@ -50,8 +53,12 @@ func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
 		images:      images,
 		ingredients: ingstore.New(d, clk),
 		recipes:     recipestore.New(d, clk, nil).WithImages(guarded),
+		courses:     coursestore.New(d, clk),
 	}
 }
+
+// now is the timestamp of a row written by this store.
+func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 
 // Existing loads every Ingredient (with Unit Conversions) and every Recipe id
 // and name (archived ones too).
@@ -68,6 +75,10 @@ func (s *Store) Existing(ctx context.Context) (recipefile.Existing, error) {
 	}
 	for _, r := range recs {
 		ex.Recipes = append(ex.Recipes, recipefile.RecipeRef{ID: r.ID, Name: r.Name})
+	}
+	ex.Courses, err = s.existingCourses(ctx)
+	if err != nil {
+		return ex, err
 	}
 	return ex, nil
 }
@@ -253,6 +264,11 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 		}
 	}
 
+	newCourses, err := applyCourses(ctx, tx, c, &res, s.now())
+	if err != nil {
+		return Result{}, nil, nil, err
+	}
+
 	names, err := recipeNames(ctx, tx)
 	if err != nil {
 		return Result{}, nil, nil, err
@@ -266,7 +282,7 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 
 	var replaced []string
 	for _, rc := range c.Recipes {
-		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, imageIDs, names, replacing)
+		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, newCourses, imageIDs, names, replacing)
 		if err != nil {
 			return Result{}, nil, nil, err
 		}
@@ -334,8 +350,18 @@ func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.
 // Commit's resolution, and its Input is validated again against the Ingredients
 // as they are inside this transaction.
 func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit, rc recipefile.RecipeCommit,
-	created map[string]int64, imageIDs map[string]string, names nameIndex, replacing map[int64]bool) (AppliedRecipe, []string, error) {
+	created, newCourses map[string]int64, imageIDs map[string]string, names nameIndex, replacing map[int64]bool) (AppliedRecipe, []string, error) {
 	in := rc.Input
+	courseIDs, err := courseIDsFor(rc, newCourses)
+	if err != nil {
+		return AppliedRecipe{}, nil, err
+	}
+	if courseIDs != nil {
+		if err := requireActive(ctx, tx, courseIDs); err != nil {
+			return AppliedRecipe{}, nil, err
+		}
+	}
+	in.CourseIDs = courseIDs
 	idOf := func(key string) (int64, error) {
 		r, ok := c.Resolved[key]
 		if !ok {

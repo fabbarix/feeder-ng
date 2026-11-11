@@ -32,18 +32,19 @@ func init() { app.Register(app.Module{Name: "recipefile", Mount: mount}) }
 const (
 	topicRecipes     = "recipes"
 	topicIngredients = "ingredients"
+	topicCourses     = "courses"
 )
 
 func mount(r *app.Router, d app.Deps) {
 	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
-	prompt, promptErr := recipefile.ExtractTemplate(spec.RecipeFileMD)
+	tmpl, tmplErr := recipefile.ExtractTemplate(spec.RecipeFileMD)
 	a := &api{
 		store:     store.New(d.DB, d.Clock, images),
 		sessions:  recipefile.NewSessions(d.Clock),
 		fetcher:   imagefetch.New(imagefetch.Options{}),
 		events:    d.Events,
-		prompt:    recipefile.AgentPrompt(prompt, string(spec.Schema), string(spec.Example), nil),
-		promptOK:  promptErr == nil,
+		template:  tmpl,
+		tmplOK:    tmplErr == nil,
 		assistant: service.For(d, claude.Factory(d.Logger)),
 	}
 	r.Public("GET /schema/recipe-file-v1.json", schema)
@@ -65,8 +66,8 @@ type api struct {
 	sessions *recipefile.Sessions
 	fetcher  recipefile.Fetcher
 	events   *events.Bus
-	prompt   string
-	promptOK bool
+	template string // the Agent Prompt template; the prompt is built per request with the Courses (crs-e1)
+	tmplOK   bool
 	// assistant is the one Recipe Assistant service of the application (shared with its settings module).
 	assistant *service.Service
 }
@@ -78,12 +79,27 @@ func schema(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(spec.Schema)
 }
 
-func (a *api) agentPrompt(w http.ResponseWriter, _ *http.Request) {
-	if !a.promptOK {
+// agentPrompt answers the Agent Prompt, built now from the Household's active Courses.
+func (a *api) agentPrompt(w http.ResponseWriter, r *http.Request) {
+	if !a.tmplOK {
 		httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong")
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]string{"prompt": a.prompt})
+	prompt, err := a.buildPrompt(r.Context())
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"prompt": prompt})
+}
+
+// buildPrompt is the Agent Prompt for the Household's active Courses as they are now.
+func (a *api) buildPrompt(ctx context.Context) (string, error) {
+	courses, err := a.store.PromptCourses(ctx)
+	if err != nil {
+		return "", err
+	}
+	return recipefile.AgentPrompt(a.template, string(spec.Schema), string(spec.Example), courses), nil
 }
 
 // export answers GET /api/recipe-file/export?all=1 or ?ids=1,2 with the file.
@@ -242,6 +258,11 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
+	// Only an Admin adds or unarchives a Course (spec 13). The Review stays open for the User to answer again.
+	if user, _ := auth.UserFrom(r.Context()); !user.IsAdmin && (len(commit.NewCourses) > 0 || len(commit.UnarchiveCourses) > 0) {
+		httpx.WriteError(w, http.StatusForbidden, "forbidden", "Only Admins can add or unarchive a Course")
+		return
+	}
 	res, err := a.store.Apply(r.Context(), commit)
 	if errors.Is(err, recipefile.ErrStale) {
 		httpx.WriteError(w, http.StatusConflict, "import_stale", "The data changed since the review; review again")
@@ -303,6 +324,9 @@ func (a *api) published(res store.Result) {
 	}
 	if res.IngredientsCreated > 0 || res.ConversionsAdded > 0 {
 		a.events.Publish(topicIngredients, map[string]int{"created": res.IngredientsCreated, "conversions": res.ConversionsAdded})
+	}
+	if res.CoursesCreated > 0 || res.CoursesUnarchived > 0 {
+		a.events.Publish(topicCourses, map[string]int{"created": res.CoursesCreated, "unarchived": res.CoursesUnarchived})
 	}
 }
 
