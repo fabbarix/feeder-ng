@@ -15,14 +15,14 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - **Recipe Assistant.** Read a recipe from a web address or pasted text, or read it from a photo, and review the result before it becomes a Recipe. An Admin sets it up in Settings with an API key; the key is stored encrypted. It needs the new `FEEDER_SECRET_KEY` setting (see the upgrade note below), and it stays off without it.
 - **Access Requests.** Someone who is not yet on the Allowlist can ask to join. Any User sees a Sign-in requests row and can approve or deny a request from a sheet; the Admin manages everyone on the new Allowlist page. Members now have an email address, and an Admin can turn the notification for new requests on or off.
 - **Photos and Pictures.** A Member has a Photo and an Ingredient has a Picture. One shared ImagePicker handles crop, camera, paste and web address everywhere a picture is chosen. HEIC photos (iPhone) are converted on the server, with "Converting photo…" progress.
-- **Pictures everywhere.** Ingredient and Product Pictures and Member Avatars now show wherever they are named: in pickers and lists, in Plan, Stock, Shop and Scan, and in Settings. A Member without a Photo shows their emoji, then their initials. The Recipe editor also shows the Recipe's and Steps' Photos, and Save only becomes available once they have finished saving.
+- **Pictures everywhere.** Ingredient and Product Pictures and Member Avatars now show wherever they are named: in pickers and lists, in Plan, Stock, Shop and Scan, and in Settings. A Member without a Photo shows their emoji, then their initials. The Recipe editor also shows the Recipe's and Steps' Photos, and Save becomes available once every Photo is stored.
 - **Product pictures.** A Product has a Picture too, chosen with the same ImagePicker, and Scan shows it.
 - **Pictures from a Recipe File.** When a Recipe File brings in a picture for an Ingredient you already have, that Ingredient adopts it instead of staying without one.
 - **Drag to reorder.** Drag the handle to reorder the Ingredient lines and the Steps of a Recipe, or reorder them from the keyboard. Optional now lives in the line's actions menu.
 - **Recipe editor and detail redesign.** A centred editor with sections, compact fields and sticky bars, a button for the Recipe's actions, a plain information message, and a clearer warning symbol. Recipe detail follows the same look.
 - **Inline Ingredient creation.** The Recipe editor can create an Ingredient on the spot with a New Ingredient sheet, including Ready Meal Ingredients. Saving a Recipe with a name that is already taken now says so clearly, offers to rename, and pack sizes have a hint next to the Quantity.
 - **Reheat for Leftovers.** Each Recipe can have its own reheat time, and a Planned Meal served from a Leftover shows a Reheat step in the cook preview.
-- **Zero-waste streak.** The streak counts days without a Leftover going off. Keeping a Stock Lot (Keep) does not break it, nothing is counted twice, and the count is capped by the Household's age.
+- **Zero-waste streak.** The streak counts days without waste: no Stock Lot going off and no Leftover discarded after its Use-by. Choosing Keep on a spoiled Stock Lot does not break it, nothing is counted twice, and the count is capped by the Household's age.
 - **Multi-day Meal Slot edit.** Edit a Meal Slot for several weekdays at once with the new weekday picker, see who attends with attendee pills, and use the week grid of Meal Slots in Settings. A new slot defaults to everyone attending.
 - **Couldn't plan, grouped by cause.** When a Plan cannot fill a slot, the reasons are grouped by cause, each with a fix, and a setup checklist shows what is still missing. A replan runs when the server starts.
 - **Third-party notices.** `THIRD_PARTY_NOTICES.md` lists every open-source component with its licence, and the container image carries a copy.
@@ -30,8 +30,8 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 
 ### Changed
 
-- **Settings.** A new Settings shell with Breadcrumbs, a sheet for editing Members, and a link from an Admin to their own row in the Members list. The Plan and Cook screens have clearer contrast, a board time, and a Today/Cook layout; the cook preview shows the Leftover date.
-- **Screens on the shared layout.** Stock has two columns with a sticky filter aside on wide screens, and its Throw out or keep? rows keep their actions in line. Shop tiles fill the width. Scan, Cook, the board and Import use the shared page header, empty state and action bars; Cook fills the phone screen with sticky Back and Next, and the board has two columns on phones. Scan warns about a near-duplicate Ingredient before it is created. Settings and the catalogue use the same blocks, the Recipe Assistant has its own row in Settings, and a Weight rule error is tied to its field.
+- **Settings.** A new Settings shell with Breadcrumbs, a sheet for editing Members, and a link from an Admin to their own row in the Members list. The Plan and Cook Mode screens have clearer contrast, a board time, and a Today/Cook Mode layout; the cook preview shows the Leftover date.
+- **Screens on the shared layout.** Stock has two columns with a sticky filter aside on wide screens, and its Throw out or keep? rows keep their actions in line. Shop tiles fill the width. Scan, Cook Mode, the board and Import use the shared page header, empty state and action bars; Cook Mode fills the phone screen with sticky Back and Next, and the board has two columns on phones. Scan warns about a near-duplicate Ingredient before it is created. Settings and the catalogue use the same blocks, the Recipe Assistant has its own row in Settings, and a Weight rule error is tied to its field.
 - **Go 1.26.11.** The server is built with Go 1.26.11 (the latest 1.26 release), in `go.mod`, the Dockerfile and the docs.
 - **Layout.** Pages have set widths, the Settings and form fields share sizes, one focus ring, muted look for controls that cannot be used, and sticky action bars. The side rail has better contrast and a compact ring for the current page. Time fields fit their digits.
 - **Today and Plan.** The Plan shows 7 columns on a 1440 px screen, and Today uses the wide screen with a larger main tile.
@@ -46,6 +46,10 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - Several layout fixes: long emails in the approve sheet, the stepper inside its frame, phone layouts for the Allowlist and Sign-in requests.
 - Today after an offline reload shows the right date and a "Today could not be loaded." message with Try again, instead of "NaN" and "Nothing on the menu".
 - The zero-waste streak on Today and the board updates as soon as you Keep or Throw out a Stock Lot.
+- The streak refreshes when Stock changes on another device.
+- Today's Try again reloads everything.
+- Plan offline shows "The plan could not be loaded." with Try again.
+- "Stock about to spoil" notifications now arrive on the go-off date, the day before the Lot goes off.
 - "Went off" on a spoiled Stock Lot now counts from the day after its go-off date, as the streak does.
 - A Planned Meal served from a Leftover no longer says "0 Batches" in its sheet.
 - The Ingredient Shelf Life stepper fits its tile on a phone, and the board's Timers tile ends long names with an ellipsis.
