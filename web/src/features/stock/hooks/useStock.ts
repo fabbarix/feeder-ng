@@ -31,6 +31,15 @@ function refreshStock(client: QueryClient): Promise<void> {
   return client.invalidateQueries({ queryKey: [...STOCK_KEY] })
 }
 
+/** Keep and Throw out move the zero-waste streak, so Today's tile and the board's refetch it too. */
+async function refreshSpoiledOutcome(client: QueryClient): Promise<void> {
+  await Promise.all([
+    refreshStock(client),
+    client.invalidateQueries({ queryKey: ['today', 'streak'] }),
+    client.invalidateQueries({ queryKey: ['board'] }),
+  ])
+}
+
 /**
  * Refetches Stock when a `stock` event arrives and after the stream reconnects.
  * Every Stock hook calls it, so they share the one subscription. Closes on unmount.
@@ -84,11 +93,11 @@ export function useSpoiledLots(): LotsState & {
   const query = useQuery({ queryKey: [...STOCK_KEY, 'spoiled'], queryFn: () => stockApi.spoiled() })
   const throwOut = useMutation({
     mutationFn: (lotId: number) => stockApi.throwOut(lotId),
-    onSuccess: () => refreshStock(client),
+    onSuccess: () => refreshSpoiledOutcome(client),
   })
   const keep = useMutation({
     mutationFn: (lotId: number) => stockApi.keep(lotId),
-    onSuccess: () => refreshStock(client),
+    onSuccess: () => refreshSpoiledOutcome(client),
   })
   return {
     ...lotsState(query),

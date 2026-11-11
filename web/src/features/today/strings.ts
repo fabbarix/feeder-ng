@@ -5,6 +5,7 @@ export const todayStrings = {
   loading: 'Loading',
   emptyTitle: 'Nothing on the menu. The kitchen is yours.',
   emptyHint: 'No Planned Meals to cook, no Leftovers waiting, nothing about to spoil. Put your feet up or plan something tasty.',
+  loadError: 'Today could not be loaded.',
   emptyAction: 'Open the Plan',
   actionFailed: 'That did not save. Try again.',
   advanceStepsHeading: 'Advance Steps',

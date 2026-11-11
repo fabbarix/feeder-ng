@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react'
-import { BentoGrid, Button, EmptyState, PageHeader } from '../../../ui'
+import { BentoGrid, Button, EmptyState, ErrorState, PageHeader } from '../../../ui'
 import { todayStrings as s } from '../strings'
 import type { TodayLayout, TileId } from '../types'
 import '../today.css'
@@ -15,6 +15,8 @@ export interface TodayViewProps {
   shopping: ReactNode
   /** Where the empty state's button goes. */
   onOpenPlan: () => void
+  /** Where the error's Try again goes. */
+  onRetry?: () => void
 }
 
 /**
@@ -22,12 +24,13 @@ export interface TodayViewProps {
  * BentoGrid (labelled "Today") with a slot per tile in layout order; each slot carries data-tile. When layout.empty,
  * the EmptyState shows above the grid (so any streak tile stays visible). While loading, "Loading" and no empty state.
  */
-export function TodayView({ layout, loading = false, dateLabel, tiles, shopping, onOpenPlan }: TodayViewProps): ReactElement {
+export function TodayView({ layout, loading = false, dateLabel, tiles, shopping, onOpenPlan, onRetry }: TodayViewProps): ReactElement {
   if (layout.mode === 'shopping') return <>{shopping}</>
   return (
     <section className="today" data-hero-span={layout.heroSpan}>
       <PageHeader title={s.title} subtitle={dateLabel} />
       {loading ? <p className="today__muted">{s.loading}</p> : null}
+      {layout.failed && !loading ? <ErrorState message={s.loadError} onRetry={onRetry} /> : null}
       {layout.empty && !loading ? (
         <EmptyState title={s.emptyTitle} description={s.emptyHint} action={<Button onClick={onOpenPlan}>{s.emptyAction}</Button>} />
       ) : null}

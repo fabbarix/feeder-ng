@@ -25,12 +25,15 @@ export interface TodayPlanCounts {
   couldntPlan: number
   leftovers: number
   loading: boolean
+  failed?: boolean
+  retry?: () => void
 }
 
 export interface TodayStock {
   spoiled: number
   useSoon: UseSoonItem[]
   loading: boolean
+  failed?: boolean
 }
 
 /** Everything the Today tiles display, read from the owning features. */
@@ -55,6 +58,9 @@ export interface TodayTileData {
   keep: (lotId: number) => Promise<void>
   planLoading: boolean
   stockLoading: boolean
+  /** The plan or stock behind the tiles could not be loaded and nothing is held (offline, server error). */
+  loadFailed?: boolean
+  retry?: () => void
 }
 
 /** T11 and T10 data for the Today tiles. */
@@ -66,6 +72,7 @@ export function useTodayTileData(): TodayTileData {
   const leftovers = useLeftovers()
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
+  const failed = plan.failed || toConfirm.failed || couldntPlan.failed || leftovers.failed || spoiled.status === 'error' || spoiled.status === 'offline'
   const hero = heroSelection(plan.slots, now, plan.today)
   return {
     now,
@@ -85,6 +92,11 @@ export function useTodayTileData(): TodayTileData {
     keep: spoiled.keep,
     planLoading: plan.isLoading || toConfirm.isLoading || couldntPlan.isLoading || leftovers.isLoading,
     stockLoading: spoiled.isLoading || totals.isLoading,
+    loadFailed: failed,
+    retry: () => {
+      void plan.refetch()
+      void spoiled.refetch()
+    },
   }
 }
 
@@ -98,11 +110,13 @@ export function useTodayPlan(): TodayPlanCounts {
     couldntPlan: d.couldntPlan.length,
     leftovers: d.leftovers.length,
     loading: d.planLoading,
+    failed: d.loadFailed === true,
+    retry: d.retry,
   }
 }
 
 /** The stock counts the layout needs. */
 export function useTodayStock(): TodayStock {
   const d = useTodayTileData()
-  return { spoiled: d.spoiled.length, useSoon: d.useSoon, loading: d.stockLoading }
+  return { spoiled: d.spoiled.length, useSoon: d.useSoon, loading: d.stockLoading, failed: false }
 }

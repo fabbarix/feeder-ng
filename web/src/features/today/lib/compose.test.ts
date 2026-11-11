@@ -68,7 +68,7 @@ describe('composeToday', () => {
   })
 
   it('is empty when nothing but the streak could show', () => {
-    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, heroSpan: 'row' })
+    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, failed: false, heroSpan: 'row' })
     const withStreak = tilesOf({ ...quiet, streakDays: 12 })
     expect(withStreak.empty).toBe(true)
     expect(withStreak.tiles.map((t) => t.id)).toEqual(['streak'])

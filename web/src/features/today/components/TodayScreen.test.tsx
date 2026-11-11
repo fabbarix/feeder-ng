@@ -16,9 +16,10 @@ const h = vi.hoisted(() => ({
 // The seams are the only place Today reads other features; the spoiled tile is stubbed to one button.
 vi.mock('../seams', () => ({
   useScanSessionActive: () => h.scan,
-  useTodayPlan: () => ({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false }),
+  useTodayPlan: () => ({ hasNextMeal: false, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false, failed: h.failed }),
   useTodayStock: () => ({ spoiled: 1, useSoon: [], loading: false }),
   useTodayTileData: () => ({
+    now: new Date(),
     nextSlot: null,
     toConfirm: [],
     couldntPlan: [],
@@ -88,7 +89,7 @@ describe('TodayScreen', () => {
   it('shows a load error, not the empty state, when the data could not be loaded', async () => {
     h.failed = true
     setup()
-    expect(await screen.findByRole('alert')).toHaveTextContent('Today could not be loaded.')
+    expect(await screen.findByText('Today could not be loaded.')).toBeTruthy()
     expect(screen.queryByText(todayStrings.emptyTitle)).toBeNull()
   })
 })

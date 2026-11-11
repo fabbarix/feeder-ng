@@ -8,6 +8,7 @@ import { cookReheatPath } from '../../cook'
 import { SpoiledTile } from '../../stock'
 import { useSetupChecklist } from '../hooks/useSetupChecklist'
 import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
+import { localDate } from '../lib/dates'
 import { todayHeading } from '../lib/heading'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
 import { todayStrings } from '../strings'
@@ -32,7 +33,7 @@ export function TodayScreen(): ReactElement {
   const act = (run: () => Promise<void>) => {
     run().catch(() => toast.show(todayStrings.actionFailed))
   }
-  const { layout, loading } = useToday()
+  const { layout, loading, retry } = useToday()
   const data = useTodayTileData()
   const steps = useAdvanceStepsDue()
   const streak = useZeroWasteStreak()
@@ -74,7 +75,8 @@ export function TodayScreen(): ReactElement {
       <TodayView
         layout={layout}
         loading={loading}
-        dateLabel={todayHeading(data.planToday)}
+        dateLabel={todayHeading(data.planToday || localDate(data.now))}
+        onRetry={retry}
         tiles={tiles}
         shopping={<ShoppingListSeam />}
         onOpenPlan={openPlan}
