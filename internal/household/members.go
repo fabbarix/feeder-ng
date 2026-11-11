@@ -4,6 +4,8 @@ import (
 	"math"
 	"regexp"
 	"strings"
+
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
 // Member is a person who eats from the plan.
@@ -33,6 +35,7 @@ func (m MemberInput) Normalized() MemberInput {
 	m.Name = strings.TrimSpace(m.Name)
 	m.Avatar = strings.TrimSpace(m.Avatar)
 	m.Email = strings.ToLower(strings.TrimSpace(m.Email))
+	m.Photo = strings.TrimSpace(m.Photo)
 	return m
 }
 
@@ -54,6 +57,9 @@ func (m MemberInput) Validate() error {
 	}
 	if nameLength(m.Avatar) > 4 {
 		return fieldError("avatar", "must be at most 4 characters")
+	}
+	if m.Photo != "" && !imaging.ValidID(m.Photo) {
+		return fieldError("photo", "must be an uploaded image")
 	}
 	if m.Email != "" && !validMemberEmail(m.Email) {
 		return fieldError("email", "must be an address like name@example.com, at most 254 characters")

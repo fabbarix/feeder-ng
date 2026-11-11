@@ -100,7 +100,7 @@ func Build(in ExportInput) (File, []Warning) {
 		}
 		return ids[i] < ids[j]
 	})
-	for _, id := range ids {
+	for idx, id := range ids {
 		ing := in.Ingredients[id]
 		def := Ingredient{
 			Name:          ingredient.DisplayName(ing.Name),
@@ -109,6 +109,13 @@ func Build(in ExportInput) (File, []Warning) {
 		}
 		for _, c := range ing.Conversions {
 			def.Conversions = append(def.Conversions, Conversion{Unit: c.Unit, ToBase: c.ToBase})
+		}
+		if ing.Image != "" {
+			if data, err := in.Image(ing.Image); err != nil {
+				warns = append(warns, Warning{Path: fmt.Sprintf("$.ingredients[%d].image", idx), Code: WarnImageFailed, Message: "the photo could not be exported"})
+			} else {
+				def.Image = data
+			}
 		}
 		f.Ingredients = append(f.Ingredients, def)
 	}

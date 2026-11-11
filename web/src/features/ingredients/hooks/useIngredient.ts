@@ -45,7 +45,7 @@ export function useIngredient(id: number): UseIngredient {
     rename: (name) => changed(ingredientsApi.patch(id, { name })),
     setBaseUnit: (baseUnit) => changed(ingredientsApi.patch(id, { baseUnit })),
     setShelfLife: (shelfLifeDays) => changed(ingredientsApi.patch(id, { shelfLifeDays })),
-    setImage: () => Promise.reject(new Error('TODO(im2): PATCH { image }')), // IM2 stub: the Developer implements it
+    setImage: (image) => changed(ingredientsApi.patch(id, { image })),
     setConversion: (c) => changed(ingredientsApi.setConversion(id, c)),
     removeConversion: (unit) => changed(ingredientsApi.removeConversion(id, unit)),
     remove: async () => {

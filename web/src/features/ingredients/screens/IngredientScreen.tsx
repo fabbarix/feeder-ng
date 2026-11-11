@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
 import type { BaseUnit } from '../../../lib/units'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, CROP_ASPECTS, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
@@ -123,6 +123,15 @@ export function IngredientScreen() {
 
         <Tile as="section" aria-label={strings.shelfLifeLabel}>
           <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
+        </Tile>
+
+        <Tile as="section" span="full" aria-label={strings.pictureLabel}>
+          <ImagePicker
+            label={strings.pictureLabel}
+            value={ingredient.image ?? ''}
+            onChange={(imageId) => void attempt(() => ing.setImage(imageId))}
+            aspect={CROP_ASPECTS.landscape}
+          />
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.conversionsTitle}>

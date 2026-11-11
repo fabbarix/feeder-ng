@@ -160,8 +160,8 @@ func TestMergeKeepsATargetPictureAndAdoptsTheSourceOneWhenTargetHasNone(t *testi
 		t.Error("the merged-away picture must be deleted")
 	}
 
+	im.have[picB] = true // the file was deleted by the first merge; upload it again before Create checks it
 	srcPic2, _ := s.Create(ctx, ingredient.Input{Name: "shallot", Base: units.Gram, Image: picB})
-	im.have[picB] = true
 	got, err = s.Merge(ctx, srcPic2.ID, bare.ID, ingredient.Resolution{})
 	if err != nil || got.Image != picB {
 		t.Fatalf("merge into an Ingredient without a picture = %+v, %v; it adopts the source picture", got, err)

@@ -1,4 +1,4 @@
-import { ListGroup, ListRow } from '../../../ui'
+import { ListGroup, ListRow, RecipeThumb } from '../../../ui'
 import { baseUnitLabel, type UnitSystem } from '../../../lib/units'
 import { displayName, ingredientMeta } from '../lib/names'
 import { strings } from '../strings'
@@ -19,6 +19,7 @@ export function IngredientList({ ingredients, system, onOpen }: IngredientListPr
           key={ingredient.id}
           title={displayName(ingredient.name)}
           meta={ingredientMeta(baseUnitLabel(ingredient.baseUnit, system), ingredient.shelfLifeDays)}
+          leading={ingredient.imageUrl ? <RecipeThumb name="" photoUrl={ingredient.imageUrl} size={40} /> : undefined}
           chevron
           onActivate={() => onOpen(ingredient.id)}
         />

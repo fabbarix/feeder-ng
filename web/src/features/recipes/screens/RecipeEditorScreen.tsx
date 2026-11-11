@@ -10,7 +10,6 @@ import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
 import { StepsEditor } from '../components/StepsEditor'
 import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
-import { usePhotoUpload } from '../hooks/usePhotoUpload'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
 import type { RecipeDraft } from '../lib/draft'
@@ -28,7 +27,6 @@ export function RecipeEditorScreen(): ReactNode {
   const { id } = useParams()
   const recipeId = id === undefined ? undefined : Number(id)
   const refs = useIngredientRefs()
-  const photo = usePhotoUpload()
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ingredients made from the picker, known at once (the list refetch may still be on its way).
   const [made, setMade] = useState<IngredientRef[]>([])
@@ -91,11 +89,6 @@ export function RecipeEditorScreen(): ReactNode {
     }
   }
 
-  const onFile = async (file: File) => {
-    const imageId = await photo.upload(file)
-    if (imageId) setDraft((d) => ({ ...d, image: imageId }))
-  }
-
   return (
     <section className="recipe-editor">
       <PageHeader
@@ -106,13 +99,7 @@ export function RecipeEditorScreen(): ReactNode {
         <h2>{recipeStrings.fields.details}</h2>
         <RecipeDetailsFields draft={draft} errors={editor.errors} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
       </Tile>
-      <PhotoPicker
-        imageUrl={draft.image ? `/api/images/${draft.image}` : ''}
-        uploading={photo.uploading}
-        error={photo.error}
-        onFile={(file) => void onFile(file)}
-        onRemove={() => setDraft((d) => ({ ...d, image: '' }))}
-      />
+      <PhotoPicker value={draft.image} onChange={(image) => setDraft((d) => ({ ...d, image }))} />
       <Tile as="section">
         <h2>{recipeStrings.ingredients}</h2>
         {editor.errors.lines ? <p role="alert">{codeMessage(editor.errors.lines)}</p> : null}

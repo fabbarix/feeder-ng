@@ -203,6 +203,10 @@ func im2Steps(sc *godog.ScenarioContext, w *World) {
 			body["photo"] = photo
 		}
 		w.Last = w.Client.Do("POST", "/api/members", body)
+		var created member
+		if w.Last.JSON(&created) == nil && created.ID != 0 {
+			w.Vars["member:"+name] = created.ID // so "the Admin deletes the Member" (household steps) finds it
+		}
 	}
 	sc.Step(`^I add the Member "([^"]*)" with the photo "([^"]*)"$`, func(name, img string) error {
 		id, err := imageID(img)

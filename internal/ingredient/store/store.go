@@ -41,7 +41,7 @@ type Images interface {
 
 // WithImages makes the Store refuse a picture that was never uploaded (a *ingredient.ValidationError on field "image")
 // and delete the file of a picture that no Ingredient uses any more after a change (IM2 design note).
-func WithImages(im Images) Option { return func(s *Store) { _ = im } } // TODO(im2): store im in s.images
+func WithImages(im Images) Option { return func(s *Store) { s.images = im } }
 
 // Option configures New.
 type Option func(*Store)
@@ -99,10 +99,13 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, in ingredient.Input) (
 	if err := checkNameFree(ctx, tx, units.NormalizeName(clean.Name), 0); err != nil {
 		return ingredient.Ingredient{}, err
 	}
+	if err := s.checkImage(clean.Image); err != nil {
+		return ingredient.Ingredient{}, err
+	}
 	now := s.now()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), nullDays(clean.ShelfLifeDays), now, now)
+		`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), nullDays(clean.ShelfLifeDays), clean.Image, now, now)
 	if err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
@@ -136,7 +139,7 @@ func (s *Store) ByName(ctx context.Context, name string) (ingredient.Ingredient,
 
 // List returns all Ingredients ordered by normalised name, with Conversions.
 func (s *Store) List(ctx context.Context) ([]ingredient.Ingredient, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, base_unit, shelf_life_days FROM ingredients ORDER BY name_key`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, base_unit, shelf_life_days, image FROM ingredients ORDER BY name_key`)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +226,7 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	if err != nil {
 		return ingredient.Ingredient{}, err
 	}
-	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, Conversions: cur.Conversions}
+	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, Conversions: cur.Conversions, Image: cur.Image}
 	if p.Name != nil {
 		in.Name = *p.Name
 	}
@@ -233,9 +236,17 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	if p.ShelfLife != nil {
 		in.ShelfLifeDays = p.ShelfLife.Days
 	}
+	if p.Image != nil {
+		in.Image = *p.Image
+	}
 	clean, err := in.Validate()
 	if err != nil {
 		return ingredient.Ingredient{}, err
+	}
+	if clean.Image != cur.Image {
+		if err := s.checkImage(clean.Image); err != nil {
+			return ingredient.Ingredient{}, err
+		}
 	}
 	if clean.Base != cur.Base {
 		refs, err := s.refCounts(ctx, tx, id)
@@ -251,13 +262,14 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 		return ingredient.Ingredient{}, err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, shelf_life_days = ?, updated_at = ? WHERE id = ?`,
-		clean.Name, key, string(clean.Base), nullDays(clean.ShelfLifeDays), s.now(), id); err != nil {
+		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
+		clean.Name, key, string(clean.Base), nullDays(clean.ShelfLifeDays), clean.Image, s.now(), id); err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
 	if err := tx.Commit(); err != nil {
 		return ingredient.Ingredient{}, err
 	}
+	s.dropUnreferenced(ctx, cur.Image)
 	return s.Get(ctx, id)
 }
 
@@ -401,7 +413,8 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := loadOne(ctx, tx, id); err != nil {
+	cur, err := loadOne(ctx, tx, id)
+	if err != nil {
 		return err
 	}
 	refs, err := s.refCounts(ctx, tx, id)
@@ -414,7 +427,11 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredients WHERE id = ?`, id); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	s.dropUnreferenced(ctx, cur.Image)
+	return nil
 }
 
 // References returns per-mover reference counts (mover name -> count, only counts > 0).
@@ -488,9 +505,14 @@ func (s *Store) Merge(ctx context.Context, sourceID, targetID int64, res ingredi
 	if err != nil {
 		return ingredient.Ingredient{}, err
 	}
+	// The target keeps its own picture; without one it adopts the source's.
+	image, dropped := tgt.Image, src.Image
+	if image == "" {
+		image, dropped = src.Image, ""
+	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET shelf_life_days = ?, updated_at = ? WHERE id = ?`,
-		nullDays(merged.ShelfLifeDays), s.now(), targetID); err != nil {
+		`UPDATE ingredients SET shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
+		nullDays(merged.ShelfLifeDays), image, s.now(), targetID); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredient_conversions WHERE ingredient_id = ?`, targetID); err != nil {
@@ -510,6 +532,7 @@ func (s *Store) Merge(ctx context.Context, sourceID, targetID int64, res ingredi
 	if err := tx.Commit(); err != nil {
 		return ingredient.Ingredient{}, err
 	}
+	s.dropUnreferenced(ctx, dropped)
 	return s.Get(ctx, targetID)
 }
 
@@ -526,6 +549,26 @@ func (s *Store) refCounts(ctx context.Context, q Querier, id int64) (map[string]
 		}
 	}
 	return out, nil
+}
+
+// checkImage refuses a picture id that was never uploaded (only when WithImages was given).
+func (s *Store) checkImage(id string) error {
+	if id == "" || s.images == nil || s.images.Exists(id) {
+		return nil
+	}
+	return &ingredient.ValidationError{Field: "image", Message: "The picture was not uploaded"}
+}
+
+// dropUnreferenced deletes the file of a picture no Ingredient uses any more (best effort, after the commit).
+func (s *Store) dropUnreferenced(ctx context.Context, id string) {
+	if id == "" || s.images == nil {
+		return
+	}
+	var n int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ingredients WHERE image = ?`, id).Scan(&n); err != nil || n > 0 {
+		return
+	}
+	_ = s.images.Delete(id)
 }
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
@@ -590,7 +633,7 @@ func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 		base string
 		days sql.NullInt64
 	)
-	if err := r.Scan(&i.ID, &i.Name, &base, &days); err != nil {
+	if err := r.Scan(&i.ID, &i.Name, &base, &days, &i.Image); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	i.Base = units.Base(base)
@@ -603,7 +646,7 @@ func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 
 // loadOne reads one Ingredient with its Conversions, or ErrNotFound.
 func loadOne(ctx context.Context, q Querier, id int64) (ingredient.Ingredient, error) {
-	row := q.QueryRowContext(ctx, `SELECT id, name, base_unit, shelf_life_days FROM ingredients WHERE id = ?`, id)
+	row := q.QueryRowContext(ctx, `SELECT id, name, base_unit, shelf_life_days, image FROM ingredients WHERE id = ?`, id)
 	i, err := scanIngredient(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ingredient.Ingredient{}, ErrNotFound

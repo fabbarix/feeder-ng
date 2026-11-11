@@ -206,7 +206,7 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	}
 	defer tx.Rollback()
 
-	created, err := s.createIngredients(ctx, tx, c)
+	created, err := s.createIngredients(ctx, tx, c, imageIDs)
 	if err != nil {
 		return Result{}, nil, err
 	}
@@ -284,10 +284,14 @@ func (ni nameIndex) taken(key string, replacing map[int64]bool) bool {
 }
 
 // createIngredients inserts the new Ingredients and returns their ids by key.
-func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.Commit) (map[string]int64, error) {
+func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.Commit, imageIDs map[string]string) (map[string]int64, error) {
 	created := map[string]int64{}
 	for _, n := range c.NewIngredients {
-		ing, err := s.ingredients.CreateTx(ctx, tx, n.Input)
+		in := n.Input
+		if n.ImagePath != "" {
+			in.Image = imageIDs[n.ImagePath]
+		}
+		ing, err := s.ingredients.CreateTx(ctx, tx, in)
 		if err != nil {
 			return nil, staleOr(err)
 		}

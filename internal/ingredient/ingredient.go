@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
@@ -82,6 +83,11 @@ func (in Input) Validate() (Input, error) {
 		return Input{}, &ValidationError{Field: "shelfLifeDays", Message: fmt.Sprintf("The Shelf Life must be between 1 and %d days", MaxShelfLifeDays)}
 	}
 
+	image := strings.TrimSpace(in.Image)
+	if image != "" && !imaging.ValidID(image) {
+		return Input{}, &ValidationError{Field: "image", Message: "The picture is not a valid uploaded image"}
+	}
+
 	seen := map[string]bool{}
 	var cs []units.Conversion
 	for _, c := range in.Conversions {
@@ -100,7 +106,7 @@ func (in Input) Validate() (Input, error) {
 	}
 	sort.Slice(cs, func(i, j int) bool { return cs[i].Unit < cs[j].Unit })
 
-	return Input{Name: name, Base: in.Base, ShelfLifeDays: in.ShelfLifeDays, Conversions: cs}, nil
+	return Input{Name: name, Base: in.Base, ShelfLifeDays: in.ShelfLifeDays, Conversions: cs, Image: image}, nil
 }
 
 // conversionMessage explains a rejected Unit Conversion for the UI.

@@ -17,6 +17,8 @@ type Column struct{ Table, Column string }
 var Default = []Column{
 	{"recipes", "image"},
 	{"recipe_steps", "image"},
+	{"ingredients", "image"},
+	{"members", "photo"},
 }
 
 // Columns implements images.Referencer over SQL.

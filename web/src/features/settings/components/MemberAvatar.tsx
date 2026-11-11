@@ -16,11 +16,11 @@ export interface MemberAvatarProps extends Pick<AvatarProps, 'size'> {
  * The shared Avatar with its ring in the Member colour. The `colour` prop is the Avatar's own ring, so the fill and the
  * initials keep the primitive's contrast. The wrapper carries `--member-colour` for the feature CSS.
  */
-export function MemberAvatar({ name, colour, avatar, size = 'md' }: MemberAvatarProps) {
+export function MemberAvatar({ name, colour, avatar, photo, size = 'md' }: MemberAvatarProps) {
   const style = { '--member-colour': colour } as CSSProperties
   return (
     <span className="member-avatar" data-member-colour={colour} style={style}>
-      <Avatar name={name} size={size} colour={colour} glyph={avatar} />
+      <Avatar name={name} size={size} colour={colour} glyph={avatar} imageUrl={photo ? `/api/images/${photo}` : undefined} />
     </span>
   )
 }
