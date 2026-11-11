@@ -351,7 +351,7 @@ func (s *Store) History(ctx context.Context, before string) ([]plan.HistoryEntry
 // is bound to a transaction (the runner always is).
 func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 	return s.InTx(ctx, func(_ *sql.Tx, st *Store) error {
-		for _, k := range append(append([]plan.Key(nil), ch.Deletes...), ch.Replaced...) {
+		for _, k := range ch.Deletes {
 			course, err := st.courseIn(ctx, k.CourseID)
 			if err != nil {
 				return err

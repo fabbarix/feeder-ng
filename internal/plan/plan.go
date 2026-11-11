@@ -346,8 +346,7 @@ func keyOf(k planner.SlotKey) Key {
 //     relaxed flag and the cooldown_relaxed and variety_relaxed chips: the stored Why loses those chips and gains the
 //     Recheck's chip.
 //   - An existing unpinned Planned meal whose cell is not over yet and that is neither in Result.Kept nor re-placed
-//     (so it was invalid, cleared, or its cell is covered or not served) is deleted. A cleared one that is re-placed
-//     is Replaced: its row goes and the new Planned Meal is a new row. Pinned, Cooked and Skipped meals,
+//     (so it was invalid, cleared, or its cell is covered or not served) is deleted. Pinned, Cooked and Skipped meals,
 //     and unconfirmed meals whose cell is already over, are never touched.
 //   - Result.Unfilled become Unfilled rows; every other cell of the snapshot is in ClearUnfilled. Result.NotServed is
 //     informational: it carries no reason and is not stored.
@@ -431,25 +430,16 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 			cells = append(cells, ck)
 		}
 	}
-	cleared := map[Key]bool{}
-	for _, k := range s.Clear {
-		cleared[norm(k)] = true
-	}
 	for _, m := range s.Meals {
 		mk := norm(m.Key)
-		if m.State != StatePlanned || m.Pinned || kept[mk] {
+		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] {
 			continue
 		}
 		at, ok := slotAt[mk]
 		if !ok || at.Before(s.Now) {
 			continue // unconfirmed and over: stays in To confirm
 		}
-		switch {
-		case placed[mk] && cleared[mk]:
-			ch.Replaced = append(ch.Replaced, mk)
-		case !placed[mk]:
-			ch.Deletes = append(ch.Deletes, mk)
-		}
+		ch.Deletes = append(ch.Deletes, mk)
 	}
 
 	unfilled := map[Key]bool{}
