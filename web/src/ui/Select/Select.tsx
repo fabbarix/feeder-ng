@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { BottomSheet } from '../BottomSheet'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
 import { Icon } from '../Icon'
 import type { FieldSizeProps } from '../fields/Field'
 import { FieldFrame, useFieldIds } from '../fields/FieldFrame'
@@ -137,6 +138,7 @@ function SelectCore<V extends string | number>({
   const trigger = useRef<HTMLButtonElement>(null)
   const search = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLDivElement>(null)
+  const popover = useRef<HTMLDivElement>(null)
 
   const build = (q: string, filterIds: string[], sort: number) =>
     buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate), createDisabled: createDisabledReason !== undefined, clearLabel })
@@ -260,6 +262,8 @@ function SelectCore<V extends string | number>({
     return () => document.removeEventListener('mousedown', onDown)
   })
 
+  useFloatingPopover(open && !phone, trigger, popover, 'flex')
+
   const selectedOption = options.find((o) => selected.includes(o.value))
   const triggerText = multi
     ? options
@@ -328,7 +332,11 @@ function SelectCore<V extends string | number>({
           <span className="select__value">{triggerText === '' ? (placeholder ?? '') : triggerText}</span>
           <Icon name="expand" size={20} />
         </button>
-        {open && !phone ? <div className="select__popover">{panel}</div> : null}
+        {open && !phone ? (
+          <div ref={popover} popover={floatingPopoverAttr()} className="select__popover">
+            {panel}
+          </div>
+        ) : null}
         <BottomSheet open={open && phone} onClose={() => close(true)} title={label} initialFocusRef={showSearch ? search : list}>
           {open && phone ? panel : null}
         </BottomSheet>
