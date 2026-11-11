@@ -8,8 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -475,5 +478,47 @@ func TestRetryAfterMsBeyondTheDeadlineStopsAtOnce(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("requests = %d, want 1: 1.5 s does not fit a 1 s budget", n)
+	}
+}
+
+// ---- dial and TLS handshake timeouts: no request was sent, so they are retried -------------------------------------
+
+type failFirst struct {
+	err   error
+	calls int
+	next  http.RoundTripper
+}
+
+func (f *failFirst) RoundTrip(r *http.Request) (*http.Response, error) {
+	f.calls++
+	if f.calls == 1 {
+		return nil, f.err
+	}
+	return f.next.RoundTrip(r)
+}
+
+type tlsTimeout struct{}
+
+func (tlsTimeout) Error() string   { return "net/http: TLS handshake timeout" }
+func (tlsTimeout) Timeout() bool   { return true }
+func (tlsTimeout) Temporary() bool { return true }
+
+func TestADialOrHandshakeTimeoutIsRetriedBecauseNoRequestWasSent(t *testing.T) {
+	for name, terr := range map[string]error{
+		"dial":          &net.OpError{Op: "dial", Net: "tcp", Err: os.ErrDeadlineExceeded},
+		"tls handshake": tlsTimeout{},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := fakeanthropic.New()
+			defer f.Close()
+			rt := &failFirst{err: &url.Error{Op: "Post", URL: f.URL, Err: terr}, next: http.DefaultTransport}
+			c := claude.New(claude.Options{BaseURL: f.URL, APIKey: recipeassistant.Secret(key), HTTPClient: &http.Client{Transport: rt}})
+			if _, err := c.Message(context.Background(), req(t, "x")); err != nil {
+				t.Fatalf("err = %v, want the retry to succeed", err)
+			}
+			if rt.calls != 2 || len(f.Messages()) != 1 {
+				t.Errorf("attempts = %d, requests served = %d, want 2 and 1", rt.calls, len(f.Messages()))
+			}
+		})
 	}
 }

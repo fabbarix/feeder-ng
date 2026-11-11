@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -146,4 +147,16 @@ func TestPreparePhotosStopsOnACancelledContext(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}
+}
+
+func TestPhotoTooLargeSentinelFromTheFetcherIsTooLarge(t *testing.T) {
+	f := &fakeFetcher{err: fmt.Errorf("fetch: %w", ra.ErrPhotoTooLarge)}
+	_, err := ra.PreparePhotos(context.Background(), f, []ra.PhotoSource{{URL: "https://x.example/a.jpg"}})
+	wantPhotoCode(t, err, ra.CodePhotoTooLarge)
+}
+
+func TestTheFetchersOwnTimeoutIsPhotoUnavailableNotAnInternalError(t *testing.T) {
+	f := &fakeFetcher{err: fmt.Errorf("fetch: %w", context.DeadlineExceeded)}
+	_, err := ra.PreparePhotos(context.Background(), f, []ra.PhotoSource{{URL: "https://x.example/a.jpg"}})
+	wantPhotoCode(t, err, ra.CodePhotoUnavailable)
 }

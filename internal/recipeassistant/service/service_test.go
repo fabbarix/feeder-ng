@@ -10,8 +10,10 @@ import (
 	"log/slog"
 	"math/rand"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -140,6 +142,8 @@ type recSink struct {
 	closed []string
 	// onOpen, when set, runs inside OpenReview (after the review is recorded), e.g. to cancel the job mid-open.
 	onOpen func()
+	// afterOpen, when set, runs after OpenReview recorded the Review, just before it returns.
+	afterOpen func()
 }
 
 // CloseReview records a Review the service gave back.
@@ -181,10 +185,13 @@ func (s *recSink) OpenReview(_ context.Context, user int64, f recipefile.File, _
 	s.mu.Lock()
 	s.opened = append(s.opened, sinkCall{user, f, photos})
 	ref := service.ReviewRef{ID: fmt.Sprintf("review-%d", len(s.opened))}
-	hook := s.onOpen
+	hook, after := s.onOpen, s.afterOpen
 	s.mu.Unlock()
 	if hook != nil {
 		hook()
+	}
+	if after != nil {
+		after()
 	}
 	return ref, nil
 }
@@ -549,7 +556,7 @@ func TestARefusalIsReportedWithTheModelAndNeverRetriedOnAnotherModel(t *testing.
 	e := newEnv(t, opts{enabled: true})
 	e.claude.script = []reply{{resp: service.Response{StopReason: "refusal"}, err: &recipeassistant.Error{Code: recipeassistant.CodeDeclined, Model: savedModel}}}
 	jv := e.done(t, user, textIn("something"))
-	if jobCode(jv) != recipeassistant.CodeDeclined || jv.Error.Model != savedModel {
+	if jobCode(jv) != recipeassistant.CodeDeclined || jv.Error.Model != "Claude Haiku 5.5" {
 		t.Fatalf("job = %+v", jv)
 	}
 	if e.claude.callCount() != 1 {
@@ -975,5 +982,89 @@ func TestACancelDuringOpenReviewClosesTheReviewAndReportsCancelled(t *testing.T)
 	}
 	if c := e.sink.closedReviews(); len(c) != 1 || c[0] != "review-1" {
 		t.Errorf("the opened Review must be closed, closed = %v", c)
+	}
+}
+
+// A cancel that lands after OpenReview returned (the read is complete) must never leave a Review in a cancelled job:
+// either the read ends done with its Review open, or it ends cancelled with the Review closed and not exposed.
+func TestALateCancelNeverLeavesAClosedOrOrphanReview(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	for i := 0; i < 100; i++ {
+		before := len(e.sink.closedReviews())
+		var id atomic.Value
+		final := make(chan service.JobView, 1)
+		e.sink.mu.Lock()
+		e.sink.afterOpen = func() {
+			go func() {
+				cancelled := false
+				for {
+					v, _ := id.Load().(string)
+					jv, ok := e.svc.Job(admin.UserID, v)
+					switch {
+					case v == "":
+					case !ok:
+						final <- service.JobView{} // forgotten by our own cancel of an already finished job
+						return
+					case jv.State == service.StateDone || jv.State == service.StateFailed || jv.State == service.StateCancelled:
+						final <- jv
+						return
+					case jv.Review != nil && !cancelled:
+						cancelled = true
+						e.svc.CancelJob(admin.UserID, v)
+					}
+					runtime.Gosched()
+				}
+			}()
+		}
+		e.sink.mu.Unlock()
+		jv := e.start(t, admin, textIn("pancakes"))
+		id.Store(jv.ID)
+		var got service.JobView
+		select {
+		case got = <-final:
+		case <-time.After(20 * time.Second):
+			t.Fatalf("round %d: job never finished", i)
+		}
+		if got.ID == "" {
+			continue
+		}
+		closed := len(e.sink.closedReviews()) - before
+		switch got.State {
+		case service.StateCancelled:
+			if got.Review != nil || closed != 1 {
+				t.Fatalf("round %d: cancelled job exposes review %v / closed %d, want nil / 1", i, got.Review, closed)
+			}
+		case service.StateDone:
+			if got.Review == nil || closed != 0 {
+				t.Fatalf("round %d: done job review %v closed %d, want a review that is still open", i, got.Review, closed)
+			}
+		default:
+			t.Fatalf("round %d: state %s", i, got.State)
+		}
+	}
+	e.sink.mu.Lock()
+	e.sink.afterOpen = nil
+	e.sink.mu.Unlock()
+}
+
+// A failed read still carries the model's display name; a refusal names the model by display name too.
+func TestAFailedReadCarriesTheModelsDisplayName(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	e.claude.script = []reply{{err: &recipeassistant.Error{Code: recipeassistant.CodeBusy}}}
+	jv := e.done(t, user, textIn("something"))
+	if jv.State != service.StateFailed || jv.Model == nil || jv.Model.ID != savedModel || jv.Model.Name != "Claude Haiku 5.5" {
+		t.Fatalf("failed job model = %+v, want %s / Claude Haiku 5.5 (job %+v)", jv.Model, savedModel, jv)
+	}
+}
+
+func TestADeclinedReadNamesTheModelByDisplayName(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	e.claude.script = []reply{{resp: service.Response{StopReason: "refusal"}, err: &recipeassistant.Error{Code: recipeassistant.CodeDeclined, Model: savedModel}}}
+	jv := e.done(t, user, textIn("something"))
+	if jobCode(jv) != recipeassistant.CodeDeclined || jv.Error.Model != "Claude Haiku 5.5" {
+		t.Fatalf("declined model = %q, want the display name (job %+v)", jv.Error.Model, jv)
+	}
+	if jv.Model == nil || jv.Model.ID != savedModel || jv.Model.Name != "Claude Haiku 5.5" {
+		t.Errorf("job model = %+v", jv.Model)
 	}
 }
