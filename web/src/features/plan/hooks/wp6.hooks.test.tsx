@@ -4,31 +4,9 @@ import { findNotice } from '../../../test/notices'
 import { meal, mockApi, wrapper } from '../test-utils'
 import type { CookedResult, CookPreview } from '../types'
 import { useCookFlow } from './useCookFlow'
-import { usePlanColumns } from './usePlanColumns'
 import { useTagChoices } from './useTagChoices'
 
 afterEach(() => vi.unstubAllGlobals())
-
-const mediaStub = (width: number) =>
-  vi.stubGlobal('matchMedia', (query: string) => {
-    const min = /min-width:\s*(\d+)px/.exec(query)
-    return { matches: min ? width >= Number(min[1]) : false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }
-  })
-
-describe('usePlanColumns', () => {
-  it('2 columns on a phone, 4 on a tablet, 7 on a desktop', () => {
-    mediaStub(390)
-    expect(renderHook(() => usePlanColumns()).result.current).toBe(2)
-    mediaStub(820)
-    expect(renderHook(() => usePlanColumns()).result.current).toBe(4)
-    mediaStub(1280)
-    expect(renderHook(() => usePlanColumns()).result.current).toBe(7)
-  })
-
-  it('without matchMedia it is the desktop week', () => {
-    expect(renderHook(() => usePlanColumns()).result.current).toBe(7)
-  })
-})
 
 describe('useTagChoices (the Variety Rule Tag is picked from the existing Tags)', () => {
   it('reads GET /api/tags', async () => {

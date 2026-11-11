@@ -31,7 +31,17 @@ export interface TileSpec {
 
 export type TodayLayout =
   | { mode: 'shopping' }
-  | { mode: 'today'; tiles: TileSpec[]; /** nothing to do today: show the witty empty state */ empty: boolean }
+  | {
+      mode: 'today'
+      tiles: TileSpec[]
+      /** nothing to do today: show the witty empty state */
+      empty: boolean
+      /**
+       * The hero's footprint on the wide (three-column) Today: `block` = 2 columns x 2 rows with small tiles beside it,
+       * `row` = the full row, when no small tile (advanceSteps, leftovers, useSoon, streak) can sit beside it.
+       */
+      heroSpan: 'block' | 'row'
+    }
 
 export interface AdvanceStepDue {
   mealDate: string

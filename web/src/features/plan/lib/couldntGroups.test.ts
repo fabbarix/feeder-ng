@@ -150,8 +150,9 @@ describe('shortReason: the one-liner on a day tile', () => {
 })
 
 describe('toneStyle: warn and info tokens, never danger', () => {
-  it('info is the soft tile and a neutral chip', () => {
-    expect(toneStyle('info')).toEqual({ tile: { variant: 'soft' }, chip: { kind: 'tag' } })
+  // R2-2: --color-info-* exists now; needs Tile and Chip `status="info"` from R2-1 first (primitive request in r2-2-today-plan.md).
+  it('info is the blue info status tile and chip', () => {
+    expect(toneStyle('info')).toEqual({ tile: { variant: 'status', status: 'info' }, chip: { kind: 'status', status: 'info' } })
   })
   it('warn is the spoil (amber) status tile and chip', () => {
     expect(toneStyle('warn')).toEqual({ tile: { variant: 'status', status: 'spoil' }, chip: { kind: 'status', status: 'spoil' } })

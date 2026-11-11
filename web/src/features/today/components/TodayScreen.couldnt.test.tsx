@@ -89,10 +89,10 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     expect(within(slotEl).getByText('Every dinner this week, plus weekend breakfasts')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Tuesday dinner/)).not.toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
-    // a tile in the Bento grid at the right size (two columns), warm info tone, never the pink danger tile
+    // a tile in the Bento grid taking the full row (never a 2-wide tile that leaves a hole on three columns), warm info tone, never the pink danger tile
     const tile = slotEl.querySelector('[data-cause="nobody_attending"]') as HTMLElement
-    expect(tile).toHaveAttribute('data-span', '2')
-    expect(tile).toHaveAttribute('data-variant', 'soft')
+    expect(tile).toHaveAttribute('data-span', 'full')
+    expect(tile).toHaveAttribute('data-variant', 'status')
     expect(slotEl.querySelector('[data-status="danger"]')).toBeNull()
   })
 

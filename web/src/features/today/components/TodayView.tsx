@@ -25,7 +25,7 @@ export interface TodayViewProps {
 export function TodayView({ layout, loading = false, dateLabel, tiles, shopping, onOpenPlan }: TodayViewProps): ReactElement {
   if (layout.mode === 'shopping') return <>{shopping}</>
   return (
-    <section className="today">
+    <section className="today" data-hero-span={layout.heroSpan}>
       <PageHeader title={s.title} subtitle={dateLabel} />
       {loading ? <p className="today__muted">{s.loading}</p> : null}
       {layout.empty && !loading ? (
