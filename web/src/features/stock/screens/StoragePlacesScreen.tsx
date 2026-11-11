@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, EmptyState, ListGroup, ListRow, PageHeader, useConfirm, useToast } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListPage, ListRow, PageHeader, useConfirm, useToast } from '../../../ui'
 import { StoragePlaceSheet } from '../components/StoragePlaceSheet'
 import { useStoragePlaces } from '../hooks/useStoragePlaces'
 import { stockStrings as strings } from '../strings'
@@ -28,8 +28,7 @@ export function StoragePlacesScreen(): ReactElement {
   }
 
   return (
-    <div className="pg">
-      <PageHeader title={strings.places.title} breadcrumbs={breadcrumbs} />
+    <ListPage header={<PageHeader title={strings.places.title} breadcrumbs={breadcrumbs} />}>
       <p className="pg__muted">{strings.places.intro}</p>
       {places.isLoading ? (
         <p role="status">{strings.loading}</p>
@@ -62,6 +61,6 @@ export function StoragePlacesScreen(): ReactElement {
         }}
         onDelete={editing && editing !== 'new' ? () => void remove(editing) : undefined}
       />
-    </div>
+    </ListPage>
   )
 }

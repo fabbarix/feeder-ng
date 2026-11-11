@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, EmptyState, PageHeader, SearchField } from '../../../ui'
+import { Button, EmptyState, ListPage, PageHeader, SearchField } from '../../../ui'
 import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
@@ -28,11 +28,12 @@ export function IngredientsScreen() {
   }
 
   return (
-    <section>
-      <PageHeader title={strings.title} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />
-      <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
+    <ListPage
+      header={<PageHeader title={strings.title} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />}
+      search={<SearchField label={strings.searchLabel} value={query} onChange={setQuery} />}
+    >
       {body}
       <NewIngredientSheet open={creating} onClose={() => setCreating(false)} onCreate={list.create} />
-    </section>
+    </ListPage>
   )
 }

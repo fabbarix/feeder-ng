@@ -37,6 +37,26 @@ const (
 	RecipeConflict = "conflict" // an existing Recipe has the same normalised name
 )
 
+// Course decision actions (Import Review, crs-e1). ActionUse and ActionSkip are shared with the other decisions:
+// "use" maps the name to the Course CourseID, "skip" leaves the name out.
+const (
+	ActionAdd       = "add"       // Admin only: create a Course with the file's spelling of the name
+	ActionUnarchive = "unarchive" // Admin only: bring the matching archived Course back
+)
+
+// Course match statuses (CourseMatch.Status).
+const (
+	CourseExact    = "exact"    // matches an active Course
+	CourseArchived = "archived" // matches an archived Course
+	CourseUnknown  = "unknown"  // matches no Course
+)
+
+// Problem codes of Courses.
+const (
+	ProblemCourseNameInvalid = "course_name_invalid" // a name with no characters once trimmed
+	ProblemTooManyCourses    = "too_many_courses"    // adding the Courses would pass 20 active ones
+)
+
 // Warning codes.
 const (
 	WarnImageFailed       = "image_failed"       // an image could not be fetched or decoded; dropped
@@ -47,6 +67,17 @@ const (
 type Existing struct {
 	Ingredients []ingredient.Ingredient
 	Recipes     []RecipeRef
+	// Courses are every Course of the Household, archived ones included, in household order. Empty (a caller
+	// that does not know Courses) leaves the imported Recipes' CourseIDs and WholeMeal as the file says.
+	Courses []CourseRef
+}
+
+// CourseRef is an existing Course.
+type CourseRef struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Main     bool   `json:"main"`
+	Archived bool   `json:"archived"`
 }
 
 // RecipeRef is an existing Recipe (archived ones included).
@@ -84,6 +115,27 @@ type Decisions struct {
 	Ingredients []IngredientDecision `json:"ingredients"`
 	Conversions []ConversionAnswer   `json:"conversions"`
 	Recipes     []RecipeDecision     `json:"recipes"`
+	Courses     []CourseDecision     `json:"courses"`
+}
+
+// CourseDecision answers one Course name of the file, keyed by course.NameKey of the name.
+type CourseDecision struct {
+	Key      string `json:"key"`
+	Action   string `json:"action"`             // ActionUse, ActionSkip, ActionAdd or ActionUnarchive
+	CourseID int64  `json:"courseId,omitempty"` // ActionUse: an active Course
+}
+
+// CourseMatch is the Import Review row for one Course name of the file (one row per distinct key). Effective is
+// the answer in force: the User's, or the default (use the main Course) for an archived or unknown name; so
+// Resolved is true unless the User's answer is not valid.
+type CourseMatch struct {
+	Name      string          `json:"name"` // display name, first spelling in the file
+	Key       string          `json:"key"`
+	Status    string          `json:"status"`
+	Match     *CourseRef      `json:"match,omitempty"` // the active or archived Course the name matched
+	Effective *CourseDecision `json:"effective,omitempty"`
+	Resolved  bool            `json:"resolved"`
+	UsedBy    []string        `json:"usedBy"` // JSON paths like "$.recipes[0].courses[1]"
 }
 
 // Suggestion is a close existing Ingredient name.
@@ -172,6 +224,7 @@ type Plan struct {
 	Ingredients []IngredientMatch `json:"ingredients"`
 	UnitPrompts []UnitPrompt      `json:"unitPrompts"`
 	Recipes     []RecipeStatus    `json:"recipes"`
+	Courses     []CourseMatch     `json:"courses"`
 	Problems    []Problem         `json:"problems"`
 	Warnings    []Warning         `json:"warnings"`
 	Ready       bool              `json:"ready"`
@@ -248,7 +301,10 @@ type ResolvedIngredient struct{ ID int64 }
 // images are empty; ImagePath ("$.recipes[0].image") and StepImagePaths[s]
 // ("$.recipes[0].steps[2].image") key into Commit.Images.
 type RecipeCommit struct {
-	Index          int
+	Index int
+	// NewCourseKeys are the NewCourses (by Key) this Recipe also gets, once created; Input.CourseIDs holds the
+	// existing ones. The store writes the Recipe's Courses in household order.
+	NewCourseKeys  []string
 	Action         string // ActionReplace or "create" (new, or keep_both)
 	ReplaceID      int64  // for ActionReplace
 	Input          recipe.Input
@@ -258,8 +314,16 @@ type RecipeCommit struct {
 	StepImagePaths []string
 }
 
+// NewCourse is a Course to create (an Admin's "add" answer), added last in the household order.
+type NewCourse struct {
+	Key  string // course.NameKey of the name; RecipeCommit.NewCourseKeys refer to it
+	Name string // course.CleanName of the first spelling in the file
+}
+
 // Commit is everything Confirm writes in one transaction.
 type Commit struct {
+	NewCourses       []NewCourse // created first, in file order
+	UnarchiveCourses []int64     // archived Courses to bring back (an Admin's "unarchive" answer)
 	NewIngredients   []NewIngredient
 	AddedConversions []AddedConversion
 	AddedImages      []AddedImage // IM3: one per existing Ingredient without a picture

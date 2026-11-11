@@ -42,6 +42,7 @@ type Status struct {
 type ready struct {
 	settings recipeassistant.Settings
 	key      recipeassistant.Secret
+	system   string // the read's system prompt (crs-e1)
 }
 
 // availability decides whether the assistant can read, with the reason when it cannot (design §7 status).
@@ -271,6 +272,11 @@ func (s *Service) StartRead(c recipeassistant.Caller, in ReadInput, sink Sink) (
 	if s.promptErr != nil {
 		return JobView{}, s.promptErr
 	}
+	system, err := s.systemPrompt(ctx)
+	if err != nil {
+		return JobView{}, err
+	}
+	r.system = system
 	in, err = validate(in)
 	if err != nil {
 		return JobView{}, err
@@ -551,7 +557,7 @@ func (s *Service) perform(ctx context.Context, j *job, r ready, in ReadInput, si
 	if ms.Effort {
 		effort = effortMedium
 	}
-	req := Request{Model: r.settings.Model, System: s.agentPrompt, Turns: []Turn{{Role: "user", Images: images, Text: text}},
+	req := Request{Model: r.settings.Model, System: r.system, Turns: []Turn{{Role: "user", Images: images, Text: text}},
 		Schema: s.schema, MaxTokens: 16000, Effort: effort}
 	call := func(req Request) (string, error) {
 		rl.calls++

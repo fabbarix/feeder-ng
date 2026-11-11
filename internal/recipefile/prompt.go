@@ -43,13 +43,33 @@ func ExtractTemplate(recipeFileMD string) (string, error) {
 	return "", ErrNoTemplate
 }
 
-// AgentPrompt replaces {{SCHEMA}} and {{EXAMPLE}} in the template with the
-// schema and example file contents (verbatim, trailing newlines trimmed). The
-// result is what "Copy Agent Prompt" copies.
-func AgentPrompt(template, schema, example string) string {
+// PromptCourse is one active Course of the Household as the Agent Prompt lists it.
+type PromptCourse struct {
+	Name string
+	Main bool // the main Course, marked "(default)"
+}
+
+// AgentPrompt replaces {{SCHEMA}}, {{EXAMPLE}} and {{COURSES}} in the template
+// (docs/dev/design/crs-e1.md): the schema and example file contents verbatim with
+// trailing newlines trimmed, and the Household's active Courses one per line as
+// "- <name>", the main Course as "- <name> (default)"; no Course gives
+// "(no Courses defined)". The result is what "Copy Agent Prompt" copies.
+func AgentPrompt(template, schema, example string, courses []PromptCourse) string {
 	schema = strings.TrimRight(schema, "\r\n")
 	example = strings.TrimRight(example, "\r\n")
+	list := "(no Courses defined)"
+	if len(courses) > 0 {
+		lines := make([]string, 0, len(courses))
+		for _, c := range courses {
+			line := "- " + c.Name
+			if c.Main {
+				line += " (default)"
+			}
+			lines = append(lines, line)
+		}
+		list = strings.Join(lines, "\n")
+	}
 	// One pass, so text inserted for one placeholder is never expanded again.
-	r := strings.NewReplacer("{{SCHEMA}}", schema, "{{EXAMPLE}}", example)
+	r := strings.NewReplacer("{{SCHEMA}}", schema, "{{EXAMPLE}}", example, "{{COURSES}}", list)
 	return r.Replace(template)
 }

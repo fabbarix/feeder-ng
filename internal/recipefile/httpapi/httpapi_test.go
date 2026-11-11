@@ -118,8 +118,12 @@ func TestAgentPromptInlinesTheSchemaAndTheExample(t *testing.T) {
 	}
 	mustStatus(t, c.Get("/api/recipe-file/agent-prompt"), 200).MustJSON(t, &v)
 	tpl, _ := recipefile.ExtractTemplate(spec.RecipeFileMD)
-	if v.Prompt != recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example)) {
-		t.Fatal("the endpoint returns exactly recipefile.AgentPrompt of the embedded files")
+	seeded := []recipefile.PromptCourse{{Name: "Main", Main: true}, {Name: "Side"}, {Name: "Starter"}, {Name: "Dessert"}}
+	if v.Prompt != recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example), seeded) {
+		t.Fatal("the endpoint returns exactly recipefile.AgentPrompt of the embedded files and the seeded Courses")
+	}
+	if !strings.Contains(v.Prompt, "- Main (default)\n- Side\n- Starter\n- Dessert\n") {
+		t.Fatal("the prompt lists the seeded Courses")
 	}
 	if !strings.Contains(v.Prompt, `"feeder-recipe-file"`) || strings.Contains(v.Prompt, "{{") {
 		t.Fatal("prompt looks wrong")

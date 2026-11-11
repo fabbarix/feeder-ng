@@ -105,6 +105,13 @@
             }
           ]
         },
+        "courses": {
+          "description": "Names of the Courses this Recipe can fill (for example \"Main\", \"Side\"), taken from the list in the prompt. Omit it, or leave it empty, for the main Course.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "description": {
           "type": "string"
         },
@@ -172,6 +179,17 @@
           },
           "type": "array"
         },
+        "wholeMeal": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "true when the Recipe needs no other Course beside it; false when it does; null or omitted when unknown (a Ready Meal in the main Course then counts as a Whole meal)."
+        },
         "yield": {
           "description": "Standard portions produced by one Batch (for a Ready Meal: portions in one pack).",
           "type": "number"
@@ -179,6 +197,7 @@
       },
       "required": [
         "cooldownDays",
+        "courses",
         "description",
         "image",
         "ingredients",
@@ -189,6 +208,7 @@
         "source",
         "steps",
         "tags",
+        "wholeMeal",
         "yield"
       ],
       "type": "object"
