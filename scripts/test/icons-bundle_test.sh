@@ -10,10 +10,11 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB="$HERE/../../web"
 ICONS="$WEB/src/ui/icons.ts"
-# Budget 42 kB (43,008 B). UF1 measured 40,952 B with 97 glyphs and the plugin (68,255 B without it, which is
-# why the old 64 kB budget could not take the four ImagePicker glyphs). Headroom ~2.0 kB (~4 glyphs at ~0.43 kB).
-BUDGET=43008
-MIN_MODULES=100   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key)
+# Budget 43 kB (44,032 B). UF1 measured 40,952 B with 97 glyphs and the plugin (68,255 B without it, which is
+# why the old 64 kB budget could not take the four ImagePicker glyphs). Sort-drag measured 42,918 B with 102 modules;
+# the PM raised the budget to the new size + sensible headroom (~1.1 kB, 90 B was not sensible).
+BUDGET=44032
+MIN_MODULES=102   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then
   echo "FAIL: $PLUGIN missing (exports phosphorWeights(), strips thin and light from the Phosphor defs)"; exit 1

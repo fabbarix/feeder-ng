@@ -292,6 +292,18 @@ export function addLine(draft: RecipeDraft): RecipeDraft {
   return { ...draft, lines: [...draft.lines, newLineDraft()] }
 }
 
+/**
+ * Moves the line at `from` to `to` (clamped), keeping each line object; Steps and every other field are untouched.
+ * `from` outside the list or from === to returns an equal draft. Never mutates.
+ */
+export function moveLine(draft: RecipeDraft, from: number, to: number): RecipeDraft {
+  const lines = [...draft.lines]
+  if (from < 0 || from >= lines.length) return { ...draft, lines }
+  const [moved] = lines.splice(from, 1)
+  lines.splice(Math.max(0, Math.min(to, lines.length)), 0, moved!)
+  return { ...draft, lines }
+}
+
 /** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */
 export function updateLine(draft: RecipeDraft, key: string, patch: Partial<LineDraft>): RecipeDraft {
   const takesOver = TAKE_OVER.some((field) => field in patch)

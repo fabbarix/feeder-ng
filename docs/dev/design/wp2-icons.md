@@ -175,3 +175,7 @@ R14 adds `liquid` (`Drop`) and `piece` (`Cube`) for the Base Unit Segmented (g u
 (Drop, Cube, Key) take the bundle from 40,952 B to **42,249 B gz** (100 modules) of the 43,008 B budget (759 B headroom); `MIN_MODULES` is 100.
 WP-D's `connect` (`PlugsConnected`) does **not** fit: it alone costs about 1,070 B: with it the bundle is 43,317 B (309 B over). The budget was not raised; the PM decides
 (raise it, drop a glyph, or map `connect` to an existing glyph such as `link`).
+
+## Sort-drag update: budget raised to 44,032 B
+The drag handle (`drag`) and the Move up / down items bring the bundle to **42,918 B gz** (102 modules), 90 B under the 43,008 B budget, which is no real headroom.
+PM decision, following the user's rule "new size + sensible headroom": the budget is now **44,032 B** (43 kB), about 1.1 kB (two to three glyphs) above the measured size.

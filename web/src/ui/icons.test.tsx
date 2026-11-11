@@ -129,6 +129,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['key', 'Key'], // WP-D
   ['assistant', 'Robot'], // WP-D
   ['refresh', 'ArrowsClockwise'], // WP-D
+  ['drag', 'DotsSixVertical'], // sort-drag: ui/Sortable handle
 ]
 
 const markup = (name: string) => {

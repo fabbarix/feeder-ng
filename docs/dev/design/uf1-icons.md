@@ -47,3 +47,7 @@ Expected: 65,505 B -> 40,952 B (-37%) including the four new glyphs; ~427 B per 
 - `scripts/test/icons-bundle_test.sh`: needs `web/vite.phosphor-weights.ts`; budget **43,008 B** (expected 40,952 B + ~2.0 kB headroom); `MIN_MODULES=97`; the chunk must contain no `"thin"`/`"light"` and must contain `regular`, `bold`, `fill`, `duotone`.
 - `web/src/ui/icons.test.tsx`: rows `camera`/`Camera`, `clipboard`/`ClipboardText`, `link`/`LinkSimple`, `rotateRight`/`ArrowClockwise`, `rotateLeft`/`ArrowCounterClockwise` (same svg as `undo`).
 - `web/src/ui/icons.weights.test.tsx`: every registry icon draws at regular, bold, fill, duotone (green now, the guard against empty glyphs after stripping); `thin` and `light` render nothing (red until the plugin and `server.deps.inline` land).
+
+## Sort-drag update: budget raised to 44,032 B
+The drag handle (`drag`) and the Move up / down items bring the bundle to **42,918 B gz** (102 modules), 90 B under the 43,008 B budget, which is no real headroom.
+PM decision, following the user's rule "new size + sensible headroom": the budget is now **44,032 B** (43 kB), about 1.1 kB (two to three glyphs) above the measured size.
