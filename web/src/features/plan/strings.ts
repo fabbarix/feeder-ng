@@ -133,7 +133,8 @@ export const planStrings = {
   whyLeftoverFor: (day: string) => `Leftover for ${day}`,
   whyLeftoversToCome: 'Leftovers to come',
   // R13: Couldn't plan grouped by cause (lib/couldntGroups.ts, lib/couldntSummary.ts)
-  couldntCount: (n: number) => (n === 1 ? "1 meal couldn't be planned." : `${n} meals couldn't be planned.`),
+  couldntCount: (n: number) => (n === 1 ? "Couldn't plan 1 Meal Slot." : `Couldn't plan ${n} Meal Slots.`),
+  couldntAskAdmin: 'Ask an Admin to change this.',
   couldntCauseText: {
     nobody_attending: 'Nobody is set to attend.',
     no_recipes: 'There are no Recipes to choose from.',
@@ -174,7 +175,7 @@ export const planStrings = {
     advance_step: 'Choose a Recipe',
     no_fit: 'Choose a Recipe',
   },
-  couldntShowAll: (n: number) => `Show all ${n} meals`,
+  couldntShowAll: (n: number) => `Show all ${n}`,
   couldntHideList: 'Hide the list',
   couldntSlotRuleOne: 'Nothing that matches its Slot Rule is available.',
   couldntSlotRuleMany: 'Nothing that matches their Slot Rules is available.',

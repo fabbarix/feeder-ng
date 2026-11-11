@@ -46,20 +46,41 @@
   align-self: start;
 }
 
-/* R13: the first-run setup checklist. */
+/* R13: the first-run setup checklist. The title keeps a gap from the progress line, steps are spaced apart, the action
+   sits under its step on a phone (390 px) and right next to it on a wide screen (1280 px), never at the far edge. */
+.today__setup-title {
+  margin-bottom: 4px;
+}
 .today__setup {
-  margin-top: 12px;
+  margin-top: 16px;
+  gap: 16px;
 }
 .today__setup-step {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 8px;
 }
 .today__setup-step[data-done='true'] .today__row {
   color: var(--color-on-surface-variant, inherit);
 }
 .today__setup-step > .btn,
-.today__setup-step > .chip {
-  grid-column: 3;
+.today__setup-step > .chip,
+.today__setup-step > .today__muted {
+  grid-column: 2;
+  justify-self: start;
+}
+@media (min-width: 768px) {
+  .today__setup-step {
+    grid-template-columns: auto minmax(0, 28rem) auto;
+    justify-content: start;
+    align-items: center;
+    column-gap: 16px;
+  }
+  .today__setup-step > .btn,
+  .today__setup-step > .chip,
+  .today__setup-step > .today__muted {
+    grid-column: 3;
+  }
 }

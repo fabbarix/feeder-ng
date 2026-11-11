@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMe } from '../../../app/useMe'
 import { BentoGrid, Button, EmptyState, PageHeader } from '../../../ui'
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
@@ -33,7 +34,8 @@ export function PlanScreen(): ReactNode {
   const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
   const unplanned = useMemo(() => unplannedOf(plan.slots), [plan.slots])
-  const notice = useCouldntPlanNotice(unplanned, plan.slots)
+  const isAdmin = useMe().data?.isAdmin !== false
+  const notice = useCouldntPlanNotice(unplanned, plan.slots, isAdmin)
   const fix = useCouldntFix(s.openChoose)
 
   let body: ReactNode

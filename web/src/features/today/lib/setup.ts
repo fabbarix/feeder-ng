@@ -26,13 +26,15 @@ export interface SetupStep {
   done: boolean
   /** The first step not done: the only one with a button. */
   current: boolean
+  /** Its page can only be changed by an Admin (Members, Meal Slots): a plain User is told to ask one. */
+  adminOnly: boolean
 }
 
 export interface SetupChecklist {
   steps: SetupStep[]
   doneCount: number
   total: number
-  /** Show the checklist: nothing is planned yet, and a setup step is missing (or nothing has run yet). */
+  /** Show the checklist: nothing is planned yet and it is not the attendance-only case below (or nothing has run yet). */
   visible: boolean
 }
 
@@ -54,19 +56,14 @@ export function setupChecklist(facts: SetupFacts | null): SetupChecklist {
     { id: 'plan', to: '/plan', icon: 'plan' },
   ]
   const firstOpen = defs.findIndex((d) => !done[d.id])
-  const steps = defs.map((d, i) => ({ ...d, ...s.setupSteps[d.id], done: done[d.id], current: i === firstOpen }))
-  const setupDone = done.members && done.attendance && done.recipes
-  // Set up but held back by rules: Couldn't plan explains it.
-  const visible = facts.plannedMeals === 0 && !(setupDone && facts.unplannedMeals > 0)
+  const steps = defs.map((d, i) => ({ ...d, ...s.setupSteps[d.id], done: done[d.id], current: i === firstOpen, adminOnly: d.id === 'members' || d.id === 'attendance' }))
+  // Members and Recipes exist and the planner reports unplanned meals: either it is held back by rules, or only
+  // attendance is missing. Couldn't plan explains both ("Nobody is set to attend", with "Choose who attends").
+  const visible = facts.plannedMeals === 0 && !(facts.members > 0 && facts.recipes > 0 && facts.unplannedMeals > 0)
   return { steps, doneCount: steps.filter((x) => x.done).length, total: steps.length, visible }
 }
 
-/**
- * Whether Today leads with the checklist instead of Couldn't plan. It does while the checklist is visible, except when
- * Members and Recipes exist and the planner reports unplanned meals: then only attendance is missing, and Couldn't plan
- * ("Nobody is set to attend", with "Choose who attends") already says so with a better fix.
- */
+/** Whether Today leads with the checklist instead of Couldn't plan: exactly when the checklist is visible. */
 export function needsSetup(facts: SetupFacts | null): boolean {
-  if (!facts || !setupChecklist(facts).visible) return false
-  return !(facts.members > 0 && facts.recipes > 0 && facts.unplannedMeals > 0)
+  return setupChecklist(facts).visible
 }

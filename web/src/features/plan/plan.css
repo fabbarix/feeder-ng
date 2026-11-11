@@ -31,6 +31,9 @@
   padding-left: 0;
   margin-top: 8px;
 }
+.plan-meal__status {
+  white-space: nowrap; /* the chip inherits it: "Not planned" never wraps */
+}
 .plan__stack {
   display: grid;
   gap: 12px;

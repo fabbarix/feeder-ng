@@ -18,9 +18,10 @@ export const todayStrings = {
   useSoonMore: (n: number) => `+${n} more`,
   // R13: the first-run setup checklist
   setupTitle: 'Set up your Household',
-  setupProgress: (done: number, total: number) => `${done} of ${total} done. Then the planner takes over.`,
+  setupProgress: (done: number, total: number) => `${done} of ${total} steps set up. Then the planner takes over.`,
   setupStepsLabel: 'Setup steps',
-  setupDone: 'Done',
+  setupDone: 'Set up',
+  setupAskAdmin: 'Ask an Admin to do this.',
   setupSteps: {
     members: { label: 'Add your Members', action: 'Add Members', hint: 'Everyone who eats from the plan.' },
     attendance: { label: 'Set up Meal Slots and attendance', action: 'Set up Meal Slots', hint: 'When you eat, and who is at the table.' },

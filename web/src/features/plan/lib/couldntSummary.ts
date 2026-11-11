@@ -41,11 +41,13 @@ function clauseFor(name: string, affected: PlanSlot[], inPlan: number): Clause {
 
 /**
  * "Every dinner this week, plus weekend breakfasts and Tuesday lunch": what the affected meals are, by Meal Slot name,
- * biggest part first. `all` is the whole plan (what "every" is measured against); without it the affected meals are all
- * it knows.
+ * biggest part first. `everything` is the whole plan; "every" is measured against its slots that still count (a Planned Meal
+ * or a recorded reason, not a past slot). Without it the affected meals are all it knows.
  */
-export function summarizeSlots(affected: PlanSlot[], all: PlanSlot[] = affected): string {
+export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected): string {
   if (affected.length === 0) return ''
+  // Only slots that still count: a Planned Meal or a recorded reason. A slot whose time has gone has neither.
+  const all = everything.filter((x) => x.meal != null || x.unfilled != null)
   const names = new Map<string, PlanSlot[]>()
   for (const slot of affected) {
     const key = slot.name.toLowerCase()

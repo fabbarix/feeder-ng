@@ -83,15 +83,19 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
         <>
           {slot.unfilled ? (
             <>
-              <Chip {...toneStyle(toneOf(causeOf(slot))).chip}>{s.notPlanned}</Chip>
+              <span className="plan-meal__status">
+                <Chip {...toneStyle(toneOf(causeOf(slot))).chip}>{s.notPlanned}</Chip>
+              </span>
               {compact ? null : <p className="plan-meal__reason">{shortReason(causeOf(slot))}</p>}
             </>
           ) : (
             <p className="plan-meal__reason">{s.nothingPlanned}</p>
           )}
-          <Button variant="tertiary" size="sm" onClick={() => onChoose(key)}>
-            {s.choose}
-          </Button>
+          {slot.unfilled && causeOf(slot) === 'nobody_attending' ? null : (
+            <Button variant="tertiary" size="sm" onClick={() => onChoose(key)}>
+              {s.choose}
+            </Button>
+          )}
         </>
       )}
     </div>

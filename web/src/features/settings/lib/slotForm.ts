@@ -1,10 +1,10 @@
-import type { MealSlot, MealSlotInput } from '../types'
+import type { MealSlot, MealSlotInput, Member } from '../types'
 
-/** The editor's starting state: an existing Meal Slot, or a blank one on Monday. */
-export function slotDraft(slot?: MealSlot): MealSlotInput {
+/** The editor's starting state: an existing Meal Slot, or a blank one on Monday that every Member attends (opt out in the editor). */
+export function slotDraft(slot?: MealSlot, members: Member[] = []): MealSlotInput {
   return slot
     ? { weekday: slot.weekday, name: slot.name, time: slot.time, attendance: slot.attendance }
-    : { weekday: 1, name: '', time: '', attendance: [] }
+    : { weekday: 1, name: '', time: '', attendance: members.map((m) => ({ memberId: m.id, portionFactorOverride: null })) }
 }
 
 /** The first thing wrong with the draft, or null. */

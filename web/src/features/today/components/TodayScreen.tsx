@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useCouldntFix, useCouldntPlanNotice, useNotCooked } from '../../plan'
 import type { SlotKey } from '../../plan/types'
@@ -37,7 +38,8 @@ export function TodayScreen(): ReactElement {
   const streak = useZeroWasteStreak()
   const flow = useCookFlow()
   const notCooked = useNotCooked()
-  const notice = useCouldntPlanNotice(data.couldntPlan, data.planSlots ?? data.couldntPlan)
+  const isAdmin = useMe().data?.isAdmin !== false
+  const notice = useCouldntPlanNotice(data.couldntPlan, data.planSlots ?? data.couldntPlan, isAdmin)
   const fixCouldnt = useCouldntFix()
   const setup = useSetupChecklist()
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
@@ -61,7 +63,7 @@ export function TodayScreen(): ReactElement {
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,
     toConfirm: <ToConfirmTile slots={data.toConfirm} onYesCooked={yesCooked} onAdjust={flow.open} onNotCooked={(key) => void notCooked(key)} />,
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} />,
-    setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} />,
+    setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
     streak: <StreakTile days={streak.days} />,

@@ -7,14 +7,16 @@ import '../today.css'
 export interface SetupChecklistTileProps {
   checklist: SetupChecklist
   onAction: (step: SetupStep) => void
+  /** A plain User cannot change Members or Meal Slots: those steps say to ask an Admin. Default true. */
+  isAdmin?: boolean
 }
 
 /** First run: a welcoming soft tile with the four setup steps; only the current step has a button. Never a failure. */
-export function SetupChecklistTile({ checklist, onAction }: SetupChecklistTileProps): ReactElement | null {
+export function SetupChecklistTile({ checklist, onAction, isAdmin = true }: SetupChecklistTileProps): ReactElement | null {
   if (!checklist.visible) return null
   return (
     <Tile as="section" variant="soft" span="full" aria-labelledby="today-setup-title">
-      <h2 id="today-setup-title" className="today__tile-title">
+      <h2 id="today-setup-title" className="today__tile-title today__setup-title">
         {s.setupTitle}
       </h2>
       <p className="today__muted">{s.setupProgress(checklist.doneCount, checklist.total)}</p>
@@ -27,7 +29,8 @@ export function SetupChecklistTile({ checklist, onAction }: SetupChecklistTilePr
               <span className="today__muted">{step.hint}</span>
             </div>
             {step.done ? <Chip kind="status" status="success">{s.setupDone}</Chip> : null}
-            {step.current ? (
+            {step.current && step.adminOnly && !isAdmin ? <span className="today__muted">{s.setupAskAdmin}</span> : null}
+            {step.current && (isAdmin || !step.adminOnly) ? (
               <Button variant="secondary" size="sm" onClick={() => onAction(step)}>
                 {step.action}
               </Button>

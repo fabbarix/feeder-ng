@@ -36,8 +36,3 @@ web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal
 web/src/features/products/strings.ts deleted  # Delete Product copy: a bought Product cannot be deleted (the action, not the Archived state)
 # "Done" (board:markDone) is the Advance Step state on the kitchen board's Next Advance Step tile, not a Planned Meal (as on Cook).
 web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
-
-# R13: Couldn't plan counts "N meals couldn't be planned" / "Show all N meals" (functional-spec 7.4); a count of unfilled Meal Slots has no Planned Meal to name.
-web/src/features/plan/strings.ts meal  # "9 meals couldn't be planned", "Show all 9 meals": plain-English count of unfilled slots
-# R13: the setup checklist says "2 of 4 done" and marks a step "Done": plain English progress, not the Cooked state of a Planned Meal.
-web/src/features/today/strings.ts done  # setup checklist progress, not the Cooked state

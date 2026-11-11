@@ -12,7 +12,7 @@ const rule = (selector: string) => {
 
 describe('plan.css', () => {
   it('R13: the "Not planned" chip stays on one line', () => {
-    expect(rule('.plan-meal .chip')).toMatch(/white-space:\s*nowrap/)
+    expect(rule('.plan-meal__status')).toMatch(/white-space:\s*nowrap/)
   })
 
   it.each([2, 4, 7])('the week grid has a %i-column rule', (n) => {

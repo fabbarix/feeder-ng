@@ -14,7 +14,7 @@ export interface CouldntPlanTileProps {
 
 /**
  * One tile per cause of Couldn't plan: overline, a headline that says it once, the affected meals in a line, a hint,
- * "Show all N meals" (two or more) and one fix action. A section named by its headline, not an alarm.
+ * "Show all N" (two or more) and one fix action. A section named by its headline, not an alarm.
  */
 export function CouldntPlanTile({ group, expanded, onToggle, onFix }: CouldntPlanTileProps): ReactNode {
   const headingId = useId()
@@ -29,14 +29,14 @@ export function CouldntPlanTile({ group, expanded, onToggle, onFix }: CouldntPla
       overline={s.couldntPlanTitle}
       overlineIcon={group.icon}
       data-cause={group.cause}
-      data-tone={group.tone}
+      data-couldnt-tone={group.tone}
       className="plan-couldnt"
     >
       <h2 id={headingId} className="plan__tile-title">
         {group.headline}
       </h2>
       <p className="plan-couldnt__summary">{group.summary}</p>
-      <p className="plan__muted">{group.hint}</p>
+      <p className="plan__muted">{group.canFix ? group.hint : `${group.hint} ${s.couldntAskAdmin}`}</p>
       {expanded ? (
         <ul id={listId} className="plan__list">
           {group.slots.map((slot) => (
@@ -50,9 +50,11 @@ export function CouldntPlanTile({ group, expanded, onToggle, onFix }: CouldntPla
             {expanded ? s.couldntHideList : s.couldntShowAll(group.count)}
           </Button>
         ) : null}
-        <Button variant="secondary" size="sm" onClick={onFix}>
-          {group.fix.label}
-        </Button>
+        {group.canFix ? (
+          <Button variant="secondary" size="sm" onClick={onFix}>
+            {group.fix.label}
+          </Button>
+        ) : null}
       </div>
     </Tile>
   )

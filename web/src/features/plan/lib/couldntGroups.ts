@@ -22,12 +22,14 @@ export interface CauseGroup {
   cause: Cause
   count: number
   slots: PlanSlot[]
-  /** "9 meals couldn't be planned. Nobody is set to attend." */
+  /** "Couldn't plan 9 Meal Slots. Nobody is set to attend." */
   headline: string
   hint: string
   tone: Tone
   icon: IconName
   fix: FixAction
+  /** The fix leads to a page only an Admin can change (Meal Slots, Household settings). */
+  adminOnly: boolean
 }
 
 /** Display order: setup gaps first, then rule conflicts. */
@@ -43,6 +45,9 @@ const META: Record<Cause, { tone: Tone; icon: IconName; fix: (label: string) => 
   advance_step: { tone: 'warn', icon: 'advanceStep', fix: (label) => ({ kind: 'choose', label }) },
   no_fit: { tone: 'warn', icon: 'info', fix: (label) => ({ kind: 'choose', label }) },
 }
+
+/** Causes whose fix page (Meal Slots, Household settings) only an Admin can change; Slot and Variety Rules are open to every User. */
+const ADMIN_ONLY = new Set<Cause>(['nobody_attending', 'cool_down'])
 
 /** The tone of a cause. */
 export function toneOf(cause: Cause): Tone {
@@ -105,6 +110,7 @@ export function groupByCause(slots: PlanSlot[]): CauseGroup[] {
       tone: meta.tone,
       icon: meta.icon,
       fix: meta.fix(s.couldntFix[cause]),
+      adminOnly: ADMIN_ONLY.has(cause),
     }
   })
 }
