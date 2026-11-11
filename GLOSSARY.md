@@ -108,8 +108,13 @@ A Course a Meal Slot serves only when a Leftover or a fresh Recipe fits it witho
 _Avoid_: Extra course, maybe course, bonus course
 
 **Tag**:
-A household-defined label on Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to.
+A household-defined name carried by Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to. Each Tag has a **Tag colour**. The Household adds, renames, recolours, merges and deletes Tags in Settings > Tags; a Tag may exist with no Recipe, and it stays when its last Recipe loses it. Renaming or merging a Tag carries its Slot Rules and Variety Rule with it ([ADR 0010](docs/adr/0010-tags-as-entities.md)).
 _Avoid_: Category, label
+_Note_: two names that differ only in case or spacing are one Tag ("Fish" and "fish").
+
+**Tag colour**:
+The colour of a Tag's pill, one of a closed palette of ten (Tomato, Apricot, Mustard, Olive, Sage, Teal, Sky, Blue, Plum, Rose); a new Tag gets the colour fewest Tags have. It only helps tell Tags apart: it never carries a meaning of its own, and status colours are not among them.
+_Avoid_: Tag category, colour code
 
 ### Preferences
 
