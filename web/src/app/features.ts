@@ -4,6 +4,7 @@ import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { ComingSoon } from './ComingSoon'
 import { NotFound } from './NotFound'
+import { StockRedirect } from './StockRedirect'
 import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
 
 /** What a feature tells the shell's status slot. The scan feature will export one from features/scan/index.ts. */
@@ -58,8 +59,10 @@ export function buildRoutes(modules: Record<string, FeatureModule>): RouteObject
   const placeholders: RouteObject[] = [...PRIMARY_NAV, ...MENU_NAV]
     .filter((dest) => !provided.has(dest.path))
     .map((dest) => ({ path: dest.path, element: createElement(ComingSoon, { title: dest.label }) }))
+  // The shell owns the old /stock address (PN): it forwards to /pantry, so no feature declares it.
+  const aliases: RouteObject[] = [{ path: '/stock', element: createElement(StockRedirect) }]
   // Catch-all last: any path no route claims shows Page not found inside the shell.
-  return [...routes, ...placeholders, { path: '*', element: createElement(NotFound) }]
+  return [...routes, ...aliases, ...placeholders, { path: '*', element: createElement(NotFound) }]
 }
 
 /** The discovered feature modules, keyed by file path. */

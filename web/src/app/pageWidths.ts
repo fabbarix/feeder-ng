@@ -10,7 +10,6 @@ export interface RouteWidth {
 
 export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/', width: 'wide' },
-  { path: '/stock', width: 'default' },
   { path: '/pantry', width: 'default' },
   { path: '/recipes/:id', width: 'default' },
   { path: '/recipes/:id/edit', width: 'default' },
