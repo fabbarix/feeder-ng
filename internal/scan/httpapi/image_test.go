@@ -160,3 +160,73 @@ func TestThePhonesOfflineDataCarriesTheProductPictures(t *testing.T) {
 		t.Errorf("offline data = %+v; the phone describes a queued scan with the picture", data)
 	}
 }
+
+// PPX: a merged scan fills a Product that has no Picture (docs/dev/design/ppx-product-picture-sync.md).
+
+func TestAMergedScanFillsAProductWithoutAPicture(t *testing.T) {
+	f := newFixture(t)
+	id := uploadPNG(t, f.user)
+	op := f.unknownOp("scan-0002", "8000500310427") // the fixture Product's barcode: someone created it first
+	op["productImage"] = id
+	var res struct {
+		scanned
+		Scan struct {
+			ProductID       int64  `json:"productId"`
+			ProductCreated  bool   `json:"productCreated"`
+			ProductImageURL string `json:"productImageUrl"`
+			Merged          *struct {
+				ProductID     int64 `json:"productId"`
+				PictureFilled bool  `json:"pictureFilled"`
+			} `json:"merged"`
+		} `json:"scan"`
+	}
+	f.user.Post("/api/scan", op).MustJSON(t, &res)
+	if res.Status != "applied" || res.Scan.ProductCreated || res.Scan.Merged == nil || res.Scan.Merged.ProductID != f.product {
+		t.Fatalf("scan = %+v; want a merge into the fixture Product", res)
+	}
+	if res.Scan.ProductImageURL != "/api/images/"+id || !res.Scan.Merged.PictureFilled {
+		t.Errorf("scan = %+v; the Product had no picture, so the form's picture fills it", res.Scan)
+	}
+	var p struct {
+		Image string `json:"image"`
+	}
+	f.user.Get(fmt.Sprintf("/api/products/%d", f.product)).MustJSON(t, &p)
+	if p.Image != id {
+		t.Errorf("Product image = %q, want %q", p.Image, id)
+	}
+	if r := f.user.Get("/api/images/" + id); r.Status != 200 {
+		t.Errorf("the file = %d; it is kept", r.Status)
+	}
+}
+
+func TestAMergedScanLeavesTheLosingPictureFileForTheNightlyCleanUp(t *testing.T) {
+	f := newFixture(t)
+	own, other := uploadPNG(t, f.user), uploadPNG(t, f.user)
+	f.user.Patch(fmt.Sprintf("/api/products/%d", f.product), map[string]any{"image": own})
+	op := f.unknownOp("scan-0002", "8000500310427")
+	op["productImage"] = other
+	var res scanned
+	f.user.Post("/api/scan", op).MustJSON(t, &res)
+	if res.Status != "applied" || res.Scan.ProductImageURL != "/api/images/"+own {
+		t.Fatalf("scan = %+v; the Product keeps its own picture", res)
+	}
+	if r := f.user.Get("/api/images/" + other); r.Status != 200 {
+		t.Errorf("the unused file = %d; it stays until the sweep removes it (24 h)", r.Status)
+	}
+}
+
+func TestAQueuedBatchWithAGonePictureIsAppliedInFull(t *testing.T) {
+	f := newFixture(t)
+	a := f.unknownOp("scan-0002", "5012345678900")
+	a["productImage"] = strings.Repeat("c", 32)
+	b := f.unknownOp("scan-0003", "4006381333931")
+	b["productName"] = "Other tin"
+	var out struct {
+		Results []scanned `json:"results"`
+	}
+	r := f.user.Post("/api/scan/sync", map[string]any{"ops": []any{a, b}})
+	r.MustJSON(t, &out)
+	if r.Status != 200 || len(out.Results) != 2 || out.Results[0].Status != "applied" || out.Results[1].Status != "applied" || out.Results[0].Scan.ProductImageURL != "" {
+		t.Fatalf("sync = %d %s; a gone picture is dropped, no operation is rejected", r.Status, r.Body)
+	}
+}

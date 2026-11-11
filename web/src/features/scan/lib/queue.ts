@@ -16,7 +16,34 @@ export interface QueuedOp {
    * operation is removed from the OpStore (IndexedDB) at once and never resent; the note lives until dismissed.
    */
   rejected?: { code: string; message: string }
+  /**
+   * PPX: a Picture for this operation is waiting in the PictureStore (a Blob picked while offline). Metadata only, so
+   * all() stays light; removed once the Picture is uploaded (op.productImage then holds its id) or given up.
+   */
+  picture?: { type: string; size: number }
 }
+
+/** PPX: where the Blobs of queued Pictures live, by clientUuid (IndexedDB in the app; memory in tests). Separate from the OpStore so pending() never loads Blobs. */
+export interface PictureStore {
+  put(clientUuid: string, blob: Blob): Promise<void>
+  get(clientUuid: string): Promise<Blob | undefined>
+  remove(clientUuid: string): Promise<void>
+}
+
+/** PPX: why a queued Picture was given up (the scan still syncs, without it). */
+export interface PictureFailure {
+  clientUuid: string
+  productName: string
+  reason: 'too_large' | 'unsupported' | 'rejected' | 'missing'
+}
+
+/** PPX: what enqueue did with the Picture; false = the operation is queued WITHOUT it (over MAX_QUEUED_PICTURE_BYTES, no PictureStore, or the store refused the write). */
+export interface EnqueueResult {
+  pictureStored: boolean
+}
+
+/** PPX: the largest Blob the queue keeps (the picker already limits it to OFFLINE_PICTURE_MAX_BYTES; this is the queue's own guard). */
+export const MAX_QUEUED_PICTURE_BYTES = 2 * 1024 * 1024
 
 /** Ordered persistent storage. all() returns entries in the order they were appended. */
 export interface OpStore {
@@ -28,12 +55,32 @@ export interface OpStore {
 
 export interface SyncApi {
   sync(ops: Op[]): Promise<ScanResult[]>
+  /** PPX: uploads a queued Picture (POST /api/images) and answers its image id. Absent = queued Pictures are never uploaded. */
+  uploadPicture?(blob: Blob): Promise<string>
 }
 
 export interface FlushResult {
   /** the server was unreachable (network error or 5xx); everything stays queued */
   offline: boolean
   results: ScanResult[]
+  /** PPX: Pictures given up in this flush; absent when there were none */
+  pictureFailures?: PictureFailure[]
+}
+
+/** PPX: an in-memory PictureStore (tests, and the fallback when IndexedDB is missing). */
+export function createMemoryPictureStore(): PictureStore {
+  const blobs = new Map<string, Blob>()
+  return {
+    async put(clientUuid, blob) {
+      blobs.set(clientUuid, blob)
+    },
+    async get(clientUuid) {
+      return blobs.get(clientUuid)
+    },
+    async remove(clientUuid) {
+      blobs.delete(clientUuid)
+    },
+  }
 }
 
 export function createMemoryOpStore(): OpStore {
@@ -111,13 +158,20 @@ export class OfflineQueue {
   constructor(
     private readonly store: OpStore,
     private readonly now: () => Date = () => new Date(),
+    /** PPX: where queued Pictures are kept; without it a Picture passed to enqueue is dropped (pictureStored false) */
+    protected readonly pictures?: PictureStore,
   ) {}
 
-  /** Appends the operation; a clientUuid already in the queue is ignored (no duplicate). */
-  async enqueue(op: Op): Promise<void> {
+  /**
+   * Appends the operation; a clientUuid already in the queue is ignored (no duplicate). PPX: an optional Picture (the Blob
+   * picked on the offline form) is kept in the PictureStore and flushed first. The operation is queued either way. Stub
+   * until the Developer implements it.
+   */
+  async enqueue(op: Op, _picture?: Blob): Promise<EnqueueResult> {
     const existing = await this.store.all()
-    if (existing.some((e) => e.op.clientUuid === op.clientUuid)) return
+    if (existing.some((e) => e.op.clientUuid === op.clientUuid)) return { pictureStored: false }
     await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0 })
+    return { pictureStored: false }
   }
 
   /**

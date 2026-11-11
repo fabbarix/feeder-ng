@@ -7,6 +7,8 @@ export interface ScanApi {
   /** A rejected operation answers 422 `{status:'rejected', error:{code}}`, which lib/http raises as an ApiError with that code. */
   apply(op: Op): Promise<ScanResult>
   sync(ops: Op[]): Promise<ScanResult[]>
+  /** PPX: POST /api/images {dataUrl} for a Picture queued offline; answers the image id. Stub until the Developer implements it. */
+  uploadPicture(blob: Blob): Promise<string>
   undo(clientUuid: string): Promise<{ undone: boolean; alreadyUndone?: boolean }>
   setPrice(clientUuid: string, priceCents: number): Promise<ScanResult>
   /** R8: GET /api/resolve?barcode=&shop=; `archivedProduct` is set when only an archived Product owns the code */
@@ -34,6 +36,9 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
     async sync(ops) {
       const signal = timeoutSignal(syncTimeoutMs)
       return (await client.post<{ results: ScanResult[] }>('/api/scan/sync', { ops }, { signal })).results
+    },
+    async uploadPicture() {
+      throw new Error('not implemented')
     },
     undo: (uuid) => client.post(`/api/scan/${encodeURIComponent(uuid)}/undo`),
     setPrice: (uuid, priceCents) => client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, { priceCents }),

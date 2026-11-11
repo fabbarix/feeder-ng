@@ -124,6 +124,11 @@ type fakeCatalogue struct {
 	nextID    int64
 	recorded  []service.PriceInput
 	deleted   []int64
+	// PPX: ids that name no stored file; CreateProduct and FillPicture answer service.ErrPictureMissing for them (after the barcode check, as the real store does).
+	ghostImages map[string]bool
+	// missingErr is what the fake answers for a ghost id; defaults to the bare service.ErrPictureMissing.
+	missingErr error
+	fills      []string // images FillPicture was asked to put on a Product
 }
 
 func newFakeCatalogue() *fakeCatalogue {
@@ -175,14 +180,46 @@ func (f *fakeCatalogue) CreateProduct(_ context.Context, in service.NewProduct) 
 			return service.ProductInfo{}, &service.BarcodeTakenError{ProductID: owner}
 		}
 	}
+	if in.Image != "" && f.ghostImages[in.Image] {
+		return service.ProductInfo{}, f.missing()
+	}
 	f.nextID++
 	f.created = append(f.created, in)
 	p := service.ProductInfo{ID: f.nextID, Name: in.Name, IngredientID: in.IngredientID, IngredientName: "ingredient " + itoa(in.IngredientID), BaseUnit: "g", PackSize: in.PackSize}
+	if in.Image != "" {
+		p.ImageURL = "/api/images/" + in.Image
+	}
 	f.products[p.ID] = p
 	for _, k := range keys {
 		f.owners[k] = p.ID
 	}
 	return p, nil
+}
+func (f *fakeCatalogue) missing() error {
+	if f.missingErr != nil {
+		return f.missingErr
+	}
+	return service.ErrPictureMissing
+}
+
+// FillPicture mirrors the store: a ghost id is ErrPictureMissing, a Product with a Picture keeps it (filled false).
+func (f *fakeCatalogue) FillPicture(_ context.Context, productID int64, image string) (service.ProductInfo, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	p, ok := f.products[productID]
+	if !ok {
+		return service.ProductInfo{}, false, service.ErrProductGone
+	}
+	f.fills = append(f.fills, image)
+	if p.ImageURL != "" {
+		return p, false, nil
+	}
+	if f.ghostImages[image] {
+		return p, false, f.missing()
+	}
+	p.ImageURL = "/api/images/" + image
+	f.products[productID] = p
+	return p, true, nil
 }
 func (f *fakeCatalogue) SoldAt(_ context.Context, p, s int64) (bool, error) {
 	time.Sleep(f.delay)

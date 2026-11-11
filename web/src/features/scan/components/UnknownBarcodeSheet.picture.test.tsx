@@ -62,8 +62,9 @@ describe('UnknownBarcodeSheet: Picture', () => {
     expect(onSave.mock.calls[0]?.[0].image ?? '').toBe('')
   })
 
-  it('is left out while the phone is offline: the picture needs the server', () => {
+  // PPX: no longer left out offline; the offline field is a raw-mode picker (UnknownBarcodeSheet.offlinePicture.test.tsx has the details).
+  it('is there while the phone is offline too, in raw mode because it cannot upload', () => {
     setup('pack', { canUpload: false })
-    expect(screen.queryByRole('group', { name: scanStrings.pictureLabel })).toBeNull()
+    expect(picker()).toHaveAttribute('data-mode', 'raw')
   })
 })

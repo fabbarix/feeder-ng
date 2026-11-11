@@ -25,7 +25,7 @@ export interface ScanFlowDeps {
   /** the Shopping List range the scans count against */
   rangeTo?: string
   /** online: applies the Op and returns its Result; offline: queues it and returns null */
-  submit: (op: Op) => Promise<ScanResult | null>
+  submit: (op: Op, picture?: Blob) => Promise<ScanResult | null>
   /** drops a still-queued Op (Undo while offline); false when it was already sent */
   cancelQueued: (clientUuid: string) => Promise<boolean>
   undo: (clientUuid: string) => Promise<void>

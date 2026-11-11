@@ -60,7 +60,8 @@ export interface ScanApplied {
   remaining: number
   ticked: boolean
   productCreated: boolean
-  merged?: { productId: number; productName: string }
+  /** pictureFilled (PPX): the Product had no Picture and took the one from the form */
+  merged?: { productId: number; productName: string; pictureFilled?: boolean }
   total?: number
 }
 

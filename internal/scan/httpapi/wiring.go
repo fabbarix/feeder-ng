@@ -127,6 +127,11 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	return productInfo(d.Product), nil
 }
 
+// FillPicture gives the Product the Picture only when it has none (PPX). Stub until the Developer implements it.
+func (c catalogue) FillPicture(ctx context.Context, productID int64, image string) (service.ProductInfo, bool, error) {
+	return service.ProductInfo{}, false, nil
+}
+
 // SoldAt reports whether the Product is already sold at the Shop (T9's product_shops link).
 func (c catalogue) SoldAt(ctx context.Context, productID, shopID int64) (bool, error) {
 	var n int

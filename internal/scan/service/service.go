@@ -31,6 +31,10 @@ var (
 	// ErrUnknownIngredient is what the Catalogue and Ingredients ports return for an Ingredient that no longer
 	// exists (for example merged away while the phone was offline). Apply turns it into a rejected Result.
 	ErrUnknownIngredient = errors.New("scan: unknown Ingredient")
+	// ErrPictureMissing (PPX) is what the Catalogue port returns, wrapped or not, when a Picture id names no stored file
+	// (never uploaded, or swept before a queued scan synced). CreateProduct is then retried without the Picture, and a
+	// merge simply does not fill one. Matched with errors.Is; the adapter maps product.ErrPictureMissing to it.
+	ErrPictureMissing = errors.New("scan: picture missing")
 	// ErrAlreadyUndone is returned by SetPrice for a scan that was undone (the API answers 409 already_undone).
 	ErrAlreadyUndone = errors.New("scan: the scan was undone")
 )
@@ -148,6 +152,9 @@ type Catalogue interface {
 	ShopExists(ctx context.Context, id int64) (bool, error)
 	Product(ctx context.Context, id int64) (ProductInfo, error) // ErrProductGone
 	CreateProduct(ctx context.Context, in NewProduct) (ProductInfo, error)
+	// FillPicture (PPX) gives the Product the Picture only when it has none, atomically. filled is false when it already
+	// had one (ProductInfo then carries its own). A missing file is ErrPictureMissing; nothing is deleted.
+	FillPicture(ctx context.Context, productID int64, image string) (info ProductInfo, filled bool, err error)
 	SoldAt(ctx context.Context, productID, shopID int64) (bool, error)
 	SetSoldAt(ctx context.Context, productID, shopID int64) error
 	UnsetSoldAt(ctx context.Context, productID, shopID int64) error

@@ -91,6 +91,6 @@ Red now: `go test ./...` has failures only in `internal/product`, `internal/prod
 
 ## Product questions
 1. **Shop pictures?** Not needed; a Shop is a name. Not in PP.
-2. **A merged scan** (two phones create the same barcode): the second phone's picture is dropped and the first Product keeps its own. Should the second picture fill in when the existing Product has **none**? Easy (`SetImage` when empty); left out to keep a scan from editing a Product.
-3. **Offline unknown barcode** loses the Picture field (it uploads). Alternative: queue the cropped blob in IndexedDB and upload on sync. Out of scope for beta.1.
+2. **A merged scan** (superseded by [PPX](ppx-product-picture-sync.md): the second picture now fills a Product that has none) (two phones create the same barcode): the second phone's picture is dropped and the first Product keeps its own. Should the second picture fill in when the existing Product has **none**? Easy (`SetImage` when empty); left out to keep a scan from editing a Product.
+3. **Offline unknown barcode** (superseded by [PPX](ppx-product-picture-sync.md)) loses the Picture field (it uploads). Alternative: queue the cropped blob in IndexedDB and upload on sync. Out of scope for beta.1.
 4. **Row height.** Giving every Product row a leading slot makes the Products list rows 72 instead of 64. Intended, and the same as the Ingredients list.

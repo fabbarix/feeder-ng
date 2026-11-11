@@ -236,6 +236,14 @@ func (s *Store) SetImage(ctx context.Context, id int64, image string) (Detail, e
 	return s.Product(ctx, id)
 }
 
+// FillImage (PPX) gives the Product a Picture only when it has none, atomically (UPDATE ... WHERE image is empty), and
+// reports whether it did. A Product that already has a Picture is left alone (false, nil), as is image == "".
+// A well-formed id with no stored file is *product.ValidationError{Field: "image", Err: product.ErrPictureMissing};
+// an unknown Product is ErrNotFound. It never deletes a file. Stub until the Developer implements it.
+func (s *Store) FillImage(ctx context.Context, id int64, image string) (bool, error) {
+	return false, nil
+}
+
 // checkImage refuses a Picture id that is malformed or was never uploaded (the upload check only when WithImages was given).
 func (s *Store) checkImage(id string) error {
 	if id == "" {

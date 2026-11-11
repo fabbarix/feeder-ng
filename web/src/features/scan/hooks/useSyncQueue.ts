@@ -12,6 +12,8 @@ export interface UseSyncQueueOptions {
   isOnline?: () => boolean
   /** called with the results of each flush that sent something */
   onResults?: (results: ScanResult[], notices: SyncNotice[]) => void
+  /** PPX: called with the operation when enqueue could not keep its Picture (the scan is queued without it) */
+  onPictureNotStored?: (op: Op) => void
 }
 
 export interface UseSyncQueueResult {
@@ -20,8 +22,8 @@ export interface UseSyncQueueResult {
   pendingCount: number
   /** operations the server rejected */
   rejectedCount: number
-  /** queues an operation and, when online, flushes */
-  enqueue(op: Op): Promise<void>
+  /** queues an operation (PPX: with the Blob of its offline Picture, if any) and, when online, flushes */
+  enqueue(op: Op, picture?: Blob): Promise<void>
   /** flush now (no-op while offline) */
   flush(): Promise<void>
   /** forgets the rejected operations (their count goes to 0) */
@@ -88,7 +90,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   flushRef.current = flush
 
   const enqueue = useCallback(
-    async (op: Op) => {
+    async (op: Op, _picture?: Blob) => {
       await queueRef.current.enqueue(op)
       await refreshCounts()
       await flush()
