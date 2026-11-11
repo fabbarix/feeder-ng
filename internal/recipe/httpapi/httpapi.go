@@ -152,6 +152,8 @@ type recipeJSON struct {
 	Image             string        `json:"image"`
 	ImageURL          string        `json:"imageUrl"`
 	Archived          bool          `json:"archived"`
+	Courses           []courseJSON  `json:"courses"`
+	WholeMeal         bool          `json:"wholeMeal"`
 	Lines             []lineJSON    `json:"lines"`
 	Steps             []stepJSON    `json:"steps"`
 	TotalMinutes      int           `json:"totalMinutes"`
@@ -171,6 +173,14 @@ type summaryJSON struct {
 	Archived       bool     `json:"archived"`
 	TotalMinutes   int      `json:"totalMinutes"`
 	AdvanceMinutes int      `json:"advanceMinutes"`
+	CourseIDs      []int64  `json:"courseIds"`
+	WholeMeal      bool     `json:"wholeMeal"`
+}
+
+// courseJSON is a Course of a Recipe, in household order.
+type courseJSON struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type prefsJSON struct {
@@ -197,8 +207,12 @@ type recipeBody struct {
 	ReheatMinutes     *int       `json:"reheatMinutes"`
 	Source            sourceJSON `json:"source"`
 	Image             string     `json:"image"`
-	Lines             []lineBody `json:"lines"`
-	Steps             []stepBody `json:"steps"`
+	// CourseIDs: absent or null keeps the stored Courses (a create gets the main Course); [] is refused.
+	CourseIDs []int64 `json:"courseIds"`
+	// WholeMeal: absent or null keeps the stored value (a create gets the default for the Recipe).
+	WholeMeal *bool      `json:"wholeMeal"`
+	Lines     []lineBody `json:"lines"`
+	Steps     []stepBody `json:"steps"`
 }
 
 type lineBody struct {
@@ -231,6 +245,8 @@ func (b recipeBody) input() recipe.Input {
 		ReheatMinutes:     b.ReheatMinutes,
 		Source:            recipe.Source{URL: b.Source.URL, Attribution: b.Source.Attribution},
 		Image:             b.Image,
+		CourseIDs:         b.CourseIDs,
+		WholeMeal:         b.WholeMeal,
 	}
 	for _, l := range b.Lines {
 		in.Lines = append(in.Lines, recipe.Line{IngredientID: l.IngredientID, Quantity: l.Quantity, Unit: l.Unit, Optional: l.Optional, Note: l.Note})
@@ -263,7 +279,24 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, "archived", "archived_invalid", "archived must be no, yes or all")
 		return
 	}
-	list, err := a.store.List(r.Context(), store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q")})
+	course, ok := optionalID(q.Get("course"))
+	if !ok || (course != nil && *course <= 0) {
+		writeFieldError(w, "course", "course_invalid", "course must be a Course id")
+		return
+	}
+	notCourse, ok := optionalID(q.Get("notCourse"))
+	if !ok || (notCourse != nil && *notCourse <= 0) {
+		writeFieldError(w, "notCourse", "course_invalid", "notCourse must be a Course id")
+		return
+	}
+	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q")}
+	if course != nil {
+		f.CourseID = *course
+	}
+	if notCourse != nil {
+		f.NotCourseID = *notCourse
+	}
+	list, err := a.store.List(r.Context(), f)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -273,6 +306,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		out = append(out, summaryJSON{
 			ID: s.ID, Name: s.Name, Yield: s.Yield, ReadyMeal: s.ReadyMeal, Tags: nonNil(s.Tags),
 			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
+			CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
@@ -513,9 +547,13 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays, ReheatMinutes: rec.ReheatMinutes,
 		Source: sourceJSON{URL: rec.Source.URL, Attribution: rec.Source.Attribution},
 		Image:  rec.Image, ImageURL: imgs.URL(rec.Image), Archived: rec.Archived,
+		Courses: []courseJSON{}, WholeMeal: rec.WholeMeal != nil && *rec.WholeMeal,
 		Lines: []lineJSON{}, Steps: []stepJSON{}, Advance: []advanceJSON{},
 		TotalMinutes: rec.Timing.TotalMinutes, AdvanceMinutes: rec.Timing.AdvanceMinutes,
 		CreatedAt: rec.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: rec.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+	for _, c := range rec.Courses {
+		out.Courses = append(out.Courses, courseJSON{ID: c.ID, Name: c.Name})
 	}
 	for _, l := range rec.Lines {
 		out.Lines = append(out.Lines, lineJSON{
@@ -537,6 +575,13 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 		out.Advance = append(out.Advance, advanceJSON{Step: a.Step, LeadTimeMinutes: a.LeadTimeMinutes})
 	}
 	return out
+}
+
+func nonNilIDs(s []int64) []int64 {
+	if s == nil {
+		return []int64{}
+	}
+	return s
 }
 
 func nonNilInts(s []int) []int {

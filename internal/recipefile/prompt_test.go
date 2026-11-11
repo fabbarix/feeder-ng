@@ -38,7 +38,7 @@ func TestExtractTemplateFailsWithoutABlock(t *testing.T) {
 
 func TestAgentPromptInlinesSchemaAndExample(t *testing.T) {
 	tpl, _ := recipefile.ExtractTemplate(spec.RecipeFileMD)
-	got := recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example))
+	got := recipefile.AgentPrompt(tpl, string(spec.Schema), string(spec.Example), nil)
 	if strings.Contains(got, "{{") {
 		t.Fatal("placeholders left in the prompt")
 	}
@@ -55,7 +55,7 @@ func TestAgentPromptInlinesSchemaAndExample(t *testing.T) {
 
 func TestAgentPromptDoesNotReprocessInsertedText(t *testing.T) {
 	// A schema or example that itself contains a placeholder must not be expanded again.
-	got := recipefile.AgentPrompt("A {{SCHEMA}} B {{EXAMPLE}}", "s {{EXAMPLE}}", "e")
+	got := recipefile.AgentPrompt("A {{SCHEMA}} B {{EXAMPLE}}", "s {{EXAMPLE}}", "e", nil)
 	if got != "A s {{EXAMPLE}} B e" {
 		t.Fatalf("got %q", got)
 	}

@@ -53,6 +53,8 @@ Anything else is an **unconvertible unit**. Import Review asks for the conversio
 | `description` | Optional short text. |
 | `yield` | Standard portions produced by one Batch. For a Ready Meal, the portions in one pack. |
 | `readyMeal` | `true` for a Ready Meal. It must then have exactly one ingredient line, usually `1 piece` of the pack. Name that Ingredient like the Recipe: Import Review then needs no definition for it, using an existing Ingredient of that name or creating one with Base Unit `piece` (the same rule as the Recipe editor). A line named differently needs its definition as any other Ingredient. |
+| `courses` | Optional. The names of the Courses the Recipe can fill, for example `["Main", "Side"]`: strings of 1 to 40 characters, unique, at most 20, written by export in household order. Import matches each name to the Household's Courses, ignoring case and spacing (the key is `course.NameKey`). A name that is not one of the Household's Courses is resolved in Import Review; import never creates a Course on its own. Absent or `[]` means the main Course. An optional, backwards compatible addition to version 1: files without it stay valid, so the version stays `1`; only a Feeder older than this field rejects a file that has it (unknown properties are not allowed). |
+| `wholeMeal` | Optional boolean or `null`, with no schema default. `true` for a **Whole meal**: a Recipe that needs no other Course beside it. Export always writes it. Absent or `null` means `true` for a Ready Meal whose Courses (after matching) include the main Course, and `false` for any other Recipe, the same default as the Recipe editor; an explicit `true` or `false` is kept. Optional and backwards compatible like `courses`. |
 | `tags` | Free labels, matched by name to the household's Tags and created if missing. |
 | `cooldownDays` | Overrides the household default Cool-down. |
 | `leftoverUseByDays` | Overrides the household default Leftover Use-by. `0` means leftovers must be eaten the same day. |
@@ -96,12 +98,13 @@ Importing never writes directly. Every file goes through Import Review:
 2. **Ingredient matching**: each name is matched to an existing Ingredient (exact, then fuzzy suggestions) or created. A Ready Meal's line named like the Recipe and not defined in the file is created as a `piece` Ingredient. A definition that conflicts with an existing Ingredient (a different base unit) must be resolved by hand.
 3. **Unit check**: every unconvertible unit gets a one-off conversion prompt.
 4. **Recipe conflicts**: replace, keep both or skip.
-5. **Images** are fetched or decoded, with a warning for each failure.
-6. **Confirm** saves everything in one transaction.
+5. **Courses**: each name in a Recipe's `courses` is matched to a Course of the Household. A name that matches an active Course is used. A name that matches an archived Course, or is not a Course of the Household, shows on its row with the answers *use a Course of the Household* (default: the main Course), *skip this name*, and, for an Admin only, *add it as a Course* (for an archived Course: *unarchive it*). Nothing is created or unarchived without that answer. Names that match the same Course count once, and a Recipe whose names are all skipped gets the main Course.
+6. **Images** are fetched or decoded, with a warning for each failure.
+7. **Confirm** saves everything in one transaction (Courses added or unarchived by an answer included).
 
 ## Agent Prompt
 
-The Recipes screen offers **Copy Agent Prompt**. The copied text is the template below with `{{SCHEMA}}` replaced by the schema file's contents and `{{EXAMPLE}}` by the example file's contents. The user pastes it into any AI assistant, followed by the recipe (text, a web page or a photo), and then imports the JSON the assistant returns.
+The Recipes screen offers **Copy Agent Prompt**. The copied text is the template below with `{{SCHEMA}}` replaced by the schema file's contents, `{{EXAMPLE}}` by the example file's contents and `{{COURSES}}` by the Household's active Courses, one per line in household order as `- <name>`, the main Course marked `- <name> (default)`. Because the Courses are the Household's own, the prompt is built when it is asked for, not once at start-up; a Household with no Course gets the line `(no Courses defined)`. The user pastes it into any AI assistant, followed by the recipe (text, a web page or a photo), and then imports the JSON the assistant returns.
 
 ````text
 You convert recipes into a Feeder Recipe File: a JSON document that must validate against the JSON Schema below. Reply with ONLY the JSON (no prose, no code fences).
@@ -121,11 +124,14 @@ Rules:
    Use "after" (0-based indexes into the steps array) when a step must wait for earlier steps to FINISH, e.g. serving waits for the oven. Leave it out otherwise.
 6. Add "uses" to steps that consume ingredients, with the amounts used in that step.
 7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1; name the pack Ingredient like the Recipe), and "yield" = portions in the pack.
-8. Add 1–4 short lowercase "tags" (main protein, dish type, e.g. "chicken", "traybake", "vegetarian", "soup").
+8. Add 1–4 short lowercase "tags" (main protein, cooking method or style, e.g. "chicken", "traybake", "vegetarian").
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".
 11. Several recipes in the input become several entries in "recipes", sharing one "ingredients" list.
-12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
+12. If the source says how long the recipe takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
+13. Courses: set "courses" to the names of the Courses the recipe can fill, one or more, chosen ONLY from the list below and written exactly as given. Never invent a Course. Leave "courses" out when none clearly fits; the recipe then gets the Course marked (default).
+{{COURSES}}
+14. Whole meal: set "wholeMeal" to true only for a recipe that needs no other Course beside it (a one-pot recipe, a Ready Meal that comes with its sides), to false for a recipe that wants something served with it (a bought dessert or side, a frozen pizza that wants a salad), and leave it out when the source does not say.
 
 JSON Schema:
 {{SCHEMA}}

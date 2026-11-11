@@ -124,6 +124,15 @@
           "exclusiveMinimum": 0
         },
         "readyMeal": { "type": "boolean", "default": false },
+        "courses": {
+          "description": "Names of the Courses this Recipe can fill (for example \"Main\", \"Side\"), taken from the list in the prompt. Omit it, or leave it empty, for the main Course.",
+          "type": "array", "uniqueItems": true, "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 40 }
+        },
+        "wholeMeal": {
+          "description": "true when the Recipe needs no other Course beside it; false when it does; null or omitted when unknown (a Ready Meal in the main Course then counts as a Whole meal).",
+          "type": ["boolean", "null"]
+        },
         "tags": {
           "type": "array",
           "uniqueItems": true,

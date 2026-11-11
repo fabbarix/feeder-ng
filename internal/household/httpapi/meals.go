@@ -36,12 +36,13 @@ func attendeesIn(in []attendeeBody) []household.Attendee {
 
 // slotBody is a Meal Slot as the API shows them.
 type slotBody struct {
-	ID             int64          `json:"id"`
-	Weekday        int            `json:"weekday"`
-	Name           string         `json:"name"`
-	Time           string         `json:"time"`
-	Attendance     []attendeeBody `json:"attendance"`
-	PortionsNeeded float64        `json:"portionsNeeded"`
+	ID             int64           `json:"id"`
+	Weekday        int             `json:"weekday"`
+	Name           string          `json:"name"`
+	Time           string          `json:"time"`
+	Attendance     []attendeeBody  `json:"attendance"`
+	PortionsNeeded float64         `json:"portionsNeeded"`
+	Courses        []slotCourseOut `json:"courses"`
 }
 
 // slotIn is what an Admin sends to create or replace a Meal Slot.
@@ -50,11 +51,13 @@ type slotIn struct {
 	Name       string         `json:"name"`
 	Time       string         `json:"time"`
 	Attendance []attendeeBody `json:"attendance"`
+	Courses    []slotCourseIn `json:"courses"`
 }
 
 // input decodes and validates a slotIn.
 func (in slotIn) input() (household.MealSlotInput, error) {
-	m := household.MealSlotInput{Weekday: in.Weekday, Name: in.Name, Time: in.Time, Attendance: attendeesIn(in.Attendance)}.Normalized()
+	m := household.MealSlotInput{Weekday: in.Weekday, Name: in.Name, Time: in.Time, Attendance: attendeesIn(in.Attendance),
+		Courses: coursesIn(in.Courses)}.Normalized()
 	return m, m.Validate()
 }
 
@@ -73,7 +76,7 @@ func (a *api) slotOut(r *http.Request, s household.MealSlot) (slotBody, error) {
 		return slotBody{}, err
 	}
 	return slotBody{ID: s.ID, Weekday: s.Weekday, Name: s.Name, Time: s.Time,
-		Attendance: attendeesOut(s.Attendance), PortionsNeeded: portions}, nil
+		Attendance: attendeesOut(s.Attendance), PortionsNeeded: portions, Courses: slotCoursesOut(s.Courses)}, nil
 }
 
 func (a *api) listSlots(w http.ResponseWriter, r *http.Request) {
@@ -139,14 +142,17 @@ func (a *api) updateSlot(w http.ResponseWriter, r *http.Request) {
 	a.writeSlot(w, r, http.StatusOK, s)
 }
 
-// batchIn is the body of PATCH /api/meal-slots/batch. Only the fields present change.
+// batchIn is the body of PATCH /api/meal-slots/batch. Only the fields present change; dryRun answers what
+// the same edit would do without saving it.
 type batchIn struct {
 	Match    string `json:"match"`
 	Weekdays []int  `json:"weekdays"`
+	DryRun   bool   `json:"dryRun"`
 	Set      struct {
 		Name       *string        `json:"name"`
 		Time       *string        `json:"time"`
 		Attendance []attendeeBody `json:"attendance"`
+		Courses    []slotCourseIn `json:"courses"`
 	} `json:"set"`
 }
 
@@ -161,11 +167,15 @@ func (a *api) updateSlotsBatch(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	b := household.BatchInput{Match: in.Match, Weekdays: in.Weekdays,
+	b := household.BatchInput{Match: in.Match, Weekdays: in.Weekdays, DryRun: in.DryRun,
 		Change: household.SlotChange{Name: in.Set.Name, Time: in.Set.Time}}
 	if in.Set.Attendance != nil { // [] = nobody, absent = untouched
 		att := attendeesIn(in.Set.Attendance)
 		b.Change.Attendance = &att
+	}
+	if in.Set.Courses != nil { // [] is refused by validation; absent = untouched
+		cs := coursesIn(in.Set.Courses)
+		b.Change.Courses = &cs
 	}
 	b = b.Normalized()
 	if err := b.Validate(); err != nil {
@@ -177,7 +187,9 @@ func (a *api) updateSlotsBatch(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	a.changed("mealSlots")
+	if !b.DryRun {
+		a.changed("mealSlots")
+	}
 	updated := make([]slotBody, 0, len(res.Updated))
 	for _, s := range res.Updated {
 		body, err := a.slotOut(r, s)
@@ -191,7 +203,12 @@ func (a *api) updateSlotsBatch(w http.ResponseWriter, r *http.Request) {
 	for _, d := range res.Skipped {
 		skipped = append(skipped, skippedBody{Weekday: d, Reason: "no_slot"})
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"match": b.Match, "updated": updated, "skipped": skipped})
+	removes, err := a.removesOut(r, res.Removes)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"match": b.Match, "updated": updated, "skipped": skipped, "removes": removes})
 }
 
 func (a *api) writeSlot(w http.ResponseWriter, r *http.Request, status int, s household.MealSlot) {
@@ -217,13 +234,14 @@ func (a *api) deleteSlot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// dateAttendanceBody is the Attendance on one date.
+// dateAttendanceBody is the Attendance on one date, with each Course of the Meal Slot on that date.
 type dateAttendanceBody struct {
 	SlotID         int64          `json:"slotId"`
 	Date           string         `json:"date"`
 	IsOverride     bool           `json:"isOverride"`
 	Attendance     []attendeeBody `json:"attendance"`
 	PortionsNeeded float64        `json:"portionsNeeded"`
+	Courses        []courseDayOut `json:"courses"`
 }
 
 // dateOnSlot reads ?date= and checks it falls on the slot's weekday.
@@ -252,8 +270,12 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
+	courses, err := a.dateCourses(r, slot.ID, date)
+	if err != nil {
+		return dateAttendanceBody{}, err
+	}
 	return dateAttendanceBody{SlotID: slot.ID, Date: date, IsOverride: isOverride,
-		Attendance: attendeesOut(att), PortionsNeeded: portions}, nil
+		Attendance: attendeesOut(att), PortionsNeeded: portions, Courses: courses}, nil
 }
 
 func (a *api) getAttendance(w http.ResponseWriter, r *http.Request) {
@@ -270,27 +292,79 @@ func (a *api) getAttendance(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, b)
 }
 
+// dateIn is what a PUT of one date sends: attendance and/or courses. An absent or null field is left alone.
+type dateIn struct {
+	Attendance []attendeeBody `json:"attendance"`
+	Courses    []dateCourseIn `json:"courses"`
+}
+
+// dateCourseIn is one Course's opt-outs for the date: a list (empty = everyone eats it) replaces the date's
+// own; null or absent drops them, back to the usual opt-outs.
+type dateCourseIn struct {
+	CourseID        int64   `json:"courseId"`
+	OptOutMemberIDs []int64 `json:"optOutMemberIds"`
+}
+
 func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 	slot, date, err := a.dateOnSlot(r)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	var in struct {
-		Attendance []attendeeBody `json:"attendance"`
-	}
+	var in dateIn
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		writeErr(w, err)
 		return
 	}
-	att := attendeesIn(in.Attendance)
-	if err := household.ValidateAttendees(att); err != nil {
-		writeErr(w, err)
+	if in.Attendance == nil && in.Courses == nil {
+		writeErr(w, &household.ValidationError{Field: "attendance", Reason: "nothing_to_change",
+			Message: "send attendance, courses or both"})
 		return
 	}
-	if err := a.st.SetDateAttendance(r.Context(), slot.ID, date, att); err != nil {
-		writeErr(w, err)
-		return
+	var att []household.Attendee
+	if in.Attendance != nil {
+		att = attendeesIn(in.Attendance)
+		if err := household.ValidateAttendees(att); err != nil {
+			writeErr(w, err)
+			return
+		}
+	}
+	// Check every Course before the first write, so a bad entry leaves the date as it was.
+	var dayCourses []household.DateCourse
+	for _, c := range in.Courses {
+		dayCourses = append(dayCourses, household.DateCourse{CourseID: c.CourseID, OptOutMemberIDs: c.OptOutMemberIDs})
+	}
+	if in.Courses != nil {
+		served, err := a.st.CoursesOn(r.Context(), slot.ID, date)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		members, err := a.st.Members(r.Context())
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		if err := household.ValidateDateCourses(served, members, dayCourses); err != nil {
+			writeErr(w, err)
+			return
+		}
+	}
+	if in.Attendance != nil {
+		if err := a.st.SetDateAttendance(r.Context(), slot.ID, date, att); err != nil {
+			writeErr(w, err)
+			return
+		}
+	}
+	for _, c := range dayCourses {
+		var ids *[]int64
+		if c.OptOutMemberIDs != nil {
+			ids = &c.OptOutMemberIDs
+		}
+		if err := a.st.SetDateCourseOptOuts(r.Context(), slot.ID, date, c.CourseID, ids); err != nil {
+			writeErr(w, err)
+			return
+		}
 	}
 	a.changed("attendance")
 	b, err := a.dateBody(r, slot, date)

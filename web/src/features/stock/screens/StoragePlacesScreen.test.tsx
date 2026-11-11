@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
+import { declarations, readUiCss } from '../../../ui/test-utils'
 import { StoragePlacesScreen } from './StoragePlacesScreen'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -52,5 +53,22 @@ describe('StoragePlacesScreen', () => {
     expect(within(confirm).getByText(/stays in the Pantry, marked Not sorted/)).toBeInTheDocument()
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete Storage Place' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/storage-places/2')).toHaveLength(1))
+  })
+
+  // IH: the intro, the list and the add action sit in the gapped ListPage list slot, so they are not glued together.
+  it('puts the intro, the Storage Places list and the add action in the gapped list slot', async () => {
+    setup([{ id: 1, name: 'Kitchen Pantry', kind: 'pantry', default: true }])
+    const list = await screen.findByRole('list', { name: 'Storage Places' })
+    const slot = list.closest('.list-page__list')!
+    expect(slot).not.toBeNull()
+    const kids = Array.from(slot.children)
+    const intro = slot.querySelector('p.pg__muted')!
+    const add = screen.getByRole('button', { name: 'Add Storage Place' })
+    expect(kids).toContain(intro)
+    expect(kids.some((k) => k.contains(list))).toBe(true)
+    expect(kids).toContain(add)
+    const d = declarations(readUiCss('ListPage.css'), '.list-page__list')
+    expect(d['display']).toBe('grid')
+    expect(d['gap']).toMatch(/^var\(--space-(3|4|5|6)\)$/)
   })
 })

@@ -587,3 +587,80 @@ func TestUnarchivePutsTheCourseBackLastWithoutRestoringIt(t *testing.T) {
 		t.Errorf("unarchive at 20: %v, want ErrTooMany", err)
 	}
 }
+
+// crs-a3: Archive moves the Course after the active ones in its own transaction.
+func TestArchiveSendsTheCourseLastAndKeepsTheActiveOrderContiguous(t *testing.T) {
+	f := newFx(t)
+	before, _ := f.st.List(ctx, false)
+	if got := f.names(before); !reflect.DeepEqual(got, []string{"Main", "Side", "Starter", "Dessert"}) {
+		t.Fatalf("seed order = %v", got)
+	}
+	if _, _, err := f.st.Archive(ctx, f.side, f.main); err != nil { // Side is in the middle
+		t.Fatal(err)
+	}
+	all, err := f.st.List(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := f.names(all); !reflect.DeepEqual(got, []string{"Main", "Starter", "Dessert", "Side"}) {
+		t.Fatalf("List(true) = %v, want the archived Side last", got)
+	}
+	for i, c := range all {
+		if c.Position != i {
+			t.Errorf("%s position = %d, want %d (contiguous)", c.Name, c.Position, i)
+		}
+	}
+	active, _ := f.st.List(ctx, false)
+	if got := f.names(active); !reflect.DeepEqual(got, []string{"Main", "Starter", "Dessert"}) {
+		t.Errorf("active order = %v, want unchanged apart from Side", got)
+	}
+}
+
+// crs-a3: one write for a rename and Make main.
+func TestUpdateRenamesAndMakesMainInOneWrite(t *testing.T) {
+	f := newFx(t)
+	name := "Entree"
+	c, err := f.st.Update(ctx, f.starter, &name, true)
+	if err != nil || c.Name != "Entree" || !c.Main || c.ID != f.starter {
+		t.Fatalf("Update = %+v, %v", c, err)
+	}
+	if m, _ := f.st.Main(ctx); m != f.starter {
+		t.Errorf("main = %d, want %d", m, f.starter)
+	}
+	if g, _ := f.st.Get(ctx, f.main); g.Main {
+		t.Error("the old main kept its flag")
+	}
+	// Name only, flag only, and neither.
+	n2 := "Soup"
+	if c, err := f.st.Update(ctx, f.side, &n2, false); err != nil || c.Name != "Soup" || c.Main {
+		t.Errorf("name only = %+v, %v", c, err)
+	}
+	if c, err := f.st.Update(ctx, f.main, nil, true); err != nil || !c.Main {
+		t.Errorf("flag only = %+v, %v", c, err)
+	}
+	if c, err := f.st.Update(ctx, f.dessert, nil, false); err != nil || c.ID != f.dessert {
+		t.Errorf("neither = %+v, %v", c, err)
+	}
+	if _, err := f.st.Update(ctx, 999, nil, false); !errors.Is(err, course.ErrNotFound) {
+		t.Errorf("unknown: %v", err)
+	}
+}
+
+func TestUpdateFailedMakeMainLeavesTheNameUnchanged(t *testing.T) {
+	f := newFx(t)
+	f.exec(`UPDATE courses SET archived = 1 WHERE id = ?`, f.starter)
+	name := "Renamed"
+	if _, err := f.st.Update(ctx, f.starter, &name, true); !errors.Is(err, course.ErrArchived) {
+		t.Fatalf("Update on an archived Course: %v, want ErrArchived", err)
+	}
+	if c, _ := f.st.Get(ctx, f.starter); c.Name != "Starter" {
+		t.Errorf("name = %q, want Starter (nothing written)", c.Name)
+	}
+	taken := "dessert"
+	if _, err := f.st.Update(ctx, f.side, &taken, true); !errors.Is(err, course.ErrNameTaken) {
+		t.Fatalf("taken name: %v", err)
+	}
+	if m, _ := f.st.Main(ctx); m != f.main {
+		t.Error("a failed rename must not move the main flag")
+	}
+}

@@ -5,6 +5,7 @@ import { Chip, type ChipStatus } from './Chip'
 import { EmptyState } from './EmptyState'
 import { IconButton } from './IconButton'
 import { ListGroup, ListRow } from './ListRow'
+import { ListPage } from './ListPage'
 import { FormActions } from './FormActions'
 import { DateField } from './fields/DateField'
 import { FieldRow } from './fields/FieldRow'
@@ -225,6 +226,25 @@ function PageHeaderGroup() {
           actions={<IconButton icon="regenerate" label="Re-plan" />}
         />
       </Cell>
+    </Group>
+  )
+}
+
+function ListPageGroup() {
+  return (
+    <Group name="ListPage">
+      <WideCell caption="header, search, filter chip, list">
+        <ListPage
+          header={<PageHeader title="Ingredients" actions={<Button size="sm" icon="add">New Ingredient</Button>} />}
+          search={<SearchField label="Search Ingredients" value="" onChange={noop} />}
+          filters={<Chip kind="filter" selected={false} onClick={noop}>Archived</Chip>}
+        >
+          <ListGroup label="Ingredients">
+            <ListRow title="Flour" meta="2 kg" icon="stock" onActivate={noop} chevron />
+            <ListRow title="Eggs" meta="6 pieces" icon="stock" onActivate={noop} chevron />
+          </ListGroup>
+        </ListPage>
+      </WideCell>
     </Group>
   )
 }
@@ -569,6 +589,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <TileGroup />
       <BentoGroup />
       <PageHeaderGroup />
+      <ListPageGroup />
       <ListGroupExample />
       <RecipeThumbGroup />
       <ProgressGroup />

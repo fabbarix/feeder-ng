@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BentoGrid, Button, EmptyState, ErrorState, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
@@ -51,21 +51,25 @@ export function RecipesScreen(): ReactNode {
   else body = <EmptyState icon="search" title={recipeStrings.noMatch} />
 
   return (
-    <section className="recipes-screen">
-      <PageHeader
-        title={recipeStrings.title}
-        actions={
-          <>
-            <Button size="sm" icon="add" onClick={() => navigate('/recipes/new')}>
-              {recipeStrings.newRecipe}
-            </Button>
-            <RecipesOverflowMenu showArchived={showArchived} onShowArchivedChange={setShowArchived} />
-          </>
-        }
-      />
-      <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
-      <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
+    <ListPage
+      className="recipes-screen"
+      header={
+        <PageHeader
+          title={recipeStrings.title}
+          actions={
+            <>
+              <Button size="sm" icon="add" onClick={() => navigate('/recipes/new')}>
+                {recipeStrings.newRecipe}
+              </Button>
+              <RecipesOverflowMenu showArchived={showArchived} onShowArchivedChange={setShowArchived} />
+            </>
+          }
+        />
+      }
+      search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
+      filters={<TagChips tags={list.tags} selected={tag} onSelect={setTag} />}
+    >
       {body}
-    </section>
+    </ListPage>
   )
 }

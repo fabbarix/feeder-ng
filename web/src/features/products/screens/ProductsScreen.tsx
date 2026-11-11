@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Chip, PageHeader, SearchField } from '../../../ui'
+import { Chip, ListPage, PageHeader, SearchField } from '../../../ui'
 import { ProductList } from '../components/ProductList'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { applyArchivedFilter } from '../lib/archive'
@@ -15,14 +15,15 @@ export function ProductsScreen() {
   useProductsLiveUpdates()
   const system = useDisplayUnitSystem()
   return (
-    <div className="pg">
-      <PageHeader title={strings.productsTitle} />
-      <SearchField label={strings.productsSearch} value={q} onChange={setQ} />
-      <div>
+    <ListPage
+      header={<PageHeader title={strings.productsTitle} />}
+      search={<SearchField label={strings.productsSearch} value={q} onChange={setQ} />}
+      filters={
         <Chip kind="filter" selected={archived} onClick={() => setArchived((on) => !on)}>
           {strings.archivedFilter}
         </Chip>
-      </div>
+      }
+    >
       {error ? (
         <p role="alert">{strings.actionFailed}</p>
       ) : isLoading ? (
@@ -30,6 +31,6 @@ export function ProductsScreen() {
       ) : (
         <ProductList products={applyArchivedFilter(products, archived)} system={system} showingArchived={archived} />
       )}
-    </div>
+    </ListPage>
   )
 }

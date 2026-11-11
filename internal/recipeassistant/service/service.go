@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -17,6 +18,12 @@ import (
 // streams, so a long answer is no longer cut at one attempt's 120 s; 300 s leaves room for it and one repair.
 const DefaultOverall = 300 * time.Second
 
+// CourseSource lists the Household's active Courses for the Agent Prompt, in household order (crs-e1). The prompt
+// is built from it for every read, so a renamed or added Course reaches the model at once.
+type CourseSource interface {
+	PromptCourses(ctx context.Context) ([]recipefile.PromptCourse, error)
+}
+
 // Deps are the ports. Zero Overall means DefaultOverall.
 type Deps struct {
 	Store    *store.Store
@@ -29,6 +36,7 @@ type Deps struct {
 	Clock    clock.Clock
 	Logger   *slog.Logger
 	Overall  time.Duration
+	Courses  CourseSource // nil: no Courses are listed in the prompt
 }
 
 // Service is safe for concurrent use.
@@ -44,9 +52,9 @@ type Service struct {
 	// perform returning and the sample of j.cancelled, so a test can cancel at exactly that instant.
 	afterPerform func()
 
-	agentPrompt string
-	schema      []byte
-	promptErr   error
+	tmpl      string // the Agent Prompt template; the prompt is built per read (crs-e1)
+	schema    []byte
+	promptErr error
 }
 
 // New returns a Service.
@@ -59,12 +67,12 @@ func New(d Deps) *Service {
 		s.d.Logger = slog.Default()
 	}
 	s.limiter = recipeassistant.NewLimiter(s.d.Clock.Now)
-	s.agentPrompt, s.schema, s.promptErr = buildPrompt()
+	s.tmpl, s.schema, s.promptErr = buildPrompt()
 	return s
 }
 
-func buildPrompt() (prompt string, schema []byte, err error) {
-	tmpl, err := recipefile.ExtractTemplate(spec.RecipeFileMD)
+func buildPrompt() (tmpl string, schema []byte, err error) {
+	tmpl, err = recipefile.ExtractTemplate(spec.RecipeFileMD)
 	if err != nil {
 		return "", nil, err
 	}
@@ -72,7 +80,21 @@ func buildPrompt() (prompt string, schema []byte, err error) {
 	if err != nil {
 		return "", nil, err
 	}
-	return recipeassistant.SystemPrompt(recipefile.AgentPrompt(tmpl, string(spec.Schema), string(spec.Example))), schema, nil
+	return tmpl, schema, nil
+}
+
+// systemPrompt is the system prompt of one read: the Agent Prompt with the Household's Courses as they are now
+// (crs-e1). A Course source that fails refuses the read.
+func (s *Service) systemPrompt(ctx context.Context) (string, error) {
+	var courses []recipefile.PromptCourse
+	if s.d.Courses != nil {
+		list, err := s.d.Courses.PromptCourses(ctx)
+		if err != nil {
+			return "", err
+		}
+		courses = list
+	}
+	return recipeassistant.SystemPrompt(recipefile.AgentPrompt(s.tmpl, string(spec.Schema), string(spec.Example), courses)), nil
 }
 
 // Actor is who changes settings.

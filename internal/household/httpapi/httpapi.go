@@ -10,12 +10,14 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/auth"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	"github.com/fabbarix/feeder-ng/internal/household"
 	"github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/images"
 	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 )
 
 func init() { app.Register(app.Module{Name: "household", Mount: mount}) }
@@ -25,14 +27,17 @@ const topic = "household"
 
 // api bundles what the handlers need.
 type api struct {
-	d      app.Deps
-	st     *store.Store
-	images *imaging.Store
+	d       app.Deps
+	st      *store.Store
+	images  *imaging.Store
+	courses *coursestore.Store // Course names for Meal Slot, Attendance and removal answers
+	recipes *recipestore.Store // Recipe names for removal answers (List only: no ingredient source needed)
 }
 
 func mount(r *app.Router, d app.Deps) {
 	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
-	a := &api{d: d, st: store.New(d.DB, d.Clock).WithImages(images.NewGuarded(files, refs.New(d.DB))), images: files}
+	a := &api{d: d, st: store.New(d.DB, d.Clock).WithImages(images.NewGuarded(files, refs.New(d.DB))), images: files,
+		courses: coursestore.New(d.DB, d.Clock), recipes: recipestore.New(d.DB, d.Clock, nil)}
 
 	r.User("GET /api/household/settings", a.getSettings)
 	r.Admin("PUT /api/household/settings", a.putSettings)
@@ -62,7 +67,7 @@ func writeErr(w http.ResponseWriter, err error) {
 	var ve *household.ValidationError
 	switch {
 	case errors.As(err, &ve):
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "validation_failed", ve.Error())
+		writeFieldError(w, http.StatusUnprocessableEntity, ve.Error(), ve.Field, ve.Reason)
 	case errors.Is(err, household.ErrNotFound):
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
 	case errors.Is(err, household.ErrDuplicateSlot):
@@ -80,6 +85,18 @@ func writeErr(w http.ResponseWriter, err error) {
 	default:
 		httpx.WriteAPIError(w, err)
 	}
+}
+
+// writeFieldError answers a refused request with the field and, when the API gives one, the reason (spec §16).
+func writeFieldError(w http.ResponseWriter, status int, message, field, reason string) {
+	e := map[string]string{"code": "validation_failed", "message": message}
+	if field != "" {
+		e["field"] = field
+	}
+	if reason != "" {
+		e["reason"] = reason
+	}
+	httpx.WriteJSON(w, status, map[string]any{"error": e})
 }
 
 // changed publishes a household change so open screens refresh.

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import { buildRoutes, collectFeatures, loadFeatures, type FeatureModule } from './features'
+import { buildRoutes, collectFeatures, discoverFeatures, loadFeatures, type FeatureModule } from './features'
 
 const page = (text: string): RouteObject => ({ path: undefined, element: <p>{text}</p> })
 const route = (path: string, text: string): RouteObject => ({ ...page(text), path })
@@ -63,7 +63,7 @@ describe('buildRoutes', () => {
     ['/scan', 'Scan'],
     ['/shop', 'Shop'],
     ['/recipes', 'Recipes'],
-    ['/stock', 'Pantry'],
+    ['/pantry', 'Pantry'],
     ['/settings', 'Settings'],
   ])('shows a "coming soon" placeholder at %s', (path, title) => {
     renderAt({}, path)
@@ -105,5 +105,29 @@ describe('loadFeatures', () => {
     const f = loadFeatures()
     expect(Array.isArray(f.routes)).toBe(true)
     expect(Array.isArray(f.navItems)).toBe(true)
+  })
+})
+
+describe('/stock is an alias of /pantry (PN)', () => {
+  it('the shell redirects /stock to /pantry (replace, so Back does not bounce) with no feature loaded', async () => {
+    const router = createMemoryRouter([{ path: '/', children: buildRoutes({}) }], { initialEntries: ['/shop', '/stock'], initialIndex: 1 })
+    render(<RouterProvider router={router} />)
+    expect(router.state.location.pathname).toBe('/pantry')
+    expect(router.state.historyAction).toBe('REPLACE')
+  })
+  it('with a feature that owns /pantry, /stock still lands on that feature', async () => {
+    const mods = { '../features/stock/index.ts': { routes: [route('/pantry', 'the real pantry')] } }
+    const router = createMemoryRouter([{ path: '/', children: buildRoutes(mods) }], { initialEntries: ['/stock'] })
+    render(<RouterProvider router={router} />)
+    expect(screen.getByText('the real pantry')).toBeInTheDocument()
+  })
+  it('the stock feature declares /pantry and no /stock route of its own (the shell owns the alias, so it cannot be a duplicate)', async () => {
+    const { routes } = await import('../features/stock')
+    const paths = routes.map((r) => r.path)
+    expect(paths).toContain('/pantry')
+    expect(paths).not.toContain('/stock')
+  })
+  it('the discovered features still build without a duplicate-route error', () => {
+    expect(() => buildRoutes(discoverFeatures())).not.toThrow()
   })
 })

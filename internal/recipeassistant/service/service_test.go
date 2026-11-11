@@ -257,6 +257,7 @@ type opts struct {
 	otherMast bool // the row was sealed under another master key
 	overall   time.Duration
 	model     service.ModelInfo
+	courses   service.CourseSource // crs-e1: nil is a Household with no Courses
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -297,7 +298,7 @@ func newEnv(t *testing.T, o opts) *env {
 		Store: st, Box: box, MasterID: mk.ID(), Pages: e.pages, Images: noImages{}, Photos: e.photos, Clock: clk,
 		Claude:  func(c service.Conn) service.Claude { e.conns = append(e.conns, c); return e.claude },
 		Logger:  slog.New(hookHandler{slog.NewTextHandler(e.log, &slog.HandlerOptions{Level: slog.LevelDebug}), e}),
-		Overall: o.overall,
+		Overall: o.overall, Courses: o.courses,
 	}
 	if o.noSecret {
 		deps.Box, deps.MasterID = nil, ""
