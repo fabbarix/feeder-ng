@@ -16,6 +16,8 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
+      // favicon.svg is already in the glob below; listing it again as a manifest icon breaks Cache.addAll
+      includeManifestIcons: false,
       manifest: {
         name: 'Feeder',
         short_name: 'Feeder',

@@ -41,8 +41,8 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - The zero-waste streak on Today and the board updates as soon as you Keep or Throw out a Stock Lot.
 - "Went off" on a spoiled Stock Lot now counts from the day after its go-off date, as the streak does.
 - A Planned Meal served from a Leftover no longer says "0 Batches" in its sheet.
-- The Ingredient Shelf Life stepper fits its tile on a phone, and the board's Timers tile ends long labels with an ellipsis.
-- The web app manifest is served with the right type and has an icon, so the app can be installed.
+- The Ingredient Shelf Life stepper fits its tile on a phone, and the board's Timers tile ends long names with an ellipsis.
+- The web app manifest is served with the right type and names the app's logo, so the app can be installed.
 - Better contrast for the Preferences preview chip and the "Notifications are blocked" message.
 - Add ingredient in the Recipe editor moves focus to the new line's Ingredient picker.
 
