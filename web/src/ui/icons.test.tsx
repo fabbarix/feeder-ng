@@ -16,6 +16,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['ingredients', 'Carrot'],
   ['products', 'ShoppingBagOpen'],
   ['shops', 'Storefront'],
+  ['location', 'MapPin'],
   ['board', 'Monitor'],
   ['settings', 'GearSix'],
   ['signOut', 'SignOut'],

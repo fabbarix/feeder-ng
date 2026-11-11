@@ -1,4 +1,3 @@
-import { useMe } from '../../../app/useMe'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { PageHeader } from '../../../ui'
 import { ShopList } from '../components/ShopList'
@@ -7,11 +6,10 @@ import { useShops } from '../hooks/useShops'
 import { strings } from '../strings'
 import '../../products/products.css'
 
-/** /settings/shops: ShopList. Hooks: useShops, useMe (isAdmin). */
+/** /settings/shops: ShopList. Hooks: useShops. */
 export function ShopsScreen() {
-  const me = useMe()
   const breadcrumbs = useBreadcrumbs()
-  const { shops, isLoading, error, add } = useShops()
+  const { shops, isLoading, error } = useShops()
   useProductsLiveUpdates()
   return (
     <div className="pg">
@@ -21,7 +19,7 @@ export function ShopsScreen() {
       ) : isLoading ? (
         <p role="status">{strings.loading}</p>
       ) : (
-        <ShopList shops={shops} isAdmin={Boolean(me.data?.isAdmin)} onAdd={async (name) => void (await add(name))} />
+        <ShopList shops={shops} />
       )}
     </div>
   )

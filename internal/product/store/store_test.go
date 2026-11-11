@@ -55,7 +55,7 @@ func newFx(t *testing.T) *fx {
 
 func (f *fx) shop(t *testing.T, name string) store.Shop {
 	t.Helper()
-	s, err := f.s.CreateShop(ctx, name)
+	s, err := f.s.CreateShop(ctx, name, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,10 +74,10 @@ func (f *fx) prod(t *testing.T, name string, ing int64, size float64, barcodes .
 func TestShopNamesAreUniqueIgnoringCaseAndSpacing(t *testing.T) {
 	f := newFx(t)
 	f.shop(t, "Corner Market")
-	if _, err := f.s.CreateShop(ctx, "  corner   market "); !errors.Is(err, store.ErrNameTaken) {
+	if _, err := f.s.CreateShop(ctx, "  corner   market ", nil); !errors.Is(err, store.ErrNameTaken) {
 		t.Fatalf("got %v", err)
 	}
-	if _, err := f.s.CreateShop(ctx, "  "); !errors.Is(err, product.ErrInvalid) {
+	if _, err := f.s.CreateShop(ctx, "  ", nil); !errors.Is(err, product.ErrInvalid) {
 		t.Fatalf("blank: got %v", err)
 	}
 }

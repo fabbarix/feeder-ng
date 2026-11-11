@@ -40,3 +40,16 @@
 .pg__add-price {
   align-self: flex-start;
 }
+
+/* Shop Location status line with its optional "Try again". */
+.shop-location {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shop-location > p {
+  flex: 1 1 14rem;
+  margin: 0;
+}

@@ -12,7 +12,7 @@ Status: **draft for review** (2026-11-09). The terms in **bold** are defined in 
 
 - Sign-in is Google OAuth only, and only for a verified Google email. A person signs in at once if their email is on the **allowlist** or is the email of a **Member**. Anyone else creates an **Access Request** and sees a "Waiting for approval" page, with no session and no access to any data. Any signed-in User can approve (adding a non-Admin User) or deny it; one approval is enough. A denied email may ask again after 24 hours; a request expires after 14 days. Requests are limited per IP (10 an hour), per email (3 a week) and in total (50 pending), and every approval, denial and expiry is recorded with who did it. Settings lists the pending requests, and a count badge shows on the avatar menu.
 - The `FEEDER_ADMIN_EMAIL` environment variable is mandatory: the container refuses to start without it. It seeds the allowlist with the first **Admin**.
-- **Admin** manages the allowlist, Members, Meal Slots, Shops, Weight Barcode Rules and household settings. Every **User** can do everything else.
+- **Admin** manages the allowlist, Members, Meal Slots, Weight Barcode Rules and household settings, and renames or deletes Shops. Every **User** can do everything else, including adding a Shop and saving its Shop Location (§5).
 - A User may be linked to a **Member**. That link decides whose Favourites, Dislikes and Exclusions the User edits by default.
 - The Google sign-in redirect URI is `<FEEDER_BASE_URL>/auth/google/callback`.
 - Sessions: an HTTP-only, SameSite=Lax cookie with a 30-day sliding expiry. Removing a User from the allowlist ends their sessions immediately.
@@ -69,6 +69,13 @@ A Product may also have one optional **Picture** (the same word as an Ingredient
 - **Shop Barcodes**: a code mapped to a Product, valid only in that Shop;
 - **Weight Barcode Rules**: a barcode prefix (e.g. `21`), the digit positions of the item code, the digit positions of the value, whether the value is a weight or a price, its unit, and the decimal places. The unit is configured per rule: for a weight, g (default), kg, oz or lb; for a price, the household currency's minor unit (cents by default). The decoded value = digits ÷ 10^decimal places, in that unit. Internally all quantities are stored in metric Base Units (g, ml or piece) and price per weight is kept per kg. When the value is a price, the weight is derived from that Product's last known price per kg at that Shop. If there is no **Price** history, the app asks the user for the weight once, which also records the price per kg for next time;
 - **Prices**: a Price for a Product at a Shop on a date. The latest one prefills the next scan.
+- an optional **Shop Location**: where the Shop is (latitude and longitude, WGS84). It lets the phone pick the Shop the User is standing in.
+
+**Adding a Shop.** Any User adds a Shop, from Settings, from the Shop select on the Shop screen ("Add Shop "Lidl"" for what was typed) or from the Scan picker ("Add the Shop I am in"). The User is assumed to be in the Shop: the **Add Shop** sheet asks the phone for its position as it opens and offers it with a switch, on by default, "Save this spot as the Shop's location". A fix less precise than 150 m is not offered ("too rough to save"); with location off or unavailable the Shop is added without one, and "Try again" is offered where a retry can help. Any User can also **Save my current location** on a Shop's page, which replaces the Shop Location. Only the Admin renames or deletes a Shop. `POST /api/shops` takes an optional `location: {lat, lon}`, `PUT /api/shops/{id}/location` saves one, and every Shop carries `location` (null when not saved); a latitude outside −90…90 or a longitude outside −180…180 is `400 invalid_shop`.
+
+**Nearest Shop.** The phone compares its position with the Shop Locations; the nearest Shop within 200 m plus the fix's accuracy (at most 1 km) is the Shop the User is **in**. The position is asked for at once only where the browser already allows it (no prompt on load); otherwise only on a tap of **Find the Shop I am in**. The phone's position is never stored or sent; only a Shop Location the User chose to save reaches the server.
+- **Scan picker** (§10.1): that Shop is listed first, marked "You are here · 40 m". A Scan session that started by itself with the last Shop used, while the phone is at another saved Shop, shows "You seem to be at Coop (40 m)." with **Switch to Coop**.
+- **Shop screen** (§9): that Shop becomes the Shop the list is priced at, with a toast "Priced at Coop: you are 40 m away" and **Undo**. A tap away from every saved Shop says "No saved Shop is near you" and offers **Add it**.
 
 **Archiving Products.** A Product that was bought (it has a purchase, or Stock Lots refer to it) cannot be deleted; delete answers `409 product_bought` and the UI offers **Archive** instead. A Product never bought can still be deleted. An **archived** Product (like an archived Recipe, §4) can be **unarchived** at any time. While archived it:
 - is not shown in Product lists and pickers (the admin/catalogue view can include archived Products);
@@ -205,7 +212,7 @@ A slot the planner left empty is something to set up or a conflict between rules
 ## 10. Scanning
 
 ### 10.1 Shop mode
-Started from the centre **Scan** button. It picks the Shop (the last one used, or one chosen from a list), then shows the compact viewfinder strip above the live Shopping List. Scanning is continuous; each successful read gives a short beep and a haptic buzz, with a per-device mute toggle. iOS Safari has no vibration API, so the beep is the confirmation there.
+Started from the centre **Scan** button. It picks the Shop (the last one used, or one chosen from a list that leads with the Shop the User is in and lets any User add one, §5), then shows the compact viewfinder strip above the live Shopping List. Scanning is continuous; each successful read gives a short beep and a haptic buzz, with a per-device mute toggle. iOS Safari has no vibration API, so the beep is the confirmation there.
 
 On a resolved barcode:
 1. A Stock Lot is added (pack size, or the decoded weight).

@@ -1,5 +1,6 @@
 Feature: Shops
-  The Household's Shops are managed by the Admin. Every User can see them.
+  Every User can see the Household's Shops, add one and save where it is (its Shop Location).
+  Only the Admin renames or deletes a Shop.
 
   Background:
     Given a running Feeder
@@ -13,14 +14,57 @@ Feature: Shops
     Then the response status is 201
     And the response JSON field "name" is "Corner Market"
 
-  Scenario: A User cannot add, rename or delete a Shop
-    Given the Household shops at "Corner Market"
-    And I am signed in as the User
+  Scenario: A User adds a Shop standing in it, with its Shop Location
+    Given I am signed in as the User
+    When I send POST "/api/shops" for Products with JSON:
+      """
+      {"name": "Coop", "location": {"lat": 45.4642, "lon": 9.19}}
+      """
+    Then the response status is 201
+    And the Products response value at "name" is "Coop"
+    And the Products response value at "location.lat" is "45.4642"
+    And the Products response value at "location.lon" is "9.19"
+
+  Scenario: A Shop added without a location has none
+    Given I am signed in as the User
     When I send POST "/api/shops" for Products with JSON:
       """
       {"name": "Mine"}
       """
-    Then the response status is 403
+    Then the response status is 201
+    And the Products response value at "location" is null
+
+  Scenario: A User saves the Shop Location of an existing Shop
+    Given the Household shops at "Corner Market"
+    And I am signed in as the User
+    When I send PUT "/api/shops/{shop:Corner Market}/location" for Products with JSON:
+      """
+      {"lat": 51.5072, "lon": -0.1276}
+      """
+    Then the response status is 200
+    And the Products response value at "name" is "Corner Market"
+    And the Products response value at "location.lon" is "-0.1276"
+    When I GET "/api/shops"
+    Then the Products response value at "0.location.lat" is "51.5072"
+
+  Scenario Outline: A Shop Location must be on the globe
+    Given the Household shops at "Corner Market"
+    And I am signed in as the User
+    When I send PUT "/api/shops/{shop:Corner Market}/location" for Products with JSON:
+      """
+      <body>
+      """
+    Then the response status is 400
+    And the error code is "invalid_shop"
+
+    Examples:
+      | body                      |
+      | {"lat": 91, "lon": 0}     |
+      | {"lat": 0, "lon": -180.5} |
+
+  Scenario: A User cannot rename or delete a Shop
+    Given the Household shops at "Corner Market"
+    And I am signed in as the User
     When I send PATCH "/api/shops/{shop:Corner Market}" for Products with JSON:
       """
       {"name": "Renamed"}

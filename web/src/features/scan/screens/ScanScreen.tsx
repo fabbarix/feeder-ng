@@ -3,13 +3,19 @@
 // "Where are you shopping?" (ShopPicker over useShops(), the last Shop used first). The session is then the camera strip,
 // the live list (Shop mode), the scan line, notices and the sheets. The session view is its own component, so the camera
 // and the offline data start only once a Shop or Stock-take is chosen.
+// Shop Location: useNearestShop finds the Shop the User is in (at once only where that shows no prompt); the picker
+// lists it first, and a session started with another Shop offers to switch. Any User adds a Shop (AddShopSheet).
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ingredientsApi } from '../../ingredients/api'
 import { useShops } from '../../shops/hooks/useShops'
+import { useNearestShop } from '../../shops/hooks/useNearestShop'
+import { AddShopSheet } from '../../shops/components/AddShopSheet'
+import { formatDistance } from '../../shops/lib/nearest'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
 import { IconButton } from '../../../ui/IconButton'
+import { Icon } from '../../../ui/Icon'
 import { PageHeader } from '../../../ui/PageHeader'
 import { Skeleton } from '../../../ui/Skeleton'
 import { formatMinor } from '../../products/lib/money'
@@ -63,6 +69,8 @@ export function ScanScreen() {
   const stockTakeLink = params.get('mode') === 'stocktake'
   // undefined: not chosen yet (the starting choice applies); null: the picker is shown; otherwise the chosen session.
   const [picked, setPicked] = useState<Choice | null | undefined>(undefined)
+  const near = useNearestShop(shops)
+  const [adding, setAdding] = useState(false)
 
   // While the Shops load neither the picker (it would flash) nor a session is shown.
   if (isLoading) {
@@ -75,23 +83,52 @@ export function ScanScreen() {
 
   const choice = picked !== undefined ? picked : stockTakeLink ? { kind: 'stocktake' as const } : initialChoice(shops, lastShopId)
   const backToPicker = () => setPicked(null)
+  const pickShop = (shop: { id: number; name: string }) => {
+    setLastShopId(localStorageOrNull(), shop.id)
+    setPicked({ kind: 'shop', shop: { id: shop.id, name: shop.name } })
+  }
+  const nearest = near.nearest ? { id: near.nearest.shop.id, name: near.nearest.shop.name, distance: formatDistance(near.nearest.metres) } : null
   if (!choice) {
     return (
-      <ShopPicker
-        shops={shops}
-        lastShopId={lastShopId}
-        onPick={(shop) => {
-          setLastShopId(localStorageOrNull(), shop.id)
-          setPicked({ kind: 'shop', shop: { id: shop.id, name: shop.name } })
-        }}
-        onStockTake={() => setPicked({ kind: 'stocktake' })}
-      />
+      <>
+        <ShopPicker
+          shops={shops}
+          lastShopId={lastShopId}
+          onPick={pickShop}
+          onStockTake={() => setPicked({ kind: 'stocktake' })}
+          nearby={{ nearest, status: near.status, failure: near.failure, anyLocated: near.anyLocated, onFind: near.locate }}
+          onAddShop={() => setAdding(true)}
+        />
+        <AddShopSheet
+          open={adding}
+          onClose={() => setAdding(false)}
+          onAdded={(shop) => {
+            setAdding(false)
+            pickShop(shop)
+          }}
+        />
+      </>
     )
   }
+  // Started by itself with the last Shop, but the phone is at another saved Shop: offer to switch.
+  const elsewhere = picked === undefined && choice.kind === 'shop' && nearest && nearest.id !== choice.shop.id ? nearest : null
   return choice.kind === 'shop' ? (
-    <ScanSession mode="shop" shop={choice.shop} onChangeShop={backToPicker} />
+    <ScanSession key={choice.shop.id} mode="shop" shop={choice.shop} onChangeShop={backToPicker} elsewhere={elsewhere ? { ...elsewhere, onSwitch: () => pickShop(elsewhere) } : null} />
   ) : (
     <ScanSession mode="stocktake" shop={null} onChangeShop={backToPicker} />
+  )
+}
+
+/** "You seem to be at Coop (40 m)." with a button to switch the session to it. */
+function ElsewhereNotice({ name, distance, onSwitch }: { name: string; distance: string; onSwitch: () => void }) {
+  return (
+    <div className="scan-elsewhere" role="status">
+      <Icon name="location" size={20} />
+      <span>{scanStrings.nearOther(name, distance)}</span>
+      <Button variant="secondary" size="sm" onClick={onSwitch}>
+        {scanStrings.switchTo(name)}
+      </Button>
+    </div>
   )
 }
 
@@ -99,9 +136,11 @@ interface ScanSessionProps {
   mode: 'shop' | 'stocktake'
   shop: { id: number; name: string } | null
   onChangeShop: () => void
+  /** the saved Shop the phone is at, when it is not this one */
+  elsewhere?: { name: string; distance: string; onSwitch: () => void } | null
 }
 
-function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
+function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) {
   useScanSession(mode === 'shop')
   const c = useScanController({ mode, shop })
   const flow = c.flow
@@ -123,6 +162,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
           leading={<IconButton icon="back" label={scanStrings.back} onClick={onChangeShop} />}
         />
       )}
+      {elsewhere ? <ElsewhereNotice {...elsewhere} /> : null}
       <ViewfinderStrip
         status={viewfinderStatus}
         torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}

@@ -11,6 +11,9 @@ const actions = vi.hoisted(() => ({ tick: vi.fn(), untick: vi.fn(), addExtra: vi
 vi.mock('../hooks/useShoppingActions', () => ({ useShoppingActions: () => actions }))
 const choice = vi.hoisted(() => ({ useShopChoice: vi.fn(), setShopId: vi.fn() }))
 vi.mock('../hooks/useShopChoice', () => ({ useShopChoice: choice.useShopChoice }))
+const here = vi.hoisted(() => ({ useShopHere: vi.fn() }))
+vi.mock('../hooks/useShopHere', () => here)
+vi.mock('../../shops/components/AddShopSheet', () => ({ AddShopSheet: ({ open, initialName }: { open: boolean; initialName?: string }) => (open ? <p>Add Shop sheet: {initialName}</p> : null) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [{ id: 3, name: 'milk', baseUnit: 'ml' }], isLoading: false }) }))
 
@@ -35,6 +38,7 @@ function show(list: ShoppingList | undefined, extra: Record<string, unknown> = {
 beforeEach(() => {
   listHook.useShoppingList.mockReset()
   choice.setShopId.mockReset()
+  here.useShopHere.mockReset().mockReturnValue({ status: 'idle', anyLocated: false, find: vi.fn() })
   choice.useShopChoice.mockReturnValue({ shops: [{ id: 1, name: 'Coop' }, { id: 2, name: 'Aldi' }], shopId: 1, setShopId: choice.setShopId, isLoading: false })
   for (const f of Object.values(actions)) f.mockReset().mockResolvedValue({ ticked: true, lotId: null, created: false })
 })
@@ -54,6 +58,23 @@ describe('ShoppingScreen', () => {
     await userEvent.click(screen.getByRole('combobox', { name: /^Shop\b(?! for)/ }))
     await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Aldi/ }))
     expect(choice.setShopId).toHaveBeenCalledWith(2)
+  })
+
+  it('Shop Location: any User adds a missing Shop from the Shop select', async () => {
+    show(makeList())
+    await userEvent.click(screen.getByRole('combobox', { name: /^Shop\b(?! for)/ }))
+    await userEvent.type(screen.getByRole('searchbox'), 'Lidl')
+    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Add Shop "Lidl"/ }))
+    expect(screen.getByText('Add Shop sheet: Lidl')).toBeInTheDocument()
+  })
+
+  it('Shop Location: "Find the Shop I am in" shows once some Shop has a location', async () => {
+    expect(screen.queryByRole('button', { name: 'Find the Shop I am in' })).toBeNull()
+    const find = vi.fn()
+    here.useShopHere.mockReturnValue({ status: 'idle', anyLocated: true, find })
+    show(makeList())
+    await userEvent.click(screen.getByRole('button', { name: 'Find the Shop I am in' }))
+    expect(find).toHaveBeenCalled()
   })
 
   it('asks the list for the picked Shop', () => {

@@ -46,7 +46,7 @@ describe('ShopScreen entity actions (S-04)', () => {
 
   it('a plain User sees the note and no entity actions', async () => {
     setup(USER_ME)
-    expect(await screen.findByText('Only an Admin can change Shops.')).toBeInTheDocument()
+    expect(await screen.findByText('Only an Admin can rename or delete a Shop.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rename Shop' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete Shop' })).toBeNull()
   })
