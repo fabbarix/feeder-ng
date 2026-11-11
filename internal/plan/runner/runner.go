@@ -297,11 +297,15 @@ func (r *Runner) Nightly(ctx context.Context, day string) error {
 }
 
 // Invalidate asks for a Plan run soon. It never blocks and never runs inline:
-// calls made while a run is pending or running coalesce into one more run.
+// calls made while a run is pending or running coalesce into one more run. The
+// coalesced run keeps the latest reason, except that a pending rules_changed
+// (which clears every unpinned meal) is never downgraded by a later reason.
 func (r *Runner) Invalidate(reason plan.Reason) {
 	r.stateMu.Lock()
+	if !r.pending || r.reason != plan.ReasonRulesChanged {
+		r.reason = reason
+	}
 	r.pending = true
-	r.reason = reason
 	r.stateMu.Unlock()
 	select {
 	case r.wake <- struct{}{}:
