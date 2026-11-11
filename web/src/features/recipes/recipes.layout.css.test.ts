@@ -151,11 +151,32 @@ describe('E-02 / E-03: Step cards', () => {
   })
 })
 
+describe('E-01: the Optional chip and the remove button are centred in the line row', () => {
+  it.each(['.line-row__optional', '.line-row__remove'])('%s has align-self: center', (sel) => {
+    expect(valueFor(sel, 'align-self', 0)).toBe('center')
+    expect(valueFor(sel, 'align-self', 720)).toBe('center')
+  })
+})
+
 describe('E-01: Tags as a chip input', () => {
   it('chips and the text field share one flex-wrap control capped at the md size (320 px)', () => {
     expect(valueFor('.tag-input__control', 'display', 0)).toBe('flex')
     expect(valueFor('.tag-input__control', 'flex-wrap', 0)).toBe('wrap')
     expect(valueFor('.tag-input', 'max-inline-size', 0)).toBe('320px')
+  })
+  it('two realistic Tags and the field fit one line inside the cap: 2 chips (78 px each) + 2 gaps + the field minimum <= the cap', () => {
+    const cap = parseFloat(valueFor('.tag-input', 'max-inline-size', 1280) ?? '9999')
+    const gap = valueFor('.tag-input__control', 'gap', 1280)
+    expect(gap).toBe('var(--space-2)') // 8 px
+    const fieldMin = parseFloat(valueFor('.tag-input__control > .ui-field', 'min-inline-size', 1280) ?? '0')
+    const basis = parseFloat((valueFor('.tag-input__control > .ui-field', 'flex', 1280) ?? '').split(/\s+/)[2] ?? '0')
+    expect(fieldMin).toBeGreaterThan(0)
+    expect(fieldMin).toBeLessThanOrEqual(96)
+    expect(basis).toBeLessThanOrEqual(96)
+    expect(2 * 78 + 2 * 8 + Math.max(fieldMin, basis)).toBeLessThanOrEqual(cap)
+  })
+  it('the .tag-input block is declared once', () => {
+    expect(rulesFor('.tag-input').length).toBe(1)
   })
   it('the chips and the text field sit on one line: the field is centred with the chips and its label is visually hidden', () => {
     expect(valueFor('.tag-input__control', 'align-items', 0)).toBe('center')

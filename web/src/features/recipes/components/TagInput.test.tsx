@@ -39,6 +39,10 @@ describe('TagInput', () => {
     expect(fieldLabel).not.toHaveClass('tag-input__label') // hidden by recipes.css, kept for assistive tech
     expect(screen.getByRole('textbox', { name: 'Add a Tag' })).toBeInTheDocument()
   })
+  it('the text field has the placeholder "Add a Tag"', () => {
+    view()
+    expect(screen.getByRole('textbox', { name: 'Add a Tag' })).toHaveAttribute('placeholder', 'Add a Tag')
+  })
   it('names each chip "Remove Tag X"', () => {
     view()
     expect(screen.getByRole('button', { name: 'Remove Tag roast' })).toHaveTextContent('roast')

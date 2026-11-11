@@ -46,6 +46,7 @@ describe('RecipesOverflowMenu (popover from 768 px)', () => {
     const read = screen.getByRole('menuitem', { name: 'Read a recipe' })
     expect(read).toHaveAttribute('href', '/recipes/import#read')
     expect(read.querySelector('svg')).not.toBeNull()
+    expect(read.querySelector('svg')!.innerHTML).not.toBe(screen.getByRole('menuitem', { name: 'Copy Agent Prompt' }).querySelector('svg')!.innerHTML)
     expect(screen.getByRole('menuitem', { name: 'Import' })).toHaveAttribute('href', '/recipes/import')
     expect(screen.getByRole('menuitem', { name: 'Export' })).toHaveAttribute('href', '/recipes/export')
   })

@@ -21,7 +21,7 @@ describe('StepsEditor: card layout', () => {
   it('Kind and Duration share one FieldRow; Duration is xs with a "min" suffix', () => {
     view([step()])
     const kind = within(card()).getByRole('radiogroup', { name: 'Kind' })
-    const duration = within(card()).getByRole('spinbutton', { name: 'Duration (min)' })
+    const duration = within(card()).getByRole('spinbutton', { name: 'Duration' })
     const row = kind.closest('.field-row')
     expect(row).not.toBeNull()
     expect(row).toContainElement(duration)
@@ -32,7 +32,7 @@ describe('StepsEditor: card layout', () => {
   })
   it('an Advance Step shows Lead time in the same place, xs with "min"', () => {
     view([step({ kind: 'advance', leadTimeMinutes: '240', durationMinutes: '' })])
-    const lead = within(card()).getByRole('spinbutton', { name: 'Lead time (min)' })
+    const lead = within(card()).getByRole('spinbutton', { name: 'Lead time' })
     expect(lead.closest('.field-row')).toHaveClass('step-card__timing')
     expect(lead.closest('.ui-field')!.querySelector('.ui-field__suffix')).toHaveTextContent('min')
   })

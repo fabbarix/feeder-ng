@@ -55,15 +55,15 @@ describe('StepsEditor', () => {
 
   it('shows Duration for timeline Steps and Lead time for an Advance Step, as number fields', () => {
     render(<StepsEditor {...props([step({ kind: 'advance', leadTimeMinutes: '240', durationMinutes: '' }), step({ key: 'j' })])} />)
-    expect(within(rows()[0]!).getByRole('spinbutton', { name: 'Lead time (min)' })).toHaveDisplayValue('240')
-    expect(within(rows()[0]!).queryByRole('spinbutton', { name: 'Duration (min)' })).toBeNull()
-    expect(within(rows()[1]!).getByRole('spinbutton', { name: 'Duration (min)' })).toHaveDisplayValue('5')
+    expect(within(rows()[0]!).getByRole('spinbutton', { name: 'Lead time' })).toHaveDisplayValue('240')
+    expect(within(rows()[0]!).queryByRole('spinbutton', { name: 'Duration' })).toBeNull()
+    expect(within(rows()[1]!).getByRole('spinbutton', { name: 'Duration' })).toHaveDisplayValue('5')
   })
 
   it('commits a typed duration as text', async () => {
     const p = props([step()])
     render(<StepsEditor {...p} />)
-    const field = screen.getByRole('spinbutton', { name: 'Duration (min)' })
+    const field = screen.getByRole('spinbutton', { name: 'Duration' })
     await userEvent.clear(field)
     await userEvent.type(field, '12')
     await userEvent.tab()

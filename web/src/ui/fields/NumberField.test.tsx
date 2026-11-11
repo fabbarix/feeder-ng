@@ -20,6 +20,21 @@ describe('NumberField', () => {
     expect(input()).toHaveValue('4')
   })
 
+  it('announces the unit: it is part of the accessible description', () => {
+    render(<Num unit="days" />)
+    expect(input()).toHaveAccessibleDescription('days')
+  })
+
+  it('announces the unit after the helper text', () => {
+    render(<Num unit="min" helper="Time to reheat" />)
+    expect(input()).toHaveAccessibleDescription('Time to reheat min')
+  })
+
+  it('has no description when there is no unit, helper or error', () => {
+    render(<Num />)
+    expect(input()).not.toHaveAttribute('aria-describedby')
+  })
+
   it('shows the unit and exposes bounds', () => {
     render(<Num unit="g" min={0} max={500} />)
     expect(screen.getByText('g')).toBeInTheDocument()
