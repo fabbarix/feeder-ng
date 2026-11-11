@@ -435,6 +435,24 @@ func TestNewMemberDoesNotTouchDateAttendance(t *testing.T) {
 	}
 }
 
+// IM2: the Member photo (column members.photo, migration 1311).
+func TestMemberPhotoRoundTripsAndCanBeCleared(t *testing.T) {
+	f := newFx(t)
+	const face = "0123456789abcdef0123456789abcdef"
+	sam, err := f.st.CreateMember(f.ctx, household.MemberInput{Name: "Sam", Colour: "#e07a5f", Avatar: "🦊", PortionFactor: 0.5, Photo: face})
+	if err != nil || sam.Photo != face || sam.Avatar != "🦊" {
+		t.Fatalf("create = %+v, %v", sam, err)
+	}
+	list, _ := f.st.Members(f.ctx)
+	if len(list) != 1 || list[0].Photo != face {
+		t.Errorf("Members = %+v; the photo must be listed", list)
+	}
+	up, err := f.st.UpdateMember(f.ctx, sam.ID, household.MemberInput{Name: "Sam", Colour: "#e07a5f", PortionFactor: 0.5})
+	if err != nil || up.Photo != "" {
+		t.Errorf("update without a photo = %+v, %v; it clears the photo (an update replaces the Member)", up, err)
+	}
+}
+
 // R15: batch edit of matching Meal Slots.
 func TestUpdateSlotsBatchIsAllOrNothing(t *testing.T) {
 	f := newFx(t)

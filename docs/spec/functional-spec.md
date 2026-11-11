@@ -32,7 +32,7 @@ The Household records the moment it was created in Feeder (never edited, not a s
 | Currency | USD | Admin-managed. Used for **Prices**, the estimated cost and price-valued Weight Barcode Rules. |
 | Location | none | City or coordinates, set by the Admin. Used to compute local sunset and sunrise for the kitchen board's dark mode (§11). Without one, the board uses 19:00–07:00. |
 
-**Members**: a name, a colour/avatar and a default **Portion Factor** (adult 1.0; any value from 0.25 to 3, in 0.25 steps). A Member may have an email; see §2.
+**Members**: a name, a colour/avatar and a default **Portion Factor** (adult 1.0; any value from 0.25 to 3, in 0.25 steps). A Member may have an email; see §2. The avatar is a **photo**, an **emoji** or the Member's **initials**, the Admin's choice in the Member sheet ("Avatar: Initials, Emoji, Photo"). Wherever the avatar is drawn, the photo is shown first, then the emoji, then the initials; a photo that cannot be loaded falls back to the emoji, then the initials. The photo is added with the shared image picker (a square crop) and is stored as an image id (`photo`, with the read-only `photoUrl`); it is removed with the Member, and with it when the Admin switches the Member to an emoji or initials. Only an Admin can set it, like every other Member field.
 
 **Meal Slots** are defined per weekday. Each has a name (e.g. Lunch), a usual time and a default **Attendance** (which Members attend, each with an optional Portion Factor override). The same slot name can exist on several weekdays with different times or attendance. A one-off change for a specific date ("Sam is away Thursday") edits that date's Attendance only.
 
@@ -57,9 +57,9 @@ These fields mirror the Recipe File ([recipe-file.md](recipe-file.md)): name, de
 
 ## 5. Ingredients, Products, Shops
 
-**Ingredient**: a name, **Base Unit**, Unit Conversions and an optional **Shelf Life**. Renaming an Ingredient keeps all its references. Two Ingredients can be merged (references move, conversions combine, and conflicts are shown).
+**Ingredient**: a name, **Base Unit**, Unit Conversions, an optional **Shelf Life** and an optional **picture**. Renaming an Ingredient keeps all its references. Two Ingredients can be merged (references move, conversions combine, and conflicts are shown).
 
-The **New Ingredient** sheet asks for a name, a Base Unit (g, ml or piece, g unless a Recipe line or Scan already gave a unit) and an optional Shelf Life in days; everything else (Unit Conversions, later a picture) is edited on the Ingredient's page. It validates inline instead of disabling its button, and asks "Did you mean ...?" before creating a name close to an existing Ingredient. It is opened from the Ingredients screen, from an ingredient line of the Recipe editor, and from the "what is this?" form.
+The **New Ingredient** sheet asks for a name, a Base Unit (g, ml or piece, g unless a Recipe line or Scan already gave a unit) and an optional Shelf Life in days; the sheet also has an optional **Picture** (the shared image picker, 4:3 crop); everything else (Unit Conversions) is edited on the Ingredient's page, whose Picture Tile can add, replace, crop or remove it at any time, even while the Ingredient is in use (only the Base Unit locks). The Ingredients list shows the picture as a small thumbnail. A picture is stored as an image id (`image`, with the read-only `imageUrl`); replacing or removing it, merging the Ingredient away or deleting it removes the old file. When two Ingredients merge, the survivor keeps its own picture, or takes the merged-away Ingredient's when it has none. It validates inline instead of disabling its button, and asks "Did you mean ...?" before creating a name close to an existing Ingredient. It is opened from the Ingredients screen, from an ingredient line of the Recipe editor, and from the "what is this?" form.
 
 **Product**: a name, the Ingredient it supplies, its pack size (in the Ingredient's Base Unit), optional global barcodes (EAN/UPC) and the Shops known to sell it. Products are created only through the "what is this?" form during scanning, or from an Ingredient's page.
 
@@ -262,6 +262,8 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 - **Export:** pick one or more Recipes, or all of them, and download a `.feeder.json` file with images embedded ([recipe-file.md](recipe-file.md)).
 - **Import:** upload or paste JSON, then go through Import Review (recipe-file.md, *Import Review*).
 - A Recipe's Reheat time travels in the Recipe File as the optional `reheatMinutes`; files without it stay valid (the format is still version 1).
+- An Ingredient's picture travels in the Recipe File as the optional `image` of its definition (a data URL on export, a data URL or https URL on import, handled like a Recipe photo); files without it stay valid (still version 1). Import creates the picture only for an Ingredient it **creates**; it never changes an Ingredient the Household already has. A picture that cannot be fetched is dropped with an `image_failed` warning at `$.ingredients[i].image`. Member photos are not part of a Recipe File.
+- **One image path.** Every image field (Recipe photo, Step photo, Ingredient picture, Member photo) uses the same image picker and the same server endpoints (`/api/images`); a scripted guard (`image-input` in `scripts/check-ui.sh`) fails the build when a screen builds its own image input. The nightly clean-up keeps every image that a Recipe, Step, Ingredient or Member uses (§15, decision 25).
 - **Copy Agent Prompt:** copies the prompt template with the schema and example inlined.
 
 ## 14. Theming and layout
@@ -297,3 +299,4 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 23. (2026-11-10) Attendance defaults to everyone: a new Meal Slot includes all current Members, a new Member joins every existing Meal Slot, and people opt out; migration 1230 gives every existing slot with no attendees all Members, once and automatically (§3). Couldn't plan is a designed state grouped by cause, with a setup checklist on first run (§7.4).
 24. (2026-11-10) Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down (§2).
 25. (2026-11-10) Meal Slots can be edited on several weekdays at once: the change applies to the Matching Meal Slot (same name) on each chosen weekday, skipped days are reported, nothing is created, and the edit is atomic (`PATCH /api/meal-slots/batch`). Weekdays are chosen with the shared WeekdayPicker chips; the overview shows attendee pills and, from 1024 px, a week table (§3).
+26. (2026-11-10) Pictures for Ingredients and Members (IM2): an Ingredient may have one picture and a Member one photo, both kept in the shared image store and by the nightly clean-up; a Member's avatar is photo, else emoji, else initials; every image field uses the one image picker (§3, §5, §13).

@@ -8,12 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
@@ -27,7 +31,8 @@ const topic = "ingredients"
 const defaultSearchLimit = 5
 
 func mount(r *app.Router, d app.Deps) {
-	a := &api{store: store.New(d.DB, d.Clock), events: d.Events}
+	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB)))), events: d.Events}
 	r.User("GET /api/ingredients", a.list)
 	r.User("GET /api/ingredients/search", a.search)
 	r.User("POST /api/ingredients", a.create)
@@ -58,6 +63,8 @@ type ingredientJSON struct {
 	BaseUnit      string           `json:"baseUnit"`
 	ShelfLifeDays *int             `json:"shelfLifeDays"`
 	Conversions   []conversionJSON `json:"conversions"`
+	Image         string           `json:"image"`
+	ImageURL      string           `json:"imageUrl"`
 }
 
 func toJSON(i ingredient.Ingredient) ingredientJSON {
@@ -67,6 +74,10 @@ func toJSON(i ingredient.Ingredient) ingredientJSON {
 		BaseUnit:      string(i.Base),
 		ShelfLifeDays: i.ShelfLifeDays,
 		Conversions:   []conversionJSON{},
+		Image:         i.Image,
+	}
+	if i.Image != "" {
+		out.ImageURL = "/api/images/" + i.Image
 	}
 	for _, c := range i.Conversions {
 		out.Conversions = append(out.Conversions, conversionJSON{Unit: c.Unit, ToBase: c.ToBase})
@@ -146,12 +157,14 @@ type createBody struct {
 	BaseUnit      string         `json:"baseUnit"`
 	ShelfLifeDays *int           `json:"shelfLifeDays"`
 	Conversions   []conversionIn `json:"conversions"`
+	Image         string         `json:"image"`
 }
 
 type patchBody struct {
 	Name          *string        `json:"name"`
 	BaseUnit      *string        `json:"baseUnit"`
 	ShelfLifeDays shelfLifeField `json:"shelfLifeDays"`
+	Image         *string        `json:"image"` // nil = keep, "" = remove
 }
 
 type mergeBody struct {
@@ -209,7 +222,7 @@ func (a *api) create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays}
+	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays, Image: body.Image}
 	for _, c := range body.Conversions {
 		in.Conversions = append(in.Conversions, units.Conversion{Unit: c.Unit, ToBase: c.ToBase})
 	}
@@ -250,7 +263,7 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	p := store.Patch{Name: body.Name}
+	p := store.Patch{Name: body.Name, Image: body.Image}
 	if body.BaseUnit != nil {
 		b := units.Base(*body.BaseUnit)
 		p.Base = &b

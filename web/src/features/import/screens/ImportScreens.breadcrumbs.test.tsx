@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { plan } from '../fixtures.test-helper'
+import { plan, reviewExtras } from '../fixtures.test-helper'
 import type { UseExportPicker } from '../hooks/useExportPicker'
 import type { UseImportReview } from '../hooks/useImportReview'
 
@@ -12,6 +12,12 @@ const hook = vi.hoisted(() => ({ review: {} as UseImportReview, picker: {} as Us
 vi.mock('../hooks/useImportReview', () => ({ useImportReview: () => hook.review }))
 vi.mock('../hooks/useExportPicker', () => ({ useExportPicker: () => hook.picker }))
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
+vi.mock('../hooks/useRecipeRead', () => ({
+  useRecipeRead: () => ({ phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0, start: vi.fn(), cancel: vi.fn(), reset: vi.fn() }),
+}))
+vi.mock('../hooks/useReadAvailability', () => ({
+  useReadAvailability: () => ({ loading: false, enabled: true, isAdmin: false, statusFailed: false, settingsLink: false, photos: true, retry: vi.fn() }),
+}))
 
 import { ExportScreen } from './ExportScreen'
 import { ImportScreen } from './ImportScreen'
@@ -19,7 +25,7 @@ import { ImportScreen } from './ImportScreen'
 const review = (over: Partial<UseImportReview>): UseImportReview => ({
   phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [] }, error: undefined, busy: false, stale: false,
   result: undefined, open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(),
-  confirm: vi.fn(), reset: vi.fn(), ...over,
+  confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...over,
 })
 const at = (path: string, ui: React.ReactElement) => render(<MemoryRouter initialEntries={[path]}><ToastProvider>{ui}</ToastProvider></MemoryRouter>)
 const trail = () => screen.getByRole('navigation', { name: 'Breadcrumb' })

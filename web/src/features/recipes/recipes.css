@@ -361,8 +361,7 @@
   gap: var(--space-2);
 }
 
-.step-card__use-list,
-.step-card__error {
+.step-card__use-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -378,14 +377,13 @@
 .step-card__photo {
   display: grid;
   gap: var(--space-2);
-  justify-items: start;
-}
-
-.step-card__photo > :first-child:not(.ui-field) {
-  inline-size: 96px;
+  min-inline-size: 0;
 }
 
 .step-card__error {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   color: var(--status-danger-fg);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);

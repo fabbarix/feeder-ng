@@ -6,6 +6,17 @@ import { declarations, readStylesCss, readUiCss, ruleBlocks } from './test-utils
 
 afterEach(() => vi.restoreAllMocks())
 
+describe('Button ref', () => {
+  it('forwards an object ref and a callback ref to the button element', () => {
+    const obj = { current: null as HTMLButtonElement | null }
+    const cb = vi.fn()
+    const { rerender } = render(<Button ref={obj}>One</Button>)
+    expect(obj.current).toBe(screen.getByRole('button', { name: 'One' }))
+    rerender(<Button ref={cb}>One</Button>)
+    expect(cb).toHaveBeenCalledWith(screen.getByRole('button', { name: 'One' }))
+  })
+})
+
 describe('Button variants and sizes (plan 4.2)', () => {
   it.each(['primary', 'secondary', 'accent-secondary', 'tertiary', 'danger', 'danger-tertiary'] as const)('exposes variant %s', (variant) => {
     render(<Button variant={variant}>Go</Button>)

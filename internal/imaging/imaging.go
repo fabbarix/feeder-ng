@@ -81,17 +81,29 @@ func Process(r io.Reader) (Result, error) {
 	return processBytes(data, "")
 }
 
-// processBytes checks the size, then reads only the header (image.DecodeConfig)
-// to refuse unsupported formats, a format that differs from declared (when
-// declared is not empty) and decompression bombs, before the full decode. It
-// scales the image with ScaledSize(…, MaxSide) using a high-quality filter and
-// encodes lossless WebP. A JPEG's EXIF orientation is applied (exif.go); HEIC/HEIF goes through heic.go.
+// processBytes decodes, shrinks to MaxSide and encodes lossless WebP (see decodeUpright for the checks).
 func processBytes(data []byte, declared string) (Result, error) {
+	img, w, h, err := decodeUpright(data, declared, MaxSide)
+	if err != nil {
+		return Result{}, err
+	}
+	var out bytes.Buffer
+	if err := nativewebp.Encode(&out, img, nil); err != nil {
+		return Result{}, ErrUnsupportedFormat
+	}
+	return Result{WebP: out.Bytes(), Width: w, Height: h}, nil
+}
+
+// decodeUpright checks the size, then reads only the header (image.DecodeConfig) to refuse unsupported formats,
+// a format that differs from declared (when declared is not empty) and decompression bombs, before the full
+// decode. It scales the image with ScaledSize(…, maxSide) using a high-quality filter and applies a JPEG's EXIF
+// orientation (exif.go); HEIC/HEIF goes through heic.go. The result is upright and w x h in size.
+func decodeUpright(data []byte, declared string, maxSide int) (image.Image, int, int, error) {
 	if len(data) == 0 {
-		return Result{}, ErrEmpty
+		return nil, 0, 0, ErrEmpty
 	}
 	if len(data) > MaxBytes {
-		return Result{}, ErrTooLarge
+		return nil, 0, 0, ErrTooLarge
 	}
 	var (
 		cfg    image.Config
@@ -101,25 +113,25 @@ func processBytes(data []byte, declared string) (Result, error) {
 	if isHEIC(data) {
 		format = "heic"
 		if declared != "" && format != declared {
-			return Result{}, ErrUnsupportedFormat
+			return nil, 0, 0, ErrUnsupportedFormat
 		}
 		if cfg, err = heicConfig(data); err != nil {
-			return Result{}, err
+			return nil, 0, 0, err
 		}
 	} else {
 		cfg, format, err = image.DecodeConfig(bytes.NewReader(data))
 		if err != nil {
-			return Result{}, ErrUnsupportedFormat
+			return nil, 0, 0, ErrUnsupportedFormat
 		}
 		if _, ok := acceptedFormats[format]; !ok {
-			return Result{}, ErrUnsupportedFormat
+			return nil, 0, 0, ErrUnsupportedFormat
 		}
 	}
 	if declared != "" && format != declared {
-		return Result{}, ErrUnsupportedFormat
+		return nil, 0, 0, ErrUnsupportedFormat
 	}
 	if cfg.Width > MaxSidePixels || cfg.Height > MaxSidePixels || int64(cfg.Width)*int64(cfg.Height) > MaxPixels {
-		return Result{}, ErrTooManyPixels
+		return nil, 0, 0, ErrTooManyPixels
 	}
 	var src image.Image
 	if format == "heic" {
@@ -129,9 +141,9 @@ func processBytes(data []byte, declared string) (Result, error) {
 	}
 	if err != nil {
 		if errors.Is(err, ErrUnsupportedFormat) {
-			return Result{}, err
+			return nil, 0, 0, err
 		}
-		return Result{}, ErrUnsupportedFormat
+		return nil, 0, 0, ErrUnsupportedFormat
 	}
 	// EXIF orientation (JPEG only) is applied to the upright picture: the size is computed for the upright
 	// shape, the stored pixels are scaled to the matching stored shape, and the small result is turned.
@@ -145,7 +157,7 @@ func processBytes(data []byte, declared string) (Result, error) {
 	if swapsAxes(orientation) {
 		uw, uh = sh, sw
 	}
-	w, h := ScaledSize(uw, uh, MaxSide)
+	w, h := ScaledSize(uw, uh, maxSide)
 	img := src
 	if scaledW, scaledH := w, h; scaledW != uw || scaledH != uh {
 		if swapsAxes(orientation) {
@@ -155,12 +167,7 @@ func processBytes(data []byte, declared string) (Result, error) {
 		draw.CatmullRom.Scale(dst, dst.Bounds(), src, b, draw.Over, nil)
 		img = dst
 	}
-	img = orient(img, orientation)
-	var out bytes.Buffer
-	if err := nativewebp.Encode(&out, img, nil); err != nil {
-		return Result{}, ErrUnsupportedFormat
-	}
-	return Result{WebP: out.Bytes(), Width: w, Height: h}, nil
+	return orient(img, orientation), w, h, nil
 }
 
 // ProcessDataURL decodes a data URL and processes it. Only
