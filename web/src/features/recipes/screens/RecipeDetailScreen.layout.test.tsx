@@ -7,11 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider, Page } from '../../../ui'
 import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { garlic, recipe } from '../fixtures.test-helper'
+import { household } from '../household.test-helper'
 
-const h = vi.hoisted(() => ({ recipe: {} as Record<string, unknown>, prefs: {} as Record<string, unknown>, picker: {} as Record<string, unknown> }))
+const h = vi.hoisted(() => ({ recipe: {} as Record<string, unknown>, household: {} as import('../hooks/useHouseholdPreferences').UseHouseholdPreferences }))
 vi.mock('../hooks/useRecipe', () => ({ useRecipe: () => h.recipe }))
-vi.mock('../hooks/useRecipePreferences', () => ({ useRecipePreferences: () => h.prefs }))
-vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => h.picker }))
+vi.mock('../hooks/useHouseholdPreferences', () => ({ useHouseholdPreferences: () => h.household }))
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic]]), isLoading: false }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 
@@ -38,8 +38,7 @@ const view = () =>
 
 beforeEach(() => {
   h.recipe = { recipe: recipe(), isLoading: false, error: null, setArchived: vi.fn(), remove: vi.fn() }
-  h.prefs = { stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false }
-  h.picker = { members: [{ id: 1, name: 'Anna' }], selectedId: 1, memberId: undefined, select: vi.fn(), isLoading: false }
+  h.household = household()
 })
 afterEach(() => vi.unstubAllGlobals())
 
@@ -60,7 +59,7 @@ describe('Recipe detail at 1280 and up (D-01)', () => {
     expect(aside).toContainElement(screen.getByRole('button', { name: 'Start Cook Mode' }))
     expect(aside).toContainElement(screen.getByRole('spinbutton', { name: 'Batches' }))
     expect(main).toContainElement(heading('Steps'))
-    expect(main).toContainElement(heading('Your preferences'))
+    expect(main).toContainElement(heading('Preferences'))
   })
   it('has no StickyActionBar: the Cook entry is inline in the left column', () => {
     stubViewportWidth(1280)
@@ -86,7 +85,7 @@ describe('Recipe detail below 1280 (L-03)', () => {
   it('reads in order: photo, metrics, Ingredients, Steps, preferences (one column)', () => {
     stubViewportWidth(390)
     view()
-    const order = [heading('Ingredients'), heading('Steps'), heading('Your preferences')]
+    const order = [heading('Ingredients'), heading('Steps'), heading('Preferences')]
     for (let i = 1; i < order.length; i++) {
       expect(order[i - 1]!.compareDocumentPosition(order[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
@@ -96,6 +95,32 @@ describe('Recipe detail below 1280 (L-03)', () => {
     view()
     await userEvent.click(within(screen.getByRole('group', { name: 'Cook' })).getByRole('button', { name: 'Start Cook Mode' }))
     expect(screen.getByText('cooking')).toBeInTheDocument() // navigated to /cook/recipe/3
+  })
+})
+
+describe('Preferences table on a phone (PT)', () => {
+  it('sits in the Preferences Tile after Steps, as a table with a column per state', () => {
+    stubViewportWidth(360)
+    view()
+    const tile = heading('Preferences').closest('section') as HTMLElement
+    const table = within(tile).getByRole('table', { name: 'Preferences for Roast tray' })
+    expect(within(table).getAllByRole('columnheader').map((c) => c.textContent?.trim())).toEqual(['Member', 'Favourite', 'Dislike', 'Exclusion'])
+    expect(heading('Steps').compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('puts no width, overflow or scroll container of its own on the table or the Tile', () => {
+    stubViewportWidth(360)
+    const { container } = view()
+    const table = screen.getByRole('table')
+    expect(table.closest('[style]')).toBeNull()
+    expect(container.querySelector('.preference-table-scroll, [style*="overflow"]')).toBeNull()
+  })
+  it('keeps every state button at least a 44 px target through the shared IconButton', () => {
+    stubViewportWidth(360)
+    view()
+    for (const b of screen.getAllByRole('button', { name: /^(Anna|Ben): / })) {
+      expect(b).toHaveClass('icon-button')
+      expect(b).toHaveAttribute('data-size', 'md')
+    }
   })
 })
 

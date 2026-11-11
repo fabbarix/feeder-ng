@@ -38,13 +38,15 @@
   color: var(--color-muted);
 }
 
+/* Fixed in the top layer, placed by useFloatingPopover. Resets the UA [popover] box. */
 .date-field__popover {
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-start: calc(100% + var(--space-1));
-  z-index: 25;
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  overflow: visible;
   inline-size: min(360px, 100vw - 32px);
   padding: var(--space-3);
+  border: 0;
   border-radius: var(--radius-tile);
   background: var(--color-surface);
   color: var(--color-text);

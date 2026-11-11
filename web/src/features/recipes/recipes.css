@@ -210,10 +210,135 @@
   padding-block-end: 0;
 }
 
-.preference-toggles {
+/* PT: the Recipe's preferences as a table, a row per Member, a 48 px column per state. Fits 360 px: the Member column
+   shrinks and truncates, and nothing scrolls sideways (rx-pt.md section 5.5). */
+.preference-table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.preference-table th,
+.preference-table td {
+  padding-block: var(--space-1);
+  vertical-align: middle;
+}
+
+.preference-table__member {
+  min-inline-size: 0;
+  text-align: start;
+  font-weight: var(--text-label-weight);
+}
+
+/* A state name is wider than its 48 px column at the caption size, so it never breaks inside a word: it stays on one
+   line and sits centred, overhanging into the gap between the columns. */
+.preference-table__state {
+  inline-size: 48px;
+  padding-inline: 0;
+  text-align: center;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-body-weight);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.preference-table__head-icon {
+  display: block;
+}
+
+.preference-table__cell {
+  inline-size: 48px;
+  padding-inline: 0;
+  text-align: center;
+}
+
+.preference-table__who {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.preference-table__who .avatar {
+  flex-shrink: 0;
+}
+
+.preference-table__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preference-table__via {
+  display: block;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.preference-table__note {
+  margin-block: var(--space-2) 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.preference-table__row[data-highlighted='true'] {
+  background-color: var(--color-soft);
+  animation: preference-row-flash 2s ease-out;
+}
+
+@keyframes preference-row-flash {
+  from {
+    background-color: var(--color-soft-strong);
+  }
+  to {
+    background-color: var(--color-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preference-table__row[data-highlighted='true'] {
+    animation: none;
+  }
+}
+
+/* The Ingredient's exclusion list in its Dialog or Tile: a long name truncates instead of pushing the toggles out. */
+.ingredient-exclusions {
+  min-inline-size: 0;
+}
+
+/* The Dialog's body is a grid item that would otherwise grow to the widest name. */
+.dialog__body:has(> .ingredient-exclusions) {
+  min-inline-size: 0;
+}
+
+.ingredient-exclusions .list-row__text {
+  min-inline-size: 0;
+}
+
+.ingredient-exclusions .list-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The Members who exclude an Ingredient, beside its line: Avatars that never wrap, then "+N" and the button. */
+.ingredient-lines__excluders {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ingredient-lines__more {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
 /* Ingredient lines: quantity and name in two columns, no bullets. */

@@ -39,7 +39,6 @@ export const recipeStrings = {
     batches: 'Batches',
     batchesHint: (n: number, portions: string) => `${n} Batch${n === 1 ? '' : 'es'} · ${portions} portions`,
   },
-  memberPicker: { label: 'Preferences for', pickFirst: 'Choose a Member to set preferences for.' },
   overflow: { title: 'More', showArchived: 'Show archived' },
 
   deleteBlocked: 'This Recipe was planned, so it can only be archived.',
@@ -56,8 +55,28 @@ export const recipeStrings = {
   favourite: 'Favourite',
   dislike: 'Dislike',
   exclusion: 'Exclusion',
-  preferences: 'Your preferences',
-  excludeIngredient: (name: string) => `Exclude ${name}`,
+  /** PT: the Recipe's preferences table, one row per Member (rx-pt.md section 5.3). */
+  preferences: 'Preferences',
+  preferencesFor: (name: string) => `Preferences for ${name}`,
+  preferencesLoadError: 'The preferences could not be loaded.',
+  memberColumn: 'Member',
+  you: 'You',
+  noMembers: 'No Members yet',
+  addMembers: 'Add Members',
+  askAdmin: 'Ask an Admin to add Members',
+  viaNote: "An Exclusion via an Ingredient is changed on that Ingredient's line, under Ingredients.",
+  /** Read-only Exclusion cell: the screen reader says "Excluded", the text says "via garlic". */
+  excludedVia: 'Excluded',
+  via: 'via',
+  alsoVia: 'also via',
+  stateToggle: (member: string, state: string) => `${member}: ${state}`,
+  saveFailed: (member: string, state: string) => `Couldn't save ${member}'s ${state}. Try again.`,
+  exclusionSaveFailed: (member: string) => `Couldn't save ${member}'s Exclusions. Try again.`,
+  /** PT: who excludes an Ingredient (the Recipe line's Dialog and the Ingredient page's Excluded by Tile). */
+  members: 'Members',
+  excludersFor: (ingredient: string) => `Exclusions for ${ingredient}`,
+  whoExcludes: (ingredient: string) => `Who excludes ${ingredient}?`,
+  excludesToggle: (member: string, ingredient: string) => `${member}: excludes ${ingredient}`,
   unitConversion: {
     title: 'Unit Conversion needed',
     question: (unit: string, ingredient: string, base: string) => `How many ${base} is 1 ${unit} of ${ingredient}?`,

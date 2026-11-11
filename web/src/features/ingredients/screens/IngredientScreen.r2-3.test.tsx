@@ -24,6 +24,7 @@ const hook = {
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
+vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
 vi.mock('./../components/MergeSheet', () => ({ MergeSheet: () => null }))
 
 import { IngredientScreen } from './IngredientScreen'
