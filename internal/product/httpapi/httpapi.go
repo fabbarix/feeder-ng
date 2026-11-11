@@ -405,19 +405,10 @@ func (a *api) patchProduct(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	var d store.Detail
-	var err error
-	if body.Name != nil || body.PackSize != nil || body.Image == nil {
-		if d, err = a.store.UpdateProduct(r.Context(), id, body.Name, body.PackSize); err != nil {
-			writeErr(w, err, "product")
-			return
-		}
-	}
-	if body.Image != nil {
-		if d, err = a.store.SetImage(r.Context(), id, *body.Image); err != nil {
-			writeErr(w, err, "product")
-			return
-		}
+	d, err := a.store.PatchProduct(r.Context(), id, body.Name, body.PackSize, body.Image)
+	if err != nil {
+		writeErr(w, err, "product")
+		return
 	}
 	a.changed("products")
 	httpx.WriteJSON(w, http.StatusOK, d)

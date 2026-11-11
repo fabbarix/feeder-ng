@@ -829,6 +829,21 @@ func (s *Store) Products(ctx context.Context, f Filter) ([]Product, error) {
 
 // UpdateProduct changes name and/or pack size (nil = keep). The Ingredient is fixed.
 func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packSize *float64) (Detail, error) {
+	return s.PatchProduct(ctx, id, name, packSize, nil)
+}
+
+// PatchProduct changes name, pack size and/or Picture (nil = keep; "" image clears it) in one transaction, so a refused
+// Picture (a *product.ValidationError on field "image") leaves the Product untouched. The replaced file is deleted when
+// no Product uses it any more.
+func (s *Store) PatchProduct(ctx context.Context, id int64, name *string, packSize *float64, image *string) (Detail, error) {
+	var newImage string
+	if image != nil {
+		newImage = strings.TrimSpace(*image)
+		if err := s.checkImage(newImage); err != nil {
+			return Detail{}, err
+		}
+	}
+	var old string
 	err := s.withTx(ctx, func(tx *sql.Tx) error {
 		cur, err := loadProduct(ctx, tx, id)
 		if err != nil {
@@ -844,12 +859,24 @@ func (s *Store) UpdateProduct(ctx context.Context, id int64, name *string, packS
 		if err := in.Validate(); err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE products SET name=?, pack_size=?, updated_at=? WHERE id=?`,
-			product.NormalizeName(in.Name), in.PackSize, s.now(), id)
+		if _, err = tx.ExecContext(ctx, `UPDATE products SET name=?, pack_size=?, updated_at=? WHERE id=?`,
+			product.NormalizeName(in.Name), in.PackSize, s.now(), id); err != nil {
+			return err
+		}
+		if image == nil {
+			return nil
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT image FROM products WHERE id = ?`, id).Scan(&old); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE products SET image=? WHERE id=?`, newImage, id)
 		return err
 	})
 	if err != nil {
 		return Detail{}, err
+	}
+	if image != nil && old != newImage {
+		s.dropUnreferenced(ctx, old)
 	}
 	return s.Product(ctx, id)
 }
