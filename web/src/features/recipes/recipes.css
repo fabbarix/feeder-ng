@@ -695,7 +695,8 @@
 
   .line-row {
     grid-template-areas: none;
-    align-items: end;
+    /* Top-aligned, so an Optional chip under the picker does not lift the picker off the other fields. */
+    align-items: start;
     background: none;
     border-block-end: 1px solid var(--color-line);
     border-radius: 0;
@@ -712,6 +713,9 @@
 
   .line-row__remove {
     justify-self: start;
+    align-self: start;
+    /* Centres the 40 px buttons on the 48 px fields. */
+    margin-block-start: var(--space-1);
   }
 
   .line-row__hint {

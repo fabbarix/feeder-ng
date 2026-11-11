@@ -72,6 +72,10 @@ describe('E-01: an ingredient line is one row from 900 px', () => {
     const last = Number(/ (\d+)px$/.exec(valueFor('.line-row', 'grid-template-columns', FROM)!)![1])
     expect(last).toBeGreaterThanOrEqual(84)
   })
+  it('the cells are top-aligned from 900, so the Optional chip under the picker leaves the picker level with the other fields', () => {
+    expect(valueFor('.line-row', 'align-items', FROM)).toBe('start')
+    expect(valueFor('.line-row__remove', 'align-self', FROM)).toBe('start')
+  })
   it('the Ingredient picker keeps at least 180 px: it basis is 180 px and the chip wraps under it rather than squeezing it', () => {
     expect(valueFor('.line-row__ingredient-body', 'flex-wrap', 0)).toBe('wrap')
     expect(valueFor('.line-row__ingredient-body > :first-child', 'flex', 0)).toMatch(/^1 1 180px$/)
