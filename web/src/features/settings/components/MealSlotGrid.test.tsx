@@ -34,7 +34,7 @@ describe('MealSlotGrid (R15: desktop week, days as columns, slots as rows)', () 
   it('an empty cell is empty for a plain User and offers an add button to an Admin', async () => {
     const { onAdd } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Add Dinner on Wednesday' }))
-    expect(onAdd).toHaveBeenCalledWith(3)
+    expect(onAdd).toHaveBeenCalledWith(3, 'Dinner')
   })
   it('a plain User gets no add buttons', () => {
     setup({ canEdit: false })
@@ -50,6 +50,27 @@ describe('MealSlotGrid (R15: desktop week, days as columns, slots as rows)', () 
     const { onOpen } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Lunch 12:30' }))
     expect(onOpen).toHaveBeenCalledWith(mondayLunch)
+  })
+
+  it('the top-left corner is a th with a visually hidden label, not an empty td', () => {
+    setup()
+    const corner = within(screen.getByRole('table')).getAllByRole('columnheader').find((h) => h.textContent === 'Meal Slot')!
+    expect(corner).toBeDefined()
+    expect(corner.tagName).toBe('TH')
+    expect(corner.querySelector('.visually-hidden')?.textContent).toBe('Meal Slot')
+    expect(screen.getByRole('table').querySelector('thead td')).toBeNull()
+  })
+
+  it('the chip puts the time on its own element and keeps the accessible name "Dinner 19:30"', () => {
+    setup()
+    const button = screen.getByRole('button', { name: 'Dinner 19:30' })
+    expect(within(button).getByText('19:30')).toHaveClass('meal-chip__time')
+  })
+
+  it('the add button hands over the row name as well as the weekday', async () => {
+    const { onAdd } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Add Dinner on Wednesday' }))
+    expect(onAdd).toHaveBeenCalledWith(3, 'Dinner')
   })
 
   it('weekStart 7 starts on Sunday', () => {

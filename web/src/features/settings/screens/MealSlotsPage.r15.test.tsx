@@ -72,6 +72,21 @@ describe('MealSlotsPage: edit on several days', () => {
     expect(await screen.findByText('Updated Dinner on Tue. Fri has no Dinner, so it was skipped.')).toBeInTheDocument()
   })
 
+  it('after a rename the success message uses the new name', async () => {
+    viewport(false)
+    routes(ADMIN_ME, {
+      'PATCH /api/meal-slots/batch': { match: 'Dinner', updated: [{ ...tuesdayDinner, name: 'Supper' }], skipped: [] },
+    })
+    renderWithProviders(<MealSlotsPage />)
+    await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
+    const name = within(dialog).getByLabelText('Name')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Supper')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
+    expect(await screen.findByText('Updated Supper on Tue.')).toBeInTheDocument()
+  })
+
   it('a refused batch keeps the sheet open with the server message (nothing was saved)', async () => {
     viewport(false)
     routes(ADMIN_ME, {
@@ -107,6 +122,16 @@ describe('MealSlotsPage: overview', () => {
     const table = await screen.findByRole('table', { name: 'Meal Slots by weekday' })
     expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter(Boolean)).toContain('Thu')
     expect(screen.queryByRole('group', { name: 'Tuesday' })).toBeNull()
+  })
+
+  it('on the grid, the add button of a row opens the sheet with that row\'s name and weekday', async () => {
+    viewport(true)
+    routes(ADMIN_ME)
+    renderWithProviders(<MealSlotsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Add Dinner on Friday' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add Meal Slot' })
+    expect(within(dialog).getByLabelText('Name')).toHaveValue('Dinner')
+    expect(within(dialog).getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('an Admin taps "Nobody attending" and gets the slot sheet to choose who attends', async () => {

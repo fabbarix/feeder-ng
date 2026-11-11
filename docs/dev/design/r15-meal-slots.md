@@ -1,6 +1,6 @@
 # R15: Meal Slots (multi-day edit, WeekdayPicker, attendee pills)
 
-Team R15, pipeline step 1 (design and red tests). Spec: functional-spec §3 (Editing a Meal Slot on several days; The overview shows who attends), decision 24. Glossary: **Matching Meal Slot**, **Meal Slot**, **Attendance**. Decisions: ui-review-2 §3.7 (matching by name; WeekdayPicker; pills). Items R15 folds in: see section 9.
+Team R15, pipeline step 1 (design and red tests). Spec: functional-spec §3 (Editing a Meal Slot on several days; The overview shows who attends), decision 25. Glossary: **Matching Meal Slot**, **Meal Slot**, **Attendance**. Decisions: ui-review-2 §3.7 (matching by name; WeekdayPicker; pills). Items R15 folds in: see section 9.
 
 ## 1. What changes for the user
 

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { Icon } from '../../../ui'
 import { AttendeePills } from './AttendeePills'
 import { bigFamily, mondayLunch, members, tuesdayDinner } from './fixtures'
 
@@ -46,5 +47,11 @@ describe('AttendeePills (R15: who eats at this Meal Slot)', () => {
     render(<AttendeePills slot={mondayLunch} members={members} />)
     expect(screen.getByText('Nobody attending')).toBeInTheDocument()
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('the "Nobody attending" pill carries a warning-circle glyph, not the hourglass that "warning" maps to', () => {
+    const { container } = render(<AttendeePills slot={mondayLunch} members={members} onFix={() => {}} />)
+    const expected = render(<Icon name="error" size={14} />).container.querySelector('svg')!.innerHTML
+    expect(container.querySelector('.nobody-pill svg')!.innerHTML).toBe(expected)
   })
 })

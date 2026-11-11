@@ -25,6 +25,12 @@ describe('MealSlotEditor', () => {
     expect(document.querySelector('select, input[type=time], input[type=number]')).toBeNull()
   })
 
+  it('the Usual time field is an sm field and the Name starts as defaultName', () => {
+    render(<MealSlotEditor open members={members} defaultName="Lunch" onSave={() => {}} onClose={() => {}} />)
+    expect(screen.getByLabelText('Name')).toHaveValue('Lunch')
+    expect(screen.getByRole('spinbutton', { name: 'Hour' }).closest('[data-size]')).toHaveAttribute('data-size', 'sm')
+  })
+
   it('adds a Meal Slot for several weekdays at once (QA)', async () => {
     const onSave = vi.fn()
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
