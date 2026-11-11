@@ -177,8 +177,11 @@ func TestBatchSaveAnswersRemovesAndPublishesOneEvent(t *testing.T) {
 	if r.Status != 200 || out.Removes == nil || len(out.Removes.PlannedMeals) < 2 || len(out.Removes.SlotRules) != 1 {
 		t.Fatalf("save = %d %s, want removes", r.Status, r.Body)
 	}
-	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND course_id = ? AND state = 'planned'`, f.slot.ID, f.side); n != 0 {
-		t.Errorf("%d unresolved Side meals stayed", n)
+	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND course_id = ? AND state = 'planned' AND date >= '2026-11-09'`, f.slot.ID, f.side); n != 0 {
+		t.Errorf("%d unresolved Side meals from today on stayed", n)
+	}
+	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND course_id = ? AND state = 'planned' AND date < '2026-11-09'`, f.slot.ID, f.side); n != 1 {
+		t.Errorf("the past Planned Meal (2026-11-02) must stay, got %d", n)
 	}
 	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND course_id = ? AND state <> 'planned'`, f.slot.ID, f.side); n != 1 {
 		t.Errorf("the cooked Side meal must stay")
