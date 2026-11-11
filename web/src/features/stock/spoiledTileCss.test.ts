@@ -5,17 +5,10 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/stock/stock.css`, 'utf8')
 
-// R10: on a phone the "went off" text wraps under the amount and a "· " separator was left stranded in front of it.
+// R10: a "· " separator was left stranded in front of the wrapped wording; L-07 moved the amount and wording into one ListRow meta string.
 describe('stock.css spoiled tile detail', () => {
   it('has no generated "· " separator before the go-off wording', () => {
     expect(css).not.toMatch(/spoiled-tile__when::before/)
     expect(css).not.toMatch(/content:\s*['"]·/)
-  })
-
-  it('separates the amount from the wording with a gap that survives wrapping', () => {
-    const start = css.indexOf('.spoiled-tile__detail {')
-    const block = css.slice(start, css.indexOf('}', start))
-    expect(block).toMatch(/column-gap:\s*var\(--space-2\)/)
-    expect(block).toMatch(/flex-wrap:\s*wrap/)
   })
 })
