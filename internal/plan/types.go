@@ -51,7 +51,8 @@ type Meal struct {
 	Pinned   bool
 	From     *Source // non-nil: served from a Leftover
 	Why      []Why
-	// Relaxed is true for a relaxed pick: Cool-down or a Variety Rule gave way because too few Recipes fit (ADR 0009).
+	// Relaxed marks a relaxed pick: a Cool-down or Variety Rule gave way because too few Recipes fit
+	// (ADR 0009). Stored in planned_meals.relaxed.
 	Relaxed bool
 }
 
@@ -174,8 +175,9 @@ type SlotInfo struct {
 	Name       string
 	Time       string // HH:MM, household time
 	Attendance []Attendee
-	// Courses are the slot's Courses in the slot's order, each with its Course Attendance. Empty for a Meal Slot
-	// that is not yet Course-aware (the transition shim): BuildInput then plans one cell keyed by Key.
+	// Courses are the slot's Courses in the slot's order (ADR 0008). Attendance above stays the slot's
+	// own (for no_attendance and display); each Course's Attendance is the effective Course Attendance
+	// on that date (household.CourseAttendance).
 	Courses []SlotCourse
 }
 
