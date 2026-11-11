@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { agoCopy, changeRow } from './changes'
 
 const NOW = new Date('2026-11-10T12:00:00Z')
-const row = (action: string, detail = '', at = '2026-11-10T10:00:00Z') => changeRow({ at, actorName: 'Anna', action: action as never, detail }, NOW)
+const row = (action: string, detail = '', at = '2026-11-10T10:00:00Z', names?: ReadonlyMap<string, string>) =>
+  changeRow({ at, actorName: 'Anna', action: action as never, detail }, NOW, names)
 
 describe('changeRow', () => {
   it('turned on and off', () => {
@@ -11,6 +12,12 @@ describe('changeRow', () => {
     expect(row('turned_off').title).toBe('Anna turned the Recipe Assistant off')
   })
   it('model changed names the model', () => expect(row('model_changed', 'Claude Sonnet 5.5').title).toBe('Anna changed the model to Claude Sonnet 5.5'))
+  it('model changed takes "old -> new" IDs and shows the new one, as a name when the list knows it', () => {
+    const names = new Map([['claude-sonnet-5-5', 'Claude Sonnet 5.5']])
+    expect(row('model_changed', 'claude-haiku-5-5 -> claude-sonnet-5-5', undefined, names).title).toBe('Anna changed the model to Claude Sonnet 5.5')
+    expect(row('model_changed', 'claude-haiku-5-5 -> claude-sonnet-5-5').title).toBe('Anna changed the model to claude-sonnet-5-5')
+    expect(row('model_changed', 'claude-haiku-5-5 -> my-gateway-model', undefined, names).title).toBe('Anna changed the model to my-gateway-model')
+  })
   it('base URL changed shows the new address (detail is "old -> new")', () =>
     expect(row('base_url_changed', 'https://api.anthropic.com -> https://gw.example.com/x').title).toBe('Anna changed the address to https://gw.example.com/x'))
   it('key events show the last four only, with dots, never more', () => {

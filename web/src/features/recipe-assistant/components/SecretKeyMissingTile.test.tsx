@@ -8,7 +8,11 @@ describe('SecretKeyMissingTile', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'To turn on the Recipe Assistant, the server needs a secret key (FEEDER_SECRET_KEY). Whoever runs your server sets it once; see the deploy guide.',
     )
-    expect(screen.getByRole('link', { name: 'deploy guide' })).toHaveAttribute('href')
+  })
+  it('shows the deploy guide as plain text until WP-F gives it a page (no dead link)', () => {
+    render(<SecretKeyMissingTile />)
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('see the deploy guide.')
   })
   it('is a warning status, announced', () => {
     render(<SecretKeyMissingTile />)

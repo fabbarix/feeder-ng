@@ -14,7 +14,7 @@ export const settingsOn: AssistantSettings = {
   apiKeyReadable: true,
   modelStatus: 'ok',
   changes: [
-    { at: '2026-11-10T10:00:00Z', actorName: 'Anna', action: 'model_changed', detail: 'Claude Sonnet 5.5' },
+    { at: '2026-11-10T10:00:00Z', actorName: 'Anna', action: 'model_changed', detail: 'claude-haiku-5-5 -> claude-sonnet-5-5' },
     { at: '2026-11-09T09:00:00Z', actorName: 'Anna', action: 'turned_on', detail: '' },
   ],
 }

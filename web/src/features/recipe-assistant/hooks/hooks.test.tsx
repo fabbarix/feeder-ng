@@ -6,6 +6,7 @@ import { ApiError } from '../../../lib/http'
 import { modelsApi, modelsCatalogue, settingsOffNoKey, settingsOn } from '../fixtures'
 import { mockApi, newQueryClient, wrapperFor } from '../test-utils'
 import type { AssistantSettings } from '../types'
+import { raKeys } from './queryKeys'
 import { useModelChoices } from './useModelChoices'
 import { useRecipeAssistantSettings } from './useRecipeAssistantSettings'
 import { useTestConnection } from './useTestConnection'
@@ -61,6 +62,25 @@ describe('useRecipeAssistantSettings', () => {
     expect('warnings' in saved!.settings).toBe(false)
     await waitFor(() => expect(result.current.settings!.model).toBe('claude-sonnet-5-5'))
     expect(api.callsTo('GET', SETTINGS)).toHaveLength(1) // the PUT answer is the new cache value, no refetch
+  })
+
+  it('a save that changes the origin drops the saved-address model list; the same origin keeps it', async () => {
+    mockApi({
+      [`GET ${SETTINGS}`]: settingsOn,
+      [`PUT ${SETTINGS}`]: (c: { body: unknown }) => ({ ...settingsOn, baseUrl: (c.body as { baseUrl: string }).baseUrl }),
+    })
+    const { client, wrapper } = setup()
+    client.setQueryData(raKeys.models('saved'), modelsApi)
+    const { result } = renderHook(() => useRecipeAssistantSettings(true), { wrapper })
+    await waitFor(() => expect(result.current.isPending).toBe(false))
+    await act(async () => {
+      await result.current.save({ enabled: true, baseUrl: 'https://api.anthropic.com/gw', model: 'claude-haiku-5-5' })
+    })
+    expect(client.getQueryState(raKeys.models('saved'))!.isInvalidated).toBe(false)
+    await act(async () => {
+      await result.current.save({ enabled: true, baseUrl: 'https://gw.example.com', model: 'claude-haiku-5-5', apiKey: 'sk-ant-gw-0001' })
+    })
+    expect(client.getQueryState(raKeys.models('saved'))!.isInvalidated).toBe(true)
   })
 
   it('a save without warnings returns an empty list', async () => {

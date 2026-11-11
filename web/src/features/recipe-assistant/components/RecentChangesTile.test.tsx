@@ -7,7 +7,7 @@ const NOW = new Date('2026-11-10T12:00:00Z')
 
 describe('RecentChangesTile', () => {
   it('is a labelled section with one row per change, newest first as given', () => {
-    render(<RecentChangesTile changes={settingsOn.changes} now={NOW} />)
+    render(<RecentChangesTile changes={settingsOn.changes} now={NOW} modelNames={new Map([['claude-sonnet-5-5', 'Claude Sonnet 5.5']])} />)
     const section = screen.getByRole('region', { name: 'Recent changes' })
     const items = within(section).getAllByRole('listitem')
     expect(items).toHaveLength(2)

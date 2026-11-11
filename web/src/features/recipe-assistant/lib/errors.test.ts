@@ -1,7 +1,7 @@
 // API error code -> copy. Plain TypeScript; the page shows these, never the server's message.
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../../../lib/http'
-import { checkCopy, fieldMessage, mapSaveError, mapTestError, testErrorCopy, warningCopy } from './errors'
+import { checkCopy, fieldMessage, mapSaveError, mapTestError, modelsErrorCopy, testErrorCopy, warningCopy } from './errors'
 
 describe('fieldMessage', () => {
   it.each([
@@ -12,11 +12,12 @@ describe('fieldMessage', () => {
     ['api_key_required', 'Enter the API key to turn the Recipe Assistant on.'],
     ['api_key_refused', 'Anthropic refused this API key.'],
     ['model_required', 'Pick a model.'],
+    ['model_invalid', "This model ID can't be used. Pick another model."],
     ['model_unavailable', 'This model is not available. Pick another model.'],
     ['model_cannot_read_recipes', "This model can't read recipes. Pick another model."],
   ])('%s', (code, copy) => expect(fieldMessage(code)).toBe(copy))
   it('has copy for every code of the frozen contract and falls back for an unknown one', () => {
-    for (const c of ['secret_key_missing', 'base_url_invalid', 'base_url_not_https', 'base_url_has_version', 'model_required', 'model_id_invalid', 'api_key_required', 'api_key_invalid', 'key_required_for_new_base_url', 'model_unavailable', 'model_cannot_read_recipes', 'api_key_refused'])
+    for (const c of ['secret_key_missing', 'base_url_invalid', 'base_url_not_https', 'base_url_has_version', 'model_required', 'model_id_invalid', 'model_invalid', 'api_key_required', 'api_key_invalid', 'key_required_for_new_base_url', 'model_unavailable', 'model_cannot_read_recipes', 'api_key_refused'])
       expect(fieldMessage(c), c).not.toBe(fieldMessage('brand_new_code'))
     expect(fieldMessage('brand_new_code')).toBe("Feeder couldn't accept this value.")
   })
@@ -75,5 +76,13 @@ describe('Test connection copy', () => {
     expect(mapTestError(new ApiError(422, 'base_url_not_https', 'x'))).toBe('Use https. Plain http is only for localhost.')
     expect(mapTestError(new ApiError(500, 'internal', 'boom'))).toBe("Couldn't run the test. Try again.")
     expect(mapTestError(new ApiError(0, 'network', 'down'))).toBe("You're offline. The test did not run.")
+  })
+})
+
+describe('modelsErrorCopy', () => {
+  it('names a refused key; any other failure is the plain list notice', () => {
+    expect(modelsErrorCopy('api_key_refused')).toBe('Anthropic refused this API key. Check it and try again.')
+    expect(modelsErrorCopy('internal')).toBe("Couldn't load the model list. The saved model is still used.")
+    expect(modelsErrorCopy(undefined)).toBe("Couldn't load the model list. The saved model is still used.")
   })
 })

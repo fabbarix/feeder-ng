@@ -104,7 +104,7 @@ describe('on with a saved key', () => {
     expect(screen.getByText('On')).toBeInTheDocument()
     expect(screen.getByText('Key saved')).toBeInTheDocument()
     expect(screen.getByText('••••1234')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('Claude Haiku 5.5')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('Claude Haiku 5.5'))
     expect(url()).toHaveValue('https://api.anthropic.com')
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
@@ -122,7 +122,7 @@ describe('on with a saved key', () => {
     await loaded()
     const section = screen.getByRole('region', { name: 'Recent changes' })
     expect(within(section).getAllByRole('listitem')).toHaveLength(2)
-    expect(within(section).getByText(/Anna changed the model to Claude Sonnet 5.5/)).toBeInTheDocument()
+    expect(await within(section).findByText(/Anna changed the model to Claude Sonnet 5.5/)).toBeInTheDocument() // the ID becomes a name once the list is in
   })
   it('Cancel puts the form back to the saved values', async () => {
     open()
@@ -297,6 +297,27 @@ describe('changing the origin requires the key to be typed again', () => {
 })
 
 describe('model picker', () => {
+  it('renders without waiting for the model list; the trigger shows the saved ID, then the name', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    open(settingsOn, { [`POST ${MODELS}`]: async () => (await gate, modelsApi) })
+    await loaded()
+    expect(screen.queryByText('Loading…')).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('claude-haiku-5-5')
+    release()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('Claude Haiku 5.5'))
+  })
+  it('Refresh models with a refused key says so', async () => {
+    let refused = false
+    const api = open(settingsOn, {
+      [`POST ${MODELS}`]: () => (refused ? { status: 422, json: { error: { code: 'api_key_refused', message: 'x' } } } : modelsApi),
+    })
+    await loaded()
+    await waitFor(() => expect(api.callsTo('POST', MODELS)).toHaveLength(1))
+    refused = true
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh models' }))
+    expect(await screen.findByText('Anthropic refused this API key. Check it and try again.')).toBeInTheDocument()
+  })
   it('lists the models with Haiku 5.5 first, groups, price and speed hints and descriptions', async () => {
     open()
     await loaded()
