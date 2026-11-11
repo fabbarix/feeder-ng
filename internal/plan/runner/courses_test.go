@@ -388,8 +388,8 @@ func TestSetMealClearsTheCoursesWalkedAfterItNotThoseListedAfterIt(t *testing.T)
 	if got.RecipeID == starter.RecipeID {
 		t.Errorf("the Starter kept Recipe %d beside the Pinned Main: it is walked after the Main, so SetMeal must clear it", starter.RecipeID)
 	}
-	if got.ID == starter.ID {
-		t.Errorf("the Starter is the same Planned Meal (ID %d): it was not cleared and replanned", got.ID)
+	if pinned, ok := c.mealIn(9, c.main); !ok || pinned.RecipeID != starter.RecipeID || got.RecipeID == pinned.RecipeID {
+		t.Errorf("the Starter (Recipe %d) must differ from the Pinned Main (Recipe %d, want %d)", got.RecipeID, pinned.RecipeID, starter.RecipeID)
 	}
 }
 
