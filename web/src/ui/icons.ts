@@ -40,6 +40,7 @@ import { CookieIcon } from '@phosphor-icons/react/dist/csr/Cookie'
 import { CookingPotIcon } from '@phosphor-icons/react/dist/csr/CookingPot'
 import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
 import { CubeIcon } from '@phosphor-icons/react/dist/csr/Cube'
+import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsSixVertical'
 import { DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsThreeVertical'
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
 import { DropIcon } from '@phosphor-icons/react/dist/csr/Drop'
@@ -152,6 +153,7 @@ export const icons = {
   back: ArrowLeftIcon,
   next: ArrowRightIcon,
   more: DotsThreeVerticalIcon,
+  drag: DotsSixVerticalIcon, // sort-drag: the handle of ui/Sortable (+265 B gz, docs/dev/design/sort-drag.md section 7)
   search: MagnifyingGlassIcon,
   filter: FunnelSimpleIcon,
   sort: SortAscendingIcon,

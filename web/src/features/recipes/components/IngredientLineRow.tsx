@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import type { SortableItemProps } from '../../../ui'
 import { Button, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
@@ -16,6 +17,14 @@ export interface IngredientLineRowProps {
   onPick: (ingredient: IngredientRef) => void
   onChange: (patch: Partial<LineDraft>) => void
   onRemove: () => void
+  /** Sort-drag: the drag handle (from ui/Sortable) shown first in the Ingredient cell; omitted = not sortable. */
+  handle?: ReactNode
+  /** Sort-drag: spread on the `<li>` (ref, data-state, drag offset). */
+  itemProps?: SortableItemProps
+  /** Sort-drag: how many lines the list has, so the actions menu can disable Move up on the first and Move down on the last. */
+  count?: number
+  /** Sort-drag: the actions menu (Move ingredient up / down) moved the line by this many places. */
+  onMove?: (delta: -1 | 1) => void
   /** R14: "Create Ingredient '<query>'" was chosen in the picker. Without it the picker has no create row. */
   onQuickCreate?: (query: string) => void
   /** R14: when set, the create row is shown disabled with this reason (offline). */

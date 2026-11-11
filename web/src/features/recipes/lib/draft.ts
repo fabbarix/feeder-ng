@@ -292,6 +292,14 @@ export function addLine(draft: RecipeDraft): RecipeDraft {
   return { ...draft, lines: [...draft.lines, newLineDraft()] }
 }
 
+/**
+ * STUB (docs/dev/design/sort-drag.md): moves the line at `from` to `to` (clamped), keeping each line object; Steps and every
+ * other field untouched; out of range or from === to returns an equal draft. Never mutates.
+ */
+export function moveLine(draft: RecipeDraft, _from: number, _to: number): RecipeDraft {
+  return draft
+}
+
 /** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */
 export function updateLine(draft: RecipeDraft, key: string, patch: Partial<LineDraft>): RecipeDraft {
   const takesOver = TAKE_OVER.some((field) => field in patch)
