@@ -42,7 +42,7 @@ The number of standard portions one Batch of a Recipe produces.
 _Avoid_: Servings, makes
 
 **Ready Meal**:
-A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought. A Ready Meal is not always a Whole meal: marking a Recipe as a Ready Meal switches Whole meal on when its Courses include the main Course, and the User may switch it off (a bought dessert or side is a Ready Meal, not a Whole meal).
+A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought. A Ready Meal is not always a Whole meal: marking a Recipe as a Ready Meal switches Whole meal on when its Courses include the main Course, and the User may switch it off (a frozen pizza that wants a salad beside it, or a bought dessert). Whole meal is a flag of its own because one-pot Recipes that are not Ready Meals need it too.
 _Avoid_: Convenience food, pre-made
 
 **Step**:
@@ -96,7 +96,7 @@ The one Course the Household flags as main (seeded as Main). A Whole meal planne
 _Avoid_: Primary course, entrée, headline course
 
 **Whole meal**:
-A Recipe that is a complete serving on its own (a one-pot Recipe, most Ready Meals). Planned in a Meal Slot's main Course, it covers that slot's other Courses: they stay empty on that date, and that is not Couldn't plan. In any other Course it is an ordinary Recipe.
+A Recipe that needs no other Course beside it (a one-pot Recipe, most Ready Meals). Planned in a Meal Slot's main Course, it covers that slot's other Courses that hold no Planned Meal: they stay empty on that date, and that is not Couldn't plan. A Pinned, Cooked or Not cooked Planned Meal in another Course stays and is not covered. In any other Course a Whole meal is an ordinary Recipe.
 _Avoid_: One-pot meal, complete meal, full meal
 
 **Tag**:
