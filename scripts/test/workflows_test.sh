@@ -118,7 +118,7 @@ for f in "$CI" "$REL"; do
 done
 
 # One Go toolchain version everywhere: go.mod, CI/release (via go-version-file) and the Dockerfile builder.
-GOVER="1.26.4"
+GOVER="1.26.11"
 GOMOD="$HERE/../../go.mod"
 DOCKERFILE="$HERE/../../Dockerfile"
 has "$GOMOD" "^go ${GOVER//./\\.}\$" "go.mod go directive is not ${GOVER}"
