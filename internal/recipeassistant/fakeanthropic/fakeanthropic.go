@@ -373,7 +373,7 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request, req Request) {
 	}
 	msg := map[string]any{
 		"id": "msg_fake", "type": "message", "role": "assistant", "model": model, "content": content,
-		"stop_reason": stop, "stop_sequence": nil,
+		"stop_reason": stop, "stop_sequence": nil, "stop_details": nil,
 		"usage": map[string]any{"input_tokens": 1200, "output_tokens": 800, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
 	}
 	if stop == "refusal" {

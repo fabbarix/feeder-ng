@@ -164,7 +164,7 @@ func TestImagesComeFirstAsBase64AndARepairAppendsTurnsUnchanged(t *testing.T) {
 		t.Errorf("text comes after the images: %v", first[2])
 	}
 	asst := msgs[1].(map[string]any)
-	if asst["role"] != "assistant" || !strings.Contains(asBlocks(asst), `{"previous":"answer"}`) {
+	if asst["role"] != "assistant" || firstText(asst) != `{"previous":"answer"}` {
 		t.Errorf("assistant turn = %v", asst)
 	}
 	if msgs[2].(map[string]any)["role"] != "user" {
@@ -175,7 +175,15 @@ func TestImagesComeFirstAsBase64AndARepairAppendsTurnsUnchanged(t *testing.T) {
 	}
 }
 
-func asBlocks(m map[string]any) string { b, _ := json.Marshal(m["content"]); return string(b) }
+// firstText is the text of the first content block of a message (the wire holds it JSON-escaped inside the body).
+func firstText(m map[string]any) string {
+	blocks, _ := m["content"].([]any)
+	if len(blocks) == 0 {
+		return ""
+	}
+	t, _ := blocks[0].(map[string]any)["text"].(string)
+	return t
+}
 
 func TestSystemAndSchemaBytesAreStableAcrossCalls(t *testing.T) {
 	f := fakeanthropic.New()
