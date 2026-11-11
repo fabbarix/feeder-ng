@@ -35,6 +35,9 @@ func mount(r *app.Router, d app.Deps) {
 	})
 	a := &api{svc: svc, clk: d.Clock}
 	r.User("GET /api/cook/meals/{date}/{slotId}", a.mealView)
+	// Team C2 (docs/dev/design/crs-c2.md): the cooking timeline of a slot and the single-Course view. Stubs for now.
+	r.User("GET /api/cook/meals/{date}/{slotId}/all", a.notImplemented)
+	r.User("GET /api/cook/meals/{date}/{slotId}/{courseId}", a.notImplemented)
 	r.User("GET /api/cook/recipes/{id}", a.recipeView)
 	r.User("PUT /api/cook/marks", a.mark)
 	r.User("GET /api/cook/timers", a.timers)
@@ -86,6 +89,11 @@ func (a *api) mealView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, viewOf(v))
+}
+
+// notImplemented answers the C2 routes that are not built yet.
+func (a *api) notImplemented(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "Not built yet (crs-c2)")
 }
 
 func (a *api) recipeView(w http.ResponseWriter, r *http.Request) {

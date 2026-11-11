@@ -23,6 +23,10 @@ type SlotView struct {
 	Unfilled   *plan.Unfilled
 	// Rules are the Slot Rules of this Meal Slot.
 	Rules []plan.SlotRule
+	// Courses are the slot's Courses in the slot's order, then history rows (team C2; empty until the Developer
+	// fills them in). CookMinutes is the slot's timeline total in minutes, nil when nothing is fresh and still to cook.
+	Courses     []CourseView
+	CookMinutes *int
 }
 
 // PlanView is the plan between two dates.

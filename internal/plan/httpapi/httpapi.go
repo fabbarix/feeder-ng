@@ -67,6 +67,17 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/plan/{date}/{slotId}/cook", a.cookPreview)
 	r.User("POST /api/plan/{date}/{slotId}/cooked", a.cooked)
 	r.User("POST /api/plan/{date}/{slotId}/not-cooked", a.notCooked)
+	// Team C2 (docs/dev/design/crs-c2.md): the Course routes. Stubs until the Developer fills them in; the course-less
+	// routes above stay as aliases for the main Course until C3.
+	r.User("PUT /api/plan/{date}/{slotId}/{courseId}", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/confirm", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/unpin", a.notImplemented)
+	r.User("GET /api/plan/{date}/{slotId}/{courseId}/alternatives", a.notImplemented)
+	r.User("GET /api/plan/{date}/{slotId}/{courseId}/cook", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/cooked", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/not-cooked", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/all/cooked", a.notImplemented)
+	r.User("POST /api/plan/{date}/{slotId}/all/not-cooked", a.notImplemented)
 	r.User("GET /api/slot-rules", a.slotRules)
 	r.User("POST /api/slot-rules", a.addSlotRule)
 	r.User("DELETE /api/slot-rules/{id}", a.deleteSlotRule)
@@ -79,6 +90,11 @@ type api struct {
 	run   *runner.Runner
 	st    *store.Store
 	names *names
+}
+
+// notImplemented answers the C2 routes that are not built yet.
+func (a *api) notImplemented(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "Not built yet (crs-c2)")
 }
 
 // writeErr maps the runner's and store's errors to the API's error codes.
