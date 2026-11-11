@@ -65,6 +65,15 @@
         "clientSecretKey": { "type": "string", "minLength": 1 }
       }
     },
+    "secretKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generate": { "type": "boolean" },
+        "existingSecret": { "type": "string" },
+        "key": { "type": "string", "minLength": 1 }
+      }
+    },
     "env": { "$ref": "#/$defs/stringMap" },
     "extraEnv": {
       "type": "array",
