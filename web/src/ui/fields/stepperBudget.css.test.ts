@@ -22,7 +22,7 @@ const control = declarations(field, '.ui-field--stepper .ui-field__control')
 const inline = px(control['padding']!.split(/\s+/)[1]!)
 const gap = px(control['gap']!)
 const button = px(declarations(field, '.ui-field--stepper .icon-button')['inline-size']!)
-const border = 1.5
+const border = px('var(--field-border-width)')
 const minValue = (() => {
   const v = declarations(field, '.ui-field--stepper .ui-field__input')['min-inline-size']
   return v ? Number(v.replace('ch', '')) * CH : 0

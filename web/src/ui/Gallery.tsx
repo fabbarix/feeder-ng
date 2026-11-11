@@ -10,6 +10,7 @@ import { DateField } from './fields/DateField'
 import { FieldRow } from './fields/FieldRow'
 import { NumberField } from './fields/NumberField'
 import { SearchField } from './fields/SearchField'
+import { Segmented } from './fields/Segmented'
 import { TextField } from './fields/TextField'
 import { TimeField } from './fields/TimeField'
 import { Select } from './Select/Select'
@@ -316,6 +317,9 @@ function FieldSizesGroup() {
       </WideCell>
       <WideCell caption="TimeField disabled (muted, not dimmed)">
         <TimeField label="Until" value="21:00" onChange={noop} disabled />
+      </WideCell>
+      <WideCell caption="Segmented disabled (outlined track, selected option ringed)">
+        <Segmented label="Theme" options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} value="dark" onChange={noop} disabled />
       </WideCell>
       <WideCell caption="SearchField (full)">
         <SearchField label="Search" value="" onChange={noop} />

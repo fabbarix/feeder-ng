@@ -3,6 +3,7 @@
 /* One inner inline padding for every field control (TextField, Select, DateField, TimeField). */
 :root {
   --field-pad-inline: var(--space-3);
+  --field-border-width: 1.5px;
   --field-size-xs: 112px;
   --field-size-sm: 168px;
   --field-size-md: 320px;
@@ -72,7 +73,7 @@ legend.ui-field__label {
   gap: var(--space-2);
   min-block-size: 48px;
   padding: 0 var(--field-pad-inline);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);
