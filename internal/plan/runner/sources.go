@@ -127,10 +127,30 @@ func (s *DBSources) Attendance(ctx context.Context, mealSlotID int64, date strin
 	return out, nil
 }
 
-// SlotCourses implements Sources. STUB (crs-b developer): reads household CoursesOn and resolves each Course's
-// Attendance to effective Portion Factors.
+// SlotCourses implements Sources: the Courses of the Meal Slot on the date in the slot's order, each with its Course
+// Attendance (household CoursesOn) resolved to effective Portion Factors.
 func (s *DBSources) SlotCourses(ctx context.Context, mealSlotID int64, date string) ([]plan.SlotCourse, error) {
-	return nil, nil
+	days, err := s.hh.CoursesOn(ctx, mealSlotID, date)
+	if err != nil {
+		return nil, err
+	}
+	members, err := s.members(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]plan.SlotCourse, 0, len(days))
+	for _, d := range days {
+		sc := plan.SlotCourse{CourseID: d.CourseID, Main: d.Main, Optional: d.Optional}
+		for _, a := range d.Attendance {
+			m, ok := members[a.MemberID]
+			if !ok {
+				continue
+			}
+			sc.Attendance = append(sc.Attendance, plan.Attendee{MemberID: a.MemberID, Factor: household.EffectiveFactor(m, a)})
+		}
+		out = append(out, sc)
+	}
+	return out, nil
 }
 
 func (s *DBSources) members(ctx context.Context) (map[int64]household.Member, error) {
@@ -160,7 +180,8 @@ func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 			return nil, err
 		}
 		pr := planner.Recipe{ID: planner.RecipeID(rec.ID), Name: rec.Name, Yield: rec.Yield, Archived: rec.Archived,
-			CooldownDays: rec.CooldownDays, UseByDays: rec.LeftoverUseByDays}
+			CooldownDays: rec.CooldownDays, UseByDays: rec.LeftoverUseByDays, CourseIDs: rec.CourseIDs}
+		pr.WholeMeal = rec.WholeMeal != nil && *rec.WholeMeal
 		for _, t := range rec.Tags {
 			pr.Tags = append(pr.Tags, planner.Tag(t))
 		}

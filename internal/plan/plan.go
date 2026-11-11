@@ -69,9 +69,9 @@ func mix64(x uint64) uint64 {
 	return x
 }
 
-// courseNormaliser maps a stored key with Course 0 on a Meal Slot that has Courses to that slot's main Course
+// NormaliseCourses maps a stored key with Course 0 on a Meal Slot that has Courses to that slot's main Course
 // (the persistence shim, ADR 0008). Keys of a slot without Courses, and keys that name a Course, are unchanged.
-func courseNormaliser(slots []SlotInfo) func(Key) Key {
+func NormaliseCourses(slots []SlotInfo) func(Key) Key {
 	type slotDay struct {
 		date string
 		slot int64
@@ -100,9 +100,9 @@ func courseNormaliser(slots []SlotInfo) func(Key) Key {
 	}
 }
 
-// cellKeys lists the planning cells of one slot occurrence: one per Course in the slot's order, or the slot itself
+// CellKeys lists the planning cells of one slot occurrence: one per Course in the slot's order, or the slot itself
 // when it has no Courses (the transition shim).
-func cellKeys(si SlotInfo) []Key {
+func CellKeys(si SlotInfo) []Key {
 	if len(si.Courses) == 0 {
 		return []Key{si.Key}
 	}
@@ -137,7 +137,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	if s.Zone == nil {
 		return planner.Input{}, ErrNoZone
 	}
-	norm := courseNormaliser(s.Slots)
+	norm := NormaliseCourses(s.Slots)
 	meals := make(map[Key]Meal, len(s.Meals))
 	for _, m := range s.Meals {
 		m.Key = norm(m.Key)
@@ -174,7 +174,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 				Key:         pkey(key),
 				At:          at,
 				Attendance:  attendance(cell.attendance),
-				Rules:       slotRules(rulesOf(s.SlotRules, si, key.CourseID, norm)),
+				Rules:       slotRules(CellRules(s.SlotRules, si, key.CourseID, norm)),
 				Main:        cell.main,
 				Optional:    cell.optional,
 				Position:    pos,
@@ -247,9 +247,9 @@ func cellsOf(si SlotInfo) []cell {
 	return out
 }
 
-// rulesOf are the Slot Rules of a cell: the slot's Meal Slot and the cell's Course. A rule with Course 0 belongs to
+// CellRules are the Slot Rules of a cell: the slot's Meal Slot and the cell's Course. A rule with Course 0 belongs to
 // the main Course of a slot with Courses, and to the single cell of a slot without them.
-func rulesOf(all []SlotRule, si SlotInfo, course int64, norm func(Key) Key) []SlotRule {
+func CellRules(all []SlotRule, si SlotInfo, course int64, norm func(Key) Key) []SlotRule {
 	var out []SlotRule
 	for _, r := range all {
 		if r.MealSlotID != si.Key.MealSlotID {
@@ -349,7 +349,7 @@ func keyOf(k planner.SlotKey) Key {
 //     informational: it carries no reason and is not stored.
 func Reconcile(s Snapshot, res planner.Result) Changes {
 	var ch Changes
-	norm := courseNormaliser(s.Slots)
+	norm := NormaliseCourses(s.Slots)
 	placed := map[Key]bool{}
 	for _, p := range res.Placements {
 		k := keyOf(p.Key)
@@ -411,7 +411,7 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		if err != nil {
 			continue
 		}
-		for _, ck := range cellKeys(si) {
+		for _, ck := range CellKeys(si) {
 			slotAt[ck] = at
 			cells = append(cells, ck)
 		}

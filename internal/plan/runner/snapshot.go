@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -85,16 +86,22 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 
 	var slots []plan.SlotInfo
 	seen := map[plan.Key]bool{}
+	// add reads one slot occurrence once, whatever its Courses: keys carry the Course, the occurrence does not.
 	add := func(key plan.Key, def MealSlotDef) error {
-		if seen[key] {
+		occ := plan.Key{Date: key.Date, MealSlotID: key.MealSlotID}
+		if seen[occ] {
 			return nil
 		}
-		seen[key] = true
-		att, err := src.Attendance(ctx, def.ID, key.Date)
+		seen[occ] = true
+		att, err := src.Attendance(ctx, def.ID, occ.Date)
 		if err != nil {
 			return err
 		}
-		slots = append(slots, plan.SlotInfo{Key: key, Name: def.Name, Time: def.Time, Attendance: att})
+		courses, err := src.SlotCourses(ctx, def.ID, occ.Date)
+		if err != nil {
+			return err
+		}
+		slots = append(slots, plan.SlotInfo{Key: occ, Name: def.Name, Time: def.Time, Attendance: att, Courses: courses})
 		return nil
 	}
 	// Unconfirmed meals of past days first, then the Planning Horizon.
@@ -136,20 +143,27 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 	switch {
 	case o.clearAll:
 		for _, s := range slots {
-			clear = append(clear, s.Key)
+			clear = append(clear, plan.CellKeys(s)...)
 		}
 	case o.after != nil:
 		target, ok := in.instant(*o.after)
 		if !ok {
 			return plan.Snapshot{}, ErrUnknownSlot
 		}
+		norm := plan.NormaliseCourses(slots)
+		after := norm(*o.after)
 		for _, s := range slots {
 			at, ok := in.instant(s.Key)
 			if !ok {
 				continue
 			}
-			if at.After(target) || (at.Equal(target) && s.Key.MealSlotID > o.after.MealSlotID) {
-				clear = append(clear, s.Key)
+			for _, k := range plan.CellKeys(s) {
+				later := at.After(target) || (at.Equal(target) && s.Key.MealSlotID > o.after.MealSlotID)
+				// Within the same occurrence the Courses after the target in the slot's order are later too.
+				sameSlot := at.Equal(target) && s.Key.MealSlotID == o.after.MealSlotID
+				if later || (sameSlot && coursePosition(s, k.CourseID) > coursePosition(s, after.CourseID)) {
+					clear = append(clear, k)
+				}
 			}
 		}
 	}
@@ -203,41 +217,67 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 	}, nil
 }
 
+// coursePosition is the index of the Course in the slot occurrence's Courses (-1 when it is not one of them, and for a
+// slot without Courses).
+func coursePosition(s plan.SlotInfo, courseID int64) int {
+	for i, c := range s.Courses {
+		if c.CourseID == courseID {
+			return i
+		}
+	}
+	return -1
+}
+
+// cellAttendance is the attendance a planning cell serves: its Course Attendance, or the slot's own Attendance when the
+// slot has no Courses (the transition shim).
+func cellAttendance(s plan.SlotInfo, courseID int64) []plan.Attendee {
+	if len(s.Courses) == 0 {
+		return s.Attendance
+	}
+	for _, c := range s.Courses {
+		if c.CourseID == courseID {
+			return c.Attendance
+		}
+	}
+	return nil
+}
+
 // invalidOnRead lists the unpinned Planned Meals the planner would keep although they are no longer valid, so that
-// they are treated as empty: a slot nobody attends, or a meal that breaks the slot's Slot Rules (the planner keeps
-// valid unpinned meals without re-checking Slot Rules). Keys already in clear are not repeated.
+// they are treated as empty: a cell nobody eats, a meal planned for other portions than its cell now needs (Course
+// Attendance changed), or a meal that breaks the Slot Rules of its cell (the planner keeps valid unpinned meals without
+// re-checking them). It works per planning cell. Keys already in clear are not repeated.
 func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRule, recipes []planner.Recipe, clear []plan.Key) []plan.Key {
+	norm := plan.NormaliseCourses(slots)
 	already := map[plan.Key]bool{}
 	for _, k := range clear {
-		already[k] = true
+		already[norm(k)] = true
 	}
 	planned := map[plan.Key]plan.Meal{}
 	for _, m := range meals {
 		if m.State == plan.StatePlanned && !m.Pinned {
-			planned[m.Key] = m
+			planned[norm(m.Key)] = m
 		}
 	}
 	var out []plan.Key
 	for _, s := range slots {
-		m, ok := planned[s.Key]
-		if !ok || already[s.Key] {
-			continue
-		}
-		if attendancePortions(s.Attendance) <= 0 {
-			out = append(out, s.Key)
-			continue
-		}
-		var slotRules []plan.SlotRule
-		for _, rule := range rules {
-			if rule.MealSlotID == s.Key.MealSlotID {
-				slotRules = append(slotRules, rule)
+		for _, k := range plan.CellKeys(s) {
+			m, ok := planned[k]
+			if !ok || already[k] {
+				continue
 			}
-		}
-		if len(slotRules) == 0 || m.From != nil {
-			continue
-		}
-		if rc, ok := recipeOf(recipes, m.RecipeID); !ok || !matchesAnyRule(rc, slotRules) {
-			out = append(out, s.Key)
+			// Nobody eats the cell, or the portions it was planned for no longer match its Course Attendance.
+			portions := attendancePortions(cellAttendance(s, k.CourseID))
+			if portions <= 0 || math.Abs(m.Portions-portions) > eps {
+				out = append(out, k)
+				continue
+			}
+			cellRules := plan.CellRules(rules, s, k.CourseID, norm)
+			if len(cellRules) == 0 || m.From != nil {
+				continue
+			}
+			if rc, ok := recipeOf(recipes, m.RecipeID); !ok || !matchesAnyRule(rc, cellRules) {
+				out = append(out, k)
+			}
 		}
 	}
 	return out
