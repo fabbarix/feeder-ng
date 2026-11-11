@@ -53,7 +53,7 @@ describe('RecipeDetailsFields: sizes', () => {
   it('keeps the helper lines (blank uses the household default)', () => {
     view()
     expect(screen.getByText('Blank uses the household default')).toBeInTheDocument()
-    expect(screen.getByRole('spinbutton', { name: 'Cool-down' })).toHaveAccessibleDescription('Blank uses the household default days')
+    expect(screen.getByRole('spinbutton', { name: 'Cool-down' })).toHaveAccessibleDescription('days Blank uses the household default')
   })
   it('Source link is lg and Attribution is md, side by side in a FieldRow', () => {
     view()

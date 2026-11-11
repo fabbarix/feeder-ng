@@ -242,7 +242,7 @@ const probe = `
     const size = frame.getAttribute('data-size') || ''
     const short = ['numeric', 'decimal'].includes(e.inputMode) || e.getAttribute('role') === 'spinbutton' || ['xs', 'sm'].includes(size)
     const segment = e.closest('.time-field, .stepper')
-    fields.push({ label: (e.getAttribute('aria-label') || (e.id && document.querySelector('label[for="' + e.id + '"]')?.innerText) || e.name || '').trim().slice(0, 30), type: e.type || e.getAttribute('role'), short, segment: !!segment, long: !!e.closest('[data-size-intent="long"]'), size, w: Math.round(frame.getBoundingClientRect().width) })
+    fields.push({ label: (e.getAttribute('aria-label') || (e.id && document.querySelector('label[for="' + e.id + '"]')?.innerText) || e.name || '').trim().slice(0, 30), type: e.type || e.getAttribute('role'), short, segment: !!segment, long: !!e.closest('[data-size-intent="long"]'), inline: !!e.closest('[data-size-intent="inline"]'), size, w: Math.round(frame.getBoundingClientRect().width) })
   }
   const bars = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {

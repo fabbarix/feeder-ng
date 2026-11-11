@@ -69,7 +69,8 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const f of m.fields) {
     // A numeric-keypad field whose content is long by nature (a 14-digit code) says so with data-size-intent="long" (f.long).
     if (width >= 820 && f.short && !f.segment && f.size !== 'full' && f.w > 240 && !f.long) add('P4', `short field "${f.label}" is ${f.w}px wide (max 240; set size="xs|sm")`)
-    if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
+    // A field that shares a wrapping row with chips (the tag input) says so with data-size-intent="inline" (f.inline).
+    if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && !f.inline && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
   }
   for (const b of m.bars) {
     if (b.bgAlpha === 0) add('P6', `sticky bar .${b.cls} has a transparent background`)

@@ -33,7 +33,7 @@ export function TagInput({ tags, onChange }: TagInputProps): ReactNode {
       <span id={captionId} className="ui-field__label tag-input__label">
         {recipeStrings.fields.tags}
       </span>
-      <div className="tag-input__control">
+      <div className="tag-input__control" data-size-intent="inline">
         {tags.map((t) => (
           <Chip key={t} kind="filter" selected label={recipeStrings.fields.removeTag(t)} onClick={() => onChange(removeTag(tags, t))}>
             {t}

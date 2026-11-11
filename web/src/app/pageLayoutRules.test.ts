@@ -22,7 +22,7 @@ interface Metrics {
   vw: number; scrollW: number; clientW: number; over: string[]
   content: { x: number; r: number }; railR: number; container: { x: number; r: number }
   pageWidthAttr: string | null
-  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean }[]
+  fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean; inline?: boolean }[]
   bars: { cls: string; x: number; r: number; bgAlpha: number }[]
   railContrast: number | null
   dialog: { x: number; w: number; vw: number } | null
