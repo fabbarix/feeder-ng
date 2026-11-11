@@ -97,14 +97,19 @@ func snapshot(ctx context.Context, db *sql.DB, dir, day string) (Info, error) {
 	if !validDay(day) {
 		return Info{}, fmt.Errorf("backup: day %q is not a YYYY-MM-DD date", day)
 	}
+	return writeFile(ctx, db, dir, FileName(day), day)
+}
+
+// writeFile is the copy-verify-rename of a snapshot into <dir>/<name> (the caller holds the folder lock).
+func writeFile(ctx context.Context, db *sql.DB, dir, name, day string) (Info, error) {
 	if err := ctx.Err(); err != nil {
 		return Info{}, err
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return Info{}, fmt.Errorf("backup: create %s: %w", dir, err)
 	}
-	tmp := filepath.Join(dir, "."+FileName(day)+".tmp")
-	final := filepath.Join(dir, FileName(day))
+	tmp := filepath.Join(dir, "."+name+".tmp")
+	final := filepath.Join(dir, name)
 	_ = os.Remove(tmp)
 	if _, err := db.ExecContext(ctx, `VACUUM INTO ?`, tmp); err != nil {
 		_ = os.Remove(tmp)
@@ -126,7 +131,23 @@ func snapshot(ctx context.Context, db *sql.DB, dir, day string) (Info, error) {
 	if err != nil {
 		return Info{}, err
 	}
-	return Info{Name: FileName(day), Day: day, Size: st.Size(), CreatedAt: st.ModTime()}, nil
+	return Info{Name: name, Day: day, Size: st.Size(), CreatedAt: st.ModTime()}, nil
+}
+
+var preSnapshotRE = regexp.MustCompile(`^feeder-pre-\d{4}\.db$`)
+
+// SnapshotNamed writes a consistent copy of db to <dir>/<name> exactly like Snapshot (VACUUM INTO a
+// temporary file in dir, integrity_check, 0600, rename, the same folder lock), for a name matching
+// ^feeder-pre-\d{4}\.db$ only; anything else is an error, so it can never overwrite a daily snapshot. An
+// existing file of that name is replaced. The result has Name set, Day empty. The file is not listed by
+// List and never pruned (nameRE does not match it).
+func SnapshotNamed(ctx context.Context, db *sql.DB, dir, name string) (Info, error) {
+	if !preSnapshotRE.MatchString(name) {
+		return Info{}, fmt.Errorf("backup: %q is not a pre-migration snapshot name", name)
+	}
+	unlock := lockFolder(dir)
+	defer unlock()
+	return writeFile(ctx, db, dir, name, "")
 }
 
 // verify opens the copy read-only in spirit (its own connection) and runs the
@@ -261,3 +282,6 @@ func Job(db *sql.DB, dir string) func(ctx context.Context, day string) error {
 		return err
 	}
 }
+
+// PreSnapshotFile is the name of the snapshot taken before migration 1400 (docs/dev/design/crs-plan.md §1.3).
+const PreSnapshotFile = "feeder-pre-1400.db"

@@ -241,7 +241,7 @@ func TestApplyWritesUpsertsDeletesAndCouldntPlanReasons(t *testing.T) {
 	err := f.st.Apply(ctx, plan.Changes{
 		Upserts: []plan.Meal{
 			{Key: f.key("2026-11-12", f.dinner), RecipeID: f.soup, Batches: 1, Portions: 5, State: plan.StatePlanned,
-				Why: []plan.Why{{Code: "best_available"}}},
+				Why: []plan.Why{{Code: "favourite"}}},
 		},
 		Deletes: []plan.Key{f.key("2026-11-10", f.dinner)},
 		Unfilled: []plan.Unfilled{{Key: f.key("2026-11-13", f.dinner), Reason: "no_candidates", SlotRuleClaimed: true,
@@ -252,7 +252,7 @@ func TestApplyWritesUpsertsDeletesAndCouldntPlanReasons(t *testing.T) {
 		t.Fatal(err)
 	}
 	meals, _ := f.st.Meals(ctx, "", "")
-	if len(meals) != 2 || meals[0].Key.Date != "2026-11-11" || meals[1].Key.Date != "2026-11-12" || meals[1].Why[0].Code != "best_available" {
+	if len(meals) != 2 || meals[0].Key.Date != "2026-11-11" || meals[1].Key.Date != "2026-11-12" || meals[1].Why[0].Code != "favourite" {
 		t.Errorf("meals after Apply = %+v", meals)
 	}
 	unfilled, _ := f.st.Unfilled(ctx, "", "")
