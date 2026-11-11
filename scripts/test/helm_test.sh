@@ -227,12 +227,13 @@ grep -rq '"GET /api/health"' "$CHART/../../../internal" --include=*.go && ok || 
 
 # --- REL-1 (docs/dev/design/rel1-deploy.md): release 1.0.0-beta.1 and FEEDER_SECRET_KEY ---
 CHART_VER="$(sed -n 's/^version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$CHART/Chart.yaml")"
-[ "$CHART_VER" = "1.0.0-beta.1" ] && ok || bad "Chart.yaml version must be 1.0.0-beta.1 (got '$CHART_VER')"
-[ "$APPVER" = "1.0.0-beta.1" ] && ok || bad "Chart.yaml appVersion must be 1.0.0-beta.1 (got '$APPVER')"
+# The chart and app versions are the release being cut (a v* tag sets both again when it publishes).
+case "$CHART_VER" in 1.0.0-beta.[0-9]*|1.0.0-rc.[0-9]*|[0-9]*.[0-9]*.[0-9]*) ok ;; *) bad "Chart.yaml version must be a release version (got '$CHART_VER')" ;; esac
+[ "$APPVER" = "$CHART_VER" ] && ok || bad "Chart.yaml appVersion must equal its version $CHART_VER (got '$APPVER')"
 # Packaging exactly as release.yml does for tag v1.0.0-beta.1: the prerelease version must be accepted and name the file.
 PKG="$OUT/pkg"; mkdir -p "$PKG"
-if helm package "$CHART" --version 1.0.0-beta.1 --app-version 1.0.0-beta.1 --destination "$PKG" >"$OUT/pkg.txt" 2>&1 \
-   && [ -f "$PKG/feeder-1.0.0-beta.1.tgz" ]; then ok; else bad "helm package --version 1.0.0-beta.1 must produce feeder-1.0.0-beta.1.tgz: $(head -c 300 "$OUT/pkg.txt")"; fi
+if helm package "$CHART" --version "$CHART_VER" --app-version "$CHART_VER" --destination "$PKG" >"$OUT/pkg.txt" 2>&1 \
+   && [ -f "$PKG/feeder-$CHART_VER.tgz" ]; then ok; else bad "helm package --version $CHART_VER must produce feeder-$CHART_VER.tgz: $(head -c 300 "$OUT/pkg.txt")"; fi
 
 # Ingress body size: photo reads send up to 45 MiB, nginx defaults to 1 MB (10m is too small).
 qq ingress '(lambda a: a["nginx.ingress.kubernetes.io/proxy-body-size"] == "50m")(kind("Ingress")[0]["metadata"]["annotations"])' "ingress proxy-body-size must be 50m (45 MiB photo reads)"

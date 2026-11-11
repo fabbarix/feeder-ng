@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Release 1.0.0-beta.1: CHANGELOG, prerelease scheme and upgrade notes in the deploy guide.
+# Releases from 1.0.0-beta.1 on: CHANGELOG, prerelease scheme and upgrade notes in the deploy guide; the current
+# release (Chart.yaml version) has its CHANGELOG section and install commands.
 # Contract: docs/dev/design/rel1-deploy.md.
 set -uo pipefail
 
@@ -62,9 +63,13 @@ grep -Eqi 'reuse-values[^.]*(new|added)[^.]*(value|setting|default)|secretKey[^.
 # Not a problem to say 'latest' in the table, but the beta must not claim it.
 if grep -E '\| *`latest`' "$D" | grep -q 'beta'; then bad "deploy.md must not tie latest to a beta"; else ok; fi
 
-# --- chart docs show the prerelease install ---
-grep -Eq -- '--version 1\.0\.0-beta\.1' "$CH/README.md" && ok || bad "chart README must show --version 1.0.0-beta.1"
-grep -Eq -- '--version 1\.0\.0-beta\.1' "$CH/templates/NOTES.txt" "$ROOT/docs/dev/deploy.md" >/dev/null && ok || bad "deploy.md must pin 1.0.0-beta.1 in the Kubernetes install"
+# --- the release being cut (Chart.yaml version): its CHANGELOG section and the install commands ---
+REL="$(sed -n 's/^version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$CH/Chart.yaml")"
+REL_RE="$(printf '%s' "$REL" | sed 's/\./\\./g')"
+grep -Eq "^## \[$REL_RE\] - [0-9]{4}-[0-9]{2}-[0-9]{2}" "$C" && ok || bad "CHANGELOG.md needs a '## [$REL] - YYYY-MM-DD' heading"
+grep -Eq -- "--version $REL_RE" "$CH/README.md" && ok || bad "chart README must show --version $REL"
+grep -Eq -- "--version $REL_RE" "$CH/templates/NOTES.txt" "$ROOT/docs/dev/deploy.md" >/dev/null && ok || bad "deploy.md must pin $REL in the Kubernetes install"
+grep -Eq -- "\| *\`$REL_RE\`" "$D" && ok || bad "deploy.md image tag table must list $REL"
 
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
