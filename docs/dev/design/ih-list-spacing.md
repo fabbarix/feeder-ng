@@ -26,7 +26,7 @@ div.list-page            display: grid; gap: var(--space-4); align-content: star
   div.list-page__header   (PageHeader)
   div.list-page__search   (SearchField)      only when given
   div.list-page__filters  (chips, TagChips)  only when given
-  div.list-page__list     display: grid; gap: var(--space-4); align-content: start
+  div.list-page__list     display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-content: start
                           (ListGroup / EmptyState / status, plus the intro and add action when they sit with the list)
 ```
 

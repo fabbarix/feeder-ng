@@ -6,17 +6,24 @@
   min-inline-size: 0;
 }
 
-/* Each slot takes the full row and may shrink below its content width, so nothing forces a horizontal scroll. */
 /* The list slot stacks its own children (intro, list, add action) with the same token gap, so they never sit flush. */
+/* One minmax(0, 1fr) column: a long ListRow title truncates instead of widening the page at phone width. */
 .list-page__list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-content: start;
 }
 
+/* Each slot takes the full row and may shrink below its content width, so nothing forces a horizontal scroll. */
 .list-page__header,
 .list-page__search,
 .list-page__filters,
 .list-page__list {
   min-inline-size: 0;
+}
+
+/* A Button directly in the list slot (e.g. "Add Storage Place") keeps its own width instead of stretching. */
+.list-page__list > .button {
+  justify-self: start;
 }
