@@ -694,6 +694,25 @@ func TestCancelStopsTheCallDropsTheJobsWorkAndFreesTheSlot(t *testing.T) {
 	}
 }
 
+// Cancelling frees the Limiter slot as CancelJob returns, not when the job's goroutine gets round to concluding. The
+// goroutine is held at the afterPerform seam so the test does not depend on scheduling.
+func TestCancelFreesTheSlotBeforeTheJobHasConcluded(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	e.claude.started = make(chan struct{}, 1)
+	e.claude.block = func(ctx context.Context) { <-ctx.Done() }
+	hold := make(chan struct{})
+	e.svc.SetAfterPerform(func() { <-hold })
+	t.Cleanup(func() { close(hold) })
+	jv := e.start(t, user, textIn("x"))
+	<-e.claude.started
+	if !e.svc.CancelJob(user.UserID, jv.ID) {
+		t.Fatal("CancelJob = false for the owner")
+	}
+	if err := e.svc.Check(user); err != nil {
+		t.Errorf("slot still held right after the cancel: %v", err)
+	}
+}
+
 // ---- limits ----------------------------------------------------------------------------------------------------
 
 func TestLimitsCheckComesBeforeAnyWorkAndNeverCountsOrHolds(t *testing.T) {
