@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
+	"github.com/fabbarix/feeder-ng/internal/tag"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
@@ -408,7 +409,7 @@ func finite(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
 func intPtr(n int) *int { return &n }
 
 // TagKey is the matching key of a Tag: lower case, trimmed, whitespace collapsed.
-func TagKey(name string) string { return strings.ToLower(collapse(name)) }
+func TagKey(name string) string { return tag.NameKey(name) }
 
 // Timing is the schedule summary shown on Recipe tiles and detail.
 type Timing struct {

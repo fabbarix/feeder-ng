@@ -101,7 +101,13 @@ func ValidColour(id string) bool {
 // NextColour returns the Palette colour carried by the fewest Tags (counts maps colour id to
 // Tags); ties go to the earliest in palette order. Ids outside the Palette are ignored.
 func NextColour(counts map[string]int) string {
-	return "" // stub (TG-A developer)
+	best, bestN := "", -1
+	for _, id := range Palette {
+		if n := counts[id]; bestN < 0 || n < bestN {
+			best, bestN = id, n
+		}
+	}
+	return best
 }
 
 // Slot is the place of a Slot Rule by Tag: its Meal Slot and Course.
@@ -126,5 +132,29 @@ type MergeOutcome struct {
 // Merge computes the outcome of moving src's rules onto into's key. Pure: a duplicate Slot
 // Rule goes, the target's Variety Rule wins. A source Slot repeated in src is moved once.
 func Merge(src, into RuleSet) MergeOutcome {
-	return MergeOutcome{} // stub (TG-A developer)
+	var out MergeOutcome
+	have := make(map[Slot]bool, len(into.Slots))
+	for _, s := range into.Slots {
+		have[s] = true
+	}
+	seen := make(map[Slot]bool, len(src.Slots))
+	for _, s := range src.Slots {
+		if seen[s] {
+			continue
+		}
+		seen[s] = true
+		if have[s] {
+			out.DropSlots = append(out.DropSlots, s)
+		} else {
+			out.MoveSlots = append(out.MoveSlots, s)
+		}
+	}
+	if src.Variety {
+		if into.Variety {
+			out.DropVariety = true
+		} else {
+			out.MoveVariety = true
+		}
+	}
+	return out
 }
