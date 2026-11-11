@@ -315,8 +315,9 @@ func TestCourseAttendanceChangeReplansThePortions(t *testing.T) {
 	if _, err := c.r.Plan(ctx, plan.ReasonAttendanceChanged); err != nil {
 		t.Fatal(err)
 	}
-	if got := c.mustMeal(9, c.side); got.Portions != 2 {
-		t.Errorf("Side portions = %v after Member 2 came back, want 2", got.Portions)
+	// The Side's Batches still cover 2 portions (yield 2), so it is the same Planned Meal with updated Portions.
+	if got := c.mustMeal(9, c.side); got.Portions != 2 || got.ID != side.ID || got.RecipeID != side.RecipeID {
+		t.Errorf("Side = %+v after Member 2 came back, want the same meal (ID %d, Recipe %d) with 2 portions", got, side.ID, side.RecipeID)
 	}
 	if got := c.mustMeal(9, c.main); got.ID != main.ID || got.RecipeID != main.RecipeID {
 		t.Errorf("the Main changed: %+v -> %+v; only the Side's attendance changed", main, got)
@@ -334,6 +335,61 @@ func TestCourseAttendanceChangeReplansThePortions(t *testing.T) {
 	}
 	if _, ok := c.mealIn(9, c.main); !ok {
 		t.Error("the Main went with the Side")
+	}
+}
+
+func TestPortionFactorTweakOfOneCourseKeepsThePlannedMeal(t *testing.T) {
+	c := newCourseEnv(t)
+	c.oneDay()
+	c.recipe("roast", false, c.main)
+	c.recipe("rice", false, c.side)
+	half := []plan.Attendee{{MemberID: 1, Factor: 0.5}, {MemberID: 2, Factor: 0.5}}
+	c.serve(cspec{course: c.main}, cspec{course: c.side, att: half})
+	c.mustPlan()
+	side, main := c.mustMeal(9, c.side), c.mustMeal(9, c.main)
+	if side.Portions != 1 {
+		t.Fatalf("Side portions = %v, want 1 (two half portions)", side.Portions)
+	}
+
+	c.serve(cspec{course: c.main}, cspec{course: c.side}) // the Side's Portion Factors go back to 1
+	if _, err := c.r.Plan(ctx, plan.ReasonAttendanceChanged); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.mustMeal(9, c.side); got.Portions != 2 || got.ID != side.ID || got.RecipeID != side.RecipeID {
+		t.Errorf("Side = %+v, want the same meal (ID %d, Recipe %d) with 2 portions: its Batches still cover", got, side.ID, side.RecipeID)
+	}
+	if got := c.mustMeal(9, c.main); got.ID != main.ID || got.RecipeID != main.RecipeID {
+		t.Errorf("the Main changed: %+v -> %+v", main, got)
+	}
+}
+
+func TestSetMealClearsTheCoursesWalkedAfterItNotThoseListedAfterIt(t *testing.T) {
+	c := newCourseEnv(t)
+	c.oneDay()
+	for _, n := range []string{"one", "two", "three"} {
+		c.recipe(n, false, c.main, c.starter)
+	}
+	// The slot lists Starter, Main, Side; the walk takes the main Course first, then Starter, then Side.
+	c.serve(cspec{course: c.starter}, cspec{course: c.main}, cspec{course: c.side})
+	c.mustPlan()
+	starter, main := c.mustMeal(9, c.starter), c.mustMeal(9, c.main)
+	if starter.RecipeID == main.RecipeID {
+		t.Fatalf("set-up: Main and Starter share a Recipe: %+v", c.planMeals())
+	}
+	// Pinning the Main to the Starter's Recipe clears every unpinned Course walked after the Main, the Starter
+	// included although it is listed before the Main. It is replanned, so it cannot keep the Recipe the Main took.
+	if _, err := c.r.SetMeal(ctx, c.cell(9, c.main), starter.RecipeID, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := c.mealIn(9, c.starter)
+	if !ok {
+		t.Fatalf("no Starter after SetMeal; stored: %+v", c.planMeals())
+	}
+	if got.RecipeID == starter.RecipeID {
+		t.Errorf("the Starter kept Recipe %d beside the Pinned Main: it is walked after the Main, so SetMeal must clear it", starter.RecipeID)
+	}
+	if got.ID == starter.ID {
+		t.Errorf("the Starter is the same Planned Meal (ID %d): it was not cleared and replanned", got.ID)
 	}
 }
 

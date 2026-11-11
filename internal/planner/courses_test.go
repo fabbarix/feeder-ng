@@ -195,6 +195,37 @@ func TestWholeMealCovering(t *testing.T) {
 		in := baseInput([]Slot{mainCell(0, holding(pinnedMeal(1))), cell(0, sideC)}, recipes()...)
 		wantNotServed(t, mustPlan(t, in), ck(0, sideC), NotServedCovered)
 	})
+	// A Side covered by a kept Whole meal main must not stay covered when that main is dropped and refilled
+	// with a Recipe that is not a Whole meal: it is planned, kept again, or Couldn't plan, never silently covered.
+	wantNotCovered := func(t *testing.T, r Result, k SlotKey) {
+		t.Helper()
+		if cause, ok := notServedAt(r, k); ok {
+			t.Errorf("cell %+v is still not served (%q) after its Whole meal main was dropped; NotServed %+v", k, cause, r.NotServed)
+		}
+		_, placed := placedAt(r, k)
+		if !placed && !isKept(r, k) && !isUnfilled(r, k) {
+			t.Errorf("cell %+v is neither planned, kept nor Couldn't plan: %+v", k, r)
+		}
+	}
+	t.Run("the Sides are uncovered when dropBlockedKept drops the kept Whole meal main", func(t *testing.T) {
+		// Day 2's main has a Slot Rule for Recipe 1, which reserves it and blocks the kept Whole meal on day 0.
+		in := baseInput([]Slot{
+			mainCell(0, holding(plannedMeal(1))), cell(0, sideC, holding(plannedMeal(3))),
+			mainCell(2, ruled(SlotRule{RecipeID: 1})),
+		}, recipes()...)
+		r := mustPlan(t, in)
+		wantPlaced(t, r, ck(0, mainC), 2)
+		wantNotCovered(t, r, ck(0, sideC))
+	})
+	t.Run("the Sides are uncovered when a Leftover-served Whole meal main fails its check at walk time", func(t *testing.T) {
+		// The Leftover is there but Ben excludes the Recipe, so leftoverValid fails and the main is refilled.
+		main := mainCell(0, holding(ExistingMeal{State: MealPlanned, RecipeID: 1, From: &LeftoverSource{LeftoverID: 7}}))
+		in := prefs(baseInput([]Slot{main, cell(0, sideC, holding(plannedMeal(3)))}, recipes()...), ben, Preferences{ExcludedRecipes: []RecipeID{1}})
+		in.Leftovers = []Leftover{leftoverOf(7, 1, 2, day(3))}
+		r := mustPlan(t, in)
+		wantPlaced(t, r, ck(0, mainC), 2)
+		wantNotCovered(t, r, ck(0, sideC))
+	})
 	t.Run("a Whole meal is never chosen for a slot's main Course if a Course beside it holds a fixed meal, even a Leftover one", func(t *testing.T) {
 		in := baseInput([]Slot{mainCell(0), cell(0, sideC, holding(pinnedMeal(3)))}, recipes()...)
 		in.Leftovers = []Leftover{leftoverOf(7, 1, 2, day(3))}
@@ -542,4 +573,52 @@ func absDiff(a, b float64) float64 {
 		return a - b
 	}
 	return b - a
+}
+
+// Kept meals follow the hard rules (ADR 0008 point 1, ADR 0009 point 1): Course fit holds for a kept Planned Meal too,
+// and a Meal Slot never serves one Recipe twice.
+func TestKeptMealsFollowTheHardRules(t *testing.T) {
+	t.Run("a kept fresh Side whose Recipe is no longer marked with the Course is dropped and refilled", func(t *testing.T) {
+		in := baseInput([]Slot{mainCell(0), cell(0, sideC, holding(plannedMeal(3)))},
+			rcp(1, 2, courses(mainC)), rcp(3, 2, courses(dessertC)), rcp(4, 2, courses(sideC)))
+		r := mustPlan(t, in)
+		if isKept(r, ck(0, sideC)) {
+			t.Errorf("the Side was kept although Recipe 3 is not marked with the Side Course: %v", r.Kept)
+		}
+		wantPlaced(t, r, ck(0, sideC), 4)
+	})
+	t.Run("a kept Leftover-served Side whose Recipe is no longer marked with the Course is dropped and refilled", func(t *testing.T) {
+		side := cell(0, sideC, holding(ExistingMeal{State: MealPlanned, RecipeID: 3, From: &LeftoverSource{LeftoverID: 7}}))
+		in := baseInput([]Slot{mainCell(0), side}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(dessertC)), rcp(4, 2, courses(sideC)))
+		in.Leftovers = []Leftover{leftoverOf(7, 3, 2, day(3))}
+		r := mustPlan(t, in)
+		if isKept(r, ck(0, sideC)) {
+			t.Errorf("the Leftover-served Side was kept although Recipe 3 is not marked with the Side Course: %v", r.Kept)
+		}
+		p := wantPlaced(t, r, ck(0, sideC), 4)
+		if p.Source != SourceRecipe {
+			t.Errorf("side = %+v, want fresh Recipe 4", p)
+		}
+	})
+	t.Run("two kept meals of one slot and date with the same Recipe: one is dropped", func(t *testing.T) {
+		in := noCooldown(baseInput([]Slot{mainCell(0, holding(plannedMeal(1))), cell(0, sideC, holding(plannedMeal(1)))},
+			rcp(1, 2, courses(mainC, sideC)), rcp(2, 2, courses(mainC, sideC))))
+		r := mustPlan(t, in)
+		if isKept(r, ck(0, mainC)) && isKept(r, ck(0, sideC)) {
+			t.Fatalf("both Courses kept Recipe 1: one Recipe per slot; Kept %v", r.Kept)
+		}
+		recipeOf := func(k SlotKey) RecipeID {
+			if isKept(r, k) {
+				return 1
+			}
+			p, ok := placedAt(r, k)
+			if !ok {
+				t.Fatalf("cell %+v is neither kept nor placed: %+v", k, r)
+			}
+			return p.RecipeID
+		}
+		if a, b := recipeOf(ck(0, mainC)), recipeOf(ck(0, sideC)); a == b {
+			t.Errorf("both Courses serve Recipe %d", a)
+		}
+	})
 }

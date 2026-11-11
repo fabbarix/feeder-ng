@@ -178,7 +178,7 @@ func TestPlanRelaxesCoolDownWhenEveryOptionIsInCoolDown(t *testing.T) {
 	}
 }
 
-func TestPlanStillCouldntPlanWhenEveryOptionIsExcluded(t *testing.T) {
+func TestPlanCouldntPlanWhenEveryRecipeIsArchived(t *testing.T) {
 	e := newEnv(t)
 	for i := range e.src.recipes {
 		e.src.recipes[i].Archived = true
