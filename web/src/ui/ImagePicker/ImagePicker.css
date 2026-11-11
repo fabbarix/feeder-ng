@@ -13,6 +13,18 @@
   font-weight: var(--text-body-strong-weight);
 }
 
+.image-picker__heading--hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .image-picker__preview {
   overflow: hidden;
   border-radius: var(--radius-tile-sm);
@@ -22,6 +34,7 @@
 
 .image-picker__preview[data-size='hero'] {
   inline-size: 100%;
+  max-inline-size: 480px;
   aspect-ratio: 16 / 9;
 }
 

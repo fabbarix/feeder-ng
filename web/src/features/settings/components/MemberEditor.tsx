@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { BottomSheet, Button, ColorSwatches, CROP_ASPECTS, EmojiPicker, ImagePicker, Segmented, Select, StepperField, TextField } from '../../../ui'
-import { avatarMode, withAvatarMode, type AvatarMode } from '../lib/memberAvatar'
+import { avatarMode, keepOnLeaving, withAvatarMode, type AvatarMode } from '../lib/memberAvatar'
 import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberEmailProblem, memberFromDraft, memberProblem } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
@@ -60,6 +60,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
   const [problem, setProblem] = useState<string | null>(null)
   const [emailProblem, setEmailProblem] = useState<string | null>(null)
   const [mode, setMode] = useState<AvatarMode>(() => avatarMode(memberDraft(member)))
+  const [kept, setKept] = useState<Pick<MemberInput, 'avatar' | 'photo'>>({ avatar: '', photo: '' })
   const set = (patch: Partial<MemberInput>) => setDraft((d) => ({ ...d, ...patch }))
   const offered = availableUsers(users, members, member)
 
@@ -86,12 +87,14 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
         ]}
         value={mode}
         onChange={(next) => {
+          const stash = keepOnLeaving(kept, draft, mode)
+          setKept(stash)
           setMode(next)
-          setDraft((d) => withAvatarMode(d, next))
+          setDraft((d) => withAvatarMode(d, next, stash))
         }}
       />
       {mode === 'emoji' ? (
-        <EmojiPicker label={text.avatarEmoji} noneLabel={text.avatarNone} options={[...MEMBER_AVATARS]} value={draft.avatar} onChange={(avatar) => set({ avatar })} />
+        <EmojiPicker label={text.avatarEmoji} options={[...MEMBER_AVATARS]} value={draft.avatar} onChange={(avatar) => set({ avatar })} />
       ) : null}
       {mode === 'photo' ? (
         <ImagePicker

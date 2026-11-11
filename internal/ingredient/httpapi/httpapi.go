@@ -15,6 +15,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -29,8 +31,8 @@ const topic = "ingredients"
 const defaultSearchLimit = 5
 
 func mount(r *app.Router, d app.Deps) {
-	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
-	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images)), events: d.Events}
+	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB)))), events: d.Events}
 	r.User("GET /api/ingredients", a.list)
 	r.User("GET /api/ingredients/search", a.search)
 	r.User("POST /api/ingredients", a.create)

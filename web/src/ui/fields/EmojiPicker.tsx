@@ -11,8 +11,8 @@ export interface EmojiOption {
 export interface EmojiPickerProps {
   label: string
   helper?: string
-  /** Accessible name of the "no emoji" choice (value ""). */
-  noneLabel: string
+  /** Accessible name of the "no emoji" choice (value ""). Omit it when the host offers "no emoji" elsewhere (the Member sheet's Initials). */
+  noneLabel?: string
   options: EmojiOption[]
   value: string
   onChange: (value: string) => void
@@ -23,7 +23,7 @@ export interface EmojiPickerProps {
 export function EmojiPicker({ label, helper, noneLabel, options, value, onChange, disabled }: EmojiPickerProps) {
   const ids = useFieldIds()
   const custom = value !== '' && !options.some((o) => o.value === value) ? [{ value, name: value }] : []
-  const all: EmojiOption[] = [{ value: '', name: noneLabel }, ...options, ...custom]
+  const all: EmojiOption[] = [...(noneLabel === undefined ? [] : [{ value: '', name: noneLabel }]), ...options, ...custom]
   const roving = useRovingRadios(
     all.map((o) => ({ value: o.value, disabled })),
     value,

@@ -14,12 +14,34 @@ import (
 
 // Store reads and writes the household tables (migration 0100_household.sql).
 type Store struct {
-	db  *sql.DB
-	clk clock.Clock
+	db     *sql.DB
+	clk    clock.Clock
+	images Images
+}
+
+// Images is the image file store as the Store needs it: a Delete that keeps any file some record still references
+// (images.Guarded).
+type Images interface {
+	Delete(id string) error
 }
 
 // New returns a Store over an open, migrated database.
 func New(d *sql.DB, clk clock.Clock) *Store { return &Store{db: d, clk: clk} }
+
+// WithImages lets the Store remove the file of a Member photo that is no longer used (ReleasePhoto).
+func (s *Store) WithImages(im Images) *Store {
+	s.images = im
+	return s
+}
+
+// ReleasePhoto deletes the file of a Member photo that nothing uses any more (best effort, call it after the change is
+// saved). The file store decides "nothing uses": it checks every table, not only Members.
+func (s *Store) ReleasePhoto(id string) {
+	if id == "" || s.images == nil {
+		return
+	}
+	_ = s.images.Delete(id)
+}
 
 // querier is satisfied by *sql.DB and *sql.Tx.
 type querier interface {

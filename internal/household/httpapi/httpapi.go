@@ -13,6 +13,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/household"
 	"github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
@@ -29,7 +31,8 @@ type api struct {
 }
 
 func mount(r *app.Router, d app.Deps) {
-	a := &api{d: d, st: store.New(d.DB, d.Clock), images: imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))}
+	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	a := &api{d: d, st: store.New(d.DB, d.Clock).WithImages(images.NewGuarded(files, refs.New(d.DB))), images: files}
 
 	r.User("GET /api/household/settings", a.getSettings)
 	r.Admin("PUT /api/household/settings", a.putSettings)

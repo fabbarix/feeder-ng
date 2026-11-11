@@ -66,8 +66,7 @@ export const settingsStrings = {
     name: 'Name',
     colour: 'Colour',
     avatar: 'Avatar',
-    avatarHelper: "Optional. Shown next to the Member's name; without one the initials are used.",
-    avatarNone: 'Initials',
+    avatarHelper: "Optional. Shown next to the Member's name: an emoji or a photo; without one the initials are used.",
     // IM2: the Avatar choice is Initials, Emoji or Photo (a Segmented named `avatar`).
     avatarInitials: 'Initials',
     avatarEmoji: 'Emoji',

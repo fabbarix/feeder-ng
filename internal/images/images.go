@@ -175,3 +175,32 @@ func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 	res.TempRemoved, err = s.store.RemoveTemp(now.Add(-StaleTempAge))
 	return res, err
 }
+
+// Guarded is the image file store as the record packages (Ingredients, Recipes, Members) see it: Exists, and a Delete
+// that, like Discard, removes the file only when no table references it any more. A record's own "nobody of mine uses it"
+// check is not enough: a hand-made request can give one table another table's image id.
+type Guarded struct {
+	store *imaging.Store
+	refs  Referencer
+}
+
+// NewGuarded wraps store; refs lists every referenced id (refs.New over the database).
+func NewGuarded(store *imaging.Store, refs Referencer) *Guarded {
+	return &Guarded{store: store, refs: refs}
+}
+
+// Exists reports whether the image file is stored.
+func (g *Guarded) Exists(id string) bool { return g.store.Exists(id) }
+
+// Delete removes the file unless some record references it (then it does nothing and returns nil). Fail closed: if the
+// references cannot be read, nothing is deleted and the error is returned.
+func (g *Guarded) Delete(id string) error {
+	used, err := g.refs.ReferencedIDs(context.Background())
+	if err != nil {
+		return err
+	}
+	if used[id] {
+		return nil
+	}
+	return g.store.Delete(id)
+}

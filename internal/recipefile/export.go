@@ -112,7 +112,7 @@ func Build(in ExportInput) (File, []Warning) {
 		}
 		if ing.Image != "" {
 			if data, err := in.Image(ing.Image); err != nil {
-				warns = append(warns, Warning{Path: fmt.Sprintf("$.ingredients[%d].image", idx), Code: WarnImageFailed, Message: "the photo could not be exported"})
+				warns = append(warns, Warning{Path: fmt.Sprintf("$.ingredients[%d].image", idx), Code: WarnImageFailed, Message: "the picture could not be exported"})
 			} else {
 				def.Image = data
 			}

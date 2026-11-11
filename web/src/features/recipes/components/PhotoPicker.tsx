@@ -12,7 +12,8 @@ export interface PhotoPickerProps {
 export function PhotoPicker({ value, onChange }: PhotoPickerProps): ReactNode {
   return (
     <Tile as="section" className="photo-picker">
-      <ImagePicker label={recipeStrings.photo} value={value} onChange={onChange} aspect={CROP_ASPECTS.landscape} size="hero" />
+      <h2>{recipeStrings.photo}</h2>
+      <ImagePicker hideLabel label={recipeStrings.photo} value={value} onChange={onChange} aspect={CROP_ASPECTS.landscape} size="hero" />
     </Tile>
   )
 }

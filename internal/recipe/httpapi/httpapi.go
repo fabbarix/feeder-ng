@@ -16,6 +16,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	imgs "github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -32,9 +34,10 @@ const topic = "recipes"
 
 func mount(r *app.Router, d app.Deps) {
 	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	guarded := imgs.NewGuarded(images, refs.New(d.DB))
 	ings := ingstore.New(d.DB, d.Clock)
 	a := &api{
-		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(images).WithReadyMeal(readyMealIngredients{ings}),
+		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(guarded).WithReadyMeal(readyMealIngredients{ings}),
 		images: images,
 		events: d.Events,
 	}

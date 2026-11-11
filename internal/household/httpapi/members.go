@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -127,7 +126,7 @@ func (a *api) updateMember(w http.ResponseWriter, r *http.Request) {
 		memberErr(w, err)
 		return
 	}
-	a.dropPhoto(r.Context(), cur.Photo)
+	a.st.ReleasePhoto(cur.Photo)
 	a.changed("members")
 	httpx.WriteJSON(w, http.StatusOK, memberOut(m))
 }
@@ -144,7 +143,7 @@ func (a *api) deleteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if curErr == nil {
-		a.dropPhoto(r.Context(), cur.Photo)
+		a.st.ReleasePhoto(cur.Photo)
 	}
 	a.changed("members")
 	w.WriteHeader(http.StatusNoContent)
@@ -196,21 +195,4 @@ func (a *api) checkPhoto(id string) error {
 		return nil
 	}
 	return &household.ValidationError{Field: "photo", Message: "must be an uploaded image"}
-}
-
-// dropPhoto deletes the file of a photo no Member uses any more (best effort, after the change is saved).
-func (a *api) dropPhoto(ctx context.Context, id string) {
-	if id == "" {
-		return
-	}
-	members, err := a.st.Members(ctx)
-	if err != nil {
-		return
-	}
-	for _, m := range members {
-		if m.Photo == id {
-			return
-		}
-	}
-	_ = a.images.Delete(id)
 }

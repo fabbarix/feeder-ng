@@ -126,7 +126,9 @@ export function IngredientScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.pictureLabel}>
+          <h2>{strings.pictureLabel}</h2>
           <ImagePicker
+            hideLabel
             label={strings.pictureLabel}
             value={ingredient.image ?? ''}
             onChange={(imageId) => void attempt(() => ing.setImage(imageId))}

@@ -12,6 +12,8 @@ import (
 	"sort"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	imgs "github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -44,7 +46,7 @@ func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
 		clk:         clk,
 		images:      images,
 		ingredients: ingstore.New(d, clk),
-		recipes:     recipestore.New(d, clk, nil).WithImages(images),
+		recipes:     recipestore.New(d, clk, nil).WithImages(imgs.NewGuarded(images, refs.New(d))),
 	}
 }
 
