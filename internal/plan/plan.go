@@ -3,6 +3,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/planner"
@@ -68,17 +69,64 @@ func mix64(x uint64) uint64 {
 	return x
 }
 
+// courseNormaliser maps a stored key with Course 0 on a Meal Slot that has Courses to that slot's main Course
+// (the persistence shim, ADR 0008). Keys of a slot without Courses, and keys that name a Course, are unchanged.
+func courseNormaliser(slots []SlotInfo) func(Key) Key {
+	type slotDay struct {
+		date string
+		slot int64
+	}
+	mainOf := map[slotDay]int64{}
+	for _, si := range slots {
+		if len(si.Courses) == 0 {
+			continue
+		}
+		c := si.Courses[0].CourseID
+		for _, sc := range si.Courses {
+			if sc.Main {
+				c = sc.CourseID
+				break
+			}
+		}
+		mainOf[slotDay{si.Key.Date, si.Key.MealSlotID}] = c
+	}
+	return func(k Key) Key {
+		if k.CourseID == 0 {
+			if c, ok := mainOf[slotDay{k.Date, k.MealSlotID}]; ok {
+				k.CourseID = c
+			}
+		}
+		return k
+	}
+}
+
+// cellKeys lists the planning cells of one slot occurrence: one per Course in the slot's order, or the slot itself
+// when it has no Courses (the transition shim).
+func cellKeys(si SlotInfo) []Key {
+	if len(si.Courses) == 0 {
+		return []Key{si.Key}
+	}
+	out := make([]Key, 0, len(si.Courses))
+	for _, c := range si.Courses {
+		out = append(out, Key{Date: si.Key.Date, MealSlotID: si.Key.MealSlotID, CourseID: c.CourseID})
+	}
+	return out
+}
+
 // BuildInput maps a Snapshot to the planner's Input.
 //
-//   - Slots: one planner.Slot per SlotInfo, At = SlotInstant(date, time). A slot with no existing meal whose At is
-//     before Now is dropped (the past cannot be planned); a slot with an existing meal is always kept.
+//   - Cells: one planner.Slot per Course of each SlotInfo (one per slot when it has no Courses). At = SlotInstant(date,
+//     time), shared by the cells of one slot. Course 0 keys on a slot with Courses mean its main Course (normalised).
+//   - Attendance: each cell's Course Attendance (SlotCourse.Attendance); Factor <= 0 attendees are dropped.
+//     AllOptedOut: the slot has attendees and this Course has none. Main, Optional and Position come from the SlotCourse.
+//   - A cell with no existing meal whose At is before Now is dropped (the past cannot be planned); a cell with an
+//     existing meal is always kept.
 //   - Existing: Planned unpinned -> MealPlanned, Planned pinned -> MealPinned, Cooked -> MealCooked, Skipped ->
-//     MealSkipped, with Recipe, Batches and From (Source -> planner.LeftoverSource). Keys listed in Clear make an
-//     unpinned Planned meal count as empty. A Planned meal whose slot is already over (At before Now) and has not
+//     MealSkipped, with Recipe, Batches, From (Source -> planner.LeftoverSource) and Relaxed. Keys listed in Clear make
+//     an unpinned Planned meal count as empty. A Planned meal whose slot is already over (At before Now) and has not
 //     been confirmed is passed as MealPinned: it happened, only Cooked / Not cooked resolves it, and the planner must
 //     neither replan nor drop it (it still counts for Stock, Leftovers and Cool-down). Clear does not apply to it.
-//   - Rules: SlotRules of the slot's Meal Slot id.
-//   - Attendance: Factor <= 0 attendees are dropped.
+//   - Rules: the SlotRules of the cell's Meal Slot and Course (CourseID 0 is the main Course on a slot with Courses).
 //   - Tags (recipes and rules) are normalised with recipe.TagKey; Variety Rules likewise.
 //   - Leftovers: only Status available with Portions > 0 (the planner decides Use-by), FromSlot from Leftover.From.
 //   - LastPlanned: the latest History date per Recipe.
@@ -89,17 +137,18 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	if s.Zone == nil {
 		return planner.Input{}, ErrNoZone
 	}
+	norm := courseNormaliser(s.Slots)
 	meals := make(map[Key]Meal, len(s.Meals))
 	for _, m := range s.Meals {
+		m.Key = norm(m.Key)
+		if m.From != nil {
+			m.From.From = norm(m.From.From)
+		}
 		meals[m.Key] = m
 	}
 	clear := make(map[Key]bool, len(s.Clear))
 	for _, k := range s.Clear {
-		clear[k] = true
-	}
-	rules := map[int64][]SlotRule{}
-	for _, r := range s.SlotRules {
-		rules[r.MealSlotID] = append(rules[r.MealSlotID], r)
+		clear[norm(k)] = true
 	}
 
 	in := planner.Input{
@@ -114,20 +163,28 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 		if err != nil {
 			return planner.Input{}, err
 		}
-		m, hasMeal := meals[si.Key]
-		if !hasMeal && at.Before(s.Now) {
-			continue // the past cannot be planned
+		slotAttendees := attendance(si.Attendance)
+		for pos, cell := range cellsOf(si) {
+			key := cell.key
+			m, hasMeal := meals[key]
+			if !hasMeal && at.Before(s.Now) {
+				continue // the past cannot be planned
+			}
+			slot := planner.Slot{
+				Key:         pkey(key),
+				At:          at,
+				Attendance:  attendance(cell.attendance),
+				Rules:       slotRules(rulesOf(s.SlotRules, si, key.CourseID, norm)),
+				Main:        cell.main,
+				Optional:    cell.optional,
+				Position:    pos,
+				AllOptedOut: len(slotAttendees) > 0 && len(attendance(cell.attendance)) == 0,
+			}
+			if hasMeal {
+				slot.Existing = existing(m, at, s.Now, clear[key])
+			}
+			in.Slots = append(in.Slots, slot)
 		}
-		slot := planner.Slot{
-			Key:        pkey(si.Key),
-			At:         at,
-			Attendance: attendance(si.Attendance),
-			Rules:      slotRules(rules[si.Key.MealSlotID]),
-		}
-		if hasMeal {
-			slot.Existing = existing(m, at, s.Now, clear[si.Key])
-		}
-		in.Slots = append(in.Slots, slot)
 	}
 
 	for _, r := range s.Recipes {
@@ -148,7 +205,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 			continue
 		}
 		in.Leftovers = append(in.Leftovers, planner.Leftover{
-			ID: l.ID, FromSlot: pkey(l.From), RecipeID: planner.RecipeID(l.RecipeID),
+			ID: l.ID, FromSlot: pkey(norm(l.From)), RecipeID: planner.RecipeID(l.RecipeID),
 			Portions: l.Portions, CookedOn: planner.Date(l.CookedOn), UseBy: planner.Date(l.UseBy),
 		})
 	}
@@ -167,9 +224,51 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	return in, nil
 }
 
+// cell is one planning cell of a slot occurrence, as BuildInput reads it.
+type cell struct {
+	key        Key
+	attendance []Attendee
+	main       bool
+	optional   bool
+}
+
+// cellsOf lists the cells of a slot occurrence with their Course Attendance and Course flags.
+func cellsOf(si SlotInfo) []cell {
+	if len(si.Courses) == 0 {
+		return []cell{{key: si.Key, attendance: si.Attendance}}
+	}
+	out := make([]cell, 0, len(si.Courses))
+	for _, c := range si.Courses {
+		out = append(out, cell{
+			key:        Key{Date: si.Key.Date, MealSlotID: si.Key.MealSlotID, CourseID: c.CourseID},
+			attendance: c.Attendance, main: c.Main, optional: c.Optional,
+		})
+	}
+	return out
+}
+
+// rulesOf are the Slot Rules of a cell: the slot's Meal Slot and the cell's Course. A rule with Course 0 belongs to
+// the main Course of a slot with Courses, and to the single cell of a slot without them.
+func rulesOf(all []SlotRule, si SlotInfo, course int64, norm func(Key) Key) []SlotRule {
+	var out []SlotRule
+	for _, r := range all {
+		if r.MealSlotID != si.Key.MealSlotID {
+			continue
+		}
+		rc := r.CourseID
+		if rc == 0 {
+			rc = norm(Key{Date: si.Key.Date, MealSlotID: si.Key.MealSlotID}).CourseID
+		}
+		if rc == course {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // existing maps a stored Planned Meal to the planner's view of its slot.
 func existing(m Meal, at, now time.Time, cleared bool) *planner.ExistingMeal {
-	em := &planner.ExistingMeal{RecipeID: planner.RecipeID(m.RecipeID), Batches: m.Batches}
+	em := &planner.ExistingMeal{RecipeID: planner.RecipeID(m.RecipeID), Batches: m.Batches, Relaxed: m.Relaxed}
 	if m.From != nil {
 		em.From = &planner.LeftoverSource{LeftoverID: m.From.LeftoverID, FromSlot: pkey(m.From.From)}
 	}
@@ -229,30 +328,35 @@ func normaliseTags(tags []planner.Tag) []planner.Tag {
 }
 
 func pkey(k Key) planner.SlotKey {
-	return planner.SlotKey{Date: planner.Date(k.Date), MealSlotID: k.MealSlotID}
+	return planner.SlotKey{Date: planner.Date(k.Date), MealSlotID: k.MealSlotID, CourseID: k.CourseID}
 }
 
 func keyOf(k planner.SlotKey) Key {
-	return Key{Date: string(k.Date), MealSlotID: k.MealSlotID}
+	return Key{Date: string(k.Date), MealSlotID: k.MealSlotID, CourseID: k.CourseID}
 }
 
-// Reconcile turns the planner's Result into row changes against the Snapshot it came from.
+// Reconcile turns the planner's Result into row changes against the Snapshot it came from. Every record is keyed by
+// the cell (Date, Meal Slot, Course).
 //
-//   - Every Placement becomes an upsert: State planned, not Pinned, Batches, Portions, From (planner.LeftoverSource ->
-//     Source), Why converted with WhyFrom.
-//   - An existing unpinned Planned meal whose slot is not over yet and that is neither in Result.Kept nor re-placed (so it
-//     was invalid or cleared and nothing replaced it) is deleted. Pinned, Cooked and Skipped meals, and unconfirmed meals
-//     whose slot is already over, are never touched.
-//   - Result.Unfilled become Unfilled rows; every other slot of the snapshot is in ClearUnfilled.
+//   - Every Placement becomes an upsert: State planned, not Pinned, Batches, Portions, Relaxed, From
+//     (planner.LeftoverSource -> Source), Why converted with WhyFrom.
+//   - Rechecks (the keep check of kept fresh meals): the stored meal's Why loses its cooldown_relaxed and
+//     variety_relaxed chips and gains the Recheck's chip; a row is written only when Relaxed or the Why list changes.
+//   - An existing unpinned Planned meal whose cell is not over yet and that is neither in Result.Kept nor re-placed
+//     (so it was invalid, cleared, or its cell is covered or not served) is deleted. Pinned, Cooked and Skipped meals,
+//     and unconfirmed meals whose cell is already over, are never touched.
+//   - Result.Unfilled become Unfilled rows; every other cell of the snapshot is in ClearUnfilled. Result.NotServed is
+//     informational: it carries no reason and is not stored.
 func Reconcile(s Snapshot, res planner.Result) Changes {
 	var ch Changes
+	norm := courseNormaliser(s.Slots)
 	placed := map[Key]bool{}
 	for _, p := range res.Placements {
 		k := keyOf(p.Key)
 		placed[k] = true
 		m := Meal{
 			Key: k, RecipeID: int64(p.RecipeID), Batches: float64(p.Batches), Portions: p.Portions,
-			State: StatePlanned, Why: WhyAll(p.Why),
+			State: StatePlanned, Why: WhyAll(p.Why), Relaxed: p.Relaxed,
 		}
 		if p.From != nil {
 			m.From = &Source{LeftoverID: p.From.LeftoverID, From: keyOf(p.From.FromSlot)}
@@ -268,25 +372,60 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		ch.Upserts = append(ch.Upserts, m)
 	}
 
+	stored := make(map[Key]Meal, len(s.Meals))
+	for _, m := range s.Meals {
+		stored[norm(m.Key)] = m
+	}
+	for _, rc := range res.Rechecks {
+		k := keyOf(rc.Key)
+		m, ok := stored[k]
+		if !ok {
+			continue
+		}
+		var why []Why
+		for _, w := range m.Why {
+			if w.Code != string(planner.ReasonCooldownRelaxed) && w.Code != string(planner.ReasonVarietyRelaxed) {
+				why = append(why, w)
+			}
+		}
+		if rc.Why != nil {
+			why = append(why, WhyFrom(*rc.Why))
+		}
+		if rc.Relaxed == m.Relaxed && sameWhy(why, m.Why) {
+			continue
+		}
+		ch.Upserts = append(ch.Upserts, Meal{
+			ID: m.ID, Key: k, RecipeID: m.RecipeID, Batches: m.Batches, Portions: m.Portions,
+			State: m.State, From: m.From, Why: why, Relaxed: rc.Relaxed,
+		})
+	}
+
 	kept := map[Key]bool{}
 	for _, k := range res.Kept {
 		kept[keyOf(k)] = true
 	}
 	slotAt := map[Key]time.Time{}
+	var cells []Key
 	for _, si := range s.Slots {
-		if at, err := SlotInstant(si.Key.Date, si.Time, s.Zone); err == nil {
-			slotAt[si.Key] = at
+		at, err := SlotInstant(si.Key.Date, si.Time, s.Zone)
+		if err != nil {
+			continue
+		}
+		for _, ck := range cellKeys(si) {
+			slotAt[ck] = at
+			cells = append(cells, ck)
 		}
 	}
 	for _, m := range s.Meals {
-		if m.State != StatePlanned || m.Pinned || kept[m.Key] || placed[m.Key] {
+		mk := norm(m.Key)
+		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] {
 			continue
 		}
-		at, ok := slotAt[m.Key]
+		at, ok := slotAt[mk]
 		if !ok || at.Before(s.Now) {
 			continue // unconfirmed and over: stays in To confirm
 		}
-		ch.Deletes = append(ch.Deletes, m.Key)
+		ch.Deletes = append(ch.Deletes, mk)
 	}
 
 	unfilled := map[Key]bool{}
@@ -299,12 +438,25 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 				CoolDown: u.Eliminated.CoolDown, VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep},
 		})
 	}
-	for _, si := range s.Slots {
-		if !unfilled[si.Key] {
-			ch.ClearUnfilled = append(ch.ClearUnfilled, si.Key)
+	for _, ck := range cells {
+		if !unfilled[ck] {
+			ch.ClearUnfilled = append(ch.ClearUnfilled, ck)
 		}
 	}
 	return ch
+}
+
+// sameWhy reports whether two chip lists are equal (nil and empty are equal).
+func sameWhy(a, b []Why) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !reflect.DeepEqual(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // WhyFrom converts a planner chip to the stored form (the Date is kept as is).

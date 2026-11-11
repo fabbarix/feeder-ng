@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"hash/fnv"
 	"math"
+	"sort"
 )
 
 // Plan fills the empty slots of the horizon (§7.2). Existing Pinned, Cooked and
@@ -39,17 +40,26 @@ func Swap(in Input, key SlotKey) ([]Placement, error) {
 	if portions <= eps {
 		return nil, nil
 	}
-	opts := evalOpts{ignoreRules: true}
+	opts := evalOpts{ignoreRules: true, swap: true}
 	if s.Existing != nil {
 		opts.exclude, opts.hasExclude = s.Existing.RecipeID, true
 	}
-	cands, _ := st.evaluate(i, portions, opts)
-	sortCandidates(cands)
-	if len(cands) > 3 {
-		cands = cands[:3]
+	strict, soft, _ := st.evaluate(i, portions, opts)
+	sortCandidates(strict)
+	if len(strict) > 3 {
+		strict = strict[:3]
 	}
-	out := make([]Placement, 0, len(cands))
-	for _, b := range cands {
+	// Relaxed alternatives fill the list up to 3, in the relaxed order (ADR 0009).
+	picks := append([]breakdown(nil), strict...)
+	sort.SliceStable(soft, func(a, b int) bool { return st.relaxedBefore(i, soft[a], soft[b]) })
+	for _, c := range soft {
+		if len(picks) >= 3 {
+			break
+		}
+		picks = append(picks, c.b)
+	}
+	out := make([]Placement, 0, len(picks))
+	for _, b := range picks {
 		c := st.clone()
 		out = append(out, c.placeFresh(i, b, portions, nil))
 	}
@@ -108,6 +118,9 @@ func JitterFor(seed int64, key SlotKey, recipe RecipeID, amplitude float64) floa
 	h.Write([]byte(key.Date))
 	h.Write([]byte{0})
 	put(uint64(key.MealSlotID))
+	if key.CourseID != 0 { // Course 0 keeps its old values (a single-Course Household plans as before)
+		put(uint64(key.CourseID))
+	}
 	put(uint64(recipe))
 	x := mix64(h.Sum64())
 	u := float64(x>>11) / float64(uint64(1)<<53) // uniform in [0, 1)

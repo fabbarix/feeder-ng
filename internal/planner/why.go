@@ -27,7 +27,8 @@ func matchRule(rules []SlotRule, r Recipe) (SlotRule, bool) {
 }
 
 // buildWhy assembles the chips: the Slot Rule first (if any), then the largest
-// positive terms, at most 3 chips in all. With nothing to say it is best_available.
+// positive terms, at most 3 chips in all. With nothing to say there are no chips
+// (ADR 0009 retired best_available). The relaxed chip is appended by the caller.
 func buildWhy(chips []chip, rule *Why) []Why {
 	var out []Why
 	if rule != nil {
@@ -40,9 +41,6 @@ func buildWhy(chips []chip, rule *Why) []Why {
 			break
 		}
 		out = append(out, c.why)
-	}
-	if len(out) == 0 {
-		out = []Why{{Code: ReasonBestAvailable}}
 	}
 	return out
 }

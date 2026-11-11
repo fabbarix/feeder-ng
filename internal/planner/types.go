@@ -297,8 +297,6 @@ const (
 	ReasonIngredientOverlap ReasonCode = "ingredient_overlap" // IngredientID, Date = day the pack was planned for purchase
 	ReasonStockCoverage     ReasonCode = "stock_coverage"
 	ReasonLeftoverFits      ReasonCode = "leftover_fits" // Date = day the extra portions will be served
-	// ReasonBestAvailable is retired (ADR 0009): crs-b removes it and buildWhy returns no chips instead.
-	ReasonBestAvailable ReasonCode = "best_available"
 	// The two relaxed chips (ADR 0009, spec 7.2 step 5). Only a relaxed pick carries one, last in Why.
 	ReasonCooldownRelaxed ReasonCode = "cooldown_relaxed" // Date = the nearest fresh cook of the Recipe, RecipeID
 	ReasonVarietyRelaxed  ReasonCode = "variety_relaxed"  // Tag, and Value = the count this week or Date = the adjacent day
