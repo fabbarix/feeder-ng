@@ -104,12 +104,17 @@ func initScenario(t *testing.T, sc *godog.ScenarioContext) {
 }
 
 func TestFeatures(t *testing.T) {
+	// Scenarios tagged @wip are parked (not run) unless GODOG_TAGS says otherwise.
+	tags := os.Getenv("GODOG_TAGS")
+	if tags == "" {
+		tags = "~@wip"
+	}
 	suite := godog.TestSuite{
 		ScenarioInitializer: func(sc *godog.ScenarioContext) { initScenario(t, sc) },
 		Options: &godog.Options{
 			Format:   "pretty",
 			Paths:    []string{"features"},
-			Tags:     os.Getenv("GODOG_TAGS"),
+			Tags:     tags,
 			TestingT: t,
 			Strict:   true,
 		},

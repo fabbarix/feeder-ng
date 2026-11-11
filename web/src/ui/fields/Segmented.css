@@ -3,12 +3,21 @@
   display: flex;
   gap: var(--space-1);
   padding: var(--space-1);
+  border: var(--field-border-width) solid transparent;
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
 }
 
 .segmented[data-disabled] {
-  opacity: 0.38;
+  border-color: var(--color-outline);
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.segmented[data-disabled] .segmented__option[aria-checked='true'] {
+  background: transparent;
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 var(--field-border-width) var(--color-outline);
 }
 
 .segmented__option {
@@ -37,6 +46,10 @@
 }
 
 .segmented__option:disabled {
-  opacity: 0.38;
+  color: var(--color-muted);
   cursor: default;
+}
+
+.segmented__option[aria-checked='true']:disabled {
+  color: var(--color-muted);
 }

@@ -12,7 +12,7 @@
   inline-size: 100%;
   min-block-size: 48px;
   padding: 0 var(--field-pad-inline);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);
@@ -24,12 +24,13 @@
 }
 
 .date-field__trigger:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .date-field__trigger:disabled {
-  opacity: 0.38;
+  color: var(--color-muted);
   cursor: default;
 }
 
@@ -100,7 +101,7 @@
 }
 
 .date-field__grid button[aria-current='date'] {
-  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+  box-shadow: inset 0 0 0 var(--field-border-width) var(--color-accent);
 }
 
 .date-field__grid button[data-selected] {

@@ -18,6 +18,22 @@
   margin: 0 0 12px;
   font-size: 1.25rem;
 }
+/* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (Today's, or the Plan's notice grid). */
+.plan-couldnt-notice {
+  display: contents;
+}
+.plan-couldnt__summary {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.plan-couldnt .plan__list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 8px;
+}
+.plan-meal__status {
+  white-space: nowrap; /* the chip inherits it: "Not planned" never wraps */
+}
 .plan__stack {
   display: grid;
   gap: 12px;

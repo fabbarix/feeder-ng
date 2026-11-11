@@ -529,3 +529,33 @@ func TestMemberForUser(t *testing.T) {
 		t.Errorf("MemberForUser(unlinked) = %v, want ErrNoMember", err)
 	}
 }
+
+// fakeReady is a ReadyMealIngredients with no Ingredients whose creation fails with err.
+type fakeReady struct{ err error }
+
+func (f fakeReady) Candidates(context.Context) ([]recipe.ReadyMealCandidate, error) { return nil, nil }
+func (f fakeReady) CreatePieceTx(context.Context, *sql.Tx, string) (int64, error) {
+	return 0, f.err
+}
+
+// R14b: the placeholder id of a to-be-created Ready Meal Ingredient is only ever valid on the line.
+func TestStepUseOfPendingIngredientIsUnknown(t *testing.T) {
+	f := newFixture(t)
+	s := store.New(f.db, f.clk, ingredients{f.db}).WithReadyMeal(fakeReady{})
+	_, err := s.Create(ctx, recipe.Input{Name: "Lasagne pack", Yield: 2, ReadyMeal: true,
+		Steps: []recipe.Step{{Text: "Heat", Kind: schedule.Active, DurationMinutes: 5, Uses: []recipe.Use{{IngredientID: -1, Quantity: 1, Unit: "piece"}}}}})
+	var ve *recipe.ValidationError
+	if !errors.As(err, &ve) || ve.Code != recipe.CodeUnknownIngr || ve.Field != "steps[0].uses[0].ingredientId" {
+		t.Fatalf("Create = %v, want unknown_ingredient on steps[0].uses[0].ingredientId", err)
+	}
+}
+
+// R14b: a name taken between the lookup and the insert is a conflict, not a 500.
+func TestReadyMealNameTakenDuringCreate(t *testing.T) {
+	f := newFixture(t)
+	s := store.New(f.db, f.clk, ingredients{f.db}).WithReadyMeal(fakeReady{err: store.ErrReadyMealNameTaken})
+	_, err := s.Create(ctx, recipe.Input{Name: "Lasagne pack", Yield: 2, ReadyMeal: true})
+	if !errors.Is(err, store.ErrReadyMealNameTaken) {
+		t.Fatalf("Create = %v, want ErrReadyMealNameTaken", err)
+	}
+}

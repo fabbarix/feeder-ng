@@ -34,6 +34,14 @@ export function tomorrowMeals(slots: SlotLike[], today: string): SlotLike[] {
   return plannedOn(slots, dayAfter(today))
 }
 
+/** R13: tomorrow's Planned Meals plus the meals the planner could not plan (no meal, a recorded reason), by time. Read-only. */
+export function tomorrowSlots(slots: SlotLike[], today: string): SlotLike[] {
+  const date = dayAfter(today)
+  return slots
+    .filter((s) => s.date === date && (s.meal?.state === 'planned' || (s.meal === null && !!s.unfilled)))
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
+}
+
 export interface LeftoverRow {
   id: number
   recipeName: string

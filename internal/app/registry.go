@@ -36,6 +36,24 @@ type Deps struct {
 	Context context.Context
 	// workers counts the goroutines started with Go; App.Close waits for them.
 	workers *sync.WaitGroup
+	// idle holds the idle checks modules register with Idle; App.WaitIdle runs them.
+	idle *idleChecks
+}
+
+type idleChecks struct {
+	mu  sync.Mutex
+	fns []func(context.Context) error
+}
+
+// Idle registers a check that blocks until the module has no start-up or background work in flight (planning's
+// start-up replan). App.WaitIdle runs every check; tests and the testkit use it so a scenario starts quiet.
+func (d Deps) Idle(f func(ctx context.Context) error) {
+	if d.idle == nil {
+		return
+	}
+	d.idle.mu.Lock()
+	defer d.idle.mu.Unlock()
+	d.idle.fns = append(d.idle.fns, f)
 }
 
 // Go starts f on a goroutine that App.Close waits for, so a module's long-running

@@ -13,7 +13,7 @@
   inline-size: 44px;
   block-size: 44px;
   padding: 0;
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: 50%;
   background: var(--color-surface-2);
   color: var(--color-muted);

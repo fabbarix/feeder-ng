@@ -358,7 +358,7 @@ func DecodeWhy(s string) ([]Why, error) {
 var knownReasons = map[Reason]bool{
 	ReasonNightly: true, ReasonRegenerate: true, ReasonRecipeChanged: true, ReasonAttendanceChanged: true,
 	ReasonUnpinned: true, ReasonLeftoversChanged: true, ReasonStockTake: true, ReasonRulesChanged: true,
-	ReasonPinned: true, ReasonNotCooked: true,
+	ReasonPinned: true, ReasonNotCooked: true, ReasonStartup: true,
 }
 
 // Invalidate tells the Runner the plan may be stale (publishes on InvalidateTopic). Safe to call from any module.

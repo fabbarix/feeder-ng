@@ -3,12 +3,12 @@ import { Icon } from '../Icon'
 import { IconButton } from '../IconButton'
 import { addMonths, monthMatrix, moveIso, parseIsoDate, toIsoDate } from './calendar'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './DateField.css'
 
-export interface DateFieldProps extends FieldProps {
+export interface DateFieldProps extends FieldProps, FieldSizeProps {
   /** ISO "YYYY-MM-DD" or "" for none. */
   value: string
   onChange: (value: string) => void
@@ -35,7 +35,7 @@ function localDate(iso: string): Date {
  * A field showing the date, opening a non-modal calendar popover: Monday-first grid, arrows by day and week, PageUp/PageDown
  * by month, Enter or Space selects, Escape closes and returns focus to the trigger. Days outside min/max are disabled.
  */
-export function DateField({ label, helper, error, disabled, required, value, onChange, min, max, today, locale = 'en-GB' }: DateFieldProps) {
+export function DateField({ size = 'md', label, helper, error, disabled, required, value, onChange, min, max, today, locale = 'en-GB' }: DateFieldProps) {
   const ids = useFieldIds()
   const [open, setOpen] = useState(false)
   const [focusIso, setFocusIso] = useState(value || today || todayIso())
@@ -127,7 +127,7 @@ export function DateField({ label, helper, error, disabled, required, value, onC
   const describe = describedBy(ids, helper, error)
 
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
       <div ref={wrapRef} className="date-field">
         <button
           ref={triggerRef}

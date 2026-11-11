@@ -1,0 +1,133 @@
+/* CropEditor: the picture, a crop box with resize handles, a read-out and the actions. Tokens only. */
+.crop-editor {
+  display: grid;
+  gap: var(--space-3);
+  inline-size: 100%;
+}
+
+/* The stage pads the picture by half a handle (22 px) all round and does NOT clip: the 44 px handles and the focus outline
+   overhang the picture's edge. Only the canvas (the picture and the dimming shade) clips. */
+.crop-editor__stage {
+  padding: 22px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The frame has the shape of the turned picture and never grows taller than 60% of the viewport. */
+.crop-editor__frame {
+  position: relative;
+  inline-size: min(100%, calc(60dvh * var(--crop-ratio, 1)));
+  max-block-size: 60dvh;
+  aspect-ratio: var(--crop-ratio, 1);
+  margin-inline: auto;
+}
+
+.crop-editor__canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-thumb-lg);
+  background: var(--viewfinder-frame);
+}
+
+.crop-editor__image {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  max-inline-size: none;
+  object-fit: fill;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* The area outside the crop rectangle is dimmed by a huge shadow; it lives in the clipped canvas. */
+.crop-editor__shade {
+  position: absolute;
+  box-shadow: 0 0 0 100vmax var(--scrim);
+  pointer-events: none;
+}
+
+/* The crop rectangle: outline, box and handles. Not clipped. */
+.crop-editor__rect {
+  position: absolute;
+  outline: 2px solid var(--viewfinder-reticle);
+}
+
+.crop-editor__box {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: move;
+  touch-action: none;
+}
+
+.crop-editor__box:focus-visible,
+.crop-editor__handle:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 44 px hit area centred on the corner or edge middle; the dot is drawn by ::before. */
+.crop-editor__handle {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+  translate: -50% -50%;
+}
+
+.crop-editor__handle::before {
+  content: '';
+  inline-size: 16px;
+  block-size: 16px;
+  border: 2px solid var(--viewfinder-frame);
+  border-radius: var(--radius-pill);
+  background: var(--viewfinder-reticle);
+}
+
+.crop-editor__handle[data-handle='nw'] { inset-inline-start: 0; inset-block-start: 0; cursor: nwse-resize; }
+.crop-editor__handle[data-handle='n'] { inset-inline-start: 50%; inset-block-start: 0; cursor: ns-resize; }
+.crop-editor__handle[data-handle='ne'] { inset-inline-start: 100%; inset-block-start: 0; cursor: nesw-resize; }
+.crop-editor__handle[data-handle='e'] { inset-inline-start: 100%; inset-block-start: 50%; cursor: ew-resize; }
+.crop-editor__handle[data-handle='se'] { inset-inline-start: 100%; inset-block-start: 100%; cursor: nwse-resize; }
+.crop-editor__handle[data-handle='s'] { inset-inline-start: 50%; inset-block-start: 100%; cursor: ns-resize; }
+.crop-editor__handle[data-handle='sw'] { inset-inline-start: 0; inset-block-start: 100%; cursor: nesw-resize; }
+.crop-editor__handle[data-handle='w'] { inset-inline-start: 0; inset-block-start: 50%; cursor: ew-resize; }
+
+.crop-editor__box:disabled,
+.crop-editor__handle:disabled {
+  cursor: default;
+}
+
+.crop-editor__readout {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  text-align: center;
+}
+
+.crop-editor__actions .button {
+  white-space: nowrap;
+}
+
+.crop-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Cancel and Use crop travel together and sit at the end of the row; when they wrap (390 px) they stay together at the end of the second row, never "Use crop" alone on the left. */
+.crop-editor__confirm {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}

@@ -24,6 +24,9 @@ export function baseUnitIcon(unit: BaseUnit): IconName {
   return unit === 'ml' ? 'liquid' : unit === 'piece' ? 'piece' : 'weigh'
 }
 
+/** The server's limit on a Shelf Life (ingredient.MaxShelfLifeDays). */
+export const MAX_SHELF_LIFE_DAYS = 3650
+
 export interface NewIngredientForm {
   name: string
   baseUnit: BaseUnit
@@ -35,7 +38,7 @@ export type NewIngredientErrors = { name?: string; shelfLife?: string }
 
 /**
  * Validates the sheet on submit. name: blank after trim -> strings.sheet.nameRequired. shelfLife: blank is fine (omitted from the body);
- * otherwise a whole number 1 or more, else strings.sheet.shelfLifeInvalid. On success the body has the trimmed name, the Base Unit and,
+ * otherwise a whole number from 1 to 3650, else strings.sheet.shelfLifeInvalid. On success the body has the trimmed name, the Base Unit and,
  * only when given, shelfLifeDays.
  */
 export function checkNewIngredient(form: NewIngredientForm): { ok: true; value: NewIngredient } | { ok: false; errors: NewIngredientErrors } {
@@ -45,7 +48,7 @@ export function checkNewIngredient(form: NewIngredientForm): { ok: true; value: 
   const shelf = form.shelfLife.trim()
   let shelfLifeDays: number | undefined
   if (shelf !== '') {
-    if (/^\d+$/.test(shelf) && Number(shelf) >= 1) shelfLifeDays = Number(shelf)
+    if (/^\d+$/.test(shelf) && Number(shelf) >= 1 && Number(shelf) <= MAX_SHELF_LIFE_DAYS) shelfLifeDays = Number(shelf)
     else errors.shelfLife = strings.sheet.shelfLifeInvalid
   }
   if (errors.name || errors.shelfLife) return { ok: false, errors }

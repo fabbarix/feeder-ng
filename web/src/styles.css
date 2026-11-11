@@ -1,6 +1,8 @@
 /* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider (apply.ts).
    The Basil defaults below are the first paint, before ThemeProvider runs (plan 3.1 to 3.3). */
 :root {
+  /* One focus ring for every field control (docs/dev/design/r2f-fields.md 3); the colour follows the scheme. */
+  --focus-ring: 0 0 0 2px var(--color-accent);
   /* Type (plan 3.2): size / line / weight */
   --text-display-size: 34px;
   --text-display-line: 38px;

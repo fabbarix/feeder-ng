@@ -30,12 +30,13 @@
 }
 
 .select__trigger:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .select__trigger:disabled {
-  opacity: 0.38;
+  color: var(--color-muted);
   cursor: default;
 }
 
@@ -145,8 +146,17 @@
 }
 
 .select__option[aria-disabled='true'] {
-  opacity: 0.38;
   cursor: default;
+}
+
+.select__option:not(.select__option--create)[aria-disabled='true'] {
+  opacity: 0.38;
+}
+
+/* The create row dims its label only, so the reason below it keeps the muted colour at full strength (4.5:1). */
+.select__option--create[aria-disabled='true'] .select__label,
+.select__option--create[aria-disabled='true'] .select__leading {
+  opacity: 0.38;
 }
 
 .select__option--create {

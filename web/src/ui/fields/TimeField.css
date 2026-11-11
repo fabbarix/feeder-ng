@@ -5,17 +5,30 @@
   gap: var(--space-1);
   min-block-size: 48px;
   padding: 0 var(--field-pad-inline);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
   align-self: stretch;
-  inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.time-field:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
 }
 
 .time-field[data-disabled] {
-  opacity: 0.38;
+  color: var(--color-muted);
+}
+
+.ui-field:has(.time-field[data-disabled]) .ui-field__label {
+  color: var(--color-muted);
+}
+
+.time-field[data-disabled] .time-field__segment[aria-valuenow] {
+  color: var(--color-muted);
 }
 
 .time-field__segment {
@@ -44,14 +57,14 @@
 }
 
 .time-field__segment:disabled {
+  color: var(--color-muted);
   cursor: default;
 }
 
 .time-field__segment:focus-visible {
-  background: var(--color-soft);
+  background: var(--color-soft-strong);
   border-radius: var(--radius-control);
-  outline: 3px solid var(--color-accent);
-  outline-offset: 0;
+  outline: none;
 }
 
 .time-field__segment[aria-valuenow] {

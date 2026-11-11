@@ -78,6 +78,7 @@ export function IngredientLineRow({
         <TextField
           label={recipeStrings.lines.quantity}
           inputMode="decimal"
+          helper={line.auto && line.quantity.trim() === '' && line.ingredientId !== null ? recipeStrings.lines.packSizeHint : undefined}
           value={line.quantity}
           error={fieldError(errors, `lines.${index}.quantity`)}
           onChange={(quantity) => onChange({ quantity })}

@@ -36,6 +36,8 @@ The Household records the moment it was created in Feeder (never edited, not a s
 
 **Meal Slots** are defined per weekday. Each has a name (e.g. Lunch), a usual time and a default **Attendance** (which Members attend, each with an optional Portion Factor override). The same slot name can exist on several weekdays with different times or attendance. A one-off change for a specific date ("Sam is away Thursday") edits that date's Attendance only.
 
+**Attendance defaults to everyone** (R13, decision 23). A new Meal Slot includes every current Member as attending, each at their own Portion Factor (no override), unless the request names an Attendance explicitly (an explicit empty list means nobody, a deliberate choice). A new Member is added to every existing Meal Slot's usual Attendance, including slots that were left empty. People opt out, in the Meal Slots editor (usual Attendance) or for one date (Date Attendance). Date Attendance overrides are never touched by adding a Member: a date the Household already edited keeps its list. Deleting a Member still removes them from every Attendance. When an existing install is upgraded, a one-off migration gives every Meal Slot that has no attendees all current Members (§15, decision 23); it runs once, automatically, and slots that already have attendees are left alone.
+
 **Portions needed** for a slot = the sum of the Portion Factors of the attending Members.
 
 ## 4. Recipes
@@ -141,7 +143,32 @@ For each slot:
 4. **Pick** the top-scoring candidate. Batches = ceil(portions needed ÷ Yield). The surplus (Batches × Yield − portions needed) becomes a pending Leftover with its Use-by. Projected Stock is updated, and any shortfall is recorded as a planned purchase in pack units of the Product last bought for that Ingredient (at the chosen Shop if known). If no Product has been bought yet, exact amounts are assumed, with no pack remainder.
 5. **Why chips** are the 1–3 largest positive score terms, phrased for people: "uses Monday's chicken", "Anna's favourite", "spinach goes off Thu", "Slot Rule: Friday", "leftover from Tue".
 
-If no candidate survives, the slot stays empty and Today shows "Couldn't plan Thursday dinner: every option was excluded or in cool-down."
+If no candidate survives, the slot stays empty with a recorded reason (§7.4). The planner's reasons are `no_attendance` and `no_candidates` (with the counts removed by Exclusion, Cool-down, Variety Rule and Advance Step, and whether a Slot Rule claimed the slot); they are unchanged.
+
+### 7.4 Couldn't plan (what the Household sees)
+A slot the planner left empty is something to set up or a conflict between rules, not an error. Today, the Plan and the kitchen board show it as a designed state:
+
+- **Grouped by cause, never one line per slot.** Each cause is one compact tile: "Couldn't plan 9 Meal Slots. Nobody is set to attend." The affected Meal Slots are a short summary ("Every dinner this week, plus weekend breakfasts") with a "Show all 9" control that lists each one. "Every" is measured only over slots that still count (a Planned Meal or a recorded reason): a slot whose time has gone is not part of the week. A Household with several causes sees one tile per cause.
+- **One fix action per cause**, a button that goes where the cause is fixed:
+
+  | Cause | Shown when | Tone | Fix action |
+  |---|---|---|---|
+  | Nobody attends | reason `no_attendance` | info | **Choose who attends** (Meal Slots, Attendance) |
+  | No Recipes | `no_candidates` and no Recipe was considered | info | **Add Recipes** |
+  | Slot Rule unmet | `no_candidates` and a Slot Rule claimed the slot | warn | **Review Slot Rules** |
+  | Excluded | most options removed by an Exclusion | warn | **Review Exclusions** (Recipes: Exclusions are set per Recipe and Ingredient) |
+  | Cool-down | most options removed by Cool-down | warn | **Review Cool-down** |
+  | Variety Rule | most options removed by a Variety Rule | warn | **Review Variety Rules** |
+  | Advance Step too late | most options removed by an Advance Step | warn | **Choose a Recipe** (pin one by hand) |
+  | No fit | `no_candidates` with nothing counted | warn | **Choose a Recipe** |
+
+  A slot is filed under one cause: the filter that removed the most options (ties: Exclusion, Cool-down, Variety Rule, Advance Step).
+- **Tone.** Missing setup and rule conflicts use the info and warn tones with an icon, never the danger colour; danger is for real failures (a request that failed, spoiled food).
+- **On Plan** the grouped notice sits at the top and each affected day tile shows a small inline "Not planned" chip with the cause. **On Today** the notice is a tile in the grid. **On the board** (read-only) an unplanned slot tomorrow shows "Not planned"; there is no action.
+- **First run.** While the Household is new and nothing can be planned (no Planned Meal and a setup step missing), Today shows a setup checklist instead of Couldn't plan: **Members**, then **Meal Slots and attendance**, then **Recipes**, then the first plan ("1 of 4 steps set up"). It goes away once a Planned Meal exists.
+  - **Exception (accepted at review).** When Members and Recipes exist and only attendance is missing, the checklist is not shown: Today shows Couldn't plan ("Nobody is set to attend", with **Choose who attends**), which names the missing step and fixes it directly. This is part of the checklist's visibility rule (one rule, so the tile and the Today layout cannot disagree).
+- **Who can fix it.** Fixes that lead to an Admin-only page (Choose who attends, Review Cool-down, and the Members and Meal Slots checklist steps) are not offered to a plain User; the tile says "Ask an Admin".
+- **After an upgrade.** Migration 1230 gives existing slots their attendees, but reasons recorded earlier would stay until the next replan, so the planner replans once at every startup (reason: Startup) and clears them.
 
 ### 7.3 Swap
 **Swap** shows the top 3 alternatives under the same scoring (excluding the current Recipe and any Recipe reserved for a later Slot Rule slot, §7.2), each with its why chips. Choosing one pins it and replans the downstream unpinned slots, because Leftovers and Overlap may change.
@@ -263,4 +290,5 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 20. (2026-11-10) The per-User optional secondary colour is removed: a User's palette is derived from the accent alone. The Preferences API ignores a `secondary` field sent by an old client and never returns it, and the stored column is dropped (§14).
 21. (2026-11-10) A bought Product cannot be deleted but can be archived and unarchived; archived Products are left out of lists and pickers, unknown to Scans, never suggested as last bought, and keep their history and barcodes (a new Product cannot claim them: unarchive the owner) (§5).
 22. (2026-11-10) Slot Rule reservation: the planner keeps a Slot Rule's Recipe for its slot and does not place it on earlier slots where its Cool-down would block the rule's slot ("Friday dinner = pizza" never lands on Tuesday). It applies to a Recipe rule, and to a Tag rule when exactly one eligible Recipe carries the Tag; the window is the Recipe's Cool-down, and it also replans unpinned Planned Meals inside it. Pinned always wins, and the rule slot then shows its usual couldn't-plan reason. Swap does not offer the reserved Recipe on those earlier slots (§7.2, §7.3).
-23. (2026-11-10) Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down (§2).
+23. (2026-11-10) Attendance defaults to everyone: a new Meal Slot includes all current Members, a new Member joins every existing Meal Slot, and people opt out; migration 1230 gives every existing slot with no attendees all Members, once and automatically (§3). Couldn't plan is a designed state grouped by cause, with a setup checklist on first run (§7.4).
+24. (2026-11-10) Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down (§2).
