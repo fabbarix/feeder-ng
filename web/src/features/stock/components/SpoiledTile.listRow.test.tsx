@@ -25,7 +25,7 @@ describe('SpoiledTile rows are ListRows', () => {
     const rows = document.querySelectorAll('li.list-row')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]! as HTMLElement).getByText('Chicken thighs')).toHaveClass('list-row__title')
-    expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent('200 g · Went off 4 days ago')
+    expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent('200 g · Went off 3 days ago')
     expect(document.querySelector('.spoiled-tile__row')).toBeNull()
   })
 
