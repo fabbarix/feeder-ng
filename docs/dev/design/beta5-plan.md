@@ -43,9 +43,9 @@ Code facts this plan relies on were checked on `main` at `cd39ff1`:
 - Everything beta.4 plans.
 - The five review points in §3.1 (Candidates, not decided).
 - Per-Course Guest counts, named Guests, Guest preferences.
-- A defrost reminder for frozen Leftovers (open question Q2).
+- A defrost reminder for frozen Leftovers (decided: frozen Leftovers are used only when picked, §2.3).
 - Throw out on a Lot that has not gone off (see §2.6 edge cases).
-- Any change to the Recipe File or the Recipe Assistant schema: the new Recipe field `frozenUseByDays` is not exported in beta.5 (open question Q8).
+- Any change to the Recipe File or the Recipe Assistant schema: the new Recipe field `frozenUseByDays` is not exported in beta.5 (decided: no Recipe File change).
 
 ---
 
@@ -160,13 +160,13 @@ Every User; CSRF as today; publishes `household {"changed":"slotDates"}`, which 
 
 - The Who's eating sheet gains a row after the Member pills: caption "Guests", the shared `StepperField` (0 to 20, step 1), helper "Each Guest eats one standard portion of every Course."
 - Each Guest counts as one standard portion (Portion Factor 1). Guests have no name and no Favourites, Dislikes or Exclusions.
-- Guests eat **every Course** the slot serves on that date (required and optional), including a Course every Member opts out of: such a Course is then served, for the Guests.
+- Guests eat **every Course** the slot serves on that date (required and optional), including a Course every Member opts out of: such a Course is then served, for the Guests. Decided: there are no per-Course Guests.
 - Guests count in portions, Batches, Leftover maths and so the Shopping List. Course Attendance stays the Members; portions needed for a Course = Σ Portion Factors of its Course Attendance + Guests.
 - A date with Guests and no Member is served (planned with no preferences).
 - Where shown: the slot block's Attendance pills end with "+2 Guests"; the Planned Meal sheet's attendees line "Anna, Sam + 2 Guests"; portions include them ("6 portions").
 - **Reset to usual** on the sheet sets Guests to 0 too.
 
-**Batches follow portions** (needed for Guests to mean anything): an unresolved fresh Planned Meal (unpinned, Pinned or Bought) whose Batches no longer cover its cell's portions keeps its Recipe and gets Batches = ceil(portions ÷ Yield). Today an unpinned one is dropped and replanned, and a Pinned one under-cooks. Fewer portions do not lower Batches (the extra becomes Leftover, as today). See Q6.
+**Batches follow portions** (needed for Guests to mean anything): an unresolved fresh Planned Meal (unpinned, Pinned or Bought) whose Batches no longer cover its cell's portions keeps its Recipe and gets Batches = ceil(portions ÷ Yield). Today an unpinned one is dropped and replanned, and a Pinned one under-cooks. Fewer portions do not lower Batches (the extra becomes Leftover, as today). Decided: more Guests raise the Batches.
 
 **Spec changes**: §3 (portions formula; Guests on a date), §3.1 (Course served for Guests), §7.2 step 4 and the keep rules (Batches follow portions), §7.5 ("+2 Guests"), §8 (proposed Leftover uses portions with Guests), decision 33.
 
@@ -224,12 +224,12 @@ Actions on a Leftover, from Today's **Leftovers** tile (each row gets a row menu
 
 - Freeze it is offered only before the Use-by has passed. With no Freezer Storage Place: "Add a Freezer first" with **Storage Places** (any User).
 - **Planned Meals served from it.** When Had it, Threw it out or Freeze it leaves fewer portions than the Planned Meals served from that Leftover need, the sheet names them before confirming ("Thu Lunch was going to have 2 portions of it; it is planned again.") and they are unpinned and replanned, as in §8 rule 3.
-- **Frozen Leftovers are not planned automatically** (Q2). They show in Choose a Recipe under "From the freezer" ("Chilli · 3 portions · Garage Freezer"); choosing one pins it as a Leftover Planned Meal; its row says "From the freezer: take it out the day before".
-- **Ask before waste.** The 03:00 job no longer throws Leftovers away. A Leftover past its Use-by (frozen or not) with portions left is **to answer**: the planner ignores it, and it heads Today's Leftovers tile in the info tone: "Chilli was to be used by Tue. Had it, threw it out, or wasn't there?" (copy: Q1) with **Had it**, **Threw it out**, **Wasn't there**.
+- **Frozen Leftovers are not planned automatically** (decided): they are used only when picked. They show in Choose a Recipe under "From the freezer" ("Chilli · 3 portions · Garage Freezer"); choosing one pins it as a Leftover Planned Meal; its row says "From the freezer: take it out the day before".
+- **Ask before waste.** The 03:00 job no longer throws Leftovers away. A Leftover past its Use-by (frozen or not) with portions left is **to answer**: the planner ignores it, and it heads Today's Leftovers tile in the info tone: "Chilli was to be used by Tue. Had it, threw it out, or wasn't there?" (decided copy) with **Had it**, **Threw it out**, **Wasn't there**.
   - **Had it**: every portion left was had; not waste.
   - **Threw it out**: waste, dated the day after the Use-by (like a Lot's go-off, §6.1 event 1). The streak is recomputed and may drop back to that day.
   - **Wasn't there**: the Leftover is removed; not waste (a mistake, like Delete on a Lot).
-  - Until answered it does not count as waste and the streak is not reset by it. It stays until answered (Q4).
+  - Until answered it does not count as waste and the streak is not reset by it. It stays until answered (decided: an unanswered Leftover keeps asking).
 - Leftover Use-by push (10:00 on the Use-by) is unchanged.
 
 **Pantry**: Leftovers that have a Storage Place are listed in that place's group, after its Lots, in the leftover tone: "Chilli · 3 portions · Use by 9 Feb". A filter chip **Leftovers** shows only them. Tapping one opens the same Leftover sheet. Leftovers with no Storage Place stay on Today only.
@@ -338,7 +338,7 @@ CREATE INDEX leftover_events_leftover ON leftover_events (leftover_id);
 - A fresh, unresolved Planned Meal is **Bought** once at least one of its Ingredient lines was bought for it from the Shopping List (definition below).
 - **Automatic replans leave a Bought Planned Meal alone**: its Recipe stays, whatever the trigger (Recipe edited or archived, a Member's preferences, Tag rename, merge or delete, Slot or Variety Rule changes, Stock-take, new Recipes, Attendance, the nightly plan, the startup replan, the keep check, Slot Rule reservations). It still consumes projected Stock and yields its Leftover like a Pinned one, and Batches follow portions (§2.2).
 - **Only Regenerate, Swap or choosing a Recipe by hand changes it** (and the explicit structural edits that already remove Pinned Planned Meals after naming them: taking a Course off a Meal Slot, archiving or removing a Course, Not served, deleting a Meal Slot).
-- Regenerate's confirm (`lib/regenerate.ts`) names them: "These have Ingredients you already bought and are replaced too: Tue Dinner · Roast chicken (chicken thighs, cream)." Actions unchanged (Q5).
+- Regenerate's confirm (`lib/regenerate.ts`) names them: "These have Ingredients you already bought and are replaced too: Tue Dinner · Roast chicken (chicken thighs, cream)." Actions unchanged (decided: no "keep them" option).
 - Shown as a neutral chip **Bought** (Phosphor `shopping-cart`) on the Planned Meal row (only when the row has no other chip, like the relaxed chip) and always in the Planned Meal sheet, with the line: "Bought for it: chicken thighs, cream. Automatic plan changes leave it as it is." A Pinned Planned Meal that is also Bought shows both facts.
 - When a Bought Planned Meal now breaks a hard rule (a Member's new Exclusion, an archived Recipe, the Recipe no longer has that Course), it stays and its sheet shows a warn line: "Sam now excludes garlic, which this uses. Swap it to change it." (the same check and copy for Pinned ones).
 
@@ -351,7 +351,7 @@ CREATE INDEX leftover_events_leftover ON leftover_events (leftover_id);
 | Per line | Recorded per Planned Meal, Ingredient and Lot, with the amount. Optional lines are not on the list and are not bought for. A Planned Meal served from a Leftover needs nothing and is not Bought. |
 | Partially ticked lines | A Scan that lowers a line without ticking it is still a purchase: the Planned Meals whose shortfall it covered are Bought. A line ticked by hand with 0 adds no Lot and so buys nothing. |
 | The range | Only Planned Meals inside the list range at the time of the purchase. Changing the range later changes nothing already recorded; a Planned Meal outside the range is not Bought by it. |
-| Which line counts | Any required Ingredient line (Q3 asks whether to limit this to Ingredients with a Shelf Life). |
+| Which line counts | Any required Ingredient line (decided; not limited to Ingredients with a Shelf Life). |
 | What undoes it | Undo of the Scan, unticking a Tick by hand, or **Delete** of the Lot (§2.6) remove that Lot's records. **Not needed** (§2.5) is not a purchase. |
 | When it ends | When the Planned Meal is resolved (Cooked, Not cooked), removed (Regenerate, Not served, structural edits) or its Recipe changes (Swap, choosing a Recipe): the records go with it (cascade, or removed by the repository when the Recipe changes). What was bought stays in Stock and feeds the next plan through projected Stock and Ingredient Overlap. |
 
@@ -568,7 +568,7 @@ Stock writes publish `stock {"changed":"lots"}` (replans as a Stock-take; Bought
 
 - The Recipes list gains a **Sort** select (shared `Select`, no native control) beside the search: "Name" (the current order, default), "Last cooked: longest ago first", "Last cooked: most recent first". If beta.4 added other sorts, these join them. The device remembers the choice (`localStorage`, try/catch).
 - "Longest ago first" puts Recipes not cooked yet first, then oldest; "Most recent first" puts them last. Ties by name.
-- Recipe tiles and rows show the last cooked date in their meta: "Last cooked today", "Last cooked yesterday", "Last cooked Tue" (2 to 6 days ago), "Last cooked 3 Oct" (7 days or more), "Not cooked yet" (copy: Q1). The Recipe detail shows the same in its facts.
+- Recipe tiles and rows show the last cooked date in their meta: "Last cooked today", "Last cooked yesterday", "Last cooked Tue" (2 to 6 days ago), "Last cooked 3 Oct" (7 days or more), "Not cooked yet" (decided copy). The Recipe detail shows the same in its facts.
 - **Last cooked** = the latest date of a Cooked fresh Planned Meal of that Recipe, in any Course. Leftover-served Planned Meals do not count (nothing was cooked). The Planned Meal's date counts, not the day it was marked.
 
 **Spec changes**: §4 (Recipes list sort and Last cooked), decision 38.
@@ -676,16 +676,7 @@ No conflict with ADR 0001, 0002, 0004–0008 or 0010. Per-date controls for ever
 
 ## 3. Open questions for the user
 
-| # | Question | Recommended default |
-|---|---|---|
-| Q1 | The decided copy uses two words GLOSSARY avoids: "eaten" (avoided for **Cooked**) and "never" (avoided for **Exclusion**), in "eaten, thrown out, or never there?" and "last cooked … never". Change the copy? | Yes: "Had it, threw it out, or wasn't there?" (matching the action names) and "Not cooked yet". |
-| Q2 | Should the planner plan frozen Leftovers by itself? | No in beta.5: chosen by hand under "From the freezer"; a defrost reminder comes later. Automatic planning would need a defrost lead time like an Advance Step. |
-| Q3 | Does any bought Ingredient line make a Planned Meal Bought, or only Ingredients with a Shelf Life? Buying a 1 kg bag of rice would otherwise hold every rice Recipe in range. | Any required line (your wording: "Ingredients already bought"); revisit after a week of use. |
-| Q4 | A Leftover past its Use-by that nobody answers: keep asking, or count it as thrown out after some days? | Keep asking; it does not count as waste until answered. |
-| Q5 | Regenerate with Bought Planned Meals: only name them in the confirm, or also offer "Regenerate, keep Bought"? | Name them only (your decision: Regenerate changes them). |
-| Q6 | When portions grow (Guests, Attendance), raise a Planned Meal's Batches and keep its Recipe, for unpinned, Pinned and Bought ones alike? Today an unpinned one is replanned and a Pinned one stays short. | Yes, raise Batches and keep the Recipe; never lower them automatically. |
-| Q7 | Guests per Course (a Guest who has no Dessert)? | No: Guests eat every Course the slot serves. |
-| Q8 | Should a Recipe File carry the new `frozenUseByDays`? | Not in beta.5 (no schema or Recipe Assistant change); add with the next Recipe File change. |
+None remain. The user answered Q1 to Q8 on the recommended defaults; each answer is written into its feature section as decided (§2.2, §2.3, §2.4, §2.7, §1).
 
 ### 3.1 Candidates (not decided)
 
@@ -755,19 +746,19 @@ Critical path: A0 → A → S → B → C2 → L/F1 → F2 → H.
 | **Migrations cannot be undone** | 1500–1530 | Plain `CREATE`/`ALTER`, no rebuild, no foreign-key pragma. Snapshot `feeder-pre-1500.db` before 1500 when `planned_meals` has rows (same helper as 1400). Migration tests per file: fresh and upgraded schemas equal, second migrate is a no-op, `foreign_key_check` empty, defaults as stated. Rehearse on a copy of the user's `/data` before the tag. |
 | **Bought records lost by a delete-and-insert** | plan repository | A's test: every write path of a Bought Planned Meal keeps its id and records; a planner Reconcile with new portions keeps them. |
 | **Held Planned Meals change planner output** | planner | Bought holds only after purchases from the upgrade on, so an upgraded plan is unchanged until the first Scan. Golden planner tests: every replan reason with a Bought cell; Regenerate replaces it. |
-| **Batches follow portions** changes Pinned and unpinned behaviour (Q6) | planner, runner | Before/after replay of the user's database copy with the old and new planner: diff placements; expected differences are only cells whose Batches did not cover their portions. CHANGELOG says so. |
+| **Batches follow portions** changes Pinned and unpinned behaviour (decided) | planner, runner | Before/after replay of the user's database copy with the old and new planner: diff placements; expected differences are only cells whose Batches did not cover their portions. CHANGELOG says so. |
 | **No auto-waste at 03:00** changes the streak | runner, `cook/zerowaste` | Streak unit tests for every answer; the upgrade note says Leftovers past their Use-by now ask. QA: a Leftover with Use-by yesterday on a test install shows the question the next morning, and the streak holds until answered. |
 | **Effective slot time used everywhere** | notify, cook, planner, today, board | One function (`household.EffectiveTime`); a guard test greps for direct reads of `meal_slots.time` outside the household package. QA: change tonight's time and watch Start cooking, the board and Cook Mode. |
 | **Attribution maths** | shopping | `Attribute` is pure and derived from the same `derivedLines`; property test: the sum of recorded amounts for a purchase equals the drop in total shortfall. |
 | **Offline Scans record against a later list** | shopping | Documented edge (§2.4); BDD for a synced Scan. |
 | **beta.4 drift** | all | Gate in §4.1; W0 rebases the spec on beta.4's final text before any team starts. |
-| **Copy using avoided words** | all UI | §6 word check before the tag; Q1. |
+| **Copy using avoided words** | all UI | §6 word check before the tag; the decided copy avoids "eaten" and "never". |
 
 ---
 
 ## 6. Release checklist for beta.5
 
-- [ ] Q1–Q8 answered; spec, GLOSSARY and ADRs 0011–0013 match the answers.
+- [ ] Spec, GLOSSARY and ADRs 0011–0013 match the decisions recorded in §2.
 - [ ] Every package merged with an Opus review approval; `make check` green on main.
 - [ ] Migrations 1500, 1510, 1520, 1530 rehearsed on a copy of the user's `/data`; `feeder-pre-1500.db` written and not listed in Settings.
 - [ ] Planner before/after replay on that copy reviewed (only expected differences).
