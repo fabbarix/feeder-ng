@@ -4,6 +4,7 @@ import { IconButton } from '../IconButton'
 import { addMonths, monthMatrix, moveIso, parseIsoDate, toIsoDate } from './calendar'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
 import type { FieldProps, FieldSizeProps } from './Field'
+import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
 import { fieldStrings } from './strings'
 import './Field.css'
 import './DateField.css'
@@ -46,6 +47,7 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
   const todayValue = today ?? todayIso()
 
   const formatDay = useMemo(() => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }), [locale])
@@ -63,6 +65,8 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
     setOpen(false)
     if (restoreFocus) triggerRef.current?.focus()
   }
+
+  useFloatingPopover(open, triggerRef, popoverRef)
 
   // Latest roving day, read by the focus effect below. Effects run in order, so this is current when the tick fires.
   const focusIsoRef = useRef(focusIso)
@@ -147,7 +151,14 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
           <Icon name="planEmpty" size={20} />
         </button>
         {open ? (
-          <div role="dialog" aria-labelledby={ids.labelId} className="date-field__popover" onKeyDown={onGridKey}>
+          <div
+            ref={popoverRef}
+            popover={floatingPopoverAttr()}
+            role="dialog"
+            aria-labelledby={ids.labelId}
+            className="date-field__popover"
+            onKeyDown={onGridKey}
+          >
             <div className="date-field__header">
               <IconButton icon="back" label={fieldStrings.previousMonth} size="compact" onClick={() => shiftMonth(-1)} />
               <span id={headingId} className="date-field__month" aria-live="polite">

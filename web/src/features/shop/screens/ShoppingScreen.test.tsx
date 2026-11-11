@@ -147,9 +147,20 @@ describe('ShoppingScreen', () => {
   it('adds an extra from the sheet', async () => {
     show(makeList())
     await userEvent.click(screen.getByRole('button', { name: 'Add to Shopping List' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Something else' }))
     await userEvent.type(screen.getByLabelText('Something to buy'), 'candles')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(actions.addExtra).toHaveBeenCalledWith({ text: 'candles' })
+  })
+
+  it('adds an Ingredient extra with a quantity from the sheet', async () => {
+    show(makeList())
+    await userEvent.click(screen.getByRole('button', { name: 'Add to Shopping List' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /Ingredient/ }))
+    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /milk/ }))
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'Quantity' }), '500')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(actions.addExtra).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 3, quantity: 500 }))
   })
 
   it('changing the range asks for the new last date', async () => {

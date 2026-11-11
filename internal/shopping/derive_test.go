@@ -318,3 +318,42 @@ func TestAnEmptyListIsNotComplete(t *testing.T) {
 		t.Fatalf("From/To = %s/%s", l.From, l.To)
 	}
 }
+
+// Courses (spec §9, ADR 0008): every Course of a slot is its own Planned Meal, so Derive sums them all with no
+// Course-specific rule. Batches already carry Course Attendance (a Course nobody-opted-out-of needs a full
+// Batch, one Sam skips needs less), so the sum needs no attendance rule of its own either.
+
+func TestEveryCourseOfASlotAddsToTheNeed(t *testing.T) {
+	main := dinner("2026-11-10", 2, need(chicken, 350), need(rice, 100))
+	side := dinner("2026-11-10", 1, need(rice, 80), need(milk, 200))
+	l := shopping.Derive(input(main, side))
+	if r := line(t, l, rice); !near(r.Need, 280) { // 2 x 100 + 1 x 80
+		t.Errorf("rice Need = %v, want 280 over both Courses", r.Need)
+	}
+	if c := line(t, l, chicken); !near(c.Need, 700) {
+		t.Errorf("chicken Need = %v, want 700", c.Need)
+	}
+	if m := line(t, l, milk); !near(m.Need, 200) {
+		t.Errorf("milk Need = %v, want 200", m.Need)
+	}
+}
+
+func TestACourseWithFewerEatersNeedsFewerBatches(t *testing.T) {
+	// A dessert for 4 portions of a Recipe that yields 4 is 1 Batch; Sam opts out (a half portion), so the
+	// slot needs 3.5 portions = 0.875 Batches. Batches arrive already scaled: Derive just multiplies.
+	l := shopping.Derive(input(
+		dinner("2026-11-10", 1, need(chicken, 400)),
+		dinner("2026-11-10", 0.875, need(milk, 200)),
+	))
+	if m := line(t, l, milk); !near(m.Need, 175) {
+		t.Errorf("milk Need = %v, want 175 (0.875 Batch of 200)", m.Need)
+	}
+}
+
+func TestACourseServedFromALeftoverNeedsNothingButItsSiblingStillDoes(t *testing.T) {
+	left := dinner("2026-11-10", 0, need(milk, 200))
+	left.Leftover = true
+	l := shopping.Derive(input(dinner("2026-11-10", 1, need(rice, 100)), left))
+	noLine(t, l, milk)
+	line(t, l, rice)
+}
