@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"embed"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -185,19 +184,38 @@ const Migration1400 = "1400_courses.sql"
 
 // Pending reports whether schema_migrations does not record the migration called name yet. A missing
 // schema_migrations table (a brand-new file) counts as pending.
-//
-// Stub of team A's design step (docs/dev/design/crs-a.md): returns ErrNotImplemented until filled in.
 func Pending(ctx context.Context, d *sql.DB, name string) (bool, error) {
-	return false, ErrNotImplemented
+	var tables int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'`).Scan(&tables); err != nil {
+		return false, fmt.Errorf("db: look for schema_migrations: %w", err)
+	}
+	if tables == 0 {
+		return true, nil
+	}
+	var recorded int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM schema_migrations WHERE name = ?`, name).Scan(&recorded); err != nil {
+		return false, fmt.Errorf("db: check %s: %w", name, err)
+	}
+	return recorded == 0, nil
 }
 
 // NeedsPre1400Snapshot reports whether 1400 is pending and a planned_meals table exists with at least
 // one row: the only case in which start-up takes the verified snapshot feeder-pre-1400.db first.
-//
-// Stub of team A's design step: returns ErrNotImplemented until filled in.
 func NeedsPre1400Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
-	return false, ErrNotImplemented
+	pending, err := Pending(ctx, d, Migration1400)
+	if err != nil || !pending {
+		return false, err
+	}
+	var tables int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'planned_meals'`).Scan(&tables); err != nil {
+		return false, fmt.Errorf("db: look for planned_meals: %w", err)
+	}
+	if tables == 0 {
+		return false, nil
+	}
+	var rows int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT 1 FROM planned_meals LIMIT 1)`).Scan(&rows); err != nil {
+		return false, fmt.Errorf("db: count planned_meals: %w", err)
+	}
+	return rows > 0, nil
 }
-
-// ErrNotImplemented marks the stubs of the Courses design step.
-var ErrNotImplemented = errors.New("db: not implemented")
