@@ -310,11 +310,6 @@
   min-inline-size: 0;
 }
 
-/* The Dialog's body is a grid item that would otherwise grow to the widest name. */
-.dialog__body:has(> .ingredient-exclusions) {
-  min-inline-size: 0;
-}
-
 .ingredient-exclusions .list-row__text {
   min-inline-size: 0;
 }

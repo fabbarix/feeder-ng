@@ -7,6 +7,23 @@ const timer = (over: Partial<CookTimer> = {}): CookTimer => ({
   endsAt: '2026-11-10T18:02:00Z', startedAt: '2026-11-10T18:00:00Z', ...over,
 })
 
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, e: string) => string }
+const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
+const fixtureJson = readFileSync(`${cwd}/../docs/spec/fixtures/reheat-defaults.json`, 'utf8')
+
+// Shared with internal/cook/reheat_test.go so the Go and TypeScript formulas cannot drift.
+describe('defaultReheatSeconds (shared fixture)', () => {
+  const { cases } = JSON.parse(fixtureJson) as { cases: { name: string; portions: number | string; reheatMinutes: number; seconds: number }[] }
+  const portionsOf = (p: number | string) => (typeof p === 'string' ? Number(p) : p)
+  it('has the cases', () => {
+    expect(cases.length).toBeGreaterThanOrEqual(15)
+  })
+  it.each(cases)('$name', (c) => {
+    expect(defaultReheatSeconds(portionsOf(c.portions), c.reheatMinutes)).toBe(c.seconds)
+  })
+})
+
 describe('defaultReheatSeconds', () => {
   it('is 2 minutes for one portion, plus 1 minute for each further portion', () => {
     expect(defaultReheatSeconds(1)).toBe(120)

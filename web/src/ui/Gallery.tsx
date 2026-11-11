@@ -16,6 +16,10 @@ import { TextField } from './fields/TextField'
 import { TimeField } from './fields/TimeField'
 import { Select } from './Select/Select'
 import { CourseMultiSelect, CourseSelect } from './Select/CourseSelect'
+import { TagSelect, type TagChoice } from './Select/TagSelect'
+import { TagDot } from './TagColour/TagDot'
+import { TagColourPicker, type TagColourPickerProps } from './TagColour/TagColourPicker'
+import { TAG_PALETTE } from '../lib/tags/palette'
 import { CoursePicker, type CoursePickerProps } from './CoursePicker/CoursePicker'
 import type { CourseChoice } from '../lib/courses'
 import { Stepper } from './Stepper'
@@ -578,6 +582,92 @@ function CourseSelectGroup() {
   )
 }
 
+/** The id of a Tag colour by its display name (the samples name colours by what people see). */
+const paletteId = (name: string): string => TAG_PALETTE.find((c) => c.name === name)?.id ?? ''
+
+/** Tag colours (TG-UI, spec 4.1): every colour as a tag chip and a dot, the filter chip off and on, and the picker and select. */
+function TagChipsGroup() {
+  return (
+    <Group name="Tag chips">
+      {TAG_PALETTE.map((c) => (
+        <Cell key={c.id} caption={`tag ${c.name}`}>
+          <Chip kind="tag" tagColour={c.id}>
+            {c.name}
+          </Chip>
+        </Cell>
+      ))}
+      <Cell caption="filter off, plum">
+        <Chip kind="filter" tagColour={paletteId('Plum')} selected={false} onClick={noop}>
+          Pasta
+        </Chip>
+      </Cell>
+      <Cell caption="filter on, plum">
+        <Chip kind="filter" tagColour={paletteId('Plum')} selected onClick={noop}>
+          Pasta
+        </Chip>
+      </Cell>
+      <Cell caption="unknown colour: neutral">
+        <Chip kind="tag" tagColour="chartreuse">
+          New
+        </Chip>
+      </Cell>
+    </Group>
+  )
+}
+
+function TagDotGroup() {
+  return (
+    <Group name="TagDot">
+      {TAG_PALETTE.map((c) => (
+        <Cell key={c.id} caption={c.name}>
+          <TagDot colour={c.id} />
+        </Cell>
+      ))}
+      <Cell caption="neutral">
+        <TagDot />
+      </Cell>
+    </Group>
+  )
+}
+
+/** A picker that keeps its own value; with `preview` it shows a pill in the chosen colour. */
+function ControlledTagColourPicker({ initial, preview, ...rest }: Omit<TagColourPickerProps, 'value' | 'onChange' | 'preview'> & { initial: string; preview?: boolean }) {
+  const [value, setValue] = useState(initial)
+  return <TagColourPicker {...rest} value={value} onChange={setValue} preview={preview ? <Chip kind="tag" tagColour={value}>Fish</Chip> : undefined} />
+}
+
+function TagColourPickerGroup() {
+  return (
+    <Group name="TagColourPicker">
+      <WideCell caption="Sage chosen, with a pill preview and a helper">
+        <ControlledTagColourPicker label="Tag colour" initial="sage" helper="Colours repeat after ten Tags." preview />
+      </WideCell>
+      <WideCell caption="Error">
+        <ControlledTagColourPicker label="Tag colour" initial="tomato" error="Choose a colour" />
+      </WideCell>
+      <WideCell caption="Disabled">
+        <ControlledTagColourPicker label="Tag colour" initial="rose" disabled />
+      </WideCell>
+    </Group>
+  )
+}
+
+const GALLERY_TAGS: TagChoice[] = [
+  { id: 1, name: 'Fish', colour: paletteId('Teal'), recipes: 12 },
+  { id: 2, name: 'Pasta', colour: paletteId('Apricot'), recipes: 1 },
+  { id: 3, name: 'Roast', colour: paletteId('Olive'), recipes: 0 },
+]
+
+function TagSelectGroup() {
+  return (
+    <Group name="TagSelect">
+      <WideCell caption="TagSelect (a dot and the Recipe count on each Tag)">
+        <TagSelect label="Tag" tags={GALLERY_TAGS} value={1} onChange={noop} />
+      </WideCell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -605,6 +695,10 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <MenuGroup />
       <CoursePickerGroup />
       <CourseSelectGroup />
+      <TagChipsGroup />
+      <TagDotGroup />
+      <TagColourPickerGroup />
+      <TagSelectGroup />
       <OverlayGalleryGroups />
     </section>
   )

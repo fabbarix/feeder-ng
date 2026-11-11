@@ -16,6 +16,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
+	tagstore "github.com/fabbarix/feeder-ng/internal/tag/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
@@ -714,7 +715,7 @@ func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 // writeContent stores Tags, lines, Steps and their uses for the Recipe id.
 func writeContent(ctx context.Context, tx *sql.Tx, id int64, in recipe.Input) error {
 	for pos, name := range in.Tags {
-		tagID, err := upsertTag(ctx, tx, name)
+		tagID, err := tagstore.EnsureTx(ctx, tx, name)
 		if err != nil {
 			return err
 		}
@@ -749,17 +750,6 @@ func writeContent(ctx context.Context, tx *sql.Tx, id int64, in recipe.Input) er
 		}
 	}
 	return nil
-}
-
-// upsertTag returns the Tag's id, creating it on first use. The first spelling is kept.
-func upsertTag(ctx context.Context, tx *sql.Tx, name string) (int64, error) {
-	key := recipe.TagKey(name)
-	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO tags (key, name) VALUES (?,?)`, key, name); err != nil {
-		return 0, err
-	}
-	var id int64
-	err := tx.QueryRowContext(ctx, `SELECT id FROM tags WHERE key = ?`, key).Scan(&id)
-	return id, err
 }
 
 // getRecipe loads a Recipe with its Tags, lines, Steps and timing.
