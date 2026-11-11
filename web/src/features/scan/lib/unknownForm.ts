@@ -2,6 +2,7 @@
 // and the Op it produces. Plain TypeScript, no React. Stubs until implemented.
 import { defaultBaseUnit } from '../../ingredients/lib/newIngredient'
 import { defaultProductName } from '../../products/lib/names'
+import type { RawImage } from '../../../ui'
 import { scanStrings } from '../strings'
 import type { BarcodeScope, BaseUnit, Op } from '../types'
 import { pricePerKgFromWeight } from './barcode'
@@ -26,6 +27,11 @@ export interface UnknownFormValues {
   weightText: string
   /** PP: the Picture's image id for the Product to create, "" or absent = none */
   image?: string
+  /**
+   * PPX: the Picture picked while OFFLINE (raw-mode ImagePicker, downscaled). Not part of the Op: the flow hands its Blob to the
+   * queue, which uploads it on sync. Left out of an online form (the picker uploads and `image` is set instead).
+   */
+  picture?: RawImage | null
 }
 
 /** pack: the full form. weighed: Ingredient + Product name only. weighed_price: also the weight, once. */

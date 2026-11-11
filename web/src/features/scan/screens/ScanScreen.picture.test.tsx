@@ -1,4 +1,4 @@
-// PP: the Scan screen shows the Product's Picture on the scan line, and offers the Picture field in the what-is-this sheet only while online.
+// PP: the Scan screen shows the Product's Picture on the scan line, and offers the Picture field in the what-is-this sheet (upload mode online, raw mode offline: PPX).
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -56,8 +56,14 @@ describe('ScanScreen: Product pictures', () => {
     expect(screen.getByRole('group', { name: scanStrings.pictureLabel })).toBeInTheDocument()
   })
 
-  it('and leaves it out while offline', () => {
+  it('the field is the upload picker while online', () => {
+    open(controller({ flow: flow(unknown) }))
+    expect(screen.getByRole('group', { name: scanStrings.pictureLabel })).toHaveAttribute('data-mode', 'upload')
+  })
+
+  // PPX: no longer left out offline; the Blob is queued with the scan and uploaded on sync.
+  it('and shows it in raw mode while offline', () => {
     open(controller({ online: false, flow: flow(unknown) }))
-    expect(screen.queryByRole('group', { name: scanStrings.pictureLabel })).toBeNull()
+    expect(screen.getByRole('group', { name: scanStrings.pictureLabel })).toHaveAttribute('data-mode', 'raw')
   })
 })

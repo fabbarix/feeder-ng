@@ -45,6 +45,18 @@ export const scanStrings = {
   offline: 'Offline: Scans are kept and sent when you are back online',
   queued: (n: number) => `${n} ${n === 1 ? 'Scan' : 'Scans'} waiting to sync`,
   merged: (name: string) => `Someone already added this barcode; yours was merged into ${name}`,
+  /** PPX: a merged scan that gave its picture to a Product that had none */
+  mergedWithPicture: (name: string) => `Someone already added this barcode; yours was merged into ${name}, and your picture was added`,
+  /** PPX: a queued picture that could not be sent; the Product was added without it. reason: PictureFailure['reason'] */
+  pictureDropped: (name: string, reason: 'too_large' | 'unsupported' | 'rejected' | 'missing') =>
+    ({
+      too_large: `The picture of ${name} was too large to send, so it was added without one`,
+      unsupported: `The picture of ${name} is not a supported image, so it was added without one`,
+      rejected: `The picture of ${name} couldn't be sent, so it was added without one`,
+      missing: `The picture of ${name} was lost before it could be sent, so it was added without one`,
+    })[reason],
+  /** PPX: the phone had no room for the picture of a scan queued offline; the scan is queued without it */
+  pictureNotSaved: "This phone has no room for the picture, so the Scan was queued without it",
   rejectedCount: (n: number) => `${n} ${n === 1 ? 'Scan' : 'Scans'} couldn't sync`,
   rejected: (message: string) => `Couldn't sync a Scan: ${message}`,
   rejectedAdd: (message: string) => `Couldn't add that Scan: ${message}`,

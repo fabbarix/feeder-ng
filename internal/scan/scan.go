@@ -73,7 +73,9 @@ type Op struct {
 	Ingredient  *IngredientRef `json:"ingredient,omitempty"`
 	ProductName string         `json:"productName,omitempty"`
 	// ProductImage is the Picture of the Product this shop_unknown creates: an image id from /api/images, "" = none (PP).
-	// A malformed or never-uploaded id is rejected (code "validation", field productImage). Ignored when the barcode already belongs to a Product.
+	// A malformed id is rejected (code "validation", field productImage). An id with no stored file (never uploaded, or swept before a queued scan
+	// synced) is dropped and the scan still applies (PPX). When the barcode already belongs to a Product the scan merges into it and the Picture
+	// fills it only if it has none (Merged.PictureFilled).
 	ProductImage string  `json:"productImage,omitempty"`
 	PackSize     float64 `json:"packSize,omitempty"` // Base Units; weighed codes default to Quantity
 	Scope        Scope   `json:"scope,omitempty"`
@@ -284,6 +286,8 @@ type ErrInfo struct {
 type Merged struct {
 	ProductID   int64  `json:"productId"`
 	ProductName string `json:"productName"`
+	// PictureFilled (PPX): the Product had no Picture and took the one from this scan's form.
+	PictureFilled bool `json:"pictureFilled,omitempty"`
 }
 
 // Applied is what an operation did.
