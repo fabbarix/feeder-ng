@@ -141,6 +141,23 @@ func TestAPictureThatWasNeverUploadedIsRefused(t *testing.T) {
 	}
 }
 
+func TestARefusedPictureLeavesTheRestOfThePatchUnapplied(t *testing.T) {
+	env := testkit.Start(t)
+	u := env.LoginUser(t)
+	var p pictured
+	u.Post("/api/products", map[string]any{"name": "Passata", "ingredientId": ingredient(t, u), "packSize": 700}).MustJSON(t, &p)
+	url := fmt.Sprintf("/api/products/%d", p.ID)
+	r := u.Patch(url, map[string]any{"name": "Passata rustica", "image": strings.Repeat("c", 32)})
+	if r.Status != 400 {
+		t.Fatalf("patch = %d %s", r.Status, r.Body)
+	}
+	var got struct{ Name string }
+	u.Get(url).MustJSON(t, &got)
+	if got.Name != "Passata" {
+		t.Errorf("name = %q; a refused PATCH must change nothing", got.Name)
+	}
+}
+
 func TestDeletingAProductRemovesItsPictureFile(t *testing.T) {
 	env := testkit.Start(t)
 	u := env.LoginUser(t)
