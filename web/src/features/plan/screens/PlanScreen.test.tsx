@@ -84,7 +84,8 @@ describe('PlanScreen layout (5.2)', () => {
   it.each([
     [358, '2'],
     [640, '4'],
-    [1160, '4'],
+    [1099, '4'],
+    [1136, '7'],
     [1480, '7'],
   ])('at a %ipx container the week grid has %s columns', async (width, columns) => {
     widthStub(width)

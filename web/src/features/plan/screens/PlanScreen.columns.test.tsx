@@ -30,14 +30,23 @@ function observe(width: number) {
 }
 
 describe('PlanScreen columns come from the grid container', () => {
-  it('a 1160 px container on a 1440 px viewport has four columns and full day names', async () => {
+  it('a 900 px container on a 1440 px viewport has four columns and full day names', async () => {
     mockApi({ 'GET /api/plan': view })
-    const measure = observe(1160)
+    const measure = observe(900)
     renderWithProviders(<PlanScreen />)
     const grid = await screen.findByRole('group', { name: 'Plan' })
     measure()
     expect(grid).toHaveAttribute('data-columns', '4')
     expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument()
+  })
+
+  it('a 1136 px container (1440 px viewport beside the rail) has seven columns: the week in one row', async () => {
+    mockApi({ 'GET /api/plan': view })
+    const measure = observe(1136)
+    renderWithProviders(<PlanScreen />)
+    const grid = await screen.findByRole('group', { name: 'Plan' })
+    measure()
+    expect(grid).toHaveAttribute('data-columns', '7')
   })
 
   it('a 1480 px container has seven columns with the short weekday as heading', async () => {

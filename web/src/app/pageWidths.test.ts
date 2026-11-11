@@ -7,7 +7,7 @@ const concrete = (p: string) => p.replace(/:[a-zA-Z]+/g, '7')
 
 describe('pageWidthFor: the per-route width table', () => {
   it.each([
-    ['/', 'default'],
+    ['/', 'wide'],
     ['/stock', 'default'],
     ['/recipes/7', 'default'],
     ['/recipes/7/edit', 'default'],

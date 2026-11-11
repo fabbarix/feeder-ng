@@ -218,4 +218,9 @@ describe('MealTile (compact, on a day tile)', () => {
       expect(container.querySelectorAll('.plan-meal__head button')).toHaveLength(0)
     })
   })
+
+  it('R2-2: the Recipe name button carries the full name as its title (the 2-line clamp never hides it)', () => {
+    setup(slot({ meal: meal({ recipeName: 'Slow-roasted chicken thighs with lemon and thyme' }) }), '2026-11-10', true)
+    expect(screen.getByRole('button', { name: /Slow-roasted chicken thighs/ })).toHaveAttribute('title', 'Slow-roasted chicken thighs with lemon and thyme')
+  })
 })

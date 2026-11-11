@@ -42,17 +42,19 @@ describe('useContainerColumns', () => {
     render(<Probe />)
     resizeTo(358)
     expect(screen.getByTestId('box')).toHaveTextContent('2')
-    resizeTo(1160)
+    resizeTo(1099)
     expect(screen.getByTestId('box')).toHaveTextContent('4')
+    resizeTo(1136)
+    expect(screen.getByTestId('box')).toHaveTextContent('7')
     resizeTo(1480)
     expect(screen.getByTestId('box')).toHaveTextContent('7')
   })
 
-  it('ignores the viewport: a desktop matchMedia does not give seven columns in a 1160 px container', () => {
+  it('ignores the viewport: a desktop matchMedia does not give seven columns in a 900 px container', () => {
     stubResizeObserver()
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }))
     render(<Probe />)
-    resizeTo(1160)
+    resizeTo(900)
     expect(screen.getByTestId('box')).toHaveTextContent('4')
   })
 
