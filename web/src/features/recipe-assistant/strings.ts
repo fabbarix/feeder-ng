@@ -36,6 +36,8 @@ export const raStrings = {
   secretKeyBefore:
     'To turn on the Recipe Assistant, the server needs a secret key (FEEDER_SECRET_KEY). Whoever runs your server sets it once; see the ',
   deployGuide: 'deploy guide',
+  // The app does not serve docs/dev/deploy.md, so the guide is linked at its repository path (Chart.yaml `home`).
+  deployGuideUrl: 'https://github.com/fabbarix/feeder-ng/blob/main/docs/dev/deploy.md',
   saved: 'Saved.',
   removeFailed: "Couldn't remove the API key. Try again.",
   actionsLabel: 'Settings actions',
