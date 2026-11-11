@@ -308,9 +308,14 @@ func TestMigration1400RewritesPlannedMealScopesOnly(t *testing.T) {
 	if _, err := u.d.Exec(`INSERT INTO cook_timers(scope,step,label,duration_seconds,state,started_at,ends_at) VALUES (?,2,'again',60,'running','t','t')`, "meal:2026-11-10/4/"+main); err == nil {
 		t.Error("a second timer for the same (scope, Step) was accepted")
 	}
-	// push_sent is 1410's job.
-	if got := rows(t, u.d, `SELECT subscription_id,key,sent_at FROM push_sent ORDER BY key`); !equalRows(got, u.before["push_sent"]) {
-		t.Errorf("push_sent changed by 1400: %v", got)
+	// push_sent is 1410's job, and upgrade() runs 1410 too: the only change is the Advance Step key gaining the main
+	// Course; the Start cooking and Confirm Cooked keys, and every sent_at, are untouched.
+	wantSent := make([]string, len(u.before["push_sent"]))
+	for i, r := range u.before["push_sent"] {
+		wantSent[i] = strings.Replace(r, "advanceStep:2026-11-12/4/17@", "advanceStep:2026-11-12/4/"+main+"/17@", 1)
+	}
+	if got := rows(t, u.d, `SELECT subscription_id,key,sent_at FROM push_sent ORDER BY key`); !equalRows(got, wantSent) {
+		t.Errorf("push_sent = %v, want %v (only the Advance Step key gains the main Course)", got, wantSent)
 	}
 }
 

@@ -200,3 +200,101 @@ func TestTickingAnExtraTwiceWithTheSameClientUUIDAddsOneLot(t *testing.T) {
 		t.Fatalf("Stock Lots = %+v, want one Lot of 2000 ml", lots.Lots)
 	}
 }
+
+// ---- Courses (spec §9, ADR 0008, team G1) ----
+// The Shopping List adapter reads every Planned Meal, whatever its Course. A Course covered by a Whole meal has
+// no Planned Meal and needs nothing; a Planned Meal kept beside a Whole meal is a Planned Meal and counts.
+
+// seedCourseDinner plants a Dinner on Tuesday 2026-11-10 and, for each (Course, Recipe, Batches), a Recipe with
+// one 100 g line of the Ingredient named and a Planned Meal.
+type courseMeal struct {
+	course  string // courses.name
+	recipe  string
+	ingr    int64
+	grams   float64
+	batches float64
+}
+
+func seedCourseDinner(t *testing.T, env *testkit.Env, meals ...courseMeal) {
+	t.Helper()
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if _, err := env.DB.Exec(q, args...); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	exec(`INSERT INTO meal_slots(id,weekday,name,time) VALUES (90,2,'Dinner','19:00')`)
+	for i, m := range meals {
+		rid := int64(100 + i)
+		exec(`INSERT INTO recipes(id,name,yield,created_at,updated_at) VALUES (?,?,4,'2026-11-09T12:00:00Z','2026-11-09T12:00:00Z')`, rid, m.recipe)
+		exec(`INSERT INTO recipe_lines(recipe_id,position,ingredient_id,quantity,unit) VALUES (?,0,?,?,'g')`, rid, m.ingr, m.grams)
+		exec(`INSERT INTO planned_meals(date,meal_slot_id,course_id,recipe_id,batches,portions,created_at,updated_at)
+			VALUES ('2026-11-10',90,(SELECT id FROM courses WHERE name=?),?,?,?,'2026-11-09T12:00:00Z','2026-11-09T12:00:00Z')`,
+			m.course, rid, m.batches, m.batches*4)
+	}
+}
+
+func shoppingNeeds(t *testing.T, c *testkit.Client) map[int64]float64 {
+	t.Helper()
+	var v struct {
+		Lines []struct {
+			IngredientID int64   `json:"ingredientId"`
+			Need         float64 `json:"need"`
+		} `json:"lines"`
+	}
+	r := c.Get("/api/shopping/list")
+	r.MustJSON(t, &v)
+	if r.Status != 200 {
+		t.Fatalf("list = %d %s", r.Status, r.Body)
+	}
+	out := map[int64]float64{}
+	for _, l := range v.Lines {
+		out[l.IngredientID] = l.Need
+	}
+	return out
+}
+
+func TestTheShoppingListSumsEveryCourseOfASlot(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	rice, beans := seedIngredient(t, env, "rice", "g"), seedIngredient(t, env, "beans", "g")
+	seedCourseDinner(t, env,
+		courseMeal{"Main", "Risotto", rice, 300, 1},
+		courseMeal{"Side", "Rice salad", rice, 100, 2},
+		courseMeal{"Starter", "Bean soup", beans, 250, 1},
+	)
+	needs := shoppingNeeds(t, c)
+	if needs[rice] != 500 { // 300 + 2 x 100
+		t.Errorf("rice Need = %v, want 500 over the Main and the Side", needs[rice])
+	}
+	if needs[beans] != 250 {
+		t.Errorf("beans Need = %v, want 250 from the Starter", needs[beans])
+	}
+}
+
+func TestACourseSamOptsOutOfNeedsAProportionallySmallerBatch(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	cream := seedIngredient(t, env, "cream", "g")
+	// The planner stored 3.5 portions of a yield-4 Dessert as 0.875 Batches (Course Attendance applied).
+	seedCourseDinner(t, env, courseMeal{"Dessert", "Panna cotta", cream, 200, 0.875})
+	if got := shoppingNeeds(t, c)[cream]; got != 175 {
+		t.Errorf("cream Need = %v, want 175", got)
+	}
+}
+
+func TestACoveredCourseNeedsNothingAndAKeptPlannedMealStillCounts(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	pasta, cake := seedIngredient(t, env, "pasta", "g"), seedIngredient(t, env, "cake mix", "g")
+	// A Whole meal (a lasagne) covers the Side: it has no Planned Meal, so nothing is added for it. The Dessert
+	// was kept beside the Whole meal, so it is a Planned Meal and counts as usual.
+	seedCourseDinner(t, env,
+		courseMeal{"Main", "Lasagne", pasta, 400, 1},
+		courseMeal{"Dessert", "Sponge", cake, 150, 1},
+	)
+	needs := shoppingNeeds(t, c)
+	if len(needs) != 2 || needs[pasta] != 400 || needs[cake] != 150 {
+		t.Errorf("needs = %v, want 400 g pasta and 150 g cake mix only", needs)
+	}
+}
