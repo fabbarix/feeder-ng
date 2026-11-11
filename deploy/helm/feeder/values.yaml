@@ -33,7 +33,7 @@ google:
 # Secret, never from a value: there is no inline field. Losing or changing it means an Admin re-enters the API key.
 secretKey:
   # true: the chart creates Secret <fullname>-secret-key on install with a random key, keeps it on upgrade (lookup) and on
-  # uninstall (helm.sh/resource-policy: keep). Under helm template, --dry-run, Argo CD or Flux offline renders lookup finds
+  # uninstall (helm.sh/resource-policy: keep). Under helm template, client --dry-run, Argo CD or Flux offline renders lookup finds
   # nothing and every render makes a new key: set existingSecret there. false with no existingSecret: no key, no Recipe Assistant.
   generate: true
   # Name of a Secret you created (openssl rand -base64 32). Wins over generate; the chart creates no Secret.

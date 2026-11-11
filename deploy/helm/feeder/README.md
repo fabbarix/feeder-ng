@@ -41,10 +41,10 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 
 ## Recipe Assistant secret key
 
-The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 random bytes in base64. It always comes from a Secret; there is no inline value, and the schema rejects `secretKey.value`, `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry for it (a `valueFrom` entry is allowed, for an external secret store).
+The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 random bytes in base64. It always comes from a Secret; there is no inline value, and the schema rejects `secretKey.value`, and the template refuses `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry for it. A `valueFrom` entry named `FEEDER_SECRET_KEY` in `extraEnv` is allowed, for an external secret store: it replaces the generated entry, and the chart then creates no Secret of its own.
 
-- **Default (`secretKey.generate: true`).** The chart creates Secret `<fullname>-secret-key` with a random key, reuses it on every upgrade (it looks the Secret up with `lookup`), and keeps it when the release is uninstalled (`helm.sh/resource-policy: keep`), so a reinstall finds the same key.
-- **Your own Secret (`secretKey.existingSecret`).** Wins over `generate`; the chart creates no Secret. `secretKey.key` names the key inside it (default `secret-key`):
+- **Default (`secretKey.generate: true`).** The chart creates Secret `<fullname>-secret-key` with a random key, reuses it on every upgrade (it looks the Secret up with `lookup`), and keeps it when the release is uninstalled (`helm.sh/resource-policy: keep`), so a reinstall finds the same key. Changing `secretKey.key` on an existing install generates a new key (the kept Secret has no value under the new name), so an Admin must enter the Recipe Assistant's API key again.
+- **Your own Secret (`secretKey.existingSecret`).** Wins over `generate`; the chart creates no Secret. `secretKey.key` names the key inside it (default `secret-key`).:
 
   ```sh
   kubectl -n feeder create secret generic feeder-secret-key \
@@ -53,7 +53,7 @@ The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 r
     --reset-then-reuse-values --set secretKey.existingSecret=feeder-secret-key
   ```
 - **Off (`secretKey.generate: false`, no `existingSecret`).** No Secret and no `FEEDER_SECRET_KEY`: the Recipe Assistant stays off.
-- **Argo CD, Flux and `helm template`.** `lookup` returns nothing under `helm template`, `--dry-run` and offline renders, so each render generates a new key and the Secret would flip on every sync. In those setups set `secretKey.existingSecret`.
+- **Argo CD, Flux and `helm template`.** `lookup` returns nothing under `helm template`, client `--dry-run` and offline renders, so each render generates a new key and the Secret would flip on every sync. In those setups set `secretKey.existingSecret`.
 - **Losing or rotating the key.** If the key is lost or replaced, the stored API key can no longer be read and an Admin must re-enter the API key; nothing else is affected. There is no previous-key setting (no `_PREVIOUS` variable). To rotate: replace the Secret's value, run `kubectl -n feeder rollout restart deploy/feeder`, then re-enter the API key in Settings. Keep the key out of backups of the data volume.
 - **Upgrading from 1.0.0-dev.** Use `--reset-then-reuse-values` (Helm 3.14 or newer), or add `--set secretKey.generate=true`. Plain `--reuse-values` reuses the old values, which have no `secretKey`, so no key is created.
 

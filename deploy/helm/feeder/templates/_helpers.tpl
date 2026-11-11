@@ -77,10 +77,18 @@ otherwise). Old values mean: no generate, no existingSecret, so no key until the
 {{- dict "generate" ($sk.generate | default false) "existingSecret" ($sk.existingSecret | default "") "key" ($sk.key | default "secret-key") | toJson -}}
 {{- end }}
 
+{{/* "true" when extraEnv already provides FEEDER_SECRET_KEY (valueFrom): then the chart adds neither an env entry nor a Secret. */}}
+{{- define "feeder.secretKeyFromExtraEnv" -}}
+{{- range .Values.extraEnv | default list -}}
+{{- if eq .name "FEEDER_SECRET_KEY" -}}true{{- end -}}
+{{- end -}}
+{{- end }}
+
 {{/* Name of the Secret holding FEEDER_SECRET_KEY, or empty when there is none. */}}
 {{- define "feeder.secretKeySecretName" -}}
 {{- $sk := include "feeder.secretKey" . | fromJson -}}
-{{- if $sk.existingSecret -}}
+{{- if include "feeder.secretKeyFromExtraEnv" . -}}
+{{- else if $sk.existingSecret -}}
 {{- $sk.existingSecret -}}
 {{- else if $sk.generate -}}
 {{- printf "%s-secret-key" (include "feeder.fullname" .) | trunc 63 | trimSuffix "-" -}}
