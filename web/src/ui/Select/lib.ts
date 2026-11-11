@@ -9,6 +9,8 @@ export interface SelectOption<V extends string | number = string> {
   group?: string
   /** Extra search terms. */
   keywords?: string[]
+  /** What search matches, instead of the label, meta and keywords (a Tag's count is not something to search for). */
+  searchText?: string
   disabled?: boolean
   /** 40 px thumb, icon, badge or avatar. */
   leading?: ReactNode
@@ -33,7 +35,7 @@ export function filterOptions<V extends string | number>(options: SelectOption<V
   const words = normalise(query).split(/\s+/).filter(Boolean)
   if (words.length === 0) return options
   return options.filter((option) => {
-    const haystack = normalise([option.label, option.meta ?? '', ...(option.keywords ?? [])].join(' '))
+    const haystack = normalise(option.searchText ?? [option.label, option.meta ?? '', ...(option.keywords ?? [])].join(' '))
     return words.every((word) => haystack.includes(word))
   })
 }

@@ -1,0 +1,119 @@
+{
+  "_comment": "Shared by internal/cook/reheat_test.go and web/src/features/cook/lib/reheat.test.ts so DefaultReheatSeconds (Go) and defaultReheatSeconds (TS) cannot drift. portions may be the strings NaN, Infinity or -Infinity (not valid JSON numbers). reheatMinutes 0 means none.",
+  "cases": [
+    {
+      "name": "one portion",
+      "portions": 1,
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "two portions",
+      "portions": 2,
+      "reheatMinutes": 0,
+      "seconds": 180
+    },
+    {
+      "name": "four portions",
+      "portions": 4,
+      "reheatMinutes": 0,
+      "seconds": 300
+    },
+    {
+      "name": "at the cap",
+      "portions": 9,
+      "reheatMinutes": 0,
+      "seconds": 600
+    },
+    {
+      "name": "past the cap",
+      "portions": 40,
+      "reheatMinutes": 0,
+      "seconds": 600
+    },
+    {
+      "name": "zero portions",
+      "portions": 0,
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "negative portions",
+      "portions": -3,
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "fractional rounds up",
+      "portions": 1.5,
+      "reheatMinutes": 0,
+      "seconds": 180
+    },
+    {
+      "name": "fractional just over one",
+      "portions": 1.01,
+      "reheatMinutes": 0,
+      "seconds": 180
+    },
+    {
+      "name": "fractional below one",
+      "portions": 0.5,
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "NaN portions",
+      "portions": "NaN",
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "Infinity portions",
+      "portions": "Infinity",
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "negative Infinity portions",
+      "portions": "-Infinity",
+      "reheatMinutes": 0,
+      "seconds": 120
+    },
+    {
+      "name": "Recipe length wins",
+      "portions": 2,
+      "reheatMinutes": 5,
+      "seconds": 300
+    },
+    {
+      "name": "one minute is 60 s",
+      "portions": 1,
+      "reheatMinutes": 1,
+      "seconds": 60
+    },
+    {
+      "name": "flat, not scaled by portions",
+      "portions": 8,
+      "reheatMinutes": 4,
+      "seconds": 240
+    },
+    {
+      "name": "fifteen minutes",
+      "portions": 2,
+      "reheatMinutes": 15,
+      "seconds": 900
+    },
+    {
+      "name": "Recipe length above 30 min is clamped",
+      "portions": 4,
+      "reheatMinutes": 45,
+      "seconds": 1800
+    },
+    {
+      "name": "Recipe length wins over a NaN",
+      "portions": "NaN",
+      "reheatMinutes": 3,
+      "seconds": 180
+    }
+  ]
+}

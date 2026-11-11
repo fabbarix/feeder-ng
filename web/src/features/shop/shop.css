@@ -104,7 +104,11 @@
   font-size: var(--text-body-strong-size);
   font-weight: 700;
   line-height: var(--text-body-strong-line);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .line-tile[data-state='ticked'] .line-tile__title {
@@ -118,6 +122,7 @@
   font-size: var(--text-title-3-size);
   font-weight: 800;
   line-height: var(--text-title-3-line);
+  white-space: nowrap;
 }
 
 .line-tile__pack {
