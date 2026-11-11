@@ -29,8 +29,8 @@ func init() { app.Register(app.Module{Name: "planning", Mount: mount}) }
 func mount(r *app.Router, d app.Deps) {
 	src := runner.NewDBSources(d.DB, d.Clock, d.Logger)
 	st := store.New(d.DB, d.Clock)
-	// N4: resolving a meal cancels its Cook timers (the cook service needs only the store, the clock and the bus here).
-	timers := cookservice.New(cookservice.Config{Store: cookstore.New(d.DB), Clock: d.Clock, Bus: d.Events})
+	// N4: resolving a meal cancels its Cook timers. The cook service also reads the cooking timeline (cookMinutes).
+	timers := cookService(d)
 	run := runner.New(runner.Deps{
 		DB: d.DB, Clock: d.Clock, Store: st, Source: src,
 		Stock:  runner.NewStockService(d.DB, d.Clock, d.Events),
@@ -54,7 +54,7 @@ func mount(r *app.Router, d app.Deps) {
 	})
 	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
 
-	a := &api{run: run, st: st, names: newNames(d)}
+	a := &api{run: run, st: st, names: newNames(d), cook: timers}
 	r.User("GET /api/plan", a.view)
 	r.User("GET /api/plan/to-confirm", a.toConfirm)
 	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
@@ -67,17 +67,17 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/plan/{date}/{slotId}/cook", a.cookPreview)
 	r.User("POST /api/plan/{date}/{slotId}/cooked", a.cooked)
 	r.User("POST /api/plan/{date}/{slotId}/not-cooked", a.notCooked)
-	// Team C2 (docs/dev/design/crs-c2.md): the Course routes. Stubs until the Developer fills them in; the course-less
-	// routes above stay as aliases for the main Course until C3.
-	r.User("PUT /api/plan/{date}/{slotId}/{courseId}", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/{courseId}/confirm", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/{courseId}/unpin", a.notImplemented)
-	r.User("GET /api/plan/{date}/{slotId}/{courseId}/alternatives", a.notImplemented)
-	r.User("GET /api/plan/{date}/{slotId}/{courseId}/cook", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/{courseId}/cooked", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/{courseId}/not-cooked", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/all/cooked", a.notImplemented)
-	r.User("POST /api/plan/{date}/{slotId}/all/not-cooked", a.notImplemented)
+	// Team C2 (docs/dev/design/crs-c2.md §3): the Course routes. The course-less routes above are the main Course's
+	// aliases until C3; the literal "all" segment beats {courseId} in the mux.
+	r.User("PUT /api/plan/{date}/{slotId}/{courseId}", a.setMeal)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/confirm", a.confirm)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/unpin", a.unpin)
+	r.User("GET /api/plan/{date}/{slotId}/{courseId}/alternatives", a.alternatives)
+	r.User("GET /api/plan/{date}/{slotId}/{courseId}/cook", a.cookPreview)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/cooked", a.cooked)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/not-cooked", a.notCooked)
+	r.User("POST /api/plan/{date}/{slotId}/all/cooked", a.allCooked)
+	r.User("POST /api/plan/{date}/{slotId}/all/not-cooked", a.notCookedAll)
 	r.User("GET /api/slot-rules", a.slotRules)
 	r.User("POST /api/slot-rules", a.addSlotRule)
 	r.User("DELETE /api/slot-rules/{id}", a.deleteSlotRule)
@@ -90,11 +90,39 @@ type api struct {
 	run   *runner.Runner
 	st    *store.Store
 	names *names
+	cook  *cookservice.Service
 }
 
-// notImplemented answers the C2 routes that are not built yet.
-func (a *api) notImplemented(w http.ResponseWriter, _ *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "Not built yet (crs-c2)")
+// cookService is the cook service the planning module uses: the timers it cancels and the timelines it reads.
+func cookService(d app.Deps) *cookservice.Service {
+	db := cookservice.NewDB(d.DB, d.Clock)
+	return cookservice.New(cookservice.Config{Store: cookstore.New(d.DB), Clock: d.Clock, Bus: d.Events,
+		Recipes: db.Recipes(), Meals: db.Meals(), Household: db.Household()})
+}
+
+// BoardSlots is the plan of from..to in the plan's JSON, with courses and cookMinutes: the board's tonight and
+// tomorrow tiles (crs-c2 §5.4). cook httpapi mounts it on GET /api/board. It reads only; it starts no worker.
+func BoardSlots(d app.Deps) func(ctx context.Context, from, to string) (any, error) {
+	src := runner.NewDBSources(d.DB, d.Clock, d.Logger)
+	run := runner.New(runner.Deps{
+		DB: d.DB, Clock: d.Clock, Store: store.New(d.DB, d.Clock), Source: src,
+		Stock: runner.NewStockService(d.DB, d.Clock, d.Events), Events: d.Events, Logger: d.Logger,
+	})
+	a := &api{run: run, st: store.New(d.DB, d.Clock), names: newNames(d), cook: cookService(d)}
+	return func(ctx context.Context, from, to string) (any, error) {
+		v, err := run.View(ctx, from, to)
+		if err != nil {
+			return nil, err
+		}
+		if err := a.fillCookMinutes(ctx, v.Slots); err != nil {
+			return nil, err
+		}
+		t, err := a.names.load(ctx, viewMeals(v.Slots)...)
+		if err != nil {
+			return nil, err
+		}
+		return slots(v.Slots, t), nil
+	}
 }
 
 // writeErr maps the runner's and store's errors to the API's error codes.
@@ -126,6 +154,12 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "batches"
 	case errors.Is(err, plan.ErrInvalidLeftover):
 		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "leftoverPortions"
+	case errors.Is(err, runner.ErrCourseNotInSlot):
+		status, code = http.StatusUnprocessableEntity, "course_not_in_slot"
+	case errors.Is(err, runner.ErrRecipeNotInCourse):
+		status, code = http.StatusUnprocessableEntity, "recipe_not_in_course"
+	case errors.Is(err, runner.ErrRecipeInSlot):
+		status, code = http.StatusConflict, "recipe_in_slot"
 	case errors.Is(err, store.ErrDuplicateRule):
 		status, code = http.StatusConflict, "duplicate_rule"
 	case errors.Is(err, store.ErrUnknownRef):
@@ -164,6 +198,12 @@ func messageFor(code string) string {
 		return "That Recipe is archived"
 	case "duplicate_rule":
 		return "That Slot Rule already exists"
+	case "course_not_in_slot":
+		return "The Meal Slot does not serve that Course"
+	case "recipe_not_in_course":
+		return "That Recipe is not marked with that Course"
+	case "recipe_in_slot":
+		return "That Recipe is already in another Course of that Meal Slot on that day"
 	case "unknown_reference":
 		return "The Meal Slot or Recipe does not exist"
 	case "validation_failed":

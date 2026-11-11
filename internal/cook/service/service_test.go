@@ -36,13 +36,23 @@ func (f fakeRecipes) Steps(_ context.Context, id int64) (cook.RecipeSteps, error
 
 type fakeMeals struct{ meals []service.MealInfo }
 
-func (f *fakeMeals) Meal(_ context.Context, date string, slot int64) (service.MealInfo, error) {
+func (f *fakeMeals) Meal(_ context.Context, date string, slot, course int64) (service.MealInfo, error) {
 	for _, m := range f.meals {
-		if m.Date == date && m.MealSlotID == slot {
+		if m.Date == date && m.MealSlotID == slot && m.CourseID == course {
 			return m, nil
 		}
 	}
 	return service.MealInfo{}, service.ErrNotFound
+}
+
+func (f *fakeMeals) Slot(_ context.Context, date string, slot int64) ([]service.MealInfo, error) {
+	var out []service.MealInfo
+	for _, m := range f.meals {
+		if m.Date == date && m.MealSlotID == slot {
+			out = append(out, m)
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeMeals) Upcoming(_ context.Context, from string) ([]service.MealInfo, error) {

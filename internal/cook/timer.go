@@ -125,11 +125,16 @@ func TimerLabel(number int, text string) string {
 	if text == "" {
 		return label
 	}
+	return label + ": " + CutStepText(text)
+}
+
+// CutStepText is a Step's text cut to 30 runes with an ellipsis when longer (the timer labels use it).
+func CutStepText(text string) string {
 	const maxRunes = 30
 	if utf8.RuneCountInString(text) > maxRunes {
 		text = string([]rune(text)[:maxRunes]) + "…"
 	}
-	return label + ": " + text
+	return text
 }
 
 func itoa(n int) string {

@@ -8,6 +8,8 @@ type AdvanceCandidate struct {
 	MealDate        string
 	MealSlotID      int64
 	SlotName        string
+	CourseID        int64 // the Course the Planned Meal fills (real id)
+	CourseName      string
 	RecipeName      string
 	MealAt          time.Time // when the meal is served
 	Step            int

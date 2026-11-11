@@ -34,16 +34,28 @@ type MealInfo struct {
 	MealSlotID int64
 	SlotName   string
 	RecipeID   int64
-	Batches    float64
-	State      string // planned | cooked | skipped
+	Batches    float64 // 0 when served from a Leftover
+	State      string  // planned | cooked | skipped
 	At         time.Time
+	// The Course the Planned Meal fills (crs-c2): its real id, its name, whether it is the main Course (its scope
+	// keeps the two-part form until C3), its place in the slot's Course order and the portions the slot needed.
+	CourseID   int64
+	CourseName string
+	Main       bool
+	Position   int
+	Portions   float64
+	// ReheatMinutes is the Recipe's reheat time (0 none); a Leftover-served meal reheats by it.
+	ReheatMinutes int
 }
 
 // Meals reads Planned Meals (T11's tables, behind an adapter).
 type Meals interface {
-	// Meal returns one Planned Meal; ErrNotFound when the slot has none.
-	Meal(ctx context.Context, date string, mealSlotID int64) (MealInfo, error)
-	// Upcoming lists the Planned Meals in state planned from date (inclusive) on.
+	// Meal returns the Planned Meal of a Course on a date and Meal Slot; courseID 0 is the main Course. ErrNotFound
+	// when there is none.
+	Meal(ctx context.Context, date string, mealSlotID, courseID int64) (MealInfo, error)
+	// Slot lists the Planned Meals of a Meal Slot on a date in the slot's Course order (empty when there are none).
+	Slot(ctx context.Context, date string, mealSlotID int64) ([]MealInfo, error)
+	// Upcoming lists the Planned Meals in state planned from date (inclusive) on, in slot order.
 	Upcoming(ctx context.Context, fromDate string) ([]MealInfo, error)
 }
 
