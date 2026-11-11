@@ -10,6 +10,11 @@ import { emptyDraft } from '../lib/draft'
 
 const h = vi.hoisted(() => ({ recipe: {} as Record<string, unknown>, editor: {} as Record<string, unknown> }))
 vi.mock('../hooks/useRecipe', () => ({ useRecipe: () => h.recipe }))
+vi.mock('../hooks/useHouseholdPreferences', async () => {
+  const { household } = await import('../household.test-helper')
+  return { useHouseholdPreferences: () => household() }
+})
+// PT step 1: the stub screen still calls the old hooks; these mocks keep the unrelated tests green. The developer deletes them with the hooks.
 vi.mock('../hooks/useRecipePreferences', () => ({
   useRecipePreferences: () => ({ stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false }),
 }))

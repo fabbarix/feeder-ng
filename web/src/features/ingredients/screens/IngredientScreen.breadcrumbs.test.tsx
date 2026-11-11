@@ -10,6 +10,7 @@ const hook = { ingredient: base as IngredientDetail | undefined, isLoading: fals
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
+vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
 
 import { IngredientScreen } from './IngredientScreen'
 

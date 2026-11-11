@@ -1,25 +1,23 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider } from '../../../ui'
 import { cookRecipePath } from '../../cook'
 import { garlic, recipe } from '../fixtures.test-helper'
+import { household, prefs } from '../household.test-helper'
 
 const h = vi.hoisted(() => ({
   recipe: {} as Record<string, unknown>,
-  prefs: {} as Record<string, unknown>,
-  picker: {} as Record<string, unknown>,
-  prefsCalledWith: [] as unknown[],
+  household: {} as import('../hooks/useHouseholdPreferences').UseHouseholdPreferences,
 }))
 vi.mock('../hooks/useRecipe', () => ({ useRecipe: () => h.recipe }))
+vi.mock('../hooks/useHouseholdPreferences', () => ({ useHouseholdPreferences: () => h.household }))
+// PT step 1: the stub screen still calls the old hooks; these mocks keep the unrelated tests green. The developer deletes them with the hooks.
 vi.mock('../hooks/useRecipePreferences', () => ({
-  useRecipePreferences: (memberId?: number) => {
-    h.prefsCalledWith.push(memberId)
-    return h.prefs
-  },
+  useRecipePreferences: () => ({ stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false }),
 }))
-vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => h.picker }))
+vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => ({ members: [], selectedId: null, memberId: undefined, select: vi.fn(), isLoading: false }) }))
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic]]), isLoading: false }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
@@ -30,9 +28,9 @@ const Where = () => {
   const l = useLocation()
   return <p data-testid="where">{l.pathname + l.search}</p>
 }
-const view = () =>
+const view = (entry = '/recipes/3') =>
   render(
-    <MemoryRouter initialEntries={['/recipes/3']}>
+    <MemoryRouter initialEntries={[entry]}>
       <ConfirmProvider>
         <Routes>
           <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
@@ -43,12 +41,9 @@ const view = () =>
   )
 
 beforeEach(() => {
-  h.prefsCalledWith = []
+  Element.prototype.scrollIntoView = vi.fn()
+  h.household = household()
   h.recipe = { recipe: recipe(), isLoading: false, error: null, setArchived: vi.fn().mockResolvedValue(undefined), remove: vi.fn().mockResolvedValue(undefined) }
-  h.prefs = {
-    stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false,
-  }
-  h.picker = { members: [{ id: 1, name: 'Anna' }, { id: 2, name: 'Ben' }], selectedId: 1, memberId: undefined, select: vi.fn(), isLoading: false }
   vi.spyOn(window, 'confirm').mockImplementation(() => {
     throw new Error('window.confirm is native UI')
   })
@@ -129,28 +124,97 @@ describe('RecipeDetailScreen: delete and archive (ConfirmDialog, no window.confi
   })
 })
 
-describe('RecipeDetailScreen: preferences for a chosen Member (G1)', () => {
-  it('shows the Member picker above the Favourite / Dislike / Exclusion toggles', () => {
+const preferences = () => screen.getByRole('heading', { level: 2, name: 'Preferences' }).closest('section') as HTMLElement
+
+describe('RecipeDetailScreen: preferences of the whole Household (PT)', () => {
+  it('shows the preferences as a table in the Preferences Tile, with no Member select', () => {
     view()
-    expect(screen.getByRole('combobox', { name: 'Preferences for' })).toHaveTextContent('Anna')
-    expect(screen.getByRole('button', { name: 'Favourite' })).toBeEnabled()
+    expect(within(preferences()).getByRole('table', { name: 'Preferences for Roast tray' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Preferences for' })).toBeNull()
+    expect(screen.queryByText('Choose a Member to set preferences for.')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Your preferences' })).toBeNull()
   })
-  it('loads the preferences of the picked Member (and none explicit by default)', () => {
-    h.picker = { ...h.picker, selectedId: 2, memberId: 2 }
+  it('has a row per Member, the Member linked to the signed-in User first and marked You', () => {
+    h.household = household({ meUserId: 11, members: [{ id: 1, name: 'Anna', colour: '#fff', avatar: '', userId: 10 }, { id: 2, name: 'Ben', colour: '#fff', avatar: '', userId: 11 }] })
     view()
-    expect(h.prefsCalledWith.at(-1)).toBe(2)
+    const names = within(preferences()).getAllByRole('rowheader').map((r) => /Anna|Ben/.exec(r.textContent ?? '')![0])
+    expect(names).toEqual(['Ben', 'Anna'])
+    expect(within(within(preferences()).getByRole('rowheader', { name: /Ben/ })).getByText('You')).toBeInTheDocument()
   })
-  it('picking a Member goes to the picker hook', async () => {
+  it('shows each Member\'s own state for this Recipe', () => {
+    h.household = household({ prefsByMember: { 1: prefs(1, { recipes: { '3': 'favourite' } }), 2: prefs(2, { recipes: { '3': 'exclusion', '4': 'dislike' } }) } })
     view()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Preferences for' }))
-    await userEvent.click(screen.getByRole('option', { name: 'Ben' }))
-    expect(h.picker.select).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Anna: Favourite' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Ben: Exclusion' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Ben: Dislike' })).toHaveAttribute('aria-pressed', 'false')
   })
-  it('without a linked Member and no pick, asks to choose one and disables the toggles', () => {
-    h.prefs = { ...h.prefs, noMember: true }
-    h.picker = { ...h.picker, selectedId: null }
+  it('saves a tap for that Member and Recipe through the hook', async () => {
     view()
-    expect(screen.getByText('Choose a Member to set preferences for.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Favourite' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Ben: Dislike' }))
+    expect(h.household.toggleRecipe).toHaveBeenCalledWith(2, 3, 'dislike')
+  })
+  it('shows an Exclusion via an Ingredient of this Recipe as read-only "via garlic"', () => {
+    h.household = household({ prefsByMember: { 1: prefs(1), 2: prefs(2, { excludedIngredients: [7] }) } })
+    view()
+    expect(screen.queryByRole('button', { name: 'Ben: Exclusion' })).toBeNull()
+    expect(screen.getByRole('row', { name: /Ben/ })).toHaveTextContent('Excluded via garlic')
+  })
+  it('ignores an Ingredient the Recipe does not have', () => {
+    h.household = household({ prefsByMember: { 1: prefs(1), 2: prefs(2, { excludedIngredients: [99] }) } })
+    view()
+    expect(screen.getByRole('button', { name: 'Ben: Exclusion' })).toBeInTheDocument()
+  })
+  it('highlights and scrolls to the row a #preference-member-<id> link points at', () => {
+    view('/recipes/3#preference-member-2')
+    expect(screen.getByRole('row', { name: /Ben/ })).toHaveAttribute('data-highlighted', 'true')
+    expect(screen.getByRole('row', { name: /Anna/ })).not.toHaveAttribute('data-highlighted', 'true')
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+  })
+  it('shows an ErrorState with Try again in the Tile when the preferences fail to load', async () => {
+    h.household = household({ isError: true, prefsByMember: {} })
+    view()
+    await userEvent.click(within(preferences()).getByRole('button', { name: 'Try again' }))
+    expect(h.household.refetch).toHaveBeenCalledOnce()
+  })
+  it('offers an Admin Add Members when the Household has none', () => {
+    h.household = household({ members: [], prefsByMember: {}, isAdmin: true })
+    view()
+    expect(within(preferences()).getByRole('link', { name: 'Add Members' })).toBeInTheDocument()
+  })
+})
+
+describe('RecipeDetailScreen: Who excludes garlic? (PT)', () => {
+  it('has an "Exclusions for garlic" button on the Ingredient line and no Exclusion toggle of its own', () => {
+    view()
+    expect(screen.getByRole('button', { name: 'Exclusions for garlic' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Exclude garlic' })).toBeNull()
+  })
+  it('shows the Avatars of the Members who exclude garlic on the line', () => {
+    h.household = household({ prefsByMember: { 1: prefs(1), 2: prefs(2, { excludedIngredients: [7] }) } })
+    view()
+    const line = screen.getByRole('button', { name: 'Exclusions for garlic' }).closest('.ingredient-lines__row') as HTMLElement
+    expect(within(line).getByRole('img', { name: 'Ben' })).toBeInTheDocument()
+    expect(within(line).queryByRole('img', { name: 'Anna' })).toBeNull()
+  })
+  it('opens a Dialog "Who excludes garlic?" with a toggle per Member, and closes on Escape', async () => {
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Who excludes garlic?' })
+    expect(within(dialog).getByRole('button', { name: 'Anna: excludes garlic' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(dialog).getByRole('button', { name: 'Ben: excludes garlic' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('saves a toggle in the Dialog for that Member and Ingredient', async () => {
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ben: excludes garlic' }))
+    expect(h.household.toggleIngredient).toHaveBeenCalledWith(2, 7)
+  })
+  it('uses no native confirm, alert or prompt', async () => {
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => { throw new Error('native UI') })
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
+    expect(alert).not.toHaveBeenCalled()
   })
 })

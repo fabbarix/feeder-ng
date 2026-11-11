@@ -4,6 +4,7 @@ import { displayName } from '../../ingredients/lib/names'
 import type { UnitSystem } from '../../../lib/units'
 import { quantityText } from '../lib/lineUnits'
 import { recipeStrings } from '../strings'
+import type { PreferenceMember } from '../lib/preferenceRows'
 import type { IngredientRef, RecipeLine } from '../types'
 
 export interface IngredientLinesListProps {
@@ -11,7 +12,12 @@ export interface IngredientLinesListProps {
   /** Ingredients by id, for Base Units and Unit Conversions. */
   refs: ReadonlyMap<number, IngredientRef>
   system: UnitSystem
-  /** Ingredient Exclusion of the chosen Member; omitted to hide the toggles. */
+  /**
+   * PT (stub: not drawn yet): the Members who exclude each Ingredient (Avatars, three at most then "+N") and the
+   * "Exclusions for garlic" button that opens the Who excludes garlic? Dialog. Omitted: nothing is drawn.
+   */
+  excludedBy?: { members: (ingredientId: number) => PreferenceMember[]; onOpen: (ingredientId: number, ingredientName: string) => void }
+  /** @deprecated PT removes it: Exclusions are per Member, in the Dialog (`excludedBy`). */
   exclusions?: { isExcluded: (ingredientId: number) => boolean; onToggle: (ingredientId: number) => void }
 }
 
