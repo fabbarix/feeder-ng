@@ -140,7 +140,7 @@ export function useRecipeAssistantPage() {
   return {
     isAdmin,
     meLoading: me.isPending,
-    loading: isAdmin && !stored.isError && (stored.isPending),
+    loading: isAdmin && !stored.isError && stored.isPending,
     loadFailed: isAdmin && stored.isError && !settings,
     settings,
     form,

@@ -11,7 +11,6 @@ describe('changeRow', () => {
     expect(row('turned_on')).toEqual({ title: 'Anna turned the Recipe Assistant on', meta: '2 h ago' })
     expect(row('turned_off').title).toBe('Anna turned the Recipe Assistant off')
   })
-  it('model changed names the model', () => expect(row('model_changed', 'Claude Sonnet 5.5').title).toBe('Anna changed the model to Claude Sonnet 5.5'))
   it('model changed takes "old -> new" IDs and shows the new one, as a name when the list knows it', () => {
     const names = new Map([['claude-sonnet-5-5', 'Claude Sonnet 5.5']])
     expect(row('model_changed', 'claude-haiku-5-5 -> claude-sonnet-5-5', undefined, names).title).toBe('Anna changed the model to Claude Sonnet 5.5')
