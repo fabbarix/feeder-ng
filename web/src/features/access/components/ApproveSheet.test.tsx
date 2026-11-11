@@ -21,8 +21,18 @@ function setup(over: Partial<ApproveSheetProps> = {}) {
 describe('ApproveSheet', () => {
   it('is a dialog named for the person being approved, and says what approving does', () => {
     setup()
-    const dialog = screen.getByRole('dialog', { name: 'Approve zia@example.test' })
+    const dialog = screen.getByRole('dialog', { name: 'Approve sign-in request' })
     expect(within(dialog).getByText(/sign in as a user/i)).toBeInTheDocument()
+  })
+
+  it('keeps the title short and shows the email in the body line, where it can wrap', () => {
+    const long = 'a.very.long.family.member.address.that.never.fits@subdomain.example-household.test'
+    setup({ request: { ...zia, email: long } })
+    const dialog = screen.getByRole('dialog', { name: 'Approve sign-in request' })
+    expect(within(dialog).getByRole('heading', { name: 'Approve sign-in request' })).not.toHaveTextContent(long)
+    const line = within(dialog).getByText(/sign in as a user/i)
+    expect(line).toHaveTextContent(long)
+    expect(line).toHaveClass('access__wrap')
   })
 
   it('renders nothing when there is no request', () => {
@@ -123,7 +133,7 @@ describe('ApproveSheet: Members with an email', () => {
   it('says every Member is taken when all of them carry another email', () => {
     setup({ members: [{ ...nonna, email: 'nonna@example.test' }] })
     expect(screen.queryByRole('combobox')).toBeNull()
-    expect(screen.getByText(/every member already has a user/i)).toBeInTheDocument()
+    expect(screen.getByText('No Member can be linked to this email.')).toBeInTheDocument()
   })
 })
 

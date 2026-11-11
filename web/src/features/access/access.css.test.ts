@@ -40,3 +40,12 @@ describe('access.css: phone layout of the request rows', () => {
     expect(r['min-block-size']).toBeTruthy()
   })
 })
+
+// Review send-back: the approve sheet title held the email and never wrapped (650 px at 390). The email now sits in a body line
+// that may break anywhere.
+describe('access.css: the approve sheet body line', () => {
+  it('lets a long email wrap instead of widening the sheet', () => {
+    const r = rule(sheet.base, '.access__wrap')
+    expect(r['overflow-wrap']).toBe('anywhere')
+  })
+})
