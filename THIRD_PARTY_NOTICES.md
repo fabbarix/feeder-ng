@@ -18,6 +18,7 @@ The Go standard library and runtime, and every `require` in `go.mod` that `go li
 | github.com/buger/jsonparser | v1.1.2 | MIT | Anthropic SDK / invopop dependency |
 | github.com/dustin/go-humanize | v1.1.0 | MIT | MIT (confirmed from the module licence file) |
 | github.com/golang-jwt/jwt/v5 | v5.2.1 | MIT | MIT (confirmed from the module licence file) |
+| github.com/gen2brain/h265 | v0.2.4 | MIT | HEIC decoder. Copyright (c) 2025 roticv; Copyright (c) 2026 Karpeles Lab Inc. Ports rust_h265 (Apache-2.0 OR MIT) and oxideav-h265 (MIT); their notices are carried below |
 | github.com/google/uuid | v1.6.0 | BSD-3-Clause |  |
 | github.com/invopop/jsonschema | v0.14.0 | MIT | Anthropic SDK dependency |
 | github.com/pb33f/ordered-map/v2 | v2.3.1 | Apache-2.0 | Anthropic SDK dependency |
@@ -114,9 +115,9 @@ The production `dependencies` of `web/package.json`.
 
 `@zxing/text-encoding` is offered under `Unlicense OR Apache-2.0`; the Feeder uses it under Apache-2.0. `@types/react` and `csstype` are type definitions and add nothing to the bundle.
 
-## HEIC support (to be added)
+### github.com/gen2brain/h265 carried notices
 
-<!-- PLACEHOLDER (REL-1): the HEIC decoder is added by another team. When it merges, add these here:
-     gen2brain/h265 v0.2.4 (MIT), with the carried notices of rust_h265 (Apache-2.0 OR MIT) and oxideav-h265 (MIT). -->
+`github.com/gen2brain/h265` (MIT, Copyright (c) 2025 roticv; Copyright (c) 2026 Karpeles Lab Inc.) is a Go port of two HEVC decoders and carries their notices:
 
-Not yet included: HEIC photo support (`github.com/gen2brain/h265` v0.2.4, MIT, which carries the notices of `rust_h265` under Apache-2.0 or MIT and `oxideav-h265` under MIT) will be listed here when it is added.
+- [rust_h265](https://github.com/roticv/rust_h265), under Apache-2.0 OR MIT (the Feeder uses it under MIT).
+- [oxideav-h265](https://github.com/OxideAV/oxideav-h265), under MIT.

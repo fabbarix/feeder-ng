@@ -1,7 +1,7 @@
 # IP1: the shared ImagePicker and one server ingest path
 
 One image component for every image field, one server path for every stored image. IP1 builds the primitive, its hooks and libs (including a simple
-**crop** and rotate tool), the ingest endpoints (including server-side **HEIC conversion** and **EXIF orientation**) and the orphan clean-up. It does NOT migrate the existing fields (Recipe photo, Step photo: a later team) and does NOT add Ingredient NOTE: HEIC is refused for now (TODO(heic): decoder lands in a follow-up; HEIC_ENABLED in web/src/ui/ImagePicker/lib/limits.ts).
+**crop** and rotate tool), the ingest endpoints (including server-side **HEIC conversion** and **EXIF orientation**) and the orphan clean-up. It does NOT migrate the existing fields (Recipe photo, Step photo: a later team) and does NOT add Ingredient NOTE: HEIC is decoded by `github.com/gen2brain/h265` (IP2, [ADR 0007](../../adr/0007-heic-decoding-with-h265.md)), which supersedes the decoder discussion under "HEIC / HEIF" below; the picker shows "Converting photo…" while the server converts a HEIC.
 images (a later team). The Recipe Assistant's "Read from a photo" is a later consumer of the raw mode.
 
 ## Findings in the current code

@@ -16,8 +16,6 @@ Feature: Adding an image from a link, and cleaning up images that were never sav
     When I fetch the uploaded image
     Then the fetched image is a WebP of 1600x1067
 
-  # TODO(heic): remove @wip when the HEIC decoder lands (internal/imaging/heic.go).
-  @wip
   Scenario: An iPhone photo (HEIC) is converted to WebP
     When I add the iPhone photo "pantry.heic"
     Then the response status is 201
