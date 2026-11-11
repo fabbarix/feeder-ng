@@ -5,7 +5,7 @@ import { errorMessage } from './errors'
 describe('errorMessage', () => {
   it.each([
     ['last_admin', /at least one Admin/i],
-    ['email_taken', /already on the allowlist/i],
+    ['email_taken', /already belongs to a Member, a User or the allowlist/i], // A1 phase 2: one wording for Members and the allowlist
     ['duplicate_slot', /already has a Meal Slot/i],
     ['weekday_mismatch', /weekday/i],
     ['forbidden', /Admin/],

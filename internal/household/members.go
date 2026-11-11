@@ -2,6 +2,7 @@ package household
 
 import (
 	"math"
+	"regexp"
 	"strings"
 )
 
@@ -13,6 +14,7 @@ type Member struct {
 	Avatar        string // optional short text, e.g. an emoji
 	PortionFactor float64
 	UserID        *int64
+	Email         string // optional sign-in address, lower case; empty when none
 }
 
 // MemberInput is what an Admin supplies to create or change a Member.
@@ -21,12 +23,14 @@ type MemberInput struct {
 	Colour        string
 	Avatar        string
 	PortionFactor float64
+	Email         string // optional; empty clears it
 }
 
 // Normalized trims the name and avatar. It returns a copy.
 func (m MemberInput) Normalized() MemberInput {
 	m.Name = strings.TrimSpace(m.Name)
 	m.Avatar = strings.TrimSpace(m.Avatar)
+	m.Email = strings.ToLower(strings.TrimSpace(m.Email))
 	return m
 }
 
@@ -49,5 +53,15 @@ func (m MemberInput) Validate() error {
 	if nameLength(m.Avatar) > 4 {
 		return fieldError("avatar", "must be at most 4 characters")
 	}
+	if m.Email != "" && !validMemberEmail(m.Email) {
+		return fieldError("email", "must be an address like name@example.com, at most 254 characters")
+	}
 	return ValidatePortionFactor(m.PortionFactor)
+}
+
+var memberEmailShape = regexp.MustCompile(`^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>.]+$`)
+
+// validMemberEmail accepts one local@domain.tld address of at most 254 characters.
+func validMemberEmail(e string) bool {
+	return len(e) <= 254 && memberEmailShape.MatchString(e) && !strings.Contains(e, "..")
 }

@@ -21,11 +21,13 @@ const (
 	LeftoverUseBy Type = "leftoverUseBy"
 	StockSpoil    Type = "stockSpoil"
 	TimerFinished Type = "timerFinished"
+	// AccessRequest: someone asked to sign in (spec §12; A1).
+	AccessRequest Type = "accessRequest"
 )
 
 // AllTypes lists every type in display order.
 func AllTypes() []Type {
-	return []Type{AdvanceStep, StartCooking, ConfirmCooked, LeftoverUseBy, StockSpoil, TimerFinished}
+	return []Type{AdvanceStep, StartCooking, ConfirmCooked, LeftoverUseBy, StockSpoil, TimerFinished, AccessRequest}
 }
 
 // ParseType returns the Type for s, or false when s is not one.
@@ -50,6 +52,8 @@ type Facts struct {
 	Meals     []MealFact
 	Leftovers []LeftoverFact
 	Lots      []LotFact
+	// AccessRequests are the pending Access Requests (A1).
+	AccessRequests []AccessRequestFact
 }
 
 // MealFact is one Planned Meal.
@@ -85,6 +89,14 @@ type LotFact struct {
 	IngredientName string
 	GoesOff        string // YYYY-MM-DD, "" when it never goes off
 	UsedByPlan     bool   // some Planned Meal will use it before it goes off
+}
+
+// AccessRequestFact is one pending Access Request. Name and Email come from Google and are untrusted text.
+type AccessRequestFact struct {
+	ID          int64
+	Name        string
+	Email       string
+	RequestedAt time.Time
 }
 
 // Candidate is one notification and the instant it falls due, before quiet

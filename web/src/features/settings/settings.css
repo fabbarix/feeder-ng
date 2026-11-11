@@ -77,3 +77,47 @@
   justify-content: space-between;
   gap: 8px;
 }
+
+/* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
+.allowlist__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.allowlist__field {
+  flex: 1 1 16rem;
+  min-inline-size: 12rem;
+  max-inline-size: 28rem;
+}
+.allowlist__button {
+  flex: none;
+  /* line up with the input, below the label */
+  margin-block-start: 24px;
+}
+.allowlist__actions {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 599px) {
+  .allowlist__field {
+    flex: 1 1 100%;
+    max-inline-size: none;
+  }
+  .allowlist__button {
+    margin-block-start: 0;
+  }
+  /* Phone: the email wraps instead of truncating in the ~130 px left beside Admin and Remove, and the row grows with it. */
+  .allowlist__list .list-row[data-height] {
+    block-size: auto;
+    min-block-size: 64px;
+    padding-block: var(--space-2);
+  }
+  .allowlist__list .list-row__title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

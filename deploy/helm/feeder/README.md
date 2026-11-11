@@ -58,6 +58,7 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 | `google.clientSecretKey` | `client-secret` | Key of the client secret inside the Secret. |
 | `env` | `{}` | Extra plain environment variables, e.g. `TZ`. `FEEDER_ADDR` must stay `:8080`. Never set `FEEDER_DEV_LOGIN`. |
 | `extraEnv` | `[]` | Raw container env entries (may use `valueFrom`). |
+| `trustProxy` | `null` | `FEEDER_TRUST_PROXY`. `null` is automatic: `true` when `ingress.enabled`, else `false`. `true` or `false` overrides. Set `true` only when a proxy appends the real client address as the last `X-Forwarded-For` entry. |
 | `service.type` | `ClusterIP` | Service type. |
 | `service.port` | `80` | Service port. Targets the container's `http` port (8080). |
 | `ingress.enabled` | `false` | Create an Ingress. |

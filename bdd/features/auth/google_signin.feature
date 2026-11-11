@@ -1,6 +1,7 @@
 Feature: Google sign-in
-  People sign in with Google only. Someone whose Google email is not on the
-  allowlist is refused with a "not invited" page and gets no session.
+  People sign in with Google only. Someone whose verified Google email is not
+  on the allowlist gets no session: they ask for access instead (see
+  access_requests.feature). An unverified Google email is refused outright.
   The redirect URI is <FEEDER_BASE_URL>/auth/google/callback.
 
   Scenario: An allowlisted Google email signs in
@@ -30,12 +31,12 @@ Feature: Google sign-in
     Then the sign-in redirect goes to "/"
     And I have a Feeder session
 
-  Scenario: A Google email that is not on the allowlist is not invited
+  Scenario: A Google email that is not on the allowlist waits for approval
     Given a running Feeder with Google sign-in
     And Google knows "stranger@example.test" as "Stranger"
     When I start Google sign-in
     And Google sends me back with the code
-    Then the sign-in redirect goes to "/not-invited"
+    Then the sign-in redirect goes to "/waiting-for-approval"
     And I have no Feeder session
     When I GET "/api/me"
     Then the response status is 401
@@ -77,7 +78,7 @@ Feature: Google sign-in
     When the User "cook@example.test" is removed from the allowlist
     And I start Google sign-in
     And Google sends me back with the code
-    Then the sign-in redirect goes to "/not-invited"
+    Then the sign-in redirect goes to "/waiting-for-approval"
     And I have no Feeder session
 
   Scenario: Sign-in is unavailable until Google credentials are configured

@@ -10,7 +10,7 @@ Feature: Push devices
     When I ask for the push configuration
     Then the response status is 200
     And the push configuration has a VAPID public key
-    And the push configuration lists 6 notification types
+    And the push configuration lists 7 notification types
 
   Scenario: The VAPID public key survives a restart
     Given I note the VAPID public key

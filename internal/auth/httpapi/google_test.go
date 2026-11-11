@@ -118,13 +118,15 @@ func TestCallbackMatchesEmailCaseInsensitively(t *testing.T) {
 	}
 }
 
-func TestCallbackRefusesAnEmailNotOnTheAllowlist(t *testing.T) {
+// A1: an unknown verified account is no longer turned away: it becomes a pending Access Request (see
+// internal/access/httpapi for the full flow), never a session and never a User.
+func TestCallbackSendsAnEmailNotOnTheAllowlistToTheWaitingPage(t *testing.T) {
 	env, fake := startGoogle(t)
 	fake.Accept("c", auth.Identity{Email: "stranger@example.test", EmailVerified: true, Name: "Stranger"})
 	c := env.Anonymous()
 	l := beginLogin(t, c)
 	r := callback(c, l.state, "c")
-	if r.Status != http.StatusFound || r.Header.Get("Location") != "/not-invited" {
+	if r.Status != http.StatusFound || r.Header.Get("Location") != "/waiting-for-approval" {
 		t.Fatalf("callback = %d -> %q", r.Status, r.Header.Get("Location"))
 	}
 	if c.Cookie(auth.CookieName) != nil {

@@ -11,6 +11,7 @@ export function useAllowlistPage() {
   const isAdmin = Boolean(me.data?.isAdmin)
   const allowlist = useAllowlist(isAdmin)
   const [error, setError] = useState<string>()
+  const [addError, setAddError] = useState<string>()
 
   const guard = async <T,>(action: () => Promise<T>): Promise<T> => {
     try {
@@ -28,7 +29,19 @@ export function useAllowlistPage() {
     allowlist,
     currentUserId: me.data?.id ?? 0,
     error,
-    add: (email: string) => guard(() => allowlist.add(email)),
+    addError,
+    clearAddError: () => setAddError(undefined),
+    add: async (email: string) => {
+      try {
+        const result = await allowlist.add(email)
+        setError(undefined)
+        setAddError(undefined)
+        return result
+      } catch (err) {
+        setAddError(errorMessage(err))
+        throw err
+      }
+    },
     setAdmin: (id: number, makeAdmin: boolean) => void guard(() => allowlist.setAdmin(id, makeAdmin)).catch(() => {}),
     remove: (id: number) => void guard(() => allowlist.remove(id)).catch(() => {}),
   }

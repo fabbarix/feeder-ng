@@ -40,3 +40,7 @@ web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
 # Recipe Assistant settings (approved copy): "never" is plain English in "never sent" / "never shows"; "runs" is "Whoever runs your server".
 web/src/features/recipe-assistant/strings.ts never  # plain English in the approved privacy and key helper copy
 web/src/features/recipe-assistant/strings.ts run  # "Whoever runs your server" (approved secret key copy), not a Batch
+
+# A1: spec-mandated copy. "wait" is plain English for an Access Request waiting for approval, not a Passive Step.
+web/src/features/notifications/strings.ts wait  # "When someone asks to sign in and waits for approval"
+web/src/features/settings/strings.ts wait  # "Their requests wait in Sign-in requests"
