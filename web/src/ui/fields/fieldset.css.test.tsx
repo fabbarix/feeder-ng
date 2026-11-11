@@ -36,13 +36,17 @@ describe('Segmented label', () => {
     expect(declarations(css, '.segmented__option:disabled')).not.toHaveProperty('opacity')
   })
 
-  it('a disabled Segmented has a second cue beyond muted text: the selected pill is flattened (no shadow, no surface fill)', () => {
+  it('a disabled Segmented keeps a selection cue: the selected option differs from an unselected one, the track stays outlined', () => {
     const css = readUiCss('fields/Segmented.css')
-    const d = declarations(css, ".segmented[data-disabled] .segmented__option[aria-checked='true']")
-    expect(d['box-shadow']).toBe('none')
-    expect(d['background']).toBe('transparent')
-    expect(declarations(css, '.segmented[data-disabled]')['background']).toBe('transparent')
-    expect(declarations(css, '.segmented[data-disabled]')['border-color']).toBe('var(--color-outline)')
+    const track = declarations(css, '.segmented[data-disabled]')
+    expect(track['background']).toBe('transparent')
+    expect(track['border-color']).toBe('var(--color-outline)')
+    const selected = declarations(css, ".segmented[data-disabled] .segmented__option[aria-checked='true']")
+    expect(selected['box-shadow']).toBe('inset 0 0 0 1.5px var(--color-outline)')
+    expect(selected['color']).toBe('var(--color-text)')
+    const unselected = declarations(css, '.segmented__option:disabled')
+    expect(selected['box-shadow']).not.toBe(unselected['box-shadow'])
+    expect(selected['color']).not.toBe(unselected['color'])
   })
 
   it('the enabled track has a transparent border of the same width, so disabling does not shift layout', () => {

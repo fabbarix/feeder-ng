@@ -30,6 +30,10 @@ describe.each(['light', 'dark'] as const)('Gallery fields (%s)', (scheme) => {
     expect(s.querySelector('.time-field[data-disabled]')).not.toBeNull()
   })
 
+  it('shows a disabled Segmented with a selected option', () => {
+    expect(section().querySelector('.segmented[data-disabled] [aria-checked="true"]')).not.toBeNull()
+  })
+
   it('has a field in the focus state shown statically (data-gallery-focus) so the ring is visible in the catalogue', () => {
     expect(section().querySelector('[data-gallery-focus]')).not.toBeNull()
   })
