@@ -6,6 +6,8 @@ The short version: a Planned Meal is keyed by `(date, Meal Slot, Course)` instea
 
 **What changed in step 2** (the user's answers of 2026-11-11), and where: §1.1 (1400 gains `relaxed`, `optional` and the opt-out tables), §1.5 (1410 rewrites Advance Step keys only), §2.1 (scopes of A, B, C, D, F, G; new team K; task CD withdrawn), §2.2 (waves), §2.3 (tests), §2.4 (what A0 and D1 must change now), §3 (questions answered).
 
+**Follow-ups RX and PT** (2026-11-11): Review Exclusions explains the Exclusions (B-RX, C-RX, G2, migration 1430) and preferences on a Recipe as a table (PT, starts now); §2.2 waves and §2.5, design in [rx-pt.md](rx-pt.md).
+
 **Design review fixes** (2026-11-11): the cooking timeline keeps each Course's `schedule.Compute` schedule whole, so one Course is exactly `Compute` (spec §11; K's tests in §2.3); the keep check runs before the walk on every kept fresh Planned Meal, with its own cook left out (spec §7.2; B's tests); the later of two Slot Rule cells that reserve one Recipe gets a relaxed pick (spec §7.2; B's tests); `best_available` is removed (B, with A's store test data); the opt-out tables hang off `meal_slots`, `courses` and `members` only, and a removed Course's opt-outs are deleted explicitly (§1.1; A's tests); D1's prop is `renderRowExtras` with a layout rule (§2.4); open questions 1 and 2 are decided (§3).
 
 ## 1. Migration plan
@@ -118,10 +120,10 @@ Each team follows the CLAUDE.md pipeline: test author (Go and Vitest tests and G
 ### 2.2 Order and parallelism
 
 ```
-Wave 1:  A0 → A ─────────┐   B (after A0, in parallel) ─┐   D1   K (now, in parallel with everything)
-Wave 2:  C1 · E1 · G1 (with 1410; after A and K) · B merges (all after A)   D2 (after D1, C1)
-Wave 3:  C2 (after B and K) ── F (after C2, D1) · E2 (after D1, C1, E1)
-Wave 4:  G2 (after F) · C3 clean-up (after F, G2)
+Wave 1:  A0 → A ─────────┐   B (after A0, in parallel) ─┐   D1   K (now, in parallel with everything)   PT (now; §2.5)
+Wave 2:  C1 · E1 · G1 (with 1410; after A and K) · B merges (all after A)   D2 (after D1, C1)   PT merges (before E2 starts)
+Wave 3:  C2 (after B and K) ── F (after C2, D1) · E2 (after D1, C1, E1, PT) · B-RX (after A and B; §2.5)
+Wave 4:  C-RX (after C2, B-RX) → G2 (after F, C-RX; with the Review Exclusions page) · C3 clean-up (after F, G2)
 Wave 5:  H
 ```
 
@@ -172,6 +174,19 @@ A0 and D1 started from 011faaa on the step-1 plan. Step 2 changes them only as f
   - *Layout rule.* The extras sit after the name and before the Move buttons, in DOM order: **name, extras, Move up / Move down (and Remove)**. When they do not fit on the row's line (the Who eats it pills on a phone), the extras wrap to a full-width block under the name, and the Move buttons stay on the name's line; this is done in CSS only (a wrapping flex or grid row), never by moving the extras after the Move buttons in the DOM, so the tab and screen-reader order stays name, extras, Move buttons.
 - `CourseSelect`: no change. `web/src/lib/courses` (the `GET /api/courses` types and `useCourses`): no change; a Course has no `cooldownDays` (task CD is withdrawn) and no `optional` (that is per Meal Slot, in the settings feature's own types).
 - Cook Mode's All/Course filter is built by F from the shared `Chip`; it is not a D1 primitive.
+
+### 2.5 Follow-ups RX and PT (2026-11-11)
+
+Two requests added after step 2; design in [rx-pt.md](rx-pt.md), spec §4, §5, §7.4.1, §16 and decision 31.
+
+| Task | Scope | Owns | Depends on |
+|---|---|---|---|
+| **PT** (new team, independent of Courses) | The Recipe detail's preferences as a table (a row per Member, a column per state, Ingredient Exclusions read-only "via garlic"), the per-Member Ingredient Exclusion dialog, the Ingredient page's *Excluded by* Tile | the recipes and ingredients files of rx-pt.md §7, granted from E | none: **starts now**; merges before E2 starts (both edit `web/src/features/recipes/**`) |
+| **B-RX** (team B, follow-up) | The planner records which Member excluded which Recipe or Ingredient per Couldn't plan cell (capped), carried by `plan.Unfilled` and stored by migration **1430** (`plan_unfilled.exclusions_json`) | `internal/planner/explain.go` (new) and B's planner files; `internal/plan/{types,plan}.go`, `internal/plan/store/**` (A's, granted after A merges); `1430_unfilled_exclusions.sql` and its test (granted in `internal/db/**`) | after A and B merge |
+| **C-RX** (team C, follow-up) | `GET /api/plan/couldnt-plan/exclusions` | `internal/plan/httpapi/**`; `bdd/features/planning/couldnt_plan_exclusions.feature`, `bdd/steps_rx_test.go` | after C2 and B-RX |
+| **G2** (scope grows) | The Review Exclusions page `/plan/couldnt-plan/excluded` and the Excluded tile's link to it | as in §2.1, plus the plan screen, hook, `index.ts` and app route files of rx-pt.md §7 | after F and C-RX |
+
+Migration 1400 (team A) does not change for RX: 1430 is a plain `ALTER TABLE` that runs after 1400 and 1410.
 
 ## 3. Product questions
 
