@@ -5,22 +5,22 @@ import { UseSoonTile } from './UseSoonTile'
 const item = (id: number, name: string, when: string) => ({ ingredientId: id, name, when })
 
 describe('UseSoonTile', () => {
-  it('lists each Ingredient as "Spinach · Thu" under the Use soon heading', () => {
-    render(<UseSoonTile items={[item(1, 'Spinach', 'Thu'), item(2, 'Chicken thighs', 'today')]} />)
+  it('lists each Ingredient as "Spinach · good until Thu" under the Use soon heading', () => {
+    render(<UseSoonTile items={[item(1, 'Spinach', 'good until Thu'), item(2, 'Chicken thighs', 'good until today')]} />)
     expect(screen.getByRole('heading', { name: 'Use soon' })).toBeInTheDocument()
-    expect(screen.getByText('Spinach · Thu')).toBeInTheDocument()
-    expect(screen.getByText('Chicken thighs · today')).toBeInTheDocument()
+    expect(screen.getByText('Spinach · good until Thu')).toBeInTheDocument()
+    expect(screen.getByText('Chicken thighs · good until today')).toBeInTheDocument()
   })
 
   it('shows at most three rows and counts the rest', () => {
-    render(<UseSoonTile items={[item(1, 'Spinach', 'Thu'), item(2, 'Feta', 'Thu'), item(3, 'Milk', 'Fri'), item(4, 'Yoghurt', 'Fri'), item(5, 'Basil', 'Sat')]} />)
+    render(<UseSoonTile items={[item(1, 'Spinach', 'good until Thu'), item(2, 'Feta', 'good until Thu'), item(3, 'Milk', 'Fri'), item(4, 'Yoghurt', 'Fri'), item(5, 'Basil', 'Sat')]} />)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
     expect(screen.queryByText(/Yoghurt/)).not.toBeInTheDocument()
     expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 
   it('is a half status tile in the fixed spoil colour, never an accent', () => {
-    const { container } = render(<UseSoonTile items={[item(1, 'Spinach', 'Thu')]} />)
+    const { container } = render(<UseSoonTile items={[item(1, 'Spinach', 'good until Thu')]} />)
     const tile = container.querySelector('[data-variant="status"]')!
     expect(tile).toHaveAttribute('data-status', 'spoil')
     expect(tile).toHaveAttribute('data-span', '1')

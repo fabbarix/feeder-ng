@@ -115,6 +115,16 @@ func TestWhyChipParameters(t *testing.T) {
 			t.Errorf("chips = %+v", p.Why)
 		}
 	})
+	// GW: the chip date is the lot's last good day, i.e. its go-off date itself (a Lot is fine on
+	// its go-off date, spec 6.1), never go-off date + 1. The web phrases it "uses X by <day>".
+	t.Run("perishable use carries the go-off date, the last good day, even when it is the slot's own day", func(t *testing.T) {
+		in := weighted(baseInput([]Slot{dinner(0)}, rcp(1, 2), rcp(2, 2, needs(need(spinach, 300)))), Weights{PerishableUse: 4})
+		in.Lots = []StockLot{lot(1, spinach, 300, day(0))}
+		p := placementAt(t, mustPlan(t, in), key(0))
+		if len(p.Why) != 1 || p.Why[0].Code != ReasonPerishableUse || p.Why[0].Date != day(0) {
+			t.Errorf("chips = %+v, want the go-off date %s", p.Why, day(0))
+		}
+	})
 }
 
 func TestWhyChipForSlotRule(t *testing.T) {

@@ -149,7 +149,7 @@ func TestStockSpoilIsTenInTheMorningOnTheGoOffDateUnlessAPlanUsesIt(t *testing.T
 	if want := time.Date(2026, 11, 12, 10, 0, 0, 0, rome); !cs[0].At.Equal(want) {
 		t.Errorf("At = %s, want %s", cs[0].At, want)
 	}
-	if cs[0].Body != "Spinach goes off tomorrow and no Planned Meal uses it" {
+	if cs[0].Body != "Spinach is good until today and no Planned Meal uses it" {
 		t.Errorf("Body = %q", cs[0].Body)
 	}
 }

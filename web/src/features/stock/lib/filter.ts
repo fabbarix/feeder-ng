@@ -1,7 +1,7 @@
 import type { UnitSystem } from '../../../lib/units'
 import type { IngredientStock } from '../types'
 import { stockStrings as strings } from '../strings'
-import { daysBetween } from './view'
+import { daysBetween } from './days'
 
 export type StockFilter = 'all' | 'useSoon' | 'spoiled'
 export const STOCK_FILTERS: readonly StockFilter[] = ['all', 'useSoon', 'spoiled']
@@ -40,8 +40,8 @@ function utcDate(iso: string): Date {
 
 /**
  * Pure. The go-off phrase for the row meta, relative to the household's `today` (YYYY-MM-DD):
- * null -> '' ; -1 'went off today'; -2 'went off yesterday'; < -2 'went off 3 days ago' (go-off date + 1, §6.1); 0 'goes off today'; 1 'goes off tomorrow';
- * 2..6 'goes off Thu' (en-GB short weekday); >= 7 'goes off 20 Nov'.
+ * null -> '' ; -1 'went off today'; -2 'went off yesterday'; < -2 'went off 3 days ago' (go-off date + 1, §6.1); 0 'good until today'; 1 'good until tomorrow';
+ * 2..6 'good until Thu' (en-GB short weekday); >= 7 'good until 20 Nov'. The go-off date is the last good day.
  */
 export function goOffPhrase(goesOff: string | null, today: string): string {
   // No date, or no household date yet (the spoiled query still loading): nothing to say.
@@ -51,10 +51,10 @@ export function goOffPhrase(goesOff: string | null, today: string): string {
   if (n < -2) return strings.goesOff.ago(-n - 1)
   if (n === -2) return strings.goesOff.yesterday
   if (n === -1) return strings.goesOff.wentOffToday
-  if (n === 0) return strings.goesOff.today
-  if (n === 1) return strings.goesOff.tomorrow
-  if (n <= 6) return strings.goesOff.on(WEEKDAY.format(utcDate(goesOff)))
-  return strings.goesOff.on(DAY_AND_MONTH.format(utcDate(goesOff)))
+  if (n === 0) return strings.goesOff.goodUntil.today
+  if (n === 1) return strings.goesOff.goodUntil.tomorrow
+  if (n <= 6) return strings.goesOff.goodUntil.on(WEEKDAY.format(utcDate(goesOff)))
+  return strings.goesOff.goodUntil.on(DAY_AND_MONTH.format(utcDate(goesOff)))
 }
 
 /**

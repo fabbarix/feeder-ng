@@ -34,7 +34,7 @@ export function phraseWhy(why: Why, ctx: PhraseContext): string {
     }
     case 'perishable_use':
       return why.date
-        ? s.whyUsesBefore(why.ingredient ?? s.whyUnnamedIngredientShort, weekdayName(why.date, 'short'))
+        ? s.whyUsesBy(why.ingredient ?? s.whyUnnamedIngredientShort, weekdayName(why.date, 'short'))
         : s.whyUsesUp(why.ingredient ?? s.whyUnnamedIngredientShort)
     case 'slot_rule':
       return s.whySlotRule(weekdayName(ctx.slotDate))
