@@ -128,8 +128,7 @@ color: var(--color-on-accent); box-shadow: 0 0 0 3px var(--color-soft) }` inside
 
 **L-05 Medium: the Plan week is cramped at 1440–2560.** Screens 06, 07. Seven 140 px day tiles in the 1036 px column: Recipe names
 truncate ("Chicken tikka…"), the Leftover chip wraps to 3 lines, while 400+ px is empty on each side.
-**Fix:** Plan uses `--page-wide` (day tiles ≈ 200 px at 1480); keep 4 columns from 820 to 1279 and 7 from 1280 only when the container
-is ≥ 1200 (`@container` query on the grid, not a viewport query). Owner: future Couldn't-plan team (plan files).
+**Fix:** Plan uses `--page-wide` (day tiles ≈ 200 px at 1480); keep 4 columns for narrower containers and 7 once the grid's container is ≥ 1100 px (user decision, R2-2: the week fits one row from a 1440 px viewport beside the rail, whose container is 1136 px; measured by the grid's ResizeObserver, not a viewport query). Day tiles at that width use 10 px padding, a 12 px gap, compact chips and a 2-line Recipe name with the full name as `title`. Owner: future Couldn't-plan team (plan files).
 
 **L-06 Medium: single-column lists span 1036 px.** Screens 08, 21, 30, 37, 40. Stock, Ingredients, Products, Settings, the
 /recipes/export screen, the Scan Shop picker, Members and Meal Slots put the name at the left and the value/chevron/checkbox ~1,000 px away;

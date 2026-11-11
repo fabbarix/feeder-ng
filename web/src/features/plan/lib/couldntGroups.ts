@@ -135,12 +135,12 @@ export function slotLine(slot: PlanSlot): string {
 }
 
 export interface ToneStyle {
-  tile: { variant: 'soft' } | { variant: 'status'; status: 'spoil' }
-  chip: { kind: 'tag' } | { kind: 'status'; status: 'spoil' }
+  tile: { variant: 'status'; status: 'info' | 'spoil' }
+  chip: { kind: 'status'; status: 'info' | 'spoil' }
 }
 
-/** Existing tokens only: info is the soft tile and a neutral chip, warn the amber status. */
+/** Existing tokens only: info is the blue status tile and chip, warn the amber status. */
 export function toneStyle(tone: Tone): ToneStyle {
-  if (tone === 'info') return { tile: { variant: 'soft' }, chip: { kind: 'tag' } }
+  if (tone === 'info') return { tile: { variant: 'status', status: 'info' }, chip: { kind: 'status', status: 'info' } }
   return { tile: { variant: 'status', status: 'spoil' }, chip: { kind: 'status', status: 'spoil' } }
 }
