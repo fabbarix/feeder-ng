@@ -45,7 +45,7 @@ describe('PlannedMealSheet', () => {
     const dialog = within(screen.getByRole('dialog'))
     expect(dialog.getByText('Pinned')).toBeInTheDocument()
     expect(dialog.getByText("Anna's favourite")).toBeInTheDocument()
-    expect(dialog.getByText('uses spinach before Thu')).toBeInTheDocument()
+    expect(dialog.getByText('uses spinach by Thu')).toBeInTheDocument()
     expect(dialog.queryByText("uses Monday's chicken")).not.toBeInTheDocument()
     expect(dialog.getByText('+1')).toBeInTheDocument()
   })

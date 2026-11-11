@@ -27,8 +27,8 @@ describe('phraseWhy', () => {
     expect(phraseWhy({ code: 'favourite' }, ctx)).toBe('a favourite')
   })
 
-  it('perishable use: uses spinach before Thu (WP6 copy fix: the reason, not the spoilage)', () => {
-    expect(phraseWhy({ code: 'perishable_use', ingredient: 'spinach', date: '2026-11-12' }, ctx)).toBe('uses spinach before Thu')
+  it('perishable use: uses spinach by Thu: Thu is the last good day, the go-off date (GW)', () => {
+    expect(phraseWhy({ code: 'perishable_use', ingredient: 'spinach', date: '2026-11-12' }, ctx)).toBe('uses spinach by Thu')
     expect(phraseWhy({ code: 'perishable_use', ingredient: 'spinach' }, ctx)).toBe('uses up the spinach')
   })
 

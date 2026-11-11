@@ -74,13 +74,13 @@ describe('sheetChips: at most three, the rest as a count', () => {
 
   it('keeps the first three and counts the rest', () => {
     const { chips, overflow } = sheetChips(meal({ why: whys }), ctx)
-    expect(chips.map((c) => c.label)).toEqual(["Anna's favourite", 'uses spinach before Thu', "uses Monday's chicken"])
+    expect(chips.map((c) => c.label)).toEqual(["Anna's favourite", 'uses spinach by Thu', "uses Monday's chicken"])
     expect(overflow).toBe(1)
   })
 
   it('states come first and count against the three', () => {
     const { chips, overflow } = sheetChips(meal({ pinned: true, why: whys }), ctx)
-    expect(chips.map((c) => c.label)).toEqual(['Pinned', "Anna's favourite", 'uses spinach before Thu'])
+    expect(chips.map((c) => c.label)).toEqual(['Pinned', "Anna's favourite", 'uses spinach by Thu'])
     expect(overflow).toBe(2)
   })
 

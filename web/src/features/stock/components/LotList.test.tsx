@@ -19,7 +19,7 @@ describe('LotList', () => {
     const rows = screen.getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]!).getByText('500 g')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('Goes off in 3 days')).toBeInTheDocument()
+    expect(within(rows[0]!).getByText('Good until Thu')).toBeInTheDocument()
     expect(within(rows[0]!).getByText(/Scanned/)).toBeInTheDocument()
     expect(within(rows[0]!).getByText(/Bought 1 Nov/)).toBeInTheDocument()
     expect(within(rows[1]!).getByText('No go-off date')).toBeInTheDocument()
@@ -87,8 +87,8 @@ describe('LotList', () => {
         ]}
       />,
     )
-    expect(screen.getByText('Goes off in 3 days').closest('.chip')).toHaveAttribute('data-status', 'spoil')
-    const plain = screen.getByText('Goes off in 4 days').closest('.chip')
+    expect(screen.getByText('Good until Thu').closest('.chip')).toHaveAttribute('data-status', 'spoil')
+    const plain = screen.getByText('Good until Fri').closest('.chip')
     expect(plain).toHaveAttribute('data-kind', 'tag')
     expect(plain).not.toHaveAttribute('data-status')
   })

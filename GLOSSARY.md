@@ -207,6 +207,10 @@ _Avoid_: Expiry, best-before
 One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) the date it goes off.
 _Avoid_: Batch, item, unit
 
+**Go-off date / Good until**:
+The last day a Stock Lot is fine to use. A Stock Lot goes off the day after its go-off date. Forward copy names the last good day ("Good until today", "Good until tomorrow", "Good until Thu"); once the Stock Lot has gone off, copy says so ("Went off today", "Went off yesterday", "Went off 3 days ago"). A plan chip uses the same day: "uses spinach by Thu".
+_Avoid_: Expires, expiry date, "goes off Thu" for the last good day, "before Thu" for the go-off date
+
 **Zero-waste streak**:
 The number of whole days since the Household last wasted food (a Stock Lot going off, a Throw out, or a discarded Leftover), never more than the Household's age.
 _Avoid_: Clean run, no-waste counter
