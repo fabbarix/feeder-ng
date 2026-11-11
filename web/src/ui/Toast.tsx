@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { Button } from './Button'
 import { Icon } from './Icon'
 import { IconButton } from './IconButton'
@@ -50,6 +50,15 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(1)
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
+
+  // Pending auto-dismiss timers must not outlive the provider (they would setState after unmount).
+  useEffect(() => {
+    const pending = timers.current
+    return () => {
+      for (const timer of pending.values()) clearTimeout(timer)
+      pending.clear()
+    }
+  }, [])
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id)
