@@ -47,7 +47,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		return err
 	}
 	defer d.Close()
-	if err := db.MigrateEmbedded(ctx, d); err != nil {
+	if err := prepareDatabase(ctx, d, cfg.DataDir, logger); err != nil {
 		return err
 	}
 	a, err := app.New(cfg, d, clock.System{}, web.FS(), app.WithLogger(logger))
