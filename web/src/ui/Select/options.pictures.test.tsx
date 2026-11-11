@@ -34,7 +34,6 @@ describe('memberOptions: Avatar', () => {
     expect(el.querySelector('img')).toBeNull()
     expect(el).toHaveTextContent('🙂')
   })
-
 })
 
 describe('ingredientOptions: Thumb', () => {

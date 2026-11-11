@@ -9,6 +9,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/cook"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
@@ -77,7 +78,7 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 			Kind: st.Kind, Text: st.Text, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes,
 		}
 		if st.Image != "" {
-			step.ImageURL = "/api/images/" + st.Image
+			step.ImageURL = images.URL(st.Image)
 		}
 		for _, u := range st.Uses {
 			name, ok := names[u.IngredientID]

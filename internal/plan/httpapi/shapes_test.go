@@ -2,11 +2,11 @@ package httpapi
 
 import (
 	"encoding/json"
-	"github.com/fabbarix/feeder-ng/internal/images"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
 )
@@ -116,7 +116,7 @@ func TestImagesURLIsTheImageStoreRoute(t *testing.T) {
 		t.Errorf("images.URL = %q", got)
 	}
 	if got := images.URL(""); got != "" {
-		t.Errorf("photoURL without an image = %q", got)
+		t.Errorf("images.URL without an image = %q", got)
 	}
 }
 
