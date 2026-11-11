@@ -39,7 +39,7 @@ export function TagInput({ tags, onChange }: TagInputProps): ReactNode {
             {t}
           </Chip>
         ))}
-        <TextField size="full" label={recipeStrings.fields.tagInput} value={text} onChange={setText} onKeyDown={onKey} onBlur={commit} />
+        <TextField size="full" label={recipeStrings.fields.tagInput} placeholder={recipeStrings.fields.tagInput} value={text} onChange={setText} onKeyDown={onKey} onBlur={commit} />
       </div>
     </div>
   )

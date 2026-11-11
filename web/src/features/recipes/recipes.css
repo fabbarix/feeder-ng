@@ -337,9 +337,6 @@
 .tag-input {
   min-inline-size: 0;
   max-inline-size: 320px;
-}
-
-.tag-input {
   display: grid;
   gap: var(--space-1);
 }
@@ -366,8 +363,8 @@
 }
 
 .tag-input__control > .ui-field {
-  flex: 1 1 160px;
-  min-inline-size: 160px;
+  flex: 1 1 96px;
+  min-inline-size: 96px;
 }
 
 .line-row,
@@ -409,11 +406,13 @@
 
 .line-row__optional {
   grid-area: optional;
+  align-self: center;
   justify-self: end;
 }
 
 .line-row__remove {
   grid-area: remove;
+  align-self: center;
   justify-self: end;
 }
 

@@ -25,7 +25,7 @@ export function RecipesOverflowMenu({ showArchived, onShowArchivedChange }: Reci
           {
             id: 'read',
             label: readStrings.stepTitle,
-            icon: 'assistant',
+            icon: 'recipes',
             href: '/recipes/import#read',
           },
           {

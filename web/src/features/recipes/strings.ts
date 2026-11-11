@@ -1,6 +1,7 @@
 // English UI strings of the recipes feature. Glossary terms only (Recipe, Yield, Ready Meal, Step,
 // Advance Step, Tag, Favourite, Dislike, Exclusion, Unit Conversion, Member, Cool-down, Use-by).
 export const recipeStrings = {
+  units: { days: 'days', min: 'min' },
   title: 'Recipes',
   newRecipe: 'New Recipe',
   editRecipe: 'Edit Recipe',
@@ -129,8 +130,8 @@ export const recipeStrings = {
     active: 'Active',
     passive: 'Passive',
     advance: 'Advance Step',
-    duration: 'Duration (min)',
-    lead: 'Lead time (min)',
+    duration: 'Duration',
+    lead: 'Lead time',
     after: 'After',
     afterStep: (n: number) => `After step ${n}`,
     image: 'Step photo',

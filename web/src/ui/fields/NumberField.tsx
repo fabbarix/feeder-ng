@@ -60,6 +60,7 @@ export function NumberField({ size = 'sm', label, helper, error, disabled, requi
   }
 
   const inputId = `${ids.labelId}-input`
+  const unitId = `${ids.labelId}-unit`
   return (
     <FieldFrame ids={ids} size={size} className={hideStepper ? undefined : 'ui-field--stepper'} label={label} labelFor={inputId} helper={helper} error={error}>
       <span className="ui-field__control">
@@ -78,7 +79,7 @@ export function NumberField({ size = 'sm', label, helper, error, disabled, requi
           disabled={disabled}
           aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(ids, helper, error)}
+          aria-describedby={describedBy(ids, helper, error, unit ? unitId : undefined)}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value ?? undefined}
@@ -86,7 +87,7 @@ export function NumberField({ size = 'sm', label, helper, error, disabled, requi
           onBlur={(e) => commit(e.currentTarget.value)}
           onKeyDown={onKeyDown}
         />
-        {unit ? <span className="ui-field__suffix">{unit}</span> : null}
+        {unit ? <span id={unitId} className="ui-field__suffix">{unit}</span> : null}
         {hideStepper ? null : (
           <IconButton icon="add" label={uiStrings.increase(label)} disabled={disabled || (max !== undefined && (value ?? 0) >= max)} onClick={() => nudge(1)} />
         )}

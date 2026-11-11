@@ -98,7 +98,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
                 {s.kind === 'advance' ? (
                   <NumberField
                     size="xs"
-                    unit="min"
+                    unit={recipeStrings.units.min}
                     label={recipeStrings.steps.lead}
                     hideStepper
                     value={numberValue(s.leadTimeMinutes)}
@@ -107,7 +107,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
                 ) : (
                   <NumberField
                     size="xs"
-                    unit="min"
+                    unit={recipeStrings.units.min}
                     label={recipeStrings.steps.duration}
                     hideStepper
                     value={numberValue(s.durationMinutes)}

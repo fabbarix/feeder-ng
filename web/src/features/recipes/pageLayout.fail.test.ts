@@ -23,8 +23,10 @@ describe('page-layout guard modes (R2-1)', () => {
     const line = /^fail_routes=(.*)$/m.exec(modes)?.[1] ?? ''
     for (const pattern of ['/recipes/:id', '/recipes/:id/edit', '/recipes/new']) expect(line.split(/\s+/)).toContain(pattern)
   })
-  it('does not flip the other recipes routes: the list is R2-L, import and export belong to R2-4 / the Recipe Assistant', () => {
-    for (const route of ['/recipes', '/recipes/import', '/recipes/export']) expect(rules.modeFor(modes, route)).toBe('warn')
+  it('the Recipes list stays warn (R2-L); import and export are fail routes since R2-4 and stay fail', () => {
+    expect(rules.modeFor(modes, '/recipes')).toBe('warn')
+    for (const route of ['/recipes/import', '/recipes/export']) expect(rules.modeFor(modes, route)).toBe('fail')
+    expect(modes).not.toMatch(/^warn_routes=/m)
   })
   it('warn_routes win over fail_routes (":id" matches "import" and "export" otherwise)', () => {
     const text = 'default=warn\nfail_routes=/recipes/:id\nwarn_routes=/recipes/import\n'
