@@ -341,7 +341,7 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 		defer f.mu.Unlock()
 		f.f.Leftovers = append(f.f.Leftovers, notify.LeftoverFact{ID: 1, RecipeName: name, Portions: float64(n), UseBy: dateStr(1)})
 	})
-	sc.Step(`^a Stock Lot of "([^"]*)" goes off in (\d+) days and (no plan uses it|a plan uses it)$`, func(name string, days int, used string) {
+	sc.Step(`^a Stock Lot of "([^"]*)" goes off in (\d+) days? and (no plan uses it|a plan uses it)$`, func(name string, days int, used string) {
 		f := nw().facts
 		f.mu.Lock()
 		defer f.mu.Unlock()

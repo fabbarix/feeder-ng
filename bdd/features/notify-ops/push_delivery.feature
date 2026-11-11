@@ -76,10 +76,10 @@ Feature: Push delivery
     When it is 10:00 tomorrow and the Feeder checks for due notifications
     Then 1 push has been sent to the phone saying "Use up the Soup (2 portions) today"
 
-  Scenario: Stock about to spoil is pushed the day before, unless a plan uses it
+  Scenario: Stock about to spoil is pushed on the go-off date, unless a plan uses it
     Given the phone is registered for push with "stockSpoil" on
-    And a Stock Lot of "Spinach" goes off in 2 days and no plan uses it
-    And a Stock Lot of "Milk" goes off in 2 days and a plan uses it
+    And a Stock Lot of "Spinach" goes off in 1 day and no plan uses it
+    And a Stock Lot of "Milk" goes off in 1 day and a plan uses it
     When it is 10:00 tomorrow and the Feeder checks for due notifications
     Then 1 push has been sent to the phone saying "Spinach goes off tomorrow and no Planned Meal uses it"
 
