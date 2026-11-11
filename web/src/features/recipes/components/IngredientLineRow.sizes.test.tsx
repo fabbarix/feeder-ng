@@ -1,5 +1,5 @@
-// R2-1 (E-01, F-01 adoption): the ingredient line is Ingredient · Quantity xs · Unit sm · Note · "Optional" chip · remove.
-import { render, screen } from '@testing-library/react'
+// R2-1 (E-01, F-01 adoption): the ingredient line is Ingredient · Quantity xs · Unit sm · Note · remove (Optional is a menu item and a chip in the Ingredient cell).
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
@@ -32,27 +32,51 @@ describe('IngredientLineRow: sizes', () => {
   })
 })
 
-describe('IngredientLineRow: "Optional" is visible (never a tooltip-only icon)', () => {
-  it('is a toggle chip with the visible text "Optional" and aria-pressed', async () => {
+describe('IngredientLineRow: "Optional" is a menu item plus a status chip (never a tooltip-only icon)', () => {
+  const open = async () => userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
+  it('the actions menu has a checkable "Optional" item, unchecked for an ordinary line, that toggles it on', async () => {
     const { onChange } = view()
-    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
-    expect(chip).toHaveTextContent('Optional')
-    expect(chip).toHaveClass('chip')
-    expect(chip).toHaveAttribute('aria-pressed', 'false')
-    await userEvent.click(chip)
+    await open()
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Optional' })
+    expect(item).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(item)
     expect(onChange).toHaveBeenCalledWith({ optional: true })
   })
-  it('shows the pressed state when the line is optional and toggles it off', async () => {
+  it('the item is checked when the line is optional and toggles it off', async () => {
     const { onChange } = view({ optional: true })
-    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
-    expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(chip)
+    await open()
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Optional' })
+    expect(item).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(item)
     expect(onChange).toHaveBeenCalledWith({ optional: false })
   })
-  it('shows "Optional" as text (no title); the accessible name adds the Ingredient so each line is unique', () => {
+  it('works without a drag handle or onMove: the menu still has the Optional item and no Move items', async () => {
+    view({ optional: false })
+    await open()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Optional' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Move ingredient up' })).toBeNull()
+  })
+  it('an ordinary line shows no Optional chip', () => {
     const { container } = view()
+    expect(container.querySelector('.line-row .chip')).toBeNull()
+    expect(screen.queryByText('Optional')).toBeNull()
+  })
+  it('an optional line shows a compact non-interactive "Optional" chip inside the Ingredient cell, after the picker, announced with the line', () => {
+    const { container } = view({ optional: true })
+    const cell = container.querySelector('.line-row__ingredient')!
+    const chip = cell.querySelector('.chip') as HTMLElement
+    expect(chip).not.toBeNull()
+    expect(chip.tagName).toBe('SPAN')
+    expect(chip).toHaveTextContent('Optional')
+    expect(chip).toHaveAttribute('data-kind', 'tag')
+    expect(chip.closest('button')).toBeNull()
+    expect(chip).not.toHaveAttribute('aria-hidden')
+    const combo = within(cell as HTMLElement).getByRole('combobox', { name: 'Ingredient' })
+    expect(combo.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(container.querySelector('li.line-row')!.textContent).toContain('Optional')
+  })
+  it('no [title] attribute anywhere in the line', () => {
+    const { container } = view({ optional: true })
     expect(container.querySelector('[title]')).toBeNull()
-    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
-    expect(chip.textContent?.trim()).toBe('Optional')
   })
 })

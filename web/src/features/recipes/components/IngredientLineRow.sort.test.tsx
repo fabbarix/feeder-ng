@@ -40,10 +40,13 @@ describe('IngredientLineRow: drag handle', () => {
     view(props({ line: line({ auto: true, ingredientId: null, ingredientName: 'Aioli pack' }), ingredient: undefined }))
     expect(screen.getByRole('button', { name: 'Reorder garlic' })).toBeInTheDocument()
   })
-  it('without a handle the row is as before: no handle holder, no actions menu', () => {
+  it('without a handle the row has no handle holder and its menu offers no Move items', async () => {
     view(props({ handle: undefined, onMove: undefined, count: undefined }))
     expect(row().querySelector('.line-row__handle')).toBeNull()
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
+    expect(screen.queryByRole('menuitem', { name: /^Move ingredient/ })).toBeNull()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Optional' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Remove ingredient garlic' })).toBeInTheDocument()
   })
 })
