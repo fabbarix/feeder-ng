@@ -1,6 +1,6 @@
 module github.com/fabbarix/feeder-ng
 
-go 1.26.4
+go 1.26.11
 
 require (
 	github.com/HugoSmits86/nativewebp v1.3.0

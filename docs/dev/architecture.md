@@ -3,7 +3,7 @@
 Every team follows this. The foundation team (T0) commits it as `docs/dev/architecture.md` and keeps it accurate; later teams read it from there. Domain words come from GLOSSARY.md, never the `_Avoid_` words (in code identifiers, UI copy, test names, table names).
 
 ## Stack
-- Go 1.26.4 (godog requires 1.26), module `github.com/fabbarix/feeder-ng`. Stdlib `net/http` (1.22+ method/path patterns), no web framework.
+- Go 1.26.11 (godog requires 1.26), module `github.com/fabbarix/feeder-ng`. Stdlib `net/http` (1.22+ method/path patterns), no web framework.
 - SQLite via `modernc.org/sqlite` (pure Go, no cgo). WAL mode, foreign keys ON.
 - BDD: `github.com/cucumber/godog`, run in-process from `go test`.
 - Frontend in `web/`: Vite + React 19 + TypeScript (strict) + react-router + @tanstack/react-query; vitest + @testing-library/react + jsdom. pnpm. Font Figtree, self-hosted (`@fontsource/figtree`) so it works offline.

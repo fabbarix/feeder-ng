@@ -3,7 +3,7 @@
 Scope: the repo scaffold every other team builds on. Contract: [../architecture.md](../architecture.md). Tests are written first (red); the Developer implements until `scripts/check.sh` passes.
 
 ## Decisions taken (deviations from / refinements of the contract)
-- **Go version**: godog v0.16 pulls `go 1.26` into `go.mod`; the Dockerfile and CI use Go 1.26.4.
+- **Go version**: godog v0.16 pulls `go 1.26` into `go.mod`; the Dockerfile and CI use Go 1.26.11.
 - **`internal/httpx`** (new leaf package) holds the JSON helpers (`WriteJSON`, `WriteError`, `DecodeJSON`, `APIError`). They cannot live in `internal/app` because `internal/auth` (imported by `app`) needs them.
 - **Auth split**: `internal/auth` is the core (users, sessions, middleware, no routes). `internal/auth/httpapi` registers `/api/me`, `/api/logout`, `/api/dev/login` via `app.Register` (team T1 adds Google OAuth routes there).
 - **Module imports**: instead of `cmd/feeder/modules_<feature>.go`, each feature gets one file `internal/modules/<feature>.go` that blank-imports its `httpapi` package. Both `cmd/feeder` and `internal/testkit` import `internal/modules`, so BDD and the real binary always run the same module set. Feature `httpapi` tests must be external test packages (`package httpapi_test`) to avoid an import cycle through testkit.
@@ -168,7 +168,7 @@ func RegisterSteps(name string, f StepRegistrar)   // call from init() in steps_
 - `scripts/check.sh`: `cd` to repo root; `mkdir -p build`; run everything through `tee build/check.log`; steps in order: `pnpm -C web install --frozen-lockfile`, `pnpm -C web typecheck`, `pnpm -C web test`, `pnpm -C web build`, `go vet ./...`, `go test ./...`; stops at the first failure (`set -euo pipefail`, `PIPESTATUS`) with non-zero exit; prints `CHECK PASSED` / `CHECK FAILED: <step>` last.
 - `Makefile`: `check` (runs the script), `build` (web build then `go build -o build/feeder ./cmd/feeder`), `run` (`build` then runs it; needs `FEEDER_ADMIN_EMAIL`).
 - `cmd/feeder/main.go`: Load config (exit 2 with the error on stderr when it fails) -> `db.Open` -> `db.MigrateEmbedded` -> `app.New(..., web.FS())` -> `http.Server` with graceful shutdown on SIGINT/SIGTERM.
-- Dockerfile: stage 1 `node` + pnpm builds `web/dist`; stage 2 `golang:1.26.4` copies dist, `CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build`; stage 3 small runtime (distroless/static or alpine), non-root user, `VOLUME /data`, `ENV FEEDER_DATA_DIR=/data`, `EXPOSE 8080`; `FEEDER_DEV_LOGIN` unset.
+- Dockerfile: stage 1 `node` + pnpm builds `web/dist`; stage 2 `golang:1.26.11` copies dist, `CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build`; stage 3 small runtime (distroless/static or alpine), non-root user, `VOLUME /data`, `ENV FEEDER_DATA_DIR=/data`, `EXPOSE 8080`; `FEEDER_DEV_LOGIN` unset.
 
 ## Frontend interfaces (`web/src`)
 

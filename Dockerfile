@@ -17,7 +17,7 @@ RUN pnpm build
 
 # Stage 2: the server binary, with the SPA embedded. It runs on the build machine and
 # cross-compiles for TARGETOS/TARGETARCH, so a multi-arch build needs no emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26.4 AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.11 AS build
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
