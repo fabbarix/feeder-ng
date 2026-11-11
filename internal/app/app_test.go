@@ -338,6 +338,22 @@ func TestClientRoutesWithoutAnExtensionStillGetTheSPAIndex(t *testing.T) {
 	}
 }
 
+// L9: the web app manifest is served as application/manifest+json (not text/plain), or the browser does not treat the app as installable.
+func TestWebManifestIsServedWithItsOwnType(t *testing.T) {
+	fs := fstest.MapFS{
+		"index.html":           {Data: []byte("<html>SPA index</html>")},
+		"manifest.webmanifest": {Data: []byte(`{"name":"Feeder"}`)},
+	}
+	h := build(t, fs, app.NewRegistry())
+	rec := h.get("/manifest.webmanifest", "")
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/manifest+json") {
+		t.Errorf("Content-Type = %q, want application/manifest+json", ct)
+	}
+}
+
 // R11a N10: the brand favicon is a real file of the built frontend (web/public/favicon.svg), served with its own type.
 func TestFaviconSVGIsServedAsAnImage(t *testing.T) {
 	fs := fstest.MapFS{
