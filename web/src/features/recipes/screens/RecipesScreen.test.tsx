@@ -37,6 +37,16 @@ beforeEach(() => {
   }
 })
 
+describe('RecipesScreen CSS scope (IH)', () => {
+  it('renders the recipes-screen class on the ListPage root, with the BentoGrid inside it, so the recipes.css 3/4-column rules match', () => {
+    const { container } = view()
+    const root = container.firstElementChild as HTMLElement
+    expect(root.classList.contains('list-page')).toBe(true)
+    expect(root.classList.contains('recipes-screen')).toBe(true)
+    expect(container.querySelector('.recipes-screen .bento-grid[data-columns="2"]')).not.toBeNull()
+  })
+})
+
 describe('RecipesScreen', () => {
   it('has one h1, one primary New Recipe action and a More overflow (not five equal pills)', async () => {
     view()

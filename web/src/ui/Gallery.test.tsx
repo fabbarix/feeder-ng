@@ -11,6 +11,7 @@ const SECTIONS = [
   'BentoGrid',
   'PageHeader',
   'ListRow',
+  'ListPage',
   'RecipeThumb',
   'ProgressTile',
   'TimerTile',
