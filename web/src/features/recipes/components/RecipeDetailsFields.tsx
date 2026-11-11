@@ -2,18 +2,21 @@ import type { ReactNode } from 'react'
 import { Checkbox, FieldRow, NumberField, TextArea, TextField } from '../../../ui'
 import { codeMessage, recipeStrings } from '../strings'
 import { numberText, numberValue, type DraftErrors, type RecipeDraft } from '../lib/draft'
+import type { TagCount } from '../types'
 import { TagInput } from './TagInput'
 
 export interface RecipeDetailsFieldsProps {
   draft: RecipeDraft
   errors: DraftErrors
   onChange: (patch: Partial<RecipeDraft>) => void
+  /** The Household's existing Tags, suggested in the Tag field. */
+  knownTags?: TagCount[]
 }
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
-export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFieldsProps): ReactNode {
+export function RecipeDetailsFields({ draft, errors, onChange, knownTags }: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
   return (
     <div className="recipe-details">
@@ -71,7 +74,7 @@ export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFi
         checked={draft.readyMeal}
         onChange={(readyMeal) => onChange({ readyMeal })}
       />
-      <TagInput tags={draft.tags} onChange={(tags) => onChange({ tags })} />
+      <TagInput tags={draft.tags} known={knownTags} onChange={(tags) => onChange({ tags })} />
       <FieldRow>
         <TextField
           size="lg"

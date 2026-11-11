@@ -7,6 +7,7 @@ import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSh
 import { IngredientLineRow } from '../components/IngredientLineRow'
 import { PhotoPicker } from '../components/PhotoPicker'
 import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
+import { useKnownTags } from '../hooks/useKnownTags'
 import { RecipeSectionIndex } from '../components/RecipeSectionIndex'
 import { StepsEditor } from '../components/StepsEditor'
 import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
@@ -35,6 +36,7 @@ export function RecipeEditorScreen(): ReactNode {
   const { id } = useParams()
   const recipeId = id === undefined ? undefined : Number(id)
   const refs = useIngredientRefs()
+  const knownTags = useKnownTags()
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ingredients made from the picker, known at once (the list refetch may still be on its way).
   const [made, setMade] = useState<IngredientRef[]>([])
@@ -119,7 +121,7 @@ export function RecipeEditorScreen(): ReactNode {
           <PageHeader title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe} breadcrumbs={crumbs} />
           <Tile as="section" id="recipe-section-details" className="recipe-editor__section" aria-labelledby="recipe-section-details-title">
             <h2 id="recipe-section-details-title">{recipeStrings.fields.details}</h2>
-            <RecipeDetailsFields draft={draft} errors={editor.errors} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
+            <RecipeDetailsFields draft={draft} errors={editor.errors} knownTags={knownTags} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
           </Tile>
           <div id="recipe-section-photo" className="recipe-editor__section">
             <PhotoPicker
