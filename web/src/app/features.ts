@@ -9,6 +9,8 @@ import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
 /** What a feature tells the shell's status slot. The scan feature will export one from features/scan/index.ts. */
 export interface ShellStatusInfo {
   pendingScans?: number
+  /** Access Requests waiting for an answer (the avatar badge). */
+  pendingAccessRequests?: number
 }
 export type ShellStatusHook = () => ShellStatusInfo
 

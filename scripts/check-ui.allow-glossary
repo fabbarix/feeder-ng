@@ -36,3 +36,7 @@ web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal
 web/src/features/products/strings.ts deleted  # Delete Product copy: a bought Product cannot be deleted (the action, not the Archived state)
 # "Done" (board:markDone) is the Advance Step state on the kitchen board's Next Advance Step tile, not a Planned Meal (as on Cook).
 web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
+
+# A1: spec-mandated copy. "wait" is plain English for an Access Request waiting for approval, not a Passive Step.
+web/src/features/notifications/strings.ts wait  # "When someone asks to sign in and waits for approval"
+web/src/features/settings/strings.ts wait  # "Their requests wait in Sign-in requests"

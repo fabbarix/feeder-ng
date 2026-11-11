@@ -31,6 +31,7 @@ export const ROUTE_CRUMBS: RouteCrumb[] = [
   { path: '/settings/planning', label: sections.planningRules.title, parent: '/settings' },
   { path: '/settings/shops', label: sections.shops.title, parent: '/settings' },
   { path: '/settings/preferences', label: sections.preferences.title, parent: '/settings' },
+  { path: '/settings/access-requests', label: sections.accessRequests.title, parent: '/settings' },
   { path: '/settings/notifications', label: sections.notifications.title, parent: '/settings' },
   { path: '/settings/allowlist', label: sections.allowlist.title, parent: '/settings' },
   { path: '/settings/shops/:id', label: S.entity.shop, parent: '/settings/shops', entity: true },

@@ -2,7 +2,7 @@ import { ApiError } from '../../../lib/http'
 
 const MESSAGES: Record<string, string> = {
   last_admin: 'The Household needs at least one Admin.',
-  email_taken: 'That email is already on the allowlist.',
+  email_taken: 'That email already belongs to a Member, a User or the allowlist.',
   duplicate_slot: 'That weekday already has a Meal Slot with this name and time.',
   weekday_mismatch: 'That date does not fall on the Meal Slot\'s weekday.',
   unknown_member: 'That Member no longer exists.',

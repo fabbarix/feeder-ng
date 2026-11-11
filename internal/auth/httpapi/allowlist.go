@@ -57,6 +57,17 @@ func mountAllowlist(r *app.Router, d app.Deps) {
 		if name == "" {
 			name = localPart(email)
 		}
+		if d.Access != nil {
+			taken, err := d.Access.MemberEmailTaken(req.Context(), email)
+			if err != nil {
+				httpx.WriteAPIError(w, err)
+				return
+			}
+			if taken {
+				httpx.WriteError(w, http.StatusConflict, "email_taken", "That email already belongs to a Member")
+				return
+			}
+		}
 		u, err := d.Auth.AddUser(req.Context(), email, name, in.IsAdmin)
 		switch {
 		case errors.Is(err, auth.ErrEmailTaken):

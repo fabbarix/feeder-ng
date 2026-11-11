@@ -1,6 +1,7 @@
 // R11a: the ONE place that says which routes have a hierarchy and what their crumbs are called (screens never build crumbs).
 // web/src/app/breadcrumbs.ts exports ROUTE_CRUMBS (the table) and crumbsFor(pathname, entityName?) (pure, no React).
 import { describe, expect, it } from 'vitest'
+import { routes as accessRoutes } from '../features/access'
 import { routes as importRoutes } from '../features/import'
 import { routes as ingredientRoutes } from '../features/ingredients'
 import { routes as notificationRoutes } from '../features/notifications'
@@ -23,6 +24,7 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/shops', 'Shops'],
     ['/settings/preferences', 'Your preferences'],
     ['/settings/notifications', 'Notifications'],
+    ['/settings/access-requests', 'Sign-in requests'], // A1
     ['/settings/allowlist', 'Allowlist'],
   ])('%s is Settings > %s', (path, label) => {
     expect(crumbsFor(path)).toEqual([S, { label }])
@@ -93,7 +95,7 @@ describe('shape of every trail', () => {
 })
 
 describe('the table covers every hierarchical route the features declare', () => {
-  const all = [...settingsRoutes, ...planRoutes, ...shopsRoutes, ...notificationRoutes, ...recipeRoutes, ...importRoutes, ...ingredientRoutes, ...productRoutes]
+  const all = [...accessRoutes, ...settingsRoutes, ...planRoutes, ...shopsRoutes, ...notificationRoutes, ...recipeRoutes, ...importRoutes, ...ingredientRoutes, ...productRoutes]
   const ROOTS = new Set(['/settings', '/recipes', '/ingredients', '/products', '/plan'])
   const hierarchical = all.map((r) => r.path ?? '').filter((p) => p && !ROOTS.has(p))
 

@@ -6,7 +6,7 @@ import type { PushEnvironment } from '../lib/webpush'
 import type { BrowserSubscription, PushDevice } from '../types'
 import { useNotificationSettings, type PushPort } from './useNotificationSettings'
 
-const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false }
+const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false, accessRequest: false }
 const config = { vapidPublicKey: 'BAUF', types: Object.keys(flags), quietHours: { start: '22:00', end: '07:00' }, timeZone: 'Europe/Rome' }
 const sub: BrowserSubscription = { endpoint: 'https://push.example/pixel', keys: { p256dh: 'p', auth: 'a' } }
 const env: PushEnvironment = { hasServiceWorker: true, hasPushManager: true, hasNotification: true, permission: 'default', isIos: false, isStandalone: false }
