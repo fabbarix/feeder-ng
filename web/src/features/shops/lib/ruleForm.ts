@@ -1,5 +1,5 @@
 // Weight Barcode Rule form: text inputs <-> WeightRule. Plain TypeScript, no React.
-import { validateRule, type ValueKind, type ValueUnit, type WeightRule } from '../../scan/lib/barcode'
+import { ruleProblem, validateRule, type ValueKind, type ValueUnit, type WeightRule } from '../../scan/lib/barcode'
 import { strings } from '../strings'
 
 /** Every field is the text of an input. unit is '' for a price rule. */
@@ -82,21 +82,8 @@ export function ruleFormErrorField(v: RuleFormValues): RuleFormField | null {
   if (rule === null) {
     return RULE_NUMBER_FIELDS.find((f) => whole(v[f]) === null) ?? null
   }
-  const reason = validateRule(rule)
-  if (reason === null) return null
-  if (reason.startsWith('prefix')) return 'prefix'
-  if (reason.startsWith('item starts')) return 'itemStart'
-  if (reason.startsWith('decimal')) return 'decimalPlaces'
-  if (reason.startsWith('value starts') || reason.includes('overlap')) return 'valueStart'
-  return spanField(rule)
-}
-
-/** The field of the first span that is not valid (a start below 1 or a length below 1). */
-function spanField(rule: WeightRule): RuleFormField {
-  if (rule.item.start < 1) return 'itemStart'
-  if (rule.item.length < 1) return 'itemLength'
-  if (rule.value.start < 1) return 'valueStart'
-  return 'valueLength'
+  const field = ruleProblem(rule)?.field
+  return field === undefined || field === 'valueKind' || field === 'valueUnit' ? null : field
 }
 
 const RULE_NUMBER_FIELDS = ['itemStart', 'itemLength', 'valueStart', 'valueLength', 'decimalPlaces'] as const
