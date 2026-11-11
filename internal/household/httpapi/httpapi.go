@@ -39,6 +39,7 @@ func mount(r *app.Router, d app.Deps) {
 
 	r.User("GET /api/meal-slots", a.listSlots)
 	r.Admin("POST /api/meal-slots", a.createSlot)
+	r.Admin("PATCH /api/meal-slots/batch", a.updateSlotsBatch)
 	r.Admin("PATCH /api/meal-slots/{id}", a.updateSlot)
 	r.Admin("DELETE /api/meal-slots/{id}", a.deleteSlot)
 
@@ -60,6 +61,8 @@ func writeErr(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
 	case errors.Is(err, household.ErrDuplicateSlot):
 		httpx.WriteError(w, http.StatusConflict, "duplicate_slot", "A Meal Slot with that name already exists on that weekday")
+	case errors.Is(err, household.ErrNoMatchingSlot):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "no_matching_slot", "No Meal Slot with that name on the chosen weekdays")
 	case errors.Is(err, household.ErrUserLinked):
 		httpx.WriteError(w, http.StatusConflict, "user_already_linked", "That User is already linked to another Member")
 	case errors.Is(err, household.ErrUnknownMember):

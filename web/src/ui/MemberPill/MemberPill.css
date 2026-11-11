@@ -1,0 +1,29 @@
+/* MemberPill (R15): neutral surface, so contrast never depends on the Member colour; the colour is the avatar ring and a start accent. */
+.member-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-inline-size: 100%;
+  padding-block: 2px;
+  padding-inline: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  border-inline-start: 3px solid var(--member-colour);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+
+.member-pill .avatar[data-size='sm'] {
+  inline-size: 24px;
+  block-size: 24px;
+  font-size: var(--text-nav-size);
+}
+
+.member-pill__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

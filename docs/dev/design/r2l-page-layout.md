@@ -17,7 +17,7 @@ Deferred: `ui/Menu` (G-01) and L-12. They are in the R2-L row but not in this as
 | `--page-gutter` | `var(--gutter)` (16 phone / 24 from 768 / 32 from 1200, already there) |
 | `--color-info-fg` / `--color-info-bg` | light `#1b4a7a` on `#d9e9fb` (7.4:1); dark `#a9d0f5` on `#14304c` (8.4:1) |
 
-The widths are **content** widths. `Page` adds the two gutters (`--page-max: calc(var(--page-narrow) + 2 * var(--page-gutter))`), so a narrow form column is 720 px of content at every viewport and the gutter never eats it. The info pair is declared in all three scheme blocks (light, `[data-scheme=dark]`, and the pre-ThemeProvider `prefers-color-scheme` block); fg reaches 4.5:1 on its tint, on `--color-surface` and on `--color-bg`. Decision: **included**, because R13 asked for it and it is a pure `styles.css` addition that nobody else owns; adoption in `Tile`/`Chip` stays with R13. The name follows the caller's `--color-info*`; the existing family is `--status-*-fg|bg|solid`, so the PM may prefer `--status-info-*` for consistency (rename is mechanical, the test file is `styles.pageTokens.css.test.ts`).
+The widths are **content** widths. `Page` adds the two gutters (`--page-max: calc(var(--page-narrow) + 2 * var(--page-gutter))`), so a narrow form column is 720 px of content at every viewport and the gutter never eats it. The info pair is declared in all three scheme blocks (light, `[data-scheme=dark]`, and the pre-ThemeProvider `prefers-color-scheme` block); fg reaches 4.5:1 on its tint, on `--color-surface` and on `--color-bg`. Decision: **included**, because R13 asked for it and it is a pure `styles.css` addition that nobody else owns; adoption in `Tile`/`Chip` stays with R13. The name follows the caller's `--color-info*`; the existing family is `--status-*-fg|bg|solid`. **Decision (R2-L-b): keep `--color-info-fg|bg`.** They are a plain colour pair like `--color-accent`/`--color-soft`, not a status state (no `solid`, not tied to Tile/Chip tones), R13 already asked for these names, and a rename would touch three scheme blocks and the token test for no behaviour. Revisit only if R13 folds info into the `--status-*` tones.
 
 ## 2. One width per route: where it lives, who applies it
 
@@ -69,7 +69,7 @@ Still open on main. `shell.css`: (a) from 1440, after the soft current rule, `.s
 - `scripts/check-page-layout.sh`: the wrapper.
 
 ### Choice: wrapper wired into `check.sh`, not a separate release-QA script
-Cost: a quick run is about 3 viewports x 25 routes x ~0.6 s (settle poll) plus a `go build` of a few seconds, roughly 60 s, run once per `check.sh`. The full six-viewport run (about 3 min) is `PAGE_LAYOUT=full scripts/check.sh`, used by release QA. A guard that is not in `check.sh` is not run, and the per-route flip only means something if every worktree's check exercises it. Robustness comes from the wrapper: every failure of the environment (no Chrome, seeder crash, server not ready) is a printed `SKIP`/`WARN`, never a failed check; only a finding on a route listed in `fail_routes` fails. `PAGE_LAYOUT=skip` turns it off. It runs after `vite build` (the Go binary embeds `web/dist`) and before `go vet`.
+Cost: a quick run is about 3 viewports x 25 routes x ~0.6 s (settle poll) plus a `go build` of a few seconds, measured at about 45 s, run once per `check.sh`. The full six-viewport run (about 3 min) is `PAGE_LAYOUT=full scripts/check.sh`, used by release QA. A guard that is not in `check.sh` is not run, and the per-route flip only means something if every worktree's check exercises it. Robustness comes from the wrapper: every failure of the environment (no Chrome, seeder crash, server not ready) is a printed `SKIP`/`WARN`, never a failed check; only a finding on a route listed in `fail_routes` fails. `PAGE_LAYOUT=skip` turns it off. It runs after `vite build` (the Go binary embeds `web/dist`) and before `go vet`.
 
 ### Wrapper contract (`scripts/check-page-layout.sh`)
 1. `--print-port [--root DIR]`: `20000 + cksum(DIR) % 20000` (deterministic, per worktree); `--mode-of ROUTE`: `warn|fail` from the modes file.
@@ -104,3 +104,19 @@ Add 1920x1080 and 2560x1440; new rule 11: at >= 1024 on a non-chromeless route, 
 - `Page` nesting detection: a private context set by the outermost `Page`.
 - Recipes `recipes.css` (`.recipe-detail, .recipe-editor { max-inline-size: 760px }`), `cook.css` (1100), `notifications.css` (640) are **not** touched here (adoption packages). Until then the editor stays 760 px inside a 1120 page; the guard reports it as warn.
 - Gallery stays under `Gallery.css`; do not edit `ui/WeekdayPicker/` (R15) or the image fields (IM2).
+
+## 8. Follow-ups (R2-L-b)
+
+- **Guard time limits.** The wrapper's guard limit is `PAGE_LAYOUT_GUARD_TIMEOUT` (default 300 s, was 900; a normal run is ~45 s), the seeder has `PAGE_LAYOUT_SEED_TIMEOUT` (90 s) and per-fetch timeouts (10 s). The driver bounds every CDP call, the `ws.onopen` handshake and the Chrome start (`PAGE_LAYOUT_CDP_TIMEOUT_MS` 20 s, `PAGE_LAYOUT_CHROME_TIMEOUT_MS` 15 s) and answers exit 2 (environment, a WARN) rather than hanging or crashing with exit 1. A timeout is a WARN, never a finding.
+- **Chrome profile.** It lives in `<build>/page-layout-chrome-XXXX` (next to the ids file), Chrome runs in its own process group and the driver waits for it to exit before removing the profile; stale profiles of crashed runs are swept on the next start. Nothing is written to `/tmp` any more.
+- **Compact rail (1024-1439).** The current Scan item gets the same 3 px soft ring as the expanded rail.
+
+### ui/Menu (G-01) and L-12: not done here, sized
+
+**G-01 is not small.** It is a new primitive plus two migrations in features other teams touch, so it is a work package of its own (about 1 day: tests first, then the primitive, then the call sites).
+- `ui/Menu`: `<Menu trigger={IconButton} items=[{label, icon?, tone?, onSelect}]>`. From 768 px a popover anchored to the trigger (`position: fixed` from `getBoundingClientRect`, flips above when it does not fit, `role="menu"`/`menuitem`, focus to the first item, Arrow/Home/End, Escape and Tab close and return focus, outside click closes, same scrim-less rules as `YourMenu`); below 768 px it renders the existing `BottomSheet` with the same items. One `useMediaQuery('(min-width: 768px)')` decides.
+- `YourMenu` already has the keyboard logic: extract it into `ui/Menu/useMenuKeys` (or make `YourMenu` a `Menu` client) rather than copying it.
+- Call sites: `RecipeDetailScreen` (More: Archive, Delete) and `RecipesScreen` / `RecipesOverflowSheet` (Import, Copy Agent Prompt, Show archived). Both are under `features/recipes`, so the package must be serialised with any recipes team (E-01 editor, R13) and with `ui/index.ts`.
+- Tests: Menu unit tests (open/close, keys, focus return, flip, both breakpoints), call-site tests (a popover on desktop, a sheet on phone), a guard probe that the popover stays inside the viewport at 768 and 1024.
+
+**L-12 is decided: no action.** The review calls the avatar at the viewport edge an "acceptable app-shell convention". Moving the brand into the rail's first row changes the top bar grid at three breakpoints and every shell guard (rule 9 and 11); it should only be done if a user complains. Reopen then.

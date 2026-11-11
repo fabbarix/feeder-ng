@@ -26,6 +26,8 @@ export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/products/:id', width: 'narrow' },
   { path: '/settings', width: 'narrow' },
   { path: '/settings/*', width: 'narrow' },
+  // R15: the week grid has seven day columns and wants more than 720 px (chips and pills do not fit a ~80 px cell).
+  { path: '/settings/meal-slots', width: 'default' },
   // Sign-in routes redirect to / when signed in; they are listed so that no feature route inherits the fallback unnoticed.
   { path: '/sign-in', width: 'default' },
   { path: '/not-invited', width: 'default' },

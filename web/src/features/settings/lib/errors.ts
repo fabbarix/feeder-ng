@@ -21,3 +21,9 @@ export function errorMessage(err: unknown): string {
   }
   return 'Something went wrong. Please try again.'
 }
+
+/** R15: a refused batch edit shows the server's own sentence (it names the clash), else the usual short message. */
+export function batchErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && (err.code === 'duplicate_slot' || err.code === 'no_matching_slot') && err.message) return err.message
+  return errorMessage(err)
+}
