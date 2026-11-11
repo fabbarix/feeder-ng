@@ -136,6 +136,19 @@ func TestACourseServedFromALeftoverReheatsOnTheTimeline(t *testing.T) {
 	}
 }
 
+func TestAReheatLongerThanEveryFreshCourseComesFirst(t *testing.T) {
+	rome := zone(t, "Europe/Rome")
+	left := soup(rome)
+	left.FromLeftover, left.Steps, left.ReheatSeconds = true, nil, 60*60
+	c := only(t, compute(rome, curry(rome), left), notify.StartCooking)
+	if want := time.Date(2026, 11, 9, 18, 30, 0, 0, rome); !c.At.Equal(want) {
+		t.Errorf("At = %s, want %s (the 60 min Reheat sets the timeline)", c.At, want)
+	}
+	if c.Body != "Start cooking now for 19:30: Tomato soup first" {
+		t.Errorf("Body = %q", c.Body)
+	}
+}
+
 func TestASlotWithNothingFreshHasNoStartCooking(t *testing.T) {
 	rome := zone(t, "Europe/Rome")
 	left := curry(rome)
