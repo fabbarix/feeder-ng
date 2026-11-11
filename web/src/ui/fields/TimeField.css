@@ -5,7 +5,7 @@
   gap: var(--space-1);
   min-block-size: 48px;
   padding: 0 var(--field-pad-inline);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);

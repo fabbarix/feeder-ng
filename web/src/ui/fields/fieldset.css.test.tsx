@@ -42,7 +42,7 @@ describe('Segmented label', () => {
     expect(track['background']).toBe('transparent')
     expect(track['border-color']).toBe('var(--color-outline)')
     const selected = declarations(css, ".segmented[data-disabled] .segmented__option[aria-checked='true']")
-    expect(selected['box-shadow']).toBe('inset 0 0 0 1.5px var(--color-outline)')
+    expect(selected['box-shadow']).toBe('inset 0 0 0 var(--field-border-width) var(--color-outline)')
     expect(selected['color']).toBe('var(--color-text)')
     const unselected = declarations(css, '.segmented__option:disabled')
     expect(selected['box-shadow']).not.toBe(unselected['box-shadow'])
@@ -50,6 +50,6 @@ describe('Segmented label', () => {
   })
 
   it('the enabled track has a transparent border of the same width, so disabling does not shift layout', () => {
-    expect(declarations(readUiCss('fields/Segmented.css'), '.segmented')['border']).toBe('1.5px solid transparent')
+    expect(declarations(readUiCss('fields/Segmented.css'), '.segmented')['border']).toBe('var(--field-border-width) solid transparent')
   })
 })

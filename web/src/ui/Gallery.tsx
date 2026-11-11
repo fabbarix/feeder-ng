@@ -342,7 +342,7 @@ function FieldRowGroup() {
       <WideCell caption="Three xs NumberFields wrap on a phone">
         <FieldRow>
           <NumberField label="Yield" value={4} onChange={noop} size="xs" />
-          <NumberField label="Cool-down" value={30} onChange={noop} size="xs" unit="min" />
+          <NumberField label="Cool-down" value={30} onChange={noop} size="xs" unit="days" />
           <NumberField label="Leftover Use-by" value={3} onChange={noop} size="xs" unit="days" />
         </FieldRow>
       </WideCell>

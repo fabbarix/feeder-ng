@@ -69,7 +69,7 @@ describe('focus ring on the other field parts', () => {
   })
 
   it('the TimeField group gets the same border and radius as the other controls', () => {
-    expect(declarations(time, '.time-field')).toMatchObject({ border: '1.5px solid var(--color-outline)', 'border-radius': 'var(--radius-control)' })
+    expect(declarations(time, '.time-field')).toMatchObject({ border: 'var(--field-border-width) solid var(--color-outline)', 'border-radius': 'var(--radius-control)' })
   })
 
   it('an invalid field keeps the danger border while focused (error colour wins over the accent border)', () => {

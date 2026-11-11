@@ -9,6 +9,7 @@
   --field-size-md: 320px;
   --field-size-lg: 480px;
   --field-size-xs-stepper: 136px;
+  --field-size-xs-stepper-unit: 168px; /* holds 3ch + a unit like "days" between the buttons */
   --field-size-sm-stepper: 192px;
 }
 
@@ -41,6 +42,10 @@
 
 .ui-field--stepper[data-size='xs'] {
   max-inline-size: var(--field-size-xs-stepper);
+}
+
+.ui-field--stepper[data-size='xs']:has(.ui-field__suffix) {
+  max-inline-size: var(--field-size-xs-stepper-unit);
 }
 
 .ui-field--stepper[data-size='sm'] {
