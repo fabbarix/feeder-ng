@@ -77,7 +77,7 @@ func toJSON(i ingredient.Ingredient) ingredientJSON {
 		Image:         i.Image,
 	}
 	if i.Image != "" {
-		out.ImageURL = "/api/images/" + i.Image
+		out.ImageURL = images.URL(i.Image)
 	}
 	for _, c := range i.Conversions {
 		out.Conversions = append(out.Conversions, conversionJSON{Unit: c.Unit, ToBase: c.ToBase})

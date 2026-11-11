@@ -115,7 +115,7 @@ func writeStored(w http.ResponseWriter, st images.Stored, err error) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusCreated, map[string]any{
-		"id": st.ID, "url": "/api/images/" + st.ID, "width": st.Width, "height": st.Height,
+		"id": st.ID, "url": images.URL(st.ID), "width": st.Width, "height": st.Height,
 	})
 }
 

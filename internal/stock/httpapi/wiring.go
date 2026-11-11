@@ -3,11 +3,11 @@ package httpapi
 import (
 	"context"
 	"errors"
-	"github.com/fabbarix/feeder-ng/internal/images"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/household/store"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/stock"
 	"github.com/fabbarix/feeder-ng/internal/stock/service"

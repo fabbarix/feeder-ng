@@ -2,11 +2,11 @@ package httpapi
 
 import (
 	"errors"
-	"github.com/fabbarix/feeder-ng/internal/images"
 	"net/http"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/images"
 )
 
 // memberBody is a Member as the API shows them.
