@@ -14,7 +14,7 @@ ICONS="$WEB/src/ui/icons.ts"
 # why the old 64 kB budget could not take the four ImagePicker glyphs). Sort-drag measured 42,918 B with 102 modules;
 # the PM raised the budget to the new size + sensible headroom (~1.1 kB, 90 B was not sensible).
 BUDGET=44032
-MIN_MODULES=100   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key)
+MIN_MODULES=102   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then
   echo "FAIL: $PLUGIN missing (exports phosphorWeights(), strips thin and light from the Phosphor defs)"; exit 1

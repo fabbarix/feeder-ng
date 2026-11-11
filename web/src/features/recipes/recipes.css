@@ -475,6 +475,14 @@
   grid-area: auto;
 }
 
+/* The two-track grid has no `remove` area: put the actions in column 2 at every width (beats the >= 900 rule by specificity). */
+.line-row--pending > .line-row__remove {
+  grid-area: auto;
+  grid-row: 1;
+  grid-column: 2;
+  justify-self: end;
+}
+
 .line-row__pending-name,
 .line-row__pending-amount {
   display: flex;
