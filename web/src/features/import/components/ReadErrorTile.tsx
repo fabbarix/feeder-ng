@@ -8,8 +8,8 @@ export interface ReadErrorTileProps {
   error: ReadErrorInput
   isAdmin: boolean
   onRetry: () => void
-  /** The wrapper the step focuses after a failure (tabindex -1), so the alert is read and the User is where the problem is. */
-  focusRef?: Ref<HTMLDivElement>
+  /** The alert Tile itself, which the step focuses after a failure (tabindex -1), so the alert is read and the User is where the problem is. */
+  focusRef?: Ref<HTMLElement>
 }
 
 const SETTINGS = '/settings/recipe-assistant'
@@ -18,8 +18,7 @@ const SETTINGS = '/settings/recipe-assistant'
 export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTileProps): ReactNode {
   const copy = readErrorCopy(error, { isAdmin })
   return (
-    <div ref={focusRef} tabIndex={-1} className="read-error">
-      <Tile variant="status" status="danger" role="alert" as="section">
+    <Tile ref={focusRef} tabIndex={-1} className="read-error" variant="status" status="danger" role="alert" as="section">
         <p>{copy.message}</p>
         {copy.hint ? <p className="read-error__hint">{copy.hint}</p> : null}
         {copy.details.length > 0 ? (
@@ -46,7 +45,6 @@ export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTi
             {t.chooseModelLink}
           </Link>
         ) : null}
-      </Tile>
-    </div>
+    </Tile>
   )
 }

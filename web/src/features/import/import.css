@@ -205,19 +205,20 @@
   color: var(--color-muted);
 }
 
-/* The progress and the error tile take focus from code; they are not controls, so no ring. */
-.read-progress:focus,
-.read-error:focus {
+/* The progress takes focus from code; it is not a control, so no ring. */
+.read-progress:focus {
   outline: none;
+}
+
+/* The error tile takes focus from code and keeps the project focus ring, so the User sees where the problem is. */
+.read-error:focus {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .read-progress__note {
   margin: 0;
   color: var(--color-muted);
-}
-
-.read-error {
-  display: contents;
 }
 
 .read-error__hint {

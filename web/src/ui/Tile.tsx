@@ -1,4 +1,4 @@
-import type { ElementType, HTMLAttributes, KeyboardEvent, ReactNode } from 'react'
+import type { ElementType, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from 'react'
 import type { ChipStatus } from './Chip'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
@@ -37,6 +37,8 @@ export interface TileProps extends Omit<HTMLAttributes<HTMLElement>, 'onClick'> 
   /** @deprecated use `variant`. */
   tone?: TileTone
   as?: 'div' | 'section' | 'article'
+  /** The tile's own element (React 19 ref-as-prop), e.g. to focus it from code together with `tabIndex={-1}`. */
+  ref?: Ref<HTMLElement>
   className?: string
   children?: ReactNode
   'aria-label'?: string
@@ -64,7 +66,7 @@ export function Tile({
   ...rest
 }: TileProps) {
   const resolved = resolveTile({ variant, status, span, tone, size })
-  const Tag: ElementType = stretched ? 'article' : onClick ? 'div' : as
+  const Tag = (stretched ? 'article' : onClick ? 'div' : as) as ElementType<HTMLAttributes<HTMLElement> & { ref?: Ref<HTMLElement> }>
   const onKeyDown = onClick
     ? (e: KeyboardEvent<HTMLElement>) => {
         if (e.target !== e.currentTarget) return
@@ -109,7 +111,7 @@ export function Tile({
       data-size={size}
       data-primary-scope=""
       role={onClick ? (rest.role ?? 'button') : rest.role}
-      tabIndex={onClick ? 0 : undefined}
+      tabIndex={onClick ? 0 : rest.tabIndex}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >

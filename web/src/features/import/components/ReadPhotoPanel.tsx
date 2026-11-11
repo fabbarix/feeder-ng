@@ -12,7 +12,7 @@ export interface ReadPhotoPanelProps {
 
 /** What to photograph and the privacy note, then one ImagePicker (raw mode) per slot, labelled "Photo 1"…; a smaller preview at phone width. */
 export function ReadPhotoPanel({ slots, onSlotChange, disabled }: ReadPhotoPanelProps): ReactNode {
-  const wide = useMediaQuery('(min-width: 481px)')
+  const wide = useMediaQuery('(min-width: 600px)')
   const keys = slotKeys(slots)
   return (
     <div className="read-photos">

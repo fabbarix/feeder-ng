@@ -27,8 +27,6 @@ describe('ReadErrorTile', () => {
   })
   it('CSS: the focus target is not display: contents (Chrome will not focus it) and shows a focus ring', () => {
     const css = readSource('features/import/import.css')
-    const rule = declarations(css, '.read-error')
-    expect(rule.display ?? '').not.toBe('contents')
     expect(css).not.toMatch(/\.read-error\s*\{[^}]*display:\s*contents/)
     const focus = declarations(css, '.read-error:focus')
     expect(focus.outline).toMatch(/3px solid var\(--color-accent\)/)

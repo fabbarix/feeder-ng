@@ -97,6 +97,7 @@ export const readStrings = {
   cancel: 'Cancel',
   stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
   progressLabel: 'Reading the recipe',
+  progressBarLabel: 'Read progress',
   photoLabel: (n: number) => `Photo ${n}`,
   photoHelp: 'A cookbook page or a handwritten card. Up to 4 photos, in page order.',
   photoPrivacy: 'Photos are sent to Anthropic to read the recipe. They are only kept if you choose to use one for the Recipe.',

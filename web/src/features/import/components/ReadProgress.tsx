@@ -28,7 +28,7 @@ export function ReadProgress({ kind, state, elapsedSeconds, onCancel }: ReadProg
   useEffect(() => group.current?.focus({ preventScroll: true }), [])
   return (
     <div ref={group} role="group" aria-label={t.progressLabel} tabIndex={-1} className="read-progress">
-      <div role="progressbar" aria-label={t.progressLabel} className="read-progress__bar" />
+      <div role="progressbar" aria-label={t.progressBarLabel} className="read-progress__bar" />
       {/* The only live region: the stage text alone, so nothing else chatters. */}
       <p role="status" aria-live="polite" className="read-progress__stage">
         {announced}

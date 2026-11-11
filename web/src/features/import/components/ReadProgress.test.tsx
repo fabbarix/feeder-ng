@@ -66,7 +66,7 @@ describe('ReadProgress', () => {
     view()
     const bar = screen.getByRole('progressbar')
     expect(bar).not.toHaveAttribute('aria-valuenow')
-    expect(bar).toHaveAccessibleName(/Reading|Opening|recipe/i)
+    expect(bar).toHaveAccessibleName(/Read|Opening|recipe/i)
   })
 
   describe('live region', () => {

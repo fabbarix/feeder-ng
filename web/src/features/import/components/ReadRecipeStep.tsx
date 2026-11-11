@@ -32,7 +32,8 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const [text, setText] = useState('')
   const [slots, setSlots] = useState<PhotoSlots>(emptySlots)
   const lastInput = useRef<ReadInput | undefined>(undefined)
-  const errorTile = useRef<HTMLDivElement>(null)
+  const errorTile = useRef<HTMLElement>(null)
+  const readButton = useRef<HTMLButtonElement>(null)
   const ids = useId()
   const readButtonId = `${ids}-read`
   const reasonId = `${ids}-reason`
@@ -54,8 +55,8 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     const active = document.activeElement
     if (active && active !== document.body && active.isConnected) return
     if (read.phase === 'failed') errorTile.current?.focus()
-    else document.getElementById(readButtonId)?.focus()
-  }, [read.busy, read.phase, readButtonId])
+    else readButton.current?.focus()
+  }, [read.busy, read.phase])
 
   const counter = textCounter(text)
   const photos = filledPhotos(slots)
@@ -164,7 +165,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
       {read.busy ? (
         <ReadProgress kind={read.kind ?? current} state={read.state} elapsedSeconds={read.elapsedSeconds} onCancel={() => void read.cancel()} />
       ) : (
-        <Button id={readButtonId} icon="assistant" disabled={!canRead} aria-describedby={describedBy} onClick={submit}>
+        <Button ref={readButton} id={readButtonId} icon="assistant" disabled={!canRead} aria-describedby={describedBy} onClick={submit}>
           {t.readAction}
         </Button>
       )}
