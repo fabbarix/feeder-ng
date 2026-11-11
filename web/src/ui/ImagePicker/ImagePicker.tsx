@@ -15,7 +15,7 @@ import { imagePickerStrings as t, limitHelperFor } from './strings'
 import type { ImagePickerProps } from './types'
 import './ImagePicker.css'
 
-const PHASE_TEXT = { preparing: t.preparing, uploading: t.uploading, downloading: t.downloading, idle: '' } as const
+const PHASE_TEXT = { preparing: t.preparing, uploading: t.uploading, converting: t.converting, downloading: t.downloading, idle: '' } as const
 
 /**
  * The one image component for every image field (docs/dev/design/ip1-imagepicker.md): file / drop (FileDrop), paste (event and button),
