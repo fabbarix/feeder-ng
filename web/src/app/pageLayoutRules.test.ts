@@ -163,3 +163,19 @@ describe('the guard script and rules carry no label exemption', () => {
     expect(readFileSync(`${cwd}/../scripts/lib/page-layout-rules.mjs`, 'utf8')).not.toMatch(/barcode/i)
   })
 })
+
+describe('Pantry route in the layout guard tables (PN)', () => {
+  const nodeFs = 'node:fs'
+  const read = async (p: string) =>
+    ((await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (f: string, e: string) => string }).readFileSync(resolve(cwd, p), 'utf8')
+  it('ROUTES lists /pantry (default width) and no longer /stock', () => {
+    const paths = rules.ROUTES.map(([p]) => p)
+    expect(paths).toContain('/pantry')
+    expect(paths).not.toContain('/stock')
+  })
+  it('the modes file fails the layout on /pantry (it did on /stock) and no longer names /stock', async () => {
+    const modes = await read('../scripts/check-page-layout.modes')
+    expect(rules.modeFor(modes, '/pantry')).toBe('fail')
+    expect(modes).not.toMatch(/(^|\s)\/stock(\s|$)/m)
+  })
+})

@@ -38,4 +38,16 @@ describe('no native browser UI in features/recipes and features/import', () => {
       expect(f.text, f.rel).not.toMatch(/<EmptyState\b[^>]*\billustration=/)
     }
   })
+  it('scans the PT files and no longer has the Member picker or the preference toggles (PT)', () => {
+    const rels = files.map((f) => f.rel)
+    for (const rel of ['./components/PreferenceTable.tsx', './components/IngredientExclusionList.tsx', './hooks/useHouseholdPreferences.ts', './lib/preferenceRows.ts']) expect(rels).toContain(rel)
+    expect(rels.filter((r) => /MemberPicker|PreferenceToggles|useMemberPicker|useRecipePreferences|memberPick/.test(r))).toEqual([])
+  })
+  it('the preferences table is built from the shared primitives: IconButton, Avatar and Chip, no bare <button> of its own (PT)', () => {
+    const table = files.find((f) => f.rel === './components/PreferenceTable.tsx')!
+    expect(table.text).toMatch(/\bIconButton\b/)
+    expect(table.text).toMatch(/\bAvatar\b/)
+    expect(table.text).not.toMatch(/<button[\s>]/)
+    expect(table.text).not.toMatch(/role=["']grid["']/)
+  })
 })

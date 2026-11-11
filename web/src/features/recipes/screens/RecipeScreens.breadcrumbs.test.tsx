@@ -10,10 +10,10 @@ import { emptyDraft } from '../lib/draft'
 
 const h = vi.hoisted(() => ({ recipe: {} as Record<string, unknown>, editor: {} as Record<string, unknown> }))
 vi.mock('../hooks/useRecipe', () => ({ useRecipe: () => h.recipe }))
-vi.mock('../hooks/useRecipePreferences', () => ({
-  useRecipePreferences: () => ({ stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false }),
-}))
-vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => ({ members: [], selectedId: null, memberId: undefined, select: vi.fn(), isLoading: false }) }))
+vi.mock('../hooks/useHouseholdPreferences', async () => {
+  const { household } = await import('../household.test-helper')
+  return { useHouseholdPreferences: () => household() }
+})
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic]]), isLoading: false }) }))
 vi.mock('../hooks/useRecipeEditor', () => ({ useRecipeEditor: () => h.editor }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
