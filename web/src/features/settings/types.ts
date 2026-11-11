@@ -26,6 +26,10 @@ export interface Member {
   userId: number | null
   /** The optional Member email (A1): with it the Member's person can sign in without asking. */
   email: string | null
+  /** IM2: the photo's image id, '' = none. The server always sends it (optional here so older fixtures compile). The avatar shows photo, else emoji, else initials. */
+  photo?: string
+  /** IM2: '/api/images/<photo>' or ''. */
+  photoUrl?: string
 }
 
 export interface MemberInput {
@@ -35,6 +39,8 @@ export interface MemberInput {
   portionFactor: number
   /** In the editor draft: the typed text ('' = none). On the wire (POST/PATCH /api/members): the trimmed address, or null. */
   email: string | null
+  /** IM2: image id of the photo. Sent only when there is one (a PATCH replaces the Member, so leaving it out removes the photo). */
+  photo?: string
 }
 
 export interface AttendanceEntry {
@@ -81,4 +87,22 @@ export interface Preferences {
   scheme: ColourMode
   accent: string
   units: 'metric' | 'imperial'
+}
+
+/** R15: PATCH /api/meal-slots/batch. Edits the Meal Slot named `match` on each weekday; only the fields in `set` change. */
+export interface SlotBatchChange {
+  name?: string
+  time?: string
+  /** Replaces the usual Attendance on every matching Meal Slot; [] means nobody. */
+  attendance?: AttendanceEntry[]
+}
+export interface SlotBatchRequest {
+  match: string
+  weekdays: number[]
+  set: SlotBatchChange
+}
+export interface SlotBatchResult {
+  match: string
+  updated: MealSlot[]
+  skipped: { weekday: number; reason: 'no_slot' }[]
 }

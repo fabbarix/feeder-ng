@@ -19,3 +19,9 @@ export const householdSettings: HouseholdSettings = {
 
 export const admin: AllowedUser = { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true }
 export const cook: AllowedUser = { id: 2, email: 'cook@example.test', displayName: 'Cook', isAdmin: false }
+
+/** R15: four more Members so a Meal Slot can overflow past four pills. */
+export const pia: Member = { id: 4, name: 'Pia', colour: '#f2cc8f', avatar: '', portionFactor: 0.75, userId: null, email: null }
+export const nonna: Member = { id: 5, name: 'Nonna', colour: '#9a8c98', avatar: '👵', portionFactor: 1, userId: null, email: null }
+export const zio: Member = { id: 6, name: 'Zio Carlo', colour: '#6d597a', avatar: '', portionFactor: 1, userId: null, email: null }
+export const bigFamily = [anna, marco, sam, pia, nonna, zio]

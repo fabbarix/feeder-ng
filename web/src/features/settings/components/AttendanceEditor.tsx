@@ -30,7 +30,7 @@ export function AttendanceEditor({ members, value, onChange }: AttendanceEditorP
         return (
           <div key={m.id} className="attendance__row">
             <span className="settings__row">
-              <MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} size="sm" />
+              <MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} photo={m.photo} size="sm" />
               <Checkbox label={m.name} checked={Boolean(entry)} onChange={(attending) => toggle(m, attending)} />
             </span>
             {entry ? (

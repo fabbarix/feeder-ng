@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../../../test/notices'
 import { admin, anna, cook, householdSettings, marco, mondayLunch, sam, thursdayDinner } from '../components/fixtures'
-import { ADMIN_ME, mockApi, openOptionNames, pickOption, renderWithProviders, toggleOptions, USER_ME } from '../test-utils'
+import { ADMIN_ME, mockApi, openOptionNames, renderWithProviders, USER_ME } from '../test-utils'
 import { AllowlistPage } from './AllowlistPage'
 import { HouseholdPage } from './HouseholdPage'
 import { MealSlotsPage } from './MealSlotsPage'
@@ -146,6 +146,9 @@ describe('MembersPage', () => {
 })
 
 describe('MealSlotsPage', () => {
+  // Below 1024 px: the list, one group per weekday (the desktop table is covered in MealSlotsPage.r15.test.tsx).
+  beforeEach(() => vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} })))
+
   it('shows the week, and a plain User cannot add', async () => {
     routes(USER_ME)
     renderWithProviders(<MealSlotsPage />)
@@ -168,8 +171,9 @@ describe('MealSlotsPage', () => {
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot on Friday' }))
     const dialog = screen.getByRole('dialog', { name: 'Add Meal Slot' })
-    expect(within(dialog).getByRole('combobox', { name: /Weekdays/ })).toHaveTextContent('Friday')
-    await toggleOptions(/Weekdays/, ['Saturday', 'Sunday'], within(dialog))
+    expect(within(dialog).getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Saturday' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Sunday' }))
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Brunch')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1100')
@@ -191,7 +195,8 @@ describe('MealSlotsPage', () => {
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot on Monday' }))
     const dialog = screen.getByRole('dialog', { name: 'Add Meal Slot' })
-    await toggleOptions(/Weekdays/, ['Tuesday', 'Wednesday'], within(dialog))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Tuesday' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Wednesday' }))
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Dinner')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1930')
@@ -229,14 +234,17 @@ describe('MealSlotsPage', () => {
     expect(await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })).toBeInTheDocument()
   })
 
-  it('edits the weekday of an existing slot with a single-choice Select', async () => {
-    const api = routes(ADMIN_ME, { 'PATCH /api/meal-slots/12': (c: { body: object }) => ({ ...mondayLunch, ...c.body }) })
+  it('edits an existing slot through one batch call that cannot move it to another weekday', async () => {
+    const api = routes(ADMIN_ME, { 'PATCH /api/meal-slots/batch': () => ({ match: 'Lunch', updated: [{ ...mondayLunch, time: '13:00' }], skipped: [] }) })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Lunch 12:30' }))
-    await pickOption(/Weekday/, 'Tuesday')
+    expect(screen.queryByRole('combobox', { name: /Weekday/ })).toBeNull()
+    screen.getByRole('spinbutton', { name: 'Hour' }).focus()
+    await userEvent.keyboard('1300')
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
-    await waitFor(() => expect(api.callsTo('PATCH', '/api/meal-slots/12')).toHaveLength(1))
-    expect(api.callsTo('PATCH', '/api/meal-slots/12')[0]!.body).toMatchObject({ weekday: 2, name: 'Lunch', time: '12:30' })
+    await waitFor(() => expect(api.callsTo('PATCH', '/api/meal-slots/batch')).toHaveLength(1))
+    expect(api.callsTo('PATCH', '/api/meal-slots/batch')[0]!.body).toEqual({ match: 'Lunch', weekdays: [1], set: { time: '13:00' } })
+    expect(api.callsTo('PATCH', '/api/meal-slots/12')).toHaveLength(0)
   })
 })
 

@@ -44,9 +44,7 @@
 .app-main {
   min-width: 0;
   width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-inline: var(--gutter);
+  /* The width cap and the side gutters belong to ui/Page (R2-L): <main> is exactly its grid column. */
   padding-bottom: var(--nav-clearance);
 }
 
@@ -197,6 +195,16 @@
     color: var(--color-on-accent);
   }
 
+  /* L-04: the current Scan item keeps the accent fill; its icon pill must not turn soft (white on soft was 1.31:1). */
+  .side-rail__link[data-accent='true'][aria-current='page'] .side-rail__pill {
+    background: none;
+  }
+
+  /* The compact rail's current marker for Scan: the same 3 px soft ring as the expanded rail (R2-L-b). */
+  .side-rail__link[data-accent='true'][aria-current='page'] {
+    box-shadow: 0 0 0 3px var(--color-soft);
+  }
+
   .bottom-bar {
     display: none;
   }
@@ -229,6 +237,13 @@
 
   .side-rail__link[aria-current='page'] .side-rail__pill {
     background: none;
+  }
+
+  /* L-04: the soft current row above would put on-accent text on a soft fill; the accent item keeps its accent fill. */
+  .side-rail__link[data-accent='true'][aria-current='page'] {
+    box-shadow: 0 0 0 3px var(--color-soft);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
   }
 
   .side-rail__label {

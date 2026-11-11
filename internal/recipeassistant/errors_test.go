@@ -56,6 +56,9 @@ func TestClassifyStopReason(t *testing.T) {
 	if got := ra.ClassifyStopReason("max_tokens", "m"); got == nil || got.Code != ra.CodeOutputTooLong {
 		t.Fatalf("max_tokens: %+v", got)
 	}
+	if got := ra.ClassifyStopReason("model_context_window_exceeded", "m"); got == nil || got.Code != ra.CodeOutputTooLong {
+		t.Fatalf("model_context_window_exceeded: %+v", got)
+	}
 	for _, ok := range []string{"end_turn", "stop_sequence"} {
 		if got := ra.ClassifyStopReason(ok, "m"); got != nil {
 			t.Errorf("%s must not be an error, got %+v", ok, got)

@@ -52,6 +52,8 @@ interface ImagePickerCommon {
   /** The visible heading and the accessible name of the group, e.g. "Recipe photo". */
   label: string
   helper?: string
+  /** The host shows its own heading above (e.g. a Tile's h2): keep the label as the group's accessible name but hide it visually. */
+  hideLabel?: boolean
   /** An error from the host (e.g. a failed save); the picker's own problems are shown too, this one wins. */
   error?: string
   disabled?: boolean

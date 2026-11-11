@@ -434,3 +434,54 @@ func TestNewMemberDoesNotTouchDateAttendance(t *testing.T) {
 		t.Errorf("a date with no override must follow the usual Attendance, which now includes Sam: %+v", usual)
 	}
 }
+
+// IM2: the Member photo (column members.photo, migration 1311).
+func TestMemberPhotoRoundTripsAndCanBeCleared(t *testing.T) {
+	f := newFx(t)
+	const face = "0123456789abcdef0123456789abcdef"
+	sam, err := f.st.CreateMember(f.ctx, household.MemberInput{Name: "Sam", Colour: "#e07a5f", Avatar: "🦊", PortionFactor: 0.5, Photo: face})
+	if err != nil || sam.Photo != face || sam.Avatar != "🦊" {
+		t.Fatalf("create = %+v, %v", sam, err)
+	}
+	list, _ := f.st.Members(f.ctx)
+	if len(list) != 1 || list[0].Photo != face {
+		t.Errorf("Members = %+v; the photo must be listed", list)
+	}
+	up, err := f.st.UpdateMember(f.ctx, sam.ID, household.MemberInput{Name: "Sam", Colour: "#e07a5f", PortionFactor: 0.5})
+	if err != nil || up.Photo != "" {
+		t.Errorf("update without a photo = %+v, %v; it clears the photo (an update replaces the Member)", up, err)
+	}
+}
+
+// R15: batch edit of matching Meal Slots.
+func TestUpdateSlotsBatchIsAllOrNothing(t *testing.T) {
+	f := newFx(t)
+	anna := f.member(t, "Anna", 1)
+	mon, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 1, Name: "Dinner", Time: "19:00"})
+	tue, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:00", Attendance: []household.Attendee{}})
+	f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Supper", Time: "20:00"})
+	time, name := "19:30", "Supper"
+	res, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 3}, Change: household.SlotChange{Time: &time}})
+	if err != nil || len(res.Updated) != 1 || res.Updated[0].ID != mon.ID || res.Updated[0].Time != "19:30" || len(res.Skipped) != 1 || res.Skipped[0] != 3 {
+		t.Fatalf("batch = %+v, %v", res, err)
+	}
+	// Renaming Tuesday's Dinner to the existing Supper clashes: Monday must not be renamed either.
+	_, err = f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 2}, Change: household.SlotChange{Name: &name}})
+	if !errors.Is(err, household.ErrDuplicateSlot) {
+		t.Fatalf("clash err = %v", err)
+	}
+	got, _ := f.st.Slot(f.ctx, mon.ID)
+	if got.Name != "Dinner" {
+		t.Errorf("Monday renamed to %q despite the failed batch", got.Name)
+	}
+	att := []household.Attendee{{MemberID: anna.ID}, {MemberID: 9999}}
+	if _, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 2}, Change: household.SlotChange{Attendance: &att}}); !errors.Is(err, household.ErrUnknownMember) {
+		t.Errorf("unknown member err = %v", err)
+	}
+	if g, _ := f.st.Slot(f.ctx, tue.ID); len(g.Attendance) != 0 {
+		t.Errorf("Tuesday attendance changed: %+v", g.Attendance)
+	}
+	if _, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Brunch", Weekdays: []int{1}, Change: household.SlotChange{Time: &time}}); !errors.Is(err, household.ErrNoMatchingSlot) {
+		t.Errorf("no match err = %v", err)
+	}
+}
