@@ -171,6 +171,9 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 // with the Ingredients it uses) inside the caller's transaction. It checks no
 // image ids and commits nothing. Returns the new id.
 func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (int64, error) {
+	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
+		return 0, err
+	}
 	timing, err := recipe.TimingOf(clean.Steps)
 	if err != nil {
 		return 0, err
@@ -210,6 +213,22 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 	return id, nil
 }
 
+// checkCourses reports a ValidationError for a Course id that does not exist or is archived, read through the
+// caller's transaction so a Course created earlier in it counts.
+func checkCourses(ctx context.Context, q Querier, ids []int64) error {
+	for _, id := range ids {
+		var active int
+		if err := q.QueryRowContext(ctx, `SELECT count(*) FROM courses WHERE id = ? AND archived = 0`, id).Scan(&active); err != nil {
+			return err
+		}
+		if active == 0 {
+			return &recipe.ValidationError{Field: "courses", Code: recipe.CodeCourseUnknown,
+				Message: "that Course does not exist or is archived"}
+		}
+	}
+	return nil
+}
+
 // Get returns the Recipe; ErrNotFound.
 func (s *Store) Get(ctx context.Context, id int64) (recipe.Recipe, error) {
 	return getRecipe(ctx, s.db, id)
@@ -247,6 +266,9 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 // before; the caller removes those no longer referenced (DropUnreferenced) after
 // the commit.
 func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recipe.Input) ([]string, error) {
+	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
+		return nil, err
+	}
 	timing, err := recipe.TimingOf(clean.Steps)
 	if err != nil {
 		return nil, err
@@ -646,17 +668,6 @@ func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]
 	if err != nil {
 		return recipe.Input{}, err
 	}
-	for _, id := range clean.CourseIDs {
-		var active int
-		err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM courses WHERE id = ? AND archived = 0`, id).Scan(&active)
-		if err != nil {
-			return recipe.Input{}, err
-		}
-		if active == 0 {
-			return recipe.Input{}, &recipe.ValidationError{Field: "courses", Code: recipe.CodeCourseUnknown,
-				Message: "that Course does not exist or is archived"}
-		}
-	}
 	if err := s.checkImages(clean); err != nil {
 		return recipe.Input{}, err
 	}
@@ -1002,16 +1013,5 @@ func (s *Store) dropLostCourses(ctx context.Context, tx *sql.Tx, id int64, lost 
 
 // householdToday is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
 func (s *Store) householdToday(ctx context.Context, q Querier) (string, error) {
-	loc := time.UTC
-	var tz string
-	err := q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if err == nil {
-		if l, lerr := time.LoadLocation(tz); lerr == nil {
-			loc = l
-		}
-	}
-	return s.clk.Now().In(loc).Format("2006-01-02"), nil
+	return clock.HouseholdToday(ctx, q, s.clk)
 }

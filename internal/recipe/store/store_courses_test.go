@@ -374,6 +374,7 @@ func TestDeletingARecipeRemovesItsCourseLinks(t *testing.T) {
 // the same transaction (a future import) counts, and an unknown or archived one is a ValidationError.
 func TestACreateTxSeesACourseCreatedInTheSameTransaction(t *testing.T) {
 	f := newFixture(t)
+	in := f.simple(t, "Board", nil) // before the transaction: it may create an Ingredient on another connection
 	tx, err := f.db.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -384,7 +385,7 @@ func TestACreateTxSeesACourseCreatedInTheSameTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	cid, _ := res.LastInsertId()
-	in := f.simple(t, "Board", func(in *recipe.Input) { in.CourseIDs = []int64{cid} })
+	in.CourseIDs = []int64{cid}
 	id, err := f.s.CreateTx(ctx, tx, in)
 	if err != nil {
 		t.Fatalf("CreateTx with a Course made in the same transaction: %v", err)
@@ -407,11 +408,12 @@ func TestACreateTxAndReplaceTxRejectUnknownOrArchivedCourses(t *testing.T) {
 			"CreateTx":  func(tx *sql.Tx, in recipe.Input) error { _, err := f.s.CreateTx(ctx, tx, in); return err },
 			"ReplaceTx": func(tx *sql.Tx, in recipe.Input) error { _, err := f.s.ReplaceTx(ctx, tx, existing.ID, in); return err },
 		} {
+			in := f.simple(t, "X "+op, func(in *recipe.Input) { in.CourseIDs = ids })
 			tx, err := f.db.BeginTx(ctx, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = run(tx, f.simple(t, "X "+op, func(in *recipe.Input) { in.CourseIDs = ids }))
+			err = run(tx, in)
 			tx.Rollback()
 			var ve *recipe.ValidationError
 			if !errors.As(err, &ve) || ve.Code != recipe.CodeCourseUnknown {
