@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
-import { BentoGrid, Button, EmptyState, PageHeader } from '../../../ui'
+import { BentoGrid, Button, EmptyState, ErrorState, PageHeader } from '../../../ui'
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
@@ -40,12 +40,7 @@ export function PlanScreen(): ReactNode {
 
   let body: ReactNode
   if (plan.isLoading) body = <p className="plan__muted">{planStrings.loading}</p>
-  else if (plan.error)
-    body = (
-      <p role="alert" className="plan__error">
-        {planStrings.loadError}
-      </p>
-    )
+  else if (plan.failed) body = <ErrorState message={planStrings.loadError} onRetry={() => void plan.refetch()} />
   else if (days.length === 0) body = <EmptyState title={planStrings.empty} />
   else
     body = (
@@ -85,7 +80,7 @@ export function PlanScreen(): ReactNode {
         </p>
       ) : null}
       <CookFlowSheets flow={flow} />
-      {plan.isLoading || plan.error || notice.groups.length === 0 ? null : (
+      {plan.isLoading || plan.failed || notice.groups.length === 0 ? null : (
         <BentoGrid columns={columns === 7 ? 4 : columns} label={planStrings.couldntPlanTitle}>
           <CouldntPlanNotice groups={notice.groups} onFix={fix} span={columns === 7 ? 'full' : 2} />
         </BentoGrid>

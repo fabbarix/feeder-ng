@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Button, Chip, ColorSwatches, FormActions, Segmented } from '../../../ui'
+import { usePrefersDark } from '../hooks/usePrefersDark'
 import { ACCENT_PRESETS } from '../lib/accents'
 import { previewColours } from '../lib/previewColours'
 import { preferencesChanged } from '../lib/preferencesForm'
@@ -30,7 +31,8 @@ const UNITS: ReadonlyArray<{ value: Preferences['units']; label: string }> = [
 export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps) {
   const [draft, setDraft] = useState<Preferences>(value)
   const set = (patch: Partial<Preferences>) => setDraft((d) => ({ ...d, ...patch }))
-  const preview = previewColours(draft.accent, draft.scheme, typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches === true)
+  const prefersDark = usePrefersDark()
+  const preview = previewColours(draft.accent, draft.scheme, prefersDark)
   const submit = (e: FormEvent) => {
     e.preventDefault()
     void onSave(draft)
