@@ -24,6 +24,8 @@ export interface HttpClientOptions {
 }
 
 export interface RequestOptions {
+  /** lets the request outlive the page (fetch keepalive), for a best-effort call on unmount or unload */
+  keepalive?: boolean
   /** aborts the request; an abort with a TimeoutError reason is raised as ApiError(0, 'timeout') */
   signal?: AbortSignal
 }
@@ -52,7 +54,7 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
     }
     let res: Response
     try {
-      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin', signal: reqOpts.signal })
+      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin', signal: reqOpts.signal, ...(reqOpts.keepalive ? { keepalive: true } : {}) })
     } catch (err) {
       if (isTimeoutError(err)) throw new ApiError(0, 'timeout', 'The request timed out')
       throw new ApiError(0, 'network', 'The network is unreachable')

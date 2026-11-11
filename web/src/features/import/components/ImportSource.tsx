@@ -36,7 +36,7 @@ export function ImportSource({ busy, onSubmit }: ImportSourceProps): ReactNode {
   }
 
   return (
-    <Tile as="section" overline={s.stepOverline(2)} overlineIcon="import">
+    <Tile as="section" overline={s.stepOverline(3)} overlineIcon="import">
       <h2>{s.stepTwoTitle}</h2>
       <FileDrop
         label={s.uploadLabel}
