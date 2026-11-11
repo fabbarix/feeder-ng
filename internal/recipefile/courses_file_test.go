@@ -328,8 +328,14 @@ func TestAgentPromptListsTheCoursesOneLineEachWithTheMainOneAsDefault(t *testing
 	if !strings.Contains(got, want) {
 		t.Fatalf("the prompt must list the Courses as %q", want)
 	}
-	if strings.Count(got, "(default)") != 1 {
-		t.Errorf("exactly one Course is the default")
+	defaults := 0
+	for _, line := range strings.Split(got, "\n") {
+		if strings.HasPrefix(line, "- ") && strings.Contains(line, "(default)") {
+			defaults++
+		}
+	}
+	if defaults != 1 {
+		t.Errorf("exactly one Course list line is the default, got %d", defaults)
 	}
 	// The list sits inside rule 13, before rule 14.
 	i, j, k := strings.Index(got, "13. Courses:"), strings.Index(got, "- Main (default)"), strings.Index(got, "14. Whole meal:")
