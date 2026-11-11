@@ -53,3 +53,14 @@
   gap: var(--space-3);
   inline-size: min(360px, 100vw - 64px);
 }
+
+.gallery__cell--wide {
+  inline-size: 100%;
+  justify-items: stretch;
+}
+
+/* Static focus state so the ring is visible in the catalogue. */
+[data-gallery-focus] .ui-field__control {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}

@@ -49,7 +49,7 @@ export function MealSlotEditor({ open, slot, members, defaultWeekdays, saving, e
 type FormProps = Pick<MealSlotEditorProps, 'slot' | 'members' | 'defaultWeekdays' | 'saving' | 'error' | 'onSave' | 'onDelete' | 'onChangeDate'>
 
 function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate }: FormProps) {
-  const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot))
+  const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot, members))
   const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
   // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
   const weekdaysKey = (defaultWeekdays ?? []).join(',')

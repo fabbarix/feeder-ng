@@ -103,7 +103,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Create Ingredient' }))
     expect(await within(sheet()).findByText('An Ingredient with that name already exists')).toBeInTheDocument()
     // Not recipeName(): with the sheet open, its own "Name" field matches that query too.
-    expect(screen.getByDisplayValue('Paella')).toBeInTheDocument()
+    expect(within(document.querySelector<HTMLElement>('.recipe-editor')!).getByDisplayValue('Paella')).toBeInTheDocument()
   })
   it('the new Ingredient is used in the saved Recipe', async () => {
     rApi.create.mockResolvedValue({ id: 31 } as Recipe)
@@ -188,6 +188,16 @@ describe('Ready Meal creates its Ingredient', () => {
     await waitFor(() => expect(rApi.create).toHaveBeenCalledOnce())
     expect(rApi.create.mock.calls[0]![0]).toMatchObject({ name: 'Fish pie pack', readyMeal: true, lines: [] })
     expect(await screen.findByTestId('where')).toHaveTextContent('/recipes/40')
+  })
+  it('says so when a lost name race is rejected with 409 name_taken', async () => {
+    rApi.create.mockRejectedValue(new ApiError(409, 'name_taken', 'An Ingredient with that name was just created; save again'))
+    view()
+    await userEvent.type(recipeName(), 'Fish pie pack')
+    await tickReadyMeal()
+    await userEvent.click(screen.getByRole('button', { name: recipeStrings.save }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("An Ingredient with this Recipe's name was just added. Save again.")
+    expect(alert).not.toHaveTextContent(recipeStrings.generic)
   })
   it('keeps the helper in step with the name', async () => {
     view()

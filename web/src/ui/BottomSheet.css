@@ -96,6 +96,14 @@
     max-height: 85dvh;
     border-radius: var(--radius-dialog);
   }
+
+  .sheet__grip {
+    display: none;
+  }
+
+  .sheet__panel {
+    padding-block-start: var(--space-5);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

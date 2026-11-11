@@ -2,11 +2,11 @@ import { useEffect, useState, type KeyboardEvent } from 'react'
 import { IconButton } from '../IconButton'
 import { uiStrings } from '../strings'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
-import type { FieldProps } from './Field'
+import type { FieldProps, FieldSizeProps } from './Field'
 import { clamp, parseNumber, stepValue } from './number'
 import './Field.css'
 
-export interface NumberFieldProps extends FieldProps {
+export interface NumberFieldProps extends FieldProps, FieldSizeProps {
   value: number | null
   onChange: (value: number | null) => void
   min?: number
@@ -24,7 +24,7 @@ const format = (value: number | null) => (value === null ? '' : String(value))
  * A number in a text input (inputmode decimal, accepts "2,5"). Commit-based: typing does not call onChange; blur, Enter,
  * the arrows and ± do. Values are clamped to min/max and the text is rewritten; invalid text reverts without a change.
  */
-export function NumberField({ label, helper, error, disabled, required, name, value, onChange, min, max, step = 1, unit, hideStepper, placeholder }: NumberFieldProps) {
+export function NumberField({ size = 'sm', label, helper, error, disabled, required, name, value, onChange, min, max, step = 1, unit, hideStepper, placeholder }: NumberFieldProps) {
   const ids = useFieldIds()
   const [text, setText] = useState(format(value))
   useEffect(() => setText(format(value)), [value])
@@ -61,7 +61,7 @@ export function NumberField({ label, helper, error, disabled, required, name, va
 
   const inputId = `${ids.labelId}-input`
   return (
-    <FieldFrame ids={ids} label={label} labelFor={inputId} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} className={hideStepper ? undefined : 'ui-field--stepper'} label={label} labelFor={inputId} helper={helper} error={error}>
       <span className="ui-field__control">
         {hideStepper ? null : (
           <IconButton icon="minus" label={uiStrings.decrease(label)} disabled={disabled || (min !== undefined && (value ?? 0) <= min)} onClick={() => nudge(-1)} />

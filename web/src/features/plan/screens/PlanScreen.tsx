@@ -1,14 +1,19 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, EmptyState, PageHeader } from '../../../ui'
+import { useMe } from '../../../app/useMe'
+import { BentoGrid, Button, EmptyState, PageHeader } from '../../../ui'
 import { CookFlowSheets } from '../components/CookFlowSheets'
+import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
 import { PlanGrid } from '../components/PlanGrid'
 import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
 import { SwapSheet } from '../components/SwapSheet'
+import { useCouldntFix } from '../hooks/useCouldntFix'
+import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
 import { usePlanColumns } from '../hooks/usePlanColumns'
 import { usePlanScreen } from '../hooks/usePlanScreen'
+import { unplannedOf } from '../lib/couldntGroups'
 import { dateRange, groupByDay } from '../lib/days'
 import { cookPath } from '../lib/cook'
 import { planStrings } from '../strings'
@@ -28,6 +33,10 @@ export function PlanScreen(): ReactNode {
   const days = groupByDay(plan.slots, plan.today, columns)
   const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
+  const unplanned = useMemo(() => unplannedOf(plan.slots), [plan.slots])
+  const isAdmin = useMe().data?.isAdmin !== false
+  const notice = useCouldntPlanNotice(unplanned, plan.slots, isAdmin)
+  const fix = useCouldntFix(s.openChoose)
 
   let body: ReactNode
   if (plan.isLoading) body = <p className="plan__muted">{planStrings.loading}</p>
@@ -76,6 +85,11 @@ export function PlanScreen(): ReactNode {
         </p>
       ) : null}
       <CookFlowSheets flow={flow} />
+      {plan.isLoading || plan.error || notice.groups.length === 0 ? null : (
+        <BentoGrid columns={columns === 7 ? 4 : columns} label={planStrings.couldntPlanTitle}>
+          <CouldntPlanNotice groups={notice.groups} onFix={fix} />
+        </BentoGrid>
+      )}
       {body}
       <PlannedMealSheet
         open={s.plannedOpen}

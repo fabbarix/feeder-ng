@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { slot } from '../test-utils'
 import type { Leftover } from '../types'
-import { CouldntPlanNotice, LeftoversTile, ToConfirmTile } from './TodayTiles'
+import { LeftoversTile, ToConfirmTile } from './TodayTiles'
 
 describe('ToConfirmTile', () => {
   function setup() {
@@ -36,25 +36,6 @@ describe('ToConfirmTile', () => {
 
   it('renders nothing when there is nothing to confirm', () => {
     const { container } = render(<ToConfirmTile slots={[]} onYesCooked={() => {}} onAdjust={() => {}} onNotCooked={() => {}} />)
-    expect(container).toBeEmptyDOMElement()
-  })
-})
-
-describe('CouldntPlanNotice', () => {
-  const empty = slot({
-    date: '2026-11-12', meal: null,
-    unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
-  })
-
-  it('words each slot the planner left empty, in a danger status tile', () => {
-    render(<CouldntPlanNotice slots={[empty]} />)
-    expect(screen.getByRole('status')).toHaveTextContent("Couldn't plan Thursday dinner: nobody is attending.")
-    expect(screen.getByRole('status')).toHaveAttribute('data-variant', 'status')
-    expect(screen.getByRole('status')).toHaveAttribute('data-status', 'danger')
-  })
-
-  it('renders nothing when everything was planned', () => {
-    const { container } = render(<CouldntPlanNotice slots={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
 })

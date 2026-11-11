@@ -97,6 +97,7 @@ export interface RenameOffer {
 export function renameOffer(before: Recipe | undefined, draft: RecipeDraft, ingredients: readonly IngredientRef[]): RenameOffer | null {
   if (!before || !before.readyMeal || !draft.readyMeal || before.lines.length !== 1) return null
   const line = before.lines[0]!
+  if (draft.lines[0]?.ingredientId !== line.ingredientId) return null
   const oldKey = nameKey(before.name)
   const toKey = nameKey(draft.name)
   if (toKey === '' || toKey === oldKey || nameKey(line.ingredient ?? '') !== oldKey) return null

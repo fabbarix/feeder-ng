@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { todayApi } from '../api'
 import { composeToday } from '../lib/compose'
+import { needsSetup } from '../lib/setup'
 import { useScanSessionActive, useTodayPlan, useTodayStock } from '../seams'
+import { useSetupFacts } from '../setupSeam'
 import type { AdvanceStepDue, TodayLayout } from '../types'
 
 export interface UseToday {
@@ -22,6 +24,7 @@ export function useToday(): UseToday {
   const stock = useTodayStock()
   const steps = useAdvanceStepsDue()
   const streak = useZeroWasteStreak()
+  const setup = useSetupFacts()
   const layout = composeToday({
     scanSessionActive,
     hasNextMeal: plan.hasNextMeal,
@@ -29,11 +32,12 @@ export function useToday(): UseToday {
     advanceSteps: steps.steps.length,
     toConfirm: plan.toConfirm,
     couldntPlan: plan.couldntPlan,
+    needsSetup: needsSetup(setup.facts),
     leftovers: plan.leftovers,
     useSoon: stock.useSoon.length,
     streakDays: streak.days,
   })
-  return { layout, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading }
+  return { layout, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading || setup.loading }
 }
 
 export interface AdvanceStepsState {

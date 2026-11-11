@@ -9,7 +9,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-tile-sm);
   background: var(--color-surface-2);
   color: var(--color-text);

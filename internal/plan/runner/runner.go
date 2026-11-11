@@ -47,6 +47,10 @@ type Deps struct {
 	// OnResolved (optional) is called after the commit of Cooked and of NotCooked with the meal's key (N4: the cook
 	// feature cancels that meal's timers). A failure is logged, never returned.
 	OnResolved func(ctx context.Context, key plan.Key)
+	// ReplanOnStart makes the Runner pending from New with ReasonStartup, so its worker replans once at startup.
+	// Migration 1230 changes Attendance behind the planner's back; without a replan the reasons recorded earlier
+	// (plan_unfilled) would stay until something else invalidated the plan.
+	ReplanOnStart bool
 }
 
 // Summary describes one planning run.
@@ -77,7 +81,12 @@ func New(d Deps) *Runner {
 	if d.Logger == nil {
 		d.Logger = slog.Default()
 	}
-	return &Runner{d: d, wake: make(chan struct{}, 1)}
+	r := &Runner{d: d, wake: make(chan struct{}, 1)}
+	if d.ReplanOnStart {
+		r.pending, r.reason = true, plan.ReasonStartup
+		r.wake <- struct{}{}
+	}
+	return r
 }
 
 // runOpts selects what one planning run clears before it plans.
@@ -350,6 +359,13 @@ func (r *Runner) Updating() bool {
 	r.stateMu.Lock()
 	defer r.stateMu.Unlock()
 	return r.pending || r.running
+}
+
+// PendingReason is the reason of the next (or current) run; tests use it.
+func (r *Runner) PendingReason() plan.Reason {
+	r.stateMu.Lock()
+	defer r.stateMu.Unlock()
+	return r.reason
 }
 
 // WaitIdle blocks until no invalidation is pending and no run is in progress, or ctx ends (tests, BDD).

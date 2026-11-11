@@ -1,9 +1,30 @@
 import { describe, expect, it, vi } from 'vitest'
+import { members } from '../components/fixtures'
 import { createSlotsSequentially, slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from './slotForm'
 
 describe('slotForm', () => {
   it('starts blank on Monday', () => {
     expect(slotDraft()).toEqual({ weekday: 1, name: '', time: '', attendance: [] })
+  })
+
+  it('a new Meal Slot starts with every Member attending (opt out in the editor), no Portion Factor override', () => {
+    expect(slotDraft(undefined, members)).toEqual({
+      weekday: 1, name: '', time: '',
+      attendance: [
+        { memberId: 1, portionFactorOverride: null },
+        { memberId: 2, portionFactorOverride: null },
+        { memberId: 3, portionFactorOverride: null },
+      ],
+    })
+  })
+
+  it('without Members the draft has nobody to list', () => {
+    expect(slotDraft(undefined, [])).toMatchObject({ attendance: [] })
+  })
+
+  it('an existing Meal Slot keeps its own Attendance, even an empty one (a deliberate choice)', () => {
+    const slot = { id: 1, weekday: 2, name: 'Dinner', time: '19:30', attendance: [], portionsNeeded: 0 }
+    expect(slotDraft(slot, members).attendance).toEqual([])
   })
 
   it('copies an existing Meal Slot', () => {

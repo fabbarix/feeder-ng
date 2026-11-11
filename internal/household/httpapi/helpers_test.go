@@ -81,6 +81,9 @@ func mustMember(t *testing.T, c *testkit.Client, name string, factor float64) me
 func mustSlot(t *testing.T, c *testkit.Client, weekday int, name, at string, att ...attendeeBody) slotBody {
 	t.Helper()
 	var s slotBody
+	if att == nil {
+		att = []attendeeBody{} // R13: omitted Attendance means everyone; this helper's callers mean nobody
+	}
 	r := c.Post("/api/meal-slots", map[string]any{"weekday": weekday, "name": name, "time": at, "attendance": att})
 	if r.Status != 201 {
 		t.Fatalf("create slot %s = %d %s", name, r.Status, r.Body)

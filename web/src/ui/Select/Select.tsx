@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import { BottomSheet } from '../BottomSheet'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { Icon } from '../Icon'
+import type { FieldSizeProps } from '../fields/Field'
 import { FieldFrame, useFieldIds } from '../fields/FieldFrame'
 import { buildList, type SelectFilter, type SelectSort } from './buildList'
 import { SelectPanel } from './SelectPanel'
@@ -11,7 +12,7 @@ import './Select.css'
 
 export type { SelectFilter, SelectSort } from './buildList'
 
-export interface SelectFieldProps {
+export interface SelectFieldProps extends FieldSizeProps {
   label: string
   helper?: string
   error?: string
@@ -94,6 +95,7 @@ interface CoreProps<V extends string | number> extends SelectBaseProps<V> {
 }
 
 function SelectCore<V extends string | number>({
+  size = 'md',
   label,
   helper,
   error,
@@ -297,7 +299,7 @@ function SelectCore<V extends string | number>({
   )
 
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
       <div ref={anchor} className="select">
         <button
           ref={trigger}

@@ -3,12 +3,65 @@
 /* One inner inline padding for every field control (TextField, Select, DateField, TimeField). */
 :root {
   --field-pad-inline: var(--space-3);
+  --field-border-width: 1.5px;
+  --field-size-xs: 112px;
+  --field-size-sm: 168px;
+  --field-size-md: 320px;
+  --field-size-lg: 480px;
+  --field-size-xs-stepper: 136px;
+  --field-size-xs-stepper-unit: 168px; /* holds 3ch + a unit like "days" between the buttons */
+  --field-size-sm-stepper: 192px;
 }
 
 .ui-field {
   display: grid;
   gap: var(--space-1);
+  inline-size: 100%;
   min-inline-size: 0;
+}
+
+.ui-field[data-size='xs'] {
+  max-inline-size: var(--field-size-xs);
+}
+
+.ui-field[data-size='sm'] {
+  max-inline-size: var(--field-size-sm);
+}
+
+.ui-field[data-size='md'] {
+  max-inline-size: min(var(--field-size-md), 100%);
+}
+
+.ui-field[data-size='lg'] {
+  max-inline-size: var(--field-size-lg);
+}
+
+.ui-field[data-size='full'] {
+  max-inline-size: 100%;
+}
+
+.ui-field--stepper[data-size='xs'] {
+  max-inline-size: var(--field-size-xs-stepper);
+}
+
+.ui-field--stepper[data-size='xs']:has(.ui-field__suffix) {
+  max-inline-size: var(--field-size-xs-stepper-unit);
+}
+
+.ui-field--stepper[data-size='sm'] {
+  max-inline-size: var(--field-size-sm-stepper);
+}
+
+fieldset.ui-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+legend.ui-field__label {
+  padding: 0;
+  margin-block-end: var(--space-1);
 }
 
 .ui-field__label {
@@ -25,7 +78,7 @@
   gap: var(--space-2);
   min-block-size: 48px;
   padding: 0 var(--field-pad-inline);
-  border: 1.5px solid var(--color-outline);
+  border: var(--field-border-width) solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   color: var(--color-text);
@@ -34,12 +87,34 @@
 
 .ui-field__control:focus-within {
   border-color: var(--color-accent);
-  outline: 3px solid var(--color-soft-strong);
-  outline-offset: 1px;
+  box-shadow: var(--focus-ring);
 }
 
 .ui-field[data-invalid] .ui-field__control {
   border-color: var(--status-danger-fg);
+}
+
+.ui-field[data-invalid] .ui-field__control:focus-within {
+  border-color: var(--status-danger-fg);
+}
+
+.ui-field--stepper .ui-field__control {
+  padding: 0 var(--space-1);
+  gap: var(--space-1);
+}
+
+.ui-field--stepper .ui-field__input {
+  min-inline-size: 3ch;
+}
+
+.ui-field--stepper .icon-button {
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.ui-field--stepper .ui-field__number {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-field__control:has(:disabled) {

@@ -1,0 +1,38 @@
+/* FormActions: phone = stacked, primary on top, full width; from 600 px one right-aligned row, destructive at the far left. Tokens only. */
+.form-actions {
+  display: flex;
+  inline-size: 100%;
+  gap: var(--space-2);
+}
+
+@media (max-width: 599px) {
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions > * {
+    display: flex;
+  }
+
+  .form-actions .button {
+    inline-size: 100%;
+  }
+}
+
+@media (min-width: 600px) {
+  .form-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .form-actions__destructive {
+    margin-inline-end: auto;
+  }
+}
+
+.form-actions__tertiary,
+.form-actions__secondary,
+.form-actions__primary {
+  min-inline-size: 0;
+}

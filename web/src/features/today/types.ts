@@ -4,6 +4,7 @@ export type TileId =
   | 'advanceSteps'
   | 'toConfirm'
   | 'couldntPlan'
+  | 'setup'
   | 'leftovers'
   | 'useSoon'
   | 'streak'
@@ -16,6 +17,8 @@ export interface TodayData {
   advanceSteps: number
   toConfirm: number
   couldntPlan: number
+  /** R13: the household is new and nothing can be planned yet: show the setup checklist (replaces Couldn't plan). */
+  needsSetup?: boolean
   leftovers: number
   useSoon: number
   streakDays: number
