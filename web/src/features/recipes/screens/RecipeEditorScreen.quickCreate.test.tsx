@@ -18,7 +18,6 @@ vi.mock('../api', () => ({
   },
 }))
 vi.mock('../../ingredients/api', () => ({ ingredientsApi: { create: vi.fn(), search: vi.fn() } }))
-vi.mock('../hooks/usePhotoUpload', () => ({ usePhotoUpload: () => ({ upload: vi.fn(), uploading: false, error: null }) }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
 

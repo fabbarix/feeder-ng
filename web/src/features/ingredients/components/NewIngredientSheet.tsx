@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { BottomSheet, Button, TextField } from '../../../ui'
+import { BottomSheet, Button, CROP_ASPECTS, ImagePicker, TextField } from '../../../ui'
 import type { BaseUnit } from '../../../lib/units'
 import { ingredientsApi } from '../api'
 import { checkNewIngredient, defaultBaseUnit, duplicateGuard, type DuplicateGuard, type NewIngredientErrors } from '../lib/newIngredient'
@@ -28,7 +28,7 @@ export interface NewIngredientSheetProps {
 
 const searchByName = (name: string) => ingredientsApi.search(name)
 
-/** BottomSheet "New Ingredient": Name, Base Unit (g preselected, or the unit of the line), optional Shelf Life, Cancel and Create Ingredient. */
+/** BottomSheet "New Ingredient": Name, Base Unit (g preselected, or the unit of the line), optional Shelf Life and Picture, Cancel and Create Ingredient. */
 export function NewIngredientSheet(props: NewIngredientSheetProps) {
   const { open, onClose } = props
   const formId = useId()
@@ -67,6 +67,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
   const [name, setName] = useState(initialName)
   const [baseUnit, setBaseUnit] = useState<BaseUnit>(() => defaultBaseUnit(unitHint))
   const [shelfLife, setShelfLife] = useState('')
+  const [image, setImage] = useState('')
   const [errors, setErrors] = useState<NewIngredientErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [guard, setGuard] = useState<DuplicateGuard>({ kind: 'clear' })
@@ -79,7 +80,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
     onBusy(true)
     setWorking(true)
     try {
-      await onCreate(body)
+      await onCreate(image ? { ...body, image } : body)
       onClose()
     } catch (e) {
       setServerError(errorMessage(e))
@@ -160,6 +161,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
         inputMode="numeric"
         autoComplete="off"
       />
+      <ImagePicker label={strings.sheet.pictureLabel} value={image} onChange={setImage} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
       {guard.kind === 'exists' ? (
         <div className="new-ingredient__guard" role="status">
           <p>{strings.sheet.alreadyExists(guard.ingredient.name)}</p>

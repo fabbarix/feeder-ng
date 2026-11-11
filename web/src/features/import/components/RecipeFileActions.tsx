@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ListGroup, ListRow } from '../../../ui'
 import { useAgentPrompt } from '../hooks/useAgentPrompt'
-import { importStrings as s } from '../strings'
+import { importStrings as s, readStrings } from '../strings'
 import { AgentPromptNotice } from './CopyAgentPromptButton'
 
 /** The Recipe File actions as the rows of one list (in the More sheet): Import and Export link to their screens, Copy Agent Prompt copies. */
@@ -10,6 +10,7 @@ export function RecipeFileActions(): ReactNode {
   return (
     <>
       <ListGroup label={s.sourceTitle}>
+        <ListRow title={readStrings.stepTitle} icon="assistant" href="/recipes/import#read" chevron />
         <ListRow title={s.importAction} icon="import" href="/recipes/import" chevron />
         <ListRow title={s.exportAction} icon="export" href="/recipes/export" chevron />
         <ListRow

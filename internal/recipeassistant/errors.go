@@ -131,12 +131,12 @@ func ClassifyAPIFailure(f APIFailure) *Error {
 }
 
 // ClassifyStopReason maps a response's stop_reason: "refusal" is CodeDeclined
-// (with model), "max_tokens" is CodeOutputTooLong, normal reasons are nil.
+// (with model), "max_tokens" and "model_context_window_exceeded" are CodeOutputTooLong, normal reasons are nil.
 func ClassifyStopReason(stopReason, model string) *Error {
 	switch stopReason {
 	case "refusal":
 		return &Error{Code: CodeDeclined, Model: model}
-	case "max_tokens":
+	case "max_tokens", "model_context_window_exceeded":
 		return &Error{Code: CodeOutputTooLong}
 	}
 	return nil

@@ -94,6 +94,23 @@ run_ui "$FIX/back-link/fail" "$bf"
 grep -Eq "^back-link=(warn|fail)\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set back-link (warn, or fail with fail_paths while Recipe and Import still carry theirs)"
 grep -q "back-link" "$SCRIPTS/check-ui.sh" && ok || bad "check-ui.sh must document and implement the back-link rule"
 
+# image-input (IM2): no feature builds its own image input; every image field is the shared <ImagePicker>.
+# Flags accept= with an image type or extension, capture=, and the upload URLs '/api/images' and '/api/images/from-url' anywhere outside web/src/ui/ImagePicker.
+# Kept apart like back-link so that only these cases are red until the rule exists.
+ii="$TMP/rules-imginput-warn"; { cat "$(rules_file sizing warn)"; echo "image-input=warn"; } >"$ii"
+run_ui "$FIX/image-input/fail" "$ii"
+[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 6 ] && ok || bad "image-input: expected 6 (accept image/*, accept .png, capture, two upload URLs, a ui primitive outside ui/ImagePicker) and exit 0 in warn mode (rc $RC, got $(count_of image-input))"
+run_ui "$FIX/image-input/pass" "$ii"
+[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 0 ] && ok || bad "image-input: pass fixture (ui/ImagePicker itself, a .json FileDrop, a comment, a test file, a display URL) must report 0 (rc $RC, got $(count_of image-input))"
+ii="$TMP/rules-imginput-fail"; { cat "$(rules_file sizing warn)"; echo "image-input=fail"; } >"$ii"
+run_ui "$FIX/image-input/fail" "$ii"
+[ "$RC" -eq 1 ] && ok || bad "image-input=fail must exit 1 on the fail fixture (got $RC)"
+grep -Eq "^image-input=fail\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set image-input=fail (every image field is migrated by IM2)"
+grep -q "image-input" "$SCRIPTS/check-ui.sh" && ok || bad "check-ui.sh must document and implement the image-input rule"
+# The real tree is clean: Recipe photo, Step photo, Member photo and Ingredient picture all use the shared picker.
+run_ui "$SCRIPTS/.." "$ii"
+[ "$(count_of image-input)" = 0 ] && ok || bad "image-input: the real tree must have 0 violations (got $(count_of image-input)); see build/check-ui.txt"
+
 # --- hardening cases: a pass and a fail fixture each, exact count for the fail one
 harden() { # rule fixture-dir expected-count-in-fail-fixture
   run_ui "$FIX/$2/pass" "$(rules_file "$1" fail)"

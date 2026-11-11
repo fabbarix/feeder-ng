@@ -53,9 +53,9 @@ describe('NewIngredientSheet: layout (F-09)', () => {
     expect(cancel.compareDocumentPosition(create()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(cancel.parentElement).toBe(create().parentElement)
   })
-  it('leaves room for the later picture field without rendering one', () => {
+  it('has the optional Picture field now (IM2): the shared ImagePicker, see NewIngredientSheet.picture.test.tsx', () => {
     setup()
-    expect(document.querySelector('input[type=file]')).toBeNull()
+    expect(screen.getByRole('group', { name: strings.sheet.pictureLabel })).toBeInTheDocument()
   })
 })
 

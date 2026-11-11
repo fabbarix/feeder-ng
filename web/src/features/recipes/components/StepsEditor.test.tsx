@@ -1,12 +1,17 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { PICKED_ID } from '../../../ui/ImagePicker/fake.test-helper'
+import { CROP_ASPECTS } from '../../../ui/ImagePicker/lib/crop'
 import { flour, garlic } from '../fixtures.test-helper'
+import { recipeStrings } from '../strings'
 
-// Each Step owns its photo upload (usePhotoUpload inside the Step's picker); the editor takes no `imageUpload` prop.
-const api = vi.hoisted(() => ({ uploadImage: vi.fn() }))
-vi.mock('../api', () => ({ recipesApi: api }))
+// IM2: each Step's photo is a shared ImagePicker (upload mode, 72 px, landscape 4:3); the editor takes no upload prop.
+vi.mock('../../../ui', async (orig) => ({
+  ...(await orig<object>()),
+  ImagePicker: (await import('../../../ui/ImagePicker/fake.test-helper')).FakeImagePicker,
+}))
 
 import type { StepDraft } from '../lib/draft'
 import { StepsEditor, type StepsEditorProps } from './StepsEditor'
@@ -146,44 +151,40 @@ describe('StepsEditor: Step uses (G2)', () => {
   })
 })
 
-const png = () => new File(['x'], 'step.png', { type: 'image/png' })
-const fileInputs = (c: HTMLElement) => [...c.querySelectorAll<HTMLInputElement>('input[type=file]')]
+describe('StepsEditor: Step photo (IM2)', () => {
+  const pickers = () => screen.getAllByRole('group', { name: recipeStrings.steps.image })
 
-describe('StepsEditor: Step photo (G2)', () => {
-  it('uploads a photo through FileDrop and stores its id on the Step', async () => {
-    api.uploadImage.mockResolvedValue({ id: 'img9' })
-    const p = props([step()])
-    const { container } = render(<StepsEditor {...p} />)
-    expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
-    const input = fileInputs(container)[0]!
-    expect(input).toHaveAttribute('accept', 'image/*')
-    await userEvent.upload(input, png())
-    await waitFor(() => expect(vi.mocked(p.onChange).mock.calls.at(-1)![0][0]!.image).toBe('img9'))
+  it('gives each Step a shared ImagePicker named Step photo, 72 px, landscape crop, in upload mode', () => {
+    render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
+    expect(pickers()).toHaveLength(2)
+    for (const p of pickers()) {
+      expect(p).toHaveAttribute('data-mode', 'upload')
+      expect(p).toHaveAttribute('data-size', '72')
+      expect(p).toHaveAttribute('data-aspect', String(CROP_ASPECTS.landscape))
+    }
+    expect(within(rows()[0]!).getByRole('group', { name: recipeStrings.steps.image })).toBe(pickers()[0])
   })
 
-  it('shows the current photo and removes it', async () => {
+  it('stores the picked image id on that Step only', async () => {
+    const p = props([step({ key: 'a' }), step({ key: 'b' })])
+    render(<StepsEditor {...p} />)
+    await userEvent.click(within(rows()[1]!).getByRole('button', { name: `pick ${recipeStrings.steps.image}` }))
+    const next = vi.mocked(p.onChange).mock.calls[0]![0]
+    expect(next[0]!.image).toBe('')
+    expect(next[1]!.image).toBe(PICKED_ID)
+  })
+
+  it('shows the Step\'s current image id to its picker and clears it on remove', async () => {
     const p = props([step({ image: 'img1' })])
-    const { container } = render(<StepsEditor {...p} />)
-    expect(container.querySelector('img')).toHaveAttribute('src', '/api/images/img1')
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Step photo' }))
+    render(<StepsEditor {...p} />)
+    expect(pickers()[0]).toHaveAttribute('data-value', 'img1')
+    await userEvent.click(screen.getByRole('button', { name: `remove ${recipeStrings.steps.image}` }))
     expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.image).toBe('')
   })
 
-  it('shows an upload failure on the Step that failed, and on no other Step', async () => {
-    api.uploadImage.mockRejectedValue(new Error('boom'))
-    const { container } = render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
-    await userEvent.upload(fileInputs(container)[0]!, png())
-    expect(await within(rows()[0]!).findByText('The photo could not be added.')).toBeInTheDocument()
-    expect(within(rows()[1]!).queryByText('The photo could not be added.')).toBeNull()
-  })
-
-  it('one Step uploading does not disable the photo zones of the other Steps', async () => {
-    api.uploadImage.mockReturnValue(new Promise(() => {}))
-    const { container } = render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
-    await userEvent.upload(fileInputs(container)[0]!, png())
-    await waitFor(() => expect(fileInputs(container)[0]).toBeDisabled())
-    expect(fileInputs(container)[1]).toBeEnabled()
-    expect(within(rows()[1]!).getByRole('button', { name: 'Choose a file or drop it here' })).toBeEnabled()
+  it('builds no file input or upload state of its own', () => {
+    const { container } = render(<StepsEditor {...props([step({ image: 'img1' })])} />)
+    expect(container.querySelector('input[type=file], [data-testid=file-drop-zone], .recipe-thumb')).toBeNull()
   })
 })
 

@@ -8,10 +8,12 @@ vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idl
 import { RecipeFileActions } from './RecipeFileActions'
 
 describe('RecipeFileActions', () => {
-  it('lists Import, Export and Copy Agent Prompt as rows of one list', () => {
+  it('lists Read a recipe, Import, Export and Copy Agent Prompt as rows of one list, Read a recipe first (WP-E)', () => {
     render(<MemoryRouter><RecipeFileActions /></MemoryRouter>)
     const list = screen.getByRole('list', { name: s.sourceTitle })
-    expect(list.querySelectorAll('li')).toHaveLength(3)
+    expect(list.querySelectorAll('li')).toHaveLength(4)
+    expect(list.querySelector('li')).toContainElement(screen.getByRole('link', { name: 'Read a recipe' }))
+    expect(screen.getByRole('link', { name: 'Read a recipe' })).toHaveAttribute('href', '/recipes/import#read')
     expect(screen.getByRole('link', { name: s.importAction })).toHaveAttribute('href', '/recipes/import')
     expect(screen.getByRole('link', { name: s.exportAction })).toHaveAttribute('href', '/recipes/export')
     expect(screen.getByRole('button', { name: s.copyAgentPrompt })).toBeInTheDocument()

@@ -12,6 +12,8 @@ import (
 	"sort"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	imgs "github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/images/refs"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -44,7 +46,7 @@ func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
 		clk:         clk,
 		images:      images,
 		ingredients: ingstore.New(d, clk),
-		recipes:     recipestore.New(d, clk, nil).WithImages(images),
+		recipes:     recipestore.New(d, clk, nil).WithImages(imgs.NewGuarded(images, refs.New(d))),
 	}
 }
 
@@ -206,7 +208,7 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	}
 	defer tx.Rollback()
 
-	created, err := s.createIngredients(ctx, tx, c)
+	created, err := s.createIngredients(ctx, tx, c, imageIDs)
 	if err != nil {
 		return Result{}, nil, err
 	}
@@ -284,10 +286,14 @@ func (ni nameIndex) taken(key string, replacing map[int64]bool) bool {
 }
 
 // createIngredients inserts the new Ingredients and returns their ids by key.
-func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.Commit) (map[string]int64, error) {
+func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.Commit, imageIDs map[string]string) (map[string]int64, error) {
 	created := map[string]int64{}
 	for _, n := range c.NewIngredients {
-		ing, err := s.ingredients.CreateTx(ctx, tx, n.Input)
+		in := n.Input
+		if n.ImagePath != "" {
+			in.Image = imageIDs[n.ImagePath]
+		}
+		ing, err := s.ingredients.CreateTx(ctx, tx, in)
 		if err != nil {
 			return nil, staleOr(err)
 		}

@@ -1,0 +1,1 @@
+ALTER TABLE ingredients ADD COLUMN image TEXT NOT NULL DEFAULT '';

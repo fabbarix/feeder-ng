@@ -36,7 +36,7 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
               key={m.id}
               title={m.name}
               meta={[linked, m.email].filter(Boolean).join(' · ') || undefined}
-              leading={<MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} size="sm" />}
+              leading={<MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} photo={m.photo} size="sm" />}
               trailing={<span className="settings__muted">{text.portionFactor(m.portionFactor)}</span>}
               onActivate={canEdit ? () => onEdit(m) : undefined}
             />

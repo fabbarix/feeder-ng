@@ -100,13 +100,6 @@ export interface IngredientRef {
   conversions: { unit: string; toBase: number }[]
 }
 
-export interface UploadedImage {
-  id: string
-  url: string
-  width: number
-  height: number
-}
-
 export interface MemberPreferences {
   memberId: number
   /** Recipe id (as string) -> state; absent = none. */

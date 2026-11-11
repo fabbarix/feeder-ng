@@ -101,3 +101,18 @@ describe('recipes.css', () => {
     })
   })
 })
+
+describe('recipes.css, Step photo (IM2 review)', () => {
+  const photo = find((r) => r.selector.includes('.step-card__photo'))
+  it('does not cap the Step photo picker: no width on .step-card__photo or its child, and the picker is not shrunk to its content', () => {
+    expect(photo.length).toBeGreaterThan(0)
+    for (const r of photo) {
+      expect(r.selector, r.selector).not.toMatch(/>\s*:first-child/)
+      expect(r.body, r.selector).not.toMatch(/(^|[;\s])(inline-size|width|max-inline-size|max-width)\s*:/)
+      expect(r.body, r.selector).not.toMatch(/justify-items:\s*start/)
+    }
+  })
+  it('declares .step-card__error in one rule only', () => {
+    expect(find((r) => r.selector.split(',').some((s) => s.trim() === '.step-card__error'))).toHaveLength(1)
+  })
+})

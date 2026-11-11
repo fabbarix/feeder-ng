@@ -39,7 +39,7 @@ export const MEMBER_AVATARS: ReadonlyArray<{ value: string; name: string }> = [
 /** The editor's starting state: an existing Member, or a new one at Portion Factor 1. */
 export function memberDraft(member?: Member): MemberInput {
   return member
-    ? { name: member.name, colour: member.colour, avatar: member.avatar, portionFactor: member.portionFactor, email: member.email ?? '' }
+    ? { name: member.name, colour: member.colour, avatar: member.avatar, portionFactor: member.portionFactor, email: member.email ?? '', ...(member.photo ? { photo: member.photo } : {}) }
     : { name: '', colour: DEFAULT_MEMBER_COLOUR, avatar: '', portionFactor: 1, email: '' }
 }
 
@@ -54,7 +54,9 @@ export function memberProblem(draft: MemberInput): string | null {
 
 /** The request body: name, avatar and email trimmed; a blank email is sent as null (a PATCH replaces the Member, so null clears it). */
 export function memberFromDraft(draft: MemberInput): MemberInput {
-  return { ...draft, name: draft.name.trim(), avatar: draft.avatar.trim(), email: draft.email?.trim() || null }
+  const { photo, ...rest } = draft
+  // A photo is sent only when there is one: a PATCH replaces the Member, so leaving it out removes it.
+  return { ...rest, name: draft.name.trim(), avatar: draft.avatar.trim(), email: draft.email?.trim() || null, ...(photo ? { photo } : {}) }
 }
 
 /** WP11 (QA: "Linked User" offered already-linked Users): the Users a Member may be linked to, in the given order.

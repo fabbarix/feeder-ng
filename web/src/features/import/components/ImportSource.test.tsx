@@ -9,7 +9,7 @@ const fileInput = (c: HTMLElement) => c.querySelector('input[type=file]') as HTM
 describe('ImportSource (step 2)', () => {
   it('is a numbered step tile with a FileDrop zone and a styled paste field', () => {
     const { container } = render(<ImportSource busy={false} onSubmit={vi.fn()} />)
-    expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(3))).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
     expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
     expect(fileInput(container)).toHaveAttribute('accept', '.json,application/json')

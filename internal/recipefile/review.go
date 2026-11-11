@@ -698,7 +698,16 @@ func (r *review) commit() Commit {
 		t := row.target
 		c.Resolved[row.key] = ResolvedIngredient{ID: t.existingID}
 		if t.existingID == 0 {
-			c.NewIngredients = append(c.NewIngredients, NewIngredient{Key: row.key, Input: t.clean})
+			ni := NewIngredient{Key: row.key, Input: t.clean}
+			if row.def != nil {
+				// IM2: only a NEW Ingredient takes the file's picture; existing ones are never changed by an import.
+				p := fmt.Sprintf("$.ingredients[%d].image", row.defIdx)
+				if res, ok := r.images.Images[p]; ok {
+					ni.ImagePath = p
+					c.Images[p] = res
+				}
+			}
+			c.NewIngredients = append(c.NewIngredients, ni)
 			continue
 		}
 		for _, conv := range append(append([]units.Conversion(nil), t.added...), t.answered...) {

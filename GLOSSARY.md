@@ -11,8 +11,12 @@ The single family that one deployment serves; owns all recipes, plans and shops.
 _Avoid_: Family, tenant, account
 
 **Member**:
-A person who eats from the plan and counts towards portions; need not have a login. May carry an email, so that person can sign in as a User.
+A person who eats from the plan and counts towards portions; need not have a login. May carry an email, so that person can sign in as a User. Shown by an **Avatar**.
 _Avoid_: Eater, person, diner
+
+**Avatar**:
+How a Member is drawn in lists and pickers: their photo, else their emoji, else their initials. The Admin picks which in the Member sheet; a photo that cannot be loaded falls back to the emoji, then the initials.
+_Avoid_: Profile picture, icon, userpic
 
 **User**:
 Someone who signs in with Google to use the app, because an Admin added their email, a Member carries it, or a User approved their Access Request; may be linked to a Member.
@@ -64,6 +68,10 @@ _Avoid_: Microwave, warm up
 **Reheat time**:
 The optional number of minutes (1 to 30) a Recipe says its Leftover takes to reheat; Reheat starts its timer there. Without one, Reheat works the time out from the portions.
 _Avoid_: Warm-up time, microwave time
+
+**Photo**:
+The one picture a Recipe, a Step or a Member may have, added through the image picker. An Ingredient's picture is called its **Picture**.
+_Avoid_: Thumbnail, upload
 
 **Recipe File**:
 A JSON document in the published exchange format holding one or more Recipes and the Ingredient definitions they use, with images embedded or linked.
@@ -168,7 +176,7 @@ _Avoid_: Missing meal
 ### Food and shopping
 
 **Ingredient**:
-A generic food item that recipes call for and the shopping list is written in (e.g. "passata").
+A generic food item that recipes call for and the shopping list is written in (e.g. "passata"). May carry a **Picture** (see **Photo**).
 _Avoid_: Item, food, product
 
 **Product**:

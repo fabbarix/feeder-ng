@@ -102,3 +102,10 @@
 }
 
 /* .new-ingredient__picture: reserved for the later Ingredient picture (ImagePicker); nothing renders it yet. */
+
+/* The leading slot of an Ingredient row without a picture: as wide as a thumb, so the names line up. */
+.ingredient-row__no-picture {
+  display: block;
+  inline-size: 40px;
+  block-size: 40px;
+}
