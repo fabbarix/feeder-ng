@@ -5,6 +5,8 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
@@ -30,8 +33,9 @@ const topic = "recipes"
 
 func mount(r *app.Router, d app.Deps) {
 	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
+	ings := ingstore.New(d.DB, d.Clock)
 	a := &api{
-		store:  store.New(d.DB, d.Clock, ingredientSource{ingstore.New(d.DB, d.Clock)}).WithImages(images),
+		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(images).WithReadyMeal(readyMealIngredients{ings}),
 		images: images,
 		events: d.Events,
 	}
@@ -60,6 +64,29 @@ func (src ingredientSource) Units(ctx context.Context, id int64) (units.Ingredie
 		return units.Ingredient{}, false, err
 	}
 	return ing.Units(), true, nil
+}
+
+// readyMealIngredients adapts the ingredient store for the Ready Meal rule.
+type readyMealIngredients struct{ s *ingstore.Store }
+
+func (r readyMealIngredients) Candidates(ctx context.Context) ([]recipe.ReadyMealCandidate, error) {
+	list, err := r.s.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]recipe.ReadyMealCandidate, 0, len(list))
+	for _, i := range list {
+		out = append(out, recipe.ReadyMealCandidate{ID: i.ID, Name: i.Name, Base: i.Base})
+	}
+	return out, nil
+}
+
+func (r readyMealIngredients) CreatePieceTx(ctx context.Context, tx *sql.Tx, name string) (int64, error) {
+	ing, err := r.s.CreateTx(ctx, tx, ingredient.Input{Name: name, Base: units.Piece})
+	if err != nil {
+		return 0, err
+	}
+	return ing.ID, nil
 }
 
 type api struct {

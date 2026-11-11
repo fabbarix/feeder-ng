@@ -32,6 +32,8 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   /** Adds a trailing "create" row when the query is non-empty and matches no label exactly. */
   onCreate?: (query: string) => void
   createLabel?: (query: string) => string
+  /** R14: shows the create row disabled (aria-disabled) with this reason as its second line; choosing it does nothing. */
+  createDisabledReason?: string
 }
 
 export interface SelectProps<V extends string | number = string> extends SelectBaseProps<V> {
@@ -105,6 +107,7 @@ function SelectCore<V extends string | number>({
   sorts = [],
   onCreate,
   createLabel,
+  createDisabledReason,
   multi,
   selected,
   onPick,
@@ -134,7 +137,7 @@ function SelectCore<V extends string | number>({
   const list = useRef<HTMLDivElement>(null)
 
   const build = (q: string, filterIds: string[], sort: number) =>
-    buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate), clearLabel })
+    buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate), createDisabled: createDisabledReason !== undefined, clearLabel })
   const current = build(query, activeFilters, sortIndex)
 
   const close = (restoreFocus: boolean) => {
@@ -282,6 +285,7 @@ function SelectCore<V extends string | number>({
       sortIndex={sortIndex}
       onCycleSort={cycleSort}
       list={current}
+      createDisabledReason={createDisabledReason}
       selected={selected}
       active={active}
       optionId={optionId}
