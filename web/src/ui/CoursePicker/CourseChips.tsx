@@ -29,7 +29,7 @@ export function CourseChips({ courses, chosen, disabled, mainId, onToggle }: Cou
         </Chip>
       ))}
       {hasMain && (
-        <span id={mainId} className="course-picker__hidden">
+        <span id={mainId} className="visually-hidden">
           {s.mainCourse}
         </span>
       )}

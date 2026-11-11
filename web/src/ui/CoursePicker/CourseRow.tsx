@@ -20,6 +20,7 @@ export interface CourseRowProps {
 export function CourseRow({ course, ctx, count, disabled, extras, onMove, onRemove }: CourseRowProps) {
   const { index, itemProps, handle } = ctx
   const className = ['course-picker__row', itemProps.className].filter(Boolean).join(' ')
+  const hasExtras = extras !== undefined && extras !== null && typeof extras !== 'boolean'
   return (
     <li {...itemProps} className={className}>
       {handle}
@@ -27,7 +28,7 @@ export function CourseRow({ course, ctx, count, disabled, extras, onMove, onRemo
         {course.name}
       </span>
       {course.main && <span className="course-picker__main">{s.mainCourse}</span>}
-      {extras !== undefined && extras !== null && <div className="course-picker__extras">{extras}</div>}
+      {hasExtras && <div className="course-picker__extras">{extras}</div>}
       <div className="course-picker__actions">
         <IconButton
           icon="moveUp"

@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react'
 import { inHouseholdOrder, type CourseChoice } from '../../lib/courses'
 import { MultiSelect, Select, type SelectFieldProps } from './Select'
 import type { SelectOption } from './lib'
+import { coursePickerStrings } from '../CoursePicker/strings'
 
 export interface CourseSelectProps extends SelectFieldProps {
   /** Active Courses in household order; a caller limits them (a Meal Slot's Courses) by passing fewer. */
@@ -20,7 +21,7 @@ export interface CourseMultiSelectProps extends SelectFieldProps {
 
 /** Options for the Course selects: the name, "main Course" as meta on the main one; household order. */
 export function courseOptions(courses: readonly CourseChoice[]): SelectOption<number>[] {
-  return courses.map((c) => ({ value: c.id, label: c.name, meta: c.main ? 'main Course' : undefined }))
+  return courses.map((c) => ({ value: c.id, label: c.name, meta: c.main ? coursePickerStrings.mainCourse : undefined }))
 }
 
 /** One Course (the replacement in the Delete dialog, a Slot Rule's Course). */

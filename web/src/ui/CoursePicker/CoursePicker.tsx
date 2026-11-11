@@ -12,6 +12,7 @@ import {
 } from '../../lib/courses'
 import { CourseChips } from './CourseChips'
 import { CourseList } from './CourseList'
+import '../fields/Field.css' // the shared .visually-hidden utility (the live region and the chips' main-Course text)
 import './CoursePicker.css'
 
 /** What a row of the ordered picker gets to render its extra controls (D2: optional, attendance). */
@@ -93,8 +94,9 @@ export function CoursePicker({
   const toggle = (id: number) => onChange(ordered ? toggleOrdered(shown, id) : toggleUnordered(shown, id, courses))
 
   const remove = (id: number) => {
-    const name = courses.find((c) => c.id === id)?.name ?? ''
-    pendingFocus.current = (root) => [...root.querySelectorAll<HTMLElement>('.chip')].find((el) => el.textContent === name)
+    // CourseChips renders one chip per Course, in `courses` order, so the chip's index is the Course's index.
+    const index = courses.findIndex((c) => c.id === id)
+    pendingFocus.current = (root) => root.querySelectorAll<HTMLElement>('.course-picker__chips .chip')[index] ?? null
     onChange(toggleOrdered(shown, id))
   }
 
@@ -107,7 +109,11 @@ export function CoursePicker({
     const opposite = delta < 0 ? 'down' : 'up'
     const primary = focusKey(`${row.id}:${up}`)
     const fallback = focusKey(`${row.id}:${opposite}`)
-    pendingFocus.current = (root) => primary(root) ?? fallback(root)
+    // At an edge the primary button is disabled; a disabled button cannot take focus, so use the opposite one.
+    pendingFocus.current = (root) => {
+      const p = primary(root)
+      return p && !p.hasAttribute('disabled') ? p : fallback(root)
+    }
     setAnnouncement(sortableStrings.moved(row.name, index + delta + 1, shown.length))
     onChange([...next])
   }
@@ -141,7 +147,7 @@ export function CoursePicker({
           {message}
         </p>
       )}
-      <div role="status" aria-live="polite" aria-atomic="true" className="course-picker__live">
+      <div role="status" aria-live="polite" aria-atomic="true" className="visually-hidden">
         {announcement}
       </div>
     </div>
