@@ -32,7 +32,7 @@ func stepTimer(t *testing.T, scope cook.Scope, step int, secs int) cook.Timer {
 
 func TestTimerRoundTrip(t *testing.T) {
 	st := setup(t)
-	in := stepTimer(t, cook.MealScope("2026-11-09", 3), 2, 600)
+	in := stepTimer(t, cook.MealScope("2026-11-09", 3, 0), 2, 600)
 	got, err := st.InsertTimer(ctx, in)
 	if err != nil || got.ID == 0 {
 		t.Fatalf("insert: %+v %v", got, err)
@@ -142,7 +142,7 @@ func TestTimersFilterByScopeAndDelete(t *testing.T) {
 
 func TestMarks(t *testing.T) {
 	st := setup(t)
-	scope := cook.MealScope("2026-11-09", 3)
+	scope := cook.MealScope("2026-11-09", 3, 0)
 	if m, _ := st.Marks(ctx, scope); len(m) != 0 {
 		t.Fatalf("fresh scope has marks: %v", m)
 	}

@@ -24,7 +24,7 @@ func start(t *testing.T, clk *clock.Fake, seconds int) cook.Timer {
 func TestStartTimerRunsForItsDuration(t *testing.T) {
 	clk := clock.NewFake(t0)
 	step := 2
-	tm, err := cook.StartTimer(clk.Now(), cook.MealScope("2026-11-09", 3), &step, "Step 3", 600)
+	tm, err := cook.StartTimer(clk.Now(), cook.MealScope("2026-11-09", 3, 0), &step, "Step 3", 600)
 	if err != nil {
 		t.Fatal(err)
 	}
