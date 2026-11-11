@@ -55,7 +55,6 @@ export function ImagePicker(props: ImagePickerProps) {
           width={p.cropSession.width}
           height={p.cropSession.height}
           aspect={p.aspect}
-          maxSide={p.raw ? p.maxSide : p.uploadMaxSide}
           busy={p.busy}
           autoFocus
           onApply={p.applyCrop}

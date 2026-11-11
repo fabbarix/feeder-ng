@@ -43,4 +43,26 @@ describe('CropEditor.css', () => {
   it('anything animated honours prefers-reduced-motion', () => {
     if (/animation\s*:|@keyframes|transition\s*:/.test(css)) expect(css).toMatch(/prefers-reduced-motion/)
   })
+
+  it('no ancestor of the handles clips them: the 44 px hit areas and the focus outline overhang the picture', () => {
+    // handle -> rect -> frame -> stage -> editor; only the picture layer ("canvas") may clip.
+    for (const sel of ['.crop-editor__handle', '.crop-editor__box', '.crop-editor__rect', '.crop-editor__frame', '.crop-editor__stage', '.crop-editor']) {
+      expect(rule(sel), `${sel} must not clip`).not.toMatch(/overflow(-x|-y|-inline|-block)?\s*:\s*(hidden|clip|auto|scroll)/)
+    }
+    expect(rule('.crop-editor__canvas')).toMatch(/overflow\s*:\s*hidden/)
+    expect(rule('.crop-editor__stage')).toMatch(/padding/)
+  })
+
+  it('the dimming shade lives in the clipped canvas, not in the (unclipped) crop rectangle', () => {
+    expect(rule('.crop-editor__rect')).not.toMatch(/box-shadow/)
+    expect(rule('.crop-editor__shade')).toMatch(/box-shadow/)
+  })
+
+  it('a rotated (portrait) stage never grows taller than the viewport share', () => {
+    expect(rule('.crop-editor__frame')).toMatch(/max-block-size\s*:\s*60dvh/)
+  })
+
+  it('the action buttons keep their label on one line (Use crop at 390 px wraps the row, not the label)', () => {
+    expect(css).toMatch(/\.crop-editor__actions[^{]*\.button[^{]*\{[^}]*white-space\s*:\s*nowrap/)
+  })
 })

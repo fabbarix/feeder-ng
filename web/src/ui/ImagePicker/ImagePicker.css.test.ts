@@ -30,4 +30,10 @@ describe('ImagePicker.css', () => {
   it('anything animated honours prefers-reduced-motion', () => {
     if (/animation\s*:|@keyframes|transition\s*:/.test(css)) expect(css).toMatch(/prefers-reduced-motion/)
   })
+
+  it('the panel is not the same colour as its secondary buttons (Use link must stand out, light and dark)', () => {
+    const panel = [...css.matchAll(/\.image-picker__panel\s*\{([^}]*)\}/g)].map((m) => m[1]).join(' ')
+    expect(panel).toMatch(/background\s*:\s*var\(--color-surface\)/)
+    expect(panel).toMatch(/border\s*:[^;]*var\(--color-line\)/)
+  })
 })

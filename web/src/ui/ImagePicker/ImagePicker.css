@@ -78,8 +78,9 @@
   display: grid;
   gap: var(--space-3);
   padding: var(--space-3);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-tile-sm);
-  background: var(--color-surface-2);
+  background: var(--color-surface);
 }
 
 .image-picker__status {

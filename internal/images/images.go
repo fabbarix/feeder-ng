@@ -127,6 +127,12 @@ func (s *Service) Discard(ctx context.Context, id string) error {
 	if !imaging.ValidID(id) {
 		return imaging.ErrNotFound
 	}
+	return s.deleteIfUnreferenced(ctx, id)
+}
+
+// deleteIfUnreferenced reads the references immediately before the delete (a record may have saved the image since
+// any earlier snapshot) and deletes only if none holds it. Fail closed: a Referencer error deletes nothing.
+func (s *Service) deleteIfUnreferenced(ctx context.Context, id string) error {
 	used, err := s.refs.ReferencedIDs(ctx)
 	if err != nil {
 		return err
@@ -156,7 +162,12 @@ func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 			res.Kept++
 			continue
 		}
-		if err := s.store.Delete(e.ID); err != nil {
+		// The snapshot above may be stale by now: re-check this one image just before deleting it.
+		if err := s.deleteIfUnreferenced(ctx, e.ID); err != nil {
+			if errors.Is(err, ErrInUse) {
+				res.Kept++
+				continue
+			}
 			return res, err
 		}
 		res.Deleted = append(res.Deleted, e.ID)

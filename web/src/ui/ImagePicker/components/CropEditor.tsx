@@ -13,8 +13,6 @@ export interface CropEditorProps {
   width: number
   height: number
   aspect: CropAspect
-  /** Long edge of the result (the host applies it; the read-out shows the crop in picture pixels). */
-  maxSide?: number
   busy?: boolean
   /** Focus the crop box when the editor opens (the picker does; the bare editor does not). */
   autoFocus?: boolean
@@ -89,6 +87,8 @@ export function CropEditor({ src, width, height, aspect, busy, autoFocus, onAppl
     transform: `translate(-50%, -50%) rotate(${turns * 90}deg)`,
   }
 
+  const rectStyle = { insetInlineStart: `${percent.left}%`, insetBlockStart: `${percent.top}%`, inlineSize: `${percent.width}%`, blockSize: `${percent.height}%` }
+
   return (
     <div
       role="group"
@@ -102,33 +102,35 @@ export function CropEditor({ src, width, height, aspect, busy, autoFocus, onAppl
         if (!busy) onCancel()
       }}
     >
-      <div ref={stageRef} className="crop-editor__stage" data-dragging={cropper.dragging || undefined} style={{ ['--crop-ratio' as string]: String(bounds.width / bounds.height) }}>
-        <img src={src} alt="" draggable={false} className="crop-editor__image" style={imageStyle} />
-        <div
-          className="crop-editor__rect"
-          style={{ insetInlineStart: `${percent.left}%`, insetBlockStart: `${percent.top}%`, inlineSize: `${percent.width}%`, blockSize: `${percent.height}%` }}
-        >
-          <button
-            ref={boxRef}
-            type="button"
-            className="crop-editor__box"
-            aria-label={t.cropMove}
-            aria-describedby={statusId}
-            disabled={busy}
-            {...pointer('move')}
-          />
-          {cropper.handles.map((h) => (
+      <div className="crop-editor__stage" data-dragging={cropper.dragging || undefined}>
+        <div ref={stageRef} className="crop-editor__frame" style={{ ['--crop-ratio' as string]: String(bounds.width / bounds.height) }}>
+          <div className="crop-editor__canvas">
+            <img src={src} alt="" draggable={false} className="crop-editor__image" style={imageStyle} />
+            <div className="crop-editor__shade" style={rectStyle} />
+          </div>
+          <div className="crop-editor__rect" style={rectStyle}>
             <button
-              key={h}
+              ref={boxRef}
               type="button"
-              className="crop-editor__handle"
-              data-handle={h}
-              aria-label={handleLabel(h)}
+              className="crop-editor__box"
+              aria-label={t.cropMove}
               aria-describedby={statusId}
               disabled={busy}
-              {...pointer(h)}
+              {...pointer('move')}
             />
-          ))}
+            {cropper.handles.map((h) => (
+              <button
+                key={h}
+                type="button"
+                className="crop-editor__handle"
+                data-handle={h}
+                aria-label={handleLabel(h)}
+                aria-describedby={statusId}
+                disabled={busy}
+                {...pointer(h)}
+              />
+            ))}
+          </div>
         </div>
       </div>
       <p id={statusId} role="status" className="crop-editor__readout">

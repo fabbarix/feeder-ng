@@ -5,17 +5,29 @@
   inline-size: 100%;
 }
 
-/* The stage has the shape of the turned picture and never grows taller than 60% of the viewport. */
+/* The stage pads the picture by half a handle (22 px) all round and does NOT clip: the 44 px handles and the focus outline
+   overhang the picture's edge. Only the canvas (the picture and the dimming shade) clips. */
 .crop-editor__stage {
+  padding: 22px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The frame has the shape of the turned picture and never grows taller than 60% of the viewport. */
+.crop-editor__frame {
   position: relative;
   inline-size: min(100%, calc(60dvh * var(--crop-ratio, 1)));
+  max-block-size: 60dvh;
   aspect-ratio: var(--crop-ratio, 1);
   margin-inline: auto;
+}
+
+.crop-editor__canvas {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   border-radius: var(--radius-thumb-lg);
   background: var(--viewfinder-frame);
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .crop-editor__image {
@@ -28,10 +40,16 @@
   -webkit-user-drag: none;
 }
 
-/* The crop rectangle: the area outside it is dimmed by a huge shadow clipped by the stage. */
-.crop-editor__rect {
+/* The area outside the crop rectangle is dimmed by a huge shadow; it lives in the clipped canvas. */
+.crop-editor__shade {
   position: absolute;
   box-shadow: 0 0 0 100vmax var(--scrim);
+  pointer-events: none;
+}
+
+/* The crop rectangle: outline, box and handles. Not clipped. */
+.crop-editor__rect {
+  position: absolute;
   outline: 2px solid var(--viewfinder-reticle);
 }
 
@@ -94,6 +112,10 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   text-align: center;
+}
+
+.crop-editor__actions .button {
+  white-space: nowrap;
 }
 
 .crop-editor__actions {

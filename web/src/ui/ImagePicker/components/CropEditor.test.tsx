@@ -12,7 +12,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 function setup(over: Partial<CropEditorProps> = {}) {
-  const props = { src: 'blob:photo', width: 800, height: 600, aspect: 'free' as const, maxSide: 3200, onApply: vi.fn(), onCancel: vi.fn(), ...over }
+  const props = { src: 'blob:photo', width: 800, height: 600, aspect: 'free' as const, onApply: vi.fn(), onCancel: vi.fn(), ...over }
   render(<CropEditor {...props} />)
   return props
 }
