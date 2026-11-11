@@ -101,6 +101,7 @@ legend.ui-field__label {
 .ui-field--stepper .ui-field__control {
   padding: 0 var(--space-1);
   gap: var(--space-1);
+  min-inline-size: 0;
 }
 
 .ui-field--stepper .ui-field__input {

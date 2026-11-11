@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
 import { FormActions } from '../../../ui/FormActions'
+import { Segmented } from '../../../ui/fields/Segmented'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { TextField } from '../../../ui/fields/TextField'
 import { Select } from '../../../ui/Select/Select'
 import { ingredientPickerOptions } from '../lib/ingredientOptions'
-import { checkExtraDraft, type ExtraDraftError } from '../lib/extraDraft'
+import { checkExtraDraft, type ExtraDraftError, type ExtraDraftField, type ExtraMode } from '../lib/extraDraft'
 import { shopStrings } from '../strings'
 import type { ExtraInput } from '../types'
 
@@ -18,64 +19,140 @@ export interface ExtraSheetProps {
   onSubmit: (input: ExtraInput) => void
 }
 
+interface FieldError {
+  field: ExtraDraftField
+  error: ExtraDraftError
+}
+
 const errorText: Record<ExtraDraftError, string> = {
   required: shopStrings.required,
-  bothFilled: shopStrings.pickOneNotBoth,
+  chooseIngredient: shopStrings.extraChooseIngredient,
   mustBePositive: shopStrings.mustBePositive,
 }
 
-/** "Add an extra": free text, or an Ingredient with a quantity. Checking the fields is lib/extraDraft's job. */
+const KIND_OPTIONS = (hasIngredients: boolean) => [
+  { value: 'ingredient' as const, label: shopStrings.extraKindIngredient, disabled: !hasIngredients },
+  { value: 'note' as const, label: shopStrings.extraKindNote },
+]
+
+/** "Add to Shopping List": one choice (an Ingredient with a quantity, or something else), then its fields. Checking is lib/extraDraft's job. */
 export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetProps) {
+  const formId = useId()
+  const hasIngredients = ingredients.length > 0
+  const startMode = (): ExtraMode => (hasIngredients ? 'ingredient' : 'note')
+  const [mode, setMode] = useState<ExtraMode>(startMode)
   const [text, setText] = useState('')
   const [ingredientId, setIngredientId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState<number | null>(null)
-  const [error, setError] = useState<ExtraDraftError | null>(null)
+  const [error, setError] = useState<FieldError | null>(null)
   const picked = ingredients.find((i) => i.id === ingredientId) ?? null
   const options = useMemo(() => ingredientPickerOptions(ingredients), [ingredients])
+  const kinds = useMemo(() => KIND_OPTIONS(hasIngredients), [hasIngredients])
+
+  // The sheet's state outlives each opening (the screen keeps it mounted), so start clean every time it closes.
+  useEffect(() => {
+    if (open) return
+    setMode(startMode())
+    setText('')
+    setIngredientId(null)
+    setQuantity(null)
+    setError(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on close only; startMode follows the Ingredients at that moment
+  }, [open])
+
+  const chooseMode = (next: ExtraMode) => {
+    setMode(next)
+    setError(null)
+  }
 
   const submit = () => {
-    const result = checkExtraDraft({ text, ingredientId, quantityText: quantity === null ? '' : String(quantity) })
+    const result = checkExtraDraft({ mode, text, ingredientId, quantityText: quantity === null ? '' : String(quantity) })
     if (!result.ok) {
-      setError(result.error)
+      setError({ field: result.field, error: result.error })
       return
     }
     setError(null)
     onSubmit(result.input)
   }
 
+  const fieldError = (field: ExtraDraftField) => (error?.field === field ? errorText[error.error] : undefined)
+
   return (
-    <BottomSheet open={open} onClose={onClose} title={shopStrings.addExtra}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={shopStrings.addExtra}
+      footer={
+        <FormActions
+          tertiary={
+            <Button variant="tertiary" onClick={onClose}>
+              {shopStrings.cancel}
+            </Button>
+          }
+          primary={
+            <Button type="submit" form={formId}>
+              {shopStrings.save}
+            </Button>
+          }
+        />
+      }
+    >
       <form
+        id={formId}
         className="shop-sheet-form"
         onSubmit={(e) => {
           e.preventDefault()
           submit()
         }}
       >
-        <TextField
-          label={shopStrings.extraText}
-          value={text}
-          onChange={setText}
-          error={error === 'required' || error === 'bothFilled' ? errorText[error] : undefined}
+        <Segmented<ExtraMode>
+          size="full"
+          label={shopStrings.extraKind}
+          helper={shopStrings.extraKindHelper}
+          value={mode}
+          onChange={chooseMode}
+          options={kinds}
         />
-        <Select<number>
-          label={shopStrings.extraIngredient}
-          entityName="Ingredient"
-          options={options}
-          value={ingredientId}
-          onChange={setIngredientId}
-        />
-        {picked ? (
-          <NumberField
-            label={shopStrings.extraQuantity}
-            value={quantity}
-            onChange={setQuantity}
-            min={0}
-            unit={picked.baseUnit}
-            error={error === 'mustBePositive' ? errorText.mustBePositive : undefined}
+        {mode === 'ingredient' ? (
+          <>
+            <Select<number>
+              size="full"
+              label={shopStrings.extraIngredient}
+              entityName="Ingredient"
+              options={options}
+              value={ingredientId}
+              onChange={(id) => {
+                setIngredientId(id)
+                setError(null)
+              }}
+              error={fieldError('ingredient')}
+            />
+            <NumberField
+              size="full"
+              label={shopStrings.extraQuantity}
+              value={quantity}
+              onChange={(next) => {
+                setQuantity(next)
+                setError(null)
+              }}
+              min={0}
+              unit={picked?.baseUnit}
+              disabled={!picked}
+              error={fieldError('quantity')}
+            />
+          </>
+        ) : (
+          <TextField
+            size="full"
+            label={shopStrings.extraText}
+            value={text}
+            onChange={(next) => {
+              setText(next)
+              setError(null)
+            }}
+            error={fieldError('text')}
           />
-        ) : null}
-        <FormActions primary={<Button type="submit">{shopStrings.save}</Button>} />
+        )}
       </form>
     </BottomSheet>
   )
