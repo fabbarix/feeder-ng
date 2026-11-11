@@ -87,3 +87,7 @@ Components and lib functions are typed stubs that throw `not implemented`, so ty
 - Class names follow `Name__element`, CSS uses tokens only (guards `colour-literals`, `sizing`, `class-hooks`).
 - Keep strings in a `strings.ts`; use GLOSSARY terms ("Course", "main Course", "Meal Slot").
 - Export from `ui/index.ts` (already added with the stubs) and add the Gallery samples.
+
+## Row extras: visual order vs tab order
+
+On phone width the row extras are placed with CSS `order: 1`, so they wrap to a full-width block visually under the name. The DOM order stays name, extras, Move buttons, so tab order follows the DOM and differs from the visual order. The design review accepts this: the extras are a block under the name and the tab order stays logical. Tests assert the DOM/tab order only. On the first row, Move up is disabled and not focusable, so Tab from the extra reaches Move down.

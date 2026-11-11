@@ -263,13 +263,24 @@ describe('CoursePicker: row extras (the slot D2 fills)', () => {
   })
 
   it('puts the extras between the name and the Move buttons in tab order', async () => {
+    // Middle row: both Move buttons are enabled (the first row's Move up is disabled, so unfocusable).
+    render(<Controlled initial={[1, 2, 3]} renderRowExtras={() => <button type="button">Extra</button>} />)
+    const middle = rows()[1]!
+    within(middle).getByRole('button', { name: 'Reorder Side' }).focus()
+    await userEvent.tab()
+    expect(within(middle).getByRole('button', { name: 'Extra' })).toHaveFocus()
+    await userEvent.tab()
+    expect(within(middle).getByRole('button', { name: 'Move Side up' })).toHaveFocus()
+    await userEvent.tab()
+    expect(within(middle).getByRole('button', { name: 'Move Side down' })).toHaveFocus()
+  })
+
+  it('tabs from the extra to the first enabled Move button on the first row', async () => {
     render(<Controlled initial={[1, 2]} renderRowExtras={() => <button type="button">Extra</button>} />)
     const first = rows()[0]!
-    within(first).getByRole('button', { name: 'Reorder Main' }).focus()
+    within(first).getByRole('button', { name: 'Extra' }).focus()
     await userEvent.tab()
-    expect(within(first).getByRole('button', { name: 'Extra' })).toHaveFocus()
-    await userEvent.tab()
-    expect(within(first).getByRole('button', { name: 'Move Main up' })).toHaveFocus()
+    expect(within(first).getByRole('button', { name: 'Move Main down' })).toHaveFocus()
   })
 
   it('is not called by the unordered form', () => {
