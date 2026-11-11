@@ -12,11 +12,6 @@ import { household } from '../household.test-helper'
 const h = vi.hoisted(() => ({ recipe: {} as Record<string, unknown>, household: {} as import('../hooks/useHouseholdPreferences').UseHouseholdPreferences }))
 vi.mock('../hooks/useRecipe', () => ({ useRecipe: () => h.recipe }))
 vi.mock('../hooks/useHouseholdPreferences', () => ({ useHouseholdPreferences: () => h.household }))
-// PT step 1: the stub screen still calls the old hooks; these mocks keep the unrelated tests green. The developer deletes them with the hooks.
-vi.mock('../hooks/useRecipePreferences', () => ({
-  useRecipePreferences: () => ({ stateOf: () => 'none', isExcluded: () => false, toggleRecipe: vi.fn(), toggleIngredient: vi.fn(), noMember: false, isLoading: false }),
-}))
-vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => ({ members: [], selectedId: null, memberId: undefined, select: vi.fn(), isLoading: false }) }))
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic]]), isLoading: false }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 

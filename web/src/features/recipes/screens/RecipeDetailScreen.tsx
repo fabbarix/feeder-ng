@@ -3,37 +3,40 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
+import { Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
 import { CookEntry } from '../components/CookEntry'
+import { IngredientExclusionList } from '../components/IngredientExclusionList'
 import { IngredientLinesList } from '../components/IngredientLinesList'
-import { MemberPicker } from '../components/MemberPicker'
-import { PreferenceToggles } from '../components/PreferenceToggles'
+import { PreferenceTable } from '../components/PreferenceTable'
 import { RecipeMetrics } from '../components/RecipeMetrics'
 import { StepsList } from '../components/StepsList'
+import { useHashTarget } from '../hooks/useHashTarget'
+import { useHouseholdPreferences } from '../hooks/useHouseholdPreferences'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
-import { useMemberPicker } from '../hooks/useMemberPicker'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
-import { useRecipePreferences } from '../hooks/useRecipePreferences'
+import { excludersOf, preferenceRows } from '../lib/preferenceRows'
 import { recipeStrings } from '../strings'
-import type { PreferenceState } from '../types'
 import '../recipes.css'
 
 /**
- * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines with the
- * Member's Exclusions, the Steps, the Member's preferences (picked Member first), and "Start Cook Mode" with the Batch
- * count. Edit is in the header; Archive and Delete are in the More actions Menu (Delete asks in a ConfirmDialog). From 1280 px the left column holds the photo, metrics, Ingredients and the Cook entry; below, the Cook entry is a StickyActionBar.
+ * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines (with who
+ * excludes each Ingredient, changed in a Dialog), the Steps, the preferences of the whole Household as a table, and
+ * "Start Cook Mode" with the Batch count. Edit is in the header; Archive and Delete are in the More actions Menu
+ * (Delete asks in a ConfirmDialog). From 1280 px the left column holds the photo, metrics, Ingredients and the Cook
+ * entry; below, the Cook entry is a StickyActionBar.
  */
 export function RecipeDetailScreen(): ReactNode {
   const navigate = useNavigate()
   const { id } = useParams()
   const recipeId = Number(id)
   const recipe = useRecipe(recipeId)
-  const picker = useMemberPicker()
-  const prefs = useRecipePreferences(picker.memberId)
+  const household = useHouseholdPreferences()
+  const highlighted = useHashTarget('preference-member-')
   const refs = useIngredientRefs()
   const system = useDisplayUnitSystem()
   const [batches, setBatches] = useState(1)
+  const [excluding, setExcluding] = useState<{ id: number; name: string } | null>(null)
   const wide = useMediaQuery('(min-width: 1280px)')
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)
@@ -48,13 +51,7 @@ export function RecipeDetailScreen(): ReactNode {
       </section>
     )
 
-  const current = prefs.stateOf(r.id)
-  // The toggles report the next state; clearing a state re-taps the one it had.
-  const toggle = (next: PreferenceState) => {
-    const tapped = next === 'none' ? current : next
-    if (tapped !== 'none') void prefs.toggleRecipe(r.id, tapped)
-  }
-  const noMember = picker.selectedId === null || prefs.noMember
+  const rows = preferenceRows(household.members, household.prefsByMember, r.id, r.lines, household.meUserId)
   const cook = (
     <CookEntry
       batches={batches}
@@ -112,14 +109,10 @@ export function RecipeDetailScreen(): ReactNode {
               lines={r.lines}
               refs={refs.byId}
               system={system}
-              exclusions={
-                noMember
-                  ? undefined
-                  : {
-                      isExcluded: prefs.isExcluded,
-                      onToggle: (ingredientId) => void prefs.toggleIngredient(ingredientId),
-                    }
-              }
+              excludedBy={{
+                members: (ingredientId) => excludersOf(household.members, household.prefsByMember, ingredientId),
+                onOpen: (ingredientId, name) => setExcluding({ id: ingredientId, name }),
+              }}
             />
           </Tile>
           {wide ? cook : null}
@@ -131,12 +124,25 @@ export function RecipeDetailScreen(): ReactNode {
           </Tile>
           <Tile as="section">
             <h2>{recipeStrings.preferences}</h2>
-            <MemberPicker members={picker.members} selectedId={picker.selectedId} onPick={picker.select} />
-            {noMember ? <p className="recipe-detail__hint">{recipeStrings.memberPicker.pickFirst}</p> : null}
-            <PreferenceToggles state={current} disabled={noMember} onChange={toggle} />
+            {household.isLoading ? (
+              <Skeleton variant="tile" />
+            ) : (
+              <PreferenceTable
+                recipeName={r.name}
+                rows={rows}
+                onToggle={(memberId, tapped) => void household.toggleRecipe(memberId, r.id, tapped)}
+                highlightedMemberId={highlighted}
+                isAdmin={household.isAdmin}
+                error={household.isError}
+                onRetry={household.refetch}
+              />
+            )}
           </Tile>
         </div>
       </div>
+      <Dialog open={excluding !== null} onClose={() => setExcluding(null)} title={excluding ? recipeStrings.whoExcludes(excluding.name) : ''}>
+        {excluding ? <IngredientExclusionList ingredientId={excluding.id} ingredientName={excluding.name} /> : null}
+      </Dialog>
       {actions.error ? <ErrorState message={actions.error} /> : null}
       {wide ? null : <StickyActionBar label={recipeStrings.cook.barLabel}>{cook}</StickyActionBar>}
     </section>

@@ -4,6 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
 import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
+import { IngredientExclusionList } from '../../recipes/components/IngredientExclusionList'
 import { BaseUnitPicker } from '../components/BaseUnitPicker'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
@@ -20,7 +21,7 @@ import { strings } from '../strings'
  * Unit Conversions (ConversionEditor), Merge (opens MergeSheet; on success navigates to the survivor) and Delete
  * (disabled with strings.deleteLocked(n) while referenced; otherwise asks strings.deleteConfirm in a sheet, then
  * deletes and navigates to /ingredients). While loading shows strings.loading; an unknown id (404) shows an
- * EmptyState under a PageHeader with the trail.
+ * EmptyState under a PageHeader with the trail. The Excluded by Tile (#exclusions) lists who excludes the Ingredient.
  */
 export function IngredientScreen() {
   const { id: rawId } = useParams()
@@ -154,6 +155,11 @@ export function IngredientScreen() {
         </Tile>
 
         <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
+
+        <Tile as="section" id="exclusions" span="full" aria-label={strings.excludedBy}>
+          <h2>{strings.excludedBy}</h2>
+          <IngredientExclusionList ingredientId={id} ingredientName={ingredient.name} />
+        </Tile>
 
         <Tile as="section" aria-label={strings.mergeTitle}>
           <Button variant="tertiary" onClick={() => setMergeOpen(true)}>
