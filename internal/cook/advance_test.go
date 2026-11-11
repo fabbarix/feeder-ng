@@ -8,7 +8,7 @@ import (
 )
 
 func cand(recipe string, mealAt time.Time, step, leadMin int, done bool) cook.AdvanceCandidate {
-	return cook.AdvanceCandidate{Scope: cook.MealScope(mealAt.Format("2006-01-02"), 2), RecipeName: recipe, MealAt: mealAt, Step: step, Text: "prep " + recipe, LeadTimeMinutes: leadMin, Done: done}
+	return cook.AdvanceCandidate{Scope: cook.MealScope(mealAt.Format("2006-01-02"), 2, 0), RecipeName: recipe, MealAt: mealAt, Step: step, Text: "prep " + recipe, LeadTimeMinutes: leadMin, Done: done}
 }
 
 func TestNextAdvancePicksTheEarliestDueNotDone(t *testing.T) {

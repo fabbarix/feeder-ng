@@ -38,8 +38,8 @@ func mount(r *app.Router, d app.Deps) {
 		// R13: migration 1230 changed Attendance; replan once at startup so stale "couldn't plan" reasons are cleared.
 		ReplanOnStart: d.Context != nil,
 		OnResolved: func(ctx context.Context, key plan.Key) {
-			if _, err := timers.CancelScope(ctx, cook.MealScope(key.Date, key.MealSlotID)); err != nil && d.Logger != nil {
-				d.Logger.Warn("cancelling the timers of a resolved meal", "date", key.Date, "slot", key.MealSlotID, "err", err)
+			if _, err := timers.CancelScope(ctx, cook.MealScope(key.Date, key.MealSlotID, key.CourseID)); err != nil && d.Logger != nil {
+				d.Logger.Warn("cancelling the timers of a resolved meal", "date", key.Date, "slot", key.MealSlotID, "course", key.CourseID, "err", err)
 			}
 		},
 	})
