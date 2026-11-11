@@ -1,5 +1,7 @@
 package household
 
+import "fmt"
+
 // Course Attendance and a Meal Slot's Courses (ADR 0008 points 7 and 8, spec §3.1).
 
 // Validation reasons (ValidationError.Reason), field "courses" unless noted (spec §16).
@@ -134,6 +136,53 @@ func CourseAttendance(slot []Attendee, usual []int64, date *[]int64) []Attendee 
 func containsID(ids []int64, id int64) bool {
 	for _, x := range ids {
 		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+// DateCourse is one Course's opt-outs on a date as a PUT sends them: nil drops the date's own ones (back to
+// the usual opt-outs); a non-nil list, empty included, replaces them (empty = everyone eats it).
+type DateCourse struct {
+	CourseID        int64
+	OptOutMemberIDs []int64
+}
+
+// ReasonCourseNotInSlot is the reason for a date's Course the Meal Slot does not serve (field courses[i].courseId).
+const ReasonCourseNotInSlot = "course_not_in_slot"
+
+// ValidateDateCourses checks every Course of a date's PUT before anything is written: each must be one the
+// Meal Slot serves (served is its CoursesOn), and each opt-out must be an existing Member (members). The first
+// failure is a *ValidationError naming courses[i].
+func ValidateDateCourses(served []CourseDay, members []Member, in []DateCourse) error {
+	for i, c := range in {
+		if !servesCourse(served, c.CourseID) {
+			return &ValidationError{Field: fmt.Sprintf("courses[%d].courseId", i), Reason: ReasonCourseNotInSlot,
+				Message: "the Meal Slot does not serve that Course"}
+		}
+		for _, m := range c.OptOutMemberIDs {
+			if !hasMember(members, m) {
+				return &ValidationError{Field: fmt.Sprintf("courses[%d].optOutMemberIds", i), Reason: ReasonMemberUnknown,
+					Message: "that Member does not exist"}
+			}
+		}
+	}
+	return nil
+}
+
+func servesCourse(served []CourseDay, id int64) bool {
+	for _, d := range served {
+		if d.CourseID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMember(members []Member, id int64) bool {
+	for _, m := range members {
+		if m.ID == id {
 			return true
 		}
 	}
