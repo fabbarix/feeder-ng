@@ -4,6 +4,8 @@ import (
 	"math"
 	"regexp"
 	"strings"
+
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 )
 
 // Member is a person who eats from the plan.
@@ -15,6 +17,7 @@ type Member struct {
 	PortionFactor float64
 	UserID        *int64
 	Email         string // optional sign-in address, lower case; empty when none
+	Photo         string // IM2: image id (internal/imaging), "" = none. The avatar shows photo, else Avatar, else initials.
 }
 
 // MemberInput is what an Admin supplies to create or change a Member.
@@ -24,6 +27,7 @@ type MemberInput struct {
 	Avatar        string
 	PortionFactor float64
 	Email         string // optional; empty clears it
+	Photo         string // IM2: image id, "" = none (clears it)
 }
 
 // Normalized trims the name and avatar. It returns a copy.
@@ -31,6 +35,7 @@ func (m MemberInput) Normalized() MemberInput {
 	m.Name = strings.TrimSpace(m.Name)
 	m.Avatar = strings.TrimSpace(m.Avatar)
 	m.Email = strings.ToLower(strings.TrimSpace(m.Email))
+	m.Photo = strings.TrimSpace(m.Photo)
 	return m
 }
 
@@ -52,6 +57,9 @@ func (m MemberInput) Validate() error {
 	}
 	if nameLength(m.Avatar) > 4 {
 		return fieldError("avatar", "must be at most 4 characters")
+	}
+	if m.Photo != "" && !imaging.ValidID(m.Photo) {
+		return fieldError("photo", "must be an uploaded image")
 	}
 	if m.Email != "" && !validMemberEmail(m.Email) {
 		return fieldError("email", "must be an address like name@example.com, at most 254 characters")

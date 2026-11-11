@@ -216,6 +216,9 @@ var ErrNotReady = errors.New("import review is not finished")
 type NewIngredient struct {
 	Key   string
 	Input ingredient.Input
+	// ImagePath ("$.ingredients[0].image") keys into Commit.Images when the file's picture for this NEW Ingredient resolved (IM2).
+	// Input.Image stays empty: the store fills it after saving the image.
+	ImagePath string
 }
 
 // AddedConversion is a Unit Conversion to add to an existing Ingredient (the

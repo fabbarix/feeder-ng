@@ -87,6 +87,12 @@ describe('createHttpClient', () => {
       expect(fetch.mock.calls[0]![1].signal).toBe(signal)
     })
 
+    it('forwards keepalive to fetch (a request that must outlive the page)', async () => {
+      const fetch = vi.fn().mockResolvedValue(json(204, undefined))
+      await createHttpClient({ fetch }).delete('/api/a', { keepalive: true })
+      expect(fetch.mock.calls[0]![1].keepalive).toBe(true)
+    })
+
     it('raises ApiError(0, "timeout") when the signal fires with a TimeoutError', async () => {
       const controller = new AbortController()
       const http = createHttpClient({ fetch: hangingFetch() })

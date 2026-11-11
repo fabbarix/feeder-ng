@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { BottomSheet, Button, ColorSwatches, EmojiPicker, Select, StepperField, TextField } from '../../../ui'
+import { BottomSheet, Button, ColorSwatches, CROP_ASPECTS, EmojiPicker, ImagePicker, Segmented, Select, StepperField, TextField } from '../../../ui'
+import { avatarMode, keepOnLeaving, withAvatarMode, type AvatarMode } from '../lib/memberAvatar'
 import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberEmailProblem, memberFromDraft, memberProblem } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
@@ -29,7 +30,7 @@ export interface MemberEditorProps {
 const text = settingsStrings.member
 const NO_USER = ''
 
-/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (emoji, optional), Portion Factor
+/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (Initials, Emoji or Photo), Portion Factor
  *  stepper (0.25..3, step 0.25), Linked User Select; buttons "Save Member" and "Remove Member" (editing only). */
 export function MemberEditor({ open, member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete, onClose }: MemberEditorProps) {
   return (
@@ -58,6 +59,8 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
   const [problem, setProblem] = useState<string | null>(null)
   const [emailProblem, setEmailProblem] = useState<string | null>(null)
+  const [mode, setMode] = useState<AvatarMode>(() => avatarMode(memberDraft(member)))
+  const [kept, setKept] = useState<Pick<MemberInput, 'avatar' | 'photo'>>({ avatar: '', photo: '' })
   const set = (patch: Partial<MemberInput>) => setDraft((d) => ({ ...d, ...patch }))
   const offered = availableUsers(users, members, member)
 
@@ -74,14 +77,36 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
     <form className="settings__stack" onSubmit={submit} noValidate>
       <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
       <ColorSwatches label={text.colour} swatches={[...MEMBER_COLOURS]} value={draft.colour} onChange={(colour) => set({ colour })} allowCustom />
-      <EmojiPicker
+      <Segmented
         label={text.avatar}
         helper={text.avatarHelper}
-        noneLabel={text.avatarNone}
-        options={[...MEMBER_AVATARS]}
-        value={draft.avatar}
-        onChange={(avatar) => set({ avatar })}
+        options={[
+          { value: 'initials', label: text.avatarInitials },
+          { value: 'emoji', label: text.avatarEmoji },
+          { value: 'photo', label: text.avatarPhoto },
+        ]}
+        value={mode}
+        onChange={(next) => {
+          const stash = keepOnLeaving(kept, draft, mode)
+          setKept(stash)
+          setMode(next)
+          setDraft((d) => withAvatarMode(d, next, stash))
+        }}
       />
+      {mode === 'emoji' ? (
+        <EmojiPicker label={text.avatarEmoji} options={[...MEMBER_AVATARS]} value={draft.avatar} onChange={(avatar) => set({ avatar })} />
+      ) : null}
+      {mode === 'photo' ? (
+        <ImagePicker
+          label={text.photoLabel}
+          helper={text.photoHelper}
+          size={72}
+          aspect={CROP_ASPECTS.square}
+          listenOn="dialog"
+          value={draft.photo ?? ''}
+          onChange={(photo) => set({ photo })}
+        />
+      ) : null}
       <StepperField
         label={text.portionFactorLabel}
         helper={text.portionFactorHelper}

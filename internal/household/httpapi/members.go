@@ -14,13 +14,18 @@ type memberBody struct {
 	Name          string  `json:"name"`
 	Colour        string  `json:"colour"`
 	Avatar        string  `json:"avatar"`
+	Photo         string  `json:"photo"`
+	PhotoURL      string  `json:"photoUrl"`
 	PortionFactor float64 `json:"portionFactor"`
 	UserID        *int64  `json:"userId"`
 	Email         *string `json:"email"`
 }
 
 func memberOut(m household.Member) memberBody {
-	b := memberBody{ID: m.ID, Name: m.Name, Colour: m.Colour, Avatar: m.Avatar, PortionFactor: m.PortionFactor, UserID: m.UserID}
+	b := memberBody{ID: m.ID, Name: m.Name, Colour: m.Colour, Avatar: m.Avatar, Photo: m.Photo, PortionFactor: m.PortionFactor, UserID: m.UserID}
+	if m.Photo != "" {
+		b.PhotoURL = "/api/images/" + m.Photo
+	}
 	if m.Email != "" {
 		e := m.Email
 		b.Email = &e
@@ -33,13 +38,14 @@ type memberIn struct {
 	Name          string  `json:"name"`
 	Colour        string  `json:"colour"`
 	Avatar        string  `json:"avatar"`
+	Photo         string  `json:"photo"`
 	PortionFactor float64 `json:"portionFactor"`
 	Email         string  `json:"email"`
 }
 
 // input decodes and validates a memberIn, returning the normalised input.
 func (in memberIn) input() (household.MemberInput, error) {
-	m := household.MemberInput{Name: in.Name, Colour: in.Colour, Avatar: in.Avatar, PortionFactor: in.PortionFactor, Email: in.Email}.Normalized()
+	m := household.MemberInput{Name: in.Name, Colour: in.Colour, Avatar: in.Avatar, PortionFactor: in.PortionFactor, Email: in.Email, Photo: in.Photo}.Normalized()
 	return m, m.Validate()
 }
 
@@ -64,6 +70,10 @@ func (a *api) createMember(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := in.input()
 	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	if err := a.checkPhoto(v.Photo); err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -101,6 +111,12 @@ func (a *api) updateMember(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	if v.Photo != cur.Photo {
+		if err := a.checkPhoto(v.Photo); err != nil {
+			writeErr(w, err)
+			return
+		}
+	}
 	if err := a.checkEmail(r.Context(), v.Email, cur.UserID); err != nil {
 		memberErr(w, err)
 		return
@@ -110,6 +126,7 @@ func (a *api) updateMember(w http.ResponseWriter, r *http.Request) {
 		memberErr(w, err)
 		return
 	}
+	a.st.ReleasePhoto(r.Context(), cur.Photo)
 	a.changed("members")
 	httpx.WriteJSON(w, http.StatusOK, memberOut(m))
 }
@@ -120,9 +137,13 @@ func (a *api) deleteMember(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, household.ErrNotFound)
 		return
 	}
+	cur, curErr := a.st.Member(r.Context(), id)
 	if err := a.st.DeleteMember(r.Context(), id); err != nil {
 		writeErr(w, err)
 		return
+	}
+	if curErr == nil {
+		a.st.ReleasePhoto(r.Context(), cur.Photo)
 	}
 	a.changed("members")
 	w.WriteHeader(http.StatusNoContent)
@@ -166,4 +187,12 @@ func (a *api) writeLinkedErr(w http.ResponseWriter, r *http.Request, userID *int
 		}
 	}
 	httpx.WriteError(w, http.StatusConflict, "user_already_linked", msg)
+}
+
+// checkPhoto refuses a photo id that was never uploaded (422 validation_failed, field photo).
+func (a *api) checkPhoto(id string) error {
+	if id == "" || a.images.Exists(id) {
+		return nil
+	}
+	return &household.ValidationError{Field: "photo", Message: "must be an uploaded image"}
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ButtonHTMLAttributes } from 'react'
+import { useCallback, useEffect, useRef, type ButtonHTMLAttributes, type Ref } from 'react'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { resolveButtonVariant, type LegacyButtonVariant } from './lib/legacy'
@@ -15,6 +15,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: IconName
   /** Full width: 'phone' below 600 px, 'always', or 'never' (default). */
   block?: 'phone' | 'always' | 'never'
+  /** The button element (React 19 ref-as-prop); merged with the Button's own ref. */
+  ref?: Ref<HTMLButtonElement>
 }
 
 /** Attribute that scopes the single-primary dev warning; Tile, BottomSheet and Dialog set it. */
@@ -45,10 +47,19 @@ export function Button({
   disabled,
   className,
   children,
+  ref: forwardedRef,
   ...rest
 }: ButtonProps) {
   const resolved = resolveButtonVariant(variant)
-  const ref = useRef<HTMLButtonElement>(null)
+  const ref = useRef<HTMLButtonElement | null>(null)
+  const setRef = useCallback(
+    (el: HTMLButtonElement | null) => {
+      ref.current = el
+      if (typeof forwardedRef === 'function') return forwardedRef(el)
+      if (forwardedRef) forwardedRef.current = el
+    },
+    [forwardedRef],
+  )
 
   useEffect(() => {
     if (import.meta.env.DEV && resolved === 'primary' && ref.current) checkSinglePrimary(ref.current)
@@ -57,7 +68,7 @@ export function Button({
   return (
     <button
       {...rest}
-      ref={ref}
+      ref={setRef}
       type={type}
       className={['button', className].filter(Boolean).join(' ')}
       data-variant={resolved}

@@ -52,3 +52,14 @@ describe('ingredientsApi', () => {
     ])
   })
 })
+
+// IM2: the picture travels in the normal create and patch bodies (contract only: the shapes are in types.ts).
+describe('ingredientsApi: picture', () => {
+  it('create sends the image id and patch can set or clear it', async () => {
+    calls.length = 0
+    await ingredientsApi.create({ name: 'Flour', baseUnit: 'g', image: 'a'.repeat(32) })
+    await ingredientsApi.patch(1, { image: '' })
+    expect(calls).toContainEqual(['POST', '/api/ingredients', { name: 'Flour', baseUnit: 'g', image: 'a'.repeat(32) }])
+    expect(calls).toContainEqual(['PATCH', '/api/ingredients/1', { image: '' }])
+  })
+})
