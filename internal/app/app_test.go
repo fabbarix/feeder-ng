@@ -360,3 +360,36 @@ func TestFaviconSVGIsServedAsAnImage(t *testing.T) {
 		t.Errorf("/favicon.ico status = %d, want 404", rec.Code)
 	}
 }
+
+// R13: modules with start-up work register an idle check; App.WaitIdle blocks until every one reports idle.
+func TestWaitIdleBlocksUntilEveryRegisteredModuleIsIdle(t *testing.T) {
+	var busy atomic.Bool
+	busy.Store(true)
+	g := app.NewRegistry()
+	g.Register(app.Module{Name: "slow", Mount: func(_ *app.Router, d app.Deps) {
+		d.Idle(func(ctx context.Context) error {
+			for busy.Load() {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(time.Millisecond):
+				}
+			}
+			return nil
+		})
+	}})
+	h := build(t, spaFS, g)
+	t.Cleanup(h.app.Close)
+
+	short, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	if err := h.app.WaitIdle(short); err == nil {
+		t.Fatal("WaitIdle returned while a module was still busy")
+	}
+	go func() { time.Sleep(20 * time.Millisecond); busy.Store(false) }()
+	ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+	if err := h.app.WaitIdle(ctx); err != nil {
+		t.Fatalf("WaitIdle = %v after the module went idle", err)
+	}
+}
