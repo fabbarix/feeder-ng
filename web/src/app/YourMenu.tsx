@@ -1,10 +1,10 @@
 // The avatar menu (docs/design/ui-fix-plan.md 4.5, 5.17): shortcuts, a divider, Settings, feature items, Sign out.
-import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AccessBadge } from '../features/access/components/AccessBadge'
 import { accessStrings } from '../features/access/strings'
-import { Avatar, Icon } from '../ui'
-import type { NavItem } from './nav'
+import { Avatar, Icon, useMenuKeys } from '../ui'
+import { menuIconFor, type NavItem } from './nav'
 import { shellStrings } from './strings'
 
 export interface YourMenuProps {
@@ -15,60 +15,19 @@ export interface YourMenuProps {
   onSignOut: () => void
 }
 
-const itemsIn = (menu: HTMLElement | null): HTMLElement[] =>
-  menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]')) : []
-
 export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: YourMenuProps) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Focus goes to the first item on open, never to a highlighted Sign out.
-  useEffect(() => {
-    if (open) itemsIn(menuRef.current)[0]?.focus()
-  }, [open])
-
-  // Escape closes from anywhere and returns focus to the avatar button.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      setOpen(false)
-      buttonRef.current?.focus()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
-  const onMenuKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const list = itemsIn(menuRef.current)
-    const current = list.indexOf(document.activeElement as HTMLElement)
-    const last = list.length - 1
-    const go = (to: number) => {
-      e.preventDefault()
-      list[to]?.focus()
-    }
-    switch (e.key) {
-      case 'ArrowDown':
-        go(current < 0 || current === last ? 0 : current + 1)
-        break
-      case 'ArrowUp':
-        go(current <= 0 ? last : current - 1)
-        break
-      case 'Home':
-        go(0)
-        break
-      case 'End':
-        go(last)
-        break
-      case 'Tab':
-        // Tab leaves the menu: it closes, and focus returns to the avatar button rather than falling to the page.
-        e.preventDefault()
-        setOpen(false)
-        buttonRef.current?.focus()
-        break
-    }
-  }
+  const close = useCallback(() => setOpen(false), [])
+  // Focus on open, arrows, Home/End, Escape and Tab: the shared menu rules (ui/Menu).
+  const { onMenuKeyDown } = useMenuKeys({
+    open,
+    onClose: close,
+    menuRef,
+    triggerRef: buttonRef,
+  })
 
   return (
     <div className="your-menu-anchor">
@@ -76,7 +35,11 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
         ref={buttonRef}
         type="button"
         className="your-menu-button"
-        aria-label={pendingAccessRequests > 0 ? `${shellStrings.yourMenu}, ${accessStrings.waitingLabel(pendingAccessRequests)}` : shellStrings.yourMenu}
+        aria-label={
+          pendingAccessRequests > 0
+            ? `${shellStrings.yourMenu}, ${accessStrings.waitingLabel(pendingAccessRequests)}`
+            : shellStrings.yourMenu
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -100,7 +63,7 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
               <Fragment key={item.id}>
                 {item.id === 'settings' ? <div role="separator" className="your-menu__divider" /> : null}
                 <Link role="menuitem" className="your-menu__item" to={item.path} onClick={() => setOpen(false)}>
-                  <Icon name={item.icon ?? 'chevron'} size={20} />
+                  <Icon name={menuIconFor(item)} size={20} />
                   <span>{item.label}</span>
                 </Link>
               </Fragment>

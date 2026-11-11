@@ -32,6 +32,12 @@ describe('page-layout guard modes (R2-1)', () => {
     expect(rules.modeFor(text, '/recipes/7')).toBe('fail')
     expect(rules.modeFor('default=warn\nfail_routes=/recipes/:id\n', '/recipes/import')).toBe('fail')
   })
+  it('unions several fail_routes and warn_routes lines (each team adds its own)', () => {
+    const text =
+      'default=warn\nfail_routes=/recipes/:id\nfail_routes=/plan /stock\nwarn_routes=/recipes/import\nwarn_routes=/recipes/export\n'
+    for (const route of ['/recipes/7', '/plan', '/stock']) expect(rules.modeFor(text, route)).toBe('fail')
+    for (const route of ['/recipes/import', '/recipes/export', '/shop']) expect(rules.modeFor(text, route)).toBe('warn')
+  })
   it('keeps the default in warn mode', () => {
     expect(modes).toMatch(/^default=warn$/m)
   })

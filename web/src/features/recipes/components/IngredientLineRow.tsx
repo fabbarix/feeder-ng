@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Button, Checkbox, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
+import { Button, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
@@ -29,7 +29,7 @@ const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMess
 
 /**
  * One ingredient line of the editor: Ingredient (IngredientSelect), Quantity (text, so "1 1/2" stays typeable), Unit
- * (UnitSelect with the Ingredient's units and a typed custom unit), optional and Note, with remove. A unit the
+ * (UnitSelect with the Ingredient's units and a typed custom unit), Note and the "Optional" chip, with remove; one row from 720 px. A unit the
  * Ingredient does not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
  */
 export function IngredientLineRow({
@@ -62,6 +62,7 @@ export function IngredientLineRow({
     <li className="line-row">
       <div className="line-row__ingredient">
         <IngredientSelect
+          size="full"
           label={recipeStrings.lines.ingredient}
           ingredients={ingredients}
           value={line.ingredientId}
@@ -76,6 +77,7 @@ export function IngredientLineRow({
       </div>
       <div ref={amountRef} className="line-row__amount">
         <TextField
+          size="xs"
           label={recipeStrings.lines.quantity}
           inputMode="decimal"
           helper={line.auto && line.quantity.trim() === '' && line.ingredientId !== null ? recipeStrings.lines.packSizeHint : undefined}
@@ -84,6 +86,7 @@ export function IngredientLineRow({
           onChange={(quantity) => onChange({ quantity })}
         />
         <UnitSelect
+          size="sm"
           label={recipeStrings.lines.unit}
           units={units}
           value={line.unit || null}
@@ -96,8 +99,16 @@ export function IngredientLineRow({
       </div>
       {asks ? <p className="line-row__hint">{recipeStrings.lines.unitNeedsConversion(line.unit)}</p> : null}
       <div className="line-row__extras">
-        <Checkbox label={recipeStrings.optional} checked={line.optional} onChange={(optional) => onChange({ optional })} />
-        <TextField label={recipeStrings.lines.note} value={line.note} onChange={(note) => onChange({ note })} />
+        <TextField
+          size="full"
+          label={recipeStrings.lines.note}
+          placeholder="note"
+          value={line.note}
+          onChange={(note) => onChange({ note })}
+        />
+        <Chip kind="filter" selected={line.optional} onClick={() => onChange({ optional: !line.optional })}>
+          {recipeStrings.lines.optional}
+        </Chip>
       </div>
       <IconButton icon="delete" label={recipeStrings.lines.remove} onClick={onRemove} />
     </li>

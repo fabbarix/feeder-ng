@@ -1,0 +1,69 @@
+/* ui/Menu (R2-1, G-01): a popover anchored to its trigger from 768 px. Tokens only. */
+.menu {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  inline-size: 240px;
+  max-inline-size: calc(100vw - 2 * var(--gutter));
+  padding: var(--space-2);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+  box-shadow: var(--elev-2);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu__item:hover {
+  background: var(--color-soft);
+}
+
+.menu__item:focus-visible {
+  background: var(--color-soft);
+}
+
+.menu__item[data-tone='danger'] {
+  color: var(--status-danger-fg);
+}
+
+.menu__item[aria-disabled='true'] {
+  color: var(--color-muted);
+  cursor: default;
+}
+
+.menu__item[aria-disabled='true']:hover {
+  background: none;
+}
+
+.menu__check {
+  margin-inline-start: auto;
+}
+
+.menu__divider {
+  block-size: 1px;
+  margin-block: var(--space-2);
+  background: var(--color-line);
+}
+
+/* Below 768 px the entries are ListRows in a BottomSheet; a checkable entry is a row holding a Switch. */
+.menu-sheet__switch {
+  display: flex;
+  align-items: center;
+  min-block-size: 56px;
+  padding-inline: var(--space-4);
+}

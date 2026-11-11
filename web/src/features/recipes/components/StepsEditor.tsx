@@ -1,5 +1,17 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, IconButton, IngredientSelect, NumberField, Segmented, TextArea, TextField, UnitSelect } from '../../../ui'
+import {
+  Button,
+  Chip,
+  FieldRow,
+  IconButton,
+  IngredientSelect,
+  Menu,
+  NumberField,
+  Segmented,
+  TextArea,
+  TextField,
+  UnitSelect,
+} from '../../../ui'
 import type { DraftErrors, StepDraft, UseDraft } from '../lib/draft'
 import { numberText, numberValue } from '../lib/draft'
 import { afterOptions, changeKind, moveStep, newStepDraft, removeStep, toggleAfter } from '../lib/steps'
@@ -37,7 +49,8 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
     patchUse(i, j, { ingredientId: ing.id, ingredientName: ing.name, unit: ing.baseUnit })
 
   /** Step-level problems; the fields of a use show their own. */
-  const errorsFor = (i: number): string[] => STEP_FIELDS.map((field) => errors[`steps.${i}.${field}`]).filter((code): code is string => code !== undefined)
+  const errorsFor = (i: number): string[] =>
+    STEP_FIELDS.map((field) => errors[`steps.${i}.${field}`]).filter((code): code is string => code !== undefined)
 
   return (
     <div className="steps-editor">
@@ -52,38 +65,56 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
                   {i + 1}
                 </span>
                 <div className="step-card__moves">
-                  <IconButton icon="moveUp" label={recipeStrings.steps.up} disabled={i === 0} onClick={() => onChange(moveStep(steps, i, i - 1))} />
-                  <IconButton
-                    icon="moveDown"
-                    label={recipeStrings.steps.down}
-                    disabled={i === steps.length - 1}
-                    onClick={() => onChange(moveStep(steps, i, i + 1))}
+                  <Menu
+                    label={recipeStrings.steps.actions}
+                    items={[
+                      {
+                        id: 'up',
+                        label: recipeStrings.steps.up,
+                        icon: 'moveUp',
+                        disabled: i === 0,
+                        onSelect: () => onChange(moveStep(steps, i, i - 1)),
+                      },
+                      {
+                        id: 'down',
+                        label: recipeStrings.steps.down,
+                        icon: 'moveDown',
+                        disabled: i === steps.length - 1,
+                        onSelect: () => onChange(moveStep(steps, i, i + 1)),
+                      },
+                    ]}
                   />
                   <IconButton icon="delete" label={recipeStrings.steps.remove} onClick={() => onChange(removeStep(steps, i))} />
                 </div>
               </div>
               <TextArea label={recipeStrings.steps.text} rows={2} value={s.text} onChange={(text) => patch(i, { text })} />
-              <Segmented
-                label={recipeStrings.steps.kind}
-                options={kindOptions}
-                value={s.kind}
-                onChange={(kind) => onChange(changeKind(steps, i, kind))}
-              />
-              {s.kind === 'advance' ? (
-                <NumberField
-                  label={recipeStrings.steps.lead}
-                  hideStepper
-                  value={numberValue(s.leadTimeMinutes)}
-                  onChange={(n) => patch(i, { leadTimeMinutes: numberText(n) })}
+              <FieldRow className="step-card__timing">
+                <Segmented
+                  label={recipeStrings.steps.kind}
+                  options={kindOptions}
+                  value={s.kind}
+                  onChange={(kind) => onChange(changeKind(steps, i, kind))}
                 />
-              ) : (
-                <NumberField
-                  label={recipeStrings.steps.duration}
-                  hideStepper
-                  value={numberValue(s.durationMinutes)}
-                  onChange={(n) => patch(i, { durationMinutes: numberText(n) })}
-                />
-              )}
+                {s.kind === 'advance' ? (
+                  <NumberField
+                    size="xs"
+                    unit="min"
+                    label={recipeStrings.steps.lead}
+                    hideStepper
+                    value={numberValue(s.leadTimeMinutes)}
+                    onChange={(n) => patch(i, { leadTimeMinutes: numberText(n) })}
+                  />
+                ) : (
+                  <NumberField
+                    size="xs"
+                    unit="min"
+                    label={recipeStrings.steps.duration}
+                    hideStepper
+                    value={numberValue(s.durationMinutes)}
+                    onChange={(n) => patch(i, { durationMinutes: numberText(n) })}
+                  />
+                )}
+              </FieldRow>
               {afterChoices.length > 0 ? (
                 <div role="group" aria-label={recipeStrings.steps.after} className="step-card__after">
                   <span className="step-card__label">{recipeStrings.steps.after}</span>
@@ -101,24 +132,28 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
               ) : null}
 
               <div className="step-card__uses">
-                <p className="step-card__label">{recipeStrings.steps.usesTitle}</p>
-                <ul className="step-card__use-list">
-                  {s.uses.map((u, j) => (
-                    <UseRow
-                      key={u.key}
-                      use={u}
-                      ingredients={ingredients}
-                      errors={errors}
-                      index={{ step: i, use: j }}
-                      onPick={(ing) => pickUse(i, j, ing)}
-                      onChange={(change) => patchUse(i, j, change)}
-                      onRemove={() => onChange(removeUse(steps, i, j))}
-                    />
-                  ))}
-                </ul>
-                <Button variant="tertiary" icon="add" onClick={() => onChange(addUse(steps, i))}>
+                {s.uses.length > 0 ? (
+                  <>
+                    <p className="step-card__label">{recipeStrings.steps.usesTitle}</p>
+                    <ul className="step-card__use-list">
+                      {s.uses.map((u, j) => (
+                        <UseRow
+                          key={u.key}
+                          use={u}
+                          ingredients={ingredients}
+                          errors={errors}
+                          index={{ step: i, use: j }}
+                          onPick={(ing) => pickUse(i, j, ing)}
+                          onChange={(change) => patchUse(i, j, change)}
+                          onRemove={() => onChange(removeUse(steps, i, j))}
+                        />
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                <Chip icon="add" onClick={() => onChange(addUse(steps, i))}>
                   {recipeStrings.steps.addUse}
-                </Button>
+                </Chip>
               </div>
 
               <StepPhoto imageId={s.image} onChange={(id) => onChange(setStepImage(steps, i, id))} />
@@ -167,7 +202,13 @@ function UseRow({ use, ingredients, errors, index, onPick, onChange, onRemove }:
           if (picked) onPick(picked)
         }}
       />
-      <TextField label={recipeStrings.steps.useQuantity} inputMode="decimal" value={use.quantity} error={err('quantity')} onChange={(quantity) => onChange({ quantity })} />
+      <TextField
+        label={recipeStrings.steps.useQuantity}
+        inputMode="decimal"
+        value={use.quantity}
+        error={err('quantity')}
+        onChange={(quantity) => onChange({ quantity })}
+      />
       <UnitSelect
         label={recipeStrings.steps.useUnit}
         units={ingredient ? unitChoicesOf(ingredient) : { baseUnit: use.unit, conversions: [], globalUnits: [] }}

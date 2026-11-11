@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BentoGrid, Button, EmptyState, ErrorState, IconButton, PageHeader, SearchField, Skeleton } from '../../../ui'
-import { RecipesOverflowSheet } from '../components/RecipesOverflowSheet'
+import { BentoGrid, Button, EmptyState, ErrorState, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
 import { useRecipes } from '../hooks/useRecipes'
@@ -18,8 +18,11 @@ export function RecipesScreen(): ReactNode {
   const [q, setQ] = useState('')
   const [tag, setTag] = useState('')
   const [showArchived, setShowArchived] = useState(false)
-  const [overflowOpen, setOverflowOpen] = useState(false)
-  const filter: RecipeFilter = { q: q.trim() || undefined, tag: tag || undefined, archived: showArchived ? 'all' : 'no' }
+  const filter: RecipeFilter = {
+    q: q.trim() || undefined,
+    tag: tag || undefined,
+    archived: showArchived ? 'all' : 'no',
+  }
   const list = useRecipes(filter)
 
   let body: ReactNode
@@ -38,7 +41,11 @@ export function RecipesScreen(): ReactNode {
       <EmptyState
         icon="recipes"
         title={recipeStrings.empty}
-        action={<Button icon="add" onClick={() => navigate('/recipes/new')}>{recipeStrings.newRecipe}</Button>}
+        action={
+          <Button icon="add" onClick={() => navigate('/recipes/new')}>
+            {recipeStrings.newRecipe}
+          </Button>
+        }
       />
     )
   else body = <EmptyState icon="search" title={recipeStrings.noMatch} />
@@ -52,19 +59,13 @@ export function RecipesScreen(): ReactNode {
             <Button size="sm" icon="add" onClick={() => navigate('/recipes/new')}>
               {recipeStrings.newRecipe}
             </Button>
-            <IconButton icon="more" label={recipeStrings.more} onClick={() => setOverflowOpen(true)} />
+            <RecipesOverflowMenu showArchived={showArchived} onShowArchivedChange={setShowArchived} />
           </>
         }
       />
       <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
       <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
       {body}
-      <RecipesOverflowSheet
-        open={overflowOpen}
-        onClose={() => setOverflowOpen(false)}
-        showArchived={showArchived}
-        onShowArchivedChange={setShowArchived}
-      />
     </section>
   )
 }

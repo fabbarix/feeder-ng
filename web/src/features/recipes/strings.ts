@@ -34,6 +34,7 @@ export const recipeStrings = {
   aheadMetric: (t: string) => `+ ${t} ahead`,
   cook: {
     start: 'Start Cook Mode',
+    barLabel: 'Cook',
     batches: 'Batches',
     batchesHint: (n: number, portions: string) => `${n} Batch${n === 1 ? '' : 'es'} · ${portions} portions`,
   },
@@ -49,6 +50,8 @@ export const recipeStrings = {
   stepsTitle: 'Steps',
   photo: 'Photo',
   optional: 'optional',
+  sections: 'Sections',
+  editorActions: 'Recipe actions',
   favourite: 'Favourite',
   dislike: 'Dislike',
   exclusion: 'Exclusion',
@@ -88,6 +91,7 @@ export const recipeStrings = {
     unit: 'Unit',
     note: 'Note',
     remove: 'Remove ingredient',
+    optional: 'Optional',
     none: 'No ingredients yet.',
     packSizeHint: 'Enter the pack size.',
     unitNeedsConversion: (unit: string) => `Feeder will ask how much 1 ${unit} is when you save.`,
@@ -104,7 +108,8 @@ export const recipeStrings = {
     newBadge: 'New Ingredient',
     changeIngredient: 'Choose another Ingredient',
     renameTitle: 'Rename the Ingredient too?',
-    renameBody: (from: string, to: string) => `The Ingredient '${from}' will be called '${to}', so Stock and Shopping Lists use the new name.`,
+    renameBody: (from: string, to: string) =>
+      `The Ingredient '${from}' will be called '${to}', so Stock and Shopping Lists use the new name.`,
     renameConfirm: 'Rename Ingredient',
     renameKeep: 'Keep the old name',
     renameFailed: 'The Recipe was saved, but the Ingredient could not be renamed.',
@@ -112,6 +117,7 @@ export const recipeStrings = {
   steps: {
     add: 'Add Step',
     remove: 'Remove Step',
+    actions: 'Step actions',
     up: 'Move Step up',
     down: 'Move Step down',
     text: 'Step text',
@@ -142,7 +148,8 @@ export const recipeStrings = {
     description_too_long: 'The description is longer than 4000 characters.',
     yield_invalid: 'Yield must be above 0, up to 100.',
     ready_meal_lines: 'A Ready Meal has exactly one ingredient line.',
-    ready_meal_unit: 'An Ingredient with this name already exists but is not counted in pieces. Choose it as the line and enter the pack size.',
+    ready_meal_unit:
+      'An Ingredient with this name already exists but is not counted in pieces. Choose it as the line and enter the pack size.',
     name_taken: "An Ingredient with this Recipe's name was just added. Save again.",
     lines_required: 'Add at least one ingredient line.',
     ingredient_required: 'Pick an Ingredient.',

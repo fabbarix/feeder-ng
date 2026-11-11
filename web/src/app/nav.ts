@@ -38,6 +38,18 @@ export const MENU_NAV: readonly NavItem[] = [
   { id: 'settings', label: 'Settings', path: '/settings', icon: 'settings', placement: 'menu' },
 ]
 
+/** S-01: icons of the menu entries features add (their nav items may leave `icon` out), so no entry shows the default chevron. */
+const MENU_ICONS: Readonly<Record<string, IconName>> = {
+  ingredients: 'ingredients',
+  products: 'barcodes',
+  shops: 'shops',
+}
+
+/** The icon of a menu entry: its own, else the one registered for its id, else `chevron`. */
+export function menuIconFor(item: Pick<NavItem, 'id' | 'icon'>): IconName {
+  return item.icon ?? MENU_ICONS[item.id] ?? 'chevron'
+}
+
 /** Sorts menu entries by order (unordered last), then by label. Returns a new array. */
 export function sortByOrder(items: readonly NavItem[]): NavItem[] {
   return [...items].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.label.localeCompare(b.label))

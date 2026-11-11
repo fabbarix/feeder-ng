@@ -37,6 +37,11 @@ html:has(.sticky-action-bar) {
   max-inline-size: var(--page-narrow);
 }
 
+/* R2-1: the editor's form column. */
+.sticky-action-bar[data-column="form"] .sticky-action-bar__inner {
+  max-inline-size: 840px;
+}
+
 @media (min-width: 1024px) {
   .sticky-action-bar {
     padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));

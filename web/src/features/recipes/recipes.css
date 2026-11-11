@@ -9,6 +9,74 @@
   min-inline-size: 0;
 }
 
+/* Editor (R2-1, L-02, E-01): one centred 840 px column of section cards; from 1280 px the section index sits in the left gutter. */
+.recipe-editor {
+  inline-size: 100%;
+  max-inline-size: 840px;
+  margin-inline: auto;
+}
+
+.recipe-editor-layout {
+  min-inline-size: 0;
+}
+
+.recipe-editor__index {
+  display: none;
+}
+
+.recipe-editor__section {
+  scroll-margin-block-start: var(--space-4);
+}
+
+.recipe-editor__index-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-editor__index a {
+  display: block;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.recipe-editor__index a:hover {
+  background: var(--color-soft);
+}
+
+.recipe-editor__index a[aria-current="true"] {
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--text-label-weight);
+}
+
+@media (min-width: 1280px) {
+  .recipe-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 840px) minmax(0, 1fr);
+    column-gap: var(--space-4);
+    align-items: start;
+  }
+
+  .recipe-editor__index {
+    display: block;
+    position: sticky;
+    inset-block-start: var(--space-6);
+    grid-column: 1;
+    justify-self: stretch;
+    min-inline-size: 0;
+  }
+
+  .recipe-editor-layout > .recipe-editor {
+    grid-column: 2;
+  }
+}
+
 /* Recipes list: the Tag filters scroll sideways; the fade edges appear only once the row has been scrolled. */
 .tag-chips {
   display: flex;
@@ -95,19 +163,46 @@
 }
 
 .recipe-detail__hero {
+  inline-size: 100%;
   min-inline-size: 0;
+  max-inline-size: 820px;
+  margin-inline: auto;
 }
 
-/* The detail hero is capped at 170 px on the shared media container (it keeps 16:9 otherwise);
-   the thumb fills it and the image covers the box. */
+/* The detail hero is 16:9 (D-02); the thumb fills it and the image covers the box. */
 .recipe-detail__hero .tile__media {
-  aspect-ratio: auto;
-  max-block-size: 170px;
+  aspect-ratio: 16 / 9;
 }
 
 .recipe-detail__hero .recipe-thumb[data-size='hero'] {
   block-size: 100%;
-  max-block-size: 170px;
+}
+
+/* D-01: one column below 1280; from 1280 a 360 px left column (sticky) and the Steps beside it. */
+.recipe-detail__aside,
+.recipe-detail__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+@media (min-width: 1280px) {
+  .recipe-detail__layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .recipe-detail__aside {
+    position: sticky;
+    inset-block-start: var(--space-6);
+  }
+
+  .recipe-detail__hero {
+    max-inline-size: none;
+  }
 }
 
 /* A hero tile with nothing under the photo drops the bottom padding strip. */
@@ -119,10 +214,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.recipes-overflow__archive {
-  padding-block: var(--space-2);
 }
 
 /* Ingredient lines: quantity and name in two columns, no bullets. */
@@ -232,23 +323,32 @@
   min-inline-size: 0;
 }
 
-.recipe-editor__lines {
+.recipe-editor__lines,
+.steps-editor__list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.tag-input {
-  display: grid;
-  gap: var(--space-2);
-  min-inline-size: 0;
+.steps-editor__list {
+  padding-inline-start: 0;
 }
 
-.tag-input__tags {
+.tag-input {
+  min-inline-size: 0;
+  max-inline-size: 320px;
+}
+
+.tag-input__control {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--space-2);
-  margin-block-end: var(--space-2);
+}
+
+.tag-input__control > .ui-field {
+  flex: 1 1 160px;
+  min-inline-size: 160px;
 }
 
 .line-row,
@@ -294,6 +394,10 @@
   min-inline-size: 0;
 }
 
+.recipe-editor__lines-head {
+  display: none;
+}
+
 .line-row__amount {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -301,7 +405,7 @@
 .line-row__extras {
   grid-column: 1 / -1;
   align-items: end;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .line-row__hint,
@@ -316,7 +420,7 @@
 
 .step-card__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
 }
@@ -338,6 +442,10 @@
   gap: var(--space-1);
 }
 
+.step-card__timing {
+  align-items: flex-end;
+}
+
 .step-card__label {
   margin: 0;
   font-size: var(--text-overline-size);
@@ -348,10 +456,21 @@
   color: var(--color-muted);
 }
 
-.step-card__after,
-.step-card__uses {
+.step-card__after {
   display: grid;
   gap: var(--space-2);
+}
+
+.step-card__uses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-card__uses > .step-card__label,
+.step-card__uses > .step-card__use-list {
+  flex: 1 1 100%;
 }
 
 .step-card__after {
@@ -389,8 +508,7 @@
   line-height: var(--text-meta-line);
 }
 
-.unit-prompt__actions,
-.recipe-editor__footer {
+.unit-prompt__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -398,29 +516,20 @@
   gap: var(--space-2);
 }
 
-/* The editor's footer sticks above the navigation. */
-.recipe-editor__footer {
-  position: sticky;
-  bottom: var(--nav-clearance);
-  z-index: 1;
-  padding-block: var(--space-3);
-  background: var(--color-bg);
-}
-
-/* Cook / Batch entry: sticky above the navigation on Recipe detail. */
+/* Cook / Batch entry (L-03): plain content; the StickyActionBar (below 1280 px) or the left column (from 1280 px) carries it. */
 .cook-entry {
-  position: sticky;
-  bottom: var(--nav-clearance);
-  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-tile);
-  background: var(--color-surface);
-  box-shadow: var(--elev-2);
+}
+
+@media (min-width: 1280px) {
+  .cook-entry {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .cook-entry__batches {
@@ -456,10 +565,51 @@
   white-space: nowrap;
 }
 
-@media (min-width: 768px) {
-  .steps-list,
-  .recipe-detail,
-  .recipe-editor {
-    max-inline-size: 760px;
+/* Ingredient lines: one row from 720 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions. */
+@media (min-width: 720px) {
+  .recipe-editor__lines-head,
+  .line-row {
+    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) auto auto;
+  }
+
+  .recipe-editor__lines-head {
+    display: grid;
+    gap: var(--space-3);
+    padding-inline: var(--space-3);
+    font-size: var(--text-overline-size);
+    line-height: var(--text-overline-line);
+    font-weight: var(--text-overline-weight);
+    letter-spacing: var(--text-overline-tracking);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .line-row {
+    align-items: end;
+    background: none;
+    border-block-end: 1px solid var(--color-line);
+    border-radius: 0;
+  }
+
+  .line-row__amount,
+  .line-row__extras {
+    display: contents;
+  }
+
+  .line-row__ingredient {
+    grid-column: auto;
+  }
+
+  .line-row__hint {
+    grid-column: 1 / -1;
+  }
+
+  .line-row .ui-field__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

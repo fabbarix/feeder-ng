@@ -94,10 +94,11 @@ function patternMatches(pattern, route) {
   return fixed.every((s, i) => s.startsWith(':') || s === r[i])
 }
 
-/** 'warn' | 'fail' for a (resolved) route from the text of scripts/check-page-layout.modes. */
+/** 'warn' | 'fail' for a (resolved) route from the text of scripts/check-page-layout.modes. `warn_routes` win over `fail_routes`; repeated lines of a key are unioned. */
 export function modeFor(modesText, route) {
   let dflt = 'warn'
   let failRoutes = []
+  let warnRoutes = []
   for (const raw of String(modesText).split('\n')) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
@@ -106,8 +107,11 @@ export function modeFor(modesText, route) {
     const key = line.slice(0, i).trim()
     const value = line.slice(i + 1).trim()
     if (key === 'default') dflt = value === 'fail' ? 'fail' : 'warn'
-    if (key === 'fail_routes') failRoutes = value.split(/\s+/).filter(Boolean)
+    // Several lines of the same key are unioned, so every team can add its own line.
+    if (key === 'fail_routes') failRoutes = failRoutes.concat(value.split(/\s+/).filter(Boolean))
+    if (key === 'warn_routes') warnRoutes = warnRoutes.concat(value.split(/\s+/).filter(Boolean))
   }
+  if (warnRoutes.some((pat) => patternMatches(pat, route))) return 'warn'
   if (failRoutes.some((pat) => patternMatches(pat, route))) return 'fail'
   return dflt
 }

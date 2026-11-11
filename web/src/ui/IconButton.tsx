@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import './IconButton.css'
@@ -11,6 +11,8 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   size?: 'md' | 'compact'
   /** Toggle: sets aria-pressed and renders the icon with weight `fill` while true. */
   pressed?: boolean
+  /** React 19 passes `ref` as a prop (Menu anchors its popover to the button). */
+  ref?: Ref<HTMLButtonElement>
 }
 
 /** The only place an icon is allowed without a visible text label. */

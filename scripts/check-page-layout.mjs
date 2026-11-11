@@ -227,6 +227,7 @@ const probe = `
   const over = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {
     if (e.hasAttribute('data-page-width')) continue // the container itself: its padding is the gutter, not content
+    if (e.closest('.sticky-action-bar')) continue // a bar spans the container edges by design (rule P6 checks it)
     if (!vis(e)) continue
     const b = e.getBoundingClientRect()
     if (b.width < 2) continue
@@ -245,7 +246,8 @@ const probe = `
   const bars = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {
     const s = getComputedStyle(e)
-    if ((s.position === 'sticky' || s.position === 'fixed') && vis(e) && e.querySelector('button')) {
+    // A bar sticks to the bottom edge; a column that sticks to the top (the Recipe detail's left column) is not one.
+    if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button')) {
       const b = e.getBoundingClientRect()
       bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1) })
     }

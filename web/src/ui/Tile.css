@@ -60,6 +60,11 @@
   color: var(--status-pinned-fg);
 }
 
+.tile[data-variant="status"][data-status="info"] {
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+
 /* Media tile: photo header at 16:9, the text below keeps the tile padding. */
 .tile[data-variant='media'] {
   padding: 0 0 var(--tile-pad);
