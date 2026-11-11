@@ -10,9 +10,12 @@ The image is published on GHCR and pulls anonymously once its package is public 
 docker pull ghcr.io/fabbarix/feeder-ng:1.0.0
 ```
 
+Third-party licences: the image carries [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) at `/THIRD_PARTY_NOTICES.md`.
+
 | Tag | Published on | Meaning |
 |---|---|---|
-| `1.0.0-dev` | tag `v1.0.0-dev` | pre-release: use before the first stable tag; never `latest` |
+| `1.0.0-beta.1` | tag `v1.0.0-beta.1` | prerelease: the first beta; never `latest`, `1.0` or `1` |
+| `1.0.0-dev` | tag `v1.0.0-dev` | earlier prerelease; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
 | `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
 
@@ -29,15 +32,25 @@ Images and the chart are published from `v*` tags only. `latest` is set only on 
 
 To release: `git tag v1.0.0 && git push origin v1.0.0`.
 
-Before the first stable tag, release a pre-release instead: `git tag v1.0.0-dev && git push origin v1.0.0-dev` publishes image `1.0.0-dev` and chart `1.0.0-dev`, and never sets `latest`.
+### Prereleases
+
+Before the first stable tag, release prereleases: `-beta.N` first, then `-rc.N`, then the stable tag. They order as `1.0.0-dev < 1.0.0-beta.1 < 1.0.0-rc.1 < 1.0.0` (semver compares the identifiers alphabetically, `beta` before `rc`, and the numbers numerically; so `beta.2` comes before `beta.10`). To release the first beta:
+
+```sh
+git tag v1.0.0-beta.1 && git push origin v1.0.0-beta.1
+```
+
+This publishes image `1.0.0-beta.1` and chart `1.0.0-beta.1`. A prerelease never gets the `latest`, `1.0` or `1` image tags: `release.yml` guards the `{{major}}.{{minor}}`, `{{major}}` and `latest` rules with `!contains(github.ref_name, '-')`, so those tags only ever name stable releases. Helm hides prerelease charts unless you ask for them, so a prerelease install needs an explicit `--version 1.0.0-beta.1` (or `--devel`, which picks the newest prerelease).
+
+Checklist after the beta tag, on a real cluster (not testable offline): install the chart, read the Secret `feeder-secret-key`, upgrade with an unrelated change and confirm the key is unchanged, `helm uninstall`, reinstall and confirm the same key (the Secret has `helm.sh/resource-policy: keep`).
 
 ### Verify anonymous pull after the first push
 
-Packages inherit visibility from the repository, and this repository is public, so the packages are usually public from their first push. The make-public step is usually unnecessary. After the first tag push (for example `v1.0.0-dev`), check from a machine with no `docker login` or `helm registry login`:
+Packages inherit visibility from the repository, and this repository is public, so the packages are usually public from their first push. The make-public step is usually unnecessary. After the first tag push (for example `v1.0.0-beta.1`), check from a machine with no `docker login` or `helm registry login`:
 
 ```sh
-docker pull ghcr.io/fabbarix/feeder-ng:1.0.0-dev
-helm pull oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-dev
+docker pull ghcr.io/fabbarix/feeder-ng:1.0.0-beta.1
+helm pull oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1
 ```
 
 If either pull fails with 401 or "denied", the package is still private. Make it public by hand, once, in the web UI:
@@ -65,12 +78,23 @@ The Dockerfile works with both the legacy builder and BuildKit: its stages use `
 | `FEEDER_BASE_URL` | yes in production | The public https URL, e.g. `https://feeder.example.com` (no trailing slash). Used for the Google redirect URI and the cross-origin check. |
 | `FEEDER_GOOGLE_CLIENT_ID` | for Google sign-in | OAuth client id. |
 | `FEEDER_GOOGLE_CLIENT_SECRET` | for Google sign-in | OAuth client secret. Keep it in a secret file or secret store, not in the compose file. |
+| `FEEDER_SECRET_KEY` | for the Recipe Assistant | 32 random bytes, base64 (`openssl rand -base64 32`). Encrypts the stored API key. Without it the Recipe Assistant stays off. Keep it in a secret file or secret store. Losing or changing it means an Admin re-enters the API key (see Secret key). |
 | `FEEDER_DATA_DIR` | no | Default `/data` (the volume). |
 | `FEEDER_ADDR` | no | Default `:8080`. |
 | `FEEDER_TRUST_PROXY` | no | Default `false`. `true` takes the client address (for the sign-in request rate limits) from the last `X-Forwarded-For` entry. Set it only when the Feeder sits behind a reverse proxy that appends the real client address. With it off, the socket peer address is used: behind a proxy every visitor then shares the proxy's address and one rate limit bucket. With it on and no proxy, anyone could forge the header. |
 | `FEEDER_DEV_LOGIN` | never in production | `1` enables a passwordless dev login. Leave unset. |
 
+The Google variables are `FEEDER_GOOGLE_CLIENT_ID` and `FEEDER_GOOGLE_CLIENT_SECRET`; the chart reads them from a Secret (`google.existingSecret`).
+
 Google setup: `scripts/setup-google-auth.sh` (see [t6-google-auth-script.md](design/t6-google-auth-script.md)) creates the OAuth client; the authorised redirect URI is `$FEEDER_BASE_URL/auth/google/callback`. Web Push needs no Google or GCP setup: the Feeder creates its own VAPID keys on first start in `/data/vapid.json`. Do not delete that file, or every device has to turn notifications on again.
+
+### Secret key
+
+`FEEDER_SECRET_KEY` is 32 random bytes in base64 (44 characters). Create one with `openssl rand -base64 32` and pass it as an environment variable (docker, compose) or a Secret (Kubernetes). The Helm chart can generate it: by default (`secretKey.generate: true`) it creates Secret `<fullname>-secret-key` with `randBytes 32`, which already returns base64. The chart looks the Secret up on every upgrade (`lookup`) and re-emits the existing value, and the Secret carries `helm.sh/resource-policy: keep`, so uninstalling and reinstalling keeps the same key. `secretKey.existingSecret` (with `secretKey.key`) takes precedence and creates nothing. With `secretKey.generate: false` and no `existingSecret` there is no key and the Recipe Assistant stays off. The chart refuses `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry; a `valueFrom` entry works for an external secret store.
+
+Caveats for Argo CD, Flux offline renders and `helm template` (also `--dry-run`): `lookup` returns nothing there, so each render makes a new key and the Secret would change on every sync. In those setups set `secretKey.existingSecret` to a Secret you manage.
+
+Losing the key, or replacing it, means the stored API key cannot be read: an Admin enters the API key again in Settings. There is no previous-key variable. To rotate: replace the Secret's value, run `kubectl -n feeder rollout restart deploy/feeder`, then re-enter the API key. Keep the key out of backups of the data volume (it protects what is in them).
 
 ## docker run
 
@@ -82,6 +106,7 @@ docker run -d --name feeder --restart unless-stopped \
   -e FEEDER_BASE_URL=https://feeder.example.com \
   -e FEEDER_GOOGLE_CLIENT_ID=... \
   -e FEEDER_GOOGLE_CLIENT_SECRET=... \
+  -e FEEDER_SECRET_KEY="$(cat /etc/feeder/secret-key)" \
   -e FEEDER_TRUST_PROXY=true \
   ghcr.io/fabbarix/feeder-ng:1
 ```
@@ -104,6 +129,7 @@ services:
       FEEDER_BASE_URL: https://feeder.example.com
       FEEDER_GOOGLE_CLIENT_ID: ${FEEDER_GOOGLE_CLIENT_ID}
       FEEDER_GOOGLE_CLIENT_SECRET: ${FEEDER_GOOGLE_CLIENT_SECRET}   # from an .env file kept out of git
+      FEEDER_SECRET_KEY: ${FEEDER_SECRET_KEY}   # openssl rand -base64 32; from the same .env file
       FEEDER_TRUST_PROXY: "true"      # only because a reverse proxy sits in front; omit when users connect directly
 volumes:
   feeder-data:
@@ -116,7 +142,7 @@ The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy 
 The chart is public too, published as an OCI artifact; installing it needs no login:
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -124,7 +150,7 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `appVersion` `1.0.0`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reuse-values`. Source and the values table: `deploy/helm/feeder/README.md`.
+The chart version equals the release (`v1.0.0-beta.1` publishes chart `1.0.0-beta.1` with `appVersion` `1.0.0-beta.1`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
 
 - **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
 - **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). `/data` must be writable by uid/gid 65532. The pod sets `fsGroup: 65532`, which makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
@@ -133,12 +159,13 @@ The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `app
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --namespace feeder --reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1 --namespace feeder --reset-then-reuse-values \
     --set google.existingSecret=feeder-google
   ```
 
   Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.clientSecretKey`). For a quick trial you can instead pass `google.clientId` and `google.clientSecret`, and the chart creates the Secret.
-- **Ingress.** The default annotations target ingress-nginx and make `/api/events` (server-sent events) work: `proxy-buffering: "off"`, one-hour `proxy-read-timeout` and `proxy-send-timeout`, `proxy-body-size: 10m`. Override single keys under `ingress.annotations` for other controllers.
+- **Secret key.** The chart generates `FEEDER_SECRET_KEY` by default; see Secret key above for `secretKey.existingSecret`, the Argo CD and `helm template` caveat, and rotation.
+- **Ingress.** The default annotations target ingress-nginx and make `/api/events` (server-sent events) work: `proxy-buffering: "off"`, one-hour `proxy-read-timeout` and `proxy-send-timeout`, `proxy-body-size: 50m` (photo reads send up to 45 MiB; ingress-nginx allows 1 MB by default). Override single keys under `ingress.annotations` for other controllers.
 - **Trust proxy.** `trustProxy: null` (the default) is automatic: the chart sets `FEEDER_TRUST_PROXY` to `true` when `ingress.enabled` is true and to `false` otherwise. Set `trustProxy: true` or `false` to override, for example `true` when your own proxy in front of the Service appends the real client address. With it off, the socket peer address is used, so behind a proxy all visitors share one rate limit bucket.
 - **Probes.** All three probes call `GET /api/health`.
 - **Backups** still land in `/data/backups` on the PVC; copy them off the cluster as described below.
@@ -149,20 +176,27 @@ Terminate TLS in front and forward to `127.0.0.1:8080`. Caddy:
 
 ```
 feeder.example.com {
+    request_body {
+        max_size 50MB
+    }
     reverse_proxy 127.0.0.1:8080
 }
 ```
+
+nginx needs `client_max_body_size 50m;` in the `server` or `location` block (the default is 1 MB).
 
 Traefik, nginx and others work the same way. Requirements:
 
 - Forward the `Host` header unchanged and keep `FEEDER_BASE_URL` equal to the public URL: state-changing requests are rejected with 403 `cross_origin` when the `Origin` header does not match it.
 - Do not buffer or time out the `/api/events` stream (server-sent events): disable response buffering for that path (`flush_interval -1` in Caddy, `proxy_buffering off` in nginx) and allow idle connections of several minutes.
 - Set `FEEDER_TRUST_PROXY=true` only when the proxy appends the real client address as the last `X-Forwarded-For` entry (Caddy, nginx and Traefik do by default). Left off, the socket peer address is used and every visitor shares the proxy's rate limit bucket.
-- Large uploads: Recipe Files and photos are small, but allow request bodies of at least 10 MB.
+- Proxy body size: a photo read (Recipe Assistant) sends up to 45 MiB, so allow request bodies of at least 50 MB (`client_max_body_size 50m` in nginx, `request_body { max_size 50MB }` in Caddy, `proxy-body-size: 50m` on ingress-nginx). Other uploads are small.
 
 ## Backups
 
 The Feeder writes a consistent SQLite snapshot (`VACUUM INTO`) to `/data/backups/feeder-YYYY-MM-DD.db` every night at 02:30 household time, and keeps the newest 7 daily snapshots plus the newest snapshot of each of the 4 most recent older weeks (about 11 files). An Admin can also take one at any time (`POST /api/admin/backups`) and list them (`GET /api/admin/backups`), for example before an upgrade.
+
+Do not store `FEEDER_SECRET_KEY` next to the snapshots: with the key, a snapshot can be read. Restoring a snapshot with a different key only means an Admin re-enters the API key.
 
 Snapshots live on the same volume as the database, so copy them elsewhere to survive a lost disk. `/data/images` is not in the snapshots; back that folder up as well:
 
@@ -190,3 +224,11 @@ docker pull ghcr.io/fabbarix/feeder-ng:1 && docker compose up -d
 ```
 
 Take a backup first (Admin: `POST /api/admin/backups`). Migrations are forward-only; to go back, restore the snapshot and run the older image.
+
+### Upgrading from 1.0.0-dev to 1.0.0-beta.1
+
+1. Take a backup first (Admin: `POST /api/admin/backups`, or copy `/data/backups` and `/data/images`). Migrations run at start and are forward-only; downgrading is not supported, to go back restore the snapshot and run the older image.
+2. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1 --namespace feeder --reset-then-reuse-values`. Use `--reset-then-reuse-values` (not plain `--reuse-values`, which keeps the 1.0.0-dev values and so no `secretKey`). The first upgrade creates the Secret `feeder-secret-key`. Under Argo CD or `helm template`, set `secretKey.existingSecret` first.
+3. docker / compose: set `FEEDER_SECRET_KEY` (`openssl rand -base64 32`) if you want the Recipe Assistant, then pull and restart.
+4. Ingress users: the default `proxy-body-size` is now `50m`; custom reverse proxies need the same limit (see Reverse proxy).
+5. Admin: open the Recipe Assistant settings and enter the API key.

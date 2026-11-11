@@ -3,7 +3,7 @@
 Runs the Feeder (family meal planning) on Kubernetes: one pod, the image from GHCR, and a PersistentVolumeClaim for its SQLite database. Both the chart and the image are public, so installing needs no registry login.
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -11,9 +11,9 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0 \
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reuse-values`. The chart version equals the release, and the image tag defaults to `appVersion`, so both match the release. Upgrades with `--set` or `--version` add `--reuse-values` so existing settings survive; the form matches `templates/NOTES.txt`.
+Prerelease charts need an explicit `--version` (or `--devel`). Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). `--reuse-values` keeps the old computed values, so it misses the defaults a new chart adds (such as `secretKey.generate`); `--reset-then-reuse-values` re-applies the new defaults and then your own overrides. The chart version equals the release, and the image tag defaults to `appVersion`, so both match the release. Upgrades with `--set` or `--version` add `--reset-then-reuse-values` (or `--reuse-values`) so existing settings survive; the form matches `templates/NOTES.txt`.
 
-No `latest` image exists until the first stable `v*` tag is published. Before then, use a pre-release tag such as `v1.0.0-dev`, which publishes image `1.0.0-dev` and chart `1.0.0-dev`: install with `--version 1.0.0-dev` (or add `--set image.tag=1.0.0-dev` to pin the image explicitly). Only tags publish; there are no branch builds.
+No `latest` image exists until the first stable `v*` tag is published. Before then, use a prerelease tag such as `v1.0.0-beta.1`, which publishes image `1.0.0-beta.1` and chart `1.0.0-beta.1`: install with `--version 1.0.0-beta.1` (or add `--set image.tag=1.0.0-beta.1` to pin the image explicitly). Prereleases never get the `latest`, `1.0` or `1` image tags. (The earlier prerelease tag was `v1.0.0-dev`.) Only tags publish; there are no branch builds.
 
 Lint the chart with the CI values: `helm lint deploy/helm/feeder -f deploy/helm/feeder/ci/lint-values.yaml`. The `ci/` folder is excluded from the packaged chart by `.helmignore`.
 
@@ -33,11 +33,33 @@ Preferred: create the Secret yourself, so the secret never sits in values or she
 ```sh
 kubectl -n feeder create secret generic feeder-google \
   --from-literal=client-id=... --from-literal=client-secret=...
-helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --namespace feeder --reuse-values \
+helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --namespace feeder --reset-then-reuse-values \
   --set google.existingSecret=feeder-google
 ```
 
 Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.clientSecretKey`). For a trial, `google.clientId` and `google.clientSecret` make the chart create the Secret `<fullname>-google`. With neither, Google env is not rendered and sign-in stays disabled.
+
+## Recipe Assistant secret key
+
+The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 random bytes in base64. It always comes from a Secret; there is no inline value, and the schema rejects `secretKey.value`, `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry for it (a `valueFrom` entry is allowed, for an external secret store).
+
+- **Default (`secretKey.generate: true`).** The chart creates Secret `<fullname>-secret-key` with a random key, reuses it on every upgrade (it looks the Secret up with `lookup`), and keeps it when the release is uninstalled (`helm.sh/resource-policy: keep`), so a reinstall finds the same key.
+- **Your own Secret (`secretKey.existingSecret`).** Wins over `generate`; the chart creates no Secret. `secretKey.key` names the key inside it (default `secret-key`):
+
+  ```sh
+  kubectl -n feeder create secret generic feeder-secret-key \
+    --from-literal=secret-key="$(openssl rand -base64 32)"
+  helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.1 --namespace feeder \
+    --reset-then-reuse-values --set secretKey.existingSecret=feeder-secret-key
+  ```
+- **Off (`secretKey.generate: false`, no `existingSecret`).** No Secret and no `FEEDER_SECRET_KEY`: the Recipe Assistant stays off.
+- **Argo CD, Flux and `helm template`.** `lookup` returns nothing under `helm template`, `--dry-run` and offline renders, so each render generates a new key and the Secret would flip on every sync. In those setups set `secretKey.existingSecret`.
+- **Losing or rotating the key.** If the key is lost or replaced, the stored API key can no longer be read and an Admin must re-enter the API key; nothing else is affected. There is no previous-key setting (no `_PREVIOUS` variable). To rotate: replace the Secret's value, run `kubectl -n feeder rollout restart deploy/feeder`, then re-enter the API key in Settings. Keep the key out of backups of the data volume.
+- **Upgrading from 1.0.0-dev.** Use `--reset-then-reuse-values` (Helm 3.14 or newer), or add `--set secretKey.generate=true`. Plain `--reuse-values` reuses the old values, which have no `secretKey`, so no key is created.
+
+The Ingress allows request bodies up to `50m` (`proxy-body-size`): photo reads send up to 45 MiB, and ingress-nginx allows only 1 MB by default.
+
+The Google OAuth client is read from `FEEDER_GOOGLE_CLIENT_ID` and `FEEDER_GOOGLE_CLIENT_SECRET` (see Google sign-in above).
 
 ## Values
 
@@ -56,6 +78,9 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 | `google.existingSecret` | `""` | Name of an existing Secret with the client id and secret. No Secret is created when set. |
 | `google.clientIdKey` | `client-id` | Key of the client id inside the Secret. |
 | `google.clientSecretKey` | `client-secret` | Key of the client secret inside the Secret. |
+| `secretKey.generate` | `true` | Create Secret `<fullname>-secret-key` with a random `FEEDER_SECRET_KEY` (kept on upgrade and uninstall). |
+| `secretKey.existingSecret` | `""` | Name of a Secret holding the key. Wins over `generate`; no Secret is created. |
+| `secretKey.key` | `secret-key` | Key inside the Secret (existing or generated). |
 | `env` | `{}` | Extra plain environment variables, e.g. `TZ`. `FEEDER_ADDR` must stay `:8080`. Never set `FEEDER_DEV_LOGIN`. |
 | `extraEnv` | `[]` | Raw container env entries (may use `valueFrom`). |
 | `trustProxy` | `null` | `FEEDER_TRUST_PROXY`. `null` is automatic: `true` when `ingress.enabled`, else `false`. `true` or `false` overrides. Set `true` only when a proxy appends the real client address as the last `X-Forwarded-For` entry. |
@@ -63,7 +88,7 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 | `service.port` | `80` | Service port. Targets the container's `http` port (8080). |
 | `ingress.enabled` | `false` | Create an Ingress. |
 | `ingress.className` | `""` | Ingress class name. |
-| `ingress.annotations` | ingress-nginx SSE defaults | `proxy-buffering: "off"`, `proxy-read-timeout` and `proxy-send-timeout` `"3600"`, `proxy-body-size: 10m`. Maps merge, so override single keys. |
+| `ingress.annotations` | ingress-nginx SSE defaults | `proxy-buffering: "off"`, `proxy-read-timeout` and `proxy-send-timeout` `"3600"`, `proxy-body-size: 50m`. Maps merge, so override single keys. |
 | `ingress.host` | `""` | Host name. Empty uses the host of `baseUrl`. |
 | `ingress.tls.enabled` | `false` | Add a TLS section for the host. |
 | `ingress.tls.secretName` | `""` | TLS Secret name. Empty omits `secretName` (cert-manager or the controller's default certificate). |
