@@ -103,15 +103,14 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 
 type dbMeals struct{ a *DB }
 
-// mealSelect reads a Planned Meal with its Course (name, main flag, place in the slot's order) and its Recipe's
-// reheat time. A Course missing from the slot's list sorts last.
+// mealSelect reads a Planned Meal with its Course (name, main flag, place in the slot's order). A Course missing
+// from the slot's list sorts last.
 const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, ms.time, pm.recipe_id, pm.batches, pm.state,
-	pm.course_id, c.name, c.is_main, COALESCE(msc.position, 9999), pm.portions, COALESCE(r.reheat_minutes, 0)
+	pm.course_id, c.name, c.is_main, COALESCE(msc.position, 9999), pm.portions
 	FROM planned_meals pm
 	JOIN meal_slots ms ON ms.id = pm.meal_slot_id
 	JOIN courses c ON c.id = pm.course_id
-	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id
-	LEFT JOIN recipes r ON r.id = pm.recipe_id`
+	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id`
 
 // Meal implements Meals; courseID 0 is the main Course.
 func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID, courseID int64) (MealInfo, error) {
@@ -179,7 +178,7 @@ func scanMeal(sc scanner, loc *time.Location) (MealInfo, error) {
 		main int64
 	)
 	if err := sc.Scan(&info.Date, &info.MealSlotID, &info.SlotName, &hhmm, &info.RecipeID, &info.Batches, &info.State,
-		&info.CourseID, &info.CourseName, &main, &info.Position, &info.Portions, &info.ReheatMinutes); err != nil {
+		&info.CourseID, &info.CourseName, &main, &info.Position, &info.Portions); err != nil {
 		return MealInfo{}, err
 	}
 	info.Main = main == 1

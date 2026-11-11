@@ -44,8 +44,6 @@ type MealInfo struct {
 	Main       bool
 	Position   int
 	Portions   float64
-	// ReheatMinutes is the Recipe's reheat time (0 none); a Leftover-served meal reheats by it.
-	ReheatMinutes int
 }
 
 // Meals reads Planned Meals (T11's tables, behind an adapter).

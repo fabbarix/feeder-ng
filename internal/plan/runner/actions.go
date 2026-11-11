@@ -245,7 +245,7 @@ func (r *Runner) Leftovers(ctx context.Context) ([]plan.Leftover, error) {
 
 // keyAttendance is the attendance the planning cell at key serves on its date: the Course Attendance of that Course
 // (Course 0 is the main Course of a slot with Courses), or the slot's own Attendance when the slot has no Courses.
-// ErrUnknownSlot when the slot serves no such Course.
+// ErrCourseNotInSlot when the slot serves no such Course.
 func (r *Runner) keyAttendance(ctx context.Context, def MealSlotDef, key plan.Key) ([]plan.Attendee, error) {
 	courses, err := r.d.Source.SlotCourses(ctx, def.ID, key.Date)
 	if err != nil {
