@@ -71,7 +71,7 @@ describe('crumbsFor: catalogue detail pages', () => {
 })
 
 describe('crumbsFor: no hierarchy, no crumbs', () => {
-  it.each(['/', '/plan', '/shop', '/scan', '/recipes', '/stock', '/ingredients', '/products', '/settings', '/board', '/cook/recipe/7', '/nope', '/settings/unknown'])(
+  it.each(['/', '/plan', '/shop', '/scan', '/recipes', '/stock', '/pantry', '/ingredients', '/products', '/settings', '/board', '/cook/recipe/7', '/nope', '/settings/unknown'])(
     '%s has no trail',
     (path) => {
       expect(crumbsFor(path)).toEqual([])

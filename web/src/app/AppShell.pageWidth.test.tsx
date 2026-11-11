@@ -24,7 +24,7 @@ describe('AppShell page container', () => {
     ['/shop', 'wide'],
     ['/recipes', 'wide'],
     ['/', 'wide'],
-    ['/stock', 'default'],
+    ['/pantry', 'default'],
     ['/recipes/3/edit', 'default'],
     ['/scan', 'narrow'],
     ['/settings/members', 'narrow'],
