@@ -135,6 +135,13 @@ describe('bottom bar (plan 4.5)', () => {
 })
 
 describe('side rail (plan 4.5)', () => {
+  it('compact rail (1024-1439): the current Scan item carries the same 3 px soft ring as the expanded rail (R2-L-b)', () => {
+    const compact = media('min-width: 1024px')
+    const rule = /\.side-rail__link\[data-accent='true'\]\[aria-current='page'\]\s*\{([^}]*)\}/.exec(compact)?.[1] ?? ''
+    expect(rule).toMatch(/box-shadow\s*:\s*0\s+0\s+0\s+3px\s+var\(--color-soft\)/)
+    // The ring is the marker, so the fill stays the accent (no soft background on the item itself).
+    expect(rule).not.toMatch(/background/)
+  })
   it('is hidden on phones and 88 wide from 1024, 240 wide from 1440', () => {
     expect(d('.side-rail')['display']).toBe('none')
     const wide = media('min-width: 1024px')

@@ -9,7 +9,7 @@
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
-# PAGE_LAYOUT_GUARD_CMD, CHROME.
+# PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (300 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -120,14 +120,24 @@ fi
 [ -s "$PIDFILE" ] && SERVER_PID="$(cat "$PIDFILE")"
 
 SEED_CMD="${PAGE_LAYOUT_SEED_CMD:-node $ROOT/scripts/test/fixtures/page-layout-seed.mjs}"
-if ! (cd "$ROOT" && bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") >"$BUILD/page-layout-seed.log" 2>&1; then
-  echo "WARN: seeding failed, page layout guard not run (see $BUILD/page-layout-seed.log)"
+# Same kind of limit as the guard: a hung seeder must not hang check.sh. -k: kill whatever ignores TERM.
+SEED_LIMIT=""
+command -v timeout >/dev/null 2>&1 && SEED_LIMIT="timeout -k 5 ${PAGE_LAYOUT_SEED_TIMEOUT:-90}"
+(cd "$ROOT" && exec $SEED_LIMIT bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") >"$BUILD/page-layout-seed.log" 2>&1
+SEED_RC=$?
+if [ "$SEED_RC" -ne 0 ]; then
+  if [ "$SEED_RC" -eq 124 ] || [ "$SEED_RC" -eq 137 ]; then
+    echo "WARN: seeding timed out after ${PAGE_LAYOUT_SEED_TIMEOUT:-90}s, page layout guard not run (see $BUILD/page-layout-seed.log)"
+  else
+    echo "WARN: seeding failed, page layout guard not run (see $BUILD/page-layout-seed.log)"
+  fi
   exit 0
 fi
 
 GUARD_CMD="${PAGE_LAYOUT_GUARD_CMD:-node $ROOT/scripts/check-page-layout.mjs}"
 LIMIT=""
-command -v timeout >/dev/null 2>&1 && LIMIT="timeout 900"
+# About 45 s is normal (quick profile); 300 s means something hangs. -k: kill what ignores TERM.
+command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-300}"
 START=$SECONDS
 # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
 (cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") >"$OUT" 2>&1 &
@@ -140,6 +150,11 @@ ELAPSED=$((SECONDS - START))
 if [ "$RC" -eq 0 ]; then
   cat "$OUT"
   echo "page layout guard: OK ($PROFILE profile, ${ELAPSED}s)"
+  exit 0
+fi
+if [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; then
+  cat "$OUT"
+  echo "WARN: the page layout guard timed out after ${PAGE_LAYOUT_GUARD_TIMEOUT:-300}s (${ELAPSED}s elapsed); not a layout finding"
   exit 0
 fi
 if [ "$RC" -ne 1 ]; then

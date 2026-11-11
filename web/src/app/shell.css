@@ -200,6 +200,11 @@
     background: none;
   }
 
+  /* The compact rail's current marker for Scan: the same 3 px soft ring as the expanded rail (R2-L-b). */
+  .side-rail__link[data-accent='true'][aria-current='page'] {
+    box-shadow: 0 0 0 3px var(--color-soft);
+  }
+
   .bottom-bar {
     display: none;
   }

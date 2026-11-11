@@ -23,16 +23,24 @@ if (!base) {
 const out = opt('out', 'build/page-layout-ids.json')
 const email = opt('email', 'admin@example.test')
 
+const FETCH_TIMEOUT_MS = Number(process.env.PAGE_LAYOUT_FETCH_TIMEOUT_MS) || 10000
 let cookie = ''
 const api = async (method, path, body) => {
-  const res = await fetch(base + path, {
-    method,
-    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  const set = res.headers.getSetCookie?.() ?? []
-  if (set.length) cookie = set.map((c) => c.split(';')[0]).join('; ')
-  const text = await res.text()
+  let res
+  let text = ''
+  try {
+    res = await fetch(base + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), // a hung server must not hang the seeder (the wrapper adds an overall limit)
+    })
+    const set = res.headers.getSetCookie?.() ?? []
+    if (set.length) cookie = set.map((c) => c.split(';')[0]).join('; ')
+    text = await res.text()
+  } catch (e) {
+    return { ok: false, status: 0, json: null, text: String(e?.message ?? e) } // timeout or refused: reported like a refused step
+  }
   let json = null
   try {
     json = text ? JSON.parse(text) : null
