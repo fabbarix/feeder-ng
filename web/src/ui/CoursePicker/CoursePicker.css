@@ -1,0 +1,108 @@
+/* CoursePicker (CRS D1): Bento tokens only. Chips and the Sortable list are the shared primitives; this file lays them out. */
+.course-picker {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.course-picker__label {
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  color: var(--color-text);
+}
+
+.course-picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.course-picker__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-picker__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+}
+
+.course-picker__row[data-state='lifted'],
+.course-picker__row[data-state='dragging'] {
+  background: var(--color-surface-2);
+}
+
+.course-picker__name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  overflow-wrap: anywhere;
+}
+
+.course-picker__main {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.course-picker__extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.course-picker__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+/* Phone: the extras take a line of their own under the name; the actions stay on the first line. */
+@media (max-width: 767px) {
+  .course-picker__extras {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+
+.course-picker__helper {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.course-picker__error {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--status-danger-fg);
+}
+
+/* Read by screen readers only (the same clip as the Sortable live region). */
+.course-picker__hidden,
+.course-picker__live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
