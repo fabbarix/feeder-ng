@@ -135,6 +135,11 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | pizza | `Pizza` |
 | soup | `BowlFood` |
 | vegetarian | `Leaf` |
+| liquid | `Drop` (R14: Base Unit ml) |
+| piece | `Cube` (R14: Base Unit piece) |
+| key | `Key` (WP-D) |
+| assistant | `Robot` (WP-D; same glyph as agentPrompt) |
+| refresh | `ArrowsClockwise` (WP-D; same glyph as regenerate) |
 
 ## Helpers
 - `mealSlotIcon(name: string): IconName`: trim, lower-case, whole-name match on `breakfast|lunch|dinner|snack` returns that name; anything else (incl. "Second breakfast", empty) returns `other`.
@@ -163,3 +168,10 @@ The 64 kB budget above is superseded. `@phosphor-icons/react` modules carry six 
 four (`regular`, `bold`, `fill`, `duotone`), so UF1 strips `thin` and `light` at build time
 (`web/vite.phosphor-weights.ts`, see [uf1-icons.md](uf1-icons.md)). 97 glyphs now measure ~41.0 kB gz (40,952 B, ~2.0 kB headroom); the budget is
 **43,008 B (42 kB)** and `MIN_MODULES` is 97. UF1 adds `camera`, `clipboard`, `link`, `rotateRight` and `rotateLeft`.
+
+## R14 / WP-D update: five names, three new glyphs
+R14 adds `liquid` (`Drop`) and `piece` (`Cube`) for the Base Unit Segmented (g uses `weigh`). WP-D adds `key` (`Key`), `assistant`
+(`Robot`, already imported for `agentPrompt`) and `refresh` (`ArrowsClockwise`, already imported for `regenerate`). Three new modules
+(Drop, Cube, Key) take the bundle from 40,952 B to **42,249 B gz** (100 modules) of the 43,008 B budget (759 B headroom); `MIN_MODULES` is 100.
+WP-D's `connect` (`PlugsConnected`) does **not** fit: it alone costs about 1,070 B: with it the bundle is 43,317 B (309 B over). The budget was not raised; the PM decides
+(raise it, drop a glyph, or map `connect` to an existing glyph such as `link`).

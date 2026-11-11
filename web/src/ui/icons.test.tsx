@@ -124,6 +124,11 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['pizza', 'Pizza'],
   ['soup', 'BowlFood'],
   ['vegetarian', 'Leaf'],
+  ['liquid', 'Drop'], // R14: Base Unit ml
+  ['piece', 'Cube'], // R14: Base Unit piece
+  ['key', 'Key'], // WP-D
+  ['assistant', 'Robot'], // WP-D
+  ['refresh', 'ArrowsClockwise'], // WP-D
 ]
 
 const markup = (name: string) => {

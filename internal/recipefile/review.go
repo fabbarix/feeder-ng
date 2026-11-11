@@ -47,6 +47,7 @@ type ingRow struct {
 	def       *Ingredient
 	defIdx    int
 	usedBy    []string
+	readyMeal bool // the single line of a Ready Meal named like its Recipe: piece Ingredient by default
 	match     *ingredient.Ingredient
 	conflict  *BaseUnitConflict
 	sugg      []Suggestion
@@ -223,7 +224,7 @@ func (r *review) buildIngredientRows() {
 		}
 		defs[key] = j
 	}
-	add := func(name, path string) {
+	add := func(name, path string, readyMeal bool) {
 		key := units.NormalizeName(name)
 		row := r.byKey[key]
 		if row == nil {
@@ -236,17 +237,19 @@ func (r *review) buildIngredientRows() {
 			r.rows = append(r.rows, row)
 		}
 		row.usedBy = append(row.usedBy, path)
+		row.readyMeal = row.readyMeal || readyMeal
 	}
 	for i, rec := range r.f.Recipes {
 		if !r.kept[i] {
 			continue
 		}
 		for j, l := range rec.Ingredients {
-			add(l.Ingredient, fmt.Sprintf("$.recipes[%d].ingredients[%d]", i, j))
+			pack := rec.ReadyMeal && j == 0 && units.NormalizeName(l.Ingredient) == units.NormalizeName(rec.Name)
+			add(l.Ingredient, fmt.Sprintf("$.recipes[%d].ingredients[%d]", i, j), pack)
 		}
 		for s, st := range rec.Steps {
 			for u, use := range st.Uses {
-				add(use.Ingredient, fmt.Sprintf("$.recipes[%d].steps[%d].uses[%d]", i, s, u))
+				add(use.Ingredient, fmt.Sprintf("$.recipes[%d].steps[%d].uses[%d]", i, s, u), false)
 			}
 		}
 	}
@@ -285,6 +288,8 @@ func (r *review) classify(row *ingRow) (string, []Suggestion, *BaseUnitConflict)
 		return StatusConflict, nil, &BaseUnitConflict{File: row.def.BaseUnit, Existing: string(ex.Base)}
 	case matched:
 		return StatusExact, nil, nil
+	case row.def == nil && row.readyMeal:
+		return StatusNew, nil, nil // R14: a Ready Meal's pack needs no definition
 	case row.def == nil:
 		return StatusUndefined, nil, nil
 	}
@@ -363,13 +368,16 @@ func (r *review) createTarget(row *ingRow, d *IngredientDecision) *target {
 		if d.Name != "" {
 			name = ingredient.DisplayName(d.Name)
 		}
-		if row.def == nil {
+		if row.def == nil && !(row.readyMeal && d.BaseUnit == "") {
 			b, ok := units.ParseBase(d.BaseUnit)
 			if !ok {
 				return nil
 			}
 			base = b
 		}
+	}
+	if row.def == nil && row.readyMeal && base == "" {
+		base = units.Piece
 	}
 	if base == "" {
 		return nil
