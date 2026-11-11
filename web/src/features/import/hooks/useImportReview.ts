@@ -4,7 +4,8 @@ import { ApiError } from '../../../lib/http'
 import { importApi } from '../api'
 import { answerConversion, chooseCreate, chooseExisting, chooseRecipeAction, emptyDecisions } from '../lib/decisions'
 import { readFileError } from '../lib/errors'
-import type { BaseUnit, Decisions, FileError, ImportResult, Plan, RecipeAction } from '../types'
+import { type PhotoChoice, type PhotoRecipeOption } from '../lib/photoChoice'
+import type { AdoptedRead, BaseUnit, Decisions, FileError, ImportResult, Plan, ReadNoteInfo, RecipeAction, ReviewPhoto } from '../types'
 
 export interface UseImportReview {
   phase: 'source' | 'reviewing' | 'done'
@@ -26,6 +27,22 @@ export interface UseImportReview {
   confirm: () => Promise<void>
   /** Discards the server-side review and returns to the source step. */
   reset: () => Promise<void>
+
+  // ---- Recipe Assistant (WP-E / WP-G): docs/dev/design/ra-e-import.md section 5.2 ----
+  /** The open review's id (thumbnails are GET /api/imports/{id}/photos/{n}). */
+  reviewId: string | undefined
+  /** Opens the review a finished read made; no request (the server already opened it). phase becomes 'reviewing'. */
+  adopt: (read: AdoptedRead) => void
+  /** Candidate photos of a photo read; empty for a file or a text or page read. */
+  photos: ReviewPhoto[]
+  /** The Recipes that can get a photo (skipped ones left out). */
+  photoRecipes: PhotoRecipeOption[]
+  photoChoice: PhotoChoice
+  setPhotoEnabled: (on: boolean) => void
+  choosePhoto: (index: number) => void
+  choosePhotoRecipe: (index: number) => void
+  /** "Read by Claude Haiku 5.5" / "used the page's recipe data as a hint"; undefined for a file. */
+  readNote: ReadNoteInfo | undefined
 }
 
 interface Review {
@@ -157,5 +174,19 @@ export function useImportReview(): UseImportReview {
     chooseRecipeAction: (index, action) => answer(chooseRecipeAction(decisionsRef.current, index, action)),
     confirm,
     reset,
+    // TODO(ra-e developer): the Recipe Assistant part (adopt, photos, photoChoice, confirm with `photo`).
+    reviewId: review?.id,
+    adopt: () => {
+      throw new Error('TODO(ra-e developer): not implemented')
+    },
+    photos: [],
+    photoRecipes: [],
+    photoChoice: initialPhotoChoice0,
+    setPhotoEnabled: () => undefined,
+    choosePhoto: () => undefined,
+    choosePhotoRecipe: () => undefined,
+    readNote: undefined,
   }
 }
+
+const initialPhotoChoice0: PhotoChoice = { enabled: false, photo: 0, recipe: 0 }

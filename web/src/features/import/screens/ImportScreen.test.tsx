@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { match, plan, prompt, recipe } from '../fixtures.test-helper'
+import { match, plan, prompt, recipe, reviewExtras } from '../fixtures.test-helper'
 import { importStrings as s } from '../strings'
 import type { UseImportReview } from '../hooks/useImportReview'
 
@@ -16,35 +16,44 @@ function state(over: Partial<UseImportReview>): UseImportReview {
   return {
     phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [] }, error: undefined, busy: false, stale: false,
     result: undefined, open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(),
-    confirm: vi.fn(), reset: vi.fn(), ...over,
+    confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...over,
   }
 }
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
+// WP-E: the Read a recipe step (its own tests: ImportScreen.read.test.tsx)
+vi.mock('../hooks/useRecipeRead', () => ({
+  useRecipeRead: () => ({ phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0, start: vi.fn(), cancel: vi.fn(), reset: vi.fn() }),
+}))
+vi.mock('../hooks/useReadAvailability', () => ({
+  useReadAvailability: () => ({ loading: false, enabled: true, isAdmin: false, statusFailed: false, settingsLink: false, photos: true, retry: vi.fn() }),
+}))
 const view = () => render(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
 
 describe('ImportScreen', () => {
   beforeEach(() => {
     hook.current = state({})
   })
-  it('guides the import as numbered steps: Agent Prompt, then the file, then the review', () => {
+  it('guides the import as four numbered steps: Read a recipe, the Agent Prompt, the file, then the review', () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: s.importTitle })).toBeInTheDocument()
     expect(screen.getByText(s.stepOverline(1))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Read a recipe' })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: s.stepOneTitle })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: s.copyAgentPrompt })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
     expect(screen.getByText(s.stepOverline(3))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(4))).toBeInTheDocument()
   })
-  it('step 3 is a Tile with an overline and its heading, like steps 1 and 2 (before and during the review)', () => {
+  it('step 4 is a Tile with an overline and its heading, like the other steps (before and during the review)', () => {
     const { rerender } = view()
     const tileOf = (n: number) => screen.getByText(s.stepOverline(n)).closest('.tile')
-    for (const n of [1, 2, 3]) expect(tileOf(n), `step ${n}`).not.toBeNull()
-    expect(within(tileOf(3) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(3))).toHaveClass('tile__overline')
+    for (const n of [1, 2, 3, 4]) expect(tileOf(n), `step ${n}`).not.toBeNull()
+    expect(within(tileOf(4) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
+    expect(screen.getByText(s.stepOverline(4))).toHaveClass('tile__overline')
     hook.current = state({ phase: 'reviewing', plan: plan() })
     rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(within(tileOf(3) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
+    expect(within(tileOf(4) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
   })
   it('starts with the source step and passes the text to the review', async () => {
     view()
