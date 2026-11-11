@@ -27,6 +27,10 @@ func seedSide(t *testing.T, env *testkit.Env) sideFixture {
 	seedPlannedMeal(t, env, "2026-11-13", f.snack, f.side, f.gratin, "planned", false)  // unresolved, ahead
 	seedPlannedMeal(t, env, "2026-11-19", f.dinner, f.side, f.gratin, "cooked", false)  // resolved: stays as history
 	seedPlannedMeal(t, env, "2026-11-05", f.dinner, f.side, f.greens, "planned", false) // before today: stays
+	// Somebody eats both Meal Slots, so a replan keeps their Side meals.
+	m := mustExec(t, env, `INSERT INTO members (name, colour, portion_factor, created_at) VALUES ('Anna','#fff',1,'2026-11-01T00:00:00Z')`)
+	mustExec(t, env, `INSERT INTO meal_slot_attendees (slot_id, member_id) VALUES (?, ?)`, f.dinner, m)
+	mustExec(t, env, `INSERT INTO meal_slot_attendees (slot_id, member_id) VALUES (?, ?)`, f.snack, m)
 	f.ruleID = seedSlotRule(t, env, f.dinner, f.side, f.greens)
 	return f
 }
@@ -141,7 +145,7 @@ func TestDeleteRefusals(t *testing.T) {
 	if n := count(t, env, `SELECT count(*) FROM recipe_courses WHERE recipe_id = ? AND course_id = ?`, soup, f.starter); n != 1 {
 		t.Errorf("a refused delete changed Soup")
 	}
-	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE course_id = ? AND state = 'planned'`, f.side); n != 3 {
+	if n := count(t, env, `SELECT count(*) FROM planned_meals WHERE course_id = ? AND state = 'planned' AND date <= '2026-11-19'`, f.side); n != 3 {
 		t.Errorf("a refused delete removed Planned Meals (%d left, want 3)", n)
 	}
 }

@@ -83,6 +83,7 @@ Feature: Courses on a Meal Slot
     And the Meal Slot "Dinner" on Monday has an unpinned Planned Meal of "Peas" in "Side" on 2026-11-16
     And the Meal Slot "Dinner" on Monday has a Pinned Planned Meal of "Greens" in "Side" on 2026-11-23
     And the Meal Slot "Dinner" on Monday has a Slot Rule for "Greens" in "Side"
+    And I note how many unresolved Planned Meals the Meal Slot "Dinner" on Monday has in "Side" from today on
     When the Admin previews "Dinner" on Monday with the Courses "Main"
     Then the response status is 200
     And the answer lists under removes the Pinned Planned Meal of "Greens" in "Side" on 2026-11-23
@@ -90,7 +91,7 @@ Feature: Courses on a Meal Slot
     And the answer lists under removes the Slot Rule for "Greens" in "Side"
     And the answer lists the Pinned Planned Meals first
     And the Meal Slot "Dinner" on Monday serves "Main", "Side"
-    And the Meal Slot "Dinner" on Monday has 2 unresolved Planned Meals in "Side" from today on
+    And the Meal Slot "Dinner" on Monday still has as many unresolved Planned Meals in "Side" from today on
     And the Meal Slot "Dinner" on Monday has 1 Slot Rule in "Side"
 
   Scenario: Saving the batch edit answers what it removed
