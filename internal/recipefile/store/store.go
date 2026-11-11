@@ -146,6 +146,7 @@ type Result struct {
 	Recipes            []AppliedRecipe
 	IngredientsCreated int
 	ConversionsAdded   int
+	PicturesAdded      int // IM3: existing Ingredients that took the file's picture
 }
 
 // AppliedRecipe is one written Recipe.

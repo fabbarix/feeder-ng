@@ -25,7 +25,7 @@ An Ingredient is identified by its **name**. Matching is case-insensitive, with 
 | `baseUnit` | `g`, `ml` or `piece`. All Stock and shopping maths happens in this unit. |
 | `conversions` | Ingredient-specific Unit Conversions: `{ "unit": "clove", "toBase": 5 }` means 1 clove = 5 of the base unit. |
 | `shelfLifeDays` | Days usable after purchase; omit or set to `null` for non-perishables. |
-| `image` | Optional picture of the Ingredient (see Images). Import uses it only for an Ingredient it creates; an Ingredient the household already has keeps what it has. |
+| `image` | Optional picture of the Ingredient (see Images). Import uses it for an Ingredient it creates, and for an Ingredient the household already has that has no picture (Import Review shows "Adds a picture to Garlic"); an existing picture is never replaced. |
 
 ### Units
 

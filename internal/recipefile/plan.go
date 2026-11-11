@@ -122,6 +122,9 @@ type IngredientMatch struct {
 	Effective   *IngredientDecision `json:"effective,omitempty"`
 	Resolved    bool                `json:"resolved"`
 	UsedBy      []string            `json:"usedBy"`
+	// AddsImage is true when the Ingredient this row resolves to already exists, has NO picture, and the file's definition
+	// carries a picture that resolved: the import will give it that picture (IM3). An existing picture is never replaced.
+	AddsImage bool `json:"addsImage"`
 }
 
 // UnitPrompt asks for one Unit Conversion: Unit cannot be converted to Base
@@ -228,6 +231,13 @@ type AddedConversion struct {
 	Conversion   units.Conversion
 }
 
+// AddedImage gives an EXISTING Ingredient that has no picture the file's one (IM3). ImagePath keys into Commit.Images.
+// The store applies it only if the Ingredient still has no picture when the import is written.
+type AddedImage struct {
+	IngredientID int64
+	ImagePath    string
+}
+
 // ResolvedIngredient says what a file name stands for: an existing id, or (ID
 // 0) one of Commit.NewIngredients by Key.
 type ResolvedIngredient struct{ ID int64 }
@@ -252,6 +262,7 @@ type RecipeCommit struct {
 type Commit struct {
 	NewIngredients   []NewIngredient
 	AddedConversions []AddedConversion
+	AddedImages      []AddedImage // IM3: one per existing Ingredient without a picture
 	Resolved         map[string]ResolvedIngredient
 	Recipes          []RecipeCommit
 	Images           map[string]imaging.Result // by image path; only images that were resolved
