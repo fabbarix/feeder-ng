@@ -16,7 +16,7 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - **Access Requests.** Someone who is not yet on the Allowlist can ask to join. Any User sees a Sign-in requests row and can approve or deny a request from a sheet; the Admin manages everyone on the new Allowlist page. Members now have an email address, and an Admin can turn the notification for new requests on or off.
 - **Photos and Pictures.** A Member has a Photo and an Ingredient has a Picture. One shared ImagePicker handles crop, camera, paste and web address everywhere a picture is chosen. Photos in HEIC format are not accepted yet.
 - **Inline Ingredient creation.** The Recipe editor can create an Ingredient on the spot with a New Ingredient sheet, including Ready Meal Ingredients. Saving a Recipe with a name that is already taken now says so clearly, offers to rename, and pack sizes have a hint next to the Quantity.
-- **Reheat for Leftover meals.** Each Recipe can have its own reheat time, and a Leftover meal shows a Reheat step with its own icon in the cook preview.
+- **Reheat for Leftovers.** Each Recipe can have its own reheat time, and a Planned Meal served from a Leftover shows a Reheat step in the cook preview.
 - **Zero-waste streak.** The streak counts days without a Leftover going off. Keeping a Leftover does not break it, nothing is counted twice, and the count is capped by the Household's age.
 - **Multi-day Meal Slot edit.** Edit a Meal Slot for several weekdays at once with the new weekday picker, see who attends with attendee pills, and use the week grid of Meal Slots in Settings. A new slot defaults to everyone attending.
 - **Couldn't plan, grouped by cause.** When a Plan cannot fill a slot, the reasons are grouped by cause, each with a fix, and a setup checklist shows what is still missing. A replan runs when the server starts.
@@ -26,8 +26,10 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 ### Changed
 
 - **Settings.** A new Settings shell with Breadcrumbs, a sheet for editing Members, and a link from an Admin to their own row in the Members list. The Plan and Cook screens have clearer contrast, a board time, and a Today/Cook layout; the cook preview shows the Leftover date.
+- **Screens on the shared layout.** Stock has two columns with a sticky filter aside on wide screens, and its Throw out or keep? rows keep their actions in line. Shop tiles fill the width. Scan, Cook, the board and Import use the shared page header, empty state and action bars; Cook fills the phone screen with sticky Back and Next, and the board has two columns on phones. Scan warns about a near-duplicate Ingredient before it is created. Settings and the catalogue use the same blocks, the Recipe Assistant has its own row in Settings, and a Weight rule error is tied to its field.
+- **Go 1.26.11.** The server is built with Go 1.26.11 (the latest 1.26 release), in `go.mod`, the Dockerfile and the docs.
 - **Layout.** Pages have set widths, the Settings and form fields share sizes, one focus ring, muted look for controls that cannot be used, and sticky action bars. The side rail has better contrast and a compact ring for the current page. Time fields fit their digits.
-- **Icons.** Only the icon styles in use are shipped, which keeps the icon payload under 42 kB.
+- **Icon styles.** Only the icon styles in use are shipped, which keeps the icon payload under 42 kB.
 - **Deploy.** Images and the Helm chart are published from `v*` tags only. Prereleases (`-beta.N`, `-rc.N`) do not get the `latest`, `1.0` or `1` tags. The Helm chart creates the `FEEDER_SECRET_KEY` Secret for you and keeps it, and the ingress body limit (`proxy-body-size`) is now `50m` so photos of up to 45 MiB get through. `FEEDER_TRUST_PROXY` (new in this release line, set automatically by the chart when the Ingress is on) takes the client address from the last `X-Forwarded-For` value for the sign-in rate limits.
 
 ### Fixed
@@ -48,7 +50,7 @@ See `docs/dev/deploy.md` for details.
 
 ## [1.0.0-dev]
 
-The baseline prerelease: weekly planning, shopping lists, Cook mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
+The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
 [Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.1...HEAD
 [1.0.0-beta.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-dev...v1.0.0-beta.1

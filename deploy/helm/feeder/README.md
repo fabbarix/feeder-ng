@@ -41,10 +41,10 @@ Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.c
 
 ## Recipe Assistant secret key
 
-The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 random bytes in base64. It always comes from a Secret; there is no inline value, and the schema rejects `secretKey.value`, and the template refuses `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry for it. A `valueFrom` entry named `FEEDER_SECRET_KEY` in `extraEnv` is allowed, for an external secret store: it replaces the generated entry, and the chart then creates no Secret of its own.
+The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 random bytes in base64. It always comes from a Secret; there is no inline value, and the schema rejects `secretKey.value`; the template refuses `env.FEEDER_SECRET_KEY` and a plain-value `extraEnv` entry for it. A `valueFrom` entry named `FEEDER_SECRET_KEY` in `extraEnv` is allowed, for an external secret store: it replaces the generated entry, and the chart then creates no Secret of its own.
 
 - **Default (`secretKey.generate: true`).** The chart creates Secret `<fullname>-secret-key` with a random key, reuses it on every upgrade (it looks the Secret up with `lookup`), and keeps it when the release is uninstalled (`helm.sh/resource-policy: keep`), so a reinstall finds the same key. Changing `secretKey.key` on an existing install generates a new key (the kept Secret has no value under the new name), so an Admin must enter the Recipe Assistant's API key again.
-- **Your own Secret (`secretKey.existingSecret`).** Wins over `generate`; the chart creates no Secret. `secretKey.key` names the key inside it (default `secret-key`).:
+- **Your own Secret (`secretKey.existingSecret`).** Wins over `generate`; the chart creates no Secret. `secretKey.key` names the key inside it (default `secret-key`).
 
   ```sh
   kubectl -n feeder create secret generic feeder-secret-key \
