@@ -25,6 +25,8 @@ var (
 	ErrAlreadyPlanned = errors.New("recipe was planned; archive it instead")
 	ErrNoMember       = errors.New("user has no linked member") // MemberForUser
 	ErrUnknownMember  = errors.New("member not found")
+	// ErrReadyMealNameTaken: the Ready Meal's Ingredient name was taken between the lookup and the insert.
+	ErrReadyMealNameTaken = errors.New("an Ingredient with the Recipe's name was created meanwhile")
 )
 
 // CodeImageUnknown is the validation reason for an image id that was never uploaded.
@@ -88,6 +90,15 @@ const pendingIngredient int64 = -1
 // prepare derives the Ready Meal line when needed (create: name of the Ingredient to create in
 // the transaction, empty otherwise), then validates.
 func (s *Store) prepare(ctx context.Context, in recipe.Input) (clean recipe.Input, create string, err error) {
+	// The placeholder only ever stands for the derived line; a Step use of it is just an unknown Ingredient.
+	for i, st := range in.Steps {
+		for j, u := range st.Uses {
+			if u.IngredientID == pendingIngredient {
+				return recipe.Input{}, "", &recipe.ValidationError{Field: fmt.Sprintf("steps[%d].uses[%d].ingredientId", i, j),
+					Code: recipe.CodeUnknownIngr, Message: "that Ingredient does not exist"}
+			}
+		}
+	}
 	if s.ready == nil || !recipe.NeedsReadyMealIngredient(in) {
 		clean, err = s.validate(ctx, in, nil)
 		return clean, "", err
