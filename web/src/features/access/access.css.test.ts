@@ -14,7 +14,7 @@ describe('access.css: phone layout of the request rows', () => {
   })
 
   it('the row wraps, so the actions can drop under the text', () => {
-    expect(rule(sheet.phone, '.access__list .list-row')['flex-wrap']).toBe('wrap')
+    expect(rule(sheet.phone, '.access__list .list-row[data-height]')['flex-wrap']).toBe('wrap')
   })
 
   it('the trailing actions take the whole line under the text, aligned to the end', () => {
@@ -35,7 +35,7 @@ describe('access.css: phone layout of the request rows', () => {
   })
 
   it('the row grows with its text (auto height, a minimum)', () => {
-    const r = rule(sheet.phone, '.access__list .list-row')
+    const r = rule(sheet.phone, '.access__list .list-row[data-height]')
     expect(r['block-size']).toBe('auto')
     expect(r['min-block-size']).toBeTruthy()
   })

@@ -40,5 +40,3 @@ web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
 # A1: spec-mandated copy. "wait" is plain English for an Access Request waiting for approval, not a Passive Step.
 web/src/features/notifications/strings.ts wait  # "When someone asks to sign in and waits for approval"
 web/src/features/settings/strings.ts wait  # "Their requests wait in Sign-in requests"
-# "person" is plain English for the human behind a Member's email (the Member itself is the term).
-web/src/features/settings/strings.ts person  # "Lets this person sign in with Google without asking"

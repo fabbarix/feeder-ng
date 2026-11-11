@@ -28,30 +28,32 @@ export function AccessRequestList({ requests, now = new Date(), error, onApprove
       ) : (
         <>
           <p className="access__muted">{accessStrings.approvalNote}</p>
-          <ListGroup label={accessStrings.title}>
-            {requests.map((r) => (
-              <ListRow
-                key={r.id}
-                title={r.name}
-                meta={r.email}
-                leading={<RequestAvatar name={r.name} picture={r.picture} size="md" />}
-                trailing={
-                  <span className="access__actions">
-                    <Button variant="tertiary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
-                      {accessStrings.deny}
-                    </Button>
-                    <Button variant="secondary" aria-label={accessStrings.approveLabel(r.email)} onClick={() => onApprove(r.id)}>
-                      {accessStrings.approve}
-                    </Button>
+          <div className="access__list">
+            <ListGroup label={accessStrings.title}>
+              {requests.map((r) => (
+                <ListRow
+                  key={r.id}
+                  title={r.name}
+                  meta={r.email}
+                  leading={<RequestAvatar name={r.name} picture={r.picture} size="md" />}
+                  trailing={
+                    <span className="access__actions">
+                      <Button variant="tertiary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
+                        {accessStrings.deny}
+                      </Button>
+                      <Button variant="secondary" aria-label={accessStrings.approveLabel(r.email)} onClick={() => onApprove(r.id)}>
+                        {accessStrings.approve}
+                      </Button>
+                    </span>
+                  }
+                >
+                  <span className="access__when">
+                    {accessStrings.asked(agoText(r.requestedAt, now))} · {accessStrings.daysLeft(daysLeft(r.expiresAt, now))}
                   </span>
-                }
-              >
-                <span className="access__when">
-                  {accessStrings.asked(agoText(r.requestedAt, now))} · {accessStrings.daysLeft(daysLeft(r.expiresAt, now))}
-                </span>
-              </ListRow>
-            ))}
-          </ListGroup>
+                </ListRow>
+              ))}
+            </ListGroup>
+          </div>
         </>
       )}
     </div>

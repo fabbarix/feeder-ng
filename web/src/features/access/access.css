@@ -1,4 +1,28 @@
 /* Access Requests: layout only; colours come from the theme tokens. */
+/* Phone: a request row is the avatar and the text on one line, the actions under the text (right-aligned); title and meta
+   wrap instead of truncating. The Recent activity rows wrap the same way. */
+@media (max-width: 599px) {
+  .access__list .list-row[data-height] {
+    flex-wrap: wrap;
+    block-size: auto;
+    min-block-size: 64px;
+    padding-block: var(--space-2);
+  }
+  .access__list .list-row__text {
+    flex: 1 1 10rem;
+  }
+  .access__list .list-row__trailing {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  .access__list .list-row__title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .access__list .list-row__meta {
+    overflow-wrap: anywhere;
+  }
+}
 .access {
   display: grid;
   gap: var(--space-4);

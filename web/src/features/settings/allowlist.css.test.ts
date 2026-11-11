@@ -104,7 +104,7 @@ describe('settings.css: Allowlist at phone width', () => {
   it('on a phone the row title wraps (the email stays readable) and the row grows with it', () => {
     expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['white-space']).toBe('normal')
     expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['overflow-wrap']).toBe('anywhere')
-    const row = ruleIn(sheet.phone, '.allowlist__list .list-row')
+    const row = ruleIn(sheet.phone, '.allowlist__list .list-row[data-height]')
     expect(row['block-size']).toBe('auto')
     expect(row['min-block-size']).toBeTruthy()
   })

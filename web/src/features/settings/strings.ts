@@ -1,5 +1,7 @@
 // English copy for Settings. Glossary terms only.
 export const settingsStrings = {
+  /** One wording for a mistyped email, in the Member sheet and on the Allowlist. */
+  invalidEmail: 'Enter a valid email address, such as name@example.com.',
   title: 'Settings',
   household: 'Household',
   members: 'Members',
@@ -10,7 +12,8 @@ export const settingsStrings = {
   index: {
     title: 'Settings',
     groups: { household: 'Household', you: 'You', admin: 'Admin' },
-    waiting: (n: number) => `${n} waiting`,
+    /** The row's accessible name when requests wait: the count is shown once, as the badge. */
+    rowWithCount: (title: string, n: number) => `${title}, ${n} waiting`,
     sections: {
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
@@ -67,7 +70,7 @@ export const settingsStrings = {
     avatarNone: 'Initials',
     portionFactorLabel: 'Portion Factor',
     email: 'Email',
-    emailHelper: 'Lets this person sign in with Google without asking',
+    emailHelper: 'Lets them sign in with Google without asking',
     portionFactorHelper: 'How much of a standard portion this Member eats. An adult is 1.',
     thisIsMe: 'This is me',
     you: (name: string) => `${name} (you)`,
@@ -111,7 +114,6 @@ export const settingsStrings = {
   allowlistPanel: {
     emailLabel: 'Email to allow',
     add: 'Add to allowlist',
-    badEmail: 'Enter a valid email address.',
     you: '(you)',
     youMeta: 'You',
     admin: (email: string) => `Admin: ${email}`,

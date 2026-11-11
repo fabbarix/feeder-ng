@@ -25,6 +25,7 @@ _Avoid_: Owner, superuser
 **Access Request**:
 A verified Google account's request to sign in, waiting for any User to approve or deny it; it expires after 14 days.
 _Avoid_: Invite, join request, signup, application
+_Note_: the UI calls the list of Access Requests "Sign-in requests" and the matching push notification type "Sign-in request"; both name this term.
 
 ### Recipes
 

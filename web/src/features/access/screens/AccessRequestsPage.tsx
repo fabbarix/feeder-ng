@@ -22,11 +22,13 @@ export function AccessRequestsPage() {
         {page.events.length === 0 ? (
           <p className="access__muted">{accessStrings.historyEmpty}</p>
         ) : (
-          <ListGroup label={accessStrings.history}>
-            {page.events.map((e, i) => (
-              <ListRow key={`${e.at}-${e.kind}-${e.email}-${i}`} title={historyLine(e)} meta={agoText(e.at, page.now)} />
-            ))}
-          </ListGroup>
+          <div className="access__list">
+            <ListGroup label={accessStrings.history}>
+              {page.events.map((e, i) => (
+                <ListRow key={`${e.at}-${e.kind}-${e.email}-${i}`} title={historyLine(e)} meta={agoText(e.at, page.now)} />
+              ))}
+            </ListGroup>
+          </div>
         )}
       </section>
     </div>

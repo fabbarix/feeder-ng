@@ -53,7 +53,7 @@ export function AllowlistPanel({ users, currentUserId, error, addError, onEmailE
           <TextField
             label={text.emailLabel}
             type="email"
-            error={badEmail ? text.badEmail : addError}
+            error={badEmail ? settingsStrings.invalidEmail : addError}
             value={email}
             onChange={(value) => {
               setEmail(value)
@@ -62,7 +62,7 @@ export function AllowlistPanel({ users, currentUserId, error, addError, onEmailE
             }}
           />
         </div>
-        <Button type="submit" variant="tertiary" className="allowlist__button">
+        <Button type="submit" variant="secondary" className="allowlist__button">
           {text.add}
         </Button>
       </form>
@@ -74,26 +74,28 @@ export function AllowlistPanel({ users, currentUserId, error, addError, onEmailE
           {error}
         </p>
       ) : null}
-      <ListGroup label={settingsStrings.allowlist}>
-        {users.map((u) => {
-          const locked = isLastAdmin(users, u)
-          const you = u.id === currentUserId
-          const meta = [you ? text.youMeta : null, locked ? text.lastAdmin : null].filter(Boolean).join(' · ')
-          return (
-            <ListRow
-              key={u.id}
-              title={u.email}
-              meta={meta || undefined}
-              trailing={
-                <span className="allowlist__actions">
-                  <Switch label={text.adminLabel} aria-label={text.admin(u.email)} checked={u.isAdmin} disabled={locked} onChange={(isAdmin) => onSetAdmin(u.id, isAdmin)} />
-                  <IconButton icon="delete" label={text.remove(u.email)} disabled={locked} onClick={() => void askRemove(u)} />
-                </span>
-              }
-            />
-          )
-        })}
-      </ListGroup>
+      <div className="allowlist__list">
+        <ListGroup label={settingsStrings.allowlist}>
+          {users.map((u) => {
+            const locked = isLastAdmin(users, u)
+            const you = u.id === currentUserId
+            const meta = [you ? text.youMeta : null, locked ? text.lastAdmin : null].filter(Boolean).join(' · ')
+            return (
+              <ListRow
+                key={u.id}
+                title={u.email}
+                meta={meta || undefined}
+                trailing={
+                  <span className="allowlist__actions">
+                    <Switch label={text.adminLabel} aria-label={text.admin(u.email)} checked={u.isAdmin} disabled={locked} onChange={(isAdmin) => onSetAdmin(u.id, isAdmin)} />
+                    <IconButton icon="delete" label={text.remove(u.email)} disabled={locked} onClick={() => void askRemove(u)} />
+                  </span>
+                }
+              />
+            )
+          })}
+        </ListGroup>
+      </div>
     </div>
   )
 }

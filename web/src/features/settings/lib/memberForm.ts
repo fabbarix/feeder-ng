@@ -1,3 +1,4 @@
+import { settingsStrings } from '../strings'
 import type { Member, MemberInput } from '../types'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR } from './portions'
 
@@ -80,6 +81,6 @@ export function canLinkMe(
 export function memberEmailProblem(email: string): string | null {
   const value = email.trim()
   if (value === '') return null
-  if (value.length > 254 || !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(value)) return 'Enter a valid email address, such as name@example.com.'
+  if (value.length > 254 || !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(value)) return settingsStrings.invalidEmail
   return null
 }

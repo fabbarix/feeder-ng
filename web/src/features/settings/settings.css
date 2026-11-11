@@ -90,7 +90,6 @@
   min-inline-size: 12rem;
   max-inline-size: 28rem;
 }
-.allowlist__add > .allowlist__button,
 .allowlist__button {
   flex: none;
   /* line up with the input, below the label */
@@ -110,5 +109,15 @@
   }
   .allowlist__button {
     margin-block-start: 0;
+  }
+  /* Phone: the email wraps instead of truncating in the ~130 px left beside Admin and Remove, and the row grows with it. */
+  .allowlist__list .list-row[data-height] {
+    block-size: auto;
+    min-block-size: 64px;
+    padding-block: var(--space-2);
+  }
+  .allowlist__list .list-row__title {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

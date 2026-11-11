@@ -19,7 +19,7 @@ export function SettingsIndexPage() {
           <h2 className="settings__overline">{group.title}</h2>
           <ListGroup label={group.title}>
             {group.sections.map((s) => (
-              <ListRow key={s.id} title={s.title} meta={s.meta} icon={s.icon} chevron href={s.path} aria-label={s.title} trailing={s.id === 'accessRequests' ? <AccessBadge count={waiting} /> : undefined} />
+              <ListRow key={s.id} title={s.title} meta={s.meta} icon={s.icon} chevron href={s.path} aria-label={s.id === 'accessRequests' && waiting > 0 ? settingsStrings.index.rowWithCount(s.title, waiting) : s.title} trailing={s.id === 'accessRequests' ? <AccessBadge count={waiting} /> : undefined} />
             ))}
           </ListGroup>
         </section>
