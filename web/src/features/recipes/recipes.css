@@ -260,6 +260,10 @@
   min-inline-size: 0;
 }
 
+.preference-table__who .avatar {
+  flex-shrink: 0;
+}
+
 .preference-table__name {
   min-inline-size: 0;
   overflow: hidden;
