@@ -1,4 +1,5 @@
 import { ListGroup, ListRow, Chip, EmptyState } from '../../../ui'
+import { displayName } from '../../ingredients/lib/names'
 import { formatPackSize } from '../lib/names'
 import { strings } from '../strings'
 import type { Product } from '../types'
@@ -26,7 +27,7 @@ export function ProductList({ products, system = 'metric', showingArchived = fal
           <ListRow
             key={p.id}
             title={p.name}
-            meta={showIngredient && p.ingredientName ? `${p.ingredientName} · ${size}` : size}
+            meta={showIngredient && p.ingredientName ? `${displayName(p.ingredientName)} · ${size}` : size}
             chevron
             href={`/products/${p.id}`}
             trailing={p.archived ? <Chip kind="tag">{strings.archivedChip}</Chip> : undefined}

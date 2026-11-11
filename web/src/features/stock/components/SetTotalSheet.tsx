@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { BottomSheet, Button, TextField } from '../../../ui'
+import { BottomSheet, Button, FormActions, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
 import '../stock.css'
 import type { BaseUnit } from '../types'
@@ -39,7 +39,7 @@ export function SetTotalSheet({ open, onClose, name, baseUnit, initial, onSubmit
       open={open}
       onClose={onClose}
       title={strings.setTotalTitle(name)}
-      footer={<Button onClick={submit}>{strings.save}</Button>}
+      footer={<FormActions primary={<Button onClick={submit}>{strings.save}</Button>} />}
     >
       <div className="stock-sheet__fields">
         <TextField

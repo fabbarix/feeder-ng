@@ -7,6 +7,7 @@ import {
   pricePerKgFromWeight,
   resolve,
   validateRule,
+  ruleProblem,
   weightFromPrice,
   weightProductKey,
   type Catalog,
@@ -64,6 +65,27 @@ describe('validateRule (shared vectors)', () => {
   it.each(v.rules)('$name', ({ rule, valid }) => {
     if (valid) expect(validateRule(rule)).toBeNull()
     else expect(validateRule(rule)).not.toBeNull()
+  })
+})
+
+describe('ruleProblem (the field a rule problem is about)', () => {
+  const ok = { id: 0, prefix: '21', item: { start: 3, length: 4 }, value: { start: 7, length: 5 }, valueKind: 'weight', valueUnit: 'g', decimalPlaces: 3 } as const
+  it('is null for a valid rule', () => expect(ruleProblem(ok)).toBeNull())
+  it.each([
+    ['prefix', { prefix: '' }, 'prefix'],
+    ['item start inside prefix', { item: { start: 2, length: 2 } }, 'itemStart'],
+    ['value start inside prefix', { value: { start: 2, length: 2 } }, 'valueStart'],
+    ['item span reaching the check digit', { item: { start: 3, length: 11 } }, 'itemLength'],
+    ['value span reaching the check digit', { value: { start: 7, length: 7 } }, 'valueLength'],
+    ['item start past the digits', { item: { start: 13, length: 1 } }, 'itemStart'],
+    ['zero item length', { item: { start: 3, length: 0 } }, 'itemLength'],
+    ['overlap', { value: { start: 5, length: 3 } }, 'valueStart'],
+    ['decimals', { decimalPlaces: 9 }, 'decimalPlaces'],
+  ])('%s', (_n, over, field) => {
+    expect(ruleProblem({ ...ok, ...over } as never)?.field).toBe(field)
+  })
+  it('validateRule keeps returning the message', () => {
+    expect(validateRule({ ...ok, decimalPlaces: 9 })).toBe(ruleProblem({ ...ok, decimalPlaces: 9 })?.message)
   })
 })
 

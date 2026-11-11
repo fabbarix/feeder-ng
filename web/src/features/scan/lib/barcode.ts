@@ -123,29 +123,44 @@ export function canonical(raw: string): string | null {
   return s.kind === 'gtin' || s.kind === 'opaque' ? (s.code ?? null) : null
 }
 
-/** Returns a reason the rule cannot be used, or null when fine. */
-export function validateRule(rule: WeightRule): string | null {
-  if (!isDigits(rule.prefix)) return 'prefix must be one or more digits'
+/** The rule field a problem is about. */
+export type RuleField =
+  | 'prefix' | 'valueKind' | 'valueUnit'
+  | 'itemStart' | 'itemLength' | 'valueStart' | 'valueLength' | 'decimalPlaces'
+
+export interface RuleProblem {
+  field: RuleField
+  message: string
+}
+
+/** The first problem that makes the rule unusable, with the field it is about; null when fine. */
+export function ruleProblem(rule: WeightRule): RuleProblem | null {
+  if (!isDigits(rule.prefix)) return { field: 'prefix', message: 'prefix must be one or more digits' }
   if (rule.valueKind === 'weight') {
     if (rule.valueUnit !== undefined && !WEIGHT_UNITS.includes(rule.valueUnit)) {
-      return `unknown weight unit ${String(rule.valueUnit)}`
+      return { field: 'valueUnit', message: `unknown weight unit ${String(rule.valueUnit)}` }
     }
   } else if (rule.valueKind === 'price') {
-    if (rule.valueUnit !== undefined) return 'a price rule has no value unit'
+    if (rule.valueUnit !== undefined) return { field: 'valueUnit', message: 'a price rule has no value unit' }
   } else {
-    return 'unknown value kind'
+    return { field: 'valueKind', message: 'unknown value kind' }
   }
-  const spanError = validSpan(rule.item) ?? validSpan(rule.value)
-  if (spanError !== null) return spanError
-  if (rule.item.start <= rule.prefix.length) return 'item starts inside the prefix'
-  if (rule.value.start <= rule.prefix.length) return 'value starts inside the prefix'
+  const spanProblem = spanIssue(rule.item, 'item') ?? spanIssue(rule.value, 'value')
+  if (spanProblem !== null) return spanProblem
+  if (rule.item.start <= rule.prefix.length) return { field: 'itemStart', message: 'item starts inside the prefix' }
+  if (rule.value.start <= rule.prefix.length) return { field: 'valueStart', message: 'value starts inside the prefix' }
   if (rule.item.start <= lastDigit(rule.value) && rule.value.start <= lastDigit(rule.item)) {
-    return 'item and value overlap'
+    return { field: 'valueStart', message: 'item and value overlap' }
   }
   if (rule.decimalPlaces < 0 || rule.decimalPlaces > rule.value.length) {
-    return 'decimal places must be between 0 and the value length'
+    return { field: 'decimalPlaces', message: 'decimal places must be between 0 and the value length' }
   }
   return null
+}
+
+/** Returns a reason the rule cannot be used, or null when fine. */
+export function validateRule(rule: WeightRule): string | null {
+  return ruleProblem(rule)?.message ?? null
 }
 
 export function weightProductKey(ruleId: number, itemCode: string): string {
@@ -273,9 +288,11 @@ function roundMilligram(g: number): number {
 }
 
 /** Reason a span is unusable, or null. */
-function validSpan(span: Span): string | null {
-  if (span.start < 1 || span.length < 1) return 'span must start at 1 or later and have a length of at least 1'
-  if (lastDigit(span) > 12) return 'span reaches the check digit or beyond'
+function spanIssue(span: Span, which: 'item' | 'value'): RuleProblem | null {
+  if (span.start < 1) return { field: `${which}Start`, message: 'span must start at 1 or later and have a length of at least 1' }
+  if (span.length < 1) return { field: `${which}Length`, message: 'span must start at 1 or later and have a length of at least 1' }
+  if (span.start > 12) return { field: `${which}Start`, message: 'span reaches the check digit or beyond' }
+  if (lastDigit(span) > 12) return { field: `${which}Length`, message: 'span reaches the check digit or beyond' }
   return null
 }
 

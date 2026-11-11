@@ -1,12 +1,11 @@
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { PageHeader, Tile } from '../../../ui'
+import { Button, FormActions, PageHeader, StickyActionBar, Tile } from '../../../ui'
 import { ApiKeyRow } from '../components/ApiKeyRow'
 import { AssistantToggleTile } from '../components/AssistantToggleTile'
 import { ConnectionTile } from '../components/ConnectionTile'
 import { ModelTile } from '../components/ModelTile'
 import { RecentChangesTile } from '../components/RecentChangesTile'
 import { SecretKeyMissingTile } from '../components/SecretKeyMissingTile'
-import { SettingsActions } from '../components/SettingsActions'
 import { TestConnectionTile } from '../components/TestConnectionTile'
 import { useRecipeAssistantPage } from '../hooks/useRecipeAssistantPage'
 import { raStrings } from '../strings'
@@ -104,7 +103,20 @@ export function RecipeAssistantSettingsPage() {
         {page.notice ? <p>{page.notice}</p> : null}
         {page.errors.form ? <p role="alert">{page.errors.form}</p> : null}
       </div>
-      <SettingsActions dirty={page.dirty} canSave={page.dirty && !locked} saving={page.saving} onSave={() => void page.save()} onCancel={page.cancel} />
+      <StickyActionBar column="narrow" label={raStrings.actionsLabel}>
+        <FormActions
+          tertiary={
+            <Button variant="tertiary" disabled={!page.dirty || page.saving} onClick={page.cancel}>
+              {raStrings.cancel}
+            </Button>
+          }
+          primary={
+            <Button variant="primary" disabled={!(page.dirty && !locked) || page.saving} loading={page.saving} onClick={() => void page.save()}>
+              {page.saving ? raStrings.saving : raStrings.save}
+            </Button>
+          }
+        />
+      </StickyActionBar>
     </div>
   )
 }

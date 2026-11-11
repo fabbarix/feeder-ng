@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { scanStrings } from '../strings'
 import type { StockTakeAction } from '../types'
@@ -56,7 +57,7 @@ export function StockTakeSheet({ open, onClose, productName, ingredientName, cur
           }}
         >
           <NumberField label={scanStrings.newTotal} value={total} onChange={setTotal} min={0} error={error ?? undefined} />
-          <Button type="submit">{scanStrings.save}</Button>
+          <FormActions primary={<Button type="submit">{scanStrings.save}</Button>} />
         </form>
       ) : null}
     </BottomSheet>

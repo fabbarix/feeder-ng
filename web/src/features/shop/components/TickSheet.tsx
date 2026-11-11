@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { baseUnitLabel } from '../../../lib/units'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { shopStrings } from '../strings'
 import type { BaseUnit } from '../types'
@@ -41,10 +42,14 @@ export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSu
         }}
       >
         <NumberField label={shopStrings.howMuch} value={value} onChange={setValue} min={0} unit={baseUnitLabel(baseUnit, 'metric', value ?? undefined)} error={error ?? undefined} />
-        <Button type="submit">{shopStrings.tickSave}</Button>
-        <Button variant="secondary" onClick={() => onSubmit(0)}>
-          {shopStrings.tickOnly}
-        </Button>
+        <FormActions
+          primary={<Button type="submit">{shopStrings.tickSave}</Button>}
+          secondary={
+            <Button variant="secondary" onClick={() => onSubmit(0)}>
+              {shopStrings.tickOnly}
+            </Button>
+          }
+        />
       </form>
     </BottomSheet>
   )

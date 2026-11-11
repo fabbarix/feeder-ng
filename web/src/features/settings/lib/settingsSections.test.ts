@@ -9,11 +9,11 @@ describe('settingsGroups', () => {
     expect(ids(true)).toEqual([
       ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
-      ['admin', ['allowlist']],
+      ['admin', ['allowlist', 'recipeAssistant']],
     ])
   })
 
-  it('hides the Allowlist, and its whole group, from a plain User', () => {
+  it('hides the Allowlist and the Recipe Assistant, and their whole group, from a plain User', () => {
     expect(ids(false)).toEqual([
       ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
@@ -32,6 +32,7 @@ describe('settingsGroups', () => {
       notifications: '/settings/notifications',
       accessRequests: '/settings/access-requests',
       allowlist: '/settings/allowlist',
+      recipeAssistant: '/settings/recipe-assistant',
     })
   })
 
@@ -45,7 +46,7 @@ describe('settingsGroups', () => {
 
   it('uses GLOSSARY wording for titles', () => {
     const titles = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.title))
-    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist'])
+    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
   })
 
   it('A1: "Sign-in requests" is a Household row for every User, after Shops', () => {

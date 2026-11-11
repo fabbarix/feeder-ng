@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Button, Chip, Tile, TextField } from '../../../ui'
+import { displayName } from '../../ingredients/lib/names'
 import { ingredientOptions } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { BaseUnit, IngredientMatch, IngredientStatus } from '../types'
@@ -40,19 +41,19 @@ const baseUnits: BaseUnit[] = ['g', 'ml', 'piece']
  */
 export function IngredientMatchTile({ match, onUseExisting, onCreate }: IngredientMatchTileProps): ReactNode {
   return (
-    <Tile as="section" aria-label={match.name}>
-      <h2>{match.name}</h2>
+    <Tile as="section" aria-label={displayName(match.name)}>
+      <h2>{displayName(match.name)}</h2>
       <Chip kind="status" status={statusColour[match.status]}>
         {statusLabel[match.status]}
       </Chip>
-      {match.status === 'exact' && match.match ? <p>{match.match.name}</p> : null}
+      {match.status === 'exact' && match.match ? <p>{displayName(match.match.name)}</p> : null}
       {match.status === 'undefined' ? <BaseUnitChoices onCreate={onCreate} /> : null}
       {match.status === 'conflict' && match.conflict ? <p>{s.conflictText(match.conflict.file, match.conflict.existing)}</p> : null}
       {match.status !== 'conflict' ? <Options match={match} onUseExisting={onUseExisting} onCreate={onCreate} /> : null}
       {match.status === 'conflict' && match.match ? (
         <>
           <Button variant="secondary" onClick={() => onUseExisting(match.match!.id)}>
-            {s.useExisting(match.match.name)}
+            {s.useExisting(displayName(match.match.name))}
           </Button>
           <NewName onCreate={onCreate} />
         </>
@@ -86,7 +87,7 @@ function Options({ match, onUseExisting, onCreate }: IngredientMatchTileProps): 
           selected={match.effective?.action === 'use' && match.effective.ingredientId === o.id}
           onClick={() => onUseExisting(o.id!)}
         >
-          {s.useExisting(o.label)}
+          {s.useExisting(displayName(o.label))}
         </Chip>
       ))}
       {match.status === 'undefined' ? null : (

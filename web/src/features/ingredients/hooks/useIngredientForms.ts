@@ -49,26 +49,27 @@ export function useConversionForm(base: BaseUnit, existingUnits: readonly string
 }
 
 export interface ShelfLifeForm {
-  text: string
-  setText: (v: string) => void
+  /** Whole days, or null while blank (no Shelf Life). */
+  value: number | null
+  setValue: (v: number | null) => void
   error: string | null
-  /** parseShelfLife; invalid -> error, otherwise onSave(days|null). */
+  /** Out of range -> error, otherwise onSave(days|null). */
   submit: () => void
   clear: () => void
 }
 
 export function useShelfLifeForm(days: number | null, onSave: (days: number | null) => void): ShelfLifeForm {
-  const [text, setTextValue] = useState(days === null ? '' : String(days))
+  const [value, setValueState] = useState<number | null>(days)
   const [error, setError] = useState<string | null>(null)
 
   // Follow the saved value when it changes from outside (after a save, or another edit).
   useEffect(() => {
-    setTextValue(days === null ? '' : String(days))
+    setValueState(days)
     setError(null)
   }, [days])
 
   const submit = () => {
-    const parsed = parseShelfLife(text)
+    const parsed = value === null ? null : Number.isInteger(value) ? parseShelfLife(String(value)) : undefined
     if (parsed === undefined) {
       setError(strings.errors.daysInvalid)
       return
@@ -79,14 +80,14 @@ export function useShelfLifeForm(days: number | null, onSave: (days: number | nu
 
   const clear = () => {
     setError(null)
-    setTextValue('')
+    setValueState(null)
     onSave(null)
   }
 
   return {
-    text,
-    setText: (v) => {
-      setTextValue(v)
+    value,
+    setValue: (v) => {
+      setValueState(v === null ? null : Math.round(v))
       setError(null)
     },
     error,

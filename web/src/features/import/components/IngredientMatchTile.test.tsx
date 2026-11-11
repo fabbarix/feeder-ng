@@ -11,7 +11,7 @@ describe('IngredientMatchTile', () => {
   it('says an exact match uses the existing Ingredient', () => {
     render(<IngredientMatchTile match={match({ key: 'onion', name: 'onion', status: 'exact', match: { id: 7, name: 'Onion', baseUnit: 'piece' } })} {...handlers()} />)
     expect(screen.getByText(s.statusExact)).toBeInTheDocument()
-    expect(screen.getByText(/Onion/)).toBeInTheDocument()
+    expect(screen.getAllByText('Onion')).toHaveLength(2)
   })
   it('offers each suggestion and create for a similar name', async () => {
     const h = handlers()
@@ -22,7 +22,7 @@ describe('IngredientMatchTile', () => {
     render(<IngredientMatchTile match={m} {...h} />)
     expect(screen.getByText(s.statusSuggested)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: s.createNew })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(screen.getByRole('button', { name: s.useExisting('chicken thigh') }))
+    await userEvent.click(screen.getByRole('button', { name: s.useExisting('Chicken thigh') }))
     expect(h.onUseExisting).toHaveBeenCalledWith(3)
   })
   it('asks for a Base Unit when the file does not define the Ingredient', async () => {
@@ -40,7 +40,7 @@ describe('IngredientMatchTile', () => {
     })
     render(<IngredientMatchTile match={m} {...h} />)
     expect(screen.getByText(s.conflictText('piece', 'g'))).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: s.useExisting('onion') }))
+    await userEvent.click(screen.getByRole('button', { name: s.useExisting('Onion') }))
     expect(h.onUseExisting).toHaveBeenCalledWith(5)
 
     const create = screen.getByRole('button', { name: s.createUnder })

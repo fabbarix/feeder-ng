@@ -1,3 +1,5 @@
+import { EmptyState } from '../../../ui/EmptyState'
+import { PageHeader } from '../../../ui/PageHeader'
 import { ListGroup, ListRow } from '../../../ui/ListRow'
 import { scanStrings } from '../strings'
 
@@ -22,9 +24,8 @@ export function ShopPicker({ shops, lastShopId, onPick, onStockTake }: ShopPicke
   const ordered = last ? [last, ...others] : others
   return (
     <section className="shop-picker">
-      <h1 className="shop-picker__title">{scanStrings.pickShop}</h1>
-      <p className="shop-picker__hint">{scanStrings.pickShopHint}</p>
-      {shops.length === 0 ? <p className="shop-picker__empty">No Shops yet. Your Admin adds Shops in Settings.</p> : null}
+      <PageHeader title={scanStrings.pickShop} subtitle={scanStrings.pickShopHint} />
+      {shops.length === 0 ? <EmptyState icon="shops" title={scanStrings.noShops} description={scanStrings.noShopsHint} /> : null}
       <ListGroup label={scanStrings.shopsList}>
         {ordered.map((shop) => {
           const isLast = shop.id === last?.id
