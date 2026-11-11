@@ -52,9 +52,10 @@ Feature: A Slot Rule reserves its Recipe
     And the plan slot on 2026-11-12 does not have the Recipe "pizza"
 
   Scenario: Swap does not offer the reserved Recipe on an earlier day
-    Two more Recipes leave real alternatives on Tuesday. Pizza stays out of them. Once Friday
-    holds pizza its Cool-down already keeps it out, so this scenario is an end-to-end guard only;
-    the reservation itself is pinned by TestSwapRespectsReservations (Friday still empty).
+    Two more Recipes leave more than three alternatives on Tuesday, so Swap offers three. Pizza
+    stays out of them, strict or relaxed (crs-b design note, section 4). Once Friday holds pizza
+    its Cool-down already keeps it out, so this scenario is an end-to-end guard only; the
+    reservation itself is pinned by TestSwapRespectsReservations (Friday still empty).
 
     Given the planning Recipes:
       | name    | yield | tags | needs         |
@@ -66,16 +67,17 @@ Feature: A Slot Rule reserves its Recipe
     And the planner has finished
     When I ask for alternatives for the slot on 2026-11-10
     Then the response status is 200
-    And there are 2 alternatives
+    And there are 3 alternatives
     And no alternative is the Recipe "pizza"
 
-  Scenario: Pinned always wins: pizza pinned on Tuesday leaves Friday unplanned
+  Scenario: Pinned always wins: pizza pinned on Tuesday gives Friday a relaxed pick of pizza
     Given I pin the plan slot on 2026-11-10 as "pizza"
     When I add a Slot Rule for the Dinner on Friday with the Recipe "pizza"
     And the planner has finished
     And I view the plan
     Then the plan slot on 2026-11-10 has the Recipe "pizza"
     And the plan slot on 2026-11-10 is pinned
-    And the plan slot on 2026-11-13 could not be planned because "no_candidates"
+    And the plan slot on 2026-11-13 has the Recipe "pizza"
+    And the plan slot on 2026-11-13 has the why chip "cooldown_relaxed"
     And the plan slot on 2026-11-09 has a Planned Meal
     And the plan slot on 2026-11-11 has a Planned Meal

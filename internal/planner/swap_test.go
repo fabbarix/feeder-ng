@@ -25,6 +25,7 @@ func recipeIDs(ps []Placement) []RecipeID {
 	return out
 }
 
+// An alternative with nothing to say has no chips (best_available is gone).
 func TestSwapTopThree(t *testing.T) {
 	in := swapInput()
 	got, err := Swap(in, key(0))
@@ -38,7 +39,7 @@ func TestSwapTopThree(t *testing.T) {
 	wantScores := []float64{3, 3, 0}
 	for i, p := range got {
 		wantScore(t, p, wantScores[i])
-		if p.Source != SourceRecipe || p.Batches != 1 || p.Key != key(0) || len(p.Why) < 1 || len(p.Why) > 3 {
+		if p.Source != SourceRecipe || p.Batches != 1 || p.Key != key(0) || len(p.Why) > 3 {
 			t.Errorf("alternative %d malformed: %+v", i, p)
 		}
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
-func TestPlanFillsThePlanningHorizonWithDistinctRecipesAndWhyChips(t *testing.T) {
+func TestPlanFillsThePlanningHorizonWithDistinctRecipesAndAtMostThreeWhyChips(t *testing.T) {
 	e := newEnv(t)
 	// Drop the 4-portion chicken Recipe: its second Batch could legitimately serve Tuesday as a Leftover.
 	// The simple Recipes yield exactly the 2 portions a meal needs, so every meal is cooked fresh.
@@ -35,8 +35,8 @@ func TestPlanFillsThePlanningHorizonWithDistinctRecipesAndWhyChips(t *testing.T)
 		if m.State != plan.StatePlanned || m.Pinned || m.Batches != 1 || m.Portions != 2 || !m.Fresh() {
 			t.Errorf("meal on the %dth = %+v; want planned, unpinned, 1 Batch for 2 portions", day, m)
 		}
-		if len(m.Why) < 1 || len(m.Why) > 3 {
-			t.Errorf("meal on the %dth has %d why chips, want 1 to 3", day, len(m.Why))
+		if len(m.Why) > 3 { // a meal with nothing to say has no chips: best_available is gone (ADR 0009)
+			t.Errorf("meal on the %dth has %d why chips, want at most 3", day, len(m.Why))
 		}
 		if seen[m.RecipeID] {
 			t.Errorf("Recipe %d planned twice within its Cool-down", m.RecipeID)
@@ -153,16 +153,43 @@ func TestPlanRecordsWhyASlotCouldNotBePlanned(t *testing.T) {
 	}
 }
 
-func TestPlanExplainsEliminationsWhenEveryOptionIsInCoolDown(t *testing.T) {
+// ADR 0009: Cool-down gives way when too few Recipes fit, so a single Recipe fills every day with "Again soon" chips.
+func TestPlanRelaxesCoolDownWhenEveryOptionIsInCoolDown(t *testing.T) {
 	e := newEnv(t)
 	e.src.recipes = e.src.recipes[:1] // a single Recipe: Tuesday and Wednesday are in its Cool-down
 	e.mustPlan()
-	un, _ := e.st.Unfilled(ctx, "", "")
-	if len(un) != 2 {
-		t.Fatalf("Unfilled = %+v, want Tuesday and Wednesday", un)
+	if un, _ := e.st.Unfilled(ctx, "", ""); len(un) != 0 {
+		t.Fatalf("Unfilled = %+v; Cool-down is never a reason for Couldn't plan", un)
 	}
-	if un[0].Reason != "no_candidates" || un[0].Eliminated.Considered != 1 || un[0].Eliminated.CoolDown != 1 {
-		t.Errorf("Tuesday's reason = %+v, want no_candidates with the one Recipe eliminated by Cool-down", un[0])
+	for _, day := range []int{10, 11} {
+		m := e.meal(day)
+		if m.RecipeID != int64(e.src.recipes[0].ID) {
+			t.Errorf("meal on the %dth = Recipe %d, want the only Recipe", day, m.RecipeID)
+		}
+		found := false
+		for _, w := range m.Why {
+			if w.Code == "cooldown_relaxed" {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("meal on the %dth has chips %+v, want a cooldown_relaxed (\"Again soon\") chip", day, m.Why)
+		}
+	}
+}
+
+func TestPlanStillCouldntPlanWhenEveryOptionIsExcluded(t *testing.T) {
+	e := newEnv(t)
+	for i := range e.src.recipes {
+		e.src.recipes[i].Archived = true
+	}
+	e.mustPlan()
+	un, _ := e.st.Unfilled(ctx, "", "")
+	if len(un) != 3 {
+		t.Fatalf("Unfilled = %+v, want all three days", un)
+	}
+	if un[0].Reason != "no_candidates" {
+		t.Errorf("reason = %+v, want no_candidates", un[0])
 	}
 }
 

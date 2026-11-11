@@ -56,13 +56,22 @@ Feature: When the planner runs
     And the plan JSON "slots.0.date" is "2026-11-10"
     And the plan JSON "slots.0.unfilled.reason" is "no_attendance"
 
-  Scenario: Every option excluded or in Cool-down is reported with counts
-    Given every planning Recipe except "pasta" is archived
+  Scenario: Every option excluded is reported with counts
+    Given every planning Recipe is archived
     And the planner has finished
     When I regenerate the plan
     And I view the plan
     Then the plan slot on 2026-11-10 could not be planned because "no_candidates"
-    And the plan JSON "slots.1.unfilled.eliminated.coolDown" is "1"
+
+  Scenario: Every option in Cool-down gives a relaxed pick with an Again soon chip, not Couldn't plan
+    Given every planning Recipe except "pasta" is archived
+    And the planner has finished
+    When I regenerate the plan
+    And I view the plan
+    Then the plan slot on 2026-11-10 has the Recipe "pasta"
+    And the plan slot on 2026-11-10 has the why chip "cooldown_relaxed"
+    And the plan slot on 2026-11-11 has the Recipe "pasta"
+    And the plan slot on 2026-11-11 has the why chip "cooldown_relaxed"
 
   Scenario: Unpinning a meal runs the planner and leaves the meal in place while it is valid
     Given I pin the plan slot on 2026-11-10 as "curry"
