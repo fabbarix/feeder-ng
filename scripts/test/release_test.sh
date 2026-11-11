@@ -22,16 +22,29 @@ if [ ! -f "$C" ]; then bad "CHANGELOG.md is missing at the repository root"; els
   done
   grep -Eq '^### (Added|Changed)' "$C" && ok || bad "CHANGELOG.md needs Added/Changed subsections"
   grep -Eqi 'upgrad' "$C" && grep -q '1.0.0-dev' "$C" && ok || bad "CHANGELOG.md must carry the upgrade note from 1.0.0-dev"
-  # GLOSSARY: no word the glossary says to avoid may appear in the user-facing changelog.
+  grep -Eq '^### Fixed$' "$C" && ok || bad "CHANGELOG.md needs the standard '### Fixed' heading"
+  grep -Fq -- '--reset-then-reuse-values' "$C" && ok || bad "CHANGELOG.md upgrade step must name --reset-then-reuse-values"
+  grep -Eqi "any User[^.]*approve[^.]*deny" "$C" && ok || bad "CHANGELOG.md must say any User may approve or deny an Access Request"
+  grep -Eq 'Member has a Photo' "$C" && grep -Eq 'Ingredient has a Picture' "$C" && ok || bad "CHANGELOG.md must say a Member has a Photo and an Ingredient has a Picture"
+  # GLOSSARY: no word the glossary says to avoid may appear in the user-facing prose of the changelog. Before matching, strip
+  # fenced and inline code, link targets, the standard Keep a Changelog headings, and any avoided word that is itself a
+  # GLOSSARY headword (e.g. Member is avoided for User but is a term of its own).
   python3 - "$ROOT/GLOSSARY.md" "$C" <<'PY' && ok || bad "CHANGELOG.md uses a term listed under _Avoid_ in GLOSSARY.md"
 import re, sys
-g = open(sys.argv[1]).read(); c = open(sys.argv[2]).read().lower()
+g = open(sys.argv[1]).read(); c = open(sys.argv[2]).read()
+heads = {h.strip().lower() for h in re.findall(r"\*\*([^*\n]+)\*\*", g)}
 avoid = set()
 for m in re.finditer(r"_Avoid_\**:?\s*(.+)", g):
     for w in re.split(r"[,;]", m.group(1)):
         w = re.sub(r"[_*`.]", "", w).strip().lower()
-        if len(w) >= 5 and " " not in w: avoid.add(w)
-hits = [w for w in avoid if re.search(r"\b" + re.escape(w) + r"\b", c)]
+        if len(w) >= 5 and " " not in w and w not in heads: avoid.add(w)
+c = re.sub(r"```.*?```", " ", c, flags=re.S)
+c = re.sub(r"`[^`\n]*`", " ", c)
+c = re.sub(r"\]\([^)\n]*\)", "]", c)
+c = re.sub(r"^\[[^\]\n]+\]:\s*\S+.*$", " ", c, flags=re.M)
+c = re.sub(r"^#{1,6}\s*(Added|Changed|Deprecated|Removed|Fixed|Security)\s*$", " ", c, flags=re.M | re.I)
+c = c.lower()
+hits = sorted(w for w in avoid if re.search(r"\b" + re.escape(w) + r"\b", c))
 if hits: print("avoid terms in changelog:", hits)
 sys.exit(1 if hits else 0)
 PY

@@ -307,14 +307,41 @@ for t in 'secretKey\.generate' 'secretKey\.existingSecret' 'secretKey\.key' 'hel
 done
 grep -Eqi 're-?enter[^.]*API key' "$RD" && ok || bad "chart README must say losing or changing the key means re-entering the API key"
 grep -Eqi 'no [^.]*previous|_PREVIOUS' "$RD" && ok || bad "chart README must say there is no previous-key setting for rotation"
+grep -Eqi 'secretKey\.key[^.]*(new|generat)[^.]*key|(new|generat)[^.]*key[^.]*secretKey\.key' "$RD" && ok || bad "chart README must say changing secretKey.key on an existing install generates a new key"
+grep -Eq 'client `--dry-run`' "$RD" && ok || bad "chart README must say client --dry-run (a server-side dry run can lookup)"
+grep -Eq 'the template refuses' "$RD" && ok || bad "chart README must say the template (not the schema) refuses env.FEEDER_SECRET_KEY and a plain extraEnv entry"
+grep -Eq 'randBytes' "$CHART/templates/secret-key.yaml" && ! grep -Eq '^[[:space:]]*# randBytes' "$CHART/templates/secret-key.yaml" && ok || bad "the randBytes comment must be a template comment, not a YAML comment"
 grep -Eq 'rollout restart' "$RD" && ok || bad "chart README must show rollout restart for rotation"
 grep -Eq '`secretKey\.(generate|existingSecret|key)`' "$RD" && ok || bad "chart README values table must list the secretKey.* keys"
 grep -Eq '50m' "$RD" && ok || bad "chart README must say proxy-body-size is 50m for photo reads"
 grep -qi 'secret' "$NT" && grep -Eqi 'existingSecret|Argo|helm template' "$NT" && ok || bad "NOTES.txt must say where the secret key comes from and repeat the GitOps caveat"
-# NOTES must never print the key
-helm install feeder "$CHART" "${BASE[@]}" --dry-run=client >"$OUT/notes.txt" 2>&1
-KEYV="$(sed -n 's/.*secret-key: "\(.*\)"/\1/p' "$OUT/notes.txt" | head -1)"
-if [ -n "$KEYV" ] && sed -n '/^NOTES:/,$p' "$OUT/notes.txt" | grep -qF "$KEYV"; then bad "NOTES.txt must never print the secret key"; else ok; fi
+# NOTES must never print the key. `helm install --dry-run=client` would need a cluster, so render NOTES.txt offline: a temporary
+# chart copy gets a template that runs `tpl` over a copy of NOTES.txt and puts the text in a ConfigMap, next to the real Secret.
+NCH="$OUT/notes-chart"
+cp -r "$CHART" "$NCH" && cp "$CHART/templates/NOTES.txt" "$NCH/notes-src.txt"
+cat >"$NCH/templates/zz-notes-render.yaml" <<'TPL'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-render
+data:
+  notes: {{ tpl (.Files.Get "notes-src.txt") . | quote }}
+TPL
+if helm template feeder "$NCH" "${BASE[@]}" >"$OUT/notes-render.yaml" 2>"$OUT/notes-render.err"; then ok; else bad "NOTES offline render failed: $(head -c 300 "$OUT/notes-render.err")"; : >"$OUT/notes-render.yaml"; fi
+OUTFILE="$OUT/notes-render.yaml" python3 - <<'PY' && ok || bad "NOTES.txt must render and must never print the secret key (an empty key or empty NOTES counts as a failure)"
+import os, sys, yaml
+docs = [d for d in yaml.safe_load_all(open(os.environ["OUTFILE"])) if d]
+sec = [d for d in docs if d.get("kind") == "Secret" and d["metadata"]["name"] == "feeder-secret-key"]
+cm = [d for d in docs if d.get("kind") == "ConfigMap" and d["metadata"]["name"] == "notes-render"]
+if not sec or not cm: sys.exit(1)
+key = sec[0].get("stringData", {}).get("secret-key", "")
+notes = cm[0]["data"]["notes"]
+if not key or len(key) < 32 or not notes.strip() or "Recipe Assistant" not in notes: sys.exit(1)
+sys.exit(1 if key in notes else 0)
+PY
+# An extraEnv FEEDER_SECRET_KEY with valueFrom replaces the generated env entry (one entry only) and the chart then makes no Secret.
+render sk-extra-from --set 'extraEnv[0].name=FEEDER_SECRET_KEY' --set 'extraEnv[0].valueFrom.secretKeyRef.name=ext-key' --set 'extraEnv[0].valueFrom.secretKeyRef.key=k'
+qq sk-extra-from '(lambda es: len(es) == 1 and es[0]["valueFrom"]["secretKeyRef"] == {"name": "ext-key", "key": "k"})([e for e in c["env"] if e["name"] == "FEEDER_SECRET_KEY"]) and not [s for s in kind("Secret") if s["metadata"]["name"].endswith("-secret-key")]' "an extraEnv FEEDER_SECRET_KEY valueFrom must be the only FEEDER_SECRET_KEY entry, with no generated Secret"
 # deploy.md env, docker and k8s sections (see also scripts/test/release_test.sh)
 for t in 'FEEDER_SECRET_KEY' 'secretKey\.generate' 'secretKey\.existingSecret' 'resource-policy' 'lookup' 'rollout restart' 'client_max_body_size' '50m'; do
   grep -Eq -- "$t" "$DEPLOY_MD" && ok || bad "deploy.md must mention $t"

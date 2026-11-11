@@ -46,8 +46,20 @@ expect golang.org/x/sync 'BSD-3-Clause'
 expect go.yaml.in/yaml/v4 'MIT.*Apache-2\.0|Apache-2\.0.*MIT'
 # go.yaml.in/yaml/v4 ships a NOTICE file (Apache-2.0): its text must be reproduced.
 grep -Eq 'NOTICE' "$N" && ok || bad "the notices file must reproduce the go.yaml.in/yaml/v4 NOTICE text (Apache-2.0 section 4(d))"
-# MPL-2.0 (hashicorp) is a file-level copyleft: the source link must be stated.
-grep -Eq 'github\.com/hashicorp/go-memdb' "$N" && grep -Eqi 'MPL-2\.0' "$N" && grep -Eqi 'source (code )?(is )?(available|at)|https://github\.com/hashicorp' "$N" && ok || bad "MPL-2.0 modules (hashicorp) need a pointer to their source"
+# The Go standard library and runtime are compiled into the binary: BSD-3-Clause, with the Go version from go.mod.
+GOV="$(awk '/^go /{print $2; exit}' "$ROOT/go.mod")"
+row="$(row_of 'Go standard library and runtime')"
+printf '%s' "$row" | grep -q 'BSD-3-Clause' && printf '%s' "$row" | grep -qF -- "go$GOV" && ok || bad "the notices need a 'Go standard library and runtime' row, BSD-3-Clause, go$GOV (row: '${row:-missing}')"
+# Modules that `go list -deps ./cmd/...` does not link live in the build-and-test table, not the shipped one.
+for m in cloud.google.com/go/compute/metadata github.com/hashicorp/go-immutable-radix github.com/hashicorp/go-memdb github.com/hashicorp/golang-lru github.com/mattn/go-isatty github.com/ncruces/go-strftime; do
+  line="$(grep -nF -- "| $m " "$N" | head -1)"; ln="${line%%:*}"
+  hdr="$(grep -n '^### Go modules for build and test only' "$N" | head -1 | cut -d: -f1)"
+  if [ -n "$ln" ] && [ -n "$hdr" ] && [ "$ln" -gt "$hdr" ] && sed -n "${ln}p" "$N" | grep -q 'Build and test only'; then ok; else bad "$m is not linked into ./cmd/... and belongs in the build and test only table"; fi
+done
+# MPL-2.0 modules (hashicorp) stay unmodified; their rows carry the source link.
+for m in go-immutable-radix go-memdb golang-lru; do
+  grep -F -- "| github.com/hashicorp/$m " "$N" | grep -q "https://github.com/hashicorp/$m" && ok || bad "the MPL-2.0 row for hashicorp/$m needs its source link"
+done
 
 # 3. production npm dependencies (web/package.json "dependencies"; dev dependencies are not shipped).
 while read -r pkg; do
