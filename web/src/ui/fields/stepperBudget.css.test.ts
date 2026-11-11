@@ -55,3 +55,20 @@ describe('compact stepper width budget', () => {
     expect(remaining('var(--field-size-sm-stepper)', 'people')).toBeGreaterThanOrEqual(minValue)
   })
 })
+
+describe('xs stepper with a unit stays inside its frame (R2-F send-back)', () => {
+  const unitRule = declarations(field, ".ui-field--stepper[data-size='xs']:has(.ui-field__suffix)")
+
+  it('a dedicated unit-aware xs frame token exists and is wider than the plain one', () => {
+    expect(tokens['--field-size-xs-stepper-unit']).toBeDefined()
+    expect(px('var(--field-size-xs-stepper-unit)')).toBeGreaterThan(px('var(--field-size-xs-stepper)'))
+  })
+
+  it('the xs stepper frame switches to that token when a unit is present', () => {
+    expect(unitRule['max-inline-size']).toBe('var(--field-size-xs-stepper-unit)')
+  })
+
+  it.each(['min', 'days', 'g'])('the reserved 3ch value plus the unit "%s" fits inside the frame (no overflow)', (unit) => {
+    expect(remaining('var(--field-size-xs-stepper-unit)', unit)).toBeGreaterThanOrEqual(minValue)
+  })
+})
