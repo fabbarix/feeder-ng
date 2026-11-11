@@ -289,3 +289,131 @@ button.nobody-pill:focus-visible {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* CRS D2: Settings > Courses, the Courses fields of the Meal Slot editor and the Date Attendance sheet. Tokens only. */
+.courses-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.course-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface-2);
+}
+.course-row--archived {
+  color: var(--color-muted);
+}
+.course-row__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+.course-row__title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.course-row__name {
+  font-weight: var(--text-label-weight);
+}
+.course-row__meta {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.course-row__rename-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.course-eaters {
+  display: grid;
+  gap: var(--space-1);
+}
+.course-eaters__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.course-eaters__pill {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-pill);
+}
+.course-eaters__pill[aria-pressed="false"] {
+  opacity: 0.45;
+}
+.course-eaters__pill:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.course-eaters__summary {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.courses-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.courses-archived {
+  display: grid;
+  gap: var(--space-2);
+}
+.courses-list--archived {
+  opacity: 0.85;
+}
+.slot-courses__eaters {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}
+.slot-courses__label {
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  color: var(--color-muted);
+}
+.date-courses {
+  display: grid;
+  gap: var(--space-3);
+}
+.date-courses__course {
+  display: grid;
+  gap: var(--space-2);
+}
+.course-remove__heading {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+}
+.course-remove__list {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+.course-remove__pinned {
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+.meal-slot__courses {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.meal-slot-summary__pinned {
+  font-weight: var(--text-label-weight);
+}

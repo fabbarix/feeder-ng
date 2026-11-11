@@ -1,9 +1,5 @@
-// The Courses section of the Date Attendance sheet: per Course opt-outs for one date. Plain TypeScript, no React. STUB (CRS D2 design step).
+// The Courses section of the Date Attendance sheet: per Course opt-outs for one date. Plain TypeScript, no React.
 import type { AttendanceEntry, DateCourse, DateCourseChange } from '../types'
-
-const nope = (): never => {
-  throw new Error('not implemented')
-}
 
 export interface DateCourseDraft {
   courseId: number
@@ -13,35 +9,59 @@ export interface DateCourseDraft {
   isOverride: boolean
 }
 
+const sameIds = (a: readonly number[], b: readonly number[]) => {
+  const x = [...a].sort((p, q) => p - q)
+  const y = [...b].sort((p, q) => p - q)
+  return x.length === y.length && x.every((v, i) => v === y[i])
+}
+
 /** The draft the sheet starts from: one entry per Course of the date, in the slot's order. */
-export function dateCourseDrafts(_courses: readonly DateCourse[]): DateCourseDraft[] {
-  return nope()
+export function dateCourseDrafts(courses: readonly DateCourse[]): DateCourseDraft[] {
+  return courses.map((c) => ({ courseId: c.courseId, name: c.name, optOutMemberIds: [...c.optOutMemberIds], isOverride: c.isOverride }))
 }
 
 /** A pill changed: the Course now has its own opt-outs for the date (`isOverride` true). Others untouched. */
-export function withDateEater(_drafts: readonly DateCourseDraft[], _courseId: number, _memberId: number, _eats: boolean): DateCourseDraft[] {
-  return nope()
+export function withDateEater(drafts: readonly DateCourseDraft[], courseId: number, memberId: number, eats: boolean): DateCourseDraft[] {
+  return drafts.map((d) => {
+    if (d.courseId !== courseId) return { ...d, optOutMemberIds: [...d.optOutMemberIds] }
+    const others = d.optOutMemberIds.filter((id) => id !== memberId)
+    const optOutMemberIds = eats ? others : d.optOutMemberIds.includes(memberId) ? [...d.optOutMemberIds] : [...others, memberId]
+    return { ...d, optOutMemberIds, isOverride: true }
+  })
 }
 
 /** "Reset to usual" on a Course: its opt-outs go back to `usual` and `isOverride` is false. */
-export function resetDateCourse(_drafts: readonly DateCourseDraft[], _courseId: number, _usual: readonly number[]): DateCourseDraft[] {
-  return nope()
+export function resetDateCourse(drafts: readonly DateCourseDraft[], courseId: number, usual: readonly number[]): DateCourseDraft[] {
+  return drafts.map((d) => (d.courseId === courseId ? { ...d, optOutMemberIds: [...usual], isOverride: false } : { ...d, optOutMemberIds: [...d.optOutMemberIds] }))
 }
 
 /**
  * What to send: per Course whose state changed since `served`, a list (it now has its own opt-outs: a different list, or newly
  * an override) or null (it was an override and is reset). A Course not changed is not named.
  */
-export function dateCourseChanges(_served: readonly DateCourse[], _drafts: readonly DateCourseDraft[]): DateCourseChange[] {
-  return nope()
+export function dateCourseChanges(served: readonly DateCourse[], drafts: readonly DateCourseDraft[]): DateCourseChange[] {
+  const out: DateCourseChange[] = []
+  for (const draft of drafts) {
+    const was = served.find((c) => c.courseId === draft.courseId)
+    if (!was) continue
+    if (!draft.isOverride) {
+      if (was.isOverride) out.push({ courseId: draft.courseId, optOutMemberIds: null })
+    } else if (!sameIds(draft.optOutMemberIds, was.optOutMemberIds)) {
+      out.push({ courseId: draft.courseId, optOutMemberIds: [...draft.optOutMemberIds] })
+    }
+  }
+  return out
 }
 
+const sig = (att: readonly AttendanceEntry[]) => att.map((a) => `${a.memberId}:${a.portionFactorOverride ?? ''}`).sort().join('|')
+
 /** True when two Attendance lists name the same Members with the same overrides (order ignored). */
-export function sameAttendance(_a: readonly AttendanceEntry[], _b: readonly AttendanceEntry[]): boolean {
-  return nope()
+export function sameAttendance(a: readonly AttendanceEntry[], b: readonly AttendanceEntry[]): boolean {
+  return sig(a) === sig(b)
 }
 
 /** Whether anything is overridden for the date: the Attendance or any Course (enables "Reset to usual Attendance"). */
-export function hasDateOverride(_attendance: { isOverride: boolean; courses?: readonly { isOverride: boolean }[] } | undefined): boolean {
-  return nope()
+export function hasDateOverride(attendance: { isOverride: boolean; courses?: readonly { isOverride: boolean }[] } | undefined): boolean {
+  if (!attendance) return false
+  return attendance.isOverride || (attendance.courses ?? []).some((c) => c.isOverride)
 }

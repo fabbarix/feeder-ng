@@ -11,10 +11,19 @@ const MESSAGES: Record<string, string> = {
   network: 'Check your connection and try again.',
 }
 
+/** CRS D2: the Courses refusals of a Meal Slot save, by `reason`, whatever the server wording. */
+const COURSE_REASONS: Record<string, string> = {
+  courses_all_optional: 'Keep at least one Course that is not optional',
+  courses_empty: 'Choose at least one Course',
+  course_unknown: 'One of the Courses is no longer in the list.',
+}
+
 /** A short, human message for an API failure (codes: last_admin, email_taken, user_already_linked,
  *  duplicate_slot, weekday_mismatch, unknown_member, validation_failed, forbidden, network). */
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiError) {
+    const reason = err.details.reason
+    if (err.code === 'validation_failed' && typeof reason === 'string' && Object.hasOwn(COURSE_REASONS, reason)) return COURSE_REASONS[reason]!
     if (err.code === 'validation_failed' || err.code === 'user_already_linked') return err.message
     const known = MESSAGES[err.code]
     if (known) return known

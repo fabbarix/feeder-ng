@@ -1,4 +1,9 @@
-// The Courses query and its writes (react-query). STUB (CRS D2 design step). Not exported from the pure barrel index.ts.
+// The Courses query and its writes (react-query). Not exported from the pure barrel index.ts.
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { settingsKeys } from '../../features/settings/hooks/queryKeys'
+import { coursesApi } from './api'
+import { courseKeys } from './queryKeys'
+import { activeCourses, mainCourse } from './order'
 import type { Course, CourseChoice, CourseImpact } from './types'
 
 export interface UseCoursesOptions {
@@ -30,6 +35,56 @@ export interface CoursesState {
   saving: boolean
 }
 
-export function useCourses(_options: UseCoursesOptions = {}): CoursesState {
-  throw new Error('not implemented')
+const NO_COURSES: Course[] = []
+
+export function useCourses({ includeArchived = false }: UseCoursesOptions = {}): CoursesState {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: courseKeys.list(includeArchived),
+    queryFn: () => coursesApi.list(includeArchived),
+  })
+  const refreshCourses = () => queryClient.invalidateQueries({ queryKey: courseKeys.all })
+  const refreshAll = () =>
+    Promise.all([refreshCourses(), queryClient.invalidateQueries({ queryKey: settingsKeys.slots })])
+
+  const add = useMutation({ mutationFn: (name: string) => coursesApi.create(name), onSuccess: refreshCourses })
+  const rename = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) => coursesApi.update(id, { name }),
+    onSuccess: refreshCourses,
+  })
+  const makeMain = useMutation({
+    mutationFn: (id: number) => coursesApi.update(id, { main: true }),
+    onSuccess: refreshCourses,
+  })
+  const reorder = useMutation({ mutationFn: (ids: number[]) => coursesApi.reorder(ids), onSuccess: refreshCourses })
+  const remove = useMutation({
+    mutationFn: ({ id, replacement }: { id: number; replacement?: number }) => coursesApi.remove(id, replacement),
+    onSuccess: refreshAll,
+  })
+  const archive = useMutation({
+    mutationFn: ({ id, replacementId }: { id: number; replacementId?: number }) => coursesApi.archive(id, replacementId),
+    onSuccess: refreshAll,
+  })
+  const unarchive = useMutation({ mutationFn: (id: number) => coursesApi.unarchive(id), onSuccess: refreshCourses })
+
+  const courses = query.data ?? NO_COURSES
+  const active = activeCourses(courses)
+  return {
+    courses,
+    active,
+    archived: courses.filter((c) => c.archived),
+    choices: active.map(({ id, name, main }) => ({ id, name, main })),
+    main: mainCourse(active),
+    isPending: query.isPending,
+    isError: query.isError,
+    add: add.mutateAsync,
+    rename: (id, name) => rename.mutateAsync({ id, name }),
+    makeMain: (id) => makeMain.mutateAsync(id),
+    reorder: reorder.mutateAsync,
+    loadImpact: (id) => coursesApi.impact(id),
+    remove: (id, replacement) => remove.mutateAsync({ id, replacement }),
+    archive: (id, replacementId) => archive.mutateAsync({ id, replacementId }),
+    unarchive: unarchive.mutateAsync,
+    saving: add.isPending || rename.isPending || makeMain.isPending || reorder.isPending || remove.isPending || archive.isPending || unarchive.isPending,
+  }
 }

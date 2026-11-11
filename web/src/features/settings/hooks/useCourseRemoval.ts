@@ -1,7 +1,10 @@
-// The state of the Delete / Archive dialog of a Course. STUB (CRS D2 design step).
+// The state of the Delete / Archive dialog of a Course.
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import type { Course, CourseChoice, CourseImpact } from '../../../lib/courses'
+import { courseKeys } from '../../../lib/courses/queryKeys'
 import type { CoursesState } from '../../../lib/courses/useCourses'
-import type { RemovalMode } from '../lib/courseRemoval'
+import { defaultReplacement, isPlannedRefusal, needsReplacement as needsReplacementOf, removalErrorMessage, replacementChoices, type RemovalMode } from '../lib/courseRemoval'
 
 export interface CourseRemovalState {
   /** The Course the dialog is about; null while it is closed. */
@@ -25,6 +28,72 @@ export interface CourseRemovalState {
   confirm: () => Promise<void>
 }
 
-export function useCourseRemoval(_courses: CoursesState, _onDone?: (done: { mode: RemovalMode; course: Course }) => void): CourseRemovalState {
-  throw new Error('not implemented')
+export function useCourseRemoval(
+  courses: CoursesState,
+  onDone?: (done: { mode: RemovalMode; course: Course }) => void,
+): CourseRemovalState {
+  const [course, setCourse] = useState<Course | null>(null)
+  const [mode, setMode] = useState<RemovalMode>('delete')
+  const [replacementId, setReplacementId] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  const impactQuery = useQuery({
+    queryKey: courseKeys.impact(course?.id ?? 0),
+    queryFn: () => courses.loadImpact(course!.id),
+    enabled: course !== null,
+  })
+  const impact = course === null ? undefined : impactQuery.data
+  const choices = course === null ? [] : replacementChoices(courses.choices, course)
+  const needs = impact !== undefined && needsReplacementOf(impact)
+
+  const open = (next: Course) => {
+    setCourse(next)
+    setMode('delete')
+    setError(undefined)
+    setReplacementId(defaultReplacement(replacementChoices(courses.choices, next)))
+  }
+
+  const close = () => {
+    setCourse(null)
+    setMode('delete')
+    setError(undefined)
+    setReplacementId(null)
+  }
+
+  const confirm = async () => {
+    if (course === null || impact === undefined || busy) return
+    const replacement = needs && replacementId !== null ? replacementId : undefined
+    const current = mode
+    setBusy(true)
+    setError(undefined)
+    try {
+      if (current === 'delete') await courses.remove(course.id, replacement)
+      else await courses.archive(course.id, replacement)
+      close()
+      onDone?.({ mode: current, course })
+    } catch (err) {
+      if (current === 'delete' && isPlannedRefusal(err)) setMode('archive')
+      else setError(removalErrorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return {
+    course,
+    mode,
+    impact,
+    loading: course !== null && impactQuery.isLoading,
+    loadFailed: course !== null && impactQuery.isError,
+    choices,
+    replacementId,
+    setReplacementId,
+    needsReplacement: needs,
+    busy,
+    error,
+    open,
+    close,
+    confirm,
+  }
 }

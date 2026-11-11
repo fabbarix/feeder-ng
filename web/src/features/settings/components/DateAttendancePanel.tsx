@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { BottomSheet, Button, DateField } from '../../../ui'
 import { dateProblem } from '../lib/attendanceDate'
+import { dateCourseChanges, dateCourseDrafts, hasDateOverride, resetDateCourse, sameAttendance, withDateEater, type DateCourseDraft } from '../lib/dateCourses'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, DateAttendance, DateCourseChange, MealSlot, Member } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
+import { DateCoursesSection } from './DateCoursesSection'
 import '../settings.css'
 
 export interface DateAttendancePanelProps {
@@ -33,14 +35,30 @@ export function DateAttendancePanel(props: DateAttendancePanelProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={text.dateTitle(slot.name, date)}>
       {/* A new draft whenever the server's answer for the date changes. */}
-      <DateForm key={`${date}|${props.attendance ? props.attendance.isOverride : 'none'}`} {...props} />
+      <DateForm key={`${date}|${props.attendance ? props.attendance.isOverride : 'none'}|${(props.attendance?.courses ?? []).map((c) => (c.isOverride ? 1 : 0)).join('')}`} {...props} />
     </BottomSheet>
   )
 }
 
 function DateForm({ slot, date, attendance, members, saving, onChangeDate, onSave, onReset }: DateAttendancePanelProps) {
   const [draft, setDraft] = useState<AttendanceEntry[]>(() => attendance?.attendance ?? slot.attendance)
+  const served = attendance?.courses ?? []
+  // CRS D2: the Courses of the date; the section shows only when the slot serves more than one Course.
+  const [courseDrafts, setCourseDrafts] = useState<DateCourseDraft[]>(() => dateCourseDrafts(served))
+  const showCourses = served.length > 1
+  const attendees = members.filter((m) => draft.some((a) => a.memberId === m.id))
   const problem = dateProblem(slot.weekday, date)
+
+  const save = () => {
+    const changes = showCourses ? dateCourseChanges(served, courseDrafts) : []
+    if (changes.length === 0) return onSave(draft)
+    // Only the Courses changed: the date's Attendance is left as it is (undefined).
+    const attendanceChanged = !attendance || !sameAttendance(draft, attendance.attendance)
+    return onSave(attendanceChanged ? draft : undefined, changes)
+  }
+
+  const usualOptOuts = (courseId: number) => slot.courses?.find((c) => c.id === courseId)?.optOutMemberIds ?? []
+
   return (
     <div className="settings__stack">
       <DateField label={text.date} value={date} onChange={onChangeDate} />
@@ -51,11 +69,20 @@ function DateForm({ slot, date, attendance, members, saving, onChangeDate, onSav
       ) : null}
       <p className="settings__muted">{text.thisDateOnly}</p>
       <AttendanceEditor members={members} value={draft} onChange={setDraft} />
+      {showCourses ? (
+        <DateCoursesSection
+          drafts={courseDrafts}
+          members={attendees}
+          disabled={saving}
+          onToggle={(courseId, memberId, eats) => setCourseDrafts((d) => withDateEater(d, courseId, memberId, eats))}
+          onReset={(courseId) => setCourseDrafts((d) => resetDateCourse(d, courseId, usualOptOuts(courseId)))}
+        />
+      ) : null}
       <div className="settings__row">
-        <Button disabled={problem !== null} loading={saving} onClick={() => void onSave(draft)}>
+        <Button disabled={problem !== null} loading={saving} onClick={() => void save()}>
           {text.saveDate}
         </Button>
-        <Button variant="tertiary" disabled={!attendance?.isOverride || saving} onClick={() => void onReset()}>
+        <Button variant="tertiary" disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
           {text.resetDate}
         </Button>
       </div>

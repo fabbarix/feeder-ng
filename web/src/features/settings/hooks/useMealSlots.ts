@@ -38,9 +38,7 @@ export function useMealSlots(): MealSlotsState {
     update: (id, input) => update.mutateAsync({ id, input }),
     remove: remove.mutateAsync,
     batchUpdate: batch.mutateAsync,
-    preview: async () => {
-      throw new Error('not implemented')
-    },
+    preview: (request) => settingsApi.batchUpdateMealSlots(request),
     saving: create.isPending || update.isPending || remove.isPending || batch.isPending,
   }
 }

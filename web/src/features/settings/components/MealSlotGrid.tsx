@@ -5,6 +5,7 @@ import { weekGrid } from '../lib/weekGrid'
 import { settingsStrings } from '../strings'
 import type { MealSlot, Member } from '../types'
 import { AttendeePills } from './AttendeePills'
+import { SlotCourseLine } from './SlotCourseLine'
 import '../settings.css'
 
 export interface MealSlotGridProps {
@@ -55,6 +56,7 @@ export function MealSlotGrid({ slots, members, canEdit, addDisabled = false, wee
                           {slot.name} <span className="meal-chip__time">{slot.time}</span>
                         </span>
                       </Chip>
+                      <SlotCourseLine slot={slot} members={members} />
                       <AttendeePills slot={slot} members={members} onFix={onOpen} locale={locale} />
                     </div>
                   ) : canEdit ? (

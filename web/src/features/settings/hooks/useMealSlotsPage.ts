@@ -9,6 +9,7 @@ import { nextDateForWeekday, todayIso, weekdayName } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, DateCourseChange, MealSlot, MealSlotInput, SlotBatchRequest } from '../types'
 import { useAttendance } from './useAttendance'
+import { useCourses } from '../../../lib/courses/useCourses'
 import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
 import { useMealSlots } from './useMealSlots'
@@ -28,6 +29,7 @@ export function useMealSlotsPage() {
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const members = useMembers()
   const slots = useMealSlots()
+  const courses = useCourses()
   useSlotAnchor(slots.slots)
   const [editor, setEditor] = useState<SlotEditor | null>(null)
   const [dateEditor, setDateEditor] = useState<{ slot: MealSlot; date: string } | null>(null)
@@ -116,6 +118,9 @@ export function useMealSlotsPage() {
     isAdmin,
     members,
     slots,
+    /** CRS D2: the active Courses for the editor's field (empty until loaded). */
+    courses: courses.choices,
+    preview: slots.preview,
     editor,
     error,
     dateEditor,

@@ -1,16 +1,33 @@
 import type { CourseChoice } from '../../../lib/courses'
-import type { MealSlot, MealSlotInput, Member } from '../types'
+import type { MealSlot, MealSlotInput, Member, SlotCourseInput } from '../types'
+import { newSlotCourses, slotCourseInputs } from './slotCourses'
 
 /**
  * The editor's starting state: an existing Meal Slot, or a blank one on Monday that every Member attends (opt out in the editor).
  * CRS D2: given the household's `courses`, a blank slot starts with the main Course alone (required, nobody opting out) and an
  * existing one with its own Courses; without `courses` (and for a slot that carries none) the draft has no `courses` key.
  */
-export function slotDraft(slot?: MealSlot, members: Member[] = [], _courses?: readonly CourseChoice[]): MealSlotInput {
-  return slot
-    ? { weekday: slot.weekday, name: slot.name, time: slot.time, attendance: slot.attendance }
-    : { weekday: 1, name: '', time: '', attendance: members.map((m) => ({ memberId: m.id, portionFactorOverride: null })) }
+export function slotDraft(slot?: MealSlot, members: Member[] = [], courses?: readonly CourseChoice[]): MealSlotInput {
+  const withCourses = courses && courses.length > 0
+  if (slot) {
+    return {
+      weekday: slot.weekday,
+      name: slot.name,
+      time: slot.time,
+      attendance: slot.attendance,
+      ...(withCourses ? { courses: slotCourseInputs(slot) } : {}),
+    }
+  }
+  return {
+    weekday: 1,
+    name: '',
+    time: '',
+    attendance: members.map((m) => ({ memberId: m.id, portionFactorOverride: null })),
+    ...(withCourses ? { courses: newSlotCourses(courses) } : {}),
+  }
 }
+
+const copyCourse = (c: SlotCourseInput): SlotCourseInput => ({ ...c, optOutMemberIds: [...c.optOutMemberIds] })
 
 /** The first thing wrong with the draft, or null. */
 export function slotProblem(draft: MealSlotInput): string | null {
@@ -37,6 +54,7 @@ export function slotInputsForWeekdays(draft: MealSlotInput, weekdays: number[]):
     ...slotFromDraft(draft),
     weekday,
     attendance: draft.attendance.map((a) => ({ ...a })),
+    ...(draft.courses ? { courses: draft.courses.map(copyCourse) } : {}),
   }))
 }
 

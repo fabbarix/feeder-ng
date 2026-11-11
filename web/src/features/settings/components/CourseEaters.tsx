@@ -1,5 +1,6 @@
-// "Who eats it": the attending Members as toggle pills for one Course. STUB (CRS D2 design step).
-import type { ReactNode } from 'react'
+// "Who eats it": the attending Members as toggle pills for one Course. Rules: lib/slotCourses (the summary in words).
+import { MemberPill } from '../../../ui'
+import { eatersSummary } from '../lib/slotCourses'
 import type { Member } from '../types'
 
 export interface CourseEatersProps {
@@ -15,6 +16,33 @@ export interface CourseEatersProps {
   onChange: (memberId: number, eats: boolean) => void
 }
 
-export function CourseEaters(_props: CourseEatersProps): ReactNode {
-  return null
+const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name
+
+export function CourseEaters({ courseName, groupLabel, members, optOutMemberIds, disabled, onChange }: CourseEatersProps) {
+  const optOut = new Set(optOutMemberIds)
+  const outNames = members.filter((m) => optOut.has(m.id)).map((m) => m.name)
+  const summary = eatersSummary(courseName, outNames)
+  return (
+    <div className="course-eaters">
+      <div role="group" aria-label={groupLabel} className="course-eaters__pills">
+        {members.map((m) => {
+          const eats = !optOut.has(m.id)
+          return (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={eats}
+              aria-label={m.name}
+              disabled={disabled}
+              className="course-eaters__pill"
+              onClick={() => onChange(m.id, !eats)}
+            >
+              <MemberPill name={firstName(m.name)} colour={m.colour} glyph={m.avatar || undefined} photoUrl={m.photoUrl || undefined} />
+            </button>
+          )
+        })}
+      </div>
+      {summary ? <p className="course-eaters__summary">{summary}</p> : null}
+    </div>
+  )
 }

@@ -26,6 +26,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'household', id: 'household', ...copy.household, icon: 'household', path: '/settings/household' },
   { group: 'household', id: 'members', ...copy.members, icon: 'members', path: '/settings/members' },
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
+  { group: 'household', id: 'courses', ...copy.courses, icon: 'dinner', path: '/settings/courses' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
   { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
   { group: 'household', id: 'storagePlaces', ...copy.storagePlaces, icon: 'stock', path: '/settings/storage-places' },
