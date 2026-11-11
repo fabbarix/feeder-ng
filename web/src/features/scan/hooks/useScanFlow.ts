@@ -25,7 +25,7 @@ export interface ScanFlowDeps {
   /** the Shopping List range the scans count against */
   rangeTo?: string
   /** online: applies the Op and returns its Result; offline: queues it and returns null */
-  submit: (op: Op) => Promise<ScanResult | null>
+  submit: (op: Op, picture?: Blob) => Promise<ScanResult | null>
   /** drops a still-queued Op (Undo while offline); false when it was already sent */
   cancelQueued: (clientUuid: string) => Promise<boolean>
   undo: (clientUuid: string) => Promise<void>
@@ -307,7 +307,9 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     if (Object.keys(validateUnknownForm(values, sheet.mode)).length > 0) return
     const target = sheet.target
     const op = toUnknownOp(values, target, { clientUuid: uuid(), scannedAt: nowIso(d), shopId: d.shop.id, rangeTo: d.rangeTo })
-    const result = await d.submit(op)
+    // PPX: a Picture picked offline travels with the Op as a Blob (the queue uploads it on sync). An uploaded id wins; a link is never queued.
+    const blob = !op.productImage && values.picture?.kind === 'blob' ? values.picture.blob : undefined
+    const result = blob ? await d.submit(op, blob) : await d.submit(op)
     setSheet(null)
     const ownerId = archivedOwnerId(result)
     if (ownerId !== null) {

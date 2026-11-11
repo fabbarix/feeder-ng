@@ -236,13 +236,48 @@ func (s *Store) SetImage(ctx context.Context, id int64, image string) (Detail, e
 	return s.Product(ctx, id)
 }
 
+// FillImage (PPX) gives the Product a Picture only when it has none, atomically (UPDATE ... WHERE image is empty), and
+// reports whether it did. A Product that already has a Picture is left alone (false, nil), as is image == "".
+// A well-formed id with no stored file is *product.ValidationError{Field: "image", Err: product.ErrPictureMissing};
+// an unknown Product is ErrNotFound. It never deletes a file.
+func (s *Store) FillImage(ctx context.Context, id int64, image string) (bool, error) {
+	image = strings.TrimSpace(image)
+	if image == "" {
+		return false, nil
+	}
+	if err := s.checkImage(image); err != nil {
+		return false, err
+	}
+	res, err := s.db.ExecContext(ctx, `UPDATE products SET image=?, updated_at=? WHERE id=? AND image=''`, image, s.now(), id)
+	if err != nil {
+		return false, err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return false, err
+	} else if n == 1 {
+		return true, nil
+	}
+	var one int
+	if err := s.db.QueryRowContext(ctx, `SELECT 1 FROM products WHERE id = ?`, id).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
+		}
+		return false, err
+	}
+	return false, nil
+}
+
 // checkImage refuses a Picture id that is malformed or was never uploaded (the upload check only when WithImages was given).
 func (s *Store) checkImage(id string) error {
 	if id == "" {
 		return nil
 	}
-	if !imaging.ValidID(id) || (s.images != nil && !s.images.Exists(id)) {
+	if !imaging.ValidID(id) {
 		return &product.ValidationError{Field: "image", Message: "The picture was not uploaded"}
+	}
+	if s.images != nil && !s.images.Exists(id) {
+		// PPX: a well-formed id with no stored file is the typed missing-Picture error (errors.Is ErrPictureMissing).
+		return &product.ValidationError{Field: "image", Message: "The picture was not uploaded", Err: product.ErrPictureMissing}
 	}
 	return nil
 }

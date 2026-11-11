@@ -21,6 +21,10 @@ var (
 	ErrInvalidBarcode = errors.New("invalid barcode")
 	// ErrInvalidItemCode: wrong length or not digits for the rule's item span.
 	ErrInvalidItemCode = errors.New("invalid item code")
+	// ErrPictureMissing (PPX): the Picture id is well formed but names no stored file (never uploaded, or swept). A
+	// *ValidationError{Field: "image"} wraps it in Err, so errors.Is(err, ErrPictureMissing) and errors.Is(err, ErrInvalid)
+	// both hold. A malformed id is not ErrPictureMissing.
+	ErrPictureMissing = errors.New("picture missing")
 )
 
 // maxNameRunes is the longest name a Product or Shop may have.
@@ -30,10 +34,13 @@ const maxNameRunes = 100
 type ValidationError struct {
 	Field   string
 	Message string
+	// Err is the typed cause, e.g. ErrPictureMissing (PPX); nil for the plain cases.
+	Err error
 }
 
 func (e *ValidationError) Error() string        { return e.Field + ": " + e.Message }
 func (e *ValidationError) Is(target error) bool { return target == ErrInvalid }
+func (e *ValidationError) Unwrap() error        { return e.Err }
 
 // Input is what a Product is created from.
 type Input struct {

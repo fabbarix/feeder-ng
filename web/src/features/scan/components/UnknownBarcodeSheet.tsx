@@ -14,6 +14,7 @@ import { duplicateGuard, type DuplicateGuard } from '../../ingredients/lib/newIn
 import type { SearchResult } from '../../ingredients/types'
 import { ingredientPickerOptions } from '../../shop/lib/ingredientOptions'
 import { emptyForm, suggestedName, unitOptions, validateUnknownForm, newIngredientBaseUnit, type FormErrors, type IngredientChoice, type UnknownFormValues, type UnknownMode } from '../lib/unknownForm'
+import { OFFLINE_PICTURE_MAX_BYTES, OFFLINE_PICTURE_MAX_SIDE, OFFLINE_PICTURE_SOURCES } from '../lib/offlinePicture'
 import { scanStrings } from '../strings'
 
 export interface UnknownBarcodeSheetProps {
@@ -27,7 +28,10 @@ export interface UnknownBarcodeSheetProps {
   /** a price-valued weighed code: shown to explain why the weight is asked */
   priceText?: string
   onSave: (values: UnknownFormValues) => void
-  /** PP: the Picture field needs the server (it uploads); the Scan screen passes false while offline and the field is left out. Default true. */
+  /**
+   * PP / PPX: true when the phone can reach the server: the Picture is uploaded here (upload mode). False while offline: the Picture is
+   * picked in raw mode, kept as a Blob and uploaded by the queue on sync. Default true.
+   */
   canUpload?: boolean
   /** R2-4: near-duplicate lookup for an Ingredient created here (the matcher of Import Review). Absent offline: no guard. A rejection is ignored. */
   findSimilar?: (name: string) => Promise<SearchResult>
@@ -113,7 +117,8 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
       guardRow.current?.focus()
       return
     }
-    const final: UnknownFormValues = { ...values, ingredient: effective, productName: shownName }
+    // PPX: a Blob picked offline is dropped once the phone is online (the upload picker starts empty); an id uploaded online is kept.
+    const final: UnknownFormValues = { ...values, ingredient: effective, productName: shownName, ...(canUpload ? { picture: null } : {}) }
     const found = validateUnknownForm(final, mode)
     setErrors(found)
     if (Object.keys(found).length === 0) onSave(final)
@@ -220,7 +225,19 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
             aspect={CROP_ASPECTS.landscape}
             listenOn="dialog"
           />
-        ) : null}
+        ) : (
+          <ImagePicker
+            mode="raw"
+            label={scanStrings.pictureLabel}
+            value={values.picture ?? null}
+            onChange={(picture) => setValues((v) => ({ ...v, picture }))}
+            aspect={CROP_ASPECTS.landscape}
+            listenOn="dialog"
+            maxSide={OFFLINE_PICTURE_MAX_SIDE}
+            maxBytes={OFFLINE_PICTURE_MAX_BYTES}
+            sources={OFFLINE_PICTURE_SOURCES}
+          />
+        )}
 
         {mode === 'weighed_price' ? (
           <>
