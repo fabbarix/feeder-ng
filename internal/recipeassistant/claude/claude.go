@@ -16,6 +16,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -67,6 +68,10 @@ func New(o Options) *Client {
 	if log == nil {
 		log = slog.Default()
 	}
+	timeout := o.RequestTimeout
+	if timeout <= 0 {
+		timeout = callTimeout
+	}
 	n := defaultRetries
 	if o.MaxRetries != nil {
 		n = *o.MaxRetries
@@ -77,7 +82,7 @@ func New(o Options) *Client {
 		option.WithAPIKey(o.APIKey.Reveal()),
 		option.WithHTTPClient(hc),
 		option.WithMaxRetries(0), // retrying is ours, see retry
-		option.WithRequestTimeout(callTimeout),
+		option.WithRequestTimeout(timeout),
 	)
 	return &Client{opts: o, sdk: sdk, log: log, max: n}
 }
@@ -93,7 +98,7 @@ func Factory(logger *slog.Logger) service.ClaudeFactory {
 // (the key travels in x-api-key, which Go does not strip on a cross-host redirect).
 func NewHTTPClient() *http.Client {
 	tr := &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
+		Proxy:                 proxyForHTTPS,
 		DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 		TLSHandshakeTimeout:   10 * time.Second,
@@ -107,6 +112,15 @@ func NewHTTPClient() *http.Client {
 			return errors.New("claude: redirects are refused, the API key must not leave the saved origin")
 		},
 	}
+}
+
+// proxyForHTTPS uses the environment's proxy for https addresses only (a CONNECT tunnel keeps the key and the
+// recipe private); a plain http base URL is dialled directly, never through a proxy that could read it.
+func proxyForHTTPS(req *http.Request) (*url.URL, error) {
+	if req.URL.Scheme != "https" {
+		return nil, nil
+	}
+	return http.ProxyFromEnvironment(req)
 }
 
 // Message sends one Messages call (design §1.2) and checks stop_reason before reading content.
@@ -268,8 +282,29 @@ func failure(err error) (recipeassistant.APIFailure, bool) {
 	}
 	if ae.Response != nil {
 		f.RetryAfterSeconds = parseRetryAfter(ae.Response.Header.Get("retry-after"))
+		if ms := parseRetryAfterMs(ae.Response.Header.Get("retry-after-ms")); ms > 0 {
+			f.RetryAfterSeconds = int(math.Ceil(ms.Seconds()))
+		}
 	}
 	return f, true
+}
+
+// parseRetryAfterMs reads the retry-after-ms header (milliseconds, possibly fractional); 0 when absent or invalid.
+func parseRetryAfterMs(v string) time.Duration {
+	n, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+	if err != nil || n <= 0 || math.IsInf(n, 0) || math.IsNaN(n) {
+		return 0
+	}
+	return time.Duration(n * float64(time.Millisecond))
+}
+
+// retryAfterOf is the exact wait the API asked for in retry-after-ms, or 0.
+func retryAfterOf(err error) time.Duration {
+	var ae *anthropic.Error
+	if errors.As(err, &ae) && ae.Response != nil {
+		return parseRetryAfterMs(ae.Response.Header.Get("retry-after-ms"))
+	}
+	return 0
 }
 
 func parseRetryAfter(v string) int {
@@ -328,12 +363,19 @@ func (c *Client) retry(ctx context.Context, call func() error) error {
 		if ctx.Err() != nil || attempt >= c.max {
 			return err
 		}
+		// A per-attempt timeout (the read's own ctx is still alive) is not retried: the model may be working on
+		// the answer and a second attempt would bill it again.
+		if errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		f, isAPI := failure(err)
 		if !retryable(f, isAPI) {
 			return err
 		}
 		wait := baseBackoff << attempt
-		if f.RetryAfterSeconds > 0 {
+		if ra := retryAfterOf(err); ra > 0 {
+			wait = ra
+		} else if f.RetryAfterSeconds > 0 {
 			wait = time.Duration(f.RetryAfterSeconds) * time.Second
 		}
 		remaining := time.Duration(math.MaxInt64)

@@ -139,6 +139,8 @@ type ReviewRef struct {
 // photos are the candidate photos of a photo read (nil otherwise); they move to the session.
 type Sink interface {
 	OpenReview(ctx context.Context, userID int64, f recipefile.File, images recipefile.ImageSet, photos []recipefile.CandidatePhoto) (ReviewRef, error)
+	// CloseReview drops a Review that OpenReview returned but that nobody will see (the read was cancelled).
+	CloseReview(userID int64, reviewID string)
 }
 
 // ModelRef names the model that read.

@@ -49,6 +49,9 @@ func (k reviewSink) OpenReview(ctx context.Context, userID int64, f recipefile.F
 	return ref, nil
 }
 
+// CloseReview drops a Review of a read that was cancelled while it opened.
+func (k reviewSink) CloseReview(userID int64, reviewID string) { k.a.sessions.Close(userID, reviewID) }
+
 // errorStatus maps the refusals of StartRead and Check to their HTTP status.
 func errorStatus(code string) int {
 	switch code {

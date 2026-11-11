@@ -85,7 +85,8 @@ func settingsErr(field, code string) *SettingsError {
 	return &SettingsError{Errors: []FieldError{{Field: field, Code: code}}}
 }
 
-// SaveSettings applies a PUT: recipeassistant.ApplyUpdate, KeyFor for the key used in the live check,
+// SaveSettings applies a PUT: recipeassistant.ApplyUpdate (which refuses the saved key for another origin, the same
+// rule as KeyFor), the typed key or else the readable saved key for the live check,
 // Models.Get when enabled and a key is available (404 model_unavailable, 401 api_key_refused, a network
 // failure or a gateway without /v1/models -> warning not_verified, a model without structured outputs
 // model_cannot_read_recipes, without image input -> warning no_photos), then store.Save with sealed key.

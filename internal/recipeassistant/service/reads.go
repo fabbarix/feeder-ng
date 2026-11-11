@@ -288,10 +288,12 @@ func (s *Service) StartRead(c recipeassistant.Caller, in ReadInput, sink Sink) (
 	s.jobs[c.UserID] = append(s.jobs[c.UserID], j)
 	s.mu.Unlock()
 	view := j.view()
+	var once sync.Once
+	releaseOnce := func() { once.Do(release) }
 	go func() {
-		defer release()
+		defer releaseOnce() // safety net; run releases before it publishes the terminal state
 		defer cancel()
-		s.run(jctx, j, r, in, sink)
+		s.run(jctx, j, r, in, sink, releaseOnce)
 	}()
 	return view, nil
 }
@@ -395,18 +397,23 @@ type readLog struct {
 	startedAt time.Time
 }
 
-// run executes a job and records how it ended.
-func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink Sink) {
+// run executes a job and records how it ended. The order matters: the log line is written and the Limiter slot is
+// released before the terminal state becomes visible, so a client that sees it can read again at once.
+func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink Sink, release func()) {
 	rl := &readLog{kind: in.Kind, model: r.settings.Model, photos: len(in.Photos), startedAt: time.Now()}
 	if in.Kind == recipeassistant.KindPage {
 		if u, err := url.Parse(in.URL); err == nil {
 			rl.host = u.Hostname()
 		}
 	}
+	conclude := func(state string, e *recipeassistant.Error, outcome string) {
+		s.logRead(j, rl, outcome)
+		release()
+		s.finish(j, state, e)
+	}
 	defer func() {
 		if rec := recover(); rec != nil {
-			s.finish(j, StateFailed, &recipeassistant.Error{Code: recipeassistant.CodeUnreachable})
-			s.logRead(j, rl, recipeassistant.CodeUnreachable)
+			conclude(StateFailed, &recipeassistant.Error{Code: recipeassistant.CodeUnreachable}, recipeassistant.CodeUnreachable)
 		}
 	}()
 	err := s.perform(ctx, j, r, in, sink, rl)
@@ -415,19 +422,16 @@ func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink S
 	j.mu.Unlock()
 	switch {
 	case cancelled:
-		s.finish(j, StateCancelled, nil)
-		s.logRead(j, rl, "cancelled")
+		conclude(StateCancelled, nil, "cancelled")
 	case err != nil:
 		var ae *recipeassistant.Error
 		if !errors.As(err, &ae) {
 			// A deadline (the 180 s cap) or any other failure of the call chain.
 			ae = &recipeassistant.Error{Code: recipeassistant.CodeUnreachable}
 		}
-		s.finish(j, StateFailed, ae)
-		s.logRead(j, rl, ae.Code)
+		conclude(StateFailed, ae, ae.Code)
 	default:
-		s.finish(j, StateDone, nil)
-		s.logRead(j, rl, "ok")
+		conclude(StateDone, nil, "ok")
 	}
 }
 
@@ -559,6 +563,17 @@ func (s *Service) perform(ctx context.Context, j *job, r ready, in ReadInput, si
 	ref, err := sink.OpenReview(ctx, j.userID, fin.File, set, candidates)
 	if err != nil {
 		return err
+	}
+	// A cancel or the deadline can land while the Review opens: give the Review back instead of leaking it.
+	j.mu.Lock()
+	cancelled = j.cancelled
+	j.mu.Unlock()
+	if cancelled || ctx.Err() != nil {
+		sink.CloseReview(j.userID, ref.ID)
+		if cancelled {
+			return context.Canceled
+		}
+		return ctx.Err()
 	}
 	j.mu.Lock()
 	j.review = &ref
