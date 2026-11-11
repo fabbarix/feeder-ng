@@ -144,14 +144,14 @@ func TestBothEndOnActiveStep(t *testing.T) {
 	// The longer Course (1) is placed first and ends at E; the other ends
 	// exactly when course 1's serve Step starts.
 	r := must(t, []Course{fresh(2, act(5)), fresh(1, pas(10), act(5, 0))})
-	if r.TotalSeconds != 1200 {
+	if r.TotalSeconds != 900 {
 		t.Fatalf("total = %d", r.TotalSeconds)
 	}
-	if got := span(find(t, r, 1, 1)); got != [2]int{900, 1200} {
+	if got := span(find(t, r, 1, 1)); got != [2]int{600, 900} {
 		t.Errorf("course 1 serve = %v", got)
 	}
 	// Course 2 ends as course 1's active Step starts.
-	if got := span(find(t, r, 2, 0)); got != [2]int{600, 900} {
+	if got := span(find(t, r, 2, 0)); got != [2]int{300, 600} {
 		t.Errorf("course 2 = %v", got)
 	}
 }
@@ -171,7 +171,7 @@ func TestEqualLengthSlotOrderDecides(t *testing.T) {
 
 func TestLongerCourseEndsAtEWhateverSlotOrder(t *testing.T) {
 	r := must(t, []Course{fresh(1, act(2)), fresh(2, act(10))})
-	if got := span(find(t, r, 2, 0)); got != [2]int{600, 1320} {
+	if got := span(find(t, r, 2, 0)); got != [2]int{120, 720} {
 		t.Errorf("longer = %v", got)
 	}
 	if got := span(find(t, r, 1, 0)); got != [2]int{0, 120} {
