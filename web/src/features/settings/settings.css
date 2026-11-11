@@ -26,9 +26,6 @@
   align-items: center;
   gap: 8px;
 }
-.settings__row--wrap-start {
-  align-items: flex-start;
-}
 .settings__muted {
   margin: 0;
   opacity: 0.75;
@@ -38,11 +35,23 @@
   color: var(--color-on-surface);
   font-weight: 600;
 }
-.settings__accent-preview {
-  block-size: 48px;
-  inline-size: 100%;
-  border-radius: var(--radius-tile);
+/* Accent preview tile: a label and a sample chip drawn in the draft accent (scoped override of --color-accent). */
+.settings__preview {
+  --color-accent: var(--preview-accent);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-outline);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface-2);
+}
+.settings__preview-label {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 /* A Member's colour: the wrapper carries --member-colour; the Avatar draws the ring (its colour prop), so the fill is never repainted. */
 .member-avatar {

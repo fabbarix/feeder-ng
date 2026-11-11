@@ -23,6 +23,7 @@ export function ManualBarcodeEntry({ recovery }: ManualBarcodeEntryProps) {
         helper={scanStrings.manualBarcodeHint}
         error={recovery.error ? scanStrings.manualBarcodeError[recovery.error] : undefined}
         inputMode="numeric"
+        data-size-intent="long"
         autoComplete="off"
         value={recovery.text}
         onChange={(text) => recovery.setText(text)}

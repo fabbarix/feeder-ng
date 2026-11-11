@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { strings } from '../strings'
-import { emptyRuleForm, ruleFormError, ruleToForm, setKind, toRule, unitOptions, type RuleFormValues } from './ruleForm'
+import { emptyRuleForm, ruleFormError, ruleFormErrorField, ruleToForm, setKind, toRule, unitOptions, type RuleFormValues } from './ruleForm'
 
 const filled = (over: Partial<RuleFormValues> = {}): RuleFormValues => ({ ...emptyRuleForm(), prefix: '21', ...over })
 
@@ -80,5 +80,29 @@ describe('unitOptions', () => {
   })
   it('has one option for a price: the minor unit of the Currency', () => {
     expect(unitOptions('price', 'USD')).toEqual([{ value: '', label: strings.priceUnit('USD') }])
+  })
+})
+
+describe('ruleFormErrorField (the field a validation reason is about)', () => {
+  const base = (): RuleFormValues => emptyRuleForm()
+  it('is null for a valid rule', () => expect(ruleFormErrorField({ ...base(), prefix: '21' })).toBeNull())
+  it('an empty or non-digit prefix is the prefix', () => {
+    expect(ruleFormErrorField(base())).toBe('prefix')
+    expect(ruleFormErrorField({ ...base(), prefix: '2a' })).toBe('prefix')
+  })
+  it('a non-whole number is the first such field', () => {
+    expect(ruleFormErrorField({ ...base(), prefix: '21', valueLength: '' })).toBe('valueLength')
+    expect(ruleFormErrorField({ ...base(), prefix: '21', itemStart: 'x', valueLength: '' })).toBe('itemStart')
+  })
+  it('overlap and inside-the-prefix point at the value / item start', () => {
+    expect(ruleFormErrorField({ ...base(), prefix: '21', valueStart: '6' })).toBe('valueStart')
+    expect(ruleFormErrorField({ ...base(), prefix: '2100', itemStart: '3' })).toBe('itemStart')
+  })
+  it('decimal places beyond the value length is decimalPlaces', () => {
+    expect(ruleFormErrorField({ ...base(), prefix: '21', decimalPlaces: '9' })).toBe('decimalPlaces')
+  })
+  it('a span reaching the check digit points at the field that is too long', () => {
+    expect(ruleFormErrorField({ ...base(), prefix: '21', itemLength: '11' })).toBe('itemLength')
+    expect(ruleFormErrorField({ ...base(), prefix: '21', valueLength: '9' })).toBe('valueLength')
   })
 })

@@ -53,7 +53,7 @@ describe('IngredientScreen', () => {
   it('shows the name, Base Unit, Shelf Life and conversions', () => {
     setup()
     expect(screen.getByRole('heading', { name: 'Garlic' })).toBeInTheDocument()
-    expect(screen.getByText('30 days')).toBeInTheDocument()
+    expect(screen.getByLabelText('Shelf Life')).toHaveValue('30')
     expect(screen.getByText('1 clove = 5 g')).toBeInTheDocument()
   })
   it('renames', async () => {
@@ -82,7 +82,7 @@ describe('IngredientScreen', () => {
   })
   it('lets the Base Unit change while nothing uses the Ingredient', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'ml' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'ml' }))
     expect(hook.setBaseUnit).toHaveBeenCalledWith('ml')
     expect(screen.getByRole('button', { name: strings.deleteIngredient })).toBeEnabled()
   })
@@ -91,7 +91,7 @@ describe('IngredientScreen', () => {
     hook.ingredient = { ...base, references: { 'recipe lines': 3 } }
     setup()
     expect(screen.getByText(strings.baseUnitLocked(3))).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'ml' })).toBeDisabled()
+    expect(screen.queryByRole('radio', { name: 'ml' })).toBeNull() // locked: a read-only value row, not disabled options
     expect(screen.getByRole('button', { name: strings.deleteIngredient })).toBeDisabled()
     expect(screen.getByText(strings.deleteLocked(3))).toBeInTheDocument()
   })

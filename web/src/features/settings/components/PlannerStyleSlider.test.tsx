@@ -37,28 +37,19 @@ describe('PlannerStyleSlider (ui Slider, step 0.25, three stops)', () => {
     expect(onChange).toHaveBeenLastCalledWith(0)
   })
 
-  it('has the three anchors as chips that jump to them', async () => {
-    const onChange = vi.fn()
-    render(<PlannerStyleSlider value={0.5} onChange={onChange} />)
-    expect(screen.getByRole('button', { name: 'Variety' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Favourites' })).toHaveAttribute('aria-pressed', 'false')
-    await userEvent.click(screen.getByRole('button', { name: 'Favourites' }))
-    expect(onChange).toHaveBeenLastCalledWith(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Use what we have' }))
-    expect(onChange).toHaveBeenLastCalledWith(0)
+  it('is ONE control: no anchor chips under the Slider (R2-3, F-06)', () => {
+    render(<PlannerStyleSlider value={0.5} onChange={() => {}} />)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(document.querySelector('.chip')).toBeNull()
+    expect(screen.getAllByRole('slider')).toHaveLength(1)
   })
 
-  it('disables the slider and every anchor chip, and they do nothing', async () => {
+  it('disables the slider, and it does nothing', async () => {
     const onChange = vi.fn()
     render(<PlannerStyleSlider value={0.5} onChange={onChange} disabled />)
     expect(slider()).toHaveAttribute('aria-disabled', 'true')
     slider().focus()
     await userEvent.keyboard('{ArrowRight}')
-    for (const name of ['Use what we have', 'Variety', 'Favourites']) {
-      const chip = screen.getByRole('button', { name })
-      expect(chip).toBeDisabled()
-      await userEvent.click(chip)
-    }
     expect(onChange).not.toHaveBeenCalled()
   })
 })

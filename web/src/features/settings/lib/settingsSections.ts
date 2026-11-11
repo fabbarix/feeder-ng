@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist'
+  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -32,6 +32,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'you', id: 'preferences', ...copy.preferences, icon: 'appearance', path: '/settings/preferences' },
   { group: 'you', id: 'notifications', ...copy.notifications, icon: 'notifications', path: '/settings/notifications' },
   { group: 'admin', id: 'allowlist', ...copy.allowlist, icon: 'allowlist', path: '/settings/allowlist', adminOnly: true },
+  { group: 'admin', id: 'recipeAssistant', ...copy.recipeAssistant, icon: 'assistant', path: '/settings/recipe-assistant', adminOnly: true },
 ]
 
 const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
@@ -44,7 +45,7 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
  *   Household: Household, Members, Meal Slots, Planning rules, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /shops, /access-requests)
  *   You:       Your preferences, Notifications                          (/settings/preferences, /notifications)
- *   Admin:     Allowlist (Admins only)                                  (/settings/allowlist)
+ *   Admin:     Allowlist, Recipe Assistant (Admins only)                (/settings/allowlist, /settings/recipe-assistant)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
  */
 export function settingsGroups(isAdmin: boolean): SettingsGroup[] {
