@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { BottomSheet, Button, ColorSwatches, EmojiPicker, Select, StepperField, TextField } from '../../../ui'
-import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberFromDraft, memberProblem } from '../lib/memberForm'
+import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberEmailProblem, memberFromDraft, memberProblem } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
@@ -17,6 +17,10 @@ export interface MemberEditorProps {
   currentUserId?: number
   saving?: boolean
   error?: string
+  /** A server refusal of the email (422 / 409 email_taken), shown under the Email field. */
+  emailError?: string
+  /** Called when the Admin edits the Email field, so the page can clear `emailError`. */
+  onEmailEdit?: () => void
   onSave: (input: MemberInput, userId: number | null) => void | Promise<void>
   onDelete?: () => void | Promise<void>
   onClose: () => void
@@ -27,7 +31,7 @@ const NO_USER = ''
 
 /** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (emoji, optional), Portion Factor
  *  stepper (0.25..3, step 0.25), Linked User Select; buttons "Save Member" and "Remove Member" (editing only). */
-export function MemberEditor({ open, member, users, members, currentUserId, saving, error, onSave, onDelete, onClose }: MemberEditorProps) {
+export function MemberEditor({ open, member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete, onClose }: MemberEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={member ? text.editTitle : text.addTitle}>
       <MemberForm
@@ -38,6 +42,8 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
         currentUserId={currentUserId}
         saving={saving}
         error={error}
+        emailError={emailError}
+        onEmailEdit={onEmailEdit}
         onSave={onSave}
         onDelete={onDelete}
       />
@@ -45,20 +51,23 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
   )
 }
 
-type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'saving' | 'error' | 'onSave' | 'onDelete'>
+type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'saving' | 'error' | 'emailError' | 'onEmailEdit' | 'onSave' | 'onDelete'>
 
-function MemberForm({ member, users, members, currentUserId, saving, error, onSave, onDelete }: FormProps) {
+function MemberForm({ member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete }: FormProps) {
   const [draft, setDraft] = useState<MemberInput>(() => memberDraft(member))
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
   const [problem, setProblem] = useState<string | null>(null)
+  const [emailProblem, setEmailProblem] = useState<string | null>(null)
   const set = (patch: Partial<MemberInput>) => setDraft((d) => ({ ...d, ...patch }))
   const offered = availableUsers(users, members, member)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = memberProblem(draft)
+    const found = memberProblem({ ...draft, email: '' })
+    const bad = found ? null : memberEmailProblem(draft.email ?? '')
     setProblem(found)
-    if (!found) void onSave(memberFromDraft(draft), userId)
+    setEmailProblem(bad)
+    if (!found && !bad) void onSave(memberFromDraft(draft), userId)
   }
 
   return (
@@ -81,6 +90,18 @@ function MemberForm({ member, users, members, currentUserId, saving, error, onSa
         max={MAX_PORTION_FACTOR}
         step={PORTION_STEP}
         onChange={(portionFactor) => set({ portionFactor })}
+      />
+      <TextField
+        label={text.email}
+        type="email"
+        helper={text.emailHelper}
+        error={emailProblem ?? emailError}
+        value={draft.email ?? ''}
+        onChange={(email) => {
+          set({ email })
+          setEmailProblem(null)
+          onEmailEdit?.()
+        }}
       />
       <Select
         label={text.linkedUser}

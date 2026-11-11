@@ -52,7 +52,7 @@ export function FieldFrame({ ids, label, labelFor, helper, error, className, chi
         </p>
       ) : null}
       {error ? (
-        <p id={ids.errorId} className="ui-field__error">
+        <p id={ids.errorId} className="ui-field__error" role="alert">
           <Icon name="error" size={14} />
           <span>{error}</span>
         </p>

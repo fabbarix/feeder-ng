@@ -5,6 +5,7 @@ export type NotificationType =
   | 'leftoverUseBy'
   | 'stockSpoil'
   | 'timerFinished'
+  | 'accessRequest'
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'advanceStep',
@@ -13,6 +14,7 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'leftoverUseBy',
   'stockSpoil',
   'timerFinished',
+  'accessRequest',
 ]
 
 export type TypeFlags = Record<NotificationType, boolean>

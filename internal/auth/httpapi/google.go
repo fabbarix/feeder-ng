@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fabbarix/feeder-ng/internal/access"
+	accesshttp "github.com/fabbarix/feeder-ng/internal/access/httpapi"
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
@@ -92,16 +94,30 @@ func signInRoutes(r *app.Router, d app.Deps) {
 			http.Redirect(w, req, "/sign-in?error=failed", http.StatusFound)
 			return
 		}
-		if !id.EmailVerified {
-			http.Redirect(w, req, "/not-invited", http.StatusFound)
-			return
-		}
-		u, err := d.Auth.UserByEmail(req.Context(), id.Email)
+		ip := access.ClientIP(req.RemoteAddr, access.JoinForwardedFor(req.Header.Values("X-Forwarded-For")), d.Config.TrustProxy)
+		dec, err := d.Access.SignIn(req.Context(), ip, id)
 		if err != nil {
-			// Not on the allowlist (or an unusable address): nothing is created.
-			http.Redirect(w, req, "/not-invited", http.StatusFound)
+			d.Logger.Error("google sign-in decision failed", "err", err)
+			http.Redirect(w, req, "/sign-in?error=failed", http.StatusFound)
 			return
 		}
+		switch dec.Kind {
+		case access.Unverified:
+			http.Redirect(w, req, "/not-invited", http.StatusFound)
+			return
+		case access.Pending:
+			http.SetCookie(w, accesshttp.Cookie(dec.Token, dec.Request.ExpiresAt, secure))
+			http.Redirect(w, req, "/waiting-for-approval", http.StatusFound)
+			return
+		case access.Limited:
+			http.Redirect(w, req, "/waiting-for-approval?state=limited", http.StatusFound)
+			return
+		case access.QueueFull:
+			http.Redirect(w, req, "/waiting-for-approval?state=full", http.StatusFound)
+			return
+		}
+		http.SetCookie(w, accesshttp.ClearCookie(secure))
+		u := dec.User
 		// The first sign-in replaces the default name (the e-mail's local part)
 		// with Google's name; a name the Admin chose is never overwritten.
 		if u.DisplayName == localPart(u.Email) && strings.TrimSpace(id.Name) != "" {

@@ -111,8 +111,8 @@ func TestDueNow(t *testing.T) {
 }
 
 func TestParseTypeRoundTrips(t *testing.T) {
-	if len(notify.AllTypes()) != 6 {
-		t.Fatalf("want the six spec types, got %v", notify.AllTypes())
+	if len(notify.AllTypes()) != 7 {
+		t.Fatalf("want the seven spec types, got %v", notify.AllTypes())
 	}
 	for _, ty := range notify.AllTypes() {
 		got, ok := notify.ParseType(string(ty))

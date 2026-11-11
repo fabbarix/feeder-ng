@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { PushDevice } from '../types'
 import { defaultDeviceLabel, enabledTypes, findThisDevice, hashEndpoint } from './devices'
 
-const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false }
+const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false, accessRequest: false }
 const device = (id: number, hash: string, on: Partial<typeof flags> = {}): PushDevice => ({
   id,
   label: `d${id}`,

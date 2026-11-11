@@ -12,6 +12,10 @@ import (
 const (
 	planURL  = "/plan"
 	stockURL = "/stock"
+
+	accessRequestsURL = "/settings/access-requests"
+	// maxBody caps a push body: it carries Google-supplied text.
+	maxBody = 200
 )
 
 // ConfirmAfter is how long after the slot time an unconfirmed Planned Meal is
@@ -101,8 +105,26 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			URL:   stockURL,
 		})
 	}
+	for _, a := range f.AccessRequests {
+		out = append(out, Candidate{
+			Key:   candidateKey(AccessRequest, fmt.Sprint(a.ID), a.RequestedAt),
+			Type:  AccessRequest,
+			At:    a.RequestedAt,
+			Title: "New sign-in request",
+			Body:  capRunes(fmt.Sprintf("%s (%s) wants to join Feeder", a.Name, a.Email), maxBody),
+			URL:   accessRequestsURL,
+		})
+	}
 	sortCandidates(out)
 	return out
+}
+
+// capRunes shortens s to at most n runes, ending in an ellipsis when it was cut.
+func capRunes(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n-1]) + "…"
+	}
+	return s
 }
 
 // DeferQuiet returns at when its household-local time is outside the quiet

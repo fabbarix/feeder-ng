@@ -1,0 +1,338 @@
+# A1 Access Requests: sign-in approval
+
+Scope: functional-spec §2 (access) and §12 (notifications), [ADR 0005](../../adr/0005-sign-in-needs-approval.md). **Revision 2** (user decisions after phase 1) is folded into each section below and summarised in §11; the changed parts are marked *(rev 2)*. Request: "people can login only after their e-mail is approved by another user or if their address was added to the family, so not everyone can just login with a Google account." Tests are written first (red); the Developer implements until `scripts/check.sh` passes. Domain term: **Access Request** (GLOSSARY has no better word; `_Avoid_`: invite, signup, join request).
+
+## 1. Current state against the request
+
+| Wanted | Today | Gap |
+|---|---|---|
+| Pre-added address signs in at once | **Works.** `internal/auth/httpapi/google.go` looks the verified email up in `users` (`UserByEmail`) and starts a session. The allowlist (Settings, Admin) and `FEEDER_ADMIN_EMAIL` both add rows to `users`. Covered by `google_signin.feature` and `google_test.go`. | none |
+| Member-linked email signs in | **Does not exist.** `members` has no email column (`0100_household.sql`); a Member is linked to an existing User by id (`PUT /api/members/{id}/user`, `members.user_id`). A Member only signs in because an Admin first added the same person to the allowlist and then linked them. Nothing reads an address from a Member. | New: an optional **Member email**. A verified Google sign-in whose address equals the email of a not-yet-linked Member creates the User and links it. |
+| Unknown Google accounts must not get in | **Works, but dead-ends.** Unknown or unverified email -> `/not-invited` ("Ask an Admin to add your email"), no session, no row. | Replace the dead end for *verified* unknown accounts with an Access Request and a waiting page. Unverified stays on `/not-invited`. |
+| Approval by any User | Only an **Admin** can add to the allowlist (`r.Admin("POST /api/allowlist")`). | New `r.User` routes; approval adds a non-Admin User and, *(rev 2)*, can link an unlinked Member in the same step. |
+| Pending list, badge, push | None. Web Push has six per-device types (`notify.AllTypes`, a CHECK constraint on `push_subscription_types.type`); the shell has `useShellStatus` (scan count only). | New type `accessRequest`, new Fact, new shell count. |
+| Flood protection, audit | No unauthenticated write path exists today, so none. | New: limits, cap, expiry, audit table. |
+
+Already good: the callback requires `email_verified`; PKCE and state are checked; the CSRF guard (`httpx.CSRFGuard`, JSON + same-Origin on every state-changing `/api/` request) already covers POSTs; `RequireUser` guards every household route, so a visitor without a session cannot reach data.
+
+## 2. Design
+
+### 2.1 Sign-in decision (`access.Service.SignIn`)
+The callback keeps its flow checks (state, PKCE, exchange). After `Exchange` it calls `SignIn(ctx, ip, identity)` and acts on the `Decision`:
+
+| Order | Condition | Decision | Callback does |
+|---|---|---|---|
+| 1 | address is a User and `email_verified` | `SignedIn` | existing path: display-name tweak, session, redirect `/` |
+| 2 | not verified, or not a valid address | `Unverified` | redirect `/not-invited`; nothing stored; a pending request is **not** refreshed |
+| 3 | verified and a Member with that email has no User *(rev 2: and the address is not a User, which row 1 already settled)* | `SignedIn` | `AddUser` (non-Admin, name = Google name) + `Members.LinkUser`; then as 1 |
+| 4 | the IP made `PerIPPerHour` (10) submissions in the last hour | `Limited` | redirect `/waiting-for-approval?state=limited` |
+| 5 | an unexpired request exists for the address | `Pending` | refresh name/picture/last seen and **rotate the waiting token**; no new row, no push, no event |
+| 6 | the address was denied less than `DenyCooldown` (24 h) ago | `Limited` (`RetryAfter` = remainder) | `?state=limited` |
+| 7 | the address already created `PerEmailPerWeek` (3) requests in 7 days | `Limited` | `?state=limited` |
+| 8 | `MaxPending` (50) requests are pending | `QueueFull` | `/waiting-for-approval?state=full` |
+| 9 | otherwise | `Pending` (new) | insert, `requested` event, `OnRequested` hooks, set cookie, redirect `/waiting-for-approval` |
+
+Users (1) and Member emails (3) are never throttled: a full queue or a flooded IP cannot lock the family out. Expired rows are ignored by every read and cleared by `Purge` (daily scheduler job `access.purge` at 03:45, plus lazily when the same address signs in again).
+
+No session is ever created for 2, 4 to 9. The waiting page is a signed-out page of the SPA; its only server data is `GET /api/access-request/status`.
+
+### 2.2 Waiting-page token
+On `Pending` the callback sets cookie `feeder_access` = a random 32-byte token (base64url); only its SHA-256 is stored (`access_requests.token_hash`). HttpOnly, SameSite=Lax, Secure when the base URL is https, `Path=/api/access-request` (so it is never sent to any other route), expires with the request. `GET /api/access-request/status` is public, always 200, `Cache-Control: no-store`, and returns only `{status:"pending", email, name, requestedAt}` (the visitor's own Google details) or `{status:"none"}` for no cookie, unknown token, answered or expired. After an approval the page cannot tell approved from denied (it says "Request answered" and offers Google sign-in); an approved person is then signed in, a denied one lands on the cool-down message. The page polls every 15 s and, on `none`, stops.
+
+### 2.3 Approval
+Any signed-in User (`r.User`). `POST /api/access-requests/{id}/approve`: `AddUser(email, cleaned Google name, isAdmin=false)`, delete the request, `approved` event with actor id and email *(rev 2: and the linked Member)*, live event.
+
+**Approve with "link to Member" (rev 2, decision A3).** Body (all optional, JSON): `{"memberId": 3}`. An empty body, `{}` and `{"memberId": null}` mean "no Member" (the phase 1 behaviour). Service: `Approve(ctx, id, actor)` as before and `ApproveLinked(ctx, id, actor, memberID)`. Order in `ApproveLinked`: (1) load the unexpired request, else `ErrNotFound`; (2) check `memberID` is in `Members.Unlinked(ctx)`, else `ErrMemberUnavailable` (also when the service has no Members port, i.e. phase 1) with **nothing created and the request still pending**; (3) `AddUser` (an `ErrEmailTaken` race resolves to the existing User, as in `Approve`); (4) `Members.LinkUser(memberID, user.ID)`, whose `ErrMemberUnavailable` (Member linked or deleted meanwhile) is returned as is, leaving the request pending so the approver can choose again (the User row may already exist; retrying is safe); (5) delete the request; (6) `approved` event with `MemberID` and `MemberName` (snapshots, no foreign key). The approver does not need to be an Admin; a Member's link is not an Admin power here because it only attaches a brand-new User to a Member that had none. Removing Users stays Admin-only.
+
+| Request body | Result |
+|---|---|
+| none, `{}`, `{"memberId":null}` | 200, as before |
+| `{"memberId":"x"}`, `1.5` or other bad JSON | 400 `bad_request` |
+| `{"memberId":0}` or negative | 422 `validation_failed` (field `memberId`) |
+| Member unknown, or already has a User | 409 `member_unavailable`; no User created; the request stays pending |
+| request unknown, expired or answered | 404 `not_found` (checked first) |
+
+The history route adds `memberName` (`""` when none) to every event. If the address became a User meanwhile (`ErrEmailTaken`) the request is simply cleared (idempotent). `POST .../deny`: delete the request, `denied` event. Both 404 for unknown or expired ids; a second answer to the same request gets 404 (the UI shows "already answered"). Self-approval is impossible: a visitor has no session.
+
+### 2.4 Notifications
+New type `accessRequest` (spec §12 row "Access Request: when someone asks to sign in; deferred out of quiet hours"). It goes through the existing fact pipeline so quiet hours, Grace and once-only dedupe come for free: `Facts.AccessRequests []AccessRequestFact{ID, Name, Email, RequestedAt}` (pending requests, read by `notify/facts`), `Compute` turns each into a `Candidate{Key: "accessRequest:<id>@<requestedAt>", At: RequestedAt, Title: "New sign-in request", Body: "<name> (<email>) wants to join Feeder", URL: "/settings/access-requests"}`. Opt-in is per device like every type (off by default). A request answered before its push is due is no longer a fact, so it is not pushed. The text comes from Google, so the push body is plain text and length-capped (200 chars).
+
+### 2.5 Live updates and the shell badge
+The module publishes `access` `{"changed":"requests"}` on create, approve, deny and purge (`OnRequested` plus the handlers). The `access` feature exports `useShellStatus` returning `pendingAccessRequests` (polls `GET /api/access-requests` and refetches on the event). The shell shows a badge on the avatar button (`aria-label` "Your menu, 3 sign-in requests waiting") and a "Sign-in requests" item in the avatar menu while the count is above 0. Settings gets a row "Sign-in requests" in the Household group for every User. The row is badge-only: its meta never carries the count, the count shows as a badge in the row's trailing slot, and the row's accessible name is "Sign-in requests, N waiting" while N is above 0 (plain "Sign-in requests" otherwise). `settingsGroups(isAdmin)` takes no count.
+
+### 2.6 Member email *(rev 2, decision A1: both routes stay; phase 2)*
+`members.email` (nullable, case-insensitive unique). Admin sets it in the Member editor (`email` in `POST/PATCH /api/members`). It is shown to Users in the Members list like the name. A sign-in matches only a Member that has **no User yet**; after linking, the User row is authoritative and the Member email is only a label.
+
+**It must not hijack an existing User.**
+- Sign-in order is fixed (table 2.1): a User with that address signs in as that User (row 1) *before* any Member email is read; a Member email never links a Member to an existing User, never creates a second User and never changes a User's name or role.
+- The address is unique across **Members, Users and the allowlist** (the allowlist *is* the `users` table), case-insensitive, in both directions: the Member API refuses an address that belongs to another Member or to any User, and `POST /api/allowlist` refuses an address that is a Member's email.
+- The one allowed overlap: a Member that is linked to User X may carry X's own address (nothing is ambiguous).
+- A Member email that is already a User's address when it reaches the sign-in code (data from before the rule, or a race) is simply ignored there.
+- An Access Request whose address later becomes a Member email is not special: if it is approved, the User row wins and the Member stays unlinked with a label email (an Admin can link it); sign-in then finds the User first.
+
+**Member-edit API** (`POST /api/members`, `PATCH /api/members/{id}`; Admin only; PATCH replaces the Member, so an omitted `email` clears it):
+
+| Input | Result |
+|---|---|
+| `email` omitted, `null`, `""` or blanks | no email; every Member in responses has `"email": null` or the string |
+| a valid address | trimmed, lower-cased, stored; 201/200 returns it |
+| not `name@host` (no `@`, empty side, spaces, two `@`, a list), or over 254 characters | 422 `validation_failed`, message names `email` |
+| not a JSON string | 400 `bad_request` |
+| same address (any case) as another Member | 409 `email_taken` |
+| the address of any User or allowlist entry (other than the Member's own linked User) | 409 `email_taken` |
+| the Member's own value again on PATCH | 200 (no self-conflict) |
+
+The response of a conflict is `{"error":{"code":"email_taken","message":"That email already belongs to a Member, a User or the allowlist"}}`. Clearing or deleting a Member frees its address. `POST /api/allowlist` of a Member's email returns the existing `409 email_taken`, with the same wording.
+
+## 3. Threat model
+
+| Threat | Mitigation |
+|---|---|
+| Stranger with any Google account gets in | No session without a User row; approval is by a signed-in User; every `/api` data route stays `RequireUser`. Test: pending visitor gets 401 on household, allowlist and events routes. |
+| Unverified or spoofed email | `email_verified` required for all paths (1, 3, 5, 9); unverified neither signs in, nor creates, nor refreshes a request. |
+| Queue flood by script | Google sign-in is the only entry, so each submission needs a real Google round trip; still: 10 per IP per hour, 3 per address per week, 24 h cool-down after denial, 50 pending globally, one row per address (UNIQUE NOCASE), 14-day expiry, name <= 100 chars, picture <= 500 chars. |
+| IP spoofing via `X-Forwarded-For` | *(rev 2)* `FEEDER_TRUST_PROXY` defaults to **false**: `ClientIP` is then the socket peer (`RemoteAddr` host) and the header is ignored, so a direct-exposed container cannot be talked past the IP limit. With it on (the Helm chart sets it when an ingress is enabled) only the **last** entry of the **last** header line is used (appended by the operator's proxy): the handler joins every `X-Forwarded-For` line with `,` (`access.JoinForwardedFor(req.Header.Values(...))`), because `Header.Get` returns the first line, which the client wrote (HAProxy and Envoy append a separate line). IPv6 clients are bucketed per /64 (§12.1). Behind a proxy with the setting left off every visitor shares the proxy's address, so the per-IP limit becomes a global 10 an hour: the deploy docs say to turn it on. The per-address, cool-down and global limits do not depend on it. |
+| Approving the wrong person / CSRF | POST only; JSON/same-Origin guard applies (`cross_origin` 403, `unsupported_media_type` 415); SameSite=Lax session. A malicious site cannot approve. Deny asks for confirmation in the UI. |
+| Stored XSS via Google name or photo | Name is control-char stripped and length-capped, rendered as React text; picture kept only if `https://*.googleusercontent.com` and <= 500 chars, else dropped (no arbitrary image fetch from other Users' browsers). *(rev 2)* If the allowed image still fails to load, the UI shows initials (`RequestAvatar`). Push body is plain text. |
+| Information leak to a pending visitor | No session, so all routes 401; the waiting page shows only the visitor's own Google name/email from their own token; status for a missing token reveals nothing (not even whether the address is pending); `no-store`; the SPA shell is static. The same page text for every state avoids confirming that the household exists beyond the app's own name. |
+| Token theft | Only a hash is stored; token rotates on each sign-in; cookie is path-scoped, HttpOnly; it only reveals the visitor's own Google data. It grants no access, so a stolen token is harmless. |
+| Cool-down evasion by changing case / plus-addressing | Case folded. Plus-addressing (`a+1@gmail.com`) is a different verified Google identity string and is allowed; the per-IP and global caps bound it. Accepted. |
+| Approval fatigue / denial of service on Users' attention | Global cap 50; push is deferred during quiet hours; per-IP limit. |
+| Audit gaps | `access_events` records requested, approved, denied, expired with actor id and actor email (no foreign key: survives the actor's removal). Visible to every User at `GET /api/access-requests/history`. Removing a User later is not an Access Request event (existing allowlist behaviour). |
+| A Member email takes over a User *(rev 2)* | Unique across Members, Users and the allowlist; User row wins at sign-in; the Member API and the allowlist refuse a clash (§2.6). Tests: `member_email_test.go`, `access_test.go`. |
+| Approving links the wrong Member *(rev 2)* | Optional and explicit; only unlinked Members are offered and the server re-checks; the audit trail records the Member; an Admin can unlink in Settings as today. |
+| An approved person is unwanted | Any User can approve, so any User can be removed by an Admin from the allowlist (sessions end at once, existing behaviour). Product question Q1 asks whether more is wanted. |
+
+## 4. API
+
+All JSON; errors use `{"error":{"code","message"}}`. Authentication in brackets.
+
+| Route | Auth | Result |
+|---|---|---|
+| `GET /auth/google/callback` | public | as before, plus `/waiting-for-approval[?state=limited|full]` redirects and the `feeder_access` cookie |
+| `GET /api/access-request/status` | public | `{status:"pending",email,name,requestedAt}` or `{status:"none"}` |
+| `GET /api/access-requests` | User | `{requests:[{id,email,name,picture,requestedAt,expiresAt}], count}`, oldest first, unexpired only |
+| `POST /api/access-requests/{id}/approve` | User | body `{memberId?}` (§2.3); 200 `{id,email,displayName,isAdmin:false}`; 400 `bad_request`; 422 `validation_failed`; 409 `member_unavailable`; 404 `not_found` |
+| `POST /api/access-requests/{id}/deny` | User | 204; 404 `not_found` |
+| `GET /api/access-requests/history` | User | `{events:[{kind,email,name,at,actorEmail,memberName}]}`, newest first, 50 |
+| `POST/PATCH /api/members` | Admin | accept and return optional `email` (Member email); 422 `validation_failed`, 409 `email_taken` (§2.6) |
+| `POST /api/allowlist` | Admin | additionally 409 `email_taken` for a Member's email |
+| `GET /api/notifications/config`, device routes | User | accept/list the type `accessRequest` |
+
+Event topic `access`: `{"changed":"requests"}`.
+
+## 5. Data model: migration `internal/db/migrations/1200_access_requests.sql`
+
+**Split (phase 1 / phase 2).** Phase 1 ships `1200_access_requests.sql` WITHOUT the `members.email` column and its unique index (both tables use `AUTOINCREMENT`, like 1100). They move to `1210_member_email.sql`, applied with the household changes in phase 2 (statements below marked `-- phase 2`). The Go service already has the `Members` port; the app passes `nil` until then, so the Member-email sign-in is off.
+```sql
+-- A1: Access Requests, their audit trail, Member email, and the accessRequest push type.
+CREATE TABLE access_requests (
+    id           INTEGER PRIMARY KEY,
+    email        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name         TEXT NOT NULL,
+    picture      TEXT NOT NULL DEFAULT '',
+    token_hash   TEXT NOT NULL UNIQUE,
+    requested_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL,
+    expires_at   TEXT NOT NULL
+);
+CREATE INDEX access_requests_expires ON access_requests (expires_at);
+
+CREATE TABLE access_events (
+    id            INTEGER PRIMARY KEY,
+    at            TEXT NOT NULL,
+    kind          TEXT NOT NULL CHECK (kind IN ('requested', 'approved', 'denied', 'expired')),
+    email         TEXT NOT NULL COLLATE NOCASE,
+    name          TEXT NOT NULL DEFAULT '',
+    actor_user_id INTEGER,                    -- deliberately no foreign key: the audit trail outlives the User
+    actor_email   TEXT NOT NULL DEFAULT '',
+    member_id     INTEGER,                    -- rev 2: the Member an approval linked; snapshot, no foreign key
+    member_name   TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX access_events_email ON access_events (email, kind, at);
+
+-- phase 2 (1210_member_email.sql):
+ALTER TABLE members ADD COLUMN email TEXT COLLATE NOCASE;
+CREATE UNIQUE INDEX members_email ON members (email) WHERE email IS NOT NULL;
+
+-- Widen the CHECK on push_subscription_types (SQLite cannot alter it): rebuild the child table.
+CREATE TABLE push_subscription_types_new (
+    subscription_id INTEGER NOT NULL REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+    type            TEXT    NOT NULL CHECK (type IN
+        ('advanceStep', 'startCooking', 'confirmCooked', 'leftoverUseBy', 'stockSpoil', 'timerFinished', 'accessRequest')),
+    PRIMARY KEY (subscription_id, type)
+);
+INSERT INTO push_subscription_types_new SELECT subscription_id, type FROM push_subscription_types;
+DROP TABLE push_subscription_types;
+ALTER TABLE push_subscription_types_new RENAME TO push_subscription_types;
+```
+Rows past retention (`access_events` older than 1 year) are pruned by the same `access.purge` job. The `member_*` columns are in 1200 itself (nothing has shipped; edit the file). Number 1200 is above R11c's 1150 (`bdd` and `db` tests that count migrations need no change; check `db_test.go` when adding).
+
+## 6. Files
+
+New (A1 owns all of them):
+- `docs/adr/0005-sign-in-needs-approval.md`, this note.
+- `internal/access/access.go` (Service, Limits, ports, `CleanName`, `CleanPicture`, `ClientIP`); skeleton exists, bodies return `ErrNotImplemented`.
+- `internal/access/store/store.go` (SQLite `access.Store`); skeleton exists.
+- `internal/access/httpapi/httpapi.go` (module "access": routes of §4, purge job, `access` events, cookie); only `doc.go` exists.
+- `internal/access/adapters.go` or in `httpapi`: `Members` adapter over `household/store` (see wiring).
+- `internal/modules/access.go`: `import _ ".../internal/access/httpapi"`.
+- `internal/db/migrations/1200_access_requests.sql`.
+- `web/src/features/access/`: *(rev 2: also `components/{ApproveSheet,RequestAvatar}.tsx`, `lib/members.ts`, `hooks/useUnlinkedMembers.ts`; stubs exist)* `types.ts`, `api.ts`, `strings.ts`, `lib/{requests,waitingView,liveUpdates}.ts`, `hooks/{queryKeys,useAccessRequests,useAccessBadge,useWaitingStatus}.ts` (+ a `useAccessLiveUpdates` inside `useAccessRequests`), `components/{AccessRequestList,WaitingPage,AccessBadge}.tsx`, `screens/AccessRequestsPage.tsx`, `index.ts` (route `/settings/access-requests`, `useShellStatus`), `access.css`. Skeletons exist. Copy lives in `strings.ts`; components stay free of API calls and maths (CLAUDE.md): `daysLeft`, `badgeText`, relative time are in `lib`.
+
+## 7. Wiring edits in shared files (PM to sequence)
+
+| File | Edit | Conflicts with |
+|---|---|---|
+| `internal/app/registry.go` (`Deps`) and `internal/app/app.go` | add `Access *access.Service`, built from `accessstore.New(d)`, `authSvc`, a Members adapter (*rev 2:* `ByEmail`, `Unlinked`, `LinkUser`), `Clock`, `DefaultLimits()` (`New` also reads `cfg.TrustProxy`) | none known (not `spa.go`) |
+| `internal/config/config.go` | `TrustProxy bool` from `FEEDER_TRUST_PROXY`; *(rev 2)* default **false**; `1/true/yes/on` (any case, trimmed) turn it on, anything else is off. Fix the field comment. | none |
+| `internal/auth/httpapi/google.go` | replace the `UserByEmail`/`/not-invited` block with `d.Access.SignIn` + the switch of §2.1; set/clear `feeder_access` | A1 only |
+| `internal/notify/types.go`, `compute.go`, `notify/facts/facts.go`, `notify/httpapi` (type list), migration | `AccessRequest` type in `AllTypes` (after `timerFinished`), `Facts.AccessRequests`, `Compute` rule, facts query. **Existing notify tests that assert the exact type list/count must be updated.** | R11a (notifications UI); none in Go |
+| `internal/household/{members.go,store/store.go,httpapi/members.go}`, `internal/auth/httpapi/allowlist.go` | Member `Email` field and validation, `Members` adapter methods `ByEmail`/`Unlinked`/`LinkUser`, `email_taken` rules of §2.6 (store checks `members` and `users` in one transaction; allowlist add checks `members.email`) | **R11c owns `household/store` now: do last** |
+| `web/src/features/signin/{lib/signedOutView.ts,components/SignedOut.tsx}` | `{view:'waiting', kind}` for `/waiting-for-approval`, render `access/components/WaitingPage`; signed-in visit to that path goes `/` (add to `routes`) | none |
+| `web/src/app/AppRoot.tsx`, `AppShell.tsx`, `YourMenu.tsx`, `features.ts` | `ShellStatusInfo.pendingAccessRequests`; sum in AppRoot; pass `pendingAccessRequests` to AppShell/YourMenu; render `AccessBadge` and the "Sign-in requests" menu item | **R11a: `web/src/ui`, `nav.ts`** are untouched; `shell.css` badge style goes in `access.css` |
+| `web/src/features/settings/{lib/settingsSections.ts,strings.ts}` | row "Sign-in requests" (Household group, all Users) | **R11a owns `settings/strings.ts` now: do last** (the page works without the row; the avatar menu already leads there) |
+| `web/src/features/settings/components/AllowlistPanel.tsx`, `MemberEditor.tsx` | Member email field; allowlist panel hint "People can also ask to join" | R11a? (check) |
+| `web/src/features/notifications/...NotificationSettingsScreen.tsx`, `strings.ts` | toggle + label for `accessRequest` | **R11a** |
+| `bdd/features/auth/google_signin.feature`, `internal/auth/httpapi/google_test.go` | already updated here (unknown verified email now goes to `/waiting-for-approval`) | none |
+
+## 8. Docs to apply (R11c/R12 own these files now)
+
+**GLOSSARY.md**, People section, add after **Admin**:
+```
+**Access Request**:
+A verified Google account's request to sign in, waiting for any User to approve or deny it; it expires after 14 days.
+_Avoid_: Invite, join request, signup, application
+```
+Change **User** to: "Someone who signs in with Google to use the app, because an Admin added their email, a Member carries it, or a User approved their Access Request; may be linked to a Member." Change **Member**: append "May carry an email, so that person can sign in as a User." Change **Admin**: "A User who also manages the allowlist, the Members, ..." (unchanged otherwise; the Admin no longer is the only way to add Users).
+
+**Approve sheet Member picker (`linkableMembers`)**: the sheet title is the fixed "Approve sign-in request"; the requester's name and email are in the body line, which wraps. The picker offers only Members with no User and either no email or the requester's own email (any letter case), because a Member carrying another email would be linked to a Google account that is not theirs. When Members exist but all carry another email the sheet says "No Member can be linked to this email."; when every Member already has a User it says "Every Member already has a User."
+
+**docs/spec/functional-spec.md §2**, replace line 13 with:
+```
+- Sign-in is Google OAuth only, and only for a verified Google email. A person signs in at once if their email is on the **allowlist** or is the email of a **Member**. Anyone else creates an **Access Request** and sees a "Waiting for approval" page, with no session and no access to any data. Any signed-in User can approve (adding a non-Admin User) or deny it; one approval is enough. A denied email may ask again after 24 hours; a request expires after 14 days. Requests are limited per IP (10 an hour), per email (3 a week) and in total (50 pending), and every approval, denial and expiry is recorded with who did it. Settings lists the pending requests, and a count badge shows on the avatar menu.
+```
+§3 Members: "A Member may have an email; see §2." §12 table, add row: `| Access Request | when someone asks to sign in (deferred out of quiet hours) |`. §15 Resolved decisions, append: "20. Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down."
+
+## 9. Test list (all written; red where marked R)
+
+Go domain `internal/access/access_test.go` (+ `fakes_test.go`): limits default; pre-added signs in with no request or push; User never throttled; Member-linked creates User, links, no request (R); Member-linked needs verified (R); unverified User refused (R); unverified unknown / malformed refused with no trace (R); new pending (fields, times, push once, token hashed) (R); repeat sign-in no duplicate, name refreshed, expiry fixed, token rotated (R); unverified does not refresh (R); `CleanName`, `CleanPicture`, stored fields cleaned (R); approve (new non-Admin User, audit, signs in after), approve needs no Admin, unknown/expired 404, approve after manual add, deny + audit + second deny 404, deny cool-down then new request, 3 per week, per-IP flood and reset, refreshes count towards IP limit, global cap and recovery, Users unaffected by full queue, expiry at 14 d, `Purge` + event, expired address may ask again, list order, status shows only own details, history order, `ClientIP` table (R: all).
+Go store `internal/access/store/store_test.go`: migration tables, inserts and three lookups, one request per address (any case) and unique token, refresh keeps times, list/count/expire/delete, events count/last/order, audit survives actor removal (R: all).
+Go HTTP `internal/access/httpapi/httpapi_test.go` (callback + routes, uses `testkit` and `authtest`): pre-added signs in (green regression); Member-linked signs in and is linked; unknown verified -> waiting page, no session, cookie flags, listed; unverified refused; repeat keeps one; pending visitor 401 on 15 paths and cannot approve; status reveals only own details, `no-store`, anonymous gets `none`, tokens don't cross; waiting SPA shell has no household data; any User approves and the person signs in, approve twice 404; routes need a session; CSRF (403 `cross_origin`, 415) on approve and deny; POST only; unknown ids 404; deny then cool-down then allowed; 10-per-IP flood and reset; 50-pending cap (with a User unaffected); 14-day expiry (list, status, approve 404, may ask again); history actors and times; mounted (R except the two green regressions and the SPA-shell check).
+Go push `internal/access/httpapi/push_test.go`: `accessRequest` is a type; push to opted-in devices only, once, with the payload; deferred out of quiet hours; not pushed after the request was answered (R).
+Existing, changed: `internal/auth/httpapi/google_test.go` (`...ToTheWaitingPage`), `bdd/features/auth/google_signin.feature` (two scenarios) (R).
+BDD `bdd/features/auth/access_requests.feature` with `bdd/steps_access_test.go`: pre-added; Member-linked; unknown waits; unverified refused; repeat no duplicate; waiting visitor sees only own details; 6-row outline of 401 paths; another User approves and the person signs in; approving needs no Admin and adds a plain User; deny, cool-down, ask again; history; IP flood; repeated denial limit; expiry; CSRF on approve and deny; visitor cannot approve.
+Web (vitest): `lib/requests`, `lib/waitingView`, `lib/liveUpdates`; hooks (`useAccessRequests` load/approve/deny/error, `useAccessBadge`, `useWaitingStatus`); `AccessRequestList`, `WaitingPage` (own details only, no household words, three states), `AccessBadge`, `AccessRequestsPage` (open to Users, approve, confirm before deny, history, already-answered), feature `index` (route, shell hook), `signedOutView.waiting`, `SignedOut.waiting`, `AppShell.accessBadge`.
+
+## 10. Product questions: resolved
+
+| # | Question | Decision |
+|---|---|---|
+| Q1 / A4 | Users cannot remove people | Kept as built: any User approves, only an Admin removes. |
+| Q2 / A1 | Member email or allowlist only | **Both**, plus the no-hijack and uniqueness rules of §2.6. |
+| Q3 / A3 | "Link to Member" while approving | **Changed:** offered in the approve step (§2.3, §11.2). |
+| Q4 / A5 | Push in quiet hours | As built (deferred). |
+| Q5 / A6 | Limits | As built. |
+| Q6 | Denied feedback | As built ("Request answered"). |
+| Q7 / A7 | `FEEDER_TRUST_PROXY` default | **Changed to false** (§11.3, "Deploy changes"). |
+| Q8 / A8 | Google photo | As built (googleusercontent.com only) **plus** an initials fallback on load failure (§11.4). |
+
+## 11. Revision 2 details
+
+### 11.1 Tests added (red until the Developer step; "phase 1 now" = implementable without the household adapter)
+| Test | Phase |
+|---|---|
+| `internal/access/access_test.go`: `TestApproveLinked*` (6), `TestApproveWithoutAMember...` and `TestAMemberEmailThatAlreadyBelongsToAUser...` (green regression guards) | phase 1 now (domain, against the Members port fake) |
+| `internal/access/store/store_test.go`: `TestAnApprovedEventKeepsTheLinkedMember` | phase 1 now (columns in 1200) |
+| `internal/access/httpapi/approve_member_test.go`: `TestApproveAcceptsNoBody...` (green), `TestApproveRejectsABadMemberId`, `TestApproveWithAMemberThatDoesNotExist...` (phase 1: no Members port yet), `TestApproveWithAMemberStillNeeds...` (green) | phase 1 now |
+| same file: `TestPhase2AnyUserApprovesAndLinks...`, `TestPhase2ApproveWithAMemberWhoAlreadyHasAUser...` | **phase 2** (household adapter) |
+| `internal/access/httpapi/member_email_test.go`: all `TestPhase2*` (normalisation, validation, uniqueness, no hijack, allowlist clash, own linked User) and the existing `TestAMemberLinkedAddressSignsIn...` | **phase 2** |
+| `internal/config/config_test.go`: `TestTrustProxyDefaultsToFalse...`, `TestLoadReadsAllVariables` | phase 1 now |
+| `internal/access/httpapi/trustproxy_test.go`: header ignored by default, last entry used when trusted | green regression guards |
+| `bdd/features/auth/access_requests.feature`: 5 scenarios after the "Approvals" block (link in one step, linked Member refused, Member email vs User, two Members, bad address) + the existing Member-email scenario | **phase 2** |
+| Web: `ApproveSheet.test.tsx`, `RequestAvatar.test.tsx`, `lib/members.test.ts`, additions to `AccessRequestList`, `AccessRequestsPage`, `hooks`, `format` tests | phase 1 now (the web side has no household dependency; it uses `GET /api/members`) |
+
+### 11.2 Approve UI (A3)
+`AccessRequestList` still reports `onApprove(id)`. `AccessRequestsPage` opens **`ApproveSheet`** for that request (a `BottomSheet`, no native `<select>`, no `window.confirm`): title "Approve <email>", a line "<email> will sign in as a User", an optional picker on the shared `Select` labelled "Link to a Member (optional)" with `clearLabel` "Don't link" (nothing chosen is the default), footer buttons Cancel and Approve. The picker offers `unlinkedMembers(GET /api/members)` (Members with `userId === null`), loaded by `useUnlinkedMembers`; no unlinked Member shows "Every Member already has a User." and no picker; a failed load shows "Could not load the Members." and approving without a link still works. Approve calls `approve(id, memberId?)` (body `{memberId}` only when chosen). On success the sheet closes; on `member_unavailable` the sheet stays open with the alert "That Member already has a User. Pick another, or approve without linking.", the Members refetch and the refused pick is forgotten; on any other error (a 404 "already answered") the sheet closes and the toast speaks. The sheet closes by itself if its request is no longer pending. The history line reads "user@x approved zia@x and linked them to Nonna". Business rules (which Members are unlinked, error mapping) live in `lib/members.ts`, `lib/format.ts` and the hooks, not in the components.
+
+### 11.3 Trust proxy off by default (A7)
+`config.Load`: default false (see wiring). `access.ClientIP(remote, xff, trust)` is unchanged: with `trust` false it is the host part of `RemoteAddr`. The testkit config literal already means false, so the existing HTTP tests describe the default.
+
+### 11.4 Photo fallback (A8)
+`web/src/ui/Avatar` has no `onError`, and `web/src/ui` is not ours, so the fallback lives in `features/access/components/RequestAvatar.tsx`: it renders the shared `Avatar` with the photo and, after the image's `error` event, renders it again without `imageUrl` (initials). A new `picture` value resets the failure. `AccessRequestList` uses it. Suggest (not do) moving this into `Avatar` later so every screen benefits.
+
+### Deploy changes (after D2 merges)
+Not done here: `deploy/` and `docs/dev/deploy.md` are owned by team D2 right now.
+- **Chart `values.yaml`**: add `trustProxy: null  # null = automatic: true when ingress.enabled, else false; true/false overrides`.
+- **Chart deployment template**: env `FEEDER_TRUST_PROXY` = `{{ ternary "true" "false" (default .Values.ingress.enabled .Values.trustProxy) }}`. Careful: `default` treats `false` as empty, so compute explicitly: `{{- $trust := .Values.ingress.enabled -}}{{- if not (kindIs "invalid" .Values.trustProxy) -}}{{- $trust = .Values.trustProxy -}}{{- end }}` and render `{{ $trust | quote }}`. Add a `helm template` check in the chart tests (enabled -> "true", disabled -> "false", `trustProxy: false` with ingress enabled -> "false").
+- **`docs/dev/deploy.md`**: document `FEEDER_TRUST_PROXY` in the environment table (default `false`; set `true` only when Feeder sits behind a reverse proxy that appends the real client address as the last `X-Forwarded-For` entry; with it off behind a proxy, all visitors share one rate limit bucket); the chart section explains `trustProxy: null` (automatic). Add a line to the Compose/plain-Docker examples.
+- **`docs/spec`** environment table, if any, gets the same row.
+
+## 12. Review send-back (Opus): decisions A8 to A11 and the tests
+
+Tests are written; the Developer implements until `scripts/check.sh` and `go test ./internal/... -race` pass. Type-only stubs exist (`ErrAlreadyUser`, `ErrRequestExists`, `JoinForwardedFor`, `Store.Delete` now `(bool, error)`, `Store.PruneEvents`); they compile but behave as before, so the new tests are red.
+
+### 12.1 X-Forwarded-For and IPv6 buckets
+- Handler: `ip := access.ClientIP(req.RemoteAddr, access.JoinForwardedFor(req.Header.Values("X-Forwarded-For")), d.Config.TrustProxy)`. `JoinForwardedFor` joins the lines with `,` verbatim; `ClientIP` keeps the last comma entry, as before.
+- `ClientIP` returns the **rate-limit key**: an IPv4 address as is; an IPv4-mapped IPv6 address as IPv4; any other IPv6 address as its /64 network in CIDR form (`2001:db8:1:2::/64`). Applies to the socket peer and the trusted header alike. An unparsable last entry still falls back to the peer.
+- Tests: `TestClientIP` (new rows), `TestJoinForwardedForKeepsEveryHeaderLineInOrder`, `trustproxy_test.go`: `...TheLastForwardedHeaderLineCounts`, `...AnIPv6ClientIsLimitedPerSlash64`.
+
+### 12.2 A8: answering is atomic
+- `Service` gets an `answerMu sync.Mutex` held for the whole of `Approve`, `ApproveLinked`, `Deny` and the reconcile in `List`/`Count` (A9). One process owns the SQLite file (single replica), so a mutex is enough; no cross-process claim is needed.
+- `Store.Delete(ctx, id) (removed bool, err)`. `false` means the row is gone (answered, purged, expired): the service returns `ErrNotFound` and writes nothing. SQLite: `RowsAffected() == 1`.
+- Order inside the lock: read (`pending`) -> **claim** (`Delete`, must report true) -> `AddUser` (+ `LinkUser`) -> `AddEvent`. A request is therefore never answered twice and no "approved" line exists without the claim. If `AddUser` fails after the claim the error is returned and the request is lost; the person signs in again (no denial cool-down applies). Accepted: the failure is a database error, not a race.
+- `expire()` (sign-in path) logs "expired" only when its `Delete` reports true; `Purge` logs only the rows `DeleteExpired` handed to it. The SQLite `DeleteExpired` must hand each row to exactly one caller (do the `DELETE ... RETURNING` or select+delete in one transaction), so an expiry is logged once.
+- Tests: `answer_test.go`: approve||deny (3 rounds, goroutines released together, `memStore.delay` widens the window), approve||approve, deny||deny, approve-linked||deny, `TestAnApprovalLosingTheClaimCreatesNothing`, `...LoggedOnceEvenWhenSignInAndPurgeMeet`, `TestPurgingTwiceLogsExpiredOnce`; store: `TestDeleteReportsWhetherARowWasRemoved`, `TestDeleteExpiredHandsEachRowToOneCaller`. Run with `-race`.
+
+### 12.3 A9: a request whose address is already a User
+- `Deny`: if `Users.UserByEmail` finds the address, delete the request, record **no** "denied" event, return `ErrAlreadyUser`. HTTP: **409 `already_a_user`** ("That person already has a sign-in"). Chosen over 404 because the request existed and the approver's intent (no access) can no longer be met; the UI treats it like "already answered" and refreshes.
+- `List` and `Count` drop (and delete, no event) every pending request whose address is a User, so a stale row never shows after an allowlist add, a Member-email sign-in or a half-failed approval.
+- `Approve` of such a request is unchanged: it clears the request and returns the existing User (200); the "approved" event is still written.
+- A9b `ApproveLinked`: a User cannot be created after the link (the link needs the User id), so the User is created first. When `LinkUser` then fails, the approval stands: the request is cleared, an "approved" event is recorded **without** a Member (`MemberID` 0), and the call returns `ErrMemberUnavailable` (HTTP 409 `member_unavailable`). The UI message already says to pick another or approve without linking; since the request is now answered, the sheet refetches and shows it as done. This replaces the rev 2 rule "the request stays pending" for this one failure. The earlier checks (Member not in `Unlinked`, no Members port) still refuse before anything is created and leave the request pending.
+- Tests: `TestDenyOfAnAddressThatIsAlreadyAUser...`, `TestListAndCountClear...`, `TestCountAloneAlsoDrops...`, `TestApproveLinkedWhenTheLinkFails...`; HTTP: `TestDenyOfARequestWhoseAddressIsAlreadyAUserIs409AlreadyAUser`, `TestTheListDropsARequestWhoseAddressIsAlreadyAUser`. `TestApproveLinkedWhenTheMemberWasLinkedMeanwhileKeepsTheRequestPending` is replaced by the A9b test.
+
+### 12.4 A10: sign-in audit and races
+- A Member-email sign-in (row 3 of §2.1) records an **"approved"** event with no actor (`ActorUserID` 0, `ActorEmail` ""), `MemberID`/`MemberName` set, and deletes any pending request for the address. No schema change (the CHECK already allows "approved"; history shows an empty actor).
+- Two first sign-ins of one new address at once: `Store.Insert` returns `ErrRequestExists` on the UNIQUE conflict; `SignIn` then re-reads the row and continues as a repeat sign-in (refresh, new token). Only the creator records "requested" and fires `OnRequested`; both callers get `Pending` with a working token.
+- Tests: `TestAMemberEmailSignIn...` (2), `TestTwoFirstSignInsOfANewAddressBothGetPending`, `TestALostInsertRaceFallsBackToTheExistingRequest`; store: `TestInsertOfAnAddressThatAlreadyHasARequestIsErrRequestExists`.
+
+### 12.5 A11: housekeeping
+- `Store.PruneEvents(ctx, before) (int, error)` deletes `access_events` with `at < before`. `Purge` calls it with `now - 1 year` after expiring requests (the 7-day and cool-down windows are far shorter). Tests: `TestPurgePrunesAuditEntriesOlderThanOneYear`, `TestPruneEventsDeletesOnlyOlderEntries`.
+- `SignedIn` in the callback also sends an expired `feeder_access` cookie (same name and path, `MaxAge` -1; add `accesshttp.ClearCookie(secure)`). Test: `TestSigningInClearsTheWaitingPageCookie`.
+- Migration 1200 keeps existing `push_subscription_types` rows and cascades: `internal/db/access_migration_test.go` (green regression guard).
+
+## 13. Web phase 2 (tests written, red): Member email, Settings row, notification toggle, Allowlist page (F-02)
+
+Developer: implement until `scripts/check.sh` passes. Type-only stubs exist (they compile and change no behaviour): `Member.email?` and `MemberInput.email?` (make them `string | null`, required on `Member`, and add `email: null` to `settings/components/fixtures.ts` and the other Member literals), `MemberEditorProps.emailError`, `AllowlistPanelProps.addError`, `SwitchProps['aria-label']`, `memberEmailProblem` (returns null), `settingsGroups(isAdmin, pendingAccessRequests = 0)` and the `'accessRequests'` id.
+
+### 13.1 Member email (MemberEditor, Members list, API)
+- `MemberEditor` gets a `TextField` "Email" (`type="email"`, not required) **between Portion Factor and Linked User**, helper "Lets this person sign in with Google without asking" (GLOSSARY: the Member's email makes them able to sign in as a User; no "invite"). The draft keeps the field as text; `memberDraft` copies `member.email ?? ''`; `memberFromDraft` trims and sends `email: null` for blank, so POST and PATCH always carry `email` (a PATCH replaces the Member, so null clears it).
+- Validation: `memberEmailProblem(text)` (new, in `lib/memberForm.ts`; `memberProblem` calls it after name and Portion Factor): blank is fine, else `name@host.tld`, no spaces or second `@`, at most 254 characters, and the message names "email". Shown **under the field** (`aria-invalid`, described by the message), not as the form alert.
+- Server refusals go under the field too: `useMembersPage` splits the error: `ApiError` code `email_taken`, or `validation_failed` whose message starts with or names `email`, becomes `emailError` (new `MemberEditor` prop); everything else stays `error`. The sheet stays open and keeps the text; editing the field clears `emailError`.
+- `lib/errors.ts`: `email_taken` is now one wording for the Members and the allowlist: "That email already belongs to a Member, a User or the allowlist." (the server sends the same sentence without the full stop).
+- `MemberList`: the row meta shows the email (after the linked User's name when both exist, `Cook · anna@example.test`), for every User.
+- Tests: `MemberEditor.email.test.tsx`, `lib/memberForm.email.test.ts`, `MemberList.email.test.tsx`, `screens/MembersPage.email.test.tsx`; changed because the field now exists: `MemberEditor.fields.test.tsx` (two textboxes), `MemberEditor.test.tsx` and `lib/memberForm.test.ts` (exact payloads carry `email`), `lib/errors.test.ts` (wording).
+
+### 13.2 Settings index row and breadcrumbs
+- Row **"Sign-in requests"** in the Household group, **last**, for every User (not `adminOnly`), path `/settings/access-requests`, a registered icon, meta `"<n> waiting"` when `n > 0`, else a plain line without digits (suggest "Who asked to join"). `settingsGroups(isAdmin, pendingAccessRequests = 0)` stays pure; `SettingsIndexPage` passes the count from `useAccessBadge()` (`features/access`, barrel export) and renders `AccessBadge` in the row's `trailing` (name "3 sign-in requests waiting"). A failed count shows no badge. The `ListRow` keeps `aria-label` = title.
+- **One name everywhere:** `settingsStrings.index.sections.accessRequests.title` = the `ROUTE_CRUMBS` label = the page `h1` = `accessStrings.title` = **"Sign-in requests"** (it was "Access Requests"). Body copy and the GLOSSARY keep the term Access Request.
+- `app/breadcrumbs.ts`: add `{ path: '/settings/access-requests', label: sections.accessRequests.title, parent: '/settings' }`. `AccessRequestsPage` uses `PageHeader` with `breadcrumbs={useBreadcrumbs()}` (via `SettingsHeader` or directly) and **drops the "Back to Settings" link** and `accessStrings.backToSettings`.
+- Tests: `lib/settingsSections.test.ts`, `screens/SettingsIndexPage.test.tsx` and `.accessRequests.test.tsx`, `app/breadcrumbs.test.ts` (route + coverage now include the access routes), `lib/settingsBreadcrumbs.test.tsx` (includes the access routes), `access/screens/AccessRequestsPage.breadcrumbs.test.tsx`, `ui/noBackLink.test.ts` (the scan now includes `features/access`).
+
+### 13.3 Notifications
+`NotificationType` and `NOTIFICATION_TYPES` gain `accessRequest` after `timerFinished`; `TypeFlags` follows. Strings: label "Sign-in request", hint "When someone asks to sign in and waits for approval". `NotificationSettingsView` needs no code change beyond the data (7 switches); the quiet-hours note is unchanged. Update the `flags` fixtures of the older tests (`NotificationSettingsView.test.tsx`, `lib/devices.test.ts`, `hooks/useNotificationSettings.test.tsx`). Test: `NotificationSettingsView.accessRequest.test.tsx` (casts the flags until the type is widened).
+
+### 13.4 F-02: the Allowlist page
+Cause (review 2): the flex row shrank the field to 83 px; phone rows put a checkbox label with the full email, a Chip and a text "Remove" in one trailing cell. Design, on shared primitives only (R2-F's `FieldRow` / field `size` and the page `Menu` are not merged: use these classes now, swap later):
+- **Add form** `form.allowlist__add` (flex, wrap, gap): `TextField` "Email to allow" in `.allowlist__field` (`flex: 1 1 <basis>`, `min-inline-size` non-zero, `max-inline-size` cap on desktop; below 600 px `flex-basis: 100%` and `max-inline-size: none`, so the button drops under the field) and a secondary `Button` "Add to allowlist" that does not shrink. Remove `settings__row--wrap-start` from the panel.
+- **Hint** under the form: "People can also ask to join. Their requests wait in" + a router link "Sign-in requests" to `/settings/access-requests` (so the panel needs a Router, which the page has).
+- **Refusal** `addError` (the page keeps the `POST` failure apart from the delete / admin failures): under the field, `aria-invalid`, described by the message, cleared on typing, text kept. 409 `email_taken` reads as in 13.1.
+- **Rows** `ListRow`: title = email (once), meta = `You`, `Last Admin` or `You · Last Admin` (no Chip, so the row stays 64 px); trailing `.allowlist__actions` (flex, no wrap, never shrinks): `Switch` label "Admin" with `aria-label="Admin: {email}"` (the ui `Switch` gets the optional `aria-label` prop) and an `IconButton` (icon `delete`) named "Remove {email}" (no visible text, nothing to clip; the title is what truncates). The only Admin's switch and Remove are disabled. Remove still asks in the `ConfirmDialog`.
+- No native select, checkbox or fieldset in the panel.
+- Tests: `AllowlistPanel.test.tsx` (updated: switches, "You"), `AllowlistPanel.layout.test.tsx`, `allowlist.css.test.ts` (pins the CSS above in `settings.css`), `screens/AllowlistPage.email.test.tsx`, `ui/fields/Switch.ariaLabel.test.tsx`. jsdom cannot measure layout: the Developer checks 375 and 1180 px in a browser and the Reviewer looks at the screenshots.
+
+### 13.5 Go nit
+`TestApproveLinkedWhenLinkUserFailsForAnotherReasonReturnsThatError` (`internal/access/answer_test.go`): `ApproveLinked` returns the original error when `LinkUser` fails with anything but `ErrMemberUnavailable`, still recording the "approved" event without a Member (the User exists). Only `ErrMemberUnavailable` is mapped to itself.
+
+### 13.6 Docs to apply (section 8) and the guard
+The project has **no doc-guard test** (nothing reads `GLOSSARY.md` or `docs/spec` from a test), so none was added. For the Developer to apply, from section 8: GLOSSARY.md (new **Access Request**; **User** and **Member** and **Admin** wording), `docs/spec/functional-spec.md` §2 line 13, §3 Members line, §12 table row, §15 item 20; plus this note's section 7 rows already done. The `glossary` UI guard (`scripts/check-ui.sh`) will flag `_Avoid_` words in the new strings: "invite", "join request", "signup" are not used; "ask to join" and "Sign-in requests" are UI copy, not Avoid words.

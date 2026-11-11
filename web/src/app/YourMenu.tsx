@@ -1,6 +1,8 @@
 // The avatar menu (docs/design/ui-fix-plan.md 4.5, 5.17): shortcuts, a divider, Settings, feature items, Sign out.
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { AccessBadge } from '../features/access/components/AccessBadge'
+import { accessStrings } from '../features/access/strings'
 import { Avatar, Icon } from '../ui'
 import type { NavItem } from './nav'
 import { shellStrings } from './strings'
@@ -8,13 +10,15 @@ import { shellStrings } from './strings'
 export interface YourMenuProps {
   user: { displayName: string; imageUrl?: string }
   items: NavItem[]
+  /** Shown as a count badge on the button and named in its label. */
+  pendingAccessRequests?: number
   onSignOut: () => void
 }
 
 const itemsIn = (menu: HTMLElement | null): HTMLElement[] =>
   menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]')) : []
 
-export function YourMenu({ user, items, onSignOut }: YourMenuProps) {
+export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: YourMenuProps) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -72,13 +76,14 @@ export function YourMenu({ user, items, onSignOut }: YourMenuProps) {
         ref={buttonRef}
         type="button"
         className="your-menu-button"
-        aria-label={shellStrings.yourMenu}
+        aria-label={pendingAccessRequests > 0 ? `${shellStrings.yourMenu}, ${accessStrings.waitingLabel(pendingAccessRequests)}` : shellStrings.yourMenu}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
         <Avatar name={user.displayName} imageUrl={user.imageUrl} size="sm" />
       </button>
+      <AccessBadge count={pendingAccessRequests} />
       {open ? (
         <>
           <div

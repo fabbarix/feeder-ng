@@ -35,6 +35,10 @@ env: {}
 # Raw container env entries, e.g. with valueFrom.
 extraEnv: []
 
+# FEEDER_TRUST_PROXY: take the client address from the last X-Forwarded-For entry. null = automatic: true when
+# ingress.enabled, else false. Set true or false to override (e.g. true behind your own proxy without the chart's Ingress).
+trustProxy: null
+
 service:
   type: ClusterIP
   port: 80

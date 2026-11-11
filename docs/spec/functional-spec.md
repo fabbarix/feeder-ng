@@ -10,7 +10,7 @@ Status: **draft for review** (2026-11-09). The terms in **bold** are defined in 
 
 ## 2. Users, roles and access
 
-- Sign-in is Google OAuth only. A Google account whose email isn't on the **allowlist** is refused with a "not invited" page.
+- Sign-in is Google OAuth only, and only for a verified Google email. A person signs in at once if their email is on the **allowlist** or is the email of a **Member**. Anyone else creates an **Access Request** and sees a "Waiting for approval" page, with no session and no access to any data. Any signed-in User can approve (adding a non-Admin User) or deny it; one approval is enough. A denied email may ask again after 24 hours; a request expires after 14 days. Requests are limited per IP (10 an hour), per email (3 a week) and in total (50 pending), and every approval, denial and expiry is recorded with who did it. Settings lists the pending requests, and a count badge shows on the avatar menu.
 - The `FEEDER_ADMIN_EMAIL` environment variable is mandatory: the container refuses to start without it. It seeds the allowlist with the first **Admin**.
 - **Admin** manages the allowlist, Members, Meal Slots, Shops, Weight Barcode Rules and household settings. Every **User** can do everything else.
 - A User may be linked to a **Member**. That link decides whose Favourites, Dislikes and Exclusions the User edits by default.
@@ -32,7 +32,7 @@ The Household records the moment it was created in Feeder (never edited, not a s
 | Currency | USD | Admin-managed. Used for **Prices**, the estimated cost and price-valued Weight Barcode Rules. |
 | Location | none | City or coordinates, set by the Admin. Used to compute local sunset and sunrise for the kitchen board's dark mode (§11). Without one, the board uses 19:00–07:00. |
 
-**Members**: a name, a colour/avatar and a default **Portion Factor** (adult 1.0; any value from 0.25 to 3, in 0.25 steps).
+**Members**: a name, a colour/avatar and a default **Portion Factor** (adult 1.0; any value from 0.25 to 3, in 0.25 steps). A Member may have an email; see §2.
 
 **Meal Slots** are defined per weekday. Each has a name (e.g. Lunch), a usual time and a default **Attendance** (which Members attend, each with an optional Portion Factor override). The same slot name can exist on several weekdays with different times or attendance. A one-off change for a specific date ("Sam is away Thursday") edits that date's Attendance only.
 
@@ -249,6 +249,7 @@ Each User opts in per device, and per notification type:
 | Leftover Use-by | 10:00 on the Use-by date |
 | Stock about to spoil | 10:00 the day before a lot goes off, if no plan uses it |
 | Timer finished | immediately, ignoring quiet hours |
+| Access Request | when someone asks to sign in (deferred out of quiet hours) |
 
 Notifications are suppressed during quiet hours (except timers) and deferred to the end of the quiet window.
 
@@ -290,3 +291,4 @@ Notifications are suppressed during quiet hours (except timers) and deferred to 
 21. (2026-11-10) A bought Product cannot be deleted but can be archived and unarchived; archived Products are left out of lists and pickers, unknown to Scans, never suggested as last bought, and keep their history and barcodes (a new Product cannot claim them: unarchive the owner) (§5).
 22. (2026-11-10) Slot Rule reservation: the planner keeps a Slot Rule's Recipe for its slot and does not place it on earlier slots where its Cool-down would block the rule's slot ("Friday dinner = pizza" never lands on Tuesday). It applies to a Recipe rule, and to a Tag rule when exactly one eligible Recipe carries the Tag; the window is the Recipe's Cool-down, and it also replans unpinned Planned Meals inside it. Pinned always wins, and the rule slot then shows its usual couldn't-plan reason. Swap does not offer the reserved Recipe on those earlier slots (§7.2, §7.3).
 23. (2026-11-10) Attendance defaults to everyone: a new Meal Slot includes all current Members, a new Member joins every existing Meal Slot, and people opt out; migration 1230 gives every existing slot with no attendees all Members, once and automatically (§3). Couldn't plan is a designed state grouped by cause, with a setup checklist on first run (§7.4).
+24. (2026-11-10) Sign-in needs approval by any User or a pre-added address (ADR 0005); defaults: one approval, 14-day expiry, 24 h deny cool-down (§2).

@@ -50,7 +50,7 @@ describe('MemberEditor: Avatar', () => {
     expect(group).toHaveAttribute('aria-describedby', helper.id)
     expect(helper.textContent).toMatch(/initials/i)
     expect(screen.queryByRole('textbox', { name: /avatar/i })).toBeNull()
-    expect(screen.getAllByRole('textbox')).toHaveLength(1) // Name only
+    expect(screen.getAllByRole('textbox')).toHaveLength(2) // Name and the optional Email (A1 phase 2); no Avatar text field
   })
 
   it('a new Member starts on "Initials" and saves an empty avatar', async () => {
