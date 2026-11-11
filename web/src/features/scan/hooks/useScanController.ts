@@ -15,12 +15,13 @@ import type { UnitSystem } from '../../../lib/units'
 import { scanApi } from '../api'
 import { chooseDetector, type Detector } from '../lib/detector'
 import { createFeedback, webAudioBeep } from '../lib/feedback'
-import { appOpStore } from '../lib/idbStore'
+import { appOpStore, appPictureStore } from '../lib/idbStore'
 import { shouldRefreshOfflineData } from '../lib/offlineRefresh'
 import { OfflineQueue, type SyncApi } from '../lib/queue'
 import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
 import type { IngredientChoice } from '../lib/unknownForm'
+import { scanStrings } from '../strings'
 import type { Op, ScanResult } from '../types'
 import { useOfflineData } from './useOfflineData'
 import { useCamera, type CameraStatus } from './useCamera'
@@ -108,8 +109,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const [muted, setMuted] = useState(() => feedback.isMuted())
 
   const store = useMemo(() => appOpStore(), [])
-  const queue = useMemo(() => new OfflineQueue(store), [store])
-  const syncApi = useMemo<SyncApi>(() => ({ sync: (ops: Op[]) => scanApi.sync(ops) }), [])
+  const queue = useMemo(() => new OfflineQueue(store, undefined, appPictureStore()), [store])
+  const syncApi = useMemo<SyncApi>(() => ({ sync: (ops: Op[]) => scanApi.sync(ops), uploadPicture: (blob: Blob) => scanApi.uploadPicture(blob) }), [])
   const [notices, setNotices] = useState<SyncNotice[]>([])
   const resultsRef = useRef(new Map<string, ScanResult>())
   // The flow is created after the sync queue (it needs the queue's functions); the sync reaches it through this ref.
@@ -117,6 +118,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const sync = useSyncQueue({
     queue,
     api: syncApi,
+    // PPX: the phone had no room for the Picture of an offline scan: the scan is queued without it, and the User is told.
+    onPictureNotStored: () => toast.show(scanStrings.pictureNotSaved, { status: 'info' }),
     onResults: (results, found) => {
       for (const r of results) resultsRef.current.set(r.clientUuid, r)
       flowRef.current?.applySyncResults(results)
@@ -128,10 +131,10 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     },
   })
 
-  /** Queues the Op and sends the queue; the Result of this Op, or null while it waits (offline). */
-  const submit = async (op: Op): Promise<ScanResult | null> => {
+  /** Queues the Op (PPX: with the Blob of its offline Picture) and sends the queue; the Result of this Op, or null while it waits (offline). */
+  const submit = async (op: Op, picture?: Blob): Promise<ScanResult | null> => {
     resultsRef.current.delete(op.clientUuid)
-    await sync.enqueue(op)
+    await sync.enqueue(op, picture)
     return resultsRef.current.get(op.clientUuid) ?? null
   }
 

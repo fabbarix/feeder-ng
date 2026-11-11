@@ -24,13 +24,14 @@ export function syncNotices(results: readonly ScanResult[]): SyncNotice[] {
     }
     const merged = r.scan?.merged
     if (merged && !createdInBatch.has(merged.productId)) {
-      notices.push({ kind: 'merged', clientUuid: r.clientUuid, text: scanStrings.merged(merged.productName) })
+      const text = merged.pictureFilled ? scanStrings.mergedWithPicture(merged.productName) : scanStrings.merged(merged.productName)
+      notices.push({ kind: 'merged', clientUuid: r.clientUuid, text })
     }
   }
   return notices
 }
 
-/** PPX: one notice per Picture the queue gave up ("The picture of X was too large to upload, so it was added without one"). Stub until the Developer implements it. */
-export function pictureNotices(_failures: readonly PictureFailure[]): SyncNotice[] {
-  return []
+/** PPX: one notice per Picture the queue gave up ("The picture of X was too large to send, so it was added without one"), in order. */
+export function pictureNotices(failures: readonly PictureFailure[]): SyncNotice[] {
+  return failures.map((f) => ({ kind: 'picture', clientUuid: f.clientUuid, text: scanStrings.pictureDropped(f.productName, f.reason) }))
 }

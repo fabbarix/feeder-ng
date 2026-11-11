@@ -2,7 +2,7 @@
 // enqueue (React hook; the queue and API are injected).
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { backoffMs, type OfflineQueue, type SyncApi } from '../lib/queue'
-import { syncNotices, type SyncNotice } from '../lib/notices'
+import { pictureNotices, syncNotices, type SyncNotice } from '../lib/notices'
 import type { Op, ScanResult } from '../types'
 
 export interface UseSyncQueueOptions {
@@ -10,7 +10,7 @@ export interface UseSyncQueueOptions {
   api: SyncApi
   /** navigator.onLine by default */
   isOnline?: () => boolean
-  /** called with the results of each flush that sent something */
+  /** called with the results of each flush that sent something (results empty when only Pictures were given up) */
   onResults?: (results: ScanResult[], notices: SyncNotice[]) => void
   /** PPX: called with the operation when enqueue could not keep its Picture (the scan is queued without it) */
   onPictureNotStored?: (op: Op) => void
@@ -42,10 +42,12 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   const queueRef = useRef(options.queue)
   const apiRef = useRef(options.api)
   const onResultsRef = useRef(options.onResults)
+  const onPictureNotStoredRef = useRef(options.onPictureNotStored)
   const isOnlineRef = useRef(options.isOnline ?? defaultOnline)
   queueRef.current = options.queue
   apiRef.current = options.api
   onResultsRef.current = options.onResults
+  onPictureNotStoredRef.current = options.onPictureNotStored
   isOnlineRef.current = options.isOnline ?? defaultOnline
 
   const [online, setOnline] = useState(() => isOnlineRef.current())
@@ -70,12 +72,15 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   const flush = useCallback(async () => {
     clearRetry()
     if (!isOnlineRef.current()) return
-    const { offline, results } = await queueRef.current.flush(apiRef.current)
+    const { offline, results, pictureFailures } = await queueRef.current.flush(apiRef.current)
+    // PPX: Pictures given up in this flush are reported even when the batch itself is waiting for the server.
+    const pictureFound = pictureNotices(pictureFailures ?? [])
     if (offline) {
       failuresRef.current += 1
       if (isOnlineRef.current()) {
         retryRef.current = setTimeout(() => void flushRef.current(), backoffMs(failuresRef.current))
       }
+      if (pictureFound.length > 0) onResultsRef.current?.([], pictureFound)
       await refreshCounts()
       return
     }
@@ -84,14 +89,15 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
       await refreshCounts()
       return
     }
-    onResultsRef.current?.(results, syncNotices(results))
+    onResultsRef.current?.(results, [...syncNotices(results), ...pictureFound])
     await refreshCounts()
   }, [clearRetry, refreshCounts])
   flushRef.current = flush
 
   const enqueue = useCallback(
-    async (op: Op, _picture?: Blob) => {
-      await queueRef.current.enqueue(op)
+    async (op: Op, picture?: Blob) => {
+      const { pictureStored } = await queueRef.current.enqueue(op, picture)
+      if (picture && !pictureStored) onPictureNotStoredRef.current?.(op)
       await refreshCounts()
       await flush()
     },

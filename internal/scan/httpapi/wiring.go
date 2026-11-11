@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
@@ -117,6 +118,10 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	if errors.Is(err, productstore.ErrUnknownIngredient) {
 		return service.ProductInfo{}, service.ErrUnknownIngredient
 	}
+	if errors.Is(err, product.ErrPictureMissing) {
+		// PPX: before the generic ValidationError mapping, so the scan service can match the typed sentinel.
+		return service.ProductInfo{}, fmt.Errorf("%w: %v", service.ErrPictureMissing, err)
+	}
 	var invalid *product.ValidationError
 	if errors.As(err, &invalid) {
 		return service.ProductInfo{}, &scan.ValidationError{Field: invalid.Field, Message: invalid.Message}
@@ -127,9 +132,27 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	return productInfo(d.Product), nil
 }
 
-// FillPicture gives the Product the Picture only when it has none (PPX). Stub until the Developer implements it.
+// FillPicture gives the Product the Picture only when it has none (PPX), through the store's atomic FillImage, then reads the
+// Product back so the result carries the winner's picture when it already had one.
 func (c catalogue) FillPicture(ctx context.Context, productID int64, image string) (service.ProductInfo, bool, error) {
-	return service.ProductInfo{}, false, nil
+	filled, err := c.st.FillImage(ctx, productID, image)
+	if errors.Is(err, product.ErrPictureMissing) {
+		return service.ProductInfo{}, false, fmt.Errorf("%w: %v", service.ErrPictureMissing, err)
+	}
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ProductInfo{}, false, service.ErrProductGone
+	}
+	if err != nil {
+		return service.ProductInfo{}, false, err
+	}
+	d, err := c.st.Product(ctx, productID)
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ProductInfo{}, false, service.ErrProductGone
+	}
+	if err != nil {
+		return service.ProductInfo{}, false, err
+	}
+	return productInfo(d.Product), filled, nil
 }
 
 // SoldAt reports whether the Product is already sold at the Shop (T9's product_shops link).

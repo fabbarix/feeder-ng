@@ -1,7 +1,7 @@
 // The offline operation queue (functional spec §10.3). Plain TypeScript, no React.
 // Operations are kept in the order they were made, survive a restart (IndexedDB via idbStore.ts), and are sent to
 // POST /api/scan/sync in that order when the phone is back online. The server is idempotent on clientUuid, so
-// sending twice is safe. Stubs until the Developer implements them.
+// sending twice is safe.
 import { ApiError } from '../../../lib/http'
 import type { Op, ScanResult } from '../types'
 
@@ -164,14 +164,24 @@ export class OfflineQueue {
 
   /**
    * Appends the operation; a clientUuid already in the queue is ignored (no duplicate). PPX: an optional Picture (the Blob
-   * picked on the offline form) is kept in the PictureStore and flushed first. The operation is queued either way. Stub
-   * until the Developer implements it.
+   * picked on the offline form) is kept in the PictureStore first, then the entry is appended with its type and size. A
+   * Picture that cannot be kept (over MAX_QUEUED_PICTURE_BYTES, no store, or the store refused the write) leaves the
+   * operation queued WITHOUT it and answers pictureStored false.
    */
-  async enqueue(op: Op, _picture?: Blob): Promise<EnqueueResult> {
+  async enqueue(op: Op, picture?: Blob): Promise<EnqueueResult> {
     const existing = await this.store.all()
     if (existing.some((e) => e.op.clientUuid === op.clientUuid)) return { pictureStored: false }
-    await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0 })
-    return { pictureStored: false }
+    let kept: QueuedOp['picture'] | undefined
+    if (picture && this.pictures && picture.size <= MAX_QUEUED_PICTURE_BYTES) {
+      try {
+        await this.pictures.put(op.clientUuid, picture)
+        kept = { type: picture.type, size: picture.size }
+      } catch {
+        kept = undefined
+      }
+    }
+    await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0, ...(kept ? { picture: kept } : {}) })
+    return { pictureStored: kept !== undefined }
   }
 
   /**
@@ -213,6 +223,7 @@ export class OfflineQueue {
   cancel(clientUuid: string): Promise<boolean> {
     return this.exclusive(async () => {
       const queued = (await this.store.all()).find((e) => e.op.clientUuid === clientUuid)
+      await this.pictures?.remove(clientUuid)
       if (queued) {
         await this.store.remove(clientUuid)
         return queued.attempts === 0
@@ -278,13 +289,41 @@ export class OfflineQueue {
   private async send(api: SyncApi): Promise<FlushResult> {
     const sent = await this.pending()
     if (sent.length === 0) return { offline: false, results: [] }
+    const failures: PictureFailure[] = []
+    // Upload phase: every queued Picture goes up first, in queue order. An id is persisted on its Op before the next
+    // step, so a retry never uploads the same Picture twice.
+    for (let i = 0; i < sent.length; i++) {
+      const entry = sent[i]
+      if (!entry?.picture) continue
+      let id: string
+      try {
+        id = await this.uploadEntryPicture(api, entry)
+      } catch (err) {
+        if (isConnectivityError(err) || isRetryableUploadError(err)) {
+          for (const e of sent) await this.store.put({ ...e, attempts: e.attempts + 1 })
+          return withFailures({ offline: true, results: [] }, failures)
+        }
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) throw err
+        // A Picture that can never be uploaded is given up; the scan still syncs without it.
+        await this.pictures?.remove(entry.op.clientUuid)
+        const plain = withoutPicture(entry)
+        await this.store.put(plain)
+        sent[i] = plain
+        failures.push({ clientUuid: entry.op.clientUuid, productName: entry.op.productName ?? '', reason: pictureFailureReason(err) })
+        continue
+      }
+      await this.pictures?.remove(entry.op.clientUuid)
+      const updated: QueuedOp = { ...withoutPicture(entry), op: { ...entry.op, productImage: id } }
+      await this.store.put(updated)
+      sent[i] = updated
+    }
     let results: ScanResult[]
     try {
       results = await api.sync(sent.map((e) => e.op))
     } catch (err) {
       if (!isConnectivityError(err)) throw err
       for (const entry of sent) await this.store.put({ ...entry, attempts: entry.attempts + 1 })
-      return { offline: true, results: [] }
+      return withFailures({ offline: true, results: [] }, failures)
     }
     for (const result of results) {
       const entry = sent.find((e) => e.op.clientUuid === result.clientUuid)
@@ -300,6 +339,41 @@ export class OfflineQueue {
         this.outcomes.set(entry.op.clientUuid, 'applied')
       }
     }
-    return { offline: false, results }
+    return withFailures({ offline: false, results }, failures)
   }
+
+  /** PPX: uploads the Blob of a queued entry. A missing Blob (or no uploader) is a PictureFailure 'missing', thrown as such. */
+  private async uploadEntryPicture(api: SyncApi, entry: QueuedOp): Promise<string> {
+    const blob = await this.pictures?.get(entry.op.clientUuid)
+    if (!blob || !api.uploadPicture) throw new MissingPictureError()
+    return api.uploadPicture(blob)
+  }
+}
+
+/** PPX: an upload that should be tried again later (the server is busy, or the request timed out), like a connectivity failure. */
+const isRetryableUploadError = (err: unknown): boolean =>
+  err instanceof ApiError && (err.status === 408 || err.status === 429)
+
+/** PPX: a queued Picture whose Blob is gone (the device cleared it) or that has no uploader. */
+class MissingPictureError extends Error {}
+
+/** PPX: the reason a Picture was given up, from the server's answer (413 / 422 codes of internal/images/httpapi). */
+function pictureFailureReason(err: unknown): PictureFailure['reason'] {
+  if (err instanceof MissingPictureError) return 'missing'
+  if (err instanceof ApiError) {
+    if (err.code === 'image_too_large' || err.code === 'image_too_large_pixels') return 'too_large'
+    if (err.code === 'unsupported_image') return 'unsupported'
+  }
+  return 'rejected'
+}
+
+/** PPX: an entry without its Picture (the key is removed, not set to undefined, so stored rows stay clean). */
+function withoutPicture(entry: QueuedOp): QueuedOp {
+  const { picture: _picture, ...rest } = entry
+  return rest
+}
+
+/** PPX: adds pictureFailures only when there are some, so a flush without them keeps its plain shape. */
+function withFailures(result: FlushResult, failures: PictureFailure[]): FlushResult {
+  return failures.length > 0 ? { ...result, pictureFailures: failures } : result
 }

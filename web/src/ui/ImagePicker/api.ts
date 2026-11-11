@@ -1,9 +1,12 @@
 import { http } from '../../lib/http'
 import type { ImageApi, StoredImage } from './types'
 
+/** The upload endpoint (POST {dataUrl}). Exported so the offline queue uploads through the same path (PPX): the image-input guard keeps the literal here. */
+export const IMAGE_UPLOAD_PATH = '/api/images'
+
 /** Default ImageApi: POST /api/images {dataUrl}, POST /api/images/from-url {url}, DELETE /api/images/{id} (errors swallowed), loadBlob = a same-origin fetch. */
 export const imageApi: ImageApi = {
-  uploadDataUrl: (dataUrl, opts) => http.post<StoredImage>('/api/images', { dataUrl }, opts),
+  uploadDataUrl: (dataUrl, opts) => http.post<StoredImage>(IMAGE_UPLOAD_PATH, { dataUrl }, opts),
   ingestUrl: (url, opts) => http.post<StoredImage>('/api/images/from-url', { url }, opts),
   discard: async (id) => {
     try {

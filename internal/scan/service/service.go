@@ -340,7 +340,7 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	var merged *scan.Merged
 	created := true
 	p, err := s.d.Catalogue.CreateProduct(ctx, np)
-	if ve := (*scan.ValidationError)(nil); errors.As(err, &ve) && ve.Field == "image" && np.Image != "" {
+	if errors.Is(err, ErrPictureMissing) && np.Image != "" {
 		// A queued scan can outlive its uploaded picture: drop the missing picture rather than lose the whole scan.
 		np.Image = ""
 		p, err = s.d.Catalogue.CreateProduct(ctx, np)
@@ -356,6 +356,19 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 			return scan.Result{}, err
 		}
 		merged = &scan.Merged{ProductID: p.ID, ProductName: p.Name}
+		// PPX: the merged Product takes the form's Picture only when it has none (the store decides atomically).
+		if np.Image != "" && p.ImageURL == "" {
+			info, filled, ferr := s.d.Catalogue.FillPicture(ctx, p.ID, np.Image)
+			switch {
+			case errors.Is(ferr, ErrPictureMissing):
+				// The picture was swept or never stored: the merge goes ahead without it.
+			case ferr != nil:
+				return scan.Result{}, ferr
+			default:
+				p = info
+				merged.PictureFilled = filled
+			}
+		}
 	} else if err != nil {
 		var ve *scan.ValidationError
 		if errors.As(err, &ve) {

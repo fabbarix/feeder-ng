@@ -1,4 +1,6 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
+import { IMAGE_UPLOAD_PATH } from '../../ui/ImagePicker/api'
+import { blobToDataUrl } from '../../ui/ImagePicker/lib/imageUrl'
 import type { ArchivedProduct } from './lib/archivedProduct'
 import type { OfflineData, Op, ScanResult } from './types'
 
@@ -7,7 +9,7 @@ export interface ScanApi {
   /** A rejected operation answers 422 `{status:'rejected', error:{code}}`, which lib/http raises as an ApiError with that code. */
   apply(op: Op): Promise<ScanResult>
   sync(ops: Op[]): Promise<ScanResult[]>
-  /** PPX: POST /api/images {dataUrl} for a Picture queued offline; answers the image id. Stub until the Developer implements it. */
+  /** PPX: POST /api/images {dataUrl} for a Picture queued offline (the ImagePicker's endpoint); answers the image id. */
   uploadPicture(blob: Blob): Promise<string>
   undo(clientUuid: string): Promise<{ undone: boolean; alreadyUndone?: boolean }>
   setPrice(clientUuid: string, priceCents: number): Promise<ScanResult>
@@ -37,8 +39,9 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
       const signal = timeoutSignal(syncTimeoutMs)
       return (await client.post<{ results: ScanResult[] }>('/api/scan/sync', { ops }, { signal })).results
     },
-    async uploadPicture() {
-      throw new Error('not implemented')
+    async uploadPicture(blob) {
+      const dataUrl = await blobToDataUrl(blob)
+      return (await client.post<{ id: string }>(IMAGE_UPLOAD_PATH, { dataUrl })).id
     },
     undo: (uuid) => client.post(`/api/scan/${encodeURIComponent(uuid)}/undo`),
     setPrice: (uuid, priceCents) => client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, { priceCents }),
