@@ -1,7 +1,7 @@
 // CoursePicker (CRS D1): ordered and unordered forms, keyboard and ARIA, add, remove, reorder, the main Course marker,
 // at least one required, and the per-row extras slot D2 fills with "Optional" and attendance.
 // See docs/dev/design/crs-d1.md.
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -174,6 +174,30 @@ describe('CoursePicker: moving', () => {
     expect(screen.getByRole('button', { name: 'Move Starter up' })).toHaveFocus()
   })
 
+  it('a row moved to the top keeps focus on its Move down (Move up is now disabled)', async () => {
+    render(<Controlled initial={[1, 2, 3]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Move Side up' }))
+    expect(rowNames()).toEqual(['Side', 'Main', 'Starter'])
+    expect(screen.getByRole('button', { name: 'Move Side down' })).toHaveFocus()
+    expect(document.body).not.toHaveFocus()
+  })
+
+  it('a row moved to the bottom keeps focus on its Move up (Move down is now disabled)', async () => {
+    render(<Controlled initial={[1, 2, 3]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Move Side down' }))
+    expect(rowNames()).toEqual(['Main', 'Starter', 'Side'])
+    expect(screen.getByRole('button', { name: 'Move Side up' })).toHaveFocus()
+    expect(document.body).not.toHaveFocus()
+  })
+
+  it('Remove puts focus on the Course\'s chip, now unpressed', async () => {
+    render(<Controlled initial={[1, 2, 3]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Side' }))
+    expect(rowNames()).toEqual(['Main', 'Starter'])
+    expect(chip('Side')).toHaveFocus()
+    expect(chip('Side')).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('has a drag handle per row (the shared Sortable) that moves with the keyboard', async () => {
     const onChange = vi.fn()
     render(<Controlled initial={[1, 2, 3]} onChange={onChange} />)
@@ -281,6 +305,36 @@ describe('CoursePicker: row extras (the slot D2 fills)', () => {
     within(first).getByRole('button', { name: 'Extra' }).focus()
     await userEvent.tab()
     expect(within(first).getByRole('button', { name: 'Move Main down' })).toHaveFocus()
+  })
+
+  it('a focused extra and its state survive another row moving', () => {
+    function Toggle({ name }: { name: string }) {
+      const [on, setOn] = useState(false)
+      return (
+        <button type="button" aria-pressed={on} onClick={() => setOn(!on)}>
+          {`Optional ${name}`}
+        </button>
+      )
+    }
+    const extras = (row: { course: CourseChoice }) => <Toggle name={row.course.name} />
+    const { rerender } = render(
+      <CoursePicker label="Courses" courses={courses} value={[1, 2, 3]} onChange={() => {}} renderRowExtras={extras} />,
+    )
+    const toggle = screen.getByRole('button', { name: 'Optional Side' })
+    toggle.focus()
+    act(() => toggle.click())
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle).toHaveFocus()
+
+    // Another row (Starter) moves to the top; Side's row is pushed down but not remounted.
+    rerender(
+      <CoursePicker label="Courses" courses={courses} value={[3, 1, 2]} onChange={() => {}} renderRowExtras={extras} />,
+    )
+    expect(rowNames()).toEqual(['Starter', 'Main', 'Side'])
+    const after = screen.getByRole('button', { name: 'Optional Side' })
+    expect(after).toBe(toggle)
+    expect(after).toHaveFocus()
+    expect(after).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('is not called by the unordered form', () => {
