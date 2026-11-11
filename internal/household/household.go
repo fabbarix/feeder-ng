@@ -19,6 +19,7 @@ var (
 	ErrDuplicateSlot     = errors.New("household: a Meal Slot with that name already exists on that weekday")
 	ErrUnknownMember     = errors.New("household: unknown member")
 	ErrDuplicateAttendee = errors.New("household: member listed twice in an Attendance")
+	ErrEmailTaken        = errors.New("household: that e-mail address is already in use")
 	ErrWeekdayMismatch   = errors.New("household: date is not on the Meal Slot's weekday")
 )
 

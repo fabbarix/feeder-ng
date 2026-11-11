@@ -94,8 +94,11 @@ func (s *Store) Member(ctx context.Context, id int64) (household.Member, error) 
 // CreateMember adds a Member with no User link.
 func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (household.Member, error) {
 	now := s.clk.Now().UTC().Truncate(time.Second).Format(time.RFC3339)
-	res, err := s.db.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, portion_factor, created_at)
-		VALUES (?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.PortionFactor, now)
+	res, err := s.db.ExecContext(ctx, `INSERT INTO members (name, colour, avatar, portion_factor, email, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)`, in.Name, in.Colour, in.Avatar, in.PortionFactor, nullEmail(in.Email), now)
+	if isUnique(err) {
+		return household.Member{}, household.ErrEmailTaken
+	}
 	if err != nil {
 		return household.Member{}, err
 	}
@@ -106,10 +109,13 @@ func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (hou
 	return s.Member(ctx, id)
 }
 
-// UpdateMember changes name, colour, avatar and Portion Factor, keeping the User link.
+// UpdateMember changes name, colour, avatar, Portion Factor and email, keeping the User link.
 func (s *Store) UpdateMember(ctx context.Context, id int64, in household.MemberInput) (household.Member, error) {
-	res, err := s.db.ExecContext(ctx, `UPDATE members SET name = ?, colour = ?, avatar = ?, portion_factor = ?
-		WHERE id = ?`, in.Name, in.Colour, in.Avatar, in.PortionFactor, id)
+	res, err := s.db.ExecContext(ctx, `UPDATE members SET name = ?, colour = ?, avatar = ?, portion_factor = ?, email = ?
+		WHERE id = ?`, in.Name, in.Colour, in.Avatar, in.PortionFactor, nullEmail(in.Email), id)
+	if isUnique(err) {
+		return household.Member{}, household.ErrEmailTaken
+	}
 	if err != nil {
 		return household.Member{}, err
 	}
@@ -355,7 +361,7 @@ func (s *Store) inTx(ctx context.Context, fn func(*sql.Tx) error) error {
 }
 
 func queryMembers(ctx context.Context, q querier) ([]household.Member, error) {
-	rows, err := q.QueryContext(ctx, `SELECT id, name, colour, avatar, portion_factor, user_id FROM members ORDER BY id`)
+	rows, err := q.QueryContext(ctx, `SELECT id, name, colour, avatar, portion_factor, user_id, email FROM members ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +379,7 @@ func queryMembers(ctx context.Context, q querier) ([]household.Member, error) {
 
 func getMember(ctx context.Context, q querier, id int64) (household.Member, error) {
 	m, err := scanMember(q.QueryRowContext(ctx,
-		`SELECT id, name, colour, avatar, portion_factor, user_id FROM members WHERE id = ?`, id))
+		`SELECT id, name, colour, avatar, portion_factor, user_id, email FROM members WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return household.Member{}, household.ErrNotFound
 	}
@@ -384,12 +390,14 @@ type scanner interface{ Scan(dest ...any) error }
 
 func scanMember(r scanner) (household.Member, error) {
 	var (
-		m    household.Member
-		user sql.NullInt64
+		m     household.Member
+		user  sql.NullInt64
+		email sql.NullString
 	)
-	if err := r.Scan(&m.ID, &m.Name, &m.Colour, &m.Avatar, &m.PortionFactor, &user); err != nil {
+	if err := r.Scan(&m.ID, &m.Name, &m.Colour, &m.Avatar, &m.PortionFactor, &user, &email); err != nil {
 		return household.Member{}, err
 	}
+	m.Email = email.String
 	if user.Valid {
 		u := user.Int64
 		m.UserID = &u
@@ -511,4 +519,12 @@ func (s *Store) Created(ctx context.Context) (time.Time, error) {
 		}
 	}
 	return time.Parse(time.RFC3339, at.String)
+}
+
+// nullEmail stores no address as NULL so the unique index ignores it.
+func nullEmail(e string) any {
+	if e == "" {
+		return nil
+	}
+	return e
 }

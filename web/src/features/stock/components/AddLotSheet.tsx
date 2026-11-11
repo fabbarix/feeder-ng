@@ -17,7 +17,8 @@ export interface AddLotSheetProps {
  * Ingredient is the default until picked), `TextField` labelled "Quantity" (inputMode decimal, `suffix` = the chosen
  * Ingredient's Base Unit, parseAmount 'positive', error shown inline via the field's `error`), `DateField` labelled
  * "Bought on" (optional; empty = omit `purchased`), and a primary Save in the sheet `footer`.
- * No native select/date input, no `role="alert"` paragraph (the field error is the message).
+ * No native select/date input, no separate `role="alert"` paragraph: the field's own error line is the alert (FieldFrame
+ * renders it with role="alert"), so there is one message.
  */
 export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetProps): ReactElement | null {
   const [pickedId, setPickedId] = useState<number | null>(null)

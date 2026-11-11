@@ -21,6 +21,9 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	DevLogin           bool
+	// TrustProxy: the client address for rate limits is the last X-Forwarded-For entry. Off by default (the socket peer
+	// is used); FEEDER_TRUST_PROXY=1/true/yes/on says a reverse proxy sits in front.
+	TrustProxy bool
 }
 
 // Load reads the configuration through getenv (os.Getenv in production).
@@ -36,6 +39,10 @@ func Load(getenv func(string) string) (Config, error) {
 		BaseURL:            getenv("FEEDER_BASE_URL"),
 		GoogleClientID:     getenv("FEEDER_GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: getenv("FEEDER_GOOGLE_CLIENT_SECRET"),
+	}
+	switch strings.ToLower(strings.TrimSpace(getenv("FEEDER_TRUST_PROXY"))) {
+	case "1", "true", "yes", "on":
+		c.TrustProxy = true
 	}
 	switch strings.ToLower(getenv("FEEDER_DEV_LOGIN")) {
 	case "1", "true":

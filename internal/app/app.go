@@ -9,10 +9,13 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/fabbarix/feeder-ng/internal/access"
+	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/config"
 	"github.com/fabbarix/feeder-ng/internal/events"
+	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/scheduler"
 )
@@ -70,6 +73,7 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	lifetime, stop := context.WithCancel(context.Background())
 	workers := &sync.WaitGroup{}
 	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger,
+		Access:    access.NewService(accessstore.New(d), authSvc, householdstore.New(d, clk).AccessMembers(), clk, access.DefaultLimits()),
 		Scheduler: scheduler.New(clk, scheduler.NewSQLRunStore(d), o.logger), Context: lifetime, workers: workers}
 	// Removal and sign-out end the live-update streams of the affected User or session.
 	authSvc.OnRevoke(deps.Events.CloseOwner)

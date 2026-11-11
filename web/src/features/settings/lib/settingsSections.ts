@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'preferences' | 'notifications' | 'allowlist'
+  id: 'household' | 'members' | 'mealSlots' | 'planningRules' | 'shops' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -28,6 +28,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
   { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
+  { group: 'household', id: 'accessRequests', ...copy.accessRequests, icon: 'timer', path: '/settings/access-requests' },
   { group: 'you', id: 'preferences', ...copy.preferences, icon: 'appearance', path: '/settings/preferences' },
   { group: 'you', id: 'notifications', ...copy.notifications, icon: 'notifications', path: '/settings/notifications' },
   { group: 'admin', id: 'allowlist', ...copy.allowlist, icon: 'allowlist', path: '/settings/allowlist', adminOnly: true },
@@ -41,7 +42,7 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
 
 /**
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
- *   Household: Household, Members, Meal Slots, Planning rules, Shops   (/settings/household, /members, /meal-slots, /planning, /shops)
+ *   Household: Household, Members, Meal Slots, Planning rules, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /shops, /access-requests)
  *   You:       Your preferences, Notifications                          (/settings/preferences, /notifications)
  *   Admin:     Allowlist (Admins only)                                  (/settings/allowlist)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).

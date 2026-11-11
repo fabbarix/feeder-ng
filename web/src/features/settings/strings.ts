@@ -1,5 +1,7 @@
 // English copy for Settings. Glossary terms only.
 export const settingsStrings = {
+  /** One wording for a mistyped email, in the Member sheet and on the Allowlist. */
+  invalidEmail: 'Enter a valid email address, such as name@example.com.',
   title: 'Settings',
   household: 'Household',
   members: 'Members',
@@ -10,6 +12,8 @@ export const settingsStrings = {
   index: {
     title: 'Settings',
     groups: { household: 'Household', you: 'You', admin: 'Admin' },
+    /** The row's accessible name when requests wait: the count is shown once, as the badge. */
+    rowWithCount: (title: string, n: number) => `${title}, ${n} waiting`,
     sections: {
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
@@ -17,6 +21,7 @@ export const settingsStrings = {
       planningRules: { title: 'Planning rules', meta: 'Planner Style, Cool-down, Leftover Use-by' },
       shops: { title: 'Shops', meta: 'Where you buy, and their barcodes' },
       preferences: { title: 'Your preferences', meta: 'Colour mode, units, accent' },
+      accessRequests: { title: 'Sign-in requests', meta: 'Who asked to join' },
       notifications: { title: 'Notifications', meta: 'Which alerts reach this device' },
       allowlist: { title: 'Allowlist', meta: 'Who may sign in to Feeder' },
     },
@@ -64,6 +69,8 @@ export const settingsStrings = {
     avatarHelper: "Optional. Shown next to the Member's name; without one the initials are used.",
     avatarNone: 'Initials',
     portionFactorLabel: 'Portion Factor',
+    email: 'Email',
+    emailHelper: 'Lets them sign in with Google without asking',
     portionFactorHelper: 'How much of a standard portion this Member eats. An adult is 1.',
     thisIsMe: 'This is me',
     you: (name: string) => `${name} (you)`,
@@ -107,8 +114,8 @@ export const settingsStrings = {
   allowlistPanel: {
     emailLabel: 'Email to allow',
     add: 'Add to allowlist',
-    badEmail: 'Enter a valid email address.',
     you: '(you)',
+    youMeta: 'You',
     admin: (email: string) => `Admin: ${email}`,
     lastAdmin: 'Last Admin',
     adminLabel: 'Admin',
@@ -118,6 +125,8 @@ export const settingsStrings = {
     confirmRemoveTitle: (email: string) => `Remove ${email}?`,
     confirmRemoveBody: 'They will no longer be able to sign in. Their own data stays.',
     cancel: 'Cancel',
+    askToJoinHint: 'People can also ask to join. Their requests wait in',
+    signInRequests: 'Sign-in requests',
   },
 
   prefs: {

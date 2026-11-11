@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/fabbarix/feeder-ng/internal/access"
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/config"
@@ -24,6 +25,8 @@ type Deps struct {
 	Config config.Config
 	Events *events.Bus
 	Auth   *auth.Service
+	// Access decides sign-in outcomes and holds the Access Requests (ADR 0005).
+	Access *access.Service
 	Logger *slog.Logger
 	// Scheduler runs household-time daily jobs (planning's nightly run, later backups and
 	// notification sweeps). Modules register jobs in Mount; cmd/feeder starts it with Run.

@@ -1,8 +1,8 @@
 import type { AllowedUser, HouseholdSettings, MealSlot, Member } from '../types'
 
-export const anna: Member = { id: 1, name: 'Anna', colour: '#3366cc', avatar: '', portionFactor: 1, userId: 2 }
-export const marco: Member = { id: 2, name: 'Marco', colour: '#e07a5f', avatar: '', portionFactor: 1, userId: null }
-export const sam: Member = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: null }
+export const anna: Member = { id: 1, name: 'Anna', colour: '#3366cc', avatar: '', portionFactor: 1, userId: 2, email: null }
+export const marco: Member = { id: 2, name: 'Marco', colour: '#e07a5f', avatar: '', portionFactor: 1, userId: null, email: null }
+export const sam: Member = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: null, email: null }
 export const members = [anna, marco, sam]
 
 export const tuesdayDinner: MealSlot = {

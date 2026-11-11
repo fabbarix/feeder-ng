@@ -24,6 +24,8 @@ export interface Member {
   avatar: string
   portionFactor: number
   userId: number | null
+  /** The optional Member email (A1): with it the Member's person can sign in without asking. */
+  email: string | null
 }
 
 export interface MemberInput {
@@ -31,6 +33,8 @@ export interface MemberInput {
   colour: string
   avatar: string
   portionFactor: number
+  /** In the editor draft: the typed text ('' = none). On the wire (POST/PATCH /api/members): the trimmed address, or null. */
+  email: string | null
 }
 
 export interface AttendanceEntry {

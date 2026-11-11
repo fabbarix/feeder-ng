@@ -29,6 +29,8 @@ export function MembersPage() {
         members={page.members.members}
         saving={page.members.saving}
         error={page.error}
+        emailError={page.emailError}
+        onEmailEdit={page.clearEmailError}
         onSave={page.save}
         onDelete={page.remove}
         onClose={page.close}
