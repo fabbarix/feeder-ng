@@ -452,3 +452,36 @@ func TestMemberPhotoRoundTripsAndCanBeCleared(t *testing.T) {
 		t.Errorf("update without a photo = %+v, %v; it clears the photo (an update replaces the Member)", up, err)
 	}
 }
+
+// R15: batch edit of matching Meal Slots.
+func TestUpdateSlotsBatchIsAllOrNothing(t *testing.T) {
+	f := newFx(t)
+	anna := f.member(t, "Anna", 1)
+	mon, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 1, Name: "Dinner", Time: "19:00"})
+	tue, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:00", Attendance: []household.Attendee{}})
+	f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Supper", Time: "20:00"})
+	time, name := "19:30", "Supper"
+	res, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 3}, Change: household.SlotChange{Time: &time}})
+	if err != nil || len(res.Updated) != 1 || res.Updated[0].ID != mon.ID || res.Updated[0].Time != "19:30" || len(res.Skipped) != 1 || res.Skipped[0] != 3 {
+		t.Fatalf("batch = %+v, %v", res, err)
+	}
+	// Renaming Tuesday's Dinner to the existing Supper clashes: Monday must not be renamed either.
+	_, err = f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 2}, Change: household.SlotChange{Name: &name}})
+	if !errors.Is(err, household.ErrDuplicateSlot) {
+		t.Fatalf("clash err = %v", err)
+	}
+	got, _ := f.st.Slot(f.ctx, mon.ID)
+	if got.Name != "Dinner" {
+		t.Errorf("Monday renamed to %q despite the failed batch", got.Name)
+	}
+	att := []household.Attendee{{MemberID: anna.ID}, {MemberID: 9999}}
+	if _, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 2}, Change: household.SlotChange{Attendance: &att}}); !errors.Is(err, household.ErrUnknownMember) {
+		t.Errorf("unknown member err = %v", err)
+	}
+	if g, _ := f.st.Slot(f.ctx, tue.ID); len(g.Attendance) != 0 {
+		t.Errorf("Tuesday attendance changed: %+v", g.Attendance)
+	}
+	if _, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Brunch", Weekdays: []int{1}, Change: household.SlotChange{Time: &time}}); !errors.Is(err, household.ErrNoMatchingSlot) {
+		t.Errorf("no match err = %v", err)
+	}
+}

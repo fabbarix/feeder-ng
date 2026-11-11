@@ -15,6 +15,8 @@ const SECTIONS = [
   'ProgressTile',
   'TimerTile',
   'EmptyState',
+  'WeekdayPicker',
+  'MemberPill',
 ] as const
 
 describe('Gallery (dev catalogue)', () => {
@@ -65,6 +67,15 @@ describe('Gallery (dev catalogue)', () => {
     for (const v of ['surface', 'hero', 'soft', 'status', 'media', 'action']) expect(section.querySelector(`.tile[data-variant="${v}"]`), v).not.toBeNull()
     for (const s of ['leftover', 'spoil', 'danger', 'success', 'pinned']) expect(section.querySelector(`.tile[data-status="${s}"]`), s).not.toBeNull()
     expect(section.querySelector('.tile__stretch')).not.toBeNull()
+  })
+
+  it('WeekdayPicker shows a selection and an error; MemberPill shows initials, an emoji and a long name', () => {
+    const { container } = render(<Gallery />)
+    const section = container.querySelector<HTMLElement>('[data-scheme="light"]')!
+    expect(within(section).getAllByRole('group', { name: 'Apply to' })[0]!.querySelector('[aria-pressed="true"]')).not.toBeNull()
+    expect(section.querySelector('.weekday-picker [role="alert"]')).not.toBeNull()
+    expect(section.querySelectorAll('.member-pill').length).toBeGreaterThanOrEqual(3)
+    expect(within(section).getByText('Lucia')).toBeInTheDocument()
   })
 
   it('shows every timer state', () => {

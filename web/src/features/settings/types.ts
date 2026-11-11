@@ -88,3 +88,21 @@ export interface Preferences {
   accent: string
   units: 'metric' | 'imperial'
 }
+
+/** R15: PATCH /api/meal-slots/batch. Edits the Meal Slot named `match` on each weekday; only the fields in `set` change. */
+export interface SlotBatchChange {
+  name?: string
+  time?: string
+  /** Replaces the usual Attendance on every matching Meal Slot; [] means nobody. */
+  attendance?: AttendanceEntry[]
+}
+export interface SlotBatchRequest {
+  match: string
+  weekdays: number[]
+  set: SlotBatchChange
+}
+export interface SlotBatchResult {
+  match: string
+  updated: MealSlot[]
+  skipped: { weekday: number; reason: 'no_slot' }[]
+}

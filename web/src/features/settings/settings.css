@@ -76,6 +76,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  /* the stepper icon buttons' 6 px hit area sticks out of the row; leave room so the sheet never scrolls sideways */
+  padding-inline-end: 6px;
 }
 
 /* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
@@ -120,4 +122,160 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+}
+
+/* R15: Meal Slot overview. */
+.meal-week__slot {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  scroll-margin-block: var(--space-6);
+}
+.meal-week__slot:focus-visible,
+.meal-grid__slot:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-control);
+}
+.attendee-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.attendee-pills__item {
+  display: inline-flex;
+  max-inline-size: 100%;
+}
+.attendee-pills__more {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+.nobody-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 28px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--text-chip-size);
+  font-weight: var(--text-label-weight);
+}
+.nobody-pill[data-tone='warn'] {
+  background: var(--status-spoil-bg);
+  color: var(--status-spoil-fg);
+}
+button.nobody-pill {
+  cursor: pointer;
+}
+button.nobody-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.meal-grid-wrap {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+.meal-grid {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: var(--space-1);
+  table-layout: fixed;
+}
+.meal-grid th {
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+  text-align: start;
+}
+.meal-grid th[scope='row'] {
+  inline-size: 4.5rem;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.meal-grid td {
+  vertical-align: top;
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+  min-inline-size: 0;
+  /* a cell holds its content: it wraps first, and clips (with room for the focus ring) only as a last resort */
+  overflow: clip;
+  overflow-clip-margin: 4px;
+}
+.meal-grid__slot {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  inline-size: 100%;
+  min-inline-size: 0;
+  scroll-margin-block: var(--space-6);
+}
+/* The chip wraps inside a ~80 px cell: name first, the time on its own line. */
+.meal-grid .chip {
+  white-space: normal;
+  block-size: auto;
+  min-block-size: 28px;
+  min-inline-size: 0;
+  padding-block: 4px;
+  padding-inline: 8px;
+  gap: 4px;
+  line-height: var(--text-label-line);
+  text-align: start;
+}
+.meal-grid .meal-chip__label {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.meal-grid .meal-chip__time {
+  display: block;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.meal-grid .attendee-pills {
+  flex-wrap: wrap;
+  inline-size: 100%;
+}
+.meal-grid .nobody-pill {
+  max-inline-size: 100%;
+  white-space: normal;
+  block-size: auto;
+  padding-block: 2px;
+  text-align: start;
+}
+/* Narrow grid (the 720 px Page): pills shrink to their avatars; the names stay in the list's accessible text. */
+@container (max-width: 900px) {
+  .meal-grid .member-pill__name {
+    display: none;
+  }
+  .meal-grid .member-pill {
+    padding-inline: 2px;
+  }
+}
+.meal-slot-summary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+.meal-slot-summary__skipped {
+  color: var(--status-spoil-fg);
+}
+.meal-slot-quickpicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }

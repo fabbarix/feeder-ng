@@ -109,6 +109,10 @@ _Avoid_: Never, allergy, blacklist
 A named eating occasion the Household defines for a particular day of the week, with a usual time (e.g. "Tuesday Dinner, 19:30").
 _Avoid_: Meal time, occasion, slot type
 
+**Matching Meal Slot**:
+The Meal Slot with the same name (case and edge spaces ignored) on another weekday. A change applied to several weekdays edits the Matching Meal Slot on each; a weekday without one is skipped, and nothing is created.
+_Avoid_: Sibling, linked slot, twin
+
 **Planned Meal**:
 The Recipe assigned to one Meal Slot on one date, either freshly cooked or served from a Leftover.
 _Avoid_: Meal, entry, booking

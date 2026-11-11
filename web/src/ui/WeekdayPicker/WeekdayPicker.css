@@ -1,0 +1,77 @@
+/* WeekdayPicker (R15): seven toggle chips that fit a 390 px phone (7 x 44 px + 6 x 2 px gap = 320 px). Tokens only. */
+.weekday-picker {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.weekday-picker__label {
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+
+.weekday-picker__chips {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.weekday-picker__chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-block-size: 44px;
+  min-inline-size: 0;
+  padding: 0;
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  cursor: pointer;
+}
+
+.weekday-picker__chip svg {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+.weekday-picker__chip[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 800;
+}
+
+.weekday-picker__chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.weekday-picker__chip:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.weekday-picker__helper {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.weekday-picker__error {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-label-weight);
+  color: var(--status-danger-fg);
+}
