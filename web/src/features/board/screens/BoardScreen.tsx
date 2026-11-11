@@ -9,7 +9,7 @@ import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimer
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
 import { BOARD_LAYOUT, type BoardCell } from '../lib/layout'
-import { leftoverRows, startCookPath, tomorrowMeals, tonightMeal, useSoonRows } from '../lib/tiles'
+import { leftoverRows, startCookPath, tomorrowSlots, tonightMeal, useSoonRows } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import '../board.css'
 
@@ -80,7 +80,7 @@ export function BoardScreen(): ReactNode {
           <BoardTimersTile items={timers.items} />
         </Cell>
         <Cell id="tomorrow">
-          <TomorrowTile slots={tomorrowMeals(plan.slots, data.today)} />
+          <TomorrowTile slots={tomorrowSlots(plan.slots, data.today)} />
         </Cell>
         <Cell id="useSoon">
           <UseSoonTile rows={useSoonRows(totals.data ?? [], 5)} />

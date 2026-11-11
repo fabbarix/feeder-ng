@@ -61,4 +61,9 @@ describe('MealSlotWeek (5.14: a week of 7 rows, slots as chips)', () => {
     setup({ slots: [] })
     expect(screen.getByText('No Meal Slots yet')).toBeInTheDocument()
   })
+
+  it('R13: "Add Meal Slot" is disabled until the Members have loaded, so a new slot cannot start with nobody', () => {
+    setup({ addDisabled: true })
+    for (const day of WEEK) expect(screen.getByRole('button', { name: `Add Meal Slot on ${day}` })).toBeDisabled()
+  })
 })

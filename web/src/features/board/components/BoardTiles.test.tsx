@@ -218,6 +218,12 @@ describe('board text truncation contract', () => {
     expect(rule('.board-tile__heading')).toMatch(/font-size:\s*1\.3125rem/)
     expect(rule('.board-screen .board-use-soon .chip')).toMatch(/block-size:\s*40px/)
   })
+  it('R13: the "Not planned" chip in Tomorrow is board scale (40 px, like Use soon), one line', () => {
+    const body = rule('.board-screen .board-tomorrow .chip')
+    expect(body).toMatch(/block-size:\s*40px/)
+    expect(body).toMatch(/font-size:\s*1\.25rem/)
+    expect(body).toMatch(/white-space:\s*nowrap/)
+  })
   it('timer rows in the Timers tile are compact and clamp their label to 1 line', () => {
     expect(rule('.board-timers .board-list')).toMatch(/gap:\s*(4|8)px/)
     expect(rule('.board-timers .timer-tile__label')).toMatch(/-webkit-line-clamp:\s*1|text-overflow:\s*ellipsis/)
