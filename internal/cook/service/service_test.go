@@ -773,10 +773,10 @@ func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
 	for scope, want := range map[cook.Scope]string{
 		cook.MealScope("2026-11-09", 3, 0): "Chicken stew",
-		cook.RecipeScope(12):            "Chicken stew",
+		cook.RecipeScope(12):               "Chicken stew",
 		cook.MealScope("2026-11-20", 1, 0): "",
-		cook.RecipeScope(99):            "",
-		"":                              "",
+		cook.RecipeScope(99):               "",
+		"":                                 "",
 	} {
 		if got := f.svc.ScopeRecipeName(ctx, scope); got != want {
 			t.Errorf("ScopeRecipeName(%q) = %q, want %q", scope, got, want)

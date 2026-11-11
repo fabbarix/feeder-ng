@@ -42,10 +42,10 @@ type ScopeParts struct {
 func ParseScope(s string) (ScopeParts, error) {
 	if rest, ok := strings.CutPrefix(s, "meal:"); ok {
 		date, slot, ok := strings.Cut(rest, "/")
-		slot, course, hasCourse := strings.Cut(slot, "/")
 		if !ok {
 			return ScopeParts{}, ErrInvalidScope
 		}
+		slot, course, hasCourse := strings.Cut(slot, "/")
 		if _, err := time.Parse("2006-01-02", date); err != nil || len(date) != len("2006-01-02") {
 			return ScopeParts{}, ErrInvalidScope
 		}

@@ -3,6 +3,7 @@ package plan_test
 import (
 	"testing"
 
+	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 )
 
@@ -21,9 +22,29 @@ func TestKeyCourse(t *testing.T) {
 	}
 }
 
-func TestSlotRuleCourse(t *testing.T) {
-	r := plan.SlotRule{MealSlotID: 1, CourseID: 3, RecipeID: 4}
-	if r.CourseID != 3 {
-		t.Errorf("SlotRule.CourseID = %d", r.CourseID)
+func TestMealScopeRoundTrip(t *testing.T) {
+	cases := []struct {
+		name     string
+		courseID int64
+		want     string
+	}{
+		{"course 0 two-part", 0, "meal:2026-11-09/1"},
+		{"real course three-part", 3, "meal:2026-11-09/1/3"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			scope := cook.MealScope("2026-11-09", 1, c.courseID)
+			if string(scope) != c.want {
+				t.Fatalf("MealScope = %q, want %q", scope, c.want)
+			}
+			got, err := cook.ParseScope(string(scope))
+			if err != nil {
+				t.Fatalf("ParseScope(%q): %v", scope, err)
+			}
+			want := cook.ScopeParts{Date: "2026-11-09", MealSlotID: 1, CourseID: c.courseID, IsMeal: true}
+			if got != want {
+				t.Errorf("ParseScope(%q) = %+v, want %+v", scope, got, want)
+			}
+		})
 	}
 }
