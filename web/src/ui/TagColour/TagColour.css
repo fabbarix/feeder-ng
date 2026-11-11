@@ -1,0 +1,137 @@
+/* Tag colour primitives (TG-UI, spec 4.1): the dot and the swatches take their colour from the Tag tokens only. */
+.tag-dot {
+  display: inline-block;
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--color-outline);
+}
+
+.tag-dot[data-tag-colour='tomato'] {
+  background: var(--tag-tomato-dot);
+}
+
+.tag-dot[data-tag-colour='apricot'] {
+  background: var(--tag-apricot-dot);
+}
+
+.tag-dot[data-tag-colour='mustard'] {
+  background: var(--tag-mustard-dot);
+}
+
+.tag-dot[data-tag-colour='olive'] {
+  background: var(--tag-olive-dot);
+}
+
+.tag-dot[data-tag-colour='sage'] {
+  background: var(--tag-sage-dot);
+}
+
+.tag-dot[data-tag-colour='teal'] {
+  background: var(--tag-teal-dot);
+}
+
+.tag-dot[data-tag-colour='sky'] {
+  background: var(--tag-sky-dot);
+}
+
+.tag-dot[data-tag-colour='blue'] {
+  background: var(--tag-blue-dot);
+}
+
+.tag-dot[data-tag-colour='plum'] {
+  background: var(--tag-plum-dot);
+}
+
+.tag-dot[data-tag-colour='rose'] {
+  background: var(--tag-rose-dot);
+}
+
+.tag-colour-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-outline);
+  cursor: pointer;
+}
+
+.tag-swatch:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.tag-swatch:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+/* The tick sits on the swatch's dot colour: the fill token is the contrasting one in both schemes. */
+.tag-swatch[data-tag-colour='tomato'] {
+  background: var(--tag-tomato-dot);
+  color: var(--tag-tomato-bg);
+}
+
+.tag-swatch[data-tag-colour='apricot'] {
+  background: var(--tag-apricot-dot);
+  color: var(--tag-apricot-bg);
+}
+
+.tag-swatch[data-tag-colour='mustard'] {
+  background: var(--tag-mustard-dot);
+  color: var(--tag-mustard-bg);
+}
+
+.tag-swatch[data-tag-colour='olive'] {
+  background: var(--tag-olive-dot);
+  color: var(--tag-olive-bg);
+}
+
+.tag-swatch[data-tag-colour='sage'] {
+  background: var(--tag-sage-dot);
+  color: var(--tag-sage-bg);
+}
+
+.tag-swatch[data-tag-colour='teal'] {
+  background: var(--tag-teal-dot);
+  color: var(--tag-teal-bg);
+}
+
+.tag-swatch[data-tag-colour='sky'] {
+  background: var(--tag-sky-dot);
+  color: var(--tag-sky-bg);
+}
+
+.tag-swatch[data-tag-colour='blue'] {
+  background: var(--tag-blue-dot);
+  color: var(--tag-blue-bg);
+}
+
+.tag-swatch[data-tag-colour='plum'] {
+  background: var(--tag-plum-dot);
+  color: var(--tag-plum-bg);
+}
+
+.tag-swatch[data-tag-colour='rose'] {
+  background: var(--tag-rose-dot);
+  color: var(--tag-rose-bg);
+}
+
+.tag-swatch[aria-checked='true'] {
+  box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-accent);
+}
+
+.tag-colour-picker__preview {
+  align-self: flex-start;
+}
