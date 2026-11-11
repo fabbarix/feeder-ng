@@ -56,13 +56,14 @@ describe('settingsGroups', () => {
     }
   })
 
-  it('A1: the row\'s meta is the pending count, and a plain line when nobody waits', () => {
-    const meta = (n?: number) => settingsGroups(false, n).flatMap((g) => g.sections).find((s) => s.id === 'accessRequests')!.meta
-    expect(meta(0)).not.toMatch(/\d/)
-    expect(meta(0)).not.toBe('')
-    expect(meta(1)).toBe('1 waiting')
-    expect(meta(3)).toBe('3 waiting')
-    expect(meta()).toBe(meta(0))
+  it('A1: the row\'s meta never carries the count (the badge does), and has a distinct icon from the Allowlist', () => {
+    const row = (n?: number) => settingsGroups(false, n).flatMap((g) => g.sections).find((s) => s.id === 'accessRequests')!
+    expect(row(0).meta).not.toMatch(/\d/)
+    expect(row(0).meta).not.toBe('')
+    expect(row(3).meta).toBe(row(0).meta)
+    expect(row().meta).toBe(row(0).meta)
+    const allowlist = settingsGroups(true).flatMap((g) => g.sections).find((s) => s.id === 'allowlist')!
+    expect(row().icon).not.toBe(allowlist.icon)
   })
 
   it('A1: only the Sign-in requests row changes with the count', () => {

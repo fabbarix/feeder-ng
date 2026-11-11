@@ -1,6 +1,6 @@
 // A1 phase 2 (docs/dev/design/a1-access-requests.md 2.6, 7): the Member sheet gets an optional Email field.
 // A Member with an email can sign in with Google without asking (an Access Request is skipped). The field is a shared
-// TextField (type email) with the helper "Lets this person sign in with Google without asking". It is optional, sent as
+// TextField (type email) with the helper "Lets them sign in with Google without asking". It is optional, sent as
 // `email` (null when empty), and a server refusal (422 validation_failed, 409 email_taken) is shown inline under the field.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -25,7 +25,7 @@ describe('MemberEditor: Email', () => {
     expect(input).toHaveAttribute('type', 'email')
     expect(input).not.toHaveAttribute('aria-required')
     expect(input).toHaveValue('')
-    const helper = within(dialog).getByText('Lets this person sign in with Google without asking')
+    const helper = within(dialog).getByText('Lets them sign in with Google without asking')
     expect(helper).toBeVisible()
     expect(input).toHaveAttribute('aria-describedby', expect.stringContaining(helper.id))
   })

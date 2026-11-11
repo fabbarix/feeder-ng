@@ -5,6 +5,7 @@
 //   - at phone width (below 600 px) the field is the full row and the button drops under it;
 //   - .allowlist__actions (Switch + Remove) never shrinks or wraps, so the row title is what truncates (the ListRow ellipsis).
 import { describe, expect, it } from 'vitest'
+import { rule as ruleIn, stylesheet } from '../../test/cssRules'
 
 const nodeFs = 'node:fs'
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
@@ -82,5 +83,29 @@ describe('settings.css: Allowlist rows', () => {
       expect(r['inline-size'] ?? '', sel).not.toMatch(/^\d+px$/)
       expect(r.width ?? '', sel).not.toMatch(/^\d+px$/)
     }
+  })
+})
+
+// Review send-back (390 px): the button floated ~33 px below the field because a more specific base selector
+// (`.allowlist__add > .allowlist__button`) beat the phone override, and emails truncated in a ~129 px title.
+describe('settings.css: Allowlist at phone width', () => {
+  const sheet = stylesheet('src/features/settings/settings.css')
+
+  it('the button margin comes from ONE selector, so the phone override cannot lose on specificity', () => {
+    expect(ruleIn(sheet.base, '.allowlist__add > .allowlist__button')).toEqual({})
+    expect(ruleIn(sheet.base, '.allowlist__button')['margin-block-start']).toBeTruthy()
+  })
+
+  it('on a phone the button sits directly under the field (margin-block-start 0)', () => {
+    expect(ruleIn(sheet.phone, '.allowlist__button')['margin-block-start']).toMatch(/^0(px)?$/)
+    expect(ruleIn(sheet.phone, '.allowlist__add > .allowlist__button')).toEqual({})
+  })
+
+  it('on a phone the row title wraps (the email stays readable) and the row grows with it', () => {
+    expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['white-space']).toBe('normal')
+    expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['overflow-wrap']).toBe('anywhere')
+    const row = ruleIn(sheet.phone, '.allowlist__list .list-row')
+    expect(row['block-size']).toBe('auto')
+    expect(row['min-block-size']).toBeTruthy()
   })
 })

@@ -27,12 +27,14 @@ describe('SettingsIndexPage: Sign-in requests row', () => {
     expect(within(household).getAllByRole('link').at(-1)).toHaveAttribute('aria-label', 'Sign-in requests')
   })
 
-  it('shows the pending count as meta and as a badge', async () => {
+  it('shows the pending count once, as the badge, and puts it in the link\'s accessible name', async () => {
     mockApi({ 'GET /api/me': ADMIN_ME, 'GET /api/access-requests': waiting(3) })
     renderWithProviders(<SettingsIndexPage />, '/settings')
-    const row = (await screen.findByRole('link', { name: 'Sign-in requests' })).closest('li')!
-    expect(await within(row).findByText('3 waiting')).toBeInTheDocument()
+    const link = await screen.findByRole('link', { name: 'Sign-in requests, 3 waiting' })
+    const row = link.closest('li')!
     expect(within(row).getByRole('img', { name: '3 sign-in requests waiting' })).toBeInTheDocument()
+    expect(within(row).queryByText('3 waiting')).toBeNull() // no second display of the count in the meta
+    expect(row.textContent?.match(/3/g)).toHaveLength(1)
   })
 
   it('shows no badge and no number when nobody waits', async () => {

@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider } from '../../../ui'
+import { memberEmailProblem } from '../lib/memberForm'
 import { admin, cook } from './fixtures'
 import { AllowlistPanel, type AllowlistPanelProps } from './AllowlistPanel'
 
@@ -117,3 +118,27 @@ describe('AllowlistPanel: rows', () => {
     expect(within(actions as HTMLElement).getAllByRole('button')).toHaveLength(1) // Remove
   })
 })
+
+describe('AllowlistPanel: review send-back', () => {
+  it('"Add to allowlist" is a secondary Button (design 13.4)', () => {
+    setup()
+    expect(screen.getByRole('button', { name: 'Add to allowlist' })).toHaveAttribute('data-variant', 'secondary')
+  })
+
+  it('the rows sit in .allowlist__list, the hook of the phone rules (the email wraps on a phone)', () => {
+    const { container } = setup()
+    const list = container.querySelector('.allowlist__list')
+    expect(list).not.toBeNull()
+    expect(within(list as HTMLElement).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('an invalid email reads exactly as it does in the Member sheet', async () => {
+    setup()
+    await userEvent.type(screen.getByLabelText('Email to allow'), 'nope')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
+    const expected = memberEmailProblem('nope')
+    expect(expected).toMatch(/email/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(expected!)
+  })
+})
+

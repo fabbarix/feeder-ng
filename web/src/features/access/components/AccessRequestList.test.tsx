@@ -66,4 +66,13 @@ describe('AccessRequestList', () => {
     render(<AccessRequestList requests={[zia]} now={now} error="That request was already answered" onApprove={vi.fn()} onDeny={vi.fn()} />)
     expect(screen.getByRole('alert')).toHaveTextContent('already answered')
   })
+
+  it('the rows sit in .access__list, the hook of the phone layout (actions under the text)', () => {
+    setup()
+    const list = document.querySelector('.access__list')
+    expect(list).not.toBeNull()
+    const rows = within(list as HTMLElement).getAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    for (const row of rows) expect(within(row).getByRole('button', { name: /^Approve / }).closest('.list-row__trailing')).not.toBeNull()
+  })
 })

@@ -186,4 +186,14 @@ describe('AccessRequestsPage', () => {
     expect(await screen.findByText(/already answered/i)).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()) // nothing left to approve: the sheet closes
   })
+
+  it('the Recent activity rows sit in .access__list too, so they wrap on a phone', async () => {
+    mockApi({
+      'GET /api/access-requests': { requests: [], count: 0 },
+      'GET /api/access-requests/history': { events: [{ kind: 'requested', email: 'zia@example.test', name: 'Zia', at: '2026-11-09T12:00:00Z', actorEmail: '' }] },
+    })
+    renderWithProviders(<AccessRequestsPage />)
+    const history = await screen.findByRole('list', { name: 'Recent activity' })
+    expect(history.closest('.access__list')).not.toBeNull()
+  })
 })

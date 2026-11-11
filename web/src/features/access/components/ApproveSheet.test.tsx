@@ -97,3 +97,33 @@ describe('ApproveSheet', () => {
     expect(onApprove).toHaveBeenCalledWith(undefined)
   })
 })
+
+// Review nit: a Member who already carries a DIFFERENT email would be linked to a Google account that is not theirs.
+// The picker offers Members with no email, or with the requester's own email (any letter case); it never offers the others.
+describe('ApproveSheet: Members with an email', () => {
+  const names = async () => {
+    await userEvent.click(screen.getByRole('combobox', { name: 'Link to a Member (optional)' }))
+    return (await screen.findAllByRole('option')).map((o) => o.textContent ?? '')
+  }
+
+  it('does not offer a Member who carries a different email', async () => {
+    setup({ members: [nonna, { ...anna, email: 'anna@example.test' }] })
+    const offered = await names()
+    expect(offered.some((t) => t.includes('Nonna'))).toBe(true)
+    expect(offered.some((t) => t.includes('Anna'))).toBe(false)
+  })
+
+  it('offers a Member whose email is the requester\'s own, whatever the letter case, and one with a null email', async () => {
+    setup({ members: [{ ...nonna, email: 'ZIA@Example.test' }, { ...anna, email: null }] })
+    const offered = await names()
+    expect(offered.some((t) => t.includes('Nonna'))).toBe(true)
+    expect(offered.some((t) => t.includes('Anna'))).toBe(true)
+  })
+
+  it('says every Member is taken when all of them carry another email', () => {
+    setup({ members: [{ ...nonna, email: 'nonna@example.test' }] })
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.getByText(/every member already has a user/i)).toBeInTheDocument()
+  })
+})
+

@@ -32,6 +32,8 @@ export interface AccessMember {
   name: string
   avatar?: string
   userId: number | null
+  /** The Member's own email, when it has one (A1). */
+  email?: string | null
 }
 
 /** What the waiting page may know: only the visitor's own Google details. */

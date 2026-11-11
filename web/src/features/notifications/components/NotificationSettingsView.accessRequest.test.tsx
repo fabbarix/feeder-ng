@@ -9,8 +9,7 @@ import { NOTIFICATION_TYPES, type PushDevice } from '../types'
 import { NotificationSettingsView, type NotificationSettingsViewProps } from './NotificationSettingsView'
 
 const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false, accessRequest: false }
-// cast: until the Developer step TypeFlags has no accessRequest key
-const device = (on: Partial<typeof flags> = {}): PushDevice => ({ id: 1, label: 'Pixel', createdAt: '2026-11-09T12:00:00Z', endpointHash: 'aa', types: { ...flags, ...on } as unknown as PushDevice['types'] })
+const device = (on: Partial<typeof flags> = {}): PushDevice => ({ id: 1, label: 'Pixel', createdAt: '2026-11-09T12:00:00Z', endpointHash: 'aa', types: { ...flags, ...on } })
 
 function setup(thisDevice: PushDevice, over: Partial<NotificationSettingsViewProps> = {}) {
   const props: NotificationSettingsViewProps = {
