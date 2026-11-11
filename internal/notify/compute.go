@@ -13,7 +13,7 @@ import (
 // Deep links (Payload.URL): the screen that acts on each notification.
 const (
 	planURL  = "/plan"
-	stockURL = "/stock"
+	stockURL = "/pantry"
 
 	accessRequestsURL = "/settings/access-requests"
 	// maxBody caps a push body: it carries Google-supplied text.

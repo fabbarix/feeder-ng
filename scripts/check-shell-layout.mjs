@@ -15,6 +15,8 @@
 //  10. (ordinary routes) at >= 1440 every .side-rail__link sits inside the rail (left > 0, right < rail right) and its labels do not overflow (scrollWidth <= clientWidth);
 //   8. (on /) the open avatar menu popover lies fully inside the viewport;
 //  11. (ordinary routes) at >= 1024 the current rail item (aria-current) has a label contrast of at least 4.5:1 against its own background (L-04: Scan was 1.31:1).
+//  12. (phone, < 1024) the six-button bottom bar (PN): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
+//      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line); the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -28,14 +30,16 @@ const arg = (name, fallback) => {
 const base = arg('url', 'http://localhost:5173').replace(/\/$/, '')
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const VIEWPORTS = [
+  { width: 360, height: 800, mobile: true },
   { width: 390, height: 844, mobile: true },
+  { width: 430, height: 932, mobile: true },
   { width: 820, height: 1180, mobile: false },
   { width: 1280, height: 800, mobile: false },
   { width: 1440, height: 900, mobile: false },
   { width: 1920, height: 1080, mobile: false },
   { width: 2560, height: 1440, mobile: false },
 ]
-const ROUTES = ['/', '/plan', '/scan', '/shop', '/recipes', '/stock', '/settings', '/board', '/cook/1', '/this-route-does-not-exist']
+const ROUTES = ['/', '/plan', '/pantry', '/scan', '/shop', '/recipes', '/settings', '/board', '/cook/1', '/this-route-does-not-exist']
 const CHROMELESS = /^\/(board|cook)(\/|$)/
 
 const profile = mkdtempSync(join(tmpdir(), 'shell-layout-'))
@@ -156,6 +160,13 @@ const page = `
     current: [...document.querySelectorAll('nav [aria-current="page"]')].map((a) => a.textContent.trim()),
     notFound: /Page not found/.test(document.body.innerText),
     railLinks: rail && visible(rail) ? [...rail.querySelectorAll('.side-rail__link')].map((a) => { const r = a.getBoundingClientRect(); return { text: a.textContent.trim(), left: Math.round(r.left), right: Math.round(r.right), sw: a.scrollWidth, cw: a.clientWidth } }) : [],
+    barLinks: bar && visible(bar) ? [...bar.querySelectorAll('.bottom-bar__link')].map((a) => {
+      const r = a.getBoundingClientRect()
+      const label = a.querySelector('.bottom-bar__label')
+      const lr = label ? label.getBoundingClientRect() : null
+      return { text: a.textContent.trim(), w: r.width, h: r.height, cx: r.left + r.width / 2, lsw: label ? label.scrollWidth : 0, lcw: label ? label.clientWidth : 0, lh: lr ? lr.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0, scan: a.getAttribute('data-accent') === 'true' }
+    }) : [],
+    barBox: bar && visible(bar) ? (() => { const r = bar.getBoundingClientRect(); return { left: r.left, right: r.right, cx: (r.left + r.right) / 2, vw: document.documentElement.clientWidth } })() : null,
     railRight: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().right) : null,
     devErrorPage: /Unexpected Application Error|Hey developer/.test(document.body.innerText),
   }
@@ -184,9 +195,10 @@ for (const vp of VIEWPORTS) {
     }
     if (route.includes('does-not-exist')) {
       if (!m.notFound) fail(`${tag}: no "Page not found" state`)
-    } else if (m.current.length === 0 && route !== '/stock' && route !== '/settings') {
+    } else if (m.current.length === 0 && route !== '/settings') {
       fail(`${tag}: no tab has aria-current="page"`)
     }
+    if (route === '/pantry' && !m.current.some((t) => t.startsWith('Pantry'))) fail(`${tag}: Pantry is not the current tab`)
     const phone = vp.width < 1024
     if (phone && m.avatarCenterX !== null && m.avatarCenterX < m.innerWidth / 2) fail(`${tag}: avatar trigger is on the left half (centre x ${m.avatarCenterX} of ${m.innerWidth})`)
     if (!phone) {
@@ -208,6 +220,18 @@ for (const vp of VIEWPORTS) {
       else if (box.left < 0 || box.top < 0 || box.right > box.w || box.bottom > box.h) {
         fail(`${tag}: avatar menu popover (${box.left},${box.top})-(${box.right},${box.bottom}) leaves the ${box.w}x${box.h} viewport`)
       }
+    }
+    if (phone && m.barBox && m.barLinks.length !== 6) fail(`${tag}: the bottom bar has ${m.barLinks.length} buttons, expected 6`)
+    if (phone && m.barBox) {
+      // Rule 12: the six-button bar on the narrowest phones.
+      const scan = m.barLinks.find((l) => l.scan)
+      if (scan && Math.abs(scan.cx - m.barBox.cx) > 1) fail(`${tag}: Scan is not centred on the bar (centre ${scan.cx.toFixed(1)}, bar centre ${m.barBox.cx.toFixed(1)})`)
+      for (const l of m.barLinks) {
+        if (l.w < 44 || l.h < 44) fail(`${tag}: bar button "${l.text}" is ${l.w.toFixed(0)}x${l.h.toFixed(0)}, below the 44 px target`)
+        if (l.lsw > l.lcw) fail(`${tag}: bar label "${l.text}" is truncated (scrollWidth ${l.lsw} > clientWidth ${l.lcw})`)
+        if (l.fs && l.lh > l.fs * 1.5) fail(`${tag}: bar label "${l.text}" wraps onto more than one line`)
+      }
+      if (m.barBox.left < 0 || m.barBox.right > m.barBox.vw) fail(`${tag}: bottom bar (${m.barBox.left.toFixed(0)}-${m.barBox.right.toFixed(0)}) leaves the viewport (safe-area insets)`)
     }
     if (phone && (!m.barVisible || m.railVisible)) fail(`${tag}: expected the bottom bar only (bar ${m.barVisible}, rail ${m.railVisible})`)
     if (!phone && (m.barVisible || !m.railVisible)) fail(`${tag}: expected the side rail only (bar ${m.barVisible}, rail ${m.railVisible})`)

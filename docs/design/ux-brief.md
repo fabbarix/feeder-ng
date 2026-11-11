@@ -14,7 +14,7 @@ Inputs for the UI/UX proposals. Domain terms are defined in [GLOSSARY.md](../../
 
 ## Structure
 - **Home = Today, context-aware:** next meal, Advance Steps due, Leftovers to use, Cooked to confirm. Switches to the Shopping List when a scan session is active.
-- **Phone navigation:** bottom bar with Today · Plan · [Scan] · Shop · Recipes, where Scan is the raised centre button. "Shop" here is a UI label for the shopping screen (Shopping List plus scanning), not the glossary **Shop**. Stock and Settings sit behind the avatar. On desktop this becomes a side rail, and the layout expands for weekly planning and recipe editing.
+- **Phone navigation:** bottom bar with Today · Plan · Pantry · [Scan] · Shop · Recipes, where Scan is the raised centre button. "Shop" here is a UI label for the shopping screen (Shopping List plus scanning), not the glossary **Shop**. Settings and the Kitchen board sit behind the avatar. On desktop this becomes a side rail, and the layout expands for weekly planning and recipe editing.
 - **Planner transparency:** "why" chips on every auto-planned meal ("uses Monday's chicken", "Anna's favourite", "leftover from Tue"); one tap to swap offers 3 alternatives, and swapping pins the meal.
 
 ## Key flows
