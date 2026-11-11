@@ -330,3 +330,107 @@ func TestCreatedIsStampedOnFirstReadAndStays(t *testing.T) {
 		t.Fatalf("second read = %v %v, want %v", again, err, first)
 	}
 }
+
+// R13: Attendance defaults to everyone. A nil Attendance on create means "everyone"; an explicit
+// empty list means nobody (a deliberate choice).
+
+func attendeeIDs(att []household.Attendee) map[int64]bool {
+	out := map[int64]bool{}
+	for _, a := range att {
+		out[a.MemberID] = true
+	}
+	return out
+}
+
+func TestNewSlotWithoutAttendanceIncludesEveryMember(t *testing.T) {
+	f := newFx(t)
+	anna, sam := f.member(t, "Anna", 1), f.member(t, "Sam", 0.5)
+	slot, err := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:30"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := attendeeIDs(slot.Attendance)
+	if len(slot.Attendance) != 2 || !got[anna.ID] || !got[sam.ID] {
+		t.Fatalf("attendance = %+v, want Anna and Sam", slot.Attendance)
+	}
+	for _, a := range slot.Attendance {
+		if a.PortionFactorOverride != nil {
+			t.Errorf("member %d got an override %v; everyone attends at their own Portion Factor", a.MemberID, *a.PortionFactorOverride)
+		}
+	}
+	again, _ := f.st.Slot(f.ctx, slot.ID)
+	if len(again.Attendance) != 2 {
+		t.Errorf("stored attendance = %+v, want 2", again.Attendance)
+	}
+}
+
+func TestNewSlotKeepsAnExplicitAttendance(t *testing.T) {
+	f := newFx(t)
+	anna, _ := f.member(t, "Anna", 1), f.member(t, "Sam", 0.5)
+	only, err := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:30", Attendance: []household.Attendee{{MemberID: anna.ID, PortionFactorOverride: fp(1.5)}}})
+	if err != nil || len(only.Attendance) != 1 || only.Attendance[0].MemberID != anna.ID || only.Attendance[0].PortionFactorOverride == nil {
+		t.Fatalf("explicit attendance = %+v, %v; want Anna alone with her override", only.Attendance, err)
+	}
+	nobody, err := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 3, Name: "Dinner", Time: "19:30", Attendance: []household.Attendee{}})
+	if err != nil || len(nobody.Attendance) != 0 {
+		t.Fatalf("explicit empty attendance = %+v, %v; want nobody", nobody.Attendance, err)
+	}
+}
+
+func TestNewSlotInAHouseholdWithoutMembersIsEmpty(t *testing.T) {
+	f := newFx(t)
+	slot, err := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:30"})
+	if err != nil || len(slot.Attendance) != 0 {
+		t.Fatalf("attendance = %+v, %v; want none (no Members yet)", slot.Attendance, err)
+	}
+}
+
+func TestNewMemberJoinsEveryExistingSlot(t *testing.T) {
+	f := newFx(t)
+	anna := f.member(t, "Anna", 1)
+	dinner, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:30", Attendance: []household.Attendee{{MemberID: anna.ID, PortionFactorOverride: fp(1.5)}}})
+	lunch, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 6, Name: "Lunch", Time: "12:30", Attendance: []household.Attendee{}}) // deliberately empty
+	sam := f.member(t, "Sam", 0.5)
+
+	for _, id := range []int64{dinner.ID, lunch.ID} {
+		s, err := f.st.Slot(f.ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !attendeeIDs(s.Attendance)[sam.ID] {
+			t.Errorf("slot %d did not gain Sam: %+v", id, s.Attendance)
+		}
+		for _, a := range s.Attendance {
+			if a.MemberID == sam.ID && a.PortionFactorOverride != nil {
+				t.Errorf("slot %d: Sam got an override %v, want none", id, *a.PortionFactorOverride)
+			}
+		}
+	}
+	d, _ := f.st.Slot(f.ctx, dinner.ID)
+	if len(d.Attendance) != 2 {
+		t.Fatalf("Dinner attendance = %+v, want Anna (override kept) and Sam", d.Attendance)
+	}
+	for _, a := range d.Attendance {
+		if a.MemberID == anna.ID && (a.PortionFactorOverride == nil || *a.PortionFactorOverride != 1.5) {
+			t.Errorf("Anna's override changed: %+v", a)
+		}
+	}
+}
+
+func TestNewMemberDoesNotTouchDateAttendance(t *testing.T) {
+	f := newFx(t)
+	anna := f.member(t, "Anna", 1)
+	slot, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 4, Name: "Dinner", Time: "19:00"})
+	if err := f.st.SetDateAttendance(f.ctx, slot.ID, "2026-11-12", []household.Attendee{{MemberID: anna.ID}}); err != nil {
+		t.Fatal(err)
+	}
+	sam := f.member(t, "Sam", 0.5)
+	att, isOverride, err := f.st.DateAttendance(f.ctx, slot.ID, "2026-11-12")
+	if err != nil || !isOverride || len(att) != 1 || att[0].MemberID != anna.ID {
+		t.Fatalf("date attendance = %+v override=%v err=%v; an edited date keeps its list", att, isOverride, err)
+	}
+	usual, _, _ := f.st.DateAttendance(f.ctx, slot.ID, "2026-11-19")
+	if !attendeeIDs(usual)[sam.ID] {
+		t.Errorf("a date with no override must follow the usual Attendance, which now includes Sam: %+v", usual)
+	}
+}

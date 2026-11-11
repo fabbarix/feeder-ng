@@ -154,8 +154,12 @@ How much of a standard portion a Member eats; each Member has a default, which a
 _Avoid_: Appetite, multiplier, serving size
 
 **Attendance**:
-The Members who eat at a given Meal Slot, each with their Portion Factor; it determines the portions that slot needs.
+The Members who eat at a given Meal Slot, each with their Portion Factor; it determines the portions that slot needs. It starts as everyone, and people opt out.
 _Avoid_: Guests, headcount
+
+**Couldn't plan**:
+The state of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, a Slot Rule that nothing meets, or every Recipe excluded, in Cool-down, blocked by a Variety Rule or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure.
+_Avoid_: Missing meal
 
 ### Food and shopping
 

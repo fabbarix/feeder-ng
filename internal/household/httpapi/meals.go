@@ -22,7 +22,11 @@ func attendeesOut(att []household.Attendee) []attendeeBody {
 	return out
 }
 
+// attendeesIn keeps nil (field omitted or null) apart from an empty list (nobody).
 func attendeesIn(in []attendeeBody) []household.Attendee {
+	if in == nil {
+		return nil
+	}
 	out := make([]household.Attendee, 0, len(in))
 	for _, a := range in {
 		out = append(out, household.Attendee{MemberID: a.MemberID, PortionFactorOverride: a.PortionFactorOverride})
