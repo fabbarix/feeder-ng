@@ -98,17 +98,27 @@ func TestPrepareForModelAcceptsPNGAndFlattensTransparencyOnWhite(t *testing.T) {
 	}
 }
 
+func TestPrepareForModelAcceptsHEIC(t *testing.T) {
+	res, err := PrepareForModel(fixture(t, "pantry-128x96.heic"))
+	if err != nil || res.Width != 128 || res.Height != 96 {
+		t.Errorf("got %dx%d, %v; want 128x96", res.Width, res.Height, err)
+	}
+	if _, err := PrepareForModelAs(fixture(t, "pantry-128x96.heic"), "image/heif"); err != nil {
+		t.Errorf("declared image/heif: %v", err)
+	}
+}
+
 func TestPrepareForModelRefusals(t *testing.T) {
 	tests := map[string]struct {
 		data []byte
 		want error
 	}{
-		"empty":         {nil, ErrEmpty},
-		"garbage":       {[]byte("this is not an image"), ErrUnsupportedFormat},
-		"over 8 MB":     {make([]byte, MaxBytes+1), ErrTooLarge},
-		"pixel bomb":    {bombPNG(t, 20000, 20000), ErrTooManyPixels},
-		"too many side": {bombPNG(t, 12100, 64), ErrTooManyPixels},
-		"HEIC":          {fixture(t, "pantry-128x96.heic"), ErrUnsupportedFormat},
+		"empty":           {nil, ErrEmpty},
+		"garbage":         {[]byte("this is not an image"), ErrUnsupportedFormat},
+		"over 8 MB":       {make([]byte, MaxBytes+1), ErrTooLarge},
+		"pixel bomb":      {bombPNG(t, 20000, 20000), ErrTooManyPixels},
+		"too many side":   {bombPNG(t, 12100, 64), ErrTooManyPixels},
+		"HEIC, truncated": {fixture(t, "pantry-128x96.heic")[:200], ErrUnsupportedFormat},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

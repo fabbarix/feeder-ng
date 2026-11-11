@@ -7,7 +7,8 @@ import { MAX_UPLOAD_BYTES, UPLOAD_MAX_SIDE } from '../lib/limits'
 import { prepareImage, type ImageEngine, type Turns } from '../lib/prepare'
 import { checkImageFile, ImageProblemError, problemFromError, type ImageProblemCode } from '../lib/problems'
 
-export type IngestPhase = 'idle' | 'preparing' | 'uploading' | 'downloading'
+/** 'converting' is the upload of a HEIC/HEIF, which the server converts to WebP (it can take seconds). */
+export type IngestPhase = 'idle' | 'preparing' | 'uploading' | 'converting' | 'downloading'
 
 export interface UseImageIngestOptions {
   api: ImageApi
@@ -117,7 +118,7 @@ export function useImageIngest(options: UseImageIngestOptions): UseImageIngest {
           dataUrl = await blobToDataUrl(prepared.blob)
         }
         if (signal.aborted) throw new ImageProblemError('failed')
-        enter('uploading')
+        enter(heic ? 'converting' : 'uploading')
         return api.uploadDataUrl(dataUrl, { signal })
       })
     },
