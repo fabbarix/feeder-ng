@@ -137,7 +137,40 @@ func (p *stubPhotos) Prepare(_ context.Context, in []service.PhotoInput) ([]serv
 type recSink struct {
 	mu     sync.Mutex
 	opened []sinkCall
+	closed []string
+	// onOpen, when set, runs inside OpenReview (after the review is recorded), e.g. to cancel the job mid-open.
+	onOpen func()
 }
+
+// CloseReview records a Review the service gave back.
+func (s *recSink) CloseReview(_ int64, id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.closed = append(s.closed, id)
+}
+func (s *recSink) closedReviews() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.closed...)
+}
+
+// syncBuf is a log sink safe for the job goroutine to write while the test reads.
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+func (s *syncBuf) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
 type sinkCall struct {
 	user   int64
 	file   recipefile.File
@@ -146,9 +179,14 @@ type sinkCall struct {
 
 func (s *recSink) OpenReview(_ context.Context, user int64, f recipefile.File, _ recipefile.ImageSet, photos []recipefile.CandidatePhoto) (service.ReviewRef, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.opened = append(s.opened, sinkCall{user, f, photos})
-	return service.ReviewRef{ID: fmt.Sprintf("review-%d", len(s.opened))}, nil
+	ref := service.ReviewRef{ID: fmt.Sprintf("review-%d", len(s.opened))}
+	hook := s.onOpen
+	s.mu.Unlock()
+	if hook != nil {
+		hook()
+	}
+	return ref, nil
 }
 func (s *recSink) calls() []sinkCall {
 	s.mu.Lock()
@@ -172,7 +210,7 @@ type env struct {
 	pages  *stubPages
 	photos *stubPhotos
 	sink   *recSink
-	log    *bytes.Buffer
+	log    *syncBuf
 	conns  []service.Conn
 }
 
@@ -212,7 +250,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	e := &env{st: st, clk: clk, pages: &stubPages{}, photos: &stubPhotos{}, sink: &recSink{}, log: &bytes.Buffer{}}
+	e := &env{st: st, clk: clk, pages: &stubPages{}, photos: &stubPhotos{}, sink: &recSink{}, log: &syncBuf{}}
 	info := o.model
 	if info.ID == "" {
 		info = service.ModelInfo{ID: savedModel, DisplayName: "Claude Haiku 5.5", StructuredOutputs: true, ImageInput: true, Lifecycle: "active"}
@@ -889,5 +927,53 @@ func TestLogsHoldTheOutcomeAndNeverTheKeySourceOrOutput(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("log should mention %q:\n%s", want, out)
 		}
+	}
+}
+
+// ---- review send-back: terminal state, slot, log order; cancel during OpenReview -----------------------------------
+
+// The Limiter slot and the log line come before the terminal state, so a client that sees done can start the next
+// read at once and never gets read_in_progress.
+func TestTheSlotIsFreeTheMomentATerminalStateIsVisible(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	for i := 0; i < 100; i++ {
+		jv := e.start(t, user, textIn(fmt.Sprintf("pancakes %d", i)))
+		e.wait(t, user, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
+		if _, err := e.svc.StartRead(user, textIn("next"), e.sink); err != nil {
+			t.Fatalf("round %d: a read started right after a terminal state was refused: %v", i, err)
+		}
+		// let the follow-up finish so the next round starts clean (and the per-User read cap is not the subject here)
+		e.clk.Advance(time.Hour)
+		for deadline := time.Now().Add(5 * time.Second); e.svc.Check(user) != nil && time.Now().Before(deadline); {
+			time.Sleep(time.Millisecond)
+		}
+	}
+}
+
+func TestTheReadIsLoggedBeforeItsTerminalStateIsVisible(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	for i := 0; i < 50; i++ {
+		before := strings.Count(e.log.String(), "recipe assistant read")
+		jv := e.start(t, user, textIn("pancakes"))
+		e.wait(t, user, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
+		if got := strings.Count(e.log.String(), "recipe assistant read"); got != before+1 {
+			t.Fatalf("round %d: log lines = %d, want %d once the terminal state is visible", i, got, before+1)
+		}
+		e.clk.Advance(time.Hour)
+	}
+}
+
+func TestACancelDuringOpenReviewClosesTheReviewAndReportsCancelled(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	var id string
+	e.sink.onOpen = func() { e.svc.CancelJob(user.UserID, id) }
+	jv := e.start(t, user, textIn("pancakes"))
+	id = jv.ID
+	got := e.wait(t, user, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
+	if got.State != service.StateCancelled || got.Review != nil {
+		t.Fatalf("a read cancelled while its Review opened must end cancelled with no Review: %+v", got)
+	}
+	if c := e.sink.closedReviews(); len(c) != 1 || c[0] != "review-1" {
+		t.Errorf("the opened Review must be closed, closed = %v", c)
 	}
 }

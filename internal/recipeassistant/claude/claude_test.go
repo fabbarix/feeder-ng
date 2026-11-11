@@ -434,3 +434,46 @@ func TestModelsWithABadKeyIsBadKey(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+// ---- review send-back: per-attempt timeout, retry-after-ms ---------------------------------------------------------
+
+// A per-attempt timeout is not retried: it would bill a slow model again for the same answer.
+func TestAPerAttemptTimeoutIsNotRetried(t *testing.T) {
+	f := fakeanthropic.New(fakeanthropic.WithSlow(3 * time.Second))
+	defer f.Close()
+	c := claude.New(claude.Options{BaseURL: f.URL, APIKey: recipeassistant.Secret(key), RequestTimeout: 200 * time.Millisecond})
+	start := time.Now()
+	_, err := c.Message(context.Background(), req(t, "x #fake:slow"))
+	if codeOf(err) != recipeassistant.CodeUnreachable {
+		t.Errorf("code = %q (%v), want unreachable", codeOf(err), err)
+	}
+	if n := len(f.Messages()); n != 1 {
+		t.Errorf("requests = %d, want exactly 1 (a timed-out attempt is not retried)", n)
+	}
+	if time.Since(start) > 2*time.Second {
+		t.Errorf("took %v", time.Since(start))
+	}
+}
+
+// retry-after-ms (milliseconds) is honoured like retry-after: one that does not fit the deadline stops at once.
+func TestRetryAfterMsBeyondTheDeadlineStopsAtOnce(t *testing.T) {
+	var n int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		w.Header().Set("retry-after-ms", "1500")
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(429)
+		_, _ = w.Write([]byte(`{"type":"error","error":{"type":"rate_limit_error","message":"slow down"}}`))
+	}))
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err := client(srv.URL, nil).Message(ctx, req(t, "x"))
+	var e *recipeassistant.Error
+	if !errors.As(err, &e) || e.Code != recipeassistant.CodeRateLimited || e.RetryAfterSeconds != 2 {
+		t.Fatalf("err = %v, want rate limited with retryAfterSeconds 2 (1500 ms rounded up)", err)
+	}
+	if n != 1 {
+		t.Errorf("requests = %d, want 1: 1.5 s does not fit a 1 s budget", n)
+	}
+}

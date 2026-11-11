@@ -44,6 +44,8 @@ type Options struct {
 	// honouring retry-after; nil means 2.
 	MaxRetries *int
 	Logger     *slog.Logger // nil: slog.Default
+	// RequestTimeout bounds one HTTP attempt; zero means 120 s.
+	RequestTimeout time.Duration
 }
 
 // Client implements service.Claude.
