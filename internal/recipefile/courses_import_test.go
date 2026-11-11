@@ -254,6 +254,53 @@ func TestAddingPastTwentyActiveCoursesIsAProblem(t *testing.T) {
 	}
 }
 
+// exWithActive fills courseEx with extra active Courses until n are active (the archived Soup stays archived).
+func exWithActive(n int) recipefile.Existing {
+	ex := courseEx()
+	for i := int64(10); len(activeOf(ex)) < n; i++ {
+		ex.Courses = append(ex.Courses, recipefile.CourseRef{ID: i, Name: "Extra " + string(rune('A'+i-10))})
+	}
+	return ex
+}
+
+func TestUnarchivingPastTwentyActiveCoursesIsAProblem(t *testing.T) {
+	f := fileOf(riceWith("Lentil soup", "Soup"))
+	d := recipefile.Decisions{Courses: []recipefile.CourseDecision{{Key: "soup", Action: recipefile.ActionUnarchive}}}
+	// 19 active + the unarchived Soup is exactly 20: allowed.
+	if p := plan(t, f, exWithActive(19), d); !p.Ready {
+		t.Fatalf("19 active + 1 unarchived = 20 must be Ready: %+v", p.Problems)
+	}
+	ex := exWithActive(20)
+	p := plan(t, f, ex, d)
+	if p.Ready || !hasProblem(p, "$.recipes[0].courses[0]", recipefile.ProblemTooManyCourses) {
+		t.Fatalf("plan = %+v, want the too_many_courses Problem at the name", p)
+	}
+	var notReady *recipefile.NotReadyError
+	if _, err := recipefile.BuildCommit(f, ex, d, noImages); !errors.As(err, &notReady) {
+		t.Fatalf("BuildCommit err = %v, want NotReadyError", err)
+	}
+}
+
+func TestAddAndUnarchiveTogetherCountTowardTheLimitAtTheRowThatPassesIt(t *testing.T) {
+	f := fileOf(riceWith("Lentil soup", "Brunch", "Soup"))
+	d := recipefile.Decisions{Courses: []recipefile.CourseDecision{
+		{Key: "brunch", Action: recipefile.ActionAdd},
+		{Key: "soup", Action: recipefile.ActionUnarchive},
+	}}
+	// 18 active + 2 = 20: allowed.
+	if p := plan(t, f, exWithActive(18), d); !p.Ready {
+		t.Fatalf("18 active + add + unarchive = 20 must be Ready: %+v", p.Problems)
+	}
+	// 19 active + add = 20 fits; the unarchive is the row that first passes 20.
+	p := plan(t, f, exWithActive(19), d)
+	if p.Ready || !hasProblem(p, "$.recipes[0].courses[1]", recipefile.ProblemTooManyCourses) {
+		t.Fatalf("plan = %+v, want too_many_courses at the Soup row (courses[1])", p)
+	}
+	if hasProblem(p, "$.recipes[0].courses[0]", recipefile.ProblemTooManyCourses) {
+		t.Errorf("the add row fits (20) and must not be flagged: %+v", p.Problems)
+	}
+}
+
 func activeOf(ex recipefile.Existing) []recipefile.CourseRef {
 	var out []recipefile.CourseRef
 	for _, c := range ex.Courses {

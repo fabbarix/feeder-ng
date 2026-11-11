@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/docs/spec"
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
@@ -204,6 +205,71 @@ func TestAnAdminCanUnarchiveTheCourseAtConfirm(t *testing.T) {
 	}
 	if got := recipeCourseNames(t, env, "Lentil soup"); !reflect.DeepEqual(got, []string{"Soup"}) {
 		t.Errorf("Courses = %v", got)
+	}
+}
+
+// subscribeHousehold returns a func that drains the events published on topic "household".
+func subscribeHousehold(t *testing.T, env *testkit.Env) func() []string {
+	t.Helper()
+	ch, cancel := env.App.Deps.Events.Subscribe("household")
+	t.Cleanup(cancel)
+	return func() []string {
+		var out []string
+		for {
+			select {
+			case e := <-ch:
+				out = append(out, string(e.Data))
+			case <-time.After(200 * time.Millisecond):
+				return out
+			}
+		}
+	}
+}
+
+func wantChangedCourses(t *testing.T, got []string) {
+	t.Helper()
+	for _, d := range got {
+		var p map[string]any
+		if json.Unmarshal([]byte(d), &p) == nil && len(p) == 1 && p["changed"] == "courses" {
+			return
+		}
+	}
+	t.Fatalf("household events = %v, want one with payload {\"changed\":\"courses\"} (spec 16, crs-e1 3.6)", got)
+}
+
+func TestAnImportThatAddsACourseEmitsTheHouseholdCoursesEvent(t *testing.T) {
+	env, _ := start(t)
+	admin := env.LoginAdmin(t)
+	drain := subscribeHousehold(t, env)
+	rev := openReview(t, admin, courseFile("Pancakes", "Main", "Brunch"))
+	d := obj{"courses": []obj{{"key": "brunch", "action": "add"}}}
+	mustStatus(t, admin.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": d}), 200)
+	wantChangedCourses(t, drain())
+}
+
+func TestAnImportThatUnarchivesACourseEmitsTheHouseholdCoursesEvent(t *testing.T) {
+	env, _ := start(t)
+	if _, err := env.DB.Exec(`INSERT INTO courses (name, name_key, position, is_main, archived, created_at) VALUES ('Soup', 'soup', 4, 0, 1, '2026-11-09T12:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	admin := env.LoginAdmin(t)
+	drain := subscribeHousehold(t, env)
+	rev := openReview(t, admin, courseFile("Lentil soup", "Soup"))
+	d := obj{"courses": []obj{{"key": "soup", "action": "unarchive"}}}
+	mustStatus(t, admin.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": d}), 200)
+	wantChangedCourses(t, drain())
+}
+
+func TestAnImportThatOnlyUsesCoursesEmitsNoHouseholdCoursesEvent(t *testing.T) {
+	env, _ := start(t)
+	admin := env.LoginAdmin(t)
+	drain := subscribeHousehold(t, env)
+	rev := openReview(t, admin, courseFile("Pancakes", "Main", "side"))
+	mustStatus(t, admin.Post("/api/imports/"+rev.ID+"/confirm", obj{}), 200)
+	for _, d := range drain() {
+		if strings.Contains(d, `"courses"`) {
+			t.Fatalf("unexpected household event %s for an import that only used Courses", d)
+		}
 	}
 }
 

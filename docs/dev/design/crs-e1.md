@@ -64,7 +64,7 @@ Per Recipe, each entry of `courses` is cleaned with `course.CleanName` (trim and
 | `add` | unknown | create the Course (Admin only) |
 | `unarchive` | archived | bring the Course back (Admin only) |
 
-An answer for a key not in the file is ignored (as for Ingredients). An answer that does not fit the row (`unarchive` for an unknown name, `add` for a matched one) is ignored and the default stays. The `add` of a name makes a `NewCourse{Key, Name}` (name = the first spelling, cleaned); if the active Courses plus the added ones would pass `course.MaxCourses` (20) the plan has a **Problem** `too_many_courses` at the first use of the name and is not `Ready` (the commit is a `*NotReadyError`). A name taken since is the store's `ErrStale` (5).
+An answer for a key not in the file is ignored (as for Ingredients). An answer that does not fit the row (`unarchive` for an unknown name, `add` for a matched one) is ignored and the default stays. The `add` of a name makes a `NewCourse{Key, Name}` (name = the first spelling, cleaned); the limit counts the active Courses plus the added ones plus the unarchived ones (an `unarchive` that applies makes a Course active again): going through the rows in order, at the row where that total first passes `course.MaxCourses` (20) the plan has a **Problem** `too_many_courses` at the first use of the name and is not `Ready` (the commit is a `*NotReadyError`). A name taken since is the store's `ErrStale` (5).
 
 Admin-only is enforced by the HTTP layer (3.6), not by the pure planner.
 
@@ -81,7 +81,7 @@ Every kept Recipe gets an **explicit** `Input.WholeMeal`, so a Replace never kee
 - `POST /api/imports` and `/plan` answer the plan with `courses`. `confirm` accepts `decisions.courses`.
 - **Admin only**: a `confirm` whose decisions hold an `add` or `unarchive` that applies (a key of the file, on a row it fits) from a User who is not an Admin answers `403 forbidden`, writes nothing and keeps the Review open (the existing "restore on failure" path), so the User can answer again with `use` or `skip`. `plan` does not check (it writes nothing).
 - `confirm` answers gain `coursesCreated` and `coursesUnarchived`.
-- After a commit that created or unarchived a Course the module publishes the household event `changed: courses` (and `recipes` as today).
+- After a commit that created or unarchived a Course the module publishes the household event: topic `household`, payload `{"changed":"courses"}` (and `recipes` as today). A confirm that only matches or uses Courses publishes no such event.
 - **`GET /api/recipe-file/agent-prompt` builds the prompt per request** from the template and the active Courses (4). `promptOK` becomes "the template was found".
 
 ## 4. Agent Prompt
