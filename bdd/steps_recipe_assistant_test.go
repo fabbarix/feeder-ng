@@ -39,7 +39,7 @@ const (
 // raState lives in w.Vars["ra"]. Responses seen so far are kept to assert that no secret ever appeared.
 type raState struct {
 	fake, second   *fakeanthropic.Server
-	mark, markKeys int
+	mark int
 	page           *httptest.Server
 	servers        []func()
 	readID         string
@@ -202,7 +202,6 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 	})
 	sc.Step(`^I note the requests the fake server has received so far$`, func() {
 		st.mark = len(st.fake.Requests())
-		st.markKeys = len(st.fake.Keys())
 	})
 	sc.Step(`^the fake server received no request since$`, func() error {
 		if n := len(st.fake.Requests()) - st.mark; n != 0 {
@@ -211,12 +210,8 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 		return nil
 	})
 	sc.Step(`^no request since carried "([^"]*)" as x-api-key$`, func(saved string) error {
-		keys := st.fake.Keys()
-		if st.markKeys > len(keys) {
-			return fmt.Errorf("fake key log shrank")
-		}
-		for _, k := range keys[st.markKeys:] {
-			if k == saved {
+		for _, r := range st.fake.Requests()[st.mark:] {
+			if r.APIKey == saved {
 				return fmt.Errorf("the saved key reached the fake server after the note")
 			}
 		}
