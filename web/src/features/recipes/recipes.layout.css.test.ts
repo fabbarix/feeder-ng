@@ -45,8 +45,10 @@ describe('E-01: section cards and the section index', () => {
 
 // Why 900 and not 720: the one-row line has 382 px of fixed tracks (88 + 120 + 90 + 84) plus five 12 px gaps, the drag handle sits inside the
 // Ingredient cell, and the page has side padding. At 820 px that left the Ingredient picker about 126 px ("T…"). From 900 px the two 1fr tracks
-// are each about 180 px, so the picker keeps >= 180 px (and Note >= 160, the page-layout guard's P5 floor). Between 720 and 899 px the
-// two-row phone layout is used, where the picker spans the whole row. The header and the rows switch together at the same width.
+// are each about 165 px, still short of the 180 px the picker needs, because the page column is capped near 840 px (it does not grow with the
+// viewport). So the Optional chip leaves the track row and sits on a second row under the Ingredient (5 tracks, not 6): Ingredient 1.4fr then
+// gets about 250 px (picker >= 180 px) and Note about 180 px (the page-layout guard's P5 floor is 160). Between 720 and 899 px the two-row
+// phone layout is used, where the picker spans the whole row. The header and the rows switch together at the same width.
 describe('E-01: an ingredient line is one row from 900 px', () => {
   const FROM = 900
   it('between 720 and 899 px the line still uses the two-row layout, so the picker is never cramped', () => {
@@ -59,20 +61,23 @@ describe('E-01: an ingredient line is one row from 900 px', () => {
     expect(valueFor('.recipe-editor__lines-head', 'display', 899)).toBe('none')
     expect(valueFor('.recipe-editor__lines-head', 'display', 900)).toBe('grid')
   })
-  it('.line-row: Ingredient 1fr · Quantity 88 · Unit 120 · Note 1fr · Optional · remove, on one grid row', () => {
+  it('.line-row: Ingredient 1.4fr · Quantity 88 · Unit 120 · Note 1fr · remove; Optional sits on a second row under the Ingredient', () => {
     const cols = valueFor('.line-row', 'grid-template-columns', FROM)
-    expect(cols).toMatch(/^minmax\(0, 1fr\) 88px 120px minmax\(0, 1fr\) \d+px \d+px$/)
+    expect(cols).toMatch(/^minmax\(0, 1\.4fr\) 88px 120px minmax\(0, 1fr\) \d+px$/)
+    expect(valueFor('.line-row__optional', 'grid-row', FROM)).toBe('2')
+    expect(valueFor('.line-row__optional', 'grid-column', FROM)).toBe('1')
+    expect(valueFor('.line-row__hint', 'grid-row', FROM)).toBe('3')
     expect(valueFor('.line-row', 'grid-template-columns', 899)).not.toMatch(/120px/)
   })
   it('the header uses the same columns so the captions sit over the fields', () => {
     expect(valueFor('.recipe-editor__lines-head', 'grid-template-columns', FROM)).toBe(valueFor('.line-row', 'grid-template-columns', FROM))
   })
-  it('the last two tracks are fixed widths: an `auto` track is empty in the header and would collapse, drifting the captions', () => {
+  it('the last track is a fixed width: an `auto` track is empty in the header and would collapse, drifting the captions', () => {
     for (const sel of ['.recipe-editor__lines-head', '.line-row']) {
-      for (const w of [720, 1280, 1920]) {
+      for (const w of [900, 1280, 1920]) {
         const cols = valueFor(sel, 'grid-template-columns', w)!
         expect(cols, `${sel} @${w}`).not.toMatch(/\bauto\b/)
-        expect(cols, `${sel} @${w}`).toMatch(/ \d+px \d+px$/)
+        expect(cols, `${sel} @${w}`).toMatch(/ \d+px$/)
       }
     }
   })
@@ -83,7 +88,7 @@ describe('E-01: an ingredient line is one row from 900 px', () => {
   })
   it('the cells are direct grid items; from 900 each goes to the next track (no named areas)', () => {
     expect(valueFor('.line-row', 'grid-template-areas', FROM)).toBe('none')
-    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'optional', 'remove']) {
+    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'remove']) {
       expect(valueFor(`.line-row__${c}`, 'grid-area', FROM), c).toBe('auto')
     }
     for (const sel of ['.line-row__amount', '.line-row__extras']) expect(rulesFor(sel), sel).toEqual([])
