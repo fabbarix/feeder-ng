@@ -85,7 +85,7 @@ New exports (stubs and the in-memory store added): `PictureStore` (`put/get/remo
 1. A `clientUuid` already queued is ignored (including its Picture).
 2. With a Blob, a `PictureStore`, and `blob.size <= MAX_QUEUED_PICTURE_BYTES`: `pictures.put(uuid, blob)` first, then append the entry with `picture: {type, size}`.
 3. If there is no store, the Blob is too big, or `put` throws (`QuotaExceededError`, private mode): the operation is **queued without the Picture** and `pictureStored` is `false`.
-   Order matters: the blob is written before the entry, so an entry never points at a Blob that was not written; a crash between the two leaves an unreferenced Blob that `cancel`/`flush` cleanup removes by uuid.
+   Order matters: the blob is written before the entry, so an entry never points at a Blob that was not written; a crash between the two leaves an unreferenced Blob that only `cancel` removes (by uuid); `flush` does not sweep orphan Blobs (see Open points).
 4. `useSyncQueue.enqueue(op, picture?)` stays `Promise<void>` (existing tests type it so) and calls the new option `onPictureNotStored(op)` when a Picture was given and `pictureStored` is false;
    the controller shows `scanStrings.pictureNotSaved` as a toast.
 
@@ -105,6 +105,7 @@ then the batch is sent as today, with the updated ops; the result carries pictur
 ```
 - Reasons: `image_too_large` and `image_too_large_pixels` -> `too_large`; `unsupported_image` -> `unsupported`; any other 4xx or a non-ApiError (the Blob could not be read) -> `rejected`; blob or uploader missing -> `missing`.
   (These codes are what `internal/images/httpapi` answers: 413 / 422 / 422.)
+- **Order inside one upload: `store.put(updated)` (the id) first, THEN `pictures.remove(uuid)`.** If the remove throws (IndexedDB closed), the Op already has `productImage` and the Picture is not given up; at worst an orphan Blob stays (Open points). Test: `a Blob that cannot be removed...`.
 - **Why persist the id before the sync:** if a later upload fails (503) or the sync itself fails, the next flush must not upload the same Picture again. The id is on the Op in the store, the Blob is gone, so the retry
   just sends the batch. (Test: `an id already returned is kept on the Op...`.) If the id is swept before the retry succeeds (the phone was offline for more than 24 h after a partial flush) the server drops it, see Go.
 - **Retry = the existing backoff.** `offline: true` makes `useSyncQueue` schedule `backoffMs(failures)` (1, 2, 4, 8, 16, then 30 s) while the phone thinks it is online, and the `online` event retries at once. No new timer.
@@ -114,6 +115,8 @@ then the batch is sent as today, with the updated ops; the result carries pictur
 - `useSyncQueue.flush` builds the notices as `[...syncNotices(results), ...pictureNotices(pictureFailures)]` and passes them to `onResults` (so the existing notice line shows them).
 
 ### The upload call (`api.ts`)
+**Timeout (review):** `uploadPicture` passes `timeoutSignal(syncTimeoutMs)` like `sync` (commit 4c9cf96), so a hung upload is raised as `ApiError(0, 'timeout')`, which the queue treats as retryable and releases its lock. Tests in `api.picture.test.ts`.
+
 `ScanApi.uploadPicture(blob): Promise<string>` (stub added): read the Blob to a data URL with `FileReader`, `client.post('/api/images', { dataUrl })`, answer `.id`. It is the endpoint `ImagePicker` uses (`ui/ImagePicker/api.ts`),
 so there is still one image path on the server; the `image-input` guard (`scripts/check-ui.sh`) is about inputs, and this file builds none. `useScanController` wires `syncApi = { sync, uploadPicture }`. A failure is an `ApiError`
 (`status`, `code`) from `lib/http`, a network error is `ApiError(0, ...)`.
@@ -125,6 +128,7 @@ so there is still one image path on the server; the `image-input` guard (`script
 - A picture that the **server** drops (swept id) is not reported: the sync Result has no `productImageUrl` and nothing else says why; this needs a phone offline for over 24 h after uploading, which the upload-at-sync design makes very rare.
 
 ### IndexedDB (`lib/idbStore.ts`, thin glue, not unit-tested because jsdom has no IndexedDB; the contract is tested through `createMemoryPictureStore` and the queue)
+- An old v1 tab left open can delay the upgrade to v2 (the open connection blocks it) until it is closed or reloaded. v2 adds `blocking` (close the connection when a newer version wants to open) and `terminated` handlers, so future upgrades close cleanly.
 - Database `feeder-scan` goes to **version 2**: `upgrade(db, oldVersion)` keeps creating `ops` and `snapshots` for `oldVersion < 1` and adds `pictures` (out-of-line keys = `clientUuid`) for `oldVersion < 2`. Existing queues survive.
 - Value stored: `{ bytes: ArrayBuffer, type: string }`, not a `Blob`: older Safari had trouble persisting Blobs. `get` rebuilds `new Blob([bytes], {type})`.
 - `appPictureStore()` like `appOpStore()` (lazy shared connection). Memory fallback when IndexedDB is missing or opening fails: Pictures then live only until the page closes, as the ops do (`persistent: false`).
@@ -174,7 +178,14 @@ Everything else is green, and the green-by-design cases pin behaviour that must 
 4. `idbStore.ts` version 2 and `appPictureStore()` (check by hand in the browser: queue offline, reload, go online).
 5. `scripts/check.sh`.
 
+## Accepted deviations (review)
+- The upload path is a constant, `IMAGE_UPLOAD_PATH` (`/api/images`), in `api.ts`, not an inline string.
+- The upload retry list is status 0, 408, 429 and 5xx; the sync's own list is 0 and 5xx only (a 408/429 on a batch is not retried by the existing code).
+- `pictureFailures` are reported (as notices) even when the flush returns `offline`: the Picture is gone for good whether or not the scans reach the server this time. Test: `notices a given-up Picture even when the flush returns offline`.
+- The "no room for the picture" toast is status `'info'`, not an error: the scan itself is queued.
+
 ## Open points
+- **Orphan Blobs** (a crash between `pictures.put` and the entry append, or a failed `remove`) are never swept in beta.1. After beta.1: a cleanup at queue start that removes every stored Blob whose `clientUuid` has no queued entry.
 - The picker's raw mode returns the cropped, downscaled Blob but no preview of the **Picture** exists on the scan line while the scan is queued. Fine for beta; PE-style thumbs can use an object URL later.
 - If the User queues a scan with a Picture and the Ingredient or Shop is gone by sync time, the scan is rejected as today and the uploaded file waits for the sweep (one orphan, 24 h).
 - No total cap on queued Pictures; revisit if real use shows quota errors (they are already handled by queueing without the picture).

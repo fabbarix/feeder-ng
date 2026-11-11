@@ -90,4 +90,29 @@ describe('useSyncQueue with queued Pictures', () => {
     expect(onPictureNotStored).toHaveBeenCalledWith(expect.objectContaining({ clientUuid: 'q-1' }))
     expect(result.current.pendingCount).toBe(1)
   })
+
+  // Review: a Picture given up in a flush that then finds the server unreachable is still told to the User (the scan will sync later).
+  it('notices a given-up Picture even when the flush returns offline', async () => {
+    const online = { value: false }
+    const jpeg2 = () => new Blob([new Uint8Array(20)], { type: 'image/jpeg' })
+    const { hook, onResults, sync } = setup(online, async (b) => {
+      if (b.size === 10) throw new ApiError(413, 'image_too_large', 'big')
+      throw unavailable()
+    })
+    vi.useFakeTimers()
+    await act(async () => {
+      await hook.result.current.enqueue(unknown('one'), jpeg())
+      await hook.result.current.enqueue(unknown('two'), jpeg2())
+    })
+    online.value = true
+    await act(async () => {
+      window.dispatchEvent(new Event('online'))
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(sync).not.toHaveBeenCalled()
+    expect(onResults).toHaveBeenCalledTimes(1)
+    const [results, notices] = onResults.mock.calls[0] as [ScanResult[], { kind: string; clientUuid: string }[]]
+    expect(results).toEqual([])
+    expect(notices).toEqual([expect.objectContaining({ kind: 'picture', clientUuid: 'one' })])
+  })
 })

@@ -273,3 +273,25 @@ describe('OfflineQueue.flush: a Picture that can never be uploaded is given up, 
     expect((await clean.queue.flush(server().api)).pictureFailures).toBeUndefined()
   })
 })
+
+// Review: the id is persisted on the Op BEFORE the Blob is removed, so a failing remove can neither lose the id nor give the Picture up.
+describe('OfflineQueue.flush: persist the id, then remove the Blob', () => {
+  it('a Blob that cannot be removed after a successful upload keeps productImage on the Op and is not given up', async () => {
+    const memory = createMemoryPictureStore()
+    const pictures: PictureStore = { ...memory, remove: vi.fn().mockRejectedValue(new Error('IndexedDB closed')) }
+    const { queue } = setup(pictures)
+    await queue.enqueue(unknown('q-1'), jpeg())
+    const down = server()
+    down.sync.mockRejectedValue(new ApiError(503, 'http_error', 'unavailable'))
+    const first = await queue.flush(down.api)
+    expect(first.pictureFailures).toBeUndefined()
+    expect(down.uploadPicture).toHaveBeenCalledTimes(1)
+    expect((await queue.pending())[0]?.op.productImage).toBe(ID_A)
+
+    const up = server()
+    const second = await queue.flush(up.api)
+    expect(up.uploadPicture).not.toHaveBeenCalled() // not uploaded twice
+    expect((up.sync.mock.calls[0]?.[0] as Op[])[0]?.productImage).toBe(ID_A)
+    expect(second.pictureFailures).toBeUndefined()
+  })
+})
