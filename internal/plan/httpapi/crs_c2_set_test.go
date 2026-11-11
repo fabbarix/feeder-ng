@@ -271,3 +271,50 @@ func TestCookPreviewIsThatCoursesProposalAndPortions(t *testing.T) {
 		t.Errorf("the old cook preview = %d %+v, want the main Course, 2 portions", r.Status, p)
 	}
 }
+
+// The one exception to "one Recipe per slot and date" (docs/dev/design/crs-c2.md §7, decision 13): the other meal
+// holds the same Recipe, is planned and unpinned, and its Course is walked after the target. The replan after the PUT
+// clears that later Course, so the duplicate never survives. Swap can offer the main Course a Recipe the unpinned Side
+// holds, which is why the PUT must accept it.
+func TestPutAcceptsARecipeHeldByALaterUnpinnedPlannedCourseAndClearsIt(t *testing.T) {
+	w := crsc2.New(t)
+	salad := w.Recipe("Salad", crsc2.RecipeSpec{Courses: []int64{w.Main, w.Side}})
+	w.Settle()
+	w.Meal(crsc2.Today, w.Slot, w.Side, salad, "planned", false)
+
+	m := decodeMeal(t, w.User.Put(path(w, crsc2.Today, w.Main, ""), map[string]any{"recipeId": salad}))
+	if m.CourseID != w.Main || m.RecipeID != salad || !m.Pinned {
+		t.Errorf("meal = %+v, want the Salad pinned in the Main", m)
+	}
+	if n := w.Count(`SELECT count(*) FROM planned_meals WHERE course_id = ? AND recipe_id = ?`, w.Side, salad); n != 0 {
+		t.Errorf("the Side still holds the Salad (%d rows): one Recipe per slot is broken", n)
+	}
+	if n := w.Count(`SELECT count(*) FROM planned_meals WHERE course_id = ? AND recipe_id = ?`, w.Main, salad); n != 1 {
+		t.Errorf("%d Main rows with the Salad, want 1", n)
+	}
+}
+
+func TestPutRefusesARecipeHeldByALaterPinnedCourse(t *testing.T) {
+	w := crsc2.New(t)
+	salad := w.Recipe("Salad", crsc2.RecipeSpec{Courses: []int64{w.Main, w.Side}})
+	w.Settle()
+	w.Meal(crsc2.Today, w.Slot, w.Side, salad, "planned", true)
+
+	wantErr(t, "a Recipe held by a Pinned later Course", w.User.Put(path(w, crsc2.Today, w.Main, ""), map[string]any{"recipeId": salad}), 409, "recipe_in_slot")
+	if w.MealState(crsc2.Today, w.Slot, w.Side) != "planned" {
+		t.Error("the Pinned Side changed")
+	}
+}
+
+func TestPutRefusesARecipeHeldByALaterCookedCourse(t *testing.T) {
+	w := crsc2.New(t)
+	salad := w.Recipe("Salad", crsc2.RecipeSpec{Courses: []int64{w.Main, w.Side}})
+	w.Settle()
+	w.Meal(crsc2.Today, w.Slot, w.Side, salad, "cooked", true)
+
+	r := w.User.Put(path(w, crsc2.Today, w.Main, ""), map[string]any{"recipeId": salad})
+	wantErr(t, "a Recipe held by a Cooked later Course", r, 409, "recipe_in_slot")
+	if w.MealState(crsc2.Today, w.Slot, w.Side) != "cooked" {
+		t.Error("the Cooked Side changed")
+	}
+}
