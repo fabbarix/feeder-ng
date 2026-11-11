@@ -1,5 +1,7 @@
+import { fitWithin } from './size'
+
 /**
- * IP1 stub. The pure crop maths of the ImagePicker (no React, no DOM; docs/dev/design/ip1-imagepicker.md, "Crop").
+ * The pure crop maths of the ImagePicker (no React, no DOM; docs/dev/design/ip1-imagepicker.md, "Crop").
  * All rectangles are in PIXELS OF THE TURNED IMAGE (the picture after the user's quarter turns), integers, origin top-left.
  */
 
@@ -28,67 +30,144 @@ export type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 /** The smallest crop side in pixels (or the whole image side when the image is smaller). */
 export const MIN_CROP_PX = 16
 
-/** IP1 stub. The crop shown first: the whole image for 'free', else the largest centred rectangle of that aspect (sizes and offsets rounded to whole pixels). */
-export function initialCrop(bounds: Size, _aspect: CropAspect): Rect {
-  return { x: 0, y: 0, width: bounds.width, height: bounds.height }
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
+
+/** The crop shown first: the whole image for 'free', else the largest centred rectangle of that aspect (whole pixels). */
+export function initialCrop(bounds: Size, aspect: CropAspect): Rect {
+  const full = { x: 0, y: 0, width: bounds.width, height: bounds.height }
+  if (aspect === 'free' || !(aspect > 0)) return full
+  if (bounds.width / bounds.height > aspect) {
+    const width = Math.min(bounds.width, Math.max(1, Math.round(bounds.height * aspect)))
+    return { x: Math.round((bounds.width - width) / 2), y: 0, width, height: bounds.height }
+  }
+  const height = Math.min(bounds.height, Math.max(1, Math.round(bounds.width / aspect)))
+  return { x: 0, y: Math.round((bounds.height - height) / 2), width: bounds.width, height }
 }
 
-/** IP1 stub. Keeps a rect inside bounds: size limited to [min(MIN_CROP_PX, bounds side), bounds side], then SHIFTED (not shrunk) to fit. */
-export function clampRect(rect: Rect, _bounds: Size): Rect {
-  return rect
+/** Keeps a rect inside bounds: size limited to [min(MIN_CROP_PX, bounds side), bounds side], then SHIFTED (not shrunk) to fit. */
+export function clampRect(rect: Rect, bounds: Size): Rect {
+  const width = clamp(Math.round(rect.width), Math.min(MIN_CROP_PX, bounds.width), bounds.width)
+  const height = clamp(Math.round(rect.height), Math.min(MIN_CROP_PX, bounds.height), bounds.height)
+  return {
+    x: clamp(Math.round(rect.x), 0, bounds.width - width),
+    y: clamp(Math.round(rect.y), 0, bounds.height - height),
+    width,
+    height,
+  }
 }
 
-/** IP1 stub. Translates by (dx, dy), size unchanged, stopping at the edges. */
-export function moveRect(rect: Rect, _dx: number, _dy: number, _bounds: Size): Rect {
-  return rect
+/** Translates by (dx, dy), size unchanged, stopping at the edges. */
+export function moveRect(rect: Rect, dx: number, dy: number, bounds: Size): Rect {
+  return clampRect({ ...rect, x: rect.x + Math.round(dx), y: rect.y + Math.round(dy) }, bounds)
 }
 
 /**
- * IP1 stub. Moves one handle by (dx, dy).
- * Free: an edge handle changes only its own side; a corner changes two sides; the opposite sides stay put; result clamped to bounds and MIN_CROP_PX.
+ * Moves one handle by (dx, dy).
+ * Free: an edge handle changes only its own side; a corner changes two sides; the opposite sides stay put; clamped to bounds and MIN_CROP_PX.
  * Locked: only corners work (an edge handle returns the rect unchanged); the OPPOSITE corner stays put; the dominant axis decides
  * (|dx| against |dy * aspect|), the other side follows to keep width / height == aspect (within 1 px of rounding); clamped so the rect stays inside bounds
  * and its shorter side is at least MIN_CROP_PX.
  */
-export function resizeRect(rect: Rect, _handle: Handle, _dx: number, _dy: number, _bounds: Size, _aspect: CropAspect): Rect {
-  return rect
+export function resizeRect(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size, aspect: CropAspect): Rect {
+  dx = Math.round(dx)
+  dy = Math.round(dy)
+  const west = handle.includes('w')
+  const east = handle.includes('e')
+  const north = handle.includes('n')
+  const south = handle.includes('s')
+  if (aspect === 'free' || !(aspect > 0)) {
+    let left = rect.x
+    let top = rect.y
+    let right = rect.x + rect.width
+    let bottom = rect.y + rect.height
+    const minW = Math.min(MIN_CROP_PX, bounds.width)
+    const minH = Math.min(MIN_CROP_PX, bounds.height)
+    if (west) left = clamp(left + dx, 0, right - minW)
+    if (east) right = clamp(right + dx, left + minW, bounds.width)
+    if (north) top = clamp(top + dy, 0, bottom - minH)
+    if (south) bottom = clamp(bottom + dy, top + minH, bounds.height)
+    return { x: left, y: top, width: right - left, height: bottom - top }
+  }
+  if (handle.length !== 2) return rect
+  // Locked: the corner opposite the handle is the anchor.
+  const anchorX = west ? rect.x + rect.width : rect.x
+  const anchorY = north ? rect.y + rect.height : rect.y
+  const room = { w: west ? anchorX : bounds.width - anchorX, h: north ? anchorY : bounds.height - anchorY }
+  const sx = west ? -1 : 1
+  const sy = north ? -1 : 1
+  const wantW = rect.width + sx * dx
+  const wantH = rect.height + sy * dy
+  let width = Math.abs(sx * dx) >= Math.abs(sy * dy * aspect) ? wantW : wantH * aspect
+  const limit = Math.floor(Math.min(room.w, room.h * aspect))
+  const smallest = Math.min(limit, Math.ceil(Math.max(MIN_CROP_PX, MIN_CROP_PX * aspect)))
+  width = Math.round(clamp(width, smallest, limit))
+  const height = Math.max(1, Math.round(width / aspect))
+  return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height }
 }
 
 /**
- * IP1 stub. The crop after the image is turned a quarter turn (delta 1 = clockwise, -1 = counter-clockwise); `bounds` is the size BEFORE the turn.
+ * The crop after the image is turned a quarter turn (delta 1 = clockwise, -1 = counter-clockwise); `bounds` is the size BEFORE the turn.
  * Free: the same area, mapped (clockwise: x' = H - y - h, y' = x, width' = h, height' = w). Locked: the aspect applies to the output, so the
  * crop starts again as initialCrop(new bounds, aspect).
  */
-export function rotateCrop(rect: Rect, _bounds: Size, _delta: 1 | -1, _aspect: CropAspect): Rect {
-  return rect
+export function rotateCrop(rect: Rect, bounds: Size, delta: 1 | -1, aspect: CropAspect): Rect {
+  const turned = { width: bounds.height, height: bounds.width }
+  if (aspect !== 'free') return initialCrop(turned, aspect)
+  if (delta === 1) return { x: bounds.height - rect.y - rect.height, y: rect.x, width: rect.height, height: rect.width }
+  return { x: rect.y, y: bounds.width - rect.x - rect.width, width: rect.height, height: rect.width }
 }
 
-/** IP1 stub. Maps a rect in turned-image pixels back to the ORIGINAL image's pixels (inverse of `turns` clockwise quarter turns of a srcW x srcH picture). */
-export function rectInSource(rect: Rect, _turns: 0 | 1 | 2 | 3, _srcW: number, _srcH: number): Rect {
-  return rect
+/** Maps a rect in turned-image pixels back to the ORIGINAL image's pixels (inverse of `turns` clockwise quarter turns of a srcW x srcH picture). */
+export function rectInSource(rect: Rect, turns: 0 | 1 | 2 | 3, srcW: number, srcH: number): Rect {
+  switch (turns) {
+    case 1: // turned width = srcH: undo with a counter-clockwise turn
+      return { x: rect.y, y: srcH - rect.x - rect.width, width: rect.height, height: rect.width }
+    case 2:
+      return { x: srcW - rect.x - rect.width, y: srcH - rect.y - rect.height, width: rect.width, height: rect.height }
+    case 3: // turned height = srcW: undo with a clockwise turn
+      return { x: srcW - rect.y - rect.height, y: rect.x, width: rect.height, height: rect.width }
+    default:
+      return rect
+  }
 }
 
-/** IP1 stub. The size to render the crop at: the crop size, scaled down (never up) so the long edge is at most maxSide (same rounding as internal/imaging ScaledSize). */
-export function outputSize(rect: Rect, _maxSide: number): Size {
-  return { width: rect.width, height: rect.height }
+/** The size to render the crop at: the crop size, scaled down (never up) so the long edge is at most maxSide (same rounding as internal/imaging ScaledSize). */
+export function outputSize(rect: Rect, maxSide: number): Size {
+  return fitWithin(rect.width, rect.height, maxSide)
 }
 
-/** IP1 stub. The rect as CSS percentages of the bounds (for the overlay): left, top, width, height in 0..100. */
-export function rectToPercent(_rect: Rect, _bounds: Size): { left: number; top: number; width: number; height: number } {
-  return { left: 0, top: 0, width: 100, height: 100 }
+/** The rect as CSS percentages of the bounds (for the overlay): left, top, width, height in 0..100. */
+export function rectToPercent(rect: Rect, bounds: Size): { left: number; top: number; width: number; height: number } {
+  return {
+    left: (rect.x / bounds.width) * 100,
+    top: (rect.y / bounds.height) * 100,
+    width: (rect.width / bounds.width) * 100,
+    height: (rect.height / bounds.height) * 100,
+  }
 }
 
-/** IP1 stub. True when the rect is the whole image (nothing is cropped). */
-export function isFullImage(_rect: Rect, _bounds: Size): boolean {
-  return false
+/** True when the rect is the whole image (nothing is cropped). */
+export function isFullImage(rect: Rect, bounds: Size): boolean {
+  return rect.x === 0 && rect.y === 0 && rect.width === bounds.width && rect.height === bounds.height
 }
 
-/** IP1 stub. Handles on offer: the four corners when the aspect is locked, all eight when free. Order: nw, n, ne, e, se, s, sw, w (corners only: nw, ne, se, sw). */
-export function handlesFor(_aspect: CropAspect): Handle[] {
-  return []
+/** Handles on offer: the four corners when the aspect is locked, all eight when free. */
+export function handlesFor(aspect: CropAspect): Handle[] {
+  return aspect === 'free' ? ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] : ['nw', 'ne', 'se', 'sw']
 }
 
-/** IP1 stub. The accessible name of a handle: "Resize crop, top left corner", "Resize crop, top edge", ... */
-export function handleLabel(_handle: Handle): string {
-  return ''
+const HANDLE_NAMES: Record<Handle, string> = {
+  nw: 'top left corner',
+  n: 'top edge',
+  ne: 'top right corner',
+  e: 'right edge',
+  se: 'bottom right corner',
+  s: 'bottom edge',
+  sw: 'bottom left corner',
+  w: 'left edge',
+}
+
+/** The accessible name of a handle: "Resize crop, top left corner", "Resize crop, top edge", ... */
+export function handleLabel(handle: Handle): string {
+  return `Resize crop, ${HANDLE_NAMES[handle]}`
 }

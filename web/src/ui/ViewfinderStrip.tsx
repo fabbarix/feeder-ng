@@ -11,9 +11,9 @@ export interface ViewfinderStripProps {
   /** shown only when `supported` */
   torch?: { supported: boolean; on: boolean; onToggle: () => void }
   mute?: { muted: boolean; onToggle: () => void }
-  /** IP1 (declared, not yet implemented): accessible name of the region. Default "Scanner". The ImagePicker passes "Camera". */
+  /** Accessible name of the region. Default "Scanner". The ImagePicker passes "Camera". */
   label?: string
-  /** IP1 (declared, not yet implemented): `strip` (default, 140 px, with the barcode reticle) or `photo` (4:3, no reticle, sets data-size="photo"). */
+  /** `strip` (default, 140 px, with the barcode reticle) or `photo` (4:3, no reticle, sets data-size="photo"). */
   size?: 'strip' | 'photo'
 }
 
@@ -21,12 +21,12 @@ export interface ViewfinderStripProps {
  * The compact camera strip above the live Shopping List (functional spec §10.1): a wide, short viewfinder with a
  * reticle, a torch button (when the camera has one) and a mute button. Layout only; it knows nothing about scanning.
  */
-export function ViewfinderStrip({ children, status, torch, mute }: ViewfinderStripProps) {
+export function ViewfinderStrip({ children, status, torch, mute, label, size = 'strip' }: ViewfinderStripProps) {
   return (
-    <section role="region" aria-label={uiStrings.scanner} className="viewfinder-strip">
+    <section role="region" aria-label={label ?? uiStrings.scanner} className="viewfinder-strip" data-size={size === 'photo' ? 'photo' : undefined}>
       <div className="viewfinder-strip__picture">
         {children}
-        <span aria-hidden="true" className="viewfinder-strip__reticle" />
+        {size === 'photo' ? null : <span aria-hidden="true" className="viewfinder-strip__reticle" />}
         {status ? <p className="viewfinder-strip__status">{status}</p> : null}
       </div>
       <div className="viewfinder-strip__controls">

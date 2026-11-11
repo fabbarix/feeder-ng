@@ -95,3 +95,7 @@ export { WhyChip } from './WhyChip'
 export type { WhyChipProps } from './WhyChip'
 export { mealSlotIcon } from './lib/mealSlotIcon'
 export { tagIcon } from './lib/tagIcon'
+// ImagePicker (IP1): keep these lines together at the end of the file.
+export { ImagePicker } from './ImagePicker/ImagePicker'
+export { CROP_ASPECTS } from './ImagePicker/lib/crop'
+export type { ImagePickerProps, RawImage, ImageSource } from './ImagePicker/types'

@@ -14,6 +14,11 @@
   background: var(--viewfinder-frame);
 }
 
+.viewfinder-strip[data-size='photo'] .viewfinder-strip__picture {
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
 .viewfinder-strip__picture video {
   width: 100%;
   height: 100%;

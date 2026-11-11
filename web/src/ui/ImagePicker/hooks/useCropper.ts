@@ -1,4 +1,6 @@
-import type { CropAspect, Handle, Rect, Size } from '../lib/crop'
+import { useCallback, useRef, useState } from 'react'
+import { handlesFor, initialCrop, isFullImage, moveRect, outputSize, rectToPercent, resizeRect, rotateCrop, type CropAspect, type Handle, type Rect, type Size } from '../lib/crop'
+import { addTurn, turnedSize } from '../lib/prepare'
 
 export interface UseCropperOptions {
   /** The ORIGINAL picture's pixel size. */
@@ -58,24 +60,110 @@ export interface UseCropper {
   output(maxSide: number): CropOutput
 }
 
-/** IP1 stub. State for the crop editor: rotation, crop rect, pointer drag and keyboard nudging (uses lib/crop). */
+interface Drag {
+  kind: 'move' | Handle
+  pointerId: number
+  x: number
+  y: number
+  rect: Rect
+}
+
+const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+
+/** State for the crop editor: rotation, crop rect, pointer drag and keyboard nudging (uses lib/crop). */
 export function useCropper(options: UseCropperOptions): UseCropper {
-  const bounds = { width: options.width, height: options.height }
-  const rect = { x: 0, y: 0, width: options.width, height: options.height }
+  const { width, height, aspect, viewWidth } = options
+  const key = `${width}x${height}@${aspect}`
+  const [state, setState] = useState<{ key: string; turns: 0 | 1 | 2 | 3; rect: Rect }>(() => ({ key, turns: 0, rect: initialCrop({ width, height }, aspect) }))
+  // A different picture or aspect starts the editor again (derived state, adjusted during render).
+  let current = state
+  if (state.key !== key) {
+    current = { key, turns: 0, rect: initialCrop({ width, height }, aspect) }
+    setState(current)
+  }
+  const { turns, rect } = current
+  const bounds: Size = turnedSize(width, height, turns)
+  const boundsRef = useRef(bounds)
+  boundsRef.current = bounds
+  const aspectRef = useRef(aspect)
+  aspectRef.current = aspect
+  const viewRef = useRef(viewWidth)
+  viewRef.current = viewWidth
+  const rectRef = useRef(rect)
+  rectRef.current = rect
+  const drag = useRef<Drag | null>(null)
+  const [dragging, setDragging] = useState(false)
+
+  const setRect = useCallback((next: Rect) => setState((s) => ({ ...s, rect: next })), [])
+
+  const rotate = useCallback(
+    (delta: 1 | -1) =>
+      setState((s) => {
+        const before = turnedSize(width, height, s.turns)
+        return { ...s, turns: addTurn(s.turns, delta), rect: rotateCrop(s.rect, before, delta, aspectRef.current) }
+      }),
+    [width, height],
+  )
+
+  const reset = useCallback(() => setState((s) => ({ ...s, turns: 0, rect: initialCrop({ width, height }, aspectRef.current) })), [width, height])
+
+  const begin = useCallback((kind: 'move' | Handle, e: PointerLike) => {
+    if (!(viewRef.current > 0)) return
+    drag.current = { kind, pointerId: e.pointerId, x: e.clientX, y: e.clientY, rect: rectRef.current }
+    setDragging(true)
+  }, [])
+
+  const dragTo = useCallback(
+    (e: PointerLike) => {
+      const d = drag.current
+      if (!d || d.pointerId !== e.pointerId) return
+      const scale = boundsRef.current.width / viewRef.current
+      const dx = (e.clientX - d.x) * scale
+      const dy = (e.clientY - d.y) * scale
+      setRect(d.kind === 'move' ? moveRect(d.rect, dx, dy, boundsRef.current) : resizeRect(d.rect, d.kind, dx, dy, boundsRef.current, aspectRef.current))
+    },
+    [setRect],
+  )
+
+  const end = useCallback((e?: PointerLike) => {
+    if (e && drag.current && drag.current.pointerId !== e.pointerId) return
+    drag.current = null
+    setDragging(false)
+  }, [])
+
+  const keyDown = useCallback(
+    (kind: 'move' | Handle, e: KeyLike): boolean => {
+      const arrow = ARROWS[e.key]
+      if (!arrow) return false
+      e.preventDefault()
+      setState((s) => {
+        const b = turnedSize(width, height, s.turns)
+        const step = Math.max(1, Math.round(Math.max(b.width, b.height) / 100)) * (e.shiftKey ? 10 : 1)
+        const dx = arrow[0] * step
+        const dy = arrow[1] * step
+        return { ...s, rect: kind === 'move' ? moveRect(s.rect, dx, dy, b) : resizeRect(s.rect, kind, dx, dy, b, aspectRef.current) }
+      })
+      return true
+    },
+    [width, height],
+  )
+
+  const output = useCallback((maxSide: number): CropOutput => ({ turns, crop: rect, ...outputSize(rect, maxSide) }), [turns, rect])
+
   return {
-    turns: 0,
+    turns,
     bounds,
     rect,
-    percent: { left: 0, top: 0, width: 100, height: 100 },
-    handles: [],
-    dragging: false,
-    changed: false,
-    rotate: () => {},
-    reset: () => {},
-    begin: () => {},
-    drag: () => {},
-    end: () => {},
-    key: () => false,
-    output: () => ({ turns: 0, crop: rect, width: rect.width, height: rect.height }),
+    percent: rectToPercent(rect, bounds),
+    handles: handlesFor(aspect),
+    dragging,
+    changed: turns !== 0 || !isFullImage(rect, bounds),
+    rotate,
+    reset,
+    begin,
+    drag: dragTo,
+    end,
+    key: keyDown,
+    output,
   }
 }

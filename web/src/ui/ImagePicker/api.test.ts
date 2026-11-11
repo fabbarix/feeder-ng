@@ -46,7 +46,7 @@ describe('imageApi', () => {
   })
 
   it('loadBlob fetches the stored image with the session cookie', async () => {
-    const fetch = vi.fn(async () => new Response(new Blob(['webp'], { type: 'image/webp' })))
+    const fetch = vi.fn(async () => new Response('webp', { headers: { 'Content-Type': 'image/webp' } }))
     vi.stubGlobal('fetch', fetch)
     const blob = await imageApi.loadBlob('/api/images/abc')
     expect(blob.size).toBe(4)

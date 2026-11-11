@@ -7,10 +7,12 @@ export interface CameraEnv {
 }
 
 /**
- * IP1 stub. 'viewfinder' = our getUserMedia viewfinder; 'capture-input' = the system camera through a hidden `<input capture>`;
+ * 'viewfinder' = our getUserMedia viewfinder; 'capture-input' = the system camera through a hidden `<input capture>`;
  * 'none' = no camera offered. Rules: no getUserMedia -> capture-input when coarsePointer, else none; iosStandalone -> capture-input;
  * otherwise viewfinder. After a camera failure (denied, in use, error) the UI falls back to capture-input whatever this says.
  */
-export function cameraStrategy(_env: CameraEnv): 'viewfinder' | 'capture-input' | 'none' {
-  return 'none'
+export function cameraStrategy(env: CameraEnv): 'viewfinder' | 'capture-input' | 'none' {
+  if (env.iosStandalone) return 'capture-input'
+  if (!env.hasGetUserMedia) return env.coarsePointer ? 'capture-input' : 'none'
+  return 'viewfinder'
 }

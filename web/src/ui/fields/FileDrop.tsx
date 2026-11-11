@@ -11,6 +11,8 @@ export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
   /** An accept string: ".json,image/*". */
   accept?: string
   multiple?: boolean
+  /** The button's text and accessible name; default "Choose a file or drop it here". */
+  buttonLabel?: string
   /** The chosen file's name, shown under the zone. */
   fileName?: string
   /** Accepted files (only the first unless `multiple`). */
@@ -20,7 +22,7 @@ export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
 }
 
 /** A dashed drop zone with a "Choose a file or drop it here" button. The native file input stays inside this primitive. */
-export function FileDrop({ label, helper, error, disabled, accept, multiple, fileName, onFiles, onReject }: FileDropProps) {
+export function FileDrop({ label, helper, error, disabled, accept, multiple, fileName, buttonLabel, onFiles, onReject }: FileDropProps) {
   const ids = useFieldIds()
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -57,7 +59,7 @@ export function FileDrop({ label, helper, error, disabled, accept, multiple, fil
       >
         <Icon name="file" size={24} />
         <button type="button" className="file-drop__button" disabled={disabled} onClick={() => input.current?.click()}>
-          {fieldStrings.chooseFile}
+          {buttonLabel ?? fieldStrings.chooseFile}
         </button>
         {fileName ? <p className="file-drop__name">{fileName}</p> : null}
         <input

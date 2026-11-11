@@ -2,17 +2,20 @@
 // images): a data URL or an https URL goes in, a stored WebP comes out (internal/imaging does the decoding, the
 // 1600 px scale and the encoding). It also owns Discard (drop an upload that was never saved) and the orphan Sweep.
 // No net/http and no SQL: HTTP is images/httpapi, the SQL that lists referenced ids is images/refs.
-//
-// IP1 stubs: the Developer implements them (docs/dev/design/ip1-imagepicker.md).
 package images
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"net/netip"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/recipefile/imagefetch"
 )
 
 // OrphanGrace is how long an unreferenced image is kept: an editor left open overnight must not lose its upload.
@@ -23,10 +26,10 @@ const StaleTempAge = time.Hour
 
 // Errors of the URL path (errors.Is). Size, type and pixel errors are imaging's: imaging.ErrTooLarge, ErrUnsupportedFormat, ErrTooManyPixels, ErrEmpty.
 var (
-	ErrURLInvalid     = errors.New("the image link is not an https URL")      // not https, no host, or credentials in it
+	ErrURLInvalid     = errors.New("the image link is not an https URL")         // not https, no host, or credentials in it
 	ErrURLBlocked     = errors.New("the image link points to a private address") // SSRF guard
-	ErrURLUnreachable = errors.New("the image could not be downloaded")         // status, network, timeout, too many redirects
-	ErrInUse          = errors.New("the image is in use")                      // Discard of a referenced image
+	ErrURLUnreachable = errors.New("the image could not be downloaded")          // status, network, timeout, too many redirects
+	ErrInUse          = errors.New("the image is in use")                        // Discard of a referenced image
 )
 
 // Fetcher downloads an https image; imagefetch.Fetcher is the production one (same SSRF policy as Recipe File images).
@@ -65,25 +68,99 @@ func NewService(store *imaging.Store, fetch Fetcher, refs Referencer, clk clock.
 	return &Service{store: store, fetch: fetch, refs: refs, clk: clk}
 }
 
-var errTodo = errors.New("images: not implemented")
-
 // IngestDataURL processes a data URL (imaging.ProcessDataURL) and stores the WebP with SaveAt(now).
-func (s *Service) IngestDataURL(dataURL string) (Stored, error) { return Stored{}, errTodo }
+func (s *Service) IngestDataURL(dataURL string) (Stored, error) {
+	res, err := imaging.ProcessDataURL(dataURL)
+	if err != nil {
+		return Stored{}, err
+	}
+	return s.save(res)
+}
+
+func (s *Service) save(res imaging.Result) (Stored, error) {
+	id, err := s.store.SaveAt(res.WebP, s.clk.Now())
+	if err != nil {
+		return Stored{}, err
+	}
+	return Stored{ID: id, Width: res.Width, Height: res.Height}, nil
+}
 
 // IngestURL downloads rawURL with the Fetcher and stores it like IngestDataURL. A URL that is not https, has no
 // host or carries credentials is ErrURLInvalid WITHOUT calling the Fetcher; imagefetch.ErrBlocked is ErrURLBlocked;
 // ErrNotHTTPS (a redirect to http) is ErrURLInvalid; imagefetch.ErrTooLarge is imaging.ErrTooLarge; ErrContentType
 // is imaging.ErrUnsupportedFormat; any other fetch error (status, network, timeout, redirects) is ErrURLUnreachable.
-// The fetched bytes then go through the same imaging limits (8 MB, JPEG/PNG/WebP, pixel caps). Nothing is stored on error.
+// The fetched bytes then go through the same imaging limits (8 MB, JPEG/PNG/WebP/HEIC, pixel caps). Nothing is stored on error.
 func (s *Service) IngestURL(ctx context.Context, rawURL string) (Stored, error) {
-	return Stored{}, errTodo
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil {
+		return Stored{}, ErrURLInvalid
+	}
+	// An address typed as a literal never reaches DNS, so refuse the private ones here too (the fetcher checks
+	// again when it dials).
+	if ip, perr := netip.ParseAddr(u.Hostname()); perr == nil && imagefetch.Blocked(ip.Unmap()) {
+		return Stored{}, ErrURLBlocked
+	}
+	data, _, err := s.fetch.Fetch(ctx, u.String())
+	if err != nil {
+		switch {
+		case errors.Is(err, imagefetch.ErrBlocked):
+			return Stored{}, ErrURLBlocked
+		case errors.Is(err, imagefetch.ErrNotHTTPS), errors.Is(err, imagefetch.ErrCredentials):
+			return Stored{}, ErrURLInvalid
+		case errors.Is(err, imagefetch.ErrTooLarge):
+			return Stored{}, imaging.ErrTooLarge
+		case errors.Is(err, imagefetch.ErrContentType):
+			return Stored{}, imaging.ErrUnsupportedFormat
+		}
+		return Stored{}, ErrURLUnreachable
+	}
+	res, err := imaging.Process(bytes.NewReader(data))
+	if err != nil {
+		return Stored{}, err
+	}
+	return s.save(res)
 }
 
 // Discard deletes the image unless a record still references it (ErrInUse). A missing image is not an error; an
 // id of the wrong shape is imaging.ErrNotFound. If the Referencer fails, nothing is deleted and the error is returned.
-func (s *Service) Discard(ctx context.Context, id string) error { return errTodo }
+func (s *Service) Discard(ctx context.Context, id string) error {
+	if !imaging.ValidID(id) {
+		return imaging.ErrNotFound
+	}
+	used, err := s.refs.ReferencedIDs(ctx)
+	if err != nil {
+		return err
+	}
+	if used[id] {
+		return ErrInUse
+	}
+	return s.store.Delete(id)
+}
 
 // Sweep deletes every stored image that no record references and that is older than OrphanGrace (strictly), and
 // removes ".tmp-*" files older than StaleTempAge. If the Referencer fails it deletes NOTHING and returns the error
 // (fail closed: a missed reference would delete a live photo).
-func (s *Service) Sweep(ctx context.Context) (SweepResult, error) { return SweepResult{}, errTodo }
+func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
+	used, err := s.refs.ReferencedIDs(ctx)
+	if err != nil {
+		return SweepResult{}, err
+	}
+	list, err := s.store.List()
+	if err != nil {
+		return SweepResult{}, err
+	}
+	now := s.clk.Now()
+	var res SweepResult
+	for _, e := range list {
+		if used[e.ID] || now.Sub(e.ModTime) <= OrphanGrace {
+			res.Kept++
+			continue
+		}
+		if err := s.store.Delete(e.ID); err != nil {
+			return res, err
+		}
+		res.Deleted = append(res.Deleted, e.ID)
+	}
+	res.TempRemoved, err = s.store.RemoveTemp(now.Add(-StaleTempAge))
+	return res, err
+}

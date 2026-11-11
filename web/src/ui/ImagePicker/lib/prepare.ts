@@ -1,5 +1,7 @@
-import type { Rect } from './crop'
-import type { ImageProblemCode } from './problems'
+import { clampRect, isFullImage, outputSize, rectInSource, type Rect } from './crop'
+import { DEFAULT_QUALITY } from './limits'
+import { ImageProblemError, type ImageProblemCode } from './problems'
+import { fitWithin } from './size'
 
 export type Turns = 0 | 1 | 2 | 3
 
@@ -51,35 +53,120 @@ export interface Prepared {
   reencoded: boolean
 }
 
-/** IP1 stub. The browser engine (createImageBitmap + OffscreenCanvas, canvas fallback). */
-export const browserEngine: ImageEngine = {
-  decode: () => Promise.reject(new Error('not implemented')),
-  encode: () => Promise.reject(new Error('not implemented')),
+export { fitWithin }
+
+/** (current + delta) modulo 4. */
+export function addTurn(current: Turns, delta: 1 | -1): Turns {
+  return ((current + delta + 4) % 4) as Turns
 }
 
-/** IP1 stub. Largest size that fits max x max keeping the aspect ratio; never upscales; each side at least 1; rounds like internal/imaging ScaledSize. */
-export function fitWithin(width: number, height: number, _max: number): { width: number; height: number } {
-  return { width, height }
+/** The size after `turns` quarter turns: odd turns swap width and height. */
+export function turnedSize(width: number, height: number, turns: Turns): { width: number; height: number } {
+  return turns % 2 === 1 ? { width: height, height: width } : { width, height }
 }
 
-/** IP1 stub. (current + delta) modulo 4. */
-export function addTurn(current: Turns, _delta: 1 | -1): Turns {
-  return current
-}
-
-/** IP1 stub. The size after `turns` quarter turns: odd turns swap width and height. */
-export function turnedSize(width: number, height: number, _turns: Turns): { width: number; height: number } {
-  return { width, height }
-}
+const isHeic = (type: string) => /^image\/hei[cf]$/i.test(type)
 
 /**
- * IP1 stub. decode (failure -> ImageProblemError('unreadable')); target = fitWithin(turnedSize(...), maxSide).
- * Returns the ORIGINAL blob (reencoded false) when turns is 0, forceEncode is not set, the size does not change and blob.size <= maxBytes.
+ * Decodes (failure -> ImageProblemError('unreadable')); target = the crop (or the whole turned picture) fitted to maxSide.
+ * Returns the ORIGINAL blob (reencoded false) when nothing turns, crops or shrinks, forceEncode is not set, it is not HEIC and blob.size <= maxBytes.
  * Otherwise encodes: PNG stays PNG, everything else becomes JPEG; while the result exceeds maxBytes lowers JPEG quality 0.9 -> 0.6 in 0.1 steps
  * (a PNG that is too big is retried as JPEG); still too big -> ImageProblemError('too_large'). The decoded image is always closed.
  */
-export async function prepareImage(blob: Blob, _opts: PrepareOptions, _engine: ImageEngine): Promise<Prepared> {
-  return { blob, width: 0, height: 0, type: blob.type, reencoded: false }
+export async function prepareImage(blob: Blob, opts: PrepareOptions, engine: ImageEngine): Promise<Prepared> {
+  let image: DecodedImage
+  try {
+    image = await engine.decode(blob)
+  } catch {
+    throw new ImageProblemError('unreadable')
+  }
+  try {
+    const turns = opts.turns ?? 0
+    const turned = turnedSize(image.width, image.height, turns)
+    const crop = opts.crop ? clampRect(opts.crop, turned) : undefined
+    // A crop that is the whole picture changes nothing: it is passed on (the engine draws the same area) but does not force a re-encode.
+    const cropped = crop !== undefined && !isFullImage(crop, turned)
+    const target = outputSize(crop ?? { x: 0, y: 0, ...turned }, opts.maxSide)
+    const resized = target.width !== turned.width || target.height !== turned.height
+    const untouched = turns === 0 && !cropped && !resized && !opts.forceEncode && !isHeic(blob.type)
+    if (untouched && blob.size <= opts.maxBytes) {
+      return { blob, width: target.width, height: target.height, type: blob.type, reencoded: false }
+    }
+    const encode = (type: 'image/jpeg' | 'image/png', quality: number) =>
+      engine.encode(image, { width: target.width, height: target.height, turns, ...(crop ? { crop } : {}), type, quality })
+    const done = (out: Blob, type: string): Prepared => ({ blob: out, width: target.width, height: target.height, type, reencoded: true })
+    const first = opts.quality ?? DEFAULT_QUALITY
+    if (blob.type === 'image/png') {
+      const png = await encode('image/png', first)
+      if (png.size <= opts.maxBytes) return done(png, 'image/png')
+    }
+    for (let q = first; q >= 0.6 - 1e-9; q -= 0.1) {
+      const jpeg = await encode('image/jpeg', Math.round(q * 10) / 10)
+      if (jpeg.size <= opts.maxBytes) return done(jpeg, 'image/jpeg')
+    }
+    throw new ImageProblemError('too_large')
+  } finally {
+    image.close()
+  }
 }
 
 export type { ImageProblemCode }
+
+type Canvas2D = {
+  canvas: { width: number; height: number }
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+  toBlob(type: string, quality: number): Promise<Blob>
+}
+
+function makeCanvas(width: number, height: number): Canvas2D {
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('no 2d context')
+    return { canvas, ctx, toBlob: (type, quality) => canvas.convertToBlob({ type, quality }) }
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('no 2d context')
+  return {
+    canvas,
+    ctx,
+    toBlob: (type, quality) => new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), type, quality)),
+  }
+}
+
+/** The browser engine: createImageBitmap (EXIF orientation applied) + OffscreenCanvas, or a canvas element. */
+export const browserEngine: ImageEngine = {
+  async decode(blob) {
+    return createImageBitmap(blob, { imageOrientation: 'from-image' })
+  },
+  async encode(image, o) {
+    const bitmap = image as unknown as ImageBitmap
+    const { ctx, toBlob } = makeCanvas(o.width, o.height)
+    if (o.type === 'image/jpeg') {
+      ctx.fillStyle = '#fff' // JPEG has no transparency
+      ctx.fillRect(0, 0, o.width, o.height)
+    }
+    ctx.imageSmoothingQuality = 'high'
+    const turned = turnedSize(bitmap.width, bitmap.height, o.turns)
+    const area = o.crop ?? { x: 0, y: 0, ...turned }
+    const src = rectInSource(area, o.turns, bitmap.width, bitmap.height)
+    // Rotate about the centre of the output, then draw the source area into the un-rotated destination box.
+    const odd = o.turns % 2 === 1
+    const dw = odd ? o.height : o.width
+    const dh = odd ? o.width : o.height
+    ctx.translate(o.width / 2, o.height / 2)
+    ctx.rotate((o.turns * Math.PI) / 2)
+    ctx.drawImage(bitmap, src.x, src.y, src.width, src.height, -dw / 2, -dh / 2, dw, dh)
+    return toBlob(o.type, o.quality)
+  },
+}
+
+/** Draws the video's current frame at its native size and returns a JPEG. */
+export async function grabVideoFrame(video: HTMLVideoElement): Promise<Blob> {
+  const { ctx, toBlob } = makeCanvas(video.videoWidth || 640, video.videoHeight || 480)
+  ctx.drawImage(video, 0, 0)
+  return toBlob('image/jpeg', 0.92)
+}

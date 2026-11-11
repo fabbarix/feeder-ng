@@ -34,7 +34,7 @@ const (
 
 // Errors.
 var (
-	ErrUnsupportedFormat = errors.New("unsupported or corrupt image") // not JPEG, PNG or WebP, not the declared type, or undecodable
+	ErrUnsupportedFormat = errors.New("unsupported or corrupt image") // not JPEG, PNG, WebP or HEIC, not the declared type, or undecodable
 	ErrTooLarge          = errors.New("image larger than 8 MB")
 	ErrEmpty             = errors.New("empty image")
 	ErrTooManyPixels     = errors.New("image dimensions too large") // decompression-bomb guard, see MaxSidePixels and MaxPixels
@@ -68,7 +68,7 @@ func clampMin1(n int) int {
 }
 
 // acceptedFormats maps the image.DecodeConfig format names we accept to their declared MIME types.
-var acceptedFormats = map[string]string{"jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+var acceptedFormats = map[string]string{"jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp", "heic": "image/heic"}
 
 // Process reads at most MaxBytes (+1 to detect overflow) from r and processes
 // it as processBytes does with no declared type. Errors: ErrEmpty, ErrTooLarge,
@@ -85,7 +85,7 @@ func Process(r io.Reader) (Result, error) {
 // to refuse unsupported formats, a format that differs from declared (when
 // declared is not empty) and decompression bombs, before the full decode. It
 // scales the image with ScaledSize(…, MaxSide) using a high-quality filter and
-// encodes lossless WebP. EXIF orientation is not applied in v1 (known limit).
+// encodes lossless WebP. A JPEG's EXIF orientation is applied (exif.go); HEIC/HEIF goes through heic.go.
 func processBytes(data []byte, declared string) (Result, error) {
 	if len(data) == 0 {
 		return Result{}, ErrEmpty
@@ -93,12 +93,27 @@ func processBytes(data []byte, declared string) (Result, error) {
 	if len(data) > MaxBytes {
 		return Result{}, ErrTooLarge
 	}
-	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil {
-		return Result{}, ErrUnsupportedFormat
-	}
-	if _, ok := acceptedFormats[format]; !ok {
-		return Result{}, ErrUnsupportedFormat
+	var (
+		cfg    image.Config
+		format string
+		err    error
+	)
+	if isHEIC(data) {
+		format = "heic"
+		if declared != "" && format != declared {
+			return Result{}, ErrUnsupportedFormat
+		}
+		if cfg, err = heicConfig(data); err != nil {
+			return Result{}, err
+		}
+	} else {
+		cfg, format, err = image.DecodeConfig(bytes.NewReader(data))
+		if err != nil {
+			return Result{}, ErrUnsupportedFormat
+		}
+		if _, ok := acceptedFormats[format]; !ok {
+			return Result{}, ErrUnsupportedFormat
+		}
 	}
 	if declared != "" && format != declared {
 		return Result{}, ErrUnsupportedFormat
@@ -106,18 +121,41 @@ func processBytes(data []byte, declared string) (Result, error) {
 	if cfg.Width > MaxSidePixels || cfg.Height > MaxSidePixels || int64(cfg.Width)*int64(cfg.Height) > MaxPixels {
 		return Result{}, ErrTooManyPixels
 	}
-	src, _, err := image.Decode(bytes.NewReader(data))
+	var src image.Image
+	if format == "heic" {
+		src, err = decodeHEIC(data)
+	} else {
+		src, _, err = image.Decode(bytes.NewReader(data))
+	}
 	if err != nil {
+		if errors.Is(err, ErrUnsupportedFormat) {
+			return Result{}, err
+		}
 		return Result{}, ErrUnsupportedFormat
 	}
+	// EXIF orientation (JPEG only) is applied to the upright picture: the size is computed for the upright
+	// shape, the stored pixels are scaled to the matching stored shape, and the small result is turned.
+	orientation := 1
+	if format == "jpeg" {
+		orientation = jpegOrientation(data)
+	}
 	b := src.Bounds()
-	w, h := ScaledSize(b.Dx(), b.Dy(), MaxSide)
+	sw, sh := b.Dx(), b.Dy()
+	uw, uh := sw, sh
+	if swapsAxes(orientation) {
+		uw, uh = sh, sw
+	}
+	w, h := ScaledSize(uw, uh, MaxSide)
 	img := src
-	if w != b.Dx() || h != b.Dy() {
-		dst := image.NewRGBA(image.Rect(0, 0, w, h))
+	if scaledW, scaledH := w, h; scaledW != uw || scaledH != uh {
+		if swapsAxes(orientation) {
+			scaledW, scaledH = h, w
+		}
+		dst := image.NewRGBA(image.Rect(0, 0, scaledW, scaledH))
 		draw.CatmullRom.Scale(dst, dst.Bounds(), src, b, draw.Over, nil)
 		img = dst
 	}
+	img = orient(img, orientation)
 	var out bytes.Buffer
 	if err := nativewebp.Encode(&out, img, nil); err != nil {
 		return Result{}, ErrUnsupportedFormat
@@ -126,7 +164,7 @@ func processBytes(data []byte, declared string) (Result, error) {
 }
 
 // ProcessDataURL decodes a data URL and processes it. Only
-// `data:image/(jpeg|png|webp);base64,<payload>` is accepted (the Recipe File
+// `data:image/(jpeg|png|webp|heic|heif);base64,<payload>` is accepted (the Recipe File
 // form); the format found in the bytes must match the declared type. Anything
 // else is ErrUnsupportedFormat.
 func ProcessDataURL(dataURL string) (Result, error) {
@@ -148,6 +186,9 @@ func ProcessDataURL(dataURL string) (Result, error) {
 
 // declaredFormat maps a declared MIME type to its DecodeConfig format name.
 func declaredFormat(mime string) (string, bool) {
+	if mime == "image/heif" {
+		return "heic", true
+	}
 	for format, m := range acceptedFormats {
 		if m == mime {
 			return format, true
