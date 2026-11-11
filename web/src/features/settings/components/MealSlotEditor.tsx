@@ -1,10 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField } from '../../../ui'
-import { WeekdayPicker } from '../../../ui/WeekdayPicker/WeekdayPicker'
-import { sortIsoDays } from '../../../ui/WeekdayPicker/weekdays'
+import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField, WeekdayPicker } from '../../../ui'
+import { useSlotForm } from '../hooks/useSlotForm'
 import { documentLocale } from '../lib/locale'
-import { batchRequest, hasChanges, matchingSlots, quickPicks, sameDays, summaryLines } from '../lib/multiDay'
-import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
+import { sameDays } from '../lib/multiDay'
 import { settingsStrings } from '../strings'
 import type { MealSlot, MealSlotInput, Member, SlotBatchRequest } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
@@ -16,6 +13,8 @@ export interface MealSlotEditorProps {
   members: Member[]
   /** Add mode starts with these weekdays chosen (ISO 1..7), e.g. the weekday whose add button was pressed. */
   defaultWeekdays?: number[]
+  /** Add mode starts with this Name (the grid row whose add button was pressed). */
+  defaultName?: string
   saving?: boolean
   error?: string
   /** Adding: one body per chosen weekday. */
@@ -45,41 +44,8 @@ export function MealSlotEditor({ open, slot, onClose, ...rest }: MealSlotEditorP
 
 type FormProps = Omit<MealSlotEditorProps, 'open' | 'onClose'>
 
-function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, slots, onApply, weekStart, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
-  const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot, members))
-  const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
-  // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
-  const weekdaysKey = (defaultWeekdays ?? []).join(',')
-  useEffect(() => {
-    if (!slot) setWeekdays(weekdaysKey === '' ? [] : weekdaysKey.split(',').map(Number))
-  }, [weekdaysKey, slot])
-  const [problem, setProblem] = useState<{ message: string; field: 'weekdays' | 'form' } | null>(null)
-  const set = (patch: Partial<MealSlotInput>) => setDraft((d) => ({ ...d, ...patch }))
-  const picks = quickPicks(slots ?? (slot ? [slot] : []), slot)
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const none = weekdaysProblem(weekdays)
-    if (none) return setProblem({ message: none, field: 'weekdays' })
-    const bad = slotProblem(draft)
-    if (bad) return setProblem({ message: bad, field: 'form' })
-    if (!slot) {
-      setProblem(null)
-      void onSave(slotInputsForWeekdays(draft, weekdays))
-      return
-    }
-    if (!onApply) {
-      void onSave([slotFromDraft({ ...draft, weekday: slot.weekday })])
-      return
-    }
-    const request = batchRequest(slot, weekdays, draft)
-    if (!hasChanges(request.set)) return setProblem({ message: text.nothingToChange, field: 'form' })
-    setProblem(null)
-    void onApply(request)
-  }
-
-  const match = slot ? matchingSlots(slots ?? [slot], slot.name, weekdays) : null
-  const summary = slot && match ? summaryLines(slot.name.trim(), match.matched, match.skipped, locale) : null
+function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
+  const { draft, set, weekdays, setWeekdays, picks, summary, problem, submit } = useSlotForm({ slot, members, defaultWeekdays, defaultName, slots, locale, onSave, onApply })
   const formProblem = problem?.field === 'form' ? problem.message : undefined
   const shownError = formProblem ?? error
 
@@ -88,7 +54,7 @@ function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, slots
       <WeekdayPicker
         label={slot ? text.applyTo : text.days}
         value={weekdays}
-        onChange={(days) => setWeekdays(sortIsoDays(days))}
+        onChange={setWeekdays}
         weekStart={weekStart}
         locale={locale}
         error={problem?.field === 'weekdays' ? problem.message : undefined}
@@ -102,7 +68,7 @@ function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, slots
       </div>
       <FieldRow>
         <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
-        <TimeField label={text.time} value={draft.time} onChange={(time) => set({ time })} />
+        <TimeField size="sm" label={text.time} value={draft.time} onChange={(time) => set({ time })} />
       </FieldRow>
       <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
       {summary ? (

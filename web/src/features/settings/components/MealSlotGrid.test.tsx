@@ -15,7 +15,7 @@ describe('MealSlotGrid (R15: desktop week, days as columns, slots as rows)', () 
   it('is a table with a column header per weekday, Monday first, and a row header per Meal Slot name', () => {
     setup()
     const table = screen.getByRole('table', { name: 'Meal Slots by weekday' })
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter(Boolean)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter((t) => t && t !== 'Meal Slot')).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
     expect(within(table).getAllByRole('rowheader').map((h) => h.textContent)).toEqual(['Lunch', 'Dinner'])
   })
 
@@ -75,6 +75,6 @@ describe('MealSlotGrid (R15: desktop week, days as columns, slots as rows)', () 
 
   it('weekStart 7 starts on Sunday', () => {
     setup({ weekStart: 7 })
-    expect(within(screen.getByRole('table')).getAllByRole('columnheader').map((h) => h.textContent).filter(Boolean)[0]).toBe('Sun')
+    expect(within(screen.getByRole('table')).getAllByRole('columnheader').map((h) => h.textContent).filter((t) => t && t !== 'Meal Slot')[0]).toBe('Sun')
   })
 })

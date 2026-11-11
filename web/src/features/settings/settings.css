@@ -76,6 +76,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  /* the stepper icon buttons' 6 px hit area sticks out of the row; leave room so the sheet never scrolls sideways */
+  padding-inline-end: 6px;
 }
 
 /* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
@@ -179,6 +181,10 @@ button.nobody-pill:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+.meal-grid-wrap {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
 .meal-grid {
   inline-size: 100%;
   border-collapse: separate;
@@ -193,21 +199,68 @@ button.nobody-pill:focus-visible {
   text-align: start;
 }
 .meal-grid th[scope='row'] {
-  inline-size: 7rem;
+  inline-size: 4.5rem;
   color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 .meal-grid td {
   vertical-align: top;
-  padding: var(--space-2);
+  padding: var(--space-1);
   border-radius: var(--radius-control);
   background: var(--color-surface-2);
   min-inline-size: 0;
+  /* a cell holds its content: it wraps first, and clips (with room for the focus ring) only as a last resort */
+  overflow: clip;
+  overflow-clip-margin: 4px;
 }
 .meal-grid__slot {
   display: grid;
   gap: var(--space-1);
   justify-items: start;
+  inline-size: 100%;
+  min-inline-size: 0;
   scroll-margin-block: var(--space-6);
+}
+/* The chip wraps inside a ~80 px cell: name first, the time on its own line. */
+.meal-grid .chip {
+  white-space: normal;
+  block-size: auto;
+  min-block-size: 28px;
+  min-inline-size: 0;
+  padding-block: 4px;
+  padding-inline: 8px;
+  gap: 4px;
+  line-height: var(--text-label-line);
+  text-align: start;
+}
+.meal-grid .meal-chip__label {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.meal-grid .meal-chip__time {
+  display: block;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.meal-grid .attendee-pills {
+  flex-wrap: wrap;
+  inline-size: 100%;
+}
+.meal-grid .nobody-pill {
+  max-inline-size: 100%;
+  white-space: normal;
+  block-size: auto;
+  padding-block: 2px;
+  text-align: start;
+}
+/* Narrow grid (the 720 px Page): pills shrink to their avatars; the names stay in the list's accessible text. */
+@container (max-width: 900px) {
+  .meal-grid .member-pill__name {
+    display: none;
+  }
+  .meal-grid .member-pill {
+    padding-inline: 2px;
+  }
 }
 .meal-slot-summary {
   margin: 0;

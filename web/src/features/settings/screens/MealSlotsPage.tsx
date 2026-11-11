@@ -30,6 +30,7 @@ export function MealSlotsPage() {
         slot={editor?.item}
         members={page.members.members}
         defaultWeekdays={editor?.defaultWeekdays}
+        defaultName={editor?.defaultName}
         saving={page.slots.saving}
         error={page.error}
         onSave={page.save}

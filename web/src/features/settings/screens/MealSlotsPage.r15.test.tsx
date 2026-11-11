@@ -120,7 +120,7 @@ describe('MealSlotsPage: overview', () => {
     routes(USER_ME)
     renderWithProviders(<MealSlotsPage />)
     const table = await screen.findByRole('table', { name: 'Meal Slots by weekday' })
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter(Boolean)).toContain('Thu')
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter((t) => t && t !== 'Meal Slot')).toContain('Thu')
     expect(screen.queryByRole('group', { name: 'Tuesday' })).toBeNull()
   })
 

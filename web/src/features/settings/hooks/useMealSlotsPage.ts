@@ -18,6 +18,7 @@ import { useMembers } from './useMembers'
 interface SlotEditor {
   item?: MealSlot
   defaultWeekdays?: number[]
+  defaultName?: string
 }
 
 /** The Meal Slots page: the week, the slot sheet (an Admin), and the one-date Attendance a tap opens. */
@@ -52,7 +53,7 @@ export function useMealSlotsPage() {
     try {
       const result = await slots.batchUpdate(request)
       toast.show(
-        resultMessage(request.match, result.updated.map((s) => s.weekday), result.skipped.map((s) => s.weekday), documentLocale()),
+        resultMessage(request.set.name?.trim() || request.match, result.updated.map((s) => s.weekday), result.skipped.map((s) => s.weekday), documentLocale()),
         { status: 'success' },
       )
       setError(undefined)
@@ -120,7 +121,7 @@ export function useMealSlotsPage() {
     dateEditor,
     attendance,
     add: () => (setError(undefined), (savedWeekdays.current = []), setEditor({})),
-    addOn: (weekday: number) => (setError(undefined), (savedWeekdays.current = []), setEditor({ defaultWeekdays: [weekday] })),
+    addOn: (weekday: number, name?: string) => (setError(undefined), (savedWeekdays.current = []), setEditor({ defaultWeekdays: [weekday], defaultName: name })),
     open,
     closeEditor: () => (savedWeekdays.current = [], setEditor(null)),
     /** "Change a date" from the sheet: the sheet gives way to the one-date Attendance for the same slot. */

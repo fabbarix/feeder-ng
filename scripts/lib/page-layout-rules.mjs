@@ -11,7 +11,7 @@ export const ROUTES = [
   ['/recipes', 'wide'], ['/recipes/:id', 'default'], ['/recipes/:id/edit', 'default'], ['/recipes/new', 'default'],
   ['/recipes/import', 'narrow'], ['/recipes/export', 'narrow'], ['/ingredients', 'narrow'], ['/ingredients/:id', 'narrow'],
   ['/products', 'narrow'], ['/products/:id', 'narrow'], ['/settings', 'narrow'], ['/settings/household', 'narrow'],
-  ['/settings/members', 'narrow'], ['/settings/meal-slots', 'narrow'], ['/settings/planning', 'narrow'],
+  ['/settings/members', 'narrow'], ['/settings/meal-slots', 'default'], ['/settings/planning', 'narrow'],
   ['/settings/shops', 'narrow'], ['/settings/shops/:id', 'narrow'], ['/settings/notifications', 'narrow'],
   ['/settings/allowlist', 'narrow'], ['/settings/preferences', 'narrow'], ['/settings/access-requests', 'narrow'],
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],

@@ -106,6 +106,7 @@ export const settingsStrings = {
     nobodyAttending: 'Nobody attending',
     nobodyAttendingFix: (slot: string, weekday: string) => `Nobody attending. Choose who attends ${slot} on ${weekday}`,
     gridLabel: 'Meal Slots by weekday',
+    gridCorner: 'Meal Slot',
     attendingList: (slot: string, weekday: string) => `Attending ${slot} on ${weekday}`,
     moreAttending: (n: number, names: string) => `and ${n} more: ${names}`,
     cellLabel: (name: string, weekday: string) => `${name} on ${weekday}`,

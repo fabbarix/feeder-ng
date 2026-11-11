@@ -1,5 +1,4 @@
-import { Chip, IconButton, mealSlotIcon } from '../../../ui'
-import { weekdayLongName, weekdayShortName, type WeekStart } from '../../../ui/WeekdayPicker/weekdays'
+import { Chip, IconButton, mealSlotIcon, weekdayLongName, weekdayShortName, type WeekStart } from '../../../ui'
 import { documentLocale } from '../lib/locale'
 import { slotAnchorId } from '../lib/slotAnchor'
 import { weekGrid } from '../lib/weekGrid'
@@ -15,8 +14,8 @@ export interface MealSlotGridProps {
   addDisabled?: boolean
   weekStart?: WeekStart
   locale?: string
-  /** Admin: add a Meal Slot on this weekday. */
-  onAdd: (weekday: number) => void
+  /** Admin: add a Meal Slot on this weekday, named like the row. */
+  onAdd: (weekday: number, name: string) => void
   onOpen: (slot: MealSlot) => void
 }
 
@@ -26,10 +25,13 @@ const text = settingsStrings.slot
 export function MealSlotGrid({ slots, members, canEdit, addDisabled = false, weekStart = 1, locale = documentLocale(), onAdd, onOpen }: MealSlotGridProps) {
   const grid = weekGrid(slots, weekStart)
   return (
+    <div className="meal-grid-wrap">
     <table className="meal-grid" aria-label={text.gridLabel}>
       <thead>
         <tr>
-          <td />
+          <th scope="col">
+            <span className="visually-hidden">{text.gridCorner}</span>
+          </th>
           {grid.days.map((day) => (
             <th key={day} scope="col" aria-label={weekdayLongName(day, locale)}>
               {weekdayShortName(day, locale)}
@@ -49,12 +51,14 @@ export function MealSlotGrid({ slots, members, canEdit, addDisabled = false, wee
                   {slot ? (
                     <div id={slotAnchorId(slot.id)} tabIndex={-1} className="meal-grid__slot">
                       <Chip kind="tag" icon={mealSlotIcon(slot.name)} onClick={() => onOpen(slot)}>
-                        {text.slotButton(slot.name, slot.time)}
+                        <span className="meal-chip__label">
+                          {slot.name} <span className="meal-chip__time">{slot.time}</span>
+                        </span>
                       </Chip>
                       <AttendeePills slot={slot} members={members} onFix={onOpen} locale={locale} />
                     </div>
                   ) : canEdit ? (
-                    <IconButton icon="add" label={text.addOn(row.name, weekday)} size="compact" disabled={addDisabled} onClick={() => onAdd(day)} />
+                    <IconButton icon="add" label={text.addOn(row.name, weekday)} size="compact" disabled={addDisabled} onClick={() => onAdd(day, row.name)} />
                   ) : null}
                 </td>
               )
@@ -63,5 +67,6 @@ export function MealSlotGrid({ slots, members, canEdit, addDisabled = false, wee
         ))}
       </tbody>
     </table>
+    </div>
   )
 }

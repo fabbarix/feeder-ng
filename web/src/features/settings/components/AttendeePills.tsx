@@ -1,6 +1,4 @@
-import { Icon } from '../../../ui'
-import { MemberPill } from '../../../ui/MemberPill/MemberPill'
-import { weekdayLongName } from '../../../ui/WeekdayPicker/weekdays'
+import { Icon, MemberPill, weekdayLongName } from '../../../ui'
 import { attendeePills } from '../lib/attendeePills'
 import { documentLocale } from '../lib/locale'
 import { settingsStrings } from '../strings'
@@ -26,7 +24,7 @@ export function AttendeePills({ slot, members, max = 4, onFix, locale = document
   if (model.state === 'nobody') {
     const content = (
       <>
-        <Icon name="warning" size={14} />
+        <Icon name="error" size={14} />
         {text.nobodyAttending}
       </>
     )

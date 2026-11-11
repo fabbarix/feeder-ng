@@ -1,5 +1,4 @@
-import { Chip, EmptyState, IconButton, mealSlotIcon } from '../../../ui'
-import { weekdayLongName, weekdayOrder, type WeekStart } from '../../../ui/WeekdayPicker/weekdays'
+import { Chip, EmptyState, IconButton, mealSlotIcon, weekdayLongName, weekdayOrder, type WeekStart } from '../../../ui'
 import { documentLocale } from '../lib/locale'
 import { slotAnchorId } from '../lib/slotAnchor'
 import { settingsStrings } from '../strings'
