@@ -67,12 +67,13 @@ func TestResolveImagesResolvesIngredientImagesByPath(t *testing.T) {
 	}
 }
 
-func TestNewIngredientsCarryTheirImagePathAndExistingOnesAreLeftAlone(t *testing.T) {
+func TestNewIngredientsCarryTheirImagePathAndExistingOnesWithAPictureAreLeftAlone(t *testing.T) {
 	f := exampleFile(t)
 	f.Ingredients[4].Image = pngDataURL(t, 8, 6) // onion
 	f.Ingredients[3].Image = pngDataURL(t, 8, 6) // lemon
 	set := recipefile.ResolveImages(context.Background(), f, &fakeFetcher{})
-	existing := recipefile.Existing{Ingredients: []ingredient.Ingredient{{ID: 5, Name: "lemon", Base: units.Piece}}}
+	// IM3: lemon already has a picture of its own, so the file's one is dropped (one without a picture adopts it: im3_import_pictures_test.go).
+	existing := recipefile.Existing{Ingredients: []ingredient.Ingredient{{ID: 5, Name: "lemon", Base: units.Piece, Image: "0123456789abcdef0123456789abcdef"}}}
 	d := recipefile.Decisions{}
 	c, err := recipefile.BuildCommit(f, existing, d, set)
 	if err != nil {
@@ -100,7 +101,10 @@ func TestNewIngredientsCarryTheirImagePathAndExistingOnesAreLeftAlone(t *testing
 		t.Error("lemon already exists, so it is not created")
 	}
 	if _, ok := c.Images["$.ingredients[3].image"]; ok {
-		t.Error("the picture of an EXISTING Ingredient is dropped: an import never changes what the household already has")
+		t.Error("an existing picture is never replaced, so the file's one is dropped")
+		if len(c.AddedImages) != 0 {
+			t.Errorf("AddedImages = %+v; an Ingredient with a picture keeps it", c.AddedImages)
+		}
 	}
 }
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Icon } from '../../../ui/Icon'
 import { IconButton } from '../../../ui/IconButton'
 import { Tile } from '../../../ui/Tile'
@@ -10,6 +11,8 @@ export interface LineTileProps {
   onUntick: (entry: ListEntry) => void
   /** extras only; Lines come from the plan and cannot be deleted */
   onDelete?: (entry: ListEntry) => void
+  /** R2-4: a leading visual (an Ingredient thumbnail later), rendered in `.line-tile__lead` between the tick and the text. */
+  lead?: ReactNode
 }
 
 /**
@@ -17,10 +20,10 @@ export interface LineTileProps {
  * its quantity and pack suggestion, the estimated cost (only when there is a Price) and, for extras, a note icon and a
  * compact Delete IconButton. Render only.
  */
-export function LineTile({ entry, onTick, onUntick, onDelete }: LineTileProps) {
+export function LineTile({ entry, onTick, onUntick, onDelete, lead }: LineTileProps) {
   const label = entry.ticked ? shopStrings.untick(entry.title) : shopStrings.tickTitle(entry.title)
   return (
-    <Tile as="article" className="line-tile" data-state={entry.ticked ? 'ticked' : 'open'}>
+    <Tile as="article" className="line-tile" data-lead={lead ? 'true' : undefined} data-state={entry.ticked ? 'ticked' : 'open'}>
       <button
         type="button"
         className="line-tile__tick"
@@ -30,6 +33,7 @@ export function LineTile({ entry, onTick, onUntick, onDelete }: LineTileProps) {
       >
         {entry.ticked ? <Icon name="tick" size={24} weight="fill" /> : null}
       </button>
+      {lead ? <span className="line-tile__lead">{lead}</span> : null}
       <div className="line-tile__body">
         <p className="line-tile__title">{entry.title}</p>
         {entry.quantityText ? <p className="line-tile__quantity">{entry.quantityText}</p> : null}

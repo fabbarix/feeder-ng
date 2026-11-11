@@ -1,4 +1,4 @@
 # Per-route mode of the page-layout guard (scripts/check-page-layout.sh). warn = findings are printed, the run passes.
 # An adoption package flips its routes to fail when it merges (patterns: exact, :id, trailing /*).
 default=warn
-fail_routes=/ /plan
+fail_routes=/settings /settings/household /settings/preferences /settings/members /settings/allowlist /settings/shops /settings/shops/:id /ingredients /ingredients/:id /products /products/:id /settings/recipe-assistant /stock /shop /scan /recipes/import /recipes/export /board /cook/* /recipes/:id /recipes/:id/edit /recipes/new / /plan

@@ -117,5 +117,46 @@ for f in "$CI" "$REL"; do
   fi
 done
 
+# REL-1: a dotted prerelease tag (v1.0.0-beta.1, v1.0.0-rc.2) publishes image {{version}} and chart 1.0.0-beta.1, never latest,
+# and never moves the floating 1.0 / 1 tags (they must name stable releases only; do not rely on metadata-action's default).
+python3 - "$REL" <<'PY' && ok || bad "release.yml: 1.0 and 1 floating tags and latest must all be disabled for tags containing '-' (prereleases)"
+import re, sys
+t = open(sys.argv[1]).read()
+lines = [l for l in t.splitlines() if "type=semver" in l or "type=raw,value=latest" in l]
+mm = [l for l in lines if "{{major}}" in l]
+ok = len(mm) == 2 and all("!contains(github.ref_name, '-')" in l for l in mm)
+lat = [l for l in lines if "value=latest" in l]
+ok = ok and len(lat) == 1 and "!contains(github.ref_name, '-')" in lat[0]
+ver = [l for l in lines if "pattern={{version}}" in l]
+ok = ok and len(ver) == 1 and "contains(github.ref_name, '-')" not in ver[0]
+sys.exit(0 if ok else 1)
+PY
+# Version derivation for the chart job: v1.0.0-beta.1 -> 1.0.0-beta.1 (valid semver, no build metadata, same for --version and --app-version).
+for tag in v1.0.0 v1.0.0-dev v1.0.0-beta.1 v1.0.0-rc.2; do
+  ver="${tag#v}"
+  if printf '%s' "$ver" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then ok; else bad "tag $tag does not map to a valid chart version ($ver)"; fi
+done
+# The sorting rule the docs state: only stable tags (no '-') may set latest.
+for tag in v1.0.0-dev v1.0.0-beta.1 v1.0.0-rc.2; do case "$tag" in *-*) ok ;; *) bad "$tag must count as a prerelease" ;; esac; done
+has "$REL" 'VERSION="?\$\{TAG#v\}' "VERSION must be the tag without the leading v"
+# the image job must also be gated on the same tag filter used by the chart job
+has "$REL" "refs/tags/v" "release.yml must filter on refs/tags/v"
+
+# One Go toolchain version everywhere: go.mod, CI/release (via go-version-file) and the Dockerfile builder.
+GOVER="1.26.11"
+GOMOD="$HERE/../../go.mod"
+DOCKERFILE="$HERE/../../Dockerfile"
+has "$GOMOD" "^go ${GOVER//./\\.}\$" "go.mod go directive is not ${GOVER}"
+if grep -Eq '^toolchain ' "$GOMOD"; then
+  has "$GOMOD" "^toolchain go${GOVER//./\\.}\$" "go.mod toolchain line is not go${GOVER}"
+else
+  ok
+fi
+has "$CI"  'go-version-file:\s*go\.mod' "ci.yml setup-go must read the Go version from go.mod"
+has "$REL" 'go-version-file:\s*go\.mod' "release.yml setup-go must read the Go version from go.mod"
+lacks "$CI"  '^\s*go-version:' "ci.yml pins a literal go-version instead of go.mod"
+lacks "$REL" '^\s*go-version:' "release.yml pins a literal go-version instead of go.mod"
+has "$DOCKERFILE" "^FROM .*golang:${GOVER//./\\.}([-@ ]|\$)" "Dockerfile builder image is not golang:${GOVER}"
+
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

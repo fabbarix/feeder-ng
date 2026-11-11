@@ -5,6 +5,8 @@
  * - `PageHeader title="Stock"` with actions: secondary sm "Stock-take" (icon `scan`, onClick from
  *   useStockTakeEntry) and primary sm "Add to Stock" (icon `add`) which opens AddLotSheet. Header actions are the
  *   only Buttons at this level, so one primary per scope.
+ * - L-06: from 1280 px a two-column `.stock-screen__layout`: a sticky `<aside aria-label="Filter Stock">` (SpoiledTile, then the search
+ *   and the chips) beside `.stock-screen__main` (the list). One tree: on a phone the aside simply comes first.
  * - SpoiledTile (when there are spoiled lots).
  * - `SearchField` "Search Stock" and filter `Chip kind="filter"`s All · Use soon · Spoiled (aria-pressed), both
  *   only when status is 'ready'. filterTotals(sortTotals(data), filter, query).
@@ -17,7 +19,7 @@
  * No `<main>`: the shell provides it. No tile grid.
  */
 import { useMemo, useState, type ReactElement } from 'react'
-import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
+import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { LotList } from '../components/LotList'
 import { SetTotalSheet } from '../components/SetTotalSheet'
@@ -53,6 +55,11 @@ export function StockScreen(): ReactElement | null {
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
+  // The aside is a 360 px column from 1280 px: the spoiled rows keep their actions under the text there.
+  const twoColumns = useMediaQuery('(min-width: 1280px)')
+  const ready = totals.status === 'ready'
+  // No empty aside: it exists when something is spoiled or the search and chips are shown.
+  const showAside = spoiledLots.length > 0 || ready
 
   /** Runs a change; a failure shows an error toast and the screen stays usable. */
   const attempt = async (change: () => Promise<void>) => {
@@ -84,37 +91,44 @@ export function StockScreen(): ReactElement | null {
         }
       />
 
-      <SpoiledTile
-        lots={spoiledLots}
-        today={today}
-        system={system}
-        onThrowOut={(id) => void attempt(() => spoiled.throwOut(id))}
-        onKeep={(id) => void attempt(() => spoiled.keep(id))}
-      />
+      <div className="stock-screen__layout">
+        {showAside ? (
+          <aside className="stock-screen__aside" aria-label={strings.asideLabel}>
+            <SpoiledTile
+              lots={spoiledLots}
+              today={today}
+              system={system}
+              stacked={twoColumns}
+              onThrowOut={(id) => void attempt(() => spoiled.throwOut(id))}
+              onKeep={(id) => void attempt(() => spoiled.keep(id))}
+            />
+            {ready ? (
+              <div className="stock-screen__controls">
+                <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
+                <div className="stock-screen__filters" role="group" aria-label={strings.filtersLabel}>
+                  {STOCK_FILTERS.map((f) => (
+                    <Chip key={f} kind="filter" selected={filter === f} onClick={() => setFilter(f)}>
+                      {strings.filters[f]}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </aside>
+        ) : null}
 
-      {totals.status === 'loading' ? (
-        <div aria-busy="true">
-          <Skeleton variant="row" count={5} />
-        </div>
-      ) : totals.status === 'error' ? (
-        <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
-      ) : totals.status === 'offline' ? (
-        <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
-      ) : totals.status === 'empty' ? (
-        <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
-      ) : (
-        <div className="stock-screen__list">
-          <div className="stock-screen__controls">
-            <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
-            <div className="stock-screen__filters" role="group" aria-label={strings.filtersLabel}>
-              {STOCK_FILTERS.map((f) => (
-                <Chip key={f} kind="filter" selected={filter === f} onClick={() => setFilter(f)}>
-                  {strings.filters[f]}
-                </Chip>
-              ))}
+        <div className="stock-screen__main">
+          {totals.status === 'loading' ? (
+            <div aria-busy="true">
+              <Skeleton variant="row" count={5} />
             </div>
-          </div>
-          {items.length === 0 ? (
+          ) : totals.status === 'error' ? (
+            <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
+          ) : totals.status === 'offline' ? (
+            <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
+          ) : totals.status === 'empty' ? (
+            <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
+          ) : items.length === 0 ? (
             <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
           ) : (
             <ListGroup label={strings.listLabel}>
@@ -124,7 +138,7 @@ export function StockScreen(): ReactElement | null {
             </ListGroup>
           )}
         </div>
-      )}
+      </div>
 
       <BottomSheet
         open={selected !== null && !settingTotal}

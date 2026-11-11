@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
+import { recipeAssistantSettingsRoute } from '../recipe-assistant'
 import { AllowlistPage } from './screens/AllowlistPage'
 import { HouseholdPage } from './screens/HouseholdPage'
 import { MealSlotsPage } from './screens/MealSlotsPage'
@@ -14,4 +15,5 @@ export const routes: RouteObject[] = [
   { path: '/settings/meal-slots', element: createElement(MealSlotsPage) },
   { path: '/settings/allowlist', element: createElement(AllowlistPage) },
   { path: '/settings/preferences', element: createElement(PreferencesPage) },
+  recipeAssistantSettingsRoute,
 ]

@@ -17,7 +17,7 @@ RUN pnpm build
 
 # Stage 2: the server binary, with the SPA embedded. It runs on the build machine and
 # cross-compiles for TARGETOS/TARGETARCH, so a multi-arch build needs no emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26 AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.11 AS build
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
@@ -32,6 +32,7 @@ RUN mkdir -p /out/data \
 # Stage 3: the runtime image. No shell, no root.
 FROM gcr.io/distroless/static:nonroot
 COPY --from=build /out/feeder /usr/local/bin/feeder
+COPY THIRD_PARTY_NOTICES.md /THIRD_PARTY_NOTICES.md
 COPY --from=build --chown=65532:65532 /out/data /data
 ENV FEEDER_DATA_DIR=/data \
     FEEDER_ADDR=:8080

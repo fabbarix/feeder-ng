@@ -35,6 +35,8 @@ export interface IngredientMatch {
   effective?: IngredientDecision
   resolved: boolean
   usedBy: string[]
+  /** IM3: the Ingredient this row resolves to exists without a picture and the file gives it one. Absent = false. */
+  addsImage?: boolean
 }
 export interface UnitPrompt {
   key: string

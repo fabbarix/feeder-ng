@@ -118,19 +118,23 @@
   gap: var(--space-3);
 }
 
-.shop-picker__title {
-  margin: 0;
-  font-size: var(--text-title-1-size);
-  font-weight: var(--text-title-1-weight);
-  line-height: var(--text-title-1-line);
+/* The near-duplicate guard of the "what is this?" sheet (same look as the New Ingredient sheet's). */
+.unknown-sheet__guard {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
 }
 
-.shop-picker__hint,
-.shop-picker__empty {
+.unknown-sheet__guard p {
   margin: 0;
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
+}
+
+.unknown-sheet__guard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .stock-take__pack {

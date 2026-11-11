@@ -67,8 +67,10 @@ export function evaluateMetrics(m, { width, kind }) {
     if (max !== undefined && w > max + 40) add('P3', `content is ${w}px wide; a ${kind} page is at most ${max}px`)
   }
   for (const f of m.fields) {
-    if (width >= 820 && f.short && !f.segment && f.size !== 'full' && f.w > 240) add('P4', `short field "${f.label}" is ${f.w}px wide (max 240; set size="xs|sm")`)
-    if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
+    // A numeric-keypad field whose content is long by nature (a 14-digit code) says so with data-size-intent="long" (f.long).
+    if (width >= 820 && f.short && !f.segment && f.size !== 'full' && f.w > 240 && !f.long) add('P4', `short field "${f.label}" is ${f.w}px wide (max 240; set size="xs|sm")`)
+    // A field that shares a wrapping row with chips (the tag input) says so with data-size-intent="inline" (f.inline).
+    if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && !f.inline && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
   }
   for (const b of m.bars) {
     if (b.bgAlpha === 0) add('P6', `sticky bar .${b.cls} has a transparent background`)
@@ -94,10 +96,11 @@ function patternMatches(pattern, route) {
   return fixed.every((s, i) => s.startsWith(':') || s === r[i])
 }
 
-/** 'warn' | 'fail' for a (resolved) route from the text of scripts/check-page-layout.modes. */
+/** 'warn' | 'fail' for a (resolved) route from the text of scripts/check-page-layout.modes. `warn_routes` win over `fail_routes`; repeated lines of a key are unioned. */
 export function modeFor(modesText, route) {
   let dflt = 'warn'
   let failRoutes = []
+  let warnRoutes = []
   for (const raw of String(modesText).split('\n')) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
@@ -106,8 +109,11 @@ export function modeFor(modesText, route) {
     const key = line.slice(0, i).trim()
     const value = line.slice(i + 1).trim()
     if (key === 'default') dflt = value === 'fail' ? 'fail' : 'warn'
-    if (key === 'fail_routes') failRoutes = value.split(/\s+/).filter(Boolean)
+    // Several lines of the same key are unioned, so every team can add its own line.
+    if (key === 'fail_routes') failRoutes = failRoutes.concat(value.split(/\s+/).filter(Boolean))
+    if (key === 'warn_routes') warnRoutes = warnRoutes.concat(value.split(/\s+/).filter(Boolean))
   }
+  if (warnRoutes.some((pat) => patternMatches(pat, route))) return 'warn'
   if (failRoutes.some((pat) => patternMatches(pat, route))) return 'fail'
   return dflt
 }

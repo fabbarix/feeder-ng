@@ -22,3 +22,23 @@ export const BOARD_LAYOUT: BoardCell[] = [
   { id: 'useSoon', col: 2, row: 3, colSpan: 2, rowSpan: 1 },
   { id: 'streak', col: 4, row: 3, colSpan: 1, rowSpan: 1 },
 ]
+
+/**
+ * The same eight tiles on 2 columns (L-10, a phone): Tonight is a full-width hero, the clock and Next Advance Step,
+ * Leftovers and Timers sit two by two, Use soon (up to five rows) is full width, then Tomorrow and the streak. Every row is full.
+ */
+const PHONE_LAYOUT: BoardCell[] = [
+  { id: 'tonight', col: 1, row: 1, colSpan: 2, rowSpan: 1 },
+  { id: 'clock', col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+  { id: 'nextAdvance', col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+  { id: 'leftovers', col: 1, row: 3, colSpan: 1, rowSpan: 1 },
+  { id: 'timers', col: 2, row: 3, colSpan: 1, rowSpan: 1 },
+  { id: 'useSoon', col: 1, row: 4, colSpan: 2, rowSpan: 1 },
+  { id: 'tomorrow', col: 1, row: 5, colSpan: 1, rowSpan: 1 },
+  { id: 'streak', col: 2, row: 5, colSpan: 1, rowSpan: 1 },
+]
+
+/** The layout for a 2-column phone board (L-10) or the 4 x 3 wall board. */
+export function boardLayout(columns: 2 | 4): BoardCell[] {
+  return columns === 2 ? PHONE_LAYOUT : BOARD_LAYOUT
+}

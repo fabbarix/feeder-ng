@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { IconButton } from '../../../ui'
+import { displayName } from '../../ingredients/lib/names'
 import type { UnitSystem } from '../../../lib/units'
 import { quantityText } from '../lib/lineUnits'
 import { recipeStrings } from '../strings'
@@ -24,7 +25,7 @@ export function IngredientLinesList({ lines, refs, system, exclusions }: Ingredi
           <div key={`${l.ingredientId}-${i}`} className="ingredient-lines__row">
             <dt className="ingredient-lines__quantity">{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</dt>
             <dd className="ingredient-lines__name">
-              <span>{name}</span>
+              <span>{displayName(name)}</span>
               {l.optional ? <span className="ingredient-lines__tag">{recipeStrings.optional}</span> : null}
               {l.note ? <span className="ingredient-lines__note">{l.note}</span> : null}
               {exclusions ? (

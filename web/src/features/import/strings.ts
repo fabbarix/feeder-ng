@@ -35,6 +35,7 @@ export const importStrings = {
   statusUndefined: 'Needs a definition',
   statusConflict: 'Base Unit conflict',
   useExisting: (name: string) => `Use ${name}`,
+  addsPicture: (name: string) => `Adds a picture to ${name}`,
   createNew: 'Create new',
   createUnder: 'Create under this name',
   newNameLabel: 'New name',
@@ -68,6 +69,8 @@ export const importStrings = {
 
   exportPick: 'Choose Recipes',
   allRecipes: 'All Recipes',
+  importActions: 'Import actions',
+  exportActions: 'Export actions',
   exportFile: 'Export Recipe File',
   selectAll: 'Select all',
   clearSelection: 'Clear',

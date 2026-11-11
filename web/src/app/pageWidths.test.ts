@@ -76,3 +76,10 @@ describe('chromeless routes are full and nothing else is', () => {
     expect(ROUTE_WIDTHS.filter((r) => r.width === 'full').map((r) => r.path).sort()).toEqual(['/board', '/cook/*'])
   })
 })
+
+describe('ROUTE_WIDTHS: no redundant entries', () => {
+  it('/settings/recipe-assistant is covered by /settings/*', () => {
+    expect(ROUTE_WIDTHS.map((r) => r.path)).not.toContain('/settings/recipe-assistant')
+    expect(pageWidthFor('/settings/recipe-assistant')).toBe('narrow')
+  })
+})

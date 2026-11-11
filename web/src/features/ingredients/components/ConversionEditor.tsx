@@ -1,4 +1,4 @@
-import { Button, TextField } from '../../../ui'
+import { Button, FieldRow, TextField } from '../../../ui'
 import { baseUnitLabel, formatConversion, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { useConversionForm } from '../hooks/useIngredientForms'
 import { strings } from '../strings'
@@ -44,11 +44,13 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove }:
           form.submit()
         }}
       >
-        <TextField label={strings.conversionUnitLabel} value={form.unit} onChange={form.setUnit} />
-        <TextField label={amountLabel} inputMode="decimal" value={form.amount} onChange={form.setAmount} />
-        <Button type="submit" variant="tertiary">
-          {strings.addConversion}
-        </Button>
+        <FieldRow align="end">
+          <TextField size="sm" label={strings.conversionUnitLabel} value={form.unit} onChange={form.setUnit} />
+          <TextField size="sm" label={amountLabel} inputMode="decimal" value={form.amount} onChange={form.setAmount} />
+          <Button type="submit" variant="secondary">
+            {strings.addConversion}
+          </Button>
+        </FieldRow>
         {form.error ? <p role="alert">{form.error}</p> : null}
       </form>
     </section>

@@ -27,3 +27,16 @@
   margin: 0;
   font-weight: 600;
 }
+.pg__group {
+  display: grid;
+  gap: 8px;
+}
+.pg__subhead {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+/* A Button in a Tile column would stretch to the full width. */
+.pg__add-price {
+  align-self: flex-start;
+}

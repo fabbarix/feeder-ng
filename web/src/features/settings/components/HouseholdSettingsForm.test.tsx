@@ -64,7 +64,8 @@ describe('HouseholdSettingsForm', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit onSave={onSave} />)
     await replace('Planning Horizon (days)', '14')
     await userEvent.tab()
-    await userEvent.click(screen.getByRole('button', { name: 'Favourites' }))
+    screen.getByRole('slider', { name: 'Planner Style' }).focus() // the anchor chips went (R2-3, F-06); End jumps to Favourites
+    await userEvent.keyboard('{End}')
     await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
     expect(onSave).toHaveBeenCalledWith({
       timeZone: 'Europe/Rome',
