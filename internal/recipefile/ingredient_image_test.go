@@ -170,6 +170,9 @@ func TestBuildWarnsAndLeavesOutAnIngredientPictureThatCannotBeRead(t *testing.T)
 	for _, w := range warns {
 		if w.Code == recipefile.WarnImageFailed && strings.HasPrefix(w.Path, "$.ingredients[") {
 			at = w.Path
+			if !strings.Contains(w.Message, "picture") || strings.Contains(w.Message, "photo") {
+				t.Errorf("message = %q; an Ingredient has a picture, not a photo (GLOSSARY)", w.Message)
+			}
 		}
 	}
 	if at == "" {

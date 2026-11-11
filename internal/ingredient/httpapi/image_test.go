@@ -108,3 +108,25 @@ func TestAPictureThatWasNeverUploadedIsRefused(t *testing.T) {
 		}
 	}
 }
+
+func TestClearingAPictureNeverDeletesAFileAMemberStillUses(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	id := upload(t, admin)
+	if r := admin.Post("/api/members", map[string]any{"name": "Sam", "colour": "#e07a5f", "portionFactor": 1, "photo": id}); r.Status != 201 {
+		t.Fatalf("member = %d %s", r.Status, r.Body)
+	}
+	var ing pictured
+	admin.Post("/api/ingredients", map[string]any{"name": "Flour", "baseUnit": "g"}).MustJSON(t, &ing)
+	url := fmt.Sprintf("/api/ingredients/%d", ing.ID)
+	// A hand-made request gives the Ingredient the Member's photo, then clears it.
+	if r := admin.Patch(url, map[string]any{"image": id}); r.Status != 200 {
+		t.Fatalf("set = %d %s", r.Status, r.Body)
+	}
+	if r := admin.Patch(url, map[string]any{"image": ""}); r.Status != 200 {
+		t.Fatalf("clear = %d %s", r.Status, r.Body)
+	}
+	if g := admin.Get("/api/images/" + id); g.Status != 200 {
+		t.Errorf("the Member's photo file must survive: %d", g.Status)
+	}
+}

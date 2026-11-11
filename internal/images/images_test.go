@@ -438,3 +438,32 @@ func TestDiscardRechecksReferencesRightBeforeDeleting(t *testing.T) {
 		t.Errorf("Discard = %v, exists = %v; want ErrInUse and the image kept", err, e.store.Exists(got.ID))
 	}
 }
+
+// ---- guarded store (IM2: file cleanup goes through the references) ----
+
+func TestGuardedDeleteKeepsAnImageAnotherRecordReferences(t *testing.T) {
+	e := newEnv(t)
+	got, _ := e.svc.IngestDataURL(pngDataURL(t, 8, 8))
+	g := images.NewGuarded(e.store, e.refs)
+	e.refs.ids[got.ID] = true
+	if err := g.Delete(got.ID); err != nil {
+		t.Errorf("a referenced image is kept without an error, got %v", err)
+	}
+	if !g.Exists(got.ID) {
+		t.Fatal("a referenced image must stay")
+	}
+	delete(e.refs.ids, got.ID)
+	if err := g.Delete(got.ID); err != nil || g.Exists(got.ID) {
+		t.Errorf("an unreferenced image is deleted: err = %v, exists = %v", err, g.Exists(got.ID))
+	}
+}
+
+func TestGuardedDeleteIsFailClosed(t *testing.T) {
+	e := newEnv(t)
+	got, _ := e.svc.IngestDataURL(pngDataURL(t, 8, 8))
+	g := images.NewGuarded(e.store, e.refs)
+	e.refs.err = errors.New("db down")
+	if err := g.Delete(got.ID); err == nil || !g.Exists(got.ID) {
+		t.Errorf("a failing Referencer must delete nothing: err = %v, exists = %v", err, g.Exists(got.ID))
+	}
+}

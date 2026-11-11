@@ -37,3 +37,16 @@ describe('ImagePicker.css', () => {
     expect(panel).toMatch(/border\s*:[^;]*var\(--color-line\)/)
   })
 })
+
+describe('ImagePicker.css, hero size (IM2 review)', () => {
+  it('caps the hero preview so it does not dominate a desktop page', () => {
+    const hero = /\.image-picker__preview\[data-size='hero'\]\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    const cap = /max-inline-size\s*:\s*(\d+)px/.exec(hero)?.[1]
+    expect(cap, 'a px max-inline-size').toBeDefined()
+    expect(Number(cap)).toBeLessThanOrEqual(640)
+    expect(Number(cap)).toBeGreaterThanOrEqual(320)
+  })
+  it('can hide the heading visually (the host shows its own)', () => {
+    expect(css).toMatch(/\.image-picker__heading--hidden\s*\{[^}]*clip-path/)
+  })
+})

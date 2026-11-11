@@ -23,6 +23,10 @@ describe('PhotoPicker', () => {
     expect(picker()).toHaveAttribute('data-aspect', String(CROP_ASPECTS.landscape))
     expect(picker()).toHaveAttribute('data-size', 'hero')
   })
+  it('has an h2 heading like the other Tiles', () => {
+    const { container } = render(<PhotoPicker value="" onChange={vi.fn()} />)
+    expect(within(container.querySelector('section')!).getByRole('heading', { level: 2, name: recipeStrings.photo })).toBeInTheDocument()
+  })
   it('hands the current image id to the picker and the picked id to onChange', async () => {
     const onChange = vi.fn()
     const { rerender } = render(<PhotoPicker value="abc" onChange={onChange} />)

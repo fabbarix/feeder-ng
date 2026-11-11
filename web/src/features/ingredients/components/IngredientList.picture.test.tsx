@@ -14,8 +14,13 @@ describe('IngredientList: pictures', () => {
     expect(row.querySelector('img')).toHaveAttribute('src', flour.imageUrl)
     expect(row.querySelector('img')).toHaveAttribute('alt', '')
   })
-  it('leaves the row as it was for an Ingredient without a picture', () => {
+  it('draws no picture for an Ingredient without one, but keeps the same leading slot so the names line up', () => {
     render(<IngredientList ingredients={[flour, salt]} system="metric" onOpen={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Salt' }).closest('li')!.querySelector('img')).toBeNull()
+    const withPic = screen.getByRole('button', { name: 'Flour' }).closest('li')!
+    const without = screen.getByRole('button', { name: 'Salt' }).closest('li')!
+    expect(without.querySelector('img')).toBeNull()
+    expect(without.querySelector('.list-row__leading')).not.toBeNull()
+    expect(without.getAttribute('data-height')).toBe(withPic.getAttribute('data-height'))
+    expect(without.querySelector('.list-row__leading')!.firstElementChild).toHaveAttribute('data-size', '40')
   })
 })

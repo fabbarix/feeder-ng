@@ -79,3 +79,37 @@ describe('MemberEditor: Photo', () => {
     expect(onSave.mock.calls[0]![0]).toMatchObject({ avatar: '', photo: PICKED_ID })
   })
 })
+
+describe('MemberEditor: Photo kept while switching (IM2 review)', () => {
+  it('Photo -> Emoji -> Photo brings the chosen photo back, and Save sends it', async () => {
+    const onSave = open()
+    await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarPhoto }))
+    await userEvent.click(screen.getByRole('button', { name: `pick ${text.photoLabel}` }))
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarEmoji }))
+    expect(screen.queryByTestId('fake-image-picker')).toBeNull()
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarPhoto }))
+    expect(picker()).toHaveAttribute('data-value', PICKED_ID)
+    await save()
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ avatar: '', photo: PICKED_ID }), null)
+  })
+
+  it('an existing photo survives a trip through Initials too', async () => {
+    const onSave = open(withPhoto)
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarInitials }))
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarPhoto }))
+    expect(picker()).toHaveAttribute('data-value', withPhoto.photo)
+    await save()
+    expect(onSave.mock.calls[0]![0]).toMatchObject({ photo: withPhoto.photo })
+  })
+
+  it('saving while on Emoji sends no photo even though one was chosen before', async () => {
+    const onSave = open()
+    await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarPhoto }))
+    await userEvent.click(screen.getByRole('button', { name: `pick ${text.photoLabel}` }))
+    await userEvent.click(within(avatar()).getByRole('radio', { name: text.avatarEmoji }))
+    await save()
+    expect(onSave.mock.calls[0]![0]).not.toHaveProperty('photo')
+  })
+})

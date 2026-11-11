@@ -114,3 +114,26 @@ func TestRemovingAMemberRemovesTheirPhotoFile(t *testing.T) {
 		t.Errorf("the photo of a removed Member is still served: %d (delete the file with the Member; the sweep is the safety net)", g.Status)
 	}
 }
+
+func TestRemovingAPhotoNeverDeletesAFileAnIngredientStillUses(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	id := uploadPNG(t, admin)
+	if r := admin.Post("/api/ingredients", map[string]any{"name": "Flour", "baseUnit": "g", "image": id}); r.Status != 201 {
+		t.Fatalf("ingredient = %d %s", r.Status, r.Body)
+	}
+	var sam photoMember
+	admin.Post("/api/members", map[string]any{"name": "Sam", "colour": "#e07a5f", "portionFactor": 1, "photo": id}).MustJSON(t, &sam)
+	if r := admin.Patch(path("/api/members/%d", sam.ID), map[string]any{"name": "Sam", "colour": "#e07a5f", "portionFactor": 1}); r.Status != 200 {
+		t.Fatalf("clear = %d %s", r.Status, r.Body)
+	}
+	if g := admin.Get("/api/images/" + id); g.Status != 200 {
+		t.Errorf("the Ingredient's picture file must survive: %d", g.Status)
+	}
+	if r := admin.Delete(path("/api/members/%d", sam.ID)); r.Status != 204 {
+		t.Fatalf("delete = %d", r.Status)
+	}
+	if g := admin.Get("/api/images/" + id); g.Status != 200 {
+		t.Errorf("deleting the Member must not remove the Ingredient's picture: %d", g.Status)
+	}
+}

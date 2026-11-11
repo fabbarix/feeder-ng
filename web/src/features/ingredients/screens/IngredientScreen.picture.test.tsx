@@ -54,6 +54,12 @@ describe('IngredientScreen: Picture', () => {
     expect(picker()).toHaveAttribute('data-value', '')
   })
 
+  it('has an h2 heading like the other Tiles', () => {
+    setup()
+    const tile = screen.getByRole('region', { name: strings.pictureLabel })
+    expect(within(tile).getByRole('heading', { level: 2, name: strings.pictureLabel })).toBeInTheDocument()
+  })
+
   it('shows the current picture id to the picker', () => {
     hook.ingredient = { ...base, image: PICKED_ID, imageUrl: `/api/images/${PICKED_ID}` }
     setup()

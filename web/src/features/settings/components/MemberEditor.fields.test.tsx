@@ -57,6 +57,20 @@ describe('MemberEditor: Avatar', () => {
     expect(screen.getAllByRole('textbox')).toHaveLength(2) // Name and the optional Email; no Avatar text field
   })
 
+  it('says in the helper that the avatar can be the initials, an emoji or a photo', () => {
+    open()
+    const helper = screen.getByText(/optional/i)
+    for (const word of [/initials/i, /emoji/i, /photo/i]) expect(helper.textContent).toMatch(word)
+  })
+
+  it('the Emoji list has no "Initials" / Aa choice: Initials is its own option of the Avatar choice', async () => {
+    open()
+    await userEvent.click(within(avatarGroup()).getByRole('radio', { name: 'Emoji' }))
+    const emoji = screen.getByRole('radiogroup', { name: 'Emoji' })
+    expect(within(emoji).queryByRole('radio', { name: 'Initials' })).toBeNull()
+    expect(within(emoji).queryByText('Aa')).toBeNull()
+  })
+
   it('a new Member starts on "Initials" with no emoji list and saves an empty avatar', async () => {
     const onSave = open()
     expect(within(avatarGroup()).getByRole('radio', { name: 'Initials' })).toHaveAttribute('aria-checked', 'true')
