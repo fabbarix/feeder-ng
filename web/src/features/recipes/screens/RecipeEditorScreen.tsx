@@ -126,7 +126,6 @@ export function RecipeEditorScreen(): ReactNode {
                 <span>{recipeStrings.lines.unit}</span>
                 <span>{recipeStrings.lines.note}</span>
                 <span />
-                <span />
               </div>
             ) : null}
             <Sortable

@@ -509,7 +509,7 @@
   gap: var(--space-2);
 }
 
-/* Reordering: a line being moved is opaque and round even from 720 px, where its row has no background of its own. */
+/* Reordering: a line being moved is opaque and round even from 900 px, where its row has no background of its own. */
 .line-row[data-state='dragging'],
 .line-row[data-state='lifted'] {
   border-radius: var(--radius-tile-sm);
@@ -661,12 +661,14 @@
   white-space: nowrap;
 }
 
-/* Ingredient lines: one row from 720 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions.
+/* Ingredient lines: one row from 900 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions.
+   Below 900 px the picker would get under 180 px beside the drag handle, so the two-row layout stays up to 899 px.
+   Optional is on a second row under the Ingredient: a sixth track left the picker about 120 px beside the drag handle.
    Every track is a fixed width except the two flexible ones: an `auto` track is empty in the header, so it collapsed and the captions drifted. */
-@media (min-width: 720px) {
+@media (min-width: 900px) {
   .recipe-editor__lines-head,
   .line-row {
-    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) 90px 84px;
+    grid-template-columns: minmax(0, 1.4fr) 88px 120px minmax(0, 1fr) 84px;
   }
 
   .recipe-editor__lines-head {
@@ -693,20 +695,25 @@
   .line-row__quantity,
   .line-row__unit,
   .line-row__note,
-  .line-row__optional,
   .line-row__remove {
     grid-area: auto;
     grid-row: 1;
   }
 
-  .line-row__optional,
+  .line-row__optional {
+    grid-area: auto;
+    grid-row: 2;
+    grid-column: 1;
+    justify-self: start;
+  }
+
   .line-row__remove {
     justify-self: start;
   }
 
   .line-row__hint {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
   }
 
   .line-row[data-state='dragging'],
