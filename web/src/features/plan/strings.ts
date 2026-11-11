@@ -149,7 +149,7 @@ export const planStrings = {
     nobody_attending: 'Pick the Members who eat at each Meal Slot, and the planner will fill it.',
     no_recipes: 'The planner picks from your Recipes. Add a few, or import a Recipe File.',
     slot_rule: 'A Slot Rule asks for a Recipe or Tag that cannot be used here. Loosen the rule, or choose a Recipe yourself.',
-    excluded: 'Someone who eats there cannot have any of your Recipes. Review their Exclusions, or choose a Recipe yourself.',
+    excluded: 'Someone who eats there cannot have any of your Recipes. Exclusions are set on each Recipe and its Ingredients.',
     cool_down: 'You cooked them all lately. Shorten the Cool-down, or add more Recipes.',
     variety_rule: 'A Variety Rule keeps every Recipe out of this week. Loosen the rule, or add more Recipes.',
     advance_step: 'Each Recipe needs preparing ahead and the time has gone. Choose a quicker Recipe for these Meal Slots.',

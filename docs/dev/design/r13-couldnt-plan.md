@@ -45,7 +45,7 @@ The API gives two reasons plus counts. A slot is filed under **one** cause (`lib
 | `nobody_attending` | info | `attendance` | Nobody is set to attend. | **Choose who attends** (`/settings/meal-slots`) |
 | `no_recipes` | info | `recipes` | There are no Recipes to choose from. | **Add Recipes** (`/recipes`) |
 | `slot_rule` | warn | `slotRule` | Nothing that matches its / their Slot Rule(s) is available. | **Review Slot Rules** (`/settings/planning`) |
-| `excluded` | warn | `exclusion` | Every Recipe is excluded for someone who attends. | **Review Exclusions** (`/settings/preferences`) |
+| `excluded` | warn | `exclusion` | Every Recipe is excluded for someone who attends. | **Review Exclusions** (`/recipes`: Exclusions are set per Recipe and per Ingredient) |
 | `cool_down` | warn | `duration` | Every Recipe is in Cool-down. | **Review Cool-down** (`/settings/household`) |
 | `variety_rule` | warn | `varietyRule` | Every Recipe is blocked by a Variety Rule. | **Review Variety Rules** (`/settings/planning`) |
 | `advance_step` | warn | `advanceStep` | Every Recipe needs an Advance Step that is already too late. | **Choose a Recipe** (Plan: the chooser for the first affected meal; Today: opens the Plan) |

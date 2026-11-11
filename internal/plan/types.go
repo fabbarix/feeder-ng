@@ -130,6 +130,7 @@ const (
 	ReasonRulesChanged      Reason = "rules_changed" // Slot or Variety Rules edited
 	ReasonPinned            Reason = "pinned"        // set, swapped or confirmed
 	ReasonNotCooked         Reason = "not_cooked"
+	ReasonStartup           Reason = "startup" // the planner replans once when the app starts
 )
 
 // Errors.

@@ -156,7 +156,7 @@ A slot the planner left empty is something to set up or a conflict between rules
   | Nobody attends | reason `no_attendance` | info | **Choose who attends** (Meal Slots, Attendance) |
   | No Recipes | `no_candidates` and no Recipe was considered | info | **Add Recipes** |
   | Slot Rule unmet | `no_candidates` and a Slot Rule claimed the slot | warn | **Review Slot Rules** |
-  | Excluded | most options removed by an Exclusion | warn | **Review Exclusions** |
+  | Excluded | most options removed by an Exclusion | warn | **Review Exclusions** (Recipes: Exclusions are set per Recipe and Ingredient) |
   | Cool-down | most options removed by Cool-down | warn | **Review Cool-down** |
   | Variety Rule | most options removed by a Variety Rule | warn | **Review Variety Rules** |
   | Advance Step too late | most options removed by an Advance Step | warn | **Choose a Recipe** (pin one by hand) |
@@ -168,7 +168,7 @@ A slot the planner left empty is something to set up or a conflict between rules
 - **First run.** While the Household is new and nothing can be planned (no Planned Meal and a setup step missing), Today shows a setup checklist instead of Couldn't plan: **Members**, then **Meal Slots and attendance**, then **Recipes**, then the first plan ("1 of 4 steps set up"). It goes away once a Planned Meal exists.
   - **Exception (accepted at review).** When Members and Recipes exist and only attendance is missing, the checklist is not shown: Today shows Couldn't plan ("Nobody is set to attend", with **Choose who attends**), which names the missing step and fixes it directly. This is part of the checklist's visibility rule (one rule, so the tile and the Today layout cannot disagree).
 - **Who can fix it.** Fixes that lead to an Admin-only page (Choose who attends, Review Cool-down, and the Members and Meal Slots checklist steps) are not offered to a plain User; the tile says "Ask an Admin".
-- **After an upgrade.** Migration 1230 gives existing slots their attendees, but reasons recorded earlier would stay until the next replan, so the planner replans once at every startup (reason: Attendance changed) and clears them.
+- **After an upgrade.** Migration 1230 gives existing slots their attendees, but reasons recorded earlier would stay until the next replan, so the planner replans once at every startup (reason: Startup) and clears them.
 
 ### 7.3 Swap
 **Swap** shows the top 3 alternatives under the same scoring (excluding the current Recipe and any Recipe reserved for a later Slot Rule slot, §7.2), each with its why chips. Choosing one pins it and replans the downstream unpinned slots, because Leftovers and Overlap may change.
