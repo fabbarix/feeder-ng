@@ -1,12 +1,15 @@
 import { useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
+import { resultMessage } from '../lib/multiDay'
 import { createSlotsSequentially } from '../lib/slotForm'
-import { errorMessage } from '../lib/errors'
+import { documentLocale } from '../lib/locale'
+import { batchErrorMessage, errorMessage } from '../lib/errors'
 import { nextDateForWeekday, todayIso, weekdayName } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
-import type { AttendanceEntry, MealSlot, MealSlotInput } from '../types'
+import type { AttendanceEntry, MealSlot, MealSlotInput, SlotBatchRequest } from '../types'
 import { useAttendance } from './useAttendance'
+import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
 import { useMealSlots } from './useMealSlots'
 import { useMembers } from './useMembers'
@@ -24,6 +27,7 @@ export function useMealSlotsPage() {
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const members = useMembers()
   const slots = useMealSlots()
+  useSlotAnchor(slots.slots)
   const [editor, setEditor] = useState<SlotEditor | null>(null)
   const [dateEditor, setDateEditor] = useState<{ slot: MealSlot; date: string } | null>(null)
   const [error, setError] = useState<string>()
@@ -43,19 +47,23 @@ export function useMealSlotsPage() {
     }
   }
 
-  /** Saves the sheet: one slot when editing, one per chosen weekday when adding. Stops at the first failure. */
-  const save = async (inputs: MealSlotInput[]) => {
-    const editing = editor?.item
-    if (editing) {
-      try {
-        await slots.update(editing.id, inputs[0]!)
-        setError(undefined)
-        setEditor(null)
-      } catch (err) {
-        setError(errorMessage(err))
-      }
-      return
+  /** Editing: one batch call for every chosen weekday (all or nothing), then a message that names any skipped day. */
+  const apply = async (request: SlotBatchRequest) => {
+    try {
+      const result = await slots.batchUpdate(request)
+      toast.show(
+        resultMessage(request.match, result.updated.map((s) => s.weekday), result.skipped.map((s) => s.weekday), documentLocale()),
+        { status: 'success' },
+      )
+      setError(undefined)
+      setEditor(null)
+    } catch (err) {
+      setError(batchErrorMessage(err))
     }
+  }
+
+  /** Adding: one Meal Slot per chosen weekday, in turn. Stops at the first failure. */
+  const save = async (inputs: MealSlotInput[]) => {
     const pending = inputs.filter((input) => !savedWeekdays.current.includes(input.weekday))
     const result = await createSlotsSequentially(pending, slots.create)
     savedWeekdays.current = [...savedWeekdays.current, ...pending.slice(0, result.created).map((input) => input.weekday)]
@@ -123,6 +131,7 @@ export function useMealSlotsPage() {
       openDate(slot)
     },
     save,
+    apply,
     remove,
     dateChange: (date: string) => setDateEditor((d) => (d ? { ...d, date } : d)),
     closeDate: () => setDateEditor(null),

@@ -440,7 +440,7 @@ func TestUpdateSlotsBatchIsAllOrNothing(t *testing.T) {
 	f := newFx(t)
 	anna := f.member(t, "Anna", 1)
 	mon, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 1, Name: "Dinner", Time: "19:00"})
-	tue, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:00"})
+	tue, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Dinner", Time: "19:00", Attendance: []household.Attendee{}})
 	f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 2, Name: "Supper", Time: "20:00"})
 	time, name := "19:30", "Supper"
 	res, err := f.st.UpdateSlotsBatch(f.ctx, household.BatchInput{Match: "Dinner", Weekdays: []int{1, 3}, Change: household.SlotChange{Time: &time}})

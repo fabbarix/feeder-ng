@@ -121,3 +121,108 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* R15: Meal Slot overview. */
+.meal-week__slot {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  scroll-margin-block: var(--space-6);
+}
+.meal-week__slot:focus-visible,
+.meal-grid__slot:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-control);
+}
+.attendee-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.attendee-pills__item {
+  display: inline-flex;
+  max-inline-size: 100%;
+}
+.attendee-pills__more {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+.nobody-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 28px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--text-chip-size);
+  font-weight: var(--text-label-weight);
+}
+.nobody-pill[data-tone='warn'] {
+  background: var(--status-spoil-bg);
+  color: var(--status-spoil-fg);
+}
+button.nobody-pill {
+  cursor: pointer;
+}
+button.nobody-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.meal-grid {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: var(--space-1);
+  table-layout: fixed;
+}
+.meal-grid th {
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+  text-align: start;
+}
+.meal-grid th[scope='row'] {
+  inline-size: 7rem;
+  color: var(--color-text);
+}
+.meal-grid td {
+  vertical-align: top;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+  min-inline-size: 0;
+}
+.meal-grid__slot {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  scroll-margin-block: var(--space-6);
+}
+.meal-slot-summary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+.meal-slot-summary__skipped {
+  color: var(--status-spoil-fg);
+}
+.meal-slot-quickpicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

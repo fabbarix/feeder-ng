@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { pickOption, toggleOptions } from '../test-utils'
 import { members, tuesdayDinner } from './fixtures'
 import { MealSlotEditor } from './MealSlotEditor'
 
 const hour = () => screen.getByRole('spinbutton', { name: 'Hour' })
+
+const day = (name: string) => screen.getByRole('button', { name })
+const days = (group: string) => within(screen.getByRole('group', { name: group })).getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.getAttribute('aria-label'))
 
 async function typeTime(digits: string) {
   hour().focus()
@@ -27,8 +29,8 @@ describe('MealSlotEditor', () => {
     const onSave = vi.fn()
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
     expect(screen.getByRole('dialog', { name: 'Add Meal Slot' })).toBeInTheDocument()
-    await toggleOptions(/Weekdays/, ['Friday', 'Monday', 'Wednesday'])
-    expect(screen.getByRole('combobox', { name: /Weekdays/ })).toHaveTextContent('Monday, Wednesday, Friday')
+    for (const name of ['Friday', 'Monday', 'Wednesday']) await userEvent.click(day(name))
+    expect(days('Days')).toEqual(['Monday', 'Wednesday', 'Friday'])
     await userEvent.type(screen.getByLabelText('Name'), 'Dinner')
     await typeTime('2015')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' })) // opt out: everyone starts checked
@@ -73,7 +75,7 @@ describe('MealSlotEditor', () => {
   it('starts with the weekday the add button was on (defaultWeekdays)', async () => {
     const onSave = vi.fn()
     render(<MealSlotEditor open members={members} defaultWeekdays={[5]} onSave={onSave} onClose={() => {}} />)
-    expect(screen.getByRole('combobox', { name: /Weekdays/ })).toHaveTextContent('Friday')
+    expect(days('Days')).toEqual(['Friday'])
     await userEvent.type(screen.getByLabelText('Name'), 'Lunch')
     await typeTime('1230')
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
@@ -93,29 +95,26 @@ describe('MealSlotEditor', () => {
   it('needs a name and a time', async () => {
     const onSave = vi.fn()
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
-    await toggleOptions(/Weekdays/, ['Monday'])
+    await userEvent.click(day('Monday'))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
     expect(screen.getByRole('alert')).toHaveTextContent(/name/i)
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('edits one existing slot with a single-choice Weekday (no multi-select)', async () => {
-    const onSave = vi.fn()
+  it('edits an existing slot: it starts on its own weekday and shows its fields (the weekday dropdown is gone)', async () => {
+    const onApply = vi.fn()
     const onDelete = vi.fn()
-    render(<MealSlotEditor open members={members} slot={tuesdayDinner} onSave={onSave} onDelete={onDelete} onClose={() => {}} />)
+    render(<MealSlotEditor open members={members} slot={tuesdayDinner} onSave={() => {}} onApply={onApply} onDelete={onDelete} onClose={() => {}} />)
     expect(screen.getByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /Weekdays/ })).toBeNull()
-    expect(screen.getByRole('combobox', { name: /Weekday/ })).toHaveTextContent('Tuesday')
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(days('Apply to')).toEqual(['Tuesday'])
     expect(screen.getByLabelText('Name')).toHaveValue('Dinner')
     expect(hour()).toHaveValue('19')
     expect(screen.getByRole('spinbutton', { name: 'Minute' })).toHaveValue('30')
     expect(screen.getByRole('status')).toHaveTextContent('Portions needed: 2.5')
-    await pickOption(/Weekday/, 'Wednesday')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
-    expect(onSave).toHaveBeenCalledWith([
-      expect.objectContaining({ weekday: 3, attendance: [tuesdayDinner.attendance[0], tuesdayDinner.attendance[2]] }),
-    ])
+    expect(onApply).toHaveBeenCalledWith({ match: 'Dinner', weekdays: [2], set: { attendance: [tuesdayDinner.attendance[0], tuesdayDinner.attendance[2]] } })
     await userEvent.click(screen.getByRole('button', { name: 'Remove Meal Slot' }))
     expect(onDelete).toHaveBeenCalled()
   })

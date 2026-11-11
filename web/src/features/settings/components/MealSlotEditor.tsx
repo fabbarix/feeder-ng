@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { BottomSheet, Button, MultiSelect, Select, TimeField, TextField } from '../../../ui'
-import type { SlotBatchRequest } from '../types'
+import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField } from '../../../ui'
+import { WeekdayPicker } from '../../../ui/WeekdayPicker/WeekdayPicker'
+import { sortIsoDays } from '../../../ui/WeekdayPicker/weekdays'
+import { documentLocale } from '../lib/locale'
+import { batchRequest, hasChanges, matchingSlots, quickPicks, sameDays, summaryLines } from '../lib/multiDay'
 import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
-import { WEEKDAYS } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
-import type { MealSlot, MealSlotInput, Member } from '../types'
+import type { MealSlot, MealSlotInput, Member, SlotBatchRequest } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
 import '../settings.css'
 
@@ -16,7 +18,7 @@ export interface MealSlotEditorProps {
   defaultWeekdays?: number[]
   saving?: boolean
   error?: string
-  /** Add mode may cover several weekdays, so this always receives an array (one body per weekday; editing gives one). */
+  /** Adding: one body per chosen weekday. */
   onSave: (inputs: MealSlotInput[]) => void | Promise<void>
   /** R15, editing: every Meal Slot in the household (to match by name) and the one-call batch save. */
   slots?: MealSlot[]
@@ -30,31 +32,20 @@ export interface MealSlotEditorProps {
 }
 
 const text = settingsStrings.slot
-const WEEKDAY_OPTIONS = WEEKDAYS.map((d) => ({ value: d.id, label: d.name }))
 
-/** A BottomSheet "Add Meal Slot" / "Edit Meal Slot": Weekdays (several when adding) or one Weekday (editing), Name,
- *  Usual time (TimeField), AttendanceEditor; buttons "Save Meal Slot", "Change a date" and "Remove Meal Slot" (editing). */
-export function MealSlotEditor({ open, slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate, onClose }: MealSlotEditorProps) {
+/** A BottomSheet "Add Meal Slot" / "Edit Meal Slot". Adding: "Days" chips; editing: "Apply to" chips (the same name on the
+ *  other days gets the same change, one save), quick picks, Name, Usual time, AttendanceEditor and a "What will change" summary. */
+export function MealSlotEditor({ open, slot, onClose, ...rest }: MealSlotEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={slot ? text.editTitle : text.addTitle}>
-      <SlotForm
-        key={slot?.id ?? 'new'}
-        slot={slot}
-        members={members}
-        defaultWeekdays={defaultWeekdays}
-        saving={saving}
-        error={error}
-        onSave={onSave}
-        onDelete={onDelete}
-        onChangeDate={onChangeDate}
-      />
+      <SlotForm key={slot?.id ?? 'new'} slot={slot} {...rest} />
     </BottomSheet>
   )
 }
 
-type FormProps = Pick<MealSlotEditorProps, 'slot' | 'members' | 'defaultWeekdays' | 'saving' | 'error' | 'onSave' | 'onDelete' | 'onChangeDate'>
+type FormProps = Omit<MealSlotEditorProps, 'open' | 'onClose'>
 
-function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, onDelete, onChangeDate }: FormProps) {
+function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, slots, onApply, weekStart, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
   const [draft, setDraft] = useState<MealSlotInput>(() => slotDraft(slot, members))
   const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
   // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
@@ -62,52 +53,94 @@ function SlotForm({ slot, members, defaultWeekdays, saving, error, onSave, onDel
   useEffect(() => {
     if (!slot) setWeekdays(weekdaysKey === '' ? [] : weekdaysKey.split(',').map(Number))
   }, [weekdaysKey, slot])
-  const [problem, setProblem] = useState<string | null>(null)
+  const [problem, setProblem] = useState<{ message: string; field: 'weekdays' | 'form' } | null>(null)
   const set = (patch: Partial<MealSlotInput>) => setDraft((d) => ({ ...d, ...patch }))
+  const picks = quickPicks(slots ?? (slot ? [slot] : []), slot)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = slot ? slotProblem(draft) : (weekdaysProblem(weekdays) ?? slotProblem(draft))
-    setProblem(found)
-    if (found) return
-    void onSave(slot ? [slotFromDraft({ ...draft, weekday: weekdays[0]! })] : slotInputsForWeekdays(draft, weekdays))
+    const none = weekdaysProblem(weekdays)
+    if (none) return setProblem({ message: none, field: 'weekdays' })
+    const bad = slotProblem(draft)
+    if (bad) return setProblem({ message: bad, field: 'form' })
+    if (!slot) {
+      setProblem(null)
+      void onSave(slotInputsForWeekdays(draft, weekdays))
+      return
+    }
+    if (!onApply) {
+      void onSave([slotFromDraft({ ...draft, weekday: slot.weekday })])
+      return
+    }
+    const request = batchRequest(slot, weekdays, draft)
+    if (!hasChanges(request.set)) return setProblem({ message: text.nothingToChange, field: 'form' })
+    setProblem(null)
+    void onApply(request)
   }
+
+  const match = slot ? matchingSlots(slots ?? [slot], slot.name, weekdays) : null
+  const summary = slot && match ? summaryLines(slot.name.trim(), match.matched, match.skipped, locale) : null
+  const formProblem = problem?.field === 'form' ? problem.message : undefined
+  const shownError = formProblem ?? error
 
   return (
     <form className="settings__stack" onSubmit={submit} noValidate>
-      {slot ? (
-        <Select<number> label={text.weekday} options={WEEKDAY_OPTIONS} value={weekdays[0] ?? null} onChange={(day) => setWeekdays([day])} />
-      ) : (
-        <MultiSelect<number>
-          label={text.weekdays}
-          options={WEEKDAY_OPTIONS}
-          values={weekdays}
-          onChange={(days) => setWeekdays([...days].sort((a, b) => a - b))}
-        />
-      )}
-      <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
-      <TimeField label={text.time} value={draft.time} onChange={(time) => set({ time })} />
+      <WeekdayPicker
+        label={slot ? text.applyTo : text.days}
+        value={weekdays}
+        onChange={(days) => setWeekdays(sortIsoDays(days))}
+        weekStart={weekStart}
+        locale={locale}
+        error={problem?.field === 'weekdays' ? problem.message : undefined}
+      />
+      <div className="meal-slot-quickpicks">
+        {picks.map((pick) => (
+          <Chip key={pick.id} kind="filter" selected={sameDays(weekdays, pick.days)} onClick={() => setWeekdays(pick.days)}>
+            {pick.label}
+          </Chip>
+        ))}
+      </div>
+      <FieldRow>
+        <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
+        <TimeField label={text.time} value={draft.time} onChange={(time) => set({ time })} />
+      </FieldRow>
       <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
-      {problem ?? error ? (
+      {summary ? (
+        <ul className="meal-slot-summary" role="list" aria-label={text.willChange} aria-live="polite">
+          {summary.update ? <li>{summary.update}</li> : null}
+          {summary.skipped.map((line) => (
+            <li key={line} className="meal-slot-summary__skipped">
+              {line}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {shownError ? (
         <p role="alert" className="settings__error">
-          {problem ?? error}
+          {shownError}
         </p>
       ) : null}
-      <div className="settings__row">
-        <Button type="submit" loading={saving}>
-          {text.save}
-        </Button>
-        {slot && onChangeDate ? (
-          <Button variant="tertiary" onClick={onChangeDate}>
-            {text.changeDateButton}
+      <FormActions
+        primary={
+          <Button type="submit" loading={saving}>
+            {text.save}
           </Button>
-        ) : null}
-        {slot && onDelete ? (
-          <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
-            {text.remove}
-          </Button>
-        ) : null}
-      </div>
+        }
+        tertiary={
+          slot && onChangeDate ? (
+            <Button variant="tertiary" onClick={onChangeDate}>
+              {text.changeDateButton}
+            </Button>
+          ) : undefined
+        }
+        destructive={
+          slot && onDelete ? (
+            <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
+              {text.remove}
+            </Button>
+          ) : undefined
+        }
+      />
     </form>
   )
 }
