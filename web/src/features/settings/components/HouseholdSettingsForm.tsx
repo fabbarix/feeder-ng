@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Button, NumberField, TextField, TimeField } from '../../../ui'
+import { Button, FieldRow, FormActions, NumberField, TextField, TimeField } from '../../../ui'
 import { draftFromSettings, settingsFromDraft, validateSettings, type SettingsDraft } from '../lib/settingsForm'
 import { settingsStrings } from '../strings'
 import type { HouseholdSettings, SettingsInput } from '../types'
@@ -40,6 +40,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
   return (
     <form className="settings__stack" onSubmit={submit} noValidate>
       <TextField
+        size="md"
         label={text.timeZone}
         value={draft.timeZone}
         disabled={readOnly}
@@ -47,48 +48,55 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
         helper={fromBrowser ? text.timeZoneFromBrowser : undefined}
         onChange={(timeZone) => set({ timeZone })}
       />
-      <NumberField
-        label={text.planningHorizon}
-        value={days(draft.planningHorizonDays)}
-        min={1}
-        max={28}
-        step={1}
-        disabled={readOnly}
-        error={errors.planningHorizonDays}
-        onChange={(n) => set({ planningHorizonDays: fromDays(n) })}
-      />
-      <NumberField
-        label={text.cooldown}
-        value={days(draft.defaultCooldownDays)}
-        min={0}
-        max={365}
-        step={1}
-        disabled={readOnly}
-        error={errors.defaultCooldownDays}
-        onChange={(n) => set({ defaultCooldownDays: fromDays(n) })}
-      />
-      <NumberField
-        label={text.leftoverUseBy}
-        value={days(draft.defaultLeftoverUseByDays)}
-        min={1}
-        max={14}
-        step={1}
-        disabled={readOnly}
-        error={errors.defaultLeftoverUseByDays}
-        onChange={(n) => set({ defaultLeftoverUseByDays: fromDays(n) })}
-      />
-      <div className="settings__row settings__row--wrap-start">
+      <FieldRow>
+        <NumberField
+          size="xs"
+          label={text.planningHorizon}
+          value={days(draft.planningHorizonDays)}
+          min={1}
+          max={28}
+          step={1}
+          disabled={readOnly}
+          error={errors.planningHorizonDays}
+          onChange={(n) => set({ planningHorizonDays: fromDays(n) })}
+        />
+        <NumberField
+          size="xs"
+          label={text.cooldown}
+          value={days(draft.defaultCooldownDays)}
+          min={0}
+          max={365}
+          step={1}
+          disabled={readOnly}
+          error={errors.defaultCooldownDays}
+          onChange={(n) => set({ defaultCooldownDays: fromDays(n) })}
+        />
+        <NumberField
+          size="xs"
+          label={text.leftoverUseBy}
+          value={days(draft.defaultLeftoverUseByDays)}
+          min={1}
+          max={14}
+          step={1}
+          disabled={readOnly}
+          error={errors.defaultLeftoverUseByDays}
+          onChange={(n) => set({ defaultLeftoverUseByDays: fromDays(n) })}
+        />
+      </FieldRow>
+      <FieldRow>
         <TimeField
+          size="sm"
           label={text.quietStart}
           value={draft.quietHours.start}
           disabled={readOnly}
           error={errors.quietHours}
           onChange={(start) => set({ quietHours: { ...draft.quietHours, start } })}
         />
-        <TimeField label={text.quietEnd} value={draft.quietHours.end} disabled={readOnly} onChange={(end) => set({ quietHours: { ...draft.quietHours, end } })} />
-      </div>
+        <TimeField size="sm" label={text.quietEnd} value={draft.quietHours.end} disabled={readOnly} onChange={(end) => set({ quietHours: { ...draft.quietHours, end } })} />
+      </FieldRow>
       <PlannerStyleSlider value={draft.plannerStyle} disabled={readOnly} onChange={(plannerStyle) => set({ plannerStyle })} />
       <TextField
+        size="lg"
         label={text.location}
         value={draft.locationText}
         disabled={readOnly}
@@ -96,11 +104,15 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
         helper={text.locationHint}
         onChange={(locationText) => set({ locationText })}
       />
-      <TextField label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
+      <TextField size="xs" label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
       {canEdit ? (
-        <Button type="submit" loading={saving}>
-          {text.save}
-        </Button>
+        <FormActions
+          primary={
+            <Button type="submit" loading={saving}>
+              {text.save}
+            </Button>
+          }
+        />
       ) : null}
     </form>
   )

@@ -1,5 +1,5 @@
 // Weight Barcode Rule form: text inputs <-> WeightRule. Plain TypeScript, no React.
-import { validateRule, type ValueKind, type ValueUnit, type WeightRule } from '../../scan/lib/barcode'
+import { ruleProblem, validateRule, type ValueKind, type ValueUnit, type WeightRule } from '../../scan/lib/barcode'
 import { strings } from '../strings'
 
 /** Every field is the text of an input. unit is '' for a price rule. */
@@ -75,6 +75,19 @@ export function ruleFormError(v: RuleFormValues): string | null {
   if (rule === null) return strings.errNumber
   return validateRule(rule)
 }
+
+/** The field the validation reason is about (to mark it invalid and focus it); null when the rule is fine. */
+export function ruleFormErrorField(v: RuleFormValues): RuleFormField | null {
+  const rule = toRule(v)
+  if (rule === null) {
+    return RULE_NUMBER_FIELDS.find((f) => whole(v[f]) === null) ?? null
+  }
+  const field = ruleProblem(rule)?.field
+  return field === undefined || field === 'valueKind' || field === 'valueUnit' ? null : field
+}
+
+const RULE_NUMBER_FIELDS = ['itemStart', 'itemLength', 'valueStart', 'valueLength', 'decimalPlaces'] as const
+export type RuleFormField = 'prefix' | (typeof RULE_NUMBER_FIELDS)[number]
 
 /** Choices for the unit select: weight -> g, kg, oz, lb; price -> one option ('' = the Currency's minor unit). */
 export function unitOptions(kind: ValueKind, currency: string): { value: '' | ValueUnit; label: string }[] {

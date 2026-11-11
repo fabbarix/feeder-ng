@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, EmptyState, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, EmptyState, FormActions, PageHeader, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
+import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
 import { PriceList } from '../components/PriceList'
 import { ProductBarcodes } from '../components/ProductBarcodes'
@@ -60,7 +61,7 @@ export function ProductScreen() {
     <div className="pg">
       <PageHeader title={product.name} breadcrumbs={breadcrumbs} />
       <p className="pg__muted">
-        <Link to={`/ingredients/${product.ingredientId}`}>{product.ingredientName}</Link> · {formatPackSize(product.packSize, product.baseUnit, system)}
+        <Link to={`/ingredients/${product.ingredientId}`}>{displayName(product.ingredientName)}</Link> · {formatPackSize(product.packSize, product.baseUnit, system)}
       </p>
       {product.archived ? (
         <div className="pg__row">
@@ -86,15 +87,20 @@ export function ProductScreen() {
             }}
           >
             <TextField
+              size="sm"
               label={strings.packSizeLabel(product.baseUnit)}
               inputMode="decimal"
               value={packValue}
               onChange={setPackText}
               error={packSize === null ? strings.errPackSize : undefined}
             />
-            <Button type="submit" variant="tertiary" disabled={packSize === null || packSize === product.packSize}>
-              {strings.savePackSize}
-            </Button>
+            <FormActions
+              primary={
+                <Button type="submit" disabled={packSize === null || packSize === product.packSize}>
+                  {strings.savePackSize}
+                </Button>
+              }
+            />
           </form>
         </Tile>
 
@@ -119,7 +125,7 @@ export function ProductScreen() {
           <h2 className="pg__tile-title">{strings.pricesTitle}</h2>
           <h3 className="pg__muted">{strings.latestPrices}</h3>
           <PriceList prices={product.latestPrices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
-          <Button variant="tertiary" onClick={() => setPricing(true)}>
+          <Button className="pg__add-price" variant="secondary" icon="add" onClick={() => setPricing(true)}>
             {strings.addPrice}
           </Button>
           <h3 className="pg__muted">{strings.priceHistory}</h3>
@@ -127,21 +133,24 @@ export function ProductScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.actionsTitle}>
-          <div className="pg__row">
-            {offered.includes('archive') ? (
-              <Button variant="tertiary" onClick={() => void actions.archive()}>
-                {strings.archiveProduct}
+          <FormActions
+            destructive={
+              <Button variant="danger-tertiary" onClick={() => void actions.remove()}>
+                {strings.deleteProduct}
               </Button>
-            ) : null}
-            {offered.includes('unarchive') ? (
-              <Button variant="tertiary" onClick={() => void actions.unarchive()}>
-                {strings.unarchiveProduct}
-              </Button>
-            ) : null}
-            <Button variant="danger-tertiary" onClick={() => void actions.remove()}>
-              {strings.deleteProduct}
-            </Button>
-          </div>
+            }
+            primary={
+              offered.includes('unarchive') ? (
+                <Button variant="secondary" onClick={() => void actions.unarchive()}>
+                  {strings.unarchiveProduct}
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => void actions.archive()}>
+                  {strings.archiveProduct}
+                </Button>
+              )
+            }
+          />
         </Tile>
       </BentoGrid>
 

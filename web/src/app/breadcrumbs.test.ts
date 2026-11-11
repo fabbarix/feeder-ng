@@ -26,6 +26,7 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/notifications', 'Notifications'],
     ['/settings/access-requests', 'Sign-in requests'], // A1
     ['/settings/allowlist', 'Allowlist'],
+    ['/settings/recipe-assistant', 'Recipe Assistant'],
   ])('%s is Settings > %s', (path, label) => {
     expect(crumbsFor(path)).toEqual([S, { label }])
   })

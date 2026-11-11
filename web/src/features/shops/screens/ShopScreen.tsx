@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, EmptyState, IconButton, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -59,19 +59,19 @@ export function ShopScreen() {
 
   return (
     <div className="pg">
-      <PageHeader title={shop.shop.name} breadcrumbs={breadcrumbs} />
-      {isAdmin ? (
-        <div className="pg__row">
-          <Button variant="tertiary" onClick={() => setRenaming(true)}>
-            {strings.renameShop}
-          </Button>
-          <Button variant="danger-tertiary" onClick={() => setDeleting(true)}>
-            {strings.deleteShop}
-          </Button>
-        </div>
-      ) : (
-        <p className="pg__muted">{strings.adminOnly}</p>
-      )}
+      <PageHeader
+        title={shop.shop.name}
+        breadcrumbs={breadcrumbs}
+        actions={
+          isAdmin ? (
+            <>
+              <IconButton icon="edit" label={strings.renameShopLabel} onClick={() => setRenaming(true)} />
+              <IconButton icon="delete" label={strings.deleteShop} onClick={() => setDeleting(true)} />
+            </>
+          ) : undefined
+        }
+      />
+      {isAdmin ? null : <p className="pg__muted">{strings.adminOnly}</p>}
       {error ? (
         <p role="alert" className="pg__error">
           {error}

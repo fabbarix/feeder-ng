@@ -69,14 +69,14 @@ describe('WeightRuleEditor', () => {
     expect(preview()).toHaveTextContent(strings.previewNoMatch)
   })
 
-  it('cannot be saved while the rule is invalid, and says why', async () => {
+  it('cannot be saved while the rule is invalid: Save says why on submit (R2-3, F-08) and does not save', async () => {
     const { user, onSave } = setup()
-    expect(screen.getByRole('button', { name: strings.saveRule })).toBeDisabled() // empty prefix
+    await user.click(screen.getByRole('button', { name: strings.saveRule })) // empty prefix
+    expect(screen.getByRole('alert')).toHaveTextContent(/prefix/i)
     await user.type(screen.getByLabelText(strings.prefixLabel), '21')
-    expect(screen.getByRole('button', { name: strings.saveRule })).toBeEnabled()
     await user.clear(screen.getByLabelText(strings.valueStartLabel))
     await user.type(screen.getByLabelText(strings.valueStartLabel), '6') // overlaps the item digits
-    expect(screen.getByRole('button', { name: strings.saveRule })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: strings.saveRule }))
     expect(screen.getByText(/overlap/i)).toBeInTheDocument()
     expect(onSave).not.toHaveBeenCalled()
   })
