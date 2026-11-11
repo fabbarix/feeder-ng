@@ -5,6 +5,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import type { ReadErrorInput } from '../lib/readErrors'
 import { ReadErrorTile } from './ReadErrorTile'
+import { createRef } from 'react'
+import { declarations } from '../../../ui/test-utils'
+import { readSource } from '../../plan/test-css'
 
 function setup(error: ReadErrorInput, isAdmin = false) {
   const onRetry = vi.fn()
@@ -13,6 +16,23 @@ function setup(error: ReadErrorInput, isAdmin = false) {
 }
 
 describe('ReadErrorTile', () => {
+  it('the focus target is the alert element itself, focusable by code (tabindex -1)', () => {
+    const ref = createRef<HTMLElement>()
+    render(<MemoryRouter><ReadErrorTile error={{ code: 'assistant_busy' }} isAdmin={false} onRetry={() => undefined} focusRef={ref} /></MemoryRouter>)
+    const alert = screen.getByRole('alert')
+    expect(ref.current).toBe(alert)
+    expect(alert).toHaveAttribute('tabindex', '-1')
+    ref.current?.focus()
+    expect(alert).toHaveFocus()
+  })
+  it('CSS: the focus target is not display: contents (Chrome will not focus it) and shows a focus ring', () => {
+    const css = readSource('features/import/import.css')
+    const rule = declarations(css, '.read-error')
+    expect(rule.display ?? '').not.toBe('contents')
+    expect(css).not.toMatch(/\.read-error\s*\{[^}]*display:\s*contents/)
+    const focus = declarations(css, '.read-error:focus')
+    expect(focus.outline).toMatch(/3px solid var\(--color-accent\)/)
+  })
   it('is a danger status tile announced as an alert, with the message', () => {
     const { container } = setup({ code: 'assistant_busy' })
     expect(screen.getByRole('alert')).toHaveTextContent('Anthropic is busy. Try again in a minute.')

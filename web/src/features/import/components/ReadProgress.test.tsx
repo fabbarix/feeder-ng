@@ -34,6 +34,12 @@ describe('ReadProgress', () => {
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
     expect(screen.queryByRole('list')).toBeNull()
   })
+  it('names the group and the progressbar differently, so the label is not announced twice', () => {
+    view()
+    const bar = screen.getByRole('progressbar')
+    expect(bar.getAttribute('aria-label')).toBeTruthy()
+    expect(bar.getAttribute('aria-label')).not.toBe(screen.getByRole('group').getAttribute('aria-label'))
+  })
   it('shows the stage text once only', () => {
     view({ kind: 'url', state: 'reading' })
     expect(screen.getAllByText('Reading the recipe…')).toHaveLength(1)
