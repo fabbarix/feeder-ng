@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BottomSheet, Button, DateField } from '../../../ui'
 import { dateProblem } from '../lib/attendanceDate'
 import { settingsStrings } from '../strings'
-import type { AttendanceEntry, DateAttendance, MealSlot, Member } from '../types'
+import type { AttendanceEntry, DateAttendance, DateCourseChange, MealSlot, Member } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
 import '../settings.css'
 
@@ -15,7 +15,11 @@ export interface DateAttendancePanelProps {
   members: Member[]
   saving?: boolean
   onChangeDate: (date: string) => void
-  onSave: (attendance: AttendanceEntry[]) => void | Promise<void>
+  /**
+   * `attendance` is undefined when only the Courses changed (the date's Attendance is left as it is); `courses` is left out
+   * (not passed at all) when no Course changed.
+   */
+  onSave: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => void | Promise<void>
   onReset: () => void | Promise<void>
   onClose: () => void
 }

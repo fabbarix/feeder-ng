@@ -8,6 +8,10 @@ describe('staleKeysFor', () => {
     expect(staleKeysFor({ changed: 'attendance' })).toContainEqual(['household', 'attendance'])
   })
 
+  it('CRS D2: a Courses change refreshes the Courses and the Meal Slots that name them', () => {
+    expect(staleKeysFor({ changed: 'courses' })).toEqual([['courses'], ['household', 'meal-slots']])
+  })
+
   it('ignores payloads it does not know', () => {
     expect(staleKeysFor(null)).toEqual([])
     expect(staleKeysFor('members')).toEqual([])

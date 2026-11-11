@@ -1,9 +1,10 @@
+import type { CourseChoice } from '../../../lib/courses'
 import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField, WeekdayPicker } from '../../../ui'
 import { useSlotForm } from '../hooks/useSlotForm'
 import { documentLocale } from '../lib/locale'
 import { sameDays } from '../lib/multiDay'
 import { settingsStrings } from '../strings'
-import type { MealSlot, MealSlotInput, Member, SlotBatchRequest } from '../types'
+import type { MealSlot, MealSlotInput, Member, SlotBatchRequest, SlotBatchResult } from '../types'
 import { AttendanceEditor } from './AttendanceEditor'
 import '../settings.css'
 
@@ -23,6 +24,10 @@ export interface MealSlotEditorProps {
   slots?: MealSlot[]
   onApply?: (request: SlotBatchRequest) => void | Promise<void>
   weekStart?: 1 | 6 | 7
+  /** CRS D2: the household's active Courses (household order). Given, the editor shows the Courses field; absent or empty, it does not. */
+  courses?: CourseChoice[]
+  /** CRS D2, editing: a dry run of the batch (`dryRun: true`), asked while the Admin takes Courses off, to name what goes. */
+  onPreview?: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   locale?: string
   onDelete?: () => void | Promise<void>
   /** Editing only: opens the one-date Attendance for this slot ("Change a date"). */

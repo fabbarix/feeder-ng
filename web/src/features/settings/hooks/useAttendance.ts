@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { settingsApi } from '../api'
-import type { AttendanceEntry, DateAttendance } from '../types'
+import type { AttendanceEntry, DateAttendance, DateCourseChange } from '../types'
 import { settingsKeys } from './queryKeys'
 
 export interface AttendanceState {
   attendance: DateAttendance | undefined
   isPending: boolean
   isError: boolean
-  /** PUT this date's Attendance; also refreshes Meal Slots. */
-  save: (attendance: AttendanceEntry[]) => Promise<DateAttendance>
+  /** PUT this date's Attendance and/or its Courses' opt-outs (undefined attendance: Courses only); also refreshes Meal Slots. */
+  save: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => Promise<DateAttendance>
   /** DELETE the override for this date. */
   reset: () => Promise<void>
   saving: boolean
@@ -30,7 +30,8 @@ export function useAttendance(slotId: number | null, date: string | null): Atten
     ])
   }
   const save = useMutation({
-    mutationFn: (attendance: AttendanceEntry[]) => settingsApi.saveAttendance(slotId!, date!, attendance),
+    mutationFn: ({ attendance, courses }: { attendance: AttendanceEntry[] | undefined; courses?: DateCourseChange[] }) =>
+      settingsApi.saveAttendance(slotId!, date!, attendance, courses),
     onSuccess: refresh,
   })
   const reset = useMutation({ mutationFn: () => settingsApi.resetAttendance(slotId!, date!), onSuccess: refresh })
@@ -38,7 +39,7 @@ export function useAttendance(slotId: number | null, date: string | null): Atten
     attendance: query.data,
     isPending: enabled && query.isPending,
     isError: query.isError,
-    save: save.mutateAsync,
+    save: (attendance, courses) => save.mutateAsync({ attendance, courses }),
     reset: () => reset.mutateAsync(),
     saving: save.isPending || reset.isPending,
   }

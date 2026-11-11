@@ -7,7 +7,7 @@ const ids = (isAdmin: boolean) => settingsGroups(isAdmin).map((g) => [g.id, g.se
 describe('settingsGroups', () => {
   it('shows an Admin three groups in order', () => {
     expect(ids(true)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
+      ['household', ['household', 'members', 'mealSlots', 'courses', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
       ['admin', ['allowlist', 'recipeAssistant']],
     ])
@@ -15,7 +15,7 @@ describe('settingsGroups', () => {
 
   it('hides the Allowlist and the Recipe Assistant, and their whole group, from a plain User', () => {
     expect(ids(false)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
+      ['household', ['household', 'members', 'mealSlots', 'courses', 'planningRules', 'shops', 'storagePlaces', 'accessRequests']],
       ['you', ['preferences', 'notifications']],
     ])
   })
@@ -26,6 +26,7 @@ describe('settingsGroups', () => {
       household: '/settings/household',
       members: '/settings/members',
       mealSlots: '/settings/meal-slots',
+      courses: '/settings/courses',
       planningRules: '/settings/planning',
       shops: '/settings/shops',
       storagePlaces: '/settings/storage-places',
@@ -47,7 +48,16 @@ describe('settingsGroups', () => {
 
   it('uses GLOSSARY wording for titles', () => {
     const titles = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.title))
-    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Storage Places', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
+    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Courses', 'Planning rules', 'Shops', 'Storage Places', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
+  })
+
+  it('CRS D2: "Courses" is a Household row for every User (read-only for a plain User), right after Meal Slots', () => {
+    for (const isAdmin of [true, false]) {
+      const household = settingsGroups(isAdmin).find((g) => g.id === 'household')!
+      const at = household.sections.findIndex((s) => s.id === 'mealSlots')
+      expect(household.sections[at + 1]).toMatchObject({ id: 'courses', title: 'Courses', path: '/settings/courses' })
+      expect(household.sections[at + 1]?.adminOnly).toBeFalsy()
+    }
   })
 
   it('A1: "Sign-in requests" is a Household row for every User, after Shops', () => {

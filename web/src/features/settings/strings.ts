@@ -18,6 +18,7 @@ export const settingsStrings = {
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
       mealSlots: { title: 'Meal Slots', meta: 'When the Household eats, by weekday' },
+      courses: { title: 'Courses', meta: 'What a Meal Slot serves, and which Course is main' },
       planningRules: { title: 'Planning rules', meta: 'Planner Style, Cool-down, Leftover Use-by' },
       shops: { title: 'Shops', meta: 'Where you buy, and their barcodes' },
       storagePlaces: { title: 'Storage Places', meta: 'Where you keep Stock: pantry, fridge, freezer' },

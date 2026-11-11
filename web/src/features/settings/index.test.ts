@@ -8,6 +8,7 @@ describe('settings feature routes (WP11)', () => {
       '/settings/household',
       '/settings/members',
       '/settings/meal-slots',
+      '/settings/courses',
       '/settings/allowlist',
       '/settings/preferences',
       '/settings/recipe-assistant',

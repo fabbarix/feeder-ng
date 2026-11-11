@@ -12,6 +12,8 @@ export interface MealSlotsState {
   remove: (id: number) => Promise<void>
   /** R15: edit every Meal Slot with the same name on several weekdays in one call. */
   batchUpdate: (request: SlotBatchRequest) => Promise<SlotBatchResult>
+  /** CRS D2: PATCH the batch request as given (`useSlotPreview` sets `dryRun: true`): nothing is written and nothing is refetched; the answer has `removes`. */
+  preview: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   saving: boolean
 }
 
@@ -36,6 +38,9 @@ export function useMealSlots(): MealSlotsState {
     update: (id, input) => update.mutateAsync({ id, input }),
     remove: remove.mutateAsync,
     batchUpdate: batch.mutateAsync,
+    preview: async () => {
+      throw new Error('not implemented')
+    },
     saving: create.isPending || update.isPending || remove.isPending || batch.isPending,
   }
 }

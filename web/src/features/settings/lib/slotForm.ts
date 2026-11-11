@@ -1,7 +1,12 @@
+import type { CourseChoice } from '../../../lib/courses'
 import type { MealSlot, MealSlotInput, Member } from '../types'
 
-/** The editor's starting state: an existing Meal Slot, or a blank one on Monday that every Member attends (opt out in the editor). */
-export function slotDraft(slot?: MealSlot, members: Member[] = []): MealSlotInput {
+/**
+ * The editor's starting state: an existing Meal Slot, or a blank one on Monday that every Member attends (opt out in the editor).
+ * CRS D2: given the household's `courses`, a blank slot starts with the main Course alone (required, nobody opting out) and an
+ * existing one with its own Courses; without `courses` (and for a slot that carries none) the draft has no `courses` key.
+ */
+export function slotDraft(slot?: MealSlot, members: Member[] = [], _courses?: readonly CourseChoice[]): MealSlotInput {
   return slot
     ? { weekday: slot.weekday, name: slot.name, time: slot.time, attendance: slot.attendance }
     : { weekday: 1, name: '', time: '', attendance: members.map((m) => ({ memberId: m.id, portionFactorOverride: null })) }

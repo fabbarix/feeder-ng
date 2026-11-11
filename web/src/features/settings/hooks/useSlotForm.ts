@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import type { CourseChoice } from '../../../lib/courses'
 import { sortIsoDays } from '../../../ui'
 import { documentLocale } from '../lib/locale'
 import { batchRequest, hasChanges, matchingSlots, quickPicks, summaryLines } from '../lib/multiDay'
@@ -14,6 +15,8 @@ export interface UseSlotFormOptions {
   /** Add mode: the Name the draft starts with (the grid row whose add button was pressed). */
   defaultName?: string
   slots?: MealSlot[]
+  /** CRS D2: the household's active Courses. Without them the form has no Courses field and sends none. */
+  courses?: CourseChoice[]
   locale?: string
   onSave: (inputs: MealSlotInput[]) => void | Promise<void>
   onApply?: (request: SlotBatchRequest) => void | Promise<void>

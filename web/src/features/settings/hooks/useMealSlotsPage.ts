@@ -7,7 +7,7 @@ import { documentLocale } from '../lib/locale'
 import { batchErrorMessage, errorMessage } from '../lib/errors'
 import { nextDateForWeekday, todayIso, weekdayName } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
-import type { AttendanceEntry, MealSlot, MealSlotInput, SlotBatchRequest } from '../types'
+import type { AttendanceEntry, DateCourseChange, MealSlot, MealSlotInput, SlotBatchRequest } from '../types'
 import { useAttendance } from './useAttendance'
 import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
@@ -92,9 +92,9 @@ export function useMealSlotsPage() {
     }
   }
 
-  const saveDate = async (entries: AttendanceEntry[]) => {
+  const saveDate = async (entries: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => {
     try {
-      await attendance.save(entries)
+      await attendance.save(entries, courses)
       toast.show(settingsStrings.attendanceSaved, { status: 'success' })
       setDateEditor(null)
     } catch (err) {

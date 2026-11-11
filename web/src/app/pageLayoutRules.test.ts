@@ -164,6 +164,13 @@ describe('the guard script and rules carry no label exemption', () => {
   })
 })
 
+describe('Courses route in the layout guard tables (CRS D2)', () => {
+  it('ROUTES lists /settings/courses as narrow, as pageWidths.ts does', () => {
+    expect(rules.ROUTES).toContainEqual(['/settings/courses', 'narrow'])
+    expect(pageWidthFor('/settings/courses')).toBe('narrow')
+  })
+})
+
 describe('Pantry route in the layout guard tables (PN)', () => {
   const nodeFs = 'node:fs'
   const read = async (p: string) =>

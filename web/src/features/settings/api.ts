@@ -4,6 +4,7 @@ import type {
   AllowedUser,
   AttendanceEntry,
   DateAttendance,
+  DateCourseChange,
   HouseholdSettings,
   MealSlot,
   MealSlotInput,
@@ -30,7 +31,8 @@ export const settingsApi = {
   deleteMealSlot: (id: number) => http.delete<void>(`/api/meal-slots/${id}`),
   getAttendance: (slotId: number, date: string) =>
     http.get<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`),
-  saveAttendance: (slotId: number, date: string, attendance: AttendanceEntry[]) =>
+  /** CRS D2: `attendance` is left out of the body when undefined (only the Courses change); `courses` is sent when given. */
+  saveAttendance: (slotId: number, date: string, attendance: AttendanceEntry[] | undefined, _courses?: DateCourseChange[]) =>
     http.put<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`, { attendance }),
   resetAttendance: (slotId: number, date: string) =>
     http.delete<void>(`/api/meal-slots/${slotId}/attendance?date=${date}`),
