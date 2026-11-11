@@ -124,12 +124,22 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | celebration | `Confetti` |
 | planEmpty | `CalendarBlank` |
 | cameraOff | `CameraSlash` |
+| camera | `Camera` (UF1) |
+| clipboard | `ClipboardText` (UF1) |
+| link | `LinkSimple` (UF1) |
+| rotateRight | `ArrowClockwise` (UF1) |
+| rotateLeft | `ArrowCounterClockwise` (UF1; same glyph as `undo`/`unarchive`) |
 | pasta | `BowlSteam` |
 | fish | `Fish` |
 | chicken | `Bird` |
 | pizza | `Pizza` |
 | soup | `BowlFood` |
 | vegetarian | `Leaf` |
+| liquid | `Drop` (R14: Base Unit ml) |
+| piece | `Cube` (R14: Base Unit piece) |
+| key | `Key` (WP-D) |
+| assistant | `Robot` (WP-D; same glyph as agentPrompt) |
+| refresh | `ArrowsClockwise` (WP-D; same glyph as regenerate) |
 
 ## Helpers
 - `mealSlotIcon(name: string): IconName`: trim, lower-case, whole-name match on `breakfast|lunch|dinner|snack` returns that name; anything else (incl. "Second breakfast", empty) returns `other`.
@@ -152,3 +162,16 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 The 40 kB estimate assumed one weight per glyph. Each `@phosphor-icons/react` csr glyph module carries all six weights, so 87 glyphs measure 62,367 B gz (about 0.7 kB per glyph). PM decision: keep per-icon csr imports (CLAUDE.md rule; `@phosphor-icons/core` SVGs would break it) and set the budget to 64 kB gz (65,536 B). The app is a self-hosted PWA with a precached shell, so this is a one-time cost. About 3 kB of headroom remains, so each new glyph must be justified.
 
 R12 adds `reheat` -> `Fire` (+928 B gz): 65,505 B gz of the 65,536 B budget, 93 modules. 31 B of headroom is left, so the next glyph must raise the budget.
+
+## UF1 update: weights slimmed, budget 42 kB gz
+The 64 kB budget above is superseded. `@phosphor-icons/react` modules carry six weights per glyph but the app uses
+four (`regular`, `bold`, `fill`, `duotone`), so UF1 strips `thin` and `light` at build time
+(`web/vite.phosphor-weights.ts`, see [uf1-icons.md](uf1-icons.md)). 97 glyphs now measure ~41.0 kB gz (40,952 B, ~2.0 kB headroom); the budget is
+**43,008 B (42 kB)** and `MIN_MODULES` is 97. UF1 adds `camera`, `clipboard`, `link`, `rotateRight` and `rotateLeft`.
+
+## R14 / WP-D update: five names, three new glyphs
+R14 adds `liquid` (`Drop`) and `piece` (`Cube`) for the Base Unit Segmented (g uses `weigh`). WP-D adds `key` (`Key`), `assistant`
+(`Robot`, already imported for `agentPrompt`) and `refresh` (`ArrowsClockwise`, already imported for `regenerate`). Three new modules
+(Drop, Cube, Key) take the bundle from 40,952 B to **42,249 B gz** (100 modules) of the 43,008 B budget (759 B headroom); `MIN_MODULES` is 100.
+WP-D's `connect` (`PlugsConnected`) does **not** fit: it alone costs about 1,070 B: with it the bundle is 43,317 B (309 B over). The budget was not raised; the PM decides
+(raise it, drop a glyph, or map `connect` to an existing glyph such as `link`).

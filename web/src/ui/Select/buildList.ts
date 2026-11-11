@@ -22,6 +22,8 @@ export interface ListInput<V extends string | number> {
   sortIndex: number
   createLabel?: (query: string) => string
   canCreate: boolean
+  /** R14: the create row is shown but cannot be chosen (offline). */
+  createDisabled?: boolean
   /** WP3b: label of the clear row (e.g. "Any Shop"); it leads the list and is filtered by the query like an option. */
   clearLabel?: string
 }
@@ -53,7 +55,7 @@ export function buildList<V extends string | number>(input: ListInput<V>): Built
   const trimmed = input.query.trim()
   const duplicate = input.options.some((o) => normalise(o.label) === normalise(trimmed))
   const createText = input.canCreate && trimmed !== '' && !duplicate ? (input.createLabel ?? defaultCreate)(trimmed) : null
-  const nav: SelectOption<V>[] = createText ? [...flat, { value: '' as V, label: createText }] : flat
+  const nav: SelectOption<V>[] = createText ? [...flat, { value: '' as V, label: createText, disabled: input.createDisabled || undefined }] : flat
   return { groups, flat, nav, createText, firstEnabled: firstEnabledIndex(nav) }
 }
 
