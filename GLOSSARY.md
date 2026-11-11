@@ -23,7 +23,7 @@ Someone who signs in with Google to use the app, because an Admin added their em
 _Avoid_: Account, login, member
 
 **Admin**:
-A User who also manages who may sign in, the Members, Meal Slots, Shops and household settings.
+A User who also manages who may sign in, the Members, Meal Slots, Courses, Shops and household settings.
 _Avoid_: Owner, superuser
 
 **Access Request**:
@@ -34,7 +34,7 @@ _Note_: the UI calls the list of Access Requests "Sign-in requests" and the matc
 ### Recipes
 
 **Recipe**:
-A dish the Household can plan, made from Ingredients, with a Yield and optional timed Steps.
+A dish the Household can plan, made from Ingredients, with a Yield, one or more **Courses** it can fill, an optional **Whole meal** flag and optional timed Steps.
 _Avoid_: Dish, meal
 
 **Yield**:
@@ -42,7 +42,7 @@ The number of standard portions one Batch of a Recipe produces.
 _Avoid_: Servings, makes
 
 **Ready Meal**:
-A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought.
+A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought. A Ready Meal is not always a Whole meal: marking a Recipe as a Ready Meal switches Whole meal on when its Courses include the main Course, and the User may switch it off (a bought dessert or side is a Ready Meal, not a Whole meal).
 _Avoid_: Convenience food, pre-made
 
 **Step**:
@@ -75,7 +75,7 @@ The one picture a Recipe, a Step or a Member may have, added through the image p
 _Avoid_: Thumbnail, upload
 
 **Recipe File**:
-A JSON document in the published exchange format holding one or more Recipes and the Ingredient definitions they use, with images embedded or linked.
+A JSON document in the published exchange format holding one or more Recipes and the Ingredient definitions they use, with images embedded or linked. A Recipe names its Courses by name and carries its Whole meal flag.
 _Avoid_: Export, bundle, backup
 
 **Import Review**:
@@ -85,6 +85,19 @@ _Avoid_: Import wizard, mapping
 **Agent Prompt**:
 The copyable instructions, including the exchange schema, that make an AI agent turn an arbitrary recipe into a valid Recipe File.
 _Avoid_: Parser prompt, AI import
+
+**Course**:
+One part of what a Meal Slot serves, filled by one Recipe (e.g. Starter, Main, Side, Dessert). The Household defines its Courses and their order in Settings; a Recipe is marked with the Courses it can fill, and a Meal Slot lists the Courses it serves, in its own order. A Course is filled only by a Recipe marked with it.
+_Avoid_: Dish type, meal part
+_Note_: "course" in plain English ("of course") is not this term.
+
+**main Course**:
+The one Course the Household flags as main (seeded as Main). A Whole meal planned in it covers the Meal Slot's other Courses, and a Recipe or Meal Slot that has to be given a Course gets this one (on upgrade, and for a Recipe File without Courses). It can be renamed; it cannot be removed while it has the flag, so the flag moves to another Course first.
+_Avoid_: Primary course, entrée, headline course
+
+**Whole meal**:
+A Recipe that is a complete serving on its own (a one-pot Recipe, most Ready Meals). Planned in a Meal Slot's main Course, it covers that slot's other Courses: they stay empty on that date, and that is not Couldn't plan. In any other Course it is an ordinary Recipe.
+_Avoid_: One-pot meal, complete meal, full meal
 
 **Tag**:
 A household-defined label on Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to.
@@ -107,7 +120,7 @@ _Avoid_: Never, allergy, blacklist
 ### Planning
 
 **Meal Slot**:
-A named eating occasion the Household defines for a particular day of the week, with a usual time (e.g. "Tuesday Dinner, 19:30").
+A named eating occasion the Household defines for a particular day of the week, with a usual time and the ordered Courses it serves (e.g. "Tuesday Dinner, 19:30: Main, Side"). It serves at least one Course.
 _Avoid_: Meal time, occasion, slot type
 
 **Matching Meal Slot**:
@@ -115,7 +128,7 @@ The Meal Slot with the same name (case and edge spaces ignored) on another weekd
 _Avoid_: Sibling, linked slot, twin
 
 **Planned Meal**:
-The Recipe assigned to one Meal Slot on one date, either freshly cooked or served from a Leftover.
+The Recipe assigned to one Course of one Meal Slot on one date, either freshly cooked or served from a Leftover. A Meal Slot on a date has one Planned Meal per Course it serves, except the Courses a Whole meal covers; each is planned, swapped, Pinned and marked Cooked on its own.
 _Avoid_: Meal, entry, booking
 
 **Cooked**:
@@ -127,7 +140,7 @@ One preparation of a Recipe, producing its Yield; a Planned Meal cooks a whole n
 _Avoid_: Scale, run
 
 **Leftover**:
-Portions left from a Batch beyond what its Planned Meal's Attendance needs; these are served at later Meal Slots.
+Portions left from a Batch beyond what its Planned Meal's Attendance needs; these are served at later Meal Slots, in any Course the Recipe is marked with.
 _Avoid_: Surplus, remains
 
 **Use-by**:
@@ -135,7 +148,7 @@ The last date a Leftover may be served; after it the Leftover is discarded and n
 _Avoid_: Expiry, best-before
 
 **Cool-down**:
-The minimum number of days before the same Recipe may be planned again.
+The minimum number of days before the same Recipe may be planned again, in any Course.
 _Avoid_: Rotation, repeat gap
 
 **Planning Horizon**:
@@ -155,7 +168,7 @@ The Household's single setting for what the planner leans towards, from using up
 _Avoid_: Mode, profile, weights
 
 **Slot Rule**:
-A standing rule that fixes a Meal Slot to a particular Recipe or Tag (e.g. "Friday Dinner = pizza").
+A standing rule that fixes one Course of a Meal Slot (the main Course unless another is chosen) to a particular Recipe or Tag (e.g. "Friday Dinner = pizza", "Sunday Lunch, Dessert = tiramisu").
 _Avoid_: Fixed meal, theme night
 
 **Variety Rule**:
@@ -171,7 +184,7 @@ The Members who eat at a given Meal Slot, each with their Portion Factor; it det
 _Avoid_: Guests, headcount
 
 **Couldn't plan**:
-The state of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, a Slot Rule that nothing meets, or every Recipe excluded, in Cool-down, blocked by a Variety Rule or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure.
+The state of a Course of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, no Recipe marked with that Course, a Slot Rule that nothing meets, or every Recipe excluded, in Cool-down, blocked by a Variety Rule or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure. A Course covered by a Whole meal is not Couldn't plan.
 _Avoid_: Missing meal
 
 ### Food and shopping
@@ -185,7 +198,7 @@ A specific purchasable pack, identified by its barcode, that supplies exactly on
 _Avoid_: SKU, article, item, pack shot, product photo
 
 **Archived**:
-The state of a Recipe or Product that was used (planned, or bought) and so cannot be deleted, but is retired: left out of lists and pickers and ignored by the planner and by Scans, while its history stays. It can be unarchived.
+The state of a Recipe, Product or Course that was used (planned, or bought) and so cannot be deleted, but is retired: left out of lists and pickers and ignored by the planner and by Scans, while its history stays. It can be unarchived.
 _Avoid_: Deleted, disabled, hidden, inactive
 
 **Base Unit**:
