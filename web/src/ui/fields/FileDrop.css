@@ -4,7 +4,7 @@
   justify-items: center;
   gap: var(--space-2);
   padding: var(--space-6) var(--space-4);
-  border: 1.5px dashed var(--color-outline);
+  border: var(--field-border-width) dashed var(--color-outline);
   border-radius: var(--radius-tile);
   background: var(--color-surface-2);
   color: var(--color-muted);

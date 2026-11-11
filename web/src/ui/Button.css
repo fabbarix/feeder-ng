@@ -151,3 +151,13 @@
     animation: none;
   }
 }
+
+.button[data-block='always'] {
+  inline-size: 100%;
+}
+
+@media (max-width: 599px) {
+  .button[data-block='phone'] {
+    inline-size: 100%;
+  }
+}
