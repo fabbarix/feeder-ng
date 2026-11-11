@@ -51,7 +51,8 @@ _Avoid_: Instruction, direction
 
 **Passive Step**:
 A timed Step that needs no attention while it runs (e.g. simmering), so the cook can carry on with later Steps.
-_Avoid_: Background step, wait
+_Avoid_: Background step, wait step, a wait
+_Note_: "wait" is fine as an ordinary verb ("Save waits for the Photos"), but never a name for a Passive Step: not "a wait", not "wait step".
 
 **Advance Step**:
 A Step to be done a set lead time before the Planned Meal's slot time (e.g. defrost 24 h before, marinate 4 h before).

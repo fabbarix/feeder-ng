@@ -29,35 +29,22 @@ if [ ! -f "$C" ]; then bad "CHANGELOG.md is missing at the repository root"; els
   # GLOSSARY: no word the glossary says to avoid may appear in the user-facing prose of the changelog. Before matching, strip
   # fenced and inline code, link targets, the standard Keep a Changelog headings, and any avoided word that is itself a
   # GLOSSARY headword (e.g. Member is avoided for User but is a term of its own).
-  python3 - "$ROOT/GLOSSARY.md" "$C" <<'PY' && ok || bad "CHANGELOG.md uses a term listed under _Avoid_ in GLOSSARY.md"
-import re, sys
-g = open(sys.argv[1]).read(); c = open(sys.argv[2]).read()
-heads = {h.strip().lower() for h in re.findall(r"^\*\*([^*\n]+)\*\*", g, flags=re.M)}
-# Avoided words and phrases, short ones included (meal, mode, icon) and multi-word ones. An avoided word that is itself a
-# GLOSSARY headword (Member is avoided for User but is a term of its own) is not avoided here.
-avoid = set()
-for m in re.finditer(r"_Avoid_\**:?\s*(.+)", g):
-    for w in re.split(r"[,;]", m.group(1)):
-        w = re.sub(r"[_*`.]", "", w).strip().lower()
-        if w and w not in heads: avoid.add(w)
-c = re.sub(r"```.*?```", " ", c, flags=re.S)
-c = re.sub(r"`[^`\n]*`", " ", c)
-c = re.sub(r"\]\([^)\n]*\)", "]", c)
-c = re.sub(r"^\[[^\]\n]+\]:\s*\S+.*$", " ", c, flags=re.M)
-c = re.sub(r"^#{1,6}\s*(Added|Changed|Deprecated|Removed|Fixed|Security)\s*$", " ", c, flags=re.M | re.I)
-c = c.lower()
-# Strip every multi-word GLOSSARY headword first (Meal Slot, Ready Meal, Planned Meal, Cook Mode, ...), longest first, so the
-# avoided word inside it (meal, mode) does not match.
-for h in sorted((h for h in heads if " " in h), key=len, reverse=True):
-    c = re.sub(r"\b" + re.escape(h) + r"(s|es)?\b", " ", c)
-# Other senses of an avoided word that are not the domain term.
-allow = ["icon styles", "icon payload", "migrations run", "replan runs", "app runs", "run the older image", "you run your own"]
-for a in allow:
-    c = c.replace(a, " ")
-hits = sorted(w for w in avoid if re.search(r"\b" + re.escape(w) + r"(s|es)?\b", c))
-if hits: print("avoid terms in changelog:", hits)
-sys.exit(1 if hits else 0)
-PY
+  python3 "$ROOT/scripts/changelog-avoid.py" "$ROOT/GLOSSARY.md" "$C" && ok || bad "CHANGELOG.md uses a term listed under _Avoid_ in GLOSSARY.md"
+  # "wait" is banned only as a name for a Passive Step (GLOSSARY: _Avoid_ lists "wait step" and "a wait", with a note); the plain
+  # verb is fine. Same guard, fixture glossary and changelogs.
+  W="$(mktemp -d)"
+  sed -n '/^\*\*Passive Step\*\*/,/^$/p' "$ROOT/GLOSSARY.md" | grep -Eq '^_Avoid_:.*wait step' && ok || bad "GLOSSARY Passive Step must list 'wait step' under _Avoid_"
+  sed -n '/^\*\*Passive Step\*\*/,/^$/p' "$ROOT/GLOSSARY.md" | grep -Eq '^_Avoid_:.*a wait' && ok || bad "GLOSSARY Passive Step must list 'a wait' under _Avoid_"
+  sed -n '/^\*\*Passive Step\*\*/,/^$/p' "$ROOT/GLOSSARY.md" | grep -Eq '^_Avoid_:.*(,|:) *wait *(,|$)' && bad "GLOSSARY must not ban bare 'wait' (ordinary verb)" || ok
+  sed -n '/^\*\*Passive Step\*\*/,/^$/p' "$ROOT/GLOSSARY.md" | grep -Eqi '^_Note_:.*ordinary verb' && ok || bad "GLOSSARY Passive Step needs a _Note_ saying 'wait' is fine as an ordinary verb"
+  printf '**Passive Step**:\nA step.\n_Avoid_: Background step, wait step, a wait\n_Note_: wait is fine as an ordinary verb.\n' >"$W/G.md"
+  printf '## [1.0.0] - 2026-01-01\n\nSave is possible once every Photo is stored, so wait for it, or keep waiting; one waits, two wait.\n' >"$W/ok.md"
+  python3 "$ROOT/scripts/changelog-avoid.py" "$W/G.md" "$W/ok.md" >/dev/null && ok || bad "changelog guard must allow 'wait', 'waits', 'waiting' as plain verbs"
+  for t in 'Add a wait step to the Recipe.' 'The Recipe has a wait before serving.' 'Two wait steps run.' 'A Background step runs.'; do
+    printf '## [1.0.0] - 2026-01-01\n\n%s\n' "$t" >"$W/bad.md"
+    python3 "$ROOT/scripts/changelog-avoid.py" "$W/G.md" "$W/bad.md" >/dev/null && bad "changelog guard must flag: $t" || ok
+  done
+  rm -rf "$W"
 fi
 
 # --- deploy.md: prerelease scheme and upgrade note ---

@@ -23,9 +23,6 @@ web/src/features/recipes/strings.ts never  # ordinary adverb inside a sentence t
 # "Export" (import:4-74) is the verb of the Export action, which downloads a Recipe File; the noun is always "Recipe File" (GLOSSARY: Recipe File avoids Export). The tests name the links Export.
 web/src/features/import/strings.ts export  # verb of the Export action, not the Recipe File noun
 
-# "wait" (recipes:123-124) is the verb in "A Step can only wait for an earlier Step" (a dependency rule), not a Passive Step label.
-web/src/features/recipes/strings.ts wait  # verb in a Step dependency message
-
 # "Runs" (cook:29) is the verb "Runs for N min" for a Passive Step's timer, not a Batch.
 web/src/features/cook/strings.ts run  # verb for how long a timer runs
 
@@ -40,7 +37,3 @@ web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
 # Recipe Assistant settings (approved copy): "never" is plain English in "never sent" / "never shows"; "runs" is "Whoever runs your server".
 web/src/features/recipe-assistant/strings.ts never  # plain English in the approved privacy and key helper copy
 web/src/features/recipe-assistant/strings.ts run  # "Whoever runs your server" (approved secret key copy), not a Batch
-
-# A1: spec-mandated copy. "wait" is plain English for an Access Request waiting for approval, not a Passive Step.
-web/src/features/notifications/strings.ts wait  # "When someone asks to sign in and waits for approval"
-web/src/features/settings/strings.ts wait  # "Their requests wait in Sign-in requests"
