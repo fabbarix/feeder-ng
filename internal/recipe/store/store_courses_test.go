@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"database/sql"
 	"errors"
 	"reflect"
 	"sort"
@@ -366,5 +367,56 @@ func TestDeletingARecipeRemovesItsCourseLinks(t *testing.T) {
 	}
 	if n := f.count(t, "recipe_courses"); n != 1 {
 		t.Errorf("%d recipe_courses rows after the delete, want only %d's", n, keep.ID)
+	}
+}
+
+// CreateTx and ReplaceTx check the Course ids against the caller's transaction, so a Course created earlier in
+// the same transaction (a future import) counts, and an unknown or archived one is a ValidationError.
+func TestACreateTxSeesACourseCreatedInTheSameTransaction(t *testing.T) {
+	f := newFixture(t)
+	tx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`INSERT INTO courses (name, name_key, position, created_at) VALUES ('Cheese','cheese',9,'2026-11-09T12:00:00Z')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cid, _ := res.LastInsertId()
+	in := f.simple(t, "Board", func(in *recipe.Input) { in.CourseIDs = []int64{cid} })
+	id, err := f.s.CreateTx(ctx, tx, in)
+	if err != nil {
+		t.Fatalf("CreateTx with a Course made in the same transaction: %v", err)
+	}
+	in.Name = "Board 2"
+	if _, err := f.s.ReplaceTx(ctx, tx, id, in); err != nil {
+		t.Fatalf("ReplaceTx with a Course made in the same transaction: %v", err)
+	}
+}
+
+func TestACreateTxAndReplaceTxRejectUnknownOrArchivedCourses(t *testing.T) {
+	f := newFixture(t)
+	c := f.courses(t)
+	existing := f.mustCreate(t, f.simple(t, "Soup", nil))
+	for name, ids := range map[string][]int64{"unknown": {c.main, 999}, "archived": {c.starter}} {
+		if _, err := f.db.Exec(`UPDATE courses SET archived = 1 WHERE id = ?`, c.starter); err != nil {
+			t.Fatal(err)
+		}
+		for op, run := range map[string]func(*sql.Tx, recipe.Input) error{
+			"CreateTx":  func(tx *sql.Tx, in recipe.Input) error { _, err := f.s.CreateTx(ctx, tx, in); return err },
+			"ReplaceTx": func(tx *sql.Tx, in recipe.Input) error { _, err := f.s.ReplaceTx(ctx, tx, existing.ID, in); return err },
+		} {
+			tx, err := f.db.BeginTx(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = run(tx, f.simple(t, "X "+op, func(in *recipe.Input) { in.CourseIDs = ids }))
+			tx.Rollback()
+			var ve *recipe.ValidationError
+			if !errors.As(err, &ve) || ve.Code != recipe.CodeCourseUnknown {
+				t.Errorf("%s %s: err = %v, want a %s ValidationError", op, name, err, recipe.CodeCourseUnknown)
+			}
+		}
 	}
 }
