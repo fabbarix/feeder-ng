@@ -1,4 +1,4 @@
-// R2-1 (G-01): the Recipes "More actions" is a ui/Menu (replaces RecipesOverflowSheet): Import, Export, Copy Agent Prompt, Show archived.
+// R2-1 (G-01): the Recipes "More actions" is a ui/Menu (replaces RecipesOverflowSheet): Read a recipe, Import, Export, Copy Agent Prompt, Show archived.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -31,12 +31,21 @@ describe('RecipesOverflowMenu (popover from 768 px)', () => {
     expect(screen.getByRole('menu', { name: 'More actions' })).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('holds Import and Export (links), Copy Agent Prompt and Show archived, in that order', async () => {
+  it('holds Read a recipe, Import and Export (links), Copy Agent Prompt and Show archived, in that order', async () => {
     view()
     await open()
     const menu = screen.getByRole('menu')
-    expect(menu.querySelectorAll('[role^="menuitem"]')).toHaveLength(4)
-    expect([...menu.querySelectorAll('[role^="menuitem"]')].map((i) => i.textContent)).toEqual(['Import', 'Export', 'Copy Agent Prompt', 'Show archived'])
+    expect(menu.querySelectorAll('[role^="menuitem"]')).toHaveLength(5)
+    expect([...menu.querySelectorAll('[role^="menuitem"]')].map((i) => i.textContent)).toEqual([
+      'Read a recipe',
+      'Import',
+      'Export',
+      'Copy Agent Prompt',
+      'Show archived',
+    ])
+    const read = screen.getByRole('menuitem', { name: 'Read a recipe' })
+    expect(read).toHaveAttribute('href', '/recipes/import#read')
+    expect(read.querySelector('svg')).not.toBeNull()
     expect(screen.getByRole('menuitem', { name: 'Import' })).toHaveAttribute('href', '/recipes/import')
     expect(screen.getByRole('menuitem', { name: 'Export' })).toHaveAttribute('href', '/recipes/export')
   })
@@ -64,11 +73,13 @@ describe('RecipesOverflowMenu (popover from 768 px)', () => {
 })
 
 describe('RecipesOverflowMenu (sheet below 768 px)', () => {
-  it('opens the "More" sheet with the same four entries', async () => {
+  it('opens the "More" sheet with the same five entries, Read a recipe first', async () => {
     stubViewportWidth(390)
     view()
     await open()
     const sheet = screen.getByRole('dialog', { name: 'More' })
+    expect(within(sheet).getAllByRole('link')[0]).toHaveAccessibleName(/Read a recipe/)
+    expect(within(sheet).getByRole('link', { name: /Read a recipe/ })).toHaveAttribute('href', '/recipes/import#read')
     expect(within(sheet).getByRole('link', { name: /Import/ })).toHaveAttribute('href', '/recipes/import')
     expect(within(sheet).getByRole('link', { name: /Export/ })).toHaveAttribute('href', '/recipes/export')
     expect(within(sheet).getByRole('button', { name: /Copy Agent Prompt/ })).toBeInTheDocument()

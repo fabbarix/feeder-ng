@@ -104,6 +104,16 @@ describe('Menu: popover from 768 px', () => {
     await userEvent.click(item)
     expect(onSelect).not.toHaveBeenCalled()
   })
+  it('the checked tick is the last child of the item and carries the menu__check class', async () => {
+    view({ items: [{ id: 'archived', label: 'Show archived', icon: 'archive', checked: true }, { id: 'x', label: 'Plain', checked: false }] })
+    await open()
+    const on = screen.getByRole('menuitemcheckbox', { name: 'Show archived' })
+    const tick = on.querySelector('.menu__check')
+    expect(tick).not.toBeNull()
+    expect(tick?.tagName.toLowerCase()).toBe('svg')
+    expect(on.lastElementChild).toBe(tick)
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Plain' }).querySelector('.menu__check')).toBeNull()
+  })
   it('draws a separator entry as role=separator', async () => {
     view({ items: [{ id: 'a', label: 'One' }, { separator: true }, { id: 'b', label: 'Two' }] })
     await open()
@@ -222,7 +232,78 @@ describe('Menu: placement of the popover (inside the viewport at 768 and 1024)',
   })
 })
 
+describe('Menu: the popover follows its trigger', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect
+  const setup = () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+    const t = { current: rect(900, 100, 40, 40) }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'menu') return rect(0, 0, 240, 120)
+      if (this.getAttribute('aria-haspopup') === 'menu') return t.current
+      return rect(0, 0, 0, 0)
+    })
+    return t
+  }
+  it('repositions when the page scrolls', async () => {
+    const t = setup()
+    view()
+    const menu = await open()
+    const before = Number.parseFloat(menu.style.top)
+    t.current = rect(900, 40, 40, 40)
+    window.dispatchEvent(new Event('scroll'))
+    await waitFor(() => expect(Number.parseFloat(menu.style.top)).toBeLessThan(before))
+    expect(Number.parseFloat(menu.style.top)).toBeGreaterThanOrEqual(80)
+  })
+  it('repositions when the window is resized', async () => {
+    const t = setup()
+    view()
+    const menu = await open()
+    const before = Number.parseFloat(menu.style.left)
+    t.current = rect(500, 100, 40, 40)
+    window.dispatchEvent(new Event('resize'))
+    await waitFor(() => expect(Number.parseFloat(menu.style.left)).toBeLessThan(before))
+  })
+  it('stops listening once closed', async () => {
+    setup()
+    const remove = vi.spyOn(window, 'removeEventListener')
+    view()
+    await open()
+    await userEvent.click(trigger())
+    expect(remove.mock.calls.map((c) => c[0])).toEqual(expect.arrayContaining(['scroll', 'resize']))
+  })
+})
+
 describe('Menu: a sheet below 768 px', () => {
+  it('honours tone danger, disabled and separators', async () => {
+    stubViewportWidth(390)
+    const onSelect = vi.fn()
+    view({
+      items: [
+        { id: 'a', label: 'Archive', onSelect },
+        { separator: true },
+        { id: 'd', label: 'Delete', tone: 'danger', onSelect },
+        { id: 'c', label: 'Copy', disabled: true, onSelect },
+      ],
+    })
+    await userEvent.click(trigger())
+    const sheet = screen.getByRole('dialog')
+    expect(within(sheet).getByRole('separator')).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Delete' }).closest('li')).toHaveAttribute('data-tone', 'danger')
+    expect(within(sheet).queryByRole('button', { name: 'Copy' })).toBeNull()
+    const copy = within(sheet).getByText('Copy').closest('li')!
+    expect(copy).toHaveAttribute('data-disabled', 'true')
+    await userEvent.click(within(sheet).getByText('Copy'))
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+  it('a disabled checkable entry is a disabled Switch', async () => {
+    stubViewportWidth(390)
+    view({ items: [{ id: 's', label: 'Show archived', checked: false, disabled: true }] })
+    await userEvent.click(trigger())
+    expect(screen.getByRole('switch', { name: 'Show archived' })).toBeDisabled()
+  })
   it('opens a BottomSheet titled by `title` (default label), not a popover', async () => {
     stubViewportWidth(390)
     view({ title: 'More' })

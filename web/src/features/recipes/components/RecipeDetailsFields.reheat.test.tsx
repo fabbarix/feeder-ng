@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { emptyDraft } from '../lib/draft'
 import { RecipeDetailsFields } from './RecipeDetailsFields'
 
-// R12: a compact "Reheat time (minutes)" field in the Recipe editor, after the Use-by override.
+// R12: a compact "Reheat time" field in the Recipe editor, after the Use-by override.
 const view = (over = {}, errors = {}) => {
   const onChange = vi.fn()
   render(<RecipeDetailsFields draft={{ ...emptyDraft(), name: 'Curry', ...over }} errors={errors} onChange={onChange} />)
@@ -14,19 +14,19 @@ const view = (over = {}, errors = {}) => {
 describe('RecipeDetailsFields: reheat time (R12)', () => {
   it('renders a number field with its hint, blank by default', () => {
     view()
-    const field = screen.getByRole('spinbutton', { name: 'Reheat time (minutes)' })
+    const field = screen.getByRole('spinbutton', { name: 'Reheat time' })
     expect(field).toHaveDisplayValue('')
     expect(screen.getByText('Blank: Reheat works it out from the portions')).toBeInTheDocument()
   })
 
   it('shows the Recipe\'s stored reheat time', () => {
     view({ reheatMinutes: '6' })
-    expect(screen.getByRole('spinbutton', { name: 'Reheat time (minutes)' })).toHaveDisplayValue('6')
+    expect(screen.getByRole('spinbutton', { name: 'Reheat time' })).toHaveDisplayValue('6')
   })
 
   it('commits a typed time as text', async () => {
     const onChange = view()
-    const field = screen.getByRole('spinbutton', { name: 'Reheat time (minutes)' })
+    const field = screen.getByRole('spinbutton', { name: 'Reheat time' })
     await userEvent.type(field, '5')
     await userEvent.tab()
     expect(onChange).toHaveBeenLastCalledWith({ reheatMinutes: '5' })
@@ -34,7 +34,7 @@ describe('RecipeDetailsFields: reheat time (R12)', () => {
 
   it('an emptied field means "not set" (blank text)', async () => {
     const onChange = view({ reheatMinutes: '5' })
-    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Reheat time (minutes)' }))
+    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Reheat time' }))
     await userEvent.tab()
     expect(onChange).toHaveBeenLastCalledWith({ reheatMinutes: '' })
   })
@@ -42,6 +42,6 @@ describe('RecipeDetailsFields: reheat time (R12)', () => {
   it('puts the error on the field', () => {
     view({ reheatMinutes: '45' }, { reheatMinutes: 'reheat_invalid' })
     expect(screen.getByText('Reheat time must be 1 to 30 minutes.')).toBeInTheDocument()
-    expect(screen.getByRole('spinbutton', { name: 'Reheat time (minutes)' })).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('spinbutton', { name: 'Reheat time' })).toHaveAttribute('aria-invalid', 'true')
   })
 })

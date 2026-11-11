@@ -35,7 +35,7 @@ describe('IngredientLineRow: sizes', () => {
 describe('IngredientLineRow: "Optional" is visible (never a tooltip-only icon)', () => {
   it('is a toggle chip with the visible text "Optional" and aria-pressed', async () => {
     const { onChange } = view()
-    const chip = screen.getByRole('button', { name: 'Optional' })
+    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
     expect(chip).toHaveTextContent('Optional')
     expect(chip).toHaveClass('chip')
     expect(chip).toHaveAttribute('aria-pressed', 'false')
@@ -44,16 +44,15 @@ describe('IngredientLineRow: "Optional" is visible (never a tooltip-only icon)',
   })
   it('shows the pressed state when the line is optional and toggles it off', async () => {
     const { onChange } = view({ optional: true })
-    const chip = screen.getByRole('button', { name: 'Optional' })
+    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(chip)
     expect(onChange).toHaveBeenCalledWith({ optional: false })
   })
-  it('relies on no title attribute or aria-label to name it (touch screens show neither)', () => {
+  it('shows "Optional" as text (no title); the accessible name adds the Ingredient so each line is unique', () => {
     const { container } = view()
     expect(container.querySelector('[title]')).toBeNull()
-    const chip = screen.getByRole('button', { name: 'Optional' })
-    expect(chip).not.toHaveAttribute('aria-label')
+    const chip = screen.getByRole('button', { name: 'Optional: garlic' })
     expect(chip.textContent?.trim()).toBe('Optional')
   })
 })

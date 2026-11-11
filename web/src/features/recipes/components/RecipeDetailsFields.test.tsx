@@ -34,7 +34,7 @@ describe('RecipeDetailsFields', () => {
   })
   it('an emptied Cool-down means "household default" (blank text)', async () => {
     const onChange = view({ cooldownDays: '3' })
-    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Cool-down (days)' }))
+    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Cool-down' }))
     await userEvent.tab()
     expect(onChange).toHaveBeenLastCalledWith({ cooldownDays: '' })
   })

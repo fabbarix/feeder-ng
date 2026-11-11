@@ -26,9 +26,27 @@ describe('TagInput', () => {
     expect(control).toContainElement(box)
     expect(chips.at(-1)!.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
+  it('shows the group label "Tags" as visible text and hides the text field label visually', () => {
+    const { container } = view()
+    const group = screen.getByRole('group', { name: 'Tags' })
+    const caption = container.querySelector('.tag-input__label')!
+    expect(caption).toHaveTextContent('Tags')
+    expect(caption).not.toHaveClass('visually-hidden')
+    expect(group).toHaveAttribute('aria-labelledby', caption.id)
+    expect(group).not.toHaveAttribute('aria-label')
+    const fieldLabel = container.querySelector('.tag-input__control .ui-field__label')!
+    expect(fieldLabel).toHaveTextContent('Add a Tag')
+    expect(fieldLabel.closest('.visually-hidden') ?? fieldLabel).toHaveClass('visually-hidden')
+    expect(screen.getByRole('textbox', { name: 'Add a Tag' })).toBeInTheDocument()
+  })
+  it('names each chip "Remove Tag X"', () => {
+    view()
+    expect(screen.getByRole('button', { name: 'Remove Tag roast' })).toHaveTextContent('roast')
+    expect(screen.getByRole('button', { name: 'Remove Tag quick' })).toBeInTheDocument()
+  })
   it('a chip is pressed; choosing it removes the Tag', async () => {
     const { onChange } = view()
-    const chip = screen.getByRole('button', { name: 'roast' })
+    const chip = screen.getByRole('button', { name: 'Remove Tag roast' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(chip)
     expect(onChange).toHaveBeenCalledWith(['quick'])

@@ -30,6 +30,11 @@ describe('Menu.css', () => {
     expect(declarations(css, '.menu__item:hover')['background']).toBe('var(--color-soft)')
     expect(declarations(css, ".menu__item[aria-disabled='true']")['color']).toBe('var(--color-muted)')
   })
+  it('styles the sheet rows: danger tone, disabled and the divider (tokens only)', () => {
+    expect(css).toMatch(/\.list-row\[data-tone='danger'\][^{]*\{[^}]*var\(--status-danger-fg\)/)
+    expect(css).toMatch(/\.list-row\[data-disabled='true'\][^{]*\{[^}]*var\(--color-muted\)/)
+    expect(declarations(css, '.menu-sheet__divider')['background']).toBe('var(--color-line)')
+  })
   it('has a hairline divider on the line token', () => {
     expect(declarations(css, '.menu__divider')['background']).toBe('var(--color-line)')
   })
