@@ -163,6 +163,6 @@ INSERT INTO slot_rules_new (id, meal_slot_id, course_id, recipe_id, tag)
 DROP TABLE slot_rules;
 ALTER TABLE slot_rules_new RENAME TO slot_rules;
 
--- Cook scopes: a Planned Meal's scope gains its Course. Recipe scopes and free timers are untouched.
-UPDATE cook_timers SET scope = scope || '/' || (SELECT id FROM courses WHERE is_main = 1) WHERE scope LIKE 'meal:%';
-UPDATE advance_step_marks SET scope = scope || '/' || (SELECT id FROM courses WHERE is_main = 1) WHERE scope LIKE 'meal:%';
+-- Cook scopes: a Planned Meal's scope gains its Course. Recipe scopes, free timers and scopes that already carry a Course (three parts) are untouched.
+UPDATE cook_timers SET scope = scope || '/' || (SELECT id FROM courses WHERE is_main = 1) WHERE scope LIKE 'meal:%' AND scope NOT GLOB 'meal:*/*/*';
+UPDATE advance_step_marks SET scope = scope || '/' || (SELECT id FROM courses WHERE is_main = 1) WHERE scope LIKE 'meal:%' AND scope NOT GLOB 'meal:*/*/*';
