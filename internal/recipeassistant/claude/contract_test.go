@@ -126,7 +126,16 @@ func TestTheFakeCarriesEveryFieldOfTheFixtures(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The fake's own raw answer, fetched with the same request the adapter sent.
-	body := f.Messages()[0].Body
+	// The adapter streams; the shape check compares whole messages, so ask for the same call unstreamed.
+	var sent map[string]any
+	if err := json.Unmarshal(f.Messages()[0].Body, &sent); err != nil {
+		t.Fatal(err)
+	}
+	if sent["stream"] != true {
+		t.Fatalf("the adapter must stream a Messages call, sent stream=%v", sent["stream"])
+	}
+	delete(sent, "stream")
+	body, _ := json.Marshal(sent)
 	got := rawPost(t, f.URL+"/v1/messages", body)
 	want := shape(t, fixture(t, "message_end_turn.json"))
 	have := shape(t, got)

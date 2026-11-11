@@ -27,8 +27,8 @@
               }
             },
             "required": [
-              "unit",
-              "toBase"
+              "toBase",
+              "unit"
             ],
             "type": "object"
           },
@@ -53,8 +53,11 @@
         }
       },
       "required": [
+        "baseUnit",
+        "conversions",
+        "image",
         "name",
-        "baseUnit"
+        "shelfLifeDays"
       ],
       "type": "object"
     },
@@ -82,6 +85,8 @@
       },
       "required": [
         "ingredient",
+        "note",
+        "optional",
         "quantity",
         "unit"
       ],
@@ -146,10 +151,13 @@
               "type": "string"
             },
             "url": {
-              "format": "uri",
               "type": "string"
             }
           },
+          "required": [
+            "attribution",
+            "url"
+          ],
           "type": "object"
         },
         "steps": {
@@ -170,9 +178,18 @@
         }
       },
       "required": [
+        "cooldownDays",
+        "description",
+        "image",
+        "ingredients",
+        "leftoverUseByDays",
         "name",
-        "yield",
-        "ingredients"
+        "readyMeal",
+        "reheatMinutes",
+        "source",
+        "steps",
+        "tags",
+        "yield"
       ],
       "type": "object"
     },
@@ -214,8 +231,13 @@
         }
       },
       "required": [
+        "after",
+        "durationMinutes",
+        "image",
+        "kind",
+        "leadTimeMinutes",
         "text",
-        "kind"
+        "uses"
       ],
       "type": "object"
     },
@@ -253,8 +275,10 @@
   },
   "required": [
     "format",
-    "version",
-    "recipes"
+    "ingredients",
+    "noRecipe",
+    "recipes",
+    "version"
   ],
   "type": "object"
 }

@@ -13,8 +13,9 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/secretbox"
 )
 
-// DefaultOverall is the cap for one whole read: fetch, model calls, repair and images (design §1.3).
-const DefaultOverall = 180 * time.Second
+// DefaultOverall is the cap for one whole read: fetch, model calls, repair and images (design §1.3). The model call
+// streams, so a long answer is no longer cut at one attempt's 120 s; 300 s leaves room for it and one repair.
+const DefaultOverall = 300 * time.Second
 
 // Deps are the ports. Zero Overall means DefaultOverall.
 type Deps struct {

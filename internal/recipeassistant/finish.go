@@ -52,6 +52,8 @@ func Finish(raw []byte, in FinishInput) (Finished, error) {
 	if !ok {
 		return Finished{}, &Error{Code: CodeInvalidOutput, Message: "the answer is not a JSON object"}
 	}
+	// The output schema made every field required; drop the "none" values of the optional ones (pruneNone).
+	root = pruneNone(root)
 	if flag, _ := root["noRecipe"].(bool); flag {
 		return Finished{}, &Error{Code: CodeNoRecipeFound}
 	}

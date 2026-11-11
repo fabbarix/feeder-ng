@@ -131,6 +131,9 @@ type Server struct {
 	retryAfter string
 	slowFor    time.Duration
 	once429    map[string]bool
+	// trickleGap is the pause between streamed chunks of #fake:trickle (default 50 ms), trickleChunks how many.
+	trickleGap    time.Duration
+	trickleChunks int
 }
 
 // Option configures New.
@@ -138,6 +141,11 @@ type Option func(*Server)
 
 // WithRetryAfter sets the retry-after header (seconds) of #fake:429 answers (default "1").
 func WithRetryAfter(seconds string) Option { return func(s *Server) { s.retryAfter = seconds } }
+
+// WithTrickle makes #fake:trickle stream its answer in `chunks` pieces, `gap` apart (a slow but steady model).
+func WithTrickle(gap time.Duration, chunks int) Option {
+	return func(s *Server) { s.trickleGap, s.trickleChunks = gap, chunks }
+}
 
 // WithSlow sets how long #fake:slow waits (default 10 s, or until the client goes away).
 func WithSlow(d time.Duration) Option { return func(s *Server) { s.slowFor = d } }
@@ -164,7 +172,8 @@ func DefaultModels() []Model {
 }
 
 func build(opts []Option) *Server {
-	s := &Server{models: DefaultModels(), retryAfter: "1", slowFor: 10 * time.Second, once429: map[string]bool{}}
+	s := &Server{models: DefaultModels(), retryAfter: "1", slowFor: 10 * time.Second, once429: map[string]bool{},
+		trickleGap: 50 * time.Millisecond, trickleChunks: 4}
 	for _, o := range opts {
 		o(s)
 	}
@@ -352,6 +361,8 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request, req Request) {
 			return
 		case <-time.After(s.slowFor):
 		}
+	case "trickle", "stall":
+		// Streaming only: handled by stream below (a non-streaming call just answers).
 	default:
 		s.mu.Lock()
 		if len(s.queue) > 0 {
@@ -379,8 +390,85 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request, req Request) {
 	if stop == "refusal" {
 		msg["stop_details"] = map[string]any{"type": "refusal", "category": "general_harms", "explanation": "declined"}
 	}
+	if stream, _ := j["stream"].(bool); stream {
+		s.stream(w, r, msg, reply.Text, marker)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(msg)
+}
+
+// stream answers a "stream": true call as server-sent events in the Messages API's order: message_start,
+// content_block_start, content_block_delta (the text in pieces), content_block_stop, message_delta (stop_reason,
+// usage), message_stop. #fake:trickle sends the pieces s.trickleGap apart; #fake:stall sends one piece, then nothing
+// for s.slowFor (or until the client goes away).
+func (s *Server) stream(w http.ResponseWriter, r *http.Request, msg map[string]any, text, marker string) {
+	flusher, _ := w.(http.Flusher)
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+	send := func(event string, data map[string]any) bool {
+		b, _ := json.Marshal(data)
+		if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, b); err != nil {
+			return false
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+		return r.Context().Err() == nil
+	}
+	wait := func(d time.Duration) bool {
+		select {
+		case <-r.Context().Done():
+			return false
+		case <-time.After(d):
+			return true
+		}
+	}
+	start := map[string]any{}
+	for k, v := range msg {
+		start[k] = v
+	}
+	start["content"], start["stop_reason"] = []any{}, nil
+	start["usage"] = map[string]any{"input_tokens": 1200, "output_tokens": 1}
+	if !send("message_start", map[string]any{"type": "message_start", "message": start}) || !send("ping", map[string]any{"type": "ping"}) {
+		return
+	}
+	if text != "" {
+		if !send("content_block_start", map[string]any{"type": "content_block_start", "index": 0, "content_block": map[string]any{"type": "text", "text": ""}}) {
+			return
+		}
+		pieces := 4
+		gap := time.Duration(0)
+		if marker == "trickle" {
+			pieces, gap = s.trickleChunks, s.trickleGap
+		}
+		if pieces < 1 {
+			pieces = 1
+		}
+		size := (len(text) + pieces - 1) / pieces
+		for i := 0; i < len(text); i += size {
+			end := min(i+size, len(text))
+			if !send("content_block_delta", map[string]any{"type": "content_block_delta", "index": 0, "delta": map[string]any{"type": "text_delta", "text": text[i:end]}}) {
+				return
+			}
+			if marker == "stall" {
+				wait(s.slowFor)
+				return
+			}
+			if gap > 0 && end < len(text) && !wait(gap) {
+				return
+			}
+		}
+		if !send("content_block_stop", map[string]any{"type": "content_block_stop", "index": 0}) {
+			return
+		}
+	}
+	usage := msg["usage"].(map[string]any)
+	if !send("message_delta", map[string]any{"type": "message_delta", "delta": map[string]any{"stop_reason": msg["stop_reason"], "stop_sequence": nil},
+		"usage": map[string]any{"output_tokens": usage["output_tokens"]}}) {
+		return
+	}
+	send("message_stop", map[string]any{"type": "message_stop"})
 }
 
 func modelJSON(m Model) map[string]any {

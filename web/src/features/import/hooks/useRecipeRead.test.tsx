@@ -214,10 +214,10 @@ describe('useRecipeRead: poll', () => {
     expect(h.result.current.phase).toBe('running')
     expect(api.cancelRead).not.toHaveBeenCalled()
   })
-  it('gives up at the deadline (200 s) when the read never ends: failed assistant_unreachable, with one DELETE', async () => {
+  it('gives up at the deadline (320 s) when the read never ends: failed assistant_unreachable, with one DELETE', async () => {
     const h = setup()
     await begin(h)
-    await tick(200_000 + 2_000)
+    await tick(320_000 + 2_000)
     expect(h.result.current).toMatchObject({ phase: 'failed', error: { code: 'assistant_unreachable' } })
     expect(api.cancelRead).toHaveBeenCalledWith('rd1')
   })

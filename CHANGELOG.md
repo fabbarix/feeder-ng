@@ -4,11 +4,25 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0-beta.3] - 2026-11-11
+
+The Pantry, with Storage Places and a frozen Shelf Life, and Recipe Assistant reads that work again.
+
 ### Added
 
 - **Pantry.** The Stock page is now the Pantry. It lists every Stock Lot by Storage Place, with search, filters (Use soon, Spoiled, Storage Places, kinds) and sorting (good until, name, quantity, bought, Storage Place). "By Ingredient" keeps the per-Ingredient totals.
 - **Storage Places.** Add places such as Kitchen Pantry, Garage Fridge or Garage Freezer in Settings, each a pantry, fridge or freezer, and pick a default. New Stock goes where that Ingredient was last put. Move a Stock Lot, or part of it, from its sheet on the Pantry page.
 - **Frozen Shelf Life.** An Ingredient can say how long it keeps frozen. A Stock Lot moved into a Freezer is good for that long from the day it goes in; out of the Freezer, its ordinary Shelf Life starts again.
+
+### Fixed
+
+- **Recipe Assistant reads.** Reading a recipe failed with "Couldn't reach Recipe Assistant" although the connection test passed. The Anthropic API refused the answer format as too complex after about 3 minutes, and Feeder gave up waiting at 2. The answer format now asks for every field, with an explicit "none" for what a recipe leaves out, so a read takes seconds. Reads also stream, so a long answer is no longer cut off at 2 minutes, and a whole read may now take up to 5. The server log names the API's reason when a call is refused.
+
+### Upgrading
+
+No new settings. The database gains Storage Places and the frozen Shelf Life on start (migration 1330); existing Stock Lots are not sorted until moved. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.3 --namespace feeder --reset-then-reuse-values`. If an ingress or proxy in front of Feeder limits request time, reads no longer depend on it: the server works on them in the background for up to 5 minutes.
 
 ## [1.0.0-beta.2] - 2026-11-11
 
