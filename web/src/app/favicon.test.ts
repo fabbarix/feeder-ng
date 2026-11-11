@@ -26,10 +26,11 @@ describe('index.html head: icons', () => {
     expect(icons).toContainEqual(expect.objectContaining({ href: '/favicon-32.png', type: 'image/png', sizes: '32x32' }))
     expect(icons).toContainEqual(expect.objectContaining({ href: '/favicon-16.png', type: 'image/png', sizes: '16x16' }))
   })
-  it('links the apple-touch-icon, the Safari mask-icon (basil) and the manifest', () => {
+  it('links the apple-touch-icon and the Safari mask-icon (basil); the manifest link is VitePWA's, not ours', () => {
     expect(links).toContainEqual(expect.objectContaining({ rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }))
     expect(links).toContainEqual(expect.objectContaining({ rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: '#34724e' }))
-    expect(links).toContainEqual(expect.objectContaining({ rel: 'manifest', href: '/manifest.webmanifest' }))
+    // VitePWA injects <link rel="manifest"> at build time; a hand-written one would make two (scripts/test/precache_test.sh checks dist).
+    expect(links.filter((l) => l.rel === 'manifest')).toHaveLength(0)
   })
   it('keeps theme-color for light and dark', () => {
     const tc = metas.filter((m) => m.name === 'theme-color')

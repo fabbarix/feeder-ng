@@ -41,15 +41,28 @@ describe('FeederMark (Family Pot, mono)', () => {
   })
 })
 
+describe('FeederMark decorative', () => {
+  it('has aria-hidden, no role and no title', () => {
+    const { container } = render(<FeederMark decorative />)
+    const svg = container.querySelector('svg')!
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    expect(svg).not.toHaveAttribute('role')
+    expect(svg.querySelector('title')).toBeNull()
+    expect(svg.querySelector('g#symbol')).not.toBeNull()
+  })
+})
+
 describe('the mark on the signed-out pages', () => {
   const potMark = (c: HTMLElement) => {
     const mark = within(c).getByRole('img', { name: 'Feeder' })
     expect(mark.querySelector('g#symbol')).not.toBeNull()
     return mark
   }
-  it('the sign-in page shows the Family Pot above the title', () => {
+  it('the sign-in page shows the Family Pot above the title (decorative: the title names the app)', () => {
     const { container } = render(<SignInPage />)
-    const mark = potMark(container)
+    const mark = container.querySelector('svg.signin__mark')!
+    expect(mark.querySelector('g#symbol')).not.toBeNull()
+    expect(mark).toHaveAttribute('aria-hidden', 'true')
     const title = screen.getByRole('heading', { level: 1 })
     expect(mark.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

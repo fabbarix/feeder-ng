@@ -24,7 +24,7 @@ Old tests rewritten by this commit: `web/src/app/favicon.test.ts` (head links, n
 
 ## index.html head
 
-Use `docs/brand/web/head-snippet.html` as is: `rel="icon"` for `/favicon.ico` (`sizes="48x48"`), `/favicon.svg` (`image/svg+xml`), `/favicon-32.png`, `/favicon-16.png`; `apple-touch-icon`; `mask-icon` (`/safari-pinned-tab.svg`, `color="#34724e"`); `manifest` (`/manifest.webmanifest`); `theme-color` `#e7f4eb` for light and `#090f0b` for dark. The existing theme-color metas, boot-paint style and `color-scheme` stay; do not duplicate the theme-color metas. The boot mark in `#root` (two circles) becomes the pot: the same inline SVG as `FeederMark`, 48 px, `currentColor`.
+Use `docs/brand/web/head-snippet.html`, which has no manifest link: `rel="icon"` for `/favicon.ico` (`sizes="48x48"`), `/favicon.svg` (`image/svg+xml`), `/favicon-32.png`, `/favicon-16.png`; `apple-touch-icon`; `mask-icon` (`/safari-pinned-tab.svg`, `color="#34724e"`); do not hand-write `<link rel="manifest">`, VitePWA adds the one (`/manifest.webmanifest`) at build time and a second would be a duplicate; `theme-color` `#e7f4eb` for light and `#090f0b` for dark. The existing theme-color metas, boot-paint style and `color-scheme` stay; do not duplicate the theme-color metas. The boot mark in `#root` (two circles) becomes the pot: the same inline SVG as `FeederMark`, 48 px, `currentColor`.
 
 ## Manifest (vite.config.ts, VitePWA `manifest.icons`)
 
