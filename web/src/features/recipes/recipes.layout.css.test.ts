@@ -91,7 +91,7 @@ describe('E-01: an ingredient line is one row from 720 px', () => {
 })
 
 describe('E-01: an ingredient line is two rows on a phone (below 720 px)', () => {
-  const rows = (w: number) => [...(valueFor('.line-row', 'grid-template-areas', w) ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]!.trim().split(/\s+/))
+  const rows = (w: number) => [...(valueFor('.line-row', 'grid-template-areas', w) ?? '').matchAll(/["']([^"']+)["']/g)].map((m) => m[1]!.trim().split(/\s+/))
   it('has named areas: Ingredient on its own first row', () => {
     const r = rows(0)
     expect(r.length).toBeGreaterThanOrEqual(2)

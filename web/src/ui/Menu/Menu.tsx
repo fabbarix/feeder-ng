@@ -81,7 +81,7 @@ function Popover({
     triggerRef,
   })
 
-  useLayoutEffect(() => {
+  const place = useCallback(() => {
     const t = triggerRef.current?.getBoundingClientRect()
     const m = menuRef.current?.getBoundingClientRect()
     if (!t || !m) return
@@ -91,6 +91,18 @@ function Popover({
     const left = Math.min(Math.max(GAP, t.right - m.width), Math.max(GAP, window.innerWidth - m.width - GAP))
     setPlaced({ top, left, placement: fits ? 'below' : 'above' })
   }, [triggerRef])
+
+  useLayoutEffect(place, [place])
+
+  // The popover is fixed, so it follows its trigger when the page (or any scroll container) scrolls or the window resizes.
+  useEffect(() => {
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => {
+      window.removeEventListener('scroll', place, true)
+      window.removeEventListener('resize', place)
+    }
+  }, [place])
 
   // A pointer-down outside closes (the trigger toggles on its own click).
   useEffect(() => {
@@ -147,7 +159,7 @@ function PopoverItem({ item, onSelect }: { item: MenuItem; onSelect: (item: Menu
     <>
       {item.icon ? <Icon name={item.icon} size={20} /> : null}
       <span>{item.label}</span>
-      {item.checked ? <Icon name="tick" size={20} /> : null}
+      {item.checked ? <Icon name="tick" size={20} className="menu__check" /> : null}
     </>
   )
   if (item.href !== undefined && item.checked === undefined) {
@@ -192,21 +204,27 @@ function Sheet({ title, items, onClose }: { title: string; items: MenuEntry[]; o
       <div onClick={(e) => (e.target as HTMLElement).closest('a') && onClose()} data-menu-sheet={titleId}>
         <ListGroup label={title}>
           {items.map((entry, i) => {
-            if (isSeparator(entry)) return null
+            if (isSeparator(entry)) return <li key={`sep-${i}`} role="separator" className="menu-sheet__divider" />
+            const tone = entry.tone
+            const state = {
+              'data-tone': tone,
+              'data-disabled': entry.disabled ? 'true' : undefined,
+            }
             if (entry.checked !== undefined) {
               return (
-                <li key={entry.id} className="menu-sheet__switch">
+                <li key={entry.id} className="menu-sheet__switch" {...state}>
                   <Switch label={entry.label} checked={entry.checked} disabled={entry.disabled} onChange={() => run(entry)} />
                 </li>
               )
             }
-            if (entry.href !== undefined) return <ListRow key={entry.id} title={entry.label} icon={entry.icon} href={entry.href} />
+            if (entry.href !== undefined && !entry.disabled) return <ListRow key={entry.id} title={entry.label} icon={entry.icon} href={entry.href} {...state} />
             return (
               <ListRow
-                key={entry.id + i}
+                key={entry.id}
                 title={entry.label}
                 icon={entry.icon}
                 onActivate={entry.disabled ? undefined : () => run(entry)}
+                {...state}
               />
             )
           })}

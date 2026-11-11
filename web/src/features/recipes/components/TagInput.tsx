@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Chip, TextField } from '../../../ui'
 import { addTag, removeTag } from '../lib/tags'
 import { recipeStrings } from '../strings'
@@ -11,6 +11,7 @@ export interface TagInputProps {
 /** Tags of the Recipe as filter Chips (tap one to remove it) and a text field on one line: Enter, a comma or leaving the field adds the typed Tag; Backspace in the empty field removes the last one. */
 export function TagInput({ tags, onChange }: TagInputProps): ReactNode {
   const [text, setText] = useState('')
+  const captionId = useId()
 
   const commit = () => {
     onChange(addTag(tags, text))
@@ -28,10 +29,13 @@ export function TagInput({ tags, onChange }: TagInputProps): ReactNode {
   }
 
   return (
-    <div className="tag-input" role="group" aria-label={recipeStrings.fields.tags} data-size="md">
+    <div className="tag-input" role="group" aria-labelledby={captionId} data-size="md">
+      <span id={captionId} className="ui-field__label tag-input__label">
+        {recipeStrings.fields.tags}
+      </span>
       <div className="tag-input__control">
         {tags.map((t) => (
-          <Chip key={t} kind="filter" selected onClick={() => onChange(removeTag(tags, t))}>
+          <Chip key={t} kind="filter" selected label={recipeStrings.fields.removeTag(t)} onClick={() => onChange(removeTag(tags, t))}>
             {t}
           </Chip>
         ))}

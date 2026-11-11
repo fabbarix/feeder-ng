@@ -93,7 +93,7 @@ A `BottomSheet` titled `title ?? label` with a `ListGroup` of `ListRow`s: a butt
 
 ### 2.5 Call sites
 - `RecipeDetailScreen`: `<Menu label="More actions" title="More" items=[Archive|Unarchive, Delete (danger)]>`; the `BottomSheet` and `sheetOpen` state go.
-- `RecipesScreen`: `RecipesOverflowSheet` is replaced by `RecipesOverflowMenu` in the header actions: Import (`href /recipes/import`, icon `import`), Export (`/recipes/export`, `export`), Copy Agent Prompt (`agentPrompt`; calls `useAgentPrompt().copy()`, and an `AgentPromptNotice` is mounted while the state is copied/failed), Show archived (`checked`, `onSelect` toggles). The strings come from `importStrings` (`importAction`, `exportAction`, `copyAgentPrompt`). Delete `RecipesOverflowSheet.tsx`, its `recipes-overflow__archive` CSS; `RecipeFileActions` stays in `features/import` (unused by Recipes; WP-E decides).
+- `RecipesScreen`: `RecipesOverflowSheet` is replaced by `RecipesOverflowMenu` in the header actions: **Read a recipe first** (`href /recipes/import#read`, icon `assistant`, label `readStrings.stepTitle`; plan §5.2 of ai-recipe-import.md), then Import (`href /recipes/import`, icon `import`), Export (`/recipes/export`, `export`), Copy Agent Prompt (`agentPrompt`; calls `useAgentPrompt().copy()`, and an `AgentPromptNotice` is mounted while the state is copied/failed), Show archived (`checked`, `onSelect` toggles). The strings come from `importStrings` (`importAction`, `exportAction`, `copyAgentPrompt`) and `readStrings.stepTitle`. Review send-back: the checked tick carries `menu__check` and is the last child; the phone sheet honours `tone: 'danger'` (`data-tone`), `disabled` (static muted row, `data-disabled`) and separators (`role=separator`); the popover repositions on scroll (capture) and resize. Delete `RecipesOverflowSheet.tsx`, its `recipes-overflow__archive` CSS; `RecipeFileActions` stays in `features/import` (unused by Recipes; WP-E decides).
 - Gallery: a "Menu" group (h3 "Menu") in both scheme blocks with one working trigger.
 
 ## 3. Shared `warning` icon
@@ -132,3 +132,11 @@ What the guard checks on these routes and how this package meets it: P3 width (n
 - **IM2** (`team/im2-image-fields`, not merged when this was written) rewrites `PhotoPicker`, `StepPhoto`, `RecipeEditorScreen` (photo lines), `recipes.css` (`.step-card__photo`, `.step-card__error`) and several recipe tests. R2-1 owns none of the photo behaviour; the tests here avoid it (the Photo section is only an anchor). The developer rebases on IM2 if it lands first; the conflicts are mechanical (the editor screen's photo lines, two CSS rules, the old `usePhotoUpload` mock in `RecipeEditorScreen.test.tsx`).
 - **R2-3** edits `app/YourMenu.tsx` (section 2.4).
 - `ui/index.ts` and `ui/Gallery.tsx` are serialised by the PM (R2-1 adds the Menu lines at the end of the barrel).
+
+
+## Review send-back (R2-1)
+- **Line captions (E-01):** the header and the row share one template whose last two tracks are fixed (`96px 40px`), never `auto` (an empty header track collapsed, drifting the captions about 55 px from 720 px). Cells (`line-row__{ingredient,quantity,unit,note,optional,remove}`) are direct grid items; below 720 px they sit in named areas: Ingredient; Quantity, Unit, remove; Note, Optional (three rows, the trash icon never alone; Optional does not fit the second row at 390 px).
+- **Step timing (E-02):** the Segmented frame in `step-card__timing` is `max-content`, so Kind and Duration share a row.
+- **Tags (E-01):** a visible caption "Tags" names the group (`aria-labelledby`); the field's own label is visually hidden so chips and field sit on one line; chips are named "Remove Tag X".
+- **Details row (F-01):** the labels are single-line ("Cool-down", "Use-by", "Reheat time") with the unit as the field suffix (days, min), so no label wraps and pushes an input down; the row stays top-aligned (`align="end"` would misalign the controls, as the helper lines differ in length).
+- **Unique names:** per-line Optional and remove are named "Optional: <Ingredient>" and "Remove ingredient <Ingredient>" (line number before one is picked).

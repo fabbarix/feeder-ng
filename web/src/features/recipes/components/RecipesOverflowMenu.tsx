@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Menu } from '../../../ui'
 import { AgentPromptNotice } from '../../import/components/CopyAgentPromptButton'
 import { useAgentPrompt } from '../../import/hooks/useAgentPrompt'
-import { importStrings } from '../../import/strings'
+import { importStrings, readStrings } from '../../import/strings'
 import { recipeStrings } from '../strings'
 
 export interface RecipesOverflowMenuProps {
@@ -11,7 +11,7 @@ export interface RecipesOverflowMenuProps {
 }
 
 /**
- * The Recipes "More actions" Menu (G-01): Import and Export (links), Copy Agent Prompt (its outcome is a Toast) and the
+ * The Recipes "More actions" Menu (G-01): Read a recipe, Import and Export (links), Copy Agent Prompt (its outcome is a Toast) and the
  * "Show archived" switch. A popover from 768 px, the "More" sheet below.
  */
 export function RecipesOverflowMenu({ showArchived, onShowArchivedChange }: RecipesOverflowMenuProps): ReactNode {
@@ -22,6 +22,12 @@ export function RecipesOverflowMenu({ showArchived, onShowArchivedChange }: Reci
         label={recipeStrings.more}
         title={recipeStrings.overflow.title}
         items={[
+          {
+            id: 'read',
+            label: readStrings.stepTitle,
+            icon: 'assistant',
+            href: '/recipes/import#read',
+          },
           {
             id: 'import',
             label: importStrings.importAction,

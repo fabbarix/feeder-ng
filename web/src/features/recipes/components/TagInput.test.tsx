@@ -36,7 +36,7 @@ describe('TagInput', () => {
     expect(group).not.toHaveAttribute('aria-label')
     const fieldLabel = container.querySelector('.tag-input__control .ui-field__label')!
     expect(fieldLabel).toHaveTextContent('Add a Tag')
-    expect(fieldLabel.closest('.visually-hidden') ?? fieldLabel).toHaveClass('visually-hidden')
+    expect(fieldLabel).not.toHaveClass('tag-input__label') // hidden by recipes.css, kept for assistive tech
     expect(screen.getByRole('textbox', { name: 'Add a Tag' })).toBeInTheDocument()
   })
   it('names each chip "Remove Tag X"', () => {

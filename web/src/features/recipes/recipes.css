@@ -339,11 +339,30 @@
   max-inline-size: 320px;
 }
 
+.tag-input {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.tag-input__label {
+  display: block;
+}
+
+/* Chips and the field share one line: the field's own label is visually hidden (the group's caption above is the visible one). */
 .tag-input__control {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-2);
+}
+
+.tag-input__control .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .tag-input__control > .ui-field {
@@ -361,17 +380,63 @@
   min-inline-size: 0;
 }
 
+/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note and Optional below. The last column holds the trash icon and the Optional chip. */
 .line-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'ingredient ingredient ingredient'
+    'quantity unit remove'
+    'note note optional';
+  align-items: end;
 }
 
 .line-row__ingredient {
-  grid-column: 1 / -1;
+  grid-area: ingredient;
+  min-inline-size: 0;
+}
+
+.line-row__quantity {
+  grid-area: quantity;
+}
+
+.line-row__unit {
+  grid-area: unit;
+}
+
+.line-row__note {
+  grid-area: note;
+}
+
+.line-row__optional {
+  grid-area: optional;
+  justify-self: end;
+}
+
+.line-row__remove {
+  grid-area: remove;
+  justify-self: end;
+}
+
+.line-row__quantity,
+.line-row__unit,
+.line-row__note,
+.line-row__optional,
+.line-row__remove {
   min-inline-size: 0;
 }
 
 .line-row--pending {
   align-items: start;
+}
+
+/* A pending Ready Meal line is the summary and its remove button: two tracks at every width. */
+.line-row.line-row--pending {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: none;
+}
+
+.line-row--pending > .line-row__ingredient {
+  grid-area: auto;
 }
 
 .line-row__pending-name,
@@ -387,25 +452,12 @@
   color: var(--color-muted);
 }
 
-.line-row__amount,
-.line-row__extras {
-  display: grid;
-  gap: var(--space-3);
-  min-inline-size: 0;
-}
-
 .recipe-editor__lines-head {
   display: none;
 }
 
-.line-row__amount {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.line-row__extras {
-  grid-column: 1 / -1;
-  align-items: end;
-  grid-template-columns: minmax(0, 1fr) auto;
+.line-row__hint {
+  grid-row: 4;
 }
 
 .line-row__hint,
@@ -444,6 +496,12 @@
 
 .step-card__timing {
   align-items: flex-end;
+}
+
+/* The Segmented frame is 100 % wide by default, so Duration always wrapped: it takes its content's width, and the pair shares a row. */
+.step-card__timing > .ui-field:has(.segmented) {
+  inline-size: max-content;
+  max-inline-size: 100%;
 }
 
 .step-card__label {
@@ -565,11 +623,12 @@
   white-space: nowrap;
 }
 
-/* Ingredient lines: one row from 720 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions. */
+/* Ingredient lines: one row from 720 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions.
+   Every track is a fixed width except the two flexible ones: an `auto` track is empty in the header, so it collapsed and the captions drifted. */
 @media (min-width: 720px) {
   .recipe-editor__lines-head,
   .line-row {
-    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) 96px 40px;
   }
 
   .recipe-editor__lines-head {
@@ -585,23 +644,31 @@
   }
 
   .line-row {
+    grid-template-areas: none;
     align-items: end;
     background: none;
     border-block-end: 1px solid var(--color-line);
     border-radius: 0;
   }
 
-  .line-row__amount,
-  .line-row__extras {
-    display: contents;
+  .line-row__ingredient,
+  .line-row__quantity,
+  .line-row__unit,
+  .line-row__note,
+  .line-row__optional,
+  .line-row__remove {
+    grid-area: auto;
+    grid-row: 1;
   }
 
-  .line-row__ingredient {
-    grid-column: auto;
+  .line-row__optional,
+  .line-row__remove {
+    justify-self: start;
   }
 
   .line-row__hint {
     grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .line-row .ui-field__label {

@@ -37,6 +37,7 @@ export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFi
         <NumberField
           size="xs"
           label={f.cooldown}
+          unit="days"
           helper={f.cooldownHint}
           hideStepper
           value={numberValue(draft.cooldownDays)}
@@ -46,6 +47,7 @@ export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFi
         <NumberField
           size="xs"
           label={f.useBy}
+          unit="days"
           helper={f.useByHint}
           hideStepper
           value={numberValue(draft.leftoverUseByDays)}
@@ -55,6 +57,7 @@ export function RecipeDetailsFields({ draft, errors, onChange }: RecipeDetailsFi
         <NumberField
           size="xs"
           label={f.reheat}
+          unit="min"
           helper={f.reheatHint}
           hideStepper
           value={numberValue(draft.reheatMinutes)}
