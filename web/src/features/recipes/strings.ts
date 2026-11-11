@@ -94,6 +94,10 @@ export const recipeStrings = {
     remove: 'Remove ingredient',
     /** Names that stay unique across lines: the Ingredient, or the line number before one is picked. */
     removeLine: (name: string) => `Remove ingredient ${name}`,
+    /** The line's actions menu (Move ingredient up / down, the accessible alternative to the drag handle). */
+    actions: (name: string) => `Actions for ${name}`,
+    up: 'Move ingredient up',
+    down: 'Move ingredient down',
     optional: 'Optional',
     optionalLine: (name: string) => `Optional: ${name}`,
     lineLabel: (n: number) => `line ${n}`,
@@ -125,6 +129,8 @@ export const recipeStrings = {
     actions: 'Step actions',
     up: 'Move Step up',
     down: 'Move Step down',
+    /** Label of a Step for the drag handle ("Reorder Step 2") and its announcements. */
+    reorder: (n: number) => `Step ${n}`,
     text: 'Step text',
     kind: 'Kind',
     active: 'Active',

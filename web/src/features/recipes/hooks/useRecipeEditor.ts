@@ -9,6 +9,7 @@ import {
   emptyDraft,
   pickCreatedIngredient,
   pickIngredient,
+  moveLine,
   removeLine,
   serverErrorKey,
   updateLine,
@@ -45,6 +46,8 @@ export interface UseRecipeEditor {
   updateLine: (key: string, patch: Partial<LineDraft>) => void
   pickIngredient: (key: string, ingredient: IngredientRef) => void
   removeLine: (key: string) => void
+  /** Drag handles and the line actions menu: move the line at `from` to `to` (lib/draft.moveLine). */
+  moveLine: (from: number, to: number) => void
   /** Replaces the Steps (the StepsEditor computes the new list with lib/steps). */
   setSteps: (steps: StepDraft[]) => void
   /** R14: choose an Ingredient made from the picker (keeps the line's unit, see lib/draft.pickCreatedIngredient). */
@@ -156,6 +159,7 @@ export function useRecipeEditor(recipeId?: number, ingredients: readonly Ingredi
     updateLine: (key, patch) => setDraft((d) => updateLine(d, key, patch)),
     pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
     removeLine: (key) => setDraft((d) => removeLine(d, key)),
+    moveLine: (from, to) => setDraft((d) => moveLine(d, from, to)),
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     renameOffer: keptOffer ?? liveOffer,

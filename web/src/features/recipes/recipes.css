@@ -377,19 +377,60 @@
   min-inline-size: 0;
 }
 
-/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note and Optional below. The last column holds the trash icon and the Optional chip. */
+/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note below. The last column holds the actions menu and the trash icon. */
 .line-row {
   grid-template-columns: 72px minmax(0, 1fr) auto;
   grid-template-areas:
     'ingredient ingredient ingredient'
     'quantity unit remove'
-    'note note optional';
+    'note note note';
   align-items: end;
 }
 
 .line-row__ingredient {
   grid-area: ingredient;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
   min-inline-size: 0;
+}
+
+/* The drag handle sits before the picker, inside the Ingredient cell, so the grid tracks stay as they were. */
+.line-row__handle {
+  flex: none;
+  align-self: flex-end;
+  display: grid;
+  place-items: center;
+  /* The 44 px target spills 6 px each side over the padding and gap, so the picker keeps as much room as possible. */
+  inline-size: 32px;
+}
+
+.line-row__ingredient > :not(.line-row__handle) {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* The picker keeps a 180 px basis; the Optional chip sits after it, or wraps under it when the cell is narrow. */
+.line-row__ingredient-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.line-row__ingredient-body > :first-child {
+  flex: 1 1 180px;
+  min-inline-size: 0;
+}
+
+.line-row__ingredient-body > .chip {
+  flex: none;
+}
+
+.line-row__pending-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
 }
 
 .line-row__quantity {
@@ -404,14 +445,11 @@
   grid-area: note;
 }
 
-.line-row__optional {
-  grid-area: optional;
-  align-self: center;
-  justify-self: end;
-}
-
 .line-row__remove {
   grid-area: remove;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   align-self: center;
   justify-self: end;
 }
@@ -419,7 +457,6 @@
 .line-row__quantity,
 .line-row__unit,
 .line-row__note,
-.line-row__optional,
 .line-row__remove {
   min-inline-size: 0;
 }
@@ -436,6 +473,14 @@
 
 .line-row--pending > .line-row__ingredient {
   grid-area: auto;
+}
+
+/* The two-track grid has no `remove` area: put the actions in column 2 at every width (beats the >= 900 rule by specificity). */
+.line-row--pending > .line-row__remove {
+  grid-area: auto;
+  grid-row: 1;
+  grid-column: 2;
+  justify-self: end;
 }
 
 .line-row__pending-name,
@@ -471,9 +516,21 @@
 
 .step-card__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.step-card__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Reordering: a line being moved is opaque and round even from 900 px, where its row has no background of its own. */
+.line-row[data-state='dragging'],
+.line-row[data-state='lifted'] {
+  border-radius: var(--radius-tile-sm);
 }
 
 .step-card__number {
@@ -622,12 +679,14 @@
   white-space: nowrap;
 }
 
-/* Ingredient lines: one row from 720 px (Ingredient, Quantity, Unit, Note, Optional, remove) under a row of captions.
+/* Ingredient lines: one row from 900 px (Ingredient, Quantity, Unit, Note, actions + remove) under a row of captions.
+   Below 900 px the picker would get under 180 px beside the drag handle, so the multi-row layout stays up to 899 px.
+   Optional is a Menu item plus a chip inside the Ingredient cell (it wraps under the picker), so it needs no track.
    Every track is a fixed width except the two flexible ones: an `auto` track is empty in the header, so it collapsed and the captions drifted. */
-@media (min-width: 720px) {
+@media (min-width: 900px) {
   .recipe-editor__lines-head,
   .line-row {
-    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) 96px 40px;
+    grid-template-columns: minmax(0, 1.4fr) 88px 120px minmax(0, 1fr) 84px;
   }
 
   .recipe-editor__lines-head {
@@ -644,7 +703,8 @@
 
   .line-row {
     grid-template-areas: none;
-    align-items: end;
+    /* Top-aligned, so an Optional chip under the picker does not lift the picker off the other fields. */
+    align-items: start;
     background: none;
     border-block-end: 1px solid var(--color-line);
     border-radius: 0;
@@ -654,20 +714,33 @@
   .line-row__quantity,
   .line-row__unit,
   .line-row__note,
-  .line-row__optional,
   .line-row__remove {
     grid-area: auto;
     grid-row: 1;
   }
 
-  .line-row__optional,
+  /* Top-aligned with the picker, centred on the 48 px field: (48 - 44) / 2. The base rule drops it to the chip row. */
+  .line-row__handle {
+    align-self: flex-start;
+    margin-block-start: 2px;
+  }
+
   .line-row__remove {
     justify-self: start;
+    align-self: start;
+    /* Centres the 40 px buttons on the 48 px fields. */
+    margin-block-start: var(--space-1);
   }
 
   .line-row__hint {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .line-row[data-state='dragging'],
+  .line-row[data-state='lifted'] {
+    background: var(--color-surface);
+    border-radius: var(--radius-tile-sm);
   }
 
   .line-row .ui-field__label {
