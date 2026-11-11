@@ -20,10 +20,15 @@ describe('Button.css, a long label stays inside its container (SF1)', () => {
     expect(d['overflow-wrap']).toBe('break-word')
   })
 
-  it.each(['sm', 'md', 'lg', 'xl'])('size %s grows with two lines: min-block-size, not a fixed block-size', (size) => {
-    const d = declarations(css, `.button[data-size='${size}']`)
-    expect(d['min-block-size']).toMatch(/^\d+px$/)
-    expect(d['block-size']).toBeUndefined()
+  it.each(['sm', 'md', 'lg', 'xl'])('size %s grows with two lines: min-block-size', (size) => {
+    expect(declarations(css, `.button[data-size='${size}']`)['min-block-size']).toMatch(/^\d+px$/)
+  })
+
+  it('a one-line Button keeps its exact height and does not stretch', () => {
+    for (const size of ['sm', 'md', 'lg', 'xl']) {
+      expect(declarations(css, `.button[data-size='${size}']`)['min-block-size']).toMatch(/^\d+px$/)
+    }
+    expect(declarations(css, '.button')['block-size']).toBe('fit-content')
   })
 
   it('line-height is no longer 1 (two lines must not touch)', () => {
