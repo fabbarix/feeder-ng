@@ -16,7 +16,9 @@ import { TimeField } from './fields/TimeField'
 import { Select } from './Select/Select'
 import { Stepper } from './Stepper'
 import type { FieldSize } from './fields/Field'
+import { Page } from './Page'
 import { PageHeader } from './PageHeader'
+import { StickyActionBar } from './StickyActionBar'
 import { ProgressTile } from './ProgressTile'
 import { RecipeThumb } from './RecipeThumb'
 import { Tile, TileMetric } from './Tile'
@@ -365,6 +367,53 @@ function FormActionsGroup() {
   )
 }
 
+function PageGroup() {
+  return (
+    <Group name="Page">
+      {(['narrow', 'default', 'wide'] as const).map((w) => (
+        <WideCell key={w} caption={`width="${w}": content ${w === 'narrow' ? 720 : w === 'default' ? 1120 : 1480} px plus the gutters, centred`}>
+          <div className="gallery__frame">
+            <Page width={w} header={<PageHeader title={`Page ${w}`} />}>
+              <Tile>
+                <p>Content column</p>
+              </Tile>
+            </Page>
+          </div>
+        </WideCell>
+      ))}
+    </Group>
+  )
+}
+
+function StickyActionBarGroup() {
+  return (
+    <Group name="StickyActionBar">
+      <WideCell caption="Opaque, as wide as the Page, hairline on top; scroll the frame to see it stick">
+        <div className="gallery__frame gallery__frame--scroll">
+          <Page width="default">
+            <Tile>
+              <p>A long form goes here.</p>
+              <div className="gallery__spacer" />
+            </Tile>
+            <StickyActionBar>
+              <FormActions tertiary={<Button variant="tertiary">Cancel</Button>} primary={<Button>Save</Button>} />
+            </StickyActionBar>
+          </Page>
+        </div>
+      </WideCell>
+      <WideCell caption='column="narrow": the actions sit under the narrow form column'>
+        <div className="gallery__frame">
+          <Page width="default">
+            <StickyActionBar column="narrow">
+              <FormActions tertiary={<Button variant="tertiary">Cancel</Button>} primary={<Button>Save</Button>} />
+            </StickyActionBar>
+          </Page>
+        </div>
+      </WideCell>
+    </Group>
+  )
+}
+
 function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <section data-scheme={scheme} className="gallery__scheme">
@@ -384,6 +433,8 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <FieldSizesGroup />
       <FieldRowGroup />
       <FormActionsGroup />
+      <PageGroup />
+      <StickyActionBarGroup />
       <OverlayGalleryGroups />
     </section>
   )

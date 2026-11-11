@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Icon } from '../ui'
+import { Icon, Page, PageWidthProvider } from '../ui'
 import { withAccessRequests } from './accessMenu'
 import { isChromeless } from './chromeless'
+import { pageWidthFor } from './pageWidths'
 import { PageErrorBoundary } from './PageErrorBoundary'
 import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
@@ -24,6 +25,7 @@ export interface AppShellProps {
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
   const { pathname } = useLocation()
+  const pageWidth = pageWidthFor(pathname)
   if (isChromeless(pathname)) {
     // The kitchen board and Cook Mode: the page alone, no bars, no avatar menu, no status slot.
     return (
@@ -71,9 +73,13 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
         ))}
       </nav>
       <main className="app-main">
-        <PageErrorBoundary resetKey={pathname}>
-          <Outlet />
-        </PageErrorBoundary>
+        <PageWidthProvider value={pageWidth}>
+          <Page width={pageWidth}>
+            <PageErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </PageErrorBoundary>
+          </Page>
+        </PageWidthProvider>
       </main>
       <nav aria-label={shellStrings.bottomBar} className="bottom-bar">
         {PRIMARY_NAV.map((item) => (
