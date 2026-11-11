@@ -3,7 +3,10 @@
 const nodeFs = 'node:fs'
 const { readFileSync, readdirSync } = (await import(/* @vite-ignore */ nodeFs)) as {
   readFileSync: (p: string, enc: string) => string
-  readdirSync: (p: string) => string[]
+  readdirSync: {
+    (p: string): string[]
+    (p: string, o: { withFileTypes: true }): { name: string; isDirectory: () => boolean }[]
+  }
 }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
 
@@ -81,4 +84,17 @@ function splitSelectors(list: string): string[] {
   }
   out.push(cur)
   return out.map(norm)
+}
+
+/** Concatenated text of every .css file under web/src/<dir> (recursive). */
+export function readFeatureCss(dir = 'features'): string {
+  const out: string[] = []
+  const walk = (d: string) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(`${d}/${e.name}`)
+      else if (e.name.endsWith('.css')) out.push(readFileSync(`${d}/${e.name}`, 'utf8'))
+    }
+  }
+  walk(`${cwd}/src/${dir}`)
+  return out.join('\n')
 }
