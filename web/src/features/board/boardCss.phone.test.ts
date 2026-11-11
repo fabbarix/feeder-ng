@@ -34,3 +34,22 @@ describe('board.css phone grid', () => {
     expect(rule(base, '.board-cell')).toMatch(/min-height:\s*\d+(\.\d+)?rem/)
   })
 })
+
+const clockAt = css.indexOf('.board-clock__date {')
+const clockWallAt = css.indexOf('@media (min-width: 600px)', clockAt)
+const clockBase = css.slice(0, clockWallAt)
+const clockWall = css.slice(clockWallAt)
+
+describe('board.css clock tile on a phone (R2-4 review: "Wednesda" and "Novembe" were clipped at 390)', () => {
+  it('below 600 px the clock is sized to its cell, not to a fixed rem, and the date wraps', () => {
+    expect(rule(clockBase, '.board-clock__time')).toMatch(/font-size:\s*(1\d|2[0-5])cqi/)
+    const date = rule(clockBase, '.board-clock__date')
+    expect(date).toMatch(/font-size:\s*\d+(\.\d+)?cqi/)
+    expect(date).not.toMatch(/font-size:\s*[\d.]+rem/)
+    expect(date).toMatch(/overflow-wrap:\s*(anywhere|break-word)/)
+  })
+  it('from 600 px the wall clock keeps its big sizes', () => {
+    expect(rule(clockWall, '  .board-clock__time')).toMatch(/font-size:\s*32cqi/)
+    expect(rule(clockWall, '  .board-clock__date')).toMatch(/font-size:\s*2rem/)
+  })
+})

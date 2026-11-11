@@ -44,6 +44,9 @@ grep -Eq -- "--profile" "$ROOT/scripts/check-page-layout.mjs" 2>/dev/null && ok 
 grep -q '/api/dev/login' "$ROOT/scripts/test/fixtures/page-layout-seed.mjs" 2>/dev/null && ok || bad "the seeder must sign in through /api/dev/login"
 grep -q 'page-layout-ids' "$ROOT/scripts/test/fixtures/page-layout-seed.mjs" 2>/dev/null && ok || bad "the seeder must write the ids file (build/page-layout-ids.json)"
 
+# P6 counts a sticky/fixed bottom bar whose primary action is a link (`a`) as well as a `button` (R2-4 review)
+grep -Eq "querySelector\('(button, a|a, button)'\)" "$ROOT/scripts/check-page-layout.mjs" 2>/dev/null && ok || bad "the P6 bar scan must match bars holding an a as well as a button"
+
 [ -x "$W" ] || { printf 'check-page-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"; exit 1; }
 
 # --- --print-port: deterministic, in 20000..39999, differs per worktree path

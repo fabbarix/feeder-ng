@@ -25,6 +25,11 @@ describe('ExportScreen states', () => {
     await waitFor(() => expect(document.querySelector('.skeleton-group')).not.toBeNull())
     expect(screen.queryByText('Loading…')).toBeNull()
   })
+  it('the loading Skeleton sits in an aria-busy wrapper from the first render (the Skeleton itself shows after its delay)', () => {
+    hook.picker = { ...base(), isLoading: true }
+    view()
+    expect(document.querySelector('.import-screen > [aria-busy="true"]')).not.toBeNull()
+  })
   it('no Recipes is an EmptyState', () => {
     view()
     expect(document.querySelector('.empty-state')).not.toBeNull()

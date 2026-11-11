@@ -77,6 +77,14 @@ describe('UnknownBarcodeSheet duplicate guard', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
+  it('Save while the "Did you mean" row is unanswered moves focus to that row', async () => {
+    setup(vi.fn().mockResolvedValue({ exact: null, suggestions: [{ ingredient: garlic, score: 0.8 }] }))
+    await createIngredient('Garlik')
+    const guard = await screen.findByRole('status')
+    await fillAndSave()
+    expect(guard).toHaveFocus()
+  })
+
   it('no match: no guard, the Ingredient is created as before', async () => {
     const onSave = setup(vi.fn().mockResolvedValue({ exact: null, suggestions: [] }))
     await createIngredient('Sumac')
