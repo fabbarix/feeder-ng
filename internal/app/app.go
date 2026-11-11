@@ -40,6 +40,21 @@ type App struct {
 	Deps    Deps
 	stop    context.CancelFunc
 	workers *sync.WaitGroup
+	idle    *idleChecks
+}
+
+// WaitIdle blocks until every idle check registered with Deps.Idle reports idle, or ctx ends. The start-up replan
+// publishes its "plan" event asynchronously; tests wait here so that event is not mistaken for a later one.
+func (a *App) WaitIdle(ctx context.Context) error {
+	a.idle.mu.Lock()
+	fns := append([]func(context.Context) error(nil), a.idle.fns...)
+	a.idle.mu.Unlock()
+	for _, f := range fns {
+		if err := f(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Close ends Deps.Context, ends the live-update streams and waits until the workers the modules started with
@@ -74,7 +89,7 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	workers := &sync.WaitGroup{}
 	deps := Deps{DB: d, Clock: clk, Config: cfg, Events: events.NewBus(), Auth: authSvc, Logger: o.logger,
 		Access:    access.NewService(accessstore.New(d), authSvc, householdstore.New(d, clk).AccessMembers(), clk, access.DefaultLimits()),
-		Scheduler: scheduler.New(clk, scheduler.NewSQLRunStore(d), o.logger), Context: lifetime, workers: workers}
+		Scheduler: scheduler.New(clk, scheduler.NewSQLRunStore(d), o.logger), Context: lifetime, workers: workers, idle: &idleChecks{}}
 	// Removal and sign-out end the live-update streams of the affected User or session.
 	authSvc.OnRevoke(deps.Events.CloseOwner)
 
@@ -92,7 +107,7 @@ func New(cfg config.Config, d *sql.DB, clk clock.Clock, spa fs.FS, opts ...Optio
 	for _, m := range o.registry.Modules() {
 		m.Mount(r, deps)
 	}
-	return &App{Handler: recoverPanics(o.logger, httpx.CSRFGuard(cfg.BaseURL, mux)), Deps: deps, stop: stop, workers: workers}, nil
+	return &App{Handler: recoverPanics(o.logger, httpx.CSRFGuard(cfg.BaseURL, mux)), Deps: deps, stop: stop, workers: workers, idle: deps.idle}, nil
 }
 
 // eventStream serves GET /api/events for a signed-in request. The stream is

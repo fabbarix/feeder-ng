@@ -46,6 +46,7 @@ func mount(r *app.Router, d app.Deps) {
 	if d.Context != nil {
 		d.Go(func() { run.Subscribe(d.Context, d.Events) })
 		d.Go(func() { run.Start(d.Context) })
+		d.Idle(run.WaitIdle)
 	}
 	d.Scheduler.SetZone(func(ctx context.Context) (*time.Location, error) {
 		_, loc, err := src.Settings(ctx)
