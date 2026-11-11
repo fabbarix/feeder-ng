@@ -7,6 +7,7 @@
   gap: 8px;
   min-inline-size: 0;
   max-inline-size: 100%;
+  block-size: fit-content;
   border: 0;
   font-family: inherit;
   font-size: var(--text-body-strong-size);
