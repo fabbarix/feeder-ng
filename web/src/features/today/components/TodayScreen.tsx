@@ -62,7 +62,7 @@ export function TodayScreen(): ReactElement {
     ),
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,
     toConfirm: <ToConfirmTile slots={data.toConfirm} onYesCooked={yesCooked} onAdjust={flow.open} onNotCooked={(key) => void notCooked(key)} />,
-    couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} />,
+    couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
     setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
     useSoon: <UseSoonTile items={data.useSoon} />,

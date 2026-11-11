@@ -10,13 +10,15 @@ export interface CouldntPlanTileProps {
   expanded: boolean
   onToggle: () => void
   onFix: () => void
+  /** Default 2; `full` takes the whole row (Today, and the 7-column Plan). */
+  span?: 2 | 'full'
 }
 
 /**
  * One tile per cause of Couldn't plan: overline, a headline that says it once, the affected meals in a line, a hint,
  * "Show all N" (two or more) and one fix action. A section named by its headline, not an alarm.
  */
-export function CouldntPlanTile({ group, expanded, onToggle, onFix }: CouldntPlanTileProps): ReactNode {
+export function CouldntPlanTile({ group, expanded, onToggle, onFix, span = 2 }: CouldntPlanTileProps): ReactNode {
   const headingId = useId()
   const listId = useId()
   const tile = toneStyle(group.tone).tile
@@ -25,7 +27,7 @@ export function CouldntPlanTile({ group, expanded, onToggle, onFix }: CouldntPla
       as="section"
       aria-labelledby={headingId}
       {...tile}
-      span={2}
+      span={span}
       overline={s.couldntPlanTitle}
       overlineIcon={group.icon}
       data-cause={group.cause}

@@ -1,5 +1,8 @@
 import type { TileId, TodayData, TodayLayout } from '../types'
 
+/** Tiles one column wide: the only ones that can back-fill beside a 2x2 hero on the three-column Today. */
+const SMALL_TILES: TileId[] = ['advanceSteps', 'leftovers', 'useSoon', 'streak']
+
 /**
  * Decides what Today shows. While a scan session is active it is the Shopping List. Otherwise the tiles with
  * something to show, in the hierarchy of ui-fix-plan 5.1: nextMeal (the hero, first), toConfirm, advanceSteps,
@@ -23,5 +26,6 @@ export function composeToday(d: TodayData): TodayLayout {
     mode: 'today',
     tiles: ids.map((id) => ({ id })),
     empty: ids.every((id) => id === 'streak'),
+    heroSpan: ids.some((id) => SMALL_TILES.includes(id)) ? 'block' : 'row',
   }
 }

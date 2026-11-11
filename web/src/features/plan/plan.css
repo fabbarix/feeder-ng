@@ -66,6 +66,7 @@
 }
 .plan-grid[data-columns='7'] {
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
 }
 .plan-day {
   display: grid;
@@ -86,9 +87,10 @@
 .plan-grid[data-columns='7'] .plan-day__title {
   font-size: 1rem;
 }
-/* A ~135 px day tile: a narrower inner padding leaves the compact head row room for the slot icon, the time and one action. */
+/* A ~140 px day tile (1440 px viewport beside the rail): tight padding leaves the compact head row room for the slot icon,
+   the time and one action, and the Recipe name keeps its 2-line clamp (the full name is the button's title). */
 .plan-grid[data-columns='7'] .plan-day {
-  --tile-pad: 14px;
+  --tile-pad: 10px;
 }
 
 /* A Planned Meal inside a day tile: compact, one chip at most. */
@@ -176,6 +178,16 @@
   margin: 0;
   font-size: 0.9rem;
   overflow-wrap: break-word;
+}
+
+/* Compact chips in the 7-column week. */
+.plan-grid[data-columns='7'] .plan-meal [data-kind] {
+  min-block-size: 24px;
+  padding-inline: 8px;
+  font-size: 0.75rem;
+}
+.plan-grid[data-columns='7'] .plan-meal__recipe {
+  font-size: 1rem;
 }
 
 /* The Today hero: the photo and the text side by side, the actions below. */
@@ -282,4 +294,21 @@
 .plan-meal[data-state='cooked'] .plan-meal__slot,
 .plan-meal[data-state='skipped'] .plan-meal__slot {
   color: var(--color-muted);
+}
+
+/* R2-2 (L-05): the box the container-width columns are measured on. */
+.plan__grid-box {
+  min-width: 0;
+}
+
+/* R2-2 (L-07): the hero actions sit at the tile's end on a wide screen; the button keeps its own width. */
+@media (min-width: 820px) {
+  .plan-hero__actions {
+    justify-content: flex-end;
+  }
+  .plan-confirm {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+  }
 }

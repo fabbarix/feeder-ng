@@ -1,0 +1,62 @@
+// R2-2 CSS contracts of the Plan and the Today hero (jsdom does not lay out, so the stylesheet is read as text).
+import { describe, expect, it } from 'vitest'
+import { readFeatureCss } from './test-css'
+
+const css = readFeatureCss('plan.css')
+const rules = (selector: string) => css.split('}').filter((r) => r.includes(selector))
+/** The rule bodies for `selector` found inside any @media block whose condition matches `media`. */
+const inMedia = (media: RegExp, selector: string) => {
+  const out: string[] = []
+  const re = /@media\s*([^{]+)\{/g
+  for (let m = re.exec(css); m; m = re.exec(css)) {
+    if (!media.test(m[1] ?? '')) continue
+    let depth = 1
+    let i = m.index + m[0].length
+    const start = i
+    while (i < css.length && depth > 0) depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0, i++
+    out.push(...css.slice(start, i - 1).split('}').filter((r) => r.includes(selector)))
+  }
+  return out
+}
+
+describe('plan.css R2-2', () => {
+  it('L-05: a day tile never lets a Recipe name or chip spill: tiles in the grid can shrink (min-width 0)', () => {
+    expect(rules('.plan-day {').join('')).toMatch(/min-width:\s*0/)
+  })
+
+  it('L-07: from 820 px the hero actions sit at the end (right) of the tile, the button keeps its own width', () => {
+    const r = inMedia(/min-width:\s*820px/, '.plan-hero__actions').join('')
+    expect(r).toMatch(/justify-content:\s*(flex-end|end)/)
+  })
+
+  it('L-07: the hero body does not stretch the action row on desktop (no width: 100% on its buttons)', () => {
+    expect(rules('.plan-hero__actions .button').join('')).not.toMatch(/width:\s*100%/)
+  })
+
+  it('L-07: To confirm rows put the Recipe at the start and the actions at the end from 820 px', () => {
+    const r = inMedia(/min-width:\s*820px/, '.plan-confirm').join('')
+    expect(r).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/)
+    expect(r).toMatch(/align-items:\s*center/)
+  })
+
+  it('7 columns: tighter tile padding (10 px) and a smaller gap, so a 1440 px week fits one row', () => {
+    const pad = rules(".plan-grid[data-columns='7'] .plan-day").join('')
+    expect(pad).toMatch(/--tile-pad:\s*(\d+)px/)
+    expect(Number(/--tile-pad:\s*(\d+)px/.exec(pad)?.[1])).toBeLessThanOrEqual(10)
+    const gap = rules(".plan-grid[data-columns='7'] {").join('')
+    expect(gap).toMatch(/gap:\s*(8|10|12)px/)
+  })
+
+  it('7 columns: Recipe names clamp at two lines (the full name is the button title)', () => {
+    const r = rules('.plan-meal__recipe {').join('')
+    expect(r).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(r).toMatch(/overflow:\s*hidden/)
+  })
+
+  it('7 columns: chips are compact (smaller type, 24 px minimum height, tighter padding)', () => {
+    const r = rules(".plan-grid[data-columns='7'] .plan-meal [data-kind]").join('')
+    expect(r).toMatch(/min-block-size:\s*24px/)
+    expect(r).toMatch(/padding-inline:\s*8px|padding:\s*0 8px/)
+    expect(r).toMatch(/font-size:/)
+  })
+})

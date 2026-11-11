@@ -3,7 +3,7 @@ import { planStrings } from '../strings'
 import '../plan.css'
 
 export interface PlanGridProps {
-  /** 2 on phones, 4 on tablets, 7 on desktop (hooks/usePlanColumns). */
+  /** 2 on phones, 4 on tablets, 7 on desktop (hooks/useContainerColumns). */
   columns: 2 | 4 | 7
   children?: ReactNode
 }
