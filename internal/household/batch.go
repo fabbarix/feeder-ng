@@ -15,6 +15,9 @@ type SlotChange struct {
 	Name       *string
 	Time       *string
 	Attendance *[]Attendee
+	// Courses replaces the slot's Courses with the same shape and rules as MealSlotInput.Courses; a
+	// Member who does not attend the Matching Meal Slot is ignored in the opt-outs here.
+	Courses *[]SlotCourseInput
 }
 
 // BatchInput edits every Meal Slot named Match on the chosen weekdays (R15, ui-review-2 §3.7).
@@ -22,12 +25,16 @@ type BatchInput struct {
 	Match    string
 	Weekdays []int
 	Change   SlotChange
+	// DryRun computes the result (and Removes) without writing anything.
+	DryRun bool
 }
 
 // BatchResult lists the updated Meal Slots (weekday order) and the weekdays skipped for lack of a match.
 type BatchResult struct {
 	Updated []MealSlot
 	Skipped []int
+	// Removes is what taking Courses off the Matching Meal Slots removes (or, with DryRun, would remove).
+	Removes Removals
 }
 
 // Normalized trims names, de-duplicates and sorts Weekdays. It returns a copy.
@@ -47,6 +54,10 @@ func (b BatchInput) Normalized() BatchInput {
 	}
 	sort.Ints(days)
 	b.Weekdays = days
+	if b.Change.Courses != nil {
+		courses := NormalizeSlotCourses(*b.Change.Courses)
+		b.Change.Courses = &courses
+	}
 	return b
 }
 
@@ -64,8 +75,8 @@ func (b BatchInput) Validate() error {
 		}
 	}
 	c := b.Change
-	if c.Name == nil && c.Time == nil && c.Attendance == nil {
-		return fieldError("set", "must change at least one of name, time or attendance")
+	if c.Name == nil && c.Time == nil && c.Attendance == nil && c.Courses == nil {
+		return fieldError("set", "must change at least one of name, time, attendance or courses")
 	}
 	if c.Name != nil {
 		if n := nameLength(*c.Name); n < 1 || n > 50 {
@@ -74,6 +85,11 @@ func (b BatchInput) Validate() error {
 	}
 	if c.Time != nil && !validTimeOfDay(*c.Time) {
 		return fieldError("time", "must be an HH:MM time")
+	}
+	if c.Courses != nil {
+		if err := ValidateSlotCourses(*c.Courses); err != nil {
+			return err
+		}
 	}
 	if c.Attendance != nil {
 		return ValidateAttendees(*c.Attendance)

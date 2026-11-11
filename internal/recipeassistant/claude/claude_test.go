@@ -466,21 +466,22 @@ func TestRetryAfterMsBeyondTheDeadlineStopsAtOnce(t *testing.T) {
 	var n int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n++
-		w.Header().Set("retry-after-ms", "1500")
+		w.Header().Set("retry-after-ms", "3500")
 		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(429)
 		_, _ = w.Write([]byte(`{"type":"error","error":{"type":"rate_limit_error","message":"slow down"}}`))
 	}))
 	defer srv.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// 2 s, not 1: under a loaded full check even the local 429 can take most of a second to arrive.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_, err := client(srv.URL, nil).Message(ctx, req(t, "x"))
 	var e *recipeassistant.Error
-	if !errors.As(err, &e) || e.Code != recipeassistant.CodeRateLimited || e.RetryAfterSeconds != 2 {
-		t.Fatalf("err = %v, want rate limited with retryAfterSeconds 2 (1500 ms rounded up)", err)
+	if !errors.As(err, &e) || e.Code != recipeassistant.CodeRateLimited || e.RetryAfterSeconds != 4 {
+		t.Fatalf("err = %v, want rate limited with retryAfterSeconds 4 (3500 ms rounded up)", err)
 	}
 	if n != 1 {
-		t.Errorf("requests = %d, want 1: 1.5 s does not fit a 1 s budget", n)
+		t.Errorf("requests = %d, want 1: 3.5 s does not fit a 2 s budget", n)
 	}
 }
 
