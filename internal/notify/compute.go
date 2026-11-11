@@ -3,8 +3,10 @@ package notify
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
 
@@ -33,43 +35,42 @@ const (
 // household time zone loc. Order is by At, then Key.
 func Compute(f Facts, loc *time.Location) []Candidate {
 	var out []Candidate
-	for _, m := range f.Meals {
-		if m.State != MealPlanned {
-			continue
-		}
-		slot := m.SlotAt.In(loc).Format("15:04")
-		meal := fmt.Sprintf("%s/%d", m.Date, m.MealSlotID)
-		if !m.FromLeftover {
+	for _, slot := range plannedSlots(f.Meals) {
+		meal := fmt.Sprintf("%s/%d", slot.date, slot.mealSlotID)
+		ms := slot.meals
+		slotAt := ms[0].SlotAt
+		slotHHMM := slotAt.In(loc).Format("15:04")
+		// Advance Step: one per fresh Course and Step, keyed by the Course (migration 1410).
+		for _, m := range ms {
+			if m.FromLeftover {
+				continue
+			}
 			for _, s := range m.AdvanceSteps {
 				at := m.SlotAt.Add(-s.Lead)
 				out = append(out, Candidate{
-					Key:   candidateKey(AdvanceStep, fmt.Sprintf("%s/%d", meal, s.ID), at),
+					Key:   candidateKey(AdvanceStep, fmt.Sprintf("%s/%d/%d", meal, m.CourseID, s.ID), at),
 					Type:  AdvanceStep,
 					At:    at,
 					Title: "Advance Step",
-					Body:  fmt.Sprintf("%s now for %s", s.Description, slot),
-					URL:   planURL,
-				})
-			}
-			if m.TotalTime > 0 {
-				at := m.SlotAt.Add(-m.TotalTime)
-				out = append(out, Candidate{
-					Key:   candidateKey(StartCooking, meal, at),
-					Type:  StartCooking,
-					At:    at,
-					Title: "Start cooking",
-					Body:  fmt.Sprintf("Start cooking %s now to eat at %s", m.RecipeName, slot),
+					Body:  fmt.Sprintf("%s now for %s", s.Description, slotHHMM),
 					URL:   planURL,
 				})
 			}
 		}
-		at := m.SlotAt.Add(ConfirmAfter)
+		if c, ok := startCooking(ms, meal, slotAt, loc); ok {
+			out = append(out, c)
+		}
+		at := slotAt.Add(ConfirmAfter)
+		names := make([]string, 0, len(ms))
+		for _, m := range ms {
+			names = append(names, m.RecipeName)
+		}
 		out = append(out, Candidate{
 			Key:   candidateKey(ConfirmCooked, meal, at),
 			Type:  ConfirmCooked,
 			At:    at,
 			Title: "Confirm Cooked",
-			Body:  fmt.Sprintf("Did you cook %s?", m.RecipeName),
+			Body:  fmt.Sprintf("Did you cook %s?", joinNames(names)),
 			URL:   planURL,
 		})
 	}
@@ -119,6 +120,90 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 	}
 	sortCandidates(out)
 	return out
+}
+
+// plannedSlot is the still-planned Courses of one Meal Slot on one date, in the slot's Course order.
+type plannedSlot struct {
+	date       string
+	mealSlotID int64
+	meals      []MealFact
+}
+
+// plannedSlots groups the planned Planned Meals by (date, Meal Slot). Each group keeps the order of
+// f.Meals, which the facts source gives in Course order.
+func plannedSlots(meals []MealFact) []plannedSlot {
+	type slotKey struct {
+		date string
+		slot int64
+	}
+	index := map[slotKey]int{}
+	var out []plannedSlot
+	for _, m := range meals {
+		if m.State != MealPlanned {
+			continue
+		}
+		k := slotKey{m.Date, m.MealSlotID}
+		i, ok := index[k]
+		if !ok {
+			i = len(out)
+			index[k] = i
+			out = append(out, plannedSlot{date: m.Date, mealSlotID: m.MealSlotID})
+		}
+		out[i].meals = append(out[i].meals, m)
+	}
+	return out
+}
+
+// startCooking is the one Start cooking of a slot (spec §11, §12): the slot's Courses that are still to cook
+// go through cook.Timeline, and the reminder falls at the slot time minus the timeline total. A Leftover
+// Course contributes its Reheat (none when it has no length); a slot with no fresh Course has none. An
+// unplaceable timeline or a zero total gives none, and nothing else is affected.
+func startCooking(ms []MealFact, meal string, slotAt time.Time, loc *time.Location) (Candidate, bool) {
+	var courses []cook.Course
+	names := map[int64]string{}
+	fresh := false
+	for _, m := range ms {
+		names[m.CourseID] = m.RecipeName
+		switch {
+		case !m.FromLeftover:
+			fresh = true
+			courses = append(courses, cook.Course{ID: m.CourseID, Steps: m.Steps})
+		case m.ReheatSeconds > 0:
+			courses = append(courses, cook.Course{ID: m.CourseID, Reheat: true, ReheatSeconds: m.ReheatSeconds})
+		}
+	}
+	if !fresh || len(courses) == 0 {
+		return Candidate{}, false
+	}
+	r, err := cook.Timeline(courses)
+	if err != nil || r.TotalSeconds <= 0 || len(r.Items) == 0 {
+		return Candidate{}, false
+	}
+	at := slotAt.Add(-time.Duration(r.TotalSeconds) * time.Second)
+	slot := slotAt.In(loc).Format("15:04")
+	body := fmt.Sprintf("Start cooking %s now to eat at %s", names[courses[0].ID], slot)
+	if len(courses) > 1 {
+		body = fmt.Sprintf("Start cooking now for %s: %s first", slot, names[r.Items[0].CourseID])
+	}
+	return Candidate{
+		Key:   candidateKey(StartCooking, meal, at),
+		Type:  StartCooking,
+		At:    at,
+		Title: "Start cooking",
+		Body:  body,
+		URL:   planURL,
+	}, true
+}
+
+// joinNames lists Recipe names as "A", "A and B", or "A, B and C".
+func joinNames(names []string) string {
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // capRunes shortens s to at most n runes, ending in an ellipsis when it was cut.
