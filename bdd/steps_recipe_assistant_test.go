@@ -38,15 +38,15 @@ const (
 
 // raState lives in w.Vars["ra"]. Responses seen so far are kept to assert that no secret ever appeared.
 type raState struct {
-	fake, second   *fakeanthropic.Server
-	mark int
-	page           *httptest.Server
-	servers        []func()
-	readID         string
-	reviewID       string
-	view           map[string]any
-	seen           []string
-	hooked         bool
+	fake, second *fakeanthropic.Server
+	mark         int
+	page         *httptest.Server
+	servers      []func()
+	readID       string
+	reviewID     string
+	view         map[string]any
+	seen         []string
+	hooked       bool
 }
 
 func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
