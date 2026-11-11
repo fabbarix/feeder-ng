@@ -21,6 +21,10 @@ const (
 	CodePhotoUnavailable = "photo_unavailable"
 )
 
+// ErrPhotoTooLarge is what a Fetcher returns (wrapped is fine) when the image is larger than it will read; the
+// service's wiring maps the HTTP guard's own error onto it so this package needs no HTTP imports.
+var ErrPhotoTooLarge = errors.New("photo is larger than 8 MB")
+
 // Fetcher downloads an https image (the SSRF-guarded fetcher; recipefile.Fetcher satisfies it). It should stop
 // reading a little past imaging.MaxBytes; PreparePhotos refuses what is larger than that.
 type Fetcher interface {
@@ -39,7 +43,7 @@ type PreparedPhoto struct {
 // PreparePhotos checks and prepares 1..4 photos for the model, in order. Errors are *Error with CodePhotosEmpty,
 // CodeTooManyPhotos, CodePhotoTooLarge (over 8 MB or too many pixels), CodePhotoUnsupported (not a picture
 // Feeder can read, a declared type that differs from the bytes, both or neither of data URL and URL) or
-// CodePhotoUnavailable (the URL could not be fetched: generic, the cause is not kept). A cancelled context
+// CodePhotoUnavailable (the URL could not be fetched or the fetcher timed out: generic, the cause is not kept). A cancelled context
 // returns ctx.Err().
 func PreparePhotos(ctx context.Context, fetch Fetcher, in []PhotoSource) ([]PreparedPhoto, error) {
 	if len(in) < MinPhotos {
@@ -76,9 +80,10 @@ func photoBytes(ctx context.Context, fetch Fetcher, p PhotoSource) (data []byte,
 			if ctx.Err() != nil {
 				return nil, "", ctx.Err()
 			}
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return nil, "", err
+			if errors.Is(err, ErrPhotoTooLarge) {
+				return nil, "", &Error{Code: CodePhotoTooLarge}
 			}
+			// The context is alive, so a deadline or cancel here is the fetcher's own timeout: unavailable.
 			return nil, "", &Error{Code: CodePhotoUnavailable}
 		}
 		return data, "", nil

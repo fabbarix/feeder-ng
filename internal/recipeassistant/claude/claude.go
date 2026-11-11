@@ -343,6 +343,15 @@ func (c *Client) classify(ctx context.Context, err error) error {
 	return recipeassistant.ClassifyAPIFailure(f)
 }
 
+// noRequestSent reports a timeout while connecting: the dial or the TLS handshake, before any request bytes left.
+func noRequestSent(err error) bool {
+	var oe *net.OpError
+	if errors.As(err, &oe) && oe.Op == "dial" {
+		return true
+	}
+	return strings.Contains(err.Error(), "TLS handshake timeout")
+}
+
 func retryable(f recipeassistant.APIFailure, isAPI bool) bool {
 	if !isAPI {
 		return true // connection errors
@@ -368,8 +377,9 @@ func (c *Client) retry(ctx context.Context, call func() error) error {
 		}
 		// A per-attempt timeout (the read's own ctx is still alive) is not retried: the model may be working on
 		// the answer and a second attempt would bill it again.
+		// A dial or TLS-handshake timeout is different: no request was sent, so nothing was billed. Retry it.
 		var ne net.Error
-		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout()) {
+		if !noRequestSent(err) && (errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout())) {
 			return err
 		}
 		f, isAPI := failure(err)

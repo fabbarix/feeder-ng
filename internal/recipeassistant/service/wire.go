@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
@@ -88,7 +89,7 @@ func (l lazyPhotos) Prepare(ctx context.Context, in []PhotoInput) ([]PreparedPho
 	for i, p := range in {
 		src[i] = recipeassistant.PhotoSource{DataURL: p.DataURL, URL: p.URL}
 	}
-	prepared, err := recipeassistant.PreparePhotos(ctx, f, src)
+	prepared, err := recipeassistant.PreparePhotos(ctx, tooLargeMapper{f}, src)
 	if err != nil {
 		return nil, err
 	}
@@ -97,4 +98,16 @@ func (l lazyPhotos) Prepare(ctx context.Context, in []PhotoInput) ([]PreparedPho
 		out[i] = PreparedPhoto{JPEG: p.JPEG, Width: p.Width, Height: p.Height}
 	}
 	return out, nil
+}
+
+// tooLargeMapper reports the HTTP guard's "larger than the limit" as recipeassistant.ErrPhotoTooLarge, so the
+// recipeassistant package stays free of safehttp.
+type tooLargeMapper struct{ f recipeassistant.Fetcher }
+
+func (m tooLargeMapper) Fetch(ctx context.Context, rawURL string) ([]byte, string, error) {
+	data, ct, err := m.f.Fetch(ctx, rawURL)
+	if errors.Is(err, safehttp.ErrTooLarge) {
+		return nil, "", recipeassistant.ErrPhotoTooLarge
+	}
+	return data, ct, err
 }

@@ -138,11 +138,31 @@ func (j *job) set(state string) {
 	}
 }
 
+func (j *job) modelRef() *ModelRef {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.model
+}
+
+// dropReview gives back a Review a job still holds (a cancelled or failed read must not expose one).
+func (s *Service) dropReview(j *job, sink Sink) {
+	j.mu.Lock()
+	ref := j.review
+	j.review = nil
+	j.mu.Unlock()
+	if ref != nil {
+		sink.CloseReview(j.userID, ref.ID)
+	}
+}
+
 func (j *job) view() JobView {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	v := JobView{ID: j.id, State: j.state, States: append([]string(nil), j.states...), Review: j.review, Source: j.source,
+	v := JobView{ID: j.id, State: j.state, States: append([]string(nil), j.states...), Source: j.source,
 		Model: j.model, Warnings: append([]recipeassistant.Warning(nil), j.warnings...)}
+	if j.state != StateCancelled && j.state != StateFailed {
+		v.Review = j.review // never a Review that was closed
+	}
 	if j.err != nil {
 		e := *j.err
 		v.Error = &e
@@ -201,7 +221,7 @@ func httpsURL(raw string) bool {
 	return err == nil && strings.EqualFold(u.Scheme, "https") && u.Hostname() != "" && u.User == nil
 }
 
-var photoMediaTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/gif": true, "image/webp": true}
+var photoMediaTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
 
 // validatePhoto does the synchronous checks of design ra-c-service §3: exactly one of data URL or URL, a
 // supported declared type, and the 8 MB size cap. Decoding happens later, in the preparing state.
@@ -421,17 +441,29 @@ func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink S
 	cancelled := j.cancelled
 	j.mu.Unlock()
 	switch {
+	case err == nil:
+		// perform returned nil: the read is complete and its Review is open, so a cancel that landed after it
+		// came too late. The job is done; never cancelled with a Review still open.
+		conclude(StateDone, nil, "ok")
 	case cancelled:
+		s.dropReview(j, sink)
 		conclude(StateCancelled, nil, "cancelled")
-	case err != nil:
+	default:
 		var ae *recipeassistant.Error
 		if !errors.As(err, &ae) {
 			// A deadline (the 180 s cap) or any other failure of the call chain.
 			ae = &recipeassistant.Error{Code: recipeassistant.CodeUnreachable}
 		}
+		s.dropReview(j, sink)
+		if ae.Code == recipeassistant.CodeDeclined {
+			// The adapter knows the model by id; the Client shows the display name.
+			if m := j.modelRef(); m != nil {
+				c := *ae
+				c.Model = m.Name
+				ae = &c
+			}
+		}
 		conclude(StateFailed, ae, ae.Code)
-	default:
-		conclude(StateDone, nil, "ok")
 	}
 }
 
@@ -505,6 +537,11 @@ func (s *Service) perform(ctx context.Context, j *job, r ready, in ReadInput, si
 	j.set(StateReading)
 
 	ms, _ := s.lookupModel(ctx, cl, r.settings)
+	// The model is known before the call, so a failed read carries its display name too.
+	model := &ModelRef{ID: r.settings.Model, Name: modelName(r.settings.Model, ms.DisplayName)}
+	j.mu.Lock()
+	j.model = model
+	j.mu.Unlock()
 	effort := ""
 	if ms.Effort {
 		effort = effortMedium
@@ -573,7 +610,6 @@ func (s *Service) perform(ctx context.Context, j *job, r ready, in ReadInput, si
 	if !late {
 		j.review = &ref
 		j.source = &info
-		j.model = &ModelRef{ID: r.settings.Model, Name: modelName(r.settings.Model, ms.DisplayName)}
 		j.warnings = fin.Warnings
 	}
 	j.mu.Unlock()

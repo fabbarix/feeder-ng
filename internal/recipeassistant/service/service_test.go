@@ -1068,3 +1068,11 @@ func TestADeclinedReadNamesTheModelByDisplayName(t *testing.T) {
 		t.Errorf("job model = %+v", jv.Model)
 	}
 }
+
+func TestAGIFDataURLIsRefusedSynchronously(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	_, err := e.svc.StartRead(user, service.ReadInput{Kind: recipeassistant.KindPhoto, Photos: []service.PhotoInput{{DataURL: "data:image/gif;base64,R0lGODlhAQABAAAAACw="}}}, e.sink)
+	if code(err) != recipeassistant.CodePhotoUnsupported {
+		t.Fatalf("err = %v, want photo_unsupported", err)
+	}
+}

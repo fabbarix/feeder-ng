@@ -485,7 +485,7 @@ func TestEveryReadErrorHasItsCodeAndNothingIsSavedOrRetriedOnAnotherModel(t *tes
 		}
 		switch tc.marker {
 		case "refusal":
-			if v.Error.Model != "claude-haiku-5-5" {
+			if v.Error.Model != "Claude Haiku 5.5" {
 				t.Errorf("refusal names the model: %+v", v.Error)
 			}
 		case "429":
