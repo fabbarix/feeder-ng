@@ -90,7 +90,18 @@ func (r *review) buildCourses() {
 	}
 
 	// Answers.
-	added := 0
+	// The limit: active Courses plus the added and the unarchived ones, going through the rows in order. The row
+	// where that total first passes MaxCourses gets the Problem; later rows are not flagged again.
+	total := active
+	over := false
+	passes := func(row *CourseMatch) {
+		total++
+		if !over && total > course.MaxCourses {
+			over = true
+			row.Resolved = false
+			r.problem(row.UsedBy[0], ProblemTooManyCourses, "the Household would have more than 20 Courses")
+		}
+	}
 	for k := range st.rows {
 		row := &st.rows[k]
 		eff := CourseDecision{Key: row.Key, Action: ActionUse, CourseID: mainID}
@@ -111,15 +122,12 @@ func (r *review) buildCourses() {
 				case ActionAdd:
 					if row.Status == CourseUnknown {
 						eff = CourseDecision{Key: row.Key, Action: ActionAdd}
-						added++
-						if active+added > course.MaxCourses {
-							row.Resolved = false
-							r.problem(row.UsedBy[0], ProblemTooManyCourses, "the Household would have more than 20 Courses")
-						}
+						passes(row)
 					}
 				case ActionUnarchive:
 					if row.Status == CourseArchived {
 						eff = CourseDecision{Key: row.Key, Action: ActionUnarchive, CourseID: st.matched[k].ID}
+						passes(row)
 					}
 				}
 			}

@@ -32,7 +32,7 @@ func init() { app.Register(app.Module{Name: "recipefile", Mount: mount}) }
 const (
 	topicRecipes     = "recipes"
 	topicIngredients = "ingredients"
-	topicCourses     = "courses"
+	topicHousehold   = "household"
 )
 
 func mount(r *app.Router, d app.Deps) {
@@ -326,7 +326,7 @@ func (a *api) published(res store.Result) {
 		a.events.Publish(topicIngredients, map[string]int{"created": res.IngredientsCreated, "conversions": res.ConversionsAdded})
 	}
 	if res.CoursesCreated > 0 || res.CoursesUnarchived > 0 {
-		a.events.Publish(topicCourses, map[string]int{"created": res.CoursesCreated, "unarchived": res.CoursesUnarchived})
+		a.events.Publish(topicHousehold, map[string]string{"changed": "courses"})
 	}
 }
 
