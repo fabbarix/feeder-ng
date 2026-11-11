@@ -56,12 +56,24 @@ Feature: When the planner runs
     And the plan JSON "slots.0.date" is "2026-11-10"
     And the plan JSON "slots.0.unfilled.reason" is "no_attendance"
 
-  Scenario: Every option excluded is reported with counts
+  Scenario: Every Recipe archived: the Course has no Recipes to plan
     Given every planning Recipe is archived
     And the planner has finished
     When I regenerate the plan
     And I view the plan
+    Then the plan slot on 2026-11-10 could not be planned because "no_course_recipes"
+
+  Scenario: Every option excluded is reported with counts
+    Given every planning Recipe except "pasta" is archived
+    And the planning Member "Anna" excludes the planning Ingredient "flour"
+    And the planner has finished
+    When I regenerate the plan
+    And I view the plan
     Then the plan slot on 2026-11-10 could not be planned because "no_candidates"
+    When I list the slots the planner could not plan
+    Then the plan JSON "slots.0.unfilled.reason" is "no_candidates"
+    And the plan JSON "slots.0.unfilled.eliminated.considered" is "1"
+    And the plan JSON "slots.0.unfilled.eliminated.exclusion" is "1"
 
   Scenario: Every option in Cool-down gives a relaxed pick with an Again soon chip, not Couldn't plan
     Given every planning Recipe except "pasta" is archived

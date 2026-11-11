@@ -24,6 +24,19 @@ func crsBSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	// A Member's Exclusion of an Ingredient, for the Members and Ingredients of the "planning" steps.
+	sc.Step(`^the planning Member "([^"]*)" excludes the planning Ingredient "([^"]*)"$`, func(member, ing string) error {
+		mid, _ := w.Vars["plan:member:"+member].(int64)
+		iid, _ := w.Vars["plan:ingredient:"+ing].(int64)
+		if mid == 0 || iid == 0 {
+			return fmt.Errorf("unknown planning Member %q (%d) or Ingredient %q (%d)", member, mid, ing, iid)
+		}
+		r := w.Ensure().LoginAdmin(w.TB).Put(fmt.Sprintf("/api/ingredient-exclusions/%d", iid), map[string]any{"excluded": true, "memberId": mid})
+		if r.Status != 200 && r.Status != 204 {
+			return fmt.Errorf("exclude %s for %s: %d %s", ing, member, r.Status, r.Body)
+		}
+		return nil
+	})
 	// Fresh meals tagged <tag> that carry no variety_relaxed chip are the ones that keep the rule.
 	sc.Step(`^the planned fresh meals tagged "([^"]*)" that keep the Variety Rule number at most (\d+)$`, func(tag string, max int) error {
 		v, err := planJSON(w.Last.Body, "slots")
