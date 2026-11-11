@@ -134,7 +134,9 @@ describe('ExtraSheet: validation (inline, on the field at fault)', () => {
     await pick('passata')
     await userEvent.type(screen.getByRole('spinbutton', { name: 'Quantity' }), '0')
     await save()
-    expect(screen.getByRole('spinbutton', { name: 'Quantity' })).toHaveAccessibleDescription('Enter a number above 0')
+    const quantity = screen.getByRole('spinbutton', { name: 'Quantity' })
+    expect(quantity).toHaveAccessibleDescription(/Enter a number above 0/)
+    expect(quantity).toHaveAccessibleDescription(/\bg\b/)
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
