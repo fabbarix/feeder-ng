@@ -204,7 +204,7 @@ An optional number of days an Ingredient stays usable after purchase.
 _Avoid_: Expiry, best-before
 
 **Stock Lot**:
-One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) the date it goes off.
+One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) its go-off date, the last day it is good.
 _Avoid_: Batch, item, unit
 
 **Go-off date / Good until**:
