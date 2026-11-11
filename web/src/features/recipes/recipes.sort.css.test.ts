@@ -36,6 +36,18 @@ describe('ingredient line: the last cell holds the actions menu and the remove b
   })
 })
 
+describe('a pending (Ready Meal) line: the actions sit in column 2 of the two-track grid, on row 1', () => {
+  const sel = '.line-row--pending > .line-row__remove'
+  it('the override exists and targets an explicit track, not the missing `remove` area', () => {
+    expect(rulesFor(sel).length).toBeGreaterThan(0)
+    for (const width of [0, 900]) {
+      expect(valueFor(sel, 'grid-area', width), `${width}`).toBe('auto')
+      expect(valueFor(sel, 'grid-row', width), `${width}`).toBe('1')
+      expect(valueFor(sel, 'grid-column', width), `${width}`).toBe('2')
+    }
+  })
+})
+
 describe('a line being dragged or lifted is opaque and floats', () => {
   it("from 900 the hairline row has no background, so ['dragging'] and ['lifted'] give it the surface", () => {
     expect(valueFor(".line-row[data-state='dragging']", 'background', 900)).toBe('var(--color-surface)')
