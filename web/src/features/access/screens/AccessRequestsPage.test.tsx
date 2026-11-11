@@ -39,7 +39,7 @@ describe('AccessRequestsPage', () => {
     })
     renderWithProviders(<AccessRequestsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Approve zia@example.test' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Approve zia@example.test' })
+    const dialog = await screen.findByRole('dialog', { name: 'Approve sign-in request' })
     expect(api.callsTo('POST', '/api/access-requests/5/approve')).toHaveLength(0)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Approve' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/access-requests/5/approve')).toHaveLength(1))

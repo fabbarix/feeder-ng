@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Avatar, BottomSheet, Button, Select } from '../../../ui'
-import { linkableMembers } from '../lib/members'
+import { linkableMembers, unlinkedMembers } from '../lib/members'
 import { accessStrings } from '../strings'
 import type { AccessMember, AccessRequest } from '../types'
 import '../access.css'
@@ -41,9 +41,9 @@ export function ApproveSheet({ request, members, membersFailed, busy, error, onA
     </span>
   )
   return (
-    <BottomSheet open onClose={onCancel} title={accessStrings.approveLabel(request.email)} footer={footer}>
+    <BottomSheet open onClose={onCancel} title={t.title} footer={footer}>
       <div className="access__stack">
-        <p className="access__muted">{t.explain(request.name)}</p>
+        <p className="access__muted access__wrap">{t.explain(request.name, request.email)}</p>
         {error ? (
           <p role="alert" className="access__error">
             {error}
@@ -52,7 +52,7 @@ export function ApproveSheet({ request, members, membersFailed, busy, error, onA
         {membersFailed ? (
           <p className="access__muted">{t.membersFailed}</p>
         ) : offered.length === 0 ? (
-          <p className="access__muted">{t.noFreeMembers}</p>
+          <p className="access__muted">{unlinkedMembers(members).length === 0 ? t.noFreeMembers : t.noLinkableMembers}</p>
         ) : (
           <Select<number>
             label={t.memberLabel}

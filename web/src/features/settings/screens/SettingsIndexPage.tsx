@@ -10,7 +10,7 @@ import '../settings.css'
 export function SettingsIndexPage() {
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const waiting = useAccessBadge()
-  const groups = settingsGroups(isAdmin, waiting)
+  const groups = settingsGroups(isAdmin)
   return (
     <div className="settings">
       <PageHeader title={settingsStrings.index.title} />

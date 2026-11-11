@@ -13,10 +13,12 @@ export const accessStrings = {
   confirmDenyTitle: (email: string) => `Deny ${email}?`,
   confirmDenyBody: 'They can ask again after 24 hours.',
   approveSheet: {
-    explain: (name: string) => `Approving lets ${name} sign in as a User.`,
+    title: 'Approve sign-in request',
+    explain: (name: string, email: string) => `Approving lets ${name} (${email}) sign in as a User.`,
     memberLabel: 'Link to a Member (optional)',
     dontLink: "Don't link",
     noFreeMembers: 'Every Member already has a User.',
+    noLinkableMembers: 'No Member can be linked to this email.',
     membersFailed: 'Could not load the Members. You can still approve without linking.',
     cancel: 'Cancel',
   },

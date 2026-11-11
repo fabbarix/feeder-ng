@@ -47,7 +47,7 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
  *   Admin:     Allowlist (Admins only)                                  (/settings/allowlist)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
  */
-export function settingsGroups(isAdmin: boolean, _pendingAccessRequests = 0): SettingsGroup[] {
+export function settingsGroups(isAdmin: boolean): SettingsGroup[] {
   return GROUP_ORDER.map((group) => ({
     id: group.id,
     title: group.title,

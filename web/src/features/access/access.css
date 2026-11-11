@@ -40,6 +40,9 @@
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
 }
+.access__wrap {
+  overflow-wrap: anywhere;
+}
 .access__muted {
   margin: 0;
   color: var(--color-on-surface-variant);

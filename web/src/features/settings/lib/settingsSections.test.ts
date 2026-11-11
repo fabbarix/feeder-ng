@@ -57,17 +57,10 @@ describe('settingsGroups', () => {
   })
 
   it('A1: the row\'s meta never carries the count (the badge does), and has a distinct icon from the Allowlist', () => {
-    const row = (n?: number) => settingsGroups(false, n).flatMap((g) => g.sections).find((s) => s.id === 'accessRequests')!
-    expect(row(0).meta).not.toMatch(/\d/)
-    expect(row(0).meta).not.toBe('')
-    expect(row(3).meta).toBe(row(0).meta)
-    expect(row().meta).toBe(row(0).meta)
+    const row = () => settingsGroups(false).flatMap((g) => g.sections).find((s) => s.id === 'accessRequests')!
+    expect(row().meta).not.toMatch(/\d/)
+    expect(row().meta).not.toBe('')
     const allowlist = settingsGroups(true).flatMap((g) => g.sections).find((s) => s.id === 'allowlist')!
     expect(row().icon).not.toBe(allowlist.icon)
-  })
-
-  it('A1: only the Sign-in requests row changes with the count', () => {
-    const rest = (n: number) => settingsGroups(true, n).flatMap((g) => g.sections).filter((s) => s.id !== 'accessRequests')
-    expect(rest(5)).toEqual(rest(0))
   })
 })
