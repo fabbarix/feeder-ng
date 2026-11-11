@@ -456,7 +456,7 @@ func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink S
 	default:
 		var ae *recipeassistant.Error
 		if !errors.As(err, &ae) {
-			// A deadline (the 180 s cap) or any other failure of the call chain.
+			// A deadline (the 300 s cap) or any other failure of the call chain.
 			ae = &recipeassistant.Error{Code: recipeassistant.CodeUnreachable}
 		}
 		s.dropReview(j, sink)

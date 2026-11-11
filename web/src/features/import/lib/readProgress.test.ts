@@ -70,8 +70,8 @@ describe('errorBackoff and shouldGiveUp', () => {
     expect(shouldGiveUp({ failures: 4, elapsedMs: 1000 })).toBe(false)
     expect(shouldGiveUp({ failures: 5, elapsedMs: 1000 })).toBe(true)
   })
-  it('gives up past the server\'s 180 s cap (plus margin) whatever happened', () => {
-    expect(POLL_DEADLINE_MS).toBe(200_000)
+  it('gives up past the server\'s 300 s cap (plus margin) whatever happened', () => {
+    expect(POLL_DEADLINE_MS).toBe(320_000)
     expect(shouldGiveUp({ failures: 0, elapsedMs: POLL_DEADLINE_MS - 1 })).toBe(false)
     expect(shouldGiveUp({ failures: 0, elapsedMs: POLL_DEADLINE_MS })).toBe(true)
   })

@@ -30,7 +30,9 @@ import (
 
 const (
 	defaultRetries = 2
-	// callTimeout bounds one HTTP attempt; the read's own deadline (180 s) is the real cap.
+	// callTimeout bounds one HTTP attempt of a small call (models, the connection test). A Messages call streams,
+	// so for it this is the longest silence allowed (no event, not even a ping); the read's own deadline is the
+	// real cap.
 	callTimeout = 120 * time.Second
 	baseBackoff = 500 * time.Millisecond
 )
@@ -45,7 +47,7 @@ type Options struct {
 	// honouring retry-after; nil means 2.
 	MaxRetries *int
 	Logger     *slog.Logger // nil: slog.Default
-	// RequestTimeout bounds one HTTP attempt; zero means 120 s.
+	// RequestTimeout bounds one HTTP attempt, and for a streamed Messages call the longest silence; zero means 120 s.
 	RequestTimeout time.Duration
 }
 
@@ -55,7 +57,20 @@ type Client struct {
 	sdk  anthropic.Client
 	log  *slog.Logger
 	max  int
+	idle time.Duration // the longest silence of a streamed Messages call
 }
+
+// errStalled is a streamed Messages call that went silent for longer than the idle limit. It is a timeout, so retry
+// does not send the call again (the model may still be billing the first one), and it classifies as unreachable.
+var errStalled error = stalledError{}
+
+type stalledError struct{}
+
+func (stalledError) Error() string {
+	return "claude: the answer stopped arriving (no event within the idle limit)"
+}
+func (stalledError) Timeout() bool   { return true }
+func (stalledError) Temporary() bool { return false }
 
 // New returns a client. The environment is never consulted (no ANTHROPIC_* variables, profiles or headers):
 // the Admin's saved base URL and key are the only credentials.
@@ -84,7 +99,7 @@ func New(o Options) *Client {
 		option.WithMaxRetries(0), // retrying is ours, see retry
 		option.WithRequestTimeout(timeout),
 	)
-	return &Client{opts: o, sdk: sdk, log: log, max: n}
+	return &Client{opts: o, sdk: sdk, log: log, max: n, idle: timeout}
 }
 
 // Factory returns a service.ClaudeFactory over the default HTTP client.
@@ -139,9 +154,9 @@ func (c *Client) Message(ctx context.Context, r service.Request) (service.Respon
 	)
 	start := time.Now()
 	err = c.retry(ctx, func() error {
-		var e error
 		hdr = nil
-		msg, e = c.sdk.Messages.New(ctx, params, option.WithResponseInto(&hdr))
+		m, e := c.stream(ctx, params, &hdr)
+		msg = m
 		return e
 	})
 	if err != nil {
@@ -167,6 +182,38 @@ func (c *Client) Message(ctx context.Context, r service.Request) (service.Respon
 	}
 	c.logCall("messages", r.Model, hdr, nil, nil, start, resp.Usage)
 	return resp, nil
+}
+
+// stream sends one streamed Messages attempt and accumulates its events into the final Message. A recipe answer can
+// take minutes, which a non-streamed call cannot survive (it returns nothing until the end). Streamed, the call has
+// no overall per-attempt timeout; instead it ends with errStalled when c.idle passes without an event (the API sends
+// ping events while the model works, so silence means a stall).
+func (c *Client) stream(ctx context.Context, params anthropic.MessageNewParams, hdr **http.Response) (*anthropic.Message, error) {
+	actx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	watchdog := time.AfterFunc(c.idle, func() { cancel(errStalled) })
+	defer watchdog.Stop()
+	st := c.sdk.Messages.NewStreaming(actx, params, option.WithResponseInto(hdr), option.WithRequestTimeout(0))
+	defer st.Close()
+	var msg anthropic.Message
+	for st.Next() {
+		watchdog.Reset(c.idle)
+		if err := msg.Accumulate(st.Current()); err != nil {
+			return nil, err
+		}
+	}
+	err := st.Err()
+	if errors.Is(context.Cause(actx), errStalled) && ctx.Err() == nil {
+		return nil, errStalled
+	}
+	if err != nil {
+		return nil, err
+	}
+	if msg.ID == "" {
+		// The stream ended before message_start: nothing usable arrived.
+		return nil, errStalled
+	}
+	return &msg, nil
 }
 
 func messageParams(r service.Request) (anthropic.MessageNewParams, error) {
@@ -429,6 +476,22 @@ func (c *Client) logCall(kind, model string, h *http.Response, err error, out er
 		attrs = append(attrs, "status", ae.StatusCode, "request_id", ae.RequestID)
 	} else if h != nil {
 		attrs = append(attrs, "status", h.StatusCode, "request_id", h.Header.Get("request-id"))
+	}
+	// The API's error type says why a call failed. Its message is logged only for a refused request shape ("Schema is
+	// too complex", an unknown model), never for authentication or permission errors, and cut short; a stall or a
+	// transport failure names itself.
+	if f, isAPI := failure(err); isAPI {
+		attrs = append(attrs, "error_type", f.Type)
+		switch f.Type {
+		case "invalid_request_error", "not_found_error", "request_too_large":
+			msg := f.Message
+			if len(msg) > 200 {
+				msg = msg[:200]
+			}
+			attrs = append(attrs, "error", msg)
+		}
+	} else if err != nil && !errors.Is(err, context.Canceled) {
+		attrs = append(attrs, "error", err.Error())
 	}
 	if code := recipeassistant.CodeOf(out); code != "" {
 		attrs = append(attrs, "outcome", code)

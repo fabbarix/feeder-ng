@@ -49,7 +49,8 @@ Haiku is the cheapest by far; the trade-off is more fixing in Import Review on m
 ### 1.2 Request shape (per read)
 - `client.Messages.New` (non-beta). `fallbacks` and the `server-side-fallback-*` beta are **never sent** (user decision 8; Haiku 5.5 has none anyway).
 - `model`: the saved model ID (string, never an SDK constant).
-- `max_tokens: 16000` (skill default for non-streaming; thinking counts against it).
+- `max_tokens: 16000` (thinking counts against it).
+- **Streamed** (`"stream": true`, the SDK's `Messages.NewStreaming`, events accumulated into the final message). A whole recipe in one schema-constrained answer can take longer than one non-streamed attempt allows: on 2026-11-11 (beta.2) two reads got no response headers within the 120 s per-attempt timeout and failed as `assistant_unreachable`. Streamed, the connection shows progress (text deltas, and `ping` events while the model thinks), so the 120 s limit applies to **silence** instead of to the whole answer.
 - `thinking`: **unset**. On Haiku 5.5 / Sonnet 5.5 / Opus 5.5 / Fable that runs adaptive thinking; `{type:"disabled"}` and `budget_tokens` are 400s on several current models, so we never send them.
 - `output_config.effort: "medium"` only when the model's `capabilities.effort.supported` is true (Haiku 5.5 and Opus 5.5 default to medium, so this pins the default at no cost; Sonnet 5.5 defaults to high, so it is set explicitly). Not sent for unknown/custom IDs or Haiku 4.5. No `temperature`/`top_p`/`top_k`.
 - `output_config.format`: `{type: "json_schema", schema: <OutputSchema bytes as json.RawMessage>}` (raw bytes serialise deterministically, which keeps the cache prefix stable). No assistant prefill (400). No `tool_choice`, no tools.
@@ -58,9 +59,9 @@ Haiku is the cheapest by far; the trade-off is more fixing in Import Review on m
 - Response: check `stop_reason` before reading content. `end_turn` -> parse the single text block as JSON; `refusal` -> `assistant_declined` (with `stop_details.category` logged); `max_tokens` -> `assistant_output_too_long`. Parse JSON with `encoding/json`, never string matching.
 
 ### 1.3 Client, timeouts, retries
-- One SDK client per read, built from the current settings: `option.WithAPIKey`, `option.WithBaseURL(baseURL)`, `option.WithMaxRetries(2)` (SDK retries 408/409/429/5xx/529 and connection errors, honouring `retry-after`), `option.WithRequestTimeout(120 s)` per attempt, `option.WithHTTPClient(c)`.
+- One SDK client per read, built from the current settings: `option.WithAPIKey`, `option.WithBaseURL(baseURL)`, `option.WithMaxRetries(2)` (SDK retries 408/409/429/5xx/529 and connection errors, honouring `retry-after`), `option.WithRequestTimeout(120 s)` per attempt for the small calls (Models, the connection test), `option.WithHTTPClient(c)`. The streamed Messages call turns the per-attempt timeout off and instead ends with `assistant_unreachable` after 120 s without any event; a stalled stream is not retried (the model may still be billing it).
 - `c` is our `*http.Client`: TLS 1.2+, `Proxy: http.ProxyFromEnvironment`, and **`CheckRedirect` refusing every redirect**: the key travels in `x-api-key`, which Go's client does not strip on a cross-host redirect.
-- The whole read runs under a context with a **180 s** deadline (fetch 15 s + model + images). If a `retry-after` exceeds the remaining budget we stop with `assistant_rate_limited` instead of waiting.
+- The whole read runs under a context with a **300 s** deadline (180 s before reads streamed) (fetch 15 s + model + images). If a `retry-after` exceeds the remaining budget we stop with `assistant_rate_limited` instead of waiting.
 - Cancel (`DELETE` on the read) cancels the context, which aborts the HTTP call.
 
 ### 1.4 Error mapping (Anthropic -> Feeder)

@@ -5,16 +5,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 )
 
 // OutputSchema projects the canonical Recipe File JSON Schema
 // (docs/spec/recipe-file-v1.schema.json) onto what structured outputs accept
 // (design §4.6). Pure and deterministic (same input, same bytes). It:
-//   - keeps type, properties, required, items, enum, const, $defs, $ref, anyOf,
-//     description, additionalProperties:false, and format date-time and uri;
-//   - drops $schema, $id, title, minimum, maximum, exclusiveMinimum,
-//     exclusiveMaximum, minLength, maxLength, minItems, maxItems, uniqueItems,
-//     pattern, default, if, then, else, not, allOf;
+//   - keeps type, properties, items, enum, const, $defs, $ref, anyOf,
+//     description and additionalProperties:false;
+//   - makes every property required: a schema with optional fields nested in
+//     arrays compiled for 180 s and was refused as "Schema is too complex" (live
+//     test, 2026-11-11), so the model writes an explicit "none" ("", [], null, 0,
+//     false) instead, and Finish drops those for the fields the canonical schema
+//     leaves optional (pruneNone);
+//   - drops $schema, $id, title, format (a required URL may be ""), minimum,
+//     maximum, exclusiveMinimum, exclusiveMaximum, minLength, maxLength,
+//     minItems, maxItems, uniqueItems, pattern, default, if, then, else, not,
+//     allOf;
 //   - turns type ["integer","null"] into anyOf [{type:integer},{type:null}];
 //   - replaces the image definition's anyOf with {type:string, description};
 //   - removes exportedAt, and adds an optional top-level noRecipe: boolean;
@@ -38,14 +45,8 @@ func OutputSchema(canonical []byte) ([]byte, error) {
 			"description": "true when the source contains no recipe; then recipes is empty",
 		}
 	}
-	if req, ok := out["required"].([]any); ok {
-		kept := make([]any, 0, len(req))
-		for _, r := range req {
-			if r != "exportedAt" {
-				kept = append(kept, r)
-			}
-		}
-		out["required"] = kept
+	if props, ok := out["properties"].(map[string]any); ok {
+		out["required"] = allKeys(props)
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
@@ -105,16 +106,29 @@ func projectSchema(in map[string]any) map[string]any {
 			} else {
 				out[k] = v
 			}
-		case "format":
-			if f, _ := v.(string); f == "date-time" || f == "uri" {
-				out[k] = v
-			}
-		case "required", "enum", "const", "description", "$ref":
+		case "enum", "const", "description", "$ref":
 			out[k] = v
 		}
 	}
+	if props, ok := out["properties"].(map[string]any); ok {
+		out["required"] = allKeys(props)
+	}
 	if out["type"] == "object" {
 		out["additionalProperties"] = false
+	}
+	return out
+}
+
+// allKeys is every property name, sorted, so the projection stays deterministic.
+func allKeys(props map[string]any) []any {
+	names := make([]string, 0, len(props))
+	for name := range props {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	out := make([]any, len(names))
+	for i, n := range names {
+		out[i] = n
 	}
 	return out
 }

@@ -1,7 +1,7 @@
 // Stage copy, poll and back-off policy of a running read (docs/dev/design/ra-e-import.md section 4.2). Plain TypeScript.
 import type { ReadInput, ReadState } from '../types'
 
-export const POLL_DEADLINE_MS = 200_000 // the server cuts a read at 180 s
+export const POLL_DEADLINE_MS = 320_000 // the server cuts a read at 300 s
 export const MAX_POLL_FAILURES = 5
 
 const POLL_DELAYS = [500, 500, 1000, 1000, 1500, 2000]

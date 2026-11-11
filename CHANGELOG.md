@@ -4,7 +4,9 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **Recipe Assistant reads.** Reading a recipe failed with "Couldn't reach Recipe Assistant" although the connection test passed. The Anthropic API refused the answer format as too complex after about 3 minutes, and Feeder gave up waiting at 2. The answer format now asks for every field, with an explicit "none" for what a recipe leaves out, so a read takes seconds. Reads also stream, so a long answer is no longer cut off at 2 minutes, and a whole read may now take up to 5. The server log names the API's reason when a call is refused.
 
 ## [1.0.0-beta.2] - 2026-11-11
 

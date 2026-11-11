@@ -118,8 +118,9 @@ func TestOutputSchemaKeepsTheStructure(t *testing.T) {
 			t.Errorf("required lost %q: %v", want, req)
 		}
 	}
-	if contains(req, "noRecipe") {
-		t.Error("noRecipe is optional")
+	// Every property is required (an explicit "none" instead of a missing field), noRecipe included.
+	if len(req) != len(props) || !contains(req, "noRecipe") {
+		t.Errorf("required = %v, want every property", req)
 	}
 	if _, ok := props["exportedAt"]; ok {
 		t.Error("exportedAt must be removed")
@@ -150,11 +151,30 @@ func TestOutputSchemaKeepsTheStructure(t *testing.T) {
 	if d, _ := step["after"].(map[string]any)["description"].(string); !strings.Contains(d, "0-based") {
 		t.Errorf("step.after description lost: %v", step["after"])
 	}
-	// source.url keeps format uri, and source stays a closed object.
+	// source stays a closed object; its url loses format uri (it may be "" for none) and both fields are required.
 	src := defs["recipe"].(map[string]any)["properties"].(map[string]any)["source"].(map[string]any)
-	if src["additionalProperties"] != false || src["properties"].(map[string]any)["url"].(map[string]any)["format"] != "uri" {
+	if src["additionalProperties"] != false || src["properties"].(map[string]any)["url"].(map[string]any)["format"] != nil ||
+		len(toStrings(src["required"])) != 2 {
 		t.Errorf("source: %v", src)
 	}
+	// Every object of the projection requires all its properties.
+	var walk func(any)
+	walk = func(v any) {
+		switch o := v.(type) {
+		case map[string]any:
+			if p, ok := o["properties"].(map[string]any); ok && len(toStrings(o["required"])) != len(p) {
+				t.Errorf("an object leaves properties optional: %v", toStrings(o["required"]))
+			}
+			for _, c := range o {
+				walk(c)
+			}
+		case []any:
+			for _, c := range o {
+				walk(c)
+			}
+		}
+	}
+	walk(root)
 }
 
 func TestOutputSchemaRewritesNullableIntegersAsAnyOf(t *testing.T) {
@@ -244,29 +264,47 @@ func compile(t *testing.T, schema []byte) *jsonschema.Schema {
 	return s
 }
 
-func TestProjectedSchemaAcceptsTheSpecExampleWithoutExportedAt(t *testing.T) {
+// fullAnswer is a small answer as the model writes it under the projection: every field present, "none" spelled out.
+func fullAnswer() map[string]any {
+	none := map[string]any{"ingredient": "butter", "quantity": 10.0, "unit": "g", "note": "", "optional": false}
+	return map[string]any{"format": "feeder-recipe-file", "version": 1.0, "noRecipe": false,
+		"ingredients": []any{map[string]any{"name": "butter", "baseUnit": "g", "conversions": []any{}, "image": "", "shelfLifeDays": nil}},
+		"recipes": []any{map[string]any{
+			"name": "Buttered toast", "description": "", "yield": 1.0, "readyMeal": false, "tags": []any{}, "image": "",
+			"cooldownDays": nil, "leftoverUseByDays": nil, "reheatMinutes": nil, "source": map[string]any{"url": "", "attribution": ""},
+			"ingredients": []any{none},
+			"steps": []any{map[string]any{"text": "Toast the bread.", "kind": "active", "durationMinutes": 3.0, "leadTimeMinutes": 0.0,
+				"after": []any{}, "uses": []any{}, "image": ""}},
+		}}}
+}
+
+func TestProjectedSchemaAcceptsAnAnswerWithEveryFieldWritten(t *testing.T) {
 	s := compile(t, projected(t))
+	if err := s.Validate(fullAnswer()); err != nil {
+		t.Fatalf("a full answer is rejected by the projection: %v", err)
+	}
+	// The spec example leaves optional fields out, which the projection no longer allows.
 	var ex map[string]any
 	if err := json.Unmarshal(spec.Example, &ex); err != nil {
 		t.Fatal(err)
 	}
 	delete(ex, "exportedAt")
-	if err := s.Validate(ex); err != nil {
-		t.Fatalf("example rejected by the projection: %v", err)
+	if err := s.Validate(ex); err == nil {
+		t.Fatal("an answer that leaves fields out must be rejected: every field is required")
 	}
 }
 
 func TestProjectedSchemaAcceptsNoRecipeAndLooseValuesThatParseStillChecks(t *testing.T) {
 	s := compile(t, projected(t))
-	noRecipe := map[string]any{"format": "feeder-recipe-file", "version": 1, "recipes": []any{}, "noRecipe": true}
+	noRecipe := map[string]any{"format": "feeder-recipe-file", "version": 1, "recipes": []any{}, "ingredients": []any{}, "noRecipe": true}
 	if err := s.Validate(noRecipe); err != nil {
 		t.Fatalf("noRecipe answer: %v", err)
 	}
 	// Rules that were dropped are enforced later (Parse, CheckFile), not here.
-	loose := map[string]any{"format": "feeder-recipe-file", "version": 1, "recipes": []any{map[string]any{
-		"name": "", "yield": -1, "ingredients": []any{},
-		"steps": []any{map[string]any{"text": "Rest", "kind": "passive"}},
-	}}}
+	loose := fullAnswer()
+	r := loose["recipes"].([]any)[0].(map[string]any)
+	r["name"], r["yield"] = "", -1.0
+	r["steps"].([]any)[0].(map[string]any)["kind"] = "passive"
 	if err := s.Validate(loose); err != nil {
 		t.Fatalf("the projection must not enforce dropped rules: %v", err)
 	}

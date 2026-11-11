@@ -644,8 +644,8 @@ func TestTheWholeReadIsCappedAndTheSlotIsReleased(t *testing.T) {
 	}
 }
 
-func TestTheDefaultCapIs180Seconds(t *testing.T) {
-	if service.DefaultOverall != 180*time.Second {
+func TestTheDefaultCapIs300Seconds(t *testing.T) {
+	if service.DefaultOverall != 300*time.Second {
 		t.Fatalf("DefaultOverall = %v", service.DefaultOverall)
 	}
 	e := newEnv(t, opts{enabled: true})
@@ -660,8 +660,8 @@ func TestTheDefaultCapIs180Seconds(t *testing.T) {
 	jv := e.start(t, user, textIn("x"))
 	<-e.claude.started
 	dl, ok := e.claude.ctxs[0].Deadline()
-	if !ok || dl.Sub(time.Now()) > 181*time.Second || dl.Sub(time.Now()) < 170*time.Second {
-		t.Errorf("deadline of the model call = %v (ok=%v), want about 180 s from now", dl, ok)
+	if !ok || dl.Sub(time.Now()) > 301*time.Second || dl.Sub(time.Now()) < 290*time.Second {
+		t.Errorf("deadline of the model call = %v (ok=%v), want about 300 s from now", dl, ok)
 	}
 	close(release)
 	e.wait(t, user, jv.ID, service.StateDone, service.StateFailed)

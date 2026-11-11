@@ -75,10 +75,13 @@ func TestRequestShape(t *testing.T) {
 		t.Error("x-api-key only, never Authorization")
 	}
 	body := m.JSON()
-	for _, banned := range []string{"fallbacks", "thinking", "temperature", "top_p", "top_k", "tools", "tool_choice", "stream", "output_format", "betas", "container"} {
+	for _, banned := range []string{"fallbacks", "thinking", "temperature", "top_p", "top_k", "tools", "tool_choice", "output_format", "betas", "container"} {
 		if _, has := body[banned]; has {
 			t.Errorf("the request must not contain %q", banned)
 		}
+	}
+	if body["stream"] != true {
+		t.Error("a read streams (a whole recipe can outlast one non-streamed call)")
 	}
 	if body["model"] != "claude-haiku-5-5" || body["max_tokens"] != float64(16000) {
 		t.Errorf("model/max_tokens = %v/%v", body["model"], body["max_tokens"])
@@ -520,5 +523,60 @@ func TestADialOrHandshakeTimeoutIsRetriedBecauseNoRequestWasSent(t *testing.T) {
 				t.Errorf("attempts = %d, requests served = %d, want 2 and 1", rt.calls, len(f.Messages()))
 			}
 		})
+	}
+}
+
+// ---- streaming: the read call streams, so a slow but steady answer is not cut off ---------------------------------
+
+// A model that keeps sending takes longer than the idle limit in total and still succeeds: the limit is silence,
+// not the whole answer (the 2026-11-11 beta.2 reads died at 120 s with no answer at all).
+func TestAStreamedAnswerSlowerThanTheIdleLimitStillArrives(t *testing.T) {
+	f := fakeanthropic.New(fakeanthropic.WithTrickle(120*time.Millisecond, 6))
+	defer f.Close()
+	c := claude.New(claude.Options{BaseURL: f.URL, APIKey: recipeassistant.Secret(key), RequestTimeout: 300 * time.Millisecond})
+	start := time.Now()
+	resp, err := c.Message(context.Background(), req(t, "x #fake:trickle"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if took := time.Since(start); took < 500*time.Millisecond {
+		t.Fatalf("took %v: the trickle should outlast the 300 ms idle limit", took)
+	}
+	if resp.Text != fakeanthropic.ValidFile() || resp.StopReason != "end_turn" || resp.Usage.InputTokens != 1200 || resp.Usage.OutputTokens != 800 {
+		t.Errorf("resp = %+v", resp)
+	}
+	if resp.RequestID == "" {
+		t.Error("no request id")
+	}
+}
+
+// A stream that goes silent mid-answer ends at the idle limit as unreachable, and is not sent again.
+func TestAStalledStreamIsUnreachableAndNotRetried(t *testing.T) {
+	f := fakeanthropic.New(fakeanthropic.WithSlow(5 * time.Second))
+	defer f.Close()
+	c := claude.New(claude.Options{BaseURL: f.URL, APIKey: recipeassistant.Secret(key), RequestTimeout: 200 * time.Millisecond})
+	start := time.Now()
+	_, err := c.Message(context.Background(), req(t, "x #fake:stall"))
+	if codeOf(err) != recipeassistant.CodeUnreachable {
+		t.Errorf("code = %q (%v), want unreachable", codeOf(err), err)
+	}
+	if n := len(f.Messages()); n != 1 {
+		t.Errorf("requests = %d, want 1 (a stalled answer may still be billing)", n)
+	}
+	if took := time.Since(start); took > 2*time.Second {
+		t.Errorf("took %v, want about the 200 ms idle limit", took)
+	}
+}
+
+// Stop reasons still come through a stream: a refusal and a truncated answer are errors.
+func TestStreamedStopReasonsAreChecked(t *testing.T) {
+	f := fakeanthropic.New()
+	defer f.Close()
+	c := client(f.URL, zero())
+	if _, err := c.Message(context.Background(), req(t, "x #fake:refusal")); codeOf(err) != recipeassistant.CodeDeclined {
+		t.Errorf("refusal: %v", err)
+	}
+	if _, err := c.Message(context.Background(), req(t, "x #fake:max-tokens")); codeOf(err) != recipeassistant.CodeOutputTooLong {
+		t.Errorf("max tokens: %v", err)
 	}
 }
