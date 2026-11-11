@@ -7,6 +7,13 @@
 }
 
 /* Each slot takes the full row and may shrink below its content width, so nothing forces a horizontal scroll. */
+/* The list slot stacks its own children (intro, list, add action) with the same token gap, so they never sit flush. */
+.list-page__list {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
 .list-page__header,
 .list-page__search,
 .list-page__filters,

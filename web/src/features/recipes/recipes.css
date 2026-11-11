@@ -1,6 +1,5 @@
 /* Recipes feature (WP9, ui-fix-plan 5.8 to 5.10). Layout and text on tokens only; the primitives carry their own look. */
 
-.recipes-screen,
 .recipe-detail,
 .recipe-editor {
   display: flex;
