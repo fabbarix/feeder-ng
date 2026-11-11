@@ -12,6 +12,7 @@ type MealSlot struct {
 	Name       string
 	Time       string // HH:MM, household time
 	Attendance []Attendee
+	Courses    []SlotCourse // the slot's Courses in the slot's order (ADR 0008); never empty once read
 }
 
 // MealSlotInput is what an Admin supplies to create or replace a Meal Slot.
@@ -20,11 +21,17 @@ type MealSlotInput struct {
 	Name       string
 	Time       string
 	Attendance []Attendee
+	// Courses in the slot's order. nil: absent (a create gets the main Course, required, nobody opting
+	// out; an update keeps the stored Courses and their opt-outs). A non-nil empty list is
+	// ReasonCoursesEmpty.
+	Courses []SlotCourseInput
 }
 
-// Normalized trims the name. It returns a copy.
+// Normalized trims the name and drops repeated Courses (the first wins) and repeated opt-out Members
+// from Courses. It returns a copy.
 func (m MealSlotInput) Normalized() MealSlotInput {
 	m.Name = strings.TrimSpace(m.Name)
+	m.Courses = NormalizeSlotCourses(m.Courses)
 	return m
 }
 
@@ -39,7 +46,10 @@ func (m MealSlotInput) Validate() error {
 	if !validTimeOfDay(m.Time) {
 		return fieldError("time", "must be an HH:MM time")
 	}
-	return ValidateAttendees(m.Attendance)
+	if err := ValidateAttendees(m.Attendance); err != nil {
+		return err
+	}
+	return ValidateSlotCourses(m.Courses)
 }
 
 // WeekdayOf returns the ISO weekday (1 Monday .. 7 Sunday) of a YYYY-MM-DD date.

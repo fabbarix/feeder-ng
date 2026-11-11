@@ -227,6 +227,9 @@ func (s *Store) Slots(ctx context.Context) ([]household.MealSlot, error) {
 		if out[i].Attendance, err = usualAttendance(ctx, s.db, out[i].ID); err != nil {
 			return nil, err
 		}
+		if out[i].Courses, err = loadSlotCourses(ctx, s.db, out[i].ID); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -242,11 +245,15 @@ func (s *Store) Slot(ctx context.Context, id int64) (household.MealSlot, error) 
 	if err != nil {
 		return household.MealSlot{}, err
 	}
-	m.Attendance, err = usualAttendance(ctx, s.db, id)
+	if m.Attendance, err = usualAttendance(ctx, s.db, id); err != nil {
+		return household.MealSlot{}, err
+	}
+	m.Courses, err = loadSlotCourses(ctx, s.db, id)
 	return m, err
 }
 
-// CreateSlot: ErrDuplicateSlot (same weekday, name case-insensitively), ErrUnknownMember.
+// CreateSlot: ErrDuplicateSlot (same weekday, name case-insensitively), ErrUnknownMember. Courses nil: the
+// main Course, required, nobody opting out.
 func (s *Store) CreateSlot(ctx context.Context, in household.MealSlotInput) (household.MealSlot, error) {
 	var id int64
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
@@ -259,11 +266,22 @@ func (s *Store) CreateSlot(ctx context.Context, in household.MealSlotInput) (hou
 			return err
 		}
 		if in.Attendance == nil { // not given: everyone attends; an empty list means nobody
-			_, err = tx.ExecContext(ctx, `INSERT INTO meal_slot_attendees (slot_id, member_id, portion_factor_override)
-				SELECT ?, id, NULL FROM members`, id)
+			if _, err := tx.ExecContext(ctx, `INSERT INTO meal_slot_attendees (slot_id, member_id, portion_factor_override)
+				SELECT ?, id, NULL FROM members`, id); err != nil {
+				return err
+			}
+		} else if err := insertAttendees(ctx, tx, id, in.Attendance); err != nil {
 			return err
 		}
-		return insertAttendees(ctx, tx, id, in.Attendance)
+		courses := in.Courses
+		if courses == nil {
+			mainID, err := mainCourseID(ctx, tx)
+			if err != nil {
+				return err
+			}
+			courses = []household.SlotCourseInput{{CourseID: mainID}}
+		}
+		return s.saveSlotCourses(ctx, tx, id, courses, nil, &household.Removals{})
 	})
 	if err != nil {
 		return household.MealSlot{}, err
@@ -285,7 +303,13 @@ func (s *Store) UpdateSlot(ctx context.Context, id int64, in household.MealSlotI
 		if _, err := tx.ExecContext(ctx, `DELETE FROM meal_slot_attendees WHERE slot_id = ?`, id); err != nil {
 			return err
 		}
-		return insertAttendees(ctx, tx, id, in.Attendance)
+		if err := insertAttendees(ctx, tx, id, in.Attendance); err != nil {
+			return err
+		}
+		if in.Courses == nil { // not given: the stored Courses and their opt-outs stay
+			return nil
+		}
+		return s.saveSlotCourses(ctx, tx, id, in.Courses, nil, &household.Removals{})
 	})
 	if err != nil {
 		return household.MealSlot{}, err
@@ -353,10 +377,15 @@ func (s *Store) SetDateAttendance(ctx context.Context, slotID int64, date string
 	})
 }
 
-// ClearDateAttendance removes the override for date (idempotent).
+// ClearDateAttendance removes the override for date (idempotent), and the date's Course opt-outs with it.
 func (s *Store) ClearDateAttendance(ctx context.Context, slotID int64, date string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date)
-	return err
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := clearDateCourses(ctx, tx, slotID, date); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date)
+		return err
+	})
 }
 
 // Preferences returns the User's preferences, or DefaultPreferences when none are saved.

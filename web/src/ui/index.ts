@@ -123,3 +123,8 @@ export { Menu, useMenuKeys } from './Menu'
 export type { MenuEntry, MenuItem, MenuProps, MenuSeparator, UseMenuKeysOptions } from './Menu'
 export { Sortable, useSortable } from './Sortable'
 export type { SortableItemProps, SortableItemState, SortableProps, SortableRenderContext, UseSortableOptions, UseSortableResult } from './Sortable'
+// Courses (CRS D1).
+export { CoursePicker } from './CoursePicker/CoursePicker'
+export type { CoursePickerProps, CoursePickerRowContext } from './CoursePicker/CoursePicker'
+export { CourseMultiSelect, CourseSelect, courseOptions } from './Select/CourseSelect'
+export type { CourseMultiSelectProps, CourseSelectProps } from './Select/CourseSelect'
