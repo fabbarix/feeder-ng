@@ -39,7 +39,7 @@ export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogP
         </>
       }
     >
-      {mode === 'archive' ? <p>{s.plannedRefusal(name)}</p> : null}
+      {mode === 'archive' ? <p role="status">{s.plannedRefusal(name)}</p> : null}
       {loading ? <p role="status">{s.checking(name)}</p> : null}
       {loadFailed ? <p role="alert">{s.loadFailed}</p> : null}
       {impact ? <p>{usageLine(name, impact)}</p> : null}

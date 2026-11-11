@@ -43,14 +43,25 @@ export function useCourses({ includeArchived = false }: UseCoursesOptions = {}):
     queryKey: courseKeys.list(includeArchived),
     queryFn: () => coursesApi.list(includeArchived),
   })
-  const refreshCourses = () => queryClient.invalidateQueries({ queryKey: courseKeys.all })
+  // The Courses lists are refetched after a write. A Course's impact is read when its dialog opens, and a deleted Course's
+  // impact answers 404: it is left out, so the dialog closes at once instead of waiting on retries of that 404.
+  const refreshCourses = () =>
+    queryClient.invalidateQueries({ queryKey: courseKeys.all, predicate: (query) => query.queryKey[1] !== 'impact' })
   const refreshAll = () =>
     Promise.all([refreshCourses(), queryClient.invalidateQueries({ queryKey: settingsKeys.slots })])
 
   const add = useMutation({ mutationFn: (name: string) => coursesApi.create(name), onSuccess: refreshCourses })
   const rename = useMutation({
     mutationFn: ({ id, name }: { id: number; name: string }) => coursesApi.update(id, { name }),
-    onSuccess: refreshCourses,
+    onSuccess: async (renamed) => {
+      await refreshCourses()
+      // The PATCH answer is the Course as renamed: it is written over the refetched lists, so a list read that raced the
+      // write cannot show the old name.
+      queryClient.setQueriesData<Course[]>({ queryKey: courseKeys.all }, (old) =>
+        Array.isArray(old) ? old.map((c) => (c.id === renamed.id ? renamed : c)) : old,
+      )
+      await queryClient.invalidateQueries({ queryKey: settingsKeys.slots })
+    },
   })
   const makeMain = useMutation({
     mutationFn: (id: number) => coursesApi.update(id, { main: true }),

@@ -44,7 +44,8 @@ const text = settingsStrings.slot
 export function MealSlotEditor({ open, slot, onClose, ...rest }: MealSlotEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={slot ? text.editTitle : text.addTitle}>
-      <SlotForm key={`${slot?.id ?? 'new'}|${rest.courses?.length ?? 0}`} slot={slot} {...rest} />
+      {/* Keyed on whether the household has Courses, not on how many: a live Course added elsewhere must not discard an open draft. */}
+      <SlotForm key={`${slot?.id ?? 'new'}|${(rest.courses?.length ?? 0) > 0 ? 'courses' : 'none'}`} slot={slot} {...rest} />
     </BottomSheet>
   )
 }

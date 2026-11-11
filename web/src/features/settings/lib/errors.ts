@@ -1,4 +1,5 @@
 import { ApiError } from '../../../lib/http'
+import { coursesStrings } from '../coursesStrings'
 
 const MESSAGES: Record<string, string> = {
   last_admin: 'The Household needs at least one Admin.',
@@ -13,7 +14,7 @@ const MESSAGES: Record<string, string> = {
 
 /** CRS D2: the Courses refusals of a Meal Slot save, by `reason`, whatever the server wording. */
 const COURSE_REASONS: Record<string, string> = {
-  courses_all_optional: 'Keep at least one Course that is not optional',
+  courses_all_optional: coursesStrings.slot.allOptional,
   courses_empty: 'Choose at least one Course',
   course_unknown: 'One of the Courses is no longer in the list.',
 }

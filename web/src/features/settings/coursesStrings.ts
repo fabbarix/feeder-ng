@@ -65,7 +65,6 @@ export const coursesStrings = {
   },
   date: {
     section: 'Courses',
-    group: (name: string) => `Who eats ${name} on this date`,
     reset: 'Reset to usual',
     resetLabel: (name: string) => `Reset ${name} to usual`,
   },

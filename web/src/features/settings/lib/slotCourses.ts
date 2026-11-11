@@ -2,10 +2,11 @@
 // Plain TypeScript, no React. Rules: functional-spec 3.1.
 import { COURSES_EMPTY_MESSAGE, type CourseChoice } from '../../../lib/courses'
 import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
+import { coursesStrings } from '../coursesStrings'
 import type { AttendanceEntry, MealSlot, Member, SlotCourse, SlotCourseInput, SlotRemoves } from '../types'
 import { plannedMealText } from './courseRemoval'
 
-const NOT_OPTIONAL_MESSAGE = 'Keep at least one Course that is not optional'
+const NOT_OPTIONAL_MESSAGE = coursesStrings.slot.allOptional
 
 const sameIds = (a: readonly number[], b: readonly number[]) => {
   const x = [...a].sort((p, q) => p - q)

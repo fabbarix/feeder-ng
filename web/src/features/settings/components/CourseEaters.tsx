@@ -5,8 +5,10 @@ import type { Member } from '../types'
 
 export interface CourseEatersProps {
   courseName: string
-  /** The group's accessible name ("Who eats Dessert", "Who eats Dessert on this date"). */
-  groupLabel: string
+  /** The group's accessible name ("Who eats Dessert") as aria-label. Ignored when `labelId` is given. */
+  groupLabel?: string
+  /** The id of a visible element that names the group (aria-labelledby): the date sheet shows the Course name there. */
+  labelId?: string
   /** The Members offered: the ones who attend (the caller filters). */
   members: readonly Member[]
   /** Members who opt out of this Course; an id that is not in `members` is ignored. */
@@ -18,13 +20,18 @@ export interface CourseEatersProps {
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name
 
-export function CourseEaters({ courseName, groupLabel, members, optOutMemberIds, disabled, onChange }: CourseEatersProps) {
+export function CourseEaters({ courseName, groupLabel, labelId, members, optOutMemberIds, disabled, onChange }: CourseEatersProps) {
   const optOut = new Set(optOutMemberIds)
   const outNames = members.filter((m) => optOut.has(m.id)).map((m) => m.name)
   const summary = eatersSummary(courseName, outNames)
   return (
     <div className="course-eaters">
-      <div role="group" aria-label={groupLabel} className="course-eaters__pills">
+      <div
+        role="group"
+        aria-label={labelId ? undefined : groupLabel}
+        aria-labelledby={labelId}
+        className="course-eaters__pills"
+      >
         {members.map((m) => {
           const eats = !optOut.has(m.id)
           return (

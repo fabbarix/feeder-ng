@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { Icon } from '../Icon'
 import type { SortableStrings } from './strings'
 import { useSortable, type SortableItemProps, type SortableItemState } from './useSortable'
@@ -31,6 +31,9 @@ export interface SortableProps<T> {
   'aria-label'?: string
   disabled?: boolean
   strings?: SortableStrings
+  /** The list element, for the owner to focus (e.g. when no item is left). */
+  listRef?: Ref<HTMLElement>
+  tabIndex?: number
 }
 
 /**
@@ -48,6 +51,8 @@ export function Sortable<T>({
   className,
   disabled,
   strings,
+  listRef,
+  tabIndex,
   ...rest
 }: SortableProps<T>): ReactNode {
   const sortable = useSortable({
@@ -61,7 +66,12 @@ export function Sortable<T>({
   sortable.order.forEach((original, shown) => (position[original] = shown))
   return (
     <>
-      <Tag className={className ? `sortable ${className}` : 'sortable'} aria-label={rest['aria-label']}>
+      <Tag
+        ref={listRef as Ref<never>}
+        tabIndex={tabIndex}
+        className={className ? `sortable ${className}` : 'sortable'}
+        aria-label={rest['aria-label']}
+      >
         {sortable.order.map((i) => {
           const item = items[i] as T
           const itemProps = sortable.getItemProps(i)

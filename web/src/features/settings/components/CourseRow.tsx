@@ -33,9 +33,19 @@ export function CourseRow({ course, canEdit, sortable, onAction, onUnarchive, re
   const className = ['course-row', course.archived ? 'course-row--archived' : undefined, sortable?.itemProps.className].filter(Boolean).join(' ')
 
   return (
-    <li {...sortable?.itemProps} className={className}>
+    <li {...sortable?.itemProps} className={className} data-course-id={course.id}>
       {sortable ? sortable.handle : null}
       <div className="course-row__body">
+        <div className="course-row__title">
+          <span className="course-row__name" data-testid="course-name">
+            {course.name}
+          </span>
+          {course.main ? (
+            <span data-testid="course-main-chip">
+              <Chip>{s.mainChip}</Chip>
+            </span>
+          ) : null}
+        </div>
         {renaming ? (
           <TextField
             autoFocus
@@ -53,18 +63,7 @@ export function CourseRow({ course, canEdit, sortable, onAction, onUnarchive, re
               }
             }}
           />
-        ) : (
-          <div className="course-row__title">
-            <span className="course-row__name" data-testid="course-name">
-              {course.name}
-            </span>
-            {course.main ? (
-              <span data-testid="course-main-chip">
-                <Chip>{s.mainChip}</Chip>
-              </span>
-            ) : null}
-          </div>
-        )}
+        ) : null}
         {meta && !isRenaming ? <span className="course-row__meta">{meta}</span> : null}
         {isRenaming ? (
           <div className="course-row__rename-actions">

@@ -1,5 +1,6 @@
 // Settings > Courses: the row copy, the actions menu and the reorder maths. Plain TypeScript, no React.
 import { MAX_COURSES, type Course } from '../../../lib/courses'
+import { coursesStrings as s } from '../coursesStrings'
 
 export interface CourseAction {
   id: 'rename' | 'makeMain' | 'delete'
@@ -20,11 +21,11 @@ export function courseMeta(course: Pick<Course, 'recipeCount' | 'mealSlotCount'>
 
 /** The actions menu of a Course row: Rename, Make main (not on the main Course), Delete (on the main Course it is the disabled "Make another Course main first"). */
 export function courseActions(course: Pick<Course, 'name' | 'main'>): CourseAction[] {
-  const rename: CourseAction = { id: 'rename', label: 'Rename' }
-  const makeMain: CourseAction[] = course.main ? [] : [{ id: 'makeMain', label: 'Make main' }]
+  const rename: CourseAction = { id: 'rename', label: s.rename }
+  const makeMain: CourseAction[] = course.main ? [] : [{ id: 'makeMain', label: s.makeMain }]
   const del: CourseAction = course.main
-    ? { id: 'delete', label: 'Make another Course main first', disabled: true }
-    : { id: 'delete', label: 'Delete', tone: 'danger' }
+    ? { id: 'delete', label: s.makeAnotherMain, disabled: true }
+    : { id: 'delete', label: s.delete, tone: 'danger' }
   return [rename, ...makeMain, del]
 }
 
@@ -35,6 +36,18 @@ export function reorderedIds(ids: readonly number[], from: number, to: number): 
   const [moved] = out.splice(from, 1)
   out.splice(to, 0, moved!)
   return out
+}
+
+/**
+ * The Course whose Actions button takes focus after `removedId` leaves the list: the row that takes its place (the next one),
+ * else the previous row when it was last, else null (no row is left: the list itself takes focus). `order` is the active ids before the removal.
+ */
+export function focusAfterRemoval(order: readonly number[], removedId: number): number | null {
+  const at = order.indexOf(removedId)
+  const rest = order.filter((id) => id !== removedId)
+  if (rest.length === 0) return null
+  if (at < 0) return rest[0] ?? null
+  return rest[Math.min(at, rest.length - 1)] ?? null
 }
 
 /** True while the list (archived Courses not counted) is under MAX_COURSES. */

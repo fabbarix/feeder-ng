@@ -107,7 +107,7 @@ describe('MealSlotsPage: Date Attendance Courses', () => {
     renderWithProviders(<MealSlotsPage />)
     await openTuesday()
     const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-10' })
-    const side = await within(dialog).findByRole('group', { name: 'Who eats Side on this date' })
+    const side = await within(dialog).findByRole('group', { name: 'Side' })
     await userEvent.click(within(side).getByRole('button', { name: 'Marco' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/meal-slots/10/attendance?date=2026-11-10')).toHaveLength(1))

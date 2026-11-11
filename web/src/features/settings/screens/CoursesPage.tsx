@@ -43,6 +43,8 @@ export function CoursesPage(): ReactElement {
             as="ul"
             className="courses-list"
             aria-label={s.listLabel}
+            listRef={page.listRef}
+            tabIndex={-1}
             items={active}
             getKey={(c) => String(c.id)}
             getLabel={(c) => c.name}
