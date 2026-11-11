@@ -38,7 +38,7 @@ describe('BackLink is removed', () => {
 
   it('no catalogue or Settings screen keeps an inline "Back to ..." string or a back IconButton that navigates', () => {
     const offenders = sources(`${cwd}/src/features`)
-      .filter((p) => /\/(settings|shops|notifications|plan|ingredients|products)\//.test(p))
+      .filter((p) => /\/(settings|shops|notifications|plan|ingredients|products|access)\//.test(p))
       .filter((p) => {
         const t = readFileSync(p, 'utf8')
         return /backToShops|backToProducts|backToSettings/.test(t) || /<IconButton[^>]*icon="back"[^>]*navigate\(/.test(t)

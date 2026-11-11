@@ -17,6 +17,8 @@ export function AllowlistPage() {
             users={page.allowlist.users}
             currentUserId={page.currentUserId}
             error={page.error}
+            addError={page.addError}
+            onEmailEdit={page.clearAddError}
             onAdd={page.add}
             onSetAdmin={page.setAdmin}
             onRemove={page.remove}

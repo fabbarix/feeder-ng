@@ -138,7 +138,8 @@ describe('NewIngredientSheet: creating', () => {
     await userEvent.click(create())
     expect(await screen.findByText(strings.nameTaken)).toBeInTheDocument()
     expect(name()).toHaveAccessibleDescription(strings.nameTaken)
-    expect(screen.queryByRole('alert')).toBeNull()
+    // FieldFrame announces its own error line as the alert (A1); there is no second, loose alert.
+    expect(screen.getAllByRole('alert').map((a) => a.textContent)).toEqual([strings.nameTaken])
     expect(p.onClose).not.toHaveBeenCalled()
   })
   it('shows "Creating…" and blocks a second click while the request runs', async () => {

@@ -30,7 +30,7 @@ describe('MemberEditor', () => {
     expect(screen.getByRole('dialog', { name: 'Add Member' })).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
-    expect(onSave).toHaveBeenCalledWith({ name: 'Nonna', colour: expect.stringMatching(/^#[0-9a-f]{6}$/i), avatar: '', portionFactor: 1 }, null)
+    expect(onSave).toHaveBeenCalledWith({ name: 'Nonna', colour: expect.stringMatching(/^#[0-9a-f]{6}$/i), avatar: '', portionFactor: 1, email: null }, null)
   })
 
   it('picks the Member colour from named swatches, with Custom, and shows the current one', async () => {
@@ -91,7 +91,7 @@ describe('MemberEditor', () => {
     render(<MemberEditor open users={users} members={all} member={sam} onSave={onSave} onClose={() => {}} />)
     await pickOption(/Linked User/, 'Guest')
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
-    expect(onSave).toHaveBeenCalledWith({ name: 'Sam', colour: sam.colour, avatar: '🦊', portionFactor: 0.5 }, 3)
+    expect(onSave).toHaveBeenCalledWith({ name: 'Sam', colour: sam.colour, avatar: '🦊', portionFactor: 0.5, email: null }, 3)
   })
 
   it('removes a Member only when editing one', async () => {

@@ -8,8 +8,8 @@ describe('memberDraft', () => {
   })
 
   it('copies an existing Member', () => {
-    const m = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: 2 }
-    expect(memberDraft(m)).toEqual({ name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5 })
+    const m = { id: 3, name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, userId: 2, email: null }
+    expect(memberDraft(m)).toEqual({ name: 'Sam', colour: '#81b29a', avatar: '🦊', portionFactor: 0.5, email: '' })
   })
 })
 
@@ -27,7 +27,7 @@ describe('memberProblem', () => {
 
 describe('memberFromDraft', () => {
   it('trims the name and avatar', () => {
-    expect(memberFromDraft({ name: ' Anna ', colour: '#112233', avatar: ' ', portionFactor: 1 })).toEqual({ name: 'Anna', colour: '#112233', avatar: '', portionFactor: 1 })
+    expect(memberFromDraft({ name: ' Anna ', colour: '#112233', avatar: ' ', portionFactor: 1, email: '' })).toEqual({ name: 'Anna', colour: '#112233', avatar: '', portionFactor: 1, email: null })
   })
 })
 
