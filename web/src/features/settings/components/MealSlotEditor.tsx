@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { BottomSheet, Button, MultiSelect, Select, TimeField, TextField } from '../../../ui'
+import type { SlotBatchRequest } from '../types'
 import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
 import { WEEKDAYS } from '../lib/weekdays'
 import { settingsStrings } from '../strings'
@@ -17,6 +18,11 @@ export interface MealSlotEditorProps {
   error?: string
   /** Add mode may cover several weekdays, so this always receives an array (one body per weekday; editing gives one). */
   onSave: (inputs: MealSlotInput[]) => void | Promise<void>
+  /** R15, editing: every Meal Slot in the household (to match by name) and the one-call batch save. */
+  slots?: MealSlot[]
+  onApply?: (request: SlotBatchRequest) => void | Promise<void>
+  weekStart?: 1 | 6 | 7
+  locale?: string
   onDelete?: () => void | Promise<void>
   /** Editing only: opens the one-date Attendance for this slot ("Change a date"). */
   onChangeDate?: () => void
