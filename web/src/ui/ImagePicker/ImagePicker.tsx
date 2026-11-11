@@ -45,7 +45,7 @@ export function ImagePicker(props: ImagePickerProps) {
       onPaste={p.handlePaste}
       onKeyDown={p.onKeyDown}
     >
-      <p id={headingId} className="image-picker__heading">
+      <p id={headingId} className={props.hideLabel ? 'image-picker__heading visually-hidden' : 'image-picker__heading'}>
         {props.label}
       </p>
 

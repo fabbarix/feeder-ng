@@ -24,6 +24,12 @@ describe('EmojiPicker', () => {
     expect(screen.getByRole('radio', { name: 'Fox' })).toHaveAttribute('aria-checked', 'false')
   })
 
+  it('without a noneLabel there is no "none" choice (the host offers Initials elsewhere)', () => {
+    render(<EmojiPicker label="Emoji" options={options} value="🐻" onChange={() => {}} />)
+    const radios = within(screen.getByRole('radiogroup')).getAllByRole('radio')
+    expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual(['Fox', 'Bear', 'Sunflower'])
+  })
+
   it('the empty value checks the none choice', () => {
     render(<EmojiPicker {...props} value="" onChange={() => {}} />)
     expect(screen.getByRole('radio', { name: 'Initials' })).toHaveAttribute('aria-checked', 'true')

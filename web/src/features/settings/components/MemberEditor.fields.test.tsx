@@ -42,29 +42,49 @@ describe('MemberEditor: Portion Factor', () => {
   })
 })
 
+// IM2 (decision K3): a Member's avatar is Initials, an Emoji or a Photo: one Segmented named Avatar; the Emoji choices appear
+// under "Emoji", the picture under "Member photo" (see MemberEditor.photo.test.tsx).
 describe('MemberEditor: Avatar', () => {
-  it('is a radiogroup named Avatar with a helper (optional, initials by default), not an empty text field', () => {
+  const avatarGroup = () => screen.getByRole('radiogroup', { name: 'Avatar' })
+
+  it('is a three-way choice, Initials, Emoji, Photo, with a helper (optional, initials by default), not a text field', () => {
     open()
-    const group = screen.getByRole('radiogroup', { name: 'Avatar' })
+    expect(within(avatarGroup()).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Initials', 'Emoji', 'Photo'])
     const helper = screen.getByText(/optional/i)
-    expect(group).toHaveAttribute('aria-describedby', helper.id)
+    expect(avatarGroup()).toHaveAttribute('aria-describedby', helper.id)
     expect(helper.textContent).toMatch(/initials/i)
     expect(screen.queryByRole('textbox', { name: /avatar/i })).toBeNull()
-    expect(screen.getAllByRole('textbox')).toHaveLength(2) // Name and the optional Email (A1 phase 2); no Avatar text field
+    expect(screen.getAllByRole('textbox')).toHaveLength(2) // Name and the optional Email; no Avatar text field
   })
 
-  it('a new Member starts on "Initials" and saves an empty avatar', async () => {
+  it('says in the helper that the avatar can be the initials, an emoji or a photo', () => {
+    open()
+    const helper = screen.getByText(/optional/i)
+    for (const word of [/initials/i, /emoji/i, /photo/i]) expect(helper.textContent).toMatch(word)
+  })
+
+  it('the Emoji list has no "Initials" / Aa choice: Initials is its own option of the Avatar choice', async () => {
+    open()
+    await userEvent.click(within(avatarGroup()).getByRole('radio', { name: 'Emoji' }))
+    const emoji = screen.getByRole('radiogroup', { name: 'Emoji' })
+    expect(within(emoji).queryByRole('radio', { name: 'Initials' })).toBeNull()
+    expect(within(emoji).queryByText('Aa')).toBeNull()
+  })
+
+  it('a new Member starts on "Initials" with no emoji list and saves an empty avatar', async () => {
     const onSave = open()
-    expect(within(screen.getByRole('radiogroup', { name: 'Avatar' })).getByRole('radio', { name: 'Initials' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(avatarGroup()).getByRole('radio', { name: 'Initials' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('radiogroup', { name: 'Emoji' })).toBeNull()
     await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
     expect(onSave.mock.calls[0]![0]).toMatchObject({ avatar: '' })
   })
 
-  it('picks an emoji and saves it (at most 4 characters, what the API accepts)', async () => {
+  it('Emoji shows the emoji list; picking one saves it (at most 4 characters, what the API accepts)', async () => {
     const onSave = open()
     await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
-    const radios = within(screen.getByRole('radiogroup', { name: 'Avatar' })).getAllByRole('radio')
+    await userEvent.click(within(avatarGroup()).getByRole('radio', { name: 'Emoji' }))
+    const radios = within(screen.getByRole('radiogroup', { name: 'Emoji' })).getAllByRole('radio')
     expect(radios.length).toBeGreaterThan(6)
     await userEvent.click(radios[1]!) // the first emoji
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
@@ -74,18 +94,19 @@ describe('MemberEditor: Avatar', () => {
     expect(avatar).toBe(radios[1]!.textContent)
   })
 
-  it('shows an existing Member\'s emoji as checked and can go back to initials', async () => {
+  it('opens an existing Member with an emoji on Emoji with that emoji checked, and can go back to Initials', async () => {
     const onSave = open(sam)
-    const group = screen.getByRole('radiogroup', { name: 'Avatar' })
-    expect(within(group).getByRole('radio', { name: /fox/i })).toHaveAttribute('aria-checked', 'true')
-    await userEvent.click(within(group).getByRole('radio', { name: 'Initials' }))
+    expect(within(avatarGroup()).getByRole('radio', { name: 'Emoji' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(screen.getByRole('radiogroup', { name: 'Emoji' })).getByRole('radio', { name: /fox/i })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(avatarGroup()).getByRole('radio', { name: 'Initials' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
     expect(onSave.mock.calls[0]![0]).toMatchObject({ avatar: '' })
   })
 
-  it('every emoji choice has a name for assistive technology (never just the glyph)', () => {
+  it('every emoji choice has a name for assistive technology (never just the glyph)', async () => {
     open()
-    for (const r of within(screen.getByRole('radiogroup', { name: 'Avatar' })).getAllByRole('radio')) {
+    await userEvent.click(within(avatarGroup()).getByRole('radio', { name: 'Emoji' }))
+    for (const r of within(screen.getByRole('radiogroup', { name: 'Emoji' })).getAllByRole('radio')) {
       expect(r.getAttribute('aria-label')?.trim().length ?? 0).toBeGreaterThan(1)
     }
   })

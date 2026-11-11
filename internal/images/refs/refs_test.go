@@ -91,3 +91,28 @@ func TestDefaultColumnsExistInTheRealSchema(t *testing.T) {
 		t.Errorf("ids = %v, err = %v; a Recipe photo must be referenced", got, err)
 	}
 }
+
+// IM2: an Ingredient picture and a Member photo are image ids too. If either column is missing from Default, the nightly sweep
+// deletes the picture 24 hours after it was saved.
+func TestDefaultKeepsIngredientPicturesAndMemberPhotos(t *testing.T) {
+	d := openDB(t)
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	have := map[refs.Column]bool{}
+	for _, c := range refs.Default {
+		have[c] = true
+	}
+	for _, want := range []refs.Column{{"ingredients", "image"}, {"members", "photo"}} {
+		if !have[want] {
+			t.Errorf("refs.Default lacks %+v", want)
+		}
+	}
+	const pic, face = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	exec(t, d, `INSERT INTO ingredients (name, name_key, base_unit, image, created_at, updated_at) VALUES ('Flour', 'flour', 'g', ?, 'x', 'x')`, pic)
+	exec(t, d, `INSERT INTO members (name, colour, photo, portion_factor, created_at) VALUES ('Sam', '#3366cc', ?, 1, 'x')`, face)
+	got, err := refs.New(d).ReferencedIDs(context.Background())
+	if err != nil || !got[pic] || !got[face] {
+		t.Errorf("ids = %v, err = %v; an Ingredient picture and a Member photo must be referenced", got, err)
+	}
+}

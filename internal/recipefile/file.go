@@ -27,6 +27,7 @@ type Ingredient struct {
 	BaseUnit      string       `json:"baseUnit"`
 	Conversions   []Conversion `json:"conversions,omitempty"`
 	ShelfLifeDays *int         `json:"shelfLifeDays,omitempty"`
+	Image         string       `json:"image,omitempty"` // IM2: data URL or https URL, like a Recipe's
 }
 
 // Conversion is an Ingredient-specific Unit Conversion: 1 Unit = ToBase Base Units.
