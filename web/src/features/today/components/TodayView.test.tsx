@@ -13,7 +13,7 @@ const tiles = {
 const shopping = <p>Shopping List screen</p>
 
 function layout(ids: string[], empty = false): TodayLayout {
-  return { mode: 'today', empty, tiles: ids.map((id) => ({ id })) as never }
+  return { mode: 'today', empty, heroSpan: 'block', tiles: ids.map((id) => ({ id })) as never }
 }
 
 describe('TodayView', () => {
@@ -70,5 +70,12 @@ describe('TodayView', () => {
     render(<TodayView layout={layout([])} loading tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
     expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.queryByText('Nothing on the menu. The kitchen is yours.')).not.toBeInTheDocument()
+  })
+
+  it('passes the hero span from the layout to the grid (data-hero-span) so CSS needs no :has()', () => {
+    const { container, rerender } = render(<TodayView layout={{ ...layout(['nextMeal']), heroSpan: 'row' } as TodayLayout} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(container.querySelector('.today')).toHaveAttribute('data-hero-span', 'row')
+    rerender(<TodayView layout={layout(['nextMeal', 'leftovers'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(container.querySelector('.today')).toHaveAttribute('data-hero-span', 'block')
   })
 })

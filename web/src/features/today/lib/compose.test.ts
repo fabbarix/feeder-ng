@@ -81,4 +81,31 @@ describe('composeToday', () => {
   it('without a next meal the rest keeps its order, spoiled lots after the half tiles', () => {
     expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
   })
+
+  // R2-2: the hero spans 2x2 only when a small tile can sit beside it; otherwise it takes the full row (no hole).
+  describe('heroSpan', () => {
+    const hero = { ...quiet, hasNextMeal: true }
+    it('is the full row for the hero alone', () => {
+      expect(tilesOf(hero).heroSpan).toBe('row')
+    })
+    it('is the full row for the hero with only full-span tiles (To confirm, Throw out or keep?, Couldn\'t plan)', () => {
+      expect(tilesOf({ ...hero, couldntPlan: 2 }).heroSpan).toBe('row')
+      expect(tilesOf({ ...hero, toConfirm: 1, spoiled: 1, couldntPlan: 1 }).heroSpan).toBe('row')
+    })
+    it('is the full row for the hero with the setup checklist', () => {
+      expect(tilesOf({ ...hero, needsSetup: true }).heroSpan).toBe('row')
+    })
+    it.each([
+      ['advanceSteps', { advanceSteps: 1 }],
+      ['leftovers', { leftovers: 1 }],
+      ['useSoon', { useSoon: 1 }],
+      ['streak', { streakDays: 3 }],
+    ])('is 2x2 (block) when the small tile %s is present', (_n, extra) => {
+      expect(tilesOf({ ...hero, ...extra }).heroSpan).toBe('block')
+      expect(tilesOf({ ...hero, ...extra, couldntPlan: 1, toConfirm: 1 }).heroSpan).toBe('block')
+    })
+    it('is 2x2 for a busy day', () => {
+      expect(tilesOf(busy).heroSpan).toBe('block')
+    })
+  })
 })

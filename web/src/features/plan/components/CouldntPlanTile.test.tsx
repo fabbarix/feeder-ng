@@ -109,6 +109,11 @@ describe('CouldntPlanTile: one compact tile per cause', () => {
     expect(container.querySelector('[data-cause]')).toHaveAttribute('data-span', '2')
   })
 
+  it('can take the full row (span full) where the grid has more than four columns', () => {
+    const { container } = render(<CouldntPlanTile group={nine} expanded={false} span="full" onToggle={vi.fn()} onFix={vi.fn()} />)
+    expect(container.querySelector('[data-cause]')).toHaveAttribute('data-span', 'full')
+  })
+
   it('a section named by its heading, not an alarm', () => {
     setup()
     expect(screen.getByRole('region', { name: "Couldn't plan 9 Meal Slots. Nobody is set to attend." })).toBeInTheDocument()

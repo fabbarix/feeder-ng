@@ -63,4 +63,19 @@ describe('useContainerColumns', () => {
     render(<Probe />)
     expect(screen.getByTestId('box')).toHaveTextContent('4')
   })
+
+  it('measures synchronously on mount (getBoundingClientRect), so a desktop never renders 4 columns first', () => {
+    stubResizeObserver()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1136, height: 10, top: 0, left: 0, right: 1136, bottom: 10, x: 0, y: 0, toJSON() {} } as DOMRect)
+    const seen: string[] = []
+    function Spy() {
+      const { ref, columns } = useContainerColumns()
+      seen.push(String(columns))
+      return <div ref={ref}>{columns}</div>
+    }
+    render(<Spy />)
+    // layout effects flush before paint: the 4 of the first render is never committed to the screen
+    expect(screen.getByText('7')).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
 })

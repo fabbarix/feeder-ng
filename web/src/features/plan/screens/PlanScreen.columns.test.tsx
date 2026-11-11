@@ -57,4 +57,24 @@ describe('PlanScreen columns come from the grid container', () => {
     measure()
     expect(grid).toHaveAttribute('data-columns', '7')
   })
+
+  // Couldn't plan matches Today: at seven columns its tile takes the full width (no half-empty row); at four it stays 2 wide.
+  const withUnplanned: PlanView = {
+    ...view,
+    slots: [
+      ...view.slots,
+      slot({ date: '2026-11-12', mealSlotId: 3, name: 'Lunch', meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }),
+    ],
+  }
+  it.each([
+    [1136, 'full'],
+    [900, '2'],
+  ])("at a %ipx container the Couldn't plan tile has span %s", async (width, span) => {
+    mockApi({ 'GET /api/plan': withUnplanned })
+    const measure = observe(width)
+    renderWithProviders(<PlanScreen />)
+    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
+    measure()
+    expect(notice.querySelector('[data-cause]')).toHaveAttribute('data-span', span)
+  })
 })

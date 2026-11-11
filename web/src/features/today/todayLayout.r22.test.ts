@@ -36,21 +36,24 @@ describe('today.css at desktop widths', () => {
     expect(r).toMatch(/grid-auto-flow:\s*row dense|grid-auto-flow:\s*dense/)
   })
 
-  it('from 1280 px the hero spans two columns and two rows', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, '.plan-hero').join('\n') + inMedia(css, /min-width:\s*1280px/, "[data-tile='nextMeal']").join('\n')
+  it('from 1280 px the hero spans two columns and two rows only with small tiles beside it (data-hero-span=block)', () => {
+    const r = inMedia(css, /min-width:\s*1280px/, "[data-hero-span='block']").join('\n')
+    expect(r).toMatch(/\.plan-hero/)
     expect(r).toMatch(/grid-column:\s*span 2/)
     expect(r).toMatch(/grid-row:\s*span 2/)
   })
 
-  it('wide tiles (Throw out or keep?, To confirm, Couldn\'t plan) still take the full row at three columns', () => {
-    const tile = readSource('ui/Tile.css')
-    expect(tile).toMatch(/\.tile\[data-span='full'\]\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/)
-  })
-
-  it('a hero with no other tile falls back to the full row (no hole in the third column)', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, ':only-child').join('\n')
+  it('a hero with no small tile beside it takes the full row (data-hero-span=row), decided in compose, not by :has()', () => {
+    const r = inMedia(css, /min-width:\s*1280px/, "[data-hero-span='row']").join('\n')
     expect(r).toMatch(/\.plan-hero/)
     expect(r).toMatch(/grid-column:\s*1\s*\/\s*-1/)
+    expect(css).not.toMatch(/:has\(/)
+    expect(css).not.toMatch(/only-child/)
+  })
+
+  it('wide tiles (Throw out or keep?, To confirm, Couldn\'t plan) take the full row at three columns', () => {
+    const tile = readSource('ui/Tile.css')
+    expect(tile).toMatch(/\.tile\[data-span='full'\]\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/)
   })
 
   it('the .today container adds no side padding of its own (the Page already has the gutters)', () => {
