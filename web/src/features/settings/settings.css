@@ -38,6 +38,7 @@
 /* Accent preview tile: a label and a sample chip drawn in the draft accent (scoped override of --color-accent). */
 .settings__preview {
   --color-accent: var(--preview-accent);
+  --color-on-accent: var(--preview-on-accent);
   display: flex;
   align-items: center;
   gap: var(--space-3);

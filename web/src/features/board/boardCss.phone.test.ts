@@ -53,3 +53,13 @@ describe('board.css clock tile on a phone (R2-4 review: "Wednesda" and "Novembe"
     expect(rule(clockWall, '  .board-clock__date')).toMatch(/font-size:\s*2rem/)
   })
 })
+
+describe('board.css Timers tile (L5: labels were cut with no ellipsis at 390)', () => {
+  it('lets the timer list shrink to the tile and ellipsises the label', () => {
+    expect(css).toMatch(/\.board-timers \.board-list \{\s*grid-template-columns:\s*minmax\(0, 1fr\)/)
+    expect(css).toMatch(/\n\.board-timers \.timer-tile \.tile__overline \{\s*min-width:\s*0/)
+    const label = rule(css, '.board-timers .timer-tile__label')
+    expect(label).toMatch(/text-overflow:\s*ellipsis/)
+    expect(label).toMatch(/white-space:\s*nowrap/)
+  })
+})
