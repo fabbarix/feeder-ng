@@ -293,6 +293,9 @@ func TestACoveredCourseNeedsNothingAndAKeptPlannedMealStillCounts(t *testing.T) 
 		courseMeal{"Main", "Lasagne", pasta, 400, 1},
 		courseMeal{"Dessert", "Sponge", cake, 150, 1},
 	)
+	if _, err := env.DB.Exec(`UPDATE recipes SET whole_meal = 1 WHERE name = 'Lasagne'`); err != nil {
+		t.Fatal(err)
+	}
 	needs := shoppingNeeds(t, c)
 	if len(needs) != 2 || needs[pasta] != 400 || needs[cake] != 150 {
 		t.Errorf("needs = %v, want 400 g pasta and 150 g cake mix only", needs)

@@ -393,3 +393,27 @@ func TestFactsGiveALeftoverCourseItsReheatLength(t *testing.T) {
 		t.Errorf("ReheatSeconds = %d, Steps = %+v; want 420 and none", m.ReheatSeconds, m.Steps)
 	}
 }
+
+// With no reheat_minutes on the Recipe, a Leftover-served Course reheats by the portions formula.
+func TestFactsGiveALeftoverCourseWithoutReheatMinutesTheDefaultLength(t *testing.T) {
+	w := newWorld(t)
+	if _, err := w.db.Exec(`UPDATE recipes SET reheat_minutes = NULL WHERE id = ?`, w.risotto); err != nil {
+		t.Fatal(err)
+	}
+	src := &plan.Source{From: plan.Key{Date: "2026-11-08", MealSlotID: w.dinner, CourseID: w.mainCourse(t)}}
+	m3, err := w.plans.SaveMeal(ctx, plan.Meal{Key: key("2026-11-09", w.dinner), RecipeID: w.risotto, Batches: 1, Portions: 3, State: plan.StatePlanned, From: src})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := find(f, m3.Key.Date, w.dinner)
+	if !ok || !m.FromLeftover {
+		t.Fatalf("meal = %+v, ok = %v", m, ok)
+	}
+	if m.ReheatSeconds != 240 {
+		t.Errorf("ReheatSeconds = %d, want 240 (120 s + 60 s for each of 2 further portions)", m.ReheatSeconds)
+	}
+}
