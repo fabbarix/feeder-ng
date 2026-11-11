@@ -63,7 +63,7 @@ The hands-free, step-by-step view used while cooking, which follows a Meal Slot'
 _Avoid_: Kitchen mode, guided mode
 
 **cooking timeline**:
-The order and timing of the Steps Cook Mode walks through. For a Meal Slot on a date it interleaves the Steps of every fresh Course still to cook, plus the Reheat of any Leftover Course, by the scheduling rule with one cook, so that every Course is ready together; for a Recipe on its own it is that Recipe's Steps. Advance Steps are outside it. Each Step in it still belongs to its Course.
+The order and timing of the Steps Cook Mode walks through. For a Meal Slot on a date it interleaves the Steps of every fresh Course still to cook, plus the Reheat of any Leftover Course, with one cook: each Course keeps its Recipe's own schedule and is placed as late as it can, so that every Course is ready together; for a Recipe on its own it is that Recipe's Steps. Advance Steps are outside it. Each Step in it still belongs to its Course.
 _Avoid_: Combined run, merged schedule, cook plan, multi-course mode
 
 **Reheat**:
@@ -188,7 +188,7 @@ How much of a standard portion a Member eats; each Member has a default, which a
 _Avoid_: Appetite, multiplier, serving size
 
 **Attendance**:
-The Members who eat at a given Meal Slot, each with their Portion Factor. It starts as everyone, and people opt out; it can be changed for one date. Each Course of the slot is eaten by its **Course Attendance**.
+The Members who eat at a given Meal Slot, each with their Portion Factor. It starts as everyone, and people opt out; it can be changed for one date. The Members who eat each Course of the slot are that Course's **Course Attendance**.
 _Avoid_: Guests, headcount
 
 **Course Attendance**:
