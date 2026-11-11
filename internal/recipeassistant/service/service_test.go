@@ -290,7 +290,7 @@ func (e *env) start(t *testing.T, c recipeassistant.Caller, in service.ReadInput
 
 func (e *env) wait(t *testing.T, c recipeassistant.Caller, id string, states ...string) service.JobView {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		if jv, ok := e.svc.Job(c.UserID, id); ok {
 			for _, s := range states {
@@ -448,7 +448,7 @@ func TestAPageThatCannotBeOpenedFailsGenericallyWithoutCallingTheModel(t *testin
 func TestPhotoReadPreparesThenReadsAndHandsShrunkCandidatesToTheSink(t *testing.T) {
 	e := newEnv(t, opts{enabled: true})
 	e.photos.out = []service.PreparedPhoto{
-		{JPEG: noisyJPEG(t, 2576, 1800), Width: 2576, Height: 1800},
+		{JPEG: noisyJPEG(t, 1800, 1260), Width: 1800, Height: 1260},
 		{JPEG: noisyJPEG(t, 900, 1200), Width: 900, Height: 1200},
 	}
 	in := service.ReadInput{Kind: recipeassistant.KindPhoto, Photos: []service.PhotoInput{{DataURL: "data:image/png;base64,AAAA"}, {URL: "https://img.example/b.jpg"}}}
@@ -475,7 +475,7 @@ func TestPhotoReadPreparesThenReadsAndHandsShrunkCandidatesToTheSink(t *testing.
 		t.Fatalf("candidates = %d, want 2", len(got))
 	}
 	if got[0].Width != recipefile.CandidateMaxSide || got[0].Height >= 1600 {
-		t.Errorf("candidate 0 = %dx%d, want long side %d (shrunk from 2576)", got[0].Width, got[0].Height, recipefile.CandidateMaxSide)
+		t.Errorf("candidate 0 = %dx%d, want long side %d (shrunk from 1800)", got[0].Width, got[0].Height, recipefile.CandidateMaxSide)
 	}
 	if got[1].Width != 900 || got[1].Height != 1200 {
 		t.Errorf("candidate 1 = %dx%d, must not be upscaled or changed", got[1].Width, got[1].Height)

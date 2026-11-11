@@ -60,17 +60,17 @@ type Client struct {
 // New returns a client. The environment is never consulted (no ANTHROPIC_* variables, profiles or headers):
 // the Admin's saved base URL and key are the only credentials.
 func New(o Options) *Client {
+	timeout := o.RequestTimeout
+	if timeout <= 0 {
+		timeout = callTimeout
+	}
 	hc := o.HTTPClient
 	if hc == nil {
-		hc = NewHTTPClient()
+		hc = newHTTPClient(timeout)
 	}
 	log := o.Logger
 	if log == nil {
 		log = slog.Default()
-	}
-	timeout := o.RequestTimeout
-	if timeout <= 0 {
-		timeout = callTimeout
 	}
 	n := defaultRetries
 	if o.MaxRetries != nil {
@@ -96,13 +96,16 @@ func Factory(logger *slog.Logger) service.ClaudeFactory {
 
 // NewHTTPClient is the client every call uses: TLS 1.2+, the environment's proxy, and every redirect refused
 // (the key travels in x-api-key, which Go does not strip on a cross-host redirect).
-func NewHTTPClient() *http.Client {
+func NewHTTPClient() *http.Client { return newHTTPClient(callTimeout) }
+
+// newHTTPClient is NewHTTPClient with the response-header wait tied to the configured per-attempt timeout.
+func newHTTPClient(headerTimeout time.Duration) *http.Client {
 	tr := &http.Transport{
 		Proxy:                 proxyForHTTPS,
 		DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: callTimeout,
+		ResponseHeaderTimeout: headerTimeout,
 		MaxIdleConns:          4,
 		IdleConnTimeout:       30 * time.Second,
 	}
@@ -365,7 +368,8 @@ func (c *Client) retry(ctx context.Context, call func() error) error {
 		}
 		// A per-attempt timeout (the read's own ctx is still alive) is not retried: the model may be working on
 		// the answer and a second attempt would bill it again.
-		if errors.Is(err, context.DeadlineExceeded) {
+		var ne net.Error
+		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout()) {
 			return err
 		}
 		f, isAPI := failure(err)

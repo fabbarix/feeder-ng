@@ -564,23 +564,26 @@ func (s *Service) perform(ctx context.Context, j *job, r ready, in ReadInput, si
 	if err != nil {
 		return err
 	}
-	// A cancel or the deadline can land while the Review opens: give the Review back instead of leaking it.
+	// A cancel or the deadline can land while the Review opens. The check and the assignment share one lock,
+	// so a cancel either sees the Review (the run is still the one that closes it) or is seen here: give the
+	// Review back instead of leaking it.
 	j.mu.Lock()
 	cancelled = j.cancelled
+	late := cancelled || ctx.Err() != nil
+	if !late {
+		j.review = &ref
+		j.source = &info
+		j.model = &ModelRef{ID: r.settings.Model, Name: modelName(r.settings.Model, ms.DisplayName)}
+		j.warnings = fin.Warnings
+	}
 	j.mu.Unlock()
-	if cancelled || ctx.Err() != nil {
+	if late {
 		sink.CloseReview(j.userID, ref.ID)
 		if cancelled {
 			return context.Canceled
 		}
 		return ctx.Err()
 	}
-	j.mu.Lock()
-	j.review = &ref
-	j.source = &info
-	j.model = &ModelRef{ID: r.settings.Model, Name: modelName(r.settings.Model, ms.DisplayName)}
-	j.warnings = fin.Warnings
-	j.mu.Unlock()
 	return nil
 }
 

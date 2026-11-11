@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/recipeassistant"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/store"
 	"github.com/fabbarix/feeder-ng/internal/recipefile/imagefetch"
 	"github.com/fabbarix/feeder-ng/internal/safehttp"
@@ -39,7 +41,7 @@ func For(d app.Deps, claude ClaudeFactory) *Service {
 		Claude:  claude,
 		Pages:   lazyPages{dataDir: d.Config.DataDir},
 		Images:  lazyImages{dataDir: d.Config.DataDir},
-		Photos:  nil, // TODO(IP1): recipeassistant.PreparePhotos over imaging.PrepareForModel; photo reads are unavailable until then
+		Photos:  lazyPhotos{dataDir: d.Config.DataDir},
 		Clock:   d.Clock,
 		Logger:  d.Logger,
 		Overall: 0,
@@ -73,4 +75,26 @@ type lazyImages struct{ dataDir string }
 func (l lazyImages) Fetch(ctx context.Context, rawURL string) ([]byte, string, error) {
 	h := HooksFor(l.dataDir).Safehttp
 	return imagefetch.New(imagefetch.Options{LookupIP: h.LookupIP, Allow: h.Allow, TLSConfig: h.TLSConfig}).Fetch(ctx, rawURL)
+}
+
+// lazyPhotos prepares photos with recipeassistant.PreparePhotos; photo URLs go through the SSRF-guarded fetcher,
+// which stops a little past 8 MB so PreparePhotos can tell "too large" from "unreachable".
+type lazyPhotos struct{ dataDir string }
+
+func (l lazyPhotos) Prepare(ctx context.Context, in []PhotoInput) ([]PreparedPhoto, error) {
+	h := HooksFor(l.dataDir).Safehttp
+	f := imagefetch.New(imagefetch.Options{MaxBytes: imaging.MaxBytes + 1, LookupIP: h.LookupIP, Allow: h.Allow, TLSConfig: h.TLSConfig})
+	src := make([]recipeassistant.PhotoSource, len(in))
+	for i, p := range in {
+		src[i] = recipeassistant.PhotoSource{DataURL: p.DataURL, URL: p.URL}
+	}
+	prepared, err := recipeassistant.PreparePhotos(ctx, f, src)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]PreparedPhoto, len(prepared))
+	for i, p := range prepared {
+		out[i] = PreparedPhoto{JPEG: p.JPEG, Width: p.Width, Height: p.Height}
+	}
+	return out, nil
 }

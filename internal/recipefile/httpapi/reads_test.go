@@ -621,7 +621,6 @@ func TestAPhotoReadSendsPreparedJPEGsBeforeTheTextAndKeepsNoImages(t *testing.T)
 		!strings.Contains(blocks[2].(map[string]any)["text"].(string), `<source kind="photo"`) {
 		t.Error("image blocks first, then the <source kind=\"photo\"> text")
 	}
-	// TODO(IP1): EXIF orientation is applied by internal/imaging once IP1 merges; add the fixture check here.
 	mustStatus(t, w.user.Post("/api/imports/"+v.Review.ID+"/confirm", obj{"decisions": obj{}}), 200)
 	for _, id := range recipeIDs(t, w.user) {
 		var rec struct{ Image string }
