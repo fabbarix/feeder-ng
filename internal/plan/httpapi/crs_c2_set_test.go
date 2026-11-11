@@ -79,7 +79,7 @@ func TestPutWholeMealInTheMainCourseCoversTheRestAndRemovesWhatIsNotFixed(t *tes
 	soup := w.Recipe("Soup", crsc2.RecipeSpec{Courses: []int64{w.Starter}})
 	tart := w.Recipe("Fruit tart", crsc2.RecipeSpec{Courses: []int64{w.Dessert}})
 	w.Settle()
-	w.Meal(crsc2.Today, w.Slot, w.Side, beans, "planned", false) // unpinned, unresolved: goes
+	w.Meal(crsc2.Today, w.Slot, w.Side, beans, "planned", false)  // unpinned, unresolved: goes
 	w.Meal(crsc2.Today, w.Slot, w.Starter, soup, "cooked", true)  // resolved: stays
 	w.Meal(crsc2.Today, w.Slot, w.Dessert, tart, "planned", true) // Pinned: stays
 
