@@ -49,17 +49,18 @@ const iconOf = (link: HTMLElement) => {
 }
 
 describe('bottom bar (phone)', () => {
-  it('lists Today, Plan, Scan, Shop, Recipes in that order', () => {
+  it('lists Today, Plan, Pantry, Scan, Shop, Recipes in that order: Scan sits in the middle (PN)', () => {
     setup()
-    expect(labels(bottomBar())).toEqual(['Today', 'Plan', 'Scan', 'Shop', 'Recipes'])
+    expect(labels(bottomBar())).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes'])
   })
 
   it('shows the registered icon of each destination at 24 px (Scan 28 px)', () => {
-    setup({ path: '/stock' }) // no tab active
+    setup({ path: '/settings' }) // no tab active (PN: /stock and /pantry now activate Pantry)
     const bar = bottomBar()
     for (const [label, name, size] of [
       ['Today', 'today', '24'],
       ['Plan', 'plan', '24'],
+      ['Pantry', 'stock', '24'],
       ['Scan', 'scan', '28'],
       ['Shop', 'shop', '24'],
       ['Recipes', 'recipes', '24'],
@@ -74,7 +75,7 @@ describe('bottom bar (phone)', () => {
     const plan = within(bar).getByRole('link', { name: 'Plan' })
     expect(plan).toHaveAttribute('aria-current', 'page')
     expect(iconOf(plan).weight).toBe('fill')
-    for (const other of ['Today', 'Scan', 'Shop', 'Recipes']) {
+    for (const other of ['Today', 'Pantry', 'Scan', 'Shop', 'Recipes']) {
       const link = within(bar).getByRole('link', { name: other })
       expect(link, other).not.toHaveAttribute('aria-current')
       expect(iconOf(link).weight, other).toBe('regular')
@@ -102,7 +103,7 @@ describe('bottom bar (phone)', () => {
     const scan = within(bar).getByRole('link', { name: 'Scan' })
     expect(scan).toHaveAttribute('data-accent', 'true')
     expect(scan).not.toHaveAttribute('data-raised')
-    for (const other of ['Today', 'Plan', 'Shop', 'Recipes']) {
+    for (const other of ['Today', 'Plan', 'Pantry', 'Shop', 'Recipes']) {
       expect(within(bar).getByRole('link', { name: other })).not.toHaveAttribute('data-accent')
     }
   })
@@ -114,20 +115,59 @@ describe('bottom bar (phone)', () => {
   })
 })
 
+describe('Pantry tab (PN)', () => {
+  it.each(['/pantry', '/stock'])('%s highlights Pantry in the bottom bar and the side rail, and nothing else', (path) => {
+    setup({ path })
+    for (const nav of [bottomBar(), sideRail()]) {
+      const pantry = within(nav).getByRole('link', { name: 'Pantry' })
+      expect(pantry).toHaveAttribute('aria-current', 'page')
+      expect(pantry).toHaveAttribute('href', '/pantry')
+      expect(iconOf(pantry).weight).toBe('fill')
+      expect(within(nav).getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page')).toHaveLength(1)
+    }
+  })
+
+  it('/stock lands on /pantry (bookmarks keep working) and shows the Pantry page', () => {
+    const router = setup({ path: '/stock' })
+    expect(router.state.location.pathname).toBe('/pantry')
+    expect(screen.getByRole('heading', { name: 'Pantry' })).toBeInTheDocument()
+  })
+
+  it('keeps the query string and hash when /stock redirects', () => {
+    const router = setup({ path: '/stock?q=milk#x' })
+    expect(router.state.location.pathname + router.state.location.search + router.state.location.hash).toBe('/pantry?q=milk#x')
+  })
+
+  it('no tab is active on a page that is not a destination (Settings)', () => {
+    setup({ path: '/settings' })
+    for (const nav of [bottomBar(), sideRail()]) {
+      expect(within(nav).getAllByRole('link').filter((a) => a.hasAttribute('aria-current'))).toHaveLength(0)
+    }
+  })
+
+  it('Pantry is a regular tab: not accent, label in its own element', () => {
+    setup()
+    const link = within(bottomBar()).getByRole('link', { name: 'Pantry' })
+    expect(link).not.toHaveAttribute('data-accent')
+    expect(link.querySelector('.bottom-bar__label')).toHaveTextContent('Pantry')
+  })
+})
+
 describe('side rail (tablet landscape / desktop)', () => {
-  it('lists the same order as the bottom bar (R11a N8): Today first, then Plan, Scan (accent), Shop, Recipes', () => {
+  it('lists the same order as the bottom bar (R11a N8): Today first, then Plan, Pantry, Scan (accent), Shop, Recipes', () => {
     setup()
     const rail = sideRail()
-    expect(labels(rail)).toEqual(['Today', 'Plan', 'Scan', 'Shop', 'Recipes'])
+    expect(labels(rail)).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes'])
     expect(within(rail).getByRole('link', { name: 'Scan' })).toHaveAttribute('data-accent', 'true')
   })
 
   it('uses 24 px icons and stacks the label as its own element', () => {
-    setup({ path: '/stock' })
+    setup({ path: '/settings' })
     const rail = sideRail()
     for (const [label, name] of [
       ['Today', 'today'],
       ['Plan', 'plan'],
+      ['Pantry', 'stock'],
       ['Shop', 'shop'],
       ['Recipes', 'recipes'],
       ['Scan', 'scan'],
@@ -189,22 +229,21 @@ describe('avatar menu', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false')
     const menu = await open()
     expect(btn).toHaveAttribute('aria-expanded', 'true')
-    expect(texts(menu)).toEqual(['Pantry', 'Kitchen board', 'Settings', 'Sign out'])
+    expect(texts(menu)).toEqual(['Kitchen board', 'Settings', 'Sign out'])
   })
 
-  it('links Stock, Kitchen board and Settings to their pages', async () => {
+  it('links Kitchen board and Settings to their pages; Pantry is no longer in the menu (PN)', async () => {
     setup()
     await open()
-    expect(screen.getByRole('menuitem', { name: 'Pantry' })).toHaveAttribute('href', '/stock')
+    expect(screen.queryByRole('menuitem', { name: 'Pantry' })).toBeNull()
     expect(screen.getByRole('menuitem', { name: 'Kitchen board' })).toHaveAttribute('href', '/board')
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', '/settings')
   })
 
-  it('gives every row an icon: Stock, Kitchen board (board), Settings, Sign out', async () => {
+  it('gives every row an icon: Kitchen board (board), Settings, Sign out', async () => {
     setup()
     const menu = await open()
     for (const [label, name] of [
-      ['Pantry', 'stock'],
       ['Kitchen board', 'board'],
       ['Settings', 'settings'],
       ['Sign out', 'signOut'],
@@ -232,7 +271,7 @@ describe('avatar menu', () => {
       ],
     })
     const menu = await open()
-    expect(texts(menu)).toEqual(['Pantry', 'Kitchen board', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
+    expect(texts(menu)).toEqual(['Kitchen board', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Weight Barcode Rules' })).name).toBe('barcodes')
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Household' })).name).toBe('chevron')
   })
@@ -245,7 +284,7 @@ describe('avatar menu', () => {
     const signOut = items[items.length - 1]!
     expect(signOut).toHaveTextContent('Sign out')
     expect(signOut).toHaveAttribute('data-tone', 'danger')
-    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).not.toHaveAttribute('data-tone')
+    expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).not.toHaveAttribute('data-tone')
     await userEvent.click(signOut)
     expect(onSignOut).toHaveBeenCalledOnce()
     expect(screen.queryByRole('menu')).toBeNull()
@@ -254,7 +293,7 @@ describe('avatar menu', () => {
   it('moves focus to the first item on open (not Sign out), and nothing is highlighted as selected', async () => {
     setup()
     const menu = await open()
-    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).toHaveFocus()
     for (const item of within(menu).getAllByRole('menuitem')) expect(item).not.toHaveAttribute('aria-current')
   })
 
@@ -262,15 +301,15 @@ describe('avatar menu', () => {
     setup()
     const menu = await open()
     await userEvent.keyboard('{ArrowDown}')
-    expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Settings' })).toHaveFocus()
     await userEvent.keyboard('{End}')
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{ArrowDown}')
-    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).toHaveFocus()
     await userEvent.keyboard('{ArrowUp}')
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{Home}')
-    expect(within(menu).getByRole('menuitem', { name: 'Pantry' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).toHaveFocus()
   })
 
   it('closes on Escape and returns focus to the avatar button', async () => {

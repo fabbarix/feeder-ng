@@ -5,7 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/clock"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
@@ -96,18 +97,7 @@ func mainCourseID(ctx context.Context, q querier) (int64, error) {
 
 // today is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
 func (s *Store) today(ctx context.Context, q querier) (string, error) {
-	loc := time.UTC
-	var tz string
-	err := q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if err == nil {
-		if l, lerr := time.LoadLocation(tz); lerr == nil {
-			loc = l
-		}
-	}
-	return s.clk.Now().In(loc).Format("2006-01-02"), nil
+	return clock.HouseholdToday(ctx, q, s.clk)
 }
 
 // saveSlotCourses writes a slot's Courses (in the list's order) inside the caller's transaction. Every Course

@@ -57,3 +57,22 @@ Feature: Favourites, Dislikes and Exclusions
     Given I set the Recipe "Pad thai" to "favourite" for my Member
     When I archive the Recipe "Pad thai"
     Then the preferences of the Member "Sam" show the Recipe "Pad thai" as "favourite"
+
+  # PT: the Recipe detail shows the whole Household at once, so it reads one set of
+  # preferences per Member and writes them for any Member (rx-pt.md section 5.2).
+  Scenario: A plain User sets a Favourite for another Member who has a sign-in
+    Given "alex@example.test" is on the allowlist
+    And the household has the Member "Alex" linked to "alex@example.test"
+    When I set the Recipe "Pad thai" to "favourite" for the Member "Alex"
+    Then the response status is 200
+    And the preferences of the Member "Alex" show the Recipe "Pad thai" as "favourite"
+    And the preferences of the Member "Sam" show the Recipe "Pad thai" as "none"
+
+  Scenario: Each Member's preferences are read by id and list their excluded Ingredients
+    Given I exclude the Ingredient "peanut" for the Member "Kim"
+    And I exclude the Ingredient "flour" for the Member "Sam"
+    Then the preferences of the Member "Kim" list the excluded Ingredients "peanut"
+    And the preferences of the Member "Sam" list the excluded Ingredients "flour"
+
+  Scenario: A Member who excludes nothing has an empty list, not a missing one
+    Then the preferences of the Member "Kim" list no excluded Ingredients

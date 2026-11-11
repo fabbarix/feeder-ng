@@ -151,6 +151,55 @@ func (s *Store) Rename(ctx context.Context, id int64, name string) (course.Cours
 	return c, nil
 }
 
+// Update renames (when name is non-nil) and makes the Course main (when makeMain) in one transaction:
+// if either part fails nothing is written. Errors are those of Rename and MakeMain.
+func (s *Store) Update(ctx context.Context, id int64, name *string, makeMain bool) (course.Course, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return course.Course{}, err
+	}
+	defer tx.Rollback()
+	c, err := getCourse(ctx, tx, id)
+	if err != nil {
+		return course.Course{}, err
+	}
+	if makeMain && c.Archived {
+		return course.Course{}, course.ErrArchived
+	}
+	if name != nil {
+		clean, err := course.CleanName(*name)
+		if err != nil {
+			return course.Course{}, err
+		}
+		key := course.NameKey(clean)
+		var other int64
+		err = tx.QueryRowContext(ctx, `SELECT id FROM courses WHERE name_key = ?`, key).Scan(&other)
+		if err == nil && other != id {
+			return course.Course{}, course.ErrNameTaken
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return course.Course{}, err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE courses SET name = ?, name_key = ? WHERE id = ?`, clean, key, id); err != nil {
+			return course.Course{}, err
+		}
+		c.Name = clean
+	}
+	if makeMain && !c.Main {
+		if _, err := tx.ExecContext(ctx, `UPDATE courses SET is_main = 0 WHERE is_main = 1`); err != nil {
+			return course.Course{}, err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE courses SET is_main = 1 WHERE id = ?`, id); err != nil {
+			return course.Course{}, err
+		}
+		c.Main = true
+	}
+	if err := tx.Commit(); err != nil {
+		return course.Course{}, err
+	}
+	return c, nil
+}
+
 // MakeMain moves the main flag to id in one transaction (the old main is cleared first, so the
 // partial unique index never sees two). ErrNotFound, ErrArchived. Making the main Course main is a no-op.
 func (s *Store) MakeMain(ctx context.Context, id int64) (course.Course, error) {
@@ -379,11 +428,32 @@ func (s *Store) remove(ctx context.Context, id, replacementID int64, kind course
 			return course.Course{}, course.Impact{}, err
 		}
 		c.Archived = true
+		// Last in the order, active Courses renumbered 0..n-1 (as Reorder does), all in this transaction.
+		if err := renumber(ctx, tx); err != nil {
+			return course.Course{}, course.Impact{}, err
+		}
+		if c, err = getCourse(ctx, tx, id); err != nil {
+			return course.Course{}, course.Impact{}, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return course.Course{}, course.Impact{}, err
 	}
 	return c, im, nil
+}
+
+// renumber sets positions 0..n-1: active Courses first, then archived ones, each group in its current order.
+func renumber(ctx context.Context, q dbtx) error {
+	ids, err := ids2(ctx, q, `SELECT id FROM courses ORDER BY archived, position, id`)
+	if err != nil {
+		return err
+	}
+	for i, id := range ids {
+		if _, err := q.ExecContext(ctx, `UPDATE courses SET position = ? WHERE id = ?`, i, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // impact computes what Delete or Archive of id changes, as of today (YYYY-MM-DD in the Household's zone).
@@ -557,18 +627,7 @@ func exists(ctx context.Context, q dbtx, query string, args ...any) (bool, error
 
 // today is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
 func (s *Store) today(ctx context.Context, q dbtx) (string, error) {
-	loc := time.UTC
-	var tz string
-	err := q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if err == nil {
-		if l, lerr := time.LoadLocation(tz); lerr == nil {
-			loc = l
-		}
-	}
-	return s.clk.Now().In(loc).Format("2006-01-02"), nil
+	return clock.HouseholdToday(ctx, q, s.clk)
 }
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
