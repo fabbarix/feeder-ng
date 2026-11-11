@@ -56,6 +56,8 @@ const (
 	CodeStepTextMissing = "step_text_required"
 	CodeStepTextLong    = "step_text_too_long"
 	CodeMinutesInvalid  = "minutes_invalid"
+	CodeCoursesEmpty    = "courses_empty"  // field "courses": a non-nil empty CourseIDs (spec §4)
+	CodeCourseUnknown   = "course_unknown" // field "courses": an unknown or archived Course id (checked by the store)
 )
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
@@ -131,10 +133,17 @@ type Step struct {
 
 // Input is what a User supplies to create or fully replace a Recipe.
 type Input struct {
-	Name              string
-	Description       string
-	Yield             float64
-	ReadyMeal         bool
+	Name        string
+	Description string
+	Yield       float64
+	ReadyMeal   bool
+	// CourseIDs are the Recipe's Courses (ADR 0008). nil: absent (a create gets the main Course; an update keeps
+	// the stored ones); a non-nil empty list is CodeCoursesEmpty. Validate drops repeated ids, keeping order.
+	// A stored Recipe lists them in household order.
+	CourseIDs []int64
+	// WholeMeal: nil is absent (a create gets DefaultWholeMeal; an update keeps the stored value). A stored
+	// Recipe always has it set.
+	WholeMeal         *bool
 	Tags              []string
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
@@ -234,6 +243,17 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 	}
 	out.ReadyMeal = ready
 	out.Lines = lines
+
+	if in.CourseIDs != nil {
+		if len(in.CourseIDs) == 0 {
+			return Input{}, fieldErr("courses", CodeCoursesEmpty, "a Recipe needs at least one Course")
+		}
+		out.CourseIDs = dedupeIDs(in.CourseIDs)
+	}
+	if in.WholeMeal != nil {
+		whole := *in.WholeMeal
+		out.WholeMeal = &whole
+	}
 
 	steps, err := cleanSteps(in.Steps, lookup)
 	if err != nil {
@@ -428,10 +448,17 @@ func TimingOf(steps []Step) (Timing, error) {
 type Recipe struct {
 	ID int64
 	Input
+	Courses   []CourseRef // CourseIDs with their names, in household order (read only)
 	Archived  bool
 	Timing    Timing
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// CourseRef is a Course as a Recipe shows it.
+type CourseRef struct {
+	ID   int64
+	Name string
 }
 
 // Summary is one row of the Recipes list.
@@ -440,6 +467,8 @@ type Summary struct {
 	Name           string
 	Yield          float64
 	ReadyMeal      bool
+	CourseIDs      []int64 // household order; never nil
+	WholeMeal      bool
 	Tags           []string
 	Image          string
 	Archived       bool
@@ -471,4 +500,47 @@ func ParseState(s string) (State, bool) {
 		return State(v), true
 	}
 	return "", false
+}
+
+// DefaultWholeMeal is the Whole meal value of a create that does not say: true for a Ready Meal whose
+// Courses include the main Course, false otherwise (spec §4).
+func DefaultWholeMeal(readyMeal bool, courseIDs []int64, mainID int64) bool {
+	if !readyMeal {
+		return false
+	}
+	for _, id := range courseIDs {
+		if id == mainID {
+			return true
+		}
+	}
+	return false
+}
+
+// LostCourses returns the Course ids in before that are not in after, in before's order: the Courses a
+// Recipe loses on save (spec §4, "A Recipe that loses a Course").
+func LostCourses(before, after []int64) []int64 {
+	kept := make(map[int64]bool, len(after))
+	for _, id := range after {
+		kept[id] = true
+	}
+	var lost []int64
+	for _, id := range before {
+		if !kept[id] {
+			lost = append(lost, id)
+		}
+	}
+	return lost
+}
+
+// dedupeIDs drops repeated ids, keeping the first of each and the order. It returns a new slice.
+func dedupeIDs(ids []int64) []int64 {
+	seen := make(map[int64]bool, len(ids))
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
