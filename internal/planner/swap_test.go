@@ -55,23 +55,23 @@ func TestSwapFiltersAndContext(t *testing.T) {
 			t.Errorf("got %v, %v", recipeIDs(got), err)
 		}
 	})
-	t.Run("Exclusions, cool-down and archived Recipes are not offered", func(t *testing.T) {
+	t.Run("Exclusions and archived Recipes are not offered, Recipes in cool-down come last as relaxed ones", func(t *testing.T) {
 		in := swapInput()
 		in.Recipes[0].Archived = true // R1
 		in = prefs(in, carl, Preferences{ExcludedRecipes: []RecipeID{3}})
 		in.Slots[0].Attendance = []Attendee{{anna, 1}, {carl, 1}}
 		in.LastPlanned = map[RecipeID]Date{4: day(-2)}
 		got, err := Swap(in, key(0))
-		if err != nil || !reflect.DeepEqual(recipeIDs(got), []RecipeID{5}) {
+		if err != nil || !reflect.DeepEqual(recipeIDs(got), []RecipeID{5, 4}) {
 			t.Errorf("got %v, %v", recipeIDs(got), err)
 		}
 	})
-	t.Run("an earlier meal puts its Recipe in cool-down", func(t *testing.T) {
+	t.Run("an earlier meal puts its Recipe in cool-down: strict first, then the relaxed one", func(t *testing.T) {
 		first := withExisting(dinner(0), ExistingMeal{State: MealPinned, RecipeID: 1, Batches: 1})
 		second := withExisting(dinner(1), ExistingMeal{State: MealPinned, RecipeID: 2, Batches: 1})
 		in := weighted(baseInput([]Slot{first, second}, rcp(1, 2), rcp(2, 2), rcp(3, 2)), Weights{})
 		got, _ := Swap(in, key(1))
-		if !reflect.DeepEqual(recipeIDs(got), []RecipeID{3}) {
+		if !reflect.DeepEqual(recipeIDs(got), []RecipeID{3, 1}) {
 			t.Errorf("got %v", recipeIDs(got))
 		}
 	})
@@ -120,7 +120,7 @@ func TestSwapErrors(t *testing.T) {
 	if _, err := Swap(in, key(1)); !errors.Is(err, ErrSlotNotSwappable) {
 		t.Errorf("skipped: %v", err)
 	}
-	if _, err := Swap(in, SlotKey{day(40), dinnerSlot}); !errors.Is(err, ErrUnknownSlot) {
+	if _, err := Swap(in, SlotKey{Date: day(40), MealSlotID: dinnerSlot}); !errors.Is(err, ErrUnknownSlot) {
 		t.Errorf("unknown: %v", err)
 	}
 }

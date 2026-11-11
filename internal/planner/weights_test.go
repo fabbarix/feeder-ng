@@ -68,7 +68,7 @@ func TestDefaultStyleIsVariety(t *testing.T) {
 }
 
 func TestJitterFor(t *testing.T) {
-	k := SlotKey{day(0), dinnerSlot}
+	k := SlotKey{Date: day(0), MealSlotID: dinnerSlot}
 	t.Run("deterministic", func(t *testing.T) {
 		if JitterFor(42, k, 7, 0.5) != JitterFor(42, k, 7, 0.5) {
 			t.Error("same arguments must give the same jitter")
@@ -92,7 +92,7 @@ func TestJitterFor(t *testing.T) {
 		seeds, slots, recipes := map[float64]bool{}, map[float64]bool{}, map[float64]bool{}
 		for i := 0; i < 20; i++ {
 			seeds[JitterFor(int64(i), k, 1, 0.5)] = true
-			slots[JitterFor(1, SlotKey{day(i), dinnerSlot}, 1, 0.5)] = true
+			slots[JitterFor(1, SlotKey{Date: day(i), MealSlotID: dinnerSlot}, 1, 0.5)] = true
 			recipes[JitterFor(1, k, RecipeID(i+1), 0.5)] = true
 		}
 		if len(seeds) < 10 || len(slots) < 10 || len(recipes) < 10 {

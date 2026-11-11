@@ -51,6 +51,8 @@ type Meal struct {
 	Pinned   bool
 	From     *Source // non-nil: served from a Leftover
 	Why      []Why
+	// Relaxed is true for a relaxed pick: Cool-down or a Variety Rule gave way because too few Recipes fit (ADR 0009).
+	Relaxed bool
 }
 
 // Fresh reports whether the meal is cooked from scratch (not served from a Leftover).
@@ -115,7 +117,7 @@ type Eliminations struct {
 // Unfilled is a slot the planner could not fill ("Couldn't plan" reason).
 type Unfilled struct {
 	Key             Key
-	Reason          string // planner.UnfilledReason: "no_attendance" | "no_candidates"
+	Reason          string // planner.UnfilledReason: "no_attendance" | "no_candidates" | "no_course_recipes"
 	SlotRuleClaimed bool
 	Eliminated      Eliminations
 }
@@ -158,12 +160,23 @@ type Attendee struct {
 	Factor   float64
 }
 
+// SlotCourse is one Course a Meal Slot serves on a date.
+type SlotCourse struct {
+	CourseID   int64
+	Main       bool
+	Optional   bool
+	Attendance []Attendee // the effective Course Attendance on that date (household.CourseAttendance)
+}
+
 // SlotInfo is one Meal Slot occurrence (a Meal Slot on a date) with its resolved Attendance.
 type SlotInfo struct {
 	Key        Key
 	Name       string
 	Time       string // HH:MM, household time
 	Attendance []Attendee
+	// Courses are the slot's Courses in the slot's order, each with its Course Attendance. Empty for a Meal Slot
+	// that is not yet Course-aware (the transition shim): BuildInput then plans one cell keyed by Key.
+	Courses []SlotCourse
 }
 
 // HistoryEntry is a fresh cook (planned or Cooked) before the first slot of the snapshot, for Cool-down and recency.

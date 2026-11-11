@@ -64,7 +64,7 @@ func TestReserveAlsoBlocksTheSameDayEarlierSlot(t *testing.T) {
 	// Friday lunch is before Friday dinner on the same day; pizza (Cool-down 7) must wait for dinner.
 	slots := []Slot{lunch(4), withRules(dinner(4), SlotRule{RecipeID: pizzaR})}
 	r := mustPlan(t, baseInput(slots, rcp(1, 2), rcp(2, 2)))
-	if got := placementAt(t, r, SlotKey{day(4), lunchSlot}).RecipeID; got != 2 {
+	if got := placementAt(t, r, SlotKey{Date: day(4), MealSlotID: lunchSlot}).RecipeID; got != 2 {
 		t.Errorf("Friday lunch = Recipe %d, want 2", got)
 	}
 	if got := placementAt(t, r, key(4)).RecipeID; got != pizzaR {
@@ -118,15 +118,18 @@ func TestReserveTagRuleWithExactlyOneEligibleRecipe(t *testing.T) {
 }
 
 func TestReserveIsVoidWhenAPinnedMealMakesItImpossible(t *testing.T) {
-	// The User pinned pizza on Tuesday: pinned always wins, Friday (3 days later, Cool-down 7) cannot
-	// be filled and shows its existing couldn't-plan reason. The reservation must not block other
-	// Recipes, so every other slot is still filled.
+	// The User pinned pizza on Tuesday: pinned always wins, so Friday (3 days later, Cool-down 7) cannot
+	// be met strictly. Pinned wins (ADR 0009 point 6a): Friday gets pizza as a relaxed pick, with "Again soon:
+	// had Tue", instead of Couldn't plan. The reservation must not block other Recipes, so every other slot is
+	// still filled.
 	slots := fridayRule(SlotRule{RecipeID: pizzaR})
 	slots[1] = withExisting(slots[1], ExistingMeal{State: MealPinned, RecipeID: pizzaR, Batches: 1})
 	r := mustPlan(t, baseInput(slots, fiveRecipes()...))
-	u := unfilledAt(t, r, key(4))
-	if u.Reason != UnfilledNoCandidates || !u.SlotRuleClaimed || u.Eliminated.Considered != 1 || u.Eliminated.CoolDown != 1 {
-		t.Errorf("Friday unfilled = %+v, want no_candidates, claimed, 1 considered, 1 in Cool-down", u)
+	if len(r.Unfilled) != 0 {
+		t.Errorf("Unfilled = %+v", r.Unfilled)
+	}
+	if p := placementAt(t, r, key(4)); p.RecipeID != pizzaR || !p.Relaxed {
+		t.Errorf("Friday = %+v, want pizza as a relaxed pick", p)
 	}
 	for _, n := range []int{0, 2, 3} {
 		if got := placementAt(t, r, key(n)).RecipeID; got == pizzaR {
@@ -136,18 +139,23 @@ func TestReserveIsVoidWhenAPinnedMealMakesItImpossible(t *testing.T) {
 	// Same when the pinned pizza is after the rule's slot, inside its Cool-down.
 	slots = append(fridayRule(SlotRule{RecipeID: pizzaR}), withExisting(dinner(5), ExistingMeal{State: MealPinned, RecipeID: pizzaR, Batches: 1}))
 	r = mustPlan(t, baseInput(slots, fiveRecipes()...))
-	unfilledAt(t, r, key(4))
+	if p := placementAt(t, r, key(4)); p.RecipeID != pizzaR || !p.Relaxed {
+		t.Errorf("Friday = %+v, want pizza as a relaxed pick", p)
+	}
 }
 
 func TestReserveIsVoidForLastPlannedInsideTheCooldown(t *testing.T) {
 	// Pizza was cooked two days before the horizon starts: Friday is 6 days later (< 7), so the rule
-	// cannot be met; earlier slots are in Cool-down anyway, and nothing else is disturbed.
+	// cannot be met strictly: Friday gets pizza as a relaxed pick; earlier slots are in Cool-down anyway,
+	// and nothing else is disturbed.
 	in := baseInput(fridayRule(SlotRule{RecipeID: pizzaR}), fiveRecipes()...)
 	in.LastPlanned = map[RecipeID]Date{pizzaR: day(-2)}
 	r := mustPlan(t, in)
-	unfilledAt(t, r, key(4))
-	if got, want := planSignature(r), "2,3,4,5"; got != want {
+	if got, want := planSignature(r), "2,3,4,5,1"; got != want {
 		t.Errorf("plan = %s, want %s", got, want)
+	}
+	if p := placementAt(t, r, key(4)); !p.Relaxed {
+		t.Errorf("Friday = %+v, want a relaxed pick", p)
 	}
 }
 
@@ -210,7 +218,7 @@ func TestReserveDoesNotBlockUnrelatedRecipesOrOtherSlots(t *testing.T) {
 
 func TestReserveTwoRulesForTheSameRecipeEarlierWins(t *testing.T) {
 	// Pizza on both Wednesday and Friday is impossible with a 7-day Cool-down: the earlier rule slot
-	// keeps the reservation, the later one is the one that ends up unfilled.
+	// keeps the reservation and gets pizza strictly, the later one gets it as a relaxed pick (ADR 0009 point 6b).
 	slots := []Slot{dinner(0), dinner(1), withRules(dinner(2), SlotRule{RecipeID: pizzaR}), dinner(3), withRules(dinner(4), SlotRule{RecipeID: pizzaR})}
 	r := mustPlan(t, baseInput(slots, fiveRecipes()...))
 	if got := placementAt(t, r, key(2)).RecipeID; got != pizzaR {
@@ -221,9 +229,11 @@ func TestReserveTwoRulesForTheSameRecipeEarlierWins(t *testing.T) {
 			t.Errorf("day %d = pizza, reserved for Wednesday", n)
 		}
 	}
-	u := unfilledAt(t, r, key(4))
-	if !u.SlotRuleClaimed || u.Eliminated.CoolDown != 1 {
-		t.Errorf("Friday unfilled = %+v", u)
+	if p := placementAt(t, r, key(4)); p.RecipeID != pizzaR || !p.Relaxed {
+		t.Errorf("Friday = %+v, want pizza as a relaxed pick", p)
+	}
+	if p := placementAt(t, r, key(2)); p.Relaxed {
+		t.Errorf("Wednesday = %+v, want a strict pick", p)
 	}
 }
 

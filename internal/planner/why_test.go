@@ -78,15 +78,15 @@ func TestWhyChipsCount(t *testing.T) {
 		in := weighted(baseInput([]Slot{dinner(0)}, rcp(1, 2)), Weights{Dislike: -2})
 		in = prefs(in, anna, Preferences{Dislikes: []RecipeID{1}})
 		p := placementAt(t, mustPlan(t, in), key(0))
-		if got := whyCodes(p); !reflect.DeepEqual(got, []ReasonCode{ReasonBestAvailable}) {
-			t.Errorf("chips = %v", got)
+		if len(p.Why) != 0 {
+			t.Errorf("chips = %+v, want none: best_available is gone (ADR 0009)", p.Why)
 		}
 	})
-	t.Run("jitter never becomes a chip; with nothing positive there is still one chip", func(t *testing.T) {
+	t.Run("jitter never becomes a chip; with nothing positive there are no chips", func(t *testing.T) {
 		in := weighted(baseInput([]Slot{dinner(0)}, rcp(1, 2), rcp(2, 2)), Weights{Jitter: 0.5})
 		p := placementAt(t, mustPlan(t, in), key(0))
-		if got := whyCodes(p); !reflect.DeepEqual(got, []ReasonCode{ReasonBestAvailable}) {
-			t.Errorf("chips = %v", got)
+		if len(p.Why) != 0 {
+			t.Errorf("chips = %+v, want none", p.Why)
 		}
 	})
 }
