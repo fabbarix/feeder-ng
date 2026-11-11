@@ -119,7 +119,7 @@ Rules:
    - "advance" for things done well before cooking (marinate, soak, defrost, chill overnight), with "leadTimeMinutes" before serving time.
    Use "after" (0-based indexes into the steps array) when a step must wait for earlier steps to FINISH, e.g. serving waits for the oven. Leave it out otherwise.
 6. Add "uses" to steps that consume ingredients, with the amounts used in that step.
-7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1), and "yield" = portions in the pack.
+7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1; name the pack Ingredient like the Recipe), and "yield" = portions in the pack.
 8. Add 1–4 short lowercase "tags" (main protein, dish type, e.g. "chicken", "traybake", "vegetarian", "soup").
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".

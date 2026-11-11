@@ -147,6 +147,7 @@ export const recipeStrings = {
     description_too_long: 'The description is longer than 4000 characters.',
     yield_invalid: 'Yield must be above 0, up to 100.',
     ready_meal_lines: 'A Ready Meal has exactly one ingredient line.',
+    ready_meal_unit: 'An Ingredient with this name already exists but is not counted in pieces. Choose it as the line and enter the pack size.',
     lines_required: 'Add at least one ingredient line.',
     ingredient_required: 'Pick an Ingredient.',
     unknown_ingredient: 'That Ingredient no longer exists.',

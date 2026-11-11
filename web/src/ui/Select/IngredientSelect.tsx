@@ -14,7 +14,7 @@ export interface IngredientSelectProps extends SelectFieldProps {
 }
 
 /** Ingredients with their Base Unit as meta (shown once); "Create Ingredient" for an unknown query when onCreate is given. */
-export function IngredientSelect({ ingredients, value, onChange, onCreate, ...field }: IngredientSelectProps) {
+export function IngredientSelect({ ingredients, value, onChange, onCreate, createDisabledReason, ...field }: IngredientSelectProps) {
   const options = useMemo(() => ingredientOptions(ingredients), [ingredients])
   return (
     <Select<number | string>
@@ -24,6 +24,7 @@ export function IngredientSelect({ ingredients, value, onChange, onCreate, ...fi
       value={value}
       onChange={onChange}
       onCreate={onCreate}
+      createDisabledReason={createDisabledReason}
       createLabel={selectStrings.createIngredient}
     />
   )

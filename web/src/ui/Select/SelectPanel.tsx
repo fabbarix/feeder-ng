@@ -25,6 +25,7 @@ export interface SelectPanelProps<V extends string | number> {
   sortIndex: number
   onCycleSort: () => void
   list: BuiltList<V>
+  createDisabledReason?: string
   selected: V[]
   active: number
   optionId: (index: number) => string
@@ -131,7 +132,9 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
             id={p.optionId(createIndex)}
             role="option"
             aria-selected={false}
+            aria-disabled={p.createDisabledReason ? true : undefined}
             aria-labelledby={`${p.optionId(createIndex)}-label`}
+            aria-describedby={p.createDisabledReason ? `${p.optionId(createIndex)}-meta` : undefined}
             data-active={createIndex === p.active || undefined}
             className="select__option select__option--create"
             onClick={() => p.onPick(createIndex)}
@@ -144,6 +147,11 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
               <span id={`${p.optionId(createIndex)}-label`} className="select__label">
                 {p.list.createText}
               </span>
+              {p.createDisabledReason ? (
+                <span id={`${p.optionId(createIndex)}-meta`} className="select__meta">
+                  {p.createDisabledReason}
+                </span>
+              ) : null}
             </span>
           </div>
         ) : null}

@@ -227,7 +227,8 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
   if (draft.lines.length === 0) errors.lines = 'lines_required'
   else if (draft.readyMeal && draft.lines.length !== 1) errors.lines = 'ready_meal_lines'
   draft.lines.forEach((l, i) => {
-    if (l.ingredientId === null) errors[`lines.${i}.ingredient`] = 'ingredient_required'
+    const pending = draft.readyMeal && l.auto === true && l.ingredientId === null // R14: the server creates the Ingredient on save
+    if (l.ingredientId === null && !pending) errors[`lines.${i}.ingredient`] = 'ingredient_required'
     const q = parseNumber(l.quantity)
     if (q === null || q <= 0) errors[`lines.${i}.quantity`] = 'quantity_invalid'
     if (l.unit.trim() === '') errors[`lines.${i}.unit`] = 'unit_required'
@@ -293,8 +294,20 @@ export function addLine(draft: RecipeDraft): RecipeDraft {
 
 /** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */
 export function updateLine(draft: RecipeDraft, key: string, patch: Partial<LineDraft>): RecipeDraft {
-  return { ...draft, lines: draft.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }
+  const takesOver = TAKE_OVER.some((field) => field in patch)
+  return {
+    ...draft,
+    lines: draft.lines.map((l) => {
+      if (l.key !== key) return l
+      const next = { ...l, ...patch }
+      if (takesOver && !('auto' in patch)) delete next.auto
+      return next
+    }),
+  }
 }
+
+/** R14: the line fields whose edit by the User ends the Ready Meal rule's hold on the line (not the note, not Optional). */
+const TAKE_OVER: (keyof LineDraft)[] = ['ingredientId', 'ingredientName', 'quantity', 'unit']
 
 /** Chooses an Ingredient for the line with `key`: sets ingredientId, ingredientName and the unit to the Ingredient's Base Unit; quantity, optional and note are kept. */
 export function pickIngredient(draft: RecipeDraft, key: string, ingredient: IngredientRef): RecipeDraft {
@@ -311,5 +324,7 @@ export function removeLine(draft: RecipeDraft, key: string): RecipeDraft {
  * (the Ingredient was made to fit it), and only an empty unit becomes the Base Unit. Clears `auto`.
  */
 export function pickCreatedIngredient(draft: RecipeDraft, key: string, ingredient: IngredientRef): RecipeDraft {
-  return pickIngredient(draft, key, ingredient)
+  const line = draft.lines.find((l) => l.key === key)
+  const unit = line && line.unit.trim() !== '' ? line.unit : ingredient.baseUnit
+  return updateLine(draft, key, { ingredientId: ingredient.id, ingredientName: ingredient.name, unit })
 }

@@ -2,7 +2,8 @@ import type { IconName } from '../../../ui/icons'
 import type { BaseUnit } from '../../../lib/units'
 import type { Ingredient, NewIngredient, SearchResult, Suggestion } from '../types'
 
-// R14 (docs/dev/design/r14-recipe-editor.md): pure rules of the New Ingredient sheet. Stubs; the Developer implements them.
+// R14 (docs/dev/design/r14-recipe-editor.md): pure rules of the New Ingredient sheet.
+import { strings } from '../strings'
 
 /**
  * The Base Unit to preselect when the sheet is opened with a unit already known (the unit typed on a Recipe line, or on a Scan).
@@ -10,14 +11,17 @@ import type { Ingredient, NewIngredient, SearchResult, Suggestion } from '../typ
  * Trimmed, case-insensitive.
  */
 export function defaultBaseUnit(unit?: string | null): BaseUnit {
-  void unit
+  const u = (unit ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  if (ML_UNITS.has(u)) return 'ml'
+  if (u === 'piece') return 'piece'
   return 'g'
 }
 
+const ML_UNITS = new Set(['ml', 'l', 'dl', 'cl', 'tsp', 'tbsp', 'cup', 'fl oz'])
+
 /** The registry icon of a Base Unit option: g -> 'weigh' (Scales), ml -> 'liquid' (Drop), piece -> 'piece' (Cube). The last two are new glyphs (UF1 registry). */
 export function baseUnitIcon(unit: BaseUnit): IconName {
-  void unit
-  return 'weigh'
+  return unit === 'ml' ? 'liquid' : unit === 'piece' ? 'piece' : 'weigh'
 }
 
 export interface NewIngredientForm {
@@ -35,8 +39,17 @@ export type NewIngredientErrors = { name?: string; shelfLife?: string }
  * only when given, shelfLifeDays.
  */
 export function checkNewIngredient(form: NewIngredientForm): { ok: true; value: NewIngredient } | { ok: false; errors: NewIngredientErrors } {
-  void form
-  return { ok: false, errors: {} }
+  const name = form.name.trim().split(/\s+/).filter(Boolean).join(' ')
+  const errors: NewIngredientErrors = {}
+  if (name === '') errors.name = strings.sheet.nameRequired
+  const shelf = form.shelfLife.trim()
+  let shelfLifeDays: number | undefined
+  if (shelf !== '') {
+    if (/^\d+$/.test(shelf) && Number(shelf) >= 1) shelfLifeDays = Number(shelf)
+    else errors.shelfLife = strings.sheet.shelfLifeInvalid
+  }
+  if (errors.name || errors.shelfLife) return { ok: false, errors }
+  return { ok: true, value: shelfLifeDays === undefined ? { name, baseUnit: form.baseUnit } : { name, baseUnit: form.baseUnit, shelfLifeDays } }
 }
 
 /** What the sheet does after the near-duplicate lookup of the typed name (the same matcher as Import Review: GET /api/ingredients/search). */
@@ -47,6 +60,7 @@ export type DuplicateGuard =
 
 /** exact match -> 'exists'; else any suggestions -> 'similar' (as sent, best first); else 'clear'. */
 export function duplicateGuard(result: SearchResult): DuplicateGuard {
-  void result
+  if (result.exact) return { kind: 'exists', ingredient: result.exact }
+  if (result.suggestions.length > 0) return { kind: 'similar', suggestions: result.suggestions }
   return { kind: 'clear' }
 }

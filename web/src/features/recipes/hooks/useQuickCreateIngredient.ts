@@ -1,8 +1,13 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useConnectivity } from '../../../app/useConnectivity'
+import { ingredientsApi } from '../../ingredients/api'
 import type { Ingredient, NewIngredient } from '../../ingredients/types'
+import { recipeStrings } from '../strings'
 import type { IngredientRef } from '../types'
 
 // R14 (docs/dev/design/r14-recipe-editor.md, "Quick create"): state of the nested New Ingredient sheet opened from an ingredient line.
-// Stub; the Developer implements it. No JSX here and no draft state: the Recipe draft lives in useRecipeEditor and is never touched by opening or cancelling.
+// No JSX here and no draft state: the Recipe draft lives in useRecipeEditor and is never touched by opening or cancelling.
 
 export interface QuickCreateRequest {
   lineKey: string
@@ -32,16 +37,29 @@ export interface UseQuickCreateIngredient {
   disabledReason: string | undefined
 }
 
-export function useQuickCreateIngredient(options: { pick: (lineKey: string, ingredient: IngredientRef) => void }): UseQuickCreateIngredient {
-  void options
+export function useQuickCreateIngredient({ pick }: { pick: (lineKey: string, ingredient: IngredientRef) => void }): UseQuickCreateIngredient {
+  const client = useQueryClient()
+  const { offline } = useConnectivity()
+  const [request, setRequest] = useState<QuickCreateRequest | null>(null)
+  const [focusLineKey, setFocusLineKey] = useState<string | null>(null)
+
   return {
-    request: null,
-    open: () => {},
-    close: () => {},
-    create: () => Promise.reject(new Error('R14: not implemented')),
-    select: () => {},
-    focusLineKey: null,
-    amountFocused: () => {},
-    disabledReason: undefined,
+    request,
+    open: setRequest,
+    close: () => setRequest(null),
+    create: async (body) => {
+      const made = await ingredientsApi.create(body)
+      void client.invalidateQueries({ queryKey: ['ingredients'] })
+      return made
+    },
+    select: (ingredient) => {
+      if (!request) return
+      pick(request.lineKey, { id: ingredient.id, name: ingredient.name, baseUnit: ingredient.baseUnit, conversions: ingredient.conversions })
+      setFocusLineKey(request.lineKey)
+      setRequest(null)
+    },
+    focusLineKey,
+    amountFocused: () => setFocusLineKey(null),
+    disabledReason: offline ? recipeStrings.quickCreate.offlineReason : undefined,
   }
 }

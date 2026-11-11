@@ -1,6 +1,10 @@
 package recipe
 
-import "github.com/fabbarix/feeder-ng/internal/units"
+import (
+	"strings"
+
+	"github.com/fabbarix/feeder-ng/internal/units"
+)
 
 // CodeReadyMealUnit is the validation reason when a Ready Meal's same-name
 // Ingredient already exists but does not count in pieces, so no pack line can be
@@ -21,8 +25,6 @@ type ReadyMealCandidate struct {
 //   - Conflict: the same-name Ingredient exists but its Base Unit is not piece (CodeReadyMealUnit).
 //   - Line is the single ingredient line (quantity 1, unit piece, not optional, no note) with
 //     IngredientID set only for ReuseID; the caller fills the id of a created Ingredient.
-//
-// R14 stub: the Developer implements ChooseReadyMealIngredient and NeedsReadyMealIngredient.
 type ReadyMealChoice struct {
 	ReuseID  int64
 	Create   string
@@ -32,10 +34,26 @@ type ReadyMealChoice struct {
 
 // NeedsReadyMealIngredient reports whether the Input asks the server to derive the pack line:
 // a Ready Meal with no ingredient lines at all.
-func NeedsReadyMealIngredient(in Input) bool { return false }
+func NeedsReadyMealIngredient(in Input) bool { return in.ReadyMeal && len(in.Lines) == 0 }
 
 // ChooseReadyMealIngredient applies the Ready Meal rule for a Recipe name against the existing Ingredients.
 // Names are compared with units.NormalizeName.
 func ChooseReadyMealIngredient(recipeName string, existing []ReadyMealCandidate) ReadyMealChoice {
-	return ReadyMealChoice{}
+	display := strings.Join(strings.Fields(recipeName), " ")
+	if display == "" {
+		return ReadyMealChoice{}
+	}
+	line := Line{Quantity: 1, Unit: string(units.Piece)}
+	key := units.NormalizeName(display)
+	for _, c := range existing {
+		if units.NormalizeName(c.Name) != key {
+			continue
+		}
+		if c.Base != units.Piece {
+			return ReadyMealChoice{ReuseID: c.ID, Conflict: true}
+		}
+		line.IngredientID = c.ID
+		return ReadyMealChoice{ReuseID: c.ID, Line: line}
+	}
+	return ReadyMealChoice{Create: display, Line: line}
 }

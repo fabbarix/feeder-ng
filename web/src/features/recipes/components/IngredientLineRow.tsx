@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Checkbox, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Button, Checkbox, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
@@ -32,7 +32,30 @@ const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMess
  * (UnitSelect with the Ingredient's units and a typed custom unit), optional and Note, with remove. A unit the
  * Ingredient does not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
  */
-export function IngredientLineRow({ line, index, errors, ingredient, ingredients = [], onPick, onChange, onRemove }: IngredientLineRowProps): ReactNode {
+export function IngredientLineRow({
+  line,
+  index,
+  errors,
+  ingredient,
+  ingredients = [],
+  onPick,
+  onChange,
+  onRemove,
+  onQuickCreate,
+  quickCreateDisabledReason,
+  focusAmount,
+  onAmountFocused,
+}: IngredientLineRowProps): ReactNode {
+  const amountRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!focusAmount) return
+    amountRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+    onAmountFocused?.()
+  }, [focusAmount, onAmountFocused])
+
+  if (line.auto && line.ingredientId === null) {
+    return <PendingLine line={line} onChange={onChange} onRemove={onRemove} />
+  }
   const units = ingredient ? unitChoicesOf(ingredient) : { baseUnit: line.unit, conversions: [], globalUnits: [] }
   const asks = needsConversion(line.unit, ingredient)
   return (
@@ -43,13 +66,15 @@ export function IngredientLineRow({ line, index, errors, ingredient, ingredients
           ingredients={ingredients}
           value={line.ingredientId}
           error={fieldError(errors, `lines.${index}.ingredient`)}
+          onCreate={onQuickCreate}
+          createDisabledReason={onQuickCreate ? quickCreateDisabledReason : undefined}
           onChange={(id) => {
             const picked = ingredients.find((ing) => ing.id === id)
             if (picked) onPick(picked)
           }}
         />
       </div>
-      <div className="line-row__amount">
+      <div ref={amountRef} className="line-row__amount">
         <TextField
           label={recipeStrings.lines.quantity}
           inputMode="decimal"
@@ -72,6 +97,31 @@ export function IngredientLineRow({ line, index, errors, ingredient, ingredients
       <div className="line-row__extras">
         <Checkbox label={recipeStrings.optional} checked={line.optional} onChange={(optional) => onChange({ optional })} />
         <TextField label={recipeStrings.lines.note} value={line.note} onChange={(note) => onChange({ note })} />
+      </div>
+      <IconButton icon="delete" label={recipeStrings.lines.remove} onClick={onRemove} />
+    </li>
+  )
+}
+
+/**
+ * The Ready Meal's pack when its Ingredient does not exist yet: a read-only summary. Feeder makes the Ingredient when the Recipe is saved.
+ * "Choose another Ingredient" turns the line into an ordinary blank one.
+ */
+function PendingLine({ line, onChange, onRemove }: Pick<IngredientLineRowProps, 'line' | 'onChange' | 'onRemove'>): ReactNode {
+  const text = recipeStrings.readyMealIngredient
+  return (
+    <li className="line-row line-row--pending">
+      <div className="line-row__ingredient">
+        <p className="line-row__pending-name">
+          <strong>{line.ingredientName}</strong> <Chip kind="state">{text.newBadge}</Chip>
+        </p>
+        <p className="line-row__pending-amount">
+          {line.quantity} {line.unit}
+        </p>
+        <p className="line-row__hint">{text.helper(line.ingredientName)}</p>
+        <Button variant="tertiary" onClick={() => onChange({ auto: false, ingredientName: '', quantity: '', unit: '' })}>
+          {text.changeIngredient}
+        </Button>
       </div>
       <IconButton icon="delete" label={recipeStrings.lines.remove} onClick={onRemove} />
     </li>
