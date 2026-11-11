@@ -401,3 +401,40 @@ func TestSweepOnAnEmptyStoreIsHarmless(t *testing.T) {
 	}
 	sort.Strings(res.Deleted)
 }
+
+// lateRefs reports no references on the first call and `id` as referenced from the second call on: a record that
+// saved the image between the snapshot and the delete.
+type lateRefs struct {
+	id    string
+	calls int
+}
+
+func (r *lateRefs) ReferencedIDs(context.Context) (map[string]bool, error) {
+	r.calls++
+	if r.calls > 1 {
+		return map[string]bool{r.id: true}, nil
+	}
+	return map[string]bool{}, nil
+}
+
+func TestSweepRechecksReferencesRightBeforeEachDelete(t *testing.T) {
+	e := newEnv(t)
+	old := seed(t, e, 25*time.Hour)
+	svc := images.NewService(e.store, e.fetch, &lateRefs{id: old}, e.clk)
+	res, err := svc.Sweep(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !e.store.Exists(old) || len(res.Deleted) != 0 {
+		t.Errorf("an image referenced after the snapshot must survive: exists=%v deleted=%v", e.store.Exists(old), res.Deleted)
+	}
+}
+
+func TestDiscardRechecksReferencesRightBeforeDeleting(t *testing.T) {
+	e := newEnv(t)
+	got, _ := e.svc.IngestDataURL(pngDataURL(t, 8, 8))
+	svc := images.NewService(e.store, e.fetch, &lateRefs{id: got.ID, calls: 1}, e.clk)
+	if err := svc.Discard(context.Background(), got.ID); !errors.Is(err, images.ErrInUse) || !e.store.Exists(got.ID) {
+		t.Errorf("Discard = %v, exists = %v; want ErrInUse and the image kept", err, e.store.Exists(got.ID))
+	}
+}
