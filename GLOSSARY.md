@@ -59,8 +59,12 @@ A Step to be done a set lead time before the Planned Meal's slot time (e.g. defr
 _Avoid_: Prep step, pre-step
 
 **Cook Mode**:
-The hands-free, step-by-step view used while cooking, which runs the Step timers.
+The hands-free, step-by-step view used while cooking, which follows a Meal Slot's **cooking timeline** and runs the Step timers. It can also show one Course, or one Recipe, on its own.
 _Avoid_: Kitchen mode, guided mode
+
+**cooking timeline**:
+The order and timing of the Steps Cook Mode walks through. For a Meal Slot on a date it interleaves the Steps of every fresh Course still to cook, plus the Reheat of any Leftover Course, by the scheduling rule with one cook, so that every Course is ready together; for a Recipe on its own it is that Recipe's Steps. Advance Steps are outside it. Each Step in it still belongs to its Course.
+_Avoid_: Combined run, merged schedule, cook plan, multi-course mode
 
 **Reheat**:
 Warming a Leftover for the Planned Meal it is served at, with a short timer before the meal is marked Cooked; a Leftover has no Steps, so it uses its own screen rather than Cook Mode. The timer starts at the Recipe's Reheat time when it has one.
@@ -99,6 +103,10 @@ _Avoid_: Primary course, entrée, headline course
 A Recipe that needs no other Course beside it (a one-pot Recipe, most Ready Meals). Planned in a Meal Slot's main Course, it covers that slot's other Courses that hold no Planned Meal: they stay empty on that date, and that is not Couldn't plan. A Pinned, Cooked or Not cooked Planned Meal in another Course stays and is not covered. In any other Course a Whole meal is an ordinary Recipe.
 _Avoid_: One-pot meal, complete meal, full meal
 
+**optional Course**:
+A Course a Meal Slot serves only when a Leftover or a fresh Recipe fits it without breaking a Cool-down or Variety Rule (e.g. "Dinner: Main, Side, Dessert (optional)"); otherwise it is left empty on that date, and that is not Couldn't plan. Optional is set per Meal Slot, not on the Course, and every Meal Slot serves at least one Course that is not optional.
+_Avoid_: Extra course, maybe course, bonus course
+
 **Tag**:
 A household-defined label on Recipes (e.g. "fish", "pasta", "roast") that Slot Rules and Variety Rules refer to.
 _Avoid_: Category, label
@@ -106,21 +114,21 @@ _Avoid_: Category, label
 ### Preferences
 
 **Favourite**:
-A Member's liking for a Recipe, which makes the planner more likely to choose it when they attend.
+A Member's liking for a Recipe, which makes the planner more likely to choose it for a Course they eat.
 _Avoid_: Star, like
 
 **Dislike**:
-A Member's soft aversion to a Recipe; the planner avoids it when they attend, but it may still appear.
+A Member's soft aversion to a Recipe; the planner avoids it for a Course they eat, but it may still appear.
 _Avoid_: Unfavourite
 
 **Exclusion**:
-A Member's hard ban on a Recipe or Ingredient (e.g. an allergy); the planner never chooses it when they attend.
+A Member's hard ban on a Recipe or Ingredient (e.g. an allergy); the planner never chooses it for a Course they eat.
 _Avoid_: Never, allergy, blacklist
 
 ### Planning
 
 **Meal Slot**:
-A named eating occasion the Household defines for a particular day of the week, with a usual time and the ordered Courses it serves (e.g. "Tuesday Dinner, 19:30: Main, Side"). It serves at least one Course.
+A named eating occasion the Household defines for a particular day of the week, with a usual time and the ordered Courses it serves (e.g. "Tuesday Dinner, 19:30: Main, Side"), some of which may be optional. It serves at least one Course that is not optional.
 _Avoid_: Meal time, occasion, slot type
 
 **Matching Meal Slot**:
@@ -128,7 +136,7 @@ The Meal Slot with the same name (case and edge spaces ignored) on another weekd
 _Avoid_: Sibling, linked slot, twin
 
 **Planned Meal**:
-The Recipe assigned to one Course of one Meal Slot on one date, either freshly cooked or served from a Leftover. A Meal Slot on a date has one Planned Meal per Course it serves, except the Courses a Whole meal covers; each is planned, swapped, Pinned and marked Cooked on its own.
+The Recipe assigned to one Course of one Meal Slot on one date, either freshly cooked or served from a Leftover. A Meal Slot on a date has one Planned Meal per Course it serves, except the Courses a Whole meal covers, optional Courses left empty and Courses nobody eats that day; each is planned, swapped, Pinned and marked Cooked on its own.
 _Avoid_: Meal, entry, booking
 
 **Cooked**:
@@ -140,7 +148,7 @@ One preparation of a Recipe, producing its Yield; a Planned Meal cooks a whole n
 _Avoid_: Scale, run
 
 **Leftover**:
-Portions left from a Batch beyond what its Planned Meal's Attendance needs; these are served at later Meal Slots, in any Course the Recipe is marked with.
+Portions left from a Batch beyond what its Planned Meal's Course Attendance needs; these are served at later Meal Slots, in any Course the Recipe is marked with.
 _Avoid_: Surplus, remains
 
 **Use-by**:
@@ -148,7 +156,7 @@ The last date a Leftover may be served; after it the Leftover is discarded and n
 _Avoid_: Expiry, best-before
 
 **Cool-down**:
-The minimum number of days before the same Recipe may be planned again, in any Course.
+The minimum number of days before the same Recipe may be planned again, in any Course. It is soft: when no Recipe that fits a required Course keeps it, the planner still fills the Course with the Recipe that comes round least soon, and says so with a why chip ("Again soon: had Tue"). As the Household adds Recipes, it holds again on its own.
 _Avoid_: Rotation, repeat gap
 
 **Planning Horizon**:
@@ -172,7 +180,7 @@ A standing rule that fixes one Course of a Meal Slot (the main Course unless ano
 _Avoid_: Fixed meal, theme night
 
 **Variety Rule**:
-A limit on how often Recipes with a given Tag may appear (e.g. at most twice a week, never two days running).
+A limit on how often Recipes with a given Tag may appear (e.g. at most twice a week, never two days running). Soft, like Cool-down: when nothing that fits a required Course keeps it, the planner breaks it as little as it can and says so ("3rd fish this week").
 _Avoid_: Quota, balance rule
 
 **Portion Factor**:
@@ -180,11 +188,16 @@ How much of a standard portion a Member eats; each Member has a default, which a
 _Avoid_: Appetite, multiplier, serving size
 
 **Attendance**:
-The Members who eat at a given Meal Slot, each with their Portion Factor; it determines the portions that slot needs. It starts as everyone, and people opt out.
+The Members who eat at a given Meal Slot, each with their Portion Factor. It starts as everyone, and people opt out; it can be changed for one date. Each Course of the slot is eaten by its **Course Attendance**.
 _Avoid_: Guests, headcount
 
+**Course Attendance**:
+The Members who eat one Course of a Meal Slot: the slot's Attendance less those who opt out of that Course (e.g. Sam opts out of Dessert), usually or for one date. It determines that Course's portions, and whose Exclusions, Dislikes and Favourites count for it. Nobody opts out unless set; a Course nobody eats on a date is left empty, and that is not Couldn't plan.
+_Avoid_: Course guests, skips, diners
+_Note_: "skip" and "skipped" are not used for opting out, because the code calls a Not cooked Planned Meal `skipped`.
+
 **Couldn't plan**:
-The state of a Course of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, no Recipe marked with that Course, a Slot Rule that nothing meets, or every Recipe excluded, in Cool-down, blocked by a Variety Rule or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure. A Course covered by a Whole meal is not Couldn't plan.
+The state of a required Course of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, no Recipe marked with that Course, a Slot Rule that nothing meets, or every Recipe excluded or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure. Cool-down and Variety Rules never cause it, because they give way when too few Recipes fit. A Course covered by a Whole meal, an optional Course left empty and a Course nobody eats are not Couldn't plan.
 _Avoid_: Missing meal
 
 ### Food and shopping

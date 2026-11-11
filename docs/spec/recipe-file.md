@@ -75,7 +75,7 @@ Anything else is an **unconvertible unit**. Import Review asks for the conversio
 - the cook is free: the previous non-advance Step has finished if it was active, or has merely started if it was passive;
 - every Step listed in its `after` (0-based indexes into `steps`) has finished.
 
-The Recipe's **total time** is the end of the last Step on this schedule (the critical path), not the sum of the durations. In the example: the oven runs 0–2, the veg is cut 2–10, the tray roasts 10–35 (it waits for steps 1 and 2), the rice simmers 10–25 (it starts as soon as the tray goes in) and serving runs 35–40 (it waits for 3 and 4). Total: 40 minutes. Cook Mode's "start cooking" reminder fires at slot time minus total time.
+The Recipe's **total time** is the end of the last Step on this schedule (the critical path), not the sum of the durations. In the example: the oven runs 0–2, the veg is cut 2–10, the tray roasts 10–35 (it waits for steps 1 and 2), the rice simmers 10–25 (it starts as soon as the tray goes in) and serving runs 35–40 (it waits for 3 and 4). Total: 40 minutes. Cook Mode's "start cooking" reminder fires at slot time minus total time. When a Meal Slot serves several Courses, Cook Mode applies the same rule across their Recipes with one cook (no two active Steps of different Recipes at once) and places every Step as late as it can, so the Courses are ready together; the reminder then fires at the start of that combined cooking timeline ([functional spec §11](functional-spec.md)).
 
 `uses` lists the Ingredient amounts a Step needs. Cook Mode shows them scaled to the number of Batches being cooked. They are informational, and the Recipe's `ingredients` list remains what counts for Stock and shopping.
 
