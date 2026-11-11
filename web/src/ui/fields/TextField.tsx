@@ -15,6 +15,7 @@ export interface TextFieldProps extends FieldProps, FieldSizeProps, Omit<InputHT
 export function TextField({ size = 'md', label, helper, error, disabled, required, name, value, onChange, suffix, type = 'text', id, 'aria-describedby': extraDescribedBy, ...rest }: TextFieldProps) {
   const ids = useFieldIds()
   const inputId = id ?? `${ids.labelId}-input`
+  const suffixId = `${ids.labelId}-suffix`
   return (
     <FieldFrame ids={ids} size={size} label={label} labelFor={inputId} helper={helper} error={error}>
       <span className="ui-field__control">
@@ -28,10 +29,10 @@ export function TextField({ size = 'md', label, helper, error, disabled, require
           disabled={disabled}
           aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(ids, helper, error, extraDescribedBy)}
+          aria-describedby={describedBy(ids, helper, error, extraDescribedBy, suffix ? suffixId : undefined)}
           onChange={(e) => onChange(e.target.value)}
         />
-        {suffix ? <span className="ui-field__suffix">{suffix}</span> : null}
+        {suffix ? <span id={suffixId} className="ui-field__suffix">{suffix}</span> : null}
       </span>
     </FieldFrame>
   )

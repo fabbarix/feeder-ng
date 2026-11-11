@@ -37,16 +37,19 @@ type Store struct {
 	images      *imaging.Store
 	ingredients *ingstore.Store
 	recipes     *recipestore.Store
+	guarded     *imgs.Guarded
 }
 
 // New returns a Store.
 func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
+	guarded := imgs.NewGuarded(images, refs.New(d))
 	return &Store{
+		guarded:     guarded,
 		db:          d,
 		clk:         clk,
 		images:      images,
 		ingredients: ingstore.New(d, clk),
-		recipes:     recipestore.New(d, clk, nil).WithImages(imgs.NewGuarded(images, refs.New(d))),
+		recipes:     recipestore.New(d, clk, nil).WithImages(guarded),
 	}
 }
 
@@ -146,6 +149,7 @@ type Result struct {
 	Recipes            []AppliedRecipe
 	IngredientsCreated int
 	ConversionsAdded   int
+	PicturesAdded      int // IM3: existing Ingredients that took the file's picture
 }
 
 // AppliedRecipe is one written Recipe.
@@ -169,10 +173,14 @@ func (s *Store) Apply(ctx context.Context, c recipefile.Commit) (Result, error) 
 		s.removeImages(imageIDs)
 		return Result{}, err
 	}
-	res, replaced, err := s.write(ctx, c, imageIDs)
+	res, replaced, orphans, err := s.write(ctx, c, imageIDs)
 	if err != nil {
 		s.removeImages(imageIDs)
 		return Result{}, err
+	}
+	// A picture set after the review won: the file saved for it is an orphan. Guarded refuses a file any record still uses.
+	for _, id := range orphans {
+		_ = s.guarded.Delete(ctx, id)
 	}
 	s.recipes.DropUnreferenced(ctx, replaced)
 	return res, nil
@@ -201,16 +209,16 @@ func (s *Store) removeImages(ids map[string]string) {
 
 // write runs the transaction. It returns the ids of photos that replaced
 // Recipes used to refer to.
-func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[string]string) (Result, []string, error) {
+func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[string]string) (Result, []string, []string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
 	defer tx.Rollback()
 
 	created, err := s.createIngredients(ctx, tx, c, imageIDs)
 	if err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
 	res := Result{IngredientsCreated: len(c.NewIngredients)}
 	// A Unit Conversion the Ingredient gained since the review wins: it is kept,
@@ -218,16 +226,34 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	for _, a := range c.AddedConversions {
 		added, err := s.ingredients.AddConversionTx(ctx, tx, a.IngredientID, a.Conversion)
 		if err != nil {
-			return Result{}, nil, staleOr(err)
+			return Result{}, nil, nil, staleOr(err)
 		}
 		if added {
 			res.ConversionsAdded++
 		}
 	}
 
+	// IM3: an existing Ingredient without a picture adopts the file's. One that got a picture since the review keeps it.
+	var orphans []string
+	for _, a := range c.AddedImages {
+		id := imageIDs[a.ImagePath]
+		if id == "" {
+			continue
+		}
+		r, err := tx.ExecContext(ctx, `UPDATE ingredients SET image = ? WHERE id = ? AND image = ''`, id, a.IngredientID)
+		if err != nil {
+			return Result{}, nil, nil, err
+		}
+		if n, _ := r.RowsAffected(); n == 1 {
+			res.PicturesAdded++
+		} else {
+			orphans = append(orphans, id)
+		}
+	}
+
 	names, err := recipeNames(ctx, tx)
 	if err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
 	replacing := map[int64]bool{}
 	for _, rc := range c.Recipes {
@@ -240,15 +266,15 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	for _, rc := range c.Recipes {
 		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, imageIDs, names, replacing)
 		if err != nil {
-			return Result{}, nil, err
+			return Result{}, nil, nil, err
 		}
 		res.Recipes = append(res.Recipes, applied)
 		replaced = append(replaced, prev...)
 	}
 	if err := tx.Commit(); err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
-	return res, replaced, nil
+	return res, replaced, orphans, nil
 }
 
 // nameIndex maps units.NormalizeName of Recipe names to the ids that have them.

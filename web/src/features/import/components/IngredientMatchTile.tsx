@@ -47,6 +47,7 @@ export function IngredientMatchTile({ match, onUseExisting, onCreate }: Ingredie
         {statusLabel[match.status]}
       </Chip>
       {match.status === 'exact' && match.match ? <p>{displayName(match.match.name)}</p> : null}
+      {match.addsImage ? <p>{s.addsPicture(displayName(pictureRecipient(match)))}</p> : null}
       {match.status === 'undefined' ? <BaseUnitChoices onCreate={onCreate} /> : null}
       {match.status === 'conflict' && match.conflict ? <p>{s.conflictText(match.conflict.file, match.conflict.existing)}</p> : null}
       {match.status !== 'conflict' ? <Options match={match} onUseExisting={onUseExisting} onCreate={onCreate} /> : null}
@@ -60,6 +61,16 @@ export function IngredientMatchTile({ match, onUseExisting, onCreate }: Ingredie
       ) : null}
     </Tile>
   )
+}
+
+/** The Ingredient that receives the picture: the suggestion the User chose, otherwise the matched one. */
+function pictureRecipient(match: IngredientMatch): string {
+  const e = match.effective
+  if (e?.action === 'use') {
+    const chosen = match.suggestions.find((x) => x.id === e.ingredientId)
+    if (chosen) return chosen.name
+  }
+  return match.match?.name ?? match.name
 }
 
 function BaseUnitChoices({ onCreate }: { onCreate: IngredientMatchTileProps['onCreate'] }): ReactNode {
