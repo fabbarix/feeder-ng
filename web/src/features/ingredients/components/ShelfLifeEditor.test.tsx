@@ -7,8 +7,8 @@ import { ShelfLifeEditor } from './ShelfLifeEditor'
 describe('ShelfLifeEditor', () => {
   it('shows the current Shelf Life', () => {
     render(<ShelfLifeEditor days={7} onSave={() => {}} />)
-    expect(screen.getByText('7 days')).toBeInTheDocument()
-    expect(screen.getByLabelText(strings.shelfLifeLabel)).toHaveValue('7')
+    expect(screen.queryByText('7 days')).toBeNull() // the value lives in the field only (F-05)
+    expect(screen.getByLabelText('Shelf Life')).toHaveValue('7')
   })
   it('says there is none, and offers no clear button', () => {
     render(<ShelfLifeEditor days={null} onSave={() => {}} />)
@@ -28,12 +28,11 @@ describe('ShelfLifeEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: strings.clearShelfLife }))
     expect(onSave).toHaveBeenCalledWith(null)
   })
-  it('refuses invalid text', async () => {
+  it('clamps 0 to the 1-day minimum instead of saving an invalid value', async () => {
     const onSave = vi.fn()
     render(<ShelfLifeEditor days={null} onSave={onSave} />)
-    await userEvent.type(screen.getByLabelText(strings.shelfLifeLabel), '0')
+    await userEvent.type(screen.getByLabelText('Shelf Life'), '0')
     await userEvent.click(screen.getByRole('button', { name: strings.saveShelfLife }))
-    expect(screen.getByRole('alert')).toHaveTextContent(strings.errors.daysInvalid)
-    expect(onSave).not.toHaveBeenCalled()
+    expect(onSave).toHaveBeenCalledWith(1)
   })
 })

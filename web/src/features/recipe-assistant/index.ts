@@ -4,11 +4,11 @@ import { RecipeAssistantSettingsPage } from './screens/RecipeAssistantSettingsPa
 
 export { RecipeAssistantSettingsPage }
 
-/** The route object WP-F adds to the settings routes; the Settings index row is WP-F too. */
+/** The route object the settings feature registers (features/settings/index.ts); its Settings index row is in settingsSections. */
 export const recipeAssistantSettingsRoute: RouteObject = {
   path: '/settings/recipe-assistant',
   element: createElement(RecipeAssistantSettingsPage),
 }
 
-/** Nothing is registered here: auto-discovery gets an empty list until WP-F wires the route. */
+/** Nothing is registered here: the settings feature registers the route, so auto-discovery gets an empty list. */
 export const routes: RouteObject[] = []

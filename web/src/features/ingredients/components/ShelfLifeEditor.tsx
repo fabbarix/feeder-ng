@@ -1,5 +1,6 @@
-import { Button, TextField } from '../../../ui'
+import { Button, FormActions, NumberField } from '../../../ui'
 import { useShelfLifeForm } from '../hooks/useIngredientForms'
+import { MAX_SHELF_LIFE_DAYS } from '../lib/conversionForm'
 import { strings } from '../strings'
 
 export interface ShelfLifeEditorProps {
@@ -7,28 +8,38 @@ export interface ShelfLifeEditorProps {
   onSave: (days: number | null) => void
 }
 
-/** Shows strings.shelfLife(days) or strings.noShelfLife; a "Shelf Life (days)" input, "Save Shelf Life", and "Clear Shelf Life" (only while set). Invalid text shows the error (role alert) and does not save. */
+/** One "Shelf Life" number field (1 day minimum, "days" inside it; blank means none), "Save Shelf Life", and "Clear Shelf Life" (only while set). */
 export function ShelfLifeEditor({ days, onSave }: ShelfLifeEditorProps) {
   const form = useShelfLifeForm(days, onSave)
   return (
     <section>
-      <p>{days === null ? strings.noShelfLife : strings.shelfLife(days)}</p>
       <form
         onSubmit={(e) => {
           e.preventDefault()
           form.submit()
         }}
       >
-        <TextField label={strings.shelfLifeLabel} inputMode="numeric" value={form.text} onChange={form.setText} />
-        <Button type="submit" variant="tertiary">
-          {strings.saveShelfLife}
-        </Button>
-        {days !== null ? (
-          <Button variant="tertiary" onClick={form.clear}>
-            {strings.clearShelfLife}
-          </Button>
-        ) : null}
-        {form.error ? <p role="alert">{form.error}</p> : null}
+        <NumberField
+          size="xs"
+          label={strings.shelfLifeLabel}
+          unit="days"
+          min={1}
+          max={MAX_SHELF_LIFE_DAYS}
+          value={form.value}
+          onChange={form.setValue}
+          helper={form.value === null ? strings.noShelfLife : undefined}
+          error={form.error ?? undefined}
+        />
+        <FormActions
+          destructive={
+            days !== null ? (
+              <Button variant="danger-tertiary" onClick={form.clear}>
+                {strings.clearShelfLife}
+              </Button>
+            ) : undefined
+          }
+          primary={<Button type="submit">{strings.saveShelfLife}</Button>}
+        />
       </form>
     </section>
   )

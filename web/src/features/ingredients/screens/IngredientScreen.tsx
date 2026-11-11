@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import type { BaseUnit } from '../../../lib/units'
-import { BentoGrid, BottomSheet, Button, Chip, CROP_ASPECTS, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
+import { BaseUnitPicker } from '../components/BaseUnitPicker'
 import { ConversionEditor } from '../components/ConversionEditor'
 import { MergeSheet } from '../components/MergeSheet'
 import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
@@ -14,11 +14,9 @@ import { errorMessage } from '../lib/errorMessage'
 import { displayName } from '../lib/names'
 import { strings } from '../strings'
 
-const BASE_UNITS: readonly BaseUnit[] = ['g', 'ml', 'piece']
-
 /**
  * Route /ingredients/:id. Heading = name; "Rename" (inline Name field + "Save name"). Below it a BentoGrid of Tiles:
- * Base Unit (chip group disabled with strings.baseUnitLocked(n) while referenced), Shelf Life (ShelfLifeEditor),
+ * Base Unit (BaseUnitPicker; a read-only value row with strings.baseUnitLocked(n) while referenced), Shelf Life (ShelfLifeEditor),
  * Unit Conversions (ConversionEditor), Merge (opens MergeSheet; on success navigates to the survivor) and Delete
  * (disabled with strings.deleteLocked(n) while referenced; otherwise asks strings.deleteConfirm in a sheet, then
  * deletes and navigates to /ingredients). While loading shows strings.loading; an unknown id (404) shows an
@@ -103,25 +101,26 @@ export function IngredientScreen() {
 
       <BentoGrid columns={2} label={strings.detailsLabel}>
         <Tile as="section" aria-label={strings.baseUnitLabel}>
-          <Chip>{ingredient.baseUnit}</Chip>
-          <fieldset disabled={locked}>
-            <legend>{strings.baseUnitLabel}</legend>
-            {BASE_UNITS.map((b) => (
-              <Chip
-                key={b}
-                selected={ingredient.baseUnit === b}
-                onClick={() => {
-                  if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
-                }}
-              >
-                {b}
-              </Chip>
-            ))}
-          </fieldset>
-          {locked ? <p>{strings.baseUnitLocked(ing.referenceCount)}</p> : null}
+          {locked ? (
+            <>
+              <div className="base-unit__value" data-testid="base-unit-value">
+                <span className="base-unit__label">{strings.baseUnitLabel}</span>
+                <span aria-hidden="true">{' · '}</span>
+                <strong>{ingredient.baseUnit}</strong>
+              </div>
+              <p className="base-unit__helper">{strings.baseUnitLocked(ing.referenceCount)}</p>
+            </>
+          ) : (
+            <BaseUnitPicker
+              value={ingredient.baseUnit}
+              onChange={(b) => {
+                if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
+              }}
+            />
+          )}
         </Tile>
 
-        <Tile as="section" aria-label={strings.shelfLifeLabel}>
+        <Tile as="section" aria-label={strings.shelfLifeTile}>
           <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
         </Tile>
 
