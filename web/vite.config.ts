@@ -2,11 +2,13 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { phosphorWeights } from './vite.phosphor-weights.ts'
 
 // The PWA: src/sw/sw.ts is the worker (injectManifest, so it can be extended); registration is ours
 // (features/scan/registerSw.ts), so injectRegister is off.
 export default defineConfig({
   plugins: [
+    phosphorWeights(),
     react(),
     VitePWA({
       strategies: 'injectManifest',
@@ -35,5 +37,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // node_modules are externalised (untransformed) by default; inline Phosphor so tests see the slimmed weights
+    server: { deps: { inline: [/@phosphor-icons/] } },
   },
 })
