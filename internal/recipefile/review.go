@@ -669,11 +669,13 @@ func (r *review) plan() Plan {
 		Warnings:    append([]Warning{}, r.warnings...),
 	}
 	ready := len(r.problems) == 0
+	adopts := r.adoptions()
 	for _, row := range r.rows {
 		m := IngredientMatch{
 			Name: row.name, Key: row.key, Status: row.status, Definition: row.def,
 			Suggestions: append([]Suggestion{}, row.sugg...), Conflict: row.conflict,
 			Effective: row.effective, Resolved: row.target != nil, UsedBy: append([]string{}, row.usedBy...),
+			AddsImage: adopts[row.key] != "",
 		}
 		if row.match != nil {
 			m.Match = &ExistingRef{ID: row.match.ID, Name: row.match.Name, BaseUnit: string(row.match.Base)}
@@ -694,6 +696,7 @@ func (r *review) plan() Plan {
 // commit is the write set of a ready review.
 func (r *review) commit() Commit {
 	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings}
+	adopts := r.adoptions()
 	for _, row := range r.rows {
 		t := row.target
 		c.Resolved[row.key] = ResolvedIngredient{ID: t.existingID}
@@ -709,6 +712,10 @@ func (r *review) commit() Commit {
 			}
 			c.NewIngredients = append(c.NewIngredients, ni)
 			continue
+		}
+		if p := adopts[row.key]; p != "" {
+			c.AddedImages = append(c.AddedImages, AddedImage{IngredientID: t.existingID, ImagePath: p})
+			c.Images[p] = r.images.Images[p]
 		}
 		for _, conv := range append(append([]units.Conversion(nil), t.added...), t.answered...) {
 			c.AddedConversions = append(c.AddedConversions, AddedConversion{IngredientID: t.existingID, Conversion: conv})
@@ -762,4 +769,37 @@ func (r *review) recipeCommit(i int, rec Recipe) RecipeCommit {
 func (r *review) hasImage(p string) bool {
 	_, ok := r.images.Images[p]
 	return ok
+}
+
+// adoptions maps a row key to the image path its existing Ingredient adopts (IM3). A row adopts when its target is an
+// existing Ingredient with no picture and the file's definition has a resolved picture. When several rows resolve to
+// the same Ingredient, the first definition in file order wins.
+func (r *review) adoptions() map[string]string {
+	out := map[string]string{}
+	best := map[int64]int{} // existing id -> defIdx of the winner
+	for _, row := range r.rows {
+		t := row.target
+		if t == nil || t.existingID == 0 || row.def == nil {
+			continue
+		}
+		if e, ok := r.existingByID[t.existingID]; !ok || e.Image != "" {
+			continue
+		}
+		p := fmt.Sprintf("$.ingredients[%d].image", row.defIdx)
+		if !r.hasImage(p) {
+			continue
+		}
+		if prev, ok := best[t.existingID]; ok && prev < row.defIdx {
+			continue
+		}
+		best[t.existingID] = row.defIdx
+	}
+	for _, row := range r.rows {
+		if row.target != nil && row.def != nil && row.target.existingID != 0 {
+			if j, ok := best[row.target.existingID]; ok && j == row.defIdx {
+				out[row.key] = fmt.Sprintf("$.ingredients[%d].image", j)
+			}
+		}
+	}
+	return out
 }
