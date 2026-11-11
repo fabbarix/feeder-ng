@@ -33,6 +33,8 @@ export interface Op {
   itemCode?: string
   ingredient?: IngredientRef
   productName?: string
+  /** PP: the Picture of the Product a shop_unknown creates (an image id); left out when there is none */
+  productImage?: string
   packSize?: number
   scope?: BarcodeScope
   action?: StockTakeAction
@@ -47,6 +49,8 @@ export interface ScanApplied {
   baseUnit: BaseUnit
   productId: number
   productName: string
+  /** PP: "/api/images/<id>" of the Product's Picture; absent when it has none */
+  productImageUrl?: string
   quantity: number
   lotId: number | null
   priceCents: number | null
@@ -72,6 +76,8 @@ export interface OfflineProduct {
   ingredientName: string
   baseUnit: BaseUnit
   packSize: number
+  /** PP: the Product's Picture, so a queued scan can be described offline; absent when none */
+  imageUrl?: string
   lastPriceCents: number | null
 }
 

@@ -1,5 +1,6 @@
 // The "what is this?" sheet for an unknown barcode: the Ingredient, the pack or the weight, the name and the scope.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { CROP_ASPECTS, ImagePicker } from '../../../ui'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
 import { FormActions } from '../../../ui/FormActions'
@@ -26,6 +27,8 @@ export interface UnknownBarcodeSheetProps {
   /** a price-valued weighed code: shown to explain why the weight is asked */
   priceText?: string
   onSave: (values: UnknownFormValues) => void
+  /** PP: the Picture field needs the server (it uploads); the Scan screen passes false while offline and the field is left out. Default true. */
+  canUpload?: boolean
   /** R2-4: near-duplicate lookup for an Ingredient created here (the matcher of Import Review). Absent offline: no guard. A rejection is ignored. */
   findSimilar?: (name: string) => Promise<SearchResult>
 }
@@ -44,7 +47,7 @@ const ERROR_TEXT: Record<keyof FormErrors, string> = {
   weight: scanStrings.mustBePositive,
 }
 
-export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients, priceText, onSave, findSimilar }: UnknownBarcodeSheetProps) {
+export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients, priceText, onSave, canUpload = true, findSimilar }: UnknownBarcodeSheetProps) {
   const [values, setValues] = useState<UnknownFormValues>(() => ({ ...emptyForm(), packUnit: '' }))
   const [nameTouched, setNameTouched] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -206,6 +209,16 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
               { value: 'global', title: scanStrings.scopeGlobal, description: scanStrings.scopeGlobalHint },
               { value: 'shop', title: scanStrings.scopeShop, description: scanStrings.scopeShopHint(shopName) },
             ]}
+          />
+        ) : null}
+
+        {canUpload ? (
+          <ImagePicker
+            label={scanStrings.pictureLabel}
+            value={values.image ?? ''}
+            onChange={(image) => setValues((v) => ({ ...v, image }))}
+            aspect={CROP_ASPECTS.landscape}
+            listenOn="dialog"
           />
         ) : null}
 

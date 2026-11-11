@@ -22,6 +22,8 @@ export interface UnknownFormValues {
   scope: BarcodeScope
   /** grams, only for a price-valued weighed code */
   weightText: string
+  /** PP: the Picture's image id for the Product to create, "" or absent = none */
+  image?: string
 }
 
 /** pack: the full form. weighed: Ingredient + Product name only. weighed_price: also the weight, once. */
@@ -105,6 +107,7 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
     productName: values.productName.trim(),
   }
   if (meta.rangeTo) op.rangeTo = meta.rangeTo
+  if (values.image) op.productImage = values.image
   if (target.mode === 'pack') {
     const size = packSizeInBase(values.packSize, values.packUnit, base) ?? 0
     return { ...op, barcode: target.code, quantity: size, packSize: size, scope: values.scope }

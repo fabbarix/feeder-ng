@@ -2,6 +2,8 @@
 import { strings as ingredientStrings } from '../ingredients/strings'
 
 export const scanStrings = {
+  /** PP: the what-is-this sheet's optional Picture field. */
+  pictureLabel: 'Picture',
   title: 'Scan',
   pickShop: 'Where are you shopping?',
   pickShopHint: 'Pick the Shop so prices and barcodes match.',

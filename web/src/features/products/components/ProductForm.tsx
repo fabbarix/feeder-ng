@@ -1,4 +1,4 @@
-import { Button, FormActions, TextField } from '../../../ui'
+import { Button, CROP_ASPECTS, FormActions, ImagePicker, TextField } from '../../../ui'
 import { useProductForm } from '../hooks/useProductForm'
 import { strings } from '../strings'
 import type { BaseUnit, NewProduct } from '../types'
@@ -38,6 +38,7 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, onSubmit }
         error={form.errors.packSize}
       />
       <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" data-size-intent="long" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
+      <ImagePicker label={strings.pictureLabel} value={form.values.image ?? ''} onChange={form.setImage} aspect={CROP_ASPECTS.landscape} />
       {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <FormActions
         primary={

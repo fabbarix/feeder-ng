@@ -71,6 +71,7 @@ type ProductInfo struct {
 	IngredientName string
 	BaseUnit       string
 	PackSize       float64
+	ImageURL       string // "/api/images/<id>" of the Product's Picture, "" = none (PP)
 }
 
 // ShopBarcode is a Shop-only barcode: a plain code, or RuleID + ItemCode for a weighed one.
@@ -86,6 +87,7 @@ type NewProduct struct {
 	Name         string
 	IngredientID int64
 	PackSize     float64
+	Image        string // the Picture's image id, "" = none (PP)
 	Barcodes     []string
 	ShopBarcodes []ShopBarcode
 }
@@ -125,6 +127,7 @@ type OfflineProduct struct {
 	IngredientName string  `json:"ingredientName"`
 	BaseUnit       string  `json:"baseUnit"`
 	PackSize       float64 `json:"packSize"`
+	ImageURL       string  `json:"imageUrl,omitempty"` // PP: the Picture, so a scan can be described offline
 	LastPriceCents *int    `json:"lastPriceCents"`
 }
 
@@ -306,7 +309,8 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	}
 	shop := *op.ShopID
 	weighed := op.RuleID != 0
-	np := NewProduct{Name: strings.Join(strings.Fields(op.ProductName), " "), IngredientID: ingredientID, PackSize: op.PackSize}
+	np := NewProduct{Name: strings.Join(strings.Fields(op.ProductName), " "), IngredientID: ingredientID, PackSize: op.PackSize,
+		Image: strings.TrimSpace(op.ProductImage)}
 	switch {
 	case weighed:
 		np.PackSize = op.Quantity
@@ -325,6 +329,11 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	var merged *scan.Merged
 	created := true
 	p, err := s.d.Catalogue.CreateProduct(ctx, np)
+	if ve := (*scan.ValidationError)(nil); errors.As(err, &ve) && ve.Field == "image" && np.Image != "" {
+		// A queued scan can outlive its uploaded picture: drop the missing picture rather than lose the whole scan.
+		np.Image = ""
+		p, err = s.d.Catalogue.CreateProduct(ctx, np)
+	}
 	var taken *BarcodeTakenError
 	if errors.As(err, &taken) {
 		// WP7 / R8: an archived owner is never merged into (its Stock would be added to a retired pack); the phone offers to unarchive it.
@@ -479,7 +488,7 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 	})
 
 	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit,
-		ProductID: pid, ProductName: p.Name, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
+		ProductID: pid, ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
 		OnList: eff.OnList, Remaining: eff.Remaining, Ticked: eff.Ticked, Merged: merged}
 	if created != nil {
 		applied.ProductCreated = *created
@@ -560,7 +569,7 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 	}
 	pid := p.ID
 	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit, ProductID: pid,
-		ProductName: p.Name, Quantity: quantity, LotID: lotID, Total: &after}
+		ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: quantity, LotID: lotID, Total: &after}
 	res := scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied, Scan: &applied}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

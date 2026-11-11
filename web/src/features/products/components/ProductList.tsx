@@ -1,6 +1,7 @@
 import { ListGroup, ListRow, Chip, EmptyState } from '../../../ui'
 import { displayName } from '../../ingredients/lib/names'
 import { formatPackSize } from '../lib/names'
+import { PictureThumb } from './PictureThumb'
 import { strings } from '../strings'
 import type { Product } from '../types'
 
@@ -28,6 +29,7 @@ export function ProductList({ products, system = 'metric', showingArchived = fal
             key={p.id}
             title={p.name}
             meta={showIngredient && p.ingredientName ? `${displayName(p.ingredientName)} · ${size}` : size}
+            leading={<PictureThumb imageUrl={p.imageUrl} size={40} />}
             chevron
             href={`/products/${p.id}`}
             trailing={p.archived ? <Chip kind="tag">{strings.archivedChip}</Chip> : undefined}

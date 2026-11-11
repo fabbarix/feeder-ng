@@ -1,5 +1,7 @@
 // English UI strings of the Products feature (GLOSSARY words: Product, Shop, Shop Barcode, Price).
 export const strings = {
+  /** PP: the Product page's Picture Tile, the Product form's field and the ImagePicker's label (GLOSSARY: Picture). */
+  pictureLabel: 'Picture',
   productsTitle: 'Products',
   productsSearch: 'Search Products',
   productsEmpty: 'No Products yet',

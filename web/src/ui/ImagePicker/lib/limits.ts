@@ -1,11 +1,11 @@
 /** Limits shared by the picker and its libs. The server enforces the same ones (internal/imaging: MaxBytes 8 MB, MaxSide 1600, 12000 px / 50 MP). */
 export const MAX_UPLOAD_BYTES = 8 << 20
 /**
- * TODO(heic): HEIC/HEIF are refused until the server-side decoder lands (internal/imaging/heic.go). Flip to true then, and flip the
- * tests marked TODO(heic) back (problems, ImagePicker.file/empty, useImageIngest).
+ * HEIC/HEIF are accepted: the server converts them to WebP (internal/imaging/heic.go, docs/adr/0007-heic-decoding-with-h265.md).
+ * Kept as a switch so the picker can refuse HEIC again without touching the callers.
  */
-export const HEIC_ENABLED = false
-/** The formats the server decodes. GIF, AVIF, PDF and the like (HEIC/HEIF too, while HEIC_ENABLED is false) are refused with a message. */
+export const HEIC_ENABLED = true
+/** The formats the server decodes (HEIC/HEIF are converted to WebP there). GIF, AVIF, PDF and the like are refused with a message. */
 export const ACCEPT_TYPES = (HEIC_ENABLED
   ? ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
   : ['image/jpeg', 'image/png', 'image/webp']) as readonly string[]
