@@ -66,6 +66,13 @@ run_ui "$FIX/sizing/fail" "$(rules_file sizing warn)"
 run_ui "$FIX/glossary/fail" "$(rules_file glossary warn)"
 [ "$(count_of glossary)" = 2 ] && ok || bad "glossary: expected 2 (dish, meal), got $(count_of glossary)"
 
+# "wait" is banned only as a Passive Step name ("wait step", "a wait"); the plain verb passes with no allowlist entry.
+run_ui "$FIX/glossary-wait/pass" "$(rules_file glossary fail)"
+[ $RC -eq 0 ] && [ "$(count_of glossary)" = 0 ] && ok || bad "glossary-wait: plain wait/waits/waiting must pass without an allowlist entry (rc=$RC)"
+run_ui "$FIX/glossary-wait/fail" "$(rules_file glossary warn)"
+[ "$(count_of glossary)" = 3 ] && ok || bad "glossary-wait: expected 3 ('wait step' and 'a wait' on one line, 'a wait' on another), got $(count_of glossary)"
+! grep -Eq '^[^#]*[ \t]wait[ \t]*(#|$)' "$SCRIPTS/check-ui.allow-glossary" && ok || bad "check-ui.allow-glossary must not carry 'wait' entries any more"
+
 # native-search (warn-level by default): kept apart so that, until it exists, only these cases are red.
 sf="$TMP/rules-search-warn"; { cat "$(rules_file sizing warn)"; echo "native-search=warn"; } >"$sf"
 run_ui "$FIX/native-search/fail" "$sf"

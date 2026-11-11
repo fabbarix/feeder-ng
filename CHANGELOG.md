@@ -15,8 +15,10 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - **Recipe Assistant.** Read a recipe from a web address or pasted text, or read it from a photo, and review the result before it becomes a Recipe. An Admin sets it up in Settings with an API key; the key is stored encrypted. It needs the new `FEEDER_SECRET_KEY` setting (see the upgrade note below), and it stays off without it.
 - **Access Requests.** Someone who is not yet on the Allowlist can ask to join. Any User sees a Sign-in requests row and can approve or deny a request from a sheet; the Admin manages everyone on the new Allowlist page. Members now have an email address, and an Admin can turn the notification for new requests on or off.
 - **Photos and Pictures.** A Member has a Photo and an Ingredient has a Picture. One shared ImagePicker handles crop, camera, paste and web address everywhere a picture is chosen. HEIC photos (iPhone) are converted on the server, with "Converting photo…" progress.
-- **Pictures everywhere.** Ingredient and Product Pictures and Member Avatars now show wherever they are named: in pickers and lists, in Plan, Stock, Shop and Scan, and in Settings. A Member without a Photo shows their emoji, then their initials. The Recipe editor also shows the Recipe's and Steps' Photos, and Save becomes available once every Photo is stored.
+- **Pictures everywhere.** Ingredient and Product Pictures and Member Avatars now show wherever they are named: in pickers and lists, in Plan, Stock, Shop and Scan, and in Settings. A Member without a Photo shows their emoji, then their initials. The Recipe editor also shows the Recipe's and Steps' Photos, and Save waits until every Photo is stored.
 - **Product pictures.** A Product has a Picture too, chosen with the same ImagePicker, and Scan shows it.
+- **Picture on a merged scan.** When a scan of an unknown barcode merges into an existing Product that has no Picture, the Product takes the Picture from the scan. A Product that already has a Picture keeps it.
+- **Picture on an offline scan.** The unknown-barcode form shows the Picture field when the phone is offline. The Picture is queued with the scan and uploaded when the scan syncs. A Picture that cannot be uploaded (too large, unsupported, or gone) is dropped and the scan still syncs, with a notice.
 - **Pictures from a Recipe File.** When a Recipe File brings in a picture for an Ingredient you already have, that Ingredient adopts it instead of staying without one.
 - **Drag to reorder.** Drag the handle to reorder the Ingredient lines and the Steps of a Recipe, or reorder them from the keyboard. Optional now lives in the line's actions menu.
 - **Recipe editor and detail redesign.** A centred editor with sections, compact fields and sticky bars, a button for the Recipe's actions, a plain information message, and a clearer warning symbol. Recipe detail follows the same look.
@@ -37,6 +39,8 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - **Today and Plan.** The Plan shows 7 columns on a 1440 px screen, and Today uses the wide screen with a larger main tile.
 - **Icon styles.** Only the icon styles in use are shipped, which keeps the icon payload under 42 kB.
 - **Deploy.** Images and the Helm chart are published from `v*` tags only. Prereleases (`-beta.N`, `-rc.N`) do not get the `latest`, `1.0` or `1` tags. The Helm chart creates the `FEEDER_SECRET_KEY` Secret for you and keeps it, and the ingress body limit (`proxy-body-size`) is now `50m` so photos of up to 45 MiB get through. `FEEDER_TRUST_PROXY` (new in this release line, set automatically by the chart when the Ingress is on) takes the client address from the last `X-Forwarded-For` value for the sign-in rate limits.
+- **Good until.** Stock, Use soon and the notification now name the last good day of a Stock Lot: "Good until today", "Good until tomorrow" or "Good until Thu". A Lot that has gone off keeps "Went off ...".
+- The planner chip reads "uses spinach by Thu" and is no longer a day early.
 
 ### Fixed
 
@@ -49,7 +53,7 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - The streak refreshes when Stock changes on another device.
 - Today's Try again reloads everything.
 - Plan offline shows "The plan could not be loaded." with Try again.
-- "Stock about to spoil" notifications now arrive on the go-off date, the day before the Lot goes off.
+- "Stock about to spoil" notifications now arrive on the go-off date, the day before the Lot goes off. They read "Spinach is good until today and no Planned Meal uses it" and still go out at 10:00.
 - "Went off" on a spoiled Stock Lot now counts from the day after its go-off date, as the streak does.
 - A Planned Meal served from a Leftover no longer says "0 Batches" in its sheet.
 - The Ingredient Shelf Life stepper fits its tile on a phone, and the board's Timers tile ends long names with an ellipsis.
