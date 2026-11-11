@@ -17,9 +17,9 @@ describe('StockRow', () => {
     expect(row).not.toHaveTextContent('Feta200')
   })
 
-  it('shows when a use-soon Ingredient goes off, without a Use soon pill', () => {
+  it('shows the last good day of a use-soon Ingredient, without a Use soon pill', () => {
     inList(<StockRow today={today} item={makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' })} onOpen={() => {}} />)
-    expect(screen.getByText('1 Stock Lot · goes off Thu')).toBeInTheDocument()
+    expect(screen.getByText('1 Stock Lot · good until Thu')).toBeInTheDocument()
     expect(screen.queryByText('Use soon')).toBeNull()
     expect(document.querySelector('.chip')).toBeNull()
   })
@@ -31,7 +31,7 @@ describe('StockRow', () => {
 
   it('separates the meta with a single space on each side of the dot', () => {
     inList(<StockRow today={today} item={makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' })} onOpen={() => {}} />)
-    expect(document.querySelector('.list-row__meta')?.textContent).toBe('1 Stock Lot · goes off Thu')
+    expect(document.querySelector('.list-row__meta')?.textContent).toBe('1 Stock Lot · good until Thu')
     expect(document.querySelector('.list-row__meta')?.textContent).not.toMatch(/\s{2,}/)
   })
 

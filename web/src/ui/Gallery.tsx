@@ -232,7 +232,7 @@ function ListGroupExample() {
       <Cell caption="list">
         <ListGroup label="Shopping List">
           <ListRow title="Milk" trailing={<span>2 L</span>} />
-          <ListRow title="Eggs" meta="Goes off Thu" icon="stock" onActivate={noop} chevron />
+          <ListRow title="Eggs" meta="Good until Thu" icon="stock" onActivate={noop} chevron />
           <ListRow title="Lasagne" meta="2 portions" leading={<RecipeThumb name="Lasagne" />} href="/recipes/1" selected />
         </ListGroup>
       </Cell>

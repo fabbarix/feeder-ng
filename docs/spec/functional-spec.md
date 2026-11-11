@@ -91,6 +91,7 @@ A purchase or Price that arrives late for an archived Product (an offline phone 
 The streak is the number of whole household days (household time zone, §3) since the last **waste event**, never more than the Household's age. It is shown on Today and on the Kitchen board (§11); both show the same number.
 
 - **Go-off day.** A Lot is still fine on its go-off date; it **goes off** on the next household day (go-off date + 1), the first day it is listed as spoiled. A Lot with no go-off date never goes off.
+- **Wording (GW).** Copy before the Lot has gone off names the last good day, the go-off date: "Good until today", "Good until tomorrow", "Good until Thu" (two to six days ahead; "Good until 20 Nov" from seven days ahead). This applies to Stock rows and Stock Lot chips, the Today Use soon tile ("Spinach · good until Thu") and the Stock about to spoil notification. Once the Lot has gone off, copy says "Went off today" (go-off date yesterday), "Went off yesterday", "Went off N days ago". Never write "goes off" for the go-off date itself.
 - **Waste events.** A waste event counts on one household day:
   1. *A Lot going off.* The day it went off, whether or not anyone has acted on it yet. It counts the moment the day starts, so a Lot that went off today makes the streak 0 today.
   2. *A Throw out of a Lot that had already gone off* is the same event as (1): it counts on the day the Lot went off, **not** on the day of the Throw out. It is never a second event. So a Lot that went off Monday and is thrown out on Thursday resets the streak on Monday.
@@ -147,7 +148,7 @@ For each slot:
    | recency (per unit) | −0.25 | −1 | −0.25 |
    | jitter | ±0.5 | ±0.75 | ±0.5 |
 4. **Pick** the top-scoring candidate. Batches = ceil(portions needed ÷ Yield). The surplus (Batches × Yield − portions needed) becomes a pending Leftover with its Use-by. Projected Stock is updated, and any shortfall is recorded as a planned purchase in pack units of the Product last bought for that Ingredient (at the chosen Shop if known). If no Product has been bought yet, exact amounts are assumed, with no pack remainder.
-5. **Why chips** are the 1–3 largest positive score terms, phrased for people: "uses Monday's chicken", "Anna's favourite", "spinach goes off Thu", "Slot Rule: Friday", "leftover from Tue".
+5. **Why chips** are the 1–3 largest positive score terms, phrased for people: "uses Monday's chicken", "Anna's favourite", "uses spinach by Thu" (the go-off date is the last good day), "Slot Rule: Friday", "leftover from Tue".
 
 If no candidate survives, the slot stays empty with a recorded reason (§7.4). The planner's reasons are `no_attendance` and `no_candidates` (with the counts removed by Exclusion, Cool-down, Variety Rule and Advance Step, and whether a Slot Rule claimed the slot); they are unchanged.
 
@@ -255,7 +256,7 @@ Each User opts in per device, and per notification type:
 | Start cooking | slot time − total time |
 | Confirm Cooked | 2 h after slot time if still unconfirmed |
 | Leftover Use-by | 10:00 on the Use-by date |
-| Stock about to spoil | 10:00 the day before a lot goes off, if no plan uses it |
+| Stock about to spoil | 10:00 on the go-off date (the day before the lot goes off), if no plan uses it: "Spinach is good until today and no Planned Meal uses it" |
 | Timer finished | immediately, ignoring quiet hours |
 | Access Request | when someone asks to sign in (deferred out of quiet hours) |
 

@@ -10,12 +10,12 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS)
 }
 
-/** The short row wording of when an Ingredient goes off: "today", "tomorrow", otherwise the short weekday ("Thu"). */
+/** The short row wording of the last good day: "good until today", "good until tomorrow", otherwise "good until Thu". */
 export function whenWording(date: string, today: string): string {
   const days = daysBetween(today, date)
-  if (days <= 0) return todayStrings.whenToday
-  if (days === 1) return todayStrings.whenTomorrow
-  return shortWeekday(date)
+  if (days <= 0) return todayStrings.goodUntil.today
+  if (days === 1) return todayStrings.goodUntil.tomorrow
+  return todayStrings.goodUntil.on(shortWeekday(date))
 }
 
 /**

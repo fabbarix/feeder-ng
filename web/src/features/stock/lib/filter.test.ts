@@ -35,12 +35,12 @@ describe('goOffPhrase', () => {
     ['2026-11-08', 'went off today'],
     ['2026-11-07', 'went off yesterday'],
     ['2026-11-05', 'went off 3 days ago'],
-    ['2026-11-09', 'goes off today'],
-    ['2026-11-10', 'goes off tomorrow'],
-    ['2026-11-12', 'goes off Thu'],
-    ['2026-11-15', 'goes off Sun'],
-    ['2026-11-16', 'goes off 16 Nov'],
-    ['2026-12-01', 'goes off 1 Dec'],
+    ['2026-11-09', 'good until today'],
+    ['2026-11-10', 'good until tomorrow'],
+    ['2026-11-12', 'good until Thu'],
+    ['2026-11-15', 'good until Sun'],
+    ['2026-11-16', 'good until 16 Nov'],
+    ['2026-12-01', 'good until 1 Dec'],
   ])('%s -> %j', (date, phrase) => expect(goOffPhrase(date, today)).toBe(phrase))
 })
 
@@ -49,8 +49,8 @@ describe('rowMeta', () => {
     expect(rowMeta(makeTotal({ lotCount: 1, nextGoesOff: '2026-11-20' }), today)).toBe('1 Stock Lot')
     expect(rowMeta(makeTotal({ lotCount: 3 }), today)).toBe('3 Stock Lots')
   })
-  it('adds when it goes off for use-soon items', () => {
-    expect(rowMeta(makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' }), today)).toBe('1 Stock Lot · goes off Thu')
+  it('adds the last good day for use-soon items', () => {
+    expect(rowMeta(makeTotal({ lotCount: 1, useSoon: true, nextGoesOff: '2026-11-12' }), today)).toBe('1 Stock Lot · good until Thu')
   })
   it('says went off for spoiled items', () => {
     expect(rowMeta(makeTotal({ lotCount: 2, spoiledCount: 1, nextGoesOff: '2026-11-05' }), today)).toBe('2 Stock Lots · went off 3 days ago')

@@ -5,10 +5,10 @@ import { splitUseSoon, useSoonItems } from './useSoon'
 const stock = (id: number, name: string, nextGoesOff: string | null, useSoon = true) =>
   ({ ingredientId: id, name, useSoon, nextGoesOff }) as unknown as IngredientStock
 
-describe('useSoonItems (short wording for the row "Spinach · Thu")', () => {
-  it('says today, tomorrow, then the short weekday', () => {
+describe('useSoonItems (short wording for the row "Spinach · good until Thu")', () => {
+  it('names the last good day: today, tomorrow, then the short weekday', () => {
     const items = useSoonItems([stock(1, 'Milk', '2026-11-10'), stock(2, 'Feta', '2026-11-11'), stock(3, 'Spinach', '2026-11-12')], '2026-11-10')
-    expect(items.map((i) => `${i.name} ${i.when}`)).toEqual(['Milk today', 'Feta tomorrow', 'Spinach Thu'])
+    expect(items.map((i) => `${i.name} ${i.when}`)).toEqual(['Milk good until today', 'Feta good until tomorrow', 'Spinach good until Thu'])
   })
 
   it('soonest first, skips spoiled lots and Ingredients not flagged', () => {

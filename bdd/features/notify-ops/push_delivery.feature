@@ -81,7 +81,7 @@ Feature: Push delivery
     And a Stock Lot of "Spinach" goes off in 1 day and no plan uses it
     And a Stock Lot of "Milk" goes off in 1 day and a plan uses it
     When it is 10:00 tomorrow and the Feeder checks for due notifications
-    Then 1 push has been sent to the phone saying "Spinach goes off tomorrow and no Planned Meal uses it"
+    Then 1 push has been sent to the phone saying "Spinach is good until today and no Planned Meal uses it"
 
   Scenario: Timer finished is pushed at once, even during quiet hours
     Given the phone is registered for push with "timerFinished" on

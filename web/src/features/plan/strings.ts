@@ -121,7 +121,7 @@ export const planStrings = {
   whyFavouriteOne: (name: string) => `${name}'s favourite`,
   whyFavouriteTwo: (first: string, second: string) => `${first} and ${second}'s favourite`,
   whyFavouriteMany: (n: number) => `a favourite of ${n}`,
-  whyUsesBefore: (ingredient: string, day: string) => `uses ${ingredient} before ${day}`,
+  whyUsesBy: (ingredient: string, day: string) => `uses ${ingredient} by ${day}`,
   whyUsesUp: (ingredient: string) => `uses up the ${ingredient}`,
   whyUnnamedIngredient: 'an ingredient',
   whyUnnamedIngredientShort: 'ingredient',

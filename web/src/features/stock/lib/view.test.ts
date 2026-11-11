@@ -23,11 +23,14 @@ describe('describeGoOff', () => {
     ['2026-11-08', flags(true, false), 'Went off today', 'spoil'],
     ['2026-11-07', flags(true, false), 'Went off yesterday', 'spoil'],
     ['2026-11-05', flags(true, false), 'Went off 3 days ago', 'spoil'],
-    ['2026-11-09', flags(false, true), 'Goes off today', 'spoil'],
-    ['2026-11-10', flags(false, true), 'Goes off tomorrow', 'spoil'],
-    ['2026-11-12', flags(false, true), 'Goes off in 3 days', 'spoil'],
-    ['2026-11-13', flags(false, false), 'Goes off in 4 days', 'neutral'],
-    ['2026-11-30', flags(false, false), 'Goes off in 21 days', 'neutral'],
+    // GW: forward copy names the last good day (the go-off date). today 2026-11-09 is a Monday.
+    ['2026-11-09', flags(false, true), 'Good until today', 'spoil'],
+    ['2026-11-10', flags(false, true), 'Good until tomorrow', 'spoil'],
+    ['2026-11-11', flags(false, true), 'Good until Wed', 'spoil'],
+    ['2026-11-12', flags(false, true), 'Good until Thu', 'spoil'],
+    ['2026-11-15', flags(false, false), 'Good until Sun', 'neutral'],
+    ['2026-11-16', flags(false, false), 'Good until 16 Nov', 'neutral'],
+    ['2026-11-30', flags(false, false), 'Good until 30 Nov', 'neutral'],
   ] as const)('%s with %j -> %s (%s)', (goesOff, f, label, tone) => {
     expect(describeGoOff({ goesOff, ...f }, today)).toEqual({ label, tone })
   })

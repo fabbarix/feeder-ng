@@ -38,7 +38,7 @@ describe('SwapSheet (rows are the buttons)', () => {
     expect(list.querySelectorAll('li')).toHaveLength(3)
     expect(screen.queryByText('Fourth')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Stew' })).toBeInTheDocument()
-    expect(screen.getByText(/uses carrots before Thu/)).toBeInTheDocument()
+    expect(screen.getByText(/uses carrots by Thu/)).toBeInTheDocument()
     expect(screen.getByText(/Slot Rule: Friday/)).toBeInTheDocument() // the slot is on a Friday
     expect(screen.queryByText(/best available/)).not.toBeInTheDocument()
     expect(list.querySelectorAll('.recipe-thumb').length).toBe(3)
