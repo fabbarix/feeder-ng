@@ -22,7 +22,7 @@ type Store struct {
 // Images is the image file store as the Store needs it: a Delete that keeps any file some record still references
 // (images.Guarded).
 type Images interface {
-	Delete(id string) error
+	Delete(ctx context.Context, id string) error
 }
 
 // New returns a Store over an open, migrated database.
@@ -36,11 +36,11 @@ func (s *Store) WithImages(im Images) *Store {
 
 // ReleasePhoto deletes the file of a Member photo that nothing uses any more (best effort, call it after the change is
 // saved). The file store decides "nothing uses": it checks every table, not only Members.
-func (s *Store) ReleasePhoto(id string) {
+func (s *Store) ReleasePhoto(ctx context.Context, id string) {
 	if id == "" || s.images == nil {
 		return
 	}
-	_ = s.images.Delete(id)
+	_ = s.images.Delete(ctx, id)
 }
 
 // querier is satisfied by *sql.DB and *sql.Tx.

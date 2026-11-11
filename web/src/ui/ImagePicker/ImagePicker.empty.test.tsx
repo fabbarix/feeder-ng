@@ -74,10 +74,10 @@ describe('ImagePicker, hideLabel', () => {
   it('keeps the group named by the label but marks the visible heading as visually hidden', () => {
     render(<ImagePicker label="Picture" hideLabel value="" onChange={noop} deps={fakeDeps()} />)
     expect(screen.getByRole('group', { name: 'Picture' })).toBeInTheDocument()
-    expect(screen.getByText('Picture')).toHaveClass('image-picker__heading--hidden')
+    expect(screen.getByText('Picture')).toHaveClass('visually-hidden')
   })
   it('shows the heading by default', () => {
     render(<ImagePicker label="Picture" value="" onChange={noop} deps={fakeDeps()} />)
-    expect(screen.getByText('Picture')).not.toHaveClass('image-picker__heading--hidden')
+    expect(screen.getByText('Picture')).not.toHaveClass('visually-hidden')
   })
 })

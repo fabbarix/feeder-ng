@@ -72,7 +72,7 @@ export const settingsStrings = {
     avatarEmoji: 'Emoji',
     avatarPhoto: 'Photo',
     photoLabel: 'Member photo',
-    photoHelper: 'Shown next to the name instead of the initials. A square picture works best.',
+    photoHelper: 'Shown next to the name instead of the initials. A square photo works best.',
     portionFactorLabel: 'Portion Factor',
     email: 'Email',
     emailHelper: 'Lets them sign in with Google without asking',

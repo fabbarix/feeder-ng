@@ -40,6 +40,8 @@ type Fetcher interface {
 // Referencer lists the image ids some record still uses. A failure means "unknown", and callers must then delete nothing.
 type Referencer interface {
 	ReferencedIDs(ctx context.Context) (map[string]bool, error)
+	// IsReferenced reports whether some record uses this one image (a targeted query, for the per-image guard).
+	IsReferenced(ctx context.Context, id string) (bool, error)
 }
 
 // Stored is a freshly ingested image.
@@ -194,12 +196,12 @@ func (g *Guarded) Exists(id string) bool { return g.store.Exists(id) }
 
 // Delete removes the file unless some record references it (then it does nothing and returns nil). Fail closed: if the
 // references cannot be read, nothing is deleted and the error is returned.
-func (g *Guarded) Delete(id string) error {
-	used, err := g.refs.ReferencedIDs(context.Background())
+func (g *Guarded) Delete(ctx context.Context, id string) error {
+	used, err := g.refs.IsReferenced(ctx, id)
 	if err != nil {
 		return err
 	}
-	if used[id] {
+	if used {
 		return nil
 	}
 	return g.store.Delete(id)

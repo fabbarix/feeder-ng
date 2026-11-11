@@ -36,7 +36,7 @@ type Store struct {
 // Without WithImages, image ids are not checked and replaced pictures are not removed.
 type Images interface {
 	Exists(id string) bool
-	Delete(id string) error
+	Delete(ctx context.Context, id string) error
 }
 
 // WithImages makes the Store refuse a picture that was never uploaded (a *ingredient.ValidationError on field "image")
@@ -568,7 +568,7 @@ func (s *Store) dropUnreferenced(ctx context.Context, id string) {
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ingredients WHERE image = ?`, id).Scan(&n); err != nil || n > 0 {
 		return
 	}
-	_ = s.images.Delete(id)
+	_ = s.images.Delete(ctx, id)
 }
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }

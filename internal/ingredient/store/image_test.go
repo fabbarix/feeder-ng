@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -31,7 +32,7 @@ func newImages(ids ...string) *fakeImages {
 	return f
 }
 func (f *fakeImages) Exists(id string) bool { return f.have[id] }
-func (f *fakeImages) Delete(id string) error {
+func (f *fakeImages) Delete(_ context.Context, id string) error {
 	delete(f.have, id)
 	f.deleted = append(f.deleted, id)
 	return nil

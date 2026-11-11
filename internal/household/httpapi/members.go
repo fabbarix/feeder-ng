@@ -126,7 +126,7 @@ func (a *api) updateMember(w http.ResponseWriter, r *http.Request) {
 		memberErr(w, err)
 		return
 	}
-	a.st.ReleasePhoto(cur.Photo)
+	a.st.ReleasePhoto(r.Context(), cur.Photo)
 	a.changed("members")
 	httpx.WriteJSON(w, http.StatusOK, memberOut(m))
 }
@@ -143,7 +143,7 @@ func (a *api) deleteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if curErr == nil {
-		a.st.ReleasePhoto(cur.Photo)
+		a.st.ReleasePhoto(r.Context(), cur.Photo)
 	}
 	a.changed("members")
 	w.WriteHeader(http.StatusNoContent)

@@ -47,6 +47,6 @@ describe('ImagePicker.css, hero size (IM2 review)', () => {
     expect(Number(cap)).toBeGreaterThanOrEqual(320)
   })
   it('can hide the heading visually (the host shows its own)', () => {
-    expect(css).toMatch(/\.image-picker__heading--hidden\s*\{[^}]*clip-path/)
+    expect(readUiCss('fields/Field.css')).toMatch(/\.visually-hidden\s*\{[^}]*clip-path/)
   })
 })
