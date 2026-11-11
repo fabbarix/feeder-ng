@@ -30,6 +30,9 @@ type Config struct {
 	DevLogin           bool
 	// SecretKey is FEEDER_SECRET_KEY (zero value: unset). Required only for the Recipe Assistant.
 	SecretKey secretbox.MasterKey
+	// TrustProxy: the client address for rate limits is the last X-Forwarded-For entry. Off by default (the socket peer
+	// is used); FEEDER_TRUST_PROXY=1/true/yes/on says a reverse proxy sits in front.
+	TrustProxy bool
 }
 
 // HasSecretKey reports whether FEEDER_SECRET_KEY was set (and valid).
@@ -55,6 +58,7 @@ func (c Config) LogValue() slog.Value {
 		slog.Any("GoogleClientSecret", secret(c.GoogleClientSecret)),
 		slog.Bool("DevLogin", c.DevLogin),
 		slog.String("SecretKey", redacted),
+		slog.Bool("TrustProxy", c.TrustProxy),
 	)
 }
 
@@ -71,8 +75,8 @@ func (c Config) redactedString() string {
 		}
 		return redacted
 	}
-	return fmt.Sprintf("{AdminEmail:%s DataDir:%s Addr:%s BaseURL:%s GoogleClientID:%s GoogleClientSecret:%s DevLogin:%t SecretKey:%s}",
-		c.AdminEmail, c.DataDir, c.Addr, c.BaseURL, c.GoogleClientID, secret(c.GoogleClientSecret), c.DevLogin, redacted)
+	return fmt.Sprintf("{AdminEmail:%s DataDir:%s Addr:%s BaseURL:%s GoogleClientID:%s GoogleClientSecret:%s DevLogin:%t SecretKey:%s TrustProxy:%t}",
+		c.AdminEmail, c.DataDir, c.Addr, c.BaseURL, c.GoogleClientID, secret(c.GoogleClientSecret), c.DevLogin, redacted, c.TrustProxy)
 }
 
 // Load reads the configuration through getenv (os.Getenv in production).
@@ -95,6 +99,10 @@ func Load(getenv func(string) string) (Config, error) {
 			return Config{}, fmt.Errorf("config: %w", ErrSecretKeyMalformed)
 		}
 		c.SecretKey = mk
+	}
+	switch strings.ToLower(strings.TrimSpace(getenv("FEEDER_TRUST_PROXY"))) {
+	case "1", "true", "yes", "on":
+		c.TrustProxy = true
 	}
 	switch strings.ToLower(getenv("FEEDER_DEV_LOGIN")) {
 	case "1", "true":

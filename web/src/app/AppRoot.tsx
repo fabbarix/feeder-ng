@@ -21,8 +21,11 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
   // The statusHooks list comes from the eager glob, so it is fixed for the app's life: calling the hooks in a loop
   // keeps their order stable from render to render. They run before the early returns below, so every render calls them.
   let pendingScans = 0
+  let pendingAccessRequests = 0
   for (const useStatus of statusHooks) {
-    pendingScans += useStatus().pendingScans ?? 0
+    const status = useStatus()
+    pendingScans += status.pendingScans ?? 0
+    pendingAccessRequests += status.pendingAccessRequests ?? 0
   }
 
   if (me.isPending) return <p role="status">{shellStrings.loading}</p>
@@ -40,6 +43,7 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
       onSignOut={signOut}
       navItems={navItems}
       pendingScans={pendingScans}
+      pendingAccessRequests={pendingAccessRequests}
     />
   )
 }

@@ -45,6 +45,10 @@ spec:
               value: {{ required "adminEmail is required: the first Admin's email" .Values.adminEmail | quote }}
             - name: FEEDER_BASE_URL
               value: {{ required "baseUrl is required: the public https URL" .Values.baseUrl | quote }}
+            {{- $trust := .Values.ingress.enabled }}
+            {{- if not (kindIs "invalid" .Values.trustProxy) }}{{ $trust = .Values.trustProxy }}{{ end }}
+            - name: FEEDER_TRUST_PROXY
+              value: {{ $trust | quote }}
             {{- range $name, $value := .Values.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}

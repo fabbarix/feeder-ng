@@ -54,7 +54,8 @@ describe('WP11 folders use no native browser UI', () => {
 describe('the per-User secondary colour is gone (R6)', () => {
   it('leaves no secondary-colour identifier, field, class or token in the six folders', () => {
     for (const f of files) {
-      expect(f.text, f.path).not.toMatch(/secondary(Colou?r|Accent)?\b/i)
+      // `<Button variant="secondary">` is the shared Button variant (design 13.4), not the per-User colour.
+      expect(f.text.replace(/variant=["']secondary["']/g, ''), f.path).not.toMatch(/secondary(Colou?r|Accent)?\b/i)
       expect(f.text, f.path).not.toMatch(/--color-(on-)?secondary/)
     }
   })

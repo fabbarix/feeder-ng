@@ -52,6 +52,20 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+// Decision A7: the client address for rate limits is the socket peer unless the operator says a reverse proxy sits in
+// front (the Helm chart sets FEEDER_TRUST_PROXY=true when an ingress is enabled). Anything unrecognised means off.
+func TestTrustProxyDefaultsToFalseAndIsSwitchedOnExplicitly(t *testing.T) {
+	for val, want := range map[string]bool{
+		"": false, "false": false, "0": false, "no": false, "off": false, "FALSE": false, "garbage": false,
+		"true": true, "1": true, "yes": true, "on": true, "TRUE": true, " true ": true,
+	} {
+		c, err := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test", "FEEDER_TRUST_PROXY": val}))
+		if err != nil || c.TrustProxy != want {
+			t.Errorf("FEEDER_TRUST_PROXY=%q: TrustProxy = %v, %v; want %v", val, c.TrustProxy, err, want)
+		}
+	}
+}
+
 func TestLoadReadsAllVariables(t *testing.T) {
 	c, err := config.Load(env(map[string]string{
 		"FEEDER_ADMIN_EMAIL":          "a@example.test",
@@ -68,7 +82,7 @@ func TestLoadReadsAllVariables(t *testing.T) {
 	want := config.Config{
 		AdminEmail: "a@example.test", DataDir: "/srv/feeder", Addr: "127.0.0.1:9000",
 		BaseURL: "https://feeder.example.test", GoogleClientID: "id", GoogleClientSecret: "secret",
-		DevLogin: true,
+		DevLogin: true, TrustProxy: false,
 	}
 	if c != want {
 		t.Fatalf("got %+v, want %+v", c, want)

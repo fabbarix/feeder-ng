@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon } from '../ui'
+import { withAccessRequests } from './accessMenu'
 import { isChromeless } from './chromeless'
 import { PageErrorBoundary } from './PageErrorBoundary'
 import type { NavItem } from './nav'
@@ -16,10 +17,12 @@ export interface AppShellProps {
   navItems?: NavItem[]
   /** Scans waiting to sync, shown by the OfflineBanner slot (fed by the scan feature's queue). */
   pendingScans?: number
+  /** Access Requests waiting for an answer: a badge on the avatar button and an item in its menu. */
+  pendingAccessRequests?: number
 }
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
-export function AppShell({ user, onSignOut, navItems = [], pendingScans }: AppShellProps) {
+export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
   const { pathname } = useLocation()
   if (isChromeless(pathname)) {
     // The kitchen board and Cook Mode: the page alone, no bars, no avatar menu, no status slot.
@@ -37,7 +40,12 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans }: AppSh
     <div className="app-shell">
       <header className="top-bar">
         <span className="top-bar__brand">{shellStrings.brand}</span>
-        <YourMenu user={user} items={[...MENU_NAV, ...sortByOrder(navItems)]} onSignOut={onSignOut} />
+        <YourMenu
+          user={user}
+          items={withAccessRequests([...MENU_NAV, ...sortByOrder(navItems)], pendingAccessRequests)}
+          pendingAccessRequests={pendingAccessRequests}
+          onSignOut={onSignOut}
+        />
       </header>
       <div className="app-status">
         <ShellStatus pendingScans={pendingScans} />
