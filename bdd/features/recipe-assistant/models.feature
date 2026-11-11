@@ -49,5 +49,16 @@ Feature: Recipe Assistant models and connection test
       | POST   | /api/recipe-assistant/models       | {second}                 |
       | POST   | /api/recipe-assistant/test         | {second:localhost}       |
       | PUT    | /api/recipe-assistant/settings     | {second:localhost}       |
+
+  Scenario Outline: The saved key does not follow a changed spelling of the same server
+    Given I note the requests the fake server has received so far
+    When an Admin calls <method> <route> with base URL "<other>" and no API key
+    Then the answer is 422 "key_required_for_new_base_url"
+    And the fake server received no request since
+    When an Admin calls <method> <route> with base URL "<other>" and API key "sk-new"
+    Then no request since carried "sk-ant-api03-SAVED0001" as x-api-key
+
+    Examples:
+      | method | route                              | other                    |
       | POST   | /api/recipe-assistant/models       | {fake:localhost}         |
       | POST   | /api/recipe-assistant/test         | {fake:https}             |

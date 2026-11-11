@@ -38,14 +38,15 @@ const (
 
 // raState lives in w.Vars["ra"]. Responses seen so far are kept to assert that no secret ever appeared.
 type raState struct {
-	fake, second *fakeanthropic.Server
-	page         *httptest.Server
-	servers      []func()
-	readID       string
-	reviewID     string
-	view         map[string]any
-	seen         []string
-	hooked       bool
+	fake, second   *fakeanthropic.Server
+	mark, markKeys int
+	page           *httptest.Server
+	servers        []func()
+	readID         string
+	reviewID       string
+	view           map[string]any
+	seen           []string
+	hooked         bool
 }
 
 func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
@@ -195,6 +196,28 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 		for _, a := range strings.Split(list, ", ") {
 			if !have[a] {
 				return fail("history lacks %q: %v", a, s.Changes)
+			}
+		}
+		return nil
+	})
+	sc.Step(`^I note the requests the fake server has received so far$`, func() {
+		st.mark = len(st.fake.Requests())
+		st.markKeys = len(st.fake.Keys())
+	})
+	sc.Step(`^the fake server received no request since$`, func() error {
+		if n := len(st.fake.Requests()) - st.mark; n != 0 {
+			return fmt.Errorf("the fake server received %d requests since the note", n)
+		}
+		return nil
+	})
+	sc.Step(`^no request since carried "([^"]*)" as x-api-key$`, func(saved string) error {
+		keys := st.fake.Keys()
+		if st.markKeys > len(keys) {
+			return fmt.Errorf("fake key log shrank")
+		}
+		for _, k := range keys[st.markKeys:] {
+			if k == saved {
+				return fmt.Errorf("the saved key reached the fake server after the note")
 			}
 		}
 		return nil
