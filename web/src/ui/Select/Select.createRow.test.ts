@@ -1,12 +1,18 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
+// vitest blanks CSS modules and @types/node is not installed: read the source with an untyped dynamic import of node:fs.
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
+
 // R14b: the disabled create row dims only its label; the reason keeps the muted colour at full opacity (>= 4.5:1).
-const css = readFileSync(new URL('./Select.css', import.meta.url), 'utf8')
-const rule = (selector: string) => {
-  const at = css.indexOf(`${selector} {`)
-  return at < 0 ? '' : css.slice(at, css.indexOf('}', at))
-}
+const css = readFileSync(`${cwd}/src/ui/Select/Select.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+/** The declarations of every rule whose selector list contains `selector`. */
+const rule = (selector: string) =>
+  [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+    .filter((m) => m[1]!.split(',').some((sel) => sel.trim() === selector))
+    .map((m) => m[2]!)
+    .join('\n')
 
 describe('Select.css: disabled create row', () => {
   it('does not dim the whole disabled option', () => {

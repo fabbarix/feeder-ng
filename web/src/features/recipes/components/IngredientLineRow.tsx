@@ -93,6 +93,7 @@ export function IngredientLineRow({
           createLabel={recipeStrings.lines.useUnit}
         />
       </div>
+      {line.auto && line.quantity.trim() === '' && line.ingredientId !== null ? <p className="line-row__hint">{recipeStrings.lines.packSizeHint}</p> : null}
       {asks ? <p className="line-row__hint">{recipeStrings.lines.unitNeedsConversion(line.unit)}</p> : null}
       <div className="line-row__extras">
         <Checkbox label={recipeStrings.optional} checked={line.optional} onChange={(optional) => onChange({ optional })} />

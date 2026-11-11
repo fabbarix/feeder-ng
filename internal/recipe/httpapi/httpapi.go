@@ -85,6 +85,9 @@ func (r readyMealIngredients) Candidates(ctx context.Context) ([]recipe.ReadyMea
 
 func (r readyMealIngredients) CreatePieceTx(ctx context.Context, tx *sql.Tx, name string) (int64, error) {
 	ing, err := r.s.CreateTx(ctx, tx, ingredient.Input{Name: name, Base: units.Piece})
+	if errors.Is(err, ingstore.ErrNameTaken) {
+		return 0, store.ErrReadyMealNameTaken
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -636,6 +639,8 @@ func writeErr(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
 	case errors.Is(err, store.ErrAlreadyPlanned):
 		httpx.WriteError(w, http.StatusConflict, "already_planned", "This Recipe was planned, so it can only be archived")
+	case errors.Is(err, store.ErrReadyMealNameTaken):
+		httpx.WriteError(w, http.StatusConflict, "name_taken", "An Ingredient with that name was just created; save again")
 	case errors.Is(err, store.ErrUnknownMember):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_member", "That Member does not exist")
 	case errors.Is(err, store.ErrNoMember):

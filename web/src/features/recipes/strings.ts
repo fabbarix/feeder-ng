@@ -93,6 +93,7 @@ export const recipeStrings = {
     note: 'Note',
     remove: 'Remove ingredient',
     none: 'No ingredients yet.',
+    packSizeHint: 'Enter the pack size',
     unitNeedsConversion: (unit: string) => `Feeder will ask how much 1 ${unit} is when you save.`,
     useUnit: (unit: string) => `Use unit "${unit}"`,
   },

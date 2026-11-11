@@ -103,7 +103,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Create Ingredient' }))
     expect(await within(sheet()).findByText('An Ingredient with that name already exists')).toBeInTheDocument()
     // Not recipeName(): with the sheet open, its own "Name" field matches that query too.
-    expect(within(screen.getByRole('main')).getByDisplayValue('Paella')).toBeInTheDocument()
+    expect(within(document.querySelector<HTMLElement>('.recipe-editor')!).getByDisplayValue('Paella')).toBeInTheDocument()
   })
   it('the new Ingredient is used in the saved Recipe', async () => {
     rApi.create.mockResolvedValue({ id: 31 } as Recipe)
