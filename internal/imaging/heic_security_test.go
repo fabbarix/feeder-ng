@@ -209,7 +209,7 @@ func TestHEICDecoderRunsNoWorkerGoroutines(t *testing.T) {
 
 func TestRunHEICTurnsADecoderPanicIntoARefusal(t *testing.T) {
 	old := heicDecode
-	heicDecode = func(io.Reader, heic.Options) (image.Image, error) { panic("boom") }
+	heicDecode = func(io.Reader, ...heic.Options) (image.Image, error) { panic("boom") }
 	defer func() { heicDecode = old }()
 	res := runHEIC(fixture(t, "pantry-128x96.heic"))
 	if !errors.Is(res.err, ErrUnsupportedFormat) || res.img != nil {

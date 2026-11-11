@@ -18,7 +18,8 @@ import (
 //  1. the container is inspected before anything is decoded: a grid with more than MaxHEICTiles tiles is refused;
 //  2. heic.DecodeConfig reads the picture size, then the generic pixel caps apply;
 //  3. heic.Options.FrameSizeLimit bounds what a header may ask the decoder to allocate;
-//  4. at most two decodes run at once (heicSlots), each under a timeout (heicTimeout).
+//  4. the decoder runs on one thread (heicThreads), so a panic reaches the recover in runHEIC;
+//  5. at most two decodes run at once (heicSlots), each under a timeout (heicTimeout).
 //
 // A decode that times out cannot be cancelled (the library takes no context): the caller gets
 // ErrHEICTimeout at once, but the decode goroutine keeps running to its end and keeps its slot until then. This is
@@ -38,8 +39,10 @@ const (
 	MaxHEICTiles = 256
 	// HEICFrameSizeLimit is heic.Options.FrameSizeLimit: the largest coded area, in pixels, a header may ask for.
 	HEICFrameSizeLimit = MaxPixels
-	// heicThreads bounds the goroutines of one decode; with two slots that is at most four busy cores.
-	heicThreads = 2
+	// heicThreads is 1: with more, gen2brain/h265 starts worker goroutines (heic/grid.go, hevc/wavefront.go) that
+	// have no recover, and a panic in one would kill the server. One thread decodes on the calling goroutine,
+	// where runHEIC's recover covers it. Cost: about 0.7 s for 12 MP on one core (ADR 0007).
+	heicThreads = 1
 )
 
 // heicTimeout is how long a request waits (for a slot, then for the decode). A variable so tests can shorten it.
@@ -47,6 +50,12 @@ var heicTimeout = 20 * time.Second
 
 // heicSlots limits concurrent HEIC decodes (decoding is CPU- and memory-hungry).
 var heicSlots = make(chan struct{}, 2)
+
+// The library entry points, variables so tests can make them panic.
+var (
+	heicDecode       = heic.Decode
+	heicDecodeConfig = heic.DecodeConfig
+)
 
 // heicRun is the decode itself; tests replace it to simulate slow decodes.
 var heicRun = runHEIC
@@ -87,17 +96,35 @@ func heicOptions() heic.Options {
 type heicInfo struct {
 	MaxTiles    int  // the largest number of tiles any item is assembled from (rows x cols of a grid)
 	Transformed bool // the primary item carries irot or imir (rotation or mirroring), applied by AutoRotate
+	// Refused: the container could not be read in full (more boxes than the reader's cap, or a malformed iref), so
+	// the tile count cannot be trusted. Callers fail closed.
+	Refused bool
 }
 
 // inspectHEIC reads the item references and properties of a HEIC container: no picture data is touched, and
 // every offset and count is bounds-checked. Malformed metadata gives the zero heicInfo (the decoder refuses it).
 func inspectHEIC(data []byte) heicInfo {
 	var info heicInfo
-	meta, ok := findBox(data, "meta")
-	if !ok || len(meta) < 4 {
+	// get splits boxes and notes when the reader's cap cut the list short: what lies beyond is unseen.
+	get := func(b []byte) []box {
+		out, capped, _ := scanBoxes(b)
+		if capped {
+			info.Refused = true
+		}
+		return out
+	}
+	var meta []byte
+	found := false
+	for _, b := range get(data) {
+		if b.typ == "meta" {
+			meta, found = b.body, true
+			break
+		}
+	}
+	if !found || len(meta) < 4 {
 		return info
 	}
-	children := boxes(meta[4:]) // meta is a full box: 4 bytes of version and flags
+	children := get(meta[4:]) // meta is a full box: 4 bytes of version and flags
 	var primary uint32
 	havePrimary := false
 	for _, b := range children {
@@ -111,19 +138,26 @@ func inspectHEIC(data []byte) heicInfo {
 				}
 			}
 		case "iref":
-			info.MaxTiles = maxDerivedFrom(b.body)
+			// Every iref counts, the largest wins: a decoy iref must not lower what another one claims.
+			n, ok := maxDerivedFrom(b.body)
+			info.MaxTiles = max(info.MaxTiles, n)
+			if !ok {
+				info.Refused = true
+			}
 		}
 	}
 	if havePrimary {
-		info.Transformed = primaryTransformed(children, primary)
+		info.Transformed = primaryTransformed(children, primary, get)
 	}
 	return info
 }
 
-// maxDerivedFrom returns the largest number of "dimg" references any one item makes (iref is a full box).
-func maxDerivedFrom(iref []byte) int {
+// maxDerivedFrom returns the largest number of "dimg" references any one item makes (iref is a full box), and
+// whether the iref was well formed: false for a truncated or oversized inner box, a reference too short for its
+// header, a count that claims more targets than the box holds, or more boxes than the reader's cap.
+func maxDerivedFrom(iref []byte) (int, bool) {
 	if len(iref) < 4 {
-		return 0
+		return 0, false
 	}
 	wide := iref[0] != 0 // version 1 uses 32-bit item ids
 	idLen := 2
@@ -131,26 +165,34 @@ func maxDerivedFrom(iref []byte) int {
 		idLen = 4
 	}
 	most := 0
-	for _, ref := range boxes(iref[4:]) {
-		if ref.typ != "dimg" || len(ref.body) < idLen+2 {
+	refs, capped, clean := scanBoxes(iref[4:])
+	ok := clean && !capped
+	for _, ref := range refs {
+		if ref.typ != "dimg" {
+			continue
+		}
+		if len(ref.body) < idLen+2 {
+			ok = false
 			continue
 		}
 		count := int(binary.BigEndian.Uint16(ref.body[idLen:]))
 		// The count is claimed by the file: it can't exceed what the box really holds.
-		count = min(count, (len(ref.body)-idLen-2)/idLen)
+		if held := (len(ref.body) - idLen - 2) / idLen; count > held {
+			count, ok = held, false
+		}
 		most = max(most, count)
 	}
-	return most
+	return most, ok
 }
 
 // primaryTransformed reports whether the primary item is associated (ipma) with an irot or imir property (ipco).
-func primaryTransformed(meta []box, primary uint32) bool {
+func primaryTransformed(meta []box, primary uint32, get func([]byte) []box) bool {
 	var ipco, ipma []byte
 	for _, b := range meta {
 		if b.typ != "iprp" {
 			continue
 		}
-		for _, c := range boxes(b.body) {
+		for _, c := range get(b.body) {
 			switch c.typ {
 			case "ipco":
 				ipco = c.body
@@ -162,7 +204,7 @@ func primaryTransformed(meta []box, primary uint32) bool {
 	if ipco == nil || len(ipma) < 8 {
 		return false
 	}
-	props := boxes(ipco)
+	props := get(ipco)
 	version, flags := ipma[0], uint32(ipma[1])<<16|uint32(ipma[2])<<8|uint32(ipma[3])
 	entries := int(binary.BigEndian.Uint32(ipma[4:]))
 	p := ipma[8:]
@@ -214,25 +256,37 @@ type box struct {
 
 // boxes splits a run of ISO-BMFF boxes. It stops at the first box that doesn't fit, so a lying size can't read past b.
 func boxes(b []byte) []box {
-	var out []box
-	for len(b) >= 8 && len(out) < 4096 {
+	out, _, _ := scanBoxes(b)
+	return out
+}
+
+// maxBoxes is the most boxes one run is split into.
+const maxBoxes = 4096
+
+// scanBoxes is boxes plus two verdicts: capped (the run had more boxes than maxBoxes, the rest unseen) and clean
+// (the run was consumed exactly: no box that does not fit, no stray bytes).
+func scanBoxes(b []byte) (out []box, capped, clean bool) {
+	for len(b) >= 8 {
+		if len(out) >= maxBoxes {
+			return out, true, false
+		}
 		size, hdr := uint64(binary.BigEndian.Uint32(b)), 8
 		switch size {
 		case 0:
 			size = uint64(len(b))
 		case 1:
 			if len(b) < 16 {
-				return out
+				return out, false, false
 			}
 			size, hdr = binary.BigEndian.Uint64(b[8:]), 16
 		}
 		if size < uint64(hdr) || size > uint64(len(b)) {
-			return out
+			return out, false, false
 		}
 		out = append(out, box{typ: string(b[4:8]), body: b[hdr:size]})
 		b = b[size:]
 	}
-	return out
+	return out, false, len(b) == 0
 }
 
 func findBox(b []byte, typ string) ([]byte, bool) {
@@ -255,13 +309,29 @@ func exifOrientationFallback(info heicInfo, exifOrientation int) int {
 	return exifOrientation
 }
 
+// checkHEICContainer refuses a container that is too big a grid or could not be inspected in full.
+func checkHEICContainer(info heicInfo) error {
+	if info.Refused {
+		return fmt.Errorf("%w: HEIC container is malformed or too large to inspect", ErrUnsupportedFormat)
+	}
+	if info.MaxTiles > MaxHEICTiles {
+		return ErrHEICTooManyTiles
+	}
+	return nil
+}
+
 // heicConfig reads only the header: the size of the picture, before any decode. The tile cap is checked first,
 // from the container.
-func heicConfig(data []byte) (image.Config, error) {
-	if inspectHEIC(data).MaxTiles > MaxHEICTiles {
-		return image.Config{}, ErrHEICTooManyTiles
+func heicConfig(data []byte) (cfg image.Config, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			cfg, err = image.Config{}, fmt.Errorf("%w: HEIC decoder failed", ErrUnsupportedFormat)
+		}
+	}()
+	if err := checkHEICContainer(inspectHEIC(data)); err != nil {
+		return image.Config{}, err
 	}
-	cfg, err := heic.DecodeConfig(bytes.NewReader(data))
+	cfg, err = heicDecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return image.Config{}, fmt.Errorf("%w: %v", ErrUnsupportedFormat, err)
 	}
@@ -283,10 +353,10 @@ func runHEIC(data []byte) (res heicResult) {
 		}
 	}()
 	info := inspectHEIC(data)
-	if info.MaxTiles > MaxHEICTiles {
-		return heicResult{err: ErrHEICTooManyTiles}
+	if err := checkHEICContainer(info); err != nil {
+		return heicResult{err: err}
 	}
-	img, err := heic.Decode(bytes.NewReader(data), heicOptions())
+	img, err := heicDecode(bytes.NewReader(data), heicOptions())
 	if err != nil {
 		return heicResult{err: fmt.Errorf("%w: %v", ErrUnsupportedFormat, err)}
 	}
