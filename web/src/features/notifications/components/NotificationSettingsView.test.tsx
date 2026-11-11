@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { PushDevice } from '../types'
 import { NotificationSettingsView, type NotificationSettingsViewProps } from './NotificationSettingsView'
 
-const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false }
+const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false, accessRequest: false }
 const mine: PushDevice = { id: 1, label: 'Pixel', createdAt: '2026-11-09T12:00:00Z', endpointHash: 'aa', types: { ...flags, advanceStep: true, timerFinished: true } }
 const tablet: PushDevice = { id: 2, label: 'Kitchen tablet', createdAt: '2026-11-08T12:00:00Z', endpointHash: 'bb', types: { ...flags } }
 

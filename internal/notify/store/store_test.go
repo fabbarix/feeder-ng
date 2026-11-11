@@ -72,8 +72,8 @@ func TestANewDeviceStartsWithEverythingOffUnlessAsked(t *testing.T) {
 	if err != nil || !created {
 		t.Fatalf("Upsert = %+v, %v, %v", d, created, err)
 	}
-	if len(d.Types) != 6 {
-		t.Fatalf("want all six types present, got %v", d.Types)
+	if len(d.Types) != 7 {
+		t.Fatalf("want all seven types present, got %v", d.Types)
 	}
 	for ty, on := range d.Types {
 		if on {

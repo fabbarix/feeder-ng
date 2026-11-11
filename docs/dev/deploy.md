@@ -67,6 +67,7 @@ The Dockerfile works with both the legacy builder and BuildKit: its stages use `
 | `FEEDER_GOOGLE_CLIENT_SECRET` | for Google sign-in | OAuth client secret. Keep it in a secret file or secret store, not in the compose file. |
 | `FEEDER_DATA_DIR` | no | Default `/data` (the volume). |
 | `FEEDER_ADDR` | no | Default `:8080`. |
+| `FEEDER_TRUST_PROXY` | no | Default `false`. `true` takes the client address (for the sign-in request rate limits) from the last `X-Forwarded-For` entry. Set it only when the Feeder sits behind a reverse proxy that appends the real client address. With it off, the socket peer address is used: behind a proxy every visitor then shares the proxy's address and one rate limit bucket. With it on and no proxy, anyone could forge the header. |
 | `FEEDER_DEV_LOGIN` | never in production | `1` enables a passwordless dev login. Leave unset. |
 
 Google setup: `scripts/setup-google-auth.sh` (see [t6-google-auth-script.md](design/t6-google-auth-script.md)) creates the OAuth client; the authorised redirect URI is `$FEEDER_BASE_URL/auth/google/callback`. Web Push needs no Google or GCP setup: the Feeder creates its own VAPID keys on first start in `/data/vapid.json`. Do not delete that file, or every device has to turn notifications on again.
@@ -81,6 +82,7 @@ docker run -d --name feeder --restart unless-stopped \
   -e FEEDER_BASE_URL=https://feeder.example.com \
   -e FEEDER_GOOGLE_CLIENT_ID=... \
   -e FEEDER_GOOGLE_CLIENT_SECRET=... \
+  -e FEEDER_TRUST_PROXY=true \
   ghcr.io/fabbarix/feeder-ng:1
 ```
 
@@ -102,6 +104,7 @@ services:
       FEEDER_BASE_URL: https://feeder.example.com
       FEEDER_GOOGLE_CLIENT_ID: ${FEEDER_GOOGLE_CLIENT_ID}
       FEEDER_GOOGLE_CLIENT_SECRET: ${FEEDER_GOOGLE_CLIENT_SECRET}   # from an .env file kept out of git
+      FEEDER_TRUST_PROXY: "true"      # only because a reverse proxy sits in front; omit when users connect directly
 volumes:
   feeder-data:
 ```
@@ -136,6 +139,7 @@ The chart version equals the release (`v1.0.0` publishes chart `1.0.0` with `app
 
   Keys default to `client-id` and `client-secret` (`google.clientIdKey`, `google.clientSecretKey`). For a quick trial you can instead pass `google.clientId` and `google.clientSecret`, and the chart creates the Secret.
 - **Ingress.** The default annotations target ingress-nginx and make `/api/events` (server-sent events) work: `proxy-buffering: "off"`, one-hour `proxy-read-timeout` and `proxy-send-timeout`, `proxy-body-size: 10m`. Override single keys under `ingress.annotations` for other controllers.
+- **Trust proxy.** `trustProxy: null` (the default) is automatic: the chart sets `FEEDER_TRUST_PROXY` to `true` when `ingress.enabled` is true and to `false` otherwise. Set `trustProxy: true` or `false` to override, for example `true` when your own proxy in front of the Service appends the real client address. With it off, the socket peer address is used, so behind a proxy all visitors share one rate limit bucket.
 - **Probes.** All three probes call `GET /api/health`.
 - **Backups** still land in `/data/backups` on the PVC; copy them off the cluster as described below.
 
@@ -153,6 +157,7 @@ Traefik, nginx and others work the same way. Requirements:
 
 - Forward the `Host` header unchanged and keep `FEEDER_BASE_URL` equal to the public URL: state-changing requests are rejected with 403 `cross_origin` when the `Origin` header does not match it.
 - Do not buffer or time out the `/api/events` stream (server-sent events): disable response buffering for that path (`flush_interval -1` in Caddy, `proxy_buffering off` in nginx) and allow idle connections of several minutes.
+- Set `FEEDER_TRUST_PROXY=true` only when the proxy appends the real client address as the last `X-Forwarded-For` entry (Caddy, nginx and Traefik do by default). Left off, the socket peer address is used and every visitor shares the proxy's rate limit bucket.
 - Large uploads: Recipe Files and photos are small, but allow request bodies of at least 10 MB.
 
 ## Backups

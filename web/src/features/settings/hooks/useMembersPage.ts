@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ApiError } from '../../../lib/http'
 import { useMe } from '../../../app/useMe'
 import { settingsStrings } from '../strings'
 import { errorMessage } from '../lib/errors'
@@ -17,6 +18,13 @@ export function useMembersPage() {
   const allowlist = useAllowlist(isAdmin)
   const [editor, setEditor] = useState<{ item?: Member } | null>(null)
   const [error, setError] = useState<string>()
+  const [emailError, setEmailError] = useState<string>()
+  const refuse = (err: unknown) => {
+    const forEmail = err instanceof ApiError && (err.code === 'email_taken' || (err.code === 'validation_failed' && /\bemail\b/i.test(err.message)))
+    setError(forEmail ? undefined : errorMessage(err))
+    setEmailError(forEmail ? errorMessage(err) : undefined)
+  }
+  const clear = () => (setError(undefined), setEmailError(undefined))
 
   const linkedUserNames = Object.fromEntries(allowlist.users.map((u) => [u.id, u.id === currentUserId ? settingsStrings.member.you(u.displayName) : u.displayName])) as Record<number, string>
 
@@ -25,10 +33,10 @@ export function useMembersPage() {
     try {
       const saved = editing ? await members.update(editing.id, input) : await members.create(input)
       if (userId !== (editing?.userId ?? null)) await members.linkUser(saved.id, userId)
-      setError(undefined)
+      clear()
       setEditor(null)
     } catch (err) {
-      setError(errorMessage(err))
+      refuse(err)
     }
   }
 
@@ -37,10 +45,10 @@ export function useMembersPage() {
     if (!editing) return
     try {
       await members.remove(editing.id)
-      setError(undefined)
+      clear()
       setEditor(null)
     } catch (err) {
-      setError(errorMessage(err))
+      refuse(err)
     }
   }
 
@@ -52,8 +60,10 @@ export function useMembersPage() {
     linkedUserNames,
     editor,
     error,
-    add: () => (setError(undefined), setEditor({})),
-    edit: (item: Member) => (setError(undefined), setEditor({ item })),
+    emailError,
+    clearEmailError: () => setEmailError(undefined),
+    add: () => (clear(), setEditor({})),
+    edit: (item: Member) => (clear(), setEditor({ item })),
     close: () => setEditor(null),
     save,
     remove,
