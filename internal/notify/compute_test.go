@@ -133,7 +133,9 @@ func TestLeftoverUseByIsTenInTheMorningOnTheUseByDate(t *testing.T) {
 	}
 }
 
-func TestStockSpoilIsTenInTheMorningTheDayBeforeUnlessAPlanUsesIt(t *testing.T) {
+// A Lot is fine on its go-off date and goes off on go-off date + 1 (functional-spec 6.1),
+// so the day before it goes off is the go-off date itself.
+func TestStockSpoilIsTenInTheMorningOnTheGoOffDateUnlessAPlanUsesIt(t *testing.T) {
 	rome := zone(t, "Europe/Rome")
 	f := notify.Facts{Lots: []notify.LotFact{
 		{ID: 1, IngredientName: "Spinach", GoesOff: "2026-11-12"},
@@ -144,7 +146,7 @@ func TestStockSpoilIsTenInTheMorningTheDayBeforeUnlessAPlanUsesIt(t *testing.T) 
 	if len(cs) != 1 {
 		t.Fatalf("want 1 Stock about to spoil, got %+v", cs)
 	}
-	if want := time.Date(2026, 11, 11, 10, 0, 0, 0, rome); !cs[0].At.Equal(want) {
+	if want := time.Date(2026, 11, 12, 10, 0, 0, 0, rome); !cs[0].At.Equal(want) {
 		t.Errorf("At = %s, want %s", cs[0].At, want)
 	}
 	if cs[0].Body != "Spinach goes off tomorrow and no Planned Meal uses it" {

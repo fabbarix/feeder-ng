@@ -19,8 +19,10 @@ describe('describeGoOff', () => {
   const flags = (spoiled: boolean, useSoon: boolean) => ({ spoiled, useSoon })
   it.each([
     [null, flags(false, false), 'No go-off date', 'neutral'],
-    ['2026-11-08', flags(true, false), 'Went off yesterday', 'spoil'],
-    ['2026-11-05', flags(true, false), 'Went off 4 days ago', 'spoil'],
+    // §6.1: a Lot goes off the day AFTER its go-off date.
+    ['2026-11-08', flags(true, false), 'Went off today', 'spoil'],
+    ['2026-11-07', flags(true, false), 'Went off yesterday', 'spoil'],
+    ['2026-11-05', flags(true, false), 'Went off 3 days ago', 'spoil'],
     ['2026-11-09', flags(false, true), 'Goes off today', 'spoil'],
     ['2026-11-10', flags(false, true), 'Goes off tomorrow', 'spoil'],
     ['2026-11-12', flags(false, true), 'Goes off in 3 days', 'spoil'],

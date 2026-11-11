@@ -215,11 +215,20 @@
   line-height: 1.2;
 }
 
+/* L5: a long label must not size the card (the list is one shrinkable column and the overline may shrink), so it ends in an ellipsis. */
+.board-timers .board-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.board-timers .timer-tile .tile__overline {
+  min-width: 0;
+}
+
 .board-timers .timer-tile__label {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  display: block;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   min-width: 0;
 }
 

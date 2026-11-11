@@ -2,10 +2,16 @@ package app
 
 import (
 	"io/fs"
+	"mime"
 	"net/http"
 	"path"
 	"strings"
 )
+
+func init() {
+	// The manifest needs its own type; without it http.ServeFileFS falls back to text/plain and Chrome does not offer to install.
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 // spaHandler serves files from the built frontend, and index.html for any other
 // GET or HEAD path so the client-side router can take over.

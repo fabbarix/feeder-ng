@@ -74,7 +74,7 @@ export function PlannedMealSheet({ open, onClose, slot, today, onCook, onMarkCoo
       {slot && meal ? (
         <div className="plan-sheet">
           <p className="plan-sheet__meta">{`${slot.name} · ${slot.time}`}</p>
-          <p className="plan-sheet__facts">{s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
+          <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
           {slot.attendance && slot.attendance.length > 0 ? (
             <div className="plan-sheet__attendance">
               {slot.attendance.map((a) => (

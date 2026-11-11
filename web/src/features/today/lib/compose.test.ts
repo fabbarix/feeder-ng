@@ -68,7 +68,7 @@ describe('composeToday', () => {
   })
 
   it('is empty when nothing but the streak could show', () => {
-    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, heroSpan: 'row' })
+    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, failed: false, heroSpan: 'row' })
     const withStreak = tilesOf({ ...quiet, streakDays: 12 })
     expect(withStreak.empty).toBe(true)
     expect(withStreak.tiles.map((t) => t.id)).toEqual(['streak'])
@@ -107,5 +107,15 @@ describe('composeToday', () => {
     it('is 2x2 for a busy day', () => {
       expect(tilesOf(busy).heroSpan).toBe('block')
     })
+  })
+
+  it('is never empty when a load failed: the layout says so instead of "nothing on the menu"', () => {
+    const layout = tilesOf({ ...quiet, loadFailed: true })
+    expect(layout.failed).toBe(true)
+    expect(layout.empty).toBe(false)
+  })
+
+  it('is not failed by default', () => {
+    expect(tilesOf(quiet).failed).toBe(false)
   })
 })

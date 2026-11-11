@@ -3,6 +3,9 @@
 # runs the guard, stops the server (always), and maps findings to warn/fail per route. Everything heavy is replaced by fakes here.
 set -uo pipefail
 
+# The release-QA profile (PAGE_LAYOUT=full) and the other overrides are the caller's; these runs set their own.
+for v in $(compgen -e | grep -E '^PAGE_LAYOUT'); do unset "$v"; done
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 W="$ROOT/scripts/check-page-layout.sh"

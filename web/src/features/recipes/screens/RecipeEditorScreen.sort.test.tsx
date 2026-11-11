@@ -48,6 +48,20 @@ beforeEach(() => {
   }
 })
 
+describe('RecipeEditorScreen: Add ingredient (L13)', () => {
+  it('moves focus to the Ingredient picker of the new line', async () => {
+    const lines = (h.editor.draft as { lines: unknown[] }).lines
+    h.editor.addLine = vi.fn(() => {
+      lines.push({ key: 'l3', ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '' })
+    })
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
+    const boxes = screen.getAllByRole('combobox', { name: 'Ingredient' })
+    expect(boxes).toHaveLength(3)
+    expect(boxes[2]).toHaveFocus()
+  })
+})
+
 describe('RecipeEditorScreen: ingredient lines reorder', () => {
   it('each line has a drag handle named for its Ingredient, inside the line row', () => {
     view()

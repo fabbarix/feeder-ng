@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { planApi } from '../api'
 import type { PlanSlot, PlanView } from '../types'
+import { queryFailed } from './queryFailed'
 import { usePlanLiveUpdates } from './usePlanLiveUpdates'
 
 export interface UsePlan {
@@ -10,6 +11,9 @@ export interface UsePlan {
   updating: boolean
   isLoading: boolean
   error: Error | null
+  /** No data and the fetch failed or is waiting for the network (offline): an error to show, never an empty plan. */
+  failed: boolean
+  refetch: () => Promise<unknown>
 }
 
 const NO_SLOTS: PlanSlot[] = []
@@ -31,5 +35,7 @@ export function usePlan(): UsePlan {
     updating: view?.updating ?? false,
     isLoading: query.isLoading,
     error: query.error,
+    failed: queryFailed(query),
+    refetch: query.refetch,
   }
 }

@@ -11,8 +11,8 @@
   margin: 0 0 8px;
 }
 .notifications__muted {
+  /* L12: --color-muted is already guarded to 4.5:1; fading it as well measured 4.39:1. */
   color: var(--color-muted, currentColor);
-  opacity: 0.8;
   margin: 4px 0 0;
   font-size: 0.9rem;
 }

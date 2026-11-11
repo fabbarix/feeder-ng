@@ -72,7 +72,7 @@ describe('LotList', () => {
 
   it('marks a lot that is going off with a spoil state chip', () => {
     render(<LotList today="2026-11-09" lots={[makeLot({ goesOff: '2026-11-05' })]} />)
-    const chip = screen.getByText('Went off 4 days ago').closest('.chip')
+    const chip = screen.getByText('Went off 3 days ago').closest('.chip')
     expect(chip).toHaveAttribute('data-status', 'spoil')
     expect(chip).toHaveAttribute('data-kind', 'state')
   })

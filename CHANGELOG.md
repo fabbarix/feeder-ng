@@ -22,7 +22,7 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - **Recipe editor and detail redesign.** A centred editor with sections, compact fields and sticky bars, a button for the Recipe's actions, a plain information message, and a clearer warning symbol. Recipe detail follows the same look.
 - **Inline Ingredient creation.** The Recipe editor can create an Ingredient on the spot with a New Ingredient sheet, including Ready Meal Ingredients. Saving a Recipe with a name that is already taken now says so clearly, offers to rename, and pack sizes have a hint next to the Quantity.
 - **Reheat for Leftovers.** Each Recipe can have its own reheat time, and a Planned Meal served from a Leftover shows a Reheat step in the cook preview.
-- **Zero-waste streak.** The streak counts days without a Leftover going off. Keeping a Leftover does not break it, nothing is counted twice, and the count is capped by the Household's age.
+- **Zero-waste streak.** The streak counts days without a Leftover going off. Keeping a Stock Lot (Keep) does not break it, nothing is counted twice, and the count is capped by the Household's age.
 - **Multi-day Meal Slot edit.** Edit a Meal Slot for several weekdays at once with the new weekday picker, see who attends with attendee pills, and use the week grid of Meal Slots in Settings. A new slot defaults to everyone attending.
 - **Couldn't plan, grouped by cause.** When a Plan cannot fill a slot, the reasons are grouped by cause, each with a fix, and a setup checklist shows what is still missing. A replan runs when the server starts.
 - **Third-party notices.** `THIRD_PARTY_NOTICES.md` lists every open-source component with its licence, and the container image carries a copy.
@@ -44,6 +44,14 @@ The first beta. It adds the Recipe Assistant, Access Requests, Photos for Member
 - The Recipe Assistant handles oversize photos, a read that is cancelled late, and slow connections with a clear message instead of a stuck screen.
 - Cancelling a read in the Recipe Assistant frees its slot at once, so the next read starts straight away.
 - Several layout fixes: long emails in the approve sheet, the stepper inside its frame, phone layouts for the Allowlist and Sign-in requests.
+- Today after an offline reload shows the right date and a "Today could not be loaded." message with Try again, instead of "NaN" and "Nothing on the menu".
+- The zero-waste streak on Today and the board updates as soon as you Keep or Throw out a Stock Lot.
+- "Went off" on a spoiled Stock Lot now counts from the day after its go-off date, as the streak does.
+- A Planned Meal served from a Leftover no longer says "0 Batches" in its sheet.
+- The Ingredient Shelf Life stepper fits its tile on a phone, and the board's Timers tile ends long names with an ellipsis.
+- The web app manifest is served with the right type and names the app's logo, so the app can be installed.
+- Better contrast for the Preferences preview chip and the "Notifications are blocked" message.
+- Add ingredient in the Recipe editor moves focus to the new line's Ingredient picker.
 
 ### Upgrade note (from 1.0.0-dev)
 

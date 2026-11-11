@@ -1,6 +1,8 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Button, Chip, ColorSwatches, FormActions, Segmented } from '../../../ui'
+import { usePrefersDark } from '../hooks/usePrefersDark'
 import { ACCENT_PRESETS } from '../lib/accents'
+import { previewColours } from '../lib/previewColours'
 import { preferencesChanged } from '../lib/preferencesForm'
 import { settingsStrings } from '../strings'
 import type { ColourMode, Preferences } from '../types'
@@ -29,6 +31,8 @@ const UNITS: ReadonlyArray<{ value: Preferences['units']; label: string }> = [
 export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps) {
   const [draft, setDraft] = useState<Preferences>(value)
   const set = (patch: Partial<Preferences>) => setDraft((d) => ({ ...d, ...patch }))
+  const prefersDark = usePrefersDark()
+  const preview = previewColours(draft.accent, draft.scheme, prefersDark)
   const submit = (e: FormEvent) => {
     e.preventDefault()
     void onSave(draft)
@@ -45,7 +49,7 @@ export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps)
         onChange={(accent) => set({ accent })}
         allowCustom
       />
-      <div className="settings__preview" data-testid="accent-preview" data-accent={draft.accent} style={{ '--preview-accent': draft.accent } as CSSProperties}>
+      <div className="settings__preview" data-testid="accent-preview" data-accent={draft.accent} style={{ '--preview-accent': preview.accent, '--preview-on-accent': preview.onAccent } as CSSProperties}>
         <span className="settings__preview-label">{text.preview}</span>
         <Chip kind="filter" selected>
           {text.previewSample}

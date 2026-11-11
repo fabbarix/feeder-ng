@@ -25,7 +25,8 @@ export function composeToday(d: TodayData): TodayLayout {
   return {
     mode: 'today',
     tiles: ids.map((id) => ({ id })),
-    empty: ids.every((id) => id === 'streak'),
+    empty: !d.loadFailed && ids.every((id) => id === 'streak'),
+    failed: d.loadFailed === true,
     heroSpan: ids.some((id) => SMALL_TILES.includes(id)) ? 'block' : 'row',
   }
 }
