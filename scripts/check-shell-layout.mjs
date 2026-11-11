@@ -3,7 +3,7 @@
 //   pnpm -C web dev --port 5199 &            (start it detached, log to build/)
 //   node scripts/check-shell-layout.mjs --url http://localhost:5199 [--chrome /usr/bin/google-chrome]
 // It drives Chrome over the DevTools protocol (no extra dependency; Node 22+ has WebSocket), fakes GET /api/me so the shell renders,
-// and for every route at 390, 820, 1280 and 1440 px wide asserts:
+// and for every route at 390, 820, 1280, 1440, 1920 and 2560 px wide asserts:
 //   1. document.documentElement.scrollWidth <= clientWidth (= innerWidth without a scrollbar): no sideways scroll;
 //   2. scrolled to the end, the last element of the page ends above the nav (bottom bar < 1024, none hidden behind it);
 //   3. /board and /cook/* have no nav and their <main> spans the viewport width (>= 900: the old 220 px column is gone);
@@ -13,7 +13,8 @@
 //   7. (ordinary routes) at >= 1024 the side rail and <main> start within 120 px of the top (the grid rows must not stretch);
 //   9. (ordinary routes) at >= 1024 <main> is at least min(1100, its grid column width) - 1 wide (it must not shrink to its content);
 //  10. (ordinary routes) at >= 1440 every .side-rail__link sits inside the rail (left > 0, right < rail right) and its labels do not overflow (scrollWidth <= clientWidth);
-//   8. (on /) the open avatar menu popover lies fully inside the viewport.
+//   8. (on /) the open avatar menu popover lies fully inside the viewport;
+//  11. (ordinary routes) at >= 1024 the current rail item (aria-current) has a label contrast of at least 4.5:1 against its own background (L-04: Scan was 1.31:1).
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -31,6 +32,8 @@ const VIEWPORTS = [
   { width: 820, height: 1180, mobile: false },
   { width: 1280, height: 800, mobile: false },
   { width: 1440, height: 900, mobile: false },
+  { width: 1920, height: 1080, mobile: false },
+  { width: 2560, height: 1440, mobile: false },
 ]
 const ROUTES = ['/', '/plan', '/scan', '/shop', '/recipes', '/stock', '/settings', '/board', '/cook/1', '/this-route-does-not-exist']
 const CHROMELESS = /^\/(board|cook)(\/|$)/
@@ -113,6 +116,20 @@ const menuProbe = `
 const page = `
 (() => {
   const q = (s) => document.querySelector(s)
+  // Contrast of the current rail item's label colour against its effective background (own fill, else the pill, else the body).
+  const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
+  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
+  const railContrast = () => {
+    const rail = q('nav.side-rail')
+    const cur = rail && getComputedStyle(rail).display !== 'none' ? rail.querySelector('[aria-current="page"]') : null
+    if (!cur) return null
+    const s = getComputedStyle(cur)
+    let bg = s.backgroundColor
+    if (rgb(bg)[3] === 0) bg = getComputedStyle(cur.querySelector('.side-rail__pill') || rail).backgroundColor
+    if (rgb(bg)[3] === 0) bg = getComputedStyle(document.body).backgroundColor
+    const [x, y] = [lum(rgb(s.color)), lum(rgb(bg))].sort((p, q2) => q2 - p)
+    return Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100
+  }
   const visible = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0
   const main = q('main')
   const bar = q('nav.bottom-bar')
@@ -127,7 +144,8 @@ const page = `
   const last = main ? main.lastElementChild : null
   return {
     innerWidth, clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth,
-    mainColumn: main && main.parentElement ? Math.round(Math.min(1100, main.parentElement.getBoundingClientRect().width - (rail && visible(rail) ? rail.getBoundingClientRect().width : 0))) : null,
+    mainColumn: main && main.parentElement ? Math.round(main.parentElement.getBoundingClientRect().width - (rail && visible(rail) ? rail.getBoundingClientRect().width : 0)) : null,
+    railContrast: railContrast(),
     mainWidth: main ? Math.round(main.getBoundingClientRect().width) : null,
     avatarCenterX: q('.your-menu-button') ? Math.round(q('.your-menu-button').getBoundingClientRect().left + q('.your-menu-button').getBoundingClientRect().width / 2) : null,
     railTop: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().top) : null,
@@ -176,6 +194,7 @@ for (const vp of VIEWPORTS) {
       if (m.mainWidth !== null && m.mainColumn !== null && m.mainWidth < m.mainColumn - 1) fail(`${tag}: <main> is ${m.mainWidth}px wide, narrower than its column (${m.mainColumn}px): it shrinks to its content`)
       if (m.mainTop !== null && m.mainTop > 120) fail(`${tag}: <main> starts ${m.mainTop}px from the top (grid rows stretch)`)
     }
+    if (!phone && m.railContrast !== null && m.railContrast < 4.5) fail(`${tag}: current rail item (aria-current) contrast ${m.railContrast}:1 is below 4.5`)
     if (vp.width >= 1440) {
       if (m.railLinks.length === 0) fail(`${tag}: no .side-rail__link found in the rail`)
       for (const l of m.railLinks) {

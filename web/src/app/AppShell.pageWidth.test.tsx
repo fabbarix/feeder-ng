@@ -12,7 +12,7 @@ function Probe() {
 }
 function mount(path: string) {
   const router = createMemoryRouter(
-    [{ path: '/', element: <AppShell user={{ displayName: 'Anna' }} onSignOut={() => {}} />, children: [{ path: '*', element: <Probe /> }] }],
+    [{ path: '/', element: <AppShell user={{ displayName: 'Anna' }} onSignOut={() => {}} />, children: [{ index: true, element: <Probe /> }, { path: '*', element: <Probe /> }] }],
     { initialEntries: [path] },
   )
   return render(<RouterProvider router={router} />)
