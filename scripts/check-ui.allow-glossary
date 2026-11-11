@@ -36,3 +36,7 @@ web/src/features/cook/strings.ts done  # Advance Step state, not a Planned Meal
 web/src/features/products/strings.ts deleted  # Delete Product copy: a bought Product cannot be deleted (the action, not the Archived state)
 # "Done" (board:markDone) is the Advance Step state on the kitchen board's Next Advance Step tile, not a Planned Meal (as on Cook).
 web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
+
+# Recipe Assistant settings (approved copy): "never" is plain English in "never sent" / "never shows"; "runs" is "Whoever runs your server".
+web/src/features/recipe-assistant/strings.ts never  # plain English in the approved privacy and key helper copy
+web/src/features/recipe-assistant/strings.ts run  # "Whoever runs your server" (approved secret key copy), not a Batch

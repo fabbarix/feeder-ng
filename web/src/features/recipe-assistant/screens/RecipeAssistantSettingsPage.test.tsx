@@ -126,6 +126,7 @@ describe('on with a saved key', () => {
   })
   it('Cancel puts the form back to the saved values', async () => {
     open()
+    await loaded()
     await retype(url(), 'https://api.anthropic.com/gw')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(url()).toHaveValue('https://api.anthropic.com')

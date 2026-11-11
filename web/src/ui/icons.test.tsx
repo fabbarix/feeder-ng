@@ -63,12 +63,6 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['import', 'DownloadSimple'],
   ['export', 'UploadSimple'],
   ['agentPrompt', 'Robot'],
-  // Recipe Assistant settings (WP-D, design 5.2): refresh shares regenerate's glyph, assistant shares agentPrompt's.
-  ['key', 'Key'],
-  ['assistant', 'Robot'],
-  ['connect', 'PlugsConnected'],
-  ['link', 'LinkSimple'],
-  ['refresh', 'ArrowsClockwise'],
   ['file', 'FileArrowUp'],
   ['torch', 'Flashlight'],
   ['moveUp', 'ArrowUp'], // WP3b: reorder Recipe Steps
