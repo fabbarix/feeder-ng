@@ -219,6 +219,36 @@ type env struct {
 	sink   *recSink
 	log    *syncBuf
 	conns  []service.Conn
+	// onLog, when set, runs as each log record is written (before the record reaches the buffer's reader).
+	onLog atomic.Value // func(msg, readID string)
+}
+
+// hookHandler calls the env's onLog hook for every record, then passes it on.
+type hookHandler struct {
+	slog.Handler
+	e *env
+}
+
+func (h hookHandler) Handle(ctx context.Context, r slog.Record) error {
+	err := h.Handler.Handle(ctx, r)
+	if f, _ := h.e.onLog.Load().(func(string, string)); f != nil {
+		read := ""
+		r.Attrs(func(a slog.Attr) bool {
+			if a.Key == "read" {
+				read = a.Value.String()
+			}
+			return true
+		})
+		f(r.Message, read)
+	}
+	return err
+}
+
+func (h hookHandler) WithAttrs(a []slog.Attr) slog.Handler {
+	return hookHandler{h.Handler.WithAttrs(a), h.e}
+}
+func (h hookHandler) WithGroup(n string) slog.Handler {
+	return hookHandler{h.Handler.WithGroup(n), h.e}
 }
 
 type opts struct {
@@ -266,7 +296,7 @@ func newEnv(t *testing.T, o opts) *env {
 	deps := service.Deps{
 		Store: st, Box: box, MasterID: mk.ID(), Pages: e.pages, Images: noImages{}, Photos: e.photos, Clock: clk,
 		Claude:  func(c service.Conn) service.Claude { e.conns = append(e.conns, c); return e.claude },
-		Logger:  slog.New(slog.NewTextHandler(e.log, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		Logger:  slog.New(hookHandler{slog.NewTextHandler(e.log, &slog.HandlerOptions{Level: slog.LevelDebug}), e}),
 		Overall: o.overall,
 	}
 	if o.noSecret {
@@ -1045,6 +1075,27 @@ func TestALateCancelNeverLeavesAClosedOrOrphanReview(t *testing.T) {
 	e.sink.mu.Lock()
 	e.sink.afterOpen = nil
 	e.sink.mu.Unlock()
+}
+
+// A cancel that lands after the read is complete (its Review open) is too late: conclude writes the read's log line
+// just before finish, so cancelling from the log handler lands the cancel between the outcome and the terminal state,
+// every time. The job ends done with its Review open. (The earlier window, between perform returning and run
+// sampling j.cancelled, has no seam a test can reach, so it stays covered by the racy test above.)
+func TestACancelAtTheReadsLogLineLeavesItDoneWithItsReviewOpen(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	e.onLog.Store(func(msg, read string) {
+		if msg == "recipe assistant read" {
+			e.svc.CancelJob(admin.UserID, read)
+		}
+	})
+	jv := e.start(t, admin, textIn("pancakes"))
+	got := e.wait(t, admin, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
+	if got.State != service.StateDone || got.Review == nil {
+		t.Fatalf("a cancel after the read completed must leave it done with its Review open: %+v", got)
+	}
+	if c := e.sink.closedReviews(); len(c) != 0 {
+		t.Errorf("the Review must stay open, closed = %v", c)
+	}
 }
 
 // A failed read still carries the model's display name; a refusal names the model by display name too.

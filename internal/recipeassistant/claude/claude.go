@@ -349,6 +349,8 @@ func noRequestSent(err error) bool {
 	if errors.As(err, &oe) && oe.Op == "dial" {
 		return true
 	}
+	// net/http has no typed error for a TLS handshake timeout: the transport returns an untyped error built from the
+	// string "net/http: TLS handshake timeout", so the message is the only thing to match on.
 	return strings.Contains(err.Error(), "TLS handshake timeout")
 }
 
