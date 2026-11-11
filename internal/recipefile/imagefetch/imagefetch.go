@@ -87,7 +87,7 @@ func New(o Options) *Fetcher {
 	return &Fetcher{opts: o, client: safehttp.New(safehttp.Options{LookupIP: o.LookupIP, Allow: o.Allow, TLSConfig: o.TLSConfig})}
 }
 
-var imageTypes = []string{"image/jpeg", "image/png", "image/webp"}
+var imageTypes = []string{"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
 // Fetch downloads rawURL: https only, SSRF-guarded, an image of at most
 // MaxBytes within Timeout. See safehttp.Client.Fetch for the guard.
@@ -96,7 +96,7 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string) ([]byte, string, err
 		AllowedTypes: imageTypes,
 		MaxBytes:     f.opts.MaxBytes,
 		Timeout:      f.opts.Timeout,
-		Header:       http.Header{"Accept": {"image/jpeg, image/png, image/webp"}},
+		Header:       http.Header{"Accept": {"image/jpeg, image/png, image/webp, image/heic, image/heif"}},
 	})
 	if err != nil {
 		return nil, "", reword(err)

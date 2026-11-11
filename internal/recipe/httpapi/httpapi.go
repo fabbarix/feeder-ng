@@ -6,7 +6,6 @@ package httpapi
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"path/filepath"
@@ -47,8 +46,6 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/recipes/{id}/archive", a.archive)
 	r.User("POST /api/recipes/{id}/unarchive", a.unarchive)
 	r.User("GET /api/tags", a.tags)
-	r.User("POST /api/images", a.uploadImage)
-	r.User("GET /api/images/{id}", a.image)
 	r.User("GET /api/recipe-preferences", a.getPreferences)
 	r.User("PUT /api/recipes/{id}/preference", a.setPreference)
 	r.User("PUT /api/ingredient-exclusions/{ingredientId}", a.setExclusion)
@@ -369,55 +366,6 @@ func (a *api) tags(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// uploadImage takes {"dataUrl": "data:image/...;base64,..."} (the Recipe File
-// form) and stores it as WebP. The request body is capped a little above the
-// 8 MB photo limit, so an oversized photo answers 413 without being read whole.
-func (a *api) uploadImage(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, imaging.MaxBodyBytes)
-	var b struct {
-		DataURL string `json:"dataUrl"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			writeImageErr(w, imaging.ErrTooLarge)
-			return
-		}
-		httpx.WriteError(w, http.StatusBadRequest, "bad_request", "The request body must be JSON with a dataUrl")
-		return
-	}
-	res, err := imaging.ProcessDataURL(b.DataURL)
-	if err != nil {
-		writeImageErr(w, err)
-		return
-	}
-	id, err := a.images.Save(res.WebP)
-	if err != nil {
-		httpx.WriteAPIError(w, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusCreated, map[string]any{
-		"id": id, "url": imageURL(id), "width": res.Width, "height": res.Height,
-	})
-}
-
-func (a *api) image(w http.ResponseWriter, r *http.Request) {
-	f, err := a.images.Open(r.PathValue("id"))
-	if errors.Is(err, imaging.ErrNotFound) {
-		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
-		return
-	}
-	if err != nil {
-		httpx.WriteAPIError(w, err)
-		return
-	}
-	defer f.Close()
-	w.Header().Set("Content-Type", "image/webp")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
-	http.ServeContent(w, r, "", time.Time{}, f)
-}
-
 func (a *api) getPreferences(w http.ResponseWriter, r *http.Request) {
 	explicit, ok := optionalID(r.URL.Query().Get("memberId"))
 	if !ok {
@@ -607,18 +555,6 @@ func writeFieldError(w http.ResponseWriter, field, reason, message string) {
 	httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
 		"code": "validation_failed", "message": message, "field": field, "reason": reason,
 	}})
-}
-
-func writeImageErr(w http.ResponseWriter, err error) {
-	if errors.Is(err, imaging.ErrTooLarge) {
-		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "image_too_large", "A photo must be 8 MB or smaller")
-		return
-	}
-	if errors.Is(err, imaging.ErrTooManyPixels) {
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "image_too_large_pixels", "A photo must be at most 12000 pixels on its longest side and 50 megapixels")
-		return
-	}
-	httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_image", "That is not a JPEG, PNG or WebP image")
 }
 
 // writeErr maps domain and store errors to responses.

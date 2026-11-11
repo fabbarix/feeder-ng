@@ -12,6 +12,7 @@ const raw = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.*', '!./t
 const ALLOWED: Record<string, string> = {
   'fields/Checkbox.tsx': 'checkbox',
   'fields/FileDrop.tsx': 'file',
+  'ImagePicker/components/FileButton.tsx': 'file', // the hidden camera-app input (capture="environment")
   'fields/SearchField.tsx': 'search',
 }
 

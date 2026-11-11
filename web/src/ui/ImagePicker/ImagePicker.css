@@ -1,0 +1,109 @@
+/* ImagePicker (docs/dev/design/ip1-imagepicker.md): one labelled group inside whatever Tile the host uses. Tokens only. */
+.image-picker {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.image-picker__heading {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.image-picker__preview {
+  overflow: hidden;
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}
+
+.image-picker__preview[data-size='hero'] {
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.image-picker__preview[data-size='72'] {
+  inline-size: 72px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-thumb);
+}
+
+.image-picker__image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.image-picker__broken {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  block-size: 100%;
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  text-align: center;
+}
+
+.image-picker__actions,
+.image-picker__sources,
+.image-picker__panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.image-picker__actions .button,
+.image-picker__actions .icon-button,
+.image-picker__sources .button,
+.image-picker__panel-actions .button {
+  min-block-size: 44px;
+}
+
+.image-picker__helper {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.image-picker__panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+}
+
+.image-picker__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.image-picker__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--status-danger-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.image-picker button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
