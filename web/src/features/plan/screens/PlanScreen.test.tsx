@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
+import { onlineManager } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanScreen } from './PlanScreen'
 import { meal, mockApi, renderWithProviders, slot } from '../test-utils'
@@ -48,6 +49,25 @@ const openSheet = async (day: string, recipe: string) => {
   await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
   return screen.findByRole('dialog', { name: recipe })
 }
+
+describe('PlanScreen load failure', () => {
+  afterEach(() => onlineManager.setOnline(true))
+
+  it('offline with nothing held shows the error state with Try again, never the empty state', async () => {
+    onlineManager.setOnline(false)
+    mockApi({ 'GET /api/plan': view() })
+    renderWithProviders(<PlanScreen />)
+    expect(await screen.findByText('The plan could not be loaded.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByText(/nothing planned/i)).toBeNull()
+  })
+
+  it('a server error shows the same error state', async () => {
+    mockApi({ 'GET /api/plan': { status: 500, json: { error: { code: 'x', message: 'boom' } } } })
+    renderWithProviders(<PlanScreen />)
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+})
 
 describe('PlanScreen layout (5.2)', () => {
   it('has the Plan title, the week range and a secondary Regenerate with its icon', async () => {
