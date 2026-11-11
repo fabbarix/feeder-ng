@@ -23,7 +23,7 @@ describe('AppShell page container', () => {
     ['/plan', 'wide'],
     ['/shop', 'wide'],
     ['/recipes', 'wide'],
-    ['/', 'default'],
+    ['/', 'wide'],
     ['/stock', 'default'],
     ['/recipes/3/edit', 'default'],
     ['/scan', 'narrow'],

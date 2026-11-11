@@ -70,7 +70,7 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
       </div>
       {meal ? (
         <>
-          <button type="button" className="plan-meal__recipe" onClick={() => onOpen(key)}>
+          <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
             {meal.recipeName}
           </button>
           {chip ? (
