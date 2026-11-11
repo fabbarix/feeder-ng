@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { recipeAssistantApi } from '../api'
+import { sameOrigin } from '../lib/baseUrl'
 import type { AssistantSettings, SaveResult, SettingsPutBody } from '../types'
 import { raKeys } from './queryKeys'
 
@@ -18,8 +19,11 @@ export function useRecipeAssistantSettings(enabled: boolean) {
     async (body: SettingsPutBody): Promise<SaveResult> => {
       setSaving(true)
       try {
+        const before = client.getQueryData<AssistantSettings>(raKeys.settings)
         const { warnings, ...settings } = await recipeAssistantApi.saveSettings(body)
         client.setQueryData(raKeys.settings, settings)
+        // The "saved address" model list now belongs to another address.
+        if (before && !sameOrigin(before.baseUrl, settings.baseUrl)) void client.invalidateQueries({ queryKey: raKeys.models('saved') })
         return { settings, warnings: warnings ?? [] }
       } finally {
         setSaving(false)

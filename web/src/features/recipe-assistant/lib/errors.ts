@@ -1,5 +1,6 @@
 // API error code -> copy. Plain TypeScript; the page shows these, never the server's message.
 import { ApiError } from '../../../lib/http'
+import { raStrings } from '../strings'
 import type { FormField, TestCheck } from '../types'
 
 const FIELD_COPY: Record<string, string> = {
@@ -8,6 +9,7 @@ const FIELD_COPY: Record<string, string> = {
   base_url_not_https: 'Use https. Plain http is only for localhost.',
   base_url_has_version: 'Leave out /v1; Feeder adds it.',
   model_required: 'Pick a model.',
+  model_invalid: "This model ID can't be used. Pick another model.",
   model_id_invalid: 'A model ID can use letters, numbers and . _ : @ / - only.',
   api_key_required: 'Enter the API key to turn the Recipe Assistant on.',
   api_key_invalid: 'Check the API key and enter it again.',
@@ -46,6 +48,12 @@ export function mapSaveError(err: unknown): SaveErrors {
     if (err.status === 0) return { fields: {}, form: "You're offline. The settings were not saved." }
   }
   return { fields: {}, form: "Couldn't save the settings. Try again." }
+}
+
+/** Why the model list could not be loaded: a refused key is named, anything else is the plain notice. */
+export function modelsErrorCopy(code: string | undefined): string {
+  if (code === 'api_key_refused') return 'Anthropic refused this API key. Check it and try again.'
+  return raStrings.modelListFailed
 }
 
 export function warningCopy(code: string): string {

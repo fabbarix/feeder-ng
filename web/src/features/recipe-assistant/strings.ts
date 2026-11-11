@@ -36,8 +36,6 @@ export const raStrings = {
   secretKeyBefore:
     'To turn on the Recipe Assistant, the server needs a secret key (FEEDER_SECRET_KEY). Whoever runs your server sets it once; see the ',
   deployGuide: 'deploy guide',
-  /** Interim target until the deploy guide has a page in the app (WP-F). */
-  deployGuideHref: '/docs/deploy',
   saved: 'Saved.',
   removeFailed: "Couldn't remove the API key. Try again.",
   actionsLabel: 'Settings actions',

@@ -1,10 +1,9 @@
-// The icons this page uses. R14 adds `key`, `connect`, `assistant` and `refresh` to ui/icons.ts (design 5.2); until it
-// merges these point at the glyphs that exist. Swap the four values then (the names are the final ones).
+// The icons this page uses (design 5.2); the names are local, the values are keys of ui/icons.ts.
 import type { IconName } from '../../ui/icons'
 
 export const raIcons = {
-  key: 'allowlist',
+  key: 'key',
   connect: 'link',
-  assistant: 'agentPrompt',
-  refresh: 'regenerate',
+  assistant: 'assistant',
+  refresh: 'refresh',
 } as const satisfies Record<string, IconName>

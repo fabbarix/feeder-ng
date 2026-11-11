@@ -47,13 +47,13 @@ Shared primitives only: `Tile`/`BentoGrid`, `Switch`, `TextField`, `Select`, `Li
 
 ## Assumptions to confirm with WP-C (the contract is frozen, these are its gaps)
 1. `priceTier` is `"$"`..`"$$$$"` or `""`, `speedTier` is `Fastest|Quick|Steady|Slow` or `""` (the catalogue's words).
-2. `changes[].detail`: model name for `model_changed`, `"old -> new"` for `base_url_changed`, last four for key events, empty for on/off.
+2. `changes[].detail`: for `model_changed` and `base_url_changed` it is `"old -> new"` (model IDs, not names; the page shows the new one as a name when the model list is loaded, else the ID); last four for key events; empty for on/off. `actorName` is the actor's email.
 3. `TestResult.checks[].code` uses the read error codes of 1.4 (`assistant_bad_key`, ...).
 4. A 422 on `/models` and `/test` has the code at `error.code` (`key_required_for_new_base_url`, `base_url_*`), as the table says.
 5. SSE topic `recipeAssistant` is not wired here (a second Admin's change shows on reload); a follow-up can reuse the household live-updates pattern.
 
 ## Icons and primitives needed
-- `ui/icons.ts` (WP-D owns it for this change) and `wp2-icons.md`: add `key` (Key), `assistant` (Robot, alias of `agentPrompt`), `connect` (PlugsConnected), `link` (LinkSimple), `refresh` (ArrowsClockwise, alias of `regenerate`). The red test is `ui/icons.test.tsx`.
+- Icons: R14 added `key`, `assistant` and `refresh` to `ui/icons.ts`; `link` already existed and `connect` was not added. `recipe-assistant/icons.ts` maps the page's local names to them: `key`->`key`, `assistant`->`assistant`, `refresh`->`refresh`, `connect`->`link`.
 - `scripts/check-ui.rules`: add `web/src/features/recipe-assistant` to the `fail_paths` of every rule (developer task; the rules file is not a test).
 - No new shared primitive. `ui/StickyActionBar` is not required (interim `SettingsActions`).
 
@@ -70,3 +70,13 @@ Shared primitives only: `Tile`/`BentoGrid`, `Switch`, `TextField`, `Select`, `Li
 | `index.test.ts` | exports, no registered route |
 | `features/native-controls.test.ts` | folder joins the guard; components never call the API; lib has no React; no storage or console |
 | `ui/icons.test.tsx` | the five icon names |
+
+## Server code differences (found at review against WP-C)
+- `model_invalid` is a server code for a refused model ID; it has its own copy ("This model ID can't be used. Pick another model.") beside `model_id_invalid`.
+- `base_url_invalid` also covers plain http to a non-local host (the client pre-checks it as `base_url_not_https`, so a server answer with `base_url_invalid` for that case shows the generic address copy).
+- `actorName` is the actor's email address.
+- `model_changed` detail is `"old -> new"` model IDs.
+- A refused key on **Refresh models** (`api_key_refused`, read from `errorCode`) shows "Anthropic refused this API key. Check it and try again." instead of the general list notice.
+- A successful save that changes the address origin invalidates the saved-address model list.
+- The page no longer waits for the model list: it renders as soon as the settings arrive; the Model trigger shows the saved ID until the list loads.
+- The "deploy guide" in the secret-key tile is plain text (the `/docs/deploy` link was dead); WP-F restores the link (TODO in `SecretKeyMissingTile.tsx`).

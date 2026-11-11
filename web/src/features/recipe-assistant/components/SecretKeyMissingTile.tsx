@@ -10,10 +10,8 @@ export function SecretKeyMissingTile() {
         <Icon name="warning" size={20} />
         <span>
           {raStrings.secretKeyBefore}
-          <a className="ra__link" href={raStrings.deployGuideHref}>
-            {raStrings.deployGuide}
-          </a>
-          .
+          {/* TODO(WP-F): link "deploy guide" to its page in the app once it exists (the old /docs/deploy target was dead). */}
+          {raStrings.deployGuide}.
         </span>
       </p>
     </Tile>

@@ -18,7 +18,10 @@ export function agoCopy(at: string, now: Date): string {
 /** The new value of an "old -> new" detail; a plain detail is returned as is. */
 const newValue = (detail: string) => detail.split(' -> ').pop()!.trim()
 
-export function changeRow(change: SettingsChange, now: Date): ChangeRow {
+/** Model IDs -> names, from the model list when it is loaded. */
+export type ModelNames = ReadonlyMap<string, string>
+
+export function changeRow(change: SettingsChange, now: Date, modelNames?: ModelNames): ChangeRow {
   const who = change.actorName
   const meta = agoCopy(change.at, now)
   switch (change.action) {
@@ -27,7 +30,7 @@ export function changeRow(change: SettingsChange, now: Date): ChangeRow {
     case 'turned_off':
       return { title: `${who} turned the Recipe Assistant off`, meta }
     case 'model_changed':
-      return { title: `${who} changed the model to ${newValue(change.detail)}`, meta }
+      return { title: `${who} changed the model to ${modelNames?.get(newValue(change.detail)) ?? newValue(change.detail)}`, meta }
     case 'base_url_changed':
       return { title: `${who} changed the address to ${newValue(change.detail)}`, meta }
     case 'key_saved':

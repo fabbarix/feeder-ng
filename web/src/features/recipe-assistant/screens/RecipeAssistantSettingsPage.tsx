@@ -83,7 +83,7 @@ export function RecipeAssistantSettingsPage() {
         options={page.models.options}
         error={page.errors.model}
         notice={page.models.notice}
-        failed={page.models.failed}
+        failedMessage={page.models.failedMessage}
         disabled={locked || page.models.loading}
         canRefresh={page.models.canRefresh}
         createLabel={page.models.createLabel}
@@ -99,7 +99,7 @@ export function RecipeAssistantSettingsPage() {
         errorMessage={page.test.errorMessage}
         onRun={() => void page.test.run()}
       />
-      <RecentChangesTile changes={settings.changes} now={page.now} />
+      <RecentChangesTile changes={settings.changes} now={page.now} modelNames={page.models.names} />
       <div role="status" aria-live="polite">
         {page.notice ? <p>{page.notice}</p> : null}
         {page.errors.form ? <p role="alert">{page.errors.form}</p> : null}

@@ -10,8 +10,8 @@ export interface ModelTileProps {
   error?: string
   /** The catalogue fallback notice, when the live list could not be read. */
   notice?: string
-  /** The list could not be loaded at all: only the saved model is offered. */
-  failed?: boolean
+  /** Why the list could not be loaded (only the saved model is offered). */
+  failedMessage?: string
   disabled?: boolean
   canRefresh: boolean
   createLabel: (query: string) => string
@@ -21,7 +21,7 @@ export interface ModelTileProps {
 }
 
 /** The model Select (price Chip as leading glyph), Refresh models and the notices around them. `id="model"` is the refusal link target. */
-export function ModelTile({ value, options, error, notice, failed, disabled, canRefresh, createLabel, onChange, onCreate, onRefresh }: ModelTileProps) {
+export function ModelTile({ value, options, error, notice, failedMessage, disabled, canRefresh, createLabel, onChange, onCreate, onRefresh }: ModelTileProps) {
   const withBadges = options.map((o) => ({
     ...o,
     leading: o.priceTier ? <Chip kind={o.warning ? 'status' : 'tag'} status={o.warning ? 'spoil' : undefined}>{o.priceTier}</Chip> : undefined,
@@ -44,7 +44,7 @@ export function ModelTile({ value, options, error, notice, failed, disabled, can
         <IconButton icon={raIcons.refresh} label={raStrings.refreshModels} disabled={!canRefresh} onClick={onRefresh} />
       </div>
       {notice ? <p className="ra__muted">{notice}</p> : null}
-      {failed ? <p className="ra__muted">{raStrings.modelListFailed}</p> : null}
+      {failedMessage ? <p className="ra__muted">{failedMessage}</p> : null}
     </Tile>
   )
 }

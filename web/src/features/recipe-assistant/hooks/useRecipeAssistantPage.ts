@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { useConfirm, useToast } from '../../../ui'
-import { fieldMessage, mapSaveError, mapTestError, warningCopy, type SaveErrors } from '../lib/errors'
+import { fieldMessage, mapSaveError, mapTestError, modelsErrorCopy, warningCopy, type SaveErrors } from '../lib/errors'
 import { createModelLabel, isValidModelId, toModelOptions } from '../lib/modelOptions'
 import {
   canCallWithUnsavedValues,
@@ -57,12 +57,8 @@ export function useRecipeAssistantPage() {
     apiKey: typedKey === '' ? undefined : typedKey,
   })
 
-  // The page opens once the model list has answered (or was not asked for), so the Model trigger shows the model's name.
-  const [bootstrapped, setBootstrapped] = useState(false)
-  const modelsSettled = !choices.isPending
-  useEffect(() => {
-    if (settings && modelsSettled) setBootstrapped(true)
-  }, [settings, modelsSettled])
+  // Model IDs -> names for the change history; empty until the list arrives (the ID is shown meanwhile).
+  const modelNames = useMemo(() => new Map((choices.models ?? []).map((m) => [m.id, m.name])), [choices.models])
 
   /** Every edit forgets the last server answer and the last test: they no longer describe the form. */
   const edit = (update: (f: SettingsForm) => SettingsForm) => {
@@ -144,7 +140,7 @@ export function useRecipeAssistantPage() {
   return {
     isAdmin,
     meLoading: me.isPending,
-    loading: isAdmin && !stored.isError && (stored.isPending || !bootstrapped),
+    loading: isAdmin && !stored.isError && (stored.isPending),
     loadFailed: isAdmin && stored.isError && !settings,
     settings,
     form,
@@ -168,7 +164,8 @@ export function useRecipeAssistantPage() {
       createLabel: createModelLabel,
       create: createModel,
       notice: choices.source === 'catalogue' ? choices.notice : undefined,
-      failed: choices.failed,
+      failedMessage: choices.failed ? modelsErrorCopy(choices.errorCode) : undefined,
+      names: modelNames,
       loading: choices.isPending,
       refreshing: choices.refreshing,
       canRefresh: canCall && !choices.refreshing,
