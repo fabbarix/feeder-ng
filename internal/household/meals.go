@@ -31,6 +31,7 @@ type MealSlotInput struct {
 // from Courses. It returns a copy.
 func (m MealSlotInput) Normalized() MealSlotInput {
 	m.Name = strings.TrimSpace(m.Name)
+	m.Courses = NormalizeSlotCourses(m.Courses)
 	return m
 }
 

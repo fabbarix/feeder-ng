@@ -54,6 +54,10 @@ func (b BatchInput) Normalized() BatchInput {
 	}
 	sort.Ints(days)
 	b.Weekdays = days
+	if b.Change.Courses != nil {
+		courses := NormalizeSlotCourses(*b.Change.Courses)
+		b.Change.Courses = &courses
+	}
 	return b
 }
 
@@ -71,8 +75,8 @@ func (b BatchInput) Validate() error {
 		}
 	}
 	c := b.Change
-	if c.Name == nil && c.Time == nil && c.Attendance == nil {
-		return fieldError("set", "must change at least one of name, time or attendance")
+	if c.Name == nil && c.Time == nil && c.Attendance == nil && c.Courses == nil {
+		return fieldError("set", "must change at least one of name, time, attendance or courses")
 	}
 	if c.Name != nil {
 		if n := nameLength(*c.Name); n < 1 || n > 50 {
@@ -81,6 +85,11 @@ func (b BatchInput) Validate() error {
 	}
 	if c.Time != nil && !validTimeOfDay(*c.Time) {
 		return fieldError("time", "must be an HH:MM time")
+	}
+	if c.Courses != nil {
+		if err := ValidateSlotCourses(*c.Courses); err != nil {
+			return err
+		}
 	}
 	if c.Attendance != nil {
 		return ValidateAttendees(*c.Attendance)

@@ -3,12 +3,14 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
 
 // UpdateSlotsBatch applies a batch edit in one transaction: all matching Meal Slots or none.
-// Date Attendance overrides are untouched.
+// Date Attendance overrides are untouched. With DryRun the same work is done and rolled back; the
+// result (Removes included) is what the real edit would answer.
 func (s *Store) UpdateSlotsBatch(ctx context.Context, in household.BatchInput) (household.BatchResult, error) {
 	var res household.BatchResult
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
@@ -21,6 +23,7 @@ func (s *Store) UpdateSlotsBatch(ctx context.Context, in household.BatchInput) (
 			return household.ErrNoMatchingSlot
 		}
 		c := in.Change
+		var removes household.Removals
 		for i := range matched {
 			m := &matched[i]
 			if c.Name != nil {
@@ -41,10 +44,25 @@ func (s *Store) UpdateSlotsBatch(ctx context.Context, in household.BatchInput) (
 				}
 				m.Attendance = *c.Attendance
 			}
+			if c.Courses != nil {
+				// Opt-outs of Members who do not attend this Meal Slot are ignored (not stored).
+				if err := s.saveSlotCourses(ctx, tx, m.ID, *c.Courses, attendingIDs(m.Attendance), &removes); err != nil {
+					return err
+				}
+			}
+			if m.Courses, err = loadSlotCourses(ctx, tx, m.ID); err != nil {
+				return err
+			}
 		}
-		res = household.BatchResult{Updated: matched, Skipped: skipped}
+		res = household.BatchResult{Updated: matched, Skipped: skipped, Removes: removes}
+		if in.DryRun {
+			return errDryRun
+		}
 		return nil
 	})
+	if errors.Is(err, errDryRun) {
+		return res, nil
+	}
 	if err != nil {
 		return household.BatchResult{}, err
 	}

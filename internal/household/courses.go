@@ -1,9 +1,6 @@
 package household
 
 // Course Attendance and a Meal Slot's Courses (ADR 0008 points 7 and 8, spec §3.1).
-//
-// Stubs of team A's design step (docs/dev/design/crs-a.md): the functions return zero values until
-// the developer step fills them in.
 
 // Validation reasons (ValidationError.Reason), field "courses" unless noted (spec §16).
 const (
@@ -34,11 +31,49 @@ type SlotCourseInput struct {
 // ValidateSlotCourses checks a Courses list: nil is fine (absent); a non-nil empty list is
 // ReasonCoursesEmpty; a list in which every Course is optional is ReasonCoursesAllOptional
 // (the main Course may be optional when another is required). Both are *ValidationError on field "courses".
-func ValidateSlotCourses(courses []SlotCourseInput) error { return nil }
+func ValidateSlotCourses(courses []SlotCourseInput) error {
+	if courses == nil {
+		return nil
+	}
+	if len(courses) == 0 {
+		return &ValidationError{Field: "courses", Message: "a Meal Slot needs at least one Course", Reason: ReasonCoursesEmpty}
+	}
+	for _, c := range courses {
+		if !c.Optional {
+			return nil
+		}
+	}
+	return &ValidationError{Field: "courses", Message: "at least one Course must be required", Reason: ReasonCoursesAllOptional}
+}
 
 // NormalizeSlotCourses drops repeated Courses (the first wins) and repeated Members in each OptOutMemberIDs,
 // keeping order; nil stays nil and a nil OptOutMemberIDs stays nil. It returns a copy.
-func NormalizeSlotCourses(courses []SlotCourseInput) []SlotCourseInput { return nil }
+func NormalizeSlotCourses(courses []SlotCourseInput) []SlotCourseInput {
+	if courses == nil {
+		return nil
+	}
+	seenCourse := map[int64]bool{}
+	out := make([]SlotCourseInput, 0, len(courses))
+	for _, c := range courses {
+		if seenCourse[c.CourseID] {
+			continue
+		}
+		seenCourse[c.CourseID] = true
+		if c.OptOutMemberIDs != nil {
+			seenMember := map[int64]bool{}
+			members := make([]int64, 0, len(c.OptOutMemberIDs))
+			for _, m := range c.OptOutMemberIDs {
+				if !seenMember[m] {
+					seenMember[m] = true
+					members = append(members, m)
+				}
+			}
+			c.OptOutMemberIDs = members
+		}
+		out = append(out, c)
+	}
+	return out
+}
 
 // CourseDay is one Course of a Meal Slot on one date, as planning reads it.
 type CourseDay struct {
@@ -81,4 +116,26 @@ type Removals struct {
 // for the Course (the usual opt-outs apply); a non-nil date, empty included, replaces the usual ones
 // ("everyone attending eats it"). An opt-out of a Member not in slot changes nothing. Order and
 // Portion Factor overrides are kept; the inputs are not modified. It is the only place opt-outs are subtracted.
-func CourseAttendance(slot []Attendee, usual []int64, date *[]int64) []Attendee { return nil }
+func CourseAttendance(slot []Attendee, usual []int64, date *[]int64) []Attendee {
+	excluded := usual
+	if date != nil {
+		excluded = *date
+	}
+	out := make([]Attendee, 0, len(slot))
+	for _, a := range slot {
+		if containsID(excluded, a.MemberID) {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+func containsID(ids []int64, id int64) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
