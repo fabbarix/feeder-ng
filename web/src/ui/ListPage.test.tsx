@@ -24,4 +24,11 @@ describe('ListPage', () => {
     expect(container.querySelector('.list-page__filters')).toBeNull()
     expect(container.querySelector('.list-page__list')).toHaveTextContent('body')
   })
+
+  it('adds an optional className next to list-page on the root (a screen scope class)', () => {
+    const { container } = render(<ListPage header={<h1>Recipes</h1>} className="recipes-screen"><p>body</p></ListPage>)
+    const root = container.firstElementChild as HTMLElement
+    expect(root.classList.contains('list-page')).toBe(true)
+    expect(root.classList.contains('recipes-screen')).toBe(true)
+  })
 })

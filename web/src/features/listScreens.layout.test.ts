@@ -24,11 +24,15 @@ describe('list screens use the shared ListPage', () => {
     expect(src(p), p).toMatch(/<ListPage\b/)
   })
 
-  it.each(SCREENS)('%s has no ad-hoc root (div.pg, bare <section>, section.recipes-screen)', (p) => {
+  it.each(SCREENS)('%s has no ad-hoc root (div.pg, bare <section>, <div|section className="recipes-screen">)', (p) => {
     const t = src(p)
     expect(t, p).not.toMatch(/className="pg"/)
     expect(t, p).not.toMatch(/<section[\s>]/)
-    expect(t, p).not.toMatch(/className="recipes-screen"/)
+    expect(t, p).not.toMatch(/<(div|section)\b[^>]*className="recipes-screen"/)
+  })
+
+  it('Recipes keeps its CSS scope class on ListPage (recipes.css scopes the 3/4-column grid on .recipes-screen)', () => {
+    expect(src('./recipes/screens/RecipesScreen.tsx')).toMatch(/<ListPage\b[^>]*className="recipes-screen"/)
   })
 
   it.each(['./ingredients/screens/IngredientsScreen.tsx', './products/screens/ProductsScreen.tsx', './recipes/screens/RecipesScreen.tsx'])(
