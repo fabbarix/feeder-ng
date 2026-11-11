@@ -32,6 +32,9 @@ export interface IngredientLineRowProps {
   /** R14: take focus in the Quantity field now (after a quick create); calls onAmountFocused once it has. */
   focusAmount?: boolean
   onAmountFocused?: () => void
+  /** L13: take focus in the Ingredient picker now (a line just added); calls onIngredientFocused once it has. */
+  focusIngredient?: boolean
+  onIngredientFocused?: () => void
 }
 
 /** The row's class names with the one the sortable adds. */
@@ -77,8 +80,16 @@ export function IngredientLineRow({
   quickCreateDisabledReason,
   focusAmount,
   onAmountFocused,
+  focusIngredient,
+  onIngredientFocused,
 }: IngredientLineRowProps): ReactNode {
   const amountRef = useRef<HTMLDivElement>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!focusIngredient) return
+    pickerRef.current?.querySelector<HTMLElement>('[role="combobox"], input, button')?.focus()
+    onIngredientFocused?.()
+  }, [focusIngredient, onIngredientFocused])
   useEffect(() => {
     if (!focusAmount) return
     amountRef.current?.querySelector<HTMLInputElement>('input')?.focus()
@@ -106,7 +117,7 @@ export function IngredientLineRow({
     <li {...itemProps} className={rowClass('line-row', itemProps)}>
       <div className="line-row__ingredient">
         {handle ? <div className="line-row__handle">{handle}</div> : null}
-        <div className="line-row__ingredient-body">
+        <div ref={pickerRef} className="line-row__ingredient-body">
           <IngredientSelect
             size="full"
             label={recipeStrings.lines.ingredient}
