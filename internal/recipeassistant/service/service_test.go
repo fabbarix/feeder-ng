@@ -1021,10 +1021,11 @@ func TestTheReadIsLoggedBeforeItsTerminalStateIsVisible(t *testing.T) {
 
 func TestACancelDuringOpenReviewClosesTheReviewAndReportsCancelled(t *testing.T) {
 	e := newEnv(t, opts{enabled: true})
-	var id string
-	e.sink.onOpen = func() { e.svc.CancelJob(user.UserID, id) }
+	// The job may reach OpenReview before start returns its id (a slow CI runner did), so the hook waits for it.
+	ids := make(chan string, 1)
+	e.sink.onOpen = func() { e.svc.CancelJob(user.UserID, <-ids) }
 	jv := e.start(t, user, textIn("pancakes"))
-	id = jv.ID
+	ids <- jv.ID
 	got := e.wait(t, user, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
 	if got.State != service.StateCancelled || got.Review != nil {
 		t.Fatalf("a read cancelled while its Review opened must end cancelled with no Review: %+v", got)
