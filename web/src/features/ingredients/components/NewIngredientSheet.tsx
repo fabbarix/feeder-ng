@@ -33,6 +33,8 @@ export function NewIngredientSheet(props: NewIngredientSheetProps) {
   const { open, onClose } = props
   const formId = useId()
   const [busy, setBusy] = useState(false)
+  // PE: Create waits for a Picture that is still uploading.
+  const [pictureBusy, setPictureBusy] = useState(false)
   const reasonId = `${formId}-reason`
   return (
     <BottomSheet
@@ -44,13 +46,13 @@ export function NewIngredientSheet(props: NewIngredientSheetProps) {
           <Button variant="tertiary" onClick={onClose}>
             {strings.sheet.cancel}
           </Button>
-          <Button type="submit" form={formId} disabled={busy || props.disabledReason !== undefined} aria-describedby={props.disabledReason ? reasonId : undefined}>
+          <Button type="submit" form={formId} disabled={busy || pictureBusy || props.disabledReason !== undefined} aria-describedby={props.disabledReason ? reasonId : undefined}>
             {busy ? strings.sheet.creating : strings.createIngredient}
           </Button>
         </div>
       }
     >
-      {open ? <NewIngredientForm {...props} formId={formId} reasonId={reasonId} onBusy={setBusy} /> : null}
+      {open ? <NewIngredientForm {...props} formId={formId} reasonId={reasonId} onBusy={setBusy} onPictureBusy={setPictureBusy} /> : null}
     </BottomSheet>
   )
 }
@@ -59,10 +61,11 @@ interface FormProps extends NewIngredientSheetProps {
   formId: string
   reasonId: string
   onBusy: (busy: boolean) => void
+  onPictureBusy: (busy: boolean) => void
 }
 
 /** The form itself; it mounts fresh each time the sheet opens. */
-function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initialName = '', unitHint, findSimilar = searchByName, onUseExisting, disabledReason }: FormProps) {
+function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, onCreate, initialName = '', unitHint, findSimilar = searchByName, onUseExisting, disabledReason }: FormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const [name, setName] = useState(initialName)
   const [baseUnit, setBaseUnit] = useState<BaseUnit>(() => defaultBaseUnit(unitHint))
@@ -161,7 +164,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
         inputMode="numeric"
         autoComplete="off"
       />
-      <ImagePicker label={strings.sheet.pictureLabel} value={image} onChange={setImage} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
+      <ImagePicker label={strings.sheet.pictureLabel} value={image} onChange={setImage} onBusyChange={onPictureBusy} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
       {guard.kind === 'exists' ? (
         <div className="new-ingredient__guard" role="status">
           <p>{strings.sheet.alreadyExists(guard.ingredient.name)}</p>

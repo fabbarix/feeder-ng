@@ -78,7 +78,7 @@ export function PlannedMealSheet({ open, onClose, slot, today, onCook, onMarkCoo
           {slot.attendance && slot.attendance.length > 0 ? (
             <div className="plan-sheet__attendance">
               {slot.attendance.map((a) => (
-                <Avatar key={a.id} name={a.name} imageUrl={a.imageUrl} size="sm" />
+                <Avatar key={a.id} name={a.name} imageUrl={a.photoUrl || undefined} glyph={a.avatar || undefined} colour={a.colour} size="sm" />
               ))}
             </div>
           ) : null}

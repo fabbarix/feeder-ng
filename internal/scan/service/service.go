@@ -72,6 +72,8 @@ type ProductInfo struct {
 	BaseUnit       string
 	PackSize       float64
 	ImageURL       string // "/api/images/<id>" of the Product's Picture, "" = none (PP)
+	// IngredientImageURL is the Ingredient's Picture, "" = none (PE): scan feedback falls back to it.
+	IngredientImageURL string
 }
 
 // ShopBarcode is a Shop-only barcode: a plain code, or RuleID + ItemCode for a weighed one.
@@ -128,7 +130,9 @@ type OfflineProduct struct {
 	BaseUnit       string  `json:"baseUnit"`
 	PackSize       float64 `json:"packSize"`
 	ImageURL       string  `json:"imageUrl,omitempty"` // PP: the Picture, so a scan can be described offline
-	LastPriceCents *int    `json:"lastPriceCents"`
+	// PE: the Ingredient's Picture, for a Product without one.
+	IngredientImageURL string `json:"ingredientImageUrl,omitempty"`
+	LastPriceCents     *int   `json:"lastPriceCents"`
 }
 
 // OfflineData is what the phone caches to resolve and describe scans offline.
@@ -488,7 +492,7 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 	})
 
 	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit,
-		ProductID: pid, ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
+		ProductID: pid, ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
 		OnList: eff.OnList, Remaining: eff.Remaining, Ticked: eff.Ticked, Merged: merged}
 	if created != nil {
 		applied.ProductCreated = *created
@@ -569,7 +573,7 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 	}
 	pid := p.ID
 	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit, ProductID: pid,
-		ProductName: p.Name, ProductImageURL: p.ImageURL, Quantity: quantity, LotID: lotID, Total: &after}
+		ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: quantity, LotID: lotID, Total: &after}
 	res := scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied, Scan: &applied}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

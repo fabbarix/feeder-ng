@@ -42,7 +42,7 @@ export function AttendeePills({ slot, members, max = 4, onFix, locale = document
     <div className="attendee-pills" role="list" aria-label={text.attendingList(slot.name, weekday)}>
       {model.shown.map((m) => (
         <span key={m.id} role="listitem" className="attendee-pills__item">
-          <MemberPill name={m.name} colour={m.colour} glyph={m.avatar || undefined} />
+          <MemberPill name={m.name} colour={m.colour} glyph={m.avatar || undefined} photoUrl={m.photoUrl || undefined} />
         </span>
       ))}
       {model.more.length > 0 ? (

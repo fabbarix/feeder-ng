@@ -30,7 +30,10 @@ type Meal struct {
 }
 
 // IngredientInfo is what a Line shows about its Ingredient.
-type IngredientInfo struct{ Name, BaseUnit string }
+type IngredientInfo struct {
+	Name, BaseUnit string
+	ImageURL       string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
+}
 
 // Pack is the pack size (Base Units) of the Product last bought for an Ingredient.
 type Pack struct {
@@ -82,6 +85,7 @@ type PackSuggestion struct {
 type Line struct {
 	IngredientID       int64
 	Name, BaseUnit     string
+	ImageURL           string
 	Need, Available    float64
 	Quantity           float64
 	Ticked             bool
@@ -95,6 +99,7 @@ type ExtraLine struct {
 	Text           string
 	IngredientID   int64
 	Name, BaseUnit string
+	ImageURL       string
 	Quantity       float64
 	Ticked         bool
 }
@@ -128,7 +133,7 @@ func Derive(in Input) List {
 		}
 		// Covered by Stock (or by this range's scans) and kept as ticked.
 		info := in.Ingredients[ing]
-		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, Need: t.Needed, Available: t.Needed}
+		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: t.Needed, Available: t.Needed}
 	}
 	for ing, l := range lines {
 		if ticked[ing] {
@@ -212,7 +217,7 @@ func derivedLines(in Input) map[int64]Line {
 			continue
 		}
 		info := in.Ingredients[ing]
-		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, Need: total, Available: total - quantity, Quantity: quantity}
+		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: total, Available: total - quantity, Quantity: quantity}
 		if p, ok := in.Packs[ing]; ok {
 			s := SuggestPack(quantity, p)
 			line.Pack = &s
@@ -270,7 +275,7 @@ func extraLines(extras []Extra, ings map[int64]IngredientInfo) []ExtraLine {
 		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked}
 		if e.IngredientID != 0 {
 			info := ings[e.IngredientID]
-			l.Name, l.BaseUnit = info.Name, info.BaseUnit
+			l.Name, l.BaseUnit, l.ImageURL = info.Name, info.BaseUnit, info.ImageURL
 			l.Quantity = math.Max(0, e.Quantity-e.Got)
 		}
 		out = append(out, l)

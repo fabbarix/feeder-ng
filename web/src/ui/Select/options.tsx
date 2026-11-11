@@ -1,6 +1,7 @@
 import { Avatar } from '../Avatar'
 import { Icon } from '../Icon'
 import { RecipeThumb } from '../RecipeThumb'
+import { Thumb } from '../Thumb'
 import { mealSlotIcon } from '../lib/mealSlotIcon'
 import type { SelectOption } from './lib'
 import { selectStrings } from './strings'
@@ -21,6 +22,8 @@ export interface IngredientChoice {
   key?: string
   name: string
   baseUnit: string
+  /** PE: the Ingredient's Picture address; the option draws a Thumb (an empty slot without it). */
+  imageUrl?: string
 }
 export interface UnitChoices {
   baseUnit: string
@@ -42,7 +45,11 @@ export interface MealSlotChoice {
 export interface MemberChoice {
   id: number
   name: string
-  imageUrl?: string
+  /** PE: the Member's Photo address, then `avatar` (emoji), then the initials. */
+  photoUrl?: string
+  avatar?: string
+  /** PE: the Member colour, "#rrggbb" (the Avatar's ring). */
+  colour?: string
 }
 
 export const ENGLISH_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -64,6 +71,7 @@ export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
+    leading: <Thumb imageUrl={i.imageUrl} size={40} />,
   }))
 }
 
@@ -107,6 +115,6 @@ export function memberOptions(members: MemberChoice[]): SelectOption<number>[] {
   return members.map((m) => ({
     value: m.id,
     label: m.name,
-    leading: <Avatar name={m.name} imageUrl={m.imageUrl} size="sm" />,
+    leading: <Avatar name={m.name} imageUrl={m.photoUrl} glyph={m.avatar} colour={m.colour} size="sm" />,
   }))
 }

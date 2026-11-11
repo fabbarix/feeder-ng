@@ -294,16 +294,18 @@ type Applied struct {
 	ProductID      int64  `json:"productId"`
 	ProductName    string `json:"productName"`
 	// ProductImageURL is "/api/images/<id>" of the Product's Picture; absent when it has none (PP).
-	ProductImageURL string   `json:"productImageUrl,omitempty"`
-	Quantity        float64  `json:"quantity"`
-	LotID           *int64   `json:"lotId"`
-	PriceCents      *int     `json:"priceCents"`
-	OnList          bool     `json:"onList"`
-	Remaining       float64  `json:"remaining"`
-	Ticked          bool     `json:"ticked"`
-	ProductCreated  bool     `json:"productCreated"`
-	Merged          *Merged  `json:"merged,omitempty"`
-	Total           *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
+	ProductImageURL string `json:"productImageUrl,omitempty"`
+	// IngredientImageURL is the Ingredient's Picture; absent when it has none (PE).
+	IngredientImageURL string   `json:"ingredientImageUrl,omitempty"`
+	Quantity           float64  `json:"quantity"`
+	LotID              *int64   `json:"lotId"`
+	PriceCents         *int     `json:"priceCents"`
+	OnList             bool     `json:"onList"`
+	Remaining          float64  `json:"remaining"`
+	Ticked             bool     `json:"ticked"`
+	ProductCreated     bool     `json:"productCreated"`
+	Merged             *Merged  `json:"merged,omitempty"`
+	Total              *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
 }
 
 // Result is the outcome of one operation.

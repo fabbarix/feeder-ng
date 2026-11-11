@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
@@ -28,6 +29,7 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (service.Ing
 		Name:          ing.Name,
 		BaseUnit:      string(ing.Base),
 		ShelfLifeDays: ing.ShelfLifeDays,
+		ImageURL:      images.URL(ing.Image),
 	}, nil
 }
 

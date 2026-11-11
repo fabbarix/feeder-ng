@@ -71,6 +71,8 @@ interface ImagePickerCommon {
   /** Preview size. Default `hero`. */
   size?: 'hero' | 72
   deps?: Partial<ImagePickerDeps>
+  /** PE: called with true when the picker starts working (preparing, uploading, converting, downloading, loading a crop) and false when it stops or unmounts, so a host can disable Save meanwhile. */
+  onBusyChange?: (busy: boolean) => void
 }
 
 /** Entity photos: the picture is sent to the server and the host keeps the image id. */

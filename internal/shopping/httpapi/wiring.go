@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"log/slog"
 	"time"
 
@@ -246,7 +247,7 @@ func (i ingredients) Info(ctx context.Context, ids []int64) (map[int64]shopping.
 		if err != nil {
 			return nil, err
 		}
-		out[id] = shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base)}
+		out[id] = shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base), ImageURL: images.URL(ing.Image)}
 	}
 	return out, nil
 }

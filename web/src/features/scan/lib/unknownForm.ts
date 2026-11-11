@@ -11,6 +11,8 @@ export interface IngredientChoice {
   id?: number
   name: string
   baseUnit: BaseUnit
+  /** PE: the Ingredient's Picture address, drawn in the picker option */
+  imageUrl?: string
 }
 
 export interface UnknownFormValues {

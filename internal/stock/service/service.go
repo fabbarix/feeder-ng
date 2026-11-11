@@ -32,6 +32,7 @@ type IngredientInfo struct {
 	Name          string
 	BaseUnit      string // g, ml or piece
 	ShelfLifeDays *int
+	ImageURL      string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
 }
 
 // Ingredients looks Ingredients up (adapter over the Ingredient store).
@@ -89,6 +90,7 @@ type IngredientStock struct {
 	NextGoesOff  stock.Date // soonest go-off among its lots, None if no lot has one
 	UseSoon      bool
 	SpoiledCount int
+	ImageURL     string
 }
 
 // Warning says Stock could not cover a Cooked meal's need for an Ingredient.
@@ -637,7 +639,7 @@ func view(l store.StoredLot, ing IngredientInfo, today stock.Date) LotView {
 
 // summarise builds one Ingredient's Stock from its lots (none = empty Stock).
 func summarise(ing IngredientInfo, lots []store.StoredLot, today stock.Date) IngredientStock {
-	out := IngredientStock{IngredientID: ing.ID, Name: ing.Name, BaseUnit: ing.BaseUnit}
+	out := IngredientStock{IngredientID: ing.ID, Name: ing.Name, BaseUnit: ing.BaseUnit, ImageURL: ing.ImageURL}
 	for _, l := range lots {
 		out.Total += l.Quantity
 		out.LotCount++

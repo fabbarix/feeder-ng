@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"strings"
 	"sync"
 	"time"
@@ -68,6 +69,8 @@ type Product struct {
 	// Image is the Picture's image id ("" = none) and ImageURL its address "/api/images/<id>" ("" = none); both are always sent (PP).
 	Image    string `json:"image"`
 	ImageURL string `json:"imageUrl"`
+	// IngredientImageURL is the Ingredient's Picture address (PE; for scan feedback, not part of the Product JSON).
+	IngredientImageURL string `json:"-"`
 }
 
 // ShopBarcode as stored.
@@ -518,18 +521,18 @@ func (s *Store) Rules(ctx context.Context, shopID int64) ([]Rule, error) {
 // ---- Products ----
 
 const productSelect = `SELECT p.id, p.name, p.ingredient_id, i.name, i.base_unit, p.pack_size,
-	CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END, p.image
+	CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END, p.image, i.image
 	FROM products p JOIN ingredients i ON i.id = p.ingredient_id`
 
 func scanProduct(sc interface{ Scan(...any) error }) (Product, error) {
 	var p Product
 	var base string
 	var archived int
-	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived, &p.Image)
+	var ingImage string
+	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived, &p.Image, &ingImage)
 	p.BaseUnit = units.Base(base)
-	if p.Image != "" {
-		p.ImageURL = "/api/images/" + p.Image
-	}
+	p.IngredientImageURL = images.URL(ingImage)
+	p.ImageURL = images.URL(p.Image)
 	p.Archived = archived == 1
 	return p, err
 }

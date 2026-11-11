@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"github.com/fabbarix/feeder-ng/internal/images"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
@@ -54,6 +55,8 @@ type table struct {
 	recipePhoto   map[int64]string // photo URL of a Recipe ("" without one)
 	members       map[int64]string
 	memberColour  map[int64]string
+	memberPhoto   map[int64]string // photo URL of a Member ("" without one)
+	memberAvatar  map[int64]string // emoji of a Member
 	ingredients   map[int64]string
 	slots         map[int64]string
 	// leftoverFrom is the source Meal Slot of each stored Leftover by id (N1): a meal served from a stored Leftover
@@ -61,19 +64,11 @@ type table struct {
 	leftoverFrom map[int64]plan.Key
 }
 
-// photoURL is the URL the image store serves an image id at (the recipe httpapi's imageURL).
-func photoURL(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "/api/images/" + id
-}
-
 // load builds the names table. meals are the Meals about to be rendered: the source Meal Slot of the stored Leftovers
 // they are served from is looked up by id (N1).
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	t := table{recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
-		members: map[int64]string{}, memberColour: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
+		members: map[int64]string{}, memberColour: map[int64]string{}, memberPhoto: map[int64]string{}, memberAvatar: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
 	if err != nil {
 		return t, err
@@ -89,7 +84,7 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 		t.recipes[r.ID] = r.Name
 		t.recipeMinutes[r.ID] = r.TotalMinutes
 		t.recipeReheat[r.ID] = r.ReheatMinutes
-		t.recipePhoto[r.ID] = photoURL(r.Image)
+		t.recipePhoto[r.ID] = images.URL(r.Image)
 	}
 	ms, err := n.hh.Members(ctx)
 	if err != nil {
@@ -98,6 +93,8 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	for _, m := range ms {
 		t.members[m.ID] = m.Name
 		t.memberColour[m.ID] = m.Colour
+		t.memberPhoto[m.ID] = images.URL(m.Photo)
+		t.memberAvatar[m.ID] = m.Avatar
 	}
 	is, err := n.ing.List(ctx)
 	if err != nil {

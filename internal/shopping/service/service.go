@@ -428,7 +428,7 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 		if err != nil {
 			return shopping.ExtraLine{}, err
 		}
-		line.Name, line.BaseUnit = info[e.IngredientID].Name, info[e.IngredientID].BaseUnit
+		line.Name, line.BaseUnit, line.ImageURL = info[e.IngredientID].Name, info[e.IngredientID].BaseUnit, info[e.IngredientID].ImageURL
 		line.Quantity = e.Quantity - e.Got
 		if line.Quantity < 0 {
 			line.Quantity = 0

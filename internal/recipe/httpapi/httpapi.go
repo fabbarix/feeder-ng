@@ -272,7 +272,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 	for _, s := range list {
 		out = append(out, summaryJSON{
 			ID: s.ID, Name: s.Name, Yield: s.Yield, ReadyMeal: s.ReadyMeal, Tags: nonNil(s.Tags),
-			ImageURL: imageURL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
+			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
@@ -500,13 +500,6 @@ func optionalID(s string) (*int64, bool) {
 	return &n, true
 }
 
-func imageURL(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "/api/images/" + id
-}
-
 func nonNil(s []string) []string {
 	if s == nil {
 		return []string{}
@@ -519,7 +512,7 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 		ID: rec.ID, Name: rec.Name, Description: rec.Description, Yield: rec.Yield, ReadyMeal: rec.ReadyMeal,
 		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays, ReheatMinutes: rec.ReheatMinutes,
 		Source: sourceJSON{URL: rec.Source.URL, Attribution: rec.Source.Attribution},
-		Image:  rec.Image, ImageURL: imageURL(rec.Image), Archived: rec.Archived,
+		Image:  rec.Image, ImageURL: imgs.URL(rec.Image), Archived: rec.Archived,
 		Lines: []lineJSON{}, Steps: []stepJSON{}, Advance: []advanceJSON{},
 		TotalMinutes: rec.Timing.TotalMinutes, AdvanceMinutes: rec.Timing.AdvanceMinutes,
 		CreatedAt: rec.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: rec.UpdatedAt.UTC().Format(time.RFC3339),
@@ -533,7 +526,7 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 	for _, s := range rec.Steps {
 		sj := stepJSON{
 			Text: s.Text, Kind: string(s.Kind), DurationMinutes: s.DurationMinutes, LeadTimeMinutes: s.LeadTimeMinutes,
-			After: nonNilInts(s.After), Uses: []useJSON{}, Image: s.Image, ImageURL: imageURL(s.Image),
+			After: nonNilInts(s.After), Uses: []useJSON{}, Image: s.Image, ImageURL: imgs.URL(s.Image),
 		}
 		for _, u := range s.Uses {
 			sj.Uses = append(sj.Uses, useJSON{IngredientID: u.IngredientID, Quantity: u.Quantity, Unit: u.Unit})

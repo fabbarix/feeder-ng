@@ -38,11 +38,11 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, onSubmit }
         error={form.errors.packSize}
       />
       <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" data-size-intent="long" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
-      <ImagePicker label={strings.pictureLabel} value={form.values.image ?? ''} onChange={form.setImage} aspect={CROP_ASPECTS.landscape} />
+      <ImagePicker label={strings.pictureLabel} value={form.values.image ?? ''} onChange={form.setImage} onBusyChange={form.setPictureBusy} aspect={CROP_ASPECTS.landscape} />
       {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <FormActions
         primary={
-          <Button type="submit" loading={form.saving}>
+          <Button type="submit" loading={form.saving} disabled={form.pictureBusy}>
             {strings.saveProduct}
           </Button>
         }

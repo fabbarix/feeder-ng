@@ -98,6 +98,8 @@ export interface IngredientRef {
   name: string
   baseUnit: BaseUnit
   conversions: { unit: string; toBase: number }[]
+  /** PE: the Ingredient's Picture address (GET /api/ingredients sends it); IngredientSelect draws a Thumb from it. */
+  imageUrl?: string
 }
 
 export interface MemberPreferences {

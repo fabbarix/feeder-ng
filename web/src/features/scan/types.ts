@@ -51,6 +51,8 @@ export interface ScanApplied {
   productName: string
   /** PP: "/api/images/<id>" of the Product's Picture; absent when it has none */
   productImageUrl?: string
+  /** PE: the Ingredient's Picture, the fallback when the Product has none; absent when neither has one */
+  ingredientImageUrl?: string
   quantity: number
   lotId: number | null
   priceCents: number | null
@@ -78,6 +80,8 @@ export interface OfflineProduct {
   packSize: number
   /** PP: the Product's Picture, so a queued scan can be described offline; absent when none */
   imageUrl?: string
+  /** PE: the Ingredient's Picture, the fallback for a queued scan; absent when none */
+  ingredientImageUrl?: string
   lastPriceCents: number | null
 }
 

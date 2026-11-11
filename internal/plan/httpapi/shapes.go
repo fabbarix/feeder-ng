@@ -78,6 +78,9 @@ type attendeeOut struct {
 	// Optional, additive (WP6): the Member as an Avatar: id, name and colour (#rrggbb).
 	ID     int64  `json:"id"`
 	Colour string `json:"colour"`
+	// PE: the Member's Photo ("/api/images/<id>") and emoji, so every Avatar can draw them.
+	PhotoURL string `json:"photoUrl,omitempty"`
+	Avatar   string `json:"avatar,omitempty"`
 }
 
 type ruleOut struct {
@@ -220,7 +223,8 @@ func slotFor(s runner.SlotView, t table) slotOut {
 	}
 	for _, a := range s.Attendance {
 		out.Attendance = append(out.Attendance, attendeeOut{MemberID: a.MemberID, Name: t.members[a.MemberID], Factor: a.Factor,
-			ID: a.MemberID, Colour: t.memberColour[a.MemberID]})
+			ID: a.MemberID, Colour: t.memberColour[a.MemberID],
+			PhotoURL: t.memberPhoto[a.MemberID], Avatar: t.memberAvatar[a.MemberID]})
 	}
 	if s.Meal != nil {
 		out.Meal = mealFor(*s.Meal, t)

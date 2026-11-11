@@ -18,12 +18,12 @@ describe('ingredientOptions', () => {
   it('shows the Base Unit once, as meta (selectStrings.baseUnitMeta), with no badge', () => {
     const [opt] = ingredientOptions([{ id: 3, name: 'Garlic', baseUnit: 'g' }])
     expect(opt).toMatchObject({ value: 3, label: 'Garlic', meta: selectStrings.baseUnitMeta('g') })
-    expect(opt?.leading).toBeUndefined()
+    expect(opt?.leading).toBeDefined() // PE: a Thumb (see options.pictures.test.tsx)
   })
   it('a not-yet-saved Ingredient (no id) is keyed by its temporary key', () => {
     const [opt] = ingredientOptions([{ key: 'new-1', name: 'Saffron', baseUnit: 'g' }])
     expect(opt).toMatchObject({ value: 'new-1', label: 'Saffron', meta: 'Base Unit: g' })
-    expect(opt?.leading).toBeUndefined()
+    expect(opt?.leading).toBeDefined() // PE: a Thumb (see options.pictures.test.tsx)
   })
 })
 

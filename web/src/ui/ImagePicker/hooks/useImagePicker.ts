@@ -104,6 +104,13 @@ export function useImagePicker(props: ImagePickerProps) {
   const busy = pipeline.busy || loading || cropSession.session.phase === 'loading'
   const locked = busy || Boolean(props.disabled)
 
+  // PE: tell the host while the picker works (same moments as aria-busy); the cleanup also reports false on unmount, so a host never stays locked.
+  useEffect(() => {
+    if (!busy) return undefined
+    propsRef.current.onBusyChange?.(true)
+    return () => propsRef.current.onBusyChange?.(false)
+  }, [busy])
+
   // ---- what is held ----
   const value = props.value
   const hasValue = raw ? raw.value !== null : typeof value === 'string' && value !== ''

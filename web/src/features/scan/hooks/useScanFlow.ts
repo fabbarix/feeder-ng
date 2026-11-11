@@ -180,6 +180,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     d.feedback.confirm()
     setBanner(null)
     const s = result.scan
+    // PE: the Product's Picture, else its Ingredient's.
+    const picture = s ? s.productImageUrl || s.ingredientImageUrl : fallback.imageUrl
     setLine({
       clientUuid,
       ingredientName: s?.ingredientName ?? fallback.ingredientName,
@@ -190,7 +192,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       queued: false,
       productName: s?.productName ?? productName,
       // The server is right: a Result without a picture shows none, whatever the cache had.
-      ...((s ? s.productImageUrl : fallback.imageUrl) ? { imageUrl: s ? s.productImageUrl : fallback.imageUrl } : {}),
+      ...(picture ? { imageUrl: picture } : {}),
     })
   }
 
@@ -214,7 +216,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     await finish(
       op.clientUuid,
       result,
-      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: plan.quantity, priceCents: plan.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl },
+      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: plan.quantity, priceCents: plan.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl || plan.product.ingredientImageUrl },
       plan.product.name,
     )
   }
@@ -342,7 +344,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     await finish(
       op.clientUuid,
       result,
-      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: asked.quantity, priceCents: asked.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl },
+      { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: asked.quantity, priceCents: asked.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl || plan.product.ingredientImageUrl },
       plan.product.name,
     )
   }
@@ -443,7 +445,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       if (result.status === 'rejected') return null
       const s = result.scan
       if (!s) return { ...current, queued: false }
-      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName, imageUrl: s.productImageUrl }
+      return { ...current, queued: false, ingredientName: s.ingredientName, baseUnit: s.baseUnit, quantity: s.quantity, priceCents: s.priceCents, onList: s.onList, productName: s.productName, imageUrl: s.productImageUrl || s.ingredientImageUrl }
     })
   }
 
