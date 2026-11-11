@@ -102,7 +102,7 @@ describe('ShoppingScreen', () => {
 
   it('asks how much for an Ingredient extra', async () => {
     show(makeList({ lines: [], extras: [makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 })], progress: { ticked: 0, total: 1 } }))
-    await userEvent.click(screen.getByRole('button', { name: 'Tick milk' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Tick Milk' }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick and add to Stock' }))
     expect(actions.tickExtra).toHaveBeenCalledWith(2, 2000, 1)
   })
@@ -110,7 +110,7 @@ describe('ShoppingScreen', () => {
   it('QA: ticks are visible - a ticked Line sits in the Ticked group with a check mark', async () => {
     show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 1, total: 2 } }))
     const ticked = screen.getByRole('group', { name: 'Ticked' })
-    const untick = within(ticked).getByRole('button', { name: 'Untick rice' })
+    const untick = within(ticked).getByRole('button', { name: 'Untick Rice' })
     expect(untick.querySelector('svg')).not.toBeNull()
     await userEvent.click(untick)
     expect(actions.untick).toHaveBeenCalledWith(4, '2026-11-15')

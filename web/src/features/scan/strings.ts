@@ -1,8 +1,12 @@
 // English UI strings for the Scan feature.
+import { strings as ingredientStrings } from '../ingredients/strings'
+
 export const scanStrings = {
   title: 'Scan',
   pickShop: 'Where are you shopping?',
   pickShopHint: 'Pick the Shop so prices and barcodes match.',
+  noShops: 'No Shops yet',
+  noShopsHint: 'Your Admin adds Shops in Settings.',
   stockTakeAtHome: 'Stock-take at home',
   changeShop: 'Change Shop',
   notOnList: 'not on the list',
@@ -87,4 +91,11 @@ export const scanStrings = {
   cameraError: 'The camera could not start. Try again.',
   left: (n: number) => `${n} left`,
   askWeightTitle: 'How much does it weigh?',
+  /** R2-4: the near-duplicate guard says the same words as the New Ingredient sheet (one place for them). */
+  guard: {
+    alreadyExists: ingredientStrings.sheet.alreadyExists,
+    didYouMean: ingredientStrings.sheet.didYouMean,
+    useExisting: ingredientStrings.sheet.useExisting,
+    createAnyway: ingredientStrings.sheet.createAnyway,
+  },
 }

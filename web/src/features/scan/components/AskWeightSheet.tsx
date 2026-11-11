@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { scanStrings } from '../strings'
 
@@ -38,7 +39,7 @@ export function AskWeightSheet({ open, onClose, productName, priceText, onSubmit
         }}
       >
         <NumberField label={scanStrings.weight} helper={scanStrings.weightHint} value={grams} onChange={setGrams} min={0} error={error ? scanStrings.mustBePositive : undefined} />
-        <Button type="submit">{scanStrings.save}</Button>
+        <FormActions primary={<Button type="submit">{scanStrings.save}</Button>} />
       </form>
     </BottomSheet>
   )

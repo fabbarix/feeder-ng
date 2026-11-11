@@ -92,7 +92,7 @@ describe('ImportScreen', () => {
     expect(screen.getByText('$.recipes[0].image')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: s.confirm })).toBeDisabled()
 
-    await userEvent.click(screen.getByRole('button', { name: s.useExisting('onion') }))
+    await userEvent.click(screen.getByRole('button', { name: s.useExisting('Onion') }))
     expect(hook.current.chooseExisting).toHaveBeenCalledWith('onion', 5)
     await userEvent.click(screen.getByRole('button', { name: s.skip }))
     expect(hook.current.chooseRecipeAction).toHaveBeenCalledWith(0, 'skip')

@@ -245,7 +245,8 @@ const probe = `
   const bars = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {
     const s = getComputedStyle(e)
-    if ((s.position === 'sticky' || s.position === 'fixed') && vis(e) && e.querySelector('button')) {
+    // P6 is about action bars stuck to the bottom of the viewport; a top-sticky side panel (the Stock aside) is not one.
+    if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button, a')) {
       const b = e.getBoundingClientRect()
       bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1) })
     }
