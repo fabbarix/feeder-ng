@@ -22,6 +22,10 @@ type Review struct {
 	UserID int64
 	File   File
 	Images ImageSet
+	// Photos are the candidate photos of a Recipe Assistant photo read (in memory only, travel with the
+	// Review through Take/Restore and are dropped only when the Review ends: successful Confirm, Close,
+	// idle TTL, eviction past MaxUserReviews). See photos.go.
+	Photos []CandidatePhoto
 }
 
 // entry is a Review with its idle clock.
@@ -100,6 +104,7 @@ func (s *Sessions) Restore(rv Review) {
 		list = list[over:]
 	}
 	s.byUser[rv.UserID] = list
+	enforcePhotoBound(list)
 }
 
 // Close drops a Review (Confirm and DELETE). Closing an unknown id is a no-op.
