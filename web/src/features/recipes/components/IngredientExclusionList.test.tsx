@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { anna, ben, household, prefs } from '../household.test-helper'
@@ -60,5 +60,40 @@ describe('IngredientExclusionList', () => {
     h.value = household({ members: [ben, anna], meUserId: 10 })
     view()
     expect(screen.getAllByRole('listitem').map((i) => i.textContent)).toEqual([expect.stringContaining('Ben'), expect.stringContaining('Anna')])
+  })
+  describe('while loading or failed', () => {
+    it('shows a Skeleton, not "No Members yet" or unpressed toggles, while the Household loads', () => {
+      vi.useFakeTimers()
+      try {
+        h.value = household({ isLoading: true, members: [], prefsByMember: {} })
+        view()
+        act(() => void vi.advanceTimersByTime(400))
+        expect(screen.getByRole('status')).toBeInTheDocument()
+        expect(screen.queryByText('No Members yet')).toBeNull()
+        expect(screen.queryByRole('button')).toBeNull()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+    it('shows a Skeleton, not unpressed toggles, while the Members are known but their preferences load', () => {
+      vi.useFakeTimers()
+      try {
+        h.value = household({ isLoading: true, prefsByMember: {} })
+        view()
+        act(() => void vi.advanceTimersByTime(400))
+        expect(screen.getByRole('status')).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /excludes garlic/ })).toBeNull()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+    it('shows an ErrorState whose Try again calls refetch', async () => {
+      h.value = household({ isError: true, members: [], prefsByMember: {} })
+      view()
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.queryByText('No Members yet')).toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      expect(h.value.refetch).toHaveBeenCalledOnce()
+    })
   })
 })

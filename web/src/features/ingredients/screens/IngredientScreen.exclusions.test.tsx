@@ -58,6 +58,14 @@ describe('IngredientScreen: Excluded by Tile', () => {
     expect(within(tile()).getByRole('button', { name: 'Anna: excludes garlic' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(tile()).getByRole('button', { name: 'Ben: excludes garlic' })).toHaveAttribute('aria-pressed', 'false')
   })
+  it('shows an ErrorState inside the Tile, with a retry that refetches, when the Household failed to load', async () => {
+    h.household = household({ isError: true, members: [], prefsByMember: {} })
+    setup()
+    expect(within(tile()).getByRole('alert')).toBeInTheDocument()
+    expect(within(tile()).queryByText('No Members yet')).toBeNull()
+    await userEvent.click(within(tile()).getByRole('button', { name: 'Try again' }))
+    expect(h.household.refetch).toHaveBeenCalledOnce()
+  })
 })
 
 describe('IngredientScreen: imports the list from its file', () => {

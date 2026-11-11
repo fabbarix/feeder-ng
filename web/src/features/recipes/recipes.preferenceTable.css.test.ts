@@ -37,6 +37,14 @@ describe('.preference-table on a phone', () => {
     expect(rulesFor(".preference-table tr[data-highlighted='true']").length + rulesFor(".preference-table__row[data-highlighted='true']").length).toBeGreaterThan(0)
     expect(css).toMatch(/prefers-reduced-motion:\s*reduce[\s\S]*data-highlighted/)
   })
+  it('never shrinks the Avatar beside a long name: it keeps its size and only the name truncates', () => {
+    const rules = recipeRules.filter((r) => /\.preference-table__who\s*(>\s*)?\.avatar\b/.test(r.selector))
+    expect(rules.length).toBeGreaterThan(0)
+    expect(rules.some((r) => /(?:^|[;\s])flex-shrink\s*:\s*0\s*(;|$)/.test(r.body))).toBe(true)
+  })
+  it('centres the state labels over their columns', () => {
+    expect(valueFor('.preference-table__state', 'text-align', 0)).toBe('center')
+  })
   it('has no leftover toggles row from the old Member picker', () => {
     expect(rulesFor('.preference-toggles')).toEqual([])
   })
