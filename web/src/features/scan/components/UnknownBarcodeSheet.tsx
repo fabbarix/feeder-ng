@@ -51,6 +51,8 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
   const [guard, setGuard] = useState<DuplicateGuard>({ kind: 'clear' })
   // Which lookup is current: an answer for an Ingredient the User has since replaced is dropped.
   const lookup = useRef(0)
+  // The guard row, so a Save while it is unanswered can move focus to it.
+  const guardRow = useRef<HTMLDivElement>(null)
   useEffect(() => () => void (lookup.current += 1), [])
   const weighed = mode !== 'pack'
 
@@ -104,7 +106,10 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
     pick({ id: existing.id, name: existing.name, baseUnit: existing.baseUnit })
 
   const save = () => {
-    if (guard.kind !== 'clear') return
+    if (guard.kind !== 'clear') {
+      guardRow.current?.focus()
+      return
+    }
     const final: UnknownFormValues = { ...values, ingredient: effective, productName: shownName }
     const found = validateUnknownForm(final, mode)
     setErrors(found)
@@ -141,7 +146,7 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
         />
 
         {guard.kind === 'exists' ? (
-          <div className="unknown-sheet__guard" role="status">
+          <div className="unknown-sheet__guard" role="status" ref={guardRow} tabIndex={-1}>
             <p>{scanStrings.guard.alreadyExists(guard.ingredient.name)}</p>
             <Button variant="tertiary" onClick={() => adopt(guard.ingredient)}>
               {scanStrings.guard.useExisting(guard.ingredient.name)}
@@ -149,7 +154,7 @@ export function UnknownBarcodeSheet({ open, onClose, mode, shopName, ingredients
           </div>
         ) : null}
         {guard.kind === 'similar' ? (
-          <div className="unknown-sheet__guard" role="status">
+          <div className="unknown-sheet__guard" role="status" ref={guardRow} tabIndex={-1}>
             <p>{scanStrings.guard.didYouMean(guard.suggestions.map((s) => s.ingredient.name).join(', '))}</p>
             <div className="unknown-sheet__guard-actions">
               {guard.suggestions.map((s) => (

@@ -79,7 +79,7 @@
 
 .board-clock__time {
   margin: 0;
-  font-size: 32cqi;
+  font-size: 22cqi; /* phone: the half-width cell is 163 px at 390 (123 px of content); the wall grid restores 32cqi */
   line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -87,7 +87,20 @@
 
 .board-clock__date {
   margin: 8px 0 0;
-  font-size: 2rem;
+  font-size: 12cqi; /* phone: "Wednesday" and "November" fit 123 px; the wall grid restores 2rem */
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 600px) {
+  .board-clock__time {
+    font-size: 32cqi;
+  }
+
+  .board-clock__date {
+    font-size: 2rem;
+    line-height: inherit;
+  }
 }
 
 .board-tonight {

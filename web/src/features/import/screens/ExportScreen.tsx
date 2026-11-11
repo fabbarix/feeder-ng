@@ -12,7 +12,11 @@ export function ExportScreen(): ReactNode {
   return (
     <section className="import-screen">
       <PageHeader title={s.exportTitle} breadcrumbs={useBreadcrumbs()} />
-      {p.isLoading ? <Skeleton variant="row" count={5} /> : null}
+      {p.isLoading ? (
+        <div aria-busy="true">
+          <Skeleton variant="row" count={5} />
+        </div>
+      ) : null}
       {p.error ? <ErrorState message={p.error.message} /> : null}
       {!p.isLoading && !p.error ? (
         <ExportPicker recipes={p.recipes} selected={p.selected} onToggle={p.toggle} onSelectAll={p.selectAll} onClear={p.clear} href={p.href} />

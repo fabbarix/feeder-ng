@@ -36,7 +36,7 @@ When these are applied, `import.css` has no `max-width`, `position: sticky`, or 
 
 ## Product questions
 
-1. **"Throw out or keep?" rows as ListRows (L-07)** is listed for R2-2 (Today) but `SpoiledTile` lives in `features/stock` and is exported to Today. Who changes it? This package leaves `SpoiledTile` as it is, and only moves it into the Stock aside; PM to confirm R2-2 owns the ListRow change (it must then touch `stock/components/SpoiledTile.tsx` and `stock.css`: serialise with this team).
+1. **"Throw out or keep?" rows as ListRows (L-07)**: resolved. `SpoiledTile` lives in `features/stock` and this package (R2-4) owns the ListRow change, made in the Stock aside; R2-2 (Today) only consumes the tile.
 2. Stock aside on tablets (820-1279 px) stays one column; confirm that is intended (the review only asks for >= 1280).
 3. Duplicate guard when the match is found for a Scan: should "Use garlic" also keep the pack size and Product name the User already typed? The tests say yes (only the Ingredient changes), and the prefilled Product name follows the new Ingredient unless the User edited it.
 
