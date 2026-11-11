@@ -25,9 +25,24 @@ export interface MergeSummaryInput {
   bothRecipes?: number
 }
 
+const courseOf = (rule: ImpactSlotRule): number | null => rule.courseId ?? null
+
 export function mergeSummary(input: MergeSummaryInput): MergeSummary {
-  void input
-  throw new Error('TG-UI: not implemented')
+  const { sourceImpact, targetImpact } = input
+  const taken = (rule: ImpactSlotRule) => targetImpact.slotRules.some((t) => t.mealSlotId === rule.mealSlotId && courseOf(t) === courseOf(rule))
+  const droppedRules = sourceImpact.slotRules.filter(taken)
+  const movedRules = sourceImpact.slotRules.filter((rule) => !taken(rule))
+  let varietyRule: MergeSummary['varietyRule'] = 'none'
+  if (sourceImpact.varietyRule) varietyRule = targetImpact.varietyRule ? 'goes' : 'moves'
+  return {
+    source: input.source.name,
+    target: input.target.name,
+    recipes: sourceImpact.recipes,
+    bothRecipes: input.bothRecipes ?? 0,
+    movedRules,
+    droppedRules,
+    varietyRule,
+  }
 }
 
 export interface DeleteSummary {
@@ -40,6 +55,12 @@ export interface DeleteSummary {
 }
 
 export function deleteSummary(input: { tag: Pick<Tag, 'name'>; impact: TagImpact }): DeleteSummary {
-  void input
-  throw new Error('TG-UI: not implemented')
+  const { impact } = input
+  return {
+    name: input.tag.name,
+    recipes: impact.recipes,
+    rules: impact.slotRules,
+    varietyRule: impact.varietyRule,
+    hasRules: impact.slotRules.length > 0 || impact.varietyRule !== null,
+  }
 }

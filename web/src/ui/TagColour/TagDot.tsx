@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { isTagColour } from '../../lib/tags/palette'
 import './TagColour.css'
 
 export interface TagDotProps {
@@ -8,6 +9,5 @@ export interface TagDotProps {
 
 /** The Tag colour's dot alone, 8 px, decorative: for list rows and select options (spec 4.1). */
 export function TagDot({ colour }: TagDotProps): ReactNode {
-  void colour
-  return null // TG-UI stub
+  return <span className="tag-dot" aria-hidden="true" data-tag-colour={isTagColour(colour) ? colour : undefined} />
 }

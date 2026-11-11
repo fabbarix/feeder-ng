@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { resolveChip, type LegacyChipTone } from './lib/legacy'
+import { isTagColour } from '../lib/tags/palette'
 import './Chip.css'
 
 export type ChipKind = 'why' | 'state' | 'status' | 'tag' | 'filter' | 'count'
@@ -55,7 +56,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, tone, icon, selected, disabled, onClick, label, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, tone, icon, selected, disabled, tagColour, onClick, label, 'aria-describedby': describedBy, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -63,6 +64,10 @@ export function Chip({ kind, status, tone, icon, selected, disabled, onClick, la
     finalKind = 'tag'
   }
   const finalStatus = finalKind === 'state' || finalKind === 'status' ? resolved.status : undefined
+
+  // spec 4.1: a Tag colour tints a tag chip, and a filter chip only while it is selected; an unknown id is neutral.
+  const tagged = (finalKind === 'tag' || finalKind === 'filter') && isTagColour(tagColour) ? tagColour : undefined
+  const showDot = Boolean(tagged) && (finalKind === 'tag' || !selected)
 
   let leading: ReactNode = null
   if (icon) leading = renderIcon(icon, 14)
@@ -74,11 +79,12 @@ export function Chip({ kind, status, tone, icon, selected, disabled, onClick, la
 
   const content = (
     <>
+      {showDot ? <span className="chip__dot" aria-hidden="true" /> : null}
       {leading}
       {children}
     </>
   )
-  const attrs = { 'data-kind': finalKind, 'data-status': finalStatus, 'data-tone': tone }
+  const attrs = { 'data-kind': finalKind, 'data-status': finalStatus, 'data-tone': tone, 'data-tag-colour': tagged }
 
   if (onClick || finalKind === 'filter') {
     return (
