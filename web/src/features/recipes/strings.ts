@@ -75,6 +75,8 @@ export const recipeStrings = {
     readyMealHint: 'Made from one bought pack',
     tags: 'Tags',
     tagInput: 'Add a Tag',
+    tagSuggestions: 'Existing Tags',
+    tagRecipes: (n: number) => (n === 1 ? '1 Recipe' : `${n} Recipes`),
     removeTag: (tag: string) => `Remove Tag ${tag}`,
     cooldown: 'Cool-down',
     cooldownHint: 'Blank uses the household default',

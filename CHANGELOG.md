@@ -4,7 +4,9 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Tag suggestions.** While you type a Tag on a Recipe, the Tags the Household already uses are listed under the field with how many Recipes carry each; pick one with the arrows and Enter, or a tap. Typing an existing Tag in another spelling ("Pasta" for "pasta") picks that Tag, so no duplicate is made.
 
 ## [1.0.0-beta.3] - 2026-11-11
 
