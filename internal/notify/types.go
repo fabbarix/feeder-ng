@@ -7,6 +7,8 @@ package notify
 import (
 	"errors"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 )
 
 // Type is one notification type a User can opt in to per device. The string
@@ -56,16 +58,24 @@ type Facts struct {
 	AccessRequests []AccessRequestFact
 }
 
-// MealFact is one Planned Meal.
+// MealFact is one Planned Meal: one Course of a Meal Slot (ADR 0008). A FactSource lists the
+// Planned Meals of a slot together, in the slot's Course order, which is the order Compute gives
+// cook.Timeline.
 type MealFact struct {
 	Date         string // household date of the slot, YYYY-MM-DD
 	MealSlotID   int64
+	CourseID     int64 // the Course this Planned Meal fills
 	RecipeName   string
-	SlotAt       time.Time     // the slot instant (exact)
-	State        string        // MealPlanned, or cooked / skipped (no reminders)
-	FromLeftover bool          // served from a Leftover: nothing to start or prepare
-	TotalTime    time.Duration // the Recipe's total time (critical path); 0 = unknown
-	AdvanceSteps []AdvanceStepFact
+	SlotAt       time.Time // the slot instant (exact)
+	State        string    // MealPlanned, or cooked / skipped (no reminders)
+	FromLeftover bool      // served from a Leftover: nothing to start or prepare
+	// Steps are the Recipe's Steps (Advance Steps included, as schedule.Compute wants them). They feed
+	// cook.Timeline for Start cooking. Empty for a Leftover-served meal.
+	Steps []schedule.Step
+	// ReheatSeconds is the length of the Reheat of a Leftover-served meal (FromLeftover); 0 = no Reheat
+	// to place on the timeline.
+	ReheatSeconds int
+	AdvanceSteps  []AdvanceStepFact
 }
 
 // AdvanceStepFact is one Advance Step of the meal's Recipe.

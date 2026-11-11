@@ -19,6 +19,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/db"
 	"github.com/fabbarix/feeder-ng/internal/notify"
 	notifyapi "github.com/fabbarix/feeder-ng/internal/notify/httpapi"
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	"github.com/fabbarix/feeder-ng/internal/testkit"
 )
 
@@ -307,6 +308,12 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	totalSteps := func(total time.Duration) []schedule.Step {
+		if total <= 0 {
+			return nil
+		}
+		return []schedule.Step{{Kind: schedule.Active, DurationMinutes: int(total / time.Minute)}}
+	}
 	addMeal := func(name, hhmm string, total time.Duration, steps ...notify.AdvanceStepFact) {
 		f := nw().facts
 		f.mu.Lock()
@@ -314,7 +321,8 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 		slotAt := at(0, hhmm)
 		f.f.Meals = append(f.f.Meals, notify.MealFact{
 			Date: dateStr(0), MealSlotID: int64(len(f.f.Meals) + 1), RecipeName: name, SlotAt: slotAt,
-			State: notify.MealPlanned, TotalTime: total, AdvanceSteps: steps,
+			State: notify.MealPlanned, CourseID: 1, AdvanceSteps: steps,
+			Steps: totalSteps(total),
 		})
 	}
 	sc.Step(`^dinner "([^"]*)" is planned for (\d\d:\d\d) today with the Advance Step "([^"]*)" (\d+) hours ahead$`, func(name, hhmm, step string, hours int) {
@@ -322,6 +330,26 @@ func notifyOpsSteps(sc *godog.ScenarioContext, w *World) {
 	})
 	sc.Step(`^dinner "([^"]*)" is planned for (\d\d:\d\d) today taking (\d+) minutes in total$`, func(name, hhmm string, mins int) {
 		addMeal(name, hhmm, time.Duration(mins)*time.Minute)
+	})
+	// alsoCourse adds a second Course (id 2) to the slot of the named dinner.
+	alsoCourse := func(dinner, name string, steps []schedule.Step, adv ...notify.AdvanceStepFact) error {
+		f := nw().facts
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		for _, m := range f.f.Meals {
+			if m.RecipeName == dinner {
+				m.CourseID, m.RecipeName, m.Steps, m.AdvanceSteps = 2, name, steps, adv
+				f.f.Meals = append(f.f.Meals, m)
+				return nil
+			}
+		}
+		return fmt.Errorf("no dinner %q", dinner)
+	}
+	sc.Step(`^the dinner "([^"]*)" also has the Course "([^"]*)" taking (\d+) minutes$`, func(dinner, name string, mins int) error {
+		return alsoCourse(dinner, name, totalSteps(time.Duration(mins)*time.Minute))
+	})
+	sc.Step(`^the dinner "([^"]*)" also has the Course "([^"]*)" with the Advance Step "([^"]*)" (\d+) hours ahead$`, func(dinner, name, step string, hours int) error {
+		return alsoCourse(dinner, name, nil, notify.AdvanceStepFact{ID: 1, Description: step, Lead: time.Duration(hours) * time.Hour})
 	})
 	sc.Step(`^dinner "([^"]*)" has been cooked$`, func(name string) error {
 		f := nw().facts

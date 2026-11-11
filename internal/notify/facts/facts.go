@@ -97,9 +97,9 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			return notify.Facts{}, err
 		}
 		mf := notify.MealFact{
-			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, RecipeName: rec.Name, SlotAt: at,
+			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: m.Key.CourseID, RecipeName: rec.Name, SlotAt: at,
 			State: string(m.State), FromLeftover: !m.Fresh(),
-			TotalTime: time.Duration(rec.Timing.TotalMinutes) * time.Minute,
+			// TODO(crs-g1): Steps (fresh) or ReheatSeconds (Leftover), and meals in Course order.
 		}
 		for i, st := range rec.Steps {
 			if st.Kind == schedule.Advance {

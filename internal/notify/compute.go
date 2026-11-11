@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
 
@@ -43,7 +44,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			for _, s := range m.AdvanceSteps {
 				at := m.SlotAt.Add(-s.Lead)
 				out = append(out, Candidate{
-					Key:   candidateKey(AdvanceStep, fmt.Sprintf("%s/%d", meal, s.ID), at),
+					Key:   candidateKey(AdvanceStep, fmt.Sprintf("%s/%d", meal, s.ID), at), // TODO(crs-g1): "<date>/<slot>/<course>/<step>"
 					Type:  AdvanceStep,
 					At:    at,
 					Title: "Advance Step",
@@ -51,8 +52,9 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 					URL:   planURL,
 				})
 			}
-			if m.TotalTime > 0 {
-				at := m.SlotAt.Add(-m.TotalTime)
+			// TODO(crs-g1): one Start cooking per slot, from cook.Timeline over all the slot's Courses.
+			if total := singleCourseTotal(m); total > 0 {
+				at := m.SlotAt.Add(-total)
 				out = append(out, Candidate{
 					Key:   candidateKey(StartCooking, meal, at),
 					Type:  StartCooking,
@@ -119,6 +121,15 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 	}
 	sortCandidates(out)
 	return out
+}
+
+// singleCourseTotal is the stub's timeline total for one Course on its own.
+func singleCourseTotal(m MealFact) time.Duration {
+	r, err := cook.Timeline([]cook.Course{{ID: m.CourseID, Steps: m.Steps}})
+	if err != nil {
+		return 0
+	}
+	return time.Duration(r.TotalSeconds) * time.Second
 }
 
 // capRunes shortens s to at most n runes, ending in an ellipsis when it was cut.
