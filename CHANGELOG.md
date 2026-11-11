@@ -4,7 +4,11 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Pantry.** The Stock page is now the Pantry. It lists every Stock Lot by Storage Place, with search, filters (Use soon, Spoiled, Storage Places, kinds) and sorting (good until, name, quantity, bought, Storage Place). "By Ingredient" keeps the per-Ingredient totals.
+- **Storage Places.** Add places such as Kitchen Pantry, Garage Fridge or Garage Freezer in Settings, each a pantry, fridge or freezer, and pick a default. New Stock goes where that Ingredient was last put. Move a Stock Lot, or part of it, from its sheet on the Pantry page.
+- **Frozen Shelf Life.** An Ingredient can say how long it keeps frozen. A Stock Lot moved into a Freezer is good for that long from the day it goes in; out of the Freezer, its ordinary Shelf Life starts again.
 
 ## [1.0.0-beta.2] - 2026-11-11
 

@@ -68,7 +68,7 @@ export const stockStrings = {
   usualPlace: 'Where it usually goes',
   places: {
     title: 'Storage Places',
-    intro: 'Where the Household keeps its food. New Stock goes where that Ingredient was last put, else to the default.',
+    intro: 'Where the Household keeps its Stock. New Stock goes where that Ingredient was last put, else to the default.',
     empty: 'No Storage Places yet',
     add: 'Add Storage Place',
     edit: 'Edit Storage Place',
@@ -76,9 +76,9 @@ export const stockStrings = {
     nameHint: 'For example Kitchen Pantry, Garage Fridge or Chest Freezer.',
     kind: 'Kind',
     kindHint: {
-      pantry: 'Food keeps for its Shelf Life.',
-      fridge: 'Food keeps for its Shelf Life.',
-      freezer: 'Food keeps for its frozen Shelf Life (set on each Ingredient).',
+      pantry: 'Stock keeps for its Shelf Life.',
+      fridge: 'Stock keeps for its Shelf Life.',
+      freezer: 'Stock keeps for its frozen Shelf Life (set on each Ingredient).',
     },
     default: 'Default for new Stock',
     defaultMeta: 'Default',

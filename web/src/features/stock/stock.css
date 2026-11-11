@@ -111,3 +111,22 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* Pantry: the Storage Place groups, one ListGroup each, spaced like the page's sections. */
+.pantry-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* The Lot sheet: its facts (quantity, good until, place, bought) and the "Move to" heading. */
+.lot-sheet__facts {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.lot-sheet__heading {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+}
