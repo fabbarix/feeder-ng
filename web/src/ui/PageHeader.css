@@ -11,6 +11,7 @@
 
 .page-header__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
@@ -23,8 +24,14 @@
   flex: none;
 }
 
+/* Wrapped actions stay at the inline end. */
+.page-header__actions {
+  margin-inline-start: auto;
+}
+
+/* A title that would get less than 12rem sends the actions to a second line. */
 .page-header__text {
-  flex: 1;
+  flex: 1 1 12rem;
   min-inline-size: 0;
 }
 
@@ -33,7 +40,7 @@
   font-size: var(--text-title-1-size);
   line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .page-header__subtitle {

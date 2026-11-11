@@ -36,3 +36,17 @@ describe('PageHeader', () => {
     expect(d['font-weight']).toBe('var(--text-title-1-weight)')
   })
 })
+
+describe('PageHeader, wrapping order (SF1)', () => {
+  it('puts the title block before the actions in the row, so wrapped actions fall below the title', () => {
+    const { container } = render(<PageHeader title="Pantry" actions={<IconButton icon="regenerate" label="Re-plan" />} />)
+    const kids = [...(container.querySelector('.page-header__row')?.children ?? [])].map((c) => c.className)
+    expect(kids).toEqual(['page-header__text', 'page-header__actions'])
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pantry')
+  })
+
+  it('does not force a break inside the title with inline styles', () => {
+    render(<PageHeader title="Pantry" />)
+    expect(screen.getByRole('heading', { level: 1 }).getAttribute('style')).toBeNull()
+  })
+})
