@@ -55,18 +55,22 @@
   padding-bottom: 0;
 }
 
-/* Phone: floating bottom bar, inset 12 px plus the safe area, centred up to 480 px. */
+/* Phone: floating bottom bar, inset 12 px plus the safe area, centred up to 480 px.
+   Six buttons (PN): Today, Plan, Pantry | Scan | Shop, Recipes. The 1fr columns are equal on each side of the 58 px Scan
+   track (three on the left, two on the right at 1.5fr), so Scan's centre is the bar's centre at every width. */
 .bottom-bar {
   position: fixed;
-  left: var(--nav-inset);
-  right: var(--nav-inset);
+  left: calc(var(--nav-inset) + env(safe-area-inset-left, 0px));
+  right: calc(var(--nav-inset) + env(safe-area-inset-right, 0px));
   bottom: calc(var(--nav-inset) + env(safe-area-inset-bottom, 0px));
   z-index: 10;
   height: var(--nav-height);
   max-width: 480px;
   margin-inline: auto;
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 58px 1.5fr 1.5fr;
+  gap: 0;
+  padding: 0;
   align-items: center;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -80,7 +84,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 62px;
+  width: 100%;
+  min-width: 44px;
   height: 54px;
   border-radius: var(--radius-button);
   color: var(--color-muted);
@@ -109,6 +114,8 @@
   font-size: var(--text-nav-size);
   line-height: 1;
   font-weight: var(--text-nav-weight);
+  /* A label is never wrapped or cut short: the cell is wide enough for the longest one ("Pantry", "Recipes"). */
+  white-space: nowrap;
 }
 
 /* Side rail: hidden on phones; the grid column and the rail appear from 1024. */
@@ -156,6 +163,8 @@
     top: 0;
     align-self: start;
     max-height: 100dvh;
+    /* Six destinations on a short landscape screen scroll inside the rail rather than clip. */
+    overflow-y: auto;
     padding-block: var(--space-3);
   }
 

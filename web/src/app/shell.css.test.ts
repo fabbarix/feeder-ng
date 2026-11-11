@@ -97,9 +97,9 @@ describe('bottom bar (plan 4.5)', () => {
     expect(bar['background']).toBe('var(--color-surface)')
     expect(code).toMatch(/\.bottom-bar[^{}]*\{[^{}]*(margin-inline\s*:\s*auto|margin\s*:[^;]*auto)/)
   })
-  it('items are 62 x 54, radius 16, icon over a 11/800 label', () => {
+  it('items are 54 high (PN: the width comes from the grid track, no longer a fixed 62), radius 16, icon over a 11/800 label', () => {
     const link = d('.bottom-bar__link')
-    expect(link['width']).toBe('62px')
+    expect(link['width']).toBe('100%')
     expect(link['height']).toBe('54px')
     expect(link['border-radius']).toBe('var(--radius-button)')
     expect(link['flex-direction']).toBe('column')
@@ -265,5 +265,82 @@ describe('rail current item contrast (L-04, R2-L)', () => {
   })
   it('a Scan item that is current at 1440 never sets the soft background on the link itself', () => {
     expect(rail1440).not.toMatch(/\[data-accent='true'\]\[aria-current='page'\]\s*\{[^}]*var\(--color-soft\)\s*;?\s*\}/)
+  })
+})
+
+describe('bottom bar with six buttons: Today, Plan, Pantry | Scan | Shop, Recipes (PN)', () => {
+  const bar = () => d('.bottom-bar')
+  const tracks = () => (bar()['grid-template-columns'] ?? '').trim().split(/\s+/).filter(Boolean)
+  const fr = (t: string) => (/^([\d.]+)fr$/.exec(t) ? Number(/^([\d.]+)fr$/.exec(t)![1]) : null)
+  const px = (t: string) => (/^([\d.]+)px$/.exec(t) ? Number(/^([\d.]+)px$/.exec(t)![1]) : null)
+
+  /** Pixel width of every track at a viewport width, no safe-area inset (the safe-area env() is 0 on these phones). */
+  function layout(viewport: number) {
+    const barW = Math.min(viewport - 2 * 12, 480)
+    const inner = barW - 2 // 1 px border each side
+    const t = tracks()
+    const fixed = t.reduce((n, x) => n + (px(x) ?? 0), 0)
+    const frs = t.reduce((n, x) => n + (fr(x) ?? 0), 0)
+    const widths = t.map((x) => px(x) ?? ((fr(x) ?? 0) * (inner - fixed)) / frs)
+    const left = widths.slice(0, 3).reduce((n, w) => n + w, 0)
+    const scanLeft = left
+    return { barW, inner, widths, scanCentre: 1 + scanLeft + widths[3]! / 2, barCentre: barW / 2 }
+  }
+
+  it('is a six-track grid in DOM order: three destinations, Scan, two destinations', () => {
+    expect(bar()['display']).toBe('grid')
+    expect(tracks()).toHaveLength(6)
+  })
+  it('the Scan track is the fixed 58 px one, in the fourth place; the other five share the rest by fr', () => {
+    const t = tracks()
+    expect(px(t[3]!)).toBe(58)
+    for (const i of [0, 1, 2, 4, 5]) expect(fr(t[i]!), `track ${i}`).not.toBeNull()
+  })
+  it('Scan is centred: the fr weights on its left equal those on its right (3 buttons on one side, 2 on the other)', () => {
+    const t = tracks()
+    const sum = (xs: string[]) => xs.reduce((n, x) => n + (fr(x) ?? 0), 0)
+    expect(sum(t.slice(0, 3))).toBeCloseTo(sum(t.slice(4)), 5)
+  })
+  it.each([360, 375, 390, 412, 430, 480, 600])('at %i px the Scan centre is the bar centre (within 0.5 px)', (vw) => {
+    const l = layout(vw)
+    expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
+  })
+  it.each([360, 375, 390, 412, 430])('at %i px every destination track is at least 44 px wide', (vw) => {
+    const l = layout(vw)
+    expect(l.widths).toHaveLength(6)
+    l.widths.forEach((w, i) => expect(w, `track ${i}`).toBeGreaterThanOrEqual(44))
+  })
+  it('every button keeps a 44 x 44 minimum target (min-width, and height >= 44)', () => {
+    const link = d('.bottom-bar__link')
+    expect(link['min-width']).toBe('44px')
+    expect(Number.parseFloat(link['height'] ?? '0')).toBeGreaterThanOrEqual(44)
+    expect(Number.parseFloat(d(".bottom-bar__link[data-accent='true']")['height'] ?? '0')).toBeGreaterThanOrEqual(44)
+  })
+  it('tracks may not shrink below the target: no track is a bare 0-based fr that can collapse (grid items min-width 44 px holds them)', () => {
+    expect(d('.bottom-bar__link')['min-width']).toBe('44px')
+    expect(bar()['gap'] ?? '0').toMatch(/^0(px)?$/)
+    expect(bar()['padding'] ?? '0').toMatch(/^0(px)?$/)
+  })
+  it('labels never wrap or truncate: nowrap, no ellipsis, no clipping', () => {
+    const label = d('.bottom-bar__label')
+    expect(label['white-space']).toBe('nowrap')
+    expect(label['text-overflow']).toBeUndefined()
+    expect(label['overflow'] ?? 'visible').toBe('visible')
+    expect(label['line-height']).toBe('1')
+  })
+  it('respects the safe-area insets on all three sides: bottom (already), and left and right in landscape', () => {
+    const b = bar()
+    expect(b['bottom']).toMatch(/var\(--nav-inset\).*env\(safe-area-inset-bottom/)
+    expect(b['left']).toMatch(/var\(--nav-inset\).*env\(safe-area-inset-left/)
+    expect(b['right']).toMatch(/var\(--nav-inset\).*env\(safe-area-inset-right/)
+  })
+  it('still floats centred up to 480 px (margin-inline auto) and keeps the 70 px height', () => {
+    expect(bar()['max-width']).toBe('480px')
+    expect(bar()['height']).toBe('var(--nav-height)')
+  })
+  it('the rail needs no change for the sixth item: 6 x 56 + gaps fit a 100dvh rail, and the rail scrolls rather than clips on short screens', () => {
+    const rail = (media('min-width: 1024px').match(/\.side-rail\s*\{([^}]*)\}/) ?? [])[1] ?? ''
+    expect(rail).toMatch(/max-height\s*:\s*100dvh/)
+    expect(rail).toMatch(/overflow-y\s*:\s*auto/)
   })
 })

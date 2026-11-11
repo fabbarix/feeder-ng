@@ -17,6 +17,16 @@ has "^//  11\\." "the header comment must document rule 11"
 has "'/scan'" "rule 11 needs /scan in ROUTES (the accent item that was unreadable)"
 # the min(1100, ...) cap is gone from rule 9: <main> is the grid column now (R2-L)
 grep -Eq "Math\\.min\\(1100" "$F" && bad "rule 9 must not cap <main> at 1100 any more (the cap moved to ui/Page)" || ok
+# PN: six bottom-bar buttons (Today, Plan, Pantry | Scan | Shop, Recipes) on the narrowest phones
+has "width: 360, height: 800" "VIEWPORTS must include 360x800 (the narrowest phone the bar must fit)"
+has "width: 430, height: 932" "VIEWPORTS must include 430x932"
+has "'/pantry'" "ROUTES must include /pantry (the Pantry tab must be current there)"
+has "^//  12\\." "the header comment must document rule 12 (the six-button bar)"
+has "[Ss]can.*centre|centre.*[Ss]can|centred" "rule 12 must check that Scan is centred in the bar"
+has ">= 44|at least 44" "rule 12 must require a 44 px target for every bar button"
+has "bottom-bar__label.*scrollWidth|scrollWidth.*bottom-bar__label|barLabel" "rule 12 must check that no bar label is truncated (scrollWidth <= clientWidth)"
+has "safe-area|safeArea" "rule 12 must mention the safe-area insets"
+grep -Eq "ROUTES = \[[^]]*'/stock'" "$F" && bad "ROUTES must not list /stock as a page any more (it redirects); a separate redirect check may name it" || ok
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"

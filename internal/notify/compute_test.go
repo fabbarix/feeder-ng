@@ -231,7 +231,7 @@ func TestCandidatesDeepLinkToTheScreenThatActsOnThem(t *testing.T) {
 	cs := notify.Compute(f, rome)
 	want := map[notify.Type]string{
 		notify.AdvanceStep: "/plan", notify.StartCooking: "/plan", notify.ConfirmCooked: "/plan",
-		notify.LeftoverUseBy: "/plan", notify.StockSpoil: "/stock",
+		notify.LeftoverUseBy: "/plan", notify.StockSpoil: "/pantry",
 	}
 	for typ, url := range want {
 		if got := only(t, cs, typ).URL; got != url {

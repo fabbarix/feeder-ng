@@ -8,7 +8,7 @@ const concrete = (p: string) => p.replace(/:[a-zA-Z]+/g, '7')
 describe('pageWidthFor: the per-route width table', () => {
   it.each([
     ['/', 'wide'],
-    ['/stock', 'default'],
+    ['/pantry', 'default'],
     ['/recipes/7', 'default'],
     ['/recipes/7/edit', 'default'],
     ['/recipes/new', 'default'],
@@ -81,5 +81,14 @@ describe('ROUTE_WIDTHS: no redundant entries', () => {
   it('/settings/recipe-assistant is covered by /settings/*', () => {
     expect(ROUTE_WIDTHS.map((r) => r.path)).not.toContain('/settings/recipe-assistant')
     expect(pageWidthFor('/settings/recipe-assistant')).toBe('narrow')
+  })
+})
+
+describe('/pantry is the canonical Pantry route (PN)', () => {
+  it('/pantry is listed; /stock is only a redirect, so it has no row of its own', () => {
+    const paths = ROUTE_WIDTHS.map((r) => r.path)
+    expect(paths).toContain('/pantry')
+    expect(paths).not.toContain('/stock')
+    expect(explicitPageWidth('/pantry')).toBe('default')
   })
 })
