@@ -10,6 +10,7 @@ describe('settings feature routes (WP11)', () => {
       '/settings/meal-slots',
       '/settings/allowlist',
       '/settings/preferences',
+      '/settings/recipe-assistant',
     ])
   })
 

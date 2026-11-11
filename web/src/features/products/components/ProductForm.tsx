@@ -1,4 +1,4 @@
-import { Button, TextField } from '../../../ui'
+import { Button, FormActions, TextField } from '../../../ui'
 import { useProductForm } from '../hooks/useProductForm'
 import { strings } from '../strings'
 import type { BaseUnit, NewProduct } from '../types'
@@ -27,19 +27,25 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, onSubmit }
         void form.submit()
       }}
     >
-      <TextField label={strings.nameLabel} value={form.values.name} onChange={form.setName} error={form.errors.name} />
+      <TextField size="lg" label={strings.nameLabel} value={form.values.name} onChange={form.setName} error={form.errors.name} />
       <TextField
+        size="sm"
         label={strings.packSizeLabel(baseUnit)}
+        suffix={baseUnit}
         inputMode="decimal"
         value={form.values.packSize}
         onChange={form.setPackSize}
         error={form.errors.packSize}
       />
-      <TextField label={strings.barcodeLabel} inputMode="numeric" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
+      <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
       {form.serverError ? <p role="alert">{form.serverError}</p> : null}
-      <Button type="submit" loading={form.saving}>
-        {strings.saveProduct}
-      </Button>
+      <FormActions
+        primary={
+          <Button type="submit" loading={form.saving}>
+            {strings.saveProduct}
+          </Button>
+        }
+      />
     </form>
   )
 }

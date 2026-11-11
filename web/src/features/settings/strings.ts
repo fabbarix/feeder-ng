@@ -24,6 +24,7 @@ export const settingsStrings = {
       accessRequests: { title: 'Sign-in requests', meta: 'Who asked to join' },
       notifications: { title: 'Notifications', meta: 'Which alerts reach this device' },
       allowlist: { title: 'Allowlist', meta: 'Who may sign in to Feeder' },
+      recipeAssistant: { title: 'Recipe Assistant', meta: 'Reads recipes from a photo or a web page' },
     },
   },
   loading: 'Loading',
@@ -169,5 +170,7 @@ export const settingsStrings = {
     accent: 'Accent colour',
     customAccent: 'Custom accent colour',
     save: 'Save preferences',
+    preview: 'Preview',
+    previewSample: 'Sample',
   },
 }

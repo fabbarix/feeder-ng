@@ -25,11 +25,11 @@ export function BaseUnitPicker({ value, onChange, disabled }: BaseUnitPickerProp
   const helperId = `${base}-helper`
   const roving = useRovingRadios(BASE_UNITS.map((v) => ({ value: v, disabled })), value, onChange)
   return (
-    <div className="new-ingredient__section">
-      <span id={labelId} className="new-ingredient__label">
+    <div className="base-unit">
+      <span id={labelId} className="base-unit__label">
         {strings.baseUnitLabel}
       </span>
-      <div role="radiogroup" aria-labelledby={labelId} aria-describedby={helperId} className="new-ingredient__options">
+      <div role="radiogroup" aria-labelledby={labelId} aria-describedby={helperId} className="base-unit__options">
         {BASE_UNITS.map((unit) => {
           const checked = unit === value
           return (
@@ -41,7 +41,7 @@ export function BaseUnitPicker({ value, onChange, disabled }: BaseUnitPickerProp
               aria-checked={checked}
               tabIndex={unit === roving.tabStop ? 0 : -1}
               disabled={disabled}
-              className="new-ingredient__unit"
+              className="base-unit__option"
               onClick={() => onChange(unit)}
               onKeyDown={(e) => roving.onKeyDown(e, unit)}
             >
@@ -52,7 +52,7 @@ export function BaseUnitPicker({ value, onChange, disabled }: BaseUnitPickerProp
           )
         })}
       </div>
-      <p id={helperId} className="new-ingredient__helper">
+      <p id={helperId} className="base-unit__helper">
         {strings.sheet.baseUnitHelper}
       </p>
     </div>

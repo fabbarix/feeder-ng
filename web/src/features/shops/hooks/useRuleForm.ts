@@ -11,6 +11,7 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
   const [sample, setSample] = useState('')
   const [serverError, setServerError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [attempted, setAttempted] = useState(false)
 
   const rule = useMemo(() => toRule(values), [values])
   const error = useMemo(() => ruleFormError(values), [values])
@@ -24,6 +25,7 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
   }
 
   const submit = async () => {
+    setAttempted(true)
     if (!rule || error !== null) return
     const { id: _id, ...body } = rule
     void _id
@@ -38,6 +40,8 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
     }
   }
 
-  return { values, sample, setSample, setField, error, preview, serverError, saving, submit }
+    /** The validation reason, shown only once Save was pressed. */
+  const shownError = attempted ? error : null
+  return { values, sample, setSample, setField, error, shownError, preview, serverError, saving, submit }
 }
 
