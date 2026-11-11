@@ -125,5 +125,80 @@ echo 'exit 3' >"$TMP/fake-seed.sh"
 run_full "" 'default=warn\n'
 server_gone && ok || bad "the server must be stopped when the seeder fails"
 
+
+# =====================================================================================================================
+# R2-L-b follow-ups: bounded run times and no leaked Chrome profile dirs.
+# =====================================================================================================================
+DRV="$ROOT/scripts/check-page-layout.mjs"; SEED="$ROOT/scripts/test/fixtures/page-layout-seed.mjs"
+
+# --- static: the wrapper limit is about 300 s (was 900), the seeder is limited too, every CDP call has a timeout
+grep -q 'timeout 900' "$W" && bad "the guard limit must be about 300 s, not 900"  || ok
+grep -Eq 'PAGE_LAYOUT_GUARD_TIMEOUT:-300' "$W" && ok || bad "the guard time limit must default to 300 s (PAGE_LAYOUT_GUARD_TIMEOUT)"
+grep -Eq 'PAGE_LAYOUT_SEED_TIMEOUT:-[0-9]+' "$W" && ok || bad "the seeder must run under its own time limit (PAGE_LAYOUT_SEED_TIMEOUT)"
+grep -q 'AbortSignal.timeout' "$SEED" && ok || bad "every seeder fetch needs a timeout (AbortSignal.timeout)"
+grep -q 'PAGE_LAYOUT_CDP_TIMEOUT_MS' "$DRV" && ok || bad "the driver needs a per-call CDP timeout (PAGE_LAYOUT_CDP_TIMEOUT_MS)"
+grep -Eq 'ws\.onopen' "$DRV" && grep -Eq 'ws\.onerror|WebSocket.*timed out|connect.*timeout' "$DRV" && ok || bad "ws.onopen must be bounded by a timeout (and onerror)"
+grep -q 'page-layout-' "$DRV" && grep -Eq "mkdtempSync\(join\(tmpdir\(\)" "$DRV" && bad "the Chrome profile must not live in the system tmp dir (/tmp/page-layout-XXXX)" || ok
+
+# --- a hanging guard is cut off by the limit: WARN, exit 0, server stopped, quickly
+cat >"$TMP/hang.sh" <<'FS'
+sleep 30
+FS
+d="$(mktemp -d "$TMP/run.XXXX")"; PORT="$(free_port)"; printf 'default=warn\n' >"$d/modes"
+t0=$SECONDS
+OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" PAGE_LAYOUT_GUARD_TIMEOUT=2 \
+  PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="true" PAGE_LAYOUT_GUARD_CMD="bash $TMP/hang.sh" \
+  FAKE_ENV_OUT="$d/env" FAKE_PID_OUT="$d/pid" "$W" 2>&1); RC=$?; RUN="$d"
+[ "$RC" -eq 0 ] && grep -q 'WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && ok || bad "a hanging guard must be cut off by PAGE_LAYOUT_GUARD_TIMEOUT with a WARN and exit 0 (rc $RC, $((SECONDS - t0))s)"
+server_gone && ok || bad "the server must be stopped after a guard timeout"
+
+# --- a hanging seeder is cut off too
+d="$(mktemp -d "$TMP/run.XXXX")"; PORT="$(free_port)"; printf 'default=warn\n' >"$d/modes"
+t0=$SECONDS
+OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" PAGE_LAYOUT_SEED_TIMEOUT=2 \
+  PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="bash $TMP/hang.sh" PAGE_LAYOUT_GUARD_CMD="bash $TMP/fake-guard.sh" \
+  FAKE_ENV_OUT="$d/env" FAKE_PID_OUT="$d/pid" FAKE_GUARD_OUT="$d/guard" "$W" 2>&1); RC=$?; RUN="$d"
+[ "$RC" -eq 0 ] && grep -q 'WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && [ ! -e "$d/guard" ] && ok || bad "a hanging seeder must be cut off by PAGE_LAYOUT_SEED_TIMEOUT: WARN, exit 0, guard not run (rc $RC, $((SECONDS - t0))s)"
+server_gone && ok || bad "the server must be stopped after a seeder timeout"
+
+# --- driver: CDP trouble is exit 2 (environment), bounded, and leaves no Chrome profile dir behind
+profiles() { { ls -d "$1"/tmp/page-layout-* "$1"/page-layout-chrome-* 2>/dev/null || true; } | sort; } # TMPDIR is "$1"/tmp in drive(): a profile dir in the system tmp would land there
+drive() { # CHROME_BIN BUILD_DIR -> RC, DOUT
+  DOUT=$(cd "$ROOT" && TMPDIR="$2/tmp" CHROME="$1" PAGE_LAYOUT_CDP_TIMEOUT_MS=1500 PAGE_LAYOUT_CHROME_TIMEOUT_MS=3000 timeout 60 \
+    node "$DRV" --url "http://127.0.0.1:1" --ids "$2/page-layout-ids.json" 2>&1); RC=$?
+}
+b="$TMP/drv"; mkdir -p "$b/tmp"
+before=$(profiles "$b")
+printf '#!/bin/sh\nexit 0\n' >"$TMP/chrome-exits"; chmod +x "$TMP/chrome-exits"
+drive "$TMP/chrome-exits" "$b"
+[ "$RC" -eq 2 ] && ok || bad "Chrome that exits at once must be exit 2, not a finding (rc $RC): $DOUT"
+[ "$(profiles "$b")" = "$before" ] && ok || bad "no profile dir may remain after Chrome exited early"
+
+# a DevTools endpoint that accepts the TCP connection but never completes the WebSocket handshake: ws.onopen must time out
+cat >"$TMP/chrome-hang.sh" <<'FS'
+#!/bin/sh
+exec node -e '
+const s = require("http").createServer(() => {}).listen(0, "127.0.0.1", () => {
+  console.error("DevTools listening on ws://127.0.0.1:" + s.address().port + "/devtools/browser/x");
+});
+s.on("upgrade", () => {});
+setInterval(() => {}, 1000);
+'
+FS
+chmod +x "$TMP/chrome-hang.sh"
+t0=$SECONDS
+drive "$TMP/chrome-hang.sh" "$b"
+[ "$RC" -eq 2 ] && [ $((SECONDS - t0)) -lt 30 ] && grep -qi 'timed out' <<<"$DOUT" && ok || bad "a DevTools endpoint that never answers must give exit 2 with 'timed out' within seconds (rc $RC, $((SECONDS - t0))s): $DOUT"
+[ "$(profiles "$b")" = "$before" ] && ok || bad "no profile dir may remain after a CDP timeout"
+
+# a real Chrome, when there is one: a failed run (nothing listens on the URL) must clean up after itself
+REAL="$(command -v google-chrome || command -v chromium || true)"
+if [ -n "$REAL" ]; then
+  drive "$REAL" "$b"
+  [ "$RC" -eq 2 ] && ok || bad "real Chrome against a dead URL must exit 2 (rc $RC): $DOUT"
+  sleep 1
+  [ "$(profiles "$b")" = "$before" ] && ok || bad "real Chrome: no profile dir may remain (/tmp/page-layout-* or build/page-layout-chrome-*)"
+fi
+
 printf 'check-page-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
