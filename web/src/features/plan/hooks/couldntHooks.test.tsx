@@ -24,7 +24,7 @@ describe('useCouldntPlanNotice', () => {
       cause: 'nobody_attending',
       count: 3,
       summary: 'Every dinner this week',
-      headline: "3 meals couldn't be planned. Nobody is set to attend.",
+      headline: "Couldn't plan 3 Meal Slots. Nobody is set to attend.",
     })
   })
 
@@ -32,6 +32,21 @@ describe('useCouldntPlanNotice', () => {
     const planned = ['2026-11-13', '2026-11-14'].map((d) => slot({ date: d }))
     const { result } = renderHook(() => useCouldntPlanNotice(dinners, [...dinners, ...planned]))
     expect(result.current.groups[0]!.summary).toBe('Tuesday, Wednesday and Thursday dinners')
+  })
+
+  it('R13: past slots (no meal, no reason) are not part of "all": still "every dinner" at 23:56', () => {
+    const gone = slot({ date: '2026-11-10', meal: null, unfilled: null })
+    const { result } = renderHook(() => useCouldntPlanNotice(dinners, [gone, ...dinners]))
+    expect(result.current.groups[0]!.summary).toBe('Every dinner this week')
+  })
+
+  it('R13: attendance and the Cool-down setting are Admin duties; the fix is withheld from a plain User, not the rest', () => {
+    const cool = unplanned('2026-11-12', 'no_candidates', { considered: 2, coolDown: 2 })
+    const rule = unplanned('2026-11-13', 'no_candidates', { considered: 2, varietyRule: 2 })
+    const asUser = renderHook(() => useCouldntPlanNotice([...dinners, cool, rule], [...dinners, cool, rule], false)).result.current
+    expect(asUser.groups.map((g) => [g.cause, g.canFix])).toEqual([['nobody_attending', false], ['cool_down', false], ['variety_rule', true]])
+    const asAdmin = renderHook(() => useCouldntPlanNotice([...dinners, cool, rule], [...dinners, cool, rule], true)).result.current
+    expect(asAdmin.groups.every((g) => g.canFix)).toBe(true)
   })
 
   it('has no groups and a zero total when everything was planned', () => {

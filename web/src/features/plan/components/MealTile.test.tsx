@@ -154,6 +154,13 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(screen.getByText('Nobody is set to attend.')).toBeInTheDocument()
   })
 
+  it('R13: choosing a Recipe is no fix for a slot nobody attends, so the day tile offers none', () => {
+    setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
+    expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
+    setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }), '2026-11-10', true)
+    expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
+  })
+
   it('R13: on the compact week tile the chip stays and the reason moves to its title (no room for a sentence)', () => {
     const { container } = setup(
       slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }),

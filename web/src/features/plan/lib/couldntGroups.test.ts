@@ -57,11 +57,11 @@ describe('groupByCause: one group per cause, never one line per slot', () => {
     expect(groups[0]!.cause).toBe('nobody_attending')
     expect(groups[0]!.count).toBe(9)
     expect(groups[0]!.slots).toHaveLength(9)
-    expect(groups[0]!.headline).toBe("9 meals couldn't be planned. Nobody is set to attend.")
+    expect(groups[0]!.headline).toBe("Couldn't plan 9 Meal Slots. Nobody is set to attend.")
   })
 
   it('a single slot is singular', () => {
-    expect(groupByCause([nobody('2026-11-10')])[0]!.headline).toBe("1 meal couldn't be planned. Nobody is set to attend.")
+    expect(groupByCause([nobody('2026-11-10')])[0]!.headline).toBe("Couldn't plan 1 Meal Slot. Nobody is set to attend.")
   })
 
   it('causes are separate groups, setup gaps first, then rule conflicts', () => {
@@ -94,14 +94,14 @@ describe('every cause: copy, fix action, tone and icon', () => {
   const group = (cause: string) => groupByCause([sample[cause]!])[0]!
 
   it.each([
-    ['nobody_attending', "1 meal couldn't be planned. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots', 'info', 'attendance'],
-    ['no_recipes', "1 meal couldn't be planned. There are no Recipes to choose from.", 'Add Recipes', '/recipes', 'info', 'recipes'],
-    ['slot_rule', "1 meal couldn't be planned. Nothing that matches its Slot Rule is available.", 'Review Slot Rules', '/settings/planning', 'warn', 'slotRule'],
-    ['excluded', "1 meal couldn't be planned. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/settings/preferences', 'warn', 'exclusion'],
-    ['cool_down', "1 meal couldn't be planned. Every Recipe is in Cool-down.", 'Review Cool-down', '/settings/household', 'warn', 'duration'],
-    ['variety_rule', "1 meal couldn't be planned. Every Recipe is blocked by a Variety Rule.", 'Review Variety Rules', '/settings/planning', 'warn', 'varietyRule'],
-    ['advance_step', "1 meal couldn't be planned. Every Recipe needs an Advance Step that is already too late.", 'Choose a Recipe', '/plan', 'warn', 'advanceStep'],
-    ['no_fit', "1 meal couldn't be planned. No Recipe fits.", 'Choose a Recipe', '/plan', 'warn', 'info'],
+    ['nobody_attending', "Couldn't plan 1 Meal Slot. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots', 'info', 'attendance'],
+    ['no_recipes', "Couldn't plan 1 Meal Slot. There are no Recipes to choose from.", 'Add Recipes', '/recipes', 'info', 'recipes'],
+    ['slot_rule', "Couldn't plan 1 Meal Slot. Nothing that matches its Slot Rule is available.", 'Review Slot Rules', '/settings/planning', 'warn', 'slotRule'],
+    ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/settings/preferences', 'warn', 'exclusion'],
+    ['cool_down', "Couldn't plan 1 Meal Slot. Every Recipe is in Cool-down.", 'Review Cool-down', '/settings/household', 'warn', 'duration'],
+    ['variety_rule', "Couldn't plan 1 Meal Slot. Every Recipe is blocked by a Variety Rule.", 'Review Variety Rules', '/settings/planning', 'warn', 'varietyRule'],
+    ['advance_step', "Couldn't plan 1 Meal Slot. Every Recipe needs an Advance Step that is already too late.", 'Choose a Recipe', '/plan', 'warn', 'advanceStep'],
+    ['no_fit', "Couldn't plan 1 Meal Slot. No Recipe fits.", 'Choose a Recipe', '/plan', 'warn', 'info'],
   ])('%s', (cause, headline, label, to, tone, icon) => {
     const g = group(cause)
     expect(g.headline).toBe(headline)
@@ -115,7 +115,7 @@ describe('every cause: copy, fix action, tone and icon', () => {
 
   it('the Slot Rule headline is plural for several slots', () => {
     const two = groupByCause([sample.slot_rule!, { ...sample.slot_rule!, date: '2026-11-11' }])[0]!
-    expect(two.headline).toBe("2 meals couldn't be planned. Nothing that matches their Slot Rules is available.")
+    expect(two.headline).toBe("Couldn't plan 2 Meal Slots. Nothing that matches their Slot Rules is available.")
   })
 
   it('setup gaps explain how to fix them in one sentence', () => {

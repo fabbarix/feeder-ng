@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -33,7 +33,7 @@ describe('PlanScreen: Couldn\'t plan', () => {
     renderWithProviders(<PlanScreen />)
     const notice = await screen.findByRole('group', { name: "Couldn't plan" })
     expect(within(notice).getAllByRole('region')).toHaveLength(1)
-    expect(within(notice).getByRole('heading', { name: "2 meals couldn't be planned. Nobody is set to attend." })).toBeInTheDocument()
+    expect(within(notice).getByRole('heading', { name: "Couldn't plan 2 Meal Slots. Nobody is set to attend." })).toBeInTheDocument()
     expect(within(notice).getByText('Every dinner this week')).toBeInTheDocument()
     const grid = screen.getByRole('group', { name: 'Plan' })
     expect(notice.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -90,6 +90,22 @@ describe('PlanScreen: Couldn\'t plan', () => {
     mockApi({ 'GET /api/plan': nobodyAttends })
     renderWithProviders(<PlanScreen />)
     expect(within(await dayTile('Today')).getByText('Not planned')).toBeInTheDocument()
+  })
+
+  it('R13: a plain User is not sent to Admin-only settings: no "Choose who attends" button', async () => {
+    mockApi({ 'GET /api/plan': nobodyAttends, 'GET /api/me': { id: 2, email: 'u@example.com', displayName: 'U', isAdmin: false } })
+    renderWithProviders(<PlanScreen />)
+    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
+    await waitFor(() => expect(within(notice).queryByRole('button', { name: 'Choose who attends' })).not.toBeInTheDocument())
+    expect(within(notice).getByText(/Ask an Admin/)).toBeInTheDocument()
+  })
+
+  it('R13: slots whose time has gone (no meal, no reason) do not stop it reading "every dinner" (23:56)', async () => {
+    const gone = slot({ date: '2026-11-10', mealSlotId: 2, meal: null, unfilled: null })
+    mockApi({ 'GET /api/plan': view([gone, unplanned('2026-11-11', 2), unplanned('2026-11-12', 2)]) })
+    renderWithProviders(<PlanScreen />)
+    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
+    expect(within(notice).getByText('Every dinner this week')).toBeInTheDocument()
   })
 
   it('no notice at all when everything is planned', async () => {

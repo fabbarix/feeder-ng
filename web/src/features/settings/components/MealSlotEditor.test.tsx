@@ -31,8 +31,7 @@ describe('MealSlotEditor', () => {
     expect(screen.getByRole('combobox', { name: /Weekdays/ })).toHaveTextContent('Monday, Wednesday, Friday')
     await userEvent.type(screen.getByLabelText('Name'), 'Dinner')
     await typeTime('2015')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Anna' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Sam' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' })) // opt out: everyone starts checked
     await userEvent.click(screen.getByRole('button', { name: 'Increase Portion Factor for Sam' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
     const attendance = [
@@ -45,6 +44,30 @@ describe('MealSlotEditor', () => {
       { weekday: 3, name: 'Dinner', time: '20:15', attendance },
       { weekday: 5, name: 'Dinner', time: '20:15', attendance },
     ])
+  })
+
+  it('R13: a new Meal Slot opens with every Member attending, and saves them all if nothing is changed', async () => {
+    const onSave = vi.fn()
+    render(<MealSlotEditor open members={members} defaultWeekdays={[2]} onSave={onSave} onClose={() => {}} />)
+    for (const name of ['Anna', 'Marco', 'Sam']) expect(screen.getByRole('checkbox', { name })).toBeChecked()
+    await userEvent.type(screen.getByLabelText('Name'), 'Dinner')
+    await typeTime('1930')
+    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    expect(onSave).toHaveBeenCalledWith([
+      expect.objectContaining({
+        weekday: 2,
+        attendance: [
+          { memberId: 1, portionFactorOverride: null },
+          { memberId: 2, portionFactorOverride: null },
+          { memberId: 3, portionFactorOverride: null },
+        ],
+      }),
+    ])
+  })
+
+  it('R13: editing a Meal Slot nobody attends keeps it that way', () => {
+    render(<MealSlotEditor open members={members} slot={{ ...tuesdayDinner, attendance: [] }} onSave={() => {}} onClose={() => {}} />)
+    for (const name of ['Anna', 'Marco', 'Sam']) expect(screen.getByRole('checkbox', { name })).not.toBeChecked()
   })
 
   it('starts with the weekday the add button was on (defaultWeekdays)', async () => {

@@ -40,7 +40,7 @@ Existing tests edited for the new default (they meant "nobody", now they say so)
 
 The API gives two reasons plus counts. A slot is filed under **one** cause (`lib/couldntGroups.ts causeOf`): `no_attendance`; else `slotRuleClaimed`; else `considered == 0`; else the filter that removed the most options (ties: Exclusion, Cool-down, Variety Rule, Advance Step); else "no fit".
 
-| Cause | Tone | Icon (existing) | Headline (`N meals couldn't be planned.` + ...) | Fix action (target) |
+| Cause | Tone | Icon (existing) | Headline (`Couldn't plan N Meal Slots.` + ...) | Fix action (target) |
 |---|---|---|---|---|
 | `nobody_attending` | info | `attendance` | Nobody is set to attend. | **Choose who attends** (`/settings/meal-slots`) |
 | `no_recipes` | info | `recipes` | There are no Recipes to choose from. | **Add Recipes** (`/recipes`) |
@@ -75,14 +75,14 @@ Per Meal Slot name (lower-cased, plural with `s` or `es` after s, ch, sh, x), in
 4. Up to three days: "Tuesday and Thursday dinners", "Thursday dinner".
 5. Otherwise a count: "4 dinners".
 
-The first clause is capitalised, a leading "every" clause is followed by "this week" (plan of 7 days or fewer) or "in the next N days", then ", plus " and the rest joined by "and": "Every dinner this week, plus weekend breakfasts and Tuesday lunch". `all` is the whole plan; Today gets it from the plan view (`planSlots`), so "every" is accurate.
+The first clause is capitalised, a leading "every" clause is followed by "this week" (plan of 7 days or fewer) or "in the next N days", then ", plus " and the rest joined by "and": "Every dinner this week, plus weekend breakfasts and Tuesday lunch". `all` is the whole plan, measured only over slots that still count (a Planned Meal or a recorded reason): at 23:56 tonight's dinner is past (no meal, no reason) and must not stop it reading "every dinner". Today gets it from the plan view (`planSlots`).
 
 ## 4. Screens
 
 ### Today
 
-- Tile id `couldntPlan` keeps its place in `composeToday` (after Throw out or keep). Its node is `CouldntPlanNotice`: a wrapper with `display: contents` (so its tiles are Bento grid items, like `.today__slot`) holding one `CouldntPlanTile` per cause, **span 2** (a wide tile: a full row on the phone's 2 columns, half the 4-column desktop row).
-- Tile: overline icon + "Couldn't plan", `h2` headline, the summary line, the hint, a tertiary "Show all N meals" / "Hide the list" toggle (`aria-expanded`; only with two or more meals) that expands a list of "Tue 10 Nov · Dinner", and one secondary fix button. One meal: the summary line is the meal ("Tuesday dinner") and there is no toggle.
+- Tile id `couldntPlan` keeps its place in `composeToday` (after Throw out or keep). Its node is `CouldntPlanNotice`: a wrapper with `display: contents` (so its tiles are Bento grid items, like `.today__slot`) holding one `CouldntPlanTile` per cause, **span 2** (a wide tile: a full row on the phone's 2 columns, two of the four columns of the desktop row).
+- Tile: overline icon + "Couldn't plan", `h2` headline, the summary line, the hint, a tertiary "Show all N" / "Hide the list" toggle (`aria-expanded`; only with two or more meals) that expands a list of "Tue 10 Nov · Dinner", and one secondary fix button. One meal: the summary line is the meal ("Tuesday dinner") and there is no toggle.
 - It is a section named by its headline, not `role="status"` or an alert: nothing is on fire.
 
 ### Plan
@@ -99,7 +99,7 @@ The board has no free cell (12 of 12 used), so no new tile. The Tomorrow tile al
 `composeToday` gets `needsSetup`. When it is true the `setup` tile (full width, soft) shows first and Couldn't plan does not. `lib/setup.ts setupChecklist(facts)`:
 
 - Steps: **Add your Members** (Members), **Set up Meal Slots and attendance** (a Meal Slot with at least one attendee), **Add Recipes**, **Get your first plan** (a Planned Meal exists). The current step is the first not done; only it has a button (Add Members, Set up Meal Slots, Add a Recipe, Open the Plan).
-- Visible while `plannedMeals == 0`, except when the first three steps are done and the planner is held back by rules (`unplannedMeals > 0`): then Couldn't plan explains it. Unknown facts (loading or a failed request) show nothing, never a false first run.
+- Visible while `plannedMeals == 0`, except when Members and Recipes exist and the planner reports unplanned meals (`unplannedMeals > 0`): then Couldn't plan explains it. This covers both "set up but held back by rules" and the **`needsSetup` exception**: only attendance is missing, so Today shows Couldn't plan with "Choose who attends" (a better fix than the checklist's button). The exception lives in `setupChecklist().visible`; `needsSetup(facts)` is that same value, so the tile and `composeToday` cannot disagree. Progress reads "1 of 4 steps set up" and a finished step shows a check-icon "Set up" chip (the words "done" and "meal" are Glossary _Avoid_ terms). Unknown facts (loading or a failed request) show nothing, never a false first run.
 - Facts come from `today/setupSeam.ts useSetupFacts()` (counts from `/api/members`, `/api/meal-slots`, `/api/recipes`, `/api/plan`), the one place Today reads those features. `useToday` is `loading` while they load, so the "Nothing on the menu" empty state never flashes.
 
 ## 5. Code structure (CLAUDE.md rules)
@@ -142,7 +142,7 @@ Scenario: A new household opens Today
 
 Scenario: Nobody is set to attend nine meals
   Given Members exist and no Meal Slot has an attendee
-  Then Today shows one tile: "9 meals couldn't be planned. Nobody is set to attend."
+  Then Today shows one tile: "Couldn't plan 9 Meal Slots. Nobody is set to attend."
   And "Every dinner this week, plus weekend breakfasts" with "Choose who attends" going to the Meal Slots
 
 Scenario: A new Member attends every Meal Slot   (API: attendance_default.feature)
@@ -152,3 +152,12 @@ Scenario: A new Member attends every Meal Slot   (API: attendance_default.featur
 
 - The R15 team owns the Meal Slots attendance editor; "Choose who attends" only links to `/settings/meal-slots`. If R15 gives each slot an anchor, the link can carry it.
 - Existing tests that changed meaning: `MealTile.test.tsx` (unfilled block), `PlanScreen.test.tsx` (one assertion), `TodayTiles.test.tsx` (the `CouldntPlanNotice` block moved), `httpapi/helpers_test.go` (`mustSlot`). R13's Developer should not need to touch any other existing test; if a `vi.mock('../seams')` test in Today fails because `useToday` now reads `setupSeam`, mock `../setupSeam` there too.
+
+## 8. Review send-back (Opus review of fa72538)
+
+- **New slots default to everyone in the editor.** `slotDraft(slot?, members?)` starts a new Meal Slot with every Member (override null); an existing slot keeps its own list, even an empty one.
+- **Copy.** Headline `Couldn't plan N Meal Slots.` / `Couldn't plan 1 Meal Slot.`, toggle `Show all N`, progress `N of 4 steps set up`, finished step a check-icon `Set up` chip. The matching `check-ui.allow-glossary` entries are removed.
+- **Startup replan.** `runner.Deps.ReplanOnStart` makes the Runner pending with `ReasonAttendanceChanged` from `New`, so the worker replans once when the app starts and migration 1230's effect reaches `plan_unfilled`. `planning` mounts the Runner with it set. The cost is one planning run at boot.
+- **Tile tone.** The tone of a Couldn't plan tile is `data-couldnt-tone` (its own attribute); the shared `Tile` `data-tone` is untouched (the pass-through added in fa72538 is reverted).
+- **Admin-only fixes.** `/settings/meal-slots`, `/settings/members` and `/settings/household` are editable only by an Admin; `/settings/planning` (Slot and Variety Rules) is open to every User, and `/recipes` too. `CauseGroup.adminOnly` (nobody attending, Cool-down) and `NoticeGroup.canFix` (`useCouldntPlanNotice(unplanned, all, isAdmin = true)`; the screens pass `me.isAdmin !== false`, so nothing is hidden while the User is unknown) decide; without `canFix` the tile shows "Ask an Admin to change this." instead of the button. The checklist does the same for its Members and Meal Slots steps (`SetupStep.adminOnly`, tile prop `isAdmin`).
+- **Day tiles.** "Choose a Recipe" is not offered for a slot nobody attends (a Recipe is not the fix; attendance is). The "Not planned" chip does not wrap; the board's is 40 px like Use soon.

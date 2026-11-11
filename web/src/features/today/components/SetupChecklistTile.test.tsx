@@ -6,9 +6,9 @@ import { SetupChecklistTile } from './SetupChecklistTile'
 
 const fresh: SetupFacts = { members: 0, mealSlots: 0, mealSlotsWithAttendance: 0, recipes: 0, plannedMeals: 0, unplannedMeals: 0 }
 
-function setup(facts: SetupFacts = fresh) {
+function setup(facts: SetupFacts = fresh, isAdmin = true) {
   const onAction = vi.fn()
-  const view = render(<SetupChecklistTile checklist={setupChecklist(facts)} onAction={onAction} />)
+  const view = render(<SetupChecklistTile checklist={setupChecklist(facts)} onAction={onAction} isAdmin={isAdmin} />)
   return { onAction, ...view }
 }
 
@@ -19,7 +19,7 @@ describe('SetupChecklistTile: the first-run Today', () => {
     expect(tile).toHaveAttribute('data-variant', 'soft')
     expect(tile.querySelector('[data-status="danger"]')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Set up your Household' })).toBeInTheDocument()
-    expect(screen.getByText('0 of 4 done. Then the planner takes over.')).toBeInTheDocument()
+    expect(screen.getByText('0 of 4 steps set up. Then the planner takes over.')).toBeInTheDocument()
   })
 
   it('lists the four steps in order with their one-line hints', () => {
@@ -46,11 +46,24 @@ describe('SetupChecklistTile: the first-run Today', () => {
     setup({ ...fresh, members: 2 })
     const items = screen.getAllByRole('listitem')
     expect(items[0]).toHaveAttribute('data-done', 'true')
-    expect(within(items[0]!).getByText('Done')).toBeInTheDocument()
+    const chip = within(items[0]!).getByText('Set up').closest('.chip')!
+    expect(chip.querySelector('svg')).not.toBeNull() // a check icon
+    expect(within(items[0]!).queryByText('Done')).not.toBeInTheDocument()
     expect(items[1]).toHaveAttribute('aria-current', 'step')
     expect(items[2]).not.toHaveAttribute('aria-current')
-    expect(screen.getByText('1 of 4 done. Then the planner takes over.')).toBeInTheDocument()
+    expect(screen.getByText('1 of 4 steps set up. Then the planner takes over.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Set up Meal Slots' })).toBeInTheDocument()
+  })
+
+  it('R13: Members and Meal Slots are Admin settings, so a plain User sees "Ask an Admin" instead of the button', () => {
+    setup(fresh, false)
+    expect(screen.queryByRole('button', { name: 'Add Members' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Ask an Admin/)).toBeInTheDocument()
+  })
+
+  it('R13: but Recipes are for everyone: a plain User keeps the Add a Recipe button', () => {
+    setup({ ...fresh, members: 2, mealSlots: 3, mealSlotsWithAttendance: 3 }, false)
+    expect(screen.getByRole('button', { name: 'Add a Recipe' })).toBeInTheDocument()
   })
 
   it('every step has an icon from the registry', () => {

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { meal } from '../test-utils'
 import type { PlanSlot } from '../types'
 import { summarizeSlots } from './couldntSummary'
 
 /** Tue 2026-11-10 .. Mon 2026-11-16 (a 7-day horizon); Dinner every day, Breakfast only Sat and Sun, Lunch Mon to Fri. */
 const days = ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16']
 function s(date: string, name: string, id: number): PlanSlot {
-  return { date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, unfilled: null, rules: [] }
+  return { date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } }, rules: [] }
+}
+/** A slot whose time has gone: no Planned Meal and no reason (the planner never plans the past). */
+function past(date: string, name: string, id: number): PlanSlot {
+  return { ...s(date, name, id), unfilled: null }
 }
 const dinners = days.map((d, i) => s(d, 'Dinner', 100 + i))
 const breakfasts = ['2026-11-14', '2026-11-15'].map((d, i) => s(d, 'Breakfast', 200 + i))
@@ -69,4 +74,29 @@ describe('summarizeSlots', () => {
   })
 
   it('nothing is an empty string', () => expect(summarizeSlots([], all)).toBe(''))
+})
+
+describe('summarizeSlots: "all" only counts slots that still count', () => {
+  // 23:56 on Tue 2026-11-10: Tuesday's dinner is past (no meal, no reason), the other six dinners could not be planned.
+  const gone = past('2026-11-10', 'Dinner', 100)
+  const rest = dinners.slice(1)
+
+  it('a past slot (no meal, no reason) does not stop it being "every dinner"', () => {
+    expect(summarizeSlots(rest, [gone, ...rest])).toBe('Every dinner this week')
+  })
+
+  it('past slots do not count in the number of days either', () => {
+    const pastBreakfast = past('2026-11-10', 'Breakfast', 400)
+    const horizon = ['2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18'].map((d, i) => s(d, 'Dinner', 500 + i))
+    expect(summarizeSlots(horizon, [gone, pastBreakfast, ...horizon])).toBe('Every dinner in the next 8 days')
+  })
+
+  it('a planned meal still counts, so "some dinners" stay some', () => {
+    const planned = { ...dinners[0]!, meal: meal({ date: '2026-11-10' }), unfilled: null }
+    expect(summarizeSlots(rest.slice(0, 4), [planned, ...rest])).toBe('4 dinners')
+  })
+
+  it('a slot with a reason still counts', () => {
+    expect(summarizeSlots(rest, [s('2026-11-10', 'Dinner', 100), ...rest])).toBe('6 dinners')
+  })
 })

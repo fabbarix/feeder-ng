@@ -39,8 +39,8 @@ const dinners = ['10', '11', '12', '13', '14', '15', '16'].map((d, i) => unplann
 const breakfasts = ['14', '15'].map((d, i) => unplanned(`2026-11-${d}`, 'Breakfast', 20 + i))
 const established: SetupFacts = { members: 2, mealSlots: 9, mealSlotsWithAttendance: 0, recipes: 5, plannedMeals: 0, unplannedMeals: 9 }
 
-function setup() {
-  mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
+function setup(extra: Record<string, unknown> = {}) {
+  mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 }, ...extra })
   return renderWithProviders(
     <Routes>
       <Route path="/" element={createElement(TodayScreen)} />
@@ -50,16 +50,41 @@ function setup() {
   )
 }
 
+describe('Scenario: 23:56, tonight\'s dinner is already past', () => {
+  // Given Tuesday's dinner time has gone (no Planned Meal, no reason) and the six dinners after it cannot be planned
+  // Then Today still says "Every dinner this week"
+  it('the past slot is not counted in "all"', async () => {
+    const gone: PlanSlot = { ...unplanned('2026-11-10', 'Dinner', 10), unfilled: null }
+    h.couldnt = dinners.slice(1)
+    h.all = [gone, ...dinners.slice(1)]
+    h.facts = established
+    setup()
+    expect(await screen.findByText('Every dinner this week')).toBeInTheDocument()
+  })
+})
+
+describe('Scenario: a plain User cannot reach Admin-only settings', () => {
+  it('sees what is wrong but no "Choose who attends" button', async () => {
+    h.couldnt = [...dinners, ...breakfasts]
+    h.all = h.couldnt
+    h.facts = established
+    setup({ 'GET /api/me': { id: 2, email: 'u@example.com', displayName: 'U', isAdmin: false } })
+    expect(await screen.findByRole('heading', { name: "Couldn't plan 9 Meal Slots. Nobody is set to attend." })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Choose who attends' })).not.toBeInTheDocument())
+    expect(screen.getByText(/Ask an Admin/)).toBeInTheDocument()
+  })
+})
+
 describe('Scenario: nobody is set to attend nine meals', () => {
   // Given Members exist and every Meal Slot has no attendee
   // When I open Today
-  // Then one tile says "9 meals couldn't be planned. Nobody is set to attend." with a summary and "Choose who attends"
+  // Then one tile says "Couldn't plan 9 Meal Slots. Nobody is set to attend." with a summary and "Choose who attends"
   it('shows one grouped tile in the grid, not nine lines', async () => {
     h.couldnt = [...dinners, ...breakfasts]
     h.all = h.couldnt
     h.facts = established
     setup()
-    const slotEl = (await screen.findByRole('heading', { name: "9 meals couldn't be planned. Nobody is set to attend." })).closest('[data-tile="couldntPlan"]') as HTMLElement
+    const slotEl = (await screen.findByRole('heading', { name: "Couldn't plan 9 Meal Slots. Nobody is set to attend." })).closest('[data-tile="couldntPlan"]') as HTMLElement
     expect(slotEl).not.toBeNull()
     expect(within(slotEl).getByText('Every dinner this week, plus weekend breakfasts')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Tuesday dinner/)).not.toBeInTheDocument()
@@ -80,12 +105,12 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     expect(await screen.findByText('Meal Slots page')).toBeInTheDocument()
   })
 
-  it('"Show all 9 meals" expands the full list on request', async () => {
+  it('"Show all 9" expands the full list on request', async () => {
     h.couldnt = [...dinners, ...breakfasts]
     h.all = h.couldnt
     h.facts = established
     setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Show all 9 meals' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Show all 9' }))
     expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(9)
   })
 })

@@ -144,7 +144,7 @@ If no candidate survives, the slot stays empty with a recorded reason (§7.4). T
 ### 7.4 Couldn't plan (what the Household sees)
 A slot the planner left empty is something to set up or a conflict between rules, not an error. Today, the Plan and the kitchen board show it as a designed state:
 
-- **Grouped by cause, never one line per slot.** Each cause is one compact tile: "9 meals couldn't be planned. Nobody is set to attend." The affected meals are a short summary ("Every dinner this week, plus weekend breakfasts") with an expand control that lists each meal. A Household with several causes sees one tile per cause.
+- **Grouped by cause, never one line per slot.** Each cause is one compact tile: "Couldn't plan 9 Meal Slots. Nobody is set to attend." The affected Meal Slots are a short summary ("Every dinner this week, plus weekend breakfasts") with a "Show all 9" control that lists each one. "Every" is measured only over slots that still count (a Planned Meal or a recorded reason): a slot whose time has gone is not part of the week. A Household with several causes sees one tile per cause.
 - **One fix action per cause**, a button that goes where the cause is fixed:
 
   | Cause | Shown when | Tone | Fix action |
@@ -161,7 +161,10 @@ A slot the planner left empty is something to set up or a conflict between rules
   A slot is filed under one cause: the filter that removed the most options (ties: Exclusion, Cool-down, Variety Rule, Advance Step).
 - **Tone.** Missing setup and rule conflicts use the info and warn tones with an icon, never the danger colour; danger is for real failures (a request that failed, spoiled food).
 - **On Plan** the grouped notice sits at the top and each affected day tile shows a small inline "Not planned" chip with the cause. **On Today** the notice is a tile in the grid. **On the board** (read-only) an unplanned slot tomorrow shows "Not planned"; there is no action.
-- **First run.** While the Household is new and nothing can be planned (no Planned Meal and a setup step missing), Today shows a setup checklist instead of Couldn't plan: **Members**, then **Meal Slots and attendance**, then **Recipes**, then the first plan. It goes away once a Planned Meal exists.
+- **First run.** While the Household is new and nothing can be planned (no Planned Meal and a setup step missing), Today shows a setup checklist instead of Couldn't plan: **Members**, then **Meal Slots and attendance**, then **Recipes**, then the first plan ("1 of 4 steps set up"). It goes away once a Planned Meal exists.
+  - **Exception (accepted at review).** When Members and Recipes exist and only attendance is missing, the checklist is not shown: Today shows Couldn't plan ("Nobody is set to attend", with **Choose who attends**), which names the missing step and fixes it directly. This is part of the checklist's visibility rule (one rule, so the tile and the Today layout cannot disagree).
+- **Who can fix it.** Fixes that lead to an Admin-only page (Choose who attends, Review Cool-down, and the Members and Meal Slots checklist steps) are not offered to a plain User; the tile says "Ask an Admin".
+- **After an upgrade.** Migration 1230 gives existing slots their attendees, but reasons recorded earlier would stay until the next replan, so the planner replans once at every startup (reason: Attendance changed) and clears them.
 
 ### 7.3 Swap
 **Swap** shows the top 3 alternatives under the same scoring (excluding the current Recipe and any Recipe reserved for a later Slot Rule slot, §7.2), each with its why chips. Choosing one pins it and replans the downstream unpinned slots, because Leftovers and Overlap may change.

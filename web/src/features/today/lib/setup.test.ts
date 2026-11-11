@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { setupChecklist, type SetupFacts } from './setup'
+import { needsSetup, setupChecklist, type SetupFacts } from './setup'
 
 const fresh: SetupFacts = { members: 0, mealSlots: 0, mealSlotsWithAttendance: 0, recipes: 0, plannedMeals: 0, unplannedMeals: 0 }
 
@@ -66,8 +66,33 @@ describe('setupChecklist: Members, Meal Slots and attendance, Recipes, first pla
     expect(c.visible).toBe(false)
   })
 
-  it('but while a setup step is missing the checklist wins over Couldn\'t plan', () => {
-    expect(setupChecklist({ members: 2, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 4, plannedMeals: 0, unplannedMeals: 3 }).visible).toBe(true)
+  it('but while Members or Recipes are missing the checklist wins over Couldn\'t plan', () => {
+    expect(setupChecklist({ members: 2, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 0, plannedMeals: 0, unplannedMeals: 3 }).visible).toBe(true)
+    expect(setupChecklist({ members: 0, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 4, plannedMeals: 0, unplannedMeals: 3 }).visible).toBe(true)
+  })
+
+  it('R13 exception, folded into visible: Members and Recipes exist and only attendance is missing, so Couldn\'t plan leads', () => {
+    const c = setupChecklist({ members: 2, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 4, plannedMeals: 0, unplannedMeals: 3 })
+    expect(c.visible).toBe(false)
+    expect(c.steps.find((s) => s.current)!.id).toBe('attendance')
+  })
+
+  it('needsSetup is exactly the checklist being visible, so the tile and the compose rule cannot disagree', () => {
+    const cases: SetupFacts[] = [
+      fresh,
+      { ...fresh, members: 2 },
+      { members: 2, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 4, plannedMeals: 0, unplannedMeals: 3 },
+      { members: 2, mealSlots: 3, mealSlotsWithAttendance: 3, recipes: 4, plannedMeals: 0, unplannedMeals: 3 },
+      { members: 2, mealSlots: 3, mealSlotsWithAttendance: 3, recipes: 4, plannedMeals: 0, unplannedMeals: 0 },
+      { members: 0, mealSlots: 0, mealSlotsWithAttendance: 0, recipes: 4, plannedMeals: 0, unplannedMeals: 3 },
+      { members: 2, mealSlots: 3, mealSlotsWithAttendance: 3, recipes: 4, plannedMeals: 2, unplannedMeals: 1 },
+    ]
+    for (const facts of cases) expect(needsSetup(facts)).toBe(setupChecklist(facts).visible)
+    expect(needsSetup(null)).toBe(false)
+  })
+
+  it('but Recipes missing wins: Members exist, no Recipes, nothing attends: the checklist leads', () => {
+    expect(setupChecklist({ members: 2, mealSlots: 3, mealSlotsWithAttendance: 0, recipes: 0, plannedMeals: 0, unplannedMeals: 3 }).visible).toBe(true)
   })
 
   it('unknown facts (still loading, or the request failed) show nothing', () => {
