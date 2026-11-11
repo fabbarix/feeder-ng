@@ -38,7 +38,7 @@ The number of standard portions one Batch of a Recipe produces.
 _Avoid_: Servings, makes
 
 **Ready Meal**:
-A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack.
+A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought.
 _Avoid_: Convenience food, pre-made
 
 **Step**:
