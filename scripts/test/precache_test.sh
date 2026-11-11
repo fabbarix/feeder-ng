@@ -24,4 +24,9 @@ if [ -n "$dups" ]; then
   printf 'FAIL: duplicate precache URLs in sw.js:\n%s\n' "$dups"
   exit 1
 fi
+# LG: the Family Pot icons are precached, so the installed app has them offline
+for u in favicon.ico favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png \
+  icon-maskable-192.png icon-maskable-512.png safari-pinned-tab.svg; do
+  printf '%s\n' "$urls" | grep -qE "\"$u\"" || { echo "FAIL: $u is not in the precache"; exit 1; }
+done
 echo "precache ok: $(printf '%s\n' "$urls" | wc -l) unique URLs"
