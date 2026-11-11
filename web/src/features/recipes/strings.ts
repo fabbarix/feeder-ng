@@ -80,10 +80,6 @@ export const recipeStrings = {
     reheatHint: 'Blank: Reheat works it out from the portions',
     sourceUrl: 'Source link',
     attribution: 'Attribution',
-    addPhoto: 'Add photo',
-    replacePhoto: 'Replace photo',
-    removePhoto: 'Remove photo',
-    uploading: 'Uploading photo…',
   },
   lines: {
     add: 'Add ingredient',
@@ -128,8 +124,6 @@ export const recipeStrings = {
     after: 'After',
     afterStep: (n: number) => `After step ${n}`,
     image: 'Step photo',
-    addImage: 'Add Step photo',
-    removeImage: 'Remove Step photo',
     usesTitle: 'Uses',
     addUse: 'Add ingredient use',
     removeUse: 'Remove ingredient use',
@@ -175,11 +169,6 @@ export const recipeStrings = {
     no_member: 'You are not linked to a Member.',
     unknown_member: 'That Member does not exist.',
   } as Record<string, string>,
-  photoErrors: {
-    tooLarge: 'A photo must be 8 MB or smaller.',
-    unsupported: 'That is not a JPEG, PNG, GIF or WebP photo.',
-    failed: 'The photo could not be added.',
-  },
 } as const
 
 /** The message for a validation or error code, or the generic text. */

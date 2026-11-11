@@ -70,6 +70,27 @@ func (l *Limiter) refusal(c Caller) error {
 	return nil
 }
 
+// Remaining reports how many more reads the Caller's Household may start in the rolling hour and, when some
+// are counted, the whole seconds (rounded up) until the oldest leaves the window (0 when none are counted).
+// Admins are exempt from the hourly limit, so callers do not show it for them.
+func (l *Limiter) Remaining(c Caller) (remaining, resetsInSeconds int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.now()
+	kept := l.accepted[c.HouseholdID][:0]
+	for _, t := range l.accepted[c.HouseholdID] {
+		if now.Sub(t) < LimiterWindow {
+			kept = append(kept, t)
+		}
+	}
+	l.accepted[c.HouseholdID] = kept
+	remaining = HourlyReadLimit - len(kept)
+	if len(kept) > 0 {
+		resetsInSeconds = int(math.Ceil(kept[0].Add(LimiterWindow).Sub(now).Seconds()))
+	}
+	return remaining, resetsInSeconds
+}
+
 // Acquire accepts a read or refuses it with *Error CodeReadInProgress (the
 // User already has a read running; checked first) or CodeTooManyReads (with
 // RetryAfterSeconds: whole seconds, rounded up, until the oldest counted read

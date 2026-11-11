@@ -37,7 +37,7 @@ const MaxImagesFetched = 50
 // refuses every URL). Every failure (bad data, wrong content type, refused
 // address, anything not https, over MaxImagesFetched) drops that image and
 // adds a WarnImageFailed warning with the image's JSON path and ImageFailedMessage
-// ("$.recipes[0].image", "$.recipes[0].steps[1].image"). A cancelled context
+// ("$.recipes[0].image", "$.recipes[0].steps[1].image", "$.ingredients[2].image"). A cancelled context
 // stops fetching and warns for the rest. Paths are returned for images that
 // worked only.
 func ResolveImages(ctx context.Context, f File, fetch Fetcher) ImageSet {
@@ -60,6 +60,9 @@ func ResolveImages(ctx context.Context, f File, fetch Fetcher) ImageSet {
 		for j, s := range r.Steps {
 			resolve(fmt.Sprintf("$.recipes[%d].steps[%d].image", i, j), s.Image)
 		}
+	}
+	for i, ing := range f.Ingredients {
+		resolve(fmt.Sprintf("$.ingredients[%d].image", i), ing.Image)
 	}
 	return set
 }
