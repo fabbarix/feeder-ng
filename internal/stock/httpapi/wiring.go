@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
@@ -28,16 +29,8 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (service.Ing
 		Name:          ing.Name,
 		BaseUnit:      string(ing.Base),
 		ShelfLifeDays: ing.ShelfLifeDays,
-		ImageURL:      imageURL(ing.Image),
+		ImageURL:      images.URL(ing.Image),
 	}, nil
-}
-
-// imageURL is the URL the image store serves an image id at ("" without one).
-func imageURL(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "/api/images/" + id
 }
 
 // householdToday returns today's date in the household time zone (T1's household

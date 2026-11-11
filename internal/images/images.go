@@ -206,3 +206,12 @@ func (g *Guarded) Delete(ctx context.Context, id string) error {
 	}
 	return g.store.Delete(id)
 }
+
+// URL is the address the image store serves an image id at ("/api/images/<id>"), or "" for no image. Every module
+// that sends a Picture's address uses this one helper.
+func URL(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "/api/images/" + id
+}

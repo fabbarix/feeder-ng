@@ -45,8 +45,6 @@ export interface MealSlotChoice {
 export interface MemberChoice {
   id: number
   name: string
-  /** @deprecated use photoUrl (kept so older callers compile). */
-  imageUrl?: string
   /** PE: the Member's Photo address, then `avatar` (emoji), then the initials. */
   photoUrl?: string
   avatar?: string
@@ -117,6 +115,6 @@ export function memberOptions(members: MemberChoice[]): SelectOption<number>[] {
   return members.map((m) => ({
     value: m.id,
     label: m.name,
-    leading: <Avatar name={m.name} imageUrl={m.photoUrl ?? m.imageUrl} glyph={m.avatar} colour={m.colour} size="sm" />,
+    leading: <Avatar name={m.name} imageUrl={m.photoUrl} glyph={m.avatar} colour={m.colour} size="sm" />,
   }))
 }

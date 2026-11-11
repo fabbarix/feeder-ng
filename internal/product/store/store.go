@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"strings"
 	"sync"
 	"time"
@@ -530,12 +531,8 @@ func scanProduct(sc interface{ Scan(...any) error }) (Product, error) {
 	var ingImage string
 	err := sc.Scan(&p.ID, &p.Name, &p.IngredientID, &p.IngredientName, &base, &p.PackSize, &archived, &p.Image, &ingImage)
 	p.BaseUnit = units.Base(base)
-	if ingImage != "" {
-		p.IngredientImageURL = "/api/images/" + ingImage
-	}
-	if p.Image != "" {
-		p.ImageURL = "/api/images/" + p.Image
-	}
+	p.IngredientImageURL = images.URL(ingImage)
+	p.ImageURL = images.URL(p.Image)
 	p.Archived = archived == 1
 	return p, err
 }

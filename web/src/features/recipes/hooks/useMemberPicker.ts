@@ -23,7 +23,7 @@ export function useMemberPicker(): UseMemberPicker {
   const settings = useMembers()
   const me = useMe()
   const [chosen, setChosen] = useState<number | undefined>(undefined)
-  const members = useMemo(() => settings.members.map((m) => ({ id: m.id, name: m.name })), [settings.members])
+  const members = useMemo(() => settings.members.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, avatar: m.avatar, colour: m.colour })), [settings.members])
   const refs = useMemo(() => settings.members.map((m) => ({ id: m.id, name: m.name, userId: m.userId })), [settings.members])
   const selectedId = selectedMemberId(refs, me.data?.id ?? null, chosen)
   return {

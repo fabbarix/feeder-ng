@@ -1,5 +1,5 @@
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
@@ -50,6 +50,17 @@ export function RecipeEditorScreen(): ReactNode {
       editor.pickCreatedIngredient(lineKey, ingredient)
     },
   })
+  // PE: pickers that are uploading right now ('photo' and one 'step:<key>' per Step); Save waits for the set to empty.
+  const [busyPickers, setBusyPickers] = useState<ReadonlySet<string>>(new Set())
+  const setPickerBusy = useCallback((id: string, busy: boolean) => {
+    setBusyPickers((cur) => {
+      if (cur.has(id) === busy) return cur
+      const next = new Set(cur)
+      if (busy) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
   const [asking, setAsking] = useState<{ id: number } | null>(null)
 
   const crumbs = useBreadcrumbs(editor.draft?.name)
@@ -108,7 +119,11 @@ export function RecipeEditorScreen(): ReactNode {
             <RecipeDetailsFields draft={draft} errors={editor.errors} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
           </Tile>
           <div id="recipe-section-photo" className="recipe-editor__section">
-            <PhotoPicker value={draft.image} onChange={(image) => setDraft((d) => ({ ...d, image }))} />
+            <PhotoPicker
+              value={draft.image}
+              onChange={(image) => setDraft((d) => ({ ...d, image }))}
+              onBusyChange={(busy) => setPickerBusy('photo', busy)}
+            />
           </div>
           <Tile
             as="section"
@@ -165,7 +180,9 @@ export function RecipeEditorScreen(): ReactNode {
           </Tile>
           <Tile as="section" id="recipe-section-steps" className="recipe-editor__section" aria-labelledby="recipe-section-steps-title">
             <h2 id="recipe-section-steps-title">{recipeStrings.stepsTitle}</h2>
-            <StepsEditor steps={draft.steps} errors={editor.errors} onChange={editor.setSteps} ingredients={ingredients} />
+            <StepsEditor steps={draft.steps} errors={editor.errors} onChange={editor.setSteps} ingredients={ingredients}
+              onPhotoBusyChange={(key, busy) => setPickerBusy(`step:${key}`, busy)}
+            />
           </Tile>
           {saveError ? <p role="alert">{saveError}</p> : null}
           {Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
@@ -206,7 +223,7 @@ export function RecipeEditorScreen(): ReactNode {
             </Button>
           }
           primary={
-            <Button onClick={() => void save()} loading={editor.saving}>
+            <Button onClick={() => void save()} loading={editor.saving} disabled={busyPickers.size > 0}>
               {editor.saving ? recipeStrings.saving : recipeStrings.save}
             </Button>
           }

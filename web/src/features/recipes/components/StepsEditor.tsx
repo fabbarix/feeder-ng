@@ -28,6 +28,8 @@ export interface StepsEditorProps {
   onChange: (steps: StepDraft[]) => void
   /** Every Ingredient, for the `uses` rows (IngredientSelect + UnitSelect). */
   ingredients?: IngredientRef[]
+  /** PE: a Step's photo picker started or stopped uploading (the editor holds Save), by the Step's key. */
+  onPhotoBusyChange?: (stepKey: string, busy: boolean) => void
 }
 
 const kindOptions: { value: StepKind; label: string }[] = [
@@ -43,7 +45,7 @@ const STEP_FIELDS = ['text', 'kind', 'durationMinutes', 'leadTimeMinutes', 'afte
  * Lead time (NumberField), "After" as filter Chips (lib/steps.afterOptions), its `uses` (Ingredient, quantity, unit)
  * and photo, plus reorder and remove. Every change goes through lib/steps and lib/stepUses; this only renders.
  */
-export function StepsEditor({ steps, errors, onChange, ingredients = [] }: StepsEditorProps): ReactNode {
+export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhotoBusyChange }: StepsEditorProps): ReactNode {
   const patch = (i: number, change: Partial<StepDraft>) => onChange(steps.map((s, j) => (j === i ? { ...s, ...change } : s)))
   const patchUse = (i: number, j: number, change: Partial<UseDraft>) => onChange(updateUse(steps, i, j, change))
   const pickUse = (i: number, j: number, ing: IngredientRef) =>
@@ -170,7 +172,11 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
                 </Chip>
               </div>
 
-              <StepPhoto imageId={s.image} onChange={(id) => onChange(setStepImage(steps, i, id))} />
+              <StepPhoto
+                imageId={s.image}
+                onChange={(id) => onChange(setStepImage(steps, i, id))}
+                onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
+              />
 
               {errorsFor(i).map((code) => (
                 <p role="alert" key={code} className="step-card__error">

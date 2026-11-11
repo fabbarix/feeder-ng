@@ -35,10 +35,6 @@ describe('memberOptions: Avatar', () => {
     expect(el).toHaveTextContent('🙂')
   })
 
-  it('still accepts the older imageUrl field', () => {
-    const [old] = memberOptions([{ id: 9, name: 'Old', imageUrl: photo }])
-    expect(leading(old!).querySelector('img')).toHaveAttribute('src', photo)
-  })
 })
 
 describe('ingredientOptions: Thumb', () => {

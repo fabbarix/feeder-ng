@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"github.com/fabbarix/feeder-ng/internal/images"
 	"net/http"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
@@ -23,9 +24,7 @@ type memberBody struct {
 
 func memberOut(m household.Member) memberBody {
 	b := memberBody{ID: m.ID, Name: m.Name, Colour: m.Colour, Avatar: m.Avatar, Photo: m.Photo, PortionFactor: m.PortionFactor, UserID: m.UserID}
-	if m.Photo != "" {
-		b.PhotoURL = "/api/images/" + m.Photo
-	}
+	b.PhotoURL = images.URL(m.Photo)
 	if m.Email != "" {
 		e := m.Email
 		b.Email = &e

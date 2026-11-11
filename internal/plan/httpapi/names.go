@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"github.com/fabbarix/feeder-ng/internal/images"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
@@ -63,14 +64,6 @@ type table struct {
 	leftoverFrom map[int64]plan.Key
 }
 
-// photoURL is the URL the image store serves an image id at (the recipe httpapi's imageURL).
-func photoURL(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "/api/images/" + id
-}
-
 // load builds the names table. meals are the Meals about to be rendered: the source Meal Slot of the stored Leftovers
 // they are served from is looked up by id (N1).
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
@@ -91,7 +84,7 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 		t.recipes[r.ID] = r.Name
 		t.recipeMinutes[r.ID] = r.TotalMinutes
 		t.recipeReheat[r.ID] = r.ReheatMinutes
-		t.recipePhoto[r.ID] = photoURL(r.Image)
+		t.recipePhoto[r.ID] = images.URL(r.Image)
 	}
 	ms, err := n.hh.Members(ctx)
 	if err != nil {
@@ -100,7 +93,7 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	for _, m := range ms {
 		t.members[m.ID] = m.Name
 		t.memberColour[m.ID] = m.Colour
-		t.memberPhoto[m.ID] = photoURL(m.Photo)
+		t.memberPhoto[m.ID] = images.URL(m.Photo)
 		t.memberAvatar[m.ID] = m.Avatar
 	}
 	is, err := n.ing.List(ctx)
