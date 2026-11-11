@@ -89,9 +89,14 @@ func writeErr(w http.ResponseWriter, err error) {
 
 // writeFieldError answers a refused request with the field and, when the API gives one, the reason (spec §16).
 func writeFieldError(w http.ResponseWriter, status int, message, field, reason string) {
-	httpx.WriteJSON(w, status, map[string]any{"error": map[string]string{
-		"code": "validation_failed", "message": message, "field": field, "reason": reason,
-	}})
+	e := map[string]string{"code": "validation_failed", "message": message}
+	if field != "" {
+		e["field"] = field
+	}
+	if reason != "" {
+		e["reason"] = reason
+	}
+	httpx.WriteJSON(w, status, map[string]any{"error": e})
 }
 
 // changed publishes a household change so open screens refresh.

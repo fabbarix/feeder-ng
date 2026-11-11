@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -82,20 +81,33 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 	name := ""
 	if in.Name != nil {
 		name = *in.Name
-		if _, err := a.st.Rename(r.Context(), id, name); err != nil {
+	}
+	if in.Name != nil && makeMain {
+		// One write: the rename and Make main commit together, or neither does.
+		if _, err := a.st.Update(r.Context(), id, in.Name, true); err != nil {
 			a.fail(w, r, err, name)
 			return
 		}
 		a.changed("courses")
-	}
-	if makeMain {
-		if _, err := a.st.MakeMain(r.Context(), id); err != nil {
-			a.fail(w, r, err, "")
-			return
-		}
 		// The walk order of the planner changes, so the Meal Slots replan too.
-		a.changed("courses")
 		a.changed("mealSlots")
+	} else {
+		if in.Name != nil {
+			if _, err := a.st.Rename(r.Context(), id, name); err != nil {
+				a.fail(w, r, err, name)
+				return
+			}
+			a.changed("courses")
+		}
+		if makeMain {
+			if _, err := a.st.MakeMain(r.Context(), id); err != nil {
+				a.fail(w, r, err, "")
+				return
+			}
+			// The walk order of the planner changes, so the Meal Slots replan too.
+			a.changed("courses")
+			a.changed("mealSlots")
+		}
 	}
 	l, err := a.listing(r.Context(), id)
 	if err != nil {
@@ -187,10 +199,6 @@ func (a *api) archive(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err, "")
 		return
 	}
-	if err := a.archivedLast(r.Context()); err != nil {
-		a.fail(w, r, err, "")
-		return
-	}
 	a.removed()
 	l, err := a.listing(r.Context(), id)
 	if err != nil {
@@ -198,21 +206,6 @@ func (a *api) archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, courseOut(l))
-}
-
-// archivedLast puts the archived Courses after the active ones (the store's Archive keeps the position). It
-// re-sends the active Courses in their current order through the store's Reorder, which renumbers them and
-// moves the archived ones after them.
-func (a *api) archivedLast(ctx context.Context) error {
-	list, err := a.st.List(ctx, false)
-	if err != nil {
-		return err
-	}
-	ids := make([]int64, 0, len(list))
-	for _, l := range list {
-		ids = append(ids, l.ID)
-	}
-	return a.st.Reorder(ctx, ids)
 }
 
 // unarchive answers POST /api/courses/{id}/unarchive: the Course goes back last, restoring nothing.

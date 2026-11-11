@@ -3,7 +3,6 @@ package httpapi
 import (
 	"context"
 	"net/http"
-	"sort"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
@@ -38,8 +37,9 @@ type removedRuleJSON struct {
 	Tag          string `json:"tag,omitempty"`
 }
 
-// removesOut names what goes and sorts it: Pinned meals first (the dialog names them before saving), then by
-// date, Meal Slot and Course; rules by id. Courses keep their real ids, the main Course included.
+// removesOut names what goes, in the order household.SortRemovals gives: Pinned meals first (the dialog names
+// them before saving), then by date, Meal Slot and Course; rules by id. Courses keep their real ids, the main
+// Course included.
 func (a *api) removesOut(r *http.Request, rem household.Removals) (removesJSON, error) {
 	ctx := r.Context()
 	slots, err := a.slotNames(ctx)
@@ -56,28 +56,14 @@ func (a *api) removesOut(r *http.Request, rem household.Removals) (removesJSON, 
 	}
 	out := removesJSON{PlannedMeals: []removedMealJSON{}, SlotRules: []removedRuleJSON{}}
 
-	meals := append([]household.RemovedMeal(nil), rem.PlannedMeals...)
-	sort.SliceStable(meals, func(i, j int) bool {
-		if meals[i].Pinned != meals[j].Pinned {
-			return meals[i].Pinned
-		}
-		if meals[i].Date != meals[j].Date {
-			return meals[i].Date < meals[j].Date
-		}
-		if meals[i].MealSlotID != meals[j].MealSlotID {
-			return meals[i].MealSlotID < meals[j].MealSlotID
-		}
-		return meals[i].CourseID < meals[j].CourseID
-	})
-	for _, m := range meals {
+	rem = household.SortRemovals(rem)
+	for _, m := range rem.PlannedMeals {
 		out.PlannedMeals = append(out.PlannedMeals, removedMealJSON{Date: m.Date, MealSlotID: m.MealSlotID,
 			MealSlotName: slots[m.MealSlotID], CourseID: m.CourseID, CourseName: courses[m.CourseID],
 			RecipeID: m.RecipeID, RecipeName: recipes[m.RecipeID], Pinned: m.Pinned})
 	}
 
-	rules := append([]household.RemovedRule(nil), rem.SlotRules...)
-	sort.SliceStable(rules, func(i, j int) bool { return rules[i].ID < rules[j].ID })
-	for _, s := range rules {
+	for _, s := range rem.SlotRules {
 		o := removedRuleJSON{ID: s.ID, MealSlotID: s.MealSlotID, MealSlotName: slots[s.MealSlotID],
 			CourseID: s.CourseID, CourseName: courses[s.CourseID], Tag: s.Tag}
 		if s.RecipeID != 0 {
