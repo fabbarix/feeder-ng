@@ -205,7 +205,7 @@ func TestTimelineNamesTheRecipeInATimerLabelOnlyWhenThereIsMoreThanOneCourse(t *
 	}{
 		{w.Side, "Prep", "active", 0, 300},
 		{w.Main, "Roast", "active", 300, 1500},
-		{w.Side, "Simmer", "passive", 300, 1500}, // ties by the slot's Course order: Main before Side
+		{w.Side, "Simmer", "passive", 300, 1200}, // ties by the slot's Course order: Main before Side
 	}
 	for i, x := range want {
 		g := tl.Items[i]
