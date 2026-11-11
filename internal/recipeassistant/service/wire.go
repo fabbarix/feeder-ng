@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"sync"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
@@ -10,6 +11,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/store"
 	"github.com/fabbarix/feeder-ng/internal/recipefile/imagefetch"
+	recipefilestore "github.com/fabbarix/feeder-ng/internal/recipefile/store"
 	"github.com/fabbarix/feeder-ng/internal/safehttp"
 	"github.com/fabbarix/feeder-ng/internal/secretbox"
 )
@@ -39,6 +41,7 @@ func For(d app.Deps, claude ClaudeFactory) *Service {
 	}
 	deps := Deps{
 		Store:   store.New(d.DB, d.Clock),
+		Courses: recipefilestore.New(d.DB, d.Clock, imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))),
 		Claude:  claude,
 		Pages:   lazyPages{dataDir: d.Config.DataDir},
 		Images:  lazyImages{dataDir: d.Config.DataDir},

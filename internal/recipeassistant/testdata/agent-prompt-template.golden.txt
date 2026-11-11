@@ -15,11 +15,14 @@ Rules:
    Use "after" (0-based indexes into the steps array) when a step must wait for earlier steps to FINISH, e.g. serving waits for the oven. Leave it out otherwise.
 6. Add "uses" to steps that consume ingredients, with the amounts used in that step.
 7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1; name the pack Ingredient like the Recipe), and "yield" = portions in the pack.
-8. Add 1–4 short lowercase "tags" (main protein, dish type, e.g. "chicken", "traybake", "vegetarian", "soup").
+8. Add 1–4 short lowercase "tags" (main protein, cooking method or style, e.g. "chicken", "traybake", "vegetarian").
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".
 11. Several recipes in the input become several entries in "recipes", sharing one "ingredients" list.
-12. If the source says how long the dish takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
+12. If the source says how long the recipe takes to reheat (a ready-meal pack, "reheat for 3 minutes"), set the recipe's "reheatMinutes" to a whole number of minutes from 1 to 30, the time to reheat a typical serving of the Leftover, flat for the whole Planned Meal. Omit it when the source does not say; never guess.
+13. Courses: set "courses" to the names of the Courses the recipe can fill, one or more, chosen ONLY from the list below and written exactly as given. Never invent a Course. Leave "courses" out when none clearly fits; the recipe then gets the Course marked (default).
+{{COURSES}}
+14. Whole meal: set "wholeMeal" to true only for a recipe that needs no other Course beside it (a one-pot recipe, a Ready Meal that comes with its sides), to false for a recipe that wants something served with it (a bought dessert or side, a frozen pizza that wants a salad), and leave it out when the source does not say.
 
 JSON Schema:
 {{SCHEMA}}

@@ -49,6 +49,13 @@ func Build(in ExportInput) (File, []Warning) {
 			LeftoverUseByDays: copyInt(r.LeftoverUseByDays),
 			ReheatMinutes:     copyInt(r.ReheatMinutes),
 		}
+		for _, c := range r.Courses {
+			out.Courses = append(out.Courses, c.Name)
+		}
+		if r.WholeMeal != nil {
+			w := *r.WholeMeal
+			out.WholeMeal = &w
+		}
 		if r.Source.URL != "" || r.Source.Attribution != "" {
 			out.Source = &Source{URL: r.Source.URL, Attribution: r.Source.Attribution}
 		}
