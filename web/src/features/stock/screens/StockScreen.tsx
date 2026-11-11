@@ -19,7 +19,7 @@
  * No `<main>`: the shell provides it. No tile grid.
  */
 import { useMemo, useState, type ReactElement } from 'react'
-import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
+import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { LotList } from '../components/LotList'
 import { SetTotalSheet } from '../components/SetTotalSheet'
@@ -55,6 +55,8 @@ export function StockScreen(): ReactElement | null {
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
+  // The aside is a 360 px column from 1280 px: the spoiled rows keep their actions under the text there.
+  const twoColumns = useMediaQuery('(min-width: 1280px)')
   const ready = totals.status === 'ready'
   // No empty aside: it exists when something is spoiled or the search and chips are shown.
   const showAside = spoiledLots.length > 0 || ready
@@ -96,6 +98,7 @@ export function StockScreen(): ReactElement | null {
               lots={spoiledLots}
               today={today}
               system={system}
+              stacked={twoColumns}
               onThrowOut={(id) => void attempt(() => spoiled.throwOut(id))}
               onKeep={(id) => void attempt(() => spoiled.keep(id))}
             />

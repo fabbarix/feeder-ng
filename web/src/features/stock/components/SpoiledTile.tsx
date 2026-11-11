@@ -13,6 +13,8 @@ export interface SpoiledTileProps {
   onThrowOut: (lotId: number) => void
   onKeep: (lotId: number) => void
   system?: UnitSystem
+  /** Keep the actions under the text even from 820 px (a narrow column, like Stock's aside). */
+  stacked?: boolean
 }
 
 /**
@@ -24,8 +26,8 @@ export interface SpoiledTileProps {
  * trail the row, below it they sit under the text. Accessible names stay "Throw out <name>" / "Keep <name>". Renders nothing when lots is empty.
  * Exported for the Today screen.
  */
-export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric' }: SpoiledTileProps): ReactElement | null {
-  const wide = useMediaQuery('(min-width: 820px)')
+export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric', stacked = false }: SpoiledTileProps): ReactElement | null {
+  const wide = useMediaQuery('(min-width: 820px)') && !stacked
   if (lots.length === 0) return null
   return (
     <Tile as="section" variant="status" status="danger" span="full" aria-label={strings.spoiledHeading} overline={strings.spoiledHeading} overlineIcon="spoiled">
