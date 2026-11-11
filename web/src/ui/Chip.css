@@ -111,3 +111,163 @@ button.chip:focus-visible {
   background: var(--color-info-bg);
   color: var(--color-info-fg);
 }
+
+/* Tag colours (TG-UI, spec 4.1): a tag chip is tinted; a filter chip only while selected; the dot is decorative. Tokens only. */
+.chip__dot {
+  display: inline-block;
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--color-outline);
+}
+
+.chip[data-kind='tag'][data-tag-colour='tomato'] {
+  background: var(--tag-tomato-bg);
+  color: var(--tag-tomato-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='apricot'] {
+  background: var(--tag-apricot-bg);
+  color: var(--tag-apricot-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='mustard'] {
+  background: var(--tag-mustard-bg);
+  color: var(--tag-mustard-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='olive'] {
+  background: var(--tag-olive-bg);
+  color: var(--tag-olive-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='sage'] {
+  background: var(--tag-sage-bg);
+  color: var(--tag-sage-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='teal'] {
+  background: var(--tag-teal-bg);
+  color: var(--tag-teal-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='sky'] {
+  background: var(--tag-sky-bg);
+  color: var(--tag-sky-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='blue'] {
+  background: var(--tag-blue-bg);
+  color: var(--tag-blue-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='plum'] {
+  background: var(--tag-plum-bg);
+  color: var(--tag-plum-fg);
+}
+
+.chip[data-kind='tag'][data-tag-colour='rose'] {
+  background: var(--tag-rose-bg);
+  color: var(--tag-rose-fg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='tomato'][aria-pressed='true'] {
+  background: var(--tag-tomato-bg);
+  color: var(--tag-tomato-fg);
+  border-color: var(--tag-tomato-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='apricot'][aria-pressed='true'] {
+  background: var(--tag-apricot-bg);
+  color: var(--tag-apricot-fg);
+  border-color: var(--tag-apricot-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='mustard'][aria-pressed='true'] {
+  background: var(--tag-mustard-bg);
+  color: var(--tag-mustard-fg);
+  border-color: var(--tag-mustard-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='olive'][aria-pressed='true'] {
+  background: var(--tag-olive-bg);
+  color: var(--tag-olive-fg);
+  border-color: var(--tag-olive-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='sage'][aria-pressed='true'] {
+  background: var(--tag-sage-bg);
+  color: var(--tag-sage-fg);
+  border-color: var(--tag-sage-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='teal'][aria-pressed='true'] {
+  background: var(--tag-teal-bg);
+  color: var(--tag-teal-fg);
+  border-color: var(--tag-teal-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='sky'][aria-pressed='true'] {
+  background: var(--tag-sky-bg);
+  color: var(--tag-sky-fg);
+  border-color: var(--tag-sky-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='blue'][aria-pressed='true'] {
+  background: var(--tag-blue-bg);
+  color: var(--tag-blue-fg);
+  border-color: var(--tag-blue-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='plum'][aria-pressed='true'] {
+  background: var(--tag-plum-bg);
+  color: var(--tag-plum-fg);
+  border-color: var(--tag-plum-bg);
+}
+
+.chip[data-kind='filter'][data-tag-colour='rose'][aria-pressed='true'] {
+  background: var(--tag-rose-bg);
+  color: var(--tag-rose-fg);
+  border-color: var(--tag-rose-bg);
+}
+
+.chip[data-tag-colour='tomato'] .chip__dot {
+  background: var(--tag-tomato-dot);
+}
+
+.chip[data-tag-colour='apricot'] .chip__dot {
+  background: var(--tag-apricot-dot);
+}
+
+.chip[data-tag-colour='mustard'] .chip__dot {
+  background: var(--tag-mustard-dot);
+}
+
+.chip[data-tag-colour='olive'] .chip__dot {
+  background: var(--tag-olive-dot);
+}
+
+.chip[data-tag-colour='sage'] .chip__dot {
+  background: var(--tag-sage-dot);
+}
+
+.chip[data-tag-colour='teal'] .chip__dot {
+  background: var(--tag-teal-dot);
+}
+
+.chip[data-tag-colour='sky'] .chip__dot {
+  background: var(--tag-sky-dot);
+}
+
+.chip[data-tag-colour='blue'] .chip__dot {
+  background: var(--tag-blue-dot);
+}
+
+.chip[data-tag-colour='plum'] .chip__dot {
+  background: var(--tag-plum-dot);
+}
+
+.chip[data-tag-colour='rose'] .chip__dot {
+  background: var(--tag-rose-dot);
+}
