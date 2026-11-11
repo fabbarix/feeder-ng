@@ -1,8 +1,10 @@
 package cook
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
@@ -346,6 +348,89 @@ func clash(a, b Item) bool {
 	return a.StartSeconds < b.EndSeconds && b.StartSeconds < a.EndSeconds
 }
 
+// placementOrder rebuilds the order Timeline places Courses in: Reheat first,
+// then longer length, then slot order.
+func placementOrder(cs []Course) []Course {
+	length := func(c Course) int {
+		if c.Reheat {
+			return c.ReheatSeconds
+		}
+		s, _ := schedule.Compute(c.Steps)
+		return s.TotalMinutes * 60
+	}
+	out := append([]Course(nil), cs...)
+	pos := map[int64]int{}
+	for i, c := range cs {
+		pos[c.ID] = i
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.Reheat != b.Reheat {
+			return a.Reheat
+		}
+		if la, lb := length(a), length(b); la != lb {
+			return la > lb
+		}
+		return pos[a.ID] < pos[b.ID]
+	})
+	return out
+}
+
+// assertLatest fails when a Course could end later (a whole-second shift,
+// ending at or before E) without clashing with the Courses placed before it.
+func assertLatest(t *testing.T, label string, cs []Course, r Result) {
+	t.Helper()
+	var before []Item
+	for _, c := range placementOrder(cs) {
+		var mine []Item
+		end := 0
+		for _, it := range r.Items {
+			if it.CourseID == c.ID {
+				mine = append(mine, it)
+				if it.EndSeconds > end {
+					end = it.EndSeconds
+				}
+			}
+		}
+		for s := r.TotalSeconds - end; s >= 1; s-- {
+			free := true
+			for _, it := range mine {
+				m := it
+				m.StartSeconds += s
+				m.EndSeconds += s
+				for _, p := range before {
+					if clash(m, p) {
+						free = false
+					}
+				}
+			}
+			if free {
+				t.Fatalf("%s: course %d could end %ds later without a clash", label, c.ID, s)
+			}
+		}
+		before = append(before, mine...)
+	}
+}
+
+func TestLatestPositionOnRandomSlots(t *testing.T) {
+	rng := rand.New(rand.NewSource(2))
+	for n := 0; n < 300; n++ {
+		cs := randomCourses(rng)
+		assertLatest(t, fmt.Sprintf("case %d", n), cs, must(t, cs))
+	}
+}
+
+func TestZeroShiftWinsOverPassiveStep(t *testing.T) {
+	// Candidates exist (Course 1's Active Step), yet the answer is d = 0:
+	// Course 2 ends at E, over Course 1's passive Step.
+	cs := []Course{fresh(1, act(5), pas(30)), fresh(2, act(3))}
+	r := must(t, cs)
+	if got := find(t, r, 2, 0).EndSeconds; got != r.TotalSeconds {
+		t.Fatalf("course 2 ends at %d, want E = %d", got, r.TotalSeconds)
+	}
+	assertLatest(t, "fixed", cs, r)
+}
+
 func TestGuaranteesOnRandomSlots(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	for n := 0; n < 300; n++ {
@@ -370,23 +455,68 @@ func TestGuaranteesOnRandomSlots(t *testing.T) {
 			t.Fatalf("case %d: latest end %d != total %d", n, maxEnd, r.TotalSeconds)
 		}
 
-		// (a) each fresh Course keeps Compute's offsets; (b) one cook.
+		// Every Course is placed: (a) each fresh Course keeps Compute's
+		// offsets and each non-Advance Step appears exactly once; Reheat and
+		// Serve items sit where the spec puts them; (b) one cook, below.
 		for _, c := range cs {
-			if c.Reheat || len(byCourse[c.ID]) == 0 {
+			items := byCourse[c.ID]
+			switch {
+			case c.Reheat:
+				if len(items) != 1 {
+					t.Fatalf("case %d: reheat course %d has %d items", n, c.ID, len(items))
+				}
+				it := items[0]
+				if it.Kind != ItemReheat || it.StepKind != schedule.Passive ||
+					it.EndSeconds-it.StartSeconds != c.ReheatSeconds || it.EndSeconds != r.TotalSeconds {
+					t.Fatalf("case %d: reheat course %d = %+v (total %d)", n, c.ID, it, r.TotalSeconds)
+				}
 				continue
 			}
 			want, _ := schedule.Compute(c.Steps)
-			items := byCourse[c.ID]
 			if len(want.Steps) == 0 {
+				if len(items) != 1 {
+					t.Fatalf("case %d: serve course %d has %d items", n, c.ID, len(items))
+				}
+				it := items[0]
+				if it.Kind != ItemServe || it.StepKind != schedule.Active ||
+					it.StartSeconds != r.TotalSeconds || it.EndSeconds != r.TotalSeconds {
+					t.Fatalf("case %d: serve course %d = %+v (total %d)", n, c.ID, it, r.TotalSeconds)
+				}
 				continue
 			}
-			shift := items[0].StartSeconds - want.Steps[0].Start*60
+			if len(items) != len(want.Steps) {
+				t.Fatalf("case %d: course %d has %d items, want %d", n, c.ID, len(items), len(want.Steps))
+			}
+			seenIdx := map[int]bool{}
+			for _, it := range items {
+				if it.Kind != ItemStep || seenIdx[it.StepIndex] {
+					t.Fatalf("case %d: course %d duplicate or odd item %+v", n, c.ID, it)
+				}
+				seenIdx[it.StepIndex] = true
+			}
+			shift := find(t, r, c.ID, want.Steps[0].Index).StartSeconds - want.Steps[0].Start*60
 			for _, w := range want.Steps {
 				it := find(t, r, c.ID, w.Index)
 				if it.StartSeconds-shift != w.Start*60 || it.EndSeconds-shift != w.End*60 {
 					t.Fatalf("case %d course %d: block split at step %d", n, c.ID, w.Index)
 				}
 			}
+		}
+		// The first fresh Course in placement order ends at E.
+		for _, c := range placementOrder(cs) {
+			if c.Reheat {
+				continue
+			}
+			end := 0
+			for _, it := range byCourse[c.ID] {
+				if it.EndSeconds > end {
+					end = it.EndSeconds
+				}
+			}
+			if end != r.TotalSeconds {
+				t.Fatalf("case %d: first fresh course %d ends at %d, want %d", n, c.ID, end, r.TotalSeconds)
+			}
+			break
 		}
 		for i := range r.Items {
 			for j := i + 1; j < len(r.Items); j++ {
