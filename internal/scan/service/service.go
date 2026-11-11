@@ -71,6 +71,7 @@ type ProductInfo struct {
 	IngredientName string
 	BaseUnit       string
 	PackSize       float64
+	ImageURL       string // "/api/images/<id>" of the Product's Picture, "" = none (PP)
 }
 
 // ShopBarcode is a Shop-only barcode: a plain code, or RuleID + ItemCode for a weighed one.
@@ -86,6 +87,7 @@ type NewProduct struct {
 	Name         string
 	IngredientID int64
 	PackSize     float64
+	Image        string // the Picture's image id, "" = none (PP)
 	Barcodes     []string
 	ShopBarcodes []ShopBarcode
 }
@@ -125,6 +127,7 @@ type OfflineProduct struct {
 	IngredientName string  `json:"ingredientName"`
 	BaseUnit       string  `json:"baseUnit"`
 	PackSize       float64 `json:"packSize"`
+	ImageURL       string  `json:"imageUrl,omitempty"` // PP: the Picture, so a scan can be described offline
 	LastPriceCents *int    `json:"lastPriceCents"`
 }
 

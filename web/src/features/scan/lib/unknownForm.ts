@@ -22,6 +22,8 @@ export interface UnknownFormValues {
   scope: BarcodeScope
   /** grams, only for a price-valued weighed code */
   weightText: string
+  /** PP: the Picture's image id for the Product to create, "" or absent = none */
+  image?: string
 }
 
 /** pack: the full form. weighed: Ingredient + Product name only. weighed_price: also the weight, once. */

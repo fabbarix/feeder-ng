@@ -6,6 +6,8 @@ import { scanStrings } from '../strings'
 export interface ScanFeedbackProps {
   /** feedbackText(...) of the scan, e.g. "Passata +700 g · $1.59" */
   text: string
+  /** PP: the Product's Picture, drawn as a small leading thumb; nothing is drawn (and no space kept) without it */
+  imageUrl?: string
   /** the scan sits in the offline queue, not yet on the server */
   queued?: boolean
   /** offers the Edit price IconButton */

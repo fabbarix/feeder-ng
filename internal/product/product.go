@@ -39,6 +39,9 @@ type Input struct {
 	Name         string
 	IngredientID int64
 	PackSize     float64 // in the Ingredient's Base Unit
+	// Image is the Product's Picture: an image id from internal/imaging, "" = none (PP). Validate trims it and accepts ""
+	// or a well-formed id (imaging.ValidID), else a *ValidationError{Field: "image"}. STUB: not validated yet.
+	Image string
 }
 
 // Validate: name 1-100 runes after NormalizeName, IngredientID > 0, PackSize

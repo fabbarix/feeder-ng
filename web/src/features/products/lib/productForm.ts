@@ -9,6 +9,8 @@ export interface ProductFormValues {
   packSize: string
   /** optional global barcode as typed or scanned */
   barcode: string
+  /** PP: the Picture's image id, "" or absent = none */
+  image?: string
 }
 
 export type ProductFormErrors = Partial<Record<keyof ProductFormValues, string>>

@@ -26,6 +26,8 @@ export interface UnknownBarcodeSheetProps {
   /** a price-valued weighed code: shown to explain why the weight is asked */
   priceText?: string
   onSave: (values: UnknownFormValues) => void
+  /** PP: the Picture field needs the server (it uploads); the Scan screen passes false while offline and the field is left out. Default true. */
+  canUpload?: boolean
   /** R2-4: near-duplicate lookup for an Ingredient created here (the matcher of Import Review). Absent offline: no guard. A rejection is ignored. */
   findSimilar?: (name: string) => Promise<SearchResult>
 }

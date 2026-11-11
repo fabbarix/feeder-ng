@@ -64,6 +64,10 @@ type Product struct {
 	BaseUnit       units.Base `json:"baseUnit"`
 	PackSize       float64    `json:"packSize"`
 	Archived       bool       `json:"archived"`
+	// Image is the Picture's image id ("" = none) and ImageURL its address "/api/images/<id>" ("" = none); both are always sent (PP).
+	// STUB: never filled yet (migration 1312 and the SELECT come with the implementation).
+	Image    string `json:"image"`
+	ImageURL string `json:"imageUrl"`
 }
 
 // ShopBarcode as stored.
@@ -175,11 +179,39 @@ func allUsages() []UsageCounter {
 
 // Store is the SQLite-backed store.
 type Store struct {
-	db  *sql.DB
-	clk clock.Clock
+	db     *sql.DB
+	clk    clock.Clock
+	images Images
 }
 
-func New(d *sql.DB, clk clock.Clock) *Store { return &Store{db: d, clk: clk} }
+func New(d *sql.DB, clk clock.Clock, opts ...Option) *Store {
+	s := &Store{db: d, clk: clk}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
+}
+
+// Images is the part of the image store the Product Store needs (PP): the same two methods as ingredient/store.Images.
+// Production passes images.NewGuarded(files, refs.New(db)), so Delete never removes a file some record still uses.
+type Images interface {
+	Exists(id string) bool
+	Delete(ctx context.Context, id string) error
+}
+
+// Option configures a Store.
+type Option func(*Store)
+
+// WithImages makes the Store refuse a Picture that was never uploaded (a *product.ValidationError on field "image") and
+// delete a file no Product uses any more after it is replaced, cleared, or its Product deleted. STUB: stored, not used yet.
+func WithImages(im Images) Option { return func(s *Store) { s.images = im } }
+
+// SetImage sets (id), replaces or clears ("") the Picture of a Product, then deletes the replaced file when no Product uses it.
+// ErrNotFound for an unknown Product, a *product.ValidationError on field "image" for a malformed or never-uploaded id.
+// STUB: changes nothing yet.
+func (s *Store) SetImage(ctx context.Context, id int64, image string) (Detail, error) {
+	return s.Product(ctx, id)
+}
 
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 

@@ -66,6 +66,8 @@ export interface FlowFeedback {
   productName: string
   priceCents: number | null
   canEditPrice: boolean
+  /** PP: the Product's Picture ("/api/images/<id>"), from the Result or, for a queued scan, the offline Product; absent when none */
+  imageUrl?: string
 }
 
 export interface FlowBanner {
