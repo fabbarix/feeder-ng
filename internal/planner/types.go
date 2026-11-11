@@ -399,6 +399,9 @@ type Result struct {
 	Unfilled   []Unfilled
 	// Kept are unpinned Planned Meals that Plan left unchanged.
 	Kept []SlotKey
+	// KeptPortions are the Portions each kept meal is planned for: its cell's Course Attendance. Its Batches still cover
+	// them (spec 7.2); Reconcile writes them when the stored meal has other Portions.
+	KeptPortions map[SlotKey]float64
 	// Rechecks has one entry per kept fresh Planned Meal (the keep check); empty for Regenerate.
 	Rechecks []Recheck
 	// NotServed are the cells left empty with no reason: covered, optional and nothing fits, or nobody eats the Course.

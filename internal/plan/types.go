@@ -220,6 +220,9 @@ type Snapshot struct {
 type Changes struct {
 	// Upserts are the new or changed Planned Meals (State planned, not Pinned), by Key.
 	Upserts []Meal
+	// Replaced are unpinned Planned Meals that were cleared and are planned again: their rows are deleted before the
+	// upserts, so the replacement is a new Planned Meal (a new id).
+	Replaced []Key
 	// Deletes are unpinned Planned Meals the planner dropped and did not replace.
 	Deletes []Key
 	// Unfilled are the "Couldn't plan" reasons to store.

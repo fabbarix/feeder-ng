@@ -3,6 +3,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
@@ -340,10 +341,13 @@ func keyOf(k planner.SlotKey) Key {
 //
 //   - Every Placement becomes an upsert: State planned, not Pinned, Batches, Portions, Relaxed, From
 //     (planner.LeftoverSource -> Source), Why converted with WhyFrom.
-//   - Rechecks (the keep check of kept fresh meals): the stored meal's Why loses its cooldown_relaxed and
-//     variety_relaxed chips and gains the Recheck's chip; a row is written only when Relaxed or the Why list changes.
+//   - Kept meals: the stored meal is written only when it changed. Its Portions become the planner's KeptPortions (its
+//     cell's Course Attendance; Batches stay, spec 7.2). A kept fresh meal's Rechecks (the keep check) replace its
+//     relaxed flag and the cooldown_relaxed and variety_relaxed chips: the stored Why loses those chips and gains the
+//     Recheck's chip.
 //   - An existing unpinned Planned meal whose cell is not over yet and that is neither in Result.Kept nor re-placed
-//     (so it was invalid, cleared, or its cell is covered or not served) is deleted. Pinned, Cooked and Skipped meals,
+//     (so it was invalid, cleared, or its cell is covered or not served) is deleted. A cleared one that is re-placed
+//     is Replaced: its row goes and the new Planned Meal is a new row. Pinned, Cooked and Skipped meals,
 //     and unconfirmed meals whose cell is already over, are never touched.
 //   - Result.Unfilled become Unfilled rows; every other cell of the snapshot is in ClearUnfilled. Result.NotServed is
 //     informational: it carries no reason and is not stored.
@@ -376,30 +380,41 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 	for _, m := range s.Meals {
 		stored[norm(m.Key)] = m
 	}
+	rechecks := make(map[Key]planner.Recheck, len(res.Rechecks))
 	for _, rc := range res.Rechecks {
-		k := keyOf(rc.Key)
+		rechecks[keyOf(rc.Key)] = rc
+	}
+	for _, kk := range res.Kept {
+		k := keyOf(kk)
 		m, ok := stored[k]
 		if !ok {
 			continue
 		}
-		var why []Why
-		for _, w := range m.Why {
-			if w.Code != string(planner.ReasonCooldownRelaxed) && w.Code != string(planner.ReasonVarietyRelaxed) {
-				why = append(why, w)
+		relaxed, why, changedWhy := m.Relaxed, m.Why, false
+		if rc, fresh := rechecks[k]; fresh {
+			relaxed, why = rc.Relaxed, []Why{}
+			for _, w := range m.Why {
+				if w.Code != string(planner.ReasonCooldownRelaxed) && w.Code != string(planner.ReasonVarietyRelaxed) {
+					why = append(why, w)
+				}
 			}
+			if rc.Why != nil {
+				why = append(why, WhyFrom(*rc.Why))
+			}
+			changedWhy = !sameWhy(why, m.Why)
 		}
-		if rc.Why != nil {
-			why = append(why, WhyFrom(*rc.Why))
+		portions := m.Portions
+		if p, ok := res.KeptPortions[kk]; ok {
+			portions = p
 		}
-		if rc.Relaxed == m.Relaxed && sameWhy(why, m.Why) {
+		if relaxed == m.Relaxed && !changedWhy && samePortions(portions, m.Portions) {
 			continue
 		}
 		ch.Upserts = append(ch.Upserts, Meal{
-			ID: m.ID, Key: k, RecipeID: m.RecipeID, Batches: m.Batches, Portions: m.Portions,
-			State: m.State, From: m.From, Why: why, Relaxed: rc.Relaxed,
+			ID: m.ID, Key: k, RecipeID: m.RecipeID, Batches: m.Batches, Portions: portions,
+			State: m.State, From: m.From, Why: why, Relaxed: relaxed,
 		})
 	}
-
 	kept := map[Key]bool{}
 	for _, k := range res.Kept {
 		kept[keyOf(k)] = true
@@ -416,16 +431,25 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 			cells = append(cells, ck)
 		}
 	}
+	cleared := map[Key]bool{}
+	for _, k := range s.Clear {
+		cleared[norm(k)] = true
+	}
 	for _, m := range s.Meals {
 		mk := norm(m.Key)
-		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] {
+		if m.State != StatePlanned || m.Pinned || kept[mk] {
 			continue
 		}
 		at, ok := slotAt[mk]
 		if !ok || at.Before(s.Now) {
 			continue // unconfirmed and over: stays in To confirm
 		}
-		ch.Deletes = append(ch.Deletes, mk)
+		switch {
+		case placed[mk] && cleared[mk]:
+			ch.Replaced = append(ch.Replaced, mk)
+		case !placed[mk]:
+			ch.Deletes = append(ch.Deletes, mk)
+		}
 	}
 
 	unfilled := map[Key]bool{}
@@ -444,6 +468,11 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		}
 	}
 	return ch
+}
+
+// samePortions reports whether two portion counts are equal up to float noise.
+func samePortions(a, b float64) bool {
+	return math.Abs(a-b) <= eps
 }
 
 // sameWhy reports whether two chip lists are equal (nil and empty are equal).

@@ -111,6 +111,7 @@ func (st *state) dropBlockedKept() {
 		for _, res := range st.reservations {
 			if res.recipe == id && res.slot != i && absInt(st.days[res.slot]-st.days[i]) < res.cooldown {
 				st.roles[i] = roleEmpty
+				st.uncoverCells(i) // the history loop after dropBlockedKept adds the restored kept cells
 				break
 			}
 		}

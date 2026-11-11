@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"errors"
-	"math"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -159,9 +158,9 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 			}
 			for _, k := range plan.CellKeys(s) {
 				later := at.After(target) || (at.Equal(target) && s.Key.MealSlotID > o.after.MealSlotID)
-				// Within the same occurrence the Courses after the target in the slot's order are later too.
+				// Within the same occurrence the Courses the walk visits after the target are later too.
 				sameSlot := at.Equal(target) && s.Key.MealSlotID == o.after.MealSlotID
-				if later || (sameSlot && coursePosition(s, k.CourseID) > coursePosition(s, after.CourseID)) {
+				if later || (sameSlot && walkRank(s, k.CourseID) > walkRank(s, after.CourseID)) {
 					clear = append(clear, k)
 				}
 			}
@@ -217,12 +216,20 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 	}, nil
 }
 
-// coursePosition is the index of the Course in the slot occurrence's Courses (-1 when it is not one of them, and for a
-// slot without Courses).
-func coursePosition(s plan.SlotInfo, courseID int64) int {
+// walkRank is the Course's place in the planner's walk inside its slot occurrence: the main Course first, then the
+// required Courses, then the optional ones, each group in the slot's order (-1 when the Course is not one of the
+// slot's Courses, and for a slot without Courses).
+func walkRank(s plan.SlotInfo, courseID int64) int {
 	for i, c := range s.Courses {
 		if c.CourseID == courseID {
-			return i
+			group := 1
+			switch {
+			case c.Main:
+				group = 0
+			case c.Optional:
+				group = 2
+			}
+			return group*len(s.Courses) + i
 		}
 	}
 	return -1
@@ -243,9 +250,11 @@ func cellAttendance(s plan.SlotInfo, courseID int64) []plan.Attendee {
 }
 
 // invalidOnRead lists the unpinned Planned Meals the planner would keep although they are no longer valid, so that
-// they are treated as empty: a cell nobody eats, a meal planned for other portions than its cell now needs (Course
-// Attendance changed), or a meal that breaks the Slot Rules of its cell (the planner keeps valid unpinned meals without
-// re-checking them). It works per planning cell. Keys already in clear are not repeated.
+// they are treated as empty: a cell nobody eats, a meal whose Batches no longer cover its cell's portions, or a meal
+// that breaks the Slot Rules of its cell (the planner keeps valid unpinned meals without re-checking them). A meal
+// planned for other portions that its Batches still cover stays: Reconcile writes the new Portions (spec 7.2). A
+// Leftover-served meal is checked against its source by the planner. It works per planning cell. Keys already in
+// clear are not repeated.
 func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRule, recipes []planner.Recipe, clear []plan.Key) []plan.Key {
 	norm := plan.NormaliseCourses(slots)
 	already := map[plan.Key]bool{}
@@ -265,17 +274,21 @@ func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRu
 			if !ok || already[k] {
 				continue
 			}
-			// Nobody eats the cell, or the portions it was planned for no longer match its Course Attendance.
+			// Nobody eats the cell.
 			portions := attendancePortions(cellAttendance(s, k.CourseID))
-			if portions <= 0 || math.Abs(m.Portions-portions) > eps {
+			if portions <= 0 {
 				out = append(out, k)
 				continue
 			}
-			cellRules := plan.CellRules(rules, s, k.CourseID, norm)
-			if len(cellRules) == 0 || m.From != nil {
+			if m.From != nil {
 				continue
 			}
-			if rc, ok := recipeOf(recipes, m.RecipeID); !ok || !matchesAnyRule(rc, cellRules) {
+			rc, ok := recipeOf(recipes, m.RecipeID)
+			if !ok || m.Batches*rc.Yield < portions-eps {
+				out = append(out, k)
+				continue
+			}
+			if cellRules := plan.CellRules(rules, s, k.CourseID, norm); len(cellRules) > 0 && !matchesAnyRule(rc, cellRules) {
 				out = append(out, k)
 			}
 		}

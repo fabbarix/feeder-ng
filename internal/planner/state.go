@@ -86,11 +86,12 @@ type state struct {
 	coveredBy []int
 	preRole   []role
 
-	placements []Placement
-	unfilled   []Unfilled
-	kept       []SlotKey
-	notServed  []NotServed
-	rechecks   []Recheck
+	placements   []Placement
+	unfilled     []Unfilled
+	kept         []SlotKey
+	keptPortions map[SlotKey]float64
+	notServed    []NotServed
+	rechecks     []Recheck
 }
 
 // cellBefore is the walk order: chronological, then the Meal Slot, the date, the
@@ -142,15 +143,16 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 	sort.SliceStable(slots, func(a, b int) bool { return cellBefore(slots[a], slots[b]) })
 
 	st := &state{
-		in:        in,
-		cfg:       in.Config,
-		regen:     regen,
-		swapIdx:   -1,
-		recipes:   make(map[RecipeID]Recipe, len(in.Recipes)),
-		slots:     slots,
-		nextLot:   1 << 40,
-		purchases: map[IngredientID]*Purchase{},
-		placed:    map[int]RecipeID{},
+		in:           in,
+		cfg:          in.Config,
+		regen:        regen,
+		swapIdx:      -1,
+		recipes:      make(map[RecipeID]Recipe, len(in.Recipes)),
+		slots:        slots,
+		nextLot:      1 << 40,
+		purchases:    map[IngredientID]*Purchase{},
+		placed:       map[int]RecipeID{},
+		keptPortions: map[SlotKey]float64{},
 	}
 	if in.Weights != nil {
 		st.w = *in.Weights
@@ -195,9 +197,15 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 			st.roles[i] = roleNotServed
 		}
 	}
+	st.dropDuplicateKept()
+	// A Whole meal main that is already fixed or kept covers now; a Leftover-served one covers once it passes its check
+	// at walk time (step).
 	for i, s := range slots {
-		if s.Main && s.Existing != nil && st.isWholeMeal(s.Existing.RecipeID) && st.roles[i] != roleEmpty &&
-			st.roles[i] != roleCovered && st.roles[i] != roleNotServed {
+		if !s.Main || s.Existing == nil || !st.isWholeMeal(s.Existing.RecipeID) {
+			continue
+		}
+		switch st.roles[i] {
+		case rolePinned, roleCooked, roleSkipped, roleKept:
 			st.coverGroup(i)
 		}
 	}
@@ -296,7 +304,7 @@ func (st *state) classify(i int) role {
 func (st *state) validPlannedFresh(i int) bool {
 	s := st.slots[i]
 	r, ok := st.recipes[s.Existing.RecipeID]
-	if !ok || r.Archived || r.Yield <= 0 {
+	if !ok || r.Archived || r.Yield <= 0 || !st.fitsCourse(i, r) {
 		return false
 	}
 	if st.excludes(s.Attendance, r, true) {
@@ -374,18 +382,57 @@ func (st *state) coverGroup(main int) {
 }
 
 // uncover undoes the covering of the cells a main cell covered, once that main
-// cell is dropped by the keep check.
+// cell is dropped by the keep check. Restored kept cells join the history.
 func (st *state) uncover(main int) {
+	for _, j := range st.uncoverCells(main) {
+		if st.roles[j] == roleKept {
+			st.addHistory(j)
+		}
+	}
+}
+
+// uncoverCells restores the roles the cells main covered had before the covering,
+// and returns them. The caller decides about the history of restored kept cells.
+func (st *state) uncoverCells(main int) []int {
+	var restored []int
 	for j := range st.slots {
 		if st.coveredBy[j] != main {
 			continue
 		}
 		st.coveredBy[j] = -1
 		st.roles[j] = st.preRole[j]
-		if st.roles[j] == roleKept {
-			st.addHistory(j)
+		restored = append(restored, j)
+	}
+	return restored
+}
+
+// dropDuplicateKept drops a kept fresh meal whose Recipe is already served by another Course of its slot and date
+// that the walk settles first: a fixed meal, or an earlier kept or Leftover-served cell. The walk refills the cell.
+func (st *state) dropDuplicateKept() {
+	for i := range st.slots {
+		if st.roles[i] == roleKept && st.servedElsewhere(i) {
+			st.roles[i] = roleEmpty
 		}
 	}
+}
+
+// servedElsewhere: the Recipe of kept cell i is planned in another Course of its slot and date (see dropDuplicateKept).
+func (st *state) servedElsewhere(i int) bool {
+	id := st.slots[i].Existing.RecipeID
+	for j := range st.slots {
+		if j == i || !st.sameGroup(i, j) || st.slots[j].Existing == nil || st.slots[j].Existing.RecipeID != id {
+			continue
+		}
+		switch st.roles[j] {
+		case rolePinned, roleCooked, roleSkipped:
+			return true
+		case roleKept, rolePlannedLeftover:
+			if j < i {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // drop turns a kept or planned cell back into an empty one for the walk to fill.
@@ -454,12 +501,15 @@ func (st *state) step(i int) {
 	case rolePinned:
 		st.applyFixed(i, *s.Existing)
 	case roleKept:
-		st.kept = append(st.kept, s.Key)
+		st.keep(i)
 		st.applyFixed(i, *s.Existing)
 	case rolePlannedLeftover:
 		if st.leftoverValid(i) {
-			st.kept = append(st.kept, s.Key)
+			st.keep(i)
 			st.consumeLeftover(*s.Existing.From, PortionsNeeded(s.Attendance))
+			if s.Main && st.isWholeMeal(s.Existing.RecipeID) {
+				st.coverGroup(i)
+			}
 		} else {
 			st.roles[i] = roleEmpty
 			st.fill(i)
@@ -469,6 +519,12 @@ func (st *state) step(i int) {
 	case roleNotServed:
 		st.notServed = append(st.notServed, NotServed{Key: s.Key, Cause: NotServedNoCourseAttendance})
 	}
+}
+
+// keep records cell i as an unpinned Planned meal that Plan leaves unchanged, with the portions its cell needs.
+func (st *state) keep(i int) {
+	st.kept = append(st.kept, st.slots[i].Key)
+	st.keptPortions[st.slots[i].Key] = PortionsNeeded(st.slots[i].Attendance)
 }
 
 // applyFixed applies a Pinned or kept fresh meal, or one served from a Leftover:
@@ -530,7 +586,8 @@ func (st *state) consumeLeftover(src LeftoverSource, portions float64) {
 
 // leftoverValid: a Planned meal served from a Leftover is still valid when its
 // source holds the same Recipe, covers the portions, is not past its Use-by,
-// and nobody attending excludes its Recipe.
+// nobody attending excludes its Recipe, the Recipe fits the Course and is not
+// already planned in another Course of the slot.
 func (st *state) leftoverValid(i int) bool {
 	s := st.slots[i]
 	portions := PortionsNeeded(s.Attendance)
@@ -542,7 +599,7 @@ func (st *state) leftoverValid(i int) bool {
 		return false
 	}
 	r, ok := st.recipes[p.recipe]
-	return ok && !st.excludes(s.Attendance, r, true)
+	return ok && st.fitsCourse(i, r) && !st.plannedInGroup(i, r.ID) && !st.excludes(s.Attendance, r, true)
 }
 
 func (st *state) prunePending() {
@@ -720,6 +777,7 @@ func (st *state) clone() *state {
 	c.history = append([]fresh(nil), st.history...)
 	c.purchases = map[IngredientID]*Purchase{}
 	c.placements, c.unfilled, c.kept, c.notServed = nil, nil, nil, nil
+	c.keptPortions = map[SlotKey]float64{}
 	return &c
 }
 
@@ -778,12 +836,13 @@ func (st *state) result() Result {
 		}
 	}
 	return Result{
-		Placements: st.placements,
-		Unfilled:   st.unfilled,
-		Kept:       st.kept,
-		Rechecks:   rechecks,
-		NotServed:  st.notServed,
-		Purchases:  purchases,
+		Placements:   st.placements,
+		Unfilled:     st.unfilled,
+		Kept:         st.kept,
+		KeptPortions: st.keptPortions,
+		Rechecks:     rechecks,
+		NotServed:    st.notServed,
+		Purchases:    purchases,
 	}
 }
 
