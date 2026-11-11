@@ -86,19 +86,20 @@
   }
 }
 
-/* R2-2 (L-07): from 1280 px a three-column Bento. The hero spans two columns and two rows; dense flow lets Use soon,
-   Leftovers and the streak back-fill the third column beside it. Full-span tiles keep the whole row. */
+/* R2-2 (L-07): from 1280 px a three-column Bento with dense flow. Compose decides the hero's footprint (data-hero-span):
+   `block` (a small tile can sit beside it) = 2 columns x 2 rows, with Use soon, Leftovers, Next steps and the streak
+   back-filling the third column; `row` (only full-span tiles, or nothing, beside it) = the full row, so no empty column.
+   Couldn't plan is a full-row tile on Today (CouldntPlanNotice span="full"). */
 @media (min-width: 1280px) {
   .today .bento-grid[data-columns] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-auto-flow: row dense;
   }
-  .today .tile.plan-hero[data-span] {
+  .today[data-hero-span='block'] .tile.plan-hero[data-span] {
     grid-column: span 2;
     grid-row: span 2;
   }
-  /* A hero with nothing beside it falls back to the full row instead of leaving a hole. */
-  .today .bento-grid:has(.today__slot:only-child) .tile.plan-hero[data-span] {
+  .today[data-hero-span='row'] .tile.plan-hero[data-span] {
     grid-column: 1 / -1;
     grid-row: auto;
   }
