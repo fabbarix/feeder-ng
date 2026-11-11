@@ -61,7 +61,7 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
         }}
       >
         <FieldRow align="end">
-          <TextField size="md" label={strings.barcodeLabel} inputMode="numeric" value={text} onChange={setText} error={error ?? undefined} />
+          <TextField size="md" label={strings.barcodeLabel} inputMode="numeric" data-size-intent="long" value={text} onChange={setText} error={error ?? undefined} />
           <Button type="submit" variant="secondary" icon="add">
             {strings.addBarcode}
           </Button>

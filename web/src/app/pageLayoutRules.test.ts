@@ -151,7 +151,9 @@ describe('the guard script and rules carry no label exemption', () => {
   it('reads data-size-intent in the browser and does not match labels against /barcode/', async () => {
     const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
     const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
-    expect(readFileSync(`${cwd}/../scripts/check-page-layout.mjs`, 'utf8')).toContain('data-size-intent')
+    const script = readFileSync(`${cwd}/../scripts/check-page-layout.mjs`, 'utf8')
+    expect(script).toContain('data-size-intent')
+    expect(script).toContain("matches('.sticky-action-bar')") // the bar spans the container: it is not page content (P3)
     expect(readFileSync(`${cwd}/../scripts/lib/page-layout-rules.mjs`, 'utf8')).not.toMatch(/barcode/i)
   })
 })

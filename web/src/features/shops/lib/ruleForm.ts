@@ -76,6 +76,32 @@ export function ruleFormError(v: RuleFormValues): string | null {
   return validateRule(rule)
 }
 
+/** The field the validation reason is about (to mark it invalid and focus it); null when the rule is fine. */
+export function ruleFormErrorField(v: RuleFormValues): RuleFormField | null {
+  const rule = toRule(v)
+  if (rule === null) {
+    return RULE_NUMBER_FIELDS.find((f) => whole(v[f]) === null) ?? null
+  }
+  const reason = validateRule(rule)
+  if (reason === null) return null
+  if (reason.startsWith('prefix')) return 'prefix'
+  if (reason.startsWith('item starts')) return 'itemStart'
+  if (reason.startsWith('decimal')) return 'decimalPlaces'
+  if (reason.startsWith('value starts') || reason.includes('overlap')) return 'valueStart'
+  return spanField(rule)
+}
+
+/** The field of the first span that is not valid (a start below 1 or a length below 1). */
+function spanField(rule: WeightRule): RuleFormField {
+  if (rule.item.start < 1) return 'itemStart'
+  if (rule.item.length < 1) return 'itemLength'
+  if (rule.value.start < 1) return 'valueStart'
+  return 'valueLength'
+}
+
+const RULE_NUMBER_FIELDS = ['itemStart', 'itemLength', 'valueStart', 'valueLength', 'decimalPlaces'] as const
+export type RuleFormField = 'prefix' | (typeof RULE_NUMBER_FIELDS)[number]
+
 /** Choices for the unit select: weight -> g, kg, oz, lb; price -> one option ('' = the Currency's minor unit). */
 export function unitOptions(kind: ValueKind, currency: string): { value: '' | ValueUnit; label: string }[] {
   if (kind === 'price') return [{ value: '', label: strings.priceUnit(currency) }]

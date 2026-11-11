@@ -105,6 +105,7 @@ export function IngredientScreen() {
             <>
               <div className="base-unit__value" data-testid="base-unit-value">
                 <span className="base-unit__label">{strings.baseUnitLabel}</span>
+                <span aria-hidden="true">{' · '}</span>
                 <strong>{ingredient.baseUnit}</strong>
               </div>
               <p className="base-unit__helper">{strings.baseUnitLocked(ing.referenceCount)}</p>

@@ -72,7 +72,7 @@ describe('WeightRuleEditor', () => {
   it('cannot be saved while the rule is invalid: Save says why on submit (R2-3, F-08) and does not save', async () => {
     const { user, onSave } = setup()
     await user.click(screen.getByRole('button', { name: strings.saveRule })) // empty prefix
-    expect(screen.getByText(/prefix/i, { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(/prefix/i)
     await user.type(screen.getByLabelText(strings.prefixLabel), '21')
     await user.clear(screen.getByLabelText(strings.valueStartLabel))
     await user.type(screen.getByLabelText(strings.valueStartLabel), '6') // overlaps the item digits

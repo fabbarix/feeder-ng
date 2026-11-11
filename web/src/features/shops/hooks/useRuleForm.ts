@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { errorText } from '../../products/lib/productForm'
 import { decodeSample, type RulePreview } from '../lib/rulePreview'
-import { emptyRuleForm, ruleFormError, ruleToForm, setKind, toRule, type RuleFormValues } from '../lib/ruleForm'
+import { emptyRuleForm, ruleFormError, ruleFormErrorField, ruleToForm, setKind, toRule, type RuleFormValues } from '../lib/ruleForm'
 import type { RuleBody } from '../api'
 import type { ShopRule } from '../types'
 
@@ -12,6 +12,8 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
   const [serverError, setServerError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [attempted, setAttempted] = useState(false)
+  const idBase = useId()
+  const fieldId = (field: string) => `${idBase}-${field}`
 
   const rule = useMemo(() => toRule(values), [values])
   const error = useMemo(() => ruleFormError(values), [values])
@@ -26,7 +28,11 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
 
   const submit = async () => {
     setAttempted(true)
-    if (!rule || error !== null) return
+    if (!rule || error !== null) {
+      const field = ruleFormErrorField(values)
+      if (field) document.getElementById(fieldId(field))?.focus()
+      return
+    }
     const { id: _id, ...body } = rule
     void _id
     setSaving(true)
@@ -40,8 +46,10 @@ export function useRuleForm(initial: ShopRule | undefined, onSave: (rule: RuleBo
     }
   }
 
-    /** The validation reason, shown only once Save was pressed. */
+  /** The validation reason, shown only once Save was pressed; it clears as soon as the rule is valid. */
   const shownError = attempted ? error : null
-  return { values, sample, setSample, setField, error, shownError, preview, serverError, saving, submit }
+  /** The field the shown reason is about: it carries the reason as its own error (alert, aria-invalid, described-by) and is focused on Save. */
+  const errorField = shownError === null ? null : ruleFormErrorField(values)
+  return { values, sample, setSample, setField, error, shownError, errorField, fieldId, preview, serverError, saving, submit }
 }
 

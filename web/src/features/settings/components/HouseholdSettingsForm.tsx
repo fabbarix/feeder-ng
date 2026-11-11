@@ -50,7 +50,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
       />
       <FieldRow>
         <NumberField
-            size="xs"
+          size="xs"
           label={text.planningHorizon}
           value={days(draft.planningHorizonDays)}
           min={1}
@@ -61,7 +61,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
           onChange={(n) => set({ planningHorizonDays: fromDays(n) })}
         />
         <NumberField
-            size="xs"
+          size="xs"
           label={text.cooldown}
           value={days(draft.defaultCooldownDays)}
           min={0}
@@ -72,7 +72,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
           onChange={(n) => set({ defaultCooldownDays: fromDays(n) })}
         />
         <NumberField
-            size="xs"
+          size="xs"
           label={text.leftoverUseBy}
           value={days(draft.defaultLeftoverUseByDays)}
           min={1}

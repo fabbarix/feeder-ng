@@ -74,6 +74,7 @@ function AddShopBarcodeForm({ rules, currency, onClose, onAdd }: Omit<AddShopBar
         <TextField
           label={strings.itemCodeLabel}
           inputMode="numeric"
+          data-size-intent="long"
           value={form.values.itemCode}
           onChange={(itemCode) => form.set({ itemCode })}
           error={form.errors.itemCode}

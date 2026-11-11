@@ -125,7 +125,7 @@ export function ProductScreen() {
           <h2 className="pg__tile-title">{strings.pricesTitle}</h2>
           <h3 className="pg__muted">{strings.latestPrices}</h3>
           <PriceList prices={product.latestPrices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
-          <Button variant="secondary" icon="add" onClick={() => setPricing(true)}>
+          <Button className="pg__add-price" variant="secondary" icon="add" onClick={() => setPricing(true)}>
             {strings.addPrice}
           </Button>
           <h3 className="pg__muted">{strings.priceHistory}</h3>

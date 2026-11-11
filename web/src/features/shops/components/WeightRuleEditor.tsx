@@ -2,7 +2,7 @@ import { Button, FieldRow, FormActions, Select, TextField } from '../../../ui'
 import type { ValueKind } from '../../scan/lib/barcode'
 import type { RuleBody } from '../api'
 import { useRuleForm } from '../hooks/useRuleForm'
-import { unitOptions } from '../lib/ruleForm'
+import { unitOptions, type RuleFormField } from '../lib/ruleForm'
 import { strings } from '../strings'
 import type { ShopRule } from '../types'
 import { RulePreview } from './RulePreview'
@@ -27,8 +27,16 @@ export interface WeightRuleEditorProps {
 export function WeightRuleEditor({ initial, currency, onSave, onCancel }: WeightRuleEditorProps) {
   const form = useRuleForm(initial, onSave)
   const v = form.values
-  const text = (label: string, field: 'prefix' | 'itemStart' | 'itemLength' | 'valueStart' | 'valueLength' | 'decimalPlaces', size: 'xs' | 'sm' = 'xs') => (
-    <TextField size={size} label={label} inputMode="numeric" value={v[field]} onChange={(value) => form.setField(field, value)} />
+  const text = (label: string, field: RuleFormField | 'decimalPlaces', size: 'xs' | 'sm' = 'xs') => (
+    <TextField
+      id={form.fieldId(field)}
+      size={size}
+      label={label}
+      inputMode="numeric"
+      value={v[field]}
+      error={form.errorField === field ? (form.shownError ?? undefined) : undefined}
+      onChange={(value) => form.setField(field, value)}
+    />
   )
   return (
     <form
@@ -40,15 +48,25 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
       }}
     >
       {text(strings.prefixLabel, 'prefix', 'sm')}
-      <FieldRow label={strings.itemCodeGroup}>
-        {text(strings.itemStartLabel, 'itemStart')}
-        {text(strings.itemLengthLabel, 'itemLength')}
-      </FieldRow>
-      <FieldRow label={strings.valueGroup}>
-        {text(strings.valueStartLabel, 'valueStart')}
-        {text(strings.valueLengthLabel, 'valueLength')}
-        {text(strings.decimalPlacesLabel, 'decimalPlaces')}
-      </FieldRow>
+      <div className="pg__group">
+        <p className="pg__subhead" aria-hidden="true">
+          {strings.itemCodeGroup}
+        </p>
+        <FieldRow label={strings.itemCodeGroup}>
+          {text(strings.itemStartLabel, 'itemStart')}
+          {text(strings.itemLengthLabel, 'itemLength')}
+        </FieldRow>
+      </div>
+      <div className="pg__group">
+        <p className="pg__subhead" aria-hidden="true">
+          {strings.valueGroup}
+        </p>
+        <FieldRow label={strings.valueGroup}>
+          {text(strings.valueStartLabel, 'valueStart')}
+          {text(strings.valueLengthLabel, 'valueLength')}
+          {text(strings.decimalPlacesLabel, 'decimalPlaces')}
+        </FieldRow>
+      </div>
       <FieldRow>
         <Select<ValueKind>
           size="md"
@@ -68,9 +86,13 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
           onChange={(unit) => form.setField('unit', unit)}
         />
       </FieldRow>
-      <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" value={form.sample} onChange={form.setSample} />
+      <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" data-size-intent="long" value={form.sample} onChange={form.setSample} />
       <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
-      {form.shownError ? <p className="pg__error">{form.shownError}</p> : null}
+      {form.shownError && form.errorField === null ? (
+        <p role="alert" className="pg__error">
+          {form.shownError}
+        </p>
+      ) : null}
       {form.serverError ? (
         <p role="alert" className="pg__error">
           {form.serverError}

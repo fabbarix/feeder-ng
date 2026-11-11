@@ -37,7 +37,7 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, onSubmit }
         onChange={form.setPackSize}
         error={form.errors.packSize}
       />
-      <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
+      <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" data-size-intent="long" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
       {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <FormActions
         primary={

@@ -67,8 +67,8 @@ export function evaluateMetrics(m, { width, kind }) {
     if (max !== undefined && w > max + 40) add('P3', `content is ${w}px wide; a ${kind} page is at most ${max}px`)
   }
   for (const f of m.fields) {
-    // A Barcode is typed or pasted (up to 14 digits, with a scanner) and uses the numeric keypad, but its field is md by design (R2-3).
-    if (width >= 820 && f.short && !f.segment && f.size !== 'full' && f.w > 240 && !/barcode/i.test(f.label)) add('P4', `short field "${f.label}" is ${f.w}px wide (max 240; set size="xs|sm")`)
+    // A numeric-keypad field whose content is long by nature (a 14-digit code) says so with data-size-intent="long" (f.long).
+    if (width >= 820 && f.short && !f.segment && f.size !== 'full' && f.w > 240 && !f.long) add('P4', `short field "${f.label}" is ${f.w}px wide (max 240; set size="xs|sm")`)
     if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
   }
   for (const b of m.bars) {

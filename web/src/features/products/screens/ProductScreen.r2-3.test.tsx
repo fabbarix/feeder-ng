@@ -4,7 +4,7 @@
 //   - Add barcode: the field (md) and its button share one FieldRow (button aligned to the control).
 //   - Archive / Delete: FormActions, Delete (danger) as the destructive action at the far left.
 import { screen } from '@testing-library/react'
-import { rule, stylesheet } from '../../../test/cssRules'
+import { rule as cssRule, stylesheet } from '../../../test/cssRules'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
@@ -91,6 +91,6 @@ describe('ProductScreen (R2-3)', () => {
     setup()
     const button = await screen.findByRole('button', { name: 'Add Price' })
     expect(button).toHaveClass('pg__add-price')
-    expect(rule(stylesheet('src/features/products/products.css').base, '.pg__add-price')['align-self']).toBe('flex-start')
+    expect(cssRule(stylesheet('src/features/products/products.css').base, '.pg__add-price')['align-self']).toBe('flex-start')
   })
 })
