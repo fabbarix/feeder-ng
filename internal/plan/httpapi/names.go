@@ -54,6 +54,8 @@ type table struct {
 	recipePhoto   map[int64]string // photo URL of a Recipe ("" without one)
 	members       map[int64]string
 	memberColour  map[int64]string
+	memberPhoto   map[int64]string // photo URL of a Member ("" without one)
+	memberAvatar  map[int64]string // emoji of a Member
 	ingredients   map[int64]string
 	slots         map[int64]string
 	// leftoverFrom is the source Meal Slot of each stored Leftover by id (N1): a meal served from a stored Leftover
@@ -73,7 +75,7 @@ func photoURL(id string) string {
 // they are served from is looked up by id (N1).
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	t := table{recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
-		members: map[int64]string{}, memberColour: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
+		members: map[int64]string{}, memberColour: map[int64]string{}, memberPhoto: map[int64]string{}, memberAvatar: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
 	if err != nil {
 		return t, err
@@ -98,6 +100,8 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	for _, m := range ms {
 		t.members[m.ID] = m.Name
 		t.memberColour[m.ID] = m.Colour
+		t.memberPhoto[m.ID] = photoURL(m.Photo)
+		t.memberAvatar[m.ID] = m.Avatar
 	}
 	is, err := n.ing.List(ctx)
 	if err != nil {

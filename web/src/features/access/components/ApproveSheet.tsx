@@ -60,7 +60,7 @@ export function ApproveSheet({ request, members, membersFailed, busy, error, onA
             options={offered.map((m) => ({
               value: m.id,
               label: m.name,
-              leading: <Avatar name={m.name} imageUrl={m.avatar || undefined} size="sm" />,
+              leading: <Avatar name={m.name} imageUrl={m.photoUrl || undefined} glyph={m.avatar || undefined} size="sm" />,
             }))}
             value={choice}
             onChange={setPicked}

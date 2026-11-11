@@ -19,7 +19,8 @@ describe('ApproveSheet: Member avatars', () => {
   it('shows the Photo, the emoji or the initials of each Member in the options', async () => {
     render(<ApproveSheet request={request} members={members} onApprove={vi.fn()} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByRole('combobox', { name: accessStrings.approveSheet.memberLabel }))
-    const options = screen.getAllByRole('option')
+    // The first option is the "Don't link" row; the Members follow.
+    const options = screen.getAllByRole('option').slice(1)
     expect(options[0]!.querySelector('img')).toHaveAttribute('src', photo)
     expect(options[1]!.querySelector('img')).toBeNull()
     expect(options[1]).toHaveTextContent('🦊')

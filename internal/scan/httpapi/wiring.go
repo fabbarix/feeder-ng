@@ -82,7 +82,7 @@ type catalogue struct {
 
 func productInfo(p productstore.Product) service.ProductInfo {
 	return service.ProductInfo{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL}
+		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
 }
 
 func (c catalogue) ShopExists(ctx context.Context, id int64) (bool, error) {
@@ -216,7 +216,7 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 	}
 	for _, p := range products {
 		bp := service.OfflineProduct{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL}
+			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
 		if shopID != nil {
 			if latest, err := c.LatestPrice(ctx, p.ID, *shopID); err != nil {
 				return service.OfflineData{}, err

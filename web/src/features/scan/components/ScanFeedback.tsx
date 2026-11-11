@@ -1,7 +1,7 @@
 import { Button } from '../../../ui/Button'
+import { Thumb } from '../../../ui/Thumb'
 import { IconButton } from '../../../ui/IconButton'
 import { uiStrings } from '../../../ui/strings'
-import { PictureThumb } from '../../products/components/PictureThumb'
 import { scanStrings } from '../strings'
 
 export interface ScanFeedbackProps {
@@ -22,7 +22,7 @@ export interface ScanFeedbackProps {
 export function ScanFeedback({ text, imageUrl, queued = false, canEditPrice, onEditPrice, onUndo, onDismiss }: ScanFeedbackProps) {
   return (
     <div role="status" aria-live="polite" className="scan-feedback" data-has-picture={imageUrl ? '' : undefined}>
-      {imageUrl ? <PictureThumb imageUrl={imageUrl} size={40} /> : null}
+      {imageUrl ? <Thumb imageUrl={imageUrl} size={40} /> : null}
       <p className="scan-feedback__text">{text}</p>
       {queued ? <span className="scan-feedback__queued">{scanStrings.waitingToSync}</span> : null}
       <div className="scan-feedback__actions">

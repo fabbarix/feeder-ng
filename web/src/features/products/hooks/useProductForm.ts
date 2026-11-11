@@ -15,6 +15,8 @@ export function useProductForm(
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // PE: Save waits for a Picture that is still uploading.
+  const [pictureBusy, setPictureBusy] = useState(false)
 
   const setName = (name: string) => {
     setNameEdited(true)
@@ -45,5 +47,5 @@ export function useProductForm(
     }
   }
 
-  return { values, errors, serverError, saving, setName, setPackSize, setBarcode, setImage, submit }
+  return { values, errors, serverError, saving, pictureBusy, setPictureBusy, setName, setPackSize, setBarcode, setImage, submit }
 }

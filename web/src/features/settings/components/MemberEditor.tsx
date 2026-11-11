@@ -55,6 +55,8 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
 type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'saving' | 'error' | 'emailError' | 'onEmailEdit' | 'onSave' | 'onDelete'>
 
 function MemberForm({ member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete }: FormProps) {
+  // PE: Save waits for a Photo that is still uploading.
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [draft, setDraft] = useState<MemberInput>(() => memberDraft(member))
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -105,6 +107,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
           listenOn="dialog"
           value={draft.photo ?? ''}
           onChange={(photo) => set({ photo })}
+          onBusyChange={setPhotoBusy}
         />
       ) : null}
       <StepperField
@@ -145,7 +148,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
         </p>
       ) : null}
       <div className="settings__row">
-        <Button type="submit" loading={saving}>
+        <Button type="submit" loading={saving} disabled={photoBusy}>
           {text.save}
         </Button>
         {member && onDelete ? (

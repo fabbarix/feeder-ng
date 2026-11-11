@@ -92,6 +92,7 @@ type ingredientStockJSON struct {
 	NextGoesOff  *string `json:"nextGoesOff"`
 	UseSoon      bool    `json:"useSoon"`
 	SpoiledCount int     `json:"spoiledCount"`
+	ImageURL     string  `json:"imageUrl"` // PE: always sent, "" without a Picture
 }
 
 func ingredientStockToJSON(s service.IngredientStock) ingredientStockJSON {
@@ -103,6 +104,7 @@ func ingredientStockToJSON(s service.IngredientStock) ingredientStockJSON {
 		LotCount:     s.LotCount,
 		UseSoon:      s.UseSoon,
 		SpoiledCount: s.SpoiledCount,
+		ImageURL:     s.ImageURL,
 	}
 	if !s.NextGoesOff.IsNone() {
 		g := string(s.NextGoesOff)

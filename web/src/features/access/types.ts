@@ -31,6 +31,8 @@ export interface AccessMember {
   id: number
   name: string
   avatar?: string
+  /** PE: the Member's Photo address ("/api/images/<id>"). */
+  photoUrl?: string
   userId: number | null
   /** The Member's own email, when it has one (A1). */
   email?: string | null

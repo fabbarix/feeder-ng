@@ -9,7 +9,7 @@ export function useIngredientChoices(): { choices: IngredientChoice[]; isLoading
   const choices = useMemo(
     () =>
       (list.data ?? [])
-        .map((i) => ({ id: i.id, name: i.name, baseUnit: i.baseUnit }))
+        .map((i) => ({ id: i.id, name: i.name, baseUnit: i.baseUnit, imageUrl: i.imageUrl }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [list.data],
   )

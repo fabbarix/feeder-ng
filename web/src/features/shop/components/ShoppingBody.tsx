@@ -2,6 +2,7 @@ import type { UnitSystem } from '../../../lib/units'
 import { BentoGrid } from '../../../ui/BentoGrid'
 import { EmptyState } from '../../../ui/EmptyState'
 import { ProgressTile } from '../../../ui/ProgressTile'
+import { Thumb } from '../../../ui/Thumb'
 import { listEntries, type ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 import type { ShoppingList } from '../types'
@@ -19,6 +20,11 @@ export interface ShoppingBodyProps {
   onScan: () => void
 }
 
+/** PE: the Ingredient's Picture (an empty slot without one); a free-text extra is not an Ingredient and has no lead. */
+function leadOf(entry: ListEntry) {
+  return entry.ingredientId === null ? undefined : <Thumb imageUrl={entry.imageUrl} size={40} />
+}
+
 /** The list's tiles: how many are left and the estimate, the open entries, then the Ticked group. Render only. */
 export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelete, onScan }: ShoppingBodyProps) {
   const { open, ticked } = listEntries(list, system)
@@ -34,7 +40,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
       <div className="shop-lines">
         <BentoGrid columns={2}>
           {open.map((entry) => (
-            <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} onDelete={entry.kind === 'extra' ? onDelete : undefined} />
+            <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} onDelete={entry.kind === 'extra' ? onDelete : undefined} lead={leadOf(entry)} />
           ))}
         </BentoGrid>
       </div>
@@ -45,7 +51,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
             <div className="shop-lines">
               <BentoGrid columns={2}>
                 {ticked.map((entry) => (
-                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} />
+                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} lead={leadOf(entry)} />
                 ))}
               </BentoGrid>
             </div>

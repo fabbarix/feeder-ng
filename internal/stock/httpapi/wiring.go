@@ -28,7 +28,16 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (service.Ing
 		Name:          ing.Name,
 		BaseUnit:      string(ing.Base),
 		ShelfLifeDays: ing.ShelfLifeDays,
+		ImageURL:      imageURL(ing.Image),
 	}, nil
+}
+
+// imageURL is the URL the image store serves an image id at ("" without one).
+func imageURL(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "/api/images/" + id
 }
 
 // householdToday returns today's date in the household time zone (T1's household

@@ -24,6 +24,8 @@ export interface ListEntry {
   /** the remaining amount in Base Units (what "How much?" is prefilled with); 0 for free text and covered lines */
   quantity: number
   baseUnit: BaseUnit | null
+  /** PE: the Ingredient's Picture address of a Line or an Ingredient extra; '' = none. */
+  imageUrl?: string
 }
 
 /** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
@@ -51,6 +53,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,
     baseUnit: line.baseUnit,
+    imageUrl: line.imageUrl,
   }
 }
 
@@ -69,6 +72,7 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     ticked: extra.ticked,
     quantity: hasAmount && !extra.ticked ? (extra.quantity ?? 0) : 0,
     baseUnit: extra.baseUnit,
+    imageUrl: extra.imageUrl,
   }
 }
 

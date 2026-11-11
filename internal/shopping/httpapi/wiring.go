@@ -246,9 +246,17 @@ func (i ingredients) Info(ctx context.Context, ids []int64) (map[int64]shopping.
 		if err != nil {
 			return nil, err
 		}
-		out[id] = shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base)}
+		out[id] = shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base), ImageURL: imageURL(ing.Image)}
 	}
 	return out, nil
+}
+
+// imageURL is the URL the image store serves an image id at ("" without one).
+func imageURL(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "/api/images/" + id
 }
 
 // Compile-time checks that the adapters satisfy the ports.

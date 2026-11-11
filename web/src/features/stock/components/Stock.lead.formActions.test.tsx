@@ -17,9 +17,9 @@ describe('StockRow lead slot', () => {
     expect(leading).not.toBeNull()
     expect(leading).toContainElement(screen.getByTestId('pic'))
   })
-  it('has no leading element without `lead`', () => {
+  it('leads with the Ingredient Thumb slot (PE), not a custom visual, without `lead`', () => {
     render(<ul><StockRow today="2026-11-09" item={makeTotal({ name: 'feta' })} onOpen={() => {}} /></ul>)
-    expect(document.querySelector('.list-row__leading')).toBeNull()
+    expect(document.querySelector('.list-row__leading > .thumb')).not.toBeNull()
   })
 })
 

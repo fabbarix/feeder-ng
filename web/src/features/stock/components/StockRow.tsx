@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react'
-import { ListRow } from '../../../ui'
+import { ListRow, Thumb } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { rowMeta } from '../lib/filter'
 import { capitalise } from '../lib/display'
@@ -27,7 +27,7 @@ export function StockRow({ item, today, onOpen, system = 'metric', lead }: Stock
       title={capitalise(item.name)}
       meta={rowMeta(item, today)}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
-      leading={lead}
+      leading={lead ?? <Thumb imageUrl={item.imageUrl} size={40} />}
       chevron
       onActivate={() => onOpen(item.ingredientId)}
     />

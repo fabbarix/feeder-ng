@@ -1,6 +1,7 @@
 import { Avatar } from '../Avatar'
 import { Icon } from '../Icon'
 import { RecipeThumb } from '../RecipeThumb'
+import { Thumb } from '../Thumb'
 import { mealSlotIcon } from '../lib/mealSlotIcon'
 import type { SelectOption } from './lib'
 import { selectStrings } from './strings'
@@ -72,6 +73,7 @@ export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
+    leading: <Thumb imageUrl={i.imageUrl} size={40} />,
   }))
 }
 
@@ -115,6 +117,6 @@ export function memberOptions(members: MemberChoice[]): SelectOption<number>[] {
   return members.map((m) => ({
     value: m.id,
     label: m.name,
-    leading: <Avatar name={m.name} imageUrl={m.imageUrl} size="sm" />,
+    leading: <Avatar name={m.name} imageUrl={m.photoUrl ?? m.imageUrl} glyph={m.avatar} colour={m.colour} size="sm" />,
   }))
 }

@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import './Thumb.css'
+
 export type ThumbSize = 40 | 48 | 72 | 'hero'
 
 export interface ThumbProps {
@@ -9,9 +12,17 @@ export interface ThumbProps {
 }
 
 /**
- * STUB (PE step 1, docs/dev/design/pe-pictures-everywhere.md): the shared Picture thumb. The Developer implements it
- * (+ Thumb.css) and moves features/products PictureThumb and IngredientList's local slot onto it.
+ * A Picture as a square thumb (`object-fit: cover`). Without a Picture, or after a load error (that address is remembered; a
+ * different one retries), an empty reserved slot of the same box, so list names stay aligned.
  */
-export function Thumb(_props: ThumbProps) {
-  return null
+export function Thumb({ imageUrl, size = 40, label }: ThumbProps) {
+  const [failedUrl, setFailedUrl] = useState<string>()
+  if (imageUrl && failedUrl !== imageUrl) {
+    return (
+      <span className="thumb" data-size={size}>
+        <img src={imageUrl} alt={label ?? ''} onError={() => setFailedUrl(imageUrl)} />
+      </span>
+    )
+  }
+  return <span className="thumb" data-size={size} aria-hidden="true" />
 }

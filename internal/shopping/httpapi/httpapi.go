@@ -45,6 +45,7 @@ type lineJSON struct {
 	IngredientID       int64     `json:"ingredientId"`
 	Name               string    `json:"name"`
 	BaseUnit           string    `json:"baseUnit"`
+	ImageURL           string    `json:"imageUrl"` // PE: always sent, "" without a Picture
 	Need               float64   `json:"need"`
 	Available          float64   `json:"available"`
 	Quantity           float64   `json:"quantity"`
@@ -59,6 +60,7 @@ type extraJSON struct {
 	IngredientID *int64   `json:"ingredientId"`
 	Name         *string  `json:"name"`
 	BaseUnit     *string  `json:"baseUnit"`
+	ImageURL     string   `json:"imageUrl"` // PE: always sent, "" for free text or without a Picture
 	Quantity     *float64 `json:"quantity"`
 	Ticked       bool     `json:"ticked"`
 }
@@ -98,7 +100,7 @@ type tickJSON struct {
 }
 
 func lineToJSON(l shopping.Line) lineJSON {
-	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, Need: l.Need, Available: l.Available,
+	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, ImageURL: l.ImageURL, Need: l.Need, Available: l.Available,
 		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents}
 	if l.Pack != nil {
 		out.Pack = &packJSON{ProductID: l.Pack.ProductID, Name: l.Pack.Name, Size: l.Pack.Size, Count: l.Pack.Count, Remainder: l.Pack.Remainder}
@@ -107,7 +109,7 @@ func lineToJSON(l shopping.Line) lineJSON {
 }
 
 func extraToJSON(e shopping.ExtraLine) extraJSON {
-	out := extraJSON{ID: e.ID, Ticked: e.Ticked}
+	out := extraJSON{ID: e.ID, Ticked: e.Ticked, ImageURL: e.ImageURL}
 	if e.IngredientID != 0 {
 		id, name, unit, qty := e.IngredientID, e.Name, e.BaseUnit, e.Quantity
 		out.IngredientID, out.Name, out.BaseUnit, out.Quantity = &id, &name, &unit, &qty

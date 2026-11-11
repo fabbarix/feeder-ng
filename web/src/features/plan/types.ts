@@ -83,7 +83,9 @@ export interface AttendanceMember {
   name: string
   /** #rrggbb, the Member's colour. */
   colour?: string
-  imageUrl?: string
+  /** PE: the Member's Photo address ("/api/images/<id>") and emoji; the Avatar shows photo, else emoji, else initials. */
+  photoUrl?: string
+  avatar?: string
 }
 
 export interface PlanSlot {
