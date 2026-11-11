@@ -1,10 +1,10 @@
 // WP-G: the Photo tab of "Read a recipe" uses the shared ImagePicker in raw mode (ai-recipe-import.md section 3.5; ra-e-import.md section 6.3).
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { lastPickerProps, PICKED, pickerRenders } from '../fakeImagePicker.test-helper'
 
-vi.mock('../../../ui/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
 
 import { ReadPhotoPanel } from './ReadPhotoPanel'
 
@@ -60,9 +60,31 @@ describe('ReadPhotoPanel', () => {
     expect(lastPickerProps('Photo 1')?.disabled).toBe(true)
     expect(lastPickerProps('Photo 2')?.disabled).toBe(true)
   })
-  it('shows a problem with the photos as an alert', () => {
-    setup({ error: 'A photo is over 8 MB. Use a smaller picture.' })
-    expect(screen.getByRole('alert')).toHaveTextContent('A photo is over 8 MB. Use a smaller picture.')
+  it('has no error prop: the panel never shows an alert (errors live in the error tile)', () => {
+    setup({ slots: [PICKED, null] })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+  it('puts the helper and the privacy note above the pickers, so they are read before the first picker', () => {
+    setup({ slots: [PICKED, null] })
+    const help = screen.getByText(/A cookbook page or a handwritten card/)
+    const privacy = screen.getByText(/Photos are sent to Anthropic/)
+    const first = screen.getAllByRole('group')[0]!
+    expect(help.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(privacy.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('uses the full preview size on a wide screen and the 72 px one at phone width (390)', () => {
+    setup()
+    expect(lastPickerProps('Photo 1')?.size).toBe('hero')
+    const original = window.matchMedia
+    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia
+    try {
+      pickerRenders.length = 0
+      cleanup()
+      setup()
+      expect(lastPickerProps('Photo 1')?.size).toBe(72)
+    } finally {
+      window.matchMedia = original
+    }
   })
   it('has no native file input of its own (the picker owns that)', () => {
     const { container } = render(<ReadPhotoPanel slots={[null]} onSlotChange={vi.fn()} />)

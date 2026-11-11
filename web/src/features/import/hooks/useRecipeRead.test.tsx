@@ -287,6 +287,60 @@ describe('useRecipeRead: cancel', () => {
   })
 })
 
+describe('useRecipeRead: unmount', () => {
+  it('while a read is running sends a best-effort DELETE with keepalive', async () => {
+    const h = setup()
+    await begin(h)
+    h.unmount()
+    expect(api.cancelRead).toHaveBeenCalledWith('rd1', { keepalive: true })
+  })
+  it('a failing DELETE on unmount is swallowed', async () => {
+    api.cancelRead.mockRejectedValue(new ApiError(0, 'network', 'down'))
+    const h = setup()
+    await begin(h)
+    expect(() => h.unmount()).not.toThrow()
+    await act(async () => undefined)
+  })
+  it('while idle sends nothing', () => {
+    const h = setup()
+    h.unmount()
+    expect(api.cancelRead).not.toHaveBeenCalled()
+  })
+  it('after the read ended (done, cancelled, failed) sends nothing', async () => {
+    api.getRead.mockResolvedValue(doneView)
+    const h = setup()
+    await begin(h)
+    await tick(pollDelay(0))
+    h.unmount()
+    expect(api.cancelRead).not.toHaveBeenCalled()
+    const g = setup()
+    await begin(g)
+    await act(async () => { await g.result.current.cancel() })
+    api.cancelRead.mockClear()
+    g.unmount()
+    expect(api.cancelRead).not.toHaveBeenCalled()
+  })
+  it('a polled answer arriving after unmount does nothing', async () => {
+    let answer: (v: ReadView) => void = () => undefined
+    api.getRead.mockImplementation(() => new Promise((r) => { answer = r }))
+    const h = setup()
+    await begin(h)
+    await tick(pollDelay(0))
+    h.unmount()
+    await act(async () => { answer(doneView) })
+    expect(h.onDone).not.toHaveBeenCalled()
+  })
+})
+
+describe('useRecipeRead: a refused start', () => {
+  it('a 404 on the start POST fails with start-specific copy code, not "expired"', async () => {
+    api.startRead.mockRejectedValue(new ApiError(404, 'not_found', 'x'))
+    const h = setup()
+    await begin(h)
+    expect(h.result.current).toMatchObject({ phase: 'failed', error: { code: 'read_unavailable' } })
+  })
+})
+
 describe('useRecipeRead: reset', () => {
   it('clears a failure', async () => {
     const h = setup()

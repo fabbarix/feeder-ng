@@ -53,7 +53,13 @@ describe('ImportScreen', () => {
     expect(screen.getByText(s.stepOverline(4))).toHaveClass('tile__overline')
     hook.current = state({ phase: 'reviewing', plan: plan() })
     rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(within(tileOf(4) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
+    expect(within(tileOf(2) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
+  })
+  it('numbers the steps that are shown without gaps: during the review the Agent Prompt is step 1 and the review step 2', () => {
+    hook.current = state({ phase: 'reviewing', plan: plan() })
+    view()
+    const overlines = Array.from(document.querySelectorAll('.tile__overline')).map((e) => e.textContent)
+    expect(overlines).toEqual([s.stepOverline(1), s.stepOverline(2)])
   })
   it('starts with the source step and passes the text to the review', async () => {
     view()

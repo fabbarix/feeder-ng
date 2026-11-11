@@ -1,6 +1,7 @@
 // WP-E/G: progress per read state with Cancel; a live region (ra-e-import.md section 6.2, accessibility).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { ReadProgress } from './ReadProgress'
 
@@ -28,11 +29,32 @@ describe('ReadProgress', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onCancel).toHaveBeenCalledOnce()
   })
-  it('lists the stages of this kind of read and marks the current one', () => {
+  it('says where the read is in "Step n of N" for this kind of read, without a second copy of the stage', () => {
     view({ kind: 'photo', state: 'reading' })
-    const items = within(screen.getByRole('list', { name: 'Steps' })).getAllByRole('listitem')
-    expect(items.map((i) => i.textContent)).toEqual(['Preparing the photos…', 'Reading the recipe…', 'Checking the result…'])
-    expect(items.map((i) => i.getAttribute('aria-current'))).toEqual([null, 'step', null])
+    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
+    expect(screen.queryByRole('list')).toBeNull()
+  })
+  it('shows the stage text once only', () => {
+    view({ kind: 'url', state: 'reading' })
+    expect(screen.getAllByText('Reading the recipe…')).toHaveLength(1)
+    expect(screen.getByText('Step 2 of 4')).toBeInTheDocument()
+  })
+  it('without a state yet it counts from the first step', () => {
+    view({ kind: 'text', state: undefined })
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+  })
+  it('takes focus when it appears (a group with the progress name), so a keyboard user is not left on a vanished button', () => {
+    view()
+    const group = screen.getByRole('group', { name: 'Reading the recipe' })
+    expect(group).toHaveAttribute('tabindex', '-1')
+    expect(group).toHaveFocus()
+  })
+  it('does not take focus again when the stage changes', async () => {
+    const { rerender, props } = view({ state: 'fetching' })
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    cancel.focus()
+    rerender(<ReadProgress {...props} state="reading" />)
+    expect(cancel).toHaveFocus()
   })
   it('shows an indeterminate bar (no fake percentage)', () => {
     view()
@@ -50,7 +72,13 @@ describe('ReadProgress', () => {
       expect(screen.getByRole('status')).toBe(region)
       expect(region).toHaveTextContent('Reading the recipe…')
     })
-    it('announces only the stage: not the stage list, not the seconds, not Cancel', () => {
+    it('is rendered empty first and filled afterwards, so the first stage is announced', () => {
+      const html = renderToString(<ReadProgress kind="url" state="fetching" elapsedSeconds={0} onCancel={() => undefined} />)
+      expect(html).toMatch(/<p[^>]*role="status"[^>]*><\/p>/)
+      view({ state: 'fetching' })
+      expect(screen.getByRole('status')).toHaveTextContent('Opening the page…')
+    })
+    it('announces only the stage: not the step count, not the seconds, not Cancel', () => {
       view({ kind: 'url', state: 'reading', elapsedSeconds: 45 })
       expect(screen.getByRole('status').textContent?.trim()).toBe('Reading the recipe…')
     })

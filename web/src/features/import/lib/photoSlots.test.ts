@@ -1,7 +1,7 @@
 // WP-G: the ordered picture slots of the Photo tab (up to 4, order kept; ImagePicker holds one picture each).
 import { describe, expect, it } from 'vitest'
 import type { RawImage } from '../../../ui/ImagePicker'
-import { emptySlots, filledPhotos, setSlot } from './photoSlots'
+import { emptySlots, filledPhotos, setSlot, slotKeys } from './photoSlots'
 
 const img = (n: number): RawImage => ({ kind: 'url', url: `https://example.com/${n}.jpg` })
 
@@ -35,5 +35,22 @@ describe('photoSlots', () => {
   it('filledPhotos lists the pictures in order, without the empty slot', () => {
     expect(filledPhotos([img(1), img(2), null])).toEqual([img(1), img(2)])
     expect(filledPhotos([null])).toEqual([])
+  })
+})
+
+describe('slotKeys', () => {
+  it('gives every slot a distinct key', () => {
+    const keys = slotKeys([img(1), img(2), null])
+    expect(new Set(keys).size).toBe(3)
+  })
+  it('a photo keeps its key when another one is removed (its picker is not remounted)', () => {
+    const [a, b, c] = [img(1), img(2), img(3)]
+    const before = slotKeys([a, b, c, null])
+    const after = slotKeys(setSlot([a, b, c, null], 0, null))
+    expect(after.slice(0, 2)).toEqual([before[1], before[2]])
+  })
+  it('the same photo has the same key on every render', () => {
+    const a = img(1)
+    expect(slotKeys([a, null])[0]).toBe(slotKeys([a, null])[0])
   })
 })

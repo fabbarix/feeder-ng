@@ -1,5 +1,5 @@
 // A stand-in for ui/ImagePicker in the Read-a-recipe tests (the real one needs a camera, a canvas and an image engine).
-// Use: vi.mock('../../../ui/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+// Use: vi.mock('../../../ui/ImagePicker/ImagePicker' (the module the ui barrel re-exports), async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
 // It records every render's props and shows two buttons per picker: "Choose <label>" (reports PICKED) and "Remove <label>".
 import { createElement } from 'react'
 import type { RawImage } from '../../ui/ImagePicker'

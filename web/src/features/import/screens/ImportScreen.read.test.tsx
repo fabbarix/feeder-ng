@@ -25,7 +25,7 @@ vi.mock('../hooks/useRecipeRead', () => ({
 }))
 vi.mock('../hooks/useReadAvailability', () => ({ useReadAvailability: () => hook.avail }))
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
-vi.mock('../../../ui/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
 
 import { ImportScreen } from './ImportScreen'
 

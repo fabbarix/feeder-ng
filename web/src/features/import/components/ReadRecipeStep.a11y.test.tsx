@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 
-vi.mock('../../../ui/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
 
 import { ReadRecipeStep } from './ReadRecipeStep'
 

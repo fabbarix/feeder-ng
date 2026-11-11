@@ -147,6 +147,17 @@ describe('errorFromApi', () => {
   it('a 404 on a poll is "expired"', () => {
     expect(errorFromApi(new ApiError(404, 'not_found', 'x'))).toEqual({ code: 'expired' })
   })
+  it('a 404 on the start POST is "read_unavailable" (not "expired": nothing was lost)', () => {
+    expect(errorFromApi(new ApiError(404, 'not_found', 'x'), 'start')).toEqual({ code: 'read_unavailable' })
+    expect(readErrorCopy({ code: 'read_unavailable' }, user)).toMatchObject({
+      message: 'The read could not be started. Reload the page and try again.',
+      action: 'none',
+      retryable: false,
+    })
+  })
+  it('other start errors are mapped as for a poll', () => {
+    expect(errorFromApi(new ApiError(429, 'too_many_reads', 'x', { retryAfterSeconds: 90 }), 'start')).toEqual({ code: 'too_many_reads', retryAfterSeconds: 90 })
+  })
   it('anything else is "unknown"', () => {
     expect(errorFromApi(new Error('boom'))).toEqual({ code: 'unknown' })
   })

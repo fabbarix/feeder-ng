@@ -7,7 +7,7 @@ import { PICKED, PICKED_2, pickerRenders } from '../fakeImagePicker.test-helper'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 
-vi.mock('../../../ui/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
 
 import { ReadRecipeStep } from './ReadRecipeStep'
 

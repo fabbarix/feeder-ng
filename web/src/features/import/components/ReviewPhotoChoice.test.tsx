@@ -102,4 +102,11 @@ describe('ReviewPhotoChoice', () => {
     expect(screen.getByRole('switch', { name: 'Use this photo for the Recipe' })).toBeDisabled()
     expect(screen.getByText('Every Recipe is skipped, so there is nothing to give the photo to.')).toBeInTheDocument()
   })
+
+  it('the chosen thumbnail shows a check as well as a ring (not colour alone); the others show none', () => {
+    setup({ photos: photos(3), choice: { ...on, photo: 1 } })
+    const radios = screen.getAllByRole('radio')
+    expect(radios.map((r) => r.querySelector('.photo-choice__check') !== null)).toEqual([false, true, false])
+    expect(radios[1]!.querySelector('.photo-choice__check')).toHaveAttribute('aria-hidden', 'true')
+  })
 })

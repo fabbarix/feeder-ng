@@ -41,6 +41,16 @@ describe('importApi: Recipe Assistant reads', () => {
   })
 })
 
+describe('importApi.cancelRead with keepalive', () => {
+  beforeEach(() => {
+    calls.length = 0
+  })
+  it('passes keepalive on to the DELETE (the unmount path)', async () => {
+    await importApi.cancelRead('rd1', { keepalive: true })
+    expect(calls).toEqual([['DELETE', '/api/recipe-assistant/reads/rd1', undefined, { keepalive: true }]])
+  })
+})
+
 describe('importApi.confirm with a photo', () => {
   beforeEach(() => {
     calls.length = 0
