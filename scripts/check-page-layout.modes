@@ -1,0 +1,4 @@
+# Per-route mode of the page-layout guard (scripts/check-page-layout.sh). warn = findings are printed, the run passes.
+# An adoption package flips its routes to fail when it merges (patterns: exact, :id, trailing /*).
+default=warn
+fail_routes=

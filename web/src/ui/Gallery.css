@@ -64,3 +64,21 @@
   border-color: var(--color-accent);
   box-shadow: var(--focus-ring);
 }
+
+/* Page and StickyActionBar demos: a framed box, so the Page centres inside it (the frame is not the viewport). */
+.gallery__frame {
+  inline-size: 100%;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.gallery__frame--scroll {
+  max-block-size: 220px;
+  overflow: auto;
+}
+
+.gallery__spacer {
+  block-size: 240px;
+}
