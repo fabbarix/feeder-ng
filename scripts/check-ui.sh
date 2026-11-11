@@ -12,6 +12,8 @@
 #   glossary         6  GLOSSARY.md _Avoid_ words in strings.ts (or in the allowlist)
 #   native-search    7  no <input type="search"> outside web/src/ui (use the SearchField primitive)
 #   back-link        8  no BackLink, no <Link>/<a> reading "Back to ...", no <IconButton icon="back"> that navigates (use Breadcrumbs)
+#   image-input      9  no own image input (IM2): no accept= with an image type or extension, no capture=, no '/api/images' upload URL
+#                       outside web/src/ui/ImagePicker (use <ImagePicker>); accept=".json" and display URLs like `/api/images/${id}` are fine
 #
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
@@ -51,7 +53,7 @@ trap 'rm -rf "$TMP"' EXIT
 VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
-RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link)
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input)
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
@@ -426,6 +428,13 @@ rule_back_link() {
     '(^|[^A-Za-z0-9_])BackLink([^A-Za-z0-9_]|$)|<(Link|a)[ \t][^>]*>[ \t]*Back to|<IconButton[^<]*icon="back"[^<]*navigate\('
 }
 rule_back_link
+
+# ------------------------------------------------------------------ rule 9
+rule_image_input() {
+  src_files tsx ts | grep -v "^$SRC/ui/ImagePicker/" | code_match image-input "own image input; use the shared <ImagePicker> (ui/ImagePicker is the only place for accept=image, capture= and the upload URLs)" \
+    'accept=[^>]*(image/|[.](png|jpe?g|webp|heic|heif|gif|avif))|(^|[^A-Za-z0-9_-])capture=|[\x27"`]/api/images(/from-url)?[\x27"`]'
+}
+rule_image_input
 
 # File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
 if [ -f "$ALLOW_COLOURS" ]; then

@@ -96,7 +96,3 @@
   line-height: 1;
   pointer-events: none;
 }
-/* The wrapper that catches a failed photo load must not affect the layout. */
-.access__photo {
-  display: contents;
-}

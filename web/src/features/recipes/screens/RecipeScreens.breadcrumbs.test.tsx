@@ -16,7 +16,6 @@ vi.mock('../hooks/useRecipePreferences', () => ({
 vi.mock('../hooks/useMemberPicker', () => ({ useMemberPicker: () => ({ members: [], selectedId: null, memberId: undefined, select: vi.fn(), isLoading: false }) }))
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic]]), isLoading: false }) }))
 vi.mock('../hooks/useRecipeEditor', () => ({ useRecipeEditor: () => h.editor }))
-vi.mock('../hooks/usePhotoUpload', () => ({ usePhotoUpload: () => ({ upload: vi.fn(), uploading: false, error: null }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 

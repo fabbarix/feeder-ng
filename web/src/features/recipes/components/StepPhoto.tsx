@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, FileDrop, RecipeThumb } from '../../../ui'
-import { usePhotoUpload } from '../hooks/usePhotoUpload'
+import { CROP_ASPECTS, ImagePicker } from '../../../ui'
 import { recipeStrings } from '../strings'
 
 export interface StepPhotoProps {
@@ -9,31 +8,11 @@ export interface StepPhotoProps {
   onChange: (imageId: string) => void
 }
 
-/**
- * One Step's photo: the thumb, a FileDrop and remove. Each StepPhoto holds its own usePhotoUpload state, so one
- * Step's upload never shows on another Step or on the Recipe photo.
- */
+/** One Step's photo: the shared ImagePicker at 72 px. Each picker keeps its own upload state, so one Step never affects another. */
 export function StepPhoto({ imageId, onChange }: StepPhotoProps): ReactNode {
-  const photo = usePhotoUpload()
-  const onFile = async (file: File) => {
-    const id = await photo.upload(file)
-    if (id) onChange(id)
-  }
   return (
     <div className="step-card__photo">
-      {imageId ? <RecipeThumb name="" photoUrl={`/api/images/${imageId}`} size={72} label={recipeStrings.steps.image} /> : null}
-      <FileDrop
-        label={imageId ? recipeStrings.fields.replacePhoto : recipeStrings.steps.image}
-        accept="image/*"
-        disabled={photo.uploading}
-        error={photo.error ?? undefined}
-        onFiles={([file]) => void onFile(file!)}
-      />
-      {imageId ? (
-        <Button variant="tertiary" icon="delete" onClick={() => onChange('')}>
-          {recipeStrings.steps.removeImage}
-        </Button>
-      ) : null}
+      <ImagePicker label={recipeStrings.steps.image} value={imageId} onChange={onChange} size={72} aspect={CROP_ASPECTS.landscape} />
     </div>
   )
 }
