@@ -65,12 +65,15 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
   it('the viewport never scrolls sideways: the page is not wider than the viewport', () => {
     expect(d('.app-shell')['min-width']).toBe('0')
     expect(d('.app-main')['min-width']).toBe('0')
-    expect(d('.app-main')['max-width']).toBeDefined()
+    expect(d('.app-main')['max-width']).toBeUndefined() // R2-L: the width cap moved to ui/Page (one place)
   })
-  it('<main> fills its grid column up to 1100 px: width 100% (or justify-self stretch) with max-width 1100, not shrink-to-content', () => {
+  it('<main> fills its grid column (R2-L): width 100%, no max-width, no auto margin, no side padding; ui/Page centres the content', () => {
     const m = d('.app-main')
-    expect(m['max-width']).toBe('1100px')
-    expect(`${m['width'] ?? ''}|${m['justify-self'] ?? ''}`).toMatch(/100%|stretch/)
+    expect(m['width']).toBe('100%')
+    expect(m['max-width']).toBeUndefined()
+    expect(m['max-inline-size']).toBeUndefined()
+    expect(m['margin']).toBeUndefined()
+    expect(m['padding-inline']).toBeUndefined()
   })
   it('the expanded rail (from 1440) insets its rows: margin-inline var(--space-3), and a row never overflows the 240 px rail', () => {
     const wide = media('min-width: 1440px')
@@ -231,5 +234,29 @@ describe('review fixes: anchor, rows, rail pill, trigger', () => {
   it('the avatar trigger paints a surface-2 square, so the round avatar sits inside a rounded square, not alone', () => {
     const t = d('.your-menu-button')
     expect(t['background']).toBe('var(--color-surface-2)')
+  })
+})
+
+describe('rail current item contrast (L-04, R2-L)', () => {
+  const rail1024 = media('min-width: 1024px')
+  const rail1440 = media('min-width: 1440px')
+  const rule = (css: string, sel: string) => {
+    const i = css.indexOf(sel + ' {')
+    return i < 0 ? '' : css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i))
+  }
+  const cur = ".side-rail__link[data-accent='true'][aria-current='page']"
+  it('from 1440 the current Scan row keeps the accent fill and on-accent text, with the soft ring (after the soft current rule)', () => {
+    const r = rule(rail1440, cur)
+    expect(r).toMatch(/background\s*:\s*var\(--color-accent\)/)
+    expect(r).toMatch(/color\s*:\s*var\(--color-on-accent\)/)
+    expect(r).toMatch(/box-shadow\s*:\s*0 0 0 3px var\(--color-soft\)/)
+    expect(rail1440.indexOf(cur)).toBeGreaterThan(rail1440.indexOf(".side-rail__link[aria-current='page'] {"))
+  })
+  it('from 1024 the icon pill of the current Scan item is not soft (white icon on soft was 1.31:1)', () => {
+    const r = rule(rail1024, cur + ' .side-rail__pill')
+    expect(r).toMatch(/background\s*:\s*none/)
+  })
+  it('a Scan item that is current at 1440 never sets the soft background on the link itself', () => {
+    expect(rail1440).not.toMatch(/\[data-accent='true'\]\[aria-current='page'\]\s*\{[^}]*var\(--color-soft\)\s*;?\s*\}/)
   })
 })
