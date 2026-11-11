@@ -244,6 +244,17 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 	out.ReadyMeal = ready
 	out.Lines = lines
 
+	if in.CourseIDs != nil {
+		if len(in.CourseIDs) == 0 {
+			return Input{}, fieldErr("courses", CodeCoursesEmpty, "a Recipe needs at least one Course")
+		}
+		out.CourseIDs = dedupeIDs(in.CourseIDs)
+	}
+	if in.WholeMeal != nil {
+		whole := *in.WholeMeal
+		out.WholeMeal = &whole
+	}
+
 	steps, err := cleanSteps(in.Steps, lookup)
 	if err != nil {
 		return Input{}, err
@@ -493,8 +504,43 @@ func ParseState(s string) (State, bool) {
 
 // DefaultWholeMeal is the Whole meal value of a create that does not say: true for a Ready Meal whose
 // Courses include the main Course, false otherwise (spec §4).
-func DefaultWholeMeal(readyMeal bool, courseIDs []int64, mainID int64) bool { return false }
+func DefaultWholeMeal(readyMeal bool, courseIDs []int64, mainID int64) bool {
+	if !readyMeal {
+		return false
+	}
+	for _, id := range courseIDs {
+		if id == mainID {
+			return true
+		}
+	}
+	return false
+}
 
 // LostCourses returns the Course ids in before that are not in after, in before's order: the Courses a
 // Recipe loses on save (spec §4, "A Recipe that loses a Course").
-func LostCourses(before, after []int64) []int64 { return nil }
+func LostCourses(before, after []int64) []int64 {
+	kept := make(map[int64]bool, len(after))
+	for _, id := range after {
+		kept[id] = true
+	}
+	var lost []int64
+	for _, id := range before {
+		if !kept[id] {
+			lost = append(lost, id)
+		}
+	}
+	return lost
+}
+
+// dedupeIDs drops repeated ids, keeping the first of each and the order. It returns a new slice.
+func dedupeIDs(ids []int64) []int64 {
+	seen := make(map[int64]bool, len(ids))
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
+}

@@ -176,16 +176,32 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 		return 0, err
 	}
 	now := s.now()
+	mainID, err := mainCourse(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+	courseIDs := clean.CourseIDs
+	if courseIDs == nil {
+		courseIDs = []int64{mainID}
+	}
+	whole := recipe.DefaultWholeMeal(clean.ReadyMeal, courseIDs, mainID)
+	if clean.WholeMeal != nil {
+		whole = *clean.WholeMeal
+	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
-	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, created_at, updated_at)
-	        VALUES (?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)`,
+	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, whole_meal, created_at, updated_at)
+	        VALUES (?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, now, now)
+		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
+		boolInt(whole), now, now)
 	if err != nil {
 		return 0, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
+		return 0, err
+	}
+	if err := writeCourses(ctx, tx, id, courseIDs); err != nil {
 		return 0, err
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
@@ -235,12 +251,28 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 	if err != nil {
 		return nil, err
 	}
-	if err := exists(ctx, tx, `SELECT 1 FROM recipes WHERE id = ?`, id, ErrNotFound); err != nil {
+	var storedWhole int64
+	if err := tx.QueryRowContext(ctx, `SELECT whole_meal FROM recipes WHERE id = ?`, id).Scan(&storedWhole); errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 	before, err := recipeImages(ctx, tx, id)
 	if err != nil {
 		return nil, err
+	}
+	prevCourses, err := loadCourses(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	// Courses: nil keeps the stored ones; Whole meal: nil keeps the stored value.
+	ids := clean.CourseIDs
+	if ids == nil {
+		ids = courseIDs(prevCourses)
+	}
+	whole := storedWhole == 1
+	if clean.WholeMeal != nil {
+		whole = *clean.WholeMeal
 	}
 	for _, q := range []string{
 		`DELETE FROM recipe_step_uses WHERE recipe_id = ?`,
@@ -254,10 +286,23 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET name = ?, description = ?, yield = ?, ready_meal = ?, cooldown_days = ?,
 	        leftover_use_by_days = ?, reheat_minutes = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
-	        updated_at = ? WHERE id = ?`,
+	        whole_meal = ?, updated_at = ? WHERE id = ?`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes, s.now(), id); err != nil {
+		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
+		boolInt(whole), s.now(), id); err != nil {
 		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM recipe_courses WHERE recipe_id = ?`, id); err != nil {
+		return nil, err
+	}
+	if err := writeCourses(ctx, tx, id, ids); err != nil {
+		return nil, err
+	}
+	// A Recipe that loses a Course loses its unpinned, unresolved plan there (and its Slot Rules by Recipe).
+	if lost := recipe.LostCourses(courseIDs(prevCourses), ids); len(lost) > 0 {
+		if err := s.dropLostCourses(ctx, tx, id, lost); err != nil {
+			return nil, err
+		}
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
 		return nil, err
@@ -298,7 +343,15 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 		        WHERE rt.recipe_id = r.id AND t.key = ?)`)
 		args = append(args, recipe.TagKey(f.Tag))
 	}
-	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes FROM recipes r`
+	if f.CourseID != 0 {
+		where = append(where, `EXISTS (SELECT 1 FROM recipe_courses rc WHERE rc.recipe_id = r.id AND rc.course_id = ?)`)
+		args = append(args, f.CourseID)
+	}
+	if f.NotCourseID != 0 {
+		where = append(where, `NOT EXISTS (SELECT 1 FROM recipe_courses rc WHERE rc.recipe_id = r.id AND rc.course_id = ?)`)
+		args = append(args, f.NotCourseID)
+	}
+	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes, r.whole_meal FROM recipes r`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -312,12 +365,14 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	out := []recipe.Summary{}
 	for rows.Next() {
 		var sum recipe.Summary
-		var ready, archived int64
+		var ready, archived, whole int64
 		var reheat sql.NullInt64
-		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat); err != nil {
+		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat, &whole); err != nil {
 			return nil, err
 		}
 		sum.ReheatMinutes = int(reheat.Int64)
+		sum.WholeMeal = whole == 1
+		sum.CourseIDs = []int64{}
 		if needle != "" && !strings.Contains(strings.ToLower(sum.Name), needle) {
 			continue
 		}
@@ -336,12 +391,38 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	if err != nil {
 		return nil, err
 	}
+	courses, err := s.allRecipeCourses(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
 		if t, ok := tags[out[i].ID]; ok {
 			out[i].Tags = t
 		}
+		if c, ok := courses[out[i].ID]; ok {
+			out[i].CourseIDs = c
+		}
 	}
 	return out, nil
+}
+
+// allRecipeCourses maps every Recipe to its Course ids in household order.
+func (s *Store) allRecipeCourses(ctx context.Context) (map[int64][]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT rc.recipe_id, rc.course_id FROM recipe_courses rc
+	        JOIN courses c ON c.id = rc.course_id ORDER BY rc.recipe_id, c.position, c.id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64][]int64{}
+	for rows.Next() {
+		var recipeID, courseID int64
+		if err := rows.Scan(&recipeID, &courseID); err != nil {
+			return nil, err
+		}
+		out[recipeID] = append(out[recipeID], courseID)
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) allRecipeTags(ctx context.Context) (map[int64][]string, error) {
@@ -565,6 +646,17 @@ func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]
 	if err != nil {
 		return recipe.Input{}, err
 	}
+	for _, id := range clean.CourseIDs {
+		var active int
+		err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM courses WHERE id = ? AND archived = 0`, id).Scan(&active)
+		if err != nil {
+			return recipe.Input{}, err
+		}
+		if active == 0 {
+			return recipe.Input{}, &recipe.ValidationError{Field: "courses", Code: recipe.CodeCourseUnknown,
+				Message: "that Course does not exist or is archived"}
+		}
+	}
 	if err := s.checkImages(clean); err != nil {
 		return recipe.Input{}, err
 	}
@@ -665,10 +757,11 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	var ready, archived int64
 	var cool, useBy, reheat sql.NullInt64
 	var created, updated string
+	var whole int64
 	err := q.QueryRowContext(ctx, `SELECT name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
-	        reheat_minutes, source_url, source_attribution, image, archived, created_at, updated_at FROM recipes WHERE id = ?`, id).
+	        reheat_minutes, source_url, source_attribution, image, archived, whole_meal, created_at, updated_at FROM recipes WHERE id = ?`, id).
 		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &reheat, &r.Source.URL, &r.Source.Attribution, &r.Image,
-			&archived, &created, &updated)
+			&archived, &whole, &created, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return recipe.Recipe{}, ErrNotFound
 	}
@@ -678,6 +771,8 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	r.ID = id
 	r.ReadyMeal = ready == 1
 	r.Archived = archived == 1
+	wholeMeal := whole == 1
+	r.WholeMeal = &wholeMeal
 	if cool.Valid {
 		r.CooldownDays = intPtr(int(cool.Int64))
 	}
@@ -696,6 +791,10 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	if r.Tags, err = loadTags(ctx, q, id); err != nil {
 		return recipe.Recipe{}, err
 	}
+	if r.Courses, err = loadCourses(ctx, q, id); err != nil {
+		return recipe.Recipe{}, err
+	}
+	r.CourseIDs = courseIDs(r.Courses)
 	if r.Lines, err = loadLines(ctx, q, id); err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -836,3 +935,83 @@ func nullInt(p *int) any {
 }
 
 func intPtr(n int) *int { return &n }
+
+// mainCourse is the id of the main Course.
+func mainCourse(ctx context.Context, q Querier) (int64, error) {
+	var id int64
+	err := q.QueryRowContext(ctx, `SELECT id FROM courses WHERE is_main = 1`).Scan(&id)
+	return id, err
+}
+
+// writeCourses stores the Recipe's Course links (the caller removed the old ones).
+func writeCourses(ctx context.Context, tx *sql.Tx, id int64, ids []int64) error {
+	for _, c := range ids {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO recipe_courses (recipe_id, course_id) VALUES (?, ?)`, id, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// loadCourses returns the Recipe's Courses in household order.
+func loadCourses(ctx context.Context, q Querier, id int64) ([]recipe.CourseRef, error) {
+	rows, err := q.QueryContext(ctx, `SELECT c.id, c.name FROM recipe_courses rc JOIN courses c ON c.id = rc.course_id
+	        WHERE rc.recipe_id = ? ORDER BY c.position, c.id`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []recipe.CourseRef{}
+	for rows.Next() {
+		var c recipe.CourseRef
+		if err := rows.Scan(&c.ID, &c.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func courseIDs(refs []recipe.CourseRef) []int64 {
+	out := make([]int64, 0, len(refs))
+	for _, r := range refs {
+		out = append(out, r.ID)
+	}
+	return out
+}
+
+// dropLostCourses removes what a Recipe no longer has a reason to be in once it loses the Courses lost:
+// its Slot Rules by Recipe on them, and its unpinned, unresolved Planned Meals from today on in them.
+// Pinned, Cooked, Not cooked and past Planned Meals stay, as do other Recipes' and Tag rules.
+func (s *Store) dropLostCourses(ctx context.Context, tx *sql.Tx, id int64, lost []int64) error {
+	today, err := s.householdToday(ctx, tx)
+	if err != nil {
+		return err
+	}
+	for _, c := range lost {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM slot_rules WHERE recipe_id = ? AND course_id = ?`, id, c); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM planned_meals WHERE recipe_id = ? AND course_id = ?
+		        AND state = 'planned' AND pinned = 0 AND date >= ?`, id, c, today); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// householdToday is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
+func (s *Store) householdToday(ctx context.Context, q Querier) (string, error) {
+	loc := time.UTC
+	var tz string
+	err := q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", err
+	}
+	if err == nil {
+		if l, lerr := time.LoadLocation(tz); lerr == nil {
+			loc = l
+		}
+	}
+	return s.clk.Now().In(loc).Format("2006-01-02"), nil
+}
