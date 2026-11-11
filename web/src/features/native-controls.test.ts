@@ -2,6 +2,7 @@
 // (CLAUDE.md "No native browser UI"; the per-User secondary colour was removed in R6). Mirrors ui/native-controls.test.ts.
 // The only native <input> allowed is the one inside a shared primitive in web/src/ui, never in a feature.
 import { describe, expect, it } from 'vitest'
+import { stripAllowedSecondary } from './native-controls.helpers'
 
 const raw = import.meta.glob(
   [
@@ -55,8 +56,8 @@ describe('WP11 folders use no native browser UI', () => {
 describe('the per-User secondary colour is gone (R6)', () => {
   it('leaves no secondary-colour identifier, field, class or token in the six folders', () => {
     for (const f of files) {
-      // `<Button variant="secondary">` is the shared Button variant (design 13.4), not the per-User colour.
-      expect(f.text.replace(/variant=["']secondary["']/g, ''), f.path).not.toMatch(/secondary(Colou?r|Accent)?\b/i)
+      // `<Button variant="secondary">` is the shared Button variant (design 13.4) and `<FormActions secondary={…}>` its slot: not the per-User colour.
+      expect(stripAllowedSecondary(f.text), f.path).not.toMatch(/secondary(Colou?r|Accent)?\b/i)
       expect(f.text, f.path).not.toMatch(/--color-(on-)?secondary/)
     }
   })
