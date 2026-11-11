@@ -1,6 +1,6 @@
 // R2-4 (Import part, /recipes/export). NEW FILE, red until the Import edits are applied (design note, "Deferred Import edits").
 // Loading is the shared Skeleton, an empty list the shared EmptyState, and the download is a StickyActionBar on a long list.
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UseExportPicker } from '../hooks/useExportPicker'
@@ -18,10 +18,11 @@ beforeEach(() => {
 })
 
 describe('ExportScreen states', () => {
-  it('loading is a Skeleton, not a bare paragraph', () => {
+  it('loading is a Skeleton, not a bare paragraph', async () => {
     hook.picker = { ...base(), isLoading: true }
     view()
-    expect(document.querySelector('.skeleton-group')).not.toBeNull()
+    // The Skeleton shows after its anti-flash delay (300 ms).
+    await waitFor(() => expect(document.querySelector('.skeleton-group')).not.toBeNull())
     expect(screen.queryByText('Loading…')).toBeNull()
   })
   it('no Recipes is an EmptyState', () => {

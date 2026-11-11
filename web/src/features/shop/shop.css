@@ -115,15 +115,20 @@
   line-height: var(--text-meta-line);
 }
 
+/* L-09: as many 240 px tiles as fit the page (loaded after, so it beats .bento-grid[data-columns='2'] at equal specificity). */
 .shop-lines .bento-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
 }
 
-@media (min-width: 768px) {
-  .shop-lines .bento-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* R2-4: a leading visual (an Ingredient thumbnail later) between the tick and the text. */
+.line-tile[data-lead='true'] {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
 }
+
+.line-tile__lead {
+  display: inline-flex;
+}
+
 
 .line-tile__end {
   display: inline-flex;

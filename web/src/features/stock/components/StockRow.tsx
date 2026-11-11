@@ -21,12 +21,13 @@ export interface StockRowProps {
  * TODO(WP3b): when isDue(item) the meta should be drawn in the spoil colour with HourglassMedium 14. ListRow has no
  * `metaStatus` yet (a primitive follow-up team is adding it), so the meta is plain text for now.
  */
-export function StockRow({ item, today, onOpen, system = 'metric' }: StockRowProps): ReactElement | null {
+export function StockRow({ item, today, onOpen, system = 'metric', lead }: StockRowProps): ReactElement | null {
   return (
     <ListRow
       title={capitalise(item.name)}
       meta={rowMeta(item, today)}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
+      leading={lead}
       chevron
       onActivate={() => onOpen(item.ingredientId)}
     />

@@ -24,15 +24,15 @@ describe('SpoiledTile rows are ListRows', () => {
     view()
     const rows = document.querySelectorAll('li.list-row')
     expect(rows).toHaveLength(2)
-    expect(within(rows[0] as HTMLElement).getByText('Chicken thighs')).toHaveClass('list-row__title')
-    expect(rows[0].querySelector('.list-row__meta')).toHaveTextContent('200 g · Went off 4 days ago')
+    expect(within(rows[0]! as HTMLElement).getByText('Chicken thighs')).toHaveClass('list-row__title')
+    expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent('200 g · Went off 4 days ago')
     expect(document.querySelector('.spoiled-tile__row')).toBeNull()
   })
 
   it('from 820 px both actions trail the row, Throw out before Keep', () => {
     viewport(820)
     view()
-    const row = document.querySelectorAll('li.list-row')[0]
+    const row = document.querySelectorAll('li.list-row')[0]!
     const trailing = row.querySelector('.list-row__trailing') as HTMLElement
     expect(trailing).not.toBeNull()
     const buttons = within(trailing).getAllByRole('button')

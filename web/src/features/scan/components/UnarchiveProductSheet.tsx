@@ -1,6 +1,7 @@
 // R8: "Unarchive <Product>?" offered when an Archived Product owns the scanned barcode.
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { scanStrings } from '../strings'
 
 export interface UnarchiveProductSheetProps {
@@ -18,12 +19,18 @@ export function UnarchiveProductSheet({ open, onClose, productName, busy = false
   return (
     <BottomSheet open={open} onClose={onClose} title={scanStrings.archivedTitle(productName)}>
       <p>{scanStrings.archivedBody}</p>
-      <Button loading={busy} onClick={onUnarchive}>
-        {scanStrings.unarchiveAction(productName)}
-      </Button>
-      <Button variant="secondary" disabled={busy} onClick={onCreateNew}>
-        {scanStrings.createNewInstead}
-      </Button>
+      <FormActions
+        primary={
+          <Button loading={busy} onClick={onUnarchive}>
+            {scanStrings.unarchiveAction(productName)}
+          </Button>
+        }
+        secondary={
+          <Button variant="secondary" disabled={busy} onClick={onCreateNew}>
+            {scanStrings.createNewInstead}
+          </Button>
+        }
+      />
     </BottomSheet>
   )
 }

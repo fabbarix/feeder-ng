@@ -35,6 +35,7 @@ export const stockStrings = {
   stockTake: 'Stock-take',
   searchLabel: 'Search Stock',
   filtersLabel: 'Show',
+  asideLabel: 'Filter Stock',
   filters: { all: 'All', useSoon: 'Use soon', spoiled: 'Spoiled' } as const,
   listLabel: 'Stock',
   noMatch: 'Nothing in Stock matches',

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatMajor, parseMajor } from '../../products/lib/money'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { FormActions } from '../../../ui/FormActions'
 import { TextField } from '../../../ui/fields/TextField'
 import { scanStrings } from '../strings'
 
@@ -43,7 +44,7 @@ export function PriceEditSheet({ open, onClose, productName, priceCents, currenc
         }}
       >
         <TextField label={scanStrings.priceLabel} value={text} onChange={setText} inputMode="decimal" error={error ? scanStrings.mustBePositive : undefined} />
-        <Button type="submit">{scanStrings.savePrice}</Button>
+        <FormActions primary={<Button type="submit">{scanStrings.savePrice}</Button>} />
       </form>
     </BottomSheet>
   )
