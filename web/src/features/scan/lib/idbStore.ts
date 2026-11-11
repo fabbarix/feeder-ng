@@ -35,7 +35,7 @@ interface ScanDb extends DBSchema {
 }
 
 async function openDatabase(name: string): Promise<IDBPDatabase<ScanDb>> {
-  return openDB<ScanDb>(name, 2, {
+  const db = await openDB<ScanDb>(name, 2, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         const ops = db.createObjectStore('ops', { keyPath: 'op.clientUuid' })
@@ -44,7 +44,18 @@ async function openDatabase(name: string): Promise<IDBPDatabase<ScanDb>> {
       }
       if (oldVersion < 2) db.createObjectStore('pictures')
     },
+    // A newer tab wants to upgrade the schema: close this connection so it is not blocked, and reopen on next use.
+    blocking() {
+      db.close()
+      shared = undefined
+    },
+    // The browser dropped the connection: forget it so the next use reopens the database.
+    terminated() {
+      db.close()
+      shared = undefined
+    },
   })
+  return db
 }
 
 function idbPictureStore(db: IDBPDatabase<ScanDb>): PictureStore {

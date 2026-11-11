@@ -312,10 +312,15 @@ export class OfflineQueue {
         failures.push({ clientUuid: entry.op.clientUuid, productName: entry.op.productName ?? '', reason: pictureFailureReason(err) })
         continue
       }
-      await this.pictures?.remove(entry.op.clientUuid)
+      // The id is persisted first. If the Blob cannot be removed afterwards it is only an orphan (cancel removes it by uuid).
       const updated: QueuedOp = { ...withoutPicture(entry), op: { ...entry.op, productImage: id } }
       await this.store.put(updated)
       sent[i] = updated
+      try {
+        await this.pictures?.remove(entry.op.clientUuid)
+      } catch {
+        // Leave the orphan Blob: the Picture is uploaded and its id is kept, so neither the Picture nor the flush is lost.
+      }
     }
     let results: ScanResult[]
     try {

@@ -24,6 +24,8 @@ export interface ScanApi {
 export interface ScanApiOptions {
   /** how long a sync may hang before it is given up as offline (ApiError 0 'timeout'); 20 s by default */
   syncTimeoutMs?: number
+  /** how long a Picture upload may hang before it is given up as offline (ApiError 0 'timeout'); 20 s by default */
+  uploadTimeoutMs?: number
   /** a signal that aborts after `ms` (AbortSignal.timeout by default); injectable for tests */
   timeoutSignal?: (ms: number) => AbortSignal
 }
@@ -31,6 +33,7 @@ export interface ScanApiOptions {
 /** Typed calls for /api/scan. */
 export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): ScanApi {
   const syncTimeoutMs = opts.syncTimeoutMs ?? 20_000
+  const uploadTimeoutMs = opts.uploadTimeoutMs ?? 20_000
   const timeoutSignal = opts.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms))
   return {
     offlineData: (shopId) => client.get<OfflineData>(`/api/scan/offline${shopId != null ? `?shop=${shopId}` : ''}`),
@@ -41,7 +44,8 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
     },
     async uploadPicture(blob) {
       const dataUrl = await blobToDataUrl(blob)
-      return (await client.post<{ id: string }>(IMAGE_UPLOAD_PATH, { dataUrl })).id
+      const signal = timeoutSignal(uploadTimeoutMs)
+      return (await client.post<{ id: string }>(IMAGE_UPLOAD_PATH, { dataUrl }, { signal })).id
     },
     undo: (uuid) => client.post(`/api/scan/${encodeURIComponent(uuid)}/undo`),
     setPrice: (uuid, priceCents) => client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, { priceCents }),
