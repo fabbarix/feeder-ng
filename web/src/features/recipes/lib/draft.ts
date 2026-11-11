@@ -293,11 +293,15 @@ export function addLine(draft: RecipeDraft): RecipeDraft {
 }
 
 /**
- * STUB (docs/dev/design/sort-drag.md): moves the line at `from` to `to` (clamped), keeping each line object; Steps and every
- * other field untouched; out of range or from === to returns an equal draft. Never mutates.
+ * Moves the line at `from` to `to` (clamped), keeping each line object; Steps and every other field are untouched.
+ * `from` outside the list or from === to returns an equal draft. Never mutates.
  */
-export function moveLine(draft: RecipeDraft, _from: number, _to: number): RecipeDraft {
-  return draft
+export function moveLine(draft: RecipeDraft, from: number, to: number): RecipeDraft {
+  const lines = [...draft.lines]
+  if (from < 0 || from >= lines.length) return { ...draft, lines }
+  const [moved] = lines.splice(from, 1)
+  lines.splice(Math.max(0, Math.min(to, lines.length)), 0, moved!)
+  return { ...draft, lines }
 }
 
 /** Patches the line with `key`; other lines (same objects) and every other field are untouched. Unknown key: no change. */

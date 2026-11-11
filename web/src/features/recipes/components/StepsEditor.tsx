@@ -8,6 +8,7 @@ import {
   Menu,
   NumberField,
   Segmented,
+  Sortable,
   TextArea,
   TextField,
   UnitSelect,
@@ -46,7 +47,11 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
   const patch = (i: number, change: Partial<StepDraft>) => onChange(steps.map((s, j) => (j === i ? { ...s, ...change } : s)))
   const patchUse = (i: number, j: number, change: Partial<UseDraft>) => onChange(updateUse(steps, i, j, change))
   const pickUse = (i: number, j: number, ing: IngredientRef) =>
-    patchUse(i, j, { ingredientId: ing.id, ingredientName: ing.name, unit: ing.baseUnit })
+    patchUse(i, j, {
+      ingredientId: ing.id,
+      ingredientName: ing.name,
+      unit: ing.baseUnit,
+    })
 
   /** Step-level problems; the fields of a use show their own. */
   const errorsFor = (i: number): string[] =>
@@ -55,15 +60,24 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
   return (
     <div className="steps-editor">
       {steps.length === 0 ? <p className="steps-editor__empty">{recipeStrings.steps.empty}</p> : null}
-      <ol className="steps-editor__list">
-        {steps.map((s, i) => {
+      <Sortable
+        as="ol"
+        className="steps-editor__list"
+        items={steps}
+        getKey={(s) => s.key}
+        getLabel={(_, i) => recipeStrings.steps.reorder(i + 1)}
+        onReorder={(from, to) => onChange(moveStep(steps, from, to))}
+        renderItem={(s, { index: i, position, handle, itemProps }) => {
           const afterChoices = afterOptions(steps, i)
           return (
-            <li key={s.key} className="step-card">
+            <li {...itemProps} className={`step-card ${itemProps.className ?? ''}`.trim()}>
               <div className="step-card__head">
-                <span className="step-card__number" data-step-number="">
-                  {i + 1}
-                </span>
+                <div className="step-card__lead">
+                  <span className="step-card__number" data-step-number="">
+                    {position + 1}
+                  </span>
+                  {handle}
+                </div>
                 <div className="step-card__moves">
                   <Menu
                     label={recipeStrings.steps.actions}
@@ -165,8 +179,8 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
               ))}
             </li>
           )
-        })}
-      </ol>
+        }}
+      />
       <Button variant="secondary" icon="add" onClick={() => onChange([...steps, newStepDraft()])}>
         {recipeStrings.steps.add}
       </Button>

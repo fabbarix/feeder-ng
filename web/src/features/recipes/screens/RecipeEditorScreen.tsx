@@ -2,7 +2,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
-import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, StickyActionBar, Tile } from '../../../ui'
+import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
 import { IngredientLineRow } from '../components/IngredientLineRow'
 import { PhotoPicker } from '../components/PhotoPicker'
@@ -129,12 +129,24 @@ export function RecipeEditorScreen(): ReactNode {
                 <span />
               </div>
             ) : null}
-            <ul className="recipe-editor__lines">
-              {draft.lines.map((line, i) => (
+            <Sortable
+              as="ul"
+              className="recipe-editor__lines"
+              items={draft.lines}
+              getKey={(line) => line.key}
+              getLabel={(line, i) =>
+                (line.ingredientName || (line.ingredientId === null ? '' : byId.get(line.ingredientId)?.name) || '').trim() ||
+                recipeStrings.lines.lineLabel(i + 1)
+              }
+              onReorder={editor.moveLine}
+              renderItem={(line, { index: i, handle, itemProps }) => (
                 <IngredientLineRow
-                  key={line.key}
                   line={line}
                   index={i}
+                  handle={handle}
+                  itemProps={itemProps}
+                  count={draft.lines.length}
+                  onMove={(delta) => editor.moveLine(i, i + delta)}
                   errors={editor.errors}
                   ingredient={line.ingredientId === null ? undefined : byId.get(line.ingredientId)}
                   ingredients={ingredients}
@@ -146,8 +158,8 @@ export function RecipeEditorScreen(): ReactNode {
                   focusAmount={quick.focusLineKey === line.key}
                   onAmountFocused={quick.amountFocused}
                 />
-              ))}
-            </ul>
+              )}
+            />
             <Button variant="secondary" icon="add" onClick={editor.addLine}>
               {recipeStrings.lines.add}
             </Button>

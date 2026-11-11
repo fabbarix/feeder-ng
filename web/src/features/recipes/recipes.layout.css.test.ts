@@ -147,7 +147,7 @@ describe('E-02 / E-03: Step cards', () => {
   })
   it('the Step head carries number, text area and the actions on one row from 720', () => {
     expect(valueFor('.step-card__head', 'display', 0)).toBe('flex')
-    expect(valueFor('.step-card__head', 'align-items', 0)).toBe('flex-start')
+    expect(valueFor('.step-card__head', 'align-items', 0)).toBe('center')
   })
 })
 

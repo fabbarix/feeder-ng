@@ -9,6 +9,7 @@ import {
   emptyDraft,
   pickCreatedIngredient,
   pickIngredient,
+  moveLine,
   removeLine,
   serverErrorKey,
   updateLine,
@@ -158,7 +159,7 @@ export function useRecipeEditor(recipeId?: number, ingredients: readonly Ingredi
     updateLine: (key, patch) => setDraft((d) => updateLine(d, key, patch)),
     pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
     removeLine: (key) => setDraft((d) => removeLine(d, key)),
-    moveLine: () => {}, // STUB (sort-drag)
+    moveLine: (from, to) => setDraft((d) => moveLine(d, from, to)),
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     renameOffer: keptOffer ?? liveOffer,

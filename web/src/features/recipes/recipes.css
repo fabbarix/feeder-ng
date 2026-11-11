@@ -389,7 +389,31 @@
 
 .line-row__ingredient {
   grid-area: ingredient;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
   min-inline-size: 0;
+}
+
+/* The drag handle sits before the picker, inside the Ingredient cell, so the grid tracks stay as they were. */
+.line-row__handle {
+  flex: none;
+  align-self: flex-end;
+  display: grid;
+  place-items: center;
+  /* The 44 px target spills 6 px each side over the padding and gap, so the picker keeps as much room as possible. */
+  inline-size: 32px;
+}
+
+.line-row__ingredient > :not(.line-row__handle) {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.line-row__pending-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
 }
 
 .line-row__quantity {
@@ -412,6 +436,9 @@
 
 .line-row__remove {
   grid-area: remove;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   align-self: center;
   justify-self: end;
 }
@@ -471,9 +498,21 @@
 
 .step-card__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.step-card__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Reordering: a line being moved is opaque and round even from 720 px, where its row has no background of its own. */
+.line-row[data-state='dragging'],
+.line-row[data-state='lifted'] {
+  border-radius: var(--radius-tile-sm);
 }
 
 .step-card__number {
@@ -627,7 +666,7 @@
 @media (min-width: 720px) {
   .recipe-editor__lines-head,
   .line-row {
-    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) 96px 40px;
+    grid-template-columns: minmax(0, 1fr) 88px 120px minmax(0, 1fr) 90px 84px;
   }
 
   .recipe-editor__lines-head {
@@ -668,6 +707,12 @@
   .line-row__hint {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .line-row[data-state='dragging'],
+  .line-row[data-state='lifted'] {
+    background: var(--color-surface);
+    border-radius: var(--radius-tile-sm);
   }
 
   .line-row .ui-field__label {

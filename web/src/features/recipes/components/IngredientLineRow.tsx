@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import type { SortableItemProps } from '../../../ui'
-import { Button, Chip, IconButton, IngredientSelect, TextField, UnitSelect } from '../../../ui'
+import { Button, Chip, IconButton, IngredientSelect, Menu, TextField, UnitSelect } from '../../../ui'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
@@ -34,6 +34,10 @@ export interface IngredientLineRowProps {
   onAmountFocused?: () => void
 }
 
+/** The row's class names with the one the sortable adds. */
+const rowClass = (base: string, itemProps: SortableItemProps | undefined, extra = '') =>
+  [base, extra, itemProps?.className].filter(Boolean).join(' ')
+
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /**
@@ -50,6 +54,10 @@ export function IngredientLineRow({
   onPick,
   onChange,
   onRemove,
+  handle,
+  itemProps,
+  count,
+  onMove,
   onQuickCreate,
   quickCreateDisabledReason,
   focusAmount,
@@ -63,14 +71,15 @@ export function IngredientLineRow({
   }, [focusAmount, onAmountFocused])
 
   if (line.auto && line.ingredientId === null) {
-    return <PendingLine line={line} index={index} onChange={onChange} onRemove={onRemove} />
+    return <PendingLine line={line} index={index} onChange={onChange} onRemove={onRemove} handle={handle} itemProps={itemProps} />
   }
   const units = ingredient ? unitChoicesOf(ingredient) : { baseUnit: line.unit, conversions: [], globalUnits: [] }
   const asks = needsConversion(line.unit, ingredient)
   const who = (line.ingredientName || ingredient?.name || '').trim() || recipeStrings.lines.lineLabel(index + 1)
   return (
-    <li className="line-row">
+    <li {...itemProps} className={rowClass('line-row', itemProps)}>
       <div className="line-row__ingredient">
+        {handle ? <div className="line-row__handle">{handle}</div> : null}
         <IngredientSelect
           size="full"
           label={recipeStrings.lines.ingredient}
@@ -120,11 +129,37 @@ export function IngredientLineRow({
         />
       </div>
       <div className="line-row__optional">
-        <Chip kind="filter" selected={line.optional} label={recipeStrings.lines.optionalLine(who)} onClick={() => onChange({ optional: !line.optional })}>
+        <Chip
+          kind="filter"
+          selected={line.optional}
+          label={recipeStrings.lines.optionalLine(who)}
+          onClick={() => onChange({ optional: !line.optional })}
+        >
           {recipeStrings.lines.optional}
         </Chip>
       </div>
       <div className="line-row__remove">
+        {onMove ? (
+          <Menu
+            label={recipeStrings.lines.actions(who)}
+            items={[
+              {
+                id: 'up',
+                label: recipeStrings.lines.up,
+                icon: 'moveUp',
+                disabled: index === 0,
+                onSelect: () => onMove(-1),
+              },
+              {
+                id: 'down',
+                label: recipeStrings.lines.down,
+                icon: 'moveDown',
+                disabled: count !== undefined && index >= count - 1,
+                onSelect: () => onMove(1),
+              },
+            ]}
+          />
+        ) : null}
         <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
       </div>
     </li>
@@ -135,23 +170,47 @@ export function IngredientLineRow({
  * The Ready Meal's pack when its Ingredient does not exist yet: a read-only summary. Feeder makes the Ingredient when the Recipe is saved.
  * "Choose another Ingredient" turns the line into an ordinary blank one.
  */
-function PendingLine({ line, index, onChange, onRemove }: Pick<IngredientLineRowProps, 'line' | 'index' | 'onChange' | 'onRemove'>): ReactNode {
+function PendingLine({
+  line,
+  index,
+  onChange,
+  onRemove,
+  handle,
+  itemProps,
+}: Pick<IngredientLineRowProps, 'line' | 'index' | 'onChange' | 'onRemove' | 'handle' | 'itemProps'>): ReactNode {
   const text = recipeStrings.readyMealIngredient
   return (
-    <li className="line-row line-row--pending">
+    <li {...itemProps} className={rowClass('line-row', itemProps, 'line-row--pending')}>
       <div className="line-row__ingredient">
-        <p className="line-row__pending-name">
-          <strong>{line.ingredientName}</strong> <Chip kind="state">{text.newBadge}</Chip>
-        </p>
-        <p className="line-row__pending-amount">
-          {line.quantity} {line.unit}
-        </p>
-        <p className="line-row__hint">{text.helper(line.ingredientName)}</p>
-        <Button variant="tertiary" onClick={() => onChange({ auto: false, ingredientName: '', quantity: '', unit: '' })}>
-          {text.changeIngredient}
-        </Button>
+        {handle ? <div className="line-row__handle">{handle}</div> : null}
+        <div className="line-row__pending-body">
+          <p className="line-row__pending-name">
+            <strong>{line.ingredientName}</strong> <Chip kind="state">{text.newBadge}</Chip>
+          </p>
+          <p className="line-row__pending-amount">
+            {line.quantity} {line.unit}
+          </p>
+          <p className="line-row__hint">{text.helper(line.ingredientName)}</p>
+          <Button
+            variant="tertiary"
+            onClick={() =>
+              onChange({
+                auto: false,
+                ingredientName: '',
+                quantity: '',
+                unit: '',
+              })
+            }
+          >
+            {text.changeIngredient}
+          </Button>
+        </div>
       </div>
-      <IconButton icon="delete" label={recipeStrings.lines.removeLine(line.ingredientName.trim() || recipeStrings.lines.lineLabel(index + 1))} onClick={onRemove} />
+      <IconButton
+        icon="delete"
+        label={recipeStrings.lines.removeLine(line.ingredientName.trim() || recipeStrings.lines.lineLabel(index + 1))}
+        onClick={onRemove}
+      />
     </li>
   )
 }

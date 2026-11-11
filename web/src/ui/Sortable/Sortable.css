@@ -1,0 +1,85 @@
+/* ui/Sortable (docs/dev/design/sort-drag.md sections 2.3 and 5). Tokens only. */
+.sortable {
+  min-inline-size: 0;
+}
+
+.sortable__item {
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+/* Keyboard: the picked up item is outlined. */
+.sortable__item[data-state='lifted'] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Pointer: the dragged item follows the pointer through --sortable-dy (compositor only) and floats above its neighbours.
+   --sortable-shift cancels the move of its place in the DOM while the others preview the new order. */
+.sortable__item[data-state='dragging'] {
+  position: relative;
+  z-index: 1;
+  translate: 0 calc(-1 * var(--sortable-shift, 0px));
+  transform: translateY(var(--sortable-dy, 0px));
+  background: var(--color-surface);
+  box-shadow: var(--elev-2);
+  outline: 1px solid var(--color-line);
+  cursor: grabbing;
+  transition: none;
+}
+
+/* The handle is the only drag zone: touch-action none here, and nowhere else, so a finger on it drags and anywhere else scrolls. */
+.sortable-handle {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-thumb);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.sortable-handle:hover:not(:disabled),
+.sortable-handle[aria-pressed='true'] {
+  color: var(--color-text);
+}
+
+.sortable-handle[aria-pressed='true'] {
+  background: var(--color-soft);
+}
+
+.sortable-handle:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.sortable-handle:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.sortable__live,
+.sortable__instructions {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortable__item {
+    transition: none;
+  }
+}

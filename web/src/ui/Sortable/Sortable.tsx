@@ -1,6 +1,8 @@
-import { Fragment, type ReactNode } from 'react'
-import type { SortableItemProps, SortableItemState } from './useSortable'
+import type { ReactNode } from 'react'
+import { Icon } from '../Icon'
 import type { SortableStrings } from './strings'
+import { useSortable, type SortableItemProps, type SortableItemState } from './useSortable'
+import './Sortable.css'
 
 export interface SortableRenderContext {
   /** Original index of the item (what callbacks must use). */
@@ -29,21 +31,66 @@ export interface SortableProps<T> {
   strings?: SortableStrings
 }
 
-/** STUB (docs/dev/design/sort-drag.md): renders the items without handles, live region or instructions. */
-export function Sortable<T>({ items, getKey, renderItem, as: Tag = 'ul', className, ...rest }: SortableProps<T>): ReactNode {
+/**
+ * A reorderable list: a drag handle per item (pointer, touch and keyboard), a live region that announces every change and
+ * one hidden instructions paragraph the handles point at. It only previews the order; the owner reorders on `onReorder`.
+ * See docs/dev/design/sort-drag.md.
+ */
+export function Sortable<T>({
+  items,
+  getKey,
+  getLabel,
+  onReorder,
+  renderItem,
+  as: Tag = 'ul',
+  className,
+  disabled,
+  strings,
+  ...rest
+}: SortableProps<T>): ReactNode {
+  const sortable = useSortable({
+    count: items.length,
+    labelOf: (i) => getLabel(items[i] as T, i),
+    onReorder,
+    disabled,
+    strings,
+  })
+  const position: number[] = []
+  sortable.order.forEach((original, shown) => (position[original] = shown))
   return (
-    <Tag className={className} aria-label={rest['aria-label']}>
-      {items.map((item, index) => (
-        <Fragment key={getKey(item)}>
-          {renderItem(item, {
-            index,
-            position: index,
-            state: 'idle',
-            handle: null,
-            itemProps: { ref: null, 'data-sortable-item': '', 'data-sortable-index': index, 'data-state': 'idle' },
-          })}
-        </Fragment>
-      ))}
-    </Tag>
+    <>
+      <Tag className={className ? `sortable ${className}` : 'sortable'} aria-label={rest['aria-label']}>
+        {sortable.order.map((i) => {
+          const item = items[i] as T
+          const itemProps = sortable.getItemProps(i)
+          return (
+            <ItemSlot key={getKey(item)}>
+              {renderItem(item, {
+                index: i,
+                position: position[i] ?? i,
+                state: itemProps['data-state'],
+                itemProps,
+                handle: (
+                  <button className="sortable-handle" disabled={disabled} {...sortable.getHandleProps(i)}>
+                    <Icon name="drag" size={20} />
+                  </button>
+                ),
+              })}
+            </ItemSlot>
+          )
+        })}
+      </Tag>
+      <p id={sortable.instructionsId} className="sortable__instructions">
+        {sortable.instructions}
+      </p>
+      <div role="status" aria-live="polite" aria-atomic="true" className="sortable__live">
+        {sortable.announcement}
+      </div>
+    </>
   )
+}
+
+/** Carries the key of an item without adding a DOM node of its own. */
+function ItemSlot({ children }: { children: ReactNode }): ReactNode {
+  return children
 }
