@@ -562,9 +562,6 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 		return Detail{}, err
 	}
 	image := strings.TrimSpace(in.Image)
-	if err := s.checkImage(image); err != nil {
-		return Detail{}, err
-	}
 	var id int64
 	err = s.withTx(ctx, func(tx *sql.Tx) error {
 		var ok bool
@@ -593,7 +590,8 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 				return err
 			}
 		}
-		return nil
+		// After the barcode checks, so a taken barcode is reported (and merged by a scan) before a missing Picture.
+		return s.checkImage(image)
 	})
 	if err != nil {
 		return Detail{}, err

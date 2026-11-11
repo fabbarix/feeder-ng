@@ -329,6 +329,11 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	var merged *scan.Merged
 	created := true
 	p, err := s.d.Catalogue.CreateProduct(ctx, np)
+	if ve := (*scan.ValidationError)(nil); errors.As(err, &ve) && ve.Field == "image" && np.Image != "" {
+		// A queued scan can outlive its uploaded picture: drop the missing picture rather than lose the whole scan.
+		np.Image = ""
+		p, err = s.d.Catalogue.CreateProduct(ctx, np)
+	}
 	var taken *BarcodeTakenError
 	if errors.As(err, &taken) {
 		// WP7 / R8: an archived owner is never merged into (its Stock would be added to a retired pack); the phone offers to unarchive it.
