@@ -391,7 +391,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the plan slot on `+planDate+` has (\d+) portions$`, func(date string, want float64) error {
+	sc.Step(`^the plan slot on `+planDate+` has ([0-9.]+) portions$`, func(date string, want float64) error {
 		s, err := planSlot(date)
 		if err != nil {
 			return err

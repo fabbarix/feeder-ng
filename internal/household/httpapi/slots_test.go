@@ -209,3 +209,76 @@ func TestAttendanceChangePublishesHouseholdEvent(t *testing.T) {
 		t.Fatalf("event = %s %s", topic, data)
 	}
 }
+
+// R13: Attendance defaults to everyone. The field omitted or null means everyone; [] means nobody.
+
+func TestNewMealSlotDefaultsToEveryMember(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	anna, sam := mustMember(t, admin, "Anna", 1), mustMember(t, admin, "Sam", 0.5)
+	for name, body := range map[string]map[string]any{
+		"omitted": {"weekday": 2, "name": "Dinner", "time": "19:30"},
+		"null":    {"weekday": 3, "name": "Dinner", "time": "19:30", "attendance": nil},
+	} {
+		r := admin.Post("/api/meal-slots", body)
+		if r.Status != 201 {
+			t.Fatalf("%s: create = %d %s", name, r.Status, r.Body)
+		}
+		var s slotBody
+		r.MustJSON(t, &s)
+		if len(s.Attendance) != 2 || s.PortionsNeeded != 1.5 {
+			t.Errorf("%s: attendance %+v, portions %v; want Anna and Sam, 1.5", name, s.Attendance, s.PortionsNeeded)
+		}
+		ids := map[int64]bool{}
+		for _, a := range s.Attendance {
+			ids[a.MemberID] = true
+			if a.PortionFactorOverride != nil {
+				t.Errorf("%s: unexpected override on %d", name, a.MemberID)
+			}
+		}
+		if !ids[anna.ID] || !ids[sam.ID] {
+			t.Errorf("%s: attendance %+v misses a Member", name, s.Attendance)
+		}
+	}
+}
+
+func TestMealSlotWithAnExplicitEmptyAttendanceIsNobody(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	mustMember(t, admin, "Anna", 1)
+	r := admin.Post("/api/meal-slots", map[string]any{"weekday": 2, "name": "Dinner", "time": "19:30", "attendance": []any{}})
+	var s slotBody
+	if r.Status != 201 {
+		t.Fatalf("create = %d %s", r.Status, r.Body)
+	}
+	r.MustJSON(t, &s)
+	if len(s.Attendance) != 0 || s.PortionsNeeded != 0 {
+		t.Errorf("attendance %+v, portions %v; an explicit [] means nobody", s.Attendance, s.PortionsNeeded)
+	}
+}
+
+func TestNewMemberJoinsEveryMealSlot(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	anna := mustMember(t, admin, "Anna", 1)
+	mustSlot(t, admin, 2, "Dinner", "19:30", attendeeBody{MemberID: anna.ID})
+	if r := admin.Post("/api/meal-slots", map[string]any{"weekday": 6, "name": "Breakfast", "time": "09:00", "attendance": []any{}}); r.Status != 201 {
+		t.Fatalf("create Breakfast = %d %s", r.Status, r.Body) // deliberately empty: the new Member still joins
+	}
+	sam := mustMember(t, admin, "Sam", 0.5)
+
+	var list []slotBody
+	admin.Get("/api/meal-slots").MustJSON(t, &list)
+	if len(list) != 2 {
+		t.Fatalf("slots = %+v", list)
+	}
+	for _, s := range list {
+		has := false
+		for _, a := range s.Attendance {
+			has = has || a.MemberID == sam.ID
+		}
+		if !has {
+			t.Errorf("%s did not gain Sam: %+v", s.Name, s.Attendance)
+		}
+	}
+}

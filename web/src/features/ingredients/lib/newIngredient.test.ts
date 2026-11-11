@@ -50,8 +50,11 @@ describe('checkNewIngredient', () => {
   it('asks for a name instead of staying silent', () => {
     expect(checkNewIngredient({ name: '   ', baseUnit: 'g', shelfLife: '' })).toEqual({ ok: false, errors: { name: strings.sheet.nameRequired } })
   })
-  it.each(['0', '-3', '1.5', 'soon'])('refuses the Shelf Life %j', (shelfLife) => {
+  it.each(['0', '-3', '1.5', 'soon', '3651'])('refuses the Shelf Life %j', (shelfLife) => {
     expect(checkNewIngredient({ name: 'Milk', baseUnit: 'ml', shelfLife })).toEqual({ ok: false, errors: { shelfLife: strings.sheet.shelfLifeInvalid } })
+  })
+  it('accepts the server maximum of 3650 days', () => {
+    expect(checkNewIngredient({ name: 'Rice', baseUnit: 'g', shelfLife: '3650' })).toEqual({ ok: true, value: { name: 'Rice', baseUnit: 'g', shelfLifeDays: 3650 } })
   })
   it('reports every problem at once', () => {
     expect(checkNewIngredient({ name: '', baseUnit: 'g', shelfLife: '0' })).toEqual({

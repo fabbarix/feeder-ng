@@ -40,6 +40,8 @@ export interface SlotLike {
   /** RFC 3339 instant of the slot. */
   at: string
   meal: { recipeId: number; recipeName: string; batches: number; portions: number; state: 'planned' | 'cooked' | 'skipped' } | null
+  /** R13: why the planner left the slot empty (T11's Unfilled, structurally); the board only needs to know that it did. */
+  unfilled?: { reason: string } | null
 }
 
 export interface LeftoverLike {

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, Icon, IconButton } from '../../../ui'
-import { couldntPlanText } from '../lib/couldnt'
+import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
 import { dayChip } from '../lib/chips'
 import { compactAction, mayCook } from '../lib/resolve'
 import { slotIcon } from '../lib/hero'
@@ -26,8 +26,9 @@ export interface MealTileProps {
  * One Planned Meal inside a day tile (ui-fix-plan 5.2), compact: row 1 = Meal Slot icon and name, trailing compact
  * IconButtons "Swap" (planned meals) and "Cook" (today's planned meal); row 2 = the Recipe name as a button that opens
  * the sheet (2-line clamp); row 3 = at most ONE chip (lib/chips dayChip). Cooked and Not cooked meals are muted
- * (data-state) and have no icon buttons. An empty slot is a dashed block (data-unfilled) with a danger chip
- * "Couldn't plan", the reason text and a tertiary "Choose a Recipe". No Mark as Cooked, Pin or Confirm here: the sheet has them.
+ * (data-state) and have no icon buttons. An empty slot is a dashed block (data-unfilled) with a small
+ * "Not planned" chip (R13: neutral for a setup gap, amber for a rule conflict, never danger), the short reason (the
+ * block's title on a compact tile) and a tertiary "Choose a Recipe". No Mark as Cooked, Pin or Confirm here: the sheet has them.
  */
 export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compact = false }: MealTileProps): ReactNode {
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
@@ -37,7 +38,7 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
   const action = compact ? (planned ? compactAction(slot.date, today) : null) : null
 
   return (
-    <div className="plan-meal" data-state={meal && meal.state !== 'planned' ? meal.state : undefined} data-unfilled={meal ? undefined : ''}>
+    <div className="plan-meal" data-state={meal && meal.state !== 'planned' ? meal.state : undefined} data-unfilled={meal ? undefined : ''} title={compact && !meal && slot.unfilled ? shortReason(causeOf(slot)) : undefined}>
       <div className="plan-meal__head">
         {compact ? (
           <span className="plan-meal__slot" aria-label={slot.name}>
@@ -82,17 +83,19 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
         <>
           {slot.unfilled ? (
             <>
-              <Chip kind="status" status="danger">
-                {s.couldntPlanChip}
-              </Chip>
-              <p className="plan-meal__reason">{couldntPlanText(slot)}</p>
+              <span className="plan-meal__status">
+                <Chip {...toneStyle(toneOf(causeOf(slot))).chip}>{s.notPlanned}</Chip>
+              </span>
+              {compact ? null : <p className="plan-meal__reason">{shortReason(causeOf(slot))}</p>}
             </>
           ) : (
             <p className="plan-meal__reason">{s.nothingPlanned}</p>
           )}
-          <Button variant="tertiary" size="sm" onClick={() => onChoose(key)}>
-            {s.choose}
-          </Button>
+          {slot.unfilled && causeOf(slot) === 'nobody_attending' ? null : (
+            <Button variant="tertiary" size="sm" onClick={() => onChoose(key)}>
+              {s.choose}
+            </Button>
+          )}
         </>
       )}
     </div>

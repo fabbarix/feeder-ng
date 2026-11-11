@@ -108,6 +108,12 @@ func (e *Env) boot(t TB) {
 	}
 	e.App = a
 	e.Auth = a.Deps.Auth
+	// The start-up replan publishes "plan" asynchronously: wait for it so no scenario sees it mid-step.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := a.WaitIdle(ctx); err != nil {
+		t.Fatalf("testkit: waiting for the start-up replan: %v", err)
+	}
 	e.server = httptest.NewServer(a.Handler)
 }
 

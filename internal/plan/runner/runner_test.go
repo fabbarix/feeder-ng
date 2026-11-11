@@ -331,3 +331,45 @@ func TestDiscardExpiredPublishesStockWasteAfterAnInTransactionWaste(t *testing.T
 		t.Errorf("a run that discards nothing published a stock event (or discarded %d)", n)
 	}
 }
+
+// R13: migration 1230 fixes Attendance, but plan_unfilled rows written before it stay until a replan. With ReplanOnStart
+// the Runner invalidates itself with ReasonStartup when it starts, so the stale rows are cleared at once.
+func TestStartupReplanClearsStaleUnfilledRows(t *testing.T) {
+	e := newEnv(t)
+	e.mustPlan()
+	e.src.setAttendance(e.key(10).MealSlotID, "2026-11-10", nil) // the old data: nobody attends
+	if _, err := e.r.Plan(ctx, plan.ReasonAttendanceChanged); err != nil {
+		t.Fatal(err)
+	}
+	if un, _ := e.st.Unfilled(ctx, "", ""); len(un) != 1 {
+		t.Fatalf("setup: Unfilled = %+v, want one stale row", un)
+	}
+	e.src.clearAttendance() // what the migration did to the attendees, behind the planner's back
+
+	// A Runner without the option leaves the stale row alone.
+	idle := runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: e.stock, Events: e.bus})
+	if idle.Updating() {
+		t.Fatal("a Runner without ReplanOnStart must not start out pending")
+	}
+
+	// The Runner of the restarted app replans on start.
+	boot := runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: e.stock, Events: e.bus, ReplanOnStart: true})
+	if !boot.Updating() {
+		t.Fatal("a Runner with ReplanOnStart must be pending before its worker starts")
+	}
+	if got := boot.PendingReason(); got != plan.ReasonStartup {
+		t.Fatalf("startup replan reason = %q, want %q", got, plan.ReasonStartup)
+	}
+	c, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go boot.Start(c)
+	if err := boot.WaitIdle(c); err != nil {
+		t.Fatal(err)
+	}
+	if un, _ := e.st.Unfilled(ctx, "", ""); len(un) != 0 {
+		t.Errorf("stale unfilled rows survived the startup replan: %+v", un)
+	}
+	if _, err := e.st.Meal(ctx, e.key(10)); err != nil {
+		t.Errorf("Tuesday was not planned by the startup replan: %v", err)
+	}
+}

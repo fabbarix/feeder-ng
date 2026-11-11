@@ -1,7 +1,9 @@
 package testkit_test
 
 import (
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/config"
 	"github.com/fabbarix/feeder-ng/internal/testkit"
@@ -108,5 +110,35 @@ func TestClientSendsJSONBodies(t *testing.T) {
 	r := env.Anonymous().Post("/api/dev/login", map[string]string{"email": testkit.AdminEmail})
 	if r.Status != 200 {
 		t.Fatalf("status = %d %s", r.Status, r.Body)
+	}
+}
+
+// R13: the startup replan (ReplanOnStart) publishes a "plan" event asynchronously. Start and Restart return only
+// once it has completed, so no scenario sees that event arrive in the middle of its own steps.
+func TestStartAndRestartReturnOnlyAfterTheStartupReplanCompleted(t *testing.T) {
+	env := testkit.Start(t)
+	for _, phase := range []string{"Start", "Restart"} {
+		if phase == "Restart" {
+			env.Restart(t)
+		}
+		var body struct {
+			Updating bool `json:"updating"`
+		}
+		if r := env.LoginAdmin(t).Get("/api/plan"); r.Status != 200 {
+			t.Fatalf("%s: GET /api/plan = %d", phase, r.Status)
+		} else if err := json.Unmarshal(r.Body, &body); err != nil {
+			t.Fatalf("%s: decode: %v", phase, err)
+		}
+		if body.Updating {
+			t.Fatalf("%s returned while the startup replan was still pending or running", phase)
+		}
+		ch, cancel := env.App.Deps.Events.Subscribe()
+		select {
+		case ev := <-ch:
+			cancel()
+			t.Fatalf("%s: a %q event was published after it returned", phase, ev.Topic)
+		case <-time.After(150 * time.Millisecond):
+		}
+		cancel()
 	}
 }
