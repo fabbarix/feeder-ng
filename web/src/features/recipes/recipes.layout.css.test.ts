@@ -180,7 +180,7 @@ describe('E-02 / E-03: Step cards', () => {
 })
 
 describe('E-01: the remove cell is centred in the line row', () => {
-  it('.line-row__remove has align-self: center', () => {
+  it('.line-row__remove has align-self: center below 900 px (from 900 it is top-aligned)', () => {
     expect(valueFor('.line-row__remove', 'align-self', 0)).toBe('center')
     expect(valueFor('.line-row__remove', 'align-self', 720)).toBe('center')
   })

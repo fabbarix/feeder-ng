@@ -55,20 +55,9 @@ describe('the item states', () => {
     expect(d['box-shadow']).toBe('var(--elev-2)')
     expect(d['cursor']).toBe('grabbing')
   })
-  it('the dragged item does not animate its own transform (it tracks the finger), the others ease into place', () => {
+  it('the dragged item does not animate its own transform (it tracks the finger); the others have no dead transition (the preview reorders the DOM)', () => {
     expect(declarations(css, ".sortable__item[data-state='dragging']")['transition']).toBe('none')
-    expect(declarations(css, '.sortable__item')['transition']).toMatch(/var\(--dur-1\)/)
-  })
-})
-
-describe('reduced motion', () => {
-  const block = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?\n)\}/.exec(bare)?.[1] ?? ''
-  it('has a prefers-reduced-motion block', () => {
-    expect(block).not.toBe('')
-  })
-  it('turns the easing of the neighbours off and the dragged item loses its lift scale', () => {
-    expect(block).toMatch(/\.sortable__item[^{]*\{[^}]*transition:\s*none/)
-    expect(block).not.toMatch(/scale\(/)
+    expect(declarations(css, '.sortable__item')['transition']).toBeUndefined()
   })
 })
 

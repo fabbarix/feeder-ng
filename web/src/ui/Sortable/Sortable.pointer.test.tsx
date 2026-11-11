@@ -1,6 +1,6 @@
 // Pointer drag of ui/Sortable with simulated pointer events (docs/dev/design/sort-drag.md sections 2.1 and 2.3).
 // Rows are 50 px tall at y = 0, 50, 100 (see sortable.test-helper); the handle of row 0 is grabbed at y = 25.
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { Demo, layoutRows, pointer, shown } from './sortable.test-helper'
 
@@ -138,6 +138,59 @@ describe('Sortable: dropping and cancelling', () => {
     expect(shown()).toEqual(['garlic', 'flour', 'salt'])
     pointer(handle(), 'pointerup', { clientY: 130 })
     expect(onReorder).not.toHaveBeenCalled()
+  })
+  it('Escape during a pointer drag is swallowed: it neither bubbles nor keeps its default action', () => {
+    const outer = vi.fn()
+    window.addEventListener('keydown', outer)
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 130 })
+    const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    document.dispatchEvent(e)
+    window.removeEventListener('keydown', outer)
+    expect(e.defaultPrevented).toBe(true)
+    expect(outer).not.toHaveBeenCalled()
+  })
+  it('a mouse move with no button down (the release happened outside the window) drops the item', () => {
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 130 })
+    fireEvent(document, new PointerEvent('pointermove', { bubbles: true, pointerId: 1, pointerType: 'mouse', buttons: 0, clientY: 130 }))
+    expect(onReorder).toHaveBeenCalledExactlyOnceWith(0, 2)
+    expect(state(0)).toBe('idle')
+  })
+  it('a move with the button still down keeps dragging', () => {
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    fireEvent(document, new PointerEvent('pointermove', { bubbles: true, pointerId: 1, pointerType: 'mouse', buttons: 1, clientY: 130 }))
+    expect(state(0)).toBe('dragging')
+  })
+  it('the window losing focus cancels the drag', () => {
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 130 })
+    fireEvent.blur(window)
+    expect(shown()).toEqual(['garlic', 'flour', 'salt'])
+    expect(onReorder).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent('Reordering cancelled.')
+  })
+  it('lostpointercapture is ignored on purpose: a reordered node loses its capture while the drag goes on', () => {
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 130 })
+    fireEvent(handle(), new Event('lostpointercapture', { bubbles: true }))
+    expect(state(0)).toBe('dragging')
+  })
+  it('keeps "Picked up" in the announcement when the first move already crosses into another row', () => {
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 70 })
+    const text = screen.getByRole('status').textContent ?? ''
+    expect(text).toContain('Picked up garlic. Position 1 of 3.')
+    expect(text).toContain('garlic moved to position 2 of 3.')
+    expect(text.indexOf('Picked up')).toBeLessThan(text.indexOf('moved to'))
+  })
+  it('removes every document listener when the drag ends', () => {
+    const remove = vi.spyOn(document, 'removeEventListener')
+    pointer(handle(), 'pointerdown', { clientY: 25 })
+    pointer(handle(), 'pointermove', { clientY: 130 })
+    pointer(handle(), 'pointerup', { clientY: 130 })
+    const types = remove.mock.calls.map((c) => c[0])
+    for (const t of ['pointermove', 'pointerup', 'pointercancel', 'keydown']) expect(types).toContain(t)
   })
   it('suppresses the context menu on the handle (a touch long-press must not open the callout)', () => {
     const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })

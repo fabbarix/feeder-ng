@@ -95,6 +95,20 @@ describe('StepsEditor: keyboard reorder', () => {
   })
 })
 
+describe('StepsEditor: after-chips while a Step is lifted', () => {
+  it('name the Steps by the positions shown in the preview, matching the badges', async () => {
+    render(<Harness initial={three()} />)
+    const chipNames = (card: HTMLElement) => within(card).getAllByRole('button', { name: /^After step/ }).map((b) => b.textContent)
+    const two = () => cards().find((c) => (within(c).getByRole('textbox', { name: 'Step text' }) as HTMLTextAreaElement).value === 'two')!
+    expect(chipNames(two())).toEqual(['After step 1'])
+    screen.getByRole('button', { name: 'Reorder Step 3' }).focus()
+    await userEvent.keyboard(' {ArrowUp}{ArrowUp}')
+    // Preview: three, one, two. Step "one" is now shown as Step 2.
+    expect(numbers()).toEqual(['1', '2', '3'])
+    expect(chipNames(two())).toEqual(['After step 2'])
+  })
+})
+
 describe('StepsEditor: pointer reorder', () => {
   it('dragging the handle of Step 1 below Step 3 reorders on release', () => {
     const { container } = render(<Harness initial={three()} />)

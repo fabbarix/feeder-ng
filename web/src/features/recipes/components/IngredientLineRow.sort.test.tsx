@@ -40,6 +40,22 @@ describe('IngredientLineRow: drag handle', () => {
     view(props({ line: line({ auto: true, ingredientId: null, ingredientName: 'Aioli pack' }), ingredient: undefined }))
     expect(screen.getByRole('button', { name: 'Reorder garlic' })).toBeInTheDocument()
   })
+  it('a pending Ready Meal line has the same actions menu with Move ingredient up / down', async () => {
+    const onMove = vi.fn()
+    view(props({ line: line({ auto: true, ingredientId: null, ingredientName: 'Aioli pack' }), ingredient: undefined, onMove, index: 1, count: 3 }))
+    const cell = row().querySelector('.line-row__remove') as HTMLElement
+    expect(within(cell).getByRole('button', { name: 'Remove ingredient Aioli pack' })).toBeInTheDocument()
+    await userEvent.click(within(cell).getByRole('button', { name: 'Actions for Aioli pack' }))
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Move ingredient down' }))
+    expect(onMove).toHaveBeenCalledWith(1)
+  })
+  it('the pending line menu disables Move up on the first line and Move down on the last', async () => {
+    view(props({ line: line({ auto: true, ingredientId: null, ingredientName: 'Aioli pack' }), ingredient: undefined, index: 0, count: 1 }))
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Aioli pack' }))
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient down' })).toBeDisabled()
+  })
   it('without a handle the row has no handle holder and its menu offers no Move items', async () => {
     view(props({ handle: undefined, onMove: undefined, count: undefined }))
     expect(row().querySelector('.line-row__handle')).toBeNull()

@@ -12,6 +12,10 @@ describe('ingredient line: the handle lives inside the Ingredient cell, so the g
   it('the handle holder does not shrink and has no label height of its own', () => {
     expect(valueFor('.line-row__handle', 'flex', 0)).toMatch(/^(none|0 0 auto)$/)
   })
+  it('from 900 the handle is top-aligned with the picker and centred on the 48 px field, not dropped to the chip row', () => {
+    expect(valueFor('.line-row__handle', 'align-self', 900)).toBe('flex-start')
+    expect(valueFor('.line-row__handle', 'margin-block-start', 900)).toMatch(/^(2px|calc\(.+\))$/)
+  })
   it('a pending (Ready Meal) line keeps its column layout for the summary', () => {
     expect(rulesFor('.line-row--pending > .line-row__ingredient').length).toBeGreaterThan(0)
   })
