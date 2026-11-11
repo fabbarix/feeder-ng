@@ -173,6 +173,27 @@ func (r *Runner) Leftovers(ctx context.Context) ([]plan.Leftover, error) {
 	return r.d.Store.Leftovers(ctx)
 }
 
+// keyAttendance is the attendance the planning cell at key serves on its date: the Course Attendance of that Course
+// (Course 0 is the main Course of a slot with Courses), or the slot's own Attendance when the slot has no Courses.
+// ErrUnknownSlot when the slot serves no such Course.
+func (r *Runner) keyAttendance(ctx context.Context, def MealSlotDef, key plan.Key) ([]plan.Attendee, error) {
+	courses, err := r.d.Source.SlotCourses(ctx, def.ID, key.Date)
+	if err != nil {
+		return nil, err
+	}
+	if len(courses) == 0 {
+		return r.d.Source.Attendance(ctx, def.ID, key.Date)
+	}
+	occ := plan.SlotInfo{Key: plan.Key{Date: key.Date, MealSlotID: def.ID}, Courses: courses}
+	courseID := plan.NormaliseCourses([]plan.SlotInfo{occ})(key).CourseID
+	for _, c := range courses {
+		if c.CourseID == courseID {
+			return c.Attendance, nil
+		}
+	}
+	return nil, ErrUnknownSlot
+}
+
 // meal re-reads the Planned Meal at key after a write.
 func (r *Runner) meal(ctx context.Context, key plan.Key) (plan.Meal, error) {
 	m, err := r.d.Store.Meal(ctx, key)
@@ -211,7 +232,7 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 			return nil, ErrInvalidBatches
 		}
 		def, _ := in.slotDef(key)
-		att, err := r.d.Source.Attendance(ctx, def.ID, key.Date)
+		att, err := r.keyAttendance(ctx, def, key)
 		if err != nil {
 			return nil, err
 		}
@@ -300,6 +321,9 @@ type Alternative struct {
 	NewLeftoverUseBy    string
 	Score               float64
 	Why                 []plan.Why
+	// Relaxed marks an alternative that is inside its Cool-down or breaks a Variety Rule (offered after the
+	// strict ones, its relaxed chip last; ADR 0009).
+	Relaxed bool
 }
 
 // Alternatives returns the top 3 alternatives for the slot under the same scoring (excluding the current Recipe), each
@@ -321,7 +345,8 @@ func (r *Runner) Alternatives(ctx context.Context, key plan.Key) ([]Alternative,
 	if err != nil {
 		return nil, err
 	}
-	placements, err := planner.Swap(pin, planner.SlotKey{Date: planner.Date(key.Date), MealSlotID: key.MealSlotID})
+	cell := plan.NormaliseCourses(snap.Slots)(key) // Course 0 is the main Course of a slot with Courses
+	placements, err := planner.Swap(pin, planner.SlotKey{Date: planner.Date(cell.Date), MealSlotID: cell.MealSlotID, CourseID: cell.CourseID})
 	switch {
 	case errors.Is(err, planner.ErrSlotNotSwappable):
 		return nil, ErrNotSwappable
@@ -332,7 +357,7 @@ func (r *Runner) Alternatives(ctx context.Context, key plan.Key) ([]Alternative,
 	}
 	out := make([]Alternative, 0, len(placements))
 	for _, p := range placements {
-		a := Alternative{RecipeID: int64(p.RecipeID), Batches: p.Batches, Score: p.Score, Why: plan.WhyAll(p.Why)}
+		a := Alternative{RecipeID: int64(p.RecipeID), Batches: p.Batches, Score: p.Score, Why: plan.WhyAll(p.Why), Relaxed: p.Relaxed}
 		if p.NewLeftover != nil {
 			a.NewLeftoverPortions = p.NewLeftover.Portions
 			a.NewLeftoverUseBy = string(p.NewLeftover.UseBy)
@@ -372,7 +397,7 @@ func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, er
 	if !ok {
 		return CookPreview{}, ErrUnknownSlot
 	}
-	att, err := r.d.Source.Attendance(ctx, def.ID, key.Date)
+	att, err := r.keyAttendance(ctx, def, key)
 	if err != nil {
 		return CookPreview{}, err
 	}
@@ -491,7 +516,7 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		if !ok {
 			return nil, ErrUnknownSlot
 		}
-		att, err := r.d.Source.Attendance(ctx, def.ID, key.Date)
+		att, err := r.keyAttendance(ctx, def, key)
 		if err != nil {
 			return nil, err
 		}

@@ -43,7 +43,7 @@ func slotAt(n int, id int64, hour, min int, att []Attendee) Slot {
 		att = both()
 	}
 	return Slot{
-		Key:        SlotKey{day(n), id},
+		Key:        SlotKey{Date: day(n), MealSlotID: id},
 		At:         baseDay.AddDate(0, 0, n).Add(time.Duration(hour)*time.Hour + time.Duration(min)*time.Minute),
 		Attendance: att,
 	}
@@ -54,7 +54,7 @@ func dinner(n int, att ...Attendee) Slot { return slotAt(n, dinnerSlot, 19, 30, 
 
 func lunch(n int) Slot { return slotAt(n, lunchSlot, 12, 0, nil) }
 
-func key(n int) SlotKey { return SlotKey{day(n), dinnerSlot} }
+func key(n int) SlotKey { return SlotKey{Date: day(n), MealSlotID: dinnerSlot} }
 
 func withRules(s Slot, r ...SlotRule) Slot { s.Rules = r; return s }
 

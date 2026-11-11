@@ -107,6 +107,7 @@ Feature: The Household's Courses
     And the Household has the Recipe "Gratin" for the Courses "Main" and "Side"
     And the Household has the Meal Slot "Dinner" on Thursday at 19:00 attended by nobody
     And the Admin saves the Meal Slot "Dinner" on Thursday with the Courses "Main", "Side"
+    And the planner has finished
     And the Meal Slot "Dinner" on Thursday has a Pinned Planned Meal of "Greens" in "Side" on 2026-11-12
     And the Meal Slot "Dinner" on Thursday has a Slot Rule for "Greens" in "Side"
     When I ask what removing the Course "Side" changes
@@ -156,6 +157,7 @@ Feature: The Household's Courses
     And the Household has the Recipe "Greens" for the Courses "Side"
     And the Household has the Meal Slot "Dinner" on Thursday at 19:00 attended by nobody
     And the Admin saves the Meal Slot "Dinner" on Thursday with the Courses "Main", "Side"
+    And the planner has finished
     And the Meal Slot "Dinner" on Thursday has a Pinned Planned Meal of "Greens" in "Side" on 2026-11-12
     And the Meal Slot "Dinner" on Thursday has an unpinned Planned Meal of "Greens" in "Side" on 2026-11-19
     And the Meal Slot "Dinner" on Thursday has a Slot Rule for "Greens" in "Side"

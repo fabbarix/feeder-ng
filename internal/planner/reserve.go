@@ -47,9 +47,10 @@ func (st *state) isOpenSlot(i int) bool {
 	return PortionsNeeded(st.slots[i].Attendance) > eps
 }
 
-// onlyEligible returns the Recipe the slot's Slot Rules allow when that is
+// onlyEligible returns the Recipe the cell's Slot Rules allow when that is
 // exactly one: the Recipes matching the rules, restricted to those not archived,
-// with Yield > 0 and no Exclusion for an attendee (Ingredients included).
+// with Yield > 0, marked with the cell's Course, and no Exclusion for an attendee
+// (Ingredients included).
 func (st *state) onlyEligible(i int) (Recipe, bool) {
 	s := st.slots[i]
 	if len(s.Rules) == 0 {
@@ -59,7 +60,7 @@ func (st *state) onlyEligible(i int) (Recipe, bool) {
 	n := 0
 	for _, id := range st.recipeIDs {
 		r := st.recipes[id]
-		if r.Archived || r.Yield <= 0 {
+		if r.Archived || r.Yield <= 0 || !st.fitsCourse(i, r) {
 			continue
 		}
 		if _, ok := matchRule(s.Rules, r); !ok {
@@ -110,6 +111,7 @@ func (st *state) dropBlockedKept() {
 		for _, res := range st.reservations {
 			if res.recipe == id && res.slot != i && absInt(st.days[res.slot]-st.days[i]) < res.cooldown {
 				st.roles[i] = roleEmpty
+				st.uncoverCells(i) // the history loop after dropBlockedKept adds the restored kept cells
 				break
 			}
 		}

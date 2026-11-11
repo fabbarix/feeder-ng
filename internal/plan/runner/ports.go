@@ -27,6 +27,10 @@ type Sources interface {
 	// Attendance is the Attendance of the slot on that date (a per-date override when there is one) with the
 	// effective Portion Factors resolved.
 	Attendance(ctx context.Context, mealSlotID int64, date string) ([]plan.Attendee, error)
+	// SlotCourses are the Courses the Meal Slot serves on that date in the slot's order, each with its Course
+	// Attendance (household.CourseAttendance with the effective Portion Factors). Empty: the slot has no Courses
+	// (the transition shim) and plans as one cell. (ADR 0008, docs/dev/design/crs-b.md §6.)
+	SlotCourses(ctx context.Context, mealSlotID int64, date string) ([]plan.SlotCourse, error)
 	// Recipes returns every Recipe, archived ones included, with Needs per Batch in Base Units and the Advance Steps.
 	Recipes(ctx context.Context) ([]planner.Recipe, error)
 	// Preferences returns each Member's Favourites, Dislikes and Exclusions.

@@ -20,13 +20,13 @@ Feature: Swap, set and confirm
     And I am signed in as the User
     And the planner has finished
 
-  Scenario: Swap offers three other Recipes, each with at least one why chip
+  Scenario: Swap offers three other Recipes; an alternative with nothing to say has no chips
     Given I remember the Recipe planned on 2026-11-10
     When I ask for alternatives for the slot on 2026-11-10
     Then the response status is 200
     And there are 3 alternatives
     And none of the alternatives is the remembered Recipe
-    And every alternative has at least one why chip with a code
+    And no alternative has more than 3 why chips and every chip has a code
     And the plan slot on 2026-11-10 has the remembered Recipe
 
   Scenario: Choosing an alternative pins it and replans the unpinned slots after it

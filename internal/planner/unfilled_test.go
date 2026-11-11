@@ -17,22 +17,34 @@ func TestUnfilledSlots(t *testing.T) {
 			t.Errorf("eliminations = %+v, want %+v", u.Eliminated, want)
 		}
 	})
-	t.Run("a mix of filters, each candidate counted once by the first filter that removed it", func(t *testing.T) {
-		pinned := withExisting(dinner(1), ExistingMeal{State: MealPinned, RecipeID: 6, Batches: 1})
-		in := baseInput([]Slot{dinner(0), pinned},
-			rcp(1, 2),                            // Exclusion (and also in cool-down: counted as Exclusion)
-			rcp(2, 2),                            // cool-down
-			rcp(3, 2, tags("fish")),              // Variety Rule
-			rcp(4, 2, lead(48*time.Hour)),        // Advance Step
-			rcp(5, 2, archived()),                // archived: not considered at all
-			rcp(6, 2, tags("fish"), cooldown(0))) // Variety Rule (pinned fish meal on day 1)
+	t.Run("a mix of hard filters, each candidate counted once by the first filter that removed it", func(t *testing.T) {
+		// ADR 0009: Cool-down and Variety Rules are soft, so a Recipe they alone remove is a relaxed candidate and
+		// the cell is filled; the cell is Couldn't plan only when the hard filters remove everything, and they are
+		// counted first (a Recipe that is both excluded and in Cool-down counts as Exclusion).
+		in := baseInput([]Slot{dinner(0)},
+			rcp(1, 2),                     // Exclusion (and also in cool-down: counted as Exclusion)
+			rcp(4, 2, lead(48*time.Hour)), // Advance Step (and also in cool-down: counted as Advance Step)
+			rcp(5, 2, archived()))         // archived: not considered at all
 		in = prefs(in, anna, Preferences{ExcludedRecipes: []RecipeID{1}})
-		in.LastPlanned = map[RecipeID]Date{1: day(-1), 2: day(-1)}
-		in.VarietyRules = []VarietyRule{{Tag: "fish", MaxPerWeek: 1}}
+		in.LastPlanned = map[RecipeID]Date{1: day(-1), 4: day(-1)}
 		u := unfilledAt(t, mustPlan(t, in), key(0))
-		want := Eliminations{Considered: 5, Exclusion: 1, CoolDown: 1, VarietyRule: 2, AdvanceStep: 1}
+		want := Eliminations{Considered: 2, Exclusion: 1, AdvanceStep: 1}
 		if u.Eliminated != want {
 			t.Errorf("eliminations = %+v, want %+v", u.Eliminated, want)
+		}
+	})
+	t.Run("Recipes only Cool-down or a Variety Rule remove are relaxed candidates, so the cell is filled", func(t *testing.T) {
+		pinned := withExisting(dinner(1), ExistingMeal{State: MealPinned, RecipeID: 6, Batches: 1})
+		in := baseInput([]Slot{dinner(0), pinned},
+			rcp(2, 2), rcp(3, 2, tags("fish")), rcp(6, 2, tags("fish"), cooldown(0)))
+		in.LastPlanned = map[RecipeID]Date{2: day(-1)}
+		in.VarietyRules = []VarietyRule{{Tag: "fish", MaxPerWeek: 1}}
+		r := mustPlan(t, in)
+		if len(r.Unfilled) != 0 {
+			t.Errorf("Unfilled = %+v", r.Unfilled)
+		}
+		if p := placementAt(t, r, key(0)); !p.Relaxed {
+			t.Errorf("placement = %+v, want a relaxed pick", p)
 		}
 	})
 	t.Run("no Recipes at all", func(t *testing.T) {

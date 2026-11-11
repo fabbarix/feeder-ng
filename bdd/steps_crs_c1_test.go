@@ -536,6 +536,37 @@ func crsC1Steps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	remembered := map[string]int64{}
+	countUnresolved := func(slotName, day, course string) (int64, error) {
+		s, err := slot(slotName, day)
+		if err != nil {
+			return 0, err
+		}
+		cid, err := courseID(course)
+		if err != nil {
+			return 0, err
+		}
+		return one(`SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND course_id = ? AND state = 'planned' AND date >= ?`, s.ID, cid, today)
+	}
+	sc.Step(`^I note how many unresolved Planned Meals the Meal Slot "([^"]*)" on (\w+) has in "([^"]*)" from today on$`, func(slotName, day, course string) error {
+		n, err := countUnresolved(slotName, day, course)
+		remembered[slotName+"|"+day+"|"+course] = n
+		return err
+	})
+	sc.Step(`^the Meal Slot "([^"]*)" on (\w+) still has as many unresolved Planned Meals in "([^"]*)" from today on$`, func(slotName, day, course string) error {
+		want, ok := remembered[slotName+"|"+day+"|"+course]
+		if !ok {
+			return fmt.Errorf("no count was noted for %s on %s in %s", slotName, day, course)
+		}
+		n, err := countUnresolved(slotName, day, course)
+		if err != nil {
+			return err
+		}
+		if n != want {
+			return fmt.Errorf("%s on %s has %d unresolved Planned Meals in %s from today on, was %d: the preview wrote", slotName, day, n, course, want)
+		}
+		return nil
+	})
 	sc.Step(`^the Meal Slot "([^"]*)" on (\w+) has (\d+) Slot Rules? in "([^"]*)"$`, func(slotName, day string, want int, course string) error {
 		s, err := slot(slotName, day)
 		if err != nil {

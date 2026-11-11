@@ -241,7 +241,7 @@ func TestPlanOrdersAndValidates(t *testing.T) {
 	t.Run("placements are chronological whatever the input order", func(t *testing.T) {
 		in := noCooldown(baseInput([]Slot{dinner(2), dinner(0), lunch(1), dinner(1)}, rcp(1, 2), rcp(2, 2)))
 		r := mustPlan(t, in)
-		want := []SlotKey{key(0), {day(1), lunchSlot}, key(1), key(2)}
+		want := []SlotKey{key(0), {Date: day(1), MealSlotID: lunchSlot}, key(1), key(2)}
 		var got []SlotKey
 		for _, p := range r.Placements {
 			got = append(got, p.Key)

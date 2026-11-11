@@ -151,7 +151,7 @@ func TestConfirmPinsTheMealAsItIsAndUnpinKeepsItButRunsAPlan(t *testing.T) {
 	}
 }
 
-func TestAlternativesAreThreeOtherRecipesWithWhyChipsAndWriteNothing(t *testing.T) {
+func TestAlternativesAreThreeOtherRecipesAndWriteNothing(t *testing.T) {
 	e := newEnv(t)
 	e.mustPlan()
 	current := e.meal(10)
@@ -172,8 +172,8 @@ func TestAlternativesAreThreeOtherRecipesWithWhyChipsAndWriteNothing(t *testing.
 			t.Errorf("Recipe %d offered twice", a.RecipeID)
 		}
 		seen[a.RecipeID] = true
-		if a.Batches < 1 || len(a.Why) < 1 {
-			t.Errorf("alternative %d = %+v; want Batches and at least one why chip", i, a)
+		if a.Batches < 1 || len(a.Why) > 3 { // an alternative with nothing to say has no chips (ADR 0009)
+			t.Errorf("alternative %d = %+v; want Batches and at most three why chips", i, a)
 		}
 		if i > 0 && a.Score > alts[i-1].Score {
 			t.Errorf("alternatives not ordered by score: %v then %v", alts[i-1].Score, a.Score)
@@ -513,7 +513,7 @@ func TestASlotRuleFixesItsMealSlotAndGetsASlotRuleChip(t *testing.T) {
 	}
 }
 
-func TestAVarietyRuleCapsTaggedRecipesPerISOWeek(t *testing.T) {
+func TestAVarietyRuleCapsTaggedRecipesPerISOWeekUntilRecipesRunOut(t *testing.T) {
 	e := newEnv(t)
 	e.src.settings.HorizonDays = 7
 	for i := range e.src.recipes { // pasta, soup and curry are all "Fish"
@@ -526,14 +526,31 @@ func TestAVarietyRuleCapsTaggedRecipesPerISOWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.mustPlan()
-	fish := 0
+	// ADR 0009: the cap holds while enough other Recipes exist, then gives way, and every fish meal past the cap says so.
+	fish, strict := 0, 0
 	for _, m := range e.planMeals() {
-		if m.Fresh() && (m.RecipeID == e.rec["pasta"] || m.RecipeID == e.rec["soup"] || m.RecipeID == e.rec["curry"]) {
-			fish++
+		if !m.Fresh() || (m.RecipeID != e.rec["pasta"] && m.RecipeID != e.rec["soup"] && m.RecipeID != e.rec["curry"]) {
+			continue
+		}
+		fish++
+		relaxedChip := false
+		for _, w := range m.Why {
+			if w.Code == "variety_relaxed" && w.Tag == "fish" {
+				relaxedChip = true
+			}
+		}
+		if !relaxedChip {
+			strict++
 		}
 	}
-	if fish > 1 {
-		t.Errorf("%d fresh Fish meals in the week (Mon 9 - Sun 15), the Variety Rule allows 1", fish)
+	if strict > 1 {
+		t.Errorf("%d fresh Fish meals without a variety_relaxed chip, the Variety Rule allows 1", strict)
+	}
+	if fish < 2 {
+		t.Errorf("%d fresh Fish meals; with 7 dinners and 3 non-Fish Recipes the rule must give way", fish)
+	}
+	if un, _ := e.st.Unfilled(ctx, "", ""); len(un) != 0 {
+		t.Errorf("Unfilled = %+v; a Variety Rule is never a reason for Couldn't plan", un)
 	}
 }
 

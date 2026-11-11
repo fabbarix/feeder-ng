@@ -138,7 +138,7 @@ func TestLeftoverFromAnEarlierPlannedMeal(t *testing.T) {
 	t.Run("a later slot on the same day can use the lunch extra portions", func(t *testing.T) {
 		in := noCooldown(baseInput([]Slot{lunch(0), dinner(0)}, rcp(1, 4), rcp(2, 2)))
 		r := mustPlan(t, in)
-		if p := placementAt(t, r, SlotKey{day(0), dinnerSlot}); p.Source != SourceLeftover || p.From.FromSlot != (SlotKey{day(0), lunchSlot}) {
+		if p := placementAt(t, r, SlotKey{Date: day(0), MealSlotID: dinnerSlot}); p.Source != SourceLeftover || p.From.FromSlot != (SlotKey{Date: day(0), MealSlotID: lunchSlot}) {
 			t.Errorf("dinner should reuse lunch's extra portions: %+v", p)
 		}
 	})

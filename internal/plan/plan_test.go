@@ -90,8 +90,8 @@ func TestWhyConversionKeepsEveryParameter(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("WhyFrom = %+v, want %+v", got, want)
 	}
-	all := plan.WhyAll([]planner.Why{{Code: planner.ReasonSlotRule, Tag: "fish"}, {Code: planner.ReasonBestAvailable}})
-	if len(all) != 2 || all[0].Code != "slot_rule" || all[1].Code != "best_available" {
+	all := plan.WhyAll([]planner.Why{{Code: planner.ReasonSlotRule, Tag: "fish"}, {Code: planner.ReasonLeftover, RecipeID: 4}})
+	if len(all) != 2 || all[0].Code != "slot_rule" || all[1].Code != "leftover" {
 		t.Errorf("WhyAll = %+v", all)
 	}
 }

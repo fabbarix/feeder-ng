@@ -25,10 +25,14 @@ type (
 // means "none" (for example a Stock Lot that never goes off).
 type Date string
 
-// SlotKey identifies one Meal Slot on one date.
+// SlotKey identifies one cell: one Course of one Meal Slot on one date, the key
+// of a Planned Meal (ADR 0008). CourseID 0 is the transition shim of the plan
+// package: a cell with no Course, which skips Course fit and the Whole meal
+// rules, so a single-Course Household plans exactly as before.
 type SlotKey struct {
 	Date       Date
 	MealSlotID int64
+	CourseID   int64
 }
 
 // Attendee is one Member eating at a slot, with their effective Portion Factor.
@@ -78,16 +82,37 @@ type ExistingMeal struct {
 	Batches float64
 	// From is non-nil when the meal is served from a Leftover.
 	From *LeftoverSource
+	// Relaxed is true when the stored Planned Meal is a relaxed pick (ADR 0009).
+	Relaxed bool
 }
 
-// Slot is one Meal Slot occurrence in the Planning Horizon.
+// Slot is one cell in the Planning Horizon: one Course of one Meal Slot on one
+// date. The name stays for compatibility; see crs-b.md for the cell rules.
 type Slot struct {
 	Key SlotKey
 	// At is the slot time instant (Key.Date plus the usual time, household zone).
-	At         time.Time
+	// Every cell of one Meal Slot on one date shares it.
+	At time.Time
+	// Attendance is the cell's Course Attendance: the Meal Slot's Attendance on
+	// that date less the opt-outs of this Course. It gives the cell's portions,
+	// Exclusions, Dislikes and Favourites.
 	Attendance []Attendee
-	Rules      []SlotRule
+	Rules      []SlotRule // the Slot Rules of this cell's Course
 	Existing   *ExistingMeal
+
+	// Main marks the Meal Slot's main Course: it is walked first and a Whole
+	// meal planned in it covers the slot's other Courses.
+	Main bool
+	// Optional marks an optional Course of the Meal Slot (never relaxed, walked
+	// after the required Courses, left empty with no reason when nothing fits).
+	Optional bool
+	// Position is the Course's place in the Meal Slot's own order (0-based); it
+	// orders the required Courses and the optional Courses among themselves.
+	Position int
+	// AllOptedOut is true when the Meal Slot has attendees on this date but every
+	// one of them opts out of this Course (so Attendance is empty): the cell is
+	// not served. A Meal Slot nobody attends leaves it false.
+	AllOptedOut bool
 }
 
 // Need is one ingredient line for ONE Batch, already in Base Units.
@@ -112,6 +137,11 @@ type Recipe struct {
 	UseByDays    *int
 	Needs        []Need
 	AdvanceSteps []AdvanceStep
+	// CourseIDs are the Courses the Recipe is marked with (Course fit). A cell
+	// with CourseID 0 skips Course fit.
+	CourseIDs []int64
+	// WholeMeal: planned in a slot's main Course it covers the slot's other Courses.
+	WholeMeal bool
 }
 
 // Preferences are one Member's Favourites, Dislikes and Exclusions.
@@ -267,7 +297,9 @@ const (
 	ReasonIngredientOverlap ReasonCode = "ingredient_overlap" // IngredientID, Date = day the pack was planned for purchase
 	ReasonStockCoverage     ReasonCode = "stock_coverage"
 	ReasonLeftoverFits      ReasonCode = "leftover_fits" // Date = day the extra portions will be served
-	ReasonBestAvailable     ReasonCode = "best_available"
+	// The two relaxed chips (ADR 0009, spec 7.2 step 5). Only a relaxed pick carries one, last in Why.
+	ReasonCooldownRelaxed ReasonCode = "cooldown_relaxed" // Date = the nearest fresh cook of the Recipe, RecipeID
+	ReasonVarietyRelaxed  ReasonCode = "variety_relaxed"  // Tag, and Value = the count this week or Date = the adjacent day
 )
 
 // Why is a structured why chip: a reason code with its parameters. Unused
@@ -295,7 +327,10 @@ type Placement struct {
 	Purchases []Purchase
 	Score     float64 // sum of Terms (0 for a Leftover)
 	Terms     []ScoreTerm
-	Why       []Why // 1 to 3 chips
+	// Why holds up to 3 score chips, then the relaxed chip of a relaxed pick; empty when there is nothing to say.
+	Why []Why
+	// Relaxed is true for a relaxed pick (ADR 0009, spec 7.2 step 2b).
+	Relaxed bool
 }
 
 // UnfilledReason says why a slot stays empty.
@@ -304,11 +339,15 @@ type UnfilledReason string
 const (
 	UnfilledNoAttendance UnfilledReason = "no_attendance"
 	UnfilledNoCandidates UnfilledReason = "no_candidates"
+	// UnfilledNoCourseRecipes: no non-archived Recipe is marked with the cell's Course.
+	UnfilledNoCourseRecipes UnfilledReason = "no_course_recipes"
 )
 
-// Eliminations counts candidates removed by each filter, each candidate
-// counted once, by the first filter that removed it (Exclusion, Cool-down,
-// Variety Rule, Advance Step, in that order).
+// Eliminations counts candidates removed by each filter, each candidate counted
+// once, by the first filter that removed it: hard filters first (Exclusion, then
+// Advance Step), then the soft ones (Cool-down, Variety Rule). A Recipe that
+// passes every hard filter is a relaxed candidate, so a recorded Unfilled always
+// has CoolDown and VarietyRule at 0 (ADR 0009); the fields stay for JSON compatibility.
 type Eliminations struct {
 	Considered  int // non-archived Recipes left after the Slot Rule narrowing
 	Exclusion   int
@@ -325,6 +364,34 @@ type Unfilled struct {
 	Eliminated      Eliminations
 }
 
+// NotServedCause says why a cell is left empty with no Couldn't plan reason.
+type NotServedCause string
+
+const (
+	// NotServedCovered: a Whole meal in the main Course covers the cell (spec 7.2 step 0).
+	NotServedCovered NotServedCause = "covered"
+	// NotServedOptional: an optional Course with no Leftover and no strict candidate (step 0b).
+	NotServedOptional NotServedCause = "optional"
+	// NotServedNoCourseAttendance: every attendee opts out of the Course on that date (step 0b).
+	NotServedNoCourseAttendance NotServedCause = "no_course_attendance"
+)
+
+// NotServed is a cell the planner left empty on purpose; it has no reason row.
+type NotServed struct {
+	Key   SlotKey
+	Cause NotServedCause
+}
+
+// Recheck is the outcome of the keep check (spec 7.2, step 2b) for one kept fresh
+// Planned Meal: the flag and the relaxed chip it must carry now. Relaxed is false
+// and Why nil when it keeps every soft rule. The adapter replaces the old relaxed
+// chip of the stored meal with Why.
+type Recheck struct {
+	Key     SlotKey
+	Relaxed bool
+	Why     *Why
+}
+
 // Result is the output of Plan and Regenerate. Placements and Unfilled are in
 // chronological order and cover every slot that was not fixed.
 type Result struct {
@@ -332,6 +399,14 @@ type Result struct {
 	Unfilled   []Unfilled
 	// Kept are unpinned Planned Meals that Plan left unchanged.
 	Kept []SlotKey
+	// KeptPortions are the Portions each kept meal is planned for: its cell's Course Attendance. Its Batches still cover
+	// them (spec 7.2); Reconcile writes them when the stored meal has other Portions.
+	KeptPortions map[SlotKey]float64
+	// Rechecks has one entry per kept fresh Planned Meal (the keep check); empty for Regenerate.
+	Rechecks []Recheck
+	// NotServed are the cells left empty with no reason: covered, optional and nothing fits, or nobody eats the Course.
+	// A Pinned, Cooked or Not cooked Planned Meal in such a cell stays and the cell is not listed.
+	NotServed []NotServed
 	// Purchases are the planned purchases of the whole walk (fixed and new
 	// uncooked meals), one entry per Ingredient, ordered by IngredientID.
 	Purchases []Purchase

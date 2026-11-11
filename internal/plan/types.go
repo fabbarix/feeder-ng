@@ -118,7 +118,7 @@ type Eliminations struct {
 // Unfilled is a slot the planner could not fill ("Couldn't plan" reason).
 type Unfilled struct {
 	Key             Key
-	Reason          string // planner.UnfilledReason: "no_attendance" | "no_candidates"
+	Reason          string // planner.UnfilledReason: "no_attendance" | "no_candidates" | "no_course_recipes"
 	SlotRuleClaimed bool
 	Eliminated      Eliminations
 }
@@ -161,6 +161,14 @@ type Attendee struct {
 	Factor   float64
 }
 
+// SlotCourse is one Course a Meal Slot serves on a date.
+type SlotCourse struct {
+	CourseID   int64
+	Main       bool
+	Optional   bool
+	Attendance []Attendee // the effective Course Attendance on that date (household.CourseAttendance)
+}
+
 // SlotInfo is one Meal Slot occurrence (a Meal Slot on a date) with its resolved Attendance.
 type SlotInfo struct {
 	Key        Key
@@ -171,14 +179,6 @@ type SlotInfo struct {
 	// own (for no_attendance and display); each Course's Attendance is the effective Course Attendance
 	// on that date (household.CourseAttendance).
 	Courses []SlotCourse
-}
-
-// SlotCourse is one Course of a Meal Slot occurrence.
-type SlotCourse struct {
-	CourseID   int64
-	Main       bool
-	Optional   bool
-	Attendance []Attendee
 }
 
 // HistoryEntry is a fresh cook (planned or Cooked) before the first slot of the snapshot, for Cool-down and recency.

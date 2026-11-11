@@ -56,6 +56,7 @@ Feature: Courses and Whole meal on a Recipe
     And the Household has the Meal Slot "Dinner" on Thursday at 19:00 attended by nobody
     And I create the Recipe "Greens" for the Courses "Main" and "Side"
     And the Admin saves the Meal Slot "Dinner" on Thursday with the Courses "Main", "Side"
+    And the planner has finished
     And the Meal Slot "Dinner" on Thursday has an unpinned Planned Meal of "Greens" in "Side" on 2026-11-12
     And the Meal Slot "Dinner" on Thursday has a Slot Rule for "Greens" in "Side"
     When I save the Recipe "Greens" for the Courses "Main"

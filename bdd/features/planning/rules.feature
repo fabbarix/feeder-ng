@@ -80,14 +80,14 @@ Feature: Slot Rules and Variety Rules
     Then the response status is 409
     And the error code is "already_planned"
 
-  Scenario: A Variety Rule caps a Tag per ISO week, whatever its spelling
+  Scenario: A Variety Rule caps a Tag per ISO week, whatever its spelling, until the Recipes run out
     When I set the Variety Rule "Fish" to at most 1 per week
     Then the response status is 200
     And the plan JSON "tag" is "fish"
     And the plan JSON "maxPerWeek" is "1"
     When the planner has finished
     And I view the plan
-    Then the planned fresh meals tagged "fish" this week number at most 1
+    Then the planned fresh meals tagged "fish" that keep the Variety Rule number at most 1
 
   Scenario: A Variety Rule can forbid consecutive days
     When I set the Variety Rule "pasta" to never on consecutive days

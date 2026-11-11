@@ -58,6 +58,7 @@ Feature: Courses on a Meal Slot
   Scenario: Taking Side off a Meal Slot drops its opt-outs and its unresolved Planned Meals
     Given the Household has the Recipe "Greens" for the Courses "Side"
     And the Admin saves the Meal Slot "Dinner" on Monday with the Courses "Main", "Side" without "Sam"
+    And the planner has finished
     And the Meal Slot "Dinner" on Monday has a Pinned Planned Meal of "Greens" in "Side" on 2026-11-16
     And the Meal Slot "Dinner" on Monday has an unpinned Planned Meal of "Greens" in "Side" on 2026-11-23
     And the Meal Slot "Dinner" on Monday has a cooked Planned Meal of "Greens" in "Side" on 2026-11-30
@@ -80,9 +81,11 @@ Feature: Courses on a Meal Slot
     Given the Household has the Recipe "Greens" for the Courses "Side"
     And the Household has the Recipe "Peas" for the Courses "Side"
     And the Admin saves the Meal Slot "Dinner" on Monday with the Courses "Main", "Side"
+    And the planner has finished
     And the Meal Slot "Dinner" on Monday has an unpinned Planned Meal of "Peas" in "Side" on 2026-11-16
     And the Meal Slot "Dinner" on Monday has a Pinned Planned Meal of "Greens" in "Side" on 2026-11-23
     And the Meal Slot "Dinner" on Monday has a Slot Rule for "Greens" in "Side"
+    And I note how many unresolved Planned Meals the Meal Slot "Dinner" on Monday has in "Side" from today on
     When the Admin previews "Dinner" on Monday with the Courses "Main"
     Then the response status is 200
     And the answer lists under removes the Pinned Planned Meal of "Greens" in "Side" on 2026-11-23
@@ -90,12 +93,13 @@ Feature: Courses on a Meal Slot
     And the answer lists under removes the Slot Rule for "Greens" in "Side"
     And the answer lists the Pinned Planned Meals first
     And the Meal Slot "Dinner" on Monday serves "Main", "Side"
-    And the Meal Slot "Dinner" on Monday has 2 unresolved Planned Meals in "Side" from today on
+    And the Meal Slot "Dinner" on Monday still has as many unresolved Planned Meals in "Side" from today on
     And the Meal Slot "Dinner" on Monday has 1 Slot Rule in "Side"
 
   Scenario: Saving the batch edit answers what it removed
     Given the Household has the Recipe "Greens" for the Courses "Side"
     And the Admin saves the Meal Slot "Dinner" on Monday with the Courses "Main", "Side"
+    And the planner has finished
     And the Meal Slot "Dinner" on Monday has an unpinned Planned Meal of "Greens" in "Side" on 2026-11-16
     When the Admin saves "Dinner" on Monday with the Courses "Main"
     Then the response status is 200
