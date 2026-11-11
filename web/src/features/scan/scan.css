@@ -25,13 +25,13 @@
 }
 
 /* PP: with a Product Picture the line reads thumb then text; queued note and actions take the full width below. */
-.scan-feedback:has(> .picture-thumb) {
+.scan-feedback[data-has-picture] {
   grid-template-columns: auto 1fr;
   align-items: center;
   column-gap: var(--space-3);
 }
 
-.scan-feedback:has(> .picture-thumb) > :not(.picture-thumb):not(.scan-feedback__text) {
+.scan-feedback[data-has-picture] > :not(:first-child):not(.scan-feedback__text) {
   grid-column: 1 / -1;
 }
 

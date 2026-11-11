@@ -21,7 +21,7 @@ export interface ScanFeedbackProps {
 /** The line shown after a scan: its text, the Edit price and Undo actions and a dismiss control. Announced politely. */
 export function ScanFeedback({ text, imageUrl, queued = false, canEditPrice, onEditPrice, onUndo, onDismiss }: ScanFeedbackProps) {
   return (
-    <div role="status" aria-live="polite" className="scan-feedback">
+    <div role="status" aria-live="polite" className="scan-feedback" data-has-picture={imageUrl ? '' : undefined}>
       {imageUrl ? <PictureThumb imageUrl={imageUrl} size={40} /> : null}
       <p className="scan-feedback__text">{text}</p>
       {queued ? <span className="scan-feedback__queued">{scanStrings.waitingToSync}</span> : null}

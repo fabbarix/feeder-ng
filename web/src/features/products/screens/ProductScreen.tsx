@@ -76,9 +76,12 @@ export function ProductScreen() {
       ) : null}
 
       <BentoGrid columns={2}>
-        <Tile as="section" span="full" aria-label={strings.pictureLabel}>
-          <h2 className="pg__tile-title">{strings.pictureLabel}</h2>
+        <Tile as="section" span="full" aria-labelledby="product-picture-heading">
+          <h2 id="product-picture-heading" className="pg__tile-title">
+            {strings.pictureLabel}
+          </h2>
           <ImagePicker
+            hideLabel
             label={strings.pictureLabel}
             value={product.image ?? ''}
             onChange={(id) => void attempt(() => p.setImage(id))}

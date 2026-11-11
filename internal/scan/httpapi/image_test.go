@@ -89,18 +89,44 @@ func TestTheWhatIsThisFormCreatesTheProductWithItsPicture(t *testing.T) {
 	}
 }
 
-func TestANeverUploadedPictureRejectsTheFormAndCreatesNothing(t *testing.T) {
+func TestAQueuedScanWhoseUploadedPictureIsGoneIsAppliedWithoutIt(t *testing.T) {
 	f := newFixture(t)
 	op := f.unknownOp("scan-0002", "5012345678900")
-	op["productImage"] = strings.Repeat("c", 32)
+	op["productImage"] = strings.Repeat("c", 32) // well-formed, but the file is gone
+	var res scanned
+	r := f.user.Post("/api/scan", op)
+	r.MustJSON(t, &res)
+	if r.Status != 200 || res.Status != "applied" || !res.Scan.ProductCreated || res.Scan.ProductImageURL != "" {
+		t.Fatalf("scan = %d %s; the missing picture is dropped, the scan is not rejected", r.Status, r.Body)
+	}
+	var p struct {
+		Image string `json:"image"`
+	}
+	f.user.Get(fmt.Sprintf("/api/products/%d", res.Scan.ProductID)).MustJSON(t, &p)
+	if p.Image != "" {
+		t.Errorf("the created Product = %+v; it has no picture", p)
+	}
+}
+
+func TestAMalformedPictureIdStillRejectsTheScan(t *testing.T) {
+	f := newFixture(t)
+	op := f.unknownOp("scan-0002", "5012345678900")
+	op["productImage"] = "jar.png"
 	r := f.user.Post("/api/scan", op)
 	if r.Status != 422 || r.ErrorCode() != "validation_failed" {
 		t.Fatalf("scan = %d %s", r.Status, r.Body)
 	}
-	var list []struct{ ID int64 }
-	f.user.Get("/api/products").MustJSON(t, &list)
-	if len(list) != 1 {
-		t.Errorf("Products = %+v; only the fixture's", list)
+}
+
+func TestATakenBarcodeMergesEvenWhenThePictureIsGone(t *testing.T) {
+	f := newFixture(t)
+	f.user.Post("/api/scan", f.unknownOp("scan-0002", "5012345678900"))
+	b := f.unknownOp("scan-0003", "5012345678900")
+	b["productImage"] = strings.Repeat("c", 32)
+	var res scanned
+	f.user.Post("/api/scan", b).MustJSON(t, &res)
+	if res.Status != "applied" || res.Scan.ProductCreated {
+		t.Errorf("scan = %+v; a taken barcode merges as before", res)
 	}
 }
 
