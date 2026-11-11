@@ -1,0 +1,15 @@
+/* ListPage (IH): header, search, filters and list on separate rows. One token gap; no px, no colours. */
+.list-page {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+/* Each slot takes the full row and may shrink below its content width, so nothing forces a horizontal scroll. */
+.list-page__header,
+.list-page__search,
+.list-page__filters,
+.list-page__list {
+  min-inline-size: 0;
+}
