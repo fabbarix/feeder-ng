@@ -96,14 +96,14 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			continue
 		}
 		// A Lot is fine on its go-off date and goes off the day after (functional-spec 6.1):
-		// "the day before it goes off" is the go-off date itself.
+		// the push fires on the go-off date, the last good day, so the body says "good until today".
 		at := goes
 		out = append(out, Candidate{
 			Key:   candidateKey(StockSpoil, fmt.Sprint(lot.ID), at),
 			Type:  StockSpoil,
 			At:    at,
 			Title: "Stock about to spoil",
-			Body:  fmt.Sprintf("%s goes off tomorrow and no Planned Meal uses it", lot.IngredientName),
+			Body:  fmt.Sprintf("%s is good until today and no Planned Meal uses it", lot.IngredientName),
 			URL:   stockURL,
 		})
 	}

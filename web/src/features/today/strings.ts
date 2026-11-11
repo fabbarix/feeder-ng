@@ -14,8 +14,7 @@ export const todayStrings = {
   useSoonHeading: 'Use soon',
   streakHeading: 'Zero-waste streak',
   streakLabel: 'zero-waste streak',
-  whenToday: 'today',
-  whenTomorrow: 'tomorrow',
+  goodUntil: { today: 'good until today', tomorrow: 'good until tomorrow', on: (day: string) => `good until ${day}` },
   useSoonMore: (n: number) => `+${n} more`,
   // R13: the first-run setup checklist
   setupTitle: 'Set up your Household',

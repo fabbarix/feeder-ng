@@ -43,7 +43,7 @@ export const stockStrings = {
   errorMessage: 'Stock could not be loaded.',
   offlineTitle: 'Stock is not saved on this device yet',
   offlineHint: 'Connect to see what is in Stock.',
-  goesOff: { today: 'goes off today', tomorrow: 'goes off tomorrow', on: (day: string) => `goes off ${day}`, wentOffToday: 'went off today', yesterday: 'went off yesterday', ago: (n: number) => `went off ${n} days ago` },
+  goesOff: { goodUntil: { today: 'good until today', tomorrow: 'good until tomorrow', on: (day: string) => `good until ${day}` }, wentOffToday: 'went off today', yesterday: 'went off yesterday', ago: (n: number) => `went off ${n} days ago` },
   boughtOn: (date: string) => `Bought ${date}`,
   actionFailed: 'That did not save. Try again.',
 }
