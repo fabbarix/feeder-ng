@@ -8,6 +8,8 @@ export interface MealSlotWeekProps {
   slots: MealSlot[]
   members: Member[]
   canEdit: boolean
+  /** Disable "Add Meal Slot" (the Members have not loaded, so a new slot would start with nobody). */
+  addDisabled?: boolean
   /** Admin: add a Meal Slot starting on this ISO weekday (1..7). */
   onAdd: (weekday: number) => void
   /** Tap on a slot chip: an Admin gets the MealSlot sheet (with "Change a date"), a plain User the one-date Attendance. */
@@ -21,7 +23,7 @@ const text = settingsStrings.slot
  * (slot icon, earliest first) or "No Meal Slot"; an Admin also gets an IconButton "Add Meal Slot on <weekday>".
  * With no Meal Slots at all, an EmptyState comes first.
  */
-export function MealSlotWeek({ slots, canEdit, onAdd, onOpen }: MealSlotWeekProps) {
+export function MealSlotWeek({ slots, canEdit, addDisabled = false, onAdd, onOpen }: MealSlotWeekProps) {
   return (
     <div className="settings__stack">
       {slots.length === 0 ? <EmptyState title={text.empty} description={text.emptyHint} /> : null}
@@ -42,7 +44,7 @@ export function MealSlotWeek({ slots, canEdit, onAdd, onOpen }: MealSlotWeekProp
               )}
             </div>
             {canEdit ? (
-              <IconButton icon="add" label={`${text.add} on ${day.name}`} size="compact" onClick={() => onAdd(day.id)} />
+              <IconButton icon="add" label={`${text.add} on ${day.name}`} size="compact" disabled={addDisabled} onClick={() => onAdd(day.id)} />
             ) : null}
           </div>
         )

@@ -1,4 +1,4 @@
-// WP11 acceptance: "zero native controls" and "no secondary colour" in the six feature folders this team owns
+// WP11 acceptance (and Recipe Assistant WP-D for features/recipe-assistant): "zero native controls" and "no secondary colour" in the six feature folders this team owns
 // (CLAUDE.md "No native browser UI"; the per-User secondary colour was removed in R6). Mirrors ui/native-controls.test.ts.
 // The only native <input> allowed is the one inside a shared primitive in web/src/ui, never in a feature.
 import { describe, expect, it } from 'vitest'
@@ -11,6 +11,7 @@ const raw = import.meta.glob(
     './shops/**/*.{ts,tsx,css}',
     './notifications/**/*.{ts,tsx,css}',
     './signin/**/*.{ts,tsx,css}',
+    './recipe-assistant/**/*.{ts,tsx,css}', // WP-D (Recipe Assistant settings) joins the guard
     '!./**/*.test.*',
     '!./**/test-utils.*',
     '!./**/fixtures.*',
@@ -73,5 +74,37 @@ describe('icons come only from the shared Icon component', () => {
 
   it('has no emoji or unicode glyph standing in for an icon button ("×" as a close label)', () => {
     for (const f of files.filter((x) => x.path.endsWith('.tsx'))) expect(f.text, f.path).not.toMatch(/>\s*[×✕✖✗]\s*</)
+  })
+})
+
+describe('features/recipe-assistant (WP-D): thin components, no persisted or logged key', () => {
+  const own = files.filter((f) => f.path.startsWith('./recipe-assistant/'))
+  const view = own.filter((f) => /\/(components|screens)\//.test(f.path) && f.path.endsWith('.tsx'))
+
+  it('is part of the guard (not vacuous): it has lib, hooks, components and a screen', () => {
+    for (const dir of ['lib', 'hooks', 'components', 'screens']) expect(own.some((f) => f.path.startsWith(`./recipe-assistant/${dir}/`)), dir).toBe(true)
+  })
+
+  it('components and screens never call the API: no fetch, no http client, no api module', () => {
+    for (const f of view) {
+      expect(f.text, f.path).not.toMatch(/\bfetch\(/)
+      expect(f.text, f.path).not.toMatch(/from\s+['"][./]*\/lib\/http['"]/)
+      expect(f.text, f.path).not.toMatch(/from\s+['"]\.\.?\/(\.\.\/)?api['"]/)
+    }
+  })
+
+  it('lib/ is plain TypeScript with no React import', () => {
+    for (const f of own.filter((x) => x.path.startsWith('./recipe-assistant/lib/'))) expect(f.text, f.path).not.toMatch(/from\s+['"]react(-dom)?['"]/)
+  })
+
+  it('never stores or logs anything (the API key must not reach storage or the console)', () => {
+    for (const f of own) {
+      expect(f.text, f.path).not.toMatch(/\b(localStorage|sessionStorage|indexedDB)\b/)
+      expect(f.text, f.path).not.toMatch(/\bconsole\.(log|info|debug|warn|error)\(/)
+    }
+  })
+
+  it('the API key field is a shared TextField of type password, never a native input', () => {
+    for (const f of own) expect(f.text, f.path).not.toMatch(/<input\b/)
   })
 })

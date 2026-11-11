@@ -29,7 +29,7 @@ export function mockApi(handlers: Record<string, Handler>) {
       return new Response(JSON.stringify({ error: { code: 'not_found', message: `no stub for ${key}` } }), { status: 404 })
     }
     const h = handlers[key]
-    const out = typeof h === 'function' ? (h as (c: RecordedCall) => unknown)(call) : h
+    const out = typeof h === 'function' ? await (h as (c: RecordedCall) => unknown)(call) : h
     const reply = (out && typeof out === 'object' && ('status' in out || 'json' in out) ? out : { json: out }) as Reply
     const status = reply.status ?? (reply.json === undefined ? 204 : 200)
     return new Response(reply.json === undefined ? null : JSON.stringify(reply.json), { status })

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Button, ListGroup, ListRow, Tile } from '../../../ui'
-import { couldntPlanText } from '../lib/couldnt'
 import { leftoverRows } from '../lib/leftovers'
 import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
@@ -49,24 +48,6 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked }: ToC
             </li>
           )
         })}
-      </ul>
-    </Tile>
-  )
-}
-
-export interface CouldntPlanNoticeProps {
-  slots: PlanSlot[]
-}
-
-/** Today: "Couldn't plan Thursday dinner: ..." for each slot the planner left empty. Renders nothing when there are none. */
-export function CouldntPlanNotice({ slots }: CouldntPlanNoticeProps): ReactNode {
-  if (slots.length === 0) return null
-  return (
-    <Tile variant="status" status="danger" span="full" role="status">
-      <ul className="plan__list">
-        {slots.map((s) => (
-          <li key={`${s.date}/${s.mealSlotId}`}>{couldntPlanText(s)}</li>
-        ))}
       </ul>
     </Tile>
   )

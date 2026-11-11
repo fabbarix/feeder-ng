@@ -11,6 +11,10 @@ const rule = (selector: string) => {
 }
 
 describe('plan.css', () => {
+  it('R13: the "Not planned" chip stays on one line', () => {
+    expect(rule('.plan-meal__status')).toMatch(/white-space:\s*nowrap/)
+  })
+
   it.each([2, 4, 7])('the week grid has a %i-column rule', (n) => {
     expect(rule(`.plan-grid[data-columns='${n}']`)).toMatch(new RegExp(`grid-template-columns:\\s*repeat\\(${n},\\s*minmax\\(0,\\s*1fr\\)\\)`))
   })

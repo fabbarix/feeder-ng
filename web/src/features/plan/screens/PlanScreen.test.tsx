@@ -61,7 +61,7 @@ describe('PlanScreen layout (5.2)', () => {
     expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Wednesday' })).toBeInTheDocument()
     expect(within(today).getByText('Chicken')).toBeInTheDocument()
-    expect(screen.getByText("Couldn't plan Wednesday dinner: every option was in Cool-down.")).toBeInTheDocument()
+    expect(within(await tile('Wednesday')).getByText('Not planned')).toBeInTheDocument() // R13: a chip, not a sentence per slot
   })
 
   it('at most one chip per Planned Meal on a day tile, and never "best available"', async () => {

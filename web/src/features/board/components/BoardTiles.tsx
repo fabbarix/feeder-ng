@@ -162,7 +162,7 @@ export function BoardTimersTile({ items }: { items: TimerItem[] }): ReactNode {
   )
 }
 
-/** Heading "Tomorrow", one line per Planned Meal ("Dinner · Chicken stew"); "Nothing planned tomorrow" when empty. */
+/** Heading "Tomorrow", one line per Planned Meal ("Dinner · Chicken stew"), and a neutral "Not planned" chip for a meal the planner could not plan (R13, read-only); "Nothing planned tomorrow" when empty. */
 export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
   return (
     <Tile as="section" className="board-tomorrow">
@@ -172,7 +172,15 @@ export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
       ) : (
         <ul className="board-list">
           {slots.map((s) => (
-            <li key={s.mealSlotId}>{`${s.name} · ${s.meal?.recipeName ?? ''}`}</li>
+            <li key={s.mealSlotId}>
+              {s.meal ? (
+                `${s.name} · ${s.meal.recipeName}`
+              ) : (
+                <>
+                  {s.name} <Chip kind="tag">{boardStrings.notPlanned}</Chip>
+                </>
+              )}
+            </li>
           ))}
         </ul>
       )}

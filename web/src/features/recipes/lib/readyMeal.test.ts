@@ -110,7 +110,8 @@ describe('renameOffer', () => {
     lines: [{ ingredientId: 21, ingredient: 'Lasagne pack', quantity: 1, unit: 'piece', optional: false, note: '' }],
     steps: [],
   })
-  const renamed = (name: string, over: Partial<RecipeDraft> = {}) => draftOf({ name, ...over })
+  const renamed = (name: string, over: Partial<RecipeDraft> = {}) =>
+    draftOf({ name, lines: [blank({ ingredientId: 21, ingredientName: 'Lasagne pack', quantity: '1', unit: 'piece' })], ...over })
 
   it('offers to rename the linked Ingredient to the new Recipe name', () => {
     expect(renameOffer(stored, renamed('  Big   lasagne pack '), known)).toEqual({ ingredientId: 21, from: 'Lasagne pack', to: 'Big lasagne pack' })
@@ -129,6 +130,10 @@ describe('renameOffer', () => {
   })
   it('does not offer when another Ingredient already has the new name (it would clash)', () => {
     expect(renameOffer(stored, renamed('Pasta'), known)).toBeNull()
+  })
+  it('does not offer when the draft no longer has that Ingredient as its line', () => {
+    expect(renameOffer(stored, renamed('Big lasagne pack', { lines: [blank({ ingredientId: 22, ingredientName: 'pasta' })] }), known)).toBeNull()
+    expect(renameOffer(stored, renamed('Big lasagne pack', { lines: [] }), known)).toBeNull()
   })
   it('does not offer for more than one line', () => {
     const two = { ...stored, lines: [...stored.lines, { ...stored.lines[0]!, ingredientId: 8, ingredient: 'flour' }] }

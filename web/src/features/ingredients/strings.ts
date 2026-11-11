@@ -15,7 +15,7 @@ export const strings = {
     shelfLifeUnit: 'days',
     shelfLifeHelper: 'Leave blank if it keeps.',
     nameRequired: 'Give the Ingredient a name',
-    shelfLifeInvalid: 'Enter a whole number of days, 1 or more',
+    shelfLifeInvalid: 'Enter a whole number of days, 1 to 3650',
     creating: 'Creating…',
     cancel: 'Cancel',
     didYouMean: (name: string) => `Did you mean ${name}?`,

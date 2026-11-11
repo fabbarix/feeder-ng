@@ -19,7 +19,7 @@ export function MealSlotsPage() {
         {page.slots.isPending ? (
           <p role="status">{settingsStrings.loading}</p>
         ) : (
-          <MealSlotWeek slots={page.slots.slots} members={page.members.members} canEdit={page.isAdmin} onAdd={page.addOn} onOpen={page.open} />
+          <MealSlotWeek slots={page.slots.slots} members={page.members.members} canEdit={page.isAdmin} addDisabled={page.members.isPending} onAdd={page.addOn} onOpen={page.open} />
         )}
       </Tile>
       <MealSlotEditor

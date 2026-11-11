@@ -70,12 +70,14 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
   const [errors, setErrors] = useState<NewIngredientErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [guard, setGuard] = useState<DuplicateGuard>({ kind: 'clear' })
+  const [working, setWorking] = useState(false)
   const [asked, setAsked] = useState<NewIngredient | null>(null)
 
   const focus = (field: string) => formRef.current?.querySelector<HTMLInputElement>(`input[name="${field}"]`)?.focus()
 
   const create = async (body: NewIngredient) => {
     onBusy(true)
+    setWorking(true)
     try {
       await onCreate(body)
       onClose()
@@ -83,6 +85,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
       setServerError(errorMessage(e))
     } finally {
       onBusy(false)
+      setWorking(false)
     }
   }
 
@@ -145,7 +148,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onClose, onCreate, initia
         error={nameError}
         autoComplete="off"
       />
-      <BaseUnitPicker value={baseUnit} onChange={(u) => edited(() => setBaseUnit(u))} />
+      <BaseUnitPicker disabled={working} value={baseUnit} onChange={(u) => edited(() => setBaseUnit(u))} />
       <TextField
         label={strings.sheet.shelfLifeLabel}
         name="shelfLife"

@@ -166,6 +166,13 @@
   font-size: 1.25rem;
 }
 
+.board-screen .board-tomorrow .chip {
+  block-size: 40px;
+  padding: 0 16px;
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
 .board-timers .board-list {
   overflow: hidden;
   gap: 4px;
