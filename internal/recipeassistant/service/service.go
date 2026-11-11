@@ -39,6 +39,10 @@ type Service struct {
 	jobs  map[int64][]*job // by User, oldest first
 	cache caches
 
+	// afterPerform is a test-only seam: nil in production, set only from export_test.go. run calls it between
+	// perform returning and the sample of j.cancelled, so a test can cancel at exactly that instant.
+	afterPerform func()
+
 	agentPrompt string
 	schema      []byte
 	promptErr   error

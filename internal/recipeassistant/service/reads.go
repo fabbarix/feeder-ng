@@ -437,6 +437,9 @@ func (s *Service) run(ctx context.Context, j *job, r ready, in ReadInput, sink S
 		}
 	}()
 	err := s.perform(ctx, j, r, in, sink, rl)
+	if s.afterPerform != nil {
+		s.afterPerform() // test-only seam, nil in production
+	}
 	j.mu.Lock()
 	cancelled := j.cancelled
 	j.mu.Unlock()

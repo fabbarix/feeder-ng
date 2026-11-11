@@ -1077,6 +1077,32 @@ func TestALateCancelNeverLeavesAClosedOrOrphanReview(t *testing.T) {
 	e.sink.mu.Unlock()
 }
 
+// Deterministic: the cancel lands exactly between perform returning (the Review is open) and run sampling the
+// cancel flag, through the test-only afterPerform seam. The job must end done with its Review still open.
+func TestACancelRightAfterPerformReturnsLeavesItDoneWithItsReviewOpen(t *testing.T) {
+	e := newEnv(t, opts{enabled: true})
+	var id string
+	known := make(chan struct{})
+	var cancelled atomic.Bool
+	e.svc.SetAfterPerform(func() {
+		<-known // the job id is only known once StartRead returned
+		cancelled.Store(e.svc.CancelJob(admin.UserID, id))
+	})
+	jv := e.start(t, admin, textIn("pancakes"))
+	id = jv.ID
+	close(known)
+	got := e.wait(t, admin, jv.ID, service.StateDone, service.StateFailed, service.StateCancelled)
+	if !cancelled.Load() {
+		t.Fatal("the hook did not cancel the job")
+	}
+	if got.State != service.StateDone || got.Review == nil {
+		t.Fatalf("a cancel right after perform returned must leave it done with its Review open: %+v", got)
+	}
+	if c := e.sink.closedReviews(); len(c) != 0 {
+		t.Errorf("the Review must stay open, closed = %v", c)
+	}
+}
+
 // A cancel that lands after the read is complete (its Review open) is too late: conclude writes the read's log line
 // just before finish, so cancelling from the log handler lands the cancel between the outcome and the terminal state,
 // every time. The job ends done with its Review open. (The earlier window, between perform returning and run
