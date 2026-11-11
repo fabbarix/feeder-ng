@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { Button, ColorSwatches, Segmented } from '../../../ui'
+import { useState, type CSSProperties, type FormEvent } from 'react'
+import { Button, Chip, ColorSwatches, FormActions, Segmented } from '../../../ui'
 import { ACCENT_PRESETS } from '../lib/accents'
 import { preferencesChanged } from '../lib/preferencesForm'
 import { settingsStrings } from '../strings'
@@ -45,10 +45,19 @@ export function PreferencesForm({ value, saving, onSave }: PreferencesFormProps)
         onChange={(accent) => set({ accent })}
         allowCustom
       />
-      <div className="settings__accent-preview" data-testid="accent-preview" data-accent={draft.accent} style={{ background: draft.accent }} aria-hidden="true" />
-      <Button type="submit" loading={saving} disabled={!preferencesChanged(value, draft)}>
-        {text.save}
-      </Button>
+      <div className="settings__preview" data-testid="accent-preview" data-accent={draft.accent} style={{ '--preview-accent': draft.accent } as CSSProperties}>
+        <span className="settings__preview-label">{text.preview}</span>
+        <Chip kind="filter" selected>
+          {text.previewSample}
+        </Chip>
+      </div>
+      <FormActions
+        primary={
+          <Button type="submit" loading={saving} disabled={!preferencesChanged(value, draft)}>
+            {text.save}
+          </Button>
+        }
+      />
     </form>
   )
 }

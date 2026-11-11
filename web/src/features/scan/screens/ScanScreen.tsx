@@ -5,6 +5,7 @@
 // and the offline data start only once a Shop or Stock-take is chosen.
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { ingredientsApi } from '../../ingredients/api'
 import { useShops } from '../../shops/hooks/useShops'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
@@ -154,6 +155,7 @@ function ScanSession({ mode, shop, onChangeShop }: ScanSessionProps) {
           mode={sheet.mode}
           shopName={shopName}
           ingredients={c.ingredients}
+          findSimilar={c.online ? (name) => ingredientsApi.search(name) : undefined}
           priceText={sheet.mode === 'weighed_price' && sheet.target.mode === 'weighed_price' ? formatMinor(sheet.target.priceCents, c.currency) : undefined}
           onSave={(values) => void flow.saveUnknown(values)}
         />

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Chip, IconButton, ListGroup, ListRow, TextField } from '../../../ui'
+import { Button, Chip, FieldRow, IconButton, ListGroup, ListRow, TextField } from '../../../ui'
 import { barcodeError, errorText } from '../lib/productForm'
 import { formatBarcode } from '../lib/barcodeFormat'
 import { shopBarcodeLabel } from '../../shops/lib/shopBarcodeForm'
@@ -60,10 +60,12 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
           void add()
         }}
       >
-        <TextField label={strings.barcodeLabel} inputMode="numeric" value={text} onChange={setText} error={error ?? undefined} />
-        <Button type="submit" variant="tertiary">
-          {strings.addBarcode}
-        </Button>
+        <FieldRow align="end">
+          <TextField size="md" label={strings.barcodeLabel} inputMode="numeric" data-size-intent="long" value={text} onChange={setText} error={error ?? undefined} />
+          <Button type="submit" variant="secondary" icon="add">
+            {strings.addBarcode}
+          </Button>
+        </FieldRow>
       </form>
       <h3 className="pg__tile-title">{strings.shopBarcodesTitle}</h3>
       {shopBarcodes.length === 0 ? (

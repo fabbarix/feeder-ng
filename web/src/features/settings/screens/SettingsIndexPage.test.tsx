@@ -42,7 +42,7 @@ describe('SettingsIndexPage (/settings, 5.14)', () => {
     const household = await screen.findByRole('list', { name: 'Household' })
     expect(within(household).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Shops', 'Sign-in requests'])
     expect(within(await screen.findByRole('list', { name: 'You' })).getAllByRole('link')).toHaveLength(2)
-    expect(within(await screen.findByRole('list', { name: 'Admin' })).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Allowlist'])
+    expect(within(await screen.findByRole('list', { name: 'Admin' })).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Allowlist', 'Recipe Assistant'])
   })
 
   it('hides the Allowlist, and the Admin group, from a plain User', async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { BottomSheet, Button, DateField, IngredientSelect, TextField } from '../../../ui'
+import { BottomSheet, Button, FormActions, DateField, IngredientSelect, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
 import '../stock.css'
 import type { IngredientChoice } from '../types'
@@ -55,9 +55,7 @@ export function AddLotSheet({ open, onClose, choices, onSubmit }: AddLotSheetPro
       onClose={onClose}
       title={strings.addTitle}
       footer={
-        <Button onClick={submit}>
-          {strings.save}
-        </Button>
+        <FormActions primary={<Button onClick={submit}>{strings.save}</Button>} />
       }
     >
       <div className="stock-sheet__fields">

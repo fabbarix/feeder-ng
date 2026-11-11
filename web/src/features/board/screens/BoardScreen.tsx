@@ -4,18 +4,18 @@ import { useTimers } from '../../cook/hooks/useTimers'
 import { useLeftovers, usePlan } from '../../plan'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import { useHouseholdSettings } from '../../settings/hooks/useHouseholdSettings'
-import { BentoGrid, EmptyState } from '../../../ui'
+import { BentoGrid, EmptyState, useMediaQuery } from '../../../ui'
 import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile, TomorrowTile, StreakTile, TonightTile } from '../components/BoardTiles'
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
-import { BOARD_LAYOUT, type BoardCell } from '../lib/layout'
+import { boardLayout, type BoardCell } from '../lib/layout'
 import { leftoverRows, startCookPath, tomorrowSlots, tonightMeal, useSoonRows } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import '../board.css'
 
-/** Places one tile on its BOARD_LAYOUT cell. */
-function Cell({ id, children }: { id: BoardCell['id']; children: ReactNode }): ReactNode {
-  const cell = BOARD_LAYOUT.find((c) => c.id === id)
+/** Places one tile on its cell of the layout in use. */
+function Cell({ id, layout, children }: { id: BoardCell['id']; layout: BoardCell[]; children: ReactNode }): ReactNode {
+  const cell = layout.find((c) => c.id === id)
   const style = cell ? { gridColumn: `${cell.col} / span ${cell.colSpan}`, gridRow: `${cell.row} / span ${cell.rowSpan}` } : undefined
   return (
     <div className="board-cell" style={style}>
@@ -51,6 +51,8 @@ export function BoardScreen(): ReactNode {
   const markDone = useAdvanceDone()
   const navigate = useNavigate()
   const clock = useNow(10_000)
+  // L-10: the 4 x 3 wall grid from 600 px, 2 columns below.
+  const wall = useMediaQuery('(min-width: 600px)')
 
   if (board.error) return <EmptyState title={boardStrings.loadError} />
   const data = board.data
@@ -61,31 +63,33 @@ export function BoardScreen(): ReactNode {
   const tonight = tonightMeal(plan.slots, data.today, nowIso)
   const startPath = startCookPath(plan.slots, data.today, nowIso)
 
+  const layout = boardLayout(wall ? 4 : 2)
+
   return (
     <div className="board-screen" data-board="true">
-      <BentoGrid columns={4}>
-        <Cell id="tonight">
+      <BentoGrid columns={wall ? 4 : 2}>
+        <Cell id="tonight" layout={layout}>
           <TonightTile slot={tonight} onCook={startPath ? () => navigate(startPath) : undefined} />
         </Cell>
-        <Cell id="clock">
+        <Cell id="clock" layout={layout}>
           <ClockTile now={clock} timeZone={zone} />
         </Cell>
-        <Cell id="nextAdvance">
+        <Cell id="nextAdvance" layout={layout}>
           <NextAdvanceTile next={data.nextAdvance} nowMs={clock.getTime()} timeZone={zone} onDone={markDone} />
         </Cell>
-        <Cell id="leftovers">
+        <Cell id="leftovers" layout={layout}>
           <BoardLeftoversTile rows={leftoverRows(leftovers, 5)} />
         </Cell>
-        <Cell id="timers">
+        <Cell id="timers" layout={layout}>
           <BoardTimersTile items={timers.items} />
         </Cell>
-        <Cell id="tomorrow">
+        <Cell id="tomorrow" layout={layout}>
           <TomorrowTile slots={tomorrowSlots(plan.slots, data.today)} />
         </Cell>
-        <Cell id="useSoon">
+        <Cell id="useSoon" layout={layout}>
           <UseSoonTile rows={useSoonRows(totals.data ?? [], 5)} />
         </Cell>
-        <Cell id="streak">
+        <Cell id="streak" layout={layout}>
           <StreakTile days={data.streak.days} />
         </Cell>
       </BentoGrid>

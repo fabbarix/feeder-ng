@@ -1,5 +1,6 @@
 // The "what is this?" form for an unknown barcode (functional spec §10.1): validation, the prefilled Product name,
 // and the Op it produces. Plain TypeScript, no React. Stubs until implemented.
+import { defaultBaseUnit } from '../../ingredients/lib/newIngredient'
 import { defaultProductName } from '../../products/lib/names'
 import { scanStrings } from '../strings'
 import type { BarcodeScope, BaseUnit, Op } from '../types'
@@ -123,4 +124,9 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
     priceCents: target.priceCents,
     ...(perKg.ok ? { pricePerKgCents: perKg.pricePerKgCents } : {}),
   }
+}
+
+/** R2-4: the Base Unit a new Ingredient gets from the pack unit chosen: the shared ingredients/lib/newIngredient.defaultBaseUnit rule. */
+export function newIngredientBaseUnit(packUnit: string): BaseUnit {
+  return defaultBaseUnit(packUnit)
 }

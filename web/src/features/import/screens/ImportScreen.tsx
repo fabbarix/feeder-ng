@@ -70,7 +70,7 @@ export function ImportScreen(): ReactNode {
       {r.phase === 'done' ? (
         <Tile as="section" className="import-done">
           <p>{s.done(r.result?.recipes.length ?? 0)}</p>
-          <Link className="import-link-button" to="/recipes">
+          <Link className="button" data-variant="primary" data-size="md" to="/recipes">
             {s.openRecipes}
           </Link>
           <Button variant="tertiary" onClick={() => void r.reset()}>
@@ -87,11 +87,14 @@ export function ImportScreen(): ReactNode {
               {s.stepThreeTitle}
             </h2>
             {r.phase === 'reviewing' && r.plan ? (
-              <Reviewing plan={r.plan} busy={r.busy} stale={r.stale} screen={r} />
+              <Reviewing plan={r.plan} stale={r.stale} screen={r} />
             ) : (
               <p className="import-review__empty">{s.reviewEmpty}</p>
             )}
           </Tile>
+          {r.phase === 'reviewing' && r.plan ? (
+            <ConfirmTile canConfirm={canConfirm(r.plan, r.busy)} busy={r.busy} open={openCount(r.plan)} onConfirm={() => void r.confirm()} />
+          ) : null}
         </>
       )}
     </section>
@@ -100,12 +103,11 @@ export function ImportScreen(): ReactNode {
 
 interface ReviewingProps {
   plan: Plan
-  busy: boolean
   stale: boolean
   screen: ReturnType<typeof useImportReview>
 }
 
-function Reviewing({ plan, busy, stale, screen }: ReviewingProps): ReactNode {
+function Reviewing({ plan, stale, screen }: ReviewingProps): ReactNode {
   return (
     <>
       {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
@@ -158,7 +160,6 @@ function Reviewing({ plan, busy, stale, screen }: ReviewingProps): ReactNode {
           onRecipe={screen.choosePhotoRecipe}
         />
       ) : null}
-      <ConfirmTile canConfirm={canConfirm(plan, busy)} busy={busy} open={openCount(plan)} onConfirm={() => void screen.confirm()} />
     </>
   )
 }

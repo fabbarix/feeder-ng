@@ -57,7 +57,7 @@ describe('lineEntry / extraEntry', () => {
     expect(extraEntry(makeExtra(), 'metric')).toMatchObject({ key: 'extra:1', kind: 'extra', extraId: 1, ingredientId: null, title: 'toilet paper', detail: '', quantityText: '', packLine: '', estimatedCost: null, quantity: 0, baseUnit: null })
     expect(extraEntry(makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 }), 'metric')).toMatchObject({
       key: 'extra:2',
-      title: 'milk',
+      title: 'Milk',
       detail: '2000 ml',
       quantityText: '2000 ml',
       packLine: '',
@@ -76,7 +76,7 @@ describe('listEntries', () => {
     })
     const { open, ticked } = listEntries(list, 'metric')
     expect(open.map((i) => i.title)).toEqual(['Passata', 'toilet paper'])
-    expect(ticked.map((i) => i.title)).toEqual(['chicken thighs', 'candles'])
+    expect(ticked.map((i) => i.title)).toEqual(['Chicken thighs', 'candles'])
   })
 
   it('is empty for an empty list', () => {
