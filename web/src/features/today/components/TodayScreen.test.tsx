@@ -9,6 +9,8 @@ const h = vi.hoisted(() => ({
   scan: false,
   throwOut: vi.fn<(id: number) => Promise<void>>(),
   keep: vi.fn<(id: number) => Promise<void>>(),
+  planToday: '2026-11-09',
+  failed: false,
 }))
 
 // The seams are the only place Today reads other features; the spoiled tile is stubbed to one button.
@@ -21,7 +23,8 @@ vi.mock('../seams', () => ({
     toConfirm: [],
     couldntPlan: [],
     leftovers: [],
-    planToday: '2026-11-09',
+    planToday: h.planToday,
+    loadFailed: h.failed,
     spoiled: [{ id: 7 }],
     stockToday: '2026-11-09',
     system: 'metric',
@@ -45,6 +48,8 @@ function setup() {
 
 afterEach(() => {
   h.scan = false
+  h.planToday = '2026-11-09'
+  h.failed = false
   h.throwOut.mockReset()
   vi.unstubAllGlobals()
 })
@@ -69,5 +74,21 @@ describe('TodayScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Throw out' }))
     expect(await screen.findByText(todayStrings.actionFailed)).toBeTruthy()
     expect(h.throwOut).toHaveBeenCalledWith(7)
+  })
+
+  it('dates the header from the device clock when the plan has not loaded (offline)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 9, 12) })
+    h.planToday = ''
+    setup()
+    expect(await screen.findByText('Mon 9 Nov')).toBeTruthy()
+    expect(screen.queryByText(/NaN/)).toBeNull()
+    vi.useRealTimers()
+  })
+
+  it('shows a load error, not the empty state, when the data could not be loaded', async () => {
+    h.failed = true
+    setup()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Today could not be loaded.')
+    expect(screen.queryByText(todayStrings.emptyTitle)).toBeNull()
   })
 })

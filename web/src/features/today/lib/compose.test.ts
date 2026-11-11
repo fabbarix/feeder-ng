@@ -108,4 +108,14 @@ describe('composeToday', () => {
       expect(tilesOf(busy).heroSpan).toBe('block')
     })
   })
+
+  it('is never empty when a load failed: the layout says so instead of "nothing on the menu"', () => {
+    const layout = tilesOf({ ...quiet, loadFailed: true })
+    expect(layout.failed).toBe(true)
+    expect(layout.empty).toBe(false)
+  })
+
+  it('is not failed by default', () => {
+    expect(tilesOf(quiet).failed).toBe(false)
+  })
 })

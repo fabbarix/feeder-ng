@@ -54,4 +54,13 @@ describe('useSpoiledLots', () => {
     expect(api.keep).toHaveBeenCalledWith(3)
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
   })
+
+  it.each(['throwOut', 'keep'] as const)('%s also refreshes the zero-waste streak on Today and the board', async (action) => {
+    const { Wrapper, spy } = wrapper()
+    const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+    await act(() => result.current[action](3))
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['today', 'streak'] }))
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['board'] }))
+  })
 })

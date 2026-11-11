@@ -78,4 +78,13 @@ describe('TodayView', () => {
     rerender(<TodayView layout={layout(['nextMeal', 'leftovers'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
     expect(container.querySelector('.today')).toHaveAttribute('data-hero-span', 'block')
   })
+
+  it('shows an error with a retry, never the empty state, when the layout failed', async () => {
+    const onRetry = vi.fn()
+    render(<TodayView layout={{ ...layout([], false), failed: true }} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} onRetry={onRetry} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Today could not be loaded.')
+    expect(screen.queryByRole('heading', { name: 'Nothing on the menu. The kitchen is yours.' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
 })
