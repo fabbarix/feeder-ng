@@ -23,9 +23,9 @@ export interface OptionGroup<V extends string | number = string> {
   options: SelectOption<V>[]
 }
 
-/** Lower-case, accents stripped, trimmed: the comparison form for search and type-ahead. */
+/** Lower-case, accents stripped, trimmed, inner whitespace collapsed: the comparison form for search and type-ahead. */
 export function normalise(text: string): string {
-  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
 /** Options whose label, meta or keywords contain every word of the query (normalised). Empty query returns all. */

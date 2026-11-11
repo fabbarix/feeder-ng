@@ -51,7 +51,7 @@ Anything else is an **unconvertible unit**. Import Review asks for the conversio
 | `name` | Display name. A Recipe with the same name as an existing one is offered as *replace*, *keep both* or *skip* in Import Review. |
 | `description` | Optional short text. |
 | `yield` | Standard portions produced by one Batch. For a Ready Meal, the portions in one pack. |
-| `readyMeal` | `true` for a Ready Meal. It must then have exactly one ingredient line, usually `1 piece` of the pack. |
+| `readyMeal` | `true` for a Ready Meal. It must then have exactly one ingredient line, usually `1 piece` of the pack. Name that Ingredient like the Recipe: Import Review then needs no definition for it, using an existing Ingredient of that name or creating one with Base Unit `piece` (the same rule as the Recipe editor). A line named differently needs its definition as any other Ingredient. |
 | `tags` | Free labels, matched by name to the household's Tags and created if missing. |
 | `cooldownDays` | Overrides the household default Cool-down. |
 | `leftoverUseByDays` | Overrides the household default Leftover Use-by. `0` means leftovers must be eaten the same day. |
@@ -92,7 +92,7 @@ On import, images are re-encoded to WebP and resized (longest side 1600 px) befo
 Importing never writes directly. Every file goes through Import Review:
 
 1. **Validation** against the schema. Errors are listed with a JSON path, and nothing is imported until they're fixed.
-2. **Ingredient matching**: each name is matched to an existing Ingredient (exact, then fuzzy suggestions) or created. A definition that conflicts with an existing Ingredient (a different base unit) must be resolved by hand.
+2. **Ingredient matching**: each name is matched to an existing Ingredient (exact, then fuzzy suggestions) or created. A Ready Meal's line named like the Recipe and not defined in the file is created as a `piece` Ingredient. A definition that conflicts with an existing Ingredient (a different base unit) must be resolved by hand.
 3. **Unit check**: every unconvertible unit gets a one-off conversion prompt.
 4. **Recipe conflicts**: replace, keep both or skip.
 5. **Images** are fetched or decoded, with a warning for each failure.
@@ -119,7 +119,7 @@ Rules:
    - "advance" for things done well before cooking (marinate, soak, defrost, chill overnight), with "leadTimeMinutes" before serving time.
    Use "after" (0-based indexes into the steps array) when a step must wait for earlier steps to FINISH, e.g. serving waits for the oven. Leave it out otherwise.
 6. Add "uses" to steps that consume ingredients, with the amounts used in that step.
-7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1), and "yield" = portions in the pack.
+7. A bought, ready-to-heat product is a Ready Meal: "readyMeal": true, exactly one ingredient (the pack, baseUnit piece, quantity 1; name the pack Ingredient like the Recipe), and "yield" = portions in the pack.
 8. Add 1–4 short lowercase "tags" (main protein, dish type, e.g. "chicken", "traybake", "vegetarian", "soup").
 9. Images: if the source has a photo URL, put it in "image" (https only). Otherwise omit "image". Never invent URLs.
 10. If the source names its origin, fill "source" with "url" and/or "attribution".

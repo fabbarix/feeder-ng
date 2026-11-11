@@ -48,6 +48,8 @@ export const recipesApi = {
   saveConversion: async (ingredientId: number, unit: string, toBase: number): Promise<void> => {
     await http.put(`/api/ingredients/${ingredientId}/conversions/${encodeURIComponent(unit)}`, { toBase })
   },
+  /** R14: renames the Ingredient linked to a Ready Meal (PATCH /api/ingredients/{id} with { name }). */
+  renameIngredient: (ingredientId: number, name: string) => http.patch<IngredientRef>(`/api/ingredients/${ingredientId}`, { name }),
   preferences: (memberId?: number) =>
     http.get<MemberPreferences>(memberId === undefined ? '/api/recipe-preferences' : `/api/recipe-preferences?memberId=${memberId}`),
   setRecipeState: (recipeId: number, state: PreferenceState, memberId?: number) =>
