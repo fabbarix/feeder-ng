@@ -88,6 +88,24 @@ func (w *world) meal(t *testing.T, date string, slot, recipeID int64, state plan
 	}
 }
 
+func (w *world) mainCourse(t *testing.T) int64 {
+	t.Helper()
+	var id int64
+	if err := w.db.QueryRow(`SELECT id FROM courses WHERE is_main = 1`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func (w *world) courseNamed(t *testing.T, name string) int64 {
+	t.Helper()
+	var id int64
+	if err := w.db.QueryRow(`SELECT id FROM courses WHERE name = ?`, name).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func (w *world) lot(t *testing.T, ing int64, goesOff string) int64 {
 	t.Helper()
 	l, _, err := w.stock.AddLot(ctx, stockstore.NewLot{IngredientID: ing, Quantity: 500, Purchased: "2026-11-08", GoesOff: stock.Date(goesOff), Source: stockstore.SourceManual})
@@ -193,8 +211,11 @@ func TestFactsPutTheSlotInstantInTheHouseholdZoneAndCarryAdvanceStepLeads(t *tes
 	if m.RecipeName != "Chicken curry" || m.FromLeftover {
 		t.Errorf("meal = %+v", m)
 	}
-	if m.TotalTime != 45*time.Minute {
-		t.Errorf("TotalTime = %s, want 45m", m.TotalTime)
+	if main := w.mainCourse(t); m.CourseID != main {
+		t.Errorf("CourseID = %d, want the main Course %d", m.CourseID, main)
+	}
+	if len(m.Steps) != 2 || m.Steps[1].Kind != schedule.Active || m.Steps[1].DurationMinutes != 45 {
+		t.Errorf("Steps = %+v, want the Recipe's two Steps (Advance, then 45 min Active)", m.Steps)
 	}
 	if len(m.AdvanceSteps) != 1 || m.AdvanceSteps[0].Description != "Marinate the chicken" || m.AdvanceSteps[0].Lead != 4*time.Hour {
 		t.Errorf("AdvanceSteps = %+v, want one 4h Advance Step", m.AdvanceSteps)
@@ -319,5 +340,56 @@ func TestStockLotsAreUsedByPlanOnlyByAFreshPlannedMealOnOrBeforeTheGoOffDate(t *
 	}
 	if got[spinach].IngredientName != "spinach" {
 		t.Errorf("IngredientName = %q", got[spinach].IngredientName)
+	}
+}
+
+// A slot with two Courses gives one MealFact per Course, in the slot's Course order (Starter before Main
+// here, by the Courses' positions), each with its own CourseID and Steps: Compute hands them to cook.Timeline.
+func TestFactsListTheCoursesOfASlotInCourseOrder(t *testing.T) {
+	w := newWorld(t)
+	starter, main := w.courseNamed(t, "Starter"), w.mainCourse(t)
+	for _, c := range []struct{ course, recipe int64 }{{main, w.curry}, {starter, w.omelette}} {
+		if _, err := w.plans.SaveMeal(ctx, plan.Meal{Key: plan.Key{Date: "2026-11-09", MealSlotID: w.dinner, CourseID: c.course},
+			RecipeID: c.recipe, Batches: 1, Portions: 4, State: plan.StatePlanned}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []notify.MealFact
+	for _, m := range f.Meals {
+		if m.Date == "2026-11-09" && m.MealSlotID == w.dinner {
+			got = append(got, m)
+		}
+	}
+	if len(got) != 2 || got[0].CourseID != main || got[1].CourseID != starter {
+		t.Fatalf("want the main Course (position 0) then Starter, got %+v", got)
+	}
+	if got[1].RecipeName != "Omelette" || len(got[1].Steps) != 1 || got[1].Steps[0].DurationMinutes != 5 {
+		t.Errorf("Starter fact = %+v, want Omelette with its one 5 min Step", got[1])
+	}
+}
+
+// A Leftover-served Course carries the length of its Reheat, not Steps, so the timeline can place it.
+func TestFactsGiveALeftoverCourseItsReheatLength(t *testing.T) {
+	w := newWorld(t)
+	mins := 7
+	if _, err := w.db.Exec(`UPDATE recipes SET reheat_minutes = ? WHERE id = ?`, mins, w.risotto); err != nil {
+		t.Fatal(err)
+	}
+	src := &plan.Source{From: plan.Key{Date: "2026-11-08", MealSlotID: w.dinner, CourseID: w.mainCourse(t)}}
+	w.meal(t, "2026-11-09", w.dinner, w.risotto, plan.StatePlanned, src)
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := find(f, "2026-11-09", w.dinner)
+	if !ok || !m.FromLeftover {
+		t.Fatalf("meal = %+v, ok = %v", m, ok)
+	}
+	if m.ReheatSeconds != 7*60 || len(m.Steps) != 0 {
+		t.Errorf("ReheatSeconds = %d, Steps = %+v; want 420 and none", m.ReheatSeconds, m.Steps)
 	}
 }
