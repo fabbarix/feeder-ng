@@ -5,8 +5,8 @@ import type { ImageProblemCode } from './lib/problems'
 /** "The image is larger than N MB." for a byte limit. */
 export const tooLargeMessage = (bytes: number): string => `The image is larger than ${Math.round((bytes / (1 << 20)) * 10) / 10} MB.`
 
-/** "JPEG, PNG, WebP or HEIC, up to N MB." for a byte limit. */
-export const limitHelperFor = (bytes: number): string => `JPEG, PNG, WebP or HEIC, up to ${Math.round((bytes / (1 << 20)) * 10) / 10} MB.`
+/** "JPEG, PNG or WebP, up to N MB." for a byte limit. */
+export const limitHelperFor = (bytes: number): string => `JPEG, PNG or WebP, up to ${Math.round((bytes / (1 << 20)) * 10) / 10} MB.`
 
 const PASTE_HINT = 'Press Ctrl+V (Cmd+V on a Mac) while this box is focused.'
 
@@ -44,7 +44,7 @@ export const imagePickerStrings = {
   useCrop: 'Use crop',
   cropArea: (width: number, height: number) => `Crop area: ${width} by ${height} pixels`,
   problems: {
-    unsupported: 'That is not a JPEG, PNG, WebP or HEIC image.',
+    unsupported: 'That is not a JPEG, PNG or WebP image. For an iPhone photo (HEIC), save or share it as JPEG or PNG.',
     too_large: tooLargeMessage(MAX_UPLOAD_BYTES),
     too_many_pixels: 'The image has too many pixels. Use one of at most 12000 pixels on its longest side.',
     empty: 'That file is empty.',

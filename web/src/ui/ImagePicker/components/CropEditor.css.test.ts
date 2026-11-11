@@ -65,4 +65,9 @@ describe('CropEditor.css', () => {
   it('the action buttons keep their label on one line (Use crop at 390 px wraps the row, not the label)', () => {
     expect(css).toMatch(/\.crop-editor__actions[^{]*\.button[^{]*\{[^}]*white-space\s*:\s*nowrap/)
   })
+
+  it('Cancel and Use crop are one group pushed to the end of the row, so a wrapped Use crop is never alone on the left', () => {
+    expect(rule('.crop-editor__confirm')).toMatch(/margin-inline-start\s*:\s*auto/)
+    expect(css).not.toMatch(/crop-editor__spacer/)
+  })
 })

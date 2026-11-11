@@ -142,13 +142,14 @@ export function CropEditor({ src, width, height, aspect, busy, autoFocus, onAppl
         <Button variant="tertiary" disabled={busy} onClick={cropper.reset}>
           {t.cropReset}
         </Button>
-        <span className="crop-editor__spacer" />
-        <Button variant="secondary" disabled={busy} onClick={onCancel}>
-          {t.cancel}
-        </Button>
-        <Button variant="primary" disabled={busy} onClick={apply}>
-          {t.useCrop}
-        </Button>
+        <div className="crop-editor__confirm">
+          <Button variant="secondary" disabled={busy} onClick={onCancel}>
+            {t.cancel}
+          </Button>
+          <Button variant="primary" disabled={busy} onClick={apply}>
+            {t.useCrop}
+          </Button>
+        </div>
       </div>
     </div>
   )

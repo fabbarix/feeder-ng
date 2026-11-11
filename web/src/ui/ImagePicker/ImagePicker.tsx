@@ -128,7 +128,7 @@ export function ImagePicker(props: ImagePickerProps) {
       ) : null}
 
       {p.message ? (
-        <p id={errorId} role="alert" className={fieldOnly ? 'visually-hidden' : 'image-picker__error'}>
+        <p id={errorId} role={fieldOnly ? undefined : 'alert'} className={fieldOnly ? 'visually-hidden' : 'image-picker__error'}>
           {fieldOnly ? null : <Icon name="error" size={14} />}
           <span>{p.message}</span>
         </p>

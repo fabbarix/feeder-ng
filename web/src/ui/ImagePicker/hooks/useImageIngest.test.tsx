@@ -78,13 +78,16 @@ describe('useImageIngest: files', () => {
     expect(onStored).toHaveBeenCalledWith(ID_B)
   })
 
-  it('HEIC goes to the server untouched (no decode, no re-encode), declared as image/heic; the stored result is a WebP like any other', async () => {
+  // TODO(heic): HEIC is refused for now (HEIC_ENABLED in lib/limits.ts). When the decoder lands, flip back to: HEIC goes to the server untouched
+  // (no decode, no re-encode), declared as image/heic, and onStored is called with the stored id.
+  it('HEIC is refused as unsupported: nothing is decoded, encoded or sent', async () => {
     const { result, api, engine, onStored } = setup()
     await act(() => result.current.ingestBlob(heicFile(), 'file'))
+    expect(result.current.problem).toBe('unsupported')
     expect(engine.decode).not.toHaveBeenCalled()
     expect(engine.encode).not.toHaveBeenCalled()
-    expect((api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
-    expect(onStored).toHaveBeenCalledWith(ID_A)
+    expect(api.uploadDataUrl).not.toHaveBeenCalled()
+    expect(onStored).not.toHaveBeenCalled()
   })
 
   it('a picture the browser cannot decode is unreadable', async () => {

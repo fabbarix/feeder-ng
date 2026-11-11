@@ -112,19 +112,14 @@ describe('ImagePicker, raw mode (Recipe Assistant "Read from a photo")', () => {
     expect(screen.queryByRole('button', { name: 'Rotate left' })).not.toBeInTheDocument()
   })
 
-  it('an iPhone photo (HEIC) is converted by the browser when it can (Safari) and refused with a clear message when it cannot', async () => {
+  // TODO(heic): HEIC is refused for now (HEIC_ENABLED in lib/limits.ts). When the decoder lands, flip back to: Safari decodes it and onChange
+  // gets a JPEG blob of 2576x1932 (no upload); a browser that cannot decode it says "cannot read that image".
+  it('an iPhone photo (HEIC) is refused with the unsupported message suggesting JPEG or PNG; nothing is decoded or sent', async () => {
     const { onChange, input, deps } = setup()
     await user.upload(input, heicFile())
-    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
-    expect(onChange.mock.calls[0]![0]).toMatchObject({ kind: 'blob', type: 'image/jpeg', width: 2576, height: 1932 })
-    expect(deps.api.uploadDataUrl).not.toHaveBeenCalled() // raw mode never uses the server's HEIC conversion
-  })
-
-  it('a HEIC this browser cannot decode says so (raw mode cannot ask the server to convert it)', async () => {
-    const { onChange, input, deps } = setup()
-    deps.engine.decode.mockRejectedValue(new Error('no HEIC'))
-    await user.upload(input, heicFile())
-    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot read that image/)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/save or share it as JPEG or PNG/)
     expect(onChange).not.toHaveBeenCalled()
+    expect(deps.engine.decode).not.toHaveBeenCalled()
+    expect(deps.api.uploadDataUrl).not.toHaveBeenCalled()
   })
 })

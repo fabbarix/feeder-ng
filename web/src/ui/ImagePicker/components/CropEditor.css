@@ -125,6 +125,9 @@
   gap: var(--space-2);
 }
 
-.crop-editor__spacer {
-  flex: 1 1 auto;
+/* Cancel and Use crop travel together and sit at the end of the row; when they wrap (390 px) they stay together at the end of the second row, never "Use crop" alone on the left. */
+.crop-editor__confirm {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }

@@ -1,7 +1,7 @@
 # IP1: the shared ImagePicker and one server ingest path
 
 One image component for every image field, one server path for every stored image. IP1 builds the primitive, its hooks and libs (including a simple
-**crop** and rotate tool), the ingest endpoints (including server-side **HEIC conversion** and **EXIF orientation**) and the orphan clean-up. It does NOT migrate the existing fields (Recipe photo, Step photo: a later team) and does NOT add Ingredient
+**crop** and rotate tool), the ingest endpoints (including server-side **HEIC conversion** and **EXIF orientation**) and the orphan clean-up. It does NOT migrate the existing fields (Recipe photo, Step photo: a later team) and does NOT add Ingredient NOTE: HEIC is refused for now (TODO(heic): decoder lands in a follow-up; HEIC_ENABLED in web/src/ui/ImagePicker/lib/limits.ts).
 images (a later team). The Recipe Assistant's "Read from a photo" is a later consumer of the raw mode.
 
 ## Findings in the current code
@@ -30,7 +30,7 @@ Recipe photo                                  <- heading, names the group
 |   Choose a file or drop it here         |   <- FileDrop (label "Add an image" / "Replace image")
 + - - - - - - - - - - - - - - - - - - - - +
 [ Paste image ] [ Paste link ] [ Take photo ]  <- 44 px buttons with Phosphor icons
-JPEG, PNG, WebP or HEIC, up to 8 MB.           <- helper (host helper replaces it)
+JPEG, PNG or WebP, up to 8 MB.           <- helper (host helper replaces it)
 <panel: link field | camera viewfinder>        <- at most one open
 <status: Uploading the image  [Cancel]>        <- role=status
 <error: ...>                                   <- role=alert

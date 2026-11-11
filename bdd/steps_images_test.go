@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/cucumber/godog"
 
@@ -127,7 +126,6 @@ func imagesSteps(sc *godog.ScenarioContext, w *World) {
 		w.Last = w.Client.Do("DELETE", "/api/images/"+id, nil)
 		return nil
 	})
-	sc.Step(`^(\d+) hours pass$`, func(h int) { w.Ensure().Clock.Advance(timeHours(h)) })
 	sc.Step(`^the image "([^"]*)" is (gone|still there)$`, func(name, which string) error {
 		id, err := idOfImage(name)
 		if err != nil {
@@ -145,5 +143,3 @@ func imagesSteps(sc *godog.ScenarioContext, w *World) {
 }
 
 func b64(b []byte) string { return base64.StdEncoding.EncodeToString(b) }
-
-func timeHours(h int) time.Duration { return time.Duration(h) * time.Hour }

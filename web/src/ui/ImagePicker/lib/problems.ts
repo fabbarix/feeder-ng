@@ -1,6 +1,6 @@
 import { ApiError } from '../../../lib/http'
 import { imagePickerStrings, tooLargeMessage } from '../strings'
-import { ACCEPT_TYPES, MAX_UPLOAD_BYTES } from './limits'
+import { ACCEPT_TYPES, HEIC_ENABLED, MAX_UPLOAD_BYTES } from './limits'
 
 /** Every way picking a picture can fail. The message for each is in ../strings.ts. */
 export type ImageProblemCode =
@@ -35,7 +35,7 @@ const HEIC_NAME = /\.hei[cf]$/i
 /** unsupported for a type outside JPEG/PNG/WebP/HEIC/HEIF (a file with no type but a .heic/.heif name is HEIC), empty for size 0, too_large above maxBytes; null when fine. */
 export function checkImageFile(file: { type: string; size: number; name?: string }, maxBytes: number = MAX_UPLOAD_BYTES): ImageProblemCode | null {
   const type = file.type.toLowerCase()
-  const known = (ACCEPT_TYPES as readonly string[]).includes(type) || (type === '' && HEIC_NAME.test(file.name ?? ''))
+  const known = ACCEPT_TYPES.includes(type) || (HEIC_ENABLED && type === '' && HEIC_NAME.test(file.name ?? ''))
   if (!known) return 'unsupported'
   if (file.size === 0) return 'empty'
   if (file.size > maxBytes) return 'too_large'

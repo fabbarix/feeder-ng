@@ -37,34 +37,27 @@ describe('ImagePicker, from a file', () => {
   ])('%s is refused with the formats message, and nothing is sent', async (_n, make) => {
     const { deps, onChange } = setup()
     drop(screen.getByTestId('file-drop-zone'), [make()])
-    expect(await screen.findByRole('alert')).toHaveTextContent(/JPEG, PNG, WebP or HEIC/)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/JPEG, PNG or WebP/)
     expect(deps.api.uploadDataUrl).not.toHaveBeenCalled()
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it('an iPhone photo (HEIC) is sent as it is - the browser may not read it, the server converts it - and nothing is decoded here', async () => {
-    const { deps, onChange, input } = setup()
-    await user.upload(input, heicFile())
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith(ID_A))
-    expect((deps.api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
-    expect(deps.engine.decode).not.toHaveBeenCalled()
-  })
-
-  it('a HEIF file, or a HEIC the browser gives no type for, is accepted too (declared by its name)', async () => {
-    const { deps, onChange, input } = setup()
-    await user.upload(input, new File([new Uint8Array(16)], 'IMG_0002.HEIC', { type: '' }))
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith(ID_A))
-    expect((deps.api.uploadDataUrl.mock.calls[0] as unknown as [string])[0]).toMatch(/^data:image\/heic;base64,/)
-    await user.upload(input, new File([new Uint8Array(16)], 'a.heif', { type: 'image/heif' }))
-    await waitFor(() => expect(deps.api.uploadDataUrl).toHaveBeenCalledTimes(2))
-    expect((deps.api.uploadDataUrl.mock.calls[1] as unknown as [string])[0]).toMatch(/^data:image\/heif;base64,/)
-  })
-
-  it('a HEIC over 8 MB shows the size message (it cannot be shrunk here) and is not sent', async () => {
-    const { deps, input } = setup()
-    await user.upload(input, new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'big.heic', { type: 'image/heic' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/8 MB/)
+  // TODO(heic): HEIC is refused for now (HEIC_ENABLED in lib/limits.ts). When the decoder lands, flip these back: a HEIC/HEIF is sent
+  // untouched as data:image/heic (or heif), a HEIC with no type is recognised by its name, and a HEIC over 8 MB shows the size message.
+  it.each([
+    ['an iPhone photo (HEIC)', () => heicFile()],
+    ['a HEIC the browser gives no type for', () => new File([new Uint8Array(16)], 'IMG_0002.HEIC', { type: '' })],
+    ['a HEIF file', () => new File([new Uint8Array(16)], 'a.heif', { type: 'image/heif' })],
+    ['a HEIC over 8 MB', () => new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'big.heic', { type: 'image/heic' })],
+  ])('%s is refused with the unsupported message suggesting JPEG or PNG, and nothing is sent', async (_n, make) => {
+    const { deps, onChange } = setup()
+    drop(screen.getByTestId('file-drop-zone'), [make()])
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/JPEG, PNG or WebP/)
+    expect(alert).toHaveTextContent(/save or share it as JPEG or PNG/)
     expect(deps.api.uploadDataUrl).not.toHaveBeenCalled()
+    expect(deps.engine.decode).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('a picture over 8 MB shows the size limit message and is not sent', async () => {
