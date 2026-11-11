@@ -25,9 +25,9 @@ describe('NumberField', () => {
     expect(input()).toHaveAccessibleDescription('days')
   })
 
-  it('announces the unit after the helper text', () => {
+  it('announces the unit before the helper text', () => {
     render(<Num unit="min" helper="Time to reheat" />)
-    expect(input()).toHaveAccessibleDescription('Time to reheat min')
+    expect(input()).toHaveAccessibleDescription('min Time to reheat')
   })
 
   it('has no description when there is no unit, helper or error', () => {
