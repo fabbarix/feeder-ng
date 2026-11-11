@@ -3,10 +3,6 @@
   min-inline-size: 0;
 }
 
-.sortable__item {
-  transition: transform var(--dur-1) var(--ease-out);
-}
-
 /* Keyboard: the picked up item is outlined. */
 .sortable__item[data-state='lifted'] {
   outline: 2px solid var(--color-accent);
@@ -76,10 +72,4 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sortable__item {
-    transition: none;
-  }
 }

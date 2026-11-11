@@ -19,13 +19,25 @@ export interface PointerInit {
   pointerId?: number
   pointerType?: 'mouse' | 'touch' | 'pen'
   button?: number
+  /** Buttons held; defaults to 1 (primary) except on pointerup/pointercancel. */
+  buttons?: number
 }
 
 /** Dispatches a pointer event (bubbling, cancelable) on `el`. */
 export function pointer(el: Element, type: 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel', init: PointerInit = {}): void {
   fireEvent(
     el,
-    new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0, ...init }),
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : 1,
+      clientX: 0,
+      clientY: 0,
+      ...init,
+    }),
   )
 }
 

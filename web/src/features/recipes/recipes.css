@@ -711,6 +711,12 @@
     grid-row: 1;
   }
 
+  /* Top-aligned with the picker, centred on the 48 px field: (48 - 44) / 2. The base rule drops it to the chip row. */
+  .line-row__handle {
+    align-self: flex-start;
+    margin-block-start: 2px;
+  }
+
   .line-row__remove {
     justify-self: start;
     align-self: start;

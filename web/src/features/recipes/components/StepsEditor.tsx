@@ -67,7 +67,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
         getKey={(s) => s.key}
         getLabel={(_, i) => recipeStrings.steps.reorder(i + 1)}
         onReorder={(from, to) => onChange(moveStep(steps, from, to))}
-        renderItem={(s, { index: i, position, handle, itemProps }) => {
+        renderItem={(s, { index: i, position, positionOf, handle, itemProps }) => {
           const afterChoices = afterOptions(steps, i)
           return (
             <li {...itemProps} className={`step-card ${itemProps.className ?? ''}`.trim()}>
@@ -139,7 +139,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [] }: Steps
                       selected={s.after.includes(j)}
                       onClick={() => onChange(toggleAfter(steps, i, j, !s.after.includes(j)))}
                     >
-                      {recipeStrings.steps.afterStep(j + 1)}
+                      {recipeStrings.steps.afterStep(positionOf(j) + 1)}
                     </Chip>
                   ))}
                 </div>

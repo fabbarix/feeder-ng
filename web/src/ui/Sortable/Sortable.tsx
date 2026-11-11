@@ -10,6 +10,8 @@ export interface SortableRenderContext {
   /** Where it is shown now: differs from `index` while another item is lifted or dragged. */
   position: number
   state: SortableItemState
+  /** Where the item at this original index is shown now (for labels that name other items by their visible number). */
+  positionOf: (index: number) => number
   /** The drag handle button; place it inside the item. */
   handle: ReactNode
   /** Spread on the item's `<li>`: ref, data-state, data-sortable-*, the drag offset. */
@@ -68,6 +70,7 @@ export function Sortable<T>({
               {renderItem(item, {
                 index: i,
                 position: position[i] ?? i,
+                positionOf: (original) => position[original] ?? original,
                 state: itemProps['data-state'],
                 itemProps,
                 handle: (

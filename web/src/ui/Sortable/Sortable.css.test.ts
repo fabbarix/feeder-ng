@@ -20,7 +20,7 @@ describe('the handle', () => {
   it('turns off browser touch handling on the handle only, so a finger on it drags and a finger anywhere else scrolls', () => {
     const d = declarations(css, '.sortable-handle')
     expect(d['touch-action']).toBe('none')
-    expect(declarations(css, '.sortable__item')['touch-action']).toBeUndefined()
+    expect(bare).not.toMatch(/\.sortable__item\s*\{/)
     expect(declarations(css, '.sortable')['touch-action']).toBeUndefined()
   })
   it('is a 44 px touch target', () => {
@@ -57,7 +57,7 @@ describe('the item states', () => {
   })
   it('the dragged item does not animate its own transform (it tracks the finger); the others have no dead transition (the preview reorders the DOM)', () => {
     expect(declarations(css, ".sortable__item[data-state='dragging']")['transition']).toBe('none')
-    expect(declarations(css, '.sortable__item')['transition']).toBeUndefined()
+    expect(bare).not.toMatch(/\.sortable__item\s*\{/)
   })
 })
 

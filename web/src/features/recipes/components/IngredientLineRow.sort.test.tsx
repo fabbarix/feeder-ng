@@ -46,15 +46,15 @@ describe('IngredientLineRow: drag handle', () => {
     const cell = row().querySelector('.line-row__remove') as HTMLElement
     expect(within(cell).getByRole('button', { name: 'Remove ingredient Aioli pack' })).toBeInTheDocument()
     await userEvent.click(within(cell).getByRole('button', { name: 'Actions for Aioli pack' }))
-    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).toBeEnabled()
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).not.toHaveAttribute('aria-disabled', 'true')
     await userEvent.click(screen.getByRole('menuitem', { name: 'Move ingredient down' }))
     expect(onMove).toHaveBeenCalledWith(1)
   })
   it('the pending line menu disables Move up on the first line and Move down on the last', async () => {
     view(props({ line: line({ auto: true, ingredientId: null, ingredientName: 'Aioli pack' }), ingredient: undefined, index: 0, count: 1 }))
     await userEvent.click(screen.getByRole('button', { name: 'Actions for Aioli pack' }))
-    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).toBeDisabled()
-    expect(screen.getByRole('menuitem', { name: 'Move ingredient down' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient up' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('menuitem', { name: 'Move ingredient down' })).toHaveAttribute('aria-disabled', 'true')
   })
   it('without a handle the row has no handle holder and its menu offers no Move items', async () => {
     view(props({ handle: undefined, onMove: undefined, count: undefined }))

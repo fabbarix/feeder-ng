@@ -38,6 +38,21 @@ export interface IngredientLineRowProps {
 const rowClass = (base: string, itemProps: SortableItemProps | undefined, extra = '') =>
   [base, extra, itemProps?.className].filter(Boolean).join(' ')
 
+/** The Move ingredient up / down items of the actions Menu (none without `onMove`). */
+const moveItems = (index: number, count: number | undefined, onMove: ((delta: -1 | 1) => void) | undefined) =>
+  onMove
+    ? [
+        { id: 'up', label: recipeStrings.lines.up, icon: 'moveUp' as const, disabled: index === 0, onSelect: () => onMove(-1) },
+        {
+          id: 'down',
+          label: recipeStrings.lines.down,
+          icon: 'moveDown' as const,
+          disabled: count !== undefined && index >= count - 1,
+          onSelect: () => onMove(1),
+        },
+      ]
+    : []
+
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /**
@@ -71,7 +86,18 @@ export function IngredientLineRow({
   }, [focusAmount, onAmountFocused])
 
   if (line.auto && line.ingredientId === null) {
-    return <PendingLine line={line} index={index} onChange={onChange} onRemove={onRemove} handle={handle} itemProps={itemProps} />
+    return (
+      <PendingLine
+        line={line}
+        index={index}
+        onChange={onChange}
+        onRemove={onRemove}
+        handle={handle}
+        itemProps={itemProps}
+        count={count}
+        onMove={onMove}
+      />
+    )
   }
   const units = ingredient ? unitChoicesOf(ingredient) : { baseUnit: line.unit, conversions: [], globalUnits: [] }
   const asks = needsConversion(line.unit, ingredient)
@@ -135,24 +161,7 @@ export function IngredientLineRow({
         <Menu
           label={recipeStrings.lines.actions(who)}
           items={[
-            ...(onMove
-              ? [
-                  {
-                    id: 'up',
-                    label: recipeStrings.lines.up,
-                    icon: 'moveUp' as const,
-                    disabled: index === 0,
-                    onSelect: () => onMove(-1),
-                  },
-                  {
-                    id: 'down',
-                    label: recipeStrings.lines.down,
-                    icon: 'moveDown' as const,
-                    disabled: count !== undefined && index >= count - 1,
-                    onSelect: () => onMove(1),
-                  },
-                ]
-              : []),
+            ...moveItems(index, count, onMove),
             {
               id: 'optional',
               label: recipeStrings.lines.optional,
@@ -178,8 +187,11 @@ function PendingLine({
   onRemove,
   handle,
   itemProps,
-}: Pick<IngredientLineRowProps, 'line' | 'index' | 'onChange' | 'onRemove' | 'handle' | 'itemProps'>): ReactNode {
+  count,
+  onMove,
+}: Pick<IngredientLineRowProps, 'line' | 'index' | 'onChange' | 'onRemove' | 'handle' | 'itemProps' | 'count' | 'onMove'>): ReactNode {
   const text = recipeStrings.readyMealIngredient
+  const who = line.ingredientName.trim() || recipeStrings.lines.lineLabel(index + 1)
   return (
     <li {...itemProps} className={rowClass('line-row', itemProps, 'line-row--pending')}>
       <div className="line-row__ingredient">
@@ -207,11 +219,10 @@ function PendingLine({
           </Button>
         </div>
       </div>
-      <IconButton
-        icon="delete"
-        label={recipeStrings.lines.removeLine(line.ingredientName.trim() || recipeStrings.lines.lineLabel(index + 1))}
-        onClick={onRemove}
-      />
+      <div className="line-row__remove">
+        {onMove ? <Menu label={recipeStrings.lines.actions(who)} items={moveItems(index, count, onMove)} /> : null}
+        <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
+      </div>
     </li>
   )
 }

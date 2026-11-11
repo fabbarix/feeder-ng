@@ -72,6 +72,14 @@ interface PointerDrag {
   frame: number | null
 }
 
+interface DocHandlers {
+  move: (e: globalThis.PointerEvent) => void
+  up: (e: globalThis.PointerEvent) => void
+  cancel: (e: globalThis.PointerEvent) => void
+  key: (e: globalThis.KeyboardEvent) => void
+  blur: () => void
+}
+
 const pointerKindOf = (t: string): PointerKind => (t === 'touch' || t === 'pen' ? t : 'mouse')
 
 const isScrollable = (el: HTMLElement): boolean => /(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight
@@ -111,6 +119,15 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
   const itemRefs = useRef(new Map<number, (el: HTMLElement | null) => void>())
   const handleRefs = useRef(new Map<number, (el: HTMLButtonElement | null) => void>())
   const drag = useRef<PointerDrag | null>(null)
+  // Stable document listeners that call the latest handlers, so add and remove always see the same functions.
+  const handlers = useRef<DocHandlers | null>(null)
+  const listeners = useRef<DocHandlers>({
+    move: (e) => handlers.current?.move(e),
+    up: (e) => handlers.current?.up(e),
+    cancel: (e) => handlers.current?.cancel(e),
+    key: (e) => handlers.current?.key(e),
+    blur: () => handlers.current?.blur(),
+  })
   const lastSaid = useRef('')
   const sayTimer = useRef<number | null>(null)
   const refocus = useRef<number | null>(null)
@@ -129,6 +146,10 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
     lastSaid.current = text
   }, [])
 
+  // The pick up and the first slot change can arrive in one pointer move: the pick up is carried into the second sentence,
+  // so the later announcement never replaces the earlier one unheard.
+  const carry = useRef('')
+
   // React moves keyed nodes with insertBefore, which can drop focus: put it back on the lifted handle.
   useLayoutEffect(() => {
     const index = refocus.current
@@ -141,21 +162,27 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
 
   // ---- pointer ----------------------------------------------------------------------------------------------------
 
+  const removeListeners = useCallback(() => {
+    const l = listeners.current
+    document.removeEventListener('pointermove', l.move)
+    document.removeEventListener('pointerup', l.up)
+    document.removeEventListener('pointercancel', l.cancel)
+    document.removeEventListener('keydown', l.key, true)
+    window.removeEventListener('blur', l.blur)
+  }, [])
+
   const stopPointer = useCallback(() => {
     const d = drag.current
     if (!d) return
     drag.current = null
     if (d.frame !== null) cancelAnimationFrame(d.frame)
-    document.removeEventListener('pointermove', onDocMove)
-    document.removeEventListener('pointerup', onDocUp)
-    document.removeEventListener('pointercancel', onDocCancel)
-    document.removeEventListener('keydown', onDocKey, true)
+    removeListeners()
     try {
       d.handle?.releasePointerCapture?.(d.pointerId)
     } catch {
       /* the capture is already gone */
     }
-  }, [])
+  }, [removeListeners])
 
   /** Recomputes the target slot and the drag offset from the last pointer position. */
   const refresh = useCallback(
@@ -175,7 +202,10 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
       if (prev.phase !== 'dragging' || prev.to !== to) {
         setTo(from, to, 'dragging')
         live.current.phase = { phase: 'dragging', from, to }
-        if (prev.phase === 'dragging') say(words.moved(label(from), to + 1, n))
+        if (prev.phase === 'dragging') {
+          const moved = words.moved(label(from), to + 1, n)
+          say(carry.current ? `${carry.current} ${moved}` : moved)
+        }
       }
     },
     [say, setTo],
@@ -229,6 +259,11 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
     (e: globalThis.PointerEvent) => {
       const d = drag.current
       if (!d || e.pointerId !== d.pointerId) return
+      // The button was released outside the window and no pointerup came: finish the drag where it is.
+      if (e.pointerType === 'mouse' && e.buttons === 0) {
+        finish(true)
+        return
+      }
       d.lastY = e.clientY
       if (!d.started) {
         if (!exceedsThreshold(e.clientX - d.startX, e.clientY - d.startY, d.kind)) return
@@ -236,12 +271,14 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
         const { count: n, labelOf: label, strings: words } = live.current
         setTo(d.index, d.index, 'dragging')
         live.current.phase = { phase: 'dragging', from: d.index, to: d.index }
-        say(words.liftedPointer(label(d.index), d.index + 1, n))
+        carry.current = words.liftedPointer(label(d.index), d.index + 1, n)
+        say(carry.current)
         d.frame = requestAnimationFrame(tick)
       }
       refresh(d)
+      carry.current = ''
     },
-    [refresh, say, setTo, tick],
+    [finish, refresh, say, setTo, tick],
   )
   const onDocUp = useCallback(
     (e: globalThis.PointerEvent) => {
@@ -257,23 +294,25 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
   )
   const onDocKey = useCallback(
     (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') finish(false)
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      finish(false)
     },
     [finish],
   )
+  const onWindowBlur = useCallback(() => finish(false), [finish])
+  handlers.current = { move: onDocMove, up: onDocUp, cancel: onDocCancel, key: onDocKey, blur: onWindowBlur }
 
   useEffect(
     () => () => {
       const d = drag.current
       if (d?.frame != null) cancelAnimationFrame(d.frame)
       drag.current = null
-      document.removeEventListener('pointermove', onDocMove)
-      document.removeEventListener('pointerup', onDocUp)
-      document.removeEventListener('pointercancel', onDocCancel)
-      document.removeEventListener('keydown', onDocKey, true)
+      removeListeners()
       if (sayTimer.current !== null) cancelAnimationFrame(sayTimer.current)
     },
-    [onDocMove, onDocUp, onDocCancel, onDocKey],
+    [removeListeners],
   )
 
   const startPointer = (index: number, e: PointerEvent<HTMLButtonElement>) => {
@@ -304,10 +343,12 @@ export function useSortable(opts: UseSortableOptions): UseSortableResult {
       scroller: live.current.getScrollParent ? live.current.getScrollParent() : scrollParentOf(first ?? null),
       frame: null,
     }
-    document.addEventListener('pointermove', onDocMove)
-    document.addEventListener('pointerup', onDocUp)
-    document.addEventListener('pointercancel', onDocCancel)
-    document.addEventListener('keydown', onDocKey, true)
+    const l = listeners.current
+    document.addEventListener('pointermove', l.move)
+    document.addEventListener('pointerup', l.up)
+    document.addEventListener('pointercancel', l.cancel)
+    document.addEventListener('keydown', l.key, true)
+    window.addEventListener('blur', l.blur)
   }
 
   // ---- keyboard ---------------------------------------------------------------------------------------------------
