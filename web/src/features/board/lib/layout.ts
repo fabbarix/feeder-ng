@@ -22,3 +22,8 @@ export const BOARD_LAYOUT: BoardCell[] = [
   { id: 'useSoon', col: 2, row: 3, colSpan: 2, rowSpan: 1 },
   { id: 'streak', col: 4, row: 3, colSpan: 1, rowSpan: 1 },
 ]
+
+/** R2-4 (stub): the layout for a 2-column phone board (L-10) or the 4 x 3 wall board. */
+export function boardLayout(_columns: 2 | 4): BoardCell[] {
+  return BOARD_LAYOUT
+}

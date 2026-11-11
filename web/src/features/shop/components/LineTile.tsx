@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Icon } from '../../../ui/Icon'
 import { IconButton } from '../../../ui/IconButton'
 import { Tile } from '../../../ui/Tile'
@@ -10,6 +11,8 @@ export interface LineTileProps {
   onUntick: (entry: ListEntry) => void
   /** extras only; Lines come from the plan and cannot be deleted */
   onDelete?: (entry: ListEntry) => void
+  /** R2-4: a leading visual (an Ingredient thumbnail later), rendered in `.line-tile__lead` between the tick and the text. */
+  lead?: ReactNode
 }
 
 /**

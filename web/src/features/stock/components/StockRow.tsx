@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { ListRow } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { rowMeta } from '../lib/filter'
@@ -10,6 +10,8 @@ export interface StockRowProps {
   today: string
   onOpen: (ingredientId: number) => void
   system?: UnitSystem
+  /** R2-4: the leading visual (an Ingredient thumbnail later); goes to ListRow `leading`. */
+  lead?: ReactNode
 }
 
 /**

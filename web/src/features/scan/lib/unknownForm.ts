@@ -124,3 +124,8 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
     ...(perKg.ok ? { pricePerKgCents: perKg.pricePerKgCents } : {}),
   }
 }
+
+/** R2-4 (stub): the Base Unit a new Ingredient gets from the pack unit chosen; the shared ingredients/lib/newIngredient.defaultBaseUnit rule. */
+export function newIngredientBaseUnit(_packUnit: string): BaseUnit {
+  return 'g'
+}

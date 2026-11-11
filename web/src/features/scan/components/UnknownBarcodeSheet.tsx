@@ -8,6 +8,7 @@ import { TextField } from '../../../ui/fields/TextField'
 import { Select } from '../../../ui/Select/Select'
 import { selectStrings } from '../../../ui/Select/strings'
 import { UnitSelect } from '../../../ui/Select/UnitSelect'
+import type { SearchResult } from '../../ingredients/types'
 import { ingredientPickerOptions } from '../../shop/lib/ingredientOptions'
 import { emptyForm, suggestedName, unitOptions, validateUnknownForm, type FormErrors, type IngredientChoice, type UnknownFormValues, type UnknownMode } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
@@ -24,6 +25,8 @@ export interface UnknownBarcodeSheetProps {
   /** a price-valued weighed code: shown to explain why the weight is asked */
   priceText?: string
   onSave: (values: UnknownFormValues) => void
+  /** R2-4: near-duplicate lookup for an Ingredient created here (the matcher of Import Review). Absent offline: no guard. A rejection is ignored. */
+  findSimilar?: (name: string) => Promise<SearchResult>
 }
 
 const ALL_UNITS = ['g', 'kg', 'oz', 'lb', 'ml', 'l', 'piece']
