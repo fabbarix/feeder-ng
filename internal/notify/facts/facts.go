@@ -12,6 +12,8 @@ import (
 
 	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/cook"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/notify"
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -33,6 +35,7 @@ type Source struct {
 	stock   *stockstore.Store
 	ings    *ingredientstore.Store
 	access  *accessstore.Store
+	courses *coursestore.Store
 }
 
 // New returns the production fact source over d.
@@ -46,6 +49,7 @@ func New(d *sql.DB, clk clock.Clock) *Source {
 		stock:   stockstore.New(d, clk),
 		ings:    ingredientstore.New(d, clk),
 		access:  accessstore.New(d),
+		courses: coursestore.New(d, clk),
 	}
 }
 
@@ -77,6 +81,11 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	if err != nil {
 		return notify.Facts{}, err
 	}
+	// The plan store reads the main Course as 0 (the shim); the reminder keys use its real id (migration 1410).
+	mainID, err := s.courses.Main(ctx)
+	if err != nil {
+		return notify.Facts{}, err
+	}
 	var out notify.Facts
 	recipes := map[int64]recipeEntry{} // each Recipe is read once per call
 	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
@@ -96,10 +105,23 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		if err != nil {
 			return notify.Facts{}, err
 		}
+		courseID := m.Key.CourseID
+		if courseID == 0 {
+			courseID = mainID
+		}
 		mf := notify.MealFact{
-			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, RecipeName: rec.Name, SlotAt: at,
+			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: courseID, RecipeName: rec.Name, SlotAt: at,
 			State: string(m.State), FromLeftover: !m.Fresh(),
-			TotalTime: time.Duration(rec.Timing.TotalMinutes) * time.Minute,
+		}
+		// The store lists a slot's meals in Course position order (plan store Meals), which Compute relies on.
+		if mf.FromLeftover {
+			reheat := 0
+			if rec.ReheatMinutes != nil {
+				reheat = *rec.ReheatMinutes
+			}
+			mf.ReheatSeconds = cook.DefaultReheatSeconds(m.Portions, reheat)
+		} else {
+			mf.Steps = scheduleSteps(rec.Steps)
 		}
 		for i, st := range rec.Steps {
 			if st.Kind == schedule.Advance {
@@ -188,4 +210,13 @@ func (s *Source) name(ctx context.Context, id int64, cache map[int64]string) (st
 	}
 	cache[id] = ing.Name
 	return ing.Name, nil
+}
+
+// scheduleSteps is a Recipe's Steps as the scheduling input (cook.Timeline), Advance Steps included.
+func scheduleSteps(steps []recipe.Step) []schedule.Step {
+	out := make([]schedule.Step, 0, len(steps))
+	for _, st := range steps {
+		out = append(out, schedule.Step{Kind: st.Kind, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes, After: st.After})
+	}
+	return out
 }
