@@ -28,7 +28,7 @@ Feature: Manage Tags
     And the Tag answer JSON "2.name" is "Pasta"
     And the Tag answer JSON "2.recipes" is "2"
     And the Tag answer JSON "2.varietyRule" is false
-    And the Tag answer JSON "0.id" is "3"
+    And the Tag answer JSON "0.id" is the id of the Tag "Apple"
 
   Scenario: A Tag added without a colour takes the colour fewest Tags have
     When I add the Tag "Fish"

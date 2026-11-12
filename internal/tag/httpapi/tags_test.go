@@ -298,7 +298,7 @@ func TestImpactRefusals(t *testing.T) {
 	wantError(t, "into itself", c.Get(path("/api/tags/%d/impact?into=%d", fish, fish)), 422, "validation_failed", "into", "")
 	wantError(t, "unknown into", c.Get(path("/api/tags/%d/impact?into=9999", fish)), 422, "validation_failed", "into", "")
 	wantError(t, "into not a number", c.Get(path("/api/tags/%d/impact?into=sea", fish)), 422, "validation_failed", "into", "")
-	wantError(t, "unknown Tag with into", c.Get("/api/tags/9999/impact?into=1"), 404, "not_found", "", "")
+	wantError(t, "unknown Tag with into", c.Get("/api/tags/9999/impact?into=x"), 404, "not_found", "", "")
 }
 
 func TestMergeEveryOutcomeThroughTheAPI(t *testing.T) {

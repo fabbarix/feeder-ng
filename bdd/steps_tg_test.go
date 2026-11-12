@@ -270,6 +270,20 @@ func tgSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	sc.Step(`^the Tag answer JSON "([^"]*)" is the id of the Tag "([^"]*)"$`, func(path, name string) error {
+		id, err := tagID(name)
+		if err != nil {
+			return err
+		}
+		v, err := planJSON(w.Last.Body, path)
+		if err != nil {
+			return err
+		}
+		if got, want := fmt.Sprint(v), fmt.Sprint(id); got != want {
+			return fmt.Errorf("%s = %q, want the id of %q (%s); body: %s", path, got, name, want, w.Last.Body)
+		}
+		return nil
+	})
 	sc.Step(`^the Tag answer JSON "([^"]*)" lists (\d+) items?$`, func(path string, want int) error {
 		v, err := planJSON(w.Last.Body, path)
 		if err != nil {

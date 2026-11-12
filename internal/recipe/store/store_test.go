@@ -258,6 +258,17 @@ func TestTagsAreCreatedOnUseAndMatchedByKey(t *testing.T) {
 	if _, err := f.s.Update(ctx, rb.ID, b); err != nil {
 		t.Fatal(err)
 	}
+	// ADR 0010 point 1: the Tag row stays, with no Recipe left on it.
+	if _, ok := f.tagColours(t)["oven bake"]; !ok {
+		t.Error(`the "oven bake" Tag row was removed with its last Recipe`)
+	}
+	var uses int
+	if err := f.db.QueryRow(`SELECT COUNT(*) FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id WHERE t.key = 'oven bake'`).Scan(&uses); err != nil {
+		t.Fatal(err)
+	}
+	if uses != 0 {
+		t.Errorf(`"oven bake" still on %d Recipes, want 0`, uses)
+	}
 }
 
 func TestUpdateReplacesEverythingAndKeepsIdentity(t *testing.T) {
