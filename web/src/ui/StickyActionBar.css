@@ -8,9 +8,15 @@ html:has(.sticky-action-bar) {
   scroll-padding-block-end: var(--sticky-bar-clearance);
 }
 
+/* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's gap to the nav (none), not the
+   content clearance (--nav-clearance adds 16 px, which showed as a strip under the bar). The bar itself still clears the nav. */
+.app-main:has(.sticky-action-bar) {
+  padding-bottom: var(--nav-top);
+}
+
 .sticky-action-bar {
   position: sticky;
-  bottom: var(--nav-clearance);
+  bottom: var(--nav-top);
   z-index: 5;
   margin-inline: calc(-1 * var(--page-gutter));
   padding-inline: var(--page-gutter);
