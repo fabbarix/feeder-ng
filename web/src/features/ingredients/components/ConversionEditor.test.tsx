@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { strings } from '../strings'
@@ -43,5 +43,14 @@ describe('ConversionEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: strings.addConversion }))
     expect(screen.getByRole('alert')).toHaveTextContent(strings.errors.unitTaken)
     expect(onAdd).not.toHaveBeenCalled()
+  })
+  it('lists the conversions as ListRows in a labelled list, with Remove as the trailing button', () => {
+    render(<ConversionEditor conversions={garlic} base="g" system="metric" onAdd={() => {}} onRemove={() => {}} />)
+    const list = screen.getByRole('list', { name: strings.conversionsTitle })
+    expect(list).toHaveClass('list-group__list')
+    const row = within(list).getByRole('listitem')
+    expect(row).toHaveClass('list-row')
+    expect(within(row).getByText('1 clove = 5 g')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: strings.removeConversion('clove') })).toBeInTheDocument()
   })
 })

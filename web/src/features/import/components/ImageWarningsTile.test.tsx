@@ -14,4 +14,8 @@ describe('ImageWarningsTile', () => {
     const { container } = render(<ImageWarningsTile warnings={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
+  it('the list is a styled .import-list, with no browser bullets', () => {
+    const { container } = render(<ImageWarningsTile warnings={[{ path: '$.a', code: 'image_failed', message: 'x' }]} />)
+    expect(container.querySelector('ul')).toHaveClass('import-list')
+  })
 })

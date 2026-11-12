@@ -178,6 +178,20 @@ describe('TagSheet: keyboard', () => {
   })
 })
 
+describe('TagSheet: Delete while the impact loads', () => {
+  it('disables Delete Tag while busy, so a fast double tap cannot ask twice', async () => {
+    const { onDelete } = show({ busy: true })
+    const del = screen.getByRole('button', { name: 'Delete Tag' })
+    expect(del).toBeDisabled()
+    await userEvent.click(del)
+    expect(onDelete).not.toHaveBeenCalled()
+  })
+  it('enables it otherwise', () => {
+    show({ busy: false })
+    expect(screen.getByRole('button', { name: 'Delete Tag' })).toBeEnabled()
+  })
+})
+
 describe('TagSheet: reopening', () => {
   it('starts afresh for another Tag, and for a new one', async () => {
     function Host() {

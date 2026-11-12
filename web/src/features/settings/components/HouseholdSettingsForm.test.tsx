@@ -31,7 +31,7 @@ describe('HouseholdSettingsForm', () => {
     await replace('Planning Horizon (days)', '40')
     await userEvent.tab()
     expect(field('Planning Horizon (days)')).toHaveValue('28')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ planningHorizonDays: 28 }))
   })
 
@@ -56,7 +56,7 @@ describe('HouseholdSettingsForm', () => {
     expect(field('Planning Horizon (days)')).toBeDisabled()
     expect(field('Currency')).toBeDisabled()
     expect(screen.getByRole('slider', { name: 'Planner Style' })).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.queryByRole('button', { name: 'Save household settings' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save Household settings' })).toBeNull()
   })
 
   it('saves the edited settings', async () => {
@@ -66,7 +66,7 @@ describe('HouseholdSettingsForm', () => {
     await userEvent.tab()
     screen.getByRole('slider', { name: 'Planner Style' }).focus() // the anchor chips went (R2-3, F-06); End jumps to Favourites
     await userEvent.keyboard('{End}')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenCalledWith({
       timeZone: 'Europe/Rome',
       planningHorizonDays: 14,
@@ -83,10 +83,10 @@ describe('HouseholdSettingsForm', () => {
     const onSave = vi.fn()
     render(<HouseholdSettingsForm value={householdSettings} canEdit onSave={onSave} />)
     await replace('Location', '45.07, 7.69')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ location: { latitude: 45.07, longitude: 7.69 } }))
     await replace('Location', '')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ location: null }))
   })
 
@@ -94,7 +94,7 @@ describe('HouseholdSettingsForm', () => {
     const onSave = vi.fn()
     render(<HouseholdSettingsForm value={householdSettings} canEdit onSave={onSave} />)
     await replace('Currency', 'eur')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ currency: 'EUR' }))
   })
 
@@ -104,7 +104,7 @@ describe('HouseholdSettingsForm', () => {
     const start = screen.getByRole('group', { name: 'Quiet hours start' })
     within(start).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('2330')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ quietHours: { start: '23:30', end: '07:00' } }))
   })
 
@@ -123,6 +123,6 @@ describe('HouseholdSettingsForm', () => {
 
   it('shows a busy save button while saving', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit saving onSave={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Save household settings' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save Household settings' })).toBeDisabled()
   })
 })
