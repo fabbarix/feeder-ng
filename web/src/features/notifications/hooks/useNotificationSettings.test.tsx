@@ -1,10 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { mockApi, wrapper } from '../../settings/test-utils'
 import { hashEndpoint } from '../lib/devices'
 import type { PushEnvironment } from '../lib/webpush'
 import type { BrowserSubscription, PushDevice } from '../types'
-import { useNotificationSettings, type PushPort } from './useNotificationSettings'
+import { browserPushPort, useNotificationSettings, type PushPort } from './useNotificationSettings'
 
 const flags = { advanceStep: false, startCooking: false, confirmCooked: false, leftoverUseBy: false, stockSpoil: false, timerFinished: false, accessRequest: false }
 const config = { vapidPublicKey: 'BAUF', types: Object.keys(flags), quietHours: { start: '22:00', end: '07:00' }, timeZone: 'Europe/Rome' }
@@ -28,6 +30,11 @@ async function deviceFor(endpoint: string, id: number, on: Partial<typeof flags>
 }
 
 afterEach(() => vi.unstubAllGlobals())
+
+/** A client with react-query's own defaults (retry 3 with backoff), so the hook must opt out itself. */
+function defaultRetryWrapper({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+}
 
 describe('useNotificationSettings', () => {
   it('finds this device among the registered ones by endpoint hash', async () => {
@@ -167,5 +174,47 @@ describe('useNotificationSettings', () => {
     })
     const { result } = renderHook(() => useNotificationSettings(port()), { wrapper })
     await waitFor(() => expect(result.current.error).not.toBeNull())
+  })
+
+  describe('never hangs on an unsupported or unregistered browser', () => {
+    const stubs = () => mockApi({ 'GET /api/notifications/config': config, 'GET /api/notifications/devices': { devices: [] } })
+
+    it('is not loading, and never reads the subscription, when push is unsupported', async () => {
+      stubs()
+      const p = port({ environment: () => ({ ...env, hasPushManager: false }) })
+      const { result } = renderHook(() => useNotificationSettings(p), { wrapper: defaultRetryWrapper })
+      await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 1000 })
+      expect(result.current.support).toBe('unsupported')
+      expect(p.currentSubscription).not.toHaveBeenCalled()
+    })
+
+    it('is not blocked by a currentSubscription that never resolves when push is unsupported', async () => {
+      stubs()
+      const p = port({ environment: () => ({ ...env, hasServiceWorker: false }), currentSubscription: () => new Promise<never>(() => {}) })
+      const { result } = renderHook(() => useNotificationSettings(p), { wrapper: defaultRetryWrapper })
+      await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 1000 })
+      expect(result.current.thisDevice).toBeUndefined()
+    })
+
+    it('stops loading promptly, without retrying, when currentSubscription rejects', async () => {
+      stubs()
+      const p = port({ currentSubscription: vi.fn(async () => Promise.reject(new Error('no push'))) })
+      const { result } = renderHook(() => useNotificationSettings(p), { wrapper: defaultRetryWrapper })
+      await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 1000 })
+      expect(p.currentSubscription).toHaveBeenCalledTimes(1)
+      expect(result.current.thisDevice).toBeUndefined()
+    })
+
+    it('currentSubscription returns null at once when no service worker is registered', async () => {
+      const getRegistration = vi.fn(async () => undefined)
+      // `ready` never resolves without a registration: the port must not wait on it.
+      vi.stubGlobal('navigator', { ...navigator, serviceWorker: { getRegistration, ready: new Promise(() => {}) } })
+      const result = await Promise.race([
+        browserPushPort.currentSubscription(),
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 500)),
+      ])
+      expect(result).toBeNull()
+      expect(getRegistration).toHaveBeenCalled()
+    })
   })
 })
