@@ -37,13 +37,16 @@ export function suggestGoodUntil(purchased: string, shelfLifeDays: number | null
   return date.toISOString().slice(0, 10)
 }
 
-/** The form for a Lot: its quantity as text, its dates, the switch on when it has no go-off date, nothing touched. */
+/**
+ * The form for a Lot: its quantity as text, its dates, nothing touched. The switch is on only for a Lot without a go-off
+ * date whose Ingredient has no Shelf Life: where a Shelf Life applies, Good until is required and the User picks it.
+ */
 export function initialForm(lot: StockLot): LotForm {
   return {
     quantity: String(lot.quantity),
     purchased: lot.purchased,
     goesOff: lot.goesOff ?? '',
-    noGoOff: lot.goesOff === null,
+    noGoOff: lot.goesOff === null && lot.shelfLifeDays == null,
     goesOffTouched: false,
   }
 }
