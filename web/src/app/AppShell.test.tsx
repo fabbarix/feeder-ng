@@ -82,6 +82,16 @@ describe('bottom bar (phone)', () => {
     }
   })
 
+  it('keeps the Plan tab current on a page below /plan (Review Exclusions)', () => {
+    setup({ path: '/plan/couldnt-plan/excluded', mods: { '../features/plan/index.ts': { routes: [{ path: '/plan/couldnt-plan/excluded', element: <p>review</p> }] } } })
+    for (const nav of [bottomBar(), sideRail()]) {
+      const plan = within(nav).getByRole('link', { name: 'Plan' })
+      expect(plan).toHaveAttribute('aria-current', 'page')
+    }
+    expect(iconOf(within(bottomBar()).getByRole('link', { name: 'Plan' })).weight).toBe('fill')
+    expect(within(bottomBar()).getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current')
+  })
+
   it('moves aria-current and the fill icon when navigating', async () => {
     setup({ path: '/plan' })
     await userEvent.click(within(bottomBar()).getByRole('link', { name: 'Recipes' }))

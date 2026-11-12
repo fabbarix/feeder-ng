@@ -139,4 +139,22 @@ describe('CouldntPlanExclusionTile: a second opt-out wording', () => {
     setup(groupOf(cellsOn(['2026-11-13'], { optOuts: [KIM, ADA] })))
     expect(screen.getByText("Kim and Ada opt out of Side, so their Exclusions don't count here.")).toBeInTheDocument()
   })
+
+  it('an Exclusion row is a shared ListRow with a wrapping title (no copied markup)', () => {
+    setup(groupOf(cellsOn(['2026-11-13'])))
+    const row = within(screen.getByRole('list', { name: 'Exclusions' })).getByRole('listitem')
+    expect(row).toHaveClass('list-row')
+    expect(row).toHaveAttribute('data-wrap-title', 'true')
+    expect(row.querySelector('.list-row__leading')).not.toBeNull()
+    expect(row.querySelector('.list-row__title')).toHaveTextContent('Sam excludes garlic')
+    expect(row.querySelector('.list-row__meta')).toHaveTextContent('Rules out 4 Recipes')
+  })
+
+  it('the Review link is a router link styled as a tertiary small Button, like "Open the Plan"', () => {
+    setup(groupOf(cellsOn(['2026-11-13'])))
+    const link = screen.getByRole('link', { name: 'Review garlic' })
+    expect(link).toHaveClass('button')
+    expect(link).toHaveAttribute('data-variant', 'tertiary')
+    expect(link).toHaveAttribute('data-size', 'sm')
+  })
 })

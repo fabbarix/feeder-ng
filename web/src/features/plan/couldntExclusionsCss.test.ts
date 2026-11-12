@@ -31,4 +31,10 @@ describe('the lists of the Couldn\'t plan tiles and the Review Exclusions page h
   it('the cell the URL hash names shows where focus is (a visible focus ring or a highlight), not the browser default alone', () => {
     expect(css).toMatch(/\[tabindex="-1"\][^{]*:focus(-visible)?[^{]*\{[^}]*(outline|box-shadow)/)
   })
+
+  it('the focus ring is scoped to the page, so Dialog and BottomSheet titles keep outline: none', () => {
+    expect(css).toMatch(/\.plan-exclusions \[tabindex="-1"\]:focus/)
+    expect(css).not.toMatch(/^\[tabindex="-1"\]:focus/m)
+    expect(css).not.toMatch(/\.plan-exclusions \.list-row__title/)
+  })
 })
