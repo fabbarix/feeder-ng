@@ -143,7 +143,7 @@ func TestCallbackRefusesAnUnverifiedEmail(t *testing.T) {
 	c := env.Anonymous()
 	l := beginLogin(t, c)
 	r := callback(c, l.state, "c")
-	if r.Header.Get("Location") != "/not-invited" || c.Cookie(auth.CookieName) != nil {
+	if r.Header.Get("Location") != "/email-not-verified" || c.Cookie(auth.CookieName) != nil {
 		t.Fatalf("unverified email must not sign in: %d -> %q", r.Status, r.Header.Get("Location"))
 	}
 }
