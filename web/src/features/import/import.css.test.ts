@@ -30,7 +30,18 @@ describe('import.css', () => {
     expect(chip).toMatch(/max-inline-size:\s*100%/)
     expect(chip).toMatch(/min-inline-size:\s*0/)
     expect(chip).toMatch(/white-space:\s*normal/)
-    expect(chip).toMatch(/block-size:\s*auto/)
+    expect(rule(".import-chips .chip[data-kind='tag']")).toMatch(/block-size:\s*auto/)
     expect(chip).toMatch(/overflow-wrap:\s*anywhere/)
+  })
+  it('the answer (filter) chips keep the shared 32 px height; only the status chip may grow (CRS E2)', () => {
+    const generic = rule('.import-chips .chip')
+    expect(generic).not.toMatch(/block-size:\s*auto/)
+    expect(css).not.toMatch(/\.import-chips \.chip(?!\[data-kind=)[^{]*\{[^}]*block-size:\s*auto/)
+    expect(css).not.toMatch(/\.import-chips \.chip\[data-kind=['"]filter['"]\][^{]*\{[^}]*block-size:\s*auto/)
+  })
+  it('Import Review tile headings and text wrap long single words (CRS E2)', () => {
+    const wraps = /overflow-wrap:\s*(anywhere|break-word)/
+    expect(rule('.import-review h2')).toMatch(wraps)
+    expect(rule('.import-review p')).toMatch(wraps)
   })
 })
