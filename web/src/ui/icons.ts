@@ -56,6 +56,7 @@ import { HourglassMediumIcon } from '@phosphor-icons/react/dist/csr/HourglassMed
 import { HourglassSimpleIcon } from '@phosphor-icons/react/dist/csr/HourglassSimple'
 import { HouseIcon } from '@phosphor-icons/react/dist/csr/House'
 import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
+import { ImagesIcon } from '@phosphor-icons/react/dist/csr/Images'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 import { KeyIcon } from '@phosphor-icons/react/dist/csr/Key'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
@@ -169,6 +170,7 @@ export const icons = {
   copy: CopyIcon,
   undo: ArrowCounterClockwiseIcon,
   camera: CameraIcon,
+  photos: ImagesIcon, // photo-read: Choose photos
   clipboard: ClipboardTextIcon,
   link: LinkSimpleIcon,
   rotateRight: ArrowClockwiseIcon,

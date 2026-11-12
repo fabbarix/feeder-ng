@@ -1,4 +1,5 @@
-import { clampRect, isFullImage, outputSize, rectInSource, type Rect } from './crop'
+import { clampRect, isFullImage, outputSize, type Rect } from './crop'
+import { drawPlan } from './render'
 import { fitWithin } from './size'
 import { addTurn, turnedSize, type Turns } from './turns'
 
@@ -150,16 +151,14 @@ export const browserEngine: ImageEngine = {
       ctx.fillRect(0, 0, o.width, o.height)
     }
     ctx.imageSmoothingQuality = 'high'
-    const turned = turnedSize(bitmap.width, bitmap.height, o.turns)
-    const area = o.crop ?? { x: 0, y: 0, ...turned }
-    const src = rectInSource(area, o.turns, bitmap.width, bitmap.height)
+    const area = o.crop ?? { x: 0, y: 0, ...turnedSize(bitmap.width, bitmap.height, o.turns) }
+    // The same maths as drawPlan (tested there): the output is already scaled to o.width x o.height, so maxSide = its long side.
+    const plan = drawPlan({ width: bitmap.width, height: bitmap.height }, { turns: o.turns, crop: area }, Math.max(o.width, o.height))
     // Rotate about the centre of the output, then draw the source area into the un-rotated destination box.
-    const odd = o.turns % 2 === 1
-    const dw = odd ? o.height : o.width
-    const dh = odd ? o.width : o.height
     ctx.translate(o.width / 2, o.height / 2)
-    ctx.rotate((o.turns * Math.PI) / 2)
-    ctx.drawImage(bitmap, src.x, src.y, src.width, src.height, -dw / 2, -dh / 2, dw, dh)
+    ctx.rotate((plan.rotate * Math.PI) / 180)
+    const { source: src, dest } = plan
+    ctx.drawImage(bitmap, src.x, src.y, src.width, src.height, dest.x, dest.y, dest.width, dest.height)
     return toBlob(o.type, o.quality)
   },
 }

@@ -44,11 +44,10 @@ export function initialCrop(bounds: Size, aspect: CropAspect): Rect {
   return { x: 0, y: Math.round((bounds.height - height) / 2), width: bounds.width, height }
 }
 
-/** Keeps a rect inside bounds: size limited to [min(MIN_CROP_PX, bounds side), bounds side], then SHIFTED (not shrunk) to fit. */
-// STUB (pr-t1 test step): `_minSide` is accepted but not used yet; the developer makes it the minimum side (default MIN_CROP_PX).
-export function clampRect(rect: Rect, bounds: Size, _minSide: number = MIN_CROP_PX): Rect {
-  const width = clamp(Math.round(rect.width), Math.min(MIN_CROP_PX, bounds.width), bounds.width)
-  const height = clamp(Math.round(rect.height), Math.min(MIN_CROP_PX, bounds.height), bounds.height)
+/** Keeps a rect inside bounds: size limited to [min(minSide, bounds side), bounds side], then SHIFTED (not shrunk) to fit. */
+export function clampRect(rect: Rect, bounds: Size, minSide: number = MIN_CROP_PX): Rect {
+  const width = clamp(Math.round(rect.width), Math.min(minSide, bounds.width), bounds.width)
+  const height = clamp(Math.round(rect.height), Math.min(minSide, bounds.height), bounds.height)
   return {
     x: clamp(Math.round(rect.x), 0, bounds.width - width),
     y: clamp(Math.round(rect.y), 0, bounds.height - height),
@@ -58,18 +57,18 @@ export function clampRect(rect: Rect, bounds: Size, _minSide: number = MIN_CROP_
 }
 
 /** Translates by (dx, dy), size unchanged, stopping at the edges. */
-export function moveRect(rect: Rect, dx: number, dy: number, bounds: Size, _minSide: number = MIN_CROP_PX): Rect {
-  return clampRect({ ...rect, x: rect.x + Math.round(dx), y: rect.y + Math.round(dy) }, bounds)
+export function moveRect(rect: Rect, dx: number, dy: number, bounds: Size, minSide: number = MIN_CROP_PX): Rect {
+  return clampRect({ ...rect, x: rect.x + Math.round(dx), y: rect.y + Math.round(dy) }, bounds, minSide)
 }
 
 /**
  * Moves one handle by (dx, dy).
- * Free: an edge handle changes only its own side; a corner changes two sides; the opposite sides stay put; clamped to bounds and MIN_CROP_PX.
+ * Free: an edge handle changes only its own side; a corner changes two sides; the opposite sides stay put; clamped to bounds and minSide.
  * Locked: only corners work (an edge handle returns the rect unchanged); the OPPOSITE corner stays put; the dominant axis decides
  * (|dx| against |dy * aspect|), the other side follows to keep width / height == aspect (within 1 px of rounding); clamped so the rect stays inside bounds
- * and its shorter side is at least MIN_CROP_PX.
+ * and its shorter side is at least minSide.
  */
-export function resizeRect(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size, aspect: CropAspect, _minSide: number = MIN_CROP_PX): Rect {
+export function resizeRect(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size, aspect: CropAspect, minSide: number = MIN_CROP_PX): Rect {
   dx = Math.round(dx)
   dy = Math.round(dy)
   const west = handle.includes('w')
@@ -81,8 +80,8 @@ export function resizeRect(rect: Rect, handle: Handle, dx: number, dy: number, b
     let top = rect.y
     let right = rect.x + rect.width
     let bottom = rect.y + rect.height
-    const minW = Math.min(MIN_CROP_PX, bounds.width)
-    const minH = Math.min(MIN_CROP_PX, bounds.height)
+    const minW = Math.min(minSide, bounds.width)
+    const minH = Math.min(minSide, bounds.height)
     if (west) left = clamp(left + dx, 0, right - minW)
     if (east) right = clamp(right + dx, left + minW, bounds.width)
     if (north) top = clamp(top + dy, 0, bottom - minH)
@@ -100,7 +99,7 @@ export function resizeRect(rect: Rect, handle: Handle, dx: number, dy: number, b
   const wantH = rect.height + sy * dy
   let width = Math.abs(sx * dx) >= Math.abs(sy * dy * aspect) ? wantW : wantH * aspect
   const limit = Math.floor(Math.min(room.w, room.h * aspect))
-  const smallest = Math.min(limit, Math.ceil(Math.max(MIN_CROP_PX, MIN_CROP_PX * aspect)))
+  const smallest = Math.min(limit, Math.ceil(Math.max(minSide, minSide * aspect)))
   width = Math.round(clamp(width, smallest, limit))
   const height = Math.max(1, Math.round(width / aspect))
   return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height }

@@ -13,8 +13,9 @@ export interface CameraEnv {
  */
 export type CameraPolicy = 'live' | 'system'
 
-// STUB (pr-t1 test step): `_policy` is accepted but not used yet ('system' must never return 'viewfinder').
-export function cameraStrategy(env: CameraEnv, _policy: CameraPolicy = 'live'): 'viewfinder' | 'capture-input' | 'none' {
+export function cameraStrategy(env: CameraEnv, policy: CameraPolicy = 'live'): 'viewfinder' | 'capture-input' | 'none' {
+  // 'system' (the photo read): never the live view; a phone or tablet uses the system camera, a computer uses files, paste and drop.
+  if (policy === 'system') return env.coarsePointer ? 'capture-input' : 'none'
   if (env.iosStandalone) return 'capture-input'
   if (!env.hasGetUserMedia) return env.coarsePointer ? 'capture-input' : 'none'
   return 'viewfinder'
