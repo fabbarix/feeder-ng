@@ -20,7 +20,7 @@ import {
   useNotCooked,
   useTonightSheets,
 } from '../../plan'
-import type { SlotKey } from '../../plan/types'
+import type { SlotDayKey, SlotKey } from '../../plan/types'
 import { cookReheatPath } from '../../cook'
 import { SpoiledTile } from '../../stock'
 import { useSetupChecklist } from '../hooks/useSetupChecklist'
@@ -30,6 +30,7 @@ import { todayHeading } from '../lib/heading'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
 import { todayStrings } from '../strings'
 import type { TileId } from '../types'
+import { courseCells } from '../../plan/lib/couldntGroups'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
 import { SetupChecklistTile } from './SetupChecklistTile'
 import { StreakTile } from './StreakTile'
@@ -57,10 +58,10 @@ export function TodayScreen(): ReactElement {
   const flow = useCookFlow()
   const notCooked = useNotCooked()
   const isAdmin = useMe().data?.isAdmin !== false
-  const notice = useCouldntPlanNotice(data.couldntPlan, data.planSlots ?? data.couldntPlan, isAdmin)
+  const notice = useCouldntPlanNotice(data.couldntPlan, courseCells(data.planSlots ?? []), isAdmin)
   const fixCouldnt = useCouldntFix()
   const setup = useSetupChecklist()
-  const cookMeal = (key: SlotKey) => navigate(cookPath(key))
+  const cookMeal = (key: SlotDayKey) => navigate(cookPath(key))
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
@@ -129,31 +130,33 @@ export function TodayScreen(): ReactElement {
         onOpenPlan={openPlan}
       />
       {layout.mode === 'today' ? <CookFlowSheets flow={flow} /> : null}
-      <PlannedMealSheet
-        open={sheets.planned.key !== null}
-        onClose={sheets.planned.close}
-        slot={sheets.planned.slot}
-        today={data.planToday}
-        courseId={sheets.planned.courseId}
-        onCook={cookMeal}
-        onMarkCooked={(k) => {
-          sheets.planned.close()
-          flow.open(k)
-        }}
-        onSwap={(k) => {
-          sheets.planned.close()
-          sheets.swap.open(k)
-        }}
-        onPin={(k) => void sheets.actions.pin(k)}
-        onUnpin={(k) => void sheets.actions.unpin(k)}
-        onChoose={(k) => {
-          sheets.planned.close()
-          sheets.choose.open(k)
-        }}
-        onMarkRecipes={sheets.planned.markRecipes}
-        onAddRecipes={sheets.planned.addRecipes}
-        onReviewVarietyRules={sheets.planned.reviewVarietyRules}
-      />
+      {sheets.planned.courseId !== undefined ? (
+        <PlannedMealSheet
+          open={sheets.planned.key !== null}
+          onClose={sheets.planned.close}
+          slot={sheets.planned.slot}
+          today={data.planToday}
+          courseId={sheets.planned.courseId}
+          onCook={cookMeal}
+          onMarkCooked={(k) => {
+            sheets.planned.close()
+            flow.open(k)
+          }}
+          onSwap={(k) => {
+            sheets.planned.close()
+            sheets.swap.open(k)
+          }}
+          onPin={(k) => void sheets.actions.pin(k)}
+          onUnpin={(k) => void sheets.actions.unpin(k)}
+          onChoose={(k) => {
+            sheets.planned.close()
+            sheets.choose.open(k)
+          }}
+          onMarkRecipes={sheets.planned.markRecipes}
+          onAddRecipes={sheets.planned.addRecipes}
+          onReviewVarietyRules={sheets.planned.reviewVarietyRules}
+        />
+      ) : null}
       <SwapSheet
         open={sheets.swap.key !== null}
         onClose={sheets.swap.close}

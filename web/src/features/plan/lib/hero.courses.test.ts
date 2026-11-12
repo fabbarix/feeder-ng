@@ -13,7 +13,7 @@ const dinner = (courses = [mainPlanned, sidePlanned], over = {}) => courseSlot(c
 describe('a slot with a Planned Meal still to cook in ANY Course is the next meal', () => {
   it('nextMeal and heroMeal pick a slot whose main Course is Cooked but whose Side is not', () => {
     const s = dinner([mainCooked, sidePlanned])
-    expect(s.meal?.state).toBe('cooked') // the alias says cooked; the Side is still to cook
+    expect(s.courses?.[0]?.meal?.state).toBe('cooked') // the main Course is Cooked; the Side is still to cook
     expect(nextMeal([s], now)).toBe(s)
     expect(heroMeal([s], now)).toBe(s)
   })

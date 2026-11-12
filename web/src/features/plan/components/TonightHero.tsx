@@ -6,7 +6,7 @@ import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '
 import type { HeroAction, HeroDay } from '../lib/hero'
 import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotCookLabel, slotIcon, slotStartBy } from '../lib/hero'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotKey } from '../types'
+import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { CourseRow, type CourseRowHandlers } from './CourseRow'
 import { SlotMenu, type SlotMenuProps } from './SlotMenu'
 import '../plan.css'
@@ -16,7 +16,7 @@ export interface TonightHeroProps {
   slot: PlanSlot
   now: Date
   /** Open Cook Mode (Today routes to lib/cook cookPath). */
-  onCook: (key: SlotKey) => void
+  onCook: (key: SlotDayKey) => void
   /** "Yes, Cooked": mark Cooked with the planned Leftover portions in one tap. */
   onYesCooked: (key: SlotKey) => void
   /** R12 "Reheat": open the Reheat screen of a meal served from a Leftover (lib/hero action 'reheat'). */
@@ -34,7 +34,7 @@ export interface TonightHeroProps {
   /** The compact rows' actions (Swap, Pin or Unpin, Mark as Cooked); the Recipe name opens the Course's sheet. */
   rowHandlers?: CourseRowHandlers
   /** "Mark all Cooked" of the hero after the slot time, when several Courses are still to cook. */
-  onMarkAllCooked?: (slot: SlotKey) => void
+  onMarkAllCooked?: (slot: SlotDayKey) => void
   /** The slot menu's other actions; the menu shows when given. */
   menu?: Pick<SlotMenuProps, 'onNotCookedSlot' | 'onAddCourse'>
 }
@@ -52,10 +52,11 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
 
 /** A slot that serves one Course: the single-Recipe hero, as before. */
 function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
-  const meal = slot.meal
+  const row = heroRow(slot)
+  const meal = row?.course.meal ?? null
   const phrase = usePhraseContext(slot.date)
-  if (!meal) return null
-  const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  if (!meal || !row) return null
+  const key: SlotKey = row.key
   const phase = heroPhase(slot, now)
   const canReheat = action === 'reheat' && onReheat !== undefined
   const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
@@ -129,7 +130,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   const meal = hero?.course.meal
   const phrase = usePhraseContext(slot.date)
   if (!hero || !meal) return null
-  const slotKey: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const left = plannedMeals(slot).length
   const phase = heroPhase(slot, now)
   const awaiting = phase === 'awaiting' && day === 'today'

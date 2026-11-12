@@ -72,16 +72,14 @@ type ruleBody struct {
 }
 
 type slotBody struct {
-	Date        string        `json:"date"`
-	MealSlotID  int64         `json:"mealSlotId"`
-	Name        string        `json:"name"`
-	Time        string        `json:"time"`
-	CookMinutes *int          `json:"cookMinutes"`
-	StartBy     string        `json:"startBy"`
-	Meal        *mealBody     `json:"meal"`
-	Unfilled    *unfilledBody `json:"unfilled"`
-	Courses     []courseBody  `json:"courses"`
-	Rules       []ruleBody    `json:"rules"`
+	Date        string       `json:"date"`
+	MealSlotID  int64        `json:"mealSlotId"`
+	Name        string       `json:"name"`
+	Time        string       `json:"time"`
+	CookMinutes *int         `json:"cookMinutes"`
+	StartBy     string       `json:"startBy"`
+	Courses     []courseBody `json:"courses"`
+	Rules       []ruleBody   `json:"rules"`
 }
 
 type errBody struct {
@@ -128,12 +126,9 @@ func courseOf(t *testing.T, s slotBody, course int64) courseBody {
 	return courseBody{}
 }
 
+// path is the route of one Course's Planned Meal. Every route names its Course by its real id (C3).
 func path(w *crsc2.World, date string, course int64, suffix string) string {
-	p := "/api/plan/" + date + "/" + itoa(w.Slot)
-	if course != 0 {
-		p += "/" + itoa(course)
-	}
-	return p + suffix
+	return "/api/plan/" + date + "/" + itoa(w.Slot) + "/" + itoa(course) + suffix
 }
 
 func itoa(n int64) string { b, _ := json.Marshal(n); return string(b) }

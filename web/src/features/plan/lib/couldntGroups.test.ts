@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { Eliminations, PlanSlot, UnfilledReason } from '../types'
+import type { Eliminations, PlanEntry, UnfilledReason } from '../types'
 import { causeOf, groupByCause, shortReason, slotLine, toneStyle, unplannedOf } from './couldntGroups'
 
 const none: Eliminations = { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 }
 
-function unfilled(date: string, reason: UnfilledReason, eliminated: Partial<Eliminations> = {}, slotRuleClaimed = false, name = 'Dinner', mealSlotId = 1): PlanSlot {
+function unfilled(date: string, reason: UnfilledReason, eliminated: Partial<Eliminations> = {}, slotRuleClaimed = false, name = 'Dinner', mealSlotId = 1): PlanEntry {
   return {
-    date, mealSlotId, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, rules: [],
+    date, mealSlotId, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, rules: [], courseId: 1, courseName: 'Main',
     unfilled: { reason, slotRuleClaimed, eliminated: { ...none, ...eliminated } },
   }
 }
@@ -34,7 +34,7 @@ describe('causeOf: one cause per slot', () => {
 
 describe('unplannedOf', () => {
   it('keeps the slots with no meal and a recorded reason, in plan order', () => {
-    const planned: PlanSlot = { ...nobody('2026-11-11'), meal: { date: '2026-11-11', mealSlotId: 1, recipeId: 1, recipeName: 'Soup', batches: 1, portions: 2, state: 'planned', pinned: false, servedFromLeftover: null, why: [] }, unfilled: null }
+    const planned: PlanEntry = { ...nobody('2026-11-11'), meal: { date: '2026-11-11', mealSlotId: 1, recipeId: 1, recipeName: 'Soup', batches: 1, portions: 2, state: 'planned', pinned: false, servedFromLeftover: null, why: [] }, unfilled: null }
     const empty = { ...nobody('2026-11-12'), unfilled: null } // nothing planned, no reason: not "couldn't plan"
     const a = nobody('2026-11-10')
     const b = nobody('2026-11-13')
@@ -79,7 +79,7 @@ describe('groupByCause: one group per cause, never one line per slot', () => {
 })
 
 describe('every cause: copy, fix action, tone and icon', () => {
-  const sample: Record<string, PlanSlot> = {
+  const sample: Record<string, PlanEntry> = {
     nobody_attending: nobody('2026-11-10'),
     no_recipes: unfilled('2026-11-10', 'no_candidates'),
     slot_rule: unfilled('2026-11-10', 'no_candidates', { considered: 2, advanceStep: 2 }, true),

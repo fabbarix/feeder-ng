@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
-import { useCourses } from '../../../lib/courses/useCourses'
 import type { SlotKey } from '../../plan/types'
 import { adjustReheatSeconds, defaultReheatSeconds, REHEAT_LABEL, reheatTimerOfCourse } from '../lib/reheat'
-import { courseScope, scopeOf } from '../lib/scope'
+import { courseScope } from '../lib/scope'
 import type { CookTimer } from '../types'
 import { useTimers } from './useTimers'
 
@@ -28,11 +27,9 @@ export interface UseReheat {
 /** Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing. */
 export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number | null, onError?: () => void): UseReheat {
   const timers = useTimers()
-  const mainCourseId = useCourses().main?.id ?? null
-  // The Course's three-part scope when the key names one; the two-part slot scope otherwise (both found through sameScope).
-  const scope = key.courseId === undefined ? scopeOf({ kind: 'meal', date: key.date, mealSlotId: key.mealSlotId }) : courseScope(key.date, key.mealSlotId, key.courseId)
+  const scope = courseScope(key.date, key.mealSlotId, key.courseId)
   const [chosen, setChosen] = useState(() => defaultReheatSeconds(portions, reheatMinutes))
-  const timer = reheatTimerOfCourse(timers.timers, scope, mainCourseId)
+  const timer = reheatTimerOfCourse(timers.timers, scope)
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
   const secondsLeft = timer ? (timers.items.find((i) => i.timer.id === timer.id)?.seconds ?? 0) : 0

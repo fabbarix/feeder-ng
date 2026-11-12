@@ -9,7 +9,7 @@ import (
 )
 
 // The runner with Courses (ADR 0008, ADR 0009, docs/dev/design/crs-b.md §6). The plan store is the real one
-// (team A's, Course-keyed, with the main Course read back as 0); the Sources are the fake, which serves each Meal Slot's
+// (Course-keyed, the main Course by its real id); the Sources are the fake, which serves each Meal Slot's
 // Courses and Course Attendance through SlotCourses.
 
 // cenv is an env whose fake household can serve Courses. It starts with no Recipes: each test adds its own.
@@ -79,13 +79,11 @@ func (c *cenv) serve(specs ...cspec) {
 
 func (c *cenv) cell(day int, course int64) plan.Key {
 	k := c.key(day)
-	if course != c.main {
-		k.CourseID = course
-	}
+	k.CourseID = course
 	return k
 }
 
-// mealIn is the stored Planned Meal of the Course on a day (the main Course is stored as Course 0).
+// mealIn is the stored Planned Meal of the Course on a day.
 func (c *cenv) mealIn(day int, course int64) (plan.Meal, bool) {
 	c.t.Helper()
 	want := c.cell(day, course)
@@ -151,8 +149,8 @@ func TestPlanStoresOnePlannedMealPerCourseOfEverySlot(t *testing.T) {
 		if m.Portions != 2 || s.Portions != 2 || m.State != plan.StatePlanned || s.State != plan.StatePlanned {
 			t.Errorf("meals on the %dth = %+v and %+v; want planned, 2 portions each", day, m, s)
 		}
-		if m.Key.CourseID != 0 || s.Key.CourseID != c.side {
-			t.Errorf("stored Course keys = %d and %d; the main Course reads as 0 and the Side as its id %d", m.Key.CourseID, s.Key.CourseID, c.side)
+		if m.Key.CourseID != c.main || s.Key.CourseID != c.side {
+			t.Errorf("stored Course keys = %d and %d, want the real ids %d and %d", m.Key.CourseID, s.Key.CourseID, c.main, c.side)
 		}
 	}
 }
@@ -497,7 +495,8 @@ func TestKeptRelaxedPickIsReplacedWhenAStrictRecipeAppears(t *testing.T) {
 		t.Fatal("setup: Tuesday is not a relaxed pick")
 	}
 	soup := plantest.SeedRecipe(t, e.db, "tomato soup", 2)
-	e.src.recipes = append(e.src.recipes, planner.Recipe{ID: planner.RecipeID(soup), Yield: 2})
+	plantest.SetRecipeCourses(t, e.db, soup, e.main)
+	e.src.recipes = append(e.src.recipes, planner.Recipe{ID: planner.RecipeID(soup), Yield: 2, CourseIDs: []int64{e.main}})
 	if _, err := e.r.Plan(ctx, plan.ReasonRecipeChanged); err != nil {
 		t.Fatal(err)
 	}
@@ -620,8 +619,8 @@ func TestSingleCourseSlotsPlanLikeSlotsWithoutCourses(t *testing.T) {
 		if a[i].Key != b[i].Key || a[i].RecipeID != b[i].RecipeID || a[i].Portions != b[i].Portions || a[i].Relaxed != b[i].Relaxed {
 			t.Errorf("meal %d differs: %+v without Courses, %+v with only the main Course", i, a[i], b[i])
 		}
-		if a[i].Key.CourseID != 0 {
-			t.Errorf("stored key %+v, want the main Course as 0", a[i].Key)
+		if a[i].Key.CourseID != one.main {
+			t.Errorf("stored key %+v, want the main Course's real id %d", a[i].Key, one.main)
 		}
 	}
 }

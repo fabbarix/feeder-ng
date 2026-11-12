@@ -24,11 +24,11 @@ func start(t *testing.T, clk *clock.Fake, seconds int) cook.Timer {
 func TestStartTimerRunsForItsDuration(t *testing.T) {
 	clk := clock.NewFake(t0)
 	step := 2
-	tm, err := cook.StartTimer(clk.Now(), cook.MealScope("2026-11-09", 3, 0), &step, "Step 3", 600)
+	tm, err := cook.StartTimer(clk.Now(), cook.MealScope("2026-11-09", 3, 7), &step, "Step 3", 600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tm.State != cook.Running || tm.DurationSeconds != 600 || tm.Label != "Step 3" || tm.Scope != "meal:2026-11-09/3" || tm.Step == nil || *tm.Step != 2 {
+	if tm.State != cook.Running || tm.DurationSeconds != 600 || tm.Label != "Step 3" || tm.Scope != "meal:2026-11-09/3/7" || tm.Step == nil || *tm.Step != 2 {
 		t.Fatalf("unexpected timer %+v", tm)
 	}
 	if !tm.StartedAt.Equal(t0) || !tm.EndsAt.Equal(t0.Add(10*time.Minute)) {

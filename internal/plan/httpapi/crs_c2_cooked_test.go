@@ -135,16 +135,17 @@ func TestCookedLeftoverIsPlannedForALaterMealAndNamesItsCourse(t *testing.T) {
 	}
 }
 
-func TestCookedAndNotCookedOldPathsActOnTheMainCourseOnly(t *testing.T) {
+// C3: the old per-slot paths are gone (they answer 404, crs_c3_routes_test.go); the Main is marked by its own id.
+func TestCookedAndNotCookedActOnTheNamedCourseOnly(t *testing.T) {
 	d := newDinner(t)
-	r := d.User.Post(path(d.World, crsc2.Today, 0, "/cooked"), map[string]any{})
+	r := d.User.Post(path(d.World, crsc2.Today, d.Main, "/cooked"), map[string]any{})
 	var c cookedBody
 	r.MustJSON(t, &c)
 	if r.Status != 200 || c.Meal.CourseID != d.Main {
-		t.Fatalf("old cooked = %d %s, want the main Course", r.Status, r.Body)
+		t.Fatalf("cooked on the Main = %d %s", r.Status, r.Body)
 	}
 	if d.MealState(crsc2.Today, d.Slot, d.Main) != "cooked" || d.MealState(crsc2.Today, d.Slot, d.Side) != "planned" {
-		t.Error("the old per-slot Cooked path must never take the whole-slot meaning")
+		t.Error("Cooked on the Main must not take the whole-slot meaning")
 	}
 	m := decodeMeal(t, d.User.Post(path(d.World, crsc2.Today, d.Side, "/not-cooked"), nil))
 	if m.CourseID != d.Side || m.State != "skipped" {
@@ -155,9 +156,9 @@ func TestCookedAndNotCookedOldPathsActOnTheMainCourseOnly(t *testing.T) {
 	}
 
 	d2 := newDinner(t)
-	m = decodeMeal(t, d2.User.Post(path(d2.World, crsc2.Today, 0, "/not-cooked"), nil))
+	m = decodeMeal(t, d2.User.Post(path(d2.World, crsc2.Today, d2.Main, "/not-cooked"), nil))
 	if m.CourseID != d2.Main || m.State != "skipped" || d2.MealState(crsc2.Today, d2.Slot, d2.Side) != "planned" {
-		t.Errorf("old not-cooked = %+v, side %q; want the main Course only", m, d2.MealState(crsc2.Today, d2.Slot, d2.Side))
+		t.Errorf("not-cooked on the Main = %+v, side %q; want the Main only", m, d2.MealState(crsc2.Today, d2.Slot, d2.Side))
 	}
 }
 

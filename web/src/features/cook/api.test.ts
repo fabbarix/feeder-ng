@@ -7,12 +7,6 @@ function client(over: Partial<Record<'get' | 'post' | 'put' | 'delete', unknown>
 }
 
 describe('createCookApi', () => {
-  it('opens a Planned Meal by date and Meal Slot', async () => {
-    const c = client()
-    await createCookApi(c).view({ kind: 'meal', date: '2026-11-09', mealSlotId: 3 })
-    expect(c.get).toHaveBeenCalledWith('/api/cook/meals/2026-11-09/3')
-  })
-
   it('opens a Recipe with its Batch count', async () => {
     const c = client()
     await createCookApi(c).view({ kind: 'recipe', recipeId: 12, batches: 1.5 })
@@ -21,8 +15,8 @@ describe('createCookApi', () => {
 
   it('marks an Advance Step', async () => {
     const c = client()
-    await createCookApi(c).setMark('meal:2026-11-09/3', 0, true)
-    expect(c.put).toHaveBeenCalledWith('/api/cook/marks', { scope: 'meal:2026-11-09/3', step: 0, done: true })
+    await createCookApi(c).setMark('meal:2026-11-09/3/7', 0, true)
+    expect(c.put).toHaveBeenCalledWith('/api/cook/marks', { scope: 'meal:2026-11-09/3/7', step: 0, done: true })
   })
 
   it('lists timers, optionally for a scope (URL-encoded)', async () => {
@@ -30,8 +24,8 @@ describe('createCookApi', () => {
     const api = createCookApi(c)
     await api.timers()
     expect(c.get).toHaveBeenLastCalledWith('/api/cook/timers')
-    await api.timers('meal:2026-11-09/3')
-    expect(c.get).toHaveBeenLastCalledWith('/api/cook/timers?scope=meal%3A2026-11-09%2F3')
+    await api.timers('meal:2026-11-09/3/7')
+    expect(c.get).toHaveBeenLastCalledWith('/api/cook/timers?scope=meal%3A2026-11-09%2F3%2F7')
   })
 
   it('starts, pauses, resumes and cancels timers', async () => {

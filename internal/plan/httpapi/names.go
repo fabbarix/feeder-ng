@@ -53,7 +53,6 @@ func (u ingredientUnits) Units(ctx context.Context, id int64) (units.Ingredient,
 // table is one snapshot of the names, plus the Recipe and Member facts the JSON carries next to them.
 type table struct {
 	courses       map[int64]string // Course names (crs-c2)
-	mainID        int64            // the real id of the main Course: the store's 0 maps to it
 	whole         map[int64]bool   // Whole meal Recipes
 	recipes       map[int64]string
 	recipeReheat  map[int64]int    // R12: reheat time of a Recipe in minutes (0 when none)
@@ -88,9 +87,6 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	}
 	for _, c := range cs {
 		t.courses[c.ID] = c.Name
-		if c.Main {
-			t.mainID = c.ID
-		}
 	}
 	rs, err := n.recipe.List(ctx, recipestore.ListFilter{Archived: "all"})
 	if err != nil {
@@ -140,11 +136,10 @@ func leftoverIDs(meals []*plan.Meal) []int64 {
 	return ids
 }
 
-// viewMeals are the Meals of the slot views: each slot's and each Course row's.
+// viewMeals are the Meals of the slot views: each Course row's.
 func viewMeals(views []runner.SlotView) []*plan.Meal {
 	out := make([]*plan.Meal, 0, len(views))
 	for _, v := range views {
-		out = append(out, v.Meal)
 		for i := range v.Courses {
 			out = append(out, v.Courses[i].Meal)
 		}
@@ -152,10 +147,11 @@ func viewMeals(views []runner.SlotView) []*plan.Meal {
 	return out
 }
 
-// course maps the store's id to the real Course id: 0 is the main Course.
-func (t table) course(id int64) int64 {
-	if id == 0 {
-		return t.mainID
+// listMeals are the Meals of the flat list entries (to-confirm).
+func listMeals(entries []runner.ListEntry) []*plan.Meal {
+	out := make([]*plan.Meal, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e.Meal)
 	}
-	return id
+	return out
 }

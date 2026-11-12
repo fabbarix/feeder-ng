@@ -29,7 +29,7 @@ export interface UseCookSession {
   isFirst: boolean
   isLast: boolean
   /** The Planned Meal for T11's Mark as Cooked sheet; null for a Recipe scope. */
-  markCookedKey: { date: string; mealSlotId: number } | null
+  markCookedKey: { date: string; mealSlotId: number; courseId: number } | null
   scope: string
 }
 
@@ -125,7 +125,7 @@ export function useCookSession(source: CookSource): UseCookSession {
     startStepTimer,
     isFirst: isFirst(nav),
     isLast: isLast(nav),
-    markCookedKey: view?.meal ? { date: view.meal.date, mealSlotId: view.meal.mealSlotId } : null,
+    markCookedKey: view?.meal && source.kind === 'meal' ? { date: view.meal.date, mealSlotId: view.meal.mealSlotId, courseId: source.courseId } : null,
     scope,
   }
 }

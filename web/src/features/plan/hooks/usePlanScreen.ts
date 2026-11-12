@@ -3,7 +3,7 @@ import { useConfirm, useToast } from '../../../ui'
 import { courseOf, unresolvedCourseIds } from '../lib/courses'
 import { regenerateConfirmCopy, regenerateImpact } from '../lib/regenerate'
 import { planStrings } from '../strings'
-import type { SlotKey } from '../types'
+import type { SlotDayKey, SlotKey } from '../types'
 import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
 import { useCookFlow } from './useCookFlow'
@@ -25,7 +25,7 @@ export function usePlanScreen() {
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
 
-  const slotAt = (key: SlotKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
+  const slotAt = (key: SlotDayKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
   const swapSlot = slotAt(swapKey)
 
   return {
@@ -54,7 +54,7 @@ export function usePlanScreen() {
       act()
     },
     /** Mark all Cooked for the slot's Courses still to cook (one sheet, one POST). */
-    openAllCooked: (key: SlotKey) => {
+    openAllCooked: (key: SlotDayKey) => {
       const slot = slotAt(key)
       if (slot) allCooked.open({ date: key.date, mealSlotId: key.mealSlotId }, unresolvedCourseIds(slot))
     },

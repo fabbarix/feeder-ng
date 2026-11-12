@@ -8,7 +8,6 @@ export const routes: RouteObject[] = [
   { path: '/cook/meal/:date/:slotId', element: createElement(CookScreen) },
   { path: '/cook/meal/:date/:slotId/:courseId', element: createElement(CookScreen) },
   { path: '/cook/recipe/:id', element: createElement(CookScreen) },
-  { path: '/cook/reheat/:date/:slotId', element: createElement(ReheatScreen) },
   { path: '/cook/reheat/:date/:slotId/:courseId', element: createElement(ReheatScreen) },
 ]
 export { cookMealPath, cookRecipePath } from './lib/scope'

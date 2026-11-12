@@ -70,39 +70,8 @@ func mix64(x uint64) uint64 {
 	return x
 }
 
-// NormaliseCourses maps a stored key with Course 0 on a Meal Slot that has Courses to that slot's main Course
-// (the persistence shim, ADR 0008). Keys of a slot without Courses, and keys that name a Course, are unchanged.
-func NormaliseCourses(slots []SlotInfo) func(Key) Key {
-	type slotDay struct {
-		date string
-		slot int64
-	}
-	mainOf := map[slotDay]int64{}
-	for _, si := range slots {
-		if len(si.Courses) == 0 {
-			continue
-		}
-		c := si.Courses[0].CourseID
-		for _, sc := range si.Courses {
-			if sc.Main {
-				c = sc.CourseID
-				break
-			}
-		}
-		mainOf[slotDay{si.Key.Date, si.Key.MealSlotID}] = c
-	}
-	return func(k Key) Key {
-		if k.CourseID == 0 {
-			if c, ok := mainOf[slotDay{k.Date, k.MealSlotID}]; ok {
-				k.CourseID = c
-			}
-		}
-		return k
-	}
-}
-
 // CellKeys lists the planning cells of one slot occurrence: one per Course in the slot's order, or the slot itself
-// when it has no Courses (the transition shim).
+// when it has no Courses (pure planning; crs-c3).
 func CellKeys(si SlotInfo) []Key {
 	if len(si.Courses) == 0 {
 		return []Key{si.Key}
@@ -138,18 +107,13 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	if s.Zone == nil {
 		return planner.Input{}, ErrNoZone
 	}
-	norm := NormaliseCourses(s.Slots)
 	meals := make(map[Key]Meal, len(s.Meals))
 	for _, m := range s.Meals {
-		m.Key = norm(m.Key)
-		if m.From != nil {
-			m.From.From = norm(m.From.From)
-		}
 		meals[m.Key] = m
 	}
 	clear := make(map[Key]bool, len(s.Clear))
 	for _, k := range s.Clear {
-		clear[norm(k)] = true
+		clear[k] = true
 	}
 
 	in := planner.Input{
@@ -175,7 +139,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 				Key:         pkey(key),
 				At:          at,
 				Attendance:  attendance(cell.attendance),
-				Rules:       slotRules(CellRules(s.SlotRules, si, key.CourseID, norm)),
+				Rules:       slotRules(CellRules(s.SlotRules, si, key.CourseID)),
 				Main:        cell.main,
 				Optional:    cell.optional,
 				Position:    pos,
@@ -206,7 +170,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 			continue
 		}
 		in.Leftovers = append(in.Leftovers, planner.Leftover{
-			ID: l.ID, FromSlot: pkey(norm(l.From)), RecipeID: planner.RecipeID(l.RecipeID),
+			ID: l.ID, FromSlot: pkey(l.From), RecipeID: planner.RecipeID(l.RecipeID),
 			Portions: l.Portions, CookedOn: planner.Date(l.CookedOn), UseBy: planner.Date(l.UseBy),
 		})
 	}
@@ -248,19 +212,15 @@ func cellsOf(si SlotInfo) []cell {
 	return out
 }
 
-// CellRules are the Slot Rules of a cell: the slot's Meal Slot and the cell's Course. A rule with Course 0 belongs to
-// the main Course of a slot with Courses, and to the single cell of a slot without them.
-func CellRules(all []SlotRule, si SlotInfo, course int64, norm func(Key) Key) []SlotRule {
+// CellRules are the Slot Rules of a cell: the slot's Meal Slot and the cell's Course. A rule with Course 0 only matches
+// the single cell of a slot without Courses (Course 0 names no Course of a slot with Courses, crs-c3 §3).
+func CellRules(all []SlotRule, si SlotInfo, course int64) []SlotRule {
 	var out []SlotRule
 	for _, r := range all {
 		if r.MealSlotID != si.Key.MealSlotID {
 			continue
 		}
-		rc := r.CourseID
-		if rc == 0 {
-			rc = norm(Key{Date: si.Key.Date, MealSlotID: si.Key.MealSlotID}).CourseID
-		}
-		if rc == course {
+		if r.CourseID == course {
 			out = append(out, r)
 		}
 	}
@@ -369,7 +329,6 @@ func keyOf(k planner.SlotKey) Key {
 //     informational: it carries no reason and is not stored.
 func Reconcile(s Snapshot, res planner.Result) Changes {
 	var ch Changes
-	norm := NormaliseCourses(s.Slots)
 	placed := map[Key]bool{}
 	for _, p := range res.Placements {
 		k := keyOf(p.Key)
@@ -394,7 +353,7 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 
 	stored := make(map[Key]Meal, len(s.Meals))
 	for _, m := range s.Meals {
-		stored[norm(m.Key)] = m
+		stored[m.Key] = m
 	}
 	rechecks := make(map[Key]planner.Recheck, len(res.Rechecks))
 	for _, rc := range res.Rechecks {
@@ -448,7 +407,7 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		}
 	}
 	for _, m := range s.Meals {
-		mk := norm(m.Key)
+		mk := m.Key
 		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] {
 			continue
 		}

@@ -63,7 +63,7 @@ export function renderWithProviders(ui: ReactElement, route = '/'): RenderResult
   )
 }
 
-import type { CookedAllResult, PlanCourse, PlanSlot, PlannedMeal, Why } from './types'
+import type { CookedAllResult, PlanCourse, PlanEntry, PlanSlot, PlannedMeal, Unfilled, Why } from './types'
 
 export function meal(over: Partial<PlannedMeal> = {}): PlannedMeal {
   return {
@@ -72,12 +72,30 @@ export function meal(over: Partial<PlannedMeal> = {}): PlannedMeal {
   }
 }
 
-export function slot(over: Partial<PlanSlot> = {}): PlanSlot {
+/**
+ * A slot as GET /api/plan sends it (crs-c3): its Courses, with the main Course's row built from `meal` and `unfilled`
+ * (the arguments are a shorthand for that row). A flat to-confirm or couldn't-plan entry (`courseId` given) also keeps
+ * its own `meal` and `unfilled` at the top, as the API does.
+ */
+type SlotOver = Partial<PlanSlot> & { meal?: PlannedMeal | null; unfilled?: Unfilled | null; courseId?: number; courseName?: string }
+
+export function slot(over: SlotOver & { courseId: number }): PlanEntry
+export function slot(over?: SlotOver): PlanSlot
+export function slot(over: SlotOver = {}): PlanSlot {
   const date = over.date ?? '2026-11-10'
-  return {
-    date, mealSlotId: 2, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`, portions: 2,
-    meal: meal({ date }), unfilled: null, rules: [], ...over,
+  const { meal: mealOver, unfilled: unfilledOver, ...rest } = over
+  const mainMeal = mealOver === undefined ? meal({ date }) : mealOver
+  const mainUnfilled = unfilledOver ?? null
+  const built: PlanSlot & { courseId?: number; meal?: PlannedMeal | null; unfilled?: Unfilled | null } = {
+    date, mealSlotId: 2, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`, portions: 2, rules: [],
+    courses: [planCourse({ courseId: rest.courseId ?? mainMeal?.courseId ?? 1, name: rest.courseName ?? mainMeal?.courseName ?? 'Main', main: true, meal: mainMeal, unfilled: mainUnfilled })],
+    ...rest,
   }
+  if (rest.courseId !== undefined) {
+    built.meal = mainMeal
+    built.unfilled = mainUnfilled
+  }
+  return built
 }
 
 export const favourite = (...members: string[]): Why => ({ code: 'favourite', members })
@@ -94,10 +112,9 @@ export function courseMeal(courseId: number, courseName: string, over: Partial<P
   return meal({ courseId, courseName, ...over })
 }
 
-/** CRS F: a slot that carries `courses`; `meal` and `unfilled` are the main Course's aliases, as the server sends them until C3. */
+/** CRS F: a slot that carries `courses` (the server shape: no meal or reason of its own). */
 export function courseSlot(courses: PlanCourse[], over: Partial<PlanSlot> = {}): PlanSlot {
-  const main = courses.find((c) => c.main)
-  return slot({ meal: main?.meal ?? null, unfilled: main?.unfilled ?? null, courses, ...over })
+  return slot({ courses, ...over })
 }
 
 /**

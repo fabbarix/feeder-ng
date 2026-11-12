@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { planApi } from '../api'
 import { planStrings } from '../strings'
 import { allCookedBody, type AllCookedRow } from '../lib/toConfirm'
-import type { CookedAllResult, CookPreview, SlotKey, StockWarning } from '../types'
+import type { CookedAllResult, CookPreview, SlotDayKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
 
 export interface MarkAllCookedController {
@@ -25,7 +25,7 @@ export interface MarkAllCookedController {
 const NONE: never[] = []
 
 /** Idle (no request) while `slot` is null. `slot` is `{ date, mealSlotId }`; `courseIds` are the Courses to cook. */
-export function useMarkAllCooked(slot: SlotKey | null, courseIds: number[]): MarkAllCookedController {
+export function useMarkAllCooked(slot: SlotDayKey | null, courseIds: number[]): MarkAllCookedController {
   const client = useQueryClient()
   const previews = useQueries({
     queries: courseIds.map((courseId) => ({

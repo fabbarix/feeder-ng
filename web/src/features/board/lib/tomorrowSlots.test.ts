@@ -5,10 +5,10 @@ import { tomorrowSlots } from './tiles'
 function slot(date: string, id: number, time: string, over: Partial<SlotLike> = {}): SlotLike {
   return {
     date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time, at: `${date}T${time}:00Z`,
-    meal: { recipeId: id, recipeName: `R${id}`, batches: 1, portions: 4, state: 'planned' }, ...over,
+    courses: [{ courseId: 1, name: 'Main', main: true, meal: { recipeId: id, recipeName: `R${id}`, batches: 1, portions: 4, state: 'planned' } }], ...over,
   }
 }
-const empty = (date: string, id: number, time: string) => slot(date, id, time, { meal: null, unfilled: { reason: 'no_attendance' } })
+const empty = (date: string, id: number, time: string) => slot(date, id, time, { courses: [{ courseId: 1, name: 'Main', main: true, meal: null, unfilled: { reason: 'no_attendance' } }] })
 
 describe('tomorrowSlots (R13: the board shows what could not be planned, read-only)', () => {
   it('lists planned meals and meals the planner could not plan, in time order', () => {
@@ -18,9 +18,9 @@ describe('tomorrowSlots (R13: the board shows what could not be planned, read-on
 
   it('leaves out cooked and skipped meals and slots with nothing planned and no reason', () => {
     const slots = [
-      slot('2026-11-10', 2, '19:00', { meal: { recipeId: 2, recipeName: 'R2', batches: 1, portions: 4, state: 'cooked' } }),
-      slot('2026-11-10', 3, '20:00', { meal: null, unfilled: null }),
-      slot('2026-11-10', 4, '21:00', { meal: null }),
+      slot('2026-11-10', 2, '19:00', { courses: [{ courseId: 1, name: 'Main', main: true, meal: { recipeId: 2, recipeName: 'R2', batches: 1, portions: 4, state: 'cooked' } }] }),
+      slot('2026-11-10', 3, '20:00', { courses: [{ courseId: 1, name: 'Main', main: true, meal: null, unfilled: null }] }),
+      slot('2026-11-10', 4, '21:00', { courses: [] }),
     ]
     expect(tomorrowSlots(slots, '2026-11-09')).toEqual([])
   })

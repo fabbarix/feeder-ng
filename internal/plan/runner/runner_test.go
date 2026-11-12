@@ -188,14 +188,15 @@ func TestPlanCouldntPlanWhenEveryRecipeIsArchived(t *testing.T) {
 	if len(un) != 3 {
 		t.Fatalf("Unfilled = %+v, want all three days", un)
 	}
-	if un[0].Reason != "no_candidates" {
-		t.Errorf("reason = %+v, want no_candidates", un[0])
+	// crs-b §3: no non-archived Recipe is marked with the Course at all, so a required Course is no_course_recipes.
+	if un[0].Reason != "no_course_recipes" {
+		t.Errorf("reason = %+v, want no_course_recipes", un[0])
 	}
 }
 
 func TestNightlyDiscardsExpiredLeftoversRecordsWasteOnceThenPlans(t *testing.T) {
 	e := newEnv(t)
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4]}
+	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
 	old, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 3, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
 	fresh, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["stew"], From: src, Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-09"}) // good today
 	if err := e.r.Nightly(ctx, "2026-11-09"); err != nil {
@@ -220,7 +221,7 @@ func TestNightlyDiscardsExpiredLeftoversRecordsWasteOnceThenPlans(t *testing.T) 
 
 func TestDiscardExpiredUnpinsPinnedDependantsAndSurvivesAWasteRecordingFailure(t *testing.T) {
 	e := newEnv(t)
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4]}
+	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
 	l, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 2, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
 	e.st.SaveMeal(ctx, plan.Meal{Key: e.key(9), RecipeID: e.rec["chicken"], Portions: 2, State: plan.StatePlanned, Pinned: true,
 		From: &plan.Source{LeftoverID: l.ID, From: src}})
@@ -286,7 +287,7 @@ func TestPlanClearsUnpinnedMealsThatBreakASlotRuleAndKeepsPinnedOnes(t *testing.
 		}
 	}
 	for _, k := range []plan.Key{e.key(9), e.key(10)} {
-		if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: k.MealSlotID, RecipeID: other}); err != nil {
+		if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: k.MealSlotID, CourseID: e.main, RecipeID: other}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -307,7 +308,7 @@ func TestChangeRulesRollsTheRuleBackWhenTheReplanFails(t *testing.T) {
 	e.mustPlan()
 	slot := e.key(10).MealSlotID
 	if err := e.r.ChangeRules(ctx, func(st *store.Store) error {
-		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, RecipeID: e.rec["pasta"]})
+		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, CourseID: e.main, RecipeID: e.rec["pasta"]})
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -320,7 +321,7 @@ func TestChangeRulesRollsTheRuleBackWhenTheReplanFails(t *testing.T) {
 
 	e.src.recipesErr = errBoom // every replan from now on fails
 	if err := e.r.ChangeRules(ctx, func(st *store.Store) error {
-		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, RecipeID: e.rec["soup"]})
+		_, err := st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: slot, CourseID: e.main, RecipeID: e.rec["soup"]})
 		return err
 	}); err == nil {
 		t.Fatal("ChangeRules succeeded although the replan failed")
@@ -343,7 +344,7 @@ func TestDiscardExpiredPublishesStockWasteAfterAnInTransactionWaste(t *testing.T
 	e := newEnv(t)
 	tx := txStock{e.stock}
 	e.r = runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: tx, Events: e.bus})
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4]}
+	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
 	old, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 3, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
 	if n, err := e.r.DiscardExpired(ctx); err != nil || n != 1 {
 		t.Fatalf("DiscardExpired = %d, %v; want 1, nil", n, err)

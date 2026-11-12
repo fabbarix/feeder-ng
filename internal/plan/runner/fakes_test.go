@@ -25,7 +25,8 @@ type fakeSources struct {
 	settings   plan.Settings
 	slots      []runner.MealSlotDef
 	attendees  map[string][]plan.Attendee   // by "slotID|date" for overrides
-	courses    map[string][]plan.SlotCourse // by "slotID|date"; "slotID|" serves every date; none: the slot has no Courses
+	courses    map[string][]plan.SlotCourse // by "slotID|date"; "slotID|" serves every date; none: the main Course alone (mainID)
+	mainID     int64                        // the real id of the main Course that a Meal Slot serves by default (crs-c3)
 	recipes    []planner.Recipe
 	prefs      map[int64]planner.Preferences
 	calls      int   // Settings calls = planning runs started
@@ -53,7 +54,15 @@ func (s *fakeSources) SlotCourses(_ context.Context, slotID int64, date string) 
 	if c, ok := s.courses[attKey(slotID, date)]; ok {
 		return append([]plan.SlotCourse(nil), c...), nil
 	}
-	return append([]plan.SlotCourse(nil), s.courses[attKey(slotID, "")]...), nil
+	if c, ok := s.courses[attKey(slotID, "")]; ok {
+		return append([]plan.SlotCourse(nil), c...), nil
+	}
+	// The default: the main Course alone, with the slot's own Attendance (so an Attendance override reaches it).
+	att, ok := s.attendees[attKey(slotID, date)]
+	if !ok {
+		att = []plan.Attendee{{MemberID: 1, Factor: 1}, {MemberID: 2, Factor: 1}}
+	}
+	return []plan.SlotCourse{{CourseID: s.mainID, Main: true, Attendance: att}}, nil
 }
 func (s *fakeSources) Recipes(context.Context) ([]planner.Recipe, error) {
 	s.mu.Lock()
@@ -186,6 +195,7 @@ type env struct {
 	r       *runner.Runner
 	slotIDs map[int]int64 // weekday -> Meal Slot id
 	rec     map[string]int64
+	main    int64 // the real id of the main Course every Meal Slot serves (crs-c3: no Course 0)
 }
 
 // Recipe names: five yield-2 Recipes (a Batch is exactly one slot's portions, so no Leftover) and "chicken" (yield 4).
@@ -201,20 +211,24 @@ func newEnvWith(t *testing.T, tweak func(*runner.Deps)) *env {
 	clk := newClock(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC))
 	e := &env{t: t, db: d, clk: clk, st: store.New(d, clk.Fake), slotIDs: map[int]int64{}, rec: map[string]int64{},
 		stock: &fakeStock{}, bus: &fakeBus{}}
-	src := &fakeSources{settings: plan.Settings{HorizonDays: 3, DefaultCooldownDays: 7, DefaultUseByDays: 3, Style: 0.5}}
+	e.main = plantest.CourseID(t, d, "Main")
+	src := &fakeSources{settings: plan.Settings{HorizonDays: 3, DefaultCooldownDays: 7, DefaultUseByDays: 3, Style: 0.5}, mainID: e.main}
 	for wd := 1; wd <= 7; wd++ {
 		id := plantest.SeedMealSlot(t, d, wd, "Dinner", "19:00")
 		e.slotIDs[wd] = id
 		src.slots = append(src.slots, runner.MealSlotDef{ID: id, Weekday: wd, Name: "Dinner", Time: "19:00"})
+		plantest.SetSlotCourses(t, d, id, plantest.SlotCourseSeed{CourseID: e.main})
 	}
 	for _, name := range simpleRecipes {
 		id := plantest.SeedRecipe(t, d, name, 2)
+		plantest.SetRecipeCourses(t, d, id, e.main)
 		e.rec[name] = id
-		src.recipes = append(src.recipes, planner.Recipe{ID: planner.RecipeID(id), Yield: 2})
+		src.recipes = append(src.recipes, planner.Recipe{ID: planner.RecipeID(id), Yield: 2, CourseIDs: []int64{e.main}})
 	}
 	chicken := plantest.SeedRecipe(t, d, "chicken", 4)
+	plantest.SetRecipeCourses(t, d, chicken, e.main)
 	e.rec["chicken"] = chicken
-	src.recipes = append(src.recipes, planner.Recipe{ID: planner.RecipeID(chicken), Yield: 4, Needs: []planner.Need{
+	src.recipes = append(src.recipes, planner.Recipe{ID: planner.RecipeID(chicken), Yield: 4, CourseIDs: []int64{e.main}, Needs: []planner.Need{
 		{IngredientID: 11, Quantity: 400},                // chicken thighs
 		{IngredientID: 12, Quantity: 10, Optional: true}, // parsley: optional lines are never deducted
 		{IngredientID: 13, Quantity: 250},                // rice
@@ -235,7 +249,7 @@ func (e *env) key(day int) plan.Key {
 	if wd == 0 {
 		wd = 7
 	}
-	return plan.Key{Date: date.Format("2006-01-02"), MealSlotID: e.slotIDs[wd]}
+	return plan.Key{Date: date.Format("2006-01-02"), MealSlotID: e.slotIDs[wd], CourseID: e.main}
 }
 
 func (e *env) meal(day int) plan.Meal {

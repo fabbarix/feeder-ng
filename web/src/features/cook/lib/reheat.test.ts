@@ -74,7 +74,7 @@ describe('reheatTimerOf', () => {
 })
 
 describe('cookReheatPath', () => {
-  it('is /cook/reheat/<date>/<slot>', () => {
-    expect(cookReheatPath({ date: '2026-11-10', mealSlotId: 2 })).toBe('/cook/reheat/2026-11-10/2')
+  it('is /cook/reheat/<date>/<slot>/<course>', () => {
+    expect(cookReheatPath({ date: '2026-11-10', mealSlotId: 2, courseId: 1 })).toBe('/cook/reheat/2026-11-10/2/1')
   })
 })

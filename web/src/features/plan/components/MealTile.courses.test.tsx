@@ -24,7 +24,7 @@ describe('one Course looks exactly as before (regression guards)', () => {
     const old = before.container.innerHTML
     before.unmount()
     const after = render(
-      <MealTile slot={courseSlot([planCourse({ courseId: 1, name: 'Main', meal: m })], { meal: m })} today="2026-11-10" compact={compact} onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />,
+      <MealTile slot={courseSlot([planCourse({ courseId: 1, name: 'Main', meal: m })])} today="2026-11-10" compact={compact} onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />,
     )
     expect(after.container.innerHTML).toBe(old)
   })

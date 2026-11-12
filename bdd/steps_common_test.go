@@ -94,3 +94,34 @@ func jsonFieldIs(w *World, path, want string) error {
 }
 
 func contextBG() context.Context { return context.Background() }
+
+// C3 (docs/dev/design/crs-c3.md): a plan slot carries no meal or unfilled of its own; they live on its Course rows.
+// mainCourseRow is the row of the main Course; slotMeal and slotUnfilled read it (nil when there is none).
+func mainCourseRow(slot map[string]any) map[string]any {
+	rows, _ := slot["courses"].([]any)
+	for _, r := range rows {
+		if row, _ := r.(map[string]any); row != nil && row["main"] == true {
+			return row
+		}
+	}
+	return nil
+}
+
+func slotMeal(slot map[string]any) map[string]any {
+	m, _ := mainCourseRow(slot)["meal"].(map[string]any)
+	return m
+}
+
+func slotUnfilled(slot map[string]any) map[string]any {
+	u, _ := mainCourseRow(slot)["unfilled"].(map[string]any)
+	return u
+}
+
+// mainCourseID is the real id of the main Course: every Planned Meal route and every Planned Meal scope names it.
+func mainCourseID(w *World) int64 {
+	var id int64
+	if err := w.Ensure().DB.QueryRow(`SELECT id FROM courses WHERE is_main = 1`).Scan(&id); err != nil {
+		w.TB.Fatalf("no main Course: %v", err)
+	}
+	return id
+}

@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isIcon } from '../../../test/iconPaths'
-import { meal, mockApi, renderWithProviders, slot } from '../../plan/test-utils'
+import { courseMeal, meal, mockApi, planCourse, renderWithProviders } from '../../plan/test-utils'
+import { serverSlot } from '../../plan/test-utils.c3'
 import type { PlanView } from '../../plan/types'
 import type { CookTimer } from '../types'
 import { ReheatScreen } from './ReheatScreen'
@@ -12,11 +13,11 @@ vi.mock('../../../lib/sse', () => ({
   connectEvents: () => ({ subscribe: () => () => {}, onReconnect: () => () => {}, close: () => {} }),
 }))
 
-const SCOPE = 'meal:2026-11-10/2'
+const SCOPE = 'meal:2026-11-10/2/1'
 const source = { leftoverId: 4, date: '2026-11-09', mealSlotId: 2, recipeName: 'Chicken curry' }
 const planView = (over: Parameters<typeof meal>[0] = {}): PlanView => ({
   today: '2026-11-10', horizonDays: 7, updating: false,
-  slots: [slot({ date: '2026-11-10', mealSlotId: 2, name: 'Dinner', meal: meal({ recipeName: 'Chicken curry', portions: 2, servedFromLeftover: source, ...over }) })],
+  slots: [serverSlot([planCourse({ courseId: 1, main: true, name: 'Main', meal: courseMeal(1, 'Main', { recipeName: 'Chicken curry', portions: 2, servedFromLeftover: source, ...over }) })], { date: '2026-11-10', mealSlotId: 2, name: 'Dinner' })],
 })
 const timers = (list: CookTimer[] = []) => ({ now: '2026-11-10T18:00:00Z', timers: list })
 const started: CookTimer = {
@@ -27,10 +28,10 @@ const started: CookTimer = {
 function renderReheat() {
   return renderWithProviders(
     <Routes>
-      <Route path="/cook/reheat/:date/:slotId" element={<ReheatScreen />} />
+      <Route path="/cook/reheat/:date/:slotId/:courseId" element={<ReheatScreen />} />
       <Route path="/" element={<p>Home page</p>} />
     </Routes>,
-    '/cook/reheat/2026-11-10/2',
+    '/cook/reheat/2026-11-10/2/1',
   )
 }
 

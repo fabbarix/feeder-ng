@@ -46,7 +46,7 @@ func crsBSteps(sc *godog.ScenarioContext, w *World) {
 		var kept, relaxed []string
 		for _, s := range v.([]any) {
 			slot := s.(map[string]any)
-			m, _ := slot["meal"].(map[string]any)
+			m := slotMeal(slot)
 			if m == nil || m["servedFromLeftover"] != nil {
 				continue
 			}

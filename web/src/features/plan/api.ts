@@ -7,20 +7,24 @@ import type {
   CookPreview,
   ExclusionCell,
   Leftover,
-  PlanSlot,
+  PlanEntry,
   PlanView,
   PlannedMeal,
   MealSlotChoice,
   RecipeChoice,
+  SlotDayKey,
   SlotKey,
   SlotRule,
   TagChoice,
   VarietyRule,
 } from './types'
 
-/** A key with a courseId is `/api/plan/<date>/<slot>/<course>`; without one, the course-less alias (the main Course, until C3). */
-const slotPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}${key.courseId === undefined ? '' : `/${key.courseId}`}`
-const slotDayPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}`
+/** A Planned Meal key is `/api/plan/<date>/<slot>/<course>`: a key without its Course is refused before any request (crs-c3 §1). */
+const slotPath = (key: SlotKey) => {
+  if (!Number.isInteger(key.courseId)) throw new Error('A Planned Meal key needs its Course')
+  return `/api/plan/${key.date}/${key.mealSlotId}/${key.courseId}`
+}
+const slotDayPath = (key: SlotDayKey) => `/api/plan/${key.date}/${key.mealSlotId}`
 
 /** Planning API calls (routes in docs/dev/design/t11-planning.md). */
 export const planApi = {
@@ -31,8 +35,8 @@ export const planApi = {
     const s = q.toString()
     return http.get<PlanView>(`/api/plan${s ? `?${s}` : ''}`)
   },
-  toConfirm: () => http.get<{ slots: PlanSlot[] }>('/api/plan/to-confirm'),
-  couldntPlan: () => http.get<{ slots: PlanSlot[] }>('/api/plan/couldnt-plan'),
+  toConfirm: () => http.get<{ slots: PlanEntry[] }>('/api/plan/to-confirm'),
+  couldntPlan: () => http.get<{ slots: PlanEntry[] }>('/api/plan/couldnt-plan'),
   /** CRS G2 (RX): every cell held back by an Exclusion, with who excluded what. Every User may read it. */
   couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
@@ -47,10 +51,10 @@ export const planApi = {
     http.post<CookedResult>(`${slotPath(key)}/cooked`, leftoverPortions === undefined ? {} : { leftoverPortions }),
   notCooked: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/not-cooked`),
   /** POST /api/plan/<date>/<slot>/all/cooked, body `{ courses }` (no body when none is given): every unresolved Course Cooked in one step. */
-  cookedAll: (slot: SlotKey, courses?: CookedAllEntry[]) =>
+  cookedAll: (slot: SlotDayKey, courses?: CookedAllEntry[]) =>
     http.post<CookedAllResult>(`${slotDayPath(slot)}/all/cooked`, courses === undefined ? undefined : { courses }),
   /** POST /api/plan/<date>/<slot>/all/not-cooked, no body. Answers `{ meals }`. */
-  notCookedAll: (slot: SlotKey) => http.post<{ meals: PlannedMeal[] }>(`${slotDayPath(slot)}/all/not-cooked`),
+  notCookedAll: (slot: SlotDayKey) => http.post<{ meals: PlannedMeal[] }>(`${slotDayPath(slot)}/all/not-cooked`),
 
   slotRules: () => http.get<SlotRule[]>('/api/slot-rules'),
   addSlotRule: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => http.post<SlotRule>('/api/slot-rules', body),

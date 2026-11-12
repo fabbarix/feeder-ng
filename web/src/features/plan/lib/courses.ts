@@ -13,37 +13,20 @@ export interface CourseRowModel {
   caption: string | null
 }
 
-/**
- * The slot's Courses. Without `slot.courses` (older fixtures, the course-less aliases) the slot is ONE main Course
- * built from `meal` and `unfilled`.
- */
+/** The slot's Courses in the slot's order (none when the slot carries none). A slot has no meal of its own (crs-c3). */
 export function slotCourses(slot: PlanSlot): PlanCourse[] {
-  if (slot.courses) return slot.courses
-  return [
-    {
-      courseId: slot.meal?.courseId ?? 0,
-      name: slot.meal?.courseName ?? 'Main',
-      main: true,
-      optional: false,
-      optOutMemberIds: [],
-      meal: slot.meal,
-      unfilled: slot.unfilled,
-      coveredBy: null,
-      unserved: null,
-    },
-  ]
+  return slot.courses ?? []
 }
 
-/** The Course a key names: the given courseId, else the main Course (the slot's alias for a slot without `courses`). */
-export function courseOf(slot: PlanSlot, courseId?: number): PlanCourse | undefined {
-  const all = slotCourses(slot)
-  return courseId === undefined ? (all.find((c) => c.main) ?? all[0]) : all.find((c) => c.courseId === courseId)
+/** The Course a key names by its real id; no id, or an id the slot does not serve, names no Course. */
+export function courseOf(slot: PlanSlot, courseId: number | undefined): PlanCourse | undefined {
+  if (courseId === undefined) return undefined
+  return slotCourses(slot).find((c) => c.courseId === courseId)
 }
 
-/** `{ date, mealSlotId }`, plus `courseId` of the Course only when the slot carries `courses`. */
+/** The Planned Meal key of one Course: `{ date, mealSlotId, courseId }` with the Course's real id. */
 export function courseKey(slot: PlanSlot, course: PlanCourse): SlotKey {
-  const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
-  return slot.courses ? { ...key, courseId: course.courseId } : key
+  return { date: slot.date, mealSlotId: slot.mealSlotId, courseId: course.courseId }
 }
 
 /**

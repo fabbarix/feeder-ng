@@ -43,7 +43,7 @@ func reheatSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return err
 		}
-		w.Last = w.Client.Get(fmt.Sprintf("/api/cook/meals/%s/%d", date, slot))
+		w.Last = w.Client.Get(fmt.Sprintf("/api/cook/meals/%s/%d/%d", date, slot, mainCourseID(w)))
 		return nil
 	})
 	sc.Step(`^the Cook timer "([^"]*)" lasts (\d+) seconds on the meal of (\d{4}-\d{2}-\d{2})$`, func(label string, secs int, date string) error {
@@ -59,8 +59,8 @@ func reheatSteps(sc *godog.ScenarioContext, w *World) {
 			if t["label"] != label {
 				continue
 			}
-			if t["scope"] != fmt.Sprintf("meal:%s/%d", date, slot) || t["durationSeconds"] != float64(secs) {
-				return fmt.Errorf("timer %q = %v, want scope meal:%s/%d and %d seconds", label, t, date, slot, secs)
+			if t["scope"] != fmt.Sprintf("meal:%s/%d/%d", date, slot, mainCourseID(w)) || t["durationSeconds"] != float64(secs) {
+				return fmt.Errorf("timer %q = %v, want scope meal:%s/%d/%d and %d seconds", label, t, date, slot, mainCourseID(w), secs)
 			}
 			return nil
 		}

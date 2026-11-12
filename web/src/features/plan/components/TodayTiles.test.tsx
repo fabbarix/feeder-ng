@@ -8,7 +8,7 @@ import { LeftoversTile, ToConfirmTile } from './TodayTiles'
 describe('ToConfirmTile', () => {
   function setup() {
     const h = { onYesCooked: vi.fn(), onAdjust: vi.fn(), onNotCooked: vi.fn() }
-    render(<ToConfirmTile slots={[slot({ date: '2026-11-09' })]} {...h} />)
+    render(<ToConfirmTile slots={[slot({ date: '2026-11-09', courseId: 1, courseName: 'Main' })]} {...h} />)
     return h
   }
 
@@ -21,7 +21,7 @@ describe('ToConfirmTile', () => {
 
   it('offers Yes, Cooked (one tap), Adjust and Not cooked, each reporting the slot', async () => {
     const h = setup()
-    const key = { date: '2026-11-09', mealSlotId: 2 }
+    const key = { date: '2026-11-09', mealSlotId: 2, courseId: 1 }
     const yes = screen.getByRole('button', { name: 'Yes, Cooked' })
     expect(yes).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(yes)

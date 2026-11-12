@@ -1,5 +1,5 @@
 import { planStrings as s } from '../strings'
-import type { PlanSlot } from '../types'
+import type { PlanEntry } from '../types'
 import { courseCells } from './couldntGroups'
 import { weekdayName } from './phrase'
 
@@ -26,7 +26,7 @@ interface Clause {
 }
 
 /** One Meal Slot name: "weekend breakfasts", "every dinner", "Tuesday and Thursday dinners", "4 dinners". */
-function clauseFor(name: string, affected: PlanSlot[], inPlan: number): Clause {
+function clauseFor(name: string, affected: PlanEntry[], inPlan: number): Clause {
   const days = [...new Set(affected.map((x) => weekdayName(x.date)))]
   const count = affected.length
   const lower = name.toLowerCase()
@@ -46,11 +46,11 @@ function clauseFor(name: string, affected: PlanSlot[], inPlan: number): Clause {
  * or a recorded reason, not a past slot). Without it the affected meals are all it knows. CRS G2: `capitalise: false` gives
  * the clause as it reads inside a sentence ("every dinner this week", "Tuesday and Wednesday dinners" keeps its weekday capitals).
  */
-export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected, options: { capitalise?: boolean } = {}): string {
+export function summarizeSlots(affected: PlanEntry[], everything: PlanEntry[] = affected, options: { capitalise?: boolean } = {}): string {
   if (affected.length === 0) return ''
   // Only slots that still count: a Planned Meal or a recorded reason. A slot whose time has gone has neither.
   const all = everything.filter((x) => x.meal != null || x.unfilled != null)
-  const names = new Map<string, PlanSlot[]>()
+  const names = new Map<string, PlanEntry[]>()
   for (const slot of affected) {
     const key = slot.name.toLowerCase()
     names.set(key, [...(names.get(key) ?? []), slot])
@@ -76,7 +76,7 @@ export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = af
  * "…, plus …", the whole-slot part first, then the Courses by number of cells. '' when there are no cells.
  * For cells of slots without Courses it gives exactly what `summarizeSlots(cells, all)` gives.
  */
-export function summarizeCells(cells: PlanSlot[], all: PlanSlot[] = cells): string {
+export function summarizeCells(cells: PlanEntry[], all: PlanEntry[] = cells): string {
   if (cells.length === 0) return ''
   const counting = courseCells(all)
   // One representative per Meal Slot that still counts: "every dinner" is measured over the slots, as summarizeSlots does.
@@ -86,8 +86,8 @@ export function summarizeCells(cells: PlanSlot[], all: PlanSlot[] = cells): stri
   const affectedCourses = new Map<string, Set<number>>()
   for (const x of cells) affectedCourses.set(slotKey(x), (affectedCourses.get(slotKey(x)) ?? new Set()).add(courseKey(x)))
 
-  const whole: PlanSlot[] = []
-  const perCourse = new Map<number, PlanSlot[]>()
+  const whole: PlanEntry[] = []
+  const perCourse = new Map<number, PlanEntry[]>()
   const seenSlots = new Set<string>()
   for (const x of cells) {
     const k = slotKey(x)
@@ -117,5 +117,5 @@ export function summarizeCells(cells: PlanSlot[], all: PlanSlot[] = cells): stri
   return out.charAt(0).toUpperCase() + out.slice(1)
 }
 
-const slotKey = (x: PlanSlot): string => `${x.date}/${x.mealSlotId}`
-const courseKey = (x: PlanSlot): number => x.courseId ?? -1
+const slotKey = (x: PlanEntry): string => `${x.date}/${x.mealSlotId}`
+const courseKey = (x: PlanEntry): number => x.courseId ?? -1

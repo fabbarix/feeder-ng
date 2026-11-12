@@ -26,9 +26,9 @@ type (
 type Date string
 
 // SlotKey identifies one cell: one Course of one Meal Slot on one date, the key
-// of a Planned Meal (ADR 0008). CourseID 0 is the transition shim of the plan
-// package: a cell with no Course, which skips Course fit and the Whole meal
-// rules, so a single-Course Household plans exactly as before.
+// of a Planned Meal (ADR 0008). CourseID 0 is a cell with no Course, which skips
+// Course fit and the Whole meal rules; the plan package only produces it for a
+// slot without Courses, which the store never holds (crs-c3).
 type SlotKey struct {
 	Date       Date
 	MealSlotID int64

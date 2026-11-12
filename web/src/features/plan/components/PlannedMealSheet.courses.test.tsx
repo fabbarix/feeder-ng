@@ -14,7 +14,7 @@ const cool = { code: 'cooldown_relaxed' as const, date: '2026-11-08', recipeId: 
 const main = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 1, name: 'Main', main: true, meal: courseMeal(1, 'Main', { recipeName: 'Roast chicken', portions: 4 }), ...over })
 const side = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { recipeName: 'Green beans', recipeId: 8, portions: 2 }), ...over })
 
-function setup(s: PlanSlot, courseId?: number) {
+function setup(s: PlanSlot, courseId: number) {
   const h = {
     onClose: vi.fn(), onCook: vi.fn(), onMarkCooked: vi.fn(), onSwap: vi.fn(), onPin: vi.fn(), onUnpin: vi.fn(), onChoose: vi.fn(),
     onMarkRecipes: vi.fn(), onAddRecipes: vi.fn(), onReviewVarietyRules: vi.fn(),
@@ -30,10 +30,10 @@ describe('one Course looks exactly as before (regression guard)', () => {
   it('a single Course in `courses` gives the same sheet as a slot without `courses`', () => {
     const m = meal({ recipeName: 'Chicken curry', why: [{ code: 'favourite', members: ['Anna'] }] })
     const handlers = { onClose: () => {}, onCook: () => {}, onMarkCooked: () => {}, onSwap: () => {}, onPin: () => {}, onUnpin: () => {}, onChoose: () => {} }
-    const before = render(<PlannedMealSheet open slot={slot({ meal: m })} today="2026-11-10" {...handlers} />)
+    const before = render(<PlannedMealSheet open slot={slot({ meal: m })} courseId={1} today="2026-11-10" {...handlers} />)
     const old = withoutGeneratedIds(screen.getByRole('dialog').innerHTML)
     before.unmount()
-    render(<PlannedMealSheet open slot={courseSlot([planCourse({ courseId: 1, meal: m })], { meal: m })} courseId={1} today="2026-11-10" {...handlers} />)
+    render(<PlannedMealSheet open slot={courseSlot([planCourse({ courseId: 1, meal: m })])} courseId={1} today="2026-11-10" {...handlers} />)
     expect(withoutGeneratedIds(screen.getByRole('dialog').innerHTML)).toBe(old)
   })
 })

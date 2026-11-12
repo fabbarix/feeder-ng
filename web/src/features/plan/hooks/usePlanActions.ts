@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { planApi } from '../api'
-import type { SlotKey } from '../types'
+import type { SlotDayKey, SlotKey } from '../types'
 import { invalidatePlan } from './planCache'
 
 export interface UsePlanActions {
@@ -16,7 +16,7 @@ export interface UsePlanActions {
   /** Undo of a Swap: the previous Recipe back, unpinned again when it was not Pinned before. */
   restore: (key: SlotKey, recipeId: number, pinned: boolean) => Promise<boolean>
   /** CRS F: POST .../all/not-cooked for the slot (Not cooked: whole slot), then the plan refetches. Resolves true on success. */
-  notCookedSlot: (slot: SlotKey) => Promise<boolean>
+  notCookedSlot: (slot: SlotDayKey) => Promise<boolean>
   /** Message of the last failed action, or null. */
   error: string | null
 }

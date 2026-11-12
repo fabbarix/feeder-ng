@@ -186,10 +186,7 @@ func TestRunnerWithTheRealSourcesPlansMainSideAndDessertWithCourseAttendance(t *
 		t.Fatal(err)
 	}
 	at := func(course int64) (plan.Meal, bool) {
-		k := plan.Key{Date: "2026-11-09", MealSlotID: h.slot}
-		if course != h.main {
-			k.CourseID = course
-		}
+		k := plan.Key{Date: "2026-11-09", MealSlotID: h.slot, CourseID: course}
 		m, err := st.Meal(ctx, k)
 		return m, err == nil
 	}

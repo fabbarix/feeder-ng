@@ -152,16 +152,16 @@ func TestRecipeViewScalesUsesAndRejectsBadBatches(t *testing.T) {
 	}
 }
 
-func TestMealViewUsesTheMealsBatchesAndMarks(t *testing.T) {
+func TestCourseViewUsesTheMealsBatchesAndMarks(t *testing.T) {
 	f := setup(t)
 	f.meals.meals = []service.MealInfo{
-		{Date: "2026-11-09", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 2, State: "planned", At: time.Date(2026, 11, 9, 18, 30, 0, 0, time.UTC)},
-		{Date: "2026-11-08", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "cooked"},
+		{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 2, State: "planned", At: time.Date(2026, 11, 9, 18, 30, 0, 0, time.UTC)},
+		{Date: "2026-11-08", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "cooked"},
 	}
-	if _, err := f.svc.SetMark(ctx, "meal:2026-11-09/3", 0, true); err != nil {
+	if _, err := f.svc.SetMark(ctx, "meal:2026-11-09/3/5", 0, true); err != nil {
 		t.Fatal(err)
 	}
-	v, err := f.svc.MealView(ctx, "2026-11-09", 3)
+	v, err := f.svc.CourseView(ctx, "2026-11-09", 3, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,10 +171,10 @@ func TestMealViewUsesTheMealsBatchesAndMarks(t *testing.T) {
 	if !v.Advance[0].Done || v.Advance[0].Warning {
 		t.Errorf("Advance Step should be done: %+v", v.Advance[0])
 	}
-	if _, err := f.svc.MealView(ctx, "2026-11-08", 3); !errors.Is(err, service.ErrNotCookable) {
+	if _, err := f.svc.CourseView(ctx, "2026-11-08", 3, 5); !errors.Is(err, service.ErrNotCookable) {
 		t.Errorf("a cooked meal: %v", err)
 	}
-	if _, err := f.svc.MealView(ctx, "2026-11-12", 3); !errors.Is(err, service.ErrNotFound) {
+	if _, err := f.svc.CourseView(ctx, "2026-11-12", 3, 5); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("no meal: %v", err)
 	}
 }
@@ -200,7 +200,7 @@ func TestViewIncludesTheScopesTimers(t *testing.T) {
 
 func TestSetMarkRules(t *testing.T) {
 	f := setup(t)
-	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, Batches: 1, State: "planned"}}
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, RecipeID: 12, Batches: 1, State: "planned"}}
 	m, err := f.svc.SetMark(ctx, "recipe:12", 0, true)
 	if err != nil || !m.Done || m.DoneAt == nil || !m.DoneAt.Equal(f.clk.Now()) {
 		t.Fatalf("mark = %+v %v", m, err)
@@ -225,7 +225,7 @@ func TestSetMarkRules(t *testing.T) {
 	if _, err := f.svc.SetMark(ctx, "recipe:99", 0, true); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("unknown Recipe: %v", err)
 	}
-	if _, err := f.svc.SetMark(ctx, "meal:2026-11-20/1", 0, true); !errors.Is(err, service.ErrNotFound) {
+	if _, err := f.svc.SetMark(ctx, "meal:2026-11-20/1/5", 0, true); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("unknown meal: %v", err)
 	}
 }
@@ -510,22 +510,22 @@ func TestBoardStreakFromWasteDates(t *testing.T) {
 func TestBoardNextAdvanceStepOverPlannedMeals(t *testing.T) {
 	f := setup(t)
 	f.meals.meals = []service.MealInfo{
-		{Date: "2026-11-09", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned", At: time.Date(2026, 11, 9, 18, 0, 0, 0, time.UTC)},
-		{Date: "2026-11-10", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned", At: time.Date(2026, 11, 10, 18, 0, 0, 0, time.UTC)},
+		{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned", At: time.Date(2026, 11, 9, 18, 0, 0, 0, time.UTC)},
+		{Date: "2026-11-10", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned", At: time.Date(2026, 11, 10, 18, 0, 0, 0, time.UTC)},
 	}
 	b, err := f.svc.Board(ctx)
 	if err != nil || b.NextAdvance == nil {
 		t.Fatalf("board = %+v %v", b, err)
 	}
 	n := b.NextAdvance
-	if n.Scope != "meal:2026-11-09/3" || n.Step != 0 || n.Text != "Marinate the chicken" || n.RecipeName != "Chicken stew" ||
+	if n.Scope != "meal:2026-11-09/3/5" || n.Step != 0 || n.Text != "Marinate the chicken" || n.RecipeName != "Chicken stew" ||
 		!n.DueAt.Equal(time.Date(2026, 11, 9, 14, 0, 0, 0, time.UTC)) || n.Overdue || n.SlotName != "Dinner" {
 		t.Errorf("next advance = %+v", n)
 	}
 	// Marking tonight's marinade done moves on to tomorrow's.
-	_, _ = f.svc.SetMark(ctx, "meal:2026-11-09/3", 0, true)
+	_, _ = f.svc.SetMark(ctx, "meal:2026-11-09/3/5", 0, true)
 	b, _ = f.svc.Board(ctx)
-	if b.NextAdvance == nil || b.NextAdvance.Scope != "meal:2026-11-10/3" {
+	if b.NextAdvance == nil || b.NextAdvance.Scope != "meal:2026-11-10/3/5" {
 		t.Errorf("after marking: %+v", b.NextAdvance)
 	}
 	// Once the due time has passed it is flagged overdue.
@@ -534,7 +534,7 @@ func TestBoardNextAdvanceStepOverPlannedMeals(t *testing.T) {
 	if b.NextAdvance == nil || !b.NextAdvance.Overdue {
 		t.Errorf("overdue: %+v", b.NextAdvance)
 	}
-	_, _ = f.svc.SetMark(ctx, "meal:2026-11-10/3", 0, true)
+	_, _ = f.svc.SetMark(ctx, "meal:2026-11-10/3/5", 0, true)
 	if b, _ = f.svc.Board(ctx); b.NextAdvance != nil {
 		t.Errorf("nothing left: %+v", b.NextAdvance)
 	}
@@ -577,10 +577,10 @@ func TestTheFinishedEventShapeCarriesTheRecipeName(t *testing.T) {
 
 func TestTheFinishedEventForAMealScopeNamesItsRecipeAndAFreeTimerHasNone(t *testing.T) {
 	f := setup(t)
-	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 2, State: "planned"}}
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 2, State: "planned"}}
 	ch, cancel := service.SubscribeFinished(f.bus)
 	defer cancel()
-	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: "meal:2026-11-09/3", Step: intp(2)})
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: "meal:2026-11-09/3/5", Step: intp(2)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,7 +596,7 @@ func TestTheFinishedEventForAMealScopeNamesItsRecipeAndAFreeTimerHasNone(t *test
 			t.Fatalf("only %d finished events", i)
 		}
 	}
-	if got[meal.ID].RecipeName != "Chicken stew" || got[meal.ID].Scope != "meal:2026-11-09/3" {
+	if got[meal.ID].RecipeName != "Chicken stew" || got[meal.ID].Scope != "meal:2026-11-09/3/5" {
 		t.Errorf("meal timer = %+v", got[meal.ID])
 	}
 	if got[free.ID].RecipeName != "" || got[free.ID].Label != "Eggs" {
@@ -711,15 +711,15 @@ func TestAPauseThatLandedBeforeTheFinishIsNotOverwrittenByTheSweep(t *testing.T)
 }
 
 // R4 B10: the view carries the household date so the client can hide Mark as Cooked on a future meal.
-func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
+func TestCourseViewCarriesTheHouseholdDate(t *testing.T) {
 	f := setup(t)
-	f.meals.meals = []service.MealInfo{{Date: "2026-11-10", MealSlotID: 3, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned"}}
-	v, err := f.svc.MealView(ctx, "2026-11-10", 3)
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-10", MealSlotID: 3, CourseID: 5, SlotName: "Dinner", RecipeID: 12, Batches: 1, State: "planned"}}
+	v, err := f.svc.CourseView(ctx, "2026-11-10", 3, 5)
 	if err != nil || v.Today != "2026-11-09" {
 		t.Errorf("Today = %q, %v; want 2026-11-09 (Rome, 13:00 local)", v.Today, err)
 	}
 	f.clk.Set(time.Date(2026, 11, 9, 23, 30, 0, 0, time.UTC)) // 00:30 on the 10th in Rome
-	if v, _ = f.svc.MealView(ctx, "2026-11-10", 3); v.Today != "2026-11-10" {
+	if v, _ = f.svc.CourseView(ctx, "2026-11-10", 3, 5); v.Today != "2026-11-10" {
 		t.Errorf("Today = %q after local midnight, want 2026-11-10 (household zone, not UTC)", v.Today)
 	}
 }
@@ -728,10 +728,10 @@ func TestMealViewCarriesTheHouseholdDate(t *testing.T) {
 func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.T) {
 	f := setup(t)
 	f.meals.meals = []service.MealInfo{
-		{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"},
-		{Date: "2026-11-10", MealSlotID: 3, RecipeID: 12, State: "planned"},
+		{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, RecipeID: 12, State: "planned"},
+		{Date: "2026-11-10", MealSlotID: 3, CourseID: 5, RecipeID: 12, State: "planned"},
 	}
-	meal := cook.MealScope("2026-11-09", 3, 0)
+	meal := cook.MealScope("2026-11-09", 3, 5)
 	running, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: meal, Label: "Simmer", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
@@ -743,7 +743,7 @@ func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.
 	if _, err := f.svc.Pause(ctx, paused.ID); err != nil {
 		t.Fatal(err)
 	}
-	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3, 0), Label: "Other", DurationSeconds: 600})
+	other, _, _ := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-10", 3, 5), Label: "Other", DurationSeconds: 600})
 	free, _, _ := f.svc.StartTimer(ctx, service.StartInput{Label: "Eggs", DurationSeconds: 300})
 	ch, cancel := f.bus.Subscribe(service.TopicTimers)
 	defer cancel()
@@ -780,11 +780,11 @@ func TestCancelScopeRemovesOnlyThatScopesTimersAndPublishesCancelled(t *testing.
 
 func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 	f := setup(t)
-	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, RecipeID: 12, State: "planned"}}
 	for scope, want := range map[cook.Scope]string{
-		cook.MealScope("2026-11-09", 3, 0): "Chicken stew",
+		cook.MealScope("2026-11-09", 3, 5): "Chicken stew",
 		cook.RecipeScope(12):               "Chicken stew",
-		cook.MealScope("2026-11-20", 1, 0): "",
+		cook.MealScope("2026-11-20", 1, 5): "",
 		cook.RecipeScope(99):               "",
 		"":                                 "",
 	} {
@@ -800,8 +800,8 @@ func TestScopeRecipeNameResolvesMealAndRecipeScopes(t *testing.T) {
 // so the package compiles until the Developer adds it.
 func TestTimersWithRecipeNamesResolvesTheNameOfEachScope(t *testing.T) {
 	f := setup(t)
-	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, RecipeID: 12, State: "planned"}}
-	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3, 0), Label: "Rest", DurationSeconds: 600})
+	f.meals.meals = []service.MealInfo{{Date: "2026-11-09", MealSlotID: 3, CourseID: 5, RecipeID: 12, State: "planned"}}
+	meal, _, err := f.svc.StartTimer(ctx, service.StartInput{Scope: cook.MealScope("2026-11-09", 3, 5), Label: "Rest", DurationSeconds: 600})
 	if err != nil {
 		t.Fatal(err)
 	}

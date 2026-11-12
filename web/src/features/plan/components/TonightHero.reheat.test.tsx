@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { meal, slot } from '../test-utils'
 import { TonightHero } from './TonightHero'
 
-const key = { date: '2026-11-10', mealSlotId: 2 }
+const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
 const before = new Date('2026-11-10T17:00:00Z')
 const after = new Date('2026-11-10T20:00:00Z')
 const served = slot({

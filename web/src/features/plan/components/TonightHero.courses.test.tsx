@@ -36,7 +36,7 @@ describe('one Course looks exactly as before (regression guard)', () => {
     const before = render(<TonightHero slot={slot({ meal: m })} {...props} />)
     const old = before.container.innerHTML
     before.unmount()
-    const after = render(<TonightHero slot={courseSlot([planCourse({ courseId: 1, meal: m })], { meal: m })} {...props} today="2026-11-10" />)
+    const after = render(<TonightHero slot={courseSlot([planCourse({ courseId: 1, meal: m })])} {...props} today="2026-11-10" />)
     expect(after.container.innerHTML).toBe(old)
   })
 })

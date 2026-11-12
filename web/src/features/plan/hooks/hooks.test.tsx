@@ -6,7 +6,7 @@ import { useMarkCooked } from './useMarkCooked'
 import { usePlanActions } from './usePlanActions'
 import { useStockCorrection } from './useStockCorrection'
 
-const key = { date: '2026-11-09', mealSlotId: 2 }
+const key = { date: '2026-11-09', mealSlotId: 2, courseId: 1 }
 
 const preview: CookPreview = {
   meal: { date: '2026-11-09', mealSlotId: 2, recipeId: 7, recipeName: 'Chicken', batches: 1, portions: 2, state: 'planned', pinned: false, servedFromLeftover: null, why: [] },
@@ -32,14 +32,14 @@ describe('useMarkCooked', () => {
   })
 
   it('loads the preview and starts the Leftover at the proposal', async () => {
-    mockApi({ 'GET /api/plan/2026-11-09/2/cook': preview })
+    mockApi({ 'GET /api/plan/2026-11-09/2/1/cook': preview })
     const { result } = renderHook(() => useMarkCooked(key), { wrapper })
     await waitFor(() => expect(result.current.preview).not.toBeNull())
     expect(result.current.leftover).toBe(2)
   })
 
   it('confirms with the edited portions and exposes the warnings, which can be dismissed one by one', async () => {
-    const api = mockApi({ 'GET /api/plan/2026-11-09/2/cook': preview, 'POST /api/plan/2026-11-09/2/cooked': cooked })
+    const api = mockApi({ 'GET /api/plan/2026-11-09/2/1/cook': preview, 'POST /api/plan/2026-11-09/2/1/cooked': cooked })
     const { result } = renderHook(() => useMarkCooked(key), { wrapper })
     await waitFor(() => expect(result.current.preview).not.toBeNull())
     act(() => result.current.setLeftover(2.5))
@@ -48,14 +48,14 @@ describe('useMarkCooked', () => {
       res = await result.current.confirm()
     })
     expect(res).toEqual(cooked)
-    expect(api.callsTo('POST', '/api/plan/2026-11-09/2/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 })
+    expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 })
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([11, 13])
     act(() => result.current.dismissWarning(11))
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([13])
   })
 
   it('B13: exposes where the Leftover went once Mark as Cooked succeeded', async () => {
-    mockApi({ 'GET /api/plan/2026-11-09/2/cook': preview, 'POST /api/plan/2026-11-09/2/cooked': cooked })
+    mockApi({ 'GET /api/plan/2026-11-09/2/1/cook': preview, 'POST /api/plan/2026-11-09/2/1/cooked': cooked })
     const { result } = renderHook(() => useMarkCooked(key), { wrapper })
     await waitFor(() => expect(result.current.preview).not.toBeNull())
     expect(result.current.outcome).toBeNull()
@@ -69,8 +69,8 @@ describe('useMarkCooked', () => {
 
   it('a failed confirmation reports it and keeps the sheet usable', async () => {
     mockApi({
-      'GET /api/plan/2026-11-09/2/cook': preview,
-      'POST /api/plan/2026-11-09/2/cooked': { status: 500, json: { error: { code: 'internal', message: 'boom' } } },
+      'GET /api/plan/2026-11-09/2/1/cook': preview,
+      'POST /api/plan/2026-11-09/2/1/cooked': { status: 500, json: { error: { code: 'internal', message: 'boom' } } },
     })
     const { result } = renderHook(() => useMarkCooked(key), { wrapper })
     await waitFor(() => expect(result.current.preview).not.toBeNull())
@@ -84,7 +84,7 @@ describe('useMarkCooked', () => {
   })
 
   it('Not cooked posts to not-cooked', async () => {
-    const api = mockApi({ 'GET /api/plan/2026-11-09/2/cook': preview, 'POST /api/plan/2026-11-09/2/not-cooked': { ...preview.meal, state: 'skipped' } })
+    const api = mockApi({ 'GET /api/plan/2026-11-09/2/1/cook': preview, 'POST /api/plan/2026-11-09/2/1/not-cooked': { ...preview.meal, state: 'skipped' } })
     const { result } = renderHook(() => useMarkCooked(key), { wrapper })
     await waitFor(() => expect(result.current.preview).not.toBeNull())
     let ok = false
@@ -92,7 +92,7 @@ describe('useMarkCooked', () => {
       ok = await result.current.notCooked()
     })
     expect(ok).toBe(true)
-    expect(api.callsTo('POST', '/api/plan/2026-11-09/2/not-cooked')).toHaveLength(1)
+    expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/not-cooked')).toHaveLength(1)
   })
 })
 
@@ -108,29 +108,29 @@ describe('usePlanActions', () => {
   })
 
   it('setMeal puts the Recipe on the slot', async () => {
-    const api = mockApi({ 'PUT /api/plan/2026-11-10/3': { ...preview.meal, pinned: true } })
+    const api = mockApi({ 'PUT /api/plan/2026-11-10/3/1': { ...preview.meal, pinned: true } })
     const { result } = renderHook(() => usePlanActions(), { wrapper })
     await act(async () => {
-      await result.current.setMeal({ date: '2026-11-10', mealSlotId: 3 }, 9)
+      await result.current.setMeal({ date: '2026-11-10', mealSlotId: 3, courseId: 1 }, 9)
     })
-    expect(api.callsTo('PUT', '/api/plan/2026-11-10/3')[0]?.body).toEqual({ recipeId: 9 })
+    expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')[0]?.body).toEqual({ recipeId: 9 })
   })
 
   it('pin (the old confirm) and unpin post to their routes', async () => {
-    const api = mockApi({ 'POST /api/plan/2026-11-10/3/confirm': preview.meal, 'POST /api/plan/2026-11-10/3/unpin': preview.meal })
+    const api = mockApi({ 'POST /api/plan/2026-11-10/3/1/confirm': preview.meal, 'POST /api/plan/2026-11-10/3/1/unpin': preview.meal })
     const { result } = renderHook(() => usePlanActions(), { wrapper })
     await act(async () => {
-      await result.current.pin({ date: '2026-11-10', mealSlotId: 3 })
-      await result.current.unpin({ date: '2026-11-10', mealSlotId: 3 })
+      await result.current.pin({ date: '2026-11-10', mealSlotId: 3, courseId: 1 })
+      await result.current.unpin({ date: '2026-11-10', mealSlotId: 3, courseId: 1 })
     })
-    expect(api.calls.map((c) => c.path)).toEqual(['/api/plan/2026-11-10/3/confirm', '/api/plan/2026-11-10/3/unpin'])
+    expect(api.calls.map((c) => c.path)).toEqual(['/api/plan/2026-11-10/3/1/confirm', '/api/plan/2026-11-10/3/1/unpin'])
   })
 
   it('keeps the message of a failed action', async () => {
-    mockApi({ 'PUT /api/plan/2026-11-10/3': { status: 422, json: { error: { code: 'recipe_archived', message: 'The Recipe is archived' } } } })
+    mockApi({ 'PUT /api/plan/2026-11-10/3/1': { status: 422, json: { error: { code: 'recipe_archived', message: 'The Recipe is archived' } } } })
     const { result } = renderHook(() => usePlanActions(), { wrapper })
     await act(async () => {
-      await result.current.setMeal({ date: '2026-11-10', mealSlotId: 3 }, 9).catch(() => {})
+      await result.current.setMeal({ date: '2026-11-10', mealSlotId: 3, courseId: 1 }, 9).catch(() => {})
     })
     await waitFor(() => expect(result.current.error).toBe('The Recipe is archived'))
   })

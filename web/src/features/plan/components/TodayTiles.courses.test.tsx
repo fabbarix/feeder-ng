@@ -3,13 +3,13 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { courseMeal, slot } from '../test-utils'
-import type { PlanSlot } from '../types'
+import type { PlanEntry } from '../types'
 import { ToConfirmTile } from './TodayTiles'
 
-const entry = (courseId: number, courseName: string, recipeName: string, over: Partial<PlanSlot> = {}): PlanSlot =>
+const entry = (courseId: number, courseName: string, recipeName: string, over: Partial<PlanEntry> = {}): PlanEntry =>
   slot({ date: '2026-11-09', courseId, courseName, meal: courseMeal(courseId, courseName, { recipeName, date: '2026-11-09' }), ...over })
 
-function setup(slots: PlanSlot[]) {
+function setup(slots: PlanEntry[]) {
   const h = { onYesCooked: vi.fn(), onAdjust: vi.fn(), onNotCooked: vi.fn(), onMarkAllCooked: vi.fn() }
   const view = render(<ToConfirmTile slots={slots} {...h} />)
   return { ...h, container: view.container }
@@ -17,7 +17,7 @@ function setup(slots: PlanSlot[]) {
 
 describe('ToConfirmTile with Courses', () => {
   it('one Course per slot looks exactly as before, even when the entries carry a courseId (regression guard)', () => {
-    const plain = render(<ToConfirmTile slots={[slot({ date: '2026-11-09' })]} onYesCooked={() => {}} onAdjust={() => {}} onNotCooked={() => {}} />)
+    const plain = render(<ToConfirmTile slots={[slot({ date: '2026-11-09', courseId: 1, courseName: 'Main' })]} onYesCooked={() => {}} onAdjust={() => {}} onNotCooked={() => {}} />)
     const old = plain.container.innerHTML
     plain.unmount()
     const withCourse = render(<ToConfirmTile slots={[slot({ date: '2026-11-09', courseId: 1, courseName: 'Main', meal: courseMeal(1, 'Main', { date: '2026-11-09' }) })]} onYesCooked={() => {}} onAdjust={() => {}} onNotCooked={() => {}} />)

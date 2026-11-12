@@ -3,7 +3,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
-import { useCourses } from '../../../lib/courses/useCourses'
 import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
 import { advanceGroups, courseMenuEntries, effectiveFilter, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
@@ -22,7 +21,6 @@ export interface UseCookTimeline {
   error: Error | null
   /** The server answered 409 not_cookable: nothing is left to cook. */
   notCookable: boolean
-  mainCourseId: number | null
   filter: CourseFilter
   setFilter: (filter: CourseFilter) => void
   chips: FilterChip[]
@@ -61,8 +59,6 @@ const TIMELINE_KEY = ['cook', 'view', 'timeline'] as const
  */
 export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
   const client = useQueryClient()
-  const courses = useCourses()
-  const mainCourseId = courses.main?.id ?? null
   const key = [...TIMELINE_KEY, target.date, target.mealSlotId] as const
   const query = useQuery({
     queryKey: key,
@@ -119,15 +115,15 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
       const id = `${item.scope}#reheat`
       if (started.current.has(id)) return
       started.current.add(id)
-      if (reheatTimerOfCourse(timers.timers, item.scope, mainCourseId) !== null) return
+      if (reheatTimerOfCourse(timers.timers, item.scope) !== null) return
       void cookApi
         .startTimer({ scope: item.scope, label: item.timer.label, durationSeconds: item.timer.durationSeconds })
         .then(() => client.invalidateQueries({ queryKey: ['cook', 'timers'] }))
         .catch(() => started.current.delete(id))
     }
-  }, [item, timers.isLoading, timers.timers, mainCourseId, client])
+  }, [item, timers.isLoading, timers.timers, client])
 
-  const gate = useItemGate(items, nav.index, timers.items, mainCourseId, () => {})
+  const gate = useItemGate(items, nav.index, timers.items, () => {})
   const step = current ? toCookStep(current) : null
   const markAdvanceDone = useCallback(
     async (scope: string, stepIndex: number) => {
@@ -142,7 +138,6 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
     isLoading: query.isLoading,
     error: query.error,
     notCookable: query.error instanceof ApiError && query.error.code === 'not_cookable',
-    mainCourseId,
     filter,
     setFilter,
     chips: view ? filterChips(view) : [],

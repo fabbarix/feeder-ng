@@ -94,36 +94,35 @@ describe('holdingTimersFor: Next is held only by the next item\'s own Course', (
   const mainStep0 = timerItem(timer({ id: 2, scope: MAIN_SCOPE, step: 0 }))
 
   it('a running timer of the same Course\'s `after` Step holds', () => {
-    expect(holdingTimersFor(sideNext, [sideStep0], 1)).toEqual([sideStep0])
+    expect(holdingTimersFor(sideNext, [sideStep0])).toEqual([sideStep0])
   })
 
   it('another Course\'s timer for the same Step index never holds (a Step never waits for another Course)', () => {
-    expect(holdingTimersFor(sideNext, [mainStep0], 1)).toEqual([])
-    expect(holdingTimersFor(mainNext, [sideStep0], 1)).toEqual([])
+    expect(holdingTimersFor(sideNext, [mainStep0])).toEqual([])
+    expect(holdingTimersFor(mainNext, [sideStep0])).toEqual([])
   })
 
-  it('the main Course\'s timer holds in either scope form', () => {
-    expect(holdingTimersFor(mainNext, [mainStep0], 1)).toEqual([mainStep0])
-    const afterC3 = timerItem(timer({ id: 3, scope: 'meal:2026-11-10/4/1', step: 0 }))
-    expect(holdingTimersFor(mainNext, [afterC3], 1)).toEqual([afterC3])
-    expect(holdingTimersFor({ ...mainNext, scope: 'meal:2026-11-10/4/1' }, [mainStep0], 1)).toEqual([mainStep0])
+  it('the main Course\'s timer holds like any Course\'s, by its three-part scope (crs-c3)', () => {
+    expect(holdingTimersFor(mainNext, [mainStep0])).toEqual([mainStep0])
+    const side = timerItem(timer({ id: 3, scope: 'meal:2026-11-10/4/2', step: 0 }))
+    expect(holdingTimersFor(mainNext, [side])).toEqual([])
   })
 
   it('only Steps in `after` hold; a finished timer, a timer with no time left, or a Step that never started holds nothing', () => {
-    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 1 }))], 1)).toEqual([])
-    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 0, state: 'finished' }), 0)], 1)).toEqual([])
-    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 0 }), 0)], 1)).toEqual([])
-    expect(holdingTimersFor(sideNext, [], 1)).toEqual([])
+    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 1 }))])).toEqual([])
+    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 0, state: 'finished' }), 0)])).toEqual([])
+    expect(holdingTimersFor(sideNext, [timerItem(timer({ scope: SIDE_SCOPE, step: 0 }), 0)])).toEqual([])
+    expect(holdingTimersFor(sideNext, [])).toEqual([])
   })
 
   it('a paused timer still holds', () => {
     const paused = timerItem(timer({ scope: SIDE_SCOPE, step: 0, state: 'paused', endsAt: null }), 200)
-    expect(holdingTimersFor(sideNext, [paused], 1)).toEqual([paused])
+    expect(holdingTimersFor(sideNext, [paused])).toEqual([paused])
   })
 
   it('no next item, or an item with no `after`, holds nothing', () => {
-    expect(holdingTimersFor(null, [sideStep0], 1)).toEqual([])
-    expect(holdingTimersFor(view.items[0]!, [mainStep0], 1)).toEqual([])
+    expect(holdingTimersFor(null, [sideStep0])).toEqual([])
+    expect(holdingTimersFor(view.items[0]!, [mainStep0])).toEqual([])
   })
 })
 
