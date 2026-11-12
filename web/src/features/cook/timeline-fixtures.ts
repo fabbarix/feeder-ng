@@ -1,6 +1,6 @@
 // CRS F test support: a cooking timeline as GET /api/cook/meals/{date}/{slotId}/all sends it (docs/dev/design/crs-c2.md 5.1).
 // Dinner 19:00 (30 minutes): Main (id 1, the main Course: its scope is two-part until C3) and Side (id 2, three-part).
-import type { CookTimer, TimelineItem, TimelineView } from './types'
+import type { CookTimer, CookView, TimelineItem, TimelineView } from './types'
 
 export const MAIN_SCOPE = 'meal:2026-11-10/4'
 export const SIDE_SCOPE = 'meal:2026-11-10/4/2'
@@ -52,5 +52,27 @@ export function timer(over: Partial<CookTimer> = {}): CookTimer {
   return {
     id: 41, scope: SIDE_SCOPE, step: 0, recipeName: 'Green beans', label: 'Green beans · Simmer the beans', durationSeconds: 600, state: 'running',
     remainingSeconds: 252, endsAt: new Date(now + 252_000).toISOString(), startedAt: new Date(now - 348_000).toISOString(), ...over,
+  }
+}
+
+/** A one-Course TimelineView equivalent to a two-part CookView (the old single-Recipe meal payload): main Course, same Steps and Advance Steps. */
+export function oneCourseTimeline(v: CookView, over: Partial<TimelineView> = {}): TimelineView {
+  const date = v.meal?.date ?? '2026-11-09'
+  const mealSlotId = v.meal?.mealSlotId ?? 2
+  let at = 0
+  const items: TimelineItem[] = v.steps.map((s) => {
+    const startSeconds = at
+    at += s.durationMinutes * 60
+    return {
+      courseId: 1, scope: v.scope, kind: s.kind === 'passive' ? 'passive' : 'active', step: s.index, number: s.number, text: s.text,
+      durationMinutes: s.durationMinutes, startSeconds, endSeconds: at, uses: s.uses, imageUrl: s.imageUrl, timer: s.timer, after: s.after ?? [],
+    }
+  })
+  return {
+    date, mealSlotId, slotName: 'Dinner', time: '19:00', startAt: `${date}T18:00:00Z`, totalMinutes: Math.round(at / 60),
+    courses: [{ courseId: 1, name: 'Main', recipeId: v.recipeId, recipeName: v.recipeName, scope: v.scope, batches: v.batches, fresh: true, state: 'planned' }],
+    advance: v.advance.map((a) => ({ courseId: 1, scope: v.scope, ...a })),
+    items,
+    ...over,
   }
 }

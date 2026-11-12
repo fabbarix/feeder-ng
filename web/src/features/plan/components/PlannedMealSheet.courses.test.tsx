@@ -23,15 +23,18 @@ function setup(s: PlanSlot, courseId?: number) {
   return { ...h, dialog: within(screen.getByRole('dialog')) }
 }
 
+/** React's useId hands out `_r_0_`, `_r_1_`, … per render; only the counter differs between the two renders, so compare with it normalised. */
+const withoutGeneratedIds = (html: string) => html.replace(/_r_[0-9a-z]+_/g, '_r_#_')
+
 describe('one Course looks exactly as before (regression guard)', () => {
   it('a single Course in `courses` gives the same sheet as a slot without `courses`', () => {
     const m = meal({ recipeName: 'Chicken curry', why: [{ code: 'favourite', members: ['Anna'] }] })
     const handlers = { onClose: () => {}, onCook: () => {}, onMarkCooked: () => {}, onSwap: () => {}, onPin: () => {}, onUnpin: () => {}, onChoose: () => {} }
     const before = render(<PlannedMealSheet open slot={slot({ meal: m })} today="2026-11-10" {...handlers} />)
-    const old = screen.getByRole('dialog').innerHTML
+    const old = withoutGeneratedIds(screen.getByRole('dialog').innerHTML)
     before.unmount()
     render(<PlannedMealSheet open slot={courseSlot([planCourse({ courseId: 1, meal: m })], { meal: m })} courseId={1} today="2026-11-10" {...handlers} />)
-    expect(screen.getByRole('dialog').innerHTML).toBe(old)
+    expect(withoutGeneratedIds(screen.getByRole('dialog').innerHTML)).toBe(old)
   })
 })
 

@@ -235,7 +235,9 @@ describe('CookScreen with ONE Course (regression guards: nothing changes)', () =
     setup({ view: sideOnly() })
     expect(await screen.findByRole('heading', { level: 1, name: 'Green beans' })).toBeInTheDocument()
     const tile = await screen.findByRole('article', { name: 'Step 1 of 2' })
-    expect(tile).not.toHaveTextContent('·')
+    // No Course caption on a one-Course timeline ("Side · Green beans"); the Step's own overline ("Passive · 10 min timer") may still have a "·".
+    expect(within(tile).queryByText(/^(Main|Side)\b/)).not.toBeInTheDocument()
+    expect(within(tile).queryByText('Side · Green beans')).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Courses' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Course actions' })).not.toBeInTheDocument()
   })
