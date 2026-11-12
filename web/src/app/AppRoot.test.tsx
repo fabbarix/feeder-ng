@@ -33,9 +33,15 @@ describe('AppRoot signed out', () => {
     expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/auth/google/login')
   })
 
-  it('shows the not-on-the-Allowlist page after Google refuses the Google sign-in', async () => {
+  it('shows the Email not verified page after Google does not verify the email', async () => {
+    mount('/email-not-verified', unauthenticated())
+    expect(await screen.findByRole('heading', { name: 'Email not verified' })).toBeInTheDocument()
+    expect(screen.getByText('Google has not verified this email. Use a different Google sign-in.')).toBeInTheDocument()
+  })
+
+  it('redirects the old /not-invited to the Email not verified page', async () => {
     mount('/not-invited', unauthenticated())
-    expect(await screen.findByRole('heading', { name: 'Not on the Allowlist' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Email not verified' })).toBeInTheDocument()
   })
 
   it('shows why a sign-in failed', async () => {

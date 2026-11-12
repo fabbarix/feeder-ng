@@ -17,9 +17,14 @@ describe('signedOutView', () => {
     expect(signedOutView('/sign-in', '?error=<script>')).toEqual({ view: 'sign-in' })
   })
 
-  it('shows the not-invited page at /not-invited', () => {
-    expect(signedOutView('/not-invited', '')).toEqual({ view: 'not-invited' })
-    expect(signedOutView('/not-invited/', '')).toEqual({ view: 'not-invited' })
+  it('shows the email-not-verified page at /email-not-verified', () => {
+    expect(signedOutView('/email-not-verified', '')).toEqual({ view: 'email-not-verified' })
+    expect(signedOutView('/email-not-verified/', '')).toEqual({ view: 'email-not-verified' })
+  })
+
+  it('redirects the old /not-invited route to /email-not-verified', () => {
+    expect(signedOutView('/not-invited', '')).toEqual({ view: 'redirect', to: '/email-not-verified' })
+    expect(signedOutView('/not-invited/', '')).toEqual({ view: 'redirect', to: '/email-not-verified' })
   })
 
   it('starts Google sign-in at the server route', () => {

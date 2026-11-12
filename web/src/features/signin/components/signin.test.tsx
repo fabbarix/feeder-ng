@@ -6,7 +6,7 @@ const nodeFs = 'node:fs'
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
 const css = readFileSync(`${cwd}/src/features/signin/signin.css`, 'utf8')
-import { NotInvitedPage } from './NotInvitedPage'
+import { EmailNotVerifiedPage } from './EmailNotVerifiedPage'
 import { SignedOut } from './SignedOut'
 import { SignInPage } from './SignInPage'
 
@@ -60,11 +60,11 @@ describe('SignInPage look (5.16)', () => {
   })
 })
 
-describe('NotInvitedPage', () => {
-  it('says the email is not on the Allowlist and how to get in', () => {
-    render(<NotInvitedPage />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Not on the Allowlist' })).toBeInTheDocument()
-    expect(screen.getByText(/ask an Admin/i)).toBeInTheDocument()
+describe('EmailNotVerifiedPage', () => {
+  it('says Google has not verified the email and offers another Google sign-in', () => {
+    render(<EmailNotVerifiedPage />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Email not verified' })).toBeInTheDocument()
+    expect(screen.getByText('Google has not verified this email. Use a different Google sign-in.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Use a different Google sign-in' })).toHaveAttribute('href', '/auth/google/login')
   })
 })
@@ -87,8 +87,13 @@ describe('SignedOut', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/did not work/i)
   })
 
-  it('shows Not on the Allowlist at /not-invited', () => {
+  it('shows Email not verified at /email-not-verified', () => {
+    at('/email-not-verified')
+    expect(screen.getByRole('heading', { name: 'Email not verified' })).toBeInTheDocument()
+  })
+
+  it('redirects the old /not-invited to the Email not verified page', () => {
     at('/not-invited')
-    expect(screen.getByRole('heading', { name: 'Not on the Allowlist' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Email not verified' })).toBeInTheDocument()
   })
 })

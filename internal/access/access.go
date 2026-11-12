@@ -159,7 +159,7 @@ const (
 	SignedIn DecisionKind = iota + 1
 	// Pending: an Access Request exists; show the waiting page. Token is the raw waiting-page token.
 	Pending
-	// Unverified: Google has not verified the address; nothing is created. Redirect to /not-invited.
+	// Unverified: Google has not verified the address; nothing is created. Redirect to /email-not-verified.
 	Unverified
 	// Limited: a rate limit applies (IP, address or denial cooldown); nothing is created. RetryAfter says when.
 	Limited

@@ -48,12 +48,12 @@ Feature: Google sign-in
     And Google sends me back with the code
     Then the allowlist has no entry for "stranger@example.test"
 
-  Scenario: A Google email that is not verified is not invited
+  Scenario: A Google email that is not verified is refused as not verified
     Given a running Feeder with Google sign-in
     And Google knows "user@example.test" but has not verified it
     When I start Google sign-in
     And Google sends me back with the code
-    Then the sign-in redirect goes to "/not-invited"
+    Then the sign-in redirect goes to "/email-not-verified"
     And I have no Feeder session
 
   Scenario: A forged state is refused

@@ -11,7 +11,7 @@ describe('signedOutView at /waiting-for-approval (A1)', () => {
     expect(signedOutView('/waiting-for-approval', '?state=full')).toEqual({ view: 'waiting', kind: 'full' })
     expect(signedOutView('/waiting-for-approval', '?state=bogus')).toEqual({ view: 'waiting', kind: 'waiting' })
   })
-  it('keeps /not-invited for unverified addresses', () => {
-    expect(signedOutView('/not-invited', '')).toEqual({ view: 'not-invited' })
+  it('keeps /email-not-verified for unverified addresses', () => {
+    expect(signedOutView('/email-not-verified', '')).toEqual({ view: 'email-not-verified' })
   })
 })

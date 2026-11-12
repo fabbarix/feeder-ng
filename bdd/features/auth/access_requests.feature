@@ -32,7 +32,7 @@ Feature: Access Requests
 
   Scenario: An unverified Google email is refused without a request
     When the visitor "zia@example.test" signs in with Google but Google has not verified the address
-    Then the sign-in redirect goes to "/not-invited"
+    Then the sign-in redirect goes to "/email-not-verified"
     And I have no Feeder session
     And there are 0 pending Access Requests
 

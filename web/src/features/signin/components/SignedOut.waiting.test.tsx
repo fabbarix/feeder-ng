@@ -29,8 +29,8 @@ describe('SignedOut (A1)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Please try again later' })).toBeInTheDocument()
   })
 
-  it('still shows Not on the Allowlist for an unverified address', () => {
-    at('/not-invited')
-    expect(screen.getByRole('heading', { level: 1, name: 'Not on the Allowlist' })).toBeInTheDocument()
+  it('still shows Email not verified for an unverified address', () => {
+    at('/email-not-verified')
+    expect(screen.getByRole('heading', { level: 1, name: 'Email not verified' })).toBeInTheDocument()
   })
 })
