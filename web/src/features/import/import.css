@@ -61,7 +61,7 @@
   line-height: var(--text-label-line);
 }
 
-/* Only the status chip (Unknown, Archived) may wrap its label and grow. */
+/* Tag chips wrap their label and grow: the status chip (Unknown, Archived) and the answer chips. */
 .import-chips .chip[data-kind='tag'] {
   block-size: auto;
   min-block-size: 28px;
@@ -302,4 +302,15 @@
 .photo-choice__radio:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Error and warning lists in the Import tiles: no browser bullets or indent; a quiet gap between items. */
+.import-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
 }

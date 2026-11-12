@@ -409,6 +409,21 @@ describe('TagsScreen: Delete', () => {
     expect(api.callsTo('DELETE', '/api/tags/1')).toHaveLength(0)
   })
 
+  it('a fast double tap on Delete Tag loads the impact once, and the button is disabled while it loads', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { api } = await show(allTags, { 'GET /api/tags/1/impact': async () => { await gate; return fishImpact } })
+    const sheet = await openFish()
+    const del = within(sheet).getByRole('button', { name: 'Delete Tag' })
+    await userEvent.dblClick(del)
+    await waitFor(() => expect(del).toBeDisabled())
+    release()
+    await screen.findByRole('dialog', { name: 'Delete fish?' })
+    expect(api.callsTo('GET', '/api/tags/1/impact')).toHaveLength(1)
+  })
+
   it('a failed delete keeps the sheet and shows an error Toast', async () => {
     await show(allTags, { 'DELETE /api/tags/1': { status: 500, json: { error: { code: 'internal', message: 'boom' } } } })
     const sheet = await openFish()

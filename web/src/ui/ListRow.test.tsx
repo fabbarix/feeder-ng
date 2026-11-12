@@ -189,3 +189,21 @@ describe('ListRow: a rich, wrapping title (CRS G2)', () => {
     expect(declarations(css, '.list-row__title a')['pointer-events']).toBe('auto')
   })
 })
+
+describe('ListRow: accessible name of the target', () => {
+  it('a ReactNode title with a target needs an aria-label (type error otherwise)', () => {
+    const rich = <span>Rich</span>
+    // @ts-expect-error an interactive row with a ReactNode title and no aria-label has no name
+    const bad = <ListRow title={rich} onActivate={() => {}} />
+    // @ts-expect-error the same for an href
+    const badLink = <ListRow title={rich} href="/x" />
+    const ok = <ListRow title={rich} aria-label="Rich" onActivate={() => {}} />
+    const staticRow = <ListRow title={rich} />
+    const plain = <ListRow title="Plain" onActivate={() => {}} />
+    expect([bad, badLink, ok, staticRow, plain]).toHaveLength(5)
+  })
+  it('a string title names the target without an aria-label', () => {
+    inList(<ListRow title="Plain" onActivate={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Plain' })).toBeInTheDocument()
+  })
+})
