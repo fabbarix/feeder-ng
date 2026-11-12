@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react'
+import { useEffect, useId, useRef, useState, type MutableRefObject, type ReactNode, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Segmented, TextArea, TextField, Tile } from '../../../ui'
 import { usePhotoPages } from '../hooks/usePhotoPages'
@@ -19,6 +19,11 @@ export interface ReadRecipeStepProps {
   availability: ReadAvailability & { retry?: () => void }
   /** The step's heading takes focus when the page is opened at #read (the screen owns that). */
   headingRef?: Ref<HTMLHeadingElement>
+  /**
+   * The screen's slot for this step's photo clearing (pages.finished). The screen runs it when a photo read reaches review, after
+   * this step has unmounted (hotfix 4.2).
+   */
+  photosFinished?: MutableRefObject<(() => void) | undefined>
 }
 
 type Tab = 'url' | 'text' | 'photo'
@@ -28,7 +33,7 @@ type Tab = 'url' | 'text' | 'photo'
  * (Web page, Text, Photo), its panel, the Read button, the progress while a read runs, the error tile after a failure,
  * and the disabled reason when the feature is off. Renders and wires; the work is in useRecipeRead and lib/.
  */
-export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeStepProps): ReactNode {
+export function ReadRecipeStep({ read, availability, headingRef, photosFinished }: ReadRecipeStepProps): ReactNode {
   const [tab, setTab] = useState<Tab>('url')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
@@ -76,7 +81,12 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     setSending(false)
   }, [read.phase, read.error])
 
-  // The photos are kept until a read reaches review (see usePhotoReadEnd).
+  // The photos are kept until a read reaches review: the screen calls the published clearing then (photosFinished), and this
+  // step's own effect covers a read that ends while the step is still mounted (usePhotoReadEnd).
+  // Not cleared on unmount: the screen's effect runs after this step has gone, and needs the last clearing published.
+  useEffect(() => {
+    if (photosFinished) photosFinished.current = pages.finished
+  }, [photosFinished, pages.finished])
   usePhotoReadEnd(read, pages.finished)
 
   const counter = textCounter(text)

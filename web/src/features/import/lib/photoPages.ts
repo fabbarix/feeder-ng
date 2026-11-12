@@ -69,6 +69,8 @@ export type PhotoPagesAction =
   | { type: 'editCommitted' }
   | { type: 'editCancelled' }
   | { type: 'removed'; id: PhotoId }
+  /** The read reached review: no photos, no open editor, no queued files (hotfix 4.2). */
+  | { type: 'cleared' }
   | { type: 'moved'; from: number; to: number }
   | { type: 'rendered'; id: PhotoId; revision: number; out: RenderedOutput }
   | { type: 'renderFailed'; id: PhotoId; revision: number; problem: PhotoProblem }
@@ -228,6 +230,9 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
         photos: state.photos.filter((p) => p.id !== action.id),
         editing: state.editing?.id === action.id ? null : state.editing,
       }
+
+    case 'cleared':
+      return { ...state, photos: [], editing: null, queue: [], problem: null }
 
     case 'moved':
       return state.editing ? state : { ...state, photos: moveItem(state.photos, action.from, action.to) }

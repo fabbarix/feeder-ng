@@ -134,8 +134,10 @@
   outline-offset: -3px;
 }
 
-/* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer. */
-.tile :is(button, a):not(.tile__stretch):not(.list-row__target) {
+/* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer.
+   :where(.tile) keeps this rule at 0,2,1, below the positioning of a component that places its own controls (the crop editor's
+   handles and box, 0,3,0): a host rule must never move a component's absolutely placed controls (hotfix 4.2). */
+:where(.tile) :is(button, a):not(.tile__stretch):not(.list-row__target) {
   position: relative;
   z-index: 1;
 }
