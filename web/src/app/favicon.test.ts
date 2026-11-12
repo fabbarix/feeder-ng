@@ -26,7 +26,7 @@ describe('index.html head: icons', () => {
     expect(icons).toContainEqual(expect.objectContaining({ href: '/favicon-32.png', type: 'image/png', sizes: '32x32' }))
     expect(icons).toContainEqual(expect.objectContaining({ href: '/favicon-16.png', type: 'image/png', sizes: '16x16' }))
   })
-  it('links the apple-touch-icon and the Safari mask-icon (basil); the manifest link is VitePWA's, not ours', () => {
+  it('links the apple-touch-icon and the Safari mask-icon (basil); the manifest link is added by VitePWA, not written here', () => {
     expect(links).toContainEqual(expect.objectContaining({ rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }))
     expect(links).toContainEqual(expect.objectContaining({ rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: '#34724e' }))
     // VitePWA injects <link rel="manifest"> at build time; a hand-written one would make two (scripts/test/precache_test.sh checks dist).

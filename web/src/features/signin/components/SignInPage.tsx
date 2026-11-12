@@ -13,7 +13,7 @@ export function SignInPage({ reason }: SignInPageProps) {
   return (
     <main className="signin">
       <Tile variant="hero" as="section" className="signin__tile">
-        <FeederMark />
+        <FeederMark decorative />
         <h1 className="signin__title">{signinStrings.title}</h1>
         <p className="signin__text">{signinStrings.intro}</p>
         {reason ? (
