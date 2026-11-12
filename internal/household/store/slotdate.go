@@ -67,9 +67,10 @@ func (s *Store) SaveWhoIsEating(ctx context.Context, slotID int64, date string, 
 			if err := setDateAttendance(ctx, tx, slotID, date, *in.Members); err != nil {
 				return err
 			}
-			if household.EmptiesDate(*in.Members, row.Guests) {
-				row.NotServed = true
-			}
+			// An emptied date is Not served (U1); any other save serves it again, a Guest included (U3).
+			row.NotServed = household.EmptiesDate(*in.Members, row.Guests)
+		} else if in.Guests != nil && *in.Guests > 0 {
+			row.NotServed = false // Guests eat: a Guests-only save serves the date again (PM, round 2)
 		}
 		return writeSlotDate(ctx, tx, row, s.clk.Now())
 	})

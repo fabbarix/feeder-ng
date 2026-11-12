@@ -557,6 +557,11 @@ func (st *state) raise(i int, m ExistingMeal) ExistingMeal {
 	if m.Batches*r.Yield >= portions-eps {
 		return m
 	}
+	// Batches follow the portions only when the portions changed since the meal was placed (ADR 0014; PM, round 2).
+	// 0 = unknown: nothing is raised.
+	if m.PlacedPortions <= 0 || portions <= m.PlacedPortions+eps {
+		return m
+	}
 	n := BatchesFor(portions, r.Yield)
 	st.raised = append(st.raised, BatchRaise{Key: st.slots[i].Key, Batches: n, Portions: portions})
 	m.Batches = float64(n)

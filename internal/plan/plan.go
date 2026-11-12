@@ -248,7 +248,8 @@ func CellRules(all []SlotRule, si SlotInfo, course int64) []SlotRule {
 
 // existing maps a stored Planned Meal to the planner's view of its slot.
 func existing(m Meal, at, now time.Time, cleared bool) *planner.ExistingMeal {
-	em := &planner.ExistingMeal{RecipeID: planner.RecipeID(m.RecipeID), Batches: m.Batches, Relaxed: m.Relaxed}
+	em := &planner.ExistingMeal{RecipeID: planner.RecipeID(m.RecipeID), Batches: m.Batches, Relaxed: m.Relaxed,
+		PlacedPortions: m.Portions}
 	if m.From != nil {
 		em.From = &planner.LeftoverSource{LeftoverID: m.From.LeftoverID, FromSlot: pkey(m.From.From)}
 	}

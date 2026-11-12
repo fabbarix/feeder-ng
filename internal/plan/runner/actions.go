@@ -301,6 +301,14 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		if at.Before(in.now) {
 			return nil, ErrInPast
 		}
+		// A Meal Slot that is Not served on the date takes no Recipe (ADR 0014; PM, round 2).
+		sd, err := r.d.Source.SlotDate(ctx, key.MealSlotID, key.Date)
+		if err != nil {
+			return nil, err
+		}
+		if sd.NotServed {
+			return nil, ErrNotServed
+		}
 		recipes, err := r.d.Source.Recipes(ctx)
 		if err != nil {
 			return nil, err
