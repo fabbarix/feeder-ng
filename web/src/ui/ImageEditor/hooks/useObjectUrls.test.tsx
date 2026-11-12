@@ -137,4 +137,26 @@ describe('useObjectUrls', () => {
       URL.revokeObjectURL = orig.r
     }
   })
+
+  it('survives StrictMode: a url obtained during render is live after mount, cleanup, mount', async () => {
+    const f = fakeApi()
+    const b = blob()
+    const { result, unmount } = renderHook(
+      () => {
+        const urls = useObjectUrls(f.api)
+        return { urls, url: urls.urlFor('p1:work', b) }
+      },
+      { reactStrictMode: true },
+    )
+    await Promise.resolve()
+    expect(f.live.has(result.current.url)).toBe(true)
+    expect(f.created).toHaveLength(1)
+    expect(f.revoked).toHaveLength(0)
+    // and it still hands out the same live url afterwards
+    expect(result.current.urls.urlFor('p1:work', b)).toBe(result.current.url)
+    unmount()
+    await Promise.resolve()
+    expect(f.live.size).toBe(0)
+    expect(f.revoked).toHaveLength(f.created.length)
+  })
 })

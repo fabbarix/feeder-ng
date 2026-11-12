@@ -1,8 +1,6 @@
 // Pure limits and sizes of the photo read's working copy. See docs/dev/design/photo-read.md section 3.5.
 import type { Orientation } from './exif'
-
-// TODO(T1): replace by `import type { Size } from './size'` once T1 has moved size.ts into ui/ImageEditor.
-type Size = { width: number; height: number }
+import type { Size } from './crop'
 
 export const WORK_MAX_SIDE = 4096
 export const WORK_MAX_AREA = 16_777_216 // iOS Safari's canvas area limit
