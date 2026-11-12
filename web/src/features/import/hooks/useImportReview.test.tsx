@@ -17,7 +17,7 @@ const notReady = plan({
   recipes: [recipe({ status: 'conflict', resolved: false })],
 })
 const ready = plan({ ready: true })
-const empty = { ingredients: [], conversions: [], recipes: [] }
+const empty = { ingredients: [], conversions: [], recipes: [], courses: [] }
 
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -64,7 +64,7 @@ describe('useImportReview', () => {
     await act(() => result.current.open('{}'))
     act(() => result.current.chooseExisting('onion', 5))
     await waitFor(() => expect(result.current.plan).toEqual(ready))
-    expect(api.plan).toHaveBeenLastCalledWith('r1', { ingredients: [{ key: 'onion', action: 'use', ingredientId: 5 }], conversions: [], recipes: [] })
+    expect(api.plan).toHaveBeenLastCalledWith('r1', { ingredients: [{ key: 'onion', action: 'use', ingredientId: 5 }], conversions: [], recipes: [], courses: [] })
     act(() => result.current.answerConversion('onion', 'piece', 150))
     act(() => result.current.chooseRecipeAction(0, 'replace'))
     await waitFor(() => expect(api.plan).toHaveBeenCalledTimes(3))
@@ -72,6 +72,7 @@ describe('useImportReview', () => {
       ingredients: [{ key: 'onion', action: 'use', ingredientId: 5 }],
       conversions: [{ key: 'onion', unit: 'piece', toBase: 150 }],
       recipes: [{ index: 0, action: 'replace' }],
+      courses: [],
     })
   })
 
@@ -94,7 +95,7 @@ describe('useImportReview', () => {
     act(() => result.current.chooseRecipeAction(0, 'skip'))
     await waitFor(() => expect(result.current.plan).toEqual(ready))
     await act(() => result.current.confirm())
-    expect(api.confirm).toHaveBeenCalledWith('r1', { ingredients: [], conversions: [], recipes: [{ index: 0, action: 'skip' }] })
+    expect(api.confirm).toHaveBeenCalledWith('r1', { ingredients: [], conversions: [], recipes: [{ index: 0, action: 'skip' }], courses: [] })
     expect(result.current.phase).toBe('done')
     expect(result.current.result?.ingredientsCreated).toBe(2)
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey))

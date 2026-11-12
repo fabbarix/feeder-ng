@@ -123,3 +123,6 @@ describe('RecipeEditorScreen: Steps reorder', () => {
     expect(document.querySelectorAll('.sortable__live')).toHaveLength(2)
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

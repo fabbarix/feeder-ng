@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { plan, reviewExtras } from '../fixtures.test-helper'
+import { plan, reviewExtras, courseExtras } from '../fixtures.test-helper'
 import type { UseExportPicker } from '../hooks/useExportPicker'
 import type { UseImportReview } from '../hooks/useImportReview'
 
@@ -23,9 +23,9 @@ import { ExportScreen } from './ExportScreen'
 import { ImportScreen } from './ImportScreen'
 
 const review = (over: Partial<UseImportReview>): UseImportReview => ({
-  phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [] }, error: undefined, busy: false, stale: false,
+  phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [], courses: [] }, error: undefined, busy: false, stale: false,
   result: undefined, open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(),
-  confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...over,
+  confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...courseExtras(), ...over,
 })
 const at = (path: string, ui: React.ReactElement) => render(<MemoryRouter initialEntries={[path]}><ToastProvider>{ui}</ToastProvider></MemoryRouter>)
 const trail = () => screen.getByRole('navigation', { name: 'Breadcrumb' })
@@ -55,3 +55,6 @@ describe('Import and Export breadcrumbs', () => {
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
   })
 })
+
+// CRS E2: the screen reads the Courses of the household; these tests do not care which.
+vi.mock('../hooks/useImportCourses', () => ({ useImportCourses: () => ({ courses: [], isAdmin: false, isPending: false }) }))

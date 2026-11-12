@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { match, plan, prompt, recipe, reviewExtras } from '../fixtures.test-helper'
+import { match, plan, prompt, recipe, reviewExtras, courseExtras } from '../fixtures.test-helper'
 import { importStrings as s } from '../strings'
 import type { UseImportReview } from '../hooks/useImportReview'
 
@@ -14,9 +14,9 @@ import { ImportScreen } from './ImportScreen'
 
 function state(over: Partial<UseImportReview>): UseImportReview {
   return {
-    phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [] }, error: undefined, busy: false, stale: false,
+    phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [], courses: [] }, error: undefined, busy: false, stale: false,
     result: undefined, open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(),
-    confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...over,
+    confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...courseExtras(), ...over,
   }
 }
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
@@ -121,3 +121,6 @@ describe('ImportScreen', () => {
     expect(hook.current.reset).toHaveBeenCalledOnce()
   })
 })
+
+// CRS E2: the screen reads the Courses of the household; these tests do not care which.
+vi.mock('../hooks/useImportCourses', () => ({ useImportCourses: () => ({ courses: [], isAdmin: false, isPending: false }) }))

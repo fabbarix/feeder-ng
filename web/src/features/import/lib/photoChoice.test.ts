@@ -4,7 +4,7 @@ import { plan, recipe } from '../fixtures.test-helper'
 import type { Decisions } from '../types'
 import { confirmPhoto, initialPhotoChoice, normaliseChoice, photoRecipes, photoUrl } from './photoChoice'
 
-const none: Decisions = { ingredients: [], conversions: [], recipes: [] }
+const none: Decisions = { ingredients: [], conversions: [], recipes: [], courses: [] }
 const two = [{ index: 0, name: 'Soup' }, { index: 1, name: 'Bread' }]
 
 describe('initialPhotoChoice', () => {

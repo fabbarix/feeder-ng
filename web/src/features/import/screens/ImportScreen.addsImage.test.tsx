@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { match, plan, reviewExtras } from '../fixtures.test-helper'
+import { match, plan, reviewExtras, courseExtras } from '../fixtures.test-helper'
 import type { UseImportReview } from '../hooks/useImportReview'
 
 const hook = vi.hoisted(() => ({ current: {} as UseImportReview }))
@@ -21,7 +21,7 @@ import { ImportScreen } from './ImportScreen'
 describe('ImportScreen: adds a picture', () => {
   it('shows the line only on the flagged Ingredient', () => {
     hook.current = {
-      phase: 'reviewing', error: undefined, busy: false, stale: false, result: undefined, decisions: { ingredients: [], conversions: [], recipes: [] },
+      phase: 'reviewing', error: undefined, busy: false, stale: false, result: undefined, decisions: { ingredients: [], conversions: [], recipes: [], courses: [] },
       open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(), confirm: vi.fn(), reset: vi.fn(),
       plan: plan({
         ingredients: [
@@ -30,9 +30,13 @@ describe('ImportScreen: adds a picture', () => {
         ],
       }),
       ...reviewExtras(),
+      ...courseExtras(),
     } as UseImportReview
     render(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
     expect(screen.getAllByText(/Adds a picture to/)).toHaveLength(1)
     expect(screen.getByText('Adds a picture to Garlic')).toBeInTheDocument()
   })
 })
+
+// CRS E2: the screen reads the Courses of the household; these tests do not care which.
+vi.mock('../hooks/useImportCourses', () => ({ useImportCourses: () => ({ courses: [], isAdmin: false, isPending: false }) }))
