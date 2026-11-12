@@ -313,7 +313,7 @@ New terms (singular, as the glossary names them):
 +_Note_: not **Frozen Shelf Life**, which is how long an Ingredient's Stock Lot keeps in a Freezer.
 
 +**Had it**:
-+A User's record that portions of a Leftover were eaten outside the plan; the portions go down and it is not waste.
++A User's record that portions of a Leftover were had outside the plan; the portions go down and it is not waste.
 +_Avoid_: Consumed
 
 +**Threw it out**:
@@ -327,7 +327,7 @@ New terms (singular, as the glossary names them):
 
 +**Wasn't there**:
 +The answer that removes a Leftover that Feeder thought was left but never was (a mistake, like Delete on a Stock Lot); it is not waste.
-+_Avoid_: Missing
++_Avoid_: Not found
 
 +**Take out**:
 +Taking a frozen Leftover out of the Freezer; it is no longer frozen and its Use-by becomes today plus the Recipe's Use-by days.
@@ -481,7 +481,7 @@ Example: the Main is marked Cooked but the Side is still planned, and you then s
 Recommendation: **A**. A meal someone has started cooking was served, and one clear rule is easier to understand than a half-served meal.
 
 **U3. Guests: do they eat dishes that no Member eats, and can a meal be planned for Guests only?** (was Q7 and Q8)
-Say the children skip Dessert, and two Guests come on Saturday.
+Say the children opt out of Dessert, and two Guests come on Saturday.
 - *Option A: Guests eat every dish the meal serves.* Dessert is planned for the two Guests even though every Member opted out of it, and a Saturday with Guests and no Members is planned (no preferences or allergies apply, since Guests have none). If no Members and no Guests are eating, you still get the warning.
 - *Option B: Guests only add portions to dishes at least one Member eats.* Dessert stays out; a day with Guests and no Members is not allowed to count.
 Recommendation: **A**. It is the simplest rule to say aloud ("Guests eat what is on the table"). This is what you decided earlier for Guests; the question is only whether it also applies to a dish all Members skip.

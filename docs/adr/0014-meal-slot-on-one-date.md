@@ -15,7 +15,7 @@ ADR 0008 keeps Attendance on the Meal Slot (usual, and per date) and Course Atte
 
 ## Considered options
 
-- *A per-Course Not served flag and per-Course Guests*: more storage and UI for something opt-outs and one headcount already cover. Rejected (decided).
+- *A per-Course Not served flag and per-Course Guests*: more storage and UI for something opt-outs and one number of Guests already cover. Rejected (decided).
 - *Store Guests, time and Not served on the Attendance override*: the override is deleted by Reset and owns an attendee list; the three would be lost or half-reset. Rejected.
 - *Replan (drop and re-place) unpinned Planned Meals whose Batches fall short*: simpler for unpinned ones, but leaves Pinned ones under-cooking. Rejected for raising Batches.
 
