@@ -43,7 +43,7 @@ bdd/steps_<feature>_test.go        step defs for that feature, registered via in
 
 ## Frontend layout and rules
 ```
-web/src/app/            shell: router, AppShell (bottom bar Today · Plan · Pantry · [Scan] · Shop · Recipes on phone, side rail on desktop; avatar menu -> Kitchen board, Settings), providers
+web/src/app/            shell: router, AppShell (bottom bar Today · Plan · Pantry · [Scan] · Shop · Recipes · Settings on phone, side rail on desktop; avatar menu -> Kitchen board, Sign out, and Sign-in requests at the end when present; decision 44), providers
 web/src/ui/             shared Bento primitives (Tile, BentoGrid, Chip, WhyChip, ProgressTile, TimerTile, BottomSheet, Toast, Button, Stepper(±), EmptyState, Avatar, ViewfinderStrip slot...). Never copy markup between screens.
 web/src/theme/          accent -> tonal light/dark palette (Material-You style), WCAG AA contrast check, fixed status colours (spoil, leftover). Pure TS, unit-tested.
 web/src/lib/            plain TS (no React): http client, SSE client, shared pure helpers

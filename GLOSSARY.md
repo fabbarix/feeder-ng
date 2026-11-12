@@ -28,7 +28,7 @@ _Avoid_: Owner, superuser
 
 **Allowlist**:
 The list of emails, managed by an Admin, that may sign in at once. An approved Access Request, or the first sign-in with an email a Member carries, adds that email to it; any other verified Google email makes an **Access Request** instead.
-_Avoid_: Invite list, guest list, whitelist
+_Avoid_: Invite list, whitelist
 
 **Access Request**:
 A verified Google account's request to sign in, waiting for any User to approve or deny it; it expires after 14 days.
@@ -44,6 +44,10 @@ _Avoid_: Dish, meal
 **Yield**:
 The number of standard portions one Batch of a Recipe produces.
 _Avoid_: Servings, makes
+
+**Last cooked**:
+The latest date a Recipe was Cooked fresh (not served from a Leftover).
+_Avoid_: Last made, last eaten
 
 **Ready Meal**:
 A Recipe made from exactly one Ingredient (a bought pack), whose Yield is the portions in that pack. Feeder keeps an Ingredient with the Recipe's name for that pack, so it can be stocked and bought. A Ready Meal is not always a Whole meal: marking a Recipe as a Ready Meal switches Whole meal on when its Courses include the main Course, and the User may switch it off (a frozen pizza that wants a salad beside it, or a bought dessert). Whole meal is a flag of its own because one-pot Recipes that are not Ready Meals need it too.
@@ -137,7 +141,7 @@ _Avoid_: Never, allergy, blacklist
 ### Planning
 
 **Meal Slot**:
-A named eating occasion the Household defines for a particular day of the week, with a usual time and the ordered Courses it serves (e.g. "Tuesday Dinner, 19:30: Main, Side"), some of which may be optional. It serves at least one Course that is not optional.
+A named eating occasion the Household defines for a particular day of the week, with a usual time (which one date may change) and the ordered Courses it serves (e.g. "Tuesday Dinner, 19:30: Main, Side"), some of which may be optional. It serves at least one Course that is not optional.
 _Avoid_: Meal time, occasion, slot type
 
 **Matching Meal Slot**:
@@ -149,7 +153,7 @@ The Recipe assigned to one Course of one Meal Slot on one date, either freshly c
 _Avoid_: Meal, entry, booking
 
 **Cooked**:
-The state of a Planned Meal once someone has confirmed it was actually prepared; only then is Stock deducted.
+The state of a Planned Meal once someone has confirmed it was actually prepared; only then is Stock deducted, from the Lots the User picked (**Used from**) or else soonest to go off first.
 _Avoid_: Done, eaten, completed
 
 **Batch**:
@@ -157,12 +161,32 @@ One preparation of a Recipe, producing its Yield; a Planned Meal cooks a whole n
 _Avoid_: Scale, run
 
 **Leftover**:
-Portions left from a Batch beyond what its Planned Meal's Course Attendance needs; these are served at later Meal Slots, in any Course the Recipe is marked with.
+Portions left from a Batch beyond what its Planned Meal's Course Attendance needs; these are served at later Meal Slots, in any Course the Recipe is marked with. A Leftover may be frozen in a Storage Place of kind freezer; a frozen Leftover is not planned automatically.
 _Avoid_: Surplus, remains
 
 **Use-by**:
-The last date a Leftover may be served; after it the Leftover is discarded and never planned.
+The last date a Leftover may be served; after it the Leftover is not planned, and Feeder asks whether it was had, thrown out or not there.
 _Avoid_: Expiry, best-before
+
+**Had it**:
+A User's record that portions of a Leftover were had outside the plan; the portions go down and it is not waste.
+_Avoid_: Consumed
+
+**Threw it out**:
+A User's record that portions of a Leftover were thrown away: waste dated the day of the action, or, when answering the question after the Use-by, the day after the Use-by.
+_Avoid_: Scrapped, dumped
+_Note_: a Stock Lot's equivalent is **Throw out**.
+
+**Freeze it**:
+Moving a Leftover, or part of it, to a Storage Place of kind freezer; its Use-by becomes today plus its Frozen Use-by.
+_Avoid_: Stash
+
+**Wasn't there**:
+The answer that removes a Leftover that Feeder thought was left but never was (a mistake, like Delete on a Stock Lot); it is not waste.
+_Avoid_: Phantom leftover
+
+**Take out**:
+Taking a frozen Leftover out of the Freezer; it is no longer frozen and its Use-by becomes today plus the Recipe's Use-by days.
 
 **Cool-down**:
 The minimum number of days before the same Recipe may be planned again, in any Course. It is soft: when no Recipe that fits a required Course keeps it, the planner still fills the Course with the Recipe that comes round least soon, and says so with a why chip ("Again soon: had Tue"). As the Household adds Recipes, it holds again on its own.
@@ -175,6 +199,7 @@ _Avoid_: Window, lookahead
 **Pinned**:
 A Planned Meal set or confirmed by a User, which the planner never replaces.
 _Avoid_: Locked, fixed, manual
+_Note_: a **Bought** Planned Meal is held the same way by automatic replans, but Regenerate replaces it; it is not Pinned.
 
 **Ingredient Overlap**:
 The planner's preference for Recipes that use up what remains of Ingredients already bought or planned that week, so that fewer distinct Ingredients are needed.
@@ -193,17 +218,34 @@ A limit on how often Recipes with a given Tag may appear (e.g. at most twice a w
 _Avoid_: Quota, balance rule
 
 **Portion Factor**:
-How much of a standard portion a Member eats; each Member has a default, which a Meal Slot may override.
+How much of a standard portion a Member eats; each Member has a default, which a Meal Slot may override. A Guest's is always 1.
 _Avoid_: Appetite, multiplier, serving size
 
 **Attendance**:
 The Members who eat at a given Meal Slot, each with their Portion Factor. It starts as everyone, and people opt out; it can be changed for one date. The Members who eat each Course of the slot are that Course's **Course Attendance**.
-_Avoid_: Guests, headcount
+_Avoid_: Headcount
+_Note_: **Guests** are counted beside the Attendance, not in it: they add portions but no preferences. In the UI, "Who's eating" is the sheet that edits one date's Attendance, its Course Attendance and its Guests; it is a label, not a second term. "Time today" and "Time on Thu" are labels for one date's time of a **Meal Slot**.
 
 **Course Attendance**:
 The Members who eat one Course of a Meal Slot: the slot's Attendance less those who opt out of that Course (e.g. Sam opts out of Dessert), usually or for one date. It determines that Course's portions, and whose Exclusions, Dislikes and Favourites count for it. Nobody opts out unless set; a Course nobody eats on a date is left empty, and that is not Couldn't plan.
-_Avoid_: Course guests, skips, diners
+_Avoid_: skips, diners
+_Note_: Guests eat every Course the slot serves; they are not part of a Course Attendance.
 _Note_: "skip" and "skipped" are not used for opting out, because the code calls a Not cooked Planned Meal `skipped`.
+
+**Not served**:
+A Meal Slot on one date, or one Course of it, that the plan leaves empty on purpose: the Household marked the slot Not served, nobody eats that Course that date, or it is an optional Course that nothing fits. It is not Couldn't plan and it is not Not cooked, which is said after the date.
+_Avoid_: Day off, blocked out, no meal
+_Note_: "skipped" stays the code's word for a Not cooked Planned Meal; Not served is never "skipped".
+
+**Guest**:
+Someone who is not a Member and eats at one Meal Slot on one date, counted only as a number. Each Guest is one standard portion of every Course the slot serves that date, with no name and no preferences.
+_Avoid_: Visitor, plus-one
+_Note_: the singular is the term; the UI says "Guests" for the count.
+
+**Bought**:
+A fresh Planned Meal that a purchase from the Shopping List was bought for: a Scan or Tick by hand that covered part of its Ingredients. Automatic replans leave it as it is; Regenerate, Swap or choosing a Recipe changes it.
+_Avoid_: Reserved, committed, purchased
+_Note_: not **Pinned**: a Pinned Planned Meal is the User's choice and Regenerate keeps it; a Bought one is only held against automatic changes. Not the "Bought today" / "Bought on" of a Stock Lot's purchase date, which is plain copy for **Stock Lot**.
 
 **Couldn't plan**:
 The state of a required Course of a Meal Slot the planner left empty, filed under one cause (nobody attends, no Recipes, no Recipe marked with that Course, a Slot Rule that nothing meets, or every Recipe excluded or too late for an Advance Step) with one way to fix it. Something to set up or adjust, not a failure. Cool-down and Variety Rules never cause it, because they give way when too few Recipes fit. A Course covered by a Whole meal, an optional Course left empty and a Course nobody eats are not Couldn't plan.
@@ -234,35 +276,46 @@ _Avoid_: Measure, ratio
 **Stock**:
 The quantity of each Ingredient the Household currently has at home.
 _Avoid_: Inventory, larder
-_Note_: "Pantry" names the page that shows Stock (and the pantry kind of Storage Place); the things on it are still Stock and Stock Lots.
+_Note_: "Pantry" names the page that shows Stock (and the pantry kind of Storage Place); the things on it are still Stock and Stock Lots. Frozen Leftovers also appear on the Pantry page; they are not Stock.
 
 **Storage Place**:
-Where the Household keeps Stock (Kitchen Pantry, Garage Fridge, Garage Freezer), of one kind: pantry, fridge or freezer. A Stock Lot is in one Storage Place, or not sorted.
+Where the Household keeps Stock and frozen Leftovers (Kitchen Pantry, Garage Fridge, Garage Freezer), of one kind: pantry, fridge or freezer. A Stock Lot is in one Storage Place, or not sorted.
 _Avoid_: Storage location, shelf, compartment
 
 **Frozen Shelf Life**:
 An optional number of days an Ingredient keeps in a Storage Place of kind freezer; a Stock Lot moved into a Freezer is good for this long from that day.
 _Avoid_: Freezer life, frozen expiry
+_Note_: not **Frozen Use-by**, which is a Leftover's.
 
 **Shelf Life**:
 An optional number of days an Ingredient stays usable after purchase.
 _Avoid_: Expiry, best-before
 
 **Stock Lot**:
-One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) its go-off date, the last day it is good.
+One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) its go-off date, the last day it is good; a User may correct the quantity and both dates.
 _Avoid_: Batch, item, unit
 
 **Go-off date / Good until**:
 The last day a Stock Lot is fine to use. A Stock Lot goes off the day after its go-off date. Forward copy names the last good day ("Good until today", "Good until tomorrow", "Good until Thu"); once the Stock Lot has gone off, copy says so ("Went off today", "Went off yesterday", "Went off 3 days ago"). A plan chip uses the same day: "uses spinach by Thu".
 _Avoid_: Expires, expiry date, "goes off Thu" for the last good day, "before Thu" for the go-off date
 
+**Frozen Use-by**:
+The number of days a Leftover keeps in a Storage Place of kind freezer, set per Recipe or by the Household's default; freezing a Leftover sets its Use-by to that many days from that day.
+_Avoid_: Freezer use-by, freezer date
+_Note_: not **Frozen Shelf Life**, which is how long an Ingredient's Stock Lot keeps in a Freezer.
+
+**Used from**:
+The Stock Lots a User says a Cooked Planned Meal took an Ingredient from, when not the default order.
+_Avoid_: Source lots, picked lots
+
 **Zero-waste streak**:
-The number of whole days since the Household last wasted food (a Stock Lot going off, a Throw out, or a discarded Leftover), never more than the Household's age.
+The number of whole days since the Household last wasted food (a Stock Lot going off, a Throw out, or a Leftover thrown out), never more than the Household's age.
 _Avoid_: Clean run, no-waste counter
 
 **Throw out / Keep**:
 The two choices for a spoiled Stock Lot: Throw out removes it and records the waste; Keep pushes its go-off date out by a day and means it did not go off.
 _Avoid_: Discard, bin, extend, snooze
+_Note_: a Leftover's equivalent is **Threw it out**.
 
 **Scan**:
 Reading a barcode with the phone; in a Shop it ticks the Shopping List and adds a Stock Lot; at home (Stock-take) it corrects Stock.
@@ -281,8 +334,12 @@ What a Product cost at a given Shop on a given date, optionally recorded at Scan
 _Avoid_: Cost
 
 **Shopping List**:
-The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date, less Stock, plus any manual extras.
+The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date (earlier ones not yet marked Cooked included), less Stock, less lines **Not needed**, plus any manual extras.
 _Avoid_: Grocery list, basket
+
+**Not needed**:
+A Shopping List line the User took off the list for its current range, because nothing needs buying; it adds no Stock and is not a purchase.
+_Avoid_: Not required, crossed off
 
 **Shop**:
 A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop. Any User adds one; only the Admin renames or deletes one.

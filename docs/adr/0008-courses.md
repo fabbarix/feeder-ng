@@ -1,6 +1,6 @@
 # A Meal Slot serves ordered Courses, each its own Planned Meal; a Whole meal in the main Course covers the rest
 
-Status: **Accepted** (2026-11-11; amended the same day with Course Attendance, optional Courses and the cooking timeline, points 7 to 9). Spec: [functional-spec §3.1, §7, §8, §11, §16 and decisions 29 and 30](../spec/functional-spec.md). Cool-down and Variety Rules became soft at the same time: [ADR 0009](0009-soft-cool-down-and-variety.md). Plan: [docs/dev/design/crs-plan.md](../dev/design/crs-plan.md).
+Status: **Accepted** (2026-11-11; amended the same day with Course Attendance, optional Courses and the cooking timeline, points 7 to 9). Spec: [functional-spec §3.1, §7, §8, §11, §16 and decisions 29 and 30](../spec/functional-spec.md). Cool-down and Variety Rules became soft at the same time: [ADR 0009](0009-soft-cool-down-and-variety.md). Plan: [docs/dev/design/crs-plan.md](../dev/design/crs-plan.md). Amended by [ADR 0013](0013-bought-planned-meals-held.md) (points 2 and 8, Bought Planned Meals) and [ADR 0014](0014-meal-slot-on-one-date.md) (point 8, Guests and a date nobody eats), both Accepted.
 
 Until now a Meal Slot on a date held exactly one Recipe: one Planned Meal per `(date, Meal Slot)`. A Household that eats a Main with a Side, or a Starter and a Dessert at Sunday Lunch, had to fold them into one Recipe or leave them out of the plan, the Shopping List and the Stock maths. Feeder now has **Courses**:
 
