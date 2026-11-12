@@ -81,3 +81,43 @@ describe('the dark pass really renders dark', () => {
     expect(before).not.toMatch(/if\s*\([^)]*(vp\.width|profile|mobile)/)
   })
 })
+
+// Review fix 2: the dark pass is isolated, so a dark environment problem never hides or repeats the light findings.
+describe('the dark pass is isolated from the light findings', () => {
+  const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+  const loop = src.slice(src.indexOf('const started = Date.now()'))
+  const dark = loop.indexOf("value: 'dark'")
+  const evalAt = loop.indexOf('evaluateMetrics(')
+  const failAt = loop.indexOf('fail(`${tag}: ${f.message}`)')
+  it('reports the light findings (evaluateMetrics, fail) before the dark emulation', () => {
+    expect(dark).toBeGreaterThan(0)
+    expect(evalAt).toBeGreaterThanOrEqual(0)
+    expect(failAt).toBeGreaterThan(evalAt)
+    expect(failAt).toBeLessThan(dark)
+  })
+  it('has its own try/catch/finally; the media reset to light stays in that finally; the dark error is "could not inspect ... (dark scheme"', () => {
+    const fromDark = loop.slice(Math.max(0, loop.lastIndexOf('try {', dark)))
+    const tryAt = 0
+    const catchAt = fromDark.search(/\}\s*catch\s*\(/)
+    const finallyAt = fromDark.search(/\}\s*finally\s*\{/)
+    expect(fromDark.startsWith('try {')).toBe(true)
+    expect(tryAt).toBe(0)
+    expect(catchAt).toBeGreaterThan(0)
+    expect(finallyAt).toBeGreaterThan(catchAt)
+    const reset = fromDark.search(/value:\s*'light'/)
+    expect(reset).toBeGreaterThan(finallyAt)
+    expect(fromDark).toMatch(/could not inspect \$\{tag\} \(dark scheme/)
+  })
+  it('races Page.reload with sleep(', () => {
+    expect(loop).toMatch(/Promise\.race\(\[\s*cdp\('Page\.reload'[\s\S]*?sleep\(/)
+  })
+  it('after the dark probe only the dark P10 findings are reported, never the light ones again', () => {
+    const probe = loop.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    const after = loop.slice(probe)
+    expect(probe).toBeGreaterThan(0)
+    // one evaluateMetrics for the light pass only; the dark pass must not call it again with the full metrics
+    expect(loop.match(/evaluateMetrics\(/g)).toHaveLength(2)
+    expect(after).toMatch(/evaluateMetrics\(\s*\{\s*lowContrastButtons:\s*\[\]\s*,\s*lowContrastButtonsDark/)
+    expect(after).toMatch(/\.filter\(\(?\w+\)?\s*=>\s*\w+\.rule\s*===\s*'P10'\)|rule\s*===\s*'P10'/)
+  })
+})
