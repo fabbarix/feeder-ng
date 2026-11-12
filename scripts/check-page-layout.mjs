@@ -256,13 +256,73 @@ const probe = `
   const cur = rail && vis(rail) ? rail.querySelector('[aria-current="page"]') : null
   let railContrast = null
   if (cur) { const s = getComputedStyle(cur); let bg = s.backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(cur.querySelector('.side-rail__pill') || rail).backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(document.body).backgroundColor; railContrast = Math.round(contrast(s.color, bg) * 100) / 100 }
+  // P10: a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
+  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
+  const lowContrastButtons = []
+  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
+    if (!vis(b)) continue
+    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
+    if (ratio < 4.5) lowContrastButtons.push({ label: b.innerText.trim().slice(0, 40), ratio })
+  }
+  // P11: a clipped box (overflow hidden, text wider than the box, not an intentional ellipsis) or a word broken mid-word across lines.
+  const brokenText = []
+  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
+  for (const e of (main ? main.querySelectorAll('*') : [])) {
+    const s = getComputedStyle(e)
+    // A visually-hidden (screen-reader) box is 1 px on purpose: only boxes wider than 2 px are checked.
+    if (['hidden', 'clip'].includes(s.overflowX) && s.textOverflow !== 'ellipsis' && e.clientWidth > 2 && e.scrollWidth > e.clientWidth + 1 && vis(e) && e.innerText.trim()) {
+      brokenText.push({ sel: sel(e), why: 'clipped' })
+    }
+  }
+  const isWordChar = (c) => /[\\p{L}\\p{N}]/u.test(c)
+  const midWord = (node) => {
+    let prevTop = null
+    let prevCh = ''
+    // The whitespace-delimited token around index i, so the rule can allow emails and links.
+    const tokenAt = (i) => {
+      const v = node.nodeValue
+      let a = i
+      let b = i
+      while (a > 0 && !/\\s/.test(v[a - 1])) a--
+      while (b < v.length && !/\\s/.test(v[b])) b++
+      return v.slice(a, b)
+    }
+    for (let i = 0; i < node.nodeValue.length; i++) {
+      const ch = node.nodeValue[i]
+      if (/\\s/.test(ch)) { prevCh = ch; continue }
+      const r = document.createRange()
+      r.setStart(node, i)
+      r.setEnd(node, i + 1)
+      const rects = r.getClientRects()
+      if (!rects.length) continue
+      const top = Math.round(rects[0].top)
+      if (prevTop !== null && Math.abs(top - prevTop) > 2 && isWordChar(prevCh) && isWordChar(ch)) return tokenAt(i)
+      prevTop = top
+      prevCh = ch
+    }
+    return null
+  }
+  if (main) {
+    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT)
+    let n = 0
+    for (let node = walker.nextNode(); node && n < 2000; node = walker.nextNode()) {
+      if (!node.nodeValue.trim() || !node.parentElement || !vis(node.parentElement)) continue
+      if (node.parentElement.closest('script, style')) continue
+      n++
+      const token = midWord(node)
+      if (token) {
+        const item = { sel: sel(node.parentElement), why: 'mid-word', token: token.slice(0, 200) }
+        if (!brokenText.some((b) => b.sel === item.sel && b.why === item.why)) brokenText.push(item)
+      }
+    }
+  }
   const pageEl = main && main.querySelector('[data-page-width]')
   const container = pageEl || main
   const cb = container.getBoundingClientRect()
   return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
     content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) },
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
-    fields, bars, railContrast, dialog: null }
+    fields, bars, railContrast, lowContrastButtons, brokenText, dialog: null }
 })()`
 const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
