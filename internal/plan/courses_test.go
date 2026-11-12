@@ -163,12 +163,16 @@ func TestBuildInputCourseZeroNamesNoCourseOnASlotWithCourses(t *testing.T) {
 	s.Meals = []plan.Meal{{Key: k("2026-11-10", 1), RecipeID: 1, Batches: 1, State: plan.StatePlanned, Pinned: true}}
 	s.SlotRules = []plan.SlotRule{{ID: 1, MealSlotID: 1, Tag: "Pizza"}}
 	in, _ := plan.BuildInput(s)
-	main := slotByKey(t, in, pkc("2026-11-10", 1, mainCourse))
-	if main.Existing != nil {
-		t.Errorf("main Existing = %+v, want none: Course 0 is not the main Course", main.Existing)
+	if len(in.Slots) == 0 {
+		t.Fatal("no cells")
 	}
-	if len(main.Rules) != 0 {
-		t.Errorf("main Rules = %+v, want none: Course 0 is not the main Course", main.Rules)
+	for _, c := range in.Slots {
+		if c.Existing != nil {
+			t.Errorf("cell %+v Existing = %+v, want none: Course 0 names no Course", c.Key, c.Existing)
+		}
+		if len(c.Rules) != 0 {
+			t.Errorf("cell %+v Rules = %+v, want none: Course 0 names no Course", c.Key, c.Rules)
+		}
 	}
 }
 

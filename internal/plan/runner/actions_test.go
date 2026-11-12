@@ -474,7 +474,7 @@ func TestViewListsEverySlotOfTheHorizonWithMealsAndRules(t *testing.T) {
 		t.Fatalf("View = today %q, horizon %d, %d slots; want 2026-11-09, 3, 3", v.Today, v.HorizonDays, len(v.Slots))
 	}
 	s := v.Slots[0]
-	if s.Key.Date != e.key(9).Date || s.Name != "Dinner" || s.Time != "19:00" || s.Portions != 2 || len(s.Courses) != 1 || s.Courses[0].Meal == nil ||
+	if s.Key.Date != e.key(9).Date || s.Key.MealSlotID != e.key(9).MealSlotID || s.Name != "Dinner" || s.Time != "19:00" || s.Portions != 2 || len(s.Courses) != 1 || s.Courses[0].Meal == nil ||
 		!s.At.Equal(time.Date(2026, 11, 9, 19, 0, 0, 0, time.UTC)) {
 		t.Errorf("Monday = %+v", s)
 	}

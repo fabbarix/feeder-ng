@@ -48,7 +48,7 @@ describe('no course-less fallback is left in the SPA', () => {
   })
 
   it('the plan and cook libraries read the Course rows, not the slot\'s own meal and unfilled', () => {
-    expect(hits(/\bslot\.(meal|unfilled)\b/, /^features\/(plan\/lib\/(courses|hero)|board\/lib\/tiles)\.ts$/)).toEqual([])
+    expect(hits(/\bslot\.(meal|unfilled)\b/, /^features\/(plan\/lib\/(courses|hero)|board\/lib\/tiles|today\/lib\/setup)\.ts$/)).toEqual([])
     expect(hits(/\bs\.meal\b/, /^features\/plan\/lib\/regenerate\.ts$/)).toEqual([])
   })
 

@@ -263,7 +263,7 @@ describe('No Recipes for this Course', () => {
     expect(m!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Dessert', to: '/recipes?notCourse=3' })
   })
 
-  it('cells of several Courses fall back to the general sentence and the Recipes list (every cell names its Course)', () => {
+  it('cells of several Courses get the general sentence and a link naming the first cell Course (/recipes?notCourse=2)', () => {
     const [o] = groupByCause([flat('2026-11-10', 2, 'Side', NO_COURSE_RECIPES), flat('2026-11-10', 3, 'Dessert', NO_COURSE_RECIPES)])
     expect(o!.headline).toBe("Couldn't plan 2 Courses. Some Courses have no Recipes marked for them.")
     expect(o!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Side', to: '/recipes?notCourse=2' })
