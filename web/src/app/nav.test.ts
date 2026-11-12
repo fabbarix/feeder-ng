@@ -19,23 +19,34 @@ describe('menuIconFor (S-01)', () => {
   })
 })
 
-describe('PRIMARY_NAV: Pantry is a first-class destination (PN)', () => {
-  it('is Today, Plan, Pantry, Scan, Shop, Recipes: Scan has three destinations before it and two after', () => {
-    expect(PRIMARY_NAV.map((i) => i.id)).toEqual(['today', 'plan', 'pantry', 'scan', 'shop', 'recipes'])
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes'])
-    expect(PRIMARY_NAV.map((i) => i.path)).toEqual(['/', '/plan', '/pantry', '/scan', '/shop', '/recipes'])
+describe('PRIMARY_NAV: seven slots, Settings top-level (nav-even)', () => {
+  const ids = ['today', 'plan', 'pantry', 'scan', 'shop', 'recipes', 'settings']
+  it('is Today, Plan, Pantry, Scan, Shop, Recipes, Settings: three destinations on each side of Scan', () => {
+    expect(PRIMARY_NAV.map((i) => i.id)).toEqual(ids)
+    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes', 'Settings'])
+    expect(PRIMARY_NAV.map((i) => i.path)).toEqual(['/', '/plan', '/pantry', '/scan', '/shop', '/recipes', '/settings'])
+    expect(PRIMARY_NAV.findIndex((i) => i.id === 'scan')).toBe(3)
+    expect(PRIMARY_NAV).toHaveLength(7)
   })
-  it('Pantry uses the stock icon and is not the accent button; only Scan is', () => {
-    const pantry = PRIMARY_NAV.find((i) => i.id === 'pantry')
-    expect(pantry).toMatchObject({ label: 'Pantry', path: '/pantry', icon: 'stock' })
-    expect(pantry?.accent).toBeUndefined()
+  it('Scan is the exact middle item: as many destinations before it as after it', () => {
+    const at = PRIMARY_NAV.findIndex((i) => i.id === 'scan')
+    expect(at).toBe(PRIMARY_NAV.length - 1 - at)
+  })
+  it('Settings uses the settings icon, is the last item and not the accent button; only Scan is', () => {
+    const settings = PRIMARY_NAV[PRIMARY_NAV.length - 1]
+    expect(settings).toMatchObject({ id: 'settings', label: 'Settings', path: '/settings', icon: 'settings' })
+    expect(settings?.accent).toBeUndefined()
     expect(PRIMARY_NAV.filter((i) => i.accent).map((i) => i.id)).toEqual(['scan'])
   })
-  it('the rail lists the same six, in the same order', () => {
-    expect(RAIL_NAV.map((i) => i.id)).toEqual(['today', 'plan', 'pantry', 'scan', 'shop', 'recipes'])
+  it('Pantry still uses the stock icon', () => {
+    expect(PRIMARY_NAV.find((i) => i.id === 'pantry')).toMatchObject({ label: 'Pantry', path: '/pantry', icon: 'stock' })
   })
-  it('the avatar menu no longer lists Pantry (nor /stock): Kitchen board, Settings', () => {
-    expect(MENU_NAV.map((i) => i.id)).toEqual(['board', 'settings'])
+  it('the rail lists the same seven, in the same order', () => {
+    expect(RAIL_NAV.map((i) => i.id)).toEqual(ids)
+  })
+  it('the avatar menu lists only Kitchen board now: Settings left it, Pantry and /stock are not there either', () => {
+    expect(MENU_NAV.map((i) => i.id)).toEqual(['board'])
+    expect(MENU_NAV.map((i) => i.path)).not.toContain('/settings')
     expect(MENU_NAV.map((i) => i.path)).not.toContain('/stock')
     expect(MENU_NAV.map((i) => i.path)).not.toContain('/pantry')
   })

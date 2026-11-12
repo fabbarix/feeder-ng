@@ -15,12 +15,17 @@
 //  10. (ordinary routes) at >= 1440 every .side-rail__link sits inside the rail (left > 0, right < rail right) and its labels do not overflow (scrollWidth <= clientWidth);
 //   8. (on /) the open avatar menu popover lies fully inside the viewport;
 //  11. (ordinary routes) at >= 1024 the current rail item (aria-current) has a label contrast of at least 4.5:1 against its own background (L-04: Scan was 1.31:1).
-//  12. (phone, < 1024) the six-button bottom bar (PN): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
+//  12. (phone, < 1024) the seven-button bottom bar (PN, nav-even): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
 //      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line); the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
 //  13. (phone, < 1024, /recipes/new) QA-4: the sticky action bar sits flush on the bottom bar: its bottom edge is within 1 px of the bar's top edge,
 //      at 360 and 390 px, with the page scrolled to the top and to the end (no strip of page content between them).
 //  14. (phone, < 1024, /recipes/new) FU-1: with a toast raised, the .toast-region's bottom edge is at or above the sticky action bar's top edge
 //      (1 px tolerance), at 360 and 390 px, scrolled to the end where the bar sits on the bottom bar. A toast never covers Save.
+//  15. (nav-even, / and /settings, in light and dark) the seven-slot bottom bar (Today, Plan, Pantry | Scan | Shop, Recipes, Settings), at 360, 390 and 820 px:
+//      every slot has the same width (the centre-to-centre distance of neighbours is equal, within 1 px; no slot is narrower than 44 px);
+//      Scan's centre is the bar's centre (within 1 px); the active pill's inset from the bar's inner edge is at least the gap between items
+//      (Today current on /, Settings current on /settings); no label is clipped, wrapped or wider than its button, at 360 px with seven buttons.
+//      At 1024 and 1280 px (side rail) the bottom bar is hidden and the rail shows seven links of one size (within 1 px), all inside the rail.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -38,6 +43,7 @@ const VIEWPORTS = [
   { width: 390, height: 844, mobile: true },
   { width: 430, height: 932, mobile: true },
   { width: 820, height: 1180, mobile: false },
+  { width: 1024, height: 768, mobile: false },
   { width: 1280, height: 800, mobile: false },
   { width: 1440, height: 900, mobile: false },
   { width: 1920, height: 1080, mobile: false },
@@ -225,7 +231,7 @@ for (const vp of VIEWPORTS) {
         fail(`${tag}: avatar menu popover (${box.left},${box.top})-(${box.right},${box.bottom}) leaves the ${box.w}x${box.h} viewport`)
       }
     }
-    if (phone && m.barBox && m.barLinks.length !== 6) fail(`${tag}: the bottom bar has ${m.barLinks.length} buttons, expected 6`)
+    if (phone && m.barBox && m.barLinks.length !== 7) fail(`${tag}: the bottom bar has ${m.barLinks.length} buttons, expected 7 (Settings is top-level)`)
     if (phone && m.barBox) {
       // Rule 12: the six-button bar on the narrowest phones.
       const scan = m.barLinks.find((l) => l.scan)
@@ -295,6 +301,86 @@ for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   if (!t) fail(`${tag}: no .toast-region, live region or .sticky-action-bar to measure`)
   else if (t.gap < -1) fail(`${tag}: the toast region's bottom edge (${t.regionBottom}px) is below the sticky action bar's top edge (${t.barTop}px)`)
 }
+
+// Rule 15 (nav-even): seven equal slots, Scan centred, the active pill has room at the ends, no label clipped. Measured on / (Today
+// current) and /settings (Settings current), in light and dark. At 1024 and 1280 the rail replaces the bar: seven links of one size.
+const navProbe = `
+(() => {
+  const bar = document.querySelector('nav.bottom-bar')
+  const rail = document.querySelector('nav.side-rail')
+  const shown = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0
+  const box = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height, cx: r.left + r.width / 2 } }
+  if (shown(bar)) {
+    const b = bar.getBoundingClientRect()
+    const cs = getComputedStyle(bar)
+    const innerLeft = b.left + parseFloat(cs.borderLeftWidth), innerRight = b.right - parseFloat(cs.borderRightWidth)
+    const links = [...bar.querySelectorAll('.bottom-bar__link')].map((a) => {
+      const label = a.querySelector('.bottom-bar__label')
+      const lb = label ? label.getBoundingClientRect() : null
+      const ab = a.getBoundingClientRect()
+      return {
+        text: a.textContent.trim(), ...box(a), scan: a.getAttribute('data-accent') === 'true', current: a.getAttribute('aria-current') === 'page',
+        labelOut: lb ? Math.max(ab.left - lb.left, lb.right - ab.right, 0) : 0, labelH: lb ? lb.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0,
+        sw: label ? label.scrollWidth : 0, cw: label ? label.clientWidth : 0,
+      }
+    })
+    return { kind: 'bar', barCx: (b.left + b.right) / 2, innerLeft, innerRight, links }
+  }
+  if (shown(rail)) {
+    const r = rail.getBoundingClientRect()
+    return { kind: 'rail', railLeft: r.left, railRight: r.right, links: [...rail.querySelectorAll('.side-rail__link')].map((a) => ({ text: a.textContent.trim(), ...box(a) })) }
+  }
+  return null
+})()`
+for (const scheme of ['light', 'dark']) {
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+  for (const vp of VIEWPORTS.filter((v) => [360, 390, 820, 1024, 1280].includes(v.width))) {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+    for (const route of ['/', '/settings']) {
+      const tag = `${vp.width}px ${route} (${scheme}) nav-even`
+      await cdp('Page.navigate', { url: base + route })
+      await new Promise((r) => setTimeout(r, 1200))
+      const n = await evaluate(navProbe).catch(() => null)
+      if (!n) { fail(`${tag}: neither the bottom bar nor the side rail is visible`); continue }
+      if (n.kind === 'rail') {
+        if (n.links.length !== 7) fail(`${tag}: the side rail has ${n.links.length} links, expected 7`)
+        const w0 = n.links[0]?.w ?? 0, h0 = n.links[0]?.h ?? 0
+        for (const l of n.links) {
+          if (Math.abs(l.w - w0) > 1 || Math.abs(l.h - h0) > 1) fail(`${tag}: rail link "${l.text}" is ${l.w.toFixed(1)}x${l.h.toFixed(1)}, not the ${w0.toFixed(1)}x${h0.toFixed(1)} of the first`)
+          if (l.left < n.railLeft - 1 || l.right > n.railRight + 1) fail(`${tag}: rail link "${l.text}" is outside the rail`)
+        }
+        continue
+      }
+      if (n.links.length !== 7) { fail(`${tag}: the bottom bar has ${n.links.length} buttons, expected 7`); continue }
+      const steps = n.links.slice(1).map((l, i) => l.cx - n.links[i].cx)
+      const step0 = steps[0]
+      steps.forEach((st, i) => {
+        if (Math.abs(st - step0) > 1) fail(`${tag}: slots are uneven: "${n.links[i].text}" to "${n.links[i + 1].text}" is ${st.toFixed(1)} px, the first step is ${step0.toFixed(1)} px`)
+      })
+      for (const l of n.links) if (!l.scan && l.w < 44) fail(`${tag}: slot "${l.text}" is ${l.w.toFixed(1)} px wide, below 44`)
+      const plain = n.links.filter((l) => !l.scan)
+      for (const l of plain) if (Math.abs(l.w - plain[0].w) > 1) fail(`${tag}: button "${l.text}" is ${l.w.toFixed(1)} px wide, not the ${plain[0].w.toFixed(1)} px of "${plain[0].text}"`)
+      const scan = n.links.find((l) => l.scan)
+      if (!scan || Math.abs(scan.cx - n.barCx) > 1) fail(`${tag}: Scan is not centred (centre ${scan ? scan.cx.toFixed(1) : 'none'}, bar centre ${n.barCx.toFixed(1)})`)
+      // The gap between items: the largest space between neighbouring non-Scan buttons.
+      let gap = 0
+      for (let i = 1; i < n.links.length; i++) if (!n.links[i].scan && !n.links[i - 1].scan) gap = Math.max(gap, n.links[i].left - n.links[i - 1].right)
+      const cur = n.links.find((l) => l.current)
+      if (!cur) fail(`${tag}: no current button`)
+      else {
+        const inset = cur.text === n.links[0].text ? cur.left - n.innerLeft : cur.text === n.links[6].text ? n.innerRight - cur.right : null
+        if (inset !== null && inset < gap - 0.5) fail(`${tag}: the active pill "${cur.text}" is ${inset.toFixed(1)} px from the bar edge, less than the ${gap.toFixed(1)} px gap between items`)
+        if (inset !== null && inset < 4) fail(`${tag}: the active pill "${cur.text}" is only ${inset.toFixed(1)} px from the bar edge`)
+      }
+      for (const l of n.links) {
+        if (l.labelOut > 0.5) fail(`${tag}: label "${l.text}" sticks out of its button by ${l.labelOut.toFixed(1)} px (clipped)`)
+        if (l.sw > l.cw + 0.5 && l.cw > 0) fail(`${tag}: label "${l.text}" is truncated (scrollWidth ${l.sw} > clientWidth ${l.cw})`)
+        if (l.fs && l.labelH > l.fs * 1.5) fail(`${tag}: label "${l.text}" wraps onto more than one line`)
+      }
+    }
+  }
+}
+await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
 
 ws.close()
 chrome.removeAllListeners('exit')

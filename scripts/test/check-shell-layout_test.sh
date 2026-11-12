@@ -31,6 +31,18 @@ grep -Eq "ROUTES = \[[^]]*'/stock'" "$F" && bad "ROUTES must not list /stock as 
 has "^//  14\\." "the header comment must document rule 14 (toast vs sticky action bar)"
 has "toast-region" "rule 14 must measure the .toast-region"
 has "toast-region.*sticky-action-bar|sticky-action-bar.*toast-region|toastProbe" "rule 14 must compare the toast region with the sticky action bar"
+# nav-even: seven equal slots, Scan centred, Settings top-level; 1024 is a checked width
+has "width: 1024, height: 768" "VIEWPORTS must include 1024 (the rail's first width)"
+has "^//  15\\." "the header comment must document rule 15 (the seven-slot bar)"
+has "expected 7" "the bar must have seven buttons (Settings is top-level), rule 12 and rule 15"
+has "navProbe" "rule 15 must have its own probe"
+has "slots are uneven|not the .* of the first|equal" "rule 15 must check that every slot has the same width"
+has "Scan is not centred \\(centre" "rule 15 must check that Scan's centre is the bar's centre"
+has "active pill.*(gap|edge)|inset" "rule 15 must check the active pill inset against the gap between items"
+has "less than the .*gap between items" "rule 15 must fail when the pill inset is smaller than the gap"
+has "wraps onto more than one line|clipped" "rule 15 must check that no label is clipped or wrapped"
+has "setEmulatedMedia" "rule 15 must run in light and dark (prefers-color-scheme)"
+has "\\[360, 390, 820, 1024, 1280\\]" "rule 15 must cover 360, 390, 820, 1024 and 1280"
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"

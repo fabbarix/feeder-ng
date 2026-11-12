@@ -125,9 +125,9 @@ describe('bottom bar (plan 4.5)', () => {
     expect(active['background']).toBe('var(--color-soft)')
     expect(active['color']).toBe('var(--color-accent-text)')
   })
-  it('Scan is a 58 x 58 accent button, radius 20, in the bar (no upward translate)', () => {
+  it('Scan is a 58 high accent button, at most 58 wide (never wider than its slot), radius 20, in the bar (no upward translate)', () => {
     const scan = d(".bottom-bar__link[data-accent='true']")
-    expect(scan['width']).toBe('58px')
+    expect(scan['width']).toMatch(/^min\(\s*58px\s*,\s*100%\s*\)$/)
     expect(scan['height']).toBe('58px')
     expect(scan['border-radius']).toBe('var(--radius-button-lg)')
     expect(scan['background']).toBe('var(--color-accent)')
@@ -279,47 +279,69 @@ describe('rail current item contrast (L-04, R2-L)', () => {
   })
 })
 
-describe('bottom bar with six buttons: Today, Plan, Pantry | Scan | Shop, Recipes (PN)', () => {
+describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, Recipes, Settings (nav-even)', () => {
   const bar = () => d('.bottom-bar')
-  const tracks = () => (bar()['grid-template-columns'] ?? '').trim().split(/\s+/).filter(Boolean)
-  const fr = (t: string) => (/^([\d.]+)fr$/.exec(t) ? Number(/^([\d.]+)fr$/.exec(t)![1]) : null)
-  const px = (t: string) => (/^([\d.]+)px$/.exec(t) ? Number(/^([\d.]+)px$/.exec(t)![1]) : null)
+  const tracks = () => (bar()['grid-template-columns'] ?? '').trim()
+  const spaceTokens = () => {
+    const root = declarations(readStylesCss().replace(/\/\*[\s\S]*?\*\//g, ''), ':root')
+    return (v: string | undefined): number => {
+      const raw = (v ?? '0').trim()
+      const t = /^var\((--space-\d+)\)$/.exec(raw)
+      if (t) return Number.parseFloat(root[t[1]!] ?? 'NaN')
+      return /^0(px)?$/.test(raw) ? 0 : Number.parseFloat(raw)
+    }
+  }
+  /** The horizontal padding: padding-inline, else the padding shorthand's second (or only) value. */
+  const padInline = () => {
+    const b = bar()
+    if (b['padding-inline']) return b['padding-inline']
+    const parts = (b['padding'] ?? '0').trim().split(/\s+(?![^(]*\))/)
+    return parts[1] ?? parts[0]
+  }
+  const gapOf = () => (bar()['column-gap'] ?? bar()['gap'] ?? '0').trim().split(/\s+/).pop()
 
-  /** Pixel width of every track at a viewport width, no safe-area inset (the safe-area env() is 0 on these phones). */
+  /** Pixel width of the slots at a viewport width, no safe-area inset (env() is 0 on these phones). */
   function layout(viewport: number) {
+    const px = spaceTokens()
+    const pad = px(padInline())
+    const gap = px(gapOf())
     const barW = Math.min(viewport - 2 * 12, 480)
-    const inner = barW - 2 // 1 px border each side
-    const t = tracks()
-    const fixed = t.reduce((n, x) => n + (px(x) ?? 0), 0)
-    const frs = t.reduce((n, x) => n + (fr(x) ?? 0), 0)
-    const widths = t.map((x) => px(x) ?? ((fr(x) ?? 0) * (inner - fixed)) / frs)
-    const left = widths.slice(0, 3).reduce((n, w) => n + w, 0)
-    const scanLeft = left
-    return { barW, inner, widths, scanCentre: 1 + scanLeft + widths[3]! / 2, barCentre: barW / 2 }
+    const inner = barW - 2 - 2 * pad // 1 px border each side
+    const slot = (inner - 6 * gap) / 7
+    const scanCentre = 1 + pad + 3 * (slot + gap) + slot / 2
+    return { barW, pad, gap, slot, scanCentre, barCentre: barW / 2 }
   }
 
-  it('is a six-track grid in DOM order: three destinations, Scan, two destinations', () => {
+  it('is a grid of seven equal tracks, minmax(0, 1fr) so a long label cannot widen one slot', () => {
     expect(bar()['display']).toBe('grid')
-    expect(tracks()).toHaveLength(6)
+    expect(tracks()).toMatch(/^repeat\(\s*7\s*,\s*minmax\(\s*0(px)?\s*,\s*1fr\s*\)\s*\)$/)
   })
-  it('the Scan track is the fixed 58 px one, in the fourth place; the other five share the rest by fr', () => {
-    const t = tracks()
-    expect(px(t[3]!)).toBe(58)
-    for (const i of [0, 1, 2, 4, 5]) expect(fr(t[i]!), `track ${i}`).not.toBeNull()
+  it('Scan is the fourth slot of seven: three destinations on each side', () => {
+    // The DOM order comes from PRIMARY_NAV (nav.test.ts); the grid has no explicit placement that would move a button.
+    expect(code).not.toMatch(/\.bottom-bar__link[^{}]*\{[^{}]*grid-column\s*:/)
   })
-  it('Scan is centred: the fr weights on its left equal those on its right (3 buttons on one side, 2 on the other)', () => {
-    const t = tracks()
-    const sum = (xs: string[]) => xs.reduce((n, x) => n + (fr(x) ?? 0), 0)
-    expect(sum(t.slice(0, 3))).toBeCloseTo(sum(t.slice(4)), 5)
+  it('the padding is the same at both ends (padding-inline), and is a real inset (at least 4 px)', () => {
+    const b = bar()
+    expect(b['padding-left']).toBeUndefined()
+    expect(b['padding-right']).toBeUndefined()
+    expect(spaceTokens()(padInline())).toBeGreaterThanOrEqual(4)
   })
-  it.each([360, 375, 390, 412, 430, 480, 600])('at %i px the Scan centre is the bar centre (within 0.5 px)', (vw) => {
+  it('the active pill inset from the bar edge is at least the gap between slots', () => {
+    const px = spaceTokens()
+    expect(px(padInline())).toBeGreaterThanOrEqual(px(gapOf()))
+    expect(px(gapOf())).toBeGreaterThanOrEqual(0)
+  })
+  it.each([360, 375, 390, 412, 430, 480, 600, 820])('at %i px the Scan centre is the bar centre (within 0.5 px)', (vw) => {
     const l = layout(vw)
+    expect(Number.isFinite(l.slot)).toBe(true)
     expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
   })
-  it.each([360, 375, 390, 412, 430])('at %i px every destination track is at least 44 px wide', (vw) => {
+  it.each([360, 375, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them)', (vw) => {
     const l = layout(vw)
-    expect(l.widths).toHaveLength(6)
-    l.widths.forEach((w, i) => expect(w, `track ${i}`).toBeGreaterThanOrEqual(44))
+    expect(l.slot).toBeGreaterThanOrEqual(44)
+  })
+  it('the Scan button is centred in its slot', () => {
+    expect(d(".bottom-bar__link[data-accent='true']")['justify-self']).toBe('center')
   })
   it('every button keeps a 44 x 44 minimum target (min-width, and height >= 44)', () => {
     const link = d('.bottom-bar__link')
@@ -329,8 +351,6 @@ describe('bottom bar with six buttons: Today, Plan, Pantry | Scan | Shop, Recipe
   })
   it('tracks may not shrink below the target: no track is a bare 0-based fr that can collapse (grid items min-width 44 px holds them)', () => {
     expect(d('.bottom-bar__link')['min-width']).toBe('44px')
-    expect(bar()['gap'] ?? '0').toMatch(/^0(px)?$/)
-    expect(bar()['padding'] ?? '0').toMatch(/^0(px)?$/)
   })
   it('labels never wrap or truncate: nowrap, no ellipsis, no clipping', () => {
     const label = d('.bottom-bar__label')
@@ -349,7 +369,7 @@ describe('bottom bar with six buttons: Today, Plan, Pantry | Scan | Shop, Recipe
     expect(bar()['max-width']).toBe('480px')
     expect(bar()['height']).toBe('var(--nav-height)')
   })
-  it('the rail needs no change for the sixth item: 6 x 56 + gaps fit a 100dvh rail, and the rail scrolls rather than clips on short screens', () => {
+  it('the rail takes the seventh item (Settings): 7 x 56 + gaps fit a 100dvh rail, and the rail scrolls rather than clips on short screens', () => {
     const rail = (media('min-width: 1024px').match(/\.side-rail\s*\{([^}]*)\}/) ?? [])[1] ?? ''
     expect(rail).toMatch(/max-height\s*:\s*100dvh/)
     expect(rail).toMatch(/overflow-y\s*:\s*auto/)

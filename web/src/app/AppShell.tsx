@@ -4,7 +4,7 @@ import { withAccessRequests } from './accessMenu'
 import { isChromeless } from './chromeless'
 import { pageWidthFor } from './pageWidths'
 import { PageErrorBoundary } from './PageErrorBoundary'
-import type { NavItem } from './nav'
+import type { NavItem, PrimaryNavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
 import { ShellStatus } from './ShellStatus'
 import { shellStrings } from './strings'
@@ -21,6 +21,9 @@ export interface AppShellProps {
   /** Access Requests waiting for an answer: a badge on the avatar button and an item in its menu. */
   pendingAccessRequests?: number
 }
+
+/** Plan and Settings match their sub-pages too (/plan/..., /settings/...); the other destinations match exactly. */
+const isEndMatch = (item: PrimaryNavItem) => item.id !== 'plan' && item.id !== 'settings'
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
@@ -57,7 +60,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           <NavLink
             key={item.id}
             to={item.path}
-            end={item.id !== 'plan'}
+            end={isEndMatch(item)}
             className="side-rail__link"
             data-accent={item.accent ? 'true' : undefined}
           >
@@ -86,7 +89,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           <NavLink
             key={item.id}
             to={item.path}
-            end={item.id !== 'plan'}
+            end={isEndMatch(item)}
             className="bottom-bar__link"
             data-accent={item.accent ? 'true' : undefined}
           >
