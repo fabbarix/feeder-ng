@@ -6,34 +6,70 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 
 	"github.com/fabbarix/feeder-ng/internal/backup"
 	"github.com/fabbarix/feeder-ng/internal/db"
 )
 
-// prepareDatabase is what run calls between db.Open and the app: when db.NeedsPre1400Snapshot, it takes the
-// verified snapshot <dataDir>/backups/feeder-pre-1400.db with backup.SnapshotNamed (a failure stops start-up
-// before any migration runs, and logs one line), then db.MigrateEmbedded (docs/dev/design/crs-plan.md §1.3).
-// A fresh install, or a database that already has 1400, takes no snapshot.
+// preSnapshot is one verified snapshot taken before a group of migrations. need reports whether it is
+// due for the database and the migration set fsys; take is then written with backup.SnapshotNamed.
+type preSnapshot struct {
+	file      string // name under <data>/backups
+	migration string // the migrations it precedes, for the log and errors
+	keep      bool   // an existing file is never replaced (the 1500 snapshot holds the true pre-1500 database)
+	need      func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error)
+}
+
+// preSnapshots is the ordered table run before any migration (docs/dev/design/crs-plan.md §1.3,
+// docs/dev/design/b5-snap.md). 1400 first, then 1500.
+var preSnapshots = []preSnapshot{
+	{
+		file:      backup.PreSnapshotFile,
+		migration: "1400",
+		need: func(ctx context.Context, d *sql.DB, _ fs.FS) (bool, error) {
+			return db.NeedsPre1400Snapshot(ctx, d)
+		},
+	},
+	{
+		file:      backup.PreSnapshot1500File,
+		migration: "1500",
+		keep:      true,
+		need: func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error) {
+			return db.NeedsSnapshotFor(ctx, d, fsys, db.Pre1500Prefixes)
+		},
+	},
+}
+
+// prepareDatabase is what run calls between db.Open and the app: for each pre-migration snapshot that is due
+// (see preSnapshots), it takes the verified copy <dataDir>/backups/<file> with backup.SnapshotNamed before any
+// migration runs, and logs one line. A failure stops start-up and migrates nothing. Then db.Migrate applies the
+// embedded set (docs/dev/design/crs-plan.md §1.3). A fresh install takes no snapshot.
 func prepareDatabase(ctx context.Context, d *sql.DB, dataDir string, logger *slog.Logger) error {
 	return prepareDatabaseWith(ctx, d, dataDir, logger, db.Migrations())
 }
 
-// prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass a synthetic 1500 and 1510).
-// STUB (b5-snap test author): still only the pre-1400 snapshot; the developer adds feeder-pre-1500.db.
+// prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass synthetic 1500 and 1510 files).
+// A 1500 snapshot that already exists is never replaced: it is the true pre-1500 database.
 func prepareDatabaseWith(ctx context.Context, d *sql.DB, dataDir string, logger *slog.Logger, fsys fs.FS) error {
-	need, err := db.NeedsPre1400Snapshot(ctx, d)
-	if err != nil {
-		return err
-	}
-	if need {
-		dir := filepath.Join(dataDir, backup.DirName)
-		if _, err := backup.SnapshotNamed(ctx, d, dir, backup.PreSnapshotFile); err != nil {
-			logger.Error("snapshot before migration 1400 failed, start-up stopped", "file", backup.PreSnapshotFile, "error", err)
-			return fmt.Errorf("snapshot %s before migration 1400: %w", backup.PreSnapshotFile, err)
+	dir := filepath.Join(dataDir, backup.DirName)
+	for _, s := range preSnapshots {
+		if _, err := os.Stat(filepath.Join(dir, s.file)); s.keep && err == nil {
+			continue // already taken: keep it
 		}
-		logger.Info("took the snapshot before migration 1400", "file", filepath.Join(dir, backup.PreSnapshotFile))
+		need, err := s.need(ctx, d, fsys)
+		if err != nil {
+			return err
+		}
+		if !need {
+			continue
+		}
+		if _, err := backup.SnapshotNamed(ctx, d, dir, s.file); err != nil {
+			logger.Error("snapshot before migration "+s.migration+" failed, start-up stopped", "file", s.file, "error", err)
+			return fmt.Errorf("snapshot %s before migration %s: %w", s.file, s.migration, err)
+		}
+		logger.Info("took the snapshot before migration "+s.migration, "file", filepath.Join(dir, s.file))
 	}
 	return db.Migrate(ctx, d, fsys)
 }

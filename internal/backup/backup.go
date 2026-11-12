@@ -288,4 +288,4 @@ const PreSnapshotFile = "feeder-pre-1400.db"
 
 // PreSnapshot1500File is the name of the snapshot taken before the beta.5 migrations 1500 to 1530
 // (docs/dev/design/b5-snap.md). SnapshotNamed already accepts it; List and Prune never see it.
-const PreSnapshot1500File = "" // STUB (b5-snap test author): the developer sets "feeder-pre-1500.db"
+const PreSnapshot1500File = "feeder-pre-1500.db"
