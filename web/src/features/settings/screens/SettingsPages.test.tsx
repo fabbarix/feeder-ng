@@ -60,7 +60,7 @@ describe('HouseholdPage', () => {
     await userEvent.clear(horizon)
     await userEvent.type(horizon, '14')
     await userEvent.tab()
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(await findNotice('status', 'Household settings saved')).toBeInTheDocument()
     expect(api.callsTo('PUT', '/api/household/settings')[0]!.body).toMatchObject({ planningHorizonDays: 14, timeZone: 'Europe/Rome' })
   })
@@ -77,7 +77,7 @@ describe('HouseholdPage', () => {
     })
     renderWithProviders(<HouseholdPage />)
     await screen.findByLabelText('Currency')
-    await userEvent.click(screen.getByRole('button', { name: 'Save household settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(await findNotice('alert', 'currency: must be a 3-letter code')).toBeInTheDocument()
   })
 
@@ -85,7 +85,7 @@ describe('HouseholdPage', () => {
     const api = routes(USER_ME)
     renderWithProviders(<HouseholdPage />)
     expect(await screen.findByLabelText('Planning Horizon (days)')).toBeDisabled()
-    expect(screen.queryByRole('button', { name: 'Save household settings' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save Household settings' })).toBeNull()
     expect(api.callsTo('GET', '/api/allowlist')).toHaveLength(0)
   })
 

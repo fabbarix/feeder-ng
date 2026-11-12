@@ -6,8 +6,6 @@ import type { IconName } from './icons'
 import './ListRow.css'
 
 interface ListRowBase {
-  /** Plain text, or inline content (e.g. Recipe links) on a static row, which then needs no `aria-label`. */
-  title: ReactNode
   /** Second line (muted). Makes the row two-lined (64) unless a thumb is given (72). */
   meta?: string
   /** Tinted 40 px square with this icon, as leading visual. */
@@ -21,8 +19,6 @@ interface ListRowBase {
   selected?: boolean
   /** Lets the title wrap over several lines instead of one truncated line. */
   wrapTitle?: boolean
-  /** WP3b: overrides the accessible name of the row's target (default: `title`). */
-  'aria-label'?: string
   /** WP3b: colours the meta line with a status (spoil, leftover, ...); needs `meta`. */
   metaStatus?: ChipStatus
   /** WP3b: icon before the meta text (14 px); defaults to the status icon when `metaStatus` is set. */
@@ -34,8 +30,20 @@ interface ListRowBase {
 /** WP3b: `data-*` attributes (e.g. `data-testid`) are passed through to the `li`. */
 type DataAttributes = { [K in `data-${string}`]?: string }
 
-/** The row's tap target: `href` or `onActivate`, never both; neither makes a static row. */
-export type ListRowProps = ListRowBase & DataAttributes & ({ href?: string; onActivate?: never } | { href?: never; onActivate?: () => void })
+/**
+ * The row's tap target: `href` or `onActivate`, never both; neither makes a static row.
+ *
+ * Accessible name: the target is named after `title`. A static row may have a ReactNode title (e.g. inline Recipe links) and
+ * needs no name. A row with a target must either have a plain string `title` or an explicit `aria-label`; a ReactNode title
+ * without one would leave the target unnamed, so it is a type error.
+ */
+export type ListRowProps = ListRowBase &
+  DataAttributes &
+  (
+    | { href?: undefined; onActivate?: undefined; title: ReactNode; 'aria-label'?: string }
+    | ({ href: string; onActivate?: never } | { href?: never; onActivate?: () => void }) &
+        ({ title: string; 'aria-label'?: string } | { title: ReactNode; 'aria-label': string })
+  )
 
 export interface ListGroupProps {
   /** Accessible name of the list. */
@@ -67,7 +75,7 @@ function passthroughData(props: Record<string, unknown>): Record<string, string>
   return out
 }
 
-/** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`). */
+/** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`, required for a ReactNode title on a row with a target). */
 export function ListRow(props: ListRowProps) {
   const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, children, metaStatus, metaIcon, wrapTitle } = props
   const inRouter = useInRouterContext()

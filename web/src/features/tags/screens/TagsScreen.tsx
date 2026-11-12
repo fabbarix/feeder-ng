@@ -48,6 +48,7 @@ export function TagsScreen(): ReactElement | null {
         onSave={page.save}
         onMerge={page.openMergePicker}
         onDelete={() => void page.deleteTag()}
+        busy={page.busy}
       />
       <MergeTargetDialog
         state={page.mergePicker}

@@ -1,6 +1,6 @@
 // R2-3 (ui-review-2 F-01 adoption, L-06, F-03): the Household form uses field sizes, FieldRow and FormActions.
 //   Time zone md . Planning Horizon / Cool-down / Leftover Use-by xs, side by side in one FieldRow . Quiet hours start+end sm in one
-//   FieldRow . Location lg . Currency xs . "Save household settings" in FormActions (auto width from 600 px), only for an Admin.
+//   FieldRow . Location lg . Currency xs . "Save Household settings" in FormActions (auto width from 600 px), only for an Admin.
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { householdSettings } from './fixtures'
@@ -44,12 +44,12 @@ describe('HouseholdSettingsForm sizing (R2-3)', () => {
     expect(container.querySelector('.settings__row')).toBeNull()
   })
 
-  it('puts Save household settings in FormActions for an Admin, and shows none otherwise', () => {
+  it('puts Save Household settings in FormActions for an Admin, and shows none otherwise', () => {
     const { unmount } = setup()
-    expect(screen.getByRole('button', { name: 'Save household settings' }).closest('.form-actions__primary')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Save Household settings' }).closest('.form-actions__primary')).not.toBeNull()
     unmount()
     setup(false)
-    expect(screen.queryByRole('button', { name: 'Save household settings' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save Household settings' })).toBeNull()
     expect(document.querySelector('.form-actions')).toBeNull()
   })
 })

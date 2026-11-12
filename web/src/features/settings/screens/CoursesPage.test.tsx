@@ -278,7 +278,7 @@ describe('CoursesPage: Delete and Archive', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete Course' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/courses/2?replacement=1')).toHaveLength(1))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(await findNotice('status', 'Deleted Side.')).toBeInTheDocument()
+    expect(await findNotice('status', 'Removed Side.')).toBeInTheDocument()
   })
 
   // Rule (design note 3.2): after a removal focus goes to the Actions button of the row that takes the removed row's place
