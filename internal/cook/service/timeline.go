@@ -1,0 +1,219 @@
+package service
+
+import (
+	"context"
+	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/cook"
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
+)
+
+// Timeline is the cooking timeline of one Meal Slot occurrence (spec §11, §16; crs-c2 §5.1): every Course of the
+// slot in its order, the timeline items of the unresolved ones (cook.Timeline on whole minutes) and the Advance Steps
+// of their fresh Courses.
+type Timeline struct {
+	Date         string
+	MealSlotID   int64
+	SlotName     string
+	Time         string    // HH:MM, household time
+	At           time.Time // the slot instant
+	StartAt      time.Time // At less TotalMinutes: when cooking starts
+	TotalMinutes int
+	Courses      []TimelineCourse
+	Items        []TimelineItem
+	Advance      []TimelineAdvance
+	Unresolved   int // Courses still to cook or reheat
+	Fresh        int // fresh Courses still to cook
+}
+
+// TimelineCourse is one Course of the slot. ReheatSeconds is set for an unresolved Leftover Course only.
+type TimelineCourse struct {
+	CourseID      int64
+	Name          string
+	RecipeID      int64
+	RecipeName    string
+	Scope         cook.Scope
+	Batches       float64
+	Fresh         bool
+	State         string
+	ReheatSeconds int
+}
+
+// TimelineItem is one entry of the timeline. Kind is active, passive, reheat or serve; Step is the Recipe Step index
+// (-1 for Reheat and Serve); Number is the 1-based place in Items; TimerSeconds is 0 when the item has no timer.
+type TimelineItem struct {
+	CourseID        int64
+	Scope           cook.Scope
+	Kind            string
+	Step            int
+	Number          int
+	Text            string
+	DurationMinutes int
+	StartSeconds    int
+	EndSeconds      int
+	Uses            []schedule.Use
+	ImageURL        string
+	TimerLabel      string
+	TimerSeconds    int
+	After           []int
+}
+
+// TimelineAdvance is an Advance Step of a fresh Course, with its mark.
+type TimelineAdvance struct {
+	CourseID        int64
+	Scope           cook.Scope
+	Step            int
+	Text            string
+	LeadTimeMinutes int
+	Done            bool
+	DoneAt          *time.Time
+	Warning         bool
+}
+
+// openCourse is an unresolved Course with its Recipe's Steps.
+type openCourse struct {
+	meal MealInfo
+	rs   cook.RecipeSteps
+}
+
+// SlotTimeline builds the timeline of a slot on a date. ErrNotFound when the slot has no Planned Meal there;
+// ErrNotCookable when no Course is left to cook or reheat. Leftover Courses are reheats: items, but no Steps.
+func (s *Service) SlotTimeline(ctx context.Context, date string, mealSlotID int64) (Timeline, error) {
+	metas, err := s.cfg.Meals.Slot(ctx, date, mealSlotID)
+	if err != nil {
+		return Timeline{}, err
+	}
+	if len(metas) == 0 {
+		return Timeline{}, ErrNotFound
+	}
+	zone, err := s.cfg.Household.Zone(ctx)
+	if err != nil {
+		return Timeline{}, err
+	}
+	if zone == nil {
+		zone = time.UTC
+	}
+	t := Timeline{Date: date, MealSlotID: mealSlotID, SlotName: metas[0].SlotName, At: metas[0].At,
+		Time: metas[0].At.In(zone).Format("15:04")}
+	var inputs []cook.Course
+	var open []openCourse
+	steps := map[int64]cook.RecipeSteps{}
+	for _, m := range metas {
+		rs, ok := steps[m.RecipeID]
+		if !ok {
+			if rs, err = s.cfg.Recipes.Steps(ctx, m.RecipeID); err != nil {
+				return Timeline{}, err
+			}
+			steps[m.RecipeID] = rs
+		}
+		tc := TimelineCourse{CourseID: m.CourseID, Name: m.CourseName, RecipeID: m.RecipeID, RecipeName: rs.Name,
+			Scope: courseScope(m), Batches: m.Batches, Fresh: m.Batches > 0, State: m.State}
+		if m.State == "planned" {
+			t.Unresolved++
+			c := cook.Course{ID: m.CourseID}
+			if m.Batches > 0 {
+				t.Fresh++
+				c.Steps = scheduleSteps(rs.Steps)
+			} else {
+				c.Reheat = true
+				c.ReheatSeconds = cook.DefaultReheatSeconds(m.Portions, rs.ReheatMinutes)
+				tc.ReheatSeconds = c.ReheatSeconds
+			}
+			inputs = append(inputs, c)
+			open = append(open, openCourse{meal: m, rs: rs})
+		}
+		t.Courses = append(t.Courses, tc)
+	}
+	if t.Unresolved == 0 {
+		return Timeline{}, ErrNotCookable
+	}
+	res, err := cook.Timeline(inputs)
+	if err != nil {
+		return Timeline{}, err
+	}
+	res, minutes := cook.RoundToMinutes(res)
+	t.TotalMinutes = minutes
+	t.StartAt = t.At.Add(-time.Duration(minutes) * time.Minute)
+
+	byCourse := map[int64]openCourse{}
+	for _, oc := range open {
+		byCourse[oc.meal.CourseID] = oc
+	}
+	multi := len(open) > 1
+	for i, it := range res.Items {
+		oc := byCourse[it.CourseID]
+		ti := TimelineItem{CourseID: it.CourseID, Scope: courseScope(oc.meal), Step: -1, Number: i + 1,
+			StartSeconds: it.StartSeconds, EndSeconds: it.EndSeconds, After: []int{}}
+		switch it.Kind {
+		case cook.ItemStep:
+			st := oc.rs.Steps[it.StepIndex]
+			uses, err := schedule.ScaleUses(st.Uses, oc.meal.Batches)
+			if err != nil {
+				return Timeline{}, err
+			}
+			ti.Kind, ti.Step, ti.Text, ti.DurationMinutes = string(st.Kind), it.StepIndex, st.Text, st.DurationMinutes
+			ti.Uses, ti.ImageURL, ti.After = uses, st.ImageURL, append([]int{}, st.After...)
+			if st.Kind == schedule.Passive {
+				ti.TimerSeconds = st.DurationMinutes * 60
+				ti.TimerLabel = cook.TimerLabel(recipeNumber(oc.rs, it.StepIndex), st.Text)
+				if multi {
+					ti.TimerLabel = oc.rs.Name + " · " + cook.CutStepText(st.Text)
+				}
+			}
+		case cook.ItemReheat:
+			seconds := it.EndSeconds - it.StartSeconds
+			ti.Kind, ti.Text = "reheat", "Reheat "+oc.rs.Name
+			ti.DurationMinutes = (seconds + 59) / 60
+			ti.TimerLabel, ti.TimerSeconds = "Reheat", seconds
+		case cook.ItemServe:
+			ti.Kind, ti.Text = "serve", oc.rs.Name+": ready to serve"
+		}
+		t.Items = append(t.Items, ti)
+	}
+
+	for _, oc := range open {
+		if oc.meal.Batches <= 0 {
+			continue
+		}
+		sc, err := schedule.Compute(scheduleSteps(oc.rs.Steps))
+		if err != nil {
+			return Timeline{}, err
+		}
+		scope := courseScope(oc.meal)
+		marks, err := s.cfg.Store.Marks(ctx, scope)
+		if err != nil {
+			return Timeline{}, err
+		}
+		for _, adv := range sc.Advance {
+			_, done := marks[adv.Index]
+			a := TimelineAdvance{CourseID: oc.meal.CourseID, Scope: scope, Step: adv.Index,
+				Text: oc.rs.Steps[adv.Index].Text, LeadTimeMinutes: adv.LeadTimeMinutes, Warning: !done}
+			if at, ok := marks[adv.Index]; ok {
+				a.Done, a.DoneAt = true, &at
+			}
+			t.Advance = append(t.Advance, a)
+		}
+	}
+	return t, nil
+}
+
+// scheduleSteps maps a Recipe's Steps to the scheduler's.
+func scheduleSteps(steps []cook.Step) []schedule.Step {
+	out := make([]schedule.Step, 0, len(steps))
+	for _, st := range steps {
+		out = append(out, schedule.Step{Kind: st.Kind, DurationMinutes: st.DurationMinutes,
+			LeadTimeMinutes: st.LeadTimeMinutes, After: st.After})
+	}
+	return out
+}
+
+// recipeNumber is the 1-based place of a Recipe Step among the non-Advance Steps (the number Cook Mode's labels use).
+func recipeNumber(rs cook.RecipeSteps, index int) int {
+	n := 1
+	for i := 0; i < index && i < len(rs.Steps); i++ {
+		if rs.Steps[i].Kind != schedule.Advance {
+			n++
+		}
+	}
+	return n
+}

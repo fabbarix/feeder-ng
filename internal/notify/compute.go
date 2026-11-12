@@ -270,6 +270,7 @@ func DueNow(cands []Candidate, now time.Time, q household.QuietHours, loc *time.
 type StepDue struct {
 	MealDate    string
 	MealSlotID  int64
+	CourseID    int64 // the Course the Planned Meal fills (crs-c2)
 	RecipeName  string
 	Description string
 	SlotAt      time.Time
@@ -287,7 +288,7 @@ func AdvanceStepsOn(f Facts, day string, loc *time.Location) []StepDue {
 		}
 		for _, s := range m.AdvanceSteps {
 			out = append(out, StepDue{
-				MealDate: m.Date, MealSlotID: m.MealSlotID, RecipeName: m.RecipeName,
+				MealDate: m.Date, MealSlotID: m.MealSlotID, CourseID: m.CourseID, RecipeName: m.RecipeName,
 				Description: s.Description, SlotAt: m.SlotAt.In(loc), DueAt: m.SlotAt.Add(-s.Lead).In(loc),
 			})
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/cook/service"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	hstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/notify"
@@ -35,6 +36,8 @@ func mount(r *app.Router, d app.Deps) {
 type stepDTO struct {
 	MealDate    string `json:"mealDate"`
 	MealSlotID  int64  `json:"mealSlotId"`
+	CourseID    int64  `json:"courseId"`
+	CourseName  string `json:"courseName"`
 	RecipeName  string `json:"recipeName"`
 	Description string `json:"description"`
 	DueAt       string `json:"dueAt"`
@@ -59,6 +62,15 @@ func (a *api) advanceSteps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	steps := notify.AdvanceStepsOn(f, plan.Today(now, loc), loc)
+	courses, err := coursestore.New(a.d.DB, a.d.Clock).List(ctx, true)
+	if err != nil {
+		a.fail(w, err)
+		return
+	}
+	courseName := map[int64]string{}
+	for _, c := range courses {
+		courseName[c.ID] = c.Name
+	}
 	out := make([]stepDTO, 0, len(steps))
 	for _, s := range steps {
 		state := "upcoming"
@@ -66,7 +78,8 @@ func (a *api) advanceSteps(w http.ResponseWriter, r *http.Request) {
 			state = "due"
 		}
 		out = append(out, stepDTO{
-			MealDate: s.MealDate, MealSlotID: s.MealSlotID, RecipeName: s.RecipeName, Description: s.Description,
+			MealDate: s.MealDate, MealSlotID: s.MealSlotID, CourseID: s.CourseID, CourseName: courseName[s.CourseID],
+			RecipeName: s.RecipeName, Description: s.Description,
 			DueAt: s.DueAt.UTC().Format(time.RFC3339), DueTime: s.DueAt.Format("15:04"), SlotTime: s.SlotAt.Format("15:04"),
 			State: state,
 		})
