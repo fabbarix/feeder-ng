@@ -8,6 +8,9 @@ import { AppRoot, type AppRootProps } from './AppRoot'
 import { ME_CACHE_KEY } from './meCache'
 
 vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
+// Sign-out empties the photos kept on the device for a photo read (photo-store.md "Sign-out"): the import feature's own function, mocked here.
+const forget = vi.hoisted(() => ({ forgetStoredPhotos: vi.fn<() => Promise<void>>() }))
+vi.mock('../features/import', async (orig) => ({ ...(await orig<object>()), forgetStoredPhotos: forget.forgetStoredPhotos }))
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -122,5 +125,46 @@ describe('AppRoot offline cold reload (R10)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
     await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
+  })
+
+  describe('sign-out and the photos kept on the device', () => {
+    const signOut = async () => {
+      mount('/plan', new Response(JSON.stringify(me), { status: 200 }))
+      const calls: string[] = []
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (url: string) => {
+          calls.push(`fetch ${url}`)
+          return new Response(JSON.stringify(me), { status: 200 })
+        }),
+      )
+      forget.forgetStoredPhotos.mockImplementation(async () => void calls.push('forget'))
+      expect(await screen.findByText('plan page')).toBeInTheDocument()
+      calls.length = 0
+      await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
+      await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
+      await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
+      return calls
+    }
+    beforeEach(() => forget.forgetStoredPhotos.mockReset())
+
+    it('forgets the stored photos BEFORE /api/logout is called', async () => {
+      const calls = await signOut()
+      expect(forget.forgetStoredPhotos).toHaveBeenCalledOnce()
+      expect(calls.indexOf('forget')).toBeGreaterThanOrEqual(0)
+      expect(calls.findIndex((c) => c.includes('/api/logout'))).toBeGreaterThan(calls.indexOf('forget'))
+    })
+
+    it('still signs out when forgetting fails (the error is swallowed)', async () => {
+      forget.forgetStoredPhotos.mockRejectedValue(new Error('idb'))
+      const calls: string[] = []
+      mount('/plan', new Response(JSON.stringify(me), { status: 200 }))
+      vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => (calls.push(url), new Response(JSON.stringify(me), { status: 200 }))))
+      expect(await screen.findByText('plan page')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
+      await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
+      await waitFor(() => expect(calls.some((c) => c.includes('/api/logout'))).toBe(true))
+      await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
+    })
   })
 })

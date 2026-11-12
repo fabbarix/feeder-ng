@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
+import { JPEG_DATA, rawPhoto, setPages } from '../fakePhotoPages.test-helper'
 import { photos, plan, recipe, reviewExtras, courseExtras } from '../fixtures.test-helper'
 import type { UseImportReview } from '../hooks/useImportReview'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
@@ -25,7 +26,7 @@ vi.mock('../hooks/useRecipeRead', () => ({
 }))
 vi.mock('../hooks/useReadAvailability', () => ({ useReadAvailability: () => hook.avail }))
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
-vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 
 import { ImportScreen } from './ImportScreen'
 
@@ -44,6 +45,7 @@ const avail = (over: Partial<UseReadAvailability> = {}): UseReadAvailability => 
 const at = (path = '/recipes/import') => render(<MemoryRouter initialEntries={[path]}><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
+  setPages()
   hook.review = review()
   hook.read = idle()
   hook.avail = avail()
@@ -72,6 +74,15 @@ describe('ImportScreen: Read a recipe', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Page address' }), 'https://example.com/soup')
     await userEvent.click(screen.getByRole('button', { name: 'Read recipe' }))
     expect(hook.read.start).toHaveBeenCalledWith({ kind: 'url', url: 'https://example.com/soup' })
+  })
+  it('reads the Photo tab: Read recipe sends the photos the hook prepared, in order, through the screen\'s read hook', async () => {
+    const pages = setPages({ canRead: true, toReadInput: vi.fn(async () => ({ kind: 'photo' as const, photos: [rawPhoto(JPEG_DATA), rawPhoto('data:image/jpeg;base64,BBBB')] })) })
+    at()
+    await userEvent.click(screen.getByRole('radio', { name: 'Photo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Read recipe' }))
+    await vi.waitFor(() => expect(hook.read.start).toHaveBeenCalledOnce())
+    expect(pages.toReadInput).toHaveBeenCalledOnce()
+    expect(vi.mocked(hook.read.start).mock.calls[0]![0]).toMatchObject({ kind: 'photo', photos: [{ dataUrl: JPEG_DATA }, { dataUrl: 'data:image/jpeg;base64,BBBB' }] })
   })
   it('shows progress with Cancel while reading', async () => {
     hook.read = idle({ phase: 'running', busy: true, kind: 'url', state: 'fetching' })

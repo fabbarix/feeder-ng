@@ -91,9 +91,25 @@ describe('buildReadRequest: photos', () => {
   it('refuses a picture without a data URL (the picker was not asked for output "dataUrl")', () => {
     expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: undefined })] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 0 })
   })
-  it('refuses a data URL that is not JPEG, PNG, GIF or WebP, and an http link', () => {
-    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto(), blobPhoto({ dataUrl: 'data:image/heic;base64,AAAA' })] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 1 })
+  it('refuses a data URL that is not JPEG, PNG, GIF, WebP, HEIC or HEIF (AVIF, say), and an http link', () => {
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto(), blobPhoto({ dataUrl: 'data:image/avif;base64,AAAA' })] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 1 })
     expect(buildReadRequest({ kind: 'photo', photos: [linkPhoto('http://cdn.example.com/a.jpg')] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 0 })
+  })
+  it('accepts a HEIC or HEIF data URL as it is (photo-read.md D8: the server turns it upright)', () => {
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'data:image/heic;base64,AAAA' })] })).toEqual({ ok: true, body: { photos: [{ dataUrl: 'data:image/heic;base64,AAAA' }] } })
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'data:image/heif;base64,AAAA' })] })).toEqual({ ok: true, body: { photos: [{ dataUrl: 'data:image/heif;base64,AAAA' }] } })
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'DATA:IMAGE/HEIC;base64,AAAA' })] }).ok).toBe(true)
+  })
+  it('still refuses AVIF and a bare "data:;base64," (an as-is HEIC whose type was lost)', () => {
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'data:image/avif;base64,AAAA' })] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 0 })
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'data:;base64,AAAA' })] })).toEqual({ ok: false, problem: 'photo_unsupported', index: 0 })
+  })
+  it('keeps the 8 MB limit for a HEIC and keeps a link and a HEIC in their order', () => {
+    expect(buildReadRequest({ kind: 'photo', photos: [blobPhoto({ dataUrl: 'data:image/heic;base64,AAAA', size: READ_LIMITS.photoBytes + 1 })] })).toEqual({ ok: false, problem: 'photo_too_large', index: 0 })
+    expect(buildReadRequest({ kind: 'photo', photos: [linkPhoto(), blobPhoto({ dataUrl: 'data:image/heic;base64,AAAA' })] })).toEqual({
+      ok: true,
+      body: { photos: [{ url: 'https://cdn.example.com/card.jpg' }, { dataUrl: 'data:image/heic;base64,AAAA' }] },
+    })
   })
 })
 

@@ -97,7 +97,7 @@ describe('input errors (start refused with 4xx)', () => {
     ['photos_empty', 'Add at least one photo.'],
     ['too_many_photos', 'A read takes up to 4 photos.'],
     ['photo_too_large', 'A photo is over 8 MB. Use a smaller picture.'],
-    ['photo_unsupported', 'A photo could not be read. Use a JPEG, PNG, GIF or WebP picture.'],
+    ['photo_unsupported', 'A photo could not be read. Use a JPEG, PNG, WebP or HEIC photo.'],
     ['photo_unavailable', 'A photo link could not be fetched. Add the photo from your device instead.'],
     ['request_too_large', 'That is too much to send at once. Use fewer or smaller photos.'],
     ['read_in_progress', 'A recipe is already being read. Let it finish, or cancel it.'],

@@ -3,11 +3,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { PICKED, PICKED_2, pickerRenders } from '../fakeImagePicker.test-helper'
+import { setPages } from '../fakePhotoPages.test-helper'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 
-vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 
 import { ReadRecipeStep } from './ReadRecipeStep'
 
@@ -26,7 +26,7 @@ const readButton = () => screen.getByRole('button', { name: 'Read recipe' })
 const tab = (name: string) => screen.getByRole('radio', { name })
 
 beforeEach(() => {
-  pickerRenders.length = 0
+  setPages()
 })
 
 describe('ReadRecipeStep: the three inputs', () => {
@@ -87,37 +87,6 @@ describe('ReadRecipeStep: the three inputs', () => {
       expect(screen.getByText('That text is over 50,000 characters. Paste a shorter part.')).toBeInTheDocument()
       expect(screen.getByText('50,001 / 50,000')).toBeInTheDocument()
       expect(readButton()).toBeDisabled()
-    })
-  })
-
-  describe('Photo', () => {
-    it('shows the photo panel (an ImagePicker per photo) and keeps Read off until one is added', async () => {
-      view()
-      await userEvent.click(tab('Photo'))
-      expect(screen.getByRole('group', { name: 'Photo 1' })).toBeInTheDocument()
-      expect(readButton()).toBeDisabled()
-    })
-    it('adding a photo opens the next slot; Read starts a photo read with the pictures in order', async () => {
-      const { read } = view()
-      await userEvent.click(tab('Photo'))
-      await userEvent.click(screen.getByRole('button', { name: 'Choose Photo 1' }))
-      expect(screen.getByRole('group', { name: 'Photo 2' })).toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Choose Photo 2' }))
-      await userEvent.click(readButton())
-      expect(read.start).toHaveBeenCalledWith({ kind: 'photo', photos: [PICKED, PICKED_2] })
-    })
-    it('removing a photo takes it out of the read', async () => {
-      const { read } = view()
-      await userEvent.click(tab('Photo'))
-      await userEvent.click(screen.getByRole('button', { name: 'Choose Photo 1' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Remove Photo 1' }))
-      expect(readButton()).toBeDisabled()
-      expect(read.start).not.toHaveBeenCalled()
-    })
-    it('shows the privacy note ("only kept if you choose to")', async () => {
-      view()
-      await userEvent.click(tab('Photo'))
-      expect(screen.getByText(/They are only kept if you choose to use one for the Recipe\./)).toBeInTheDocument()
     })
   })
 

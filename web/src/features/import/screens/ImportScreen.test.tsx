@@ -19,6 +19,7 @@ function state(over: Partial<UseImportReview>): UseImportReview {
     confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...courseExtras(), ...over,
   }
 }
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 // WP-E: the Read a recipe step (its own tests: ImportScreen.read.test.tsx)
 vi.mock('../hooks/useRecipeRead', () => ({

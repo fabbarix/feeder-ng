@@ -11,6 +11,7 @@ import type { UseImportReview } from '../hooks/useImportReview'
 const hook = vi.hoisted(() => ({ review: {} as UseImportReview, picker: {} as UseExportPicker }))
 vi.mock('../hooks/useImportReview', () => ({ useImportReview: () => hook.review }))
 vi.mock('../hooks/useExportPicker', () => ({ useExportPicker: () => hook.picker }))
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 vi.mock('../hooks/useRecipeRead', () => ({
   useRecipeRead: () => ({ phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0, start: vi.fn(), cancel: vi.fn(), reset: vi.fn() }),

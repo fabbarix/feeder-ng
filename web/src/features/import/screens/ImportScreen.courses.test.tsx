@@ -12,6 +12,7 @@ import { importStrings as s } from '../strings'
 const h = vi.hoisted(() => ({ review: {} as UseImportReview, admin: true }))
 vi.mock('../hooks/useImportReview', () => ({ useImportReview: () => h.review }))
 vi.mock('../hooks/useImportCourses', () => ({ useImportCourses: () => ({ courses: courseChoices, isAdmin: h.admin, isPending: false }) }))
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 vi.mock('../hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 vi.mock('../hooks/useRecipeRead', () => ({
   useRecipeRead: () => ({ phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0, start: vi.fn(), cancel: vi.fn(), reset: vi.fn() }),

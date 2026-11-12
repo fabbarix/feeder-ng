@@ -3,6 +3,7 @@
 import type { ImageOrigin, RawImage } from '../../../ui/ImagePicker/types'
 import type { ImageProblemCode } from '../../../ui/ImagePicker/lib/problems'
 import { moveItem } from '../../../ui/Sortable/reorder'
+import type { SavablePhoto } from './photoStore'
 
 // --- Stand-ins, replaced by the ui barrel imports when T1 (ui/ImageEditor) lands. ---------------------------------------------
 // Keep this block together: once ui/ImageEditor exports ImageEdit, Rect, Size, initialEdit, isFull and outputSize, delete it and import them.
@@ -107,6 +108,8 @@ export type PhotoPagesAction =
   | { type: 'renderFailed'; id: PhotoId; revision: number; problem: PhotoProblem }
   | { type: 'problemSet'; problem: PanelProblem }
   | { type: 'problemCleared' }
+  /** The photos kept on the device (photo-store.md phase 2): they go before the live ones; `nextId` is the store's counter. */
+  | { type: 'restored'; photos: readonly SavablePhoto[]; nextId: number }
 
 export type BlockReason = 'editing' | 'preparing' | { failed: PhotoId } | null
 
@@ -248,6 +251,9 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
 
     case 'problemCleared':
       return { ...state, problem: null }
+
+    case 'restored':
+      return state // TODO(pr-t3 developer): see photoPages.restored.test.ts
   }
 }
 

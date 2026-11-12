@@ -12,3 +12,8 @@ const feature: FeatureModule = {
 }
 
 export const routes = feature.routes
+
+/** Empties the photos kept on the device for a photo read (AppRoot calls it on sign-out). STUB. */
+export async function forgetStoredPhotos(): Promise<void> {
+  return undefined
+}

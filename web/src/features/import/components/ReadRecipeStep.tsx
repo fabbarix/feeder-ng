@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button, Segmented, TextArea, TextField, Tile } from '../../../ui'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
-import { filledPhotos, emptySlots, setSlot, type PhotoSlots } from '../lib/photoSlots'
+import { usePhotoPages } from '../hooks/usePhotoPages'
 import { withModelName } from '../lib/readErrors'
 import { textCounter } from '../lib/readRequest'
 import { importStrings as s, readStrings as t } from '../strings'
@@ -30,7 +30,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const [tab, setTab] = useState<Tab>('url')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
-  const [slots, setSlots] = useState<PhotoSlots>(emptySlots)
+  const pages = usePhotoPages()
   const lastInput = useRef<ReadInput | undefined>(undefined)
   const errorTile = useRef<HTMLElement>(null)
   const readButton = useRef<HTMLButtonElement>(null)
@@ -59,17 +59,23 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   }, [read.busy, read.phase])
 
   const counter = textCounter(text)
-  const photos = filledPhotos(slots)
-  const input: ReadInput | undefined =
-    current === 'url' ? { kind: 'url', url } : current === 'text' ? { kind: 'text', text } : { kind: 'photo', photos }
-  const hasInput = current === 'url' ? url.trim() !== '' : current === 'text' ? text.trim() !== '' && !counter.over : photos.length > 0
+  const input: ReadInput | undefined = current === 'url' ? { kind: 'url', url } : current === 'text' ? { kind: 'text', text } : undefined
+  const hasInput = current === 'url' ? url.trim() !== '' : current === 'text' ? text.trim() !== '' && !counter.over : pages.canRead
   const canRead = !locked && hasInput
 
   const clearFailure = () => {
     if (read.phase === 'failed') read.reset()
   }
   const submit = () => {
-    if (!canRead || !input) return
+    if (!canRead) return
+    if (!input) {
+      // STUB: the developer adds the blockReason description, the Photo tab on restore and finished() on success.
+      void pages.toReadInput().then((photoInput) => {
+        lastInput.current = photoInput
+        void read.start(photoInput)
+      })
+      return
+    }
     lastInput.current = input
     void read.start(input)
   }
@@ -136,14 +142,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
           />
         ) : null}
         {current === 'photo' ? (
-          <ReadPhotoPanel
-            slots={slots}
-            disabled={locked}
-            onSlotChange={(i, image) => {
-              clearFailure()
-              setSlots((prev) => setSlot(prev, i, image))
-            }}
-          />
+          <ReadPhotoPanel pages={pages} disabled={locked} />
         ) : null}
       </div>
       {reason ? (
