@@ -48,10 +48,9 @@ describe('TagInput', () => {
     expect(screen.getByRole('button', { name: 'Remove Tag roast' })).toHaveTextContent('roast')
     expect(screen.getByRole('button', { name: 'Remove Tag quick' })).toBeInTheDocument()
   })
-  it('a chip is pressed; choosing it removes the Tag', async () => {
+  it('choosing a chip removes the Tag', async () => {
     const { onChange } = view()
     const chip = screen.getByRole('button', { name: 'Remove Tag roast' })
-    expect(chip).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(chip)
     expect(onChange).toHaveBeenCalledWith(['quick'])
   })

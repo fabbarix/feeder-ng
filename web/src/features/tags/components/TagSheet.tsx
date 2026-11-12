@@ -18,10 +18,12 @@ export interface TagSheetProps {
   onMerge: () => void
   /** Delete Tag: only an edit sheet shows it. */
   onDelete: () => void
+  /** True while the Delete impact is loading (or a write is running): Delete Tag is disabled so a double tap cannot ask twice. */
+  busy?: boolean
 }
 
 /** The Tag sheet: Name, Tag colour picker with a live pill, Save, and (editing) Merge into… and Delete Tag. */
-export function TagSheet({ sheet, newColour, onClose, onSave, onMerge, onDelete }: TagSheetProps): ReactElement | null {
+export function TagSheet({ sheet, newColour, onClose, onSave, onMerge, onDelete, busy }: TagSheetProps): ReactElement | null {
   const title = sheet?.mode === 'edit' ? tagsStrings.sheet.editTitle : tagsStrings.sheet.addTitle
   return (
     <BottomSheet open={sheet !== null} onClose={onClose} title={title}>
@@ -33,6 +35,7 @@ export function TagSheet({ sheet, newColour, onClose, onSave, onMerge, onDelete 
           onSave={onSave}
           onMerge={onMerge}
           onDelete={onDelete}
+          busy={busy}
         />
       ) : null}
     </BottomSheet>
@@ -40,7 +43,7 @@ export function TagSheet({ sheet, newColour, onClose, onSave, onMerge, onDelete 
 }
 
 /** The form of one opening of the sheet: its state is local, so a reopened sheet starts afresh. */
-function TagSheetForm({ sheet, newColour, onSave, onMerge, onDelete }: Omit<TagSheetProps, 'sheet' | 'onClose'> & { sheet: NonNullable<SheetState> }) {
+function TagSheetForm({ sheet, newColour, onSave, onMerge, onDelete, busy }: Omit<TagSheetProps, 'sheet' | 'onClose'> & { sheet: NonNullable<SheetState> }) {
   const editing = sheet.mode === 'edit' ? sheet.tag : null
   const [name, setName] = useState(editing?.name ?? '')
   const [colour, setColour] = useState<string>(editing?.colour ?? newColour)
@@ -90,7 +93,7 @@ function TagSheetForm({ sheet, newColour, onSave, onMerge, onDelete }: Omit<TagS
       <FormActions
         destructive={
           editing ? (
-            <Button type="button" variant="danger-tertiary" onClick={onDelete}>
+            <Button type="button" variant="danger-tertiary" disabled={busy} onClick={onDelete}>
               {tagsStrings.sheet.delete}
             </Button>
           ) : undefined

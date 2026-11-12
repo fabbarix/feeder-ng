@@ -19,10 +19,13 @@ export function usePlanLiveUpdates(): void {
       const changed = (data as { changed?: unknown } | undefined)?.changed
       if (changed === 'courses' || changed === 'mealSlots' || changed === 'attendance') void client.invalidateQueries({ queryKey: ['plan'] })
     })
+    // A Tag renamed on another device (topic tags) changes the names in the why chips.
+    const offTags = connection.subscribe('tags', () => void client.invalidateQueries({ queryKey: ['tags'] }))
     const offReconnect = connection.onReconnect(refresh)
     return () => {
       off()
       offHousehold()
+      offTags()
       offReconnect()
       connection.close()
     }

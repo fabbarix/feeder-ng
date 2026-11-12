@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, IconButton } from '../../../ui'
+import { usePhraseContext } from '../hooks/usePhraseContext'
 import { dayChip } from '../lib/chips'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
 import { wholeMealChip, type CourseRowModel } from '../lib/courses'
@@ -42,7 +43,8 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
   const { course, key, caption } = row
   const meal = course.meal
   const planned = meal?.state === 'planned'
-  const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
+  const phrase = usePhraseContext(slot.date)
+  const chip = meal ? dayChip(meal, phrase) : null
   const whole = wholeMealChip(slot, row)
   // CRS G2 (spec 7.4, "On Plan"): an empty Course says why, in the tone of its cause.
   const reason = !meal && course.unfilled !== null

@@ -142,6 +142,16 @@
   list-style: none;
 }
 
+/* TG-RW: the Tag chips of a tile and of the detail (a plain list of tag Chips in their colours). */
+.recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .course-filter {
   display: flex;
   flex-wrap: wrap;
@@ -525,7 +535,6 @@
 
 .tag-input__suggestion {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
   min-block-size: 44px;
@@ -540,7 +549,24 @@
   background: var(--color-surface-2);
 }
 
+/* The Tag field's "New" marker on a Tag nobody has saved yet, and the dot in front of a suggestion. */
+.tag-input__new {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.tag-input__suggestion .tag-dot {
+  flex: none;
+}
+
+.tag-input__name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
 .tag-input__count {
+  flex: none;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
