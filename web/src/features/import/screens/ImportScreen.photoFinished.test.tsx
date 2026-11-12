@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { createFakeEngine, createMemorySpyStore, createUrlLog, meHolder } from '../fakeReadEngine.test-helper'
+import { createFakeEngine, createMemorySpyStore, createUrlLog, deferred, meHolder } from '../fakeReadEngine.test-helper'
 import { plan } from '../fixtures.test-helper'
 import type { PhotoRecord } from '../lib/photoStore'
 import type { ReadView } from '../types'
@@ -106,13 +106,16 @@ describe('a photo read that reaches review', () => {
 
 describe('a photo read that fails', () => {
   it('keeps the photos on the screen and on the device; Try again sends them again, and success then clears both', async () => {
-    rig.getRead = vi.fn().mockResolvedValueOnce(failed).mockResolvedValue(done)
+    const second = deferred<ReadView>()
+    rig.getRead = vi.fn().mockResolvedValueOnce(failed).mockReturnValueOnce(second.promise)
     mountScreen()
     await readyToRead()
     await userEvent.click(readButton())
     await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
-    expect(await stored()).toBe(2) // still there while the second read runs
-    expect(rig.startRead).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(rig.startRead).toHaveBeenCalledTimes(2))
+    await screen.findByRole('button', { name: 'Cancel' }) // the second read is running (its answer is pending)
+    expect(await stored()).toBe(2) // still there while it runs
+    second.resolve(done)
     await screen.findByRole('button', { name: 'Confirm import' })
     await waitFor(async () => expect(await stored()).toBe(0))
   })

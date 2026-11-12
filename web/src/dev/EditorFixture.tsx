@@ -11,9 +11,9 @@ function makePicture(width: number, height: number): Promise<string> {
   canvas.width = width
   canvas.height = height
   const g = canvas.getContext('2d')!
-  g.fillStyle = '#c9b99a'
+  g.fillStyle = `hsl(${40}deg 30% 70%)`
   g.fillRect(0, 0, width, height)
-  g.fillStyle = '#222'
+  g.fillStyle = `hsl(${0}deg 0% 15%)`
   for (let y = 0; y < height; y += 200) g.fillRect(0, y, width, 6)
   return new Promise((resolve) => canvas.toBlob((b) => resolve(URL.createObjectURL(b!)), 'image/jpeg', 0.5))
 }
