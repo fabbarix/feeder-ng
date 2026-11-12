@@ -110,3 +110,28 @@ func TestReconcileFillsTheSourceSlotOfAStoredLeftover(t *testing.T) {
 		t.Errorf("From = %+v, want %+v", *got.Upserts[0].From, want)
 	}
 }
+
+func TestReconcileCarriesTheExclusionDetail(t *testing.T) {
+	s := baseSnapshot()
+	s.Slots = []plan.SlotInfo{slotInfo("2026-11-12", 1, "19:00", 1), slotInfo("2026-11-13", 1, "19:00", 1)}
+	res := planner.Result{Unfilled: []planner.Unfilled{
+		{Key: planner.SlotKey{Date: "2026-11-12", MealSlotID: 1}, Reason: planner.UnfilledNoCandidates,
+			Eliminated: planner.Eliminations{Considered: 4, Exclusion: 4},
+			Exclusions: []planner.ExclusionRecord{
+				{MemberID: 3, IngredientID: 12, RecipeIDs: []planner.RecipeID{4, 7}, RecipeCount: 9},
+				{MemberID: 5, RecipeIDs: []planner.RecipeID{4}, RecipeCount: 1},
+			}, MoreExclusions: 2},
+		{Key: planner.SlotKey{Date: "2026-11-13", MealSlotID: 1}, Reason: planner.UnfilledNoAttendance},
+	}}
+	got := plan.Reconcile(s, res)
+	want := []plan.ExclusionRecord{
+		{MemberID: 3, IngredientID: 12, RecipeIDs: []int64{4, 7}, RecipeCount: 9},
+		{MemberID: 5, IngredientID: 0, RecipeIDs: []int64{4}, RecipeCount: 1},
+	}
+	if len(got.Unfilled) != 2 || !reflect.DeepEqual(got.Unfilled[0].Exclusions, want) || got.Unfilled[0].MoreExclusions != 2 {
+		t.Errorf("Unfilled[0] = %+v, want Exclusions %+v and MoreExclusions 2", got.Unfilled[0], want)
+	}
+	if got.Unfilled[1].Exclusions != nil || got.Unfilled[1].MoreExclusions != 0 {
+		t.Errorf("a cell without detail carries none: %+v", got.Unfilled[1])
+	}
+}

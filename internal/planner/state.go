@@ -471,7 +471,7 @@ func (st *state) keepCheck() {
 			st.rechecks = append(st.rechecks, Recheck{Key: s.Key})
 			continue
 		}
-		strict, _, _ := st.evaluate(i, PortionsNeeded(s.Attendance), evalOpts{})
+		strict, _, _, _ := st.evaluate(i, PortionsNeeded(s.Attendance), evalOpts{})
 		if len(strict) > 0 || s.Optional {
 			st.drop(i)
 			continue
@@ -633,7 +633,7 @@ func (st *state) fill(i int) {
 		st.noFit(i, UnfilledNoCourseRecipes, Eliminations{}, false)
 		return
 	}
-	strict, soft, elim := st.evaluate(i, portions, evalOpts{})
+	strict, soft, elim, removed := st.evaluate(i, portions, evalOpts{})
 	if len(strict) > 0 {
 		best := strict[0]
 		for _, c := range strict[1:] {
@@ -648,7 +648,14 @@ func (st *state) fill(i int) {
 		st.commitFresh(i, st.bestRelaxed(i, soft).b, portions)
 		return
 	}
-	st.noFit(i, UnfilledNoCandidates, elim, len(s.Rules) > 0)
+	claimed := len(s.Rules) > 0
+	if s.Optional || elim.Exclusion == 0 {
+		st.noFit(i, UnfilledNoCandidates, elim, claimed)
+		return
+	}
+	exclusions, more := st.explainExclusions(i, removed)
+	st.unfilled = append(st.unfilled, Unfilled{Key: s.Key, Reason: UnfilledNoCandidates, SlotRuleClaimed: claimed,
+		Eliminated: elim, Exclusions: exclusions, MoreExclusions: more})
 }
 
 // noFit leaves a cell with nothing to plan: a Couldn't plan reason for a required

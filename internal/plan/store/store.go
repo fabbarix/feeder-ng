@@ -388,10 +388,15 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 			if err != nil {
 				return err
 			}
-			_, err = st.q.ExecContext(ctx, `INSERT INTO plan_unfilled (date, meal_slot_id, course_id, reason, slot_rule_claimed, eliminated_json)
-				VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (date, meal_slot_id, course_id) DO UPDATE SET reason = excluded.reason,
-				slot_rule_claimed = excluded.slot_rule_claimed, eliminated_json = excluded.eliminated_json`,
-				u.Key.Date, u.Key.MealSlotID, course, u.Reason, claimed, string(elim))
+			excl, err := exclusionsJSON(u.Exclusions, u.MoreExclusions)
+			if err != nil {
+				return err
+			}
+			_, err = st.q.ExecContext(ctx, `INSERT INTO plan_unfilled (date, meal_slot_id, course_id, reason, slot_rule_claimed, eliminated_json, exclusions_json)
+				VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (date, meal_slot_id, course_id) DO UPDATE SET reason = excluded.reason,
+				slot_rule_claimed = excluded.slot_rule_claimed, eliminated_json = excluded.eliminated_json,
+				exclusions_json = excluded.exclusions_json`,
+				u.Key.Date, u.Key.MealSlotID, course, u.Reason, claimed, string(elim), excl)
 			if err != nil {
 				return mapErr(err)
 			}
@@ -410,9 +415,27 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 	})
 }
 
+// exclusionsDoc is the stored form of a cell's Exclusion detail (exclusions_json, migration 1430).
+type exclusionsDoc struct {
+	Records []plan.ExclusionRecord `json:"records"`
+	More    int                    `json:"more"`
+}
+
+// exclusionsJSON stores a cell's Exclusion detail, or NULL when there is none (so a rewrite without detail clears it).
+func exclusionsJSON(records []plan.ExclusionRecord, more int) (any, error) {
+	if len(records) == 0 && more == 0 {
+		return nil, nil
+	}
+	b, err := json.Marshal(exclusionsDoc{Records: records, More: more})
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
+}
+
 // Unfilled returns the stored "couldn't plan" reasons with from <= date <= to, ordered by date then Meal Slot id.
 func (s *Store) Unfilled(ctx context.Context, from, to string) ([]plan.Unfilled, error) {
-	rows, err := s.q.QueryContext(ctx, `SELECT date, meal_slot_id, `+courseOut("course_id")+`, reason, slot_rule_claimed, eliminated_json FROM plan_unfilled
+	rows, err := s.q.QueryContext(ctx, `SELECT date, meal_slot_id, `+courseOut("course_id")+`, reason, slot_rule_claimed, eliminated_json, exclusions_json FROM plan_unfilled
 		WHERE (? = '' OR date >= ?) AND (? = '' OR date <= ?)
 		ORDER BY date, meal_slot_id, (SELECT position FROM courses WHERE id = plan_unfilled.course_id)`, from, from, to, to)
 	if err != nil {
@@ -424,12 +447,20 @@ func (s *Store) Unfilled(ctx context.Context, from, to string) ([]plan.Unfilled,
 		var u plan.Unfilled
 		var claimed int64
 		var elim string
-		if err := rows.Scan(&u.Key.Date, &u.Key.MealSlotID, &u.Key.CourseID, &u.Reason, &claimed, &elim); err != nil {
+		var excl sql.NullString
+		if err := rows.Scan(&u.Key.Date, &u.Key.MealSlotID, &u.Key.CourseID, &u.Reason, &claimed, &elim, &excl); err != nil {
 			return nil, err
 		}
 		u.SlotRuleClaimed = claimed == 1
 		if err := json.Unmarshal([]byte(elim), &u.Eliminated); err != nil {
 			return nil, err
+		}
+		if excl.Valid {
+			var doc exclusionsDoc
+			if err := json.Unmarshal([]byte(excl.String), &doc); err != nil {
+				return nil, err
+			}
+			u.Exclusions, u.MoreExclusions = doc.Records, doc.More
 		}
 		out = append(out, u)
 	}

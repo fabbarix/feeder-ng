@@ -44,7 +44,7 @@ func Swap(in Input, key SlotKey) ([]Placement, error) {
 	if s.Existing != nil {
 		opts.exclude, opts.hasExclude = s.Existing.RecipeID, true
 	}
-	strict, soft, _ := st.evaluate(i, portions, opts)
+	strict, soft, _, _ := st.evaluate(i, portions, opts)
 	sortCandidates(strict)
 	if len(strict) > 3 {
 		strict = strict[:3]

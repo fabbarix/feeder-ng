@@ -121,6 +121,17 @@ type Unfilled struct {
 	Reason          string // planner.UnfilledReason: "no_attendance" | "no_candidates" | "no_course_recipes"
 	SlotRuleClaimed bool
 	Eliminated      Eliminations
+	// Exclusions and MoreExclusions are planner.Unfilled's, ids as int64 (docs/dev/design/crs-brx.md).
+	Exclusions     []ExclusionRecord
+	MoreExclusions int
+}
+
+// ExclusionRecord is planner.ExclusionRecord as stored: IngredientID 0 is a direct Recipe Exclusion.
+type ExclusionRecord struct {
+	MemberID     int64   `json:"memberId"`
+	IngredientID int64   `json:"ingredientId"`
+	RecipeIDs    []int64 `json:"recipeIds"`
+	RecipeCount  int     `json:"recipeCount"`
 }
 
 // Reason says why a planning run happened.
