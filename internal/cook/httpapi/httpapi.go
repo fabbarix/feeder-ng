@@ -18,6 +18,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/cook/service"
 	"github.com/fabbarix/feeder-ng/internal/cook/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
+	planhttp "github.com/fabbarix/feeder-ng/internal/plan/httpapi"
 )
 
 func init() { app.Register(app.Module{Name: "cook", Mount: mount}) }
@@ -33,8 +34,11 @@ func mount(r *app.Router, d app.Deps) {
 		Store: store.New(d.DB), Clock: d.Clock, Bus: d.Events,
 		Recipes: db.Recipes(), Meals: db.Meals(), Waste: db.Waste(), Household: db.Household(),
 	})
-	a := &api{svc: svc, clk: d.Clock}
+	a := &api{svc: svc, clk: d.Clock, boardSlots: planhttp.BoardSlots(d)}
 	r.User("GET /api/cook/meals/{date}/{slotId}", a.mealView)
+	// Team C2 (docs/dev/design/crs-c2.md §5): the cooking timeline of a slot and the single-Course view.
+	r.User("GET /api/cook/meals/{date}/{slotId}/all", a.timeline)
+	r.User("GET /api/cook/meals/{date}/{slotId}/{courseId}", a.courseView)
 	r.User("GET /api/cook/recipes/{id}", a.recipeView)
 	r.User("PUT /api/cook/marks", a.mark)
 	r.User("GET /api/cook/timers", a.timers)
@@ -67,6 +71,8 @@ func sweep(ctx context.Context, svc *service.Service, logger *slog.Logger) {
 type api struct {
 	svc *service.Service
 	clk clock.Clock
+	// boardSlots is the plan's slots from..to in the plan's JSON (the board's tonight and tomorrow, crs-c2 §5.4).
+	boardSlots func(ctx context.Context, from, to string) (any, error)
 }
 
 func (a *api) mealView(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +92,51 @@ func (a *api) mealView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, viewOf(v))
+}
+
+// courseView is Cook Mode for one Course's Planned Meal of a slot (a Course id that is not a number is not found).
+func (a *api) courseView(w http.ResponseWriter, r *http.Request) {
+	date, slot, ok := mealPath(r)
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", notFoundMsg)
+		return
+	}
+	course, ok := positiveInt(r.PathValue("courseId"))
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", notFoundMsg)
+		return
+	}
+	v, err := a.svc.CourseView(r.Context(), date, slot, course)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, viewOf(v))
+}
+
+// mealPath reads {date} and {slotId}; false when either is not valid.
+func mealPath(r *http.Request) (string, int64, bool) {
+	date := r.PathValue("date")
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return "", 0, false
+	}
+	slot, ok := positiveInt(r.PathValue("slotId"))
+	return date, slot, ok
+}
+
+// timeline is the cooking timeline of a slot (GET .../all): the Courses, the items, the Advance Steps.
+func (a *api) timeline(w http.ResponseWriter, r *http.Request) {
+	date, slot, ok := mealPath(r)
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", notFoundMsg)
+		return
+	}
+	t, err := a.svc.SlotTimeline(r.Context(), date, slot)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, timelineOf(t))
 }
 
 func (a *api) recipeView(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +288,26 @@ func (a *api) board(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, boardOf(b))
+	tomorrow, err := nextDay(b.Today)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	slots, err := a.boardSlots(r.Context(), b.Today, tomorrow)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, boardOf(b, slots))
+}
+
+// nextDay is the date after a YYYY-MM-DD date.
+func nextDay(date string) (string, error) {
+	d, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return "", err
+	}
+	return d.AddDate(0, 0, 1).Format("2006-01-02"), nil
 }
 
 func (a *api) now() time.Time { return a.clk.Now().UTC() }
@@ -358,6 +428,8 @@ type mealDTO struct {
 	MealSlotID int64  `json:"mealSlotId"`
 	SlotName   string `json:"slotName"`
 	At         string `json:"at"`
+	CourseID   int64  `json:"courseId"`
+	CourseName string `json:"courseName"`
 }
 
 type viewDTO struct {
@@ -380,7 +452,8 @@ func viewOf(v service.CookView) viewDTO {
 		Today: v.Today,
 	}
 	if v.Meal != nil {
-		d.Meal = &mealDTO{Date: v.Meal.Date, MealSlotID: v.Meal.MealSlotID, SlotName: v.Meal.SlotName, At: instant(v.Meal.At)}
+		d.Meal = &mealDTO{Date: v.Meal.Date, MealSlotID: v.Meal.MealSlotID, SlotName: v.Meal.SlotName, At: instant(v.Meal.At),
+			CourseID: v.Meal.CourseID, CourseName: v.Meal.CourseName}
 	}
 	for _, a := range v.Advance {
 		item := advanceDTO{Step: a.Step, Text: a.Text, LeadTimeMinutes: a.LeadTimeMinutes, Done: a.Done, Warning: a.Warning}
@@ -415,6 +488,8 @@ type themeDTO struct {
 
 type nextAdvanceDTO struct {
 	Scope           string `json:"scope"`
+	CourseID        int64  `json:"courseId"`
+	CourseName      string `json:"courseName"`
 	RecipeName      string `json:"recipeName"`
 	Step            int    `json:"step"`
 	Text            string `json:"text"`
@@ -434,17 +509,20 @@ type boardDTO struct {
 		Days int `json:"days"`
 	} `json:"streak"`
 	NextAdvance *nextAdvanceDTO `json:"nextAdvance"`
+	// Slots are today's and tomorrow's slots in the plan's shape (courses, cookMinutes), crs-c2 §5.4.
+	Slots any `json:"slots"`
 }
 
-func boardOf(b service.Board) boardDTO {
+func boardOf(b service.Board, slots any) boardDTO {
 	d := boardDTO{
 		Now: instant(b.Now), Today: b.Today,
 		Theme: themeDTO{Dark: b.Phase.Dark, NextChangeAt: instant(b.Phase.Next), Source: string(b.Phase.Source), Reason: b.ThemeReason},
 	}
 	d.Streak.Days = b.StreakDays
+	d.Slots = slots
 	if n := b.NextAdvance; n != nil {
 		d.NextAdvance = &nextAdvanceDTO{
-			Scope: string(n.Scope), RecipeName: n.RecipeName, Step: n.Step, Text: n.Text,
+			Scope: string(n.Scope), CourseID: n.CourseID, CourseName: n.CourseName, RecipeName: n.RecipeName, Step: n.Step, Text: n.Text,
 			LeadTimeMinutes: n.LeadTimeMinutes, DueAt: instant(n.DueAt), Overdue: n.Overdue,
 			MealDate: n.MealDate, MealSlotID: n.MealSlotID, SlotName: n.SlotName,
 		}

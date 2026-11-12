@@ -15,6 +15,9 @@ type MealSlotDef struct {
 	Weekday int
 	Name    string
 	Time    string // HH:MM
+	// Courses are the Course ids the slot serves, in its order, and MainCourse the id of its main Course (crs-c2).
+	Courses    []int64
+	MainCourse int64
 }
 
 // Sources are the reads the runner needs from the household, recipes and products

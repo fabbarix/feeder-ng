@@ -19,9 +19,10 @@ type Step struct {
 
 // RecipeSteps is a Recipe's name and Steps.
 type RecipeSteps struct {
-	RecipeID int64
-	Name     string
-	Steps    []Step
+	RecipeID      int64
+	Name          string
+	Steps         []Step
+	ReheatMinutes int // the Recipe's reheat time, 0 none (R12)
 }
 
 // AdvanceItem is an Advance Step listed above the Steps.
