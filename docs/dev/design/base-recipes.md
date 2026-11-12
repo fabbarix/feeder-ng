@@ -1,8 +1,8 @@
 # Base recipes
 
-Design (docs only) for a new **1.0.0-beta.5** feature. Branch `team/b5-base-design`, from main `878952b`. Architectural decisions: [ADR 0015](../../adr/0015-base-recipes.md) (Proposed). It fits into the beta.5 work packages of [beta5-reconcile.md §12](beta5-reconcile.md#12-proposed-work-packages-and-order) (§14 below).
+Design (docs only) for **Base recipes**, **scheduled for beta.6** (the user's answer P4 = C; nothing is built in beta.5). Written on branch `team/b5-base-design`, from main `878952b`. Architectural decisions: [ADR 0015](../../adr/0015-base-recipes.md) (Accepted, Target: beta.6). The user's answers to the design's questions are in §15; the beta.6 work packages and waves are in §14. Spec: [functional-spec.md](../../spec/functional-spec.md) decision 46 and §19, both marked "Scheduled for beta.6".
 
-Terms in **bold** are [GLOSSARY](../../../GLOSSARY.md) terms; the new ones are proposed in §2 and are not in GLOSSARY.md yet. Everything was read from the tree at `878952b`.
+Terms in **bold** are [GLOSSARY](../../../GLOSSARY.md) terms; the new ones of §2 are now in GLOSSARY.md, each marked "(beta.6)". Everything was read from the tree at `878952b`.
 
 The user's decisions (final), numbered as in the brief and referred to as **D1** to **D9**:
 
@@ -32,7 +32,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 | Cooking timeline | The recipe store composes each Recipe's cook Steps (its own plus its Base recipes', inserted where the total time is shortest, ending before the Needed at Step). `cook.Timeline` and `schedule.Compute` are unchanged; Steps carry a label. |
 | Import | Recipe File v1 gains optional `baseRecipe`, `yieldUnit` (Recipe) and `recipe`, `neededAtStep` (line). The Recipe Assistant output schema follows by projection (all-required + `pruneNone`); the Agent Prompt gains two rules. Import Review gets a **Base recipe line** tile. |
 | Migration | `1540_base_recipes.sql`, additive (`ALTER TABLE ... ADD COLUMN`), no rebuild. |
-| Schedule | Fits beta.5 only with one more wave on the tail, or with the cooking timeline part cut to beta.6 (§14.4, question P4). |
+| Schedule | **beta.6** (P4 = C), five waves plus QA on top of a finished beta.5 (§14). |
 
 ---
 
@@ -54,7 +54,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 
 ---
 
-## 2. GLOSSARY: proposed changes (not applied; W-BR or H applies them)
+## 2. GLOSSARY changes (applied to GLOSSARY.md with a "(beta.6)" note on each)
 
 ```diff
  **Recipe**:
@@ -85,7 +85,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 +The quantity of each Ingredient the Household currently has at home, a Base recipe's Ingredient included (a jar of béchamel, a frozen batch of ragù).
 ```
 
-Word check: none of the new _Avoid_ words occurs inside a quoted string of any `strings.ts` at `878952b` (`component` occurs only in comments of `ui/CoursePicker/strings.ts` and `features/cook/strings.ts`, which `check-ui.sh` rule 6 skips). Copy must not say "makes" (Yield's _Avoid_ word, inflections "make", "made", "making" included): the editor and tiles say **Yield**, Import Review says "Add it as a new Base recipe", never "Make it".
+Word check: none of the new _Avoid_ words occurs inside a quoted string of any `strings.ts` at `878952b` (`component` occurs only in comments of `ui/CoursePicker/strings.ts` and `features/cook/strings.ts`, which `check-ui.sh` rule 6 skips). The CHANGELOG word check (`scripts/changelog-avoid.py`, run by `scripts/test/release_test.sh`) found "open-source component" in the 1.0.0 notes (third-party notices), another sense of the word; it is on that script's allow list, like "app icons". Copy must not say "makes" (Yield's _Avoid_ word, inflections "make", "made", "making" included): the editor and tiles say **Yield**, Import Review says "Add it as a new Base recipe", never "Make it".
 
 ---
 
@@ -102,7 +102,7 @@ Word check: none of the new _Avoid_ words occurs inside a quoted string of any `
 The Base recipe owns one Ingredient (`recipes.base_ingredient_id`, unique). It exists so that a jar or a frozen batch is Stock like any Ingredient (comparison of the options in §6).
 
 - **Created** with the Base recipe, in the same transaction: name = the Recipe's name; Base Unit from the Yield unit (g and kg → `g`; the ml family → `ml`; `piece`, `portion` → `piece`); no Shelf Life (the User sets one on the Ingredient, as for any Ingredient).
-- **Always its own Ingredient, never an adopted one** (question P7, recommended A). An Ingredient that already has the name ("béchamel" on older Recipes, a jar in Stock) is **kept** as it is: adopting it would turn every line of it into a Base recipe line at once, which D9 and the bulk link (§3.8) forbid. So the Base recipe Ingredient's identity key is not its name: `ingredients.name_key` holds `base-recipe:<recipe id>` for it (the column stays unique; it is the identity, and only plain Ingredients use `units.NormalizeName(name)`). Two Ingredients may then show the same name; the picker, the Pantry and the Ingredients page tell them apart by the Base recipe badge. Name matching (import, quick create, "Did you mean") never matches a Base recipe Ingredient; Base recipes are found as Recipes (§4.5). The plain Ingredient is linked line by line (§3.7, §3.8) and, once no Recipe line uses it, offered for merge into the Base recipe's (§3.8).
+- **Always its own Ingredient, never an adopted one** (P7 = A). An Ingredient that already has the name ("béchamel" on older Recipes, a jar in Stock) is **kept** as it is: adopting it would turn every line of it into a Base recipe line at once, which D9 and the bulk link (§3.8) forbid. So the Base recipe Ingredient's identity key is not its name: `ingredients.name_key` holds `base-recipe:<recipe id>` for it (the column stays unique; it is the identity, and only plain Ingredients use `units.NormalizeName(name)`). Two Ingredients may then show the same name; the picker, the Pantry and the Ingredients page tell them apart by the Base recipe badge. Name matching (import, quick create, "Did you mean") never matches a Base recipe Ingredient; Base recipes are found as Recipes (§4.5). The plain Ingredient is linked line by line (§3.7, §3.8) and, once no Recipe line uses it, offered for merge into the Base recipe's (§3.8).
 - **Batch conversion.** The store keeps a Unit Conversion `batch` = Yield in Base Units on it (1 l Yield → `1 batch = 1000 ml`), rewritten whenever the Yield changes, so "1 batch of pasta frolla" is a valid line. A Yield in `portion` also keeps `portion = 1 piece`. The Ingredient page shows both read-only ("Set by the Base recipe").
 - **Name follows** the Base recipe: a rename renames the Ingredient in the same transaction (no name clash is possible: its key is `base-recipe:<id>`). The Ingredients page shows the name read-only with a recipe badge and a link to the Base recipe; Shelf Life, Frozen Shelf Life, Picture and other Unit Conversions are editable as usual.
 - **Base Unit change** (a Yield unit of another family) follows the Ingredient rule: refused while the Ingredient has Stock, Products or lines that would no longer convert (`409 base_unit_in_use`).
@@ -140,7 +140,7 @@ Follows the Archived pattern:
   - Cooked and Not cooked Planned Meals stay as history; Last cooked keeps them;
   - Slot Rules by that Recipe are removed (listed);
   - its Leftovers stay as rows, are never planned again (no Course fit), and are answered on Today at their Use-by (ADR 0012);
-  - Favourites and Dislikes on it are removed (question P2); Exclusions of it move to its Ingredient (§8);
+  - Favourites and Dislikes on it are removed (P2 = A); Exclusions of it move to its Ingredient (§8);
   - its Yield becomes an amount: the confirm asks for it ("Yield: 4 portions" is prefilled from the old Yield with unit `portion`).
   Confirm copy: "Turn Pesto into a Base recipe? It will no longer be planned. 2 Planned Meals from today come off the plan (Tue Dinner, Pinned; Thu Lunch). The Slot Rule Friday Dinner · Main = Pesto is removed." Actions **Turn into a Base recipe** and **Cancel**.
 - **Base → plannable**: `POST /api/recipes/{id}/to-plannable {yield, courseIds}`; `409 base_recipe_in_use` (with `usedBy`) while any Recipe calls for it. Its Ingredient stays as an ordinary Ingredient with its Stock (its `name_key` becomes `units.NormalizeName(name)` again; `409 ingredient_name_taken` when a plain Ingredient already has that key, and the dialog offers to merge the two).
@@ -229,7 +229,7 @@ Builds the Steps Cook Mode walks for one Batch-independent Recipe, Base recipes 
 4. Advance Steps of a Base recipe stay Advance Steps of the Recipe (soak the beans overnight), labelled.
 5. Each composed Step carries its origin: `BaseRecipeID`, `BaseRecipeName` and the path for a nested one ("Béchamel · Roux").
 6. **Stock first** (D5): `made(path)` is the fraction of that Base recipe line still to make (1 with no Stock, 0 when Stock covers it). The Steps stay in the list (so indexes do not move with Stock), but a fully covered block's Steps become zero-length Active Steps and are hidden in Cook Mode; the Needed at Step then shows "Use 500 ml Béchamel from the Pantry". A partly covered block keeps its durations, with its `uses` scaled by the fraction.
-7. Step `uses` of a Base recipe Step are multiplied by the line factor (as its Ingredients, §4.1); Cook Mode then multiplies by the Batches as today (`schedule.ScaleUses`). **Durations are not scaled** (as for Batches today); question P1.
+7. Step `uses` of a Base recipe Step are multiplied by the line factor (as its Ingredients, §4.1); Cook Mode then multiplies by the Batches as today (`schedule.ScaleUses`). **Durations are not scaled** (as for Batches today; P1 = A).
 
 `schedule.Compute`, `schedule.Validate` and `cook.Timeline` are unchanged: the composed list is a valid Step list (every `After` points at an earlier Step).
 
@@ -265,7 +265,7 @@ A Base recipe may have no lines (D9's "create an empty Base recipe to fill later
 | Option | What | For | Against |
 |---|---|---|---|
 | **A. Base recipe Ingredient** (recommended) | The Base recipe owns an Ingredient; a Base recipe line is a line of that Ingredient; Stock is ordinary Stock Lots of it | Stock Lots, Products and barcodes, Scan and Stock-take, Shelf Life and Frozen Shelf Life, Storage Places, Used from, waste and the Zero-waste streak, Ingredient Exclusions, the ingredient picker and Unit Conversions all work unchanged. No new line table, no change to `recipe_lines`' meaning. Same idea as the Ready Meal's Ingredient, which users already know | The Ingredient must follow the Recipe (name, Base Unit, `batch` conversion) and be guarded against delete and merge; the Ingredients page lists it (with a badge) |
-| B. A Stock Lot kind | `stock_lots.recipe_id` beside `ingredient_id` | Stock is visibly "of a Recipe" | Every Stock path (Project, Deduct, Used from, Pantry, Scan, Products, waste, go-off, Shopping List draw, ST's Lot edit) gains a second kind, in the files ST, UF and LOW own in beta.5. No barcode for a jar without inventing a Product kind too |
+| B. A Stock Lot kind | `stock_lots.recipe_id` beside `ingredient_id` | Stock is visibly "of a Recipe" | Every Stock path (Project, Deduct, Used from, Pantry, Scan, Products, waste, go-off, Shopping List draw, ST's Lot edit) gains a second kind, in the Stock, Used from and Pantry code. No barcode for a jar without inventing a Product kind too |
 | C. Base recipe surplus as a Leftover | Portions in `leftovers` | Reuses freezing (ADR 0012) | A Leftover is portions of a plannable Recipe that the planner serves; a Base recipe is an amount, never served. ADR 0012 already rejected "Leftover becomes Stock" for this reason. A bought jar is not a Leftover |
 
 **Recommendation: A.** Recorded in ADR 0015.
@@ -286,8 +286,8 @@ A Base recipe may have no lines (D9's "create an empty Base recipe to fill later
 
 - **Cooked.** The runner's `needsFor` takes the tree (kept per Recipe beside the planner's Recipes in the snapshot) and calls `baserecipe.Resolve` with the Stock totals inside the transaction (`StockPort.Lots`), then `DeductCookedTx` as today. So the jar is used first and only the made part's Ingredients are deducted. **Used from** (ADR 0011) lists the Base recipe Ingredient as a line when Stock covers some of it, so the User can pick which jar or frozen batch; a pick covering more than the default moves the rest of the made part accordingly (the resolve runs on the picked amount).
 - The Mark as Cooked sheet needs no new UI: Used from rows name the Base recipe Ingredient ("Béchamel"); short-Stock warnings name raw Ingredients.
-- **A made surplus** does not arise: the made amount is scaled to the need (D3). Making more on purpose (a batch for the freezer) is question P5; until then the User adds a Lot of the Base recipe Ingredient on the Pantry page (it is an Ingredient), with its Storage Place.
-- **Preferences on a Base recipe** (question P2, recommended A): its detail shows the Preferences Tile with the **Exclusion** column only. Setting it writes `member_ingredient_exclusions` for the Base recipe Ingredient (so it is one fact, seen by the planner and Review Exclusions). Favourite and Dislike are not offered: a Base recipe is never planned, and liking béchamel says nothing about lasagne.
+- **A made surplus** does not arise: the made amount is scaled to the need (D3). Making more on purpose (a batch for the freezer) is a later feature (P5 = A); the User adds a Lot of the Base recipe Ingredient on the Pantry page (it is an Ingredient), with its Storage Place.
+- **Preferences on a Base recipe** (P2 = A): its detail shows the Preferences Tile with the **Exclusion** column only. Setting it writes `member_ingredient_exclusions` for the Base recipe Ingredient (so it is one fact, seen by the planner and Review Exclusions). Favourite and Dislike are not offered: a Base recipe is never planned, and liking béchamel says nothing about lasagne.
 - **"via" on a using Recipe** (spec §4, *An Exclusion via an Ingredient*): the Preferences Tile and the line Avatars look down. The detail payload gains `within` (every Ingredient inside, with the Base recipe path), so the cell reads "via milk (in Béchamel)" or "via Béchamel".
 
 ---
@@ -303,7 +303,7 @@ A Base recipe may have no lines (D9's "create an empty Base recipe to fill later
 
 ## 10. API
 
-New spec section **§19 API for Base recipes** (§18 is beta.5's). Errors use the existing `validation_failed` / conflict shapes.
+New spec section **§19 Base recipes (scheduled for beta.6)** (§18 is beta.5's). Errors use the existing `validation_failed` / conflict shapes.
 
 **Recipes** (`internal/recipe/httpapi`):
 
@@ -364,7 +364,7 @@ One tile per line that is marked or matched (`BaseRecipeLineTile`, `features/imp
 4. **A Recipe you plan** (offered when a plannable Recipe matches, or chosen through **Choose another**, which lists plannable Recipes in a second group): picking one opens the ConfirmDialog of §3.6 (with the dry run's list and the Yield field). **Turn into a Base recipe** takes the answer; **Cancel** goes back to the tile with nothing chosen. The kind change runs in the import's commit transaction.
 5. **Keep it as an Ingredient**: the line stays the plain Ingredient line it was read as (then matched in the Ingredient tiles).
 
-**Nothing is linked silently (D9).** Confirm is disabled while any tile has no answer (the existing pattern for unresolved rows). A preselected answer is shown like any other and counts as answered only because the User confirms the whole review (question P3). The line's unit is then checked against the target's Base recipe Ingredient, so a unit prompt can follow on that Ingredient. Cycle check runs at Confirm (`422 base_recipe_cycle` on the tile).
+**Nothing is linked silently (D9).** Confirm is disabled while any tile has no answer (the existing pattern for unresolved rows). A preselected answer is shown like any other and counts as answered only because the User confirms the whole review (P3 = A). The line's unit is then checked against the target's Base recipe Ingredient, so a unit prompt can follow on that Ingredient. Cycle check runs at Confirm (`422 base_recipe_cycle` on the tile).
 
 Server: `internal/recipefile/review.go` gains rows for these lines; `plan()` returns `baseRecipeLines: [{ path, name, cue, quantity, unit, suggestions: [{ kind: "base" | "plannable" | "file", recipeId?, recipeIndex?, name, exact }], answer? }]`; decisions take `baseRecipeLines: { "<path>": { "action": "use" | "file" | "create" | "convert" | "keep", "recipeId"?, "recipeIndex"?, "yield"?, "yieldUnit"?, "readNext"? } }`; `commit()` creates Base recipes and their Ingredients before the Recipes that call for them, in its one transaction.
 
@@ -372,7 +372,7 @@ Server: `internal/recipefile/review.go` gains rows for these lines; `plan()` ret
 
 ## 12. Migration `1540_base_recipes.sql`
 
-Next free number after 1530 (1500, 1510 and 1520 are reserved by SD, LO and BO). Additive; no table rebuild, no foreign-key pragma; covered by the `feeder-pre-1500.db` snapshot that SNAP takes before the first beta.5 migration.
+The next free number after beta.5's 1500 to 1530, unless another beta.6 migration takes it first (then BR-B takes the next free one). Additive; no table rebuild, no foreign-key pragma, so it needs no snapshot of its own beyond the release's usual one.
 
 ```sql
 -- Base recipes (ADR 0015). A Recipe is a Base recipe iff base_ingredient_id is set.
@@ -408,89 +408,59 @@ All copy in `strings.ts`, GLOSSARY terms, no _Avoid_ word ("makes" included). Sh
 
 ---
 
-## 14. Team split, dependencies and schedule
+## 14. Team split, dependencies and schedule (beta.6)
+
+The user chose **P4 C**: Base recipes are **scheduled for beta.6**, and nothing of them is built in beta.5. The plan below starts on a finished beta.5 (SD, BO, LO, UF and their web teams merged), so it no longer interleaves with beta.5's waves and none of the beta.5 ordering requests (LO rebasing on BR-B, BR-G after UF-runner) applies. If other beta.6 work is planned on the same files (the runner, shopping, cook, `features/recipes`), the PM serialises it against these WPs as usual.
 
 ### 14.1 Work packages
 
-Each WP runs the usual pipeline (designer/test author, developer, reviewer) in its own worktree. Files are owned exactly as listed; nothing here overlaps a beta.5 WP while that WP owns the file (see 14.2).
+Each WP runs the usual pipeline (designer/test author, developer, reviewer) in its own worktree. Files are owned exactly as listed.
 
 | WP | Scope | Owns | Depends on |
 |---|---|---|---|
-| **BR-A Domain** | The pure package (§4): Expand, Flatten, Resolve, ComposeSteps, NeededAt, FindCycle, MatchReference, LinkCandidates, PickerOrder; the exported fuzzy score in `ingredient/search.go` | `internal/recipe/baserecipe/**` (new), `internal/ingredient/search.go` (one exported function) | none. **Can start now** |
-| **BR-B Recipe backend** | Migration 1540 and its test; kind, Yield unit and Needed at validation (`recipe.go`); the Base recipe Ingredient lifecycle; the store's `NeedTree`, `Cook` composition, total-time cache rewrite, cycle check, to-base / to-plannable; linking a line and undo (§3.7), link candidates, bulk link and unlink with the merge offer (§3.8), `linked_from_ingredient_id`, the `base-recipe:<id>` key; the API (§10) | `internal/db/migrations/1540_*`, `internal/db/base_recipes_migration_test.go`, `internal/recipe/{recipe.go,readymeal.go,base.go}`, `internal/recipe/store/**`, `internal/recipe/httpapi/**`, `internal/ingredient/{store,httpapi}/**`, `internal/modules/{recipes,ingredients}.go` | BR-A merged. **Before LO** (LO owns `internal/recipe/**` and `modules/recipes.go` from wave 4) |
-| **BR-C Recipe File and Recipe Assistant** | Schema, `recipe-file.md` (fields, rules 15 and 16), example, `check.go`, export, Import Review rows, decisions and commit; golden files; fake-anthropic fixture | `docs/spec/{recipe-file-v1.schema.json,recipe-file.md,examples/**,fixtures/**,spec_test.go}`, `internal/recipefile/**`, `internal/recipeassistant/{testdata/**,fakeanthropic/**}` and tests | BR-A; the commit half after BR-B. Nobody else owns these in beta.5 |
-| **BR-D Web recipes** | Editor switch and Yield, picker badge, Needed at, detail, list kind filter, Ingredients page badge; **Link to a Base recipe** and **Use as a plain Ingredient** on lines (editor and detail), `BaseRecipePicker`, `LinkCandidatesSheet` with the merge offer, Undo Toasts | `web/src/features/recipes/**`, `web/src/features/ingredients/**`, `web/src/lib/baseRecipes/**` (new), `web/src/ui/Select/IngredientSelect*` (not `ui/index.ts`; the export exists) | BR-B (API; can start on fixtures after BR-B's tests are red). **Before LOW** (LOW owns the editor in wave 5) |
+| **BR-A Domain** | The pure package (§4): Expand, Flatten, Resolve, ComposeSteps, NeededAt, FindCycle, MatchReference, LinkCandidates, PickerOrder; the exported fuzzy score in `ingredient/search.go` | `internal/recipe/baserecipe/**` (new), `internal/ingredient/search.go` (one exported function) | none |
+| **BR-B Recipe backend** | Migration 1540 and its test; kind, Yield unit and Needed at validation (`recipe.go`); the Base recipe Ingredient lifecycle; the store's `NeedTree`, `Cook` composition, total-time cache rewrite, cycle check, to-base / to-plannable; linking a line and undo (§3.7), link candidates, bulk link and unlink with the merge offer (§3.8), `linked_from_ingredient_id`, the `base-recipe:<id>` key; the API (§10) | `internal/db/migrations/1540_*`, `internal/db/base_recipes_migration_test.go`, `internal/recipe/{recipe.go,readymeal.go,base.go}`, `internal/recipe/store/**`, `internal/recipe/httpapi/**`, `internal/ingredient/{store,httpapi}/**`, `internal/modules/{recipes,ingredients}.go` | BR-A |
+| **BR-C Recipe File and Recipe Assistant** | Schema, `recipe-file.md` (fields, rules 15 and 16), example, `check.go`, export, Import Review rows, decisions and commit; golden files; fake-anthropic fixture | `docs/spec/{recipe-file-v1.schema.json,recipe-file.md,examples/**,fixtures/**,spec_test.go}`, `internal/recipefile/**`, `internal/recipeassistant/{testdata/**,fakeanthropic/**}` and tests | BR-A; the commit half after BR-B |
+| **BR-D Web recipes** | Editor switch and Yield, picker badge, Needed at, detail, list kind filter, Ingredients page badge; **Link to a Base recipe** and **Use as a plain Ingredient** on lines (editor and detail), `BaseRecipePicker`, `LinkCandidatesSheet` with the merge offer, Undo Toasts | `web/src/features/recipes/**`, `web/src/features/ingredients/**`, `web/src/lib/baseRecipes/**` (new), `web/src/ui/Select/IngredientSelect*` (not `ui/index.ts`; the export exists) | BR-B (API; can start on fixtures once BR-B's tests are red) |
 | **BR-E Web import** | Base recipe line tile, convert dialog, Read it next, the bulk link sheet after Confirm (BR-D's sheet and `lib/baseRecipes`), Export picker | `web/src/features/import/**` | BR-C; BR-D's sheet merged |
-| **BR-F Planning and shopping wiring** | `DBSources.Recipes` flatten + Exclusions (§5), the Base recipe Exclusion mapping; `shopping.Need.Made`, `derivedLines` Stock first, `plans.Meals` tree | `internal/plan/runner/sources.go`, new `internal/plan/runner/basetree.go`, `internal/shopping/shopping.go`, `internal/shopping/httpapi/wiring.go` | BR-B; **after LO** (runner) and **after BO** (shopping) |
-| **BR-G Cooked and Cook Mode backend** | `needsFor` with `Resolve` (Stock first, Used from), composed Steps in the cook adapter, labels in the cook payloads, notify facts on composed Steps | `internal/plan/runner/{snapshot.go,courses_c2.go,actions.go,stockport.go}`, `internal/cook/**`, `internal/notify/facts/facts.go` | BR-B; **after UF-runner** (owns stockport, actions, `internal/cook/**`) and SD (notify) |
-| **BR-H Web Cook Mode** | Base recipe chips, "ready", hidden covered Steps | `web/src/features/cook/**` | BR-G API (can build on a fixture once BR-G's tests are red); after F1 (owns `features/cook` captions) |
-| **W-BR Docs** | GLOSSARY (§2), spec §4, §6, §7.2, §8, §9, §11, §13, decision 46, §19; ADR 0015 to Accepted | `GLOSSARY.md`, `docs/spec/functional-spec.md`, `docs/adr/0015-*` | the answers to §15; GLOSSARY before any `strings.ts` with the new terms is checked (rule 6 has no problem with new terms, only with avoid words, so it does not block BR-D) |
+| **BR-F Planning and shopping wiring** | `DBSources.Recipes` flatten + Exclusions (§5), the Base recipe Exclusion mapping; `shopping.Need.Made`, `derivedLines` Stock first, `plans.Meals` tree | `internal/plan/runner/sources.go`, new `internal/plan/runner/basetree.go`, `internal/shopping/shopping.go`, `internal/shopping/httpapi/wiring.go` | BR-B |
+| **BR-G Cooked and Cook Mode backend** | `needsFor` with `Resolve` (Stock first, Used from), composed Steps in the cook adapter, labels in the cook payloads, notify facts on composed Steps | `internal/plan/runner/{snapshot.go,courses_c2.go,actions.go,stockport.go}`, `internal/cook/**`, `internal/notify/facts/facts.go` | BR-B, BR-F (`needsFor` reads the tree kept by `basetree.go`) |
+| **BR-H Web Cook Mode** | Base recipe chips, "ready", hidden covered Steps | `web/src/features/cook/**` | BR-G (API; can build on a fixture once BR-G's tests are red) |
+| **W-BR Docs** | Done on this branch: GLOSSARY entries marked (beta.6), spec decision 46 and §19 marked "Scheduled for beta.6", the Recipe File doc's beta.6 section, ADR 0015 Accepted. Left for the beta.6 release: drop the (beta.6) notes, fold §19 into the behaviour sections (§4, §6, §7.2, §8, §9, §11, §13) and the beta.6 fields into the Recipe File tables (BR-C) | `GLOSSARY.md`, `docs/spec/functional-spec.md` | the release, last |
 
-### 14.2 Fit with the beta.5 waves (reconcile §12.1, as on main today: R and SH merged; SD, ST, G, SNAP, D in flight)
 
-| Wave | beta.5 (unchanged) | Base recipes beside it |
+### 14.2 beta.6 waves
+
+| Wave | Parallel WPs | Why this order |
 |---|---|---|
-| 0 | W0, SNAP, D, NAV, MS, R, SH | **BR-A** (new package only) |
-| 1 | G, ST | **BR-B** (recipe/ingredient files: no beta.5 owner until LO), **BR-C** (schema, prompt, assistant; review on stubs) |
-| 2 | SD, UF-stock | BR-B continues; **BR-D** (recipes web: no owner until LOW); BR-C commit half |
-| 3 | F1, BO | **BR-E** (import web) |
-| 4 | BOW, LO | LO rebases on BR-B (it adds a Recipe field next to the new ones; conflicts are in the same files but different lines) |
-| 5 | UF-runner, LOW | **BR-F** (sources.go and a new runner file: disjoint from UF-runner's stockport/actions; shopping after BO). LOW rebases on BR-D |
-| 6 | UF-web | **BR-G** (after UF-runner) |
-| 7 | H, QA | **BR-H** (after BR-G), then H, QA |
+| 0 | **BR-A** | the pure package everything else calls |
+| 1 | **BR-B**, **BR-C** (schema, prompt, Recipe Assistant, review rows on stubs) | BR-B and BR-C own disjoint files; both need BR-A's API |
+| 2 | **BR-D**, **BR-F**, BR-C (commit half) | all need BR-B's store and API; disjoint files |
+| 3 | **BR-E**, **BR-G** | BR-E needs BR-C and BR-D's sheet; BR-G needs BR-F's tree |
+| 4 | **BR-H** | needs BR-G's cook payload |
+| 5 | release (W-BR's remaining part, CHANGELOG), QA | |
 
-Shared hot spots and the order they force, added to reconcile §12's: recipes backend BR-B, then LO; recipes web BR-D, then LOW; runner LO, then BR-F (sources) beside UF-runner, then BR-G (stockport, actions); cook and notify SD, then UF-runner, then BR-G; shopping SH, BO, then BR-F; cook web F1, then BR-H.
+Critical path: BR-A, BR-B, BR-F, BR-G, BR-H, release (BR-D and BR-E beside it). Migration 1540 is the number if no other beta.6 migration takes it first; BR-B takes the next free one otherwise (it is additive, so the order does not matter).
 
-What can run in parallel now: BR-A at once; BR-B and BR-C as soon as BR-A's API is fixed (its tests); BR-D and BR-E against their APIs. Six of the nine WPs are off beta.5's critical path.
+### 14.3 Estimate
 
-### 14.3 Requests to the PM about in-flight teams
-
-- **LO must rebase on BR-B** (both add Recipe fields and touch `recipe.go`, the store and `modules/recipes.go`). If LO starts before BR-B merges, BR-B waits for LO instead, which moves BR-D, BR-F and BR-G one wave later.
-- **SD** (in flight) touches `sources.go`, `snapshot.go`, `courses_c2.go` and `notify/facts`; nothing to ask, only to merge first.
-- **UF-runner** owns `stockport.go`, `actions.go` and `internal/cook/**`: BR-G must follow it.
-
-### 14.4 Honest estimate
-
-- **Size**: nine WPs, about as much as beta.5's planner features (SD, BO, LO, UF). BR-A, BR-B and BR-C are the large ones; BR-F, BR-G and BR-H are small adapters on top of a tested pure package.
-- **Critical path**: BR-G sits after UF-runner and beside UF-web, and BR-H after BR-G. If both land first time, the wave count stays at 7 with a fuller wave 6 and 7; realistically **one more wave** on the tail, and a QA round about a third larger (planner, Shopping List, Cooked, Cook Mode and Import all gain cases).
-- **Risk**: it touches four of beta.5's hot spots (runner, shopping, cook, recipes). The ownership plan above avoids parallel edits, but every slip in SD, BO, LO or UF-runner now also delays Base recipes.
-- **Does it threaten one beta.5?** Yes, moderately: one more wave and a bigger QA round, not a rewrite. The options (question P4):
-  - **A. All of it in beta.5** (+1 wave, recommended if the date can move by a wave): the feature is consistent everywhere.
-  - **B. Cut the cooking timeline merge to beta.6** (BR-G's cook part and BR-H): beta.5 then has authoring, import, planner, Exclusions, Shopping List and Cooked; Cook Mode shows only the Recipe's own Steps and the Base recipe line, and the Base recipe is cooked from its own detail. Total time on tiles must then stay uncomposed too, or it disagrees with Cook Mode and Start cooking. Saves the tail wave.
-  - **C. All of Base recipes in beta.6**: beta.5 keeps its plan; only BR-A (pure, no user effect) could still land early.
-  Not recommended: shipping authoring without BR-F, because then Exclusions would not look down (D8 is a safety rule for allergies) while Base recipe lines already exist.
+Nine WPs, about the size of beta.5's planner features (SD, BO, LO, UF). BR-A, BR-B and BR-C are the large ones; BR-F, BR-G and BR-H are small adapters on top of a tested pure package. On its own, beta.6 needs about **five waves plus QA**. The QA round covers the planner, the Shopping List, Cooked, Cook Mode and Import.
 
 ---
 
-## 15. Product questions for the user
+## 15. Product decisions (the user's answers, final)
 
-Only real choices; each has a recommended default (A).
+The user answered every question with the recommended option. They are decided, and recorded in ADR 0015 and spec decision 46.
 
-- **P1. Step times when a Base recipe is scaled.** The brief says "ingredients and step times scale". Today Batches never scale durations (a 30-minute simmer stays 30 minutes for 2 Batches).
-  A. Amounts scale, durations stay as written (as for Batches). *(recommended)*
-  B. Active Step durations scale with the amount, Passive ones stay.
-  C. All durations scale with the amount.
-- **P2. Preferences on a Base recipe.**
-  A. Exclusion only, stored as the Exclusion of its Ingredient and counted inside every Recipe that uses it; no Favourite or Dislike. *(recommended)*
-  B. All three; a Favourite or Dislike of the Base recipe counts for every Recipe that uses it.
-- **P3. Preselected answers in Import Review.**
-  A. Preselect only an exact name match to an existing Base recipe or to a Base recipe in the same file (a Feeder export); every other marked line waits for an answer before Confirm. *(recommended)*
-  B. Never preselect; every marked line waits for an answer, Feeder exports included.
-- **P4. Schedule** (§14.4).
-  A. All of Base recipes in beta.5, one more wave. *(recommended)*
-  B. beta.5 without the cooking timeline merge (Cook Mode shows Base recipes from beta.6).
-  C. Base recipes in beta.6.
-- **P5. Making a Base recipe on purpose** (Sunday's ragù for the freezer, or more béchamel than the lasagne needs).
-  A. Not in beta.5: the jar or batch is added on the Pantry page as a Lot of the Base recipe's Ingredient; a "Made it" action that deducts the Ingredients and adds the Lot comes later. *(recommended)*
-  B. In beta.5: a **Made it** action on the Base recipe's detail and an "extra" amount in Mark as Cooked, both adding a Lot.
-- **P6. Turning a plannable Recipe into a Base recipe** (the flow of §3.6, to confirm).
-  A. Allowed after the confirm that names what goes: its Planned Meals from today (Pinned and Bought too) and Slot Rules are removed, Cooked history stays, its Leftovers stay until answered. *(recommended)*
-  B. Refused while it has Pinned or Bought Planned Meals or Leftovers; the User clears them first.
-- **P7. A new Base recipe whose name an Ingredient already has** ("béchamel" from older Recipes or a jar in Stock). *Revised after the user's link and bulk link requirements (§3.7, §3.8); the options sent earlier are replaced by these.*
-  A. The Base recipe always gets its own Ingredient (same name shown, told apart by the badge); the old Ingredient is kept; its lines are linked only by ticking them in the bulk link sheet or one by one; once no Recipe line uses it, Feeder offers to merge it (its Stock and Products move). *(recommended)*
-  B. Offer to adopt the old Ingredient as the Base recipe's: one confirm that lists every Recipe it is on, and all of them become Base recipe lines at once (Stock carries over, no merge needed); "No" falls back to A.
+- **P1 = A. Step times.** Amounts scale with the Base recipe line; Step durations stay as written, as for Batches (§4.4 point 7).
+- **P2 = A. Preferences.** A Base recipe has only an Exclusion, stored as the Exclusion of its Ingredient and counted inside every Recipe that uses it; no Favourite or Dislike (§8).
+- **P3 = A. Import Review defaults.** Only an exact name match to an existing Base recipe, or to a Base recipe in the same file (a Feeder export), is preselected, and the User still confirms the review; every other marked line waits for an answer before Confirm (§11.3).
+- **P4 = C. Schedule.** Base recipes are scheduled for beta.6 (§14). The GLOSSARY entries carry "(beta.6)" and the spec text says "Scheduled for beta.6" until then.
+- **P5 = A. Making a Base recipe on purpose.** Not in this design: a jar or a batch is added on the Pantry page as a Lot of the Base recipe's Ingredient. A "Made it" action that deducts the Ingredients and adds the Lot is a later feature (§8).
+- **P6 = A. Turning a plannable Recipe into a Base recipe.** Allowed after the confirm that names what goes: its Planned Meals from today (Pinned and Bought too) and its Slot Rules are removed, Cooked history stays, and its Leftovers stay until they are answered (§3.6).
+- **P7 = A. A name an Ingredient already has.** The Base recipe always gets its own Ingredient (the same name is shown, told apart by the badge). The old Ingredient is kept, and its lines are linked only when the User ticks them in the bulk link list or links them one by one. Once no Recipe line uses it, Feeder offers to merge it (§3.2, §3.7, §3.8).
 
-Decided here, no question (veto if wrong): Base recipes hidden from the Recipes list by default with a **Base recipes** filter; no Last cooked for them; Tags allowed; Delete in use refused and Archive offered, archived ones keep working inside Recipes that use them; an empty Base recipe counts as its own Ingredient (on the Shopping List as itself) until it has Ingredients; the planner's scores treat a Base recipe as made from scratch; nutrition stays out of v1.
+Decided by the design, not asked: Base recipes hidden from the Recipes list by default with a **Base recipes** filter; no Last cooked for them; Tags allowed; Delete in use refused and Archive offered, archived ones keep working inside Recipes that use them; an empty Base recipe counts as its own Ingredient (on the Shopping List as itself) until it has Ingredients; the planner's scores treat a Base recipe as made from scratch; nutrition stays out of v1.
 
 ---
 
