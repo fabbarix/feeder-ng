@@ -143,9 +143,9 @@ describe('orientationOps', () => {
       ['C', 'F'],
     ],
     6: [
-      ['D', 'A'],
-      ['E', 'B'],
-      ['F', 'C'],
+      ['C', 'F'],
+      ['B', 'E'],
+      ['A', 'D'],
     ],
     7: [
       ['F', 'C'],
@@ -153,9 +153,9 @@ describe('orientationOps', () => {
       ['D', 'A'],
     ],
     8: [
-      ['C', 'F'],
-      ['B', 'E'],
-      ['A', 'D'],
+      ['D', 'A'],
+      ['E', 'B'],
+      ['F', 'C'],
     ],
   }
   for (const o of ALL) it(`applying the ops of ${o} to its stored grid gives the upright grid`, () => expect(apply(stored[o], o)).toEqual(upright))
