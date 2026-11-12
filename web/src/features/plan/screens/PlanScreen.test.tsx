@@ -17,7 +17,7 @@ const view = (over: Partial<PlanView> = {}): PlanView => ({
     slot({ date: '2026-11-10', mealSlotId: 3, meal: meal({ date: '2026-11-10', mealSlotId: 3, recipeId: 8, recipeName: 'Stew' }) }),
     slot({
       date: '2026-11-11', mealSlotId: 4, meal: null,
-      unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 2, exclusion: 0, coolDown: 2, varietyRule: 0, advanceStep: 0 } },
+      unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 2, exclusion: 2, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
     }),
   ],
   ...over,

@@ -81,6 +81,44 @@ export interface Unfilled {
   eliminated: Eliminations
 }
 
+/** CRS G2 (spec 16): a Member as the Review Exclusions API names one (the Avatar needs all of it). */
+export interface MemberRef {
+  id: number
+  name: string
+  colour: string
+  photoUrl?: string
+  avatar?: string
+}
+
+/** CRS G2: one Exclusion that emptied a Course: a Member's Exclusion of an Ingredient (`ingredient` set) or of Recipes directly (`ingredient: null`). */
+export interface ExclusionRecord {
+  member: MemberRef
+  ingredient: { id: number; name: string } | null
+  /** At most 5, in name order. */
+  recipes: { id: number; name: string }[]
+  /** All the Recipes this Exclusion rules out in the cell; can exceed `recipes.length`. */
+  recipeCount: number
+}
+
+/** CRS G2: one cell of GET /api/plan/couldnt-plan/exclusions (reason `no_candidates` with `eliminated.exclusion` above 0). */
+export interface ExclusionCell {
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  time: string
+  courseId: number
+  courseName: string
+  slotRuleClaimed: boolean
+  eliminated: Eliminations
+  /** The cell's Course Attendance on that date. */
+  attendance: MemberRef[]
+  /** Members of the slot who opt out of this Course on that date. */
+  optOuts: MemberRef[]
+  /** null before the first replan after the upgrade: no detail yet. */
+  exclusions: ExclusionRecord[] | null
+  moreExclusions: number
+}
+
 export interface SlotRule {
   id: number
   mealSlotId: number

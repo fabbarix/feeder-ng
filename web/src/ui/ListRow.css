@@ -116,6 +116,19 @@
   font-weight: var(--text-body-strong-weight);
 }
 
+.list-row[data-wrap-title='true'] .list-row__title {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Inline links in a rich title stay clickable (content is otherwise click-through). */
+.list-row__title a {
+  position: relative;
+  pointer-events: auto;
+}
+
 .list-row__meta {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);

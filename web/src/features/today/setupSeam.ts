@@ -1,13 +1,13 @@
 // The one place Today reads the Members, Meal Slots, Recipes and the plan for the first-run checklist: counts only.
 import { useQuery } from '@tanstack/react-query'
 import { http } from '../../lib/http'
-import type { SetupFacts } from './lib/setup'
+import { planFacts, type PlanSlotLike, type SetupFacts } from './lib/setup'
 
 interface SlotView {
   attendance?: unknown[]
 }
 interface PlanView {
-  slots?: { meal?: unknown; unfilled?: unknown }[]
+  slots?: PlanSlotLike[]
 }
 
 const qs = {
@@ -33,8 +33,8 @@ export function useSetupFacts(): { facts: SetupFacts | null; loading: boolean } 
       mealSlots: mealSlots.data.length,
       mealSlotsWithAttendance: mealSlots.data.filter((m) => (m.attendance?.length ?? 0) > 0).length,
       recipes: recipes.data.length,
-      plannedMeals: slots.filter((x) => x.meal).length,
-      unplannedMeals: slots.filter((x) => !x.meal && x.unfilled).length,
+      // CRS G2: per Course (lib/setup planFacts).
+      ...planFacts(slots),
     },
   }
 }

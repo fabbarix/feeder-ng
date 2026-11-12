@@ -1,5 +1,6 @@
 import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
+import { courseCells } from './couldntGroups'
 import { weekdayName } from './phrase'
 
 function plural(name: string): string {
@@ -42,9 +43,10 @@ function clauseFor(name: string, affected: PlanSlot[], inPlan: number): Clause {
 /**
  * "Every dinner this week, plus weekend breakfasts and Tuesday lunch": what the affected meals are, by Meal Slot name,
  * biggest part first. `everything` is the whole plan; "every" is measured against its slots that still count (a Planned Meal
- * or a recorded reason, not a past slot). Without it the affected meals are all it knows.
+ * or a recorded reason, not a past slot). Without it the affected meals are all it knows. CRS G2: `capitalise: false` gives
+ * the clause as it reads inside a sentence ("every dinner this week", "Tuesday and Wednesday dinners" keeps its weekday capitals).
  */
-export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected): string {
+export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected, options: { capitalise?: boolean } = {}): string {
   if (affected.length === 0) return ''
   // Only slots that still count: a Planned Meal or a recorded reason. A slot whose time has gone has neither.
   const all = everything.filter((x) => x.meal != null || x.unfilled != null)
@@ -64,6 +66,56 @@ export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = af
   const head = texts[0]!
   const rest = texts.slice(1)
   const out = rest.length === 0 ? head : s.summaryPlus(head, joinNames(rest))
+  return options.capitalise === false ? out : out.charAt(0).toUpperCase() + out.slice(1)
+}
+
+/**
+ * CRS G2: `summarizeSlots` over cells (one per Course). Slots where every Course of the slot is affected are summarised
+ * once, by Meal Slot ("Every dinner this week"); the others per Course, "Side at every dinner this week" (the Course
+ * name, "at", then that Course's own clauses, measured against that Course's counting cells in `all`). Parts are joined
+ * "…, plus …", the whole-slot part first, then the Courses by number of cells. '' when there are no cells.
+ * For cells of slots without Courses it gives exactly what `summarizeSlots(cells, all)` gives.
+ */
+export function summarizeCells(cells: PlanSlot[], all: PlanSlot[] = cells): string {
+  if (cells.length === 0) return ''
+  const counting = courseCells(all)
+  // One representative per Meal Slot that still counts: "every dinner" is measured over the slots, as summarizeSlots does.
+  const reps = [...new Map(counting.map((x) => [slotKey(x), x] as const)).values()]
+  const countingCourses = new Map<string, Set<number>>()
+  for (const x of counting) countingCourses.set(slotKey(x), (countingCourses.get(slotKey(x)) ?? new Set()).add(courseKey(x)))
+  const affectedCourses = new Map<string, Set<number>>()
+  for (const x of cells) affectedCourses.set(slotKey(x), (affectedCourses.get(slotKey(x)) ?? new Set()).add(courseKey(x)))
+
+  const whole: PlanSlot[] = []
+  const perCourse = new Map<number, PlanSlot[]>()
+  const seenSlots = new Set<string>()
+  for (const x of cells) {
+    const k = slotKey(x)
+    const counted = countingCourses.get(k)
+    const affected = affectedCourses.get(k)!
+    const everyCourse = counted !== undefined && [...counted].every((c) => affected.has(c))
+    if (everyCourse) {
+      if (!seenSlots.has(k)) {
+        seenSlots.add(k)
+        whole.push(cells.find((y) => slotKey(y) === k)!)
+      }
+    } else {
+      perCourse.set(courseKey(x), [...(perCourse.get(courseKey(x)) ?? []), x])
+    }
+  }
+
+  const parts: string[] = []
+  if (whole.length > 0) parts.push(summarizeSlots(whole, reps, { capitalise: false }))
+  const courses = [...perCourse.entries()].sort((a, b) => b[1].length - a[1].length)
+  for (const [id, list] of courses) {
+    const own = counting.filter((x) => courseKey(x) === id)
+    const text = summarizeSlots(list, own.length > 0 ? own : list, { capitalise: false })
+    parts.push(list[0]!.courseName ? `${list[0]!.courseName} at ${text}` : text)
+  }
+  const [head = '', ...rest] = parts
+  const out = rest.length === 0 ? head : s.summaryPlus(head, joinNames(rest))
   return out.charAt(0).toUpperCase() + out.slice(1)
 }
 
+const slotKey = (x: PlanSlot): string => `${x.date}/${x.mealSlotId}`
+const courseKey = (x: PlanSlot): number => x.courseId ?? -1

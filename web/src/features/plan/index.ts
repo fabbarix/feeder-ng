@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import type { FeatureModule } from '../../app/features'
 import { PlanScreen } from './screens/PlanScreen'
+import { CouldntPlanExclusionsScreen } from './screens/CouldntPlanExclusionsScreen'
 import { PlanningRulesScreen } from './screens/PlanningRulesScreen'
 
 // "Plan" is a fixed bottom-bar destination of the shell, so there is no navItem here.
@@ -8,6 +9,8 @@ const feature: FeatureModule = {
   routes: [
     { path: '/plan', element: createElement(PlanScreen) },
     { path: '/settings/planning', element: createElement(PlanningRulesScreen) },
+    // CRS G2 (RX): the Exclusions that left each Course empty; open to every User.
+    { path: '/plan/couldnt-plan/excluded', element: createElement(CouldntPlanExclusionsScreen) },
   ],
 }
 

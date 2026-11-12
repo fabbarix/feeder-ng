@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, IconButton } from '../../../ui'
 import { dayChip } from '../lib/chips'
+import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
 import { wholeMealChip, type CourseRowModel } from '../lib/courses'
 import { mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
@@ -43,11 +44,19 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
   const planned = meal?.state === 'planned'
   const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
   const whole = wholeMealChip(slot, row)
+  // CRS G2 (spec 7.4, "On Plan"): an empty Course says why, in the tone of its cause.
+  const reason = !meal && course.unfilled !== null
+  const cause = causeOf(course)
 
   return (
     <li aria-label={course.name} className="plan-course" data-compact={compact ? 'true' : undefined}>
       {caption ? <span className="plan-course__caption">{caption}</span> : null}
-      <div className="plan-course__body" data-state={meal && meal.state !== 'planned' ? meal.state : undefined} data-unfilled={meal ? undefined : ''}>
+      <div
+        className="plan-course__body"
+        data-state={meal && meal.state !== 'planned' ? meal.state : undefined}
+        data-unfilled={meal ? undefined : ''}
+        title={compact && reason ? shortReason(cause) : undefined}
+      >
         {meal ? (
           <>
             <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
@@ -83,10 +92,14 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
           </>
         ) : (
           <>
-            <Chip>{s.notPlanned}</Chip>
-            <Button variant="tertiary" size="sm" onClick={() => onChoose?.(key)}>
-              {s.choose}
-            </Button>
+            {reason ? <Chip {...toneStyle(toneOf(cause)).chip}>{s.notPlanned}</Chip> : <Chip>{s.notPlanned}</Chip>}
+            {reason && !compact ? <span className="plan-course__reason">{shortReason(cause)}</span> : null}
+            {/* CRS G2: nobody attends, so there is nobody to cook for (as a lone slot). */}
+            {cause !== 'nobody_attending' ? (
+              <Button variant="tertiary" size="sm" onClick={() => onChoose?.(key)}>
+                {s.choose}
+              </Button>
+            ) : null}
           </>
         )}
       </div>

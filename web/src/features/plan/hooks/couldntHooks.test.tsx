@@ -40,12 +40,12 @@ describe('useCouldntPlanNotice', () => {
     expect(result.current.groups[0]!.summary).toBe('Every dinner this week')
   })
 
-  it('R13: attendance and the Cool-down setting are Admin duties; the fix is withheld from a plain User, not the rest', () => {
-    const cool = unplanned('2026-11-12', 'no_candidates', { considered: 2, coolDown: 2 })
-    const rule = unplanned('2026-11-13', 'no_candidates', { considered: 2, varietyRule: 2 })
-    const asUser = renderHook(() => useCouldntPlanNotice([...dinners, cool, rule], [...dinners, cool, rule], false)).result.current
-    expect(asUser.groups.map((g) => [g.cause, g.canFix])).toEqual([['nobody_attending', false], ['cool_down', false], ['variety_rule', true]])
-    const asAdmin = renderHook(() => useCouldntPlanNotice([...dinners, cool, rule], [...dinners, cool, rule], true)).result.current
+  it('R13: attendance is an Admin duty; the fix is withheld from a plain User, not the rest', () => {
+    const late = unplanned('2026-11-12', 'no_candidates', { considered: 2, advanceStep: 2 })
+    const rule = unplanned('2026-11-13', 'no_candidates', { considered: 2, exclusion: 2 })
+    const asUser = renderHook(() => useCouldntPlanNotice([...dinners, late, rule], [...dinners, late, rule], false)).result.current
+    expect(asUser.groups.map((g) => [g.cause, g.canFix])).toEqual([['nobody_attending', false], ['excluded', true], ['advance_step', true]])
+    const asAdmin = renderHook(() => useCouldntPlanNotice([...dinners, late, rule], [...dinners, late, rule], true)).result.current
     expect(asAdmin.groups.every((g) => g.canFix)).toBe(true)
   })
 
@@ -68,7 +68,7 @@ describe('useCauseExpansion: which cause tiles show their full list', () => {
     expect(result.current.isOpen('nobody_attending')).toBe(false)
     act(() => result.current.toggle('nobody_attending'))
     expect(result.current.isOpen('nobody_attending')).toBe(true)
-    expect(result.current.isOpen('cool_down')).toBe(false)
+    expect(result.current.isOpen('excluded')).toBe(false)
     act(() => result.current.toggle('nobody_attending'))
     expect(result.current.isOpen('nobody_attending')).toBe(false)
   })

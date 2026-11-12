@@ -20,6 +20,7 @@ const ROOTS: Record<string, string> = {
   '/recipes': S.roots.recipes,
   '/ingredients': S.roots.ingredients,
   '/products': S.roots.products,
+  '/plan': S.roots.plan,
 }
 
 const sections = settingsStrings.index.sections
@@ -45,6 +46,8 @@ export const ROUTE_CRUMBS: RouteCrumb[] = [
   { path: '/recipes/:id', label: S.entity.recipe, parent: '/recipes', entity: true },
   { path: '/recipes/:id/edit', label: S.edit, parent: '/recipes/:id' },
   { path: '/ingredients/:id', label: S.entity.ingredient, parent: '/ingredients', entity: true },
+  // CRS G2 (RX): Plan > Review Exclusions.
+  { path: '/plan/couldnt-plan/excluded', label: S.reviewExclusions, parent: '/plan' },
   { path: '/products/:id', label: S.entity.product, parent: '/products', entity: true },
 ]
 

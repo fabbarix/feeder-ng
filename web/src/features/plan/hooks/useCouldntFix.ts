@@ -14,7 +14,7 @@ export function useCouldntFix(onChoose?: (key: SlotKey) => void): (group: CauseG
       return
     }
     const first = group.slots[0]
-    if (onChoose && first) onChoose({ date: first.date, mealSlotId: first.mealSlotId })
+    if (onChoose && first) onChoose({ date: first.date, mealSlotId: first.mealSlotId, ...(first.courseId !== undefined ? { courseId: first.courseId } : {}) })
     else navigate('/plan')
   }
 }

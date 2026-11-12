@@ -6,7 +6,8 @@ import type { IconName } from './icons'
 import './ListRow.css'
 
 interface ListRowBase {
-  title: string
+  /** Plain text, or inline content (e.g. Recipe links) on a static row, which then needs no `aria-label`. */
+  title: ReactNode
   /** Second line (muted). Makes the row two-lined (64) unless a thumb is given (72). */
   meta?: string
   /** Tinted 40 px square with this icon, as leading visual. */
@@ -18,6 +19,8 @@ interface ListRowBase {
   /** Shows a CaretRight chevron. */
   chevron?: boolean
   selected?: boolean
+  /** Lets the title wrap over several lines instead of one truncated line. */
+  wrapTitle?: boolean
   /** WP3b: overrides the accessible name of the row's target (default: `title`). */
   'aria-label'?: string
   /** WP3b: colours the meta line with a status (spoil, leftover, ...); needs `meta`. */
@@ -55,22 +58,22 @@ function PlainTarget({ href, label, current }: { href: string; label: string; cu
   return <a className="list-row__target" href={href} aria-label={label} aria-current={current} />
 }
 
-/** `data-*` attributes from the row props, for the `li` (never data-height / data-selected, which are ours). */
+/** `data-*` attributes from the row props, for the `li` (never data-height / data-selected / data-wrap-title, which are ours). */
 function passthroughData(props: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(props)) {
-    if (key.startsWith('data-') && typeof value === 'string' && key !== 'data-height' && key !== 'data-selected') out[key] = value
+    if (key.startsWith('data-') && typeof value === 'string' && key !== 'data-height' && key !== 'data-selected' && key !== 'data-wrap-title') out[key] = value
   }
   return out
 }
 
 /** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`). */
 export function ListRow(props: ListRowProps) {
-  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, children, metaStatus, metaIcon } = props
+  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, children, metaStatus, metaIcon, wrapTitle } = props
   const inRouter = useInRouterContext()
-  const height = children ? 'auto' : leading ? 72 : meta ? 64 : 56
+  const height = children || wrapTitle ? 'auto' : leading ? 72 : meta ? 64 : 56
   const current = selected ? 'true' : undefined
-  const label = props['aria-label'] ?? title
+  const label = props['aria-label'] ?? (typeof title === 'string' ? title : '')
   const metaGlyph: IconName | undefined = metaIcon ?? (metaStatus ? defaultStatusIcon(metaStatus) : undefined)
   let target: ReactNode = null
   if (href !== undefined) {
@@ -79,7 +82,7 @@ export function ListRow(props: ListRowProps) {
     target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} onClick={onActivate} />
   }
   return (
-    <li {...passthroughData(props as unknown as Record<string, unknown>)} className="list-row" data-height={height} data-selected={selected ? 'true' : undefined}>
+    <li {...passthroughData(props as unknown as Record<string, unknown>)} className="list-row" data-height={height} data-selected={selected ? 'true' : undefined} data-wrap-title={wrapTitle ? 'true' : undefined}>
       {target}
       {leading ? (
         <span className="list-row__leading">{leading}</span>

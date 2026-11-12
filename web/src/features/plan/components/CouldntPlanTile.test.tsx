@@ -96,9 +96,9 @@ describe('CouldntPlanTile: one compact tile per cause', () => {
   })
 
   it('a rule conflict (warn) is the amber status tile', () => {
-    const warn = noticeGroups([unplanned('2026-11-10', 'no_candidates', { considered: 2, coolDown: 2 })])[0]!
+    const warn = noticeGroups([unplanned('2026-11-10', 'no_candidates', { considered: 2, advanceStep: 2 })])[0]!
     const { container } = setup(warn).view
-    const tile = container.querySelector('[data-cause="cool_down"]') as HTMLElement
+    const tile = container.querySelector('[data-cause="advance_step"]') as HTMLElement
     expect(tile).toHaveAttribute('data-couldnt-tone', 'warn')
     expect(tile).toHaveAttribute('data-variant', 'status')
     expect(tile).toHaveAttribute('data-status', 'spoil')
@@ -122,7 +122,7 @@ describe('CouldntPlanTile: one compact tile per cause', () => {
 })
 
 describe('CouldntPlanNotice: one tile per cause', () => {
-  const cool = unplanned('2026-11-12', 'no_candidates', { considered: 3, coolDown: 3 }, 'Lunch', 5)
+  const cool = unplanned('2026-11-12', 'no_candidates', { considered: 3, advanceStep: 3 }, 'Lunch', 5)
 
   it('nine identical slots are one tile', () => {
     render(<CouldntPlanNotice groups={noticeGroups([...dinners, ...breakfasts])} onFix={() => {}} />)
@@ -134,8 +134,8 @@ describe('CouldntPlanNotice: one tile per cause', () => {
     const onFix = vi.fn()
     render(<CouldntPlanNotice groups={noticeGroups([...dinners, cool])} onFix={onFix} />)
     expect(screen.getAllByRole('region')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Review Cool-down' }))
-    expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ cause: 'cool_down' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe' }))
+    expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ cause: 'advance_step' }))
     await userEvent.click(screen.getByRole('button', { name: 'Choose who attends' }))
     expect(onFix).toHaveBeenLastCalledWith(expect.objectContaining({ cause: 'nobody_attending' }))
   })

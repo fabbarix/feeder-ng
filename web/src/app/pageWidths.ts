@@ -15,6 +15,8 @@ export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/recipes/:id/edit', width: 'default' },
   { path: '/recipes/new', width: 'default' },
   { path: '/plan', width: 'wide' },
+  // CRS G2 (RX): a list of Tiles, default width like the other detail pages.
+  { path: '/plan/couldnt-plan/excluded', width: 'default' },
   { path: '/recipes', width: 'wide' },
   { path: '/shop', width: 'wide' },
   { path: '/scan', width: 'narrow' },
