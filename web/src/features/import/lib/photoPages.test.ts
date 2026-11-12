@@ -1,5 +1,18 @@
 // Unit tests of the photo-read state model (docs/dev/design/photo-read.md sections 2 and 12.1).
 // They use only the shapes of section 2 (literal edits and states), not the ImageEditor's implementation.
+// Ambiguities found in section 2 of the design (phase 1 report); how each is pinned is in brackets.
+//  1. toReadInput(state, dataUrls): the shape of dataUrls is not given. [Record<PhotoId, string>; links need none.]
+//  2. RawImage fields for as-is: the source has no `origin`. [origin not pinned for as-is; suggest 'file'; declared type, width and height 0 are pinned.]
+//  3. toReadInput on a non-ready photo is undefined. [Throws.]
+//  4. initialEdit(size) / isFull(draft, size): working size or turned size? [Only turns 0 + full crop is full; a turned full-area edit is not.]
+//  5. blockReason priority and the empty list. [editing, then preparing, then {failed}; null for an empty list.]
+//  6. `added` while an editor is open or with no intake running is undefined. [Not tested for image/as-is; a link is allowed at any time.]
+//  7. intakeStarted on an empty queue, editStarted while another session is open, photoNumber of an unknown id are undefined. [editStarted is now
+//     tested as ignored; the other two are not tested.]
+//  8. queued with dropped files: the problem is overwritten (newest wins); with none dropped an existing problem stays. [First tested, second not.]
+//  9. added at 4: is the problem's `count` set? [Only the code too_many_photos is pinned.]
+// 10. No initial state or constructor is named. [initialPhotoPages(), ids start at p1.]
+// 11. Action field names and the rendered payload {blob, width, height, type} are my choice. [See the action union in photoPages.ts.]
 import { describe, expect, it } from 'vitest'
 import { moveItem } from '../../../ui/Sortable'
 import {
@@ -100,13 +113,57 @@ describe('added', () => {
     expect(s.problem?.code).toBe('too_many_photos')
   })
   it('does not count the queue or the intake in photos (the file being prepared becomes this photo)', () => {
-    const s = reduce(state({ photos: photos(3), queue: files(0), intake: 'preparing', nextId: 4 }), { type: 'added', source: linkSource })
+    const s = reduce(state({ photos: photos(3), queue: files(0), intake: 'preparing', nextId: 4 }), { type: 'added', source: imageSource() })
     expect(s.photos).toHaveLength(4)
     expect(s.intake).toBe('preparing')
   })
-  it('clears the panel message', () => {
+  it('as-is also counts photos + queue only (it is the prepared file)', () => {
+    const s = reduce(state({ photos: photos(3), intake: 'preparing', nextId: 4 }), { type: 'added', source: asIsSource })
+    expect(s.photos).toHaveLength(4)
+  })
+  it('a link counts photos + queue + preparing: it may not take the slot of a file being prepared', () => {
+    const s0 = state({ photos: photos(2), queue: files(1), intake: 'preparing', nextId: 3 })
+    const refused = reduce(s0, { type: 'added', source: linkSource })
+    expect(refused.photos).toEqual(s0.photos)
+    expect(refused.problem?.code).toBe('too_many_photos')
+  })
+  it('a link during preparing with room 0 is refused and the prepared image is still added', () => {
+    let s = state({ photos: photos(3), intake: 'preparing', nextId: 4 })
+    s = reduce(s, { type: 'added', source: linkSource })
+    expect(s.photos).toHaveLength(3)
+    s = reduce(s, { type: 'added', source: imageSource() })
+    expect(s.photos).toHaveLength(4)
+    expect(s.photos[3]?.source.kind).toBe('image')
+  })
+  it('a link when idle and the sum is below 4 is added', () => {
+    expect(reduce(state({ photos: photos(2), queue: files(1) }), { type: 'added', source: linkSource }).photos).toHaveLength(3)
+  })
+  // Rule for the panel message (PM decision Q8): an `added` keeps a too_many_photos problem that carries a `count` ("N left out") until it is
+  // dismissed or replaced; it clears any other problem only when the queue is empty, i.e. when the pick is over.
+  it('clears another problem when the queue is empty (the pick is over)', () => {
     const s = reduce(state({ problem: { code: 'unreadable' } }), { type: 'added', source: linkSource })
     expect(s.problem).toBeNull()
+  })
+  it('keeps "N left out" through the adds of the pick: pick 6, none added yet, the first add keeps "2 left out"', () => {
+    let s = reduce(state(), { type: 'queued', files: files(6) })
+    expect(s.problem).toMatchObject({ code: 'too_many_photos', count: 2 })
+    s = run(s, { type: 'intakeStarted' }, { type: 'added', source: imageSource() })
+    expect(s.problem).toMatchObject({ code: 'too_many_photos', count: 2 })
+    s = run(s, { type: 'intakeEnded' }, { type: 'editCommitted' }, { type: 'intakeStarted' }, { type: 'added', source: imageSource() })
+    expect(s.problem).toMatchObject({ code: 'too_many_photos', count: 2 })
+  })
+  it('"N left out" stays even when the queue is empty, until dismissed or replaced', () => {
+    const s0 = state({ problem: { code: 'too_many_photos', count: 2 } })
+    expect(reduce(s0, { type: 'added', source: linkSource }).problem).toMatchObject({ code: 'too_many_photos', count: 2 })
+    expect(reduce(s0, { type: 'problemCleared' }).problem).toBeNull()
+    expect(reduce(s0, { type: 'problemSet', problem: { code: 'unreadable' } }).problem).toEqual({ code: 'unreadable' })
+  })
+  it('an unreadable on file 2 survives the add of file 3 (queue not empty) and is cleared by an add when the queue is empty', () => {
+    const s0 = state({ problem: { code: 'unreadable' }, queue: files(1), intake: 'preparing' })
+    const mid = reduce(s0, { type: 'added', source: imageSource() })
+    expect(mid.problem).toEqual({ code: 'unreadable' })
+    const last = reduce(state({ problem: { code: 'unreadable' }, intake: 'preparing' }), { type: 'added', source: imageSource() })
+    expect(last.problem).toBeNull()
   })
 })
 
@@ -181,6 +238,14 @@ describe('editStarted, draftChanged', () => {
   it('is ignored for an unknown id', () => {
     const s0 = state({ photos: photos(1) })
     expect(reduce(s0, { type: 'editStarted', id: 'zz' })).toEqual(s0)
+  })
+  it('is ignored while a file is being prepared', () => {
+    const s0 = state({ photos: photos(2), intake: 'preparing' })
+    expect(reduce(s0, { type: 'editStarted', id: 'p1' })).toEqual(s0)
+  })
+  it('is ignored while another session is open: no silent replacement', () => {
+    const s0 = state({ photos: photos(2), editing: editing('p1', edit(1, 0, 0, 100, 100), false) })
+    expect(reduce(s0, { type: 'editStarted', id: 'p2' })).toEqual(s0)
   })
   it('a failed photo can be edited again', () => {
     const s0 = state({ photos: [photo('p1', { output: { status: 'failed', problem: 'render_failed' } })] })
@@ -533,13 +598,18 @@ describe('invariants over random action sequences', () => {
         // The hook only starts an intake when nextToIntake says so, and only ends one it started.
         if (a.type === 'intakeStarted' && nextToIntake(s) === undefined) continue
         if (a.type === 'intakeEnded' && s.intake !== 'preparing') continue
-        // The hook only adds the file it is preparing.
-        if (a.type === 'added' && s.intake !== 'preparing') continue
+        // The hook adds the file it is preparing (image, as-is); a link may be added at any time (the addLink path).
+        if (a.type === 'added' && a.source.kind !== 'link' && s.intake !== 'preparing') continue
+        const openBefore = s.editing?.id
         s = reduce(s, a)
+        // An `added` never changes the id of an open session.
+        if (a.type === 'added' && openBefore !== undefined) expect(s.editing?.id).toBe(openBefore)
         sawPhoto ||= s.photos.length > 0
         expect(s.photos.length).toBeLessThanOrEqual(MAX_PHOTOS)
         // The sum holds at rest only: between `added` and `intakeEnded` the prepared file is counted twice.
         if (s.intake === 'idle') expect(s.photos.length + s.queue.length).toBeLessThanOrEqual(MAX_PHOTOS)
+        // While preparing, a link never pushes the full sum past 4 (an image or as-is is the prepared file).
+        if (a.type === 'added' && a.source.kind === 'link' && s.intake === 'preparing') expect(s.photos.length + s.queue.length + 1).toBeLessThanOrEqual(MAX_PHOTOS)
         expect(new Set(ids(s)).size).toBe(s.photos.length)
         if (s.editing) {
           const target = s.photos.find((p) => p.id === s.editing?.id)
