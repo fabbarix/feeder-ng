@@ -13,6 +13,8 @@ export interface CookNavTilesProps {
   onDone?: () => void
   /** Why Next is held (a timer the next Step waits for is still running): Next is disabled and this line says why. */
   heldText?: string | null
+  /** CRS F (STUB: not used yet): the label of the last-item action, default "Mark as Cooked"; the timeline passes "Mark all Cooked". */
+  markLabel?: string
 }
 
 /**

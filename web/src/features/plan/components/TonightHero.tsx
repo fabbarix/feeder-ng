@@ -5,6 +5,8 @@ import type { HeroAction, HeroDay } from '../lib/hero'
 import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
+import type { CourseRowHandlers } from './CourseRow'
+import type { SlotMenuProps } from './SlotMenu'
 import '../plan.css'
 
 export interface TonightHeroProps {
@@ -25,6 +27,14 @@ export interface TonightHeroProps {
   /** N3: from lib/hero heroSelection. Default 'today' and 'cook'. */
   day?: HeroDay
   action?: HeroAction
+  /** CRS F (STUB): household date, for Mark as Cooked on the compact rows and the slot menu. */
+  today?: string
+  /** CRS F (STUB): the compact rows' actions (Swap, Pin or Unpin, Mark as Cooked) and "choose"; the Recipe name opens the Course's sheet. */
+  rowHandlers?: CourseRowHandlers
+  /** CRS F (STUB): "Mark all Cooked" of the hero after the slot time, when several Courses are still to cook. */
+  onMarkAllCooked?: (slot: SlotKey) => void
+  /** CRS F (STUB): the slot menu's other actions. */
+  menu?: Pick<SlotMenuProps, 'onNotCookedSlot' | 'onAddCourse'>
 }
 
 /**

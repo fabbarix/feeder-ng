@@ -124,3 +124,50 @@ export function shortWeekday(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1)))
 }
+
+// ---- CRS F: Courses on the board (spec 7.5). STUBS: the Developer implements them. ----
+
+/** A row of the Tonight tile: one Course with a Planned Meal. */
+export interface TonightRow {
+  courseId: number
+  courseName: string
+  recipeName: string
+  main: boolean
+  state: 'planned' | 'cooked' | 'skipped'
+}
+
+const TODO = (): never => {
+  throw new Error('CRS F: not implemented')
+}
+
+/** The board's slots: the payload's `slots` when it has them, else the plan's slots (an older payload). */
+export function boardSlots(_slots: SlotLike[] | undefined, _planSlots: SlotLike[]): SlotLike[] {
+  return TODO()
+}
+
+/**
+ * True when any Course of the slot holds a Planned Meal still to cook (state planned). Without `courses` it is the
+ * slot's `meal`. Tonight's, tomorrow's and the Cook button's choices use this instead of `slot.meal` alone, so a slot
+ * whose main Course is already Cooked but whose Side is not is still tonight's.
+ */
+export function hasPlanned(_slot: SlotLike): boolean {
+  return TODO()
+}
+
+/**
+ * The Tonight tile's rows in the slot's order: every Course with a Planned Meal that is not Not cooked (covered,
+ * not-served and empty Courses have none). A slot without `courses` gives one row from `meal`.
+ */
+export function tonightRows(_slot: SlotLike): TonightRow[] {
+  return TODO()
+}
+
+/**
+ * Tomorrow's line of a slot. One Course (or no `courses`): "Dinner · Chicken stew" exactly as before. Several rows:
+ * "Dinner: Roast chicken + green beans" (slot name, colon, the Recipe names of the Courses that hold a Planned Meal
+ * joined by " + " exactly as named, in the slot's order). A covered slot is its Whole meal alone, plus any Course of
+ * it that holds a Planned Meal.
+ */
+export function tomorrowLine(_slot: SlotLike): string {
+  return TODO()
+}

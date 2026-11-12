@@ -1,5 +1,5 @@
 // The scope string of a cook session, as the server names it, and how a route opens one. Plain TypeScript.
-import type { CookSource } from '../types'
+import type { CookSource, CookTimelineTarget } from '../types'
 
 /** "meal:<date>/<mealSlotId>" for a Planned Meal, "recipe:<id>" for a Recipe. */
 export function scopeOf(source: CookSource): string {
@@ -49,4 +49,44 @@ export function cookMealPath(date: string, mealSlotId: number): string {
 /** Where Exit goes: a Recipe session leaves to `/recipes/<id>`, a Planned Meal session to Today (`/`). */
 export function exitPathFor(source: CookSource): string {
   return source.kind === 'recipe' ? `/recipes/${source.recipeId}` : '/'
+}
+
+// ---- CRS F: Course scopes and the cooking timeline's route (spec 11). STUBS: the Developer implements them. ----
+
+/** "meal:<date>/<slotId>/<courseId>": the three-part scope of one Course's Planned Meal. STUB. */
+export function courseScope(_date: string, _mealSlotId: number, _courseId: number): string {
+  throw new Error('CRS F: not implemented')
+}
+
+export interface MealScopeParts {
+  date: string
+  mealSlotId: number
+  /** null for the two-part form (the main Course until C3). */
+  courseId: number | null
+}
+
+/** Reads "meal:<date>/<slotId>" and "meal:<date>/<slotId>/<courseId>"; null for a recipe scope, a free timer (null) or anything else. STUB. */
+export function parseMealScope(_scope: string | null | undefined): MealScopeParts | null {
+  throw new Error('CRS F: not implemented')
+}
+
+/**
+ * THE ONE place cook scopes are compared (crs-plan 2.2, shim 2). Two meal scopes are the same when date, slot and Course
+ * match, where the two-part form reads as the main Course: `sameScope('meal:d/3', 'meal:d/3/7', 7)` is true. It works
+ * before C3 (the server writes the main Course two-part) and after (always three-part). While `mainCourseId` is unknown
+ * (null or undefined) a two-part scope equals only itself. Recipe scopes and null compare as plain strings (null is
+ * never equal to a scope). STUB.
+ */
+export function sameScope(_a: string | null | undefined, _b: string | null | undefined, _mainCourseId: number | null | undefined): boolean {
+  throw new Error('CRS F: not implemented')
+}
+
+/** `/cook/meal/<date>/<slotId>` (the timeline) or `/cook/meal/<date>/<slotId>/<courseId>` (opened on that Course). STUB. */
+export function cookTimelinePath(_date: string, _mealSlotId: number, _courseId?: number): string {
+  throw new Error('CRS F: not implemented')
+}
+
+/** The target of the route params `{ date, slotId, courseId? }`; null when date or slot is missing. STUB. */
+export function timelineTargetFrom(_params: { date?: string; slotId?: string; courseId?: string }): CookTimelineTarget | null {
+  throw new Error('CRS F: not implemented')
 }

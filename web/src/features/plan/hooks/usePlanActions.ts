@@ -15,6 +15,8 @@ export interface UsePlanActions {
   unpin: (key: SlotKey) => Promise<boolean>
   /** Undo of a Swap: the previous Recipe back, unpinned again when it was not Pinned before. */
   restore: (key: SlotKey, recipeId: number, pinned: boolean) => Promise<boolean>
+  /** CRS F (STUB): POST .../all/not-cooked for the slot (Not cooked: whole slot), then the plan refetches. Resolves true on success. */
+  notCookedSlot: (slot: SlotKey) => Promise<boolean>
   /** Message of the last failed action, or null. */
   error: string | null
 }
@@ -61,6 +63,7 @@ export function usePlanActions(): UsePlanActions {
         await planApi.setMeal(key, recipeId)
         if (!pinned) await planApi.unpin(key)
       }),
+    notCookedSlot: () => Promise.reject(new Error('CRS F: not implemented')),
     error,
   }
 }

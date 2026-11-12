@@ -19,6 +19,16 @@ export interface PlannedMealSheetProps {
   onPin: (key: SlotKey) => void
   onUnpin: (key: SlotKey) => void
   onChoose: (key: SlotKey) => void
+  /**
+   * CRS F (STUB): the Course the sheet is for (the slot's `courses` row); absent = the main Course / the slot's `meal`.
+   * With several Courses the meta line reads "Tue Dinner · Side"; the facts and the Attendance avatars are the
+   * Course's (the slot's Attendance without the Course's opt-outs); every action carries the key with `courseId`.
+   */
+  courseId?: number
+  /** CRS F (STUB): the relaxed line's actions (lib/relaxed). */
+  onMarkRecipes?: (courseId: number) => void
+  onAddRecipes?: () => void
+  onReviewVarietyRules?: () => void
 }
 
 /**

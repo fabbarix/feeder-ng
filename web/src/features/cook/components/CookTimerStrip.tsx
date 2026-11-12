@@ -11,6 +11,12 @@ export interface CookTimerStripProps {
   onPause: (id: number) => void
   onResume: (id: number) => void
   onCancel: (id: number) => void
+  /**
+   * CRS F (STUB: not used yet): the timeline shows EVERY timer of the slot's Courses under "Timers" whichever Course chip
+   * is chosen. When given, a timer is "here" when `belongs(timer.scope)` is true (the screen builds it with sameScope over the
+   * slot's Courses); `scope` then only words the place hint of the other timers.
+   */
+  belongs?: (timerScope: string | null) => boolean
 }
 
 /**

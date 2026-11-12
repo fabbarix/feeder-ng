@@ -15,6 +15,10 @@ export interface StepTileProps {
   /** Tablet: shows the one-time coach mark (cookStrings.coachMark) with a "Got it" button that calls onCoachDismiss. */
   coachMark?: boolean
   onCoachDismiss?: () => void
+  /** CRS F (STUB: not rendered yet): the Course and Recipe caption "Side · Green beans", shown only when given. */
+  caption?: string | null
+  /** CRS F (STUB: not rendered yet): the planned clock time "18:52", shown only when given. */
+  clock?: string | null
 }
 
 /**

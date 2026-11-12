@@ -85,3 +85,16 @@ export function heroDayOverline(sel: HeroSelection): string {
   const day = sel.day === 'tomorrow' ? s.tomorrow.toUpperCase() : weekdayName(sel.slot.date, 'short').toUpperCase()
   return `${day} · ${name}`
 }
+
+/**
+ * CRS F: the label of the slot block's Cook button (STUB). "Cook · 30 min" from `slot.cookMinutes` (the timeline total)
+ * when it is a number above 0; otherwise as `heroCookLabel(meal)` for the hero's meal (one-Course slots are unchanged).
+ */
+export function slotCookLabel(_slot: PlanSlot): string {
+  throw new Error('CRS F: not implemented')
+}
+
+/** CRS F: "start 18:45" from `slot.startBy` (the timeline start), else from the hero meal's own startBy, else null (STUB). */
+export function slotStartBy(_slot: PlanSlot): string | null {
+  throw new Error('CRS F: not implemented')
+}

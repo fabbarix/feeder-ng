@@ -13,6 +13,8 @@ export interface ToConfirmTileProps {
   /** "Adjust": the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
   onNotCooked: (key: SlotKey) => void
+  /** CRS F (STUB): "Mark all Cooked" of a slot with several Courses to confirm (lib/toConfirm groupToConfirm). */
+  onMarkAllCooked?: (slot: SlotKey) => void
 }
 
 /**

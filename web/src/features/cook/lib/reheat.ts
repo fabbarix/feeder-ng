@@ -38,3 +38,11 @@ export function reheatTimerOf(timers: CookTimer[], scope: string): CookTimer | n
 export function cookReheatPath(key: SlotKey): string {
   return `/cook/reheat/${key.date}/${key.mealSlotId}`
 }
+
+/**
+ * CRS F (STUB): the reheating timer of a Course's scope through `sameScope`, so the Reheat item of the cooking
+ * timeline and the Reheat screen find the same timer whether the main Course's scope is two-part or three-part.
+ */
+export function reheatTimerOfCourse(_timers: CookTimer[], _scope: string, _mainCourseId: number | null): CookTimer | null {
+  throw new Error('CRS F: not implemented')
+}

@@ -21,6 +21,9 @@ export interface NextAdvance {
   mealDate: string
   mealSlotId: number
   slotName: string
+  /** CRS F: the Course of the Advance Step; `scope` is that Course's (Done sends it as it is). */
+  courseId?: number
+  courseName?: string
 }
 
 export interface BoardData {
@@ -29,6 +32,8 @@ export interface BoardData {
   theme: BoardTheme
   streak: { days: number }
   nextAdvance: NextAdvance | null
+  /** CRS F: today's and tomorrow's slots in the shape of GET /api/plan (with `courses`). Absent in older payloads: the board then reads /api/plan. */
+  slots?: SlotLike[]
 }
 
 /** A Meal Slot on a date, with its Planned Meal if any (T11's PlanSlot, structurally). */
@@ -42,6 +47,21 @@ export interface SlotLike {
   meal: { recipeId: number; recipeName: string; batches: number; portions: number; state: 'planned' | 'cooked' | 'skipped' } | null
   /** R13: why the planner left the slot empty (T11's Unfilled, structurally); the board only needs to know that it did. */
   unfilled?: { reason: string } | null
+  /** CRS F: the slot's Courses in the slot's order (T11's PlanCourse, structurally). Without it the slot is one Course: `meal`. */
+  courses?: CourseLike[]
+  cookMinutes?: number | null
+  startBy?: string
+}
+
+/** CRS F: one Course of a slot, as the board needs it. */
+export interface CourseLike {
+  courseId: number
+  name: string
+  main: boolean
+  meal: { recipeId: number; recipeName: string; batches: number; portions: number; state: 'planned' | 'cooked' | 'skipped'; wholeMeal?: boolean; relaxed?: boolean } | null
+  unfilled?: { reason: string } | null
+  coveredBy?: { courseId: number; recipeId: number; recipeName: string } | null
+  unserved?: 'optional' | 'no_course_attendance' | null
 }
 
 export interface LeftoverLike {

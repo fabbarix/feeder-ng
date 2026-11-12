@@ -20,6 +20,10 @@ export interface MealTileProps {
   onCook: (key: SlotKey) => void
   /** 7-column week: head row = slot icon + time, at most one action (Cook today, Swap future). */
   compact?: boolean
+  /** CRS F (STUB): the slot menu's actions; the menu shows only for a slot that has them (lib/courses slotMenu). */
+  onMarkAllCooked?: (slot: SlotKey) => void
+  onNotCookedSlot?: (slot: SlotKey) => void
+  onAddCourse?: (key: SlotKey) => void
 }
 
 /**
