@@ -18,14 +18,14 @@ export interface RouteCrumb {
 const ROOTS: Record<string, string> = {
   '/settings': S.roots.settings,
   '/recipes': S.roots.recipes,
-  '/ingredients': S.roots.ingredients,
-  '/products': S.roots.products,
   '/plan': S.roots.plan,
 }
 
 const sections = settingsStrings.index.sections
 
 export const ROUTE_CRUMBS: RouteCrumb[] = [
+  { path: '/ingredients', label: S.catalogue.ingredients, parent: '/settings' },
+  { path: '/products', label: S.catalogue.products, parent: '/settings' },
   { path: '/settings/household', label: sections.household.title, parent: '/settings' },
   { path: '/settings/members', label: sections.members.title, parent: '/settings' },
   { path: '/settings/meal-slots', label: sections.mealSlots.title, parent: '/settings' },
