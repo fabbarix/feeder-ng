@@ -14,6 +14,8 @@ vi.mock('../hooks/useShopChoice', () => ({ useShopChoice: choice.useShopChoice }
 const here = vi.hoisted(() => ({ useShopHere: vi.fn() }))
 vi.mock('../hooks/useShopHere', () => here)
 vi.mock('../../shops/components/AddShopSheet', () => ({ AddShopSheet: ({ open, initialName }: { open: boolean; initialName?: string }) => (open ? <p>Add Shop sheet: {initialName}</p> : null) }))
+// B5-SH: the screen shows a toast after Not needed; these tests have no ToastProvider (its live regions would add status/alert roles).
+vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [{ id: 3, name: 'milk', baseUnit: 'ml' }], isLoading: false }) }))
 
