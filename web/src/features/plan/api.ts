@@ -1,6 +1,8 @@
 import { http } from '../../lib/http'
 import type {
   Alternative,
+  CookedAllEntry,
+  CookedAllResult,
   CookedResult,
   CookPreview,
   Leftover,
@@ -15,7 +17,9 @@ import type {
   VarietyRule,
 } from './types'
 
-const slotPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}`
+/** A key with a courseId is `/api/plan/<date>/<slot>/<course>`; without one, the course-less alias (the main Course, until C3). */
+const slotPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}${key.courseId === undefined ? '' : `/${key.courseId}`}`
+const slotDayPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}`
 
 /** Planning API calls (routes in docs/dev/design/t11-planning.md). */
 export const planApi = {
@@ -39,9 +43,14 @@ export const planApi = {
   cooked: (key: SlotKey, leftoverPortions?: number) =>
     http.post<CookedResult>(`${slotPath(key)}/cooked`, leftoverPortions === undefined ? {} : { leftoverPortions }),
   notCooked: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/not-cooked`),
+  /** POST /api/plan/<date>/<slot>/all/cooked, body `{ courses }` (no body when none is given): every unresolved Course Cooked in one step. */
+  cookedAll: (slot: SlotKey, courses?: CookedAllEntry[]) =>
+    http.post<CookedAllResult>(`${slotDayPath(slot)}/all/cooked`, courses === undefined ? undefined : { courses }),
+  /** POST /api/plan/<date>/<slot>/all/not-cooked, no body. Answers `{ meals }`. */
+  notCookedAll: (slot: SlotKey) => http.post<{ meals: PlannedMeal[] }>(`${slotDayPath(slot)}/all/not-cooked`),
 
   slotRules: () => http.get<SlotRule[]>('/api/slot-rules'),
-  addSlotRule: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => http.post<SlotRule>('/api/slot-rules', body),
+  addSlotRule: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => http.post<SlotRule>('/api/slot-rules', body),
   removeSlotRule: (id: number) => http.delete<void>(`/api/slot-rules/${id}`),
   varietyRules: () => http.get<VarietyRule[]>('/api/variety-rules'),
   setVarietyRule: (rule: VarietyRule) =>
@@ -52,9 +61,21 @@ export const planApi = {
   removeVarietyRule: (tag: string) => http.delete<void>(`/api/variety-rules/${encodeURIComponent(tag)}`),
 
   /** Recipes to choose from when setting a meal or a Slot Rule. */
-  recipeChoices: async (): Promise<RecipeChoice[]> => {
-    const list = await http.get<{ id: number; name: string; tags?: string[]; imageUrl?: string; totalMinutes?: number }[]>('/api/recipes')
-    return list.map((r) => ({ id: r.id, name: r.name, tags: r.tags ?? [], imageUrl: r.imageUrl || undefined, totalMinutes: r.totalMinutes }))
+  /**
+   * CRS F: with a courseId the request is `GET /api/recipes?course=<id>` (the Recipes marked with it), and every
+   * choice carries `courseIds` from the Recipe's `courses: [{ id }]`. Without one it is as before.
+   */
+  recipeChoices: async (courseId?: number): Promise<RecipeChoice[]> => {
+    const path = courseId === undefined ? '/api/recipes' : `/api/recipes?course=${courseId}`
+    const list = await http.get<{ id: number; name: string; tags?: string[]; imageUrl?: string; totalMinutes?: number; courses?: { id: number }[] }[]>(path)
+    return list.map((r) => ({
+      id: r.id,
+      name: r.name,
+      tags: r.tags ?? [],
+      imageUrl: r.imageUrl || undefined,
+      totalMinutes: r.totalMinutes,
+      courseIds: (r.courses ?? []).map((c) => c.id),
+    }))
   },
   /** Read-only use of the recipes API: the existing Tags, for the Tag selects of the planning rules. */
   tags: () => http.get<TagChoice[]>('/api/tags'),

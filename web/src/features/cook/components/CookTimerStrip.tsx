@@ -11,6 +11,12 @@ export interface CookTimerStripProps {
   onPause: (id: number) => void
   onResume: (id: number) => void
   onCancel: (id: number) => void
+  /**
+   * The timeline shows EVERY timer of the slot's Courses under "Timers" whichever Course chip is chosen. When given, a
+   * timer is "here" when `belongs(timer.scope)` is true (the screen builds it with sameScope over the slot's Courses);
+   * `scope` then only words the place hint of the other timers.
+   */
+  belongs?: (timerScope: string | null) => boolean
 }
 
 /**
@@ -19,9 +25,11 @@ export interface CookTimerStripProps {
  * resume (lib/timers timerActions); a running or paused timer has "Cancel <label>" (stops it), a finished one
  * "Dismiss <label>" (clears it). Both end the timer through onCancel. Renders nothing when there are no timers.
  */
-export function CookTimerStrip({ scope, items, onPause, onResume, onCancel }: CookTimerStripProps): ReactNode {
+export function CookTimerStrip({ scope, items, onPause, onResume, onCancel, belongs }: CookTimerStripProps): ReactNode {
   if (items.length === 0) return null
-  const { here, elsewhere } = partitionByScope(items, scope)
+  const { here, elsewhere } = belongs
+    ? { here: items.filter((i) => belongs(i.timer.scope)), elsewhere: items.filter((i) => !belongs(i.timer.scope)) }
+    : partitionByScope(items, scope)
   const handlers = { onPause, onResume, onCancel }
   return (
     <>

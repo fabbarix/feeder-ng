@@ -31,7 +31,7 @@ const NO_WARNINGS: StockWarning[] = []
 export function useMarkCooked(key: SlotKey | null): MarkCookedController {
   const client = useQueryClient()
   const q = useQuery({
-    queryKey: ['plan', 'cook', key?.date, key?.mealSlotId],
+    queryKey: ['plan', 'cook', key?.date, key?.mealSlotId, key?.courseId],
     queryFn: () => planApi.cookPreview(key!),
     enabled: key !== null,
     gcTime: 0,
