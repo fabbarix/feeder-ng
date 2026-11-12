@@ -247,10 +247,9 @@ describe('persistPhotos', () => {
     const a = photo('p1')
     const b = photo('p2')
     await persistPhotos(store, [a, b], null, USER)
-    const before = saves()
     log.length = 0
     await persistPhotos(store, [b, a], [a, b], USER)
-    expect(saves() - before).toBe(0)
+    expect(saves()).toBe(0)
     expect(log.some((l) => l.startsWith('save'))).toBe(false)
     expect(log.filter((l) => l.startsWith('update')).sort()).toEqual(['update p1', 'update p2'])
     expect(ids(await loaded(store))).toEqual(['p2', 'p1'])
