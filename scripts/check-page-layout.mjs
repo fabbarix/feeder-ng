@@ -351,21 +351,28 @@ for (const vp of VIEWPORTS) {
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
       const m = await evaluate(probe)
       m.lowContrastButtons = await evaluate(buttonProbe)
-      // FU-4: the same P10 probe in the dark scheme; the scheme is put back to light for the next route whatever happens.
+      m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
+      // The light findings are reported first, on the light page.
+      for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+      // FU-4: the dark P10 pass runs after the light findings and has its own error handling; only its P10 findings are reported.
+      // The scheme is put back to light in the finally, whatever happens.
       try {
         // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
-        await cdp('Page.reload', {})
+        await Promise.race([cdp('Page.reload', {}), sleep(4000)])
         await settle()
         if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
           throw new Error('the dark scheme was not applied (data-scheme is not dark); environment problem, not a finding')
         }
-        m.lowContrastButtonsDark = await evaluate(buttonProbe)
+        const lowContrastButtonsDark = await evaluate(buttonProbe)
+        for (const f of evaluateMetrics({ lowContrastButtons: [], lowContrastButtonsDark }, { width: vp.width, route, kind }).filter((f) => f.rule === 'P10')) {
+          fail(`${tag}: ${f.message}`)
+        }
+      } catch (e) {
+        console.error(`check-page-layout: could not inspect ${tag} (dark scheme: ${e.message})`)
       } finally {
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
       }
-      if (vp.width >= 768) m.dialog = await evaluate(dialogProbe).catch(() => null)
-      for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
     } catch (e) {
       // A probe that cannot run is an environment problem, not a layout finding: say so without a finding line.
