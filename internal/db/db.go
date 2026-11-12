@@ -219,3 +219,69 @@ func NeedsPre1400Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
 	}
 	return rows > 0, nil
 }
+
+// Pre1500Prefixes are the file-name prefixes of the beta.5 migrations (1500 Slot dates and Guests, 1510 Leftovers,
+// 1520 Bought, 1530 Not needed). Any of them pending triggers the snapshot feeder-pre-1500.db
+// (docs/dev/design/b5-snap.md).
+var Pre1500Prefixes = []string{"1500_", "1510_", "1520_", "1530_"}
+
+// Migrations is the embedded migration set, the same files MigrateEmbedded applies.
+func Migrations() fs.FS {
+	sub, err := fs.Sub(migrationFiles, "migrations")
+	if err != nil {
+		panic(err) // the embed pattern guarantees the folder
+	}
+	return sub
+}
+
+// NeedsSnapshotFor reports whether the database already holds applied migrations (a schema_migrations table
+// with at least one row: not a brand-new file) while fsys has a *.sql file whose name starts with one of
+// prefixes that schema_migrations does not record yet. A fresh install takes no snapshot.
+func NeedsSnapshotFor(ctx context.Context, d *sql.DB, fsys fs.FS, prefixes []string) (bool, error) {
+	var tables int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'`).Scan(&tables); err != nil {
+		return false, fmt.Errorf("db: look for schema_migrations: %w", err)
+	}
+	if tables == 0 {
+		return false, nil
+	}
+	var applied int
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT 1 FROM schema_migrations LIMIT 1)`).Scan(&applied); err != nil {
+		return false, fmt.Errorf("db: count schema_migrations: %w", err)
+	}
+	if applied == 0 {
+		return false, nil
+	}
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return false, fmt.Errorf("db: read migrations: %w", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") || !hasAnyPrefix(e.Name(), prefixes) {
+			continue
+		}
+		pending, err := Pending(ctx, d, e.Name())
+		if err != nil {
+			return false, err
+		}
+		if pending {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// hasAnyPrefix reports whether name starts with one of prefixes.
+func hasAnyPrefix(name string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// NeedsPre1500Snapshot is NeedsSnapshotFor over the embedded migrations and Pre1500Prefixes.
+func NeedsPre1500Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
+	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1500Prefixes)
+}
