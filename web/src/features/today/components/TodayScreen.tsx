@@ -2,7 +2,24 @@ import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
-import { CookFlowSheets, CouldntPlanNotice, LeftoversTile, TonightHero, ToConfirmTile, cookPath, useCookFlow, useCouldntFix, useCouldntPlanNotice, useNotCooked } from '../../plan'
+import {
+  AllCookedSheets,
+  CookFlowSheets,
+  CouldntPlanNotice,
+  LeftoversTile,
+  PlannedMealSheet,
+  RecipeChooserSheet,
+  SwapSheet,
+  TonightHero,
+  ToConfirmTile,
+  cookPath,
+  useCookFlow,
+  useCouldntFix,
+  useCouldntPlanNotice,
+  toConfirmCourses,
+  useNotCooked,
+  useTonightSheets,
+} from '../../plan'
 import type { SlotKey } from '../../plan/types'
 import { cookReheatPath } from '../../cook'
 import { SpoiledTile } from '../../stock'
@@ -46,11 +63,33 @@ export function TodayScreen(): ReactElement {
   const cookMeal = (key: SlotKey) => navigate(cookPath(key))
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
-
   const hero = data.nextSlot
+  const sheets = useTonightSheets(hero)
+
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
-      <TonightHero slot={hero} now={data.now} day={data.nextDay} action={data.nextAction} onCook={cookMeal} onYesCooked={yesCooked} onReheat={reheatMeal} onAdjust={flow.open} busy={flow.quickBusy !== null} />
+      <TonightHero
+        slot={hero}
+        now={data.now}
+        day={data.nextDay}
+        action={data.nextAction}
+        today={data.planToday}
+        onCook={cookMeal}
+        onYesCooked={yesCooked}
+        onReheat={reheatMeal}
+        onAdjust={flow.open}
+        busy={flow.quickBusy !== null}
+        rowHandlers={{
+          onOpen: sheets.planned.open,
+          onSwap: sheets.swap.open,
+          onPin: (k) => void sheets.actions.pin(k),
+          onUnpin: (k) => void sheets.actions.unpin(k),
+          onMarkCooked: flow.open,
+          onChoose: sheets.choose.open,
+        }}
+        onMarkAllCooked={sheets.openAllCooked}
+        menu={{ onNotCookedSlot: (k) => void sheets.actions.notCookedSlot(k), onAddCourse: sheets.choose.open }}
+      />
     ) : null,
     spoiled: (
       <SpoiledTile
@@ -62,7 +101,15 @@ export function TodayScreen(): ReactElement {
       />
     ),
     advanceSteps: <AdvanceStepsTile steps={steps.steps} />,
-    toConfirm: <ToConfirmTile slots={data.toConfirm} onYesCooked={yesCooked} onAdjust={flow.open} onNotCooked={(key) => void notCooked(key)} />,
+    toConfirm: (
+      <ToConfirmTile
+        slots={data.toConfirm}
+        onYesCooked={yesCooked}
+        onAdjust={flow.open}
+        onNotCooked={(key) => void notCooked(key)}
+        onMarkAllCooked={(key) => sheets.allCooked.open(key, toConfirmCourses(data.toConfirm, key))}
+      />
+    ),
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
     setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
@@ -82,6 +129,47 @@ export function TodayScreen(): ReactElement {
         onOpenPlan={openPlan}
       />
       {layout.mode === 'today' ? <CookFlowSheets flow={flow} /> : null}
+      <PlannedMealSheet
+        open={sheets.planned.key !== null}
+        onClose={sheets.planned.close}
+        slot={sheets.planned.slot}
+        today={data.planToday}
+        courseId={sheets.planned.courseId}
+        onCook={cookMeal}
+        onMarkCooked={(k) => {
+          sheets.planned.close()
+          flow.open(k)
+        }}
+        onSwap={(k) => {
+          sheets.planned.close()
+          sheets.swap.open(k)
+        }}
+        onPin={(k) => void sheets.actions.pin(k)}
+        onUnpin={(k) => void sheets.actions.unpin(k)}
+        onChoose={(k) => {
+          sheets.planned.close()
+          sheets.choose.open(k)
+        }}
+        onMarkRecipes={sheets.planned.markRecipes}
+        onAddRecipes={sheets.planned.addRecipes}
+        onReviewVarietyRules={sheets.planned.reviewVarietyRules}
+      />
+      <SwapSheet
+        open={sheets.swap.key !== null}
+        onClose={sheets.swap.close}
+        slot={sheets.swap.slot}
+        alternatives={sheets.swap.alternatives}
+        isLoading={sheets.swap.isLoading}
+        onPick={(id) => void sheets.swap.pick(id)}
+      />
+      <RecipeChooserSheet
+        open={sheets.choose.key !== null}
+        onClose={sheets.choose.close}
+        recipes={sheets.choose.recipes}
+        isLoading={sheets.choose.isLoading}
+        onPick={(id) => void sheets.choose.pick(id)}
+      />
+      <AllCookedSheets flow={sheets.allCooked} />
     </>
   )
 }
