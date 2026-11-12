@@ -12,6 +12,7 @@ Feature: Edit and delete a Stock Lot
     Given a running Feeder
     And I am signed in as the User
     And Stock knows the Ingredient "chicken" in g with a Shelf Life of 5 days
+    And Stock knows the Ingredient "rice" in g with no Shelf Life
     And Stock knows the Ingredient "peas" in g with a Shelf Life of 5 days and a frozen Shelf Life of 60 days
     And the Household keeps food in the pantry "Kitchen Pantry" by default
     And the Household keeps food in the freezer "Garage Freezer"
@@ -56,8 +57,12 @@ Feature: Edit and delete a Stock Lot
     And the changed Stock Lot is in the "Garage Freezer"
 
   Scenario: A Lot can be left without a Good until
-    Given I add a Stock Lot of 800 g of "chicken" bought on "2026-11-08"
-    When I change the newest Stock Lot of "chicken" with JSON:
+    Given I add a Stock Lot of 800 g of "rice" bought on "2026-11-08"
+    When I change the newest Stock Lot of "rice" with JSON:
+      """
+      {"goesOff": "2026-11-20"}
+      """
+    And I change the newest Stock Lot of "rice" with JSON:
       """
       {"goesOff": null}
       """
@@ -81,6 +86,7 @@ Feature: Edit and delete a Stock Lot
       | {"purchased": "2026-11-10"}   |
       | {"purchased": "last Tuesday"} |
       | {"goesOff": "2026-11-01"}     |
+      | {"goesOff": null}             |
 
   Scenario: Editing or deleting a Stock Lot that does not exist
     When I change the Stock Lot 4242 with JSON:

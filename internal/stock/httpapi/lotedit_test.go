@@ -82,12 +82,17 @@ func TestPatchLotBoughtOnSuggestsGoodUntilUnlessGivenToo(t *testing.T) {
 func TestPatchLotNullGoesOffClearsItAndAbsentLeavesIt(t *testing.T) {
 	env := testkit.Start(t)
 	c := env.LoginUser(t)
-	thighs := seed(t, env, "chicken thighs", "g", 4)
-	l := addThighs(t, c, thighs, 800, "2026-11-08")
+	milk := seed(t, env, "milk", "ml", nil)
+	var l lot
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": milk, "quantity": 800, "purchased": "2026-11-08"}).MustJSON(t, &l)
 	path := fmt.Sprintf("/api/stock/lots/%d", l.ID)
 
 	var got editedLot
-	r := c.Patch(path, map[string]any{"quantity": 700})
+	r := c.Patch(path, map[string]any{"goesOff": "2026-11-12"})
+	if r.Status != 200 {
+		t.Fatalf("give a go-off date = %d %s", r.Status, r.Body)
+	}
+	r = c.Patch(path, map[string]any{"quantity": 700})
 	r.MustJSON(t, &got)
 	if got.GoesOff == nil || *got.GoesOff != "2026-11-12" {
 		t.Fatalf("absent goesOff changed it: %s", r.Body)
@@ -137,14 +142,15 @@ func TestPatchLotValidates(t *testing.T) {
 	l := addThighs(t, c, thighs, 800, "2026-11-08")
 	path := fmt.Sprintf("/api/stock/lots/%d", l.ID)
 	for name, body := range map[string]map[string]any{
-		"empty body":                  {},
-		"zero quantity":               {"quantity": 0},
-		"negative quantity":           {"quantity": -5},
-		"bought after today":          {"purchased": "2026-11-10"},
-		"bought not a date":           {"purchased": "last week"},
-		"good until not date":         {"goesOff": "soon"},
-		"good until before bought on": {"goesOff": "2026-11-01"},
-		"bought null":                 {"purchased": nil},
+		"empty body":                        {},
+		"zero quantity":                     {"quantity": 0},
+		"negative quantity":                 {"quantity": -5},
+		"bought after today":                {"purchased": "2026-11-10"},
+		"bought not a date":                 {"purchased": "last week"},
+		"good until not date":               {"goesOff": "soon"},
+		"good until before bought on":       {"goesOff": "2026-11-01"},
+		"bought null":                       {"purchased": nil},
+		"good until null with a Shelf Life": {"goesOff": nil},
 	} {
 		r := c.Patch(path, body)
 		if r.Status != 422 || r.ErrorCode() != "validation_failed" {
@@ -248,5 +254,40 @@ func TestDeleteLotIsNoWasteAndNoGoOff(t *testing.T) {
 	}
 	if r := c.Delete(fmt.Sprintf("/api/stock/lots/%d", gone.ID)); r.Status != 404 {
 		t.Errorf("second delete = %d", r.Status)
+	}
+}
+
+// The 422 body names the field and the reason (plan 2.6): {"error":{"code":"validation_failed","message",
+// "field","reason"}}.
+func TestPatchLotValidationNamesFieldAndReason(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	thighs := seed(t, env, "chicken thighs", "g", 4)
+	l := addThighs(t, c, thighs, 800, "2026-11-08")
+	path := fmt.Sprintf("/api/stock/lots/%d", l.ID)
+	for name, tc := range map[string]struct {
+		body          map[string]any
+		field, reason string
+	}{
+		"zero quantity":                        {map[string]any{"quantity": 0}, "quantity", "quantity_invalid"},
+		"negative quantity":                    {map[string]any{"quantity": -2}, "quantity", "quantity_invalid"},
+		"bought after today":                   {map[string]any{"purchased": "2026-11-10"}, "purchased", "purchased_future"},
+		"good until before bought":             {map[string]any{"goesOff": "2026-11-01"}, "goesOff", "goes_off_before_purchase"},
+		"good until before the new bought on":  {map[string]any{"purchased": "2026-11-09", "goesOff": "2026-11-08"}, "goesOff", "goes_off_before_purchase"},
+		"good until cleared with a Shelf Life": {map[string]any{"goesOff": nil}, "goesOff", "goes_off_required"},
+	} {
+		r := c.Patch(path, tc.body)
+		var b struct {
+			Error struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+				Field   string `json:"field"`
+				Reason  string `json:"reason"`
+			} `json:"error"`
+		}
+		_ = r.JSON(&b)
+		if r.Status != 422 || b.Error.Code != "validation_failed" || b.Error.Field != tc.field || b.Error.Reason != tc.reason || b.Error.Message == "" {
+			t.Errorf("%s = %d %s, want 422 validation_failed field %s reason %s", name, r.Status, r.Body, tc.field, tc.reason)
+		}
 	}
 }

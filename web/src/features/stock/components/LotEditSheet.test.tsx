@@ -98,7 +98,22 @@ describe('LotEditSheet', () => {
   it('cannot pick Bought on after today', async () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: /Bought on/ }))
-    expect(screen.getByRole('button', { name: '13 November 2026' })).toBeDisabled()
+    const day = screen.getByRole('button', { name: '13 November 2026' })
+    // aria-disabled, not the native attribute: a native disabled button drops out of the calendar's keyboard focus
+    expect(day).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(day)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: /Bought on/ })).toHaveTextContent('9 Nov 2026')
+  })
+
+  it('Cancel closes the sheet without saving, even after a change', async () => {
+    const { onSubmit, onClose } = setup()
+    const input = screen.getByLabelText('Quantity')
+    await userEvent.clear(input)
+    await userEvent.type(input, '650')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onClose).toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
   })
 
   it('"No go-off date" sends goesOff null', async () => {

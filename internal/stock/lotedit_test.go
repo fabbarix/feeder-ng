@@ -52,6 +52,7 @@ func TestValidateEdit(t *testing.T) {
 		{name: "good until moved later clears the Keep", lot: Lot{ID: 9, Quantity: 1, Purchased: "2026-11-01", GoesOff: "2026-11-05", KeptOn: "2026-11-06"},
 			edit: Edit{GoesOff: dp("2026-11-30")}, shelf: ptr(4), want: Lot{ID: 9, Quantity: 1, Purchased: "2026-11-01", GoesOff: "2026-11-30"}},
 		{name: "good until set to its own value keeps the Keep", lot: base, edit: Edit{GoesOff: dp("2026-11-13")}, shelf: ptr(4), want: base},
+		{name: "clearing good until needs an Ingredient without a Shelf Life", lot: base, edit: Edit{GoesOff: dp(None)}, shelf: ptr(4), err: ErrEditGoesOffRequired},
 		{name: "clearing good until", lot: base, edit: Edit{GoesOff: dp(None)}, shelf: nil,
 			want: Lot{ID: 7, IngredientID: 3, Quantity: 800, Purchased: "2026-11-09"}},
 		{name: "giving a go-off date to a Lot without one", lot: noGoOff, edit: Edit{GoesOff: dp("2026-11-20")}, shelf: nil,

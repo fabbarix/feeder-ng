@@ -111,10 +111,25 @@ func TestEditLotGoodUntilGivenInTheSameEditWinsOverTheSuggestion(t *testing.T) {
 
 func TestEditLotCanClearGoodUntil(t *testing.T) {
 	f := setup(t)
-	l := f.add(t, f.thighs, 800, "2026-11-08")
+	l := f.add(t, f.milk, 800, "2026-11-08")
+	if _, err := f.svc.EditLot(ctx, l.ID, stock.Edit{GoesOff: day("2026-11-20")}); err != nil {
+		t.Fatal(err)
+	}
 	v, err := f.svc.EditLot(ctx, l.ID, stock.Edit{GoesOff: day(stock.None)})
 	if err != nil || !v.GoesOff.IsNone() || v.Spoiled || v.UseSoon {
 		t.Fatalf("view = %+v err = %v", v, err)
+	}
+}
+
+// An Ingredient with a Shelf Life where the Lot is cannot go without a go-off date.
+func TestEditLotCannotClearGoodUntilWithAShelfLife(t *testing.T) {
+	f := setup(t)
+	l := f.add(t, f.thighs, 800, "2026-11-08")
+	if _, err := f.svc.EditLot(ctx, l.ID, stock.Edit{GoesOff: day(stock.None)}); !errors.Is(err, service.ErrInvalid) {
+		t.Fatalf("err = %v, want ErrInvalid", err)
+	}
+	if got, _ := f.svc.Lots(ctx, f.thighs); got[0].GoesOff != "2026-11-12" {
+		t.Fatalf("lot changed: %+v", got[0])
 	}
 }
 

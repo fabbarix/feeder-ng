@@ -25,6 +25,9 @@ var (
 	ErrEditDate = errors.New("date must be as YYYY-MM-DD")
 	// ErrEditPurchasedFuture is returned for a purchase date after today.
 	ErrEditPurchasedFuture = errors.New("bought on cannot be after today")
+	// ErrEditGoesOffRequired is returned when Good until is cleared for an Ingredient that has a Shelf Life where the
+	// Lot is: only a Lot of an Ingredient that does not spoil there may go without a go-off date.
+	ErrEditGoesOffRequired = errors.New("good until is required: the Ingredient has a Shelf Life")
 	// ErrEditGoesOffBeforePurchased is returned for a go-off date before the purchase date.
 	ErrEditGoesOffBeforePurchased = errors.New("good until cannot be before bought on")
 )

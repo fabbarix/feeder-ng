@@ -115,6 +115,10 @@ describe('checkLotForm', () => {
     expect(check({}, noGoOffLot)).toEqual({ ok: true, patch: {} })
     expect(check({ noGoOff: true, goesOffTouched: true }, noGoOffLot)).toEqual({ ok: true, patch: {} })
   })
+  it('Bought on moved after a kept, untouched Good until is refused on Good until', () => {
+    const early = makeLot({ id: 7, quantity: 800, purchased: '2026-11-08', goesOff: '2026-11-10', spoiled: false })
+    expect(check({ purchased: '2026-11-12' }, early)).toEqual({ ok: false, errors: { goesOff: 'beforePurchased' } })
+  })
   it('collects every error at once', () => {
     expect(check({ quantity: '0', purchased: '2026-11-13' })).toEqual({ ok: false, errors: { quantity: 'notPositive', purchased: 'future' } })
   })
