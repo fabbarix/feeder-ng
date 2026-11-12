@@ -16,7 +16,7 @@ ICONS="$WEB/src/ui/icons.ts"
 # Pantry added the Storage Place kind glyphs (Snowflake, ThermometerCold) after Shop Location's MapPin: 44,800 B, so
 # the budget moved to 45 KiB, keeping about 1.2 kB of headroom again.
 BUDGET=46080
-MIN_MODULES=106   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key; +1 in photo-read: Images)
+MIN_MODULES=107   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key; +1 in photo-read: Images; +1 in beta.5 WP D: ShoppingCart)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then
   echo "FAIL: $PLUGIN missing (exports phosphorWeights(), strips thin and light from the Phosphor defs)"; exit 1

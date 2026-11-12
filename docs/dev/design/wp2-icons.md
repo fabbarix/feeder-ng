@@ -138,6 +138,10 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | vegetarian | `Leaf` |
 | liquid | `Drop` (R14: Base Unit ml) |
 | piece | `Cube` (R14: Base Unit piece) |
+| snowflake | `Snowflake` (beta.5 WP D: frozen Leftovers; same glyph as `freezer`) |
+| question | `Question` (beta.5 WP D: the Leftover question; same glyph as `unknownBarcode`) |
+| shoppingCart | `ShoppingCart` (beta.5 WP D: Shopping List; the one new module) |
+| guests | `UserPlus` (beta.5 WP D: the Guests stepper; same module as `allowlist`) |
 | key | `Key` (WP-D) |
 | assistant | `Robot` (WP-D; same glyph as agentPrompt) |
 | refresh | `ArrowsClockwise` (WP-D; same glyph as regenerate) |
