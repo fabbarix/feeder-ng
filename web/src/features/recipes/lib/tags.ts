@@ -38,3 +38,15 @@ export function canonicalTag(known: { name: string }[], typed: string): string {
   const key = tagKey(typed)
   return known.find((t) => tagKey(t.name) === key)?.name ?? typed
 }
+
+/** TG-RW: the Tags a tile shows (the first `limit`, in the Recipe's order) and how many are left for "+N". */
+export function visibleTags(tags: readonly string[], limit: number): { shown: string[]; more: number } {
+  void limit
+  return { shown: [...tags], more: 0 } // stub: TG-RW Developer
+}
+
+/** TG-RW: the Recipes list filtered by a Tag: `/recipes?tag=<encoded name>`. */
+export function recipesTagPath(name: string): string {
+  void name
+  return '/recipes' // stub: TG-RW Developer
+}

@@ -9,6 +9,8 @@ export interface TagChipsProps {
   /** The Tag filter in use (its name), '' for all Recipes. */
   selected: string
   onSelect: (name: string) => void
+  /** TG-RW: Tag name => colour id (useRecipeTags); absent or undefined = neutral chip. */
+  colourOf?: (name: string) => string | undefined
 }
 
 /** The Tag filter of the Recipes list: one horizontally scrolling group of filter Chips, "All Tags" first. */

@@ -12,6 +12,8 @@ export interface RecipeTileProps {
   courseNames?: readonly string[]
   /** CRS E2: add the Whole meal chip. */
   wholeMeal?: boolean
+  /** TG-RW: Tag name => colour id for the Tags shown on the tile. */
+  colourOf?: (name: string) => string | undefined
 }
 
 /**

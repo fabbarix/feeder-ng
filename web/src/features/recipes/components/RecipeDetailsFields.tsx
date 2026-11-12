@@ -13,6 +13,8 @@ export interface RecipeDetailsFieldsProps {
   onChange: (patch: Partial<RecipeDraft>) => void
   /** The Household's existing Tags, suggested in the Tag field. */
   knownTags?: TagCount[]
+  /** TG-RW: Tag name => colour id, handed to the Tag field. */
+  colourOf?: (name: string) => string | undefined
   /** CRS E2: the household's active Courses, household order: the Courses picker and the Whole meal switch. */
   courses?: readonly CourseChoice[]
 }

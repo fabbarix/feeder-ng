@@ -9,6 +9,8 @@ export interface TagInputProps {
   onChange: (tags: string[]) => void
   /** The Household's existing Tags, offered while typing so the same Tag is not made twice. */
   known?: TagCount[]
+  /** TG-RW: Tag name => colour id; undefined = a new Tag (neutral chip marked "New"). */
+  colourOf?: (name: string) => string | undefined
 }
 
 /**
