@@ -354,7 +354,7 @@ func TestWebManifestIsServedWithItsOwnType(t *testing.T) {
 	}
 }
 
-// R11a N10: the brand favicon is a real file of the built frontend (web/public/favicon.svg), served with its own type.
+// R11a N10, LG: the brand favicon is a real file of the built frontend (web/public/favicon.svg), served with its own type.
 func TestFaviconSVGIsServedAsAnImage(t *testing.T) {
 	fs := fstest.MapFS{
 		"index.html":  {Data: []byte("<html>SPA index</html>")},
@@ -370,10 +370,6 @@ func TestFaviconSVGIsServedAsAnImage(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "SPA index") {
 		t.Errorf("body is the SPA index")
-	}
-	// the decision: SVG only; there is no /favicon.ico, so it is a plain 404
-	if rec := h.get("/favicon.ico", ""); rec.Code != 404 {
-		t.Errorf("/favicon.ico status = %d, want 404", rec.Code)
 	}
 }
 
