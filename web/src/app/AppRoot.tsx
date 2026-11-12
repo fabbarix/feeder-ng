@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
+import { forgetStoredPhotos } from '../features/import'
 import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
@@ -34,6 +35,11 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
 
   const signOut = async () => {
     clearCachedMe() // forget the remembered User first: signing out must never leave it behind
+    try {
+      await forgetStoredPhotos() // the photos kept on the device for a photo read go too
+    } catch {
+      // a failure never blocks sign-out
+    }
     await http.post('/api/logout')
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }

@@ -156,6 +156,92 @@
   color: var(--status-danger-fg);
 }
 
+/* The Photo tab (photo-read.md section 5): the group is the column, the list and its rows are plain. */
+.photo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.photo-panel__count,
+.photo-list__status {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.photo-panel__alert,
+.photo-panel__restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.photo-panel__alert p,
+.photo-panel__restored p,
+.photo-sources__limit,
+.photo-editor__note,
+.photo-row__note {
+  margin: 0;
+}
+
+.photo-sources__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.photo-list__item {
+  list-style: none;
+}
+
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.photo-row__picture {
+  flex: none;
+}
+
+.photo-row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+  gap: var(--space-1);
+}
+
+.photo-row__title,
+.photo-row__status {
+  margin: 0;
+}
+
+.photo-row__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-muted);
+}
+
+.photo-row__actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+.photo-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.photo-editor__title {
+  margin: 0;
+  outline: none;
+}
+
 .read-progress {
   display: flex;
   flex-direction: column;

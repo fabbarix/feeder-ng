@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
-import type { ImageEdit, Size } from '../../../ui'
-import type { EditSession } from '../lib/photoPages'
+// PhotoEditorPanel: the inline editor of one photo (docs/dev/design/photo-read.md D10, section 5 "PhotoEditorPanel", section 6 "Editor").
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Button, ImageEditor, type ImageEdit, type Size } from '../../../ui'
+import { READ_MIN_CROP_PX, type EditSession } from '../lib/photoPages'
+import { photoReadStrings as t } from '../strings'
 
 export interface PhotoEditorPanelProps {
   session: EditSession
@@ -19,7 +21,40 @@ export interface PhotoEditorPanelProps {
   onRetake: () => void
 }
 
-/** STUB. */
-export function PhotoEditorPanel(_props: PhotoEditorPanelProps): ReactNode {
-  return null
+export function PhotoEditorPanel({ session, number, src, size, small, canRetake, onChange, onUse, onCancel, onRetake }: PhotoEditorPanelProps): ReactNode {
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    heading.current?.focus()
+  }, [])
+  return (
+    <section className="photo-editor">
+      <h3 ref={heading} tabIndex={-1} className="photo-editor__title">
+        {t.editHeading(number)}
+      </h3>
+      <ImageEditor
+        src={src}
+        width={size.width}
+        height={size.height}
+        aspect="free"
+        value={session.draft}
+        onChange={onChange}
+        minSide={READ_MIN_CROP_PX}
+        onCancel={onCancel}
+      >
+        <Button variant="primary" onClick={onUse}>
+          {t.usePhoto}
+        </Button>
+        {canRetake ? (
+          <Button variant="secondary" onClick={onRetake}>
+            {t.retake}
+          </Button>
+        ) : (
+          <Button variant="tertiary" onClick={onCancel}>
+            {t.cancel}
+          </Button>
+        )}
+      </ImageEditor>
+      {small ? <p className="photo-editor__note">{t.small}</p> : null}
+    </section>
+  )
 }

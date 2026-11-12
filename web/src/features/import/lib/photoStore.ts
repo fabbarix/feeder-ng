@@ -4,8 +4,8 @@
 //
 // TODO(wire-up after T3 lands photoPages.ts): StoredSource, StoredEdit, StoredRect and MAX_PHOTOS mirror design photo-read.md
 // section 2 (PhotoSource, ImageEdit, Rect, MAX_PHOTOS); replace them with imports of T3's types and delete the local copies.
-import { parseImageLink } from '../../../ui/ImagePicker/lib/imageUrl'
-import type { ImageOrigin } from '../../../ui/ImagePicker/types'
+import { parseImageLink } from '../../../ui'
+import type { ImageOrigin } from '../../../ui'
 
 export const MAX_PHOTOS = 4
 /** The largest Blob kept per photo (the working copy, or an as-is original): design photo-read.md section 8. */
