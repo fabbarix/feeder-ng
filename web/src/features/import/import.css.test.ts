@@ -24,4 +24,13 @@ describe('import.css', () => {
   it('the removed ReadSourceChoice options have no styles left', () => {
     expect(css).not.toMatch(/read-source__option/)
   })
+  it('the chips of an answer row wrap and shrink inside a phone-width Tile instead of clipping (CRS E2)', () => {
+    expect(rule('.import-chips')).toMatch(/flex-wrap:\s*wrap/)
+    const chip = rule('.import-chips .chip')
+    expect(chip).toMatch(/max-inline-size:\s*100%/)
+    expect(chip).toMatch(/min-inline-size:\s*0/)
+    expect(chip).toMatch(/white-space:\s*normal/)
+    expect(chip).toMatch(/block-size:\s*auto/)
+    expect(chip).toMatch(/overflow-wrap:\s*anywhere/)
+  })
 })

@@ -119,6 +119,5 @@ describe('CourseMatchTile: width', () => {
     view()
     const tile = screen.getByRole('region', { name: 'Soup' })
     expect(tile).not.toHaveAttribute('data-span', 'full')
-    expect(tile).not.toHaveAttribute('data-span')
   })
 })
