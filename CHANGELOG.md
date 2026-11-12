@@ -4,9 +4,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-## [1.0.0-beta.4.1] - 2026-11-12 <!-- pending: date to fill at the tag -->
-
-<!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in) and the final wording are confirmed in the last pass before the tag. -->
+## [1.0.0-beta.4.1] - 2026-11-12
 
 Reading a recipe from photos with the phone's own camera app and an editor, and a round of visual fixes found in the beta.4 QA.
 
