@@ -176,3 +176,29 @@ func TestAPastUnconfirmedMealIsNamedOnItsLineThroughTheService(t *testing.T) {
 		t.Fatalf("PastPlannedMeals = %+v", got)
 	}
 }
+
+func TestAScanOfANotNeededIngredientIsOffListAndTheLineStaysNotNeeded(t *testing.T) {
+	e, pass := notNeededEnv(t) // passata, 1400 g needed
+	ctx := context.Background()
+	if err := e.svc.SetNotNeeded(ctx, service.NotNeededInput{IngredientID: pass, To: "2026-11-15"}); err != nil {
+		t.Fatal(err)
+	}
+	id, _, _ := e.stock.AddLot(ctx, service.StockAdd{IngredientID: pass, Quantity: 700})
+	eff, err := e.svc.AfterLot(ctx, service.AfterLotInput{IngredientID: pass, To: "2026-11-15", LotID: id, Quantity: 700})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eff.OnList || eff.Ticked || eff.ExtraID != 0 {
+		t.Fatalf("Effect = %+v, want off the list and nothing ticked (a Not needed line is off the list)", eff)
+	}
+	if ticks, _ := e.st.Ticks(ctx, "2026-11-15"); len(ticks) != 0 {
+		t.Fatalf("ticks = %+v, want none", ticks)
+	}
+	if marks, _ := e.st.NotNeeded(ctx, "2026-11-15"); len(marks) != 1 {
+		t.Fatalf("Not needed marks = %+v, want the mark kept", marks)
+	}
+	v, _ := e.svc.List(ctx, service.Query{})
+	if len(v.Lines) != 0 || len(v.NotNeeded) != 1 || v.NotNeeded[0].IngredientID != pass {
+		t.Fatalf("Lines %+v NotNeeded %+v; the line stays Not needed", v.Lines, v.NotNeeded)
+	}
+}

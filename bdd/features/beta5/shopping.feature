@@ -85,6 +85,20 @@ Feature: Shopping List: Not needed, and past meals still to confirm (beta.5, pla
     Then the Shopping List lists "passata" as Not needed with 2100 g
     And the Shopping List line "passata" includes the unconfirmed Dinner of 2026-11-10
 
+  Scenario: A scan of a Not needed Ingredient adds the Lot off the list and the line stays Not needed
+    Given the shopping household has a Shop "Coop"
+    And the shopping catalogue has the Product "Mutti passata 700 g" of "passata" in g with pack size 700 and barcode "8000500310427"
+    And I view the Shopping List
+    And I mark "passata" as Not needed on the Shopping List
+    When I scan the barcode "8000500310427" at "Coop" as scan "scan-0001"
+    Then scan "scan-0001" was applied
+    And scan "scan-0001" is not on the list
+    And scan "scan-0001" did not tick the line
+    And the shopping Stock total of "passata" is 700 g
+    When I view the Shopping List
+    Then the Shopping List lists "passata" as Not needed with 1400 g
+    And the Shopping List has no line for "passata"
+
   # Not needed does not make a Planned Meal Bought: parked until the Bought backend (migration 1520, team BO) exists.
   @wip
   Scenario: Not needed does not make a Planned Meal Bought
