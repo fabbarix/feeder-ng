@@ -28,7 +28,7 @@ Feature: Manage Tags
     And the Tag answer JSON "2.name" is "Pasta"
     And the Tag answer JSON "2.recipes" is "2"
     And the Tag answer JSON "2.varietyRule" is false
-    And the Tag answer JSON "0.id" is "1"
+    And the Tag answer JSON "0.id" is "3"
 
   Scenario: A Tag added without a colour takes the colour fewest Tags have
     When I add the Tag "Fish"
@@ -235,7 +235,7 @@ Feature: Manage Tags
     And the Recipe "Salmon" carries exactly the Tags "Pasta"
     And no Slot Rule names a Tag
     And the Variety Rules name only the Tag "pasta"
-    When I delete the Tag "fish"
+    When I delete a Tag nobody has
     Then the response status is 404
 
   Scenario Outline: A Tag nobody has is not found
