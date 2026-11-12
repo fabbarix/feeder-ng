@@ -9,10 +9,12 @@ export interface TagChipsProps {
   /** The Tag filter in use (its name), '' for all Recipes. */
   selected: string
   onSelect: (name: string) => void
+  /** TG-RW: Tag name => colour id (useRecipeTags); absent or undefined = neutral chip. */
+  colourOf?: (name: string) => string | undefined
 }
 
 /** The Tag filter of the Recipes list: one horizontally scrolling group of filter Chips, "All Tags" first. */
-export function TagChips({ tags, selected, onSelect }: TagChipsProps): ReactNode {
+export function TagChips({ tags, selected, onSelect, colourOf }: TagChipsProps): ReactNode {
   const selectedKey = selected ? tagKey(selected) : ''
   const [scrolled, setScrolled] = useState(false)
   return (
@@ -29,7 +31,7 @@ export function TagChips({ tags, selected, onSelect }: TagChipsProps): ReactNode
         {recipeStrings.allTags}
       </Chip>
       {tags.map((t) => (
-        <Chip key={t.name} kind="filter" selected={selectedKey === tagKey(t.name)} onClick={() => onSelect(t.name)}>
+        <Chip key={t.name} kind="filter" selected={selectedKey === tagKey(t.name)} tagColour={colourOf?.(t.name)} onClick={() => onSelect(t.name)}>
           {t.name}
         </Chip>
       ))}

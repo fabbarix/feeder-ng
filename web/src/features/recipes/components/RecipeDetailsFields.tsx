@@ -13,6 +13,8 @@ export interface RecipeDetailsFieldsProps {
   onChange: (patch: Partial<RecipeDraft>) => void
   /** The Household's existing Tags, suggested in the Tag field. */
   knownTags?: TagCount[]
+  /** TG-RW: Tag name => colour id, handed to the Tag field. */
+  colourOf?: (name: string) => string | undefined
   /** CRS E2: the household's active Courses, household order: the Courses picker and the Whole meal switch. */
   courses?: readonly CourseChoice[]
 }
@@ -20,7 +22,7 @@ export interface RecipeDetailsFieldsProps {
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
-export function RecipeDetailsFields({ draft, errors, onChange, knownTags, courses = [] }: RecipeDetailsFieldsProps): ReactNode {
+export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colourOf, courses = [] }: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
   const main = courses.find((c) => c.main)
   return (
@@ -96,7 +98,7 @@ export function RecipeDetailsFields({ draft, errors, onChange, knownTags, course
           onChange={(wholeMeal) => onChange({ wholeMeal })}
         />
       ) : null}
-      <TagInput tags={draft.tags} known={knownTags} onChange={(tags) => onChange({ tags })} />
+      <TagInput tags={draft.tags} known={knownTags} colourOf={colourOf} onChange={(tags) => onChange({ tags })} />
       <FieldRow>
         <TextField
           size="lg"
