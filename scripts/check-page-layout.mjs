@@ -353,7 +353,13 @@ for (const vp of VIEWPORTS) {
       m.lowContrastButtons = await evaluate(buttonProbe)
       // FU-4: the same P10 probe in the dark scheme; the scheme is put back to light for the next route whatever happens.
       try {
+        // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+        await cdp('Page.reload', {})
+        await settle()
+        if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
+          throw new Error('the dark scheme was not applied (data-scheme is not dark); environment problem, not a finding')
+        }
         m.lowContrastButtonsDark = await evaluate(buttonProbe)
       } finally {
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
