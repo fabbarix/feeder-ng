@@ -36,6 +36,14 @@ describe('RecipeTags', () => {
     render(<RecipeTags tags={['a', 'b']} limit={2} colourOf={colourOf} />)
     expect(items().map((li) => li.textContent)).toEqual(['a', 'b'])
   })
+  it('the "+N" chip is named "N more Tags" for a screen reader', () => {
+    render(<RecipeTags tags={['a', 'b', 'c', 'd', 'e']} limit={2} />)
+    expect(screen.getByRole('img', { name: '3 more Tags' })).toHaveTextContent('+3')
+  })
+  it('says "1 more Tag" for one', () => {
+    render(<RecipeTags tags={['a', 'b', 'c']} limit={2} />)
+    expect(screen.getByRole('img', { name: '1 more Tag' })).toHaveTextContent('+1')
+  })
   it('the "+N" chip is neutral and not a button', () => {
     const { container } = render(<RecipeTags tags={['a', 'b', 'c']} limit={2} colourOf={colourOf} />)
     const more = items()[2]!

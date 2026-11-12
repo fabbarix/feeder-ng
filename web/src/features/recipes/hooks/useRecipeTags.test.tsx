@@ -60,3 +60,18 @@ describe('useRecipeTags', () => {
     expect(result.current.colourOf('roast')).toBeUndefined()
   })
 })
+
+describe('useRecipeTags order and loading', () => {
+  it('known is by name with accents and case ignored: "Édamame" before "sweet"', async () => {
+    api.list.mockResolvedValue([tag(1, 'sweet', 'plum'), tag(2, 'Zucchini', 'sky'), tag(3, 'Édamame', 'sage'), tag(4, 'apple', 'rose')])
+    const { result } = renderHook(() => useRecipeTags(), { wrapper })
+    await waitFor(() => expect(result.current.known).toHaveLength(4))
+    expect(result.current.known.map((t) => t.name)).toEqual(['apple', 'Édamame', 'sweet', 'Zucchini'])
+  })
+  it('isLoading is true until the Tags have arrived', async () => {
+    api.list.mockResolvedValue([tag(1, 'roast', 'tomato')])
+    const { result } = renderHook(() => useRecipeTags(), { wrapper })
+    expect(result.current.isLoading).toBe(true)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+  })
+})

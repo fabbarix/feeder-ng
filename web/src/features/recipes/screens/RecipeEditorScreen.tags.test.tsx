@@ -7,12 +7,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { courseChoices, flour, garlic } from '../fixtures.test-helper'
 import { emptyDraft, type RecipeDraft } from '../lib/draft'
 
-const h = vi.hoisted(() => ({ editor: {} as Record<string, unknown> }))
+const h = vi.hoisted(() => ({ editor: {} as Record<string, unknown>, loading: false }))
 vi.mock('../hooks/useRecipeEditor', () => ({ useRecipeEditor: () => h.editor }))
 vi.mock('../hooks/useIngredientRefs', () => ({ useIngredientRefs: () => ({ byId: new Map([[7, garlic], [8, flour]]), isLoading: false }) }))
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: courseChoices, isPending: false, isError: false }) }))
 vi.mock('../hooks/useRecipeTags', () => ({
   useRecipeTags: () => ({
+    isLoading: h.loading,
     known: [{ name: 'roast', recipes: 3 }, { name: 'quick', recipes: 1 }],
     colourOf: (n: string) => ({ roast: 'tomato', quick: 'sky' })[n.toLowerCase()],
   }),
@@ -44,6 +45,7 @@ const view = (tags: string[]) => {
 }
 
 beforeEach(() => {
+  h.loading = false
   Element.prototype.scrollIntoView = vi.fn()
 })
 
@@ -53,6 +55,15 @@ describe('RecipeEditorScreen Tag field', () => {
     expect(screen.getByRole('button', { name: 'Remove Tag roast' })).toHaveAttribute('data-tag-colour', 'tomato')
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).not.toHaveAttribute('data-tag-colour')
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).toHaveTextContent('New')
+  })
+  it('shows no "New" while the Tags are still loading (nothing is known yet)', () => {
+    h.loading = true
+    view(['fresh'])
+    expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).not.toHaveTextContent('New')
+  })
+  it('a new Tag is a neutral pill in the editor', () => {
+    view(['fresh'])
+    expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).toHaveAttribute('data-kind', 'tag')
   })
   it('offers the Household\'s Tags with their dots while typing', async () => {
     view([])
