@@ -22,6 +22,8 @@ var (
 	ErrUnknownShop       = errors.New("shopping: unknown Shop")
 	ErrNotFound          = errors.New("shopping: not found")
 	ErrInvalid           = errors.New("shopping: invalid")
+	// ErrNotOnList: Not needed was asked for an Ingredient that has no open Line in the range.
+	ErrNotOnList = errors.New("shopping: not on the list")
 )
 
 // StockAdd asks Stock for a new Stock Lot (source manual for a tick by hand; the scan service has its own port).
@@ -574,4 +576,23 @@ func mapStoreErr(err error) error {
 		return ErrInvalid
 	}
 	return err
+}
+
+// NotNeededInput marks one Ingredient Line Not needed for a range. UserID 0 = none recorded.
+type NotNeededInput struct {
+	IngredientID int64
+	To           stock.Date
+	ShopID       *int64
+	UserID       int64
+}
+
+// SetNotNeeded takes an open Line off the list for the range: no Stock Lot, no purchase (ErrUnknownIngredient,
+// ErrNotOnList for an Ingredient without an open Line, ticked Lines included). Idempotent. B5-SH stub.
+func (s *Service) SetNotNeeded(ctx context.Context, in NotNeededInput) error {
+	return errors.New("shopping: SetNotNeeded not implemented")
+}
+
+// ClearNotNeeded puts the Line back ("Needed after all"); ErrNotFound when it was not Not needed for the range. B5-SH stub.
+func (s *Service) ClearNotNeeded(ctx context.Context, ingredientID int64, to stock.Date) error {
+	return errors.New("shopping: ClearNotNeeded not implemented")
 }

@@ -13,6 +13,13 @@ export interface LineTileProps {
   onDelete?: (entry: ListEntry) => void
   /** R2-4: a leading visual (an Ingredient thumbnail later), rendered in `.line-tile__lead` between the tick and the text. */
   lead?: ReactNode
+  /** B5-SH: an open Line gets a Menu with "Not needed" when this is given. */
+  onNotNeeded?: (entry: ListEntry) => void
+  /**
+   * B5-SH: a "Mark it" button beside the hint, shown only when this is given and the entry has a hint. The Shop screen
+   * passes it once the Plan page can open To confirm for a slot (`/plan#to-confirm`, team F1).
+   */
+  onMarkIt?: (entry: ListEntry) => void
 }
 
 /**

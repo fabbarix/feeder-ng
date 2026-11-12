@@ -18,6 +18,10 @@ export interface ShoppingBodyProps {
   onUntick: (entry: ListEntry) => void
   onDelete: (entry: ListEntry) => void
   onScan: () => void
+  /** B5-SH: "Not needed" on an open Line; "Needed after all" in the Not needed group; "Mark it" beside a hint (not passed until F1). */
+  onNotNeeded?: (entry: ListEntry) => void
+  onNeededAfterAll?: (entry: ListEntry) => void
+  onMarkIt?: (entry: ListEntry) => void
 }
 
 /** PE: the Ingredient's Picture (an empty slot without one); a free-text extra is not an Ingredient and has no lead. */

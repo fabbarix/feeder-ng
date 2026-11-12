@@ -191,3 +191,18 @@ func (s *Store) LotsAdded(ctx context.Context, rangeTo stock.Date) (int, error) 
 		string(rangeTo)).Scan(&n)
 	return n, err
 }
+
+// SetNotNeeded marks an Ingredient Not needed for a range (upsert). userID 0 stores no User. (B5-SH stub: the table is migration 1530.)
+func (s *Store) SetNotNeeded(ctx context.Context, rangeTo stock.Date, n shopping.NotNeeded, userID int64) error {
+	return errors.New("shopping store: SetNotNeeded not implemented")
+}
+
+// DeleteNotNeeded clears the mark (ErrNotFound when the Ingredient was not Not needed for that range).
+func (s *Store) DeleteNotNeeded(ctx context.Context, rangeTo stock.Date, ingredientID int64) error {
+	return errors.New("shopping store: DeleteNotNeeded not implemented")
+}
+
+// NotNeeded returns the Not needed marks of one range by Ingredient.
+func (s *Store) NotNeeded(ctx context.Context, rangeTo stock.Date) (map[int64]shopping.NotNeeded, error) {
+	return nil, errors.New("shopping store: NotNeeded not implemented")
+}

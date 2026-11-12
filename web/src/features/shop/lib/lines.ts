@@ -2,7 +2,7 @@
 import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { BaseUnit, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
 export interface ListEntry {
@@ -26,6 +26,11 @@ export interface ListEntry {
   baseUnit: BaseUnit | null
   /** PE: the Ingredient's Picture address of a Line or an Ingredient extra; '' = none. */
   imageUrl?: string
+  /**
+   * B5-SH: "Includes Tue Dinner, not marked Cooked yet" (see pastMealsHint). The key is left out of entries with
+   * nothing to say (an extra, a Line without unconfirmed past meals).
+   */
+  hint?: string
 }
 
 /** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
@@ -83,4 +88,24 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
   const all = [...lines.filter((i) => !i.ticked), ...extras.filter((i) => !i.ticked)]
   const ticked = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
   return { open: all, ticked }
+}
+
+/**
+ * B5-SH: the hint of a Line that includes Planned Meals whose slot has passed and that are not marked Cooked or Not
+ * cooked yet. '' without any. Courses of one slot are grouped:
+ * - one slot, one Course: "Includes Tue Dinner, not marked Cooked yet"
+ * - one slot, several Courses: "Includes Tue Dinner (Main, Side), not marked Cooked yet"
+ * - several slots, oldest first: "Includes Tue Dinner and Wed Lunch, ..." / "Includes Mon Dinner, Tue Dinner and Wed Lunch, ..."
+ * The weekday is the short English name of the entry's date.
+ */
+export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
+  void meals
+  return ''
+}
+
+/** B5-SH: the entries of the collapsed "Not needed" group (list.notNeeded, in server order); [] for an older saved list. */
+export function notNeededEntries(list: ShoppingList, system: UnitSystem): ListEntry[] {
+  void list
+  void system
+  return []
 }

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { newClientUuid } from '../../scan/lib/queue'
 import { shopApi } from '../api'
-import type { ExtraInput, TickResult } from '../types'
+import type { ExtraInput, NotNeededInput, TickResult } from '../types'
 import { liveRefreshFor } from '../lib/liveRefresh'
 
 export interface ShoppingActions {
@@ -15,6 +15,10 @@ export interface ShoppingActions {
   deleteExtra(id: number): Promise<void>
   tickExtra(id: number, quantity: number, shopId?: number | null, clientUuid?: string): Promise<TickResult>
   untickExtra(id: number): Promise<void>
+  /** B5-SH: take a Line off the list for the range (no Stock, no purchase); refreshes the list only. */
+  notNeeded(input: NotNeededInput): Promise<void>
+  /** B5-SH: "Needed after all": put the Line back. */
+  neededAfterAll(ingredientId: number, to: string, shopId?: number | null): Promise<void>
 }
 
 /**
@@ -57,6 +61,12 @@ export function useShoppingActions(): ShoppingActions {
       async untickExtra(id) {
         await shopApi.untickExtra(id)
         await refreshList()
+      },
+      async notNeeded() {
+        throw new Error('useShoppingActions.notNeeded: not implemented')
+      },
+      async neededAfterAll() {
+        throw new Error('useShoppingActions.neededAfterAll: not implemented')
       },
     }
   }, [queryClient])

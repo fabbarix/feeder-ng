@@ -1,5 +1,5 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
-import type { ExtraInput, ListQuery, ShoppingExtra, ShoppingList, TickInput, TickResult } from './types'
+import type { ExtraInput, ListQuery, NotNeededInput, ShoppingExtra, ShoppingList, TickInput, TickResult } from './types'
 
 export interface ShopApi {
   list(query?: ListQuery): Promise<ShoppingList>
@@ -9,6 +9,10 @@ export interface ShopApi {
   untickExtra(id: number): Promise<void>
   tick(input: TickInput): Promise<TickResult>
   untick(ingredientId: number, to: string): Promise<void>
+  /** B5-SH: POST /api/shopping/not-needed; answers the list. */
+  notNeeded(input: NotNeededInput): Promise<ShoppingList>
+  /** B5-SH: DELETE /api/shopping/not-needed/{ingredientId}?to=&shop=; answers the list. */
+  neededAfterAll(ingredientId: number, to: string, shopId?: number | null): Promise<ShoppingList>
 }
 
 /** Typed calls for /api/shopping. */
@@ -27,6 +31,8 @@ export function createShopApi(client: HttpClient): ShopApi {
     untickExtra: (id) => client.delete<void>(`/api/shopping/extras/${id}/tick`),
     tick: (input) => client.post<TickResult>('/api/shopping/ticks', input),
     untick: (ingredientId, to) => client.delete<void>(`/api/shopping/ticks?ingredientId=${ingredientId}&to=${to}`),
+    notNeeded: () => Promise.reject(new Error('shopApi.notNeeded: not implemented')),
+    neededAfterAll: () => Promise.reject(new Error('shopApi.neededAfterAll: not implemented')),
   }
 }
 

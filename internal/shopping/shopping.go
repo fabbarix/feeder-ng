@@ -23,10 +23,14 @@ type Need struct {
 // Meal is an uncooked, non-skipped Planned Meal in the range. A meal served from a Leftover (Leftover true) needs nothing.
 type Meal struct {
 	Date     stock.Date
-	At       time.Time // slot instant (informational; a meal whose slot has passed and waits in To confirm still counts)
+	At       time.Time // slot instant: a meal whose slot instant is before Input.Now is "past" (it waits in To confirm) but still counts
 	Batches  float64
 	Leftover bool
 	Needs    []Need
+	// B5-SH: what the "Includes Tue Dinner, not marked Cooked yet" hint names. SlotID 0 = unknown (never hinted).
+	SlotID     int64
+	SlotName   string
+	CourseName string
 }
 
 // IngredientInfo is what a Line shows about its Ingredient.
@@ -59,6 +63,22 @@ type Tick struct {
 	By           string // "scan" | "hand"
 }
 
+// NotNeeded is the Not needed mark of one Ingredient for the current range (B5-SH, docs/dev/design/beta5-plan.md 2.5);
+// Needed is the Line quantity when it was set.
+type NotNeeded struct {
+	IngredientID int64
+	Needed       float64
+}
+
+// PastMeal is a Planned Meal whose slot has passed and that is not marked Cooked or Not cooked yet, named on the
+// Line it contributes to: one entry per Course of a slot.
+type PastMeal struct {
+	Date         stock.Date
+	MealSlotID   int64
+	MealSlotName string
+	CourseName   string
+}
+
 // Input is everything Derive needs.
 type Input struct {
 	Now         time.Time
@@ -69,7 +89,8 @@ type Input struct {
 	Packs       map[int64]Pack // by Ingredient: the Product last bought
 	PackPrices  map[int64]int  // by Product: cents per pack (latest Price at the selected Shop, else any Shop); absent = no Price
 	Extras      []Extra
-	Ticks       map[int64]Tick // by Ingredient, for this range
+	Ticks       map[int64]Tick      // by Ingredient, for this range
+	NotNeeded   map[int64]NotNeeded // by Ingredient, for this range
 }
 
 // PackSuggestion is "2 x Mutti 700 g": Count packs, Remainder left over.
@@ -91,6 +112,8 @@ type Line struct {
 	Ticked             bool
 	Pack               *PackSuggestion
 	EstimatedCostCents *int
+	// PastPlannedMeals are the uncooked meals of slots already past that this Line's need includes (date, slot, Course order).
+	PastPlannedMeals []PastMeal
 }
 
 // ExtraLine is a manual extra in the list; Quantity is the remaining amount of an Ingredient extra.
@@ -111,6 +134,7 @@ type Progress struct{ Ticked, Total int }
 type List struct {
 	From, To           stock.Date
 	Lines              []Line
+	NotNeeded          []Line // Lines taken off the list for this range, by name; not in Progress, the estimate or Complete
 	Extras             []ExtraLine
 	Progress           Progress
 	EstimatedCostCents int

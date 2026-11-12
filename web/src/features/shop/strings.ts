@@ -56,4 +56,13 @@ export const shopStrings = {
   amountNegative: 'The amount cannot be negative',
   tickedGroup: (n: number) => `Ticked (${n})`,
   deleteFailed: 'Could not save that. Try again.',
+  // B5-SH: Not needed and the unconfirmed-past-meals hint
+  lineMenu: (name: string) => `Actions for ${name}`,
+  notNeeded: 'Not needed',
+  notNeededGroup: (n: number) => `Not needed (${n})`,
+  notNeededToast: (name: string) => `${name} is not needed on this list`,
+  neededAfterAll: 'Needed after all',
+  neededAfterAllFor: (name: string) => `Needed after all: ${name}`,
+  markIt: 'Mark it',
+  markItFor: (name: string) => `Mark it: ${name}`,
 }
