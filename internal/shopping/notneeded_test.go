@@ -181,3 +181,16 @@ func TestANotNeededLineStillNamesItsPastMeals(t *testing.T) {
 		t.Fatalf("NotNeeded = %+v, want the line with its past meal (Not needed is allowed on such a line)", l.NotNeeded)
 	}
 }
+
+func TestAPastMealIsNamedOnALineOnlyWhenStockDoesNotFullyCoverItsShare(t *testing.T) {
+	in := input(
+		slotMeal("2026-11-03", "Main", 1, need(passata, 700)),
+		slotMeal("2026-11-04", "Main", 1, need(passata, 700)),
+	)
+	// 700 g in Stock covers the first (oldest) meal in full; the second meal's share is still to buy.
+	in.Lots = []stock.Lot{{ID: 1, IngredientID: passata, Quantity: 700, Purchased: "2026-11-09"}}
+	got := line(t, shopping.Derive(in), passata).PastPlannedMeals
+	if len(got) != 1 || got[0].Date != "2026-11-04" {
+		t.Fatalf("PastPlannedMeals = %+v, want only the 4 Nov meal (Stock covers the 3 Nov one)", got)
+	}
+}

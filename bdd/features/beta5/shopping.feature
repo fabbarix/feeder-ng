@@ -58,6 +58,7 @@ Feature: Shopping List: Not needed, and past meals still to confirm (beta.5, pla
     And the Shopping List is not complete
 
   Scenario: A Not needed mark is refused for an Ingredient that is not on the list
+    Given the shopping household has the Ingredient "rice" in g
     When I view the Shopping List
     And I try to mark "rice" as Not needed on the Shopping List
     Then the Shopping List answers 409 not_on_list
