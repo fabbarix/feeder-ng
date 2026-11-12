@@ -31,8 +31,9 @@ export function createShopApi(client: HttpClient): ShopApi {
     untickExtra: (id) => client.delete<void>(`/api/shopping/extras/${id}/tick`),
     tick: (input) => client.post<TickResult>('/api/shopping/ticks', input),
     untick: (ingredientId, to) => client.delete<void>(`/api/shopping/ticks?ingredientId=${ingredientId}&to=${to}`),
-    notNeeded: () => Promise.reject(new Error('shopApi.notNeeded: not implemented')),
-    neededAfterAll: () => Promise.reject(new Error('shopApi.neededAfterAll: not implemented')),
+    notNeeded: (input) => client.post<ShoppingList>('/api/shopping/not-needed', input),
+    neededAfterAll: (ingredientId, to, shopId) =>
+      client.delete<ShoppingList>(`/api/shopping/not-needed/${ingredientId}?to=${to}${shopId != null ? `&shop=${shopId}` : ''}`),
   }
 }
 

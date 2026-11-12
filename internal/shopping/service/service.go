@@ -190,6 +190,10 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	if err != nil {
 		return shopping.Input{}, err
 	}
+	notNeeded, err := s.st.NotNeeded(ctx, to)
+	if err != nil {
+		return shopping.Input{}, err
+	}
 	ids := map[int64]bool{}
 	for _, m := range meals {
 		for _, n := range m.Needs {
@@ -202,6 +206,9 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 		}
 	}
 	for ing := range ticks {
+		ids[ing] = true
+	}
+	for ing := range notNeeded {
 		ids[ing] = true
 	}
 	idList := make([]int64, 0, len(ids))
@@ -226,7 +233,7 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	}
 	return shopping.Input{
 		Now: s.clk.Now(), From: from, To: to, Meals: meals, Lots: lots, Ingredients: info,
-		Packs: packs, PackPrices: prices, Extras: extras, Ticks: ticks,
+		Packs: packs, PackPrices: prices, Extras: extras, Ticks: ticks, NotNeeded: notNeeded,
 	}, nil
 }
 
@@ -587,12 +594,56 @@ type NotNeededInput struct {
 }
 
 // SetNotNeeded takes an open Line off the list for the range: no Stock Lot, no purchase (ErrUnknownIngredient,
-// ErrNotOnList for an Ingredient without an open Line, ticked Lines included). Idempotent. B5-SH stub.
+// ErrNotOnList for an Ingredient without an open Line, ticked Lines included). Idempotent.
 func (s *Service) SetNotNeeded(ctx context.Context, in NotNeededInput) error {
-	return errors.New("shopping: SetNotNeeded not implemented")
+	if in.IngredientID <= 0 {
+		return ErrInvalid
+	}
+	info, err := s.ports.Ingredients.Info(ctx, []int64{in.IngredientID})
+	if err != nil {
+		return err
+	}
+	if _, ok := info[in.IngredientID]; !ok {
+		return ErrUnknownIngredient
+	}
+	today, horizon, err := s.household(ctx)
+	if err != nil {
+		return err
+	}
+	to := shopping.ClampTo(today, horizon, in.To)
+	if err := s.purge(ctx, today); err != nil {
+		return err
+	}
+	view, err := s.input(ctx, today, to, in.ShopID)
+	if err != nil {
+		return err
+	}
+	if _, marked := view.NotNeeded[in.IngredientID]; marked {
+		return nil
+	}
+	if _, ticked := view.Ticks[in.IngredientID]; ticked {
+		return ErrNotOnList
+	}
+	line, ok := shopping.Derive(view).LineFor(in.IngredientID)
+	if !ok {
+		return ErrNotOnList
+	}
+	if err := s.st.SetNotNeeded(ctx, to, shopping.NotNeeded{IngredientID: in.IngredientID, Needed: line.Quantity}, in.UserID); err != nil {
+		return err
+	}
+	s.publish("list")
+	return nil
 }
 
-// ClearNotNeeded puts the Line back ("Needed after all"); ErrNotFound when it was not Not needed for the range. B5-SH stub.
+// ClearNotNeeded puts the Line back ("Needed after all"); ErrNotFound when it was not Not needed for the range.
 func (s *Service) ClearNotNeeded(ctx context.Context, ingredientID int64, to stock.Date) error {
-	return errors.New("shopping: ClearNotNeeded not implemented")
+	today, horizon, err := s.household(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.st.DeleteNotNeeded(ctx, shopping.ClampTo(today, horizon, to), ingredientID); err != nil {
+		return mapStoreErr(err)
+	}
+	s.publish("list")
+	return nil
 }

@@ -3,6 +3,7 @@ import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import { shopStrings } from '../strings'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
 export interface ListEntry {
@@ -45,7 +46,9 @@ export function priceText(cents: number | null, currency: string): string | null
 }
 
 export function lineEntry(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry {
+  const hint = pastMealsHint(line.pastPlannedMeals)
   return {
+    ...(hint ? { hint } : {}),
     key: `line:${line.ingredientId}`,
     kind: 'line',
     ingredientId: line.ingredientId,
@@ -90,6 +93,20 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
   return { open: all, ticked }
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** The short English weekday of a YYYY-MM-DD date. */
+function weekday(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return WEEKDAYS[new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()] ?? ''
+}
+
+/** "A", "A and B", "A, B and C" (the server order is kept). */
+function joinAnd(items: string[]): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} ${shopStrings.andJoin} ${items[items.length - 1]}`
+}
+
 /**
  * B5-SH: the hint of a Line that includes Planned Meals whose slot has passed and that are not marked Cooked or Not
  * cooked yet. '' without any. Courses of one slot are grouped:
@@ -99,13 +116,19 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
  * The weekday is the short English name of the entry's date.
  */
 export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
-  void meals
-  return ''
+  if (!meals || meals.length === 0) return ''
+  const slots = new Map<string, { label: string; courses: string[] }>()
+  for (const m of meals) {
+    const key = `${m.date}|${m.mealSlotId}`
+    const slot = slots.get(key) ?? { label: `${weekday(m.date)} ${m.mealSlotName}`, courses: [] }
+    if (m.courseName) slot.courses.push(m.courseName)
+    slots.set(key, slot)
+  }
+  const named = [...slots.values()].map((s) => (s.courses.length > 1 ? shopStrings.unconfirmedCourses(s.label, s.courses.join(', ')) : s.label))
+  return shopStrings.unconfirmedMeals(joinAnd(named))
 }
 
 /** B5-SH: the entries of the collapsed "Not needed" group (list.notNeeded, in server order); [] for an older saved list. */
 export function notNeededEntries(list: ShoppingList, system: UnitSystem): ListEntry[] {
-  void list
-  void system
-  return []
+  return (list.notNeeded ?? []).map((line) => lineEntry(line, list.currency, system))
 }

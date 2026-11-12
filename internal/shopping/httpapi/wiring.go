@@ -8,6 +8,8 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/course"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	household "github.com/fabbarix/feeder-ng/internal/household"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
@@ -107,7 +109,7 @@ func NewService(d app.Deps) *service.Service {
 	hh := NewHousehold(d)
 	stockSvc := NewStock(d)
 	return service.New(store.New(d.DB, d.Clock), service.Ports{
-		Plan:        plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default())},
+		Plan:        plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default()), courses: coursestore.New(d.DB, d.Clock)},
 		Stock:       stockPort{svc: stockSvc, st: stockstore.New(d.DB, d.Clock)},
 		Products:    products{st: productstore.New(d.DB, d.Clock)},
 		Ingredients: ingredients{st: ingredientstore.New(d.DB, d.Clock)},
@@ -121,6 +123,7 @@ type plans struct {
 	st      *planstore.Store
 	hh      *householdstore.Store
 	sources *runner.DBSources
+	courses *coursestore.Store
 }
 
 func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, error) {
@@ -146,26 +149,34 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 		}
 		byID[int64(r.ID)] = needs
 	}
-	slotTimes := map[int64]string{}
+	slots := map[int64]household.MealSlot{}
+	courseNames := map[int64]string{}
 	out := []shopping.Meal{}
 	for _, m := range list {
 		if m.State != plan.StatePlanned || !m.Fresh() {
 			continue
 		}
-		hhmm, ok := slotTimes[m.Key.MealSlotID]
+		if _, ok := courseNames[m.Key.CourseID]; !ok && m.Key.CourseID != 0 {
+			c, err := p.courses.Get(ctx, m.Key.CourseID)
+			if err != nil && !errors.Is(err, course.ErrNotFound) {
+				return nil, err
+			}
+			courseNames[m.Key.CourseID] = c.Name
+		}
+		slot, ok := slots[m.Key.MealSlotID]
 		if !ok {
-			slot, err := p.hh.Slot(ctx, m.Key.MealSlotID)
+			slot, err = p.hh.Slot(ctx, m.Key.MealSlotID)
 			if err != nil {
 				return nil, err
 			}
-			hhmm = slot.Time
-			slotTimes[m.Key.MealSlotID] = hhmm
+			slots[m.Key.MealSlotID] = slot
 		}
-		at, err := time.ParseInLocation("2006-01-02 15:04", m.Key.Date+" "+hhmm, loc)
+		at, err := time.ParseInLocation("2006-01-02 15:04", m.Key.Date+" "+slot.Time, loc)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, shopping.Meal{Date: stock.Date(m.Key.Date), At: at, Batches: m.Batches, Needs: byID[m.RecipeID]})
+		out = append(out, shopping.Meal{Date: stock.Date(m.Key.Date), At: at, Batches: m.Batches, Needs: byID[m.RecipeID],
+			SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID]})
 	}
 	return out, nil
 }

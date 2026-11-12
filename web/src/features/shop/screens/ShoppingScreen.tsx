@@ -9,6 +9,7 @@ import { IconButton } from '../../../ui/IconButton'
 import { PageHeader } from '../../../ui/PageHeader'
 import { ShopSelect } from '../../../ui/Select/ShopSelect'
 import { Skeleton } from '../../../ui/Skeleton'
+import { useToast } from '../../../ui/Toast'
 import { CelebrationTile } from '../components/CelebrationTile'
 import { ExtraSheet } from '../components/ExtraSheet'
 import { RangePicker } from '../components/RangePicker'
@@ -39,6 +40,7 @@ export function ShoppingScreen() {
   const [actionError, setActionError] = useState<string | null>(null)
   const list = useShoppingList({ shopId: choice.shopId, to })
   const actions = useShoppingActions()
+  const toast = useToast()
   const here = useShopHere({ shopId: choice.shopId, setShopId: choice.setShopId, onAddHere: () => setSheet({ kind: 'addShop', name: '' }) })
   const ingredients = useIngredientChoices()
   const data = list.data
@@ -64,6 +66,26 @@ export function ShoppingScreen() {
   }
 
   const onDelete = (entry: ListEntry) => run(() => actions.deleteExtra(entry.extraId as number))
+
+  // B5-SH: Not needed for the range and the picked Shop; the toast offers Undo ("Needed after all").
+  const onNotNeeded = (entry: ListEntry) => {
+    if (!data || entry.ingredientId === null) return
+    const ingredientId = entry.ingredientId
+    const to = data.to
+    const shopId = choice.shopId
+    run(async () => {
+      await actions.notNeeded({ ingredientId, to, shopId })
+      toast.show(shopStrings.notNeededToast(entry.title), {
+        actionLabel: shopStrings.undo,
+        onAction: () => run(() => actions.neededAfterAll(ingredientId, to, shopId)),
+      })
+    })
+  }
+
+  const onNeededAfterAll = (entry: ListEntry) => {
+    if (!data || entry.ingredientId === null) return
+    run(() => actions.neededAfterAll(entry.ingredientId as number, data.to, choice.shopId))
+  }
 
   const onTickSubmit = (entry: ListEntry, quantity: number) => {
     if (!data) return
@@ -122,6 +144,8 @@ export function ShoppingScreen() {
           onUntick={onUntick}
           onDelete={onDelete}
           onScan={() => navigate('/scan')}
+          onNotNeeded={onNotNeeded}
+          onNeededAfterAll={onNeededAfterAll}
         />
       ) : null}
       {sheet?.kind === 'tick' && data ? (

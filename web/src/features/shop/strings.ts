@@ -65,4 +65,7 @@ export const shopStrings = {
   neededAfterAllFor: (name: string) => `Needed after all: ${name}`,
   markIt: 'Mark it',
   markItFor: (name: string) => `Mark it: ${name}`,
+  unconfirmedMeals: (slots: string) => `Includes ${slots}, not marked Cooked yet`,
+  unconfirmedCourses: (slot: string, courses: string) => `${slot} (${courses})`,
+  andJoin: 'and',
 }

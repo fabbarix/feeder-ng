@@ -159,6 +159,16 @@ func Derive(in Input) List {
 		info := in.Ingredients[ing]
 		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: t.Needed, Available: t.Needed}
 	}
+	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is.
+	for ing := range in.NotNeeded {
+		l, ok := lines[ing]
+		if !ok || ticked[ing] {
+			continue
+		}
+		delete(lines, ing)
+		out.NotNeeded = append(out.NotNeeded, l)
+	}
+	sortLines(out.NotNeeded)
 	for ing, l := range lines {
 		if ticked[ing] {
 			l.Ticked = true
@@ -220,7 +230,9 @@ func derivedLines(in Input) map[int64]Line {
 	projected := stock.Project(usable)
 	need := map[int64]float64{}
 	short := map[int64]float64{}
+	pastFor := map[int64][]PastMeal{}
 	for _, m := range meals {
+		past := m.SlotID != 0 && m.At.Before(in.Now)
 		for _, n := range m.Needs {
 			if n.Optional {
 				continue
@@ -230,7 +242,14 @@ func derivedLines(in Input) map[int64]Line {
 				continue
 			}
 			need[n.IngredientID] += q
-			short[n.IngredientID] += draw(projected, n.IngredientID, q, drawDate(m.Date, in.From))
+			s := draw(projected, n.IngredientID, q, drawDate(m.Date, in.From))
+			short[n.IngredientID] += s
+			// A past meal that Stock does not cover is still to confirm and is named on the Line it adds to.
+			if pm := (PastMeal{Date: m.Date, MealSlotID: m.SlotID, MealSlotName: m.SlotName, CourseName: m.CourseName}); past && s > eps {
+				if p := pastFor[n.IngredientID]; len(p) == 0 || p[len(p)-1] != pm {
+					pastFor[n.IngredientID] = append(p, pm)
+				}
+			}
 		}
 	}
 
@@ -241,7 +260,8 @@ func derivedLines(in Input) map[int64]Line {
 			continue
 		}
 		info := in.Ingredients[ing]
-		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: total, Available: total - quantity, Quantity: quantity}
+		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: total, Available: total - quantity, Quantity: quantity,
+			PastPlannedMeals: pastFor[ing]}
 		if p, ok := in.Packs[ing]; ok {
 			s := SuggestPack(quantity, p)
 			line.Pack = &s

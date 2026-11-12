@@ -1,4 +1,4 @@
-// Package store is the SQL repository for Shopping List extras and ticks (migration 0800).
+// Package store is the SQL repository for Shopping List extras, ticks and Not needed marks (migrations 0800, 1530).
 package store
 
 import (
@@ -178,9 +178,12 @@ func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shoppi
 	return out, rows.Err()
 }
 
-// PurgeBefore deletes ticks whose range ended before today.
+// PurgeBefore deletes ticks and Not needed marks whose range ended before today.
 func (s *Store) PurgeBefore(ctx context.Context, today stock.Date) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to < ?`, string(today))
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to < ?`, string(today)); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `DELETE FROM shopping_not_needed WHERE range_to < ?`, string(today))
 	return err
 }
 
@@ -192,17 +195,39 @@ func (s *Store) LotsAdded(ctx context.Context, rangeTo stock.Date) (int, error) 
 	return n, err
 }
 
-// SetNotNeeded marks an Ingredient Not needed for a range (upsert). userID 0 stores no User. (B5-SH stub: the table is migration 1530.)
+// SetNotNeeded marks an Ingredient Not needed for a range (upsert). userID 0 stores no User.
 func (s *Store) SetNotNeeded(ctx context.Context, rangeTo stock.Date, n shopping.NotNeeded, userID int64) error {
-	return errors.New("shopping store: SetNotNeeded not implemented")
+	var user sql.NullInt64
+	if userID != 0 {
+		user = sql.NullInt64{Int64: userID, Valid: true}
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO shopping_not_needed (range_to, ingredient_id, needed, user_id, created_at)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(range_to, ingredient_id) DO UPDATE SET needed = excluded.needed, user_id = excluded.user_id,
+			created_at = excluded.created_at`,
+		string(rangeTo), n.IngredientID, n.Needed, user, s.now())
+	return err
 }
 
 // DeleteNotNeeded clears the mark (ErrNotFound when the Ingredient was not Not needed for that range).
 func (s *Store) DeleteNotNeeded(ctx context.Context, rangeTo stock.Date, ingredientID int64) error {
-	return errors.New("shopping store: DeleteNotNeeded not implemented")
+	return s.exec(ctx, `DELETE FROM shopping_not_needed WHERE range_to = ? AND ingredient_id = ?`, string(rangeTo), ingredientID)
 }
 
 // NotNeeded returns the Not needed marks of one range by Ingredient.
 func (s *Store) NotNeeded(ctx context.Context, rangeTo stock.Date) (map[int64]shopping.NotNeeded, error) {
-	return nil, errors.New("shopping store: NotNeeded not implemented")
+	rows, err := s.db.QueryContext(ctx, `SELECT ingredient_id, needed FROM shopping_not_needed WHERE range_to = ?`, string(rangeTo))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]shopping.NotNeeded{}
+	for rows.Next() {
+		var n shopping.NotNeeded
+		if err := rows.Scan(&n.IngredientID, &n.Needed); err != nil {
+			return nil, err
+		}
+		out[n.IngredientID] = n
+	}
+	return out, rows.Err()
 }

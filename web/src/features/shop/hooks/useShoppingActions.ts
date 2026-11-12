@@ -62,11 +62,13 @@ export function useShoppingActions(): ShoppingActions {
         await shopApi.untickExtra(id)
         await refreshList()
       },
-      async notNeeded() {
-        throw new Error('useShoppingActions.notNeeded: not implemented')
+      async notNeeded(input) {
+        await shopApi.notNeeded(input)
+        await refreshList()
       },
-      async neededAfterAll() {
-        throw new Error('useShoppingActions.neededAfterAll: not implemented')
+      async neededAfterAll(ingredientId, to, shopId) {
+        await shopApi.neededAfterAll(ingredientId, to, shopId)
+        await refreshList()
       },
     }
   }, [queryClient])
