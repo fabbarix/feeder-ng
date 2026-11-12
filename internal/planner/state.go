@@ -26,6 +26,7 @@ const (
 	rolePlannedLeftover             // a Planned meal served from a Leftover: checked at walk time
 	roleCovered                     // a Whole meal in the main Course covers it (spec 7.2 step 0)
 	roleNotServed                   // every attendee opts out of this Course (spec 7.2 step 0b)
+	roleNotServedDate               // the Meal Slot is Not served on this date (ADR 0014): left empty, no reason
 )
 
 // fresh is one fresh cook (for cool-down, recency and Variety Rules). seq is the
@@ -92,6 +93,7 @@ type state struct {
 	keptPortions map[SlotKey]float64
 	notServed    []NotServed
 	rechecks     []Recheck
+	raised       []BatchRaise
 }
 
 // cellBefore is the walk order: chronological, then the Meal Slot, the date, the
@@ -193,7 +195,8 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 	// Step 0, before the history: cells nobody eats are not served; a Whole meal
 	// already in a main Course covers the rest of its Meal Slot.
 	for i, s := range slots {
-		if s.AllOptedOut && (st.roles[i] == roleEmpty || st.roles[i] == roleKept || st.roles[i] == rolePlannedLeftover) {
+		// Guests eat every Course the slot serves, so a Course every Member opts out of is served for them (U3).
+		if s.AllOptedOut && s.Guests == 0 && (st.roles[i] == roleEmpty || st.roles[i] == roleKept || st.roles[i] == rolePlannedLeftover) {
 			st.roles[i] = roleNotServed
 		}
 	}
@@ -279,15 +282,23 @@ func (st *state) classify(i int) role {
 	}
 	m := st.slots[i].Existing
 	if m == nil {
+		if st.slots[i].NotServed {
+			return roleNotServedDate
+		}
 		return roleEmpty
 	}
 	switch m.State {
-	case MealPinned:
-		return rolePinned
 	case MealCooked:
 		return roleCooked
 	case MealSkipped:
 		return roleSkipped
+	}
+	// Not served drops the unresolved Planned Meal, Pinned ones too (ADR 0014); Cooked and Not cooked ones are history.
+	if st.slots[i].NotServed {
+		return roleNotServedDate
+	}
+	if m.State == MealPinned {
+		return rolePinned
 	}
 	if st.regen {
 		return roleEmpty
@@ -310,7 +321,8 @@ func (st *state) validPlannedFresh(i int) bool {
 	if st.excludes(s.Attendance, r, true) {
 		return false
 	}
-	return s.Existing.Batches*r.Yield >= PortionsNeeded(s.Attendance)-eps
+	// Batches that no longer cover the portions do not drop the meal: it is kept and raised (ADR 0014 point 6, raise).
+	return true
 }
 
 // sameGroup: cells i and j are two Courses of one Meal Slot on one date.
@@ -471,7 +483,7 @@ func (st *state) keepCheck() {
 			st.rechecks = append(st.rechecks, Recheck{Key: s.Key})
 			continue
 		}
-		strict, _, _, _ := st.evaluate(i, PortionsNeeded(s.Attendance), evalOpts{})
+		strict, _, _, _ := st.evaluate(i, s.Portions(), evalOpts{})
 		if len(strict) > 0 || s.Optional {
 			st.drop(i)
 			continue
@@ -499,14 +511,16 @@ func (st *state) step(i int) {
 		// Cooked time (ADR 0003), so Input.Leftovers already reflects them.
 		// Skipped has no effect.
 	case rolePinned:
-		st.applyFixed(i, *s.Existing)
+		st.applyFixed(i, st.raise(i, *s.Existing))
 	case roleKept:
 		st.keep(i)
-		st.applyFixed(i, *s.Existing)
+		st.applyFixed(i, st.raise(i, *s.Existing))
+	case roleNotServedDate:
+		st.notServed = append(st.notServed, NotServed{Key: s.Key, Cause: NotServedDate})
 	case rolePlannedLeftover:
 		if st.leftoverValid(i) {
 			st.keep(i)
-			st.consumeLeftover(*s.Existing.From, PortionsNeeded(s.Attendance))
+			st.consumeLeftover(*s.Existing.From, s.Portions())
 			if s.Main && st.isWholeMeal(s.Existing.RecipeID) {
 				st.coverGroup(i)
 			}
@@ -524,14 +538,36 @@ func (st *state) step(i int) {
 // keep records cell i as an unpinned Planned meal that Plan leaves unchanged, with the portions its cell needs.
 func (st *state) keep(i int) {
 	st.kept = append(st.kept, st.slots[i].Key)
-	st.keptPortions[st.slots[i].Key] = PortionsNeeded(st.slots[i].Attendance)
+	st.keptPortions[st.slots[i].Key] = st.slots[i].Portions()
+}
+
+// raise gives a fresh Planned Meal, unpinned or Pinned, the Batches its cell needs (ADR 0014 point 6): when its stored
+// Batches no longer cover the cell's portions (Guests, a new Member, a Portion Factor, an opt-out removed), the Recipe
+// stays and the Batches become ceil(portions / Yield). Fewer portions never lower Batches. A meal served from a
+// Leftover is not a fresh cook and is not raised.
+func (st *state) raise(i int, m ExistingMeal) ExistingMeal {
+	if m.From != nil {
+		return m
+	}
+	r, ok := st.recipes[m.RecipeID]
+	if !ok || r.Yield <= 0 {
+		return m
+	}
+	portions := st.slots[i].Portions()
+	if m.Batches*r.Yield >= portions-eps {
+		return m
+	}
+	n := BatchesFor(portions, r.Yield)
+	st.raised = append(st.raised, BatchRaise{Key: st.slots[i].Key, Batches: n, Portions: portions})
+	m.Batches = float64(n)
+	return m
 }
 
 // applyFixed applies a Pinned or kept fresh meal, or one served from a Leftover:
 // it consumes Stock (or its source) and leaves its extra portions pending.
 func (st *state) applyFixed(i int, m ExistingMeal) {
 	s := st.slots[i]
-	portions := PortionsNeeded(s.Attendance)
+	portions := s.Portions()
 	if m.From != nil {
 		st.consumeLeftover(*m.From, portions)
 		return
@@ -590,7 +626,7 @@ func (st *state) consumeLeftover(src LeftoverSource, portions float64) {
 // already planned in another Course of the slot.
 func (st *state) leftoverValid(i int) bool {
 	s := st.slots[i]
-	portions := PortionsNeeded(s.Attendance)
+	portions := s.Portions()
 	p := st.findSource(*s.Existing.From)
 	if p == nil || p.portions < portions-eps || st.days[i] > p.useBy {
 		return false
@@ -617,7 +653,7 @@ func (st *state) prunePending() {
 // or not served when it is optional.
 func (st *state) fill(i int) {
 	s := st.slots[i]
-	portions := PortionsNeeded(s.Attendance)
+	portions := s.Portions()
 	if portions <= eps {
 		if s.Optional {
 			st.skipOptional(i)
@@ -849,6 +885,7 @@ func (st *state) result() Result {
 		KeptPortions: st.keptPortions,
 		Rechecks:     rechecks,
 		NotServed:    st.notServed,
+		Raised:       st.raised,
 		Purchases:    purchases,
 	}
 }

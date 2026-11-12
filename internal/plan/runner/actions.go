@@ -123,8 +123,8 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 // slotOf is the slot view of one occurrence with its Course rows (no meals): the base of the lists.
 func slotOf(in info, si plan.SlotInfo) SlotView {
 	at, _ := plan.SlotInstant(si.Key.Date, si.Time, in.zone)
-	return SlotView{Key: si.Key, Name: si.Name, Time: si.Time, At: at, Portions: attendancePortions(si.Attendance),
-		Attendance: si.Attendance}
+	return SlotView{Key: si.Key, Name: si.Name, Time: si.Time, UsualTime: si.UsualTime, At: at, NotServed: si.NotServed,
+		Guests: si.Guests, Portions: attendancePortions(si.Attendance) + float64(si.Guests), Attendance: si.Attendance}
 }
 
 // nextDay is the date after a YYYY-MM-DD date ("" when malformed, which ends a walk).
@@ -149,7 +149,11 @@ func (r *Runner) ToConfirm(ctx context.Context) ([]ListEntry, error) {
 	}
 	var timed []plan.Timed
 	for _, m := range meals {
-		if at, ok := in.instant(m.Key); ok {
+		at, ok, err := r.slotAt(ctx, in, m.Key)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			timed = append(timed, plan.Timed{Meal: m, At: at})
 		}
 	}
@@ -249,6 +253,12 @@ func (r *Runner) keyAttendance(ctx context.Context, def MealSlotDef, key plan.Ke
 	return nil, ErrCourseNotInSlot
 }
 
+// guestsOn is the number of Guests of the Meal Slot on the date (ADR 0014): they eat every Course, so they add portions.
+func (r *Runner) guestsOn(ctx context.Context, def MealSlotDef, date string) (int, error) {
+	d, err := r.d.Source.SlotDate(ctx, def.ID, date)
+	return d.Guests, err
+}
+
 // meal re-reads the Planned Meal at key after a write.
 func (r *Runner) meal(ctx context.Context, key plan.Key) (plan.Meal, error) {
 	m, err := r.d.Store.Meal(ctx, key)
@@ -284,7 +294,11 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		if _, ok := in.slotDef(key); !ok {
 			return nil, ErrUnknownSlot
 		}
-		if at, _ := in.instant(key); at.Before(in.now) {
+		at, _, err := r.slotAt(ctx, in, key)
+		if err != nil {
+			return nil, err
+		}
+		if at.Before(in.now) {
 			return nil, ErrInPast
 		}
 		recipes, err := r.d.Source.Recipes(ctx)
@@ -316,7 +330,7 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 				return nil, ErrRecipeNotInCourse
 			}
 		}
-		portions := attendancePortions(courseAttendance(si, cell))
+		portions := cellPortions(si, cell)
 		b := 1.0
 		if batches != nil {
 			b = *batches
@@ -584,7 +598,11 @@ func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, er
 	if err != nil {
 		return CookPreview{}, err
 	}
-	p.PortionsNeeded = attendancePortions(att)
+	guests, err := r.guestsOn(ctx, def, key.Date)
+	if err != nil {
+		return CookPreview{}, err
+	}
+	p.PortionsNeeded = attendancePortions(att) + float64(guests)
 	if !m.Fresh() {
 		return p, nil
 	}
@@ -704,7 +722,11 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		if err != nil {
 			return nil, err
 		}
-		need := attendancePortions(att)
+		guests, err := r.guestsOn(ctx, def, key.Date)
+		if err != nil {
+			return nil, err
+		}
+		need := attendancePortions(att) + float64(guests)
 		recipes, err := r.d.Source.Recipes(ctx)
 		if err != nil {
 			return nil, err

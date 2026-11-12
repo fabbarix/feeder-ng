@@ -129,6 +129,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 			return planner.Input{}, err
 		}
 		slotAttendees := attendance(si.Attendance)
+		notServed := notServedSlot(si, meals)
 		for pos, cell := range cellsOf(si) {
 			key := cell.key
 			m, hasMeal := meals[key]
@@ -144,8 +145,12 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 				Optional:    cell.optional,
 				Position:    pos,
 				AllOptedOut: len(slotAttendees) > 0 && len(attendance(cell.attendance)) == 0,
+				Guests:      si.Guests,
+				NotServed:   notServed,
 			}
-			if hasMeal {
+			// A Not served slot drops its unresolved Planned Meal, Pinned ones too (the User confirmed the list); a meal
+			// whose slot is already over is still passed (only Cooked or Not cooked resolves it).
+			if hasMeal && !(notServed && !at.Before(s.Now)) {
 				slot.Existing = existing(m, at, s.Now, clear[key])
 			}
 			in.Slots = append(in.Slots, slot)
@@ -187,6 +192,20 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 		})
 	}
 	return in, nil
+}
+
+// notServedSlot says whether the slot occurrence is Not served for planning: the date marks it, and no Course of it is
+// Cooked or Not cooked (U2: a started slot is planned as it was).
+func notServedSlot(si SlotInfo, meals map[Key]Meal) bool {
+	if !si.NotServed {
+		return false
+	}
+	for _, ck := range CellKeys(si) {
+		if m, ok := meals[ck]; ok && (m.State == StateCooked || m.State == StateSkipped) {
+			return false
+		}
+	}
+	return true
 }
 
 // cell is one planning cell of a slot occurrence, as BuildInput reads it.
@@ -355,6 +374,13 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 	for _, m := range s.Meals {
 		stored[m.Key] = m
 	}
+	// Batches that follow portions (ADR 0014 point 6): Apply writes them, so the kept meal is not upserted as well.
+	raised := make(map[Key]bool, len(res.Raised))
+	for _, r := range res.Raised {
+		k := keyOf(r.Key)
+		raised[k] = true
+		ch.RaiseBatches = append(ch.RaiseBatches, BatchRaise{Key: k, Batches: float64(r.Batches), Portions: r.Portions})
+	}
 	rechecks := make(map[Key]planner.Recheck, len(res.Rechecks))
 	for _, rc := range res.Rechecks {
 		rechecks[keyOf(rc.Key)] = rc
@@ -362,7 +388,7 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 	for _, kk := range res.Kept {
 		k := keyOf(kk)
 		m, ok := stored[k]
-		if !ok {
+		if !ok || raised[k] {
 			continue
 		}
 		relaxed, why, changedWhy := m.Relaxed, m.Why, false
@@ -395,20 +421,36 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		kept[keyOf(k)] = true
 	}
 	slotAt := map[Key]time.Time{}
+	notServedCell := map[Key]bool{}
 	var cells []Key
 	for _, si := range s.Slots {
 		at, err := SlotInstant(si.Key.Date, si.Time, s.Zone)
 		if err != nil {
 			continue
 		}
+		notServed := notServedSlot(si, stored)
 		for _, ck := range CellKeys(si) {
 			slotAt[ck] = at
 			cells = append(cells, ck)
+			if notServed {
+				notServedCell[ck] = true
+			}
 		}
+	}
+	// A Not served Meal Slot removes its unresolved Planned Meals, Pinned ones too; a meal whose slot is over waits in
+	// To confirm.
+	removed := map[Key]bool{}
+	for _, m := range s.Meals {
+		mk := m.Key
+		if m.State != StatePlanned || !notServedCell[mk] || slotAt[mk].Before(s.Now) {
+			continue
+		}
+		removed[mk] = true
+		ch.RemoveUnresolved = append(ch.RemoveUnresolved, mk)
 	}
 	for _, m := range s.Meals {
 		mk := m.Key
-		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] {
+		if m.State != StatePlanned || m.Pinned || kept[mk] || placed[mk] || removed[mk] {
 			continue
 		}
 		at, ok := slotAt[mk]
@@ -506,7 +548,7 @@ func DecodeWhy(s string) ([]Why, error) {
 var knownReasons = map[Reason]bool{
 	ReasonNightly: true, ReasonRegenerate: true, ReasonRecipeChanged: true, ReasonAttendanceChanged: true,
 	ReasonUnpinned: true, ReasonLeftoversChanged: true, ReasonStockTake: true, ReasonRulesChanged: true,
-	ReasonPinned: true, ReasonNotCooked: true, ReasonStartup: true,
+	ReasonPinned: true, ReasonNotCooked: true, ReasonStartup: true, ReasonSlotDateChanged: true,
 }
 
 // Invalidate tells the Runner the plan may be stale (publishes on InvalidateTopic). Safe to call from any module.
@@ -524,6 +566,7 @@ func Invalidate(p Publisher, reason Reason) {
 //	"plan.invalidate" {"reason": r}                       -> r (unknown or empty reasons are ignored)
 //	"recipes" (any event: a Recipe, or a Member's preferences) -> ReasonRecipeChanged
 //	"household" {"changed": "attendance"|"mealSlots"|"members"|"settings"} -> ReasonAttendanceChanged
+//	"household" {"changed": "slotDates"}                  -> ReasonSlotDateChanged
 //	"stock" {"changed": "lots"}                           -> ReasonStockTake
 //
 // Everything else (stock waste, the "plan" topic itself, products, ...) is ignored.
@@ -549,6 +592,8 @@ func ReasonForEvent(topic string, data []byte) (Reason, bool) {
 		switch p.Changed {
 		case "attendance", "mealSlots", "members", "settings":
 			return ReasonAttendanceChanged, true
+		case "slotDates":
+			return ReasonSlotDateChanged, true
 		}
 	case "stock":
 		var p struct {

@@ -314,7 +314,7 @@ func slotFor(s runner.SlotView, t table) slotOut {
 	out := slotOut{
 		Date: s.Key.Date, MealSlotID: s.Key.MealSlotID, Name: s.Name, Time: s.Time,
 		At: s.At.Format(time.RFC3339), Portions: s.Portions, Attendance: []attendeeOut{}, Rules: rulesFor(s.Rules, t),
-		Courses: []courseOut{},
+		Courses: []courseOut{}, UsualTime: s.UsualTime, NotServed: s.NotServed, Guests: s.Guests,
 	}
 	for _, c := range s.Courses {
 		out.Courses = append(out.Courses, courseFor(c, s.At, t))

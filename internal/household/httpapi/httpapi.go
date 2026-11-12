@@ -82,6 +82,8 @@ func writeErr(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_member", "That Member does not exist")
 	case errors.Is(err, household.ErrDuplicateAttendee):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "duplicate_attendee", "A Member can only be listed once")
+	case errors.Is(err, household.ErrSlotStarted):
+		httpx.WriteError(w, http.StatusConflict, "slot_started", "A Course of this Meal Slot is already Cooked or Not cooked on that date")
 	case errors.Is(err, household.ErrWeekdayMismatch):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "weekday_mismatch", "That date is not on this Meal Slot's weekday")
 	default:

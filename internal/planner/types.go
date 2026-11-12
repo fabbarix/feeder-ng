@@ -127,7 +127,7 @@ type Slot struct {
 
 // Portions is the cell's portions: the Portion Factors of its Attendance plus one per Guest.
 func (s Slot) Portions() float64 {
-	return PortionsNeeded(s.Attendance) // stub: ignores the Guests
+	return PortionsNeeded(s.Attendance) + float64(s.Guests)
 }
 
 // Need is one ingredient line for ONE Batch, already in Base Units.

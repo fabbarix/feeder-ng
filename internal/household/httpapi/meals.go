@@ -240,7 +240,8 @@ type dateAttendanceBody struct {
 	Date           string         `json:"date"`
 	IsOverride     bool           `json:"isOverride"`
 	Attendance     []attendeeBody `json:"attendance"`
-	PortionsNeeded float64        `json:"portionsNeeded"`
+	PortionsNeeded float64        `json:"portionsNeeded"` // Guests included (ADR 0014)
+	Guests         int            `json:"guests"`
 	Courses        []courseDayOut `json:"courses"`
 }
 
@@ -266,7 +267,11 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
-	portions, err := a.portionsOf(r, att)
+	row, err := a.st.SlotDate(r.Context(), slot.ID, date)
+	if err != nil {
+		return dateAttendanceBody{}, err
+	}
+	portions, err := a.portionsWithGuests(r, att, row.Guests)
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
@@ -275,7 +280,7 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 		return dateAttendanceBody{}, err
 	}
 	return dateAttendanceBody{SlotID: slot.ID, Date: date, IsOverride: isOverride,
-		Attendance: attendeesOut(att), PortionsNeeded: portions, Courses: courses}, nil
+		Attendance: attendeesOut(att), PortionsNeeded: portions, Guests: row.Guests, Courses: courses}, nil
 }
 
 func (a *api) getAttendance(w http.ResponseWriter, r *http.Request) {
@@ -296,6 +301,7 @@ func (a *api) getAttendance(w http.ResponseWriter, r *http.Request) {
 type dateIn struct {
 	Attendance []attendeeBody `json:"attendance"`
 	Courses    []dateCourseIn `json:"courses"`
+	Guests     *int           `json:"guests"` // 0 to 20 (ADR 0014); absent = unchanged
 }
 
 // dateCourseIn is one Course's opt-outs for the date: a list (empty = everyone eats it) replaces the date's
@@ -316,15 +322,25 @@ func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	if in.Attendance == nil && in.Courses == nil {
+	if in.Attendance == nil && in.Courses == nil && in.Guests == nil {
 		writeErr(w, &household.ValidationError{Field: "attendance", Reason: "nothing_to_change",
-			Message: "send attendance, courses or both"})
+			Message: "send attendance, courses, guests or several"})
 		return
+	}
+	if in.Guests != nil {
+		if err := household.ValidateGuests(*in.Guests); err != nil {
+			writeErr(w, err)
+			return
+		}
 	}
 	var att []household.Attendee
 	if in.Attendance != nil {
 		att = attendeesIn(in.Attendance)
 		if err := household.ValidateAttendees(att); err != nil {
+			writeErr(w, err)
+			return
+		}
+		if err := a.checkNotEmptiedWhileStarted(r, slot.ID, date, att, in.Guests); err != nil {
 			writeErr(w, err)
 			return
 		}
@@ -350,8 +366,12 @@ func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if in.Attendance != nil {
-		if err := a.st.SetDateAttendance(r.Context(), slot.ID, date, att); err != nil {
+	if in.Attendance != nil || in.Guests != nil {
+		who := household.WhoIsEating{Guests: in.Guests}
+		if in.Attendance != nil {
+			who.Members = &att
+		}
+		if err := a.st.SaveWhoIsEating(r.Context(), slot.ID, date, who); err != nil {
 			writeErr(w, err)
 			return
 		}
@@ -367,6 +387,9 @@ func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	a.changed("attendance")
+	if in.Guests != nil {
+		a.changed("slotDates")
+	}
 	b, err := a.dateBody(r, slot, date)
 	if err != nil {
 		writeErr(w, err)
@@ -386,6 +409,7 @@ func (a *api) deleteAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed("attendance")
+	a.changed("slotDates") // Reset to usual Attendance drops the date's Guests
 	w.WriteHeader(http.StatusNoContent)
 }
 

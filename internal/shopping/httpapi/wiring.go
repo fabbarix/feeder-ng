@@ -171,7 +171,12 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 			}
 			slots[m.Key.MealSlotID] = slot
 		}
-		at, err := time.ParseInLocation("2006-01-02 15:04", m.Key.Date+" "+slot.Time, loc)
+		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
+		day, err := p.hh.SlotDate(ctx, m.Key.MealSlotID, m.Key.Date)
+		if err != nil {
+			return nil, err
+		}
+		at, err := time.ParseInLocation("2006-01-02 15:04", m.Key.Date+" "+household.EffectiveTime(slot.Time, day), loc)
 		if err != nil {
 			return nil, err
 		}

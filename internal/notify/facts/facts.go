@@ -69,14 +69,6 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	if err != nil {
 		return notify.Facts{}, err
 	}
-	slots, err := s.slots.MealSlots(ctx)
-	if err != nil {
-		return notify.Facts{}, err
-	}
-	slotTime := map[int64]string{}
-	for _, sl := range slots {
-		slotTime[sl.ID] = sl.Time
-	}
 	meals, err := s.plans.Meals(ctx, todayDate.AddDate(0, 0, -1).Format("2006-01-02"), "")
 	if err != nil {
 		return notify.Facts{}, err
@@ -85,11 +77,12 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	recipes := map[int64]recipeEntry{} // each Recipe is read once per call
 	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
 	for _, m := range meals {
-		hhmm, ok := slotTime[m.Key.MealSlotID]
-		if !ok {
+		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
+		day, err := s.slots.SlotDate(ctx, m.Key.MealSlotID, m.Key.Date)
+		if err != nil {
 			continue
 		}
-		at, err := plan.SlotInstant(m.Key.Date, hhmm, loc)
+		at, err := plan.SlotInstant(m.Key.Date, day.Time, loc)
 		if err != nil {
 			continue
 		}

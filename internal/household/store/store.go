@@ -352,39 +352,53 @@ func (s *Store) SetDateAttendance(ctx context.Context, slotID int64, date string
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO attendance_overrides (slot_id, date) VALUES (?, ?)`,
-			slotID, date); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_override_attendees WHERE slot_id = ? AND date = ?`,
-			slotID, date); err != nil {
-			return err
-		}
-		for _, a := range att {
-			if err := checkMember(ctx, tx, a.MemberID); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO attendance_override_attendees
-				(slot_id, date, member_id, portion_factor_override) VALUES (?, ?, ?, ?)`,
-				slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride)); err != nil {
-				if isUnique(err) {
-					return household.ErrDuplicateAttendee
-				}
-				return err
-			}
-		}
-		return nil
+		return setDateAttendance(ctx, tx, slotID, date, att)
 	})
 }
 
+// setDateAttendance replaces the override for date inside tx (SetDateAttendance; Who's eating saves it with Guests).
+func setDateAttendance(ctx context.Context, tx *sql.Tx, slotID int64, date string, att []household.Attendee) error {
+	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO attendance_overrides (slot_id, date) VALUES (?, ?)`,
+		slotID, date); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_override_attendees WHERE slot_id = ? AND date = ?`,
+		slotID, date); err != nil {
+		return err
+	}
+	for _, a := range att {
+		if err := checkMember(ctx, tx, a.MemberID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO attendance_override_attendees
+			(slot_id, date, member_id, portion_factor_override) VALUES (?, ?, ?, ?)`,
+			slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride)); err != nil {
+			if isUnique(err) {
+				return household.ErrDuplicateAttendee
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 // ClearDateAttendance removes the override for date (idempotent), and the date's Course opt-outs with it.
+//
+// It also drops the date's Guests (ADR 0014). Not served and the date's own time stay: they are not attendance.
 func (s *Store) ClearDateAttendance(ctx context.Context, slotID int64, date string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		if err := clearDateCourses(ctx, tx, slotID, date); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date)
-		return err
+		if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date); err != nil {
+			return err
+		}
+		row, err := readSlotDate(ctx, tx, slotID, date)
+		if err != nil {
+			return err
+		}
+		row.Guests = 0
+		return writeSlotDate(ctx, tx, row, s.clk.Now())
 	})
 }
 
