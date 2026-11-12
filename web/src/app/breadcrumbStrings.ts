@@ -7,6 +7,7 @@ export const breadcrumbStrings = {
     recipes: 'Recipes',
     ingredients: 'Ingredients',
     products: 'Products',
+    plan: 'Plan',
   },
   /** Fallback labels for an entity crumb until its name is known (the GLOSSARY term). */
   entity: {
@@ -19,4 +20,6 @@ export const breadcrumbStrings = {
   importRecipes: importStrings.importTitle,
   exportRecipes: importStrings.exportTitle,
   edit: 'Edit',
+  /** CRS G2: the Review Exclusions page's title and its crumb. */
+  reviewExclusions: 'Review Exclusions',
 }

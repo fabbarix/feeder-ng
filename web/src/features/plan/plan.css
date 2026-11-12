@@ -364,3 +364,43 @@
   gap: 0.5rem;
   justify-items: start;
 }
+
+/* CRS G2: the Review Exclusions page and the Couldn't plan lines. Tokens only; lists have no bullets. */
+.plan__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plan__caption {
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+.plan-course__reason {
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+/* The cell the URL hash names takes focus: a visible ring, not the browser default alone. */
+[tabindex="-1"]:focus {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* CRS G2 (rx-pt 4.2): one column of Tiles on a phone, two from 1024 px. */
+.plan-exclusions .bento-grid[data-columns='2'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1024px) {
+  .plan-exclusions .bento-grid[data-columns='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* The first line of an Exclusion row wraps: a Member's name and the Ingredient must both read. */
+.plan-exclusions .list-row__title {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}

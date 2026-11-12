@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { groupByCause, type CauseGroup } from '../lib/couldntGroups'
-import { summarizeSlots } from '../lib/couldntSummary'
+import { summarizeCells } from '../lib/couldntSummary'
 import type { PlanSlot } from '../types'
 
 /** `canFix`: the User may use the fix action (false for an Admin-only fix and a plain User). */
@@ -15,7 +15,7 @@ export interface CouldntPlanNotice {
 export function useCouldntPlanNotice(unplanned: PlanSlot[], all: PlanSlot[], isAdmin = true): CouldntPlanNotice {
   return useMemo(
     () => ({
-      groups: groupByCause(unplanned).map((g) => ({ ...g, summary: summarizeSlots(g.slots, all), canFix: isAdmin || !g.adminOnly })),
+      groups: groupByCause(unplanned, all).map((g) => ({ ...g, summary: summarizeCells(g.slots, all), canFix: isAdmin || !g.adminOnly })),
       total: unplanned.length,
     }),
     [unplanned, all, isAdmin],

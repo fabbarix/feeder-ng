@@ -80,6 +80,16 @@ export interface PlanSlotLike {
  * Planned Meal; a Course with a reason and no Planned Meal). A slot without `courses` counts its own `meal` and `unfilled`.
  * Covered and not-served Courses (neither) count nowhere, so an optional Course never makes a step look missing.
  */
-export function planFacts(_slots: PlanSlotLike[]): Pick<SetupFacts, 'plannedMeals' | 'unplannedMeals'> {
-  throw new Error('CRS G2: not implemented')
+export function planFacts(slots: PlanSlotLike[]): Pick<SetupFacts, 'plannedMeals' | 'unplannedMeals'> {
+  let plannedMeals = 0
+  let unplannedMeals = 0
+  for (const slot of slots) {
+    // A slot with `courses` counts each of them; the list is the whole truth then (an empty list counts nothing).
+    const counted = slot.courses !== undefined ? slot.courses : [slot]
+    for (const x of counted) {
+      if (x.meal != null) plannedMeals++
+      else if (x.unfilled != null) unplannedMeals++
+    }
+  }
+  return { plannedMeals, unplannedMeals }
 }
