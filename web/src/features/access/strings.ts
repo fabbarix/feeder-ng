@@ -45,7 +45,7 @@ export const accessStrings = {
   },
   waiting: {
     title: 'Waiting for approval',
-    text: 'Someone in the household needs to approve your request before you can sign in. It can take a while: you can close this page and come back.',
+    text: 'Someone in the Household needs to approve your request before you can sign in. It can take a while: you can close this page and come back.',
     signedInAs: 'Asking as',
     otherAccount: 'Use a different Google sign-in',
     answeredTitle: 'Request answered',
@@ -54,6 +54,6 @@ export const accessStrings = {
     limitedTitle: 'Please try again later',
     limitedText: 'Too many tries for now. Please try again in a little while.',
     fullTitle: 'Too many requests right now',
-    fullText: 'Feeder cannot take new requests at the moment. Ask someone in the household to add you directly, then sign in again.',
+    fullText: 'Feeder cannot take new requests at the moment. Ask someone in the Household to add you directly, then sign in again.',
   },
 }
