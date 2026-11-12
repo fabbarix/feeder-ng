@@ -5,7 +5,10 @@ import { SlotRulesEditor, VarietyRulesEditor } from './RulesEditors'
 
 const mealSlots = [{ id: 5, weekday: 5, name: 'Dinner', time: '19:00' }, { id: 6, weekday: 6, name: 'Lunch', time: '12:30' }]
 const recipes = [{ id: 3, name: 'Curry', tags: [] }, { id: 4, name: 'Pizza', tags: ['pizza'] }]
-const tags = [{ name: 'fish', recipes: 2 }, { name: 'pizza', recipes: 1 }]
+const tags = [
+  { id: 1, name: 'fish', key: 'fish', colour: 'teal', recipes: 2, slotRules: 0, varietyRule: false },
+  { id: 2, name: 'pizza', key: 'pizza', colour: 'apricot', recipes: 1, slotRules: 0, varietyRule: false },
+]
 
 /** Picks an option of one of our Select primitives: open its combobox, click the option. */
 async function pick(field: string, option: string | RegExp) {
@@ -34,7 +37,7 @@ describe('SlotRulesEditor', () => {
     )
     const list = within(screen.getByRole('list', { name: 'Slot Rules' }))
     expect(list.getByText('Friday Dinner')).toBeInTheDocument()
-    expect(list.getByText('Tag: pizza')).toBeInTheDocument()
+    expect(list.getByText('pizza')).toBeInTheDocument() // the Tag pill (TG-PW), not "Tag: pizza"
     await userEvent.click(list.getByRole('button', { name: 'Remove' }))
     expect(onRemove).toHaveBeenCalledWith(9)
   })

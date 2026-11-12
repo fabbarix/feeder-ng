@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { useTags } from '../../../lib/tags'
 import { PageHeader, Tile } from '../../../ui'
 import { SlotRulesEditor, VarietyRulesEditor } from '../components/RulesEditors'
 import { useSlotRules, useVarietyRules } from '../hooks/useRules'
-import { useTagChoices } from '../hooks/useTagChoices'
 import { planStrings } from '../strings'
 import '../plan.css'
 
@@ -16,7 +16,7 @@ export function PlanningRulesScreen(): ReactNode {
   const breadcrumbs = useBreadcrumbs()
   const slotRules = useSlotRules()
   const varietyRules = useVarietyRules()
-  const tags = useTagChoices()
+  const tags = useTags()
   if (slotRules.isLoading || varietyRules.isLoading) {
     return (
       <div className="plan">
