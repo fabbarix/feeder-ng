@@ -50,4 +50,29 @@ describe('board.css: the clock tile at tablet widths (768-1024 px)', () => {
   it('the clock tile does not clip its content: the time and date get the whole cell content box (min-width: 0)', () => {
     expect(all('.board-clock__time') + all('.board-clock__date') + all('.board-clock')).toMatch(/min-width:\s*0|max-width:\s*100%/)
   })
+  describe('the sizes use the board tile\'s real padding', () => {
+    const tile = () => all('.board-cell > .tile')
+    const padX = () => /--board-tile-pad-x:\s*([^;]+);/.exec(tile())?.[1]?.trim() ?? ''
+    const calcs = () => [lastSize('.board-clock__time'), lastSize('.board-clock__date')]
+
+    it('the tile declares one horizontal padding variable and pads its sides with it', () => {
+      expect(padX()).toMatch(/^\d+px$/)
+      expect(tile()).toMatch(/padding:\s*\d+px var\(--board-tile-pad-x\)\s*;/)
+    })
+
+    it('the time and date calcs subtract 2 * that same variable, not the page-wide --tile-pad', () => {
+      for (const size of calcs()) {
+        expect(size).toMatch(/100cqi\s*-\s*2\s*\*\s*var\(--board-tile-pad-x\)/)
+        expect(size).not.toMatch(/--tile-pad/)
+      }
+    })
+  })
+
+  // Measured in Figtree 400 in Chrome: "Wednesday" is 5.235 em and "September" 4.993 em, the longest words of the date. The
+  // divisor is em per content width, so it must be at least the longest word (5.235) or the date overflows the content box.
+  it('the date divisor leaves room for "Wednesday" (5.235 em) and "September" (4.993 em)', () => {
+    const divisor = Number(/\)\s*\/\s*([\d.]+)\s*\)/.exec(lastSize('.board-clock__date'))?.[1])
+    expect(divisor).toBeGreaterThanOrEqual(5.3)
+    expect(divisor).toBeLessThanOrEqual(7)
+  })
 })
