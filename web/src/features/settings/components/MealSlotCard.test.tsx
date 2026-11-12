@@ -59,7 +59,7 @@ describe('MealSlotCard: the 7-day strip', () => {
   })
   it('an Admin taps a day to edit that Meal Slot', async () => {
     const { props, region } = setup()
-    await userEvent.click(within(region).getByRole('button', { name: 'Dinner on Friday' }))
+    await userEvent.click(within(region).getByRole('button', { name: 'Dinner on Friday, 20:00' }))
     expect(props.onEdit).toHaveBeenCalledWith(dinnerCard.differences[1]!.slot)
   })
   it('an Admin gets a dashed "+" on a free day that adds that name on that weekday', async () => {
@@ -90,7 +90,7 @@ describe('MealSlotCard: "Differs on"', () => {
   })
   it('an Admin opens that weekday\'s Meal Slot from its row', async () => {
     const { props, region } = setup()
-    await userEvent.click(within(region).getByRole('button', { name: 'Edit Dinner on Wednesday' }))
+    await userEvent.click(within(region).getByRole('button', { name: 'Edit Dinner on Wednesday: Fabio only' }))
     expect(props.onEdit).toHaveBeenCalledWith(dinnerCard.differences[0]!.slot)
   })
 })

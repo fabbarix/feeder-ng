@@ -19,10 +19,9 @@ describe('DatesThatDiffer (read-only)', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0)
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
-  it('says so when no date differs', () => {
-    render(<DatesThatDiffer rows={[]} members={twoMembers} />)
-    expect(within(screen.getByRole('region', { name: 'Dates that differ' })).getByText('No upcoming date differs from the usual.')).toBeInTheDocument()
-    expect(screen.queryByRole('list')).toBeNull()
+  it('renders nothing without rows', () => {
+    const { container } = render(<DatesThatDiffer rows={[]} members={twoMembers} />)
+    expect(container).toBeEmptyDOMElement()
   })
   it('names who eats on a date that changes the Attendance', () => {
     render(<DatesThatDiffer rows={[{ key: 'k', date: '2026-11-12', dateLabel: 'Thu 12 Nov', slotName: 'Dinner', parts: [{ kind: 'attendance', attendeeIds: [2] }] }]} members={twoMembers} />)

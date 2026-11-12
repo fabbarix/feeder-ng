@@ -41,7 +41,7 @@ describe('MealSlotsPage: edit on several days', () => {
       }),
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Monday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Wednesday' }))
@@ -62,7 +62,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { match: 'Dinner', updated: [{ ...tuesdayDinner, time: '20:00' }], skipped: [{ weekday: 5, reason: 'no_slot' }] },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Friday' }))
     expect(within(dialog).getByText('Fri skipped: no Dinner')).toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { match: 'Dinner', updated: [{ ...tuesdayDinner, name: 'Supper' }], skipped: [] },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     const name = within(dialog).getByLabelText('Name')
     await userEvent.clear(name)
@@ -93,7 +93,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { status: 409, json: { error: { code: 'duplicate_slot', message: 'A Meal Slot with that name already exists on that weekday' } } },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     const name = within(dialog).getByLabelText('Name')
     await userEvent.clear(name)

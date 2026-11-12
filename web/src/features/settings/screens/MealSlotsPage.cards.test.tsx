@@ -43,12 +43,12 @@ afterEach(() => {
 })
 
 describe('MealSlotsPage: the cards', () => {
-  it('shows the Household line once, then Breakfast, Lunch and Dinner in time order and "Dates that differ" last', async () => {
+  it('shows the Household line once, then Breakfast, Lunch and Dinner in time order and no "Dates that differ" tile', async () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
     await screen.findByRole('region', { name: 'Dinner' })
     expect(screen.getAllByText('Everyone eats unless a Meal Slot says otherwise')).toHaveLength(1)
-    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Breakfast', 'Lunch', 'Dinner', 'Dates that differ'])
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Breakfast', 'Lunch', 'Dinner'])
   })
 
   it('Dinner shows 19:30 as the usual time, and Breakfast 09:00 (the Saturday value wins the tie)', async () => {
@@ -73,12 +73,13 @@ describe('MealSlotsPage: the cards', () => {
     expect(rows[1]).toHaveTextContent('Main only')
   })
 
-  it('"Dates that differ" is read-only and says nothing differs while main has no per-date list', async () => {
+  it('does not render "Dates that differ" at all until useDateExceptions has a real source (PM decision; F1 turns it on)', async () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    const tile = await screen.findByRole('region', { name: 'Dates that differ' })
-    expect(within(tile).getByText('No upcoming date differs from the usual.')).toBeInTheDocument()
-    expect(within(tile).queryAllByRole('button')).toHaveLength(0)
+    await screen.findByRole('region', { name: 'Dinner' })
+    expect(screen.queryByRole('region', { name: 'Dates that differ' })).toBeNull()
+    expect(screen.queryByText('Dates that differ')).toBeNull()
+    expect(screen.queryByText('No upcoming date differs from the usual.')).toBeNull()
   })
 
   it('shows the empty state and the header button when there is no Meal Slot yet', async () => {
@@ -140,7 +141,7 @@ describe('MealSlotsPage: Admin actions on a card', () => {
   it('a row of "Differs on" opens that weekday\'s Meal Slot (Friday: 20:00)', async () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Edit Dinner on Friday' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Edit Dinner on Friday: 20:00, Main only' }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     expect(within(dialog).getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(dialog).getByRole('spinbutton', { name: 'Hour' })).toHaveValue('20')
@@ -202,13 +203,13 @@ describe('MealSlotsPage: a plain User', () => {
 })
 
 describe('MealSlotsPage: scale', () => {
-  it('five names and six Members: five cards and the Dates tile, and an Avatar stack stops at four with "+N"', async () => {
+  it('five names and six Members: five cards, and an Avatar stack stops at four with "+N"', async () => {
     const names: Array<[string, string]> = [['Breakfast', '08:00'], ['Elevenses', '11:00'], ['Lunch', '13:00'], ['Tea', '16:30'], ['Dinner', '19:30']]
     const five = names.flatMap(([n, t]) => [1, 2, 3, 4, 5, 6, 7].map((d) => slot(d, n, t, { attendance: sixMembers.slice(0, 5).map((m) => ({ memberId: m.id, portionFactorOverride: null })) })))
     routes(ADMIN_ME, five, sixMembers)
     renderWithProviders(<MealSlotsPage />)
     await screen.findByRole('region', { name: 'Dinner' })
-    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Breakfast', 'Elevenses', 'Lunch', 'Tea', 'Dinner', 'Dates that differ'])
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Breakfast', 'Elevenses', 'Lunch', 'Tea', 'Dinner'])
     const list = within(screen.getByRole('region', { name: 'Dinner' })).getByRole('list', { name: 'Attending Dinner' })
     expect(within(list).getAllByRole('img')).toHaveLength(4)
     expect(within(list).getByText('+1')).toBeInTheDocument()

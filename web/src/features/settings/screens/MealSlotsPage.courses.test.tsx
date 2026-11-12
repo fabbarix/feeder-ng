@@ -30,7 +30,7 @@ afterEach(() => {
 })
 /** An Admin taps the Tuesday day of the Dinner card; a plain User taps "Change a date" (the next Dinner is Tuesday 10 Nov). */
 const openTuesday = async () => {
-  await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+  await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
 }
 const openNextDinnerDate = async () => {
   await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Change a date for Dinner' }))

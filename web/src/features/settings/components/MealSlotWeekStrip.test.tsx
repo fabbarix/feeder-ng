@@ -18,8 +18,8 @@ describe('MealSlotWeekStrip', () => {
   })
   it('marks a day that differs for assistive technology as well as by the dot', () => {
     setup()
-    expect(screen.getByRole('button', { name: 'Dinner on Wednesday' })).toHaveAccessibleDescription(/differs/i)
-    expect(screen.getByRole('button', { name: 'Dinner on Tuesday' })).not.toHaveAccessibleDescription(/differs/i)
+    expect(screen.getByRole('button', { name: 'Dinner on Wednesday, 19:30' })).toHaveAccessibleDescription(/differs/i)
+    expect(screen.getByRole('button', { name: 'Dinner on Tuesday, 19:30' })).not.toHaveAccessibleDescription(/differs/i)
   })
   it('free days are "+ add" buttons for an Admin and nothing for a plain User', () => {
     setup(lunchCard)
@@ -31,7 +31,7 @@ describe('MealSlotWeekStrip', () => {
   })
   it('opens the tapped day', async () => {
     const props = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner on Monday' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Dinner on Monday, 19:30' }))
     expect(props.onEdit).toHaveBeenCalledWith(dinnerCard.week[0] && 'slot' in dinnerCard.week[0] ? dinnerCard.week[0].slot : undefined)
   })
 })
