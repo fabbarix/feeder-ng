@@ -41,20 +41,22 @@ func TestSlotCarriesStartByCookMinutesPhotoAndAttendance(t *testing.T) {
 	view := runner.SlotView{
 		Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t), Portions: 3,
 		Attendance: []plan.Attendee{{MemberID: 1, Factor: 1}, {MemberID: 2, Factor: 0.5}},
-		Meal:       &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: 7, Batches: 1, Portions: 3, State: plan.StatePlanned},
+		Courses:    []runner.CourseView{{CourseID: 1, Main: true, Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2, CourseID: 1}, RecipeID: 7, Batches: 1, Portions: 3, State: plan.StatePlanned}}},
 	}
 	out := slotFor(view, fixture())
 
-	if out.Meal == nil {
-		t.Fatal("slot lost its Planned Meal")
+	// C3: the Planned Meal is on its Course row only; the Recipe's own timing moved there with it (the slot alias is gone).
+	if len(out.Courses) != 1 || out.Courses[0].Meal == nil {
+		t.Fatalf("slot lost its Planned Meal: %+v", out.Courses)
 	}
-	if out.Meal.CookMinutes != 45 {
-		t.Errorf("cookMinutes = %d, want 45", out.Meal.CookMinutes)
+	m := out.Courses[0].Meal
+	if m.CookMinutes != 45 {
+		t.Errorf("cookMinutes = %d, want 45", m.CookMinutes)
 	}
-	if out.Meal.StartBy != "18:45" {
-		t.Errorf("startBy = %q, want 18:45", out.Meal.StartBy)
+	if m.StartBy != "18:45" {
+		t.Errorf("startBy = %q, want 18:45 (the Course row's meal carries the Recipe's own start, as the slot alias did)", m.StartBy)
 	}
-	if out.Meal.PhotoURL != "/api/images/curry.jpg" {
+	if m.PhotoURL != "/api/images/curry.jpg" {
 		t.Errorf("photoUrl = %q", out.Meal.PhotoURL)
 	}
 	if len(out.Attendance) != 2 {
@@ -69,13 +71,14 @@ func TestSlotCarriesStartByCookMinutesPhotoAndAttendance(t *testing.T) {
 func TestMealWithoutTimingOmitsTheOptionalFields(t *testing.T) {
 	view := runner.SlotView{
 		Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t),
-		Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: 8, Batches: 1, State: plan.StatePlanned},
+		Courses: []runner.CourseView{{CourseID: 1, Main: true, Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2, CourseID: 1}, RecipeID: 8, Batches: 1, State: plan.StatePlanned}}},
 	}
 	out := slotFor(view, fixture())
-	if out.Meal.CookMinutes != 0 || out.Meal.StartBy != "" || out.Meal.PhotoURL != "" {
-		t.Errorf("unknown timing and photo should be zero, got %+v", out.Meal)
+	meal := out.Courses[0].Meal
+	if meal.CookMinutes != 0 || meal.StartBy != "" || meal.PhotoURL != "" {
+		t.Errorf("unknown timing and photo should be zero, got %+v", meal)
 	}
-	raw, err := json.Marshal(out.Meal)
+	raw, err := json.Marshal(meal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,17 +126,18 @@ func TestImagesURLIsTheImageStoreRoute(t *testing.T) {
 func TestLeftoverServedMealSendsNoCookMinutesOrStartBy(t *testing.T) {
 	view := runner.SlotView{
 		Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t), Portions: 3,
-		Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: 7, Batches: 0, Portions: 1, State: plan.StatePlanned,
-			From: &plan.Source{From: plan.Key{Date: "2026-11-09", MealSlotID: 2}, LeftoverID: 5}},
+		Courses: []runner.CourseView{{CourseID: 1, Main: true, Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2, CourseID: 1}, RecipeID: 7, Batches: 0, Portions: 1, State: plan.StatePlanned,
+			From: &plan.Source{From: plan.Key{Date: "2026-11-09", MealSlotID: 2, CourseID: 1}, LeftoverID: 5}}}},
 	}
 	out := slotFor(view, fixture())
-	if out.Meal == nil || out.Meal.ServedFromLeftover == nil {
-		t.Fatalf("meal is not served from a Leftover: %+v", out.Meal)
+	meal := out.Courses[0].Meal
+	if meal == nil || meal.ServedFromLeftover == nil {
+		t.Fatalf("meal is not served from a Leftover: %+v", meal)
 	}
-	if out.Meal.CookMinutes != 0 || out.Meal.StartBy != "" {
-		t.Errorf("a Leftover-served meal must not carry cookMinutes or startBy, got cookMinutes=%d startBy=%q", out.Meal.CookMinutes, out.Meal.StartBy)
+	if meal.CookMinutes != 0 || meal.StartBy != "" {
+		t.Errorf("a Leftover-served meal must not carry cookMinutes or startBy, got cookMinutes=%d startBy=%q", meal.CookMinutes, meal.StartBy)
 	}
-	raw, err := json.Marshal(out.Meal)
+	raw, err := json.Marshal(meal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +146,7 @@ func TestLeftoverServedMealSendsNoCookMinutesOrStartBy(t *testing.T) {
 			t.Errorf("JSON carries %s for a Leftover-served meal: %s", key, raw)
 		}
 	}
-	if out.Meal.PhotoURL == "" {
+	if meal.PhotoURL == "" {
 		t.Error("the photo is still sent for a Leftover-served meal")
 	}
 }

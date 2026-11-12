@@ -1,4 +1,4 @@
-// CRS F: the plan routes per Course (docs/dev/design/crs-c2.md section 3). Without a courseId the course-less alias is used.
+// CRS F + C3: the plan routes per Course (docs/dev/design/crs-c2.md section 3). Every key names its Course: the course-less routes are gone.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { planApi } from './api'
 import { mockApi } from './test-utils'
@@ -24,15 +24,20 @@ describe('planApi with a Course', () => {
   })
 })
 
-describe('planApi without a Course (the alias for the main Course, until C3)', () => {
-  it('uses the course-less paths', async () => {
-    const api = mockApi({
-      'PUT /api/plan/2026-11-10/2': {}, 'POST /api/plan/2026-11-10/2/confirm': {}, 'POST /api/plan/2026-11-10/2/not-cooked': {},
-    })
-    await planApi.setMeal(alias, 8)
-    await planApi.confirm(alias)
-    await planApi.notCooked(alias)
-    expect(api.calls.map((c) => `${c.method} ${c.path}`)).toEqual(['PUT /api/plan/2026-11-10/2', 'POST /api/plan/2026-11-10/2/confirm', 'POST /api/plan/2026-11-10/2/not-cooked'])
+describe('planApi without a Course (C3: the course-less routes are gone)', () => {
+  // A key from older code (no courseId) must fail loudly in the SPA, before any request: the server answers 404 to the old paths.
+  it.each<[string, () => Promise<unknown>]>([
+    ['setMeal', () => planApi.setMeal(alias as never, 8)],
+    ['confirm', () => planApi.confirm(alias as never)],
+    ['unpin', () => planApi.unpin(alias as never)],
+    ['alternatives', () => planApi.alternatives(alias as never)],
+    ['cookPreview', () => planApi.cookPreview(alias as never)],
+    ['cooked', () => planApi.cooked(alias as never, 1)],
+    ['notCooked', () => planApi.notCooked(alias as never)],
+  ])('%s refuses a key without a Course and sends nothing', async (_name, call) => {
+    const api = mockApi({})
+    await expect(Promise.resolve().then(call)).rejects.toThrow(/course/i)
+    expect(api.calls).toEqual([])
   })
 })
 

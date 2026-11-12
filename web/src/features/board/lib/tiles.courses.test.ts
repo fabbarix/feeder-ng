@@ -32,10 +32,16 @@ describe('hasPlanned', () => {
     expect(hasPlanned(slotOf([course(1, 'Main', true)]))).toBe(false)
   })
 
-  it('without `courses` it is the slot\'s meal, as before', () => {
-    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew') }))).toBe(true)
-    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew', 'cooked') }))).toBe(false)
-    expect(hasPlanned(slotOf(undefined, { meal: null }))).toBe(false)
+  // C3: the server sends no `meal` on a slot; only the Course rows count.
+  it('without `courses` nothing is planned, whatever an old `meal` field says', () => {
+    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew') }))).toBe(false)
+    expect(hasPlanned(slotOf([], { meal: meal('Stew') }))).toBe(false)
+  })
+
+  it('reads the Course rows of a slot that has no `meal` at all', () => {
+    const s = slotOf(roastAndBeans()) as Partial<SlotLike>
+    delete s.meal
+    expect(hasPlanned(s as SlotLike)).toBe(true)
   })
 })
 
@@ -75,14 +81,19 @@ describe('tonightRows', () => {
     expect(rows.map((r) => r.courseName)).toEqual(['Main'])
   })
 
-  it('a slot without `courses` is one row from its meal', () => {
-    expect(tonightRows(slotOf(undefined, { meal: meal('Chicken stew') })).map((r) => r.recipeName)).toEqual(['Chicken stew'])
+  it('a slot without `courses` has no rows: there is no made-up main Course with the id 0', () => {
+    expect(tonightRows(slotOf(undefined, { meal: meal('Chicken stew') }))).toEqual([])
+  })
+
+  it('every row carries the real id of its Course', () => {
+    const rows = tonightRows(slotOf(roastAndBeans()))
+    expect(rows.map((r) => r.courseId)).toEqual([1, 2])
+    expect(rows.every((r) => r.courseId > 0)).toBe(true)
   })
 })
 
 describe('tomorrowLine', () => {
   it('one Course reads exactly as before: "Dinner · Chicken stew"', () => {
-    expect(tomorrowLine(slotOf(undefined, { meal: meal('Chicken stew') }))).toBe('Dinner · Chicken stew')
     expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner · Chicken stew')
   })
 

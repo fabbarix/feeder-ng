@@ -17,8 +17,9 @@ describe('toConfirmCourses(entries, key)', () => {
     expect(toConfirmCourses(entries, { date: '2026-11-09', mealSlotId: 4 })).toEqual([1, 4])
   })
 
-  it('an entry without a courseId is the course-less alias: 0', () => {
-    expect(toConfirmCourses([entry(undefined)], { date: '2026-11-09', mealSlotId: 4 })).toEqual([0])
+  it('an entry without a courseId names no Course: it is left out, never read as 0', () => {
+    expect(toConfirmCourses([entry(undefined)], { date: '2026-11-09', mealSlotId: 4 })).toEqual([])
+    expect(toConfirmCourses([entry(undefined), entry(2)], { date: '2026-11-09', mealSlotId: 4 })).toEqual([2])
   })
 
   it('nothing to confirm for the slot: empty', () => {

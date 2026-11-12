@@ -1,9 +1,10 @@
 // CRS F: the Courses of a slot (spec 7.5). Pure rules behind the rows, captions, the slot menu and the hero split.
 import { describe, expect, it } from 'vitest'
 import {
-  addableCourses, compactRows, courseKey, courseRows, heroRow, plannedMeals, slotCourses, slotMenu, unresolvedCourseIds, withoutCaption, wholeMealChip,
+  addableCourses, compactRows, courseKey, courseOf, courseRows, heroRow, plannedMeals, slotCourses, slotMenu, unresolvedCourseIds, withoutCaption, wholeMealChip,
 } from './courses'
 import { courseMeal, courseSlot, meal, planCourse, slot } from '../test-utils'
+import { serverSlot } from '../test-utils.c3'
 
 const main = (over = {}) => planCourse({ courseId: 1, name: 'Main', main: true, meal: courseMeal(1, 'Main', { recipeName: 'Roast chicken' }), ...over })
 const side = (over = {}) => planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { recipeName: 'Green beans', recipeId: 8 }), ...over })
@@ -14,35 +15,46 @@ const bo = { id: 3, name: 'Bo' }
 const names = (slotArg: Parameters<typeof courseRows>[0]) => courseRows(slotArg).map((r) => r.course.name)
 
 describe('slotCourses', () => {
-  it('a slot without `courses` is ONE main Course read from meal and unfilled', () => {
-    const s = slot({ meal: meal({ courseId: 7, courseName: 'Main' }) })
-    expect(slotCourses(s)).toEqual([
-      { courseId: 7, name: 'Main', main: true, optional: false, optOutMemberIds: [], meal: s.meal, unfilled: null, coveredBy: null, unserved: null },
-    ])
-  })
-
-  it('an empty slot without `courses` is still one main Course (courseId 0, the shim) carrying its unfilled reason', () => {
-    const unfilled = { reason: 'no_candidates' as const, slotRuleClaimed: false, eliminated: { considered: 3, exclusion: 3, coolDown: 0, varietyRule: 0, advanceStep: 0 } }
-    const [only] = slotCourses(slot({ meal: null, unfilled }))
-    expect(only).toMatchObject({ courseId: 0, main: true, meal: null, unfilled })
+  // C3: GET /api/plan always sends `courses`; there is no main Course made up from meal and unfilled, and no courseId 0.
+  it('a slot without `courses` has no Courses (nothing is made up from meal, nothing is courseId 0)', () => {
+    expect(slotCourses(slot({ meal: meal({ courseId: 7, courseName: 'Main' }) }))).toEqual([])
+    expect(slotCourses(slot({ meal: null }))).toEqual([])
   })
 
   it('a slot with `courses` returns them as sent', () => {
     const courses = [main(), side()]
     expect(slotCourses(courseSlot(courses))).toEqual(courses)
   })
+
+  it('reads the Course rows, never the slot\'s own meal and unfilled', () => {
+    const s = serverSlot([main(), side()])
+    expect(s).not.toHaveProperty('meal')
+    expect(slotCourses(s).map((c) => c.courseId)).toEqual([1, 2])
+    expect(plannedMeals(s).map((m) => m.recipeName)).toEqual(['Roast chicken', 'Green beans'])
+    expect(courseRows(s).map((r) => r.key.courseId)).toEqual([1, 2])
+  })
 })
 
 describe('courseKey', () => {
-  it('has no courseId when the slot has no `courses` (the course-less alias routes keep working)', () => {
-    const s = slot()
-    expect(courseKey(s, slotCourses(s)[0]!)).toEqual({ date: '2026-11-10', mealSlotId: 2 })
-    expect(courseKey(s, slotCourses(s)[0]!)).not.toHaveProperty('courseId')
+  it('always carries the Course id (the course-less alias routes are gone)', () => {
+    const s = serverSlot([main(), side()])
+    expect(courseKey(s, s.courses![0]!)).toEqual({ date: '2026-11-10', mealSlotId: 2, courseId: 1 })
+    expect(courseKey(s, s.courses![1]!)).toEqual({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
   })
 
-  it('carries the Course id when the slot has `courses`', () => {
-    const s = courseSlot([main(), side()])
-    expect(courseKey(s, s.courses![1]!)).toEqual({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
+  it('carries it for a slot that has `courses` and for a bare one', () => {
+    const bare = slot()
+    expect(courseKey(bare, main())).toEqual({ date: '2026-11-10', mealSlotId: 2, courseId: 1 })
+  })
+})
+
+describe('courseOf', () => {
+  it('finds a Course by its id; no id means no Course (there is no "main by default")', () => {
+    const s = serverSlot([main(), side()])
+    expect(courseOf(s, 2)?.name).toBe('Side')
+    expect(courseOf(s, 9)).toBeUndefined()
+    expect(courseOf(s, undefined as never)).toBeUndefined()
+    expect(courseOf(slot(), 1)).toBeUndefined()
   })
 })
 

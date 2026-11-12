@@ -82,7 +82,7 @@ Feature: Cook Mode
     And the Recipe "Chicken stew" is planned for tonight's Dinner with 2 Batches
     When I open Cook Mode for tonight's Planned Meal
     Then the response status is 200
-    And the response JSON field "scope" is "meal:2026-11-09/1"
+    And the response scope is the three-part scope of tonight's Planned Meal
     And the response JSON field "meal.mealSlotId" is "1"
     And the cooking Step 1 uses 4 piece of "onion"
 

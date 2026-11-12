@@ -20,9 +20,5 @@ describe('createCookApi: the timeline', () => {
     expect(c.get).toHaveBeenCalledWith('/api/cook/meals/2026-11-10/4/2')
   })
 
-  it('the old two-part meal view is unchanged (the main Course alias, until C3)', async () => {
-    const c = client()
-    await createCookApi(c).view({ kind: 'meal', date: '2026-11-10', mealSlotId: 4 })
-    expect(c.get).toHaveBeenCalledWith('/api/cook/meals/2026-11-10/4')
-  })
+  // C3: createCookApi.view opens a Recipe only; the two-part meal view is gone (api.c3.test.ts).
 })

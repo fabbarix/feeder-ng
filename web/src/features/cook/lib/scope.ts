@@ -84,7 +84,7 @@ export function parseMealScope(scope: string | null | undefined): MealScopeParts
  * (null or undefined) a two-part scope equals only itself. Recipe scopes and null compare as plain strings (null is
  * never equal to a scope).
  */
-export function sameScope(a: string | null | undefined, b: string | null | undefined, mainCourseId: number | null | undefined): boolean {
+export function sameScope(a: string | null | undefined, b: string | null | undefined, mainCourseId?: number | null): boolean {
   if (a === null || a === undefined || b === null || b === undefined) return false
   const pa = parseMealScope(a)
   const pb = parseMealScope(b)

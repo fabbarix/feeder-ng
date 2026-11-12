@@ -45,26 +45,22 @@ func TestPlanSlotListsItsCoursesInSlotOrderWithRealCourseIDs(t *testing.T) {
 	}
 }
 
-func TestPlanSlotKeepsMealAndUnfilledAsAliasesForTheMainCourse(t *testing.T) {
+// C3 dropped slot.meal and slot.unfilled (spec §16): only the Course rows carry the Planned Meal and the reason.
+// The absence itself is pinned in crs_c3_routes_test.go.
+func TestCourseRowsCarryTheMealAndTheReasonOfEachCourse(t *testing.T) {
 	w := crsc2.New(t)
 	roast := w.Recipe("Roast chicken", crsc2.RecipeSpec{})
 	w.Settle()
 	w.Meal(crsc2.Today, w.Slot, w.Main, roast, "planned", false)
 	s := slotOf(t, w, crsc2.Today)
-	if s.Meal == nil || s.Meal.RecipeID != roast || s.Meal.CourseID != w.Main {
-		t.Errorf("slot.meal = %+v, want the main Course's meal with the real Course id", s.Meal)
-	}
-	if s.Unfilled != nil {
-		t.Errorf("slot.unfilled = %+v, want null", s.Unfilled)
+	if m := courseOf(t, s, w.Main).Meal; m == nil || m.RecipeID != roast || m.CourseID != w.Main {
+		t.Errorf("main meal = %+v, want the Roast with the real Course id", m)
 	}
 
 	w.Exec(`DELETE FROM planned_meals`)
 	w.Unfilled(crsc2.Today, w.Slot, w.Main, "no_candidates")
 	w.Unfilled(crsc2.Today, w.Slot, w.Side, "no_course_recipes")
 	s = slotOf(t, w, crsc2.Today)
-	if s.Meal != nil || s.Unfilled == nil || s.Unfilled.Reason != "no_candidates" {
-		t.Errorf("slot = meal %+v unfilled %+v, want the main Course's no_candidates", s.Meal, s.Unfilled)
-	}
 	if u := courseOf(t, s, w.Side).Unfilled; u == nil || u.Reason != "no_course_recipes" {
 		t.Errorf("side unfilled = %+v", u)
 	}

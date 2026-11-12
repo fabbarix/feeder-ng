@@ -57,7 +57,7 @@ func TestPutRefusals(t *testing.T) {
 	check("an archived Recipe", crsc2.Today, w.Side, old, 422, "recipe_archived")
 	check("a day that is over", "2026-11-02", w.Side, beans, 422, "in_past")
 	check("no Meal Slot on that weekday", "2026-11-10", w.Side, beans, 404, "unknown_slot")
-	if r := w.User.Put(path(w, crsc2.Today, 0, "/side"), map[string]any{"recipeId": beans}); r.Status != 404 {
+	if r := w.User.Put("/api/plan/"+crsc2.Today+"/"+itoa(w.Slot)+"/side", map[string]any{"recipeId": beans}); r.Status != 404 {
 		t.Errorf("a Course id that is not a number = %d, want 404", r.Status)
 	}
 
@@ -102,18 +102,19 @@ func TestPutWholeMealInTheMainCourseCoversTheRestAndRemovesWhatIsNotFixed(t *tes
 	}
 }
 
-func TestTheCourselessPutIsTheMainCourseAlias(t *testing.T) {
+// C3: the course-less PUT is gone (404, crs_c3_routes_test.go); the Main is set by its own id.
+func TestPutOnTheMainCourseByItsIDIsOneCell(t *testing.T) {
 	w := crsc2.New(t)
 	roast := w.Recipe("Roast chicken", crsc2.RecipeSpec{})
 	w.Settle()
-	m := decodeMeal(t, w.User.Put(path(w, crsc2.Today, 0, ""), map[string]any{"recipeId": roast}))
+	m := decodeMeal(t, w.User.Put(path(w, crsc2.Today, w.Main, ""), map[string]any{"recipeId": roast}))
 	if m.CourseID != w.Main || m.CourseName != "Main" || !m.Pinned {
 		t.Errorf("meal = %+v, want the main Course with its real id", m)
 	}
 	if w.MealState(crsc2.Today, w.Slot, w.Main) != "planned" {
 		t.Error("no row for the main Course")
 	}
-	// The real main id on the new route is the same cell.
+	// Again: the same cell.
 	if m2 := decodeMeal(t, w.User.Put(path(w, crsc2.Today, w.Main, ""), map[string]any{"recipeId": roast})); m2.CourseID != w.Main {
 		t.Errorf("PUT with the main id = %+v", m2)
 	}
@@ -141,12 +142,12 @@ func TestConfirmAndUnpinActOnOneCourse(t *testing.T) {
 	if m.CourseID != w.Side || m.Pinned {
 		t.Errorf("unpin = %+v", m)
 	}
-	// The old paths are the main Course.
-	if m := decodeMeal(t, w.User.Post(path(w, crsc2.Today, 0, "/confirm"), nil)); m.CourseID != w.Main || !m.Pinned {
-		t.Errorf("the old confirm = %+v, want the main Course", m)
+	// The Main by its own id (the old course-less paths answer 404 after C3, crs_c3_routes_test.go).
+	if m := decodeMeal(t, w.User.Post(path(w, crsc2.Today, w.Main, "/confirm"), nil)); m.CourseID != w.Main || !m.Pinned {
+		t.Errorf("confirm on the Main = %+v", m)
 	}
-	if m := decodeMeal(t, w.User.Post(path(w, crsc2.Today, 0, "/unpin"), nil)); m.CourseID != w.Main || m.Pinned {
-		t.Errorf("the old unpin = %+v, want the main Course", m)
+	if m := decodeMeal(t, w.User.Post(path(w, crsc2.Today, w.Main, "/unpin"), nil)); m.CourseID != w.Main || m.Pinned {
+		t.Errorf("unpin on the Main = %+v", m)
 	}
 	wantErr(t, "confirm a Course with no Planned Meal", w.User.Post(path(w, crsc2.Today, w.Dessert, "/confirm"), nil), 404, "not_found")
 }
@@ -225,10 +226,9 @@ func TestMainAlternativesTellWhichCoverTheOtherCourses(t *testing.T) {
 	if a := by[curry]; a.WholeMeal || len(a.Covers) != 0 || a.Relaxed {
 		t.Errorf("the curry = %+v, want an ordinary Recipe", a)
 	}
-	// The old path is the main Course.
-	old := w.User.Get(path(w, crsc2.Today, 0, "/alternatives"))
-	if old.Status != 200 || !strings.Contains(string(old.Body), "Beef stew") {
-		t.Errorf("the old alternatives = %d %s", old.Status, old.Body)
+	// The Main by its own id; the old course-less path answers 404 after C3 (crs_c3_routes_test.go).
+	if r := w.User.Get(path(w, crsc2.Today, w.Main, "/alternatives")); r.Status != 200 || !strings.Contains(string(r.Body), "Beef stew") {
+		t.Errorf("alternatives of the Main = %d %s", r.Status, r.Body)
 	}
 }
 
@@ -265,10 +265,10 @@ func TestCookPreviewIsThatCoursesProposalAndPortions(t *testing.T) {
 	if p.Meal.CourseID != w.Side || !p.Fresh || p.PortionsNeeded != 1 || p.ProposedLeftover != 3 || p.MaxLeftover != 4 {
 		t.Errorf("Side preview = %+v, want 1 portion needed (the Course's Attendance), 3 proposed, 4 max", p)
 	}
-	r = w.User.Get(path(w, crsc2.Today, 0, "/cook"))
+	r = w.User.Get(path(w, crsc2.Today, w.Main, "/cook"))
 	r.MustJSON(t, &p)
 	if r.Status != 200 || p.Meal.CourseID != w.Main || p.PortionsNeeded != 2 {
-		t.Errorf("the old cook preview = %d %+v, want the main Course, 2 portions", r.Status, p)
+		t.Errorf("Main cook preview = %d %+v, want the main Course, 2 portions", r.Status, p)
 	}
 }
 

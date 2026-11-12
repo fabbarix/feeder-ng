@@ -45,6 +45,6 @@ export function cookReheatPath(key: SlotKey): string {
  * The reheating timer of a Course's scope through `sameScope`, so the Reheat item of the cooking timeline and the Reheat
  * screen find the same timer whether the main Course's scope is two-part or three-part.
  */
-export function reheatTimerOfCourse(timers: CookTimer[], scope: string, mainCourseId: number | null): CookTimer | null {
+export function reheatTimerOfCourse(timers: CookTimer[], scope: string, mainCourseId?: number | null): CookTimer | null {
   return timers.find((t) => t.step === null && t.label === REHEAT_LABEL && sameScope(t.scope, scope, mainCourseId)) ?? null
 }

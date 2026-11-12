@@ -26,17 +26,16 @@ Feature: Cooked and Not cooked per Course, and for the whole slot
     And the C2 Stock of "beans" is 400 g
     And the C2 Stock of "chicken" is 1000 g
 
-  Scenario: The old per-slot Cooked path marks the main Course only
-    When I use the old per-slot path to mark 2026-11-09 as Cooked
-    Then the response status is 200
-    And the answer JSON at "meal.courseName" is "Main"
-    And the C2 meal of the Course "Main" on 2026-11-09 is cooked
+  Scenario: The removed per-slot Cooked path marks nothing
+    When I use the removed per-slot path to mark 2026-11-09 as Cooked
+    Then the response status is 404
+    And the C2 meal of the Course "Main" on 2026-11-09 is planned
     And the C2 meal of the Course "Side" on 2026-11-09 is planned
 
-  Scenario: The old per-slot Not cooked path skips the main Course only
-    When I use the old per-slot path to mark 2026-11-09 as Not cooked
-    Then the response status is 200
-    And the C2 meal of the Course "Main" on 2026-11-09 is skipped
+  Scenario: The removed per-slot Not cooked path skips nothing
+    When I use the removed per-slot path to mark 2026-11-09 as Not cooked
+    Then the response status is 404
+    And the C2 meal of the Course "Main" on 2026-11-09 is planned
     And the C2 meal of the Course "Side" on 2026-11-09 is planned
 
   Scenario: Not cooked on one Course leaves the other

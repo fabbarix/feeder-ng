@@ -415,7 +415,7 @@ func tgSteps(sc *godog.ScenarioContext, w *World) {
 		for _, s := range v.([]any) {
 			slot := s.(map[string]any)
 			if slot["date"] == date {
-				m, _ := slot["meal"].(map[string]any)
+				m := slotMeal(slot)
 				return m, nil
 			}
 		}
@@ -473,7 +473,7 @@ func tgSteps(sc *godog.ScenarioContext, w *World) {
 		var kept []string
 		for _, s := range v.([]any) {
 			slot := s.(map[string]any)
-			m, _ := slot["meal"].(map[string]any)
+			m := slotMeal(slot)
 			if m == nil || m["servedFromLeftover"] != nil {
 				continue
 			}

@@ -42,8 +42,13 @@ func newFixture(t *testing.T) *fixture {
 	}
 }
 
+// key names the main Course by its real id (C3: the store has no Course 0 shim any more).
 func (f *fixture) key(date string, slot int64) plan.Key {
-	return plan.Key{Date: date, MealSlotID: slot}
+	var main int64
+	if err := f.db.QueryRow(`SELECT id FROM courses WHERE is_main = 1`).Scan(&main); err != nil {
+		panic(err)
+	}
+	return plan.Key{Date: date, MealSlotID: slot, CourseID: main}
 }
 
 func (f *fixture) meal(date string, slot, recipe int64) plan.Meal {

@@ -28,7 +28,6 @@ func TestMealScopeRoundTrip(t *testing.T) {
 		courseID int64
 		want     string
 	}{
-		{"course 0 two-part", 0, "meal:2026-11-09/1"},
 		{"real course three-part", 3, "meal:2026-11-09/1/3"},
 	}
 	for _, c := range cases {

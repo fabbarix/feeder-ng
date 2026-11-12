@@ -80,9 +80,9 @@ describe('courseCells: one flat cell per Course that holds a Planned Meal or a r
     expect(courseCells(once)).toEqual(once)
   })
 
-  it('a slot without courses is one cell, itself (a Household before Courses)', () => {
-    const old = lone('2026-11-10', EXCLUDED)
-    expect(courseCells([old])).toEqual([old])
+  // C3: every slot and every flat entry the server sends names its Course; a "slot without Courses" is not a cell.
+  it('a slot without courses and without a courseId is not a cell (there is no course-less cell)', () => {
+    expect(courseCells([lone('2026-11-10', EXCLUDED)])).toEqual([])
   })
 
   it('a slot whose time has gone (no meal, no reason, no Course holding either) gives nothing', () => {
@@ -103,10 +103,16 @@ describe('unplannedOf: the Courses the planner left empty with a reason', () => 
     expect(unplannedOf([dinner('2026-11-10', [planned(1, 'Main'), dessert])])).toEqual([])
   })
 
-  it('still works on flat API entries and on slots without courses', () => {
+  it('still works on flat API entries; an entry with no Course is dropped', () => {
     const a = flat('2026-11-10', 2, 'Side', NO_COURSE_RECIPES)
     const b = lone('2026-11-11', NOBODY)
-    expect(unplannedOf([a, b])).toEqual([a, b])
+    expect(unplannedOf([a, b])).toEqual([a])
+  })
+
+  it('the id of a line is built from the real Course id', () => {
+    const slots = sideWeek(['2026-11-12'])
+    const [g] = groupByCause(unplannedOf(slots), slots)
+    expect(g!.items[0]!.id).toBe('cell-2026-11-12-4-2')
   })
 })
 
