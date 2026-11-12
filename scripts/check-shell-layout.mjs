@@ -19,6 +19,8 @@
 //      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line); the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
 //  13. (phone, < 1024, /recipes/new) QA-4: the sticky action bar sits flush on the bottom bar: its bottom edge is within 1 px of the bar's top edge,
 //      at 360 and 390 px, with the page scrolled to the top and to the end (no strip of page content between them).
+//  14. (phone, < 1024, /recipes/new) FU-1: with a toast raised, the .toast-region's bottom edge is at or above the sticky action bar's top edge
+//      (1 px tolerance), at 360 and 390 px, scrolled to the end where the bar sits on the bottom bar. A toast never covers Save.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -261,6 +263,37 @@ for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   const tag = `${vp.width}px /recipes/new`
   if (!g) fail(`${tag}: no .sticky-action-bar or bottom bar to measure`)
   else for (const [where, gap] of Object.entries(g)) if (Math.abs(gap) > 1) fail(`${tag}: ${gap}px between the action bar and the bottom bar (scrolled to ${where})`)
+}
+
+// Rule 14 (FU-1): a toast raised on the page lies above the sticky action bar. The toast is put into the live region the way
+// ToastProvider renders one (no test hook is exposed), then the region's bottom edge is compared with the bar's top edge.
+const toastProbe = `
+(async () => {
+  await new Promise((r) => setTimeout(r, 300))
+  const bar = document.querySelector('.sticky-action-bar')
+  const region = document.querySelector('.toast-region')
+  const live = region && region.querySelector('[role="status"].toast-live')
+  if (!bar || !region || !live) return null
+  const t = document.createElement('div')
+  t.className = 'toast'
+  t.dataset.status = 'neutral'
+  t.innerHTML = '<span class="toast__message">Probe</span>'
+  live.appendChild(t)
+  window.scrollTo(0, document.documentElement.scrollHeight)
+  await new Promise((r) => setTimeout(r, 300))
+  const regionBottom = Math.round(region.getBoundingClientRect().bottom * 10) / 10
+  const barTop = Math.round(bar.getBoundingClientRect().top * 10) / 10
+  t.remove()
+  return { regionBottom, barTop, gap: Math.round((barTop - regionBottom) * 10) / 10 }
+})()`
+for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
+  await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: true })
+  await cdp('Page.navigate', { url: base + '/recipes/new' })
+  await new Promise((r) => setTimeout(r, 1500))
+  const t = await evaluate(toastProbe).catch(() => null)
+  const tag = `${vp.width}px /recipes/new`
+  if (!t) fail(`${tag}: no .toast-region, live region or .sticky-action-bar to measure`)
+  else if (t.gap < -1) fail(`${tag}: the toast region's bottom edge (${t.regionBottom}px) is below the sticky action bar's top edge (${t.barTop}px)`)
 }
 
 ws.close()

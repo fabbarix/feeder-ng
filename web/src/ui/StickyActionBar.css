@@ -1,16 +1,18 @@
-/* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-clearance is 0 from 1024). */
+/* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-top is 0 from 1024). */
 :root {
-  /* Room a focused field keeps above the bar (WCAG 2.4.11). */
-  --sticky-bar-clearance: 96px;
+  /* Room the bar takes above the viewport bottom: a toast and a focused field (WCAG 2.4.11) keep clear of it. The bar publishes its
+     measured height (useStickyBarClearance) and this is only the default before that: the stacked two-row phone bar, 2 x 12 padding
+     + 1 border + 2 x 44 control + 8 gap = 121 px (the Save and Cancel rows of the recipe editor at 360 and 390 px). */
+  --sticky-bar-clearance: calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2));
 }
 
 html:has(.sticky-action-bar) {
-  scroll-padding-block-end: var(--sticky-bar-clearance);
+  scroll-padding-block-end: calc(var(--nav-top) + var(--sticky-bar-clearance));
 }
 
 /* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's gap to the nav (none), not the
    content clearance (--nav-clearance adds 16 px, which showed as a strip under the bar). The bar itself still clears the nav. */
-.app-main:has(.sticky-action-bar) {
+.app-main:has(.sticky-action-bar):not(.app-main--full) {
   padding-bottom: var(--nav-top);
 }
 

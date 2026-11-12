@@ -9,7 +9,7 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { PROFILES, ROUTES, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, darkButtonFindings, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -256,14 +256,6 @@ const probe = `
   const cur = rail && vis(rail) ? rail.querySelector('[aria-current="page"]') : null
   let railContrast = null
   if (cur) { const s = getComputedStyle(cur); let bg = s.backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(cur.querySelector('.side-rail__pill') || rail).backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(document.body).backgroundColor; railContrast = Math.round(contrast(s.color, bg) * 100) / 100 }
-  // P10: a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
-  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
-  const lowContrastButtons = []
-  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
-    if (!vis(b)) continue
-    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
-    if (ratio < 4.5) lowContrastButtons.push({ label: b.innerText.trim().slice(0, 40), ratio })
-  }
   // P11: a clipped box (overflow hidden, text wider than the box, not an intentional ellipsis) or a word broken mid-word across lines.
   const brokenText = []
   const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
@@ -322,7 +314,24 @@ const probe = `
   return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
     content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) },
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
-    fields, bars, railContrast, lowContrastButtons, brokenText, dialog: null }
+    fields, bars, railContrast, brokenText, dialog: null }
+})()`
+// P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
+const buttonProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+  const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
+  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
+  const contrast = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
+  const low = []
+  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
+    if (!vis(b)) continue
+    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
+    if (ratio < 4.5) low.push({ label: b.innerText.trim().slice(0, 40), ratio })
+  }
+  return low
 })()`
 const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
@@ -341,8 +350,27 @@ for (const vp of VIEWPORTS) {
       await settle()
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
       const m = await evaluate(probe)
-      if (vp.width >= 768) m.dialog = await evaluate(dialogProbe).catch(() => null)
+      m.lowContrastButtons = await evaluate(buttonProbe)
+      m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
+      // The light findings are reported first, on the light page.
       for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+      // FU-4: the dark P10 pass runs after the light findings and has its own error handling; only its P10 findings are reported.
+      // The scheme is put back to light in the finally, whatever happens.
+      try {
+        // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+        await Promise.race([cdp('Page.reload', {}), sleep(4000)])
+        await settle()
+        if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
+          throw new Error('the dark scheme was not applied (data-scheme is not dark); environment problem, not a finding')
+        }
+        const lowContrastButtonsDark = await evaluate(buttonProbe)
+        for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
+      } catch (e) {
+        console.error(`check-page-layout: could not inspect ${tag} (dark scheme: ${e.message})`)
+      } finally {
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
+      }
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
     } catch (e) {
       // A probe that cannot run is an environment problem, not a layout finding: say so without a finding line.

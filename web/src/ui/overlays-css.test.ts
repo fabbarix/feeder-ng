@@ -38,12 +38,13 @@ describe('BottomSheet.css', () => {
 })
 
 describe('Toast.css', () => {
-  it('sits above the nav (var(--nav-clearance), no hard-coded 98px) with a minimum gap, and is at most 420px wide', () => {
+  it('sits above the bottom bar (var(--nav-top), no hard-coded 98px) with a minimum gap, and is at most 420px wide', () => {
     const code = toast.replace(/\/\*[\s\S]*?\*\//g, '')
     const bottom = /\.toast-region\s*\{[^}]*?bottom:\s*([^;]+);/.exec(code)?.[1] ?? ''
     expect(bottom).not.toMatch(/98px/)
-    expect(bottom).toMatch(/var\(--nav-clearance/)
-    // --nav-clearance is 0 from 1024 up, so a gap must be added on top of it.
+    expect(bottom).toMatch(/var\(--nav-top/)
+    expect(bottom).not.toMatch(/--nav-clearance/)
+    // --nav-top is 0 from 1024 up, so a gap must be added on top of it.
     expect(bottom).toMatch(/\+\s*(var\(--space-\d+\)|\d+px)|max\(/)
     expect(code).toMatch(/max-width:\s*420px/)
   })

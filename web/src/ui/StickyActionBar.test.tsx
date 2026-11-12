@@ -99,7 +99,7 @@ describe('StickyActionBar.css', () => {
   const css = readUiCss('StickyActionBar.css')
   const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const d = (s: string) => declarations(css, s)
-  it('sticks to the bottom clear of the phone bottom bar (--nav-clearance is 0 from 1024), below the bottom bar in z-order', () => {
+  it('sticks to the bottom clear of the phone bottom bar (--nav-top is 0 from 1024), below the bottom bar in z-order', () => {
     const b = d('.sticky-action-bar')
     expect(b['position']).toBe('sticky')
     // QA-4: flush on the bottom bar's top edge (--nav-top), not --nav-clearance, which adds a 16 px content gap.
@@ -143,8 +143,8 @@ describe('StickyActionBar.css', () => {
   it('respects the safe area from 1024 (where there is no bottom bar above it) and never covers a focused field', () => {
     const wide = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
     expect(wide).toMatch(/padding-block-end\s*:[^;]*env\(safe-area-inset-bottom/)
-    expect(d(':root')['--sticky-bar-clearance']).toMatch(/^\d+px$/)
-    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('var(--sticky-bar-clearance)')
+    expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
+    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--sticky-bar-clearance))')
   })
   it('uses tokens only', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)

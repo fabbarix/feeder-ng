@@ -27,6 +27,10 @@ has ">= 44|at least 44" "rule 12 must require a 44 px target for every bar butto
 has "bottom-bar__label.*scrollWidth|scrollWidth.*bottom-bar__label|barLabel" "rule 12 must check that no bar label is truncated (scrollWidth <= clientWidth)"
 has "safe-area|safeArea" "rule 12 must mention the safe-area insets"
 grep -Eq "ROUTES = \[[^]]*'/stock'" "$F" && bad "ROUTES must not list /stock as a page any more (it redirects); a separate redirect check may name it" || ok
+# FU-1: a toast never covers the sticky action bar on phones
+has "^//  14\\." "the header comment must document rule 14 (toast vs sticky action bar)"
+has "toast-region" "rule 14 must measure the .toast-region"
+has "toast-region.*sticky-action-bar|sticky-action-bar.*toast-region|toastProbe" "rule 14 must compare the toast region with the sticky action bar"
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
