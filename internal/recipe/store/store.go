@@ -514,31 +514,6 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-// TagCount is a Tag and the number of (active and archived) Recipes using it.
-type TagCount struct {
-	Name    string
-	Recipes int
-}
-
-// Tags returns every Tag ordered by name; Tags stay when no Recipe uses them.
-func (s *Store) Tags(ctx context.Context) ([]TagCount, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.name, (SELECT count(*) FROM recipe_tags rt WHERE rt.tag_id = t.id)
-	        FROM tags t ORDER BY lower(t.name), t.id`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []TagCount{}
-	for rows.Next() {
-		var c TagCount
-		if err := rows.Scan(&c.Name, &c.Recipes); err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
-}
-
 // Preferences are one Member's Favourites, Dislikes and Exclusions.
 type Preferences struct {
 	Recipes             map[int64]recipe.State // only non-none
