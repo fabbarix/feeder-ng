@@ -6,25 +6,27 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [1.0.0-beta.4] - 2026-11-11 <!-- pending: date to fill at the tag -->
 
-<!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in), the pending entries below and the final wording are confirmed in the last pass before the tag. -->
+<!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in) and the final wording are confirmed in the last pass before the tag. -->
 
 Courses: a Meal Slot can hold a main Course and its sides, each planned, cooked and shopped for on its own, and the Tags get a page and colours.
 
 ### Added
 
-- **Courses.** The Household has an ordered list of Courses (Main, Side, Starter and Dessert to begin with) on a new Courses page in Settings: add, rename, reorder, choose the main Course, archive or delete a Course with a replacement where Recipes depend on it. A Recipe is marked with the Courses it can fill, and each Meal Slot says which Courses it plans. The Plan, Today, the board and Cook Mode show a Meal Slot as one block with a row per Course.<!-- pending: E2 (the Recipe editor Courses field that marks a Recipe with its Courses) -->
-- **Meal Slot Courses.** In the Meal Slot editor, pick the Courses of a slot and put them in order, for one weekday or several at once. Taking a Course off a slot names the Planned Meals and Slot Rules that go with it before you save. A Slot Rule belongs to a Course.<!-- pending: TG-PW (the Slot Rule Course select) -->
+- **Courses.** The Household has an ordered list of Courses (Main, Side, Starter and Dessert to begin with) on a new Courses page in Settings: add, rename, reorder, choose the main Course, archive or delete a Course with a replacement where Recipes depend on it. A Recipe is marked with the Courses it can fill, and each Meal Slot says which Courses it plans. The Plan, Today, the board and Cook Mode show a Meal Slot as one block with a row per Course.
+- **Meal Slot Courses.** In the Meal Slot editor, pick the Courses of a slot and put them in order, for one weekday or several at once. Taking a Course off a slot names the Planned Meals and Slot Rules that go with it before you save. A Slot Rule belongs to a Course.
+- **Course on Slot Rules.** When you add a Slot Rule for a Meal Slot with more than one Course, a Course select picks the Course it fixes; without a choice the rule fixes the main Course. A Slot Rule shows its Course only for slots with several Courses, for example "Friday Dinner · Starter".
 - **Optional Courses.** A Course of a Meal Slot can be optional: the planner fills it when it can and leaves it empty without reporting Couldn't plan.
 - **Course Attendance.** Who eats which Course: Members opt out of a Course of a slot, usually or on one date, and the planner counts portions, Batches and the Shopping List for the Course accordingly.
-- **Whole meal.** A Recipe can be a Whole meal that needs no other Course beside it (a traybake, or a Ready Meal). It fills every Course it covers, so the slot gets no further Planned Meal for them. A Ready Meal is a Whole meal by default.<!-- pending: E2 (the Recipe editor Whole meal switch) -->
+- **Whole meal.** A Recipe can be a Whole meal that needs no other Course beside it (a traybake, or a Ready Meal). It fills every Course it covers, so the slot gets no further Planned Meal for them. A Ready Meal is a Whole meal by default.
 - **Combined cooking timeline.** Cook Mode for a Meal Slot lays the Steps of every Course on one timeline so that all the Courses finish together and no two Active Steps overlap. Start cooking reminders use the timeline's length, and Advance Step reminders are sent for each Course.
-- **Soft Cool-down and Variety.** When every Recipe that fits a Course is still inside its Cool-down or a Variety Rule, the planner now fills the Course with the one that is due soonest instead of giving up. Such a Planned Meal carries an "Again soon" chip, and Swap marks the same alternatives.
-- **Course in the Recipe File and Recipe Assistant.** The Recipe File has `courses` and `wholeMeal`; a Recipe File written by Feeder carries them. Import Review asks what to do with a Course name the Household does not have, and the Recipe Assistant is told the Household's Courses. Existing files keep working.<!-- pending: E2 (Recipe editor Courses field and Whole meal switch, Import Review screen for unknown Courses) -->
-- **Review Exclusions page.** On the Couldn't plan tile, Review Exclusions opens a page that names the Exclusions that left a Course empty ("Sam excludes garlic: rules out 4 Recipes"), each with a link to where it is changed.<!-- pending: C-RX (route) and G2 (page and tile action) -->
+- **Soft Cool-down and Variety.** When every Recipe that fits a Course is still inside its Cool-down or a Variety Rule, the planner now fills the Course with the one that is due soonest instead of giving up. Such a Planned Meal carries an "Again soon" chip, and Swap marks the same alternatives. A Variety chip names the Tag as the Household wrote it ("3rd Fish this week"), and follows the Tag when it is renamed.
+- **Course in the Recipe File and Recipe Assistant.** The Recipe File has `courses` and `wholeMeal`; a Recipe File written by Feeder carries them. Import Review asks what to do with a Course name the Household does not have, and the Recipe Assistant is told the Household's Courses. Existing files keep working.
+- **Review Exclusions page.** On the Couldn't plan tile, Review Exclusions opens a page that names the Exclusions that left a Course empty ("Sam excludes garlic: rules out 4 Recipes"), each with a link to where it is changed.
 - **Preferences table.** The Recipe detail shows the Favourite, Dislike and Exclusion of every Member in one table, and an Ingredient line shows who excludes it. The Ingredient page has an Excluded by Tile.
-- **Tags page.** Settings > Tags lists every Tag with how many Recipes and rules use it. Any User can add, rename, recolour, merge or delete a Tag; renaming and merging carry the Slot Rules and the Variety Rule along, and a delete says what it touches first. A Tag can exist with no Recipe.<!-- pending: TG-S (the Tags page screen) -->
-- **Tag colours.** Each Tag has one of ten colours, in light and dark, shown as a dot or pill on Recipe tiles, the Recipe detail and in the rules. A new Tag takes the colour least used so far.<!-- pending: TG-RW and TG-PW (Tag colours on Recipes and on the Slot and Variety Rules) -->
-- **Tag suggestions.** While you type a Tag on a Recipe, the Tags the Household already uses are listed under the field with how many Recipes carry each; pick one with the arrows and Enter, or a tap. Typing an existing Tag in another spelling ("Pasta" for "pasta") picks that Tag, so no duplicate is made.
+- **Tags page.** Settings > Tags lists every Tag with how many Recipes and rules use it. Any User can add, rename, recolour, merge or delete a Tag; renaming and merging carry the Slot Rules and the Variety Rule along, and a delete says what it touches first. A Tag can exist with no Recipe.
+- **Tag colours.** Each Tag has one of ten colours, in light and dark, shown as a dot or pill on Recipe tiles, the Recipe detail and in the rules. A new Tag takes the colour least used so far.
+- **Rules need a Tag that exists.** A Slot Rule or Variety Rule that names a Tag no one has added is refused with `422 tag_unknown`; the Tag spelled another way picks the existing Tag.
+- **Tag suggestions.** While you type a Tag on a Recipe, the Tags the Household already uses are listed under the field with how many Recipes carry each; pick one with the arrows and Enter, or a tap. Typing an existing Tag in another spelling ("Pasta" for "pasta") picks that Tag, so no duplicate is made. On a Recipe, each Tag opens the Recipes list filtered by that Tag.
 
 ### Changed
 
@@ -32,16 +34,18 @@ Courses: a Meal Slot can hold a main Course and its sides, each planned, cooked 
 - **New Feeder logo and app icons.** A casserole pot with a heart on its lid replaces the old mark in the browser tab, the installed app, the home screen and the signed-out pages. A new logo can take up to a day to show in a browser that has the old one.
 - **List screen spacing.** Every list screen (Ingredients, Recipes, Products, Members and the others) now has the same space between its heading, search field and list.
 - **Couldn't plan on Cool-down and Variety.** These two no longer leave a Course empty (see Soft Cool-down and Variety above); Couldn't plan keeps Exclusions and the other reasons.
+- **Course-less plan and cook routes.** The Plan and Cook Mode routes without a Course are gone: an old per-slot path (`/api/plan/{date}/{slotId}/cooked` and the others, `/api/cook/meals/{date}/{slotId}`) answers 404, a Meal Slot carries its Planned Meals on its Course rows only, and the cook scope of a Planned Meal is always per Course (`meal:<date>/<slot>/<course>`, the main Course too). API users move to the routes with a Course.
 
 ### Fixed
 
+- **Notification settings.** The page no longer waits on loading for ever in a browser that cannot receive push messages or has no service worker registered, and it finds this device reliably.
+- **Small wording and layout fixes.** The Household is capitalised wherever it is named. Page titles break between words, not in the middle of one ("Pantry", not "Pant / ry"). Buttons wrap a long text instead of spilling out of their Tile and grow to fit it. A Shopping List line keeps "700 g" together and shortens a long name to two lines. Dialog bodies shrink to the screen. The Ingredient merge sheet, the error and warning lists in Import Review and the Unit Conversions list in the Ingredient editor no longer show list bullets.
 - **Add to Shopping List.** The sheet is clearer about adding a line of text or an Ingredient with a quantity, and its Ingredient and date pickers open above the sheet instead of behind it. Select lists and date fields now float above every dialog.
-- **Small layout fixes.** Page titles break between words, not in the middle of one ("Pantry", not "Pant / ry"). Buttons wrap a long text instead of spilling out of their Tile and grow to fit it. A Shopping List line keeps "700 g" together and shortens a long name to two lines. Dialog bodies shrink to the screen.
 - **Replans after a rules change.** A replan that was waiting after a change to the Slot Rules or Variety Rule could be replaced by a lesser one and the change was not applied. It is now always carried out.
 
 ### Upgrading
 
-No new settings. The database is migrated on start: 1400 adds Courses and moves every Planned Meal, Leftover and Slot Rule to the main Course, 1410 renames the Advance Step reminders already sent so they are not sent again, 1430 adds the detail Review Exclusions reads, and 1440 adds Tag colours. Migrations cannot be undone.
+No new settings. The database is migrated on start: 1400 adds Courses and moves every Planned Meal, Leftover and Slot Rule to the main Course, 1410 renames the Advance Step reminders already sent so they are not sent again, 1430 adds the detail Review Exclusions reads, and 1440 adds Tag colours and turns Tags into entities: it gives every key that only a Slot Rule or Variety Rule names a Tag of its own, so existing rules keep working. Migrations cannot be undone.
 
 If the database holds Planned Meals, Feeder first saves a checked copy of it as `feeder-pre-1400.db` in the `backups` folder of the data volume (`/data/backups`). It is not listed in Settings, the nightly clean-up does not remove it, and a fresh install takes none. If the copy cannot be written, Feeder stops with a log line naming the file and migrates nothing.
 
