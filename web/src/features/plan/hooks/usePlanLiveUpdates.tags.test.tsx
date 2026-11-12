@@ -33,7 +33,6 @@ function setup() {
   renderHook(() => usePlanLiveUpdates(), { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> })
   return spy
 }
-const planCalls = (spy: ReturnType<typeof setup>) => spy.mock.calls.filter(([f]) => JSON.stringify((f as { queryKey?: unknown }).queryKey) === JSON.stringify(['plan']))
 
 const tagCalls = (spy: ReturnType<typeof setup>) => spy.mock.calls.filter(([f]) => JSON.stringify((f as { queryKey?: unknown }).queryKey) === JSON.stringify(['tags']))
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../ui'
+import { usePhraseContext } from '../hooks/usePhraseContext'
 import { alternativeNote, swapMeta } from '../lib/choose'
 import { planStrings as s } from '../strings'
 import type { Alternative, PlanSlot } from '../types'
@@ -18,6 +19,7 @@ export interface SwapSheetProps {
 /** Bottom sheet with the top 3 alternatives as rows (thumb, Recipe, first reason and the Leftover); a tap swaps and pins. */
 export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick }: SwapSheetProps): ReactNode {
   const slotDate = slot?.date ?? ''
+  const phrase = usePhraseContext(slotDate)
   const rows = alternatives.slice(0, 3)
   return (
     <BottomSheet open={open} onClose={onClose} title={s.swapTitle} footer={<Button variant="tertiary" onClick={onClose}>{s.swapKeep}</Button>}>
@@ -30,7 +32,7 @@ export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick
               <ListRow
                 key={a.recipeId}
                 title={a.recipeName}
-                meta={swapMeta(alternativeNote(a, { slotDate }), a.newLeftoverPortions > 0 ? s.extraPortions(a.newLeftoverPortions) : '')}
+                meta={swapMeta(alternativeNote(a, phrase), a.newLeftoverPortions > 0 ? s.extraPortions(a.newLeftoverPortions) : '')}
                 leading={<RecipeThumb name={a.recipeName} photoUrl={a.photoUrl} size={48} initial={false} />}
                 onActivate={() => onPick(a.recipeId)}
               />

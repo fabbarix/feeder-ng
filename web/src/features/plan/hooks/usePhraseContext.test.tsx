@@ -11,6 +11,6 @@ describe('usePhraseContext without a provider', () => {
     await new Promise((r) => setTimeout(r, 20))
     expect(api.fetchMock).not.toHaveBeenCalled()
     expect(result.current.slotDate).toBe('2026-11-10')
-    expect(result.current.tagName('fish')).toBeUndefined()
+    expect(result.current.tagName?.('fish')).toBeUndefined()
   })
 })
