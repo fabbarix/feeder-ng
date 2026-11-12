@@ -34,11 +34,15 @@ describe('import.css', () => {
     expect(status).toMatch(/block-size:\s*auto/)
     expect(status).toMatch(/overflow-wrap:\s*anywhere/)
   })
-  it('the answer (filter) chips keep the shared 32 px height; only the status chip may grow (CRS E2)', () => {
-    const generic = rule('.import-chips .chip')
-    expect(generic).not.toMatch(/block-size:\s*auto/)
-    expect(css).not.toMatch(/\.import-chips \.chip(?!\[data-kind=)[^{]*\{[^}]*block-size:\s*auto/)
-    expect(css).not.toMatch(/\.import-chips \.chip\[data-kind=['"]filter['"]\][^{]*\{[^}]*block-size:\s*auto/)
+  it('answer (filter) chips wrap and grow from the shared 32 px height; keep their hit area (CRS E2)', () => {
+    const filter = rule(".import-chips .chip[data-kind='filter']")
+    expect(filter).toMatch(/min-block-size:\s*32px/)
+    expect(filter).toMatch(/white-space:\s*normal/)
+    expect(filter).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(filter).toMatch(/block-size:\s*auto/)
+    expect(filter).not.toMatch(/overflow:\s*hidden/)
+    expect(filter).not.toMatch(/text-overflow/)
+    expect(filter).not.toMatch(/nowrap/)
   })
   it('Import Review tile headings and text wrap long single words (CRS E2)', () => {
     const wraps = /overflow-wrap:\s*(anywhere|break-word)/
