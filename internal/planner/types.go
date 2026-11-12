@@ -362,6 +362,25 @@ type Unfilled struct {
 	Reason          UnfilledReason
 	SlotRuleClaimed bool
 	Eliminated      Eliminations
+	// Exclusions says which Exclusions ruled the cell's Recipes out (docs/dev/design/rx-pt.md 2). Nil unless Reason
+	// is UnfilledNoCandidates and Eliminated.Exclusion > 0.
+	Exclusions []ExclusionRecord
+	// MoreExclusions counts the records left out by MaxExclusionRecords.
+	MoreExclusions int
+}
+
+const (
+	MaxExclusionRecords = 8 // records kept per cell
+	MaxExclusionRecipes = 5 // Recipe ids kept per record
+)
+
+// ExclusionRecord is one (Member, Ingredient) pair, or one Member's direct Exclusions (IngredientID 0), and the
+// Recipes of the cell it rules out.
+type ExclusionRecord struct {
+	MemberID     MemberID
+	IngredientID IngredientID // 0: the Member excludes the Recipes themselves
+	RecipeIDs    []RecipeID   // ascending, at most MaxExclusionRecipes
+	RecipeCount  int          // every Recipe of the cell this record rules out
 }
 
 // NotServedCause says why a cell is left empty with no Couldn't plan reason.

@@ -75,9 +75,10 @@ func sortCandidates(cands []breakdown) {
 
 // evaluate runs the filters of spec 7.2 step 2 on cell i. It returns the strict
 // candidates (scored, passing every filter) and the soft ones (hard-passing but
-// breaking a Cool-down or Variety Rule, or reserved for a later cell), plus the
-// eliminations. Reserved Recipes are not counted and are not Considered.
-func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []breakdown, soft []softCand, elim Eliminations) {
+// breaking a Cool-down or Variety Rule, or reserved for a later cell), the eliminations,
+// and the ids of the Recipes its Exclusion count counted (ascending; reserved Recipes are
+// not among them). Reserved Recipes are not counted and are not Considered.
+func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []breakdown, soft []softCand, elim Eliminations, removed []RecipeID) {
 	slot := st.slots[i]
 	for _, id := range st.recipeIDs {
 		r := st.recipes[id]
@@ -105,7 +106,11 @@ func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []brea
 		} else {
 			elim.Considered++
 		}
+		before := counts.Exclusion
 		if !st.tally(i, r, counts) {
+			if !reserved && counts.Exclusion > before {
+				removed = append(removed, r.ID)
+			}
 			continue
 		}
 		b := st.score(i, r, portions)
@@ -115,7 +120,7 @@ func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []brea
 			strict = append(strict, b)
 		}
 	}
-	return strict, soft, elim
+	return strict, soft, elim, removed
 }
 
 // tally applies the hard filters to Recipe r for cell i, in order, and counts the
