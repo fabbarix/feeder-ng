@@ -95,9 +95,10 @@ Feature: Reading a recipe from photos
     And the model was called 0 times
 
   Scenario: A photo link that is not a picture is refused
-    Given a photo link "/other.jpg" of 8x8 px
-    When I start a read of the photo link "/missing.jpg"
+    Given a photo link "/note.jpg" that holds text
+    When I start a read of the photo link "/note.jpg"
     Then the read failed with "photo_unsupported"
+    And the model was called 0 times
 
   Scenario: Five photos are refused
     When I start a read of 5 photos

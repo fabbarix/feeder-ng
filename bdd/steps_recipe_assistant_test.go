@@ -533,10 +533,10 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 		return b
 	}
 	readOne := func(dataURL string) {
-		start(map[string]any{"photos": []map[string]any{{"dataUrl": dataURL}}})
-		if st.readID != "" && w.Last.Status == 202 {
-			poll(st.readID)
+		if r := start(map[string]any{"photos": []map[string]any{{"dataUrl": dataURL}}}); r.Status != 202 {
+			panic(fmt.Sprintf("starting the photo read: %d %s", r.Status, r.Body))
 		}
+		poll(st.readID)
 	}
 	photoServer := func(body func(path string) []byte) *httptest.Server {
 		hookFetch(w, st)
@@ -612,7 +612,20 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 		})
 	})
 	sc.Step(`^a photo link "([^"]*)" of 9 MB$`, func(path string) {
-		photoServer(func(string) []byte { return bytes.Repeat([]byte{1}, 9<<20) })
+		photoServer(func(p string) []byte {
+			if p == path {
+				return bytes.Repeat([]byte{1}, 9<<20)
+			}
+			return nil
+		})
+	})
+	sc.Step(`^a photo link "([^"]*)" that holds text$`, func(path string) {
+		photoServer(func(p string) []byte {
+			if p == path {
+				return []byte("not a picture, just words")
+			}
+			return nil
+		})
 	})
 	sc.Step(`^I read the photo link "([^"]*)"$`, func(path string) {
 		if r := start(map[string]any{"photos": []map[string]any{{"url": st.page.URL + path}}}); r.Status != 202 {
