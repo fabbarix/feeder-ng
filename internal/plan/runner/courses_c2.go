@@ -48,7 +48,7 @@ type CourseView struct {
 	Meal            *plan.Meal
 	Unfilled        *plan.Unfilled
 	CoveredBy       *CoveredBy
-	Unserved        string // "", "optional" or "no_course_attendance"
+	Unserved        string // "", "optional", "no_course_attendance" or "not_served" (the whole slot is Not served on that date)
 	History         bool   // a Course the slot no longer serves, shown for its Cooked or Not cooked meal
 }
 

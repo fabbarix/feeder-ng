@@ -111,8 +111,23 @@ type Slot struct {
 	Position int
 	// AllOptedOut is true when the Meal Slot has attendees on this date but every
 	// one of them opts out of this Course (so Attendance is empty): the cell is
-	// not served. A Meal Slot nobody attends leaves it false.
+	// not served. A Meal Slot nobody attends leaves it false. It is ignored when
+	// Guests > 0: Guests eat every Course the slot serves (ADR 0014, U3).
 	AllOptedOut bool
+	// Guests is the number of Guests of the Meal Slot on that date (0 to 20). Each is one standard portion of every
+	// Course: the cell's portions are the Attendance's Portion Factors plus Guests. They add portions, Batches and
+	// Leftover maths, never preferences or Exclusions (those come from the Attendance, Members only). A cell with no
+	// Attendance and Guests > 0 is planned, with no preferences (U3). Use Portions() for the sum.
+	Guests int
+	// NotServed is true when the Meal Slot is Not served on this date (ADR 0014): the cell is left empty with
+	// NotServedDate and no reason, its unresolved Planned Meal (Pinned too, if the caller passes one) is neither kept
+	// nor replanned, and it takes no part in Stock, Leftovers, Cool-down, recency or a Whole meal's covering.
+	NotServed bool
+}
+
+// Portions is the cell's portions: the Portion Factors of its Attendance plus one per Guest.
+func (s Slot) Portions() float64 {
+	return PortionsNeeded(s.Attendance) // stub: ignores the Guests
 }
 
 // Need is one ingredient line for ONE Batch, already in Base Units.
@@ -393,12 +408,21 @@ const (
 	NotServedOptional NotServedCause = "optional"
 	// NotServedNoCourseAttendance: every attendee opts out of the Course on that date (step 0b).
 	NotServedNoCourseAttendance NotServedCause = "no_course_attendance"
+	// NotServedDate: the whole Meal Slot is Not served on that date (Slot.NotServed; ADR 0014).
+	NotServedDate NotServedCause = "not_served"
 )
 
 // NotServed is a cell the planner left empty on purpose; it has no reason row.
 type NotServed struct {
 	Key   SlotKey
 	Cause NotServedCause
+}
+
+// BatchRaise is one raised cell: the Batches to write and the portions they now cover.
+type BatchRaise struct {
+	Key      SlotKey
+	Batches  int
+	Portions float64
 }
 
 // Recheck is the outcome of the keep check (spec 7.2, step 2b) for one kept fresh
@@ -426,6 +450,11 @@ type Result struct {
 	// NotServed are the cells left empty with no reason: covered, optional and nothing fits, or nobody eats the Course.
 	// A Pinned, Cooked or Not cooked Planned Meal in such a cell stays and the cell is not listed.
 	NotServed []NotServed
+	// Raised are the cells whose existing fresh Planned Meal keeps its Recipe but needs more Batches to cover the cell's
+	// portions (Guests, a new Member, a Portion Factor, an opt-out removed): unpinned (they are also in Kept) and
+	// Pinned alike (ADR 0014, point 6). Batches = ceil(portions / Yield); fewer portions never lower Batches, so a meal
+	// whose Batches still cover its portions is not listed. Cooked and Not cooked meals are never raised.
+	Raised []BatchRaise
 	// Purchases are the planned purchases of the whole walk (fixed and new
 	// uncooked meals), one entry per Ingredient, ordered by IngredientID.
 	Purchases []Purchase

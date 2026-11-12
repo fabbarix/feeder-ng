@@ -57,6 +57,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/meal-slots/{id}/attendance", a.getAttendance)
 	r.User("PUT /api/meal-slots/{id}/attendance", a.putAttendance)
 	r.User("DELETE /api/meal-slots/{id}/attendance", a.deleteAttendance)
+	r.User("GET /api/meal-slots/{id}/dates/{date}", a.getSlotDate)
+	r.User("PATCH /api/meal-slots/{id}/dates/{date}", a.patchSlotDate)
 
 	r.User("GET /api/me/preferences", a.getPreferences)
 	r.User("PUT /api/me/preferences", a.putPreferences)

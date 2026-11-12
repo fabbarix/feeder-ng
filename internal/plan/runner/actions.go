@@ -16,9 +16,12 @@ import (
 type SlotView struct {
 	Key        plan.Key
 	Name       string
-	Time       string
+	Time       string // HH:MM, the effective time (the date's own time when it has one)
+	UsualTime  string // HH:MM, the Meal Slot's usual time
 	At         time.Time
-	Portions   float64 // portions the Attendance needs
+	NotServed  bool    // the Meal Slot is Not served on this date (ADR 0014)
+	Guests     int     // 0 to 20
+	Portions   float64 // portions the Attendance needs, Guests included
 	Attendance []plan.Attendee
 	// Rules are the Slot Rules of this Meal Slot.
 	Rules []plan.SlotRule

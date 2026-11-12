@@ -160,6 +160,13 @@ func (s *DBSources) SlotCourses(ctx context.Context, mealSlotID int64, date stri
 	return out, nil
 }
 
+// SlotDate implements Sources: the effective time, Not served and Guests of the Meal Slot on the date, read through
+// household.EffectiveTime and household.IsNotServed.
+// TEST-FIRST STUB (B5-SD): the developer implements it.
+func (s *DBSources) SlotDate(ctx context.Context, mealSlotID int64, date string) (SlotDateDef, error) {
+	return SlotDateDef{}, nil
+}
+
 func (s *DBSources) members(ctx context.Context) (map[int64]household.Member, error) {
 	list, err := s.hh.Members(ctx)
 	if err != nil {
