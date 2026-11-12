@@ -253,6 +253,12 @@ function ListPageGroup() {
   )
 }
 
+/** Beta.5: a stateful expandable row, the controlled pattern a screen uses (the row keeps no state of its own). */
+function ExpandableRowDemo({ title, initial }: { title: string; initial: boolean }) {
+  const [expanded, setExpanded] = useState(initial)
+  return <ListRow title={title} meta="2 kg" expanded={expanded} onToggle={() => setExpanded((v) => !v)} panel={<p>Opened 1 Jun</p>} chevron />
+}
+
 function ListGroupExample() {
   return (
     <Group name="ListRow">
@@ -261,6 +267,20 @@ function ListGroupExample() {
           <ListRow title="Milk" trailing={<span>2 L</span>} />
           <ListRow title="Eggs" meta="Good until Thu" icon="stock" onActivate={noop} chevron />
           <ListRow title="Lasagne" meta="2 portions" leading={<RecipeThumb name="Lasagne" />} href="/recipes/1" selected />
+        </ListGroup>
+      </Cell>
+      <Cell caption="beta.5 glyphs">
+        <ListGroup label="Leftovers, Shopping List and Guests">
+          <ListRow title="Snowflake" icon="snowflake" onActivate={noop} chevron />
+          <ListRow title="Question" icon="question" onActivate={noop} chevron />
+          <ListRow title="Shopping cart" icon="shoppingCart" onActivate={noop} chevron />
+          <ListRow title="Guests" icon="guests" onActivate={noop} chevron />
+        </ListGroup>
+      </Cell>
+      <Cell caption="expandable">
+        <ListGroup label="Expandable rows">
+          <ExpandableRowDemo title="Flour" initial={false} />
+          <ListRow title="Rice" meta="1 kg" expanded onToggle={noop} panel={<p>Opened 3 Jun</p>} chevron />
         </ListGroup>
       </Cell>
     </Group>
