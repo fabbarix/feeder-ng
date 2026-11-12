@@ -1,4 +1,5 @@
 // CRS E2: the pure rules of a Recipe's Courses and Whole meal for the editor (docs/dev/design/crs-e2.md 2). Plain TypeScript, no React.
+import { mealSlotLabel } from '../../../lib/mealSlots'
 import type { CourseChoice } from '../../../lib/courses'
 import type { CourseLoss, LostRule, RecipeSlotRule, SlotName } from '../types'
 import type { RecipeDraft } from './draft'
@@ -75,22 +76,26 @@ export function lostSlotRules(input: {
   if (lost.length === 0) return null
   const courseNames = courses.filter((c) => taken.includes(c.id) && lost.some((r) => r.courseId === c.id)).map((c) => c.name)
   const labelled: LostRule[] = lost.map((r) => {
-    const slot = slots.find((s) => s.id === r.mealSlotId)?.name ?? ''
+    const slot = slots.find((x) => x.id === r.mealSlotId)
+    const when = slot ? mealSlotLabel(slot.weekday, slot.name) : ''
     const course = listed(r.courseId)?.name ?? ''
-    return { id: r.id, label: `${slot} · ${course} = ${r.recipeName ?? ''}` }
+    return { id: r.id, label: `${when} · ${course} = ${r.recipeName ?? ''}` }
   })
   return { courseNames, rules: labelled }
 }
 
 /**
- * Applies a change the Courses picker made (`picked`, made against the `shown` ids) to the latest `current` ids: the one Course the
- * picker added or removed is toggled in `current`, and an added one takes its household place. Used so a quick second tap works on
- * the draft as it is now.
+ * Applies a change the Courses picker made (`picked`, made against the `shown` ids) to the latest `current` ids. The one Course the
+ * picker added or removed is set in `current` (added: in, removed: out), so a quick second tap works on the draft as it is now and
+ * a Course the draft already gained meanwhile is not toggled back. An added one takes its household place.
  */
 export function pickCourseIds(current: readonly number[], shown: readonly number[], picked: readonly number[], courses: readonly CourseChoice[]): number[] {
-  const id = picked.find((x) => !shown.includes(x)) ?? shown.find((x) => !picked.includes(x))
+  const added = picked.find((x) => !shown.includes(x))
+  const removed = shown.find((x) => !picked.includes(x))
+  const id = added ?? removed
   if (id === undefined) return [...current]
-  if (current.includes(id)) return current.filter((x) => x !== id)
+  if (added === undefined) return current.filter((x) => x !== id)
+  if (current.includes(id)) return [...current]
   const next = [...current, id]
   return courses.filter((c) => next.includes(c.id)).map((c) => c.id)
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { BentoGrid, Button, PageHeader, Tile, useToast } from '../../../ui'
+import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
 import { AgentPromptStep } from '../components/AgentPromptStep'
 import { ConfirmTile } from '../components/ConfirmTile'
 import { CourseMatchTile } from '../components/CourseMatchTile'
@@ -20,7 +20,7 @@ import { useReadAvailability } from '../hooks/useReadAvailability'
 import { useRecipeRead } from '../hooks/useRecipeRead'
 import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
 import { canConfirm, openCount } from '../lib/reviewSummary'
-import { importStrings, importStrings as s } from '../strings'
+import { importStrings as s } from '../strings'
 import type { Plan } from '../types'
 import { MAX_COURSES } from '../../../lib/courses'
 import '../import.css'
@@ -116,19 +116,12 @@ interface ReviewingProps {
 }
 
 function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode {
-  // CRS E2: the too_many_courses Problem and a refused Course answer are error toasts (they stay until dismissed, and the
-  // toast region is the one alert the screen speaks); the other Problems stay in the generic list.
-  const toast = useToast()
+  // CRS E2: the too_many_courses Problem and a refused Course answer are inline danger Tiles beside the Course tiles; each follows its
+  // state. The other Problems stay in the generic list.
   const { courseLimit, others } = splitProblems(plan.problems)
   const names = questionRows(plan.courses)
   const forbidden = screen.courseForbidden
   const limited = courseLimit !== undefined
-  useEffect(() => {
-    if (forbidden) toast.show(importStrings.courses.forbidden, { status: 'error' })
-  }, [forbidden, toast])
-  useEffect(() => {
-    if (limited) toast.show(importStrings.courses.tooMany(MAX_COURSES), { status: 'error' })
-  }, [limited, toast])
   return (
     <>
       {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
@@ -164,8 +157,18 @@ function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode 
           ))}
         </BentoGrid>
       ) : null}
-      {names.length > 0 ? (
+      {names.length > 0 || limited || forbidden ? (
         <BentoGrid columns={2} label={s.courses.title}>
+          {limited ? (
+            <Tile variant="status" status="danger" role="alert" as="section">
+              <p>{s.courses.tooMany(MAX_COURSES)}</p>
+            </Tile>
+          ) : null}
+          {forbidden ? (
+            <Tile variant="status" status="danger" role="alert" as="section">
+              <p>{s.courses.forbidden}</p>
+            </Tile>
+          ) : null}
           {names.map((m) => (
             <CourseMatchTile
               key={m.key}

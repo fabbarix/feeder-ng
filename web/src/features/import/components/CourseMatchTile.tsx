@@ -29,9 +29,11 @@ export function CourseMatchTile({ match, usedBy, courses, isAdmin, onUse, onSkip
   const useCourseId = answer === 'use' ? (match.effective?.courseId ?? null) : null
 
   return (
-    <Tile as="section" aria-label={name} span="full">
+    <Tile as="section" aria-label={name}>
       <h2>{name}</h2>
-      <Chip kind="tag">{archived ? s.statusArchived : s.statusUnknown}</Chip>
+      <div className="import-chips">
+        <Chip kind="tag">{archived ? s.statusArchived : s.statusUnknown}</Chip>
+      </div>
       <p>{archived ? s.archivedText(name) : s.unknownText(name)}</p>
       {usedBy.length > 0 ? <p>{s.usedBy(usedBy)}</p> : null}
       <CourseSelect label={s.useLabel} courses={courses} value={useCourseId} onChange={onUse} />

@@ -39,6 +39,19 @@
   gap: var(--space-2);
 }
 
+/* A chip may shrink to the Tile's width and wrap its label, so a long name never runs past the edge at phone width. */
+.import-chips .chip {
+  block-size: auto;
+  min-block-size: 28px;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding-block: var(--space-1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+  line-height: var(--text-label-line);
+}
+
 /* The Confirm bar's "N things left to answer" sits before the actions inside the shared StickyActionBar. */
 .import-confirm__open {
   margin: 0 0 var(--space-2);

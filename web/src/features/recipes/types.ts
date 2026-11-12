@@ -130,9 +130,10 @@ export interface RecipeSlotRule {
   tag?: string
 }
 
-/** CRS E2: a Meal Slot as the editor needs it (`GET /api/meal-slots`): the id and the name. */
+/** CRS E2: a Meal Slot as the editor needs it (`GET /api/meal-slots`): the id, the weekday and the name. */
 export interface SlotName {
   id: number
+  weekday: number
   name: string
 }
 

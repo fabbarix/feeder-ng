@@ -132,7 +132,7 @@ export function RecipeEditorScreen(): ReactNode {
 
   return (
     <>
-      <div className="recipe-editor-layout" aria-hidden={confirmingLoss || undefined}>
+      <div className="recipe-editor-layout">
         <RecipeSectionIndex sections={SECTIONS} />
         <section className="recipe-editor">
           <PageHeader title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe} breadcrumbs={crumbs} />
@@ -266,12 +266,12 @@ export function RecipeEditorScreen(): ReactNode {
       <StickyActionBar label={recipeStrings.editorActions} column="form">
         <FormActions
           tertiary={
-            <Button variant="tertiary" aria-hidden={confirmingLoss || undefined} onClick={() => navigate(-1)}>
+            <Button variant="tertiary" onClick={() => navigate(-1)}>
               {recipeStrings.cancel}
             </Button>
           }
           primary={
-            <Button aria-hidden={confirmingLoss || undefined} onClick={() => void save()} loading={editor.saving} disabled={busyPickers.size > 0}>
+            <Button onClick={() => void save()} loading={editor.saving} disabled={busyPickers.size > 0}>
               {editor.saving ? recipeStrings.saving : recipeStrings.save}
             </Button>
           }
