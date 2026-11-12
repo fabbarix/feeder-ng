@@ -54,7 +54,7 @@ describe('TagsScreen: the list', () => {
   it('lists the Tags by name, each as a pill in its colour with what uses it', async () => {
     await show()
     expect(rows().map((r) => within(r).getByRole('button').getAttribute('aria-label'))).toEqual([
-      FISH_ROW, 'Pasta, 3 Recipes', 'Roast, No Recipes yet', 'Seafood, 4 Recipes',
+      FISH_ROW, 'Pasta, 3 Recipes', 'Roast, No Recipes yet', 'Seafood, 4 Recipes · Variety Rule',
     ])
     const colours = rows().map((r) => r.querySelector('.chip[data-kind="tag"]')?.getAttribute('data-tag-colour'))
     expect(colours).toEqual(['sky', 'apricot', 'tomato', 'teal'])
@@ -378,7 +378,7 @@ describe('TagsScreen: Delete', () => {
         return { status: 204 }
       },
     })
-    await userEvent.click(rowButton('Seafood, 4 Recipes'))
+    await userEvent.click(rowButton('Seafood, 4 Recipes · Variety Rule'))
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Tag' }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Delete Seafood?' })).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(rowButton('Roast, No Recipes yet')).toHaveFocus())
