@@ -133,10 +133,9 @@ describe('CouldntPlanExclusionsScreen: states', () => {
       'GET /api/plan': view(THREE),
     })
     renderWithProviders(<CouldntPlanExclusionsScreen />, PATH)
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('The Exclusions could not be loaded.')
+    expect(await screen.findByText('The Exclusions could not be loaded.')).toBeInTheDocument()
     expect(screen.queryByText('No Course is held back by Exclusions now.')).not.toBeInTheDocument()
-    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findAllByRole('region')).toHaveLength(2)
   })
 

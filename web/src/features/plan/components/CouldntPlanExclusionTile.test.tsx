@@ -34,7 +34,7 @@ describe('CouldntPlanExclusionTile', () => {
   it('"Who eats it" lists the Members as pills', () => {
     setup(three)
     const who = screen.getByRole('list', { name: 'Who eats it' })
-    expect(within(who).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Sam', 'Alex'])
+    expect(within(who).getAllByRole('listitem').map((li) => li.querySelector('.member-pill__name')?.textContent)).toEqual(['Sam', 'Alex'])
   })
 
   it('says who opts out and why their Exclusions are not here; says nothing when nobody does', () => {
