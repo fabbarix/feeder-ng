@@ -397,7 +397,6 @@ button.ms-day[data-state='free']:hover {
   font-weight: var(--text-label-weight);
 }
 
-.ms-dates__none,
 .ms-dates__note {
   margin: 0;
   font-size: var(--text-meta-size);

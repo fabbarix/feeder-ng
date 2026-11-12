@@ -13,11 +13,10 @@ const text = settingsStrings.slot
 
 /** The read-only "Dates that differ" tile: the upcoming one-date changes, soonest first. Changed from the Plan, not here. */
 export function DatesThatDiffer({ rows, members }: DatesThatDifferProps) {
+  if (rows.length === 0) return null
   return (
     <Tile as="section" span="full" aria-label={text.datesThatDiffer} overline={text.datesThatDiffer} overlineIcon="plan" className="ms-dates">
-      {rows.length === 0 ? (
-        <p className="ms-dates__none">{text.datesNone}</p>
-      ) : (
+      {(
         <ul className="ms-dates__list">
           {rows.map((r) => (
             <li key={r.key} className="ms-date">

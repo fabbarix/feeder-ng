@@ -42,7 +42,7 @@ export function MealSlotCards({ cards, dateRows, members, canEdit, addDisabled, 
             onAddOn={onAddOn}
           />
         ))}
-        <DatesThatDiffer rows={dateRows} members={members} />
+        {dateRows.length > 0 ? <DatesThatDiffer rows={dateRows} members={members} /> : null}
       </BentoGrid>
     </div>
   )

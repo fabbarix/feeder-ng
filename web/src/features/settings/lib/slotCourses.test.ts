@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { choices, thursdayDinnerCourses, tuesdayCourses, tuesdayDinnerCourses } from '../components/courseFixtures'
-import { anna, marco, members, pia, sam, tuesdayDinner } from '../components/fixtures'
+import { anna, members, sam } from '../components/fixtures'
 import type { SlotCourseInput, SlotRemoves } from '../types'
 import {
   attendeesOf,
-  courseOverviewLine,
   courseRemovals,
   coursesChanged,
   coursesProblem,
   eatersSummary,
   newSlotCourses,
-  overviewCourseLine,
   removalPreview,
   slotCourseInputs,
   withCourseIds,
@@ -99,24 +97,6 @@ describe('eatersSummary', () => {
   ])('%j reads %s', (names, text) => expect(eatersSummary('Dessert', names)).toBe(text))
 })
 
-describe('courseOverviewLine (the Meal Slots overview)', () => {
-  const attending = tuesdayDinner.attendance
-  it('lists the Courses in the slot\'s order with (optional) and "without <Member>"', () => {
-    expect(courseOverviewLine(tuesdayCourses, members, attending)).toBe('Main · Side · Dessert (optional) without Sam')
-  })
-  it('puts "without" after the Course someone opts out of', () => {
-    const courses = [tuesdayCourses[0]!, { ...tuesdayCourses[1]!, optOutMemberIds: [3, 4] }, tuesdayCourses[2]!]
-    const everyone = [...attending, { memberId: 4, portionFactorOverride: null }]
-    expect(courseOverviewLine(courses, [anna, marco, sam, pia], everyone)).toBe('Main · Side without Sam and Pia · Dessert (optional) without Sam')
-  })
-  it('ignores the opt-out of a Member who does not attend, or is unknown', () => {
-    const noSam = attending.filter((a) => a.memberId !== 3)
-    expect(courseOverviewLine(tuesdayCourses, members, noSam)).toBe('Main · Side · Dessert (optional)')
-    expect(courseOverviewLine([{ ...tuesdayCourses[0]!, optOutMemberIds: [99] }], members, attending)).toBe('Main')
-  })
-  it('is empty for a slot with no Courses', () => expect(courseOverviewLine([], members, attending)).toBe(''))
-})
-
 describe('coursesChanged', () => {
   const same = [main, side, dessert]
   it('is false for the same Courses, even with the opt-outs in another order', () => {
@@ -178,16 +158,3 @@ describe('courseRemovals and removalPreview', () => {
   })
 })
 
-describe('overviewCourseLine (a lone main Course shows nothing)', () => {
-  const attending = tuesdayDinner.attendance
-  it('is hidden for a slot whose only Course is the main Course', () => {
-    expect(overviewCourseLine([tuesdayCourses[0]!], members, attending)).toBe('')
-  })
-  it('is shown for two or more Courses', () => {
-    expect(overviewCourseLine(tuesdayCourses, members, attending)).toBe('Main · Side · Dessert (optional) without Sam')
-    expect(overviewCourseLine(tuesdayCourses.slice(0, 2), members, attending)).toBe('Main · Side')
-  })
-  it('is shown for a single Course that is not main', () => {
-    expect(overviewCourseLine([tuesdayCourses[1]!], members, attending)).toBe('Side')
-  })
-})

@@ -67,7 +67,7 @@ export function MealSlotWeekStrip({ name, cells, canEdit, addDisabled = false, l
             className="ms-day"
             data-state="runs"
             data-differs={cell.differs || undefined}
-            aria-label={text.cellLabel(name, long)}
+            aria-label={`${text.cellLabel(name, long)}, ${cell.time}`}
             aria-describedby={cell.differs ? diffId : undefined}
             onClick={() => onEdit(cell.slot)}
           >

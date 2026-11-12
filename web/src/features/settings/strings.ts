@@ -147,7 +147,6 @@ export const settingsStrings = {
     courseWithout: (course: string, names: string) => `${course}: without ${names}`,
     courseEaters: (course: string, names: string) => `${course}: ${names} only`,
     datesThatDiffer: 'Dates that differ',
-    datesNone: 'No upcoming date differs from the usual.',
     notServed: 'Not served',
     timeUsually: (time: string, usual: string) => `${time} · usually ${usual}`,
     moreMembers: (n: number) => `+${n}`,

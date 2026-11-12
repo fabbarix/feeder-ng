@@ -23,22 +23,22 @@ export function MealSlotDifferences({ card, members, canEdit, locale = documentL
       <p className="ms-subhead">{text.differsOn}</p>
       <ul className="ms-diffs__list" aria-label={text.differsOn}>
         {card.differences.map((d) => {
-          const what = differenceParts(d, card, members).join(' · ')
+          const parts = differenceParts(d, card, members)
+          const label = `${text.edit(card.name, weekdayLongName(d.weekday, locale))}: ${parts.join(', ')}`
           const body = (
             <>
-              <span className="ms-diff__day">{weekdayShortName(d.weekday, locale)}</span>
-              {what ? (
-                <>
-                  {' · '}
-                  <span className="ms-diff__what">{what}</span>
-                </>
-              ) : null}
+              <span className="ms-diff__day" data-part="weekday">
+                {weekdayShortName(d.weekday, locale)}
+              </span>
+              <span className="ms-diff__what" data-part="parts">
+                {parts.join(' · ')}
+              </span>
             </>
           )
           return (
             <li key={d.weekday} className="ms-diff">
               {canEdit ? (
-                <button type="button" className="ms-diff__button" aria-label={text.edit(card.name, weekdayLongName(d.weekday, locale))} onClick={() => onEdit(d.slot)}>
+                <button type="button" className="ms-diff__button" aria-label={label} onClick={() => onEdit(d.slot)}>
                   <span className="ms-diff__body">{body}</span>
                   <Icon name="chevron" size={16} />
                 </button>

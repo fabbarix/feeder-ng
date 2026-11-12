@@ -40,14 +40,6 @@ describe('useMealSlotsPage: cards', () => {
 })
 
 describe('useMealSlotsPage: acting on a card', () => {
-  it('editCard opens the sheet on the card\'s usual slot', async () => {
-    routes(ADMIN_ME)
-    const { result } = renderHook(() => useMealSlotsPage(), { wrapper: routerWrapper })
-    await waitFor(() => expect(result.current.cards.length).toBe(2))
-    act(() => result.current.editCard(result.current.cards[1]!))
-    expect(result.current.editor?.item?.name).toBe('Dinner')
-    expect(result.current.editor?.item?.id).toBe(result.current.cards[1]!.editSlot.id)
-  })
   it('changeDateOf opens the one-date Attendance on the card\'s next run (Tuesday 10 Nov for Dinner), for an Admin and for a plain User', async () => {
     for (const me of [ADMIN_ME, USER_ME]) {
       routes(me)

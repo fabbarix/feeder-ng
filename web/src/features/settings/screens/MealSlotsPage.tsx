@@ -12,7 +12,7 @@ import '../settings.css'
 export function MealSlotsPage() {
   const page = useMealSlotsPage()
   const { editor, dateEditor, attendance } = page
-  const ready = !page.slots.isPending && !page.members.isPending
+  const ready = page.loaded
   const addButton = page.isAdmin ? (
     <Button variant="primary" icon="add" disabled={page.members.isPending} onClick={page.add}>
       {settingsStrings.slot.add}

@@ -123,11 +123,6 @@ export function useMealSlotsPage() {
     [loaded, slots.slots, members.members],
   )
   const dateRows = useMemo(() => datesThatDiffer(exceptions, { today: todayIso(), locale: documentLocale() }), [exceptions])
-  /** "Edit <name>": the sheet on the card's usual slot (only an Admin gets there). */
-  const editCard = (card: MealSlotCard) => {
-    setError(undefined)
-    setEditor({ item: card.editSlot })
-  }
   /** "Change a date": the one-date Attendance of the card's soonest run; any User, an Admin included (the sheet gives way). */
   const changeDateOf = (card: MealSlotCard) => {
     setEditor(null)
@@ -136,12 +131,13 @@ export function useMealSlotsPage() {
 
   return {
     isAdmin,
+    /** True once the Meal Slots and the Members have loaded (the cards are derived from both). */
+    loaded,
     /** MS: one card per Meal Slot name (empty until the Meal Slots and the Members have loaded). */
     cards,
     /** MS: the read-only "Dates that differ" rows. */
     dateRows,
     /** MS: "Edit <name>" opens the sheet on the card's usual slot (an Admin). */
-    editCard,
     /** MS: "Change a date for <name>" opens the one-date Attendance on the card's next run (any User). */
     changeDateOf,
     members,

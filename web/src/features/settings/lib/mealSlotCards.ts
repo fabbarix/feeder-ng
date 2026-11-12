@@ -221,7 +221,7 @@ function coursesText(courses: CourseChip[], usual: CourseChip[]): string {
   const names = courses.map((c) => (c.optional ? `${c.name} (${text.optionalSuffix})` : c.name))
   const usualIds = new Set(usual.map((c) => c.id))
   const fewer = courses.length < usual.length && courses.every((c) => usualIds.has(c.id))
-  return fewer ? `${names.join(' · ')} only` : names.join(' · ')
+  return fewer ? text.onlyEats(names.join(' · ')) : names.join(' · ')
 }
 
 /** The words of one "Differs on" row after the weekday: the time, who eats ("Fabio only"), the Courses ("Main only" when they are fewer than usual, else listed). */
