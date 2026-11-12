@@ -207,3 +207,91 @@ describe('rectToPercent / isFullImage / handles', () => {
     expect(handleLabel('w')).toBe('Resize crop, left edge')
   })
 })
+
+describe('minSide (the read flow passes 160)', () => {
+  const big = B(1000, 800)
+
+  it('clampRect: the default minimum stays 16, a parameter raises it', () => {
+    expect(clampRect(R(0, 0, 20, 20), big)).toEqual(R(0, 0, 20, 20))
+    expect(clampRect(R(10, 10, 20, 20), big, 160)).toEqual(R(10, 10, 160, 160))
+  })
+
+  it('clampRect: the minimum is the bounds side when the picture is smaller than minSide', () => {
+    expect(clampRect(R(0, 0, 5, 5), B(100, 90), 160)).toEqual(R(0, 0, 100, 90))
+  })
+
+  it('clampRect: a rect raised to minSide is shifted, not pushed out of the bounds', () => {
+    expect(clampRect(R(950, 780, 20, 20), big, 160)).toEqual(R(840, 640, 160, 160))
+  })
+
+  it('moveRect passes the minimum on (a small rect handed in is raised)', () => {
+    expect(moveRect(R(100, 100, 50, 50), 10, 10, big, 160)).toEqual(R(110, 110, 160, 160))
+  })
+
+  it.each<[Handle, number, number, Rect]>([
+    ['w', 900, 0, R(240, 100, 160, 300)],
+    ['e', -900, 0, R(100, 100, 160, 300)],
+    ['n', 0, 900, R(100, 240, 300, 160)],
+    ['s', 0, -900, R(100, 100, 300, 160)],
+  ])('free resize: the %s edge stops at 160', (handle, dx, dy, want) => {
+    expect(resizeRect(R(100, 100, 300, 300), handle, dx, dy, big, 'free', 160)).toEqual(want)
+  })
+
+  it('free resize: a corner stops at 160 on both axes', () => {
+    expect(resizeRect(R(100, 100, 300, 300), 'se', -900, -900, big, 'free', 160)).toEqual(R(100, 100, 160, 160))
+    expect(resizeRect(R(100, 100, 300, 300), 'nw', 900, 900, big, 'free', 160)).toEqual(R(240, 240, 160, 160))
+  })
+
+  it('free resize: the minimum is the bounds side when the picture is smaller than minSide', () => {
+    expect(resizeRect(R(0, 0, 100, 90), 'se', -500, -500, B(100, 90), 'free', 160)).toEqual(R(0, 0, 100, 90))
+  })
+
+  it('locked resize: the shorter side stops at minSide, the anchored corner stays', () => {
+    const out = resizeRect(R(100, 100, 400, 400), 'se', -900, -900, big, 1, 160)
+    expect(out).toEqual(R(100, 100, 160, 160))
+  })
+
+  it('without the parameter the old 16 px minimum still holds', () => {
+    expect(resizeRect(R(100, 100, 300, 300), 'e', -900, 0, big, 'free')).toEqual(R(100, 100, MIN_CROP_PX, 300))
+  })
+})
+
+describe('rotateCrop and rectInSource together', () => {
+  it('four clockwise turns bring a free rect back; four counter-clockwise too', () => {
+    let size = B(1000, 800)
+    let rect = R(120, 60, 300, 200)
+    const start = rect
+    for (let i = 0; i < 4; i++) {
+      rect = rotateCrop(rect, size, 1, 'free')
+      size = B(size.height, size.width)
+    }
+    expect(rect).toEqual(start)
+    for (let i = 0; i < 4; i++) {
+      rect = rotateCrop(rect, size, -1, 'free')
+      size = B(size.height, size.width)
+    }
+    expect(rect).toEqual(start)
+  })
+
+  it('a free rect keeps pointing at the same source area after turning 1, 2 and 3 times', () => {
+    const W = 1000
+    const H = 800
+    let seed = 7
+    const rnd = (n: number) => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff
+      return seed % n
+    }
+    for (let i = 0; i < 40; i++) {
+      const w = 20 + rnd(W - 20)
+      const h = 20 + rnd(H - 20)
+      const rect = R(rnd(W - w + 1), rnd(H - h + 1), w, h)
+      let turned = rect
+      let size = B(W, H)
+      for (const turns of [1, 2, 3] as const) {
+        turned = rotateCrop(turned, size, 1, 'free')
+        size = B(size.height, size.width)
+        expect(rectInSource(turned, turns, W, H)).toEqual(rect)
+      }
+    }
+  })
+})

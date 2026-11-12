@@ -4,7 +4,7 @@ import { IconButton } from '../../IconButton'
 import { useCropper } from '../hooks/useCropper'
 import { handleLabel, type CropAspect, type Handle, type Rect } from '../lib/crop'
 import { imagePickerStrings as t } from '../strings'
-import './CropEditor.css'
+import '../../ImageEditor/ImageEditor.css'
 
 export interface CropEditorProps {
   /** Object URL (or URL) of the picture to crop. */

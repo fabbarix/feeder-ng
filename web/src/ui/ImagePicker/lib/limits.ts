@@ -17,4 +17,4 @@ export const ACCEPT = (HEIC_ENABLED ? [...ACCEPT_TYPES, '.heic', '.heif'] : [...
 export const UPLOAD_MAX_SIDE = 3200
 /** Raw mode (Recipe Assistant "Read from a photo") default long edge. */
 export const RAW_MAX_SIDE = 2576
-export const DEFAULT_QUALITY = 0.9
+export { DEFAULT_QUALITY } from '../../ImageEditor/lib/prepare'

@@ -11,7 +11,10 @@ export interface CameraEnv {
  * 'none' = no camera offered. Rules: no getUserMedia -> capture-input when coarsePointer, else none; iosStandalone -> capture-input;
  * otherwise viewfinder. After a camera failure (denied, in use, error) the UI falls back to capture-input whatever this says.
  */
-export function cameraStrategy(env: CameraEnv): 'viewfinder' | 'capture-input' | 'none' {
+export type CameraPolicy = 'live' | 'system'
+
+// STUB (pr-t1 test step): `_policy` is accepted but not used yet ('system' must never return 'viewfinder').
+export function cameraStrategy(env: CameraEnv, _policy: CameraPolicy = 'live'): 'viewfinder' | 'capture-input' | 'none' {
   if (env.iosStandalone) return 'capture-input'
   if (!env.hasGetUserMedia) return env.coarsePointer ? 'capture-input' : 'none'
   return 'viewfinder'

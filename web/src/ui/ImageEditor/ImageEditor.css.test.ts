@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { readUiCss } from '../../test-utils'
+import { readUiCss } from '../test-utils'
 
-const css = readUiCss('ImagePicker/components/CropEditor.css').replace(/\/\*[\s\S]*?\*\//g, '')
+const css = readUiCss('ImageEditor/ImageEditor.css').replace(/\/\*[\s\S]*?\*\//g, '')
 /** The declarations of every rule whose selector list contains exactly `selector` (so `.x:focus-visible` is not `.x`). */
 const rule = (selector: string) =>
   [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
@@ -9,7 +9,7 @@ const rule = (selector: string) =>
     .map((m) => m[2])
     .join(' ')
 
-describe('CropEditor.css', () => {
+describe('ImageEditor.css', () => {
   it('styles the editor, the stage, the crop box and the handles', () => {
     for (const sel of ['.crop-editor', '.crop-editor__stage', '.crop-editor__box', '.crop-editor__handle']) expect(css, sel).toContain(sel)
   })
