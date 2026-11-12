@@ -9,12 +9,12 @@ describe('RAIL_NAV (R11a N8)', () => {
 })
 
 describe('menuIconFor (S-01)', () => {
-  it('uses the entry icon, else the registered one for Ingredients, Products and Shops, else the chevron', async () => {
+  it('uses the entry icon, else the chevron: Ingredients, Products and Shops left the menu, so no icon is registered for them', async () => {
     const { menuIconFor } = await import('./nav')
     expect(menuIconFor({ id: 'stock', icon: 'stock' })).toBe('stock')
-    expect(menuIconFor({ id: 'ingredients' })).toBe('ingredients')
-    expect(menuIconFor({ id: 'products' })).toBe('barcodes')
-    expect(menuIconFor({ id: 'shops' })).toBe('shops')
+    expect(menuIconFor({ id: 'ingredients' })).toBe('chevron')
+    expect(menuIconFor({ id: 'products' })).toBe('chevron')
+    expect(menuIconFor({ id: 'shops' })).toBe('chevron')
     expect(menuIconFor({ id: 'other' })).toBe('chevron')
   })
 })

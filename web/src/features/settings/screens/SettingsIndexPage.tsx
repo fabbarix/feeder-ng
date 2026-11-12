@@ -5,7 +5,7 @@ import { settingsGroups } from '../lib/settingsSections'
 import { settingsStrings } from '../strings'
 import '../settings.css'
 
-/** /settings: the Settings index. Rows (icon, title, one line of meta, chevron) grouped as Household, You and Admin;
+/** /settings: the Settings index. Rows (icon, title, one line of meta, chevron) grouped as Catalogue, Household and You;
  *  each row opens its own sub-page. No forms here. */
 export function SettingsIndexPage() {
   const isAdmin = Boolean(useMe().data?.isAdmin)

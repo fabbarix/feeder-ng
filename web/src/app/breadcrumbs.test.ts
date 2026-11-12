@@ -24,6 +24,8 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/planning', 'Planning rules'],
     ['/settings/tags', 'Tags'], // TG-S
     ['/settings/shops', 'Shops'],
+    ['/ingredients', 'Ingredients'], // beta.5: Settings > Catalogue
+    ['/products', 'Products'],
     ['/settings/preferences', 'Your preferences'],
     ['/settings/notifications', 'Notifications'],
     ['/settings/access-requests', 'Sign-in requests'], // A1
@@ -61,19 +63,19 @@ describe('crumbsFor: Recipes and Import', () => {
   })
 })
 
-describe('crumbsFor: catalogue detail pages', () => {
-  it('Ingredient: Ingredients > name', () => {
-    expect(crumbsFor('/ingredients/3', 'Garlic')).toEqual([{ label: 'Ingredients', to: '/ingredients' }, { label: 'Garlic' }])
+describe('crumbsFor: catalogue detail pages (beta.5: under Settings)', () => {
+  it('Ingredient: Settings > Ingredients > name', () => {
+    expect(crumbsFor('/ingredients/3', 'Garlic')).toEqual([S, { label: 'Ingredients', to: '/ingredients' }, { label: 'Garlic' }])
     expect(crumbsFor('/ingredients/3').at(-1)).toEqual({ label: 'Ingredient' })
   })
-  it('Product: Products > name', () => {
-    expect(crumbsFor('/products/9', 'Whole milk 1 L')).toEqual([{ label: 'Products', to: '/products' }, { label: 'Whole milk 1 L' }])
+  it('Product: Settings > Products > name', () => {
+    expect(crumbsFor('/products/9', 'Whole milk 1 L')).toEqual([S, { label: 'Products', to: '/products' }, { label: 'Whole milk 1 L' }])
     expect(crumbsFor('/products/9').at(-1)).toEqual({ label: 'Product' })
   })
 })
 
 describe('crumbsFor: no hierarchy, no crumbs', () => {
-  it.each(['/', '/plan', '/shop', '/scan', '/recipes', '/stock', '/pantry', '/ingredients', '/products', '/settings', '/board', '/cook/recipe/7', '/nope', '/settings/unknown'])(
+  it.each(['/', '/plan', '/shop', '/scan', '/recipes', '/stock', '/pantry', '/settings', '/board', '/cook/recipe/7', '/nope', '/settings/unknown'])(
     '%s has no trail',
     (path) => {
       expect(crumbsFor(path)).toEqual([])
@@ -99,7 +101,7 @@ describe('shape of every trail', () => {
 
 describe('the table covers every hierarchical route the features declare', () => {
   const all = [...accessRoutes, ...settingsRoutes, ...planRoutes, ...shopsRoutes, ...notificationRoutes, ...recipeRoutes, ...importRoutes, ...ingredientRoutes, ...productRoutes]
-  const ROOTS = new Set(['/settings', '/recipes', '/ingredients', '/products', '/plan'])
+  const ROOTS = new Set(['/settings', '/recipes', '/plan'])
   const hierarchical = all.map((r) => r.path ?? '').filter((p) => p && !ROOTS.has(p))
 
   it('has an entry per hierarchical route path', () => {
