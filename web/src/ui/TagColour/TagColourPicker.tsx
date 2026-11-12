@@ -26,31 +26,33 @@ export function TagColourPicker({ label, helper, error, disabled, value, onChang
     (next) => onChange(next as TagColourId),
   )
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
-      <div role="radiogroup" aria-labelledby={ids.labelId} aria-describedby={describedBy(ids, helper, error)} className="tag-colour-picker">
-        {TAG_PALETTE.map((colour) => {
-          const on = colour.id === checked
-          return (
-            <button
-              key={colour.id}
-              ref={roving.register(colour.id)}
-              type="button"
-              role="radio"
-              aria-label={colour.name}
-              aria-checked={on}
-              tabIndex={colour.id === roving.tabStop ? 0 : -1}
-              disabled={disabled}
-              className="tag-swatch"
-              data-tag-colour={colour.id}
-              onClick={() => onChange(colour.id)}
-              onKeyDown={(e) => roving.onKeyDown(e, colour.id)}
-            >
-              {on ? <Icon name="tick" size={20} /> : null}
-            </button>
-          )
-        })}
-      </div>
+    <>
+      <FieldFrame ids={ids} label={label} helper={helper} error={error}>
+        <div role="radiogroup" aria-labelledby={ids.labelId} aria-describedby={describedBy(ids, helper, error)} className="tag-colour-picker">
+          {TAG_PALETTE.map((colour) => {
+            const on = colour.id === checked
+            return (
+              <button
+                key={colour.id}
+                ref={roving.register(colour.id)}
+                type="button"
+                role="radio"
+                aria-label={colour.name}
+                aria-checked={on}
+                tabIndex={colour.id === roving.tabStop ? 0 : -1}
+                disabled={disabled}
+                className="tag-swatch"
+                data-tag-colour={colour.id}
+                onClick={() => onChange(colour.id)}
+                onKeyDown={(e) => roving.onKeyDown(e, colour.id)}
+              >
+                {on ? <Icon name="tick" size={20} /> : null}
+              </button>
+            )
+          })}
+        </div>
+      </FieldFrame>
       {preview ? <div className="tag-colour-picker__preview">{preview}</div> : null}
-    </FieldFrame>
+    </>
   )
 }

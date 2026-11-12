@@ -26,6 +26,7 @@ describe('SettingsIndexPage (/settings, 5.14)', () => {
       'Meal Slots': '/settings/meal-slots',
       Courses: '/settings/courses',
       'Planning rules': '/settings/planning',
+      Tags: '/settings/tags',
       Shops: '/settings/shops',
       'Storage Places': '/settings/storage-places',
       'Sign-in requests': '/settings/access-requests',
@@ -42,7 +43,7 @@ describe('SettingsIndexPage (/settings, 5.14)', () => {
     mockApi({ 'GET /api/me': ADMIN_ME })
     renderWithProviders(<SettingsIndexPage />, '/settings')
     const household = await screen.findByRole('list', { name: 'Household' })
-    expect(within(household).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Household', 'Members', 'Meal Slots', 'Courses', 'Planning rules', 'Shops', 'Storage Places', 'Sign-in requests'])
+    expect(within(household).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Household', 'Members', 'Meal Slots', 'Courses', 'Planning rules', 'Tags', 'Shops', 'Storage Places', 'Sign-in requests'])
     expect(within(await screen.findByRole('list', { name: 'You' })).getAllByRole('link')).toHaveLength(2)
     expect(within(await screen.findByRole('list', { name: 'Admin' })).getAllByRole('link').map((a) => a.getAttribute('aria-label'))).toEqual(['Allowlist', 'Recipe Assistant'])
   })
