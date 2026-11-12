@@ -62,6 +62,8 @@ export function useTagsPage(): TagsPage {
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const addRef = useRef<HTMLButtonElement>(null)
+  /** Set synchronously while Delete Tag loads the impact, so two taps in one task cannot ask twice (state lags a render). */
+  const loadingImpact = useRef(false)
   const newColour = useMemo(() => nextColour(colourCounts(tags)), [tags])
 
   // Runs once the Tag's row exists (a refetch may land later); clears the target once focus has gone there.
@@ -160,16 +162,19 @@ export function useTagsPage(): TagsPage {
 
   const deleteTag = async (): Promise<void> => {
     const tag = sheet?.mode === 'edit' ? sheet.tag : null
-    if (!tag) return
+    if (!tag || busy || loadingImpact.current) return
     let summary: DeleteSummary
+    loadingImpact.current = true
     setBusy(true)
     try {
       summary = await actions.deleteSummaryFor(tag)
     } catch {
+      loadingImpact.current = false
       setBusy(false)
       toast.show(tagsStrings.errors.impactFailed, { status: 'error' })
       return
     }
+    loadingImpact.current = false
     setBusy(false)
     const copy = deleteConfirmCopy(summary)
     const choice = await confirm.choose({

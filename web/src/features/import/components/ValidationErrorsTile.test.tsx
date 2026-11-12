@@ -27,4 +27,8 @@ describe('ValidationErrorsTile', () => {
     render(<ValidationErrorsTile error={error} />)
     expect(screen.getByRole('alert')).toHaveTextContent(text)
   })
+  it('the list is a styled .import-list, with no browser bullets', () => {
+    const { container } = render(<ValidationErrorsTile error={{ kind: 'schema', errors: [{ path: '$.a', message: 'bad' }] }} />)
+    expect(container.querySelector('ul')).toHaveClass('import-list')
+  })
 })

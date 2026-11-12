@@ -25,7 +25,7 @@ export const coursesStrings = {
   renamed: (name: string) => `Renamed to ${name}.`,
   nowMain: (name: string) => `${name} is now the main Course.`,
   unarchived: (name: string) => `${name} is back in the list, last.`,
-  deleted: (name: string) => `Deleted ${name}.`,
+  deleted: (name: string) => `Removed ${name}.`,
   archived: (name: string) => `Archived ${name}.`,
   archivedHeading: (n: number) => `Archived Courses (${n})`,
   unarchive: 'Unarchive',

@@ -1,7 +1,8 @@
-import { Button, FieldRow, TextField } from '../../../ui'
+import { Button, FieldRow, ListGroup, ListRow, TextField } from '../../../ui'
 import { baseUnitLabel, formatConversion, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { useConversionForm } from '../hooks/useIngredientForms'
 import { strings } from '../strings'
+import '../ingredients.css'
 import type { Conversion } from '../types'
 
 export interface ConversionEditorProps {
@@ -22,21 +23,24 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove }:
   const amountLabel = strings.conversionAmountLabel(baseUnitLabel(base, 'metric'))
 
   return (
-    <section>
+    <section className="conversion-editor">
       <h2>{strings.conversionsTitle}</h2>
       {conversions.length === 0 ? (
         <p>{strings.noConversions}</p>
       ) : (
-        <ul>
+        <ListGroup label={strings.conversionsTitle}>
           {conversions.map((c) => (
-            <li key={c.unit}>
-              <span>{formatConversion(c.unit, c.toBase, base, system)}</span>{' '}
-              <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
-                {strings.removeConversion(c.unit)}
-              </Button>
-            </li>
+            <ListRow
+              key={c.unit}
+              title={formatConversion(c.unit, c.toBase, base, system)}
+              trailing={
+                <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
+                  {strings.removeConversion(c.unit)}
+                </Button>
+              }
+            />
           ))}
-        </ul>
+        </ListGroup>
       )}
       <form
         onSubmit={(e) => {
