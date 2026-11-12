@@ -41,12 +41,11 @@ export function canonicalTag(known: { name: string }[], typed: string): string {
 
 /** TG-RW: the Tags a tile shows (the first `limit`, in the Recipe's order) and how many are left for "+N". */
 export function visibleTags(tags: readonly string[], limit: number): { shown: string[]; more: number } {
-  void limit
-  return { shown: [...tags], more: 0 } // stub: TG-RW Developer
+  const cut = Math.max(0, limit)
+  return { shown: tags.slice(0, cut), more: Math.max(0, tags.length - cut) }
 }
 
 /** TG-RW: the Recipes list filtered by a Tag: `/recipes?tag=<encoded name>`. */
 export function recipesTagPath(name: string): string {
-  void name
-  return '/recipes' // stub: TG-RW Developer
+  return `/recipes?tag=${encodeURIComponent(name)}`
 }

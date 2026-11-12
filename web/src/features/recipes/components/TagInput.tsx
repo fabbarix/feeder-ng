@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Chip, TextField } from '../../../ui'
+import { Chip, TagDot, TextField } from '../../../ui'
 import { addTag, canonicalTag, removeTag, suggestTags } from '../lib/tags'
 import { recipeStrings } from '../strings'
 import type { TagCount } from '../types'
@@ -19,7 +19,7 @@ export interface TagInputProps {
  * are listed under the field (a combobox): arrows move through them, Enter or a tap picks one. A typed Tag that matches
  * an existing one in another spelling is saved with the existing spelling.
  */
-export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNode {
+export function TagInput({ tags, onChange, known = [], colourOf }: TagInputProps): ReactNode {
   const [text, setText] = useState('')
   const [active, setActive] = useState(-1)
   const captionId = useId()
@@ -60,8 +60,16 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
       </span>
       <div className="tag-input__control" data-size-intent="inline">
         {tags.map((t) => (
-          <Chip key={t} kind="filter" selected label={recipeStrings.fields.removeTag(t)} onClick={() => onChange(removeTag(tags, t))}>
+          <Chip
+            key={t}
+            kind="filter"
+            selected
+            label={recipeStrings.fields.removeTag(t)}
+            tagColour={colourOf?.(t)}
+            onClick={() => onChange(removeTag(tags, t))}
+          >
             {t}
+            {colourOf && !colourOf(t) ? <span className="tag-input__new">{recipeStrings.newTag}</span> : null}
           </Chip>
         ))}
         <TextField
@@ -89,6 +97,7 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
             key={t.name}
             id={`${listId}-${i}`}
             role="option"
+            aria-label={`${t.name} ${recipeStrings.fields.tagRecipes(t.recipes)}`}
             aria-selected={i === active}
             className="tag-input__suggestion"
             // mousedown, not click: the field's blur would add the typed text first.
@@ -97,6 +106,7 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
               add(t.name)
             }}
           >
+            <TagDot colour={colourOf?.(t.name)} />
             <span>{t.name}</span>
             <span className="tag-input__count">{recipeStrings.fields.tagRecipes(t.recipes)}</span>
           </li>

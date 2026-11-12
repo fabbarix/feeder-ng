@@ -1,4 +1,6 @@
-// TG-RW: the Household's Tags for the Recipes screens: the suggestions' counts and the colour of a Tag by name. Replaces useKnownTags.
+// TG-RW: useRecipeTags = useTags (by name, live) + useTagLookup (by key) for the Recipes screens.
+import { useMemo } from 'react'
+import { useTagLookup, useTags } from '../../../lib/tags/useTags'
 import type { TagCount } from '../types'
 
 export interface UseRecipeTags {
@@ -9,5 +11,8 @@ export interface UseRecipeTags {
 }
 
 export function useRecipeTags(): UseRecipeTags {
-  return { known: [], colourOf: () => undefined } // stub: TG-RW Developer (useTags + useTagLookup)
+  const { tags } = useTags()
+  const lookup = useTagLookup()
+  const known = useMemo(() => tags.map((t) => ({ name: t.name, recipes: t.recipes })), [tags])
+  return { known, colourOf: (name: string) => lookup(name)?.colour }
 }

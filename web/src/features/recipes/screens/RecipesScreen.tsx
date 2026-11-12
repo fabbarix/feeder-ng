@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { CourseFilter } from '../components/CourseFilter'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
+import { useRecipeTags } from '../hooks/useRecipeTags'
 import { useRecipes } from '../hooks/useRecipes'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
@@ -19,7 +20,10 @@ import '../recipes.css'
 export function RecipesScreen(): ReactNode {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [tag, setTag] = useState('')
+  const [searchParams] = useSearchParams()
+  // TG-RW: the detail's Tag links open the list already filtered (/recipes?tag=<name>).
+  const [tag, setTag] = useState(() => searchParams.get('tag') ?? '')
+  const { colourOf } = useRecipeTags()
   const [showArchived, setShowArchived] = useState(false)
   const [course, setCourse] = useState<number | null>(null)
   const { choices } = useCourses()
@@ -42,6 +46,7 @@ export function RecipesScreen(): ReactNode {
             key={r.id}
             recipe={r}
             onOpen={(id) => navigate(`/recipes/${id}`)}
+            colourOf={colourOf}
             courseNames={courseNamesOf(r.courseIds, choices)}
             wholeMeal={r.wholeMeal && showsWholeMeal(r.courseIds, choices)}
           />
@@ -81,7 +86,7 @@ export function RecipesScreen(): ReactNode {
       search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
       filters={
         <>
-          <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
+          <TagChips tags={list.tags} selected={tag} onSelect={setTag} colourOf={colourOf} />
           <CourseFilter courses={choices} selected={course} onSelect={setCourse} />
         </>
       }

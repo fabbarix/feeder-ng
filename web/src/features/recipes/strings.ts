@@ -7,6 +7,8 @@ export const recipeStrings = {
   editRecipe: 'Edit Recipe',
   search: 'Search Recipes',
   allTags: 'All Tags',
+  tagsLabel: 'Tags',
+  newTag: 'New',
   showArchived: 'Show archived',
   empty: 'No Recipes yet. Add your first one.',
   noMatch: 'No Recipe matches.',
