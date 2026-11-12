@@ -96,21 +96,64 @@ describe('ImportScreen Course answers', () => {
 })
 
 describe('ImportScreen: 403 and the Course limit', () => {
-  it('after a refused Confirm, an alert says only an Admin can add or unarchive, and the Review stays open', () => {
+  const limit = { path: '$.recipes[0].courses[0]', code: 'too_many_courses', message: 'too many' }
+  /** The inline danger Tile that holds `text`: the Toast live region is another alert and is not it. */
+  const inlineAlert = (text: string) => screen.getByText(text).closest('[role=alert]') as HTMLElement
+  const inToastRegion = (el: Element) => el.closest('[aria-live]') !== null
+  const sibling = (a: HTMLElement, b: HTMLElement) => a.parentElement === b.parentElement
+
+  it('after a refused Confirm, an inline danger Tile says only an Admin can add or unarchive, and the Review stays open', () => {
     h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: true })
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent(s.courses.forbidden)
+    const tile = inlineAlert(s.courses.forbidden)
+    expect(tile).toHaveTextContent(s.courses.forbidden)
+    expect(tile).toHaveClass('tile')
+    expect(tile).toHaveAttribute('data-status', 'danger')
+    expect(inToastRegion(tile)).toBe(false)
     expect(screen.getByRole('region', { name: 'Soup' })).toBeInTheDocument()
+  })
+  it('puts the 403 Tile next to the Course tiles, in the same grid', () => {
+    h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: true })
+    view()
+    expect(sibling(inlineAlert(s.courses.forbidden), screen.getByRole('region', { name: 'Soup' }))).toBe(true)
+  })
+  it('uses no toast for the 403 notice', () => {
+    h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: true })
+    view()
+    expect(screen.getAllByText(s.courses.forbidden)).toHaveLength(1)
+  })
+  it('the 403 Tile goes away when its state clears, after the next answer', () => {
+    h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: true })
+    const { rerender } = view()
+    expect(screen.getByText(s.courses.forbidden)).toBeInTheDocument()
+    h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: false })
+    rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
+    expect(screen.queryByText(s.courses.forbidden)).toBeNull()
   })
   it('has no such alert otherwise', () => {
     view()
     expect(screen.queryByText(s.courses.forbidden)).toBeNull()
   })
-  const limit = { path: '$.recipes[0].courses[0]', code: 'too_many_courses', message: 'too many' }
-  it('explains too_many_courses beside the Course rows, with the limit of 20', () => {
+  it('explains too_many_courses in an inline danger Tile beside the Course rows, with the limit of 20', () => {
     h.review = state({ plan: plan({ ready: false, recipes, courses: rows, problems: [limit] }) })
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent(s.courses.tooMany(20))
+    const tile = inlineAlert(s.courses.tooMany(20))
+    expect(tile).toHaveAttribute('data-status', 'danger')
+    expect(inToastRegion(tile)).toBe(false)
+    expect(sibling(tile, screen.getByRole('region', { name: 'Soup' }))).toBe(true)
+  })
+  it('uses no toast for the limit notice', () => {
+    h.review = state({ plan: plan({ ready: false, recipes, courses: rows, problems: [limit] }) })
+    view()
+    expect(screen.getAllByText(s.courses.tooMany(20))).toHaveLength(1)
+  })
+  it('the limit Tile goes away when the plan no longer passes 20', () => {
+    h.review = state({ plan: plan({ ready: false, recipes, courses: rows, problems: [limit] }) })
+    const { rerender } = view()
+    expect(screen.getByText(s.courses.tooMany(20))).toBeInTheDocument()
+    h.review = state({ plan: plan({ recipes, courses: rows, problems: [] }) })
+    rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
+    expect(screen.queryByText(s.courses.tooMany(20))).toBeNull()
   })
   it('does not repeat it in the generic list of Problems', () => {
     h.review = state({ plan: plan({ ready: false, recipes, courses: rows, problems: [limit] }) })

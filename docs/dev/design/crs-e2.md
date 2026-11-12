@@ -15,7 +15,7 @@ The tests are red on purpose; only the new ones fail. New logic is a stub that t
 ## 2. Recipe editor: logic
 
 ### 2.1 API client
-`recipesApi.list` sends `?course=<id>` (after `archived`, so `q, tag, archived, course`). New `slotRules()` (`GET /api/slot-rules`, every rule, each with `courseId`) and `mealSlots()` (`GET /api/meal-slots`, only `id` and `name` are read).
+`recipesApi.list` sends `?course=<id>` (after `archived`, so `q, tag, archived, course`). New `slotRules()` (`GET /api/slot-rules`, every rule, each with `courseId`) and `mealSlots()` (`GET /api/meal-slots`, only `id`, `weekday` and `name` are read; `SlotName` is `{id, weekday, name}`). The Slot Rule label comes from the shared `mealSlotLabel(weekday, name)` ("Friday Dinner"), moved from `plan/lib/rules.ts` to a shared lib, not from the name alone.
 
 ### 2.2 Draft (`lib/draft.ts`)
 `RecipeDraft` gains `courseIds` (household order), `wholeMeal` and `wholeMealSet` (the User set Whole meal in this edit; never sent). `emptyDraft`: `[]`, `false`, `false`. `draftFromRecipe`: ids of `recipe.courses` in order, the stored `wholeMeal`, `wholeMealSet` false. `draftToInput` sends `courseIds` (a copy) and `wholeMeal` **as the draft holds it**: this is what makes the hidden switch "send back the stored value" and a new Recipe send `false`, with no special case. `serverErrorKey('courses', …)` is `courses`.
@@ -25,7 +25,7 @@ The tests are red on purpose; only the new ones fail. New logic is a stub that t
 
 `reconcileWholeMeal` is run on every `setDraft` step: a change of `wholeMeal` the step did not make itself is the User's (`wholeMealSet` true); Ready Meal off to on, with the main Course among the Courses and `wholeMealSet` false, makes `wholeMeal` true (spec 4: "unless the User already set Whole meal in this edit"); unticking Ready Meal and changing Courses never touch `wholeMeal`. The default applies at the moment of marking only, so taking Main off a Ready Meal and putting it back changes nothing.
 
-`lostSlotRules({recipeId, storedIds, draftIds, rules, slots, courses})`: Slot Rules **by this Recipe** (`rule.recipeId === recipeId`; Tag rules are never touched) on a Course that `draftIds` takes off; rules on a Course `courses` no longer lists are ignored (archiving already removed them). Label `<Meal Slot> · <Course> = <Recipe>` ("Friday Dinner · Side = rice"), in the API's order. `courseNames` are the taken-off Courses that lose a rule, household order. `null` for a new Recipe, nothing lost or no rules. The brief says "use `GET /api/slot-rules` with `courseId`": the rules carry `courseId` and the filter is done here, so the editor needs one cached request and no backend filter.
+`lostSlotRules({recipeId, storedIds, draftIds, rules, slots, courses})`: Slot Rules **by this Recipe** (`rule.recipeId === recipeId`; Tag rules are never touched) on a Course that `draftIds` takes off; rules on a Course `courses` no longer lists are ignored (archiving already removed them). Label `<Meal Slot> · <Course> = <Recipe>` with the Meal Slot from `mealSlotLabel(weekday, name)` ("Friday Dinner · Side = rice"), in the API's order. `courseNames` are the taken-off Courses that lose a rule, household order. `null` for a new Recipe, nothing lost or no rules. The brief says "use `GET /api/slot-rules` with `courseId`": the rules carry `courseId` and the filter is done here, so the editor needs one cached request and no backend filter.
 
 ## 3. Recipe editor: hooks, components, screen
 

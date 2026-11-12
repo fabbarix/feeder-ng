@@ -113,3 +113,12 @@ describe('CourseMatchTile: an archived Course', () => {
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Mainmain Course', 'Side', 'Starter', 'Dessert'])
   })
 })
+
+describe('CourseMatchTile: width', () => {
+  it('does not span the full width, so it matches the Ingredient tiles in the same BentoGrid', () => {
+    view()
+    const tile = screen.getByRole('region', { name: 'Soup' })
+    expect(tile).not.toHaveAttribute('data-span', 'full')
+    expect(tile).not.toHaveAttribute('data-span')
+  })
+})

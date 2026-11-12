@@ -140,7 +140,7 @@ describe('useRecipeEditor: courseLoss', () => {
   beforeEach(() => {
     api.get.mockResolvedValue(stored)
     api.slotRules.mockResolvedValue(rules)
-    api.mealSlots.mockResolvedValue([{ id: 5, name: 'Friday Dinner' }])
+    api.mealSlots.mockResolvedValue([{ id: 5, weekday: 5, name: 'Dinner' }])
   })
 
   it('is null while the draft keeps every Course', async () => {

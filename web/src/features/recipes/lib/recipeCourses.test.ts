@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { courseChoices } from '../fixtures.test-helper'
 import type { RecipeSlotRule, SlotName } from '../types'
 import { emptyDraft, type RecipeDraft } from './draft'
-import { courseNamesOf, defaultWholeMeal, joinNames, lostSlotRules, reconcileWholeMeal, showsWholeMeal, validateCourses, withDefaultCourse } from './recipeCourses'
+import { courseNamesOf, defaultWholeMeal, joinNames, lostSlotRules, pickCourseIds, reconcileWholeMeal, showsWholeMeal, validateCourses, withDefaultCourse } from './recipeCourses'
 
 const MAIN = 1
 const SIDE = 2
@@ -112,7 +112,7 @@ describe('courseNamesOf and joinNames', () => {
 })
 
 describe('lostSlotRules', () => {
-  const slots: SlotName[] = [{ id: 5, name: 'Friday Dinner' }, { id: 6, name: 'Sunday Lunch' }]
+  const slots: SlotName[] = [{ id: 5, weekday: 5, name: 'Dinner' }, { id: 6, weekday: 7, name: 'Lunch' }]
   const rule = (over: Partial<RecipeSlotRule>): RecipeSlotRule => ({ id: 10, mealSlotId: 5, courseId: SIDE, recipeId: 3, recipeName: 'rice', ...over })
   const input = (over = {}) => ({
     recipeId: 3 as number | undefined,
@@ -153,5 +153,27 @@ describe('lostSlotRules', () => {
   })
   it('ignores a rule on a Course the household no longer lists (archiving took it already)', () => {
     expect(lostSlotRules(input({ storedIds: [MAIN, 99], draftIds: [MAIN], rules: [rule({ courseId: 99 })] }))).toBeNull()
+  })
+})
+
+describe('pickCourseIds', () => {
+  const DESSERT = 4
+  it('toggles the one id the picker changed against the current ids, not the ones shown', () => {
+    // shown [MAIN]; the User adds SIDE; meanwhile the draft became [MAIN, DESSERT]
+    expect(pickCourseIds([MAIN, DESSERT], [MAIN], [MAIN, SIDE], courseChoices)).toEqual([MAIN, SIDE, DESSERT])
+    // shown [MAIN, SIDE]; the User removes SIDE; the draft has since gained DESSERT, which stays
+    expect(pickCourseIds([MAIN, SIDE, DESSERT], [MAIN, SIDE], [MAIN], courseChoices)).toEqual([MAIN, DESSERT])
+    // shown [MAIN]; the User removes MAIN; current also has DESSERT, which stays
+    expect(pickCourseIds([MAIN, DESSERT], [MAIN, DESSERT], [DESSERT], courseChoices)).toEqual([DESSERT])
+  })
+  it('an added id takes its household place, not the end', () => {
+    expect(pickCourseIds([DESSERT], [DESSERT], [DESSERT, MAIN], courseChoices)).toEqual([MAIN, DESSERT])
+    expect(pickCourseIds([MAIN, DESSERT], [MAIN, DESSERT], [MAIN, DESSERT, SIDE], courseChoices)).toEqual([MAIN, SIDE, DESSERT])
+  })
+  it('no change returns a copy of the current ids', () => {
+    const current = [MAIN, SIDE]
+    const out = pickCourseIds(current, [MAIN], [MAIN], courseChoices)
+    expect(out).toEqual([MAIN, SIDE])
+    expect(out).not.toBe(current)
   })
 })

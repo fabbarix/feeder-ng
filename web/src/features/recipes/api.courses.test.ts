@@ -31,8 +31,8 @@ describe('recipesApi slotRules and mealSlots', () => {
     expect(api.calls).toHaveLength(1)
   })
   it('reads the Meal Slots', async () => {
-    mockApi({ 'GET /api/meal-slots': [{ id: 5, name: 'Friday Dinner', time: '19:00' }] })
+    mockApi({ 'GET /api/meal-slots': [{ id: 5, weekday: 5, name: 'Dinner', time: '19:00' }] })
     const slots = await recipesApi.mealSlots()
-    expect(slots[0]).toMatchObject({ id: 5, name: 'Friday Dinner' })
+    expect(slots[0]).toMatchObject({ id: 5, weekday: 5, name: 'Dinner' })
   })
 })

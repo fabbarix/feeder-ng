@@ -121,10 +121,21 @@ describe('RecipeEditorScreen: taking a Course off', () => {
     setEditor({ courseLoss: loss })
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(h.editor.save).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Save Recipe' })).toBeInTheDocument()
+  })
+  it('leaves the page\'s own Cancel and Save Recipe out of aria-hidden while the dialog is open', async () => {
+    setEditor({ courseLoss: loss })
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    const pageButtons = screen
+      .getAllByRole('button', { hidden: true })
+      .filter((b) => ['Cancel', 'Save Recipe'].includes(b.textContent?.trim() ?? '') && !b.closest('dialog'))
+    expect(pageButtons.map((b) => b.textContent?.trim()).sort()).toEqual(['Cancel', 'Save Recipe'])
+    for (const b of pageButtons) expect(b.closest('[aria-hidden="true"]')).toBeNull()
   })
   it('returns focus to Save Recipe after Cancel', async () => {
     setEditor({ courseLoss: loss })
