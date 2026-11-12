@@ -36,6 +36,8 @@ export function MealSlotsPage() {
         onSave={page.save}
         slots={page.slots.slots}
         onApply={page.apply}
+        courses={page.courses}
+        onPreview={page.preview}
         onDelete={page.remove}
         onChangeDate={editor?.item ? page.changeDate : undefined}
         onClose={page.closeEditor}

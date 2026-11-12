@@ -12,6 +12,6 @@ const modes = readFileSync(`${cwd}/../scripts/check-page-layout.modes`, 'utf8')
 describe('check-page-layout.modes (R2-3)', () => {
   it.each([
     '/settings', '/settings/household', '/settings/preferences', '/settings/members', '/settings/allowlist',
-    '/settings/shops', '/settings/shops/4', '/ingredients', '/ingredients/3', '/products', '/products/5', '/settings/recipe-assistant',
+    '/settings/courses', '/settings/shops', '/settings/shops/4', '/ingredients', '/ingredients/3', '/products', '/products/5', '/settings/recipe-assistant',
   ])('%s is a fail route', (route) => expect(modeFor(modes, route)).toBe('fail'))
 })

@@ -4,6 +4,7 @@ import { slotAnchorId } from '../lib/slotAnchor'
 import { settingsStrings } from '../strings'
 import type { MealSlot, Member } from '../types'
 import { AttendeePills } from './AttendeePills'
+import { SlotCourseLine } from './SlotCourseLine'
 import '../settings.css'
 
 export interface MealSlotWeekProps {
@@ -46,6 +47,7 @@ export function MealSlotWeek({ slots, members, canEdit, addDisabled = false, wee
                     <Chip kind="tag" icon={mealSlotIcon(slot.name)} onClick={() => onOpen(slot)}>
                       {text.slotButton(slot.name, slot.time)}
                     </Chip>
+                    <SlotCourseLine slot={slot} members={members} />
                     <AttendeePills slot={slot} members={members} onFix={onOpen} locale={locale} />
                   </div>
                 ))

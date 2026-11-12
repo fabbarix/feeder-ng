@@ -49,6 +49,22 @@ export interface AttendanceEntry {
   portionFactorOverride: number | null
 }
 
+/** CRS D2: one Course a Meal Slot serves, in the slot's order (`optOutMemberIds`: the usual opt-outs, spec 3.1). */
+export interface SlotCourse {
+  id: number
+  name: string
+  main: boolean
+  optional: boolean
+  optOutMemberIds: number[]
+}
+
+/** What a Meal Slot save sends for a Course: its id, the Optional flag and the usual opt-outs. */
+export interface SlotCourseInput {
+  id: number
+  optional: boolean
+  optOutMemberIds: number[]
+}
+
 export interface MealSlot {
   id: number
   /** ISO weekday: 1 Monday .. 7 Sunday. */
@@ -57,6 +73,8 @@ export interface MealSlot {
   time: string
   attendance: AttendanceEntry[]
   portionsNeeded: number
+  /** CRS D2: the Courses the slot serves, in its order. The server always sends it; optional here so older fixtures compile (absent = none shown). */
+  courses?: SlotCourse[]
 }
 
 export interface MealSlotInput {
@@ -64,6 +82,24 @@ export interface MealSlotInput {
   name: string
   time: string
   attendance: AttendanceEntry[]
+  /** CRS D2: in the slot's order. Absent: the main Course on create, unchanged on update. */
+  courses?: SlotCourseInput[]
+}
+
+/** CRS D2: a Course's effective Attendance on one date (`isOverride`: that date has its own opt-outs for it). */
+export interface DateCourse {
+  courseId: number
+  name: string
+  optOutMemberIds: number[]
+  isOverride: boolean
+  attendance: AttendanceEntry[]
+  portionsNeeded: number
+}
+
+/** CRS D2: what a Date Attendance save says about one Course: a list sets its opt-outs for the date, null drops them (back to usual). */
+export interface DateCourseChange {
+  courseId: number
+  optOutMemberIds: number[] | null
 }
 
 export interface DateAttendance {
@@ -72,6 +108,8 @@ export interface DateAttendance {
   isOverride: boolean
   attendance: AttendanceEntry[]
   portionsNeeded: number
+  /** CRS D2: one per Course of the slot, in its order (always sent by the server; absent in older fixtures). */
+  courses?: DateCourse[]
 }
 
 export interface AllowedUser {
@@ -95,14 +133,47 @@ export interface SlotBatchChange {
   time?: string
   /** Replaces the usual Attendance on every matching Meal Slot; [] means nobody. */
   attendance?: AttendanceEntry[]
+  /** CRS D2: the Courses of each matching slot, in order, with Optional and opt-outs. Only when the Admin changed them. */
+  courses?: SlotCourseInput[]
 }
 export interface SlotBatchRequest {
   match: string
   weekdays: number[]
   set: SlotBatchChange
+  /** CRS D2: answer the same shape plus `removes` without writing (the editor's preview). */
+  dryRun?: boolean
+}
+
+/** CRS D2: a Planned Meal a Meal Slot change takes away (Pinned ones first in the answer). */
+export interface RemovedMeal {
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  courseId: number
+  courseName: string
+  recipeId: number
+  recipeName: string
+  pinned: boolean
+}
+/** CRS D2: a Slot Rule a Meal Slot change takes away (a Recipe or a Tag). */
+export interface RemovedRule {
+  id: number
+  mealSlotId: number
+  mealSlotName: string
+  courseId: number
+  courseName: string
+  recipeId?: number
+  recipeName?: string
+  tag?: string
+}
+export interface SlotRemoves {
+  plannedMeals: RemovedMeal[]
+  slotRules: RemovedRule[]
 }
 export interface SlotBatchResult {
   match: string
   updated: MealSlot[]
   skipped: { weekday: number; reason: 'no_slot' }[]
+  /** CRS D2: what the change removes (always sent by the server; absent in older fixtures). */
+  removes?: SlotRemoves
 }

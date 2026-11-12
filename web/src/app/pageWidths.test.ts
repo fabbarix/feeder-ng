@@ -26,6 +26,7 @@ describe('pageWidthFor: the per-route width table', () => {
     ['/settings/household', 'narrow'],
     ['/settings/members', 'narrow'],
     ['/settings/meal-slots', 'default'],
+    ['/settings/courses', 'narrow'], // CRS D2: listed on its own, like the other Settings pages
     ['/settings/planning', 'narrow'],
     ['/settings/shops', 'narrow'],
     ['/settings/shops/7', 'narrow'],

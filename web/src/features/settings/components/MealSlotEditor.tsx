@@ -1,10 +1,13 @@
+import type { CourseChoice } from '../../../lib/courses'
 import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField, WeekdayPicker } from '../../../ui'
 import { useSlotForm } from '../hooks/useSlotForm'
 import { documentLocale } from '../lib/locale'
 import { sameDays } from '../lib/multiDay'
 import { settingsStrings } from '../strings'
-import type { MealSlot, MealSlotInput, Member, SlotBatchRequest } from '../types'
+import type { MealSlot, MealSlotInput, Member, SlotBatchRequest, SlotBatchResult } from '../types'
+import { coursesStrings } from '../coursesStrings'
 import { AttendanceEditor } from './AttendanceEditor'
+import { SlotCoursesField } from './SlotCoursesField'
 import '../settings.css'
 
 export interface MealSlotEditorProps {
@@ -23,6 +26,10 @@ export interface MealSlotEditorProps {
   slots?: MealSlot[]
   onApply?: (request: SlotBatchRequest) => void | Promise<void>
   weekStart?: 1 | 6 | 7
+  /** CRS D2: the household's active Courses (household order). Given, the editor shows the Courses field; absent or empty, it does not. */
+  courses?: CourseChoice[]
+  /** CRS D2, editing: a dry run of the batch (`dryRun: true`), asked while the Admin takes Courses off, to name what goes. */
+  onPreview?: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   locale?: string
   onDelete?: () => void | Promise<void>
   /** Editing only: opens the one-date Attendance for this slot ("Change a date"). */
@@ -37,15 +44,28 @@ const text = settingsStrings.slot
 export function MealSlotEditor({ open, slot, onClose, ...rest }: MealSlotEditorProps) {
   return (
     <BottomSheet open={open} onClose={onClose} title={slot ? text.editTitle : text.addTitle}>
-      <SlotForm key={slot?.id ?? 'new'} slot={slot} {...rest} />
+      {/* Keyed on whether the household has Courses, not on how many: a live Course added elsewhere must not discard an open draft. */}
+      <SlotForm key={`${slot?.id ?? 'new'}|${(rest.courses?.length ?? 0) > 0 ? 'courses' : 'none'}`} slot={slot} {...rest} />
     </BottomSheet>
   )
 }
 
 type FormProps = Omit<MealSlotEditorProps, 'open' | 'onClose'>
 
-function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
-  const { draft, set, weekdays, setWeekdays, picks, summary, problem, submit } = useSlotForm({ slot, members, defaultWeekdays, defaultName, slots, locale, onSave, onApply })
+function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, courses, onPreview, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
+  const { draft, set, weekdays, setWeekdays, picks, summary, problem, submit, coursesError, removal } = useSlotForm({
+    slot,
+    members,
+    defaultWeekdays,
+    defaultName,
+    slots,
+    courses,
+    onPreview,
+    locale,
+    onSave,
+    onApply,
+  })
+  const showCourses = courses !== undefined && courses.length > 0
   const formProblem = problem?.field === 'form' ? problem.message : undefined
   const shownError = formProblem ?? error
 
@@ -71,6 +91,16 @@ function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, 
         <TimeField size="sm" label={text.time} value={draft.time} onChange={(time) => set({ time })} />
       </FieldRow>
       <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
+      {showCourses && draft.courses ? (
+        <SlotCoursesField
+          courses={courses}
+          members={members}
+          attendance={draft.attendance}
+          value={draft.courses}
+          onChange={(next) => set({ courses: next })}
+          error={coursesError}
+        />
+      ) : null}
       {summary ? (
         <ul className="meal-slot-summary" role="list" aria-label={text.willChange} aria-live="polite">
           {summary.update ? <li>{summary.update}</li> : null}
@@ -79,6 +109,13 @@ function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, 
               {line}
             </li>
           ))}
+          {removal.lines?.lines.map((line) => <li key={line}>{line}</li>)}
+          {removal.lines && removal.lines.pinned.length > 0 ? <li className="meal-slot-summary__pinned">{coursesStrings.slot.pinnedHeading}</li> : null}
+          {removal.lines?.pinned.map((line) => (
+            <li key={`pinned-${line}`}>{line}</li>
+          ))}
+          {removal.status === 'loading' ? <li>{coursesStrings.slot.previewLoading}</li> : null}
+          {removal.status === 'error' ? <li>{coursesStrings.slot.previewFailed}</li> : null}
         </ul>
       ) : null}
       {shownError ? (

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { pageWidthFor } from '../../app/pageWidths'
 
 describe('Settings page widths', () => {
-  it.each(['/settings', '/settings/household', '/settings/preferences', '/settings/members', '/settings/allowlist', '/settings/shops', '/settings/shops/4', '/settings/notifications', '/ingredients', '/ingredients/3', '/products', '/products/3'])(
+  it.each(['/settings', '/settings/household', '/settings/preferences', '/settings/members', '/settings/courses', '/settings/allowlist', '/settings/shops', '/settings/shops/4', '/settings/notifications', '/ingredients', '/ingredients/3', '/products', '/products/3'])(
     '%s is narrow',
     (path) => expect(pageWidthFor(path)).toBe('narrow'),
   )

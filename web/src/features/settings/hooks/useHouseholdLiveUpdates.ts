@@ -10,7 +10,7 @@ export function useHouseholdLiveUpdates(): void {
     if (typeof EventSource === 'undefined') return
     const connection = connectEvents()
     const stale = () => {
-      for (const key of [['household'], ['allowlist']]) void queryClient.invalidateQueries({ queryKey: key })
+      for (const key of [['household'], ['allowlist'], ['courses']]) void queryClient.invalidateQueries({ queryKey: key })
     }
     const off = connection.subscribe('household', (data) => {
       for (const queryKey of staleKeysFor(data)) void queryClient.invalidateQueries({ queryKey: [...queryKey] })

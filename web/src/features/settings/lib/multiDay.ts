@@ -2,6 +2,7 @@
 import { sortIsoDays, weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, MealSlot, MealSlotInput, SlotBatchChange, SlotBatchRequest } from '../types'
+import { coursesChanged, slotCourseInputs } from './slotCourses'
 
 const text = settingsStrings.slot
 
@@ -49,11 +50,12 @@ export function changedFields(original: MealSlot, draft: MealSlotInput): SlotBat
   if (name !== original.name.trim()) out.name = name
   if (draft.time !== original.time) out.time = draft.time
   if (sig(draft.attendance) !== sig(original.attendance)) out.attendance = draft.attendance
+  if (draft.courses !== undefined && coursesChanged(slotCourseInputs(original), draft.courses)) out.courses = draft.courses
   return out
 }
 
 export function hasChanges(change: SlotBatchChange): boolean {
-  return change.name !== undefined || change.time !== undefined || change.attendance !== undefined
+  return change.name !== undefined || change.time !== undefined || change.attendance !== undefined || change.courses !== undefined
 }
 
 export function batchRequest(original: MealSlot, weekdays: number[], draft: MealSlotInput): SlotBatchRequest {

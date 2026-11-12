@@ -25,3 +25,31 @@ export const COURSE_NAME_MAX = 40
 export const MAX_COURSES = 20
 /** The message of an empty choice, for a Meal Slot or a Recipe (spec 3.1 and 4). */
 export const COURSES_EMPTY_MESSAGE = 'Choose at least one Course'
+
+/** CRS D2: a Planned Meal a Delete or Archive removes (`GET /api/courses/{id}/impact`). Pinned ones are listed first. */
+export interface ImpactMeal {
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  recipeId?: number
+  recipeName: string
+  pinned: boolean
+}
+/** CRS D2: a Slot Rule on the Course (by Recipe or by Tag). */
+export interface ImpactRule {
+  id: number
+  mealSlotId: number
+  recipeId?: number
+  recipeName?: string
+  tag?: string
+}
+/** CRS D2: what a Delete or Archive changes. */
+export interface CourseImpact {
+  planned: boolean
+  recipes: number
+  recipesOnlyThis: number
+  mealSlots: number
+  mealSlotsOnlyThis: number
+  plannedMeals: ImpactMeal[]
+  slotRules: ImpactRule[]
+}

@@ -20,6 +20,7 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/household', 'Household'],
     ['/settings/members', 'Members'],
     ['/settings/meal-slots', 'Meal Slots'],
+    ['/settings/courses', 'Courses'], // CRS D2
     ['/settings/planning', 'Planning rules'],
     ['/settings/shops', 'Shops'],
     ['/settings/preferences', 'Your preferences'],
