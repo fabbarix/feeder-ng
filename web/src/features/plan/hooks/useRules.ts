@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { planApi } from '../api'
+import { rulesStrings } from '../lib/rulesStrings'
 import { planStrings } from '../strings'
 import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
 import { invalidatePlan } from './planCache'
@@ -10,7 +11,11 @@ import { useRecipeChoices } from './useRecipeChoices'
 const NONE: never[] = []
 
 function messageOf(e: unknown, fallback: string): string {
-  if (e instanceof ApiError) return e.code === 'duplicate_rule' ? planStrings.duplicateRule : e.message || fallback
+  if (e instanceof ApiError) {
+    if (e.code === 'duplicate_rule') return planStrings.duplicateRule
+    if (e.code === 'tag_unknown') return rulesStrings.unknownTag
+    return e.message || fallback
+  }
   return e instanceof Error ? e.message : fallback
 }
 
@@ -18,7 +23,7 @@ export interface UseSlotRules {
   rules: SlotRule[]
   mealSlots: MealSlotChoice[]
   recipes: RecipeChoice[]
-  add: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => Promise<boolean>
+  add: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => Promise<boolean>
   remove: (id: number) => Promise<void>
   error: string | null
   isLoading: boolean
@@ -38,7 +43,7 @@ export function useSlotRules(): UseSlotRules {
   }, [client])
 
   const add = useCallback(
-    async (body: { mealSlotId: number; recipeId?: number; tag?: string }) => {
+    async (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => {
       setError(null)
       try {
         await planApi.addSlotRule(body)

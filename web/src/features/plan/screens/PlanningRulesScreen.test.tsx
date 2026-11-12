@@ -10,7 +10,11 @@ const base = {
   'GET /api/variety-rules': [{ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false }],
   'GET /api/meal-slots': [{ id: 5, weekday: 5, name: 'Dinner', time: '19:00' }],
   'GET /api/recipes': [{ id: 3, name: 'Curry', tags: [] }],
-  'GET /api/tags': [{ name: 'fish', recipes: 2 }, { name: 'pasta', recipes: 4 }],
+  'GET /api/tags': [
+    { id: 1, name: 'fish', key: 'fish', colour: 'teal', recipes: 2, slotRules: 0, varietyRule: true },
+    { id: 2, name: 'pasta', key: 'pasta', colour: 'apricot', recipes: 4, slotRules: 0, varietyRule: false },
+    { id: 3, name: 'Pizza', key: 'pizza', colour: 'plum', recipes: 1, slotRules: 1, varietyRule: false },
+  ],
 }
 
 async function pick(field: string, option: string | RegExp) {
@@ -24,21 +28,21 @@ describe('PlanningRulesScreen', () => {
     renderWithProviders(<PlanningRulesScreen />)
     expect(await screen.findByRole('heading', { name: 'Slot Rules' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Variety Rules' })).toBeInTheDocument()
-    expect(await screen.findByText('Tag: pizza')).toBeInTheDocument()
+    expect(await screen.findByText('Pizza')).toBeInTheDocument()
     expect(await screen.findByText('At most 2 a week')).toBeInTheDocument()
   })
 
   it('has no native <select>', async () => {
     mockApi(base)
     const { container } = renderWithProviders(<PlanningRulesScreen />)
-    await screen.findByText('Tag: pizza')
+    await screen.findByText('Pizza')
     expect(container.querySelector('select')).toBeNull()
   })
 
   it('reads the existing Tags once for the Tag selects (read-only use of the recipes API)', async () => {
     const api = mockApi(base)
     renderWithProviders(<PlanningRulesScreen />)
-    await screen.findByText('Tag: pizza')
+    await screen.findByText('Pizza')
     await waitFor(() => expect(api.callsTo('GET', '/api/tags').length).toBeGreaterThanOrEqual(1))
     expect(api.calls.filter((c) => c.method !== 'GET')).toHaveLength(0)
   })
@@ -46,7 +50,7 @@ describe('PlanningRulesScreen', () => {
   it('adding a Slot Rule posts it', async () => {
     const api = mockApi({ ...base, 'POST /api/slot-rules': { id: 10, mealSlotId: 5, recipeId: 3 } })
     renderWithProviders(<PlanningRulesScreen />)
-    await screen.findByText('Tag: pizza')
+    await screen.findByText('Pizza')
     await pick('Meal Slot', /Dinner/)
     await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
@@ -76,7 +80,7 @@ describe('PlanningRulesScreen', () => {
   it('shows the server message when a Slot Rule already exists', async () => {
     mockApi({ ...base, 'POST /api/slot-rules': { status: 409, json: { error: { code: 'duplicate_rule', message: 'dup' } } } })
     renderWithProviders(<PlanningRulesScreen />)
-    await screen.findByText('Tag: pizza')
+    await screen.findByText('Pizza')
     await pick('Meal Slot', /Dinner/)
     await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
@@ -87,7 +91,7 @@ describe('PlanningRulesScreen', () => {
   it('shows Settings > Planning rules above the h1 and has no link to Plan', async () => {
     mockApi(base)
     const { container } = renderWithProviders(<PlanningRulesScreen />, '/settings/planning')
-    await screen.findByText('Tag: pizza')
+    await screen.findByText('Pizza')
     const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
     expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings')
     expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Planning rules')
