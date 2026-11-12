@@ -130,6 +130,10 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['vegetarian', 'Leaf'],
   ['liquid', 'Drop'], // R14: Base Unit ml
   ['piece', 'Cube'], // R14: Base Unit piece
+  ['snowflake', 'Snowflake'], // beta.5 WP D
+  ['question', 'Question'], // beta.5 WP D
+  ['shoppingCart', 'ShoppingCart'], // beta.5 WP D
+  ['guests', 'UserPlus'], // beta.5 WP D
   ['key', 'Key'], // WP-D
   ['assistant', 'Robot'], // WP-D
   ['refresh', 'ArrowsClockwise'], // WP-D
