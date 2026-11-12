@@ -16,7 +16,7 @@ describe('pastMealsHint', () => {
   })
 
   it('groups the Courses of one slot instead of repeating the slot', () => {
-    expect(pastMealsHint([makePast({ courseName: 'Main' }), makePast({ courseName: 'Side' })])).toBe('Includes Tue Dinner (Main, Side), not marked Cooked yet')
+    expect(pastMealsHint([makePast({ courseName: 'Starter' }), makePast({ courseName: 'Side' })])).toBe('Includes Tue Dinner (Starter, Side), not marked Cooked yet')
   })
 
   it('lists two slots with "and", in the order given', () => {
@@ -29,7 +29,7 @@ describe('pastMealsHint', () => {
   })
 
   it('tells two Dinners on different days apart from one slot with two Courses', () => {
-    const meals = [makePast({ courseName: 'Main' }), makePast({ date: '2026-11-04', courseName: 'Main' })]
+    const meals = [makePast({ courseName: 'Starter' }), makePast({ date: '2026-11-04', courseName: 'Starter' })]
     expect(pastMealsHint(meals)).toBe('Includes Tue Dinner and Wed Dinner, not marked Cooked yet')
   })
 

@@ -41,5 +41,5 @@ export function makeList(over: Partial<ShoppingList> = {}): ShoppingList {
 
 /** B5-SH: an unconfirmed past meal; 2026-11-03 is a Tuesday. */
 export function makePast(over: Partial<PastPlannedMeal> = {}): PastPlannedMeal {
-  return { date: '2026-11-03', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main', ...over }
+  return { date: '2026-11-03', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Starter', ...over }
 }
