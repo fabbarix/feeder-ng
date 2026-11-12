@@ -25,6 +25,7 @@ const DEFAULT_API: ObjectUrlApi = {
 /** `api` is read on mount only; the returned functions keep their identity for the life of the component. */
 export function useObjectUrls(api?: ObjectUrlApi): ObjectUrls {
   const apiRef = useRef<ObjectUrlApi>(api ?? DEFAULT_API)
+  const aliveRef = useRef(false)
   const [entries] = useState(() => new Map<string, Entry>())
 
   const release = useCallback(
@@ -54,7 +55,17 @@ export function useObjectUrls(api?: ObjectUrlApi): ObjectUrls {
     [entries],
   )
 
-  useEffect(() => releaseAll, [releaseAll])
+  // Deferred: StrictMode runs cleanup and mount back to back, and a url taken during render must survive that.
+  // A real unmount is not re-mounted, so the microtask releases everything.
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+      queueMicrotask(() => {
+        if (!aliveRef.current) releaseAll()
+      })
+    }
+  }, [releaseAll])
 
   return useMemo(() => ({ urlFor, release, releaseAll }), [urlFor, release, releaseAll])
 }
