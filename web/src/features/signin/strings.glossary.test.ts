@@ -39,8 +39,10 @@ describe('sign-in intro', () => {
 describe('"email not verified" page', () => {
   it('says Google has not verified the email and offers another Google sign-in (no Allowlist or Admin fix)', () => {
     expect(signinStrings.emailNotVerifiedTitle).toBe('Email not verified')
-    expect(signinStrings.emailNotVerifiedText).toBe('Google has not verified this email. Use a different Google sign-in.')
+    expect(signinStrings.emailNotVerifiedText).toBe('Google has not verified this email.')
     expect(signinStrings.emailNotVerifiedText).not.toMatch(/Allowlist|Admin/i)
+    expect(signinStrings.emailNotVerifiedText).not.toContain(signinStrings.tryAnother)
+    expect(signinStrings.emailNotVerifiedText).not.toMatch(/different Google sign-in/i)
     expect(Object.keys(signinStrings).filter((k) => /invit/i.test(k))).toEqual([])
   })
 })

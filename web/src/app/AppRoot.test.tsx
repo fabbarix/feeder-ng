@@ -39,7 +39,7 @@ describe('AppRoot signed out', () => {
   it('shows the Email not verified page after Google does not verify the email', async () => {
     mount('/email-not-verified', unauthenticated())
     expect(await screen.findByRole('heading', { name: 'Email not verified' })).toBeInTheDocument()
-    expect(screen.getByText('Google has not verified this email. Use a different Google sign-in.')).toBeInTheDocument()
+    expect(screen.getByText('Google has not verified this email.')).toBeInTheDocument()
   })
 
   it('redirects the old /not-invited to the Email not verified page', async () => {
