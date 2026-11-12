@@ -58,6 +58,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/plan", a.view)
 	r.User("GET /api/plan/to-confirm", a.toConfirm)
 	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
+	// Team C-RX (docs/dev/design/crs-crx.md): a literal, so the mux prefers it to the {date}/{slotId} patterns.
+	r.User("GET /api/plan/couldnt-plan/exclusions", a.couldntExclusions)
 	r.User("GET /api/plan/leftovers", a.leftovers)
 	r.User("POST /api/plan/regenerate", a.regenerate)
 	r.User("PUT /api/plan/{date}/{slotId}", a.setMeal)

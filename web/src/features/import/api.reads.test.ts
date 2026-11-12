@@ -12,7 +12,7 @@ vi.mock('../../lib/http', () => {
 
 import { importApi } from './api'
 
-const none = { ingredients: [], conversions: [], recipes: [] }
+const none = { ingredients: [], conversions: [], recipes: [], courses: [] }
 
 describe('importApi: Recipe Assistant reads', () => {
   beforeEach(() => {

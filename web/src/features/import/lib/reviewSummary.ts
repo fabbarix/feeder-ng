@@ -1,7 +1,8 @@
 // Pure view-model of an Import Review: which step tiles to show and how much is still open.
 import type { IngredientMatch, Plan } from '../types'
+import { questionRows } from './courseRows'
 
-export type StepId = 'problems' | 'ingredients' | 'units' | 'recipes' | 'images'
+export type StepId = 'problems' | 'ingredients' | 'units' | 'courses' | 'recipes' | 'images'
 
 export interface StepTile {
   id: StepId
@@ -13,8 +14,8 @@ export interface StepTile {
 
 /**
  * The tiles to show, in this order: problems (only when there are any), ingredients (always),
- * units (only with prompts), recipes (only when some Recipe conflicts), images (only with warnings).
- * `open` counts unresolved Ingredients, unanswered unit prompts, unresolved Recipe conflicts and problems;
+ * units (only with prompts), Courses (only with unknown or archived names), recipes (only when some Recipe conflicts), images (only with warnings).
+ * `open` counts unresolved Ingredients, unanswered unit prompts, unresolved Courses, unresolved Recipe conflicts and problems;
  * images are never blocking (open 0).
  */
 export function reviewSteps(plan: Plan): StepTile[] {
@@ -29,6 +30,11 @@ export function reviewSteps(plan: Plan): StepTile[] {
   })
   if (plan.unitPrompts.length > 0) {
     tiles.push({ id: 'units', total: plan.unitPrompts.length, open: plan.unitPrompts.filter((p) => !p.answered).length })
+  }
+  // CRS E2: the Course names that ask something (unknown or archived); a matched name needs no tile.
+  const courses = questionRows(plan.courses)
+  if (courses.length > 0) {
+    tiles.push({ id: 'courses', total: courses.length, open: courses.filter((c) => !c.resolved).length })
   }
   const conflicts = plan.recipes.filter((r) => r.status === 'conflict')
   if (conflicts.length > 0) {

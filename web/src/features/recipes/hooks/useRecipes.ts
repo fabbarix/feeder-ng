@@ -19,7 +19,7 @@ export function useRecipes(filter: RecipeFilter): UseRecipes {
   useRecipeLiveUpdates()
   const list = useQuery({ queryKey: ['recipes', filter], queryFn: () => recipesApi.list(filter) })
   const tags = useQuery({ queryKey: ['tags'], queryFn: recipesApi.tags })
-  const filtered = Boolean(filter.q || filter.tag || (filter.archived && filter.archived !== 'no'))
+  const filtered = Boolean(filter.q || filter.tag || filter.course !== undefined || (filter.archived && filter.archived !== 'no'))
   return {
     recipes: list.data ?? [],
     tags: tags.data ?? [],
