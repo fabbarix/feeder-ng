@@ -24,8 +24,14 @@
   outline-offset: 2px;
 }
 
+/* A long single word (a Course name) wraps inside a half-width Tile instead of scrolling the page sideways. */
 .import-review h2 {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.import-review p {
+  overflow-wrap: anywhere;
 }
 
 .import-review__empty {
@@ -39,16 +45,26 @@
   gap: var(--space-2);
 }
 
-/* A chip may shrink to the Tile's width and wrap its label, so a long name never runs past the edge at phone width. */
+/* A chip never runs past the Tile's edge at phone width. Filter (answer) chips keep the shared 32 px height and 44 px hit area, so a long name is cut with an ellipsis. */
 .import-chips .chip {
-  block-size: auto;
-  min-block-size: 28px;
   min-inline-size: 0;
   max-inline-size: 100%;
+  text-align: start;
+}
+
+.import-chips .chip[data-kind='filter'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Only the status chip (Unknown, Archived) may wrap its label and grow. */
+.import-chips .chip[data-kind='tag'] {
+  block-size: auto;
+  min-block-size: 28px;
   padding-block: var(--space-1);
   white-space: normal;
   overflow-wrap: anywhere;
-  text-align: start;
   line-height: var(--text-label-line);
 }
 

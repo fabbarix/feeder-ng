@@ -29,9 +29,10 @@ describe('import.css', () => {
     const chip = rule('.import-chips .chip')
     expect(chip).toMatch(/max-inline-size:\s*100%/)
     expect(chip).toMatch(/min-inline-size:\s*0/)
-    expect(chip).toMatch(/white-space:\s*normal/)
-    expect(rule(".import-chips .chip[data-kind='tag']")).toMatch(/block-size:\s*auto/)
-    expect(chip).toMatch(/overflow-wrap:\s*anywhere/)
+    const status = rule(".import-chips .chip[data-kind='tag']")
+    expect(status).toMatch(/white-space:\s*normal/)
+    expect(status).toMatch(/block-size:\s*auto/)
+    expect(status).toMatch(/overflow-wrap:\s*anywhere/)
   })
   it('the answer (filter) chips keep the shared 32 px height; only the status chip may grow (CRS E2)', () => {
     const generic = rule('.import-chips .chip')
