@@ -1,6 +1,6 @@
 # Stock is kept as lots and deducted only when a meal is marked Cooked
 
-Status: **Accepted**. The deduction order became the default, not the only rule, with Used from: [ADR 0011](0011-cooked-takes-from-picked-lots.md) (Proposed).
+Status: **Accepted**. The deduction order became the default, not the only rule, with Used from: [ADR 0011](0011-cooked-takes-from-picked-lots.md) (Accepted).
 
 Stock is kept as Stock Lots (purchase date, plus a go-off date if the Ingredient has a Shelf Life), so the planner can push to use perishables before they spoil (Ingredient Overlap). Lots are added by Scan or Stock-take. They are deducted only when a User marks a Planned Meal as Cooked, taking from the lot that goes off soonest and otherwise the oldest. Merely planning a meal, or a slot passing, never changes Stock.
 

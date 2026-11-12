@@ -1,6 +1,6 @@
 # Cooked takes from the Stock Lots the User picks, else soonest to go off first
 
-Status: **Proposed** (2026-11-12). Amends [ADR 0003](0003-stock-lots-deducted-on-cooked.md). No open question: the Storage Place and order points are decided (Q23, [beta5-reconcile.md](../dev/design/beta5-reconcile.md) §9).
+Status: **Accepted** (2026-11-12; the user's decisions U1 to U7, [beta5-reconcile.md](../dev/design/beta5-reconcile.md) §13). Amends [ADR 0003](0003-stock-lots-deducted-on-cooked.md). The Storage Place and order points were decided with the plan (Q23, §9).
 
 ADR 0003 says a Cooked Planned Meal deducts Stock from the Lot that goes off soonest, then the oldest. That is still the default (`stock.Deduct`, `consumptionLess`: soonest go-off date, then oldest purchase, then lowest id). The Household sometimes cooks with another Lot than the one Feeder would take (the open pack, the one from the Garage Freezer they just thawed), and Stock then drifts from the shelf.
 

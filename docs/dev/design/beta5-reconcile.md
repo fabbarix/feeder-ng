@@ -14,16 +14,16 @@ Terms in **bold** are [GLOSSARY](../../../GLOSSARY.md) terms. Everything here wa
 
 | # | Feature | State on main | Verdict |
 |---|---|---|---|
-| 1 | Per-date slot controls | Date Attendance (Members, Course opt-outs) exists, any User, but only in Settings > Meal Slots. No per-date time, no Not served action. The slot menu is hidden for one-Course slots. | Buildable in part. Waits on U1, U2 (menu rule). |
-| 2 | Guests | Nothing. Portions = Members of the Course Attendance. | Waits on U3. |
-| 3 | Leftovers by hand | `leftovers` rows carry a Course of origin; no place, no hand actions; the 03:00 job discards and counts waste (spec §8). | Waits on U4, U5. |
-| 4 | Plan stability (Bought) | Nothing. ADR 0009 keep check and Slot Rule reservations replan every unpinned Planned Meal. | Waits on U2, U6; needs an ADR. |
+| 1 | Per-date slot controls | Date Attendance (Members, Course opt-outs) exists, any User, but only in Settings > Meal Slots. No per-date time, no Not served action. The slot menu is hidden for one-Course slots. | Buildable in part. Buildable (decided in §13). |
+| 2 | Guests | Nothing. Portions = Members of the Course Attendance. | Buildable (decided in §13). |
+| 3 | Leftovers by hand | `leftovers` rows carry a Course of origin; no place, no hand actions; the 03:00 job discards and counts waste (spec §8). | Buildable (decided in §13). |
+| 4 | Plan stability (Bought) | Nothing. ADR 0009 keep check and Slot Rule reservations replan every unpinned Planned Meal. | Buildable (decided in §13). |
 | 5 | Shopping List | Past unconfirmed Planned Meals are **already** on the list (`Meals(ctx, "", to)`, `derivedLines`). No Not needed, no hint. | Not needed and the hint are buildable now. |
 | 6 | Stock Lots | Pantry lists every Lot by Storage Place; a Lot sheet with Move exists; no edit, no delete, no inline Lots in By Ingredient, no Used from. | Buildable now (decided in §9). |
 | 7 | Recipe sort by last cooked | No sort; no last cooked. | Buildable now. |
 | 8 | Settings grouped | Index already has Household / You / Admin; Courses, Tags, Shops, Storage Places are rows of Household; Ingredients and Products are still in the avatar menu. | Buildable now (decided in §9). |
 
-Release shape: U7 (one tag or two); the snapshot is decided (§9).
+Release shape: one release (U7); the snapshot is decided (§9).
 
 ### 0.1 Drift in the plan's numbers (fix when the plan's text is lifted into the spec)
 
@@ -286,7 +286,7 @@ These were questions in the first version of this document. They are decided; ol
 | Q24 | The Recipes sort is a `?sort=` URL parameter (the other filters live in the URL) and is also remembered on the device. "Last cooked ..." joins the tile's meta line. |
 | Q25 | Dropped. As the plan: Catalogue = Ingredients, Products, Shops, Tags, Courses, Storage Places; Household = Household, Members, Meal Slots, Planning rules, Sign-in requests, plus Allowlist and Recipe Assistant for Admins; You = Your preferences, Notifications. The Admin group dissolves. (Tags and Courses rows landed after `cd39ff1`; the plan listed them already.) |
 | Q26 | Dropped. As the plan: the avatar menu keeps Kitchen board, Settings and Sign-in requests. |
-| Q28 | **A.** Take the snapshot again (`feeder-pre-1500.db`), generalising the helper. If the user chooses two releases (U7 = B) the snapshot trigger moves with the first release that carries a migration (1530 is plain `CREATE`, so the snapshot may then be dropped for beta.5 and kept for the planner release). |
+| Q28 | **A.** Take the snapshot again (`feeder-pre-1500.db`), generalising the helper. The user chose one release (U7 = A); the snapshot stays.. |
 
 ---
 
@@ -327,7 +327,7 @@ New terms (singular, as the glossary names them):
 
 +**Wasn't there**:
 +The answer that removes a Leftover that Feeder thought was left but never was (a mistake, like Delete on a Stock Lot); it is not waste.
-+_Avoid_: Not found
++_Avoid_: Phantom leftover
 
 +**Take out**:
 +Taking a frozen Leftover out of the Freezer; it is no longer frozen and its Use-by becomes today plus the Recipe's Use-by days.
@@ -385,22 +385,22 @@ Updates:
  **Frozen Shelf Life**: _Note_ (add): "Not Frozen Use-by, which is a Leftover's."
 ```
 
-(The Storage Place and Stock updates depend on U4.)
+(The Storage Place and Stock updates follow U4 = A.)
 
 ---
 
-## 11. ADR candidates
+## 11. ADRs
 
-Drafted as files, status **Proposed**. The "waits on" column names decisions still open; all others are recorded in §9.
+Drafted as files and **Accepted** with the user's decisions (§13); the decisions are recorded in the ADRs.
 
-| ADR | File | Amends | Waits on |
-|---|---|---|---|
-| 0011 Cooked takes from the Lots the User picks, else soonest to go off first | [0011](../../adr/0011-cooked-takes-from-picked-lots.md) | ADR 0003 | nothing (Q23 decided) |
-| 0012 Leftovers stay Leftovers: freezing, hand actions and asking before waste | [0012](../../adr/0012-leftovers-stay-leftovers.md) | spec §1, §6.1, §8 | U4, U5 |
-| 0013 Bought Planned Meals are held by automatic replans | [0013](../../adr/0013-bought-planned-meals-held.md) | ADR 0008 points 2 and 8, ADR 0009 points 4 and 6, decision 22, spec §7.2 steps 0 and 0b | U2, U6 |
-| 0014 A Meal Slot on one date: Not served, an emptied date, Guests and Batches following portions | [0014](../../adr/0014-meal-slot-on-one-date.md) | ADR 0008 point 8 | U1, U2, U3 |
+| ADR | File | Amends |
+|---|---|---|
+| 0011 Cooked takes from the Lots the User picks, else soonest to go off first | [0011](../../adr/0011-cooked-takes-from-picked-lots.md) | ADR 0003 |
+| 0012 Leftovers stay Leftovers: freezing, hand actions and asking before waste | [0012](../../adr/0012-leftovers-stay-leftovers.md) | spec §1, §6.1, §8 |
+| 0013 Bought Planned Meals are held by automatic replans | [0013](../../adr/0013-bought-planned-meals-held.md) | ADR 0008 points 2 and 8, ADR 0009 points 4 and 6, decision 22, spec §7.2 steps 0 and 0b |
+| 0014 A Meal Slot on one date: Not served, an emptied date, Guests and Batches following portions | [0014](../../adr/0014-meal-slot-on-one-date.md) | ADR 0008 point 8 |
 
-Back-references: the status lines of ADR 0003, 0008 and 0009 point at the amending drafts (added in this commit, in the pattern ADR 0008 uses for ADR 0009). W0 owns those three files from here on and flips them with the drafts when they are accepted.
+Back-references: the status lines of ADR 0003, 0008 and 0009 point at the amending ADRs (in the pattern ADR 0008 uses for ADR 0009).
 
 No ADR for Recipes sort, Settings grouping, Not needed or Lot edit (no decision that reverses one).
 
@@ -413,21 +413,23 @@ Rules from CLAUDE.md apply: one team per feature, own worktree and branch, no tw
 | WP | Scope | Owns | Depends on |
 |---|---|---|---|
 | **D Shared web** | Phosphor glyphs (`snowflake`, `question`, `shopping-cart`, a Guests glyph); expandable `ui/ListRow` (`expanded`, `onToggle`); Gallery rows | `web/src/ui/icons.ts`, `web/src/ui/ListRow*`, `web/src/ui/Gallery*`, `web/src/ui/galleryData.ts`, `web/src/ui/index.ts` | none; **before ST and LOW** |
-| **G Settings and nav** (F8) | Groups, rows, copy, avatar menu, breadcrumbs | `web/src/features/settings/lib/settingsSections*`, `settings/strings.ts`, `settings/screens/SettingsIndexPage*`, `web/src/app/{nav.ts,breadcrumbs*,pageWidths.ts}` (+tests), `web/src/features/{ingredients,products,shops}/index.ts` (+tests), `scripts/lib/page-layout-rules.mjs` if a route changes | none; **before F1 and LOW** (they edit `settings/strings.ts` too) |
+| **NAV Bottom nav** | User decision: a 7th top-level button, **Settings**, on the right of the bottom bar and the side rail. Seven equal slots, Scan exactly centred, equal inner padding so the highlights at both ends have room. The avatar menu keeps the account items: sign out and Kitchen board | `web/src/app/{nav.ts,nav.test.ts,AppShell*,YourMenu*,accessMenu*,shell.css,shell.css.test.ts,chromeless*}`, `scripts/check-shell-layout.mjs` and the shell guard (`scripts/lib/page-layout-rules.mjs`, `scripts/check-page-layout.modes` if a route changes) | none |
+| **MS Settings > Meal Slots redesign** | User decision: option B, one card per Meal Slot, from `docs/dev/design/meal-slots-redesign.md`. "Dates that differ" is kept and read-only. "Usual" is the most common value, ties to the earliest weekday. A plain User sees the cards read-only except for "Change a date" | `web/src/features/settings/screens/MealSlotsPage*`, `settings/components/{MealSlotEditor,MealSlotGrid,MealSlotWeek,SlotCourseLine,SlotCoursesField,AttendeePills,AttendanceEditor}*`, `settings/lib/{weekGrid,weekdays,slotGroups,slotForm,slotAnchor,multiDay,slotCourses}*` plus a new pure `settings/lib/mealSlotCards.ts`, its own CSS file (not `settings.css`), and `settings/strings.ts` for its copy | none; **before G and F1** |
+| **G Settings and nav** (F8) | Groups, rows, copy, breadcrumbs. The Settings top-level button (NAV) changes the avatar-menu plan: Ingredients and Products leave the avatar menu for Settings > Catalogue, as the plan says | `web/src/features/settings/lib/settingsSections*`, `settings/strings.ts`, `settings/screens/SettingsIndexPage*`, `web/src/app/{breadcrumbs*,pageWidths.ts}` (+tests) and, after NAV merges, the `MENU_ICONS` entries of `web/src/app/nav.ts`, `web/src/features/{ingredients,products,shops}/index.ts` (+tests), `scripts/lib/page-layout-rules.mjs` if a route changes | **NAV** and **MS** merged (nav.ts, the avatar menu and `settings/strings.ts` are theirs first); **before F1 and LOW** |
 | **R Recipes last cooked** (F7) | `LastCooked` in the plan store, list/detail field, `?sort`, sort select, tile meta | `internal/plan/store/lastcooked.go` (new file), `internal/recipe/httpapi/**`, `internal/modules/recipes.go`, `web/src/features/recipes/**` | none; **before LO** (LO adds the Recipe field and `internal/modules/recipes.go`) |
 | **SH Shopping Not needed + hint** (F5) | Migration 1530, shopping, hint, Not needed | `internal/db/migrations/1530_*.sql`, `internal/shopping/{shopping.go,store/**,service/**,httpapi/**}`, `internal/modules/shopping.go`, `web/src/features/shop/**` | none. **Mark it** needs an anchor on the plan side (`/plan#to-confirm` handled by Plan); F1 provides it. Until F1 merges, SH ships the hint without the button. |
 | **ST Stock Lots: edit, delete, inline** (F6) | `PATCH`/`DELETE` lot, `ValidateEdit`, Pantry expansion, `LotEditSheet` | `internal/stock/**` (all of it, `lot.go` included), `internal/modules/stock.go`, `web/src/features/stock/**` | **D** merged (ListRow) |
-| **SD Slot dates + Guests backend** (F1, F2) | Migration 1500, `household/slotdate.go`, Sources port, planner (Guests, Not served, walk by time, Batches follow portions), notify, cook, shopping slot-time read, payloads | `internal/db/migrations/1500_*`, `internal/household/**`, `internal/planner/**`, `internal/plan/{plan.go,types.go,cook.go}`, `internal/plan/runner/**`, `internal/plan/store/**` (other than `lastcooked.go`), `internal/plan/httpapi/**`, `internal/notify/**`, `internal/cook/**`, `internal/today/**`, `internal/shopping/httpapi/wiring.go`, `internal/modules/{household,planning,notify,cook,today}.go` | SH merged (or hand-off of `wiring.go`); decisions U1, U2, U3 |
-| **F1 Plan and Today web: slot controls, Guests** | Slot menu (every slot), Not served row, time dialog, Who's eating from Plan/Today, Guests stepper, pill suffix, the `/plan#to-confirm` anchor | `web/src/features/plan/**` **except** the Mark-cooked set below, `web/src/features/today/**`, `web/src/features/board/**`, `web/src/features/cook/**` (time captions), `web/src/features/settings/{components/DateAttendancePanel*,lib/attendanceDate*,lib/dateCourses*,hooks/useAttendance*,api.ts,types.ts,strings.ts,index.ts}` | SD, D, **G** merged |
-| **BO Bought backend** | Migration 1520, `shopping.Attribute`, `BoughtRecorder`, planner `roleHeld`, runner, Regenerate dry run, structural dry runs list `bought` | `internal/db/migrations/1520_*`, `internal/shopping/**` (after SH), `internal/planner/**`, `internal/plan/**`, `internal/modules/{shopping,planning}.go` | SD and SH merged; U2, U6 |
+| **SD Slot dates + Guests backend** (F1, F2) | Migration 1500, `household/slotdate.go`, Sources port, planner (Guests, Not served, walk by time, Batches follow portions), notify, cook, shopping slot-time read, payloads | `internal/db/migrations/1500_*`, `internal/household/**`, `internal/planner/**`, `internal/plan/{plan.go,types.go,cook.go}`, `internal/plan/runner/**`, `internal/plan/store/**` (other than `lastcooked.go`), `internal/plan/httpapi/**`, `internal/notify/**`, `internal/cook/**`, `internal/today/**`, `internal/shopping/httpapi/wiring.go`, `internal/modules/{household,planning,notify,cook,today}.go` | SH merged (or hand-off of `wiring.go`) |
+| **F1 Plan and Today web: slot controls, Guests** | Slot menu (every slot), Not served row, time dialog, Who's eating from Plan/Today, Guests stepper, pill suffix, the `/plan#to-confirm` anchor | `web/src/features/plan/**` **except** the Mark-cooked set below, `web/src/features/today/**`, `web/src/features/board/**`, `web/src/features/cook/**` (time captions), `web/src/features/settings/{components/DateAttendancePanel*,lib/attendanceDate*,lib/dateCourses*,hooks/useAttendance*,api.ts,types.ts,strings.ts,index.ts}` | SD, D, **G** and **MS** merged |
+| **BO Bought backend** | Migration 1520, `shopping.Attribute`, `BoughtRecorder`, planner `roleHeld`, runner, Regenerate dry run, structural dry runs list `bought` | `internal/db/migrations/1520_*`, `internal/shopping/**` (after SH), `internal/planner/**`, `internal/plan/**`, `internal/modules/{shopping,planning}.go` | SD and SH merged |
 | **BOW Bought web** | Chip, sheet line, Regenerate list, Swap note | `web/src/features/plan/**` (except the Mark-cooked set) | BO, F1 merged |
-| **LO Leftovers backend** | Migration 1510 (the columns **and** `leftover_events`), `plan/leftover.go`, runner actions, no auto-waste, answers, zero-waste, API, Recipe and household fields | `internal/db/migrations/1510_*`, `internal/plan/{leftover.go,runner/**,store/**,httpapi/**}`, `internal/cook/zerowaste.go` and related, `internal/recipe/**` (field), `internal/household/settings*`, `internal/modules/{planning,recipes,household}.go` | BO merged, **R merged**; U4, U5 |
+| **LO Leftovers backend** | Migration 1510 (the columns **and** `leftover_events`), `plan/leftover.go`, runner actions, no auto-waste, answers, zero-waste, API, Recipe and household fields | `internal/db/migrations/1510_*`, `internal/plan/{leftover.go,runner/**,store/**,httpapi/**}`, `internal/cook/zerowaste.go` and related, `internal/recipe/**` (field), `internal/household/settings*`, `internal/modules/{planning,recipes,household}.go` | BO merged, **R merged** |
 | **UF-stock** | `stock.DeductPicked`, stock service picks in `DeductCookedTx`, preview Lots per need | `internal/stock/{lot.go,service/**}` and tests | **ST merged** |
 | **UF-runner/httpapi** | `usedFrom` through `plan/runner/{stockport.go,actions.go}` and the cooked routes, preview `lots` | `internal/plan/runner/{stockport.go,actions.go}`, `internal/plan/httpapi/**`, `internal/cook/**` | UF-stock and **LO** merged |
 | **UF-web** | `UsedFromSection` in both Mark sheets | the Mark-cooked set: `web/src/features/plan/components/{MarkCookedSheet,MarkAllCookedSheet,CookFlowSheets,AllCookedSheets}*`, `hooks/{useMarkCooked,useMarkAllCooked,useCookFlow,useAllCookedFlow}*`, `lib/{cook,usedFrom}.ts`, new `usedFromStrings.ts` and `api.usedFrom.ts` in `features/plan/` | **UF-runner/httpapi** merged |
 | **LOW Leftovers web** | `lib/leftovers`, `ui/LeftoverActions`, Today tile, Planned Meal sheet link, "From the freezer", Pantry frozen rows, Recipe editor and Household fields | `web/src/lib/leftovers/**`, `web/src/ui/LeftoverActions/**`, `web/src/ui/index.ts`, `web/src/features/plan/**` (except the Mark-cooked set), `web/src/features/stock/**`, `web/src/features/recipes/**` (editor field), `web/src/features/settings/{components/HouseholdSettingsForm*,strings.ts}` | LO, **BOW**, D, G, ST, F1, R merged |
 | **SNAP Snapshot** | Generalise `NeedsPre1400Snapshot` to a named snapshot, `feeder-pre-1500.db` | `internal/db/db.go`, `internal/backup/backup.go`, `cmd/feeder/startup.go`, and its **own** new test file under `scripts/test/` (not the shared release test) | none |
-| **W0 Doc** | Spec (decisions 37 to 43, §18, per-feature edits), GLOSSARY (§10), ADRs 0011 to 0014 to Accepted, status-line back-references | `docs/spec/functional-spec.md`, `GLOSSARY.md`, `docs/adr/001[1-4]-*`, `docs/adr/0003-*`, `0008-*`, `0009-*` | **all** answers (U1 to U7) |
+| **W0 Doc** | Spec (decisions 37 to 43, §18, per-feature edits), GLOSSARY (§10), ADRs 0011 to 0014 to Accepted, status-line back-references | `docs/spec/functional-spec.md`, `GLOSSARY.md`, `docs/adr/001[1-4]-*`, `docs/adr/0003-*`, `0008-*`, `0009-*` | none (the answers are recorded in §13) |
 | **H Release** | CHANGELOG (including the Batches note, §9 Q9), upgrade note, deploy guide, word check | `CHANGELOG.md`, `docs/dev/deploy.md`, `GLOSSARY.md` | last |
 
 **Mark-cooked carve-out.** F1, BOW and LOW own `web/src/features/plan/**` except `components/{MarkCookedSheet,MarkAllCookedSheet,CookFlowSheets,AllCookedSheets}*`, `hooks/{useMarkCooked,useMarkAllCooked,useCookFlow,useAllCookedFlow}*` and `lib/cook.ts`, which belong to UF-web. `plan/strings.ts`, `types.ts`, `api.ts` and `plan.css` are shared by F1, BOW and LOW and so stay strictly in that order; UF-web adds its own strings and API calls in new files.
@@ -436,22 +438,24 @@ Rules from CLAUDE.md apply: one team per feature, own worktree and branch, no tw
 
 ### 12.1 Waves
 
-| Wave | Parallel teams | Needs |
-|---|---|---|
-| **0** | SNAP, D, G, R, SH | none of the open questions |
-| **1** | ST (after D), W0 prep | none |
-| **2** | SD (after SH), UF-stock (after ST) | U1, U2, U3 |
-| **3** | F1 web (after SD, D, G), BO (after SD, SH) | U2, U6 |
-| **4** | BOW, LO (after BO and R) | U4, U5 |
-| **5** | UF-runner/httpapi (after LO), LOW (after BOW, LO, F1, ST, G, R) | |
-| **6** | UF-web (after UF-runner) | |
-| **7** | W0 acceptance of the ADRs and spec, H release, QA | all of U1 to U7 |
+| Wave | Parallel teams (each after what it depends on) |
+|---|---|
+| **0** | SNAP, D, NAV, MS, R, SH |
+| **1** | G (after NAV and MS), ST (after D) |
+| **2** | SD (after SH), UF-stock (after ST) |
+| **3** | F1 web (after SD, D, G, MS), BO (after SD, SH) |
+| **4** | BOW, LO (after BO and R) |
+| **5** | UF-runner/httpapi (after LO), LOW (after BOW, LO, F1, ST, G, R) |
+| **6** | UF-web (after UF-runner) |
+| **7** | W0 (spec, GLOSSARY, ADR status), H release, QA |
 
-Critical path: SD, BO, LO, UF-runner, UF-web, H (LOW runs beside UF-runner and UF-web). W0 cannot finish until every answer is in; its drafts can be prepared earlier.
+Critical path: SD, BO, LO, UF-runner, UF-web, H (LOW runs beside UF-runner and UF-web). W0 can start at once: no answer is open.
+
+**No file has two owners at once.** `web/src/app/nav.ts` and the avatar menu: NAV, then G. `web/src/features/settings/strings.ts`: MS, then G, then F1, then LOW. The Meal Slots components and DateAttendancePanel: MS, then F1 (F1 adds Guests to the sheet and the Settings date entry). `ui/index.ts`: D, then LOW.
 
 ### 12.2 What can start today
 
-D, G, R, SH, SNAP, then ST: none depends on a user question. SD waits for U1 to U3 (and U2 for the menu rule), BO for U2 and U6, LO and LOW for U4 and U5. If U7 is "two releases" the planner packages (SD, F1, BO, BOW, LO, LOW, UF-*) move to the second release; the rest ship first.
+Wave 0 and, behind it, G and ST: no open question. If the coordinator ever cuts to a second release (U7), the planner packages (SD, F1, BO, BOW, LO, LOW, UF-*) move to it, after telling the coordinator.
 
 ### 12.3 Tests and QA additions caused by main
 
@@ -463,50 +467,14 @@ D, G, R, SH, SNAP, then ST: none depends on a user question. SD waits for U1 to 
 
 ---
 
-## 13. Questions for the user
+## 13. Decisions by the user
 
-Seven things only you can decide. Each says what the choice means in the app and what I recommend. Everything else is settled in §9.
+The user answered the seven questions of the first review, taking the recommended option each time. They are decided; the ADRs and the spec follow them.
 
-**U1. When you empty the list of who is eating on one day, what should Feeder do?** (was Q2)
-Today, if you open "Who's eating" for Thursday dinner, take everyone off and save, Feeder shows a "Couldn't plan: nobody is set to attend" warning for that dinner and asks you to choose who attends.
-- *Option A: the day becomes "Not served".* Dinner on Thursday simply disappears from the plan, the Shopping List and the reminders, with no warning, and a small "Plan Dinner again" button brings it back. A dinner that is empty every week in Settings (nobody ever set to attend) still shows the warning, because that is a set-up mistake, not a choice for one day. If you add Guests but no Members, the dinner is served.
-- *Option B: keep today's behaviour.* An emptied day is still a warning. If you really want no dinner, you use the separate "Not served" button.
-- *Option C: refuse to save an empty day,* with a message "Use Not served if nobody is eating".
-Recommendation: **A**. It matches what you mean when you take everyone off ("nobody eats that day") with one gesture and no warning to clear. It changes a rule written earlier (the Couldn't plan for an emptied day), which is why I am asking.
-
-**U2. Can you mark a dinner "Not served" after you have already cooked one of its dishes?** (was Q6)
-Example: the Main is marked Cooked but the Side is still planned, and you then say the dinner is not served. Anything you have already bought for the Side is also affected.
-- *Option A: no.* The "Not served" button only appears while nothing in that meal has been marked Cooked or Not cooked. After that you use "Not cooked" for the rest. Nothing already cooked ever sits beside a "Not served" label.
-- *Option B: yes.* Only the dishes not yet cooked are removed, and the meal shows the cooked dishes with "other dishes not served". Dishes you have already bought for are listed in the confirmation before they go.
-Recommendation: **A**. A meal someone has started cooking was served, and one clear rule is easier to understand than a half-served meal.
-
-**U3. Guests: do they eat dishes that no Member eats, and can a meal be planned for Guests only?** (was Q7 and Q8)
-Say the children opt out of Dessert, and two Guests come on Saturday.
-- *Option A: Guests eat every dish the meal serves.* Dessert is planned for the two Guests even though every Member opted out of it, and a Saturday with Guests and no Members is planned (no preferences or allergies apply, since Guests have none). If no Members and no Guests are eating, you still get the warning.
-- *Option B: Guests only add portions to dishes at least one Member eats.* Dessert stays out; a day with Guests and no Members is not allowed to count.
-Recommendation: **A**. It is the simplest rule to say aloud ("Guests eat what is on the table"). This is what you decided earlier for Guests; the question is only whether it also applies to a dish all Members skip.
-
-**U4. Do frozen Leftovers show on the Pantry page, and where do they go when taken out?** (was Q10 and Q11)
-- *Option A:* frozen Leftovers appear on the Pantry page inside their Freezer ("Chilli, 3 portions, Use by 9 Feb"), with a "Leftovers" filter and not in the "By Ingredient" view. When you take one out of the Freezer it leaves the Pantry and is a normal Leftover again, shown on Today and the Plan with its short Use-by.
-- *Option B:* the Pantry only shows a small link "2 frozen Leftovers" that opens a list elsewhere, so Pantry stays purely for ingredients.
-- *Option C:* frozen and taken-out Leftovers both stay on the Pantry page, a taken-out one in the fridge (or other place) you choose.
-Recommendation: **A**. You asked for a freezer; a frozen dish you cannot see where you look is easily forgotten, and a thawed one is a few-days item, not stock. (If a Freezer is deleted, a frozen Leftover in it shows under "Not sorted".)
-
-**U5. When a frozen Leftover is chosen for a meal, when does it leave the Freezer?** (was Q12)
-Example: six frozen portions of chilli and you pick it for Thursday lunch for two.
-- *Option A:* Feeder takes out only the portions the meal uses, when you mark the meal Cooked; the other four stay frozen with their date. You never have to press "Take out" first.
-- *Option B:* you must press "Take out" first; the whole Leftover is then thawed with a short Use-by.
-- *Option C:* choosing it for a meal thaws all six portions automatically.
-Recommendation: **A**. It is what happens in a kitchen, and "Take out" stays for when you really did thaw everything.
-
-**U6. If you bought a side dish's ingredients and then choose a "whole meal" Recipe for the main dish, what happens to the side?** (was Q17)
-A "whole meal" Recipe (a one-pot dish, a frozen pizza) normally means the side is left out. Meals you have bought for are kept when Feeder changes the plan on its own.
-- *Option A:* the side you bought for is kept and the whole meal sits beside it; Feeder itself will not pick a whole meal beside a bought side. You can still swap the side yourself.
-- *Option B:* choosing the whole meal removes the bought side after a confirmation that names what you bought (it stays in Stock).
-Recommendation: **A**: bought meals are treated like ones you pinned, one rule everywhere. This reverses a small part of the earlier rule for whole meals, which is why I am asking.
-
-**U7. One release or two?** (was Q27)
-The risky changes are the ones that touch how the planner works: Guests, Bought meals, Leftovers by hand and the extra cooking Batches. The others (Recipe sort, Settings groups, Not needed, Lot editing) are small and independent.
-- *Option A:* one release, beta.5, with everything, built in waves; one round of testing at the end.
-- *Option B:* beta.5 with the small independent ones and "Used from" for Stock; the planner changes follow in beta.6.
-Recommendation: **A, cutting to B if a wave slips.** One round of testing is less work for you; the planner changes are scheduled last anyway, so cutting later is cheap.
+- **U1. An emptied day (was Q2): A.** Saving Who's eating for a date with no Member and no Guest makes that slot **Not served** for the date (no warning, with "Plan Dinner again" to bring it back). A slot whose usual Attendance is empty stays Couldn't plan. A date with Guests and no Members is served.
+- **U2. Not served on a partly cooked meal (was Q6): A.** Not served is offered only while no Course of the slot is Cooked or Not cooked; afterwards the User uses Not cooked for the rest.
+- **U3. Guests and dishes no Member eats (was Q7 and Q8): A.** Guests eat every Course the slot serves, including one every Member opts out of, and a date with Guests and no Members is planned (no preferences apply). With no Member and no Guest, the warning stays.
+- **U4. Frozen Leftovers on the Pantry page (was Q10 and Q11): A.** Frozen Leftovers show in their Freezer on the Pantry page, with a Leftovers filter and not in By Ingredient. A taken-out Leftover leaves the Pantry and is a normal Leftover on Today and the Plan with a short Use-by. If its Freezer is deleted it shows under "Not sorted".
+- **U5. When a frozen Leftover leaves the Freezer (was Q12): A.** Cooked takes the portions the meal uses; the rest stays frozen with its date; Take out is not required first.
+- **U6. Bought side beside a Whole meal (was Q17): A.** A Bought Planned Meal is kept like a Pinned one; Feeder does not pick a Whole meal beside it, and the User can still swap it.
+- **U7. One release or two (was Q27): A.** One release, beta.5, built in waves with one round of testing at the end. Cut to beta.6 only after telling the coordinator.
