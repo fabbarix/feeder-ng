@@ -13,7 +13,7 @@ const NONE: Alternative[] = []
 /** GET .../alternatives for the slot; idle (no request) while key is null. */
 export function useAlternatives(key: SlotKey | null): UseAlternatives {
   const q = useQuery({
-    queryKey: ['plan', 'alternatives', key?.date, key?.mealSlotId],
+    queryKey: ['plan', 'alternatives', key?.date, key?.mealSlotId, key?.courseId],
     queryFn: () => planApi.alternatives(key!),
     enabled: key !== null,
     gcTime: 0,

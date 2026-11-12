@@ -2,7 +2,18 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { importApi } from '../api'
-import { answerConversion, chooseCreate, chooseExisting, chooseRecipeAction, emptyDecisions } from '../lib/decisions'
+import {
+  answerConversion,
+  chooseCreate,
+  chooseCourseAdd,
+  chooseCourseSkip,
+  chooseCourseUnarchive,
+  chooseCourseUse,
+  chooseExisting,
+  chooseRecipeAction,
+  dropAdminCourseAnswers,
+  emptyDecisions,
+} from '../lib/decisions'
 import { readFileError } from '../lib/errors'
 import { confirmPhoto, initialPhotoChoice, normaliseChoice, photoRecipes as photoRecipesOf, type PhotoChoice, type PhotoRecipeOption } from '../lib/photoChoice'
 import type { AdoptedRead, BaseUnit, Decisions, FileError, ImportResult, Plan, ReadNoteInfo, RecipeAction, ReviewPhoto } from '../types'
@@ -23,6 +34,14 @@ export interface UseImportReview {
   chooseCreate: (key: string, opts?: { name?: string; baseUnit?: BaseUnit }) => void
   answerConversion: (key: string, unit: string, toBase: number) => void
   chooseRecipeAction: (index: number, action: RecipeAction) => void
+  /** CRS E2: answers for a Course name of the file (docs/dev/design/crs-e2.md 4.2). Each re-plans like the other answers. */
+  chooseCourseUse: (key: string, courseId: number) => void
+  chooseCourseSkip: (key: string) => void
+  /** Admin only: the server answers 403 to a Confirm that holds it from anyone else. */
+  chooseCourseAdd: (key: string) => void
+  chooseCourseUnarchive: (key: string) => void
+  /** True after a Confirm refused with 403 `forbidden`: the Review stays open, `add` and `unarchive` answers were dropped. Cleared by the next answer. */
+  courseForbidden: boolean
   /** Saves everything. On success phase becomes 'done' and the Recipe, Ingredient and Tag queries are invalidated. */
   confirm: () => Promise<void>
   /** Discards the server-side review and returns to the source step. */
@@ -73,6 +92,7 @@ export function useImportReview(): UseImportReview {
   const [result, setResult] = useState<ImportResult | undefined>(undefined)
   const [decisions, setDecisions] = useState<Decisions>(emptyDecisions)
   const [extras, setExtrasState] = useState<ReadExtras>(noExtras)
+  const [courseForbidden, setCourseForbidden] = useState(false)
 
   // Refs mirror the latest values, so answers given in quick succession build on each other.
   const decisionsRef = useRef<Decisions>(decisions)
@@ -134,13 +154,14 @@ export function useImportReview(): UseImportReview {
         note: { modelName: read.model?.name, structuredData: read.source?.structuredData === true },
       })
       setCurrent({ id: read.id, plan: read.plan })
+      setCourseForbidden(false)
       setPhase('reviewing')
     },
     [setCurrent, setExtras],
   )
 
-  /** Applies an answer and asks the server for the plan it leads to; only the latest request is shown. */
-  const answer = useCallback(
+  /** Applies the answers and asks the server for the plan they lead to; only the latest request is shown. */
+  const replan = useCallback(
     (next: Decisions) => {
       decisionsRef.current = next
       setDecisions(next)
@@ -156,6 +177,15 @@ export function useImportReview(): UseImportReview {
     [track, setCurrent],
   )
 
+  /** An answer from the User: it also clears the notice of a refused Course answer. */
+  const answer = useCallback(
+    (next: Decisions) => {
+      setCourseForbidden(false)
+      replan(next)
+    },
+    [replan],
+  )
+
   const confirm = useCallback(async () => {
     const current = reviewRef.current
     if (!current) return
@@ -169,16 +199,22 @@ export function useImportReview(): UseImportReview {
       void client.invalidateQueries({ queryKey: ['recipes'] })
       void client.invalidateQueries({ queryKey: ['ingredients'] })
       void client.invalidateQueries({ queryKey: ['tags'] })
+      // CRS E2: an import that added or brought back a Course changes the Courses lists.
+      if ((res.coursesCreated ?? 0) > 0 || (res.coursesUnarchived ?? 0) > 0) void client.invalidateQueries({ queryKey: ['courses'] })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'import_not_ready') {
         setCurrent({ id: current.id, plan: e.details.plan as Plan })
       } else if (e instanceof ApiError && e.code === 'import_stale') {
         setStale(true)
+      } else if (e instanceof ApiError && e.code === 'forbidden' && hasAdminCourseAnswers(decisionsRef.current)) {
+        // CRS E2: a non-Admin's Confirm with add or unarchive: the Review stays open without them, and the plan is asked again.
+        setCourseForbidden(true)
+        replan(dropAdminCourseAnswers(decisionsRef.current))
       } else {
         setError(readFileError(e))
       }
     }
-  }, [track, client, setCurrent])
+  }, [track, client, setCurrent, replan])
 
   const reset = useCallback(async () => {
     const current = reviewRef.current
@@ -196,6 +232,7 @@ export function useImportReview(): UseImportReview {
     setStale(false)
     setResult(undefined)
     setExtras(noExtras())
+    setCourseForbidden(false)
     setPhase('source')
   }, [setCurrent, setExtras])
 
@@ -219,6 +256,11 @@ export function useImportReview(): UseImportReview {
     chooseCreate: (key, opts) => answer(chooseCreate(decisionsRef.current, key, opts)),
     answerConversion: (key, unit, toBase) => answer(answerConversion(decisionsRef.current, key, unit, toBase)),
     chooseRecipeAction: (index, action) => answer(chooseRecipeAction(decisionsRef.current, index, action)),
+    chooseCourseUse: (key, courseId) => answer(chooseCourseUse(decisionsRef.current, key, courseId)),
+    chooseCourseSkip: (key) => answer(chooseCourseSkip(decisionsRef.current, key)),
+    chooseCourseAdd: (key) => answer(chooseCourseAdd(decisionsRef.current, key)),
+    chooseCourseUnarchive: (key) => answer(chooseCourseUnarchive(decisionsRef.current, key)),
+    courseForbidden,
     confirm,
     reset,
     reviewId: review?.id,
@@ -231,4 +273,9 @@ export function useImportReview(): UseImportReview {
     choosePhotoRecipe: (index) => changeChoice({ recipe: index }),
     readNote: extras.note,
   }
+}
+
+/** True when the answers hold an `add` or `unarchive` Course answer (the ones an Admin alone may send). */
+function hasAdminCourseAnswers(d: Decisions): boolean {
+  return d.courses.some((c) => c.action === 'add' || c.action === 'unarchive')
 }

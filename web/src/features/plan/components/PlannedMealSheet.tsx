@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
 import { sheetChips } from '../lib/chips'
+import { courseKey, courseOf, slotCourses } from '../lib/courses'
+import { relaxedLine } from '../lib/relaxed'
+import { weekdayName } from '../lib/phrase'
 import { mayCook, mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
@@ -19,6 +22,16 @@ export interface PlannedMealSheetProps {
   onPin: (key: SlotKey) => void
   onUnpin: (key: SlotKey) => void
   onChoose: (key: SlotKey) => void
+  /**
+   * The Course the sheet is for (the slot's `courses` row); absent = the main Course. With several Courses the meta line
+   * reads "Tue Dinner · Side"; the facts and the Attendance avatars are the Course's (the slot's Attendance without the
+   * Course's opt-outs); every action carries the key with `courseId`, except Cook, which is the slot's.
+   */
+  courseId?: number
+  /** The relaxed line's actions (lib/relaxed). */
+  onMarkRecipes?: (courseId: number) => void
+  onAddRecipes?: () => void
+  onReviewVarietyRules?: () => void
 }
 
 /**
@@ -27,17 +40,37 @@ export interface PlannedMealSheetProps {
  * (lib/chips sheetChips); actions in this order: Cook (primary, today, planned only), Mark as Cooked (today and past,
  * planned only), Swap, Pin or Unpin (planned only), Choose a Recipe. A Cooked or Not cooked meal has no actions.
  */
-export function PlannedMealSheet({ open, onClose, slot, today, onCook, onMarkCooked, onSwap, onPin, onUnpin, onChoose }: PlannedMealSheetProps): ReactNode {
-  const meal = slot?.meal ?? null
-  const key: SlotKey | null = slot ? { date: slot.date, mealSlotId: slot.mealSlotId } : null
+export function PlannedMealSheet({
+  open,
+  onClose,
+  slot,
+  today,
+  courseId,
+  onCook,
+  onMarkCooked,
+  onSwap,
+  onPin,
+  onUnpin,
+  onChoose,
+  onMarkRecipes = () => {},
+  onAddRecipes = () => {},
+  onReviewVarietyRules = () => {},
+}: PlannedMealSheetProps): ReactNode {
+  const course = slot ? courseOf(slot, courseId) : undefined
+  const meal = course?.meal ?? null
+  const several = slot ? slotCourses(slot).length > 1 : false
+  const key: SlotKey | null = slot && course ? courseKey(slot, course) : null
+  const slotKey: SlotKey | null = slot ? { date: slot.date, mealSlotId: slot.mealSlotId } : null
   const planned = meal?.state === 'planned'
   const { chips, overflow } = meal && slot ? sheetChips(meal, { slotDate: slot.date }) : { chips: [], overflow: 0 }
+  const line = meal && slot && course ? relaxedLine(meal, { courseId: course.courseId, courseName: course.name, main: course.main, severalCourses: several }) : null
+  const attendance = slot?.attendance?.filter((a) => !course?.optOutMemberIds.includes(a.id))
 
   const actions =
     key && slot && planned
       ? [
           mayCook(slot.date, today) ? (
-            <Button key="cook" variant="primary" icon="cook" onClick={() => onCook(key)}>
+            <Button key="cook" variant="primary" icon="cook" onClick={() => onCook(slotKey!)}>
               {s.cook}
             </Button>
           ) : null,
@@ -73,11 +106,11 @@ export function PlannedMealSheet({ open, onClose, slot, today, onCook, onMarkCoo
     >
       {slot && meal ? (
         <div className="plan-sheet">
-          <p className="plan-sheet__meta">{`${slot.name} · ${slot.time}`}</p>
+          <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
           <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
-          {slot.attendance && slot.attendance.length > 0 ? (
+          {attendance && attendance.length > 0 ? (
             <div className="plan-sheet__attendance">
-              {slot.attendance.map((a) => (
+              {attendance.map((a) => (
                 <Avatar key={a.id} name={a.name} imageUrl={a.photoUrl || undefined} glyph={a.avatar || undefined} colour={a.colour} size="sm" />
               ))}
             </div>
@@ -90,6 +123,24 @@ export function PlannedMealSheet({ open, onClose, slot, today, onCook, onMarkCoo
             ))}
             {overflow > 0 ? <Chip kind="count">{`+${overflow}`}</Chip> : null}
           </div>
+          {line ? (
+            <div className="plan-sheet__relaxed">
+              <p className="plan__muted">{line.text}</p>
+              {line.action.kind === 'markRecipes' ? (
+                <Button variant="tertiary" size="sm" onClick={() => onMarkRecipes(line.action.kind === 'markRecipes' ? line.action.courseId : 0)}>
+                  {line.action.label}
+                </Button>
+              ) : line.action.kind === 'addRecipes' ? (
+                <Button variant="tertiary" size="sm" onClick={onAddRecipes}>
+                  {line.action.label}
+                </Button>
+              ) : (
+                <Button variant="tertiary" size="sm" onClick={onReviewVarietyRules}>
+                  {line.action.label}
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </BottomSheet>

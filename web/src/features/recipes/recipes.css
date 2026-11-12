@@ -132,6 +132,27 @@
   gap: var(--space-2);
 }
 
+/* CRS E2: the Course chips of a tile and of the detail (a plain list of tag Chips), and the Course filter row. */
+.course-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.course-loss__rules {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-4);
+}
+
 .recipe-tile__meta {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);

@@ -1,7 +1,6 @@
+import { mealSlotLabel } from '../../../lib/mealSlots'
 import { planStrings as s } from '../strings'
 import type { SlotRule, TagChoice, VarietyRule } from '../types'
-
-const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 /** Tags are matched by lower case with inner spaces collapsed (the server's recipe.TagKey). */
 export function normaliseTag(tag: string): string {
@@ -40,16 +39,15 @@ export function toVarietyRule(draft: VarietyDraft): { rule: VarietyRule } | { er
   return { rule: { tag, maxPerWeek: limit ?? 0, notConsecutiveDays: draft.notConsecutiveDays } }
 }
 
-/** "Friday Dinner" from weekday 5 (ISO, 1 = Monday) and the Meal Slot name. */
-export function mealSlotLabel(weekday: number, name: string): string {
-  return `${WEEKDAYS[(weekday - 1 + 7) % 7]} ${name}`
-}
+export { mealSlotLabel }
 
 export interface SlotRuleDraft {
   mealSlotId: string
   kind: 'recipe' | 'tag'
   recipeId: string
   tag: string
+  /** CRS F: the chosen Course ("" = none chosen: the slot serves one Course, the server then takes the main Course). */
+  courseId?: string
 }
 
 export type SlotRuleDraftError = 'meal_slot_required' | 'tag_required' | 'recipe_required'
@@ -57,16 +55,17 @@ export type SlotRuleDraftError = 'meal_slot_required' | 'tag_required' | 'recipe
 /** Validates the Slot Rule form: a Meal Slot, then a Recipe or a Tag. Returns the request body or the first error. */
 export function toSlotRuleBody(
   draft: SlotRuleDraft,
-): { body: { mealSlotId: number; recipeId?: number; tag?: string } } | { error: SlotRuleDraftError } {
+): { body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string } } | { error: SlotRuleDraftError } {
+  const course = draft.courseId ? { courseId: Number(draft.courseId) } : {}
   if (draft.kind === 'tag') {
     const tag = draft.tag.trim()
     if (!tag) return { error: 'tag_required' }
     if (!draft.mealSlotId) return { error: 'meal_slot_required' }
-    return { body: { mealSlotId: Number(draft.mealSlotId), tag } }
+    return { body: { mealSlotId: Number(draft.mealSlotId), ...course, tag } }
   }
   if (!draft.recipeId) return { error: 'recipe_required' }
   if (!draft.mealSlotId) return { error: 'meal_slot_required' }
-  return { body: { mealSlotId: Number(draft.mealSlotId), recipeId: Number(draft.recipeId) } }
+  return { body: { mealSlotId: Number(draft.mealSlotId), ...course, recipeId: Number(draft.recipeId) } }
 }
 
 export interface TagOption {
@@ -81,4 +80,9 @@ export function toTagOptions(tags: TagChoice[]): TagOption[] {
   return [...tags]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((t) => ({ value: t.name, label: t.name, meta: s.recipeCount(t.recipes) }))
+}
+
+/** CRS F: the title of a Slot Rule row. "Friday Dinner · Main" when the rule's Course is shown, else just "Friday Dinner". */
+export function slotRuleTitle(slotLabel: string, courseName: string | null): string {
+  return courseName ? `${slotLabel} · ${courseName}` : slotLabel
 }

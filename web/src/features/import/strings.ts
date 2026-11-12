@@ -67,6 +67,27 @@ export const importStrings = {
   openRecipes: 'Open Recipes',
   startOver: 'Start over',
 
+  /** CRS E2: Course names of the file (docs/dev/design/crs-e2.md 4). */
+  courses: {
+    title: 'Courses',
+    statusUnknown: 'Not one of your Courses',
+    statusArchived: 'Archived Course',
+    unknownText: (name: string) => `${name} is not one of your Courses`,
+    archivedText: (name: string) => `${name} is an archived Course`,
+    usedBy: (recipes: readonly string[]) => `Used by ${recipes.join(', ')}`,
+    useLabel: 'Use this Course instead',
+    answerGroup: (name: string) => `Answer for ${name}`,
+    skip: (name: string) => `Skip ${name}`,
+    add: (name: string) => `Add ${name} as a Course`,
+    unarchive: (name: string) => `Unarchive ${name}`,
+    adminOnlyAdd: 'Only an Admin can add a Course.',
+    adminOnlyUnarchive: 'Only an Admin can unarchive a Course.',
+    forbidden: 'Only an Admin can add or unarchive a Course. Those answers were cleared: use an existing Course or skip the name.',
+    tooMany: (max: number) => `That would pass the limit of ${max} Courses. Use an existing Course, skip some names, or remove a Course first.`,
+    created: (n: number) => `Added ${n} Course${n === 1 ? '' : 's'}`,
+    unarchived: (n: number) => `Brought back ${n} Course${n === 1 ? '' : 's'}`,
+  },
+
   exportPick: 'Choose Recipes',
   allRecipes: 'All Recipes',
   importActions: 'Import actions',

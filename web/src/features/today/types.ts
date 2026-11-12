@@ -57,6 +57,9 @@ export interface AdvanceStepDue {
   dueTime: string
   slotTime: string
   state: 'due' | 'upcoming'
+  /** CRS F: the Course of the Planned Meal (GET /api/today/advance-steps). */
+  courseId?: number
+  courseName?: string
 }
 
 export interface UseSoonItem {

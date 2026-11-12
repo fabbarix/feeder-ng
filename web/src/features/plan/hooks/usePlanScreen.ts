@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useConfirm, useToast } from '../../../ui'
+import { courseOf, unresolvedCourseIds } from '../lib/courses'
 import { regenerateConfirmCopy, regenerateImpact } from '../lib/regenerate'
 import { planStrings } from '../strings'
 import type { SlotKey } from '../types'
+import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
 import { useCookFlow } from './useCookFlow'
 import { usePlan } from './usePlan'
@@ -19,7 +21,8 @@ export function usePlanScreen() {
   const [swapKey, setSwapKey] = useState<SlotKey | null>(null)
   const [chooseKey, setChooseKey] = useState<SlotKey | null>(null)
   const alternatives = useAlternatives(swapKey)
-  const choices = useRecipeChoices(chooseKey !== null)
+  const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
+  const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
 
   const slotAt = (key: SlotKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
@@ -29,9 +32,12 @@ export function usePlanScreen() {
     plan,
     actions,
     flow,
+    allCooked,
     alternatives,
     choices,
     plannedSlot: slotAt(plannedKey),
+    /** The Course of the open Planned Meal sheet (undefined: the main Course). */
+    plannedCourseId: plannedKey?.courseId,
     swapSlot,
     plannedOpen: plannedKey !== null,
     swapOpen: swapKey !== null,
@@ -47,9 +53,14 @@ export function usePlanScreen() {
       setPlannedKey(null)
       act()
     },
+    /** Mark all Cooked for the slot's Courses still to cook (one sheet, one POST). */
+    openAllCooked: (key: SlotKey) => {
+      const slot = slotAt(key)
+      if (slot) allCooked.open({ date: key.date, mealSlotId: key.mealSlotId }, unresolvedCourseIds(slot))
+    },
     pickAlternative: async (recipeId: number) => {
       if (!swapKey) return
-      const before = swapSlot?.meal
+      const before = swapSlot ? courseOf(swapSlot, swapKey.courseId)?.meal : undefined
       const key = swapKey
       setSwapKey(null)
       if (!(await actions.setMeal(key, recipeId)) || !before) return

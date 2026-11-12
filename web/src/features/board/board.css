@@ -243,3 +243,31 @@
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
+
+/* CRS F: the Tonight tile lists the slot's Courses; the main Course's row is the larger one. */
+.board-tonight__courses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+/* Legible from across the kitchen: the main row sits near the hero Recipe scale (3.25rem), the others below it but not
+   below the slot line (1.75rem). A Cooked row stays on the list, muted. */
+.board-tonight__course {
+  font-size: 2rem;
+}
+.board-tonight__course[data-main='true'] {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+/* The Tonight tile is an accent (hero) tile: its muted text is the on-accent colour, dimmed, so a Cooked row reads as
+   done and stays legible on the accent in both themes. */
+.board-tonight {
+  --color-muted: var(--color-on-accent);
+}
+.board-tonight__course[data-state='cooked'] {
+  color: var(--color-muted);
+  opacity: 0.7;
+}
