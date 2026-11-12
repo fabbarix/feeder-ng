@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -21,6 +22,7 @@ type names struct {
 	recipe *recipestore.Store
 	ing    *ingredientstore.Store
 	plan   *planstore.Store
+	course *coursestore.Store
 }
 
 func newNames(d app.Deps) *names {
@@ -30,6 +32,7 @@ func newNames(d app.Deps) *names {
 		recipe: recipestore.New(d.DB, d.Clock, ingredientUnits{ing}),
 		ing:    ing,
 		plan:   planstore.New(d.DB, d.Clock),
+		course: coursestore.New(d.DB, d.Clock),
 	}
 }
 
@@ -49,6 +52,9 @@ func (u ingredientUnits) Units(ctx context.Context, id int64) (units.Ingredient,
 
 // table is one snapshot of the names, plus the Recipe and Member facts the JSON carries next to them.
 type table struct {
+	courses       map[int64]string // Course names (crs-c2)
+	mainID        int64            // the real id of the main Course: the store's 0 maps to it
+	whole         map[int64]bool   // Whole meal Recipes
 	recipes       map[int64]string
 	recipeReheat  map[int64]int    // R12: reheat time of a Recipe in minutes (0 when none)
 	recipeMinutes map[int64]int    // total time of a Recipe in minutes (0 when unknown)
@@ -67,7 +73,7 @@ type table struct {
 // load builds the names table. meals are the Meals about to be rendered: the source Meal Slot of the stored Leftovers
 // they are served from is looked up by id (N1).
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
-	t := table{recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
+	t := table{courses: map[int64]string{}, whole: map[int64]bool{}, recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
 		members: map[int64]string{}, memberColour: map[int64]string{}, memberPhoto: map[int64]string{}, memberAvatar: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
 	ss, err := n.hh.Slots(ctx)
 	if err != nil {
@@ -76,12 +82,23 @@ func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	for _, s := range ss {
 		t.slots[s.ID] = s.Name
 	}
+	cs, err := n.course.List(ctx, true)
+	if err != nil {
+		return t, err
+	}
+	for _, c := range cs {
+		t.courses[c.ID] = c.Name
+		if c.Main {
+			t.mainID = c.ID
+		}
+	}
 	rs, err := n.recipe.List(ctx, recipestore.ListFilter{Archived: "all"})
 	if err != nil {
 		return t, err
 	}
 	for _, r := range rs {
 		t.recipes[r.ID] = r.Name
+		t.whole[r.ID] = r.WholeMeal
 		t.recipeMinutes[r.ID] = r.TotalMinutes
 		t.recipeReheat[r.ID] = r.ReheatMinutes
 		t.recipePhoto[r.ID] = images.URL(r.Image)
@@ -123,11 +140,22 @@ func leftoverIDs(meals []*plan.Meal) []int64 {
 	return ids
 }
 
-// viewMeals are the Meals of the slot views.
+// viewMeals are the Meals of the slot views: each slot's and each Course row's.
 func viewMeals(views []runner.SlotView) []*plan.Meal {
 	out := make([]*plan.Meal, 0, len(views))
 	for _, v := range views {
 		out = append(out, v.Meal)
+		for i := range v.Courses {
+			out = append(out, v.Courses[i].Meal)
+		}
 	}
 	return out
+}
+
+// course maps the store's id to the real Course id: 0 is the main Course.
+func (t table) course(id int64) int64 {
+	if id == 0 {
+		return t.mainID
+	}
+	return id
 }

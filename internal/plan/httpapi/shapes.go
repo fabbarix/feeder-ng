@@ -28,6 +28,7 @@ type plannedForOut struct {
 	MealSlotID   int64  `json:"mealSlotId"`
 	MealSlotName string `json:"mealSlotName"`
 	RecipeName   string `json:"recipeName"`
+	CourseID     int64  `json:"courseId"`
 }
 
 type leftoverSourceOut struct {
@@ -38,10 +39,15 @@ type leftoverSourceOut struct {
 }
 
 type mealOut struct {
-	Date               string             `json:"date"`
-	MealSlotID         int64              `json:"mealSlotId"`
+	Date       string `json:"date"`
+	MealSlotID int64  `json:"mealSlotId"`
+	// CourseID is the real id of the Course the meal fills (crs-c2); CourseName its name.
+	CourseID           int64              `json:"courseId"`
+	CourseName         string             `json:"courseName"`
 	RecipeID           int64              `json:"recipeId"`
 	RecipeName         string             `json:"recipeName"`
+	WholeMeal          bool               `json:"wholeMeal"`
+	Relaxed            bool               `json:"relaxed"`
 	Batches            float64            `json:"batches"`
 	Portions           float64            `json:"portions"`
 	State              string             `json:"state"`
@@ -86,6 +92,7 @@ type attendeeOut struct {
 type ruleOut struct {
 	ID         int64  `json:"id"`
 	MealSlotID int64  `json:"mealSlotId"`
+	CourseID   int64  `json:"courseId"`
 	RecipeID   int64  `json:"recipeId,omitempty"`
 	RecipeName string `json:"recipeName,omitempty"`
 	Tag        string `json:"tag,omitempty"`
@@ -99,9 +106,49 @@ type slotOut struct {
 	At         string        `json:"at"`
 	Portions   float64       `json:"portions"`
 	Attendance []attendeeOut `json:"attendance"`
-	Meal       *mealOut      `json:"meal"`
-	Unfilled   *unfilledOut  `json:"unfilled"`
-	Rules      []ruleOut     `json:"rules"`
+	// Meal and Unfilled are the main Course's (the aliases until C3, crs-plan §2.2).
+	Meal     *mealOut     `json:"meal"`
+	Unfilled *unfilledOut `json:"unfilled"`
+	Rules    []ruleOut    `json:"rules"`
+	// Courses are the slot's Course rows in the slot's order, then history rows (crs-c2 §3.1).
+	Courses []courseOut `json:"courses"`
+	// CookMinutes is the slot's timeline total in minutes, null when nothing fresh is left to cook; StartBy the time to
+	// start cooking by (omitted with CookMinutes null).
+	CookMinutes *int   `json:"cookMinutes"`
+	StartBy     string `json:"startBy,omitempty"`
+}
+
+// courseOut is one Course row of a slot (crs-c2 §3.1): exactly one of meal, unfilled, coveredBy and unserved is set,
+// or none for a date the planner has not planned.
+type courseOut struct {
+	CourseID        int64         `json:"courseId"`
+	Name            string        `json:"name"`
+	Main            bool          `json:"main"`
+	Optional        bool          `json:"optional"`
+	OptOutMemberIDs []int64       `json:"optOutMemberIds"`
+	Meal            *mealOut      `json:"meal"`
+	Unfilled        *unfilledOut  `json:"unfilled"`
+	CoveredBy       *coveredByOut `json:"coveredBy"`
+	Unserved        *string       `json:"unserved"`
+}
+
+type coveredByOut struct {
+	CourseID   int64  `json:"courseId"`
+	RecipeID   int64  `json:"recipeId"`
+	RecipeName string `json:"recipeName"`
+}
+
+// listEntryOut is one entry of the to-confirm and couldn't-plan lists: a slot occurrence for one Course.
+type listEntryOut struct {
+	slotOut
+	CourseID   int64  `json:"courseId"`
+	CourseName string `json:"courseName"`
+}
+
+// putOut is the answer of a PUT: the meal and the Courses a Whole meal removed (covered, always a list).
+type putOut struct {
+	*mealOut
+	Covered []int64 `json:"covered"`
 }
 
 type leftoverOut struct {
@@ -113,6 +160,7 @@ type leftoverOut struct {
 	UseBy          string  `json:"useBy"`
 	FromDate       string  `json:"fromDate"`
 	FromMealSlotID int64   `json:"fromMealSlotId"`
+	FromCourseID   int64   `json:"fromCourseId"`
 }
 
 type warningOut struct {
@@ -151,6 +199,9 @@ type alternativeOut struct {
 	NewLeftoverUseBy    string   `json:"newLeftoverUseBy"`
 	Score               float64  `json:"score"`
 	Why                 []whyOut `json:"why"`
+	WholeMeal           bool     `json:"wholeMeal"`
+	Covers              []string `json:"covers"` // the names of the Courses a Whole meal would cover
+	Relaxed             bool     `json:"relaxed"`
 	// Optional, additive (WP6): the Recipe photo.
 	PhotoURL string `json:"photoUrl,omitempty"`
 }
@@ -176,8 +227,10 @@ func whyFor(ws []plan.Why, t table) []whyOut {
 }
 
 func mealFor(m plan.Meal, t table) *mealOut {
+	courseID := t.course(m.Key.CourseID)
 	out := &mealOut{
-		Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, RecipeID: m.RecipeID, RecipeName: t.recipes[m.RecipeID],
+		Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: courseID, CourseName: t.courses[courseID],
+		RecipeID: m.RecipeID, RecipeName: t.recipes[m.RecipeID], WholeMeal: t.whole[m.RecipeID], Relaxed: m.Relaxed,
 		Batches: m.Batches, Portions: m.Portions, State: string(m.State), Pinned: m.Pinned,
 		Why:      whyFor(m.Why, t),
 		PhotoURL: t.recipePhoto[m.RecipeID],
@@ -213,13 +266,44 @@ func rulesFor(rs []plan.SlotRule, t table) []ruleOut {
 }
 
 func ruleFor(r plan.SlotRule, t table) ruleOut {
-	return ruleOut{ID: r.ID, MealSlotID: r.MealSlotID, RecipeID: r.RecipeID, RecipeName: t.recipes[r.RecipeID], Tag: r.Tag}
+	return ruleOut{ID: r.ID, MealSlotID: r.MealSlotID, CourseID: t.course(r.CourseID), RecipeID: r.RecipeID,
+		RecipeName: t.recipes[r.RecipeID], Tag: r.Tag}
+}
+
+// courseFor is one Course row of a slot.
+func courseFor(c runner.CourseView, t table) courseOut {
+	out := courseOut{CourseID: c.CourseID, Name: t.courses[c.CourseID], Main: c.Main, Optional: c.Optional,
+		OptOutMemberIDs: append([]int64{}, c.OptOutMemberIDs...)}
+	if c.Meal != nil {
+		out.Meal = mealFor(*c.Meal, t)
+	}
+	if c.Unfilled != nil {
+		out.Unfilled = unfilledFor(*c.Unfilled)
+	}
+	if c.CoveredBy != nil {
+		out.CoveredBy = &coveredByOut{CourseID: c.CoveredBy.CourseID, RecipeID: c.CoveredBy.RecipeID,
+			RecipeName: t.recipes[c.CoveredBy.RecipeID]}
+	}
+	if c.Unserved != "" {
+		reason := c.Unserved
+		out.Unserved = &reason
+	}
+	return out
 }
 
 func slotFor(s runner.SlotView, t table) slotOut {
 	out := slotOut{
 		Date: s.Key.Date, MealSlotID: s.Key.MealSlotID, Name: s.Name, Time: s.Time,
 		At: s.At.Format(time.RFC3339), Portions: s.Portions, Attendance: []attendeeOut{}, Rules: rulesFor(s.Rules, t),
+		Courses: []courseOut{},
+	}
+	for _, c := range s.Courses {
+		out.Courses = append(out.Courses, courseFor(c, t))
+	}
+	if s.CookMinutes != nil {
+		minutes := *s.CookMinutes
+		out.CookMinutes = &minutes
+		out.StartBy = plan.StartBy(s.At, minutes)
 	}
 	for _, a := range s.Attendance {
 		out.Attendance = append(out.Attendance, attendeeOut{MemberID: a.MemberID, Name: t.members[a.MemberID], Factor: a.Factor,
@@ -238,9 +322,14 @@ func slotFor(s runner.SlotView, t table) slotOut {
 
 // alternativeFor is one alternative of the Swap sheet.
 func alternativeFor(alt runner.Alternative, t table) alternativeOut {
+	covers := []string{}
+	for _, c := range alt.Covers {
+		covers = append(covers, t.courses[c])
+	}
 	return alternativeOut{RecipeID: alt.RecipeID, RecipeName: t.recipes[alt.RecipeID], Batches: alt.Batches,
 		NewLeftoverPortions: alt.NewLeftoverPortions, NewLeftoverUseBy: alt.NewLeftoverUseBy, Score: alt.Score,
-		Why: whyFor(alt.Why, t), PhotoURL: t.recipePhoto[alt.RecipeID]}
+		Why: whyFor(alt.Why, t), PhotoURL: t.recipePhoto[alt.RecipeID], WholeMeal: alt.WholeMeal, Covers: covers,
+		Relaxed: alt.Relaxed}
 }
 
 func unfilledFor(u plan.Unfilled) *unfilledOut {
@@ -251,5 +340,6 @@ func unfilledFor(u plan.Unfilled) *unfilledOut {
 
 func leftoverFor(l plan.Leftover, t table) leftoverOut {
 	return leftoverOut{ID: l.ID, RecipeID: l.RecipeID, RecipeName: t.recipes[l.RecipeID], Portions: l.Portions,
-		CookedOn: l.CookedOn, UseBy: l.UseBy, FromDate: l.From.Date, FromMealSlotID: l.From.MealSlotID}
+		CookedOn: l.CookedOn, UseBy: l.UseBy, FromDate: l.From.Date, FromMealSlotID: l.From.MealSlotID,
+		FromCourseID: t.course(l.From.CourseID)}
 }

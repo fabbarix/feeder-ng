@@ -98,10 +98,25 @@ func (s *Service) today(ctx context.Context, now time.Time) (string, error) {
 	return now.In(zone).Format("2006-01-02"), nil
 }
 
-// MealView is Cook Mode for a Planned Meal (ErrNotFound; ErrNotCookable unless state is planned).
-// A Planned Meal served from a Leftover (Batches 0) has nothing to cook and is not cookable either.
+// courseScope is the scope of a Planned Meal: "meal:<date>/<slot>/<course>", two-part for the main Course until C3
+// (crs-plan §2.2). The store maps both forms to the same stored scope.
+func courseScope(m MealInfo) cook.Scope {
+	if m.Main {
+		return cook.MealScope(m.Date, m.MealSlotID, 0)
+	}
+	return cook.MealScope(m.Date, m.MealSlotID, m.CourseID)
+}
+
+// MealView is Cook Mode for the main Course's Planned Meal of a slot (the two-part route; ErrNotFound; ErrNotCookable
+// unless state is planned). A Planned Meal served from a Leftover (Batches 0) has nothing to cook and is not cookable.
 func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (CookView, error) {
-	meal, err := s.cfg.Meals.Meal(ctx, date, mealSlotID)
+	return s.CourseView(ctx, date, mealSlotID, 0)
+}
+
+// CourseView is Cook Mode for one Course's Planned Meal (courseID 0: the main Course). ErrNotFound when the Course
+// has no Planned Meal there; ErrNotCookable as MealView.
+func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, courseID int64) (CookView, error) {
+	meal, err := s.cfg.Meals.Meal(ctx, date, mealSlotID, courseID)
 	if err != nil {
 		return CookView{}, err
 	}
@@ -112,7 +127,7 @@ func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (
 	if err != nil {
 		return CookView{}, err
 	}
-	scope := cook.MealScope(date, mealSlotID, 0)
+	scope := courseScope(meal)
 	marks, err := s.cfg.Store.Marks(ctx, scope)
 	if err != nil {
 		return CookView{}, err
@@ -211,7 +226,7 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 	}
 	recipeID := parts.RecipeID
 	if parts.IsMeal {
-		meal, err := s.cfg.Meals.Meal(ctx, parts.Date, parts.MealSlotID)
+		meal, err := s.cfg.Meals.Meal(ctx, parts.Date, parts.MealSlotID, parts.CourseID)
 		if err != nil {
 			return cook.RecipeSteps{}, err
 		}
@@ -630,7 +645,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			}
 			steps[m.RecipeID] = rs
 		}
-		scope := cook.MealScope(m.Date, m.MealSlotID, 0)
+		scope := courseScope(m)
 		marks, err := s.cfg.Store.Marks(ctx, scope)
 		if err != nil {
 			return nil, err
@@ -642,6 +657,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			_, done := marks[i]
 			cands = append(cands, cook.AdvanceCandidate{
 				Scope: scope, MealDate: m.Date, MealSlotID: m.MealSlotID, SlotName: m.SlotName,
+				CourseID: m.CourseID, CourseName: m.CourseName,
 				RecipeName: rs.Name, MealAt: m.At, Step: i, Text: st.Text,
 				LeadTimeMinutes: st.LeadTimeMinutes, Done: done,
 			})

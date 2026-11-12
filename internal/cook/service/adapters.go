@@ -73,6 +73,9 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 	}
 	names := map[int64]string{}
 	out := cook.RecipeSteps{RecipeID: recipeID, Name: rec.Name}
+	if rec.ReheatMinutes != nil {
+		out.ReheatMinutes = *rec.ReheatMinutes
+	}
 	for _, st := range rec.Steps {
 		step := cook.Step{
 			Kind: st.Kind, Text: st.Text, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes,
@@ -100,31 +103,54 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 
 type dbMeals struct{ a *DB }
 
-const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, ms.time, pm.recipe_id, pm.batches, pm.state
-	FROM planned_meals pm JOIN meal_slots ms ON ms.id = pm.meal_slot_id`
+// mealSelect reads a Planned Meal with its Course (name, main flag, place in the slot's order). A Course missing
+// from the slot's list sorts last.
+const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, ms.time, pm.recipe_id, pm.batches, pm.state,
+	pm.course_id, c.name, c.is_main, COALESCE(msc.position, 9999), pm.portions
+	FROM planned_meals pm
+	JOIN meal_slots ms ON ms.id = pm.meal_slot_id
+	JOIN courses c ON c.id = pm.course_id
+	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id`
 
-// Meal implements Meals.
-func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID int64) (MealInfo, error) {
+// Meal implements Meals; courseID 0 is the main Course.
+func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID, courseID int64) (MealInfo, error) {
 	loc, err := m.a.zone(ctx)
 	if err != nil {
 		return MealInfo{}, err
 	}
-	row := m.a.db.QueryRowContext(ctx, mealSelect+` WHERE pm.date = ? AND pm.meal_slot_id = ?`, date, mealSlotID)
-	info, err := scanMeal(row, loc)
+	q := mealSelect + ` WHERE pm.date = ? AND pm.meal_slot_id = ? AND pm.course_id = `
+	args := []any{date, mealSlotID}
+	if courseID == 0 {
+		q += `(SELECT id FROM courses WHERE is_main = 1)`
+	} else {
+		q += `?`
+		args = append(args, courseID)
+	}
+	info, err := scanMeal(m.a.db.QueryRowContext(ctx, q, args...), loc)
 	if errors.Is(err, sql.ErrNoRows) {
 		return MealInfo{}, ErrNotFound
 	}
 	return info, err
 }
 
+// Slot implements Meals: the Planned Meals of a slot on a date in the slot's Course order.
+func (m dbMeals) Slot(ctx context.Context, date string, mealSlotID int64) ([]MealInfo, error) {
+	return m.query(ctx, mealSelect+` WHERE pm.date = ? AND pm.meal_slot_id = ? ORDER BY COALESCE(msc.position, 9999), pm.course_id`,
+		date, mealSlotID)
+}
+
 // Upcoming implements Meals: Planned Meals in state planned from fromDate on.
 func (m dbMeals) Upcoming(ctx context.Context, fromDate string) ([]MealInfo, error) {
+	return m.query(ctx, mealSelect+` WHERE pm.state = 'planned' AND pm.date >= ?
+		ORDER BY pm.date, pm.meal_slot_id, COALESCE(msc.position, 9999)`, fromDate)
+}
+
+func (m dbMeals) query(ctx context.Context, q string, args ...any) ([]MealInfo, error) {
 	loc, err := m.a.zone(ctx)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := m.a.db.QueryContext(ctx, mealSelect+` WHERE pm.state = 'planned' AND pm.date >= ?
-		ORDER BY pm.date, pm.meal_slot_id`, fromDate)
+	rows, err := m.a.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -149,10 +175,13 @@ func scanMeal(sc scanner, loc *time.Location) (MealInfo, error) {
 	var (
 		info MealInfo
 		hhmm string
+		main int64
 	)
-	if err := sc.Scan(&info.Date, &info.MealSlotID, &info.SlotName, &hhmm, &info.RecipeID, &info.Batches, &info.State); err != nil {
+	if err := sc.Scan(&info.Date, &info.MealSlotID, &info.SlotName, &hhmm, &info.RecipeID, &info.Batches, &info.State,
+		&info.CourseID, &info.CourseName, &main, &info.Position, &info.Portions); err != nil {
 		return MealInfo{}, err
 	}
+	info.Main = main == 1
 	at, err := time.ParseInLocation("2006-01-02 15:04", info.Date+" "+hhmm, loc)
 	if err != nil {
 		return MealInfo{}, err

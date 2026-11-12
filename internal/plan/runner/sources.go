@@ -89,7 +89,14 @@ func (s *DBSources) MealSlots(ctx context.Context) ([]MealSlotDef, error) {
 	}
 	out := make([]MealSlotDef, 0, len(slots))
 	for _, m := range slots {
-		out = append(out, MealSlotDef{ID: m.ID, Weekday: m.Weekday, Name: m.Name, Time: m.Time})
+		def := MealSlotDef{ID: m.ID, Weekday: m.Weekday, Name: m.Name, Time: m.Time}
+		for _, c := range m.Courses {
+			def.Courses = append(def.Courses, c.CourseID)
+			if c.Main {
+				def.MainCourse = c.CourseID
+			}
+		}
+		out = append(out, def)
 	}
 	return out, nil
 }
