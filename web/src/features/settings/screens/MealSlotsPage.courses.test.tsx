@@ -28,16 +28,33 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
+/** An Admin taps the Tuesday day of the Dinner card; a plain User taps "Change a date" (the next Dinner is Tuesday 10 Nov). */
 const openTuesday = async () => {
-  await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+  await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Dinner on Tuesday' }))
+}
+const openNextDinnerDate = async () => {
+  await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Change a date for Dinner' }))
 }
 const rowNames = () => within(screen.getByRole('list', { name: 'Courses in order' })).getAllByTestId('course-name').map((n) => n.textContent)
 
 describe('MealSlotsPage: Courses', () => {
-  it('shows the Courses of each slot on the week', async () => {
+  it('shows the usual Courses on the Dinner card, and who eats the optional Dessert', async () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(await within(await screen.findByRole('group', { name: 'Tuesday' })).findByText('Main · Side · Dessert (optional) without Sam')).toBeInTheDocument()
+    const card = await screen.findByRole('region', { name: 'Dinner' })
+    const list = within(card).getByRole('list', { name: 'Courses' })
+    expect(within(list).getAllByRole('listitem').map((i) => i.textContent)).toEqual(['Main', 'Side', 'Dessert (optional)'])
+    expect(within(card).getByText('Dessert: Anna, Marco only')).toBeInTheDocument()
+  })
+
+  it('lists Thursday (no Dessert) under "Differs on"', async () => {
+    routes(ADMIN_ME)
+    renderWithProviders(<MealSlotsPage />)
+    const card = await screen.findByRole('region', { name: 'Dinner' })
+    const row = within(within(card).getByRole('list', { name: 'Differs on' })).getByRole('listitem')
+    expect(row).toHaveTextContent('Thu')
+    expect(row).toHaveTextContent('19:00')
+    expect(row).toHaveTextContent('Main · Side')
   })
 
   it('the editor shows the slot\'s Courses once the household Courses are loaded', async () => {
@@ -105,7 +122,7 @@ describe('MealSlotsPage: Date Attendance Courses', () => {
       'PUT /api/meal-slots/10/attendance?date=2026-11-10': { ...dateWithCourses, slotId: 10, date: '2026-11-10' },
     })
     renderWithProviders(<MealSlotsPage />)
-    await openTuesday()
+    await openNextDinnerDate()
     const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-10' })
     const side = await within(dialog).findByRole('group', { name: 'Side' })
     await userEvent.click(within(side).getByRole('button', { name: 'Marco' }))

@@ -12,6 +12,8 @@ import { useAttendance } from './useAttendance'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
+import type { DateRow, MealSlotCard } from '../lib/mealSlotCards'
+import { useDateExceptions } from './useDateExceptions'
 import { useMealSlots } from './useMealSlots'
 import { useMembers } from './useMembers'
 
@@ -114,8 +116,23 @@ export function useMealSlotsPage() {
     }
   }
 
+  // STUB (test-first): the developer derives these with buildMealSlotCards / datesThatDiffer (todayIso(), documentLocale(), the Members).
+  const cards: MealSlotCard[] = []
+  const dateRows: DateRow[] = []
+  useDateExceptions()
+  const editCard = (_card: MealSlotCard) => {}
+  const changeDateOf = (_card: MealSlotCard) => {}
+
   return {
     isAdmin,
+    /** MS: one card per Meal Slot name (empty until the Meal Slots and the Members have loaded). */
+    cards,
+    /** MS: the read-only "Dates that differ" rows. */
+    dateRows,
+    /** MS: "Edit <name>" opens the sheet on the card's usual slot (an Admin). */
+    editCard,
+    /** MS: "Change a date for <name>" opens the one-date Attendance on the card's next run (any User). */
+    changeDateOf,
     members,
     slots,
     /** CRS D2: the active Courses for the editor's field (empty until loaded). */

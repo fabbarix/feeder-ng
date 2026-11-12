@@ -146,15 +146,15 @@ describe('MembersPage', () => {
 })
 
 describe('MealSlotsPage', () => {
-  // Below 1024 px: the list, one group per weekday (the desktop table is covered in MealSlotsPage.r15.test.tsx).
+  // One card per Meal Slot name at every width (the cards are covered in MealSlotsPage.cards.test.tsx).
   beforeEach(() => vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} })))
 
-  it('shows the week, and a plain User cannot add', async () => {
+  it('shows a card per name, and a plain User cannot add', async () => {
     routes(USER_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(await screen.findByRole('group', { name: 'Monday' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Lunch 12:30' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Add Meal Slot/ })).toBeNull()
+    expect(await screen.findByRole('region', { name: 'Lunch' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Dinner' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Add / })).toBeNull()
   })
 
   it('adds one Meal Slot on several weekdays at once (QA)', async () => {
@@ -169,9 +169,9 @@ describe('MealSlotsPage', () => {
       },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot on Friday' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot' }))
     const dialog = screen.getByRole('dialog', { name: 'Add Meal Slot' })
-    expect(within(dialog).getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Friday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Saturday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Sunday' }))
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Brunch')
@@ -181,7 +181,7 @@ describe('MealSlotsPage', () => {
     await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots')).toHaveLength(3))
     expect(api.callsTo('POST', '/api/meal-slots').map((c) => (c.body as { weekday: number }).weekday)).toEqual([5, 6, 7])
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(within(screen.getByRole('group', { name: 'Sunday' })).getByRole('button', { name: 'Brunch 11:00' })).toBeInTheDocument()
+    expect(within(await screen.findByRole('region', { name: 'Brunch' })).getByRole('button', { name: 'Brunch on Sunday' })).toBeInTheDocument()
   })
 
   it('when one weekday fails, keeps the sheet open and says which weekday and how many were saved', async () => {
@@ -193,8 +193,9 @@ describe('MealSlotsPage', () => {
           : { status: 201, json: { ...c.body, id: 60 + calls, portionsNeeded: 0 } },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot on Monday' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add Meal Slot' }))
     const dialog = screen.getByRole('dialog', { name: 'Add Meal Slot' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Monday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tuesday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Wednesday' }))
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Dinner')
@@ -208,7 +209,7 @@ describe('MealSlotsPage', () => {
     expect(screen.getByRole('dialog', { name: 'Add Meal Slot' })).toBeInTheDocument()
   })
 
-  it('records "Sam is away Thursday" for one date; a plain User taps the chip straight to that date', async () => {
+  it('records "Sam is away Thursday" for one date; a plain User taps "Change a date" on the Dinner card', async () => {
     const url = '/api/meal-slots/11/attendance?date=2026-11-12'
     const day = { slotId: 11, date: '2026-11-12', isOverride: false, attendance: thursdayDinner.attendance, portionsNeeded: 2.5 }
     const api = routes(USER_ME, {
@@ -216,7 +217,7 @@ describe('MealSlotsPage', () => {
       [`PUT ${url}`]: (c: { body: { attendance: unknown[] } }) => ({ ...day, isOverride: true, attendance: c.body.attendance, portionsNeeded: 2 }),
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Dinner 19:00' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Dinner' }))
     const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Sam' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))
@@ -224,11 +225,11 @@ describe('MealSlotsPage', () => {
     expect(api.callsTo('PUT', url)[0]!.body).toEqual({ attendance: thursdayDinner.attendance.slice(0, 2) })
   })
 
-  it('an Admin tapping a chip gets the MealSlot sheet, which leads to "Change a date"', async () => {
+  it('an Admin tapping a day gets the MealSlot sheet, which leads to "Change a date"', async () => {
     const url = '/api/meal-slots/11/attendance?date=2026-11-12'
     routes(ADMIN_ME, { [`GET ${url}`]: { slotId: 11, date: '2026-11-12', isOverride: false, attendance: thursdayDinner.attendance, portionsNeeded: 2.5 } })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Dinner 19:00' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Dinner on Thursday' }))
     expect(await screen.findByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Change a date' }))
     expect(await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })).toBeInTheDocument()
@@ -237,7 +238,7 @@ describe('MealSlotsPage', () => {
   it('edits an existing slot through one batch call that cannot move it to another weekday', async () => {
     const api = routes(ADMIN_ME, { 'PATCH /api/meal-slots/batch': () => ({ match: 'Lunch', updated: [{ ...mondayLunch, time: '13:00' }], skipped: [] }) })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Lunch 12:30' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Lunch on Monday' }))
     expect(screen.queryByRole('combobox', { name: /Weekday/ })).toBeNull()
     screen.getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1300')
