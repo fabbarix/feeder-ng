@@ -100,16 +100,14 @@ export function RecipesScreen(): ReactNode {
           }
         />
       }
-      search={
-        <div className="recipes-search">
-          <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
-          <RecipeSortSelect value={sort} onChange={setSort} />
-        </div>
-      }
+      search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
       filters={
         <>
           <TagChips tags={known} selected={tag} onSelect={setTag} colourOf={colourOf} />
           <CourseFilter courses={choices} selected={course} onSelect={setCourse} />
+          <div className="recipes-sort">
+            <RecipeSortSelect value={sort} onChange={setSort} />
+          </div>
         </>
       }
     >

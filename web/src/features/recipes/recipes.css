@@ -180,21 +180,10 @@
   white-space: nowrap;
 }
 
-/* Beta.5 F7: the search and the Sort select share one row; the select keeps its width. */
-.recipes-search {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-
-.recipes-search > :first-child {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.recipes-search > :last-child {
-  flex: 0 1 11rem;
-  min-inline-size: 0;
+/* Beta.5 F7: the Sort select sits in the filters row; its width is bounded so the value ellipsises at phone width. */
+.recipes-sort {
+  inline-size: 11rem;
+  max-inline-size: 100%;
 }
 
 /* Recipe detail */
