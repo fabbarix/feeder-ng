@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
@@ -17,6 +17,7 @@ import { ValidationErrorsTile } from '../components/ValidationErrorsTile'
 import { useImportCourses } from '../hooks/useImportCourses'
 import { useImportReview } from '../hooks/useImportReview'
 import { useReadAvailability } from '../hooks/useReadAvailability'
+import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import { useRecipeRead } from '../hooks/useRecipeRead'
 import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
 import { canConfirm, openCount } from '../lib/reviewSummary'
@@ -34,6 +35,11 @@ export function ImportScreen(): ReactNode {
   const r = useImportReview()
   const courses = useImportCourses()
   const read = useRecipeRead({ onDone: r.adopt })
+  // A photo read that reaches review finishes its photos here, not in the step: the step unmounts in the same commit that opens the review,
+  // so the step's own effect would never see the end (hotfix 4.2). The step publishes its clearing in photosFinished.
+  const photosFinished = useRef<(() => void) | undefined>(undefined)
+  const finishPhotos = useCallback(() => photosFinished.current?.(), [])
+  usePhotoReadEnd(read, finishPhotos)
   const availability = useReadAvailability()
   const readHeading = useRef<HTMLHeadingElement>(null)
   const reviewHeading = useRef<HTMLHeadingElement>(null)
@@ -86,7 +92,7 @@ export function ImportScreen(): ReactNode {
         </Tile>
       ) : (
         <>
-          {r.phase === 'source' ? <ReadRecipeStep read={read} availability={availability} headingRef={readHeading} /> : null}
+          {r.phase === 'source' ? <ReadRecipeStep read={read} availability={availability} headingRef={readHeading} photosFinished={photosFinished} /> : null}
           <AgentPromptStep step={r.phase === 'source' ? 2 : 1} />
           {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
           <Tile as="section" className="import-review" overline={s.stepOverline(r.phase === 'source' ? 4 : 2)}>

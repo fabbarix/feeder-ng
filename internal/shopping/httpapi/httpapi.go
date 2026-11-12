@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
 	"github.com/fabbarix/feeder-ng/internal/shopping/service"
@@ -27,6 +28,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("DELETE /api/shopping/extras/{id}/tick", a.untickExtra)
 	r.User("POST /api/shopping/ticks", a.tick)
 	r.User("DELETE /api/shopping/ticks", a.untick)
+	r.User("POST /api/shopping/not-needed", a.notNeeded)
+	r.User("DELETE /api/shopping/not-needed/{ingredientId}", a.neededAfterAll)
 }
 
 type api struct{ svc *service.Service }
@@ -42,16 +45,24 @@ type packJSON struct {
 }
 
 type lineJSON struct {
-	IngredientID       int64     `json:"ingredientId"`
-	Name               string    `json:"name"`
-	BaseUnit           string    `json:"baseUnit"`
-	ImageURL           string    `json:"imageUrl"` // PE: always sent, "" without a Picture
-	Need               float64   `json:"need"`
-	Available          float64   `json:"available"`
-	Quantity           float64   `json:"quantity"`
-	Ticked             bool      `json:"ticked"`
-	Pack               *packJSON `json:"pack"`
-	EstimatedCostCents *int      `json:"estimatedCostCents"`
+	IngredientID       int64          `json:"ingredientId"`
+	Name               string         `json:"name"`
+	BaseUnit           string         `json:"baseUnit"`
+	ImageURL           string         `json:"imageUrl"` // PE: always sent, "" without a Picture
+	Need               float64        `json:"need"`
+	Available          float64        `json:"available"`
+	Quantity           float64        `json:"quantity"`
+	Ticked             bool           `json:"ticked"`
+	Pack               *packJSON      `json:"pack"`
+	EstimatedCostCents *int           `json:"estimatedCostCents"`
+	PastPlannedMeals   []pastMealJSON `json:"pastPlannedMeals"` // B5-SH: always sent, [] when none
+}
+
+type pastMealJSON struct {
+	Date         string `json:"date"`
+	MealSlotID   int64  `json:"mealSlotId"`
+	MealSlotName string `json:"mealSlotName"`
+	CourseName   string `json:"courseName"`
 }
 
 type extraJSON struct {
@@ -74,6 +85,7 @@ type listJSON struct {
 	MaxTo              stock.Date   `json:"maxTo"`
 	Currency           string       `json:"currency"`
 	Lines              []lineJSON   `json:"lines"`
+	NotNeeded          []lineJSON   `json:"notNeeded"` // B5-SH: always sent, [] when none
 	Extras             []extraJSON  `json:"extras"`
 	Progress           progressJSON `json:"progress"`
 	EstimatedCostCents int          `json:"estimatedCostCents"`
@@ -101,7 +113,11 @@ type tickJSON struct {
 
 func lineToJSON(l shopping.Line) lineJSON {
 	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, ImageURL: l.ImageURL, Need: l.Need, Available: l.Available,
-		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents}
+		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents, PastPlannedMeals: []pastMealJSON{}}
+	for _, p := range l.PastPlannedMeals {
+		out.PastPlannedMeals = append(out.PastPlannedMeals, pastMealJSON{Date: string(p.Date), MealSlotID: p.MealSlotID,
+			MealSlotName: p.MealSlotName, CourseName: p.CourseName})
+	}
 	if l.Pack != nil {
 		out.Pack = &packJSON{ProductID: l.Pack.ProductID, Name: l.Pack.Name, Size: l.Pack.Size, Count: l.Pack.Count, Remainder: l.Pack.Remainder}
 	}
@@ -120,27 +136,44 @@ func extraToJSON(e shopping.ExtraLine) extraJSON {
 	return out
 }
 
-func (a *api) list(w http.ResponseWriter, r *http.Request) {
-	var shopID *int64
-	if raw := r.URL.Query().Get("shop"); raw != "" {
-		id, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			writeError(w, service.ErrInvalid)
-			return
-		}
-		shopID = &id
+// shopParam reads the optional ?shop= Shop id (nil = any Shop).
+func shopParam(r *http.Request) (*int64, error) {
+	raw := r.URL.Query().Get("shop")
+	if raw == "" {
+		return nil, nil
 	}
-	v, err := a.svc.List(r.Context(), service.Query{ShopID: shopID, To: stock.Date(r.URL.Query().Get("to"))})
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return nil, service.ErrInvalid
+	}
+	return &id, nil
+}
+
+func (a *api) list(w http.ResponseWriter, r *http.Request) {
+	shopID, err := shopParam(r)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	a.writeList(w, r, shopID, stock.Date(r.URL.Query().Get("to")))
+}
+
+// writeList answers the Shopping List for the range ending on to (the default when empty).
+func (a *api) writeList(w http.ResponseWriter, r *http.Request, shopID *int64, to stock.Date) {
+	v, err := a.svc.List(r.Context(), service.Query{ShopID: shopID, To: to})
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 	out := listJSON{Today: v.Today, HorizonDays: v.HorizonDays, From: v.From, To: v.To, DefaultTo: v.DefaultTo, MaxTo: v.MaxTo,
-		Currency: v.Currency, Lines: []lineJSON{}, Extras: []extraJSON{}, Progress: progressJSON{Ticked: v.Progress.Ticked, Total: v.Progress.Total},
+		Currency: v.Currency, Lines: []lineJSON{}, NotNeeded: []lineJSON{}, Extras: []extraJSON{}, Progress: progressJSON{Ticked: v.Progress.Ticked, Total: v.Progress.Total},
 		EstimatedCostCents: v.EstimatedCostCents, UnpricedLines: v.UnpricedLines, Complete: v.Complete,
 		Summary: summaryJSON{Lines: v.Summary.Lines, SpentCents: v.Summary.SpentCents, LotsAdded: v.Summary.LotsAdded}}
 	for _, l := range v.Lines {
 		out.Lines = append(out.Lines, lineToJSON(l))
+	}
+	for _, l := range v.NotNeeded {
+		out.NotNeeded = append(out.NotNeeded, lineToJSON(l))
 	}
 	for _, e := range v.Extras {
 		out.Extras = append(out.Extras, extraToJSON(e))
@@ -261,6 +294,61 @@ func (a *api) untick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type notNeededBody struct {
+	IngredientID int64  `json:"ingredientId"`
+	To           string `json:"to"`
+	ShopID       *int64 `json:"shopId"`
+}
+
+// notNeeded takes an open Line off the list for the range and answers the list.
+func (a *api) notNeeded(w http.ResponseWriter, r *http.Request) {
+	var body notNeededBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	u, _ := auth.UserFrom(r.Context())
+	err := a.svc.SetNotNeeded(r.Context(), service.NotNeededInput{IngredientID: body.IngredientID, To: stock.Date(body.To),
+		ShopID: body.ShopID, UserID: u.ID})
+	if err != nil {
+		writeNotNeededError(w, err)
+		return
+	}
+	a.writeList(w, r, body.ShopID, stock.Date(body.To))
+}
+
+// neededAfterAll puts a Not needed Line back for the range (?to=) and answers the list.
+func (a *api) neededAfterAll(w http.ResponseWriter, r *http.Request) {
+	ing, err := strconv.ParseInt(r.PathValue("ingredientId"), 10, 64)
+	if err != nil {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found.")
+		return
+	}
+	shopID, err := shopParam(r)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	to := stock.Date(r.URL.Query().Get("to"))
+	if err := a.svc.ClearNotNeeded(r.Context(), ing, to); err != nil {
+		writeError(w, err)
+		return
+	}
+	a.writeList(w, r, shopID, to)
+}
+
+// writeNotNeededError: an unknown Ingredient is a 404 here, an Ingredient with no open Line a 409.
+func writeNotNeededError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrUnknownIngredient):
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found.")
+	case errors.Is(err, service.ErrNotOnList):
+		httpx.WriteError(w, http.StatusConflict, "not_on_list", "That Ingredient is not on the list.")
+	default:
+		writeError(w, err)
+	}
 }
 
 func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {

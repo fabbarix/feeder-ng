@@ -3,11 +3,12 @@ import { BentoGrid } from '../../../ui/BentoGrid'
 import { EmptyState } from '../../../ui/EmptyState'
 import { ProgressTile } from '../../../ui/ProgressTile'
 import { Thumb } from '../../../ui/Thumb'
-import { listEntries, type ListEntry } from '../lib/lines'
+import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 import type { ShoppingList } from '../types'
 import { CostTile } from './CostTile'
 import { LineTile } from './LineTile'
+import { NotNeededGroup } from './NotNeededGroup'
 
 export interface ShoppingBodyProps {
   list: ShoppingList
@@ -18,6 +19,10 @@ export interface ShoppingBodyProps {
   onUntick: (entry: ListEntry) => void
   onDelete: (entry: ListEntry) => void
   onScan: () => void
+  /** B5-SH: "Not needed" on an open Line; "Needed after all" in the Not needed group; "Mark it" beside a hint (not passed until F1). */
+  onNotNeeded?: (entry: ListEntry) => void
+  onNeededAfterAll?: (entry: ListEntry) => void
+  onMarkIt?: (entry: ListEntry) => void
 }
 
 /** PE: the Ingredient's Picture (an empty slot without one); a free-text extra is not an Ingredient and has no lead. */
@@ -26,8 +31,9 @@ function leadOf(entry: ListEntry) {
 }
 
 /** The list's tiles: how many are left and the estimate, the open entries, then the Ticked group. Render only. */
-export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelete, onScan }: ShoppingBodyProps) {
+export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelete, onScan, onNotNeeded, onNeededAfterAll, onMarkIt }: ShoppingBodyProps) {
   const { open, ticked } = listEntries(list, system)
+  const notNeeded = notNeededEntries(list, system)
   const left = list.progress.total - list.progress.ticked
   const empty = open.length === 0 && ticked.length === 0
   return (
@@ -40,7 +46,16 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
       <div className="shop-lines">
         <BentoGrid columns={2}>
           {open.map((entry) => (
-            <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} onDelete={entry.kind === 'extra' ? onDelete : undefined} lead={leadOf(entry)} />
+            <LineTile
+              key={entry.key}
+              entry={entry}
+              onTick={onTick}
+              onUntick={onUntick}
+              onDelete={entry.kind === 'extra' ? onDelete : undefined}
+              lead={leadOf(entry)}
+              onNotNeeded={onNotNeeded}
+              onMarkIt={onMarkIt}
+            />
           ))}
         </BentoGrid>
       </div>
@@ -51,13 +66,14 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
             <div className="shop-lines">
               <BentoGrid columns={2}>
                 {ticked.map((entry) => (
-                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} lead={leadOf(entry)} />
+                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} lead={leadOf(entry)} onMarkIt={onMarkIt} />
                 ))}
               </BentoGrid>
             </div>
           </div>
         </section>
       ) : null}
+      <NotNeededGroup entries={notNeeded} onNeededAfterAll={onNeededAfterAll} lead={leadOf} />
     </>
   )
 }
