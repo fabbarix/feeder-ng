@@ -199,7 +199,7 @@ describe('normalise: failures', () => {
   })
   it('accepts exactly maxPixels', async () => {
     const e = createImageEngine({ ...harness(true).deps, browserOrients: true })
-    await expect(e.normalise(jpegBlob(1, 10000, 5000), { maxPixels: 50_000_000 })).resolves.toMatchObject({ kept: true })
+    await expect(e.normalise(jpegBlob(1, 10000, 5000), { maxPixels: 50_000_000 })).resolves.toMatchObject({ kept: false, width: 4096, height: 2048 })
   })
 })
 

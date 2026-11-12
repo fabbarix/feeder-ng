@@ -104,7 +104,7 @@ describe('useObjectUrls', () => {
     expect(f.revoked).toHaveLength(2)
   })
 
-  it('unmount revokes everything: create and revoke balance to zero', () => {
+  it('unmount revokes everything: create and revoke balance to zero', async () => {
     const f = fakeApi()
     const { result, unmount } = renderHook(() => useObjectUrls(f.api))
     for (let i = 0; i < 4; i++) {
@@ -113,11 +113,12 @@ describe('useObjectUrls', () => {
     }
     result.current.urlFor('p0:out', blob('new')) // replaced once
     unmount()
+    await Promise.resolve()
     expect(f.live.size).toBe(0)
     expect(f.revoked).toHaveLength(f.created.length)
   })
 
-  it('uses URL.createObjectURL and revokeObjectURL by default', () => {
+  it('uses URL.createObjectURL and revokeObjectURL by default', async () => {
     const made: string[] = []
     const gone: string[] = []
     const orig = { c: URL.createObjectURL, r: URL.revokeObjectURL }
@@ -131,6 +132,7 @@ describe('useObjectUrls', () => {
       const { result, unmount } = renderHook(() => useObjectUrls())
       expect(result.current.urlFor('k', blob())).toBe('blob:default/0')
       unmount()
+      await Promise.resolve()
       expect(gone).toEqual(['blob:default/0'])
     } finally {
       URL.createObjectURL = orig.c
