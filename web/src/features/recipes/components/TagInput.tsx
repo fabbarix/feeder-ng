@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Chip, TextField } from '../../../ui'
+import { Chip, TagDot, TextField } from '../../../ui'
 import { addTag, canonicalTag, removeTag, suggestTags } from '../lib/tags'
 import { recipeStrings } from '../strings'
 import type { TagCount } from '../types'
@@ -9,6 +9,8 @@ export interface TagInputProps {
   onChange: (tags: string[]) => void
   /** The Household's existing Tags, offered while typing so the same Tag is not made twice. */
   known?: TagCount[]
+  /** TG-RW: Tag name => colour id; undefined = a new Tag (neutral chip marked "New"). */
+  colourOf?: (name: string) => string | undefined
 }
 
 /**
@@ -17,7 +19,7 @@ export interface TagInputProps {
  * are listed under the field (a combobox): arrows move through them, Enter or a tap picks one. A typed Tag that matches
  * an existing one in another spelling is saved with the existing spelling.
  */
-export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNode {
+export function TagInput({ tags, onChange, known = [], colourOf }: TagInputProps): ReactNode {
   const [text, setText] = useState('')
   const [active, setActive] = useState(-1)
   const captionId = useId()
@@ -57,11 +59,23 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
         {recipeStrings.fields.tags}
       </span>
       <div className="tag-input__control" data-size-intent="inline">
-        {tags.map((t) => (
-          <Chip key={t} kind="filter" selected label={recipeStrings.fields.removeTag(t)} onClick={() => onChange(removeTag(tags, t))}>
-            {t}
-          </Chip>
-        ))}
+        {tags.map((t) => {
+          // A saved Tag is its colour's pill; a new one (or one not known yet) is a neutral pill, never the accent fill.
+          const colour = colourOf?.(t)
+          return (
+            <Chip
+              key={t}
+              kind={colour ? 'filter' : 'tag'}
+              selected={colour ? true : undefined}
+              label={recipeStrings.fields.removeTag(t)}
+              tagColour={colour}
+              onClick={() => onChange(removeTag(tags, t))}
+            >
+              {t}
+              {colourOf && !colour ? <span className="tag-input__new">{recipeStrings.newTag}</span> : null}
+            </Chip>
+          )
+        })}
         <TextField
           size="full"
           label={recipeStrings.fields.tagInput}
@@ -87,6 +101,7 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
             key={t.name}
             id={`${listId}-${i}`}
             role="option"
+            aria-label={`${t.name} ${recipeStrings.fields.tagRecipes(t.recipes)}`}
             aria-selected={i === active}
             className="tag-input__suggestion"
             // mousedown, not click: the field's blur would add the typed text first.
@@ -95,7 +110,8 @@ export function TagInput({ tags, onChange, known = [] }: TagInputProps): ReactNo
               add(t.name)
             }}
           >
-            <span>{t.name}</span>
+            <TagDot colour={colourOf?.(t.name)} />
+            <span className="tag-input__name">{t.name}</span>
             <span className="tag-input__count">{recipeStrings.fields.tagRecipes(t.recipes)}</span>
           </li>
         ))}

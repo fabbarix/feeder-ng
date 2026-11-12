@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { CourseFilter } from '../components/CourseFilter'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
+import { useRecipeTags } from '../hooks/useRecipeTags'
 import { useRecipes } from '../hooks/useRecipes'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
@@ -19,7 +20,20 @@ import '../recipes.css'
 export function RecipesScreen(): ReactNode {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [tag, setTag] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  // TG-RW: the Tag filter lives in the URL (/recipes?tag=<name>), so the detail's Tag links open the list filtered.
+  const tag = searchParams.get('tag') ?? ''
+  const setTag = (name: string) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (name) next.set('tag', name)
+        else next.delete('tag')
+        return next
+      },
+      { replace: true },
+    )
+  const { known, colourOf } = useRecipeTags()
   const [showArchived, setShowArchived] = useState(false)
   const [course, setCourse] = useState<number | null>(null)
   const { choices } = useCourses()
@@ -42,6 +56,7 @@ export function RecipesScreen(): ReactNode {
             key={r.id}
             recipe={r}
             onOpen={(id) => navigate(`/recipes/${id}`)}
+            colourOf={colourOf}
             courseNames={courseNamesOf(r.courseIds, choices)}
             wholeMeal={r.wholeMeal && showsWholeMeal(r.courseIds, choices)}
           />
@@ -81,7 +96,7 @@ export function RecipesScreen(): ReactNode {
       search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
       filters={
         <>
-          <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
+          <TagChips tags={known} selected={tag} onSelect={setTag} colourOf={colourOf} />
           <CourseFilter courses={choices} selected={course} onSelect={setCourse} />
         </>
       }

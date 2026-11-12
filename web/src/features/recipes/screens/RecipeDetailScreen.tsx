@@ -11,13 +11,16 @@ import { IngredientExclusionList } from '../components/IngredientExclusionList'
 import { IngredientLinesList } from '../components/IngredientLinesList'
 import { PreferenceTable } from '../components/PreferenceTable'
 import { RecipeMetrics } from '../components/RecipeMetrics'
+import { RecipeTags } from '../components/RecipeTags'
 import { StepsList } from '../components/StepsList'
 import { useHashTarget } from '../hooks/useHashTarget'
 import { useHouseholdPreferences } from '../hooks/useHouseholdPreferences'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
+import { useRecipeTags } from '../hooks/useRecipeTags'
 import { excludersOf, preferenceRows } from '../lib/preferenceRows'
+import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import '../recipes.css'
@@ -45,6 +48,7 @@ export function RecipeDetailScreen(): ReactNode {
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
+  const { colourOf } = useRecipeTags()
 
   if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
   if (!r)
@@ -104,6 +108,7 @@ export function RecipeDetailScreen(): ReactNode {
               names={r.courses.map((c) => c.name)}
               wholeMeal={r.wholeMeal && showsWholeMeal(r.courses.map((c) => c.id), choices)}
             />
+            <RecipeTags tags={r.tags} colourOf={colourOf} onOpen={(name) => navigate(recipesTagPath(name))} />
           </Tile>
           <RecipeMetrics
             yieldText={String(r.yield)}
