@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Chip, Icon, RecipeThumb, Tile } from '../../../ui'
 import { timeSummary } from '../lib/timeSummary'
+import { CourseChips } from './CourseChips'
 import { recipeStrings } from '../strings'
 import type { RecipeSummary } from '../types'
 
@@ -18,7 +19,7 @@ export interface RecipeTileProps {
  * meta row with the total time ("No Steps" when none) and the "+4 h ahead" Chip. The whole tile is one link-like
  * button named after the Recipe. Ready Meal and Archived are tag Chips.
  */
-export function RecipeTile({ recipe, onOpen }: RecipeTileProps): ReactNode {
+export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal }: RecipeTileProps): ReactNode {
   const time = timeSummary(recipe)
   const thumb = <RecipeThumb name={recipe.name} photoUrl={recipe.imageUrl || undefined} tags={recipe.tags} size="hero" />
   return (
@@ -42,6 +43,7 @@ export function RecipeTile({ recipe, onOpen }: RecipeTileProps): ReactNode {
           </Chip>
         ) : null}
       </div>
+      <CourseChips names={courseNames ?? []} wholeMeal={wholeMeal} />
       {recipe.readyMeal || recipe.archived ? (
         <div className="recipe-tile__tags">
           {recipe.readyMeal ? <Chip kind="tag">{recipeStrings.readyMeal}</Chip> : null}

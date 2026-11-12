@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
+import { Chip } from '../../../ui'
+import { courseStrings } from '../strings'
 
 export interface CourseFilterProps {
   /** Active Courses, household order. */
@@ -10,6 +12,18 @@ export interface CourseFilterProps {
 }
 
 /** CRS E2: the Course filter of the Recipes list: a group of filter Chips ("All Courses", then one per Course). Renders nothing with fewer than two Courses. */
-export function CourseFilter(_props: CourseFilterProps): ReactNode {
-  return null
+export function CourseFilter({ courses, selected, onSelect }: CourseFilterProps): ReactNode {
+  if (courses.length < 2) return null
+  return (
+    <div role="group" aria-label={courseStrings.filterLabel} className="course-filter">
+      <Chip kind="filter" selected={selected === null} onClick={() => onSelect(null)}>
+        {courseStrings.allCourses}
+      </Chip>
+      {courses.map((c) => (
+        <Chip key={c.id} kind="filter" selected={selected === c.id} onClick={() => onSelect(selected === c.id ? null : c.id)}>
+          {c.name}
+        </Chip>
+      ))}
+    </div>
+  )
 }

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { Checkbox, FieldRow, NumberField, TextArea, TextField } from '../../../ui'
-import { codeMessage, recipeStrings } from '../strings'
+import { Checkbox, CoursePicker, FieldRow, NumberField, Switch, TextArea, TextField } from '../../../ui'
+import { codeMessage, courseStrings, recipeStrings } from '../strings'
 import { numberText, numberValue, type DraftErrors, type RecipeDraft } from '../lib/draft'
+import { showsWholeMeal } from '../lib/recipeCourses'
 import type { CourseChoice } from '../../../lib/courses'
 import type { TagCount } from '../types'
 import { TagInput } from './TagInput'
@@ -19,8 +20,9 @@ export interface RecipeDetailsFieldsProps {
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
-export function RecipeDetailsFields({ draft, errors, onChange, knownTags }: RecipeDetailsFieldsProps): ReactNode {
+export function RecipeDetailsFields({ draft, errors, onChange, knownTags, courses = [] }: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
+  const main = courses.find((c) => c.main)
   return (
     <div className="recipe-details">
       <TextField size="lg" label={f.name} value={draft.name} error={fieldError(errors, 'name')} onChange={(name) => onChange({ name })} />
@@ -77,6 +79,23 @@ export function RecipeDetailsFields({ draft, errors, onChange, knownTags }: Reci
         checked={draft.readyMeal}
         onChange={(readyMeal) => onChange({ readyMeal })}
       />
+      <CoursePicker
+        label={courseStrings.label}
+        courses={courses}
+        value={draft.courseIds}
+        ordered={false}
+        required={courses.length > 0}
+        error={errors.courses ? codeMessage(errors.courses) : undefined}
+        onChange={(courseIds) => onChange({ courseIds })}
+      />
+      {showsWholeMeal(draft.courseIds, courses) && main ? (
+        <Switch
+          label={courseStrings.wholeMeal}
+          description={courseStrings.wholeMealHelper(main.name)}
+          checked={draft.wholeMeal}
+          onChange={(wholeMeal) => onChange({ wholeMeal })}
+        />
+      ) : null}
       <TagInput tags={draft.tags} known={knownTags} onChange={(tags) => onChange({ tags })} />
       <FieldRow>
         <TextField

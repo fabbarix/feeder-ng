@@ -2,8 +2,10 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
+import { useCourses } from '../../../lib/courses/useCourses'
 import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
+import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
 import { PhotoPicker } from '../components/PhotoPicker'
 import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
@@ -15,6 +17,7 @@ import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
 import type { RecipeDraft } from '../lib/draft'
+import { pickCourseIds } from '../lib/recipeCourses'
 import { codeMessage, recipeStrings } from '../strings'
 import type { IngredientRef } from '../types'
 import '../recipes.css'
@@ -45,7 +48,8 @@ export function RecipeEditorScreen(): ReactNode {
     return [...all, ...made.filter((m) => !refs.byId.has(m.id))]
   }, [refs.byId, made])
   const byId = useMemo(() => new Map(ingredients.map((i) => [i.id, i] as const)), [ingredients])
-  const editor = useRecipeEditor(recipeId, ingredients)
+  const { choices: courses } = useCourses()
+  const editor = useRecipeEditor(recipeId, ingredients, courses)
   const quick = useQuickCreateIngredient({
     pick: (lineKey, ingredient) => {
       setMade((list) => [...list.filter((i) => i.id !== ingredient.id), ingredient])
@@ -67,6 +71,8 @@ export function RecipeEditorScreen(): ReactNode {
     })
   }, [])
   const [asking, setAsking] = useState<{ id: number } | null>(null)
+  // CRS E2: a save that takes a Course off and so removes Slot Rules waits for the User's confirm.
+  const [confirmingLoss, setConfirmingLoss] = useState(false)
 
   const crumbs = useBreadcrumbs(editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
@@ -93,10 +99,21 @@ export function RecipeEditorScreen(): ReactNode {
     }
     navigate(`/recipes/${saved.id}`)
   }
+  // The Courses picker says the new list; its change is applied to the latest draft (lib/recipeCourses.pickCourseIds).
+  const changeDetails = (patch: Partial<RecipeDraft>) =>
+    setDraft((d) => ({
+      ...d,
+      ...patch,
+      ...(patch.courseIds ? { courseIds: pickCourseIds(d.courseIds, draft.courseIds, patch.courseIds, courses) } : {}),
+    }))
   const failed = (err: unknown) => setSaveError(err instanceof ApiError ? codeMessage(err.code) : recipeStrings.generic)
 
-  const save = async () => {
+  const save = async (confirmed = false) => {
     setSaveError(null)
+    if (!confirmed && editor.courseLoss) {
+      setConfirmingLoss(true)
+      return
+    }
     try {
       finish(await editor.save())
     } catch (err) {
@@ -115,13 +132,19 @@ export function RecipeEditorScreen(): ReactNode {
 
   return (
     <>
-      <div className="recipe-editor-layout">
+      <div className="recipe-editor-layout" aria-hidden={confirmingLoss || undefined}>
         <RecipeSectionIndex sections={SECTIONS} />
         <section className="recipe-editor">
           <PageHeader title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe} breadcrumbs={crumbs} />
           <Tile as="section" id="recipe-section-details" className="recipe-editor__section" aria-labelledby="recipe-section-details-title">
             <h2 id="recipe-section-details-title">{recipeStrings.fields.details}</h2>
-            <RecipeDetailsFields draft={draft} errors={editor.errors} knownTags={knownTags} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
+            <RecipeDetailsFields
+              draft={draft}
+              errors={editor.errors}
+              knownTags={knownTags}
+              courses={courses}
+              onChange={changeDetails}
+            />
           </Tile>
           <div id="recipe-section-photo" className="recipe-editor__section">
             <PhotoPicker
@@ -229,15 +252,26 @@ export function RecipeEditorScreen(): ReactNode {
           ) : null}
         </section>
       </div>
+      {editor.courseLoss ? (
+        <CourseLossDialog
+          open={confirmingLoss}
+          loss={editor.courseLoss}
+          onConfirm={() => {
+            setConfirmingLoss(false)
+            void save(true)
+          }}
+          onCancel={() => setConfirmingLoss(false)}
+        />
+      ) : null}
       <StickyActionBar label={recipeStrings.editorActions} column="form">
         <FormActions
           tertiary={
-            <Button variant="tertiary" onClick={() => navigate(-1)}>
+            <Button variant="tertiary" aria-hidden={confirmingLoss || undefined} onClick={() => navigate(-1)}>
               {recipeStrings.cancel}
             </Button>
           }
           primary={
-            <Button onClick={() => void save()} loading={editor.saving} disabled={busyPickers.size > 0}>
+            <Button aria-hidden={confirmingLoss || undefined} onClick={() => void save()} loading={editor.saving} disabled={busyPickers.size > 0}>
               {editor.saving ? recipeStrings.saving : recipeStrings.save}
             </Button>
           }
