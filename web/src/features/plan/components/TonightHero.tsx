@@ -210,6 +210,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
               slot={slot}
               today={today}
               compact
+              onAccent
               actions={['swap', 'pin', 'cooked']}
               onOpen={rowHandlers.onOpen}
               onSwap={rowHandlers.onSwap}

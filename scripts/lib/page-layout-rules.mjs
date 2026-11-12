@@ -83,6 +83,14 @@ export function evaluateMetrics(m, { width, kind }) {
     add('P8', `dialog ${m.dialog.w}px wide at x=${m.dialog.x}`)
   }
   if (!full && m.pageWidthAttr !== kind) add('P9', `the page container says data-page-width="${m.pageWidthAttr}", the route table says "${kind}"`)
+  // QA-1: a Button label must reach 4.5:1 on its own background (the probe reports the ones that do not).
+  for (const b of m.lowContrastButtons ?? []) add('P10', `Button "${b.label}" contrast ${b.ratio}:1 (< 4.5)`)
+  // QA-1: text clipped by its box ("clipped") or a word broken across lines ("mid-word").
+  // An email or a link is one token that has to wrap somewhere, so a mid-word break inside one ("@", "://" or "/") is allowed.
+  for (const b of m.brokenText ?? []) {
+    if (b.why === 'mid-word' && /@|:\/\/|\//.test(b.token ?? '')) continue
+    add('P11', `${b.sel}: ${b.why}`)
+  }
   return out
 }
 
