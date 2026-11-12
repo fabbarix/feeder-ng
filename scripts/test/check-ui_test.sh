@@ -73,6 +73,20 @@ run_ui "$FIX/glossary-wait/fail" "$(rules_file glossary warn)"
 [ "$(count_of glossary)" = 3 ] && ok || bad "glossary-wait: expected 3 ('wait step' and 'a wait' on one line, 'a wait' on another), got $(count_of glossary)"
 ! grep -Eq '^[^#]*[ \t]wait[ \t]*(#|$)' "$SCRIPTS/check-ui.allow-glossary" && ok || bad "check-ui.allow-glossary must not carry 'wait' entries any more"
 
+# Avoid words are matched in their inflected forms too ("invite" also flags "invited" and "inviting"), plain look-alikes pass.
+run_ui "$FIX/glossary-inflect/pass" "$(rules_file glossary fail)"
+[ $RC -eq 0 ] && [ "$(count_of glossary)" = 0 ] && ok || bad "glossary-inflect: look-alike words (investigate, inventory, inside, invoice) must pass (rc=$RC)"
+run_ui "$FIX/glossary-inflect/fail" "$(rules_file glossary warn)"
+[ "$(count_of glossary)" = 3 ] && ok || bad "glossary-inflect: expected 3 (invited, Not invited, Inviting), got $(count_of glossary)"
+
+# The sign-in and access copy is under the glossary guard in fail mode (QA-3: "invited" slipped through on the sign-in page).
+for p in web/src/features/signin web/src/features/access; do
+  grep -E '^glossary\.fail_paths=' "$SCRIPTS/check-ui.rules" | grep -Eq "(^|[= ])$p( |$)" && ok || bad "check-ui.rules: glossary.fail_paths must list $p"
+done
+# ...and the real tree is clean under the stricter guard (rc 0 with glossary in fail mode, nothing under signin/access).
+run_ui "$(cd "$SCRIPTS/.." && pwd)" "$SCRIPTS/check-ui.rules"
+! grep -Eq $'^glossary\tweb/src/features/(signin|access)/' "$TMP/out.txt" && ok || bad "signin/access strings still hold an avoid word: $(grep -E $'^glossary\tweb/src/features/(signin|access)/' "$TMP/out.txt")"
+
 # native-search (warn-level by default): kept apart so that, until it exists, only these cases are red.
 sf="$TMP/rules-search-warn"; { cat "$(rules_file sizing warn)"; echo "native-search=warn"; } >"$sf"
 run_ui "$FIX/native-search/fail" "$sf"
