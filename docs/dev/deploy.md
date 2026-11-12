@@ -254,7 +254,10 @@ This release adds Courses, which changes how a Planned Meal is stored, so read t
 docker stop feeder                                          # Kubernetes: kubectl -n feeder scale deploy/feeder --replicas=0
 cp /srv/feeder/backups/feeder-pre-1400.db /srv/feeder/feeder.db
 rm -f /srv/feeder/feeder.db-wal /srv/feeder/feeder.db-shm   # stale write-ahead files
-# run the older image: ghcr.io/fabbarix/feeder-ng:1.0.0-beta.3 (Helm: --version 1.0.0-beta.3)
+chown 65532:65532 /srv/feeder/feeder.db
+# run the older image: ghcr.io/fabbarix/feeder-ng:1.0.0-beta.3
 ```
+
+   On Kubernetes the paths above are on the PVC, which you reach by mounting it in a helper pod while the deployment is scaled to zero (for example a pod with the PVC mounted at `/data` and an image that has `cp`, `rm` and `chown`). In the pod the files are under `/data/...`: the snapshot is `/data/backups/feeder-pre-1400.db` and the database is `/data/feeder.db`, owned by 65532. Run the same `cp`, `rm` and `chown` there with those paths, then delete the helper pod. To bring the replica back on the older release, run `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.3 --namespace feeder --reset-then-reuse-values`, or `helm rollback feeder -n feeder` to the revision before the upgrade.
 
    Everything Feeder recorded after the upgrade (Plan changes, Stock, new Recipes) is gone with the restore; images in `/data/images` stay. Restore the file as `feeder.db` owned by uid/gid 65532, as in Restore above. Do not start the new image on the restored file: it migrates it again.
