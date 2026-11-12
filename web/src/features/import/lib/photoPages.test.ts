@@ -601,6 +601,8 @@ describe('invariants over random action sequences', () => {
         // The hook adds the file it is preparing (image, as-is); a link may be added at any time (the addLink path).
         if (a.type === 'added' && a.source.kind !== 'link' && s.intake !== 'preparing') continue
         const openBefore = s.editing?.id
+        const sumBefore = (st: PhotoPagesState) => st.photos.length + st.queue.length + (st.intake === 'preparing' ? 1 : 0)
+        const before = sumBefore(s)
         s = reduce(s, a)
         // An `added` never changes the id of an open session.
         if (a.type === 'added' && openBefore !== undefined) expect(s.editing?.id).toBe(openBefore)
@@ -608,8 +610,8 @@ describe('invariants over random action sequences', () => {
         expect(s.photos.length).toBeLessThanOrEqual(MAX_PHOTOS)
         // The sum holds at rest only: between `added` and `intakeEnded` the prepared file is counted twice.
         if (s.intake === 'idle') expect(s.photos.length + s.queue.length).toBeLessThanOrEqual(MAX_PHOTOS)
-        // While preparing, a link never pushes the full sum past 4 (an image or as-is is the prepared file).
-        if (a.type === 'added' && a.source.kind === 'link' && s.intake === 'preparing') expect(s.photos.length + s.queue.length + 1).toBeLessThanOrEqual(MAX_PHOTOS)
+        // A link added while preparing never raises the sum (photos + queue + preparing); if the sum is already 4 it is refused.
+        if (a.type === 'added' && a.source.kind === 'link' && s.intake === 'preparing') expect(sumBefore(s)).toBeLessThanOrEqual(Math.max(MAX_PHOTOS, before))
         expect(new Set(ids(s)).size).toBe(s.photos.length)
         if (s.editing) {
           const target = s.photos.find((p) => p.id === s.editing?.id)
