@@ -6,7 +6,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [1.0.0-beta.4] - 2026-11-11 <!-- pending: date to fill at the tag -->
 
-<!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in), the pending entries below and the final wording are confirmed in the last pass before the tag. -->
+<!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in) and the final wording are confirmed in the last pass before the tag. -->
 
 Courses: a Meal Slot can hold a main Course and its sides, each planned, cooked and shopped for on its own, and the Tags get a page and colours.
 
