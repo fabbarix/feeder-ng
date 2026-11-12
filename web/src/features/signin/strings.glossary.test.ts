@@ -36,12 +36,11 @@ describe('sign-in intro', () => {
   })
 })
 
-describe('"not on the Allowlist" page', () => {
-  it('names the Allowlist and the Admin, in GLOSSARY terms', () => {
-    expect(signinStrings.notInvitedTitle).toBe('Not on the Allowlist')
-    expect(signinStrings.notInvitedText).toContain('Allowlist')
-    expect(signinStrings.notInvitedText).toContain('Admin')
-    expect(signinStrings.notInvitedText).toMatch(/\bemail\b/)
-    expect(signinStrings.notInvitedText).not.toContain('allowlist')
+describe('"email not verified" page', () => {
+  it('says Google has not verified the email and offers another Google sign-in (no Allowlist or Admin fix)', () => {
+    expect(signinStrings.emailNotVerifiedTitle).toBe('Email not verified')
+    expect(signinStrings.emailNotVerifiedText).toBe('Google has not verified this email. Use a different Google sign-in.')
+    expect(signinStrings.emailNotVerifiedText).not.toMatch(/Allowlist|Admin/i)
+    expect(Object.keys(signinStrings).filter((k) => /invit/i.test(k))).toEqual([])
   })
 })

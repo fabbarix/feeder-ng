@@ -176,7 +176,7 @@ func TestAnUnknownVerifiedAddressGetsAPendingRequestAndNoSession(t *testing.T) {
 func TestAnUnverifiedAddressIsRefusedWithoutARequest(t *testing.T) {
 	g := start(t)
 	c, r := g.visit("zia@example.test", "Zia", false)
-	if where(r) != "/not-invited" || c.Cookie(auth.CookieName) != nil || c.Cookie(cookie) != nil {
+	if where(r) != "/email-not-verified" || c.Cookie(auth.CookieName) != nil || c.Cookie(cookie) != nil {
 		t.Fatalf("callback -> %q, cookies session=%v waiting=%v", where(r), c.Cookie(auth.CookieName), c.Cookie(cookie))
 	}
 	if n := g.pending(g.env.LoginUser(t)).Count; n != 0 {

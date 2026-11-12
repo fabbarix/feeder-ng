@@ -11,4 +11,22 @@ describe('cameraStrategy', () => {
   it('a desktop without getUserMedia offers no camera', () => expect(cameraStrategy(env({ hasGetUserMedia: false }))).toBe('none'))
   it('an iOS home-screen app uses the system camera input even though getUserMedia exists', () =>
     expect(cameraStrategy(env({ coarsePointer: true, iosStandalone: true }))).toBe('capture-input'))
+  it('the default policy is "live"', () => {
+    expect(cameraStrategy(env(), 'live')).toBe('viewfinder')
+  })
+})
+
+describe("cameraStrategy with the 'system' policy (the photo read: no live camera view)", () => {
+  const flags = [true, false]
+  const table = flags.flatMap((hasGetUserMedia) => flags.flatMap((coarsePointer) => flags.map((iosStandalone) => ({ hasGetUserMedia, coarsePointer, iosStandalone }))))
+
+  it('covers all 8 combinations of the three flags', () => expect(table).toHaveLength(8))
+
+  it.each(table)('never the viewfinder: %j', (flagsSet) => {
+    expect(cameraStrategy(env(flagsSet), 'system')).not.toBe('viewfinder')
+  })
+
+  it.each(table)('a coarse pointer (phone, tablet) -> capture-input, else none: %j', (flagsSet) => {
+    expect(cameraStrategy(env(flagsSet), 'system')).toBe(flagsSet.coarsePointer ? 'capture-input' : 'none')
+  })
 })

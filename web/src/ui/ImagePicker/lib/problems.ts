@@ -1,5 +1,6 @@
 import { ApiError } from '../../../lib/http'
 import { imagePickerStrings, tooLargeMessage } from '../strings'
+import { ImageEditorError } from '../../ImageEditor/lib/prepare'
 import { ACCEPT_TYPES, HEIC_ENABLED, MAX_UPLOAD_BYTES } from './limits'
 
 /** Every way picking a picture can fail. The message for each is in ../strings.ts. */
@@ -56,6 +57,7 @@ const API_CODES: Record<string, ImageProblemCode> = {
 /** ImageProblemError -> its code; ApiError with an image code -> the matching code; network or timeout -> offline; anything else -> failed. */
 export function problemFromError(err: unknown): ImageProblemCode {
   if (err instanceof ImageProblemError) return err.code
+  if (err instanceof ImageEditorError) return err.code
   if (err instanceof ApiError) return API_CODES[err.code] ?? 'failed'
   return 'failed'
 }

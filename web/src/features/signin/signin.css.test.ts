@@ -31,8 +31,8 @@ describe('signin.css: the Feeder mark is visible on the hero Tile', () => {
     expect(d['fill'] ?? 'currentColor').toBe('currentColor')
   })
 
-  it('SignInPage and NotInvitedPage render the mark inside the hero Tile (same .signin__tile)', () => {
-    const sources = ['SignInPage', 'NotInvitedPage'].map((n) => readFileSync(`${cwd}/src/features/signin/components/${n}.tsx`, 'utf8'))
+  it('SignInPage and EmailNotVerifiedPage render the mark inside the hero Tile (same .signin__tile)', () => {
+    const sources = ['SignInPage', 'EmailNotVerifiedPage'].map((n) => readFileSync(`${cwd}/src/features/signin/components/${n}.tsx`, 'utf8'))
     for (const src of sources) {
       expect(src).toContain('<FeederMark')
       expect(src).toMatch(/variant="hero"/)

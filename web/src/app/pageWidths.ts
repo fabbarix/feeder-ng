@@ -34,6 +34,8 @@ export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/settings/courses', width: 'narrow' },
   // Sign-in routes redirect to / when signed in; they are listed so that no feature route inherits the fallback unnoticed.
   { path: '/sign-in', width: 'default' },
+  { path: '/email-not-verified', width: 'default' },
+  // The old route redirects to /email-not-verified; kept in case anything links to it.
   { path: '/not-invited', width: 'default' },
   { path: '/waiting-for-approval', width: 'default' },
   { path: '/board', width: 'full' },
