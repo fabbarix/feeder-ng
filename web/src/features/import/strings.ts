@@ -135,7 +135,7 @@ export const readStrings = {
   photoNoRecipe: 'Every Recipe is skipped, so there is nothing to give the photo to.',
   photoGroup: 'Photo to keep',
   photoRecipe: 'Recipe',
-  photoOnlyOne: 'Only the chosen photo is kept. The others are discarded.',
+  photoOnlyOne: 'Only the chosen photo is kept. The others are left out.',
 
   // errors: the sentence of each failure code (lib/readErrors maps codes to these)
   errors: {
