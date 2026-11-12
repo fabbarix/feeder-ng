@@ -58,8 +58,9 @@
 }
 
 /* Phone: floating bottom bar, inset 12 px plus the safe area, centred up to 480 px.
-   Six buttons (PN): Today, Plan, Pantry | Scan | Shop, Recipes. The 1fr columns are equal on each side of the 58 px Scan
-   track (three on the left, two on the right at 1.5fr), so Scan's centre is the bar's centre at every width. */
+   Seven buttons (nav-even): Today, Plan, Pantry | Scan | Shop, Recipes, Settings. Seven equal tracks (minmax(0, 1fr), so a long
+   label cannot widen one), three destinations on each side of Scan, so Scan's centre is the bar's centre at every width. The same
+   inset sits at both ends, and it is at least the gap, so the active pill has room at the ends. */
 .bottom-bar {
   position: fixed;
   left: calc(var(--nav-inset) + env(safe-area-inset-left, 0px));
@@ -70,9 +71,9 @@
   max-width: 480px;
   margin-inline: auto;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 58px 1.5fr 1.5fr;
-  gap: 0;
-  padding: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: 2px;
+  padding-inline: var(--space-1);
   align-items: center;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -101,7 +102,8 @@
 
 /* Scan: the accent button, in the bar (not raised). Rules after the current-tab rule so the accent wins. */
 .bottom-bar__link[data-accent='true'] {
-  width: 58px;
+  justify-self: center;
+  width: min(58px, 100%);
   height: 58px;
   border-radius: var(--radius-button-lg);
   background: var(--color-accent);

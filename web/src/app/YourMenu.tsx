@@ -1,5 +1,5 @@
-// The avatar menu (docs/design/ui-fix-plan.md 4.5, 5.17): shortcuts, a divider, Settings, feature items, Sign out.
-import { Fragment, useCallback, useRef, useState } from 'react'
+// The avatar menu (docs/design/ui-fix-plan.md 4.5, 5.17): shortcuts and feature items, a divider, Sign out.
+import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AccessBadge } from '../features/access/components/AccessBadge'
 import { accessStrings } from '../features/access/strings'
@@ -60,14 +60,12 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
           />
           <div ref={menuRef} role="menu" className="your-menu" onKeyDown={onMenuKeyDown}>
             {items.map((item) => (
-              <Fragment key={item.id}>
-                {item.id === 'settings' ? <div role="separator" className="your-menu__divider" /> : null}
-                <Link role="menuitem" className="your-menu__item" to={item.path} onClick={() => setOpen(false)}>
-                  <Icon name={menuIconFor(item)} size={20} />
-                  <span>{item.label}</span>
-                </Link>
-              </Fragment>
+              <Link key={item.id} role="menuitem" className="your-menu__item" to={item.path} onClick={() => setOpen(false)}>
+                <Icon name={menuIconFor(item)} size={20} />
+                <span>{item.label}</span>
+              </Link>
             ))}
+            <div role="separator" className="your-menu__divider" />
             <button
               type="button"
               role="menuitem"

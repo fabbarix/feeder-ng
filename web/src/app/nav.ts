@@ -27,15 +27,16 @@ export const PRIMARY_NAV: readonly PrimaryNavItem[] = [
   { id: 'scan', label: 'Scan', path: '/scan', icon: 'scan', accent: true },
   { id: 'shop', label: 'Shop', path: '/shop', icon: 'shop' },
   { id: 'recipes', label: 'Recipes', path: '/recipes', icon: 'recipes' },
+  { id: 'settings', label: 'Settings', path: '/settings', icon: 'settings' },
 ]
 
 /** The side rail lists the destinations in the same order as the bottom bar. */
 export const RAIL_NAV: readonly PrimaryNavItem[] = PRIMARY_NAV
 
+/** The avatar menu: shortcuts only (Settings is a top-level destination, nav-even). */
 export const MENU_NAV: readonly NavItem[] = [
   // B2: /board was linked from nowhere. It is a destination in its own right (a wall display), so it lives in the menu.
   { id: 'board', label: 'Kitchen board', path: '/board', icon: 'board', placement: 'menu' },
-  { id: 'settings', label: 'Settings', path: '/settings', icon: 'settings', placement: 'menu' },
 ]
 
 /** S-01: icons of the menu entries features add (their nav items may leave `icon` out), so no entry shows the default chevron. */
