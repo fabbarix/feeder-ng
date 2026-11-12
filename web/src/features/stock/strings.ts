@@ -95,4 +95,25 @@ export const stockStrings = {
   goesOff: { goodUntil: { today: 'good until today', tomorrow: 'good until tomorrow', on: (day: string) => `good until ${day}` }, wentOffToday: 'went off today', yesterday: 'went off yesterday', ago: (n: number) => `went off ${n} days ago` },
   boughtOn: (date: string) => `Bought ${date}`,
   actionFailed: 'That did not save. Try again.',
+  // Beta.5 ST: Lots inline per Ingredient, Edit and Delete (docs/dev/design/b5-st.md)
+  ingredientLotsLabel: (name: string, n: number) => `${name}, ${n === 1 ? '1 Stock Lot' : `${n} Stock Lots`}`,
+  lotsOf: (name: string) => `${name} Stock Lots`,
+  boughtToday: 'Bought today',
+  boughtYesterday: 'Bought yesterday',
+  edit: 'Edit',
+  editTitle: (name: string) => `Edit ${name}`,
+  goodUntil: 'Good until',
+  noGoOffSwitch: 'No go-off date',
+  editErrors: {
+    future: 'Bought on cannot be after today',
+    beforePurchased: 'Good until cannot be before Bought on',
+    invalidDate: 'Choose a date',
+  },
+  edited: (name: string) => `${name} saved`,
+  delete: 'Delete',
+  deleteTitle: 'Delete this Stock Lot?',
+  deleteBody: 'Use Delete for a mistake, such as a double Scan. It does not count as waste. To record waste, Throw out a Lot that has gone off.',
+  deleteBodyWentOff:
+    'Use Delete for a mistake, such as a double Scan. It does not count as waste. This Stock Lot has gone off: deleting it also takes that go-off off your Zero-waste streak. To record waste, Throw out a Lot that has gone off.',
+  deleted: (name: string) => `${name} removed from Stock`,
 }

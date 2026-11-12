@@ -5,7 +5,7 @@ import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { stockApi } from '../api'
 import { resolveStockStatus, type StockStatus } from '../lib/status'
-import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse } from '../types'
+import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse } from '../types'
 
 export interface QueryState<T> {
   data: T | undefined
@@ -153,6 +153,10 @@ export function useStockActions(): {
   throwOut(lotId: number): Promise<void>
   /** Pantry: moves a Lot, or `quantity` of it, to a Storage Place. */
   moveLot(lotId: number, storagePlaceId: number, quantity?: number): Promise<void>
+  /** Beta.5: corrects a Lot (quantity, Bought on, Good until). Invalidates ['stock'] and the zero-waste streak. */
+  editLot(lotId: number, patch: LotPatch): Promise<void>
+  /** Beta.5: deletes a Lot as a correction. Invalidates ['stock'] and the zero-waste streak. */
+  deleteLot(lotId: number): Promise<void>
 } {
   const client = useQueryClient()
   const moveLot = useMutation({
@@ -183,6 +187,12 @@ export function useStockActions(): {
     },
     moveLot: async (lotId, placeId, quantity) => {
       await moveLot.mutateAsync({ lotId, placeId, quantity })
+    },
+    editLot: async () => {
+      throw new Error('not implemented (b5-st)')
+    },
+    deleteLot: async () => {
+      throw new Error('not implemented (b5-st)')
     },
   }
 }

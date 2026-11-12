@@ -85,6 +85,9 @@ type LotView struct {
 	UseSoon        bool // GoesOff within stock.UseSoonDays
 	// IngredientImageURL is the Ingredient's Picture ("" without one).
 	IngredientImageURL string
+	// ShelfLifeDays is the Shelf Life that applies where the Lot is (stock.ShelfLifeIn the Storage Place's kind:
+	// the frozen one in a Freezer); nil = it does not spoil there. The Edit sheet suggests Good until from it.
+	ShelfLifeDays *int
 }
 
 // IngredientStock is one Ingredient's Stock: the total and its soonest go-off date.
@@ -236,6 +239,19 @@ func (s *Service) RemoveLot(ctx context.Context, lotID int64) error {
 	}
 	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{lot.IngredientID}})
 	return nil
+}
+
+// EditLot corrects a Lot's quantity, purchase date and go-off date (stock.ValidateEdit with the Shelf Life that applies
+// where the Lot is). A correction: no waste, no Keep, and a go-off record of the Lot is forgotten when its go-off date
+// changes. Invalid input is ErrInvalid; an unknown Lot store.ErrNotFound.
+func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (LotView, error) {
+	return LotView{}, errors.New("not implemented (b5-st)")
+}
+
+// DeleteLot deletes a Lot as a correction (a double Scan): the Lot leaves Stock, no waste is recorded and no go-off is
+// kept, and its go-off record, if any, goes (like the Undo of a Scan). Publishes stock {"changed":"lots"}.
+func (s *Service) DeleteLot(ctx context.Context, lotID int64) error {
+	return errors.New("not implemented (b5-st)")
 }
 
 // Totals lists every Ingredient with Stock, those with spoiled or use-soon lots

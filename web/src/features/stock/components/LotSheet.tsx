@@ -17,6 +17,17 @@ export interface LotSheetProps {
   onMove: (lot: StockLot, placeId: number, quantity: number | undefined) => void
   /** Opens the Ingredient's own sheet (all its Lots, Set total). */
   onSeeIngredient: (ingredientId: number) => void
+  /**
+   * Beta.5: "Edit" (secondary button) asks the screen to open the LotEditSheet for the Lot. The sheet closes itself first
+   * through onClose.
+   */
+  onEdit?: (lot: StockLot) => void
+  /**
+   * Beta.5: "Delete" (danger tertiary button) asks first in our own confirm dialog (useConfirm, `tone: 'danger'`, title
+   * strings.deleteTitle, body strings.deleteBody, or strings.deleteBodyWentOff when the Lot has gone off, confirm label
+   * "Delete"); only the confirm calls onDelete.
+   */
+  onDelete?: (lot: StockLot) => void
 }
 
 /** One Stock Lot: where it is, when it was bought, how long it is good, and "Move to" another Storage Place (all or part). */
