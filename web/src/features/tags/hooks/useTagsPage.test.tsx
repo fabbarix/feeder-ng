@@ -319,7 +319,7 @@ describe('useTagsPage: Delete', () => {
     await act(async () => done)
     expect(api.callsTo('DELETE', '/api/tags/1')).toHaveLength(1)
     expect(page(view).sheet).toBeNull()
-    await findNotice('status', 'Deleted fish.')
+    await findNotice('status', 'Removed fish.')
   })
 
   it('never refuses: a Tag nothing uses still gets a confirm and can be deleted', async () => {

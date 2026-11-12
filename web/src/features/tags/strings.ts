@@ -41,6 +41,6 @@ export const tagsStrings = {
     renamed: (name: string) => `Renamed to ${name}.`,
     saved: (name: string) => `Saved ${name}.`,
     merged: (from: string, into: string) => `Merged ${from} into ${into}.`,
-    deleted: (name: string) => `Deleted ${name}.`,
+    deleted: (name: string) => `Removed ${name}.`,
   },
 } as const

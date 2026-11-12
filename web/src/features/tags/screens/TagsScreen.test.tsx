@@ -365,7 +365,7 @@ describe('TagsScreen: Delete', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Delete Tag' }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Delete fish?' })).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/tags/1')).toHaveLength(1))
-    await findNotice('status', 'Deleted fish.')
+    await findNotice('status', 'Removed fish.')
     expect(screen.queryByRole('dialog')).toBeNull()
     await waitFor(() => expect(rowButton('Pasta, 3 Recipes')).toHaveFocus())
     expect(rows()).toHaveLength(3)
