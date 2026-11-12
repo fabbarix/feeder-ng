@@ -20,6 +20,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
 	"github.com/fabbarix/feeder-ng/internal/plan/store"
+	tagstore "github.com/fabbarix/feeder-ng/internal/tag/store"
 )
 
 func init() { app.Register(app.Module{Name: "planning", Mount: mount}) }
@@ -54,7 +55,7 @@ func mount(r *app.Router, d app.Deps) {
 	})
 	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
 
-	a := &api{run: run, st: st, names: newNames(d), cook: timers}
+	a := &api{run: run, st: st, names: newNames(d), cook: timers, tagExists: tagstore.New(d.DB).Exists}
 	r.User("GET /api/plan", a.view)
 	r.User("GET /api/plan/to-confirm", a.toConfirm)
 	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
@@ -93,6 +94,28 @@ type api struct {
 	st    *store.Store
 	names *names
 	cook  *cookservice.Service
+	// tagExists is the Tag check of the rule routes (TG-R, ADR 0010): wired at mount, a stub in the handler tests.
+	tagExists TagExists
+}
+
+// TagExists says whether a Tag has that key.
+type TagExists func(ctx context.Context, key string) (bool, error)
+
+var errTagUnknown = errors.New("no Tag has that key")
+
+// requireTag refuses a rule key no Tag has. A rule with no Tag (a Recipe Slot Rule) is not checked.
+func (a *api) requireTag(ctx context.Context, key string) error {
+	if key == "" {
+		return nil
+	}
+	ok, err := a.tagExists(ctx, key)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errTagUnknown
+	}
+	return nil
 }
 
 // cookService is the cook service the planning module uses: the timers it cancels and the timelines it reads.
@@ -166,6 +189,8 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code = http.StatusConflict, "duplicate_rule"
 	case errors.Is(err, store.ErrUnknownRef):
 		status, code = http.StatusUnprocessableEntity, "unknown_reference"
+	case errors.Is(err, errTagUnknown):
+		status, code, field = http.StatusUnprocessableEntity, "tag_unknown", "tag"
 	case errors.Is(err, store.ErrInvalid):
 		status, code = http.StatusUnprocessableEntity, "validation_failed"
 	default:
@@ -174,7 +199,7 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		return
 	}
 	body := map[string]any{"code": code, "message": messageFor(code)}
-	if field != "" && code == "validation_failed" {
+	if field != "" && (code == "validation_failed" || code == "tag_unknown") {
 		body["field"] = field
 	}
 	httpx.WriteJSON(w, status, map[string]any{"error": body})
@@ -208,6 +233,8 @@ func messageFor(code string) string {
 		return "That Recipe is already in another Course of that Meal Slot on that day"
 	case "unknown_reference":
 		return "The Meal Slot or Recipe does not exist"
+	case "tag_unknown":
+		return "No such Tag"
 	case "validation_failed":
 		return "The request is not valid"
 	}
