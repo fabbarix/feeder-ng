@@ -23,6 +23,14 @@ export interface UseImportReview {
   chooseCreate: (key: string, opts?: { name?: string; baseUnit?: BaseUnit }) => void
   answerConversion: (key: string, unit: string, toBase: number) => void
   chooseRecipeAction: (index: number, action: RecipeAction) => void
+  /** CRS E2: answers for a Course name of the file (docs/dev/design/crs-e2.md 4.2). Each re-plans like the other answers. */
+  chooseCourseUse: (key: string, courseId: number) => void
+  chooseCourseSkip: (key: string) => void
+  /** Admin only: the server answers 403 to a Confirm that holds it from anyone else. */
+  chooseCourseAdd: (key: string) => void
+  chooseCourseUnarchive: (key: string) => void
+  /** True after a Confirm refused with 403 `forbidden`: the Review stays open, `add` and `unarchive` answers were dropped. Cleared by the next answer. */
+  courseForbidden: boolean
   /** Saves everything. On success phase becomes 'done' and the Recipe, Ingredient and Tag queries are invalidated. */
   confirm: () => Promise<void>
   /** Discards the server-side review and returns to the source step. */
@@ -219,6 +227,19 @@ export function useImportReview(): UseImportReview {
     chooseCreate: (key, opts) => answer(chooseCreate(decisionsRef.current, key, opts)),
     answerConversion: (key, unit, toBase) => answer(answerConversion(decisionsRef.current, key, unit, toBase)),
     chooseRecipeAction: (index, action) => answer(chooseRecipeAction(decisionsRef.current, index, action)),
+    chooseCourseUse: () => {
+      throw new Error('not implemented')
+    },
+    chooseCourseSkip: () => {
+      throw new Error('not implemented')
+    },
+    chooseCourseAdd: () => {
+      throw new Error('not implemented')
+    },
+    chooseCourseUnarchive: () => {
+      throw new Error('not implemented')
+    },
+    courseForbidden: false,
     confirm,
     reset,
     reviewId: review?.id,

@@ -44,6 +44,12 @@ export interface RecipeDraft {
   description: string
   yield: string
   readyMeal: boolean
+  /** CRS E2: the Courses chosen, household order. */
+  courseIds: number[]
+  /** CRS E2: sent as it is. While the Whole meal switch is hidden it keeps the stored value (a new Recipe: false). */
+  wholeMeal: boolean
+  /** CRS E2: the User set Whole meal in this edit; the Ready Meal default then leaves it alone. Never sent. */
+  wholeMealSet: boolean
   tags: string[]
   cooldownDays: string
   leftoverUseByDays: string
@@ -74,6 +80,9 @@ export function emptyDraft(): RecipeDraft {
     description: '',
     yield: '4',
     readyMeal: false,
+    courseIds: [],
+    wholeMeal: false,
+    wholeMealSet: false,
     tags: [],
     cooldownDays: '',
     leftoverUseByDays: '',
@@ -96,6 +105,9 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     description: recipe.description,
     yield: String(recipe.yield),
     readyMeal: recipe.readyMeal,
+    courseIds: [],
+    wholeMeal: false,
+    wholeMealSet: false,
     tags: [...recipe.tags],
     cooldownDays: numText(recipe.cooldownDays),
     leftoverUseByDays: numText(recipe.leftoverUseByDays),
@@ -178,6 +190,8 @@ export function draftToInput(draft: RecipeDraft): RecipeInput {
     description: draft.description.trim(),
     yield: numberOrZero(draft.yield),
     readyMeal: draft.readyMeal,
+    courseIds: [],
+    wholeMeal: false,
     tags: [...draft.tags],
     cooldownDays: overrideOf(draft.cooldownDays),
     leftoverUseByDays: overrideOf(draft.leftoverUseByDays),

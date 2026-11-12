@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
-import { photos, plan, recipe, reviewExtras } from '../fixtures.test-helper'
+import { photos, plan, recipe, reviewExtras, courseExtras } from '../fixtures.test-helper'
 import type { UseImportReview } from '../hooks/useImportReview'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { UseReadAvailability } from '../hooks/useReadAvailability'
@@ -30,9 +30,9 @@ vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fak
 import { ImportScreen } from './ImportScreen'
 
 const review = (over: Partial<UseImportReview> = {}): UseImportReview => ({
-  phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [] }, error: undefined, busy: false, stale: false,
+  phase: 'source', plan: undefined, decisions: { ingredients: [], conversions: [], recipes: [], courses: [] }, error: undefined, busy: false, stale: false,
   result: undefined, open: vi.fn(), chooseExisting: vi.fn(), chooseCreate: vi.fn(), answerConversion: vi.fn(), chooseRecipeAction: vi.fn(),
-  confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...over,
+  confirm: vi.fn(), reset: vi.fn(), ...reviewExtras(), ...courseExtras(), ...over,
 })
 const idle = (over: Partial<UseRecipeRead> = {}): UseRecipeRead => ({
   phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0,
@@ -181,3 +181,6 @@ describe('ImportScreen: focus after a read (accessibility)', () => {
     expect(screen.getByRole('heading', { name: 'Review' })).not.toHaveFocus()
   })
 })
+
+// CRS E2: the screen reads the Courses of the household; these tests do not care which.
+vi.mock('../hooks/useImportCourses', () => ({ useImportCourses: () => ({ courses: [], isAdmin: false, isPending: false }) }))

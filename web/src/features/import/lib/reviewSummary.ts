@@ -1,7 +1,7 @@
 // Pure view-model of an Import Review: which step tiles to show and how much is still open.
 import type { IngredientMatch, Plan } from '../types'
 
-export type StepId = 'problems' | 'ingredients' | 'units' | 'recipes' | 'images'
+export type StepId = 'problems' | 'ingredients' | 'units' | 'courses' | 'recipes' | 'images'
 
 export interface StepTile {
   id: StepId

@@ -3,7 +3,7 @@ import type { BaseUnit, ConversionAnswer, Decisions, IngredientDecision, RecipeA
 
 /** No answers yet. */
 export function emptyDecisions(): Decisions {
-  return { ingredients: [], conversions: [], recipes: [] }
+  return { ingredients: [], conversions: [], recipes: [], courses: [] }
 }
 
 /** Replaces the entry matching `same`, or appends `entry` when there is none. */
@@ -51,3 +51,31 @@ export function parseToBase(text: string): number | null {
   const n = Number(t)
   return Number.isFinite(n) && n > 0 ? n : null
 }
+
+// ---- CRS E2: Course answers (docs/dev/design/crs-e2.md 4) ----
+
+/** Answer a Course name with an existing active Course. Replaces an earlier answer for the same key. */
+export function chooseCourseUse(_d: Decisions, _key: string, _courseId: number): Decisions {
+  throw new Error('not implemented')
+}
+
+/** Leave a Course name out. */
+export function chooseCourseSkip(_d: Decisions, _key: string): Decisions {
+  throw new Error('not implemented')
+}
+
+/** Add the name as a new Course (Admin only). */
+export function chooseCourseAdd(_d: Decisions, _key: string): Decisions {
+  throw new Error('not implemented')
+}
+
+/** Bring an archived Course back (Admin only). */
+export function chooseCourseUnarchive(_d: Decisions, _key: string): Decisions {
+  throw new Error('not implemented')
+}
+
+/** The answers a non-Admin cannot give (`add`, `unarchive`) taken out, everything else kept; used after a 403. */
+export function dropAdminCourseAnswers(_d: Decisions): Decisions {
+  throw new Error('not implemented')
+}
+

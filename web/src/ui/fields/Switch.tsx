@@ -5,6 +5,8 @@ export interface SwitchProps {
   label: string
   /** Overrides the accessible name while `label` stays the visible text ("Admin" visible, "Admin: cook@x" announced). */
   'aria-label'?: string
+  /** CRS E2: a helper line under the label, linked with aria-describedby so it is read with the switch. */
+  description?: string
   checked: boolean
   disabled?: boolean
   onChange: (checked: boolean) => void

@@ -213,3 +213,6 @@ describe('RecipeDetailScreen: Who excludes garlic? (PT)', () => {
     expect(alert).not.toHaveBeenCalled()
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Checkbox, FieldRow, NumberField, TextArea, TextField } from '../../../ui'
 import { codeMessage, recipeStrings } from '../strings'
 import { numberText, numberValue, type DraftErrors, type RecipeDraft } from '../lib/draft'
+import type { CourseChoice } from '../../../lib/courses'
 import type { TagCount } from '../types'
 import { TagInput } from './TagInput'
 
@@ -11,6 +12,8 @@ export interface RecipeDetailsFieldsProps {
   onChange: (patch: Partial<RecipeDraft>) => void
   /** The Household's existing Tags, suggested in the Tag field. */
   knownTags?: TagCount[]
+  /** CRS E2: the household's active Courses, household order: the Courses picker and the Whole meal switch. */
+  courses?: readonly CourseChoice[]
 }
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)

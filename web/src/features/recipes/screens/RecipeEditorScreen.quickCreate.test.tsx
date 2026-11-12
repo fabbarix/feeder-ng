@@ -271,3 +271,6 @@ describe('Ready Meal: renaming the Recipe offers to rename its Ingredient', () =
     expect(screen.queryByRole('dialog', { name: recipeStrings.readyMealIngredient.renameTitle })).toBeNull()
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

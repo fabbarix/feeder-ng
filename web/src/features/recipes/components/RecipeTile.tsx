@@ -7,6 +7,10 @@ import type { RecipeSummary } from '../types'
 export interface RecipeTileProps {
   recipe: RecipeSummary
   onOpen: (id: number) => void
+  /** CRS E2: the Course names (household order) shown as chips. */
+  courseNames?: readonly string[]
+  /** CRS E2: add the Whole meal chip. */
+  wholeMeal?: boolean
 }
 
 /**
