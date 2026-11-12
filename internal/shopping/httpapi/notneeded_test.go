@@ -239,14 +239,14 @@ func TestEveryLineSendsPastPlannedMealsEvenWhenThereAreNone(t *testing.T) {
 	}
 }
 
-func TestNeededAfterAllWithABadShopIs400AndKeepsTheMark(t *testing.T) {
+func TestNeededAfterAllWithABadShopIs422AndKeepsTheMark(t *testing.T) {
 	env := testkit.Start(t)
 	c := env.LoginUser(t)
 	rice := seedIngredient(t, env, "rice", "g")
 	seedCourseDinner(t, env, courseMeal{"Main", "Risotto", rice, 300, 1})
 	c.Post("/api/shopping/not-needed", map[string]any{"ingredientId": rice, "to": "2026-11-15"})
-	if r := c.Delete("/api/shopping/not-needed/" + itoa(rice) + "?to=2026-11-15&shop=abc"); r.Status != 400 {
-		t.Fatalf("DELETE with shop=abc = %d %s, want 400", r.Status, r.Body)
+	if r := c.Delete("/api/shopping/not-needed/" + itoa(rice) + "?to=2026-11-15&shop=abc"); r.Status != 422 {
+		t.Fatalf("DELETE with shop=abc = %d %s, want 422", r.Status, r.Body)
 	}
 	if v := getList(t, c, ""); len(v.NotNeeded) != 1 || len(v.Lines) != 0 {
 		t.Fatalf("after the refused DELETE: %+v; the input is validated before the mark is cleared", v)
