@@ -19,7 +19,7 @@ How a Member is drawn in lists and pickers: their photo, else their emoji, else 
 _Avoid_: Profile picture, icon, userpic
 
 **User**:
-Someone who signs in with Google to use the app, because an Admin added their email, a Member carries it, or a User approved their Access Request; may be linked to a Member.
+Someone who signs in with Google to use the app, because their email is on the **Allowlist** (an Admin added it, or a User approved their Access Request) or a Member carries it; may be linked to a Member.
 _Avoid_: Account, login, member
 
 **Admin**:
@@ -27,7 +27,7 @@ A User who also manages who may sign in, the Members, Meal Slots, Courses, Shops
 _Avoid_: Owner, superuser
 
 **Allowlist**:
-The list of emails, managed by an Admin, that may sign in at once. Any other verified Google account makes an **Access Request** instead.
+The list of emails, managed by an Admin, that may sign in at once. An approved Access Request, or the first sign-in with an email a Member carries, adds that email to it; any other verified Google email makes an **Access Request** instead.
 _Avoid_: Invite list, guest list, whitelist
 
 **Access Request**:

@@ -38,7 +38,7 @@ To release: `git tag v1.0.0 && git push origin v1.0.0`.
 
 ### Prereleases
 
-Before the first stable tag, release prereleases: `-beta.N` first, then `-rc.N`, then the stable tag. They order as `1.0.0-dev < 1.0.0-beta.1 < 1.0.0-rc.1 < 1.0.0` (semver compares the identifiers alphabetically, `beta` before `rc`, and the numbers numerically; so `beta.2` comes before `beta.10`). To release the first beta:
+Before the first stable tag, release prereleases: `-beta.N` first, then `-rc.N`, then the stable tag. They order as `1.0.0-dev < 1.0.0-beta.1 < 1.0.0-rc.1 < 1.0.0` (semver compares the identifiers alphabetically, `beta` before `rc`, and the numbers numerically; so `beta.2` comes before `beta.10`). A fix release of a beta adds a number: 1.0.0-beta.4 < 1.0.0-beta.4.1 < 1.0.0-beta.5 (more identifiers sort after the same prefix). To release the first beta:
 
 ```sh
 git tag v1.0.0-beta.1 && git push origin v1.0.0-beta.1
