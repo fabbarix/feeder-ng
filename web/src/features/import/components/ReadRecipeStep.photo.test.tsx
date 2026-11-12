@@ -1,6 +1,6 @@
 // The Photo tab inside "Read a recipe" (docs/dev/design/photo-read.md section 5, "ReadRecipeStep changes"; photo-store.md "Finished read" and "State owner").
 // usePhotoPages is replaced by a controllable fake; the step, the photo panel and its parts are real.
-// Choices pinned where the design leaves room: the step spots a successful finish as busy -> idle with no failure and no Cancel pressed in between.
+// Success is read from UseRecipeRead.outcome === 'done' (review of 59f2b4b): a server 'cancelled', a Cancel from another tab, a Cancel here and a failure keep the photos.
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -84,6 +84,30 @@ describe('Photo tab', () => {
   })
 })
 
+describe('Photo tab: Read recipe does not stay held after a refused start', () => {
+  it('start refuses the input without ever going busy: once the failure is shown and cleared, Read recipe is on again', async () => {
+    setPages({ canRead: true, state: { photos: [imagePhoto('p1')] } })
+    const read = idle()
+    const { rerender } = render(ui(read))
+    await openPhoto()
+    await userEvent.click(readButton())
+    await waitFor(() => expect(read.start).toHaveBeenCalledOnce())
+    // buildReadRequest refused it: failed, never busy.
+    rerender(ui(idle({ start: read.start, phase: 'failed', kind: 'photo', outcome: 'failed', error: { code: 'photo_unsupported' } })))
+    // reset() ran (the User changed something) and the hook is idle again.
+    rerender(ui(idle({ start: read.start })))
+    expect(readButton()).toBeEnabled()
+  })
+
+  it('also when toReadInput() itself fails', async () => {
+    setPages({ canRead: true, state: { photos: [imagePhoto('p1')] }, toReadInput: vi.fn(async () => Promise.reject(new Error('reader'))) })
+    render(ui(idle()))
+    await openPhoto()
+    await userEvent.click(readButton())
+    await waitFor(() => expect(readButton()).toBeEnabled())
+  })
+})
+
 describe('Photo tab: why Read recipe is off', () => {
   const reason = async (state: Parameters<typeof setPages>[0]) => {
     setPages({ canRead: false, ...state })
@@ -118,12 +142,26 @@ describe('Photo tab: why Read recipe is off', () => {
 })
 
 describe('Photo tab: the photos are kept until the read is finished', () => {
-  it('a read that ends without a failure and without Cancel (it reached review) calls finished()', () => {
+  it('a photo read that ends with outcome "done" (it reached review) calls finished()', () => {
     const pages = setPages({ state: { photos: [imagePhoto('p1')] } })
     const read = idle()
     const { rerender } = render(ui(running({ start: read.start })))
-    rerender(ui(idle({ start: read.start })))
+    rerender(ui(idle({ start: read.start, outcome: 'done' })))
     expect(pages.finished).toHaveBeenCalledOnce()
+  })
+
+  it('a read the server cancelled (another tab) keeps the photos', () => {
+    const pages = setPages({ state: { photos: [imagePhoto('p1')] } })
+    const { rerender } = render(ui(running()))
+    rerender(ui(idle({ outcome: 'cancelled' })))
+    expect(pages.finished).not.toHaveBeenCalled()
+  })
+
+  it('a read that ends with no outcome at all keeps the photos (never clear on a guess)', () => {
+    const pages = setPages({ state: { photos: [imagePhoto('p1')] } })
+    const { rerender } = render(ui(running()))
+    rerender(ui(idle()))
+    expect(pages.finished).not.toHaveBeenCalled()
   })
 
   it('a failed read keeps the photos (and Try again does too)', () => {
@@ -140,14 +178,14 @@ describe('Photo tab: the photos are kept until the read is finished', () => {
     const { rerender } = render(ui(read))
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(read.cancel).toHaveBeenCalledOnce()
-    rerender(ui(idle()))
+    rerender(ui(idle({ outcome: 'cancelled' })))
     expect(pages.finished).not.toHaveBeenCalled()
   })
 
   it('a text or page read that finishes does not touch the photos', () => {
     const pages = setPages({ state: { photos: [imagePhoto('p1')] } })
     const { rerender } = render(ui(running({ kind: 'text' })))
-    rerender(ui(idle()))
+    rerender(ui(idle({ outcome: 'done' })))
     expect(pages.finished).not.toHaveBeenCalled()
   })
 

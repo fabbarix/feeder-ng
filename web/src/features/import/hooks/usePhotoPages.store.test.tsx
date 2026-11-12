@@ -354,6 +354,16 @@ describe('leaving the import page (a location change, never a plain unmount)', (
     expect(s.hook.current!.state.photos).toHaveLength(1)
   })
 
+  it('the back button (popstate) is leaving too', async () => {
+    window.history.pushState({}, '', '/recipes')
+    const s = setup()
+    await withPhoto(s)
+    act(() => window.history.back())
+    expect(await screen.findByText('the recipes')).toBeInTheDocument()
+    await waitFor(() => expect(s.spy.clear).toHaveBeenCalled())
+    expect(await s.inner.load()).toEqual([])
+  })
+
   it('StrictMode\'s mount, unmount, mount does not clear', async () => {
     const s = setup(true)
     await withPhoto(s)

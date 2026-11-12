@@ -6,7 +6,12 @@ import { errorBackoff, isTerminal, pollDelay, shouldGiveUp } from '../lib/readPr
 import { buildReadRequest } from '../lib/readRequest'
 import type { AdoptedRead, ReadInput, ReadState, ReadView } from '../types'
 
+/** How the last read ended: 'done' = it reached review; 'cancelled' = by the User or by the server (another tab); 'failed' = it has an error. */
+export type ReadOutcome = 'done' | 'cancelled' | 'failed'
+
 export interface UseRecipeRead {
+  /** Set when a read ends, cleared when the next one starts. PM decision: photos are cleared only for 'done'. */
+  outcome?: ReadOutcome
   /** idle: nothing running. starting: the POST is in flight. running: polling. failed: `error` is set. */
   phase: 'idle' | 'starting' | 'running' | 'failed'
   /** starting or running. */

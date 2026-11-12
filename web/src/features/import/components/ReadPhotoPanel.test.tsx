@@ -1,6 +1,6 @@
 // ReadPhotoPanel: the Photo tab (docs/dev/design/photo-read.md section 5, "ReadPhotoPanel"; section 6; photo-store.md "Copy" and "Remove").
 // The panel takes UsePhotoPages as a prop; here it is a fake. Its parts (sources, list, editor) are real.
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { problemMessage } from '../../../ui'
@@ -259,5 +259,117 @@ describe('ReadPhotoPanel: photos from before', () => {
   it('is shown with the list, not while an editor is open', () => {
     view({ restoredCount: 1, ...editingNew() })
     expect(screen.queryByText(/from before/)).toBeNull()
+  })
+})
+
+describe('ReadPhotoPanel: focus when the editor closes (design section 6)', () => {
+  const editingExisting = (): FakePagesInput => ({ state: { photos: [imagePhoto('p1'), imagePhoto('p2')], editing: { id: 'p2', draft, isNew: false } } })
+
+  it('Use photo on an existing photo: focus goes to that photo\'s "Edit photo n"', () => {
+    const { again } = view(editingExisting())
+    again({ state: { photos: [imagePhoto('p1'), imagePhoto('p2', { revision: 1 })], editing: null } })
+    expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
+  })
+
+  it('Cancel or Escape on an existing photo: the same', () => {
+    const { again } = view(editingExisting())
+    again({ state: { photos: [imagePhoto('p1'), imagePhoto('p2')], editing: null } })
+    expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
+  })
+
+  it('Use photo on a NEW photo: focus goes to its "Edit photo n" too', () => {
+    const { again } = view({ state: { photos: [imagePhoto('p1', { output: { status: 'pending' } })], editing: { id: 'p1', draft, isNew: true } } })
+    again({ state: { photos: [imagePhoto('p1', { output: { status: 'pending' } })], editing: null } })
+    expect(screen.getByRole('button', { name: 'Edit photo 1' })).toHaveFocus()
+  })
+
+  it('Cancel on a NEW photo (it is removed): focus goes to the first source button', () => {
+    const { again } = view({ state: { photos: [imagePhoto('p1', { output: { status: 'pending' } })], editing: { id: 'p1', draft, isNew: true } } })
+    again({ state: { photos: [], editing: null } })
+    expect(screen.getByRole('button', { name: 'Choose files' })).toHaveFocus()
+  })
+
+  it('Cancel on a new photo when other photos are listed: still the first source button', () => {
+    const { again } = view({ state: { photos: [imagePhoto('p0'), imagePhoto('p1', { output: { status: 'pending' } })], editing: { id: 'p1', draft, isNew: true } } })
+    again({ state: { photos: [imagePhoto('p0')], editing: null } })
+    expect(screen.getByRole('button', { name: 'Choose files' })).toHaveFocus()
+  })
+
+  it('on a phone the first source button is Take photo', () => {
+    asPhone()
+    const { again } = view({ state: { photos: [imagePhoto('p1', { output: { status: 'pending' } })], editing: { id: 'p1', draft, isNew: true } } })
+    again({ state: { photos: [], editing: null } })
+    expect(screen.getByRole('button', { name: 'Take photo' })).toHaveFocus()
+  })
+
+  it('Retake opens the camera and does not move focus to a source button first', async () => {
+    asPhone()
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => undefined)
+    const { again } = view(editingNew('camera'))
+    await userEvent.click(screen.getByRole('button', { name: 'Retake' }))
+    again({ state: { photos: [], editing: null } })
+    await waitFor(() => expect(click).toHaveBeenCalled())
+    expect(screen.getByRole('button', { name: 'Take photo' })).not.toHaveFocus()
+  })
+
+  it('does not steal focus on the first render or on a re-render with no editor change', () => {
+    const { again } = view({ state: { photos: [imagePhoto('p1')] } })
+    again({ state: { photos: [imagePhoto('p1')] } })
+    expect(document.body).toHaveFocus()
+  })
+})
+
+describe('ReadPhotoPanel: live regions', () => {
+  it('"Preparing the photo…" is a status that stays mounted: only its text changes', () => {
+    vi.useFakeTimers()
+    const { again } = view({ busy: false })
+    const before = screen.getAllByRole('status')
+    expect(before.some((s) => s.textContent === '')).toBe(true)
+    again({ busy: true })
+    act(() => void vi.advanceTimersByTime(300))
+    const note = screen.getAllByRole('status').find((s) => s.textContent === 'Preparing the photo…')
+    expect(note).toBeDefined()
+    expect(before).toContain(note)
+    again({ busy: false })
+    expect(note!.isConnected).toBe(true)
+    expect(note!.textContent).toBe('')
+  })
+
+  it('"Photo 1 removed." is still announced after the last photo is removed (the status outlives the list)', async () => {
+    const { again } = view({ state: { photos: [imagePhoto('p1')] } })
+    await userEvent.click(screen.getByRole('button', { name: 'Remove photo 1' }))
+    again({ state: { photos: [] } })
+    expect(screen.getAllByRole('status').map((s) => s.textContent)).toContain('Photo 1 removed.')
+  })
+
+  it('the restore message is a status, and its Remove button is described by the message text', () => {
+    view({ restoredCount: 2, state: { photos: [imagePhoto('p1'), imagePhoto('p2')] } })
+    const message = screen.getByText('2 photos from before are back.')
+    expect(message.closest('[role="status"]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Remove' })).toHaveAccessibleDescription('2 photos from before are back.')
+  })
+})
+
+describe('ReadPhotoPanel: dropping something that is not a photo', () => {
+  const drop = (zone: HTMLElement, files: File[]) => {
+    const event = createEvent.drop(zone)
+    Object.defineProperty(event, 'dataTransfer', { value: { files, types: ['Files'] } })
+    fireEvent(zone, event)
+  }
+
+  it('is handed to the hook (which says "That is not a JPEG, PNG, WebP or HEIC photo." and never queues it), not silently dropped', () => {
+    const { pages } = view()
+    const text = new File(['soup'], 'notes.txt', { type: 'text/plain' })
+    drop(screen.getByTestId('file-drop-zone'), [text])
+    expect(pages.addFiles).toHaveBeenCalledWith([text], 'file')
+  })
+
+  it('a mixed drop sends the photo and the other file together, in order', () => {
+    const { pages } = view()
+    const photo = new File(['x'], 'a.jpg', { type: 'image/jpeg' })
+    const text = new File(['soup'], 'notes.txt', { type: 'text/plain' })
+    drop(screen.getByTestId('file-drop-zone'), [photo, text])
+    const sent = vi.mocked(pages.addFiles).mock.calls.flatMap((c) => c[0])
+    expect(sent).toEqual([photo, text])
   })
 })

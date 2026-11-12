@@ -191,6 +191,15 @@ describe('intake: the checks before and after decoding', () => {
     expect(m.state().editing).toBeNull()
   })
 
+  it('a refused file is never queued (a non-photo dropped on the zone)', async () => {
+    const m = mount()
+    await m.add([new File(['soup'], 'notes.txt', { type: 'text/plain' })])
+    await waitFor(() => expect(m.state().problem?.code).toBe('unsupported'))
+    expect(m.state().queue).toEqual([])
+    expect(m.state().photos).toEqual([])
+    expect(m.state().intake).toBe('idle')
+  })
+
   it('a refusal does not stop the files after it', async () => {
     const m = mount()
     await m.add([new File(['x'], 'a.txt', { type: 'text/plain' }), jpg('b.jpg')])

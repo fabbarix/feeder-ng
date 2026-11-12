@@ -98,3 +98,39 @@ describe('PhotoList: after Remove', () => {
     expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
   })
 })
+
+describe('PhotoList: after Remove, focus goes to the row now at that position', () => {
+  const rerenderWithout = async (before: Photo[], after: Photo[], n: number) => {
+    const v = view(before)
+    await userEvent.click(screen.getByRole('button', { name: `Remove photo ${n}` }))
+    v.rerender(<PhotoList {...v.props} photos={after} />)
+  }
+  const [a, b] = [imagePhoto('p1'), imagePhoto('p2')]
+  const link = linkPhoto('p4')
+  const heic = heicPhoto('p5')
+
+  it('a row without an Edit button (a link) gets its Remove button focused', async () => {
+    await rerenderWithout([a, link, b], [link, b], 1)
+    expect(screen.getByRole('button', { name: 'Remove photo 1' })).toHaveFocus()
+  })
+  it('the same for an as-is photo', async () => {
+    await rerenderWithout([a, heic, b], [heic, b], 1)
+    expect(screen.getByRole('button', { name: 'Remove photo 1' })).toHaveFocus()
+  })
+  it('a row with an Edit button still gets its Edit button, even beside rows without one', async () => {
+    await rerenderWithout([a, link, b], [a, b], 2)
+    expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
+  })
+  it('only rows without an Edit button left: the Remove button of the row at that position', async () => {
+    await rerenderWithout([a, link], [link], 1)
+    expect(screen.getByRole('button', { name: 'Remove photo 1' })).toHaveFocus()
+  })
+  it('removing the last row focuses the new last row, whatever kind it is', async () => {
+    await rerenderWithout([link, a], [link], 2)
+    expect(screen.getByRole('button', { name: 'Remove photo 1' })).toHaveFocus()
+  })
+  it('the position is by page position, not by the number of Edit buttons before it', async () => {
+    await rerenderWithout([link, a, b], [link, b], 2)
+    expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
+  })
+})
