@@ -57,6 +57,17 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     expect(root['--nav-clearance']).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*var\(--space-4\).*env\(safe-area-inset-bottom/)
     expect(d('.app-main')['padding-bottom']).toBe('var(--nav-clearance)')
   })
+  it('QA-4: --nav-top is the bottom bar top edge: height + inset + safe area (no gap), 0 from 1024', () => {
+    const top = d(':root')['--nav-top'] ?? ''
+    expect(top).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*env\(safe-area-inset-bottom/)
+    expect(top).not.toMatch(/--space-/)
+    expect(media('min-width: 1024px')).toMatch(/--nav-top\s*:\s*0/)
+  })
+  it('QA-4: the bottom bar is placed with the same tokens --nav-top is built from', () => {
+    const bar = d('.bottom-bar')
+    expect(bar['bottom']).toMatch(/var\(--nav-inset\).*env\(safe-area-inset-bottom/)
+    expect(bar['height']).toBe('var(--nav-height)')
+  })
   it('chromeless and the rail layout drop the clearance (there is no bottom bar)', () => {
     expect(d('.app-shell--chromeless')['padding']).toBe('0')
     expect(d('.app-main--full')['padding-bottom']).toBe('0')

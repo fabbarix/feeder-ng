@@ -17,6 +17,8 @@
 //  11. (ordinary routes) at >= 1024 the current rail item (aria-current) has a label contrast of at least 4.5:1 against its own background (L-04: Scan was 1.31:1).
 //  12. (phone, < 1024) the six-button bottom bar (PN): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
 //      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line); the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
+//  13. (phone, < 1024, /recipes/new) QA-4: the sticky action bar sits flush on the bottom bar: its bottom edge is within 1 px of the bar's top edge,
+//      at 360 and 390 px, with the page scrolled to the top and to the end (no strip of page content between them).
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -239,6 +241,26 @@ for (const vp of VIEWPORTS) {
       fail(`${tag}: end of page (${m.lastBottom}px) is hidden behind the bottom bar (top ${m.navTop}px)`)
     }
   }
+}
+
+// Rule 13 (QA-4): the sticky action bar and the bottom bar leave no gap.
+const gapProbe = `
+(async () => {
+  await new Promise((r) => setTimeout(r, 300))
+  const bar = document.querySelector('.sticky-action-bar')
+  const nav = document.querySelector('nav.bottom-bar')
+  if (!bar || !nav) return null
+  const at = (y) => { window.scrollTo(0, y); const b = bar.getBoundingClientRect(), n = nav.getBoundingClientRect(); return Math.round((n.top - b.bottom) * 10) / 10 }
+  return { top: at(0), end: at(document.documentElement.scrollHeight) }
+})()`
+for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
+  await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: true })
+  await cdp('Page.navigate', { url: base + '/recipes/new' })
+  await new Promise((r) => setTimeout(r, 1500))
+  const g = await evaluate(gapProbe).catch(() => null)
+  const tag = `${vp.width}px /recipes/new`
+  if (!g) fail(`${tag}: no .sticky-action-bar or bottom bar to measure`)
+  else for (const [where, gap] of Object.entries(g)) if (Math.abs(gap) > 1) fail(`${tag}: ${gap}px between the action bar and the bottom bar (scrolled to ${where})`)
 }
 
 ws.close()
