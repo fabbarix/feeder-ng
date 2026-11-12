@@ -64,7 +64,8 @@ describe('EmailNotVerifiedPage', () => {
   it('says Google has not verified the email and offers another Google sign-in', () => {
     render(<EmailNotVerifiedPage />)
     expect(screen.getByRole('heading', { level: 1, name: 'Email not verified' })).toBeInTheDocument()
-    expect(screen.getByText('Google has not verified this email. Use a different Google sign-in.')).toBeInTheDocument()
+    expect(screen.getByText('Google has not verified this email.')).toBeInTheDocument()
+    expect(screen.getByText('Google has not verified this email.').textContent).not.toMatch(/different Google sign-in/i)
     expect(screen.getByRole('link', { name: 'Use a different Google sign-in' })).toHaveAttribute('href', '/auth/google/login')
   })
 })
