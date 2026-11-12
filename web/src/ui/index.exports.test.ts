@@ -12,4 +12,10 @@ describe('ui barrel (R15)', () => {
     const props: [WeekdayPickerProps, MemberPillProps] = [{ label: 'x', value: [], onChange: () => {} }, { name: 'A', colour: '#000000' }]
     expect(props).toHaveLength(2)
   })
+
+  it('exports moveItem (the reorder helper of Sortable) for hosts that own the list', () => {
+    const { moveItem } = ui as unknown as { moveItem?: (items: string[], from: number, to: number) => string[] }
+    expect(typeof moveItem).toBe('function')
+    expect(moveItem?.(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a'])
+  })
 })

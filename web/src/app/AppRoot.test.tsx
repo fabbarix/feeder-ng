@@ -9,8 +9,11 @@ import { ME_CACHE_KEY } from './meCache'
 
 vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
 // Sign-out empties the photos kept on the device for a photo read (photo-store.md "Sign-out"): the import feature's own function, mocked here.
-const forget = vi.hoisted(() => ({ forgetStoredPhotos: vi.fn<() => Promise<void>>() }))
-vi.mock('../features/import', async (orig) => ({ ...(await orig<object>()), forgetStoredPhotos: forget.forgetStoredPhotos }))
+const forget = vi.hoisted(() => {
+  const state = { impl: undefined as undefined | (() => Promise<void>), forgetStoredPhotos: vi.fn<() => Promise<void>>() }
+  return state
+})
+vi.mock('../features/import', async (orig) => ({ ...(await orig<object>()), forgetStoredPhotos: () => (forget.impl ? forget.impl() : forget.forgetStoredPhotos()) }))
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -146,7 +149,10 @@ describe('AppRoot offline cold reload (R10)', () => {
       await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
       return calls
     }
-    beforeEach(() => forget.forgetStoredPhotos.mockReset())
+    beforeEach(() => {
+      forget.forgetStoredPhotos.mockReset()
+      forget.impl = undefined
+    })
 
     it('forgets the stored photos BEFORE /api/logout is called', async () => {
       const calls = await signOut()
@@ -156,7 +162,9 @@ describe('AppRoot offline cold reload (R10)', () => {
     })
 
     it('still signs out when forgetting fails (the error is swallowed)', async () => {
-      forget.forgetStoredPhotos.mockRejectedValue(new Error('idb'))
+      // Not mockRejectedValue / an async mock: vitest tracks the Promise a vi.fn returns and reports its rejection as the test's own failure,
+      // although AppRoot awaits it inside try/catch. A plain function makes the same rejection without that tracking.
+      forget.impl = () => Promise.reject(new Error('idb'))
       const calls: string[] = []
       mount('/plan', new Response(JSON.stringify(me), { status: 200 }))
       vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => (calls.push(url), new Response(JSON.stringify(me), { status: 200 }))))

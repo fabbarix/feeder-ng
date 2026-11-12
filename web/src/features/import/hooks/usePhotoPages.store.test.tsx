@@ -5,8 +5,8 @@
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode, type ReactNode } from 'react'
-import { Link, MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createBrowserRouter, Link, MemoryRouter, RouterProvider } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ImageEdit } from '../../../ui'
 import { createFakeEngine, createMemorySpyStore, createUrlLog, deferred, meHolder } from '../fakeReadEngine.test-helper'
 import type { PhotoRecord } from '../lib/photoStore'
@@ -296,6 +296,7 @@ describe('clearing', () => {
 })
 
 describe('leaving the import page (a location change, never a plain unmount)', () => {
+  afterEach(() => window.history.pushState({}, '', '/'))
   function Harness({ hook, deps }: { hook: { current: UsePhotoPages | undefined }; deps: Parameters<typeof usePhotoPages>[0] }) {
     hook.current = usePhotoPages(deps)
     return (
@@ -311,15 +312,14 @@ describe('leaving the import page (a location change, never a plain unmount)', (
     const { spy, inner } = createMemorySpyStore()
     const hook: { current: UsePhotoPages | undefined } = { current: undefined }
     const deps = { engine: createFakeEngine(), objectUrls: createUrlLog().api, store: spy }
-    const tree = (
-      <MemoryRouter initialEntries={['/recipes/import']}>
-        <Routes>
-          <Route path="/recipes/import" element={<Harness hook={hook} deps={deps} />} />
-          <Route path="/recipes" element={<p>the recipes</p>} />
-          <Route path="/recipes/export" element={<p>the export</p>} />
-        </Routes>
-      </MemoryRouter>
-    )
+    // The app's own router (createBrowserRouter): the hook compares window.location at mount and at cleanup, so the real History API is used.
+    window.history.pushState({}, '', '/recipes/import')
+    const router = createBrowserRouter([
+      { path: '/recipes/import', element: <Harness hook={hook} deps={deps} /> },
+      { path: '/recipes', element: <p>the recipes</p> },
+      { path: '/recipes/export', element: <p>the export</p> },
+    ])
+    const tree = <RouterProvider router={router} />
     const view = render(strict ? <StrictMode>{tree}</StrictMode> : tree)
     return { spy, inner, hook, ...view }
   }
