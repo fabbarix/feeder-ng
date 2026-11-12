@@ -4,7 +4,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-## [1.0.0-beta.4.2] - 2026-11-12 <!-- pending: date to fill at the tag -->
+## [1.0.0-beta.4.2] - 2026-11-12
 
 A fix for the photo editor in Read a recipe.
 
