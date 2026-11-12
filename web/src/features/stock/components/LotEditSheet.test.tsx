@@ -49,6 +49,19 @@ describe('LotEditSheet', () => {
     expect(screen.getByRole('switch', { name: 'No go-off date' })).toBeChecked()
   })
 
+  it('a Lot without a go-off date whose Ingredient has a Shelf Life can be given one', async () => {
+    const noDate = makeLot({ id: 8, quantity: 500, purchased: '2026-11-09', goesOff: null, spoiled: false, shelfLifeDays: 4 })
+    const { onSubmit } = setup(noDate)
+    expect(screen.queryByRole('switch', { name: 'No go-off date' })).toBeNull()
+    const trigger = screen.getByRole('button', { name: /Good until/ })
+    expect(trigger).toBeEnabled()
+    expect(trigger).not.toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('button', { name: '20 November 2026' }))
+    await userEvent.click(save())
+    expect(onSubmit).toHaveBeenCalledWith(noDate, { goesOff: '2026-11-20' })
+  })
+
   it('closing without a change does not call onSubmit', async () => {
     const { onSubmit, onClose } = setup()
     await userEvent.click(save())
