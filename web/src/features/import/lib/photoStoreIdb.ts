@@ -1,54 +1,84 @@
-// IndexedDB implementation (library `idb`) of PhotoStore, database "feeder-photo-read", one object store `photos` keyed by photo id.
-// A record holds the working copy (or the as-is Blob), the edit, the source kind, the declared type, the link url and the order; never
-// the rendered output. Blobs are kept as bytes + type (as scan/lib/idbStore.ts does), so older Safari has nothing to persist.
-// Thin glue, not unit-tested (jsdom has no IndexedDB); falls back to the memory store when indexedDB is missing or opening fails.
+// IndexedDB implementation (library `idb`) of PhotoStore, database "feeder-photo-read" (version 1), two object stores keyed by photo id:
+//   `photos` the metadata: id, userId, order, edit, and the source WITHOUT its bytes (kind, size, origin, declared type, name, link url);
+//   `bytes`  {bytes, type} of the working copy or the as-is original (kept as bytes + type, as scan/lib/idbStore.ts does).
+// Never the rendered output. save/remove/clear touch both stores in one transaction; update touches `photos` only, so an edit or a
+// reorder never rewrites a Blob. load() never throws on a malformed row: it joins what it can and leaves the rest for restorePhotos
+// to drop. Thin glue, not unit-tested (jsdom has no IndexedDB); falls back to the memory store when indexedDB is missing or opening fails.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { createMemoryPhotoStore, type PhotoRecord, type PhotoStore, type StoredSource } from './photoStore'
+import { createMemoryPhotoStore, type PhotoRecord, type PhotoStore, type StoredEdit } from './photoStore'
 
-interface BytesBlob {
+interface BytesRow {
   bytes: ArrayBuffer
   type: string
 }
-type PackedSource =
-  | { kind: 'image'; working: BytesBlob; width: number; height: number; origin: Extract<StoredSource, { kind: 'image' }>['origin'] }
-  | { kind: 'as-is'; blob: BytesBlob; type: 'image/heic' | 'image/heif'; name?: string }
-  | { kind: 'link'; url: string }
-type PackedRecord = Omit<PhotoRecord, 'source'> & { source: PackedSource }
+/** The record minus the Blob: `source` keeps every field except `working` / `blob`. */
+type MetaRow = Omit<PhotoRecord, 'source'> & { source: Record<string, unknown> }
 
 interface PhotoDb extends DBSchema {
-  photos: { key: string; value: PackedRecord }
+  photos: { key: string; value: MetaRow }
+  bytes: { key: string; value: BytesRow }
 }
 
-const pack = async (b: Blob): Promise<BytesBlob> => ({ bytes: await b.arrayBuffer(), type: b.type })
-const unpack = (b: BytesBlob): Blob => new Blob([b.bytes], { type: b.type })
-
-async function packRecord(r: PhotoRecord): Promise<PackedRecord> {
-  const s = r.source
-  if (s.kind === 'image') return { ...r, source: { ...s, working: await pack(s.working) } }
-  if (s.kind === 'as-is') return { ...r, source: { ...s, blob: await pack(s.blob) } }
-  return { ...r, source: s }
-}
-function unpackRecord(r: PackedRecord): PhotoRecord {
-  const s = r.source
-  if (s.kind === 'image') return { ...r, source: { ...s, working: unpack(s.working) } }
-  if (s.kind === 'as-is') return { ...r, source: { ...s, blob: unpack(s.blob) } }
-  return { ...r, source: s }
+function split(record: PhotoRecord, bytes: BytesRow): { meta: MetaRow; bytes: BytesRow } {
+  const { working: _w, blob: _b, ...rest } = record.source as Record<string, unknown>
+  return { meta: { ...record, source: rest }, bytes }
 }
 
 function idbPhotoStore(db: IDBPDatabase<PhotoDb>): PhotoStore {
   return {
     async load() {
-      const rows = await db.getAll('photos')
-      return rows.map(unpackRecord).sort((a, b) => a.order - b.order)
+      const out: unknown[] = []
+      try {
+        const tx = db.transaction(['photos', 'bytes'])
+        const rows = await tx.objectStore('photos').getAll()
+        for (const row of rows) {
+          try {
+            const joined: Record<string, unknown> = { ...row, source: { ...(row.source ?? {}) } }
+            const b = await tx.objectStore('bytes').get(row.id)
+            if (b && b.bytes instanceof ArrayBuffer) {
+              const blob = new Blob([b.bytes], { type: String(b.type ?? '') })
+              const src = joined.source as Record<string, unknown>
+              if (src.kind === 'image') src.working = blob
+              else if (src.kind === 'as-is') src.blob = blob
+            }
+            out.push(joined)
+          } catch {
+            // a malformed row is left out
+          }
+        }
+      } catch {
+        // nothing readable: nothing to restore
+      }
+      return out
+    },
+    async keys() {
+      return (await db.getAllKeys('photos')).map(String)
     },
     async save(record) {
-      await db.put('photos', await packRecord(record), record.id)
+      const s = record.source
+      const blob = s.kind === 'image' ? s.working : s.kind === 'as-is' ? s.blob : null
+      // The bytes are read before the transaction opens (a transaction closes when it has nothing pending).
+      const bytes: BytesRow | null = blob ? { bytes: await blob.arrayBuffer(), type: blob.type } : null
+      const { meta } = split(record, bytes ?? { bytes: new ArrayBuffer(0), type: '' })
+      const tx = db.transaction(['photos', 'bytes'], 'readwrite')
+      await tx.objectStore('photos').put(meta, record.id)
+      if (bytes) await tx.objectStore('bytes').put(bytes, record.id)
+      else await tx.objectStore('bytes').delete(record.id)
+      await tx.done
+    },
+    async update(id, changes: { order: number; edit: StoredEdit | null }) {
+      const tx = db.transaction('photos', 'readwrite')
+      const row = await tx.store.get(id)
+      if (row) await tx.store.put({ ...row, order: changes.order, edit: changes.edit }, id)
+      await tx.done
     },
     async remove(id) {
-      await db.delete('photos', id)
+      const tx = db.transaction(['photos', 'bytes'], 'readwrite')
+      await Promise.all([tx.objectStore('photos').delete(id), tx.objectStore('bytes').delete(id), tx.done])
     },
     async clear() {
-      await db.clear('photos')
+      const tx = db.transaction(['photos', 'bytes'], 'readwrite')
+      await Promise.all([tx.objectStore('photos').clear(), tx.objectStore('bytes').clear(), tx.done])
     },
   }
 }
@@ -65,7 +95,9 @@ export async function openPhotoStore(name = 'feeder-photo-read'): Promise<Opened
     const db = await openDB<PhotoDb>(name, 1, {
       upgrade(d) {
         d.createObjectStore('photos')
+        d.createObjectStore('bytes')
       },
+      // A newer tab wants to upgrade the schema, or the browser dropped the connection: close it and reopen on next use.
       blocking() {
         db.close()
         shared = undefined
@@ -93,8 +125,14 @@ export function appPhotoStore(): PhotoStore {
     async load() {
       return (await sharedStore()).store.load()
     },
+    async keys() {
+      return (await sharedStore()).store.keys()
+    },
     async save(record) {
       await (await sharedStore()).store.save(record)
+    },
+    async update(id, changes) {
+      await (await sharedStore()).store.update(id, changes)
     },
     async remove(id) {
       await (await sharedStore()).store.remove(id)

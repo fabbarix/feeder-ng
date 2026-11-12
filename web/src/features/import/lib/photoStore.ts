@@ -1,10 +1,16 @@
-// Phase 1 of "keep photos on the device" (docs/dev/design/photo-store.md): the storage port, its in-memory implementation and the pure
-// helpers between a photo-pages state and stored records. The IndexedDB implementation is photoStoreIdb.ts (thin glue).
+// Phase 1 of "keep photos on the device" (docs/dev/design/photo-store.md): the storage port, its in-memory implementation, the pure
+// helpers between a photo-pages state and stored records, and the serial writer the hook uses. The IndexedDB implementation is
+// photoStoreIdb.ts (thin glue). STUBS: the developer implements the functions below against photoStore.test.ts.
 //
-// TODO(wire-up after T3 lands photoPages.ts): the types below mirror design photo-read.md section 2 on purpose; replace them with
-// imports of Photo, PhotoSource, ImageEdit, ImageOrigin and MAX_PHOTOS, and delete the local copies.
+// TODO(wire-up after T3 lands photoPages.ts): StoredSource, StoredEdit, StoredRect and MAX_PHOTOS mirror design photo-read.md
+// section 2 (PhotoSource, ImageEdit, Rect, MAX_PHOTOS); replace them with imports of T3's types and delete the local copies.
+import type { ImageOrigin } from '../../../ui/ImagePicker/types'
 
 export const MAX_PHOTOS = 4
+/** The largest Blob kept per photo (the working copy, or an as-is original): design photo-read.md section 8. */
+export const MAX_PHOTO_BYTES = 8 * 1024 * 1024
+
+export const IMAGE_ORIGINS = ['file', 'drop', 'paste', 'link', 'camera'] as const satisfies readonly ImageOrigin[]
 
 export interface StoredRect {
   x: number
@@ -14,19 +20,21 @@ export interface StoredRect {
 }
 export interface StoredEdit {
   turns: 0 | 1 | 2 | 3
+  /** In pixels of the TURNED working copy. */
   crop: StoredRect
 }
-export type StoredOrigin = 'file' | 'drop' | 'paste' | 'link' | 'camera'
 
 /** What a photo was made from, as kept: the same shape as PhotoSource (section 2). */
 export type StoredSource =
-  | { kind: 'image'; working: Blob; width: number; height: number; origin: StoredOrigin }
+  | { kind: 'image'; working: Blob; width: number; height: number; origin: ImageOrigin }
   | { kind: 'as-is'; blob: Blob; type: 'image/heic' | 'image/heif'; name?: string }
   | { kind: 'link'; url: string }
 
-/** One stored photo. Never the rendered output (it is rendered again after a restore). `order` is the page position (0-based). */
+/** One stored photo. Never the rendered output (it is rendered again after a restore) and never the revision. `order` is the page position (0-based). */
 export interface PhotoRecord {
   id: string
+  /** The signed-in User who added it; a restore for another User clears instead. */
+  userId: number
   order: number
   source: StoredSource
   edit: StoredEdit | null
@@ -39,168 +47,83 @@ export interface SavablePhoto {
   edit: StoredEdit | null
 }
 
-/** A photo ready to go back into the photo-pages state. */
-export interface RestoredPhoto {
-  id: string
-  source: StoredSource
-  edit: StoredEdit | null
-}
-
 export interface PhotoStore {
-  /** All saved photos in page order (by `order`). */
-  load(): Promise<PhotoRecord[]>
-  /** Saves a photo, replacing the one with the same id. */
+  /** Everything stored, untrusted (a row may be malformed; restorePhotos decides). Any order. */
+  load(): Promise<unknown[]>
+  /** The ids of the stored photos, without reading any Blob. */
+  keys(): Promise<string[]>
+  /** Writes a whole record (metadata and bytes), replacing the one with the same id. */
   save(record: PhotoRecord): Promise<void>
+  /** Writes the metadata only (no Blob is touched). A no-op for an unknown id. */
+  update(id: string, changes: { order: number; edit: StoredEdit | null }): Promise<void>
   remove(id: string): Promise<void>
   clear(): Promise<void>
 }
 
-const ORIGINS = ['file', 'drop', 'paste', 'link', 'camera'] as const
-const TURNS = [0, 1, 2, 3] as const
-const HEIC_TYPES = ['image/heic', 'image/heif'] as const
-
+/** Map-backed store for tests and for the fallback; copies `source` and `edit` (not the Blobs) on the way in and out. */
 export function createMemoryPhotoStore(): PhotoStore {
-  const records = new Map<string, PhotoRecord>()
-  // Copies on the way in and out, so a caller cannot change what is stored through an object it holds.
-  const sorted = (): PhotoRecord[] =>
-    [...records.values()].sort((a, b) => a.order - b.order).map((r) => ({ ...r }))
-  return {
-    async load() {
-      return sorted()
-    },
-    async save(record) {
-      records.set(record.id, { ...record })
-    },
-    async remove(id) {
-      records.delete(id)
-    },
-    async clear() {
-      records.clear()
-    },
-  }
+  throw new Error('not implemented')
 }
 
 /** Photos in page order to records (`order` = index). */
-export function toRecords(photos: readonly SavablePhoto[]): PhotoRecord[] {
-  return photos.map((p, order) => ({ id: p.id, order, source: p.source, edit: p.edit }))
+export function toRecords(photos: readonly SavablePhoto[], userId: number): PhotoRecord[] {
+  void photos
+  void userId
+  throw new Error('not implemented')
 }
 
 /**
- * Writes the current pages to the store: saves every photo and removes stored ones that are no longer in the list.
+ * Brings the store in line with `photos`, writing as little as possible:
+ * 1. removes the stored ids (keys()) that are not in the list;
+ * 2. save() only for an id that is new, or whose `source` object differs from `previous`'s;
+ * 3. update() when only the order or the edit changed; nothing when nothing changed.
+ * `previous` null = unknown: every photo is saved.
  */
-export async function persistPhotos(store: PhotoStore, photos: readonly SavablePhoto[]): Promise<void> {
-  for (const record of toRecords(photos)) await store.save(record)
-  const keep = new Set(photos.map((p) => p.id))
-  for (const stored of await store.load()) {
-    if (!keep.has(stored.id)) await store.remove(stored.id)
-  }
+export async function persistPhotos(
+  store: PhotoStore,
+  photos: readonly SavablePhoto[],
+  previous: readonly SavablePhoto[] | null,
+  userId: number,
+): Promise<void> {
+  void store
+  void photos
+  void previous
+  void userId
+  throw new Error('not implemented')
 }
 
-interface ValidRecord {
-  id: string
-  order: number
-  source: StoredSource
-  edit: StoredEdit | null
-}
-
-function isObject(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null
-}
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === 'number' && Number.isFinite(x)
-}
-function isPositiveInteger(x: unknown): x is number {
-  return typeof x === 'number' && Number.isInteger(x) && x > 0
-}
-function isOneOf<T extends string | number>(list: readonly T[], x: unknown): x is T {
-  return (list as readonly unknown[]).includes(x)
-}
-function isNonEmptyBlob(x: unknown): x is Blob {
-  return x instanceof Blob && x.size > 0
-}
-function isHttpsUrl(url: string): boolean {
-  try {
-    return new URL(url).protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-function isRect(r: unknown): r is StoredRect {
-  return (
-    isObject(r) &&
-    isFiniteNumber(r.x) &&
-    r.x >= 0 &&
-    isFiniteNumber(r.y) &&
-    r.y >= 0 &&
-    isFiniteNumber(r.width) &&
-    r.width > 0 &&
-    isFiniteNumber(r.height) &&
-    r.height > 0
-  )
-}
-function isEdit(e: unknown): e is StoredEdit {
-  return isObject(e) && isOneOf(TURNS, e.turns) && isRect(e.crop)
-}
-
-function restoreSource(s: unknown): StoredSource | null {
-  if (!isObject(s)) return null
-  switch (s.kind) {
-    case 'image': {
-      const { working, width, height, origin } = s
-      if (!isNonEmptyBlob(working) || !isPositiveInteger(width) || !isPositiveInteger(height)) return null
-      if (!isOneOf(ORIGINS, origin)) return null
-      return { kind: 'image', working, width, height, origin }
-    }
-    case 'as-is': {
-      const { blob, type, name } = s
-      if (!isNonEmptyBlob(blob) || !isOneOf(HEIC_TYPES, type)) return null
-      if (name !== undefined && typeof name !== 'string') return null
-      return name === undefined ? { kind: 'as-is', blob, type } : { kind: 'as-is', blob, type, name }
-    }
-    case 'link': {
-      const { url } = s
-      if (typeof url !== 'string' || !isHttpsUrl(url)) return null
-      return { kind: 'link', url }
-    }
-    default:
-      return null
-  }
-}
-
-/** A record as read from the store (untrusted) to a usable one, or null when it is broken. */
-function restoreRecord(r: unknown): ValidRecord | null {
-  if (!isObject(r)) return null
-  const { id, order, source, edit } = r
-  if (typeof id !== 'string' || id === '' || !isFiniteNumber(order)) return null
-  const restored = restoreSource(source)
-  if (!restored) return null
-  // An edit only applies to a photo that has a working copy; as-is and link photos are never edited.
-  if (restored.kind !== 'image' || edit === undefined || edit === null) return { id, order, source: restored, edit: null }
-  if (!isEdit(edit)) return null
-  return { id, order, source: restored, edit: { turns: edit.turns, crop: { ...edit.crop } } }
+export interface RestoreResult {
+  photos: SavablePhoto[]
+  /** The counter the photo-pages state continues from: the highest kept number + 1 (1 when none). */
+  nextId: number
+  /** true when a well-formed record belongs to another User: the caller clears the store instead of restoring. */
+  otherUser: boolean
 }
 
 /**
- * Records (as read from the store, so untrusted) back to restorable photos: sorted by `order`, broken records dropped, at most
- * MAX_PHOTOS kept, ids renumbered 'p1'.. in that order. `nextId` is the counter the photo-pages state continues from.
+ * Records (as read from the store, so untrusted) back to restorable photos: only those of `userId`, sorted by `order`, broken records
+ * dropped (ids kept as they are: /^p[1-9]\d*$/), at most MAX_PHOTOS kept.
  */
-export function restorePhotos(records: readonly unknown[]): { photos: RestoredPhoto[]; nextId: number } {
-  const valid: ValidRecord[] = []
-  for (const r of records) {
-    const v = restoreRecord(r)
-    if (v) valid.push(v)
-  }
-  valid.sort((a, b) => a.order - b.order)
+export function restorePhotos(records: readonly unknown[], userId: number): RestoreResult {
+  void records
+  void userId
+  throw new Error('not implemented')
+}
 
-  const seen = new Set<string>()
-  const kept: ValidRecord[] = []
-  for (const v of valid) {
-    if (kept.length >= MAX_PHOTOS) break
-    if (seen.has(v.id)) continue
-    seen.add(v.id)
-    kept.push(v)
-  }
+export interface PhotoWriter {
+  /** Until start() is called, persist does nothing. */
+  start(restored?: readonly SavablePhoto[]): void
+  /** Queues "make the store equal to this list"; a queued (not yet running) persist is replaced by the newest list. Never throws. */
+  persist(photos: readonly SavablePhoto[]): void
+  /** Drops queued persists, then empties the store after the operation in flight, and forgets what was written. Never throws. */
+  clear(): void
+  /** Resolves (never rejects) when everything queued so far has run. */
+  idle(): Promise<void>
+}
 
-  const photos = kept.map((v, i) => ({ id: `p${i + 1}`, source: v.source, edit: v.edit }))
-  return { photos, nextId: photos.length + 1 }
+/** One serial chain over a store: a failure is swallowed and forgets `previous`, so the next persist rewrites everything. */
+export function createPhotoWriter(store: PhotoStore, userId: number): PhotoWriter {
+  void store
+  void userId
+  throw new Error('not implemented')
 }

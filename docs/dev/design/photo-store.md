@@ -1,51 +1,67 @@
 # PHOTO-STORE: keep photos on the device (1.0.0-beta.4.1, task T5)
 
 Product answer (Q5 of photo-read.md section 14): **yes**. The photos a User adds to a photo Recipe read are kept on the device (IndexedDB), so they survive the
-browser unloading the tab while the camera app is open. They are cleared after a successful send, when the User removes them, and when the User leaves the read. Nothing
-is sent anywhere by this.
+browser unloading the tab while the camera app is open. They are cleared after a successful read, when the User removes them, when the User leaves the read and on
+sign-out. Nothing is sent anywhere by this.
 
-## Phase 1 (this task): the storage lib
+## Phase 1: the storage lib (`web/src/features/import/lib/`)
 
-Files in `web/src/features/import/lib/`:
+- `photoStore.ts`: types, the port, `createMemoryPhotoStore()`, and the pure helpers `toRecords`, `persistPhotos`, `restorePhotos`, plus `createPhotoWriter`. Unit-tested.
+- `photoStoreIdb.ts`: `openPhotoStore(name = 'feeder-photo-read')` and `appPhotoStore()`. Thin glue, not unit-tested (jsdom has no IndexedDB; no `fake-indexeddb`).
+  Falls back to the memory store when `indexedDB` is missing or opening fails.
 
-- `photoStore.ts`: the port `PhotoStore { load, save, remove, clear }`, `createMemoryPhotoStore()` and the pure helpers `toRecords`, `persistPhotos`, `restorePhotos`. Unit-tested.
-- `photoStoreIdb.ts`: `openPhotoStore(name = 'feeder-photo-read')` and `appPhotoStore()` (the app's lazily opened store). Database `feeder-photo-read`, version 1, one object
-  store `photos`, out-of-line key = photo id. Thin glue, not unit-tested (jsdom has no IndexedDB; no `fake-indexeddb`). Falls back to the memory store when `indexedDB` is
-  missing or opening fails, as `scan/lib/idbStore.ts` does. Blobs are stored as bytes + type.
-- `PhotoRecord { id, order, source, edit }`: `source` is the photo's `PhotoSource` (section 2): the working copy Blob with width, height and origin; or the as-is Blob with its
-  declared type and name; or the link url. `edit` is the `ImageEdit` or null. **Never the rendered output** (it is rendered again after a restore) and never the revision.
-- `restorePhotos(records)` treats records as untrusted: sorts by `order`, drops broken ones (wrong shape, empty or non-Blob bytes, bad size, unknown origin, a declared type
-  that is not HEIC/HEIF, a link that is not https, a bad edit, a repeated id), forces `edit = null` for `as-is` and `link`, keeps at most `MAX_PHOTOS` (4), renumbers ids
-  `p1`.. and returns `nextId` for the reducer's counter.
-- `persistPhotos(store, photos)` makes the store equal to the list: saves every photo (new order included) and removes the stored ones that left.
+**The port** `PhotoStore { load(): Promise<unknown[]>, keys(): Promise<string[]>, save(record), update(id, {order, edit}), remove(id), clear() }`.
+`save` writes a whole record; `update` writes metadata only (no Blob) and does nothing for an unknown id; `keys` lists ids without reading Blobs. `load` returns untrusted
+rows: it never throws on a malformed row.
 
-The local types in `photoStore.ts` (`StoredSource`, `StoredEdit`, `StoredOrigin`, `MAX_PHOTOS`) mirror section 2 until T3's `photoPages.ts` lands; then they become imports.
+**IndexedDB layout**: database `feeder-photo-read`, version 1, two object stores keyed by photo id: `photos` (id, userId, order, edit, and the source without its bytes:
+kind, width, height, origin, declared type, name, link url) and `bytes` (`{bytes, type}` of the working copy or the as-is original). `save`, `remove` and `clear` use one
+transaction over both stores; `update` touches `photos` only, so an edit or a reorder never rewrites a Blob. `load` joins metadata to bytes per row; a row with no bytes is
+left for `restorePhotos` to drop. Never the rendered output, never the revision.
 
-## Phase 2 (after T3 merges): wiring in `usePhotoPages`
+**`restorePhotos(records, userId)`** treats records as untrusted. It keeps only records of this User (`otherUser: true` when a well-formed record belongs to someone else),
+sorts by `order`, keeps at most `MAX_PHOTOS` (4), and **keeps ids as stored** (`/^p[1-9]\d*$/`; any other id is dropped); `nextId` = highest kept number + 1. It drops a
+record when: the shape is wrong or an id repeats; an image's working copy is empty, over 8 MB, or its type does not start with `image/`; width/height are not positive
+integers; the origin is unknown; an as-is Blob is empty or over 8 MB or its declared type is not HEIC/HEIF; a link fails `parseImageLink` (so it must be https with no
+credentials); the edit is malformed or its crop does not fit inside the turned working copy (width and height swap for 1 and 3 turns). `edit` is forced to null for `as-is`
+and `link`. A restored photo is `{id, source, edit}`; the reducer adds the pending output and `revision: 0`.
 
-When the store is written:
+**`persistPhotos(store, photos, previous, userId)`** writes as little as possible: removes the stored ids not in the list (`keys()`), then `save` only for a new id or one
+whose `source` object differs from `previous`, `update` when only order or edit changed, nothing otherwise. `previous` null = full write. A reorder or an edit writes no Blob.
 
-- After a photo's working copy is ready (`added` with an `image`, or a link / as-is photo added): the hook calls `persistPhotos` with the new list.
-- After `editCommitted` (the edit changed), `removed`, `moved`: `persistPhotos` again. A photo being edited for the first time (`isNew`) is already stored; Cancel on it removes it, so the store follows.
-- Writes are fire-and-forget and serial (one chain), never block the UI; a failed write is ignored (the photos still work in memory).
+**`createPhotoWriter(store, userId)`** (`start(restored?)`, `persist(photos)`, `clear()`, `idle()`) is the only way the hook writes. One serial chain; a rejection is swallowed
+and the chain continues; a queued (not yet running) persist is replaced by the newest list; after a failure `previous` is forgotten so the next persist is a full resync;
+`clear()` drops queued persists, runs after the operation in flight and resets `previous`; before `start()` persist does nothing. `start(restored)` records the restored
+photos as `previous` so they are not written again.
 
-When it is cleared (`store.clear()`):
+The local types in `photoStore.ts` (`StoredSource`, `StoredEdit`, `StoredRect`, `MAX_PHOTOS`) mirror photo-read.md section 2 until T3's `photoPages.ts` lands; then they become
+imports. `ImageOrigin` is already imported from `ui/ImagePicker/types`.
 
-- a **finished read**: the read came back successfully (the same moment `useRecipeRead` goes to its review step);
-- **Remove** of the last photo (`persistPhotos([])`), and **Remove** of any photo removes just that record;
-- **leaving the read**: the User navigates away from the import page, or cancels the read step (the Back/Cancel action that returns to the choice of how to add a Recipe);
-- **sign-out**.
+## Phase 2 (after T3 merges): wiring
 
-What does **not** clear: a tab unload, a reload, the browser killing the page, the camera app taking over. In those the records stay, and the next time the photo read step
-mounts it restores them.
+**Writes.** Only through the writer. Persist after `added`, `editCommitted`, `editCancelled` of a new photo (it was removed), `removed` and `moved`. Never after `rendered`,
+`draftChanged` or a problem change. A failed write is silent (the photos still work in memory).
 
-"Leaving the read" is therefore only the User's own act (navigating away or cancelling the step), never the page being unloaded; the hook clears in its unmount cleanup only
-when the unmount came from navigation (a React unmount does not happen on a page unload, so the cleanup is safe to use for this).
+**Restore.** Runs at mount of the state owner: `load`, then `restorePhotos(records, me.id)`, then a `restored(photos, nextId)` action, then `writer.start(photos)`. Photos added
+while the load runs are merged after the restored ones (ids from the state's counter, which `restored` moves past `nextId`). Restore never gates the UI, and restored photos are
+never sent without the User pressing Read recipe. If `otherUser` is true, the store is cleared instead of restored.
 
-Restore: on mount, `load()` then `restorePhotos`; if there is at least one photo, they are put in the state (a `restored(photos, nextId)` action; outputs `pending`, so they
-render again) and a message says "2 photos from before are back." (singular for one) with **Remove** (clears the store and the photos). The store is rewritten once after a
-restore so its ids match the renumbered ones. Restored photos are never sent without the User pressing Read recipe.
+**State owner.** `usePhotoPages` lives at `ReadRecipeStep` level, not in the photo panel. Switching tabs neither clears nor restores. If the store holds photos after a reload,
+the step opens on the Photo tab.
 
-Privacy note: one line, "Photos stay on this device until the read is finished.". Size: at most 4 x 8 MB (section 8).
+**Finished read.** Clear when `useRecipeRead` reaches review on success. A failed read, or Try again, keeps the photos.
 
-Open for phase 2: exact copy of the restore message and the Remove label (GLOSSARY words), and where the privacy line sits.
+**Leaving the read.** There is no cancel control (PM decision), so only navigation away from the import page counts. The clear is triggered from the location change, never from
+a plain unmount cleanup (StrictMode mounts, unmounts and mounts again). A tab unload, a reload or the browser killing the page never clears.
+
+**Remove.** Removing one photo removes its record. The Remove button on the restore message clears all.
+
+**Sign-out.** `AppRoot.signOut` calls `forgetStoredPhotos()` (exported from the import feature's `index.ts`, clears `appPhotoStore()`) with `.catch(() => {})`, before `/api/logout`.
+
+**Different User.** Records carry the signed-in User's id; restore keeps only a matching User's records, otherwise the store is cleared (see above).
+
+**Copy.** "2 photos from before are back." / "1 photo from before is back." with a **Remove** button; and, in the photo panel's note, "Photos stay on this device until the read
+is finished." Checked against GLOSSARY: "Photo" is the Recipe/Step/Member picture term and is used here for the read's pictures as photo-read.md does; none of the `_Avoid_`
+words (Thumbnail, Upload, ...) appear.
+
+Size: at most 4 x 8 MB on the device (photo-read.md section 8).
