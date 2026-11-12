@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { useCourses } from '../../../lib/courses/useCourses'
+import { CourseFilter } from '../components/CourseFilter'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
 import { useRecipes } from '../hooks/useRecipes'
+import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { RecipeFilter } from '../types'
 import '../recipes.css'
@@ -18,9 +21,12 @@ export function RecipesScreen(): ReactNode {
   const [q, setQ] = useState('')
   const [tag, setTag] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [course, setCourse] = useState<number | null>(null)
+  const { choices } = useCourses()
   const filter: RecipeFilter = {
     q: q.trim() || undefined,
     tag: tag || undefined,
+    course: course ?? undefined,
     archived: showArchived ? 'all' : 'no',
   }
   const list = useRecipes(filter)
@@ -32,7 +38,13 @@ export function RecipesScreen(): ReactNode {
     body = (
       <BentoGrid columns={2} label={recipeStrings.title}>
         {list.recipes.map((r) => (
-          <RecipeTile key={r.id} recipe={r} onOpen={(id) => navigate(`/recipes/${id}`)} />
+          <RecipeTile
+            key={r.id}
+            recipe={r}
+            onOpen={(id) => navigate(`/recipes/${id}`)}
+            courseNames={courseNamesOf(r.courseIds, choices)}
+            wholeMeal={r.wholeMeal && showsWholeMeal(r.courseIds, choices)}
+          />
         ))}
       </BentoGrid>
     )
@@ -67,7 +79,12 @@ export function RecipesScreen(): ReactNode {
         />
       }
       search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
-      filters={<TagChips tags={list.tags} selected={tag} onSelect={setTag} />}
+      filters={
+        <>
+          <TagChips tags={list.tags} selected={tag} onSelect={setTag} />
+          <CourseFilter courses={choices} selected={course} onSelect={setCourse} />
+        </>
+      }
     >
       {body}
     </ListPage>

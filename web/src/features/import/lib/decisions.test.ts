@@ -3,7 +3,7 @@ import { answerConversion, chooseCreate, chooseExisting, chooseRecipeAction, cle
 
 describe('decisions', () => {
   it('starts empty', () => {
-    expect(emptyDecisions()).toEqual({ ingredients: [], conversions: [], recipes: [] })
+    expect(emptyDecisions()).toEqual({ ingredients: [], conversions: [], recipes: [], courses: [] })
   })
   it('answers an Ingredient with an existing one, replacing an earlier answer', () => {
     let d = chooseCreate(emptyDecisions(), 'onion', { name: 'onion (whole)' })

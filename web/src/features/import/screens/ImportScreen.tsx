@@ -4,6 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
 import { AgentPromptStep } from '../components/AgentPromptStep'
 import { ConfirmTile } from '../components/ConfirmTile'
+import { CourseMatchTile } from '../components/CourseMatchTile'
 import { ImageWarningsTile } from '../components/ImageWarningsTile'
 import { ImportSource } from '../components/ImportSource'
 import { IngredientMatchTile } from '../components/IngredientMatchTile'
@@ -13,12 +14,15 @@ import { RecipeConflictTile } from '../components/RecipeConflictTile'
 import { ReviewPhotoChoice } from '../components/ReviewPhotoChoice'
 import { UnitPromptTile } from '../components/UnitPromptTile'
 import { ValidationErrorsTile } from '../components/ValidationErrorsTile'
+import { useImportCourses } from '../hooks/useImportCourses'
 import { useImportReview } from '../hooks/useImportReview'
 import { useReadAvailability } from '../hooks/useReadAvailability'
 import { useRecipeRead } from '../hooks/useRecipeRead'
+import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
 import { canConfirm, openCount } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { Plan } from '../types'
+import { MAX_COURSES } from '../../../lib/courses'
 import '../import.css'
 
 /**
@@ -28,6 +32,7 @@ import '../import.css'
  */
 export function ImportScreen(): ReactNode {
   const r = useImportReview()
+  const courses = useImportCourses()
   const read = useRecipeRead({ onDone: r.adopt })
   const availability = useReadAvailability()
   const readHeading = useRef<HTMLHeadingElement>(null)
@@ -70,6 +75,8 @@ export function ImportScreen(): ReactNode {
       {r.phase === 'done' ? (
         <Tile as="section" className="import-done">
           <p>{s.done(r.result?.recipes.length ?? 0)}</p>
+          {(r.result?.coursesCreated ?? 0) > 0 ? <p>{s.courses.created(r.result?.coursesCreated ?? 0)}</p> : null}
+          {(r.result?.coursesUnarchived ?? 0) > 0 ? <p>{s.courses.unarchived(r.result?.coursesUnarchived ?? 0)}</p> : null}
           <Link className="button" data-variant="primary" data-size="md" to="/recipes">
             {s.openRecipes}
           </Link>
@@ -87,7 +94,7 @@ export function ImportScreen(): ReactNode {
               {s.stepThreeTitle}
             </h2>
             {r.phase === 'reviewing' && r.plan ? (
-              <Reviewing plan={r.plan} stale={r.stale} screen={r} />
+              <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} />
             ) : (
               <p className="import-review__empty">{s.reviewEmpty}</p>
             )}
@@ -105,9 +112,16 @@ interface ReviewingProps {
   plan: Plan
   stale: boolean
   screen: ReturnType<typeof useImportReview>
+  courses: ReturnType<typeof useImportCourses>
 }
 
-function Reviewing({ plan, stale, screen }: ReviewingProps): ReactNode {
+function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode {
+  // CRS E2: the too_many_courses Problem and a refused Course answer are inline danger Tiles beside the Course tiles; each follows its
+  // state. The other Problems stay in the generic list.
+  const { courseLimit, others } = splitProblems(plan.problems)
+  const names = questionRows(plan.courses)
+  const forbidden = screen.courseForbidden
+  const limited = courseLimit !== undefined
   return (
     <>
       {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
@@ -119,11 +133,11 @@ function Reviewing({ plan, stale, screen }: ReviewingProps): ReactNode {
           </Button>
         </Tile>
       ) : null}
-      {plan.problems.length > 0 ? (
+      {others.length > 0 ? (
         <Tile variant="status" status="spoil" as="section">
           <h3>{s.errorsTitle}</h3>
           <ul>
-            {plan.problems.map((p, i) => (
+            {others.map((p, i) => (
               <li key={`${p.path}-${i}`}>
                 <code>{p.path}</code> {p.message}
               </li>
@@ -140,6 +154,33 @@ function Reviewing({ plan, stale, screen }: ReviewingProps): ReactNode {
         <BentoGrid columns={2} label={s.unitsTitle}>
           {plan.unitPrompts.map((p) => (
             <UnitPromptTile key={`${p.key}-${p.unit}`} prompt={p} onAnswer={(toBase) => screen.answerConversion(p.key, p.unit, toBase)} />
+          ))}
+        </BentoGrid>
+      ) : null}
+      {names.length > 0 || limited || forbidden ? (
+        <BentoGrid columns={2} label={s.courses.title}>
+          {limited ? (
+            <Tile variant="status" status="danger" role="alert" as="section">
+              <p>{s.courses.tooMany(MAX_COURSES)}</p>
+            </Tile>
+          ) : null}
+          {forbidden ? (
+            <Tile variant="status" status="danger" role="alert" as="section">
+              <p>{s.courses.forbidden}</p>
+            </Tile>
+          ) : null}
+          {names.map((m) => (
+            <CourseMatchTile
+              key={m.key}
+              match={m}
+              usedBy={usedByRecipes(m.usedBy, plan.recipes)}
+              courses={courses.courses}
+              isAdmin={courses.isAdmin}
+              onUse={(courseId) => screen.chooseCourseUse(m.key, courseId)}
+              onSkip={() => screen.chooseCourseSkip(m.key)}
+              onAdd={() => screen.chooseCourseAdd(m.key)}
+              onUnarchive={() => screen.chooseCourseUnarchive(m.key)}
+            />
           ))}
         </BentoGrid>
       ) : null}

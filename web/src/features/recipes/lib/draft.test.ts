@@ -77,7 +77,7 @@ describe('draftToInput', () => {
 
   it('round-trips through draftFromRecipe', () => {
     const recipe: Recipe = {
-      id: 9, name: 'Soup', description: 'Warm', yield: 2.5, readyMeal: false, tags: ['soup'],
+      id: 9, name: 'Soup', description: 'Warm', yield: 2.5, readyMeal: false, courses: [{ id: 1, name: 'Main' }], wholeMeal: false, tags: ['soup'],
       cooldownDays: 3, leftoverUseByDays: null, reheatMinutes: null, source: { url: '', attribution: '' }, image: '', imageUrl: '',
       lines: [{ ingredientId: 2, ingredient: 'leek', quantity: 2, unit: 'piece', optional: false, note: '' }],
       steps: [{ text: 'Simmer', kind: 'passive', durationMinutes: 20, leadTimeMinutes: 0, after: [], uses: [], image: '' }],

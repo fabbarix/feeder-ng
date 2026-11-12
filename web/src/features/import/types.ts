@@ -17,10 +17,19 @@ export interface IngredientDecision {
 }
 export interface ConversionAnswer { key: string; unit: string; toBase: number }
 export interface RecipeDecision { index: number; action: RecipeAction }
+/** CRS E2: how a Course name of the file is answered. `add` and `unarchive` are Admin only (the server answers 403 otherwise). */
+export type CourseAction = 'use' | 'skip' | 'add' | 'unarchive'
+export interface CourseDecision {
+  key: string
+  action: CourseAction
+  /** For action 'use': an active Course. */
+  courseId?: number
+}
 export interface Decisions {
   ingredients: IngredientDecision[]
   conversions: ConversionAnswer[]
   recipes: RecipeDecision[]
+  courses: CourseDecision[]
 }
 
 export interface Suggestion { id: number; name: string; baseUnit: BaseUnit; score: number }
@@ -37,6 +46,22 @@ export interface IngredientMatch {
   usedBy: string[]
   /** IM3: the Ingredient this row resolves to exists without a picture and the file gives it one. Absent = false. */
   addsImage?: boolean
+}
+/** CRS E2: `exact` matches an active Course, `archived` an archived one, `unknown` none (docs/dev/design/crs-e1.md 3.2). */
+export type CourseStatus = 'exact' | 'archived' | 'unknown'
+export interface CourseMatch {
+  /** The first spelling of the name in the file, cleaned. */
+  name: string
+  /** `course.NameKey` of the name. */
+  key: string
+  status: CourseStatus
+  /** For exact and archived rows. */
+  match?: { id: number; name: string; main: boolean; archived: boolean }
+  /** The answer in force: the User's, else the default (use the main Course). */
+  effective?: CourseDecision
+  resolved: boolean
+  /** JSON paths such as `$.recipes[2].courses[0]`. */
+  usedBy: string[]
 }
 export interface UnitPrompt {
   key: string
@@ -64,6 +89,8 @@ export interface Plan {
   ingredients: IngredientMatch[]
   unitPrompts: UnitPrompt[]
   recipes: RecipeStatus[]
+  /** CRS E2: one row per distinct Course name of the kept Recipes, first-seen order; [] when none. */
+  courses: CourseMatch[]
   problems: Problem[]
   warnings: Warning[]
   ready: boolean
@@ -73,6 +100,9 @@ export interface ImportResult {
   recipes: Array<{ index: number; id: number; name: string; action: 'created' | 'replaced' }>
   ingredientsCreated: number
   conversionsAdded: number
+  /** CRS E2: Courses the import added or brought back (absent from an old answer = 0). */
+  coursesCreated?: number
+  coursesUnarchived?: number
 }
 export interface ExportableRecipe { id: number; name: string; imageUrl: string; archived: boolean }
 
