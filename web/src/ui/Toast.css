@@ -1,14 +1,19 @@
-/* Toast (docs/design/ui-fix-plan.md 4.8): inverse surface, radius 16, padding 12 16, region above the nav
-   (--nav-clearance, which already holds the safe area, plus a gap), max-width 420, stack of 2. Tokens only. */
+/* Toast (docs/design/ui-fix-plan.md 4.8): inverse surface, radius 16, padding 12 16, max-width 420, stack of 2. Tokens only.
+   The region sits above the bottom bar: its top edge (--nav-top, zero from 1024, where the viewport edge is the bottom) plus a gap.
+   On a page with a sticky action bar it is lifted by the bar's room too (FU-1), so a toast never covers Save or Start Cook Mode. */
 .toast-region {
   position: fixed;
   inset-inline: 16px;
-  bottom: calc(var(--nav-clearance) + var(--space-3));
+  bottom: calc(var(--nav-top) + var(--space-3));
   z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: center;
   pointer-events: none;
+}
+
+html:has(.sticky-action-bar) .toast-region {
+  bottom: calc(var(--nav-top) + var(--sticky-bar-clearance) + var(--space-3));
 }
 
 /* Both live regions stay mounted; an empty one takes no room. */

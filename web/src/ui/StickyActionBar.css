@@ -1,4 +1,4 @@
-/* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-clearance is 0 from 1024). */
+/* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-top is 0 from 1024). */
 :root {
   /* Room a focused field keeps above the bar (WCAG 2.4.11). */
   --sticky-bar-clearance: 96px;
@@ -10,7 +10,7 @@ html:has(.sticky-action-bar) {
 
 /* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's gap to the nav (none), not the
    content clearance (--nav-clearance adds 16 px, which showed as a strip under the bar). The bar itself still clears the nav. */
-.app-main:has(.sticky-action-bar) {
+.app-main:has(.sticky-action-bar):not(.app-main--full) {
   padding-bottom: var(--nav-top);
 }
 

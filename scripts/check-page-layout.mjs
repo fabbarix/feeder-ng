@@ -256,14 +256,6 @@ const probe = `
   const cur = rail && vis(rail) ? rail.querySelector('[aria-current="page"]') : null
   let railContrast = null
   if (cur) { const s = getComputedStyle(cur); let bg = s.backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(cur.querySelector('.side-rail__pill') || rail).backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(document.body).backgroundColor; railContrast = Math.round(contrast(s.color, bg) * 100) / 100 }
-  // P10: a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
-  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
-  const lowContrastButtons = []
-  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
-    if (!vis(b)) continue
-    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
-    if (ratio < 4.5) lowContrastButtons.push({ label: b.innerText.trim().slice(0, 40), ratio })
-  }
   // P11: a clipped box (overflow hidden, text wider than the box, not an intentional ellipsis) or a word broken mid-word across lines.
   const brokenText = []
   const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
@@ -322,7 +314,24 @@ const probe = `
   return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
     content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) },
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
-    fields, bars, railContrast, lowContrastButtons, brokenText, dialog: null }
+    fields, bars, railContrast, brokenText, dialog: null }
+})()`
+// P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
+const buttonProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+  const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
+  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
+  const contrast = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
+  const low = []
+  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
+    if (!vis(b)) continue
+    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
+    if (ratio < 4.5) low.push({ label: b.innerText.trim().slice(0, 40), ratio })
+  }
+  return low
 })()`
 const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
@@ -341,6 +350,14 @@ for (const vp of VIEWPORTS) {
       await settle()
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
       const m = await evaluate(probe)
+      m.lowContrastButtons = await evaluate(buttonProbe)
+      // FU-4: the same P10 probe in the dark scheme; the scheme is put back to light for the next route whatever happens.
+      try {
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+        m.lowContrastButtonsDark = await evaluate(buttonProbe)
+      } finally {
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
+      }
       if (vp.width >= 768) m.dialog = await evaluate(dialogProbe).catch(() => null)
       for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
