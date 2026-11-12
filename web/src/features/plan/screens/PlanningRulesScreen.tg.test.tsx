@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { mockApi, renderWithProviders } from '../test-utils'
+import { rulesStrings } from '../lib/rulesStrings'
 import { PlanningRulesScreen } from './PlanningRulesScreen'
 
 const base = {
@@ -47,9 +48,21 @@ describe('PlanningRulesScreen with Tag colours and Courses', () => {
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('Friday Dinner · Starter')
     await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
-    await userEvent.click(screen.getByRole('combobox', { name: 'Tag' }))
+    await userEvent.click(screen.getAllByRole('combobox', { name: 'Tag' })[0]!)
     await userEvent.click(await screen.findByRole('option', { name: /Fish/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/slot-rules')[0]?.body).toEqual({ mealSlotId: 5, courseId: 2, tag: 'fish' }))
+  })
+
+  it('an unknown Tag from the server shows a crafted message, not the raw one', async () => {
+    mockApi({ ...base, 'POST /api/slot-rules': { status: 422, json: { error: { code: 'tag_unknown', message: 'No such Tag' } } } })
+    renderWithProviders(<PlanningRulesScreen />)
+    await screen.findByText('Friday Dinner · Starter')
+    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getAllByRole('combobox', { name: 'Tag' })[0]!)
+    await userEvent.click(await screen.findByRole('option', { name: /Fish/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
+    expect(await screen.findByText(rulesStrings.unknownTag as string)).toBeInTheDocument()
+    expect(screen.queryByText('No such Tag')).not.toBeInTheDocument()
   })
 })
