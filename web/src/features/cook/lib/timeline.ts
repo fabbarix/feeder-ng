@@ -93,14 +93,13 @@ export function toCookStep(visible: VisibleItem): CookStep {
 }
 
 /**
- * The timers that hold Next (spec 11): timers of the NEXT item's own Course (`sameScope(timer.scope, next.scope,
- * mainCourseId)`) for a Step in `next.after`, still counting (state not finished, seconds above 0). A timer of another
- * Course's Step never holds, whatever its index. null `next` holds nothing. Keeps the order of `items`.
+ * The timers that hold Next (spec 11): timers of the NEXT item's own Course (`sameScope(timer.scope, next.scope)`) for a
+ * Step in `next.after`, still counting (state not finished, seconds above 0). A timer of another Course's Step never
+ * holds, whatever its index. null `next` holds nothing. Keeps the order of `items`.
  */
 export function holdingTimersFor<T extends { timer: CookTimer; seconds: number }>(
   next: Pick<TimelineItem, 'scope' | 'after'> | null,
   items: T[],
-  mainCourseId: number | null,
 ): T[] {
   if (!next || next.after.length === 0) return []
   return items.filter(
@@ -109,7 +108,7 @@ export function holdingTimersFor<T extends { timer: CookTimer; seconds: number }
       seconds > 0 &&
       timer.step !== null &&
       next.after.includes(timer.step) &&
-      sameScope(timer.scope, next.scope, mainCourseId),
+      sameScope(timer.scope, next.scope),
   )
 }
 

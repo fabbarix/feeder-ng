@@ -4,17 +4,17 @@ import type { ReactNode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { EXCLUDED, NO_COURSE_RECIPES, NOBODY, WEEK, dinner, empty, flat, planned, sideWeek } from '../couldnt-fixtures'
-import { unplannedOf } from '../lib/couldntGroups'
+import { courseCells, unplannedOf } from '../lib/couldntGroups'
 import { useCauseExpansion } from './useCauseExpansion'
 import { useCouldntFix } from './useCouldntFix'
 import { useCouldntPlanNotice } from './useCouldntPlanNotice'
 
 describe('useCouldntPlanNotice with Courses', () => {
   const slots = sideWeek(WEEK)
-  const cells = unplannedOf(slots)
+  const cells = unplannedOf(courseCells(slots))
 
   it('groups the Course cells and names the Course in the headline and the summary', () => {
-    const { result } = renderHook(() => useCouldntPlanNotice(cells, slots))
+    const { result } = renderHook(() => useCouldntPlanNotice(cells, courseCells(slots)))
     expect(result.current.total).toBe(7)
     expect(result.current.groups).toHaveLength(1)
     expect(result.current.groups[0]).toMatchObject({
@@ -27,7 +27,7 @@ describe('useCouldntPlanNotice with Courses', () => {
 
   it('takes the plan view as `all` and the API\'s flat entries as the cells (Today)', () => {
     const entries = [flat('2026-11-10', 2, 'Side', EXCLUDED), flat('2026-11-11', 2, 'Side', EXCLUDED)]
-    const { result } = renderHook(() => useCouldntPlanNotice(entries, slots))
+    const { result } = renderHook(() => useCouldntPlanNotice(entries, courseCells(slots)))
     expect(result.current.groups[0]).toMatchObject({ count: 2, summary: 'Side at Tuesday and Wednesday dinners' })
   })
 
@@ -37,7 +37,7 @@ describe('useCouldntPlanNotice with Courses', () => {
       dinner('2026-11-11', [planned(1, 'Main'), empty(2, 'Side', NO_COURSE_RECIPES)]),
       dinner('2026-11-12', [planned(1, 'Main'), empty(2, 'Side', EXCLUDED)]),
     ]
-    const asUser = renderHook(() => useCouldntPlanNotice(unplannedOf(mixed), mixed, false)).result.current
+    const asUser = renderHook(() => useCouldntPlanNotice(unplannedOf(courseCells(mixed)), courseCells(mixed), false)).result.current
     expect(asUser.groups.map((g) => [g.cause, g.canFix])).toEqual([['nobody_attending', false], ['no_course_recipes', true], ['excluded', true]])
   })
 })
@@ -74,7 +74,7 @@ describe('useCouldntFix with Courses', () => {
     const onChoose = vi.fn()
     const t = setup(onChoose)
     const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 2, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 2 } })])]
-    const g = groupOf(unplannedOf(slots), slots)
+    const g = groupOf(unplannedOf(courseCells(slots)), courseCells(slots))
     act(() => t.fix.current(g))
     expect(onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 4, courseId: 2 })
   })
@@ -82,7 +82,7 @@ describe('useCouldntFix with Courses', () => {
   it('Review Exclusions goes to the page', () => {
     const t = setup()
     const slots = sideWeek(['2026-11-12'])
-    const g = groupOf(unplannedOf(slots), slots)
+    const g = groupOf(unplannedOf(courseCells(slots)), courseCells(slots))
     act(() => t.fix.current(g))
     expect(t.where()).toBe('/plan/couldnt-plan/excluded')
   })
@@ -90,7 +90,7 @@ describe('useCouldntFix with Courses', () => {
   it('Mark Recipes as Side goes to the Recipes list filtered to Recipes not marked with it', () => {
     const t = setup()
     const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', NO_COURSE_RECIPES)])]
-    const g = groupOf(unplannedOf(slots), slots)
+    const g = groupOf(unplannedOf(courseCells(slots)), courseCells(slots))
     act(() => t.fix.current(g))
     expect(t.where()).toBe('/recipes?notCourse=2')
   })

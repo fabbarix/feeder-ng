@@ -8,7 +8,7 @@ const entry = (courseId: number, courseName: string, recipeName: string, over = 
 
 describe('groupToConfirm', () => {
   it('one Course per slot: the Recipe name is the heading, as before', () => {
-    const [g] = groupToConfirm([slot({ meal: courseMeal(1, 'Main', { recipeName: 'Chicken curry' }) })])
+    const [g] = groupToConfirm([entry(1, 'Main', 'Chicken curry')])
     expect(g!.heading).toBe('Chicken curry')
     expect(g!.entries).toHaveLength(1)
     expect(g!.slot).toEqual({ date: '2026-11-10', mealSlotId: 2 })

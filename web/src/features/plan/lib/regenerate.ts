@@ -1,9 +1,11 @@
 import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
 
-/** How many meals Regenerate would change: state planned, not Pinned, dated today or later. */
+/** How many meals Regenerate would change: each Course's Planned Meal that is state planned, not Pinned, dated today or later. */
 export function regenerateImpact(slots: PlanSlot[], today: string): number {
-  return slots.filter((s) => s.meal !== null && s.meal.state === 'planned' && !s.meal.pinned && s.date >= today).length
+  return slots
+    .filter((s) => s.date >= today)
+    .reduce((n, s) => n + (s.courses ?? []).filter((c) => c.meal !== null && c.meal.state === 'planned' && !c.meal.pinned).length, 0)
 }
 
 export interface RegenerateConfirmCopy {

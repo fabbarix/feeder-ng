@@ -373,7 +373,7 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 			if err != nil {
 				return err
 			}
-			r := me().Put(fmt.Sprintf("/api/plan/%s/%d", date, id("slot", strconv.Itoa(wd))), map[string]any{"recipeId": id("recipe", recipe), "batches": batches})
+			r := me().Put(fmt.Sprintf("/api/plan/%s/%d/%d", date, id("slot", strconv.Itoa(wd)), mainCourseID(w)), map[string]any{"recipeId": id("recipe", recipe), "batches": batches})
 			if r.Status != 200 {
 				return fmt.Errorf("pin %s on %s: %d %s", recipe, date, r.Status, r.Body)
 			}
@@ -398,7 +398,7 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return err
 		}
-		r := me().Post(fmt.Sprintf("/api/plan/%s/%d/not-cooked", date, id("slot", strconv.Itoa(wd))), nil)
+		r := me().Post(fmt.Sprintf("/api/plan/%s/%d/%d/not-cooked", date, id("slot", strconv.Itoa(wd)), mainCourseID(w)), nil)
 		if r.Status != 200 {
 			return fmt.Errorf("mark %s not cooked: %d %s", date, r.Status, r.Body)
 		}

@@ -152,14 +152,14 @@ func courseRows(slots []runner.SlotView) map[plan.Key]runner.CourseView {
 }
 
 // exclusionCell builds one answer cell from a Couldn't plan cell. Its Course Attendance and opt-outs come from the
-// View's Course row; a slot without Course rows (the transition shim) uses the slot's Attendance and no opt-outs.
-func exclusionCell(s runner.SlotView, rows map[plan.Key]runner.CourseView, t table) exclusionCellOut {
+// View's Course row.
+func exclusionCell(s runner.ListEntry, rows map[plan.Key]runner.CourseView, t table) exclusionCellOut {
 	u := *s.Unfilled
 	att, optOuts := s.Attendance, []int64{}
 	if cv, ok := rows[s.Key]; ok {
 		att, optOuts = cv.Attendance, cv.OptOutMemberIDs
 	}
-	courseID := t.course(s.Key.CourseID)
+	courseID := s.Key.CourseID
 	return exclusionCellOut{
 		Date: s.Key.Date, MealSlotID: s.Key.MealSlotID, MealSlotName: s.Name, Time: s.Time,
 		CourseID: courseID, CourseName: t.courses[courseID],
@@ -193,7 +193,7 @@ func (a *api) couldntExclusions(w http.ResponseWriter, r *http.Request) {
 }
 
 // excludedCells keeps the cells whose reason is no_candidates with an Exclusion count, in the plan's order.
-func excludedCells(cells []runner.SlotView, rows map[plan.Key]runner.CourseView, t table) []exclusionCellOut {
+func excludedCells(cells []runner.ListEntry, rows map[plan.Key]runner.CourseView, t table) []exclusionCellOut {
 	out := []exclusionCellOut{}
 	for _, s := range cells {
 		if s.Unfilled == nil || s.Unfilled.Reason != "no_candidates" || s.Unfilled.Eliminated.Exclusion <= 0 {

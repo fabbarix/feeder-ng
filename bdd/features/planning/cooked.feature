@@ -189,7 +189,7 @@ Feature: Cooked, Not cooked and Leftovers
     And planning Stock holds 1000 g of "rice"
     When I mark the slot on 2026-11-09 as Cooked
     And I view the plan from 2026-11-10 to 2026-11-10
-    Then the plan JSON "slots.0.meal.servedFromLeftover.date" is "2026-11-09"
+    Then the plan JSON "slots.0.courses.0.meal.servedFromLeftover.date" is "2026-11-09"
     When I view the plan
     Then the plan slot on 2026-11-10 is served from the Leftover of 2026-11-09
 

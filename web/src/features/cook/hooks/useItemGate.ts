@@ -7,11 +7,11 @@ import type { TimerItem } from './useTimers'
 
 /**
  * Like useStepGate, for the timeline: the item after `index` in `items` (the current filter's list) is held by
- * lib/timeline holdingTimersFor(next, timerItems, mainCourseId) only. The text is the same as useStepGate's: one timer
+ * lib/timeline holdingTimersFor(next, timerItems) only. The text is the same as useStepGate's: one timer
  * "Next waits for <label>: <m:ss> left. Cancel its timer to go on now.", several "Next waits for N timers: ...".
  */
-export function useItemGate(items: VisibleItem[], index: number, timerItems: TimerItem[], mainCourseId: number | null, next: () => void): UseStepGate {
-  const holding = holdingTimersFor(items[index + 1]?.item ?? null, timerItems, mainCourseId)
+export function useItemGate(items: VisibleItem[], index: number, timerItems: TimerItem[], next: () => void): UseStepGate {
+  const holding = holdingTimersFor(items[index + 1]?.item ?? null, timerItems)
   if (holding.length === 0) return { canNext: true, heldText: null, next }
   const longest = Math.max(...holding.map((i) => i.seconds))
   const heldText =

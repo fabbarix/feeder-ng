@@ -35,7 +35,7 @@ describe('relaxed Variety chip names the Tag', () => {
   })
 
   it('PlannedMealSheet says "3rd Fish this week"', async () => {
-    renderIn(<PlannedMealSheet open slot={withWhy()} today="2026-11-10" onClose={noop} onCook={noop} onMarkCooked={noop} onSwap={noop} onPin={noop} onUnpin={noop} onChoose={noop} />)
+    renderIn(<PlannedMealSheet open slot={withWhy()} courseId={1} today="2026-11-10" onClose={noop} onCook={noop} onMarkCooked={noop} onSwap={noop} onPin={noop} onUnpin={noop} onChoose={noop} />)
     expect(await screen.findByText('3rd Fish this week')).toBeInTheDocument()
   })
 

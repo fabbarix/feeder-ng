@@ -35,7 +35,6 @@ func mount(r *app.Router, d app.Deps) {
 		Recipes: db.Recipes(), Meals: db.Meals(), Waste: db.Waste(), Household: db.Household(),
 	})
 	a := &api{svc: svc, clk: d.Clock, boardSlots: planhttp.BoardSlots(d)}
-	r.User("GET /api/cook/meals/{date}/{slotId}", a.mealView)
 	// Team C2 (docs/dev/design/crs-c2.md §5): the cooking timeline of a slot and the single-Course view.
 	r.User("GET /api/cook/meals/{date}/{slotId}/all", a.timeline)
 	r.User("GET /api/cook/meals/{date}/{slotId}/{courseId}", a.courseView)
@@ -73,25 +72,6 @@ type api struct {
 	clk clock.Clock
 	// boardSlots is the plan's slots from..to in the plan's JSON (the board's tonight and tomorrow, crs-c2 §5.4).
 	boardSlots func(ctx context.Context, from, to string) (any, error)
-}
-
-func (a *api) mealView(w http.ResponseWriter, r *http.Request) {
-	date := r.PathValue("date")
-	if _, err := time.Parse("2006-01-02", date); err != nil {
-		httpx.WriteError(w, http.StatusNotFound, "not_found", notFoundMsg)
-		return
-	}
-	slot, ok := positiveInt(r.PathValue("slotId"))
-	if !ok {
-		httpx.WriteError(w, http.StatusNotFound, "not_found", notFoundMsg)
-		return
-	}
-	v, err := a.svc.MealView(r.Context(), date, slot)
-	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, viewOf(v))
 }
 
 // courseView is Cook Mode for one Course's Planned Meal of a slot (a Course id that is not a number is not found).

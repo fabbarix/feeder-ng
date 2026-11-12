@@ -44,10 +44,7 @@ export interface SlotLike {
   time: string
   /** RFC 3339 instant of the slot. */
   at: string
-  meal: { recipeId: number; recipeName: string; batches: number; portions: number; state: 'planned' | 'cooked' | 'skipped' } | null
-  /** R13: why the planner left the slot empty (T11's Unfilled, structurally); the board only needs to know that it did. */
-  unfilled?: { reason: string } | null
-  /** CRS F: the slot's Courses in the slot's order (T11's PlanCourse, structurally). Without it the slot is one Course: `meal`. */
+  /** The slot's Courses in the slot's order (T11's PlanCourse, structurally); a slot carries no meal of its own (crs-c3). */
   courses?: CourseLike[]
   cookMinutes?: number | null
   startBy?: string

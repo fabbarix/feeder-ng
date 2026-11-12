@@ -3,14 +3,14 @@ import type { ReactNode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { slot } from '../test-utils'
-import type { Eliminations, PlanSlot, UnfilledReason } from '../types'
+import type { Eliminations, PlanEntry, UnfilledReason } from '../types'
 import { useCauseExpansion } from './useCauseExpansion'
 import { useCouldntFix } from './useCouldntFix'
 import { useCouldntPlanNotice } from './useCouldntPlanNotice'
 
 const none: Eliminations = { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 }
-function unplanned(date: string, reason: UnfilledReason, over: Partial<Eliminations> = {}, id = 2): PlanSlot {
-  return slot({ date, mealSlotId: id, meal: null, unfilled: { reason, slotRuleClaimed: false, eliminated: { ...none, ...over } } })
+function unplanned(date: string, reason: UnfilledReason, over: Partial<Eliminations> = {}, id = 2): PlanEntry {
+  return slot({ date, mealSlotId: id, courseId: 1, courseName: 'Main', meal: null, unfilled: { reason, slotRuleClaimed: false, eliminated: { ...none, ...over } } }) as PlanEntry
 }
 
 describe('useCouldntPlanNotice', () => {
@@ -29,13 +29,13 @@ describe('useCouldntPlanNotice', () => {
   })
 
   it('uses the whole plan to tell "every" from "some"', () => {
-    const planned = ['2026-11-13', '2026-11-14'].map((d) => slot({ date: d }))
+    const planned = ['2026-11-13', '2026-11-14'].map((d) => slot({ date: d, courseId: 1, courseName: 'Main' }) as PlanEntry)
     const { result } = renderHook(() => useCouldntPlanNotice(dinners, [...dinners, ...planned]))
     expect(result.current.groups[0]!.summary).toBe('Tuesday, Wednesday and Thursday dinners')
   })
 
   it('R13: past slots (no meal, no reason) are not part of "all": still "every dinner" at 23:56', () => {
-    const gone = slot({ date: '2026-11-10', meal: null, unfilled: null })
+    const gone = slot({ date: '2026-11-10', courseId: 1, courseName: 'Main', meal: null, unfilled: null }) as PlanEntry
     const { result } = renderHook(() => useCouldntPlanNotice(dinners, [gone, ...dinners]))
     expect(result.current.groups[0]!.summary).toBe('Every dinner this week')
   })
@@ -107,7 +107,7 @@ describe('useCouldntFix: the one fix action of a cause', () => {
     const t = setup(onChoose)
     const g = group('no_candidates', { considered: 2, advanceStep: 2 })
     act(() => t.fix.current(g))
-    expect(onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 })
+    expect(onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 1 })
     expect(t.path()).toBe('/')
   })
 

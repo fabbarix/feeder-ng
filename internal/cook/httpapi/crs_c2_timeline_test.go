@@ -124,8 +124,10 @@ func wantErr(t *testing.T, label string, r *testkit.Response, status int, code s
 	}
 }
 
-func mainScope(w *crsc2.World) string { return "meal:" + crsc2.Today + "/" + id(w.Slot) }
-func sideScope(w *crsc2.World) string { return mainScope(w) + "/" + id(w.Side) }
+// C3: every Planned Meal scope is three-part, the main Course's too.
+func slotScope(w *crsc2.World) string { return "meal:" + crsc2.Today + "/" + id(w.Slot) }
+func mainScope(w *crsc2.World) string { return slotScope(w) + "/" + id(w.Main) }
+func sideScope(w *crsc2.World) string { return slotScope(w) + "/" + id(w.Side) }
 
 func twoCourses(t *testing.T) (w *crsc2.World, roast, beans int64) {
 	t.Helper()
@@ -395,15 +397,9 @@ func TestSingleCourseViewIsThatCoursesRecipeScopeAndCourse(t *testing.T) {
 	}
 	main, _ := get(w.Main)
 	if main.RecipeID != roast || main.Scope != mainScope(w) || main.Meal.CourseID != w.Main || main.Meal.CourseName != "Main" {
-		t.Errorf("main view = %+v, want the real main Course id and the (transitional) two-part scope", main)
+		t.Errorf("main view = %+v, want the real main Course id and its three-part scope", main)
 	}
-	// The two-part route stays the main Course's single view while the SPA moves over; it is never the timeline.
-	r := w.User.Get(slotPath(w, ""))
-	var old view
-	r.MustJSON(t, &old)
-	if r.Status != 200 || old.RecipeID != roast || old.Meal.CourseID != w.Main || strings.Contains(string(r.Body), `"items"`) {
-		t.Errorf("two-part route = %d %s, want the main Course's single view", r.Status, r.Body)
-	}
+	// C3: the two-part route is gone (crs_c3_scope_test.go).
 }
 
 func TestSingleCourseViewRefusals(t *testing.T) {
@@ -448,8 +444,8 @@ func TestTimersAndMarksUseTheScopeOfTheirCourse(t *testing.T) {
 	}
 	// A Step the Side's Recipe has but the Main's has not (Active, not Passive) is refused by that Course's Steps.
 	wantErr(t, "an Active Step of the Side", w.User.Post("/api/cook/timers", map[string]any{"scope": sideScope(w), "step": 1}), 422, "not_passive_step")
-	// The main Course by its real id starts the Main Recipe's Rest.
-	r = w.User.Post("/api/cook/timers", map[string]any{"scope": mainScope(w) + "/" + id(w.Main), "step": 1})
+	// The main Course starts the Main Recipe's Rest by its three-part scope.
+	r = w.User.Post("/api/cook/timers", map[string]any{"scope": mainScope(w), "step": 1})
 	if r.Status != 201 {
 		t.Fatalf("start the Main's Rest by its real id = %d %s", r.Status, r.Body)
 	}
@@ -467,7 +463,7 @@ func TestTimersAndMarksUseTheScopeOfTheirCourse(t *testing.T) {
 	list.Timers = nil
 	w.User.Get("/api/cook/timers?scope="+mainScope(w)).MustJSON(t, &list)
 	if len(list.Timers) != 1 || list.Timers[0].RecipeName != "Roast chicken" {
-		t.Errorf("Main timers (asked by the two-part scope) = %+v, want one, naming Roast chicken", list.Timers)
+		t.Errorf("Main timers = %+v, want one, naming Roast chicken", list.Timers)
 	}
 	// An Advance Step mark of the Side's Recipe, by the Side's scope.
 	if r := w.User.Put("/api/cook/marks", map[string]any{"scope": sideScope(w), "step": 0, "done": true}); r.Status != 200 {

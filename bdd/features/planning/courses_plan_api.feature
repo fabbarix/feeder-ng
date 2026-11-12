@@ -1,8 +1,8 @@
 @crs-c2
 Feature: The plan API per Course
   A Meal Slot serves ordered Courses and each is its own Planned Meal (ADR 0008, spec 7.5 and 16). GET /api/plan lists
-  the Courses of every slot; Set, Pin, Swap, Cooked and Not cooked work on one Course. The old course-less routes stay
-  as aliases for the main Course until C3 and the API never shows the transition shim's Course 0.
+  the Courses of every slot; Set, Pin, Swap, Cooked and Not cooked work on one Course. The course-less routes are gone
+  (C3): they answer 404, and a slot carries its meal and reason on its Course rows only.
 
   Background:
     Given a running Feeder
@@ -81,10 +81,15 @@ Feature: The plan API per Course
     And the answer covers the Course "Side"
     And the C2 Course "Side" on 2026-11-09 has no Planned Meal
 
-  Scenario: The old course-less path sets the main Course
-    When I put "Roast chicken" in the main Course on 2026-11-09 by the old path
-    Then the response status is 200
-    And the answer JSON at "courseName" is "Main"
+  Scenario: The course-less path is gone and sets nothing
+    When I put "Roast chicken" in the main Course on 2026-11-09 by the removed course-less path
+    Then the response status is 404
+    And the C2 Course "Main" on 2026-11-09 has no Planned Meal
+
+  Scenario: A slot carries no meal or unfilled of its own
+    Given the C2 plan has "Roast chicken" in the Course "Main" on 2026-11-09 as planned
+    Then the C2 plan slot on 2026-11-09 carries no "meal" of its own
+    And the C2 plan slot on 2026-11-09 carries no "unfilled" of its own
 
   Scenario: Side alternatives are strict first and relaxed last
     Given the C2 plan has "Green beans" in the Course "Side" on 2026-11-09 as planned

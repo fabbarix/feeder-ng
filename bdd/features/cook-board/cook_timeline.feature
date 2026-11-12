@@ -52,13 +52,20 @@ Feature: The cooking timeline of a Meal Slot
     And the answer JSON at "recipeName" is "Green beans"
     And the answer JSON at "meal.courseName" is "Side"
 
-  Scenario: The old two-part path is the main Course, never the timeline
+  Scenario: The two-part path is gone, it is neither the main Course nor the timeline
     Given the C2 plan has "Roast chicken" in the Course "Main" on 2026-11-09 as planned
     And the C2 plan has "Green beans" in the Course "Side" on 2026-11-09 as planned
-    When I open Cook Mode for 2026-11-09 by the old two-part path
-    Then the response status is 200
-    And the answer JSON at "recipeName" is "Roast chicken"
-    And the answer JSON at "meal.courseName" is "Main"
+    When I open Cook Mode for 2026-11-09 by the removed two-part path
+    Then the response status is 404
+
+  Scenario: A two-part scope is invalid for a timer and for a mark
+    Given the C2 plan has "Roast chicken" in the Course "Main" on 2026-11-09 as planned
+    When I start a timer on the two-part scope of 2026-11-09
+    Then the response status is 422
+    And the error code is "invalid_scope"
+    When I mark an Advance Step on the two-part scope of 2026-11-09
+    Then the response status is 422
+    And the error code is "invalid_scope"
 
   Scenario: The board carries tonight's Courses and the time they take
     Given the C2 plan has "Roast chicken" in the Course "Main" on 2026-11-09 as planned

@@ -25,7 +25,7 @@ describe('CookFlowSheets', () => {
   })
 
   it('opens the Mark as Cooked sheet for the flow key', () => {
-    render(<CookFlowSheets flow={flow({ cookKey: { date: '2026-11-10', mealSlotId: 2 }, cook: { ...flow().cook, preview: { meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs: [] } } })} />)
+    render(<CookFlowSheets flow={flow({ cookKey: { date: '2026-11-10', mealSlotId: 2, courseId: 1 }, cook: { ...flow().cook, preview: { meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs: [] } } })} />)
     expect(screen.getByRole('dialog', { name: 'Mark as Cooked' })).toBeInTheDocument()
   })
 

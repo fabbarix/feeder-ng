@@ -7,7 +7,7 @@ import { relaxedLine } from '../lib/relaxed'
 import { weekdayName } from '../lib/phrase'
 import { mayCook, mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotKey } from '../types'
+import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import '../plan.css'
 
 export interface PlannedMealSheetProps {
@@ -17,7 +17,7 @@ export interface PlannedMealSheetProps {
   slot: PlanSlot | null
   /** Household date: Cook is offered for today only, Mark as Cooked for today and past (lib/resolve). */
   today: string
-  onCook: (key: SlotKey) => void
+  onCook: (key: SlotDayKey) => void
   onMarkCooked: (key: SlotKey) => void
   onSwap: (key: SlotKey) => void
   onPin: (key: SlotKey) => void
@@ -28,7 +28,7 @@ export interface PlannedMealSheetProps {
    * reads "Tue Dinner · Side"; the facts and the Attendance avatars are the Course's (the slot's Attendance without the
    * Course's opt-outs); every action carries the key with `courseId`, except Cook, which is the slot's.
    */
-  courseId?: number
+  courseId: number
   /** The relaxed line's actions (lib/relaxed). */
   onMarkRecipes?: (courseId: number) => void
   onAddRecipes?: () => void
@@ -61,7 +61,7 @@ export function PlannedMealSheet({
   const meal = course?.meal ?? null
   const several = slot ? slotCourses(slot).length > 1 : false
   const key: SlotKey | null = slot && course ? courseKey(slot, course) : null
-  const slotKey: SlotKey | null = slot ? { date: slot.date, mealSlotId: slot.mealSlotId } : null
+  const slotKey: SlotDayKey | null = slot ? { date: slot.date, mealSlotId: slot.mealSlotId } : null
   const planned = meal?.state === 'planned'
   const phrase = usePhraseContext(slot?.date ?? '')
   const { chips, overflow } = meal && slot ? sheetChips(meal, phrase) : { chips: [], overflow: 0 }

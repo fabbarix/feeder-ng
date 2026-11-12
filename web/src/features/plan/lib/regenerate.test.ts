@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { planStrings } from '../strings'
 import { readSource } from '../test-css'
-import { meal, slot } from '../test-utils'
+import { courseMeal, courseSlot, meal, planCourse } from '../test-utils'
+import { serverSlot } from '../test-utils.c3'
 import { regenerateConfirmCopy, regenerateImpact } from './regenerate'
 
 const today = '2026-11-10'
+// A one-Course slot as the server sends it (C3: the meal is on the Course row).
+const slot = (over: { date: string; mealSlotId: number; meal: ReturnType<typeof meal> | null }) =>
+  courseSlot([planCourse({ courseId: 1, meal: over.meal ? courseMeal(1, 'Main', over.meal) : null })], { date: over.date, mealSlotId: over.mealSlotId })
 
 describe('regenerateImpact', () => {
   it('counts the planned, unpinned Planned Meals from today on', () => {
@@ -17,6 +21,15 @@ describe('regenerateImpact', () => {
       slot({ date: '2026-11-13', mealSlotId: 2, meal: null }),
     ]
     expect(regenerateImpact(slots, today)).toBe(2)
+  })
+
+  it('counts every Course of a slot, not the main Course alone (the slot carries no meal of its own)', () => {
+    const dinner = serverSlot([
+      planCourse({ courseId: 1, main: true, meal: courseMeal(1, 'Main', { date: '2026-11-10' }) }),
+      planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { date: '2026-11-10' }) }),
+      planCourse({ courseId: 3, name: 'Dessert', main: false, meal: courseMeal(3, 'Dessert', { date: '2026-11-10', pinned: true }) }),
+    ], { date: '2026-11-10', mealSlotId: 4 })
+    expect(regenerateImpact([dinner], today)).toBe(2)
   })
 
   it('is 0 for an empty plan', () => {
@@ -36,7 +49,9 @@ describe('Regenerate copy lives in strings.ts', () => {
   it('regenerate.ts holds no copy of its own', () => {
     const source = readSource('features/plan/lib/regenerate.ts')
     expect(source).not.toBe('')
-    expect(source).not.toMatch(/Planned Meal|Regenerate the plan|Empty Meal Slots/)
+    // Comments may use the domain words; only code (string literals) must hold no copy.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).not.toMatch(/Planned Meal|Regenerate the plan|Empty Meal Slots/)
   })
 })
 

@@ -123,12 +123,14 @@ describe('PlanScreen with Courses', () => {
 describe('PlanScreen with one Course (regression guards)', () => {
   const plain = () => slot({ date: TODAY, mealSlotId: 2, meal: meal({ date: TODAY, mealSlotId: 2, recipeId: 7, recipeName: 'Chicken' }) })
 
-  it('a slot without `courses` keeps the course-less routes', async () => {
-    const api = mockApi({ 'GET /api/plan': view([plain()]), 'POST /api/plan/2026-11-10/2/confirm': meal({ pinned: true }) })
+  it('a one-Course slot pins through the Course route (the course-less routes are gone)', async () => {
+    const one = courseSlot([planCourse({ courseId: 1, meal: courseMeal(1, 'Main', { date: TODAY, mealSlotId: 2, recipeId: 7, recipeName: 'Chicken' }) })], { date: TODAY, mealSlotId: 2 })
+    const api = mockApi({ 'GET /api/plan': view([one]), 'POST /api/plan/2026-11-10/2/1/confirm': meal({ pinned: true }) })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(within(await today()).getByRole('button', { name: /Chicken/ }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Chicken' })).getByRole('button', { name: 'Pin' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/confirm')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/confirm')).toHaveLength(1))
+    expect(api.calls.some((c) => c.path === '/api/plan/2026-11-10/2/confirm')).toBe(false)
   })
 
   it('shows no Course caption, no list of Courses and no slot menu', async () => {

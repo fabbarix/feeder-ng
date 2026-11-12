@@ -18,7 +18,7 @@ describe('useSetupFacts', () => {
       'GET /api/members': [{ id: 1 }, { id: 2 }],
       'GET /api/meal-slots': [slot(1, [1, 2]), slot(2, [])],
       'GET /api/recipes': [{ id: 1 }, { id: 2 }, { id: 3 }],
-      'GET /api/plan': planView([{ meal: { recipeName: 'Soup', state: 'planned' } }, { meal: null, unfilled: { reason: 'no_attendance' } }, { meal: null, unfilled: null }]),
+      'GET /api/plan': planView([{ courses: [{ meal: { recipeName: 'Soup', state: 'planned' } }] }, { courses: [{ meal: null, unfilled: { reason: 'no_attendance' } }] }, { courses: [{ meal: null, unfilled: null }] }]),
     })
     const { result } = renderHook(() => useSetupFacts(), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))

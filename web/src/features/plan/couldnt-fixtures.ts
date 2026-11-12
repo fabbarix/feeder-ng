@@ -1,7 +1,7 @@
 // CRS G2: fixtures for the Couldn't plan tiles and the Review Exclusions page. Dates: 2026-11-10 is a Tuesday (today).
 // Courses: Main 1 (the main Course), Side 2, Dessert 3. Dinner is Meal Slot 4.
 import { courseMeal, courseSlot, planCourse, slot } from './test-utils'
-import type { Eliminations, ExclusionCell, ExclusionRecord, MemberRef, PlanCourse, PlanSlot, Unfilled, UnfilledReason } from './types'
+import type { Eliminations, ExclusionCell, ExclusionRecord, MemberRef, PlanCourse, PlanEntry, PlanSlot, Unfilled, UnfilledReason } from './types'
 
 export const NONE: Eliminations = { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 }
 
@@ -33,7 +33,7 @@ export const dinner = (date: string, courses: PlanCourse[], over: Partial<PlanSl
 export const otherSlot = (date: string, name: string, mealSlotId: number, courses: PlanCourse[]): PlanSlot => courseSlot(courses, { date, mealSlotId, name })
 
 /** A flat entry as GET /api/plan/couldnt-plan answers: the slot's fields plus the Course, `meal` null and the reason. */
-export function flat(date: string, courseId: number, courseName: string, reason: Unfilled, over: Partial<PlanSlot> = {}): PlanSlot {
+export function flat(date: string, courseId: number, courseName: string, reason: Unfilled, over: Partial<PlanSlot> = {}): PlanEntry {
   return slot({ date, mealSlotId: DINNER, name: 'Dinner', meal: null, unfilled: reason, courseId, courseName, ...over })
 }
 

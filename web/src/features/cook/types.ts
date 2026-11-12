@@ -80,7 +80,8 @@ export interface StartTimerInput {
 }
 
 /** What one scope's Cook Mode is opened for. */
-export type CookSource = { kind: 'meal'; date: string; mealSlotId: number } | { kind: 'recipe'; recipeId: number; batches: number }
+/** A Planned Meal is opened through its Course (crs-c3: no two-part scope); a Recipe through its id and Batches. */
+export type CookSource = { kind: 'meal'; date: string; mealSlotId: number; courseId: number } | { kind: 'recipe'; recipeId: number; batches: number }
 
 // ---- CRS F: the combined cooking timeline (GET /api/cook/meals/{date}/{slotId}/all, spec 11 and 16) ----
 

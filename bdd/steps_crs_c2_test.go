@@ -400,7 +400,7 @@ func crsC2Steps(sc *godog.ScenarioContext, w *World) {
 		w.Last = user().Put(p, map[string]any{"recipeId": rid})
 		return nil
 	})
-	sc.Step(`^I put "([^"]*)" in the main Course on `+c2Date+` by the old path$`, func(recipe, date string) error {
+	sc.Step(`^I put "([^"]*)" in the main Course on `+c2Date+` by the removed course-less path$`, func(recipe, date string) error {
 		rid, err := recipeID(recipe)
 		if err != nil {
 			return err
@@ -429,7 +429,7 @@ func crsC2Steps(sc *godog.ScenarioContext, w *World) {
 		w.Last = user().Get(p + "/alternatives")
 		return nil
 	})
-	sc.Step(`^I use the old per-slot path to mark `+c2Date+` as (Cooked|Not cooked)$`, func(date, what string) error {
+	sc.Step(`^I use the removed per-slot path to mark `+c2Date+` as (Cooked|Not cooked)$`, func(date, what string) error {
 		suffix, b := "/not-cooked", any(nil)
 		if what == "Cooked" {
 			suffix, b = "/cooked", map[string]any{}
@@ -563,8 +563,38 @@ func crsC2Steps(sc *godog.ScenarioContext, w *World) {
 		w.Last = user().Get(fmt.Sprintf("/api/cook/meals/%s/%d/%d", date, slotID(), cid))
 		return nil
 	})
-	sc.Step(`^I open Cook Mode for `+c2Date+` by the old two-part path$`, func(date string) {
+	sc.Step(`^I open Cook Mode for `+c2Date+` by the removed two-part path$`, func(date string) {
 		w.Last = user().Get(fmt.Sprintf("/api/cook/meals/%s/%d", date, slotID()))
+	})
+	// C3: the two-part scope is refused, and a slot carries its meal and reason on its Course rows only.
+	sc.Step(`^I (start a timer|mark an Advance Step) on the two-part scope of `+c2Date+`$`, func(what, date string) {
+		scope := fmt.Sprintf("meal:%s/%d", date, slotID())
+		if what == "start a timer" {
+			w.Last = user().Post("/api/cook/timers", map[string]any{"scope": scope, "step": 1})
+			return
+		}
+		w.Last = user().Put("/api/cook/marks", map[string]any{"scope": scope, "step": 0, "done": true})
+	})
+	sc.Step(`^the C2 plan slot on `+c2Date+` carries no "(meal|unfilled)" of its own$`, func(date, key string) error {
+		r := user().Get("/api/plan?from=" + date + "&to=" + date)
+		if r.Status != 200 {
+			return fmt.Errorf("GET /api/plan = %d %s", r.Status, r.Body)
+		}
+		var out struct {
+			Slots []map[string]json.RawMessage `json:"slots"`
+		}
+		if err := json.Unmarshal(r.Body, &out); err != nil || len(out.Slots) == 0 {
+			return fmt.Errorf("no slots in %s (%v)", r.Body, err)
+		}
+		for _, sl := range out.Slots {
+			if _, ok := sl[key]; ok {
+				return fmt.Errorf("the slot still carries %q: %s", key, r.Body)
+			}
+			if _, ok := sl["courses"]; !ok {
+				return fmt.Errorf("the slot has no courses: %s", r.Body)
+			}
+		}
+		return nil
 	})
 	sc.Step(`^the timeline takes (\d+) minutes and starts at ([0-9:]+) UTC$`, func(n int, hhmm string) error {
 		tm, err := at("totalMinutes")

@@ -15,22 +15,32 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipe"
 )
 
-// key reads {date}/{slotId} and, on the Course routes, {courseId} (0 on the course-less aliases: the main Course).
-// A {courseId} that is not a positive number is not a key.
+// key reads {date}/{slotId} and {courseId}. A {courseId} that is not a positive number (0 included: it names no
+// Course) is not a key (crs-c3 §1).
 func key(r *http.Request) (plan.Key, bool) {
 	id, err := strconv.ParseInt(r.PathValue("slotId"), 10, 64)
 	if err != nil {
 		return plan.Key{}, false
 	}
-	k := plan.Key{Date: r.PathValue("date"), MealSlotID: id}
-	if raw := r.PathValue("courseId"); raw != "" {
-		c, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || c <= 0 {
-			return plan.Key{}, false
-		}
-		k.CourseID = c
+	c, err := strconv.ParseInt(r.PathValue("courseId"), 10, 64)
+	if err != nil || c <= 0 {
+		return plan.Key{}, false
 	}
-	return k, true
+	return plan.Key{Date: r.PathValue("date"), MealSlotID: id, CourseID: c}, true
+}
+
+// slotKey reads {date}/{slotId} of a whole-slot route (the literal all segment, no Course).
+func slotKey(r *http.Request) (plan.Key, bool) {
+	id, err := strconv.ParseInt(r.PathValue("slotId"), 10, 64)
+	if err != nil {
+		return plan.Key{}, false
+	}
+	return plan.Key{Date: r.PathValue("date"), MealSlotID: id}, true
+}
+
+// notFound answers a removed route (crs-c3 §1) with the usual not_found body.
+func notFound(w http.ResponseWriter, _ *http.Request) {
+	writeErr(w, store.ErrNotFound)
 }
 
 func unknownSlot(w http.ResponseWriter) {
@@ -90,21 +100,20 @@ func (a *api) view(w http.ResponseWriter, r *http.Request) {
 }
 
 // slotList answers the lists of slots, one entry per Course (to-confirm, couldn't plan).
-func (a *api) slotList(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]runner.SlotView, error)) {
+func (a *api) slotList(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]runner.ListEntry, error)) {
 	views, err := list(r.Context())
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	t, err := a.names.load(r.Context(), viewMeals(views)...)
+	t, err := a.names.load(r.Context(), listMeals(views)...)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	out := make([]listEntryOut, 0, len(views))
 	for _, v := range views {
-		id := t.course(v.Key.CourseID)
-		out = append(out, listEntryOut{slotOut: slotFor(v, t), CourseID: id, CourseName: t.courses[id]})
+		out = append(out, listEntryFor(v, t))
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"slots": out})
 }
@@ -188,7 +197,7 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 	}
 	covered := make([]int64, 0, len(res.Covered))
 	for _, c := range res.Covered {
-		covered = append(covered, t.course(c))
+		covered = append(covered, c)
 	}
 	httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(res.Meal, t), Covered: covered})
 }
@@ -298,7 +307,7 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 	plannedFor := make([]plannedForOut, 0, len(res.PlannedFor))
 	for _, p := range res.PlannedFor {
 		plannedFor = append(plannedFor, plannedForOut{Date: p.Date, MealSlotID: p.MealSlotID,
-			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName, CourseID: t.course(p.CourseID)})
+			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName, CourseID: p.CourseID})
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"meal": mealFor(res.Meal, t), "leftover": leftover,
 		"warnings": warnings, "plannedFor": plannedFor})
@@ -317,7 +326,7 @@ func (a *api) notCooked(w http.ResponseWriter, r *http.Request) {
 // allCooked marks every unresolved Course of the slot Cooked in one step (POST .../all/cooked, crs-c2 §3.3). The body
 // is optional: {"courses": [{"courseId", "leftoverPortions"?}]}.
 func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
-	k, ok := key(r)
+	k, ok := slotKey(r)
 	if !ok {
 		unknownSlot(w)
 		return
@@ -373,7 +382,7 @@ func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
 	plannedFor := make([]plannedForOut, 0, len(res.PlannedFor))
 	for _, p := range res.PlannedFor {
 		plannedFor = append(plannedFor, plannedForOut{Date: p.Date, MealSlotID: p.MealSlotID,
-			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName, CourseID: t.course(p.CourseID)})
+			MealSlotName: p.MealSlotName, RecipeName: p.RecipeName, CourseID: p.CourseID})
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"meals": meals, "leftovers": leftovers,
 		"warnings": warnings, "plannedFor": plannedFor})
@@ -381,7 +390,7 @@ func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
 
 // notCookedAll marks every unresolved Course of the slot Not cooked (POST .../all/not-cooked, crs-c2 §3.3).
 func (a *api) notCookedAll(w http.ResponseWriter, r *http.Request) {
-	k, ok := key(r)
+	k, ok := slotKey(r)
 	if !ok {
 		unknownSlot(w)
 		return

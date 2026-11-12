@@ -82,16 +82,16 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
 
   it('Yes, Cooked is one tap: Cooked with the planned Leftover, then a friendly confirmation', async () => {
     h.now = new Date('2026-11-10T20:00:00Z')
-    const api = mockApi({ ...base, 'GET /api/plan/2026-11-10/2/cook': preview, 'POST /api/plan/2026-11-10/2/cooked': cooked })
+    const api = mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked })
     renderWithProviders(routed, '/')
     await userEvent.click(await screen.findByRole('button', { name: 'Yes, Cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/cooked')[0]?.body).toEqual({ leftoverPortions: 2 }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 }))
     expect(await findNotice('status', 'Cooked, nice one! 2 portions → Wed Lunch')).toBeDefined()
   })
 
   it('Adjust opens the Mark as Cooked sheet on Today itself', async () => {
     h.now = new Date('2026-11-10T20:00:00Z')
-    mockApi({ ...base, 'GET /api/plan/2026-11-10/2/cook': preview })
+    mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview })
     renderWithProviders(routed, '/')
     await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
     expect(await screen.findByRole('dialog', { name: 'Mark as Cooked' })).toBeInTheDocument()
@@ -101,16 +101,16 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
 
 describe('TodayScreen: To confirm and Leftovers', () => {
   it('To confirm rows offer Yes, Cooked and Adjust right on Today', async () => {
-    h.toConfirm = [slot({ date: '2026-11-09', meal: meal({ date: '2026-11-09', recipeName: 'Stew' }) })]
+    h.toConfirm = [slot({ date: '2026-11-09', courseId: 1, courseName: 'Main', meal: meal({ date: '2026-11-09', recipeName: 'Stew' }) })]
     const api = mockApi({
       ...base,
-      'GET /api/plan/2026-11-09/2/cook': { meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 0, maxLeftover: 2, leftoverUseBy: '2026-11-12', needs: [] },
-      'POST /api/plan/2026-11-09/2/cooked': { meal: meal({ state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
+      'GET /api/plan/2026-11-09/2/1/cook': { meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 0, maxLeftover: 2, leftoverUseBy: '2026-11-12', needs: [] },
+      'POST /api/plan/2026-11-09/2/1/cooked': { meal: meal({ state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
     const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
     await userEvent.click(within(tile).getByRole('button', { name: 'Yes, Cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/cooked')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1))
   })
 
   it('the Leftovers tile opens the Plan', async () => {

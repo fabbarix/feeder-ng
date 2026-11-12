@@ -462,7 +462,7 @@ func TestToConfirmListsUnconfirmedMealsTwoHoursAfterTheirSlotTime(t *testing.T) 
 func TestViewListsEverySlotOfTheHorizonWithMealsAndRules(t *testing.T) {
 	e := newEnv(t)
 	e.mustPlan()
-	rule, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.slotIDs[3], Tag: "pizza"})
+	rule, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.slotIDs[3], CourseID: e.main, Tag: "pizza"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +474,7 @@ func TestViewListsEverySlotOfTheHorizonWithMealsAndRules(t *testing.T) {
 		t.Fatalf("View = today %q, horizon %d, %d slots; want 2026-11-09, 3, 3", v.Today, v.HorizonDays, len(v.Slots))
 	}
 	s := v.Slots[0]
-	if s.Key != e.key(9) || s.Name != "Dinner" || s.Time != "19:00" || s.Portions != 2 || s.Meal == nil ||
+	if s.Key.Date != e.key(9).Date || s.Key.MealSlotID != e.key(9).MealSlotID || s.Name != "Dinner" || s.Time != "19:00" || s.Portions != 2 || len(s.Courses) != 1 || s.Courses[0].Meal == nil ||
 		!s.At.Equal(time.Date(2026, 11, 9, 19, 0, 0, 0, time.UTC)) {
 		t.Errorf("Monday = %+v", s)
 	}
@@ -482,7 +482,7 @@ func TestViewListsEverySlotOfTheHorizonWithMealsAndRules(t *testing.T) {
 		t.Errorf("Wednesday's Rules = %+v, want the pizza rule", wed.Rules)
 	}
 	narrow, _ := e.r.View(ctx, "2026-11-10", "2026-11-10")
-	if len(narrow.Slots) != 1 || narrow.Slots[0].Key != e.key(10) {
+	if len(narrow.Slots) != 1 || narrow.Slots[0].Key != (plan.Key{Date: "2026-11-10", MealSlotID: e.key(10).MealSlotID}) {
 		t.Errorf("View(10..10) = %+v", narrow.Slots)
 	}
 }
@@ -498,7 +498,7 @@ func TestASlotRuleFixesItsMealSlotAndGetsASlotRuleChip(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.slotIDs[5], RecipeID: e.rec["pizza"]}); err != nil {
+	if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.slotIDs[5], CourseID: e.main, RecipeID: e.rec["pizza"]}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.r.Plan(ctx, plan.ReasonRulesChanged); err != nil {
@@ -568,7 +568,7 @@ func TestPlanAfterARuleChangeReplansUnpinnedMealsThatBreakIt(t *testing.T) {
 			break
 		}
 	}
-	if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.key(11).MealSlotID, RecipeID: rule}); err != nil {
+	if _, err := e.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: e.key(11).MealSlotID, CourseID: e.main, RecipeID: rule}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.r.Plan(ctx, plan.ReasonRulesChanged); err != nil {
@@ -683,7 +683,7 @@ func TestCookedReportsTheMealsTheLeftoverIsPlannedFor(t *testing.T) {
 	}
 	var got []plan.Key
 	for _, p := range res.PlannedFor {
-		got = append(got, plan.Key{Date: p.Date, MealSlotID: p.MealSlotID})
+		got = append(got, plan.Key{Date: p.Date, MealSlotID: p.MealSlotID, CourseID: p.CourseID})
 	}
 	if want := []plan.Key{e.key(10)}; !reflect.DeepEqual(got, want) {
 		t.Errorf("PlannedFor = %v, want %v (Tuesday is served from it)", got, want)

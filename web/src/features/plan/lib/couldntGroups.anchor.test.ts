@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { PlanSlot } from '../types'
+import type { PlanEntry } from '../types'
 import { groupByCause } from './couldntGroups'
 
-const nobody = (date: string, mealSlotId: number): PlanSlot => ({
-  date, mealSlotId, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`, portions: 0, meal: null, rules: [],
-  unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
-})
+const nobody = (date: string, mealSlotId: number): PlanEntry => {
+  const entry: Omit<PlanEntry, 'courseId' | 'courseName'> = {
+    date, mealSlotId, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`, portions: 0, meal: null, rules: [],
+    unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
+  }
+  return entry as PlanEntry // the course-less shape: no Course named
+}
 
 describe('R15: "Choose who attends" deep-links to the first affected Meal Slot', () => {
   it('goes to /settings/meal-slots#meal-slot-<id> of the earliest affected slot', () => {

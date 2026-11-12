@@ -4,22 +4,22 @@ import { groupToConfirm } from '../lib/toConfirm'
 import { leftoverRows } from '../lib/leftovers'
 import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
-import type { Leftover, PlanSlot, SlotKey } from '../types'
+import type { Leftover, PlanEntry, SlotDayKey, SlotKey } from '../types'
 import '../plan.css'
 
 export interface ToConfirmTileProps {
-  slots: PlanSlot[]
+  slots: PlanEntry[]
   /** "Yes, Cooked": one tap, planned Leftover portions. */
   onYesCooked: (key: SlotKey) => void
   /** "Adjust": the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
   onNotCooked: (key: SlotKey) => void
   /** "Mark all Cooked" of a slot with several Courses to confirm (lib/toConfirm groupToConfirm). */
-  onMarkAllCooked?: (slot: SlotKey) => void
+  onMarkAllCooked?: (slot: SlotDayKey) => void
 }
 
 /** The key of one to-confirm entry: its slot, and its Course when the entry carries one. */
-const entryKey = (e: PlanSlot): SlotKey => ({ date: e.date, mealSlotId: e.mealSlotId, ...(e.courseId !== undefined ? { courseId: e.courseId } : {}) })
+const entryKey = (e: PlanEntry): SlotKey => ({ date: e.date, mealSlotId: e.mealSlotId, courseId: e.courseId })
 
 /**
  * Today: Planned Meals still unconfirmed two hours after their slot time. Tile variant surface, span full, h2 "To

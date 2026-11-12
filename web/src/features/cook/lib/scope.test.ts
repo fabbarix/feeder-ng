@@ -26,6 +26,6 @@ describe('cookMealPath', () => {
 describe('exitPathFor', () => {
   it('leaves a Recipe session for the Recipe and a Planned Meal session for Today', () => {
     expect(exitPathFor({ kind: 'recipe', recipeId: 7, batches: 2 })).toBe('/recipes/7')
-    expect(exitPathFor({ kind: 'meal', date: '2026-11-09', mealSlotId: 2 })).toBe('/')
+    expect(exitPathFor({ kind: 'meal', date: '2026-11-09', mealSlotId: 2, courseId: 1 })).toBe('/')
   })
 })

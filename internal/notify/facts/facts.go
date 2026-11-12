@@ -81,11 +81,6 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	if err != nil {
 		return notify.Facts{}, err
 	}
-	// The plan store reads the main Course as 0 (the shim); the reminder keys use its real id (migration 1410).
-	mainID, err := s.courses.Main(ctx)
-	if err != nil {
-		return notify.Facts{}, err
-	}
 	var out notify.Facts
 	recipes := map[int64]recipeEntry{} // each Recipe is read once per call
 	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
@@ -105,12 +100,8 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		if err != nil {
 			return notify.Facts{}, err
 		}
-		courseID := m.Key.CourseID
-		if courseID == 0 {
-			courseID = mainID
-		}
 		mf := notify.MealFact{
-			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: courseID, RecipeName: rec.Name, SlotAt: at,
+			Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: m.Key.CourseID, RecipeName: rec.Name, SlotAt: at,
 			State: string(m.State), FromLeftover: !m.Fresh(),
 		}
 		// The store lists a slot's meals in Course position order (plan store Meals), which Compute relies on.

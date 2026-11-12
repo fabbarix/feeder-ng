@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { unresolvedCourseIds } from '../lib/courses'
-import type { PlanSlot, SlotKey } from '../types'
+import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
 import { usePlanActions } from './usePlanActions'
@@ -63,7 +63,7 @@ export function useTonightSheets(slot: PlanSlot | null) {
     },
     allCooked,
     /** Mark all Cooked for the Courses still to cook of a slot (the Tonight slot menu). */
-    openAllCooked: (key: SlotKey) => {
+    openAllCooked: (key: SlotDayKey) => {
       if (slot) allCooked.open({ date: key.date, mealSlotId: key.mealSlotId }, unresolvedCourseIds(slot))
     },
   }

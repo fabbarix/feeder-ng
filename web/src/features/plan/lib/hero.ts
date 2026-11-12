@@ -90,9 +90,9 @@ export function heroDayOverline(sel: HeroSelection): string {
   return `${day} · ${name}`
 }
 
-/** The meal the slot block shows for its Cook label and start: the hero row's Planned Meal, else the slot's alias. */
+/** The meal the slot block shows for its Cook label and start: the hero row's Planned Meal, else none. */
 function slotHeroMeal(slot: PlanSlot): PlannedMeal | null {
-  return heroRow(slot)?.course.meal ?? slot.meal
+  return heroRow(slot)?.course.meal ?? null
 }
 
 /**

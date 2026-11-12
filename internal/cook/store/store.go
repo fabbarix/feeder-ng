@@ -29,14 +29,10 @@ func New(d *sql.DB) *Store { return &Store{db: d} }
 // InsertTimer stores t (its ID is ignored) and returns it with the new ID. A
 // second timer for the same (scope, Step) returns ErrDuplicateStep.
 func (s *Store) InsertTimer(ctx context.Context, t cook.Timer) (cook.Timer, error) {
-	stored, err := s.storedScope(ctx, t.Scope)
-	if err != nil {
-		return cook.Timer{}, err
-	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO cook_timers
 		(scope, step, label, duration_seconds, state, started_at, ends_at, remaining_ms)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		nullScope(stored), nullStep(t.Step), t.Label, t.DurationSeconds, string(t.State),
+		nullScope(t.Scope), nullStep(t.Step), t.Label, t.DurationSeconds, string(t.State),
 		fmtTime(t.StartedAt), fmtTime(t.EndsAt), t.RemainingMs)
 	if err != nil {
 		if isDuplicate(err) {
@@ -49,11 +45,6 @@ func (s *Store) InsertTimer(ctx context.Context, t cook.Timer) (cook.Timer, erro
 		return cook.Timer{}, err
 	}
 	t.ID = id
-	main, err := s.mainID(ctx)
-	if err != nil {
-		return cook.Timer{}, err
-	}
-	t.Scope = callerScope(stored, main)
 	return t, nil
 }
 
@@ -67,11 +58,6 @@ func (s *Store) Timer(ctx context.Context, id int64) (cook.Timer, error) {
 	if err != nil {
 		return cook.Timer{}, err
 	}
-	main, err := s.mainID(ctx)
-	if err != nil {
-		return cook.Timer{}, err
-	}
-	t.Scope = callerScope(t.Scope, main)
 	return t, nil
 }
 
@@ -79,16 +65,8 @@ func (s *Store) Timer(ctx context.Context, id int64) (cook.Timer, error) {
 func (s *Store) Timers(ctx context.Context, scope cook.Scope) ([]cook.Timer, error) {
 	q, args := timerSelect, []any{}
 	if scope != "" {
-		stored, err := s.storedScope(ctx, scope)
-		if err != nil {
-			return nil, err
-		}
 		q += " WHERE scope = ?"
-		args = append(args, string(stored))
-	}
-	main, err := s.mainID(ctx)
-	if err != nil {
-		return nil, err
+		args = append(args, string(scope))
 	}
 	rows, err := s.db.QueryContext(ctx, q+" ORDER BY id", args...)
 	if err != nil {
@@ -101,7 +79,6 @@ func (s *Store) Timers(ctx context.Context, scope cook.Scope) ([]cook.Timer, err
 		if err != nil {
 			return nil, err
 		}
-		t.Scope = callerScope(t.Scope, main)
 		out = append(out, t)
 	}
 	return out, rows.Err()
@@ -109,11 +86,7 @@ func (s *Store) Timers(ctx context.Context, scope cook.Scope) ([]cook.Timer, err
 
 // StepTimer returns the timer of a (scope, Step) if there is one.
 func (s *Store) StepTimer(ctx context.Context, scope cook.Scope, step int) (cook.Timer, bool, error) {
-	stored, err := s.storedScope(ctx, scope)
-	if err != nil {
-		return cook.Timer{}, false, err
-	}
-	row := s.db.QueryRowContext(ctx, timerSelect+" WHERE scope = ? AND step = ?", string(stored), step)
+	row := s.db.QueryRowContext(ctx, timerSelect+" WHERE scope = ? AND step = ?", string(scope), step)
 	t, err := scanTimer(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return cook.Timer{}, false, nil
@@ -121,11 +94,6 @@ func (s *Store) StepTimer(ctx context.Context, scope cook.Scope, step int) (cook
 	if err != nil {
 		return cook.Timer{}, false, err
 	}
-	main, err := s.mainID(ctx)
-	if err != nil {
-		return cook.Timer{}, false, err
-	}
-	t.Scope = callerScope(t.Scope, main)
 	return t, true, nil
 }
 
@@ -168,28 +136,20 @@ func (s *Store) DeleteTimer(ctx context.Context, id int64) error {
 
 // SetMark marks (done) or unmarks a Step of a scope. Marking twice keeps the first time.
 func (s *Store) SetMark(ctx context.Context, scope cook.Scope, step int, done bool, at time.Time) error {
-	stored, err := s.storedScope(ctx, scope)
-	if err != nil {
-		return err
-	}
 	if !done {
-		_, err := s.db.ExecContext(ctx, `DELETE FROM advance_step_marks WHERE scope = ? AND step = ?`, string(stored), step)
+		_, err := s.db.ExecContext(ctx, `DELETE FROM advance_step_marks WHERE scope = ? AND step = ?`, string(scope), step)
 		return err
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO advance_step_marks (scope, step, done_at) VALUES (?, ?, ?)
 		 ON CONFLICT (scope, step) DO NOTHING`,
-		string(stored), step, fmtTime(at))
+		string(scope), step, fmtTime(at))
 	return err
 }
 
 // Marks returns the done time of every marked Step of a scope.
 func (s *Store) Marks(ctx context.Context, scope cook.Scope) (map[int]time.Time, error) {
-	stored, err := s.storedScope(ctx, scope)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := s.db.QueryContext(ctx, `SELECT step, done_at FROM advance_step_marks WHERE scope = ?`, string(stored))
+	rows, err := s.db.QueryContext(ctx, `SELECT step, done_at FROM advance_step_marks WHERE scope = ?`, string(scope))
 	if err != nil {
 		return nil, err
 	}
@@ -221,40 +181,6 @@ func (s *Store) PurgeOlderThan(ctx context.Context, t time.Time) (int, error) {
 	m, _ := marks.RowsAffected()
 	n, _ := timers.RowsAffected()
 	return int(m + n), nil
-}
-
-// The cook scope shim (crs-plan §2.2, removed by C3). Until then a two-part Planned Meal scope
-// meal:<date>/<slot> means the main Course: a write or lookup maps it to the three-part stored form, and a
-// read writes the main Course's scope back two-part, as the current SPA compares scopes as strings. Other
-// Courses, Recipe scopes and free timers are untouched.
-
-// mainID is the id of the Course with the main flag.
-func (s *Store) mainID(ctx context.Context) (int64, error) {
-	var id int64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM courses WHERE is_main = 1`).Scan(&id)
-	return id, err
-}
-
-// storedScope maps a caller's scope to the stored form (a two-part Planned Meal scope gains the main Course).
-func (s *Store) storedScope(ctx context.Context, scope cook.Scope) (cook.Scope, error) {
-	p, err := cook.ParseScope(string(scope))
-	if err != nil || !p.IsMeal || p.CourseID != 0 {
-		return scope, nil
-	}
-	main, err := s.mainID(ctx)
-	if err != nil {
-		return "", err
-	}
-	return cook.MealScope(p.Date, p.MealSlotID, main), nil
-}
-
-// callerScope maps a stored scope to the form callers get: the main Course's Planned Meal scope is two-part.
-func callerScope(stored cook.Scope, main int64) cook.Scope {
-	p, err := cook.ParseScope(string(stored))
-	if err != nil || !p.IsMeal || p.CourseID != main {
-		return stored
-	}
-	return cook.MealScope(p.Date, p.MealSlotID, 0)
 }
 
 const timerSelect = `SELECT id, scope, step, label, duration_seconds, state, started_at, ends_at, remaining_ms FROM cook_timers`

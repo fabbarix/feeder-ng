@@ -16,7 +16,7 @@ export interface CookApi {
 }
 
 /**
- * Typed calls for /api/cook. view: GET /api/cook/meals/{date}/{slotId} or
+ * Typed calls for /api/cook. view: GET /api/cook/meals/{date}/{slotId}/{courseId} or
  * GET /api/cook/recipes/{id}?batches=; setMark: PUT /api/cook/marks {scope, step, done};
  * timers: GET /api/cook/timers[?scope=] (encoded); startTimer: POST /api/cook/timers;
  * pause/resume: POST /api/cook/timers/{id}/pause|resume; cancel: DELETE /api/cook/timers/{id}.
@@ -24,7 +24,7 @@ export interface CookApi {
 export function createCookApi(client: HttpClient): CookApi {
   return {
     view(source) {
-      if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}`)
+      if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}/${source.courseId}`)
       return client.get<CookView>(`/api/cook/recipes/${source.recipeId}?batches=${source.batches}`)
     },
     timeline(date, mealSlotId) {

@@ -98,24 +98,18 @@ func (s *Service) today(ctx context.Context, now time.Time) (string, error) {
 	return now.In(zone).Format("2006-01-02"), nil
 }
 
-// courseScope is the scope of a Planned Meal: "meal:<date>/<slot>/<course>", two-part for the main Course until C3
-// (crs-plan §2.2). The store maps both forms to the same stored scope.
+// courseScope is the scope of a Planned Meal: "meal:<date>/<slot>/<course>", the main Course's included (crs-c3 §2).
 func courseScope(m MealInfo) cook.Scope {
-	if m.Main {
-		return cook.MealScope(m.Date, m.MealSlotID, 0)
-	}
 	return cook.MealScope(m.Date, m.MealSlotID, m.CourseID)
 }
 
-// MealView is Cook Mode for the main Course's Planned Meal of a slot (the two-part route; ErrNotFound; ErrNotCookable
-// unless state is planned). A Planned Meal served from a Leftover (Batches 0) has nothing to cook and is not cookable.
-func (s *Service) MealView(ctx context.Context, date string, mealSlotID int64) (CookView, error) {
-	return s.CourseView(ctx, date, mealSlotID, 0)
-}
-
-// CourseView is Cook Mode for one Course's Planned Meal (courseID 0: the main Course). ErrNotFound when the Course
-// has no Planned Meal there; ErrNotCookable as MealView.
+// CourseView is Cook Mode for one Course's Planned Meal. ErrNotFound when the Course has no Planned Meal there, and
+// for a Course id that is not above 0 (0 names no Course). ErrNotCookable unless the state is planned; a Planned Meal
+// served from a Leftover (Batches 0) has nothing to cook and is not cookable.
 func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, courseID int64) (CookView, error) {
+	if courseID <= 0 {
+		return CookView{}, ErrNotFound
+	}
 	meal, err := s.cfg.Meals.Meal(ctx, date, mealSlotID, courseID)
 	if err != nil {
 		return CookView{}, err
@@ -217,10 +211,20 @@ func (s *Service) SetMark(ctx context.Context, scope cook.Scope, step int, done 
 	return m, nil
 }
 
+// parseScope is cook.ParseScope with the service's error: a scope that is not valid (the two-part Planned Meal form
+// included) is ErrInvalid, and the HTTP layer still answers it 422 invalid_scope.
+func parseScope(scope cook.Scope) (cook.ScopeParts, error) {
+	parts, err := cook.ParseScope(string(scope))
+	if err != nil {
+		return cook.ScopeParts{}, fmt.Errorf("%w: %w", ErrInvalid, err)
+	}
+	return parts, nil
+}
+
 // scopeSteps returns the Steps of the Recipe a scope cooks (ErrInvalidScope,
 // ErrNotFound for an unknown Recipe or Planned Meal).
 func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.RecipeSteps, error) {
-	parts, err := cook.ParseScope(string(scope))
+	parts, err := parseScope(scope)
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
@@ -268,7 +272,7 @@ func (s *Service) StartTimer(ctx context.Context, in StartInput) (t cook.Timer, 
 	if in.Scope == "" {
 		return cook.Timer{}, false, fmt.Errorf("%w: a Step timer needs its scope", ErrInvalid)
 	}
-	if _, err := cook.ParseScope(string(in.Scope)); err != nil {
+	if _, err := parseScope(in.Scope); err != nil {
 		return cook.Timer{}, false, err
 	}
 	rs, err := s.scopeSteps(ctx, in.Scope)
@@ -329,7 +333,7 @@ func (s *Service) startFree(ctx context.Context, in StartInput) (cook.Timer, boo
 		return cook.Timer{}, false, fmt.Errorf("%w: a timer needs a label", ErrInvalid)
 	}
 	if in.Scope != "" {
-		if _, err := cook.ParseScope(string(in.Scope)); err != nil {
+		if _, err := parseScope(in.Scope); err != nil {
 			return cook.Timer{}, false, err
 		}
 	}

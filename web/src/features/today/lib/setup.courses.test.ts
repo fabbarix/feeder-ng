@@ -24,18 +24,18 @@ describe('planFacts: Planned Meals and unplanned meals, counted over the Courses
     expect(planFacts([{ courses: [course('unserved')] }])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
   })
 
-  it('a slot without `courses` counts its own meal and reason, as before', () => {
-    const slots = [{ meal: { recipeName: 'Soup' } }, { meal: null, unfilled: { reason: 'no_attendance' } }, { meal: null, unfilled: null }]
-    expect(planFacts(slots)).toEqual({ plannedMeals: 1, unplannedMeals: 1 })
+  it('a slot without `courses` counts nothing', () => {
+    const slots = [{ meal: { recipeName: 'Soup' } }, { meal: null, unfilled: { reason: 'no_attendance' } }, {}] as never
+    expect(planFacts(slots)).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
   })
 
   it('a slot whose time has gone (no meal, no reason) counts nowhere; an empty plan is zero', () => {
-    expect(planFacts([{ courses: [course('covered')] }, { meal: null, unfilled: null }])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
+    expect(planFacts([{ courses: [course('covered')] }, {}])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
     expect(planFacts([])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
   })
 
-  it('an empty `courses` list falls back to nothing, not to the slot\'s aliases', () => {
-    expect(planFacts([{ meal: { recipeName: 'Soup' }, courses: [] }])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
+  it('an empty `courses` list counts nothing', () => {
+    expect(planFacts([{ courses: [] }])).toEqual({ plannedMeals: 0, unplannedMeals: 0 })
   })
 })
 

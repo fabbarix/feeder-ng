@@ -155,22 +155,24 @@ func TestBuildInputMatchesMealsToTheirCourse(t *testing.T) {
 	}
 }
 
-func TestBuildInputCourseZeroMeansTheMainCourseOnASlotWithCourses(t *testing.T) {
-	// The persistence shim (A): until the handlers switch over, a stored key may still carry Course 0.
+// crs-c3 §3: Course 0 names no Course. A stored meal or Slot Rule keyed 0 on a slot with Courses matches no cell (the
+// main Course is its real id), so it neither fills the main cell nor rules it.
+func TestBuildInputCourseZeroNamesNoCourseOnASlotWithCourses(t *testing.T) {
 	s := baseSnapshot()
 	s.Slots = []plan.SlotInfo{dinnerWithCourses("2026-11-10")}
 	s.Meals = []plan.Meal{{Key: k("2026-11-10", 1), RecipeID: 1, Batches: 1, State: plan.StatePlanned, Pinned: true}}
-	s.SlotRules = []plan.SlotRule{{ID: 1, MealSlotID: 1, Tag: "Pizza"}} // CourseID 0: the main Course
+	s.SlotRules = []plan.SlotRule{{ID: 1, MealSlotID: 1, Tag: "Pizza"}}
 	in, _ := plan.BuildInput(s)
-	main := slotByKey(t, in, pkc("2026-11-10", 1, mainCourse))
-	if main.Existing == nil || main.Existing.RecipeID != 1 {
-		t.Errorf("main Existing = %+v", main.Existing)
+	if len(in.Slots) == 0 {
+		t.Fatal("no cells")
 	}
-	if want := []planner.SlotRule{{Tag: "pizza"}}; !reflect.DeepEqual(main.Rules, want) {
-		t.Errorf("main Rules = %+v, want %+v", main.Rules, want)
-	}
-	if side := slotByKey(t, in, pkc("2026-11-10", 1, sideCourse)); side.Existing != nil || len(side.Rules) != 0 {
-		t.Errorf("side cell = %+v, must not inherit the main Course's meal or rules", side)
+	for _, c := range in.Slots {
+		if c.Existing != nil {
+			t.Errorf("cell %+v Existing = %+v, want none: Course 0 names no Course", c.Key, c.Existing)
+		}
+		if len(c.Rules) != 0 {
+			t.Errorf("cell %+v Rules = %+v, want none: Course 0 names no Course", c.Key, c.Rules)
+		}
 	}
 }
 

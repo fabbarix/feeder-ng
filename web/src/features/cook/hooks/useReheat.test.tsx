@@ -12,8 +12,8 @@ vi.mock('../../../lib/sse', () => ({
 
 import { useReheat } from './useReheat'
 
-const key = { date: '2026-11-10', mealSlotId: 2 }
-const SCOPE = 'meal:2026-11-10/2'
+const key = { date: '2026-11-10', mealSlotId: 2, courseId: 3 }
+const SCOPE = 'meal:2026-11-10/2/3'
 const NOW = '2026-11-10T18:00:00Z'
 
 const timer = (over: Partial<CookTimer> = {}): CookTimer => ({

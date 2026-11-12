@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -76,33 +75,10 @@ func mapErr(err error) error {
 	return err
 }
 
-// The Course shim (crs-plan §2.2): until C3 removes it, a plan.Key with CourseID 0 means the main Course.
-// Callers read and write through it: 0 and the real id of the main Course are the same row, and every value
-// read back gives the main Course as 0 and every other Course as its real id, so a map keyed by plan.Key built
-// from the store finds what the callers look up.
-
-// mainCourseSQL is the id of the Course with the main flag.
-const mainCourseSQL = `(SELECT id FROM courses WHERE is_main = 1)`
-
-// courseOut is the read form of a Course column: the main Course reads as 0, any other as its id.
-func courseOut(col string) string {
-	return fmt.Sprintf(`CASE WHEN %[1]s = %[2]s THEN 0 ELSE %[1]s END`, col, mainCourseSQL)
-}
-
-// courseIn is the stored id of a plan.Key's Course: 0 is the main Course. Unknown ids are left to the foreign key.
-func (s *Store) courseIn(ctx context.Context, id int64) (int64, error) {
-	if id != 0 {
-		return id, nil
-	}
-	var main int64
-	err := s.q.QueryRowContext(ctx, `SELECT id FROM courses WHERE is_main = 1`).Scan(&main)
-	return main, err
-}
-
 // Planned Meals.
 
-var mealCols = `date, meal_slot_id, recipe_id, ` + courseOut("course_id") + ` AS course_id, batches, portions, state, pinned,
-	from_leftover_id, from_date, from_meal_slot_id, ` + courseOut("from_course_id") + ` AS from_course_id, relaxed, why_json`
+var mealCols = `date, meal_slot_id, recipe_id, course_id, batches, portions, state, pinned,
+	from_leftover_id, from_date, from_meal_slot_id, from_course_id, relaxed, why_json`
 
 type scanner interface {
 	Scan(dest ...any) error
@@ -159,12 +135,8 @@ func collectMeals(rows *sql.Rows) ([]plan.Meal, error) {
 
 // Meal returns the Planned Meal at key; ErrNotFound if the slot is empty.
 func (s *Store) Meal(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return plan.Meal{}, err
-	}
 	m, err := scanMeal(s.q.QueryRowContext(ctx, mealSelect+` WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		key.Date, key.MealSlotID, course))
+		key.Date, key.MealSlotID, key.CourseID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return plan.Meal{}, ErrNotFound
 	}
@@ -187,10 +159,6 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 	if err != nil {
 		return plan.Meal{}, err
 	}
-	course, err := s.courseIn(ctx, m.Key.CourseID)
-	if err != nil {
-		return plan.Meal{}, err
-	}
 	var fromLeftover, fromSlot, fromCourse sql.NullInt64
 	var fromDate sql.NullString
 	if m.From != nil {
@@ -199,11 +167,7 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 		}
 		fromDate = sql.NullString{String: m.From.From.Date, Valid: true}
 		fromSlot = sql.NullInt64{Int64: m.From.From.MealSlotID, Valid: true}
-		fc, err := s.courseIn(ctx, m.From.From.CourseID)
-		if err != nil {
-			return plan.Meal{}, err
-		}
-		fromCourse = sql.NullInt64{Int64: fc, Valid: true}
+		fromCourse = sql.NullInt64{Int64: m.From.From.CourseID, Valid: true}
 	}
 	pinned, relaxed := 0, 0
 	if m.Pinned {
@@ -230,7 +194,7 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 		  from_meal_slot_id = excluded.from_meal_slot_id, from_course_id = excluded.from_course_id,
 		  relaxed = excluded.relaxed, why_json = excluded.why_json,
 		  resolved_at = excluded.resolved_at, updated_at = excluded.updated_at`,
-		m.Key.Date, m.Key.MealSlotID, course, m.RecipeID, m.Batches, m.Portions, state, pinned,
+		m.Key.Date, m.Key.MealSlotID, m.Key.CourseID, m.RecipeID, m.Batches, m.Portions, state, pinned,
 		fromLeftover, fromDate, fromSlot, fromCourse, relaxed, why, resolved, now, now)
 	if err != nil {
 		return plan.Meal{}, mapErr(err)
@@ -240,16 +204,12 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 
 // SetPinned changes only the Pinned flag; ErrNotFound if the slot is empty.
 func (s *Store) SetPinned(ctx context.Context, key plan.Key, pinned bool) error {
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return err
-	}
 	v := 0
 	if pinned {
 		v = 1
 	}
 	return s.affectOne(ctx, `UPDATE planned_meals SET pinned = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		v, s.now(), key.Date, key.MealSlotID, course)
+		v, s.now(), key.Date, key.MealSlotID, key.CourseID)
 }
 
 // SetWhy replaces only the why chips of the Planned Meal at key (a resolved meal keeps its resolution instant);
@@ -259,33 +219,21 @@ func (s *Store) SetWhy(ctx context.Context, key plan.Key, why []plan.Why) error 
 	if err != nil {
 		return err
 	}
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return err
-	}
 	return s.affectOne(ctx, `UPDATE planned_meals SET why_json = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		enc, s.now(), key.Date, key.MealSlotID, course)
+		enc, s.now(), key.Date, key.MealSlotID, key.CourseID)
 }
 
 // MarkResolved sets State (cooked or skipped) and the resolution instant (the clock's now).
 func (s *Store) MarkResolved(ctx context.Context, key plan.Key, state plan.State) error {
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return err
-	}
 	now := s.now()
 	return s.affectOne(ctx, `UPDATE planned_meals SET state = ?, resolved_at = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		string(state), now, now, key.Date, key.MealSlotID, course)
+		string(state), now, now, key.Date, key.MealSlotID, key.CourseID)
 }
 
 // DeleteMeal removes the Planned Meal at key; ErrNotFound if there is none.
 func (s *Store) DeleteMeal(ctx context.Context, key plan.Key) error {
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return err
-	}
 	return s.affectOne(ctx, `DELETE FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		key.Date, key.MealSlotID, course)
+		key.Date, key.MealSlotID, key.CourseID)
 }
 
 // affectOne runs a statement that must change exactly one row.
@@ -302,12 +250,8 @@ func (s *Store) affectOne(ctx context.Context, query string, args ...any) error 
 
 // Dependants returns the Planned Meals in State planned served from the Leftover of the fresh meal at source.
 func (s *Store) Dependants(ctx context.Context, source plan.Key) ([]plan.Meal, error) {
-	course, err := s.courseIn(ctx, source.CourseID)
-	if err != nil {
-		return nil, err
-	}
 	rows, err := s.q.QueryContext(ctx, mealSelect+` WHERE state = 'planned' AND from_date = ? AND from_meal_slot_id = ? AND from_course_id = ?
-		ORDER BY date, meal_slot_id`, source.Date, source.MealSlotID, course)
+		ORDER BY date, meal_slot_id`, source.Date, source.MealSlotID, source.CourseID)
 	if err != nil {
 		return nil, err
 	}
@@ -316,13 +260,9 @@ func (s *Store) Dependants(ctx context.Context, source plan.Key) ([]plan.Meal, e
 
 // LinkLeftover points every dependant of source (State planned) at the actual Leftover.
 func (s *Store) LinkLeftover(ctx context.Context, source plan.Key, leftoverID int64) error {
-	course, err := s.courseIn(ctx, source.CourseID)
-	if err != nil {
-		return err
-	}
-	_, err = s.q.ExecContext(ctx, `UPDATE planned_meals SET from_leftover_id = ?, updated_at = ?
+	_, err := s.q.ExecContext(ctx, `UPDATE planned_meals SET from_leftover_id = ?, updated_at = ?
 		WHERE state = 'planned' AND from_date = ? AND from_meal_slot_id = ? AND from_course_id = ?`,
-		leftoverID, s.now(), source.Date, source.MealSlotID, course)
+		leftoverID, s.now(), source.Date, source.MealSlotID, source.CourseID)
 	return mapErr(err)
 }
 
@@ -352,12 +292,8 @@ func (s *Store) History(ctx context.Context, before string) ([]plan.HistoryEntry
 func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 	return s.InTx(ctx, func(_ *sql.Tx, st *Store) error {
 		for _, k := range ch.Deletes {
-			course, err := st.courseIn(ctx, k.CourseID)
-			if err != nil {
-				return err
-			}
-			_, err = st.q.ExecContext(ctx, `DELETE FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?
-				AND state = 'planned' AND pinned = 0`, k.Date, k.MealSlotID, course)
+			_, err := st.q.ExecContext(ctx, `DELETE FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?
+				AND state = 'planned' AND pinned = 0`, k.Date, k.MealSlotID, k.CourseID)
 			if err != nil {
 				return mapErr(err)
 			}
@@ -384,10 +320,6 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 			if u.SlotRuleClaimed {
 				claimed = 1
 			}
-			course, err := st.courseIn(ctx, u.Key.CourseID)
-			if err != nil {
-				return err
-			}
 			excl, err := exclusionsJSON(u.Exclusions, u.MoreExclusions)
 			if err != nil {
 				return err
@@ -396,18 +328,14 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 				VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (date, meal_slot_id, course_id) DO UPDATE SET reason = excluded.reason,
 				slot_rule_claimed = excluded.slot_rule_claimed, eliminated_json = excluded.eliminated_json,
 				exclusions_json = excluded.exclusions_json`,
-				u.Key.Date, u.Key.MealSlotID, course, u.Reason, claimed, string(elim), excl)
+				u.Key.Date, u.Key.MealSlotID, u.Key.CourseID, u.Reason, claimed, string(elim), excl)
 			if err != nil {
 				return mapErr(err)
 			}
 		}
 		for _, k := range ch.ClearUnfilled {
-			course, err := st.courseIn(ctx, k.CourseID)
-			if err != nil {
-				return err
-			}
 			if _, err := st.q.ExecContext(ctx, `DELETE FROM plan_unfilled WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-				k.Date, k.MealSlotID, course); err != nil {
+				k.Date, k.MealSlotID, k.CourseID); err != nil {
 				return err
 			}
 		}
@@ -435,7 +363,7 @@ func exclusionsJSON(records []plan.ExclusionRecord, more int) (any, error) {
 
 // Unfilled returns the stored "couldn't plan" reasons with from <= date <= to, ordered by date then Meal Slot id.
 func (s *Store) Unfilled(ctx context.Context, from, to string) ([]plan.Unfilled, error) {
-	rows, err := s.q.QueryContext(ctx, `SELECT date, meal_slot_id, `+courseOut("course_id")+`, reason, slot_rule_claimed, eliminated_json, exclusions_json FROM plan_unfilled
+	rows, err := s.q.QueryContext(ctx, `SELECT date, meal_slot_id, course_id, reason, slot_rule_claimed, eliminated_json, exclusions_json FROM plan_unfilled
 		WHERE (? = '' OR date >= ?) AND (? = '' OR date <= ?)
 		ORDER BY date, meal_slot_id, (SELECT position FROM courses WHERE id = plan_unfilled.course_id)`, from, from, to, to)
 	if err != nil {
@@ -469,7 +397,7 @@ func (s *Store) Unfilled(ctx context.Context, from, to string) ([]plan.Unfilled,
 
 // Leftovers.
 
-var leftoverCols = `id, recipe_id, from_date, from_meal_slot_id, ` + courseOut("from_course_id") + ` AS from_course_id, portions, cooked_on, use_by, status`
+var leftoverCols = `id, recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status`
 
 func scanLeftover(sc scanner) (plan.Leftover, error) {
 	var l plan.Leftover
@@ -481,13 +409,9 @@ func scanLeftover(sc scanner) (plan.Leftover, error) {
 
 // AddLeftover records an actual Leftover (Status available) and returns it with its id.
 func (s *Store) AddLeftover(ctx context.Context, l plan.Leftover) (plan.Leftover, error) {
-	course, err := s.courseIn(ctx, l.From.CourseID)
-	if err != nil {
-		return plan.Leftover{}, err
-	}
 	res, err := s.q.ExecContext(ctx, `INSERT INTO leftovers (recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, 'available', ?)`,
-		l.RecipeID, l.From.Date, l.From.MealSlotID, course, l.Portions, l.CookedOn, l.UseBy, s.now())
+		l.RecipeID, l.From.Date, l.From.MealSlotID, l.From.CourseID, l.Portions, l.CookedOn, l.UseBy, s.now())
 	if err != nil {
 		return plan.Leftover{}, mapErr(err)
 	}
@@ -539,7 +463,7 @@ func (s *Store) LeftoverSources(ctx context.Context, ids []int64) (map[int64]pla
 		args[i] = id
 	}
 	rows, err := s.q.QueryContext(ctx,
-		`SELECT id, from_date, from_meal_slot_id, `+courseOut("from_course_id")+` FROM leftovers WHERE id IN (`+marks+`)`, args...)
+		`SELECT id, from_date, from_meal_slot_id, from_course_id FROM leftovers WHERE id IN (`+marks+`)`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -557,13 +481,9 @@ func (s *Store) LeftoverSources(ctx context.Context, ids []int64) (map[int64]pla
 
 // LeftoverFrom returns the available Leftover produced by the Cooked meal at key, if any.
 func (s *Store) LeftoverFrom(ctx context.Context, key plan.Key) (plan.Leftover, bool, error) {
-	course, err := s.courseIn(ctx, key.CourseID)
-	if err != nil {
-		return plan.Leftover{}, false, err
-	}
 	l, err := scanLeftover(s.q.QueryRowContext(ctx, `SELECT `+leftoverCols+` FROM leftovers
 		WHERE status = 'available' AND from_date = ? AND from_meal_slot_id = ? AND from_course_id = ? ORDER BY id DESC LIMIT 1`,
-		key.Date, key.MealSlotID, course))
+		key.Date, key.MealSlotID, key.CourseID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return plan.Leftover{}, false, nil
 	}
@@ -587,7 +507,7 @@ func (s *Store) DiscardLeftover(ctx context.Context, id int64, on string) error 
 
 // SlotRules returns all Slot Rules ordered by Meal Slot id, then id.
 func (s *Store) SlotRules(ctx context.Context) ([]plan.SlotRule, error) {
-	rows, err := s.q.QueryContext(ctx, `SELECT id, meal_slot_id, `+courseOut("course_id")+`, recipe_id, tag FROM slot_rules ORDER BY meal_slot_id, id`)
+	rows, err := s.q.QueryContext(ctx, `SELECT id, meal_slot_id, course_id, recipe_id, tag FROM slot_rules ORDER BY meal_slot_id, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -612,10 +532,6 @@ func (s *Store) AddSlotRule(ctx context.Context, r plan.SlotRule) (plan.SlotRule
 	if (r.RecipeID == 0) == (r.Tag == "") {
 		return plan.SlotRule{}, ErrInvalid
 	}
-	course, err := s.courseIn(ctx, r.CourseID)
-	if err != nil {
-		return plan.SlotRule{}, err
-	}
 	var recipeID sql.NullInt64
 	var tag sql.NullString
 	if r.RecipeID != 0 {
@@ -625,21 +541,18 @@ func (s *Store) AddSlotRule(ctx context.Context, r plan.SlotRule) (plan.SlotRule
 	}
 	var dup int
 	if err := s.q.QueryRowContext(ctx, `SELECT COUNT(*) FROM slot_rules WHERE meal_slot_id = ? AND course_id = ? AND recipe_id IS ? AND tag IS ?`,
-		r.MealSlotID, course, recipeID, tag).Scan(&dup); err != nil {
+		r.MealSlotID, r.CourseID, recipeID, tag).Scan(&dup); err != nil {
 		return plan.SlotRule{}, err
 	}
 	if dup > 0 {
 		return plan.SlotRule{}, ErrDuplicateRule
 	}
 	res, err := s.q.ExecContext(ctx, `INSERT INTO slot_rules (meal_slot_id, course_id, recipe_id, tag) VALUES (?, ?, ?, ?)`,
-		r.MealSlotID, course, recipeID, tag)
+		r.MealSlotID, r.CourseID, recipeID, tag)
 	if err != nil {
 		return plan.SlotRule{}, mapErr(err)
 	}
 	r.ID, _ = res.LastInsertId()
-	if mainID, err := s.courseIn(ctx, 0); err == nil && mainID == course {
-		r.CourseID = 0 // the main Course reads back as 0
-	}
 	return r, nil
 }
 

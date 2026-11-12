@@ -167,14 +167,14 @@ func cookBoardSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return err
 		}
-		r := admin().Put(fmt.Sprintf("/api/plan/2026-11-09/%d", w.Vars["cook.dinnerSlot"]), map[string]any{"recipeId": id, "batches": batches})
+		r := admin().Put(fmt.Sprintf("/api/plan/2026-11-09/%d/%d", w.Vars["cook.dinnerSlot"], mainCourseID(w)), map[string]any{"recipeId": id, "batches": batches})
 		if r.Status != 200 {
 			return fmt.Errorf("plan the meal: %d %s", r.Status, r.Body)
 		}
 		return nil
 	})
 	sc.Step(`^tonight's Planned Meal is marked as cooked$`, func() error {
-		r := admin().Post(fmt.Sprintf("/api/plan/2026-11-09/%d/cooked", w.Vars["cook.dinnerSlot"]), map[string]any{"leftoverPortions": 0})
+		r := admin().Post(fmt.Sprintf("/api/plan/2026-11-09/%d/%d/cooked", w.Vars["cook.dinnerSlot"], mainCourseID(w)), map[string]any{"leftoverPortions": 0})
 		if r.Status != 200 {
 			return fmt.Errorf("mark as cooked: %d %s", r.Status, r.Body)
 		}
@@ -209,9 +209,19 @@ func cookBoardSteps(sc *godog.ScenarioContext, w *World) {
 		w.Last = w.Client.Get(fmt.Sprintf("/api/cook/recipes/%d?batches=%s", id, batches))
 		return nil
 	})
+	sc.Step(`^the response scope is the three-part scope of tonight's Planned Meal$`, func() error {
+		want := fmt.Sprintf("meal:2026-11-09/%d/%d", w.Vars["cook.dinnerSlot"], mainCourseID(w))
+		var out struct {
+			Scope string `json:"scope"`
+		}
+		if err := w.Last.JSON(&out); err != nil || out.Scope != want {
+			return fmt.Errorf("scope = %q (%v), want %q", out.Scope, err, want)
+		}
+		return nil
+	})
 	sc.Step(`^I open Cook Mode for tonight's Planned Meal$`, func() {
 		w.Ensure()
-		w.Last = w.Client.Get(fmt.Sprintf("/api/cook/meals/2026-11-09/%d", w.Vars["cook.dinnerSlot"]))
+		w.Last = w.Client.Get(fmt.Sprintf("/api/cook/meals/2026-11-09/%d/%d", w.Vars["cook.dinnerSlot"], mainCourseID(w)))
 	})
 	sc.Step(`^Cook Mode shows (\d+) Steps? to cook and (\d+) Advance Steps?$`, func(steps, adv int) error {
 		doc := body()
@@ -306,7 +316,7 @@ func cookBoardSteps(sc *godog.ScenarioContext, w *World) {
 	})
 	sc.Step(`^I mark Step (\d+) of tonight's Planned Meal as done$`, func(step int) {
 		w.Ensure()
-		w.Last = w.Client.Put("/api/cook/marks", map[string]any{"scope": fmt.Sprintf("meal:2026-11-09/%d", w.Vars["cook.dinnerSlot"]), "step": step - 1, "done": true})
+		w.Last = w.Client.Put("/api/cook/marks", map[string]any{"scope": fmt.Sprintf("meal:2026-11-09/%d/%d", w.Vars["cook.dinnerSlot"], mainCourseID(w)), "step": step - 1, "done": true})
 	})
 	sc.Step(`^I mark Step (\d+) of the Recipe "([^"]*)" as done$`, func(step int, name string) error {
 		id, err := recipeID(name)

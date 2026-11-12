@@ -11,7 +11,7 @@ const slot = (id: number, name: string, recipe: string, time: string): SlotLike 
   name,
   time,
   at: `2026-11-09T${time}:00Z`,
-  meal: { recipeId: id, recipeName: recipe, batches: 1, portions: 4, state: 'planned' },
+  courses: [{ courseId: 1, name: 'Main', main: true, meal: { recipeId: id, recipeName: recipe, batches: 1, portions: 4, state: 'planned' } }],
 })
 
 describe('ClockTile', () => {

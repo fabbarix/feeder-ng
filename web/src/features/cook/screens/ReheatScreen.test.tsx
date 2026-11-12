@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../../../test/notices'
-import { meal, mockApi, renderWithProviders, slot } from '../../plan/test-utils'
+import { courseMeal, meal, mockApi, planCourse, renderWithProviders } from '../../plan/test-utils'
+import { serverSlot } from '../../plan/test-utils.c3'
 import type { CookedResult, CookPreview, PlanView } from '../../plan/types'
 import type { CookTimer } from '../types'
 import { ReheatScreen } from './ReheatScreen'
@@ -12,11 +13,11 @@ vi.mock('../../../lib/sse', () => ({
   connectEvents: () => ({ subscribe: () => () => {}, onReconnect: () => () => {}, close: () => {} }),
 }))
 
-const SCOPE = 'meal:2026-11-10/2'
+const SCOPE = 'meal:2026-11-10/2/1'
 const source = { leftoverId: 4, date: '2026-11-09', mealSlotId: 2, recipeName: 'Chicken curry' }
 const planView = (over: Parameters<typeof meal>[0] = {}): PlanView => ({
   today: '2026-11-10', horizonDays: 7, updating: false,
-  slots: [slot({ date: '2026-11-10', mealSlotId: 2, name: 'Dinner', meal: meal({ recipeName: 'Chicken curry', portions: 2, servedFromLeftover: source, ...over }) })],
+  slots: [serverSlot([planCourse({ courseId: 1, main: true, name: 'Main', meal: courseMeal(1, 'Main', { recipeName: 'Chicken curry', portions: 2, servedFromLeftover: source, ...over }) })], { date: '2026-11-10', mealSlotId: 2, name: 'Dinner' })],
 })
 const timers = (list: CookTimer[] = []) => ({ now: '2026-11-10T18:00:00Z', timers: list })
 const running: CookTimer = {
@@ -33,10 +34,10 @@ const base = () => ({ 'GET /api/plan': planView(), 'GET /api/cook/timers': timer
 function renderReheat() {
   return renderWithProviders(
     <Routes>
-      <Route path="/cook/reheat/:date/:slotId" element={<ReheatScreen />} />
+      <Route path="/cook/reheat/:date/:slotId/:courseId" element={<ReheatScreen />} />
       <Route path="/" element={<p>Home page</p>} />
     </Routes>,
-    '/cook/reheat/2026-11-10/2',
+    '/cook/reheat/2026-11-10/2/1',
   )
 }
 
@@ -90,17 +91,17 @@ describe('ReheatScreen (R12)', () => {
   })
 
   it('Mark as Cooked marks the meal Cooked in one go (no Leftover portions sent) and leaves for Today', async () => {
-    const api = mockApi({ ...base(), 'GET /api/plan/2026-11-10/2/cook': preview, 'POST /api/plan/2026-11-10/2/cooked': cooked })
+    const api = mockApi({ ...base(), 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked })
     renderReheat()
     await userEvent.click(await screen.findByRole('button', { name: 'Mark as Cooked' }))
     expect(await screen.findByText('Home page')).toBeInTheDocument()
-    const posts = api.callsTo('POST', '/api/plan/2026-11-10/2/cooked')
+    const posts = api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')
     expect(posts).toHaveLength(1)
     expect(posts[0]!.body).toEqual({})
   })
 
   it('a failed Mark as Cooked says so, stays on the screen and changes nothing', async () => {
-    mockApi({ ...base(), 'GET /api/plan/2026-11-10/2/cook': preview, 'POST /api/plan/2026-11-10/2/cooked': { status: 500, json: { error: { code: 'internal', message: 'x' } } } })
+    mockApi({ ...base(), 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': { status: 500, json: { error: { code: 'internal', message: 'x' } } } })
     renderReheat()
     await userEvent.click(await screen.findByRole('button', { name: 'Mark as Cooked' }))
     expect(await findNotice('alert', 'That could not be saved. Nothing was changed.')).toBeInTheDocument()
@@ -157,8 +158,8 @@ describe('ReheatScreen (R12)', () => {
     mockApi({
       ...base(),
       'GET /api/plan': () => plan,
-      'GET /api/plan/2026-11-10/2/cook': preview,
-      'POST /api/plan/2026-11-10/2/cooked': () => {
+      'GET /api/plan/2026-11-10/2/1/cook': preview,
+      'POST /api/plan/2026-11-10/2/1/cooked': () => {
         plan = planView({ state: 'cooked' })
         return cooked
       },

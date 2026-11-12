@@ -12,7 +12,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
-// SlotView is one Meal Slot occurrence in the plan, with its meal or its "couldn't plan" reason.
+// SlotView is one Meal Slot occurrence in the plan. Its meals and "couldn't plan" reasons are per Course (Courses).
 type SlotView struct {
 	Key        plan.Key
 	Name       string
@@ -20,14 +20,20 @@ type SlotView struct {
 	At         time.Time
 	Portions   float64 // portions the Attendance needs
 	Attendance []plan.Attendee
-	Meal       *plan.Meal
-	Unfilled   *plan.Unfilled
 	// Rules are the Slot Rules of this Meal Slot.
 	Rules []plan.SlotRule
 	// Courses are the slot's Courses in the slot's order, then history rows (team C2; empty until the Developer
 	// fills them in). CookMinutes is the slot's timeline total in minutes, nil when nothing is fresh and still to cook.
 	Courses     []CourseView
 	CookMinutes *int
+}
+
+// ListEntry is one entry of a flat list (to-confirm, couldn't plan): the slot occurrence for one Course, with that
+// Course's own Planned Meal or reason.
+type ListEntry struct {
+	SlotView
+	Meal     *plan.Meal
+	Unfilled *plan.Unfilled
 }
 
 // PlanView is the plan between two dates.
@@ -80,13 +86,8 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 			infos = append(infos, si)
 		}
 	}
-	norm := plan.NormaliseCourses(infos)
-	for i := range meals {
-		meals[i].Key = norm(meals[i].Key)
-	}
 	uByKey := map[plan.Key]plan.Unfilled{}
 	for _, u := range unfilled {
-		u.Key = norm(u.Key)
 		uByKey[u.Key] = u
 	}
 	whole, err := r.wholeFunc(ctx)
@@ -106,15 +107,6 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 			cells = courseViews(si, day, uByKey, whole)
 		}
 		sv := occurrenceView(in, si, cells)
-		if len(si.Courses) == 0 { // a slot without Courses (the transition shim) plans as one cell
-			if len(day) > 0 {
-				m := day[0]
-				sv.Meal = &m
-			}
-			if u, ok := uByKey[si.Key]; ok {
-				sv.Unfilled = &u
-			}
-		}
 		for _, rule := range rules {
 			if rule.MealSlotID == si.Key.MealSlotID {
 				sv.Rules = append(sv.Rules, rule)
@@ -143,7 +135,7 @@ func nextDay(date string) string {
 
 // ToConfirm returns one entry per Course whose Planned Meal is still in State planned and at least
 // plan.ConfirmAfter past its slot time, in date, slot time, then the slot's Course order.
-func (r *Runner) ToConfirm(ctx context.Context) ([]SlotView, error) {
+func (r *Runner) ToConfirm(ctx context.Context) ([]ListEntry, error) {
 	in, err := r.info(ctx)
 	if err != nil {
 		return nil, err
@@ -159,7 +151,7 @@ func (r *Runner) ToConfirm(ctx context.Context) ([]SlotView, error) {
 		}
 	}
 	type entry struct {
-		sv  SlotView
+		sv  ListEntry
 		pos int
 	}
 	var list []entry
@@ -169,11 +161,10 @@ func (r *Runner) ToConfirm(ctx context.Context) ([]SlotView, error) {
 		if err != nil {
 			return nil, err
 		}
-		m := withRealIDs(si, []plan.Meal{t.Meal})[0]
+		m := t.Meal
 		sv := slotOf(in, si)
 		sv.Key = m.Key
-		sv.Meal = &m
-		list = append(list, entry{sv: sv, pos: coursePosition(si, m.Key.CourseID)})
+		list = append(list, entry{sv: ListEntry{SlotView: sv, Meal: &m}, pos: coursePosition(si, m.Key.CourseID)})
 	}
 	sort.SliceStable(list, func(i, j int) bool {
 		a, b := list[i], list[j]
@@ -185,7 +176,7 @@ func (r *Runner) ToConfirm(ctx context.Context) ([]SlotView, error) {
 		}
 		return a.pos < b.pos
 	})
-	out := make([]SlotView, 0, len(list))
+	out := make([]ListEntry, 0, len(list))
 	for _, e := range list {
 		out = append(out, e.sv)
 	}
@@ -204,7 +195,7 @@ func coursePosition(si plan.SlotInfo, course int64) int {
 
 // CouldntPlan returns one entry per Course in the horizon (not yet past) that stayed empty with its reason, in the
 // plan's order.
-func (r *Runner) CouldntPlan(ctx context.Context) ([]SlotView, error) {
+func (r *Runner) CouldntPlan(ctx context.Context) ([]ListEntry, error) {
 	in, err := r.info(ctx)
 	if err != nil {
 		return nil, err
@@ -213,15 +204,9 @@ func (r *Runner) CouldntPlan(ctx context.Context) ([]SlotView, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []SlotView
+	var out []ListEntry
 	for _, s := range view.Slots {
 		if s.At.Before(in.now) {
-			continue
-		}
-		if len(s.Courses) == 0 {
-			if s.Unfilled != nil {
-				out = append(out, s)
-			}
 			continue
 		}
 		for _, c := range s.Courses {
@@ -229,10 +214,9 @@ func (r *Runner) CouldntPlan(ctx context.Context) ([]SlotView, error) {
 				continue
 			}
 			e := s
-			e.Courses, e.Meal = nil, nil
+			e.Courses = nil
 			e.Key.CourseID = c.CourseID
-			e.Unfilled = c.Unfilled
-			out = append(out, e)
+			out = append(out, ListEntry{SlotView: e, Unfilled: c.Unfilled})
 		}
 	}
 	return out, nil
@@ -254,10 +238,8 @@ func (r *Runner) keyAttendance(ctx context.Context, def MealSlotDef, key plan.Ke
 	if len(courses) == 0 {
 		return r.d.Source.Attendance(ctx, def.ID, key.Date)
 	}
-	occ := plan.SlotInfo{Key: plan.Key{Date: key.Date, MealSlotID: def.ID}, Courses: courses}
-	courseID := plan.NormaliseCourses([]plan.SlotInfo{occ})(key).CourseID
 	for _, c := range courses {
-		if c.CourseID == courseID {
+		if c.CourseID == key.CourseID {
 			return c.Attendance, nil
 		}
 	}
@@ -290,12 +272,8 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 // meals and reports them as Covered. Errors: ErrUnknownSlot (not a Meal Slot of that weekday), ErrInPast (before
 // today), ErrAlreadyResolved (Cooked or skipped there), ErrUnknownRecipe, ErrArchivedRecipe, ErrInvalidBatches.
 func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64, batches *float64) (SetResult, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return SetResult{}, err
-	}
 	var covered []int64
-	_, err = r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -325,7 +303,7 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		if err != nil {
 			return nil, err
 		}
-		cell := realCourse(si, key)
+		cell := key.CourseID
 		main := mainOf(si)
 		if len(si.Courses) > 0 {
 			if !hasCourse(si, cell) {
@@ -350,16 +328,16 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		whole := rc.WholeMeal && len(si.Courses) > 0 && cell == main
 		// covers: a Whole meal in the main Course replaces the other Courses' unpinned, unresolved meals.
 		covers := func(m plan.Meal) bool {
-			return whole && m.Key.MealSlotID == key.MealSlotID && realCourse(si, m.Key) != cell &&
+			return whole && m.Key.MealSlotID == key.MealSlotID && m.Key.CourseID != cell &&
 				m.State == plan.StatePlanned && !m.Pinned
 		}
 		// A Recipe may not stand in two Courses of one slot and date, unless the other one is walked after this Course
 		// and unpinned: the replan after this write clears and refills it (the planner's walk, crs-b §2).
 		for _, m := range day {
-			if m.Key.MealSlotID != key.MealSlotID || realCourse(si, m.Key) == cell || covers(m) || m.RecipeID != recipeID {
+			if m.Key.MealSlotID != key.MealSlotID || m.Key.CourseID == cell || covers(m) || m.RecipeID != recipeID {
 				continue
 			}
-			walkedBefore := walkRank(si, realCourse(si, m.Key)) < walkRank(si, cell)
+			walkedBefore := walkRank(si, m.Key.CourseID) < walkRank(si, cell)
 			if m.State != plan.StatePlanned || m.Pinned || walkedBefore {
 				return nil, ErrRecipeInSlot
 			}
@@ -386,7 +364,7 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 			if !covers(m) {
 				continue
 			}
-			covered = append(covered, realCourse(si, m.Key))
+			covered = append(covered, m.Key.CourseID)
 			if m.Fresh() {
 				if err := r.unpinMisfits(ctx, st, m.Key, 0, in); err != nil {
 					return nil, err
@@ -424,11 +402,7 @@ func (r *Runner) resolved(ctx context.Context, key plan.Key) {
 
 // Confirm Pins the Planned Meal as it is and replans the unpinned slots after it. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) Confirm(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return plan.Meal{}, err
-	}
-	_, err = r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		m, err := st.Meal(ctx, key)
 		if err != nil {
 			return nil, mapStoreErr(err)
@@ -447,11 +421,7 @@ func (r *Runner) Confirm(ctx context.Context, key plan.Key) (plan.Meal, error) {
 // Unpin clears the Pinned flag and runs Plan(ReasonUnpinned) (the meal stays as it is while it is valid; Regenerate may
 // now replace it). ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) Unpin(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return plan.Meal{}, err
-	}
-	_, err = r.write(ctx, plan.ReasonUnpinned, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonUnpinned, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		m, err := st.Meal(ctx, key)
 		if err != nil {
 			return nil, mapStoreErr(err)
@@ -501,7 +471,7 @@ func (r *Runner) Alternatives(ctx context.Context, key plan.Key) ([]Alternative,
 	if err != nil {
 		return nil, err
 	}
-	cell := realCourse(si, key)
+	cell := key.CourseID
 	if len(si.Courses) > 0 && !hasCourse(si, cell) {
 		return nil, ErrCourseNotInSlot
 	}
@@ -513,9 +483,7 @@ func (r *Runner) Alternatives(ctx context.Context, key plan.Key) ([]Alternative,
 	if err != nil {
 		return nil, err
 	}
-	norm := plan.NormaliseCourses(snap.Slots)
-	c := norm(key) // Course 0 is the main Course of a slot with Courses
-	placements, err := planner.Swap(pin, planner.SlotKey{Date: planner.Date(c.Date), MealSlotID: c.MealSlotID, CourseID: c.CourseID})
+	placements, err := planner.Swap(pin, planner.SlotKey{Date: planner.Date(key.Date), MealSlotID: key.MealSlotID, CourseID: key.CourseID})
 	switch {
 	case errors.Is(err, planner.ErrSlotNotSwappable):
 		return nil, ErrNotSwappable
@@ -567,7 +535,7 @@ func (r *Runner) coverable(ctx context.Context, si plan.SlotInfo) ([]int64, erro
 		}
 		covered := true
 		for _, m := range day {
-			if m.Key.MealSlotID == si.Key.MealSlotID && realCourse(si, m.Key) == c.CourseID &&
+			if m.Key.MealSlotID == si.Key.MealSlotID && m.Key.CourseID == c.CourseID &&
 				(m.State != plan.StatePlanned || m.Pinned) {
 				covered = false
 			}
@@ -593,10 +561,6 @@ type CookPreview struct {
 
 // CookPreview computes the sheet. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return CookPreview{}, err
-	}
 	in, err := r.info(ctx)
 	if err != nil {
 		return CookPreview{}, err
@@ -687,10 +651,6 @@ func plannedForMeals(in info, recipes []planner.Recipe, meals []plan.Meal, src p
 // Any error rolls everything back: Stock is untouched, the meal stays planned, nothing is published.
 // Errors: ErrNotFound, ErrAlreadyResolved, plan.ErrInvalidLeftover.
 func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *float64) (CookedResult, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return CookedResult{}, err
-	}
 	var warnings []Warning
 	var leftover *plan.Leftover
 	var publish func()
@@ -718,7 +678,7 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		plannedFor = plannedForMeals(in, recipes, later, key)
 		return nil
 	}
-	_, err = r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -847,11 +807,7 @@ func (r *Runner) leftoverSource(ctx context.Context, st *store.Store, m plan.Mea
 // NotCooked marks the meal skipped ("we had takeaway"): no Stock change, no Leftover; Pinned dependants are unpinned and
 // the dependants replanned. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) NotCooked(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	key, err := r.storeKey(ctx, key)
-	if err != nil {
-		return plan.Meal{}, err
-	}
-	_, err = r.write(ctx, plan.ReasonNotCooked, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonNotCooked, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err

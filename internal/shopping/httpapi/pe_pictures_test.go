@@ -40,7 +40,25 @@ func TestShoppingLinesAndExtrasCarryTheIngredientPicture(t *testing.T) {
 	if recipe.ID == 0 || slot.ID == 0 {
 		t.Fatalf("setup: recipe %d %s, slot %d", r.Status, r.Body, slot.ID)
 	}
-	if p := admin.Put(fmt.Sprintf("/api/plan/2026-11-09/%d", slot.ID), map[string]any{"recipeId": recipe.ID, "batches": 1}); p.Status != 200 {
+	// Team C3: a Planned Meal is set on its Course by the real id; the main Course is the one flagged main.
+	var listed struct {
+		Courses []struct {
+			ID   int64 `json:"id"`
+			Main bool  `json:"main"`
+		} `json:"courses"`
+	}
+	admin.Get("/api/courses").MustJSON(t, &listed)
+	courses := listed.Courses
+	var mainCourse int64
+	for _, c := range courses {
+		if c.Main {
+			mainCourse = c.ID
+		}
+	}
+	if mainCourse == 0 {
+		t.Fatalf("setup: no main Course in %+v", courses)
+	}
+	if p := admin.Put(fmt.Sprintf("/api/plan/2026-11-09/%d/%d", slot.ID, mainCourse), map[string]any{"recipeId": recipe.ID, "batches": 1}); p.Status != 200 {
 		t.Fatalf("pin = %d %s", p.Status, p.Body)
 	}
 	if x := admin.Post("/api/shopping/extras", map[string]any{"ingredientId": milk, "quantity": 1000}); x.Status != 201 {

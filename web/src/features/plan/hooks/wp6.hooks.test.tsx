@@ -8,7 +8,7 @@ import { useCookFlow } from './useCookFlow'
 afterEach(() => vi.unstubAllGlobals())
 
 describe('useCookFlow', () => {
-  const key = { date: '2026-11-10', mealSlotId: 2 }
+  const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
   const preview: CookPreview = {
     meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs: [],
   }
@@ -20,12 +20,12 @@ describe('useCookFlow', () => {
   }
 
   it('quickCook: one tap posts Cooked with the planned Leftover and cheers where it went', async () => {
-    const api = mockApi({ 'GET /api/plan/2026-11-10/2/cook': preview, 'POST /api/plan/2026-11-10/2/cooked': cooked, 'GET /api/plan': { today: '2026-11-10', horizonDays: 7, updating: false, slots: [] } })
+    const api = mockApi({ 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked, 'GET /api/plan': { today: '2026-11-10', horizonDays: 7, updating: false, slots: [] } })
     const { result } = renderHook(() => useCookFlow(), { wrapper })
     await act(async () => {
       await result.current.quickCook(key)
     })
-    expect(api.callsTo('POST', '/api/plan/2026-11-10/2/cooked')[0]?.body).toEqual({ leftoverPortions: 2 })
+    expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 })
     expect(await findNotice('status', 'Cooked, nice one! 2 portions → Wed Lunch')).toBeDefined()
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([11])
     expect(result.current.quickBusy).toBeNull()
@@ -33,20 +33,20 @@ describe('useCookFlow', () => {
 
   it('quickCook for a meal served from a Leftover sends no portions', async () => {
     const api = mockApi({
-      'GET /api/plan/2026-11-10/2/cook': { ...preview, fresh: false, batches: 0, proposedLeftover: 0, maxLeftover: 0 },
-      'POST /api/plan/2026-11-10/2/cooked': { ...cooked, leftover: null, plannedFor: [], warnings: [] },
+      'GET /api/plan/2026-11-10/2/1/cook': { ...preview, fresh: false, batches: 0, proposedLeftover: 0, maxLeftover: 0 },
+      'POST /api/plan/2026-11-10/2/1/cooked': { ...cooked, leftover: null, plannedFor: [], warnings: [] },
     })
     const { result } = renderHook(() => useCookFlow(), { wrapper })
     await act(async () => {
       await result.current.quickCook(key)
     })
-    expect(api.callsTo('POST', '/api/plan/2026-11-10/2/cooked')[0]?.body).toEqual({})
+    expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({})
   })
 
   it('quickCook failing says so and leaves nothing half done', async () => {
     mockApi({
-      'GET /api/plan/2026-11-10/2/cook': preview,
-      'POST /api/plan/2026-11-10/2/cooked': { status: 500, json: { error: { code: 'internal', message: 'boom' } } },
+      'GET /api/plan/2026-11-10/2/1/cook': preview,
+      'POST /api/plan/2026-11-10/2/1/cooked': { status: 500, json: { error: { code: 'internal', message: 'boom' } } },
     })
     const { result } = renderHook(() => useCookFlow(), { wrapper })
     await act(async () => {
@@ -58,7 +58,7 @@ describe('useCookFlow', () => {
   })
 
   it('open and close drive the Adjust sheet', () => {
-    mockApi({ 'GET /api/plan/2026-11-10/2/cook': preview })
+    mockApi({ 'GET /api/plan/2026-11-10/2/1/cook': preview })
     const { result } = renderHook(() => useCookFlow(), { wrapper })
     expect(result.current.cookKey).toBeNull()
     act(() => result.current.open(key))

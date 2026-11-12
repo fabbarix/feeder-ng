@@ -92,7 +92,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("/api/plan/%s/%d%s", date, slot, suffix), nil
+		return fmt.Sprintf("/api/plan/%s/%d/%d%s", date, slot, mainCourseID(w), suffix), nil
 	}
 	// planSlot fetches the plan for one date and returns that date's slot object (without touching w.Last).
 	planSlot := func(date string) (map[string]any, error) {
@@ -115,8 +115,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return nil, err
 		}
-		m, _ := s["meal"].(map[string]any)
-		return m, nil
+		return slotMeal(s), nil
 	}
 	settled := func() error {
 		deadline := time.Now().Add(5 * time.Second)
@@ -381,7 +380,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 			return err
 		}
 		for _, s := range v.([]any) {
-			m, _ := s.(map[string]any)["meal"].(map[string]any)
+			m := slotMeal(s.(map[string]any))
 			if m == nil {
 				return fmt.Errorf("slot without a Planned Meal: %v", s)
 			}
@@ -498,9 +497,9 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return err
 		}
-		u, _ := s["unfilled"].(map[string]any)
+		u := slotUnfilled(s)
 		if u == nil || u["reason"] != reason {
-			return fmt.Errorf("slot on %s unfilled = %v, want reason %q", date, s["unfilled"], reason)
+			return fmt.Errorf("slot on %s unfilled = %v, want reason %q", date, u, reason)
 		}
 		return nil
 	})
@@ -648,7 +647,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		if err != nil {
 			return err
 		}
-		return startCookTimer(map[string]any{"scope": fmt.Sprintf("meal:%s/%d", date, slot), "label": label, "durationSeconds": secs})
+		return startCookTimer(map[string]any{"scope": fmt.Sprintf("meal:%s/%d/%d", date, slot, mainCourseID(w)), "label": label, "durationSeconds": secs})
 	})
 	sc.Step(`^I start the free timer "([^"]*)" for (\d+) seconds$`, func(label string, secs int) error {
 		return startCookTimer(map[string]any{"label": label, "durationSeconds": secs})
@@ -755,7 +754,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		servedFrom := map[string]string{} // "date/slot" of a dependant -> "date/slot" of its source
 		for _, it := range list {
 			sl := it.(map[string]any)
-			m, _ := sl["meal"].(map[string]any)
+			m := slotMeal(sl)
 			if m == nil {
 				continue
 			}
@@ -765,7 +764,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		for _, it := range list {
 			sl := it.(map[string]any)
-			m, _ := sl["meal"].(map[string]any)
+			m := slotMeal(sl)
 			if m == nil {
 				continue
 			}
@@ -853,7 +852,7 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		days := map[string]bool{}
 		for _, s := range v.([]any) {
 			slot := s.(map[string]any)
-			m, _ := slot["meal"].(map[string]any)
+			m := slotMeal(slot)
 			if m == nil || m["servedFromLeftover"] != nil {
 				continue
 			}

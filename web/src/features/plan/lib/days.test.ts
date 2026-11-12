@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import type { PlanSlot } from '../types'
+import type { PlanSlot, PlannedMeal } from '../types'
 import { dateRange, dayOverline, groupByDay, heroMeal, nextMeal } from './days'
 
-function slot(date: string, id: number, time: string, over: Partial<PlanSlot> = {}): PlanSlot {
-  return { date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time, at: `${date}T${time}:00Z`, portions: 2, meal: null, unfilled: null, rules: [], ...over }
+type SlotOver = Partial<PlanSlot> & { meal?: PlannedMeal | null }
+
+// A slot as the server sends it: one main Course row carries the Planned Meal.
+function slot(date: string, id: number, time: string, over: SlotOver = {}): PlanSlot {
+  const { meal: m = null, ...rest } = over
+  return {
+    date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time, at: `${date}T${time}:00Z`, portions: 2, rules: [],
+    courses: [{ courseId: 1, name: 'Main', main: true, optional: false, optOutMemberIds: [], meal: m, unfilled: null, coveredBy: null, unserved: null }],
+    ...rest,
+  }
 }
 
 const meal = (date: string, id: number, state: 'planned' | 'cooked' | 'skipped' = 'planned') => ({

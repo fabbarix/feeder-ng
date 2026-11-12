@@ -112,21 +112,17 @@ const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, ms.time, pm.recipe
 	JOIN courses c ON c.id = pm.course_id
 	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id`
 
-// Meal implements Meals; courseID 0 is the main Course.
+// Meal implements Meals. A Course id that is not above 0 names no Course.
 func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID, courseID int64) (MealInfo, error) {
+	if courseID <= 0 {
+		return MealInfo{}, ErrNotFound
+	}
 	loc, err := m.a.zone(ctx)
 	if err != nil {
 		return MealInfo{}, err
 	}
-	q := mealSelect + ` WHERE pm.date = ? AND pm.meal_slot_id = ? AND pm.course_id = `
-	args := []any{date, mealSlotID}
-	if courseID == 0 {
-		q += `(SELECT id FROM courses WHERE is_main = 1)`
-	} else {
-		q += `?`
-		args = append(args, courseID)
-	}
-	info, err := scanMeal(m.a.db.QueryRowContext(ctx, q, args...), loc)
+	q := mealSelect + ` WHERE pm.date = ? AND pm.meal_slot_id = ? AND pm.course_id = ?`
+	info, err := scanMeal(m.a.db.QueryRowContext(ctx, q, date, mealSlotID, courseID), loc)
 	if errors.Is(err, sql.ErrNoRows) {
 		return MealInfo{}, ErrNotFound
 	}

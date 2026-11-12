@@ -10,7 +10,7 @@ function setup(s = slot(), today = '2026-11-10', compact = false) {
   return { ...handlers, container: view.container }
 }
 
-const key = { date: '2026-11-10', mealSlotId: 2 }
+const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
 const chipsOf = (container: HTMLElement) => container.querySelectorAll('.chip')
 
 describe('MealTile (compact, on a day tile)', () => {
@@ -143,7 +143,7 @@ describe('MealTile (compact, on a day tile)', () => {
     const choose = screen.getByRole('button', { name: 'Choose a Recipe' })
     expect(choose).toHaveAttribute('data-variant', 'tertiary')
     await userEvent.click(choose)
-    expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 2 })
+    expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 2, courseId: 1 })
   })
 
   it('R13: a setup gap (nobody attends) is the blue info chip with its reason', () => {
@@ -199,7 +199,7 @@ describe('MealTile (compact, on a day tile)', () => {
       const h = setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10', true)
       expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
-      expect(h.onSwap).toHaveBeenCalledWith({ date: '2026-11-11', mealSlotId: 2 })
+      expect(h.onSwap).toHaveBeenCalledWith({ date: '2026-11-11', mealSlotId: 2, courseId: 1 })
     })
 
     it('never more than one icon button in the head row', () => {

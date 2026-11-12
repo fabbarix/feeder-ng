@@ -11,11 +11,8 @@ import (
 
 // The Course in the plan store (crs-plan §1.1, §2.2 "Persistence shim", §2.3, team A).
 //
-// The shim: until B and C2 merge, callers still use plan.Key{CourseID: 0}, which means the main Course.
-// The store keeps ONE consistent key form while that lasts: the main Course always reads back as
-// CourseID 0 (never its real id), every other Course as its real id, and a lookup by either form of the
-// main Course finds the same row. So a map[plan.Key] built from what the store returns is found by the keys
-// the callers (SlotInfo.Key, reconcile) use, and nothing misses. Removing the shim is C3's job.
+// C3 removed the shim (docs/dev/design/crs-c3.md §3): a plan.Key names its Course by its real id, the main Course
+// included. The store reads every Course as its real id, and a key with CourseID 0 names no Course at all.
 
 type courseIDs struct{ main, side, starter, dessert int64 }
 
@@ -48,35 +45,57 @@ func (f *fixture) rawCourse(t *testing.T, table, where string, args ...any) int6
 	return id
 }
 
-func TestCourseZeroIsStoredAsTheMainCourseAndReadsBackAsZero(t *testing.T) {
+func TestTheMainCourseIsStoredAndReadBackWithItsRealID(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	saved, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, Portions: 3, State: plan.StatePlanned})
+	saved, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, Portions: 3, State: plan.StatePlanned})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if saved.Key.CourseID != 0 {
-		t.Errorf("SaveMeal returned CourseID %d, want 0 (the shim form of the main Course)", saved.Key.CourseID)
+	if saved.Key.CourseID != c.main {
+		t.Errorf("SaveMeal returned CourseID %d, want the main Course's real id %d", saved.Key.CourseID, c.main)
 	}
 	if got := f.rawCourse(t, "planned_meals", "id = ?", saved.ID); got != c.main {
 		t.Errorf("stored course_id = %d, want the main Course %d", got, c.main)
 	}
-	// The same cell by the real id of the main Course is the same row: no second meal, same id.
 	again, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.pasta, Batches: 1, Portions: 3, State: plan.StatePlanned})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if again.ID != saved.ID || again.Key.CourseID != 0 || again.RecipeID != f.pasta {
-		t.Errorf("saving by the main Course's id = %+v, want the same row (id %d) read back with CourseID 0", again, saved.ID)
-	}
-	for _, course := range []int64{0, c.main} {
-		m, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, course))
-		if err != nil || m.ID != saved.ID {
-			t.Errorf("Meal(course %d) = %+v, %v; want the row %d", course, m, err, saved.ID)
-		}
+	if err != nil || again.ID != saved.ID || again.Key.CourseID != c.main || again.RecipeID != f.pasta {
+		t.Errorf("saving the same cell again = %+v, %v; want the same row (id %d)", again, err, saved.ID)
 	}
 	if n := f.count(t, `SELECT count(*) FROM planned_meals`); n != 1 {
 		t.Errorf("%d rows, want 1", n)
+	}
+}
+
+// With the shim gone, 0 is not a Course: nothing is written under it and nothing is found by it.
+func TestCourseZeroNamesNoCourse(t *testing.T) {
+	f := newFixture(t)
+	c := f.courses(t)
+	zero := f.ck("2026-11-10", f.dinner, 0)
+	if _, err := f.st.SaveMeal(ctx, plan.Meal{Key: zero, RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned}); !errors.Is(err, store.ErrUnknownRef) {
+		t.Errorf("SaveMeal with Course 0 = %v, want ErrUnknownRef", err)
+	}
+	if err := f.st.Apply(ctx, plan.Changes{Upserts: []plan.Meal{{Key: zero, RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned}}}); err == nil {
+		t.Error("Apply upserting a meal with Course 0 succeeded")
+	}
+	if err := f.st.Apply(ctx, plan.Changes{Unfilled: []plan.Unfilled{{Key: zero, Reason: "no_candidates"}}}); err == nil {
+		t.Error("Apply storing a reason with Course 0 succeeded")
+	}
+	if _, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, Tag: "pizza"}); !errors.Is(err, store.ErrUnknownRef) {
+		t.Errorf("AddSlotRule with Course 0 = %v, want ErrUnknownRef (the HTTP layer and the runner default to the main Course before the store)", err)
+	}
+	if n := f.count(t, `SELECT count(*) FROM planned_meals`); n != 0 {
+		t.Errorf("%d meals written under Course 0", n)
+	}
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
+	if _, err := f.st.Meal(ctx, zero); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("Meal(Course 0) = %v, want ErrNotFound (it must not mean the main Course)", err)
+	}
+	if err := f.st.SetPinned(ctx, zero, true); err == nil {
+		t.Error("SetPinned by Course 0 succeeded")
+	}
+	if _, ok, _ := f.st.LeftoverFrom(ctx, zero); ok {
+		t.Error("LeftoverFrom(Course 0) found a Leftover")
 	}
 }
 
@@ -92,7 +111,7 @@ func (f *fixture) count(t *testing.T, q string, args ...any) int {
 func TestTwoCoursesOfOneSlotAndDateAreTwoPlannedMeals(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	main, _ := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, Portions: 3, State: plan.StatePlanned})
+	main, _ := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, Portions: 3, State: plan.StatePlanned})
 	side, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.soup, Batches: 1, Portions: 3, State: plan.StatePlanned})
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +121,7 @@ func TestTwoCoursesOfOneSlotAndDateAreTwoPlannedMeals(t *testing.T) {
 	}
 	// Replacing the Side leaves the Main alone, and the other way round.
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.pasta, Batches: 1, Portions: 3, State: plan.StatePlanned, Pinned: true})
-	got, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0))
+	got, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main))
 	if got.RecipeID != f.chicken || got.Pinned {
 		t.Errorf("Main changed by saving the Side: %+v", got)
 	}
@@ -111,7 +130,7 @@ func TestTwoCoursesOfOneSlotAndDateAreTwoPlannedMeals(t *testing.T) {
 		t.Errorf("Side = %+v, want the same row replaced and Pinned", got)
 	}
 	// Pin, resolve, why and delete act on one Course only.
-	if err := f.st.SetPinned(ctx, f.ck("2026-11-10", f.dinner, 0), true); err != nil {
+	if err := f.st.SetPinned(ctx, f.ck("2026-11-10", f.dinner, c.main), true); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.st.MarkResolved(ctx, f.ck("2026-11-10", f.dinner, c.side), plan.StateCooked); err != nil {
@@ -120,7 +139,7 @@ func TestTwoCoursesOfOneSlotAndDateAreTwoPlannedMeals(t *testing.T) {
 	if err := f.st.SetWhy(ctx, f.ck("2026-11-10", f.dinner, c.side), []plan.Why{{Code: "favourite"}}); err != nil {
 		t.Fatal(err)
 	}
-	m, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0))
+	m, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main))
 	s, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.side))
 	if !m.Pinned || m.State != plan.StatePlanned || len(m.Why) != 0 || s.State != plan.StateCooked || len(s.Why) != 1 {
 		t.Errorf("Main = %+v, Side = %+v", m, s)
@@ -128,7 +147,7 @@ func TestTwoCoursesOfOneSlotAndDateAreTwoPlannedMeals(t *testing.T) {
 	if err := f.st.DeleteMeal(ctx, f.ck("2026-11-10", f.dinner, c.side)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0)); err != nil {
+	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main)); err != nil {
 		t.Errorf("deleting the Side deleted the Main: %v", err)
 	}
 	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.side)); !errors.Is(err, store.ErrNotFound) {
@@ -144,8 +163,8 @@ func TestMealsAreOrderedByDateSlotThenCourseOrder(t *testing.T) {
 	c := f.courses(t)
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.dessert), RecipeID: f.soup, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.pasta, State: plan.StatePlanned})
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, State: plan.StatePlanned})
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-09", f.lunch, 0), RecipeID: f.chicken, State: plan.StatePlanned})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, State: plan.StatePlanned})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-09", f.lunch, c.main), RecipeID: f.chicken, State: plan.StatePlanned})
 	meals, err := f.st.Meals(ctx, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -154,27 +173,27 @@ func TestMealsAreOrderedByDateSlotThenCourseOrder(t *testing.T) {
 	for _, m := range meals {
 		got = append(got, m.Key)
 	}
-	want := []plan.Key{f.ck("2026-11-09", f.lunch, 0), f.ck("2026-11-10", f.dinner, 0), f.ck("2026-11-10", f.dinner, c.side), f.ck("2026-11-10", f.dinner, c.dessert)}
+	want := []plan.Key{f.ck("2026-11-09", f.lunch, c.main), f.ck("2026-11-10", f.dinner, c.main), f.ck("2026-11-10", f.dinner, c.side), f.ck("2026-11-10", f.dinner, c.dessert)}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Meals order = %v, want %v (household Course order within a slot, the main Course as 0)", got, want)
 	}
 }
 
 // A map keyed by the keys the callers use (SlotInfo.Key, reconcile) must find what the store returns.
-func TestLookupsByPlanKeyDoNotMissUnderTheShim(t *testing.T) {
+func TestEveryReadGivesTheRealCourseIDSoMapsByKeyFindThem(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-11", f.lunch, c.main), RecipeID: f.pasta, Batches: 1, State: plan.StatePlanned}) // saved by the real id
 	f.st.Apply(ctx, plan.Changes{Unfilled: []plan.Unfilled{
-		{Key: f.ck("2026-11-12", f.dinner, 0), Reason: "no_candidates"},
+		{Key: f.ck("2026-11-12", f.dinner, c.main), Reason: "no_candidates"},
 		{Key: f.ck("2026-11-12", f.dinner, c.side), Reason: "no_course_recipes"},
 		{Key: f.ck("2026-11-13", f.lunch, c.main), Reason: "no_attendance"}, // by the real id
 	}})
 
-	// What a SlotInfo carries today is CourseID 0 for the main Course.
-	slotKeys := []plan.Key{f.ck("2026-11-10", f.dinner, 0), f.ck("2026-11-11", f.lunch, 0)}
+	// A SlotInfo carries the real id of every Course (the main one too).
+	slotKeys := []plan.Key{f.ck("2026-11-10", f.dinner, c.main), f.ck("2026-11-11", f.lunch, c.main)}
 	meals, _ := f.st.Meals(ctx, "", "")
 	byKey := map[plan.Key]plan.Meal{}
 	for _, m := range meals {
@@ -188,8 +207,10 @@ func TestLookupsByPlanKeyDoNotMissUnderTheShim(t *testing.T) {
 	if _, ok := byKey[f.ck("2026-11-10", f.dinner, c.side)]; !ok {
 		t.Error("the Side's key (its real id) is missing")
 	}
-	if _, ok := byKey[f.ck("2026-11-10", f.dinner, c.main)]; ok {
-		t.Error("the main Course must read back as 0, never as its real id, while the shim lasts")
+	for k := range byKey {
+		if k.CourseID == 0 {
+			t.Errorf("Meals() returned the key %+v with Course 0", k)
+		}
 	}
 
 	// Unfilled reasons: same form, so reconcile's lookups by SlotInfo.Key hit.
@@ -201,7 +222,7 @@ func TestLookupsByPlanKeyDoNotMissUnderTheShim(t *testing.T) {
 	for _, u := range unfilled {
 		uby[u.Key] = u
 	}
-	for _, k := range []plan.Key{f.ck("2026-11-12", f.dinner, 0), f.ck("2026-11-13", f.lunch, 0), f.ck("2026-11-12", f.dinner, c.side)} {
+	for _, k := range []plan.Key{f.ck("2026-11-12", f.dinner, c.main), f.ck("2026-11-13", f.lunch, c.main), f.ck("2026-11-12", f.dinner, c.side)} {
 		if _, ok := uby[k]; !ok {
 			t.Errorf("a map built from Unfilled() misses %+v (keys: %v)", k, unfilledKeys(uby))
 		}
@@ -210,30 +231,30 @@ func TestLookupsByPlanKeyDoNotMissUnderTheShim(t *testing.T) {
 		t.Error("the new reason no_course_recipes must be stored as it is")
 	}
 
-	// Apply's Deletes, Upserts and ClearUnfilled accept either form of the main Course and hit the same cell.
+	// Apply's Deletes, Upserts and ClearUnfilled hit the cell the real id names.
 	err := f.st.Apply(ctx, plan.Changes{
 		Deletes:       []plan.Key{f.ck("2026-11-10", f.dinner, c.main)},
-		Upserts:       []plan.Meal{{Key: f.ck("2026-11-11", f.lunch, 0), RecipeID: f.soup, Batches: 1, Portions: 2, State: plan.StatePlanned}},
-		ClearUnfilled: []plan.Key{f.ck("2026-11-12", f.dinner, c.main), f.ck("2026-11-13", f.lunch, 0)},
+		Upserts:       []plan.Meal{{Key: f.ck("2026-11-11", f.lunch, c.main), RecipeID: f.soup, Batches: 1, Portions: 2, State: plan.StatePlanned}},
+		ClearUnfilled: []plan.Key{f.ck("2026-11-12", f.dinner, c.main), f.ck("2026-11-13", f.lunch, c.main)},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0)); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("Delete by the main Course's id left the meal: %v", err)
+	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main)); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("Delete left the meal: %v", err)
 	}
 	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.side)); err != nil {
 		t.Errorf("the Side was deleted with the Main: %v", err)
 	}
 	if m, _ := f.st.Meal(ctx, f.ck("2026-11-11", f.lunch, c.main)); m.RecipeID != f.soup {
-		t.Errorf("Upsert by 0 did not replace the meal saved by the real id: %+v", m)
+		t.Errorf("Upsert did not replace the meal saved before: %+v", m)
 	}
 	if n := f.count(t, `SELECT count(*) FROM planned_meals WHERE date = '2026-11-11'`); n != 1 {
-		t.Errorf("%d meals on the 11th, want 1 (0 and the real id are one cell)", n)
+		t.Errorf("%d meals on the 11th, want 1 (one cell)", n)
 	}
 	left, _ := f.st.Unfilled(ctx, "", "")
 	if len(left) != 1 || left[0].Key != f.ck("2026-11-12", f.dinner, c.side) {
-		t.Errorf("Unfilled after ClearUnfilled by either form = %+v, want only the Side's", left)
+		t.Errorf("Unfilled after ClearUnfilled = %+v, want only the Side's", left)
 	}
 }
 
@@ -256,16 +277,16 @@ func unfilledKeys(m map[plan.Key]plan.Unfilled) []plan.Key {
 func TestApplyKeepsPinnedCookedAndSkippedPerCourse(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, State: plan.StatePlanned, Pinned: true})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, State: plan.StatePlanned, Pinned: true})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.soup, State: plan.StatePlanned})
 	err := f.st.Apply(ctx, plan.Changes{
-		Deletes: []plan.Key{f.ck("2026-11-10", f.dinner, 0), f.ck("2026-11-10", f.dinner, c.side)},
-		Upserts: []plan.Meal{{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.pasta, State: plan.StatePlanned}},
+		Deletes: []plan.Key{f.ck("2026-11-10", f.dinner, c.main), f.ck("2026-11-10", f.dinner, c.side)},
+		Upserts: []plan.Meal{{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.pasta, State: plan.StatePlanned}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0)); err != nil || m.RecipeID != f.chicken {
+	if m, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main)); err != nil || m.RecipeID != f.chicken {
 		t.Errorf("the Pinned Main was touched: %+v, %v", m, err)
 	}
 	if _, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.side)); !errors.Is(err, store.ErrNotFound) {
@@ -276,7 +297,7 @@ func TestApplyKeepsPinnedCookedAndSkippedPerCourse(t *testing.T) {
 func TestRelaxedRoundTripsAndIsClearedByAnUpsertThatIsNotRelaxed(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	saved, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned,
+	saved, err := f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned,
 		Relaxed: true, Why: []plan.Why{{Code: "cooldown_relaxed", Date: "2026-11-07", RecipeID: f.chicken}}})
 	if err != nil || !saved.Relaxed {
 		t.Fatalf("SaveMeal = %+v, %v; want Relaxed true", saved, err)
@@ -290,10 +311,10 @@ func TestRelaxedRoundTripsAndIsClearedByAnUpsertThatIsNotRelaxed(t *testing.T) {
 	}
 	// A relaxed Side beside it, and a run's upsert that is strict now: it loses the flag.
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.soup, State: plan.StatePlanned, Relaxed: true})
-	if err := f.st.Apply(ctx, plan.Changes{Upserts: []plan.Meal{{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned}}}); err != nil {
+	if err := f.st.Apply(ctx, plan.Changes{Upserts: []plan.Meal{{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned}}}); err != nil {
 		t.Fatal(err)
 	}
-	if m, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0)); m.Relaxed {
+	if m, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main)); m.Relaxed {
 		t.Error("the strict upsert must clear Relaxed")
 	}
 	if m, _ := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.side)); !m.Relaxed {
@@ -308,14 +329,14 @@ func TestRelaxedRoundTripsAndIsClearedByAnUpsertThatIsNotRelaxed(t *testing.T) {
 func TestLeftoverSourcesAndDependantsUseTheCourseOfTheCookedMeal(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	mainSrc, sideSrc := f.ck("2026-11-10", f.dinner, 0), f.ck("2026-11-10", f.dinner, c.side)
+	mainSrc, sideSrc := f.ck("2026-11-10", f.dinner, c.main), f.ck("2026-11-10", f.dinner, c.side)
 	f.st.SaveMeal(ctx, plan.Meal{Key: mainSrc, RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: sideSrc, RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
 	// Planned Meals served from each source (the Side's Leftover feeds a Starter on the 12th).
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-11", f.dinner, 0), RecipeID: f.chicken, Portions: 2, State: plan.StatePlanned, From: &plan.Source{From: mainSrc}})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-11", f.dinner, c.main), RecipeID: f.chicken, Portions: 2, State: plan.StatePlanned, From: &plan.Source{From: mainSrc}})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-12", f.dinner, c.starter), RecipeID: f.soup, Portions: 2, State: plan.StatePlanned, From: &plan.Source{From: sideSrc}})
 
-	m, _ := f.st.Meal(ctx, f.ck("2026-11-11", f.dinner, 0))
+	m, _ := f.st.Meal(ctx, f.ck("2026-11-11", f.dinner, c.main))
 	if m.From == nil || m.From.From != mainSrc {
 		t.Errorf("source of the main meal = %+v, want %+v (the main Course reads back as 0)", m.From, mainSrc)
 	}
@@ -325,7 +346,7 @@ func TestLeftoverSourcesAndDependantsUseTheCourseOfTheCookedMeal(t *testing.T) {
 	}
 	for _, src := range []plan.Key{mainSrc, f.ck("2026-11-10", f.dinner, c.main)} {
 		deps, err := f.st.Dependants(ctx, src)
-		if err != nil || len(deps) != 1 || deps[0].Key != f.ck("2026-11-11", f.dinner, 0) {
+		if err != nil || len(deps) != 1 || deps[0].Key != f.ck("2026-11-11", f.dinner, c.main) {
 			t.Errorf("Dependants(%+v) = %+v, %v; want just the main meal of the 11th", src, deps, err)
 		}
 	}
@@ -350,7 +371,7 @@ func TestLeftoverSourcesAndDependantsUseTheCourseOfTheCookedMeal(t *testing.T) {
 	if err := f.st.LinkLeftover(ctx, f.ck("2026-11-10", f.dinner, c.main), lm.ID); err != nil {
 		t.Fatal(err)
 	}
-	if m, _ := f.st.Meal(ctx, f.ck("2026-11-11", f.dinner, 0)); m.From.LeftoverID != lm.ID {
+	if m, _ := f.st.Meal(ctx, f.ck("2026-11-11", f.dinner, c.main)); m.From.LeftoverID != lm.ID {
 		t.Errorf("LinkLeftover by the real id missed the dependant: %+v", m.From)
 	}
 	if s, _ := f.st.Meal(ctx, f.ck("2026-11-12", f.dinner, c.starter)); s.From.LeftoverID != 0 {
@@ -371,7 +392,7 @@ func TestLeftoverSourcesAndDependantsUseTheCourseOfTheCookedMeal(t *testing.T) {
 	}
 	all, _ := f.st.Leftovers(ctx)
 	for _, l := range all {
-		if l.ID == lm.ID && l.From.CourseID != 0 || l.ID == ls.ID && l.From.CourseID != c.side {
+		if l.ID == lm.ID && l.From.CourseID != c.main || l.ID == ls.ID && l.From.CourseID != c.side {
 			t.Errorf("Leftovers() From = %+v", l.From)
 		}
 	}
@@ -387,8 +408,8 @@ func TestLeftoverSourcesAndDependantsUseTheCourseOfTheCookedMeal(t *testing.T) {
 func TestSlotRulesCarryTheirCourse(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	mainRule, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, Tag: "pizza"}) // CourseID 0: the main Course
-	if err != nil || mainRule.CourseID != 0 {
+	mainRule, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, CourseID: c.main, Tag: "pizza"})
+	if err != nil || mainRule.CourseID != c.main {
 		t.Fatalf("AddSlotRule(0) = %+v, %v", mainRule, err)
 	}
 	if got := f.rawCourse(t, "slot_rules", "id = ?", mainRule.ID); got != c.main {
@@ -417,7 +438,7 @@ func TestUnfilledCarriesTheCourseAndTheNewReason(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
 	want := []plan.Unfilled{
-		{Key: f.ck("2026-11-13", f.dinner, 0), Reason: "no_candidates", SlotRuleClaimed: true, Eliminated: plan.Eliminations{Considered: 3, Exclusion: 1, AdvanceStep: 2}},
+		{Key: f.ck("2026-11-13", f.dinner, c.main), Reason: "no_candidates", SlotRuleClaimed: true, Eliminated: plan.Eliminations{Considered: 3, Exclusion: 1, AdvanceStep: 2}},
 		{Key: f.ck("2026-11-13", f.dinner, c.side), Reason: "no_course_recipes"},
 		{Key: f.ck("2026-11-13", f.dinner, c.dessert), Reason: "no_attendance"},
 	}
@@ -443,7 +464,7 @@ func TestHistoryCountsARecipeCookedInAnyCourse(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-05", f.dinner, c.side), RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-07", f.dinner, 0), RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-07", f.dinner, c.main), RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-06", f.dinner, c.dessert), RecipeID: f.pasta, Batches: 1, State: plan.StatePlanned})
 	got, err := f.st.History(ctx, "2026-11-09")
 	if err != nil {
@@ -458,21 +479,19 @@ func TestHistoryCountsARecipeCookedInAnyCourse(t *testing.T) {
 	}
 }
 
-func TestTheShimFollowsTheMainFlagWhenItMoves(t *testing.T) {
+func TestMakeMainChangesNoKey(t *testing.T) {
 	f := newFixture(t)
 	c := f.courses(t)
-	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, 0), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
+	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.main), RecipeID: f.chicken, Batches: 1, State: plan.StatePlanned})
 	f.st.SaveMeal(ctx, plan.Meal{Key: f.ck("2026-11-10", f.dinner, c.side), RecipeID: f.soup, Batches: 1, State: plan.StatePlanned})
-	// Make main: the flag moves in one step; no Planned Meal changes.
+	// Make main: the flag moves in one step; no Planned Meal and no key changes.
 	f.db.Exec(`UPDATE courses SET is_main = 0 WHERE id = ?`, c.main)
 	f.db.Exec(`UPDATE courses SET is_main = 1 WHERE id = ?`, c.side)
-	m0, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, 0))
-	if err != nil || m0.RecipeID != f.soup {
-		t.Errorf("after Make main, CourseID 0 is the new main Course (the Soup row): %+v, %v", m0, err)
-	}
-	old, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, c.main))
-	if err != nil || old.RecipeID != f.chicken || old.Key.CourseID != c.main {
-		t.Errorf("the former main Course is an ordinary Course now: %+v, %v (key must carry its real id)", old, err)
+	for course, recipe := range map[int64]int64{c.main: f.chicken, c.side: f.soup} {
+		m, err := f.st.Meal(ctx, f.ck("2026-11-10", f.dinner, course))
+		if err != nil || m.RecipeID != recipe || m.Key.CourseID != course {
+			t.Errorf("Meal(course %d) after Make main = %+v, %v; want recipe %d under the same real id", course, m, err, recipe)
+		}
 	}
 }
 

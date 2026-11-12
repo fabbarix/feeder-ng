@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { meal } from '../test-utils'
-import type { PlanSlot } from '../types'
+import type { PlanEntry } from '../types'
 import { summarizeSlots } from './couldntSummary'
 
 /** Tue 2026-11-10 .. Mon 2026-11-16 (a 7-day horizon); Dinner every day, Breakfast only Sat and Sun, Lunch Mon to Fri. */
 const days = ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16']
-function s(date: string, name: string, id: number): PlanSlot {
-  return { date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } }, rules: [] }
+function s(date: string, name: string, id: number): PlanEntry {
+  const entry: Omit<PlanEntry, 'courseId' | 'courseName'> = { date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 2, meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } }, rules: [] }
+  return entry as PlanEntry // the course-less shape: no Course named
 }
 /** A slot whose time has gone: no Planned Meal and no reason (the planner never plans the past). */
-function past(date: string, name: string, id: number): PlanSlot {
+function past(date: string, name: string, id: number): PlanEntry {
   return { ...s(date, name, id), unfilled: null }
 }
 const dinners = days.map((d, i) => s(d, 'Dinner', 100 + i))

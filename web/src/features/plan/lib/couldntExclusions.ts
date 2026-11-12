@@ -1,7 +1,7 @@
 // CRS G2 (RX, docs/dev/design/crs-g2.md section 3): the Review Exclusions page. Plain TypeScript, no React.
 import { planStrings as s } from '../strings'
-import type { ExclusionCell, ExclusionRecord, MemberRef, PlanSlot } from '../types'
-import { causeOf, cellItems, groupByCause, type CauseItem } from './couldntGroups'
+import type { ExclusionCell, ExclusionRecord, MemberRef, PlanEntry, PlanSlot } from '../types'
+import { causeOf, cellItems, courseCells, groupByCause, type CauseItem } from './couldntGroups'
 import { summarizeCells } from './couldntSummary'
 
 /** A piece of the first line of an Exclusion row; `strong` is the Member and the thing excluded, `to` makes it a link. */
@@ -39,7 +39,7 @@ function joinAnd(names: string[]): string {
 }
 
 /** The API's cells as flat Couldn't plan entries (reason `no_candidates`, name = the Meal Slot name), for the grouping code of the tile. */
-export function cellsAsEntries(cells: ExclusionCell[]): PlanSlot[] {
+export function cellsAsEntries(cells: ExclusionCell[]): PlanEntry[] {
   return cells.map((c) => ({
     date: c.date,
     mealSlotId: c.mealSlotId,
@@ -64,7 +64,7 @@ export function excludedCells(cells: ExclusionCell[]): ExclusionCell[] {
 export function excludedSummary(cells: ExclusionCell[], slots: PlanSlot[]): string | null {
   const held = excludedCells(cells)
   if (held.length === 0) return null
-  const group = groupByCause(cellsAsEntries(held), slots).find((g) => g.cause === 'excluded')
+  const group = groupByCause(cellsAsEntries(held), courseCells(slots)).find((g) => g.cause === 'excluded')
   return group ? group.headline : null
 }
 
@@ -89,8 +89,8 @@ export function explanationGroups(cells: ExclusionCell[], slots: PlanSlot[]): Ex
       courseId: first.courseId,
       courseName: first.courseName,
       cells: group,
-      summary: summarizeCells(entries, slots),
-      items: cellItems(entries, slots),
+      summary: summarizeCells(entries, courseCells(slots)),
+      items: cellItems(entries, courseCells(slots)),
       attendance: first.attendance,
       optOuts: first.optOuts,
       exclusions: first.exclusions,

@@ -49,17 +49,22 @@ func reheatTimeSteps(sc *godog.ScenarioContext, w *World) {
 	mealReheat := func(date string) (any, bool, error) {
 		var v struct {
 			Slots []struct {
-				Date string         `json:"date"`
-				Meal map[string]any `json:"meal"`
+				Date    string `json:"date"`
+				Courses []struct {
+					Main bool           `json:"main"`
+					Meal map[string]any `json:"meal"`
+				} `json:"courses"`
 			} `json:"slots"`
 		}
 		if err := w.Last.JSON(&v); err != nil {
 			return nil, false, err
 		}
 		for _, s := range v.Slots {
-			if s.Date == date && s.Meal != nil {
-				x, ok := s.Meal["reheatMinutes"]
-				return x, ok, nil
+			for _, c := range s.Courses {
+				if s.Date == date && c.Main && c.Meal != nil {
+					x, ok := c.Meal["reheatMinutes"]
+					return x, ok, nil
+				}
 			}
 		}
 		return nil, false, fmt.Errorf("no Planned Meal on %s in %s", date, w.Last.Body)

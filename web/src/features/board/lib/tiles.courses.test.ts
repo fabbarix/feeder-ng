@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { boardSlots, hasPlanned, startCookPath, tomorrowLine, tomorrowSlots, tonightMeal, tonightRows } from './tiles'
 import type { CourseLike, SlotLike } from '../types'
 
+// A slot carries no meal of its own (crs-c3); a few cases give one anyway to prove it is ignored.
+type LegacySlot = SlotLike & { meal?: CourseLike['meal'] }
+
 const meal = (recipeName: string, state: 'planned' | 'cooked' | 'skipped' = 'planned', wholeMeal = false) => ({ recipeId: 1, recipeName, batches: 1, portions: 4, state, wholeMeal })
 const course = (courseId: number, name: string, main: boolean, over: Partial<CourseLike> = {}): CourseLike => ({ courseId, name, main, meal: null, ...over })
-const slotOf = (courses: CourseLike[] | undefined, over: Partial<SlotLike> = {}): SlotLike => {
+const slotOf = (courses: CourseLike[] | undefined, over: Partial<LegacySlot> = {}): LegacySlot => {
   const m = courses?.find((c) => c.main)?.meal ?? null
   return { date: '2026-11-09', mealSlotId: 2, name: 'Dinner', time: '19:00', at: '2026-11-09T19:00:00Z', meal: m, courses, ...over }
 }
@@ -32,10 +35,16 @@ describe('hasPlanned', () => {
     expect(hasPlanned(slotOf([course(1, 'Main', true)]))).toBe(false)
   })
 
-  it('without `courses` it is the slot\'s meal, as before', () => {
-    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew') }))).toBe(true)
-    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew', 'cooked') }))).toBe(false)
-    expect(hasPlanned(slotOf(undefined, { meal: null }))).toBe(false)
+  // C3: the server sends no `meal` on a slot; only the Course rows count.
+  it('without `courses` nothing is planned, whatever an old `meal` field says', () => {
+    expect(hasPlanned(slotOf(undefined, { meal: meal('Stew') }))).toBe(false)
+    expect(hasPlanned(slotOf([], { meal: meal('Stew') }))).toBe(false)
+  })
+
+  it('reads the Course rows of a slot that has no `meal` at all', () => {
+    const s = slotOf(roastAndBeans()) as Partial<LegacySlot>
+    delete s.meal
+    expect(hasPlanned(s as SlotLike)).toBe(true)
   })
 })
 
@@ -75,14 +84,19 @@ describe('tonightRows', () => {
     expect(rows.map((r) => r.courseName)).toEqual(['Main'])
   })
 
-  it('a slot without `courses` is one row from its meal', () => {
-    expect(tonightRows(slotOf(undefined, { meal: meal('Chicken stew') })).map((r) => r.recipeName)).toEqual(['Chicken stew'])
+  it('a slot without `courses` has no rows: there is no made-up main Course with the id 0', () => {
+    expect(tonightRows(slotOf(undefined, { meal: meal('Chicken stew') }))).toEqual([])
+  })
+
+  it('every row carries the real id of its Course', () => {
+    const rows = tonightRows(slotOf(roastAndBeans()))
+    expect(rows.map((r) => r.courseId)).toEqual([1, 2])
+    expect(rows.every((r) => r.courseId > 0)).toBe(true)
   })
 })
 
 describe('tomorrowLine', () => {
   it('one Course reads exactly as before: "Dinner · Chicken stew"', () => {
-    expect(tomorrowLine(slotOf(undefined, { meal: meal('Chicken stew') }))).toBe('Dinner · Chicken stew')
     expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner · Chicken stew')
   })
 

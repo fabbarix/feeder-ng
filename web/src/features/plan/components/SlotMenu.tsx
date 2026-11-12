@@ -2,14 +2,14 @@ import type { ReactNode } from 'react'
 import { Menu, type MenuEntry } from '../../../ui'
 import { slotMenu } from '../lib/courses'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotKey } from '../types'
+import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 
 export interface SlotMenuProps {
   slot: PlanSlot
   today: string
   /** The slot, `{ date, mealSlotId }`. */
-  onMarkAllCooked: (slot: SlotKey) => void
-  onNotCookedSlot: (slot: SlotKey) => void
+  onMarkAllCooked: (slot: SlotDayKey) => void
+  onNotCookedSlot: (slot: SlotDayKey) => void
   /** The key of the empty Course (courseId included). */
   onAddCourse: (key: SlotKey) => void
 }
@@ -21,7 +21,7 @@ export interface SlotMenuProps {
 export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse }: SlotMenuProps): ReactNode {
   const model = slotMenu(slot, today)
   if (!model) return null
-  const slotKey: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const items: MenuEntry[] = []
   if (model.markAllCooked) items.push({ id: 'mark-all-cooked', label: s.markAllCooked, onSelect: () => onMarkAllCooked(slotKey) })
   if (model.notCookedSlot) items.push({ id: 'not-cooked-slot', label: s.notCookedSlot, onSelect: () => onNotCookedSlot(slotKey) })

@@ -12,10 +12,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
-// Team C2 (docs/dev/design/crs-c2.md §4): the Courses of a slot in the runner. The store keeps the main Course as 0
-// (the transition shim, crs-plan §2.2). Inside the actions the runner works in the store's form, because the
-// dependant and Leftover matching compares keys the store wrote; the views return real ids (CourseView.CourseID is
-// always real, and the HTTP layer maps a stored 0 to the main Course's id).
+// Team C2 (docs/dev/design/crs-c2.md §4): the Courses of a slot in the runner. Every key is the real id of its
+// Course, the main Course included (crs-c3 §3: the store shim is gone).
 
 // Errors of the Course routes; the HTTP layer maps them (design note §3.2).
 var (
@@ -59,21 +57,6 @@ func (r *Runner) MainCourseID(ctx context.Context) (int64, error) {
 	var id int64
 	err := r.d.DB.QueryRowContext(ctx, `SELECT id FROM courses WHERE is_main = 1`).Scan(&id)
 	return id, err
-}
-
-// storeKey is key in the store's form: the main Course is 0, every other Course its id.
-func (r *Runner) storeKey(ctx context.Context, key plan.Key) (plan.Key, error) {
-	if key.CourseID == 0 {
-		return key, nil
-	}
-	main, err := r.MainCourseID(ctx)
-	if err != nil {
-		return plan.Key{}, err
-	}
-	if key.CourseID == main {
-		key.CourseID = 0
-	}
-	return key, nil
 }
 
 // occurrence reads one slot occurrence: its Attendance and its Courses in the slot's order.
@@ -140,38 +123,21 @@ func optOutsOf(slot, course []plan.Attendee) []int64 {
 	return out
 }
 
-// slotOrder sorts the store-form Planned Meals of one occurrence into the slot's Course order.
+// slotOrder sorts the Planned Meals of one occurrence into the slot's Course order.
 func slotOrder(si plan.SlotInfo, meals []plan.Meal) []plan.Meal {
-	norm := plan.NormaliseCourses([]plan.SlotInfo{si})
 	pos := map[int64]int{}
 	for i, c := range si.Courses {
 		pos[c.CourseID] = i
 	}
 	out := append([]plan.Meal(nil), meals...)
 	sort.SliceStable(out, func(i, j int) bool {
-		return pos[norm(out[i].Key).CourseID] < pos[norm(out[j].Key).CourseID]
+		return pos[out[i].Key.CourseID] < pos[out[j].Key.CourseID]
 	})
 	return out
 }
 
-// realCourse is the real Course id of a store-form key in the occurrence.
-func realCourse(si plan.SlotInfo, key plan.Key) int64 {
-	return plan.NormaliseCourses([]plan.SlotInfo{si})(key).CourseID
-}
-
-// withRealIDs returns the occurrence's Planned Meals with their real Course ids (for the views).
-func withRealIDs(si plan.SlotInfo, meals []plan.Meal) []plan.Meal {
-	norm := plan.NormaliseCourses([]plan.SlotInfo{si})
-	out := make([]plan.Meal, 0, len(meals))
-	for _, m := range meals {
-		m.Key = norm(m.Key)
-		out = append(out, m)
-	}
-	return out
-}
-
-// courseViews builds the Course rows of one occurrence in the slot's order, then its history rows. meals are the
-// occurrence's Planned Meals with real keys (withRealIDs); unfilled is keyed the same way; whole reports the Whole meals.
+// courseViews builds the Course rows of one occurrence in the slot's order, then its history rows. unfilled is keyed
+// by the cell's key; whole reports the Whole meals.
 func courseViews(si plan.SlotInfo, meals []plan.Meal, unfilled map[plan.Key]plan.Unfilled, whole func(int64) bool) []CourseView {
 	mealOf := map[int64]plan.Meal{}
 	for _, m := range meals {
@@ -220,16 +186,10 @@ func courseViews(si plan.SlotInfo, meals []plan.Meal, unfilled map[plan.Key]plan
 	return out
 }
 
-// occurrenceView is the SlotView of one occurrence with its Course rows: the main Course's meal and reason are the
-// slot's aliases (crs-c2 §3.1).
+// occurrenceView is the SlotView of one occurrence with its Course rows.
 func occurrenceView(in info, si plan.SlotInfo, cells []CourseView) SlotView {
 	sv := slotOf(in, si)
 	sv.Courses = cells
-	for _, c := range cells {
-		if c.Main && !c.History {
-			sv.Meal, sv.Unfilled = c.Meal, c.Unfilled
-		}
-	}
 	return sv
 }
 
@@ -418,7 +378,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			if m.State != plan.StatePlanned {
 				continue
 			}
-			real := realCourse(si, m.Key)
+			real := m.Key.CourseID
 			lo := listed[real].LeftoverPortions
 			i, ok := index[real]
 			if !ok {
@@ -465,7 +425,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 // source; fresh ones return the Stock they need and record their Leftover). index is the request's entry (-1: none).
 func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
 	recipes []planner.Recipe, listedPortions *float64, index int) ([]Need, *plan.Leftover, error) {
-	need := attendancePortions(courseAttendance(si, realCourse(si, m.Key)))
+	need := attendancePortions(courseAttendance(si, m.Key.CourseID))
 	if !m.Fresh() {
 		src, err := r.leftoverSource(ctx, st, m)
 		if err != nil {
@@ -538,7 +498,7 @@ func combineNeeds(needs []Need) []Need {
 // findMeal is the Planned Meal of a real Course id in a day of the occurrence.
 func findMeal(si plan.SlotInfo, day []plan.Meal, course int64) (plan.Meal, bool) {
 	for _, m := range day {
-		if realCourse(si, m.Key) == course {
+		if m.Key.CourseID == course {
 			return m, true
 		}
 	}

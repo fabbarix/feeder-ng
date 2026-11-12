@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { DINNER, EXCLUDED, NO_COURSE_RECIPES, NOBODY, WEEK, dinner, empty, flat, lone, otherSlot, planned, sideWeek, unfilled } from '../couldnt-fixtures'
 import { planStrings } from '../strings'
 import { planCourse } from '../test-utils'
+import type { PlanEntry, PlanSlot, Unfilled } from '../types'
 import { causeOf, courseCells, groupByCause, shortReason, toneOf, toneStyle, unplannedOf } from './couldntGroups'
+
+// C3: a slot with no `courses` at all (nothing to make a cell from).
+const bare = (date: string, reason: Unfilled | null) => ({ ...lone(date, reason), courses: undefined }) as unknown as PlanSlot
 
 describe('causeOf: the new cause, and the two that are gone', () => {
   it('reason no_course_recipes is its own cause, with or without Recipes counted', () => {
@@ -80,9 +84,9 @@ describe('courseCells: one flat cell per Course that holds a Planned Meal or a r
     expect(courseCells(once)).toEqual(once)
   })
 
-  it('a slot without courses is one cell, itself (a Household before Courses)', () => {
-    const old = lone('2026-11-10', EXCLUDED)
-    expect(courseCells([old])).toEqual([old])
+  // C3: every slot and every flat entry the server sends names its Course; a "slot without Courses" is not a cell.
+  it('a slot without courses and without a courseId is not a cell (there is no course-less cell)', () => {
+    expect(courseCells([bare('2026-11-10', EXCLUDED)])).toEqual([])
   })
 
   it('a slot whose time has gone (no meal, no reason, no Course holding either) gives nothing', () => {
@@ -93,27 +97,33 @@ describe('courseCells: one flat cell per Course that holds a Planned Meal or a r
 
 describe('unplannedOf: the Courses the planner left empty with a reason', () => {
   it('keeps only the Side that has a reason, as a cell with its Course', () => {
-    const cells = unplannedOf(sideWeek(['2026-11-12']))
+    const cells = unplannedOf(courseCells(sideWeek(['2026-11-12'])))
     expect(cells).toHaveLength(1)
     expect(cells[0]).toMatchObject({ date: '2026-11-12', courseId: 2, courseName: 'Side', meal: null, unfilled: EXCLUDED })
   })
 
   it('a slot with no Course left empty gives nothing; an optional Course left empty (no reason) is not unplanned', () => {
     const dessert = planCourse({ courseId: 3, name: 'Dessert', main: false, optional: true, unserved: 'optional' })
-    expect(unplannedOf([dinner('2026-11-10', [planned(1, 'Main'), dessert])])).toEqual([])
+    expect(unplannedOf(courseCells([dinner('2026-11-10', [planned(1, 'Main'), dessert])]))).toEqual([])
   })
 
-  it('still works on flat API entries and on slots without courses', () => {
+  it('still works on flat API entries; an entry with no Course is dropped', () => {
     const a = flat('2026-11-10', 2, 'Side', NO_COURSE_RECIPES)
-    const b = lone('2026-11-11', NOBODY)
-    expect(unplannedOf([a, b])).toEqual([a, b])
+    const b = bare('2026-11-11', NOBODY)
+    expect(unplannedOf(courseCells([a, b]))).toEqual([a])
+  })
+
+  it('the id of a line is built from the real Course id', () => {
+    const slots = sideWeek(['2026-11-12'])
+    const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
+    expect(g!.items[0]!.id).toBe('cell-2026-11-12-4-2')
   })
 })
 
 describe('groupByCause: counts, names and lines', () => {
   it('every Side excluded: "Couldn\'t plan 7 Sides." with one line per Side, each naming the Course', () => {
     const slots = sideWeek(WEEK)
-    const [g, ...rest] = groupByCause(unplannedOf(slots), slots)
+    const [g, ...rest] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(rest).toEqual([])
     expect(g!.cause).toBe('excluded')
     expect(g!.count).toBe(7)
@@ -125,17 +135,17 @@ describe('groupByCause: counts, names and lines', () => {
 
   it('one Course is singular', () => {
     const slots = sideWeek(['2026-11-12'])
-    expect(groupByCause(unplannedOf(slots), slots)[0]!.headline).toBe("Couldn't plan 1 Side. Every Recipe is excluded for someone who eats it.")
+    expect(groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))[0]!.headline).toBe("Couldn't plan 1 Side. Every Recipe is excluded for someone who eats it.")
   })
 
   it('the Course name is pluralised on its last word', () => {
     const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side dish', EXCLUDED)]), dinner('2026-11-11', [planned(1, 'Main'), empty(2, 'Side dish', EXCLUDED)])]
-    expect(groupByCause(unplannedOf(slots), slots)[0]!.headline).toBe("Couldn't plan 2 Side dishes. Every Recipe is excluded for someone who eats it.")
+    expect(groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))[0]!.headline).toBe("Couldn't plan 2 Side dishes. Every Recipe is excluded for someone who eats it.")
   })
 
   it('a slot whose every Course has the cause is named once, without Courses, and counts both Courses', () => {
     const slots = [dinner('2026-11-13', [empty(1, 'Main', EXCLUDED), empty(2, 'Side', EXCLUDED)])]
-    const [g] = groupByCause(unplannedOf(slots), slots)
+    const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(g!.count).toBe(2)
     expect(g!.headline).toBe("Couldn't plan 2 Courses. Every Recipe is excluded for someone who eats it.")
     expect(g!.items).toHaveLength(1)
@@ -144,14 +154,14 @@ describe('groupByCause: counts, names and lines', () => {
 
   it('different Courses in one cause are "Courses", each line names its Course', () => {
     const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', EXCLUDED)]), dinner('2026-11-11', [planned(1, 'Main'), planned(2, 'Side'), empty(3, 'Dessert', EXCLUDED)])]
-    const [g] = groupByCause(unplannedOf(slots), slots)
+    const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(g!.headline).toBe("Couldn't plan 2 Courses. Every Recipe is excluded for someone who eats it.")
     expect(g!.items.map((i) => i.text)).toEqual(['Tue 10 Nov · Dinner · Side', 'Wed 11 Nov · Dinner · Dessert'])
   })
 
   it('Nobody attends counts Meal Slots, once per slot, however many Courses the slot has', () => {
     const slots = WEEK.slice(0, 3).map((d) => dinner(d, [empty(1, 'Main', NOBODY), empty(2, 'Side', NOBODY)]))
-    const [g] = groupByCause(unplannedOf(slots), slots)
+    const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(g!.cause).toBe('nobody_attending')
     expect(g!.count).toBe(3)
     expect(g!.headline).toBe("Couldn't plan 3 Meal Slots. Nobody is set to attend.")
@@ -163,13 +173,13 @@ describe('groupByCause: counts, names and lines', () => {
   it('the flat entries Today gets, with the plan view as `all`, read the same as the plan view', () => {
     const slots = sideWeek(['2026-11-10', '2026-11-11'])
     const entries = [flat('2026-11-10', 2, 'Side', EXCLUDED), flat('2026-11-11', 2, 'Side', EXCLUDED)]
-    const [g] = groupByCause(entries, slots)
+    const [g] = groupByCause(entries, courseCells(slots))
     expect(g!.headline).toBe("Couldn't plan 2 Sides. Every Recipe is excluded for someone who eats it.")
     expect(g!.items.map((i) => i.text)).toEqual(['Tue 10 Nov · Dinner · Side', 'Wed 11 Nov · Dinner · Side'])
   })
 
   it('a Household with one Course per slot is exactly as before: Meal Slots, no Course names', () => {
-    const cells = [lone('2026-11-10', EXCLUDED), lone('2026-11-11', EXCLUDED)]
+    const cells = [flat('2026-11-10', 1, 'Main', EXCLUDED), flat('2026-11-11', 1, 'Main', EXCLUDED)]
     const [g] = groupByCause(cells)
     expect(g!.headline).toBe("Couldn't plan 2 Meal Slots. Every Recipe is excluded for someone who eats it.")
     expect(g!.items.map((i) => i.text)).toEqual(['Tue 10 Nov · Dinner', 'Wed 11 Nov · Dinner'])
@@ -177,7 +187,7 @@ describe('groupByCause: counts, names and lines', () => {
 
   it('a slot that serves several Courses but only the Main is empty: "Couldn\'t plan 1 Main."', () => {
     const slots = [dinner('2026-11-10', [empty(1, 'Main', unfilled('no_candidates', { considered: 2, advanceStep: 2 }, true)), planned(2, 'Side')])]
-    const [g] = groupByCause(unplannedOf(slots), slots)
+    const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(g!.headline).toBe("Couldn't plan 1 Main. Nothing that matches its Slot Rule is available.")
     expect(g!.items[0]!.text).toBe('Tue 10 Nov · Dinner · Main')
   })
@@ -190,11 +200,11 @@ describe('groupByCause: counts, names and lines', () => {
       dinner('2026-11-12', [planned(1, 'Main'), empty(2, 'Side', unfilled('no_candidates', { considered: 3, advanceStep: 3 }))]),
       dinner('2026-11-13', [planned(1, 'Main'), empty(2, 'Side', unfilled('no_candidates', { considered: 3 }))]),
     ]
-    expect(groupByCause(unplannedOf(slots), slots).map((g) => g.cause)).toEqual(['nobody_attending', 'no_course_recipes', 'excluded', 'advance_step', 'no_fit'])
+    expect(groupByCause(unplannedOf(courseCells(slots)), courseCells(slots)).map((g) => g.cause)).toEqual(['nobody_attending', 'no_course_recipes', 'excluded', 'advance_step', 'no_fit'])
   })
 
   it('a stored Cool-down count is no cause: the cell is filed as No fit, with Choose a Recipe', () => {
-    const [g] = groupByCause([lone('2026-11-10', unfilled('no_candidates', { considered: 3, coolDown: 3 }))])
+    const [g] = groupByCause([lone('2026-11-10', unfilled('no_candidates', { considered: 3, coolDown: 3 })) as PlanEntry]) // a course-less slot, filed as it stands
     expect(g!.cause).toBe('no_fit')
     expect(g!.fix.label).toBe('Choose a Recipe')
   })
@@ -202,7 +212,7 @@ describe('groupByCause: counts, names and lines', () => {
 
 describe('the Excluded cause links to the Review Exclusions page', () => {
   const slots = sideWeek(['2026-11-13', '2026-11-14'])
-  const [g] = groupByCause(unplannedOf(slots), slots)
+  const [g] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
 
   it('its fix is a link to /plan/couldnt-plan/excluded, open to every User', () => {
     expect(g!.fix).toEqual({ kind: 'link', label: 'Review Exclusions', to: '/plan/couldnt-plan/excluded' })
@@ -214,14 +224,14 @@ describe('the Excluded cause links to the Review Exclusions page', () => {
   })
 
   it('other causes have no line links', () => {
-    const [n] = groupByCause([lone('2026-11-10', NOBODY), lone('2026-11-11', NOBODY)])
+    const [n] = groupByCause([lone('2026-11-10', NOBODY) as PlanEntry, lone('2026-11-11', NOBODY) as PlanEntry])
     expect(n!.items.every((i) => i.to === undefined)).toBe(true)
   })
 })
 
 describe('No Recipes for this Course', () => {
   const dessertWeek = WEEK.slice(0, 5).map((d) => dinner(d, [planned(1, 'Main'), empty(3, 'Dessert', NO_COURSE_RECIPES)]))
-  const [g] = groupByCause(unplannedOf(dessertWeek), dessertWeek)
+  const [g] = groupByCause(unplannedOf(courseCells(dessertWeek)), courseCells(dessertWeek))
 
   it('names the Course in the headline', () => {
     expect(g!.cause).toBe('no_course_recipes')
@@ -248,15 +258,15 @@ describe('No Recipes for this Course', () => {
       dinner('2026-11-11', [planned(1, 'Main'), planned(2, 'Side'), empty(3, 'Dessert', NO_COURSE_RECIPES)]),
       dinner('2026-11-12', [planned(1, 'Main'), empty(2, 'Side', NO_COURSE_RECIPES)]),
     ]
-    const [m] = groupByCause(unplannedOf(slots), slots)
+    const [m] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(m!.headline).toBe("Couldn't plan 2 Courses. Some Courses have no Recipes marked for them.")
     expect(m!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Dessert', to: '/recipes?notCourse=3' })
   })
 
-  it('a cell without a Course (an old payload) falls back to the general sentence and the Recipes list', () => {
-    const [o] = groupByCause([lone('2026-11-10', NO_COURSE_RECIPES)])
-    expect(o!.headline).toBe("Couldn't plan 1 Meal Slot. Some Courses have no Recipes marked for them.")
-    expect(o!.fix).toEqual({ kind: 'link', label: 'Mark Recipes', to: '/recipes' })
+  it('cells of several Courses get the general sentence and a link naming the first cell Course (/recipes?notCourse=2)', () => {
+    const [o] = groupByCause([flat('2026-11-10', 2, 'Side', NO_COURSE_RECIPES), flat('2026-11-10', 3, 'Dessert', NO_COURSE_RECIPES)])
+    expect(o!.headline).toBe("Couldn't plan 2 Courses. Some Courses have no Recipes marked for them.")
+    expect(o!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Side', to: '/recipes?notCourse=2' })
   })
 
   it('a Household with one Course per slot: Meal Slots, with the Course named in the sentence', () => {

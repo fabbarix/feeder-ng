@@ -8,13 +8,13 @@ import { NextAdvanceTile, TomorrowTile, TonightTile } from './BoardTiles'
 const meal = (recipeName: string, state: 'planned' | 'cooked' | 'skipped' = 'planned', wholeMeal = false) => ({ recipeId: 1, recipeName, batches: 1, portions: 4, state, wholeMeal })
 const course = (courseId: number, name: string, main: boolean, over: Partial<CourseLike> = {}): CourseLike => ({ courseId, name, main, meal: null, ...over })
 const slotOf = (courses: CourseLike[] | undefined, over: Partial<SlotLike> = {}): SlotLike => ({
-  date: '2026-11-09', mealSlotId: 2, name: 'Dinner', time: '19:00', at: '2026-11-09T19:00:00Z', meal: courses?.find((c) => c.main)?.meal ?? null, courses, ...over,
+  date: '2026-11-09', mealSlotId: 2, name: 'Dinner', time: '19:00', at: '2026-11-09T19:00:00Z', courses, ...over,
 })
 const several = () => slotOf([course(1, 'Main', true, { meal: meal('Roast chicken') }), course(2, 'Side', false, { meal: meal('Green beans') }), course(3, 'Dessert', false, { unserved: 'optional' })])
 
 describe('TonightTile with Courses', () => {
   it('one Course in `courses` renders the same markup as a slot without `courses` (regression guard)', () => {
-    const plain = render(<TonightTile slot={slotOf(undefined, { meal: meal('Chicken stew') })} onCook={() => {}} />)
+    const plain = render(<TonightTile slot={slotOf([course(7, 'Dish', true, { meal: meal('Chicken stew') })])} onCook={() => {}} />)
     const old = plain.container.innerHTML
     plain.unmount()
     const withCourse = render(<TonightTile slot={slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })])} onCook={() => {}} />)

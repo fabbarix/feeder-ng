@@ -8,13 +8,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { NO_COURSE_RECIPES, WEEK, dinner, empty, planned, sideWeek } from '../couldnt-fixtures'
 import { useCauseExpansion } from '../hooks/useCauseExpansion'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
-import { unplannedOf } from '../lib/couldntGroups'
+import { courseCells, unplannedOf } from '../lib/couldntGroups'
 import type { PlanSlot } from '../types'
 import { CouldntPlanNotice } from './CouldntPlanNotice'
 import { CouldntPlanTile } from './CouldntPlanTile'
 
 function Notice({ slots, onFix = vi.fn() }: { slots: PlanSlot[]; onFix?: () => void }) {
-  const notice = useCouldntPlanNotice(unplannedOf(slots), slots)
+  const notice = useCouldntPlanNotice(unplannedOf(courseCells(slots)), courseCells(slots))
   return <CouldntPlanNotice groups={notice.groups} onFix={onFix} />
 }
 const renderNotice = (slots: PlanSlot[], onFix?: () => void) =>
@@ -97,7 +97,7 @@ describe('CouldntPlanTile: Show all counts the lines it lists', () => {
 
 describe('CouldntPlanTile: keyboard', () => {
   function Wrapped({ slots }: { slots: PlanSlot[] }) {
-    const notice = useCouldntPlanNotice(unplannedOf(slots), slots)
+    const notice = useCouldntPlanNotice(unplannedOf(courseCells(slots)), courseCells(slots))
     const [fixed, setFixed] = useState(0)
     const expansion = useCauseExpansion()
     return (
