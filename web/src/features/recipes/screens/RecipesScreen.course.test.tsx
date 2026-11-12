@@ -13,6 +13,7 @@ vi.mock('../hooks/useRecipes', () => ({
     return state.result
   },
 }))
+vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [], colourOf: () => undefined }) }))
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: state.courses, isPending: false, isError: false }) }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 

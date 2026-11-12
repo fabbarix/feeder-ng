@@ -16,6 +16,7 @@ vi.mock('../hooks/useRecipes', () => ({
 vi.mock('../hooks/useRecipeTags', () => ({
   useRecipeTags: () => ({ known: [], colourOf: (n: string) => ({ roast: 'tomato', sweet: 'plum' })[n.toLowerCase()] }),
 }))
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 
 import { RecipesScreen } from './RecipesScreen'

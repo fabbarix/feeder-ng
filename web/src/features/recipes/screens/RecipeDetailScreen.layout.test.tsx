@@ -158,4 +158,5 @@ describe('no width of its own (L-02)', () => {
 })
 
 // CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [], colourOf: () => undefined }) }))
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
