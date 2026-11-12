@@ -538,7 +538,8 @@ describe('invariants over random action sequences', () => {
         s = reduce(s, a)
         sawPhoto ||= s.photos.length > 0
         expect(s.photos.length).toBeLessThanOrEqual(MAX_PHOTOS)
-        expect(s.photos.length + s.queue.length + (s.intake === 'preparing' ? 1 : 0)).toBeLessThanOrEqual(MAX_PHOTOS)
+        // The sum holds at rest only: between `added` and `intakeEnded` the prepared file is counted twice.
+        if (s.intake === 'idle') expect(s.photos.length + s.queue.length).toBeLessThanOrEqual(MAX_PHOTOS)
         expect(new Set(ids(s)).size).toBe(s.photos.length)
         if (s.editing) {
           const target = s.photos.find((p) => p.id === s.editing?.id)
