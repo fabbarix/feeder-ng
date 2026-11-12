@@ -37,7 +37,9 @@ export function RecipeTags({ tags, colourOf, limit, onOpen }: RecipeTagsProps): 
       })}
       {more > 0 ? (
         <li>
-          <Chip kind="tag">{`+${more}`}</Chip>
+          <span role="img" aria-label={recipeStrings.moreTags(more)}>
+            <Chip kind="tag">{`+${more}`}</Chip>
+          </span>
         </li>
       ) : null}
     </ul>

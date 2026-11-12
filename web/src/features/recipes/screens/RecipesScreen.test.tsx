@@ -114,5 +114,5 @@ describe('RecipesScreen', () => {
 })
 
 // CRS E2: the screen reads the household Courses; these tests do not care which.
-vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [], colourOf: () => undefined }) }))
+vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [{ name: 'roast', recipes: 2 }], isLoading: false, colourOf: () => undefined }) }))
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

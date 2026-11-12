@@ -39,7 +39,7 @@ export function RecipeEditorScreen(): ReactNode {
   const { id } = useParams()
   const recipeId = id === undefined ? undefined : Number(id)
   const refs = useIngredientRefs()
-  const { known: knownTags, colourOf } = useRecipeTags()
+  const { known: knownTags, colourOf, isLoading: tagsLoading } = useRecipeTags()
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ingredients made from the picker, known at once (the list refetch may still be on its way).
   const [made, setMade] = useState<IngredientRef[]>([])
@@ -142,7 +142,7 @@ export function RecipeEditorScreen(): ReactNode {
               draft={draft}
               errors={editor.errors}
               knownTags={knownTags}
-              colourOf={colourOf}
+              colourOf={tagsLoading ? undefined : colourOf}
               courses={courses}
               onChange={changeDetails}
             />

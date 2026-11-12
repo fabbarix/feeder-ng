@@ -8,11 +8,13 @@ export interface UseRecipeTags {
   known: TagCount[]
   /** The Tag colour id for a Tag spelling (matched by key), undefined while unknown or not saved yet. */
   colourOf: (name: string) => string | undefined
+  /** True until the Tags have first loaded (nothing is known, so no Tag is "New" yet). */
+  isLoading: boolean
 }
 
 export function useRecipeTags(): UseRecipeTags {
-  const { tags } = useTags()
+  const { tags, isLoading } = useTags()
   const lookup = useTagLookup()
   const known = useMemo(() => tags.map((t) => ({ name: t.name, recipes: t.recipes })), [tags])
-  return { known, colourOf: (name: string) => lookup(name)?.colour }
+  return { known, colourOf: (name: string) => lookup(name)?.colour, isLoading }
 }

@@ -9,6 +9,7 @@ export const recipeStrings = {
   allTags: 'All Tags',
   tagsLabel: 'Tags',
   newTag: 'New',
+  moreTags: (n: number) => (n === 1 ? '1 more Tag' : `${n} more Tags`),
   showArchived: 'Show archived',
   empty: 'No Recipes yet. Add your first one.',
   noMatch: 'No Recipe matches.',
