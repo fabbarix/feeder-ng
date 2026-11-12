@@ -4,7 +4,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-## [1.0.0-beta.4] - 2026-11-11 <!-- pending: date to fill at the tag -->
+## [1.0.0-beta.4] - 2026-11-12
 
 <!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in) and the final wording are confirmed in the last pass before the tag. -->
 
@@ -155,6 +155,9 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...HEAD
+[1.0.0-beta.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.3...v1.0.0-beta.4
+[1.0.0-beta.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.2...v1.0.0-beta.3
+[1.0.0-beta.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.1...v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-dev...v1.0.0-beta.1
 [1.0.0-dev]: https://github.com/fabbarix/feeder-ng/releases/tag/v1.0.0-dev
