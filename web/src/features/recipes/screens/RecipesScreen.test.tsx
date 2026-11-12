@@ -112,3 +112,6 @@ describe('RecipesScreen', () => {
     expect(await screen.findByRole('status', {}, { timeout: 1500 })).toHaveAttribute('aria-busy', 'true')
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

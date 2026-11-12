@@ -1,9 +1,9 @@
 // Pure helpers that build the answers sent to the server. Every function returns a new object and leaves the input untouched.
-import type { BaseUnit, ConversionAnswer, Decisions, IngredientDecision, RecipeAction, RecipeDecision } from './../types'
+import type { BaseUnit, ConversionAnswer, CourseDecision, Decisions, IngredientDecision, RecipeAction, RecipeDecision } from './../types'
 
 /** No answers yet. */
 export function emptyDecisions(): Decisions {
-  return { ingredients: [], conversions: [], recipes: [] }
+  return { ingredients: [], conversions: [], recipes: [], courses: [] }
 }
 
 /** Replaces the entry matching `same`, or appends `entry` when there is none. */
@@ -50,4 +50,36 @@ export function parseToBase(text: string): number | null {
   if (!/^\d+(\.\d+)?(e\d+)?$/i.test(t)) return null
   const n = Number(t)
   return Number.isFinite(n) && n > 0 ? n : null
+}
+
+// ---- CRS E2: Course answers (docs/dev/design/crs-e2.md 4) ----
+
+/** Replaces the Course answer of the same key (in place), or appends it. */
+function courseUpsert(d: Decisions, entry: CourseDecision): Decisions {
+  return { ...d, courses: upsert(d.courses, (x) => x.key === entry.key, entry) }
+}
+
+/** Answer a Course name with an existing active Course. Replaces an earlier answer for the same key. */
+export function chooseCourseUse(d: Decisions, key: string, courseId: number): Decisions {
+  return courseUpsert(d, { key, action: 'use', courseId })
+}
+
+/** Leave a Course name out. */
+export function chooseCourseSkip(d: Decisions, key: string): Decisions {
+  return courseUpsert(d, { key, action: 'skip' })
+}
+
+/** Add the name as a new Course (Admin only). */
+export function chooseCourseAdd(d: Decisions, key: string): Decisions {
+  return courseUpsert(d, { key, action: 'add' })
+}
+
+/** Bring an archived Course back (Admin only). */
+export function chooseCourseUnarchive(d: Decisions, key: string): Decisions {
+  return courseUpsert(d, { key, action: 'unarchive' })
+}
+
+/** The answers a non-Admin cannot give (`add`, `unarchive`) taken out, everything else kept; used after a 403. */
+export function dropAdminCourseAnswers(d: Decisions): Decisions {
+  return { ...d, courses: d.courses.filter((c) => c.action !== 'add' && c.action !== 'unarchive') }
 }

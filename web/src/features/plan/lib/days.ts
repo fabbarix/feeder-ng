@@ -1,6 +1,7 @@
 import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
 import { dayNumber, weekdayName } from './phrase'
+import { plannedMeals } from './courses'
 
 /** Two hours: the Today hero stays on a Planned Meal this long after its slot time, then To confirm takes over. */
 const HERO_GRACE_MS = 2 * 60 * 60 * 1000
@@ -73,7 +74,7 @@ export function groupByDay(slots: PlanSlot[], today: string, columns: 2 | 4 | 7 
 export function nextMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
   const t = now.getTime()
   const open = slots
-    .filter((s) => s.meal?.state === 'planned' && Date.parse(s.at) >= t)
+    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) >= t)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
 }
@@ -112,7 +113,7 @@ export function dateRange(first: string, last: string): string {
 export function heroMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
   const t = now.getTime()
   const open = slots
-    .filter((s) => s.meal?.state === 'planned' && Date.parse(s.at) + HERO_GRACE_MS > t)
+    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) + HERO_GRACE_MS > t)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
 }

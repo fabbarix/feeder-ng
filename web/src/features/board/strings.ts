@@ -1,6 +1,7 @@
 // English UI strings for the kitchen board (glossary words only).
 export const boardStrings = {
   tonight: 'Tonight',
+  tonightCourses: "Tonight's Courses",
   tonightNone: 'Nothing planned tonight',
   nextAdvance: 'Next Advance Step',
   nextAdvanceNone: 'Nothing to prepare ahead',

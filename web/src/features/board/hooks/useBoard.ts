@@ -30,9 +30,15 @@ export function useBoard(): UseBoard {
     const connection = connectEvents()
     const refresh = () => void client.invalidateQueries({ queryKey: [...BOARD_KEY] })
     const offs = LIVE_TOPICS.map((topic) => connection.subscribe(topic, refresh))
+    // CRS F: the board lists Courses, their order and who eats them: those household changes refetch it.
+    const offHousehold = connection.subscribe('household', (data?: unknown) => {
+      const changed = (data as { changed?: unknown } | undefined)?.changed
+      if (changed === 'courses' || changed === 'mealSlots' || changed === 'attendance') refresh()
+    })
     const offReconnect = connection.onReconnect(refresh)
     return () => {
       offs.forEach((off) => off())
+      offHousehold()
       offReconnect()
       connection.close()
     }
