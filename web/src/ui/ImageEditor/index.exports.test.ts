@@ -10,6 +10,7 @@ describe('the read engine and its libs are public', () => {
       expect(typeof m.browserImageEngine).toBe('object')
       expect(typeof m.readHeaderSize).toBe('function')
       expect(typeof m.useObjectUrls).toBe('function')
+      expect(typeof m.TooManyPixelsError).toBe('function')
       expect(m.READ_MAX_SIDE).toBe(2576)
       expect(m.INPUT_MAX_BYTES).toBe(30 * 1024 * 1024)
       expect(m.INPUT_MAX_PIXELS).toBe(50_000_000)
