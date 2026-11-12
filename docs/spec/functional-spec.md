@@ -495,7 +495,7 @@ All JSON is camelCase. Reads are open to every User, writes on Courses and Meal 
 
 **Recipes.** A Recipe gains `"courses": [{ "id", "name" }]` (household order) and `"wholeMeal": bool`. `POST` and `PUT /api/recipes/{id}` take `"courseIds"` and `"wholeMeal"` (defaults in §4). `GET /api/recipes` takes `?course=<id>` (marked with it) and `?notCourse=<id>` (not marked with it, for the Couldn't plan fix).
 
-**Plan.** Every Planned Meal route gains the Course; the course-less routes are gone (task C3, [crs-c3.md](../dev/design/crs-c3.md)): only the routes with a `{courseId}` stay, and every old per-slot path, whatever its method, answers `404 not_found`. A slot carries no `meal` or `unfilled`, only its Course rows, and each Course row's `meal` carries `startBy` (the slot time minus the Recipe's own `cookMinutes`; absent when unknown or served from a Leftover). The main Course is named by its id like any other, and no route or scope reads Course `0`:
+**Plan.** Every Planned Meal route gains the Course; the course-less routes are gone (task C3, [crs-c3.md](../dev/design/crs-c3.md)): only the routes with a `{courseId}` stay, and every old per-slot path answers `404 not_found` (a `PATCH` gets the router's `405`). A slot carries no `meal` or `unfilled`, only its Course rows, and each Course row's `meal` carries `startBy` (the slot time minus the Recipe's own `cookMinutes`; absent when unknown or served from a Leftover). The main Course is named by its id like any other, and no route or scope reads Course `0`:
 
 | Route | Change |
 |---|---|
