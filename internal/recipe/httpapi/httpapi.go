@@ -48,7 +48,6 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("DELETE /api/recipes/{id}", a.delete)
 	r.User("POST /api/recipes/{id}/archive", a.archive)
 	r.User("POST /api/recipes/{id}/unarchive", a.unarchive)
-	r.User("GET /api/tags", a.tags)
 	r.User("GET /api/recipe-preferences", a.getPreferences)
 	r.User("PUT /api/recipes/{id}/preference", a.setPreference)
 	r.User("PUT /api/ingredient-exclusions/{ingredientId}", a.setExclusion)
@@ -187,11 +186,6 @@ type prefsJSON struct {
 	MemberID            int64             `json:"memberId"`
 	Recipes             map[string]string `json:"recipes"`
 	ExcludedIngredients []int64           `json:"excludedIngredients"`
-}
-
-type tagJSON struct {
-	Name    string `json:"name"`
-	Recipes int    `json:"recipes"`
 }
 
 // Request bodies.
@@ -388,19 +382,6 @@ func (a *api) setArchived(w http.ResponseWriter, r *http.Request, archived bool)
 	}
 	a.changed(id)
 	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
-}
-
-func (a *api) tags(w http.ResponseWriter, r *http.Request) {
-	list, err := a.store.Tags(r.Context())
-	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	out := make([]tagJSON, 0, len(list))
-	for _, t := range list {
-		out = append(out, tagJSON{Name: t.Name, Recipes: t.Recipes})
-	}
-	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 func (a *api) getPreferences(w http.ResponseWriter, r *http.Request) {
