@@ -12,11 +12,11 @@ Feature: Recipes sorted by last cooked
 
   Scenario: Recipes sorted by last cooked, longest ago first, start with Recipes not cooked yet
     Given the Recipe "Chilli" was Cooked fresh on 2026-11-08
-    And the Recipe "Dal" was Cooked fresh on 2026-10-01
+    And the Recipe "Dal" was Cooked fresh on 2026-09-28
     And the Recipe "Apple pie" was Cooked fresh on 2026-10-01
     When I list the Recipes sorted by "last_cooked_asc"
     Then the response status is 200
-    And the listed Recipes are "Borscht, Apple pie, Dal, Chilli" in that order
+    And the listed Recipes are "Borscht, Dal, Apple pie, Chilli" in that order
     When I list the Recipes sorted by "last_cooked_desc"
     Then the listed Recipes are "Chilli, Apple pie, Dal, Borscht" in that order
 
