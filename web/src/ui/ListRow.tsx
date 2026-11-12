@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useHref, useInRouterContext, useLinkClickHandler } from 'react-router-dom'
 import { defaultStatusIcon, type ChipStatus } from './Chip'
 import { Icon } from './Icon'
@@ -27,6 +27,14 @@ interface ListRowBase {
   children?: ReactNode
 }
 
+/**
+ * Beta.5 (docs/dev/design/b5-d-shared-web.md): an expandable row. `onToggle` makes the whole-row target a disclosure button
+ * (`aria-expanded`, `aria-controls` the panel); `panel` is the content that shows when `expanded` (rendered with `hidden`
+ * while collapsed, so `aria-controls` always resolves). A toggling row has no `href` or `onActivate`.
+ */
+type NoDisclosure = { onToggle?: undefined; expanded?: undefined; panel?: undefined }
+type Toggle = { onToggle: () => void; expanded: boolean; panel?: ReactNode; href?: never; onActivate?: never }
+
 /** WP3b: `data-*` attributes (e.g. `data-testid`) are passed through to the `li`. */
 type DataAttributes = { [K in `data-${string}`]?: string }
 
@@ -40,8 +48,8 @@ type DataAttributes = { [K in `data-${string}`]?: string }
 export type ListRowProps = ListRowBase &
   DataAttributes &
   (
-    | { href?: undefined; onActivate?: undefined; title: ReactNode; 'aria-label'?: string }
-    | ({ href: string; onActivate?: never } | { href?: never; onActivate?: () => void }) &
+    | (NoDisclosure & { href?: undefined; onActivate?: undefined; title: ReactNode; 'aria-label'?: string })
+    | ((NoDisclosure & ({ href: string; onActivate?: never } | { href?: never; onActivate?: () => void })) | Toggle) &
         ({ title: string; 'aria-label'?: string } | { title: ReactNode; 'aria-label': string })
   )
 
@@ -77,20 +85,41 @@ function passthroughData(props: Record<string, unknown>): Record<string, string>
 
 /** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`, required for a ReactNode title on a row with a target). */
 export function ListRow(props: ListRowProps) {
-  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, children, metaStatus, metaIcon, wrapTitle } = props
+  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, onToggle, expanded, panel, children, metaStatus, metaIcon, wrapTitle } =
+    props
   const inRouter = useInRouterContext()
-  const height = children || wrapTitle ? 'auto' : leading ? 72 : meta ? 64 : 56
+  const panelId = useId()
+  const isExpanded = onToggle !== undefined && expanded === true
+  const height = isExpanded || children || wrapTitle ? 'auto' : leading ? 72 : meta ? 64 : 56
   const current = selected ? 'true' : undefined
   const label = props['aria-label'] ?? (typeof title === 'string' ? title : '')
   const metaGlyph: IconName | undefined = metaIcon ?? (metaStatus ? defaultStatusIcon(metaStatus) : undefined)
   let target: ReactNode = null
   if (href !== undefined) {
     target = inRouter ? <RouterTarget to={href} label={label} current={current} /> : <PlainTarget href={href} label={label} current={current} />
+  } else if (onToggle) {
+    target = (
+      <button
+        type="button"
+        className="list-row__target"
+        aria-label={label}
+        aria-expanded={isExpanded}
+        aria-controls={panelId}
+        onClick={() => onToggle()}
+      />
+    )
   } else if (onActivate) {
     target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} onClick={onActivate} />
   }
   return (
-    <li {...passthroughData(props as unknown as Record<string, unknown>)} className="list-row" data-height={height} data-selected={selected ? 'true' : undefined} data-wrap-title={wrapTitle ? 'true' : undefined}>
+    <li
+      {...passthroughData(props as unknown as Record<string, unknown>)}
+      className="list-row"
+      data-height={height}
+      data-selected={selected ? 'true' : undefined}
+      data-wrap-title={wrapTitle ? 'true' : undefined}
+      data-expanded={isExpanded ? 'true' : undefined}
+    >
       {target}
       {leading ? (
         <span className="list-row__leading">{leading}</span>
@@ -114,6 +143,11 @@ export function ListRow(props: ListRowProps) {
         <span className="list-row__chevron">
           <Icon name="chevron" size={20} />
         </span>
+      ) : null}
+      {onToggle ? (
+        <div id={panelId} className="list-row__panel" hidden={!isExpanded}>
+          {panel}
+        </div>
       ) : null}
     </li>
   )

@@ -86,6 +86,7 @@ import { RecycleIcon } from '@phosphor-icons/react/dist/csr/Recycle'
 import { RobotIcon } from '@phosphor-icons/react/dist/csr/Robot'
 import { ScalesIcon } from '@phosphor-icons/react/dist/csr/Scales'
 import { ShoppingBagOpenIcon } from '@phosphor-icons/react/dist/csr/ShoppingBagOpen'
+import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import { ShuffleIcon } from '@phosphor-icons/react/dist/csr/Shuffle'
 import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
 import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/csr/SlidersHorizontal'
@@ -239,6 +240,11 @@ export const icons = {
   key: KeyIcon, // WP-D
   assistant: RobotIcon, // WP-D
   refresh: ArrowsClockwiseIcon, // WP-D
+  // beta.5 WP D (docs/dev/design/b5-d-shared-web.md): Leftovers, Shopping List and Guests glyphs
+  snowflake: SnowflakeIcon, // the freezer kind (same glyph as freezer)
+  question: QuestionIcon, // an unknown barcode (same glyph as unknownBarcode)
+  shoppingCart: ShoppingCartIcon, // a cart, not the shop basket
+  guests: UserPlusIcon, // a guest added to the table (not the Members glyph)
 } as const
 
 export type IconName = keyof typeof icons

@@ -194,3 +194,26 @@
   min-block-size: 64px;
   padding-block: var(--space-2);
 }
+
+/* Beta.5 expandable row (docs/dev/design/b5-d-shared-web.md): the panel wraps onto its own line below the header and
+   catches the pointer, so its content is reachable while the rest of the row stays the disclosure target. */
+.list-row[data-expanded='true'] {
+  flex-wrap: wrap;
+}
+
+.list-row__panel {
+  position: relative;
+  z-index: 1;
+  flex-basis: 100%;
+  pointer-events: auto;
+  padding-block-end: var(--space-2);
+}
+
+/* The lift above is (0,2,0) and sets pointer-events none on the panel; the panel needs the same weight to keep its own. */
+.list-row > .list-row__panel {
+  pointer-events: auto;
+}
+
+.list-row[data-expanded='true'] .list-row__chevron {
+  transform: rotate(90deg);
+}
