@@ -175,6 +175,27 @@
   gap: var(--space-1);
 }
 
+/* Beta.5 F7: the "Last cooked" line keeps to one line in the meta row. */
+.recipe-tile__cooked {
+  white-space: nowrap;
+}
+
+/* Beta.5 F7: the search and the Sort select share one row; the select keeps its width. */
+.recipes-search {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.recipes-search > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recipes-search > :last-child {
+  flex: 0 0 auto;
+}
+
 /* Recipe detail */
 .recipe-detail__hint,
 .recipe-metric__ahead {

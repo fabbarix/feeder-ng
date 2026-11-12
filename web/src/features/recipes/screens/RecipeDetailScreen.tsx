@@ -20,6 +20,7 @@ import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { excludersOf, preferenceRows } from '../lib/preferenceRows'
+import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
@@ -115,6 +116,7 @@ export function RecipeDetailScreen(): ReactNode {
             readyMeal={r.readyMeal}
             totalMinutes={r.totalMinutes}
             advanceMinutes={r.advanceMinutes}
+            lastCooked={lastCookedLabel(r.lastCookedOn, localToday())}
           />
           <Tile as="section">
             <h2>{recipeStrings.ingredients}</h2>

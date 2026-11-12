@@ -17,7 +17,7 @@ export interface RecipeMetricsProps {
  * The two metric Tiles of Recipe detail: "4 portions per Batch" (plus a Ready Meal chip) and the time
  * (lib/timeSummary): "25 min cooking" with "+ 4 h ahead" beneath when an Advance Step exists, or "No Steps".
  */
-export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinutes }: RecipeMetricsProps): ReactNode {
+export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinutes, lastCooked }: RecipeMetricsProps): ReactNode {
   const time = timeSummary({ totalMinutes, advanceMinutes })
   const ahead = time.ahead ? recipeStrings.aheadMetric(formatMinutes(advanceMinutes)) : null
   return (
@@ -32,6 +32,7 @@ export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinut
         {!time.total && ahead ? <p className="recipe-metric">{ahead}</p> : null}
         {!time.total && !ahead ? <p className="recipe-metric">{recipeStrings.noSteps}</p> : null}
         {time.total && ahead ? <p className="recipe-metric__ahead">{ahead}</p> : null}
+        {lastCooked ? <p className="recipe-metric__ahead">{lastCooked}</p> : null}
       </Tile>
     </BentoGrid>
   )

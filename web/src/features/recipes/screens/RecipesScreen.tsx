@@ -4,10 +4,13 @@ import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, Search
 import { useCourses } from '../../../lib/courses/useCourses'
 import { CourseFilter } from '../components/CourseFilter'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
+import { RecipeSortSelect } from '../components/RecipeSortSelect'
 import { RecipeTile } from '../components/RecipeTile'
 import { TagChips } from '../components/TagChips'
+import { useRecipeSort } from '../hooks/useRecipeSort'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { useRecipes } from '../hooks/useRecipes'
+import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { RecipeFilter } from '../types'
@@ -37,13 +40,16 @@ export function RecipesScreen(): ReactNode {
   const [showArchived, setShowArchived] = useState(false)
   const [course, setCourse] = useState<number | null>(null)
   const { choices } = useCourses()
+  const { sort, setSort } = useRecipeSort()
   const filter: RecipeFilter = {
     q: q.trim() || undefined,
     tag: tag || undefined,
     course: course ?? undefined,
     archived: showArchived ? 'all' : 'no',
+    sort,
   }
   const list = useRecipes(filter)
+  const today = localToday()
 
   let body: ReactNode
   if (list.error) body = <ErrorState message={recipeStrings.listError} onRetry={list.refetch} />
@@ -59,6 +65,7 @@ export function RecipesScreen(): ReactNode {
             colourOf={colourOf}
             courseNames={courseNamesOf(r.courseIds, choices)}
             wholeMeal={r.wholeMeal && showsWholeMeal(r.courseIds, choices)}
+            lastCooked={lastCookedLabel(r.lastCookedOn, today)}
           />
         ))}
       </BentoGrid>
@@ -93,7 +100,12 @@ export function RecipesScreen(): ReactNode {
           }
         />
       }
-      search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
+      search={
+        <div className="recipes-search">
+          <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
+          <RecipeSortSelect value={sort} onChange={setSort} />
+        </div>
+      }
       filters={
         <>
           <TagChips tags={known} selected={tag} onSelect={setTag} colourOf={colourOf} />

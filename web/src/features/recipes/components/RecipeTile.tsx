@@ -24,7 +24,7 @@ export interface RecipeTileProps {
  * meta row with the total time ("No Steps" when none) and the "+4 h ahead" Chip. The whole tile is one link-like
  * button named after the Recipe. Ready Meal and Archived are tag Chips.
  */
-export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf }: RecipeTileProps): ReactNode {
+export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, lastCooked }: RecipeTileProps): ReactNode {
   const time = timeSummary(recipe)
   const thumb = <RecipeThumb name={recipe.name} photoUrl={recipe.imageUrl || undefined} tags={recipe.tags} size="hero" />
   return (
@@ -47,6 +47,7 @@ export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf }:
             {time.ahead}
           </Chip>
         ) : null}
+        {lastCooked ? <span className="recipe-tile__cooked">{lastCooked}</span> : null}
       </div>
       <CourseChips names={courseNames ?? []} wholeMeal={wholeMeal} />
       <RecipeTags tags={recipe.tags} colourOf={colourOf} limit={2} />

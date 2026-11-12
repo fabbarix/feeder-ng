@@ -21,6 +21,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	"github.com/fabbarix/feeder-ng/internal/recipe/store"
@@ -40,6 +41,8 @@ func mount(r *app.Router, d app.Deps) {
 		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(guarded).WithReadyMeal(readyMealIngredients{ings}),
 		images: images,
 		events: d.Events,
+		// Last cooked comes from the plan store (beta.5 F7): the recipe store never reads plan tables.
+		lastCooked: planstore.New(d.DB, d.Clock).LastCooked,
 	}
 	r.User("GET /api/recipes", a.list)
 	r.User("POST /api/recipes", a.create)
@@ -167,7 +170,7 @@ type recipeJSON struct {
 	Advance           []advanceJSON `json:"advance"`
 	CreatedAt         string        `json:"createdAt"`
 	UpdatedAt         string        `json:"updatedAt"`
-	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only.
+	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only; null on the write responses.
 	LastCookedOn *string `json:"lastCookedOn"`
 }
 
@@ -273,6 +276,32 @@ func (b recipeBody) input() recipe.Input {
 	return in
 }
 
+// Sorts of the Recipe list (?sort=). The empty value and "name" are the default: by name.
+const (
+	sortName           = "name"
+	sortLastCookedAsc  = "last_cooked_asc"
+	sortLastCookedDesc = "last_cooked_desc"
+)
+
+// parseSort reads ?sort=; ok is false for a sort the list does not know.
+func parseSort(s string) (string, bool) {
+	switch s {
+	case "", sortName:
+		return sortName, true
+	case sortLastCookedAsc, sortLastCookedDesc:
+		return s, true
+	}
+	return "", false
+}
+
+// lastCookedOf reads Recipe id -> last cooked date through the port; no port (or none cooked) is an empty map.
+func (a *api) lastCookedOf(r *http.Request) (map[int64]string, error) {
+	if a.lastCooked == nil {
+		return map[int64]string{}, nil
+	}
+	return a.lastCooked(r.Context())
+}
+
 // Handlers.
 
 func (a *api) list(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +323,11 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, "notCourse", "course_invalid", "notCourse must be a Course id")
 		return
 	}
+	sort, ok := parseSort(q.Get("sort"))
+	if !ok {
+		writeFieldError(w, "sort", "sort_invalid", "sort must be name, last_cooked_asc or last_cooked_desc")
+		return
+	}
 	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q")}
 	if course != nil {
 		f.CourseID = *course
@@ -306,13 +340,28 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	cooked, err := a.lastCookedOf(r)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	switch sort {
+	case sortLastCookedAsc:
+		recipe.SortLastCookedAsc(list, cooked)
+	case sortLastCookedDesc:
+		recipe.SortLastCookedDesc(list, cooked)
+	}
 	out := make([]summaryJSON, 0, len(list))
 	for _, s := range list {
-		out = append(out, summaryJSON{
+		j := summaryJSON{
 			ID: s.ID, Name: s.Name, Yield: s.Yield, ReadyMeal: s.ReadyMeal, Tags: nonNil(s.Tags),
 			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
 			CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
-		})
+		}
+		if d, ok := cooked[s.ID]; ok {
+			j.LastCookedOn = &d
+		}
+		out = append(out, j)
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -342,7 +391,16 @@ func (a *api) get(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
+	cooked, err := a.lastCookedOf(r)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	j := toRecipeJSON(rec)
+	if d, ok := cooked[id]; ok {
+		j.LastCookedOn = &d
+	}
+	httpx.WriteJSON(w, http.StatusOK, j)
 }
 
 func (a *api) update(w http.ResponseWriter, r *http.Request) {
