@@ -10,12 +10,12 @@ A fix for the photo editor in Read a recipe.
 
 ### Fixed
 
-- **Crop handles.** The crop handles of the photo editor sit on the crop box again; on a phone they were scattered across the Read a recipe step.
+- **Crop handles.** The crop handles of the photo editor sit on the crop box again; on the Photo choice of Read a recipe they were scattered across the step.
 - **Photos after a read.** After a recipe is read from photos and reaches review, the photos are cleared, so the next read starts fresh; a failed read keeps them.
 
 ### Upgrading
 
-No new settings and no migrations.
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.2 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
 
 ## [1.0.0-beta.4.1] - 2026-11-12
 
