@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BottomSheet, Button, TextField } from '../../../ui'
+import { BottomSheet, Button, ListGroup, ListRow, TextField } from '../../../ui'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useMergeFlow } from '../hooks/useMergeFlow'
 import { errorMessage } from '../lib/errorMessage'
@@ -42,15 +42,11 @@ export function MergeSheet({ open, sourceId, onClose, onMerged }: MergeSheetProp
       {target === null ? (
         <>
           <TextField label={strings.mergeFindLabel} value={flow.query} onChange={flow.setQuery} />
-          <ul>
+          <ListGroup label={strings.mergeCandidatesLabel}>
             {flow.candidates.map((c) => (
-              <li key={c.id}>
-                <Button variant="tertiary" onClick={() => flow.selectTarget(c)}>
-                  {c.name}
-                </Button>
-              </li>
+              <ListRow key={c.id} title={c.name} onActivate={() => flow.selectTarget(c)} />
             ))}
-          </ul>
+          </ListGroup>
         </>
       ) : (
         <>

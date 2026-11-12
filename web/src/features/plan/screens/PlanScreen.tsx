@@ -5,6 +5,7 @@ import { BentoGrid, Button, EmptyState, ErrorState, PageHeader } from '../../../
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
+import { AllCookedSheets } from '../components/AllCookedSheets'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
 import { PlanGrid } from '../components/PlanGrid'
 import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
@@ -55,6 +56,9 @@ export function PlanScreen(): ReactNode {
             onSwap={(k) => s.openSwap(k)}
             onChoose={(k) => s.openChoose(k)}
             onCook={cookMeal}
+            onMarkAllCooked={(k) => s.openAllCooked(k)}
+            onNotCookedSlot={(k) => void actions.notCookedSlot(k)}
+            onAddCourse={(k) => s.openChoose(k)}
           />
         ))}
       </PlanGrid>
@@ -93,6 +97,10 @@ export function PlanScreen(): ReactNode {
         onClose={s.closePlanned}
         slot={s.plannedSlot}
         today={plan.today}
+        courseId={s.plannedCourseId}
+        onMarkRecipes={(courseId) => s.fromSheet(() => navigate(`/recipes?notCourse=${courseId}`))}
+        onAddRecipes={() => s.fromSheet(() => navigate('/recipes'))}
+        onReviewVarietyRules={() => s.fromSheet(() => navigate('/settings/planning'))}
         onCook={(k) => s.fromSheet(() => cookMeal(k))}
         onMarkCooked={(k) => s.fromSheet(() => flow.open(k))}
         onSwap={(k) => s.fromSheet(() => s.openSwap(k))}
@@ -100,6 +108,7 @@ export function PlanScreen(): ReactNode {
         onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
         onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
       />
+      <AllCookedSheets flow={s.allCooked} />
       <SwapSheet
         open={s.swapOpen}
         onClose={s.closeSwap}

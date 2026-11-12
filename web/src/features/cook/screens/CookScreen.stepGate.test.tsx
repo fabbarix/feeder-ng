@@ -6,6 +6,7 @@ import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../plan/test-utils'
 import type { CookTimer, CookView } from '../types'
+import { oneCourseTimeline } from '../timeline-fixtures'
 import { CookScreen } from './CookScreen'
 
 vi.mock('../../../lib/sse', () => ({
@@ -34,7 +35,8 @@ function preheat(state: CookTimer['state'] = 'running'): CookTimer {
 function setup(after: number[], timer: CookTimer | null) {
   let current = timer ? [timer] : []
   const api = mockApi({
-    'GET /api/cook/meals/2026-11-09/2': view(after),
+    'GET /api/cook/meals/2026-11-09/2/all': oneCourseTimeline(view(after)),
+    'GET /api/plan': { today: '2026-11-09', horizonDays: 3, updating: false, slots: [] },
     'GET /api/cook/timers': () => ({ now: new Date().toISOString(), timers: current }),
     'POST /api/cook/timers': () => current[0] ?? preheat(),
     'DELETE /api/cook/timers/41': () => {
