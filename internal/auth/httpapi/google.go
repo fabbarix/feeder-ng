@@ -103,7 +103,7 @@ func signInRoutes(r *app.Router, d app.Deps) {
 		}
 		switch dec.Kind {
 		case access.Unverified:
-			http.Redirect(w, req, "/not-invited", http.StatusFound)
+			http.Redirect(w, req, "/email-not-verified", http.StatusFound)
 			return
 		case access.Pending:
 			http.SetCookie(w, accesshttp.Cookie(dec.Token, dec.Request.ExpiresAt, secure))

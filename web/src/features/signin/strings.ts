@@ -6,8 +6,7 @@ export const signinStrings = {
   continueWithGoogle: 'Continue with Google',
   denied: 'Sign-in was cancelled. You can try again when you are ready.',
   failed: 'Sign-in did not work. Please try again.',
-  emailNotVerifiedTitle: 'Not on the Allowlist',
-  emailNotVerifiedText:
-    'This Google sign-in is not on the Allowlist yet. Ask an Admin to add your email to the Allowlist, then sign in again.',
+  emailNotVerifiedTitle: 'Email not verified',
+  emailNotVerifiedText: 'Google has not verified this email. Use a different Google sign-in.',
   tryAnother: 'Use a different Google sign-in',
 }
