@@ -37,7 +37,8 @@
 .board-cell > .tile {
   box-sizing: border-box;
   height: 100%;
-  padding: 16px 20px;
+  --board-tile-pad-x: 20px; /* the clock sizes subtract 2 of these */
+  padding: 16px var(--board-tile-pad-x);
   border-radius: var(--radius-board);
   font-size: 1.5rem;
   overflow: hidden;
@@ -79,27 +80,35 @@
 
 .board-clock__time {
   margin: 0;
-  font-size: 22cqi; /* phone: the half-width cell is 163 px at 390 (123 px of content); the wall grid restores 32cqi */
+  font-size: 22cqi; /* phone: the half-width cell is 163 px at 390 (123 px of content); the wall grid restores the cap below */
   line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
 
 .board-clock__date {
   margin: 8px 0 0;
   font-size: 12cqi; /* phone: "Wednesday" and "November" fit 123 px; the wall grid restores 2rem */
   line-height: 1.15;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word; /* a word splits only when it cannot fit at all; at phone sizes every word fits */
+  min-width: 0;
 }
 
+/* From 600 px the sizes come from the content box (the cell less the tile padding on both sides, 2 * --board-tile-pad-x), not the bare
+   cell: "00:00" is 3em wide and "Wednesday" 5.24em ("September" 4.99em), so the time is capped at 32cqi and the date at 2rem. Each size is
+   declared twice: the first is the fallback for a browser without min(), the second the content-box size. */
 @media (min-width: 600px) {
   .board-clock__time {
     font-size: 32cqi;
+    font-size: min(32cqi, calc((100cqi - 2 * var(--board-tile-pad-x)) / 3));
   }
 
   .board-clock__date {
     font-size: 2rem;
+    font-size: min(2rem, calc((100cqi - 2 * var(--board-tile-pad-x)) / 5.5));
     line-height: inherit;
+    overflow-wrap: normal;
   }
 }
 
