@@ -38,6 +38,17 @@ describe('P11: clipped text and mid-word breaks', () => {
     expect(f.find((x) => x.rule === 'P11')!.message).toMatch(/board-clock__date.*mid-word/)
   })
   it('nothing broken is clean', () => expect(run({ brokenText: [] })).not.toContain('P11'))
+  // The probe reports the whitespace-delimited token that broke, as `token`; an email or a link is one token that must wrap somewhere.
+  it.each(['mario.rossi@example.com', 'https://example.com/a/very/long/path', 'docs/adr/0001-some-decision.md'])(
+    'a mid-word break inside %s is not a finding',
+    (token) => expect(run({ brokenText: [{ sel: 'span.list-row__title', why: 'mid-word', token }] })).not.toContain('P11'),
+  )
+  it('a mid-word break in an ordinary word still is a finding', () => {
+    expect(run({ brokenText: [{ sel: 'p.board-clock__date', why: 'mid-word', token: 'November' }] })).toContain('P11')
+  })
+  it('a clipped box is a finding even when its text is an email', () => {
+    expect(run({ brokenText: [{ sel: 'span.list-row__title', why: 'clipped', token: 'a@b.co' }] })).toContain('P11')
+  })
 })
 
 describe('the driver probes them', () => {
