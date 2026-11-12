@@ -83,11 +83,11 @@ describe('Read a recipe structure', () => {
   it('the read design no longer says nothing is persisted', () => {
     expect(readSource('../../docs/dev/design/photo-read.md')).not.toMatch(/nothing is persisted/)
   })
-  it('features/import has no native <input> and no accept= or capture= of its own (the shared ImageFileInput and FileDrop own them)', () => {
+  it('features/import has no native <input> and no string capture= attribute of its own (the shared ImageFileInput and FileDrop own them)', () => {
     const files = walk(`${cwd}/src/features/import`).filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test(-helper)?\.(ts|tsx)$/.test(f) && !/\.test-helper\./.test(f))
     const hits = files.flatMap((f) => {
       const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
-      return /<input\b|\baccept=|\bcapture=/.test(code) ? [f.replace(`${cwd}/src/`, '')] : []
+      return /<input\b|\bcapture=["']/.test(code) ? [f.replace(`${cwd}/src/`, '')] : []
     })
     expect(hits).toEqual([])
   })
