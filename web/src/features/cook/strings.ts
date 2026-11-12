@@ -41,4 +41,11 @@ export const cookStrings = {
   remove30: 'Remove 30 seconds',
   notALeftover: 'This Planned Meal is not served from a Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
+  // CRS F: the cooking timeline (lib/timeline, components/CourseFilterChips, CourseMenu)
+  allCourses: 'All',
+  markCourseCooked: (course: string) => `Mark ${course} as Cooked`,
+  notCookedCourse: (course: string) => `Not cooked: ${course}`,
+  courseActions: 'Course actions',
+  markAllCooked: 'Mark all Cooked',
+  coursesGroup: 'Courses',
 } as const

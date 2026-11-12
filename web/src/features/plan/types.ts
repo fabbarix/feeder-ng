@@ -8,7 +8,12 @@ export type WhyCode =
   | 'ingredient_overlap'
   | 'stock_coverage'
   | 'leftover_fits'
+  /** Retired (ADR 0009): an old stored chip may still carry it; the SPA never shows it. */
   | 'best_available'
+  /** ADR 0009 relaxed picks: `date` is the nearest fresh cook of the Recipe (before or after the slot). */
+  | 'cooldown_relaxed'
+  /** ADR 0009 relaxed picks: `tag`, and `value` (the count this week) or `date` (the adjacent day). */
+  | 'variety_relaxed'
 
 /** A structured why chip. The server adds the names; lib/phrase.ts turns it into words. */
 export interface Why {
@@ -44,6 +49,13 @@ export interface PlannedMeal {
   pinned: boolean
   servedFromLeftover: LeftoverSource | null
   why: Why[]
+  /** CRS F: the Course of this Planned Meal. Optional until C3 removes the course-less routes (fixtures without it are the main Course). */
+  courseId?: number
+  courseName?: string
+  /** CRS F: a Whole meal Recipe (spec 7.5: shown as the "Whole meal" chip on a slot that serves several Courses). */
+  wholeMeal?: boolean
+  /** CRS F (ADR 0009): picked by relaxing a Cool-down or Variety Rule; its why chips say which. */
+  relaxed?: boolean
   /** WP6 (optional until the API sends them): minutes the Recipe takes, "HH:MM" to start by, a photo, the Recipe's Tags. */
   cookMinutes?: number
   /** R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when the Recipe has one. */
@@ -53,7 +65,7 @@ export interface PlannedMeal {
   tags?: string[]
 }
 
-export type UnfilledReason = 'no_attendance' | 'no_candidates'
+export type UnfilledReason = 'no_attendance' | 'no_candidates' | 'no_course_recipes'
 
 export interface Eliminations {
   considered: number
@@ -75,6 +87,8 @@ export interface SlotRule {
   recipeId?: number
   recipeName?: string
   tag?: string
+  /** CRS F: the Course the rule is for (real id). Absent in older fixtures = the main Course. */
+  courseId?: number
 }
 
 /** A Member attending a Meal Slot (shown as an Avatar in the Planned Meal sheet). */
@@ -86,6 +100,34 @@ export interface AttendanceMember {
   /** PE: the Member's Photo address ("/api/images/<id>") and emoji; the Avatar shows photo, else emoji, else initials. */
   photoUrl?: string
   avatar?: string
+}
+
+/** CRS F: the main Course's Whole meal covers this Course on that date (spec 7.5). */
+export interface CoveredBy {
+  courseId: number
+  recipeId: number
+  recipeName: string
+}
+
+/** CRS F: why a Course with no Planned Meal has no reason either. */
+export type Unserved = 'optional' | 'no_course_attendance'
+
+/**
+ * CRS F (spec 16): one Course of a slot on a date. At most one of meal, unfilled, coveredBy and unserved is set.
+ * History rows (a Course the slot no longer serves, with a Cooked or Not cooked meal) come after the slot's Courses
+ * with main false, optional false and no opt-outs.
+ */
+export interface PlanCourse {
+  courseId: number
+  name: string
+  main: boolean
+  optional: boolean
+  /** The effective opt-outs on that date: Members of the slot's Attendance who do not eat this Course. */
+  optOutMemberIds: number[]
+  meal: PlannedMeal | null
+  unfilled: Unfilled | null
+  coveredBy: CoveredBy | null
+  unserved: Unserved | null
 }
 
 export interface PlanSlot {
@@ -100,6 +142,18 @@ export interface PlanSlot {
   rules: SlotRule[]
   /** WP6: optional until the API sends it. */
   attendance?: AttendanceMember[]
+  /**
+   * CRS F: the slot's Courses in the slot's order, then history rows. Optional until C3: without it the slot is one
+   * Course, read from `meal` and `unfilled` (lib/courses slotCourses). `meal` and `unfilled` stay the main Course's aliases.
+   */
+  courses?: PlanCourse[]
+  /** CRS F: the slot's cooking timeline total in whole minutes; null when nothing fresh is left to cook. */
+  cookMinutes?: number | null
+  /** CRS F: "HH:MM" to start the timeline by (hero "start 18:45"). */
+  startBy?: string
+  /** CRS F: on the flat to-confirm and couldn't-plan entries (one per Course). */
+  courseId?: number
+  courseName?: string
 }
 
 export interface PlanView {
@@ -113,6 +167,8 @@ export interface PlanView {
 export interface SlotKey {
   date: string
   mealSlotId: number
+  /** CRS F: the Course. Absent = the slot (Cook Mode, the slot-wide actions) or, on a Planned Meal route, the main Course alias. */
+  courseId?: number
 }
 
 export interface Alternative {
@@ -125,6 +181,11 @@ export interface Alternative {
   why: Why[]
   /** WP6: optional until the API sends it. */
   photoUrl?: string
+  /** CRS F: a Whole meal offered to the main Course, with the names of the Courses it would cover. */
+  wholeMeal?: boolean
+  covers?: string[]
+  /** CRS F (ADR 0009): a relaxed alternative; the server sends strict ones first. */
+  relaxed?: boolean
 }
 
 export interface CookPreview {
@@ -158,6 +219,7 @@ export interface Leftover {
   useBy: string
   fromDate: string
   fromMealSlotId: number
+  fromCourseId?: number
 }
 
 /** A later Planned Meal the new Leftover is planned for (R4 B13). */
@@ -166,6 +228,7 @@ export interface PlannedForMeal {
   mealSlotId: number
   mealSlotName: string
   recipeName: string
+  courseId?: number
 }
 
 export interface CookedResult {
@@ -174,6 +237,23 @@ export interface CookedResult {
   warnings: StockWarning[]
   /** The later Planned Meals served from the recorded Leftover after the replan; empty when it is kept (or none). */
   plannedFor: PlannedForMeal[]
+}
+
+/** CRS F: POST .../all/cooked. */
+export interface CookedAllResult {
+  meals: PlannedMeal[]
+  leftovers: Leftover[]
+  warnings: StockWarning[]
+  plannedFor: PlannedForMeal[]
+}
+
+/** CRS F: PUT a Recipe in a Course; `covered` lists the Courses a Whole meal in the main Course removed. */
+export type SetMealResult = PlannedMeal & { covered?: number[] }
+
+/** CRS F: one entry of the Mark all Cooked body; a Leftover Course has no leftoverPortions. */
+export interface CookedAllEntry {
+  courseId: number
+  leftoverPortions?: number
 }
 
 export interface VarietyRule {
@@ -189,6 +269,8 @@ export interface RecipeChoice {
   tags: string[]
   imageUrl?: string
   totalMinutes?: number
+  /** CRS F: the Courses the Recipe is marked with (from `courses: [{id}]` of GET /api/recipes). */
+  courseIds?: number[]
 }
 
 /** An existing Tag with the number of Recipes that carry it (GET /api/tags). */
@@ -204,4 +286,6 @@ export interface MealSlotChoice {
   name: string
   /** "HH:mm". */
   time: string
+  /** CRS F: the Courses the slot serves, in its order (GET /api/meal-slots `courses`). */
+  courses?: { id: number; name: string; main: boolean }[]
 }

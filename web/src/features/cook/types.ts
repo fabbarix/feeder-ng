@@ -81,3 +81,77 @@ export interface StartTimerInput {
 
 /** What one scope's Cook Mode is opened for. */
 export type CookSource = { kind: 'meal'; date: string; mealSlotId: number } | { kind: 'recipe'; recipeId: number; batches: number }
+
+// ---- CRS F: the combined cooking timeline (GET /api/cook/meals/{date}/{slotId}/all, spec 11 and 16) ----
+
+export type TimelineItemKind = 'active' | 'passive' | 'reheat' | 'serve'
+export type TimelineCourseState = 'planned' | 'cooked' | 'skipped'
+
+/** A Course of the slot with a Planned Meal; resolved ones are listed with their state and have no items. */
+export interface TimelineCourse {
+  courseId: number
+  name: string
+  recipeId: number
+  recipeName: string
+  /** The Course's cook scope. Until C3 the main Course's is two-part (`meal:<date>/<slotId>`), every other one three-part. */
+  scope: string
+  batches: number
+  fresh: boolean
+  state: TimelineCourseState
+  /** Only for an unresolved Leftover Course. */
+  reheatSeconds?: number
+}
+
+export interface TimelineAdvance {
+  courseId: number
+  scope: string
+  step: number
+  text: string
+  leadTimeMinutes: number
+  done: boolean
+  doneAt: string | null
+  warning: boolean
+}
+
+/** One item of the timeline: a Step, a Reheat or a Serve item, in on-screen order. */
+export interface TimelineItem {
+  courseId: number
+  scope: string
+  kind: TimelineItemKind
+  /** The Recipe Step index (what timers and marks use); null for Reheat and Serve. */
+  step: number | null
+  /** 1-based position over the whole timeline. */
+  number: number
+  text: string
+  durationMinutes: number
+  /** Seconds from `startAt`. */
+  startSeconds: number
+  endSeconds: number
+  uses: StepUse[]
+  imageUrl: string
+  /** Passive items: the Step's timer; Reheat items: `{ label: 'Reheat', durationSeconds }`; else null. */
+  timer: { label: string; durationSeconds: number } | null
+  /** Recipe Step indexes of the same Course this item waits for. */
+  after: number[]
+}
+
+export interface TimelineView {
+  date: string
+  mealSlotId: number
+  slotName: string
+  /** "HH:MM", the slot time in household time. */
+  time: string
+  /** RFC 3339: the slot time minus `totalMinutes`. */
+  startAt: string
+  totalMinutes: number
+  courses: TimelineCourse[]
+  advance: TimelineAdvance[]
+  items: TimelineItem[]
+}
+
+/** What a route opens: the slot's timeline, on one Course when `courseId` is given. */
+export interface CookTimelineTarget {
+  date: string
+  mealSlotId: number
+  courseId?: number
+}

@@ -9,7 +9,7 @@ import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimer
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
 import { boardLayout, type BoardCell } from '../lib/layout'
-import { leftoverRows, startCookPath, tomorrowSlots, tonightMeal, useSoonRows } from '../lib/tiles'
+import { boardSlots, leftoverRows, startCookPath, tomorrowSlots, tonightMeal, useSoonRows } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import '../board.css'
 
@@ -60,8 +60,10 @@ export function BoardScreen(): ReactNode {
 
   const zone = settings.settings?.timeZone ?? 'UTC'
   const nowIso = clock.toISOString()
-  const tonight = tonightMeal(plan.slots, data.today, nowIso)
-  const startPath = startCookPath(plan.slots, data.today, nowIso)
+  // CRS F: the board's own slots (with their Courses) when the payload has them; the plan's for an older payload.
+  const slots = boardSlots(data.slots, plan.slots)
+  const tonight = tonightMeal(slots, data.today, nowIso)
+  const startPath = startCookPath(slots, data.today, nowIso)
 
   const layout = boardLayout(wall ? 4 : 2)
 
@@ -84,7 +86,7 @@ export function BoardScreen(): ReactNode {
           <BoardTimersTile items={timers.items} />
         </Cell>
         <Cell id="tomorrow" layout={layout}>
-          <TomorrowTile slots={tomorrowSlots(plan.slots, data.today)} />
+          <TomorrowTile slots={tomorrowSlots(slots, data.today)} />
         </Cell>
         <Cell id="useSoon" layout={layout}>
           <UseSoonTile rows={useSoonRows(totals.data ?? [], 5)} />

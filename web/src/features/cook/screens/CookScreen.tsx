@@ -20,7 +20,8 @@ import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, use
 import { useStepGate } from '../hooks/useStepGate'
 import { useTimers } from '../hooks/useTimers'
 import { advanceOnScreen } from '../lib/advance'
-import { cookSourceFrom, exitPathFor, type CookRouteParams } from '../lib/scope'
+import { cookSourceFrom, exitPathFor, timelineTargetFrom, type CookRouteParams } from '../lib/scope'
+import { TimelineCookScreen } from './TimelineCookScreen'
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
 import { Button, EmptyState } from '../../../ui'
@@ -40,7 +41,18 @@ import '../cook.css'
  * Mark as Cooked only once it is due (mayResolve). After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with "Back to
  * Today" (no timed redirect). A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
  */
+/**
+ * Cook Mode. A Planned Meal route (/cook/meal/:date/:slotId[/:courseId]) opens the slot's cooking timeline (CRS F); a
+ * Recipe route (/cook/recipe/:id) opens its own session.
+ */
 export function CookScreen(): ReactNode {
+  const params = useParams() as CookRouteParams
+  const target = params.date !== undefined && params.slotId !== undefined ? timelineTargetFrom(params) : null
+  if (target) return <TimelineCookScreen target={target} />
+  return <SessionCookScreen />
+}
+
+function SessionCookScreen(): ReactNode {
   const params = useParams() as CookRouteParams
   const [search] = useSearchParams()
   const navigate = useNavigate()
