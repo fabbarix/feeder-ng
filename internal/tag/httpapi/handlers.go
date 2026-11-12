@@ -86,6 +86,11 @@ func (a *api) impact(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, tag.ErrNotFound)
 		return
 	}
+	im, err := a.st.Impact(r.Context(), id)
+	if err != nil {
+		a.fail(w, err)
+		return
+	}
 	var into *int64
 	if r.URL.Query().Has("into") {
 		n, err := strconv.ParseInt(r.URL.Query().Get("into"), 10, 64)
@@ -95,11 +100,6 @@ func (a *api) impact(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		into = &n
-	}
-	im, err := a.st.Impact(r.Context(), id)
-	if err != nil {
-		a.fail(w, err)
-		return
 	}
 	out := impactOut(im)
 	if into != nil {
