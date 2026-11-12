@@ -136,7 +136,7 @@ function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode 
       {others.length > 0 ? (
         <Tile variant="status" status="spoil" as="section">
           <h3>{s.errorsTitle}</h3>
-          <ul>
+          <ul className="import-list">
             {others.map((p, i) => (
               <li key={`${p.path}-${i}`}>
                 <code>{p.path}</code> {p.message}

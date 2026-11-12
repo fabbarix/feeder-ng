@@ -48,7 +48,7 @@ export const settingsStrings = {
     location: 'Location',
     locationHint: "Coordinates such as 45.07, 7.69 are needed for the kitchen board's sunset and sunrise. A city alone keeps the 19:00 to 07:00 dark mode.",
     currency: 'Currency',
-    save: 'Save household settings',
+    save: 'Save Household settings',
   },
   plannerStyle: 'Planner Style',
   plannerStyleAnchor: {

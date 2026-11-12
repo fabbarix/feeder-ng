@@ -10,7 +10,7 @@ export function ImageWarningsTile({ warnings }: { warnings: Warning[] }): ReactN
     <Tile as="section">
       <h2>{s.warningsTitle}</h2>
       <p>{s.warningsHelp}</p>
-      <ul>
+      <ul className="import-list">
         {warnings.map((w, i) => (
           <li key={`${w.path}-${i}`}>
             <code>{w.path}</code> {w.message}

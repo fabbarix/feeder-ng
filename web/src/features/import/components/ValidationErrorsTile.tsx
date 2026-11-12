@@ -10,7 +10,7 @@ export function ValidationErrorsTile({ error }: { error: FileError }): ReactNode
       <h2>{s.errorsTitle}</h2>
       <p>{s.errorsHelp}</p>
       {error.kind === 'schema' ? (
-        <ul>
+        <ul className="import-list">
           {error.errors.map((e, i) => (
             <li key={`${e.path}-${i}`}>
               <code>{e.path}</code> {e.message}
