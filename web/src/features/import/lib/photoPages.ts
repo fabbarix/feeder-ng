@@ -2,6 +2,7 @@
 // Plain TypeScript: no React, no DOM, no Blob reads.
 import type { ImageOrigin, RawImage } from '../../../ui/ImagePicker/types'
 import type { ImageProblemCode } from '../../../ui/ImagePicker/lib/problems'
+import { moveItem } from '../../../ui/Sortable/reorder'
 
 // --- Stand-ins, replaced by the ui barrel imports when T1 (ui/ImageEditor) lands. ---------------------------------------------
 // Keep this block together: once ui/ImageEditor exports ImageEdit, Rect, Size, initialEdit, isFull and outputSize, delete it and import them.
@@ -113,42 +114,189 @@ export function initialPhotoPages(): PhotoPagesState {
   return { photos: [], editing: null, queue: [], intake: 'idle', problem: null, nextId: 1 }
 }
 
-// --- Stubs: the test author's red phase. The developer replaces every body below. ------------------------------------------------
-const todo = (name: string): never => {
-  throw new Error(`photoPages.${name}: not implemented`)
+// --- The reducer and the selectors ----------------------------------------------------------------------------------------------
+
+/** Photos plus queued files plus the file being prepared: what is left of the four. */
+function roomFor(state: PhotoPagesState): number {
+  return MAX_PHOTOS - state.photos.length - state.queue.length - (state.intake === 'preparing' ? 1 : 0)
 }
 
-export function photoPagesReducer(state: PhotoPagesState, _action: PhotoPagesAction): PhotoPagesState {
-  return state
+/** The size of an image photo's working copy (the editor works on it). */
+function workingSize(source: PhotoSource): Size | undefined {
+  return source.kind === 'image' ? { width: source.width, height: source.height } : undefined
 }
-export function isSmallPhoto(_size: Size): boolean {
-  return todo('isSmallPhoto')
+
+function updatePhoto(state: PhotoPagesState, id: PhotoId, change: (p: Photo) => Photo): PhotoPagesState {
+  return { ...state, photos: state.photos.map((p) => (p.id === id ? change(p) : p)) }
 }
-export function canAdd(_state: PhotoPagesState): boolean {
-  return todo('canAdd')
+
+/** Applies a render answer only when it is for the photo's current revision. */
+function answerRender(state: PhotoPagesState, id: PhotoId, revision: number, output: PhotoOutput): PhotoPagesState {
+  const current = state.photos.some((p) => p.id === id && p.revision === revision)
+  return current ? updatePhoto(state, id, (p) => ({ ...p, output })) : state
 }
-export function count(_state: PhotoPagesState): number {
-  return todo('count')
+
+export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesAction): PhotoPagesState {
+  switch (action.type) {
+    case 'intakeStarted':
+      return { ...state, queue: state.queue.slice(1), intake: 'preparing' }
+
+    case 'intakeEnded':
+      return { ...state, intake: 'idle' }
+
+    case 'queued': {
+      const room = Math.max(0, roomFor(state))
+      const kept = action.files.slice(0, room)
+      const dropped = action.files.length - kept.length
+      return {
+        ...state,
+        queue: [...state.queue, ...kept],
+        problem: dropped > 0 ? { code: 'too_many_photos', count: dropped } : state.problem,
+      }
+    }
+
+    case 'added': {
+      // The file being prepared already holds its slot (intake), so only photos and queued files count here.
+      if (state.photos.length + state.queue.length >= MAX_PHOTOS) return { ...state, problem: { code: 'too_many_photos' } }
+      const id = `p${state.nextId}`
+      const source = action.source
+      let photo: Photo
+      let editing = state.editing
+      if (source.kind === 'image') {
+        photo = { id, source, edit: null, output: { status: 'pending' }, revision: 0 }
+        editing = { id, draft: initialEdit({ width: source.width, height: source.height }), isNew: true }
+      } else if (source.kind === 'as-is') {
+        // Nothing to render: the declared file is sent as it is.
+        photo = { id, source, edit: null, output: { status: 'ready', blob: source.blob, width: 0, height: 0, type: source.type }, revision: 0 }
+      } else {
+        // A link has no blob here; the server fetches it, so its output is a ready placeholder with no bytes.
+        photo = { id, source, edit: null, output: { status: 'ready', blob: new Blob([]), width: 0, height: 0, type: '' }, revision: 0 }
+      }
+      return { ...state, photos: [...state.photos, photo], editing, nextId: state.nextId + 1, problem: null }
+    }
+
+    case 'editStarted': {
+      const photo = state.photos.find((p) => p.id === action.id)
+      const size = photo ? workingSize(photo.source) : undefined
+      if (!photo || !size) return state
+      return { ...state, editing: { id: photo.id, draft: photo.edit ?? initialEdit(size), isNew: false } }
+    }
+
+    case 'draftChanged':
+      return state.editing ? { ...state, editing: { ...state.editing, draft: action.draft } } : state
+
+    case 'editCommitted': {
+      const session = state.editing
+      if (!session) return state
+      const photos = state.photos.map((p) => {
+        const size = p.id === session.id ? workingSize(p.source) : undefined
+        if (!size) return p
+        return {
+          ...p,
+          edit: isFull(session.draft, size) ? null : session.draft,
+          revision: p.revision + 1,
+          output: { status: 'pending' as const },
+        }
+      })
+      return { ...state, photos, editing: null }
+    }
+
+    case 'editCancelled': {
+      const session = state.editing
+      if (!session) return state
+      const photos = session.isNew ? state.photos.filter((p) => p.id !== session.id) : state.photos
+      return { ...state, photos, editing: null }
+    }
+
+    case 'removed':
+      return {
+        ...state,
+        photos: state.photos.filter((p) => p.id !== action.id),
+        editing: state.editing?.id === action.id ? null : state.editing,
+      }
+
+    case 'moved':
+      return state.editing ? state : { ...state, photos: moveItem(state.photos, action.from, action.to) }
+
+    case 'rendered':
+      return answerRender(state, action.id, action.revision, {
+        status: 'ready',
+        blob: action.out.blob,
+        width: action.out.width,
+        height: action.out.height,
+        type: action.out.type,
+      })
+
+    case 'renderFailed':
+      return answerRender(state, action.id, action.revision, { status: 'failed', problem: action.problem })
+
+    case 'problemSet':
+      return { ...state, problem: action.problem }
+
+    case 'problemCleared':
+      return { ...state, problem: null }
+  }
 }
-export function nextToIntake(_state: PhotoPagesState): File | undefined {
-  return todo('nextToIntake')
+
+export function isSmallPhoto(size: Size): boolean {
+  return Math.max(size.width, size.height) < SMALL_PHOTO_SIDE
 }
-export function nextToRender(_state: PhotoPagesState): Photo | undefined {
-  return todo('nextToRender')
+
+export function canAdd(state: PhotoPagesState): boolean {
+  return !state.editing && roomFor(state) > 0
 }
-export function readyToSend(_state: PhotoPagesState): boolean {
-  return todo('readyToSend')
+
+export function count(state: PhotoPagesState): number {
+  return state.photos.length
 }
-export function blockReason(_state: PhotoPagesState): BlockReason {
-  return todo('blockReason')
+
+export function nextToIntake(state: PhotoPagesState): File | undefined {
+  if (state.editing || state.intake !== 'idle') return undefined
+  return state.queue[0]
 }
+
+export function nextToRender(state: PhotoPagesState): Photo | undefined {
+  return state.photos.find((p) => p.source.kind === 'image' && p.output.status === 'pending' && state.editing?.id !== p.id)
+}
+
+export function readyToSend(state: PhotoPagesState): boolean {
+  return state.photos.length > 0 && blockReason(state) === null
+}
+
+export function blockReason(state: PhotoPagesState): BlockReason {
+  if (state.editing) return 'editing'
+  if (state.intake === 'preparing' || state.queue.length > 0 || state.photos.some((p) => p.output.status === 'pending')) return 'preparing'
+  const failed = state.photos.find((p) => p.output.status === 'failed')
+  return failed ? { failed: failed.id } : null
+}
+
 /** `dataUrls`: the data URL of each photo's blob (a `ready` image output, an `as-is` blob), by photo id; links need none. */
-export function toReadInput(_state: PhotoPagesState, _dataUrls: Readonly<Record<PhotoId, string>>): { kind: 'photo'; photos: RawImage[] } {
-  return todo('toReadInput')
+export function toReadInput(state: PhotoPagesState, dataUrls: Readonly<Record<PhotoId, string>>): { kind: 'photo'; photos: RawImage[] } {
+  const photos = state.photos.map((p): RawImage => {
+    if (p.source.kind === 'link') return { kind: 'url', url: p.source.url }
+    if (p.output.status !== 'ready') throw new Error(`photoPages.toReadInput: photo ${p.id} is not ready`)
+    const dataUrl = dataUrls[p.id]
+    if (dataUrl === undefined) throw new Error(`photoPages.toReadInput: photo ${p.id} has no data URL`)
+    if (p.source.kind === 'as-is') {
+      return { kind: 'blob', blob: p.source.blob, dataUrl, width: 0, height: 0, type: p.source.type, origin: 'file' }
+    }
+    return {
+      kind: 'blob',
+      blob: p.output.blob,
+      dataUrl,
+      width: p.output.width,
+      height: p.output.height,
+      type: p.output.type,
+      origin: p.source.origin,
+    }
+  })
+  return { kind: 'photo', photos }
 }
-export function photoNumber(_state: PhotoPagesState, _id: PhotoId): number {
-  return todo('photoNumber')
+
+export function photoNumber(state: PhotoPagesState, id: PhotoId): number {
+  return state.photos.findIndex((p) => p.id === id) + 1
 }
-export function draftOutputSize(_state: PhotoPagesState): Size | undefined {
-  return todo('draftOutputSize')
+
+export function draftOutputSize(state: PhotoPagesState): Size | undefined {
+  return state.editing ? outputSize(state.editing.draft.crop, READ_MAX_SIDE) : undefined
 }
