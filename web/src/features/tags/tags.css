@@ -1,0 +1,5 @@
+/* Settings > Tags: only what the shared ListPage, ListRow, Chip, sheet and pickers do not already cover. Tokens only. */
+.tag-sheet {
+  display: grid;
+  gap: var(--space-4);
+}
