@@ -822,9 +822,9 @@ func planningSteps(sc *godog.ScenarioContext, w *World) {
 		body := map[string]any{"mealSlotId": fridayDinner()}
 		switch what {
 		case "both a Tag and a Recipe":
-			body["tag"], body["recipeId"] = "x", recipeID("curry")
+			body["tag"], body["recipeId"] = "pizza", recipeID("curry")
 		case "an unknown Meal Slot":
-			body["mealSlotId"], body["tag"] = 99999, "x"
+			body["mealSlotId"], body["tag"] = 99999, "pizza"
 		case "an unknown Recipe":
 			body["recipeId"] = 99999
 		}

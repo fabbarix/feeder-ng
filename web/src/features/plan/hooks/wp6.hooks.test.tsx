@@ -1,29 +1,11 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../../../test/notices'
 import { meal, mockApi, wrapper } from '../test-utils'
 import type { CookedResult, CookPreview } from '../types'
 import { useCookFlow } from './useCookFlow'
-import { useTagChoices } from './useTagChoices'
 
 afterEach(() => vi.unstubAllGlobals())
-
-describe('useTagChoices (the Variety Rule Tag is picked from the existing Tags)', () => {
-  it('reads GET /api/tags', async () => {
-    const api = mockApi({ 'GET /api/tags': [{ name: 'pasta', recipes: 3 }, { name: 'fish', recipes: 1 }] })
-    const { result } = renderHook(() => useTagChoices(), { wrapper })
-    await waitFor(() => expect(result.current.tags).toHaveLength(2))
-    expect(result.current.tags[0]).toEqual({ name: 'pasta', recipes: 3 })
-    expect(api.callsTo('GET', '/api/tags')).toHaveLength(1)
-  })
-
-  it('stays idle while not enabled', () => {
-    const api = mockApi({})
-    const { result } = renderHook(() => useTagChoices(false), { wrapper })
-    expect(result.current.tags).toEqual([])
-    expect(api.calls).toHaveLength(0)
-  })
-})
 
 describe('useCookFlow', () => {
   const key = { date: '2026-11-10', mealSlotId: 2 }

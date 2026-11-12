@@ -297,6 +297,10 @@ func TestSlotRuleRefusals(t *testing.T) {
 	w := crsc2.New(t)
 	roast := w.Recipe("Roast chicken", crsc2.RecipeSpec{})
 	w.Settle()
+	// TG-R: a Tag rule needs the Tag.
+	if r := w.User.Post("/api/tags", map[string]any{"name": "light"}); r.Status != 201 {
+		t.Fatalf("add the Tag = %d %s", r.Status, r.Body)
+	}
 	wantErr(t, "a Course the slot does not serve", w.User.Post("/api/slot-rules", map[string]any{"mealSlotId": w.Slot, "courseId": w.Dessert, "tag": "light"}), 422, "course_not_in_slot")
 	wantErr(t, "an unknown Course", w.User.Post("/api/slot-rules", map[string]any{"mealSlotId": w.Slot, "courseId": 9999, "tag": "light"}), 422, "course_not_in_slot")
 	wantErr(t, "a Recipe not marked with the Course", w.User.Post("/api/slot-rules", map[string]any{"mealSlotId": w.Slot, "courseId": w.Side, "recipeId": roast}), 422, "recipe_not_in_course")

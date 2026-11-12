@@ -22,6 +22,7 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/meal-slots', 'Meal Slots'],
     ['/settings/courses', 'Courses'], // CRS D2
     ['/settings/planning', 'Planning rules'],
+    ['/settings/tags', 'Tags'], // TG-S
     ['/settings/shops', 'Shops'],
     ['/settings/preferences', 'Your preferences'],
     ['/settings/notifications', 'Notifications'],
