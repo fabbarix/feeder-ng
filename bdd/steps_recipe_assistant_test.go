@@ -14,6 +14,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -508,6 +512,124 @@ func recipeAssistantSteps(sc *godog.ScenarioContext, w *World) {
 	sc.Step(`^I read the photo address "([^"]*)"$`, func(u string) {
 		if r := start(map[string]any{"photos": []map[string]any{{"url": u}}}); r.Status != 202 {
 			panic(fmt.Sprintf("starting the read: %d %s", r.Status, r.Body))
+		}
+		poll(st.readID)
+	})
+	// ---- photo read: order, formats, links (photo-read design, section 12.3) ----
+	sizes := func(list string) [][2]int {
+		var out [][2]int
+		for _, m := range regexp.MustCompile(`(\d+)x(\d+)`).FindAllStringSubmatch(list, -1) {
+			wd, _ := strconv.Atoi(m[1])
+			ht, _ := strconv.Atoi(m[2])
+			out = append(out, [2]int{wd, ht})
+		}
+		return out
+	}
+	fixture := func(name string) []byte {
+		b, err := os.ReadFile(filepath.Join("..", "internal", "imaging", "testdata", name))
+		if err != nil {
+			panic(err)
+		}
+		return b
+	}
+	readOne := func(dataURL string) {
+		start(map[string]any{"photos": []map[string]any{{"dataUrl": dataURL}}})
+		if st.readID != "" && w.Last.Status == 202 {
+			poll(st.readID)
+		}
+	}
+	photoServer := func(body func(path string) []byte) *httptest.Server {
+		hookFetch(w, st)
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("Content-Type", "image/jpeg")
+			_, _ = rw.Write(body(r.URL.Path))
+		}))
+		st.servers = append(st.servers, srv.Close)
+		st.page = srv
+		return srv
+	}
+	sc.Step(`^I read photos of ((?:\d+x\d+(?:, | and )?)+) px$`, func(list string) {
+		var ps []map[string]any
+		for _, sz := range sizes(list) {
+			ps = append(ps, dataURL(sz[0], sz[1]))
+		}
+		if r := start(map[string]any{"photos": ps}); r.Status != 202 {
+			panic(fmt.Sprintf("starting the photo read: %d %s", r.Status, r.Body))
+		}
+		poll(st.readID)
+	})
+	sc.Step(`^I start a read of no photos$`, func() { start(map[string]any{"photos": []map[string]any{}}) })
+	sc.Step(`^the model received image blocks of ((?:\d+x\d+(?:, | and )?)+) px, in that order$`, func(list string) error {
+		ms := st.fake.Messages()
+		if len(ms) != 1 {
+			return fmt.Errorf("calls = %d", len(ms))
+		}
+		imgs := ms[0].Images()
+		want := sizes(list)
+		if len(imgs) != len(want) {
+			return fmt.Errorf("%d image blocks, want %d", len(imgs), len(want))
+		}
+		for i, im := range imgs {
+			if im.Width != want[i][0] || im.Height != want[i][1] {
+				return fmt.Errorf("block %d is %dx%d, want %dx%d", i+1, im.Width, im.Height, want[i][0], want[i][1])
+			}
+		}
+		return nil
+	})
+	sc.Step(`^I read the (?:HEIC )?photo "([^"]*)"(?: declared as "([^"]*)")?$`, func(name, declared string) {
+		if declared == "" {
+			declared = "image/jpeg"
+			if strings.HasSuffix(name, ".heic") {
+				declared = "image/heic"
+			}
+		}
+		readOne("data:" + declared + ";base64," + base64.StdEncoding.EncodeToString(fixture(name)))
+	})
+	sc.Step(`^I start a read of the photo "([^"]*)" declared as "([^"]*)"$`, func(name, declared string) {
+		start(map[string]any{"photos": []map[string]any{{"dataUrl": "data:" + declared + ";base64," + base64.StdEncoding.EncodeToString(fixture(name))}}})
+		if w.Last.Status == 202 {
+			poll(st.readID)
+		}
+	})
+	sc.Step(`^I start a read of a photo of text declared as "([^"]*)"$`, func(declared string) {
+		start(map[string]any{"photos": []map[string]any{{"dataUrl": "data:" + declared + ";base64," + base64.StdEncoding.EncodeToString([]byte("not a picture, just words"))}}})
+		if w.Last.Status == 202 {
+			poll(st.readID)
+		}
+	})
+	sc.Step(`^I start a read of a photo that is both a data URL and a link$`, func() {
+		p := dataURL(100, 100)
+		p["url"] = "https://example.test/card.jpg"
+		start(map[string]any{"photos": []map[string]any{p}})
+	})
+	sc.Step(`^a photo link "([^"]*)" of (\d+)x(\d+) px$`, func(path string, wd, ht int) {
+		jp := gradient(wd, ht)
+		photoServer(func(p string) []byte {
+			if p == path {
+				return jp
+			}
+			return nil
+		})
+	})
+	sc.Step(`^a photo link "([^"]*)" of 9 MB$`, func(path string) {
+		photoServer(func(string) []byte { return bytes.Repeat([]byte{1}, 9<<20) })
+	})
+	sc.Step(`^I read the photo link "([^"]*)"$`, func(path string) {
+		if r := start(map[string]any{"photos": []map[string]any{{"url": st.page.URL + path}}}); r.Status != 202 {
+			panic(fmt.Sprintf("starting the read: %d %s", r.Status, r.Body))
+		}
+		poll(st.readID)
+	})
+	sc.Step(`^I start a read of the photo link "([^"]*)"$`, func(path string) {
+		start(map[string]any{"photos": []map[string]any{{"url": st.page.URL + path}}})
+		if st.readID != "" && w.Last.Status == 202 {
+			poll(st.readID)
+		}
+	})
+	sc.Step(`^I read a photo of (\d+)x(\d+) px, then the photo link "([^"]*)", then a photo of (\d+)x(\d+) px$`, func(w1, h1 int, path string, w2, h2 int) {
+		ps := []map[string]any{dataURL(w1, h1), {"url": st.page.URL + path}, dataURL(w2, h2)}
+		if r := start(map[string]any{"photos": ps}); r.Status != 202 {
+			panic(fmt.Sprintf("starting the photo read: %d %s", r.Status, r.Body))
 		}
 		poll(st.readID)
 	})
