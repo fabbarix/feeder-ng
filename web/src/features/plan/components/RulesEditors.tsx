@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import type { Tag } from '../../../lib/tags'
-import { Button, Checkbox, ListGroup, ListRow, MealSlotSelect, NumberField, RecipeSelect, Segmented, Select } from '../../../ui'
+import { Button, Checkbox, Chip, CourseSelect, ListGroup, ListRow, MealSlotSelect, NumberField, RecipeSelect, Segmented, TagSelect } from '../../../ui'
 import { useSlotRuleForm, useVarietyRuleForm } from '../hooks/useRuleForms'
-import { describeSlotRule, describeVarietyRule, mealSlotLabel, toTagOptions } from '../lib/rules'
+import { describeSlotRule, describeVarietyRule, mealSlotLabel, ruleCourseName, slotRuleTitle } from '../lib/rules'
+import { findTag, tagPill } from '../lib/tagPill'
+import { rulesStrings } from '../lib/rulesStrings'
 import { planStrings as s } from '../strings'
 import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
 import '../plan.css'
@@ -15,11 +17,34 @@ export function keepEnterInFields(e: { key: string; target: EventTarget; prevent
   if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault()
 }
 
+/** A Tag as a pill: its name in its colour, or the key in a neutral pill when no Tag has it (deleted, or not loaded). */
+function TagChip({ tags, tag }: { tags: Tag[]; tag: string }): ReactNode {
+  const pill = tagPill(tags, tag)
+  return (
+    <Chip kind="tag" tagColour={pill.colour}>
+      {pill.label}
+    </Chip>
+  )
+}
+
+/** The Tag select: shows and picks Tags by id, but the form keeps the Tag key (what the rules store). */
+function TagPicker({ tags, tag, onChange, label, helper }: { tags: Tag[]; tag: string; onChange: (key: string) => void; label: string; helper?: string }): ReactNode {
+  return (
+    <TagSelect
+      label={label}
+      tags={tags}
+      value={findTag(tags, tag)?.id ?? null}
+      onChange={(id) => onChange(tags.find((t) => t.id === id)?.key ?? '')}
+      helper={helper}
+    />
+  )
+}
+
 export interface SlotRulesEditorProps {
   rules: SlotRule[]
   mealSlots: MealSlotChoice[]
   recipes: RecipeChoice[]
-  /** The existing Tags: the Tag of a Slot Rule is picked, never typed. */
+  /** The existing Tags: the Tag of a Slot Rule is picked, never typed; rows show their name and colour. */
   tags: Tag[]
   onAdd: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => void
   onRemove: (id: number) => void
@@ -30,8 +55,9 @@ export interface SlotRulesEditorProps {
 export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemove, error }: SlotRulesEditorProps): ReactNode {
   const form = useSlotRuleForm(mealSlots, onAdd)
   const message = form.error ?? error
+  const slotOf = (id: number) => mealSlots.find((m) => m.id === id)
   const labelOf = (id: number) => {
-    const slot = mealSlots.find((m) => m.id === id)
+    const slot = slotOf(id)
     return slot ? mealSlotLabel(slot.weekday, slot.name) : s.unknownMealSlot
   }
   return (
@@ -43,14 +69,16 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
           {rules.map((r) => (
             <ListRow
               key={r.id}
-              title={labelOf(r.mealSlotId)}
-              meta={describeSlotRule(r)}
+              title={slotRuleTitle(labelOf(r.mealSlotId), ruleCourseName(slotOf(r.mealSlotId), r.courseId))}
+              meta={r.recipeId !== undefined ? describeSlotRule(r) : undefined}
               trailing={
                 <Button variant="tertiary" size="sm" onClick={() => onRemove(r.id)}>
                   {s.removeRule}
                 </Button>
               }
-            />
+            >
+              {r.recipeId === undefined ? <TagChip tags={tags} tag={r.tag ?? ''} /> : null}
+            </ListRow>
           ))}
         </ListGroup>
       ) : null}
@@ -68,6 +96,14 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
           value={form.mealSlotId ? Number(form.mealSlotId) : null}
           onChange={(id) => form.setMealSlotId(String(id))}
         />
+        {form.showCourse ? (
+          <CourseSelect
+            label={rulesStrings.courseField}
+            courses={form.courses}
+            value={form.courseId ? Number(form.courseId) : null}
+            onChange={(id) => form.setCourseId(String(id))}
+          />
+        ) : null}
         <Segmented
           label={s.ruleKindField}
           options={[
@@ -78,13 +114,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
           onChange={form.setKind}
         />
         {form.kind === 'tag' ? (
-          <Select
-            label={s.tagField}
-            options={toTagOptions(tags as never)}
-            value={form.tag || null}
-            onChange={form.setTag}
-            helper={tags.length === 0 ? s.noTags : undefined}
-          />
+          <TagPicker tags={tags} tag={form.tag} onChange={form.setTag} label={s.tagField} helper={tags.length === 0 ? s.noTags : undefined} />
         ) : (
           <RecipeSelect
             label={s.recipeField}
@@ -126,14 +156,16 @@ export function VarietyRulesEditor({ rules, tags, onSave, onRemove, error }: Var
           {rules.map((r) => (
             <ListRow
               key={r.tag}
-              title={r.tag}
+              title=""
               meta={describeVarietyRule(r)}
               trailing={
                 <Button variant="tertiary" size="sm" onClick={() => onRemove(r.tag)}>
                   {s.removeRule}
                 </Button>
               }
-            />
+            >
+              <TagChip tags={tags} tag={r.tag} />
+            </ListRow>
           ))}
         </ListGroup>
       ) : null}
@@ -145,13 +177,7 @@ export function VarietyRulesEditor({ rules, tags, onSave, onRemove, error }: Var
           form.submit()
         }}
       >
-        <Select
-          label={s.tagField}
-          options={toTagOptions(tags as never)}
-          value={form.tag || null}
-          onChange={form.setTag}
-          helper={tags.length === 0 ? s.noTags : undefined}
-        />
+        <TagPicker tags={tags} tag={form.tag} onChange={form.setTag} label={s.tagField} helper={tags.length === 0 ? s.noTags : undefined} />
         <NumberField label={s.maxPerWeekField} value={form.maxPerWeek} onChange={form.setMaxPerWeek} min={1} max={21} />
         <Checkbox label={s.notConsecutive} checked={form.notConsecutiveDays} onChange={form.setNotConsecutiveDays} />
         {message ? (

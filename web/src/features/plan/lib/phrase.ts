@@ -61,8 +61,9 @@ export function phraseWhy(why: Why, ctx: PhraseContext): string {
       if (!why.date) return ''
       return why.date < ctx.slotDate ? s.whyAgainSoonBefore(weekdayName(why.date, 'short')) : s.whyAgainSoonAfter(weekdayName(why.date, 'short'))
     case 'variety_relaxed':
-      if (why.date) return s.whyTagTwoDays(why.tag ?? '')
-      return why.value ? s.whyTagCount(ordinal(why.value), why.tag ?? '') : ''
+      const tag = ctx.tagName?.(why.tag ?? '') ?? why.tag ?? ''
+      if (why.date) return s.whyTagTwoDays(tag)
+      return why.value ? s.whyTagCount(ordinal(why.value), tag) : ''
     default:
       return ''
   }

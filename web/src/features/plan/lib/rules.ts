@@ -89,19 +89,24 @@ export function slotRuleTitle(slotLabel: string, courseName: string | null): str
 }
 
 /** TG-PW: the Courses of a Meal Slot as the Course select takes them (household order, as the slot lists them); [] for a slot without `courses`. */
-export function slotCourseChoices(_slot: MealSlotChoice | undefined): CourseChoice[] {
-  return []
+export function slotCourseChoices(slot: MealSlotChoice | undefined): CourseChoice[] {
+  return [...(slot?.courses ?? [])]
 }
 
 /** TG-PW: the Course the form starts on for a slot: the main Course's id as a string, '' when the slot has no Courses. */
-export function defaultCourseId(_slot: MealSlotChoice | undefined): string {
-  return ''
+export function defaultCourseId(slot: MealSlotChoice | undefined): string {
+  const courses = slot?.courses ?? []
+  const main = courses.find((c) => c.main) ?? courses[0]
+  return main ? String(main.id) : ''
 }
 
 /**
  * TG-PW: the Course name a Slot Rule row shows: only when the slot has several Courses. An absent `courseId` means the
  * main Course. null when the slot serves one Course (the row reads as before), is unknown, or no longer serves that Course.
  */
-export function ruleCourseName(_slot: MealSlotChoice | undefined, _courseId: number | undefined): string | null {
-  return null
+export function ruleCourseName(slot: MealSlotChoice | undefined, courseId: number | undefined): string | null {
+  const courses = slot?.courses ?? []
+  if (courses.length < 2) return null
+  const course = courseId === undefined ? courses.find((c) => c.main) : courses.find((c) => c.id === courseId)
+  return course?.name ?? null
 }

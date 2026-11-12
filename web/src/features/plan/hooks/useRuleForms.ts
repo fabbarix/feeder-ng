@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { toSlotRuleBody, toVarietyRule, type SlotRuleDraftError, type VarietyDraftError } from '../lib/rules'
+import { defaultCourseId, slotCourseChoices, toSlotRuleBody, toVarietyRule, type SlotRuleDraftError, type VarietyDraftError } from '../lib/rules'
 import { planStrings } from '../strings'
 import type { CourseChoice } from '../../../lib/courses/types'
 import type { MealSlotChoice, VarietyRule } from '../types'
@@ -45,11 +45,22 @@ export function useSlotRuleForm(
   const [kind, setKind] = useState<'recipe' | 'tag'>('recipe')
   const [recipeId, setRecipeId] = useState('')
   const [tag, setTag] = useState('')
+  /** TG-PW: the Course picked on the current slot; '' = the slot's main Course. Cleared when the slot changes. */
+  const [pickedCourse, setPickedCourse] = useState('')
   const [error, setError] = useState<string | null>(null)
   const effectiveSlot = mealSlotId || (mealSlots[0] ? String(mealSlots[0].id) : '')
+  const slot = mealSlots.find((m) => String(m.id) === effectiveSlot)
+  const courses = slotCourseChoices(slot)
+  const showCourse = courses.length > 1
+  const courseId = showCourse ? pickedCourse || defaultCourseId(slot) : ''
+
+  const changeSlot = (v: string) => {
+    setMealSlotId(v)
+    setPickedCourse('')
+  }
 
   const submit = () => {
-    const res = toSlotRuleBody({ mealSlotId: effectiveSlot, kind, recipeId, tag })
+    const res = toSlotRuleBody({ mealSlotId: effectiveSlot, kind, recipeId, tag, courseId })
     if ('error' in res) {
       setError(slotErrors[res.error])
       return
@@ -58,7 +69,22 @@ export function useSlotRuleForm(
     onAdd(res.body)
     setTag('')
   }
-  return { mealSlotId: effectiveSlot, kind, recipeId, tag, courseId: '', courses: [], showCourse: false, setCourseId: () => {}, setMealSlotId, setKind, setRecipeId, setTag, error, submit }
+  return {
+    mealSlotId: effectiveSlot,
+    kind,
+    recipeId,
+    tag,
+    courseId,
+    courses,
+    showCourse,
+    setCourseId: setPickedCourse,
+    setMealSlotId: changeSlot,
+    setKind,
+    setRecipeId,
+    setTag,
+    error,
+    submit,
+  }
 }
 
 export interface VarietyRuleForm {
