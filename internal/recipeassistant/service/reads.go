@@ -223,7 +223,7 @@ func httpsURL(raw string) bool {
 	return err == nil && strings.EqualFold(u.Scheme, "https") && u.Hostname() != "" && u.User == nil
 }
 
-var photoMediaTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
+var photoMediaTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/heic": true, "image/heif": true}
 
 // validatePhoto does the synchronous checks of design ra-c-service §3: exactly one of data URL or URL, a
 // supported declared type, and the 8 MB size cap. Decoding happens later, in the preparing state.

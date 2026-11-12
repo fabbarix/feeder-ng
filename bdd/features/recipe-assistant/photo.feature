@@ -37,15 +37,11 @@ Feature: Reading a recipe from photos
     When I read photos of 4000x1000 px
     Then the model received image blocks of 2576x644 px, in that order
 
-  # @wip: the server refuses data:image/heic and data:image/heif synchronously (service/reads.go photoMediaTypes lacks
-  # them), against ADR 0007 and Q6 of the photo-read design. Drop the tag when photoMediaTypes accepts both.
-  @wip
   Scenario: A HEIC photo is read as JPEG
     When I read the HEIC photo "pantry-128x96.heic"
     Then the read is done and a review is open
     And the model received 1 JPEG image blocks before the text, each at most 2576 px
 
-  @wip
   Scenario: A HEIC photo declared as HEIF is read as JPEG
     When I read the photo "pantry-128x96.heic" declared as "image/heif"
     Then the read is done and a review is open
@@ -56,7 +52,6 @@ Feature: Reading a recipe from photos
     Then the read is done and a review is open
     And the model received image blocks of 32x64 px, in that order
 
-  @wip
   Scenario: A HEIC photo that is far too wide is refused
     When I start a read of the photo "too-wide-12100x64.heic" declared as "image/heic"
     Then the read failed with "photo_too_large"
