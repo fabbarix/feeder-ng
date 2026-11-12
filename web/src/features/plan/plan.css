@@ -202,6 +202,10 @@
   top: 8px;
   inset-inline-end: 8px;
 }
+/* The overline (the Meal Slot name, up to 50 characters) wraps before it reaches the slot menu: button + gap. */
+.plan-hero:has(.plan-hero__menu) .tile__overline {
+  padding-inline-end: calc(40px + var(--space-2));
+}
 .plan-hero__body {
   display: flex;
   gap: 16px;
