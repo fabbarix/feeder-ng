@@ -99,7 +99,7 @@ describe('StickyActionBar.css', () => {
   const css = readUiCss('StickyActionBar.css')
   const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const d = (s: string) => declarations(css, s)
-  it('sticks to the bottom clear of the phone bottom bar (--nav-clearance is 0 from 1024), below the bottom bar in z-order', () => {
+  it('sticks to the bottom clear of the phone bottom bar (--nav-top is 0 from 1024), below the bottom bar in z-order', () => {
     const b = d('.sticky-action-bar')
     expect(b['position']).toBe('sticky')
     // QA-4: flush on the bottom bar's top edge (--nav-top), not --nav-clearance, which adds a 16 px content gap.

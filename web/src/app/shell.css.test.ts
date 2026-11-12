@@ -1,4 +1,4 @@
-// The shell stylesheet (plan 4.5): tokens only, one clearance variable, chromeless is full-viewport. Reads web/src/app/shell.css.
+// The shell stylesheet (plan 4.5): tokens only, a content clearance token and a bar-top token, chromeless is full-viewport. Reads web/src/app/shell.css.
 import { describe, expect, it } from 'vitest'
 import { declarations, readStylesCss } from '../ui/test-utils'
 
