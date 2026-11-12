@@ -8,6 +8,10 @@ import { Page } from './Page'
 import { StickyActionBar } from './StickyActionBar'
 import { declarations, readUiCss } from './test-utils'
 
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, e: string) => string }
+const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
+
 type IOCallback = (entries: { isIntersecting: boolean }[]) => void
 let ioCallbacks: IOCallback[] = []
 beforeEach(() => {
@@ -98,9 +102,24 @@ describe('StickyActionBar.css', () => {
   it('sticks to the bottom clear of the phone bottom bar (--nav-clearance is 0 from 1024), below the bottom bar in z-order', () => {
     const b = d('.sticky-action-bar')
     expect(b['position']).toBe('sticky')
-    expect(b['bottom']).toBe('var(--nav-clearance)')
+    // QA-4: flush on the bottom bar's top edge (--nav-top), not --nav-clearance, which adds a 16 px content gap.
+    expect(b['bottom']).toBe('var(--nav-top)')
     expect(Number(b['z-index'])).toBeGreaterThan(0)
     expect(Number(b['z-index'])).toBeLessThan(10) // .bottom-bar is 10
+  })
+  it('QA-4: its offset comes from the bottom bar tokens (height, inset, safe area), never a literal or the clearance gap', () => {
+    const bottom = d('.sticky-action-bar')['bottom']
+    expect(bottom).not.toMatch(/\d+px|--nav-clearance|--space-/)
+    const shell = (readFileSync(`${cwd}/src/app/shell.css`, 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '')
+    const navTop = declarations(shell, ':root')['--nav-top'] ?? ''
+    expect(navTop).toMatch(/var\(--nav-height\)/)
+    expect(navTop).toMatch(/var\(--nav-inset\)/)
+    expect(navTop).toMatch(/env\(safe-area-inset-bottom/)
+    expect(navTop).not.toMatch(/--space-/)
+  })
+  it('QA-4: no padding or margin below the bar that would open a gap above the nav on phones', () => {
+    const b = d('.sticky-action-bar')
+    expect(b['margin-block-end'] ?? b['margin-bottom'] ?? '0').toMatch(/^0(px)?$/)
   })
   it('is opaque: surface background, no alpha, no blur, no opacity', () => {
     const b = d('.sticky-action-bar')

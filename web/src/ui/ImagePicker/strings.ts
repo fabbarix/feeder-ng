@@ -25,7 +25,7 @@ export const imagePickerStrings = {
   removeImage: 'Remove image',
   cancel: 'Cancel',
   preparing: 'Preparing the image',
-  uploading: 'Uploading the image',
+  uploading: 'Saving the image',
   converting: 'Converting photo…',
   downloading: 'Downloading the image',
   pasteHint: PASTE_HINT,

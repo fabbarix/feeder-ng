@@ -12,4 +12,15 @@ describe('notifications.css', () => {
     expect(body).toContain('var(--color-muted')
     expect(body).not.toMatch(/opacity/)
   })
+
+  // QA-2: the shared page (ListPage, and the shell's page container) owns padding and width; the screen adds none.
+  it('has no screen root rule: no .notifications block with max-width, padding or margin', () => {
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const m of bare.matchAll(/(^|\})\s*([^{}@]+)\{([^{}]*)\}/g)) {
+      const selectors = m[2]!.split(',').map((x) => x.trim())
+      if (!selectors.includes('.notifications')) continue
+      expect(m[3], '.notifications').not.toMatch(/max-width|max-inline-size|padding|margin/)
+    }
+    expect(bare).not.toMatch(/\.notifications\s*\{[^}]*(max-width|padding)/)
+  })
 })

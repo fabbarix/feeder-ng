@@ -99,7 +99,7 @@ describe('ImagePicker, from a file', () => {
     })
     const { input, onChange } = setup({ api })
     await user.upload(input, pngFile())
-    expect(await screen.findByRole('status')).toHaveTextContent(/Uploading the image/)
+    expect(await screen.findByRole('status')).toHaveTextContent(/Saving the image/)
     expect(screen.getByRole('group', { name: 'Recipe photo' })).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByRole('button', { name: 'Paste image' })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Choose a file/ })).toBeDisabled()

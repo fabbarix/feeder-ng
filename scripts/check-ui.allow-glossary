@@ -8,6 +8,7 @@ web/src/features/shops/strings.ts item  # "Item code" is a Shop receipt term
 
 # "unit" meaning a measurement unit (g, ml, piece; currency minor unit), not a Stock Lot ("Units" is not a glossary term).
 web/src/features/import/strings.ts unit  # 'Units' title: measurement units
+web/src/ui/Select/strings.ts unit  # useUnit: "Use unit" creates a measurement unit (UnitSelect), not a Stock Lot
 web/src/features/ingredients/strings.ts unit  # conversion unit label/errors: measurement unit
 web/src/features/recipes/strings.ts unit  # recipe line unit label and validation: measurement unit
 web/src/features/scan/strings.ts unit  # pack unit label: measurement unit

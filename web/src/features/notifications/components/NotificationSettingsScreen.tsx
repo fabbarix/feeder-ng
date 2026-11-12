@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { PageHeader, Tile } from '../../../ui'
+import { ListPage, PageHeader, Tile } from '../../../ui'
 import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { notificationStrings as s } from '../strings'
 import { NotificationSettingsView } from './NotificationSettingsView'
@@ -15,8 +15,7 @@ export function NotificationSettingsScreen(): ReactElement {
   const state = useNotificationSettings()
   const breadcrumbs = useBreadcrumbs()
   return (
-    <main className="notifications">
-      <PageHeader title={s.title} breadcrumbs={breadcrumbs} />
+    <ListPage header={<PageHeader title={s.title} breadcrumbs={breadcrumbs} />}>
       {state.loading ? (
         <Tile as="section" span="full">
           <p className="notifications__muted">{s.loading}</p>
@@ -38,6 +37,6 @@ export function NotificationSettingsScreen(): ReactElement {
           onRemove={(id) => void state.removeDevice(id)}
         />
       )}
-    </main>
+    </ListPage>
   )
 }
