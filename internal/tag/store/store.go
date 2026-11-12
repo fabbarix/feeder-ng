@@ -429,3 +429,12 @@ func EnsureTx(ctx context.Context, tx *sql.Tx, name string) (int64, error) {
 	}
 	return res.LastInsertId()
 }
+
+// BothRecipes counts the Recipes (archived included) that carry both Tag id and Tag into: the
+// "(4 already have both)" of the merge confirm (GET /api/tags/{id}/impact?into=). tag.ErrNotFound
+// (id), tag.ErrMergeSelf, tag.ErrMergeTarget, checked in that order.
+//
+// STUB (TG-API test author): returns an error until the developer writes it.
+func (s *Store) BothRecipes(ctx context.Context, id, into int64) (int, error) {
+	return 0, errors.New("tag/store: BothRecipes is not implemented")
+}
