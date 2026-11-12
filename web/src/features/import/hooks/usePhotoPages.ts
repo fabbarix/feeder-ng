@@ -304,12 +304,20 @@ export function usePhotoPages(deps: Partial<PhotoPagesDeps> = {}): UsePhotoPages
   const dismissProblem = useCallback(() => dispatch({ type: 'problemCleared' }), [])
 
   // ---- clearing: the read finished, or the restore message's Remove --------------------------------------------------------------
-  const clearAll = useCallback(() => {
+  const clearStore = useCallback(() => {
     writer.clear()
     urls.releaseAll()
     setRestoredIds([])
-    for (const photo of latest.current.photos) dispatch({ type: 'removed', id: photo.id })
   }, [urls, writer])
+  const clearAll = useCallback(() => {
+    clearStore()
+    for (const photo of latest.current.photos) dispatch({ type: 'removed', id: photo.id })
+  }, [clearStore])
+  // A finished read: the store, the URLs, the list, the open editor and the queued files all go (hotfix 4.2).
+  const finished = useCallback(() => {
+    clearStore()
+    dispatch({ type: 'cleared' })
+  }, [clearStore])
 
   // ---- the read ---------------------------------------------------------------------------------------------------------------------
   const toReadInput = useCallback(async (): Promise<Extract<ReadInput, { kind: 'photo' }>> => {
@@ -344,7 +352,7 @@ export function usePhotoPages(deps: Partial<PhotoPagesDeps> = {}): UsePhotoPages
     toReadInput,
     restoredCount,
     removeRestored: clearAll,
-    finished: clearAll,
+    finished,
   }
 }
 

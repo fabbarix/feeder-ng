@@ -1,4 +1,4 @@
-import type { ShoppingExtra, ShoppingLine, ShoppingList } from './types'
+import type { PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from './types'
 
 export function makeLine(over: Partial<ShoppingLine> = {}): ShoppingLine {
   return {
@@ -37,4 +37,9 @@ export function makeList(over: Partial<ShoppingList> = {}): ShoppingList {
     summary: { lines: 0, spentCents: 0, lotsAdded: 0 },
     ...over,
   }
+}
+
+/** B5-SH: an unconfirmed past meal; 2026-11-03 is a Tuesday. */
+export function makePast(over: Partial<PastPlannedMeal> = {}): PastPlannedMeal {
+  return { date: '2026-11-03', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Starter', ...over }
 }

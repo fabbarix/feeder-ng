@@ -2,7 +2,9 @@
 import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { BaseUnit, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
+import { shopStrings } from '../strings'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
 export interface ListEntry {
@@ -26,6 +28,11 @@ export interface ListEntry {
   baseUnit: BaseUnit | null
   /** PE: the Ingredient's Picture address of a Line or an Ingredient extra; '' = none. */
   imageUrl?: string
+  /**
+   * B5-SH: "Includes Tue Dinner, not marked Cooked yet" (see pastMealsHint). The key is left out of entries with
+   * nothing to say (an extra, a Line without unconfirmed past meals).
+   */
+  hint?: string
 }
 
 /** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
@@ -40,7 +47,9 @@ export function priceText(cents: number | null, currency: string): string | null
 }
 
 export function lineEntry(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry {
+  const hint = pastMealsHint(line.pastPlannedMeals)
   return {
+    ...(hint ? { hint } : {}),
     key: `line:${line.ingredientId}`,
     kind: 'line',
     ingredientId: line.ingredientId,
@@ -83,4 +92,43 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
   const all = [...lines.filter((i) => !i.ticked), ...extras.filter((i) => !i.ticked)]
   const ticked = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
   return { open: all, ticked }
+}
+
+/** The short English weekday of a YYYY-MM-DD date. */
+function weekday(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const jsDay = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
+  return weekdayShortName(jsDay === 0 ? 7 : jsDay)
+}
+
+/** "A", "A and B", "A, B and C" (the server order is kept). */
+function joinAnd(items: string[]): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} ${shopStrings.andJoin} ${items[items.length - 1]}`
+}
+
+/**
+ * B5-SH: the hint of a Line that includes Planned Meals whose slot has passed and that are not marked Cooked or Not
+ * cooked yet. '' without any. Courses of one slot are grouped:
+ * - one slot, one Course: "Includes Tue Dinner, not marked Cooked yet"
+ * - one slot, several Courses: "Includes Tue Dinner (Main, Side), not marked Cooked yet"
+ * - several slots, oldest first: "Includes Tue Dinner and Wed Lunch, ..." / "Includes Mon Dinner, Tue Dinner and Wed Lunch, ..."
+ * The weekday is the short English name of the entry's date.
+ */
+export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
+  if (!meals || meals.length === 0) return ''
+  const slots = new Map<string, { label: string; courses: string[] }>()
+  for (const m of meals) {
+    const key = `${m.date}|${m.mealSlotId}`
+    const slot = slots.get(key) ?? { label: `${weekday(m.date)} ${m.mealSlotName}`, courses: [] }
+    if (m.courseName) slot.courses.push(m.courseName)
+    slots.set(key, slot)
+  }
+  const named = [...slots.values()].map((s) => (s.courses.length > 1 ? shopStrings.unconfirmedCourses(s.label, s.courses.join(', ')) : s.label))
+  return shopStrings.unconfirmedMeals(joinAnd(named))
+}
+
+/** B5-SH: the entries of the collapsed "Not needed" group (list.notNeeded, in server order); [] for an older saved list. */
+export function notNeededEntries(list: ShoppingList, system: UnitSystem): ListEntry[] {
+  return (list.notNeeded ?? []).map((line) => lineEntry(line, list.currency, system))
 }

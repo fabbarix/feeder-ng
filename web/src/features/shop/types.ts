@@ -10,6 +10,15 @@ export interface PackSuggestion {
   remainder: number
 }
 
+/** B5-SH: a Planned Meal whose slot has passed and that is not marked Cooked or Not cooked yet; one entry per Course. */
+export interface PastPlannedMeal {
+  /** YYYY-MM-DD */
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  courseName: string
+}
+
 export interface ShoppingLine {
   ingredientId: number
   name: string
@@ -24,6 +33,8 @@ export interface ShoppingLine {
   estimatedCostCents: number | null
   /** PE: "/api/images/<id>" of the Ingredient's Picture, '' = none (the server always sends it). */
   imageUrl?: string
+  /** B5-SH: the unconfirmed past meals this need includes; absent in a list saved by an older version. */
+  pastPlannedMeals?: PastPlannedMeal[]
 }
 
 /** A manual extra: free text, or an Ingredient with a remaining quantity. */
@@ -54,6 +65,8 @@ export interface ShoppingList {
   maxTo: string
   currency: string
   lines: ShoppingLine[]
+  /** B5-SH: Lines taken off the list for this range; absent in a list saved by an older version. */
+  notNeeded?: ShoppingLine[]
   extras: ShoppingExtra[]
   progress: { ticked: number; total: number }
   estimatedCostCents: number
@@ -74,6 +87,13 @@ export interface TickInput {
   quantity: number
   shopId?: number | null
   clientUuid?: string
+}
+
+export interface NotNeededInput {
+  ingredientId: number
+  /** the range's last date, as the list answered it */
+  to: string
+  shopId?: number | null
 }
 
 export interface TickResult {

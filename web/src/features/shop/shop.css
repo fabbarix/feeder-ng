@@ -164,6 +164,67 @@
   white-space: nowrap;
 }
 
+/* B5-SH: a Line with unconfirmed past meals names them; "Mark it" sits beside the hint. */
+.line-tile__hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.line-tile__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+/* B5-SH: the Not needed group. A Line there has no tick control, so its grid is text and action only. */
+.line-tile[data-state='not-needed'] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.line-tile[data-state='not-needed'][data-lead='true'] {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.shop-not-needed {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.shop-not-needed__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: start;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  cursor: pointer;
+}
+
+.shop-not-needed__chevron {
+  transition: transform 150ms ease;
+}
+
+.shop-not-needed__toggle[aria-expanded='true'] .shop-not-needed__chevron {
+  transform: rotate(90deg);
+}
+
+.shop-not-needed__toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* The estimated total. */
 .cost-tile {
   display: grid;
