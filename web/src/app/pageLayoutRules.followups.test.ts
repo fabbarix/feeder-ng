@@ -12,6 +12,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
+  darkButtonFindings: (list?: { label: string; ratio: number }[]) => { rule: string; message: string }[]
 }
 const base = {
   vw: 820, scrollW: 820, clientW: 820, over: [], content: { x: 24, r: 796 }, railR: 0, container: { x: 24, r: 796 },
@@ -116,8 +117,28 @@ describe('the dark pass is isolated from the light findings', () => {
     const after = loop.slice(probe)
     expect(probe).toBeGreaterThan(0)
     // one evaluateMetrics for the light pass only; the dark pass must not call it again with the full metrics
-    expect(loop.match(/evaluateMetrics\(/g)).toHaveLength(2)
-    expect(after).toMatch(/evaluateMetrics\(\s*\{\s*lowContrastButtons:\s*\[\]\s*,\s*lowContrastButtonsDark/)
-    expect(after).toMatch(/\.filter\(\(?\w+\)?\s*=>\s*\w+\.rule\s*===\s*'P10'\)|rule\s*===\s*'P10'/)
+    expect(loop.match(/evaluateMetrics\(/g)).toHaveLength(1)
+    expect(after).toContain('darkButtonFindings(')
+    expect(after.indexOf('darkButtonFindings(')).toBeLessThan(after.indexOf('finally'))
+  })
+})
+
+describe('darkButtonFindings (the dark pass reports through this helper, not a partial evaluateMetrics call)', () => {
+  it('one low-contrast Button gives exactly one P10 finding with the dark scheme message', () => {
+    const f = rules.darkButtonFindings([{ label: 'Choose a Recipe', ratio: 1.3 }])
+    expect(f).toHaveLength(1)
+    expect(f[0]!.rule).toBe('P10')
+    expect(f[0]!.message).toMatch(/Choose a Recipe.*1\.3.*\(dark scheme\)|\(dark scheme\).*Choose a Recipe/)
+  })
+  it('an empty list gives none, and an undefined list gives none without throwing', () => {
+    expect(rules.darkButtonFindings([])).toEqual([])
+    expect(() => rules.darkButtonFindings(undefined)).not.toThrow()
+    expect(rules.darkButtonFindings(undefined)).toEqual([])
+  })
+  it('evaluateMetrics reports m.lowContrastButtonsDark with the very same message', () => {
+    const entry = { label: 'Go', ratio: 2.2 }
+    const viaHelper = rules.darkButtonFindings([entry])[0]!.message
+    const viaMetrics = run({ lowContrastButtons: [], lowContrastButtonsDark: [entry] }).filter((x) => x.rule === 'P10')
+    expect(viaMetrics.map((x) => x.message)).toEqual([viaHelper])
   })
 })
