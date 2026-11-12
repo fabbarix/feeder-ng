@@ -490,7 +490,7 @@ are added by T2 after T1 has merged (the PM hands both barrel files to T2 for th
 | `ACCEPT`, type `ImageOrigin` | `./ImagePicker/lib/limits`, `./ImagePicker/types` | `libraryAccept`, `addFiles` | T1 |
 | `cameraStrategy`, `cameraEnvironment`, type `CameraPolicy` | `./ImagePicker/lib/cameraStrategy`, `./ImagePicker/lib/deps` | `usePhotoSources` | T1 |
 | `ImageEditor`; types `ImageEditorProps`, `ImageEdit`, `Turns`, `Rect`, `Size`, `CropAspect`; `initialEdit`, `isFullEdit`, `outputSize` | `./ImageEditor` | `PhotoEditorPanel`, the reducer | T1 |
-| `browserImageEngine` (the read engine: `decode`, `encode`, `normalise`, `browserOrients`, `readHead`), types `ReadImageEngine`, `Working`; the `working.ts` constants (`READ_MAX_SIDE`, `INPUT_MAX_BYTES`, `INPUT_MAX_PIXELS`, `AS_IS_MAX_BYTES`), `readHeaderSize` | `./ImageEditor` (its `lib/engine.ts`, `lib/working.ts`, `lib/header.ts`) | `PhotoPagesDeps` defaults, intake | **T2** |
+| `browserImageEngine` (the read engine: `decode`, `encode`, `normalise`, `browserOrients`, `readHead`), class `TooManyPixelsError` (for `instanceof`), types `ReadImageEngine`, `Working`; the `working.ts` constants (`READ_MAX_SIDE`, `INPUT_MAX_BYTES`, `INPUT_MAX_PIXELS`, `AS_IS_MAX_BYTES`), `readHeaderSize` | `./ImageEditor` (its `lib/engine.ts`, `lib/working.ts`, `lib/header.ts`) | `PhotoPagesDeps` defaults, intake | **T2** |
 | `useObjectUrls`, type `ObjectUrls` | `./ImageEditor` (its `hooks/useObjectUrls.ts`) | `previewUrl`, `editorUrl` | **T2** |
 
 `RawImage` and `Sortable` are already exported. Nothing else of ImagePicker or ImageEditor is public.
