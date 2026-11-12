@@ -156,15 +156,19 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
     }
 
     case 'added': {
-      // The file being prepared already holds its slot (intake), so only photos and queued files count here.
-      if (state.photos.length + state.queue.length >= MAX_PHOTOS) return { ...state, problem: { code: 'too_many_photos' } }
+      // A prepared image or as-is file already holds its intake slot, so it counts photos + queue only. A link is not prepared,
+      // so while a file is being prepared it also takes that slot into account.
+      const isLink = action.source.kind === 'link'
+      const taken = state.photos.length + state.queue.length + (isLink && state.intake === 'preparing' ? 1 : 0)
+      if (taken >= MAX_PHOTOS) return { ...state, problem: { code: 'too_many_photos' } }
       const id = `p${state.nextId}`
       const source = action.source
       let photo: Photo
       let editing = state.editing
       if (source.kind === 'image') {
         photo = { id, source, edit: null, output: { status: 'pending' }, revision: 0 }
-        editing = { id, draft: initialEdit({ width: source.width, height: source.height }), isNew: true }
+        // An open session is never replaced by an add: the new photo then waits as a whole picture until it is edited.
+        if (!editing) editing = { id, draft: initialEdit({ width: source.width, height: source.height }), isNew: true }
       } else if (source.kind === 'as-is') {
         // Nothing to render: the declared file is sent as it is.
         photo = { id, source, edit: null, output: { status: 'ready', blob: source.blob, width: 0, height: 0, type: source.type }, revision: 0 }
@@ -172,13 +176,22 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
         // A link has no blob here; the server fetches it, so its output is a ready placeholder with no bytes.
         photo = { id, source, edit: null, output: { status: 'ready', blob: new Blob([]), width: 0, height: 0, type: '' }, revision: 0 }
       }
-      return { ...state, photos: [...state.photos, photo], editing, nextId: state.nextId + 1, problem: null }
+      // "N left out" (too_many_photos with a count) stays until dismissed or replaced; any other message is cleared only when the pick is over.
+      const keepProblem = (state.problem?.code === 'too_many_photos' && state.problem.count !== undefined) || state.queue.length > 0
+      return {
+        ...state,
+        photos: [...state.photos, photo],
+        editing,
+        nextId: state.nextId + 1,
+        problem: keepProblem ? state.problem : null,
+      }
     }
 
     case 'editStarted': {
       const photo = state.photos.find((p) => p.id === action.id)
       const size = photo ? workingSize(photo.source) : undefined
-      if (!photo || !size) return state
+      // Ignored while a file is being prepared or another session is open: no silent replacement.
+      if (!photo || !size || state.intake === 'preparing' || state.editing) return state
       return { ...state, editing: { id: photo.id, draft: photo.edit ?? initialEdit(size), isNew: false } }
     }
 
