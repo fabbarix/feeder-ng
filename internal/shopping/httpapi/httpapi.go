@@ -326,13 +326,13 @@ func (a *api) neededAfterAll(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found.")
 		return
 	}
-	to := stock.Date(r.URL.Query().Get("to"))
-	if err := a.svc.ClearNotNeeded(r.Context(), ing, to); err != nil {
+	shopID, err := shopParam(r)
+	if err != nil {
 		writeError(w, err)
 		return
 	}
-	shopID, err := shopParam(r)
-	if err != nil {
+	to := stock.Date(r.URL.Query().Get("to"))
+	if err := a.svc.ClearNotNeeded(r.Context(), ing, to); err != nil {
 		writeError(w, err)
 		return
 	}

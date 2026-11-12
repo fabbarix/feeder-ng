@@ -3,6 +3,7 @@ import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { shopStrings } from '../strings'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
@@ -93,12 +94,11 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
   return { open: all, ticked }
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 /** The short English weekday of a YYYY-MM-DD date. */
 function weekday(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
-  return WEEKDAYS[new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()] ?? ''
+  const jsDay = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
+  return weekdayShortName(jsDay === 0 ? 7 : jsDay)
 }
 
 /** "A", "A and B", "A, B and C" (the server order is kept). */

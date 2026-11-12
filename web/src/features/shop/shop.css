@@ -194,6 +194,9 @@
 }
 
 .shop-not-needed__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   align-self: start;
   min-height: 44px;
   margin: 0;
@@ -207,6 +210,14 @@
   font-weight: var(--text-label-weight);
   line-height: var(--text-label-line);
   cursor: pointer;
+}
+
+.shop-not-needed__chevron {
+  transition: transform 150ms ease;
+}
+
+.shop-not-needed__toggle[aria-expanded='true'] .shop-not-needed__chevron {
+  transform: rotate(180deg);
 }
 
 .shop-not-needed__toggle:focus-visible {

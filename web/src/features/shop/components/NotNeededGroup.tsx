@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { BentoGrid } from '../../../ui/BentoGrid'
 import { Button } from '../../../ui/Button'
+import { Icon } from '../../../ui/Icon'
 import { Tile } from '../../../ui/Tile'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
@@ -26,6 +27,7 @@ export function NotNeededGroup({ entries, onNeededAfterAll, lead }: NotNeededGro
     <section className="shop-not-needed">
       <button type="button" className="shop-not-needed__toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((o) => !o)}>
         {shopStrings.notNeededGroup(entries.length)}
+        <Icon name="chevron" size={20} className="shop-not-needed__chevron" />
       </button>
       {open ? (
         <div role="group" aria-label={shopStrings.notNeeded} id={panelId}>
