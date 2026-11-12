@@ -9,7 +9,7 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { PROFILES, ROUTES, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, darkButtonFindings, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -365,9 +365,7 @@ for (const vp of VIEWPORTS) {
           throw new Error('the dark scheme was not applied (data-scheme is not dark); environment problem, not a finding')
         }
         const lowContrastButtonsDark = await evaluate(buttonProbe)
-        for (const f of evaluateMetrics({ lowContrastButtons: [], lowContrastButtonsDark }, { width: vp.width, route, kind }).filter((f) => f.rule === 'P10')) {
-          fail(`${tag}: ${f.message}`)
-        }
+        for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
       } catch (e) {
         console.error(`check-page-layout: could not inspect ${tag} (dark scheme: ${e.message})`)
       } finally {

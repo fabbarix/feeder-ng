@@ -32,7 +32,7 @@ After the light probe the driver therefore calls `Emulation.setEmulatedMedia` (`
 runs `settle()`, and checks `document.documentElement.dataset.scheme === 'dark'`. If it is not dark the driver reports an environment problem
 ("could not inspect", no finding, never clean). Only then does it re-run the button probe into `lowContrastButtonsDark`, then resets the media to `light`.
 Order and isolation: the light findings (`evaluateMetrics`, `fail`) are reported first. The dark pass then runs in its own try/catch/finally (the media reset to `light` is in the finally; a dark error is logged as "could not inspect <tag> (dark scheme: ...)", not a finding), `Page.reload` is raced with `sleep()` like the first navigation, and afterwards only the dark P10 findings are reported (metrics with an empty light list), never the light ones twice.
-The dark pass runs on every viewport of the run. `evaluateMetrics` adds one P10 finding per entry; dark ones read `Button "X" contrast 1.3:1 (< 4.5, dark scheme)`. The light message is unchanged.
+The dark pass runs on every viewport of the run. `evaluateMetrics` adds one P10 finding per entry; dark ones read `Button "X" contrast 1.3:1 (dark scheme)` (from `darkButtonFindings`). The light message is unchanged.
 A missing `lowContrastButtonsDark` (older probe) is clean.
 
 ## Tests (red first)

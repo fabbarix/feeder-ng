@@ -53,6 +53,11 @@ export function contrastRatio(fg, bg) {
  * Findings for one probe of a page: [{rule, message}], message starting with the rule id.
  * `metrics` is what the driver's in-page probe returns; ctx = {width (viewport), route, kind}.
  */
+/** FU-4: the P10 findings of the Button probe run in the dark scheme (none for an undefined or empty list). */
+export function darkButtonFindings(lowContrastButtonsDark) {
+  return (lowContrastButtonsDark ?? []).map((b) => ({ rule: 'P10', message: `P10 Button "${b.label}" contrast ${b.ratio}:1 (dark scheme)` }))
+}
+
 export function evaluateMetrics(m, { width, kind }) {
   const out = []
   const add = (rule, text) => out.push({ rule, message: `${rule} ${text}` })
@@ -86,7 +91,7 @@ export function evaluateMetrics(m, { width, kind }) {
   // QA-1: a Button label must reach 4.5:1 on its own background (the probe reports the ones that do not).
   for (const b of m.lowContrastButtons ?? []) add('P10', `Button "${b.label}" contrast ${b.ratio}:1 (< 4.5)`)
   // FU-4: the same probe in the dark scheme (the driver emulates prefers-color-scheme: dark for it).
-  for (const b of m.lowContrastButtonsDark ?? []) add('P10', `Button "${b.label}" contrast ${b.ratio}:1 (< 4.5, dark scheme)`)
+  out.push(...darkButtonFindings(m.lowContrastButtonsDark))
   // QA-1: text clipped by its box ("clipped") or a word broken across lines ("mid-word").
   // An email or a link is one token that has to wrap somewhere, so a mid-word break inside one ("@", "://" or "/") is allowed.
   for (const b of m.brokenText ?? []) {
