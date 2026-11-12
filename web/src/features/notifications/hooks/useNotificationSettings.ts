@@ -36,7 +36,10 @@ export const browserPushPort: PushPort = {
   }),
   userAgent: () => navigator.userAgent,
   currentSubscription: async () => {
-    const sub = await (await readyRegistration()).pushManager.getSubscription()
+    // getRegistration, not `ready`: `ready` never resolves when no service worker is registered.
+    const registration = await navigator.serviceWorker.getRegistration()
+    if (!registration) return null
+    const sub = await registration.pushManager.getSubscription()
     return sub ? toBrowserSubscription(sub) : null
   },
   requestPermission: () => Notification.requestPermission(),
@@ -80,8 +83,11 @@ export function useNotificationSettings(port: PushPort = browserPushPort): Notif
   const queryClient = useQueryClient()
   const config = useQuery({ queryKey: keys.config, queryFn: notificationsApi.config })
   const devices = useQuery({ queryKey: keys.devices, queryFn: () => notificationsApi.devices().then((r) => r.devices) })
+  const supported = pushSupport(port.environment()) === 'supported'
   const browser = useQuery({
     queryKey: keys.thisBrowser,
+    enabled: supported,
+    retry: false,
     queryFn: async () => {
       const sub = await port.currentSubscription()
       return sub ? hashEndpoint(sub.endpoint) : null
@@ -127,7 +133,7 @@ export function useNotificationSettings(port: PushPort = browserPushPort): Notif
     enableMutation.isPending || disableMutation.isPending || setTypeMutation.isPending || removeMutation.isPending
 
   return {
-    loading: config.isPending || devices.isPending || browser.isPending,
+    loading: config.isPending || devices.isPending || (supported && browser.isPending),
     error: (config.error ?? devices.error) as Error | null,
     support: pushSupport(port.environment()),
     config: config.data,
