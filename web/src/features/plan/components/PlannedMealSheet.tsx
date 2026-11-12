@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
+import { usePhraseContext } from '../hooks/usePhraseContext'
 import { sheetChips } from '../lib/chips'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
 import { relaxedLine } from '../lib/relaxed'
@@ -62,7 +63,8 @@ export function PlannedMealSheet({
   const key: SlotKey | null = slot && course ? courseKey(slot, course) : null
   const slotKey: SlotKey | null = slot ? { date: slot.date, mealSlotId: slot.mealSlotId } : null
   const planned = meal?.state === 'planned'
-  const { chips, overflow } = meal && slot ? sheetChips(meal, { slotDate: slot.date }) : { chips: [], overflow: 0 }
+  const phrase = usePhraseContext(slot?.date ?? '')
+  const { chips, overflow } = meal && slot ? sheetChips(meal, phrase) : { chips: [], overflow: 0 }
   const line = meal && slot && course ? relaxedLine(meal, { courseId: course.courseId, courseName: course.name, main: course.main, severalCourses: several }) : null
   const attendance = slot?.attendance?.filter((a) => !course?.optOutMemberIds.includes(a.id))
 

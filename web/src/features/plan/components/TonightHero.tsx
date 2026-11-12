@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, RecipeThumb, Tile } from '../../../ui'
+import { usePhraseContext } from '../hooks/usePhraseContext'
 import { heroChips, leftoverChip } from '../lib/chips'
 import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '../lib/courses'
 import type { HeroAction, HeroDay } from '../lib/hero'
@@ -52,13 +53,14 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
 /** A slot that serves one Course: the single-Recipe hero, as before. */
 function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
   const meal = slot.meal
+  const phrase = usePhraseContext(slot.date)
   if (!meal) return null
   const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const phase = heroPhase(slot, now)
   const canReheat = action === 'reheat' && onReheat !== undefined
   const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
   // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
-  const chips = [...leftoverChip(meal), ...heroChips(meal, { slotDate: slot.date })].slice(0, 2)
+  const chips = [...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   // Yes, Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
   const awaiting = phase === 'awaiting' && day === 'today'
 
@@ -125,6 +127,7 @@ const noop = () => {}
 function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu }: TonightHeroProps): ReactNode {
   const hero = heroRow(slot)
   const meal = hero?.course.meal
+  const phrase = usePhraseContext(slot.date)
   if (!hero || !meal) return null
   const slotKey: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const left = plannedMeals(slot).length
@@ -134,7 +137,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   const canReheat = action === 'reheat' && onReheat !== undefined
   const startBy = phase === 'upcoming' ? slotStartBy(slot) : null
   const whole = wholeMealChip(slot, hero)
-  const chips = [...(whole ? [whole] : []), ...leftoverChip(meal), ...heroChips(meal, { slotDate: slot.date })].slice(0, 2)
+  const chips = [...(whole ? [whole] : []), ...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   const others = compactRows(slot)
   const heading = allAtOnce ? s.askCooked(slot.name) : awaiting ? s.askCooked(meal.recipeName) : meal.recipeName
 

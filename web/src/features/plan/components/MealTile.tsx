@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, Icon, IconButton } from '../../../ui'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
+import { usePhraseContext } from '../hooks/usePhraseContext'
 import { dayChip } from '../lib/chips'
 import { courseRows, plannedMeals, slotCourses, slotMenu, type CourseRowModel } from '../lib/courses'
 import { compactAction, mayCook } from '../lib/resolve'
@@ -94,8 +95,9 @@ interface SingleTileProps {
 
 function SingleTile({ slot, keyOf: key, today, compact, onOpen, onSwap, onChoose, onCook, menu }: SingleTileProps): ReactNode {
   const meal = slot.meal
+  const phrase = usePhraseContext(slot.date)
   const planned = meal?.state === 'planned'
-  const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
+  const chip = meal ? dayChip(meal, phrase) : null
   const action = compact ? (planned ? compactAction(slot.date, today) : null) : null
 
   return (
