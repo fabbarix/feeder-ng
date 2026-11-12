@@ -91,3 +91,51 @@ Green on purpose (guards that must stay green): the `innerHTML` equality tests o
 5. **Slot Rule form.** `lib/rules.ts`, `api.addSlotRule` and `RecipeChoice.courseIds` are covered; the form (`RulesEditors`, `useRuleForms`: a `CourseSelect` limited to the chosen Meal Slot's Courses, default the main Course, shown only when the slot serves several, and a Recipe rule offering `recipesForCourse`) has **no component test** in this commit. Existing `RulesEditors.test.tsx` stays valid. The Developer adds the component test with the implementation or the PM asks me for it.
 6. **No test for `Today`'s AdvanceStepsTile with `courseId`** (types only): the server field has nothing to show.
 7. **Page layout guard** unchanged (no new routes except the two Course-suffixed ones under existing prefixes).
+
+## 8. Review round 1: tests added, and the contract the Developer implements to
+
+The reviewer found five gaps. Their tests are red on purpose. Files: `cook/lib/timeline.logic.test.ts`, `cook/screens/CookScreen.resolved.test.tsx`, `plan/lib/cook.all.test.ts`, `plan/lib/toConfirm.courses.test.ts`, `plan/lib/hero.reheat.courses.test.ts`, `plan/hooks/useAllCookedFlow.outcome.test.tsx`, `plan/screens/PlanScreen.allCooked.test.tsx`, `today/components/TodayScreen.allCooked.test.tsx`, `plan/components/TonightHero.reheat.courses.test.tsx`, `board/boardCss.tonight.test.ts` and a case in `board/components/BoardTiles.courses.test.tsx`. `plan/test-utils.tsx` gains `allCookedResult()`.
+
+### 8.1 A chip whose Course has resolved (spec 11)
+
+`lib/timeline.effectiveFilter(view, filter): CourseFilter` returns `'all'` when `filter` is a Course id that has **no item** in `view.items` (it was Cooked or skipped, or is not in the slot), and `filter` otherwise. A timeline with no items stays on `'all'`. `useCookTimeline` runs `visibleItems`, the position memory and `filterChips` selection through the effective filter and returns it as `filter`, so the chip pressed, the list and the position agree. The last Course on its own keeps its chip (same list as All). Result: after "Mark Side as Cooked" on the Side chip the screen shows All with the Main's items (never the empty "No Steps" page and never Mark as Cooked on an empty list); `/cook/meal/<d>/<s>/<courseId>` for a Course already resolved opens on All.
+
+### 8.2 The outcome of Mark all Cooked (spec 8, 11)
+
+The single path shows: `CookFlowSheets` (Stock shortfall `ShortfallNotice` with Correct Stock and Dismiss, `StockCorrectionSheet`), the success toast (`cookedSuccessText`) and, in Cook Mode, `CookedConfirmation` (`leftoverOutcomeText`). Mark all Cooked shows the same, from `CookedAllResult`.
+
+`plan/lib/cook.ts`, pure:
+- `cookedAllOutcomes(result: CookedAllResult): LeftoverOutcome[]`: one per entry of `result.leftovers`, in order. A planned meal belongs to the Leftover whose `fromCourseId` equals its `courseId`; with exactly one Leftover every `plannedFor` is its own (also without `courseId`). No Leftover gives `[]`.
+- `cookedAllOutcomeText(result): string`: `[]` gives "No Leftovers"; one Leftover gives `leftoverOutcomeText` as is; several give `"<Recipe>: <sentence>"` joined by `". "` ("Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept, good until Fri").
+- `cookedAllSuccessText(result): string`: no Leftover: "Cooked, nice one!"; one Leftover: exactly `cookedSuccessText` of the single Course; several: cheer + `"<Recipe>: <part>"` where part is "2 portions → Thu Lunch" or "1 portion kept, good until Fri", joined by `"; "`.
+
+Hooks and components:
+- `useAllCookedFlow` shows the success toast (`cookedAllSuccessText`, status success) on a successful `confirm()`, and returns `stock: StockSheetController` (`useStockSheet`, dismissing the warning on save) and `warnings` / `dismissWarning`. A new component `AllCookedSheets({ flow })` (plan, exported from the barrel) renders the shortfall notices, the `MarkAllCookedSheet` and the `StockCorrectionSheet`; Plan and Today use it instead of the bare sheet.
+- `useMarkAllCooked` starts a fresh sheet whenever the slot is **opened**: `open` (null to key) clears the error, the result, the dismissed warnings and the edited Leftovers, so closing and reopening the same slot after a failed confirm shows no old error. A successful result still survives the **close** (the notices stay up) until the next open.
+- Cook Mode (`TimelineCookScreen`): after Mark all Cooked, `CookedConfirmation` shows `cookedAllOutcomeText` and the controller's warnings with Correct Stock and Dismiss. Its title line is `lib/timeline.confirmationName(view, cookedCourseIds): string`: the Recipe name when one Course was Cooked (not `courses[0]`, which may be a Cooked Course of an earlier round), the **slot name** when several were, the slot name when none, `''` without a view.
+
+### 8.3 Today hero Reheat with several Courses (spec 11)
+
+- (a) `SeveralCoursesHero` calls `onReheat(hero.key)` (the hero Course's key with `courseId`), also before the slot time, not the course-less slot key.
+- (b)/(c) `lib/hero.heroSelection`: `action` is `'reheat'` (today) or `'leftover'` (later day) only when **every** Course still to cook is served from a Leftover; if any unresolved Course is fresh the action is `'cook'` today and `'none'` later, whatever the hero Course is. Cook opens the slot's timeline, which holds the Reheat items of the Leftover Courses.
+
+### 8.4 Logic out of the components (CLAUDE.md: no business logic in components)
+
+`cook/lib/timeline.ts` (tests: `timeline.logic.test.ts`), extracted from `TimelineCookScreen`, which then only wires them:
+
+| Function | Contract |
+|---|---|
+| `allMode(filter: CourseFilter, unresolved: {courseId:number}[]): boolean` | `filter === 'all' && unresolved.length >= 2` |
+| `markTarget(allMode: boolean, currentCourseId: number \| null, unresolved: {courseId:number}[]): number \| null` | null in all mode; else the current item's Course, else the first unresolved, else null |
+| `canMark(date: string, today: string, unresolved: {courseId:number}[]): boolean` | `mayResolve(date, today) && unresolved.length > 0` |
+| `finishedCooking(s: { cookedAny: boolean; notCookable: boolean; loaded: boolean; unresolvedCount: number }): boolean` | `cookedAny && (notCookable \|\| (loaded && unresolvedCount === 0))` |
+| `leaveIfNothingLeft(unresolvedCount: number, cookedAny: boolean): 'leave' \| 'refresh'` | `'leave'` when at most one Course was unresolved (the one skipped) and nothing was Cooked here; else `'refresh'` |
+| `title(view: TimelineView, several: boolean): string` | several: the slot name; else the first planned Course's Recipe, else the slot name |
+| `confirmationName(view: TimelineView \| undefined, cookedCourseIds: number[]): string` | see 8.2 |
+| `effectiveFilter(view, filter)` | see 8.1 |
+
+`plan/lib/toConfirm.ts` (tests: `toConfirm.courses.test.ts`): `toConfirmCourses(entries: PlanSlot[], key: SlotKey): number[]`, the `courseId` (0 for the course-less alias) of each flat to-confirm entry of that date and Meal Slot, in entry order. `TodayScreen` calls it instead of its inline filter.
+
+### 8.5 Board legibility (spec 7.5)
+
+`board.css`, tokens from the file itself: `.board-tonight__course[data-main='true']` in `rem` from 75% of `.board-tonight__recipe` (3.25rem) up to it (use 2.75rem); `.board-tonight__course` smaller than the main row but at least `.board-tonight__slot` (1.75rem); `.board-tonight__course[data-state='cooked'] { color: var(--color-muted) }`. `TonightTile` puts `data-state={row.state}` on each row `<li>` (Cooked Courses stay on the list, muted). The one-Course markup does not change.

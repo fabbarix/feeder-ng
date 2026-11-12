@@ -79,3 +79,13 @@ describe('NextAdvanceTile for a Course', () => {
     expect(onDone).toHaveBeenCalledWith('meal:2026-11-09/2/2', 1)
   })
 })
+
+describe('TonightTile: a Cooked Course stays in the list, marked so the board can mute it', () => {
+  it('data-state is the Planned Meal\'s state on each row (cooked rows are muted by board.css)', () => {
+    const cooked = slotOf([course(1, 'Main', true, { meal: meal('Roast chicken', 'cooked') }), course(2, 'Side', false, { meal: meal('Green beans') })])
+    render(<TonightTile slot={cooked} onCook={() => {}} />)
+    const rows = screen.getAllByRole('listitem')
+    expect(rows[0]).toHaveAttribute('data-state', 'cooked')
+    expect(rows[1]).toHaveAttribute('data-state', 'planned')
+  })
+})
