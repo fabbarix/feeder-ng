@@ -4,8 +4,11 @@ import type { RecipeChoice } from '../types'
 
 const NONE: RecipeChoice[] = []
 
-/** Recipes to choose from when setting a meal or a Slot Rule; idle while not enabled. */
-export function useRecipeChoices(enabled = true): { recipes: RecipeChoice[]; isLoading: boolean } {
-  const q = useQuery({ queryKey: ['plan', 'recipe-choices'], queryFn: planApi.recipeChoices, enabled })
+/**
+ * Recipes to choose from when setting a meal or a Slot Rule; idle while not enabled. CRS F: with a courseId only the
+ * Recipes marked with that Course (Add <Course>, a Slot Rule's Course).
+ */
+export function useRecipeChoices(enabled = true, courseId?: number): { recipes: RecipeChoice[]; isLoading: boolean } {
+  const q = useQuery({ queryKey: ['plan', 'recipe-choices', courseId ?? null], queryFn: () => planApi.recipeChoices(courseId), enabled })
   return { recipes: q.data ?? NONE, isLoading: enabled && q.isLoading }
 }

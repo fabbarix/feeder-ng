@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../ui'
-import { swapMeta } from '../lib/choose'
-import { phraseAll } from '../lib/phrase'
+import { alternativeNote, swapMeta } from '../lib/choose'
 import { planStrings as s } from '../strings'
 import type { Alternative, PlanSlot } from '../types'
 import '../plan.css'
@@ -31,7 +30,7 @@ export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick
               <ListRow
                 key={a.recipeId}
                 title={a.recipeName}
-                meta={swapMeta(phraseAll(a.why, { slotDate })[0], a.newLeftoverPortions > 0 ? s.extraPortions(a.newLeftoverPortions) : '')}
+                meta={swapMeta(alternativeNote(a, { slotDate }), a.newLeftoverPortions > 0 ? s.extraPortions(a.newLeftoverPortions) : '')}
                 leading={<RecipeThumb name={a.recipeName} photoUrl={a.photoUrl} size={48} initial={false} />}
                 onActivate={() => onPick(a.recipeId)}
               />

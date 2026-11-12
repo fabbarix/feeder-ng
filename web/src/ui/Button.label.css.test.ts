@@ -25,10 +25,11 @@ describe('Button.css, a long label stays inside its container (SF1)', () => {
   })
 
   it('a one-line Button keeps its exact height and does not stretch', () => {
-    for (const size of ['sm', 'md', 'lg', 'xl']) {
-      expect(declarations(css, `.button[data-size='${size}']`)['min-block-size']).toMatch(/^\d+px$/)
-    }
     expect(declarations(css, '.button')['block-size']).toBe('fit-content')
+  })
+
+  it.each(['sm', 'md', 'lg', 'xl'])('size %s sets no fixed block-size', (size) => {
+    expect(declarations(css, `.button[data-size='${size}']`)['block-size']).toBeUndefined()
   })
 
   it('line-height is no longer 1 (two lines must not touch)', () => {

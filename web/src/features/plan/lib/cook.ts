@@ -1,4 +1,4 @@
-import type { CookedResult, SlotKey, StockWarning } from '../types'
+import type { CookedAllResult, CookedResult, SlotKey, StockWarning } from '../types'
 import { planStrings as s } from '../strings'
 import { weekdayName } from './phrase'
 
@@ -76,21 +76,63 @@ export function cookPath(key: SlotKey): string {
   return `/cook/meal/${key.date}/${key.mealSlotId}`
 }
 
+/** The part of the success toast that says where one Leftover went: "2 portions → Thu Lunch", "1 portion kept, good until Fri". */
+function successPart(outcome: LeftoverOutcome): string {
+  if (outcome.kind === 'planned') {
+    const meals = outcome.meals.map((m) => `${weekdayName(m.date, 'short')} ${m.mealSlotName}`).join(' and ')
+    return `${formatPortions(outcome.portions)} → ${meals}`
+  }
+  return leftoverOutcomeText(outcome)
+}
+
 /**
  * The success toast after Cooked: "Cooked, nice one!" plus where the Leftover went: "... 2 portions → Tue Dinner"
  * (planned), "... 1 portion kept, good until Thu" (kept), nothing more when there is no Leftover.
  */
 export function cookedSuccessText(result: CookedResult): string {
   const outcome = leftoverOutcome(result)
-  const cheer = s.cookedCheer
-  switch (outcome.kind) {
-    case 'none':
-      return cheer
-    case 'kept':
-      return `${cheer} ${leftoverOutcomeText(outcome)}`
-    case 'planned': {
-      const meals = outcome.meals.map((m) => `${weekdayName(m.date, 'short')} ${m.mealSlotName}`).join(' and ')
-      return `${cheer} ${formatPortions(outcome.portions)} → ${meals}`
+  if (outcome.kind === 'none') return s.cookedCheer
+  return `${s.cookedCheer} ${successPart(outcome)}`
+}
+
+/**
+ * One outcome per Leftover recorded by Mark all Cooked, in order. The meals planned for a Leftover are those whose
+ * courseId is the Leftover's fromCourseId; with exactly one Leftover every planned meal is its own (also without a
+ * courseId). A Leftover with no meal planned for it is kept.
+ */
+export function cookedAllOutcomes(result: CookedAllResult): LeftoverOutcome[] {
+  const single = result.leftovers.length === 1
+  return result.leftovers.map((left) => {
+    const planned = result.plannedFor.filter((m) => single || m.courseId === left.fromCourseId)
+    if (planned.length === 0) return { kind: 'kept', portions: left.portions, useBy: left.useBy }
+    return {
+      kind: 'planned',
+      portions: left.portions,
+      useBy: left.useBy,
+      meals: planned.map((m) => ({ date: m.date, mealSlotName: m.mealSlotName, recipeName: m.recipeName })),
     }
-  }
+  })
+}
+
+/**
+ * The confirmation sentence of Mark all Cooked: "No Leftovers"; one Leftover: the single Course's sentence; several:
+ * each named by its Recipe, "Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept, good until Fri".
+ */
+export function cookedAllOutcomeText(result: CookedAllResult): string {
+  const outcomes = cookedAllOutcomes(result)
+  if (outcomes.length === 0) return 'No Leftovers'
+  if (outcomes.length === 1) return leftoverOutcomeText(outcomes[0]!)
+  return outcomes.map((o, i) => `${result.leftovers[i]!.recipeName}: ${leftoverOutcomeText(o)}`).join('. ')
+}
+
+/**
+ * The success toast of Mark all Cooked: the cheer alone with no Leftover; one Leftover reads exactly as the single
+ * Course's toast; several: "Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri".
+ */
+export function cookedAllSuccessText(result: CookedAllResult): string {
+  const outcomes = cookedAllOutcomes(result)
+  if (outcomes.length === 0) return s.cookedCheer
+  if (outcomes.length === 1) return `${s.cookedCheer} ${successPart(outcomes[0]!)}`
+  const parts = outcomes.map((o, i) => `${result.leftovers[i]!.recipeName}: ${successPart(o)}`)
+  return `${s.cookedCheer} ${parts.join('; ')}`
 }

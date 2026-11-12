@@ -93,8 +93,11 @@ export function useCookFlow(): CookFlow {
   }
 }
 
-/** "Not cooked" straight from a row (To confirm on Today): POST .../not-cooked, then the plan refetches; a failure toasts. */
-export function useNotCooked(): (key: SlotKey) => Promise<void> {
+/**
+ * "Not cooked" straight from a row (To confirm on Today) or a Course menu: POST .../not-cooked, then the plan refetches.
+ * Resolves true on success; a failure toasts and resolves false.
+ */
+export function useNotCooked(): (key: SlotKey) => Promise<boolean> {
   const client = useQueryClient()
   const toast = useToast()
   return useCallback(
@@ -102,8 +105,10 @@ export function useNotCooked(): (key: SlotKey) => Promise<void> {
       try {
         await planApi.notCooked(key)
         await invalidatePlan(client)
+        return true
       } catch {
         toast.show(planStrings.cookedError, { status: 'error' })
+        return false
       }
     },
     [client, toast],

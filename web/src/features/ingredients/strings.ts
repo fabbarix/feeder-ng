@@ -63,6 +63,7 @@ export const strings = {
   mergeInto: 'Merge into another Ingredient',
   mergeTitle: 'Merge Ingredient',
   mergeFindLabel: 'Find the Ingredient to keep',
+  mergeCandidatesLabel: 'Matching Ingredients',
   mergeSummary: (source: string, target: string) => `${source} will be merged into ${target}`,
   mergeMoves: (n: number) => `${n} place${n === 1 ? '' : 's'} will move`,
   mergeBlocked: "These Ingredients count in different Base Units, so they can't be merged",

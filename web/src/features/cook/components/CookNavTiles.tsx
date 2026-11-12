@@ -13,6 +13,8 @@ export interface CookNavTilesProps {
   onDone?: () => void
   /** Why Next is held (a timer the next Step waits for is still running): Next is disabled and this line says why. */
   heldText?: string | null
+  /** The label of the last-item action, default "Mark as Cooked"; the timeline passes "Mark all Cooked". */
+  markLabel?: string
 }
 
 /**
@@ -21,7 +23,7 @@ export interface CookNavTilesProps {
  * Cooked" (when onMarkCooked is given) or "Done" (onDone); with neither, Next
  * stays but is disabled. With heldText, Next is disabled and described by that line (a live status).
  */
-export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText }: CookNavTilesProps): ReactNode {
+export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText, markLabel }: CookNavTilesProps): ReactNode {
   const heldId = useId()
   let forward: ReactNode
   if (!isLast) {
@@ -31,7 +33,7 @@ export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, on
       </Button>
     )
   } else if (onMarkCooked) {
-    forward = <Button size="lg" className="cook-nav__tile" onClick={onMarkCooked}>{cookStrings.markAsCooked}</Button>
+    forward = <Button size="lg" className="cook-nav__tile" onClick={onMarkCooked}>{markLabel ?? cookStrings.markAsCooked}</Button>
   } else if (onDone) {
     forward = <Button size="lg" className="cook-nav__tile" onClick={onDone}>{cookStrings.done}</Button>
   } else {

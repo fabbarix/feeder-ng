@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import { Button, Chip, Tile, TimerTile } from '../../../ui'
-import { clockText, dateText, dueText, shortWeekday, type LeftoverRow } from '../lib/tiles'
+import { clockText, dateText, dueText, hasPlanned, shortWeekday, tomorrowLine, tonightRows, type LeftoverRow } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
 
@@ -36,15 +36,38 @@ export interface TonightTileProps {
 
 /**
  * The hero (2 x 2): heading "Tonight", the Recipe name, "<Meal Slot> · <time>" and the big "Cook" button when there is
- * a meal and a handler; "Nothing planned tonight" when null.
+ * a meal and a handler; "Nothing planned tonight" when null. A slot with several Courses lists a row per Course with a
+ * Planned Meal (the main Course's row is the larger one), under the slot line, with ONE Cook button for the slot.
  */
 export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
+  const rows = slot ? tonightRows(slot) : []
+  if (slot && rows.length > 1) {
+    return (
+      <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight">
+        <h2 className="board-tile__heading">{boardStrings.tonight}</h2>
+        <p className="board-tonight__slot">{`${slot.name} · ${slot.time}`}</p>
+        <ul aria-label={boardStrings.tonightCourses} className="board-tonight__courses">
+          {rows.map((row) => (
+            <li key={row.courseId} data-main={row.main ? 'true' : undefined} data-state={row.state} className="board-tonight__course">
+              {row.recipeName}
+            </li>
+          ))}
+        </ul>
+        {onCook ? (
+          <Button variant="secondary" size="xl" icon="cook" className="board-tonight__cook" onClick={onCook}>
+            {boardStrings.cook}
+          </Button>
+        ) : null}
+      </Tile>
+    )
+  }
+  const recipe = rows[0]?.recipeName ?? null
   return (
     <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight">
       <h2 className="board-tile__heading">{boardStrings.tonight}</h2>
-      {slot?.meal ? (
+      {slot && recipe !== null ? (
         <>
-          <p className="board-tonight__recipe">{slot.meal.recipeName}</p>
+          <p className="board-tonight__recipe">{recipe}</p>
           <p className="board-tonight__slot">{`${slot.name} · ${slot.time}`}</p>
           {onCook ? (
             <Button variant="secondary" size="xl" icon="cook" className="board-tonight__cook" onClick={onCook}>
@@ -172,9 +195,9 @@ export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
       ) : (
         <ul className="board-list">
           {slots.map((s) => (
-            <li key={s.mealSlotId}>
-              {s.meal ? (
-                `${s.name} · ${s.meal.recipeName}`
+            <li key={`${s.date}/${s.mealSlotId}`}>
+              {hasPlanned(s) ? (
+                tomorrowLine(s)
               ) : (
                 <>
                   {s.name} <Chip kind="tag">{boardStrings.notPlanned}</Chip>
