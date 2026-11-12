@@ -1,6 +1,6 @@
 // PhotoSources: where photos come from (docs/dev/design/photo-read.md section 5; decision 1: the phone's own camera app, no live view).
 import { useEffect, useId, useRef, type ReactNode, type Ref } from 'react'
-import { Button, FileDrop, type ImageOrigin } from '../../../ui'
+import { Button, FileDrop, ImageFileInput, type ImageFileInputHandle, type ImageOrigin } from '../../../ui'
 import type { PhotoSourceOptions } from '../hooks/usePhotoSources'
 import { photoReadStrings as t } from '../strings'
 
@@ -20,15 +20,15 @@ export interface PhotoSourcesProps {
 
 /** Take photo and Choose photos on a phone (hidden inputs behind them); Choose files, drop and paste on a computer. */
 export function PhotoSources({ options, canAdd, disabled, onFiles, rootRef, openCamera, onCameraOpened }: PhotoSourcesProps): ReactNode {
-  const capture = useRef<HTMLInputElement>(null)
-  const library = useRef<HTMLInputElement>(null)
+  const capture = useRef<ImageFileInputHandle>(null)
+  const library = useRef<ImageFileInputHandle>(null)
   const limitId = useId()
   const off = disabled || !canAdd
   const describedBy = canAdd ? undefined : limitId
 
   useEffect(() => {
     if (!openCamera) return
-    capture.current?.click()
+    capture.current?.open()
     onCameraOpened?.()
   }, [openCamera, onCameraOpened])
 
@@ -36,36 +36,14 @@ export function PhotoSources({ options, canAdd, disabled, onFiles, rootRef, open
     <div className="photo-sources" ref={rootRef}>
       {options.showTakePhoto ? (
         <div className="photo-sources__buttons">
-          <Button variant="primary" icon="camera" disabled={off} aria-describedby={describedBy} onClick={() => capture.current?.click()}>
+          <Button variant="primary" icon="camera" disabled={off} aria-describedby={describedBy} onClick={() => capture.current?.open()}>
             {t.takePhoto}
           </Button>
-          <Button variant="secondary" icon="photos" disabled={off} aria-describedby={describedBy} onClick={() => library.current?.click()}>
+          <Button variant="secondary" icon="photos" disabled={off} aria-describedby={describedBy} onClick={() => library.current?.open()}>
             {t.choosePhotos}
           </Button>
-          <input
-            ref={capture}
-            type="file"
-            hidden
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => {
-              const files = Array.from(e.currentTarget.files ?? [])
-              e.currentTarget.value = ''
-              if (files.length > 0) onFiles(files, 'camera')
-            }}
-          />
-          <input
-            ref={library}
-            type="file"
-            hidden
-            accept={options.libraryAccept}
-            multiple
-            onChange={(e) => {
-              const files = Array.from(e.currentTarget.files ?? [])
-              e.currentTarget.value = ''
-              if (files.length > 0) onFiles(files, 'file')
-            }}
-          />
+          <ImageFileInput ref={capture} capture disabled={off} onFiles={(files) => onFiles(files, 'camera')} />
+          <ImageFileInput ref={library} multiple accept={options.libraryAccept} disabled={off} onFiles={(files) => onFiles(files, 'file')} />
         </div>
       ) : (
         <FileDrop
