@@ -2,9 +2,7 @@
 // The SPA always uses the real id of a Course. This reads the production sources and fails on every fallback that
 // stood for the main Course: `courseId ?? 0`, a made-up courseId 0, a key built without its Course, the two-part scope.
 //
-// MealTile, TonightHero, PlannedMealSheet and CourseRow are NOT scanned: team SF-chips is editing them while C3 is
-// written. Their `slot.meal` / `slot.unfilled` reads and optional courseId are reported to the Project Manager and
-// follow in the same merge as SF-chips (crs-c3.md 6).
+// MealTile, TonightHero, PlannedMealSheet and CourseRow are scanned too: SF-chips has merged (crs-c3.md 6).
 import { describe, expect, it } from 'vitest'
 
 const raw = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.*', '!./**/*.d.ts', '!./**/test-utils*', '!./**/*fixtures*', '!./**/Gallery.tsx'], {
@@ -13,11 +11,7 @@ const raw = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.*', '!./*
   eager: true,
 }) as Record<string, string>
 
-const SKIP_COMPONENTS = /\/(MealTile|TonightHero|PlannedMealSheet|CourseRow)\.tsx$/
-
-const files = Object.entries(raw)
-  .filter(([path]) => !SKIP_COMPONENTS.test(path))
-  .map(([path, text]) => ({ path: path.replace(/^\.\//, ''), text }))
+const files = Object.entries(raw).map(([path, text]) => ({ path: path.replace(/^\.\//, ''), text }))
 
 /** Every production line that matches, as "file:line  text". */
 function hits(pattern: RegExp, only?: RegExp): string[] {

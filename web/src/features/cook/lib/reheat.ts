@@ -35,16 +35,16 @@ export function reheatTimerOf(timers: CookTimer[], scope: string): CookTimer | n
   return timers.find((t) => t.scope === scope && t.step === null && t.label === REHEAT_LABEL) ?? null
 }
 
-/** The route of the Reheat screen of a Planned Meal: `/cook/reheat/<date>/<mealSlotId>`, with the Course when the key has one. */
+/** The route of the Reheat screen of a Planned Meal: `/cook/reheat/<date>/<mealSlotId>/<courseId>`. A key without its Course has no route (throws). */
 export function cookReheatPath(key: SlotKey): string {
-  const base = `/cook/reheat/${key.date}/${key.mealSlotId}`
-  return key.courseId === undefined ? base : `${base}/${key.courseId}`
+  if (!Number.isInteger(key.courseId)) throw new Error('a Reheat route needs its Course')
+  return `/cook/reheat/${key.date}/${key.mealSlotId}/${key.courseId}`
 }
 
 /**
  * The reheating timer of a Course's scope through `sameScope`, so the Reheat item of the cooking timeline and the Reheat
- * screen find the same timer whether the main Course's scope is two-part or three-part.
+ * screen find the same timer. Every Course, the main one included, has its three-part scope (crs-c3).
  */
-export function reheatTimerOfCourse(timers: CookTimer[], scope: string, mainCourseId?: number | null): CookTimer | null {
-  return timers.find((t) => t.step === null && t.label === REHEAT_LABEL && sameScope(t.scope, scope, mainCourseId)) ?? null
+export function reheatTimerOfCourse(timers: CookTimer[], scope: string): CookTimer | null {
+  return timers.find((t) => t.step === null && t.label === REHEAT_LABEL && sameScope(t.scope, scope)) ?? null
 }

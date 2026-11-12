@@ -1,15 +1,15 @@
 // CRS F: To confirm groups a slot's Courses under one heading, and Mark all Cooked builds its body. Plain TypeScript.
 import { planStrings as s } from '../strings'
-import type { CookedAllEntry, PlanSlot, SlotKey } from '../types'
+import type { CookedAllEntry, PlanEntry, SlotDayKey } from '../types'
 import { weekdayName } from './phrase'
 
 export interface ToConfirmGroup {
   /** `{ date, mealSlotId }`: the slot, for Mark all Cooked. */
-  slot: SlotKey
+  slot: SlotDayKey
   /** One Course: the Recipe name as before. Several: "Tue Dinner: Roast chicken, Green beans". */
   heading: string
   /** The flat entries of the slot, in the order given. */
-  entries: PlanSlot[]
+  entries: PlanEntry[]
 }
 
 /**
@@ -17,8 +17,8 @@ export interface ToConfirmGroup {
  * A group with one entry has the Recipe name as heading and keeps the old "Tue Dinner" line; a group with several
  * entries has the heading "<Tue> <Dinner>: <Recipe>, <Recipe>" (short weekday, slot name, Recipe names in entry order).
  */
-export function groupToConfirm(entries: PlanSlot[]): ToConfirmGroup[] {
-  const groups = new Map<string, PlanSlot[]>()
+export function groupToConfirm(entries: PlanEntry[]): ToConfirmGroup[] {
+  const groups = new Map<string, PlanEntry[]>()
   for (const entry of entries) {
     const key = `${entry.date}|${entry.mealSlotId}`
     const list = groups.get(key)
@@ -54,9 +54,11 @@ export function allCookedBody(rows: AllCookedRow[]): CookedAllEntry[] {
 }
 
 /**
- * The course ids (0 for the course-less alias) of the to-confirm entries of one date and Meal Slot, in entry order: the
- * Courses Mark all Cooked asks about from Today.
+ * The course ids of the to-confirm entries of one date and Meal Slot, in entry order: the Courses Mark all Cooked asks
+ * about from Today. An entry without a courseId names no Course and is left out (crs-c3: never read as 0).
  */
-export function toConfirmCourses(entries: PlanSlot[], key: SlotKey): number[] {
-  return entries.filter((e) => e.date === key.date && e.mealSlotId === key.mealSlotId).map((e) => e.courseId ?? 0)
+export function toConfirmCourses(entries: PlanEntry[], key: SlotDayKey): number[] {
+  return entries
+    .filter((e) => e.date === key.date && e.mealSlotId === key.mealSlotId && e.courseId !== undefined)
+    .map((e) => e.courseId)
 }

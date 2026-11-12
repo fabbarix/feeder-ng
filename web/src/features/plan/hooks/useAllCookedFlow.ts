@@ -3,16 +3,16 @@
 import { useCallback, useState } from 'react'
 import { useToast } from '../../../ui'
 import { cookedAllSuccessText } from '../lib/cook'
-import type { SlotKey, StockWarning } from '../types'
+import type { SlotDayKey, StockWarning } from '../types'
 import { useStockSheet, type StockSheetController } from './useStockSheet'
 import type { MarkAllCookedController } from './useMarkAllCooked'
 import { useMarkAllCooked } from './useMarkAllCooked'
 
 export interface AllCookedFlow {
   /** The slot whose sheet is open, or null. */
-  key: SlotKey | null
+  key: SlotDayKey | null
   /** Opens the sheet for the slot's Courses still to cook (lib/courses unresolvedCourseIds, or the timeline's unresolvedCourses). */
-  open: (slot: SlotKey, courseIds: number[]) => void
+  open: (slot: SlotDayKey, courseIds: number[]) => void
   close: () => void
   controller: MarkAllCookedController
   /** The "Correct Stock" sheet for the shortfalls of this Mark all Cooked. */
@@ -26,11 +26,11 @@ export interface AllCookedFlow {
 
 export function useAllCookedFlow(): AllCookedFlow {
   const toast = useToast()
-  const [key, setKey] = useState<SlotKey | null>(null)
+  const [key, setKey] = useState<SlotDayKey | null>(null)
   const [courseIds, setCourseIds] = useState<number[]>([])
   const controller = useMarkAllCooked(key, courseIds)
   const stock = useStockSheet((id) => controller.dismissWarning(id))
-  const open = useCallback((slot: SlotKey, ids: number[]) => {
+  const open = useCallback((slot: SlotDayKey, ids: number[]) => {
     setKey(slot)
     setCourseIds(ids)
   }, [])

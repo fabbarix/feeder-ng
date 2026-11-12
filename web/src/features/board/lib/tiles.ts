@@ -38,7 +38,7 @@ export function tomorrowMeals(slots: SlotLike[], today: string): SlotLike[] {
 export function tomorrowSlots(slots: SlotLike[], today: string): SlotLike[] {
   const date = dayAfter(today)
   return slots
-    .filter((s) => s.date === date && (hasPlanned(s) || (s.meal === null && !!s.unfilled)))
+    .filter((s) => s.date === date && (hasPlanned(s) || (!hasPlanned(s) && (s.courses ?? []).some((c) => !!c.unfilled))))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }
 
@@ -147,19 +147,15 @@ export function boardSlots(slots: SlotLike[] | undefined, planSlots: SlotLike[])
  * whose main Course is already Cooked but whose Side is not is still tonight's.
  */
 export function hasPlanned(slot: SlotLike): boolean {
-  if (!slot.courses) return slot.meal?.state === 'planned'
-  return slot.courses.some((c) => c.meal?.state === 'planned')
+  return (slot.courses ?? []).some((c) => c.meal?.state === 'planned')
 }
 
 /**
  * The Tonight tile's rows in the slot's order: every Course with a Planned Meal that is not Not cooked (covered,
- * not-served and empty Courses have none). A slot without `courses` gives one row from `meal`.
+ * not-served and empty Courses have none). A slot without `courses` has no rows (crs-c3: no made-up main Course).
  */
 export function tonightRows(slot: SlotLike): TonightRow[] {
-  if (!slot.courses) {
-    return slot.meal && slot.meal.state !== 'skipped' ? [{ courseId: 0, courseName: 'Main', recipeName: slot.meal.recipeName, main: true, state: slot.meal.state }] : []
-  }
-  return slot.courses
+  return (slot.courses ?? [])
     .filter((c): c is CourseLike & { meal: NonNullable<CourseLike['meal']> } => c.meal !== null && c.meal.state !== 'skipped')
     .map((c) => ({ courseId: c.courseId, courseName: c.name, recipeName: c.meal.recipeName, main: c.main, state: c.meal.state }))
 }
@@ -171,7 +167,7 @@ export function tonightRows(slot: SlotLike): TonightRow[] {
  * it that holds a Planned Meal.
  */
 export function tomorrowLine(slot: SlotLike): string {
-  const names = (slot.courses ?? [{ meal: slot.meal }])
+  const names = (slot.courses ?? [])
     .map((c) => c.meal)
     .filter((m): m is NonNullable<typeof m> => m !== null && m.state === 'planned')
     .map((m) => m.recipeName)

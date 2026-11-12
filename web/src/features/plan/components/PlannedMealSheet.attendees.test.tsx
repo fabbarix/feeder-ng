@@ -14,7 +14,7 @@ const attendance = [
 ]
 const open = () => {
   const s = slot({ attendance } as unknown as Partial<PlanSlot>)
-  render(<PlannedMealSheet open slot={s} today="2026-11-10" onClose={vi.fn()} onCook={vi.fn()} onMarkCooked={vi.fn()} onSwap={vi.fn()} onPin={vi.fn()} onUnpin={vi.fn()} onChoose={vi.fn()} />)
+  render(<PlannedMealSheet open slot={s} courseId={1} today="2026-11-10" onClose={vi.fn()} onCook={vi.fn()} onMarkCooked={vi.fn()} onSwap={vi.fn()} onPin={vi.fn()} onUnpin={vi.fn()} onChoose={vi.fn()} />)
   return within(screen.getByRole('dialog'))
 }
 

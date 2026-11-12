@@ -13,8 +13,8 @@ describe('reheatTimerOfCourse', () => {
 
   it('the main Course is a Course like the others: only its three-part scope finds its timer', () => {
     expect(reheatTimerOfCourse([reheat('meal:2026-11-10/4/1')], 'meal:2026-11-10/4/1')).not.toBeNull()
-    expect(reheatTimerOfCourse([reheat('meal:2026-11-10/4')], 'meal:2026-11-10/4/1', 1)).toBeNull()
-    expect(reheatTimerOfCourse([reheat('meal:2026-11-10/4/1')], 'meal:2026-11-10/4', 1)).toBeNull()
+    expect(reheatTimerOfCourse([reheat('meal:2026-11-10/4')], 'meal:2026-11-10/4/1')).toBeNull()
+    expect(reheatTimerOfCourse([reheat('meal:2026-11-10/4/1')], 'meal:2026-11-10/4')).toBeNull()
   })
 
   it('ignores another Course\'s Reheat timer, a Step timer and any other label', () => {

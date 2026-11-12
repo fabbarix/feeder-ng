@@ -13,14 +13,10 @@ type Scope string
 // ErrInvalidScope is returned by ParseScope.
 var ErrInvalidScope = errors.New("invalid cook scope")
 
-// MealScope is "meal:<date>/<mealSlotId>/<courseId>". Course 0 gives the
-// two-part form "meal:<date>/<mealSlotId>" (transition shim, removed by C3).
+// MealScope is "meal:<date>/<mealSlotId>/<courseId>", always three-part (crs-c3 §2). Course 0 writes "/0", which
+// ParseScope refuses: a caller bug shows at once and never reads as the main Course.
 func MealScope(date string, mealSlotID, courseID int64) Scope {
-	s := "meal:" + date + "/" + strconv.FormatInt(mealSlotID, 10)
-	if courseID != 0 {
-		s += "/" + strconv.FormatInt(courseID, 10)
-	}
-	return Scope(s)
+	return Scope("meal:" + date + "/" + strconv.FormatInt(mealSlotID, 10) + "/" + strconv.FormatInt(courseID, 10))
 }
 
 // RecipeScope is "recipe:<id>".
@@ -32,13 +28,14 @@ func RecipeScope(recipeID int64) Scope {
 type ScopeParts struct {
 	Date       string // meal scope
 	MealSlotID int64  // meal scope
-	CourseID   int64  // meal scope; 0 for the two-part form
+	CourseID   int64  // meal scope
 	RecipeID   int64  // recipe scope
 	IsMeal     bool
 }
 
 // ParseScope accepts only the forms above (date YYYY-MM-DD and a real
-// calendar day, positive ids) and returns ErrInvalidScope for anything else.
+// calendar day, positive ids; the meal form has its Course) and returns
+// ErrInvalidScope for anything else, the two-part meal form included.
 func ParseScope(s string) (ScopeParts, error) {
 	if rest, ok := strings.CutPrefix(s, "meal:"); ok {
 		date, slot, ok := strings.Cut(rest, "/")
@@ -46,6 +43,9 @@ func ParseScope(s string) (ScopeParts, error) {
 			return ScopeParts{}, ErrInvalidScope
 		}
 		slot, course, hasCourse := strings.Cut(slot, "/")
+		if !hasCourse {
+			return ScopeParts{}, ErrInvalidScope
+		}
 		if _, err := time.Parse("2006-01-02", date); err != nil || len(date) != len("2006-01-02") {
 			return ScopeParts{}, ErrInvalidScope
 		}
@@ -53,11 +53,9 @@ func ParseScope(s string) (ScopeParts, error) {
 		if err != nil {
 			return ScopeParts{}, err
 		}
-		var courseID int64
-		if hasCourse {
-			if courseID, err = positiveID(course); err != nil {
-				return ScopeParts{}, err
-			}
+		courseID, err := positiveID(course)
+		if err != nil {
+			return ScopeParts{}, err
 		}
 		return ScopeParts{Date: date, MealSlotID: id, CourseID: courseID, IsMeal: true}, nil
 	}

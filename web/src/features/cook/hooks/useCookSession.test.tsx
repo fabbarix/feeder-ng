@@ -14,7 +14,7 @@ vi.mock('../../../lib/sse', () => ({
 import { useCookSession } from './useCookSession'
 
 const view: CookView = {
-  scope: 'meal:2026-11-09/3',
+  scope: 'meal:2026-11-09/3/1',
   recipeId: 12,
   recipeName: 'Chicken stew',
   batches: 2,
@@ -31,7 +31,7 @@ const view: CookView = {
   ],
   timers: [],
 }
-const source: CookSource = { kind: 'meal', date: '2026-11-09', mealSlotId: 3 }
+const source: CookSource = { kind: 'meal', date: '2026-11-09', mealSlotId: 3, courseId: 1 }
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -55,10 +55,10 @@ describe('useCookSession', () => {
     expect(result.current.step?.text).toBe('Chop the onions')
     expect(result.current.isFirst).toBe(true)
     expect(result.current.isLast).toBe(false)
-    expect(result.current.scope).toBe('meal:2026-11-09/3')
+    expect(result.current.scope).toBe('meal:2026-11-09/3/1')
     expect(result.current.advance.done.map((a) => a.text)).toEqual(['Marinate the chicken'])
     expect(result.current.advance.pending.map((a) => a.text)).toEqual(['Soak the beans'])
-    expect(result.current.markCookedKey).toEqual({ date: '2026-11-09', mealSlotId: 3 })
+    expect(result.current.markCookedKey).toEqual({ date: '2026-11-09', mealSlotId: 3, courseId: 1 })
   })
 
   it('walks the Steps with next and back and stops at the ends', async () => {
@@ -84,7 +84,7 @@ describe('useCookSession', () => {
     expect(api.startTimer).not.toHaveBeenCalled()
     act(() => result.current.next()) // reaches Simmer the stew
     await waitFor(() => expect(api.startTimer).toHaveBeenCalledTimes(1))
-    expect(api.startTimer).toHaveBeenCalledWith({ scope: 'meal:2026-11-09/3', step: 2 })
+    expect(api.startTimer).toHaveBeenCalledWith({ scope: 'meal:2026-11-09/3/1', step: 2 })
     act(() => result.current.next())
     act(() => result.current.back())
     act(() => result.current.back())
@@ -106,7 +106,7 @@ describe('useCookSession', () => {
     const { result } = renderHook(() => useCookSession(source), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.step).not.toBeNull())
     await act(async () => result.current.markAdvanceDone(3))
-    expect(api.setMark).toHaveBeenCalledWith('meal:2026-11-09/3', 3, true)
+    expect(api.setMark).toHaveBeenCalledWith('meal:2026-11-09/3/1', 3, true)
     await waitFor(() => expect(api.view).toHaveBeenCalledTimes(2))
   })
 
@@ -131,7 +131,7 @@ describe('useCookSession', () => {
     api.view.mockResolvedValue({ ...view, steps: [view.steps[1]!] })
     const { Wrapper } = wrapper()
     renderHook(() => useCookSession(source), { wrapper: Wrapper })
-    await waitFor(() => expect(api.startTimer).toHaveBeenCalledWith({ scope: 'meal:2026-11-09/3', step: 2 }))
+    await waitFor(() => expect(api.startTimer).toHaveBeenCalledWith({ scope: 'meal:2026-11-09/3/1', step: 2 }))
   })
 
   it('reports a meal that is no longer cookable', async () => {

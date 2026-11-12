@@ -33,7 +33,7 @@ describe('TodayScreen: Reheat (R12)', () => {
     renderWithProviders(
       <Routes>
         <Route path="/" element={<TodayScreen />} />
-        <Route path="/cook/reheat/:date/:slotId" element={<p>Reheat screen</p>} />
+        <Route path="/cook/reheat/:date/:slotId/:courseId" element={<p>Reheat screen</p>} />
         <Route path="/cook/meal/:date/:slotId" element={<p>Cook Mode screen</p>} />
       </Routes>,
       '/',

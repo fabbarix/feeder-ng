@@ -22,7 +22,7 @@ import { BoardScreen } from './BoardScreen'
 
 const meal = (recipeName: string) => ({ recipeId: 1, recipeName, batches: 1, portions: 4, state: 'planned' as const })
 const dinner = (date: string): SlotLike => ({
-  date, mealSlotId: 2, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`, meal: meal('Roast chicken'),
+  date, mealSlotId: 2, name: 'Dinner', time: '19:00', at: `${date}T19:00:00Z`,
   courses: [
     { courseId: 1, name: 'Main', main: true, meal: meal('Roast chicken') },
     { courseId: 2, name: 'Side', main: false, meal: meal('Green beans') },
@@ -56,7 +56,7 @@ describe('BoardScreen with Courses', () => {
 
   it('reads the plan\'s slots when the payload has none (an older server): nothing changes', () => {
     h.data = data(undefined)
-    h.planSlots = [{ ...dinner('2026-11-09'), courses: undefined, meal: meal('Chicken stew') }]
+    h.planSlots = [{ ...dinner('2026-11-09'), courses: [{ courseId: 1, name: 'Main', main: true, meal: meal('Chicken stew') }] }]
     view()
     expect(screen.getByText('Chicken stew')).toBeInTheDocument()
   })

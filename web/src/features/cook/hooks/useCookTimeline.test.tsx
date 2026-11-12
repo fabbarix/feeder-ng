@@ -54,7 +54,6 @@ describe('useCookTimeline: the timeline', () => {
     expect(r.result.current.filter).toBe('all')
     expect(r.result.current.items).toHaveLength(4)
     expect(r.result.current.step).toMatchObject({ number: 1, of: 4, text: 'Brown the chicken' })
-    expect(r.result.current.mainCourseId).toBe(1)
   })
 
   it('names the Course and Recipe and gives the planned clock time of the item on screen', async () => {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PlanSlot } from '../../plan/types'
+import type { PlanEntry } from '../../plan/types'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import type { SetupFacts } from '../lib/setup'
 import { TodayScreen } from './TodayScreen'
@@ -30,8 +30,8 @@ afterEach(() => {
 })
 
 const none = { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 }
-const unplanned = (date: string, name: string, id: number): PlanSlot => ({
-  date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 0, meal: null, rules: [],
+const unplanned = (date: string, name: string, id: number): PlanEntry => ({
+  date, mealSlotId: id, name, time: '19:00', at: `${date}T19:00:00Z`, portions: 0, courseId: 1, courseName: 'Main', meal: null, rules: [],
   unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: none },
 })
 // The screenshot of the bug: Tue to Mon dinners and the weekend breakfasts, all with nobody attending.
@@ -54,7 +54,7 @@ describe('Scenario: 23:56, tonight\'s dinner is already past', () => {
   // Given Tuesday's dinner time has gone (no Planned Meal, no reason) and the six dinners after it cannot be planned
   // Then Today still says "Every dinner this week"
   it('the past slot is not counted in "all"', async () => {
-    const gone: PlanSlot = { ...unplanned('2026-11-10', 'Dinner', 10), unfilled: null }
+    const gone: PlanEntry = { ...unplanned('2026-11-10', 'Dinner', 10), unfilled: null }
     h.couldnt = dinners.slice(1)
     h.all = [gone, ...dinners.slice(1)]
     h.facts = established

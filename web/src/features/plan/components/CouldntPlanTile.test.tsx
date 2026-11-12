@@ -5,15 +5,15 @@ import type { NoticeGroup } from '../hooks/useCouldntPlanNotice'
 import { groupByCause } from '../lib/couldntGroups'
 import { summarizeSlots } from '../lib/couldntSummary'
 import { slot } from '../test-utils'
-import type { Eliminations, PlanSlot, UnfilledReason } from '../types'
+import type { Eliminations, PlanEntry, UnfilledReason } from '../types'
 import { CouldntPlanNotice } from './CouldntPlanNotice'
 import { CouldntPlanTile } from './CouldntPlanTile'
 
 const none: Eliminations = { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 }
-function unplanned(date: string, reason: UnfilledReason, over: Partial<Eliminations> = {}, name = 'Dinner', id = 2): PlanSlot {
-  return slot({ date, name, mealSlotId: id, meal: null, unfilled: { reason, slotRuleClaimed: false, eliminated: { ...none, ...over } } })
+function unplanned(date: string, reason: UnfilledReason, over: Partial<Eliminations> = {}, name = 'Dinner', id = 2): PlanEntry {
+  return slot({ date, name, mealSlotId: id, courseId: 1, courseName: 'Main', meal: null, unfilled: { reason, slotRuleClaimed: false, eliminated: { ...none, ...over } } }) as PlanEntry
 }
-function noticeGroups(slots: PlanSlot[]): NoticeGroup[] {
+function noticeGroups(slots: PlanEntry[]): NoticeGroup[] {
   return groupByCause(slots).map((g) => ({ ...g, summary: summarizeSlots(g.slots, slots), canFix: true }))
 }
 const dinners = ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16'].map((d, i) => unplanned(d, 'no_attendance', {}, 'Dinner', 10 + i))

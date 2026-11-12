@@ -49,7 +49,9 @@ describe('Regenerate copy lives in strings.ts', () => {
   it('regenerate.ts holds no copy of its own', () => {
     const source = readSource('features/plan/lib/regenerate.ts')
     expect(source).not.toBe('')
-    expect(source).not.toMatch(/Planned Meal|Regenerate the plan|Empty Meal Slots/)
+    // Comments may use the domain words; only code (string literals) must hold no copy.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).not.toMatch(/Planned Meal|Regenerate the plan|Empty Meal Slots/)
   })
 })
 

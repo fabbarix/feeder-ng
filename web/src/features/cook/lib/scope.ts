@@ -1,9 +1,13 @@
 // The scope string of a cook session, as the server names it, and how a route opens one. Plain TypeScript.
 import type { CookSource, CookTimelineTarget } from '../types'
 
-/** "meal:<date>/<mealSlotId>" for a Planned Meal, "recipe:<id>" for a Recipe. */
+/** "meal:<date>/<mealSlotId>/<courseId>" for a Planned Meal (its Course is required), "recipe:<id>" for a Recipe. */
 export function scopeOf(source: CookSource): string {
-  return source.kind === 'meal' ? `meal:${source.date}/${source.mealSlotId}` : `recipe:${source.recipeId}`
+  if (source.kind === 'meal') {
+    if (!Number.isInteger(source.courseId) || source.courseId <= 0) throw new Error('a Planned Meal needs its Course')
+    return courseScope(source.date, source.mealSlotId, source.courseId)
+  }
+  return `recipe:${source.recipeId}`
 }
 
 /** The route params Cook Mode opens with: a Planned Meal (date + slot) or a Recipe (id). */
@@ -23,8 +27,8 @@ export function batchesFrom(raw: string | null): number {
 
 /** The cook session a route opens: /cook/meal/:date/:slotId or /cook/recipe/:id?batches=. */
 export function cookSourceFrom(params: CookRouteParams, batches: string | null): CookSource {
-  if (params.date !== undefined && params.slotId !== undefined) {
-    return { kind: 'meal', date: params.date, mealSlotId: Number(params.slotId) }
+  if (params.date !== undefined && params.slotId !== undefined && params.courseId !== undefined) {
+    return { kind: 'meal', date: params.date, mealSlotId: Number(params.slotId), courseId: Number(params.courseId) }
   }
   return { kind: 'recipe', recipeId: Number(params.id), batches: batchesFrom(batches) }
 }
@@ -63,38 +67,31 @@ export function courseScope(date: string, mealSlotId: number, courseId: number):
 export interface MealScopeParts {
   date: string
   mealSlotId: number
-  /** null for the two-part form (the main Course until C3). */
-  courseId: number | null
+  courseId: number
 }
 
-const MEAL_SCOPE = /^meal:(\d{4}-\d{2}-\d{2})\/(\d+)(?:\/(\d+))?$/
+const MEAL_SCOPE = /^meal:(\d{4}-\d{2}-\d{2})\/(\d+)\/(\d+)$/
 
-/** Reads "meal:<date>/<slotId>" and "meal:<date>/<slotId>/<courseId>"; null for a recipe scope, a free timer (null) or anything else. */
+/** Reads "meal:<date>/<slotId>/<courseId>" (crs-c3: the two-part form is no scope); null for a recipe scope, a free timer (null) or anything else. */
 export function parseMealScope(scope: string | null | undefined): MealScopeParts | null {
   if (!scope) return null
   const m = MEAL_SCOPE.exec(scope)
   if (!m) return null
-  return { date: m[1]!, mealSlotId: Number(m[2]), courseId: m[3] === undefined ? null : Number(m[3]) }
+  const courseId = Number(m[3])
+  if (courseId <= 0) return null
+  return { date: m[1]!, mealSlotId: Number(m[2]), courseId }
 }
 
 /**
- * THE ONE place cook scopes are compared (crs-plan 2.2, shim 2). Two meal scopes are the same when date, slot and Course
- * match, where the two-part form reads as the main Course: `sameScope('meal:d/3', 'meal:d/3/7', 7)` is true. It works
- * before C3 (the server writes the main Course two-part) and after (always three-part). While `mainCourseId` is unknown
- * (null or undefined) a two-part scope equals only itself. Recipe scopes and null compare as plain strings (null is
- * never equal to a scope).
+ * THE ONE place cook scopes are compared (crs-c3 §4). Two Planned Meal scopes are the same when date, slot and Course
+ * match. Recipe scopes and anything that is not a Planned Meal scope compare as plain strings; null is never a scope.
  */
-export function sameScope(a: string | null | undefined, b: string | null | undefined, mainCourseId?: number | null): boolean {
+export function sameScope(a: string | null | undefined, b: string | null | undefined): boolean {
   if (a === null || a === undefined || b === null || b === undefined) return false
   const pa = parseMealScope(a)
   const pb = parseMealScope(b)
   if (!pa || !pb) return a === b
-  if (pa.date !== pb.date || pa.mealSlotId !== pb.mealSlotId) return false
-  if (pa.courseId === null && pb.courseId === null) return true
-  const ca = pa.courseId ?? mainCourseId
-  const cb = pb.courseId ?? mainCourseId
-  if (ca === null || ca === undefined || cb === null || cb === undefined) return false
-  return ca === cb
+  return pa.date === pb.date && pa.mealSlotId === pb.mealSlotId && pa.courseId === pb.courseId
 }
 
 /** `/cook/meal/<date>/<slotId>` (the timeline) or `/cook/meal/<date>/<slotId>/<courseId>` (opened on that Course). */

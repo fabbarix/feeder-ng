@@ -16,8 +16,8 @@ import (
 const ConfirmAfter = 2 * time.Hour
 
 // Key identifies one Course of one Meal Slot on one date (YYYY-MM-DD, household
-// time). CourseID 0 is the transition shim: until the planner and handlers
-// switch over, it means the main Course (ADR 0008).
+// time). CourseID is the real id of the Course, the main Course included (ADR 0008,
+// crs-c3); 0 names no Course, and only a pure-planning fixture of a slot without Courses uses it.
 type Key struct {
 	Date       string
 	MealSlotID int64
@@ -94,7 +94,7 @@ type Leftover struct {
 type SlotRule struct {
 	ID         int64
 	MealSlotID int64
-	CourseID   int64 // 0: the main Course (transition shim)
+	CourseID   int64 // the real id of the Course; 0 names none
 	RecipeID   int64
 	Tag        string
 }

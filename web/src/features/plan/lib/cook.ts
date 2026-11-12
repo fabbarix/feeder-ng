@@ -1,4 +1,4 @@
-import type { CookedAllResult, CookedResult, SlotKey, StockWarning } from '../types'
+import type { CookedAllResult, CookedResult, SlotDayKey, StockWarning } from '../types'
 import { planStrings as s } from '../strings'
 import { weekdayName } from './phrase'
 
@@ -72,7 +72,7 @@ export function leftoverOutcomeText(outcome: LeftoverOutcome): string {
 }
 
 /** The Cook Mode route of a Planned Meal: /cook/meal/<date>/<mealSlotId>. */
-export function cookPath(key: SlotKey): string {
+export function cookPath(key: SlotDayKey): string {
   return `/cook/meal/${key.date}/${key.mealSlotId}`
 }
 

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { UnitSystem } from '../../lib/units'
 import { heroSelection, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
 import type { HeroAction, HeroDay } from '../plan'
-import type { Leftover, PlanSlot } from '../plan/types'
+import type { Leftover, PlanEntry, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
 import type { StockLot } from '../stock/types'
 import { ShoppingScreen } from '../shop'
@@ -45,8 +45,8 @@ export interface TodayTileData {
   /** N3: which day the hero meal is on and what it offers (absent = today, Cook). */
   nextDay?: HeroDay
   nextAction?: HeroAction
-  toConfirm: PlanSlot[]
-  couldntPlan: PlanSlot[]
+  toConfirm: PlanEntry[]
+  couldntPlan: PlanEntry[]
   /** R13: the whole plan, so "every dinner" is measured against it. */
   planSlots?: PlanSlot[]
   leftovers: Leftover[]

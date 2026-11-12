@@ -16,7 +16,7 @@ import {
   useStockSheet,
 } from '../../plan'
 import { cookedAllOutcomeText, leftoverOutcomeText } from '../../plan/lib/cook'
-import type { SlotKey } from '../../plan/types'
+import type { SlotDayKey, SlotKey } from '../../plan/types'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
 import { createWebAudioAlarm } from '../adapters/alarm'
@@ -49,9 +49,8 @@ import type { CookTimelineTarget } from '../types'
 import { EmptyState, Button } from '../../../ui'
 import '../cook.css'
 
-/** The plan key of one Course of the slot; the course-less alias (courseId 0) is the main Course until C3. */
-export const courseKeyOf = (target: CookTimelineTarget, courseId: number): SlotKey =>
-  courseId ? { date: target.date, mealSlotId: target.mealSlotId, courseId } : { date: target.date, mealSlotId: target.mealSlotId }
+/** The plan key of one Course of the slot (crs-c3: every key names its Course). */
+export const courseKeyOf = (target: CookTimelineTarget, courseId: number): SlotKey => ({ date: target.date, mealSlotId: target.mealSlotId, courseId })
 
 export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): ReactNode {
   const navigate = useNavigate()
@@ -59,7 +58,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   const tl = useCookTimeline(target)
   const plan = usePlan()
   const view = tl.view
-  const slotKey: SlotKey = { date: target.date, mealSlotId: target.mealSlotId }
+  const slotKey: SlotDayKey = { date: target.date, mealSlotId: target.mealSlotId }
   const open = tl.unresolved
   const several = view ? filterChips(view).length > 0 : false
   const allModeOn = isAllMode(tl.filter, open)
@@ -181,7 +180,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
       <CookTimerStrip
         scope={tl.item?.scope ?? ''}
         items={tl.timers.items}
-        belongs={(timerScope) => (view ? view.courses.some((c) => sameScope(timerScope, c.scope, tl.mainCourseId)) : false)}
+        belongs={(timerScope) => (view ? view.courses.some((c) => sameScope(timerScope, c.scope)) : false)}
         onPause={(id) => void tl.timers.pause(id)}
         onResume={(id) => void tl.timers.resume(id)}
         onCancel={(id) => void tl.timers.cancel(id)}

@@ -57,7 +57,7 @@ func TestSlotCarriesStartByCookMinutesPhotoAndAttendance(t *testing.T) {
 		t.Errorf("startBy = %q, want 18:45 (the Course row's meal carries the Recipe's own start, as the slot alias did)", m.StartBy)
 	}
 	if m.PhotoURL != "/api/images/curry.jpg" {
-		t.Errorf("photoUrl = %q", out.Meal.PhotoURL)
+		t.Errorf("photoUrl = %q", m.PhotoURL)
 	}
 	if len(out.Attendance) != 2 {
 		t.Fatalf("attendance = %d, want 2", len(out.Attendance))
@@ -187,33 +187,35 @@ func TestLeftoverServedMealCarriesTheRecipeReheatMinutes(t *testing.T) {
 	leftover := func(recipeID int64) runner.SlotView {
 		return runner.SlotView{
 			Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t), Portions: 3,
-			Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: recipeID, Batches: 0, Portions: 1, State: plan.StatePlanned,
-				From: &plan.Source{From: plan.Key{Date: "2026-11-09", MealSlotID: 2}, LeftoverID: 5}},
+			Courses: []runner.CourseView{{CourseID: 1, Main: true, Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2, CourseID: 1},
+				RecipeID: recipeID, Batches: 0, Portions: 1, State: plan.StatePlanned,
+				From: &plan.Source{From: plan.Key{Date: "2026-11-09", MealSlotID: 2, CourseID: 1}, LeftoverID: 5}}}},
 		}
 	}
 	tbl := fixture()
 	tbl.recipeReheat = map[int64]int{7: 4}
 
 	out := slotFor(leftover(7), tbl)
-	if out.Meal == nil || out.Meal.ReheatMinutes != 4 {
-		t.Fatalf("reheatMinutes = %+v, want 4", out.Meal)
+	if out.Courses[0].Meal == nil || out.Courses[0].Meal.ReheatMinutes != 4 {
+		t.Fatalf("reheatMinutes = %+v, want 4", out.Courses[0].Meal)
 	}
-	raw, _ := json.Marshal(out.Meal)
+	raw, _ := json.Marshal(out.Courses[0].Meal)
 	if !strings.Contains(string(raw), `"reheatMinutes":4`) {
 		t.Errorf("JSON lacks reheatMinutes: %s", raw)
 	}
 
 	none := slotFor(leftover(8), tbl)
-	raw, _ = json.Marshal(none.Meal)
+	raw, _ = json.Marshal(none.Courses[0].Meal)
 	if strings.Contains(string(raw), "reheatMinutes") {
 		t.Errorf("a Recipe without a reheat time sends no key: %s", raw)
 	}
 
 	fresh := runner.SlotView{
 		Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, Name: "Dinner", Time: "19:30", At: dinnerAt(t), Portions: 3,
-		Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2}, RecipeID: 7, Batches: 1, Portions: 3, State: plan.StatePlanned},
+		Courses: []runner.CourseView{{CourseID: 1, Main: true, Meal: &plan.Meal{Key: plan.Key{Date: "2026-11-10", MealSlotID: 2, CourseID: 1},
+			RecipeID: 7, Batches: 1, Portions: 3, State: plan.StatePlanned}}},
 	}
-	raw, _ = json.Marshal(slotFor(fresh, tbl).Meal)
+	raw, _ = json.Marshal(slotFor(fresh, tbl).Courses[0].Meal)
 	if strings.Contains(string(raw), "reheatMinutes") {
 		t.Errorf("a fresh meal is cooked, not reheated, so it sends no reheatMinutes: %s", raw)
 	}

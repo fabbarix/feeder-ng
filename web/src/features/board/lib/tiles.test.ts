@@ -3,7 +3,7 @@ import type { LeftoverLike, SlotLike, StockTotalLike } from '../types'
 import { clockText, dateText, dueText, leftoverRows, msUntil, startCookPath, tomorrowMeals, tonightMeal, useSoonRows } from './tiles'
 
 function slot(date: string, id: number, at: string, state: 'planned' | 'cooked' | 'skipped' | null = 'planned', recipe = `R${id}`): SlotLike {
-  return { date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time: at.slice(11, 16), at, meal: state ? { recipeId: id, recipeName: recipe, batches: 1, portions: 4, state } : null }
+  return { date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time: at.slice(11, 16), at, courses: state ? [{ courseId: 1, name: 'Main', main: true, meal: { recipeId: id, recipeName: recipe, batches: 1, portions: 4, state } }] : [] }
 }
 
 const NOW = '2026-11-09T17:00:00Z'

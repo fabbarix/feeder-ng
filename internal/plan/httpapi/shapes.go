@@ -106,10 +106,7 @@ type slotOut struct {
 	At         string        `json:"at"`
 	Portions   float64       `json:"portions"`
 	Attendance []attendeeOut `json:"attendance"`
-	// Meal and Unfilled are the main Course's (the aliases until C3, crs-plan §2.2).
-	Meal     *mealOut     `json:"meal"`
-	Unfilled *unfilledOut `json:"unfilled"`
-	Rules    []ruleOut    `json:"rules"`
+	Rules      []ruleOut     `json:"rules"`
 	// Courses are the slot's Course rows in the slot's order, then history rows (crs-c2 §3.1).
 	Courses []courseOut `json:"courses"`
 	// CookMinutes is the slot's timeline total in minutes, null when nothing fresh is left to cook; StartBy the time to
@@ -138,11 +135,27 @@ type coveredByOut struct {
 	RecipeName string `json:"recipeName"`
 }
 
-// listEntryOut is one entry of the to-confirm and couldn't-plan lists: a slot occurrence for one Course.
+// listEntryOut is one entry of the to-confirm and couldn't-plan lists: a slot occurrence for one Course, with that
+// Course's own meal or reason (crs-c3 §1: the slot itself carries neither).
 type listEntryOut struct {
 	slotOut
-	CourseID   int64  `json:"courseId"`
-	CourseName string `json:"courseName"`
+	CourseID   int64        `json:"courseId"`
+	CourseName string       `json:"courseName"`
+	Meal       *mealOut     `json:"meal"`
+	Unfilled   *unfilledOut `json:"unfilled"`
+}
+
+// listEntryFor is one flat list entry.
+func listEntryFor(e runner.ListEntry, t table) listEntryOut {
+	out := listEntryOut{slotOut: slotFor(e.SlotView, t), CourseID: e.Key.CourseID, CourseName: t.courses[e.Key.CourseID]}
+	if e.Meal != nil {
+		out.Meal = mealFor(*e.Meal, t)
+		out.Meal.StartBy = plan.StartBy(e.At, out.Meal.CookMinutes)
+	}
+	if e.Unfilled != nil {
+		out.Unfilled = unfilledFor(*e.Unfilled)
+	}
+	return out
 }
 
 // putOut is the answer of a PUT: the meal and the Courses a Whole meal removed (covered, always a list).
@@ -227,7 +240,7 @@ func whyFor(ws []plan.Why, t table) []whyOut {
 }
 
 func mealFor(m plan.Meal, t table) *mealOut {
-	courseID := t.course(m.Key.CourseID)
+	courseID := m.Key.CourseID
 	out := &mealOut{
 		Date: m.Key.Date, MealSlotID: m.Key.MealSlotID, CourseID: courseID, CourseName: t.courses[courseID],
 		RecipeID: m.RecipeID, RecipeName: t.recipes[m.RecipeID], WholeMeal: t.whole[m.RecipeID], Relaxed: m.Relaxed,
@@ -266,16 +279,17 @@ func rulesFor(rs []plan.SlotRule, t table) []ruleOut {
 }
 
 func ruleFor(r plan.SlotRule, t table) ruleOut {
-	return ruleOut{ID: r.ID, MealSlotID: r.MealSlotID, CourseID: t.course(r.CourseID), RecipeID: r.RecipeID,
+	return ruleOut{ID: r.ID, MealSlotID: r.MealSlotID, CourseID: r.CourseID, RecipeID: r.RecipeID,
 		RecipeName: t.recipes[r.RecipeID], Tag: r.Tag}
 }
 
-// courseFor is one Course row of a slot.
-func courseFor(c runner.CourseView, t table) courseOut {
+// courseFor is one Course row of a slot occurrence at the instant at. The row's meal carries its startBy (crs-c3 §1).
+func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 	out := courseOut{CourseID: c.CourseID, Name: t.courses[c.CourseID], Main: c.Main, Optional: c.Optional,
 		OptOutMemberIDs: append([]int64{}, c.OptOutMemberIDs...)}
 	if c.Meal != nil {
 		out.Meal = mealFor(*c.Meal, t)
+		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
 	}
 	if c.Unfilled != nil {
 		out.Unfilled = unfilledFor(*c.Unfilled)
@@ -298,7 +312,7 @@ func slotFor(s runner.SlotView, t table) slotOut {
 		Courses: []courseOut{},
 	}
 	for _, c := range s.Courses {
-		out.Courses = append(out.Courses, courseFor(c, t))
+		out.Courses = append(out.Courses, courseFor(c, s.At, t))
 	}
 	if s.CookMinutes != nil {
 		minutes := *s.CookMinutes
@@ -309,13 +323,6 @@ func slotFor(s runner.SlotView, t table) slotOut {
 		out.Attendance = append(out.Attendance, attendeeOut{MemberID: a.MemberID, Name: t.members[a.MemberID], Factor: a.Factor,
 			ID: a.MemberID, Colour: t.memberColour[a.MemberID],
 			PhotoURL: t.memberPhoto[a.MemberID], Avatar: t.memberAvatar[a.MemberID]})
-	}
-	if s.Meal != nil {
-		out.Meal = mealFor(*s.Meal, t)
-		out.Meal.StartBy = plan.StartBy(s.At, out.Meal.CookMinutes)
-	}
-	if s.Unfilled != nil {
-		out.Unfilled = unfilledFor(*s.Unfilled)
 	}
 	return out
 }
@@ -341,5 +348,5 @@ func unfilledFor(u plan.Unfilled) *unfilledOut {
 func leftoverFor(l plan.Leftover, t table) leftoverOut {
 	return leftoverOut{ID: l.ID, RecipeID: l.RecipeID, RecipeName: t.recipes[l.RecipeID], Portions: l.Portions,
 		CookedOn: l.CookedOn, UseBy: l.UseBy, FromDate: l.From.Date, FromMealSlotID: l.From.MealSlotID,
-		FromCourseID: t.course(l.From.CourseID)}
+		FromCourseID: l.From.CourseID}
 }

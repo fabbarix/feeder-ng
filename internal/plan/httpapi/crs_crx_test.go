@@ -381,8 +381,9 @@ func TestExclusionsRouteIsNotShadowedByTheDateSlotPatterns(t *testing.T) {
 	if _, ok := m["cells"]; !ok || len(m) != 1 {
 		t.Errorf("answer = %s, want {cells}", r.Body)
 	}
-	// the route is GET only: the other verbs still reach the {date}/{slotId} routes, which refuse the date
-	wantErr(t, "PUT on the literal", w.User.Put(exclusionsPath, map[string]any{"recipeId": 1}), 404, "unknown_slot")
+	// the route is GET only: a PUT finds no route at all (C3 removed the course-less PUT .../{date}/{slotId}), so it
+	// is the router's 404, and it never reaches a {date}/{slotId} handler.
+	wantErr(t, "PUT on the literal", w.User.Put(exclusionsPath, map[string]any{"recipeId": 1}), 404, "not_found")
 	// and its neighbours are untouched
 	if r := w.User.Get("/api/plan/couldnt-plan"); r.Status != 200 {
 		t.Errorf("GET couldnt-plan = %d %s", r.Status, r.Body)

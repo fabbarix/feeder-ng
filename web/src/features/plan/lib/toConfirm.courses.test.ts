@@ -1,10 +1,12 @@
 // CRS F review: the Courses of one to-confirm slot, for Today's Mark all Cooked (was inline in TodayScreen).
 import { describe, expect, it } from 'vitest'
 import { courseMeal, slot } from '../test-utils'
+import type { PlanEntry } from '../types'
 import { toConfirmCourses } from './toConfirm'
 
+// An entry without a courseId is deliberately not a full PlanEntry: the cases below check it is left out.
 const entry = (courseId: number | undefined, over = {}) =>
-  slot({ date: '2026-11-09', mealSlotId: 4, ...(courseId === undefined ? {} : { courseId, courseName: `C${courseId}` }), meal: courseMeal(courseId ?? 1, 'X', {}), ...over })
+  slot({ date: '2026-11-09', mealSlotId: 4, ...(courseId === undefined ? {} : { courseId, courseName: `C${courseId}` }), meal: courseMeal(courseId ?? 1, 'X', {}), ...over }) as PlanEntry
 
 describe('toConfirmCourses(entries, key)', () => {
   it('the course ids of the entries of that date and Meal Slot, in entry order', () => {

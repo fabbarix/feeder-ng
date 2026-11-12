@@ -29,8 +29,8 @@ describe('sameScope', () => {
   })
 
   it('a two-part scope is NOT the main Course', () => {
-    expect(sameScope('meal:2026-11-10/4', 'meal:2026-11-10/4/7', 7)).toBe(false)
-    expect(sameScope('meal:2026-11-10/4/7', 'meal:2026-11-10/4', 7)).toBe(false)
+    expect(sameScope('meal:2026-11-10/4', 'meal:2026-11-10/4/7')).toBe(false)
+    expect(sameScope('meal:2026-11-10/4/7', 'meal:2026-11-10/4')).toBe(false)
     expect(sameScope('meal:2026-11-10/4', 'meal:2026-11-10/4/7')).toBe(false)
   })
 

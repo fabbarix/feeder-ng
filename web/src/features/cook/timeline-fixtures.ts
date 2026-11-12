@@ -2,7 +2,7 @@
 // Dinner 19:00 (30 minutes): Main (id 1, the main Course: its scope is two-part until C3) and Side (id 2, three-part).
 import type { CookTimer, CookView, TimelineItem, TimelineView } from './types'
 
-export const MAIN_SCOPE = 'meal:2026-11-10/4'
+export const MAIN_SCOPE = 'meal:2026-11-10/4/1'
 export const SIDE_SCOPE = 'meal:2026-11-10/4/2'
 
 export function item(over: Partial<TimelineItem> = {}): TimelineItem {

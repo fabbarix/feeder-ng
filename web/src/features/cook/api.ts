@@ -24,7 +24,7 @@ export interface CookApi {
 export function createCookApi(client: HttpClient): CookApi {
   return {
     view(source) {
-      if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}`)
+      if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}/${source.courseId}`)
       return client.get<CookView>(`/api/cook/recipes/${source.recipeId}?batches=${source.batches}`)
     },
     timeline(date, mealSlotId) {

@@ -63,15 +63,15 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/plan/couldnt-plan/exclusions", a.couldntExclusions)
 	r.User("GET /api/plan/leftovers", a.leftovers)
 	r.User("POST /api/plan/regenerate", a.regenerate)
-	r.User("PUT /api/plan/{date}/{slotId}", a.setMeal)
-	r.User("POST /api/plan/{date}/{slotId}/confirm", a.confirm)
-	r.User("POST /api/plan/{date}/{slotId}/unpin", a.unpin)
-	r.User("GET /api/plan/{date}/{slotId}/alternatives", a.alternatives)
-	r.User("GET /api/plan/{date}/{slotId}/cook", a.cookPreview)
-	r.User("POST /api/plan/{date}/{slotId}/cooked", a.cooked)
-	r.User("POST /api/plan/{date}/{slotId}/not-cooked", a.notCooked)
-	// Team C2 (docs/dev/design/crs-c2.md §3): the Course routes. The course-less routes above are the main Course's
-	// aliases until C3; the literal "all" segment beats {courseId} in the mux.
+	// Team C3 (docs/dev/design/crs-c3.md §1): the course-less routes are gone. The six old words answer 404 for every
+	// method, registered explicitly: otherwise the mux answers 405 through PUT .../{slotId}/{courseId}. A method-less
+	// pattern would overlap that PUT pattern without either being more specific, so each method is named.
+	for _, word := range []string{"confirm", "unpin", "alternatives", "cook", "cooked", "not-cooked"} {
+		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
+			r.User(method+" /api/plan/{date}/{slotId}/"+word, notFound)
+		}
+	}
+	// Team C2 (docs/dev/design/crs-c2.md §3): the Course routes. The literal "all" segment beats {courseId} in the mux.
 	r.User("PUT /api/plan/{date}/{slotId}/{courseId}", a.setMeal)
 	r.User("POST /api/plan/{date}/{slotId}/{courseId}/confirm", a.confirm)
 	r.User("POST /api/plan/{date}/{slotId}/{courseId}/unpin", a.unpin)

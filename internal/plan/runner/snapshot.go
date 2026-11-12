@@ -149,8 +149,7 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 		if !ok {
 			return plan.Snapshot{}, ErrUnknownSlot
 		}
-		norm := plan.NormaliseCourses(slots)
-		after := norm(*o.after)
+		after := *o.after
 		for _, s := range slots {
 			at, ok := in.instant(s.Key)
 			if !ok {
@@ -236,7 +235,7 @@ func walkRank(s plan.SlotInfo, courseID int64) int {
 }
 
 // cellAttendance is the attendance a planning cell serves: its Course Attendance, or the slot's own Attendance when the
-// slot has no Courses (the transition shim).
+// slot has no Courses (pure planning only).
 func cellAttendance(s plan.SlotInfo, courseID int64) []plan.Attendee {
 	if len(s.Courses) == 0 {
 		return s.Attendance
@@ -256,15 +255,14 @@ func cellAttendance(s plan.SlotInfo, courseID int64) []plan.Attendee {
 // Leftover-served meal is checked against its source by the planner. It works per planning cell. Keys already in
 // clear are not repeated.
 func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRule, recipes []planner.Recipe, clear []plan.Key) []plan.Key {
-	norm := plan.NormaliseCourses(slots)
 	already := map[plan.Key]bool{}
 	for _, k := range clear {
-		already[norm(k)] = true
+		already[k] = true
 	}
 	planned := map[plan.Key]plan.Meal{}
 	for _, m := range meals {
 		if m.State == plan.StatePlanned && !m.Pinned {
-			planned[norm(m.Key)] = m
+			planned[m.Key] = m
 		}
 	}
 	var out []plan.Key
@@ -288,7 +286,7 @@ func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRu
 				out = append(out, k)
 				continue
 			}
-			if cellRules := plan.CellRules(rules, s, k.CourseID, norm); len(cellRules) > 0 && !matchesAnyRule(rc, cellRules) {
+			if cellRules := plan.CellRules(rules, s, k.CourseID); len(cellRules) > 0 && !matchesAnyRule(rc, cellRules) {
 				out = append(out, k)
 			}
 		}

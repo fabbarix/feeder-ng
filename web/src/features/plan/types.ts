@@ -175,23 +175,23 @@ export interface PlanSlot {
   time: string
   at: string
   portions: number
-  meal: PlannedMeal | null
-  unfilled: Unfilled | null
   rules: SlotRule[]
   /** WP6: optional until the API sends it. */
   attendance?: AttendanceMember[]
-  /**
-   * CRS F: the slot's Courses in the slot's order, then history rows. Optional until C3: without it the slot is one
-   * Course, read from `meal` and `unfilled` (lib/courses slotCourses). `meal` and `unfilled` stay the main Course's aliases.
-   */
+  /** The slot's Courses in the slot's order, then history rows. A slot carries no meal or reason of its own (crs-c3 §4). */
   courses?: PlanCourse[]
   /** CRS F: the slot's cooking timeline total in whole minutes; null when nothing fresh is left to cook. */
   cookMinutes?: number | null
   /** CRS F: "HH:MM" to start the timeline by (hero "start 18:45"). */
   startBy?: string
-  /** CRS F: on the flat to-confirm and couldn't-plan entries (one per Course). */
-  courseId?: number
-  courseName?: string
+}
+
+/** One entry of the flat to-confirm and couldn't-plan lists: a slot for one Course, with that Course's own meal or reason. */
+export interface PlanEntry extends PlanSlot {
+  courseId: number
+  courseName: string
+  meal: PlannedMeal | null
+  unfilled: Unfilled | null
 }
 
 export interface PlanView {
@@ -202,11 +202,17 @@ export interface PlanView {
   slots: PlanSlot[]
 }
 
+/** The key of one Planned Meal: its Meal Slot, its date and its Course (the real id, the main Course included). */
 export interface SlotKey {
   date: string
   mealSlotId: number
-  /** CRS F: the Course. Absent = the slot (Cook Mode, the slot-wide actions) or, on a Planned Meal route, the main Course alias. */
-  courseId?: number
+  courseId: number
+}
+
+/** The key of a whole Meal Slot occurrence (the slot-wide routes: Cook Mode's timeline, Mark all Cooked, Not cooked whole slot). */
+export interface SlotDayKey {
+  date: string
+  mealSlotId: number
 }
 
 export interface Alternative {

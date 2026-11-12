@@ -42,13 +42,18 @@ func newFixture(t *testing.T) *fixture {
 	}
 }
 
-// key names the main Course by its real id (C3: the store has no Course 0 shim any more).
-func (f *fixture) key(date string, slot int64) plan.Key {
+// mainID is the real id of the main Course (C3: the store has no Course 0 shim any more).
+func (f *fixture) mainID() int64 {
 	var main int64
 	if err := f.db.QueryRow(`SELECT id FROM courses WHERE is_main = 1`).Scan(&main); err != nil {
 		panic(err)
 	}
-	return plan.Key{Date: date, MealSlotID: slot, CourseID: main}
+	return main
+}
+
+// key names the main Course by its real id.
+func (f *fixture) key(date string, slot int64) plan.Key {
+	return plan.Key{Date: date, MealSlotID: slot, CourseID: f.mainID()}
 }
 
 func (f *fixture) meal(date string, slot, recipe int64) plan.Meal {
@@ -379,15 +384,15 @@ func TestLeftoversLifecycle(t *testing.T) {
 
 func TestSlotRules(t *testing.T) {
 	f := newFixture(t)
-	byTag, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, Tag: "pizza"})
+	byTag, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, CourseID: f.mainID(), Tag: "pizza"})
 	if err != nil || byTag.ID == 0 {
 		t.Fatalf("AddSlotRule(tag) = %+v, %v", byTag, err)
 	}
-	byRecipe, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, RecipeID: f.pasta})
+	byRecipe, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, CourseID: f.mainID(), RecipeID: f.pasta})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, Tag: "pizza"}); !errors.Is(err, store.ErrDuplicateRule) {
+	if _, err := f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.dinner, CourseID: f.mainID(), Tag: "pizza"}); !errors.Is(err, store.ErrDuplicateRule) {
 		t.Errorf("same rule twice: err = %v, want ErrDuplicateRule", err)
 	}
 	for name, r := range map[string]plan.SlotRule{
@@ -474,7 +479,7 @@ func TestPlannedCheckerKnowsRecipesThatWereEverPlanned(t *testing.T) {
 	byRule := plantest.SeedRecipe(t, f.db, "Only a Slot Rule", 2)
 	f.st.SaveMeal(ctx, f.meal("2026-11-10", f.dinner, f.chicken))
 	f.st.AddLeftover(ctx, plan.Leftover{RecipeID: byLeftover, From: f.key("2026-11-01", f.dinner), Portions: 1, CookedOn: "2026-11-01", UseBy: "2026-11-04"})
-	f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.lunch, RecipeID: byRule})
+	f.st.AddSlotRule(ctx, plan.SlotRule{MealSlotID: f.lunch, CourseID: f.mainID(), RecipeID: byRule})
 	// The checker is registered by the package's init().
 	for id, want := range map[int64]bool{f.chicken: true, byLeftover: true, byRule: true, other: false} {
 		got, err := rstore.DefaultPlannedCheckers.WasPlanned(ctx, f.db, id)

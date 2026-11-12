@@ -1,7 +1,7 @@
 import type { IconName } from '../../../ui/icons'
 import { slotHash } from '../../settings/lib/slotAnchor'
 import { planStrings as s } from '../strings'
-import type { PlanSlot } from '../types'
+import type { PlanEntry, PlanSlot } from '../types'
 import { weekdayName } from './phrase'
 
 export type Cause =
@@ -36,7 +36,7 @@ export interface CauseGroup {
   /** The number in the headline: Meal Slots for Nobody attends, Courses otherwise. */
   count: number
   /** CRS G2: the cells (one per Course), in plan order; for a slot without Courses, the slot itself. */
-  slots: PlanSlot[]
+  slots: PlanEntry[]
   /** CRS G2: the lines of "Show all N", N = items.length. */
   items: CauseItem[]
   /** "Couldn't plan 9 Meal Slots. Nobody is set to attend." */
@@ -53,7 +53,7 @@ export interface CauseGroup {
 const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'no_course_recipes', 'slot_rule', 'excluded', 'advance_step', 'no_fit']
 
 /** Where a cause's fix goes; `first` is the earliest cell of the group. */
-type FixFor = (label: string, first: PlanSlot | undefined) => FixAction
+type FixFor = (label: string, first: PlanEntry | undefined) => FixAction
 
 const META: Record<Cause, { tone: Tone; icon: IconName; fix: FixFor }> = {
   // R15: deep link to the earliest affected Meal Slot (the group is sorted by date and time).
@@ -88,7 +88,7 @@ export function toneOf(cause: Cause): Tone {
 }
 
 /** The one cause a slot (or a Course, or a cell) is filed under. */
-export function causeOf(slot: Pick<PlanSlot, 'unfilled'>): Cause {
+export function causeOf(slot: Pick<PlanEntry, 'unfilled'>): Cause {
   const u = slot.unfilled
   if (!u) return 'no_fit'
   if (u.reason === 'no_attendance') return 'nobody_attending'
@@ -103,16 +103,16 @@ export function causeOf(slot: Pick<PlanSlot, 'unfilled'>): Cause {
 }
 
 /** The Course cells the planner left empty with a recorded reason, in plan order (`courseCells`). */
-export function unplannedOf(slots: PlanSlot[]): PlanSlot[] {
+export function unplannedOf(slots: PlanEntry[]): PlanEntry[] {
   return courseCells(slots).filter((x) => x.meal === null && x.unfilled !== null && x.unfilled !== undefined)
 }
 
-function byTime(a: PlanSlot, b: PlanSlot): number {
+function byTime(a: PlanEntry, b: PlanEntry): number {
   return a.date < b.date ? -1 : a.date > b.date ? 1 : a.time < b.time ? -1 : a.time > b.time ? 1 : 0
 }
 
-const slotKey = (x: PlanSlot): string => `${x.date}/${x.mealSlotId}`
-const courseKey = (x: PlanSlot): number => x.courseId ?? -1
+const slotKey = (x: PlanEntry): string => `${x.date}/${x.mealSlotId}`
+const courseKey = (x: PlanEntry): number => x.courseId ?? -1
 
 /** Plural of a name on its last word: "Side" -> "Sides", "Side dish" -> "Side dishes", "Dessert" -> "Desserts". */
 export function pluralName(name: string): string {
@@ -123,7 +123,7 @@ export function pluralName(name: string): string {
 }
 
 /** The headline's noun and number for one cause's cells. */
-function countOf(cause: Cause, list: PlanSlot[], allCells: PlanSlot[]): { count: number; noun: string } {
+function countOf(cause: Cause, list: PlanEntry[], allCells: PlanEntry[]): { count: number; noun: string } {
   if (cause === 'nobody_attending') {
     const count = new Set(list.map(slotKey)).size
     return { count, noun: count === 1 ? 'Meal Slot' : 'Meal Slots' }
@@ -139,7 +139,7 @@ function countOf(cause: Cause, list: PlanSlot[], allCells: PlanSlot[]): { count:
 }
 
 /** CRS G2: the lines of "Show all", one per Meal Slot when every Course of the slot is in the group, else one per cell. */
-export function cellItems(cells: PlanSlot[], all: PlanSlot[]): CauseItem[] {
+export function cellItems(cells: PlanEntry[], all: PlanEntry[]): CauseItem[] {
   const allCells = courseCells(all)
   const items: CauseItem[] = []
   const done = new Set<string>()
@@ -160,12 +160,12 @@ export function cellItems(cells: PlanSlot[], all: PlanSlot[]): CauseItem[] {
   return items
 }
 
-function cellId(x: PlanSlot): string {
-  return `cell-${x.date}-${x.mealSlotId}-${x.courseId ?? 0}`
+function cellId(x: PlanEntry): string {
+  return `cell-${x.date}-${x.mealSlotId}-${x.courseId}`
 }
 
 /** The headline's text for one cause. */
-function textOf(cause: Cause, list: PlanSlot[], count: number): string {
+function textOf(cause: Cause, list: PlanEntry[], count: number): string {
   if (cause === 'slot_rule') return count === 1 ? s.couldntSlotRuleOne : s.couldntSlotRuleMany
   if (cause === 'no_course_recipes') {
     const courses = new Set(list.map(courseKey))
@@ -180,8 +180,8 @@ function textOf(cause: Cause, list: PlanSlot[], count: number): string {
  * `all` is the whole plan (slots with `courses`, or cells): it says how many Courses a slot has, which decides whether the
  * counts are of Meal Slots or of Courses and whether a line names its Course (`cellItems`).
  */
-export function groupByCause(slots: PlanSlot[], all: PlanSlot[] = slots): CauseGroup[] {
-  const byCause = new Map<Cause, PlanSlot[]>()
+export function groupByCause(slots: PlanEntry[], all: PlanEntry[] = slots): CauseGroup[] {
+  const byCause = new Map<Cause, PlanEntry[]>()
   for (const slot of slots) {
     const c = causeOf(slot)
     byCause.set(c, [...(byCause.get(c) ?? []), slot])
@@ -215,7 +215,7 @@ export function shortReason(cause: Cause): string {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** "Tue 10 Nov · Dinner". */
-export function slotLine(slot: PlanSlot): string {
+export function slotLine(slot: PlanEntry): string {
   const [, m, d] = slot.date.split('-').map(Number)
   return `${weekdayName(slot.date, 'short')} ${d} ${MONTHS[(m ?? 1) - 1]} · ${slot.name}`
 }
@@ -237,21 +237,22 @@ export function toneStyle(tone: Tone): ToneStyle {
  * not-served Courses have neither and give no cell. An entry that already has a `courseId` is a cell and is kept as it is;
  * a slot without `courses` is one cell, itself.
  */
-export function courseCells(slots: PlanSlot[]): PlanSlot[] {
-  const out: PlanSlot[] = []
+export function courseCells(slots: Array<PlanSlot | PlanEntry>): PlanEntry[] {
+  const out: PlanEntry[] = []
   for (const slot of slots) {
-    if (slot.courseId !== undefined) {
+    if (isEntry(slot)) {
       out.push(slot)
       continue
     }
-    if (slot.courses === undefined) {
-      if (slot.meal !== null || slot.unfilled !== null) out.push(slot)
-      continue
-    }
-    for (const course of slot.courses) {
+    for (const course of slot.courses ?? []) {
       if (course.meal === null && course.unfilled === null) continue
       out.push({ ...slot, courseId: course.courseId, courseName: course.name, meal: course.meal, unfilled: course.unfilled })
     }
   }
   return out
+}
+
+/** A flat entry already names its Course: it is a cell as it is. */
+function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
+  return (slot as PlanEntry).courseId !== undefined
 }

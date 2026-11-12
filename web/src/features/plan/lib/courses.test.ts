@@ -9,6 +9,8 @@ import { serverSlot } from '../test-utils.c3'
 const main = (over = {}) => planCourse({ courseId: 1, name: 'Main', main: true, meal: courseMeal(1, 'Main', { recipeName: 'Roast chicken' }), ...over })
 const side = (over = {}) => planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { recipeName: 'Green beans', recipeId: 8 }), ...over })
 const dessert = (over = {}) => planCourse({ courseId: 3, name: 'Dessert', main: false, optional: true, unserved: 'optional', ...over })
+// C3: a slot with no `courses` at all (the server never sends one); nothing may be made up for it.
+const bare = (over: Parameters<typeof slot>[0] = {}) => ({ ...slot(over), courses: undefined }) as unknown as ReturnType<typeof slot>
 const sam = { id: 1, name: 'Sam' }
 const ada = { id: 2, name: 'Ada' }
 const bo = { id: 3, name: 'Bo' }
@@ -17,8 +19,8 @@ const names = (slotArg: Parameters<typeof courseRows>[0]) => courseRows(slotArg)
 describe('slotCourses', () => {
   // C3: GET /api/plan always sends `courses`; there is no main Course made up from meal and unfilled, and no courseId 0.
   it('a slot without `courses` has no Courses (nothing is made up from meal, nothing is courseId 0)', () => {
-    expect(slotCourses(slot({ meal: meal({ courseId: 7, courseName: 'Main' }) }))).toEqual([])
-    expect(slotCourses(slot({ meal: null }))).toEqual([])
+    expect(slotCourses(bare({ meal: meal({ courseId: 7, courseName: 'Main' }) }))).toEqual([])
+    expect(slotCourses(bare({ meal: null }))).toEqual([])
   })
 
   it('a slot with `courses` returns them as sent', () => {
@@ -54,7 +56,7 @@ describe('courseOf', () => {
     expect(courseOf(s, 2)?.name).toBe('Side')
     expect(courseOf(s, 9)).toBeUndefined()
     expect(courseOf(s, undefined as never)).toBeUndefined()
-    expect(courseOf(slot(), 1)).toBeUndefined()
+    expect(courseOf(bare(), 1)).toBeUndefined()
   })
 })
 

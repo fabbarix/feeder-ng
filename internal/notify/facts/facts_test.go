@@ -60,7 +60,10 @@ type world struct {
 	omelette int64
 }
 
-func key(date string, slot int64) plan.Key { return plan.Key{Date: date, MealSlotID: slot} }
+// key names the main Course of a Meal Slot by its real id (crs-c3: the store has no Course 0).
+func (w *world) key(t *testing.T, date string, slot int64) plan.Key {
+	return plan.Key{Date: date, MealSlotID: slot, CourseID: w.mainCourse(t)}
+}
 
 func (w *world) recipe(t *testing.T, name string, lines []int64, steps []recipe.Step) int64 {
 	t.Helper()
@@ -77,7 +80,7 @@ func (w *world) recipe(t *testing.T, name string, lines []int64, steps []recipe.
 
 func (w *world) meal(t *testing.T, date string, slot, recipeID int64, state plan.State, from *plan.Source) {
 	t.Helper()
-	m, err := w.plans.SaveMeal(ctx, plan.Meal{Key: key(date, slot), RecipeID: recipeID, Batches: 1, Portions: 4, State: plan.StatePlanned, From: from})
+	m, err := w.plans.SaveMeal(ctx, plan.Meal{Key: w.key(t, date, slot), RecipeID: recipeID, Batches: 1, Portions: 4, State: plan.StatePlanned, From: from})
 	if err != nil {
 		t.Fatalf("save meal %s: %v", date, err)
 	}
@@ -225,7 +228,7 @@ func TestFactsPutTheSlotInstantInTheHouseholdZoneAndCarryAdvanceStepLeads(t *tes
 func TestFactsMarkAMealServedFromALeftover(t *testing.T) {
 	w := newWorld(t)
 	w.meal(t, "2026-11-09", w.dinner, w.risotto, plan.StatePlanned, nil)
-	w.meal(t, "2026-11-10", w.dinner, w.risotto, plan.StatePlanned, &plan.Source{From: key("2026-11-09", w.dinner)})
+	w.meal(t, "2026-11-10", w.dinner, w.risotto, plan.StatePlanned, &plan.Source{From: w.key(t, "2026-11-09", w.dinner)})
 	f, err := w.src.Facts(ctx, w.now)
 	if err != nil {
 		t.Fatal(err)
@@ -242,7 +245,7 @@ func TestFactsSkipAMealWhoseRecipeIsGone(t *testing.T) {
 	ghost := w.recipe(t, "Ghost stew", []int64{w.rice}, []recipe.Step{{Text: "Stir", Kind: schedule.Active, DurationMinutes: 5}})
 	w.meal(t, "2026-11-09", w.lunch, ghost, plan.StatePlanned, nil)
 	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
-	if _, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: ghost, From: key("2026-11-08", w.dinner), Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-11"}); err != nil {
+	if _, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: ghost, From: w.key(t, "2026-11-08", w.dinner), Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-11"}); err != nil {
 		t.Fatal(err)
 	}
 	// Delete the Recipe's row with foreign keys off on one connection.
@@ -273,11 +276,11 @@ func TestFactsSkipAMealWhoseRecipeIsGone(t *testing.T) {
 
 func TestFactsCarryAvailableLeftovers(t *testing.T) {
 	w := newWorld(t)
-	l, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: key("2026-11-08", w.dinner), Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-11"})
+	l, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: w.key(t, "2026-11-08", w.dinner), Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-11"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	gone, _ := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: key("2026-11-07", w.dinner), Portions: 1, CookedOn: "2026-11-07", UseBy: "2026-11-10"})
+	gone, _ := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: w.key(t, "2026-11-07", w.dinner), Portions: 1, CookedOn: "2026-11-07", UseBy: "2026-11-10"})
 	if err := w.plans.DiscardLeftover(ctx, gone.ID, "2026-11-09"); err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +299,7 @@ func TestStockLotsAreUsedByPlanOnlyByAFreshPlannedMealOnOrBeforeTheGoOffDate(t *
 	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
 	w.meal(t, "2026-11-11", w.dinner, w.porridge, plan.StatePlanned, nil)
 	// Risotto (rice) only as a Leftover-served meal on 11-10; Omelette (eggs) only Cooked.
-	w.meal(t, "2026-11-10", w.dinner, w.risotto, plan.StatePlanned, &plan.Source{From: key("2026-11-09", w.lunch)})
+	w.meal(t, "2026-11-10", w.dinner, w.risotto, plan.StatePlanned, &plan.Source{From: w.key(t, "2026-11-09", w.lunch)})
 	w.meal(t, "2026-11-09", w.lunch, w.omelette, plan.StateCooked, nil)
 
 	spinach := w.lot(t, w.spinach, "2026-11-12") // used on 11-09, before it goes off
@@ -401,7 +404,7 @@ func TestFactsGiveALeftoverCourseWithoutReheatMinutesTheDefaultLength(t *testing
 		t.Fatal(err)
 	}
 	src := &plan.Source{From: plan.Key{Date: "2026-11-08", MealSlotID: w.dinner, CourseID: w.mainCourse(t)}}
-	m3, err := w.plans.SaveMeal(ctx, plan.Meal{Key: key("2026-11-09", w.dinner), RecipeID: w.risotto, Batches: 1, Portions: 3, State: plan.StatePlanned, From: src})
+	m3, err := w.plans.SaveMeal(ctx, plan.Meal{Key: w.key(t, "2026-11-09", w.dinner), RecipeID: w.risotto, Batches: 1, Portions: 3, State: plan.StatePlanned, From: src})
 	if err != nil {
 		t.Fatal(err)
 	}

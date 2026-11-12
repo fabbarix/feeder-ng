@@ -14,11 +14,11 @@ import { useCouldntFix } from '../hooks/useCouldntFix'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
 import { useContainerColumns } from '../hooks/useContainerColumns'
 import { usePlanScreen } from '../hooks/usePlanScreen'
-import { unplannedOf } from '../lib/couldntGroups'
+import { courseCells, unplannedOf } from '../lib/couldntGroups'
 import { dateRange, groupByDay } from '../lib/days'
 import { cookPath } from '../lib/cook'
 import { planStrings } from '../strings'
-import type { SlotKey } from '../types'
+import type { SlotDayKey } from '../types'
 import '../plan.css'
 
 /**
@@ -33,10 +33,10 @@ export function PlanScreen(): ReactNode {
   const { plan, actions, flow } = s
   const days = groupByDay(plan.slots, plan.today, columns)
   const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
-  const cookMeal = (key: SlotKey) => navigate(cookPath(key))
-  const unplanned = useMemo(() => unplannedOf(plan.slots), [plan.slots])
+  const cookMeal = (key: SlotDayKey) => navigate(cookPath(key))
+  const unplanned = useMemo(() => unplannedOf(courseCells(plan.slots)), [plan.slots])
   const isAdmin = useMe().data?.isAdmin !== false
-  const notice = useCouldntPlanNotice(unplanned, plan.slots, isAdmin)
+  const notice = useCouldntPlanNotice(unplanned, courseCells(plan.slots), isAdmin)
   const fix = useCouldntFix(s.openChoose)
 
   let body: ReactNode
@@ -92,22 +92,24 @@ export function PlanScreen(): ReactNode {
       <div ref={gridRef} className="plan__grid-box">
         {body}
       </div>
-      <PlannedMealSheet
-        open={s.plannedOpen}
-        onClose={s.closePlanned}
-        slot={s.plannedSlot}
-        today={plan.today}
-        courseId={s.plannedCourseId}
-        onMarkRecipes={(courseId) => s.fromSheet(() => navigate(`/recipes?notCourse=${courseId}`))}
-        onAddRecipes={() => s.fromSheet(() => navigate('/recipes'))}
-        onReviewVarietyRules={() => s.fromSheet(() => navigate('/settings/planning'))}
-        onCook={(k) => s.fromSheet(() => cookMeal(k))}
-        onMarkCooked={(k) => s.fromSheet(() => flow.open(k))}
-        onSwap={(k) => s.fromSheet(() => s.openSwap(k))}
-        onPin={(k) => s.fromSheet(() => void actions.pin(k))}
-        onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
-        onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
-      />
+      {s.plannedCourseId !== undefined ? (
+        <PlannedMealSheet
+          open={s.plannedOpen}
+          onClose={s.closePlanned}
+          slot={s.plannedSlot}
+          today={plan.today}
+          courseId={s.plannedCourseId}
+          onMarkRecipes={(courseId) => s.fromSheet(() => navigate(`/recipes?notCourse=${courseId}`))}
+          onAddRecipes={() => s.fromSheet(() => navigate('/recipes'))}
+          onReviewVarietyRules={() => s.fromSheet(() => navigate('/settings/planning'))}
+          onCook={(k) => s.fromSheet(() => cookMeal(k))}
+          onMarkCooked={(k) => s.fromSheet(() => flow.open(k))}
+          onSwap={(k) => s.fromSheet(() => s.openSwap(k))}
+          onPin={(k) => s.fromSheet(() => void actions.pin(k))}
+          onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
+          onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
+        />
+      ) : null}
       <AllCookedSheets flow={s.allCooked} />
       <SwapSheet
         open={s.swapOpen}

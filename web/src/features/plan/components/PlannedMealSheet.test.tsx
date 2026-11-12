@@ -5,11 +5,12 @@ import { favourite, meal, slot } from '../test-utils'
 import type { PlanSlot } from '../types'
 import { PlannedMealSheet } from './PlannedMealSheet'
 
-const key = { date: '2026-11-10', mealSlotId: 2 }
+const slotKey = { date: '2026-11-10', mealSlotId: 2 }
+const key = { ...slotKey, courseId: 1 }
 
 function setup(s: PlanSlot | null = slot(), today = '2026-11-10') {
   const h = { onClose: vi.fn(), onCook: vi.fn(), onMarkCooked: vi.fn(), onSwap: vi.fn(), onPin: vi.fn(), onUnpin: vi.fn(), onChoose: vi.fn() }
-  render(<PlannedMealSheet open slot={s} today={today} {...h} />)
+  render(<PlannedMealSheet open slot={s} courseId={1} today={today} {...h} />)
   return h
 }
 
@@ -64,7 +65,7 @@ describe('PlannedMealSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
     await userEvent.click(screen.getByRole('button', { name: 'Pin' }))
     await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe' }))
-    expect(h.onCook).toHaveBeenCalledWith(key)
+    expect(h.onCook).toHaveBeenCalledWith(slotKey)
     expect(h.onMarkCooked).toHaveBeenCalledWith(key)
     expect(h.onSwap).toHaveBeenCalledWith(key)
     expect(h.onPin).toHaveBeenCalledWith(key)
@@ -98,9 +99,9 @@ describe('PlannedMealSheet', () => {
   })
 
   it('renders nothing while closed or without a slot', () => {
-    const { rerender } = render(<PlannedMealSheet open={false} slot={slot()} today="2026-11-10" onClose={() => {}} onCook={() => {}} onMarkCooked={() => {}} onSwap={() => {}} onPin={() => {}} onUnpin={() => {}} onChoose={() => {}} />)
+    const { rerender } = render(<PlannedMealSheet open={false} slot={slot()} courseId={1} today="2026-11-10" onClose={() => {}} onCook={() => {}} onMarkCooked={() => {}} onSwap={() => {}} onPin={() => {}} onUnpin={() => {}} onChoose={() => {}} />)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    rerender(<PlannedMealSheet open slot={null} today="2026-11-10" onClose={() => {}} onCook={() => {}} onMarkCooked={() => {}} onSwap={() => {}} onPin={() => {}} onUnpin={() => {}} onChoose={() => {}} />)
+    rerender(<PlannedMealSheet open slot={null} courseId={1} today="2026-11-10" onClose={() => {}} onCook={() => {}} onMarkCooked={() => {}} onSwap={() => {}} onPin={() => {}} onUnpin={() => {}} onChoose={() => {}} />)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

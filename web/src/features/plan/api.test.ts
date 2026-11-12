@@ -11,9 +11,9 @@ describe('planApi', () => {
   })
 
   it('cooked sends the edited portions only when given', async () => {
-    const api = mockApi({ 'POST /api/plan/2026-11-09/2/cooked': { meal: {}, leftover: null, warnings: [] } })
-    await planApi.cooked({ date: '2026-11-09', mealSlotId: 2 })
-    await planApi.cooked({ date: '2026-11-09', mealSlotId: 2 }, 1.5)
+    const api = mockApi({ 'POST /api/plan/2026-11-09/2/1/cooked': { meal: {}, leftover: null, warnings: [] } })
+    await planApi.cooked({ date: '2026-11-09', mealSlotId: 2, courseId: 1 })
+    await planApi.cooked({ date: '2026-11-09', mealSlotId: 2, courseId: 1 }, 1.5)
     expect(api.calls.map((c) => c.body)).toEqual([{}, { leftoverPortions: 1.5 }])
   })
 

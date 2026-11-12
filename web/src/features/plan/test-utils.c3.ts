@@ -5,8 +5,5 @@ import type { PlanCourse, PlanSlot } from './types'
 import { courseSlot } from './test-utils'
 
 export function serverSlot(courses: PlanCourse[], over: Partial<PlanSlot> = {}): PlanSlot {
-  const s = courseSlot(courses, over) as Partial<PlanSlot>
-  delete s.meal
-  delete s.unfilled
-  return s as PlanSlot
+  return courseSlot(courses, over)
 }

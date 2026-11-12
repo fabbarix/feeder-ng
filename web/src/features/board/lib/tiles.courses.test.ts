@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { boardSlots, hasPlanned, startCookPath, tomorrowLine, tomorrowSlots, tonightMeal, tonightRows } from './tiles'
 import type { CourseLike, SlotLike } from '../types'
 
+// A slot carries no meal of its own (crs-c3); a few cases give one anyway to prove it is ignored.
+type LegacySlot = SlotLike & { meal?: CourseLike['meal'] }
+
 const meal = (recipeName: string, state: 'planned' | 'cooked' | 'skipped' = 'planned', wholeMeal = false) => ({ recipeId: 1, recipeName, batches: 1, portions: 4, state, wholeMeal })
 const course = (courseId: number, name: string, main: boolean, over: Partial<CourseLike> = {}): CourseLike => ({ courseId, name, main, meal: null, ...over })
-const slotOf = (courses: CourseLike[] | undefined, over: Partial<SlotLike> = {}): SlotLike => {
+const slotOf = (courses: CourseLike[] | undefined, over: Partial<LegacySlot> = {}): LegacySlot => {
   const m = courses?.find((c) => c.main)?.meal ?? null
   return { date: '2026-11-09', mealSlotId: 2, name: 'Dinner', time: '19:00', at: '2026-11-09T19:00:00Z', meal: m, courses, ...over }
 }
@@ -39,7 +42,7 @@ describe('hasPlanned', () => {
   })
 
   it('reads the Course rows of a slot that has no `meal` at all', () => {
-    const s = slotOf(roastAndBeans()) as Partial<SlotLike>
+    const s = slotOf(roastAndBeans()) as Partial<LegacySlot>
     delete s.meal
     expect(hasPlanned(s as SlotLike)).toBe(true)
   })
