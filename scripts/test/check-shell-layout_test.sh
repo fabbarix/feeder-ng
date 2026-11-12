@@ -43,6 +43,15 @@ has "less than the .*gap between items" "rule 15 must fail when the pill inset i
 has "wraps onto more than one line|clipped" "rule 15 must check that no label is clipped or wrapped"
 has "setEmulatedMedia" "rule 15 must run in light and dark (prefers-color-scheme)"
 has "\\[360, 390, 820, 1024, 1280\\]" "rule 15 must cover 360, 390, 820, 1024 and 1280"
+# Hotfix 4.2: the photo editor's crop handles sit on the crop box (rule 16), measured on the dev-only fixture route
+has "^//  16\\." "the header comment must document rule 16 (crop handles)"
+has "/_editor-fixture" "rule 16 must open the dev-only editor fixture route"
+has "width of \\[390, 412\\]|\\[390, 412\\]" "rule 16 must run at 390 and 412 px"
+has "crop-editor__handle" "rule 16 must measure the .crop-editor__handle buttons"
+has "> 3" "rule 16 must allow at most 3 px between a handle and its place on the crop box"
+has "crop-editor__readout|data-fixture-below|overlaps" "rule 16 must check that no handle sits on the controls below the editor"
+grep -q "_editor-fixture" "$ROOT/web/src/main.tsx" && grep -q "import.meta.env.DEV" "$ROOT/web/src/main.tsx" && ok || bad "main.tsx must register /_editor-fixture only under import.meta.env.DEV"
+grep -Eq "^\\s*import .*EditorFixture|from '\\./dev/EditorFixture'" "$ROOT/web/src/main.tsx" && bad "main.tsx must load the fixture lazily (dynamic import), never statically" || ok
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"

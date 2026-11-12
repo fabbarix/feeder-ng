@@ -23,7 +23,11 @@ const router = createBrowserRouter([
   },
   // Dev-only catalogue of the shared primitives; stripped from production builds.
   ...(import.meta.env.DEV
-    ? [{ path: '/_gallery', lazy: async () => ({ Component: (await import('./ui/Gallery')).Gallery }) }]
+    ? [
+        { path: '/_gallery', lazy: async () => ({ Component: (await import('./ui/Gallery')).Gallery }) },
+        // Dev-only: the photo editor on a generated picture, for scripts/check-shell-layout.mjs (rule 15).
+        { path: '/_editor-fixture', lazy: async () => ({ Component: (await import('./dev/EditorFixture')).EditorFixture }) },
+      ]
     : []),
 ])
 
