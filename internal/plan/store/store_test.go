@@ -511,3 +511,45 @@ func TestLeftoverSourcesLooksUpOnlyTheRequestedIds(t *testing.T) {
 		t.Errorf("LeftoverSources(nil) = %v, %v; want an empty map without touching the table", got, err)
 	}
 }
+
+func TestUnfilledExclusionDetailRoundTripsAndIsNeverStale(t *testing.T) {
+	f := newFixture(t)
+	key := f.key("2026-11-13", f.dinner)
+	detail := []plan.ExclusionRecord{
+		{MemberID: 3, IngredientID: 12, RecipeIDs: []int64{4, 7, 9}, RecipeCount: 9},
+		{MemberID: 5, IngredientID: 0, RecipeIDs: []int64{4}, RecipeCount: 1},
+	}
+	with := plan.Unfilled{Key: key, Reason: "no_candidates", Eliminated: plan.Eliminations{Considered: 9, Exclusion: 9},
+		Exclusions: detail, MoreExclusions: 3}
+	if err := f.st.Apply(ctx, plan.Changes{Unfilled: []plan.Unfilled{with}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.st.Unfilled(ctx, "", "")
+	if err != nil || !reflect.DeepEqual(got, []plan.Unfilled{with}) {
+		t.Fatalf("Unfilled = %+v, %v; want %+v", got, err, with)
+	}
+	var raw sql.NullString
+	if err := f.db.QueryRow(`SELECT exclusions_json FROM plan_unfilled`).Scan(&raw); err != nil || !raw.Valid {
+		t.Fatalf("exclusions_json = %v, %v; want the stored detail", raw, err)
+	}
+
+	// The Exclusion count drops to 0: the reason is rewritten without detail, and the old detail goes (NULL).
+	without := plan.Unfilled{Key: key, Reason: "no_candidates", Eliminated: plan.Eliminations{Considered: 9, CoolDown: 9}}
+	if err := f.st.Apply(ctx, plan.Changes{Unfilled: []plan.Unfilled{without}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.db.QueryRow(`SELECT exclusions_json FROM plan_unfilled`).Scan(&raw); err != nil || raw.Valid {
+		t.Errorf("exclusions_json = %v, %v; want NULL after a rewrite without detail", raw, err)
+	}
+	got, _ = f.st.Unfilled(ctx, "", "")
+	if len(got) != 1 || got[0].Exclusions != nil || got[0].MoreExclusions != 0 {
+		t.Errorf("Unfilled after the rewrite = %+v, want nil detail", got)
+	}
+
+	// Detail, then the cell is cleared: nothing is left.
+	f.st.Apply(ctx, plan.Changes{Unfilled: []plan.Unfilled{with}})
+	f.st.Apply(ctx, plan.Changes{ClearUnfilled: []plan.Key{key}})
+	if got, _ := f.st.Unfilled(ctx, "", ""); len(got) != 0 {
+		t.Errorf("Unfilled after clearing = %+v", got)
+	}
+}

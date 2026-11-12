@@ -294,6 +294,23 @@ func existing(m Meal, at, now time.Time, cleared bool) *planner.ExistingMeal {
 	return em
 }
 
+// exclusionRecords converts the planner's Exclusion detail to its stored form; nil stays nil.
+func exclusionRecords(in []planner.ExclusionRecord) []ExclusionRecord {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]ExclusionRecord, 0, len(in))
+	for _, r := range in {
+		ids := make([]int64, 0, len(r.RecipeIDs))
+		for _, id := range r.RecipeIDs {
+			ids = append(ids, int64(id))
+		}
+		out = append(out, ExclusionRecord{MemberID: int64(r.MemberID), IngredientID: int64(r.IngredientID),
+			RecipeIDs: ids, RecipeCount: r.RecipeCount})
+	}
+	return out
+}
+
 func attendance(att []Attendee) []planner.Attendee {
 	var out []planner.Attendee
 	for _, a := range att {
@@ -450,6 +467,7 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 			Key: k, Reason: string(u.Reason), SlotRuleClaimed: u.SlotRuleClaimed,
 			Eliminated: Eliminations{Considered: u.Eliminated.Considered, Exclusion: u.Eliminated.Exclusion,
 				CoolDown: u.Eliminated.CoolDown, VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep},
+			Exclusions: exclusionRecords(u.Exclusions), MoreExclusions: u.MoreExclusions,
 		})
 	}
 	for _, ck := range cells {
