@@ -1,7 +1,8 @@
 // The state of the Delete / Archive dialog of a Course.
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { Course, CourseChoice, CourseImpact } from '../../../lib/courses'
+import { ApiError } from '../../../lib/http'
 import { courseKeys } from '../../../lib/courses/queryKeys'
 import type { CoursesState } from '../../../lib/courses/useCourses'
 import { defaultReplacement, isPlannedRefusal, needsReplacement as needsReplacementOf, removalErrorMessage, replacementChoices, type RemovalMode } from '../lib/courseRemoval'
@@ -38,10 +39,17 @@ export function useCourseRemoval(
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
 
+  const queryClient = useQueryClient()
   const impactQuery = useQuery({
     queryKey: courseKeys.impact(course?.id ?? 0),
     queryFn: () => courses.loadImpact(course!.id),
     enabled: course !== null,
+    // A 404 means the Course is gone: no retries, so the dialog does not wait on it.
+    retry: (count, err) => {
+      if (err instanceof ApiError && err.status === 404) return false
+      const dflt = queryClient.getDefaultOptions().queries?.retry ?? 3
+      return typeof dflt === 'function' ? dflt(count, err) : dflt === true || (typeof dflt === 'number' && count < dflt)
+    },
   })
   const impact = course === null ? undefined : impactQuery.data
   const choices = course === null ? [] : replacementChoices(courses.choices, course)

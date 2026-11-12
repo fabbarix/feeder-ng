@@ -36,16 +36,18 @@ export function CourseRow({ course, canEdit, sortable, onAction, onUnarchive, re
     <li {...sortable?.itemProps} className={className} data-course-id={course.id}>
       {sortable ? sortable.handle : null}
       <div className="course-row__body">
-        <div className="course-row__title">
-          <span className="course-row__name" data-testid="course-name">
-            {course.name}
-          </span>
-          {course.main ? (
-            <span data-testid="course-main-chip">
-              <Chip>{s.mainChip}</Chip>
+        {renaming ? null : (
+          <div className="course-row__title">
+            <span className="course-row__name" data-testid="course-name">
+              {course.name}
             </span>
-          ) : null}
-        </div>
+            {course.main ? (
+              <span data-testid="course-main-chip">
+                <Chip>{s.mainChip}</Chip>
+              </span>
+            ) : null}
+          </div>
+        )}
         {renaming ? (
           <TextField
             autoFocus
