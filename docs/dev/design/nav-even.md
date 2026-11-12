@@ -1,6 +1,6 @@
 # nav-even: an even bottom bar (beta.5, team NAV)
 
-Status: BLOCKED on one product question (below). No tests or implementation yet.
+Status: decided by the user (option C, below). Red tests written; implementation follows.
 
 ## Report (iPad)
 The active pill on the end buttons (Today, Recipes) is cramped, Recipes nearly touches the bar's rounded edge, and the gap from Shop to
@@ -15,19 +15,29 @@ Recipes is wider than the others, so the bar looks lopsided.
   ends (about 0 px against 8+ px between neighbours' content).
 - Labels are centred in unequal slots, so label-to-label distance differs: Shop to Recipes is the widest.
 
-## Why "equal slots" and "Scan truly centred" cannot both hold
-Six buttons, three left of Scan and two right. If the five tab slots have equal width s and Scan has any width, the left span is 3s
-and the right span 2s. Scan's centre is at the bar centre only if both spans are equal. That needs 3s = 2s, which is impossible for
-any s, padding, gap or bar width. So one of the two requirements has to give, or the layout needs a sixth slot on the right.
+## Why "equal slots" and "Scan centred" need a seventh button
+With three buttons left of Scan and two right, equal slots and an exactly centred Scan are impossible (the left span 3s can never equal
+the right span 2s). Options were A (keep 1fr/1.5fr), B (six equal, Scan off-centre) and C (a seventh button).
 
-## Options (needs the user's choice)
-A. Keep Scan exactly centred; equalise what can be: the *pill* (active highlight) gets one fixed width and the bar gets uniform inner
-   padding >= the gap, but slot widths stay 1fr x3 / 1.5fr x2. Label spacing on the right stays wider.
-B. Equal-width slots (W/6 each, Scan included, 6 columns); Scan is no longer at the bar's centre (about s/2 = 30 px left of it at 390 px).
-   Perfectly even; Scan is off-centre.
-C. Seven slots: Today, Plan, Pantry, Scan, Shop, Recipes plus a seventh (for example the avatar or a "More" button) so three sit each
-   side of Scan. Even and centred, but adds a button (a UX decision).
+## Decision: option C (user)
+A seventh top-level button, **Settings**, on the right: Today, Plan, Pantry | Scan | Shop, Recipes, Settings. Three on each side, so equal
+slots and a centred Scan hold together. Settings leaves the avatar menu, which keeps Kitchen board, feature items and Sign out.
 
-CSS for B once chosen: `grid-template-columns: repeat(6, 1fr); padding: 0 var(--space-2); gap: var(--space-1)`, links `width: 100%`.
-CSS for C: `repeat(7, 1fr)` likewise. Guard rule 15 (every slot equal width +-1 px, Scan centre vs bar centre +-1 px, active pill inset >=
-gap, at 360, 390, 820, 1024, 1280) is written once the option is fixed; under B the Scan-centre clause cannot be asserted.
+## Design
+- `nav.ts`: `PRIMARY_NAV` gains `settings` (path `/settings`, icon `settings`) last; `RAIL_NAV` follows it; `MENU_NAV` is `board` only.
+- The Settings tab is current on `/settings` and every `/settings/...` page (NavLink `end` is false for `settings`, as for `plan`), in the bar and in the rail.
+- Avatar menu: one divider, directly before Sign out. `withAccessRequests` appends "Sign-in requests" after the shortcuts when no Settings entry exists.
+- `.bottom-bar`: `grid-template-columns: repeat(7, minmax(0, 1fr))` (minmax(0, ...) so a long label such as "Settings" cannot widen a slot),
+  `padding-inline: var(--space-1)` (the same at both ends), `column-gap: 2px`; the pill inset (padding) is at least the gap.
+  At 360 px: 334 - 8 - 12 = 314 / 7 = 44.9 px per slot, so the 44 px target holds.
+- Links keep `width: 100%`; Scan is `width: min(58px, 100%)`, `height: 58px`, `justify-self: center`, so it never overflows a narrow slot.
+- Labels stay `nowrap`. If "Settings" does not fit a 44.9 px slot at 360 px, the developer may lower the label size at narrow widths
+  through a `--text-nav-size` override in a max-width media query; the guard (rule 15) decides, it checks no label sticks out of its button.
+- Rail: seven links of 56 x 56 (it already scrolls on short screens).
+- Dark mode: only tokens are used, so layout is the same; guard rule 15 runs in light and dark.
+
+## Tests (red now)
+- `nav.test.ts`, `accessMenu.test.ts`, `AppShell.test.tsx` (bar and rail order, Settings icon and current state, menu contents, divider).
+- `shell.css.test.ts` (seven equal tracks, symmetric padding, inset >= gap, Scan centred at 360..820, 44 px slots, Scan `min(58px, 100%)`).
+- `scripts/check-shell-layout.mjs` rule 15 (360, 390, 820 bar; 1024, 1280 rail; light and dark; `1024` added to VIEWPORTS) and its source check in
+  `scripts/test/check-shell-layout_test.sh` (passes now; rule 15 itself fails against a running app until the CSS is done).

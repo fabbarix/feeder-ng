@@ -49,13 +49,13 @@ const iconOf = (link: HTMLElement) => {
 }
 
 describe('bottom bar (phone)', () => {
-  it('lists Today, Plan, Pantry, Scan, Shop, Recipes in that order: Scan sits in the middle (PN)', () => {
+  it('lists Today, Plan, Pantry, Scan, Shop, Recipes, Settings in that order: Scan is the middle of seven (nav-even)', () => {
     setup()
-    expect(labels(bottomBar())).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes'])
+    expect(labels(bottomBar())).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes', 'Settings'])
   })
 
   it('shows the registered icon of each destination at 24 px (Scan 28 px)', () => {
-    setup({ path: '/settings' }) // no tab active (PN: /stock and /pantry now activate Pantry)
+    setup({ path: '/plan' })
     const bar = bottomBar()
     for (const [label, name, size] of [
       ['Today', 'today', '24'],
@@ -64,6 +64,7 @@ describe('bottom bar (phone)', () => {
       ['Scan', 'scan', '28'],
       ['Shop', 'shop', '24'],
       ['Recipes', 'recipes', '24'],
+      ['Settings', 'settings', '24'],
     ] as const) {
       expect(iconOf(within(bar).getByRole('link', { name: label })), label).toMatchObject({ name, size })
     }
@@ -148,8 +149,15 @@ describe('Pantry tab (PN)', () => {
     expect(router.state.location.pathname + router.state.location.search + router.state.location.hash).toBe('/pantry?q=milk#x')
   })
 
-  it('no tab is active on a page that is not a destination (Settings)', () => {
-    setup({ path: '/settings' })
+  it.each(['/settings', '/settings/members', '/settings/household'])('Settings is the current tab on %s, in the bar and in the rail (nav-even)', (path) => {
+    setup({ path })
+    for (const nav of [bottomBar(), sideRail()]) {
+      const current = within(nav).getAllByRole('link').filter((a) => a.hasAttribute('aria-current'))
+      expect(current.map((a) => a.textContent?.trim())).toEqual(['Settings'])
+    }
+  })
+  it('no tab is active on a page that is not a destination (an unknown route)', () => {
+    setup({ path: '/this-route-does-not-exist' })
     for (const nav of [bottomBar(), sideRail()]) {
       expect(within(nav).getAllByRole('link').filter((a) => a.hasAttribute('aria-current'))).toHaveLength(0)
     }
@@ -164,17 +172,18 @@ describe('Pantry tab (PN)', () => {
 })
 
 describe('side rail (tablet landscape / desktop)', () => {
-  it('lists the same order as the bottom bar (R11a N8): Today first, then Plan, Pantry, Scan (accent), Shop, Recipes', () => {
+  it('lists the same order as the bottom bar (R11a N8): Today first, then Plan, Pantry, Scan (accent), Shop, Recipes, Settings', () => {
     setup()
     const rail = sideRail()
-    expect(labels(rail)).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes'])
+    expect(labels(rail)).toEqual(['Today', 'Plan', 'Pantry', 'Scan', 'Shop', 'Recipes', 'Settings'])
     expect(within(rail).getByRole('link', { name: 'Scan' })).toHaveAttribute('data-accent', 'true')
   })
 
   it('uses 24 px icons and stacks the label as its own element', () => {
-    setup({ path: '/settings' })
+    setup({ path: '/plan' })
     const rail = sideRail()
     for (const [label, name] of [
+      ['Settings', 'settings'],
       ['Today', 'today'],
       ['Plan', 'plan'],
       ['Pantry', 'stock'],
@@ -239,41 +248,41 @@ describe('avatar menu', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false')
     const menu = await open()
     expect(btn).toHaveAttribute('aria-expanded', 'true')
-    expect(texts(menu)).toEqual(['Kitchen board', 'Settings', 'Sign out'])
+    expect(texts(menu)).toEqual(['Kitchen board', 'Sign out'])
   })
 
-  it('links Kitchen board and Settings to their pages; Pantry is no longer in the menu (PN)', async () => {
+  it('links Kitchen board to its page; Pantry and Settings are not in the menu (nav-even: Settings is a top-level button)', async () => {
     setup()
     await open()
     expect(screen.queryByRole('menuitem', { name: 'Pantry' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Settings' })).toBeNull()
     expect(screen.getByRole('menuitem', { name: 'Kitchen board' })).toHaveAttribute('href', '/board')
-    expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', '/settings')
   })
 
-  it('gives every row an icon: Kitchen board (board), Settings, Sign out', async () => {
+  it('gives every row an icon: Kitchen board (board), Sign out', async () => {
     setup()
     const menu = await open()
     for (const [label, name] of [
       ['Kitchen board', 'board'],
-      ['Settings', 'settings'],
       ['Sign out', 'signOut'],
     ] as const) {
       expect(iconOf(within(menu).getByRole('menuitem', { name: label })), label).toMatchObject({ name, size: '20' })
     }
   })
 
-  it('puts one divider before Settings (between the shortcuts and the account group)', async () => {
+  it('puts one divider directly before Sign out (between the shortcuts and the account group)', async () => {
     setup()
     const menu = await open()
     const separators = within(menu).getAllByRole('separator')
     expect(separators).toHaveLength(1)
-    const settings = within(menu).getByRole('menuitem', { name: 'Settings' })
     const board = within(menu).getByRole('menuitem', { name: 'Kitchen board' })
+    const signOut = within(menu).getByRole('menuitem', { name: 'Sign out' })
     expect(board.compareDocumentPosition(separators[0]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(separators[0]!.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(separators[0]!.compareDocumentPosition(signOut) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(separators[0]!.nextElementSibling).toBe(signOut)
   })
 
-  it('adds feature menu items between Settings and Sign out, by order, with their icon (default chevron)', async () => {
+  it('adds feature menu items between Kitchen board and Sign out, by order, with their icon (default chevron)', async () => {
     setup({
       navItems: [
         { id: 'b', label: 'Weight Barcode Rules', path: '/settings/barcodes', icon: 'barcodes', placement: 'menu', order: 2 },
@@ -281,7 +290,7 @@ describe('avatar menu', () => {
       ],
     })
     const menu = await open()
-    expect(texts(menu)).toEqual(['Kitchen board', 'Settings', 'Household', 'Weight Barcode Rules', 'Sign out'])
+    expect(texts(menu)).toEqual(['Kitchen board', 'Household', 'Weight Barcode Rules', 'Sign out'])
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Weight Barcode Rules' })).name).toBe('barcodes')
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Household' })).name).toBe('chevron')
   })
@@ -311,7 +320,7 @@ describe('avatar menu', () => {
     setup()
     const menu = await open()
     await userEvent.keyboard('{ArrowDown}')
-    expect(within(menu).getByRole('menuitem', { name: 'Settings' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{End}')
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     await userEvent.keyboard('{ArrowDown}')
@@ -347,9 +356,8 @@ describe('avatar menu', () => {
   it('closes after following a link', async () => {
     setup()
     await open()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Kitchen board' }))
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
   })
 
   it('shows the User as an Avatar', () => {
