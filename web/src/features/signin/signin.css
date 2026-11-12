@@ -3,6 +3,7 @@
   place-items: center;
   min-height: 100vh;
   padding: 24px 16px;
+  background: var(--color-background);
 }
 .signin__tile {
   display: grid;

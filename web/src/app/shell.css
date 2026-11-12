@@ -5,6 +5,8 @@
   --nav-inset: 12px;
   /* Content clearance above the floating bottom bar: nothing ends up behind it. Zero from 1024 (no bottom bar). */
   --nav-clearance: calc(var(--nav-height) + var(--nav-inset) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  /* The top edge of the floating bottom bar above the viewport bottom (no gap): sticky bars sit on it. Zero from 1024. */
+  --nav-top: calc(var(--nav-height) + var(--nav-inset) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Frame */
@@ -133,6 +135,7 @@
 @media (min-width: 1024px) {
   :root {
     --nav-clearance: 0px;
+    --nav-top: 0px;
   }
 
   .app-shell {

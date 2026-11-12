@@ -357,14 +357,22 @@ rule_glossary() {
   while IFS= read -r f; do
     awk -v FILE="$f" -v TERMS="$TMP/terms.txt" -v AVOID="$TMP/avoid.txt" -v ALLOW="$ALLOW_GLOSSARY" '
       function isw(c) { return c ~ /[a-z0-9-]/ }
-      function has(s, w,   p, r, b, a) {
+      # Whole-word match of an avoid word and its inflections: s, es, d, ed, ing (and "invite" -> "inviting").
+      function bounded(s, f,   p, b, a, r) {
         r = s
-        while ((p = index(r, w)) > 0) {
+        while ((p = index(r, f)) > 0) {
           b = (p == 1) ? " " : substr(r, p - 1, 1)
-          a = substr(r, p + length(w), 1); if (a == "s" || a == "e" && substr(r, p + length(w) + 1, 1) == "s") a = " "
+          a = substr(r, p + length(f), 1)
           if (!isw(b) && !isw(a == "" ? " " : a)) return 1
           r = substr(r, p + 1)
         }
+        return 0
+      }
+      function has(s, w,   f, n, k, stem) {
+        n = 0
+        f[++n] = w; f[++n] = w "s"; f[++n] = w "es"; f[++n] = w "d"; f[++n] = w "ed"; f[++n] = w "ing"
+        if (substr(w, length(w), 1) == "e") { stem = substr(w, 1, length(w) - 1); f[++n] = stem "ing" }
+        for (k = 1; k <= n; k++) if (bounded(s, f[k])) return 1
         return 0
       }
       BEGIN {
