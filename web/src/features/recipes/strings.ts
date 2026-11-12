@@ -175,6 +175,8 @@ export const recipeStrings = {
   generic: 'The Recipe could not be saved.',
   checkFields: 'Check the fields marked above.',
   codes: {
+    courses_empty: 'Choose at least one Course',
+    course_unknown: 'That Course is no longer there. Choose again.',
     name_required: 'Give the Recipe a name.',
     name_too_long: 'The name is longer than 100 characters.',
     description_too_long: 'The description is longer than 4000 characters.',
@@ -211,6 +213,21 @@ export const recipeStrings = {
 } as const
 
 /** The message for a validation or error code, or the generic text. */
+/** CRS E2: Courses and Whole meal in the editor, chips, filter and the confirm before a Course is taken off. */
+export const courseStrings = {
+  label: 'Courses',
+  wholeMeal: 'Whole meal',
+  wholeMealHelper: (main: string) => `Planned as ${main}, it leaves the slot's other Courses empty`,
+  wholeMealChip: 'Whole meal',
+  chipsLabel: 'Courses',
+  filterLabel: 'Filter by Course',
+  allCourses: 'All Courses',
+  lossTitle: (names: string, rules: number) => `Taking ${names} off removes ${rules === 1 ? 'a Slot Rule' : `${rules} Slot Rules`}`,
+  lossBody: 'These Slot Rules name this Recipe on a Course it will no longer fill.',
+  lossConfirm: 'Save and remove',
+  lossCancel: 'Cancel',
+} as const
+
 export function codeMessage(code: string): string {
   return (recipeStrings.codes as Record<string, string>)[code] ?? recipeStrings.generic
 }

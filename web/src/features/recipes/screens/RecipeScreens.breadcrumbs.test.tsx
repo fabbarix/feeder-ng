@@ -92,3 +92,6 @@ describe('RecipeEditorScreen breadcrumbs', () => {
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))

@@ -7,9 +7,21 @@
   min-block-size: 44px;
 }
 
+.switch-row__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
 .switch-row__label {
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
+}
+
+.switch-row__description {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-size: var(--text-meta-size);
 }
 
 .switch {

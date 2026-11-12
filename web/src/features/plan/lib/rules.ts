@@ -1,8 +1,7 @@
+import { mealSlotLabel } from '../../../lib/mealSlots'
 import { planStrings as s } from '../strings'
 import type { CourseChoice } from '../../../lib/courses/types'
 import type { MealSlotChoice, SlotRule, TagChoice, VarietyRule } from '../types'
-
-const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 /** Tags are matched by lower case with inner spaces collapsed (the server's recipe.TagKey). */
 export function normaliseTag(tag: string): string {
@@ -41,10 +40,7 @@ export function toVarietyRule(draft: VarietyDraft): { rule: VarietyRule } | { er
   return { rule: { tag, maxPerWeek: limit ?? 0, notConsecutiveDays: draft.notConsecutiveDays } }
 }
 
-/** "Friday Dinner" from weekday 5 (ISO, 1 = Monday) and the Meal Slot name. */
-export function mealSlotLabel(weekday: number, name: string): string {
-  return `${WEEKDAYS[(weekday - 1 + 7) % 7]} ${name}`
-}
+export { mealSlotLabel }
 
 export interface SlotRuleDraft {
   mealSlotId: string

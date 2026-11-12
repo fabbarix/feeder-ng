@@ -6,6 +6,8 @@ import type {
   Recipe,
   RecipeFilter,
   RecipeInput,
+  RecipeSlotRule,
+  SlotName,
   RecipeSummary,
   TagCount,
 } from './types'
@@ -17,6 +19,7 @@ function listQuery(f: RecipeFilter): string {
   if (f.q) params.set('q', f.q)
   if (f.tag) params.set('tag', f.tag)
   if (f.archived) params.set('archived', f.archived)
+  if (f.course !== undefined) params.set('course', String(f.course))
   const s = params.toString()
   return s ? `?${s}` : ''
 }
@@ -31,6 +34,10 @@ export const recipesApi = {
   unarchive: (id: number) => http.post<Recipe>(`${base}/${id}/unarchive`),
   remove: (id: number) => http.delete<void>(`${base}/${id}`),
   tags: () => http.get<TagCount[]>('/api/tags'),
+  /** CRS E2: every Slot Rule (`GET /api/slot-rules`, rules carry `courseId`), for the confirm before a Course is taken off. */
+  slotRules: () => http.get<RecipeSlotRule[]>('/api/slot-rules'),
+  /** CRS E2: the Meal Slots' names (`GET /api/meal-slots`). */
+  mealSlots: () => http.get<SlotName[]>('/api/meal-slots'),
   /** All Ingredients, with their Base Units and Unit Conversions (for unit pickers and quantities). */
   ingredients: () => http.get<IngredientRef[]>('/api/ingredients'),
   saveConversion: async (ingredientId: number, unit: string, toBase: number): Promise<void> => {
