@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
 import { CookEntry } from '../components/CookEntry'
+import { CourseChips } from '../components/CourseChips'
 import { IngredientExclusionList } from '../components/IngredientExclusionList'
 import { IngredientLinesList } from '../components/IngredientLinesList'
 import { PreferenceTable } from '../components/PreferenceTable'
@@ -16,6 +18,7 @@ import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { excludersOf, preferenceRows } from '../lib/preferenceRows'
+import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import '../recipes.css'
 
@@ -38,6 +41,7 @@ export function RecipeDetailScreen(): ReactNode {
   const [batches, setBatches] = useState(1)
   const [excluding, setExcluding] = useState<{ id: number; name: string } | null>(null)
   const wide = useMediaQuery('(min-width: 1280px)')
+  const { choices } = useCourses()
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
@@ -96,6 +100,10 @@ export function RecipeDetailScreen(): ReactNode {
         <div className="recipe-detail__aside">
           <Tile variant="media" className="recipe-detail__hero" media={thumb}>
             {r.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
+            <CourseChips
+              names={r.courses.map((c) => c.name)}
+              wholeMeal={r.wholeMeal && showsWholeMeal(r.courses.map((c) => c.id), choices)}
+            />
           </Tile>
           <RecipeMetrics
             yieldText={String(r.yield)}

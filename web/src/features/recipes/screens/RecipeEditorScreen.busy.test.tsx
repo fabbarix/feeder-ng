@@ -63,3 +63,6 @@ describe('RecipeEditorScreen: photo busy', () => {
     expect(saves().every((b) => !(b as HTMLButtonElement).disabled)).toBe(true)
   })
 })
+
+// CRS E2: the screen reads the household Courses; these tests do not care which.
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
