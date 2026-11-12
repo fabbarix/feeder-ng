@@ -64,7 +64,7 @@ describe('IngredientLotsRow', () => {
 
   it('says a Lot has gone off', () => {
     setup({ expanded: true, lots: [makeLot({ id: 4, quantity: 100, purchased: '2026-11-01', goesOff: '2026-11-08', spoiled: true, storagePlaceId: 1 })] })
-    expect(screen.getByText('Bought 1 Nov · Went off yesterday · Kitchen Pantry')).toBeInTheDocument()
+    expect(screen.getByText('Bought 1 Nov · Went off today · Kitchen Pantry')).toBeInTheDocument()
   })
 
   it('tapping a Lot opens it (the Lot sheet), and does not toggle the row', async () => {

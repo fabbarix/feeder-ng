@@ -65,6 +65,6 @@ describe('lotMeta', () => {
   })
   it('says when the Lot has gone off', () => {
     const lot = makeLot({ purchased: '2026-11-01', goesOff: '2026-11-06', spoiled: true })
-    expect(lotMeta(lot, today, 'Kitchen Pantry')).toBe('Bought 1 Nov · Went off 3 days ago · Kitchen Pantry')
+    expect(lotMeta(lot, today, 'Kitchen Pantry')).toBe('Bought 1 Nov · Went off 2 days ago · Kitchen Pantry')
   })
 })

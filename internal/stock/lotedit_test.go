@@ -36,7 +36,7 @@ func TestValidateEdit(t *testing.T) {
 			want: Lot{ID: 7, IngredientID: 3, Quantity: 800, Purchased: "2026-11-01", GoesOff: "2027-01-30"}},
 		{name: "bought on without a Shelf Life keeps the go-off date", lot: base, edit: Edit{Purchased: dp("2026-11-11")}, shelf: nil,
 			want: Lot{ID: 7, IngredientID: 3, Quantity: 800, Purchased: "2026-11-11", GoesOff: "2026-11-13", KeptOn: "2026-11-11"}},
-		{name: "bought on later than a kept go-off date with no Shelf Life is refused", lot: base, edit: Edit{Purchased: dp("2026-11-12")}, shelf: nil, err: ErrEditGoesOffBeforePurchased},
+		{name: "bought on later than the go-off date with no Shelf Life is refused", lot: Lot{ID: 7, IngredientID: 3, Quantity: 800, Purchased: "2026-11-08", GoesOff: "2026-11-10"}, edit: Edit{Purchased: dp("2026-11-12")}, shelf: nil, err: ErrEditGoesOffBeforePurchased},
 		{name: "bought on unchanged does not re-suggest", lot: base, edit: Edit{Purchased: dp("2026-11-09")}, shelf: ptr(30),
 			want: base},
 		{name: "good until given in the same edit wins over the suggestion", lot: base, edit: Edit{Purchased: dp("2026-11-10"), GoesOff: dp("2026-11-20")}, shelf: ptr(4),

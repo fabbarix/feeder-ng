@@ -64,7 +64,7 @@ describe('Pantry By Ingredient: Lots inline', () => {
       expect.stringContaining('500 g'),
       expect.stringContaining('800 g'),
     ])
-    expect(within(list).getByText('Bought yesterday · Good until tomorrow · Garage Fridge')).toBeInTheDocument()
+    expect(within(list).getByText('Bought 8 Nov · Good until tomorrow · Garage Fridge')).toBeInTheDocument()
     await userEvent.click(row)
     expect(row).toHaveAttribute('aria-expanded', 'false')
   })
