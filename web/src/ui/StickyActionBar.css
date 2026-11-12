@@ -1,7 +1,9 @@
 /* StickyActionBar (R2-L, L-03): opaque, the width of the Page container, clear of the phone bottom bar (--nav-top is 0 from 1024). */
 :root {
-  /* Room a focused field keeps above the bar (WCAG 2.4.11). */
-  --sticky-bar-clearance: 96px;
+  /* Room the bar takes above the viewport bottom: a toast and a focused field (WCAG 2.4.11) keep clear of it. The bar publishes its
+     measured height (useStickyBarClearance) and this is only the default before that: the stacked two-row phone bar, 2 x 12 padding
+     + 1 border + 2 x 44 control + 8 gap = 121 px (the Save and Cancel rows of the recipe editor at 360 and 390 px). */
+  --sticky-bar-clearance: calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2));
 }
 
 html:has(.sticky-action-bar) {

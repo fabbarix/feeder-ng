@@ -34,8 +34,12 @@ describe('FU-1: a toast never covers the sticky action bar', () => {
     expect(bottom).toMatch(/var\(--sticky-bar-clearance\)/)
     expect(bottom).toMatch(/var\(--space-\d+\)/)
   })
-  it('--sticky-bar-clearance is defined (StickyActionBar.css :root) and the toast stays above the bar in z-order', () => {
-    expect(declarations(stickyCss, ':root')['--sticky-bar-clearance']).toMatch(/^\d+px$/)
+  it('--sticky-bar-clearance defaults to the stacked two-row phone bar, derived from its tokens (padding, 2 x 44 controls, gap, border)', () => {
+    expect(declarations(stickyCss, ':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
+    expect(declarations(stickyCss, '.sticky-action-bar')['padding-block']).toBe('var(--space-3)')
+    expect(declarations(stickyCss, '.sticky-action-bar')['border-block-start']).toMatch(/^1px solid/)
+  })
+  it('the toast stays above the bar in z-order', () => {
     expect(Number(declarations(toastCss, '.toast-region')['z-index'])).toBeGreaterThan(Number(declarations(stickyCss, '.sticky-action-bar')['z-index']))
   })
 })

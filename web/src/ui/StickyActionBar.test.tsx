@@ -143,7 +143,7 @@ describe('StickyActionBar.css', () => {
   it('respects the safe area from 1024 (where there is no bottom bar above it) and never covers a focused field', () => {
     const wide = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
     expect(wide).toMatch(/padding-block-end\s*:[^;]*env\(safe-area-inset-bottom/)
-    expect(d(':root')['--sticky-bar-clearance']).toMatch(/^\d+px$/)
+    expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
     expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('var(--sticky-bar-clearance)')
   })
   it('uses tokens only', () => {
