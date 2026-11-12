@@ -20,11 +20,13 @@ describe('SettingsIndexPage: Sign-in requests row', () => {
     }
   })
 
-  it('sits in the Household group, last', async () => {
+  it('sits in the Household group, right after Planning rules (a plain User sees it last)', async () => {
     mockApi({ 'GET /api/me': USER_ME, 'GET /api/access-requests': waiting(0) })
     renderWithProviders(<SettingsIndexPage />, '/settings')
     const household = await screen.findByRole('list', { name: 'Household' })
-    expect(within(household).getAllByRole('link').at(-1)).toHaveAttribute('aria-label', 'Sign-in requests')
+    const labels = within(household).getAllByRole('link').map((l) => l.getAttribute('aria-label'))
+    expect(labels.at(-1)).toBe('Sign-in requests')
+    expect(labels.at(-2)).toBe('Planning rules')
   })
 
   it('shows the pending count once, as the badge, and puts it in the link\'s accessible name', async () => {

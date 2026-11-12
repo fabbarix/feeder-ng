@@ -4,25 +4,41 @@ import { settingsGroups } from './settingsSections'
 
 const ids = (isAdmin: boolean) => settingsGroups(isAdmin).map((g) => [g.id, g.sections.map((s) => s.id)])
 
-describe('settingsGroups', () => {
-  it('shows an Admin three groups in order', () => {
+const CATALOGUE = ['ingredients', 'products', 'shops', 'tags', 'courses', 'storagePlaces']
+const HOUSEHOLD = ['household', 'members', 'mealSlots', 'planningRules', 'accessRequests']
+const ADMIN_ROWS = ['allowlist', 'recipeAssistant']
+
+describe('settingsGroups (beta.5, spec decision 43: Catalogue, Household, You)', () => {
+  it('shows an Admin three groups in order; the Admin rows close the Household group, there is no Admin group', () => {
     expect(ids(true)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'courses', 'planningRules', 'tags', 'shops', 'storagePlaces', 'accessRequests']],
+      ['catalogue', CATALOGUE],
+      ['household', [...HOUSEHOLD, ...ADMIN_ROWS]],
       ['you', ['preferences', 'notifications']],
-      ['admin', ['allowlist', 'recipeAssistant']],
     ])
   })
 
-  it('hides the Allowlist and the Recipe Assistant, and their whole group, from a plain User', () => {
+  it('hides the Allowlist and the Recipe Assistant from a plain User, who keeps all three groups', () => {
     expect(ids(false)).toEqual([
-      ['household', ['household', 'members', 'mealSlots', 'courses', 'planningRules', 'tags', 'shops', 'storagePlaces', 'accessRequests']],
+      ['catalogue', CATALOGUE],
+      ['household', HOUSEHOLD],
       ['you', ['preferences', 'notifications']],
     ])
+  })
+
+  it('marks exactly the Allowlist and the Recipe Assistant as Admins only', () => {
+    const rows = settingsGroups(true).flatMap((g) => g.sections)
+    expect(rows.filter((s) => s.adminOnly).map((s) => s.id)).toEqual(ADMIN_ROWS)
+  })
+
+  it('captions the groups Catalogue, Household and You', () => {
+    expect(settingsGroups(true).map((g) => g.title)).toEqual(['Catalogue', 'Household', 'You'])
   })
 
   it('points each row at its page', () => {
     const paths = Object.fromEntries(settingsGroups(true).flatMap((g) => g.sections.map((s) => [s.id, s.path])))
     expect(paths).toEqual({
+      ingredients: '/ingredients',
+      products: '/products',
       household: '/settings/household',
       members: '/settings/members',
       mealSlots: '/settings/meal-slots',
@@ -47,35 +63,50 @@ describe('settingsGroups', () => {
     }
   })
 
-  it('uses GLOSSARY wording for titles', () => {
+  it('uses GLOSSARY wording for titles, in index order', () => {
     const titles = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.title))
-    expect(titles).toEqual(['Household', 'Members', 'Meal Slots', 'Courses', 'Planning rules', 'Tags', 'Shops', 'Storage Places', 'Sign-in requests', 'Your preferences', 'Notifications', 'Allowlist', 'Recipe Assistant'])
+    expect(titles).toEqual(['Ingredients', 'Products', 'Shops', 'Tags', 'Courses', 'Storage Places', 'Household', 'Members', 'Meal Slots', 'Planning rules', 'Sign-in requests', 'Allowlist', 'Recipe Assistant', 'Your preferences', 'Notifications'])
   })
 
-  it('CRS D2: "Courses" is a Household row for every User (read-only for a plain User), right after Meal Slots', () => {
+  it('Ingredients and Products lead the Catalogue with their own icons (the avatar menu icons they had)', () => {
+    const catalogue = settingsGroups(false).find((g) => g.id === 'catalogue')!
+    expect(catalogue.sections.slice(0, 2)).toMatchObject([
+      { id: 'ingredients', title: 'Ingredients', path: '/ingredients', icon: 'ingredients' },
+      { id: 'products', title: 'Products', path: '/products', icon: 'barcodes' },
+    ])
+    for (const s of catalogue.sections) expect(s.adminOnly, s.id).toBeFalsy()
+  })
+
+  it('Tags, Courses and Storage Places moved from Household to the Catalogue; no Household row is one of them', () => {
+    const household = settingsGroups(false).find((g) => g.id === 'household')!.sections.map((s) => s.id)
+    for (const moved of ['tags', 'courses', 'storagePlaces', 'shops']) expect(household).not.toContain(moved)
+  })
+
+  it('CRS D2: "Courses" is a Catalogue row for every User (read-only for a plain User), right after Tags', () => {
     for (const isAdmin of [true, false]) {
-      const household = settingsGroups(isAdmin).find((g) => g.id === 'household')!
-      const at = household.sections.findIndex((s) => s.id === 'mealSlots')
-      expect(household.sections[at + 1]).toMatchObject({ id: 'courses', title: 'Courses', path: '/settings/courses' })
-      expect(household.sections[at + 1]?.adminOnly).toBeFalsy()
+      const catalogue = settingsGroups(isAdmin).find((g) => g.id === 'catalogue')!
+      const at = catalogue.sections.findIndex((s) => s.id === 'tags')
+      expect(catalogue.sections[at + 1]).toMatchObject({ id: 'courses', title: 'Courses', path: '/settings/courses' })
+      expect(catalogue.sections[at + 1]?.adminOnly).toBeFalsy()
     }
   })
 
-  it('TG-S: "Tags" is a Household row for every User, right after Planning rules, with the spec description and a registered icon', () => {
+  it('TG-S: "Tags" is a Catalogue row for every User, right after Shops, with the spec description and a registered icon', () => {
+    for (const isAdmin of [true, false]) {
+      const catalogue = settingsGroups(isAdmin).find((g) => g.id === 'catalogue')!
+      const at = catalogue.sections.findIndex((s) => s.id === 'shops')
+      expect(catalogue.sections[at + 1]).toMatchObject({ id: 'tags', title: 'Tags', meta: 'Names and colours of Recipe Tags', path: '/settings/tags' })
+      expect(catalogue.sections[at + 1]?.adminOnly).toBeFalsy()
+      expect(Object.keys(icons)).toContain(catalogue.sections[at + 1]!.icon)
+    }
+  })
+
+  it('A1: "Sign-in requests" is a Household row for every User, after Planning rules and before the Admins-only rows', () => {
     for (const isAdmin of [true, false]) {
       const household = settingsGroups(isAdmin).find((g) => g.id === 'household')!
       const at = household.sections.findIndex((s) => s.id === 'planningRules')
-      expect(household.sections[at + 1]).toMatchObject({ id: 'tags', title: 'Tags', meta: 'Names and colours of Recipe Tags', path: '/settings/tags' })
+      expect(household.sections[at + 1]).toMatchObject({ id: 'accessRequests', title: 'Sign-in requests', path: '/settings/access-requests' })
       expect(household.sections[at + 1]?.adminOnly).toBeFalsy()
-      expect(Object.keys(icons)).toContain(household.sections[at + 1]!.icon)
-    }
-  })
-
-  it('A1: "Sign-in requests" is a Household row for every User, after Shops', () => {
-    for (const isAdmin of [true, false]) {
-      const household = settingsGroups(isAdmin).find((g) => g.id === 'household')!
-      expect(household.sections.at(-1)).toMatchObject({ id: 'accessRequests', title: 'Sign-in requests', path: '/settings/access-requests' })
-      expect(household.sections.at(-1)?.adminOnly).toBeFalsy()
     }
   })
 
