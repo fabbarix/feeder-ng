@@ -217,7 +217,7 @@
 }
 
 .shop-not-needed__toggle[aria-expanded='true'] .shop-not-needed__chevron {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
 }
 
 .shop-not-needed__toggle:focus-visible {
