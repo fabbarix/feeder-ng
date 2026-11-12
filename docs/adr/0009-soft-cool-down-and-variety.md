@@ -1,6 +1,6 @@
 # Cool-down and Variety Rules give way when too few Recipes fit; the Course is still planned
 
-Status: **Accepted** (2026-11-11). Amends spec §7.2, §7.3, §7.4 and decisions 22 and 23 ([functional-spec](../spec/functional-spec.md), decision 30). Plan: [crs-plan.md](../dev/design/crs-plan.md).
+Status: **Accepted** (2026-11-11). Amends spec §7.2, §7.3, §7.4 and decisions 22 and 23 ([functional-spec](../spec/functional-spec.md), decision 30). Plan: [crs-plan.md](../dev/design/crs-plan.md). Amended by [ADR 0013](0013-bought-planned-meals-held.md) (points 4 and 6: a Bought Planned Meal skips the keep check), Proposed.
 
 Until now Cool-down and Variety Rules were filters: a Recipe inside its Cool-down, or one that would break a Variety Rule, was never a candidate, and a cell with nothing left was **Couldn't plan** (Cool-down or Variety Rule). With Courses this became the common case, not the edge case: a Household with three Sides and seven dinners would see "Couldn't plan: every Recipe is in Cool-down" on most nights, and a new Household with five Recipes sees it from day six. The user's words: "Cool downs and variety do not apply when there are enough recipes to do the rotation, as the user adds recipes the variety and cool downs will start having an effect." The second half gives the meaning: while a Household has **too few** Recipes to keep them, Cool-down and Variety Rules give way; as the Household adds Recipes, they hold again. That is the rule this ADR implements.
 
