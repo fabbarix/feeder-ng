@@ -1,11 +1,12 @@
 // ReadPhotoPanel: the Photo tab of "Read a recipe" (docs/dev/design/photo-read.md section 5; photo-store.md "Copy" and "Remove").
 // Either the editor of one photo, or the notes, the photos from before, the list in page order and the sources.
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useId, useRef, type ReactNode } from 'react'
 import { Button } from '../../../ui'
 import { useBusyNote } from '../hooks/useBusyNote'
+import { usePhotoFocus } from '../hooks/usePhotoFocus'
 import type { UsePhotoPages } from '../hooks/usePhotoPages'
 import { usePhotoSources } from '../hooks/usePhotoSources'
-import { useRetakeRequest } from '../hooks/usePhotoPanel'
+import { useRetakeRequest } from '../hooks/useRetakeRequest'
 import { isSmallPhoto, canAdd, draftOutputSize, MAX_PHOTOS } from '../lib/photoPages'
 import { problemText } from '../lib/photoMessages'
 import { photoReadStrings as t, readStrings } from '../strings'
@@ -24,20 +25,11 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
   const options = usePhotoSources()
   const busyNote = useBusyNote(pages.busy)
   const retake = useRetakeRequest()
+  const root = useRef<HTMLDivElement>(null)
   const sources = useRef<HTMLDivElement>(null)
   const alert = useRef<HTMLDivElement>(null)
-  const removingLast = useRef(false)
-
-  useEffect(() => {
-    if (state.problem) alert.current?.focus()
-  }, [state.problem])
-
-  // Removing the last photo moves the focus to the first source (the list is gone).
-  useEffect(() => {
-    if (state.photos.length > 0 || !removingLast.current) return
-    removingLast.current = false
-    sources.current?.querySelector<HTMLButtonElement>('button')?.focus()
-  }, [state.photos.length])
+  const restoredNote = useId()
+  const focus = usePhotoFocus(state, { root, sources, alert }, retake.openCamera)
 
   const editing = state.editing
   const photo = editing ? state.photos.find((p) => p.id === editing.id) : undefined
@@ -66,6 +58,7 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
 
   return (
     <div
+      ref={root}
       role="group"
       aria-label={t.group}
       aria-busy={pages.busy || undefined}
@@ -75,7 +68,9 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
       <p className="read-photos__note">{readStrings.photoHelp}</p>
       <p className="read-photos__note">{readStrings.photoPrivacy}</p>
       <p className="read-photos__note">{t.stayOnDevice}</p>
-      {busyNote ? <p role="status">{t.busy}</p> : null}
+      {/* Mounted whenever the panel is usable: only its text changes, so the screen reader announces it. While the step is locked for a read,
+          the read's own progress is the live region. */}
+      {disabled ? null : <p role="status">{busyNote ? t.busy : ''}</p>}
       {problem ? (
         <div role="alert" tabIndex={-1} ref={alert} className="photo-panel__alert">
           <p>{problemText(problem)}</p>
@@ -88,8 +83,10 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
         <>
           {restored > 0 ? (
             <div className="photo-panel__restored">
-              <p>{t.restored(restored)}</p>
-              <Button variant="tertiary" onClick={pages.removeRestored}>
+              <p id={restoredNote} role="status">
+                {t.restored(restored)}
+              </p>
+              <Button variant="tertiary" aria-describedby={restoredNote} onClick={pages.removeRestored}>
                 {t.restoredRemove}
               </Button>
             </div>
@@ -101,7 +98,7 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
             disabled={disabled}
             onEdit={pages.edit}
             onRemove={(id) => {
-              removingLast.current = state.photos.length === 1
+              focus.removing()
               pages.remove(id)
             }}
             onMove={pages.move}

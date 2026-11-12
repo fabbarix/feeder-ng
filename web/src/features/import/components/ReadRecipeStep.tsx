@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 're
 import { Link } from 'react-router-dom'
 import { Button, Segmented, TextArea, TextField, Tile } from '../../../ui'
 import { usePhotoPages } from '../hooks/usePhotoPages'
+import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 import { blockText } from '../lib/photoMessages'
@@ -35,8 +36,6 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const [sending, setSending] = useState(false)
   const lastInput = useRef<ReadInput | undefined>(undefined)
   const reopened = useRef(false)
-  // The read in progress and whether Cancel was pressed: a photo read that ends without failing or cancelling reached review.
-  const running = useRef<{ kind: UseRecipeRead['kind']; cancelled: boolean } | null>(null)
   const errorTile = useRef<HTMLElement>(null)
   const readButton = useRef<HTMLButtonElement>(null)
   const ids = useId()
@@ -71,21 +70,13 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     setTab('photo')
   }, [pages.restoredCount, availability.photos])
 
-  // Sending (the photos are turned into data URLs) holds the button until the read has started or ended.
+  // Sending (the photos are turned into data URLs) holds the button until the read has started, failed or ended: any change of phase ends it.
   useEffect(() => {
-    if (!read.busy) setSending(false)
-  }, [read.busy])
+    setSending(false)
+  }, [read.phase])
 
-  // The photos are kept until a read reaches review; a failed read, a Cancel or Try again keeps them.
-  useEffect(() => {
-    if (read.busy) {
-      running.current = { kind: read.kind, cancelled: running.current?.cancelled ?? false }
-      return
-    }
-    const finished = running.current
-    running.current = null
-    if (finished && finished.kind === 'photo' && !finished.cancelled && read.phase !== 'failed') pages.finished()
-  }, [read.busy, read.phase, read.kind, pages])
+  // The photos are kept until a read reaches review (see usePhotoReadEnd).
+  usePhotoReadEnd(read, pages.finished)
 
   const counter = textCounter(text)
   const input: ReadInput | undefined = current === 'url' ? { kind: 'url', url } : current === 'text' ? { kind: 'text', text } : undefined
@@ -101,16 +92,16 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     if (!input) {
       setSending(true)
       pages.toReadInput().then(
-        (photoInput) => {
-          lastInput.current = photoInput
-          void read.start(photoInput)
-        },
+        (photoInput) => start(photoInput),
         () => setSending(false),
       )
       return
     }
-    lastInput.current = input
-    void read.start(input)
+    start(input)
+  }
+  const start = (next: ReadInput) => {
+    lastInput.current = next
+    void read.start(next)
   }
 
   return (
@@ -199,10 +190,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
           kind={read.kind ?? current}
           state={read.state}
           elapsedSeconds={read.elapsedSeconds}
-          onCancel={() => {
-            if (running.current) running.current.cancelled = true
-            void read.cancel()
-          }}
+          onCancel={() => void read.cancel()}
         />
       ) : (
         <>

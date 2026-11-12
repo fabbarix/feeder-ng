@@ -6,8 +6,6 @@ import {
   AS_IS_MAX_BYTES,
   browserImageEngine,
   blobToDataUrl,
-  checkImageFile,
-  INPUT_MAX_BYTES,
   INPUT_MAX_PIXELS,
   parseImageLink,
   pickFromClipboardData,
@@ -22,9 +20,10 @@ import {
   type ReadImageEngine,
 } from '../../../ui'
 import { useMe } from '../../../app/useMe'
-import { createPhotoWriter, restorePhotos, type PhotoStore } from '../lib/photoStore'
+import { createPhotoWriter, restorePhotos, trackWriter, type PhotoStore } from '../lib/photoStore'
 import { appPhotoStore } from '../lib/photoStoreIdb'
 import {
+  fileProblem,
   initialPhotoPages,
   nextToIntake,
   nextToRender,
@@ -110,6 +109,8 @@ export function usePhotoPages(deps: Partial<PhotoPagesDeps> = {}): UsePhotoPages
 
   // userId 0 is a placeholder until the signed-in User is known: a writer does nothing before start(), which only the restore calls.
   const writer = useMemo(() => createPhotoWriter(store, userId ?? 0), [store, userId])
+  // Sign-out stops the writers of mounted reads (forgetStoredPhotos), so nothing lands after its clear.
+  useEffect(() => trackWriter(writer), [writer])
 
   useEffect(() => {
     mounted.current = true
@@ -164,9 +165,6 @@ export function usePhotoPages(deps: Partial<PhotoPagesDeps> = {}): UsePhotoPages
   const intake = async (file: File): Promise<void> => {
     const origin = origins.current.get(file) ?? 'file'
     const declared = declaredHeic(file)
-    const refusal = checkImageFile(file, INPUT_MAX_BYTES)
-    if (refusal === 'too_large') return refuse({ code: 'too_large', limit: 'original' })
-    if (refusal) return refuse({ code: refusal })
     let head: Uint8Array = new Uint8Array(0)
     try {
       head = await engine.readHead(file)
@@ -250,10 +248,19 @@ export function usePhotoPages(deps: Partial<PhotoPagesDeps> = {}): UsePhotoPages
   )
 
   // ---- sources ---------------------------------------------------------------------------------------------------------------------
+  // A file that is not a photo (or is too big, or empty) is refused here and never queued; the rest of the pick goes on.
   const addFiles = useCallback((files: File[], origin: ImageOrigin) => {
-    if (files.length === 0) return
-    for (const file of files) origins.current.set(file, origin)
-    dispatch({ type: 'queued', files })
+    const kept: File[] = []
+    for (const file of files) {
+      const problem = fileProblem(file)
+      if (problem) {
+        dispatch({ type: 'problemSet', problem })
+        continue
+      }
+      origins.current.set(file, origin)
+      kept.push(file)
+    }
+    if (kept.length > 0) dispatch({ type: 'queued', files: kept })
   }, [])
 
   const addLink = useCallback(

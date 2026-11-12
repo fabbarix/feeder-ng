@@ -1,7 +1,7 @@
 // The state model of the Photo tab of the Recipe read (docs/dev/design/photo-read.md section 2): a reducer plus selectors.
 // Plain TypeScript: no React, no DOM, no Blob reads.
 import type { ImageEdit, ImageOrigin, ImageProblemCode, RawImage, Rect, Size } from '../../../ui'
-import { initialEdit, isFullEdit, moveItem, outputSize, READ_MAX_SIDE } from '../../../ui'
+import { checkImageFile, INPUT_MAX_BYTES, initialEdit, isFullEdit, moveItem, outputSize, READ_MAX_SIDE } from '../../../ui'
 import type { SavablePhoto } from './photoStore'
 
 /** The edit types, re-exported so the state model's callers name them from here. */
@@ -253,6 +253,13 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
     case 'restored':
       return restore(state, action.photos, action.nextId)
   }
+}
+
+/** Why a picked file is refused before it is queued (not a photo, empty, or over the input limit), or null when it may be read. */
+export function fileProblem(file: { type: string; size: number; name?: string }): PanelProblem | null {
+  const refusal = checkImageFile(file, INPUT_MAX_BYTES)
+  if (refusal === null) return null
+  return refusal === 'too_large' ? { code: 'too_large', limit: 'original' } : { code: refusal }
 }
 
 export function isSmallPhoto(size: Size): boolean {

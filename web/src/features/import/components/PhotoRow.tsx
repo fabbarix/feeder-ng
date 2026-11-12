@@ -38,9 +38,9 @@ export function PhotoRow({ photo, number, previewUrl, handle, disabled, onEdit, 
       </div>
       <div className="photo-row__actions">
         {canEdit ? (
-          <IconButton icon="edit" label={t.editButton(number)} data-photo-edit disabled={disabled} onClick={onEdit} />
+          <IconButton icon="edit" label={t.editButton(number)} data-photo-id={photo.id} data-photo-edit disabled={disabled} onClick={onEdit} />
         ) : null}
-        <IconButton icon="delete" label={t.removeButton(number)} disabled={disabled} onClick={onRemove} />
+        <IconButton icon="delete" label={t.removeButton(number)} data-photo-id={photo.id} data-photo-remove disabled={disabled} onClick={onRemove} />
       </div>
     </div>
   )

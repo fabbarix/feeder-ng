@@ -1,35 +1,17 @@
 // Phase 1 of "keep photos on the device" (docs/dev/design/photo-store.md): the storage port, its in-memory implementation, the pure
 // helpers between a photo-pages state and stored records, and the serial writer the hook uses. The IndexedDB implementation is
-// photoStoreIdb.ts (thin glue).
-//
-// TODO(wire-up after T3 lands photoPages.ts): StoredSource, StoredEdit, StoredRect and MAX_PHOTOS mirror design photo-read.md
-// section 2 (PhotoSource, ImageEdit, Rect, MAX_PHOTOS); replace them with imports of T3's types and delete the local copies.
+// photoStoreIdb.ts (thin glue). The photo types and MAX_PHOTOS are photoPages.ts's (design photo-read.md section 2).
 import { parseImageLink } from '../../../ui'
 import type { ImageOrigin } from '../../../ui'
+import { MAX_PHOTOS, type ImageEdit as StoredEdit, type PhotoSource as StoredSource } from './photoPages'
 
-export const MAX_PHOTOS = 4
+export { MAX_PHOTOS }
+export type { ImageEdit as StoredEdit, PhotoSource as StoredSource, Rect as StoredRect } from './photoPages'
+
 /** The largest Blob kept per photo (the working copy, or an as-is original): design photo-read.md section 8. */
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024
 
 export const IMAGE_ORIGINS = ['file', 'drop', 'paste', 'link', 'camera'] as const satisfies readonly ImageOrigin[]
-
-export interface StoredRect {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-export interface StoredEdit {
-  turns: 0 | 1 | 2 | 3
-  /** In pixels of the TURNED working copy. */
-  crop: StoredRect
-}
-
-/** What a photo was made from, as kept: the same shape as PhotoSource (section 2). */
-export type StoredSource =
-  | { kind: 'image'; working: Blob; width: number; height: number; origin: ImageOrigin }
-  | { kind: 'as-is'; blob: Blob; type: 'image/heic' | 'image/heif'; name?: string }
-  | { kind: 'link'; url: string }
 
 /** One stored photo. Never the rendered output (it is rendered again after a restore) and never the revision. `order` is the page position (0-based). */
 export interface PhotoRecord {
@@ -348,4 +330,22 @@ export function createPhotoWriter(store: PhotoStore, userId: number): PhotoWrite
       })
     },
   }
+}
+
+// The writers of the mounted photo reads. Sign-out stops them all before the store is emptied, so no write lands after the clear.
+const liveWriters = new Set<PhotoWriter>()
+
+/** Registers a writer while its photo read is mounted; the returned function unregisters it. */
+export function trackWriter(writer: PhotoWriter): () => void {
+  liveWriters.add(writer)
+  return () => {
+    liveWriters.delete(writer)
+  }
+}
+
+/** Drops the queued writes of every mounted read and waits for the one in flight (it lands before the clear). Never rejects. */
+export async function stopWriters(): Promise<void> {
+  const writers = [...liveWriters]
+  for (const writer of writers) writer.clear()
+  await Promise.all(writers.map((writer) => writer.idle()))
 }

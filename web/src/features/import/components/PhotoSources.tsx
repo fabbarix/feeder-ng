@@ -77,6 +77,7 @@ export function PhotoSources({ options, canAdd, disabled, onFiles, rootRef, open
           disabled={off}
           aria-describedby={describedBy}
           onFiles={(files) => onFiles(files, 'file')}
+          onReject={(files) => onFiles(files, 'file')}
         />
       )}
       {canAdd ? null : (
