@@ -10,6 +10,8 @@ export function scopeOf(source: CookSource): string {
 export interface CookRouteParams {
   date?: string
   slotId?: string
+  /** The Course of a timeline opened on one Course (/cook/meal/:date/:slotId/:courseId). */
+  courseId?: string
   id?: string
 }
 
@@ -51,11 +53,11 @@ export function exitPathFor(source: CookSource): string {
   return source.kind === 'recipe' ? `/recipes/${source.recipeId}` : '/'
 }
 
-// ---- CRS F: Course scopes and the cooking timeline's route (spec 11). STUBS: the Developer implements them. ----
+// ---- CRS F: Course scopes and the cooking timeline's route (spec 11). ----
 
-/** "meal:<date>/<slotId>/<courseId>": the three-part scope of one Course's Planned Meal. STUB. */
-export function courseScope(_date: string, _mealSlotId: number, _courseId: number): string {
-  throw new Error('CRS F: not implemented')
+/** "meal:<date>/<mealSlotId>/<courseId>": the three-part scope of one Course's Planned Meal. */
+export function courseScope(date: string, mealSlotId: number, courseId: number): string {
+  return `meal:${date}/${mealSlotId}/${courseId}`
 }
 
 export interface MealScopeParts {
@@ -65,9 +67,14 @@ export interface MealScopeParts {
   courseId: number | null
 }
 
-/** Reads "meal:<date>/<slotId>" and "meal:<date>/<slotId>/<courseId>"; null for a recipe scope, a free timer (null) or anything else. STUB. */
-export function parseMealScope(_scope: string | null | undefined): MealScopeParts | null {
-  throw new Error('CRS F: not implemented')
+const MEAL_SCOPE = /^meal:(\d{4}-\d{2}-\d{2})\/(\d+)(?:\/(\d+))?$/
+
+/** Reads "meal:<date>/<slotId>" and "meal:<date>/<slotId>/<courseId>"; null for a recipe scope, a free timer (null) or anything else. */
+export function parseMealScope(scope: string | null | undefined): MealScopeParts | null {
+  if (!scope) return null
+  const m = MEAL_SCOPE.exec(scope)
+  if (!m) return null
+  return { date: m[1]!, mealSlotId: Number(m[2]), courseId: m[3] === undefined ? null : Number(m[3]) }
 }
 
 /**
@@ -75,18 +82,31 @@ export function parseMealScope(_scope: string | null | undefined): MealScopePart
  * match, where the two-part form reads as the main Course: `sameScope('meal:d/3', 'meal:d/3/7', 7)` is true. It works
  * before C3 (the server writes the main Course two-part) and after (always three-part). While `mainCourseId` is unknown
  * (null or undefined) a two-part scope equals only itself. Recipe scopes and null compare as plain strings (null is
- * never equal to a scope). STUB.
+ * never equal to a scope).
  */
-export function sameScope(_a: string | null | undefined, _b: string | null | undefined, _mainCourseId: number | null | undefined): boolean {
-  throw new Error('CRS F: not implemented')
+export function sameScope(a: string | null | undefined, b: string | null | undefined, mainCourseId: number | null | undefined): boolean {
+  if (a === null || a === undefined || b === null || b === undefined) return false
+  const pa = parseMealScope(a)
+  const pb = parseMealScope(b)
+  if (!pa || !pb) return a === b
+  if (pa.date !== pb.date || pa.mealSlotId !== pb.mealSlotId) return false
+  if (pa.courseId === null && pb.courseId === null) return true
+  const ca = pa.courseId ?? mainCourseId
+  const cb = pb.courseId ?? mainCourseId
+  if (ca === null || ca === undefined || cb === null || cb === undefined) return false
+  return ca === cb
 }
 
-/** `/cook/meal/<date>/<slotId>` (the timeline) or `/cook/meal/<date>/<slotId>/<courseId>` (opened on that Course). STUB. */
-export function cookTimelinePath(_date: string, _mealSlotId: number, _courseId?: number): string {
-  throw new Error('CRS F: not implemented')
+/** `/cook/meal/<date>/<slotId>` (the timeline) or `/cook/meal/<date>/<slotId>/<courseId>` (opened on that Course). */
+export function cookTimelinePath(date: string, mealSlotId: number, courseId?: number): string {
+  const base = `/cook/meal/${date}/${mealSlotId}`
+  return courseId === undefined ? base : `${base}/${courseId}`
 }
 
-/** The target of the route params `{ date, slotId, courseId? }`; null when date or slot is missing. STUB. */
-export function timelineTargetFrom(_params: { date?: string; slotId?: string; courseId?: string }): CookTimelineTarget | null {
-  throw new Error('CRS F: not implemented')
+/** The target of the route params `{ date, slotId, courseId? }`; null when date or slot is missing. */
+export function timelineTargetFrom(params: { date?: string; slotId?: string; courseId?: string }): CookTimelineTarget | null {
+  if (params.date === undefined || params.slotId === undefined) return null
+  const target: CookTimelineTarget = { date: params.date, mealSlotId: Number(params.slotId) }
+  if (params.courseId !== undefined) target.courseId = Number(params.courseId)
+  return target
 }

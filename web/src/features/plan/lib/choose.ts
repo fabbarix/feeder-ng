@@ -1,5 +1,6 @@
+import { planStrings as s } from '../strings'
 import type { Alternative, RecipeChoice } from '../types'
-import type { PhraseContext } from './phrase'
+import { phraseAll, phraseWhy, type PhraseContext } from './phrase'
 
 /** The Recipes whose name contains the query, ignoring case and surrounding spaces; every Recipe for an empty query. */
 export function matchRecipes(recipes: RecipeChoice[], query: string): RecipeChoice[] {
@@ -15,10 +16,20 @@ export function swapMeta(reason: string | undefined, extra: string): string | un
 }
 
 /**
- * CRS F: the one reason a Swap row shows besides its Leftover (STUB). Priority: a Whole meal alternative that covers
- * Courses ("Whole meal: no Side", several: "Whole meal: no Side, no Dessert"), then a relaxed alternative's own relaxed
- * chip ("Again soon: had Tue"), then the first phrased why chip; undefined when there is nothing to say.
+ * The one reason a Swap row shows besides its Leftover. Priority: a Whole meal alternative that covers Courses
+ * ("Whole meal: no Side", several: "Whole meal: no Side, no Dessert"), then a relaxed alternative's own relaxed chip
+ * ("Again soon: had Tue"), then the first phrased why chip; undefined when there is nothing to say.
  */
-export function alternativeNote(_alternative: Alternative, _ctx: PhraseContext): string | undefined {
-  throw new Error('CRS F: not implemented')
+export function alternativeNote(alternative: Alternative, ctx: PhraseContext): string | undefined {
+  if (alternative.wholeMeal && alternative.covers && alternative.covers.length > 0) {
+    return s.wholeMealNote(alternative.covers)
+  }
+  if (alternative.relaxed) {
+    const relaxed = alternative.why.find((w) => w.code === 'cooldown_relaxed') ?? alternative.why.find((w) => w.code === 'variety_relaxed')
+    if (relaxed) {
+      const text = phraseWhy(relaxed, ctx)
+      if (text) return text
+    }
+  }
+  return phraseAll(alternative.why, ctx)[0]
 }

@@ -1,5 +1,5 @@
 // Pure helpers behind the kitchen board's tiles. Plain TypeScript, no React.
-import type { LeftoverLike, SlotLike, StockTotalLike } from '../types'
+import type { CourseLike, LeftoverLike, SlotLike, StockTotalLike } from '../types'
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -8,7 +8,7 @@ const MINUTE_MS = 60 * 1000
 /** Planned Meals (state planned) on the slots of one date, by `at` then Meal Slot id. */
 function plannedOn(slots: SlotLike[], date: string): SlotLike[] {
   return slots
-    .filter((s) => s.date === date && s.meal?.state === 'planned')
+    .filter((s) => s.date === date && hasPlanned(s))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }
 
@@ -38,7 +38,7 @@ export function tomorrowMeals(slots: SlotLike[], today: string): SlotLike[] {
 export function tomorrowSlots(slots: SlotLike[], today: string): SlotLike[] {
   const date = dayAfter(today)
   return slots
-    .filter((s) => s.date === date && (s.meal?.state === 'planned' || (s.meal === null && !!s.unfilled)))
+    .filter((s) => s.date === date && (hasPlanned(s) || (s.meal === null && !!s.unfilled)))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }
 
@@ -113,7 +113,7 @@ export function startCookPath(slots: SlotLike[], today: string, nowIso: string):
   const next =
     tonight ??
     slots
-      .filter((s) => s.meal?.state === 'planned' && Date.parse(s.at) >= now)
+      .filter((s) => hasPlanned(s) && Date.parse(s.at) >= now)
       .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)[0] ??
     null
   return next ? `/cook/meal/${next.date}/${next.mealSlotId}` : null
@@ -125,7 +125,7 @@ export function shortWeekday(date: string): string {
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1)))
 }
 
-// ---- CRS F: Courses on the board (spec 7.5). STUBS: the Developer implements them. ----
+// ---- CRS F: Courses on the board (spec 7.5). ----
 
 /** A row of the Tonight tile: one Course with a Planned Meal. */
 export interface TonightRow {
@@ -136,13 +136,9 @@ export interface TonightRow {
   state: 'planned' | 'cooked' | 'skipped'
 }
 
-const TODO = (): never => {
-  throw new Error('CRS F: not implemented')
-}
-
 /** The board's slots: the payload's `slots` when it has them, else the plan's slots (an older payload). */
-export function boardSlots(_slots: SlotLike[] | undefined, _planSlots: SlotLike[]): SlotLike[] {
-  return TODO()
+export function boardSlots(slots: SlotLike[] | undefined, planSlots: SlotLike[]): SlotLike[] {
+  return slots ?? planSlots
 }
 
 /**
@@ -150,16 +146,22 @@ export function boardSlots(_slots: SlotLike[] | undefined, _planSlots: SlotLike[
  * slot's `meal`. Tonight's, tomorrow's and the Cook button's choices use this instead of `slot.meal` alone, so a slot
  * whose main Course is already Cooked but whose Side is not is still tonight's.
  */
-export function hasPlanned(_slot: SlotLike): boolean {
-  return TODO()
+export function hasPlanned(slot: SlotLike): boolean {
+  if (!slot.courses) return slot.meal?.state === 'planned'
+  return slot.courses.some((c) => c.meal?.state === 'planned')
 }
 
 /**
  * The Tonight tile's rows in the slot's order: every Course with a Planned Meal that is not Not cooked (covered,
  * not-served and empty Courses have none). A slot without `courses` gives one row from `meal`.
  */
-export function tonightRows(_slot: SlotLike): TonightRow[] {
-  return TODO()
+export function tonightRows(slot: SlotLike): TonightRow[] {
+  if (!slot.courses) {
+    return slot.meal && slot.meal.state !== 'skipped' ? [{ courseId: 0, courseName: 'Main', recipeName: slot.meal.recipeName, main: true, state: slot.meal.state }] : []
+  }
+  return slot.courses
+    .filter((c): c is CourseLike & { meal: NonNullable<CourseLike['meal']> } => c.meal !== null && c.meal.state !== 'skipped')
+    .map((c) => ({ courseId: c.courseId, courseName: c.name, recipeName: c.meal.recipeName, main: c.main, state: c.meal.state }))
 }
 
 /**
@@ -168,6 +170,12 @@ export function tonightRows(_slot: SlotLike): TonightRow[] {
  * joined by " + " exactly as named, in the slot's order). A covered slot is its Whole meal alone, plus any Course of
  * it that holds a Planned Meal.
  */
-export function tomorrowLine(_slot: SlotLike): string {
-  return TODO()
+export function tomorrowLine(slot: SlotLike): string {
+  const names = (slot.courses ?? [{ meal: slot.meal }])
+    .map((c) => c.meal)
+    .filter((m): m is NonNullable<typeof m> => m !== null && m.state === 'planned')
+    .map((m) => m.recipeName)
+  if (names.length === 0) return slot.name
+  if (names.length === 1) return `${slot.name} · ${names[0]}`
+  return `${slot.name}: ${names.join(' + ')}`
 }

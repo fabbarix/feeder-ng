@@ -1,6 +1,7 @@
 import type { IconName } from '../../../ui/icons'
 import { planStrings as s } from '../strings'
 import { heroMeal } from './days'
+import { heroRow, plannedMeals } from './courses'
 import { dayNumber, weekdayName } from './phrase'
 import type { PlannedMeal, PlanSlot } from '../types'
 
@@ -68,13 +69,14 @@ export interface HeroSelection {
 
 /** N3: the Today hero's meal and what it offers. See docs/dev/design/r10-qa-fixes.md. */
 export function heroSelection(slots: PlanSlot[], now: Date, today: string): HeroSelection | null {
-  const open = slots.filter((x) => x.meal?.state === 'planned')
+  const open = slots.filter((x) => plannedMeals(x).length > 0)
   const todays = heroMeal(open.filter((x) => x.date === today), now)
   const pick = todays ?? heroMeal(open.filter((x) => x.date > today), now)
-  if (!pick?.meal) return null
+  const meal = pick ? heroRow(pick)?.course.meal : null
+  if (!pick || !meal) return null
   const diff = dayNumber(pick.date) - dayNumber(today)
   const day: HeroDay = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : 'later'
-  const action: HeroAction = pick.meal.servedFromLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
+  const action: HeroAction = meal.servedFromLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
   return { slot: pick, day, action }
 }
 
@@ -86,15 +88,24 @@ export function heroDayOverline(sel: HeroSelection): string {
   return `${day} · ${name}`
 }
 
-/**
- * CRS F: the label of the slot block's Cook button (STUB). "Cook · 30 min" from `slot.cookMinutes` (the timeline total)
- * when it is a number above 0; otherwise as `heroCookLabel(meal)` for the hero's meal (one-Course slots are unchanged).
- */
-export function slotCookLabel(_slot: PlanSlot): string {
-  throw new Error('CRS F: not implemented')
+/** The meal the slot block shows for its Cook label and start: the hero row's Planned Meal, else the slot's alias. */
+function slotHeroMeal(slot: PlanSlot): PlannedMeal | null {
+  return heroRow(slot)?.course.meal ?? slot.meal
 }
 
-/** CRS F: "start 18:45" from `slot.startBy` (the timeline start), else from the hero meal's own startBy, else null (STUB). */
-export function slotStartBy(_slot: PlanSlot): string | null {
-  throw new Error('CRS F: not implemented')
+/**
+ * CRS F: the label of the slot block's Cook button. "Cook · 30 min" from `slot.cookMinutes` (the timeline total)
+ * when it is a number above 0; otherwise as `heroCookLabel(meal)` for the hero's meal (one-Course slots are unchanged).
+ */
+export function slotCookLabel(slot: PlanSlot): string {
+  if (typeof slot.cookMinutes === 'number' && slot.cookMinutes > 0) return `${s.cook} · ${duration(slot.cookMinutes)}`
+  const meal = slotHeroMeal(slot)
+  return meal ? heroCookLabel(meal) : s.cook
+}
+
+/** CRS F: "start 18:45" from `slot.startBy` (the timeline start), else from the hero meal's own startBy, else null. */
+export function slotStartBy(slot: PlanSlot): string | null {
+  if (slot.startBy) return s.startBy(slot.startBy)
+  const meal = slotHeroMeal(slot)
+  return meal ? heroStartBy(meal) : null
 }

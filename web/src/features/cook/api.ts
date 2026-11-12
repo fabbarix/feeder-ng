@@ -3,9 +3,9 @@ import type { CookSource, CookTimer, CookView, StartTimerInput, TimelineView, Ti
 
 export interface CookApi {
   view(source: CookSource): Promise<CookView>
-  /** STUB (CRS F): GET /api/cook/meals/{date}/{slotId}/all, the slot's cooking timeline. */
+  /** GET /api/cook/meals/{date}/{slotId}/all: the slot's combined cooking timeline. */
   timeline(date: string, mealSlotId: number): Promise<TimelineView>
-  /** STUB (CRS F): GET /api/cook/meals/{date}/{slotId}/{courseId}, one Course's own view (the single-Course Cook Mode). */
+  /** GET /api/cook/meals/{date}/{slotId}/{courseId}: one Course's own view (the single-Course Cook Mode). */
   courseView(date: string, mealSlotId: number, courseId: number): Promise<CookView>
   setMark(scope: string, step: number, done: boolean): Promise<{ scope: string; step: number; done: boolean; doneAt: string | null }>
   timers(scope?: string): Promise<TimersResponse>
@@ -27,11 +27,11 @@ export function createCookApi(client: HttpClient): CookApi {
       if (source.kind === 'meal') return client.get<CookView>(`/api/cook/meals/${source.date}/${source.mealSlotId}`)
       return client.get<CookView>(`/api/cook/recipes/${source.recipeId}?batches=${source.batches}`)
     },
-    timeline() {
-      return Promise.reject(new Error('CRS F: not implemented'))
+    timeline(date, mealSlotId) {
+      return client.get<TimelineView>(`/api/cook/meals/${date}/${mealSlotId}/all`)
     },
-    courseView() {
-      return Promise.reject(new Error('CRS F: not implemented'))
+    courseView(date, mealSlotId, courseId) {
+      return client.get<CookView>(`/api/cook/meals/${date}/${mealSlotId}/${courseId}`)
     },
     setMark(scope, step, done) {
       return client.put('/api/cook/marks', { scope, step, done })

@@ -13,12 +13,14 @@ import '../cook.css'
 
 /**
  * The Reheat screen (route /cook/reheat/:date/:slotId, chromeless like Cook Mode): a reheating timer for a Planned
- * Meal served from a Leftover, then Mark as Cooked. Design: docs/dev/design/r12-reheat.md. Renders and wires only.
+ * Meal served from a Leftover, then Mark as Cooked. The route /cook/reheat/:date/:slotId/:courseId reheats that Course's
+ * Planned Meal. Design: docs/dev/design/r12-reheat.md. Renders and wires only.
  */
 export function ReheatScreen(): ReactNode {
-  const { date = '', slotId = '' } = useParams()
+  const { date = '', slotId = '', courseId } = useParams()
   const navigate = useNavigate()
-  const key: SlotKey = { date, mealSlotId: Number(slotId) }
+  // The Course's key on /cook/reheat/:date/:slotId/:courseId; without it, the main Course (the slot-only alias).
+  const key: SlotKey = courseId === undefined ? { date, mealSlotId: Number(slotId) } : { date, mealSlotId: Number(slotId), courseId: Number(courseId) }
   const { isLoading, meal } = usePlannedMeal(key)
   const flow = useCookFlow()
   // After Mark as Cooked the plan refetches and the meal turns Cooked before we leave: hold the last body meanwhile.

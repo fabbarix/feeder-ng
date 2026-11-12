@@ -37,3 +37,12 @@ export { ShortfallNotice } from './components/ShortfallNotice'
 export { PlanningSettingsLink } from './components/PlanningSettingsLink'
 export { StockCorrectionSheet } from './components/StockCorrectionSheet'
 export { useStockSheet } from './hooks/useStockSheet'
+// CRS F: the Course-aware Tonight sheets and the Mark all Cooked sheet, shared with Today.
+export { useTonightSheets } from './hooks/useTonightSheets'
+export { PlannedMealSheet } from './components/PlannedMealSheet'
+export { SwapSheet } from './components/SwapSheet'
+export { RecipeChooserSheet } from './components/RecipeChooserSheet'
+export { MarkAllCookedSheet } from './components/MarkAllCookedSheet'
+export { unresolvedCourseIds } from './lib/courses'
+export { useAllCookedFlow } from './hooks/useAllCookedFlow'
+

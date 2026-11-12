@@ -2,10 +2,13 @@ import type { ReactNode } from 'react'
 import { Button, Chip, Icon, IconButton } from '../../../ui'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
 import { dayChip } from '../lib/chips'
+import { courseRows, plannedMeals, slotCourses, slotMenu, type CourseRowModel } from '../lib/courses'
 import { compactAction, mayCook } from '../lib/resolve'
 import { slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
+import { CourseRow } from './CourseRow'
+import { SlotMenu } from './SlotMenu'
 import '../plan.css'
 
 export interface MealTileProps {
@@ -20,7 +23,7 @@ export interface MealTileProps {
   onCook: (key: SlotKey) => void
   /** 7-column week: head row = slot icon + time, at most one action (Cook today, Swap future). */
   compact?: boolean
-  /** CRS F (STUB): the slot menu's actions; the menu shows only for a slot that has them (lib/courses slotMenu). */
+  /** The slot menu's actions; the menu shows only for a slot that has them (lib/courses slotMenu). */
   onMarkAllCooked?: (slot: SlotKey) => void
   onNotCookedSlot?: (slot: SlotKey) => void
   onAddCourse?: (key: SlotKey) => void
@@ -34,8 +37,62 @@ export interface MealTileProps {
  * "Not planned" chip (R13: neutral for a setup gap, amber for a rule conflict, never danger), the short reason (the
  * block's title on a compact tile) and a tertiary "Choose a Recipe". No Mark as Cooked, Pin or Confirm here: the sheet has them.
  */
-export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compact = false }: MealTileProps): ReactNode {
-  const key: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+export function MealTile(props: MealTileProps): ReactNode {
+  const { slot, today, compact = false, onCook, onMarkAllCooked = noop, onNotCookedSlot = noop, onAddCourse = noop } = props
+  const slotKey: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const rows = courseRows(slot)
+  if (slotCourses(slot).length > 1 && rows.length > 0) {
+    return (
+      <SeveralCourses
+        slot={slot}
+        rows={rows}
+        today={today}
+        compact={compact}
+        onOpen={props.onOpen}
+        onSwap={props.onSwap}
+        onChoose={props.onChoose}
+        onCook={onCook}
+        onMarkAllCooked={onMarkAllCooked}
+        onNotCookedSlot={onNotCookedSlot}
+        onAddCourse={onAddCourse}
+      />
+    )
+  }
+  // One row: the old single-Recipe block, of that Course (the main Course's alias for a slot without `courses`).
+  const lone = rows[0]
+  const view: PlanSlot = lone ? { ...slot, meal: lone.course.meal, unfilled: lone.course.unfilled } : slot
+  const key: SlotKey = lone ? lone.key : slotKey
+  const menu = compact ? null : slotMenu(slot, today)
+  return (
+    <SingleTile
+      slot={view}
+      keyOf={key}
+      today={today}
+      compact={compact}
+      onOpen={props.onOpen}
+      onSwap={props.onSwap}
+      onChoose={props.onChoose}
+      onCook={onCook}
+      menu={menu ? <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} /> : null}
+    />
+  )
+}
+
+const noop = () => {}
+
+interface SingleTileProps {
+  slot: PlanSlot
+  keyOf: SlotKey
+  today: string
+  compact: boolean
+  onOpen: (key: SlotKey) => void
+  onSwap: (key: SlotKey) => void
+  onChoose: (key: SlotKey) => void
+  onCook: (key: SlotKey) => void
+  menu: ReactNode
+}
+
+function SingleTile({ slot, keyOf: key, today, compact, onOpen, onSwap, onChoose, onCook, menu }: SingleTileProps): ReactNode {
   const meal = slot.meal
   const planned = meal?.state === 'planned'
   const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
@@ -71,6 +128,7 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
             {mayCook(slot.date, today) ? <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(key)} /> : null}
           </span>
         ) : null}
+        {menu}
       </div>
       {meal ? (
         <>
@@ -102,6 +160,67 @@ export function MealTile({ slot, today, onOpen, onSwap, onChoose, onCook, compac
           )}
         </>
       )}
+    </div>
+  )
+}
+
+interface SeveralCoursesProps {
+  slot: PlanSlot
+  rows: CourseRowModel[]
+  today: string
+  compact: boolean
+  onOpen: (key: SlotKey) => void
+  onSwap: (key: SlotKey) => void
+  onChoose: (key: SlotKey) => void
+  onCook: (key: SlotKey) => void
+  onMarkAllCooked: (slot: SlotKey) => void
+  onNotCookedSlot: (slot: SlotKey) => void
+  onAddCourse: (key: SlotKey) => void
+}
+
+/**
+ * A slot with several Course rows (spec 7.5): the slot named once, Cook once on the head (it opens the slot's timeline),
+ * then a list of Course rows, each with its own Swap (a compact week shows none), and the slot menu.
+ */
+function SeveralCourses({ slot, rows, today, compact, onOpen, onSwap, onChoose, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse }: SeveralCoursesProps): ReactNode {
+  const slotKey: SlotKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const cookable = plannedMeals(slot).length > 0 && (compact ? compactAction(slot.date, today) === 'cook' : mayCook(slot.date, today))
+  return (
+    <div className="plan-meal plan-meal--courses">
+      <div className="plan-meal__head">
+        {compact ? (
+          <span className="plan-meal__slot" aria-label={slot.name}>
+            <Icon name={slotIcon(slot.name)} size={16} />
+            <span className="plan-meal__name">{slot.time}</span>
+          </span>
+        ) : (
+          <span className="plan-meal__slot">
+            <Icon name={slotIcon(slot.name)} size={16} />
+            <span className="plan-meal__name">{slot.name}</span>
+          </span>
+        )}
+        {cookable ? (
+          <span className="plan-meal__actions">
+            <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(slotKey)} />
+          </span>
+        ) : null}
+        {compact ? null : <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} />}
+      </div>
+      <ul aria-label={`${slot.name} Courses`} className="plan-meal__courses">
+        {rows.map((row) => (
+          <CourseRow
+            key={row.course.courseId}
+            row={row}
+            slot={slot}
+            today={today}
+            compact={compact}
+            actions={compact ? [] : ['swap']}
+            onOpen={onOpen}
+            onSwap={onSwap}
+            onChoose={onChoose}
+          />
+        ))}
+      </ul>
     </div>
   )
 }

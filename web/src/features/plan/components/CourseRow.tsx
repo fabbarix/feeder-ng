@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
-import type { CourseRowModel } from '../lib/courses'
+import { Button, Chip, IconButton } from '../../../ui'
+import { dayChip } from '../lib/chips'
+import { wholeMealChip, type CourseRowModel } from '../lib/courses'
+import { mayResolve } from '../lib/resolve'
+import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotKey } from '../types'
 
 export type CourseAction = 'swap' | 'pin' | 'cooked'
@@ -29,12 +33,63 @@ export interface CourseRowProps extends CourseRowHandlers {
 }
 
 /**
- * STUB (CRS F). One Course of a slot block: `<li aria-label="{Course name}">` with the caption (row.caption), the Recipe
- * name as a button, one day chip (lib/chips dayChip, as the single meal) plus the "Whole meal" chip (lib/courses
- * wholeMealChip), and compact IconButtons named "Swap", "Pin" or "Unpin" and "Mark as Cooked" for a planned meal, per
- * `actions` (Mark as Cooked only when mayResolve). An empty row (no meal) is the dashed "Not planned" block of MealTile
- * with "Choose a Recipe". Cooked and Not cooked rows are muted and have no buttons.
+ * One Course of a slot block: `<li aria-label="{Course name}">` with the caption, the Recipe name as a button, the day
+ * chip (lib/chips dayChip) and the "Whole meal" chip, and compact IconButtons for a planned meal, per `actions`. An
+ * empty row is the dashed "Not planned" block with "Choose a Recipe". Cooked and Not cooked rows are muted, no buttons.
  */
-export function CourseRow(_props: CourseRowProps): ReactNode {
-  return null
+export function CourseRow({ row, slot, today, actions = ['swap'], compact = false, onOpen, onSwap, onPin, onUnpin, onMarkCooked, onChoose }: CourseRowProps): ReactNode {
+  const { course, key, caption } = row
+  const meal = course.meal
+  const planned = meal?.state === 'planned'
+  const chip = meal ? dayChip(meal, { slotDate: slot.date }) : null
+  const whole = wholeMealChip(slot, row)
+
+  return (
+    <li aria-label={course.name} className="plan-course" data-compact={compact ? 'true' : undefined}>
+      {caption ? <span className="plan-course__caption">{caption}</span> : null}
+      <div className="plan-course__body" data-state={meal && meal.state !== 'planned' ? meal.state : undefined} data-unfilled={meal ? undefined : ''}>
+        {meal ? (
+          <>
+            <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
+              {meal.recipeName}
+            </button>
+            <span className="plan-course__chips">
+              {chip ? (
+                <Chip kind={chip.kind} status={chip.status}>
+                  {chip.label}
+                </Chip>
+              ) : null}
+              {whole ? (
+                <Chip kind={whole.kind} status={whole.status}>
+                  {whole.label}
+                </Chip>
+              ) : null}
+            </span>
+            {planned ? (
+              <span className="plan-meal__actions">
+                {actions.includes('swap') ? <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap?.(key)} /> : null}
+                {actions.includes('pin') ? (
+                  meal.pinned ? (
+                    <IconButton icon="unpin" label={s.unpin} size="compact" onClick={() => onUnpin?.(key)} />
+                  ) : (
+                    <IconButton icon="pin" label={s.pin} size="compact" onClick={() => onPin?.(key)} />
+                  )
+                ) : null}
+                {actions.includes('cooked') && mayResolve(meal.date, today) ? (
+                  <IconButton icon="markCooked" label={s.markCooked} size="compact" onClick={() => onMarkCooked?.(key)} />
+                ) : null}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Chip>{s.notPlanned}</Chip>
+            <Button variant="tertiary" size="sm" onClick={() => onChoose?.(key)}>
+              {s.choose}
+            </Button>
+          </>
+        )}
+      </div>
+    </li>
+  )
 }

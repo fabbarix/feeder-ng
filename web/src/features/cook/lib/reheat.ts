@@ -2,6 +2,7 @@
 // Design: docs/dev/design/r12-reheat.md.
 import type { SlotKey } from '../../plan/types'
 import type { CookTimer } from '../types'
+import { sameScope } from './scope'
 
 /** Label of the reheating timer. */
 export const REHEAT_LABEL = 'Reheat'
@@ -34,15 +35,16 @@ export function reheatTimerOf(timers: CookTimer[], scope: string): CookTimer | n
   return timers.find((t) => t.scope === scope && t.step === null && t.label === REHEAT_LABEL) ?? null
 }
 
-/** The route of the Reheat screen of a Planned Meal: `/cook/reheat/<date>/<mealSlotId>`. */
+/** The route of the Reheat screen of a Planned Meal: `/cook/reheat/<date>/<mealSlotId>`, with the Course when the key has one. */
 export function cookReheatPath(key: SlotKey): string {
-  return `/cook/reheat/${key.date}/${key.mealSlotId}`
+  const base = `/cook/reheat/${key.date}/${key.mealSlotId}`
+  return key.courseId === undefined ? base : `${base}/${key.courseId}`
 }
 
 /**
- * CRS F (STUB): the reheating timer of a Course's scope through `sameScope`, so the Reheat item of the cooking
- * timeline and the Reheat screen find the same timer whether the main Course's scope is two-part or three-part.
+ * The reheating timer of a Course's scope through `sameScope`, so the Reheat item of the cooking timeline and the Reheat
+ * screen find the same timer whether the main Course's scope is two-part or three-part.
  */
-export function reheatTimerOfCourse(_timers: CookTimer[], _scope: string, _mainCourseId: number | null): CookTimer | null {
-  throw new Error('CRS F: not implemented')
+export function reheatTimerOfCourse(timers: CookTimer[], scope: string, mainCourseId: number | null): CookTimer | null {
+  return timers.find((t) => t.step === null && t.label === REHEAT_LABEL && sameScope(t.scope, scope, mainCourseId)) ?? null
 }

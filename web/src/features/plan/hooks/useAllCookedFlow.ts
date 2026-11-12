@@ -1,4 +1,5 @@
-// CRS F: the Mark all Cooked flow shared by the Plan, Today and Cook Mode (the sheet's open state and its controller). STUB (inert).
+// CRS F: the Mark all Cooked flow shared by the Plan, Today and Cook Mode (the sheet's open state and its controller).
+import { useCallback, useState } from 'react'
 import type { SlotKey } from '../types'
 import type { MarkAllCookedController } from './useMarkAllCooked'
 import { useMarkAllCooked } from './useMarkAllCooked'
@@ -15,6 +16,19 @@ export interface AllCookedFlow {
 }
 
 export function useAllCookedFlow(): AllCookedFlow {
-  const controller = useMarkAllCooked(null, [])
-  return { key: null, open: () => {}, close: () => {}, controller, confirm: async () => false }
+  const [key, setKey] = useState<SlotKey | null>(null)
+  const [courseIds, setCourseIds] = useState<number[]>([])
+  const controller = useMarkAllCooked(key, courseIds)
+  const open = useCallback((slot: SlotKey, ids: number[]) => {
+    setKey(slot)
+    setCourseIds(ids)
+  }, [])
+  const close = useCallback(() => setKey(null), [])
+  const confirm = useCallback(async () => {
+    const res = await controller.confirm()
+    if (res === null) return false
+    setKey(null)
+    return true
+  }, [controller])
+  return { key, open, close, controller, confirm }
 }

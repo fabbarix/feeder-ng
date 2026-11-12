@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react'
+import { BottomSheet, Button, Chip, NumberField } from '../../../ui'
+import { LEFTOVER_STEP } from '../lib/cook'
 import type { AllCookedRow } from '../lib/toConfirm'
+import { weekdayName } from '../lib/phrase'
+import { planStrings as s } from '../strings'
+import '../plan.css'
 
 export interface MarkAllCookedSheetProps {
   open: boolean
@@ -13,11 +18,55 @@ export interface MarkAllCookedSheetProps {
 }
 
 /**
- * STUB (CRS F). BottomSheet titled "Mark all Cooked": a row per Course with its name and Recipe; a fresh row has a
- * NumberField (spinbutton) named "<Course> Leftover portions" (0 to maxLeftover, half steps) and the Use-by chip as in
- * MarkCookedSheet; a Leftover row says "Served from a Leftover. Nothing is taken from Stock." and has no field. The
- * footer holds one primary "Mark all Cooked" (disabled while busy or loading). An error shows as role=alert.
+ * "Mark all Cooked": a block per Course (its name and Recipe). A fresh Course has its own Leftover field at its proposal
+ * and the Use-by chip; a Leftover Course says nothing is taken from Stock. The footer holds the one primary button.
  */
-export function MarkAllCookedSheet(_props: MarkAllCookedSheetProps): ReactNode {
-  return null
+export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverChange, onConfirm, busy, error }: MarkAllCookedSheetProps): ReactNode {
+  const ready = rows.length > 0 && !isLoading
+  const footer = (
+    <div className="plan-sheet__actions">
+      <Button variant="primary" disabled={busy || !ready} onClick={onConfirm}>
+        {s.markAllCooked}
+      </Button>
+    </div>
+  )
+  return (
+    <BottomSheet open={open} onClose={onClose} title={s.markAllCooked} footer={footer}>
+      <div className="plan__stack">
+        {isLoading || rows.length === 0 ? <p className="plan__muted">{s.loading}</p> : null}
+        {rows.map((row) => (
+          <section key={row.courseId} className="plan-sheet__course">
+            <p className="plan__muted">{row.courseName}</p>
+            <p className="plan-sheet__recipe">{row.recipeName}</p>
+            {row.fresh ? (
+              <>
+                <NumberField
+                  label={s.courseLeftoverLabel(row.courseName)}
+                  value={row.leftover}
+                  onChange={(v) => onLeftoverChange(row.courseId, v ?? 0)}
+                  min={0}
+                  max={row.maxLeftover}
+                  step={LEFTOVER_STEP}
+                />
+                {row.leftover > 0 ? (
+                  <Chip kind="status" status="leftover">
+                    {s.leftoverUseBy(weekdayName(row.leftoverUseBy, 'short'))}
+                  </Chip>
+                ) : (
+                  <Chip>{s.noLeftover}</Chip>
+                )}
+              </>
+            ) : (
+              <p className="plan__muted">{s.fromLeftoverNote}</p>
+            )}
+          </section>
+        ))}
+        {error ? (
+          <p role="alert" className="plan__error">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </BottomSheet>
+  )
 }

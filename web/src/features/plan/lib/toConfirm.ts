@@ -1,9 +1,7 @@
-// CRS F: To confirm groups a slot's Courses under one heading, and Mark all Cooked builds its body. STUBS.
+// CRS F: To confirm groups a slot's Courses under one heading, and Mark all Cooked builds its body. Plain TypeScript.
+import { planStrings as s } from '../strings'
 import type { CookedAllEntry, PlanSlot, SlotKey } from '../types'
-
-const TODO = (): never => {
-  throw new Error('CRS F: not implemented')
-}
+import { weekdayName } from './phrase'
 
 export interface ToConfirmGroup {
   /** `{ date, mealSlotId }`: the slot, for Mark all Cooked. */
@@ -19,8 +17,20 @@ export interface ToConfirmGroup {
  * A group with one entry has the Recipe name as heading and keeps the old "Tue Dinner" line; a group with several
  * entries has the heading "<Tue> <Dinner>: <Recipe>, <Recipe>" (short weekday, slot name, Recipe names in entry order).
  */
-export function groupToConfirm(_entries: PlanSlot[]): ToConfirmGroup[] {
-  return TODO()
+export function groupToConfirm(entries: PlanSlot[]): ToConfirmGroup[] {
+  const groups = new Map<string, PlanSlot[]>()
+  for (const entry of entries) {
+    const key = `${entry.date}|${entry.mealSlotId}`
+    const list = groups.get(key)
+    if (list) list.push(entry)
+    else groups.set(key, [entry])
+  }
+  return [...groups.values()].map((list) => {
+    const first = list[0]!
+    const names = list.map((e) => e.meal?.recipeName ?? '')
+    const heading = list.length === 1 ? names[0]! : s.toConfirmSlotHeading(weekdayName(first.date, 'short'), first.name, names)
+    return { slot: { date: first.date, mealSlotId: first.mealSlotId }, heading, entries: list }
+  })
 }
 
 /** A fresh Course of the Mark all Cooked sheet, with its edited Leftover; a Leftover Course has `fresh: false`. */
@@ -39,6 +49,6 @@ export interface AllCookedRow {
  * The body of POST .../all/cooked: one `{ courseId, leftoverPortions }` per FRESH row, in row order, with the edited
  * Leftover; a Leftover Course (fresh false) is left out (it has no Leftover to record).
  */
-export function allCookedBody(_rows: AllCookedRow[]): CookedAllEntry[] {
-  return TODO()
+export function allCookedBody(rows: AllCookedRow[]): CookedAllEntry[] {
+  return rows.filter((r) => r.fresh).map((r) => ({ courseId: r.courseId, leftoverPortions: r.leftover }))
 }

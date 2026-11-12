@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { Menu, type MenuEntry } from '../../../ui'
 import type { CourseMenuEntry } from '../lib/timeline'
+import { cookStrings } from '../strings'
 
 export interface CourseMenuProps {
   entries: CourseMenuEntry[]
@@ -7,11 +9,13 @@ export interface CourseMenuProps {
   onNotCooked: (courseId: number) => void
 }
 
-/**
- * STUB (CRS F). The Course menu of the Cook Mode header: the shared `Menu` (ui) labelled "Course actions", one item per
- * entry ("Mark Side as Cooked", "Not cooked: Side"); choosing calls onCooked or onNotCooked with the Course id.
- * Renders nothing without entries.
- */
-export function CourseMenu(_props: CourseMenuProps): ReactNode {
-  return null
+/** The Course menu of the Cook Mode header: "Mark <Course> as Cooked" and "Not cooked: <Course>" per Course. Nothing without entries. */
+export function CourseMenu({ entries, onCooked, onNotCooked }: CourseMenuProps): ReactNode {
+  if (entries.length === 0) return null
+  const items: MenuEntry[] = entries.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    onSelect: () => (entry.action === 'cooked' ? onCooked(entry.courseId) : onNotCooked(entry.courseId)),
+  }))
+  return <Menu label={cookStrings.courseActions} items={items} />
 }

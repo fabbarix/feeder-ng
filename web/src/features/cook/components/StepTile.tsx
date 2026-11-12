@@ -15,9 +15,9 @@ export interface StepTileProps {
   /** Tablet: shows the one-time coach mark (cookStrings.coachMark) with a "Got it" button that calls onCoachDismiss. */
   coachMark?: boolean
   onCoachDismiss?: () => void
-  /** CRS F (STUB: not rendered yet): the Course and Recipe caption "Side · Green beans", shown only when given. */
+  /** The Course and Recipe caption "Side · Green beans" of a timeline of several Courses; shown only when given. */
   caption?: string | null
-  /** CRS F (STUB: not rendered yet): the planned clock time "18:52", shown only when given. */
+  /** The planned clock time "18:52" of the timeline; shown only when given. */
   clock?: string | null
 }
 
@@ -35,6 +35,8 @@ export function StepTile({
   formatUse = describeUse,
   coachMark = false,
   onCoachDismiss,
+  caption = null,
+  clock = null,
 }: StepTileProps): ReactNode {
   const onTap = (e: MouseEvent<HTMLElement>) => {
     if (!tapZones) return
@@ -45,6 +47,8 @@ export function StepTile({
   }
   return (
     <Tile as="article" className="cook-step" aria-label={cookStrings.stepOf(step.number, step.of)} overline={stepOverline(step)} onClickCapture={onTap}>
+      {caption ? <p className="cook-step__course">{caption}</p> : null}
+      {clock ? <p className="cook-step__clock">{clock}</p> : null}
       <p className="cook-step__text">{step.text}</p>
       {step.uses.length > 0 ? <p className="cook-step__uses">{cookStrings.usesLine(step.uses.map(formatUse))}</p> : null}
       {step.imageUrl ? <img className="cook-step__image" src={step.imageUrl} alt="" /> : null}

@@ -60,15 +60,16 @@ export type SlotRuleDraftError = 'meal_slot_required' | 'tag_required' | 'recipe
 export function toSlotRuleBody(
   draft: SlotRuleDraft,
 ): { body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string } } | { error: SlotRuleDraftError } {
+  const course = draft.courseId ? { courseId: Number(draft.courseId) } : {}
   if (draft.kind === 'tag') {
     const tag = draft.tag.trim()
     if (!tag) return { error: 'tag_required' }
     if (!draft.mealSlotId) return { error: 'meal_slot_required' }
-    return { body: { mealSlotId: Number(draft.mealSlotId), tag } }
+    return { body: { mealSlotId: Number(draft.mealSlotId), ...course, tag } }
   }
   if (!draft.recipeId) return { error: 'recipe_required' }
   if (!draft.mealSlotId) return { error: 'meal_slot_required' }
-  return { body: { mealSlotId: Number(draft.mealSlotId), recipeId: Number(draft.recipeId) } }
+  return { body: { mealSlotId: Number(draft.mealSlotId), ...course, recipeId: Number(draft.recipeId) } }
 }
 
 export interface TagOption {
@@ -85,10 +86,7 @@ export function toTagOptions(tags: TagChoice[]): TagOption[] {
     .map((t) => ({ value: t.name, label: t.name, meta: s.recipeCount(t.recipes) }))
 }
 
-/**
- * CRS F (STUB): the title of a Slot Rule row. "Friday Dinner · Main" when the rule's Course is shown (the Meal Slot
- * serves several Courses), else just "Friday Dinner" as before; the meta stays describeSlotRule ("Recipe: pizza").
- */
-export function slotRuleTitle(_slotLabel: string, _courseName: string | null): string {
-  throw new Error('CRS F: not implemented')
+/** CRS F: the title of a Slot Rule row. "Friday Dinner · Main" when the rule's Course is shown, else just "Friday Dinner". */
+export function slotRuleTitle(slotLabel: string, courseName: string | null): string {
+  return courseName ? `${slotLabel} · ${courseName}` : slotLabel
 }

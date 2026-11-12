@@ -20,6 +20,17 @@ export interface PhraseContext {
   slotDate: string
 }
 
+/** 1st, 2nd, 3rd, 4th, 11th, 21st. */
+export function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13
+  if (!teen) {
+    if (n % 10 === 1) return `${n}st`
+    if (n % 10 === 2) return `${n}nd`
+    if (n % 10 === 3) return `${n}rd`
+  }
+  return `${n}th`
+}
+
 /** Phrases one why chip for people; '' for a code it does not know. */
 export function phraseWhy(why: Why, ctx: PhraseContext): string {
   switch (why.code) {
@@ -44,6 +55,12 @@ export function phraseWhy(why: Why, ctx: PhraseContext): string {
       return why.ingredient ? s.whyStock(why.ingredient) : s.whyStockAny
     case 'leftover_fits':
       return why.date ? s.whyLeftoverFor(weekdayName(why.date, 'short')) : s.whyLeftoversToCome
+    case 'cooldown_relaxed':
+      if (!why.date) return ''
+      return why.date < ctx.slotDate ? s.whyAgainSoonBefore(weekdayName(why.date, 'short')) : s.whyAgainSoonAfter(weekdayName(why.date, 'short'))
+    case 'variety_relaxed':
+      if (why.date) return s.whyTagTwoDays(why.tag ?? '')
+      return why.value ? s.whyTagCount(ordinal(why.value), why.tag ?? '') : ''
     default:
       return ''
   }
