@@ -185,7 +185,7 @@ func (s *Service) AddLot(ctx context.Context, in AddInput) (LotView, bool, error
 	if created {
 		s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
 	}
-	return view(saved, ing, today), created, nil
+	return view(saved, ing, today, kind), created, nil
 }
 
 // SetTotal is a Stock-take: it makes the Ingredient's Stock equal total (Base Units).
@@ -245,13 +245,64 @@ func (s *Service) RemoveLot(ctx context.Context, lotID int64) error {
 // where the Lot is). A correction: no waste, no Keep, and a go-off record of the Lot is forgotten when its go-off date
 // changes. Invalid input is ErrInvalid; an unknown Lot store.ErrNotFound.
 func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (LotView, error) {
-	return LotView{}, errors.New("not implemented (b5-st)")
+	lot, err := s.st.Lot(ctx, lotID)
+	if err != nil {
+		return LotView{}, err
+	}
+	today, err := s.today(ctx)
+	if err != nil {
+		return LotView{}, err
+	}
+	ing, err := s.ingredient(ctx, lot.IngredientID)
+	if err != nil {
+		return LotView{}, err
+	}
+	kind, err := s.kindOf(ctx, lot.StoragePlaceID)
+	if err != nil {
+		return LotView{}, err
+	}
+	shelfLife := stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
+		out := make([]stock.Lot, 0, len(lots))
+		found := false
+		var forget []int64
+		for _, l := range lots {
+			if l.ID == lotID {
+				found = true
+				corrected, err := stock.ValidateEdit(l, edit, today, shelfLife)
+				if err != nil {
+					return store.Mutation{}, invalid("%s", err.Error())
+				}
+				if corrected.GoesOff != l.GoesOff {
+					forget = append(forget, lotID) // a new go-off date starts afresh: the old go-off record goes
+				}
+				l = corrected
+			}
+			out = append(out, l)
+		}
+		if !found {
+			return store.Mutation{}, store.ErrNotFound
+		}
+		return store.Mutation{Lots: out, ForgetGoOffs: forget}, nil
+	})
+	if err != nil {
+		return LotView{}, err
+	}
+	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
+	for _, l := range saved {
+		if l.ID == lotID {
+			return view(l, ing, today, kind), nil
+		}
+	}
+	return LotView{}, store.ErrNotFound
 }
 
 // DeleteLot deletes a Lot as a correction (a double Scan): the Lot leaves Stock, no waste is recorded and no go-off is
 // kept, and its go-off record, if any, goes (like the Undo of a Scan). Publishes stock {"changed":"lots"}.
 func (s *Service) DeleteLot(ctx context.Context, lotID int64) error {
-	return errors.New("not implemented (b5-st)")
+	// TODO(BO): the planned_meal_bought records of this Lot (spec §6, plan 2.4) come with migration 1520; when BO lands,
+	// remove them here in the same transaction as the Lot.
+	return s.RemoveLot(ctx, lotID)
 }
 
 // Totals lists every Ingredient with Stock, those with spoiled or use-soon lots
@@ -403,9 +454,13 @@ func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
 		return LotView{}, err
 	}
 	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
+	kind, err := s.kindOf(ctx, lot.StoragePlaceID)
+	if err != nil {
+		return LotView{}, err
+	}
 	for _, l := range saved {
 		if l.ID == lotID {
-			return view(l, ing, today), nil
+			return view(l, ing, today, kind), nil
 		}
 	}
 	return LotView{}, store.ErrNotFound
@@ -658,6 +713,7 @@ func (s *Service) wasteFor(ctx context.Context, lotID int64, today stock.Date) (
 // views decorates lots with their Ingredient facts. Ingredients are looked up once each.
 func (s *Service) views(ctx context.Context, stored []store.StoredLot, today stock.Date) ([]LotView, error) {
 	ings := map[int64]IngredientInfo{}
+	kinds := map[int64]stock.Kind{} // each Storage Place is looked up once per request
 	out := make([]LotView, 0, len(stored))
 	for _, l := range stored {
 		ing, ok := ings[l.IngredientID]
@@ -668,12 +724,39 @@ func (s *Service) views(ctx context.Context, stored []store.StoredLot, today sto
 			}
 			ings[l.IngredientID] = ing
 		}
-		out = append(out, view(l, ing, today))
+		kind, ok := stock.KindNone, false
+		if l.StoragePlaceID != nil {
+			if kind, ok = kinds[*l.StoragePlaceID]; !ok {
+				var err error
+				if kind, err = s.kindOf(ctx, l.StoragePlaceID); err != nil {
+					return nil, err
+				}
+				kinds[*l.StoragePlaceID] = kind
+			}
+		}
+		out = append(out, view(l, ing, today, kind))
 	}
 	return out, nil
 }
 
-func view(l store.StoredLot, ing IngredientInfo, today stock.Date) LotView {
+// kindOf is the kind of the Storage Place a Lot is in (KindNone when unsorted, or when the place no longer exists).
+func (s *Service) kindOf(ctx context.Context, placeID *int64) (stock.Kind, error) {
+	if placeID == nil {
+		return stock.KindNone, nil
+	}
+	p, err := s.st.StoragePlace(ctx, *placeID)
+	if errors.Is(err, store.ErrPlaceNotFound) {
+		return stock.KindNone, nil
+	}
+	if err != nil {
+		return stock.KindNone, err
+	}
+	return p.Kind, nil
+}
+
+// view decorates a Lot with its Ingredient facts. kind is the kind of the Storage Place the Lot is in: it decides
+// which Shelf Life applies there (ShelfLifeDays).
+func view(l store.StoredLot, ing IngredientInfo, today stock.Date, kind stock.Kind) LotView {
 	return LotView{
 		StoredLot:          l,
 		IngredientName:     ing.Name,
@@ -681,6 +764,7 @@ func view(l store.StoredLot, ing IngredientInfo, today stock.Date) LotView {
 		Spoiled:            stock.IsSpoiled(l.Lot, today),
 		UseSoon:            stock.IsUseSoon(l.Lot, today),
 		IngredientImageURL: ing.ImageURL,
+		ShelfLifeDays:      stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays),
 	}
 }
 
@@ -809,5 +893,5 @@ func (s *Service) MoveLot(ctx context.Context, lotID, placeID int64, quantity fl
 		return LotView{}, err
 	}
 	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
-	return view(moved, ing, today), nil
+	return view(moved, ing, today, to.Kind), nil
 }

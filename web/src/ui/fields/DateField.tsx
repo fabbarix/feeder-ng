@@ -190,6 +190,7 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
                               data-iso={day.iso}
                               aria-label={longDay.format(localDate(day.iso))}
                               aria-current={day.iso === todayValue ? 'date' : undefined}
+                              disabled={disabledDay || undefined}
                               aria-disabled={disabledDay || undefined}
                               data-outside={day.inMonth ? undefined : 'true'}
                               data-selected={selected || undefined}

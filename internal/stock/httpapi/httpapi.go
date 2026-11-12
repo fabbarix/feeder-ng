@@ -3,6 +3,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
@@ -539,11 +540,71 @@ func (a *api) deletePlace(w http.ResponseWriter, r *http.Request) {
 // is. A changed `purchased` with no `goesOff` re-suggests Good until from the Shelf Life that applies where the Lot is.
 // 200 with the Lot (the lotJSON shape), 404 not_found, 422 validation_failed (empty body, bad quantity or dates).
 func (a *api) editLot(w http.ResponseWriter, r *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "b5-st")
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Stock Lot not found")
+		return
+	}
+	var body editLotBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	v, err := a.svc.EditLot(r.Context(), id, body.edit())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, lotToJSON(v))
+}
+
+// editLotBody is the PATCH body. Quantity is optional; Purchased and GoesOff are kept as raw JSON so that an absent
+// field (left as it is) differs from JSON null (Purchased null is refused, GoesOff null clears the date).
+type editLotBody struct {
+	Quantity  *float64        `json:"quantity"`
+	Purchased json.RawMessage `json:"purchased"`
+	GoesOff   json.RawMessage `json:"goesOff"`
+}
+
+// notADate is a date no strict parse accepts: a field that is not a string fails validation rather than clearing.
+const notADate = stock.Date("not a date")
+
+func (b editLotBody) edit() stock.Edit {
+	e := stock.Edit{Quantity: b.Quantity}
+	if len(b.Purchased) > 0 {
+		d := dateField(b.Purchased)
+		e.Purchased = &d
+	}
+	if len(b.GoesOff) > 0 {
+		d := dateField(b.GoesOff)
+		e.GoesOff = &d
+	}
+	return e
+}
+
+// dateField reads one date from raw JSON: null is stock.None, a string is taken as it is, anything else notADate.
+func dateField(raw json.RawMessage) stock.Date {
+	if string(raw) == "null" {
+		return stock.None
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return notADate
+	}
+	return stock.Date(s)
 }
 
 // deleteLot answers DELETE /api/stock/lots/{id}: 204. A correction (a double Scan), not waste: the Lot's go-off record
 // goes with it. 404 not_found for an unknown Lot.
 func (a *api) deleteLot(w http.ResponseWriter, r *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "b5-st")
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Stock Lot not found")
+		return
+	}
+	if err := a.svc.DeleteLot(r.Context(), id); err != nil {
+		writeError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

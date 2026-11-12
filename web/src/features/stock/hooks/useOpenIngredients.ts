@@ -10,12 +10,31 @@ export interface OpenIngredients {
   toggle: (ingredientId: number) => void
 }
 
+function readOpen(): number[] {
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(OPEN_INGREDIENTS_KEY) ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === 'number') : []
+  } catch {
+    return []
+  }
+}
+
+function writeOpen(ids: number[]): void {
+  try {
+    sessionStorage.setItem(OPEN_INGREDIENTS_KEY, JSON.stringify(ids))
+  } catch {
+    // blocked storage: the rows stay as they are for this visit only
+  }
+}
+
 export function useOpenIngredients(): OpenIngredients {
-  const [open] = useState<number[]>([])
+  const [open, setOpen] = useState<number[]>(readOpen)
   return {
-    isOpen: () => open.length < 0,
-    toggle: () => {
-      throw new Error('not implemented (b5-st)')
+    isOpen: (ingredientId) => open.includes(ingredientId),
+    toggle: (ingredientId) => {
+      const next = open.includes(ingredientId) ? open.filter((id) => id !== ingredientId) : [...open, ingredientId]
+      setOpen(next)
+      writeOpen(next)
     },
   }
 }

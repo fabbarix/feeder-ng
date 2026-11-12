@@ -53,11 +53,11 @@ export function createStockApi(client: HttpClient): StockApi {
     moveLot(lotId, storagePlaceId, quantity) {
       return client.post<StockLot>(`/api/stock/lots/${lotId}/move`, quantity === undefined ? { storagePlaceId } : { storagePlaceId, quantity })
     },
-    updateLot() {
-      return Promise.reject(new Error('not implemented (b5-st)'))
+    updateLot(lotId, patch) {
+      return client.patch<StockLot>(`/api/stock/lots/${lotId}`, patch)
     },
-    deleteLot() {
-      return Promise.reject(new Error('not implemented (b5-st)'))
+    deleteLot(lotId) {
+      return client.delete<void>(`/api/stock/lots/${lotId}`)
     },
     storagePlaces() {
       return client.get<StoragePlace[]>('/api/storage-places')

@@ -175,6 +175,14 @@ export function useStockActions(): {
     mutationFn: ({ ingredientId, total }: { ingredientId: number; total: number }) => stockApi.setTotal(ingredientId, total),
     onSuccess: () => refreshStock(client),
   })
+  const editLot = useMutation({
+    mutationFn: ({ lotId, patch }: { lotId: number; patch: LotPatch }) => stockApi.updateLot(lotId, patch),
+    onSuccess: () => refreshStock(client),
+  })
+  const deleteLot = useMutation({
+    mutationFn: (lotId: number) => stockApi.deleteLot(lotId),
+    onSuccess: () => refreshStock(client),
+  })
   return {
     addLot: async (input) => {
       await addLot.mutateAsync(input)
@@ -188,11 +196,11 @@ export function useStockActions(): {
     moveLot: async (lotId, placeId, quantity) => {
       await moveLot.mutateAsync({ lotId, placeId, quantity })
     },
-    editLot: async () => {
-      throw new Error('not implemented (b5-st)')
+    editLot: async (lotId, patch) => {
+      await editLot.mutateAsync({ lotId, patch })
     },
-    deleteLot: async () => {
-      throw new Error('not implemented (b5-st)')
+    deleteLot: async (lotId) => {
+      await deleteLot.mutateAsync(lotId)
     },
   }
 }

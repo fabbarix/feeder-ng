@@ -1,6 +1,10 @@
 package stock
 
-import "errors"
+import (
+	"errors"
+	"math"
+	"time"
+)
 
 // Editing a Stock Lot by hand (beta.5, spec §6 "Editing and deleting a Lot"). An edit is a correction: it never
 // records waste and never counts as a Keep. Storage Place is not part of an edit (Move to changes it).
@@ -42,5 +46,50 @@ var (
 //     Keep forgave the old date, not the new one);
 //   - ID, IngredientID and every other field are untouched.
 func ValidateEdit(lot Lot, edit Edit, today Date, shelfLifeDays *int) (Lot, error) {
-	return lot, errors.New("not implemented (b5-st)")
+	if edit.Quantity == nil && edit.Purchased == nil && edit.GoesOff == nil {
+		return lot, ErrEditEmpty
+	}
+	out := lot
+	if edit.Quantity != nil {
+		q := *edit.Quantity
+		if math.IsNaN(q) || math.IsInf(q, 0) || q <= 0 {
+			return lot, ErrEditQuantity
+		}
+		out.Quantity = q
+	}
+	dateGiven := edit.Purchased != nil || edit.GoesOff != nil
+	purchasedChanged := false
+	if edit.Purchased != nil {
+		p := *edit.Purchased
+		if !isDate(p) {
+			return lot, ErrEditDate
+		}
+		if p > today {
+			return lot, ErrEditPurchasedFuture
+		}
+		purchasedChanged = p != lot.Purchased
+		out.Purchased = p
+	}
+	switch {
+	case edit.GoesOff != nil:
+		if g := *edit.GoesOff; !g.IsNone() && !isDate(g) {
+			return lot, ErrEditDate
+		}
+		out.GoesOff = *edit.GoesOff
+	case purchasedChanged && shelfLifeDays != nil:
+		out.GoesOff = out.Purchased.AddDays(*shelfLifeDays)
+	}
+	if dateGiven && !out.GoesOff.IsNone() && out.GoesOff < out.Purchased {
+		return lot, ErrEditGoesOffBeforePurchased
+	}
+	if out.GoesOff != lot.GoesOff {
+		out.KeptOn = None
+	}
+	return out, nil
+}
+
+// isDate reports whether d is a strict YYYY-MM-DD calendar date.
+func isDate(d Date) bool {
+	t, err := time.Parse(dateLayout, string(d))
+	return err == nil && t.Format(dateLayout) == string(d)
 }

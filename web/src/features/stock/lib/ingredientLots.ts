@@ -1,4 +1,7 @@
 // The Lots of one Ingredient shown inline under its By Ingredient row. Plain TypeScript, no React.
+import { formatLotDate } from './display'
+import { daysBetween } from './days'
+import { describeGoOff } from './view'
 import type { StockLot } from '../types'
 
 /**
@@ -6,21 +9,25 @@ import type { StockLot } from '../types'
  * then oldest purchase, then lowest id. Does not mutate.
  */
 export function deductionOrder(lots: StockLot[]): StockLot[] {
-  return [...lots]
+  return [...lots].sort((a, b) => {
+    if ((a.goesOff === null) !== (b.goesOff === null)) return a.goesOff === null ? 1 : -1
+    if (a.goesOff !== null && b.goesOff !== null && a.goesOff !== b.goesOff) return a.goesOff < b.goesOff ? -1 : 1
+    if (a.purchased !== b.purchased) return a.purchased < b.purchased ? -1 : 1
+    return a.id - b.id
+  })
 }
 
 /** The Lots of one Ingredient from the whole Pantry, in Deduction order. */
 export function lotsOfIngredient(all: StockLot[], ingredientId: number): StockLot[] {
-  void all
-  void ingredientId
-  throw new Error('not implemented (b5-st)')
+  return deductionOrder(all.filter((lot) => lot.ingredientId === ingredientId))
 }
 
 /** "Bought today", "Bought yesterday", else "Bought 5 Nov" (today is the household's date, YYYY-MM-DD). */
 export function boughtLabel(purchased: string, today: string): string {
-  void purchased
-  void today
-  throw new Error('not implemented (b5-st)')
+  const days = daysBetween(purchased, today)
+  if (days === 0) return 'Bought today'
+  if (days === 1) return 'Bought yesterday'
+  return `Bought ${formatLotDate(purchased)}`
 }
 
 /**
@@ -28,8 +35,8 @@ export function boughtLabel(purchased: string, today: string): string {
  * go-off part without a go-off date; a Lot that has gone off says so ("Went off 3 days ago").
  */
 export function lotMeta(lot: StockLot, today: string, placeName: string | null): string {
-  void lot
-  void today
-  void placeName
-  throw new Error('not implemented (b5-st)')
+  const parts = [boughtLabel(lot.purchased, today)]
+  if (lot.goesOff !== null) parts.push(describeGoOff(lot, today).label)
+  parts.push(placeName ?? 'Not sorted')
+  return parts.join(' · ')
 }
