@@ -15,6 +15,8 @@ export interface RecipeTileProps {
   wholeMeal?: boolean
   /** TG-RW: Tag name => colour id for the Tags shown on the tile. */
   colourOf?: (name: string) => string | undefined
+  /** Beta.5 F7: the "Last cooked ..." / "Not cooked yet" line for the meta row (lib/lastCooked), already worded. */
+  lastCooked?: string
 }
 
 /**

@@ -9,6 +9,8 @@ export interface RecipeMetricsProps {
   readyMeal: boolean
   totalMinutes: number
   advanceMinutes: number
+  /** Beta.5 F7: the "Last cooked ..." / "Not cooked yet" line (lib/lastCooked), already worded. */
+  lastCooked?: string
 }
 
 /**

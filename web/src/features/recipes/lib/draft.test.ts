@@ -81,7 +81,7 @@ describe('draftToInput', () => {
       cooldownDays: 3, leftoverUseByDays: null, reheatMinutes: null, source: { url: '', attribution: '' }, image: '', imageUrl: '',
       lines: [{ ingredientId: 2, ingredient: 'leek', quantity: 2, unit: 'piece', optional: false, note: '' }],
       steps: [{ text: 'Simmer', kind: 'passive', durationMinutes: 20, leadTimeMinutes: 0, after: [], uses: [], image: '' }],
-      archived: false, totalMinutes: 20, advanceMinutes: 0, advance: [], createdAt: '', updatedAt: '',
+      archived: false, totalMinutes: 20, advanceMinutes: 0, advance: [], createdAt: '', updatedAt: '', lastCookedOn: null,
     }
     const d = draftFromRecipe(recipe)
     expect(d.yield).toBe('2.5')

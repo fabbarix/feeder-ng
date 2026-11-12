@@ -1,3 +1,4 @@
+import type { RecipeSort } from './lib/sort'
 // Wire types of the recipes API (docs/dev/design/t8-recipes.md).
 
 export type StepKind = 'active' | 'passive' | 'advance'
@@ -73,6 +74,8 @@ export interface Recipe extends Omit<RecipeInput, 'courseIds'> {
   advance: { step: number; leadTimeMinutes: number }[]
   createdAt: string
   updatedAt: string
+  /** Beta.5 F7: the latest date (YYYY-MM-DD) a Cooked fresh Planned Meal of this Recipe had; null = never cooked. */
+  lastCookedOn: string | null
 }
 
 export interface RecipeSummary {
@@ -88,6 +91,8 @@ export interface RecipeSummary {
   archived: boolean
   totalMinutes: number
   advanceMinutes: number
+  /** Beta.5 F7: see Recipe.lastCookedOn. */
+  lastCookedOn: string | null
 }
 
 export interface TagCount {
@@ -101,6 +106,8 @@ export interface RecipeFilter {
   /** CRS E2: only Recipes marked with this Course (`?course=`). */
   course?: number
   archived?: 'no' | 'yes' | 'all'
+  /** Beta.5 F7: `?sort=`; absent or 'name' = by name (the server's default). */
+  sort?: RecipeSort
 }
 
 /** An Ingredient as the editor needs it (GET /api/ingredients, ingredients feature). */

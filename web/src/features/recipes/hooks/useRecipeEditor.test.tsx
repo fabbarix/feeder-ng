@@ -107,7 +107,7 @@ describe('useRecipeEditor', () => {
     api.get.mockResolvedValue({
       id: 11, name: 'Aioli', description: '', yield: 4, readyMeal: false, courses: [{ id: 1, name: 'Main' }], wholeMeal: false, tags: [], cooldownDays: null, leftoverUseByDays: null, reheatMinutes: null,
       source: { url: '', attribution: '' }, image: '', imageUrl: '', archived: false, totalMinutes: 0, advanceMinutes: 0, advance: [],
-      lines: [{ ingredientId: 7, ingredient: 'garlic', quantity: 3, unit: 'g', optional: false, note: '' }], steps: [], createdAt: '', updatedAt: '',
+      lines: [{ ingredientId: 7, ingredient: 'garlic', quantity: 3, unit: 'g', optional: false, note: '' }], steps: [], createdAt: '', updatedAt: '', lastCookedOn: null,
     })
     api.replace.mockResolvedValue(saved)
     const { result } = renderHook(() => useRecipeEditor(11), { wrapper })

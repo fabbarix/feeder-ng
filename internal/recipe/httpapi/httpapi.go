@@ -97,7 +97,14 @@ type api struct {
 	store  *store.Store
 	images *imaging.Store
 	events *events.Bus
+	// lastCooked is the port to the plan store (beta.5 F7, ADR 0010 pattern): Recipe id -> latest date (YYYY-MM-DD) of
+	// a Cooked fresh Planned Meal. Wired at mount; nil means no Recipe was ever cooked. The recipe store never reads
+	// plan tables.
+	lastCooked LastCooked
 }
+
+// LastCooked answers, for every Recipe that was cooked fresh, the latest date it was. A Recipe never cooked is absent.
+type LastCooked func(ctx context.Context) (map[int64]string, error)
 
 // JSON shapes.
 
@@ -160,6 +167,8 @@ type recipeJSON struct {
 	Advance           []advanceJSON `json:"advance"`
 	CreatedAt         string        `json:"createdAt"`
 	UpdatedAt         string        `json:"updatedAt"`
+	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only.
+	LastCookedOn *string `json:"lastCookedOn"`
 }
 
 type summaryJSON struct {
@@ -174,6 +183,8 @@ type summaryJSON struct {
 	AdvanceMinutes int      `json:"advanceMinutes"`
 	CourseIDs      []int64  `json:"courseIds"`
 	WholeMeal      bool     `json:"wholeMeal"`
+	// LastCookedOn is the latest date a Cooked fresh Planned Meal of the Recipe had, null when it was never cooked.
+	LastCookedOn *string `json:"lastCookedOn"`
 }
 
 // courseJSON is a Course of a Recipe, in household order.
