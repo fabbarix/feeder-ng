@@ -31,6 +31,15 @@ grep -Eq "ROUTES = \[[^]]*'/stock'" "$F" && bad "ROUTES must not list /stock as 
 has "^//  14\\." "the header comment must document rule 14 (toast vs sticky action bar)"
 has "toast-region" "rule 14 must measure the .toast-region"
 has "toast-region.*sticky-action-bar|sticky-action-bar.*toast-region|toastProbe" "rule 14 must compare the toast region with the sticky action bar"
+# Hotfix 4.2: the photo editor's crop handles sit on the crop box (rule 15), measured on the dev-only fixture route
+has "^//  15\\." "the header comment must document rule 15 (crop handles)"
+has "/_editor-fixture" "rule 15 must open the dev-only editor fixture route"
+has "width of \\[390, 412\\]|\\[390, 412\\]" "rule 15 must run at 390 and 412 px"
+has "crop-editor__handle" "rule 15 must measure the .crop-editor__handle buttons"
+has "> 3" "rule 15 must allow at most 3 px between a handle and its place on the crop box"
+has "crop-editor__readout|data-fixture-below|overlaps" "rule 15 must check that no handle sits on the controls below the editor"
+grep -q "_editor-fixture" "$ROOT/web/src/main.tsx" && grep -q "import.meta.env.DEV" "$ROOT/web/src/main.tsx" && ok || bad "main.tsx must register /_editor-fixture only under import.meta.env.DEV"
+grep -Eq "^\\s*import .*EditorFixture|from '\\./dev/EditorFixture'" "$ROOT/web/src/main.tsx" && bad "main.tsx must load the fixture lazily (dynamic import), never statically" || ok
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"

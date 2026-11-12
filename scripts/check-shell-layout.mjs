@@ -21,6 +21,9 @@
 //      at 360 and 390 px, with the page scrolled to the top and to the end (no strip of page content between them).
 //  14. (phone, < 1024, /recipes/new) FU-1: with a toast raised, the .toast-region's bottom edge is at or above the sticky action bar's top edge
 //      (1 px tolerance), at 360 and 390 px, scrolled to the end where the bar sits on the bottom bar. A toast never covers Save.
+//  15. (phone, 390 and 412 px, dev route /_editor-fixture) hotfix 4.2: the photo editor, hosted inside a Tile as in the Read step, on a generated
+//      2268x3226 picture: the eight crop handles sit within 3 px of the crop box's corners and edge middles (whole picture and an inset crop),
+//      and no handle overlaps the read-out, the action row or the button below the editor.
 // Exit code 0 = all passed. Prints one line per failed assertion.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -296,6 +299,55 @@ for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   else if (t.gap < -1) fail(`${tag}: the toast region's bottom edge (${t.regionBottom}px) is below the sticky action bar's top edge (${t.barTop}px)`)
 }
 
+// Rule 15 (hotfix 4.2): the crop handles sit on the crop box. The Read step's Tile restyled every button in it to position: relative, so the
+// handles were stacked in normal flow and scattered. The fixture route is dev-only (main.tsx), like /_gallery.
+const handleProbe = `
+(async () => {
+  await new Promise((r) => setTimeout(r, 800))
+  const rect = document.querySelector('.crop-editor__rect')
+  if (!rect) return null
+  const handles = Object.fromEntries([...document.querySelectorAll('.crop-editor__handle')].map((h) => [h.dataset.handle, h]))
+  const measure = () => {
+    const r = rect.getBoundingClientRect()
+    const centre = (el) => { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2] }
+    const want = { nw: [r.left, r.top], n: [r.left + r.width / 2, r.top], ne: [r.right, r.top], e: [r.right, r.top + r.height / 2], se: [r.right, r.bottom], s: [r.left + r.width / 2, r.bottom], sw: [r.left, r.bottom], w: [r.left, r.top + r.height / 2] }
+    const off = Object.fromEntries(Object.entries(handles).map(([k, el]) => { const [x, y] = centre(el); return [k, Math.round(Math.max(Math.abs(x - want[k][0]), Math.abs(y - want[k][1])) * 10) / 10] }))
+    // the 16 px dot of each handle against the controls below the editor
+    const below = [...document.querySelectorAll('.crop-editor__readout, .crop-editor__actions button, [data-fixture-below]')].map((el) => ({ name: (el.textContent || el.getAttribute('aria-label') || el.className).trim().slice(0, 20), box: el.getBoundingClientRect() }))
+    const overlaps = []
+    for (const [k, el] of Object.entries(handles)) {
+      const [x, y] = centre(el)
+      for (const c of below) if (x + 8 > c.box.left && x - 8 < c.box.right && y + 8 > c.box.top && y - 8 < c.box.bottom) overlaps.push(k + ' over "' + c.name + '"')
+    }
+    return { off, overlaps, positions: Object.fromEntries(Object.entries(handles).map(([k, el]) => [k, getComputedStyle(el).position])) }
+  }
+  const full = measure()
+  // an inset crop: pull each edge in with the keyboard (Shift+arrow on the handle)
+  const press = async (name, key, n) => { const el = handles[name]; el.focus(); for (let i = 0; i < n; i++) { el.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey: true, bubbles: true })); await new Promise((r) => setTimeout(r, 30)) } }
+  await press('s', 'ArrowUp', 4)
+  await press('n', 'ArrowDown', 2)
+  await press('e', 'ArrowLeft', 2)
+  await press('w', 'ArrowRight', 2)
+  await new Promise((r) => setTimeout(r, 200))
+  return { full, inset: measure() }
+})()`
+for (const width of [390, 412]) {
+  await cdp('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 2.6, mobile: true })
+  await cdp('Page.navigate', { url: base + '/_editor-fixture?w=2268&h=3226' })
+  await new Promise((r) => setTimeout(r, 1500))
+  const h = await evaluate(handleProbe).catch(() => null)
+  const tag = `${width}px /_editor-fixture`
+  if (!h) {
+    fail(`${tag}: the photo editor did not open (no .crop-editor__rect)`)
+    continue
+  }
+  for (const [stage, m] of Object.entries(h)) {
+    for (const [name, off] of Object.entries(m.off)) if (off > 3) fail(`${tag} (${stage} crop): handle ${name} is ${off}px from its place on the crop box (limit 3)`)
+    for (const name of Object.keys(m.off)) if (m.positions[name] !== 'absolute') fail(`${tag} (${stage} crop): handle ${name} is position ${m.positions[name]}, not absolute`)
+    for (const o of m.overlaps) fail(`${tag} (${stage} crop): handle ${o} (a handle must not sit on the controls below the editor)`)
+  }
+}
+
 ws.close()
 chrome.removeAllListeners('exit')
 const closed = new Promise((r) => chrome.once('exit', r))
@@ -306,4 +358,4 @@ if (failures.length) {
   console.error(`check-shell-layout: ${failures.length} failure(s)\n` + failures.map((f) => '  - ' + f).join('\n'))
   process.exit(1)
 }
-console.log(`check-shell-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes)`)
+console.log(`check-shell-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes, photo editor handles)`)
