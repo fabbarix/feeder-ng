@@ -3,7 +3,7 @@
 Runs the Feeder (family meal planning) on Kubernetes: one pod, the image from GHCR, and a PersistentVolumeClaim for its SQLite database. Both the chart and the image are public, so installing needs no registry login.
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.1 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -49,7 +49,7 @@ The Recipe Assistant encrypts its API key at rest with `FEEDER_SECRET_KEY`: 32 r
   ```sh
   kubectl -n feeder create secret generic feeder-secret-key \
     --from-literal=secret-key="$(openssl rand -base64 32)"
-  helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4 --namespace feeder \
+  helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.1 --namespace feeder \
     --reset-then-reuse-values --set secretKey.existingSecret=feeder-secret-key
   ```
 - **Off (`secretKey.generate: false`, no `existingSecret`).** No Secret and no `FEEDER_SECRET_KEY`: the Recipe Assistant stays off.

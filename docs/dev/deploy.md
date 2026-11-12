@@ -18,6 +18,7 @@ Third-party licences: the image carries [THIRD_PARTY_NOTICES.md](../../THIRD_PAR
 | `1.0.0-beta.2` | tag `v1.0.0-beta.2` | prerelease: the second beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.3` | tag `v1.0.0-beta.3` | prerelease: the third beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.4` | tag `v1.0.0-beta.4` | prerelease: the fourth beta; never `latest`, `1.0` or `1` |
+| `1.0.0-beta.4.1` | tag `v1.0.0-beta.4.1` | prerelease: the first fix release of the fourth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-dev` | tag `v1.0.0-dev` | earlier prerelease; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
 | `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
@@ -145,7 +146,7 @@ The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy 
 The chart is public too, published as an OCI artifact; installing it needs no login:
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.1 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -153,7 +154,7 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4 
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-The chart version equals the release (`v1.0.0-beta.4` publishes chart `1.0.0-beta.4` with `appVersion` `1.0.0-beta.4`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
+The chart version equals the release (`v1.0.0-beta.4.1` publishes chart `1.0.0-beta.4.1` with `appVersion` `1.0.0-beta.4.1`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
 
 - **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
 - **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). `/data` must be writable by uid/gid 65532. The pod sets `fsGroup: 65532`, which makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
@@ -162,7 +163,7 @@ The chart version equals the release (`v1.0.0-beta.4` publishes chart `1.0.0-bet
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4 --namespace feeder --reset-then-reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.1 --namespace feeder --reset-then-reuse-values \
     --set google.existingSecret=feeder-google
   ```
 

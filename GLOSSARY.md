@@ -26,6 +26,10 @@ _Avoid_: Account, login, member
 A User who also manages who may sign in, the Members, Meal Slots, Courses, Shops and household settings.
 _Avoid_: Owner, superuser
 
+**Allowlist**:
+The list of emails, managed by an Admin, that may sign in at once. Any other verified Google account makes an **Access Request** instead.
+_Avoid_: Invite list, guest list, whitelist
+
 **Access Request**:
 A verified Google account's request to sign in, waiting for any User to approve or deny it; it expires after 14 days.
 _Avoid_: Invite, join request, signup, application
