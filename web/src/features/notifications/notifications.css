@@ -1,11 +1,4 @@
 /* Notification settings: Bento tiles, Figtree, muted secondary text. */
-.notifications {
-  display: grid;
-  gap: 16px;
-  padding: 16px;
-  max-width: 640px;
-  margin: 0 auto;
-}
 .notifications__heading {
   font-size: 1.125rem;
   margin: 0 0 8px;
