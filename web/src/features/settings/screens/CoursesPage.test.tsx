@@ -161,7 +161,13 @@ describe('CoursesPage: Add Course', () => {
 
 describe('CoursesPage: Rename and Make main', () => {
   it('Rename edits in place and PATCHes the new name on Enter', async () => {
-    const api = routes(ADMIN_ME, { 'PATCH /api/courses/2': { ...activeCourses[1], name: 'Sides' } })
+    // The list is stateful: after the PATCH the server serves the new name, so the page can only show it by refetching.
+    const renamed = { value: false }
+    const api = routes(
+      ADMIN_ME,
+      { 'PATCH /api/courses/2': () => { renamed.value = true; return { ...activeCourses[1], name: 'Sides' } } },
+      () => allCourses.map((c) => (c.id === 2 && renamed.value ? { ...c, name: 'Sides' } : c)),
+    )
     await show()
     await menuFor('Side', 'Rename')
     const field = screen.getByRole('textbox', { name: 'Rename Side' })
@@ -171,6 +177,8 @@ describe('CoursesPage: Rename and Make main', () => {
     expect(api.callsTo('PATCH', '/api/courses/2')[0]!.body).toEqual({ name: 'Sides' })
     await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename Side' })).toBeNull())
     expect(await findNotice('status', 'Renamed to Sides.')).toBeInTheDocument()
+    expect(api.callsTo('GET', '/api/courses?archived=1').length).toBeGreaterThan(1)
+    await waitFor(() => expect(rows().map(nameOf)).toEqual(['Main', 'Sides', 'Starter', 'Dessert']))
     // Focus returns to the row's actions button (named after the new name), never to <body>.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Sides' })).toHaveFocus())
   })
@@ -187,7 +195,8 @@ describe('CoursesPage: Rename and Make main', () => {
     routes()
     await show()
     await menuFor('Side', 'Rename')
-    await userEvent.click(within(rowOf('Side')).getByRole('button', { name: 'Cancel' }))
+    const row = screen.getByRole('textbox', { name: 'Rename Side' }).closest('li')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Actions for Side' })).toHaveFocus())
   })
 
