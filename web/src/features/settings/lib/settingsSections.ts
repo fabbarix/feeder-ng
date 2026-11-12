@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'tags' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
+  id: 'ingredients' | 'products' | 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'tags' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -15,7 +15,7 @@ export interface SettingsSection {
 }
 
 export interface SettingsGroup {
-  id: 'household' | 'you' | 'admin'
+  id: 'catalogue' | 'household' | 'you'
   title: string
   sections: SettingsSection[]
 }
@@ -23,32 +23,35 @@ export interface SettingsGroup {
 const copy = settingsStrings.index.sections
 
 const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
+  { group: 'catalogue', id: 'ingredients', ...copy.ingredients, icon: 'ingredients', path: '/ingredients' },
+  { group: 'catalogue', id: 'products', ...copy.products, icon: 'barcodes', path: '/products' },
+  { group: 'catalogue', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
+  { group: 'catalogue', id: 'tags', ...copy.tags, icon: 'tag', path: '/settings/tags' },
+  { group: 'catalogue', id: 'courses', ...copy.courses, icon: 'dinner', path: '/settings/courses' },
+  { group: 'catalogue', id: 'storagePlaces', ...copy.storagePlaces, icon: 'stock', path: '/settings/storage-places' },
   { group: 'household', id: 'household', ...copy.household, icon: 'household', path: '/settings/household' },
   { group: 'household', id: 'members', ...copy.members, icon: 'members', path: '/settings/members' },
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
-  { group: 'household', id: 'courses', ...copy.courses, icon: 'dinner', path: '/settings/courses' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
-  { group: 'household', id: 'tags', ...copy.tags, icon: 'tag', path: '/settings/tags' },
-  { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
-  { group: 'household', id: 'storagePlaces', ...copy.storagePlaces, icon: 'stock', path: '/settings/storage-places' },
   { group: 'household', id: 'accessRequests', ...copy.accessRequests, icon: 'timer', path: '/settings/access-requests' },
+  { group: 'household', id: 'allowlist', ...copy.allowlist, icon: 'allowlist', path: '/settings/allowlist', adminOnly: true },
+  { group: 'household', id: 'recipeAssistant', ...copy.recipeAssistant, icon: 'assistant', path: '/settings/recipe-assistant', adminOnly: true },
   { group: 'you', id: 'preferences', ...copy.preferences, icon: 'appearance', path: '/settings/preferences' },
   { group: 'you', id: 'notifications', ...copy.notifications, icon: 'notifications', path: '/settings/notifications' },
-  { group: 'admin', id: 'allowlist', ...copy.allowlist, icon: 'allowlist', path: '/settings/allowlist', adminOnly: true },
-  { group: 'admin', id: 'recipeAssistant', ...copy.recipeAssistant, icon: 'assistant', path: '/settings/recipe-assistant', adminOnly: true },
 ]
 
 const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
+  { id: 'catalogue', title: settingsStrings.index.groups.catalogue },
   { id: 'household', title: settingsStrings.index.groups.household },
   { id: 'you', title: settingsStrings.index.groups.you },
-  { id: 'admin', title: settingsStrings.index.groups.admin },
 ]
 
 /**
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
- *   Household: Household, Members, Meal Slots, Planning rules, Tags, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /tags, /shops, /access-requests)
- *   You:       Your preferences, Notifications                          (/settings/preferences, /notifications)
- *   Admin:     Allowlist, Recipe Assistant (Admins only)                (/settings/allowlist, /settings/recipe-assistant)
+ *   Catalogue: Ingredients, Products, Shops, Tags, Courses, Storage Places     (/ingredients, /products, /settings/shops, /tags, /courses, /storage-places)
+ *   Household: Household, Members, Meal Slots, Planning rules, Sign-in requests; Admins also get Allowlist and Recipe Assistant, last
+ *                                                                              (/settings/household, /members, /meal-slots, /planning, /access-requests, /allowlist, /recipe-assistant)
+ *   You:       Your preferences, Notifications                                 (/settings/preferences, /notifications)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
  */
 export function settingsGroups(isAdmin: boolean): SettingsGroup[] {

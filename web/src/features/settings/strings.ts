@@ -11,10 +11,12 @@ export const settingsStrings = {
   preferences: 'Your preferences',
   index: {
     title: 'Settings',
-    groups: { household: 'Household', you: 'You', admin: 'Admin' },
+    groups: { catalogue: 'Catalogue', household: 'Household', you: 'You' },
     /** The row's accessible name when requests wait: the count is shown once, as the badge. */
     rowWithCount: (title: string, n: number) => `${title}, ${n} waiting`,
     sections: {
+      ingredients: { title: 'Ingredients', meta: 'What you cook with, and what it means' },
+      products: { title: 'Products', meta: 'What you buy: brands and pack sizes' },
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
       mealSlots: { title: 'Meal Slots', meta: 'When the Household eats, by weekday' },

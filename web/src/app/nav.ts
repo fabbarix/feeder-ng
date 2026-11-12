@@ -39,12 +39,8 @@ export const MENU_NAV: readonly NavItem[] = [
   { id: 'board', label: 'Kitchen board', path: '/board', icon: 'board', placement: 'menu' },
 ]
 
-/** S-01: icons of the menu entries features add (their nav items may leave `icon` out), so no entry shows the default chevron. */
-const MENU_ICONS: Readonly<Record<string, IconName>> = {
-  ingredients: 'ingredients',
-  products: 'barcodes',
-  shops: 'shops',
-}
+/** Icons registered for menu entries by id. beta.5: Ingredients, Products and Shops left the menu for Settings > Catalogue, so none is left. */
+const MENU_ICONS: Readonly<Record<string, IconName>> = {}
 
 /** The icon of a menu entry: its own, else the one registered for its id, else `chevron`. */
 export function menuIconFor(item: Pick<NavItem, 'id' | 'icon'>): IconName {

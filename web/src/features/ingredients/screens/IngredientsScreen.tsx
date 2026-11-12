@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { Button, EmptyState, ListPage, PageHeader, SearchField } from '../../../ui'
 import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
@@ -14,6 +15,7 @@ export function IngredientsScreen() {
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
   const list = useIngredients(query)
+  const breadcrumbs = useBreadcrumbs()
 
   const openNew = () => setCreating(true)
   let body
@@ -29,7 +31,7 @@ export function IngredientsScreen() {
 
   return (
     <ListPage
-      header={<PageHeader title={strings.title} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />}
+      header={<PageHeader title={strings.title} breadcrumbs={breadcrumbs} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />}
       search={<SearchField label={strings.searchLabel} value={query} onChange={setQuery} />}
     >
       {body}

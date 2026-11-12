@@ -5,9 +5,12 @@ export const breadcrumbStrings = {
   roots: {
     settings: 'Settings',
     recipes: 'Recipes',
+    plan: 'Plan',
+  },
+  /** beta.5: the Catalogue lists sit under Settings, so their crumb is the list's own title. */
+  catalogue: {
     ingredients: 'Ingredients',
     products: 'Products',
-    plan: 'Plan',
   },
   /** Fallback labels for an entity crumb until its name is known (the GLOSSARY term). */
   entity: {

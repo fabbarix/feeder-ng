@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { Chip, ListPage, PageHeader, SearchField } from '../../../ui'
 import { ProductList } from '../components/ProductList'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
@@ -14,9 +15,10 @@ export function ProductsScreen() {
   const { products, isLoading, error } = useProducts(q, archived)
   useProductsLiveUpdates()
   const system = useDisplayUnitSystem()
+  const breadcrumbs = useBreadcrumbs()
   return (
     <ListPage
-      header={<PageHeader title={strings.productsTitle} />}
+      header={<PageHeader title={strings.productsTitle} breadcrumbs={breadcrumbs} />}
       search={<SearchField label={strings.productsSearch} value={q} onChange={setQ} />}
       filters={
         <Chip kind="filter" selected={archived} onClick={() => setArchived((on) => !on)}>
