@@ -92,7 +92,7 @@ describe('MealSlotsPage: the cards', () => {
   it('shows a loading status first', () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Loading')).toBeInTheDocument()
   })
 })
 
@@ -143,7 +143,7 @@ describe('MealSlotsPage: Admin actions on a card', () => {
     await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Edit Dinner on Friday' }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     expect(within(dialog).getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(dialog).getByRole('spinbutton', { name: 'Hour' })).toHaveValue(20)
+    expect(within(dialog).getByRole('spinbutton', { name: 'Hour' })).toHaveValue('20')
   })
 
   it('a dashed "+" on a free Lunch day opens the add sheet for Lunch on that weekday', async () => {

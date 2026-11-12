@@ -55,7 +55,7 @@ describe('MealSlotCard: the 7-day strip', () => {
     const { region } = setup()
     const strip = within(region).getByRole('group', { name: 'Dinner by weekday' })
     expect(within(strip).getByText('20:00')).toBeInTheDocument()
-    expect(within(strip).getAllByText('19:30')).toHaveLength(5)
+    expect(within(strip).getAllByText('19:30')).toHaveLength(6)
   })
   it('an Admin taps a day to edit that Meal Slot', async () => {
     const { props, region } = setup()

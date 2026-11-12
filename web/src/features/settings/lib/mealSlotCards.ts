@@ -199,11 +199,20 @@ export function attendanceText(attendance: CardAttendance, members: Member[]): s
   return names ? text.onlyEats(names) : text.nobodyAttending
 }
 
-/** "Dessert: Mia only" for a Course some attending Members opt out of; null when everyone who attends eats it. */
-export function courseEatersText(course: CourseChip, members: Member[]): string | null {
+/**
+ * Who eats a Course some attending Members opt out of, in whichever form is shorter: "Dessert: Mia only" or "Dessert: without Sam"
+ * (a tie goes to the "only" form). `attending` is the Attendance the eaters are taken from. Null when everyone who attends eats it.
+ */
+export function courseEatersText(course: CourseChip, members: Member[], attending: CardAttendance = { state: 'everyone' }): string | null {
   if (course.eaters === null) return null
   const names = memberNames(course.eaters, members)
-  return names ? text.courseEaters(course.name, names) : null
+  if (!names) return null
+  const only = text.courseEaters(course.name, names)
+  const present = attending.state === 'everyone' ? members.map((m) => m.id) : attending.state === 'some' ? attending.memberIds : course.eaters
+  const outNames = memberNames(present.filter((id) => !course.eaters!.includes(id)), members)
+  if (!outNames) return only
+  const without = text.courseWithout(course.name, outNames)
+  return without.length < only.length ? without : only
 }
 
 /** The Courses of a day that differs: "Main only" when they are fewer than the usual ones and all of them are usual, else listed. */

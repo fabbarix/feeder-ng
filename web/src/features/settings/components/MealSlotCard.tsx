@@ -61,7 +61,7 @@ export function MealSlotCard({ card, members, canEdit, addDisabled = false, loca
                 ))}
               </ul>
               {card.usualCourses.map((c) => {
-                const eaters = courseEatersText(c, members)
+                const eaters = courseEatersText(c, members, card.usualAttendance)
                 return eaters ? (
                   <p key={c.id} className="ms-courses__eaters">
                     {eaters}

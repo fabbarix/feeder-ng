@@ -44,7 +44,7 @@ describe('MealSlotsPage: Courses', () => {
     const card = await screen.findByRole('region', { name: 'Dinner' })
     const list = within(card).getByRole('list', { name: 'Courses' })
     expect(within(list).getAllByRole('listitem').map((i) => i.textContent)).toEqual(['Main', 'Side', 'Dessert (optional)'])
-    expect(within(card).getByText('Dessert: Anna, Marco only')).toBeInTheDocument()
+    expect(within(card).getByText('Dessert: without Sam')).toBeInTheDocument()
   })
 
   it('lists Thursday (no Dessert) under "Differs on"', async () => {

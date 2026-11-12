@@ -1,7 +1,7 @@
 // MS redesign: the pure model of the Meal Slots cards (grouping, usual values with the tie rule, differences, the 7-day strip, scaling).
 import { describe, expect, it } from 'vitest'
 import type { MealSlot, Member, SlotCourse } from '../types'
-import { attendanceText, buildMealSlotCards, datePartText, datesThatDiffer, daysLabel, differenceParts, pickUsual } from './mealSlotCards'
+import { attendanceText, buildMealSlotCards, courseEatersText, datePartText, datesThatDiffer, daysLabel, differenceParts, pickUsual } from './mealSlotCards'
 
 const member = (id: number, name: string): Member => ({ id, name, colour: '#336699', avatar: '', portionFactor: 1, userId: null, email: null })
 const mia = member(1, 'Mia')
@@ -223,6 +223,29 @@ describe('buildMealSlotCards: scaling', () => {
   it('a Course whose opt-outs are all outside the attendance has no named eaters', () => {
     const cards = build([slot(1, 'Dinner', '19:30', { attendance: eats(1), courses: [main, dessert([2])] })])
     expect(cards[0]!.usualCourses[1]!.eaters).toBeNull()
+  })
+})
+
+describe('courseEatersText: the shorter of "only" and "without"', () => {
+  const chip = (eaters: number[] | null) => ({ id: 4, name: 'Dessert', optional: true, eaters })
+  it('names the eaters when that is shorter: "Dessert: Mia only" (Fabio opts out)', () => {
+    expect(courseEatersText(chip([1]), two)).toBe('Dessert: Mia only')
+  })
+  it('names the opt-outs when that is shorter: "Dessert: without Sam" among Mia, Fabio and Sam', () => {
+    expect(courseEatersText(chip([1, 2]), [...two, member(3, 'Sam')])).toBe('Dessert: without Sam')
+  })
+  it('with six Members and one opt-out it says "without"', () => {
+    expect(courseEatersText(chip([1, 2, 3, 4, 5]), six)).toBe('Dessert: without Zio Carlo')
+  })
+  it('the opt-outs are taken from the usual Attendance: with Mia and Fabio only attending, Sam out of the room is not "without Sam"', () => {
+    expect(courseEatersText(chip([1]), [...two, member(3, 'Sam')], { state: 'some', memberIds: [1, 2] })).toBe('Dessert: Mia only')
+  })
+  it('on a tie in length the "only" form wins ("Dessert: Anna only" = "Dessert: without A")', () => {
+    const people = [member(1, 'Anna'), member(2, 'A')]
+    expect(courseEatersText(chip([1]), people)).toBe('Dessert: Anna only')
+  })
+  it('is null when everyone who attends eats the Course', () => {
+    expect(courseEatersText(chip(null), two)).toBeNull()
   })
 })
 
