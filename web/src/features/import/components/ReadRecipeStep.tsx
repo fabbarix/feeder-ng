@@ -70,10 +70,11 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     setTab('photo')
   }, [pages.restoredCount, availability.photos])
 
-  // Sending (the photos are turned into data URLs) holds the button until the read has started, failed or ended: any change of phase ends it.
+  // Sending (the photos are turned into data URLs) holds the button until the read has started, failed or ended. A refused start sets a new
+  // error even when the phase is already 'failed', so the error (and the phase) end it.
   useEffect(() => {
     setSending(false)
-  }, [read.phase])
+  }, [read.phase, read.error])
 
   // The photos are kept until a read reaches review (see usePhotoReadEnd).
   usePhotoReadEnd(read, pages.finished)

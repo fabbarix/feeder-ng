@@ -17,7 +17,7 @@ export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
   fileName?: string
   /** Accepted files (only the first unless `multiple`). */
   onFiles: (files: File[]) => void
-  /** Files that do not match `accept` (called after onFiles, so the order of a mixed drop is kept). */
+  /** Files that do not match `accept`. */
   onReject?: (files: File[]) => void
   /** The button's description (a host says why choosing is off); the button has no description of its own otherwise. */
   'aria-describedby'?: string
@@ -32,9 +32,9 @@ export function FileDrop({ label, helper, error, disabled, accept, multiple, fil
   const distribute = (files: File[]) => {
     const accepted = files.filter((f) => acceptsFile(f, accept))
     const rejected = files.filter((f) => !acceptsFile(f, accept))
+    if (rejected.length > 0) onReject?.(rejected)
     const chosen = multiple ? accepted : accepted.slice(0, 1)
     if (chosen.length > 0) onFiles(chosen)
-    if (rejected.length > 0) onReject?.(rejected)
   }
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
