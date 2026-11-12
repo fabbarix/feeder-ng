@@ -61,9 +61,9 @@ describe('SignInPage look (5.16)', () => {
 })
 
 describe('NotInvitedPage', () => {
-  it('says the email is not invited and how to get in', () => {
+  it('says the email is not on the Allowlist and how to get in', () => {
     render(<NotInvitedPage />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Not invited' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Not on the Allowlist' })).toBeInTheDocument()
     expect(screen.getByText(/ask an Admin/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Use a different Google sign-in' })).toHaveAttribute('href', '/auth/google/login')
   })
@@ -87,8 +87,8 @@ describe('SignedOut', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/did not work/i)
   })
 
-  it('shows Not invited at /not-invited', () => {
+  it('shows Not on the Allowlist at /not-invited', () => {
     at('/not-invited')
-    expect(screen.getByRole('heading', { name: 'Not invited' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Not on the Allowlist' })).toBeInTheDocument()
   })
 })

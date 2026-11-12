@@ -90,7 +90,7 @@ describe('ReviewPhotoChoice', () => {
   })
   it('says only the chosen photo is kept (helper)', () => {
     setup({ photos: photos(2), choice: on })
-    expect(screen.getByText('Only the chosen photo is kept. The others are discarded.')).toBeInTheDocument()
+    expect(screen.getByText('Only the chosen photo is kept. The others are left out.')).toBeInTheDocument()
   })
   it('thumbnails never use a data URL (they come from the server endpoint) and have no download link', () => {
     const { container } = setup({ photos: photos(2), choice: on })

@@ -33,9 +33,9 @@ describe('AppRoot signed out', () => {
     expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/auth/google/login')
   })
 
-  it('shows the not-invited page after Google refuses the Google sign-in', async () => {
+  it('shows the not-on-the-Allowlist page after Google refuses the Google sign-in', async () => {
     mount('/not-invited', unauthenticated())
-    expect(await screen.findByRole('heading', { name: 'Not invited' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Not on the Allowlist' })).toBeInTheDocument()
   })
 
   it('shows why a sign-in failed', async () => {

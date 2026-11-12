@@ -48,3 +48,38 @@ describe('signin.css: the Feeder mark is visible on the hero Tile', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
   })
 })
+
+// QA-3 (dark mode): the sign-in and waiting pages must show the app's background token in both themes, never a different
+// dark. The page paints --color-background itself (the same token as body), so what sits behind the hero Tile does not
+// depend on what paints html or body; the boot paint and the theme-color metas carry the same Basil values as the tokens.
+const styles = readFileSync(`${cwd}/src/styles.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+const indexHtml = readFileSync(`${cwd}/index.html`, 'utf8')
+
+describe('signin.css: the page uses the app background token in light and dark', () => {
+  it('.signin paints var(--color-background) (not a literal, not the surface tokens)', () => {
+    expect(declarations(css, '.signin')['background']).toBe('var(--color-background)')
+  })
+
+  it('body paints the same token', () => {
+    expect(styles).toMatch(/body\s*\{[^}]*background:\s*var\(--color-background\)/)
+  })
+
+  it('--color-background is --color-bg, and every dark block sets --color-bg to the dark Basil ground (#090f0b)', () => {
+    expect(styles).toContain('--color-background: var(--color-bg)')
+    const dark = [...styles.matchAll(/(?:\[data-scheme='dark'\]|:root:not\(\[data-scheme='light'\]\))\s*\{([^}]*)\}/g)]
+    expect(dark.length).toBeGreaterThanOrEqual(2)
+    for (const m of dark) expect(m[1]).toMatch(/--color-bg:\s*#090f0b;/)
+  })
+
+  it('the boot background in index.html and its dark theme-color equal the tokens', () => {
+    expect(indexHtml).toMatch(/html\s*\{\s*background:\s*#e7f4eb;\s*\}/)
+    expect(indexHtml).toMatch(/data-scheme='light'\]\)\s*\{\s*background:\s*#090f0b;/)
+    expect(indexHtml).toMatch(/data-scheme='dark'\]\s*\{\s*background:\s*#090f0b;/)
+    expect(indexHtml).toMatch(/prefers-color-scheme: dark\)"\s+content="#090f0b"/)
+  })
+
+  it('the waiting page uses the same .signin page (no second background rule in access.css)', () => {
+    const access = readFileSync(`${cwd}/src/features/access/access.css`, 'utf8')
+    expect(access).not.toMatch(/\.signin\b[^{]*\{[^}]*background/)
+  })
+})
