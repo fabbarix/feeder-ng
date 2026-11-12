@@ -7,7 +7,7 @@
 an Avoid word.
 
 ## Decision (final, from the user)
-Copy: **"Google has not verified this email. Use a different Google sign-in."** Title: **"Email not verified"**.
+Copy: body **"Google has not verified this email."** only; the link below it keeps "Use a different Google sign-in" (the sentence is not repeated). Title: **"Email not verified"**.
 
 ## Names chosen
 GLOSSARY has no term for this page; it uses only words the GLOSSARY allows ("Google sign-in"; "email" is plain English, "account" is avoided).
