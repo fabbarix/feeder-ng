@@ -452,6 +452,10 @@ func (a *api) addSlotRule(w http.ResponseWriter, r *http.Request) {
 	if body.Tag != "" {
 		rule.Tag = recipe.TagKey(body.Tag)
 	}
+	if err := a.requireTag(r.Context(), rule.Tag); err != nil {
+		writeErr(w, err)
+		return
+	}
 	rule, err := a.run.CheckRule(r.Context(), rule)
 	if err != nil {
 		writeErr(w, err)
@@ -513,6 +517,10 @@ func (a *api) setVarietyRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := plan.VarietyRule{Tag: recipe.TagKey(r.PathValue("tag")), MaxPerWeek: body.MaxPerWeek, NotConsecutiveDays: body.NotConsecutiveDays}
+	if err := a.requireTag(r.Context(), v.Tag); err != nil {
+		writeErr(w, err)
+		return
+	}
 	err := a.run.ChangeRules(r.Context(), func(st *store.Store) error {
 		return st.SetVarietyRule(r.Context(), v)
 	})
