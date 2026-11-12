@@ -127,7 +127,7 @@ export function useNotificationSettings(port: PushPort = browserPushPort): Notif
     enableMutation.isPending || disableMutation.isPending || setTypeMutation.isPending || removeMutation.isPending
 
   return {
-    loading: config.isPending || devices.isPending,
+    loading: config.isPending || devices.isPending || browser.isPending,
     error: (config.error ?? devices.error) as Error | null,
     support: pushSupport(port.environment()),
     config: config.data,

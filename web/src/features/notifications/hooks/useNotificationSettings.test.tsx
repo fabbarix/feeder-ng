@@ -36,10 +36,24 @@ describe('useNotificationSettings', () => {
     mockApi({ 'GET /api/notifications/config': config, 'GET /api/notifications/devices': { devices: [mine, other] } })
     const { result } = renderHook(() => useNotificationSettings(port({ currentSubscription: async () => sub })), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))
-    await waitFor(() => expect(result.current.thisDevice?.id).toBe(1))
+    expect(result.current.thisDevice?.id).toBe(1)
     expect(result.current.support).toBe('supported')
     expect(result.current.otherDevices.map((d) => d.id)).toEqual([2])
     expect(result.current.config?.quietHours).toEqual({ start: '22:00', end: '07:00' })
+  })
+
+  it('stays loading until this browser subscription is read, so this device never flashes as missing', async () => {
+    const mine = await deviceFor(sub.endpoint, 1)
+    mockApi({ 'GET /api/notifications/config': config, 'GET /api/notifications/devices': { devices: [mine] } })
+    let release: (s: BrowserSubscription) => void = () => {}
+    const pending = new Promise<BrowserSubscription>((resolve) => (release = resolve))
+    const { result } = renderHook(() => useNotificationSettings(port({ currentSubscription: () => pending })), { wrapper })
+    await waitFor(() => expect(result.current.config).toBeDefined())
+    await waitFor(() => expect(result.current.otherDevices).toHaveLength(1))
+    expect(result.current.loading).toBe(true)
+    release(sub)
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.thisDevice?.id).toBe(1)
   })
 
   it('enable asks permission, subscribes with the server key and registers the device', async () => {
