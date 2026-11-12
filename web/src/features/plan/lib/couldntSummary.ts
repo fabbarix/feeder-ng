@@ -42,9 +42,10 @@ function clauseFor(name: string, affected: PlanSlot[], inPlan: number): Clause {
 /**
  * "Every dinner this week, plus weekend breakfasts and Tuesday lunch": what the affected meals are, by Meal Slot name,
  * biggest part first. `everything` is the whole plan; "every" is measured against its slots that still count (a Planned Meal
- * or a recorded reason, not a past slot). Without it the affected meals are all it knows.
+ * or a recorded reason, not a past slot). Without it the affected meals are all it knows. CRS G2: `capitalise: false` gives
+ * the clause as it reads inside a sentence ("every dinner this week", "Tuesday and Wednesday dinners" keeps its weekday capitals).
  */
-export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected): string {
+export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = affected, _options: { capitalise?: boolean } = {}): string {
   if (affected.length === 0) return ''
   // Only slots that still count: a Planned Meal or a recorded reason. A slot whose time has gone has neither.
   const all = everything.filter((x) => x.meal != null || x.unfilled != null)
@@ -67,3 +68,14 @@ export function summarizeSlots(affected: PlanSlot[], everything: PlanSlot[] = af
   return out.charAt(0).toUpperCase() + out.slice(1)
 }
 
+
+/**
+ * CRS G2: `summarizeSlots` over cells (one per Course). Slots where every Course of the slot is affected are summarised
+ * once, by Meal Slot ("Every dinner this week"); the others per Course, "Side at every dinner this week" (the Course
+ * name, "at", then that Course's own clauses, measured against that Course's counting cells in `all`). Parts are joined
+ * "…, plus …", the whole-slot part first, then the Courses by number of cells. '' when there are no cells.
+ * For cells of slots without Courses it gives exactly what `summarizeSlots(cells, all)` gives.
+ */
+export function summarizeCells(_cells: PlanSlot[], _all: PlanSlot[] = _cells): string {
+  throw new Error('CRS G2: not implemented')
+}

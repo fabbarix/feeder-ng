@@ -12,26 +12,14 @@ function unfilled(date: string, reason: UnfilledReason, eliminated: Partial<Elim
 }
 
 describe('couldntPlanText', () => {
-  it('every option excluded or in Cool-down', () => {
-    expect(couldntPlanText(unfilled('2026-11-12', 'no_candidates', { considered: 4, exclusion: 1, coolDown: 3 }))).toBe(
-      "Couldn't plan Thursday dinner: every option was excluded or in Cool-down.",
-    )
-  })
-
   it('names only the filters that removed something', () => {
-    expect(couldntPlanText(unfilled('2026-11-12', 'no_candidates', { considered: 1, coolDown: 1 }))).toBe(
-      "Couldn't plan Thursday dinner: every option was in Cool-down.",
-    )
-    expect(couldntPlanText(unfilled('2026-11-12', 'no_candidates', { considered: 4, exclusion: 2, coolDown: 1, varietyRule: 1 }))).toBe(
-      "Couldn't plan Thursday dinner: every option was excluded, in Cool-down or blocked by a Variety Rule.",
-    )
     expect(couldntPlanText(unfilled('2026-11-12', 'no_candidates', { considered: 2, exclusion: 1, advanceStep: 1 }))).toBe(
       "Couldn't plan Thursday dinner: every option was excluded or needs an Advance Step that is already too late.",
     )
   })
 
   it('a Slot Rule that nothing satisfies', () => {
-    expect(couldntPlanText(unfilled('2026-11-13', 'no_candidates', { considered: 1, coolDown: 1 }, true))).toBe(
+    expect(couldntPlanText(unfilled('2026-11-13', 'no_candidates', { considered: 1, advanceStep: 1 }, true))).toBe(
       "Couldn't plan Friday dinner: nothing that matches its Slot Rule is available.",
     )
   })

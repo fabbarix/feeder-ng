@@ -67,3 +67,19 @@ export function setupChecklist(facts: SetupFacts | null): SetupChecklist {
 export function needsSetup(facts: SetupFacts | null): boolean {
   return setupChecklist(facts).visible
 }
+
+/** The slice of GET /api/plan that the facts read: a slot, and since CRS its Courses. Since C3 the slot has no `meal` or `unfilled` of its own. */
+export interface PlanSlotLike {
+  meal?: unknown
+  unfilled?: unknown
+  courses?: { meal?: unknown; unfilled?: unknown }[]
+}
+
+/**
+ * CRS G2: `plannedMeals` and `unplannedMeals` of the facts, counted over every Course of every slot (a Course holding a
+ * Planned Meal; a Course with a reason and no Planned Meal). A slot without `courses` counts its own `meal` and `unfilled`.
+ * Covered and not-served Courses (neither) count nowhere, so an optional Course never makes a step look missing.
+ */
+export function planFacts(_slots: PlanSlotLike[]): Pick<SetupFacts, 'plannedMeals' | 'unplannedMeals'> {
+  throw new Error('CRS G2: not implemented')
+}

@@ -138,8 +138,10 @@ export const planStrings = {
   couldntCauseText: {
     nobody_attending: 'Nobody is set to attend.',
     no_recipes: 'There are no Recipes to choose from.',
+    /** CRS G2: the text for several Courses, or one whose name is not known; with one named Course the lib uses `couldntNoRecipesFor`. */
+    no_course_recipes: 'Some Courses have no Recipes marked for them.',
     slot_rule: 'Nothing that matches its Slot Rule is available.',
-    excluded: 'Every Recipe is excluded for someone who attends.',
+    excluded: 'Every Recipe is excluded for someone who eats it.',
     cool_down: 'Every Recipe is in Cool-down.',
     variety_rule: 'Every Recipe is blocked by a Variety Rule.',
     advance_step: 'Every Recipe needs an Advance Step that is already too late.',
@@ -148,6 +150,7 @@ export const planStrings = {
   couldntHint: {
     nobody_attending: 'Pick the Members who eat at each Meal Slot, and the planner will fill it.',
     no_recipes: 'The planner picks from your Recipes. Add a few, or import a Recipe File.',
+    no_course_recipes: 'The planner fills each Course from the Recipes marked with it. Mark some Recipes with the Course, or choose a Recipe yourself.',
     slot_rule: 'A Slot Rule asks for a Recipe or Tag that cannot be used here. Loosen the rule, or choose a Recipe yourself.',
     excluded: 'Someone who eats there cannot have any of your Recipes. Exclusions are set on each Recipe and its Ingredients.',
     cool_down: 'You cooked them all lately. Shorten the Cool-down, or add more Recipes.',
@@ -158,6 +161,7 @@ export const planStrings = {
   couldntShort: {
     nobody_attending: 'Nobody is set to attend.',
     no_recipes: 'No Recipes to choose from.',
+    no_course_recipes: 'No Recipes for this Course.',
     slot_rule: "Its Slot Rule can't be met.",
     excluded: 'Every Recipe is excluded.',
     cool_down: 'Every Recipe is in Cool-down.',
@@ -168,6 +172,8 @@ export const planStrings = {
   couldntFix: {
     nobody_attending: 'Choose who attends',
     no_recipes: 'Add Recipes',
+    /** The fallback when the Course is not known; with one, the lib uses `markRecipesAs(course)`. */
+    no_course_recipes: 'Mark Recipes',
     slot_rule: 'Review Slot Rules',
     excluded: 'Review Exclusions',
     cool_down: 'Review Cool-down',

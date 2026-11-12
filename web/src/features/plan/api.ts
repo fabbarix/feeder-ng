@@ -5,6 +5,7 @@ import type {
   CookedAllResult,
   CookedResult,
   CookPreview,
+  ExclusionCell,
   Leftover,
   PlanSlot,
   PlanView,
@@ -32,6 +33,8 @@ export const planApi = {
   },
   toConfirm: () => http.get<{ slots: PlanSlot[] }>('/api/plan/to-confirm'),
   couldntPlan: () => http.get<{ slots: PlanSlot[] }>('/api/plan/couldnt-plan'),
+  /** CRS G2 (RX): every cell held back by an Exclusion, with who excluded what. Every User may read it. */
+  couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<void>('/api/plan/regenerate'),
   setMeal: (key: SlotKey, recipeId: number, batches?: number) =>

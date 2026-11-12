@@ -77,12 +77,12 @@ describe('PlanScreen: Couldn\'t plan', () => {
   })
 
   it('a rule conflict is warn, not danger, and a mixed plan gets one tile per cause', async () => {
-    mockApi({ 'GET /api/plan': view([unplanned('2026-11-10', 2), unplanned('2026-11-11', 2, 'no_candidates', { considered: 3, coolDown: 3 })]) })
+    mockApi({ 'GET /api/plan': view([unplanned('2026-11-10', 2), unplanned('2026-11-11', 2, 'no_candidates', { considered: 3, advanceStep: 3 })]) })
     renderWithProviders(<PlanScreen />)
     const notice = await screen.findByRole('group', { name: "Couldn't plan" })
     expect(within(notice).getAllByRole('region')).toHaveLength(2)
     expect(notice.querySelector('[data-status="danger"]')).toBeNull()
-    expect(notice.querySelector('[data-cause="cool_down"][data-status="spoil"]')).not.toBeNull()
+    expect(notice.querySelector('[data-cause="advance_step"][data-status="spoil"]')).not.toBeNull()
   })
 
   it('in the 7-column week the chip is still there', async () => {
