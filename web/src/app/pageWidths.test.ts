@@ -28,6 +28,7 @@ describe('pageWidthFor: the per-route width table', () => {
     ['/settings/meal-slots', 'default'],
     ['/settings/courses', 'narrow'], // CRS D2: listed on its own, like the other Settings pages
     ['/settings/planning', 'narrow'],
+    ['/settings/tags', 'narrow'], // TG-S: narrow from /settings/*, like the other Settings pages
     ['/settings/shops', 'narrow'],
     ['/settings/shops/7', 'narrow'],
     ['/settings/notifications', 'narrow'],

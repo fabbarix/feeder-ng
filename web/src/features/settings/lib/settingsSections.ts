@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
+  id: 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'tags' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -28,6 +28,7 @@ const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'household', id: 'mealSlots', ...copy.mealSlots, icon: 'mealSlots', path: '/settings/meal-slots' },
   { group: 'household', id: 'courses', ...copy.courses, icon: 'dinner', path: '/settings/courses' },
   { group: 'household', id: 'planningRules', ...copy.planningRules, icon: 'planningRules', path: '/settings/planning' },
+  { group: 'household', id: 'tags', ...copy.tags, icon: 'tag', path: '/settings/tags' },
   { group: 'household', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
   { group: 'household', id: 'storagePlaces', ...copy.storagePlaces, icon: 'stock', path: '/settings/storage-places' },
   { group: 'household', id: 'accessRequests', ...copy.accessRequests, icon: 'timer', path: '/settings/access-requests' },
@@ -45,7 +46,7 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
 
 /**
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
- *   Household: Household, Members, Meal Slots, Planning rules, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /shops, /access-requests)
+ *   Household: Household, Members, Meal Slots, Planning rules, Tags, Shops, Sign-in requests   (/settings/household, /members, /meal-slots, /planning, /tags, /shops, /access-requests)
  *   You:       Your preferences, Notifications                          (/settings/preferences, /notifications)
  *   Admin:     Allowlist, Recipe Assistant (Admins only)                (/settings/allowlist, /settings/recipe-assistant)
  * There is no separate "Barcodes" row: Shop Barcodes and Weight Barcode Rules live under their Shop (docs/dev/design/wp11-settings-catalogue.md).
