@@ -4,9 +4,34 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
-## [1.0.0-beta.4] - 2026-11-12
+## [1.0.0-beta.4.1] - 2026-11-12 <!-- pending: date to fill at the tag -->
 
 <!-- DRAFT: the date (release_test needs a YYYY-MM-DD, so today stands in) and the final wording are confirmed in the last pass before the tag. -->
+
+Reading a recipe from photos with the phone's own camera app and an editor, and a round of visual fixes found in the beta.4 QA.
+
+### Changed
+
+- **Reading a recipe from photos.** On the Photo choice of Read a recipe, a phone takes each photo with its own camera app or picks several from its photo library; Feeder no longer opens its own camera view there. A computer chooses, drops or pastes photos as before. Each photo opens upright in an editor: turn it a quarter turn at a time with Rotate left and Rotate right, and crop it to any shape by touch, mouse or keyboard. Up to 4 photos are listed in page order, and each can be moved, edited again or removed. The photos are kept on the device until the read is finished, so they survive the phone unloading the page while the camera app is open. Read recipe sends them in that order, shrunk so the longest side is at most 2,576 px. Photos up to 30 MB are accepted, and a HEIC photo that the browser can't show is accepted as it is, up to 8 MB, without the edit step, and sent as it is. The Photo of a Recipe or a Member and the Picture of an Ingredient or a Product are added as before.
+<!-- PENDING: ships only with the photo-read implementation, including the IndexedDB storage; remove if it misses this release -->
+- **Email not verified.** When Google has not verified a sign-in email, Feeder now says so and asks for a different Google sign-in, instead of pointing to the Allowlist. The old /not-invited address leads to the new page.
+- <!-- PLACEHOLDER (other team still building): toasts no longer cover the sticky action bar on phones. Wording to come. -->
+- <!-- PLACEHOLDER (guard team): guard improvements, only if user-visible (probably none; delete this line if so). -->
+
+### Fixed
+
+- **Choose a Recipe on Today.** The "Choose a Recipe" action on the Today hero now has enough contrast against the accent background to read.
+- **Kitchen board clock.** The time and the date in the clock Tile of the Kitchen board fit their Tile at every width from 600 px up, instead of touching the edge or breaking in the middle of a word.
+- **Notification settings layout.** Settings > Notifications no longer nests a page inside a page, and is laid out as the other Settings pages are.
+- **Sticky action bar on phones.** The sticky Save and Start Cook Mode bar now sits flush on the bottom navigation on a phone, with no gap under it.
+- **Sign-in background.** The sign-in and waiting pages now paint the app's own background themselves, in the light and the dark scheme.
+- **Sign-in wording.** The sign-in page names the Allowlist: a Google email on it signs in at once, and any other sends a sign-in request for a User to approve.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.1 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
+## [1.0.0-beta.4] - 2026-11-12
 
 Courses: a Meal Slot can hold a main Course and its sides, each planned, cooked and shopped for on its own, and the Tags get a page and colours.
 
@@ -155,7 +180,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...HEAD
+[1.0.0-beta.4.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...v1.0.0-beta.4.1
 [1.0.0-beta.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.3...v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.2...v1.0.0-beta.3
 [1.0.0-beta.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.1...v1.0.0-beta.2

@@ -25,7 +25,7 @@ mapfile -t VARS < <(grep -hoE '(os\.Getenv|os\.LookupEnv|getenv|lookupEnv|lookup
 
 if [ "${#VARS[@]}" -lt 8 ]; then bad "parsed only ${#VARS[@]} variables from internal/config (parser broken?): ${VARS[*]}"; fi
 for must in FEEDER_ADMIN_EMAIL FEEDER_BASE_URL FEEDER_GOOGLE_CLIENT_ID FEEDER_GOOGLE_CLIENT_SECRET FEEDER_TRUST_PROXY FEEDER_SECRET_KEY FEEDER_DATA_DIR FEEDER_ADDR FEEDER_DEV_LOGIN; do
-  printf '%s\n' "${VARS[@]}" | grep -qx "$must" && ok || bad "the parser did not find $must in internal/config"
+  grep -qx -- "$must" <<<"$(printf '%s\n' "${VARS[@]}")" && ok || bad "the parser did not find $must in internal/config"
 done
 
 # Reading the environment anywhere else would escape this guard.
@@ -38,16 +38,16 @@ TEMPLATES="$(cat "$CHART"/templates/*.yaml "$CHART"/templates/*.tpl 2>/dev/null)
 DEPLOY="$(cat "$ROOT/docs/dev/deploy.md")"
 for v in "${VARS[@]}"; do
   if allowed "$v"; then
-    if printf '%s' "$TEMPLATES" | grep -q "name: $v\$"; then bad "$v is allowlisted as not rendered, but the chart sets it: remove it from the allowlist"; else ok; fi
+    if grep -q -- "name: $v\$" <<<"$TEMPLATES"; then bad "$v is allowlisted as not rendered, but the chart sets it: remove it from the allowlist"; else ok; fi
   else
-    printf '%s' "$TEMPLATES" | grep -Eq "name: $v\$" && ok || bad "$v is read by internal/config but the chart does not set it (add it to deploy/helm/feeder/templates/deployment.yaml, or allowlist it in this test with a reason)"
+    grep -Eq -- "name: $v\$" <<<"$TEMPLATES" && ok || bad "$v is read by internal/config but the chart does not set it (add it to deploy/helm/feeder/templates/deployment.yaml, or allowlist it in this test with a reason)"
     grep -q "$v" "$CHART/README.md" && ok || bad "$v is not documented in deploy/helm/feeder/README.md"
   fi
-  printf '%s' "$DEPLOY" | grep -q "\`$v\`" && ok || bad "$v is not in the docs/dev/deploy.md environment table"
+  grep -qF -- "\`$v\`" <<<"$DEPLOY" && ok || bad "$v is not in the docs/dev/deploy.md environment table"
 done
 for e in "${ALLOW[@]}"; do
   n="${e%%|*}"
-  printf '%s\n' "${VARS[@]}" | grep -qx "$n" && ok || bad "allowlist entry $n is no longer read by internal/config: remove it"
+  grep -qx -- "$n" <<<"$(printf '%s\n' "${VARS[@]}")" && ok || bad "allowlist entry $n is no longer read by internal/config: remove it"
 done
 
 # Secrets must come from a Secret, never a plain env value.
