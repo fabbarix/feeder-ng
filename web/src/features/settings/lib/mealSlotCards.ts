@@ -1,7 +1,9 @@
-// MS redesign (beta.5): the Meal Slots page as one card per Meal Slot name. Pure functions, no React. STUBS: the developer fills these in
-// (docs/dev/design/meal-slots-redesign.md, section "Lib"). The tests are in mealSlotCards.test.ts.
-import type { WeekStart } from '../../../ui/WeekdayPicker/weekdays'
+// MS redesign (beta.5): the Meal Slots page as one card per Meal Slot name. Pure functions, no React.
+// Rules: docs/dev/design/meal-slots-redesign.md ("Lib"). Every value a card shows is derived here, never in a component.
+import { weekdayLongName, weekdayOrder, weekdayShortName, type WeekStart } from '../../../ui/WeekdayPicker/weekdays'
+import { settingsStrings } from '../strings'
 import type { MealSlot, Member } from '../types'
+import { nextDateForWeekday, weekdayOfDate } from './weekdays'
 
 /** Who eats: every Member, nobody, or some of them (in the Members list order). Attendees whose Member no longer exists are ignored. */
 export type CardAttendance = { state: 'everyone' } | { state: 'nobody' } | { state: 'some'; memberIds: number[] }
@@ -50,32 +52,179 @@ export interface MealSlotCard {
   next: { slot: MealSlot; date: string }
 }
 
+const text = settingsStrings.slot
+const WEEKDAYS_SET = [1, 2, 3, 4, 5]
+const WEEKEND_SET = [6, 7]
+
 /**
  * The most common value among `entries` (compared by `key`); on a tie the value of the earliest ISO weekday (Monday first,
  * whatever the week start) wins. `entries` is not empty.
  */
-export function pickUsual<T>(_entries: Array<{ weekday: number; key: string; value: T }>): T {
-  throw new Error('not implemented')
+export function pickUsual<T>(entries: Array<{ weekday: number; key: string; value: T }>): T {
+  const counts = new Map<string, number>()
+  for (const e of entries) counts.set(e.key, (counts.get(e.key) ?? 0) + 1)
+  const ordered = [...entries].sort((a, b) => a.weekday - b.weekday)
+  let best = ordered[0]!
+  for (const e of ordered) if ((counts.get(e.key) ?? 0) > (counts.get(best.key) ?? 0)) best = e
+  return best.value
+}
+
+const nameKey = (name: string) => name.trim().toLowerCase()
+
+/** The Members of `members` who attend the slot, in the Members list order. */
+function attendingIds(slot: MealSlot, members: Member[]): number[] {
+  const ids = new Set(slot.attendance.map((a) => a.memberId))
+  return members.filter((m) => ids.has(m.id)).map((m) => m.id)
+}
+
+function attendanceOf(slot: MealSlot, members: Member[]): CardAttendance {
+  const ids = attendingIds(slot, members)
+  if (ids.length === 0) return { state: 'nobody' }
+  if (ids.length === members.length) return { state: 'everyone' }
+  return { state: 'some', memberIds: ids }
+}
+
+const attendanceKey = (a: CardAttendance) => (a.state === 'some' ? `some:${a.memberIds.join(',')}` : a.state)
+
+/** The Courses of a slot as the card shows them: an optional Course's eaters are the attending Members who do not opt out. */
+function chipsOf(slot: MealSlot, members: Member[]): CourseChip[] {
+  const ids = attendingIds(slot, members)
+  return (slot.courses ?? []).map((c) => {
+    const outs = c.optOutMemberIds.filter((id) => ids.includes(id))
+    return {
+      id: c.id,
+      name: c.name,
+      optional: c.optional,
+      eaters: outs.length === 0 ? null : ids.filter((id) => !c.optOutMemberIds.includes(id)),
+    }
+  })
+}
+
+const chipsKey = (chips: CourseChip[]) => JSON.stringify(chips.map((c) => [c.id, c.optional, c.eaters]))
+
+interface DayEntry {
+  weekday: number
+  slot: MealSlot
+  time: string
+  attendance: CardAttendance
+  courses: CourseChip[]
+}
+
+function buildCard(list: MealSlot[], members: Member[], today: string, weekStart: WeekStart): MealSlotCard {
+  const byDay = new Map<number, MealSlot>()
+  const sorted = [...list].sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time) || a.id - b.id)
+  for (const s of sorted) if (!byDay.has(s.weekday)) byDay.set(s.weekday, s)
+  const days = [...byDay.keys()].sort((a, b) => a - b)
+  const entries: DayEntry[] = days.map((weekday) => {
+    const slot = byDay.get(weekday)!
+    return { weekday, slot, time: slot.time, attendance: attendanceOf(slot, members), courses: chipsOf(slot, members) }
+  })
+
+  const usualTime = pickUsual(entries.map((e) => ({ weekday: e.weekday, key: e.time, value: e.time })))
+  const usualAttendance = pickUsual(entries.map((e) => ({ weekday: e.weekday, key: attendanceKey(e.attendance), value: e.attendance })))
+  const usualCourses = pickUsual(entries.map((e) => ({ weekday: e.weekday, key: chipsKey(e.courses), value: e.courses })))
+
+  const differsOn = (e: DayEntry) =>
+    e.time !== usualTime || attendanceKey(e.attendance) !== attendanceKey(usualAttendance) || chipsKey(e.courses) !== chipsKey(usualCourses)
+  const matchesUsual = (e: DayEntry) => !differsOn(e)
+
+  const order = weekdayOrder(weekStart)
+  const inWeekOrder = [...entries].sort((a, b) => order.indexOf(a.weekday) - order.indexOf(b.weekday))
+
+  const differences: DayDifference[] = inWeekOrder.filter(differsOn).map((e) => {
+    const d: DayDifference = { weekday: e.weekday, slot: e.slot }
+    if (e.time !== usualTime) d.time = e.time
+    if (attendanceKey(e.attendance) !== attendanceKey(usualAttendance)) d.attendance = e.attendance
+    if (chipsKey(e.courses) !== chipsKey(usualCourses)) d.courses = e.courses
+    return d
+  })
+
+  const week: WeekCell[] = order.map((weekday) => {
+    const e = entries.find((x) => x.weekday === weekday)
+    if (!e) return { weekday, state: 'free' }
+    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e) }
+  })
+
+  const editEntry = entries.find(matchesUsual) ?? entries[0]!
+  const next = entries
+    .map((e) => ({ slot: e.slot, date: nextDateForWeekday(e.weekday, today) }))
+    .sort((a, b) => a.date.localeCompare(b.date))[0]!
+
+  return {
+    key: nameKey(list[0]!.name),
+    name: sorted[0]!.name.trim(),
+    days,
+    usualTime,
+    usualAttendance,
+    usualCourses,
+    week,
+    differences,
+    span: days.length === 7 ? 'full' : 'half',
+    editSlot: editEntry.slot,
+    next,
+  }
 }
 
 /** One card per Meal Slot name (case and edge spaces ignored), ordered by usual time then name. `today` is YYYY-MM-DD. */
-export function buildMealSlotCards(_slots: MealSlot[], _members: Member[], _opts: { today: string; weekStart?: WeekStart }): MealSlotCard[] {
-  throw new Error('not implemented')
+export function buildMealSlotCards(slots: MealSlot[], members: Member[], opts: { today: string; weekStart?: WeekStart }): MealSlotCard[] {
+  const groups = new Map<string, MealSlot[]>()
+  for (const s of slots) {
+    const key = nameKey(s.name)
+    groups.set(key, [...(groups.get(key) ?? []), s])
+  }
+  const cards = [...groups.values()].map((list) => buildCard(list, members, opts.today, opts.weekStart ?? 1))
+  return cards.sort((a, b) => a.usualTime.localeCompare(b.usualTime) || a.name.localeCompare(b.name))
 }
 
 /** "Every day", "Weekdays", "Weekend", a single day in full ("Sunday"), else the short names joined ("Mon, Wed"). */
-export function daysLabel(_days: number[], _locale?: string): string {
-  throw new Error('not implemented')
+export function daysLabel(days: number[], locale = 'en'): string {
+  const sorted = [...new Set(days)].sort((a, b) => a - b)
+  if (sorted.length === 7) return text.everyDay
+  if (sorted.length === WEEKDAYS_SET.length && sorted.every((d, i) => d === WEEKDAYS_SET[i])) return text.weekdays
+  if (sorted.length === WEEKEND_SET.length && sorted.every((d, i) => d === WEEKEND_SET[i])) return text.weekend
+  if (sorted.length === 1) return weekdayLongName(sorted[0]!, locale)
+  return sorted.map((d) => weekdayShortName(d, locale)).join(', ')
+}
+
+/** The names of the Members in `ids`, in the Members list order; Members that no longer exist are left out. */
+function memberNames(ids: number[], members: Member[]): string {
+  return members.filter((m) => ids.includes(m.id)).map((m) => m.name).join(', ')
 }
 
 /** "Fabio only", "Mia, Sam only"; "Everyone"; "Nobody attending". */
-export function attendanceText(_attendance: CardAttendance, _members: Member[]): string {
-  throw new Error('not implemented')
+export function attendanceText(attendance: CardAttendance, members: Member[]): string {
+  if (attendance.state === 'everyone') return text.everyone
+  if (attendance.state === 'nobody') return text.nobodyAttending
+  const names = memberNames(attendance.memberIds, members)
+  return names ? text.onlyEats(names) : text.nobodyAttending
+}
+
+/** "Dessert: Mia only" for a Course some attending Members opt out of; null when everyone who attends eats it. */
+export function courseEatersText(course: CourseChip, members: Member[]): string | null {
+  if (course.eaters === null) return null
+  const names = memberNames(course.eaters, members)
+  return names ? text.courseEaters(course.name, names) : null
+}
+
+/** The Courses of a day that differs: "Main only" when they are fewer than the usual ones and all of them are usual, else listed. */
+function coursesText(courses: CourseChip[], usual: CourseChip[]): string {
+  if (courses.length === 0) return ''
+  const names = courses.map((c) => (c.optional ? `${c.name} (${text.optionalSuffix})` : c.name))
+  const usualIds = new Set(usual.map((c) => c.id))
+  const fewer = courses.length < usual.length && courses.every((c) => usualIds.has(c.id))
+  return fewer ? `${names.join(' · ')} only` : names.join(' · ')
 }
 
 /** The words of one "Differs on" row after the weekday: the time, who eats ("Fabio only"), the Courses ("Main only" when they are fewer than usual, else listed). */
-export function differenceParts(_difference: DayDifference, _card: Pick<MealSlotCard, 'usualCourses'>, _members: Member[]): string[] {
-  throw new Error('not implemented')
+export function differenceParts(difference: DayDifference, card: Pick<MealSlotCard, 'usualCourses'>, members: Member[]): string[] {
+  const parts: string[] = []
+  if (difference.time !== undefined) parts.push(difference.time)
+  if (difference.attendance) parts.push(attendanceText(difference.attendance, members))
+  if (difference.courses) {
+    const courses = coursesText(difference.courses, card.usualCourses)
+    if (courses) parts.push(courses)
+  }
+  return parts
 }
 
 /** An upcoming date on which a Meal Slot differs from its usual (beta.5's per-date backend will fill this; Guests join it with F1). */
@@ -102,12 +251,54 @@ export interface DateRow {
   parts: DatePart[]
 }
 
+function monthShort(date: string, locale: string): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
+  const at = new Date(Date.UTC(y, m - 1, d))
+  try {
+    return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' }).format(at)
+  } catch {
+    return new Intl.DateTimeFormat('en', { month: 'short', timeZone: 'UTC' }).format(at)
+  }
+}
+
+function dateLabel(date: string, locale: string): string {
+  const day = Number(date.slice(8, 10))
+  const weekday = weekdayOfDate(date)
+  const short = weekday === null ? '' : weekdayShortName(weekday, locale)
+  return `${short} ${day} ${monthShort(date, locale)}`.trim()
+}
+
+function partsOf(e: DateException): DatePart[] {
+  if (e.notServed) return [{ kind: 'notServed' }]
+  const parts: DatePart[] = []
+  if (e.time !== undefined && e.time !== e.usualTime) parts.push({ kind: 'time', time: e.time, usualTime: e.usualTime ?? '' })
+  if (e.attendeeIds !== undefined) parts.push({ kind: 'attendance', attendeeIds: e.attendeeIds })
+  return parts
+}
+
 /** The upcoming exceptions (today on) as rows, soonest first then by name; one that differs in nothing is left out. At most `limit` (default 8). */
-export function datesThatDiffer(_exceptions: DateException[], _opts: { today: string; locale?: string; limit?: number }): DateRow[] {
-  throw new Error('not implemented')
+export function datesThatDiffer(exceptions: DateException[], opts: { today: string; locale?: string; limit?: number }): DateRow[] {
+  const locale = opts.locale ?? 'en'
+  const limit = opts.limit ?? 8
+  return exceptions
+    .filter((e) => e.date >= opts.today)
+    .map((e) => ({ e, parts: partsOf(e) }))
+    .filter((x) => x.parts.length > 0)
+    .sort((a, b) => a.e.date.localeCompare(b.e.date) || a.e.slotName.localeCompare(b.e.slotName))
+    .slice(0, limit)
+    .map(({ e, parts }) => ({
+      key: `${e.date}#${e.slotId}`,
+      date: e.date,
+      dateLabel: dateLabel(e.date, locale),
+      slotName: e.slotName,
+      parts,
+    }))
 }
 
 /** "Not served", "13:30 · usually 13:00", "Fabio only". */
-export function datePartText(_part: DatePart, _members: Member[]): string {
-  throw new Error('not implemented')
+export function datePartText(part: DatePart, members: Member[]): string {
+  if (part.kind === 'notServed') return text.notServed
+  if (part.kind === 'time') return text.timeUsually(part.time, part.usualTime)
+  const names = memberNames(part.attendeeIds, members)
+  return names ? text.onlyEats(names) : text.nobodyAttending
 }

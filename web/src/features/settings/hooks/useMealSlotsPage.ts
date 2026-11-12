@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
@@ -12,7 +12,7 @@ import { useAttendance } from './useAttendance'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
-import type { DateRow, MealSlotCard } from '../lib/mealSlotCards'
+import { buildMealSlotCards, datesThatDiffer, type MealSlotCard } from '../lib/mealSlotCards'
 import { useDateExceptions } from './useDateExceptions'
 import { useMealSlots } from './useMealSlots'
 import { useMembers } from './useMembers'
@@ -116,12 +116,23 @@ export function useMealSlotsPage() {
     }
   }
 
-  // STUB (test-first): the developer derives these with buildMealSlotCards / datesThatDiffer (todayIso(), documentLocale(), the Members).
-  const cards: MealSlotCard[] = []
-  const dateRows: DateRow[] = []
-  useDateExceptions()
-  const editCard = (_card: MealSlotCard) => {}
-  const changeDateOf = (_card: MealSlotCard) => {}
+  const exceptions = useDateExceptions()
+  const loaded = !slots.isPending && !members.isPending
+  const cards = useMemo<MealSlotCard[]>(
+    () => (loaded ? buildMealSlotCards(slots.slots, members.members, { today: todayIso() }) : []),
+    [loaded, slots.slots, members.members],
+  )
+  const dateRows = useMemo(() => datesThatDiffer(exceptions, { today: todayIso(), locale: documentLocale() }), [exceptions])
+  /** "Edit <name>": the sheet on the card's usual slot (only an Admin gets there). */
+  const editCard = (card: MealSlotCard) => {
+    setError(undefined)
+    setEditor({ item: card.editSlot })
+  }
+  /** "Change a date": the one-date Attendance of the card's soonest run; any User, an Admin included (the sheet gives way). */
+  const changeDateOf = (card: MealSlotCard) => {
+    setEditor(null)
+    setDateEditor({ slot: card.next.slot, date: card.next.date })
+  }
 
   return {
     isAdmin,
