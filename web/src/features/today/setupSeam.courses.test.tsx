@@ -40,8 +40,8 @@ describe('useSetupFacts with Courses', () => {
     expect(f).toMatchObject({ plannedMeals: 1, unplannedMeals: 1 })
   })
 
-  it('slots without `courses` still work (the course-less payload)', async () => {
+  it('slots without `courses` count nothing', async () => {
     const f = await facts([{ meal: { recipeName: 'Soup', state: 'planned' } }, { meal: null, unfilled: { reason: 'no_attendance' } }])
-    expect(f).toMatchObject({ plannedMeals: 1, unplannedMeals: 1 })
+    expect(f).toMatchObject({ plannedMeals: 0, unplannedMeals: 0 })
   })
 })

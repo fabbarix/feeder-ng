@@ -12,9 +12,8 @@ import type { PlannedMeal, SlotKey } from '../../plan/types'
 import '../cook.css'
 
 /**
- * The Reheat screen (route /cook/reheat/:date/:slotId, chromeless like Cook Mode): a reheating timer for a Planned
- * Meal served from a Leftover, then Mark as Cooked. The route /cook/reheat/:date/:slotId/:courseId reheats that Course's
- * Planned Meal. Design: docs/dev/design/r12-reheat.md. Renders and wires only.
+ * The Reheat screen (route /cook/reheat/:date/:slotId/:courseId, chromeless like Cook Mode): a reheating timer for a Planned
+ * Meal of that Course served from a Leftover, then Mark as Cooked. Design: docs/dev/design/r12-reheat.md. Renders and wires only.
  */
 export function ReheatScreen(): ReactNode {
   const { date = '', slotId = '', courseId = '' } = useParams()

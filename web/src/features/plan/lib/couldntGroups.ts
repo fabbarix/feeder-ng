@@ -35,7 +35,7 @@ export interface CauseGroup {
   cause: Cause
   /** The number in the headline: Meal Slots for Nobody attends, Courses otherwise. */
   count: number
-  /** CRS G2: the cells (one per Course), in plan order; for a slot without Courses, the slot itself. */
+  /** CRS G2: the cells (one per Course), in plan order; a slot without Courses gives none. */
   slots: PlanEntry[]
   /** CRS G2: the lines of "Show all N", N = items.length. */
   items: CauseItem[]
@@ -63,7 +63,7 @@ const META: Record<Cause, { tone: Tone; icon: IconName; fix: FixFor }> = {
     fix: (label, first) => ({ kind: 'link', label, to: `/settings/meal-slots${first ? slotHash(first.mealSlotId) : ''}` }),
   },
   no_recipes: { tone: 'info', icon: 'recipes', fix: (label) => ({ kind: 'link', label, to: '/recipes' }) },
-  // CRS G2: the earliest cell's Course; no Course known (an old payload): the Recipes list.
+  // CRS G2: the earliest cell's Course; defensive fallback (a cell always names its Course): the Recipes list.
   no_course_recipes: {
     tone: 'info',
     icon: 'recipes',
@@ -112,7 +112,7 @@ function byTime(a: PlanEntry, b: PlanEntry): number {
 }
 
 const slotKey = (x: PlanEntry): string => `${x.date}/${x.mealSlotId}`
-const courseKey = (x: PlanEntry): number => x.courseId ?? -1
+const courseKey = (x: PlanEntry): number => x.courseId ?? -1 // defensive: every cell names its Course
 
 /** Plural of a name on its last word: "Side" -> "Sides", "Side dish" -> "Side dishes", "Dessert" -> "Desserts". */
 export function pluralName(name: string): string {
@@ -235,7 +235,7 @@ export function toneStyle(tone: Tone): ToneStyle {
  * CRS G2: every Course of every slot that holds a Planned Meal or a recorded reason, as flat cells in plan order (the
  * shape of the API's flat entries: the slot's fields plus `courseId`, `courseName`, `meal`, `unfilled`). Covered and
  * not-served Courses have neither and give no cell. An entry that already has a `courseId` is a cell and is kept as it is;
- * a slot without `courses` is one cell, itself.
+ * a slot without `courses` gives no cell.
  */
 export function courseCells(slots: Array<PlanSlot | PlanEntry>): PlanEntry[] {
   const out: PlanEntry[] = []

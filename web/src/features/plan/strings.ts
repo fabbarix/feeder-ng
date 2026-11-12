@@ -169,7 +169,7 @@ export const planStrings = {
   couldntFix: {
     nobody_attending: 'Choose who attends',
     no_recipes: 'Add Recipes',
-    /** The fallback when the Course is not known; with one, the lib uses `markRecipesAs(course)`. */
+    /** Defensive fallback for a cell that does not name its Course; with one, the lib uses `markRecipesAs(course)`. */
     no_course_recipes: 'Mark Recipes',
     slot_rule: 'Review Slot Rules',
     excluded: 'Review Exclusions',

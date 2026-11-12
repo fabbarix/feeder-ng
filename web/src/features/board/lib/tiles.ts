@@ -142,8 +142,8 @@ export function boardSlots(slots: SlotLike[] | undefined, planSlots: SlotLike[])
 }
 
 /**
- * True when any Course of the slot holds a Planned Meal still to cook (state planned). Without `courses` it is the
- * slot's `meal`. Tonight's, tomorrow's and the Cook button's choices use this instead of `slot.meal` alone, so a slot
+ * True when any Course of the slot holds a Planned Meal still to cook (state planned). Without `courses` it is false.
+ * Tonight's, tomorrow's and the Cook button's choices use this instead of `slot.meal` alone, so a slot
  * whose main Course is already Cooked but whose Side is not is still tonight's.
  */
 export function hasPlanned(slot: SlotLike): boolean {
