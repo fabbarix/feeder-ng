@@ -9,9 +9,11 @@ On phones the toast region (`bottom: nav-clearance + space-3`) overlaps the stic
 
 - `Toast.css`: `.toast-region { bottom: calc(var(--nav-top) + var(--space-3)) }` (above the bottom nav, or the viewport edge from 1024).
 - `Toast.css`: `html:has(.sticky-action-bar) .toast-region { bottom: calc(var(--nav-top) + var(--sticky-bar-clearance) + var(--space-3)) }`.
-  `--sticky-bar-clearance` (96 px, `StickyActionBar.css`) is already the room reserved for the bar, so no new token. Toast z-index (30) stays above the bar (5).
+  `--sticky-bar-clearance` already exists in `StickyActionBar.css`; its derived default is 121 px (2 x padding 12 + 1 border + 2 x 44 control + 8 gap, the two-row bar of the recipe editor on a phone).
+  `useStickyBarClearance` publishes the measured bar height on the document root (largest of the mounted bars; removed when the last unmounts), so the default only applies before the first measurement or without ResizeObserver.
+  The scroll padding is `calc(var(--nav-top) + var(--sticky-bar-clearance))`: on phones the bar sits `--nav-top` above the bottom. Toast z-index (30) stays above the bar (5).
 - Shell guard rule 14 (`scripts/check-shell-layout.mjs`, phone 360 and 390 px, `/recipes/new`): raise a toast, then assert the toast region's bottom edge is at or above
-  the sticky bar's top edge (1 px tolerance) and the toast does not overlap the bottom bar. Source-level check in `scripts/test/check-shell-layout_test.sh`.
+  the sticky bar's top edge (1 px tolerance). Source-level check in `scripts/test/check-shell-layout_test.sh`.
 
 ## FU-2 No bar padding on full-screen pages
 
@@ -25,11 +27,11 @@ The rule lives in `StickyActionBar.css` (not `shell.css`): `.app-main:has(.stick
 
 ## FU-4 P10 in both colour schemes
 
-The page-layout probe sets nothing for the scheme (Chrome renders light). After the light probe the driver calls
-`Emulation.setEmulatedMedia` with `prefers-color-scheme: dark`, re-runs only the P10 part of the probe (button contrast) and stores it as
-`lowContrastButtonsDark`, then resets the feature to `light` (the tab is reopened per route anyway). The app follows
-`@media (prefers-color-scheme: dark)` on `:root:not([data-scheme='light'])`, so no `data-scheme` needs setting.
-`evaluateMetrics` adds one P10 finding per entry; dark ones read `Button "X" contrast 1.3:1 (< 4.5, dark scheme)`. The light message is unchanged.
+ThemeProvider reads the system scheme once at render and then writes `data-scheme` itself, so emulating dark on a loaded page changes nothing.
+After the light probe the driver therefore calls `Emulation.setEmulatedMedia` (`prefers-color-scheme: dark`), reloads the page (`Page.reload`/`Page.navigate`),
+runs `settle()`, and checks `document.documentElement.dataset.scheme === 'dark'`. If it is not dark the driver reports an environment problem
+("could not inspect", no finding, never clean). Only then does it re-run the button probe into `lowContrastButtonsDark`, then resets the media to `light`.
+The dark pass runs on every viewport of the run. `evaluateMetrics` adds one P10 finding per entry; dark ones read `Button "X" contrast 1.3:1 (< 4.5, dark scheme)`. The light message is unchanged.
 A missing `lowContrastButtonsDark` (older probe) is clean.
 
 ## Tests (red first)

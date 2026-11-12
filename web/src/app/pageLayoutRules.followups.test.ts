@@ -53,3 +53,31 @@ describe('the page-layout driver probes both schemes', () => {
     expect(src).toMatch(/value:\s*'light'/)
   })
 })
+
+// Review fix: ThemeProvider reads the system scheme once at render and then writes data-scheme, so emulating dark after the load
+// changes nothing. The driver has to reload under the emulation, wait for the page, and prove the page really is dark.
+describe('the dark pass really renders dark', () => {
+  const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+  const after = src.slice(src.indexOf("value: 'dark'"))
+  it('reloads or re-navigates after the dark emulation, then settles, before the dark probe', () => {
+    expect(src).toContain("value: 'dark'")
+    const reload = after.search(/Page\.(reload|navigate)/)
+    const settle = after.search(/await settle\(\)/)
+    const probe = after.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    expect(reload, 'Page.reload or Page.navigate after the emulation').toBeGreaterThanOrEqual(0)
+    expect(settle, 'settle() after the reload').toBeGreaterThan(reload)
+    expect(probe, 'the dark probe after settle()').toBeGreaterThan(settle)
+  })
+  it('checks document.documentElement.dataset.scheme === "dark" before the probe and reports an environment problem otherwise', () => {
+    const check = after.search(/documentElement\.dataset\.scheme\s*===\s*['"]dark['"]/)
+    const probe = after.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    expect(check, 'the scheme check').toBeGreaterThanOrEqual(0)
+    expect(check).toBeLessThan(probe)
+    // an environment problem is reported like the other probe failures ("could not inspect"), never as a clean result
+    expect(after.slice(0, probe)).toMatch(/throw new Error|could not (inspect|render)/)
+  })
+  it('runs the dark pass on every viewport (no width or profile condition around it)', () => {
+    const before = src.slice(Math.max(0, src.indexOf("value: 'dark'") - 400), src.indexOf("value: 'dark'"))
+    expect(before).not.toMatch(/if\s*\([^)]*(vp\.width|profile|mobile)/)
+  })
+})

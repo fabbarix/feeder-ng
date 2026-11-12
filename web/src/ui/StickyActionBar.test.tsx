@@ -144,7 +144,7 @@ describe('StickyActionBar.css', () => {
     const wide = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
     expect(wide).toMatch(/padding-block-end\s*:[^;]*env\(safe-area-inset-bottom/)
     expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
-    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('var(--sticky-bar-clearance)')
+    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--sticky-bar-clearance))')
   })
   it('uses tokens only', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
