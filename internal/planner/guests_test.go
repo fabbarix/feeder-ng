@@ -124,7 +124,7 @@ func TestASlotNobodyAndNoGuestEatsIsStillNoAttendance(t *testing.T) {
 
 func TestAKeptMealUsesTheGuestsInItsPortions(t *testing.T) {
 	// 2 Members + 2 Guests = 4 portions; 2 Batches of yield 2 still cover: kept, KeptPortions 4, nothing raised.
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 2}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 2, PlacedPortions: 4}
 	in := baseInput([]Slot{mainCell(0, withGuests(2), holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
 	r := mustPlan(t, in)
 	if !isKept(r, ck(0, mainC)) || !approx(r.KeptPortions[ck(0, mainC)], 4) || len(r.Raised) != 0 {

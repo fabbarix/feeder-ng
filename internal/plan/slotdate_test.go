@@ -242,3 +242,19 @@ func TestReconcileKeepsAnUnconfirmedMealOfANotServedSlotThatIsOver(t *testing.T)
 		t.Errorf("RemoveUnresolved = %v; a meal whose slot is over waits in To confirm", got.RemoveUnresolved)
 	}
 }
+
+func TestBuildInputPassesThePortionsAMealWasPlacedWith(t *testing.T) {
+	s := baseSnapshot()
+	s.Slots = []plan.SlotInfo{dinnerWithCourses("2026-11-10")}
+	s.Meals = []plan.Meal{
+		{Key: kc("2026-11-10", 1, mainCourse), RecipeID: 1, Batches: 1, Portions: 2.5, State: plan.StatePlanned},
+		{Key: kc("2026-11-10", 1, sideCourse), RecipeID: 2, Batches: 0.5, Portions: 1, State: plan.StatePlanned, Pinned: true},
+	}
+	in, _ := plan.BuildInput(s)
+	for course, want := range map[int64]float64{mainCourse: 2.5, sideCourse: 1} {
+		got := slotByKey(t, in, pkc("2026-11-10", 1, course))
+		if got.Existing == nil || got.Existing.PlacedPortions != want {
+			t.Errorf("Course %d: Existing = %+v, want PlacedPortions %v (the stored portions)", course, got.Existing, want)
+		}
+	}
+}

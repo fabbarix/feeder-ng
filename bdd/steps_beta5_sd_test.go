@@ -345,4 +345,56 @@ func beta5SDSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+
+	// --- B5-SD, second round ---
+
+	sc.Step(`^I save Who's eating for the Dinner of `+date+` with Anna$`, func(d string) error {
+		anna, _ := w.Vars["c2:member:Anna"].(int64)
+		put(d, map[string]any{"attendance": []map[string]any{{"memberId": anna}}})
+		return mustOK("save Who's eating")
+	})
+	sc.Step(`^the Dinner answers (\d+) with the code "([a-z_]+)"$`, func(status int, code string) error {
+		var e struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		_ = w.Last.JSON(&e)
+		if w.Last.Status != status || e.Error.Code != code {
+			return fmt.Errorf("answer %d code %q (%s), want %d %s", w.Last.Status, e.Error.Code, w.Last.Body, status, code)
+		}
+		return nil
+	})
+	// For the planning household (steps_planning_test.go): the Dinner of that weekday has no usual attendees.
+	sc.Step(`^nobody usually attends the Dinner on `+date+`$`, func(d string) error {
+		t, err := time.Parse("2006-01-02", d)
+		if err != nil {
+			return err
+		}
+		wd := int(t.Weekday())
+		if wd == 0 {
+			wd = 7
+		}
+		id, _ := w.Vars["plan:slot:"+strconv.Itoa(wd)].(int64)
+		if _, err := w.Ensure().DB.Exec(`DELETE FROM meal_slot_attendees WHERE slot_id = ?`, id); err != nil {
+			return err
+		}
+		w.Ensure().App.Deps.Events.Publish("household", map[string]string{"changed": "mealSlots"})
+		return nil
+	})
+	sc.Step(`^the plan slot on `+date+` is Not served$`, func(d string) error {
+		r := w.Client.Get(fmt.Sprintf("/api/plan?from=%s&to=%s", d, d))
+		var out struct {
+			Slots []struct {
+				NotServed bool `json:"notServed"`
+			} `json:"slots"`
+		}
+		if r.Status != 200 || r.JSON(&out) != nil || len(out.Slots) != 1 {
+			return fmt.Errorf("plan of %s: %d %s", d, r.Status, r.Body)
+		}
+		if !out.Slots[0].NotServed {
+			return fmt.Errorf("the slot on %s is not Not served: %s", d, r.Body)
+		}
+		return nil
+	})
 }

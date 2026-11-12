@@ -84,6 +84,10 @@ type ExistingMeal struct {
 	From *LeftoverSource
 	// Relaxed is true when the stored Planned Meal is a relaxed pick (ADR 0009).
 	Relaxed bool
+	// PlacedPortions is what the cell needed when the meal was placed (the stored planned_meals.portions); 0 = unknown.
+	// Batches follow portions only when the portions CHANGE: a fresh meal, unpinned or Pinned, is raised only when the
+	// cell's current portions are greater than PlacedPortions, so a Pinned 0.5 Batch whose portions did not change stays.
+	PlacedPortions float64
 }
 
 // Slot is one cell in the Planning Horizon: one Course of one Meal Slot on one

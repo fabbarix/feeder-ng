@@ -153,3 +153,17 @@ func TestANotServedTonightIsOnTheBoard(t *testing.T) {
 }
 
 func path2(format string, a ...any) string { return fmt.Sprintf(format, a...) }
+
+func TestSettingAMealOnANotServedDateIsRefusedWith422(t *testing.T) {
+	w := crsc2.New(t)
+	roast := w.Recipe("Roast chicken", crsc2.RecipeSpec{})
+	w.Settle()
+	w.User.Patch(path2("/api/meal-slots/%d/dates/%s", w.Slot, crsc2.Today), map[string]any{"notServed": true})
+	sdWaitIdle(t, w)
+	r := w.User.Put(path2("/api/plan/%s/%d/%d", crsc2.Today, w.Slot, w.Main), map[string]any{"recipeId": roast})
+	var e errBody
+	r.MustJSON(t, &e)
+	if r.Status != 422 || e.Error.Code != "not_served" {
+		t.Errorf("PUT on a Not served date = %d %s, want 422 not_served", r.Status, r.Body)
+	}
+}

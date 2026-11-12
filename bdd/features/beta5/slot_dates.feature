@@ -83,6 +83,17 @@ Feature: A Meal Slot on one date: Not served, Time today, Guests (beta.5, plan 2
     When I try to mark the Dinner of 2026-11-02 Not served
     Then the Dinner answers 422 date_past
 
+  Scenario: Saving who is eating on a Not served date serves it again
+    Given I mark the Dinner of 2026-11-09 Not served
+    When I save Who's eating for the Dinner of 2026-11-09 with Anna
+    And the planner has finished
+    Then the Dinner of 2026-11-09 is served
+
+  Scenario: Setting a Recipe on a Not served date is refused
+    Given I mark the Dinner of 2026-11-09 Not served
+    When I put "Roast chicken" in the Course "Main" on 2026-11-09
+    Then the Dinner answers 422 with the code "not_served"
+
   # ---- Time today ----
 
   Scenario: Time today moves the Advance Step reminder

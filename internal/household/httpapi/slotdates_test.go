@@ -428,3 +428,14 @@ func TestDeletingAMealSlotDeletesItsDates(t *testing.T) {
 		t.Errorf("%d date rows survive the Meal Slot", n)
 	}
 }
+
+func TestSavingANonEmptyWhoIsEatingServesANotServedDateAgain(t *testing.T) {
+	w := crsc2.New(t)
+	w.User.Patch(sdURL(w, sdToday), map[string]any{"notServed": true})
+	if r := w.User.Put(whoURL(w, sdToday), map[string]any{"attendance": []attendeeBody{{MemberID: w.Anna}}}); r.Status != 200 {
+		t.Fatalf("PUT = %d %s", r.Status, r.Body)
+	}
+	if d := sdGet(t, w, sdToday); d.NotServed {
+		t.Errorf("date = %+v, want served again after a non-empty save", d)
+	}
+}

@@ -339,3 +339,35 @@ func TestDBSourcesAttendanceStaysTheMembersOnly(t *testing.T) {
 		t.Errorf("Attendance = %+v, %v; want the 2 Members: Guests are a number, not an Attendee", att, err)
 	}
 }
+
+func TestAPinnedFractionOfABatchStaysWhenThePortionsDidNotChange(t *testing.T) {
+	e := newEnv(t)
+	e.simpleOnly()
+	half := 0.5
+	pinned, err := e.r.SetMeal(ctx, e.key(11), e.rec["curry"], &half)
+	if err != nil || pinned.Batches != 0.5 {
+		t.Fatalf("SetMeal = %+v, %v", pinned, err)
+	}
+	if _, err := e.r.Plan(ctx, plan.ReasonRecipeChanged); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.meal(11); got.Batches != 0.5 || !got.Pinned {
+		t.Errorf("Wednesday = %+v, want the Pinned meal still at 0.5 Batch: its portions did not change", got)
+	}
+}
+
+func TestSetMealOnANotServedDateIsRefused(t *testing.T) {
+	e := newEnv(t)
+	e.simpleOnly()
+	e.src.setDate(e.slotOn(10), tue, runner.SlotDateDef{NotServed: true})
+	if _, err := e.r.SetMeal(ctx, e.key(10), e.rec["curry"], nil); !errors.Is(err, runner.ErrNotServed) {
+		t.Errorf("SetMeal on a Not served date = %v, want ErrNotServed", err)
+	}
+	if _, err := e.st.Meal(ctx, e.key(10)); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("a meal was written on a Not served date (%v)", err)
+	}
+	e.src.setDate(e.slotOn(10), tue, runner.SlotDateDef{})
+	if _, err := e.r.SetMeal(ctx, e.key(10), e.rec["curry"], nil); err != nil {
+		t.Errorf("served again, SetMeal = %v", err)
+	}
+}

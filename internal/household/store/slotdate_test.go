@@ -240,3 +240,45 @@ func TestResetOfAGuestsOnlyDateDeletesTheRow(t *testing.T) {
 		t.Errorf("%d rows left, want the all-default row deleted (%v)", n, err)
 	}
 }
+
+func TestSavingANonEmptyWhoIsEatingServesANotServedDateAgain(t *testing.T) {
+	f := newFx(t)
+	slot, anna, _ := f.thursday(t)
+	// An emptied date is Not served; saving Anna brings it back.
+	none, zero := []household.Attendee{}, 0
+	if err := f.st.SaveWhoIsEating(f.ctx, slot.ID, sdDate, household.WhoIsEating{Members: &none, Guests: &zero}); err != nil {
+		t.Fatal(err)
+	}
+	att := []household.Attendee{{MemberID: anna.ID}}
+	if err := f.st.SaveWhoIsEating(f.ctx, slot.ID, sdDate, household.WhoIsEating{Members: &att}); err != nil {
+		t.Fatal(err)
+	}
+	if row, _ := f.st.SlotDate(f.ctx, slot.ID, sdDate); row.NotServed {
+		t.Errorf("row = %+v, want served: a non-empty Who's eating serves the date again", row)
+	}
+	// So does a hand-marked Not served date, and its own time is kept.
+	if err := f.st.SaveSlotDate(f.ctx, household.SlotDate{SlotID: slot.ID, Date: sdDate, NotServed: true, Time: "20:00"}); err != nil {
+		t.Fatal(err)
+	}
+	two := 2
+	if err := f.st.SaveWhoIsEating(f.ctx, slot.ID, sdDate, household.WhoIsEating{Members: &att, Guests: &two}); err != nil {
+		t.Fatal(err)
+	}
+	if row, _ := f.st.SlotDate(f.ctx, slot.ID, sdDate); row.NotServed || row.Time != "20:00" || row.Guests != 2 {
+		t.Errorf("row = %+v, want served, 20:00 kept, 2 Guests", row)
+	}
+}
+
+func TestResetStillLeavesNotServedAlone(t *testing.T) {
+	f := newFx(t)
+	slot, anna, _ := f.thursday(t)
+	att, one := []household.Attendee{{MemberID: anna.ID}}, 1
+	f.st.SaveWhoIsEating(f.ctx, slot.ID, sdDate, household.WhoIsEating{Members: &att, Guests: &one})
+	f.st.SaveSlotDate(f.ctx, household.SlotDate{SlotID: slot.ID, Date: sdDate, NotServed: true, Guests: 1})
+	if err := f.st.ClearDateAttendance(f.ctx, slot.ID, sdDate); err != nil {
+		t.Fatal(err)
+	}
+	if row, _ := f.st.SlotDate(f.ctx, slot.ID, sdDate); !row.NotServed {
+		t.Errorf("row = %+v, want Not served kept (Q5)", row)
+	}
+}

@@ -49,7 +49,7 @@ Feature: Swap, set and confirm
     Then the plan slot on 2026-11-10 has the remembered Recipe
 
   Scenario: Setting a Recipe on an empty slot works and computes the Batches
-    Given nobody attends the Dinner on 2026-11-11
+    Given nobody usually attends the Dinner on 2026-11-11
     And the planner has finished
     When I pin the plan slot on 2026-11-11 as "pasta"
     Then the response status is 200

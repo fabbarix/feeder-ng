@@ -17,7 +17,7 @@ func raisedAt(r Result, k SlotKey) (BatchRaise, bool) {
 
 func TestAnUnpinnedMealWhoseBatchesNoLongerCoverIsKeptAndRaised(t *testing.T) {
 	// Moved from TestPlanDropsInvalidPlannedMeals: three Members eat now, the meal has 1 Batch of yield 2.
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := baseInput([]Slot{withExisting(dinner(0, attendees(1, 1, 1)...), meal)}, rcp(1, 2), rcp(3, 2))
 	r := mustPlan(t, in)
 	if !isKept(r, key(0)) {
@@ -36,7 +36,7 @@ func TestAnUnpinnedMealWhoseBatchesNoLongerCoverIsKeptAndRaised(t *testing.T) {
 }
 
 func TestGuestsRaiseTheBatchesOfAKeptMeal(t *testing.T) {
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := baseInput([]Slot{mainCell(0, withGuests(4), holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
 	r := mustPlan(t, in)
 	b, ok := raisedAt(r, ck(0, mainC))
@@ -46,7 +46,7 @@ func TestGuestsRaiseTheBatchesOfAKeptMeal(t *testing.T) {
 }
 
 func TestGuestsRaiseTheBatchesOfAPinnedMealAndItStaysPinned(t *testing.T) {
-	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := baseInput([]Slot{mainCell(0, withGuests(2), holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
 	r := mustPlan(t, in)
 	b, ok := raisedAt(r, ck(0, mainC))
@@ -59,7 +59,7 @@ func TestGuestsRaiseTheBatchesOfAPinnedMealAndItStaysPinned(t *testing.T) {
 }
 
 func TestARaisedPinnedMealUsesTheStockOfTheExtraBatches(t *testing.T) {
-	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := baseInput([]Slot{mainCell(0, withGuests(2), holding(meal))}, rcp(3, 2, courses(mainC), needs(need(chicken, 400))))
 	r := mustPlan(t, in)
 	if len(r.Purchases) != 1 || !approx(r.Purchases[0].Shortfall, 800) {
@@ -70,7 +70,7 @@ func TestARaisedPinnedMealUsesTheStockOfTheExtraBatches(t *testing.T) {
 func TestFewerPortionsNeverLowerBatches(t *testing.T) {
 	// 3 Batches of yield 2 stored; the cell now needs 2 portions. The extra is Leftover, as today.
 	for _, state := range []MealState{MealPlanned, MealPinned} {
-		meal := ExistingMeal{State: state, RecipeID: 3, Batches: 3}
+		meal := ExistingMeal{State: state, RecipeID: 3, Batches: 3, PlacedPortions: 6}
 		in := baseInput([]Slot{mainCell(0, holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
 		r := mustPlan(t, in)
 		if len(r.Raised) != 0 {
@@ -83,7 +83,7 @@ func TestFewerPortionsNeverLowerBatches(t *testing.T) {
 }
 
 func TestABatchCountThatStillCoversIsNotRaised(t *testing.T) {
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 2}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 2, PlacedPortions: 4}
 	in := baseInput([]Slot{withExisting(dinner(0, attendees(1, 1, 1)...), meal)}, rcp(1, 2), rcp(3, 2))
 	if r := mustPlan(t, in); len(r.Raised) != 0 || !isKept(r, key(0)) {
 		t.Errorf("Raised = %+v, Kept = %v; want kept, nothing raised", r.Raised, r.Kept)
@@ -100,7 +100,7 @@ func TestACookedOrNotCookedMealIsNeverRaised(t *testing.T) {
 }
 
 func TestAMealWithAnExcludedRecipeIsStillReplannedNotRaised(t *testing.T) {
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := prefs(baseInput([]Slot{mainCell(0, withGuests(2), holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC))),
 		ben, Preferences{ExcludedRecipes: []RecipeID{3}})
 	r := mustPlan(t, in)
@@ -113,7 +113,7 @@ func TestAMealWithAnExcludedRecipeIsStillReplannedNotRaised(t *testing.T) {
 func TestARaisedMealMakesTheBiggerLeftover(t *testing.T) {
 	// 4 portions needed, a yield-3 Recipe: 1 Batch becomes 2 Batches = 6 portions, 2 over. The Leftover is pending, so a
 	// later slot can be served from it.
-	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}
+	meal := ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
 	in := baseInput([]Slot{mainCell(0, withGuests(2), holding(meal)), mainCell(1, eats(Attendee{anna, 1}, Attendee{ben, 1}))},
 		rcp(3, 3, courses(mainC)), rcp(4, 2, courses(mainC)))
 	r := mustPlan(t, in)
@@ -122,5 +122,35 @@ func TestARaisedMealMakesTheBiggerLeftover(t *testing.T) {
 	}
 	if p := wantPlaced(t, r, ck(1, mainC), 3); p.Source != SourceLeftover {
 		t.Errorf("next day = %+v, want served from the raised meal's Leftover of 2", p)
+	}
+}
+
+func TestBatchesFollowOnlyWhenThePortionsChange(t *testing.T) {
+	// Decision (PM): a meal is raised only when its current portions are greater than the portions it was placed with.
+	// A Pinned 0.5 Batch of yield 2 covers 1 portion, the cell needs 2, but 2 is what it was placed for: nothing changed.
+	for _, state := range []MealState{MealPlanned, MealPinned} {
+		meal := ExistingMeal{State: state, RecipeID: 3, Batches: 0.5, PlacedPortions: 2}
+		in := baseInput([]Slot{mainCell(0, holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
+		if r := mustPlan(t, in); len(r.Raised) != 0 {
+			t.Errorf("state %v: Raised = %+v, want none: the portions did not change", state, r.Raised)
+		}
+	}
+}
+
+func TestAMealPlacedForMoreIsNotRaisedWhenThePortionsFell(t *testing.T) {
+	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1, PlacedPortions: 6}
+	in := baseInput([]Slot{mainCell(0, holding(meal))}, rcp(1, 2, courses(mainC)), rcp(3, 2, courses(mainC)))
+	if r := mustPlan(t, in); len(r.Raised) != 0 {
+		t.Errorf("Raised = %+v, want none: 2 portions are fewer than the 6 it was placed for", r.Raised)
+	}
+}
+
+func TestAGrownCellRaisesFromThePlacedPortionsNotFromTheBatches(t *testing.T) {
+	// Placed for 2 portions in 1 Batch of yield 3 (1 over); now 4 portions: raised to 2 Batches.
+	meal := ExistingMeal{State: MealPinned, RecipeID: 3, Batches: 1, PlacedPortions: 2}
+	in := baseInput([]Slot{mainCell(0, withGuests(2), holding(meal))}, rcp(3, 3, courses(mainC)))
+	b, ok := raisedAt(mustPlan(t, in), ck(0, mainC))
+	if !ok || b.Batches != 2 || !approx(b.Portions, 4) {
+		t.Errorf("Raised = %+v, want 2 Batches for 4 portions", b)
 	}
 }
