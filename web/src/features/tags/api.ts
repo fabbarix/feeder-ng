@@ -1,9 +1,8 @@
-// The one Tag route lib/tags does not wrap: the merge impact with `?into=` (tg-api.md). Plain TypeScript, no React.
+// tagMergeApi.impactInto: GET /api/tags/{id}/impact?into=<id> (tg-api.md), which lib/tags/api.ts does not wrap.
+import { http } from '../../lib/http'
 import type { MergeImpact } from './types'
 
 export const tagMergeApi = {
   /** GET /api/tags/{id}/impact?into=<id>: the Tag's impact plus `bothRecipes`. */
-  impactInto: (_id: number, _into: number): Promise<MergeImpact> => {
-    throw new Error('TG-S: not implemented')
-  },
+  impactInto: (id: number, into: number): Promise<MergeImpact> => http.get<MergeImpact>(`/api/tags/${id}/impact?into=${into}`),
 }
