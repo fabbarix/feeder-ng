@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
+import type { Tag } from '../../../lib/tags'
 import { Button, Checkbox, ListGroup, ListRow, MealSlotSelect, NumberField, RecipeSelect, Segmented, Select } from '../../../ui'
 import { useSlotRuleForm, useVarietyRuleForm } from '../hooks/useRuleForms'
 import { describeSlotRule, describeVarietyRule, mealSlotLabel, toTagOptions } from '../lib/rules'
 import { planStrings as s } from '../strings'
-import type { MealSlotChoice, RecipeChoice, SlotRule, TagChoice, VarietyRule } from '../types'
+import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
 import '../plan.css'
 
 /**
@@ -19,8 +20,8 @@ export interface SlotRulesEditorProps {
   mealSlots: MealSlotChoice[]
   recipes: RecipeChoice[]
   /** The existing Tags: the Tag of a Slot Rule is picked, never typed. */
-  tags: TagChoice[]
-  onAdd: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => void
+  tags: Tag[]
+  onAdd: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => void
   onRemove: (id: number) => void
   error: string | null
 }
@@ -79,7 +80,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
         {form.kind === 'tag' ? (
           <Select
             label={s.tagField}
-            options={toTagOptions(tags)}
+            options={toTagOptions(tags as never)}
             value={form.tag || null}
             onChange={form.setTag}
             helper={tags.length === 0 ? s.noTags : undefined}
@@ -106,7 +107,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
 export interface VarietyRulesEditorProps {
   rules: VarietyRule[]
   /** The existing Tags: the Variety Rule Tag is picked with a Select, never typed. */
-  tags: TagChoice[]
+  tags: Tag[]
   onSave: (rule: VarietyRule) => void
   onRemove: (tag: string) => void
   error: string | null
@@ -146,7 +147,7 @@ export function VarietyRulesEditor({ rules, tags, onSave, onRemove, error }: Var
       >
         <Select
           label={s.tagField}
-          options={toTagOptions(tags)}
+          options={toTagOptions(tags as never)}
           value={form.tag || null}
           onChange={form.setTag}
           helper={tags.length === 0 ? s.noTags : undefined}

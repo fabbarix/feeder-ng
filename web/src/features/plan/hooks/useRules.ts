@@ -18,7 +18,7 @@ export interface UseSlotRules {
   rules: SlotRule[]
   mealSlots: MealSlotChoice[]
   recipes: RecipeChoice[]
-  add: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => Promise<boolean>
+  add: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => Promise<boolean>
   remove: (id: number) => Promise<void>
   error: string | null
   isLoading: boolean
@@ -38,7 +38,7 @@ export function useSlotRules(): UseSlotRules {
   }, [client])
 
   const add = useCallback(
-    async (body: { mealSlotId: number; recipeId?: number; tag?: string }) => {
+    async (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => {
       setError(null)
       try {
         await planApi.addSlotRule(body)

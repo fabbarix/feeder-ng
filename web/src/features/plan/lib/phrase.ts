@@ -18,6 +18,8 @@ export function weekdayName(date: string, style: 'short' | 'long' = 'long'): str
 export interface PhraseContext {
   /** Date of the slot the chip belongs to ("Slot Rule: Friday" names its weekday). */
   slotDate: string
+  /** TG-PW: the Tag's name for a Tag key (`variety_relaxed` chips); absent or undefined = say the key. */
+  tagName?: (key: string) => string | undefined
 }
 
 /** 1st, 2nd, 3rd, 4th, 11th, 21st. */

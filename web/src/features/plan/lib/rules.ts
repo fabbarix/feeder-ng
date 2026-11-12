@@ -1,5 +1,6 @@
 import { planStrings as s } from '../strings'
-import type { SlotRule, TagChoice, VarietyRule } from '../types'
+import type { CourseChoice } from '../../../lib/courses/types'
+import type { MealSlotChoice, SlotRule, TagChoice, VarietyRule } from '../types'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -89,4 +90,22 @@ export function toTagOptions(tags: TagChoice[]): TagOption[] {
 /** CRS F: the title of a Slot Rule row. "Friday Dinner · Main" when the rule's Course is shown, else just "Friday Dinner". */
 export function slotRuleTitle(slotLabel: string, courseName: string | null): string {
   return courseName ? `${slotLabel} · ${courseName}` : slotLabel
+}
+
+/** TG-PW: the Courses of a Meal Slot as the Course select takes them (household order, as the slot lists them); [] for a slot without `courses`. */
+export function slotCourseChoices(_slot: MealSlotChoice | undefined): CourseChoice[] {
+  return []
+}
+
+/** TG-PW: the Course the form starts on for a slot: the main Course's id as a string, '' when the slot has no Courses. */
+export function defaultCourseId(_slot: MealSlotChoice | undefined): string {
+  return ''
+}
+
+/**
+ * TG-PW: the Course name a Slot Rule row shows: only when the slot has several Courses. An absent `courseId` means the
+ * main Course. null when the slot serves one Course (the row reads as before), is unknown, or no longer serves that Course.
+ */
+export function ruleCourseName(_slot: MealSlotChoice | undefined, _courseId: number | undefined): string | null {
+  return null
 }

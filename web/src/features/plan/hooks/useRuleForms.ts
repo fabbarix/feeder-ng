@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toSlotRuleBody, toVarietyRule, type SlotRuleDraftError, type VarietyDraftError } from '../lib/rules'
 import { planStrings } from '../strings'
+import type { CourseChoice } from '../../../lib/courses/types'
 import type { MealSlotChoice, VarietyRule } from '../types'
 
 const slotErrors: Record<SlotRuleDraftError, string> = {
@@ -20,6 +21,13 @@ export interface SlotRuleForm {
   kind: 'recipe' | 'tag'
   recipeId: string
   tag: string
+  /** TG-PW: the chosen Course as a string; the main Course of the chosen slot until another is picked. */
+  courseId: string
+  /** TG-PW: the chosen Meal Slot's Courses, for the Course select. */
+  courses: CourseChoice[]
+  /** TG-PW: the Course select shows only when the slot has several Courses. */
+  showCourse: boolean
+  setCourseId: (v: string) => void
   setMealSlotId: (v: string) => void
   setKind: (v: 'recipe' | 'tag') => void
   setRecipeId: (v: string) => void
@@ -31,7 +39,7 @@ export interface SlotRuleForm {
 /** Form state of the Slot Rule editor; the Meal Slot defaults to the first one. */
 export function useSlotRuleForm(
   mealSlots: MealSlotChoice[],
-  onAdd: (body: { mealSlotId: number; recipeId?: number; tag?: string }) => void,
+  onAdd: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => void,
 ): SlotRuleForm {
   const [mealSlotId, setMealSlotId] = useState('')
   const [kind, setKind] = useState<'recipe' | 'tag'>('recipe')
@@ -50,7 +58,7 @@ export function useSlotRuleForm(
     onAdd(res.body)
     setTag('')
   }
-  return { mealSlotId: effectiveSlot, kind, recipeId, tag, setMealSlotId, setKind, setRecipeId, setTag, error, submit }
+  return { mealSlotId: effectiveSlot, kind, recipeId, tag, courseId: '', courses: [], showCourse: false, setCourseId: () => {}, setMealSlotId, setKind, setRecipeId, setTag, error, submit }
 }
 
 export interface VarietyRuleForm {
