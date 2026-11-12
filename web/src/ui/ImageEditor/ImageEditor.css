@@ -53,8 +53,14 @@
   outline: 2px solid var(--viewfinder-reticle);
 }
 
-.crop-editor__box {
+/* Placed inside the crop rectangle whatever a host sets: the Read step's Tile restyles every button in it (Tile.css). These selectors
+   are 0,3,0, above Tile's 0,2,1, so the handles and the box stay absolute there (hotfix 4.2). */
+.crop-editor .crop-editor__rect .crop-editor__box,
+.crop-editor .crop-editor__rect .crop-editor__handle {
   position: absolute;
+}
+
+.crop-editor__box {
   inset: 0;
   padding: 0;
   border: 0;
@@ -71,7 +77,6 @@
 
 /* 44 px hit area centred on the corner or edge middle; the dot is drawn by ::before. */
 .crop-editor__handle {
-  position: absolute;
   display: grid;
   place-items: center;
   min-inline-size: 44px;
