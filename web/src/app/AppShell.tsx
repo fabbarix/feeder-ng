@@ -57,7 +57,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           <NavLink
             key={item.id}
             to={item.path}
-            end
+            end={item.id !== 'plan'}
             className="side-rail__link"
             data-accent={item.accent ? 'true' : undefined}
           >
@@ -86,7 +86,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           <NavLink
             key={item.id}
             to={item.path}
-            end
+            end={item.id !== 'plan'}
             className="bottom-bar__link"
             data-accent={item.accent ? 'true' : undefined}
           >

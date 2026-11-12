@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter, Link } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { IconButton } from './IconButton'
@@ -145,5 +146,46 @@ describe('ListRow styling (plan 4.13)', () => {
     expect(declarations(css, '.list-row__target:hover')['background']).toBe('var(--color-surface-2)')
     expect(declarations(css, '.list-row__target:active')['background']).toBe('var(--color-surface-3)')
     expect(declarations(css, '.list-row + .list-row')['border-block-start']).toBe('1px solid var(--color-line)')
+  })
+})
+
+describe('ListRow: a rich, wrapping title (CRS G2)', () => {
+  const css = readUiCss('ListRow.css')
+
+  it('a static row takes a ReactNode title: inline links stay links inside the title', () => {
+    render(
+      <MemoryRouter>
+        <ListGroup label="Exclusions">
+          <ListRow title={<><strong>Alex</strong> excludes <Link to="/recipes/9">Lasagne</Link></>} />
+        </ListGroup>
+      </MemoryRouter>,
+    )
+    const row = screen.getByRole('listitem')
+    const title = row.querySelector('.list-row__title')!
+    expect(title).toHaveTextContent('Alex excludes Lasagne')
+    expect(within(title as HTMLElement).getByRole('link', { name: 'Lasagne' })).toHaveAttribute('href', '/recipes/9')
+    expect(row.querySelector('.list-row__target')).toBeNull()
+  })
+
+  it('wrapTitle marks the row so its title wraps; without it the title stays on one line', () => {
+    render(
+      <ListGroup label="Stock">
+        <ListRow title="A long name" wrapTitle />
+        <ListRow title="Short" />
+      </ListGroup>,
+    )
+    const [wrapped, plain] = screen.getAllByRole('listitem')
+    expect(wrapped).toHaveAttribute('data-wrap-title', 'true')
+    expect(plain).not.toHaveAttribute('data-wrap-title')
+    // a wrapping title can take any number of lines, so the row grows with it
+    expect(wrapped).toHaveAttribute('data-height', 'auto')
+    expect(plain).toHaveAttribute('data-height', '56')
+  })
+
+  it('the CSS wraps the title of a wrapTitle row and lets links inside a title take the pointer', () => {
+    const wrap = declarations(css, ".list-row[data-wrap-title='true'] .list-row__title")
+    expect(wrap['white-space']).toBe('normal')
+    expect(wrap['overflow']).toBe('visible')
+    expect(declarations(css, '.list-row__title a')['pointer-events']).toBe('auto')
   })
 })

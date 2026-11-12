@@ -18,15 +18,13 @@ describe('causeOf: one cause per slot', () => {
   it('a Slot Rule claimed the slot, whatever was eliminated', () =>
     expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 3, coolDown: 3 }, true))).toBe('slot_rule'))
   it('the filter that removed the most options wins', () => {
-    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 5, exclusion: 1, coolDown: 4 }))).toBe('cool_down')
+    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 5, exclusion: 1, advanceStep: 4 }))).toBe('advance_step')
     expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 3, exclusion: 3 }))).toBe('excluded')
-    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 3, varietyRule: 2, advanceStep: 1 }))).toBe('variety_rule')
     expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 2, exclusion: 1, advanceStep: 1 }))).toBe('excluded')
     expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 2, advanceStep: 2 }))).toBe('advance_step')
   })
-  it('ties go Exclusion, Cool-down, Variety Rule, Advance Step', () => {
-    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 4, coolDown: 2, varietyRule: 2 }))).toBe('cool_down')
-    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 4, varietyRule: 2, advanceStep: 2 }))).toBe('variety_rule')
+  it('ties go Exclusion, Advance Step', () => {
+    expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 4, exclusion: 2, advanceStep: 2 }))).toBe('excluded')
   })
   it('Recipes were considered but nothing was counted: no fit', () =>
     expect(causeOf(unfilled('2026-11-10', 'no_candidates', { considered: 2 }))).toBe('no_fit'))
@@ -65,10 +63,10 @@ describe('groupByCause: one group per cause, never one line per slot', () => {
   })
 
   it('causes are separate groups, setup gaps first, then rule conflicts', () => {
-    const coolDown = unfilled('2026-11-12', 'no_candidates', { considered: 3, coolDown: 3 }, false, 'Lunch', 5)
-    const rule = unfilled('2026-11-13', 'no_candidates', { considered: 1, coolDown: 1 }, true, 'Dinner', 6)
-    const groups = groupByCause([coolDown, rule, nobody('2026-11-10')])
-    expect(groups.map((g) => g.cause)).toEqual(['nobody_attending', 'slot_rule', 'cool_down'])
+    const late = unfilled('2026-11-12', 'no_candidates', { considered: 3, advanceStep: 3 }, false, 'Lunch', 5)
+    const rule = unfilled('2026-11-13', 'no_candidates', { considered: 1, advanceStep: 1 }, true, 'Dinner', 6)
+    const groups = groupByCause([late, rule, nobody('2026-11-10')])
+    expect(groups.map((g) => g.cause)).toEqual(['nobody_attending', 'slot_rule', 'advance_step'])
   })
 
   it('slots inside a group are in date then time order', () => {
@@ -84,10 +82,8 @@ describe('every cause: copy, fix action, tone and icon', () => {
   const sample: Record<string, PlanSlot> = {
     nobody_attending: nobody('2026-11-10'),
     no_recipes: unfilled('2026-11-10', 'no_candidates'),
-    slot_rule: unfilled('2026-11-10', 'no_candidates', { considered: 2, coolDown: 2 }, true),
+    slot_rule: unfilled('2026-11-10', 'no_candidates', { considered: 2, advanceStep: 2 }, true),
     excluded: unfilled('2026-11-10', 'no_candidates', { considered: 2, exclusion: 2 }),
-    cool_down: unfilled('2026-11-10', 'no_candidates', { considered: 2, coolDown: 2 }),
-    variety_rule: unfilled('2026-11-10', 'no_candidates', { considered: 2, varietyRule: 2 }),
     advance_step: unfilled('2026-11-10', 'no_candidates', { considered: 2, advanceStep: 2 }),
     no_fit: unfilled('2026-11-10', 'no_candidates', { considered: 2 }),
   }
@@ -97,9 +93,7 @@ describe('every cause: copy, fix action, tone and icon', () => {
     ['nobody_attending', "Couldn't plan 1 Meal Slot. Nobody is set to attend.", 'Choose who attends', '/settings/meal-slots#meal-slot-1', 'info', 'attendance'],
     ['no_recipes', "Couldn't plan 1 Meal Slot. There are no Recipes to choose from.", 'Add Recipes', '/recipes', 'info', 'recipes'],
     ['slot_rule', "Couldn't plan 1 Meal Slot. Nothing that matches its Slot Rule is available.", 'Review Slot Rules', '/settings/planning', 'warn', 'slotRule'],
-    ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who attends.", 'Review Exclusions', '/recipes', 'warn', 'exclusion'],
-    ['cool_down', "Couldn't plan 1 Meal Slot. Every Recipe is in Cool-down.", 'Review Cool-down', '/settings/household', 'warn', 'duration'],
-    ['variety_rule', "Couldn't plan 1 Meal Slot. Every Recipe is blocked by a Variety Rule.", 'Review Variety Rules', '/settings/planning', 'warn', 'varietyRule'],
+    ['excluded', "Couldn't plan 1 Meal Slot. Every Recipe is excluded for someone who eats it.", 'Review Exclusions', '/plan/couldnt-plan/excluded', 'warn', 'exclusion'],
     ['advance_step', "Couldn't plan 1 Meal Slot. Every Recipe needs an Advance Step that is already too late.", 'Choose a Recipe', '/plan', 'warn', 'advanceStep'],
     ['no_fit', "Couldn't plan 1 Meal Slot. No Recipe fits.", 'Choose a Recipe', '/plan', 'warn', 'info'],
   ])('%s', (cause, headline, label, to, tone, icon) => {
@@ -131,7 +125,7 @@ describe('every cause: copy, fix action, tone and icon', () => {
 
   it('the fix actions are the ones in the spec', () => {
     expect(Object.keys(sample).map((c) => group(c).fix.label)).toEqual([
-      'Choose who attends', 'Add Recipes', 'Review Slot Rules', 'Review Exclusions', 'Review Cool-down', 'Review Variety Rules', 'Choose a Recipe', 'Choose a Recipe',
+      'Choose who attends', 'Add Recipes', 'Review Slot Rules', 'Review Exclusions', 'Choose a Recipe', 'Choose a Recipe',
     ])
   })
 })
@@ -142,8 +136,6 @@ describe('shortReason: the one-liner on a day tile', () => {
     ['no_recipes', 'No Recipes to choose from.'],
     ['slot_rule', "Its Slot Rule can't be met."],
     ['excluded', 'Every Recipe is excluded.'],
-    ['cool_down', 'Every Recipe is in Cool-down.'],
-    ['variety_rule', 'Variety Rules block every Recipe.'],
     ['advance_step', 'Too late for an Advance Step.'],
     ['no_fit', 'No Recipe fits.'],
   ] as const)('%s', (cause, text) => expect(shortReason(cause)).toBe(text))

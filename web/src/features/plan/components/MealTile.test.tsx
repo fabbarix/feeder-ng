@@ -130,7 +130,7 @@ describe('MealTile (compact, on a day tile)', () => {
   it('R13: an empty slot is a dashed block with a "Not planned" chip (never danger), the short reason and a tertiary Choose a Recipe', async () => {
     const h = setup(slot({
       date: '2026-11-12', meal: null,
-      unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 3, exclusion: 1, coolDown: 2, varietyRule: 0, advanceStep: 0 } },
+      unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 3, exclusion: 3, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
     }))
     const block = screen.getByText('Not planned').closest('[data-unfilled]') as HTMLElement
     expect(block).not.toBeNull()
@@ -138,7 +138,7 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(chip).toHaveAttribute('data-kind', 'status')
     expect(chip).toHaveAttribute('data-status', 'spoil') // warn: a rule conflict
     expect(block.querySelector('[data-status="danger"]')).toBeNull()
-    expect(screen.getByText('Every Recipe is in Cool-down.')).toBeInTheDocument()
+    expect(screen.getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Thursday dinner/)).not.toBeInTheDocument()
     const choose = screen.getByRole('button', { name: 'Choose a Recipe' })
     expect(choose).toHaveAttribute('data-variant', 'tertiary')
