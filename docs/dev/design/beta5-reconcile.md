@@ -14,7 +14,7 @@ Terms in **bold** are [GLOSSARY](../../../GLOSSARY.md) terms. Everything here wa
 
 | # | Feature | State on main | Verdict |
 |---|---|---|---|
-| 1 | Per-date slot controls | Date Attendance (Members, Course opt-outs) exists, any User, but only in Settings > Meal Slots. No per-date time, no Not served action. The slot menu is hidden for one-Course slots. | Buildable in part. Buildable (decided in §13). |
+| 1 | Per-date slot controls | Date Attendance (Members, Course opt-outs) exists, any User, but only in Settings > Meal Slots. No per-date time, no Not served action. The slot menu is hidden for one-Course slots. | Buildable (decided in §13). |
 | 2 | Guests | Nothing. Portions = Members of the Course Attendance. | Buildable (decided in §13). |
 | 3 | Leftovers by hand | `leftovers` rows carry a Course of origin; no place, no hand actions; the 03:00 job discards and counts waste (spec §8). | Buildable (decided in §13). |
 | 4 | Plan stability (Bought) | Nothing. ADR 0009 keep check and Slot Rule reservations replan every unpinned Planned Meal. | Buildable (decided in §13). |
@@ -258,7 +258,7 @@ UI: `features/shop`: line `Menu` on `LineTile`, `NotNeededGroup`, pure `lib/line
 
 ### 8.3 Proposed design
 
-As plan 2.8 for the mechanics (groups, rows, role table, breadcrumbs "Settings › Ingredients" on `/ingredients` and `/products`, routes unchanged, `MENU_ICONS` entries and the three `navItems` removed). The group and row placement waits on Q25.
+As plan 2.8 for the mechanics (groups, rows, role table, breadcrumbs "Settings › Ingredients" on `/ingredients` and `/products`, routes unchanged, `MENU_ICONS` entries and the three `navItems` removed). The avatar menu itself is NAV's (U8): Kitchen board and Sign out, Sign-in requests at the end (`app/accessMenu.ts`). The group and row placement waits on Q25.
 
 ---
 
@@ -285,8 +285,8 @@ These were questions in the first version of this document. They are decided; ol
 | Q23 | **A.** Used from keeps the default order; each row shows its Storage Place; frozen Lots are listed like any other. |
 | Q24 | The Recipes sort is a `?sort=` URL parameter (the other filters live in the URL) and is also remembered on the device. "Last cooked ..." joins the tile's meta line. |
 | Q25 | Dropped. As the plan: Catalogue = Ingredients, Products, Shops, Tags, Courses, Storage Places; Household = Household, Members, Meal Slots, Planning rules, Sign-in requests, plus Allowlist and Recipe Assistant for Admins; You = Your preferences, Notifications. The Admin group dissolves. (Tags and Courses rows landed after `cd39ff1`; the plan listed them already.) |
-| Q26 | Dropped. As the plan: the avatar menu keeps Kitchen board, Settings and Sign-in requests. |
-| Q28 | **A.** Take the snapshot again (`feeder-pre-1500.db`), generalising the helper. The user chose one release (U7 = A); the snapshot stays.. |
+| Q26 | Superseded by U8 (§13, spec decision 44): Settings becomes the 7th bottom-bar button, and the avatar menu keeps Kitchen board and Sign out, with Sign-in requests at the end. Ingredients and Products still leave the avatar menu for Settings > Catalogue. |
+| Q28 | **A.** Take the snapshot again (`feeder-pre-1500.db`), generalising the helper. The user chose one release (U7 = A); the snapshot stays. |
 
 ---
 
@@ -343,7 +343,7 @@ New terms (singular, as the glossary names them):
 
 +**Used from**:
 +The Stock Lots a User says a Cooked Planned Meal took an Ingredient from, when not the default order.
-+_Avoid_: Source lots, override
++_Avoid_: Source lots, picked lots
 
 +**Last cooked**:
 +The latest date a Recipe was Cooked fresh (not served from a Leftover).
@@ -414,7 +414,7 @@ Rules from CLAUDE.md apply: one team per feature, own worktree and branch, no tw
 |---|---|---|---|
 | **D Shared web** | Phosphor glyphs (`snowflake`, `question`, `shopping-cart`, a Guests glyph); expandable `ui/ListRow` (`expanded`, `onToggle`); Gallery rows | `web/src/ui/icons.ts`, `web/src/ui/ListRow*`, `web/src/ui/Gallery*`, `web/src/ui/galleryData.ts`, `web/src/ui/index.ts` | none; **before ST and LOW** |
 | **NAV Bottom nav** | User decision: a 7th top-level button, **Settings**, on the right of the bottom bar and the side rail. Seven equal slots, Scan exactly centred, equal inner padding so the highlights at both ends have room. The avatar menu keeps the account items: sign out and Kitchen board | `web/src/app/{nav.ts,nav.test.ts,AppShell*,YourMenu*,accessMenu*,shell.css,shell.css.test.ts,chromeless*}`, `scripts/check-shell-layout.mjs` and the shell guard (`scripts/lib/page-layout-rules.mjs`, `scripts/check-page-layout.modes` if a route changes) | none |
-| **MS Settings > Meal Slots redesign** | User decision: option B, one card per Meal Slot, from `docs/dev/design/meal-slots-redesign.md`. "Dates that differ" is kept and read-only. "Usual" is the most common value, ties to the earliest weekday. A plain User sees the cards read-only except for "Change a date" | `web/src/features/settings/screens/MealSlotsPage*`, `settings/components/{MealSlotEditor,MealSlotGrid,MealSlotWeek,SlotCourseLine,SlotCoursesField,AttendeePills,AttendanceEditor}*`, `settings/lib/{weekGrid,weekdays,slotGroups,slotForm,slotAnchor,multiDay,slotCourses}*` plus a new pure `settings/lib/mealSlotCards.ts`, its own CSS file (not `settings.css`), and `settings/strings.ts` for its copy | none; **before G and F1** |
+| **MS Settings > Meal Slots redesign** | User decision: option B, one card per Meal Slot, from `docs/dev/design/meal-slots-redesign.md`. "Dates that differ" is kept and read-only. "Usual" is the most common value, ties to the earliest weekday. A plain User sees the cards read-only except for "Change a date" | `web/src/features/settings/screens/MealSlotsPage*`, `settings/components/{MealSlotEditor,MealSlotGrid,MealSlotWeek,SlotCourseLine,SlotCoursesField,AttendeePills,AttendanceEditor}*`, `settings/lib/{weekGrid,weekdays,slotGroups,slotForm,slotAnchor,multiDay,slotCourses}*` plus a new pure `settings/lib/mealSlotCards.ts`, its own CSS file (not `settings.css`), `settings/hooks/{useMealSlotsPage,useMealSlots}.ts`, any edits to `settings/api.ts` and `settings/types.ts`, and `settings/strings.ts` for its copy. Source: `docs/dev/design/meal-slots-redesign.md` on `team/ms-redesign`, which merges in the same batch | none; **before G and F1** |
 | **G Settings and nav** (F8) | Groups, rows, copy, breadcrumbs. The Settings top-level button (NAV) changes the avatar-menu plan: Ingredients and Products leave the avatar menu for Settings > Catalogue, as the plan says | `web/src/features/settings/lib/settingsSections*`, `settings/strings.ts`, `settings/screens/SettingsIndexPage*`, `web/src/app/{breadcrumbs*,pageWidths.ts}` (+tests) and, after NAV merges, the `MENU_ICONS` entries of `web/src/app/nav.ts`, `web/src/features/{ingredients,products,shops}/index.ts` (+tests), `scripts/lib/page-layout-rules.mjs` if a route changes | **NAV** and **MS** merged (nav.ts, the avatar menu and `settings/strings.ts` are theirs first); **before F1 and LOW** |
 | **R Recipes last cooked** (F7) | `LastCooked` in the plan store, list/detail field, `?sort`, sort select, tile meta | `internal/plan/store/lastcooked.go` (new file), `internal/recipe/httpapi/**`, `internal/modules/recipes.go`, `web/src/features/recipes/**` | none; **before LO** (LO adds the Recipe field and `internal/modules/recipes.go`) |
 | **SH Shopping Not needed + hint** (F5) | Migration 1530, shopping, hint, Not needed | `internal/db/migrations/1530_*.sql`, `internal/shopping/{shopping.go,store/**,service/**,httpapi/**}`, `internal/modules/shopping.go`, `web/src/features/shop/**` | none. **Mark it** needs an anchor on the plan side (`/plan#to-confirm` handled by Plan); F1 provides it. Until F1 merges, SH ships the hint without the button. |
@@ -429,7 +429,7 @@ Rules from CLAUDE.md apply: one team per feature, own worktree and branch, no tw
 | **UF-web** | `UsedFromSection` in both Mark sheets | the Mark-cooked set: `web/src/features/plan/components/{MarkCookedSheet,MarkAllCookedSheet,CookFlowSheets,AllCookedSheets}*`, `hooks/{useMarkCooked,useMarkAllCooked,useCookFlow,useAllCookedFlow}*`, `lib/{cook,usedFrom}.ts`, new `usedFromStrings.ts` and `api.usedFrom.ts` in `features/plan/` | **UF-runner/httpapi** merged |
 | **LOW Leftovers web** | `lib/leftovers`, `ui/LeftoverActions`, Today tile, Planned Meal sheet link, "From the freezer", Pantry frozen rows, Recipe editor and Household fields | `web/src/lib/leftovers/**`, `web/src/ui/LeftoverActions/**`, `web/src/ui/index.ts`, `web/src/features/plan/**` (except the Mark-cooked set), `web/src/features/stock/**`, `web/src/features/recipes/**` (editor field), `web/src/features/settings/{components/HouseholdSettingsForm*,strings.ts}` | LO, **BOW**, D, G, ST, F1, R merged |
 | **SNAP Snapshot** | Generalise `NeedsPre1400Snapshot` to a named snapshot, `feeder-pre-1500.db` | `internal/db/db.go`, `internal/backup/backup.go`, `cmd/feeder/startup.go`, and its **own** new test file under `scripts/test/` (not the shared release test) | none |
-| **W0 Doc** | Spec (decisions 37 to 43, §18, per-feature edits), GLOSSARY (§10), ADRs 0011 to 0014 to Accepted, status-line back-references | `docs/spec/functional-spec.md`, `GLOSSARY.md`, `docs/adr/001[1-4]-*`, `docs/adr/0003-*`, `0008-*`, `0009-*` | none (the answers are recorded in §13) |
+| **W0 Doc** | **Done on this branch** (the commit "W0 glossary and spec; U8 U9"): GLOSSARY.md (§10), the spec (decisions 37 to 45, §18, per-feature edits), ux-brief, ADRs 0011 to 0014 Accepted, status-line back-references | `docs/spec/functional-spec.md`, `GLOSSARY.md`, `docs/adr/001[1-4]-*`, `docs/adr/0003-*`, `0008-*`, `0009-*` | none (the answers are recorded in §13) |
 | **H Release** | CHANGELOG (including the Batches note, §9 Q9), upgrade note, deploy guide, word check | `CHANGELOG.md`, `docs/dev/deploy.md`, `GLOSSARY.md` | last |
 
 **Mark-cooked carve-out.** F1, BOW and LOW own `web/src/features/plan/**` except `components/{MarkCookedSheet,MarkAllCookedSheet,CookFlowSheets,AllCookedSheets}*`, `hooks/{useMarkCooked,useMarkAllCooked,useCookFlow,useAllCookedFlow}*` and `lib/cook.ts`, which belong to UF-web. `plan/strings.ts`, `types.ts`, `api.ts` and `plan.css` are shared by F1, BOW and LOW and so stay strictly in that order; UF-web adds its own strings and API calls in new files.
@@ -440,18 +440,18 @@ Rules from CLAUDE.md apply: one team per feature, own worktree and branch, no tw
 
 | Wave | Parallel teams (each after what it depends on) |
 |---|---|
-| **0** | SNAP, D, NAV, MS, R, SH |
+| **0** | W0 (done), SNAP, D, NAV, MS, R, SH |
 | **1** | G (after NAV and MS), ST (after D) |
 | **2** | SD (after SH), UF-stock (after ST) |
 | **3** | F1 web (after SD, D, G, MS), BO (after SD, SH) |
 | **4** | BOW, LO (after BO and R) |
 | **5** | UF-runner/httpapi (after LO), LOW (after BOW, LO, F1, ST, G, R) |
 | **6** | UF-web (after UF-runner) |
-| **7** | W0 (spec, GLOSSARY, ADR status), H release, QA |
+| **7** | H release, QA |
 
-Critical path: SD, BO, LO, UF-runner, UF-web, H (LOW runs beside UF-runner and UF-web). W0 can start at once: no answer is open.
+Critical path: SD, BO, LO, UF-runner, UF-web, H (LOW runs beside UF-runner and UF-web). W0 is done and no answer is open.
 
-**No file has two owners at once.** `web/src/app/nav.ts` and the avatar menu: NAV, then G. `web/src/features/settings/strings.ts`: MS, then G, then F1, then LOW. The Meal Slots components and DateAttendancePanel: MS, then F1 (F1 adds Guests to the sheet and the Settings date entry). `ui/index.ts`: D, then LOW.
+**No file has two owners at once.** `web/src/app/nav.ts` and the avatar menu: NAV, then G. `web/src/features/settings/strings.ts`, `settings/api.ts`, `settings/types.ts` and the Meal Slots hooks: MS, then G, then F1, then LOW. The Meal Slots components and DateAttendancePanel: MS, then F1 (F1 adds Guests to the sheet and the Settings date entry). `ui/index.ts`: D, then LOW.
 
 ### 12.2 What can start today
 
@@ -478,3 +478,5 @@ The user answered the seven questions of the first review, taking the recommende
 - **U5. When a frozen Leftover leaves the Freezer (was Q12): A.** Cooked takes the portions the meal uses; the rest stays frozen with its date; Take out is not required first.
 - **U6. Bought side beside a Whole meal (was Q17): A.** A Bought Planned Meal is kept like a Pinned one; Feeder does not pick a Whole meal beside it, and the User can still swap it.
 - **U7. One release or two (was Q27): A.** One release, beta.5, built in waves with one round of testing at the end. Cut to beta.6 only after telling the coordinator.
+- **U8. Bottom nav (new): a 7th top-level button.** Settings is a top-level button on the right of the phone bottom bar and the side rail: seven equal slots, Scan exactly centred, equal inner padding so the highlights at both ends have room. The avatar menu keeps Kitchen board and Sign out; Sign-in requests (which `accessMenu` adds) go at the end of it. This reverses spec decision 33's six destinations; it is spec decision 44.
+- **U9. Settings > Meal Slots (new): option B.** One card per Meal Slot. "Dates that differ" is shown read-only. "Usual" is the most common value, ties to the earliest weekday. A plain User sees the cards read-only except **Change a date**. Source: `docs/dev/design/meal-slots-redesign.md` on `team/ms-redesign`, which merges in the same batch; spec decision 45.
