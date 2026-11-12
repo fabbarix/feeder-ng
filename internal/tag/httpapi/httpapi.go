@@ -4,14 +4,21 @@
 package httpapi
 
 import (
-	"net/http"
+	"context"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
-	"github.com/fabbarix/feeder-ng/internal/httpx"
+	"github.com/fabbarix/feeder-ng/internal/tag"
 	"github.com/fabbarix/feeder-ng/internal/tag/store"
 )
 
 func init() { app.Register(app.Module{Name: "tags", Mount: mount}) }
+
+// Live-update topics. A Tag write publishes tags; a rename, merge or delete also publishes recipes
+// (their Tags changed). plan.invalidate comes from internal/plan.
+const (
+	tagsTopic    = "tags"
+	recipesTopic = "recipes"
+)
 
 // api bundles what the handlers need.
 type api struct {
@@ -19,18 +26,34 @@ type api struct {
 	st *store.Store
 }
 
-// STUB (TG-API test author): GET /api/tags is still served by internal/recipe/httpapi. The developer
-// moves it here (list), removes it there, and replaces notImplemented below with the real handlers.
 func mount(r *app.Router, d app.Deps) {
 	a := &api{d: d, st: store.New(d.DB)}
-	_ = a
-	r.User("POST /api/tags", notImplemented)
-	r.User("PATCH /api/tags/{id}", notImplemented)
-	r.User("GET /api/tags/{id}/impact", notImplemented)
-	r.User("POST /api/tags/{id}/merge", notImplemented)
-	r.User("DELETE /api/tags/{id}", notImplemented)
+	r.User("GET /api/tags", a.list)
+	r.User("POST /api/tags", a.create)
+	r.User("PATCH /api/tags/{id}", a.patch)
+	r.User("GET /api/tags/{id}/impact", a.impact)
+	r.User("POST /api/tags/{id}/merge", a.merge)
+	r.User("DELETE /api/tags/{id}", a.remove)
 }
 
-func notImplemented(w http.ResponseWriter, _ *http.Request) {
-	httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "TG-API is not implemented yet")
+// changed publishes a Tag write (tags) and, when the Recipes' Tags moved, recipes.
+func (a *api) changed(recipes bool) {
+	a.d.Events.Publish(tagsTopic, map[string]string{"changed": "tags"})
+	if recipes {
+		a.d.Events.Publish(recipesTopic, map[string]string{"changed": "tags"})
+	}
+}
+
+// listing returns one Tag with its counts. tag.ErrNotFound when absent.
+func (a *api) listing(ctx context.Context, id int64) (tag.Listing, error) {
+	all, err := a.st.List(ctx)
+	if err != nil {
+		return tag.Listing{}, err
+	}
+	for _, l := range all {
+		if l.ID == id {
+			return l, nil
+		}
+	}
+	return tag.Listing{}, tag.ErrNotFound
 }

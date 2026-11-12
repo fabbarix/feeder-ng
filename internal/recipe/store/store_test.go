@@ -253,22 +253,10 @@ func TestTagsAreCreatedOnUseAndMatchedByKey(t *testing.T) {
 	if want := []string{"Fish", "oven bake"}; !reflect.DeepEqual(rb.Tags, want) {
 		t.Errorf("second Recipe Tags = %q, want %q (existing Tag spelling wins)", rb.Tags, want)
 	}
-	tags, err := f.s.Tags(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []store.TagCount{{Name: "Fish", Recipes: 2}, {Name: "oven bake", Recipes: 1}, {Name: "quick", Recipes: 1}}
-	if !reflect.DeepEqual(tags, want) {
-		t.Errorf("Tags = %+v, want %+v", tags, want)
-	}
-	// Removing the last use keeps the Tag (Slot Rules may refer to it).
+	// Removing the last use of a Tag leaves the Recipe without it (the Tag itself stays: tag store).
 	b.Tags = nil
 	if _, err := f.s.Update(ctx, rb.ID, b); err != nil {
 		t.Fatal(err)
-	}
-	tags, _ = f.s.Tags(ctx)
-	if len(tags) != 3 || tags[1].Name != "oven bake" || tags[1].Recipes != 0 {
-		t.Errorf("Tags after removal = %+v", tags)
 	}
 }
 
