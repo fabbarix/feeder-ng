@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Segmented, TextArea, TextField, Tile } from '../../../ui'
+import { usePhotoPages } from '../hooks/usePhotoPages'
+import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
-import { filledPhotos, emptySlots, setSlot, type PhotoSlots } from '../lib/photoSlots'
+import { blockText } from '../lib/photoMessages'
 import { withModelName } from '../lib/readErrors'
 import { textCounter } from '../lib/readRequest'
 import { importStrings as s, readStrings as t } from '../strings'
@@ -30,14 +32,17 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
   const [tab, setTab] = useState<Tab>('url')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
-  const [slots, setSlots] = useState<PhotoSlots>(emptySlots)
+  const pages = usePhotoPages()
+  const [sending, setSending] = useState(false)
   const lastInput = useRef<ReadInput | undefined>(undefined)
+  const reopened = useRef(false)
   const errorTile = useRef<HTMLElement>(null)
   const readButton = useRef<HTMLButtonElement>(null)
   const ids = useId()
   const readButtonId = `${ids}-read`
   const reasonId = `${ids}-reason`
   const photosReasonId = `${ids}-photos`
+  const blockId = `${ids}-block`
 
   // While a read runs, the choice shows what is being read.
   const current: Tab = read.busy && read.kind ? read.kind : tab === 'photo' && !availability.photos ? 'url' : tab
@@ -58,20 +63,46 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
     else readButton.current?.focus()
   }, [read.busy, read.phase])
 
+  // The photos the device kept come back: the Photo tab opens once, the first time there are some.
+  useEffect(() => {
+    if (reopened.current || pages.restoredCount === 0 || !availability.photos) return
+    reopened.current = true
+    setTab('photo')
+  }, [pages.restoredCount, availability.photos])
+
+  // Sending (the photos are turned into data URLs) holds the button until the read has started, failed or ended. A refused start sets a new
+  // error even when the phase is already 'failed', so the error (and the phase) end it.
+  useEffect(() => {
+    setSending(false)
+  }, [read.phase, read.error])
+
+  // The photos are kept until a read reaches review (see usePhotoReadEnd).
+  usePhotoReadEnd(read, pages.finished)
+
   const counter = textCounter(text)
-  const photos = filledPhotos(slots)
-  const input: ReadInput | undefined =
-    current === 'url' ? { kind: 'url', url } : current === 'text' ? { kind: 'text', text } : { kind: 'photo', photos }
-  const hasInput = current === 'url' ? url.trim() !== '' : current === 'text' ? text.trim() !== '' && !counter.over : photos.length > 0
+  const input: ReadInput | undefined = current === 'url' ? { kind: 'url', url } : current === 'text' ? { kind: 'text', text } : undefined
+  const hasInput = current === 'url' ? url.trim() !== '' : current === 'text' ? text.trim() !== '' && !counter.over : pages.canRead
   const canRead = !locked && hasInput
+  const block = current === 'photo' ? blockText(pages.state) : undefined
 
   const clearFailure = () => {
     if (read.phase === 'failed') read.reset()
   }
   const submit = () => {
-    if (!canRead || !input) return
-    lastInput.current = input
-    void read.start(input)
+    if (!canRead) return
+    if (!input) {
+      setSending(true)
+      pages.toReadInput().then(
+        (photoInput) => start(photoInput),
+        () => setSending(false),
+      )
+      return
+    }
+    start(input)
+  }
+  const start = (next: ReadInput) => {
+    lastInput.current = next
+    void read.start(next)
   }
 
   return (
@@ -136,14 +167,7 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
           />
         ) : null}
         {current === 'photo' ? (
-          <ReadPhotoPanel
-            slots={slots}
-            disabled={locked}
-            onSlotChange={(i, image) => {
-              clearFailure()
-              setSlots((prev) => setSlot(prev, i, image))
-            }}
-          />
+          <ReadPhotoPanel pages={pages} disabled={locked} />
         ) : null}
       </div>
       {reason ? (
@@ -163,11 +187,30 @@ export function ReadRecipeStep({ read, availability, headingRef }: ReadRecipeSte
       ) : null}
       {availability.limitHint ? <p className="read-step__muted">{availability.limitHint}</p> : null}
       {read.busy ? (
-        <ReadProgress kind={read.kind ?? current} state={read.state} elapsedSeconds={read.elapsedSeconds} onCancel={() => void read.cancel()} />
+        <ReadProgress
+          kind={read.kind ?? current}
+          state={read.state}
+          elapsedSeconds={read.elapsedSeconds}
+          onCancel={() => void read.cancel()}
+        />
       ) : (
-        <Button ref={readButton} id={readButtonId} icon="assistant" disabled={!canRead} aria-describedby={describedBy} onClick={submit}>
-          {t.readAction}
-        </Button>
+        <>
+          {block ? (
+            <p id={blockId} className="read-step__muted">
+              {block}
+            </p>
+          ) : null}
+          <Button
+            ref={readButton}
+            id={readButtonId}
+            icon="assistant"
+            disabled={!canRead || sending || block !== undefined}
+            aria-describedby={describedBy ?? (block ? blockId : undefined)}
+            onClick={submit}
+          >
+            {t.readAction}
+          </Button>
+        </>
       )}
       {read.phase === 'failed' && read.error ? (
         <ReadErrorTile

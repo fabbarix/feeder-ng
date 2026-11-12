@@ -8,7 +8,7 @@ export const READ_LIMITS = { textChars: 50_000, photos: 4, photoBytes: 8 * 1024 
 export type InputProblem = 'url_invalid' | 'text_empty' | 'text_too_long' | 'photos_empty' | 'too_many_photos' | 'photo_too_large' | 'photo_unsupported'
 export type BuiltRead = { ok: true; body: ReadBody } | { ok: false; problem: InputProblem; /** 0-based photo the problem is about. */ index?: number }
 
-const SUPPORTED_DATA_URL = /^data:image\/(jpeg|png|gif|webp);base64,/i
+const SUPPORTED_DATA_URL = /^data:image\/(jpeg|png|gif|webp|heic|heif);base64,/i
 const BARE_HOST = /^[^\s/?#:@]+\.[^\s/?#:@]+/
 
 /** The address as the server needs it: https:// added to a bare address; undefined when it is not an http(s) address with a host. */

@@ -76,4 +76,15 @@ describe('FileDrop', () => {
     drop(zone, [json()])
     expect(onFiles).not.toHaveBeenCalled()
   })
+
+  it('passes an aria-describedby to its button, so a host can say why choosing is off', () => {
+    const extra = { 'aria-describedby': 'why' } as Record<string, string>
+    render(
+      <>
+        <p id="why">That's 4 photos, the most a read takes.</p>
+        <FileDrop label="Photos" disabled onFiles={() => {}} {...extra} />
+      </>,
+    )
+    expect(screen.getByRole('button', { name: /Choose a file/ })).toHaveAccessibleDescription("That's 4 photos, the most a read takes.")
+  })
 })

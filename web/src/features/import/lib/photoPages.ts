@@ -1,44 +1,11 @@
 // The state model of the Photo tab of the Recipe read (docs/dev/design/photo-read.md section 2): a reducer plus selectors.
 // Plain TypeScript: no React, no DOM, no Blob reads.
-import type { ImageOrigin, RawImage } from '../../../ui/ImagePicker/types'
-import type { ImageProblemCode } from '../../../ui/ImagePicker/lib/problems'
-import { moveItem } from '../../../ui/Sortable/reorder'
+import type { ImageEdit, ImageOrigin, ImageProblemCode, RawImage, Rect, Size } from '../../../ui'
+import { checkImageFile, INPUT_MAX_BYTES, initialEdit, isFullEdit, moveItem, outputSize, READ_MAX_SIDE } from '../../../ui'
+import type { SavablePhoto } from './photoStore'
 
-// --- Stand-ins, replaced by the ui barrel imports when T1 (ui/ImageEditor) lands. ---------------------------------------------
-// Keep this block together: once ui/ImageEditor exports ImageEdit, Rect, Size, initialEdit, isFull and outputSize, delete it and import them.
-export interface Rect {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-export interface Size {
-  width: number
-  height: number
-}
-/** `turns` quarter turns clockwise; `crop` in pixels of the TURNED working copy. */
-export interface ImageEdit {
-  turns: 0 | 1 | 2 | 3
-  crop: Rect
-}
-/** The whole picture, no turn. (Real name in T1: `initialEdit`.) */
-export function initialEdit(size: Size): ImageEdit {
-  return { turns: 0, crop: { x: 0, y: 0, width: size.width, height: size.height } }
-}
-/** No turn and the whole picture of `size`. (Real name in T1: `isFullEdit`, imported as `isFull`.) */
-export function isFull(edit: ImageEdit, size: Size): boolean {
-  const c = edit.crop
-  return edit.turns === 0 && c.x === 0 && c.y === 0 && c.width === size.width && c.height === size.height
-}
-/** The crop shrunk so its long side is at most `maxSide`, never enlarged. */
-export function outputSize(rect: Rect, maxSide: number): Size {
-  const long = Math.max(rect.width, rect.height)
-  if (long <= maxSide) return { width: rect.width, height: rect.height }
-  const k = maxSide / long
-  return { width: Math.max(1, Math.round(rect.width * k)), height: Math.max(1, Math.round(rect.height * k)) }
-}
-export const READ_MAX_SIDE = 2576
-// --- end of the stand-ins ------------------------------------------------------------------------------------------------------
+/** The edit types, re-exported so the state model's callers name them from here. */
+export type { ImageEdit, Rect }
 
 export const MAX_PHOTOS = 4
 /** A photo whose long side is under this is "small": a warning, never a block. Defined once, here. */
@@ -107,6 +74,8 @@ export type PhotoPagesAction =
   | { type: 'renderFailed'; id: PhotoId; revision: number; problem: PhotoProblem }
   | { type: 'problemSet'; problem: PanelProblem }
   | { type: 'problemCleared' }
+  /** The photos kept on the device (photo-store.md phase 2): they go before the live ones; `nextId` is the store's counter. */
+  | { type: 'restored'; photos: readonly SavablePhoto[]; nextId: number }
 
 export type BlockReason = 'editing' | 'preparing' | { failed: PhotoId } | null
 
@@ -134,6 +103,38 @@ function updatePhoto(state: PhotoPagesState, id: PhotoId, change: (p: Photo) => 
 function answerRender(state: PhotoPagesState, id: PhotoId, revision: number, output: PhotoOutput): PhotoPagesState {
   const current = state.photos.some((p) => p.id === id && p.revision === revision)
   return current ? updatePhoto(state, id, (p) => ({ ...p, output })) : state
+}
+
+/** A stored photo back as a listed one: an image comes back pending (rendered again), the others ready at once. */
+function restoredPhoto(saved: SavablePhoto): Photo {
+  const source = saved.source
+  if (source.kind === 'image') {
+    return { id: saved.id, source, edit: saved.edit, output: { status: 'pending' }, revision: 0 }
+  }
+  if (source.kind === 'as-is') {
+    return { id: saved.id, source, edit: null, output: { status: 'ready', blob: source.blob, width: 0, height: 0, type: source.type }, revision: 0 }
+  }
+  return { id: saved.id, source, edit: null, output: { status: 'ready', blob: new Blob([]), width: 0, height: 0, type: '' }, revision: 0 }
+}
+
+/**
+ * The photos kept on the device go BEFORE the photos added while the load ran, keep their ids, and are cut to the room left.
+ * A live photo whose id a kept photo holds is renamed from the counter (an open editor follows it). The counter never goes back.
+ */
+function restore(state: PhotoPagesState, saved: readonly SavablePhoto[], storedNext: number): PhotoPagesState {
+  const room = Math.max(0, roomFor(state))
+  const kept = saved.slice(0, room).map(restoredPhoto)
+  let nextId = Math.max(state.nextId, storedNext)
+  const taken = new Set(kept.map((p) => p.id))
+  const renamed = new Map<PhotoId, PhotoId>()
+  const live = state.photos.map((p) => {
+    if (!taken.has(p.id)) return p
+    const id = `p${nextId++}`
+    renamed.set(p.id, id)
+    return { ...p, id }
+  })
+  const editing = state.editing && renamed.has(state.editing.id) ? { ...state.editing, id: renamed.get(state.editing.id)! } : state.editing
+  return { ...state, photos: [...kept, ...live], editing, nextId }
 }
 
 export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesAction): PhotoPagesState {
@@ -206,7 +207,7 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
         if (!size) return p
         return {
           ...p,
-          edit: isFull(session.draft, size) ? null : session.draft,
+          edit: isFullEdit(session.draft, size) ? null : session.draft,
           revision: p.revision + 1,
           output: { status: 'pending' as const },
         }
@@ -248,7 +249,17 @@ export function photoPagesReducer(state: PhotoPagesState, action: PhotoPagesActi
 
     case 'problemCleared':
       return { ...state, problem: null }
+
+    case 'restored':
+      return restore(state, action.photos, action.nextId)
   }
+}
+
+/** Why a picked file is refused before it is queued (not a photo, empty, or over the input limit), or null when it may be read. */
+export function fileProblem(file: { type: string; size: number; name?: string }): PanelProblem | null {
+  const refusal = checkImageFile(file, INPUT_MAX_BYTES)
+  if (refusal === null) return null
+  return refusal === 'too_large' ? { code: 'too_large', limit: 'original' } : { code: refusal }
 }
 
 export function isSmallPhoto(size: Size): boolean {

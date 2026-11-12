@@ -6,7 +6,12 @@ import { errorBackoff, isTerminal, pollDelay, shouldGiveUp } from '../lib/readPr
 import { buildReadRequest } from '../lib/readRequest'
 import type { AdoptedRead, ReadInput, ReadState, ReadView } from '../types'
 
+/** How the last read ended: 'done' = it reached review; 'cancelled' = by the User or by the server (another tab); 'failed' = it has an error. */
+export type ReadOutcome = 'done' | 'cancelled' | 'failed'
+
 export interface UseRecipeRead {
+  /** Set when a read ends, cleared when the next one starts. PM decision: photos are cleared only for 'done'. */
+  outcome?: ReadOutcome
   /** idle: nothing running. starting: the POST is in flight. running: polling. failed: `error` is set. */
   phase: 'idle' | 'starting' | 'running' | 'failed'
   /** starting or running. */
@@ -35,6 +40,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
   const [state, setState] = useState<ReadState | undefined>(undefined)
   const [error, setError] = useState<ReadErrorInput | undefined>(undefined)
   const [elapsedSeconds, setElapsed] = useState(0)
+  const [outcome, setOutcome] = useState<ReadOutcome | undefined>(undefined)
 
   const onDoneRef = useRef(opts.onDone)
   onDoneRef.current = opts.onDone
@@ -77,6 +83,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
     setError(e)
     setState(undefined)
     setPhase('failed')
+    setOutcome('failed')
   }, [])
 
   const goIdle = useCallback(() => {
@@ -100,7 +107,10 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
   const finish = useCallback(
     (view: ReadView) => {
       stopWork()
-      if (view.state === 'cancelled') return goIdle()
+      if (view.state === 'cancelled') {
+        setOutcome('cancelled')
+        return goIdle()
+      }
       if (view.state === 'failed') {
         const err = view.error
         return fail({
@@ -112,6 +122,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
       }
       if (!view.review) return fail({ code: 'unknown' })
       const { review } = view
+      setOutcome('done')
       goIdle()
       onDoneRef.current({ id: review.id, plan: review.plan, photos: review.photos, source: view.source, model: view.model })
     },
@@ -163,6 +174,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
       setError(undefined)
       setState(undefined)
       setElapsed(0)
+      setOutcome(undefined)
       setPhase('starting')
       try {
         const started = await importApi.startRead(built.body)
@@ -190,6 +202,7 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
     const id = readId.current
     const wasRunning = phase === 'running'
     stopWork()
+    setOutcome('cancelled')
     goIdle()
     if (wasRunning && id) {
       try {
@@ -205,5 +218,5 @@ export function useRecipeRead(opts: { onDone: (read: AdoptedRead) => void }): Us
     goIdle()
   }, [goIdle])
 
-  return { phase, busy: phase === 'starting' || phase === 'running', kind, state, error, elapsedSeconds, start, cancel, reset }
+  return { outcome, phase, busy: phase === 'starting' || phase === 'running', kind, state, error, elapsedSeconds, start, cancel, reset }
 }

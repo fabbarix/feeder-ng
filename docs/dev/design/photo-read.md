@@ -437,7 +437,7 @@ Choose photos with 3 files -> the editor opens on each in turn (the queue), the 
 - **Object URLs**: section 4.2; no URL outlives its photo or the panel.
 - **What is held**: per photo the working copy (a JPEG: about 4 MB when re-encoded, at most 8 MB when the original is kept) and the output (at most 8 MB, usually under 1.5 MB); data URLs are made only when Read recipe is
   pressed and live in `useRecipeRead`'s `lastInput` until the next read (needed for Try again). The `File` from the input is dropped after the intake.
-- Leaving the tab or the step drops everything (unmount revokes URLs; nothing is persisted, Q5).
+- Leaving the tab or the step drops the live photos (unmount revokes URLs). The photos kept on the device are photo-store.md, phase 2 (Q5).
 
 ## 9. A shared `ui/ImageEditor`: extract now
 

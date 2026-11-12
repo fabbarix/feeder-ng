@@ -1,15 +1,18 @@
 // WP-E/G accessibility of "Read a recipe": a live region for progress, named controls, reasons linked to the controls,
-// focus after a result (ra-e-import.md section 6.2). Real components; only the ImagePicker is replaced.
+// focus after a result (ra-e-import.md section 6.2). Real components; only usePhotoPages is replaced.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { setPages } from '../fakePhotoPages.test-helper'
 import type { UseRecipeRead } from '../hooks/useRecipeRead'
 import type { ReadAvailability } from '../lib/readAvailability'
 
-vi.mock('../../../ui/ImagePicker/ImagePicker', async () => (await import('../fakeImagePicker.test-helper')).fakeImagePickerModule())
+vi.mock('../hooks/usePhotoPages', async () => (await import('../fakePhotoPages.test-helper')).fakePhotoPagesModule())
 
 import { ReadRecipeStep } from './ReadRecipeStep'
+
+beforeEach(() => void setPages())
 
 const idle = (over: Partial<UseRecipeRead> = {}): UseRecipeRead => ({
   phase: 'idle', busy: false, kind: undefined, state: undefined, error: undefined, elapsedSeconds: 0,
@@ -100,9 +103,9 @@ describe('ReadRecipeStep accessibility', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
   })
 
-  it('the Photo tab names each picker "Photo n" (the picker is a group named by its heading)', async () => {
+  it('the Photo tab is one group named "Photos" (its list and editor are named inside it)', async () => {
     render(ui(idle(), ready()))
     await userEvent.click(screen.getByRole('radio', { name: 'Photo' }))
-    expect(screen.getByRole('group', { name: 'Photo 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Photos' })).toBeInTheDocument()
   })
 })

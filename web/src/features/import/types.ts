@@ -1,6 +1,6 @@
 // Wire types of the Recipe File import/export API (docs/dev/design/t12-import-export.md) and of the Recipe Assistant reads
 // (docs/dev/design/ai-recipe-import.md section 7, ra-c-service.md; WP-E/G: docs/dev/design/ra-e-import.md). camelCase, as the server sends them.
-import type { RawImage } from '../../ui/ImagePicker'
+import type { RawImage } from '../../ui'
 
 export type IngredientStatus = 'exact' | 'suggested' | 'new' | 'undefined' | 'conflict'
 export type BaseUnit = 'g' | 'ml' | 'piece'
@@ -120,7 +120,7 @@ export type ReadKind = 'page' | 'text' | 'photo'
 /** The server's job states. `done`, `failed` and `cancelled` are final. */
 export type ReadState = 'fetching' | 'preparing' | 'reading' | 'checking' | 'images' | 'done' | 'failed' | 'cancelled'
 
-/** What the User gave the "Read a recipe" step. Photos are what the ImagePicker (raw mode, output 'dataUrl') returned, in order. */
+/** What the User gave the "Read a recipe" step. Photos are the photo read's data URLs (or links), in page order. */
 export type ReadInput =
   | { kind: 'url'; url: string }
   | { kind: 'text'; text: string }

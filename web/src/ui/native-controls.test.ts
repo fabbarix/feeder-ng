@@ -13,6 +13,7 @@ const ALLOWED: Record<string, string> = {
   'fields/Checkbox.tsx': 'checkbox',
   'fields/FileDrop.tsx': 'file',
   'ImagePicker/components/FileButton.tsx': 'file', // the hidden camera-app input (capture="environment")
+  'ImagePicker/components/ImageFileInput.tsx': 'file', // the shared hidden image input (camera app or library) for hosts with their own buttons
   'fields/SearchField.tsx': 'search',
 }
 
