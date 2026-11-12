@@ -7,6 +7,20 @@ export const recipeStrings = {
   editRecipe: 'Edit Recipe',
   search: 'Search Recipes',
   allTags: 'All Tags',
+  /** Beta.5 F7: the Sort select of the list (lib/sort): the three sorts, longest ago first and most recent first. */
+  sort: {
+    label: 'Sort',
+    name: 'Name',
+    longestAgo: 'Last cooked: longest ago first',
+    mostRecent: 'Last cooked: most recent first',
+  },
+  /** Beta.5 F7: "Last cooked ..." on a tile, a row and the detail (lib/lastCooked). */
+  cookedLabel: {
+    never: 'Not cooked yet',
+    today: 'Last cooked today',
+    yesterday: 'Last cooked yesterday',
+    since: (when: string) => `Last cooked ${when}`,
+  },
   tagsLabel: 'Tags',
   newTag: 'New',
   moreTags: (n: number) => (n === 1 ? '1 more Tag' : `${n} more Tags`),
