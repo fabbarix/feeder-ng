@@ -16,7 +16,7 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
-      // favicon.svg is already in the glob below; listing it again as a manifest icon breaks Cache.addAll
+      // The icons are listed once here and precached once through the glob below; no automatic manifest icons.
       includeManifestIcons: false,
       manifest: {
         name: 'Feeder',
@@ -26,12 +26,18 @@ export default defineConfig({
         // The light page colours of index.html (theme-color and the boot paint); the dark scheme is the metas' business.
         theme_color: '#e7f4eb',
         background_color: '#e7f4eb',
-        // The brand mark, an SVG that scales to any size (public/favicon.svg).
-        icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        // The Family Pot: PNGs at two sizes, "any" and "maskable" kept apart (never "any maskable"), and the SVG that scales.
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
       },
       injectManifest: {
         // not webmanifest: the PWA plugin adds the manifest to the precache itself; listing it twice breaks Cache.addAll
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2,png,ico}'],
       },
     }),
   ],

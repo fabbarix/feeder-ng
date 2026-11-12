@@ -31,9 +31,12 @@ describe('SignInPage', () => {
 })
 
 describe('SignInPage look (5.16)', () => {
-  it('shows the Feeder mark above the title', () => {
-    render(<SignInPage />)
-    const mark = screen.getByRole('img', { name: 'Feeder' })
+  it('shows the Feeder mark above the title, decorative because the title already says "Feeder"', () => {
+    const { container } = render(<SignInPage />)
+    const mark = container.querySelector('svg.signin__mark')!
+    expect(screen.queryByRole('img', { name: 'Feeder' })).toBeNull()
+    expect(mark).toHaveAttribute('aria-hidden', 'true')
+    expect(mark.querySelector('title')).toBeNull()
     const title = screen.getByRole('heading', { level: 1, name: 'Sign in to Feeder' })
     expect(mark.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

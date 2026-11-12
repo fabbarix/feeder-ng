@@ -1,10 +1,10 @@
-/** The Feeder mark above the sign-in title: a plate with a fork, drawn in the current colour (tokens, no literals). */
-export function FeederMark() {
+/** The Family Pot mark above the sign-in and Access Request titles: the one-colour master art (docs/brand/master/mark-mono.svg), drawn in the current colour (tokens, no literals). */
+/** `decorative` hides the mark from assistive tech (no role, no title): for a page whose title already names the app. */
+export function FeederMark({ decorative = false }: { decorative?: boolean }) {
   return (
-    <svg className="signin__mark" role="img" aria-label="Feeder" viewBox="0 0 48 48" width="48" height="48">
-      <circle cx="24" cy="26" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
-      <path d="M16 6v10M12 6v10M20 6v10M16 16c0 2 2 3 2 3v0M16 19v11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M34 6c-3 3-3 9 0 11v9h2V6h-2z" fill="currentColor" />
+    <svg className="signin__mark" {...(decorative ? { 'aria-hidden': true } : { role: 'img' })} viewBox="0 0 512 512" width="48" height="48" fill="currentColor">
+      {!decorative && <title>Feeder</title>}
+      <g id="symbol" transform="translate(-36.71 -15.55) scale(1.1434)"><path fill="currentColor" d="M100 214 A156 52 0 0 1 412 214 Z M100 204 H412 A12 12 0 0 1 424 216 V216 A12 12 0 0 1 412 228 H100 A12 12 0 0 1 88 216 V216 A12 12 0 0 1 100 204 Z M172 250 H340 A56 56 0 0 1 396 306 V362 A56 56 0 0 1 340 418 H172 A56 56 0 0 1 116 362 V306 A56 56 0 0 1 172 250 Z M92 270 H116 A20 20 0 0 1 136 290 V290 A20 20 0 0 1 116 310 H92 A20 20 0 0 1 72 290 V290 A20 20 0 0 1 92 270 Z M396 270 H420 A20 20 0 0 1 440 290 V290 A20 20 0 0 1 420 310 H396 A20 20 0 0 1 376 290 V290 A20 20 0 0 1 396 270 Z"/><path fill="currentColor" d="M 256 146 C 196 110 196 62 226 58 C 242 56 252 66 256 76 C 260 66 270 56 286 58 C 316 62 316 110 256 146 Z"/></g>
     </svg>
   )
 }
