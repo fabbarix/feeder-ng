@@ -193,7 +193,8 @@
 }
 
 .recipes-search > :last-child {
-  flex: 0 0 auto;
+  flex: 0 1 11rem;
+  min-inline-size: 0;
 }
 
 /* Recipe detail */
