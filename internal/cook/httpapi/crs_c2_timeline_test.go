@@ -460,12 +460,12 @@ func TestTimersAndMarksUseTheScopeOfTheirCourse(t *testing.T) {
 			RecipeName string `json:"recipeName"`
 		} `json:"timers"`
 	}
-	w.User.Get("/api/cook/timers?scope=" + sideScope(w)).MustJSON(t, &list)
+	w.User.Get("/api/cook/timers?scope="+sideScope(w)).MustJSON(t, &list)
 	if len(list.Timers) != 1 || list.Timers[0].RecipeName != "Green beans" {
 		t.Errorf("Side timers = %+v, want one, naming Green beans", list.Timers)
 	}
 	list.Timers = nil
-	w.User.Get("/api/cook/timers?scope=" + mainScope(w)).MustJSON(t, &list)
+	w.User.Get("/api/cook/timers?scope="+mainScope(w)).MustJSON(t, &list)
 	if len(list.Timers) != 1 || list.Timers[0].RecipeName != "Roast chicken" {
 		t.Errorf("Main timers (asked by the two-part scope) = %+v, want one, naming Roast chicken", list.Timers)
 	}
