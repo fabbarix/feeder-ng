@@ -1,6 +1,7 @@
 // The Lots of one Ingredient shown inline under its By Ingredient row. Plain TypeScript, no React.
 import { formatLotDate } from './display'
 import { daysBetween } from './days'
+import { stockStrings as strings } from '../strings'
 import { describeGoOff } from './view'
 import type { StockLot } from '../types'
 
@@ -25,9 +26,9 @@ export function lotsOfIngredient(all: StockLot[], ingredientId: number): StockLo
 /** "Bought today", "Bought yesterday", else "Bought 5 Nov" (today is the household's date, YYYY-MM-DD). */
 export function boughtLabel(purchased: string, today: string): string {
   const days = daysBetween(purchased, today)
-  if (days === 0) return 'Bought today'
-  if (days === 1) return 'Bought yesterday'
-  return `Bought ${formatLotDate(purchased)}`
+  if (days === 0) return strings.boughtToday
+  if (days === 1) return strings.boughtYesterday
+  return strings.boughtOn(formatLotDate(purchased))
 }
 
 /**
@@ -37,6 +38,6 @@ export function boughtLabel(purchased: string, today: string): string {
 export function lotMeta(lot: StockLot, today: string, placeName: string | null): string {
   const parts = [boughtLabel(lot.purchased, today)]
   if (lot.goesOff !== null) parts.push(describeGoOff(lot, today).label)
-  parts.push(placeName ?? 'Not sorted')
+  parts.push(placeName ?? strings.unsorted)
   return parts.join(' · ')
 }

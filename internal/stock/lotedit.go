@@ -6,6 +6,21 @@ import (
 	"time"
 )
 
+// EditError is a rejected edit: the sentinel it wraps (errors.Is) and the field and reason the API names in its 422 body.
+type EditError struct {
+	Field  string // quantity, purchased or goesOff; "" for an empty edit
+	Reason string // quantity_invalid, purchased_invalid, purchased_future, goes_off_invalid, goes_off_before_purchase, goes_off_required, nothing_to_change
+	Err    error
+}
+
+func (e *EditError) Error() string { return e.Err.Error() }
+
+func (e *EditError) Unwrap() error { return e.Err }
+
+func editErr(field, reason string, err error) error {
+	return &EditError{Field: field, Reason: reason, Err: err}
+}
+
 // Editing a Stock Lot by hand (beta.5, spec §6 "Editing and deleting a Lot"). An edit is a correction: it never
 // records waste and never counts as a Keep. Storage Place is not part of an edit (Move to changes it).
 
@@ -50,13 +65,13 @@ var (
 //   - ID, IngredientID and every other field are untouched.
 func ValidateEdit(lot Lot, edit Edit, today Date, shelfLifeDays *int) (Lot, error) {
 	if edit.Quantity == nil && edit.Purchased == nil && edit.GoesOff == nil {
-		return lot, ErrEditEmpty
+		return lot, editErr("", "nothing_to_change", ErrEditEmpty)
 	}
 	out := lot
 	if edit.Quantity != nil {
 		q := *edit.Quantity
 		if math.IsNaN(q) || math.IsInf(q, 0) || q <= 0 {
-			return lot, ErrEditQuantity
+			return lot, editErr("quantity", "quantity_invalid", ErrEditQuantity)
 		}
 		out.Quantity = q
 	}
@@ -65,25 +80,29 @@ func ValidateEdit(lot Lot, edit Edit, today Date, shelfLifeDays *int) (Lot, erro
 	if edit.Purchased != nil {
 		p := *edit.Purchased
 		if !isDate(p) {
-			return lot, ErrEditDate
+			return lot, editErr("purchased", "purchased_invalid", ErrEditDate)
 		}
 		if p > today {
-			return lot, ErrEditPurchasedFuture
+			return lot, editErr("purchased", "purchased_future", ErrEditPurchasedFuture)
 		}
 		purchasedChanged = p != lot.Purchased
 		out.Purchased = p
 	}
 	switch {
 	case edit.GoesOff != nil:
-		if g := *edit.GoesOff; !g.IsNone() && !isDate(g) {
-			return lot, ErrEditDate
+		g := *edit.GoesOff
+		if g.IsNone() && shelfLifeDays != nil {
+			return lot, editErr("goesOff", "goes_off_required", ErrEditGoesOffRequired)
 		}
-		out.GoesOff = *edit.GoesOff
+		if !g.IsNone() && !isDate(g) {
+			return lot, editErr("goesOff", "goes_off_invalid", ErrEditDate)
+		}
+		out.GoesOff = g
 	case purchasedChanged && shelfLifeDays != nil:
 		out.GoesOff = out.Purchased.AddDays(*shelfLifeDays)
 	}
 	if dateGiven && !out.GoesOff.IsNone() && out.GoesOff < out.Purchased {
-		return lot, ErrEditGoesOffBeforePurchased
+		return lot, editErr("goesOff", "goes_off_before_purchase", ErrEditGoesOffBeforePurchased)
 	}
 	if out.GoesOff != lot.GoesOff {
 		out.KeptOn = None

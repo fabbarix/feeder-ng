@@ -19,6 +19,7 @@ export const stockStrings = {
   ingredient: 'Ingredient',
   purchased: 'Bought on',
   save: 'Save',
+  cancel: 'Cancel',
   lots: 'Stock Lots',
   lotCount: (n: number) => (n === 1 ? '1 Stock Lot' : `${n} Stock Lots`),
   correctStock: 'Correct Stock',

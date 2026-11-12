@@ -100,6 +100,9 @@ export function checkLotForm(form: LotForm, lot: StockLot, today: string): LotFo
     } else if (form.goesOff !== (lot.goesOff ?? '')) {
       patch.goesOff = form.goesOff
     }
+  } else if (purchasedValid && form.purchased !== lot.purchased && isIsoDate(form.goesOff) && form.goesOff < form.purchased) {
+    // An untouched, kept Good until that a moved Bought on has passed: the User must choose it again.
+    errors.goesOff = 'beforePurchased'
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors }

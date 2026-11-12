@@ -271,7 +271,8 @@ func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (Lo
 				found = true
 				corrected, err := stock.ValidateEdit(l, edit, today, shelfLife)
 				if err != nil {
-					return store.Mutation{}, invalid("%s", err.Error())
+					// Wraps both ErrInvalid and the *stock.EditError (its field and reason) for the API.
+					return store.Mutation{}, fmt.Errorf("%w: %w", ErrInvalid, err)
 				}
 				if corrected.GoesOff != l.GoesOff {
 					forget = append(forget, lotID) // a new go-off date starts afresh: the old go-off record goes

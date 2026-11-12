@@ -552,10 +552,23 @@ func (a *api) editLot(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := a.svc.EditLot(r.Context(), id, body.edit())
 	if err != nil {
-		writeError(w, err)
+		writeEditError(w, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, lotToJSON(v))
+}
+
+// writeEditError answers a refused edit: 422 validation_failed with the field and reason in the error object
+// ({"error":{"code","message","field","reason"}}). Anything else goes through writeError.
+func writeEditError(w http.ResponseWriter, err error) {
+	var ee *stock.EditError
+	if !errors.As(err, &ee) {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
+		"code": "validation_failed", "message": ee.Error(), "field": ee.Field, "reason": ee.Reason,
+	}})
 }
 
 // editLotBody is the PATCH body. Quantity is optional; Purchased and GoesOff are kept as raw JSON so that an absent
