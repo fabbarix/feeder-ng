@@ -75,6 +75,7 @@ export function PhotoSources({ options, canAdd, disabled, onFiles, rootRef, open
           accept={options.libraryAccept}
           multiple
           disabled={off}
+          aria-describedby={describedBy}
           onFiles={(files) => onFiles(files, 'file')}
         />
       )}

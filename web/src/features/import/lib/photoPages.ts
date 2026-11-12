@@ -1,7 +1,7 @@
 // The state model of the Photo tab of the Recipe read (docs/dev/design/photo-read.md section 2): a reducer plus selectors.
 // Plain TypeScript: no React, no DOM, no Blob reads.
 import type { ImageEdit, ImageOrigin, ImageProblemCode, RawImage, Rect, Size } from '../../../ui'
-import { initialEdit, isFullEdit, outputSize, READ_MAX_SIDE } from '../../../ui'
+import { initialEdit, isFullEdit, moveItem, outputSize, READ_MAX_SIDE } from '../../../ui'
 import type { SavablePhoto } from './photoStore'
 
 /** The edit types, re-exported so the state model's callers name them from here. */
@@ -103,15 +103,6 @@ function updatePhoto(state: PhotoPagesState, id: PhotoId, change: (p: Photo) => 
 function answerRender(state: PhotoPagesState, id: PhotoId, revision: number, output: PhotoOutput): PhotoPagesState {
   const current = state.photos.some((p) => p.id === id && p.revision === revision)
   return current ? updatePhoto(state, id, (p) => ({ ...p, output })) : state
-}
-
-/** Moves the item at `from` to `to` (the owner computes the new list; ui/Sortable's moveItem is not in the ui barrel). */
-function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
-  const next = [...list]
-  const [item] = next.splice(from, 1)
-  if (item === undefined) return next
-  next.splice(to, 0, item)
-  return next
 }
 
 /** A stored photo back as a listed one: an image comes back pending (rendered again), the others ready at once. */

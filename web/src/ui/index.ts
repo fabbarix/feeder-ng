@@ -123,7 +123,7 @@ export type { ImagePickerProps, RawImage, ImageSource } from './ImagePicker/type
 // Menu (R2-1, G-01).
 export { Menu, useMenuKeys } from './Menu'
 export type { MenuEntry, MenuItem, MenuProps, MenuSeparator, UseMenuKeysOptions } from './Menu'
-export { Sortable, useSortable } from './Sortable'
+export { Sortable, useSortable, moveItem } from './Sortable'
 export type { SortableItemProps, SortableItemState, SortableProps, SortableRenderContext, UseSortableOptions, UseSortableResult } from './Sortable'
 // Courses (CRS D1).
 export { CoursePicker } from './CoursePicker/CoursePicker'
