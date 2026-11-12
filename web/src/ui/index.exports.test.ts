@@ -18,4 +18,10 @@ describe('ui barrel (R15)', () => {
     expect(typeof moveItem).toBe('function')
     expect(moveItem?.(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a'])
   })
+
+  it('exports ImageFileInput (the shared hidden image input) from the barrel and from ImagePicker\'s index', async () => {
+    expect(typeof ui.ImageFileInput).toBe('object') // a forwardRef component
+    const picker = await import('./ImagePicker')
+    expect(picker.ImageFileInput).toBe(ui.ImageFileInput)
+  })
 })
