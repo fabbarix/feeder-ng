@@ -156,10 +156,18 @@ func TestExclusionRecordsOnlyCoverTheCellsOwnRecipes(t *testing.T) {
 		wantRecords(t, unfilledAt(t, mustPlan(t, in), key(0)), 0, rec(anna, garlic, 1, 1))
 	})
 	t.Run("a Recipe reserved for a later Slot Rule cell is not listed", func(t *testing.T) {
-		// Recipe 1 is the only match of the second cell's rule, so the first cell never considers it.
-		in := baseInput([]Slot{dinner(0), withRules(dinner(1), SlotRule{RecipeID: 1})}, withGarlic(1), withGarlic(2))
-		in = prefs(in, anna, Preferences{ExcludedRecipes: []RecipeID{2}})
+		// Recipe 1 is the only match of the second cell's rule for Ben (who has no Exclusion), so it is
+		// reserved there and the first cell never counts it. Anna also hard-excludes Recipe 1: a reserved
+		// Recipe is only the last-resort relaxed pick (ADR 0009), so without that failing hard filter the
+		// first cell would be filled with it. Anna's Exclusion on Recipe 1 would void the reservation if
+		// she attended the second cell, hence Ben alone there.
+		in := baseInput([]Slot{dinner(0), withRules(dinner(1, Attendee{ben, 1}), SlotRule{RecipeID: 1})},
+			withGarlic(1, cooldown(3)), withGarlic(2))
+		in = prefs(in, anna, Preferences{ExcludedRecipes: []RecipeID{1, 2}})
 		u := unfilledAt(t, mustPlan(t, in), key(0))
+		if u.Eliminated.Considered != 1 || u.Eliminated.Exclusion != 1 {
+			t.Fatalf("got %+v", u)
+		}
 		wantRecords(t, u, 0, rec(anna, 0, 1, 2))
 	})
 }
