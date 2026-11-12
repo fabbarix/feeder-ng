@@ -76,7 +76,9 @@ export function heroSelection(slots: PlanSlot[], now: Date, today: string): Hero
   if (!pick || !meal) return null
   const diff = dayNumber(pick.date) - dayNumber(today)
   const day: HeroDay = diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : 'later'
-  const action: HeroAction = meal.servedFromLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
+  // Reheat (or the chip) only when EVERY Course still to cook is a Leftover: a fresh Course needs the timeline's Cook.
+  const allLeftover = plannedMeals(pick).every((m) => m.servedFromLeftover)
+  const action: HeroAction = allLeftover ? (day === 'today' ? 'reheat' : 'leftover') : day === 'today' ? 'cook' : 'none'
   return { slot: pick, day, action }
 }
 

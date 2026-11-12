@@ -52,3 +52,11 @@ export interface AllCookedRow {
 export function allCookedBody(rows: AllCookedRow[]): CookedAllEntry[] {
   return rows.filter((r) => r.fresh).map((r) => ({ courseId: r.courseId, leftoverPortions: r.leftover }))
 }
+
+/**
+ * The course ids (0 for the course-less alias) of the to-confirm entries of one date and Meal Slot, in entry order: the
+ * Courses Mark all Cooked asks about from Today.
+ */
+export function toConfirmCourses(entries: PlanSlot[], key: SlotKey): number[] {
+  return entries.filter((e) => e.date === key.date && e.mealSlotId === key.mealSlotId).map((e) => e.courseId ?? 0)
+}

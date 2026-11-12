@@ -15,8 +15,7 @@ import {
   usePlan,
   useStockSheet,
 } from '../../plan'
-import { mayResolve } from '../../plan/lib/resolve'
-import { leftoverOutcomeText } from '../../plan/lib/cook'
+import { cookedAllOutcomeText, leftoverOutcomeText } from '../../plan/lib/cook'
 import type { SlotKey } from '../../plan/types'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
@@ -34,7 +33,16 @@ import { useCookTimeline } from '../hooks/useCookTimeline'
 import { useFormatUse } from '../hooks/useFormatUse'
 import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
 import { sameScope } from '../lib/scope'
-import { filterChips } from '../lib/timeline'
+import {
+  allMode as isAllMode,
+  canMark as canMarkDate,
+  confirmationName,
+  filterChips,
+  finishedCooking,
+  leaveIfNothingLeft,
+  markTarget as pickMarkTarget,
+  title as headerTitle,
+} from '../lib/timeline'
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
 import type { CookTimelineTarget } from '../types'
@@ -54,10 +62,12 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   const slotKey: SlotKey = { date: target.date, mealSlotId: target.mealSlotId }
   const open = tl.unresolved
   const several = view ? filterChips(view).length > 0 : false
-  const allMode = tl.filter === 'all' && open.length >= 2
+  const allModeOn = isAllMode(tl.filter, open)
   const current = tl.item ? open.find((c) => c.courseId === tl.item!.courseId) : undefined
 
   const [markCourse, setMarkCourse] = useState<number | null>(null)
+  // The Courses cooked on this screen, named by the confirmation page (lib/timeline confirmationName).
+  const [doneIds, setDoneIds] = useState<number[]>([])
   const marked = useMarkCooked(markCourse === null ? null : courseKeyOf(target, markCourse))
   const allCooked = useAllCookedFlow()
   const notCooked = useNotCooked()
@@ -88,37 +98,44 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   // Something was Cooked on this screen (one Course or the whole slot). A later refetch may fail (B13): the confirmation
   // still wins over the 409 not_cookable answer, because the Course was cooked before that answer came.
   const cookedAny = marked.result !== null || allCooked.controller.result !== null
-  // Skipping the last open Course with nothing Cooked leaves at once, as the old screen did (no "No Steps" page).
-  const leaveIfNothingLeft = (skippedLast: boolean) => {
-    if (skippedLast && !cookedAny) finish()
-    else refreshTimeline()
-  }
   const skipCourse = async (courseId: number) => {
     const skipped = await notCooked(courseKeyOf(target, courseId))
-    if (skipped) leaveIfNothingLeft(open.length <= 1)
+    if (skipped) afterSkip()
   }
-  const afterCook = () => {
+  // Skipping the last open Course with nothing Cooked leaves at once, as the old screen did (no "No Steps" page).
+  const afterSkip = () => {
+    if (leaveIfNothingLeft(open.length, cookedAny) === 'leave') finish()
+    else refreshTimeline()
+  }
+  const afterCook = (courseId: number | null) => {
+    setDoneIds(courseId === null ? [] : [courseId])
     setMarkCourse(null)
     refreshTimeline()
   }
 
   // Everything marked: the confirmation page. Otherwise the screen stays while other Courses remain.
-  const finishedCooking = cookedAny && (tl.notCookable || (view !== undefined && open.length === 0))
-  if (finishedCooking) {
-    const outcome = marked.outcome
+  const finished = finishedCooking({ cookedAny, notCookable: tl.notCookable, loaded: view !== undefined, unresolvedCount: open.length })
+  if (finished) {
+    // The outcome of the last thing cooked here: the whole slot (Mark all Cooked) or one Course.
+    const allDone = allCooked.controller.result !== null
+    const allResult = allCooked.controller.result
+    const outcomeText = allDone && allResult ? cookedAllOutcomeText(allResult) : marked.outcome ? leftoverOutcomeText(marked.outcome) : ''
+    const shortfalls = allDone ? allCooked.warnings : marked.warnings
+    const dismissShortfall = allDone ? allCooked.dismissWarning : marked.dismissWarning
+    const shortfallStock = allDone ? allCooked.stock : stock
     return (
       <div className="cook-screen">
-        <CookedConfirmation recipeName={view?.courses[0]?.recipeName ?? view?.slotName ?? ''} outcomeText={outcome ? leftoverOutcomeText(outcome) : ''} onLeave={finish}>
-          {marked.warnings.map((w) => (
-            <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => marked.dismissWarning(x.ingredientId)} />
+        <CookedConfirmation recipeName={confirmationName(view, doneIds)} outcomeText={outcomeText} onLeave={finish}>
+          {shortfalls.map((w) => (
+            <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={shortfallStock.open} onDismiss={(x) => dismissShortfall(x.ingredientId)} />
           ))}
           <StockCorrectionSheet
-            open={stock.correction !== null}
-            onClose={stock.close}
-            correction={stock.correction}
-            onSave={(t) => void stock.save(t)}
-            busy={stock.busy}
-            error={stock.error}
+            open={shortfallStock.correction !== null}
+            onClose={shortfallStock.close}
+            correction={shortfallStock.correction}
+            onSave={(t) => void shortfallStock.save(t)}
+            busy={shortfallStock.busy}
+            error={shortfallStock.error}
           />
         </CookedConfirmation>
       </div>
@@ -128,18 +145,19 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   if (tl.error) return <EmptyState title={cookStrings.loadError} />
   if (!view) return <EmptyState title={cookStrings.loading} />
 
-  const title = several ? view.slotName : (view.courses.find((c) => c.state === 'planned')?.recipeName ?? view.slotName)
   const isLast = tl.isLast
-  const canMark = mayResolve(target.date, plan.today) && open.length > 0
-  const markTarget = allMode ? null : (current?.courseId ?? open[0]?.courseId ?? null)
-  const onMarkCooked = isLast && canMark ? () => (allMode ? allCooked.open(slotKey, open.map((c) => c.courseId)) : setMarkCourse(markTarget)) : undefined
+  const markable = canMarkDate(target.date, plan.today, open)
+  const onMarkCooked =
+    isLast && markable
+      ? () => (allModeOn ? allCooked.open(slotKey, open.map((c) => c.courseId)) : setMarkCourse(pickMarkTarget(allModeOn, current?.courseId ?? null, open)))
+      : undefined
   const advanceShown = tl.nav.index === 0 && tl.filter === 'all' ? tl.advance : []
 
   return (
     <div className="cook-screen">
       <CookTopRow number={tl.step?.number ?? 0} of={tl.step?.of ?? 0} speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={finish} />
       <header className="cook-screen__header">
-        <h1 className="cook-screen__title">{title}</h1>
+        <h1 className="cook-screen__title">{headerTitle(view, several)}</h1>
         {several ? <CourseMenu entries={tl.courseMenu} onCooked={(c) => setMarkCourse(c)} onNotCooked={(c) => void skipCourse(c)} /> : null}
       </header>
       <CourseFilterChips chips={tl.chips} selected={tl.filter} onSelect={tl.setFilter} />
@@ -175,7 +193,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         onNext={tl.gate.next}
         heldText={tl.gate.heldText}
         onMarkCooked={onMarkCooked}
-        markLabel={allMode ? cookStrings.markAllCooked : undefined}
+        markLabel={allModeOn ? cookStrings.markAllCooked : undefined}
       />
       <MarkCookedSheet
         open={markCourse !== null}
@@ -185,13 +203,13 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         leftover={marked.leftover}
         onLeftoverChange={marked.setLeftover}
         onConfirm={async () => {
-          if (await marked.confirm()) afterCook()
+          const courseId = markCourse
+          if (await marked.confirm()) afterCook(courseId)
         }}
         onNotCooked={async () => {
           if (await marked.notCooked()) {
             setMarkCourse(null)
-            if (open.length <= 1 && !cookedAny) finish()
-            else refreshTimeline()
+            afterSkip()
           }
         }}
         busy={marked.busy}
@@ -204,7 +222,11 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         isLoading={allCooked.controller.isLoading}
         onLeftoverChange={allCooked.controller.setLeftover}
         onConfirm={async () => {
-          if (await allCooked.confirm()) refreshTimeline()
+          const ids = open.map((c) => c.courseId)
+          if (await allCooked.confirm()) {
+            setDoneIds(ids)
+            refreshTimeline()
+          }
         }}
         busy={allCooked.controller.busy}
         error={allCooked.controller.error}

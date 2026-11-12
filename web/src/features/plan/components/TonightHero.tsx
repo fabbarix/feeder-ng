@@ -140,6 +140,11 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
 
   return (
     <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+      {menu ? (
+        <div className="plan-hero__menu">
+          <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={menu.onNotCookedSlot} onAddCourse={menu.onAddCourse} />
+        </div>
+      ) : null}
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
@@ -165,7 +170,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
           </div>
         ) : canReheat ? (
           <div className="plan-hero__actions">
-            <Button variant="primary" size="lg" block="phone" icon="reheat" onClick={() => onReheat(slotKey)}>
+            <Button variant="primary" size="lg" block="phone" icon="reheat" onClick={() => onReheat(hero.key)}>
               {s.reheat}
             </Button>
           </div>
@@ -212,7 +217,6 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
           ))}
         </ul>
       ) : null}
-      {menu ? <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={menu.onNotCookedSlot} onAddCourse={menu.onAddCourse} /> : null}
     </Tile>
   )
 }

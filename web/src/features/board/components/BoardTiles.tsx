@@ -48,7 +48,7 @@ export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
         <p className="board-tonight__slot">{`${slot.name} · ${slot.time}`}</p>
         <ul aria-label={boardStrings.tonightCourses} className="board-tonight__courses">
           {rows.map((row) => (
-            <li key={row.courseId} data-main={row.main ? 'true' : undefined} className="board-tonight__course">
+            <li key={row.courseId} data-main={row.main ? 'true' : undefined} data-state={row.state} className="board-tonight__course">
               {row.recipeName}
             </li>
           ))}

@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import {
+  AllCookedSheets,
   CookFlowSheets,
   CouldntPlanNotice,
   LeftoversTile,
-  MarkAllCookedSheet,
   PlannedMealSheet,
   RecipeChooserSheet,
   SwapSheet,
@@ -16,6 +16,7 @@ import {
   useCookFlow,
   useCouldntFix,
   useCouldntPlanNotice,
+  toConfirmCourses,
   useNotCooked,
   useTonightSheets,
 } from '../../plan'
@@ -64,8 +65,6 @@ export function TodayScreen(): ReactElement {
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
   const sheets = useTonightSheets(hero)
-  // The Courses of a to-confirm slot, for its Mark all Cooked.
-  const toConfirmCourses = (key: SlotKey) => data.toConfirm.filter((e) => e.date === key.date && e.mealSlotId === key.mealSlotId).map((e) => e.courseId ?? 0)
 
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
@@ -108,7 +107,7 @@ export function TodayScreen(): ReactElement {
         onYesCooked={yesCooked}
         onAdjust={flow.open}
         onNotCooked={(key) => void notCooked(key)}
-        onMarkAllCooked={(key) => sheets.allCooked.open(key, toConfirmCourses(key))}
+        onMarkAllCooked={(key) => sheets.allCooked.open(key, toConfirmCourses(data.toConfirm, key))}
       />
     ),
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
@@ -151,12 +150,9 @@ export function TodayScreen(): ReactElement {
           sheets.planned.close()
           sheets.choose.open(k)
         }}
-        onMarkRecipes={(courseId) => {
-          sheets.planned.close()
-          navigate(`/recipes?notCourse=${courseId}`)
-        }}
-        onAddRecipes={() => navigate('/recipes')}
-        onReviewVarietyRules={() => navigate('/settings/planning')}
+        onMarkRecipes={sheets.planned.markRecipes}
+        onAddRecipes={sheets.planned.addRecipes}
+        onReviewVarietyRules={sheets.planned.reviewVarietyRules}
       />
       <SwapSheet
         open={sheets.swap.key !== null}
@@ -173,16 +169,7 @@ export function TodayScreen(): ReactElement {
         isLoading={sheets.choose.isLoading}
         onPick={(id) => void sheets.choose.pick(id)}
       />
-      <MarkAllCookedSheet
-        open={sheets.allCooked.key !== null}
-        onClose={sheets.allCooked.close}
-        rows={sheets.allCooked.controller.rows}
-        isLoading={sheets.allCooked.controller.isLoading}
-        onLeftoverChange={sheets.allCooked.controller.setLeftover}
-        onConfirm={() => void sheets.allCooked.confirm()}
-        busy={sheets.allCooked.controller.busy}
-        error={sheets.allCooked.controller.error}
-      />
+      <AllCookedSheets flow={sheets.allCooked} />
     </>
   )
 }

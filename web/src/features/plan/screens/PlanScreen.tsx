@@ -5,7 +5,7 @@ import { BentoGrid, Button, EmptyState, ErrorState, PageHeader } from '../../../
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
-import { MarkAllCookedSheet } from '../components/MarkAllCookedSheet'
+import { AllCookedSheets } from '../components/AllCookedSheets'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
 import { PlanGrid } from '../components/PlanGrid'
 import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
@@ -108,16 +108,7 @@ export function PlanScreen(): ReactNode {
         onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
         onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
       />
-      <MarkAllCookedSheet
-        open={s.allCooked.key !== null}
-        onClose={s.allCooked.close}
-        rows={s.allCooked.controller.rows}
-        isLoading={s.allCooked.controller.isLoading}
-        onLeftoverChange={s.allCooked.controller.setLeftover}
-        onConfirm={() => void s.allCooked.confirm()}
-        busy={s.allCooked.controller.busy}
-        error={s.allCooked.controller.error}
-      />
+      <AllCookedSheets flow={s.allCooked} />
       <SwapSheet
         open={s.swapOpen}
         onClose={s.closeSwap}

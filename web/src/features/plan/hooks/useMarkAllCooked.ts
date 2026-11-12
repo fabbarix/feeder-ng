@@ -41,12 +41,17 @@ export function useMarkAllCooked(slot: SlotKey | null, courseIds: number[]): Mar
   const [result, setResult] = useState<CookedAllResult | null>(null)
   const [dismissed, setDismissed] = useState<number[]>([])
 
-  // A different slot starts a fresh sheet: the edits, the result and the dismissed warnings belong to one slot. Closing
-  // the sheet (id null) keeps the result, so the confirmation and its warnings stay on screen after the sheet closes.
+  // Each opening of the sheet starts fresh: the edits, the result, the dismissed warnings and the error belong to one
+  // opening. Closing (id null) keeps the result, so the confirmation and its warnings stay on screen after the sheet
+  // closes; the next open clears them.
   const id = slot ? `${slot.date}/${slot.mealSlotId}/${courseIds.join(',')}` : null
-  const [seen, setSeen] = useState(id)
-  if (id !== null && id !== seen) {
+  const [seen, setSeen] = useState<string | null>(null)
+  const [closed, setClosed] = useState(true)
+  if (id === null) {
+    if (!closed) setClosed(true)
+  } else if (closed || id !== seen) {
     setSeen(id)
+    setClosed(false)
     setEdited({})
     setResult(null)
     setDismissed([])

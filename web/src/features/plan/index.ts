@@ -44,5 +44,8 @@ export { SwapSheet } from './components/SwapSheet'
 export { RecipeChooserSheet } from './components/RecipeChooserSheet'
 export { MarkAllCookedSheet } from './components/MarkAllCookedSheet'
 export { unresolvedCourseIds } from './lib/courses'
+export { toConfirmCourses } from './lib/toConfirm'
 export { useAllCookedFlow } from './hooks/useAllCookedFlow'
+export type { AllCookedFlow } from './hooks/useAllCookedFlow'
+export { AllCookedSheets } from './components/AllCookedSheets'
 

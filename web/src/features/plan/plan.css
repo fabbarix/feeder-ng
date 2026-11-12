@@ -194,6 +194,13 @@
 .plan-hero {
   display: grid;
   gap: 16px;
+  position: relative;
+}
+/* CRS F: the slot menu (⋮) sits in the hero's top row, on the overline's line, at the end. */
+.plan-hero__menu {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
 }
 .plan-hero__body {
   display: flex;

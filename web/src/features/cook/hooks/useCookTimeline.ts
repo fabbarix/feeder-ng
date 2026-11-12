@@ -6,7 +6,7 @@ import { ApiError } from '../../../lib/http'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
-import { advanceGroups, courseMenuEntries, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
+import { advanceGroups, courseMenuEntries, effectiveFilter, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
 import { reheatTimerOfCourse } from '../lib/reheat'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { AdvanceGroup } from '../lib/timeline'
@@ -72,7 +72,9 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
   const view = query.data
   const timers = useTimers()
 
-  const [filter, setFilterState] = useState<CourseFilter>(target.courseId ?? 'all')
+  // The chip asked for, and the filter shown: a Course that has resolved falls back to All (lib/timeline effectiveFilter).
+  const [chosen, setChosen] = useState<CourseFilter>(target.courseId ?? 'all')
+  const filter = view ? effectiveFilter(view, chosen) : chosen
   const [positions, setPositions] = useState<Record<string, number>>({})
   const items = view ? visibleItems(view, filter) : []
   const nav = createNav(items.length, positions[String(filter)] ?? 0)
@@ -83,7 +85,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
     (index: number) => setPositions((p) => ({ ...p, [String(filter)]: index })),
     [filter],
   )
-  const setFilter = useCallback((next: CourseFilter) => setFilterState(next), [])
+  const setFilter = useCallback((next: CourseFilter) => setChosen(next), [])
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return

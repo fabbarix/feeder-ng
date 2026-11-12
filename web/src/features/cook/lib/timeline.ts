@@ -2,6 +2,7 @@
 // The server schedules (cook.Timeline); the SPA never reorders or re-times anything, it filters, labels and gates.
 import { cookStrings as s } from '../strings'
 import type { CookStep, CookTimer, TimelineAdvance, TimelineItem, TimelineView } from '../types'
+import { mayResolve } from '../../plan/lib/resolve'
 import { sameScope } from './scope'
 
 /** The chip choice: the whole timeline, or one Course by id. */
@@ -160,4 +161,74 @@ export function courseMenuEntries(view: TimelineView): CourseMenuEntry[] {
 /** The Courses with a Planned Meal still to cook (state planned), as `{ courseId, fresh }` in the slot's order. */
 export function unresolvedCourses(view: TimelineView): { courseId: number; fresh: boolean }[] {
   return view.courses.filter((c) => c.state === 'planned').map((c) => ({ courseId: c.courseId, fresh: c.fresh }))
+}
+
+/**
+ * The filter to show. A chip whose Course has no item left (cooked, skipped, or not in the timeline) falls back to All,
+ * so the screen never shows an empty list; a timeline with no items stays on All.
+ */
+export function effectiveFilter(view: TimelineView, filter: CourseFilter): CourseFilter {
+  if (filter === 'all') return 'all'
+  return view.items.some((i) => i.courseId === filter) ? filter : 'all'
+}
+
+/** All with two or more unresolved Courses: the last item offers Mark all Cooked for the whole slot. */
+export function allMode(filter: CourseFilter, unresolved: { courseId: number }[]): boolean {
+  return filter === 'all' && unresolved.length >= 2
+}
+
+/**
+ * The Course that Mark as Cooked cooks: none in All (the whole slot); else the Course of the item on screen, else the
+ * first unresolved Course; null when nothing is left to cook.
+ */
+export function markTarget(allModeOn: boolean, currentCourseId: number | null, unresolved: { courseId: number }[]): number | null {
+  if (allModeOn) return null
+  return currentCourseId ?? unresolved[0]?.courseId ?? null
+}
+
+/** Mark (all) as Cooked is offered for a day that may be resolved (today or past, a known household date) with a Course to cook. */
+export function canMark(date: string, today: string, unresolved: { courseId: number }[]): boolean {
+  return mayResolve(date, today) && unresolved.length > 0
+}
+
+export interface FinishedState {
+  /** Something was Cooked on this screen (one Course or the whole slot). */
+  cookedAny: boolean
+  /** The server answered 409 not_cookable after that. */
+  notCookable: boolean
+  /** The timeline has loaded. */
+  loaded: boolean
+  unresolvedCount: number
+}
+
+/** The confirmation page replaces the screen: something was Cooked here and either nothing is left or the server says so. */
+export function finishedCooking(s: FinishedState): boolean {
+  return s.cookedAny && (s.notCookable || (s.loaded && s.unresolvedCount === 0))
+}
+
+/**
+ * After a Course is skipped (Not cooked): leave Cook Mode when it was the last Course to cook and nothing was Cooked
+ * here (no "No Steps" page); otherwise refresh the timeline.
+ */
+export function leaveIfNothingLeft(unresolvedCount: number, cookedAny: boolean): 'leave' | 'refresh' {
+  return unresolvedCount <= 1 && !cookedAny ? 'leave' : 'refresh'
+}
+
+/** The header of Cook Mode: the slot name for several Courses, else the Recipe of the Course still to cook (or the slot name). */
+export function title(view: TimelineView, several: boolean): string {
+  if (several) return view.slotName
+  return view.courses.find((c) => c.state === 'planned')?.recipeName ?? view.slotName
+}
+
+/**
+ * The name on the confirmation page: the Recipe when one Course was Cooked (not the first Course of the slot), the slot
+ * name when several were or none, '' without a view.
+ */
+export function confirmationName(view: TimelineView | undefined, cookedCourseIds: number[]): string {
+  if (!view) return ''
+  if (cookedCourseIds.length === 1) {
+    const course = view.courses.find((c) => c.courseId === cookedCourseIds[0])
+    if (course) return course.recipeName
+  }
+  return view.slotName
 }
