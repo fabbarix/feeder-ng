@@ -3,7 +3,7 @@
 import { COURSES_EMPTY_MESSAGE, type CourseChoice } from '../../../lib/courses'
 import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { coursesStrings } from '../coursesStrings'
-import type { AttendanceEntry, MealSlot, Member, SlotCourse, SlotCourseInput, SlotRemoves } from '../types'
+import type { AttendanceEntry, MealSlot, Member, SlotCourseInput, SlotRemoves } from '../types'
 import { plannedMealText } from './courseRemoval'
 
 const NOT_OPTIONAL_MESSAGE = coursesStrings.slot.allOptional
@@ -76,21 +76,6 @@ export function eatersSummary(courseName: string, optOutNames: readonly string[]
   return optOutNames.length === 0 ? null : `${courseName} · without ${joinList(optOutNames)}`
 }
 
-/**
- * The overview line under a Meal Slot's name: "Main · Side without Sam · Dessert (optional)". Optional comes first, then
- * "without ...". Only opt-outs of Members in `attendance` count. '' when the slot has no Courses.
- */
-export function courseOverviewLine(courses: readonly SlotCourse[], members: readonly Member[], attendance: readonly AttendanceEntry[]): string {
-  const attending = attendeesOf(members, attendance)
-  return courses
-    .map((c) => {
-      const outs = attending.filter((m) => c.optOutMemberIds.includes(m.id)).map((m) => m.name)
-      const optional = c.optional ? ' (optional)' : ''
-      return `${c.name}${optional}${outs.length > 0 ? ` without ${joinList(outs)}` : ''}`
-    })
-    .join(' · ')
-}
-
 /** True when two Course lists differ in the Courses, their order, an Optional flag or an opt-out set (order of opt-outs ignored). */
 export function coursesChanged(original: readonly SlotCourseInput[], draft: readonly SlotCourseInput[]): boolean {
   if (original.length !== draft.length) return true
@@ -147,11 +132,3 @@ export function removalPreview(removals: ReturnType<typeof courseRemovals>, remo
   return { lines, pinned }
 }
 
-/**
- * The line the Meal Slots overview shows under a slot's name. A slot that serves only the main Course shows nothing (upgraded
- * Households would otherwise see "Main" on every slot); two or more Courses, or one that is not main, show the overview line.
- */
-export function overviewCourseLine(courses: readonly SlotCourse[], members: readonly Member[], attendance: readonly AttendanceEntry[]): string {
-  if (courses.length === 1 && courses[0]!.main) return ''
-  return courseOverviewLine(courses, members, attendance)
-}

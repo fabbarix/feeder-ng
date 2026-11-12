@@ -1,0 +1,405 @@
+/* MS redesign (beta.5): the Meal Slots cards. Tokens only. Two-up from 820 px; one column below. Mockup: option-B.html. */
+
+.ms-cards {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ms-cards > .bento-grid[data-columns] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 820px) {
+  .ms-cards > .bento-grid[data-columns] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ms-household {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+/* Card */
+.ms-card {
+  gap: var(--space-4);
+}
+
+.ms-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ms-card__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 16px;
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+.ms-card__title {
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.ms-card__name {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+  font-weight: var(--text-title-2-weight);
+}
+
+.ms-card__days {
+  margin: 2px 0 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+
+.ms-card__time {
+  display: grid;
+  margin-inline-start: auto;
+  text-align: end;
+}
+
+.ms-card__clock {
+  font-size: var(--text-title-1-size);
+  line-height: var(--text-title-1-line);
+  font-weight: var(--text-title-1-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-card__usual {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+
+.ms-card__split {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ms-card__main {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+/* A name that runs every day: the strip and the "Differs on" list side by side from 820 px. */
+@media (min-width: 820px) {
+  .ms-card[data-span='full'] .ms-card__split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+}
+
+.ms-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+}
+
+/* Facts: Courses, Attendance */
+.ms-fact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ms-fact__label,
+.ms-subhead {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.ms-courses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-course[data-optional] .chip {
+  background: transparent;
+  border: 1px solid var(--color-outline);
+}
+
+.ms-courses__eaters {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+
+/* Attendance */
+.ms-attendance {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ms-stack {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-stack__item + .ms-stack__item,
+.ms-stack__more {
+  margin-inline-start: -6px;
+}
+
+.ms-stack__more {
+  display: grid;
+  place-items: center;
+  min-inline-size: 28px;
+  padding-inline: var(--space-1);
+  block-size: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-label-weight);
+}
+
+.ms-attendance__text {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-label-weight);
+}
+
+.ms-nobody {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+  font: inherit;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-label-weight);
+  cursor: pointer;
+}
+
+.ms-nobody:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 7-day strip */
+.ms-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ms-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-block-size: 56px;
+  padding: var(--space-1);
+  min-inline-size: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font: inherit;
+  text-align: center;
+}
+
+button.ms-day {
+  cursor: pointer;
+}
+
+button.ms-day:hover {
+  background: var(--color-soft-strong);
+}
+
+button.ms-day:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+button.ms-day:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ms-day__name {
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+}
+
+.ms-day__time {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.ms-day[data-differs]::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 7px;
+  inset-inline-end: 8px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.ms-day[data-state='free'] {
+  background: transparent;
+  border: 1.5px dashed var(--color-line);
+  color: var(--color-muted);
+}
+
+button.ms-day[data-state='free']:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+/* Differs on */
+.ms-diffs {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.ms-diff {
+  margin: 0;
+}
+
+.ms-diffs__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-diff__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ms-diff__button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.ms-diff__body {
+  min-inline-size: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.ms-diff__day {
+  display: inline-block;
+  min-inline-size: 44px;
+  font-weight: var(--text-label-weight);
+  color: var(--color-accent-text);
+}
+
+.ms-diff__what {
+  font-weight: var(--text-body-strong-weight);
+}
+
+/* "Dates that differ" */
+.ms-dates {
+  gap: var(--space-3);
+}
+
+.ms-dates__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-date {
+  display: grid;
+  grid-template-columns: minmax(0, 96px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.ms-date__day {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+
+.ms-date__what {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.ms-date__slot {
+  font-weight: var(--text-body-strong-weight);
+}
+
+.ms-date__part {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+
+.ms-date__part[data-kind='notServed'] {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+  font-weight: var(--text-label-weight);
+}
+
+.ms-dates__note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}

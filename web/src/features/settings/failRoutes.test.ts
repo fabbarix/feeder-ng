@@ -13,5 +13,6 @@ describe('check-page-layout.modes (R2-3)', () => {
   it.each([
     '/settings', '/settings/household', '/settings/preferences', '/settings/members', '/settings/allowlist',
     '/settings/courses', '/settings/shops', '/settings/shops/4', '/ingredients', '/ingredients/3', '/products', '/products/5', '/settings/recipe-assistant',
+    '/settings/meal-slots', // MS redesign (beta.5): the cards page adopts the layout guard
   ])('%s is a fail route', (route) => expect(modeFor(modes, route)).toBe('fail'))
 })

@@ -41,7 +41,7 @@ describe('MealSlotsPage: edit on several days', () => {
       }),
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Monday' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Wednesday' }))
@@ -62,7 +62,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { match: 'Dinner', updated: [{ ...tuesdayDinner, time: '20:00' }], skipped: [{ weekday: 5, reason: 'no_slot' }] },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Friday' }))
     expect(within(dialog).getByText('Fri skipped: no Dinner')).toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { match: 'Dinner', updated: [{ ...tuesdayDinner, name: 'Supper' }], skipped: [] },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     const name = within(dialog).getByLabelText('Name')
     await userEvent.clear(name)
@@ -93,7 +93,7 @@ describe('MealSlotsPage: edit on several days', () => {
       'PATCH /api/meal-slots/batch': { status: 409, json: { error: { code: 'duplicate_slot', message: 'A Meal Slot with that name already exists on that weekday' } } },
     })
     renderWithProviders(<MealSlotsPage />)
-    await userEvent.click(within(await screen.findByRole('group', { name: 'Tuesday' })).getByRole('button', { name: 'Dinner 19:30' }))
+    await userEvent.click(within(await screen.findByRole('region', { name: 'Dinner' })).getByRole('button', { name: /^Dinner on Tuesday, 19:30$/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
     const name = within(dialog).getByLabelText('Name')
     await userEvent.clear(name)
@@ -105,26 +105,29 @@ describe('MealSlotsPage: edit on several days', () => {
 })
 
 describe('MealSlotsPage: overview', () => {
-  it('below 1024 px it is the list with attendee pills and "Nobody attending"', async () => {
+  it('is one card per name on a phone and on a tablet alike (no table, no weekday rows)', async () => {
+    for (const desktop of [false, true]) {
+      viewport(desktop)
+      routes(USER_ME)
+      const { unmount } = renderWithProviders(<MealSlotsPage />)
+      expect(await screen.findByRole('region', { name: 'Dinner' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Lunch' })).toBeInTheDocument()
+      expect(screen.queryByRole('table')).toBeNull()
+      expect(screen.queryByRole('group', { name: 'Tuesday' })).toBeNull()
+      unmount()
+    }
+  })
+
+  it('the Dinner card names who attends only where it differs: nobody, for the Monday Lunch', async () => {
     viewport(false)
     routes(USER_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(await screen.findByRole('group', { name: 'Tuesday' })).toBeInTheDocument()
-    expect(screen.queryByRole('table')).toBeNull()
-    expect(within(screen.getByRole('group', { name: 'Tuesday' })).getByRole('list', { name: 'Attending Dinner on Tuesday' })).toBeInTheDocument()
-    expect(within(screen.getByRole('group', { name: 'Monday' })).getByRole('button', { name: /^Nobody attending/ })).toBeInTheDocument()
+    const dinner = await screen.findByRole('region', { name: 'Dinner' })
+    expect(within(dinner).queryByRole('list', { name: /^Attending/ })).toBeNull()
+    expect(within(screen.getByRole('region', { name: 'Lunch' })).getByRole('button', { name: /^Nobody attending/ })).toBeInTheDocument()
   })
 
-  it('from 1024 px it is the week grid, days as columns', async () => {
-    viewport(true)
-    routes(USER_ME)
-    renderWithProviders(<MealSlotsPage />)
-    const table = await screen.findByRole('table', { name: 'Meal Slots by weekday' })
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent).filter((t) => t && t !== 'Meal Slot')).toContain('Thu')
-    expect(screen.queryByRole('group', { name: 'Tuesday' })).toBeNull()
-  })
-
-  it('on the grid, the add button of a row opens the sheet with that row\'s name and weekday', async () => {
+  it('the "+" on a free day of the Dinner card opens the sheet with that name and weekday', async () => {
     viewport(true)
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
@@ -149,7 +152,7 @@ describe('MealSlotsPage: overview', () => {
     window.location.hash = '#meal-slot-12'
     routes(USER_ME)
     renderWithProviders(<MealSlotsPage />, '/settings/meal-slots#meal-slot-12')
-    await screen.findByRole('group', { name: 'Monday' })
+    await screen.findByRole('region', { name: 'Lunch' })
     await waitFor(() => expect(scroll).toHaveBeenCalled())
     expect(document.getElementById('meal-slot-12')).toHaveFocus()
   })

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
@@ -12,6 +12,8 @@ import { useAttendance } from './useAttendance'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { useSlotAnchor } from './useSlotAnchor'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
+import { buildMealSlotCards, datesThatDiffer, type MealSlotCard } from '../lib/mealSlotCards'
+import { useDateExceptions } from './useDateExceptions'
 import { useMealSlots } from './useMealSlots'
 import { useMembers } from './useMembers'
 
@@ -114,8 +116,30 @@ export function useMealSlotsPage() {
     }
   }
 
+  const exceptions = useDateExceptions()
+  const loaded = !slots.isPending && !members.isPending
+  const cards = useMemo<MealSlotCard[]>(
+    () => (loaded ? buildMealSlotCards(slots.slots, members.members, { today: todayIso() }) : []),
+    [loaded, slots.slots, members.members],
+  )
+  const dateRows = useMemo(() => datesThatDiffer(exceptions, { today: todayIso(), locale: documentLocale() }), [exceptions])
+  /** "Change a date": the one-date Attendance of the card's soonest run; any User, an Admin included (the sheet gives way). */
+  const changeDateOf = (card: MealSlotCard) => {
+    setEditor(null)
+    setDateEditor({ slot: card.next.slot, date: card.next.date })
+  }
+
   return {
     isAdmin,
+    /** True once the Meal Slots and the Members have loaded (the cards are derived from both). */
+    loaded,
+    /** MS: one card per Meal Slot name (empty until the Meal Slots and the Members have loaded). */
+    cards,
+    /** MS: the read-only "Dates that differ" rows. */
+    dateRows,
+    /** MS: "Edit <name>" opens the sheet on the card's usual slot (an Admin). */
+    /** MS: "Change a date for <name>" opens the one-date Attendance on the card's next run (any User). */
+    changeDateOf,
     members,
     slots,
     /** CRS D2: the active Courses for the editor's field (empty until loaded). */
