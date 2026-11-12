@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Avatar, Button, ListGroup, MemberPill, Tile } from '../../../ui'
+import { Avatar, Button, ListGroup, ListRow, MemberPill, Tile } from '../../../ui'
 import { optOutLine, recordAction, recordDetail, recordText, type ExplanationGroup, type RecordPart } from '../lib/couldntExclusions'
 import { planStrings as s } from '../strings'
 import type { ExclusionRecord } from '../types'
@@ -69,8 +69,8 @@ export function CouldntPlanExclusionTile({ group, expanded, onToggle, focusId = 
         <p className="plan__muted">{s.couldntExclusions.stillWorking}</p>
       ) : (
         <ListGroup label={s.couldntExclusions.exclusions}>
-          {group.exclusions.map((record, i) => (
-            <ExclusionRow key={i} record={record} />
+          {group.exclusions.map((record) => (
+            <ExclusionRow key={exclusionKey(record)} record={record} />
           ))}
           {group.moreExclusions > 0 ? <li className="plan__muted">{s.couldntExclusions.moreExclusions(group.moreExclusions)}</li> : null}
         </ListGroup>
@@ -79,12 +79,17 @@ export function CouldntPlanExclusionTile({ group, expanded, onToggle, focusId = 
   )
 }
 
+/** A stable key within one Tile: a Member's Exclusion of one Ingredient, or the Recipes they rule out directly. */
+function exclusionKey(record: ExclusionRecord): string {
+  const what = record.ingredient ? `ingredient-${record.ingredient.id}` : `recipes-${record.recipes.map((r) => r.id).join('-')}`
+  return `${record.member.id}-${what}`
+}
+
 /** The Recipes and names of a first line: links where the parts have a `to`. */
 function Parts({ parts }: { parts: RecordPart[] }): ReactNode {
   return parts.map((p, i) => {
-    if (p.to) return <Link key={i} to={p.to}>{p.text}</Link>
-    if (p.strong) return <strong key={i}>{p.text}</strong>
-    return <span key={i}>{p.text}</span>
+    if (p.to) return <Link key={`${i}-${p.text}`} to={p.to}>{p.text}</Link>
+    return p.strong ? <strong key={`${i}-${p.text}`}>{p.text}</strong> : <span key={`${i}-${p.text}`}>{p.text}</span>
   })
 }
 
@@ -93,21 +98,18 @@ function ExclusionRow({ record }: { record: ExclusionRecord }): ReactNode {
   const detail = recordDetail(record)
   const action = recordAction(record)
   return (
-    <li className="list-row" data-height="auto">
-      <span className="list-row__leading">
-        <Avatar name={record.member.name} imageUrl={record.member.photoUrl} size="md" colour={record.member.colour} glyph={record.member.avatar} />
-      </span>
-      <span className="list-row__text">
-        <span className="list-row__title">
-          <Parts parts={recordText(record)} />
-        </span>
-        {detail ? <span className="list-row__meta">{detail}</span> : null}
-      </span>
-      {action ? (
-        <span className="list-row__trailing">
-          <Link to={action.to}>{action.label}</Link>
-        </span>
-      ) : null}
-    </li>
+    <ListRow
+      wrapTitle
+      title={<Parts parts={recordText(record)} />}
+      meta={detail ?? undefined}
+      leading={<Avatar name={record.member.name} imageUrl={record.member.photoUrl} size="md" colour={record.member.colour} glyph={record.member.avatar} />}
+      trailing={
+        action ? (
+          <Link className="button" data-variant="tertiary" data-size="sm" to={action.to}>
+            {action.label}
+          </Link>
+        ) : undefined
+      }
+    />
   )
 }

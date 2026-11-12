@@ -140,7 +140,7 @@ export function recordAction(record: ExclusionRecord): { label: string; to: stri
 /** "Kim opts out of Side, so Kim's Exclusions don't count here." null when nobody opts out. */
 export function optOutLine(cell: Pick<ExclusionCell, 'optOuts' | 'courseName'>): string | null {
   if (cell.optOuts.length === 0) return null
-  const course = cell.courseName || 'this Course'
+  const course = cell.courseName || s.couldntExclusions.thisCourse
   if (cell.optOuts.length === 1) return s.couldntExclusions.optOutOne(firstName(cell.optOuts[0]!), course)
   return s.couldntExclusions.optOutMany(joinAnd(cell.optOuts.map(firstName)), course)
 }

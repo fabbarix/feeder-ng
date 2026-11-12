@@ -177,6 +177,9 @@ describe('ListRow: a rich, wrapping title (CRS G2)', () => {
     const [wrapped, plain] = screen.getAllByRole('listitem')
     expect(wrapped).toHaveAttribute('data-wrap-title', 'true')
     expect(plain).not.toHaveAttribute('data-wrap-title')
+    // a wrapping title can take any number of lines, so the row grows with it
+    expect(wrapped).toHaveAttribute('data-height', 'auto')
+    expect(plain).toHaveAttribute('data-height', '56')
   })
 
   it('the CSS wraps the title of a wrapTitle row and lets links inside a title take the pointer', () => {

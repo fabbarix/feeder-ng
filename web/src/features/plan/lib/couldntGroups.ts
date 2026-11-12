@@ -79,7 +79,7 @@ const META: Record<Cause, { tone: Tone; icon: IconName; fix: FixFor }> = {
   no_fit: { tone: 'warn', icon: 'info', fix: (label) => ({ kind: 'choose', label }) },
 }
 
-/** Causes whose fix page (Meal Slots) only an Admin can change; Slot and Variety Rules are open to every User. */
+/** Causes whose fix page (Meal Slots) only an Admin can change; Slot Rules are open to every User. */
 const ADMIN_ONLY = new Set<Cause>(['nobody_attending'])
 
 /** The tone of a cause. */

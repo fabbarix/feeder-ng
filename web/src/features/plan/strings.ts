@@ -198,6 +198,7 @@ export const planStrings = {
     tryAgain: 'Try again',
     showAll: (n: number) => `Show all ${n}`,
     hideList: 'Hide the list',
+    thisCourse: 'this Course',
   },
   couldntShowAll: (n: number) => `Show all ${n}`,
   couldntHideList: 'Hide the list',
