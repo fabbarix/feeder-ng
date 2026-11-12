@@ -23,7 +23,7 @@ handles below the editor on the controls. `nw` (inset 0) is the only one on its 
 are 19, 63, 107, ... 327 px off, exactly 44 px apart. Only the Photo tab is affected because it is the only editor inside a Tile.
 
 Fix direction (for the developer): make the editor's positioning win over host rules, never by source order: either wrap the Tile rule's
-selector in `:where(...)` for the inner part so it drops below 0,1,0, or give the editor's box and handle position rules a selector above
+selector in `:where(...)` for the inner part (this only brings the Tile rule to 0,2,1, not below 0,1,0, so the editor rule at 0,3,0 is also needed), or give the editor's box and handle position rules a selector above
 0,3,1. Check that the Tile's "inner controls above the stretched target" intent still holds for ordinary buttons.
 
 Guards: `ui/ImageEditor/ImageEditor.cascade.test.ts` (specificity against Tile.css), `ImageEditor.handles.test.tsx` (geometry), and rule 15 of

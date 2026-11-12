@@ -4,6 +4,19 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.4.2] - 2026-11-12 <!-- pending: date to fill at the tag -->
+
+A fix for the photo editor in Read a recipe.
+
+### Fixed
+
+- **Crop handles.** The crop handles of the photo editor sit on the crop box again; on a phone they were scattered across the Read a recipe step.
+- **Photos after a read.** After a recipe is read from photos and reaches review, the photos are cleared, so the next read starts fresh; a failed read keeps them.
+
+### Upgrading
+
+No new settings and no migrations.
+
 ## [1.0.0-beta.4.1] - 2026-11-12
 
 Reading a recipe from photos with the phone's own camera app and an editor, and a round of visual fixes found in the beta.4 QA.
@@ -176,7 +189,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...HEAD
+[1.0.0-beta.4.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...v1.0.0-beta.4.2
 [1.0.0-beta.4.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...v1.0.0-beta.4.1
 [1.0.0-beta.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.3...v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.2...v1.0.0-beta.3
