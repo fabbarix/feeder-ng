@@ -125,6 +125,7 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | planEmpty | `CalendarBlank` |
 | cameraOff | `CameraSlash` |
 | camera | `Camera` (UF1) |
+| photos | `Images` (photo-read: Choose photos) |
 | clipboard | `ClipboardText` (UF1) |
 | link | `LinkSimple` (UF1) |
 | rotateRight | `ArrowClockwise` (UF1) |
@@ -179,3 +180,6 @@ WP-D's `connect` (`PlugsConnected`) does **not** fit: it alone costs about 1,070
 ## Sort-drag update: budget raised to 44,032 B
 The drag handle (`drag`) and the Move up / down items bring the bundle to **42,918 B gz** (102 modules), 90 B under the 43,008 B budget, which is no real headroom.
 PM decision, following the user's rule "new size + sensible headroom": the budget is now **44,032 B** (43 kB), about 1.1 kB (two to three glyphs) above the measured size.
+
+## photo-read update: `photos` (Images)
+`photos` (`Images`) is the photo read's Choose photos button. It is the 106th module: the bundle measures **45,209 B gz** (`scripts/test/icons-bundle_test.sh`), 871 B under the unchanged 46,080 B budget. `MIN_MODULES` is 106.

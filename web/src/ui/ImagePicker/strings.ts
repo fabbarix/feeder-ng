@@ -1,3 +1,4 @@
+import { imageEditorStrings } from '../ImageEditor/strings'
 import { MAX_UPLOAD_BYTES } from './lib/limits'
 import type { ImageProblemCode } from './lib/problems'
 
@@ -12,6 +13,7 @@ const PASTE_HINT = 'Press Ctrl+V (Cmd+V on a Mac) while this box is focused.'
 
 /** English copy of the ImagePicker (kept out of ui/strings.ts, which another team edits). */
 export const imagePickerStrings = {
+  ...imageEditorStrings,
   limitHelper: limitHelperFor(MAX_UPLOAD_BYTES),
   addImage: 'Add an image',
   replaceImage: 'Replace image',
@@ -19,8 +21,6 @@ export const imagePickerStrings = {
   pasteLink: 'Paste link',
   takePhoto: 'Take photo',
   useCameraApp: 'Use the camera app',
-  rotateLeft: 'Rotate left',
-  rotateRight: 'Rotate right',
   crop: 'Crop',
   removeImage: 'Remove image',
   cancel: 'Cancel',
@@ -38,12 +38,8 @@ export const imagePickerStrings = {
   closeCamera: 'Close camera',
   switchCamera: 'Switch camera',
   previewBroken: 'The image could not be shown.',
-  cropGroup: 'Crop image',
   cropLoading: 'Loading the image',
-  cropMove: 'Move crop area',
-  cropReset: 'Reset',
   useCrop: 'Use crop',
-  cropArea: (width: number, height: number) => `Crop area: ${width} by ${height} pixels`,
   problems: {
     unsupported: 'That is not a JPEG, PNG, WebP or HEIC image.',
     too_large: tooLargeMessage(MAX_UPLOAD_BYTES),
