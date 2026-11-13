@@ -154,15 +154,7 @@ func (s *Store) AddLot(ctx context.Context, n NewLot) (lot StoredLot, created bo
 			return existing, false, nil
 		}
 	}
-	src := n.Source
-	if src == "" {
-		src = SourceManual
-	}
-	res, err := s.db.ExecContext(ctx, `INSERT INTO stock_lots
-		(ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, storage_place_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		n.IngredientID, n.Quantity, string(n.Purchased), nullDate(n.GoesOff), string(src),
-		nullInt(n.ProductID), nullInt(n.ShopID), nullString(n.ClientUUID), s.now(), nullInt(n.StoragePlaceID))
+	id, err := s.insertLot(ctx, s.db, n)
 	if err != nil {
 		if n.ClientUUID != "" && isUnique(err) {
 			// A concurrent scan with the same UUID won the race: return its lot.
@@ -173,12 +165,36 @@ func (s *Store) AddLot(ctx context.Context, n NewLot) (lot StoredLot, created bo
 		}
 		return StoredLot{}, false, err
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return StoredLot{}, false, err
-	}
 	lot, err = s.Lot(ctx, id)
 	return lot, err == nil, err
+}
+
+// AddLotTx inserts a lot inside the caller's transaction, with the Product, Shop and Storage Place it is given (H9:
+// Undo of a Use recreates an emptied Lot this way). It does no client UUID de-duplication: the caller has none.
+func (s *Store) AddLotTx(ctx context.Context, tx *sql.Tx, n NewLot) (StoredLot, error) {
+	id, err := s.insertLot(ctx, tx, n)
+	if err != nil {
+		return StoredLot{}, err
+	}
+	row := tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, id)
+	return scanLot(row)
+}
+
+// insertLot writes one lot row and returns its id. An empty Source is manual.
+func (s *Store) insertLot(ctx context.Context, q queryer, n NewLot) (int64, error) {
+	src := n.Source
+	if src == "" {
+		src = SourceManual
+	}
+	res, err := q.ExecContext(ctx, `INSERT INTO stock_lots
+		(ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, storage_place_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		n.IngredientID, n.Quantity, string(n.Purchased), nullDate(n.GoesOff), string(src),
+		nullInt(n.ProductID), nullInt(n.ShopID), nullString(n.ClientUUID), s.now(), nullInt(n.StoragePlaceID))
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }
 
 // Lot returns one lot, or ErrNotFound.
@@ -201,6 +217,12 @@ func (s *Store) Lots(ctx context.Context, ingredientID int64) ([]StoredLot, erro
 // inside its own transaction, after it has deducted Stock in it.
 func (s *Store) LotsTx(ctx context.Context, tx *sql.Tx) ([]StoredLot, error) {
 	return queryLots(ctx, tx, 0)
+}
+
+// LotsOfTx lists one Ingredient's lots inside tx, in the order Lots uses (H9: a Use or its Undo reads them and writes
+// in one transaction).
+func (s *Store) LotsOfTx(ctx context.Context, tx *sql.Tx, ingredientID int64) ([]StoredLot, error) {
+	return queryLots(ctx, tx, ingredientID)
 }
 
 // Begin starts a transaction for callers that group several store calls

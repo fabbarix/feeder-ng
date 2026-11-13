@@ -8,6 +8,7 @@ import { icons, type IconName } from './icons'
 const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['today', 'House'],
   ['minus', 'Minus'], // WP4: Stepper and NumberField decrease
+  ['use', 'MinusCircle'], // H9: Use on the Supplies list (take some out of Stock)
   ['plan', 'CalendarDots'],
   ['scan', 'Barcode'],
   ['shop', 'Basket'],

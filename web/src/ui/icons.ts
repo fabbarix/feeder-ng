@@ -64,6 +64,7 @@ import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
 import { MinusIcon } from '@phosphor-icons/react/dist/csr/Minus'
+import { MinusCircleIcon } from '@phosphor-icons/react/dist/csr/MinusCircle'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { MapPinIcon } from '@phosphor-icons/react/dist/csr/MapPin'
 import { MicrophoneIcon } from '@phosphor-icons/react/dist/csr/Microphone'
@@ -152,6 +153,7 @@ export const icons = {
   regenerate: ArrowsClockwiseIcon,
   add: PlusIcon,
   minus: MinusIcon,
+  use: MinusCircleIcon, // H9: take some of a Supply out of Stock (Use on the Supplies list)
   edit: PencilSimpleIcon,
   archive: ArchiveIcon,
   unarchive: ArrowCounterClockwiseIcon,

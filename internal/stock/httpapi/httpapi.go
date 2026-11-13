@@ -39,6 +39,9 @@ func mount(r *app.Router, d app.Deps) {
 	// Beta.5 ST: correct a Lot by hand (quantity, Bought on, Good until) or delete it (a correction, not waste).
 	r.User("PATCH /api/stock/lots/{id}", a.editLot)
 	r.User("DELETE /api/stock/lots/{id}", a.deleteLot)
+	// H9: quick Use of a Supply (taken oldest first, Used up, never waste) and its Undo.
+	r.User("POST /api/stock/ingredients/{id}/use", a.useSupply)
+	r.User("POST /api/stock/ingredients/{id}/use/undo", a.undoSupplyUse)
 	r.User("GET /api/storage-places", a.listPlaces)
 	r.User("POST /api/storage-places", a.createPlace)
 	r.User("PATCH /api/storage-places/{id}", a.updatePlace)
