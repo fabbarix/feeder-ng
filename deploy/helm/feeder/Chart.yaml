@@ -3,8 +3,8 @@ name: feeder
 description: Family meal-planning app. One Go binary with the web app embedded, SQLite on one volume.
 type: application
 # CI overrides version and appVersion with the release tag (see .github/workflows/release.yml).
-version: 1.0.0-beta.6.3
-appVersion: 1.0.0-beta.6.3
+version: 1.0.0-beta.6.4
+appVersion: 1.0.0-beta.6.4
 home: https://github.com/fabbarix/feeder-ng
 sources:
   - https://github.com/fabbarix/feeder-ng

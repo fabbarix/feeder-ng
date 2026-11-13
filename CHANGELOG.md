@@ -4,6 +4,18 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6.4] - 2026-11-13
+
+Tidier Ingredient lines on a Recipe's page.
+
+### Changed
+
+- **The ⋮ menu of a Recipe's Ingredient lines** now sits at the start of each line, centred on its text, so the menus, quantities and names line up in columns.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.4 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.6.3] - 2026-11-13
 
 A tidier Recipe page.
@@ -332,7 +344,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.4...HEAD
+[1.0.0-beta.6.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...v1.0.0-beta.6.4
 [1.0.0-beta.6.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...v1.0.0-beta.6.3
 [1.0.0-beta.6.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...v1.0.0-beta.6.2
 [1.0.0-beta.6.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...v1.0.0-beta.6.1
