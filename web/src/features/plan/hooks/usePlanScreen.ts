@@ -26,8 +26,8 @@ export function usePlanScreen() {
   const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
-  const slotDate = useSlotDate(plan.slots, plan.today)
-  useMarkSlotRoute({ slots: plan.slots, loaded: plan.view !== undefined, flow, allCooked })
+  const slotDate = useSlotDate(plan.slots)
+  useMarkSlotRoute({ flow, allCooked })
 
   const slotAt = (key: SlotDayKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
   const swapSlot = slotAt(swapKey)

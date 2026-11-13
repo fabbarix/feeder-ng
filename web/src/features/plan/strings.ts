@@ -269,14 +269,12 @@ export const planStrings = {
     guestsSuffix: (n: number) => (n === 1 ? '+1 Guest' : `+${n} Guests`),
     guestsCount: (n: number) => (n === 1 ? '1 Guest' : `${n} Guests`),
     datePast: 'That date has passed, so it cannot change.',
-    slotStarted: (slot: string) => `Part of ${slot} is already cooked, so it cannot be left out.`,
+    slotStarted: (slot: string) => `Part of ${slot} is already Cooked or Not cooked, so it cannot be left out.`,
     timeInvalid: 'Enter a time such as 19:30.',
     failed: 'Could not save that. Try again.',
   },
   // B5-F1: the route that opens a slot's Mark as Cooked / Mark all Cooked sheet (the Shopping List hint's "Mark it")
   markSlot: {
-    loading: 'Opening Mark as Cooked…',
     nothingLeft: 'Nothing is left to mark Cooked there.',
-    backToList: 'Back to the Shopping List',
   },
 } as const

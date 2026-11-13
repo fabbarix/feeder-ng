@@ -40,8 +40,8 @@ function sameSlot(a: SlotDayKey, b: SlotDayKey): boolean {
   return a.date === b.date && a.mealSlotId === b.mealSlotId
 }
 
-/** `slots` resolve the keys to names and times; `today` is the household date. */
-export function useSlotDate(slots: PlanSlot[], _today: string): SlotDateController {
+/** `slots` resolve the keys to names and times. */
+export function useSlotDate(slots: PlanSlot[]): SlotDateController {
   const client = useQueryClient()
   const confirm = useConfirm()
   const toast = useToast()

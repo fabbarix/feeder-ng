@@ -38,6 +38,8 @@ export const settingsStrings = {
   preferencesSaved: 'Preferences saved.',
   attendanceSaved: 'Attendance saved for this date.',
   attendanceReset: 'Back to the usual Attendance.',
+  /** A started Meal Slot cannot lose its Who's eating (409 slot_started): the Plan sentence in GLOSSARY words. */
+  slotStarted: (slot: string) => `Part of ${slot} is already Cooked or Not cooked, so it cannot be left out.`,
 
   form: {
     timeZone: 'Time zone',

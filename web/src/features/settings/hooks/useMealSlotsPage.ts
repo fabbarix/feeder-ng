@@ -102,7 +102,7 @@ export function useMealSlotsPage() {
       toast.show(settingsStrings.attendanceSaved, { status: 'success' })
       setDateEditor(null)
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, dateEditor?.slot.name), { status: 'error' })
     }
   }
 
@@ -112,7 +112,7 @@ export function useMealSlotsPage() {
       toast.show(settingsStrings.attendanceReset, { status: 'success' })
       setDateEditor(null)
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, dateEditor?.slot.name), { status: 'error' })
     }
   }
 

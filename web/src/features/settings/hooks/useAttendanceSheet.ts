@@ -57,7 +57,7 @@ export function useAttendanceSheet(target: WhosEatingTarget | null, options: Att
       try {
         await att.save(attendance, courses, guests)
       } catch (err) {
-        toast.show(errorMessage(err), { status: 'error' })
+        toast.show(errorMessage(err, slot.name), { status: 'error' })
         return false
       }
       options.onEmptied?.(target)
@@ -70,7 +70,7 @@ export function useAttendanceSheet(target: WhosEatingTarget | null, options: Att
       close()
       return true
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, slot.name), { status: 'error' })
       return false
     }
   }
@@ -83,7 +83,7 @@ export function useAttendanceSheet(target: WhosEatingTarget | null, options: Att
       close()
       return true
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, slot?.name), { status: 'error' })
       return false
     }
   }

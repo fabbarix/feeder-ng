@@ -154,6 +154,12 @@ export function attendeesLine(names: string[], guests: number): string {
   return guests > 0 ? `${names.join(', ')} + ${s.slotDate.guestsCount(guests)}` : names.join(', ')
 }
 
+/** The Guests note of a Planned Meal sheet: "+2 Guests" after the Members, "2 Guests" with none; '' for no Guests. */
+export function guestsNote(memberCount: number, guests: number): string {
+  if (guests <= 0) return ''
+  return memberCount > 0 ? guestsSuffix(guests) : attendeesLine([], guests)
+}
+
 /** The Not served slots of `today`, in time order: Today's compact rows. Slots of other dates are left out. */
 export function notServedToday(slots: PlanSlot[], today: string): PlanSlot[] {
   return slots

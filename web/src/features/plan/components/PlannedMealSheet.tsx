@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
-import { attendeesLine, guestsSuffix } from '../lib/slotDate'
+import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { sheetChips } from '../lib/chips'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
@@ -69,6 +69,7 @@ export function PlannedMealSheet({
   const line = meal && slot && course ? relaxedLine(meal, { courseId: course.courseId, courseName: course.name, main: course.main, severalCourses: several }) : null
   const attendance = slot?.attendance?.filter((a) => !course?.optOutMemberIds.includes(a.id))
   const guests = slot?.guests ?? 0
+  const guestsText = guestsNote(attendance?.length ?? 0, guests)
 
   const actions =
     key && slot && planned
@@ -118,7 +119,7 @@ export function PlannedMealSheet({
                 <Avatar key={a.id} name={a.name} imageUrl={a.photoUrl || undefined} glyph={a.avatar || undefined} colour={a.colour} size="sm" />
               ))}
               {/* B5-F1: Guests end the attendees ("+2 Guests"; "2 Guests" with no Member). */}
-              {guests > 0 ? <span className="plan-sheet__guests">{attendance && attendance.length > 0 ? guestsSuffix(guests) : attendeesLine([], guests)}</span> : null}
+              {guestsText ? <span className="plan-sheet__guests">{guestsText}</span> : null}
             </div>
           ) : null}
           <div className="plan-sheet__chips">

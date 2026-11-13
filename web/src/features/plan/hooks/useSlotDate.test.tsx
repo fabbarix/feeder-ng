@@ -18,7 +18,7 @@ const PATH = '/api/meal-slots/4/dates/2026-11-12'
 const info = { date: '2026-11-12', notServed: false, time: null, usualTime: '19:30', guests: 0 }
 const nothingGoes = { removes: { plannedMeals: [] } }
 const something = { removes: { plannedMeals: [{ courseId: 1, courseName: 'Main', recipeName: 'Roast chicken', pinned: true, bought: [] }] } }
-const setup = () => renderHook(() => useSlotDate([thu], '2026-11-10'), { wrapper })
+const setup = () => renderHook(() => useSlotDate([thu]), { wrapper })
 
 describe('useSlotDate: Not served', () => {
   it('applies at once when nothing is planned there, and toasts "Thu Dinner is not served" with Undo', async () => {
@@ -66,7 +66,7 @@ describe('useSlotDate: Not served', () => {
     })
     const { result } = setup()
     await act(async () => result.current.actions.onNotServed(key))
-    expect(await screen.findByText('Part of Dinner is already cooked, so it cannot be left out.')).toBeInTheDocument()
+    expect(await screen.findByText('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')).toBeInTheDocument()
     expect(api.callsTo('PATCH', PATH)).toHaveLength(0)
   })
 
@@ -168,7 +168,7 @@ describe('useSlotDate: Who\'s eating', () => {
       go = await result.current.whosEating.beforeEmptying(key)
     })
     expect(go).toBe(false)
-    expect(await screen.findByText('Part of Dinner is already cooked, so it cannot be left out.')).toBeInTheDocument()
+    expect(await screen.findByText('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')).toBeInTheDocument()
   })
 
   it('after an emptied date is saved the toast says "Thu Dinner is not served" with Undo, which serves it again', async () => {

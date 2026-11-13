@@ -4,7 +4,7 @@ import { ApiError } from '../../../lib/http'
 import { courseMeal, courseSlot, planCourse, slot } from '../test-utils'
 import type { NotServedPreview, PlanSlot } from '../types'
 import {
-  attendeesLine, canSaveTime, choiceLabel, dateChoices, guestsSuffix, hasOwnTime, isNotServed, needsNotServedConfirm, notServedConfirm,
+  attendeesLine, canSaveTime, choiceLabel, dateChoices, guestsNote, guestsSuffix, hasOwnTime, isNotServed, needsNotServedConfirm, notServedConfirm,
   notServedRowText, notServedToastText, notServedToday, planAgainLabel, slotDateErrorText, slotDayName, timeCaption, timeChoiceLabel, timeDialogCopy,
 } from './slotDate'
 
@@ -160,6 +160,13 @@ describe('Guests in words', () => {
     expect(attendeesLine([], 2)).toBe('2 Guests')
     expect(attendeesLine(['Anna', 'Sam'], 0)).toBe('Anna, Sam')
   })
+
+  it('the Guests note under the attendees: the suffix after Members, the count with none, nothing without Guests', () => {
+    expect(guestsNote(2, 2)).toBe('+2 Guests')
+    expect(guestsNote(0, 2)).toBe('2 Guests')
+    expect(guestsNote(0, 1)).toBe('1 Guest')
+    expect(guestsNote(2, 0)).toBe('')
+  })
 })
 
 describe('notServedToday', () => {
@@ -175,7 +182,7 @@ describe('notServedToday', () => {
 describe('slotDateErrorText', () => {
   const err = (reason: string) => new ApiError(422, 'validation_failed', 'no', { field: 'notServed', reason })
   it('names the refusals in the household\'s words', () => {
-    expect(slotDateErrorText(err('slot_started'), thu())).toBe('Part of Dinner is already cooked, so it cannot be left out.')
+    expect(slotDateErrorText(err('slot_started'), thu())).toBe('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')
     expect(slotDateErrorText(err('date_past'), thu())).toBe('That date has passed, so it cannot change.')
     expect(slotDateErrorText(err('time_invalid'), thu())).toBe('Enter a time such as 19:30.')
   })

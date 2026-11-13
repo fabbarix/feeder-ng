@@ -71,7 +71,7 @@ export function TodayScreen(): ReactElement {
   const sheets = useTonightSheets(hero)
   // B5-F1: the per-date choices of today's Tonight slot and its Not served rows (their sheets are rendered below).
   const notServed = data.notServedToday ?? []
-  const slotDate = useSlotDate(hero ? [hero, ...notServed] : notServed, data.planToday)
+  const slotDate = useSlotDate(hero ? [hero, ...notServed] : notServed)
 
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
