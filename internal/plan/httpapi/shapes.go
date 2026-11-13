@@ -179,6 +179,15 @@ type leftoverOut struct {
 	FromDate       string  `json:"fromDate"`
 	FromMealSlotID int64   `json:"fromMealSlotId"`
 	FromCourseID   int64   `json:"fromCourseId"`
+	// B5-LO (ADR 0012): where it sits and what Feeder asks. storagePlaceId and storagePlaceName are null for a Leftover
+	// in no Storage Place (or whose place was deleted); frozenOn is null when it is not frozen; plannedPortions is what
+	// the Planned Meals served from it are planned to use. NOT FILLED yet (test commit).
+	StoragePlaceID   *int64  `json:"storagePlaceId"`
+	StoragePlaceName *string `json:"storagePlaceName"`
+	Frozen           bool    `json:"frozen"`
+	FrozenOn         *string `json:"frozenOn"`
+	ToAnswer         bool    `json:"toAnswer"`
+	PlannedPortions  float64 `json:"plannedPortions"`
 }
 
 type warningOut struct {

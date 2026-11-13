@@ -29,10 +29,13 @@ type Settings struct {
 	PlanningHorizonDays      int
 	DefaultCooldownDays      int
 	DefaultLeftoverUseByDays int
-	QuietHours               QuietHours
-	PlannerStyle             float64 // 0 = Use what we have, 0.5 = Variety, 1 = Favourites
-	Location                 *Location
-	Currency                 string
+	// FrozenUseByDays is how long a Leftover keeps in a Freezer when its Recipe has no Frozen Use-by: 1 to 365, default
+	// 90 (ADR 0012, spec §3). NOT SET by DefaultSettings or checked by Validate yet (test commit).
+	FrozenUseByDays int
+	QuietHours      QuietHours
+	PlannerStyle    float64 // 0 = Use what we have, 0.5 = Variety, 1 = Favourites
+	Location        *Location
+	Currency        string
 }
 
 // DefaultSettings are the settings a new Household starts with, in the given zone.

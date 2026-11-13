@@ -88,6 +88,10 @@ type Leftover struct {
 	CookedOn string
 	UseBy    string // last date it may be served
 	Status   LeftoverStatus
+	// StoragePlaceID is the Storage Place it sits in (0: none, or its place was deleted: "Not sorted"), and FrozenOn the
+	// household date it went into a Freezer ("" = not frozen). Frozen is FrozenOn, never the place's kind (ADR 0012).
+	StoragePlaceID int64
+	FrozenOn       string
 }
 
 // SlotRule fixes a Meal Slot to a Recipe or a Tag: exactly one of RecipeID or Tag is set (Tag is a recipe.TagKey).

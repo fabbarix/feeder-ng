@@ -62,6 +62,7 @@ func mount(r *app.Router, d app.Deps) {
 	// Team C-RX (docs/dev/design/crs-crx.md): a literal, so the mux prefers it to the {date}/{slotId} patterns.
 	r.User("GET /api/plan/couldnt-plan/exclusions", a.couldntExclusions)
 	r.User("GET /api/plan/leftovers", a.leftovers)
+	a.leftoverRoutes(r) // B5-LO: Had it, Threw it out, Freeze it, Take out, answer (leftover.go)
 	r.User("POST /api/plan/regenerate", a.regenerate)
 	// Team C3 (docs/dev/design/crs-c3.md §1): the course-less routes are gone. The six old words answer 404 for every
 	// method, registered explicitly: otherwise the mux answers 405 through PUT .../{slotId}/{courseId}. A method-less
