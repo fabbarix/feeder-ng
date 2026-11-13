@@ -298,10 +298,12 @@ func (r *Runner) NotCookedAll(ctx context.Context, date string, mealSlotID int64
 	return out, nil
 }
 
-// CourseLeftover is one entry of CookedAll: the Leftover portions chosen for a Course (nil: the proposal).
+// CourseLeftover is one entry of CookedAll: the Leftover portions chosen for a Course (nil: the proposal) and the
+// Used from picks of that Course (none: the default order).
 type CourseLeftover struct {
 	CourseID         int64
 	LeftoverPortions *float64
+	UsedFrom         []UsedFrom
 }
 
 // AllCookedResult is the answer of CookedAll.
@@ -386,6 +388,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			listed[id], index[id] = c, i
 		}
 		var needs []Need
+		var meals []CookedMeal // the fresh Courses, in the slot's Course order
 		for _, m := range day {
 			if m.State != plan.StatePlanned {
 				continue
@@ -396,11 +399,14 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			if !ok {
 				i = -1
 			}
-			need, n, err := r.cookInAll(ctx, tx, st, in, si, m, recipes, lo, i)
+			meal, n, err := r.cookInAll(ctx, tx, st, in, si, m, recipes, lo, listed[real].UsedFrom, i)
 			if err != nil {
 				return nil, err
 			}
-			needs = append(needs, need...)
+			if meal != nil {
+				meals = append(meals, *meal)
+				needs = append(needs, meal.Needs...)
+			}
 			keys = append(keys, m.Key)
 			if n != nil {
 				made = append(made, *n)
@@ -409,11 +415,18 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 		if len(keys) == 0 {
 			return nil, ErrAlreadyResolved
 		}
-		if len(needs) > 0 {
-			d, err := r.d.Stock.DeductCookedTx(ctx, tx, combineNeeds(needs))
-			if err != nil {
-				return nil, err
-			}
+		var d Deduction
+		switch {
+		case anyPicks(meals):
+			// Used from anywhere in the slot: one picked deduction, one CookedMeal per Course (Main first).
+			d, err = r.deductPicked(ctx, tx, meals)
+		case len(needs) > 0:
+			d, err = r.d.Stock.DeductCookedTx(ctx, tx, combineNeeds(needs))
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(needs) > 0 || anyPicks(meals) {
 			res.Warnings = d.Warnings
 			deduction = &d
 		}
@@ -434,11 +447,15 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 }
 
 // cookInAll marks one unresolved Planned Meal of CookAll Cooked, as Cooked does (Leftover-served meals consume their
-// source; fresh ones return the Stock they need and record their Leftover). index is the request's entry (-1: none).
+// source; fresh ones record their Leftover). It returns the meal to deduct (nil for a Leftover-served one) and the
+// Leftover made. index is the request's entry (-1: none). Picks on a Leftover-served meal are ErrUsedFromInvalid.
 func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
-	recipes []planner.Recipe, listedPortions *float64, index int) ([]Need, *plan.Leftover, error) {
+	recipes []planner.Recipe, listedPortions *float64, usedFrom []UsedFrom, index int) (*CookedMeal, *plan.Leftover, error) {
 	need := cellPortions(si, m.Key.CourseID)
 	if !m.Fresh() {
+		if hasPicks(usedFrom) {
+			return nil, nil, ErrUsedFromInvalid
+		}
 		src, err := r.leftoverSource(ctx, st, m)
 		if err != nil {
 			return nil, nil, err
@@ -489,7 +506,17 @@ func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in 
 	if err := r.unpinMisfits(ctx, st, m.Key, portions, in); err != nil {
 		return nil, nil, err
 	}
-	return needsFor(rc, m.Batches), made, nil
+	return &CookedMeal{Needs: needsFor(rc, m.Batches), UsedFrom: usedFrom}, made, nil
+}
+
+// anyPicks reports whether any of the meals has a Used from pick.
+func anyPicks(meals []CookedMeal) bool {
+	for _, m := range meals {
+		if hasPicks(m.UsedFrom) {
+			return true
+		}
+	}
+	return false
 }
 
 // combineNeeds sums the Needs of several Courses per Ingredient, in the order they first appear.

@@ -3,6 +3,8 @@ package runner
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -122,6 +124,61 @@ func (a *StockService) DeductCookedTx(ctx context.Context, tx *sql.Tx, needs []N
 			Have: w.Have, Need: w.Need, Shortfall: w.Shortfall, Message: w.Message})
 	}
 	return Deduction{Warnings: warnings, Handle: d}, nil
+}
+
+// DeductCookedPickedTx implements PickedDeducter: the Used from deduction for the meals (Course order), inside tx.
+// The stock service's refusals become ErrUsedFromInvalid.
+func (a *StockService) DeductCookedPickedTx(ctx context.Context, tx *sql.Tx, meals []CookedMeal) (Deduction, error) {
+	sm := make([]stockservice.CookedMeal, 0, len(meals))
+	for _, m := range meals {
+		cm := stockservice.CookedMeal{Needs: make([]stock.Need, 0, len(m.Needs))}
+		for _, n := range m.Needs {
+			cm.Needs = append(cm.Needs, stock.Need{IngredientID: n.IngredientID, Quantity: n.Quantity})
+		}
+		for _, u := range m.UsedFrom {
+			ip := stockservice.IngredientPicks{IngredientID: u.IngredientID, Picks: make([]stock.Pick, 0, len(u.Picks))}
+			for _, p := range u.Picks {
+				ip.Picks = append(ip.Picks, stock.Pick{LotID: p.LotID, Quantity: p.Quantity})
+			}
+			cm.UsedFrom = append(cm.UsedFrom, ip)
+		}
+		sm = append(sm, cm)
+	}
+	d, err := a.svc.DeductForCookedPickedTx(ctx, tx, sm)
+	if errors.Is(err, stockservice.ErrUsedFromInvalid) {
+		return Deduction{}, fmt.Errorf("%w: %w", ErrUsedFromInvalid, err)
+	}
+	if err != nil {
+		return Deduction{}, err
+	}
+	warnings := make([]Warning, 0, len(d.Warnings))
+	for _, w := range d.Warnings {
+		warnings = append(warnings, Warning{IngredientID: w.IngredientID, Name: w.Name, BaseUnit: w.BaseUnit,
+			Have: w.Have, Need: w.Need, Shortfall: w.Shortfall, Message: w.Message})
+	}
+	return Deduction{Warnings: warnings, Handle: d.Deduction}, nil
+}
+
+// PreviewCooked implements CookPreviewer: the Lots of each need in default order, read-only.
+func (a *StockService) PreviewCooked(ctx context.Context, needs []Need) ([]NeedPreview, error) {
+	sn := make([]stock.Need, 0, len(needs))
+	for _, n := range needs {
+		sn = append(sn, stock.Need{IngredientID: n.IngredientID, Quantity: n.Quantity})
+	}
+	ps, err := a.svc.PreviewCooked(ctx, sn)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]NeedPreview, 0, len(ps))
+	for _, p := range ps {
+		np := NeedPreview{IngredientID: p.IngredientID, BaseUnit: p.BaseUnit, Lots: make([]PreviewLot, 0, len(p.Lots))}
+		for _, l := range p.Lots {
+			np.Lots = append(np.Lots, PreviewLot{ID: l.ID, Quantity: l.Quantity, Purchased: string(l.Purchased),
+				GoesOff: string(l.GoesOff), StoragePlaceName: l.StoragePlaceName})
+		}
+		out = append(out, np)
+	}
+	return out, nil
 }
 
 // PublishDeduction implements StockPort: the `stock` event, after the commit.

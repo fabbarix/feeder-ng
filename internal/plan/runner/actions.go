@@ -617,11 +617,12 @@ type CookPreview struct {
 	Meal           plan.Meal
 	Fresh          bool // false: served from a Leftover (nothing to deduct, no new Leftover)
 	Yield          float64
-	PortionsNeeded float64 // the slot's Attendance now
-	Proposed       float64 // plan.ProposedLeftover(Batches, Yield, PortionsNeeded); 0 when Fresh is false
-	Max            float64 // Batches x Yield: the most the stepper may reach
-	UseBy          string  // the Use-by the Leftover would get
-	Needs          []Need  // what Stock would be asked to deduct
+	PortionsNeeded float64       // the slot's Attendance now
+	Proposed       float64       // plan.ProposedLeftover(Batches, Yield, PortionsNeeded); 0 when Fresh is false
+	Max            float64       // Batches x Yield: the most the stepper may reach
+	UseBy          string        // the Use-by the Leftover would get
+	Needs          []Need        // what Stock would be asked to deduct
+	Stock          []NeedPreview // the Lots of each need in default order (nil: the Stock port cannot preview, or not Fresh)
 }
 
 // CookPreview computes the sheet. ErrNotFound, ErrAlreadyResolved.
@@ -667,6 +668,13 @@ func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, er
 	p.Max = m.Batches * rc.Yield
 	p.UseBy = plan.LeftoverUseBy(key.Date, rc.UseByDays, in.settings.DefaultUseByDays)
 	p.Needs = needsFor(rc, m.Batches)
+	if cp, ok := r.d.Stock.(CookPreviewer); ok {
+		lots, err := cp.PreviewCooked(ctx, p.Needs)
+		if err != nil {
+			return CookPreview{}, err
+		}
+		p.Stock = lots
+	}
 	return p, nil
 }
 
@@ -720,6 +728,14 @@ func plannedForMeals(in info, recipes []planner.Recipe, meals []plan.Meal, src p
 // Any error rolls everything back: Stock is untouched, the meal stays planned, nothing is published.
 // Errors: ErrNotFound, ErrAlreadyResolved, plan.ErrInvalidLeftover.
 func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *float64) (CookedResult, error) {
+	return r.CookedUsing(ctx, key, leftoverPortions, nil)
+}
+
+// CookedUsing is Cooked with Used from (ADR 0011): usedFrom picks the Lots the meal took, per Ingredient. Without picks
+// (nil, empty, or no pick in any entry) the deduction is DeductCookedTx, as Cooked always did. With picks it is one
+// DeductCookedPickedTx call in the same transaction. Picks on a meal served from a Leftover, or a pick the Stock refuses,
+// give ErrUsedFromInvalid and nothing is written.
+func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions *float64, usedFrom []UsedFrom) (CookedResult, error) {
 	var warnings []Warning
 	var leftover *plan.Leftover
 	var publish func()
@@ -781,6 +797,9 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		}
 
 		if !m.Fresh() {
+			if hasPicks(usedFrom) {
+				return nil, ErrUsedFromInvalid
+			}
 			// Served from a Leftover: consume the portions it needed from that Leftover (floor 0).
 			src, err := r.leftoverSource(ctx, st, m)
 			if err != nil {
@@ -816,7 +835,13 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		if err := plan.CheckLeftoverPortions(portions, m.Batches*rc.Yield); err != nil {
 			return nil, err
 		}
-		d, err := r.d.Stock.DeductCookedTx(ctx, tx, needsFor(rc, m.Batches))
+		needs := needsFor(rc, m.Batches)
+		var d Deduction
+		if hasPicks(usedFrom) {
+			d, err = r.deductPicked(ctx, tx, []CookedMeal{{Needs: needs, UsedFrom: usedFrom}})
+		} else {
+			d, err = r.d.Stock.DeductCookedTx(ctx, tx, needs)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -850,6 +875,26 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	}
 	r.resolved(ctx, key)
 	return CookedResult{Meal: cooked, Leftover: leftover, Warnings: warnings, PlannedFor: plannedFor}, nil
+}
+
+// hasPicks reports whether any Used from entry names a Lot.
+func hasPicks(usedFrom []UsedFrom) bool {
+	for _, u := range usedFrom {
+		if len(u.Picks) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// deductPicked is the Used from deduction of Cooked meals inside tx: one DeductCookedPickedTx call with a CookedMeal per
+// meal, in order. A Stock port that cannot take picks is a wiring error.
+func (r *Runner) deductPicked(ctx context.Context, tx *sql.Tx, meals []CookedMeal) (Deduction, error) {
+	pd, ok := r.d.Stock.(PickedDeducter)
+	if !ok {
+		return Deduction{}, errors.New("runner: the Stock port cannot deduct Used from picks")
+	}
+	return pd.DeductCookedPickedTx(ctx, tx, meals)
 }
 
 // eps absorbs float noise in portion arithmetic.
