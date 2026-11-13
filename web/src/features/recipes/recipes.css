@@ -214,7 +214,14 @@
   block-size: 100%;
 }
 
-/* D-01: one column below 1280; from 1280 a 360 px left column (sticky) and the Steps beside it. */
+/* D-01: one column below 1280; from 1280 a 360 px left column (sticky) and the Steps beside it. The two columns keep the
+   tiles' gap between them when they stack. */
+.recipe-detail__layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .recipe-detail__aside,
 .recipe-detail__main {
   display: flex;
@@ -354,21 +361,6 @@
 .ingredient-exclusions .list-row__title {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The Members who exclude an Ingredient, beside its line: Avatars that never wrap, then "+N" and the button. */
-.ingredient-lines__excluders {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.ingredient-lines__more {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  color: var(--color-muted);
   white-space: nowrap;
 }
 

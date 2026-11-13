@@ -4,7 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useMediaQuery } from '../../../ui'
+import { Button, Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useMediaQuery } from '../../../ui'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
@@ -13,7 +13,6 @@ import { LineLinkSession, type LineSession } from '../components/LineLinkSession
 import { usedInText, yieldText } from '../lib/baseRecipe'
 import { CookEntry } from '../components/CookEntry'
 import { CourseChips } from '../components/CourseChips'
-import { IngredientExclusionList } from '../components/IngredientExclusionList'
 import { IngredientLinesList } from '../components/IngredientLinesList'
 import { PreferenceTable } from '../components/PreferenceTable'
 import { RecipeMetrics } from '../components/RecipeMetrics'
@@ -25,7 +24,7 @@ import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipeTags } from '../hooks/useRecipeTags'
-import { excludersOf, preferenceRows } from '../lib/preferenceRows'
+import { preferenceRows } from '../lib/preferenceRows'
 import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
@@ -34,8 +33,8 @@ import type { Recipe } from '../types'
 import '../recipes.css'
 
 /**
- * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines (with who
- * excludes each Ingredient, changed in a Dialog), the Steps, the preferences of the whole Household as a table, and
+ * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines, the Steps,
+ * the preferences of the whole Household as a table, and
  * "Start Cook Mode" with the Batch count. Edit is in the header; Archive and Delete are in the More actions Menu
  * (Delete asks in a ConfirmDialog). From 1280 px the left column holds the photo, metrics, Ingredients and the Cook
  * entry; below, the Cook entry is a StickyActionBar.
@@ -50,7 +49,6 @@ export function RecipeDetailScreen(): ReactNode {
   const refs = useIngredientRefs()
   const system = useDisplayUnitSystem()
   const [batches, setBatches] = useState(1)
-  const [excluding, setExcluding] = useState<{ id: number; name: string } | null>(null)
   const wide = useMediaQuery('(min-width: 1280px)')
   const { choices } = useCourses()
   const r = recipe.recipe
@@ -143,10 +141,6 @@ export function RecipeDetailScreen(): ReactNode {
               system={system}
               onLinkToBase={(line) => setSession({ kind: 'picker', line })}
               onUseAsPlain={(line) => setSession({ kind: 'plain', line })}
-              excludedBy={{
-                members: (ingredientId) => excludersOf(household.members, household.prefsByMember, ingredientId),
-                onOpen: (ingredientId, name) => setExcluding({ id: ingredientId, name }),
-              }}
             />
           </Tile>
           {wide ? cook : null}
@@ -175,9 +169,6 @@ export function RecipeDetailScreen(): ReactNode {
           </Tile>
         </div>
       </div>
-      <Dialog open={excluding !== null} onClose={() => setExcluding(null)} title={excluding ? recipeStrings.whoExcludes(excluding.name) : ''}>
-        {excluding ? <IngredientExclusionList ingredientId={excluding.id} ingredientName={excluding.name} /> : null}
-      </Dialog>
       {session ? (
         <LineLinkSession
           recipeId={r.id}

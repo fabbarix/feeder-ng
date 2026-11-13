@@ -48,14 +48,6 @@ export function preferenceRows(
   })
 }
 
-/** The Members who exclude the Ingredient, in `members` order. Members whose preferences are not loaded are skipped. */
-export function excludersOf<M extends PreferenceMember>(members: M[], prefsByMember: Record<number, MemberPreferences | undefined>, ingredientId: number): M[] {
-  return members.filter((m) => {
-    const prefs = prefsByMember[m.id]
-    return prefs !== undefined && isExcluded(prefs.excludedIngredients, ingredientId)
-  })
-}
-
 /** Names of the Recipe's lines whose Ingredient the Member excludes: line order, each name once. */
 function viaNames(prefs: MemberPreferences, lines: RecipeLine[]): string[] {
   const names: string[] = []

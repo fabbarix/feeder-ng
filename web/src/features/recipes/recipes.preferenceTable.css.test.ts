@@ -49,10 +49,3 @@ describe('.preference-table on a phone', () => {
     expect(rulesFor('.preference-toggles')).toEqual([])
   })
 })
-
-describe('the Avatars on an Ingredient line', () => {
-  it('sit in a row that does not wrap or grow the line on a phone', () => {
-    expect(valueFor('.ingredient-lines__excluders', 'display', 0)).toMatch(/flex/)
-    expect(valueFor('.ingredient-lines__excluders', 'flex-wrap', 0)).toBe('nowrap')
-  })
-})

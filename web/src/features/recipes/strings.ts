@@ -157,10 +157,8 @@ export const recipeStrings = {
   stateToggle: (member: string, state: string) => `${member}: ${state}`,
   saveFailed: (member: string, state: string) => `Couldn't save ${member}'s ${state}. Try again.`,
   exclusionSaveFailed: (member: string) => `Couldn't save ${member}'s Exclusions. Try again.`,
-  /** PT: who excludes an Ingredient (the Recipe line's Dialog and the Ingredient page's Excluded by Tile). */
+  /** PT: who excludes an Ingredient (the Ingredient page's Excluded by Tile). */
   members: 'Members',
-  excludersFor: (ingredient: string) => `Exclusions for ${ingredient}`,
-  whoExcludes: (ingredient: string) => `Who excludes ${ingredient}?`,
   excludesToggle: (member: string, ingredient: string) => `${member}: excludes ${ingredient}`,
   unitConversion: {
     title: 'Unit Conversion needed',

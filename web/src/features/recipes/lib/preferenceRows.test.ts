@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { anna, ben, cara, prefs } from '../household.test-helper'
 import type { RecipeLine } from '../types'
-import { excludersOf, preferenceRows } from './preferenceRows'
+import { preferenceRows } from './preferenceRows'
 
 const line = (ingredientId: number, ingredient: string, optional = false): RecipeLine => ({ ingredientId, ingredient, quantity: 1, unit: 'g', optional, note: '' })
 const lines = [line(7, 'garlic'), line(8, 'flour'), line(9, 'peanut', true)]
@@ -47,17 +47,5 @@ describe('preferenceRows', () => {
   })
   it('gives no rows when there are no Members', () => {
     expect(preferenceRows([], {}, 3, lines, 10)).toEqual([])
-  })
-})
-
-describe('excludersOf', () => {
-  it('lists the Members who exclude the Ingredient, in Members order', () => {
-    const by = { 1: prefs(1, { excludedIngredients: [7] }), 2: prefs(2, { excludedIngredients: [8] }), 3: prefs(3, { excludedIngredients: [7, 8] }) }
-    expect(excludersOf([anna, ben, cara], by, 7).map((m) => m.name)).toEqual(['Anna', 'Cara'])
-    expect(excludersOf([anna, ben, cara], by, 8).map((m) => m.name)).toEqual(['Ben', 'Cara'])
-    expect(excludersOf([anna, ben, cara], by, 99)).toEqual([])
-  })
-  it('skips Members whose preferences are not loaded', () => {
-    expect(excludersOf([anna, ben], { 2: prefs(2, { excludedIngredients: [7] }) }, 7).map((m) => m.name)).toEqual(['Ben'])
   })
 })

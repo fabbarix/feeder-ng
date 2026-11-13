@@ -178,42 +178,6 @@ describe('RecipeDetailScreen: preferences of the whole Household (PT)', () => {
   })
 })
 
-describe('RecipeDetailScreen: Who excludes garlic? (PT)', () => {
-  it('has an "Exclusions for garlic" button on the Ingredient line and no Exclusion toggle of its own', () => {
-    view()
-    expect(screen.getByRole('button', { name: 'Exclusions for garlic' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Exclude garlic' })).toBeNull()
-  })
-  it('shows the Avatars of the Members who exclude garlic on the line', () => {
-    h.household = household({ prefsByMember: { 1: prefs(1), 2: prefs(2, { excludedIngredients: [7] }) } })
-    view()
-    const line = screen.getByRole('button', { name: 'Exclusions for garlic' }).closest('.ingredient-lines__row') as HTMLElement
-    expect(within(line).getByRole('img', { name: 'Ben' })).toBeInTheDocument()
-    expect(within(line).queryByRole('img', { name: 'Anna' })).toBeNull()
-  })
-  it('opens a Dialog "Who excludes garlic?" with a toggle per Member, and closes on Escape', async () => {
-    view()
-    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Who excludes garlic?' })
-    expect(within(dialog).getByRole('button', { name: 'Anna: excludes garlic' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(dialog).getByRole('button', { name: 'Ben: excludes garlic' })).toBeInTheDocument()
-    await userEvent.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
-  it('saves a toggle in the Dialog for that Member and Ingredient', async () => {
-    view()
-    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Ben: excludes garlic' }))
-    expect(h.household.toggleIngredient).toHaveBeenCalledWith(2, 7)
-  })
-  it('uses no native confirm, alert or prompt', async () => {
-    const alert = vi.spyOn(window, 'alert').mockImplementation(() => { throw new Error('native UI') })
-    view()
-    await userEvent.click(screen.getByRole('button', { name: 'Exclusions for garlic' }))
-    expect(alert).not.toHaveBeenCalled()
-  })
-})
-
 // CRS E2: the screen reads the household Courses; these tests do not care which.
 vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [], colourOf: () => undefined }) }))
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
