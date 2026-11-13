@@ -200,7 +200,8 @@ func (s *Service) Start(c recipeassistant.Caller, in ReadInput) (JobView, error)
 	s.jobs[c.UserID] = append(s.jobs[c.UserID], j)
 	s.mu.Unlock()
 
-	p := readPlan{ready: ready, shopID: in.ShopID, rows: receipt.GroupRows(events), fingerprint: receipt.Fingerprint(events),
+	// The plan is shared by pointer, so the photos have one holder that perform clears once they are prepared.
+	p := &readPlan{ready: ready, shopID: in.ShopID, rows: receipt.GroupRows(events), fingerprint: receipt.Fingerprint(events),
 		ctx: sctx, photos: in.Photos}
 	view := j.view()
 	go func() {
@@ -337,7 +338,7 @@ func (s *Service) pruneLocked(userID int64) {
 
 // finish records how a job ended. The Limiter slot is freed by the caller before this, so a client that sees the
 // terminal state can read again at once.
-func (s *Service) finish(j *job, p readPlan, res receipt.Result, warns []receipt.Warning, ae *recipeassistant.Error) {
+func (s *Service) finish(j *job, p *readPlan, res receipt.Result, warns []receipt.Warning, ae *recipeassistant.Error) {
 	j.mu.Lock()
 	if ae != nil {
 		j.status, j.err = StatusFailed, ae
@@ -364,7 +365,7 @@ type readLog struct {
 }
 
 // run performs one read and records how it ended.
-func (s *Service) run(ctx context.Context, j *job, p readPlan) {
+func (s *Service) run(ctx context.Context, j *job, p *readPlan) {
 	meta := &readLog{photos: len(p.photos), model: p.ready.Model, startedAt: time.Now()}
 	conclude := func(res receipt.Result, warns []receipt.Warning, ae *recipeassistant.Error) {
 		outcome := "done"
@@ -380,7 +381,7 @@ func (s *Service) run(ctx context.Context, j *job, p readPlan) {
 			conclude(receipt.Result{}, nil, &recipeassistant.Error{Code: recipeassistant.CodeUnreachable})
 		}
 	}()
-	res, warns, err := s.perform(ctx, j, &p, meta)
+	res, warns, err := s.perform(ctx, p, meta)
 	j.mu.Lock()
 	cancelled := j.cancelled
 	j.mu.Unlock()
@@ -407,7 +408,7 @@ func apiError(err error) *recipeassistant.Error {
 
 // perform is the read: the photos are prepared, one Messages call is made, and the answer is checked and turned into
 // proposals. It returns the result, or the error the job fails with.
-func (s *Service) perform(ctx context.Context, j *job, p *readPlan, meta *readLog) (receipt.Result, []receipt.Warning, error) {
+func (s *Service) perform(ctx context.Context, p *readPlan, meta *readLog) (receipt.Result, []receipt.Warning, error) {
 	prepared, err := s.prepare(ctx, p.photos)
 	if err != nil {
 		return receipt.Result{}, nil, err
@@ -467,7 +468,7 @@ func (m *readLog) absorb(resp rasvc.Response) {
 	m.usage.CacheCreationTokens += resp.Usage.CacheCreationTokens
 }
 
-func (s *Service) logRead(j *job, p readPlan, m *readLog, outcome string) {
+func (s *Service) logRead(j *job, p *readPlan, m *readLog, outcome string) {
 	s.d.Logger.Info("receipt read",
 		"read", j.id, "user", j.userID, "rows", len(p.rows), "photos", m.photos, "model", m.model,
 		"request_id", m.requestID, "input_tokens", m.usage.InputTokens, "output_tokens", m.usage.OutputTokens,
