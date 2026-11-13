@@ -10,10 +10,12 @@
 const tileHtml = (id, v, l) => `<section class="tile" data-variant="status" data-status="success" data-metric="${id}" aria-label="${l}"><span class="today-metric__icon" aria-hidden="true"><svg width="20" height="20"></svg></span>
   <span class="tile-metric"><span class="tile-metric__value">${v}</span><span class="tile-metric__label">${l}</span></span></section>`
 const strip = (id, tiles) => `<div class="today"><div class="today-metrics" id="${id}"><div class="bento-grid" data-min="metric" role="group">${tiles}</div></div></div>`
-document.body.insertAdjacentHTML('beforeend', '<div style="inline-size:1000px">' + strip('lone', tileHtml('streak', '2 d', 'zero-waste streak')) + '</div><div style="inline-size:1000px;margin-top:24px">' +
-  strip('three', tileHtml('streak', '2 d', 'zero-waste streak') + tileHtml('lines', '16', 'Lines to get')) + '</div>')
-const w = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().width)
-const t = document.querySelector('#lone [data-metric]').getBoundingClientRect(), i = document.querySelector('#lone .today-metric__icon').getBoundingClientRect(),
-  v = document.querySelector('#lone .tile-metric__value').getBoundingClientRect()
-document.title = JSON.stringify({ loneW: w('#lone [data-metric]'), twoW: w('#three [data-metric]'), iconTopRight: i.right > t.right - 40 && i.top < t.top + 40, iconBesideValue: i.left >= v.right - 1 || i.top < v.top + 4 })
+const T = [tileHtml('streak', '2 d', 'zero-waste streak'), tileHtml('leftovers', '3', 'Leftovers to use'), tileHtml('lines', '16', 'Lines to get')]
+document.body.insertAdjacentHTML('beforeend', [1, 2, 3].map((n) => `<div style="inline-size:1000px;margin-bottom:24px">${strip('s' + n, T.slice(0, n).join(''))}</div>`).join(''))
+const rects = (n) => [...document.querySelectorAll(`#s${n} [data-metric]`)].map((t) => t.getBoundingClientRect())
+const sw = (n) => Math.round(document.querySelector(`#s${n} .bento-grid`).getBoundingClientRect().width)
+const widths = (n) => rects(n).map((r) => Math.round(r.width)), heights = (n) => rects(n).map((r) => Math.round(r.height))
+const t1 = rects(1)[0], i = document.querySelector('#s1 .today-metric__icon').getBoundingClientRect()
+document.title = JSON.stringify({ strip: sw(1), w1: widths(1), w2: widths(2), w3: widths(3), h1: heights(1), h2: heights(2), h3: heights(3),
+  oneRow: [1, 2, 3].every((n) => new Set(rects(n).map((r) => Math.round(r.top))).size === 1), iconTopRight: i.right > t1.right - 40 && i.top < t1.top + 40 })
 </script></body></html>

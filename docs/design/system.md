@@ -48,6 +48,8 @@ Colour means something, and an accent-derived colour never imitates a status col
 - In light mode it is accent solid with on-accent text. The why chips on it are `on-accent` at 18 % over the accent.
 - In dark mode it is the **accent container** (`--color-soft-strong`) with `--color-text`, and its Cook button becomes accent solid. A full-width tile of the pastel dark accent glares at night.
 
+**Status tiles are bordered.** A status tile (Throw out or keep?, Leftovers, the streak, an info notice) has a 1 px border in its tone (`--status-<name>-fg`, `--color-info-fg`), so it reads as a tile on every page colour; with Tomato the tinted fill alone barely showed against the pink page. The border reaches 3:1 against the page in every preset, light and dark (`ui/Tile.statusBorder.test.ts`).
+
 **Where the accent goes.** The accent is reserved for the one primary action, the current nav item and the today ring (and the light hero). A screen with a red or orange accent must not look alarmed: in the round-2 Shop review with Tomato, accent-soft monograms on every row and an accent-soft "Left to get" tile read as alarm. So **metric tiles are neutral or status-toned, never accent-soft**, and monograms are neutral.
 
 **Contrast.** Every pair above is checked at WCAG AA for each palette in `theme/palette.golden.ts`, light and dark (`theme/contrast.test.ts`). This includes the why chip's text and icon on surface-2, the muted metric label on surface, the outlined Leftover chip on surface and page background, and the success progress fill on its track.

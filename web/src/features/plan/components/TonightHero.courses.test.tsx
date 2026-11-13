@@ -115,9 +115,21 @@ describe('after the slot time', () => {
     expect(h.onMarkAllCooked).toHaveBeenCalledWith(slotKey)
     await userEvent.click(within(group).getByRole('button', { name: 'Adjust' }))
     expect(h.onMarkAllCooked).toHaveBeenCalledTimes(2) // Adjust opens the Mark all Cooked sheet for the slot
-    await userEvent.click(within(group).getByRole('button', { name: 'More for Dinner' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
+    // round 3: no ⋮ of its own; Not cooked lives in the slot's ⋮ ("Dinner actions")
+    expect(within(group).queryByRole('button', { name: 'More for Dinner' })).not.toBeInTheDocument()
+    expect(within(group).getAllByRole('button')).toHaveLength(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /^Not cooked/ }))
     expect(h.menu.onNotCookedSlot).toHaveBeenCalledWith(slotKey)
+  })
+
+  it('round 3: after the slot time only ONE ⋮ shows in the hero\'s decision area, and it has Not cooked', async () => {
+    setup(dinner([main(), side()]), { now: late })
+    const hero = document.querySelector('.plan-hero')!
+    const menus = [...hero.querySelectorAll('button')].filter((b) => /^(More for Dinner|Dinner actions)$/.test(b.getAttribute('aria-label') ?? ''))
+    expect(menus.map((b) => b.getAttribute('aria-label'))).toEqual(['Dinner actions'])
+    await userEvent.click(menus[0]!)
+    expect(await screen.findByRole('menuitem', { name: /^Not cooked/ })).toBeInTheDocument()
   })
 
   it('only one Course left to cook: it is the hero, and Cooked and Adjust report that Course', async () => {

@@ -89,6 +89,7 @@ for r in 0 1; do
   [ "$(q "$T" "o.narrow[$r].gt >= o.narrow[$r].tb - 1")" = true ] && ok || bad "To confirm row $r, 358 px: the group is on its own row, under the text (today-A-390)"
   [ "$(q "$T" "Math.abs(o.narrow[$r].gl - o.narrow[$r].rl) <= 2 && Math.abs(o.narrow[$r].gr - o.narrow[$r].rr) <= 2")" = true ] && ok || bad "To confirm row $r, 358 px: the group spans the row's full width"
 done
+[ "$(q "$T" "o.wide[0].pl === o.wide[1].pl && o.wide[0].pw === o.wide[1].pw")" = true ] && ok || bad "To confirm, 1000 px: all primary buttons share one column: same start x and width (\"Cooked\" at $(q "$T" o.wide[0].pl) w$(q "$T" o.wide[0].pw), \"All Cooked\" at $(q "$T" o.wide[1].pl) w$(q "$T" o.wide[1].pw))"
 [ "$(q "$T" "o.wide[0].gl === o.wide[1].gl || Math.abs(o.wide[0].gr - o.wide[1].gr) <= 1")" = true ] && ok || bad "To confirm, 1000 px: the groups of the rows share one column (right edges equal)"
 
 H="$(title_of today-hero.html)"
@@ -106,8 +107,14 @@ done
 
 K="$(title_of today-metrics.html)"
 [ -n "$K" ] && [ "$K" != pending ] && ok || bad "today-metrics.html did not report (title: '$K')"
-[ "$(q "$K" "o.loneW <= 1000 / 3 + 1")" = true ] && ok || bad "a lone metric is capped to the metric track, not a full-width block (width $(q "$K" o.loneW) in 1000 px)"
-[ "$(q "$K" "Math.abs(o.loneW - o.twoW) <= 2")" = true ] && ok || bad "a lone metric is as wide as one of two (lone $(q "$K" o.loneW), of two $(q "$K" o.twoW))"
+# round 3: the strip always fills its row, whatever the number of metrics (a lone metric was an orphan, one third wide)
+for n in 1 2 3; do
+  [ "$(q "$K" "o.w$n.every((w) => Math.abs(w - o.w$n[0]) <= 2)")" = true ] && ok || bad "a strip of $n: the tiles are equal ($(q "$K" o.w$n))"
+  [ "$(q "$K" "Math.abs(o.w$n.reduce((a, b) => a + b, 0) + (o.w$n.length - 1) * 12 - o.strip) <= o.w$n.length * 8 + 6")" = true ] && ok || bad "a strip of $n fills its row: widths $(q "$K" o.w$n) in $(q "$K" o.strip) px"
+  [ "$(q "$K" "Math.max(...o.h$n) <= Math.max(...o.h3) + 1")" = true ] && ok || bad "a strip of $n: a tile is never taller than the 3-up tile (heights $(q "$K" o.h$n) vs $(q "$K" o.h3))"
+done
+[ "$(q "$K" "o.w1[0] > o.strip * 0.9")" = true ] && ok || bad "a lone metric spans the strip (width $(q "$K" o.w1) of $(q "$K" o.strip))"
+[ "$(q "$K" o.oneRow)" = true ] && ok || bad "1, 2 and 3 metrics are each one row"
 [ "$(q "$K" o.iconTopRight)" = true ] && ok || bad "the metric icon sits top-right of its tile (mockup)"
 # round 3: a 1 px tolerance (subpixel rounding at the bar's edge reported "0 px" on /recipes/new, /recipes/1/edit, /recipes/1)
 P="$(title_of p12-half-px.html)"
