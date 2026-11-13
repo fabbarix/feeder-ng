@@ -61,7 +61,7 @@ describe('composeToday', () => {
 
   it('drops tiles that have nothing to show', () => {
     const { tiles } = tilesOf({ ...quiet, hasNextMeal: true, leftovers: 1 })
-    expect(tiles.map((t) => t.id)).toEqual(['nextMeal', 'leftovers'])
+    expect(tiles.map((t) => t.id)).toEqual(['nextMeal', 'metrics', 'leftovers'])
   })
 
   // DS-TODAY (changed on purpose): the streak tile became the metric strip (streak, Leftovers to use, Lines to get).
@@ -89,7 +89,7 @@ describe('composeToday', () => {
   })
 
   it('without a next meal the rest keeps its order, spoiled lots after the half tiles', () => {
-    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
+    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['metrics', 'leftovers', 'spoiled'])
   })
 
   // DS-TODAY (changed on purpose): no `heroSpan`. The hero always takes the whole row; the 2x2 back-fill on the 3-column
