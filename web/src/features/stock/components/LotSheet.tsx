@@ -122,6 +122,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
                 setUsedAmount(v)
                 setUsedError(null)
               }}
+              suffix={lot.baseUnit}
               helper={strings.usedUp.hint(all)}
               error={usedError ?? undefined}
             />
