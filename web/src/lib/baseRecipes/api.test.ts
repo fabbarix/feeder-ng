@@ -4,7 +4,7 @@ const calls: Array<[string, string, unknown?]> = []
 vi.mock('../http', () => {
   const rec = (m: string) => async (path: string, body?: unknown) => {
     calls.push([m, path, body])
-    return path.endsWith('/link-candidates') ? { lines: [{ lineId: 1 }] } : {}
+    return path.endsWith('/link-candidates') ? { baseUnit: 'ml', lines: [{ lineId: 1 }] } : {}
   }
   return { http: { get: rec('GET'), post: rec('POST'), put: rec('PUT'), patch: rec('PATCH'), delete: rec('DELETE') } }
 })
@@ -44,7 +44,26 @@ describe('baseRecipesApi (routes of internal/recipe/httpapi/base_test.go)', () =
       ['POST', '/api/recipes/3/unlink', { lineIds: [1, 2] }],
     ])
   })
-  it('unwraps the candidates from { lines }', async () => {
-    expect(await baseRecipesApi.linkCandidates(3)).toEqual([{ lineId: 1 }])
+  it('returns the top-level baseUnit with the lines (round 4: the unit comes from the server)', async () => {
+    expect(await baseRecipesApi.linkCandidates(3)).toEqual({ baseUnit: 'ml', lines: [{ lineId: 1 }] })
+  })
+  it('lists the Base recipes for a Recipe with ?kind=base&for= (wouldCycle), and for none without it', async () => {
+    await baseRecipesApi.pickerBaseRecipes(7)
+    await baseRecipesApi.pickerBaseRecipes()
+    expect(calls).toEqual([
+      ['GET', '/api/recipes?kind=base&for=7', undefined],
+      ['GET', '/api/recipes?kind=base', undefined],
+    ])
+  })
+  it('has no usedBy walk any more', () => {
+    expect('usedBy' in baseRecipesApi).toBe(false)
+  })
+  it('sends takeOver with to-base when the User answered the ask', async () => {
+    await baseRecipesApi.toBase(4, { yield: 4, yieldUnit: 'portion', takeOver: true })
+    await baseRecipesApi.toBase(4, { yield: 4, yieldUnit: 'portion' })
+    expect(calls).toEqual([
+      ['POST', '/api/recipes/4/to-base', { yield: 4, yieldUnit: 'portion', takeOver: true }],
+      ['POST', '/api/recipes/4/to-base', { yield: 4, yieldUnit: 'portion' }],
+    ])
   })
 })

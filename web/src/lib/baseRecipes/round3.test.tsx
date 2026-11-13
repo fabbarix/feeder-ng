@@ -32,7 +32,7 @@ describe('the hooks need their providers (no useOptionalToast / useOptionalConfi
     expect(() => renderHook(() => useLineLink({ recipeId: 7 }))).toThrow()
   })
   it('useLinkCandidates throws outside a ToastProvider', () => {
-    expect(() => renderHook(() => useLinkCandidates({ baseRecipeId: 3, baseName: 'B', baseUnit: 'ml', baseIngredientId: 30, onDone: () => {} }))).toThrow()
+    expect(() => renderHook(() => useLinkCandidates({ baseRecipeId: 3, baseName: 'B', baseIngredientId: 30, onDone: () => {} }))).toThrow()
   })
   it.each([
     'ui/Toast.tsx', 'ui/ConfirmDialog.tsx', 'lib/baseRecipes/useLineLink.ts', 'lib/baseRecipes/useLinkCandidates.ts',

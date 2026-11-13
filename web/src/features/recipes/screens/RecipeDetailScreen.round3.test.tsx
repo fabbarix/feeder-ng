@@ -158,27 +158,27 @@ describe('detail: the bulk link list of a Base recipe', () => {
     recipe({ id: 3, name: 'Béchamel', yield: 1, yieldUnit: 'l', baseRecipe: true, baseIngredientId: 30, courses: [], usedBy: [], lines: [], ...over })
   const cups = [candidateJSON({ lineId: 1, recipeId: 10, recipeName: 'Cannelloni', quantity: 2, unit: 'cup', linkable: false, reason: 'unit_unconvertible' }), candidateJSON({ lineId: 2, recipeId: 11, recipeName: 'Lasagne' })]
 
-  it('takes the base unit from the Base recipe\'s Ingredient, never a fallback "ml"', async () => {
-    h.refs.set(30, { ...bechRef, baseUnit: 'g' })
-    mockApi({ 'GET /api/recipes/3/link-candidates': { lines: cups } })
+  it('takes the base unit from the candidates answer (round 4: top-level baseUnit), never a fallback "ml"', async () => {
+    mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'g', lines: cups } })
     setRecipe(bech())
     view('/recipes/3')
     await userEvent.click(await screen.findByRole('button', { name: /^Recipes with an Ingredient named béchamel \(2\)/ }))
     expect(await screen.findByText('cup cannot be converted to g yet: link it from Cannelloni')).toBeInTheDocument()
   })
 
-  it('opens when the base unit is only known from the Recipe\'s own Ingredient entry, not the whole Ingredient list', async () => {
+  it('opens without the Ingredient list and never reads the Ingredient for its unit', async () => {
     h.refs.delete(30) // the Ingredient list has not loaded it
-    mockApi({ 'GET /api/recipes/3/link-candidates': { lines: cups }, 'GET /api/ingredients/30': { ...bechRef, baseUnit: 'ml' } })
+    const api = mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: cups } })
     setRecipe(bech())
     view('/recipes/3')
     await userEvent.click(await screen.findByRole('button', { name: /^Recipes with an Ingredient named béchamel/ }))
     expect(await screen.findByText(/2 Recipes use an Ingredient named béchamel/)).toBeInTheDocument()
+    expect(api.calls.some((c) => c.path.startsWith('/api/ingredients/'))).toBe(false)
   })
 
   it('Undo of a bulk link refetches the candidates and the Recipe', async () => {
     const api = mockApi({
-      'GET /api/recipes/3/link-candidates': { lines: cups },
+      'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: cups },
       'POST /api/recipes/3/link': { linked: [2], mergeOffer: [] },
       'POST /api/recipes/3/unlink': undefined,
     })

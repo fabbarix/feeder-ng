@@ -27,21 +27,34 @@ describe('useBaseRecipePicker', () => {
     expect(result.current.rows.create).toMatchObject({ kind: 'new', name: 'Stock' })
   })
 
-  it('leaves the edited Recipe out and blocks every Recipe that calls for it, through other Base recipes', async () => {
-    // Editing Roux; Béchamel calls for Roux; Lasagne calls for Béchamel. Linking a Roux line to either would make a cycle.
-    mockApi({
-      'GET /api/recipes?kind=base': [roux, bech],
+  it('asks the server which Base recipes would make a cycle (?kind=base&for=) and disables them; it walks no usedBy (round 4)', async () => {
+    // Editing Roux; Béchamel calls for Roux; Lasagne (plannable) calls for Béchamel. The server answers wouldCycle.
+    const api = mockApi({
+      'GET /api/recipes?kind=base&for=1': [{ ...roux, wouldCycle: true }, { ...bech, wouldCycle: true }, summaryJSON({ id: 3, name: 'Stock', wouldCycle: false })],
       'GET /api/recipes': [lasagne],
-      'GET /api/recipes/1': { ...roux, usedBy: [{ id: 2, name: 'Béchamel' }] },
-      'GET /api/recipes/2': { ...bech, usedBy: [{ id: 20, name: 'Lasagne' }] },
-      'GET /api/recipes/20': { ...lasagne, usedBy: [] },
     })
     const { result } = renderHook(() => useBaseRecipePicker({ recipeId: 1, lineName: 'béchamel' }), { wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.rows.base.some((r) => r.kind === 'base' && r.id === 1)).toBe(false)
+    expect(result.current.rows.base.some((r) => r.kind === 'base' && r.id === 1)).toBe(false) // the Recipe itself is left out
     expect(result.current.rows.base[0]).toMatchObject({ id: 2, disabled: true, reason: 'Béchamel already calls for this Recipe' })
-    act(() => result.current.setQuery('lasagne'))
-    expect(result.current.rows.plannable[0]).toMatchObject({ id: 20, disabled: true, reason: 'Lasagne already calls for this Recipe' })
+    expect(result.current.rows.base.find((r) => r.kind === 'base' && r.id === 3)).toMatchObject({ disabled: false })
+    expect(api.calls.map((c) => `${c.method} ${c.path}`).sort()).toEqual(['GET /api/recipes', 'GET /api/recipes?kind=base&for=1'])
+    expect(api.calls.some((c) => /^\/api\/recipes\/\d+$/.test(c.path))).toBe(false)
+  })
+
+  it('never disables a plannable Recipe in the picker: the server marks only Base recipes, and a cycle through a convert is refused on the convert', async () => {
+    mockApi({ 'GET /api/recipes?kind=base&for=1': [roux], 'GET /api/recipes': [lasagne] })
+    const { result } = renderHook(() => useBaseRecipePicker({ recipeId: 1, lineName: 'lasagne' }), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.rows.plannable[0]).toMatchObject({ id: 20, disabled: false })
+  })
+
+  it('a new Recipe (no id) asks without for= (the Recipe being made cannot be called by anything)', async () => {
+    const api = mockApi({ 'GET /api/recipes?kind=base': [roux, bech], 'GET /api/recipes': [] })
+    const { result } = renderHook(() => useBaseRecipePicker({ lineName: 'béchamel' }), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(api.calls.map((c) => c.path)).toContain('/api/recipes?kind=base')
+    expect(api.calls.some((c) => c.path.includes('for='))).toBe(false)
   })
 
   it('says so when the lists cannot be loaded', async () => {

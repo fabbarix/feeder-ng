@@ -148,7 +148,7 @@ describe('RecipeEditorScreen: bulk link after saving a Base recipe', () => {
   const saved = { id: 11, name: 'Béchamel', baseRecipe: true, baseIngredientId: 30, yieldUnit: 'l', yield: 1 }
 
   it('opens the list before leaving; Not now goes to the Base recipe', async () => {
-    mockApi({ 'GET /api/recipes/11/link-candidates': { lines: [candidateJSON({ lineId: 2, recipeName: 'Lasagne' }), candidateJSON({ lineId: 3, recipeId: 12, recipeName: 'Moussaka' })] } })
+    mockApi({ 'GET /api/recipes/11/link-candidates': { baseUnit: 'ml', lines: [candidateJSON({ lineId: 2, recipeName: 'Lasagne' }), candidateJSON({ lineId: 3, recipeId: 12, recipeName: 'Moussaka' })] } })
     h.editor = editorOf({ baseRecipe: true, name: 'Béchamel', yieldUnit: 'l', lines: [] }, { save: vi.fn().mockResolvedValue(saved) })
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))
@@ -159,7 +159,7 @@ describe('RecipeEditorScreen: bulk link after saving a Base recipe', () => {
   })
 
   it('goes straight to the Base recipe when nothing can be linked', async () => {
-    mockApi({ 'GET /api/recipes/11/link-candidates': { lines: [] } })
+    mockApi({ 'GET /api/recipes/11/link-candidates': { baseUnit: 'ml', lines: [] } })
     h.editor = editorOf({ baseRecipe: true, name: 'Béchamel', yieldUnit: 'l', lines: [] }, { save: vi.fn().mockResolvedValue(saved) })
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))

@@ -43,7 +43,7 @@ describe('BaseRecipePicker keyboard', () => {
   it('puts the focus in the search field when it opens', async () => {
     mockApi(routes())
     await openIt()
-    expect(screen.getByRole('searchbox', { name: 'Search Base recipes' })).toHaveFocus()
+    expect(screen.getByRole('combobox', { name: 'Search Base recipes' })).toHaveFocus()
   })
 
   it('ArrowDown and ArrowUp move the active option through the list', async () => {
@@ -67,7 +67,7 @@ describe('BaseRecipePicker keyboard', () => {
   it('reaches the create row and the Recipes you plan group by arrows alone', async () => {
     mockApi(routes())
     const onChoose = await openIt()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'pe')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search Base recipes' }), 'pe')
     await screen.findByRole('option', { name: /^Pesto/ })
     await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}')
     for (let i = 0; i < 5 && !/^Pesto/.test(active()?.getAttribute('aria-label') ?? active()?.textContent ?? ''); i++) await userEvent.keyboard('{ArrowDown}')
@@ -77,8 +77,7 @@ describe('BaseRecipePicker keyboard', () => {
 
   it('skips disabled rows: never active, never chosen, and Tab does not land on them', async () => {
     mockApi(routes({
-      'GET /api/recipes/1': { ...summaryJSON({ id: 1, name: 'Roux' }), usedBy: [{ id: 2, name: 'Béchamel' }] },
-      'GET /api/recipes/2': { ...summaryJSON({ id: 2, name: 'Béchamel' }), usedBy: [] },
+      'GET /api/recipes?kind=base&for=1': [summaryJSON({ id: 1, name: 'Roux', yield: 300, yieldUnit: 'g', wouldCycle: true }), summaryJSON({ id: 2, name: 'Béchamel', wouldCycle: true }), summaryJSON({ id: 3, name: 'Béchamel light' })],
     }))
     const onChoose = await openIt(vi.fn(), 1)
     const blocked = await screen.findByRole('option', { name: /^Béchamel,/ })
@@ -102,7 +101,7 @@ describe('BaseRecipePicker keyboard', () => {
   it('keeps the groups as groups with headings, and the create row inside the listbox', async () => {
     mockApi(routes())
     await openIt()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'pe')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search Base recipes' }), 'pe')
     const listbox = screen.getByRole('listbox')
     expect(await within(listbox).findByRole('group', { name: 'Recipes you plan' })).toBeInTheDocument()
     expect(within(listbox).getByRole('option', { name: 'Add "Pe" as a new Base recipe' })).toBeInTheDocument()
@@ -113,14 +112,14 @@ describe('BaseRecipePicker copy', () => {
   it('does not say "Add it as a new one below" when there is no create row (an exact name is shown)', async () => {
     mockApi({ 'GET /api/recipes?kind=base': [summaryJSON({ id: 1, name: 'Roux' })], 'GET /api/recipes': [] })
     renderWithProviders(<BaseRecipePicker open lineName="roux" onClose={() => {}} onChoose={() => {}} />)
-    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search Base recipes' }), 'rouxx')
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Search Base recipes' }), 'rouxx')
     await screen.findByText(/No Base recipe matches/)
     expect(screen.queryByText(/Add it as a new one below/)).toBeNull()
   })
   it('says it when the create row is there', async () => {
     mockApi({ 'GET /api/recipes?kind=base': [summaryJSON({ id: 1, name: 'Roux' })], 'GET /api/recipes': [] })
     renderWithProviders(<BaseRecipePicker open lineName="ragù" onClose={() => {}} onChoose={() => {}} />)
-    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search Base recipes' }), 'zzz')
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Search Base recipes' }), 'zzz')
     expect(await screen.findByRole('option', { name: 'Add "Zzz" as a new Base recipe' })).toBeInTheDocument()
   })
 })

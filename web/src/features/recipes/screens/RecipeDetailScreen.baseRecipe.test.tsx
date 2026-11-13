@@ -142,7 +142,7 @@ describe('RecipeDetailScreen: a Base recipe', () => {
   })
 
   it('keeps "Recipes with an Ingredient named béchamel (3)" until none is left, and opens the list', async () => {
-    mockApi({ 'GET /api/recipes/3/link-candidates': { lines: [1, 2, 3].map((n) => candidateJSON({ lineId: n, recipeId: 10 + n, recipeName: `R${n}` })) } })
+    mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: [1, 2, 3].map((n) => candidateJSON({ lineId: n, recipeId: 10 + n, recipeName: `R${n}` })) } })
     setRecipe(bech())
     view('/recipes/3')
     await userEvent.click(await screen.findByRole('button', { name: 'Recipes with an Ingredient named béchamel (3)' }))
@@ -151,7 +151,7 @@ describe('RecipeDetailScreen: a Base recipe', () => {
   })
 
   it('has no such row when there is nothing to link', async () => {
-    const api = mockApi({ 'GET /api/recipes/3/link-candidates': { lines: [] } })
+    const api = mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: [] } })
     setRecipe(bech())
     view('/recipes/3')
     await waitFor(() => expect(api.callsTo('GET', '/api/recipes/3/link-candidates')).toHaveLength(1))

@@ -20,7 +20,7 @@ describe('BaseRecipePicker (design §3.7)', () => {
   it('is a dialog titled "Link to a Base recipe" with a search field and a listbox (no native select or datalist)', async () => {
     await open()
     expect(screen.getByRole('dialog', { name: 'Link to a Base recipe' })).toBeInTheDocument()
-    expect(screen.getByRole('searchbox', { name: 'Search Base recipes' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Search Base recipes' })).toBeInTheDocument()
     expect(screen.getByRole('listbox')).toBeInTheDocument()
     expect(document.querySelector('select, datalist')).toBeNull()
   })
@@ -40,7 +40,7 @@ describe('BaseRecipePicker (design §3.7)', () => {
 
   it('searches', async () => {
     await open()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'rou')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search Base recipes' }), 'rou')
     await waitFor(() => expect(screen.queryByRole('option', { name: /^Béchamel,/ })).toBeNull())
     expect(screen.getByRole('option', { name: /^Roux/ })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Add "Rou" as a new Base recipe' })).toBeInTheDocument()
@@ -48,7 +48,7 @@ describe('BaseRecipePicker (design §3.7)', () => {
 
   it('offers no new Base recipe when the search is exactly the name of one', async () => {
     await open()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'roux')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search Base recipes' }), 'roux')
     await screen.findByRole('option', { name: /^Roux/ })
     expect(screen.queryByRole('option', { name: /^Add "/ })).toBeNull()
   })
@@ -75,11 +75,8 @@ describe('BaseRecipePicker (design §3.7)', () => {
 
 describe('BaseRecipePicker: cycles', () => {
   it('lists a Base recipe that calls for the Recipe being edited disabled, with the reason, and chooses nothing', async () => {
-    mockApi({
-      ...routes(),
-      'GET /api/recipes/1': { ...summaryJSON({ id: 1, name: 'Roux' }), usedBy: [{ id: 2, name: 'Béchamel' }] },
-      'GET /api/recipes/2': { ...summaryJSON({ id: 2, name: 'Béchamel' }), usedBy: [] },
-    })
+    // Round 4: the server marks wouldCycle (GET /api/recipes?kind=base&for={id}); no usedBy walk.
+    mockApi({ ...routes(), 'GET /api/recipes?kind=base&for=1': [summaryJSON({ id: 2, name: 'Béchamel', wouldCycle: true }), summaryJSON({ id: 3, name: 'Béchamel light', wouldCycle: false })] })
     const props = { open: true, lineName: 'béchamel', recipeId: 1, onClose: vi.fn(), onChoose: vi.fn() }
     renderWithProviders(<BaseRecipePicker {...props} />)
     const row = await screen.findByRole('option', { name: /^Béchamel,/ })
@@ -87,6 +84,6 @@ describe('BaseRecipePicker: cycles', () => {
     expect(row).toHaveTextContent('Béchamel already calls for this Recipe')
     await userEvent.click(row)
     expect(props.onChoose).not.toHaveBeenCalled()
-    expect(screen.queryByRole('option', { name: /^Roux/ })).toBeNull() // the Recipe itself is left out
+    expect(screen.getByRole('option', { name: /^Béchamel light/ })).not.toHaveAttribute('aria-disabled', 'true')
   })
 })

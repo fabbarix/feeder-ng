@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { candidateJSON, mockApi, refusal, wrapper } from './test-utils'
 import { useLinkCandidates } from './useLinkCandidates'
 
-const opts = (over = {}) => ({ baseRecipeId: 3, baseName: 'Béchamel', baseUnit: 'ml', baseIngredientId: 30, onDone: vi.fn(), ...over })
+const opts = (over = {}) => ({ baseRecipeId: 3, baseName: 'Béchamel', baseIngredientId: 30, onDone: vi.fn(), ...over })
 const lines = [
   candidateJSON({ lineId: 1, recipeId: 10, recipeName: 'Cannelloni', quantity: 2, unit: 'cup', linkable: false, reason: 'unit_unconvertible' }),
   candidateJSON({ lineId: 2, recipeId: 11, recipeName: 'Lasagne' }),
   candidateJSON({ lineId: 3, recipeId: 12, recipeName: 'Moussaka', archived: true, quantity: 300 }),
 ]
-const base = { 'GET /api/recipes/3/link-candidates': { lines } }
+const base = { 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines } }
 const load = async (o = opts()) => {
   const hook = renderHook(() => useLinkCandidates(o), { wrapper })
   await waitFor(() => expect(hook.result.current.status).toBe('ready'))

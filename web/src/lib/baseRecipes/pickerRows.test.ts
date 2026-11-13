@@ -38,10 +38,11 @@ describe('pickerRows: Base recipes, name matches first (design §3.7)', () => {
     const rows = pickerRows(input({ baseRecipes: [base(1, 'Roux'), base(2, 'Béchamel', { archived: true }), base(3, 'Stock')], selfId: 1 }))
     expect(ids(rows.base)).toEqual([3])
   })
-  it('lists a blocked Base recipe disabled with its reason (a cycle), still in order', () => {
-    const rows = pickerRows(input({ blocked: { 2: 'Béchamel already calls for this Recipe' } })).base
+  it('lists a Base recipe the server marked wouldCycle disabled with its reason, still in order (round 4: no client walk)', () => {
+    const rows = pickerRows(input({ baseRecipes: [base(1, 'Roux'), base(2, 'Béchamel', { wouldCycle: true }), base(3, 'Béchamel light', { wouldCycle: false })] })).base
     expect(rows[0]).toMatchObject({ id: 2, disabled: true, reason: 'Béchamel already calls for this Recipe' })
     expect(rows[1]).toMatchObject({ id: 3, disabled: false })
+    expect(rows.find((r) => r.kind === 'base' && r.id === 1)).toMatchObject({ disabled: false })
   })
 })
 

@@ -4,14 +4,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { candidateJSON, mockApi, renderWithProviders } from '../../../lib/baseRecipes/test-utils'
 import { LinkCandidatesSheet } from './LinkCandidatesSheet'
 
-const base = { id: 3, name: 'Béchamel', baseUnit: 'ml', ingredientId: 30 }
+const base = { id: 3, name: 'Béchamel', ingredientId: 30 }
 const lines = [
   candidateJSON({ lineId: 1, recipeId: 10, recipeName: 'Cannelloni', quantity: 2, unit: 'cup', linkable: false, reason: 'unit_unconvertible' }),
   candidateJSON({ lineId: 2, recipeId: 11, recipeName: 'Lasagne' }),
   candidateJSON({ lineId: 3, recipeId: 12, recipeName: 'Moussaka', archived: true, quantity: 300 }),
 ]
 const show = (routes: Record<string, unknown> = {}) => {
-  const api = mockApi({ 'GET /api/recipes/3/link-candidates': { lines }, ...routes })
+  const api = mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines }, ...routes })
   const onClose = vi.fn()
   renderWithProviders(<LinkCandidatesSheet open baseRecipe={base} onClose={onClose} />)
   return { api, onClose }
@@ -86,7 +86,7 @@ describe('LinkCandidatesSheet (design §3.8): never silent, nothing ticked', () 
   })
 
   it('shows nothing and closes when there is nothing to link', async () => {
-    mockApi({ 'GET /api/recipes/3/link-candidates': { lines: [] } })
+    mockApi({ 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: [] } })
     const onClose = vi.fn()
     renderWithProviders(<LinkCandidatesSheet open baseRecipe={base} onClose={onClose} />)
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
