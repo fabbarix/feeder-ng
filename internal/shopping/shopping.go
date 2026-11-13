@@ -14,10 +14,17 @@ import (
 )
 
 // Need is one Recipe line for ONE Batch, in Base Units.
+//
+// Made (BR-F, beta.6, docs/dev/design/base-recipes.md section 7) is set on a Base recipe line: what making the whole
+// Quantity of the Base recipe Ingredient needs (the Base recipe's own lines already scaled by Quantity over its Yield,
+// nested Base recipes included). A node with Made draws the Base recipe Ingredient from the projected Stock first and
+// only the shortfall is expanded: each child counts child.Quantity * shortfall / Quantity. The Base recipe Ingredient
+// itself is then never a Line. Made nil is a plain Ingredient, or an empty Base recipe, which is listed as itself.
 type Need struct {
 	IngredientID int64
 	Quantity     float64
 	Optional     bool
+	Made         []Need
 }
 
 // Meal is an uncooked, non-skipped Planned Meal in the range. A meal served from a Leftover (Leftover true) needs nothing.
