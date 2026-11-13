@@ -134,6 +134,8 @@ for (let i = 0; i < 11; i++) {
   if (item) await step('lot', 'POST', '/api/stock/lots', { ingredientId: item.id, quantity: 250 + i * 40, purchased: today, source: 'manual', clientUuid: `layout-seed-${i}` })
 }
 if (ing[3]) await step('extra', 'POST', '/api/shopping/extras', { text: 'Napkins', ingredientId: 0, quantity: 1 })
+// DS-SHOP: a long free-text extra, so the Shop row's two-line title (word wrap, then an ellipsis) is exercised at 834 and 1024 px
+await step('extra', 'POST', '/api/shopping/extras', { text: 'Extra virgin olive oil, cold pressed, from the farm shop near the station' })
 for (const [e, n] of [['guest.one@example.test', 'Guest One'], ['guest.two@example.test', 'Guest Two']]) {
   await step('allowlist', 'POST', '/api/allowlist', { email: e, displayName: n, isAdmin: false })
 }

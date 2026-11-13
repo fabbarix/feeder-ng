@@ -89,9 +89,9 @@ describe('ShoppingScreen', () => {
     const bar = screen.getByRole('progressbar', { name: 'Left to get' })
     expect(bar).toHaveAttribute('aria-valuenow', '0')
     expect(bar).toHaveAttribute('aria-valuemax', '2')
-    expect(document.querySelector('.progress-tile__value')).toHaveTextContent('2')
-    // the total is in the CostTile; the Passata line shows the same $3.18 in its own tile (LineTile test), so query the tile
-    expect(document.querySelector('.cost-tile__value')).toHaveTextContent('$3.18')
+    expect(document.querySelector('.shop-metrics__value[data-metric="left"]')).toHaveTextContent('2')
+    // the total is in the metric strip; the Passata row shows the same $3.18 as its sub-value, so query the strip
+    expect(document.querySelector('.shop-metrics__value[data-metric="total"]')).toHaveTextContent('$3.18')
     expect(screen.getByText('est. at Coop')).toBeInTheDocument()
     expect(screen.getByText('1 line has no Price yet')).toBeInTheDocument()
     expect(screen.getByText('2 × Mutti 700 g')).toBeInTheDocument()
@@ -132,7 +132,7 @@ describe('ShoppingScreen', () => {
 
   it('QA: ticks are visible - a ticked Line sits in the Ticked group with a check mark', async () => {
     show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 1, total: 2 } }))
-    const ticked = screen.getByRole('group', { name: 'Ticked' })
+    const ticked = screen.getByRole('list', { name: 'Ticked' })
     const untick = within(ticked).getByRole('button', { name: 'Untick Rice' })
     expect(untick.querySelector('svg')).not.toBeNull()
     await userEvent.click(untick)
@@ -140,10 +140,13 @@ describe('ShoppingScreen', () => {
     expect(screen.queryByRole('button', { name: 'Untick Passata' })).toBeNull()
   })
 
-  it('extras can be deleted', async () => {
+  it('extras can be deleted: tap the row, then Delete in its sheet (DS-SHOP: no Delete button on the row)', async () => {
     show(makeList({ lines: [], extras: [makeExtra()], progress: { ticked: 0, total: 1 } }))
-    await userEvent.click(screen.getByRole('button', { name: 'Delete toilet paper' }))
+    expect(screen.queryByRole('button', { name: 'Delete toilet paper' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'toilet paper' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'toilet paper' })).getByRole('button', { name: 'Delete toilet paper' }))
     expect(actions.deleteExtra).toHaveBeenCalledWith(1)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('adds an extra from the sheet', async () => {
