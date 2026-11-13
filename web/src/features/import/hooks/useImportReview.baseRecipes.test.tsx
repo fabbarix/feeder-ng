@@ -168,6 +168,48 @@ describe('useImportReview, Confirm refusals', () => {
   })
 })
 
+describe('useImportReview, a 409 take-over the plan has no ask for (round 2)', () => {
+  const stray = new ApiError(409, 'base_recipe_take_over', 'an Ingredient named béchamel exists: take it over?', {
+    ingredient: { id: 5, name: 'béchamel' },
+    recipes: [{ id: 11, name: 'Moussaka', archived: false }],
+    stockLots: 1,
+    convertible: true,
+  })
+  const withAsk = plan({ ready: false, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [takeOver()] })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    api.open.mockResolvedValue({ id: 'r1', plan: plan({ ready: true, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [] }) })
+    api.plan.mockResolvedValue({ id: 'r1', plan: withAsk })
+    api.confirm.mockRejectedValue(stray)
+    api.discard.mockResolvedValue(undefined)
+  })
+
+  it('plans again with the current answers, so the ask shows on its tile', async () => {
+    const { result } = await reviewing()
+    await act(async () => result.current.chooseBaseRecipeLine(path, { action: 'create' }))
+    api.plan.mockClear()
+    await act(() => result.current.confirm())
+    expect(api.plan).toHaveBeenCalledWith('r1', expect.objectContaining({ baseRecipeLines: { [path]: { action: 'create' } } }))
+    expect(result.current.plan).toEqual(withAsk)
+    expect(result.current.phase).toBe('reviewing')
+  })
+
+  it('opens no dialog and shows no problem: there is no question to answer first', async () => {
+    const { result } = await reviewing()
+    await act(() => result.current.confirm())
+    expect(result.current.takeOverPrompt).toBeUndefined()
+    expect(result.current.confirmProblem).toBeUndefined()
+    expect(result.current.error).toBeUndefined()
+  })
+
+  it('does not confirm again by itself', async () => {
+    const { result } = await reviewing()
+    await act(() => result.current.confirm())
+    expect(api.confirm).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('useImportReview, Read it next', () => {
   beforeEach(() => {
     vi.clearAllMocks()

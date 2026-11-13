@@ -80,13 +80,68 @@ describe('BaseRecipeLineTile', () => {
     expect(keep).toHaveAccessibleName(expect.stringContaining('béchamel'))
   })
 
-  describe('keyboard', () => {
-    it('the group has one tab stop; the arrow keys move the answer', async () => {
-      const on = show({ suggestions: [useSuggestion(3, 'Béchamel')], effective: { action: 'use', recipeId: 3 }, resolved: true })
-      expect(screen.getAllByRole('radio').filter((r) => r.tabIndex === 0)).toHaveLength(1)
+  describe('keyboard (arrows move the focus; Space or Enter answers; a click answers)', () => {
+    const sug = [useSuggestion(3, 'Béchamel', false), fileSuggestion(1, 'Roux', false), plannableSuggestion(7, 'Pesto')]
+    const arrowTo = async (n: number) => {
       screen.getByRole('radio', { name: /Use Base recipe Béchamel/ }).focus()
+      await userEvent.keyboard('{ArrowDown}'.repeat(n))
+    }
+
+    it('the group has one tab stop', () => {
+      show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      expect(screen.getAllByRole('radio').filter((r) => r.tabIndex === 0)).toHaveLength(1)
+    })
+
+    it('arrowing between the answers sends nothing, but moves the focus', async () => {
+      const on = show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      await arrowTo(1)
+      expect(screen.getByRole('radio', { name: /Use Roux from this import/ })).toHaveFocus()
+      await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+      expect(screen.getByRole('radio', { name: /Read it next/ })).toHaveFocus()
+      expect(on.onAnswer).not.toHaveBeenCalled()
+      expect(on.onConvert).not.toHaveBeenCalled()
+    })
+
+    it('Space answers with the focused option', async () => {
+      const on = show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      await arrowTo(1)
+      await userEvent.keyboard(' ')
+      expect(on.onAnswer).toHaveBeenCalledTimes(1)
+      expect(on.onAnswer).toHaveBeenCalledWith({ action: 'file', recipeIndex: 1 })
+    })
+
+    it('Enter answers with the focused option', async () => {
+      const on = show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      await arrowTo(3)
+      await userEvent.keyboard('{Enter}')
+      expect(on.onAnswer).toHaveBeenCalledWith({ action: 'create', readNext: true })
+    })
+
+    it('arrowing onto the convert option does not ask the convert dialog, and sends no answer', async () => {
+      const on = show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      await arrowTo(4)
+      expect(screen.getByRole('radio', { name: /Turn Pesto into a Base recipe/ })).toHaveFocus()
+      expect(on.onConvert).not.toHaveBeenCalled()
+      expect(on.onAnswer).not.toHaveBeenCalled()
+    })
+
+    it.each([[' '], ['{Enter}']])('%j on the convert option asks the convert dialog', async (key) => {
+      const on = show({ suggestions: sug, effective: { action: 'use', recipeId: 3 }, resolved: true })
+      await arrowTo(4)
+      await userEvent.keyboard(key)
+      expect(on.onConvert).toHaveBeenCalledTimes(1)
+      expect(on.onConvert).toHaveBeenCalledWith({ id: 7, name: 'Pesto' })
+      expect(on.onAnswer).not.toHaveBeenCalled()
+    })
+
+    it('the take-over ask follows the same rule: arrowing sends nothing, Space answers', async () => {
+      const on = show({ effective: { action: 'create' }, resolved: true }, { ask: takeOver() })
+      screen.getByRole('radio', { name: 'Yes, take it over' }).focus()
       await userEvent.keyboard('{ArrowDown}')
-      expect(on.onAnswer).toHaveBeenCalledWith({ action: 'create' })
+      expect(screen.getByRole('radio', { name: 'No, keep it apart' })).toHaveFocus()
+      expect(on.onTakeOver).not.toHaveBeenCalled()
+      await userEvent.keyboard(' ')
+      expect(on.onTakeOver).toHaveBeenCalledWith(false)
     })
   })
 

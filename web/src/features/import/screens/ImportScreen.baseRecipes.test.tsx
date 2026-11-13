@@ -251,3 +251,92 @@ describe('ImportScreen, reading the created Base recipe', () => {
     expect(screen.queryByText(/Its review will offer to replace/)).toBeNull()
   })
 })
+
+// ---- round 2 ----
+describe('ImportScreen, keyboard on the answers', () => {
+  it('arrowing onto the convert option opens no dialog and sends no answer; Space opens it', async () => {
+    view()
+    screen.getByRole('radio', { name: /Use Base recipe Béchamel/ }).focus()
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}')
+    const convert = screen.getByRole('radio', { name: /Turn Pesto into a Base recipe/ })
+    expect(convert).toHaveFocus()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(h.review.chooseBaseRecipeLine).not.toHaveBeenCalled()
+    await userEvent.keyboard(' ')
+    expect(await screen.findByRole('dialog', { name: 'Turn Pesto into a Base recipe?' })).toBeInTheDocument()
+    expect(h.review.chooseBaseRecipeLine).not.toHaveBeenCalled()
+  })
+
+  it('Enter on the convert option opens it too, and a click', async () => {
+    view()
+    screen.getByRole('radio', { name: /Turn Pesto into a Base recipe/ }).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(await screen.findByRole('dialog', { name: 'Turn Pesto into a Base recipe?' })).toBeInTheDocument()
+  })
+
+  it('arrowing between the other answers sends nothing until Space or Enter', async () => {
+    view()
+    screen.getByRole('radio', { name: /Use Base recipe Béchamel/ }).focus()
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+    expect(h.review.chooseBaseRecipeLine).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Enter}')
+    expect(h.review.chooseBaseRecipeLine).toHaveBeenCalledWith(path, { action: 'create' })
+  })
+})
+
+describe('ImportScreen, region names (each has exactly one accessible name)', () => {
+  const ROLES = ['region', 'group', 'list', 'listbox', 'radiogroup', 'grid', 'table', 'navigation'] as const
+  const named = (name: string) => ROLES.flatMap((role) => screen.queryAllByRole(role, { name }))
+
+  it('Ingredients and Base recipes are each one named element, with no nested group of the same name', () => {
+    h.review = state({ plan: open({ ingredients: [match({ key: 'onion' })] }) })
+    view()
+    expect(named('Ingredients')).toHaveLength(1)
+    expect(named('Base recipes')).toHaveLength(1)
+  })
+
+  it('the tile is named once too', () => {
+    view()
+    expect(named('500 ml béchamel')).toHaveLength(1)
+  })
+})
+
+describe('ImportScreen, the Read step note is announced after the focus moves', () => {
+  it('the note follows the heading in the page, or the heading is described by it', () => {
+    h.review = state({ phase: 'source', plan: undefined, readNextFor: { recipeId: 3, name: 'Béchamel', line: path } })
+    view()
+    const heading = screen.getByRole('heading', { name: 'Read a recipe' })
+    const note = screen.getByText('Reading Béchamel. Its review will offer to replace the empty Base recipe.')
+    expect(heading).toHaveFocus()
+    const after = Boolean(heading.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const described = (heading.getAttribute('aria-describedby') ?? '').split(/\s+/).includes(note.id) && note.id !== ''
+    expect(after || described).toBe(true)
+  })
+})
+
+describe('ImportScreen, Problems and asks outside the tiles', () => {
+  it('a Problem that is not on a tile stays in the generic list, once', () => {
+    h.review = state({ plan: open({ problems: [{ path: '$.recipes[0].name', code: 'x', message: 'The name is too long' }] }) })
+    view()
+    expect(screen.getAllByText(/The name is too long/)).toHaveLength(1)
+  })
+
+  it('a take-over ask of a Base recipe of the file (no tile) is asked on its own, with Yes and No', async () => {
+    h.review = state({
+      plan: open({
+        baseRecipeLines: [],
+        takeOvers: [takeOver({ path: '$.recipes[1]', name: 'Roux', ingredient: { id: 9, name: 'roux', baseUnit: 'g' }, recipes: [] })],
+      }),
+    })
+    view()
+    expect(screen.getByText(/An Ingredient named roux exists\./)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'No, keep it apart' }))
+    expect(h.review.chooseTakeOver).toHaveBeenCalledWith('$.recipes[1]', false)
+  })
+
+  it('an unanswered ask of a file Recipe blocks Confirm', () => {
+    h.review = state({ plan: open({ baseRecipeLines: [], takeOvers: [takeOver({ path: '$.recipes[1]', name: 'Roux' })] }) })
+    view()
+    expect(screen.getByRole('button', { name: 'Confirm import' })).toBeDisabled()
+  })
+})

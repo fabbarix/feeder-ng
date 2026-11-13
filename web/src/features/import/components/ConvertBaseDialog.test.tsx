@@ -73,7 +73,7 @@ describe('ConvertBaseDialog', () => {
   it('shows a loading note and no primary action while the dry run is asked', () => {
     show(state({ status: 'loading', confirm: undefined }))
     expect(screen.getByRole('dialog')).toHaveAccessibleName('Turn Pesto into a Base recipe?')
-    expect(screen.getByRole('status')).toHaveTextContent('Checking what changes')
+    expect(screen.getByRole('status').textContent).toBe('Checking what changes…')
     expect(screen.queryByRole('button', { name: 'Turn into a Base recipe' })).toBeNull()
   })
 
