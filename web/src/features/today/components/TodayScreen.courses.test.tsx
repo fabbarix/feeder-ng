@@ -123,7 +123,7 @@ describe('Today: To confirm is one decision per Meal Slot', () => {
     const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
     expect(within(tile).getAllByRole('listitem')).toHaveLength(1)
     expect(within(tile).getByText('Roast chicken')).toBeInTheDocument()
-    expect(within(tile).getByText('+ Side · Green beans')).toBeInTheDocument()
+    expect(tile.querySelector('.to-confirm__meta')?.textContent).toBe('+ Side · Green beans') // "+ Side" is its own <strong>
     expect(within(tile).queryByRole('group', { name: 'Side' })).not.toBeInTheDocument()
   })
 

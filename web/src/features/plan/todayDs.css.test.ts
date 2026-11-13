@@ -102,15 +102,16 @@ describe('plan.css: a Course row of the hero', () => {
     const body = declarations(css, '.plan-course__body')
     expect(body['flex-wrap'] ?? 'nowrap').not.toBe('wrap')
     const actions = declarations(css, '.plan-course__actions')
-    expect(actions['display']).toBe('inline-flex')
+    // round 2 wins: one evenly sized group, so a grid (todayRound2.css.test.ts)
+    expect(actions['display']).toMatch(/^(grid|inline-grid)$/)
     expect(actions['margin-inline-start']).toBe('auto')
-    expect(actions['flex']).toBe('none')
   })
 
-  it('the recipe name takes the room and ends in an ellipsis rather than pushing the actions to another line', () => {
+  // round 2 wins: the hero Course name is never ellipsised; it wraps.
+  it('the recipe name can shrink and wraps, never an ellipsis', () => {
     const d = declarations(css, '.plan-course .plan-meal__recipe')
     expect(d['min-inline-size']).toBe('0')
-    expect(d['text-overflow']).toBe('ellipsis')
+    expect(d['text-overflow']).toBeUndefined()
   })
 
   it('the caption (Side) is meta, muted with the colour token, not opacity', () => {

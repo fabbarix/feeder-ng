@@ -46,5 +46,7 @@ describe('P15: actions that do not fit their row', () => {
     expect(driver).toMatch(/actionLayout/)
     expect(driver).toMatch(/scrollWidth\s*>\s*[a-z.]*clientWidth/)
     expect(driver).toMatch(/\.action-group/)
+    // icon-only buttons (the ⋮ keeps its 44 px hit area through ::after) are exempt from the label check
+    expect(driver).toMatch(/(innerText|textContent)\.trim\(\)/)
   })
 })

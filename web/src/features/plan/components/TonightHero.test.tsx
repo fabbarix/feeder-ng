@@ -68,7 +68,7 @@ describe('TonightHero after the slot time', () => {
     expect(h.onYesCooked).toHaveBeenCalledWith(key)
     await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
     expect(h.onAdjust).toHaveBeenCalledWith(key)
-    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook ·/ })).not.toBeInTheDocument() // no Cook Mode button; "Cooked" is the primary
     expect(screen.getByRole('button', { name: /^More for / })).toBeInTheDocument()
   })
 
