@@ -98,3 +98,32 @@ describe('seed: realistic long names and hints', () => {
     expect(seed).toMatch(/toConfirm/) // the count is written to the ids file and printed
   })
 })
+
+// DS-A round 2 (the Plan review): Course rows 582 px wide in a 358 px day tile, the page 614 px wide on a 390 phone, and the
+// guard said OK. Causes: the guard ran an older seed with no chip line (the row never got long), P1's "past the right edge"
+// half compared against innerWidth, which phone emulation widens with the content (614), and content wider than its tile had no
+// rule at all. Horizontal overflow now fails in every mode. Behavioural check: scripts/test/page-layout-overflow_test.sh.
+describe('P13 and the always-fail rules (round 2)', () => {
+  const r2 = rules as unknown as {
+    ALWAYS_FAIL?: string[]
+    evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
+  }
+  it('a box wider than its tile is a P13 finding naming the box, the tile and the overflow', () => {
+    const f = findings({ tileOverflow: [{ sel: 'span.plan-course__chips', card: 'section.tile', px: 224 }] }, 1024, '/plan')
+    const p13 = f.find((x) => x.rule === 'P13')
+    expect(p13?.message).toMatch(/^P13 /)
+    expect(p13?.message).toMatch(/plan-course__chips/)
+    expect(p13?.message).toMatch(/section\.tile/)
+    expect(p13?.message).toMatch(/224\s*px/)
+  })
+  it('no tile overflow is clean', () => {
+    expect(findings({ tileOverflow: [] }, 1024).map((x) => x.rule)).not.toContain('P13')
+  })
+  it('P1 and P13 fail in every mode (ALWAYS_FAIL)', () => {
+    expect(r2.ALWAYS_FAIL).toEqual(expect.arrayContaining(['P1', 'P13']))
+  })
+  it('the driver measures the right edge against documentElement.clientWidth (phone emulation widens innerWidth)', () => {
+    expect(driver).toMatch(/b\.right > (cw|clientW|document\.documentElement\.clientWidth)/)
+    expect(driver).toMatch(/tileOverflow/)
+  })
+})
