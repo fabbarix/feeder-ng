@@ -6,6 +6,7 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"path/filepath"
@@ -36,9 +37,10 @@ const topic = "recipes"
 func mount(r *app.Router, d app.Deps) {
 	images := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
 	guarded := imgs.NewGuarded(images, refs.New(d.DB))
-	ings := ingstore.New(d.DB, d.Clock)
+	// The Base recipe port (ADR 0015): the Ingredient guards see this module's Base recipes.
+	ings := ingstore.New(d.DB, d.Clock, ingstore.WithBaseRecipes(store.NewBaseRecipePort(d.DB)))
 	a := &api{
-		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(guarded).WithReadyMeal(readyMealIngredients{ings}),
+		store:  store.New(d.DB, d.Clock, ingredientSource{ings}).WithImages(guarded).WithReadyMeal(readyMealIngredients{ings}).WithIngredients(ings),
 		images: images,
 		events: d.Events,
 		// Last cooked comes from the plan store (beta.5 F7): the recipe store never reads plan tables.
@@ -53,6 +55,13 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/recipes/{id}/unarchive", a.unarchive)
 	r.User("GET /api/recipe-preferences", a.getPreferences)
 	r.User("PUT /api/recipes/{id}/preference", a.setPreference)
+	r.User("POST /api/recipes/{id}/to-base", a.toBase)
+	r.User("POST /api/recipes/{id}/to-plannable", a.toPlannable)
+	r.User("POST /api/recipes/{id}/lines/{lineId}/base", a.linkLine)
+	r.User("DELETE /api/recipes/{id}/lines/{lineId}/base", a.unlinkLine)
+	r.User("GET /api/recipes/{id}/link-candidates", a.linkCandidates)
+	r.User("POST /api/recipes/{id}/link", a.link)
+	r.User("POST /api/recipes/{id}/unlink", a.unlink)
 	r.User("PUT /api/ingredient-exclusions/{ingredientId}", a.setExclusion)
 }
 
@@ -123,12 +132,41 @@ type useJSON struct {
 }
 
 type lineJSON struct {
+	ID           int64   `json:"id"`
 	IngredientID int64   `json:"ingredientId"`
 	Ingredient   string  `json:"ingredient"`
 	Quantity     float64 `json:"quantity"`
 	Unit         string  `json:"unit"`
 	Optional     bool    `json:"optional"`
 	Note         string  `json:"note"`
+	// BaseRecipe is the Base recipe the line calls for (null for a plain line); NeededAtStep is the stored override,
+	// NeededAt the effective Step index (§3.3).
+	BaseRecipe             *baseRefJSON `json:"baseRecipe"`
+	NeededAtStep           *int         `json:"neededAtStep"`
+	NeededAt               int          `json:"neededAt"`
+	LinkedFromIngredientID *int64       `json:"linkedFromIngredientId"`
+}
+
+// baseRefJSON is the Base recipe a line calls for.
+type baseRefJSON struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Archived bool   `json:"archived"`
+	Empty    bool   `json:"empty"`
+}
+
+// refJSON names a Recipe.
+type refJSON struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Archived bool   `json:"archived"`
+}
+
+// withinJSON is an Ingredient inside a Base recipe a Recipe calls for, with the chain of Base recipes to it.
+type withinJSON struct {
+	IngredientID int64    `json:"ingredientId"`
+	Name         string   `json:"name"`
+	Path         []string `json:"path"`
 }
 
 type stepJSON struct {
@@ -173,6 +211,13 @@ type recipeJSON struct {
 	UpdatedAt         string        `json:"updatedAt"`
 	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only; null on the write responses.
 	LastCookedOn *string `json:"lastCookedOn"`
+	// Base recipes (§10): the kind, the Yield's unit (null for a plannable Recipe), its Ingredient, the Recipes that
+	// call for it, and the Ingredients inside it.
+	BaseRecipe       bool         `json:"baseRecipe"`
+	YieldUnit        *string      `json:"yieldUnit"`
+	BaseIngredientID int64        `json:"baseIngredientId"`
+	UsedBy           []refJSON    `json:"usedBy"`
+	Within           []withinJSON `json:"within"`
 }
 
 type summaryJSON struct {
@@ -189,6 +234,9 @@ type summaryJSON struct {
 	WholeMeal      bool     `json:"wholeMeal"`
 	// LastCookedOn is the latest date a Cooked fresh Planned Meal of the Recipe had, null when it was never cooked.
 	LastCookedOn *string `json:"lastCookedOn"`
+	BaseRecipe   bool    `json:"baseRecipe"`
+	YieldUnit    *string `json:"yieldUnit"`
+	UsedByCount  int     `json:"usedByCount"`
 }
 
 // courseJSON is a Course of a Recipe, in household order.
@@ -223,14 +271,22 @@ type recipeBody struct {
 	WholeMeal *bool      `json:"wholeMeal"`
 	Lines     []lineBody `json:"lines"`
 	Steps     []stepBody `json:"steps"`
+	// BaseRecipe: absent keeps the stored kind; YieldUnit is the unit of a Base recipe's Yield; TakeOver answers the
+	// take-over ask of §3.2.
+	BaseRecipe *bool  `json:"baseRecipe"`
+	YieldUnit  string `json:"yieldUnit"`
+	TakeOver   *bool  `json:"takeOver"`
 }
 
 type lineBody struct {
+	ID           int64   `json:"id"`
 	IngredientID int64   `json:"ingredientId"`
+	BaseRecipeID int64   `json:"baseRecipeId"`
 	Quantity     float64 `json:"quantity"`
 	Unit         string  `json:"unit"`
 	Optional     bool    `json:"optional"`
 	Note         string  `json:"note"`
+	NeededAtStep *int    `json:"neededAtStep"`
 }
 
 type stepBody struct {
@@ -258,9 +314,13 @@ func (b recipeBody) input() recipe.Input {
 		Image:             b.Image,
 		CourseIDs:         b.CourseIDs,
 		WholeMeal:         b.WholeMeal,
+		BaseRecipe:        b.BaseRecipe,
+		YieldUnit:         b.YieldUnit,
+		TakeOver:          b.TakeOver,
 	}
 	for _, l := range b.Lines {
-		in.Lines = append(in.Lines, recipe.Line{IngredientID: l.IngredientID, Quantity: l.Quantity, Unit: l.Unit, Optional: l.Optional, Note: l.Note})
+		in.Lines = append(in.Lines, recipe.Line{ID: l.ID, IngredientID: l.IngredientID, BaseRecipeID: l.BaseRecipeID,
+			Quantity: l.Quantity, Unit: l.Unit, Optional: l.Optional, Note: l.Note, NeededAtStep: l.NeededAtStep})
 	}
 	for _, s := range b.Steps {
 		st := recipe.Step{
@@ -331,7 +391,14 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, "sort", "sort_invalid", "sort must be name, last_cooked_asc or last_cooked_desc")
 		return
 	}
-	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q")}
+	kind := q.Get("kind")
+	switch kind {
+	case "", "plannable", "base", "all":
+	default:
+		writeFieldError(w, "kind", "kind_invalid", "kind must be plannable, base or all")
+		return
+	}
+	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q"), Kind: kind}
 	if course != nil {
 		f.CourseID = *course
 	}
@@ -360,6 +427,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 			ID: s.ID, Name: s.Name, Yield: s.Yield, ReadyMeal: s.ReadyMeal, Tags: nonNil(s.Tags),
 			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
 			CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
+			BaseRecipe: s.BaseRecipe, YieldUnit: yieldUnitPtr(s.YieldUnit), UsedByCount: s.UsedByCount,
 		}
 		if d, ok := cooked[s.ID]; ok {
 			j.LastCookedOn = &d
@@ -606,14 +674,33 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 		TotalMinutes: rec.Timing.TotalMinutes, AdvanceMinutes: rec.Timing.AdvanceMinutes,
 		CreatedAt: rec.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: rec.UpdatedAt.UTC().Format(time.RFC3339),
 	}
+	out.BaseRecipe = rec.IsBase()
+	out.YieldUnit = yieldUnitPtr(rec.YieldUnit)
+	out.BaseIngredientID = rec.BaseIngredientID
+	out.UsedBy = []refJSON{}
+	for _, u := range rec.UsedBy {
+		out.UsedBy = append(out.UsedBy, refJSON{ID: u.ID, Name: u.Name, Archived: u.Archived})
+	}
+	out.Within = []withinJSON{}
+	for _, w := range rec.Within {
+		out.Within = append(out.Within, withinJSON{IngredientID: w.IngredientID, Name: w.Name, Path: nonNil(w.Path)})
+	}
 	for _, c := range rec.Courses {
 		out.Courses = append(out.Courses, courseJSON{ID: c.ID, Name: c.Name})
 	}
 	for _, l := range rec.Lines {
-		out.Lines = append(out.Lines, lineJSON{
-			IngredientID: l.IngredientID, Ingredient: l.Ingredient, Quantity: l.Quantity, Unit: l.Unit,
-			Optional: l.Optional, Note: l.Note,
-		})
+		lj := lineJSON{
+			ID: l.ID, IngredientID: l.IngredientID, Ingredient: l.Ingredient, Quantity: l.Quantity, Unit: l.Unit,
+			Optional: l.Optional, Note: l.Note, NeededAtStep: l.NeededAtStep, NeededAt: l.NeededAt,
+		}
+		if l.Base != nil {
+			lj.BaseRecipe = &baseRefJSON{ID: l.Base.ID, Name: l.Base.Name, Archived: l.Base.Archived, Empty: l.Base.Empty}
+		}
+		if l.LinkedFromIngredientID != 0 {
+			from := l.LinkedFromIngredientID
+			lj.LinkedFromIngredientID = &from
+		}
+		out.Lines = append(out.Lines, lj)
 	}
 	for _, s := range rec.Steps {
 		sj := stepJSON{
@@ -656,7 +743,40 @@ func writeFieldError(w http.ResponseWriter, field, reason, message string) {
 func writeErr(w http.ResponseWriter, err error) {
 	var ve *recipe.ValidationError
 	var ue *recipe.UnknownUnitError
+	var ce *recipe.CycleError
+	var inUse *recipe.InUseError
+	var ask *recipe.TakeOverError
+	var taken *recipe.NameTakenError
 	switch {
+	case errors.As(err, &ce):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "validation_failed", "message": ce.Error(), "field": ce.Field, "reason": recipe.CodeBaseRecipeCycle, "path": ce.Path,
+		}})
+	case errors.As(err, &inUse):
+		used := []refJSON{}
+		for _, u := range inUse.UsedBy {
+			used = append(used, refJSON{ID: u.ID, Name: u.Name, Archived: u.Archived})
+		}
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "base_recipe_in_use", "message": inUse.Error(), "usedBy": used,
+		}})
+	case errors.As(err, &ask):
+		recs := []refJSON{}
+		for _, u := range ask.Recipes {
+			recs = append(recs, refJSON{ID: u.ID, Name: u.Name, Archived: u.Archived})
+		}
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "base_recipe_take_over", "message": ask.Error(),
+			"ingredient": refJSON{ID: ask.Ingredient.ID, Name: ask.Ingredient.Name}, "recipes": recs,
+			"stockLots": ask.StockLots, "convertible": ask.Convertible,
+		}})
+	case errors.As(err, &taken):
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "ingredient_name_taken", "message": taken.Error(),
+			"ingredient": refJSON{ID: taken.Ingredient.ID, Name: taken.Ingredient.Name},
+		}})
+	case errors.Is(err, recipe.ErrBaseUnitInUse):
+		httpx.WriteError(w, http.StatusConflict, "base_unit_in_use", "The Yield's unit changes the Base Unit while the Ingredient has Stock, Products or lines")
 	case errors.As(err, &ve):
 		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
 			"code": "validation_failed", "message": ve.Message, "field": ve.Field, "reason": ve.Code,
@@ -679,4 +799,259 @@ func writeErr(w http.ResponseWriter, err error) {
 	default:
 		httpx.WriteAPIError(w, err)
 	}
+}
+
+// Base recipes (ADR 0015, §10). The handlers parse, call the store and respond.
+
+// yieldUnitPtr is the Yield's unit, null for a plannable Recipe.
+func yieldUnitPtr(u string) *string {
+	if u == "" {
+		return nil
+	}
+	return &u
+}
+
+// planJSON is the dry run of to-base (§3.6): what the confirm names.
+type planJSON struct {
+	PlannedMeals []plannedMealJSON `json:"plannedMeals"`
+	SlotRules    []slotRuleJSON    `json:"slotRules"`
+	Leftovers    int               `json:"leftovers"`
+	Preferences  int               `json:"preferences"`
+}
+
+type plannedMealJSON struct {
+	Date         string `json:"date"`
+	MealSlotName string `json:"mealSlotName"`
+	CourseName   string `json:"courseName"`
+	Pinned       bool   `json:"pinned"`
+	Bought       bool   `json:"bought"`
+}
+
+type slotRuleJSON struct {
+	ID           int64  `json:"id"`
+	MealSlotName string `json:"mealSlotName"`
+	CourseName   string `json:"courseName"`
+}
+
+// kindBody is the body of a kind change (to-base) or of a Base recipe's line link (create / convert).
+type kindBody struct {
+	Yield     float64 `json:"yield"`
+	YieldUnit string  `json:"yieldUnit"`
+	TakeOver  *bool   `json:"takeOver"`
+	CourseIDs []int64 `json:"courseIds"`
+}
+
+// optionalBody reads a JSON body when there is one; an empty body leaves v as it is.
+func optionalBody(r *http.Request, v any) {
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(v)
+	}
+}
+
+func (a *api) toBase(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	if r.URL.Query().Get("dryRun") != "" {
+		plan, err := a.store.ToBasePreview(r.Context(), id)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		out := planJSON{PlannedMeals: []plannedMealJSON{}, SlotRules: []slotRuleJSON{}, Leftovers: plan.Leftovers, Preferences: plan.Preferences}
+		for _, m := range plan.PlannedMeals {
+			out.PlannedMeals = append(out.PlannedMeals, plannedMealJSON{Date: m.Date, MealSlotName: m.MealSlotName,
+				CourseName: m.CourseName, Pinned: m.Pinned, Bought: m.Bought})
+		}
+		for _, sr := range plan.SlotRules {
+			out.SlotRules = append(out.SlotRules, slotRuleJSON{ID: sr.ID, MealSlotName: sr.MealSlotName, CourseName: sr.CourseName})
+		}
+		httpx.WriteJSON(w, http.StatusOK, out)
+		return
+	}
+	var b kindBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	rec, err := a.store.ToBase(r.Context(), id, recipe.ToBaseInput{Yield: b.Yield, YieldUnit: b.YieldUnit, TakeOver: b.TakeOver})
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
+}
+
+func (a *api) toPlannable(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	var b kindBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	rec, err := a.store.ToPlannable(r.Context(), id, recipe.ToPlannableInput{Yield: b.Yield, CourseIDs: b.CourseIDs})
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
+}
+
+// linkBody is the body of the line link: exactly one of baseRecipeId, create or convertRecipeId (§3.7).
+type linkBody struct {
+	BaseRecipeID    int64 `json:"baseRecipeId"`
+	ConvertRecipeID int64 `json:"convertRecipeId"`
+	Create          *struct {
+		Name      string  `json:"name"`
+		Yield     float64 `json:"yield"`
+		YieldUnit string  `json:"yieldUnit"`
+	} `json:"create"`
+	Yield     float64 `json:"yield"`
+	YieldUnit string  `json:"yieldUnit"`
+	TakeOver  *bool   `json:"takeOver"`
+}
+
+func (a *api) linkLine(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	lineID, err := strconv.ParseInt(r.PathValue("lineId"), 10, 64)
+	if err != nil || lineID <= 0 {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
+		return
+	}
+	var b linkBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	req := recipe.LinkRequest{BaseRecipeID: b.BaseRecipeID, ConvertRecipeID: b.ConvertRecipeID, Yield: b.Yield, YieldUnit: b.YieldUnit, TakeOver: b.TakeOver}
+	if b.Create != nil {
+		req.Create = &recipe.NewBase{Name: b.Create.Name, Yield: b.Create.Yield, YieldUnit: b.Create.YieldUnit}
+	}
+	rec, err := a.store.LinkLine(r.Context(), id, lineID, req)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
+}
+
+func (a *api) unlinkLine(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	lineID, err := strconv.ParseInt(r.PathValue("lineId"), 10, 64)
+	if err != nil || lineID <= 0 {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "Not found")
+		return
+	}
+	var b struct {
+		IngredientID int64 `json:"ingredientId"`
+	}
+	optionalBody(r, &b)
+	rec, err := a.store.UnlinkLine(r.Context(), id, lineID, b.IngredientID)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
+}
+
+func (a *api) linkCandidates(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	cands, err := a.store.LinkCandidates(r.Context(), id)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	type lineOut struct {
+		LineID         int64   `json:"lineId"`
+		RecipeID       int64   `json:"recipeId"`
+		RecipeName     string  `json:"recipeName"`
+		Archived       bool    `json:"archived"`
+		IngredientID   int64   `json:"ingredientId"`
+		IngredientName string  `json:"ingredientName"`
+		Quantity       float64 `json:"quantity"`
+		Unit           string  `json:"unit"`
+		Linkable       bool    `json:"linkable"`
+		Reason         string  `json:"reason,omitempty"`
+	}
+	out := struct {
+		Lines []lineOut `json:"lines"`
+	}{Lines: []lineOut{}}
+	for _, c := range cands {
+		out.Lines = append(out.Lines, lineOut{LineID: c.LineID, RecipeID: c.RecipeID, RecipeName: c.RecipeName, Archived: c.Archived,
+			IngredientID: c.IngredientID, IngredientName: c.IngredientName, Quantity: c.Quantity, Unit: c.Unit,
+			Linkable: c.Linkable, Reason: c.Reason})
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+// lineIDsBody is the body of the bulk link and its undo.
+type lineIDsBody struct {
+	LineIDs []int64 `json:"lineIds"`
+}
+
+func (a *api) link(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	var b lineIDsBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	res, err := a.store.Link(r.Context(), id, b.LineIDs)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	type mergeOut struct {
+		IngredientID int64  `json:"ingredientId"`
+		Name         string `json:"name"`
+		StockLots    int    `json:"stockLots"`
+		Products     int    `json:"products"`
+	}
+	out := struct {
+		Linked     []int64    `json:"linked"`
+		MergeOffer []mergeOut `json:"mergeOffer"`
+	}{Linked: nonNilIDs(res.Linked), MergeOffer: []mergeOut{}}
+	for _, m := range res.MergeOffer {
+		out.MergeOffer = append(out.MergeOffer, mergeOut{IngredientID: m.IngredientID, Name: m.Name, StockLots: m.StockLots, Products: m.Products})
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (a *api) unlink(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	var b lineIDsBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	if err := a.store.Unlink(r.Context(), id, b.LineIDs); err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed(id)
+	httpx.WriteJSON(w, http.StatusOK, map[string][]int64{"unlinked": nonNilIDs(b.LineIDs)})
 }

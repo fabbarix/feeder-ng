@@ -180,18 +180,30 @@ func (s *Store) List(ctx context.Context) ([]ingredient.Ingredient, error) {
 }
 
 // Search runs ingredient.Search over every Ingredient and resolves the hits to full Ingredients.
+//
+// A Base recipe's Ingredient is never the Exact match (it is keyed by its Base recipe, not its name, §3.2): it is
+// offered among the suggestions, where the picker shows it with its Base recipe badge.
 func (s *Store) Search(ctx context.Context, query string, limit int) (SearchResult, error) {
 	all, err := s.List(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
+	bases, err := s.baseKeyedIDs(ctx)
+	if err != nil {
+		return SearchResult{}, err
+	}
 	byID := make(map[int64]ingredient.Ingredient, len(all))
-	cands := make([]ingredient.Candidate, 0, len(all))
+	var plain, based []ingredient.Candidate
 	for _, i := range all {
 		byID[i.ID] = i
-		cands = append(cands, ingredient.Candidate{ID: i.ID, Name: i.Name})
+		c := ingredient.Candidate{ID: i.ID, Name: i.Name}
+		if bases[i.ID] {
+			based = append(based, c)
+		} else {
+			plain = append(plain, c)
+		}
 	}
-	r := ingredient.Search(query, cands, limit)
+	r := ingredient.Search(query, plain, limit)
 	var out SearchResult
 	if r.Exact != nil {
 		e := byID[r.Exact.ID]
@@ -200,7 +212,32 @@ func (s *Store) Search(ctx context.Context, query string, limit int) (SearchResu
 	for _, sg := range r.Suggestions {
 		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
 	}
+	rb := ingredient.Search(query, based, limit)
+	if rb.Exact != nil {
+		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[rb.Exact.ID], Score: 1})
+	}
+	for _, sg := range rb.Suggestions {
+		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
+	}
 	return out, nil
+}
+
+// baseKeyedIDs is the set of Ingredients keyed by a Base recipe (name_key base-recipe:<id>).
+func (s *Store) baseKeyedIDs(ctx context.Context) (map[int64]bool, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ingredients WHERE name_key LIKE 'base-recipe:%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
 }
 
 // SearchResult is ingredient.Result with the full Ingredients.
@@ -230,8 +267,21 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	if err != nil {
 		return ingredient.Ingredient{}, err
 	}
+	base, err := s.baseOf(ctx, tx, id)
+	if err != nil {
+		return ingredient.Ingredient{}, err
+	}
+	if base != nil {
+		// A Base recipe's Ingredient is renamed through its Base recipe, and its Base Unit follows the Yield.
+		if p.Name != nil && units.NormalizeName(*p.Name) != units.NormalizeName(cur.Name) {
+			return ingredient.Ingredient{}, ErrBaseRecipeIngredient
+		}
+		if p.Base != nil && *p.Base != cur.Base {
+			return ingredient.Ingredient{}, ErrBaseRecipeIngredient
+		}
+	}
 	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, FrozenShelfLifeDays: cur.FrozenShelfLifeDays, Conversions: cur.Conversions, Image: cur.Image}
-	if p.Name != nil {
+	if p.Name != nil && base == nil {
 		in.Name = *p.Name
 	}
 	if p.Base != nil {
@@ -260,11 +310,17 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 		if err != nil {
 			return ingredient.Ingredient{}, err
 		}
+		delete(refs, BaseRecipeRefName)
 		if total(refs) > 0 {
 			return ingredient.Ingredient{}, ErrInUse
 		}
 	}
 	key := units.NormalizeName(clean.Name)
+	if base != nil {
+		if key, err = keyOf(ctx, tx, id); err != nil {
+			return ingredient.Ingredient{}, err
+		}
+	}
 	if err := checkNameFree(ctx, tx, key, id); err != nil {
 		return ingredient.Ingredient{}, err
 	}
@@ -282,6 +338,13 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 
 // SetConversion adds or replaces the Unit Conversion for unit (validated as in Input).
 func (s *Store) SetConversion(ctx context.Context, id int64, c units.Conversion) (ingredient.Ingredient, error) {
+	if isBatchUnit(c.Unit) {
+		if ref, err := s.baseOf(ctx, s.db, id); err != nil {
+			return ingredient.Ingredient{}, err
+		} else if ref != nil {
+			return ingredient.Ingredient{}, ErrBaseRecipeIngredient
+		}
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ingredient.Ingredient{}, err
@@ -369,6 +432,13 @@ func (s *Store) GetTx(ctx context.Context, tx *sql.Tx, id int64) (ingredient.Ing
 // RemoveConversion removes it (idempotent when absent). ErrInUse when any registered
 // UnitGuard says the unit is still used by that Ingredient.
 func (s *Store) RemoveConversion(ctx context.Context, id int64, unit string) (ingredient.Ingredient, error) {
+	if isBatchUnit(unit) {
+		if ref, err := s.baseOf(ctx, s.db, id); err != nil {
+			return ingredient.Ingredient{}, err
+		} else if ref != nil {
+			return ingredient.Ingredient{}, ErrBaseRecipeIngredient
+		}
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ingredient.Ingredient{}, err
@@ -420,24 +490,14 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	}
 	defer tx.Rollback()
 
-	cur, err := loadOne(ctx, tx, id)
+	image, err := s.deleteTx(ctx, tx, id)
 	if err != nil {
-		return err
-	}
-	refs, err := s.refCounts(ctx, tx, id)
-	if err != nil {
-		return err
-	}
-	if total(refs) > 0 {
-		return ErrInUse
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredients WHERE id = ?`, id); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	s.dropUnreferenced(ctx, cur.Image)
+	s.dropUnreferenced(ctx, image)
 	return nil
 }
 
@@ -455,6 +515,11 @@ func (s *Store) MergePreview(ctx context.Context, sourceID, targetID int64) (Pre
 	src, err := loadOne(ctx, s.db, sourceID)
 	if err != nil {
 		return Preview{}, err
+	}
+	if ref, err := s.baseOf(ctx, s.db, sourceID); err != nil {
+		return Preview{}, err
+	} else if ref != nil {
+		return Preview{}, ErrBaseRecipeIngredient
 	}
 	tgt, err := loadOne(ctx, s.db, targetID)
 	if err != nil {
@@ -500,45 +565,8 @@ func (s *Store) Merge(ctx context.Context, sourceID, targetID int64, res ingredi
 	}
 	defer tx.Rollback()
 
-	src, err := loadOne(ctx, tx, sourceID)
+	dropped, err := s.mergeTx(ctx, tx, sourceID, targetID, res)
 	if err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	tgt, err := loadOne(ctx, tx, targetID)
-	if err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	merged, err := ingredient.PlanMerge(src, tgt).Apply(res)
-	if err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	// The target keeps its own picture; without one it adopts the source's.
-	image, dropped := tgt.Image, src.Image
-	if image == "" {
-		image, dropped = src.Image, ""
-	}
-	// Likewise the frozen Shelf Life: the target's, or the source's when the target has none.
-	frozen := tgt.FrozenShelfLifeDays
-	if frozen == nil {
-		frozen = src.FrozenShelfLifeDays
-	}
-	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET shelf_life_days = ?, frozen_shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
-		nullDays(merged.ShelfLifeDays), nullDays(frozen), image, s.now(), targetID); err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredient_conversions WHERE ingredient_id = ?`, targetID); err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	if err := insertConversions(ctx, tx, targetID, merged.Conversions); err != nil {
-		return ingredient.Ingredient{}, err
-	}
-	for _, m := range s.movers.All() {
-		if err := m.Move(ctx, tx, sourceID, targetID); err != nil {
-			return ingredient.Ingredient{}, err
-		}
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredients WHERE id = ?`, sourceID); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	if err := tx.Commit(); err != nil {

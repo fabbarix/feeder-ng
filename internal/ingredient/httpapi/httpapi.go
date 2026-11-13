@@ -20,6 +20,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
@@ -32,7 +33,9 @@ const defaultSearchLimit = 5
 
 func mount(r *app.Router, d app.Deps) {
 	files := imaging.NewStore(filepath.Join(d.Config.DataDir, "images"))
-	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB)))), events: d.Events}
+	// The Base recipe port (ADR 0015): the guards and the badge see the Recipe tables through it.
+	a := &api{store: store.New(d.DB, d.Clock, store.WithImages(images.NewGuarded(files, refs.New(d.DB))),
+		store.WithBaseRecipes(recipestore.NewBaseRecipePort(d.DB))), events: d.Events}
 	r.User("GET /api/ingredients", a.list)
 	r.User("GET /api/ingredients/search", a.search)
 	r.User("POST /api/ingredients", a.create)
@@ -67,6 +70,15 @@ type ingredientJSON struct {
 	Conversions         []conversionJSON `json:"conversions"`
 	Image               string           `json:"image"`
 	ImageURL            string           `json:"imageUrl"`
+	// BaseRecipe is the Base recipe this Ingredient belongs to (null for a plain Ingredient, §3.2).
+	BaseRecipe *baseRecipeJSON `json:"baseRecipe"`
+}
+
+// baseRecipeJSON names the Base recipe an Ingredient belongs to.
+type baseRecipeJSON struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Archived bool   `json:"archived"`
 }
 
 func toJSON(i ingredient.Ingredient) ingredientJSON {
@@ -195,7 +207,12 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 	out := []ingredientJSON{}
 	for _, i := range all {
 		if q == "" || strings.Contains(i.Key(), q) {
-			out = append(out, toJSON(i))
+			j, err := a.jsonOf(r, i)
+			if err != nil {
+				httpx.WriteAPIError(w, err)
+				return
+			}
+			out = append(out, j)
 		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
@@ -213,11 +230,20 @@ func (a *api) search(w http.ResponseWriter, r *http.Request) {
 	}
 	out := searchJSON{Suggestions: []suggestionJSON{}}
 	if res.Exact != nil {
-		e := toJSON(*res.Exact)
+		e, err := a.jsonOf(r, *res.Exact)
+		if err != nil {
+			httpx.WriteAPIError(w, err)
+			return
+		}
 		out.Exact = &e
 	}
 	for _, s := range res.Suggestions {
-		out.Suggestions = append(out.Suggestions, suggestionJSON{Ingredient: toJSON(s.Ingredient), Score: s.Score})
+		j, err := a.jsonOf(r, s.Ingredient)
+		if err != nil {
+			httpx.WriteAPIError(w, err)
+			return
+		}
+		out.Suggestions = append(out.Suggestions, suggestionJSON{Ingredient: j, Score: s.Score})
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -238,7 +264,7 @@ func (a *api) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(created.ID)
-	httpx.WriteJSON(w, http.StatusCreated, toJSON(created))
+	a.respond(w, r, http.StatusCreated, created)
 }
 
 func (a *api) get(w http.ResponseWriter, r *http.Request) {
@@ -256,7 +282,12 @@ func (a *api) get(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, detailJSON{ingredientJSON: toJSON(i), References: refs})
+	j, err := a.jsonOf(r, i)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, detailJSON{ingredientJSON: j, References: refs})
 }
 
 func (a *api) patch(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +317,7 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(id)
-	httpx.WriteJSON(w, http.StatusOK, toJSON(updated))
+	a.respond(w, r, http.StatusOK, updated)
 }
 
 func (a *api) delete(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +349,7 @@ func (a *api) putConversion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(id)
-	httpx.WriteJSON(w, http.StatusOK, toJSON(updated))
+	a.respond(w, r, http.StatusOK, updated)
 }
 
 func (a *api) deleteConversion(w http.ResponseWriter, r *http.Request) {
@@ -332,7 +363,7 @@ func (a *api) deleteConversion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(id)
-	httpx.WriteJSON(w, http.StatusOK, toJSON(updated))
+	a.respond(w, r, http.StatusOK, updated)
 }
 
 func (a *api) mergePreview(w http.ResponseWriter, r *http.Request) {
@@ -350,9 +381,19 @@ func (a *api) mergePreview(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	source, err := a.jsonOf(r, p.Source)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	target, err := a.jsonOf(r, p.Target)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	out := previewJSON{
-		Source:           toJSON(p.Source),
-		Target:           toJSON(p.Target),
+		Source:           source,
+		Target:           target,
 		Conversions:      toConversionsJSON(p.Plan.Conversions),
 		ShelfLifeDays:    p.Plan.ShelfLifeDays,
 		Conflicts:        []conflictJSON{},
@@ -393,7 +434,30 @@ func (a *api) merge(w http.ResponseWriter, r *http.Request) {
 	}
 	a.changed(id)
 	a.changed(merged.ID)
-	httpx.WriteJSON(w, http.StatusOK, toJSON(merged))
+	a.respond(w, r, http.StatusOK, merged)
+}
+
+// jsonOf is toJSON with the Base recipe the Ingredient belongs to.
+func (a *api) jsonOf(r *http.Request, i ingredient.Ingredient) (ingredientJSON, error) {
+	j := toJSON(i)
+	ref, err := a.store.BaseRecipeOf(r.Context(), i.ID)
+	if err != nil {
+		return ingredientJSON{}, err
+	}
+	if ref != nil {
+		j.BaseRecipe = &baseRecipeJSON{ID: ref.ID, Name: ref.Name, Archived: ref.Archived}
+	}
+	return j, nil
+}
+
+// respond writes one Ingredient with its Base recipe.
+func (a *api) respond(w http.ResponseWriter, r *http.Request, status int, i ingredient.Ingredient) {
+	j, err := a.jsonOf(r, i)
+	if err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, status, j)
 }
 
 // changed tells the SPA that Ingredient id (and its lists) changed.
@@ -416,6 +480,7 @@ func idParam(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // writeErr maps domain and store errors onto the API's status codes and codes.
 func writeErr(w http.ResponseWriter, err error) {
 	var unresolved *ingredient.UnresolvedError
+	var cycle *store.CycleError
 	switch {
 	case errors.Is(err, ingredient.ErrInvalid):
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_ingredient", err.Error())
@@ -425,6 +490,12 @@ func writeErr(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusConflict, "in_use", "Other features still use this Ingredient")
 	case errors.Is(err, store.ErrNotFound):
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "No such Ingredient")
+	case errors.Is(err, store.ErrBaseRecipeIngredient):
+		httpx.WriteError(w, http.StatusConflict, "base_recipe_ingredient", "This Ingredient belongs to a Base recipe: change it on the Base recipe")
+	case errors.As(err, &cycle):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "validation_failed", "message": cycle.Error(), "reason": "base_recipe_cycle", "path": cycle.Path,
+		}})
 	case errors.Is(err, store.ErrMergeSelf):
 		httpx.WriteError(w, http.StatusBadRequest, "merge_self", "An Ingredient cannot be merged into itself")
 	case errors.Is(err, ingredient.ErrBaseMismatch):
