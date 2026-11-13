@@ -82,6 +82,17 @@ func (f fakeIngredients) Info(_ context.Context, ids []int64) (map[int64]shoppin
 	return out, nil
 }
 
+// RestockSupplies (H4): the Supplies that have a Restock level, with their info (Supply true, RestockLevel set).
+func (f fakeIngredients) RestockSupplies(context.Context) (map[int64]shopping.IngredientInfo, error) {
+	out := map[int64]shopping.IngredientInfo{}
+	for id, v := range f {
+		if v.Supply && v.RestockLevel != nil {
+			out[id] = v
+		}
+	}
+	return out, nil
+}
+
 type fakeHousehold struct {
 	today    stock.Date
 	horizon  int
@@ -140,7 +151,10 @@ type env struct {
 	ids      map[string]int64
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+// newEnvWith adds more Ingredients (Supplies, say) by name to the two foods; the name gets an id in e.ids.
+func newEnvWith(t *testing.T, more map[string]shopping.IngredientInfo) *env {
 	t.Helper()
 	db := stocktest.NewDB(t)
 	clk := clock.NewFake(startTime)
@@ -159,6 +173,11 @@ func newEnv(t *testing.T) *env {
 	ing := fakeIngredients{
 		e.ids[milk]:    {Name: "milk", BaseUnit: "ml"},
 		e.ids[passata]: {Name: "Passata", BaseUnit: "g"},
+	}
+	for name, info := range more {
+		id := stocktest.SeedIngredient(t, db, name, info.BaseUnit, nil)
+		e.ids[name] = id
+		ing[id] = info
 	}
 	e.svc = service.New(e.st, service.Ports{
 		Plan: e.plan, Stock: e.stock, Products: e.products, Ingredients: ing,
