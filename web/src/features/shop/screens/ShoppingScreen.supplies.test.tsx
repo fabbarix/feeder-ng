@@ -74,7 +74,7 @@ describe('ShoppingScreen with Supply Lines', () => {
     show(mixed())
     await userEvent.click(screen.getByRole('button', { name: 'Tick Toilet paper' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByRole('spinbutton')).toHaveValue(4)
+    expect(within(dialog).getByRole('spinbutton')).toHaveValue('4')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tick and add to Stock' }))
     expect(actions.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 20, quantity: 4, to: '2026-11-15', shopId: 1 }))
   })

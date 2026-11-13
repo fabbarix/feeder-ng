@@ -145,8 +145,9 @@
   line-height: var(--text-body-line);
 }
 
-/* Sections: "To get" and "Ticked (N)". */
+/* Sections: "To get", "Supplies" and "Ticked (N)". */
 .shop-open,
+.shop-supplies,
 .shop-ticked,
 .shop-not-needed {
   display: grid;

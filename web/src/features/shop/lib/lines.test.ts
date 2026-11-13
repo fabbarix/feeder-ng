@@ -44,6 +44,8 @@ describe('lineEntry / extraEntry', () => {
       ticked: false,
       quantity: 1400,
       baseUnit: 'g',
+      supply: false,
+      restockText: '',
     })
   })
 

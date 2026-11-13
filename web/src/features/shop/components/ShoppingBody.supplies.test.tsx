@@ -86,6 +86,13 @@ describe('ShoppingBody: the Supplies group', () => {
     expect(within(screen.getByRole('list', { name: 'Ticked' })).getByRole('button', { name: 'Tick Toilet paper', pressed: true })).toBeInTheDocument()
   })
 
+  it('NEW: a ticked Supply Line hides its restock reason (stale once bought) and shows the normal meta', () => {
+    render(<ShoppingBody {...base} list={makeList({ lines: [supply(20, 'Toilet paper', { ticked: true, quantity: 0 })], progress: { ticked: 1, total: 1 } })} />)
+    const row = within(screen.getByRole('list', { name: 'Ticked' })).getByRole('listitem')
+    expect(row.querySelector('.list-row__meta')).toBeNull()
+    expect(screen.queryByText(/Below/)).toBeNull()
+  })
+
   it('a Not needed Supply Line stays in the Not needed group', async () => {
     render(<ShoppingBody {...base} list={makeList({ lines: [], notNeeded: [supply(20, 'Toilet paper')], progress: { ticked: 0, total: 0 } })} />)
     await userEvent.click(screen.getByRole('button', { name: 'Not needed (1)' }))

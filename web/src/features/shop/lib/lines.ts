@@ -5,6 +5,7 @@ import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 import { shopStrings } from '../strings'
 import { slotsLabel } from './rows'
+import { restockText } from './supplies'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
 export interface ListEntry {
@@ -28,6 +29,10 @@ export interface ListEntry {
   baseUnit: BaseUnit | null
   /** PE: the Ingredient's Picture address of a Line or an Ingredient extra; '' = none. */
   imageUrl?: string
+  /** H7′: a Supply (a Line or an Ingredient extra of kind supply); food and free text are not. */
+  supply: boolean
+  /** H7′: "Below 6 · 2 in Stock" for a Supply Line with a Restock reason; '' otherwise (extras, food, no reason). */
+  restockText: string
   /**
    * B5-SH: "Includes Tue Dinner, not marked Cooked yet" (see pastMealsHint). The key is left out of entries with
    * nothing to say (an extra, a Line without unconfirmed past meals).
@@ -73,6 +78,8 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     quantity: line.ticked ? 0 : line.quantity,
     baseUnit: line.baseUnit,
     imageUrl: line.imageUrl,
+    supply: line.kind === 'supply',
+    restockText: line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system) : '',
   }
 }
 
@@ -92,6 +99,8 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     quantity: hasAmount && !extra.ticked ? (extra.quantity ?? 0) : 0,
     baseUnit: extra.baseUnit,
     imageUrl: extra.imageUrl,
+    supply: extra.kind === 'supply',
+    restockText: '',
   }
 }
 
