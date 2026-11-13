@@ -44,7 +44,7 @@ describe('PlanScreen: Leftovers', () => {
 
   it('shows no Leftovers section without Leftovers', async () => {
     setup([])
-    await screen.findByRole('heading', { name: 'Today' })
+    await screen.findByRole('heading', { name: /· Today$/ })
     expect(screen.queryByRole('heading', { name: 'Leftovers to use' })).toBeNull()
   })
 

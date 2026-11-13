@@ -4,33 +4,36 @@ import { describe, expect, it, vi } from 'vitest'
 import { favourite, meal, slot } from '../test-utils'
 import { MealTile } from './MealTile'
 
-function setup(s = slot(), today = '2026-11-10', compact = false) {
-  const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn() }
-  const view = render(<MealTile slot={s} today={today} compact={compact} {...handlers} />)
+function setup(s = slot(), today = '2026-11-10') {
+  const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn(), onPin: vi.fn(), onUnpin: vi.fn() }
+  const view = render(<MealTile slot={s} today={today} {...handlers} />)
   return { ...handlers, container: view.container }
 }
 
 const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
 const chipsOf = (container: HTMLElement) => container.querySelectorAll('.chip')
 
-describe('MealTile (compact, on a day tile)', () => {
-  it('shows the Meal Slot and the Recipe name, no times, Batches or portions', () => {
+describe('MealTile (on a day tile)', () => {
+  // ds-plan: the slot header shows the time (the 7-column week that hid it is gone).
+  it('shows the Meal Slot with its time and the Recipe name, no Batches or portions', () => {
     setup(slot({ meal: meal({ batches: 2, portions: 3.5 }) }))
     expect(screen.getByText('Dinner')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Chicken curry/ })).toBeInTheDocument()
-    expect(screen.queryByText(/19:00/)).not.toBeInTheDocument()
+    expect(screen.getByText(/19:00/)).toBeInTheDocument()
     expect(screen.queryByText(/Batch/)).not.toBeInTheDocument()
     expect(screen.queryByText(/portions/)).not.toBeInTheDocument()
   })
 
-  it('at most ONE chip, however many reasons the planner gave', () => {
+  // ds-plan: the row has one line of chips and clips what does not fit, so it carries all of them (was: at most ONE chip).
+  it('carries every chip the meal has, in priority order; the row clips them to one line', () => {
     const { container } = setup(slot({
       meal: meal({
         pinned: true,
         why: [favourite('Anna'), { code: 'perishable_use', ingredient: 'spinach', date: '2026-11-12' }, { code: 'ingredient_overlap', ingredient: 'chicken', date: '2026-11-09' }],
       }),
     }))
-    expect(chipsOf(container)).toHaveLength(1)
+    expect(chipsOf(container).length).toBeGreaterThan(1)
+    expect(chipsOf(container)[0]).toHaveTextContent('Pinned')
   })
 
   it('the chip is a meaning chip (data-kind), never a legacy tone chip that loses its background', () => {
@@ -78,9 +81,11 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(h.onSwap).toHaveBeenCalledWith(key)
   })
 
-  it('has no Confirm, Pin, Unpin or Mark as Cooked buttons: those live in the sheet', () => {
+  // ds-plan: Pin is an icon action of the row now (was: only in the sheet).
+  it('has Swap and Pin on the row, and no Confirm, Unpin or Mark as Cooked buttons: those live in the sheet', () => {
     setup()
-    for (const name of ['Confirm', 'Pin', 'Unpin', 'Mark as Cooked']) {
+    expect(screen.getByRole('button', { name: 'Pin' })).toBeInTheDocument()
+    for (const name of ['Confirm', 'Unpin', 'Mark as Cooked']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
   })
@@ -127,7 +132,9 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
   })
 
-  it('R13: an empty slot is a dashed block with a "Not planned" chip (never danger), the short reason and a tertiary Choose a Recipe', async () => {
+  // ds-plan: the empty Course is a dashed ListRow: the short reason is its title, the "Not planned" chip its chip line, and the
+  // whole row is "Choose a Recipe" (was: a tertiary button under a reason sentence).
+  it('R13: an empty slot is a dashed row with a "Not planned" chip (never danger), the short reason and Choose a Recipe as its target', async () => {
     const h = setup(slot({
       date: '2026-11-12', meal: null,
       unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 3, exclusion: 3, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
@@ -141,7 +148,7 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(screen.getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Thursday dinner/)).not.toBeInTheDocument()
     const choose = screen.getByRole('button', { name: 'Choose a Recipe' })
-    expect(choose).toHaveAttribute('data-variant', 'tertiary')
+    expect(choose.closest('li')).toBe(block)
     await userEvent.click(choose)
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 2, courseId: 1 })
   })
@@ -157,19 +164,6 @@ describe('MealTile (compact, on a day tile)', () => {
   it('R13: choosing a Recipe is no fix for a slot nobody attends, so the day tile offers none', () => {
     setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
     expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
-    setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }), '2026-11-10', true)
-    expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
-  })
-
-  it('R13: on the compact week tile the chip stays and the reason moves to its title (no room for a sentence)', () => {
-    const { container } = setup(
-      slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }),
-      '2026-11-10',
-      true,
-    )
-    expect(screen.getByText('Not planned')).toBeInTheDocument()
-    expect(screen.queryByText('Nobody is set to attend.')).not.toBeInTheDocument()
-    expect(container.querySelector('[data-unfilled]')).toHaveAttribute('title', 'Nobody is set to attend.')
   })
 
   it('a slot with nothing planned and no reason just says so', () => {
@@ -178,49 +172,9 @@ describe('MealTile (compact, on a day tile)', () => {
     expect(screen.getByRole('button', { name: 'Choose a Recipe' })).toBeInTheDocument()
   })
 
-  describe('compact (7-column week, ~135 px tile; ui-fix-plan 5.2)', () => {
-    it('row 1 is the Meal Slot icon and the time, the slot name is only the accessible name', () => {
-      const { container } = setup(slot(), '2026-11-10', true)
-      const head = container.querySelector('.plan-meal__slot') as HTMLElement
-      expect(head.querySelector('svg')).not.toBeNull()
-      expect(head).toHaveTextContent('19:00')
-      expect(head).toHaveAccessibleName(/Dinner/)
-      expect(screen.queryByText('Dinner')).not.toBeInTheDocument()
-    })
-
-    it("today's planned meal keeps ONE action, Cook, and gives Swap to the sheet", async () => {
-      const h = setup(slot(), '2026-11-10', true)
-      expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
-      expect(h.onCook).toHaveBeenCalledWith(key)
-    })
-
-    it('a future planned meal keeps ONE action, Swap', async () => {
-      const h = setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10', true)
-      expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
-      expect(h.onSwap).toHaveBeenCalledWith({ date: '2026-11-11', mealSlotId: 2, courseId: 1 })
-    })
-
-    it('never more than one icon button in the head row', () => {
-      const { container } = setup(slot(), '2026-11-10', true)
-      expect(container.querySelectorAll('.plan-meal__head button')).toHaveLength(1)
-    })
-
-    it('the Recipe name is still the button that opens the sheet', async () => {
-      const h = setup(slot(), '2026-11-10', true)
-      await userEvent.click(screen.getByRole('button', { name: /Chicken curry/ }))
-      expect(h.onOpen).toHaveBeenCalledWith(key)
-    })
-
-    it('an empty slot and a Cooked meal are unchanged apart from the head row', () => {
-      const { container } = setup(slot({ meal: meal({ state: 'cooked' }) }), '2026-11-10', true)
-      expect(container.querySelectorAll('.plan-meal__head button')).toHaveLength(0)
-    })
-  })
-
-  it('R2-2: the Recipe name button carries the full name as its title (the 2-line clamp never hides it)', () => {
-    setup(slot({ meal: meal({ recipeName: 'Slow-roasted chicken thighs with lemon and thyme' }) }), '2026-11-10', true)
-    expect(screen.getByRole('button', { name: /Slow-roasted chicken thighs/ })).toHaveAttribute('title', 'Slow-roasted chicken thighs with lemon and thyme')
+  // ds-plan: the 2-line clamp is ListRow's; the full name stays the row's accessible name.
+  it('R2-2: the row is named by the full Recipe name (the 2-line clamp never hides it)', () => {
+    setup(slot({ meal: meal({ recipeName: 'Slow-roasted chicken thighs with lemon and thyme' }) }))
+    expect(screen.getByRole('button', { name: 'Slow-roasted chicken thighs with lemon and thyme' })).toBeInTheDocument()
   })
 })

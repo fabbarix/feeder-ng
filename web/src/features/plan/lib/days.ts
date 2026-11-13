@@ -15,6 +15,8 @@ export interface DayGroup {
   /** WP6: the date overline of the tile, "WED 11". */
   overline: string
   isToday: boolean
+  /** ds-plan: the day tile's title-3, "Thu 12 · Today" / "Fri 13 · Tomorrow" / "Sun 8 · Yesterday", otherwise "Sat 14". Stub (empty until implemented). */
+  heading: string
   /** WP6 round 2: the short heading for the compact (7-column) tile: Today / Tomorrow / Yesterday, else "Wed". */
   shortTitle: string
   /** Grid columns the day tile spans: both columns (2) for today, otherwise 1; at 7 columns (a true week) always 1. */
@@ -64,6 +66,7 @@ export function groupByDay(slots: PlanSlot[], today: string, columns: 2 | 4 | 7 
         shortTitle: shortTitleFor(date, today),
         overline: dayOverline(date),
         isToday,
+        heading: '',
         span: isToday && columns !== 7 ? 2 : 1,
         slots: byDate.get(date)!.sort((a, b) => a.time.localeCompare(b.time) || a.mealSlotId - b.mealSlotId),
       }

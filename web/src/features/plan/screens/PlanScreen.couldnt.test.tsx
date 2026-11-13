@@ -111,7 +111,7 @@ describe('PlanScreen: Couldn\'t plan', () => {
   it('no notice at all when everything is planned', async () => {
     mockApi({ 'GET /api/plan': view([slot({ date: '2026-11-10', meal: meal() })]) })
     renderWithProviders(<PlanScreen />)
-    await screen.findByRole('heading', { name: 'Today' })
+    await screen.findByRole('heading', { name: /· Today$/ })
     expect(screen.queryByRole('group', { name: "Couldn't plan" })).not.toBeInTheDocument()
   })
 })

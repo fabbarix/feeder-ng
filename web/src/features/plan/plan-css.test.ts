@@ -1,4 +1,5 @@
-// CSS contract of the Plan (jsdom does not lay out): the week grid, today's ring, muted Cooked meals, the 2-line clamp.
+// CSS contract of the Plan (jsdom does not lay out): today's ring, muted Cooked meals, dashed empty rows, dividers.
+// ds-plan: the week-grid column rules, the Recipe clamp, the chip-wrapping rules and the slot-head truncation moved to plan.ds.css.test.ts.
 import { describe, expect, it } from 'vitest'
 import { readFeatureCss } from './test-css'
 
@@ -11,14 +12,6 @@ const rule = (selector: string) => {
 }
 
 describe('plan.css', () => {
-  it('R13: the "Not planned" chip stays on one line', () => {
-    expect(rule('.plan-meal__status')).toMatch(/white-space:\s*nowrap/)
-  })
-
-  it.each([2, 4, 7])('the week grid has a %i-column rule', (n) => {
-    expect(rule(`.plan-grid[data-columns='${n}']`)).toMatch(new RegExp(`grid-template-columns:\\s*repeat\\(${n},\\s*minmax\\(0,\\s*1fr\\)\\)`))
-  })
-
   it("today's tile gets a 2 px accent ring, not another fill", () => {
     const r = rule(".plan-day[data-today='true']")
     expect(r).toMatch(/2px/)
@@ -27,17 +20,13 @@ describe('plan.css', () => {
   })
 
   // R11b N6 replaces the old "muted to 55 %" rule: dimming by opacity broke WCAG AA (see cookedContrast.test.ts).
-  it('Cooked and Not cooked meals are not dimmed with opacity', () => {
-    expect(rule(".plan-meal[data-state='cooked']")).not.toMatch(/opacity/)
-    expect(rule(".plan-meal[data-state='skipped']")).not.toMatch(/opacity/)
+  it('Cooked and Not cooked rows are not dimmed with opacity', () => {
+    expect(rule(".plan-meal .list-row[data-state='cooked'] .list-row__title")).not.toMatch(/opacity/)
+    expect(rule(".plan-meal .list-row[data-state='skipped'] .list-row__title")).not.toMatch(/opacity/)
   })
 
-  it('the Recipe name clamps to two lines', () => {
-    expect(rule('.plan-meal__recipe')).toMatch(/-webkit-line-clamp:\s*2/)
-  })
-
-  it('an unfilled slot is a dashed block', () => {
-    expect(rule(".plan-meal[data-unfilled]")).toMatch(/dashed/)
+  it('an unfilled Course is a dashed row', () => {
+    expect(rule(".plan-meal .list-row[data-unfilled]")).toMatch(/dashed/)
   })
 
   it('the divider between meals is a 1 px line and only on a tile flagged data-dividers (3 or more meals)', () => {
@@ -49,36 +38,8 @@ describe('plan.css', () => {
     }
   })
 
-  it('chips hug the start of the block instead of stretching (justify-self: start)', () => {
-    expect(rule('.plan-meal [data-kind]')).toMatch(/justify-self:\s*start/)
-  })
-
-  it('the swap button stays beside the slot label: the head does not wrap, the actions do not shrink, the label truncates', () => {
-    const head = rule('.plan-meal__head')
-    expect(head).not.toMatch(/flex-wrap:\s*wrap/)
-    expect(rule('.plan-meal__actions')).toMatch(/flex:\s*none|flex-shrink:\s*0/)
-    const slot = rule('.plan-meal__slot')
-    expect(slot).toMatch(/min-width:\s*0/)
-    expect(slot).toMatch(/text-overflow:\s*ellipsis/)
-  })
-
-  it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
-    // No exemption, the Leftovers tile (N2) included: wp6 review rule (wp6-plan-today.md, CSS contract).
-    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
-    for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
-      expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
-      expect(rule(sel)).toMatch(/hyphens:\s*auto/)
-    }
-  })
-
-  it('the day title is never clipped: it wraps, with no overflow hidden, ellipsis or nowrap', () => {
-    const r = rule('.plan-day__title')
-    expect(r).toMatch(/overflow-wrap:\s*break-word/)
-    expect(r).not.toMatch(/overflow:\s*hidden|text-overflow|white-space:\s*nowrap/)
-  })
-
   it('does not restyle chips: they keep their own background in narrow tiles', () => {
-    expect(css).not.toMatch(/\.chip\b/)
+    expect(css).not.toMatch(/\.chip\s*\{[^}]*(background|color)/)
   })
 })
 
@@ -91,12 +52,11 @@ describe('plan.css Leftovers tile (N2)', () => {
     expect(r).toMatch(/padding-block/)
   })
 
-  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks at word edges, hyphenating (never anywhere)', () => {
+  // ds-plan: breaks at word edges only, no hyphenation (word-break guard); the 2-line clamp is ListRow's.
+  it('the Recipe name wraps (no nowrap) and breaks at word edges only (no hyphens, no overflow-wrap)', () => {
     const r = rule('.plan-leftovers .list-row__title')
     expect(r).toMatch(/white-space:\s*normal/)
-    expect(r).toMatch(/overflow-wrap:\s*break-word/)
-    expect(r).toMatch(/hyphens:\s*auto/)
-    expect(r).not.toMatch(/anywhere|nowrap/)
+    expect(r).not.toMatch(/overflow-wrap|hyphens|anywhere|nowrap/)
   })
 
   it('the meta line may wrap under the name', () => {

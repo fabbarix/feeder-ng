@@ -28,7 +28,7 @@ const preview = (courseId: number, courseName: string, recipeName: string): Cook
 })
 const alt = (id: number, name: string): Alternative => ({ recipeId: id, recipeName: name, batches: 1, newLeftoverPortions: 0, newLeftoverUseBy: '', score: 2, why: [] })
 
-const today = async () => (await screen.findByRole('heading', { name: 'Today' })).closest('article') as HTMLElement
+const today = async () => (await screen.findByRole('heading', { name: /· Today$/ })).closest('article') as HTMLElement
 const row = async (name: string) => within(await screen.findByRole('list', { name: 'Dinner Courses' })).getByRole('listitem', { name })
 
 describe('PlanScreen with Courses', () => {

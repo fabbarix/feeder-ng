@@ -4,7 +4,8 @@ import '../plan.css'
 
 export interface PlanGridProps {
   /** 2 on phones, 4 on tablets, 7 on desktop (hooks/useContainerColumns). */
-  columns: 2 | 4 | 7
+  /** @deprecated ds-plan removes the column count (BentoGrid min="day"). */
+  columns?: 2 | 4 | 7
   children?: ReactNode
 }
 
