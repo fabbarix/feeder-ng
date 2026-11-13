@@ -14,9 +14,10 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/receipt"
 )
 
-// SQLEvents is the Events port over the scan ledger (scan_events), the Products, the Ingredients and the Shops. It
-// returns the applied scans that are not undone among the given uuids, with the household date each was made on (a
-// scan stamped after today counts as today, as the scan service stores it), and the Context of the session.
+// SQLEvents is the Events and Contexts ports over the scan ledger (scan_events), the Products, the Ingredients, the
+// Prices, the Shops and the household settings. It returns the applied scans that are not undone among the given
+// uuids, with the household date each was made on (a scan stamped after today counts as today, as the scan service
+// stores it), and the Context of the session.
 type SQLEvents struct {
 	db  *sql.DB
 	clk clock.Clock
@@ -40,11 +41,11 @@ func MinorDigits(currency string) int {
 	return 2
 }
 
-// Session loads the session of a Shop by the phone's client UUIDs.
-func (e *SQLEvents) Session(ctx context.Context, shopID int64, uuids []string) (Session, error) {
+// household is the household's settings, its time zone and today's household date.
+func (e *SQLEvents) household(ctx context.Context) (householdSettings, error) {
 	hs, err := householdstore.New(e.db, e.clk).Settings(ctx)
 	if err != nil {
-		return Session{}, err
+		return householdSettings{}, err
 	}
 	loc := time.UTC
 	if hs.TimeZone != "" {
@@ -52,17 +53,41 @@ func (e *SQLEvents) Session(ctx context.Context, shopID int64, uuids []string) (
 			loc = l
 		}
 	}
-	today := e.clk.Now().In(loc).Format("2006-01-02")
-	out := Session{Context: receipt.Context{Today: today, SessionDate: today, Currency: hs.Currency, MinorDigits: MinorDigits(hs.Currency)}}
-	if out.Context.Shops, err = e.shops(ctx); err != nil {
-		return Session{}, err
+	return householdSettings{currency: hs.Currency, loc: loc, today: e.clk.Now().In(loc).Format("2006-01-02")}, nil
+}
+
+type householdSettings struct {
+	currency string
+	loc      *time.Location
+	today    string
+}
+
+// Context is what a read of the Shop is matched against: today (also the session's date), the Shop, the saved Shops
+// and the currency.
+func (e *SQLEvents) Context(ctx context.Context, shopID int64) (receipt.Context, error) {
+	h, err := e.household(ctx)
+	if err != nil {
+		return receipt.Context{}, err
 	}
-	for _, s := range out.Context.Shops {
+	out := receipt.Context{Today: h.today, SessionDate: h.today, Currency: h.currency, MinorDigits: MinorDigits(h.currency)}
+	if out.Shops, err = e.shops(ctx); err != nil {
+		return receipt.Context{}, err
+	}
+	for _, s := range out.Shops {
 		if s.ID == shopID {
-			out.Context.SessionShop = s
+			out.SessionShop = s
 		}
 	}
+	return out, nil
+}
 
+// SessionEvents loads the applied, not undone shop scans among the phone's client UUIDs, in ledger order, each with
+// its household date. Unknown uuids are left out; the service keeps only this Shop's scans of today.
+func (e *SQLEvents) SessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error) {
+	h, err := e.household(ctx)
+	if err != nil {
+		return nil, err
+	}
 	type stamped struct {
 		seq int64
 		ev  receipt.ScanEvent
@@ -72,21 +97,21 @@ func (e *SQLEvents) Session(ctx context.Context, shopID int64, uuids []string) (
 		part := uuids[start:min(start+uuidChunk, len(uuids))]
 		rows, err := e.query(ctx, part)
 		if err != nil {
-			return Session{}, err
+			return nil, err
 		}
 		for _, r := range rows {
 			ev := r.ev
-			ev.Date = dateOf(r.scannedAt, loc, today)
+			ev.Date = dateOf(r.scannedAt, h.loc, h.today)
 			if err := e.weigh(ctx, &ev); err != nil {
-				return Session{}, err
+				return nil, err
 			}
 			found = append(found, stamped{seq: r.seq, ev: ev})
 		}
 	}
 	sort.Slice(found, func(i, j int) bool { return found[i].seq < found[j].seq })
-	out.Events = make([]receipt.ScanEvent, 0, len(found))
+	out := make([]receipt.ScanEvent, 0, len(found))
 	for _, f := range found {
-		out.Events = append(out.Events, f.ev)
+		out = append(out, f.ev)
 	}
 	return out, nil
 }
@@ -190,3 +215,8 @@ func dateOf(scannedAt string, loc *time.Location, today string) string {
 	}
 	return d
 }
+
+var (
+	_ Events   = (*SQLEvents)(nil)
+	_ Contexts = (*SQLEvents)(nil)
+)

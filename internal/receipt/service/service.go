@@ -71,22 +71,24 @@ type Assistant interface {
 	Acquire(c recipeassistant.Caller) (func(), error)
 }
 
-// Session is the Scanned list a read is made of: the applied, not undone scans among the phone's uuids, and the
-// Context they are matched against (today, the Shop and date of the session, the saved Shops, the currency).
-type Session struct {
-	Events  []receipt.ScanEvent
-	Context receipt.Context
+// Events loads the Scanned list of a read: the applied, not undone shop_scan and shop_unknown events among the phone's
+// client UUIDs, in ledger order, each with its household Date. Unknown uuids are left out. SQLEvents is the SQL
+// adapter; the scan service's loader (RR3) has the same method, so either one is the port.
+type Events interface {
+	SessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error)
 }
 
-// Events loads a session by the phone's client UUIDs (SQLEvents is the SQL adapter).
-type Events interface {
-	Session(ctx context.Context, shopID int64, uuids []string) (Session, error)
+// Contexts loads what a read of a Shop is matched against: today, the Shop and date of the session, the saved Shops
+// and the currency (SQLEvents is the SQL adapter).
+type Contexts interface {
+	Context(ctx context.Context, shopID int64) (receipt.Context, error)
 }
 
 // Deps are the ports. Zero Overall means DefaultOverall; a nil Logger means slog.Default().
 type Deps struct {
 	Assistant Assistant
 	Events    Events
+	Contexts  Contexts
 	Photos    rasvc.Photos
 	Clock     clock.Clock
 	Logger    *slog.Logger
@@ -100,13 +102,16 @@ type ReadInput struct {
 	Photos      []rasvc.PhotoInput
 }
 
-// JobView is a snapshot of a read job. Fingerprint, Rows, Result and Warnings are set when the job is done; Error when
-// it failed. A view prints and logs as a summary only.
+// JobView is a snapshot of a read job. ShopID, Fingerprint, Rows, Ctx, Result and Warnings are set when the job is
+// done (the apply needs the Shop, fingerprint, rows, context and proposals the User reviewed); Error when it failed.
+// A view prints and logs as a summary only.
 type JobView struct {
 	ID          string
 	Status      Status
+	ShopID      int64
 	Fingerprint string
 	Rows        []receipt.Row
+	Ctx         receipt.Context
 	Result      receipt.Result
 	Warnings    []receipt.Warning
 	Error       *recipeassistant.Error
@@ -165,11 +170,15 @@ func (s *Service) Start(c recipeassistant.Caller, in ReadInput) (JobView, error)
 	if err := checkPhotos(in.Photos); err != nil {
 		return JobView{}, err
 	}
-	sess, err := s.d.Events.Session(ctx, in.ShopID, in.ClientUUIDs)
+	sctx, err := s.d.Contexts.Context(ctx, in.ShopID)
 	if err != nil {
 		return JobView{}, err
 	}
-	events := sessionEvents(sess, in.ShopID)
+	all, err := s.d.Events.SessionEvents(ctx, in.ShopID, in.ClientUUIDs)
+	if err != nil {
+		return JobView{}, err
+	}
+	events := sessionEvents(all, in.ShopID, sctx.Today)
 	if len(events) == 0 {
 		return JobView{}, &recipeassistant.Error{Code: CodeScansEmpty}
 	}
@@ -191,8 +200,8 @@ func (s *Service) Start(c recipeassistant.Caller, in ReadInput) (JobView, error)
 	s.jobs[c.UserID] = append(s.jobs[c.UserID], j)
 	s.mu.Unlock()
 
-	p := readPlan{ready: ready, rows: receipt.GroupRows(events), fingerprint: receipt.Fingerprint(events), ctx: sess.Context,
-		photos: in.Photos}
+	p := readPlan{ready: ready, shopID: in.ShopID, rows: receipt.GroupRows(events), fingerprint: receipt.Fingerprint(events),
+		ctx: sctx, photos: in.Photos}
 	view := j.view()
 	go func() {
 		defer releaseOnce() // a safety net: run releases before it publishes the terminal state
@@ -243,10 +252,11 @@ func (s *Service) Cancel(userID int64, id string) bool {
 	return false
 }
 
-// readPlan is what a job needs: the assistant, the rows and fingerprint of the Scanned list, the session's Context,
+// readPlan is what a job needs: the assistant, the Shop, the rows and fingerprint of the Scanned list, its Context,
 // and the photos (dropped once they are prepared).
 type readPlan struct {
 	ready       Ready
+	shopID      int64
 	rows        []receipt.Row
 	fingerprint string
 	ctx         receipt.Context
@@ -262,8 +272,10 @@ type job struct {
 
 	mu          sync.Mutex
 	status      Status
+	shopID      int64
 	fingerprint string
 	rows        []receipt.Row
+	ctx         receipt.Context
 	result      receipt.Result
 	warnings    []receipt.Warning
 	err         *recipeassistant.Error
@@ -278,7 +290,7 @@ func (j *job) view() JobView {
 	defer j.mu.Unlock()
 	v := JobView{ID: j.id, Status: j.status}
 	if j.status == StatusDone {
-		v.Fingerprint, v.Rows, v.Result = j.fingerprint, j.rows, j.result
+		v.ShopID, v.Fingerprint, v.Rows, v.Ctx, v.Result = j.shopID, j.fingerprint, j.rows, j.ctx, j.result
 		v.Warnings = j.warnings
 	}
 	if j.err != nil {
@@ -331,7 +343,8 @@ func (s *Service) finish(j *job, p readPlan, res receipt.Result, warns []receipt
 		j.status, j.err = StatusFailed, ae
 	} else {
 		j.status = StatusDone
-		j.fingerprint, j.rows, j.result, j.warnings = p.fingerprint, p.rows, res, warns
+		j.shopID, j.fingerprint, j.rows, j.ctx = p.shopID, p.fingerprint, p.rows, p.ctx
+		j.result, j.warnings = res, warns
 	}
 	j.finishedAt = s.d.Clock.Now()
 	j.mu.Unlock()
@@ -479,10 +492,10 @@ func checkPhotos(ps []rasvc.PhotoInput) error {
 }
 
 // sessionEvents keeps the events of this Shop made today: the Scanned list a read is of (Q5).
-func sessionEvents(sess Session, shopID int64) []receipt.ScanEvent {
+func sessionEvents(all []receipt.ScanEvent, shopID int64, today string) []receipt.ScanEvent {
 	var out []receipt.ScanEvent
-	for _, e := range sess.Events {
-		if e.ShopID == shopID && e.Date == sess.Context.Today {
+	for _, e := range all {
+		if e.ShopID == shopID && e.Date == today {
 			out = append(out, e)
 		}
 	}

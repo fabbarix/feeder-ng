@@ -72,7 +72,8 @@ func TestLiveReceiptReadCompletes(t *testing.T) {
 	}
 	zero := 0
 	c := claude.New(claude.Options{BaseURL: recipeassistant.DefaultBaseURL, APIKey: recipeassistant.Secret(key), MaxRetries: &zero})
-	svc := rsvc.New(rsvc.Deps{Assistant: liveAssistant{c}, Events: &eventsStub{all: events, ctx: sessionContext()}, Photos: livePhotos{}, Overall: 110 * time.Second})
+	ev := &eventsStub{all: events, ctx: sessionContext()}
+	svc := rsvc.New(rsvc.Deps{Assistant: liveAssistant{c}, Events: ev, Contexts: ev, Photos: livePhotos{}, Overall: 110 * time.Second})
 	v, err := svc.Start(userA, rsvc.ReadInput{ShopID: 1, ClientUUIDs: []string{"l1", "l2"}, Photos: []rasvc.PhotoInput{{DataURL: img}}})
 	if err != nil {
 		t.Fatalf("Start: %v", err)

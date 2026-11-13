@@ -17,10 +17,11 @@ package service_test
 //
 //	Assistant: Ready(ctx) (rsvc.Ready{Model, Claude, ImagesOK}, error)   // *rsvc.Unavailable when off / no key
 //	           Check(c) error; Acquire(c) (release func(), error)         // the Recipe Assistant's Limiter, shared
-//	Events:    Session(ctx, shopID, uuids) (rsvc.Session{Events []receipt.ScanEvent, Context receipt.Context}, error)
+//	Events:    SessionEvents(ctx, shopID, uuids) ([]receipt.ScanEvent, error)
 //	           // applied, not undone, shop_scan / shop_unknown events among uuids (unknown uuids are not returned); the
 //	           // service itself keeps only this Shop's events of today (Context.Today) (Q5), so Change Shop and an old
-//	           // day end in scans_empty.
+//	           // day end in scans_empty. The same method as the scan service's loader (RR3), so it swaps in one line.
+//	Contexts:  Context(ctx, shopID) (receipt.Context, error)
 //	Photos:    rasvc.Photos (Prepare data URLs to JPEG)
 //
 //	rsvc.JobView{ID, Status (running|done|failed), Fingerprint, Rows []receipt.Row, Result receipt.Result,
@@ -122,10 +123,12 @@ type eventsStub struct {
 	err    error
 }
 
-func (e *eventsStub) Session(_ context.Context, shopID int64, uuids []string) (rsvc.Session, error) {
+func (e *eventsStub) Context(context.Context, int64) (receipt.Context, error) { return e.ctx, nil }
+
+func (e *eventsStub) SessionEvents(_ context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error) {
 	e.shopID, e.uuids = shopID, append([]string(nil), uuids...)
 	if e.err != nil {
-		return rsvc.Session{}, e.err
+		return nil, e.err
 	}
 	want := map[string]bool{}
 	for _, u := range uuids {
@@ -137,7 +140,7 @@ func (e *eventsStub) Session(_ context.Context, shopID int64, uuids []string) (r
 			out = append(out, ev)
 		}
 	}
-	return rsvc.Session{Events: out, Context: e.ctx}, nil
+	return out, nil
 }
 
 const photoMarker = "PHOTO-BYTES-MARKER-0001"
@@ -211,7 +214,7 @@ func newWorld(t *testing.T, answer string, overall time.Duration) *world {
 	cl := &claudeStub{fn: says(answer)}
 	w := &world{claude: cl, asst: &assistantStub{claude: cl, imagesOK: true}, events: &eventsStub{all: sessionEvents(), ctx: sessionContext()},
 		photos: &photosStub{}, clk: clock.NewFake(time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)), logs: &syncBuf{}}
-	w.svc = rsvc.New(rsvc.Deps{Assistant: w.asst, Events: w.events, Photos: w.photos, Clock: w.clk, Overall: overall,
+	w.svc = rsvc.New(rsvc.Deps{Assistant: w.asst, Events: w.events, Contexts: w.events, Photos: w.photos, Clock: w.clk, Overall: overall,
 		Logger: slog.New(slog.NewTextHandler(w.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))})
 	return w
 }
@@ -325,6 +328,28 @@ func TestADoneJobHoldsTheFingerprintRowsProposalsNotesTotalsAndWarnings(t *testi
 	}
 	if !reflect.DeepEqual(v.Warnings, warns) {
 		t.Errorf("warnings are Finish's: got %v want %v", v.Warnings, warns)
+	}
+}
+
+// The apply (RR3) looks a done read up by the five things the User reviewed: its Shop, fingerprint, rows, context and
+// proposals. A failed or running job holds none of them.
+func TestADoneJobKeepsWhatTheApplyNeeds(t *testing.T) {
+	w := newWorld(t, goodAnswer(), 0)
+	v := w.read(t, input("e1", "e2", "e3"))
+	if v.Status != rsvc.StatusDone {
+		t.Fatalf("job = %+v", v)
+	}
+	if v.ShopID != 1 || v.Fingerprint == "" || len(v.Rows) == 0 || len(v.Result.Proposals) == 0 {
+		t.Errorf("shop %d, fingerprint %q, %d rows, %d proposals", v.ShopID, v.Fingerprint, len(v.Rows), len(v.Result.Proposals))
+	}
+	if !reflect.DeepEqual(v.Ctx, sessionContext()) {
+		t.Errorf("ctx = %+v, want the session's Context", v.Ctx)
+	}
+
+	w = newWorld(t, "not json", 0)
+	v = w.read(t, input("e1"))
+	if v.Status != rsvc.StatusFailed || v.ShopID != 0 || v.Fingerprint != "" || v.Rows != nil || v.Ctx.Today != "" {
+		t.Errorf("a failed job holds no read: %+v", v)
 	}
 }
 
@@ -462,7 +487,7 @@ func TestAModelWithoutImageInputRefusesTheRead(t *testing.T) {
 
 func TestAnUnreadableImageFailsTheJobWithThePhotoCode(t *testing.T) {
 	w := newWorld(t, goodAnswer(), 0)
-	w.svc = rsvc.New(rsvc.Deps{Assistant: w.asst, Events: w.events, Clock: w.clk,
+	w.svc = rsvc.New(rsvc.Deps{Assistant: w.asst, Events: w.events, Contexts: w.events, Clock: w.clk,
 		Photos: failingPhotos{&recipeassistant.Error{Code: rasvc.CodePhotoUnsupported}}})
 	v := w.read(t, input("e1"))
 	if v.Status != rsvc.StatusFailed || errCode(v) != rasvc.CodePhotoUnsupported || len(w.claude.calls()) != 0 {

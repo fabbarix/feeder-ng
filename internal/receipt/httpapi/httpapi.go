@@ -33,9 +33,11 @@ type api struct {
 func mount(r *app.Router, d app.Deps) {
 	// The Recipe Assistant's service is shared: the same availability, client, photo preparer and Limiter.
 	ra := rasvc.For(d, claude.Factory(d.Logger))
+	sqlEvents := service.NewSQLEvents(d.DB, d.Clock)
 	a := &api{svc: service.New(service.Deps{
 		Assistant: service.FromRecipeAssistant(ra),
-		Events:    service.NewSQLEvents(d.DB, d.Clock),
+		Events:    sqlEvents, // the loader the apply shares replaces this line (RR3: scanhttpapi.NewReceiptApplier(d))
+		Contexts:  sqlEvents,
 		Photos:    ra.Photos(),
 		Clock:     d.Clock,
 		Logger:    d.Logger,
