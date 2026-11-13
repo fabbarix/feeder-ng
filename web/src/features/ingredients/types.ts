@@ -98,3 +98,24 @@ export interface IngredientPatch {
   /** null clears the Restock level. */
   restockLevel?: number | null
 }
+
+/** H9: one Lot's share of a quick Use, as the server answers it and Undo sends it back (household-items.md section 4.11). */
+export interface UsedLot {
+  lotId: number
+  quantity: number
+  /** YYYY-MM-DD. */
+  purchased: string
+  storagePlaceId: number | null
+  productId: number | null
+  shopId: number | null
+}
+
+/** H9: the answer of POST /api/stock/ingredients/{id}/use and .../use/undo. `total` is the Stock left. */
+export interface SupplyUseResult {
+  ingredientId: number
+  name: string
+  baseUnit: BaseUnit
+  quantity: number
+  total: number
+  taken: UsedLot[]
+}

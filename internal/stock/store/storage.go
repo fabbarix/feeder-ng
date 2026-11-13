@@ -76,6 +76,11 @@ func (s *Store) StoragePlace(ctx context.Context, id int64) (StoragePlace, error
 	return placeByID(ctx, s.db, id)
 }
 
+// StoragePlaceTx returns one Storage Place inside tx, or ErrPlaceNotFound (H9: Undo checks the place of a Lot it recreates).
+func (s *Store) StoragePlaceTx(ctx context.Context, tx *sql.Tx, id int64) (StoragePlace, error) {
+	return placeByID(ctx, tx, id)
+}
+
 func placeByID(ctx context.Context, q querier, id int64) (StoragePlace, error) {
 	p, err := scanPlace(q.QueryRowContext(ctx, `SELECT id, name, kind, is_default FROM storage_places WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {

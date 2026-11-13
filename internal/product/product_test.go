@@ -1,8 +1,8 @@
 package product_test
 
 import (
-	"math"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 
