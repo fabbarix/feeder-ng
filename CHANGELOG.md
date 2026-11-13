@@ -4,6 +4,18 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6.5] - 2026-11-13
+
+The bottom action bar now floats, as the rest of Feeder does.
+
+### Fixed
+
+- **The bottom action bar** (Start Cook Mode and the Batch count on a Recipe's page, Save on the Recipe editor, Confirm on Import Review, the Recipe File picker and the Recipe Assistant settings) ran under the side menu with square corners. It now sits within the page, lined up with the cards above it, with rounded corners and a little space around it, and on a phone it floats just above the bottom bar. The last thing on a page always stays clear of it.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.5 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.6.4] - 2026-11-13
 
 Tidier Ingredient lines on a Recipe's page.
@@ -344,7 +356,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.4...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.5...HEAD
+[1.0.0-beta.6.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.4...v1.0.0-beta.6.5
 [1.0.0-beta.6.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...v1.0.0-beta.6.4
 [1.0.0-beta.6.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...v1.0.0-beta.6.3
 [1.0.0-beta.6.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...v1.0.0-beta.6.2
