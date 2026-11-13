@@ -249,33 +249,13 @@
 /* CRS F: the slot menu (⋮) sits in the hero's top row, on the overline's line, at the end. */
 .plan-hero__menu {
   position: absolute;
-  top: var(--space-2);
-  inset-inline-end: var(--space-2);
+  top: var(--tile-pad);
+  inset-inline-end: var(--tile-pad);
 }
 /* The overline (the Meal Slot name, up to 50 characters) wraps before it reaches the slot menu: button + gap. */
 .plan-hero:has(.plan-hero__menu) .tile__overline {
   padding-inline-end: calc(var(--space-8) + var(--space-4));
 }
-.plan-hero__body {
-  display: flex;
-  gap: var(--space-4);
-  align-items: flex-start;
-}
-.plan-hero__text {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.plan-hero__start {
-  margin: 0;
-  font-size: var(--text-label-size);
-  font-variant-numeric: tabular-nums;
-}
-.plan-hero__name {
-  margin: 0;
-  font-size: var(--text-title-2-size);
-}
-.plan-hero__chips,
 .plan-hero__actions,
 .plan-sheet__chips,
 .plan-sheet__attendance {
@@ -318,10 +298,7 @@
   justify-items: stretch;
   gap: var(--space-2);
 }
-.plan-confirm {
-  display: grid;
-  gap: var(--space-2);
-}
+
 .plan-form {
   display: grid;
   gap: var(--space-3);
@@ -371,21 +348,8 @@
   .plan-hero__actions {
     justify-content: flex-end;
   }
-  .plan-confirm {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: var(--space-4);
-  }
 }
 
-/* The Today hero's Courses list (TonightHero). */
-.plan-hero__courses {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-2);
-}
 
 /* CRS G2: the Review Exclusions page and the Couldn't plan lines. Tokens only; lists have no bullets. */
 .plan__pills {

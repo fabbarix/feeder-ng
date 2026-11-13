@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, IconButton } from '../../../ui'
+import { Button, Chip, IconButton, Menu } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { dayChip } from '../lib/chips'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
@@ -10,7 +10,8 @@ import { PlanChipView } from './PlanChipView'
 import type { PlanSlot, SlotKey } from '../types'
 import './CourseRow.css'
 
-export type CourseAction = 'swap' | 'pin' | 'cooked'
+/** `cooked` is a loose Mark as Cooked icon; `more` puts Mark as Cooked in the row's ⋮ (DS-TODAY hero). */
+export type CourseAction = 'swap' | 'pin' | 'cooked' | 'more'
 
 /** What a Course row can do; every handler gets the key of that Course's Planned Meal (courseId included). */
 export interface CourseRowHandlers {
@@ -65,19 +66,22 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
       >
         {meal ? (
           <>
-            <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
-              {meal.recipeName}
-            </button>
-            <span className="plan-course__chips">
-              {chip ? <PlanChipView chip={chip} /> : null}
-              {whole ? (
-                <Chip kind={whole.kind} status={whole.status}>
-                  {whole.label}
-                </Chip>
-              ) : null}
+            {/* DS-TODAY round 2: the name and its chips share one box; CSS puts the chip beside the name (wide) or under it (phone). */}
+            <span className="plan-course__what">
+              <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
+                {meal.recipeName}
+              </button>
+              <span className="plan-course__chips">
+                {chip ? <PlanChipView chip={chip} /> : null}
+                {whole ? (
+                  <Chip kind={whole.kind} status={whole.status}>
+                    {whole.label}
+                  </Chip>
+                ) : null}
+              </span>
             </span>
             {planned ? (
-              <span className="plan-meal__actions">
+              <span className="plan-course__actions" role="group" aria-label={`${course.name} actions`}>
                 {actions.includes('swap') ? <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap?.(key)} /> : null}
                 {actions.includes('pin') ? (
                   meal.pinned ? (
@@ -88,6 +92,9 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
                 ) : null}
                 {actions.includes('cooked') && mayResolve(meal.date, today) ? (
                   <IconButton icon="markCooked" label={s.markCooked} size="compact" onClick={() => onMarkCooked?.(key)} />
+                ) : null}
+                {actions.includes('more') && mayResolve(meal.date, today) ? (
+                  <Menu label={`More for ${course.name}`} size="compact" items={[{ id: 'cooked', label: s.markCooked, onSelect: () => onMarkCooked?.(key) }]} />
                 ) : null}
               </span>
             ) : null}

@@ -16,14 +16,20 @@ const files = readdirSync(`${cwd}/src/features`, { recursive: true })
 describe('metric tiles are never accent-soft', () => {
   const metricFiles = files.filter(({ src }) => /<TileMetric\b|className="cost-tile"/.test(src))
   it('finds the metric tiles (the streak and the Shop cost tile at least)', () => {
-    expect(metricFiles.map((x) => x.f).join(' ')).toMatch(/StreakTile\.tsx/)
+    expect(metricFiles.map((x) => x.f).join(' ')).toMatch(/MetricStrip\.tsx/) // DS-TODAY: the streak tile became the metric strip
     expect(metricFiles.map((x) => x.f).join(' ')).toMatch(/CostTile\.tsx/)
   })
   it.each(files.filter(({ src }) => /<TileMetric\b|className="cost-tile"/.test(src)).map((x) => [x.f, x.src] as const))('%s: no variant="soft" Tile', (_f, src) => {
     expect(src).not.toMatch(/<Tile\b[^>]*variant="soft"/)
   })
-  it('the Zero-waste streak is the success tone', () => {
-    const streak = files.find((x) => x.f.endsWith('StreakTile.tsx'))!.src
-    expect(streak).toMatch(/<Tile\b[^>]*variant="status"[^>]*status="success"|<Tile\b[^>]*status="success"[^>]*variant="status"/)
+  // system.md §2: metric tiles are neutral or status-toned; the accent is for the primary action, the nav item, the today ring and the light hero.
+  it('the Zero-waste streak is success, Leftovers the leftover tone, Lines to get a neutral surface tile, and MetricStrip never renders soft', () => {
+    const lib = readFileSync(`${cwd}/src/features/today/lib/metrics.ts`, 'utf8')
+    expect(lib).toMatch(/id:\s*'streak'[^}]*tone:\s*'success'/)
+    expect(lib).toMatch(/id:\s*'leftovers'[^}]*tone:\s*'leftover'/)
+    expect(lib).toMatch(/id:\s*'lines'[^}]*tone:\s*'neutral'/)
+    expect(lib).not.toMatch(/tone:\s*'accent'/)
+    const strip = files.find((x) => x.f.endsWith('MetricStrip.tsx'))!.src
+    expect(strip).not.toMatch(/['"]soft['"]/)
   })
 })

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '../BottomSheet'
 import { Icon } from '../Icon'
-import { IconButton } from '../IconButton'
+import { IconButton, type IconButtonProps } from '../IconButton'
 import { Switch } from '../fields/Switch'
 import type { IconName } from '../icons'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -34,9 +34,9 @@ export interface MenuProps {
   icon?: IconName
   /** Title of the sheet below 768 px. Default: `label`. */
   title?: string
-  /** The trigger's size: `compact` (32 px visual) for a slot header inside a day tile. Default `md`. */
-  size?: 'md' | 'compact'
   items: MenuEntry[]
+  /** The trigger's size, as an IconButton's: `compact` (32 px visual) for a slot header inside a day tile; a row's ⋮ matches its icon buttons; the hero's matches its actions. Default `md`. */
+  size?: IconButtonProps['size']
 }
 
 const GAP = 8

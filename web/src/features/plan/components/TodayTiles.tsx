@@ -1,88 +1,98 @@
 import type { ReactNode } from 'react'
-import { Button, ListGroup, ListRow, Tile } from '../../../ui'
+import { ActionGroup, Icon, ListGroup, ListRow, Tile } from '../../../ui'
 import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
 import type { LeftoverActionKind, LeftoverAnswer } from '../../../lib/leftovers/types'
 import type { Leftover as LeftoverFull } from '../../../lib/leftovers/types'
 import type { LeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
-import { groupToConfirm } from '../lib/toConfirm'
+import { toConfirmMeta, toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
 import { asLeftover, leftoverRows } from '../lib/leftovers'
 import { tileRows } from '../../../lib/leftovers/rows'
-import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
 import type { Leftover, PlanEntry, SlotDayKey, SlotKey } from '../types'
 import '../plan.css'
+import './TonightHero.css'
 
 export interface ToConfirmTileProps {
   slots: PlanEntry[]
-  /** "Yes, Cooked": one tap, planned Leftover portions. */
+  /** One Course: "Cooked", one tap with the planned Leftover portions. */
   onYesCooked: (key: SlotKey) => void
-  /** "Adjust": the Mark as Cooked sheet. */
+  /** One Course: "Adjust", the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
+  /** One Course: "Not cooked" in the ⋮. */
   onNotCooked: (key: SlotKey) => void
-  /** "Mark all Cooked" of a slot with several Courses to confirm (lib/toConfirm groupToConfirm). */
+  /** Several Courses: "All Cooked", one tap for the slot's Courses (planned Leftovers). */
+  onAllCooked?: (slot: SlotDayKey) => void
+  /** Several Courses: "Adjust", the Mark all Cooked sheet where each Course is set on its own. */
   onMarkAllCooked?: (slot: SlotDayKey) => void
+  /** Several Courses: "Not cooked" in the ⋮, the whole Meal Slot. */
+  onNotCookedSlot?: (slot: SlotDayKey) => void
 }
 
-/** The key of one to-confirm entry: its slot, and its Course when the entry carries one. */
-const entryKey = (e: PlanEntry): SlotKey => ({ date: e.date, mealSlotId: e.mealSlotId, courseId: e.courseId })
+const noop = (): void => {}
+
+/** One row of To confirm: day and slot, the Main Recipe with its "+ Side" line, and the one decision (ActionGroup). */
+function ToConfirmRowItem({ row, handlers }: { row: ToConfirmRow; handlers: Required<Omit<ToConfirmTileProps, 'slots'>> }): ReactNode {
+  const label = `${row.dayLabel} ${row.slotName}`
+  const meta = toConfirmMeta(row)
+  const single = row.single
+  const group =
+    single !== undefined
+      ? {
+          primary: { label: s.cooked, onClick: () => handlers.onYesCooked(single) },
+          secondary: { label: s.adjust, onClick: () => handlers.onAdjust(single) },
+          more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCooked(single) }],
+        }
+      : {
+          primary: { label: s.allCookedShort, onClick: () => handlers.onAllCooked(row.slot) },
+          secondary: { label: s.adjust, onClick: () => handlers.onMarkAllCooked(row.slot) },
+          more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCookedSlot(row.slot) }],
+        }
+  return (
+    // The row is the ActionGroup's container (action-group-host): the group is its direct child (DS-A round 2).
+    <li className="to-confirm__row action-group-host">
+      <p className="to-confirm__when">
+        <span>{row.dayLabel}</span>
+        <span>{row.slotName}</span>
+      </p>
+      <div className="to-confirm__text">
+        <p className="to-confirm__title">{row.main}</p>
+        {meta ? (
+          <p className="to-confirm__meta">
+            {meta.emphasis !== null ? <strong>{meta.emphasis}</strong> : null}
+            {meta.emphasis !== null ? ' · ' : null}
+            {meta.text}
+          </p>
+        ) : null}
+      </div>
+      <ActionGroup label={label} primary={group.primary} secondary={group.secondary} more={group.more} />
+    </li>
+  )
+}
 
 /**
- * Today: Planned Meals still unconfirmed two hours after their slot time. Tile variant surface, span full, h2 "To
- * confirm". A slot with one Course: the Recipe name and slot line with "Yes, Cooked", "Adjust" and "Not cooked". A slot
- * with several Courses: one heading, then a group per Course with its own buttons, and "Mark all Cooked" for the slot.
+ * Today: Planned Meals still unconfirmed two hours after their slot time (docs/design/system.md §9). One row per Meal
+ * Slot: "Cooked" (or "All Cooked" for several Courses) is the primary, "Adjust" the secondary, "Not cooked" the ⋮.
  * Renders nothing when there are none.
  */
-export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onMarkAllCooked = () => {} }: ToConfirmTileProps): ReactNode {
-  if (slots.length === 0) return null
-  const buttons = (key: SlotKey) => (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => onYesCooked(key)}>
-        {s.yesCooked}
-      </Button>
-      <Button variant="secondary" size="sm" onClick={() => onAdjust(key)}>
-        {s.adjust}
-      </Button>
-      <Button variant="tertiary" size="sm" onClick={() => onNotCooked(key)}>
-        {s.notCooked}
-      </Button>
-    </>
-  )
+export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAllCooked = noop, onMarkAllCooked = noop, onNotCookedSlot = noop }: ToConfirmTileProps): ReactNode {
+  const rows = toConfirmRows(slots)
+  if (rows.length === 0) return null
+  const handlers = { onYesCooked, onAdjust, onNotCooked, onAllCooked, onMarkAllCooked, onNotCookedSlot }
   return (
     <Tile as="section" span="full">
-      <h2 className="plan__tile-title">{s.toConfirmTitle}</h2>
-      <ul className="plan__list">
-        {groupToConfirm(slots).map((group) => {
-          const [first] = group.entries
-          if (group.entries.length === 1 && first) {
-            return (
-              <li key={`${group.slot.date}/${group.slot.mealSlotId}`} className="plan-confirm">
-                <div className="plan__stack">
-                  <p className="plan-sheet__recipe">{first.meal?.recipeName ?? ''}</p>
-                  <p className="plan__muted">{`${weekdayName(first.date, 'short')} ${first.name}`}</p>
-                </div>
-                <div className="plan__row">{buttons(entryKey(first))}</div>
-              </li>
-            )
-          }
-          return (
-            <li key={`${group.slot.date}/${group.slot.mealSlotId}`} className="plan-confirm">
-              <div className="plan__stack">
-                <p className="plan-sheet__recipe">{group.heading}</p>
-              </div>
-              {group.entries.map((e) => (
-                <div key={e.courseId} role="group" aria-label={e.courseName} className="plan__row">
-                  <p className="plan__muted">{e.meal?.recipeName ?? ''}</p>
-                  {buttons(entryKey(e))}
-                </div>
-              ))}
-              <div className="plan__row">
-                <Button variant="secondary" size="sm" onClick={() => onMarkAllCooked(group.slot)}>
-                  {s.markAllCooked}
-                </Button>
-              </div>
-            </li>
-          )
-        })}
+      <div className="to-confirm__head">
+        <span className="to-confirm__badge" data-tone="info">
+          <Icon name="markCooked" size={20} />
+        </span>
+        <h2 className="to-confirm__heading">{s.toConfirmTitle}</h2>
+        <span className="to-confirm__count" data-shape="pill">
+          {rows.length}
+        </span>
+      </div>
+      <ul className="to-confirm__list">
+        {rows.map((row) => (
+          <ToConfirmRowItem key={`${row.slot.date}/${row.slot.mealSlotId}`} row={row} handlers={handlers} />
+        ))}
       </ul>
     </Tile>
   )

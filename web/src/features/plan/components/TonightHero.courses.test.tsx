@@ -61,13 +61,15 @@ describe('TonightHero with several Courses', () => {
     expect(h.onCook).toHaveBeenCalledWith(slotKey)
   })
 
-  it('the compact rows carry Swap, Pin and Mark as Cooked for that Course', async () => {
+  // DS-TODAY (changed on purpose): Mark as Cooked moved into the row's ⋮ (More for Side); Swap, Pin, ⋮ are one icon group.
+  it('the compact rows carry Swap, Pin and (in the ⋮) Mark as Cooked for that Course', async () => {
     const h = setup(dinner([main(), side()]))
     const row = screen.getByRole('listitem', { name: 'Side' })
     const course = { ...slotKey, courseId: 2 }
     await userEvent.click(within(row).getByRole('button', { name: 'Swap' }))
     await userEvent.click(within(row).getByRole('button', { name: 'Pin' }))
-    await userEvent.click(within(row).getByRole('button', { name: 'Mark as Cooked' }))
+    await userEvent.click(within(row).getByRole('button', { name: 'More for Side' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mark as Cooked' }))
     await userEvent.click(within(row).getByRole('button', { name: /Green beans/ }))
     expect(h.rowHandlers.onSwap).toHaveBeenCalledWith(course)
     expect(h.rowHandlers.onPin).toHaveBeenCalledWith(course)
@@ -97,24 +99,41 @@ describe('TonightHero with several Courses', () => {
   })
 })
 
+// DS-TODAY round 2 (changed on purpose): after the slot time the hero keeps its Main Recipe (eyebrow, name, Course rows). The decision is
+// the hero's own ActionGroup: Cooked (or All Cooked), Adjust, Not cooked in the ⋮. "Dinner cooked?" is a line, not the title.
 describe('after the slot time', () => {
-  it('several Courses to cook: "Dinner cooked?" with one primary Mark all Cooked, no Yes, Cooked and no Adjust', async () => {
+  it('several Courses to cook: the Main Recipe stays the title, "Dinner cooked?" is the ask line, the group is All Cooked | Adjust | ⋮', async () => {
     const h = setup(dinner([main(), side()]), { now: late })
-    expect(screen.getByRole('heading', { name: 'Dinner cooked?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Roast chicken' })).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Dinner cooked?')
+    expect(screen.getByRole('listitem', { name: 'Side' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Yes, Cooked' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Adjust' })).not.toBeInTheDocument()
-    const all = screen.getByRole('button', { name: 'Mark all Cooked' })
+    const group = screen.getByRole('group', { name: 'Dinner' })
+    const all = within(group).getByRole('button', { name: 'All Cooked' })
     expect(all).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(all)
     expect(h.onMarkAllCooked).toHaveBeenCalledWith(slotKey)
+    await userEvent.click(within(group).getByRole('button', { name: 'Adjust' }))
+    expect(h.onMarkAllCooked).toHaveBeenCalledTimes(2) // Adjust opens the Mark all Cooked sheet for the slot
+    await userEvent.click(within(group).getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
+    expect(h.menu.onNotCookedSlot).toHaveBeenCalledWith(slotKey)
   })
 
-  it('only one Course left to cook: it is the hero, and Yes, Cooked and Adjust report that Course', async () => {
+  it('only one Course left to cook: it is the hero, and Cooked and Adjust report that Course', async () => {
     const h = setup(dinner([main({ meal: courseMeal(1, 'Main', { state: 'cooked' }) }), side()]), { now: late })
-    expect(screen.getByRole('heading', { name: 'Green beans cooked?' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Yes, Cooked' }))
+    expect(screen.getByRole('heading', { level: 2, name: 'Green beans' })).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Green beans cooked?')
+    await userEvent.click(screen.getByRole('button', { name: 'Cooked' }))
     expect(h.onYesCooked).toHaveBeenCalledWith({ ...slotKey, courseId: 2 })
     await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
     expect(h.onAdjust).toHaveBeenCalledWith({ ...slotKey, courseId: 2 })
+  })
+
+  it('nothing floats: the ask line, the group and the Course rows are all inside the hero tile', () => {
+    setup(dinner([main(), side()]), { now: late })
+    const hero = document.querySelector('.plan-hero')!
+    expect(hero.contains(document.querySelector('.plan-hero__ask'))).toBe(true)
+    expect(hero.contains(screen.getByRole('group', { name: 'Dinner' }))).toBe(true)
   })
 })

@@ -10,6 +10,9 @@ vi.mock('../seams', () => ({
   useTodayStock: vi.fn(() => ({ spoiled: 0, useSoon: [], loading: false })),
 }))
 
+// DS-TODAY: Today also reads the Shop list (Lines to get) through ../shopSeam.
+vi.mock('../shopSeam', () => ({ useLinesToGet: vi.fn(() => ({ count: 0, loading: false })) }))
+
 const step = {
   mealDate: '2026-11-09',
   mealSlotId: 3,
@@ -40,7 +43,7 @@ describe('useToday', () => {
     expect(result.current.today).toBe('2026-11-09')
     expect(layout.mode).toBe('today')
     if (layout.mode === 'today') {
-      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'toConfirm', 'advanceSteps', 'leftovers', 'streak', 'spoiled'])
+      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'toConfirm', 'metrics', 'advanceSteps', 'leftovers', 'spoiled'])
     }
   })
 
@@ -49,6 +52,22 @@ describe('useToday', () => {
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
     const { result } = renderHook(() => useToday(), { wrapper })
     await waitFor(() => expect(result.current.layout).toEqual({ mode: 'shopping' }))
+  })
+
+  // DS-TODAY: Lines to get (the Shop list) is a Today input: it alone makes the metric strip show, and Today waits for it.
+  it('shows the metric strip for Lines to get alone, and is loading while the Shop list loads', async () => {
+    const shop = await import('../shopSeam')
+    vi.mocked(shop.useLinesToGet).mockReturnValue({ count: 5, loading: false })
+    vi.mocked(seams.useTodayPlan).mockReturnValue({ today: '2026-11-09', hasNextMeal: true, toConfirm: 0, couldntPlan: 0, leftovers: 0, loading: false })
+    mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
+    const { result, rerender } = renderHook(() => useToday(), { wrapper })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const layout = result.current.layout
+    expect(layout.mode === 'today' && layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'metrics'])
+    vi.mocked(shop.useLinesToGet).mockReturnValue({ count: 0, loading: true })
+    rerender()
+    expect(result.current.loading).toBe(true)
+    vi.mocked(shop.useLinesToGet).mockReturnValue({ count: 0, loading: false })
   })
 
   it('is loading until the plan, stock and own queries have answered', async () => {

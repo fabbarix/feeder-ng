@@ -1,0 +1,36 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-TODAY round 2: the To confirm rows in real layout, with the app's real stylesheets. The markup is what <ToConfirmTile> renders
+     (the row is the ActionGroup's container: class action-group-host, the group its direct child). Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/500.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/700.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/800.css">
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Button.css"><link rel="stylesheet" href="../../../../web/src/ui/IconButton.css">
+<link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/ActionGroup.css">
+<link rel="stylesheet" href="../../../../web/src/features/plan/plan.css"><link rel="stylesheet" href="../../../../web/src/features/plan/components/TonightHero.css">
+<style>body { margin: 0; font-family: 'Figtree', sans-serif; }</style>
+</head><body>
+<script>
+const row = (n, day, slot, title, meta, primary) => `<li class="to-confirm__row action-group-host" id="r${n}">
+  <p class="to-confirm__when"><span>${day}</span><span>${slot}</span></p>
+  <div class="to-confirm__text"><p class="to-confirm__title">${title}</p><p class="to-confirm__meta">${meta}</p></div>
+  <div class="action-group" role="group" aria-label="${day} ${slot}" data-more="true" id="g${n}">
+    <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>${primary}</button>
+    <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+    <button class="icon-button" data-size="md" aria-label="More for ${day} ${slot}"></button></div></li>`
+const tile = (id, w) => `<section class="tile" style="inline-size:${w}px" id="${id}"><ul class="to-confirm__list" style="list-style:none;margin:0;padding:0">
+  ${row(id + '1', 'Wed', 'Dinner', "Sam's Manicotti", 'Main · 4 portions', 'Cooked')}
+  ${row(id + '2', 'Thu', 'Dinner', "Sam's Manicotti", '<strong>+ Side</strong> Two-colour cauliflower with peppers and a very long extra name', 'All Cooked')}</ul></section>`
+document.body.insertAdjacentHTML('beforeend', tile('wide', 1000) + '<div style="height:24px"></div>' + tile('narrow', 358))
+const out = {}
+for (const id of ['wide', 'narrow']) {
+  out[id] = [1, 2].map((n) => {
+    const r = document.getElementById(`r${id}${n}`).getBoundingClientRect()
+    const g = document.getElementById(`g${id}${n}`), gb = g.getBoundingClientRect()
+    const t = document.querySelector(`#r${id}${n} .to-confirm__text`).getBoundingClientRect()
+    const btns = [...g.querySelectorAll('button')] // labelled buttons are checked for a clipped label; the icon-only ⋮ is exempt (its 44 px hit area is ::after)
+    return { gw: Math.round(gb.width), gl: Math.round(gb.left), gr: Math.round(gb.right), gt: Math.round(gb.top), rl: Math.round(r.left), rr: Math.round(r.right),
+      tr: Math.round(t.right), tb: Math.round(t.bottom), tl: Math.round(t.left),
+      clipped: btns.filter((b) => b.textContent.trim() !== '').some((b) => b.scrollWidth > b.clientWidth), btnW: btns.map((b) => Math.round(b.getBoundingClientRect().width)),
+      overlap: !(t.right <= gb.left + 1 || t.bottom <= gb.top + 1 || t.left >= gb.right - 1 || t.top >= gb.bottom - 1) }
+  })
+}
+document.title = JSON.stringify(out)
+</script></body></html>

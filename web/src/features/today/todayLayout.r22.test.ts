@@ -1,5 +1,4 @@
-// R2-2 (L-07): Today at desktop widths. From 820 px a 2-column Bento as today; from 1280 px a 3-column Bento where the hero
-// spans 2 columns x 2 rows and Use soon, Leftovers and the streak stack beside it. jsdom does not lay out: stylesheet text.
+// R2-2 (L-07), changed by DS-TODAY: Today at desktop widths. jsdom does not lay out: stylesheet text.
 import { describe, expect, it } from 'vitest'
 import { readFeatureCss } from './test-css'
 import { readSource } from '../plan/test-css'
@@ -25,33 +24,18 @@ function inMedia(text: string, media: RegExp, selector: string): string[] {
   return out
 }
 
+// DS-TODAY (changed on purpose): the 3-column dense Bento (hero 2x2 beside the small tiles) is gone with the fixed column counts
+// (ADR 0016). The hero is always the full row, the tiles below flow by minimum width (BentoGrid min="wide"): 1 column on a
+// phone, 2 from about 60 rem of room. These four tests are replaced by the ones below.
 describe('today.css at desktop widths', () => {
-  it('from 1280 px the Today grid has three columns', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, '.today').join('\n')
-    expect(r).toMatch(/grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/)
-  })
-
-  it('from 1280 px the grid back-fills (dense) so small tiles sit beside the hero instead of below it', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, '.today').join('\n')
-    expect(r).toMatch(/grid-auto-flow:\s*row dense|grid-auto-flow:\s*dense/)
-  })
-
-  it('from 1280 px the hero spans two columns and two rows only with small tiles beside it (data-hero-span=block)', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, "[data-hero-span='block']").join('\n')
-    expect(r).toMatch(/\.plan-hero/)
-    expect(r).toMatch(/grid-column:\s*span 2/)
-    expect(r).toMatch(/grid-row:\s*span 2/)
-  })
-
-  it('a hero with no small tile beside it takes the full row (data-hero-span=row), decided in compose, not by :has()', () => {
-    const r = inMedia(css, /min-width:\s*1280px/, "[data-hero-span='row']").join('\n')
-    expect(r).toMatch(/\.plan-hero/)
-    expect(r).toMatch(/grid-column:\s*1\s*\/\s*-1/)
+  it('has no @media (min-width: 1280px) three-column grid, no dense flow and no hero span', () => {
+    expect(inMedia(css, /min-width:\s*1280px/, '.today').join('\n')).not.toMatch(/grid-template-columns|grid-auto-flow|span 2/)
+    expect(css).not.toMatch(/data-hero-span/)
     expect(css).not.toMatch(/:has\(/)
     expect(css).not.toMatch(/only-child/)
   })
 
-  it('wide tiles (Throw out or keep?, To confirm, Couldn\'t plan) take the full row at three columns', () => {
+  it('wide tiles (To confirm, Throw out or keep?, Couldn\'t plan) take the full row', () => {
     const tile = readSource('ui/Tile.css')
     expect(tile).toMatch(/\.tile\[data-span='full'\]\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/)
   })

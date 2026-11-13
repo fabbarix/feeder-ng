@@ -7,7 +7,7 @@ export type TileId =
   | 'setup'
   | 'leftovers'
   | 'useSoon'
-  | 'streak'
+  | 'metrics'
 
 /** Counts only: each owning feature renders its own tile, Today decides which show and how big. */
 export interface TodayData {
@@ -22,6 +22,8 @@ export interface TodayData {
   leftovers: number
   useSoon: number
   streakDays: number
+  /** DS-TODAY: the Lines of the Shopping List still to buy (Today's Lines to get metric). */
+  linesToGet: number
   /** A query behind Today failed (or is waiting for the network) with nothing to show: not the same as nothing to do. */
   loadFailed?: boolean
 }
@@ -40,11 +42,6 @@ export type TodayLayout =
       empty: boolean
       /** the data could not be loaded: show an error, never the empty state */
       failed?: boolean
-      /**
-       * The hero's footprint on the wide (three-column) Today: `block` = 2 columns x 2 rows with small tiles beside it,
-       * `row` = the full row, when no small tile (advanceSteps, leftovers, useSoon, streak) can sit beside it.
-       */
-      heroSpan: 'block' | 'row'
     }
 
 export interface AdvanceStepDue {

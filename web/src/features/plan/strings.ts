@@ -238,6 +238,8 @@ export const planStrings = {
   whyTagTwoDays: (tag: string) => `${tag} two days running`,
   toConfirmSlotHeading: (day: string, slot: string, names: string[]) => `${day} ${slot}: ${names.join(', ')}`,
   markAllCooked: 'Mark all Cooked',
+  /** DS-TODAY: the one-tap primary of a To confirm row with several Courses. */
+  allCookedShort: 'All Cooked',
   notCookedSlot: 'Not cooked: whole slot',
   slotActions: (slot: string) => `${slot} actions`,
   courseLeftoverLabel: (course: string) => `${course} Leftover portions`,

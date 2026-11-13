@@ -80,11 +80,12 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
     plannedFor: [{ date: '2026-11-11', mealSlotId: 3, mealSlotName: 'Lunch', recipeName: 'Chicken & leek pie' }],
   }
 
-  it('Yes, Cooked is one tap: Cooked with the planned Leftover, then a friendly confirmation', async () => {
+  // DS-TODAY round 2 (changed on purpose): the hero's primary after the slot time is "Cooked" (was "Yes, Cooked").
+  it('Cooked is one tap: Cooked with the planned Leftover, then a friendly confirmation', async () => {
     h.now = new Date('2026-11-10T20:00:00Z')
     const api = mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Yes, Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 }))
     expect(await findNotice('status', 'Cooked, nice one! 2 portions → Wed Lunch')).toBeDefined()
   })
@@ -100,7 +101,8 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
 })
 
 describe('TodayScreen: To confirm and Leftovers', () => {
-  it('To confirm rows offer Yes, Cooked and Adjust right on Today', async () => {
+  // DS-TODAY (changed on purpose): the To confirm row's primary is "Cooked" (the hero's, after the slot time, stays "Yes, Cooked").
+  it('To confirm rows offer Cooked and Adjust right on Today', async () => {
     h.toConfirm = [slot({ date: '2026-11-09', courseId: 1, courseName: 'Main', meal: meal({ date: '2026-11-09', recipeName: 'Stew' }) })]
     const api = mockApi({
       ...base,
@@ -109,7 +111,7 @@ describe('TodayScreen: To confirm and Leftovers', () => {
     })
     renderWithProviders(routed, '/')
     const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
-    await userEvent.click(within(tile).getByRole('button', { name: 'Yes, Cooked' }))
+    await userEvent.click(within(tile).getByRole('button', { name: 'Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1))
   })
 

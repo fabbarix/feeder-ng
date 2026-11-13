@@ -8,12 +8,12 @@ const tiles = {
   nextMeal: <p>Chicken curry at 19:30</p>,
   spoiled: <p>Spinach went off</p>,
   leftovers: <p>2 portions of soup</p>,
-  streak: <p>5 days</p>,
+  metrics: <p>5 days</p>, // DS-TODAY: the streak tile became the metric strip (tile id 'metrics')
 }
 const shopping = <p>Shopping List screen</p>
 
 function layout(ids: string[], empty = false): TodayLayout {
-  return { mode: 'today', empty, heroSpan: 'block', tiles: ids.map((id) => ({ id })) as never }
+  return { mode: 'today', empty, tiles: ids.map((id) => ({ id })) as never }
 }
 
 describe('TodayView', () => {
@@ -60,23 +60,33 @@ describe('TodayView', () => {
     expect(onOpenPlan).toHaveBeenCalledTimes(1)
   })
 
-  it('still shows the streak tile under the empty state', () => {
-    render(<TodayView layout={layout(['streak'], true)} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+  it('still shows the metric strip under the empty state', () => {
+    render(<TodayView layout={layout(['metrics'], true)} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
     expect(screen.getByText('Nothing on the menu. The kitchen is yours.')).toBeInTheDocument()
     expect(screen.getByText('5 days')).toBeInTheDocument()
   })
 
-  it('says Loading while data is on its way', () => {
-    render(<TodayView layout={layout([])} loading tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
+  // DS-TODAY (changed on purpose): no "Loading" text (it stayed visible above the content on a phone). The section says it is
+  // busy to assistive technology (aria-busy) and Today shows no empty state meanwhile.
+  it('while data is on its way there is no visible "Loading" text, the section is aria-busy and no empty state shows', () => {
+    const { container } = render(<TodayView layout={layout([])} loading tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
+    expect(container.querySelector('.today')).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelector('.today__muted')).toBeNull()
     expect(screen.queryByText('Nothing on the menu. The kitchen is yours.')).not.toBeInTheDocument()
   })
 
-  it('passes the hero span from the layout to the grid (data-hero-span) so CSS needs no :has()', () => {
-    const { container, rerender } = render(<TodayView layout={{ ...layout(['nextMeal']), heroSpan: 'row' } as TodayLayout} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
-    expect(container.querySelector('.today')).toHaveAttribute('data-hero-span', 'row')
-    rerender(<TodayView layout={layout(['nextMeal', 'leftovers'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
-    expect(container.querySelector('.today')).toHaveAttribute('data-hero-span', 'block')
+  it('is not aria-busy once loaded', () => {
+    const { container } = render(<TodayView layout={layout(['nextMeal'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(container.querySelector('.today')).not.toHaveAttribute('aria-busy', 'true')
+  })
+
+  // DS-TODAY (changed on purpose): replaces "passes the hero span from the layout (data-hero-span)": the hero is always the
+  // full row, so there is no hero span to pass and no 3-column dense back-fill.
+  it('has no data-hero-span: the hero always takes the whole row', () => {
+    const { container } = render(<TodayView layout={layout(['nextMeal', 'metrics'])} tiles={tiles} shopping={shopping} onOpenPlan={() => {}} />)
+    expect(container.querySelector('[data-hero-span]')).toBeNull()
   })
 
   it('shows an error with a retry, never the empty state, when the layout failed', async () => {
