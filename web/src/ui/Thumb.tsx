@@ -35,8 +35,16 @@ export function Thumb({ name, imageUrl, size = 40, label }: ThumbProps) {
       </span>
     )
   }
+  // Decorative beside its name, or, given a label, an image named by it (as a Picture would be).
   return (
-    <span className="thumb" data-size={size} data-monogram="true" aria-hidden="true">
+    <span
+      className="thumb"
+      data-size={size}
+      data-monogram="true"
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+    >
       <span className="thumb__monogram">{monogramOf(name)}</span>
     </span>
   )
