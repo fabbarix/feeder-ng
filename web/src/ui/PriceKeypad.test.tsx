@@ -14,9 +14,11 @@
 //     onNext / onSave / onClose: (entry: PriceEntry) => void
 //   PriceEntry = { basis: 'pack'|'perKg'; cents: number | null; packCents: number | null; perKgCents: number | null }
 //     cents is what was typed in `basis`; null for empty (and, for Close, for an invalid entry).
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { BottomSheet } from './BottomSheet'
+import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { PriceKeypad, type PriceKeypadProps } from './PriceKeypad'
 import { declarations, readUiCss } from './test-utils'
@@ -296,11 +298,14 @@ describe('PriceKeypad: the keyboard on a computer', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('Escape cancels like Close', async () => {
+  it('Escape cancels like Close, once', async () => {
     const { onClose, onSave } = setup()
     await userEvent.keyboard('2{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 200, packCents: 200, perKgCents: null })
     expect(onSave).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(2) // still mounted: the next Escape closes again
   })
 
   it('Enter on a focused key presses that key once (it does not also confirm)', async () => {
@@ -323,6 +328,66 @@ describe('PriceKeypad: the keyboard on a computer', () => {
     unmount()
     await userEvent.keyboard('1{Enter}')
     expect(onSave).not.toHaveBeenCalled()
+  })
+})
+
+describe('PriceKeypad: Escape in a host dialog (one Escape closes exactly once)', () => {
+  function inSheet(props: Partial<PriceKeypadProps> = {}) {
+    const onClose = vi.fn()
+    const sheetClose = vi.fn()
+    render(
+      <BottomSheet open title="Price" onClose={sheetClose}>
+        <PriceKeypad productName="Mutti passata" currency="EUR" locale="en-GB" shopName="Esselunga" hasNext={false} onNext={vi.fn()} onSave={vi.fn()} onClose={onClose} {...props} />
+      </BottomSheet>,
+    )
+    return { onClose, sheetClose }
+  }
+
+  it('the keypad owns Escape: it reports Close with the entry and the BottomSheet does not also close', async () => {
+    const { onClose, sheetClose } = inSheet()
+    await userEvent.keyboard('2{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 200, packCents: 200, perKgCents: null })
+    expect(sheetClose).not.toHaveBeenCalled()
+  })
+
+  it('cancels the Escape keydown, so a browser does not also send the dialog its close request', () => {
+    inSheet()
+    const notCancelled = fireEvent.keyDown(key('5'), { key: 'Escape' })
+    expect(notCancelled).toBe(false)
+  })
+
+  it("the host dialog's close request (Android back) becomes the keypad's Close, once", async () => {
+    const { onClose, sheetClose } = inSheet()
+    await userEvent.keyboard('3')
+    const cancel = new Event('cancel', { cancelable: true })
+    screen.getByRole('dialog').dispatchEvent(cancel)
+    expect(cancel.defaultPrevented).toBe(true)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 300, packCents: 300, perKgCents: null })
+    expect(sheetClose).not.toHaveBeenCalled()
+  })
+
+  it('leaves Escape to a dialog stacked over it (a ConfirmDialog), and its keys too', async () => {
+    const { onClose } = setup()
+    const other = vi.fn()
+    render(
+      <Dialog open title="Remove?" onClose={other}>
+        <button type="button">Keep them</button>
+      </Dialog>,
+    )
+    await userEvent.keyboard('7{Escape}')
+    expect(other).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(display()).toHaveTextContent('€0')
+  })
+
+  it('leaves an Escape that something inside already used (defaultPrevented)', () => {
+    const { onClose } = setup()
+    const k = key('5')
+    k.addEventListener('keydown', (e) => e.preventDefault())
+    fireEvent.keyDown(k, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
 

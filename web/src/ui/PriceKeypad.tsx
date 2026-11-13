@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from './Button'
 import { Chip } from './Chip'
 import { Icon } from './Icon'
@@ -55,6 +55,9 @@ const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
 export function PriceKeypad({ productName, currency, locale = 'en-US', initialCents, initialPerKgCents, pack, weighed, last, shopName, hasNext, onNext, onSave, onClose }: PriceKeypadProps) {
   const perKgPack = pack && supportsPerKg(pack.unit) ? pack : null
   const errorId = useId()
+  const rootRef = useRef<HTMLDivElement>(null)
+  /** Set while one Escape is being handled, so its keydown and a host dialog's `cancel` close the keypad only once. */
+  const closedThisPress = useRef(false)
   const openingBasis: PriceBasis = perKgPack && weighed !== undefined ? 'perKg' : 'pack'
   const [basis, setBasis] = useState<PriceBasis>(openingBasis)
   const [typed, setTyped] = useState(() => openingText())
@@ -107,11 +110,29 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
     setRefused(false)
   }
 
+  /** Escape or the host dialog's close request: Close, reported at most once per event dispatch. */
+  function closeByKey() {
+    if (closedThisPress.current) return
+    closedThisPress.current = true
+    queueMicrotask(() => {
+      closedThisPress.current = false
+    })
+    onClose(entry())
+  }
+
   // The keys follow the keyboard while this is mounted. Enter on a focused button is that button's click, not a confirm.
+  // Escape belongs to the keypad, because only it holds what was typed (Close saves a valid entry): it is handled once
+  // and cancelled, which stops a host <dialog>'s own close request; a host dialog's `cancel` (Escape, Android back) is
+  // caught before the dialog sees it and becomes the keypad's Close. So the host closes the sheet from onClose only.
   useEffect(() => {
+    const inOtherDialog = (node: EventTarget | null) => {
+      const dialog = node instanceof Element ? node.closest('dialog') : null
+      return dialog !== null && !dialog.contains(rootRef.current)
+    }
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
-      if (e.altKey || e.ctrlKey || e.metaKey) return
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+      if (inOtherDialog(target)) return
       if (target?.matches?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
       if (/^[0-9]$/.test(e.key)) return press(pressDigit(typed, e.key, currency))
       if (e.key === '.' || e.key === ',') return press(pressDecimal(typed, currency))
@@ -120,17 +141,31 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
         e.preventDefault()
         return commit()
       }
-      if (e.key === 'Escape') onClose(entry())
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        closeByKey()
+      }
+    }
+    const onCancel = (e: Event) => {
+      if (!(e.target instanceof HTMLDialogElement) || !e.target.contains(rootRef.current)) return
+      e.preventDefault()
+      e.stopPropagation()
+      closeByKey()
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    document.addEventListener('cancel', onCancel, true)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('cancel', onCancel, true)
+    }
   })
 
   const separator = decimalSeparator(currency, locale) ?? '.'
   const implied = impliedLine({ basis, cents: valid ? cents : null, packCents: entry().packCents, pack: pack, weighed, currency, locale })
 
   return (
-    <div className="price-keypad">
+    <div ref={rootRef} className="price-keypad">
       <p className="price-keypad__meta">{productName}</p>
       {perKgPack ? (
         <Segmented<PriceBasis> label={uiStrings.priceBasis} labelHidden options={priceBasisOptions(perKgPack.unit)} value={basis} onChange={switchBasis} compact />
