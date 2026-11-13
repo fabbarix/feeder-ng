@@ -4,7 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
+import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useMediaQuery } from '../../../ui'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
@@ -219,7 +219,7 @@ function BaseRecipeSection({ recipe: r, refreshKey, onChanged }: { recipe: Recip
         <p>
           <BaseRecipeBadge /> <span>{t.yieldLine(yieldText(r.yield, r.yieldUnit))}</span>
         </p>
-        {stock.line ? <p>{stock.line}</p> : null}
+        {stock.line ? <p>{stock.href ? <TextLink to={stock.href}>{stock.line}</TextLink> : stock.line}</p> : null}
         <h2>{usedInText(used.length)}</h2>
         {used.length === 0 ? null : (
           <p>

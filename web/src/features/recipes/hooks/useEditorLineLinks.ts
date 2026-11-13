@@ -103,7 +103,9 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     } catch (err) {
       const ask = parseTakeOver(err)
       if (ask) {
+        // one ask at a time: the newest replaces any convert still waiting
         pendingNew.current = { line, name }
+        pendingConvert.current = null
         setAskName(name)
         setTakeOverAsk(ask)
         return
@@ -144,7 +146,9 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     } catch (err) {
       const ask = takeOver === undefined ? parseTakeOver(err) : null
       if (ask) {
+        // one ask at a time: the newest replaces any new Base recipe still waiting
         pendingConvert.current = { line, recipe }
+        pendingNew.current = null
         setAskName(recipe.name)
         setTakeOverAsk(ask)
         return
@@ -171,14 +175,18 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     askName,
     answerTakeOver: async (yes) => {
       const convertPending = pendingConvert.current
+      const newPending = pendingNew.current
+      // the answer takes the ask: forget it before the retry, so a refused retry leaves nothing stale behind
+      pendingConvert.current = null
+      pendingNew.current = null
+      setTakeOverAsk(null)
+      setAskName('')
       if (convertPending) {
-        setTakeOverAsk(null)
         await convert(convertPending.line, convertPending.recipe, yes)
         return
       }
-      const pending = pendingNew.current
-      if (!pending) return
-      await createNew(pending.line, pending.name, yes)
+      if (!newPending) return
+      await createNew(newPending.line, newPending.name, yes)
     },
     cancelTakeOver: () => {
       pendingNew.current = null
