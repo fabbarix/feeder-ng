@@ -14,7 +14,10 @@ interface SessionRecord {
 }
 
 export interface SessionStore {
-  /** The entries of this Shop and day. Another Shop's or day's session is removed and read as empty. */
+  /**
+   * The entries of this Shop and day. Another day's session is removed and read as empty; another Shop's reads as empty
+   * and stays until the next save replaces it.
+   */
   load(shopId: number, day: string): Promise<SessionEntry[]>
   /** Replaces the session; no entries removes the record. */
   save(shopId: number, day: string, entries: SessionEntry[]): Promise<void>

@@ -1,11 +1,11 @@
 // SR3: a Price entry for one row becomes the work of one Price edit (shop-scan-proposals.md §13.4 and §13.9; the SR1
 // contract PATCH /api/scan/prices). Pure TypeScript, no React. The server costs each scan by its quantity when a per kg
 // Price is sent, so the PATCH carries one Price for the row; the per scan prices here are for the queue and the screen.
-import { weighedPrice } from '../../../ui/lib/perKgPrice'
+import { weighedPrice, type PriceBasis } from '../../../ui/lib/perKgPrice'
 import { scanStrings } from '../strings'
 import type { ScannedRow } from './scannedList'
 
-export type PriceBasis = 'pack' | 'perKg'
+export type { PriceBasis }
 export type PriceIntent = 'save' | 'next' | 'close'
 
 /** What the Price entry sheet holds: the typed amount in its basis, and the pack and per kg Prices it implies (null when none). */

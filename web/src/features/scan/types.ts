@@ -1,4 +1,5 @@
 // Wire types of the Scan API (docs/dev/design/t13-shopping-scan.md). Mirrors internal/scan.
+import type { IngredientKind } from '../ingredients/types'
 import type { Catalog } from './lib/barcode'
 
 export type BaseUnit = 'g' | 'ml' | 'piece'
@@ -6,7 +7,7 @@ export type OpKind = 'shop_scan' | 'shop_unknown' | 'stock_take'
 export type StockTakeAction = 'plus_pack' | 'minus_pack' | 'set_total'
 export type BarcodeScope = 'global' | 'shop'
 /** SR3: the kind of the Ingredient a Product belongs to (H4); absent from an older server. */
-export type IngredientKind = 'food' | 'supply'
+export type { IngredientKind }
 
 export interface IngredientRef {
   id?: number
