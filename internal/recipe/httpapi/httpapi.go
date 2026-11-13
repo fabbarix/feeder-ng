@@ -1086,12 +1086,8 @@ func (a *api) unlink(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	affected, err := a.store.RecipesOfLines(r.Context(), b.LineIDs)
+	affected, err := a.store.Unlink(r.Context(), id, b.LineIDs)
 	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	if err := a.store.Unlink(r.Context(), id, b.LineIDs); err != nil {
 		writeErr(w, err)
 		return
 	}

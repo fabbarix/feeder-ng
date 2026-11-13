@@ -68,7 +68,7 @@ func (basePort) AfterMerge(ctx context.Context, tx *sql.Tx, targetID int64) erro
 	if err != nil {
 		return err
 	}
-	return (&Store{}).refreshTotals(ctx, tx, id)
+	return refreshTotals(ctx, tx, id)
 }
 
 // mergeCycle is the cycle merging source into the Base recipe's Ingredient target would make: the Recipes with lines on
@@ -446,6 +446,36 @@ func (s *Store) NeedTree(ctx context.Context, id int64) ([]baserecipe.Need, erro
 	return baserecipe.Expand(cat, id)
 }
 
+// TreeResult is one plannable Recipe's need tree (Needs, one Batch), the lines skipped in it, or why it has no tree
+// (Err: a *baserecipe.CycleError for a cycle, data written before the check).
+type TreeResult struct {
+	Needs   []baserecipe.Need
+	Skipped []baserecipe.Skipped
+	Err     error
+}
+
+// NeedTrees is the need tree of every plannable Recipe (archived included; Base recipes are never keys), over one
+// catalog load. A Recipe whose tree fails has Err set and the others are still given.
+func (s *Store) NeedTrees(ctx context.Context) (map[int64]TreeResult, error) {
+	cat, err := loadCatalog(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]TreeResult, len(cat.recipes))
+	for id, r := range cat.recipes {
+		if r.Base != nil {
+			continue
+		}
+		exp, err := baserecipe.ExpandReport(cat, id)
+		if err != nil {
+			out[id] = TreeResult{Err: err}
+			continue
+		}
+		out[id] = TreeResult{Needs: exp.Needs, Skipped: exp.Skipped}
+	}
+	return out, nil
+}
+
 // Cook is baserecipe.ComposeSteps over the stored Recipes: the Recipe's Steps with its Base recipes' Steps in them,
 // each carrying its Origin. made nil = nothing in Stock.
 func (s *Store) Cook(ctx context.Context, id int64, made func(baserecipe.Path) float64) (baserecipe.Composed, error) {
@@ -684,7 +714,7 @@ func (s *Store) releaseBase(ctx context.Context, tx *sql.Tx, ingredientID int64)
 
 // refreshTotals rewrites the cached total time of every Recipe that calls for the saved Base recipe, transitively, and of
 // the saved Recipe when it has Base recipe lines: the total is the composed one, as if nothing is in Stock (§4.4).
-func (s *Store) refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
+func refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
 	cat, err := loadCatalog(ctx, tx)
 	if err != nil {
 		return err
@@ -913,7 +943,7 @@ func (s *Store) toBaseTx(ctx context.Context, tx *sql.Tx, id int64, in recipe.To
 	if err := checkCycles(ctx, tx, id); err != nil {
 		return err
 	}
-	return s.refreshTotals(ctx, tx, id)
+	return refreshTotals(ctx, tx, id)
 }
 
 // ToPlannable turns a Base recipe back into a plannable Recipe (§3.6). *recipe.InUseError while any Recipe calls for
@@ -989,7 +1019,7 @@ func (s *Store) toPlannableTx(ctx context.Context, tx *sql.Tx, id int64, in reci
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET whole_meal = ? WHERE id = ?`, boolInt(recipe.DefaultWholeMeal(false, courses, mainID)), id); err != nil {
 		return err
 	}
-	return s.refreshTotals(ctx, tx, id)
+	return refreshTotals(ctx, tx, id)
 }
 
 // coursesFor is the Course list a plannable Recipe gets: the given ids (deduplicated), or the main Course when nil.
@@ -1438,41 +1468,49 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 }
 
 // Unlink reverses a bulk link (the Toast's Undo): each line goes back to its remembered Ingredient, all or nothing
-// (CodeLineNotBase for a line that does not call for this Base recipe).
-func (s *Store) Unlink(ctx context.Context, baseID int64, lineIDs []int64) error {
+// (CodeLineNotBase for a line that does not call for this Base recipe). It returns the Recipes whose lines changed, in
+// the order of lineIDs, each once, read inside the transaction; nil on a refusal.
+func (s *Store) Unlink(ctx context.Context, baseID int64, lineIDs []int64) ([]int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 	if _, err := baseIngredientOf(ctx, tx, baseID); errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
+		return nil, ErrNotFound
 	} else if err != nil {
-		return err
+		return nil, err
 	}
+	var touched []int64
 	for _, id := range lineIDs {
 		var recipeID, ing int64
 		var linked sql.NullInt64
 		err := tx.QueryRowContext(ctx, `SELECT recipe_id, ingredient_id, linked_from_ingredient_id FROM recipe_lines WHERE id = ?`, id).
 			Scan(&recipeID, &ing, &linked)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
+			return nil, &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		own, err := baseIngredientOf(ctx, tx, baseID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if ing != own {
-			return &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
+			return nil, &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
 		}
 		if err := s.unlinkTx(ctx, tx, recipeID, id, linked.Int64, "lineIds"); err != nil {
-			return err
+			return nil, err
+		}
+		if !containsID(touched, recipeID) {
+			touched = append(touched, recipeID)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return touched, nil
 }
 
 // getRecipe loads a Recipe with its Tags, lines, Steps and timing. A Base recipe carries its kind, Yield unit, the
@@ -1561,6 +1599,7 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	if hasBase {
 		if composed, cerr := baserecipe.ComposeSteps(cat, id, nil); cerr == nil {
 			r.Timing.TotalMinutes = composed.TotalMinutes
+			r.Timing.Advance, r.Timing.AdvanceMinutes = composedAdvance(composed)
 		}
 		for i := range r.Lines {
 			if b := r.Lines[i].Base; b != nil {
@@ -1573,6 +1612,55 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 		withinOf(cat, tree, nil, &r.Within)
 	}
 	return r, nil
+}
+
+// composedAdvance lists the Advance Steps of a composed Step list (its own and its Base recipes') by index into that
+// list, with the longest lead time: what Timing.Advance and AdvanceMinutes hold for a Recipe with Base recipe lines.
+func composedAdvance(c baserecipe.Composed) ([]recipe.AdvanceItem, int) {
+	var out []recipe.AdvanceItem
+	longest := 0
+	for i, st := range c.Steps {
+		if st.Kind != schedule.Advance {
+			continue
+		}
+		out = append(out, recipe.AdvanceItem{Step: i, LeadTimeMinutes: st.LeadTimeMinutes})
+		longest = max(longest, st.LeadTimeMinutes)
+	}
+	return out, longest
+}
+
+// keptStock reports whether an Ingredient keeps Stock Lots or Products.
+func keptStock(ctx context.Context, q Querier, ingredientID int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM stock_lots WHERE ingredient_id = ?) + (SELECT count(*) FROM products WHERE ingredient_id = ?)`,
+		ingredientID, ingredientID).Scan(&n)
+	return n > 0, err
+}
+
+// releaseDeleted gives the Ingredient of a deleted Base recipe its plain key back. A plain Ingredient holding the name
+// keeps the key of the Base recipe, except when the Ingredient keeps Stock Lots or Products: then the delete is
+// refused (*recipe.NameTakenError, §17) and nothing changes. An Ingredient with nothing on it goes with the Base recipe.
+func (s *Store) releaseDeleted(ctx context.Context, tx *sql.Tx, ingredientID int64) error {
+	err := s.ings.ReleaseBaseRecipeTx(ctx, tx, ingredientID)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, ingstore.ErrNameTaken) {
+		return err
+	}
+	kept, err := keptStock(ctx, tx, ingredientID)
+	if err != nil || !kept {
+		return err
+	}
+	cur, err := s.ings.GetTx(ctx, tx, ingredientID)
+	if err != nil {
+		return err
+	}
+	holder, err := plainHolder(ctx, tx, units.NormalizeName(cur.Name), ingredientID)
+	if err != nil {
+		return err
+	}
+	return &recipe.NameTakenError{Ingredient: holder}
 }
 
 // loadLines reads a Recipe's lines in order, with the Base recipe each calls for (and whether it is empty, §4.6), its

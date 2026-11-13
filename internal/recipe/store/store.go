@@ -365,7 +365,7 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 	if err := writeContent(ctx, tx, id, clean); err != nil {
 		return 0, err
 	}
-	if err := s.refreshTotals(ctx, tx, id); err != nil {
+	if err := refreshTotals(ctx, tx, id); err != nil {
 		return 0, err
 	}
 	if err := checkCycles(ctx, tx, id); err != nil {
@@ -514,7 +514,7 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 	if err := writeContent(ctx, tx, id, clean); err != nil {
 		return nil, err
 	}
-	if err := s.refreshTotals(ctx, tx, id); err != nil {
+	if err := refreshTotals(ctx, tx, id); err != nil {
 		return nil, err
 	}
 	if err := checkCycles(ctx, tx, id); err != nil {
@@ -682,7 +682,7 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if f.For != 0 && f.Kind != "plannable" {
+	if f.For != 0 && (f.Kind == "base" || f.Kind == "all") {
 		if err := s.markWouldCycle(ctx, out, f.For); err != nil {
 			return nil, err
 		}
@@ -803,7 +803,7 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	if baseIng.Valid && s.ings != nil {
 		// The Base recipe's Ingredient stays as an ordinary one (with its Stock) unless nothing holds it: it takes its
 		// plain key back here; a plain Ingredient holding the name keeps the key of the Base recipe (ErrNameTaken).
-		if err := s.ings.ReleaseBaseRecipeTx(ctx, tx, baseIng.Int64); err != nil && !errors.Is(err, ingstore.ErrNameTaken) {
+		if err := s.releaseDeleted(ctx, tx, baseIng.Int64); err != nil {
 			return err
 		}
 		for _, k := range []string{"batch", "portion"} {
