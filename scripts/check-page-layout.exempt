@@ -1,0 +1,3 @@
+# Routes the page-layout guard cannot probe, one per line: <route pattern> <reason>.
+# The pattern is a route pattern from ROUTES (scripts/lib/page-layout-rules.mjs); the reason is required.
+# Keep this list empty: every route at every viewport must be inspected. A listed route is reported as exempt, not as inspected.

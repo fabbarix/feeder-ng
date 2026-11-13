@@ -126,7 +126,7 @@ run_full "/plan" 'default=warn\nfail_routes=/shop\n'
 PAGE_LAYOUT=full run_full "" 'default=warn\n'
 grep -q -- "--profile full" "$RUN/guard" 2>/dev/null && ok || bad "PAGE_LAYOUT=full must pass --profile full"
 
-# a crashing seeder still stops the server and still only warns
+# a crashing seeder still stops the server (and, in quick, fails the run: see the coverage test)
 echo 'exit 3' >"$TMP/fake-seed.sh"
 run_full "" 'default=warn\n'
 server_gone && ok || bad "the server must be stopped when the seeder fails"
@@ -146,7 +146,7 @@ grep -q 'PAGE_LAYOUT_CDP_TIMEOUT_MS' "$DRV" && ok || bad "the driver needs a per
 grep -Eq 'ws\.onopen' "$DRV" && grep -Eq 'ws\.onerror|WebSocket.*timed out|connect.*timeout' "$DRV" && ok || bad "ws.onopen must be bounded by a timeout (and onerror)"
 grep -q 'page-layout-' "$DRV" && grep -Eq "mkdtempSync\(join\(tmpdir\(\)" "$DRV" && bad "the Chrome profile must not live in the system tmp dir (/tmp/page-layout-XXXX)" || ok
 
-# --- a hanging guard is cut off by the limit: WARN, exit 0, server stopped, quickly
+# --- a hanging guard is cut off by the limit: the run FAILS (coverage lost) in quick too, server stopped, quickly
 cat >"$TMP/hang.sh" <<'FS'
 sleep 30
 FS
@@ -155,16 +155,16 @@ t0=$SECONDS
 OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" PAGE_LAYOUT_GUARD_TIMEOUT=2 \
   PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="true" PAGE_LAYOUT_GUARD_CMD="bash $TMP/hang.sh" \
   FAKE_ENV_OUT="$d/env" FAKE_PID_OUT="$d/pid" "$W" 2>&1); RC=$?; RUN="$d"
-[ "$RC" -eq 0 ] && grep -q 'WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && ok || bad "a hanging guard must be cut off by PAGE_LAYOUT_GUARD_TIMEOUT with a WARN and exit 0 (rc $RC, $((SECONDS - t0))s)"
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ! grep -q '^WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && ok || bad "a hanging guard must be cut off by PAGE_LAYOUT_GUARD_TIMEOUT and FAIL the run in quick (rc $RC, $((SECONDS - t0))s): $OUT"
 server_gone && ok || bad "the server must be stopped after a guard timeout"
 
-# --- a hanging seeder is cut off too
+# --- a hanging seeder is cut off too, and fails the run in quick (coverage lost)
 d="$(mktemp -d "$TMP/run.XXXX")"; PORT="$(free_port)"; printf 'default=warn\n' >"$d/modes"
 t0=$SECONDS
 OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" PAGE_LAYOUT_SEED_TIMEOUT=2 \
   PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="bash $TMP/hang.sh" PAGE_LAYOUT_GUARD_CMD="bash $TMP/fake-guard.sh" \
   FAKE_ENV_OUT="$d/env" FAKE_PID_OUT="$d/pid" FAKE_GUARD_OUT="$d/guard" "$W" 2>&1); RC=$?; RUN="$d"
-[ "$RC" -eq 0 ] && grep -q 'WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && [ ! -e "$d/guard" ] && ok || bad "a hanging seeder must be cut off by PAGE_LAYOUT_SEED_TIMEOUT: WARN, exit 0, guard not run (rc $RC, $((SECONDS - t0))s)"
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ! grep -q '^WARN' <<<"$OUT" && [ $((SECONDS - t0)) -lt 20 ] && [ ! -e "$d/guard" ] && ok || bad "a hanging seeder must be cut off by PAGE_LAYOUT_SEED_TIMEOUT: FAILED in quick, guard not run (rc $RC, $((SECONDS - t0))s): $OUT"
 server_gone && ok || bad "the server must be stopped after a seeder timeout"
 
 # --- driver: CDP trouble is exit 2 (environment), bounded, and leaves no Chrome profile dir behind
