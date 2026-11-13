@@ -57,6 +57,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['close', 'X'],
   ['back', 'ArrowLeft'],
   ['next', 'ArrowRight'],
+  ['backspace', 'Backspace'], // beta.7 SR2: the PriceKeypad's backspace key
   ['more', 'DotsThreeVertical'],
   ['search', 'MagnifyingGlass'],
   ['filter', 'FunnelSimple'],
@@ -136,6 +137,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['question', 'Question'], // beta.5 WP D
   ['shoppingCart', 'ShoppingCart'], // beta.5 WP D
   ['guests', 'UserPlus'], // beta.5 WP D
+  ['receipt', 'Receipt'], // beta.7 SR2: "Read the receipt" (receipt-reading.md 3.1)
   ['key', 'Key'], // WP-D
   ['assistant', 'Robot'], // WP-D
   ['refresh', 'ArrowsClockwise'], // WP-D

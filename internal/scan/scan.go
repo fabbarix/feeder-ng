@@ -102,10 +102,17 @@ func (e *ValidationError) Error() string { return e.Field + ": " + e.Message }
 // Is makes errors.Is(err, ErrInvalid) true.
 func (e *ValidationError) Is(target error) bool { return target == ErrInvalid }
 
+// ReservedUUID is the one client UUID refused: PATCH /api/scan/prices is the batch Price route, so a scan with that
+// UUID could never be priced alone (the phone sends crypto.randomUUID, the receipt Apply "receipt:<readId>:<n>").
+const ReservedUUID = "prices"
+
 // Validate checks the operation without touching any state (rules in the design note).
 func (o Op) Validate() error {
 	if u := strings.TrimSpace(o.ClientUUID); u == "" || len(o.ClientUUID) > 64 {
 		return &ValidationError{Field: "clientUuid", Message: "a client UUID of 1 to 64 characters is required"}
+	}
+	if o.ClientUUID == ReservedUUID {
+		return &ValidationError{Field: "clientUuid", Message: `"prices" is not a client UUID`}
 	}
 	if _, err := time.Parse(time.RFC3339, o.ScannedAt); err != nil {
 		return &ValidationError{Field: "scannedAt", Message: "scannedAt must be an RFC 3339 time"}

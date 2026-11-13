@@ -14,6 +14,7 @@ import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockw
 import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
 import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
 import { BasketIcon } from '@phosphor-icons/react/dist/csr/Basket'
+import { BackspaceIcon } from '@phosphor-icons/react/dist/csr/Backspace'
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell'
 import { BirdIcon } from '@phosphor-icons/react/dist/csr/Bird'
 import { BookOpenTextIcon } from '@phosphor-icons/react/dist/csr/BookOpenText'
@@ -84,6 +85,7 @@ import { ProhibitIcon } from '@phosphor-icons/react/dist/csr/Prohibit'
 import { PushPinIcon } from '@phosphor-icons/react/dist/csr/PushPin'
 import { PushPinSlashIcon } from '@phosphor-icons/react/dist/csr/PushPinSlash'
 import { QuestionIcon } from '@phosphor-icons/react/dist/csr/Question'
+import { ReceiptIcon } from '@phosphor-icons/react/dist/csr/Receipt'
 import { RecycleIcon } from '@phosphor-icons/react/dist/csr/Recycle'
 import { RobotIcon } from '@phosphor-icons/react/dist/csr/Robot'
 import { ScalesIcon } from '@phosphor-icons/react/dist/csr/Scales'
@@ -165,6 +167,7 @@ export const icons = {
   close: XIcon,
   back: ArrowLeftIcon,
   next: ArrowRightIcon,
+  backspace: BackspaceIcon, // beta.7 SR2: the PriceKeypad's backspace key (shop-scan-proposals.md 13.4)
   more: DotsThreeVerticalIcon,
   drag: DotsSixVerticalIcon, // sort-drag: the handle of ui/Sortable (+265 B gz, docs/dev/design/sort-drag.md section 7)
   search: MagnifyingGlassIcon,
@@ -192,6 +195,7 @@ export const icons = {
   unknownBarcode: QuestionIcon,
   weigh: ScalesIcon,
   price: CoinsIcon,
+  receipt: ReceiptIcon, // beta.7 SR2: "Read the receipt" (receipt-reading.md 3.1)
   extra: NotePencilIcon,
   timer: TimerIcon,
   reheat: FireIcon, // R12: the Reheat button and screen (a Leftover warmed up before it is marked Cooked)

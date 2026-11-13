@@ -29,7 +29,7 @@ export interface UsePantry {
 export function usePantry({ filters, query }: UsePantryInput): UsePantry {
   const { mode, applied, sort, groupByPlace } = filters
   const view = useMemo<PantryView>(
-    () => ({ query, status: applied.status, places: applied.places, kinds: applied.kinds, sort, groupByPlace }),
+    () => ({ query, status: applied.status, stock: applied.stock, places: applied.places, kinds: applied.kinds, sort, groupByPlace }),
     [query, applied, sort, groupByPlace],
   )
   const lots = useAllLots()

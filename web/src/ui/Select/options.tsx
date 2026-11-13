@@ -27,6 +27,8 @@ export interface IngredientChoice {
   imageUrl?: string
   /** BR-D: set when this is a Base recipe's Ingredient: the option shows the "Base recipe" badge. A plain Ingredient of the same name is a second option. */
   baseRecipe?: { id: number; name: string; archived: boolean } | null
+  /** Pantry (H6): the subheader this Ingredient is listed under ("Ingredients", "Supplies"); absent = no subheaders. */
+  group?: string
 }
 export interface UnitChoices {
   baseUnit: string
@@ -97,6 +99,7 @@ export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
     leading: <Thumb name={i.name} imageUrl={i.imageUrl} size={40} />,
+    group: i.group,
     preferred: i.baseRecipe ? true : undefined,
     badge: i.baseRecipe ? (
       <Chip kind="tag" icon="cook">

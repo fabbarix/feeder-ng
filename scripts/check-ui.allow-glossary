@@ -51,3 +51,4 @@ web/src/features/import/strings.ts bill  # "Anthropic reports a billing problem"
 # The rule cannot tell the two senses apart, so these files are allowed after review: every "food" in them is the kind.
 web/src/features/ingredients/strings.ts food  # kind label (Food | Supply, "This is food", "Change to food") and the kind_differs merge copy
 web/src/lib/baseRecipes/strings.ts food  # differentKinds: "not both food or both Supplies" (kind_differs merge toast)
+web/src/features/stock/strings.ts food  # stockFilter kind label (Food | Supplies) of the Pantry's Food or Supplies filter

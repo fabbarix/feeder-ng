@@ -1,4 +1,6 @@
 export type BaseUnit = 'g' | 'ml' | 'piece'
+/** H4: what a Stock row is: food, or a Supply (a non-food thing the Household buys; it never goes off). Absent in older fixtures = food. */
+export type StockKind = 'food' | 'supply'
 export type LotSource = 'scan' | 'stock_take' | 'manual'
 
 /** A Stock Lot as the API returns it (quantity in Base Units, dates YYYY-MM-DD). */
@@ -21,6 +23,8 @@ export interface StockLot {
   ingredientImageUrl?: string
   /** Beta.5: the Shelf Life in days that applies where the Lot is (the frozen one in a Freezer); null = it does not spoil there. */
   shelfLifeDays?: number | null
+  /** H4: 'supply' for a Supply's Lot (goesOff and shelfLifeDays are then always null); absent = food. */
+  kind?: StockKind
 }
 
 /**
@@ -69,6 +73,8 @@ export interface IngredientStock {
   spoiledCount: number
   /** PE: "/api/images/<id>" of the Ingredient's Picture, '' = none. */
   imageUrl?: string
+  /** H4: 'supply' for a Supply; absent = food. */
+  kind?: StockKind
 }
 
 export interface StockWarning {
@@ -105,4 +111,10 @@ export interface IngredientChoice {
   baseUnit: BaseUnit
   /** PE: the Ingredient's Picture address ('' or absent = none). */
   imageUrl?: string
+  /** H2: food or Supply; absent = food. */
+  kind?: StockKind
+  /** H2: a Supply's Restock level in Base Units; null = none (always null for food). */
+  restockLevel?: number | null
+  /** The subheader of Add to Stock: 'Ingredients' or 'Supplies'; absent while the Household has no Supply. */
+  group?: 'Ingredients' | 'Supplies'
 }
