@@ -74,6 +74,12 @@ describe('SupplyScreen: what a Supply has', () => {
     expect(screen.getByRole('button', { name: 'Merge into another Supply' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Supply' })).toBeEnabled()
   })
+  it('names its regions for a Supply, not an Ingredient', () => {
+    setup()
+    expect(screen.getByRole('group', { name: 'Supply details' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Merge Supply' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Ingredient/ })).toBeNull()
+  })
   it('has no Shelf Life, Frozen Shelf Life or Excluded by Tile', () => {
     setup()
     expect(screen.queryByLabelText(/Shelf Life/)).toBeNull()

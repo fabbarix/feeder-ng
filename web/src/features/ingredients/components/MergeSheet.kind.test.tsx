@@ -38,7 +38,19 @@ describe('MergeSheet: kind_differs', () => {
   it('keeps the Base Unit words for base_unit_mismatch', () => {
     flow.preview = { ...preview, blocked: 'base_unit_mismatch' }
     render(<MergeSheet open sourceId={21} kind="supply" onClose={() => {}} onMerged={() => {}} />)
-    expect(screen.getByRole('alert')).toHaveTextContent("These Ingredients count in different Base Units, so they can't be merged")
+    expect(screen.getByRole('alert')).toHaveTextContent("These Supplies count in different Base Units, so they can't be merged")
+  })
+  it('words the sheet for a Supply, and keeps the Ingredient words for food', () => {
+    flow.target = null
+    const { unmount } = render(<MergeSheet open sourceId={21} kind="supply" onClose={() => {}} onMerged={() => {}} />)
+    expect(screen.getByRole('dialog', { name: 'Merge Supply' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Find the Supply to keep' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Matching Supplies' })).toBeInTheDocument()
+    unmount()
+    render(<MergeSheet open sourceId={7} onClose={() => {}} onMerged={() => {}} />)
+    expect(screen.getByRole('dialog', { name: 'Merge Ingredient' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Find the Ingredient to keep' })).toBeInTheDocument()
+    flow.target = garlicJSON
   })
   it('hands its kind to the flow (default food)', () => {
     render(<MergeSheet open sourceId={21} kind="supply" onClose={() => {}} onMerged={() => {}} />)

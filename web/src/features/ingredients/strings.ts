@@ -97,6 +97,13 @@ export const strings = {
     emptyTitle: 'No Supplies yet',
     emptyText: "Toilet paper, batteries or laundry pods: things you buy and keep in Stock but don't cook with.",
     noMatches: 'No Supply matches that search',
+    detailsLabel: 'Supply details',
+    mergeTitle: 'Merge Supply',
+    mergeFindLabel: 'Find the Supply to keep',
+    mergeCandidatesLabel: 'Matching Supplies',
+    mergeChangeTarget: 'Choose another Supply',
+    mergeBlocked: "These Supplies count in different Base Units, so they can't be merged",
+    nameRequired: 'Give the Supply a name',
   },
   /** H5: the kind choice, the kind Tile, the Restock level and the words of a refused kind change. */
   kind: {

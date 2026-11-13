@@ -93,7 +93,8 @@ export function checkKindIngredient(form: KindIngredientForm): { ok: true; value
     return {
       ok: false,
       errors: {
-        ...(named.ok ? {} : { name: named.errors.name }),
+        // The only name error is a blank name, worded for a Supply.
+        ...(named.ok ? {} : { name: strings.supply.nameRequired }),
         ...(restock.ok ? {} : { restock: restock.error }),
       },
     }

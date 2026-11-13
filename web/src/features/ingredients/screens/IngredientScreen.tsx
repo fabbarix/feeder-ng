@@ -122,7 +122,7 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
         </Button>
       )}
 
-      <BentoGrid min="card" label={strings.detailsLabel}>
+      <BentoGrid min="card" label={words.detailsLabel}>
         <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
           {locked ? (
             <>
@@ -199,7 +199,7 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
 
         <KindTile kind={kind} name={ingredient.name} change={change} />
 
-        <Tile as="section" aria-label={strings.mergeTitle}>
+        <Tile as="section" aria-label={words.mergeTitle}>
           <Button variant="tertiary" onClick={() => setMergeOpen(true)}>
             {words.mergeInto}
           </Button>

@@ -52,6 +52,11 @@ describe('NewIngredientSheet: the kind choice', () => {
     expect(shelfLife()).toBeInTheDocument()
     expect(restock()).toBeNull()
   })
+  it('asks for a Supply\'s name in Supply words', async () => {
+    setup({ chooseKind: false, kind: 'supply' })
+    await userEvent.click(screen.getByRole('button', { name: 'Create Supply' }))
+    expect(name()).toHaveAccessibleDescription(/Give the Supply a name/)
+  })
   it('is fixed to food when nobody asks for the choice (the Recipe editor opens it with no kind props)', () => {
     render(<NewIngredientSheet open onClose={vi.fn()} onCreate={vi.fn()} />)
     expect(screen.queryByRole('radiogroup', { name: 'Kind' })).toBeNull()

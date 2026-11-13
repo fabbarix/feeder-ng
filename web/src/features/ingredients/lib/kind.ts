@@ -101,4 +101,11 @@ const foodWords = {
   emptyTitle: strings.emptyTitle,
   emptyText: strings.emptyText,
   noMatches: strings.noMatches,
+  detailsLabel: strings.detailsLabel,
+  mergeTitle: strings.mergeTitle,
+  mergeFindLabel: strings.mergeFindLabel,
+  mergeCandidatesLabel: strings.mergeCandidatesLabel,
+  mergeChangeTarget: strings.mergeChangeTarget,
+  mergeBlocked: strings.mergeBlocked,
+  nameRequired: strings.sheet.nameRequired,
 }
