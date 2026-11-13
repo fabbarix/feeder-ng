@@ -51,7 +51,7 @@ describe('names and roles', () => {
     const list = screen.getByRole('list', { name: 'Supplies' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(3)
     for (const name of ['Toilet paper', 'Dish soap', 'Batteries']) expect(within(list).getByRole('button', { name })).toBeInTheDocument()
-    expect(within(list).getAllByRole('button', { name: /^Use (one|some) / }).map((b) => b.getAttribute('aria-label'))).toEqual(['Use one Toilet paper', 'Use some Dish soap', 'Use one Batteries'])
+    expect(within(list).getAllByRole('button', { name: /^Use (one|some) / }).map((b) => b.getAttribute('aria-label'))).toEqual(['Use one Batteries', 'Use some Dish soap', 'Use one Toilet paper']) // useIngredients sorts by name
   })
   it('gives every Use button a different name, so a screen reader can tell them apart', async () => {
     await setup()
