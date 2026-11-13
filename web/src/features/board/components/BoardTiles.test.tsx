@@ -81,6 +81,12 @@ describe('BoardLeftoversTile', () => {
     expect(screen.getByText(/Stew/)).toHaveTextContent('2 portions')
     expect(screen.getByText(/Stew/)).toHaveTextContent('use by Thu')
   })
+  it('a Leftover to answer is a read-only line "Stew, Use-by passed", with no buttons', () => {
+    render(<BoardLeftoversTile rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-10', toAnswer: true }]} />)
+    expect(screen.getByText('Stew, Use-by passed')).toBeInTheDocument()
+    expect(screen.queryByText(/use by/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
   it('says when there are none', () => {
     render(<BoardLeftoversTile rows={[]} />)
     expect(screen.getByText('No Leftovers')).toBeInTheDocument()

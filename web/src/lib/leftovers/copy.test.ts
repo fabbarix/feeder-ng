@@ -92,3 +92,10 @@ describe('actionError', () => {
     expect(actionError({ status: 500, code: 'internal' }, 'Chilli')).toBe("Couldn't save that for Chilli. Try again.")
   })
 })
+
+describe('answerTitle (round 2)', () => {
+  it('asks to replan, in Glossary words', async () => {
+    const { answerTitle } = await import('./copy')
+    expect(answerTitle('Chilli')).toBe('Replan for Chilli?')
+  })
+})

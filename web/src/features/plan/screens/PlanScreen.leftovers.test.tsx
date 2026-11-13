@@ -16,6 +16,7 @@ const view = (): PlanView => ({
 })
 const asked = leftover({ id: 3, recipeName: 'Chilli', portions: 2, useBy: '2026-11-10', toAnswer: true })
 const soup = leftover({ id: 4, recipeId: 11, recipeName: 'Soup', portions: 2, useBy: '2026-11-14' })
+const dayTile = async (name: string) => (await screen.findByRole('heading', { name })).closest('article') as HTMLElement
 const QUESTION = "Chilli was to be used by Tue. Had it, threw it out, or wasn't there?"
 
 function setup(leftovers: Leftover[], extra: Record<string, unknown> = {}) {
@@ -60,8 +61,9 @@ describe('PlanScreen: Leftovers', () => {
       'POST /api/plan/leftovers/3/answer': { status: 204 },
     })
     await userEvent.click(await screen.findByRole('button', { name: 'Threw it out' }))
-    const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Replan for Chilli?' })
+    expect(dialog).toHaveTextContent('Fri Lunch was going to have it; it is planned again.')
+    expect(dialog).toHaveAttribute('data-tone', 'danger')
     expect(api.callsTo('POST', '/api/plan/leftovers/3/answer')).toHaveLength(0)
     set([soup])
     await userEvent.click(within(dialog).getByRole('button', { name: 'Threw it out' }))
@@ -107,7 +109,7 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
       'POST /api/plan/leftovers/5/had-it?dryRun=1': { replanned: [friLunch] },
       'POST /api/plan/leftovers/5/take-out?dryRun=1': { replanned: [friLunch] },
     })
-    await userEvent.click(await screen.findByRole('button', { name: /Chilli/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Chilli/ }))
     await userEvent.click(await screen.findByRole('button', { name: link }))
     return screen.findByRole('dialog', { name: 'Chilli Leftover' })
   }
@@ -145,10 +147,10 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
     })
     const { api } = setup([chilliFrozen], {
       'GET /api/plan': slotView(),
-      'GET /api/recipes': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }, { id: 7, name: 'Roast chicken', tags: [], courses: [{ id: 1 }] }],
+      'GET /api/recipes?course=1': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }, { id: 7, name: 'Roast chicken', tags: [], courses: [{ id: 1 }] }],
       'PUT /api/plan/2026-11-12/2/1': meal({ recipeId: 10, recipeName: 'Chilli', batches: 0, pinned: true }),
     })
-    await userEvent.click(await screen.findByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Roast chicken/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
     const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
     const freezer = await within(dialog).findByRole('list', { name: 'From the freezer' })
@@ -161,13 +163,28 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
   it('a refused pick (past its Use-by, too small) says so in a toast', async () => {
     setup([chilliFrozen], {
       'GET /api/plan': { today: '2026-11-12', horizonDays: 3, updating: false, slots: [slot({ date: '2026-11-12', mealSlotId: 2, meal: meal({ date: '2026-11-12', mealSlotId: 2, recipeName: 'Roast chicken' }) })] },
-      'GET /api/recipes': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }],
+      'GET /api/recipes?course=1': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }],
       'PUT /api/plan/2026-11-12/2/1': { status: 422, json: { error: { code: 'leftover_too_small', message: 'x' } } },
     })
-    await userEvent.click(await screen.findByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Roast chicken/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
     const freezer = await screen.findByRole('list', { name: 'From the freezer' })
     await userEvent.click(within(freezer).getByRole('button', { name: /Chilli/ }))
     expect(await screen.findByText('There are too few portions of Chilli left for that Planned Meal.')).toBeInTheDocument()
+  })
+})
+
+describe('PlanScreen: a Leftover a Planned Meal is served from', () => {
+  it('stays listed in Leftovers to use, with its row menu', async () => {
+    const served = leftover({ id: 4, recipeId: 11, recipeName: 'Soup', portions: 2, useBy: '2026-11-14', plannedPortions: 1 })
+    setup([served], {
+      'GET /api/plan': {
+        today: '2026-11-12', horizonDays: 3, updating: false,
+        slots: [slot({ date: '2026-11-12', mealSlotId: 2, meal: meal({ date: '2026-11-12', mealSlotId: 2, recipeId: 11, recipeName: 'Soup', batches: 0, servedFromLeftover: { leftoverId: 4, date: '2026-11-09', mealSlotId: 2, recipeName: 'Soup' } }) })],
+      },
+    })
+    const section = (await screen.findByRole('heading', { name: 'Leftovers to use' })).closest('section') as HTMLElement
+    expect(within(section).getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: 'Actions for Soup' })).toBeInTheDocument()
   })
 })

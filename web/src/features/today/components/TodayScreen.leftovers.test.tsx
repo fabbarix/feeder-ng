@@ -106,9 +106,10 @@ describe('Today: answering', () => {
     })
     await screen.findByText(QUESTION)
     await userEvent.click(screen.getByRole('button', { name: "Wasn't there" }))
-    const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
-    expect(within(dialog).getByText('Fri Dinner was going to have it; it is planned again.')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Replan for Chilli?' })
+    expect(dialog).toHaveTextContent('Fri Lunch was going to have it; it is planned again.')
+    expect(dialog).toHaveTextContent('Fri Dinner was going to have it; it is planned again.')
+    expect(dialog).toHaveAttribute('data-tone', 'default')
     expect(api.callsTo('POST', '/api/plan/leftovers/3/answer')).toHaveLength(0)
     await userEvent.click(within(dialog).getByRole('button', { name: "Wasn't there" }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/leftovers/3/answer')).toHaveLength(1))
@@ -122,7 +123,8 @@ describe('Today: answering', () => {
     })
     await screen.findByText(QUESTION)
     await userEvent.click(screen.getByRole('button', { name: 'Threw it out' }))
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await screen.findByRole('dialog', { name: 'Replan for Chilli?' })
+    expect(dialog).toHaveAttribute('data-tone', 'danger') // Threw it out is waste
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(api.callsTo('POST', '/api/plan/leftovers/3/answer')).toHaveLength(0)
@@ -214,5 +216,28 @@ describe('Today: the row menu', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Had it' }))
     expect(await screen.findByText('There are not that many portions of Soup left.')).toBeInTheDocument()
     expect(screen.getByRole('dialog', { name: 'How many portions of Soup did you have?' })).toBeInTheDocument()
+  })
+})
+
+describe('Today: the tile and the sheets', () => {
+  it('the tile is in the info tone while a question is open, and in the Leftover tone otherwise', async () => {
+    setup([asked, soup])
+    await screen.findByText(QUESTION)
+    expect(document.querySelector('.plan-leftovers')).toHaveAttribute('data-status', 'info')
+  })
+
+  it('without a question the tile keeps the Leftover tone', async () => {
+    setup([soup])
+    await screen.findByText('Soup')
+    expect(document.querySelector('.plan-leftovers')).toHaveAttribute('data-status', 'leftover')
+  })
+
+  it('Freeze it with no Freezer says so and links to Storage Places', async () => {
+    setup([soup], { 'GET /api/storage-places': [places[0]] })
+    await userEvent.click(await screen.findByRole('button', { name: 'Actions for Soup' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Freeze it' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Freeze Soup' })
+    expect(within(sheet).getByText(/Add a Freezer first/)).toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Storage Places' })).toHaveAttribute('href', '/settings/storage-places')
   })
 })
