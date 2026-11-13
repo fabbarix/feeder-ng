@@ -113,7 +113,11 @@ func (c catalogue) Product(ctx context.Context, id int64) (service.ProductInfo, 
 	if err != nil {
 		return service.ProductInfo{}, err
 	}
-	return c.info(ctx, d.Product)
+	out, err := c.info(ctx, d.Product)
+	if err == nil && len(d.Barcodes) > 0 {
+		out.Barcode = d.Barcodes[0] // canonical and sorted: the smallest, as RR2's read takes it
+	}
+	return out, err
 }
 
 func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (service.ProductInfo, error) {
@@ -141,6 +145,32 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 		return service.ProductInfo{}, err
 	}
 	return c.info(ctx, d.Product)
+}
+
+// UpdateProduct sets the name and pack size (the receipt Apply's correction). An unknown Product is ErrProductGone.
+func (c catalogue) UpdateProduct(ctx context.Context, id int64, in service.ProductUpdate) (service.ProductInfo, error) {
+	name, size := in.Name, in.PackSize
+	d, err := c.st.UpdateProduct(ctx, id, &name, &size)
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ProductInfo{}, service.ErrProductGone
+	}
+	var invalid *product.ValidationError
+	if errors.As(err, &invalid) {
+		return service.ProductInfo{}, &scan.ValidationError{Field: invalid.Field, Message: invalid.Message}
+	}
+	if err != nil {
+		return service.ProductInfo{}, err
+	}
+	return c.info(ctx, d.Product)
+}
+
+// DeleteProduct removes a Product the receipt Apply made and then put back (an unknown one is ErrProductGone).
+func (c catalogue) DeleteProduct(ctx context.Context, id int64) error {
+	err := c.st.DeleteProduct(ctx, id)
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ErrProductGone
+	}
+	return err
 }
 
 // FillPicture gives the Product the Picture only when it has none (PPX), through the store's atomic FillImage, then reads the
@@ -229,8 +259,15 @@ func (c catalogue) DeletePrice(ctx context.Context, id int64) error {
 	return c.st.DeletePrice(ctx, id)
 }
 
+// priceInfo is a Price as the scan service sees it: the recorded values only. The store also serves a per kg derived
+// from the pack Price; the scan service writes what it reads back (a same-day snapshot, a put-back, the day's per kg
+// that SetPrices keeps), and a derived per kg written back would become a recorded one, so it is left out here.
 func priceInfo(p productstore.Price) *service.PriceInfo {
-	return &service.PriceInfo{ID: p.ID, Date: stock.Date(p.Date), PriceCents: p.PriceCents, PricePerKgCents: p.PricePerKgCents}
+	perKg := p.PricePerKgCents
+	if p.PricePerKgDerived {
+		perKg = nil
+	}
+	return &service.PriceInfo{ID: p.ID, Date: stock.Date(p.Date), PriceCents: p.PriceCents, PricePerKgCents: perKg}
 }
 
 // OfflineData is the offline data: the barcode Catalog of the Shop (or home), the Products and the latest Price per Product there.
