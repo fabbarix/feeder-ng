@@ -71,15 +71,8 @@
           "$ref": "#/$defs/name"
         },
         "neededAtStep": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "0-based index of the step by which the other recipe must be ready. Null for none."
+          "description": "0-based index of the step by which the other recipe must be ready. Write -1 when the line calls for no other recipe.",
+          "type": "integer"
         },
         "note": {
           "type": "string"
@@ -91,15 +84,8 @@
           "type": "number"
         },
         "recipe": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/recipeRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Null when the line calls for none."
+          "$ref": "#/$defs/recipeRef",
+          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Write name \"\" and cue \"\" when the line calls for none."
         },
         "unit": {
           "$ref": "#/$defs/unit"
@@ -120,15 +106,8 @@
       "additionalProperties": false,
       "properties": {
         "baseRecipe": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "true for a Base recipe (a recipe other recipes call for, never planned); false or null otherwise."
+          "description": "true for a Base recipe (a recipe other recipes call for, never planned); false for every other recipe.",
+          "type": "boolean"
         },
         "cooldownDays": {
           "anyOf": [
@@ -230,15 +209,8 @@
           "type": "number"
         },
         "yieldUnit": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/unit"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The unit of a Base recipe's yield (g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion). Null unless baseRecipe is true."
+          "$ref": "#/$defs/unit",
+          "description": "The unit of a Base recipe's yield (g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion). Write \"\" unless baseRecipe is true."
         }
       },
       "required": [

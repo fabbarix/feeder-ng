@@ -266,7 +266,7 @@ func compile(t *testing.T, schema []byte) *jsonschema.Schema {
 
 // fullAnswer is a small answer as the model writes it under the projection: every field present, "none" spelled out.
 func fullAnswer() map[string]any {
-	none := map[string]any{"ingredient": "butter", "quantity": 10.0, "unit": "g", "note": "", "optional": false, "recipe": nil, "neededAtStep": nil}
+	none := map[string]any{"ingredient": "butter", "quantity": 10.0, "unit": "g", "note": "", "optional": false, "recipe": map[string]any{"name": "", "cue": ""}, "neededAtStep": -1.0}
 	return map[string]any{"format": "feeder-recipe-file", "version": 1.0, "noRecipe": false,
 		"ingredients": []any{map[string]any{"name": "butter", "baseUnit": "g", "conversions": []any{}, "image": "", "shelfLifeDays": nil}},
 		"recipes": []any{map[string]any{
