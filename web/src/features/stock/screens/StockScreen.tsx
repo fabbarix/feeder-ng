@@ -39,10 +39,10 @@ import { LeftoverRow } from '../../../ui/LeftoverActions/LeftoverRow'
 import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
+import { useSupplyRestock } from '../hooks/useSupplyRestock'
 import { capitalise } from '../lib/display'
 import { lotsOfIngredient } from '../lib/ingredientLots'
 import { filterTotals } from '../lib/filter'
-import { householdHasSupply, restockLevelsOf, restockOf, supplyStockOf } from '../lib/supplies'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import '../stock.css'
@@ -79,11 +79,8 @@ export function StockScreen(): ReactElement | null {
   const sections = leftovers.sections
 
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), applied.status, query, applied.stock), [totals.data, applied.status, applied.stock, query])
-  // H6: a Supply's Restock level (from the catalogue) and its Stock (summed over the Lots); food has neither.
-  const supplyLevels = useMemo(() => restockLevelsOf(choices.choices), [choices.choices])
-  const supplyStock = useMemo(() => supplyStockOf(pantry.lots.data ?? []), [pantry.lots.data])
-  const restockFor = (ingredientId: number) => restockOf(ingredientId, supplyLevels, supplyStock)
-  const hasSupplies = householdHasSupply(pantry.lots.data ?? [], choices.choices)
+  // H6: a Supply's Restock level and Stock, and whether the Household has a Supply (the Food or Supplies filter).
+  const { restockFor, hasSupplies } = useSupplyRestock(choices.choices, pantry.lots.data)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
   // The aside is a 24 rem column from 1280 px: the spoiled rows keep their actions under the text there.
