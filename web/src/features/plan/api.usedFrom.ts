@@ -1,4 +1,5 @@
 // Used from over the wire (ADR 0011): the cooked routes with `usedFrom`. Types fold into types.ts when b5-f1 has merged.
+import { ApiError, http } from '../../lib/http'
 import type { CookedAllEntry, CookedAllResult, CookedResult, CookPreview, SlotDayKey, SlotKey } from './types'
 import type { UsedFromEntry, UsedFromNeed } from './lib/usedFrom'
 
@@ -10,14 +11,33 @@ export interface CookedBody {
   usedFrom?: UsedFromEntry[]
 }
 
+const slotPath = (key: SlotKey) => `/api/plan/${key.date}/${key.mealSlotId}/${key.courseId}`
+const slotDayPath = (key: SlotDayKey) => `/api/plan/${key.date}/${key.mealSlotId}`
+
+const hasPicks = (entries: UsedFromEntry[] | undefined): entries is UsedFromEntry[] => entries !== undefined && entries.length > 0
+
+/** `usedFrom` goes on the wire only when something is picked; so does leftoverPortions when given. */
+function cookedBody(body: CookedBody): CookedBody {
+  const out: CookedBody = {}
+  if (body.leftoverPortions !== undefined) out.leftoverPortions = body.leftoverPortions
+  if (hasPicks(body.usedFrom)) out.usedFrom = body.usedFrom
+  return out
+}
+
+function courseEntry(entry: CookedAllEntryWithUsedFrom): CookedAllEntryWithUsedFrom {
+  const { usedFrom, ...rest } = entry
+  return hasPicks(usedFrom) ? { ...rest, usedFrom } : rest
+}
+
 export const usedFromApi = {
   /** POST .../{courseId}/cooked; `usedFrom` is sent only when non-empty. */
-  cooked: (_key: SlotKey, _body: CookedBody): Promise<CookedResult> => Promise.resolve(undefined as never),
+  cooked: (key: SlotKey, body: CookedBody) => http.post<CookedResult>(`${slotPath(key)}/cooked`, cookedBody(body)),
   /** POST .../all/cooked with `courses[i].usedFrom` where picked. */
-  cookedAll: (_slot: SlotDayKey, _courses: CookedAllEntryWithUsedFrom[]): Promise<CookedAllResult> => Promise.resolve(undefined as never),
+  cookedAll: (slot: SlotDayKey, courses: CookedAllEntryWithUsedFrom[]) =>
+    http.post<CookedAllResult>(`${slotDayPath(slot)}/all/cooked`, { courses: courses.map(courseEntry) }),
 }
 
 /** True for 422 used_from_invalid. */
-export function isUsedFromInvalid(_err: unknown): boolean {
-  return false
+export function isUsedFromInvalid(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 422 && err.code === 'used_from_invalid'
 }
