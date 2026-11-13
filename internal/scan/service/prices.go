@@ -30,7 +30,11 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	out, _, err := s.setPrices(ctx, in)
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	s.publish()
+	return out, nil
 }
 
 // The day's Prices (product store) and the scans' prices (scan ledger) are two writes, not one transaction (ADR 0018
@@ -54,7 +58,8 @@ type DayPriceBefore struct {
 	WrittenID         int64
 }
 
-// setPrices is SetPrices with the scan lock held. It also returns what it changed, for restorePrices.
+// setPrices is SetPrices with the scan lock held. It also returns what it changed, for restorePrices, and publishes
+// nothing: the caller publishes once (the receipt Apply at the end of its plan).
 func (s *Service) setPrices(ctx context.Context, in SetPricesInput) ([]scan.Result, PricesBefore, error) {
 	uuids := distinct(in.ClientUUIDs)
 	if len(uuids) == 0 {
@@ -193,7 +198,6 @@ func (s *Service) setPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 		}
 		out[i] = res
 	}
-	s.publish()
 	return out, undo, nil
 }
 
