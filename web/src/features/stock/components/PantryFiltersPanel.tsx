@@ -17,7 +17,6 @@ export interface PantryFiltersPanelProps {
   mode: PantryMode
   status: StockFilter
   onStatus: (status: StockFilter) => void
-  /** H6: Food or Supplies in force ('all' = both). */
   /** H6: Food or Supplies in force ('all' = both; absent = both). */
   stock?: StockKindFilter
   /** H6: a press of Food or Supplies; the caller toggles it. */
