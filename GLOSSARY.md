@@ -38,12 +38,29 @@ _Note_: the UI calls the list of Access Requests "Sign-in requests" and the matc
 ### Recipes
 
 **Recipe**:
-A dish the Household can plan, made from Ingredients, with a Yield, one or more **Courses** it can fill, an optional **Whole meal** flag and optional timed Steps.
+A dish made from Ingredients, with a Yield, one or more **Courses** it can fill, an optional **Whole meal** flag and optional timed Steps; the Household can plan it unless it is a **Base recipe** (beta.6).
 _Avoid_: Dish, meal
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
 
 **Yield**:
-The number of standard portions one Batch of a Recipe produces.
+The number of standard portions one Batch of a Recipe produces. A **Base recipe**'s Yield is an amount with a unit instead (1 l, 300 g, 8 portions).
 _Avoid_: Servings, makes
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
+
+**Base recipe**:
+A Recipe that other Recipes call for on an ingredient line (a béchamel, a pasta frolla, a stock) and that is never planned on its own: it has no Courses, and it is never chosen for a Meal Slot or Pinned. Feeder keeps an Ingredient for it (its own, or a same-name one the User lets it take over), so a bought jar or a frozen batch can be stocked, scanned and used first; only what Stock does not cover is made, scaled from its Yield, and only that goes on the Shopping List. A Base recipe may call for other Base recipes, but never, through any of them, for itself.
+_Avoid_: Component, sub-recipe, sub recipe, nested recipe
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)); beta.5 copy must not offer it.
+
+**Base recipe line**:
+An ingredient line that calls for a Base recipe by amount ("500 ml Béchamel (Base recipe)"). Every Ingredient inside the Base recipe, at any depth, counts for Exclusions and the planner as if it were on the Recipe itself. A plain line is turned into one only when a User links it, or lets the Base recipe take over its Ingredient.
+_Avoid_: Recipe reference, linked recipe, sub-recipe line
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
+
+**Needed at**:
+The Step of a Recipe by which a Base recipe line must be ready: the Base recipe's Steps are placed on the cooking timeline to finish before it. Unless the User picks one, it is the first Step that uses the Base recipe, else the first Step whose text names it, else the first Step.
+_Avoid_: Link step, anchor step, ready-by step
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)). Do not confuse with **Not needed** (a Shopping List line).
 
 **Last cooked**:
 The latest date a Recipe was Cooked fresh (not served from a Leftover).
@@ -274,9 +291,10 @@ An Ingredient-specific equivalence from another unit into its Base Unit (e.g. 1 
 _Avoid_: Measure, ratio
 
 **Stock**:
-The quantity of each Ingredient the Household currently has at home.
+The quantity of each Ingredient the Household currently has at home, a Base recipe's Ingredient included (a jar of béchamel, a frozen batch of ragù).
 _Avoid_: Inventory, larder
 _Note_: "Pantry" names the page that shows Stock (and the pantry kind of Storage Place); the things on it are still Stock and Stock Lots. Frozen Leftovers also appear on the Pantry page; they are not Stock.
+_Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
 
 **Storage Place**:
 Where the Household keeps Stock and frozen Leftovers (Kitchen Pantry, Garage Fridge, Garage Freezer), of one kind: pantry, fridge or freezer. A Stock Lot is in one Storage Place, or not sorted.
