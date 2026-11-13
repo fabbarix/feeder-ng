@@ -12,7 +12,7 @@ import { stockTakeMessage } from '../lib/stockTakeToast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
 import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
-import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
+import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, rowByKey, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
 import type { ScannedList } from './useScannedList'
 import type { OfflineData, OfflineProduct, Op, PricePatch, ScanResult, StockTakeAction } from '../types'
 
@@ -416,7 +416,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
   // ---- SR3: the Scanned list ------------------------------------------------------------------------------------
 
-  const findRow = (key: string): ScannedRow | undefined => depsRef.current.session?.rows.find((r) => r.key === key)
+  const findRow = (key: string): ScannedRow | undefined => rowByKey(depsRef.current.session?.rows ?? [], key)
 
   /**
    * Undoes one scan: a queued one leaves the queue (the server undoes it when it already left); the list drops it.
@@ -540,7 +540,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const savePrice = async (key: string, entry: PriceEntry, intent: PriceIntent): Promise<PriceOutcome> => {
     const d = depsRef.current
     const session = d.session
-    const row = session?.rows.find((r) => r.key === key)
+    const row = session ? rowByKey(session.rows, key) : undefined
     if (!session || !row) {
       setPricing(null)
       return { status: 'discarded' }
@@ -590,7 +590,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     if (intent === 'next') {
       const updates = [...queuedNow, ...served]
       const after = displayOrder(buildScannedRows(repriceEntries(entries, updates), d.offline?.products ?? []))
-      const next = nextWithoutPrice(after, key)
+      const next = nextWithoutPrice(after, row.key)
       setPricing(next ? { key: next.key } : null)
     } else {
       setPricing(null)

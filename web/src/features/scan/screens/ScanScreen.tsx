@@ -6,7 +6,7 @@
 // offline data start only once a Shop or Stock-take is chosen.
 // Shop Location: useNearestShop finds the Shop the User is in (at once only where that shows no prompt); the picker
 // lists it first, and a session started with another Shop offers to switch. Any User adds a Shop (AddShopSheet).
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ingredientsApi } from '../../ingredients/api'
 import { useShops } from '../../shops/hooks/useShops'
@@ -33,7 +33,7 @@ import { ShopPicker } from '../components/ShopPicker'
 import { StockTakeSheet } from '../components/StockTakeSheet'
 import { ToGetList } from '../components/ToGetList'
 import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
-import { UnknownBarcodeSheet } from '../components/UnknownBarcodeSheet'
+import { NewProductSheet } from '../components/NewProductSheet'
 import { useJustScanned } from '../hooks/useJustScanned'
 import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
@@ -44,7 +44,7 @@ import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import type { ListView } from '../lib/listView'
 import { priceContext } from '../lib/priceContext'
 import type { PriceEntry, PriceIntent } from '../lib/priceEntry'
-import type { ScannedRow } from '../lib/scannedList'
+import { rowByKey, type ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
 import '../scan.css'
 
@@ -175,9 +175,18 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const justScanned = useJustScanned(scanCount, scanned.rows[0]?.key ?? null)
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
 
-  const pricingKey = flow.pricing?.key ?? null
-  const pricingRow = pricingKey === null ? undefined : scanned.rows.find((r) => r.key === pricingKey)
-  useScrollAboveSheet(pricingRow ? pricingKey : null)
+  // The Price entry's row. A new Product's row is asked for by its `new:<uuid>` key and found by its scan once the
+  // server's Result has re-keyed it to the Product id.
+  const pricingRow = flow.pricing ? rowByKey(scanned.rows, flow.pricing.key) : undefined
+  const pricingKey = pricingRow?.key ?? null
+  useScrollAboveSheet(pricingKey)
+  // The row went away while its Price entry was open (removed, or its scan was rejected or became an unarchive offer): the
+  // entry closes, so the camera does not stay paused for a sheet that cannot show.
+  const pricingLost = flow.pricing !== null && scanned.loaded && pricingRow === undefined
+  const closePriceEntry = flow.closePriceEntry
+  useEffect(() => {
+    if (pricingLost) closePriceEntry()
+  }, [pricingLost, closePriceEntry])
   const productOf = (row: ScannedRow) => (row.productId === null ? undefined : c.product?.(row.productId))
 
   /** Save, Next or Close of the Price entry: a refusal or a failed save keeps the sheet open with its message. */
@@ -211,6 +220,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
       {isShop && pricingRow ? (
         <PriceEntrySheet
           row={pricingRow}
+          entryKey={flow.pricing?.key}
           shopName={shopName}
           currency={c.currency}
           {...priceContext(productOf(pricingRow))}
@@ -310,7 +320,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
         />
       ) : null}
       {sheet?.kind === 'unknown' ? (
-        <UnknownBarcodeSheet
+        <NewProductSheet
           open
           onClose={flow.closeSheet}
           mode={sheet.mode}
@@ -319,7 +329,14 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           canUpload={c.online}
           findSimilar={c.online ? (name) => ingredientsApi.search(name) : undefined}
           priceText={sheet.mode === 'weighed_price' && sheet.target.mode === 'weighed_price' ? formatMinor(sheet.target.priceCents, c.currency) : undefined}
-          onSave={(values) => void flow.saveUnknown(values)}
+          barcode={sheet.target.mode === 'pack' ? sheet.target.code : undefined}
+          lines={c.list?.lines}
+          products={c.products}
+          system={c.system}
+          onPicturePicking={c.setPicturePicking}
+          onSave={(values) => flow.saveUnknown(values)}
+          // The new row says Add price, and the keypad opens on it at once (13.5, mockup 10).
+          onAdded={(rowKey) => flow.startPriceEntry(rowKey)}
         />
       ) : null}
       {sheet?.kind === 'ask_weight' ? (

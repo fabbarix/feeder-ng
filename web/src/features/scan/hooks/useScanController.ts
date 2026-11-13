@@ -75,6 +75,13 @@ export interface ScanController {
   stockTotal?: (ingredientId: number) => number | undefined
   /** SR4: a Product of the cached offline data, by id (the Price entry's pack size and last Price) */
   product?: (id: number) => OfflineProduct | undefined
+  /** the cached offline Products (the new-Product sheet's pack chips) */
+  products?: OfflineProduct[]
+  /**
+   * The new-Product sheet is about to open the phone's camera app (true) or is back from it (false): the scanner's stream
+   * stops meanwhile, so the camera is free for the Picture, and starts again after.
+   */
+  setPicturePicking?: (picking: boolean) => void
 }
 
 /** The Scan session's view model. Mounted only after a Shop or Stock-take was chosen. */
@@ -89,7 +96,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const ingredientChoices = useIngredientChoices()
   const totals = useStockTotals()
   const shopList = useShoppingList({ shopId })
-  const camera = useCamera({ enabled: true })
+  const [picturePicking, setPicturePicking] = useState(false)
+  const camera = useCamera({ enabled: !picturePicking })
   const sessionStore = useMemo(() => appSessionStore(), [])
 
   const [detector, setDetector] = useState<Detector | null>(null)
@@ -251,8 +259,12 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     system,
     stockTotal: (ingredientId) => totals.data?.find((t) => t.ingredientId === ingredientId)?.total,
     product: (id) => offline.offline?.products.find((p) => p.id === id),
+    products: offline.offline?.products ?? NO_PRODUCTS,
+    setPicturePicking,
   }
 }
+
+const NO_PRODUCTS: OfflineProduct[] = []
 
 function safeStorage(): Storage | null {
   try {

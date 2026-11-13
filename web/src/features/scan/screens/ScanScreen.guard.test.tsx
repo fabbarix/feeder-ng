@@ -1,4 +1,4 @@
-// R2-4: ScanScreen wires the near-duplicate lookup into the "what is this?" sheet only while online.
+// R2-4: ScanScreen wires the near-duplicate lookup into the "What is this?" sheet (NewProductSheet) only while online.
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -35,9 +35,11 @@ function controller(online: boolean): ScanController {
 async function createSumac(online: boolean) {
   controllerHook.useScanController.mockReturnValue(controller(online))
   render(<MemoryRouter><ScanScreen /></MemoryRouter>)
+  // The list has open Lines: "Which Line is it?" comes first; "Something else" opens the Ingredient Select.
+  await userEvent.click(screen.getByRole('button', { name: 'Something else' }))
   await userEvent.click(screen.getByRole('combobox', { name: /Ingredient/ }))
   await userEvent.type(screen.getByRole('searchbox'), 'Sumac')
-  await userEvent.click(screen.getByRole('option', { name: 'Create Ingredient "Sumac"' }))
+  await userEvent.click(screen.getByRole('option', { name: 'New Ingredient “Sumac”' }))
 }
 
 beforeEach(() => {

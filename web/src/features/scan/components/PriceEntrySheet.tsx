@@ -25,15 +25,17 @@ export interface PriceEntrySheetProps {
   onNext: (entry: PriceEntry) => void
   onSave: (entry: PriceEntry) => void
   onClose: (entry: PriceEntry) => void
+  /** what keys the keypad (default the row's key): stable while a new Product's row re-keys to its Product id */
+  entryKey?: string
 }
 
 const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null, perKgCents: null }
 
-export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose }: PriceEntrySheetProps) {
+export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose, entryKey }: PriceEntrySheetProps) {
   return (
     <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={() => onClose(NOTHING_TYPED)}>
       <PriceKeypad
-        key={row.key}
+        key={entryKey ?? row.key}
         compact
         showName={false}
         productName={row.name}

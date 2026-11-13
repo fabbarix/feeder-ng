@@ -11,6 +11,7 @@ import {
   removeTitle,
   repriceEntries,
   rowAmounts,
+  rowByKey,
   rowMeta,
   rowTitle,
   scannedTotals,
@@ -404,5 +405,35 @@ describe('session entry helpers (pure)', () => {
     const [e] = repriceEntries([applied('a', passata)], [{ clientUuid: 'a', priceCents: 129 }])
     expect(e?.op.priceCents).toBe(129)
     expect(e?.op).not.toHaveProperty('pricePerKgCents')
+  })
+})
+
+describe('rowByKey: the row of a key, a new Product\'s row through its scan', () => {
+  // A scan that creates a Product: queued, its row is new:<uuid>; the server's Result names the Product, and the row
+  // re-keys to its id.
+  const creating = (uuid: string) => ({ op: { clientUuid: uuid, scannedAt: '2026-11-13T10:00:00Z', kind: 'shop_scan' as const, productName: 'Dish soap 500 ml', quantity: 500 }, result: null })
+
+  it('finds a row by its own key', () => {
+    const rows = buildScannedRows([applied('a', passata), applied('b', toiletPaper)], products)
+    expect(rowByKey(rows, String(toiletPaper.id))?.clientUuids).toEqual(['b'])
+  })
+
+  it('finds a new Product\'s row by new:<uuid> while it waits', () => {
+    const rows = buildScannedRows([creating('u-new')], products)
+    expect(rows[0]!.key).toBe('new:u-new')
+    expect(rowByKey(rows, 'new:u-new')).toBe(rows[0])
+  })
+
+  it('still finds it once the Result has re-keyed it to the Product id', () => {
+    const entry = creating('u-new')
+    const rows = buildScannedRows([{ op: entry.op, result: okResult(scanOp('u-new', passata), passata) }], products)
+    expect(rows[0]!.key).toBe(String(passata.id))
+    expect(rowByKey(rows, 'new:u-new')).toBe(rows[0])
+  })
+
+  it('nothing for an unknown key or a scan that left the session', () => {
+    const rows = buildScannedRows([applied('a', passata)], products)
+    expect(rowByKey(rows, '999')).toBeUndefined()
+    expect(rowByKey(rows, 'new:gone')).toBeUndefined()
   })
 })

@@ -53,6 +53,13 @@ describe('PriceEntrySheet', () => {
     expect(document.querySelector('.price-keypad__meta')).toBeNull()
   })
 
+  it('an entryKey keeps what was typed while the row re-keys (a new Product\'s row takes its Product id)', async () => {
+    const view = setup({ entryKey: 'new:u-1' })
+    await tap('0.99')
+    view.rerender(<PriceEntrySheet {...view.props} row={{ ...mutti, key: '42' }} />)
+    expect(screen.getByRole('status', { name: 'Price of Mutti passata 700 g' })).toHaveTextContent('0.99')
+  })
+
   it('offers per pack and per kg for a Product in grams, and "Last time here" with the last Price', () => {
     setup()
     expect(screen.getByRole('radio', { name: 'per pack' })).toBeChecked()

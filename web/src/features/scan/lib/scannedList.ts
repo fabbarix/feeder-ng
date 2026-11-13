@@ -250,6 +250,17 @@ export function buildScannedRows(entries: SessionEntry[], products: OfflineProdu
   return [...groups].map(([key, items]) => toRow(key, items, products, cover))
 }
 
+/**
+ * The row of a key. A `new:<uuid>` key (the row of a scan that creates a Product, as the new-Product sheet names it) still
+ * finds its row once the server's Result has re-keyed it to the Product id: through the scan's clientUuid.
+ */
+export function rowByKey(rows: ScannedRow[], key: string): ScannedRow | undefined {
+  const exact = rows.find((r) => r.key === key)
+  if (exact || !key.startsWith('new:')) return exact
+  const uuid = key.slice('new:'.length)
+  return rows.find((r) => r.clientUuids.includes(uuid))
+}
+
 /** Newest first: a rescan moves its row to the top. Does not change the input. */
 export function displayOrder(rows: ScannedRow[]): ScannedRow[] {
   return [...rows].sort((a, b) => b.latest - a.latest)
