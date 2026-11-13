@@ -54,7 +54,15 @@ type Meal struct {
 	// Relaxed marks a relaxed pick: a Cool-down or Variety Rule gave way because too few Recipes fit
 	// (ADR 0009). Stored in planned_meals.relaxed.
 	Relaxed bool
+	// Bought lists the Ingredients (ids, ascending) a purchase from the Shopping List was bought for this Planned Meal
+	// (planned_meal_bought, migration 1520; ADR 0013). Filled by the store when it reads Planned Meals; empty = not
+	// Bought. A Pinned, Cooked or Not cooked meal can carry records too, but only a fresh, unresolved, unpinned one is
+	// held by BuildInput (see IsBought).
+	Bought []int64
 }
+
+// IsBought reports whether a purchase was bought for the Planned Meal (it has at least one record).
+func (m Meal) IsBought() bool { return len(m.Bought) > 0 }
 
 // Fresh reports whether the meal is cooked from scratch (not served from a Leftover).
 func (m Meal) Fresh() bool { return m.From == nil }
@@ -149,6 +157,9 @@ const (
 	ReasonPinned            Reason = "pinned"        // set, swapped or confirmed
 	ReasonNotCooked         Reason = "not_cooked"
 	ReasonStartup           Reason = "startup" // the planner replans once when the app starts
+	// ReasonSlotDateChanged: a Meal Slot on one date was marked Not served or served again, its time changed, or its
+	// Guests changed (ADR 0014; household event {"changed":"slotDates"}).
+	ReasonSlotDateChanged Reason = "slot_date_changed"
 )
 
 // Errors.
@@ -182,9 +193,19 @@ type SlotCourse struct {
 
 // SlotInfo is one Meal Slot occurrence (a Meal Slot on a date) with its resolved Attendance.
 type SlotInfo struct {
-	Key        Key
-	Name       string
-	Time       string // HH:MM, household time
+	Key  Key
+	Name string
+	// Time is the EFFECTIVE time, HH:MM in household time: the date's own time when it has one, else the usual time
+	// (household.EffectiveTime). Every instant derives from it (the cell's At, the walk order, To confirm).
+	Time string
+	// UsualTime is the Meal Slot's usual HH:MM; it differs from Time only when the date has its own time.
+	UsualTime string
+	// Guests is the number of Guests of the Meal Slot on that date (0 to 20): one standard portion of every Course each.
+	Guests int
+	// NotServed is true when the Meal Slot is Not served on that date: marked by a User, or its date Attendance has no
+	// Member and no Guest (household.IsNotServed). BuildInput ignores it once a Course of the slot is Cooked or Not
+	// cooked (U2).
+	NotServed  bool
 	Attendance []Attendee
 	// Courses are the slot's Courses in the slot's order (ADR 0008). Attendance above stays the slot's
 	// own (for no_attendance and display); each Course's Attendance is the effective Course Attendance
@@ -237,6 +258,21 @@ type Changes struct {
 	Unfilled []Unfilled
 	// ClearUnfilled are slots that have no reason any more (everything considered and not Unfilled).
 	ClearUnfilled []Key
+	// RaiseBatches are fresh Planned Meals, unpinned or Pinned, that keep their Recipe and get more Batches (ADR 0014
+	// point 6). Apply writes batches and portions of the stored meal, whatever its Pinned flag; a Cooked or Not cooked
+	// meal is never touched.
+	RaiseBatches []BatchRaise
+	// RemoveUnresolved are Planned Meals of a Not served Meal Slot that go even when Pinned (the User confirmed the list
+	// first). Apply deletes them when they are still planned (State planned), Pinned or not; Cooked and Not cooked ones
+	// stay as history.
+	RemoveUnresolved []Key
+}
+
+// BatchRaise is a raised cell: the new Batches and the portions they cover.
+type BatchRaise struct {
+	Key      Key
+	Batches  float64
+	Portions float64
 }
 
 // InvalidateTopic is the events topic modules publish on to say "the plan may be stale". Data is {"reason": Reason}.

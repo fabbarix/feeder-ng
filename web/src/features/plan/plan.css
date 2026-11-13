@@ -180,6 +180,26 @@
   overflow-wrap: break-word;
 }
 
+/* B5-F1: "20:15 · usually 19:30" under the Meal Slot name; a Not served slot's compact row. */
+.plan-meal__caption {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: var(--color-muted);
+}
+.plan-meal--not-served {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 12px;
+  border-radius: 16px;
+}
+.plan-meal--not-served .plan-meal__head {
+  grid-column: 1 / -1;
+}
+.plan-meal--not-served .plan-meal__reason {
+  grid-column: 1 / -1;
+}
+
 /* Compact chips in the 7-column week. */
 .plan-grid[data-columns='7'] .plan-meal [data-kind] {
   min-block-size: 24px;
@@ -233,6 +253,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* B5-F1: the Guests after the attendees, in the body text colour. */
+.plan-sheet__guests {
+  align-self: center;
+  color: var(--color-muted);
 }
 
 /* Sheets: meta lines, facts and the footer actions. */
@@ -397,4 +423,17 @@
   .plan-exclusions .bento-grid[data-columns='2'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* b5-bow: the sheet's Bought line and the Pinned/Bought warn line (token-based). */
+.bought-line {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+}
+
+.rule-warning-line {
+  margin: 0;
+  color: var(--status-spoil-fg);
+  font-size: var(--text-body-size);
 }

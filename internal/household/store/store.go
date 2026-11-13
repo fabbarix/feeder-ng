@@ -332,17 +332,22 @@ func (s *Store) DateAttendance(ctx context.Context, slotID int64, date string) (
 	if _, err := s.Slot(ctx, slotID); err != nil {
 		return nil, false, err
 	}
+	return dateAttendance(ctx, s.db, slotID, date)
+}
+
+// dateAttendance is the date's Attendance inside a query or transaction: its override when it has one, else the usual.
+func dateAttendance(ctx context.Context, q querier, slotID int64, date string) (att []household.Attendee, isOverride bool, err error) {
 	var one int
-	err = s.db.QueryRowContext(ctx, `SELECT 1 FROM attendance_overrides WHERE slot_id = ? AND date = ?`,
+	err = q.QueryRowContext(ctx, `SELECT 1 FROM attendance_overrides WHERE slot_id = ? AND date = ?`,
 		slotID, date).Scan(&one)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
-		att, err = usualAttendance(ctx, s.db, slotID)
+		att, err = usualAttendance(ctx, q, slotID)
 		return att, false, err
 	case err != nil:
 		return nil, false, err
 	}
-	att, err = overrideAttendance(ctx, s.db, slotID, date)
+	att, err = overrideAttendance(ctx, q, slotID, date)
 	return att, true, err
 }
 
@@ -352,39 +357,62 @@ func (s *Store) SetDateAttendance(ctx context.Context, slotID int64, date string
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO attendance_overrides (slot_id, date) VALUES (?, ?)`,
-			slotID, date); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_override_attendees WHERE slot_id = ? AND date = ?`,
-			slotID, date); err != nil {
-			return err
-		}
-		for _, a := range att {
-			if err := checkMember(ctx, tx, a.MemberID); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO attendance_override_attendees
-				(slot_id, date, member_id, portion_factor_override) VALUES (?, ?, ?, ?)`,
-				slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride)); err != nil {
-				if isUnique(err) {
-					return household.ErrDuplicateAttendee
-				}
-				return err
-			}
-		}
-		return nil
+		return setDateAttendance(ctx, tx, slotID, date, att)
 	})
 }
 
+// setDateAttendance replaces the override for date inside tx (SetDateAttendance; Who's eating saves it with Guests).
+func setDateAttendance(ctx context.Context, tx *sql.Tx, slotID int64, date string, att []household.Attendee) error {
+	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO attendance_overrides (slot_id, date) VALUES (?, ?)`,
+		slotID, date); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_override_attendees WHERE slot_id = ? AND date = ?`,
+		slotID, date); err != nil {
+		return err
+	}
+	for _, a := range att {
+		if err := checkMember(ctx, tx, a.MemberID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO attendance_override_attendees
+			(slot_id, date, member_id, portion_factor_override) VALUES (?, ?, ?, ?)`,
+			slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride)); err != nil {
+			if isUnique(err) {
+				return household.ErrDuplicateAttendee
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 // ClearDateAttendance removes the override for date (idempotent), and the date's Course opt-outs with it.
+//
+// It also drops the date's Guests (ADR 0014). Not served and the date's own time stay: they are not attendance.
+//
+// An emptied date (no Member and no Guest) is served again (decision 3f); a date marked Not served by hand keeps it.
 func (s *Store) ClearDateAttendance(ctx context.Context, slotID int64, date string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		row, err := readSlotDate(ctx, tx, slotID, date)
+		if err != nil {
+			return err
+		}
+		att, hasOverride, err := dateAttendance(ctx, tx, slotID, date)
+		if err != nil {
+			return err
+		}
+		if household.IsNotServed(household.SlotDate{Guests: row.Guests}, att, hasOverride) {
+			row.NotServed = false
+		}
 		if err := clearDateCourses(ctx, tx, slotID, date); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date)
-		return err
+		if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`, slotID, date); err != nil {
+			return err
+		}
+		row.Guests = 0
+		return writeSlotDate(ctx, tx, row, s.clk.Now())
 	})
 }
 

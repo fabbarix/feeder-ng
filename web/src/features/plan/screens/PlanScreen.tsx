@@ -9,6 +9,7 @@ import { AllCookedSheets } from '../components/AllCookedSheets'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
 import { PlanGrid } from '../components/PlanGrid'
 import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
+import { SlotDateSheets } from '../components/SlotDateSheets'
 import { SwapSheet } from '../components/SwapSheet'
 import { useCouldntFix } from '../hooks/useCouldntFix'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
@@ -59,6 +60,7 @@ export function PlanScreen(): ReactNode {
             onMarkAllCooked={(k) => s.openAllCooked(k)}
             onNotCookedSlot={(k) => void actions.notCookedSlot(k)}
             onAddCourse={(k) => s.openChoose(k)}
+            dateActions={s.slotDate.actions}
           />
         ))}
       </PlanGrid>
@@ -71,7 +73,7 @@ export function PlanScreen(): ReactNode {
           title={planStrings.title}
           subtitle={range}
           actions={
-            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating} onClick={() => void s.askRegenerate()}>
+            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
               {planStrings.regenerate}
             </Button>
           }
@@ -111,6 +113,7 @@ export function PlanScreen(): ReactNode {
         />
       ) : null}
       <AllCookedSheets flow={s.allCooked} />
+      <SlotDateSheets controller={s.slotDate} />
       <SwapSheet
         open={s.swapOpen}
         onClose={s.closeSwap}
@@ -118,6 +121,7 @@ export function PlanScreen(): ReactNode {
         alternatives={s.alternatives.alternatives}
         isLoading={s.alternatives.isLoading}
         onPick={(id) => void s.pickAlternative(id)}
+        bought={s.swapBought}
       />
       <RecipeChooserSheet
         open={s.chooseOpen}

@@ -160,6 +160,21 @@ func (s *Store) DeleteTick(ctx context.Context, rangeTo stock.Date, ingredientID
 	return err
 }
 
+// TickLot returns the Stock Lot a tick by hand added for the range (B5-BO: its records go when the tick is removed).
+// ok is false when there is no tick, or the tick added no Lot (a scan's tick, or a tick with 0).
+func (s *Store) TickLot(ctx context.Context, rangeTo stock.Date, ingredientID int64) (lotID int64, ok bool, err error) {
+	var lot sql.NullInt64
+	err = s.db.QueryRowContext(ctx, `SELECT lot_id FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`,
+		string(rangeTo), ingredientID).Scan(&lot)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	return lot.Int64, lot.Valid, nil
+}
+
 // Ticks returns the ticks of one range by Ingredient.
 func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shopping.Tick, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT ingredient_id, needed, by FROM shopping_ticks WHERE range_to = ?`, string(rangeTo))

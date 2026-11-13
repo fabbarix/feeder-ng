@@ -20,6 +20,16 @@ type MealSlotDef struct {
 	MainCourse int64
 }
 
+// SlotDateDef is what is known about a Meal Slot on one date beyond its usual set-up (ADR 0014): resolved, so the
+// runner holds no household rule. Time is the effective time (household.EffectiveTime); NotServed is
+// household.IsNotServed (marked by hand, or an emptied date); Guests is 0 to 20.
+type SlotDateDef struct {
+	Time      string // HH:MM, effective
+	UsualTime string // HH:MM
+	NotServed bool
+	Guests    int
+}
+
 // Sources are the reads the runner needs from the household, recipes and products
 // features. sources.go (Developer) implements it over household/store, recipe/store,
 // product/store and units; the runner tests use a fake.
@@ -34,6 +44,9 @@ type Sources interface {
 	// Attendance (household.CourseAttendance with the effective Portion Factors). Empty: the slot has no Courses
 	// and plans as one cell (pure planning only). (ADR 0008, docs/dev/design/crs-b.md §6.)
 	SlotCourses(ctx context.Context, mealSlotID int64, date string) ([]plan.SlotCourse, error)
+	// SlotDate is the Meal Slot on that date: its effective time, Not served and Guests (ADR 0014). A slot with no
+	// per-date row answers its usual time, served, no Guests. household.ErrNotFound-like errors are the adapter's.
+	SlotDate(ctx context.Context, mealSlotID int64, date string) (SlotDateDef, error)
 	// Recipes returns every Recipe, archived ones included, with Needs per Batch in Base Units and the Advance Steps.
 	Recipes(ctx context.Context) ([]planner.Recipe, error)
 	// Preferences returns each Member's Favourites, Dislikes and Exclusions.

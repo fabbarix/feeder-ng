@@ -1,7 +1,7 @@
 // CRS F: the sheets Today opens on the Tonight slot (the Planned Meal sheet, Swap, Choose a Recipe, Mark all Cooked).
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { unresolvedCourseIds } from '../lib/courses'
+import { courseOf, unresolvedCourseIds } from '../lib/courses'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
@@ -19,6 +19,9 @@ export function useTonightSheets(slot: PlanSlot | null) {
   const allCooked = useAllCookedFlow()
   const navigate = useNavigate()
   const matches = (key: SlotKey | null) => (slot && key && key.date === slot.date && key.mealSlotId === slot.mealSlotId ? slot : null)
+  const swapSlot = matches(swapKey)
+  /** The swapped Course's Bought info (null when not Bought or nothing is being swapped). */
+  const swapBought = swapSlot && swapKey ? (courseOf(swapSlot, swapKey.courseId)?.meal?.bought ?? null) : null
 
   return {
     actions,
@@ -38,7 +41,8 @@ export function useTonightSheets(slot: PlanSlot | null) {
     },
     swap: {
       key: swapKey,
-      slot: matches(swapKey),
+      slot: swapSlot,
+      bought: swapBought,
       open: setSwapKey,
       close: () => setSwapKey(null),
       alternatives: alternatives.alternatives,

@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { makeLot, makeTotal } from '../testData'
 import { StockScreen } from './StockScreen'
 
@@ -30,7 +30,7 @@ vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
     mode: 'ingredients',
     setMode: vi.fn(),
-    lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
     places: [],
     view: { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true },
     setView: vi.fn(),
@@ -43,9 +43,18 @@ vi.mock('../hooks/useIngredientChoices', () => ({
   useIngredientChoices: () => ({ choices: [{ id: 7, name: 'chicken thighs', baseUnit: 'g' }], isLoading: false }),
 }))
 
-const view = () => render(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
+/** A row tap expands its Lots; the per-Ingredient sheet is reached from a Lot's sheet through "All <name>". */
+async function openIngredientSheet() {
+  await userEvent.click(screen.getByRole('button', { name: /^Chicken thighs, \d Stock Lots?$/ }))
+  const list = screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })
+  await userEvent.click(within(list).getAllByRole('button')[0]!)
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'All chicken thighs' }))
+}
+
+const view = () => render(<MemoryRouter><ToastProvider><ConfirmProvider><StockScreen /></ConfirmProvider></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
+  sessionStorage.clear() // open By Ingredient rows are remembered for the session
   hooks.totals.data = [
     makeTotal({ ingredientId: 1, name: 'milk', total: 1000, baseUnit: 'ml', lotCount: 1 }),
     makeTotal({ ingredientId: 7, name: 'chicken thighs', total: 800, useSoon: true, lotCount: 2, nextGoesOff: '2026-11-12' }),
@@ -186,7 +195,7 @@ describe('StockScreen actions', () => {
     expect(screen.queryByText('Throw out or keep?')).toBeNull()
     hooks.spoiled.data = [makeLot({ id: 42 })]
     hooks.spoiled.status = 'ready'
-    rerender(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
+    rerender(<MemoryRouter><ToastProvider><ConfirmProvider><StockScreen /></ConfirmProvider></ToastProvider></MemoryRouter>)
     expect(screen.getByText('Throw out or keep?')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Throw out chicken thighs' }))
     expect(hooks.throwOut).toHaveBeenCalledWith(42)
@@ -206,7 +215,7 @@ describe('StockScreen actions', () => {
 
   it('opens lot detail for an Ingredient and sets its total', async () => {
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    await openIngredientSheet()
     const sheet = screen.getByRole('dialog')
     expect(within(sheet).getByText('Good until Wed')).toBeInTheDocument()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Set total' }))
@@ -223,7 +232,7 @@ describe('StockScreen actions', () => {
       makeLot({ id: 6, quantity: 100, goesOff: '2026-11-05', spoiled: true }),
     ]
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    await openIngredientSheet()
     const sheet = screen.getByRole('dialog')
     const rows = within(sheet).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
@@ -234,7 +243,7 @@ describe('StockScreen actions', () => {
 
   it('lot sheet title is the capitalised name', async () => {
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    await openIngredientSheet()
     expect(screen.getByRole('dialog', { name: 'Chicken thighs' })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'chicken thighs' })).toBeNull()
   })
@@ -243,7 +252,7 @@ describe('StockScreen actions', () => {
     hooks.lots.data = [makeLot({ id: 6, spoiled: true })]
     hooks.actionThrowOut.mockRejectedValue(new Error('500'))
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Chicken thighs' }))
+    await openIngredientSheet()
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Throw out/ }))
     expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
   })

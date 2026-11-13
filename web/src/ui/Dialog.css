@@ -22,6 +22,11 @@ html:has(dialog:modal) {
   animation: scrim-in var(--dur-3) var(--ease-out);
 }
 
+/* A confirm body keeps the line breaks of a multi-line body (one line per item). */
+.confirm-dialog__body {
+  white-space: pre-line;
+}
+
 .dialog__panel {
   display: grid;
   gap: var(--space-3);

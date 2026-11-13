@@ -26,4 +26,14 @@ describe('errorMessage', () => {
     expect(errorMessage(new Error('boom'))).toMatch(/something went wrong/i)
     expect(errorMessage('weird')).toMatch(/something went wrong/i)
   })
+
+  // B5-F1 (b5-sd): the attendance PUT of a started slot answers 409 slot_started; the sentence is Plan's slotStarted in GLOSSARY words.
+  it('slot_started: names the Meal Slot and says it is already Cooked or Not cooked', () => {
+    const err = new ApiError(409, 'slot_started', 'raw server text')
+    expect(errorMessage(err, 'Dinner')).toBe('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')
+  })
+
+  it('slot_started without a Meal Slot name says "the Meal Slot"', () => {
+    expect(errorMessage(new ApiError(409, 'slot_started', 'raw server text'))).toBe('Part of the Meal Slot is already Cooked or Not cooked, so it cannot be left out.')
+  })
 })

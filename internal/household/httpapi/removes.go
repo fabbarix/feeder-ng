@@ -16,14 +16,15 @@ type removesJSON struct {
 }
 
 type removedMealJSON struct {
-	Date         string `json:"date"`
-	MealSlotID   int64  `json:"mealSlotId"`
-	MealSlotName string `json:"mealSlotName"`
-	CourseID     int64  `json:"courseId"`
-	CourseName   string `json:"courseName"`
-	RecipeID     int64  `json:"recipeId"`
-	RecipeName   string `json:"recipeName"`
-	Pinned       bool   `json:"pinned"`
+	Date         string   `json:"date"`
+	MealSlotID   int64    `json:"mealSlotId"`
+	MealSlotName string   `json:"mealSlotName"`
+	CourseID     int64    `json:"courseId"`
+	CourseName   string   `json:"courseName"`
+	RecipeID     int64    `json:"recipeId"`
+	RecipeName   string   `json:"recipeName"`
+	Pinned       bool     `json:"pinned"`
+	Bought       []string `json:"bought"` // the Ingredients bought for the meal by name; [] when none (ADR 0013)
 }
 
 type removedRuleJSON struct {
@@ -60,7 +61,7 @@ func (a *api) removesOut(r *http.Request, rem household.Removals) (removesJSON, 
 	for _, m := range rem.PlannedMeals {
 		out.PlannedMeals = append(out.PlannedMeals, removedMealJSON{Date: m.Date, MealSlotID: m.MealSlotID,
 			MealSlotName: slots[m.MealSlotID], CourseID: m.CourseID, CourseName: courses[m.CourseID],
-			RecipeID: m.RecipeID, RecipeName: recipes[m.RecipeID], Pinned: m.Pinned})
+			RecipeID: m.RecipeID, RecipeName: recipes[m.RecipeID], Pinned: m.Pinned, Bought: nonNilNames(m.Bought)})
 	}
 
 	for _, s := range rem.SlotRules {
@@ -98,4 +99,12 @@ func (a *api) recipeNames(ctx context.Context) (map[int64]string, error) {
 		out[s.ID] = s.Name
 	}
 	return out, nil
+}
+
+// nonNilNames is names, or an empty list for none: the JSON of a bought list is [] and never null.
+func nonNilNames(names []string) []string {
+	if names == nil {
+		return []string{}
+	}
+	return names
 }

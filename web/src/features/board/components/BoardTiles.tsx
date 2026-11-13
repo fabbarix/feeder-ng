@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import { Button, Chip, Tile, TimerTile } from '../../../ui'
-import { clockText, dateText, dueText, hasPlanned, shortWeekday, tomorrowLine, tonightRows, type LeftoverRow } from '../lib/tiles'
+import { clockText, dateText, dueText, hasPlanned, notServedLine, shortWeekday, tomorrowLine, tonightRows, type LeftoverRow } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
 
@@ -32,6 +32,8 @@ export interface TonightTileProps {
   slot: SlotLike | null
   /** Shows the big "Cook" button (76 px) with a Planned Meal; it starts Cook Mode. */
   onCook?: () => void
+  /** B5-F1 (ADR 0014): the slots Not served tonight (lib/tiles tonightNotServed); with no Planned Meal the tile says "Dinner · Not served" for each instead of "Nothing planned tonight". */
+  notServed?: SlotLike[]
 }
 
 /**
@@ -39,7 +41,7 @@ export interface TonightTileProps {
  * a meal and a handler; "Nothing planned tonight" when null. A slot with several Courses lists a row per Course with a
  * Planned Meal (the main Course's row is the larger one), under the slot line, with ONE Cook button for the slot.
  */
-export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
+export function TonightTile({ slot, onCook, notServed }: TonightTileProps): ReactNode {
   const rows = slot ? tonightRows(slot) : []
   if (slot && rows.length > 1) {
     return (
@@ -62,6 +64,7 @@ export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
     )
   }
   const recipe = rows[0]?.recipeName ?? null
+  const notServedNames = notServed ?? []
   return (
     <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight">
       <h2 className="board-tile__heading">{boardStrings.tonight}</h2>
@@ -75,6 +78,12 @@ export function TonightTile({ slot, onCook }: TonightTileProps): ReactNode {
             </Button>
           ) : null}
         </>
+      ) : notServedNames.length > 0 ? (
+        notServedNames.map((s) => (
+          <p key={s.mealSlotId} className="board-tonight__slot">
+            {notServedLine(s)}
+          </p>
+        ))
       ) : (
         <p>{boardStrings.tonightNone}</p>
       )}
@@ -196,7 +205,9 @@ export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
         <ul className="board-list">
           {slots.map((s) => (
             <li key={`${s.date}/${s.mealSlotId}`}>
-              {hasPlanned(s) ? (
+              {s.notServed === true ? (
+                notServedLine(s)
+              ) : hasPlanned(s) ? (
                 tomorrowLine(s)
               ) : (
                 <>

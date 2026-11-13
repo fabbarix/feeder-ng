@@ -31,12 +31,12 @@ Feature: Couldn't plan, and attendance that defaults to everyone
     When I view the plan
     Then the plan slot on 2026-11-09 has 2.5 portions
 
-  Scenario: Everyone opted out of a date: Couldn't plan keeps the unchanged reason
+  Scenario: Everyone opted out of a date: the date is Not served, not Couldn't plan (beta.5, U1)
     When nobody attends the Dinner on 2026-11-10
     And the planner has finished
+    And the plan slot on 2026-11-10 is Not served
     And I list the slots the planner could not plan
-    Then the plan JSON "slots" has 1 items
-    And the plan JSON "slots.0.unfilled.reason" is "no_attendance"
+    Then the plan JSON "slots" has 0 items
 
   Scenario: Meal Slots made for nobody are all listed with the same reason
     Given the Admin adds the Meal Slot "Supper" on Monday at 21:00 for nobody

@@ -44,7 +44,7 @@ func (st *state) isOpenSlot(i int) bool {
 	if st.roles[i] != roleEmpty && st.roles[i] != roleKept {
 		return false
 	}
-	return PortionsNeeded(st.slots[i].Attendance) > eps
+	return st.slots[i].Portions() > eps
 }
 
 // onlyEligible returns the Recipe the cell's Slot Rules allow when that is

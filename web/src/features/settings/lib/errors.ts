@@ -1,5 +1,6 @@
 import { ApiError } from '../../../lib/http'
 import { coursesStrings } from '../coursesStrings'
+import { settingsStrings } from '../strings'
 
 const MESSAGES: Record<string, string> = {
   last_admin: 'The Household needs at least one Admin.',
@@ -20,9 +21,11 @@ const COURSE_REASONS: Record<string, string> = {
 }
 
 /** A short, human message for an API failure (codes: last_admin, email_taken, user_already_linked,
- *  duplicate_slot, weekday_mismatch, unknown_member, validation_failed, forbidden, network). */
-export function errorMessage(err: unknown): string {
+ *  duplicate_slot, weekday_mismatch, unknown_member, validation_failed, slot_started, forbidden, network).
+ *  `slotName` names the Meal Slot of a slot_started refusal ("the Meal Slot" without it). */
+export function errorMessage(err: unknown, slotName?: string): string {
   if (err instanceof ApiError) {
+    if (err.code === 'slot_started') return settingsStrings.slotStarted(slotName ?? 'the Meal Slot')
     const reason = err.details.reason
     if (err.code === 'validation_failed' && typeof reason === 'string' && Object.hasOwn(COURSE_REASONS, reason)) return COURSE_REASONS[reason]!
     if (err.code === 'validation_failed' || err.code === 'user_already_linked') return err.message

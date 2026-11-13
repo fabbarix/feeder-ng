@@ -508,7 +508,7 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 	}
 	undo = append(undo, func(ctx context.Context) {
 		_ = s.d.List.UndoLot(ctx, shopservice.UndoLotInput{IngredientID: p.IngredientID, To: rangeTo, Quantity: op.Quantity,
-			Unmark: eff.Ticked, ExtraID: eff.ExtraID})
+			Unmark: eff.Ticked, ExtraID: eff.ExtraID, LotID: lotID})
 	})
 
 	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit,
@@ -654,7 +654,7 @@ func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, erro
 	}{
 		{store.UndoStepList, func() error {
 			return s.d.List.UndoLot(ctx, shopservice.UndoLotInput{IngredientID: ing, To: ev.RangeTo, Quantity: ev.Quantity,
-				Unmark: ev.Ticked, ExtraID: derefInt(ev.ExtraID)})
+				Unmark: ev.Ticked, ExtraID: derefInt(ev.ExtraID), LotID: derefInt(ev.LotID)})
 		}},
 		{store.UndoStepLot, func() error {
 			if ev.LotID == nil {

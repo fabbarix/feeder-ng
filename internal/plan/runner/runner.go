@@ -25,9 +25,11 @@ import (
 
 // Errors returned by the actions; the HTTP layer maps them.
 var (
-	ErrNotFound        = errors.New("planning: no Planned Meal there")
-	ErrUnknownSlot     = errors.New("planning: no such Meal Slot on that date")
-	ErrInPast          = errors.New("planning: that day is already over")
+	ErrNotFound    = errors.New("planning: no Planned Meal there")
+	ErrUnknownSlot = errors.New("planning: no such Meal Slot on that date")
+	ErrInPast      = errors.New("planning: that day is already over")
+	// ErrNotServed: SetMeal or Pin on a Meal Slot that is Not served on that date; the API answers 422 not_served.
+	ErrNotServed       = errors.New("planning: the Meal Slot is Not served on that date")
 	ErrAlreadyResolved = errors.New("planning: the Planned Meal is already Cooked or skipped")
 	ErrNotSwappable    = errors.New("planning: a Cooked or skipped Planned Meal cannot be swapped")
 	ErrUnknownRecipe   = errors.New("planning: unknown Recipe")

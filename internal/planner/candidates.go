@@ -453,7 +453,7 @@ func (st *state) fitsLater(i int, r Recipe, extra float64) (int, bool) {
 			continue
 		}
 		s := st.slots[j]
-		portions := PortionsNeeded(s.Attendance)
+		portions := s.Portions()
 		if portions <= eps || portions > extra+eps {
 			continue
 		}

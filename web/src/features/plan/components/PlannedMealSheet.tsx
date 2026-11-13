@@ -1,13 +1,18 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
+import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { sheetChips } from '../lib/chips'
+import { warningContextOf } from '../lib/bought'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
 import { relaxedLine } from '../lib/relaxed'
 import { weekdayName } from '../lib/phrase'
 import { mayCook, mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
+import { BoughtLine } from './BoughtLine'
+import { PlanChipView } from './PlanChipView'
+import { RuleWarningLine } from './RuleWarningLine'
 import '../plan.css'
 
 export interface PlannedMealSheetProps {
@@ -67,6 +72,8 @@ export function PlannedMealSheet({
   const { chips, overflow } = meal && slot ? sheetChips(meal, phrase) : { chips: [], overflow: 0 }
   const line = meal && slot && course ? relaxedLine(meal, { courseId: course.courseId, courseName: course.name, main: course.main, severalCourses: several }) : null
   const attendance = slot?.attendance?.filter((a) => !course?.optOutMemberIds.includes(a.id))
+  const guests = slot?.guests ?? 0
+  const guestsText = guestsNote(attendance?.length ?? 0, guests)
 
   const actions =
     key && slot && planned
@@ -110,21 +117,23 @@ export function PlannedMealSheet({
         <div className="plan-sheet">
           <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
           <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
-          {attendance && attendance.length > 0 ? (
+          {(attendance && attendance.length > 0) || guests > 0 ? (
             <div className="plan-sheet__attendance">
-              {attendance.map((a) => (
+              {attendance?.map((a) => (
                 <Avatar key={a.id} name={a.name} imageUrl={a.photoUrl || undefined} glyph={a.avatar || undefined} colour={a.colour} size="sm" />
               ))}
+              {/* B5-F1: Guests end the attendees ("+2 Guests"; "2 Guests" with no Member). */}
+              {guestsText ? <span className="plan-sheet__guests">{guestsText}</span> : null}
             </div>
           ) : null}
           <div className="plan-sheet__chips">
             {chips.map((c) => (
-              <Chip key={c.key} kind={c.kind} status={c.status}>
-                {c.label}
-              </Chip>
+              <PlanChipView key={c.key} chip={c} />
             ))}
             {overflow > 0 ? <Chip kind="count">{`+${overflow}`}</Chip> : null}
           </div>
+          <BoughtLine bought={meal.bought} />
+          <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, course?.name)} />
           {line ? (
             <div className="plan-sheet__relaxed">
               <p className="plan__muted">{line.text}</p>

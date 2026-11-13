@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -15,6 +16,7 @@ import (
 )
 
 type fx struct {
+	db   *sql.DB
 	st   *store.Store
 	auth *auth.Service
 	ctx  context.Context
@@ -31,7 +33,7 @@ func newFx(t *testing.T) *fx {
 		t.Fatal(err)
 	}
 	clk := clock.NewFake(testkit.StartTime)
-	return &fx{st: store.New(d, clk), auth: auth.NewService(d, clk, false), ctx: context.Background()}
+	return &fx{db: d, st: store.New(d, clk), auth: auth.NewService(d, clk, false), ctx: context.Background()}
 }
 
 func fp(v float64) *float64 { return &v }

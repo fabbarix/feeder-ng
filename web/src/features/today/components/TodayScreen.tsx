@@ -1,14 +1,16 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
-import { useToast } from '../../../ui'
+import { Tile, useToast } from '../../../ui'
 import {
   AllCookedSheets,
   CookFlowSheets,
   CouldntPlanNotice,
   LeftoversTile,
+  NotServedRow,
   PlannedMealSheet,
   RecipeChooserSheet,
+  SlotDateSheets,
   SwapSheet,
   TonightHero,
   ToConfirmTile,
@@ -18,6 +20,7 @@ import {
   useCouldntPlanNotice,
   toConfirmCourses,
   useNotCooked,
+  useSlotDate,
   useTonightSheets,
 } from '../../plan'
 import type { SlotDayKey, SlotKey } from '../../plan/types'
@@ -66,11 +69,15 @@ export function TodayScreen(): ReactElement {
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
   const sheets = useTonightSheets(hero)
+  // B5-F1: the per-date choices of today's Tonight slot and its Not served rows (their sheets are rendered below).
+  const notServed = data.notServedToday ?? []
+  const slotDate = useSlotDate(hero ? [hero, ...notServed] : notServed)
 
   const tiles: Partial<Record<TileId, ReactNode>> = {
     nextMeal: hero ? (
       <TonightHero
         slot={hero}
+        dateActions={slotDate.actions}
         now={data.now}
         day={data.nextDay}
         action={data.nextAction}
@@ -91,6 +98,12 @@ export function TodayScreen(): ReactElement {
         onMarkAllCooked={sheets.openAllCooked}
         menu={{ onNotCookedSlot: (k) => void sheets.actions.notCookedSlot(k), onAddCourse: sheets.choose.open }}
       />
+    ) : notServed.length > 0 ? (
+      <Tile as="section" variant="surface" span="full">
+        {notServed.map((slot) => (
+          <NotServedRow key={slot.mealSlotId} slot={slot} offline={slotDate.actions.offline} onPlanAgain={slotDate.actions.onPlanAgain} />
+        ))}
+      </Tile>
     ) : null,
     spoiled: (
       <SpoiledTile
@@ -164,6 +177,7 @@ export function TodayScreen(): ReactElement {
         alternatives={sheets.swap.alternatives}
         isLoading={sheets.swap.isLoading}
         onPick={(id) => void sheets.swap.pick(id)}
+        bought={sheets.swap.bought}
       />
       <RecipeChooserSheet
         open={sheets.choose.key !== null}
@@ -173,6 +187,7 @@ export function TodayScreen(): ReactElement {
         onPick={(id) => void sheets.choose.pick(id)}
       />
       <AllCookedSheets flow={sheets.allCooked} />
+      <SlotDateSheets controller={slotDate} />
     </>
   )
 }

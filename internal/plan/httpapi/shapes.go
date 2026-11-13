@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"sort"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -42,18 +43,22 @@ type mealOut struct {
 	Date       string `json:"date"`
 	MealSlotID int64  `json:"mealSlotId"`
 	// CourseID is the real id of the Course the meal fills (crs-c2); CourseName its name.
-	CourseID           int64              `json:"courseId"`
-	CourseName         string             `json:"courseName"`
-	RecipeID           int64              `json:"recipeId"`
-	RecipeName         string             `json:"recipeName"`
-	WholeMeal          bool               `json:"wholeMeal"`
-	Relaxed            bool               `json:"relaxed"`
-	Batches            float64            `json:"batches"`
-	Portions           float64            `json:"portions"`
-	State              string             `json:"state"`
-	Pinned             bool               `json:"pinned"`
-	ServedFromLeftover *leftoverSourceOut `json:"servedFromLeftover"`
-	Why                []whyOut           `json:"why"`
+	CourseID   int64   `json:"courseId"`
+	CourseName string  `json:"courseName"`
+	RecipeID   int64   `json:"recipeId"`
+	RecipeName string  `json:"recipeName"`
+	WholeMeal  bool    `json:"wholeMeal"`
+	Relaxed    bool    `json:"relaxed"`
+	Batches    float64 `json:"batches"`
+	Portions   float64 `json:"portions"`
+	State      string  `json:"state"`
+	Pinned     bool    `json:"pinned"`
+	// B5-BO (ADR 0013): what a purchase was bought for this meal (null when nothing was), and the hard rule a Pinned or
+	// Bought meal now breaks (null when none). Filled by mealFor and courseFor.
+	Bought             *boughtOut          `json:"bought"`
+	Warning            *hardRuleWarningOut `json:"warning"`
+	ServedFromLeftover *leftoverSourceOut  `json:"servedFromLeftover"`
+	Why                []whyOut            `json:"why"`
 	// Optional, additive (WP6): the Recipe's total time in minutes, the "HH:MM" to start cooking by (slot time less the
 	// total time, household zone; slot views only) and the Recipe photo. Omitted when unknown.
 	CookMinutes int    `json:"cookMinutes,omitempty"`
@@ -61,6 +66,23 @@ type mealOut struct {
 	PhotoURL    string `json:"photoUrl,omitempty"`
 	// R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when set.
 	ReheatMinutes int `json:"reheatMinutes,omitempty"`
+}
+
+// boughtOut lists the Ingredients a purchase was bought for the meal, by name.
+type boughtOut struct {
+	Ingredients []boughtIngredientOut `json:"ingredients"`
+}
+
+type boughtIngredientOut struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// hardRuleWarningOut is plan.Warning as served: code excluded | archived | course_lost, and the Member / Ingredient for excluded.
+type hardRuleWarningOut struct {
+	Code         string `json:"code"`
+	MemberID     int64  `json:"memberId,omitempty"`
+	IngredientID int64  `json:"ingredientId,omitempty"`
 }
 
 type eliminationsOut struct {
@@ -99,12 +121,17 @@ type ruleOut struct {
 }
 
 type slotOut struct {
-	Date       string        `json:"date"`
-	MealSlotID int64         `json:"mealSlotId"`
-	Name       string        `json:"name"`
-	Time       string        `json:"time"`
-	At         string        `json:"at"`
-	Portions   float64       `json:"portions"`
+	Date       string  `json:"date"`
+	MealSlotID int64   `json:"mealSlotId"`
+	Name       string  `json:"name"`
+	Time       string  `json:"time"` // the EFFECTIVE time: the date's own when set (ADR 0014), else the usual one
+	At         string  `json:"at"`
+	Portions   float64 `json:"portions"` // Guests included
+	// B5-SD (ADR 0014): the usual time (differs from time only when the date has its own), whether the Meal Slot is
+	// Not served on the date, and its Guests. Filled by slotFor.
+	UsualTime  string        `json:"usualTime"`
+	NotServed  bool          `json:"notServed"`
+	Guests     int           `json:"guests"`
 	Attendance []attendeeOut `json:"attendance"`
 	Rules      []ruleOut     `json:"rules"`
 	// Courses are the slot's Course rows in the slot's order, then history rows (crs-c2 §3.1).
@@ -239,6 +266,37 @@ func whyFor(ws []plan.Why, t table) []whyOut {
 	return out
 }
 
+// boughtNames are the names of the Ingredients, by name (ascending); an empty list for none.
+func boughtNames(ids []int64, t table) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, t.ingredients[id])
+	}
+	sort.Strings(out)
+	return out
+}
+
+// boughtFor is the bought object of a meal: null when nothing was bought for it, else its Ingredients by name.
+func boughtFor(ids []int64, t table) *boughtOut {
+	if len(ids) == 0 {
+		return nil
+	}
+	ings := make([]boughtIngredientOut, 0, len(ids))
+	for _, id := range ids {
+		ings = append(ings, boughtIngredientOut{ID: id, Name: t.ingredients[id]})
+	}
+	sort.SliceStable(ings, func(a, b int) bool { return ings[a].Name < ings[b].Name })
+	return &boughtOut{Ingredients: ings}
+}
+
+// warningFor is the warning object of a view cell: null when the meal breaks no hard rule.
+func warningFor(w *plan.Warning) *hardRuleWarningOut {
+	if w == nil {
+		return nil
+	}
+	return &hardRuleWarningOut{Code: w.Code, MemberID: w.MemberID, IngredientID: w.IngredientID}
+}
+
 func mealFor(m plan.Meal, t table) *mealOut {
 	courseID := m.Key.CourseID
 	out := &mealOut{
@@ -247,6 +305,7 @@ func mealFor(m plan.Meal, t table) *mealOut {
 		Batches: m.Batches, Portions: m.Portions, State: string(m.State), Pinned: m.Pinned,
 		Why:      whyFor(m.Why, t),
 		PhotoURL: t.recipePhoto[m.RecipeID],
+		Bought:   boughtFor(m.Bought, t),
 	}
 	// A meal served from a Leftover is already cooked: no cook time, so no startBy either (slotFor).
 	if m.From == nil {
@@ -290,6 +349,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 	if c.Meal != nil {
 		out.Meal = mealFor(*c.Meal, t)
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
+		out.Meal.Warning = warningFor(c.Warning)
 	}
 	if c.Unfilled != nil {
 		out.Unfilled = unfilledFor(*c.Unfilled)
@@ -309,7 +369,7 @@ func slotFor(s runner.SlotView, t table) slotOut {
 	out := slotOut{
 		Date: s.Key.Date, MealSlotID: s.Key.MealSlotID, Name: s.Name, Time: s.Time,
 		At: s.At.Format(time.RFC3339), Portions: s.Portions, Attendance: []attendeeOut{}, Rules: rulesFor(s.Rules, t),
-		Courses: []courseOut{},
+		Courses: []courseOut{}, UsualTime: s.UsualTime, NotServed: s.NotServed, Guests: s.Guests,
 	}
 	for _, c := range s.Courses {
 		out.Courses = append(out.Courses, courseFor(c, s.At, t))

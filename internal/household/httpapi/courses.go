@@ -73,9 +73,14 @@ func (a *api) dateCourses(r *http.Request, slotID int64, date string) ([]courseD
 	if err != nil {
 		return nil, err
 	}
+	row, err := a.st.SlotDate(r.Context(), slotID, date)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]courseDayOut, 0, len(days))
 	for _, d := range days {
-		portions, err := household.PortionsNeeded(members, d.Attendance)
+		// Guests eat every Course the slot serves (ADR 0014): their portion counts on each one.
+		portions, err := household.PortionsWithGuests(members, d.Attendance, row.Guests)
 		if err != nil {
 			return nil, err
 		}

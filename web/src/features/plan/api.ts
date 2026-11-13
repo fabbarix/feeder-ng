@@ -1,4 +1,5 @@
 import { http } from '../../lib/http'
+import type { RegenerateDryRun } from './lib/bought'
 import type {
   Alternative,
   CookedAllEntry,
@@ -11,7 +12,10 @@ import type {
   PlanView,
   PlannedMeal,
   MealSlotChoice,
+  NotServedPreview,
   RecipeChoice,
+  SlotDateInfo,
+  SlotDatePatch,
   SlotDayKey,
   SlotKey,
   SlotRule,
@@ -41,6 +45,8 @@ export const planApi = {
   couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<void>('/api/plan/regenerate'),
+  /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
+  regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
   setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
     http.put<PlannedMeal>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
   confirm: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/confirm`),
@@ -55,6 +61,15 @@ export const planApi = {
     http.post<CookedAllResult>(`${slotDayPath(slot)}/all/cooked`, courses === undefined ? undefined : { courses }),
   /** POST /api/plan/<date>/<slot>/all/not-cooked, no body. Answers `{ meals }`. */
   notCookedAll: (slot: SlotDayKey) => http.post<{ meals: PlannedMeal[] }>(`${slotDayPath(slot)}/all/not-cooked`),
+
+  /** B5-F1: one Meal Slot on one date (every User). */
+  slotDate: (mealSlotId: number, date: string) => http.get<SlotDateInfo>(`/api/meal-slots/${mealSlotId}/dates/${date}`),
+  /** B5-F1: PATCH presence-aware: only the keys given change; `time: null` is the usual time. Answers the GET shape. */
+  patchSlotDate: (mealSlotId: number, date: string, body: SlotDatePatch) =>
+    http.patch<SlotDateInfo>(`/api/meal-slots/${mealSlotId}/dates/${date}`, body),
+  /** B5-F1: what Not served would remove; nothing is written (PATCH ?dryRun=1 with notServed: true). */
+  notServedPreview: (mealSlotId: number, date: string) =>
+    http.patch<NotServedPreview>(`/api/meal-slots/${mealSlotId}/dates/${date}?dryRun=1`, { notServed: true }),
 
   slotRules: () => http.get<SlotRule[]>('/api/slot-rules'),
   addSlotRule: (body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string }) => http.post<SlotRule>('/api/slot-rules', body),

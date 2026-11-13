@@ -133,11 +133,10 @@ describe('PlanScreen with one Course (regression guards)', () => {
     expect(api.calls.some((c) => c.path === '/api/plan/2026-11-10/2/confirm')).toBe(false)
   })
 
-  it('shows no Course caption, no list of Courses and no slot menu', async () => {
+  it('shows no Course caption and no list of Courses', async () => {
     mockApi({ 'GET /api/plan': view([plain()]) })
     renderWithProviders(<PlanScreen />)
     const tile = await today()
     expect(within(tile).queryByRole('list', { name: /Courses/ })).not.toBeInTheDocument()
-    expect(within(tile).queryByRole('button', { name: /actions/ })).not.toBeInTheDocument()
   })
 })

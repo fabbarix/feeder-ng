@@ -8,6 +8,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/cook"
+	"github.com/fabbarix/feeder-ng/internal/household"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -105,12 +106,16 @@ type dbMeals struct{ a *DB }
 
 // mealSelect reads a Planned Meal with its Course (name, main flag, place in the slot's order). A Course missing
 // from the slot's list sorts last.
-const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, ms.time, pm.recipe_id, pm.batches, pm.state,
+//
+// The instant is not read here: the date's own time (meal_slot_dates, "" when none) comes back as ownTime, and
+// slotInstant applies household.EffectiveTime to it with the usual time (ADR 0014).
+const mealSelect = `SELECT pm.date, pm.meal_slot_id, ms.name, COALESCE(msd.time, ''), pm.recipe_id, pm.batches, pm.state,
 	pm.course_id, c.name, c.is_main, COALESCE(msc.position, 9999), pm.portions
 	FROM planned_meals pm
 	JOIN meal_slots ms ON ms.id = pm.meal_slot_id
 	JOIN courses c ON c.id = pm.course_id
-	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id`
+	LEFT JOIN meal_slot_courses msc ON msc.meal_slot_id = pm.meal_slot_id AND msc.course_id = pm.course_id
+	LEFT JOIN meal_slot_dates msd ON msd.slot_id = pm.meal_slot_id AND msd.date = pm.date`
 
 // Meal implements Meals. A Course id that is not above 0 names no Course.
 func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID, courseID int64) (MealInfo, error) {
@@ -122,10 +127,14 @@ func (m dbMeals) Meal(ctx context.Context, date string, mealSlotID, courseID int
 		return MealInfo{}, err
 	}
 	q := mealSelect + ` WHERE pm.date = ? AND pm.meal_slot_id = ? AND pm.course_id = ?`
-	info, err := scanMeal(m.a.db.QueryRowContext(ctx, q, date, mealSlotID, courseID), loc)
+	info, own, err := scanMeal(m.a.db.QueryRowContext(ctx, q, date, mealSlotID, courseID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return MealInfo{}, ErrNotFound
 	}
+	if err != nil {
+		return MealInfo{}, err
+	}
+	info.At, err = m.a.slotInstant(ctx, info.MealSlotID, info.Date, own, loc)
 	return info, err
 }
 
@@ -150,16 +159,48 @@ func (m dbMeals) query(ctx context.Context, q string, args ...any) ([]MealInfo, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []MealInfo
+	var owns []string
 	for rows.Next() {
-		info, err := scanMeal(rows, loc)
+		info, own, err := scanMeal(rows)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 		out = append(out, info)
+		owns = append(owns, own)
 	}
-	return out, rows.Err()
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// The instants are read after the rows are closed: each one may query the Meal Slot.
+	for i := range out {
+		at, err := m.a.slotInstant(ctx, out[i].MealSlotID, out[i].Date, owns[i], loc)
+		if err != nil {
+			return nil, err
+		}
+		out[i].At = at
+	}
+	return out, nil
+}
+
+// slotInstant is the instant of a Planned Meal's Meal Slot on its date, at the effective time: the date's own time
+// when it has one (ownTime, "" when none), else the usual time (household.EffectiveTime; ADR 0014). loc is the
+// household zone.
+func (a *DB) slotInstant(ctx context.Context, mealSlotID int64, date, ownTime string, loc *time.Location) (time.Time, error) {
+	slot, err := a.hh.Slot(ctx, mealSlotID)
+	if err != nil {
+		return time.Time{}, err
+	}
+	hhmm := household.EffectiveTime(slot.Time, household.SlotDate{SlotID: mealSlotID, Date: date, Time: ownTime})
+	at, err := time.ParseInLocation("2006-01-02 15:04", date+" "+hhmm, loc)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return at.UTC(), nil
 }
 
 type scanner interface {
@@ -167,23 +208,20 @@ type scanner interface {
 }
 
 // scanMeal reads one row of mealSelect; the slot time is household time in loc.
-func scanMeal(sc scanner, loc *time.Location) (MealInfo, error) {
+// scanMeal reads one mealSelect row; ownTime is the date's own time ("" for the usual one). The instant is set by the
+// caller (slotInstant).
+func scanMeal(sc scanner) (MealInfo, string, error) {
 	var (
-		info MealInfo
-		hhmm string
-		main int64
+		info    MealInfo
+		ownTime string
+		main    int64
 	)
-	if err := sc.Scan(&info.Date, &info.MealSlotID, &info.SlotName, &hhmm, &info.RecipeID, &info.Batches, &info.State,
+	if err := sc.Scan(&info.Date, &info.MealSlotID, &info.SlotName, &ownTime, &info.RecipeID, &info.Batches, &info.State,
 		&info.CourseID, &info.CourseName, &main, &info.Position, &info.Portions); err != nil {
-		return MealInfo{}, err
+		return MealInfo{}, "", err
 	}
 	info.Main = main == 1
-	at, err := time.ParseInLocation("2006-01-02 15:04", info.Date+" "+hhmm, loc)
-	if err != nil {
-		return MealInfo{}, err
-	}
-	info.At = at.UTC()
-	return info, nil
+	return info, ownTime, nil
 }
 
 type dbWaste struct{ a *DB }

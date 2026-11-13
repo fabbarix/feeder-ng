@@ -60,14 +60,18 @@ func (in info) slotDef(key plan.Key) (MealSlotDef, bool) {
 	return def, ok && def.Weekday == weekdayOf(key.Date)
 }
 
-// instant is the start of the slot at key in the household zone.
-func (in info) instant(key plan.Key) (time.Time, bool) {
-	def, ok := in.slotDef(key)
-	if !ok {
-		return time.Time{}, false
+// slotAt is the start of the Meal Slot on key's date in the household zone, at the effective time: the date's own time
+// when it has one (ADR 0014). ok is false when the key is not a Meal Slot that falls on its date.
+func (r *Runner) slotAt(ctx context.Context, in info, key plan.Key) (time.Time, bool, error) {
+	if _, ok := in.slotDef(key); !ok {
+		return time.Time{}, false, nil
 	}
-	at, err := plan.SlotInstant(key.Date, def.Time, in.zone)
-	return at, err == nil
+	d, err := r.d.Source.SlotDate(ctx, key.MealSlotID, key.Date)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	at, err := plan.SlotInstant(key.Date, d.Time, in.zone)
+	return at, err == nil, nil
 }
 
 // snapshot reads everything one planning run needs (see plan.Snapshot). It runs inside
@@ -100,7 +104,12 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 		if err != nil {
 			return err
 		}
-		slots = append(slots, plan.SlotInfo{Key: occ, Name: def.Name, Time: def.Time, Attendance: att, Courses: courses})
+		d, err := src.SlotDate(ctx, def.ID, occ.Date)
+		if err != nil {
+			return err
+		}
+		slots = append(slots, plan.SlotInfo{Key: occ, Name: def.Name, Time: d.Time, UsualTime: d.UsualTime,
+			Guests: d.Guests, NotServed: d.NotServed, Attendance: att, Courses: courses})
 		return nil
 	}
 	// Unconfirmed meals of past days first, then the Planning Horizon.
@@ -145,14 +154,17 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 			clear = append(clear, plan.CellKeys(s)...)
 		}
 	case o.after != nil:
-		target, ok := in.instant(*o.after)
+		target, ok, err := r.slotAt(ctx, in, *o.after)
+		if err != nil {
+			return plan.Snapshot{}, err
+		}
 		if !ok {
 			return plan.Snapshot{}, ErrUnknownSlot
 		}
 		after := *o.after
 		for _, s := range slots {
-			at, ok := in.instant(s.Key)
-			if !ok {
+			at, err := plan.SlotInstant(s.Key.Date, s.Time, in.zone)
+			if err != nil {
 				continue
 			}
 			for _, k := range plan.CellKeys(s) {
@@ -234,26 +246,11 @@ func walkRank(s plan.SlotInfo, courseID int64) int {
 	return -1
 }
 
-// cellAttendance is the attendance a planning cell serves: its Course Attendance, or the slot's own Attendance when the
-// slot has no Courses (pure planning only).
-func cellAttendance(s plan.SlotInfo, courseID int64) []plan.Attendee {
-	if len(s.Courses) == 0 {
-		return s.Attendance
-	}
-	for _, c := range s.Courses {
-		if c.CourseID == courseID {
-			return c.Attendance
-		}
-	}
-	return nil
-}
-
 // invalidOnRead lists the unpinned Planned Meals the planner would keep although they are no longer valid, so that
-// they are treated as empty: a cell nobody eats, a meal whose Batches no longer cover its cell's portions, or a meal
-// that breaks the Slot Rules of its cell (the planner keeps valid unpinned meals without re-checking them). A meal
-// planned for other portions that its Batches still cover stays: Reconcile writes the new Portions (spec 7.2). A
-// Leftover-served meal is checked against its source by the planner. It works per planning cell. Keys already in
-// clear are not repeated.
+// they are treated as empty: a cell nobody eats (no Member and no Guest), or a meal that breaks the Slot Rules of its
+// cell (the planner keeps valid unpinned meals without re-checking them). Batches that no longer cover the portions are
+// not listed: the planner keeps the meal and raises its Batches (ADR 0014 point 6). A Leftover-served meal is checked
+// against its source by the planner. It works per planning cell. Keys already in clear are not repeated.
 func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRule, recipes []planner.Recipe, clear []plan.Key) []plan.Key {
 	already := map[plan.Key]bool{}
 	for _, k := range clear {
@@ -272,17 +269,18 @@ func invalidOnRead(slots []plan.SlotInfo, meals []plan.Meal, rules []plan.SlotRu
 			if !ok || already[k] {
 				continue
 			}
-			// Nobody eats the cell.
-			portions := attendancePortions(cellAttendance(s, k.CourseID))
-			if portions <= 0 {
+			// Nobody eats the cell (no Member and no Guest).
+			if cellPortions(s, k.CourseID) <= 0 {
 				out = append(out, k)
 				continue
 			}
 			if m.From != nil {
 				continue
 			}
+			// Batches that no longer cover the cell's portions are not a reason to drop the meal: the planner keeps it and
+			// raises its Batches (ADR 0014 point 6).
 			rc, ok := recipeOf(recipes, m.RecipeID)
-			if !ok || m.Batches*rc.Yield < portions-eps {
+			if !ok {
 				out = append(out, k)
 				continue
 			}
@@ -321,7 +319,10 @@ func (r *Runner) unpinMisfits(ctx context.Context, st *store.Store, source plan.
 	}
 	ds := make([]plan.Dependant, 0, len(deps))
 	for _, m := range deps {
-		at, _ := in.instant(m.Key)
+		at, _, err := r.slotAt(ctx, in, m.Key)
+		if err != nil {
+			return err
+		}
 		ds = append(ds, plan.Dependant{Key: m.Key, At: at, Portions: m.Portions, Pinned: m.Pinned})
 	}
 	for _, k := range plan.DependantsToUnpin(available, ds) {
@@ -352,6 +353,15 @@ func needsFor(rc planner.Recipe, batches float64) []Need {
 		out = append(out, Need{IngredientID: int64(n.IngredientID), Quantity: n.Quantity * batches})
 	}
 	return out
+}
+
+// cellPortions is what a cell of the slot needs: the Portion Factors of its Course Attendance plus one per Guest of the
+// slot on that date (ADR 0014). A Course the slot does not serve needs nothing.
+func cellPortions(si plan.SlotInfo, course int64) float64 {
+	if len(si.Courses) > 0 && !hasCourse(si, course) {
+		return 0
+	}
+	return attendancePortions(courseAttendance(si, course)) + float64(si.Guests)
 }
 
 // attendancePortions sums the Portion Factors of an attendance.
