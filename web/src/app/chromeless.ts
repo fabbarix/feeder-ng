@@ -3,7 +3,7 @@
 
 const CHROMELESS = /^\/(board|cook|scan\/receipt)(\/|$)/
 
-/** True for /board and /cook and anything under them (but not /boards or /cooking). Query and hash are ignored. */
+/** True for /board, /cook and /scan/receipt and anything under them (but not /boards, /cooking or /scan/receipts). Query and hash are ignored. */
 export function isChromeless(pathname: string): boolean {
   const path = pathname.split(/[?#]/)[0] ?? ''
   return CHROMELESS.test(path)
