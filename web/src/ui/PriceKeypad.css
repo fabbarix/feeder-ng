@@ -1,0 +1,85 @@
+/* PriceKeypad (shop-scan-proposals.md 13.4): the keys are 44 px or more (system.md), the figures tabular. Tokens only. */
+.price-keypad {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.price-keypad__meta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+}
+
+.price-keypad__display {
+  display: block;
+  font-size: var(--text-display-size);
+  font-weight: var(--text-display-weight);
+  line-height: var(--text-display-line);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+}
+
+.price-keypad__display:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.price-keypad__error {
+  margin: 0;
+  color: var(--status-danger-fg);
+  font-size: var(--text-meta-size);
+  text-align: center;
+}
+
+.price-keypad__implied,
+.price-keypad__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.price-keypad__keys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.price-keypad__key,
+.price-keypad__key-gap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.price-keypad__key {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-title-1-size);
+  font-weight: var(--text-title-1-weight);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.price-keypad__key:active {
+  background: var(--color-surface-3);
+}
+
+.price-keypad__key:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.price-keypad__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
