@@ -1,5 +1,6 @@
 // SR3: the Scanned list as plain data (shop-scan-proposals.md §13.2, §13.3, §13.6, §13.7). The scans of a Shop and day
 // (Ops with their server Results, or null while queued) are grouped into one row per Product. Pure TypeScript, no React.
+import { amountOf } from '../../../lib/amountOf'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { ShoppingLine, ShoppingList } from '../../shop/types'
 import { scanStrings } from '../strings'
@@ -281,31 +282,13 @@ export interface RowMeta {
   waiting: boolean
 }
 
-/** One amount of an x-of-y: a piece is a bare number (as formatQuantity rounds it); g and ml read as elsewhere. */
-function coverAmount(amount: number, base: BaseUnit, system: UnitSystem): string {
-  if (base === 'piece') return String(Number(amount.toFixed(1)))
-  return formatQuantity(amount, base, system)
-}
-
-/** "200 ml" -> ["200", "ml"]; null when the text is not one number and one unit ("1 lb 2 oz"). */
-function numberAndUnit(text: string): [string, string] | null {
-  const m = /^(-?[\d.]+) (\S+)$/.exec(text)
-  return m ? [m[1]!, m[2]!] : null
-}
-
 /**
  * "x of y" in the Line's unit, as the Shop screen's Restock reason reads (household-items §4.4): pieces are bare ("2 of 6"),
  * metric g and ml name the unit once when both amounts share it ("250 of 375 g") and keep both when they do not; imperial
- * keeps both ("7.1 oz of 1 lb 2 oz").
+ * keeps both ("7.1 oz of 1 lb 2 oz"). The rule is lib/amountOf, shared with the Restock reason.
  */
 export function coverText(got: number, of: number, base: BaseUnit, system: UnitSystem): string {
-  let x = coverAmount(got > EPS ? got : 0, base, system)
-  const y = coverAmount(of, base, system)
-  if (base !== 'piece' && system === 'metric') {
-    const a = numberAndUnit(x)
-    const b = numberAndUnit(y)
-    if (a && b && a[1] === b[1]) x = a[0]
-  }
+  const [x, y] = amountOf(got, of, base, system)
   return scanStrings.coverOf(x, y)
 }
 
