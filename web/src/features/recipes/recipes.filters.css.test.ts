@@ -122,7 +122,6 @@ describe('round 2: the chip line measures natural widths', () => {
     expect(valueFor('.recipe-filters__measure', 'inline-size', 0)).toBe('max-content')
     expect(valueFor('.recipe-filters__measure', 'inset-inline', 0)).toBeUndefined()
     expect(valueFor('.recipe-filters__measure > .chip', 'flex', 0)).toBe('none')
-    expect(valueFor('.recipe-filters__measure > .chip', 'min-inline-size', 0)).toBeUndefined()
   })
 })
 
@@ -157,5 +156,28 @@ describe('round 2: spacing', () => {
   it('recipes.css never styles the shared .popover__body', () => {
     expect(recipeRules.filter((r) => r.selector.includes('popover__body'))).toEqual([])
   })
+})
+
+// Round 3 (docs/design/recipes-filter.md 14): one measurement for both states, and the panel body adds no inset.
+describe('round 3: a chip measures the same shown or in the copy', () => {
+  it('the copy\'s chips have the same min-inline-size as the shown chips (natural width = max(min, content) either way)', () => {
+    const shown = valueFor('.recipe-filters__chips > .chip', 'min-inline-size', 0)
+    expect(shown).toBeDefined()
+    expect(valueFor('.recipe-filters__measure > .chip', 'min-inline-size', 0)).toBe(shown)
+  })
+  it('and the same padding, gap and font as the shown chips (no copy-only override of the chip box)', () => {
+    for (const prop of ['padding', 'padding-inline', 'gap', 'font-size', 'border', 'inline-size', 'max-inline-size']) {
+      expect(valueFor('.recipe-filters__measure > .chip', prop, 0), prop).toBe(valueFor('.recipe-filters__chips > .chip', prop, 0))
+    }
+  })
+})
+
+describe('round 3: the panel body shares its start edge with the title and the footer', () => {
+  it.each(['padding', 'padding-inline', 'padding-inline-start', 'padding-left', 'margin', 'margin-inline', 'margin-inline-start', 'margin-left'])(
+    '.recipe-filters__body sets no %s (or 0)',
+    (prop) => {
+      for (const w of WIDTHS) expect([undefined, '0'], `${prop} @${w}`).toContain(valueFor('.recipe-filters__body', prop, w))
+    },
+  )
 })
 

@@ -1,6 +1,7 @@
 # Recipes list: the filter header (hotfix hf-recipes-filter)
 
-Status: **round 2, tests red** (2026-11-13; round 1 built in bb354d3c and sent back by review, see [§13](#13-round-2-after-the-review-of-bb354d3c)). Release: a hotfix on 1.0.0-beta.6. Domain words come from
+Status: **round 3, tests red** (2026-11-13; round 1 built in bb354d3c, round 2 in f0d5a84c, both sent back by review, see
+[§13](#13-round-2-after-the-review-of-bb354d3c) and [§14](#14-round-3-the-chip-line-must-settle)). Release: a hotfix on 1.0.0-beta.6. Domain words come from
 [GLOSSARY.md](../../GLOSSARY.md); the rules from [system.md](system.md) and [ADR 0016](../adr/0016-design-system-rules-enforced.md).
 
 ## 1. The problem
@@ -324,4 +325,26 @@ how it is built. Every user-facing string is in `recipeStrings` (§9); the foote
      `sideCourseId` and `longTag` to the ids file.
    - The static fixtures (`scripts/test/fixtures/page-layout-recipes-header/`) prove each probe: `crushed.html` (P16),
      `round1.html` (the bb354d3c defects: P17, P18, P19, P20) and `fixed.html` (the round-2 layout: clean).
+
+## 14. Round 3: the chip line must settle
+
+The review of f0d5a84c found a blocker. The chip line measured its chips two ways: the shown chips while nothing was hidden
+(`min-inline-size: 4.5rem`, so "Side" was 72 px), and the copy once a chip was hidden (no minimum, "Side" 64 px). With the line
+width inside that gap, each fit flipped the answer, the layout effect looped, React threw #185 ("Maximum update depth exceeded")
+and the page showed "Something went wrong". It happens on the guard's own filtered scenario at 430 px, and at 390 px with a
+slightly shorter Tag; the guard's widths (390, 834, 1024, 1440, 1920) missed it.
+
+1. **One measurement for both states.** The copy's chips have the same `min-inline-size` (and the same box) as the shown chips, so
+   a chip's natural width is max(min, content) whichever way it is measured.
+2. **Hysteresis.** `fitChips(widths, available, gap, plusWidth, current?)` takes the number of chips shown now. Hiding happens as
+   soon as a chip does not fit; showing one more again needs `FIT_MARGIN` px to spare (exported from `lib/recipeFilters.ts`,
+   8 to 16 px). The result is a fixed point: fitting again from its own answer gives the same answer. `useFittingChips` passes
+   its current answer, so even two measurements that disagree by up to the margin settle in a bounded number of renders.
+3. **Guard rule P21** (always fails): the page broke at a width. `RESIZE_WALK` = `{ scenario: 'recipes-filtered', from: 360,
+   to: 480, step: 10 }`: the guard loads the closed filtered `/recipes` fresh at each of those 13 widths (phone emulation) and
+   reports an uncaught exception (`Runtime.exceptionThrown`), a console error, or the error page ("Something went wrong").
+   It runs once per guard run, at about a second per width.
+4. **The panel body adds no inset**: `.recipe-filters__body` has no inline padding or margin, so the panel's content shares its
+   start edge with its title and footer. The Course line keeps "All Courses"' focus ring inside the sheet with its own padding
+   and negative margin (§13.2), not with the body's.
 
