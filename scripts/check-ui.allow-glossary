@@ -38,3 +38,8 @@ web/src/features/board/strings.ts done  # Advance Step state, not a Planned Meal
 # Recipe Assistant settings (approved copy): "never" is plain English in "never sent" / "never shows"; "runs" is "Whoever runs your server".
 web/src/features/recipe-assistant/strings.ts never  # plain English in the approved privacy and key helper copy
 web/src/features/recipe-assistant/strings.ts run  # "Whoever runs your server" (approved secret key copy), not a Batch
+
+# "finished" is on Used up's Avoid list (a Supply's Lot is Used up, not finished). These two are plain English about
+# something else: the Timer notification (notifications:21, 28, "Timer finished") and the photo read (import:230).
+web/src/features/notifications/strings.ts finished  # "Timer finished" notification, not a Supply's Lot
+web/src/features/import/strings.ts finished  # "until the read is finished": the photo read, not a Supply's Lot

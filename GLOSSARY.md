@@ -288,8 +288,8 @@ _Note_: in code a Supply is an `ingredients` row with `kind = 'supply'` ([ADR 00
 The Stock of a Supply below which the Shopping List asks for it; the Line is the Restock level less Stock, as packs of the Product last bought.
 _Avoid_: Reorder point, par level, minimum stock, low-stock threshold, alert level
 
-**Used up** (a Supply's Stock Lot action):
-Taking some or all of a Supply's Stock Lot out of Stock because the Household used it. It is not waste and not a mistake.
+**Used up**:
+A Supply's Stock Lot action: taking some or all of the Lot out of Stock because the Household used it. It is not waste and not a mistake.
 _Avoid_: Consumed, finished, emptied
 _Note_: a food Lot leaves Stock through Cooked, Set total or Throw out; **Delete** stays "for a mistake" for both.
 
