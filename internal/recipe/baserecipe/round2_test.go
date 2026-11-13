@@ -271,7 +271,7 @@ func TestComposeNestedBlocksMayStillInterleaveWithTheirParent(t *testing.T) {
 	b.Lines = []br.Line{line(iMilk, 1000, "ml"), line(iRouxI, 100, "g")}
 	b.Steps = []br.Step{step("Melt the butter", act, 5), step("Simmer the milk", pas, 60, 0),
 		{Text: "Whisk in the roux", Kind: act, DurationMinutes: 5, After: []int{1}, Uses: []schedule.Use{{IngredientID: iRouxI}}}}
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Steps: []br.Step{step("Toast the flour", act, 5)}}
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")}, Steps: []br.Step{step("Toast the flour", act, 5)}}
 	l := lasagne()
 	l.Steps = []br.Step{{Text: "Assemble", Kind: act, DurationMinutes: 10, Uses: []schedule.Use{{IngredientID: iBechamelI}}}}
 	c := newCat().add(b, ml("Béchamel")).add(roux, grams("Roux")).add(l)
