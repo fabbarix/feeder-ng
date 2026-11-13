@@ -205,7 +205,7 @@ type Deps struct {
 	Publisher   Publisher
 }
 
-// Service applies operations. mu serialises Apply, Undo and SetPrice: the app is one process on one SQLite file,
+// Service applies operations. mu serialises Apply, Undo, SetPrices and SetPrice: the app is one process on one SQLite file,
 // so one lock is enough to make a repeated or racing request see the first one's ledger row.
 type Service struct {
 	d  Deps
@@ -508,6 +508,13 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 		} else {
 			undo = append(undo, func(ctx context.Context) { _ = s.d.Catalogue.DeletePrice(ctx, id) })
 		}
+		// Another live scan already refers to the day's Price: this one shares what the day had before the first of
+		// them, so whichever is undone last puts that back (see Undo).
+		if shared, ok, err := s.d.Ledger.SharedPrice(ctx, id, op.ClientUUID); err != nil {
+			return fail(err)
+		} else if ok {
+			prevJSON = shared
+		}
 	}
 
 	eff, err := s.d.List.AfterLot(ctx, shopservice.AfterLotInput{IngredientID: p.IngredientID, To: rangeTo, ShopID: &shop,
@@ -677,10 +684,14 @@ func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, erro
 			}
 			return s.d.Catalogue.DeletePurchase(ctx, *ev.PurchaseID)
 		}},
-		// Restoring a Price re-links the Product to the Shop, so the sold-at link is removed after it.
+		// Restoring a Price re-links the Product to the Shop, so the sold-at link is removed after it. A Price that
+		// another live scan still refers to (the other scans of a priced row) stays: the last of them restores it.
 		{store.UndoStepPrice, func() error {
 			if ev.PriceID == nil || ev.ProductID == nil || ev.ShopID == nil {
 				return nil
+			}
+			if _, shared, err := s.d.Ledger.SharedPrice(ctx, *ev.PriceID, clientUUID); err != nil || shared {
+				return err
 			}
 			return s.restorePrice(ctx, ev)
 		}},

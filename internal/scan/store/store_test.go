@@ -187,3 +187,41 @@ func TestUpdatePricesIsAllOrNothing(t *testing.T) {
 		t.Fatalf("a = %d, want the first update rolled back to 100", *a.PriceCents)
 	}
 }
+
+func TestUpdatePricesSetsTheReplacedPriceOnlyWhenGiven(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 100, 1)
+	ev.PrevPriceJSON = `{"date":"2026-11-09","priceCents":90}`
+	_, _ = st.Insert(ctx, ev)
+	_, _ = st.Insert(ctx, event("b", 100, 2))
+	empty, set := "", `{"date":"2026-11-09","priceCents":80}`
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "b", Cents: 129, PrevPriceJSON: &set}})
+	a, _, _ := st.Get(ctx, "a")
+	b, _, _ := st.Get(ctx, "b")
+	if a.PrevPriceJSON != ev.PrevPriceJSON || b.PrevPriceJSON != set {
+		t.Fatalf("a %q, b %q", a.PrevPriceJSON, b.PrevPriceJSON)
+	}
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PrevPriceJSON: &empty}})
+	if a, _, _ := st.Get(ctx, "a"); a.PrevPriceJSON != "" {
+		t.Fatalf("a %q, want cleared", a.PrevPriceJSON)
+	}
+}
+
+func TestSharedPriceIsAnotherLiveEventOnTheSamePriceRow(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	a := event("a", 100, 1)
+	a.PriceID, a.PrevPriceJSON = i64(5), `{"date":"2026-11-09","priceCents":90}`
+	b := event("b", 100, 2)
+	b.PriceID = i64(5)
+	_, _ = st.Insert(ctx, a)
+	_, _ = st.Insert(ctx, b)
+	if prev, shared, err := st.SharedPrice(ctx, 5, "b"); err != nil || !shared || prev != a.PrevPriceJSON {
+		t.Fatalf("for b: %q %v %v, want a's", prev, shared, err)
+	}
+	_, _ = st.MarkUndone(ctx, "a")
+	if _, shared, _ := st.SharedPrice(ctx, 5, "b"); shared {
+		t.Fatal("an undone event does not share")
+	}
+}

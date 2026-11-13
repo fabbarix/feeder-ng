@@ -341,3 +341,64 @@ func TestOfflineProductCarriesLastPriceDateOnlyWhenThereIsAPrice(t *testing.T) {
 		t.Fatalf("without a Price: %s (lastPriceDate absent, lastPriceCents stays null)", without)
 	}
 }
+
+// −1 on a priced row is the Undo of its latest scan: the day's Price stays while another scan of the row still uses it,
+// and goes with the last one (Remove: "Their Stock Lots and Price go too").
+func TestUndoOfOneScanOfAPricedRowKeepsTheDaysPrice(t *testing.T) {
+	e := setPricesEnv(t)
+	apply(t, e, packScan("a", mutti, 700))
+	apply(t, e, packScan("b", mutti, 700))
+	if _, err := setPrices(e, service.SetPricesInput{ClientUUIDs: []string{"a", "b"}, PriceCents: 129}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Undo(context.Background(), "b"); err != nil {
+		t.Fatal(err)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p == nil || *p.PriceCents != 129 {
+		t.Fatalf("after −1 the Price of the day = %+v, want 129 (scan a still has it)", p)
+	}
+	if _, err := e.svc.Undo(context.Background(), "a"); err != nil {
+		t.Fatal(err)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p != nil {
+		t.Fatalf("after the last Undo the Price of the day = %+v, want none", p)
+	}
+}
+
+// A row priced over a Price the day already had (typed on the Prices page) puts that Price back when the row goes.
+func TestUndoOfARowPricedOverAnEarlierPriceOfTheDayRestoresIt(t *testing.T) {
+	e := setPricesEnv(t)
+	apply(t, e, packScan("a", mutti, 700))
+	e.cat.seedPrice(mutti, 1, "2026-11-09", 150) // typed on the Prices page after the scan
+	if _, err := setPrices(e, service.SetPricesInput{ClientUUIDs: []string{"a"}, PriceCents: 129}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Undo(context.Background(), "a"); err != nil {
+		t.Fatal(err)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p == nil || *p.PriceCents != 150 {
+		t.Fatalf("after Undo the Price of the day = %+v, want the earlier 150 back", p)
+	}
+}
+
+// The second scan of a row is prefilled from the first one's Price of the day: undoing the first one (out of order)
+// keeps the Price for the second, and the last Undo removes it.
+func TestUndoOutOfOrderKeepsTheDaysPriceForTheScansLeft(t *testing.T) {
+	e := setPricesEnv(t)
+	first := packScan("a", mutti, 700)
+	first.PriceCents = ip(159)
+	apply(t, e, first)
+	apply(t, e, packScan("b", mutti, 700)) // prefilled 159 from today's Price
+	if _, err := e.svc.Undo(context.Background(), "a"); err != nil {
+		t.Fatal(err)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p == nil || *p.PriceCents != 159 {
+		t.Fatalf("after undoing a the Price of the day = %+v, want 159 (b still has it)", p)
+	}
+	if _, err := e.svc.Undo(context.Background(), "b"); err != nil {
+		t.Fatal(err)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p != nil {
+		t.Fatalf("after the last Undo the Price of the day = %+v, want none", p)
+	}
+}

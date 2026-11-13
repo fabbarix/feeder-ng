@@ -199,15 +199,18 @@ func (s *Store) UpdatePrice(ctx context.Context, clientUUID string, cents int, p
 	return nil
 }
 
-// PriceUpdate sets the Price of one scan event. PriceID nil keeps the one the event has.
+// PriceUpdate sets the Price of one scan event. PriceID nil keeps the one the event has; PrevPriceJSON nil keeps the
+// event's own, and a value replaces it ("" clears it).
 type PriceUpdate struct {
-	ClientUUID string
-	Cents      int
-	PriceID    *int64
+	ClientUUID    string
+	Cents         int
+	PriceID       *int64
+	PrevPriceJSON *string
 }
 
 // UpdatePrices applies the updates in one transaction: all of them or none (ErrNotFound for an unknown client UUID).
-// json_patch merges the price into result_json's scan object, so the stored Result answers the new price too.
+// json_patch merges the price into result_json's scan object, so the stored
+// Result answers the new price too.
 func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -215,9 +218,16 @@ func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 	for _, u := range updates {
+		var prev any = nil
+		keepPrev := u.PrevPriceJSON == nil
+		if !keepPrev {
+			prev = nullString(*u.PrevPriceJSON)
+		}
 		res, err := tx.ExecContext(ctx, `UPDATE scan_events SET price_cents = ?, price_id = COALESCE(?, price_id),
-			result_json = json_patch(result_json, json_object('scan', json_object('priceCents', ?))) WHERE client_uuid = ?`,
-			u.Cents, nullInt(u.PriceID), u.Cents, u.ClientUUID)
+			prev_price_json = CASE WHEN ? THEN prev_price_json ELSE ? END,
+			result_json = json_patch(result_json, json_object('scan', json_object('priceCents', ?)))
+			WHERE client_uuid = ?`,
+			u.Cents, nullInt(u.PriceID), keepPrev, prev, u.Cents, u.ClientUUID)
 		if err != nil {
 			return err
 		}
@@ -226,6 +236,22 @@ func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// SharedPrice reports whether a live (not undone) event other than exceptUUID refers to the Price row priceID, and
+// returns the same-day Price the earliest of them replaced (its prev_price_json): the Price of the day before any of
+// the live events that share the row wrote it.
+func (s *Store) SharedPrice(ctx context.Context, priceID int64, exceptUUID string) (prevJSON string, shared bool, err error) {
+	var prev sql.NullString
+	err = s.db.QueryRowContext(ctx, `SELECT prev_price_json FROM scan_events
+		WHERE price_id = ? AND client_uuid <> ? AND undone_at IS NULL ORDER BY seq LIMIT 1`, priceID, exceptUUID).Scan(&prev)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return prev.String, true, nil
 }
 
 // Totals sums the range's Shop-mode events that are not undone: price_cents and the number of Stock Lots added.

@@ -66,23 +66,24 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 			return nil, err
 		}
 	}
-	// The day's per kg: the one sent, else the one the day already has.
+	// Each day's Price as it is (as prev_price_json keeps it), and the day's per kg: the one sent, else the one the day
+	// already has.
 	var days []stock.Date
 	dayPerKg := map[stock.Date]*int{}
+	dayBefore := map[stock.Date]string{}
 	for _, d := range dates {
 		if _, seen := dayPerKg[d]; seen {
 			continue
 		}
 		days = append(days, d)
+		existing, err := s.d.Catalogue.PriceOn(ctx, pid, shop, d)
+		if err != nil {
+			return nil, err
+		}
+		dayBefore[d] = snapshotJSON(existing)
 		dayPerKg[d] = copyInt(in.PricePerKgCents)
-		if in.PricePerKgCents == nil {
-			existing, err := s.d.Catalogue.PriceOn(ctx, pid, shop, d)
-			if err != nil {
-				return nil, err
-			}
-			if existing != nil {
-				dayPerKg[d] = copyInt(existing.PricePerKgCents)
-			}
+		if in.PricePerKgCents == nil && existing != nil {
+			dayPerKg[d] = copyInt(existing.PricePerKgCents)
 		}
 	}
 	cents := make([]int, len(events))
@@ -100,6 +101,7 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 
 	// All checks passed: the writes start here.
 	priceIDs := map[stock.Date]int64{}
+	baseline := map[stock.Date]*string{}
 	for _, d := range days {
 		pack := in.PriceCents
 		rec, err := s.d.Catalogue.RecordPrice(ctx, pid, PriceInput{ShopID: shop, Date: d, PriceCents: &pack, PricePerKgCents: dayPerKg[d]})
@@ -107,11 +109,25 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 			return nil, err
 		}
 		priceIDs[d] = rec.ID
+		// The scans that now refer to the day's Price share what it was before the first of them wrote it, so an Undo
+		// of one of them leaves it to the others and the last one puts that back (see Undo).
+		prev, shared, err := s.d.Ledger.SharedPrice(ctx, rec.ID, "")
+		if err != nil {
+			return nil, err
+		}
+		if !shared {
+			prev = dayBefore[d]
+		}
+		baseline[d] = &prev
 	}
 	updates := make([]store.PriceUpdate, len(events))
 	for i, ev := range events {
 		id := priceIDs[dates[i]]
-		updates[i] = store.PriceUpdate{ClientUUID: ev.ClientUUID, Cents: cents[i], PriceID: &id}
+		u := store.PriceUpdate{ClientUUID: ev.ClientUUID, Cents: cents[i], PriceID: &id}
+		if ev.PriceID == nil || *ev.PriceID != id {
+			u.PrevPriceJSON = baseline[dates[i]]
+		}
+		updates[i] = u
 	}
 	if err := s.d.Ledger.UpdatePrices(ctx, updates); err != nil {
 		return nil, err
@@ -132,6 +148,15 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 	}
 	s.publish()
 	return out, nil
+}
+
+// snapshotJSON is a day's Price as prev_price_json keeps it ("" for none).
+func snapshotJSON(p *PriceInfo) string {
+	if p == nil {
+		return ""
+	}
+	b, _ := json.Marshal(priceSnapshot{Date: p.Date, PriceCents: p.PriceCents, PricePerKgCents: p.PricePerKgCents})
+	return string(b)
 }
 
 // pricedScans loads the scans to price, in the order given. Each must exist, be a Shop scan and not be undone, and all of
