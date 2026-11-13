@@ -25,8 +25,11 @@ const zonesPath = resolve(cwd, '../scripts/test/fixtures/page-layout-seed-zones.
 const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
 
 type Picked = { planZone: string; confirmZone: string; targets: { date: string; time: string }[] }
+// Loaded like the other script tests (pageLayoutRules.ds.test.ts): vitest cannot import a file outside web/ by absolute path.
+const nodeModule = 'node:module'
+const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const mod = existsSync(zonesPath)
-  ? ((await import(/* @vite-ignore */ zonesPath)) as { SLOT_TIMES: string[]; pickZones: (nowMs: number) => Picked })
+  ? (createRequire(resolve(cwd, 'package.json'))(zonesPath) as { SLOT_TIMES: string[]; pickZones: (nowMs: number) => Picked })
   : null
 
 /** UTC offset in hours of a fixed-offset zone name; NaN for anything else. Etc/GMT signs are inverted (Etc/GMT+12 = UTC-12). */
