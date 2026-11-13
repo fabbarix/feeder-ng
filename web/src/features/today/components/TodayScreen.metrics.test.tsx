@@ -34,7 +34,8 @@ const routed = (
 )
 
 describe('TodayScreen: the metric strip', () => {
-  it('shows the streak, the Leftovers count and the Lines to get in one strip, each with its colour role', async () => {
+  // DS-TODAY round 2 (changed on purpose): while the Leftovers tile shows, the "Leftovers to use" metric is hidden (no duplicate).
+  it('shows the streak and the Lines to get in one strip, each with its colour role, and NOT the Leftovers count (the tile has it)', async () => {
     h.leftovers = [leftover(1), leftover(2), leftover(3)]
     h.lines = 16
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 2 } })
@@ -43,9 +44,9 @@ describe('TodayScreen: the metric strip', () => {
     expect(strip).toHaveAttribute('data-min', 'metric')
     expect(within(strip).getByText('2 d')).toBeInTheDocument()
     expect(within(strip).getByText('16')).toBeInTheDocument()
-    expect(strip.querySelector('[data-metric="leftovers"]')).toHaveTextContent('3')
+    expect(strip.querySelector('[data-metric="leftovers"]')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
     expect(container.querySelector('[data-metric="streak"]')).toHaveAttribute('data-status', 'success')
-    expect(container.querySelector('[data-metric="leftovers"]')).toHaveAttribute('data-status', 'leftover')
   })
 
   it('has no strip when there is nothing to count (no streak, no Leftovers, no Lines)', async () => {
@@ -55,11 +56,12 @@ describe('TodayScreen: the metric strip', () => {
     expect(screen.queryByRole('group', { name: 'At a glance' })).not.toBeInTheDocument()
   })
 
-  it('the Leftovers tile below still opens the Plan: the metric is a count, not a second button', async () => {
+  it('Leftovers alone do not open the strip: the Leftovers tile is the one place that says it, and it still opens the Plan', async () => {
     h.leftovers = [leftover(1)]
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
     renderWithProviders(routed, '/')
-    await screen.findByRole('group', { name: 'At a glance' })
+    await screen.findByRole('heading', { name: 'Leftovers to use' })
+    expect(screen.queryByRole('group', { name: 'At a glance' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Leftovers to use' })).toHaveLength(1)
   })
 })

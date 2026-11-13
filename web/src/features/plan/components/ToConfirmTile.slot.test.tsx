@@ -123,3 +123,35 @@ describe('ToConfirmTile: one ActionGroup per row', () => {
     for (const g of screen.getAllByRole('group')) expect(g.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
   })
 })
+
+// DS-TODAY round 2: the row is the ActionGroup's container (DS-A round 2: the group is the root, the caller's row is the host).
+describe('ToConfirmTile: the row is the container of its ActionGroup', () => {
+  it('each row carries action-group-host and the group is its direct child (a size-contained host with a real actions track)', () => {
+    setup([manicotti(), ...withSide()])
+    for (const row of screen.getAllByRole('listitem')) {
+      expect(row).toHaveClass('to-confirm__row')
+      expect(row).toHaveClass('action-group-host')
+      expect(row.querySelector(':scope > .action-group')).not.toBeNull()
+    }
+  })
+
+  it('a one-Course row shows a meta line "Main · 2 portions" (Course, portions of the Planned Meal)', () => {
+    setup([manicotti()])
+    expect(screen.getByRole('listitem').querySelector('.to-confirm__meta')).toHaveTextContent('Main · 2 portions')
+  })
+
+  it('"+ Side" is emphasised: its own <strong> in the meta line, the Recipe name stays plain', () => {
+    setup(withSide())
+    const meta = screen.getByRole('listitem').querySelector('.to-confirm__meta')!
+    expect(meta.querySelector('strong')).toHaveTextContent('+ Side')
+    expect(meta).toHaveTextContent('+ Side · Two-colour cauliflower with peppers')
+  })
+
+  it('the count is a pill with an accessible name', () => {
+    const { container } = setup([manicotti(), entry(1, 'Main', 'Soup', { date: '2026-11-10', mealSlotId: 1, name: 'Lunch' })])
+    const count = container.querySelector('.to-confirm__count')!
+    expect(count).toHaveTextContent('2')
+    expect(count).toHaveAttribute('data-shape', 'pill')
+  })
+})
+

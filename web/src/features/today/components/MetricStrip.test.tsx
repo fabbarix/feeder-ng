@@ -24,6 +24,17 @@ describe('MetricStrip', () => {
     expect(within(screen.getByText('Lines to get').closest('[data-metric]') as HTMLElement).getByText('16')).toBeInTheDocument()
   })
 
+  // DS-TODAY round 2 (mockup): the icon sits top-right beside the number, in its own aria-hidden box.
+  it('each tile has its icon in .today-metric__icon, before the value in the DOM (CSS puts it top-right)', () => {
+    const { container } = render(<MetricStrip metrics={all} />)
+    for (const t of container.querySelectorAll('[data-metric]')) {
+      const icon = t.querySelector('.today-metric__icon')!
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon.querySelector('svg')).toBeInTheDocument()
+      expect(icon.compareDocumentPosition(t.querySelector('.tile-metric')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
+  })
+
   it('colour roles: success for the streak, the leftover teal for Leftovers, the accent container (soft) for Lines', () => {
     const { container } = render(<MetricStrip metrics={all} />)
     expect(container.querySelector('[data-metric="streak"]')).toHaveAttribute('data-variant', 'status')

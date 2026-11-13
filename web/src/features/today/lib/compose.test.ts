@@ -59,18 +59,19 @@ describe('composeToday', () => {
     expect(tilesOf({ ...busy, spoiled: 9, toConfirm: 3 }).tiles[0]).toEqual({ id: 'nextMeal' })
   })
 
+  // DS-TODAY round 2: the Leftovers tile shows its own count, so Leftovers alone no longer opens the metric strip.
   it('drops tiles that have nothing to show', () => {
     const { tiles } = tilesOf({ ...quiet, hasNextMeal: true, leftovers: 1 })
-    expect(tiles.map((t) => t.id)).toEqual(['nextMeal', 'metrics', 'leftovers'])
+    expect(tiles.map((t) => t.id)).toEqual(['nextMeal', 'leftovers'])
   })
 
   // DS-TODAY (changed on purpose): the streak tile became the metric strip (streak, Leftovers to use, Lines to get).
-  it('shows the metric strip when at least one metric has something to say: a streak from one day on, Leftovers, or Lines to get', () => {
+  it('shows the metric strip when the streak (from one day on) or Lines to get has a value', () => {
     const ids = (extra: Partial<TodayData>) => tilesOf({ ...quiet, hasNextMeal: true, ...extra }).tiles.map((t) => t.id)
     expect(ids({ streakDays: 0 })).toEqual(['nextMeal'])
     expect(ids({ streakDays: 1 })).toEqual(['nextMeal', 'metrics'])
     expect(ids({ linesToGet: 3 })).toEqual(['nextMeal', 'metrics'])
-    expect(ids({ leftovers: 2 })).toEqual(['nextMeal', 'metrics', 'leftovers'])
+    expect(ids({ leftovers: 2 })).toEqual(['nextMeal', 'leftovers']) // the Leftovers tile is not duplicated by a metric
   })
 
   it('is one strip, however many metrics: the id appears once', () => {
@@ -89,7 +90,7 @@ describe('composeToday', () => {
   })
 
   it('without a next meal the rest keeps its order, spoiled lots after the half tiles', () => {
-    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['metrics', 'leftovers', 'spoiled'])
+    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
   })
 
   // DS-TODAY (changed on purpose): no `heroSpan`. The hero always takes the whole row; the 2x2 back-fill on the 3-column

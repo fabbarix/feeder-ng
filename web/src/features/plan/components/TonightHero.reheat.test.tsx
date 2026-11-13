@@ -35,9 +35,9 @@ describe('TonightHero: Reheat (R12)', () => {
     expect(screen.getByText(/Leftover from/)).toBeInTheDocument()
   })
 
-  it('after the slot time it asks Yes, Cooked (primary) with Reheat (secondary) instead of Adjust', async () => {
+  it('after the slot time it asks Cooked (primary) with Reheat (secondary) instead of Adjust (DS-TODAY round 2: was Yes, Cooked)', async () => {
     const h = setup(after)
-    expect(screen.getByRole('button', { name: 'Yes, Cooked' })).toHaveAttribute('data-variant', 'primary')
+    expect(screen.getByRole('button', { name: 'Cooked' })).toHaveAttribute('data-variant', 'primary')
     const reheat = screen.getByRole('button', { name: 'Reheat' })
     expect(reheat).toHaveAttribute('data-variant', 'secondary')
     expect(screen.queryByRole('button', { name: 'Adjust' })).not.toBeInTheDocument()

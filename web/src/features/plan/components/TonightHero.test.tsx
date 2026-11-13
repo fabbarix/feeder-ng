@@ -57,21 +57,24 @@ describe('TonightHero before the slot time', () => {
 })
 
 describe('TonightHero after the slot time', () => {
-  it('asks "<Recipe> cooked?" with Yes, Cooked (primary) and Adjust (secondary)', async () => {
+  // DS-TODAY round 2 (changed on purpose): the title stays the Recipe; "<Recipe> cooked?" is the ask line; Cooked (primary), Adjust, ⋮.
+  it('keeps the Recipe as the title, asks "<Recipe> cooked?" and offers Cooked (primary) and Adjust (secondary)', async () => {
     const h = setup(dinner(), after)
-    expect(screen.getByRole('heading', { name: 'Chicken curry cooked?' })).toBeInTheDocument()
-    const yes = screen.getByRole('button', { name: 'Yes, Cooked' })
+    expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Chicken curry cooked?')
+    const yes = screen.getByRole('button', { name: 'Cooked' })
     expect(yes).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(yes)
     expect(h.onYesCooked).toHaveBeenCalledWith(key)
     await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
     expect(h.onAdjust).toHaveBeenCalledWith(key)
     expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^More for / })).toBeInTheDocument()
   })
 
-  it('disables the buttons while a Yes, Cooked is being saved', () => {
+  it('disables the buttons while Cooked is being saved', () => {
     setup(dinner(), after, true)
-    expect(screen.getByRole('button', { name: 'Yes, Cooked' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cooked' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Adjust' })).toBeDisabled()
   })
 })

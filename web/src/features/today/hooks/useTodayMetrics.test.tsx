@@ -18,6 +18,14 @@ describe('useTodayMetrics', () => {
     expect(result.current.metrics.map((m) => m.value)).toEqual(['2 d', '3', '16'])
   })
 
+  // DS-TODAY round 2: the second argument says the Leftovers tile is on screen, which then owns the count.
+  it('useTodayMetrics(n, true): the Leftovers tile is showing, so there is no Leftovers metric', async () => {
+    mockApi({ 'GET /api/today/streak': { days: 2 } })
+    vi.mocked(shopSeam.useLinesToGet).mockReturnValue({ count: 16, loading: false })
+    const { result } = renderHook(() => useTodayMetrics(3, true), { wrapper })
+    await waitFor(() => expect(result.current.metrics.map((m) => m.id)).toEqual(['streak', 'lines']))
+  })
+
   it('has no metric while nothing is known (streak 0, no Leftovers, no Lines)', async () => {
     mockApi({ 'GET /api/today/streak': { days: 0 } })
     vi.mocked(shopSeam.useLinesToGet).mockReturnValue({ count: 0, loading: false })

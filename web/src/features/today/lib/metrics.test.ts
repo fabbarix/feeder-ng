@@ -19,12 +19,21 @@ describe('composeMetrics', () => {
   it('leaves out a metric with nothing to say: no streak under one day, no zero counts', () => {
     expect(composeMetrics({ streakDays: 0, leftovers: 0, linesToGet: 0 })).toEqual([])
     expect(composeMetrics({ streakDays: 0, leftovers: 2, linesToGet: 0 }).map((m) => m.id)).toEqual(['leftovers'])
+    expect(composeMetrics({ streakDays: 0, leftovers: 2, linesToGet: 0, leftoversTile: false }).map((m) => m.id)).toEqual(['leftovers'])
     expect(composeMetrics({ streakDays: 5, leftovers: 0, linesToGet: 4 }).map((m) => m.id)).toEqual(['streak', 'lines'])
   })
 
   it('the labels use the Glossary words ("Leftovers", "Lines")', () => {
     const labels = composeMetrics({ streakDays: 1, leftovers: 1, linesToGet: 1 }).map((m) => m.label)
     expect(labels.join(' ')).not.toMatch(/\b(items?|products?|left-overs?|left overs?)\b/i)
+  })
+})
+
+// DS-TODAY round 2: while the Leftovers tile shows (it lists them and says how many), the "Leftovers to use" metric would say it twice.
+describe('composeMetrics: the Leftovers tile and the Leftovers metric', () => {
+  it('leftoversTile: true leaves the Leftovers metric out', () => {
+    expect(composeMetrics({ streakDays: 2, leftovers: 3, linesToGet: 16, leftoversTile: true }).map((m) => m.id)).toEqual(['streak', 'lines'])
+    expect(composeMetrics({ streakDays: 0, leftovers: 3, linesToGet: 0, leftoversTile: true })).toEqual([])
   })
 })
 

@@ -109,3 +109,37 @@ describe('TonightHero: the Course row', () => {
     expect(document.querySelectorAll('.plan-hero [data-variant="primary"]')).toHaveLength(1)
   })
 })
+
+// DS-TODAY round 2: the Course row is [caption] [name + chip] [actions]. The chip belongs to the name's box so CSS can put it
+// beside the name (wide) or under it (phone); the name is never cut by an ellipsis to make room for a chip.
+describe('TonightHero: the Course row structure (round 2)', () => {
+  it('name and Leftover chip share .plan-course__what, before the actions group', () => {
+    setup()
+    const row = screen.getByRole('listitem', { name: 'Side' })
+    const what = row.querySelector('.plan-course__body > .plan-course__what')!
+    expect(what.querySelector('.plan-meal__recipe')).toHaveTextContent('Two-colour cauliflower with peppers')
+    expect(what.querySelector('.chip')).toHaveTextContent('Leftover from Mon')
+    expect(what.compareDocumentPosition(row.querySelector('.plan-course__actions')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('the caption is a sibling before the body (its own column on a wide hero)', () => {
+    setup()
+    const row = screen.getByRole('listitem', { name: 'Side' })
+    expect(row.firstElementChild).toHaveClass('plan-course__caption')
+    expect(row.lastElementChild).toHaveClass('plan-course__body')
+  })
+
+  it('the Recipe name is not given an ellipsis class or a max-width in markup (full name, wrapping)', () => {
+    setup()
+    const name = screen.getByRole('button', { name: /Two-colour cauliflower/ })
+    expect(name.getAttribute('style') ?? '').not.toMatch(/max-|overflow|ellipsis/)
+  })
+
+  it('the three icon actions are one set of equal icon buttons', () => {
+    setup()
+    const buttons = [...screen.getByRole('group', { name: 'Side actions' }).querySelectorAll('button')]
+    expect(buttons).toHaveLength(3)
+    expect(new Set(buttons.map((b) => b.getAttribute('data-size'))).size).toBe(1)
+  })
+})
+
