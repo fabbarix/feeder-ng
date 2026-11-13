@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALK, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
@@ -482,7 +482,7 @@ const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); 
 
 
 // hf-recipes-filter round 2 (P17 to P20, docs/design/recipes-filter.md 13.6). Each probe is empty on a page without the header.
-// P17: a chip line (.filter-chips) shows a chip cut after its first one, or a chip past its end.
+// P17: a chip line (.filter-chips, the Recipes and the Pantry header) shows a chip cut after its first one, or a chip past its end.
 const fitLinesProbe = `
 (() => {
   const main = document.querySelector('main')
@@ -529,7 +529,8 @@ const clippedRingsProbe = `
   }
   const worst = (rect, list) => Math.max(0, ...list.map((c) => Math.max(c.l - rect.l, rect.r - c.r, c.t - rect.t, rect.b - c.b)))
   const out = []
-  const targets = [...main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip')]
+  // The chip line of both headers, and the chip lines of an open Filters panel (Course; the Pantry's Show and Kind).
+  const targets = [...main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip, .filter-chip-group > .chip')]
   for (const el of targets) {
     if (el.getBoundingClientRect().width <= 2) continue
     el.focus({ focusVisible: true })
@@ -570,12 +571,13 @@ const popoverAlignProbe = `
   }
 })()`
 
-// P20: row 3 (the chip line) sits one slot gap (the ListPage gap) below row 2, and the panel's sections are spaced.
+// P20: row 3 (the chip line) sits one slot gap below row 2 (the gap of the header's own stack, .filter-bar, or the ListPage's), and the
+// panel's sections are spaced.
 const filterSpacingProbe = `
 (() => {
   const row2 = document.querySelector('.filter-bar__view-row'), row3 = document.querySelector('.filter-chips')
-  const list = document.querySelector('.list-page')
-  const slotGap = list ? parseFloat(getComputedStyle(list).rowGap) : NaN
+  const stack = row3 ? row3.closest('.filter-bar, .list-page') : null
+  const slotGap = stack ? parseFloat(getComputedStyle(stack).rowGap) : NaN
   let rowGap = null
   if (row2 && row3 && row3.getBoundingClientRect().height > 0) rowGap = Math.round((row3.getBoundingClientRect().top - row2.getBoundingClientRect().bottom) * 10) / 10
   const sections = [...document.querySelectorAll('.filter-panel__section')]
@@ -608,7 +610,7 @@ async function probePage(vp, route, pattern, kind, open) {
     await settle()
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
     if (open) {
-      // The Filters button of the header (round 2 scenario): opened before the probes, so the popover is measured.
+      // The Filters button of the header (the Recipes and the Pantry scenarios): opened before the probes, so the panel is measured.
       await evaluate("document.querySelector('.filter-bar__search-row > .button')?.click()")
       await settle()
     }
@@ -669,62 +671,65 @@ for (const vp of VIEWPORTS) {
   }
 }
 
-// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered /recipes is loaded fresh at each phone width from 360 to 480 px, and the
+// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered page is loaded fresh at each phone width from 360 to 480 px, and the
 // page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
-const walkScenario = SCENARIOS.find((x) => x.name === RESIZE_WALK.scenario)
-if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
-  for (const w of resizeWalkWidths()) {
+// pantry-filter: one walk per filtered header (RESIZE_WALKS: /recipes and /pantry).
+for (const walk of RESIZE_WALKS) {
+  const walkScenario = SCENARIOS.find((x) => x.name === walk.scenario)
+  if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+    for (const w of resizeWalkWidths()) {
+      probes++
+      const route = resolveScenario(walkScenario, ids)
+      const tag = `${w}px ${route}`
+      try {
+        await closeTab()
+        await openTab()
+        runtimeEvents.length = 0
+        // Phone emulation, as the quick profile's 390 px probe: the app lays out at exactly w CSS px (documentElement.clientWidth = w; no
+        // scrollbar takes 15 px of it, as it does without mobile emulation). Only a page wider than w (a horizontal overflow) reports a
+        // larger innerWidth under mobile emulation; its layout width is still w.
+        await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+        await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+        await settle()
+        const runtimeErrors = [...runtimeEvents]
+        if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+        if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify(runtimeErrors)}`)
+        // Only P21 is read from the walk: the page's error state at this width, nothing from the layout probes.
+        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${tag}: ${f.message}`)
+      } catch (e) {
+        notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
+      }
+    }
+  }
+
+  // Review of round 3 (P21, RESIZE_SWEEP): the 10 px steps of the walk can step over a narrow window (round 2's loop lived in 8 px), and a
+  // fresh load never exercises the resize path (ResizeObserver). So the same page is also loaded once at the widest width and resized
+  // live, 1 px at a time, down to the narrowest and back up. The first width at which it logs an error or shows the error page is a
+  // P21 finding, labelled "(live resize)".
+  if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
     probes++
     const route = resolveScenario(walkScenario, ids)
-    const tag = `${w}px ${route}`
+    const widths = resizeSweepWidths()
     try {
       await closeTab()
       await openTab()
-      runtimeEvents.length = 0
-      // Phone emulation, as the quick profile's 390 px probe: the app lays out at exactly w CSS px (documentElement.clientWidth = w; no
-      // scrollbar takes 15 px of it, as it does without mobile emulation). Only a page wider than w (a horizontal overflow) reports a
-      // larger innerWidth under mobile emulation; its layout width is still w.
-      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+      await cdp('Emulation.setDeviceMetricsOverride', { width: widths[0], height: 844, deviceScaleFactor: 1, mobile: true })
       await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
       await settle()
-      const runtimeErrors = [...runtimeEvents]
-      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
-      if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify(runtimeErrors)}`)
-      // Only P21 is read from the walk: the page's error state at this width, nothing from the layout probes.
-      for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${tag}: ${f.message}`)
-    } catch (e) {
-      notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
-    }
-  }
-}
-
-// Review of round 3 (P21, RESIZE_SWEEP): the 10 px steps of the walk can step over a narrow window (round 2's loop lived in 8 px), and a
-// fresh load never exercises the resize path (ResizeObserver). So the same page is also loaded once at the widest width and resized
-// live, 1 px at a time, down to the narrowest and back up. The first width at which it logs an error or shows the error page is a
-// P21 finding, labelled "(live resize)".
-if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
-  probes++
-  const route = resolveScenario(walkScenario, ids)
-  const widths = resizeSweepWidths()
-  try {
-    await closeTab()
-    await openTab()
-    await cdp('Emulation.setDeviceMetricsOverride', { width: widths[0], height: 844, deviceScaleFactor: 1, mobile: true })
-    await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
-    await settle()
-    runtimeEvents.length = 0
-    for (const w of widths) {
-      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
-      await sleep(RESIZE_SWEEP.pauseMs)
-      const runtimeErrors = [...runtimeEvents]
-      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
-      if (runtimeErrors.length > 0) {
-        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${w}px ${route} (live resize): ${f.message}`)
-        break
+      runtimeEvents.length = 0
+      for (const w of widths) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+        await sleep(RESIZE_SWEEP.pauseMs)
+        const runtimeErrors = [...runtimeEvents]
+        if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+        if (runtimeErrors.length > 0) {
+          for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${w}px ${route} (live resize): ${f.message}`)
+          break
+        }
       }
+    } catch (e) {
+      notInspected.push({ width: widths[0], route: `${route} (live resize)`, pattern: walkScenario.route, reason: e.message })
     }
-  } catch (e) {
-    notInspected.push({ width: widths[0], route: `${route} (live resize)`, pattern: walkScenario.route, reason: e.message })
   }
 }
 

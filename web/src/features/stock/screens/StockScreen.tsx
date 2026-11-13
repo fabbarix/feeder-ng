@@ -1,39 +1,36 @@
 /**
- * The Pantry screen (route /pantry, with /stock redirecting to it; the page is called Pantry, its contents are Stock): by default every Stock Lot
- * grouped by Storage Place (usePantry, PantryFilters, PantryLotRow, LotSheet with "Move to"), or "By Ingredient" the
- * per-Ingredient totals below.
+ * The Pantry screen (route /pantry, with /stock redirecting to it; the page is called Pantry, its contents are Stock): by default every
+ * Stock Lot grouped by Storage Place (usePantry, PantryLotRow, LotSheet with "Move to"), or "By Ingredient" the per-Ingredient totals.
  *
- * The Stock screen, reached from the avatar menu (a top-level destination: the bars stay, so no back button).
- *
- * Layout (ui-fix-plan 2.6, 5.7), top to bottom:
- * - `PageHeader title="Stock"` with actions: secondary sm "Stock-take" (icon `scan`, onClick from
- *   useStockTakeEntry) and primary sm "Add to Stock" (icon `add`) which opens AddLotSheet. Header actions are the
- *   only Buttons at this level, so one primary per scope.
- * - L-06: from 1280 px a two-column `.stock-screen__layout`: a sticky `<aside aria-label="Filter Stock">` (SpoiledTile, then the search
- *   and the chips) beside `.stock-screen__main` (the list). One tree: on a phone the aside simply comes first.
- * - SpoiledTile (when there are spoiled lots).
- * - `SearchField` "Search Stock" and filter `Chip kind="filter"`s All · Use soon · Spoiled (aria-pressed), both
- *   only when status is 'ready'. filterTotals(sortTotals(data), filter, query).
- * - A `ListGroup label="Stock"` of StockRow. If the filter leaves nothing: EmptyState "Nothing in Stock matches".
- * - A BottomSheet per Ingredient: LotList + secondary "Set total" (-> SetTotalSheet).
- * Status (from useStockTotals().status): loading -> `Skeleton variant="row" count={5}`; error -> `ErrorState`
- * "Stock could not be loaded." with onRetry = refetch; offline -> `EmptyState` "Stock is not saved on this device
- * yet" (icon `offline`); empty -> `EmptyState` "Nothing in Stock yet" + hint; ready -> the list.
- * A failed change shows a `useToast` error toast "That did not save. Try again." (no inline role=alert paragraph).
- * No `<main>`: the shell provides it. No tile grid.
+ * Layout (ui-fix-plan 2.6, 5.7; docs/design/pantry-filter.md 3), top to bottom:
+ * - `PageHeader title="Pantry"` with actions: secondary sm "Stock-take" (icon `scan`), primary sm "Add to Stock" (icon `add`, the one
+ *   accent action) and the More menu ("Storage Places").
+ * - L-06: from 1280 px a two-column `.stock-screen__layout`: a sticky `<aside aria-label="Filter Stock">` (SpoiledTile, then the filter
+ *   header) beside `.stock-screen__main` (the list). One tree: on a phone the aside simply comes first.
+ * - The filter header (pantry-filter), only when status is 'ready': row 1 Search Stock + Filters; row 2 the List control + Sort (By
+ *   Storage Place); row 3 the active filter chips. The filters are chosen in the Filters panel and live in the URL (usePantryFilters).
+ * - The list: the Storage Place groups, or a `ListGroup label="Stock"` of IngredientLotsRow. If the filters leave nothing: EmptyState
+ *   "Nothing in Stock matches".
+ * Status (from useStockTotals().status): loading -> Skeleton; error -> ErrorState with Try again; offline -> EmptyState "Stock is not
+ * saved on this device yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready -> the list.
+ * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
-import { useMemo, useState, type ReactElement } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
+import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
+import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
 import { LotEditSheet } from '../components/LotEditSheet'
 import { LotList } from '../components/LotList'
 import { LotSheet } from '../components/LotSheet'
-import { PantryFilters } from '../components/PantryFilters'
+import { PantryFiltersPanel } from '../components/PantryFiltersPanel'
+import { PantryModeControl } from '../components/PantryModeControl'
+import { PantryOverflowMenu } from '../components/PantryOverflowMenu'
+import { PantrySortSelect } from '../components/PantrySortSelect'
 import { PantryLotRow } from '../components/PantryLotRow'
 import { useOpenIngredients } from '../hooks/useOpenIngredients'
 import { usePantry } from '../hooks/usePantry'
+import { usePantryFilters } from '../hooks/usePantryFilters'
+import { useStoragePlaces } from '../hooks/useStoragePlaces'
 import type { StockLot } from '../types'
 import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
@@ -44,7 +41,7 @@ import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '.
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
 import { capitalise } from '../lib/display'
 import { lotsOfIngredient } from '../lib/ingredientLots'
-import { filterTotals, STOCK_FILTERS, type StockFilter } from '../lib/filter'
+import { filterTotals } from '../lib/filter'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import '../stock.css'
@@ -57,15 +54,19 @@ export function StockScreen(): ReactElement | null {
   const choices = useIngredientChoices()
   const toast = useToast()
   const openStockTake = useStockTakeEntry()
-  const pantry = usePantry()
-  const navigate = useNavigate()
-  const { mode, setMode } = pantry
+  // The view and the filters live in the URL (?view, ?status, ?place, ?kind, ?leftovers, ?sort, ?group); the search is this screen's.
+  const filters = usePantryFilters(useStoragePlaces().places)
+  const { mode } = filters
+  const [query, setQuery] = useState('')
+  const { applied, sort, groupByPlace } = filters
+  const pantry = usePantry({ filters, query })
+  const [panelOpen, setPanelOpen] = useState(false)
+  const filtersAnchor = useRef<HTMLButtonElement>(null)
+  const panelId = useId()
   const [openLot, setOpenLot] = useState<StockLot | null>(null)
   const [editingLot, setEditingLot] = useState<StockLot | null>(null)
   const openIngredients = useOpenIngredients()
 
-  const [filter, setFilter] = useState<StockFilter>('all')
-  const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [settingTotal, setSettingTotal] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -76,13 +77,13 @@ export function StockScreen(): ReactElement | null {
   const leftovers = pantry.leftovers
   const sections = leftovers.sections
 
-  const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
+  const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), applied.status, query), [totals.data, applied.status, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
-  // The aside is a 360 px column from 1280 px: the spoiled rows keep their actions under the text there.
+  // The aside is a 24 rem column from 1280 px: the spoiled rows keep their actions under the text there.
   const twoColumns = useMediaQuery('(min-width: 1280px)')
   const ready = totals.status === 'ready'
-  // No empty aside: it exists when something is spoiled or the search and chips are shown.
+  // No empty aside: it exists when something is spoiled or the filter header is shown.
   const showAside = spoiledLots.length > 0 || ready
 
   /** Runs a change; a failure shows an error toast and the screen stays usable. */
@@ -111,6 +112,7 @@ export function StockScreen(): ReactElement | null {
             <Button size="sm" icon="add" onClick={() => setAdding(true)}>
               {strings.add}
             </Button>
+            <PantryOverflowMenu />
           </>
         }
       />
@@ -127,46 +129,26 @@ export function StockScreen(): ReactElement | null {
               onKeep={(id) => void attempt(() => spoiled.keep(id))}
             />
             {ready ? (
-              <div className="stock-screen__controls">
-                <div className="stock-screen__filters" role="group" aria-label={strings.view.label}>
-                  {(['places', 'ingredients'] as const).map((m) => (
-                    <Chip key={m} kind="filter" selected={mode === m} onClick={() => setMode(m)}>
-                      {strings.view[m]}
-                    </Chip>
-                  ))}
+              <div className="filter-bar">
+                <div className="filter-bar__row filter-bar__search-row">
+                  <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
+                  <FiltersButton
+                    ref={filtersAnchor}
+                    count={filters.count}
+                    expanded={panelOpen}
+                    controls={panelOpen ? panelId : undefined}
+                    onClick={() => setPanelOpen((open) => !open)}
+                  />
                 </div>
-                <SearchField
-                  label={strings.searchLabel}
-                  value={query}
-                  onChange={(q) => {
-                    setQuery(q)
-                    pantry.setView({ query: q })
-                  }}
-                />
-                <div className="stock-screen__filters" role="group" aria-label={strings.filtersLabel}>
-                  {STOCK_FILTERS.map((f) => (
-                    <Chip
-                      key={f}
-                      kind="filter"
-                      selected={filter === f}
-                      onClick={() => {
-                        setFilter(f)
-                        pantry.setView({ status: f })
-                      }}
-                    >
-                      {strings.filters[f]}
-                    </Chip>
-                  ))}
-                  {mode === 'places' && leftovers.frozenCount > 0 ? (
-                    <Chip kind="filter" selected={leftovers.onlyLeftovers} onClick={() => leftovers.setOnlyLeftovers(!leftovers.onlyLeftovers)}>
-                      {strings.leftoversFilter}
-                    </Chip>
+                <div className="filter-bar__row filter-bar__view-row">
+                  <PantryModeControl value={mode} onChange={filters.setMode} />
+                  {mode === 'places' ? (
+                    <div className="filter-bar__sort">
+                      <PantrySortSelect value={sort} onChange={filters.setSort} />
+                    </div>
                   ) : null}
                 </div>
-                {mode === 'places' ? <PantryFilters view={pantry.view} places={pantry.places} onChange={pantry.setView} /> : null}
-                <Button variant="tertiary" size="sm" icon="settings" onClick={() => navigate('/settings/storage-places')}>
-                  {strings.managePlaces}
-                </Button>
+                <ActiveFilterChips chips={filters.chips} onRemove={filters.remove} onMore={() => setPanelOpen(true)} fallbackFocus={filtersAnchor} />
               </div>
             ) : null}
           </aside>
@@ -200,7 +182,7 @@ export function StockScreen(): ReactElement | null {
                           lot={lot}
                           today={today}
                           system={system}
-                          placeName={pantry.view.groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
+                          placeName={groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
                           onOpen={setOpenLot}
                         />
                       ))}
@@ -210,7 +192,7 @@ export function StockScreen(): ReactElement | null {
                           leftover={leftover}
                           today={today}
                           onAction={(kind, leftover) => leftovers.flow.openSheet(kind, leftover)}
-                          showPlace={!pantry.view.groupByPlace}
+                          showPlace={!groupByPlace}
                         />
                       ))}
                     </ListGroup>
@@ -239,6 +221,29 @@ export function StockScreen(): ReactElement | null {
           )}
         </div>
       </div>
+
+      <PantryFiltersPanel
+        id={panelId}
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        anchorRef={filtersAnchor}
+        mode={mode}
+        status={filters.status}
+        onStatus={filters.setStatus}
+        hasLeftovers={leftovers.frozenCount > 0}
+        leftovers={filters.leftovers}
+        onLeftovers={filters.setLeftovers}
+        kinds={filters.kinds}
+        onKind={filters.toggleKind}
+        places={pantry.places}
+        lots={pantry.lots.data ?? []}
+        selectedPlaces={filters.places}
+        onPlace={filters.togglePlace}
+        groupByPlace={groupByPlace}
+        onGroupByPlace={filters.setGroupByPlace}
+        count={filters.count}
+        onClear={filters.clear}
+      />
 
       <BottomSheet
         open={selected !== null && !settingTotal}

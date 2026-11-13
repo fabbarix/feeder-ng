@@ -5,10 +5,10 @@ import { StoragePlaceSheet } from '../components/StoragePlaceSheet'
 import { useStoragePlaces } from '../hooks/useStoragePlaces'
 import { useLeftovers } from '../../../lib/leftovers/useLeftoverActions'
 import { pantryLeftovers, placeDeleteBody } from '../lib/pantryLeftovers'
+import { KIND_ICON } from '../lib/kinds'
 import { stockStrings as strings } from '../strings'
 import type { StoragePlace } from '../types'
 
-const KIND_ICON = { pantry: 'stock', fridge: 'fridge', freezer: 'freezer' } as const
 
 /** /settings/storage-places: every Storage Place (kind icon, "Pantry · Default"), and any User adds, edits or deletes one. */
 export function StoragePlacesScreen(): ReactElement {

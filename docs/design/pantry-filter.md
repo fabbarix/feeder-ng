@@ -1,6 +1,6 @@
 # Pantry: the filter header (pantry-filter)
 
-Status: **designed, tests first** (2026-11-13). Base: 1.0.0-beta.6.1 (8564c0e6). The Recipes header ([recipes-filter.md](recipes-filter.md),
+Status: **built** (2026-11-13; tests first, then the shared header, then the Pantry). Base: 1.0.0-beta.6.1 (8564c0e6). The Recipes header ([recipes-filter.md](recipes-filter.md),
 §1–§15) is the pattern; this page says only what the Pantry does differently and what moved to shared code. Domain words come from
 [GLOSSARY.md](../../GLOSSARY.md); the rules from [system.md](system.md) and [ADR 0016](../adr/0016-design-system-rules-enforced.md).
 

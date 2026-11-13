@@ -22,12 +22,15 @@ export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20
 
 /**
  * hf-recipes-filter round 2: the filtered /recipes the guard also probes, at every width: the chips of a Side Course and a long Tag,
- * closed, and with the Filters panel open (docs/design/recipes-filter.md 13.6). The ids file gives the Course and the Tag
+ * closed, and with the Filters panel open (docs/design/recipes-filter.md 13.6). pantry-filter: the same for /pantry, with Use soon and
+ * the 60-character Storage Place (docs/design/pantry-filter.md 10). The ids file gives the Course, the Tag and the place
  * (resolveScenario).
  */
 export const SCENARIOS = [
   { name: 'recipes-filtered', route: '/recipes', open: false },
   { name: 'recipes-filtered-open', route: '/recipes', open: true },
+  { name: 'pantry-filtered', route: '/pantry', open: false },
+  { name: 'pantry-filtered-open', route: '/pantry', open: true },
 ]
 
 /**
@@ -35,6 +38,9 @@ export const SCENARIOS = [
  * widths, and the page must not break at any (P21: an uncaught exception, a console error, or the error page).
  */
 export const RESIZE_WALK = { scenario: 'recipes-filtered', from: 360, to: 480, step: 10 }
+
+/** pantry-filter: every walk the guard runs (fresh loads, then the live 1 px sweep): the filtered /recipes and the filtered /pantry. */
+export const RESIZE_WALKS = [RESIZE_WALK, { ...RESIZE_WALK, scenario: 'pantry-filtered' }]
 
 /** The P21 findings of one walked width: the runtime errors and the error page the walk saw there (only P21 is read from it). */
 export function resizeWalkFindings(runtimeErrors, { width, route }) {
@@ -52,7 +58,7 @@ export function resizeWalkFindings(runtimeErrors, { width, route }) {
  */
 export const RESIZE_SWEEP = { step: 1, pauseMs: 40 }
 
-/** The widths of the RESIZE_SWEEP, in order: RESIZE_WALK.to down to RESIZE_WALK.from, then back up. */
+/** The widths of the RESIZE_SWEEP, in order: RESIZE_WALK.to down to RESIZE_WALK.from, then back up (every walk has the same range). */
 export function resizeSweepWidths() {
   const down = []
   for (let w = RESIZE_WALK.to; w >= RESIZE_WALK.from; w -= RESIZE_SWEEP.step) down.push(w)
@@ -66,9 +72,12 @@ export function resizeWalkWidths() {
   return out
 }
 
-/** The URL of a scenario: its route with the Side Course and the long Tag from the ids file. */
+/** The URL of a scenario: /recipes with the Side Course and the long Tag, /pantry with Use soon and the long Storage Place (ids file). */
 export function resolveScenario(scenario, ids) {
-  const params = new URLSearchParams({ course: String(ids.sideCourseId), tag: String(ids.longTag) })
+  const params =
+    scenario.route === '/pantry'
+      ? new URLSearchParams({ status: 'useSoon', place: String(ids.longPlaceId) })
+      : new URLSearchParams({ course: String(ids.sideCourseId), tag: String(ids.longTag) })
   return `${scenario.route}?${params.toString()}`
 }
 

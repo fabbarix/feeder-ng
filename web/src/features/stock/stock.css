@@ -24,21 +24,24 @@
   min-inline-size: 0;
 }
 
-.stock-screen__controls {
-  display: grid;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
+/* The kind chips of the Storage Place sheet. */
 .stock-screen__filters {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
+/* pantry-filter (docs/design/pantry-filter.md 3): the Filters panel's Storage Place list is capped lower than a Tag list, so the
+   popover with all four sections fits a 900 px high desktop. (Its width is the shared 24 rem: the L-06 aside's own width.) */
+.pantry-filters__panel .filter-panel__list [role='listbox'] {
+  max-block-size: min(16rem, 40dvh);
+}
+
 @media (min-width: 1280px) {
   .stock-screen__layout {
-    grid-template-columns: 22.5rem minmax(0, 1fr);
+    /* pantry-filter: 24 rem, so row 2 of the filter header (List and "Good until") fits in full, and the 24 rem Filters panel,
+       end-aligned to the Filters button at the aside's end, starts at the page content's start (P19). */
+    grid-template-columns: 24rem minmax(0, 1fr);
     align-items: start;
   }
 
@@ -47,8 +50,11 @@
     inset-block-start: var(--space-4);
     max-block-size: calc(100dvh - 2 * var(--space-4));
     overflow-y: auto;
-    /* Room for focus rings and shadows, so a short aside does not show a scrollbar. */
-    padding-block-end: var(--space-2);
+    /* It scrolls, so it clips: room for focus rings (5 px) on every side and a removable chip's hit area (9 px) below the chip line
+       (P18, pantry-filter). The negative inline margin keeps its content on the column's edges. */
+    padding-inline: var(--space-2);
+    margin-inline: calc(-1 * var(--space-2));
+    padding-block: var(--space-2) var(--space-3);
   }
 }
 

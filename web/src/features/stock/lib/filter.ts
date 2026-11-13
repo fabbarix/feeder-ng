@@ -4,7 +4,6 @@ import { stockStrings as strings } from '../strings'
 import { daysBetween } from './days'
 
 export type StockFilter = 'all' | 'useSoon' | 'spoiled'
-export const STOCK_FILTERS: readonly StockFilter[] = ['all', 'useSoon', 'spoiled']
 
 const WORD_SEPARATOR = /\s+/
 

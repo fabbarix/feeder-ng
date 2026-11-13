@@ -22,8 +22,9 @@ describe('stock.css two-column layout', () => {
     expect(rule(phone, '.stock-screen__layout')).not.toMatch(/grid-template-columns/)
     expect(rule(phone, '.stock-screen__aside')).not.toMatch(/position:\s*sticky/)
   })
-  it('from 1280 the layout is a 360 px aside plus the list', () => {
-    expect(rule(wide, '  .stock-screen__layout')).toMatch(/grid-template-columns:\s*22\.5rem minmax\(0, 1fr\)/)
+  // pantry-filter: 24 rem (was 22.5), the width of the filter header's row 2 and of its Filters panel (docs/design/pantry-filter.md 2.9).
+  it('from 1280 the layout is a 384 px (24 rem) aside plus the list', () => {
+    expect(rule(wide, '  .stock-screen__layout')).toMatch(/grid-template-columns:\s*24rem minmax\(0, 1fr\)/)
   })
   it('from 1280 the aside is sticky below the top bar and scrolls on its own if it is tall', () => {
     const r = rule(wide, '  .stock-screen__aside')

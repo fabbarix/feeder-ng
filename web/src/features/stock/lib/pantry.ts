@@ -91,13 +91,3 @@ export function pantryGroups(lots: StockLot[], places: StoragePlace[], view: Pan
   groups.push({ place: null, key: UNSORTED, lots: shown.filter((l) => l.storagePlaceId == null || !known.has(l.storagePlaceId)) })
   return groups.filter((g) => g.lots.length > 0)
 }
-
-/** Pure. Toggles `item` in a filter list (adds it, or removes it when present). */
-export function toggle<T>(list: readonly T[], item: T): T[] {
-  return list.includes(item) ? list.filter((x) => x !== item) : [...list, item]
-}
-
-/** Pure. How many filters differ from the defaults (for the "Filters · 2" label). */
-export function activeFilterCount(view: PantryView): number {
-  return (view.status !== 'all' ? 1 : 0) + (view.places.length > 0 ? 1 : 0) + (view.kinds.length > 0 ? 1 : 0)
-}

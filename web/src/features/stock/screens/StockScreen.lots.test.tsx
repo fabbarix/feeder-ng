@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { OPEN_INGREDIENTS_KEY } from '../hooks/useOpenIngredients'
-import { PANTRY_MODE_KEY } from '../hooks/usePantry'
+import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { makeLot, makeTotal } from '../testData'
 import { StockScreen } from './StockScreen'
 

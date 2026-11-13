@@ -7,7 +7,7 @@ import { friLunch, frozenChilli, leftover } from '../../../lib/leftovers/fixture
 import type { Leftover } from '../../../lib/leftovers'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { makeLot, makeTotal } from '../testData'
-import { PANTRY_MODE_KEY } from '../hooks/usePantry'
+import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { StockScreen } from './StockScreen'
 
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
@@ -55,6 +55,11 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 const group = (name: RegExp) => screen.getByRole('list', { name })
+// pantry-filter: the filters are in the Filters panel (docs/design/pantry-filter.md 2.2).
+const openFilters = () => userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
+const panel = () => screen.getByRole('dialog', { name: 'Filters' })
+const closeFilters = () => userEvent.click(within(panel()).getByRole('button', { name: 'Show Stock' }))
+const kind = (name: string) => within(within(panel()).getByRole('group', { name: 'Filter by kind' })).getByRole('button', { name })
 
 describe('Pantry: frozen Leftovers', () => {
   it('shows a frozen Leftover inside its Freezer, with its portions and Use-by', async () => {
@@ -78,18 +83,22 @@ describe('Pantry: frozen Leftovers', () => {
     expect(screen.queryByText('Soup')).toBeNull()
   })
 
-  it('has a Leftovers filter that shows only the Leftovers, and goes back', async () => {
+  it('has a Leftovers filter that shows only the Leftovers (a teal chip), and goes back', async () => {
     setup()
     await screen.findByText('Chilli')
-    const chip = screen.getByRole('button', { name: 'Leftovers' })
+    await openFilters()
+    const chip = within(panel()).getByRole('button', { name: 'Leftovers' })
     expect(chip).toHaveAttribute('aria-pressed', 'false')
     await userEvent.click(chip)
     expect(chip).toHaveAttribute('aria-pressed', 'true')
+    await closeFilters()
     expect(screen.getByText('Chilli')).toBeInTheDocument()
     expect(screen.getByText('Stew')).toBeInTheDocument()
     expect(screen.queryByText('Peas')).toBeNull()
     expect(screen.queryByText('Rice')).toBeNull()
-    await userEvent.click(chip)
+    const active = screen.getByRole('button', { name: 'Remove Leftovers' })
+    expect(active).toHaveAttribute('data-status', 'leftover')
+    await userEvent.click(active)
     expect(screen.getByText('Peas')).toBeInTheDocument()
     expect(screen.getByText('Rice')).toBeInTheDocument()
   })
@@ -97,13 +106,15 @@ describe('Pantry: frozen Leftovers', () => {
   it('the Storage Place, kind and search filters apply to Leftovers too', async () => {
     setup()
     await screen.findByText('Chilli')
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Fridge/ }))
+    await openFilters()
+    await userEvent.click(kind('Fridge'))
     expect(screen.queryByText('Chilli')).toBeNull()
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Fridge/ }))
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Freezer/ }))
+    await userEvent.click(kind('Fridge'))
+    await userEvent.click(kind('Freezer'))
     expect(screen.getByText('Chilli')).toBeInTheDocument()
     expect(screen.queryByText('Rice')).toBeNull()
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Freezer/ }))
+    await userEvent.click(kind('Freezer'))
+    await closeFilters()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Stock' }), 'stew')
     expect(screen.getByText('Stew')).toBeInTheDocument()
     expect(screen.queryByText('Chilli')).toBeNull()
@@ -112,7 +123,9 @@ describe('Pantry: frozen Leftovers', () => {
   it('ungrouped, a Leftover is one more row with its Storage Place', async () => {
     setup()
     await screen.findByText('Chilli')
-    await userEvent.click(screen.getByRole('switch', { name: 'Group by Storage Place' }))
+    await openFilters()
+    await userEvent.click(within(panel()).getByRole('switch', { name: 'Group by Storage Place' }))
+    await closeFilters()
     const row = screen.getByText('Chilli').closest('li') as HTMLElement
     expect(row).toHaveTextContent('3 portions · Use by 10 Feb · Garage Freezer')
   })
@@ -120,16 +133,18 @@ describe('Pantry: frozen Leftovers', () => {
   it('By Ingredient never lists Leftovers', async () => {
     setup()
     await screen.findByText('Chilli')
-    await userEvent.click(within(screen.getByRole('group', { name: 'List' })).getByRole('button', { name: /By Ingredient/ }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Ingredient' }))
     expect(await screen.findByText('Peas')).toBeInTheDocument()
     expect(screen.queryByText('Chilli')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Leftovers' })).toBeNull()
+    await openFilters()
+    expect(within(panel()).queryByRole('button', { name: 'Leftovers' })).toBeNull()
   })
 
   it('with no Leftover at all the Pantry looks as before, without a Leftovers filter', async () => {
     setup({}, [soup])
     await screen.findByText('Peas')
-    expect(screen.queryByRole('button', { name: 'Leftovers' })).toBeNull()
+    await openFilters()
+    expect(within(panel()).queryByRole('button', { name: 'Leftovers' })).toBeNull()
   })
 
   it('a Leftover in a Freezer with no Stock Lot still gets its Freezer group', async () => {

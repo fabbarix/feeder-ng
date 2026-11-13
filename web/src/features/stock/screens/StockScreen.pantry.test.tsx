@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { makeLot, makeTotal } from '../testData'
-import { PANTRY_MODE_KEY } from '../hooks/usePantry'
+import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { StockScreen } from './StockScreen'
 
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
@@ -44,6 +44,11 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 const group = (name: RegExp) => screen.getByRole('list', { name })
+// pantry-filter: the filters are in the Filters panel (docs/design/pantry-filter.md 2.2).
+const openFilters = () => userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
+const panel = () => screen.getByRole('dialog', { name: 'Filters' })
+const closeFilters = () => userEvent.click(within(panel()).getByRole('button', { name: 'Show Stock' }))
+const kind = (name: string) => within(within(panel()).getByRole('group', { name: 'Filter by kind' })).getByRole('button', { name })
 
 describe('Pantry list', () => {
   it('is called Pantry and lists every Stock Lot by Storage Place, Not sorted last', async () => {
@@ -59,14 +64,16 @@ describe('Pantry list', () => {
   it('filters by Storage Place and kind, and searches', async () => {
     setup()
     await screen.findByRole('list', { name: /^Garage Freezer/ })
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Freezer/ }))
+    await openFilters()
+    await userEvent.click(kind('Freezer'))
     expect(screen.queryByRole('list', { name: /^Garage Fridge/ })).toBeNull()
     expect(group(/^Garage Freezer/)).toBeInTheDocument()
-    await userEvent.click(within(screen.getByRole('group', { name: 'Kinds' })).getByRole('button', { name: /Freezer/ }))
-    await userEvent.click(within(screen.getByRole('group', { name: 'Storage Places' })).getByRole('button', { name: /Not sorted/ }))
+    await userEvent.click(kind('Freezer'))
+    await userEvent.click(within(panel()).getByRole('option', { name: /Not sorted/ }))
     expect(screen.getAllByRole('list').filter((l) => l.getAttribute('aria-label')?.includes('Stock Lot'))).toHaveLength(1)
     expect(screen.getByText('Feta')).toBeInTheDocument()
-    await userEvent.click(within(screen.getByRole('group', { name: 'Storage Places' })).getByRole('button', { name: /Not sorted/ }))
+    await userEvent.click(within(panel()).getByRole('option', { name: /Not sorted/ }))
+    await closeFilters()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Stock' }), 'pea')
     expect(screen.getByText('Peas')).toBeInTheDocument()
     expect(screen.queryByText('Rice')).toBeNull()
@@ -75,7 +82,9 @@ describe('Pantry list', () => {
   it('ungrouped, it shows one list with each Lot\'s Storage Place', async () => {
     setup()
     await screen.findByRole('list', { name: /^Garage Freezer/ })
-    await userEvent.click(screen.getByRole('switch', { name: 'Group by Storage Place' }))
+    await openFilters()
+    await userEvent.click(within(panel()).getByRole('switch', { name: 'Group by Storage Place' }))
+    await closeFilters()
     const all = group(/^Stock Lots, 4 Stock Lots/)
     expect(within(all).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       expect.stringContaining('Minced beef'),
@@ -117,8 +126,9 @@ describe('Pantry list', () => {
   it('remembers "By Ingredient" on this device', async () => {
     setup()
     await screen.findByRole('list', { name: /^Garage Freezer/ })
-    await userEvent.click(within(screen.getByRole('group', { name: 'List' })).getByRole('button', { name: /By Ingredient/ }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Ingredient' }))
     expect(localStorage.getItem(PANTRY_MODE_KEY)).toBe('ingredients')
-    expect(screen.queryByRole('group', { name: 'Kinds' })).toBeNull()
+    await openFilters()
+    expect(within(panel()).queryByRole('group', { name: 'Filter by kind' })).toBeNull()
   })
 })

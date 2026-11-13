@@ -8,7 +8,8 @@
 //   node scripts/test/fixtures/page-layout-seed.mjs http://127.0.0.1:<port> [--out build/page-layout-ids.json] [--email admin@example.test]
 // Best effort: a step that the API refuses is reported on stderr and skipped (the guard then probes emptier screens, which is still
 // a layout). Exit 0 whenever login worked; exit 1 when it did not, or when the Side Recipe with LONG_TAG was not created (the guard's
-// filtered /recipes scenarios would then show no Recipe, so they must not pass quietly).
+// filtered /recipes scenarios would then show no Recipe, so they must not pass quietly), or when the ten Storage Places were not all
+// created (pantry-filter: the filtered /pantry scenarios need the long-named one, longPlaceId in the ids file).
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { pickZones, SLOT_TIMES } from './page-layout-seed-zones.mjs'
@@ -146,11 +147,36 @@ for (let i = 0; i < 8; i++) {
   if (i === 7) await step('archive', 'POST', `/api/products/${r.json.id}/archive`)
 }
 
-// Stock Lots (the Stock screen), a Shopping List extra, two allowlisted Users
+// pantry-filter: ten Storage Places (docs/design/pantry-filter.md 10), so the Pantry's Storage Place list scrolls and its chip line
+// overflows. One has a 60-character name, the API's limit (internal/stock/store maxPlaceName); it is a pantry, so a Lot in it keeps its
+// own Shelf Life (a freezer would use the frozen one) and can be Use soon. The guard's /pantry scenarios filter by Use soon and it.
+const LONG_PLACE = 'Basement pantry shelves behind the boiler, bottom left shelf'
+const PLACES = [
+  ['Kitchen Pantry', 'pantry'], ['Kitchen Fridge', 'fridge'], ['Kitchen Freezer', 'freezer'], ['Garage Fridge', 'fridge'],
+  ['Garage Freezer', 'freezer'], ['Cellar Shelves', 'pantry'], ['Utility Room Cupboard', 'pantry'], ['Drinks Fridge', 'fridge'],
+  ['Spare Chest Freezer', 'freezer'], [LONG_PLACE, 'pantry'],
+]
+const placeIds = []
+let longPlaceId = null
+for (const [name, kind] of PLACES) {
+  const r = await step('storage place', 'POST', '/api/storage-places', { name, kind })
+  if (r.ok && r.json?.id) {
+    placeIds.push(r.json.id)
+    if (name === LONG_PLACE) longPlaceId = r.json.id
+  }
+}
+
+// Stock Lots (the Stock screen), a Shopping List extra, two allowlisted Users. pantry-filter: one Lot per Storage Place, the last one
+// Not sorted, and a Use soon Lot in the long-named place (Flour keeps 7 days, bought 5 days ago: good for 2 more).
 const today = new Date().toISOString().slice(0, 10)
 for (let i = 0; i < 11; i++) {
   const item = ing[i % ing.length]
-  if (item) await step('lot', 'POST', '/api/stock/lots', { ingredientId: item.id, quantity: 250 + i * 40, purchased: today, source: 'manual', clientUuid: `layout-seed-${i}` })
+  const storagePlaceId = placeIds[i] // undefined past the last place: Not sorted
+  if (item) await step('lot', 'POST', '/api/stock/lots', { ingredientId: item.id, quantity: 250 + i * 40, purchased: today, source: 'manual', clientUuid: `layout-seed-${i}`, storagePlaceId })
+}
+const fiveDaysAgo = new Date(Date.now() - 5 * 86400e3).toISOString().slice(0, 10)
+if (ing[0] && longPlaceId) {
+  await step('use-soon lot', 'POST', '/api/stock/lots', { ingredientId: ing[0].id, quantity: 500, purchased: fiveDaysAgo, source: 'manual', clientUuid: 'layout-seed-use-soon', storagePlaceId: longPlaceId })
 }
 if (ing[3]) await step('extra', 'POST', '/api/shopping/extras', { text: 'Napkins', ingredientId: 0, quantity: 1 })
 // DS-SHOP: a long free-text extra, so the Shop row's two-line title (word wrap, then an ellipsis) is exercised at 834 and 1024 px
@@ -243,9 +269,14 @@ const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? [])
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
 const sideCourseId = sideCourse?.id ?? null
-writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG }, null, 2) + '\n')
+writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)
 }
-console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, toConfirm ${toConfirm}) -> ${out}`)
+// pantry-filter: the filtered /pantry scenarios need the long-named Storage Place (and the ten places that make the list overflow).
+if (longPlaceId === null || placeIds.length < PLACES.length) {
+  console.error(`page-layout-seed: the Storage Places were not all created (${placeIds.length} of ${PLACES.length}); the filtered /pantry scenarios need them`)
+  process.exit(1)
+}
+console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, ${placeIds.length} Storage Places, toConfirm ${toConfirm}) -> ${out}`)

@@ -13,6 +13,9 @@ export interface UseStoragePlaces {
   remove(id: number): Promise<void>
 }
 
+/** No Storage Places yet (or still loading): one array, so what is derived from it keeps between renders. */
+const NO_PLACES: StoragePlace[] = []
+
 /** Key ['stock', 'places'], so every Stock refresh refetches it; a change refreshes all of Stock (Lots lose a deleted place). */
 export function useStoragePlaces(): UseStoragePlaces {
   useStockLiveUpdates()
@@ -23,7 +26,7 @@ export function useStoragePlaces(): UseStoragePlaces {
   const update = useMutation({ mutationFn: ({ id, input }: { id: number; input: StoragePlaceInput }) => stockApi.updatePlace(id, input), onSuccess: refresh })
   const remove = useMutation({ mutationFn: (id: number) => stockApi.deletePlace(id), onSuccess: refresh })
   return {
-    places: query.data ?? [],
+    places: query.data ?? NO_PLACES,
     isLoading: query.isLoading,
     error: query.error,
     create: (input) => create.mutateAsync(input),

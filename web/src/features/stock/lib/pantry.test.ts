@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StockLot, StoragePlace } from '../types'
-import { DEFAULT_VIEW, UNSORTED, activeFilterCount, filterLots, pantryGroups, sortLots, toggle } from './pantry'
+import { DEFAULT_VIEW, UNSORTED, filterLots, pantryGroups, sortLots } from './pantry'
 
 const places: StoragePlace[] = [
   { id: 1, name: 'Kitchen Pantry', kind: 'pantry', default: true },
@@ -65,16 +65,5 @@ describe('pantryGroups', () => {
   it('one group when not grouping, none when nothing matches', () => {
     expect(pantryGroups(lots, places, { ...DEFAULT_VIEW, groupByPlace: false }).map((g) => g.lots.length)).toEqual([5])
     expect(pantryGroups(lots, places, { ...DEFAULT_VIEW, query: 'zzz' })).toEqual([])
-  })
-})
-
-describe('toggle and activeFilterCount', () => {
-  it('toggles an item in and out', () => {
-    expect(toggle([1, 2], 3)).toEqual([1, 2, 3])
-    expect(toggle([1, 2], 1)).toEqual([2])
-  })
-  it('counts the filters that are not the default', () => {
-    expect(activeFilterCount(DEFAULT_VIEW)).toBe(0)
-    expect(activeFilterCount({ ...DEFAULT_VIEW, status: 'spoiled', places: [1], kinds: ['freezer'], query: 'x' })).toBe(3)
   })
 })

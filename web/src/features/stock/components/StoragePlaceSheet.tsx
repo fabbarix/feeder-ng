@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { BottomSheet, Button, Chip, FormActions, Switch, TextField } from '../../../ui'
 import { errorText } from '../../products/lib/productForm'
+import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
 import { stockStrings as strings } from '../strings'
 import type { StorageKind, StoragePlace, StoragePlaceInput } from '../types'
 
@@ -13,8 +14,6 @@ export interface StoragePlaceSheetProps {
   onDelete?: () => void
 }
 
-const KINDS: StorageKind[] = ['pantry', 'fridge', 'freezer']
-const KIND_ICON = { pantry: 'stock', fridge: 'fridge', freezer: 'freezer' } as const
 
 /** Add or edit a Storage Place: a name, its kind (Pantry, Fridge or Freezer, one at a time) and "Default for new Stock". */
 export function StoragePlaceSheet({ editing, onClose, onSave, onDelete }: StoragePlaceSheetProps): ReactElement {
@@ -46,7 +45,7 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
     >
       <TextField label={strings.places.name} value={name} onChange={setName} helper={strings.places.nameHint} />
       <div className="stock-screen__filters" role="group" aria-label={strings.places.kind}>
-        {KINDS.map((k) => (
+        {STORAGE_KINDS.map((k) => (
           <Chip key={k} kind="filter" icon={KIND_ICON[k]} selected={kind === k} onClick={() => setKind(k)}>
             {strings.kinds[k]}
           </Chip>

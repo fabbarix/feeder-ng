@@ -25,19 +25,15 @@ vi.mock('../hooks/useStock', () => ({
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: hooks.throwOut, keep: hooks.keep }),
   useStockActions: () => ({ addLot: hooks.addLot, setTotal: hooks.setTotal, throwOut: hooks.actionThrowOut }),
 }))
-// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list.
+// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list (?view=ingredients).
 vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
-    mode: 'ingredients',
-    setMode: vi.fn(),
     lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
     places: [],
-    view: { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true },
-    setView: vi.fn(),
     groups: [],
     placeOf: () => null,
     leftovers: {
-      frozenCount: 0, onlyLeftovers: false, setOnlyLeftovers: vi.fn(), sections: [],
+      frozenCount: 0, sections: [],
       flow: {
         today: '2026-11-09', leftovers: [], sheet: null, details: null, asked: null, context: { storagePlaces: [], recipeFrozenUseBy: null, householdFrozenUseBy: 90, recipeUseByDays: 3, loading: false },
         busy: false, openSheet: vi.fn(), closeSheet: vi.fn(), confirm: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(), answer: vi.fn(),
@@ -45,6 +41,8 @@ vi.mock('../hooks/usePantry', () => ({
     },
   }),
 }))
+// pantry-filter: the screen reads the Storage Places for its filters (usePantryFilters).
+vi.mock('../hooks/useStoragePlaces', () => ({ useStoragePlaces: () => ({ places: [] }) }))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => hooks.stockTake }))
 vi.mock('../hooks/useIngredientChoices', () => ({
   useIngredientChoices: () => ({ choices: [{ id: 7, name: 'chicken thighs', baseUnit: 'g' }], isLoading: false }),
@@ -58,7 +56,7 @@ async function openIngredientSheet() {
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'All chicken thighs' }))
 }
 
-const view = () => render(<MemoryRouter><ToastProvider><ConfirmProvider><StockScreen /></ConfirmProvider></ToastProvider></MemoryRouter>)
+const view = () => render(<MemoryRouter initialEntries={['/pantry?view=ingredients']}><ToastProvider><ConfirmProvider><StockScreen /></ConfirmProvider></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
   sessionStorage.clear() // open By Ingredient rows are remembered for the session
@@ -120,13 +118,16 @@ describe('StockScreen layout', () => {
 })
 
 describe('StockScreen search and filters', () => {
-  it('filters by Use soon with an aria-pressed chip', async () => {
+  // pantry-filter: the status chips moved into the Filters panel, with no "All" (none pressed is all of Stock).
+  it('filters by Use soon with an aria-pressed chip in the Filters panel', async () => {
     view()
-    const chip = screen.getByRole('button', { name: 'Use soon' })
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    const chip = within(screen.getByRole('dialog', { name: 'Filters' })).getByRole('button', { name: 'Use soon' })
     expect(chip).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'All' })).toBeNull()
     await userEvent.click(chip)
     expect(chip).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Show Stock' }))
     const rows = within(screen.getByRole('list', { name: 'Stock' })).getAllByRole('listitem')
     expect(rows).toHaveLength(1)
     expect(rows[0]).toHaveTextContent('Chicken thighs')

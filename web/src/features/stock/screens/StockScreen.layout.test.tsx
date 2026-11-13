@@ -18,19 +18,15 @@ vi.mock('../hooks/useStock', () => ({
   useSpoiledLots: () => ({ ...hooks.spoiled, throwOut: vi.fn(), keep: vi.fn() }),
   useStockActions: () => ({ addLot: vi.fn(), setTotal: vi.fn(), throwOut: vi.fn() }),
 }))
-// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list.
+// The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list (?view=ingredients).
 vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
-    mode: 'ingredients',
-    setMode: vi.fn(),
     lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
     places: [],
-    view: { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true },
-    setView: vi.fn(),
     groups: [],
     placeOf: () => null,
     leftovers: {
-      frozenCount: 0, onlyLeftovers: false, setOnlyLeftovers: vi.fn(), sections: [],
+      frozenCount: 0, sections: [],
       flow: {
         today: '2026-11-09', leftovers: [], sheet: null, details: null, asked: null, context: { storagePlaces: [], recipeFrozenUseBy: null, householdFrozenUseBy: 90, recipeUseByDays: 3, loading: false },
         busy: false, openSheet: vi.fn(), closeSheet: vi.fn(), confirm: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(), answer: vi.fn(),
@@ -38,10 +34,12 @@ vi.mock('../hooks/usePantry', () => ({
     },
   }),
 }))
+// pantry-filter: the screen reads the Storage Places for its filters (usePantryFilters).
+vi.mock('../hooks/useStoragePlaces', () => ({ useStoragePlaces: () => ({ places: [] }) }))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => vi.fn() }))
 vi.mock('../hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 
-const view = () => render(<MemoryRouter><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
+const view = () => render(<MemoryRouter initialEntries={['/pantry?view=ingredients']}><ToastProvider><StockScreen /></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
   hooks.totals.data = [makeTotal({ ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 1000 }), makeTotal({ ingredientId: 3, name: 'feta', total: 200 })]
@@ -59,12 +57,14 @@ describe('StockScreen two-column layout (L-06)', () => {
     expect(layout!.querySelector(':scope > .stock-screen__main')).not.toBeNull()
   })
 
-  it('the aside is a labelled complementary landmark holding the spoiled tile, the search and the filter chips', () => {
+  // pantry-filter: the aside holds the filter header (rows 1 to 3); the "Show" chips moved into its Filters panel.
+  it('the aside is a labelled complementary landmark holding the spoiled tile and the filter header', () => {
     view()
     const aside = screen.getByRole('complementary', { name: 'Filter Stock' })
     expect(within(aside).getByRole('region', { name: 'Throw out or keep?' })).toBeInTheDocument()
     expect(within(aside).getByRole('searchbox', { name: 'Search Stock' })).toBeInTheDocument()
-    expect(within(aside).getByRole('group', { name: 'Show' })).toBeInTheDocument()
+    expect(within(aside).getByRole('button', { name: 'Filters' })).toBeInTheDocument()
+    expect(within(aside).getByRole('radiogroup', { name: 'List' })).toBeInTheDocument()
   })
 
   it('the Stock list sits in the main column, outside the aside', () => {
@@ -82,7 +82,7 @@ describe('StockScreen two-column layout (L-06)', () => {
     expect(aside.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('without spoiled lots the aside still holds the search and the chips', () => {
+  it('without spoiled lots the aside still holds the filter header', () => {
     hooks.spoiled.data = []
     hooks.spoiled.status = 'empty'
     view()
