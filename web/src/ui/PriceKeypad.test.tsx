@@ -447,6 +447,11 @@ describe('PriceKeypad: a11y and size', () => {
     expect(keyRule['font-variant-numeric'] ?? declarations(css, '.price-keypad__display')['font-variant-numeric']).toBe('tabular-nums')
   })
 
+  it('gives the 26 px Last-time chip a 44 px hit area', () => {
+    const after = declarations(readUiCss('PriceKeypad.css'), '.price-keypad__last .chip::after')
+    expect(after.inset).toBe('-9px 0')
+  })
+
   it('does not hard-code colours: tokens only', () => {
     expect(readUiCss('PriceKeypad.css')).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/)
   })

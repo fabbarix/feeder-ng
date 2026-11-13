@@ -44,6 +44,18 @@
   text-align: center;
 }
 
+/* The Last-time chip is a 26 px tag chip that types a Price: centred, with a 44 px hit area like a filter chip. */
+.price-keypad__last {
+  justify-self: center;
+  max-inline-size: 100%;
+}
+
+.price-keypad__last .chip::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
 .price-keypad__keys {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

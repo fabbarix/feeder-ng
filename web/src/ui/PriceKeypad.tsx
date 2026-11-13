@@ -182,9 +182,11 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
       ) : null}
       {implied ? <p className="price-keypad__implied">{implied}</p> : null}
       {last ? (
-        <Chip kind="tag" onClick={() => press(valueIn(last.cents, basis))}>
-          {lastPriceHint({ cents: last.cents, date: last.date, currency, locale })}
-        </Chip>
+        <span className="price-keypad__last">
+          <Chip kind="tag" onClick={() => press(valueIn(last.cents, basis))}>
+            {lastPriceHint({ cents: last.cents, date: last.date, currency, locale })}
+          </Chip>
+        </span>
       ) : (
         <p className="price-keypad__hint">{noPriceHint(shopName)}</p>
       )}
