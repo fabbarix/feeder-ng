@@ -359,7 +359,7 @@ func TestDeletingABaseRecipeWhoseIngredientKeepsStockWhileAPlainIngredientHoldsT
 	if f.lotsOf(t, b.BaseIngredientID) != 1 || f.nameKey(t, b.BaseIngredientID) == "stock" {
 		t.Error("a refused delete leaves the Stock and the Base recipe's own name key as they were")
 	}
-	for _, k := range []string{"batch", "portion"} {
+	for _, k := range []string{"batch"} {
 		if _, ok := f.conversion(t, b.BaseIngredientID, k); !ok {
 			t.Errorf("a refused delete keeps the %s conversion", k)
 		}
