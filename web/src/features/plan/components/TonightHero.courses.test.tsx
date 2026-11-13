@@ -61,13 +61,15 @@ describe('TonightHero with several Courses', () => {
     expect(h.onCook).toHaveBeenCalledWith(slotKey)
   })
 
-  it('the compact rows carry Swap, Pin and Mark as Cooked for that Course', async () => {
+  // DS-TODAY (changed on purpose): Mark as Cooked moved into the row's ⋮ (More for Side); Swap, Pin, ⋮ are one icon group.
+  it('the compact rows carry Swap, Pin and (in the ⋮) Mark as Cooked for that Course', async () => {
     const h = setup(dinner([main(), side()]))
     const row = screen.getByRole('listitem', { name: 'Side' })
     const course = { ...slotKey, courseId: 2 }
     await userEvent.click(within(row).getByRole('button', { name: 'Swap' }))
     await userEvent.click(within(row).getByRole('button', { name: 'Pin' }))
-    await userEvent.click(within(row).getByRole('button', { name: 'Mark as Cooked' }))
+    await userEvent.click(within(row).getByRole('button', { name: 'More for Side' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mark as Cooked' }))
     await userEvent.click(within(row).getByRole('button', { name: /Green beans/ }))
     expect(h.rowHandlers.onSwap).toHaveBeenCalledWith(course)
     expect(h.rowHandlers.onPin).toHaveBeenCalledWith(course)

@@ -100,7 +100,8 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
 })
 
 describe('TodayScreen: To confirm and Leftovers', () => {
-  it('To confirm rows offer Yes, Cooked and Adjust right on Today', async () => {
+  // DS-TODAY (changed on purpose): the To confirm row's primary is "Cooked" (the hero's, after the slot time, stays "Yes, Cooked").
+  it('To confirm rows offer Cooked and Adjust right on Today', async () => {
     h.toConfirm = [slot({ date: '2026-11-09', courseId: 1, courseName: 'Main', meal: meal({ date: '2026-11-09', recipeName: 'Stew' }) })]
     const api = mockApi({
       ...base,
@@ -109,7 +110,7 @@ describe('TodayScreen: To confirm and Leftovers', () => {
     })
     renderWithProviders(routed, '/')
     const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
-    await userEvent.click(within(tile).getByRole('button', { name: 'Yes, Cooked' }))
+    await userEvent.click(within(tile).getByRole('button', { name: 'Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1))
   })
 

@@ -12,6 +12,7 @@ const quiet: TodayData = {
   leftovers: 0,
   useSoon: 0,
   streakDays: 0,
+  linesToGet: 0,
 }
 
 const busy: TodayData = {
@@ -24,6 +25,7 @@ const busy: TodayData = {
   leftovers: 2,
   useSoon: 3,
   streakDays: 5,
+  linesToGet: 6,
 }
 
 function tilesOf(data: TodayData) {
@@ -38,16 +40,16 @@ describe('composeToday', () => {
     expect(composeToday({ ...quiet, scanSessionActive: true })).toEqual({ mode: 'shopping' })
   })
 
-  it('orders tiles by the Today hierarchy: the hero first, housekeeping last', () => {
+  it('orders tiles by the Today hierarchy: the hero, To confirm, the metric strip, then the rest (DS-TODAY: streak became metrics)', () => {
     const { tiles, empty } = tilesOf(busy)
     expect(empty).toBe(false)
     expect(tiles).toEqual([
       { id: 'nextMeal' },
       { id: 'toConfirm' },
+      { id: 'metrics' },
       { id: 'advanceSteps' },
       { id: 'leftovers' },
       { id: 'useSoon' },
-      { id: 'streak' },
       { id: 'spoiled' },
       { id: 'couldntPlan' },
     ])
@@ -62,16 +64,24 @@ describe('composeToday', () => {
     expect(tiles.map((t) => t.id)).toEqual(['nextMeal', 'leftovers'])
   })
 
-  it('shows the streak only from one day on', () => {
-    expect(tilesOf({ ...quiet, hasNextMeal: true, streakDays: 0 }).tiles.map((t) => t.id)).toEqual(['nextMeal'])
-    expect(tilesOf({ ...quiet, hasNextMeal: true, streakDays: 1 }).tiles.map((t) => t.id)).toEqual(['nextMeal', 'streak'])
+  // DS-TODAY (changed on purpose): the streak tile became the metric strip (streak, Leftovers to use, Lines to get).
+  it('shows the metric strip when at least one metric has something to say: a streak from one day on, Leftovers, or Lines to get', () => {
+    const ids = (extra: Partial<TodayData>) => tilesOf({ ...quiet, hasNextMeal: true, ...extra }).tiles.map((t) => t.id)
+    expect(ids({ streakDays: 0 })).toEqual(['nextMeal'])
+    expect(ids({ streakDays: 1 })).toEqual(['nextMeal', 'metrics'])
+    expect(ids({ linesToGet: 3 })).toEqual(['nextMeal', 'metrics'])
+    expect(ids({ leftovers: 2 })).toEqual(['nextMeal', 'metrics', 'leftovers'])
   })
 
-  it('is empty when nothing but the streak could show', () => {
-    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, failed: false, heroSpan: 'row' })
-    const withStreak = tilesOf({ ...quiet, streakDays: 12 })
+  it('is one strip, however many metrics: the id appears once', () => {
+    expect(tilesOf(busy).tiles.filter((t) => t.id === 'metrics')).toHaveLength(1)
+  })
+
+  it('is empty when nothing but the metric strip could show', () => {
+    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, failed: false })
+    const withStreak = tilesOf({ ...quiet, streakDays: 12, linesToGet: 4 })
     expect(withStreak.empty).toBe(true)
-    expect(withStreak.tiles.map((t) => t.id)).toEqual(['streak'])
+    expect(withStreak.tiles.map((t) => t.id)).toEqual(['metrics'])
   })
 
   it('is not empty with a single Advance Step', () => {
@@ -82,31 +92,10 @@ describe('composeToday', () => {
     expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
   })
 
-  // R2-2: the hero spans 2x2 only when a small tile can sit beside it; otherwise it takes the full row (no hole).
-  describe('heroSpan', () => {
-    const hero = { ...quiet, hasNextMeal: true }
-    it('is the full row for the hero alone', () => {
-      expect(tilesOf(hero).heroSpan).toBe('row')
-    })
-    it('is the full row for the hero with only full-span tiles (To confirm, Throw out or keep?, Couldn\'t plan)', () => {
-      expect(tilesOf({ ...hero, couldntPlan: 2 }).heroSpan).toBe('row')
-      expect(tilesOf({ ...hero, toConfirm: 1, spoiled: 1, couldntPlan: 1 }).heroSpan).toBe('row')
-    })
-    it('is the full row for the hero with the setup checklist', () => {
-      expect(tilesOf({ ...hero, needsSetup: true }).heroSpan).toBe('row')
-    })
-    it.each([
-      ['advanceSteps', { advanceSteps: 1 }],
-      ['leftovers', { leftovers: 1 }],
-      ['useSoon', { useSoon: 1 }],
-      ['streak', { streakDays: 3 }],
-    ])('is 2x2 (block) when the small tile %s is present', (_n, extra) => {
-      expect(tilesOf({ ...hero, ...extra }).heroSpan).toBe('block')
-      expect(tilesOf({ ...hero, ...extra, couldntPlan: 1, toConfirm: 1 }).heroSpan).toBe('block')
-    })
-    it('is 2x2 for a busy day', () => {
-      expect(tilesOf(busy).heroSpan).toBe('block')
-    })
+  // DS-TODAY (changed on purpose): no `heroSpan`. The hero always takes the whole row; the 2x2 back-fill on the 3-column
+  // grid is gone with the fixed column counts (ADR 0016).
+  it('has no heroSpan: the hero is always the full row', () => {
+    expect('heroSpan' in tilesOf({ ...quiet, hasNextMeal: true, leftovers: 1 })).toBe(false)
   })
 
   it('is never empty when a load failed: the layout says so instead of "nothing on the menu"', () => {

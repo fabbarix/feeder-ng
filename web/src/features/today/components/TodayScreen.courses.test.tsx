@@ -73,6 +73,7 @@ describe('Today: the Tonight tile is the slot block', () => {
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/2/confirm')).toHaveLength(1))
   })
 
+  // DS-TODAY (changed on purpose): Mark as Cooked is in the Side row's ⋮ (More for Side), no longer a loose icon.
   it('Mark as Cooked on the Side row opens the Side\'s own sheet and cooks only the Side', async () => {
     h.nextSlot = dinner()
     const api = mockApi({
@@ -81,7 +82,8 @@ describe('Today: the Tonight tile is the slot block', () => {
       'POST /api/plan/2026-11-10/4/2/cooked': { meal: courseMeal(2, 'Side', { state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
-    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: 'Mark as Cooked' }))
+    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: 'More for Side' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/2/cooked')).toHaveLength(1))
@@ -106,34 +108,27 @@ describe('Today: the Tonight tile is the slot block', () => {
   })
 })
 
-describe('Today: To confirm groups the Courses of a slot', () => {
+// DS-TODAY (changed on purpose, option A): To confirm is ONE row per Meal Slot. A slot with several Courses has one primary
+// "All Cooked" (one tap, planned Leftovers), "Adjust" (the Mark all Cooked sheet) and "Not cooked" (whole slot) in the ⋮;
+// the per-Course groups ("Side": Yes, Cooked / Adjust / Not cooked) and the floating "Mark all Cooked" are gone.
+describe('Today: To confirm is one decision per Meal Slot', () => {
   const entry = (courseId: number, courseName: string, recipeName: string): PlanSlot =>
     slot({ date: '2026-11-09', mealSlotId: 4, courseId, courseName, meal: courseMeal(courseId, courseName, { mealSlotId: 4, recipeName, date: '2026-11-09' }) })
+  const confirm = () => [entry(1, 'Main', 'Roast chicken'), entry(2, 'Side', 'Green beans')]
 
-  it('one heading for the slot, each Course confirmed on its own', async () => {
-    h.toConfirm = [entry(1, 'Main', 'Roast chicken'), entry(2, 'Side', 'Green beans')]
-    const api = mockApi({
-      ...base,
-      'GET /api/plan/2026-11-09/4/2/cook': preview(2, 'Side', 'Green beans', '2026-11-09'),
-      'POST /api/plan/2026-11-09/4/2/cooked': { meal: courseMeal(2, 'Side', { state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
-    })
+  it('one row for the slot: the Main Recipe and "+ Side · Green beans"; no per-Course group', async () => {
+    h.toConfirm = confirm()
+    mockApi(base)
     renderWithProviders(routed, '/')
-    expect(await screen.findByText('Mon Dinner: Roast chicken, Green beans')).toBeInTheDocument()
-    await userEvent.click(within(screen.getByRole('group', { name: 'Side' })).getByRole('button', { name: 'Yes, Cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/2/cooked')).toHaveLength(1))
-    expect(api.callsTo('POST', '/api/plan/2026-11-09/4/2/cooked')[0]!.body).toEqual({ leftoverPortions: 2 })
+    const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
+    expect(within(tile).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(tile).getByText('Roast chicken')).toBeInTheDocument()
+    expect(within(tile).getByText('+ Side · Green beans')).toBeInTheDocument()
+    expect(within(tile).queryByRole('group', { name: 'Side' })).not.toBeInTheDocument()
   })
 
-  it('Not cooked on one Course skips that Course only', async () => {
-    h.toConfirm = [entry(1, 'Main', 'Roast chicken'), entry(2, 'Side', 'Green beans')]
-    const api = mockApi({ ...base, 'POST /api/plan/2026-11-09/4/2/not-cooked': courseMeal(2, 'Side', { state: 'skipped' }) })
-    renderWithProviders(routed, '/')
-    await userEvent.click(within(await screen.findByRole('group', { name: 'Side' })).getByRole('button', { name: 'Not cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/2/not-cooked')).toHaveLength(1))
-  })
-
-  it('Mark all Cooked opens one sheet with each Course and confirms them together', async () => {
-    h.toConfirm = [entry(1, 'Main', 'Roast chicken'), entry(2, 'Side', 'Green beans')]
+  it('All Cooked is one tap: every Course is cooked with its planned Leftover, no sheet', async () => {
+    h.toConfirm = confirm()
     const api = mockApi({
       ...base,
       'GET /api/plan/2026-11-09/4/1/cook': preview(1, 'Main', 'Roast chicken', '2026-11-09'),
@@ -141,7 +136,24 @@ describe('Today: To confirm groups the Courses of a slot', () => {
       'POST /api/plan/2026-11-09/4/all/cooked': { meals: [], leftovers: [], warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Mark all Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'All Cooked' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/cooked')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/cooked')[0]!.body).toEqual({
+      courses: [{ courseId: 1, leftoverPortions: 2 }, { courseId: 2, leftoverPortions: 2 }],
+    })
+    expect(screen.queryByRole('dialog', { name: 'Mark all Cooked' })).not.toBeInTheDocument()
+  })
+
+  it('Adjust opens the Mark all Cooked sheet, where each Course can be set on its own', async () => {
+    h.toConfirm = confirm()
+    const api = mockApi({
+      ...base,
+      'GET /api/plan/2026-11-09/4/1/cook': preview(1, 'Main', 'Roast chicken', '2026-11-09'),
+      'GET /api/plan/2026-11-09/4/2/cook': preview(2, 'Side', 'Green beans', '2026-11-09'),
+      'POST /api/plan/2026-11-09/4/all/cooked': { meals: [], leftovers: [], warnings: [], plannedFor: [] },
+    })
+    renderWithProviders(routed, '/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
     await within(sheet).findByRole('spinbutton', { name: 'Main Leftover portions' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark all Cooked' }))
@@ -149,5 +161,27 @@ describe('Today: To confirm groups the Courses of a slot', () => {
     expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/cooked')[0]!.body).toEqual({
       courses: [{ courseId: 1, leftoverPortions: 2 }, { courseId: 2, leftoverPortions: 2 }],
     })
+  })
+
+  it('Not cooked (in the ⋮) skips the whole slot', async () => {
+    h.toConfirm = confirm()
+    const api = mockApi({ ...base, 'POST /api/plan/2026-11-09/4/all/not-cooked': { meals: [] } })
+    renderWithProviders(routed, '/')
+    await userEvent.click(await screen.findByRole('button', { name: 'More for Mon Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/not-cooked')).toHaveLength(1))
+  })
+
+  it('a slot with one Course keeps the one-tap Cooked, posting that Course', async () => {
+    h.toConfirm = [entry(1, 'Main', 'Roast chicken')]
+    const api = mockApi({
+      ...base,
+      'GET /api/plan/2026-11-09/4/1/cook': preview(1, 'Main', 'Roast chicken', '2026-11-09'),
+      'POST /api/plan/2026-11-09/4/1/cooked': { meal: courseMeal(1, 'Main', { state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
+    })
+    renderWithProviders(routed, '/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/1/cooked')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/plan/2026-11-09/4/1/cooked')[0]!.body).toEqual({ leftoverPortions: 2 })
   })
 })

@@ -22,7 +22,8 @@ describe('TonightHero before the slot time', () => {
     const { container } = setup(dinner())
     expect(container.querySelector('[data-variant="hero"]')).not.toBeNull()
     expect(container.querySelector('[data-span="full"]')).not.toBeNull()
-    expect(screen.getByText('DINNER · 19:30')).toBeInTheDocument()
+    // DS-TODAY (changed on purpose): one eyebrow line "Today · Dinner · start 18:45" (spans), not "DINNER · 19:30" + a separate paragraph.
+    expect(container.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 18:45')
     expect(screen.getByText('start 18:45')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
   })
@@ -87,9 +88,10 @@ describe('TonightHero day and action (N3)', () => {
     return h
   }
 
-  it('tomorrow: a day label overline "TOMORROW · LUNCH" instead of the slot time', () => {
+  // DS-TODAY (changed on purpose): the eyebrow is mixed case (CSS upper-cases it) and keeps the day word.
+  it('tomorrow: a day label eyebrow "Tomorrow · Lunch" instead of the slot time', () => {
     render2(lunch(), { day: 'tomorrow', action: 'none' })
-    expect(screen.getByText('TOMORROW · LUNCH')).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero .tile__overline')!.textContent).toMatch(/^Tomorrow · Lunch/)
     expect(screen.queryByText(/13:00/)).not.toBeInTheDocument()
   })
 
