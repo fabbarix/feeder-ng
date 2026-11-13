@@ -21,7 +21,14 @@ describe('restockText: why a Restock Line is on the list', () => {
   it('a g or ml Supply carries its unit, in the display unit system', () => {
     expect(restockText({ level: 500, stock: 200 }, 'ml', 'metric')).toBe('Below 500 ml · 200 ml in Stock')
     expect(restockText({ level: 500, stock: 0 }, 'g', 'metric')).toBe('Below 500 g · None in Stock')
-    expect(restockText({ level: 500, stock: 200 }, 'g', 'imperial')).toBe('Below 17.6 oz · 7.1 oz in Stock')
+    expect(restockText({ level: 500, stock: 200 }, 'g', 'imperial')).toBe('Below 1 lb 2 oz · 7.1 oz in Stock')
+    expect(restockText({ level: 1000, stock: 200 }, 'ml', 'imperial')).toBe('Below 4.25 cups · 0.75 cups in Stock')
+  })
+  it('amounts round like the rest of Shop: a piece to at most 1 decimal, float dust in Stock is none', () => {
+    expect(restockText({ level: 6, stock: 1.9999999999 }, 'piece', 'metric')).toBe('Below 6 · 2 in Stock')
+    expect(restockText({ level: 6, stock: 2.25 }, 'piece', 'metric')).toBe('Below 6 · 2.3 in Stock')
+    expect(restockText({ level: 6, stock: 1e-12 }, 'piece', 'metric')).toBe('Below 6 · None in Stock')
+    expect(restockText({ level: 500, stock: 199.96 }, 'ml', 'metric')).toBe('Below 500 ml · 200 ml in Stock')
   })
 })
 
