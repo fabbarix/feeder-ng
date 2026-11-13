@@ -293,4 +293,5 @@ type MergeOffer struct {
 type LinkResult struct {
 	Linked     []int64
 	MergeOffer []MergeOffer
+	Recipes    []int64 // the Recipes whose lines changed (events, round 2)
 }

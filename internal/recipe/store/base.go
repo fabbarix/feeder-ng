@@ -57,6 +57,20 @@ func (basePort) MergeCycle(ctx context.Context, q ingstore.Querier, sourceID, ta
 	return mergeCycle(ctx, q, sourceID, targetID)
 }
 
+// AfterMerge refreshes the cached total time of the Base recipe whose Ingredient received a merge, and of the Recipes
+// calling it, since their lines now call for it (round 2).
+func (basePort) AfterMerge(ctx context.Context, tx *sql.Tx, targetID int64) error {
+	var id int64
+	err := tx.QueryRowContext(ctx, `SELECT id FROM recipes WHERE base_ingredient_id = ?`, targetID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return (&Store{}).refreshTotals(ctx, tx, id)
+}
+
 // mergeCycle is the cycle merging source into the Base recipe's Ingredient target would make: the Recipes with lines on
 // source start calling that Base recipe. nil when target is no Base recipe's Ingredient or no cycle results.
 func mergeCycle(ctx context.Context, q Querier, sourceID, targetID int64) ([]string, error) {
@@ -550,7 +564,7 @@ func (s *Store) claimBase(ctx context.Context, tx *sql.Tx, recipeID, own int64, 
 			return 0, &recipe.ValidationError{Field: "takeOver", Code: recipe.CodeTakeOverUnit,
 				Message: "the Yield's unit does not convert to that Ingredient's Base Unit: keep it apart instead"}
 		default:
-			ing, err = s.adopt(ctx, tx, recipeID, own, plain.ID, in.Name)
+			ing, err = s.adopt(ctx, tx, recipeID, own, plain.ID, in.Name, base)
 		}
 	}
 	if err != nil {
@@ -586,7 +600,7 @@ func (s *Store) ownIngredient(ctx context.Context, tx *sql.Tx, recipeID, own int
 // adopt takes the plain Ingredient over (§3.2, Yes). On a rename the former Ingredient of the Base recipe is merged into
 // it first: the Base recipe points at the plain one, so the merge's guard does not apply to the former one, and its
 // Stock and lines move with it. Batch and portion are rewritten from the Yield by the caller.
-func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID int64, name string) (int64, error) {
+func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID int64, name string, base units.Base) (int64, error) {
 	if own != 0 && own != plainID {
 		if _, err := tx.ExecContext(ctx, `UPDATE recipes SET base_ingredient_id = ? WHERE id = ?`, plainID, recipeID); err != nil {
 			return 0, err
@@ -605,7 +619,30 @@ func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID in
 				return 0, err
 			}
 		}
-		if err := s.ings.MergeTx(ctx, tx, own, plainID, ingredient.Resolution{}); err != nil {
+		// The former Ingredient's Base Unit follows the Yield first (a Base Unit change while it is in use is refused).
+		if err := s.ings.BaseUnitTx(ctx, tx, own, base); err != nil {
+			if errors.Is(err, ingstore.ErrInUse) {
+				return 0, recipe.ErrBaseUnitInUse
+			}
+			return 0, err
+		}
+		// The taken-over Ingredient is the one in use: on every conflict its values win (its Shelf Life and its
+		// Unit Conversions). Nothing is left unresolved, so the merge cannot fail on a conflict.
+		src, err := s.ings.GetTx(ctx, tx, own)
+		if err != nil {
+			return 0, err
+		}
+		tgt, err := s.ings.GetTx(ctx, tx, plainID)
+		if err != nil {
+			return 0, err
+		}
+		res := ingredient.Resolution{Conversions: map[string]float64{}, ShelfLifeSet: true, ShelfLifeDays: tgt.ShelfLifeDays}
+		for _, c := range ingredient.PlanMerge(src, tgt).Conflicts {
+			if c.Kind == ingredient.ConflictConversion {
+				res.Conversions[c.Unit] = c.Target
+			}
+		}
+		if err := s.ings.MergeTx(ctx, tx, own, plainID, res); err != nil {
 			return 0, err
 		}
 	}
@@ -871,6 +908,9 @@ func (s *Store) toBaseTx(ctx context.Context, tx *sql.Tx, id int64, in recipe.To
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET yield = ?, yield_unit = ?, whole_meal = 0, cooldown_days = NULL,
 	        leftover_use_by_days = NULL, frozen_use_by_days = NULL, reheat_minutes = NULL, updated_at = ? WHERE id = ?`,
 		in.Yield, unit, s.now(), id); err != nil {
+		return err
+	}
+	if err := checkCycles(ctx, tx, id); err != nil {
 		return err
 	}
 	return s.refreshTotals(ctx, tx, id)
@@ -1328,10 +1368,14 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		byID[c.LineID] = c
 	}
 	ing, err := baseIngredientOf(ctx, tx, baseID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return recipe.LinkResult{}, ErrNotFound
+	}
 	if err != nil {
 		return recipe.LinkResult{}, err
 	}
 	var old []int64
+	var touched []int64
 	seen := map[int64]bool{}
 	for _, id := range lineIDs {
 		c, ok := byID[id]
@@ -1357,6 +1401,9 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		if err := s.saveInTx(ctx, tx, c.RecipeID, in); err != nil {
 			return recipe.LinkResult{}, err
 		}
+		if !containsID(touched, c.RecipeID) {
+			touched = append(touched, c.RecipeID)
+		}
 	}
 	offers := []recipe.MergeOffer{}
 	for _, id := range old {
@@ -1379,12 +1426,15 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM products WHERE ingredient_id = ?`, id).Scan(&o.Products); err != nil {
 			return recipe.LinkResult{}, err
 		}
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM member_ingredient_exclusions WHERE ingredient_id = ?`, id).Scan(&o.Exclusions); err != nil {
+			return recipe.LinkResult{}, err
+		}
 		offers = append(offers, o)
 	}
 	if err := tx.Commit(); err != nil {
 		return recipe.LinkResult{}, err
 	}
-	return recipe.LinkResult{Linked: append([]int64(nil), lineIDs...), MergeOffer: offers}, nil
+	return recipe.LinkResult{Linked: append([]int64(nil), lineIDs...), MergeOffer: offers, Recipes: touched}, nil
 }
 
 // Unlink reverses a bulk link (the Toast's Undo): each line goes back to its remembered Ingredient, all or nothing
@@ -1395,6 +1445,11 @@ func (s *Store) Unlink(ctx context.Context, baseID int64, lineIDs []int64) error
 		return err
 	}
 	defer tx.Rollback()
+	if _, err := baseIngredientOf(ctx, tx, baseID); errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
 	for _, id := range lineIDs {
 		var recipeID, ing int64
 		var linked sql.NullInt64
@@ -1510,6 +1565,7 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 		for i := range r.Lines {
 			if b := r.Lines[i].Base; b != nil {
 				r.Lines[i].NeededAt = max(0, baserecipe.NeededAt(cat.recipes[id], i, b.Name))
+				r.Lines[i].NeededAtDefault = max(0, baserecipe.NeededAt(withoutOverride(cat.recipes[id], i), i, b.Name))
 			}
 		}
 	}
@@ -1554,4 +1610,54 @@ func loadLines(ctx context.Context, q Querier, id int64) ([]recipe.Line, error) 
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+// withoutOverride is the Recipe with the stored Needed at override of line i cleared: the default rule alone (round 2).
+func withoutOverride(r baserecipe.Recipe, i int) baserecipe.Recipe {
+	lines := append([]baserecipe.Line(nil), r.Lines...)
+	if i >= 0 && i < len(lines) {
+		lines[i].NeededAtStep = nil
+	}
+	r.Lines = lines
+	return r
+}
+
+// containsID reports whether the id is in ids.
+func containsID(ids []int64, id int64) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+// BaseUnit is the Base Unit of the Base recipe's Ingredient (the link candidates carry it, round 2). ErrNotFound for a
+// plannable Recipe.
+func (s *Store) BaseUnit(ctx context.Context, baseID int64) (string, error) {
+	var u string
+	err := s.db.QueryRowContext(ctx, `SELECT i.base_unit FROM recipes r JOIN ingredients i ON i.id = r.base_ingredient_id WHERE r.id = ?`, baseID).Scan(&u)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return u, err
+}
+
+// RecipesOfLines lists the Recipes the lines belong to, in line order, each once (the events of an undo).
+func (s *Store) RecipesOfLines(ctx context.Context, lineIDs []int64) ([]int64, error) {
+	var out []int64
+	for _, id := range lineIDs {
+		var recipeID int64
+		err := s.db.QueryRowContext(ctx, `SELECT recipe_id FROM recipe_lines WHERE id = ?`, id).Scan(&recipeID)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !containsID(out, recipeID) {
+			out = append(out, recipeID)
+		}
+	}
+	return out, nil
 }

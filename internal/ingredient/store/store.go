@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -209,16 +210,31 @@ func (s *Store) Search(ctx context.Context, query string, limit int) (SearchResu
 		e := byID[r.Exact.ID]
 		out.Exact = &e
 	}
+	var sugg []Suggested
 	for _, sg := range r.Suggestions {
-		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
+		sugg = append(sugg, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
 	}
 	rb := ingredient.Search(query, based, limit)
 	if rb.Exact != nil {
-		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[rb.Exact.ID], Score: 1})
+		sugg = append(sugg, Suggested{Ingredient: byID[rb.Exact.ID], Score: 1})
 	}
 	for _, sg := range rb.Suggestions {
-		out.Suggestions = append(out.Suggestions, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
+		sugg = append(sugg, Suggested{Ingredient: byID[sg.ID], Score: sg.Score})
 	}
+	// The suggestions are capped at limit in total, plain and Base recipe Ingredients together (best first).
+	sort.SliceStable(sugg, func(i, j int) bool {
+		if sugg[i].Score != sugg[j].Score {
+			return sugg[i].Score > sugg[j].Score
+		}
+		return sugg[i].Ingredient.Name < sugg[j].Ingredient.Name
+	})
+	if limit <= 0 {
+		limit = 5
+	}
+	if len(sugg) > limit {
+		sugg = sugg[:limit]
+	}
+	out.Suggestions = sugg
 	return out, nil
 }
 

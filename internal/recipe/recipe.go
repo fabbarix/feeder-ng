@@ -352,7 +352,7 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 
 	// Needed at (§3.3): an override names one of the Recipe's own Steps (the Base recipe check is the store's).
 	for i := range out.Lines {
-		if n := out.Lines[i].NeededAtStep; n != nil && (*n < 0 || *n >= len(steps)) {
+		if n := out.Lines[i].NeededAtStep; n != nil && (*n < 0 || *n >= len(steps) || steps[*n].Kind == schedule.Advance) {
 			return Input{}, fieldErr(fmt.Sprintf("lines[%d].neededAtStep", i), CodeNeededAtStepInvalid, "Needed at must be one of this Recipe's Steps")
 		}
 	}
