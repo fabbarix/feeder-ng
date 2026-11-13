@@ -15,11 +15,11 @@ const preview: CookPreviewWithLots = {
 }
 
 /** The real controller over the preview, as useMarkCooked builds it. */
-function Harness({ pv = preview }: { pv?: CookPreviewWithLots }) {
-  const usedFrom = useUsedFrom([{ courseId: 1, courseName: 'Main', needs: pv.needs }], { unitSystem: 'metric', today: '2026-11-10' })
+function Harness({ pv = preview, courseId = 1, needs = pv.needs }: { pv?: CookPreviewWithLots; courseId?: number | null; needs?: CookPreviewWithLots['needs'] }) {
+  const usedFrom = useUsedFrom([{ courseId: 1, courseName: 'Main', needs }], { unitSystem: 'metric', today: '2026-11-10' })
   return (
     <MarkCookedSheet
-      open preview={pv} isLoading={false} leftover={2} busy={false} error={null} usedFrom={usedFrom}
+      open preview={pv} isLoading={false} leftover={2} busy={false} error={null} courseId={courseId} usedFrom={usedFrom}
       onClose={vi.fn()} onLeftoverChange={vi.fn()} onConfirm={vi.fn()} onNotCooked={vi.fn()}
     />
   )
@@ -54,8 +54,19 @@ describe('MarkCookedSheet: Used from', () => {
     expect(screen.queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
   })
 
-  it('without a controller the sheet is as before', () => {
-    render(<MarkCookedSheet open preview={preview} isLoading={false} leftover={2} busy={false} error={null} onClose={vi.fn()} onLeftoverChange={vi.fn()} onConfirm={vi.fn()} onNotCooked={vi.fn()} />)
+  it('gates on the Course of the key, not on preview.meal.courseId', () => {
+    const noMealCourse = { ...preview, meal: meal({ recipeName: 'Roast chicken', courseName: 'Main' }) } // the meal carries no courseId
+    render(<Harness pv={noMealCourse} courseId={1} />)
+    expect(screen.getByRole('button', { name: /Used from/ })).toBeInTheDocument()
+  })
+
+  it('has no Used from row while the key has no Course', () => {
+    render(<Harness courseId={null} />)
+    expect(screen.queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
+  })
+
+  it('has no Used from row when the controller has nothing for the Course (an older server sent no lots or baseUnit)', () => {
+    render(<Harness needs={[]} />)
     expect(screen.queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
   })
 })

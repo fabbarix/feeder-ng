@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/http'
-import { isUsedFromInvalid, usedFromApi } from './api.usedFrom'
-import { mockApi } from './test-utils'
+import { isUsedFromInvalid, normaliseCookPreview, usedFromApi } from './api.usedFrom'
+import { meal, mockApi } from './test-utils'
+import type { CookPreview } from './types'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -44,5 +45,28 @@ describe('isUsedFromInvalid', () => {
     expect(isUsedFromInvalid(new ApiError(422, 'validation_failed', 'no'))).toBe(false)
     expect(isUsedFromInvalid(new ApiError(500, 'used_from_invalid', 'no'))).toBe(false)
     expect(isUsedFromInvalid(new Error('x'))).toBe(false)
+  })
+})
+
+describe('normaliseCookPreview (an older server sends needs without baseUnit or lots)', () => {
+  const base = { meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13' }
+  const lots = [{ id: 1, quantity: 500, purchased: '2026-11-09', goesOff: null, storagePlaceName: 'Fridge' }]
+
+  it('gives a need that has a baseUnit but no lots an empty lots list', () => {
+    const server = { ...base, needs: [{ ingredientId: 11, ingredient: 'Chicken', quantity: 800, baseUnit: 'g' }] } as unknown as CookPreview
+    expect(normaliseCookPreview(server).needs).toEqual([{ ingredientId: 11, ingredient: 'Chicken', quantity: 800, baseUnit: 'g', lots: [] }])
+  })
+  it('drops a need with no baseUnit (it cannot be shown without a unit)', () => {
+    const server = { ...base, needs: [{ ingredientId: 11, ingredient: 'Chicken', quantity: 800 }] } as unknown as CookPreview
+    expect(normaliseCookPreview(server).needs).toEqual([])
+  })
+  it('keeps a complete need as it is, and the rest of the preview', () => {
+    const server = { ...base, needs: [{ ingredientId: 11, ingredient: 'Chicken', quantity: 800, baseUnit: 'g', lots }] } as unknown as CookPreview
+    const out = normaliseCookPreview(server)
+    expect(out.needs[0]!.lots).toEqual(lots)
+    expect(out).toMatchObject(base)
+  })
+  it('copes with a preview whose needs are missing altogether', () => {
+    expect(normaliseCookPreview({ ...base } as unknown as CookPreview).needs).toEqual([])
   })
 })

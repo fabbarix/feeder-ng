@@ -36,7 +36,7 @@ describe('useMarkAllCooked: Used from', () => {
   it('offers the lines of each Course from its own preview', async () => {
     mockApi({ [P1]: preview(1, 'Main'), [P2]: preview(2, 'Side', [lot(5, 900, 'Pantry')]) })
     const { result: hook } = await loaded()
-    const uf = hook.current.usedFrom!
+    const uf = hook.current.usedFrom
     expect(uf.lines(1)[0]!.lots.map((l) => l.lotId)).toEqual([1, 2])
     expect(uf.lines(2)[0]!.lots.map((l) => l.lotId)).toEqual([5])
     expect(uf.hasConflict).toBe(false)
@@ -56,7 +56,7 @@ describe('useMarkAllCooked: Used from', () => {
   it('sends usedFrom on the Courses that chose, per Course', async () => {
     const api = mockApi({ [P1]: preview(1, 'Main'), [P2]: preview(2, 'Side'), [ALL]: result })
     const { result: hook } = await loaded()
-    act(() => hook.current.usedFrom!.toggle(2, 11, 2, true))
+    act(() => hook.current.usedFrom.toggle(2, 11, 2, true))
     await act(async () => {
       await hook.current.confirm()
     })
@@ -71,18 +71,18 @@ describe('useMarkAllCooked: Used from', () => {
   it('two Courses taking more from one Lot than it holds is a conflict, and confirm sends nothing', async () => {
     const api = mockApi({ [P1]: preview(1, 'Main'), [P2]: preview(2, 'Side'), [ALL]: result })
     const { result: hook } = await loaded()
-    act(() => hook.current.usedFrom!.toggle(1, 11, 1, true)) // 400 of the 500 g Lot
-    expect(hook.current.usedFrom!.hasConflict).toBe(false)
-    act(() => hook.current.usedFrom!.toggle(2, 11, 1, true)) // 400 + 400 > 500
-    expect(hook.current.usedFrom!.hasConflict).toBe(true)
+    act(() => hook.current.usedFrom.toggle(1, 11, 1, true)) // 400 of the 500 g Lot
+    expect(hook.current.usedFrom.hasConflict).toBe(false)
+    act(() => hook.current.usedFrom.toggle(2, 11, 1, true)) // 400 + 400 > 500
+    expect(hook.current.usedFrom.hasConflict).toBe(true)
     let out: unknown = 'unset'
     await act(async () => {
       out = await hook.current.confirm()
     })
     expect(out).toBeNull()
     expect(api.callsTo('POST', allPath)).toHaveLength(0)
-    act(() => hook.current.usedFrom!.toggle(2, 11, 1, false))
-    expect(hook.current.usedFrom!.hasConflict).toBe(false)
+    act(() => hook.current.usedFrom.toggle(2, 11, 1, false))
+    expect(hook.current.usedFrom.hasConflict).toBe(false)
   })
 
   it('a 422 used_from_invalid shows the refusal copy, returns null and reloads every preview', async () => {
@@ -93,7 +93,7 @@ describe('useMarkAllCooked: Used from', () => {
       [ALL]: refused,
     })
     const { result: hook } = await loaded()
-    act(() => hook.current.usedFrom!.toggle(1, 11, 1, true))
+    act(() => hook.current.usedFrom.toggle(1, 11, 1, true))
     let out: unknown = 'unset'
     await act(async () => {
       out = await hook.current.confirm()
@@ -111,5 +111,22 @@ describe('useMarkAllCooked: Used from', () => {
       await hook.current.confirm()
     })
     expect(hook.current.error).toBe(planStrings.cookedError)
+  })
+
+  describe('against a server that sends needs without baseUnit or lots', () => {
+    const serverPreview = (courseId: number, courseName: string) => ({ ...preview(courseId, courseName), needs: [{ ingredientId: 11, ingredient: 'Chicken thighs', quantity: 400 }] })
+
+    it('does not throw: no Used from lines, and Mark all Cooked still sends exactly as before', async () => {
+      const api = mockApi({ [P1]: serverPreview(1, 'Main'), [P2]: serverPreview(2, 'Side'), [ALL]: result })
+      const { result: hook } = await loaded()
+      expect(hook.current.usedFrom.lines(1)).toEqual([])
+      expect(hook.current.usedFrom.lines(2)).toEqual([])
+      expect(hook.current.usedFrom.hasConflict).toBe(false)
+      await act(async () => {
+        await hook.current.confirm()
+      })
+      const body = api.callsTo('POST', allPath)[0]!.body as { courses: Array<{ usedFrom?: unknown }> }
+      expect(body.courses.map((c) => c.usedFrom)).toEqual([undefined, undefined])
+    })
   })
 })

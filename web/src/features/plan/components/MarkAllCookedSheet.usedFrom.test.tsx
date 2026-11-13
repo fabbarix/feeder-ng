@@ -20,8 +20,8 @@ const courses = [
   { courseId: 3, courseName: 'Dessert', needs: [] },
 ]
 
-function Harness({ onConfirm = vi.fn() }: { onConfirm?: () => void }) {
-  const usedFrom = useUsedFrom(courses, { unitSystem: 'metric', today: '2026-11-10' })
+function Harness({ onConfirm = vi.fn(), courseList = courses }: { onConfirm?: () => void; courseList?: typeof courses }) {
+  const usedFrom = useUsedFrom(courseList, { unitSystem: 'metric', today: '2026-11-10' })
   return (
     <MarkAllCookedSheet
       open rows={rows} isLoading={false} busy={false} error={null} usedFrom={usedFrom}
@@ -70,8 +70,9 @@ describe('MarkAllCookedSheet: Used from', () => {
     expect(confirm).toBeEnabled()
   })
 
-  it('without a controller the sheet is as before', () => {
-    render(<MarkAllCookedSheet open rows={rows} isLoading={false} busy={false} error={null} onClose={vi.fn()} onLeftoverChange={vi.fn()} onConfirm={vi.fn()} />)
-    expect(screen.queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
+  it('a fresh Course the controller has no lines for (an older server) shows no Used from row', () => {
+    render(<Harness courseList={[{ courseId: 1, courseName: 'Main', needs: [chicken] }, { courseId: 2, courseName: 'Side', needs: [] }, courses[2]!]} />)
+    expect(within(sectionOf('Main')).getByRole('button', { name: /Used from/ })).toBeInTheDocument()
+    expect(within(sectionOf('Side')).queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
   })
 })

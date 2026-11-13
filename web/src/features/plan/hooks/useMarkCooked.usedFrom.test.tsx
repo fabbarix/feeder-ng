@@ -33,7 +33,7 @@ describe('useMarkCooked: Used from', () => {
   it('offers the Used from lines of the preview needs, in the household Unit System and date', async () => {
     mockApi({ [PREVIEW]: preview() })
     const { result } = await loaded()
-    const uf = result.current.usedFrom!
+    const uf = result.current.usedFrom
     expect(uf.summary(1)).toBe('Soonest to go off first')
     expect(uf.lines(1)[0]!.title).toBe('Chicken thighs · 800 g')
     expect(uf.lines(1)[0]!.lots[0]!.meta).toBe('Good until Sat · Bought 9 Nov') // within the week reads as a weekday
@@ -42,7 +42,7 @@ describe('useMarkCooked: Used from', () => {
   it('a Good until date more than a week out reads as a day and month', async () => {
     mockApi({ [PREVIEW]: preview([{ ...lot(1, 500, 'Fridge'), goesOff: '2026-11-24' }]) })
     const { result } = await loaded()
-    expect(result.current.usedFrom!.lines(1)[0]!.lots[0]!.meta).toBe('Good until 24 Nov · Bought 9 Nov')
+    expect(result.current.usedFrom.lines(1)[0]!.lots[0]!.meta).toBe('Good until 24 Nov · Bought 9 Nov')
   })
 
   it('sends no usedFrom when nothing was chosen (exactly as before)', async () => {
@@ -58,7 +58,7 @@ describe('useMarkCooked: Used from', () => {
     const api = mockApi({ [PREVIEW]: preview(), [COOKED]: { warnings: [] } })
     const { result } = await loaded()
     act(() => result.current.setLeftover(1))
-    act(() => result.current.usedFrom!.toggle(1, 11, 2, true))
+    act(() => result.current.usedFrom.toggle(1, 11, 2, true))
     await act(async () => {
       await result.current.confirm()
     })
@@ -75,7 +75,7 @@ describe('useMarkCooked: Used from', () => {
       [COOKED]: refused,
     })
     const { result } = await loaded()
-    act(() => result.current.usedFrom!.toggle(1, 11, 1, true))
+    act(() => result.current.usedFrom.toggle(1, 11, 1, true))
     let out: unknown = 'unset'
     await act(async () => {
       out = await result.current.confirm()
@@ -84,8 +84,8 @@ describe('useMarkCooked: Used from', () => {
     expect(result.current.result).toBeNull()
     expect(result.current.error).toBe(usedFromStrings.refused)
     await waitFor(() => expect(api.callsTo('GET', '/api/plan/2026-11-10/2/1/cook')).toHaveLength(2))
-    await waitFor(() => expect(result.current.usedFrom!.lines(1)[0]!.lots.map((l) => l.lotId)).toEqual([3]))
-    expect(result.current.usedFrom!.entries(1)).toBeUndefined() // the old picks refer to Lots that are gone
+    await waitFor(() => expect(result.current.usedFrom.lines(1)[0]!.lots.map((l) => l.lotId)).toEqual([3]))
+    expect(result.current.usedFrom.entries(1)).toBeUndefined() // the old picks refer to Lots that are gone
   })
 
   it('any other failure keeps the generic cooked error and does not reload the preview', async () => {
@@ -96,5 +96,34 @@ describe('useMarkCooked: Used from', () => {
     })
     expect(result.current.error).toBe(planStrings.cookedError)
     expect(api.callsTo('GET', '/api/plan/2026-11-10/2/1/cook')).toHaveLength(1)
+  })
+
+  describe('against a server that sends needs without baseUnit or lots', () => {
+    const serverPreview = () => ({ ...preview(), needs: [{ ingredientId: 11, ingredient: 'Chicken thighs', quantity: 800 }] })
+
+    it('does not throw: no Used from lines, and Mark as Cooked still sends exactly as before', async () => {
+      const api = mockApi({ [PREVIEW]: serverPreview(), [COOKED]: { warnings: [] } })
+      const { result } = await loaded()
+      expect(result.current.usedFrom.lines(1)).toEqual([])
+      expect(result.current.usedFrom.entries(1)).toBeUndefined()
+      await act(async () => {
+        await result.current.confirm()
+      })
+      expect(api.callsTo('POST', cookedPath)[0]!.body).toEqual({ leftoverPortions: 2 })
+      expect(result.current.result).not.toBeNull()
+    })
+
+    it('a need with a baseUnit but no lots reads as no Stock of it, without throwing', async () => {
+      mockApi({ [PREVIEW]: { ...preview(), needs: [{ ingredientId: 11, ingredient: 'Chicken thighs', quantity: 800, baseUnit: 'g' }] } })
+      const { result } = await loaded()
+      expect(result.current.usedFrom.lines(1)[0]!.lots).toEqual([])
+    })
+  })
+
+  it('exposes the key\'s Course id (null while idle)', async () => {
+    mockApi({ [PREVIEW]: preview() })
+    const { result } = await loaded()
+    expect(result.current.courseId).toBe(1)
+    expect(renderHook(() => useMarkCooked(null), { wrapper }).result.current.courseId).toBeNull()
   })
 })

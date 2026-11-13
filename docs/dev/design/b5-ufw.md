@@ -66,6 +66,12 @@ interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
 5. `MarkCookedSheet` / `MarkAllCookedSheet`: render `<UsedFromSection>` below the Leftover stepper (per Course section in Mark all Cooked); props flow from the hook through `CookFlowSheets` / `AllCookedSheets`.
 6. Replace the `needs: []` fixtures in the existing sheet tests if the type change needs it; add a CHANGELOG entry.
 
+### Round 3 notes
+
+- `useCookContext` falls back to the browser's local date when `['plan','view']` is not cached, so the go-off wording can differ from the household's date near midnight or across time zones; once the plan view is cached its `today` wins.
+- Older server: the cook preview may carry needs without `baseUnit` or `lots`. `normaliseCookPreview` (api.usedFrom.ts) gives a need without `lots` an empty list and drops a need without `baseUnit`; the hooks run every preview through it. A sheet shows the Used from section only when the controller has lines for the Course, so an older server shows none, and Mark as Cooked / Mark all Cooked send exactly as before.
+- `MarkCookedController.usedFrom` / `courseId` and `MarkAllCookedController.usedFrom` are required, as are the sheets' `usedFrom` props (and `courseId` on MarkCookedSheet). MarkCookedSheet gates on the key's `courseId`, not `preview.meal.courseId`.
+
 ## 6. Open questions
 
 - Preview `needs[].baseUnit` is not named in the plan; we require it (no default unit). PM to confirm with the UF-runner/httpapi team that the server sends it. The Unit System (metric/imperial) comes from the Household setting at wiring time (default metric here).

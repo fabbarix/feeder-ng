@@ -104,3 +104,39 @@ describe('Cook Mode: Mark all Cooked offers Used from', () => {
     expect(body.courses[1]!.usedFrom).toBeUndefined()
   })
 })
+
+describe('Cook Mode: cook previews from an older server (needs without baseUnit or lots)', () => {
+  const older = (courseId: number, courseName: string, recipeName: string) => ({
+    ...preview(courseId, courseName, recipeName, 11, 'Chicken thighs'),
+    needs: [{ ingredientId: 11, ingredient: 'Chicken thighs', quantity: 400 }],
+  })
+  const olderRoutes = {
+    'GET /api/plan/2026-11-10/4/1/cook': older(1, 'Main', 'Roast chicken'),
+    'GET /api/plan/2026-11-10/4/2/cook': older(2, 'Side', 'Green beans'),
+  }
+
+  it('Mark as Cooked opens without throwing, has no Used from row, and still marks the Course Cooked', async () => {
+    const api = setup({ ...olderRoutes, 'POST /api/plan/2026-11-10/4/2/cooked': { meal: courseMeal(2, 'Side', { state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] } })
+    await screen.findByRole('article', { name: 'Step 1 of 4' })
+    await userEvent.click(screen.getByRole('button', { name: 'Course actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mark Side as Cooked' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
+    await within(sheet).findByRole('spinbutton', { name: 'Leftover portions' })
+    expect(within(sheet).queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Mark as Cooked' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/2/cooked')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/plan/2026-11-10/4/2/cooked')[0]!.body).toEqual({ leftoverPortions: 2 })
+  })
+
+  it('Mark all Cooked opens without throwing, has no Used from row, and still marks everything Cooked', async () => {
+    const api = setup({ ...olderRoutes, 'POST /api/plan/2026-11-10/4/all/cooked': allCookedResult() })
+    await screen.findByRole('article', { name: 'Step 1 of 4' })
+    for (let i = 0; i < 3; i++) await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark all Cooked' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
+    await within(sheet).findByRole('spinbutton', { name: 'Main Leftover portions' })
+    expect(within(sheet).queryByRole('button', { name: /Used from/ })).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Mark all Cooked' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/all/cooked')).toHaveLength(1))
+  })
+})
