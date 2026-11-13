@@ -7,9 +7,9 @@ import { readSource } from '../../plan/test-css'
 const css = readSource('features/shop/shop.css')
 
 describe('shop.css, a Shopping List line wraps by word (SF1)', () => {
-  it('the name breaks between words (break-word, not anywhere) and clamps to two lines', () => {
+  it('the name breaks between words only (DS-A: no anywhere, no break-word) and clamps to two lines', () => {
     const d = declarations(css, '.line-tile__title')
-    expect(d['overflow-wrap']).toBe('break-word')
+    expect(d['overflow-wrap'] ?? 'normal').toBe('normal')
     expect(d['-webkit-line-clamp']).toBe('2')
     expect(d['overflow']).toBe('hidden')
   })

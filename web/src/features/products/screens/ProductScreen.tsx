@@ -75,7 +75,7 @@ export function ProductScreen() {
         </p>
       ) : null}
 
-      <BentoGrid columns={2}>
+      <BentoGrid min="card">
         <Tile as="section" span="full" aria-labelledby="product-picture-heading">
           <h2 id="product-picture-heading" className="pg__tile-title">
             {strings.pictureLabel}

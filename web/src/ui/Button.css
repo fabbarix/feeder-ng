@@ -14,7 +14,6 @@
   font-weight: var(--text-body-strong-weight);
   line-height: 1.25;
   text-align: center;
-  overflow-wrap: break-word;
   text-decoration: none;
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);

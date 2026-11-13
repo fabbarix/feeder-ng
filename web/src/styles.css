@@ -56,6 +56,19 @@
   --tile-pad: 16px;
   --tile-overline-gap: 6px;
 
+  /* Grids are sized by a minimum tile width, never by a column count (docs/design/system.md 4, ADR 0016). */
+  --tile-min-metric: 9.5rem;
+  --tile-min-card: 20rem;
+  --tile-min-day: 21rem;
+  --tile-min-wide: 28rem;
+  /* List rows (system.md 3): at least 64 px; the value column keeps quantities in one column. */
+  --row-min: 64px;
+  --row-value-min: 5.5rem;
+  /* ActionGroup (system.md 5): the fixed width of a group in a wide row. */
+  --action-group-inline-size: 15rem;
+  /* Section rhythm (system.md 8): the gap between the sections of a Page. */
+  --section-gap: var(--space-6);
+
   /* Radii (plan 3.3) */
   --radius-chip: 999px;
   --radius-control: 14px;
@@ -173,6 +186,13 @@
   --color-on-secondary: var(--color-on-accent);
   --color-secondary-container: var(--color-soft);
   --color-on-secondary-container: var(--color-accent-text);
+}
+
+/* Phone: a value column that gives the name the room (system.md 3). */
+@media (max-width: 599px) {
+  :root {
+    --row-value-min: 4.25rem;
+  }
 }
 
 /* Tablet and desktop rhythm (plan 3.3) */

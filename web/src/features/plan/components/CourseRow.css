@@ -1,0 +1,46 @@
+/* The Today hero's compact Course row (CourseRow, Today's hero block). Moved out of plan.css by ds-plan; the markup is unchanged. Tokens only. */
+.plan-course {
+  display: grid;
+  gap: var(--space-1);
+}
+.plan-course__caption {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+.plan-course__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.plan-course__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.plan-course__reason {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+.plan-meal__actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+}
+.plan-meal__recipe {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--text-body-strong-size);
+  font-weight: 700;
+  text-align: start;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

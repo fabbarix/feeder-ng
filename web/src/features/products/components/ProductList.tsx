@@ -28,7 +28,7 @@ export function ProductList({ products, system = 'metric', showingArchived = fal
             key={p.id}
             title={p.name}
             meta={showIngredient && p.ingredientName ? `${displayName(p.ingredientName)} · ${size}` : size}
-            leading={<Thumb imageUrl={p.imageUrl} size={40} />}
+            leading={<Thumb name={p.name} imageUrl={p.imageUrl} size={40} />}
             chevron
             href={`/products/${p.id}`}
             trailing={p.archived ? <Chip kind="tag">{strings.archivedChip}</Chip> : undefined}

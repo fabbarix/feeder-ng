@@ -14,13 +14,13 @@
 .avatar[data-size='sm'] {
   width: 36px;
   height: 36px;
-  font-size: 0.85rem;
+  font-size: var(--text-label-size);
 }
 
 .avatar[data-size='lg'] {
   width: 56px;
   height: 56px;
-  font-size: 1.2rem;
+  font-size: var(--text-title-3-size);
 }
 
 /* WP3b: a Member's colour as a 2 px ring (not a fill), so the initials keep their contrast on any colour. */

@@ -209,7 +209,7 @@ function BentoGroup() {
   return (
     <Group name="BentoGrid">
       <div className="gallery__grid">
-        <BentoGrid columns={2} label="Example grid">
+        <BentoGrid min="card" label="Example grid">
           <Tile span={1}>One column</Tile>
           <Tile span={1}>Also one column</Tile>
           <Tile span="full">Full row</Tile>

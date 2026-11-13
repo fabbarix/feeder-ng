@@ -30,21 +30,9 @@ const preview: CookPreview = {
 
 const phone = () =>
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }))
-/** The week grid's container is `width` px wide: a ResizeObserver that reports it as soon as it observes (R2-2, L-05). */
-const widthStub = (width: number) =>
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      constructor(private cb: (entries: Array<{ contentRect: { width: number }; target: Element }>) => void) {}
-      observe(target: Element) {
-        this.cb([{ contentRect: { width }, target }])
-      }
-      unobserve() {}
-      disconnect() {}
-    },
-  )
-
-const tile = async (name: string) => ((await screen.findByRole('heading', { name })).closest('article') as HTMLElement)
+// ds-plan: the day title is "Mon 9 · Today" / "Tue 10 · Tomorrow" / "Wed 11" (was Today / Tomorrow / Wednesday).
+const headingOf = (day: string): string | RegExp => ({ Today: /· Today$/, Tomorrow: /· Tomorrow$/, Wednesday: 'Wed 11' })[day] ?? day
+const tile = async (name: string) => ((await screen.findByRole('heading', { name: headingOf(name) })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
   await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
   return screen.findByRole('dialog', { name: recipe })
@@ -80,67 +68,30 @@ describe('PlanScreen layout (5.2)', () => {
     expect(regenerate.querySelector('svg')).not.toBeNull()
   })
 
-  it('on a phone (2 columns) shows a day tile per day, today first and spanning two columns', async () => {
+  it('on a phone shows a day tile per day, today first, the same width as the others (no span)', async () => {
     phone()
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const today = await tile('Today')
-    expect(today).toHaveAttribute('data-span', '2')
-    expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Wednesday' })).toBeInTheDocument()
+    expect(today).not.toHaveAttribute('data-span', '2')
+    expect(screen.getByRole('heading', { name: /· Tomorrow$/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Wed 11' })).toBeInTheDocument()
     expect(within(today).getByText('Chicken')).toBeInTheDocument()
     expect(within(await tile('Wednesday')).getByText('Not planned')).toBeInTheDocument() // R13: a chip, not a sentence per slot
   })
 
-  it('at most one chip per Planned Meal on a day tile, and never "best available"', async () => {
+  // ds-plan: a row shows its chips on one line (all of them, clipped), so the count is no longer capped at one.
+  it('a Planned Meal row carries its chips, and never "best available"', async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const today = await tile('Today')
-    expect(today.querySelectorAll('.chip')).toHaveLength(1)
+    expect(today.querySelectorAll('.plan-row__chips .chip')).toHaveLength(1) // only the favourite: best_available makes no chip
     expect(within(today).getByText("Anna's favourite")).toBeInTheDocument()
     expect(screen.queryByText('best available')).not.toBeInTheDocument()
   })
 
-  it.each([
-    [358, '2'],
-    [640, '4'],
-    [1099, '4'],
-    [1136, '7'],
-    [1480, '7'],
-  ])('at a %ipx container the week grid has %s columns', async (width, columns) => {
-    widthStub(width)
-    mockApi({ 'GET /api/plan': view() })
-    renderWithProviders(<PlanScreen />)
-    await tile('Today')
-    expect(screen.getByRole('group', { name: 'Plan' })).toHaveAttribute('data-columns', columns)
-  })
 
-  it('at a 1480px container (7 columns) today takes one column, keeps its ring, and weekday headings are short', async () => {
-    widthStub(1480)
-    mockApi({ 'GET /api/plan': view() })
-    renderWithProviders(<PlanScreen />)
-    const today = await tile('Today')
-    expect(today).toHaveAttribute('data-span', '1')
-    expect(today).toHaveAttribute('data-today', 'true')
-    expect(screen.getByRole('heading', { name: 'Wed' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Wednesday' })).not.toBeInTheDocument()
-  })
-
-  it('at a 1480px container (7 columns) a day tile is compact: Recipe name on its own line, ONE action (Cook today, Swap otherwise)', async () => {
-    widthStub(1480)
-    mockApi({ 'GET /api/plan': view() })
-    renderWithProviders(<PlanScreen />)
-    const today = await tile('Today')
-    expect(today.querySelectorAll('.plan-meal__actions button')).toHaveLength(1)
-    expect(within(today).getByRole('button', { name: 'Cook' })).toBeInTheDocument()
-    expect(within(today).queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-    const tomorrow = await tile('Tomorrow')
-    expect(within(tomorrow).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
-    expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-  })
-
-  it('at a 1480px container the Planned Meal sheet still offers Swap on today (the action the tile gave up)', async () => {
-    widthStub(1480)
+  it('the Planned Meal sheet still offers Swap and Cook on today', async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const sheet = await openSheet('Today', 'Chicken')

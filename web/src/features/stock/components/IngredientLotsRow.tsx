@@ -34,7 +34,7 @@ export function IngredientLotsRow({ item, lots, places, today, system = 'metric'
       aria-label={strings.ingredientLotsLabel(name, lots.length)}
       meta={rowMeta(item, today)}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
-      leading={<Thumb imageUrl={item.imageUrl} size={40} />}
+      leading={<Thumb name={name} imageUrl={item.imageUrl} size={40} />}
       chevron
       expanded={expanded}
       onToggle={onToggle}

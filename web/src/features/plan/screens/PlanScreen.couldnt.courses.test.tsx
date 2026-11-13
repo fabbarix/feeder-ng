@@ -14,7 +14,13 @@ vi.mock('../../../lib/sse', () => ({
 afterEach(() => vi.unstubAllGlobals())
 
 const view = (slots: PlanSlot[]): PlanView => ({ today: '2026-11-10', horizonDays: 3, updating: false, slots })
-const tileOf = async (name: string) => (await screen.findByRole('heading', { name })).closest('article') as HTMLElement
+// ds-plan: the day title is "Mon 9 · Today" / "Thu 12" (was Today / Thursday).
+const tileOf = async (name: string) =>
+  (await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : new RegExp(`^${name.slice(0, 3)} \\d`) })).closest('article') as HTMLElement
+// ds-plan: a Course row is a ListRow (an <li> with no aria-label): found by the Course label in its meta line.
+const courseRow = (scope: HTMLElement, name: string) =>
+  within(scope).getAllByRole('listitem').find((li) => li.querySelector('.list-row__meta')?.textContent?.startsWith(name)) as HTMLElement
+
 const Where = () => {
   const l = useLocation()
   return <p>at {l.pathname + l.search}</p>
@@ -48,10 +54,10 @@ describe('PlanScreen: Couldn\'t plan per Course', () => {
     mockApi({ 'GET /api/plan': sideExcluded })
     renderPlan()
     const today = await tileOf('Today')
-    const side = within(today).getByRole('listitem', { name: 'Side' })
+    const side = courseRow(today, 'Side')
     expect(within(side).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'spoil')
     expect(within(side).getByText('Every Recipe is excluded.')).toBeInTheDocument()
-    expect(within(within(today).getByRole('listitem', { name: 'Main' })).queryByText('Not planned')).not.toBeInTheDocument()
+    expect(within(courseRow(today, 'Main')).queryByText('Not planned')).not.toBeInTheDocument()
     expect(within(await tileOf('Thursday')).queryByText('Not planned')).not.toBeInTheDocument()
   })
 
@@ -88,7 +94,7 @@ describe('PlanScreen: No Recipes for this Course', () => {
   it('shows its Course row with the info chip and its reason', async () => {
     mockApi({ 'GET /api/plan': noDessert })
     renderPlan()
-    const row = within(await tileOf('Today')).getByRole('listitem', { name: 'Dessert' })
+    const row = courseRow(await tileOf('Today'), 'Dessert')
     expect(within(row).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'info')
     expect(within(row).getByText('No Recipes for this Course.')).toBeInTheDocument()
   })

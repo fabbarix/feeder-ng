@@ -91,17 +91,9 @@
   mask-image: linear-gradient(to right, transparent 0, currentColor var(--space-4), currentColor calc(100% - var(--space-4)), transparent 100%);
 }
 
-/* Recipes grid: BentoGrid renders 2 columns; 3 from 720 px and 4 from 1024 px. */
-@media (min-width: 720px) {
-  .recipes-screen .bento-grid[data-columns='2'] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .recipes-screen .bento-grid[data-columns='2'] {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+/* The Recipes screen's root: its grid is a BentoGrid (card tracks), so the screen adds no column rule of its own. */
+.recipes-screen {
+  min-inline-size: 0;
 }
 
 .tag-chips::-webkit-scrollbar {
