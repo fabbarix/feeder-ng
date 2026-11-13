@@ -5,13 +5,15 @@ import (
 	"testing"
 
 	"github.com/fabbarix/feeder-ng/internal/recipe"
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
 // H3 (ADR 0017, docs/dev/design/household-items.md §2 guards 2 to 5 and 6): a Supply is never a Recipe line, never the
 // Ingredient of a Ready Meal or a Base recipe, and never an Exclusion. The guards are at the store, not only in the UI.
 //
-// Pinned codes: "ingredient_is_supply" (field "lines[i].ingredientId") and "supply_name_taken" (field "name").
+// Pinned codes: "ingredient_is_supply" (field "lines[i].ingredientId", or "steps[i].uses[j].ingredientId" for a Step use)
+// and "supply_name_taken" (field "name").
 
 const (
 	codeIngredientIsSupply = "ingredient_is_supply"
@@ -86,6 +88,46 @@ func TestALineThatCallsForABaseRecipeWhoseIngredientIsASupplyIsRefused(t *testin
 	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, bech.BaseIngredientID)
 	_, err := f.s.Create(ctx, plainIn("Lasagne", callFor(bech, 500, "ml")))
 	wantValidation(t, err, "lines[0].ingredientId", codeIngredientIsSupply)
+}
+
+// ---- guard 2, Step uses: a use may name an Ingredient that is on no line, so it is guarded on its own ----
+
+// stepUsing is an active Step that uses q unit of the Ingredient ing.
+func stepUsing(ing int64, q float64, unit string) recipe.Step {
+	return recipe.Step{Text: "Wipe the pan", Kind: schedule.Active, DurationMinutes: 2, Uses: []recipe.Use{{IngredientID: ing, Quantity: q, Unit: unit}}}
+}
+
+func TestAStepUseOfASupplyIsRefusedAndNothingIsStored(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, _ := f.basics(t)
+	soap := f.supply(t, "Dish soap", units.Millilitre)
+	in := plainIn("Soup", ln(milk, 200, "ml"))
+	in.Steps = []recipe.Step{stepUsing(milk, 200, "ml"), stepUsing(soap, 5, "ml")}
+	_, err := f.s.Create(ctx, in)
+	wantValidation(t, err, "steps[1].uses[0].ingredientId", codeIngredientIsSupply)
+	if f.recipeCount(t) != 0 || f.count(t, "recipe_step_uses") != 0 {
+		t.Error("a refused save stores nothing")
+	}
+}
+
+func TestAStepUseOfASupplyIsRefusedOnABaseRecipeToo(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, _ := f.basics(t)
+	soap := f.supply(t, "Dish soap", units.Millilitre)
+	in := baseIn("Béchamel", 1, "l", ln(milk, 1000, "ml"))
+	in.Steps = []recipe.Step{stepUsing(soap, 5, "ml")}
+	_, err := f.s.Create(ctx, in)
+	wantValidation(t, err, "steps[0].uses[0].ingredientId", codeIngredientIsSupply)
+}
+
+func TestAStepUseOfFoodOnNoLineIsStillAllowed(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, butter, _ := f.basics(t)
+	in := plainIn("Soup", ln(milk, 200, "ml"))
+	in.Steps = []recipe.Step{stepUsing(butter, 10, "g")}
+	if _, err := f.s.Create(ctx, in); err != nil {
+		t.Fatalf("Create: %v (the guard is for a Supply only)", err)
+	}
 }
 
 // ---- guard 3: a Ready Meal's Ingredient is named like the Recipe ----

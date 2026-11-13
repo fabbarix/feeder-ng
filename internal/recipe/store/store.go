@@ -287,17 +287,27 @@ func supplyNamed(ctx context.Context, q Querier, name string, exceptID int64) (b
 	return n > 0, err
 }
 
-// refuseSupplyLines refuses a Recipe line whose Ingredient is a Supply (ADR 0017, guard 2): a Supply is never a line of
-// a Recipe, a Ready Meal's pack or a Base recipe. The line is named by its index, lines[i].ingredientId.
+// refuseSupplyLines refuses a Recipe line or a Step use whose Ingredient is a Supply (ADR 0017, guard 2): a Supply is
+// never a line of a Recipe, a Ready Meal's pack or a Base recipe, nor a use of one of its Steps (a use may name an
+// Ingredient that is on no line). The refusal names the first one: lines[i].ingredientId, else
+// steps[i].uses[j].ingredientId.
 func refuseSupplyLines(ctx context.Context, q Querier, in recipe.Input) error {
 	for i, l := range in.Lines {
-		sup, err := isSupply(ctx, q, l.IngredientID)
-		if err != nil {
+		if sup, err := isSupply(ctx, q, l.IngredientID); err != nil {
 			return err
-		}
-		if sup {
+		} else if sup {
 			return &recipe.ValidationError{Field: fmt.Sprintf("lines[%d].ingredientId", i), Code: recipe.CodeIngredientIsSupply,
 				Message: "a Supply is not food: it cannot be a line of a Recipe"}
+		}
+	}
+	for i, st := range in.Steps {
+		for j, u := range st.Uses {
+			if sup, err := isSupply(ctx, q, u.IngredientID); err != nil {
+				return err
+			} else if sup {
+				return &recipe.ValidationError{Field: fmt.Sprintf("steps[%d].uses[%d].ingredientId", i, j),
+					Code: recipe.CodeIngredientIsSupply, Message: "a Supply is not food: a Step cannot use it"}
+			}
 		}
 	}
 	return nil
