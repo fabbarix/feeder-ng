@@ -41,7 +41,6 @@ export function IngredientLinesList({ lines, refs, system, excludedBy, onLinkToB
                 <BaseName
                   id={base.id}
                   label={`${quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)} ${displayName(name)}`}
-                  name={displayName(name)}
                   archived={base.archived}
                   empty={base.empty}
                 />
@@ -79,14 +78,14 @@ function lineActions(l: RecipeLine, onLinkToBase?: (line: RecipeLine) => void, o
 }
 
 /**
- * BR-D: "500 ml Béchamel (Base recipe)" as one line, the whole line a link to the Base recipe (named by the name); archived and empty ones say so.
+ * BR-D: "500 ml Béchamel (Base recipe)" as one line, the whole line a link to the Base recipe, named by its text; archived and empty ones say so.
  * The quantity column is empty on a Base recipe line: the line reads as one sentence.
  */
-function BaseName({ id, label, name, archived, empty }: { id: number; label: string; name: string; archived: boolean; empty?: boolean }): ReactNode {
+function BaseName({ id, label, archived, empty }: { id: number; label: string; archived: boolean; empty?: boolean }): ReactNode {
   const t = recipeStrings.baseRecipe
   return (
     <>
-      <Link to={`/recipes/${id}`} aria-label={name}>
+      <Link to={`/recipes/${id}`}>
         {`${label} (${archived ? t.archivedLabel : t.badge})`}
       </Link>
       {empty ? <span className="ingredient-lines__note">{t.noIngredients}</span> : null}
