@@ -1,7 +1,8 @@
-// Package httpapi exposes the receipt apply (RR3, docs/design/receipt-reading.md §7.2, §8): POST /api/scan/receipt/apply.
-// The handler is thin: it checks the read and the session, builds the plan with receipt.BuildPlan, runs it on the scan
-// service and answers. It registers itself in init() as module "receipt-apply".
 package httpapi
+
+// The receipt apply (RR3, docs/design/receipt-reading.md §7.2, §8): POST /api/scan/receipt/apply. The handler is thin: it
+// checks the read and the session, builds the plan with receipt.BuildPlan, runs it on the scan service and answers. Its
+// routes join the receipt module's (see the package comment in httpapi.go).
 
 import (
 	"context"
@@ -22,7 +23,7 @@ import (
 	shoppinghttpapi "github.com/fabbarix/feeder-ng/internal/shopping/httpapi"
 )
 
-func init() { app.Register(app.Module{Name: "receipt-apply", Mount: mount}) }
+func init() { routes = append(routes, mountApply) }
 
 // ApplyRead is a kept read as the apply needs it: its rows and context as they were proposed, and the proposals.
 type ApplyRead struct {
@@ -77,10 +78,13 @@ type applier struct {
 	hh *shoppinghttpapi.Household
 }
 
-func mount(r *app.Router, d app.Deps) {
-	a := &applier{db: d.DB, ap: scanhttpapi.NewReceiptApplier(d), hh: shoppinghttpapi.NewHousehold(d)}
-	r.User("POST /api/scan/receipt/apply", a.apply)
+// newApplier returns the apply over the scan module's own service (one scan lock with every scan route).
+func newApplier(d app.Deps, ap *scanhttpapi.ReceiptApplier) *applier {
+	return &applier{db: d.DB, ap: ap, hh: shoppinghttpapi.NewHousehold(d)}
 }
+
+// mountApply registers the apply route.
+func mountApply(r *app.Router, a *api) { r.User("POST /api/scan/receipt/apply", a.applier.apply) }
 
 type applyBody struct {
 	ReadID      string      `json:"readId"`
