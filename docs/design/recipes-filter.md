@@ -344,7 +344,8 @@ slightly shorter Tag; the guard's widths (390, 834, 1024, 1440, 1920) missed it.
    to: 480, step: 10 }`: the guard loads the closed filtered `/recipes` fresh at each of those 13 widths (phone emulation) and
    reports an uncaught exception (`Runtime.exceptionThrown`), a console error, or the error page ("Something went wrong").
    It runs once per guard run, at about a second per width.
-4. **The panel body adds no inset**: `.recipe-filters__body` has no inline padding or margin, so the panel's content shares its
-   start edge with its title and footer. The Course line keeps "All Courses"' focus ring inside the sheet with its own padding
-   and negative margin (§13.2), not with the body's.
+4. **The panel body keeps its inline padding** (`.recipe-filters__body { padding-inline: var(--space-2) }`): the focus ring wins.
+   The bottom sheet clips its body at its edge, and the Course line's own padding and negative margin (§13.2) pull "All Courses"
+   back to the body's edge, so without the body's padding its focus ring is cut. The cost is that the panel's content starts
+   `--space-2` inside its title and footer.
 
