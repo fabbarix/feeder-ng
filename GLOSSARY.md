@@ -273,14 +273,14 @@ _Avoid_: Missing meal
 **Ingredient**:
 A generic food item that recipes call for and the shopping list is written in (e.g. "passata"). May carry a **Picture** (see **Photo**).
 _Avoid_: Item, food, product
-_Note_: a non-food thing the Household buys is a **Supply**, which shares its Stock, Products and Prices.
+_Note_: a thing the Household buys that is not food is a **Supply**, which shares its Stock, Products and Prices.
 
 **Product**:
 A specific purchasable pack, identified by its barcode, of exactly one Ingredient or Supply (e.g. "Mutti passata 700 g", "Lotus toilet paper 9 rolls"). May carry a **Picture** (see **Photo**) of the pack, so it can be told from another brand at a glance.
 _Avoid_: SKU, article, item, pack shot, product photo
 
 **Supply**:
-A generic non-food thing the Household buys and keeps in Stock (dish soap, toilet paper, batteries), with Products, Prices and Stock Lots like an Ingredient. A Recipe never calls for it, and nothing about it goes off.
+A generic thing that is not food, which the Household buys and keeps in Stock (dish soap, toilet paper, batteries), with Products, Prices and Stock Lots like an Ingredient. A Recipe never calls for it, and nothing about it goes off.
 _Avoid_: Item, household item, household good, non-food, consumable, sundry, essential
 _Note_: in code a Supply is an `ingredients` row with `kind = 'supply'` ([ADR 0017](docs/adr/0017-supplies-are-ingredients-of-kind-supply.md)). "Household" stays the family.
 

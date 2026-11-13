@@ -1,5 +1,5 @@
 Feature: Supplies in the catalogue
-  A Supply is a non-food thing the Household buys and keeps in Stock (dish soap, toilet paper, batteries).
+  A Supply is a thing that is not food, which the Household buys and keeps in Stock (dish soap, toilet paper, batteries).
   It is an Ingredient of kind supply: it has Products, Prices and Stock like food, no Shelf Life, and an optional
   Restock level. Food-only things never use it. (ADR 0017, docs/dev/design/household-items.md)
 

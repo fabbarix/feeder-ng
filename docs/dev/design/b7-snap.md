@@ -78,7 +78,7 @@ only a Supply has a Restock level) are checked in Go, as 1540 does.
 ## Docs that must mention the snapshot (release step H8, not this task)
 
 - `docs/dev/deploy.md`: a new "Upgrading from 1.0.0-beta.6.x to 1.0.0-beta.7" section next to the beta.6 one (the numbered
-  "pre-1550 snapshot" item, the restore commands, the Kubernetes helper pod path, rollback to the beta.6.5 image), and a line
+  "pre-1550 snapshot" step, the restore commands, the Kubernetes helper pod path, rollback to the beta.6.5 image), and a line
   in the beta.6 section that a skip upgrade from beta.5.x also gets `feeder-pre-1540.db` and `feeder-pre-1550.db`.
 - `CHANGELOG.md`: the beta.7 entry, in the style of the beta.6 one.
 - `docs/spec/functional-spec.md`: decision 49 already names the snapshot.

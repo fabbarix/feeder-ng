@@ -24,8 +24,8 @@ const (
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
 var ErrInvalid = errors.New("invalid ingredient")
 
-// Kind is what an Ingredient is: food (the default, every Ingredient before Supplies) or a Supply, a non-food thing
-// the Household buys and keeps in Stock (ADR 0017, docs/dev/design/household-items.md §3).
+// Kind is what an Ingredient is: food (the default, every Ingredient before Supplies) or a Supply, a thing that is not
+// food, which the Household buys and keeps in Stock (ADR 0017, docs/dev/design/household-items.md §3).
 type Kind string
 
 const (
@@ -84,7 +84,7 @@ type Ingredient struct {
 // Key is the matching key: units.NormalizeName(Name).
 func (i Ingredient) Key() string { return units.NormalizeName(i.Name) }
 
-// IsSupply reports whether the Ingredient is a Supply (a non-food Ingredient, ADR 0017).
+// IsSupply reports whether the Ingredient is a Supply (an Ingredient that is not food, ADR 0017).
 func (i Ingredient) IsSupply() bool { return i.Kind == KindSupply }
 
 // normKind is the Kind with the zero value read as food.
