@@ -712,8 +712,9 @@ func (s *Store) releaseBase(ctx context.Context, tx *sql.Tx, ingredientID int64)
 
 // ---- Totals, cycles ----
 
-// refreshTotals rewrites the cached total time of every Recipe that calls for the saved Base recipe, transitively, and of
-// the saved Recipe when it has Base recipe lines: the total is the composed one, as if nothing is in Stock (§4.4).
+// refreshTotals rewrites the cached total time (total_minutes) and the composed longest lead (advance_minutes) of every
+// Recipe that calls for the saved Base recipe, transitively, and of the saved Recipe when it has Base recipe lines: both
+// are the composed ones, as if nothing is in Stock (§4.4).
 func refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
 	cat, err := loadCatalog(ctx, tx)
 	if err != nil {
