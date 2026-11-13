@@ -45,6 +45,7 @@ func OutputSchema(canonical []byte) ([]byte, error) {
 			"description": "true when the source contains no recipe; then recipes is empty",
 		}
 	}
+	overrideSentinels(out)
 	if props, ok := out["properties"].(map[string]any); ok {
 		out["required"] = allKeys(props)
 	}
@@ -61,6 +62,46 @@ func OutputSchema(canonical []byte) ([]byte, error) {
 // imageDescription replaces the image definition's pattern branches: the
 // model cannot be held to a regular expression, the server filters later.
 const imageDescription = "an https image URL that appears in the source text"
+
+// overrideSentinels replaces the four Base recipe fields with plain types and an explicit "none" (HF-schema, beta.6.1).
+// Every union costs the structured-outputs grammar compiler exponentially, and the two line-level fields sit inside
+// arrays of objects, so the canonical nullable forms made the grammar too large. The model writes the sentinel
+// instead; pruneNone maps it back to absent. The canonical schema in docs/spec is not changed.
+func overrideSentinels(out map[string]any) {
+	defs, _ := out["$defs"].(map[string]any)
+	quantity, _ := defs["quantity"].(map[string]any)
+	recipe, _ := defs["recipe"].(map[string]any)
+	if props, ok := quantity["properties"].(map[string]any); ok {
+		props["neededAtStep"] = map[string]any{
+			"type":        "integer",
+			"description": "0-based index of the step by which the other recipe must be ready. Write -1 when the line calls for no other recipe, and always in a Step's uses.",
+		}
+		props["recipe"] = map[string]any{
+			"$ref":        "#/$defs/recipeRef",
+			"description": `The other recipe this line calls for: its name, and the words in the source that point at it. Write name "" and cue "" when the line calls for no other recipe, and always in a Step's uses.`,
+		}
+	}
+	// A Step's uses reuse quantity. A separate "use" def was a second line-shaped def, and with the sentinels it pushed
+	// the grammar over the limit (bisected against the real API). Finish drops recipe and neededAtStep from a use.
+	if step, ok := defs["step"].(map[string]any); ok {
+		if props, ok := step["properties"].(map[string]any); ok {
+			if uses, ok := props["uses"].(map[string]any); ok {
+				uses["items"] = map[string]any{"$ref": "#/$defs/quantity"}
+			}
+		}
+	}
+	delete(defs, "use")
+	if props, ok := recipe["properties"].(map[string]any); ok {
+		props["baseRecipe"] = map[string]any{
+			"type":        "boolean",
+			"description": "true for a Base recipe (a recipe other recipes call for, never planned); false for every other recipe.",
+		}
+		props["yieldUnit"] = map[string]any{
+			"$ref":        "#/$defs/unit",
+			"description": `The unit of a Base recipe's yield (g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion). Write "" unless baseRecipe is true.`,
+		}
+	}
+}
 
 // projectSchema copies one schema object keeping only the accepted keywords.
 // Property names inside "properties" and "$defs" are never mistaken for keywords.

@@ -16,7 +16,7 @@ func TestPruneNoneOnTheBaseRecipeFields(t *testing.T) {
 			map[string]any{
 				"name": "Béchamel", "yield": float64(1), "baseRecipe": true, "yieldUnit": "l",
 				"ingredients": []any{
-					map[string]any{"ingredient": "milk", "quantity": float64(1000), "unit": "ml", "recipe": nil, "neededAtStep": nil},
+					map[string]any{"ingredient": "milk", "quantity": float64(1000), "unit": "ml", "recipe": map[string]any{"name": "", "cue": ""}, "neededAtStep": float64(-1)},
 					map[string]any{"ingredient": "roux", "quantity": float64(160), "unit": "g",
 						"recipe": map[string]any{"name": "Roux", "cue": ""}, "neededAtStep": float64(0)},
 					map[string]any{"ingredient": "pasta", "quantity": float64(1), "unit": "g",
@@ -31,8 +31,8 @@ func TestPruneNoneOnTheBaseRecipeFields(t *testing.T) {
 	if _, has := lasagne["yieldUnit"]; has {
 		t.Error(`yieldUnit: "" must be dropped`)
 	}
-	if v, has := lasagne["baseRecipe"]; !has || v != false {
-		t.Errorf("baseRecipe false stays (plannable), got %v %v", v, has)
+	if _, has := lasagne["baseRecipe"]; has {
+		t.Error("baseRecipe: false must be dropped (HF-schema: false is the plain Recipe, the Recipe File leaves it out)")
 	}
 	bech := recipes[1].(map[string]any)
 	if bech["baseRecipe"] != true || bech["yieldUnit"] != "l" {
@@ -41,10 +41,10 @@ func TestPruneNoneOnTheBaseRecipeFields(t *testing.T) {
 	lines := bech["ingredients"].([]any)
 	l0 := lines[0].(map[string]any)
 	if _, has := l0["recipe"]; has {
-		t.Error("recipe: null must be dropped")
+		t.Error(`recipe: {name: "", cue: ""} must be dropped`)
 	}
 	if _, has := l0["neededAtStep"]; has {
-		t.Error("neededAtStep: null must be dropped")
+		t.Error("neededAtStep: -1 must be dropped")
 	}
 	l1 := lines[1].(map[string]any)
 	ref := l1["recipe"].(map[string]any)

@@ -98,6 +98,7 @@ func Finish(raw []byte, in FinishInput) (Finished, error) {
 			continue
 		}
 		fixSource(rec, in.Kind == KindPage, pageURLOK, in.PageURL)
+		dropUseMarks(rec)
 		filter(rec, fmt.Sprintf("$.recipes[%d].image", i))
 		if steps, ok := rec["steps"].([]any); ok {
 			for j, st := range steps {
@@ -160,6 +161,26 @@ func fixSource(rec map[string]any, page, urlOK bool, pageURL string) {
 		return
 	}
 	rec["source"] = src
+}
+
+// dropUseMarks removes recipe and neededAtStep from every Step use of a Recipe. The Recipe File forbids both on a use
+// (a Step's uses never call for another recipe), and the model's answer may carry real values there, so they go
+// before validation rather than failing it.
+func dropUseMarks(rec map[string]any) {
+	steps, _ := rec["steps"].([]any)
+	for _, st := range steps {
+		sm, ok := st.(map[string]any)
+		if !ok {
+			continue
+		}
+		uses, _ := sm["uses"].([]any)
+		for _, u := range uses {
+			if um, ok := u.(map[string]any); ok {
+				delete(um, "recipe")
+				delete(um, "neededAtStep")
+			}
+		}
+	}
 }
 
 // cleanTags trims, lower-cases and de-duplicates string tags and drops empty

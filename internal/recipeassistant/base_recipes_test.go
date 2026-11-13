@@ -32,7 +32,9 @@ func anyOfTypes(t *testing.T, name string, s map[string]any) []string {
 	return out
 }
 
-func TestOutputSchemaProjectsTheBaseRecipeFieldsAsRequiredAnyOfNull(t *testing.T) {
+// HF-schema (1.0.0-beta.6.1): the four Base recipe fields are no longer unions. A union costs the structured-outputs grammar
+// compiler exponentially, and the two line-level ones sat inside arrays of objects; the model writes an explicit "none".
+func TestOutputSchemaProjectsTheBaseRecipeFieldsAsRequiredPlainTypesWithASentinel(t *testing.T) {
 	defs := decode(t, projected(t))["$defs"].(map[string]any)
 	recipeProps := defs["recipe"].(map[string]any)["properties"].(map[string]any)
 	lineProps := defs["quantity"].(map[string]any)["properties"].(map[string]any)
@@ -40,15 +42,17 @@ func TestOutputSchemaProjectsTheBaseRecipeFieldsAsRequiredAnyOfNull(t *testing.T
 	lineReq := toStrings(defs["quantity"].(map[string]any)["required"])
 
 	for _, tc := range []struct {
-		name  string
-		props map[string]any
-		req   []string
-		want  string // the non-null branch
+		name     string
+		props    map[string]any
+		req      []string
+		wantType string // "" when the property is a $ref
+		wantRef  string
+		sentinel string // the description must tell the model what to write for none
 	}{
-		{"baseRecipe", recipeProps, recipeReq, "boolean"},
-		{"yieldUnit", recipeProps, recipeReq, "#/$defs/unit"},
-		{"recipe", lineProps, lineReq, "#/$defs/recipeRef"},
-		{"neededAtStep", lineProps, lineReq, "integer"},
+		{"baseRecipe", recipeProps, recipeReq, "boolean", "", "false"},
+		{"yieldUnit", recipeProps, recipeReq, "", "#/$defs/unit", `Write "" unless baseRecipe is true`},
+		{"recipe", lineProps, lineReq, "", "#/$defs/recipeRef", `Write name "" and cue ""`},
+		{"neededAtStep", lineProps, lineReq, "integer", "", "Write -1"},
 	} {
 		p, ok := tc.props[tc.name].(map[string]any)
 		if !ok {
@@ -56,14 +60,19 @@ func TestOutputSchemaProjectsTheBaseRecipeFieldsAsRequiredAnyOfNull(t *testing.T
 			continue
 		}
 		if !contains(tc.req, tc.name) {
-			t.Errorf("%s must be required (the model writes null for none)", tc.name)
+			t.Errorf("%s must be required (the model writes its none value)", tc.name)
 		}
-		types := anyOfTypes(t, tc.name, p)
-		if len(types) != 2 || !contains(types, "null") || !contains(types, tc.want) {
-			t.Errorf("%s: anyOf = %v, want [%s, null]", tc.name, types, tc.want)
+		if _, has := p["anyOf"]; has {
+			t.Errorf("%s: must not be a union: %v", tc.name, p)
 		}
-		if _, has := p["type"]; has {
-			t.Errorf("%s: type must move into anyOf", tc.name)
+		if tc.wantType != "" && p["type"] != tc.wantType {
+			t.Errorf("%s: type = %v, want %q", tc.name, p["type"], tc.wantType)
+		}
+		if tc.wantRef != "" && p["$ref"] != tc.wantRef {
+			t.Errorf("%s: $ref = %v, want %q", tc.name, p["$ref"], tc.wantRef)
+		}
+		if d, _ := p["description"].(string); !strings.Contains(d, tc.sentinel) {
+			t.Errorf("%s: description %q must say %q", tc.name, d, tc.sentinel)
 		}
 	}
 }
@@ -114,10 +123,19 @@ func TestAgentPromptGoldenHoldsRules15And16(t *testing.T) {
 	}
 }
 
-func TestTheAddendumDoesNotMentionBaseRecipes(t *testing.T) {
-	// "the addendum is unchanged": the rules live in the Agent Prompt, the schema carries the fields.
-	if strings.Contains(strings.ToLower(ra.Addendum), "base recipe") {
-		t.Error("the Recipe Assistant addendum stays as it was")
+func TestTheAddendumTellsTheModelTheNoneValuesOfTheBaseRecipeFields(t *testing.T) {
+	// HF-schema: the output schema writes none as a sentinel, so the API-only addendum says so; the Agent Prompt
+	// (shared with the paste flow) keeps saying null.
+	want := `For the line fields recipe and neededAtStep write {"name":"","cue":""} and -1 when a line calls for no other recipe, and always in a Step's uses; write baseRecipe false and yieldUnit "" for a recipe that is not a Base recipe.`
+	if !strings.Contains(ra.Addendum, want) {
+		t.Errorf("the addendum lacks the sentence %q", want)
+	}
+	raw, err := os.ReadFile("testdata/agent-prompt-template.golden.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"neededAtStep" -1`) || strings.Contains(string(raw), `{"name":"","cue":""}`) {
+		t.Error("the Agent Prompt keeps null: the sentinels belong to the addendum")
 	}
 }
 
@@ -131,7 +149,7 @@ func baseAnswer(recipeJSON string) []byte {
 	 "recipes":[{"name":"Lasagne","description":"","yield":4,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
 	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
 	  "baseRecipe":false,"yieldUnit":"",
-	  "ingredients":[{"ingredient":"lasagne sheets","quantity":250,"unit":"g","note":"","optional":false,"recipe":null,"neededAtStep":null},
+	  "ingredients":[{"ingredient":"lasagne sheets","quantity":250,"unit":"g","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1},
 	                 {"ingredient":"béchamel","quantity":500,"unit":"ml","note":"","optional":false,` + recipeJSON + `}],
 	  "steps":[{"text":"Cook.","kind":"active","durationMinutes":5,"leadTimeMinutes":0,"after":[],"uses":[],"image":""},
 	           {"text":"Layer.","kind":"active","durationMinutes":5,"leadTimeMinutes":0,"after":[0],"uses":[],"image":""}]}]}`)
@@ -146,18 +164,18 @@ func finishBase(t *testing.T, recipeJSON string) recipefile.Recipe {
 	return fin.File.Recipes[0]
 }
 
-func TestFinishDropsRecipeNullAndNeededAtStepNullAndBlankYieldUnit(t *testing.T) {
-	r := finishBase(t, `"recipe":null,"neededAtStep":null`)
+func TestFinishDropsTheNoneSentinelsOfRecipeNeededAtStepYieldUnitAndBaseRecipe(t *testing.T) {
+	r := finishBase(t, `"recipe":{"name":"","cue":""},"neededAtStep":-1`)
 	for i, l := range r.Ingredients {
 		if l.Recipe != nil || l.NeededAtStep != nil {
-			t.Errorf("line %d: null reads as absent: %+v", i, l)
+			t.Errorf("line %d: the none sentinels read as absent: %+v", i, l)
 		}
 	}
 	if r.YieldUnit != "" {
 		t.Errorf("a blank yieldUnit reads as absent, got %q", r.YieldUnit)
 	}
-	if r.BaseRecipe == nil || *r.BaseRecipe {
-		t.Errorf("false stays and means plannable, got %v", r.BaseRecipe)
+	if r.BaseRecipe != nil {
+		t.Errorf("baseRecipe false reads as absent (a plannable Recipe), got %v", *r.BaseRecipe)
 	}
 }
 
@@ -167,7 +185,7 @@ func TestFinishKeepsAMarkWithItsCueAndDropsABlankCue(t *testing.T) {
 	if l.Recipe == nil || l.Recipe.Name != "Béchamel" || l.Recipe.Cue != "see page 42" || l.NeededAtStep == nil || *l.NeededAtStep != 1 {
 		t.Fatalf("line = %+v", l)
 	}
-	r = finishBase(t, `"recipe":{"name":"Béchamel","cue":""},"neededAtStep":null`)
+	r = finishBase(t, `"recipe":{"name":"Béchamel","cue":""},"neededAtStep":-1`)
 	if l := r.Ingredients[1]; l.Recipe == nil || l.Recipe.Name != "Béchamel" || l.Recipe.Cue != "" || l.NeededAtStep != nil {
 		t.Fatalf("a blank cue is none: %+v", l)
 	}
@@ -187,7 +205,7 @@ func TestFinishAcceptsABaseRecipeAnswerWithTheNonesOfARecipeThatIsNotServed(t *t
 	 "recipes":[{"name":"Béchamel","description":"","yield":1,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
 	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
 	  "baseRecipe":true,"yieldUnit":"l",
-	  "ingredients":[{"ingredient":"milk","quantity":1000,"unit":"ml","note":"","optional":false,"recipe":null,"neededAtStep":null}],
+	  "ingredients":[{"ingredient":"milk","quantity":1000,"unit":"ml","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1}],
 	  "steps":[]}]}`
 	fin, err := ra.Finish([]byte(raw), ra.FinishInput{Kind: ra.KindText})
 	if err != nil {
@@ -205,7 +223,7 @@ func TestFinishRejectsABaseRecipeWithoutAYieldUnitWithThePath(t *testing.T) {
 	 "recipes":[{"name":"Béchamel","description":"","yield":1,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
 	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
 	  "baseRecipe":true,"yieldUnit":"",
-	  "ingredients":[{"ingredient":"milk","quantity":1000,"unit":"ml","note":"","optional":false,"recipe":null,"neededAtStep":null}],
+	  "ingredients":[{"ingredient":"milk","quantity":1000,"unit":"ml","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1}],
 	  "steps":[]}]}`
 	_, err := ra.Finish([]byte(raw), ra.FinishInput{Kind: ra.KindText})
 	if ra.CodeOf(err) != ra.CodeInvalidOutput {
@@ -225,24 +243,6 @@ func TestFinishRejectsABaseRecipeWithoutAYieldUnitWithThePath(t *testing.T) {
 
 // ---- round 2 --------------------------------------------------------------------------------------------------
 
-func TestOutputSchemaUseHasNoRecipeOrNeededAtStep(t *testing.T) {
-	defs := decode(t, projected(t))["$defs"].(map[string]any)
-	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
-	use := items
-	if ref, ok := items["$ref"].(string); ok {
-		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
-	}
-	props := use["properties"].(map[string]any)
-	for _, name := range []string{"recipe", "neededAtStep"} {
-		if _, has := props[name]; has {
-			t.Errorf("the projection's use has %q: the model would fill a field Import ignores", name)
-		}
-	}
-	if len(toStrings(use["required"])) != len(props) {
-		t.Errorf("a use requires all its properties: %v", use["required"])
-	}
-}
-
 func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing.T) {
 	defs := decode(t, projected(t))["$defs"].(map[string]any)
 	cue := defs["recipeRef"].(map[string]any)["properties"].(map[string]any)["cue"].(map[string]any)
@@ -261,36 +261,13 @@ func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing
 
 // ---- round 3 --------------------------------------------------------------------------------------------------
 
-func TestOutputSchemaUseKeepsNoteAndOptionalSoTheModelMayWriteThem(t *testing.T) {
-	defs := decode(t, projected(t))["$defs"].(map[string]any)
-	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
-	use := items
-	if ref, ok := items["$ref"].(string); ok {
-		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
-	}
-	props := use["properties"].(map[string]any)
-	for _, name := range []string{"note", "optional"} {
-		if _, has := props[name]; !has {
-			t.Errorf("the projection's use lacks %q", name)
-		}
-	}
-	for _, name := range []string{"recipe", "neededAtStep"} {
-		if _, has := props[name]; has {
-			t.Errorf("the projection's use has %q", name)
-		}
-	}
-	if len(toStrings(use["required"])) != len(props) {
-		t.Errorf("every property of a use is required in the projection: %v", use["required"])
-	}
-}
-
 func TestFinishAcceptsAUseWithNoteAndOptionalSpelledOut(t *testing.T) {
 	raw := []byte(`{"format":"feeder-recipe-file","version":1,"noRecipe":false,
 	 "ingredients":[{"name":"rice","baseUnit":"g","conversions":[],"image":"","shelfLifeDays":null}],
 	 "recipes":[{"name":"Rice","description":"","yield":2,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
 	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
 	  "baseRecipe":false,"yieldUnit":"",
-	  "ingredients":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false,"recipe":null,"neededAtStep":null}],
+	  "ingredients":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1}],
 	  "steps":[{"text":"Boil.","kind":"active","durationMinutes":5,"leadTimeMinutes":0,"after":[],"image":"",
 	   "uses":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false}]}]}]}`)
 	fin, err := ra.Finish(raw, ra.FinishInput{Kind: ra.KindText})
