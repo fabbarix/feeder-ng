@@ -122,7 +122,7 @@ func (c addChoice) choice() receipt.AddChoice {
 	return out
 }
 
-// apply answers 200 {applied, results}; 409 receipt_session_changed, receipt_read_not_done or assistant_unavailable;
+// apply answers 200 {applied, results, undone}; 409 receipt_session_changed, receipt_read_not_done or assistant_unavailable;
 // 410 receipt_read_gone; 422 unknown_proposal or add_incomplete with the proposal's id; 500 receipt_apply_failed with
 // the results of the scans the put-back wrote.
 func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +215,11 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 	if results == nil {
 		results = []scan.Result{}
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"applied": len(accept), "results": results})
+	undone := res.Undone
+	if undone == nil {
+		undone = []string{}
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"applied": len(accept), "results": results, "undone": undone})
 }
 
 // lookup asks the database's lookup; with none set, every read is gone.

@@ -872,3 +872,29 @@ func TestSessionEventsCarryTheProductsBarcode(t *testing.T) {
 		t.Errorf("barcodes = %q, %q", evs[0].Barcode, evs[1].Barcode)
 	}
 }
+
+// The phone learns which of its scans the plan undid from Undone (receipt-reading §7.2): u1 and u3 here, in plan order.
+// A second apply of the same plan undoes nothing again, so it lists none.
+func TestAnAppliedPlanListsTheScansItUndid(t *testing.T) {
+	e := newRR3Env(t)
+	res, err := e.apply(t, fullPlan())
+	if err != nil {
+		t.Fatalf("ApplyReceiptPlan: %v", err)
+	}
+	got := strings.Join(res.Undone, ",")
+	if got != "u1,u3" && got != "u3,u1" {
+		t.Errorf("undone = %q, want u1 and u3", got)
+	}
+	for _, u := range res.Undone {
+		if e.live(t, u) {
+			t.Errorf("%s is listed as undone but is live", u)
+		}
+	}
+	again, err := e.apply(t, fullPlan())
+	if err != nil {
+		t.Fatalf("the second apply: %v", err)
+	}
+	if len(again.Undone) != 0 {
+		t.Errorf("the second apply lists %v as undone, want none", again.Undone)
+	}
+}

@@ -20,6 +20,7 @@ const globalFetch: FetchFn = (input, init) => globalThis.fetch(input, init)
 interface ApplyJson {
   applied?: number
   results?: unknown
+  undone?: unknown
 }
 
 const resultsOf = (body: unknown): ScanResult[] => {
@@ -27,12 +28,17 @@ const resultsOf = (body: unknown): ScanResult[] => {
   return Array.isArray(results) ? (results as ScanResult[]) : []
 }
 
+const undoneOf = (body: ApplyJson | undefined): string[] => {
+  const undone = body?.undone
+  return Array.isArray(undone) ? undone.filter((u): u is string => typeof u === 'string') : []
+}
+
 /** The apply never rejects: a refusal, a 500 (whose body keeps the put-back scans beside the error, ApiError.body) and a lost
  *  connection are all `ok: false`. */
 async function applyCall(client: HttpClient, body: ApplyBody): Promise<ApplyOutcome> {
   try {
     const out = await client.post<ApplyJson | undefined>('/api/scan/receipt/apply', body)
-    return { ok: true, applied: out?.applied ?? 0, results: resultsOf(out) }
+    return { ok: true, applied: out?.applied ?? 0, results: resultsOf(out), undone: undoneOf(out) }
   } catch (err) {
     if (!(err instanceof ApiError)) return { ok: false, status: 0, code: 'unknown', message: 'The answer could not be read', results: [] }
     const id = err.details.id

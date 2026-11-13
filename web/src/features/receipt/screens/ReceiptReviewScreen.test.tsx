@@ -261,7 +261,7 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
     expect(applyButton()).toHaveTextContent('Apply 5 changes')
   })
   it('the completed Add goes to the apply, with its choices', async () => {
-    api.apply.mockResolvedValue({ ok: true, applied: 6, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 6, results: [], undone: [] })
     show(sheet)
     await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
@@ -275,7 +275,7 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
 describe('Apply: success', () => {
   it('posts the body, goes back to /scan with the toast, and hands the results to the Scanned session', async () => {
     const results = [scanResult('receipt:rd-1:0'), scanResult('u1', 135)]
-    api.apply.mockResolvedValue({ ok: true, applied: 5, results })
+    api.apply.mockResolvedValue({ ok: true, applied: 5, results, undone: [] })
     show()
     await userEvent.click(applyButton())
     expect(api.apply).toHaveBeenCalledWith({
@@ -285,11 +285,11 @@ describe('Apply: success', () => {
     })
     expect(await screen.findByText('scan page')).toBeInTheDocument()
     expect(screen.getByText('Applied 5 changes from the receipt')).toBeInTheDocument()
-    expect(takePendingReceiptApplied()).toEqual({ readId: READ_ID, applied: 5, failed: false, results })
+    expect(takePendingReceiptApplied()).toEqual({ readId: READ_ID, applied: 5, failed: false, results, undone: [] })
     expect(recallRead()).toBeUndefined()
   })
   it('one change reads "Applied 1 change from the receipt"', async () => {
-    api.apply.mockResolvedValue({ ok: true, applied: 1, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 1, results: [], undone: [] })
     show()
     await userEvent.click(applyButton())
     expect(await screen.findByText('Applied 1 change from the receipt')).toBeInTheDocument()
@@ -301,7 +301,7 @@ describe('Apply: success', () => {
     await userEvent.dblClick(applyButton())
     expect(api.apply).toHaveBeenCalledTimes(1)
     expect(applyButton()).toBeDisabled()
-    release({ ok: true, applied: 5, results: [] })
+    release({ ok: true, applied: 5, results: [], undone: [] })
     expect(await screen.findByText('scan page')).toBeInTheDocument()
   })
 })
@@ -359,7 +359,7 @@ describe('Apply: refused or failed', () => {
   it('a lost connection says so and Try again posts once more', async () => {
     const alert = await press(refused(0, 'network'))
     expect(alert).toHaveTextContent('Feeder could not be reached. Check your connection and try again.')
-    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [], undone: [] })
     await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
     expect(api.apply).toHaveBeenCalledTimes(2)
     expect(await screen.findByText('scan page')).toBeInTheDocument()

@@ -23,9 +23,11 @@ import (
 var ErrReceiptApplyFailed = errors.New("scan: receipt apply failed")
 
 // ReceiptApplyResult is what an applied plan returns: the Result of each scan it made or re-priced, once each, in order
-// of first appearance, carrying the latest price.
+// of first appearance, carrying the latest price; and the uuids of the scans it undid (a Remove, fewer scans, or a scan
+// replaced by another weight, Shop or date), in order, so the phone drops them from its Scanned list.
 type ReceiptApplyResult struct {
 	Results []scan.Result
+	Undone  []string
 }
 
 // ReceiptApplyError is a plan that failed at Step, its index in the plan. Err is the step's error. Compensation is nil
@@ -233,7 +235,7 @@ func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (Rece
 	if len(plan.Steps) > 0 {
 		s.publish()
 	}
-	return ReceiptApplyResult{Results: r.results}, nil
+	return ReceiptApplyResult{Results: r.results, Undone: r.undone}, nil
 }
 
 // planRun is one plan's state: the Products made for each Ref, the plan's scan uuid for each Ref, and the Results so far.
@@ -246,6 +248,8 @@ type planRun struct {
 	results []scan.Result
 	// restored are the Results of the scans a put-back wrote (an undone scan applied again under a new uuid).
 	restored []scan.Result
+	// undone are the uuids the plan's Undo steps undid in this run.
+	undone []string
 }
 
 // errNoFreeUUID: every suffix of a plan uuid is taken by a put-back attempt (never expected; see resolveUUID).
@@ -307,13 +311,15 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 		return r.inverse(st.Inverse), nil
 
 	case receipt.OpUndo:
-		res, err := r.s.undo(ctx, r.mapped(st.Op.UUID))
+		uuid := r.mapped(st.Op.UUID)
+		res, err := r.s.undo(ctx, uuid)
 		if err != nil {
 			return nil, err
 		}
 		if !res.Undone {
 			return nil, nil // already undone: nothing to put back
 		}
+		r.undone = append(r.undone, uuid)
 		return r.inverse(st.Inverse), nil
 
 	case receipt.OpUpdateProduct:
