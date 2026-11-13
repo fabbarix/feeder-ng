@@ -204,16 +204,19 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
           {uiStrings.enterAbove0}
         </p>
       ) : null}
-      {implied ? <p className="price-keypad__implied">{implied}</p> : null}
-      {last ? (
-        <span className="price-keypad__last">
-          <Chip kind="tag" onClick={() => offer(valueIn(last.cents, basis))}>
-            {lastPriceHint({ cents: last.cents, date: last.date, currency, locale })}
-          </Chip>
-        </span>
-      ) : (
-        <p className="price-keypad__hint">{noPriceHint(shopName)}</p>
-      )}
+      {/* What the Price implies and the Last-time chip (or the no-Price hint): one line in a compact keypad. */}
+      <div className="price-keypad__notes">
+        {implied ? <p className="price-keypad__implied">{implied}</p> : null}
+        {last ? (
+          <span className="price-keypad__last">
+            <Chip kind="tag" onClick={() => offer(valueIn(last.cents, basis))}>
+              {lastPriceHint({ cents: last.cents, date: last.date, currency, locale })}
+            </Chip>
+          </span>
+        ) : (
+          <p className="price-keypad__hint">{noPriceHint(shopName)}</p>
+        )}
+      </div>
       <div role="group" aria-label={uiStrings.keypad} className="price-keypad__keys">
         {DIGITS.map((d) => (
           <button key={d} type="button" className="price-keypad__key" onClick={() => digit(d)}>

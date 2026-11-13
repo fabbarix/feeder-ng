@@ -131,3 +131,11 @@ describe('BottomSheet.css: the non-modal and half variants', () => {
     expect(wide).toMatch(/\.sheet\[data-modal='false'\]\s*\{[^}]*position:\s*static/)
   })
 })
+
+describe('Toast.css: a toast clears an open half sheet on a phone', () => {
+  it('lifts the toast region above a non-modal half sheet, by the sheet\'s height', () => {
+    const css = readUiCss('Toast.css')
+    expect(css).toMatch(/html:has\(\.sheet\[data-modal='false'\]\[data-size='half'\]\) \.toast-region \{\s*bottom: calc\(max\(50dvh, min\(480px, 85dvh\)\) \+ var\(--space-3\)\)/)
+    expect(readUiCss('BottomSheet.css')).toContain('block-size: max(50dvh, min(480px, 85dvh))')
+  })
+})

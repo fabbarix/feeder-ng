@@ -44,6 +44,11 @@
   text-align: center;
 }
 
+/* The notes take no box of their own: their lines are the keypad's grid rows (a compact keypad puts them on one line). */
+.price-keypad__notes {
+  display: contents;
+}
+
 /* The Last-time chip is a 26 px tag chip that types a Price: centred, with a 44 px hit area like a filter chip. */
 .price-keypad__last {
   justify-self: center;
@@ -104,6 +109,14 @@
 
 .price-keypad[data-compact='true'] .price-keypad__display {
   padding-block: 0;
+}
+
+.price-keypad[data-compact='true'] .price-keypad__notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-3);
 }
 
 .price-keypad[data-compact='true'] .price-keypad__keys {

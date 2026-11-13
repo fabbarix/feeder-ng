@@ -120,10 +120,15 @@
   box-shadow: var(--elev-3);
 }
 
-/* About half the viewport on a phone: the body scrolls inside when its content is taller. */
+/* About half the viewport on a phone (a little more on a short phone, so a keypad fits: at most 85 %); the body scrolls inside
+   when its content is taller. */
 .sheet[data-size='half'],
 .sheet[data-size='half'] .sheet__panel {
-  block-size: max(50dvh, min(460px, 85dvh));
+  block-size: max(50dvh, min(480px, 85dvh));
+}
+
+.sheet[data-size='half'] .sheet__panel {
+  padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
 }
 
 .sheet[data-size='half'] .sheet__grip {
