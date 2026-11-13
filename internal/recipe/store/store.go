@@ -604,6 +604,9 @@ type ListFilter struct {
 	// Couldn't plan fix uses the second.
 	CourseID    int64
 	NotCourseID int64
+	// For (round 2): the Recipe a line is being added to. With Kind "base" each Summary's WouldCycle says whether
+	// a line of For calling for that Base recipe would make a cycle (one catalog load plus baserecipe.FindCycle).
+	For int64
 }
 
 // List returns Summaries ordered by name (case-insensitive), then id.
