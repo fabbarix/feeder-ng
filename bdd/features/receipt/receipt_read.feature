@@ -37,7 +37,7 @@ Feature: Reading a receipt
     Given the provider will read row 0 as 2 packs at 149 cents each
     When I read the receipt with 3 photos for "Esselunga"
     Then the receipt read is done
-    And no file in the data directory is an image
+    And no file in the data directory is an image or holds the photos' bytes
     And no database row holds image bytes
 
   Scenario: Photos, rows, lines and prices are never logged

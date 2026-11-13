@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -58,6 +59,7 @@ type rrState struct {
 	logs     *rrLogs
 	prev     *slog.Logger
 	price    map[string]int
+	sent     [][]byte // the photos posted, as JPEG bytes
 }
 
 func receiptReadSteps(sc *godog.ScenarioContext, w *World) {
@@ -204,7 +206,9 @@ func receiptReadSteps(sc *godog.ScenarioContext, w *World) {
 	photos := func(n int) []map[string]any {
 		out := make([]map[string]any, n)
 		for i := range out {
-			out[i] = map[string]any{"dataUrl": receipttest.JPEGDataURL(60+i, 90)}
+			jpeg := receipttest.JPEG(60+i, 90)
+			st.sent = append(st.sent, jpeg)
+			out[i] = map[string]any{"dataUrl": "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(jpeg)}
 		}
 		return out
 	}
@@ -427,18 +431,45 @@ func receiptReadSteps(sc *godog.ScenarioContext, w *World) {
 	})
 
 	// ---- privacy ----
-	sc.Step(`^no file in the data directory is an image$`, func() error {
-		var bad []string
+	sc.Step(`^no file in the data directory is an image or holds the photos' bytes$`, func() error {
+		// The data directory holds files of its own (the database, vapid.json, …), so the check is on content: no file
+		// is a picture by name or by signature, and no file, the database's included, holds the bytes of a photo as it
+		// was posted or as it was sent to the provider.
+		needles := rrPhotoNeedles(st)
+		if len(needles) == 0 {
+			return fmt.Errorf("no photo was posted and sent")
+		}
 		dbName := filepath.Base(w.Env.Config.DBPath())
-		_ = filepath.WalkDir(w.Env.DataDir, func(p string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || strings.HasPrefix(filepath.Base(p), dbName) {
-				return nil
+		var bad []string
+		err := filepath.WalkDir(w.Env.DataDir, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
 			}
-			bad = append(bad, p)
+			data, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			for _, nd := range needles {
+				if bytes.Contains(data, nd) {
+					bad = append(bad, p+" holds a photo's bytes")
+					return nil
+				}
+			}
+			if strings.HasPrefix(filepath.Base(p), dbName) {
+				return nil // the database's own pages: its rows are checked by the next step
+			}
+			if rrImageExt[strings.ToLower(filepath.Ext(p))] {
+				bad = append(bad, p+" is named as a picture")
+			} else if rrIsImage(data) {
+				bad = append(bad, p+" has a picture's signature")
+			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		if len(bad) != 0 {
-			return fmt.Errorf("files appeared in the data directory: %v", bad)
+			return fmt.Errorf("the data directory holds a photo: %v", bad)
 		}
 		return nil
 	})
@@ -502,6 +533,54 @@ func receiptReadSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+}
+
+// rrImageExt are the file names of pictures.
+var rrImageExt = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true, ".heic": true,
+	".heif": true, ".avif": true, ".bmp": true, ".tif": true, ".tiff": true}
+
+// rrIsImage reports whether data starts with a picture's signature (JPEG, PNG, GIF, WebP, HEIC/AVIF, TIFF).
+func rrIsImage(data []byte) bool {
+	switch {
+	case bytes.HasPrefix(data, []byte{0xff, 0xd8, 0xff}), bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n")),
+		bytes.HasPrefix(data, []byte("GIF8")), bytes.HasPrefix(data, []byte("II*\x00")), bytes.HasPrefix(data, []byte("MM\x00*")):
+		return true
+	case len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP":
+		return true
+	case len(data) >= 12 && string(data[4:8]) == "ftyp":
+		return true
+	}
+	return false
+}
+
+// rrPhotoNeedles are 64-byte runs from the middle of each photo posted and each JPEG the provider received: a file
+// that holds one holds that photo.
+func rrPhotoNeedles(st *rrState) [][]byte {
+	photos := append([][]byte(nil), st.sent...)
+	for _, m := range st.fake.Messages() {
+		msgs, _ := m.JSON()["messages"].([]any)
+		for _, msg := range msgs {
+			mm, _ := msg.(map[string]any)
+			blocks, _ := mm["content"].([]any)
+			for _, b := range blocks {
+				bb, _ := b.(map[string]any)
+				src, _ := bb["source"].(map[string]any)
+				data, _ := src["data"].(string)
+				if raw, err := base64.StdEncoding.DecodeString(data); err == nil && len(raw) > 0 {
+					photos = append(photos, raw)
+				}
+			}
+		}
+	}
+	var out [][]byte
+	for _, p := range photos {
+		if len(p) < 128 {
+			continue
+		}
+		mid := len(p) / 2
+		out = append(out, p[mid-32:mid+32])
+	}
+	return out
 }
 
 func checkFailed(st *rrState, code string, fail func(string, ...any) error) error {
