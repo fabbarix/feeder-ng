@@ -62,9 +62,12 @@ controls. The labels are inconsistent ("Sort by" is labelled, the chip rows are 
   value ending in an ellipsis. By Ingredient has no Sort (its order is fixed: use soon first), so row 2 is the List control alone.
   - **Why "Storage Place · Ingredient" and not "By Storage Place · By Ingredient"** (the labels of beta.6): measured on the real build at
     390 px, "By Storage Place | By Ingredient" is 228 px, which leaves the Sort chip 122 px of the 166 it needs: it showed "G…". Without
-    "By" the control is 191 px: the chip gets 159 px at 390 ("Good u…"), 129 px at 360, and shows "Good until" in full from about
-    398 px. An ellipsis is what Recipes' Sort may do too (recipes-filter §3); see §11 for what would win the last 7 px. The radiogroup is
-    still named "List".
+    "By" the control is 191 px: the chip gets 159 px at 390 and 129 px at 360. The radiogroup is still named "List".
+  - **Below 420 px the Sort chip has no leading sort icon**, on both headers (the user's decision in review): the icon and its gap are
+    40 px, so "Good until" needs 126 px and shows in full from 360 px (it read "Good u…" from 360 to 397 px with the icon). It mends
+    Recipes too: in beta.6.1 its "Longest ago" and "Most recent" were cut below about 388 px ("Longest a…" in 58 of 85 px at 360);
+    without the icon they fit at 360. From 420 px the icon is back and "Good until" fits with it (365 of 388 px). The guard's P22 fails
+    any chip Select whose value is cut, and reads it on each width of the 360 to 480 px walk (§10).
 - **Row 3**: `ActiveFilterChips` (shared), the chips that fit, then "+N" which opens the panel. Natural widths are measured in the
   inert copy and the fit has hysteresis (`fitChips`, `FIT_MARGIN`), exactly as Recipes.
 - **The aside from 1280 px** keeps its sticky, scrolling column. It scrolls, so it clips: it is padded by `--space-2` inline (with a
@@ -75,7 +78,7 @@ controls. The labels are inconsistent ("Sort by" is labelled, the chip rows are 
 
 | Width | Row 1 | Row 2 | Panel |
 |---|---|---|---|
-| 390 | Search + Filters | List (191 px) + Sort chip (159 px, "Good u…") | Bottom sheet |
+| 390 | Search + Filters | List (191 px) + Sort chip (no icon below 420 px, "Good until" in full) | Bottom sheet |
 | 834, 1024 | Search + Filters | List … Sort | Popover under Filters, end-aligned |
 | 1440, 1920 | in the 24 rem aside | in the aside, "Good until" in full | Popover, 24 rem, from the content start to the button's end |
 
@@ -208,7 +211,7 @@ Every setter writes with `{ replace: true }` and keeps the other parameters. The
 | Component | What it is |
 |---|---|
 | `PantryModeControl` | `Segmented compact labelHidden`, radiogroup "List": Storage Place, Ingredient. |
-| `PantrySortSelect` | `Select appearance="chip" icon="sort"`, combobox "Sort"; trigger "Good until", "Name", "Quantity", "Bought", "Storage Place". |
+| `PantrySortSelect` | `Select appearance="chip" icon="sort"` (the icon hidden below 420 px, shared CSS), combobox "Sort"; trigger "Good until", "Name", "Quantity", "Bought", "Storage Place". |
 | `PantryFiltersPanel` | `FiltersPanel` titled "Filters", "Show Stock": Show (`FilterChipGroup`), Kind (`FilterChipGroup`, with icons), Storage Place (`PlaceFilterList`), the "Group by Storage Place" `Switch`; the last three on By Storage Place only, Kind and Storage Place only when the Household has Storage Places. |
 | `PlaceFilterList` | The shared `OptionList` (several) fed by `usePlaceFilterSearch`, each row led by its kind icon. |
 | `PantryOverflowMenu` | The shared `Menu` "More actions" with "Storage Places". |
@@ -268,7 +271,4 @@ Stock, Stock Lot, Storage Place, Use soon, Spoiled, Good until and Leftover as G
 - **"Use soon" and "Spoiled" together** (OR). It would need the status as a list in the URL and the lib; nobody asked.
 - **Sort for By Ingredient.** Its fixed order (use soon first, then name) stays.
 - **CourseFilter on the shared `FilterChipGroup`.** Same look and CSS; moving it changes Recipes' class names and tests for no gain now.
-- **The last 7 px of the Sort chip at 390 px.** "Good until" needs 166 px and gets 159. Any of these would win it, each a choice for the
-  User: drop the chip's leading sort icon below 420 px (28 px; Recipes would differ), tighten the shared chip Select's padding (changes
-  Recipes too), or a shorter value than "Good until".
 - **A guard rule for a cut Select chip value.** P16 only sees `.chip` labels under 24 px; "G…" in a Select chip passed the guard.

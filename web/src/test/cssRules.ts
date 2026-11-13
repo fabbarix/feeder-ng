@@ -48,9 +48,11 @@ export interface Rule {
   body: string
   /** The min-width of the enclosing @media, or 0. */
   minWidth: number
+  /** The max-width of the enclosing @media, or Infinity (pantry-filter review: a max-width block is not unconditional). */
+  maxWidth: number
 }
 
-function parse(text: string, minWidth = 0): Rule[] {
+function parse(text: string, minWidth = 0, maxWidth = Infinity): Rule[] {
   const rules: Rule[] = []
   let i = 0
   while (i < text.length) {
@@ -67,9 +69,10 @@ function parse(text: string, minWidth = 0): Rule[] {
     const inner = text.slice(open + 1, j - 1)
     if (head.startsWith('@media')) {
       const m = /min-width:\s*(\d+)px/.exec(head)
-      rules.push(...parse(inner, m ? Number(m[1]) : minWidth))
+      const max = /max-width:\s*(\d+(?:\.\d+)?)px/.exec(head)
+      rules.push(...parse(inner, m ? Number(m[1]) : minWidth, max ? Number(max[1]) : maxWidth))
     } else if (!head.startsWith('@')) {
-      rules.push({ selector: head, body: inner, minWidth })
+      rules.push({ selector: head, body: inner, minWidth, maxWidth })
     }
     i = j
   }
@@ -98,12 +101,12 @@ export function cssRules(paths: readonly string[]) {
     return out
   }
 
-  /** The effective value of `prop` for `selector` at viewport `width`: the last matching rule among those with minWidth <= width. */
+  /** The effective value of `prop` for `selector` at viewport `width`: the last matching rule among those with minWidth <= width <= maxWidth. */
   function valueFor(selector: string, prop: string, width: number): string | undefined {
     const re = new RegExp(`(?:^|[;\\s])${prop}\\s*:\\s*([^;]+)`)
     let out: string | undefined
     const matching = rulesFor(selector)
-      .filter((r) => r.minWidth <= width)
+      .filter((r) => r.minWidth <= width && width <= r.maxWidth)
       .sort((a, b) => a.minWidth - b.minWidth)
     for (const r of matching) {
       const m = re.exec(r.body)

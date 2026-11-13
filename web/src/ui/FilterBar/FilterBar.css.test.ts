@@ -21,6 +21,21 @@ describe('the rows', () => {
   })
 })
 
+// pantry-filter review (the user's decision): below 420 px the Sort chip has no leading sort icon, on the Recipes and the Pantry
+// headers alike, so "Good until" fits at 360 px; from 420 px the icon is back.
+describe('row 2: the Sort chip below 420 px', () => {
+  it.each([360, 390, 419])('at %i px the Sort chip hides its leading icon', (w) => {
+    expect(valueFor('.filter-bar__sort .select__leading', 'display', w)).toBe('none')
+  })
+  it.each([420, 768, 1440])('at %i px it keeps it', (w) => {
+    expect(valueFor('.filter-bar__sort .select__leading', 'display', w)).toBeUndefined()
+  })
+  it('only the Sort chip of a filter header: no other Select loses its leading visual', () => {
+    const hidden = rules.filter((r) => /select__leading/.test(r.selector))
+    expect(hidden.map((r) => r.selector)).toEqual(['.filter-bar__sort .select__leading'])
+  })
+})
+
 describe('a line of toggle chips in the panel', () => {
   it('is one line that scrolls sideways, its chips at their natural width', () => {
     expect(valueFor('.filter-chip-group', 'flex-wrap', 0)).toBe('nowrap')

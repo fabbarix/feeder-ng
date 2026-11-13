@@ -43,6 +43,15 @@
   min-inline-size: 0;
 }
 
+/* Below 420 px the Sort chip drops its leading sort icon (32 px and its 8 px gap), on both headers, so the Pantry's longest value
+   ("Good until", 166 px with the icon) shows in full from 360 px beside the List control (docs/design/pantry-filter.md 3). The
+   combobox keeps its name "Sort"; its chevron still says it is a picker. */
+@media (max-width: 419px) {
+  .filter-bar__sort .select__leading {
+    display: none;
+  }
+}
+
 /* Row 3: the active filter chips, one line; what does not fit is "+N". A chip keeps room for four characters and its close icon.
    The line does not clip: a chip's focus ring and its 44 px hit area reach past its box (recipes-filter round 2). */
 .filter-chips {

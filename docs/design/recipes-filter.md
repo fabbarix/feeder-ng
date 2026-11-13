@@ -372,3 +372,8 @@ as their shared names: `.recipe-filters__row` → `.filter-bar__row` (and `__sea
 `__section`, `__heading`), `.recipe-filters__tags` → `.filter-panel__list`. The guard's probes (P17, P18, P20) read the shared names,
 so they cover both headers. `fitChips` now shows every chip of a line that is not measured (0 px) whatever is shown now: a chip added
 to an unmeasured line was held in "+N" by the margin.
+
+The one visible change to Recipes (the user's decision in the Pantry review): **below 420 px the Sort chip has no leading sort icon**,
+on both headers (`.filter-bar__sort .select__leading`), so the Pantry's "Good until" fits at 360 px. It also mends a beta.6.1 cut that
+no rule saw: "Longest ago" and "Most recent" showed 58 of their 85 px at 360 px and were cut up to about 388 px; they now fit at 360 px.
+The combobox is still named "Sort" and keeps its chevron.
