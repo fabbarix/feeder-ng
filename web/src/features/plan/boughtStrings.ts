@@ -3,7 +3,7 @@ export const boughtStrings = {
   chip: 'Bought',
   line: (names: string) => `Bought for it: ${names}. Automatic plan changes leave it as it is.`,
   swapNote: (names: string) => `You bought ${names} for this; it stays in Stock.`,
-  regenerateIntro: 'These have Ingredients you already bought and are replaced too:',
+  regenerateIntro: 'Among them, these have Ingredients you already bought:',
   regenerateRow: (day: string, slot: string, recipe: string, names: string) => `${day} ${slot} · ${recipe} (${names}).`,
   warnExcluded: (member: string, ingredient: string) => `${member} now excludes ${ingredient}, which this uses. Swap it to change it.`,
   warnExcludedRecipe: (member: string) => `${member} now excludes this Recipe. Swap it to change it.`,

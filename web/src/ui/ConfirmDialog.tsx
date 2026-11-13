@@ -58,7 +58,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = o
         </>
       }
     >
-      {body ? <p style={{ whiteSpace: 'pre-line' }}>{body}</p> : null}
+      {body ? <p className="confirm-dialog__body">{body}</p> : null}
     </Dialog>
   )
 }
