@@ -1,0 +1,3 @@
+<source kind="text">
+{"shop":"Esselunga","date":"2026-11-13","currency":"EUR","minorDigits":2,"rows":[{"row":0,"product":"Mutti passata 700 g","barcode":"8005110170003","baseUnit":"g","packSize":700,"scans":2,"quantity":1400,"weighed":false,"priceCents":129,"perKgCents":-1},{"row":1,"product":"Parmigiano Reggiano","barcode":"","baseUnit":"g","packSize":300,"scans":1,"quantity":312,"weighed":true,"priceCents":624,"perKgCents":2000}]}
+</source>
