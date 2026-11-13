@@ -170,9 +170,14 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// An id sent twice is one accepted proposal: counted once, planned once.
 	accept := make([]string, 0, len(body.Accept))
+	seen := make(map[string]bool, len(body.Accept))
 	for _, a := range body.Accept {
-		accept = append(accept, a.ID)
+		if !seen[a.ID] {
+			seen[a.ID] = true
+			accept = append(accept, a.ID)
+		}
 	}
 	adds := make(map[string]receipt.AddChoice, len(body.Adds))
 	for _, c := range body.Adds {
@@ -209,7 +214,7 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 	if results == nil {
 		results = []scan.Result{}
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"applied": len(body.Accept), "results": results})
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"applied": len(accept), "results": results})
 }
 
 // lookup asks the database's lookup; with none set, every read is gone.

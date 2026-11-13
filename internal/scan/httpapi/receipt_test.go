@@ -591,3 +591,19 @@ func TestAScanWithAReceiptUUIDIsRejected(t *testing.T) {
 		t.Errorf("Lots = %d: the rejected scan wrote", f.lots(t))
 	}
 }
+
+// ---- the integration's additions --------------------------------------------------------------------------------
+
+// An accepted id sent twice is one proposal: "applied" counts it once and the plan runs it once.
+func TestADuplicateAcceptIdIsAppliedAndCountedOnce(t *testing.T) {
+	f := newReceiptFixture(t)
+	uuids := f.session(t)
+	f.read(t, uuids, priceLine(270)) // 135 per pack
+	var out applied
+	if r := f.apply(body(uuids, "price:0", "price:0")); r.Status != 200 || jsonInto(r.Body, &out) != nil {
+		t.Fatalf("apply = %d %s", r.Status, r.Body)
+	}
+	if out.Applied != 1 || len(out.Results) != 2 {
+		t.Errorf("applied %d with %d results, want 1 with 2: %+v", out.Applied, len(out.Results), out)
+	}
+}
