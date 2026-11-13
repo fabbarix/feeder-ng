@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # DS-A round 2: real-layout checks that jsdom cannot fake. Static fixture pages (scripts/test/fixtures/ds-layout) load the app's
 # real stylesheets, measure themselves in headless Chrome and write the result as JSON into <title>; this reads it from --dump-dom.
+#   action-group-narrow-row.html  round 3: a 358 px ListRow, the group on its own line, the title >= 120 px, no spill.
 #   action-group.html   ActionGroup in a ListRow and a flex row (800 px): wide (flex), not 0 px wide, no overflow, at the row's
 #                       end, the two groups of a list aligned in one column; in a 358 px tile: narrow (grid), no overflow.
 #   metric-strip.html   a metric strip holds at most three tiles per row (system.md §4).
@@ -49,6 +50,15 @@ done
 [ "$(q "$A" "o.g4.display")" = grid ] && ok || bad "ActionGroup in a 358 px tile is narrow (display grid), got $(q "$A" o.g4.display)"
 [ "$(q "$A" "o.g4.overflow")" = false ] && ok || bad "ActionGroup in a 358 px tile must not overflow ($(q "$A" o.g4))"
 [ "$(q "$A" "o.g4.right <= o.g4.hostRight")" = true ] && ok || bad "ActionGroup in a 358 px tile stays inside it"
+
+# --- round 3: a 358 px ListRow (a phone): below 35rem the group takes its own line, spanning the row ---------------------------
+N="$(title_of action-group-narrow-row.html)"
+[ -n "$N" ] && [ "$N" != pending ] && ok || bad "action-group-narrow-row.html did not report (title: '$N')"
+[ "$(q "$N" "o.titleW >= 120")" = true ] && ok || bad "a long title in a 358 px ListRow keeps a readable width (>= 120 px), got $(q "$N" o.titleW) px"
+[ "$(q "$N" "o.groupBelow")" = true ] && ok || bad "in a 358 px ListRow the ActionGroup takes its own line below the text ($N)"
+[ "$(q "$N" "o.groupSpans")" = true ] && ok || bad "in a 358 px ListRow the ActionGroup spans the row ($N)"
+[ "$(q "$N" "o.spill <= 0")" = true ] && ok || bad "nothing spills past a 358 px ListRow (\"All Cooked\" spilled 8 px in review 2), got $(q "$N" o.spill) px"
+[ "$(q "$N" "o.display")" = grid ] && ok || bad "the narrow group is the equal-track grid, got $(q "$N" o.display)"
 
 # --- metric strip -----------------------------------------------------------------------------------------------------
 M="$(title_of metric-strip.html)"
@@ -99,6 +109,13 @@ K="$(title_of today-metrics.html)"
 [ "$(q "$K" "o.loneW <= 1000 / 3 + 1")" = true ] && ok || bad "a lone metric is capped to the metric track, not a full-width block (width $(q "$K" o.loneW) in 1000 px)"
 [ "$(q "$K" "Math.abs(o.loneW - o.twoW) <= 2")" = true ] && ok || bad "a lone metric is as wide as one of two (lone $(q "$K" o.loneW), of two $(q "$K" o.twoW))"
 [ "$(q "$K" o.iconTopRight)" = true ] && ok || bad "the metric icon sits top-right of its tile (mockup)"
+# round 3: a 1 px tolerance (subpixel rounding at the bar's edge reported "0 px" on /recipes/new, /recipes/1/edit, /recipes/1)
+P="$(title_of p12-half-px.html)"
+[ "$P" = "[]" ] && ok || bad "a 0.5 px intersection with the bar is not a P12 finding (probe said: $P)"
+P="$(title_of p12-two-px.html)"
+[ "$(q "$P" "Array.isArray(o) && o.some((f) => /^div\.last/.test(f.sel) && f.px >= 2)")" = true ] && ok || bad "a 2 px intersection with the bar is a P12 finding of 2 px (probe said: $P)"
+P="$(title_of p12-covered.html)"
+[ "$(q "$P" "Array.isArray(o) && o.every((f) => f.px > 1)")" = true ] && ok || bad "the probe never reports an intersection of 1 px or less ('0 px' in review 2): $P"
 
 printf 'ds-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

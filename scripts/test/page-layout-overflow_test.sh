@@ -7,7 +7,8 @@
 #           intentional scroll container (overflow-x auto / scroll) between them; clipped by overflow hidden counts too.
 # P1 and P13 are in ALWAYS_FAIL (scripts/lib/page-layout-rules.mjs): count-fail counts them on warn routes as well.
 # The real driver runs against a tiny static server (fixtures/page-layout-overflow): /plan is a no-wrap row in a `1fr` grid,
-# /settings the same row in an overflow-x: auto strip with minmax(0, 1fr) tracks. No Chrome: SKIP.
+# /settings the same row in an overflow-x: auto strip with minmax(0, 1fr) tracks, /pantry (round 3) an absolute corner menu (no
+# finding) beside an in-flow svg spill (a finding). No Chrome: SKIP.
 set -uo pipefail
 for v in $(compgen -e | grep -E '^PAGE_LAYOUT'); do unset "$v"; done
 
@@ -45,14 +46,15 @@ http.createServer((q, s) => {
   if (q.method === 'POST' && q.url === '/api/dev/login') { s.setHeader('content-type', 'application/json'); return s.end('{}') }
   if (q.url.startsWith('/api/')) { s.setHeader('content-type', 'application/json'); return s.end('{}') }
   s.setHeader('content-type', 'text/html')
-  s.end(fs.readFileSync(path.join(dir, q.url.startsWith('/settings') ? 'scroller.html' : 'overflow.html')))
+  const page = q.url.startsWith('/settings') ? 'scroller.html' : q.url.startsWith('/pantry') ? 'corner.html' : 'overflow.html'
+  s.end(fs.readFileSync(path.join(dir, page)))
 }).listen(Number(process.env.PORT), '127.0.0.1')
 JS
 FIX="$FIX" PORT="$PORT" node "$TMP/server.cjs" >/dev/null 2>&1 &
 SERVER=$!
 for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" && break; sleep 0.2; done
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings|pantry)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
 [ "$RC" -eq 1 ] && ok || bad "the driver must exit 1 (findings) on the overflow page (rc $RC): $OUT"
 
 # (a) the 390 phone: the document is wider than the viewport
@@ -65,6 +67,15 @@ for w in 834 1024 1440; do
 done
 # an intentional scroll container with minmax(0, 1fr) tracks is clean
 grep -Eq '^\s+- [0-9]+px /settings: P(1|13) ' <<<"$OUT" && bad "/settings (an overflow-x: auto strip) must have no P1 or P13 finding (got: $OUT)" || ok
+
+# round 3: P13 counts in-flow spills only. An absolutely positioned corner menu in the tile's padding (.plan-hero__menu) is no
+# finding; an in-flow row of svg icons wider than its tile is, and the svg is named by its class attribute.
+grep -Eq '^\s+- [0-9]+px /pantry: P13 .*(corner-menu|button\.).*corner' <<<"$OUT" && bad "/pantry: an absolutely positioned corner menu in the tile's padding must not be a P13 finding (got: $OUT)" || ok
+grep -Eq '^\s+- [0-9]+px /pantry: P13 [^ ]*corner-menu' <<<"$OUT" && bad "/pantry: .corner-menu (position: absolute) must not be a P13 finding" || ok
+for w in 834 1024 1440; do
+  grep -Eq "^\s+- ${w}px /pantry: P13 .*svg\.spill-icon.*section\.tile" <<<"$OUT" && ok || bad "${w}px /pantry: the in-flow svg wider than its tile must be a P13 finding naming svg.spill-icon (got: $(grep "${w}px /pantry" <<<"$OUT" | head -4))"
+done
+grep -q 'object SVGAnimatedString\|svg\.\[object' <<<"$OUT" && bad "an svg must be named by getAttribute('class'), never '[object SVGAnimatedString]'" || ok
 
 # every mode: the real findings count as failures on a warn-only modes file
 n="$(node "$ROOT/scripts/lib/page-layout-modes.mjs" count-fail "$TMP/modes-warn" <<<"$OUT" 2>/dev/null)"

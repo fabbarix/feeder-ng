@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>corner</title>
+<!-- DS-A round 3 (system.md §10): P13 counts in-flow spills only. Tile 1: an absolutely positioned corner menu in the tile's padding
+     (like .plan-hero__menu) is NOT a finding. Tile 2: an in-flow svg wider than the tile IS a finding, and the
+     report names the svg by its class attribute ("svg.spill-icon", never "svg.[object SVGAnimatedString]"). -->
+<style>
+  body { margin: 0; font: 15px/20px sans-serif }
+  .page { padding: 0 16px; max-width: 1120px; margin: 0 auto }
+  .bento-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)) }
+  .tile { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); padding: 16px; border: 1px solid #888; border-radius: 20px }
+  .corner-menu { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px }
+  .spill-icon { display: block }
+</style>
+<script>const mq = matchMedia('(prefers-color-scheme: dark)'); const set = () => { document.documentElement.dataset.scheme = mq.matches ? 'dark' : 'light' }; set(); mq.addEventListener('change', set)</script></head><body>
+<main><div class="page" data-page-width="default"><h1>Pantry</h1><div class="bento-grid">
+  <section class="tile corner-tile"><h2>Tonight</h2><p>Salmon and greens</p><div class="corner-menu"><button style="width:40px;height:40px">⋮</button></div></section>
+  <section class="tile spill-tile"><h2>Icons</h2>
+    <svg class="spill-icon" width="520" height="24" aria-hidden="true"></svg>
+  </section>
+</div></div></main></body></html>
