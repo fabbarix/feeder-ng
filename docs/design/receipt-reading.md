@@ -254,10 +254,11 @@ and checks that `Finish` accepts the answer and at least the Price of row 0 is p
 
 `receipt.Finish(raw []byte, rows []Row) (Answer, []Warning, error)`, pure:
 
-1. Not a JSON object → `CodeInvalidOutput`. `readable: false`, or no lines → `CodeNoReceiptFound` (new, §9).
+1. Not a JSON object (or data after it) → `CodeInvalidOutput`. `readable: false`, or no lines → `CodeNoReceiptFound` (new, §9).
 2. Sentinels mapped back: `""` → absent, `-1` → unknown, `0` → none.
 3. Per line: `row` outside `[-1, len(rows))` → treated as `-1` with the warning `row_out_of_range`; a negative amount other than
-   `-1`, a negative count or weight → the line dropped with `line_invalid`; `packUnit` must agree with `packSize` (else both
+   `-1`, a negative count or weight, or a value past the sanity bounds (an amount above 100,000,000 minor units, more than
+   10,000 packs, more than 10 t) → the line dropped with `line_invalid` (a total past the bound is unknown); `packUnit` must agree with `packSize` (else both
    cleared); a matched line whose `packUnit` differs from the row's Base Unit loses its pack size.
 4. `date` not a real day, or later than today → absent. More than 200 lines → `CodeOutputTooLong`.
 5. Nothing else is trusted: the rows' identities, Shops and Products come from the server, never from the answer.
@@ -271,17 +272,19 @@ it concerns, and the values before and after.
 | Kind | Rule |
 |---|---|
 | `price` | A row's lines (all with readable `priceCents`): pack rows → per pack = round(Σ price / Σ count), or `unitPriceCents` when every line printed the same one; weighed rows → per kg from `perKgCents`, else Σ price × 1000 / Σ grams. Proposed when the row has no Price or differs by at least one minor unit. |
-| `weight` | A weighed row (or a Product in g whose line has `grams` > 0): Σ grams differs from the scanned quantity by more than 1 % or 2 g. The new Price follows (`PriceForWeight`). |
-| `quantity` | A pack row: Σ count differs from its scans. |
+| `weight` | A weighed row (or a Product in g whose line has `grams` > 0; such a row is then read by weight: Price per kg, no quantity or pack size): Σ grams differs from the scanned quantity by more than 1 % or 2 g. The new Price follows: the lines' amount, else their per kg, else the row's own per kg at the new weight; the new scan keeps the per kg. |
+| `quantity` | A pack row: Σ count differs from its scans. A matched line with `count` 0 is one pack (a receipt prints a count only above one), with or without a readable price; in the per-pack Price only the lines with a price count. |
 | `pack_size` | A matched line's `packSize` (in the row's Base Unit) differs from the Product's pack size. |
 | `name` | A matched line with a non-empty `name` that differs from the Product name (case and spacing ignored). |
-| `add` | Each line with `row: -1`, a count or grams, and a Price; prefilled name, pack size, unit and Price. |
+| `add` | Each line with `row: -1`, a count or grams, and a Price (0 or more); prefilled name, pack size, unit and Price. An unmatched line with neither a count nor grams is not an Add (it shows only in the totals). Applying one needs an Ingredient (an existing one, or a new one with a name and a Base Unit), a Product name and a pack size above 0. |
 | `missing` | A row that no line matched. |
 | `shop` | `shopName` is set, does not match the session's Shop (normalised, `name_key` rules), and matches exactly one other saved Shop. A name that matches no Shop is a note only ("The receipt says LIDL"), never a proposal. |
 | `date` | `date` is set, differs from the session's date, and is within the last 7 days. |
 
 Notes (not proposals): the totals comparison; a whole-receipt discount (a line with negative `priceCents` and `row: -1`); lines
-dropped by `Finish`.
+dropped by `Finish`. The projected total is the sum of the receipt's readable line amounts, **discount lines included**, so it
+compares like for like with the total paid: a discount does not raise a "totals differ" note of its own (it has its own note),
+and a difference means a line was missed or misread.
 
 ## 7. Server API
 
@@ -298,6 +301,7 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
   2. groups them into rows by Product (the same rule as the phone's `scannedList.ts`, shared through the fixtures), ordered by
      first scan, and gives each its index;
   3. computes a **fingerprint** (SHA-256 over the sorted uuids and their prices and quantities);
+  the grouping and the fingerprint are the pure `receipt.GroupRows` and `receipt.Fingerprint` (RR1), which the apply uses too;
   4. prepares the photos, acquires the Limiter, and starts a job; answers `202 {id}`.
   Errors before the job: photo codes (`photos_empty`, `too_many_photos`, `photo_too_large`, `photo_unsupported`),
   `read_in_progress`, `too_many_reads` (with `retryAfterSeconds`).
@@ -349,6 +353,11 @@ Lots, purchases, Prices, Shopping List ticks and Bought for a Planned Meal stay 
 | Pack size or name correction | `UpdateProduct` (product store, name and pack size) first; then the replacement above for this session's events |
 | Add | a Product created without a barcode (`products` create, as the Product sheet does), then a `shop_scan` Op; a new Ingredient or Supply through `ingredientsPort.Ensure(name, baseUnit, kind)` (H4) |
 | Remove (missing) | `Undo` of each of the row's events |
+
+**Shop and date move every row the User keeps** (decided in the RR1 review). A row the receipt does not list stays in the
+session unless the User accepts its "Not on the receipt" proposal; keeping it says it was bought on this trip, so it moves to the
+receipt's Shop and date with the others (one trip is never split across two Shops or days). A row whose Remove is accepted is
+only undone, and a row whose weight changes is scanned again once, at the target Shop and date.
 
 Order: Product corrections, Shop and date replacements, weight and quantity changes, Prices, Adds, Removes. New events get new
 client UUIDs (`receipt:<readId>:<n>`, idempotent if the apply is retried with the same read).
