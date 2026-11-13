@@ -308,11 +308,13 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 
 ### 7.2 Applying
 
-- `POST /api/scan/receipt/apply` — `{readId, fingerprint, accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
+- `POST /api/scan/receipt/apply` — `{readId, fingerprint, clientUuids: [...], accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
   productName, packSize, scope}]}`.
   1. The read must be done, the caller's, and still kept (`410 receipt_read_gone`).
-  2. The fingerprint is recomputed from the current events: a mismatch (a scan, an Undo or a Price edit since the read) is
-     `409 receipt_session_changed`, nothing written.
+  2. The fingerprint is recomputed, as in §7.1, from the events the phone's session holds now (`clientUuids`, this Shop,
+     applied, not undone): a mismatch (a scan, an Undo or a Price edit since the read, or a session the phone has ended) is
+     `409 receipt_session_changed`, nothing written. The read's own uuids would not see a new scan, so the phone sends its
+     current ones.
   3. Every accepted id must be one of the read's proposals; each `add` must have its choices (`422` with the proposal id).
   4. The plan (§8) runs; the answer is `200 {applied: n, results: [ScanResult...]}` with the new scan Results, so the phone
      rebuilds its session from them.
@@ -471,5 +473,5 @@ in the same release as SR0 to SR6, H4 and H7′.
 | Q6 | Defaults in the review | **As proposed** in §3.4: Prices, Weights, Quantities checked; Shop and date, Corrections, Not scanned and Not on the receipt unchecked. *Proposed, not asked.* |
 
 Consequence of Q5: the session is this phone's Scanned list for this Shop and this household day, so once Change Shop is pressed
-or the day turns, "Read the receipt" is gone and a read already done can no longer be applied (the fingerprint of §7.2 no longer
-matches the session).
+or the day turns, "Read the receipt" is gone and a read already done can no longer be applied: the phone's session is empty or
+another Shop's, so the fingerprint the server recomputes from the `clientUuids` it sends (§7.2) no longer matches.
