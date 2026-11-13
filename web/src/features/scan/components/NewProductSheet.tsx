@@ -5,6 +5,7 @@ import { BottomSheet } from '../../../ui'
 import type { LineCandidate } from '../lib/lineChoice'
 import type { PackProduct } from '../lib/packChips'
 import type { PictureHandlers } from '../lib/newProductPicture'
+import type { NewProductInitial } from '../lib/newProductSelect'
 import type { IngredientChoice, UnknownFormValues, UnknownMode } from '../lib/unknownForm'
 import type { SearchResult } from '../../ingredients/types'
 import type { UnitSystem } from '../../../lib/units'
@@ -13,6 +14,7 @@ import { NewProductForm } from './NewProductForm'
 import './NewProductSheet.css'
 
 export type { PictureHandlers } from '../lib/newProductPicture'
+export type { NewProductInitial } from '../lib/newProductSelect'
 
 /** The sheet of an unknown barcode. ScanScreen passes what it has: the barcode, the live Lines, the offline Products, the unit system. */
 export interface NewProductSheetProps {
@@ -52,6 +54,13 @@ export interface NewProductSheetProps {
    * that row ("Add price"). The sheet itself never asks for a Price.
    */
   onAdded?: (rowKey: string, clientUuid: string) => void
+  /**
+   * No barcode (a receipt line's Add…, receipt-reading 3.4): no barcode line and no Picture step; the Line chips still show. The sheet
+   * hands its values to `onSave` and nothing else: `onAdded` is not called, and the caller sends no Op.
+   */
+  noBarcode?: boolean
+  /** what the form opens with (the receipt line's name and size, or the Add's saved choices) */
+  initial?: NewProductInitial
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {

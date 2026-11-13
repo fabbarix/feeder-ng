@@ -68,3 +68,24 @@ export function numberValue(text: string): number | null {
   const n = Number(text.trim().replace(',', '.'))
   return Number.isFinite(n) ? n : null
 }
+
+/** What the sheet opens with when it is not empty (a receipt line's Add…, or that Add edited again). */
+export interface NewProductInitial {
+  ingredient?: IngredientChoice
+  productName?: string
+  /** in `packUnit` */
+  packSize?: number
+  packUnit?: string
+  scope?: 'global' | 'shop'
+}
+
+/**
+ * The pack selection a choice starts on when the sheet opened with a size: that size under Other, when its unit is one the choice's
+ * Base Unit can be typed in; else the usual one (packSelectionFor).
+ */
+export function initialPackSelection(choice: IngredientChoice, products: PackProduct[], initial?: NewProductInitial): PackSelection {
+  const size = initial?.packSize
+  const unit = initial?.packUnit ?? choice.baseUnit
+  if (size !== undefined && size > 0 && unitOptions(choice.baseUnit).includes(unit)) return { size: String(size), unit, key: null, other: true }
+  return packSelectionFor(choice, products)
+}

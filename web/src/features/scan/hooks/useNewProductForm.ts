@@ -6,7 +6,7 @@ import { choiceFromLine, lineChips, type LineCandidate, type LineChip } from '..
 import type { PictureHandlers } from '../lib/newProductPicture'
 import { newProductPictures } from '../lib/newProductPicture'
 import { suggestPackChips, type PackChip, type PackProduct } from '../lib/packChips'
-import { choiceValue, noPackSelection, packSelectionFor, type PackSelection } from '../lib/newProductSelect'
+import { choiceValue, initialPackSelection, noPackSelection, type NewProductInitial, type PackSelection } from '../lib/newProductSelect'
 import {
   choiceKind,
   defaultName,
@@ -35,6 +35,8 @@ export interface NewProductFormOptions {
   newClientUuid: () => string
   onSave: (values: UnknownFormValues) => void | Promise<void>
   onAdded?: (rowKey: string, clientUuid: string) => void
+  /** what the form opens with (a receipt line's Add…): the Ingredient, the name, the pack size and the scope */
+  initial?: NewProductInitial
 }
 
 export function useNewProductForm(o: NewProductFormOptions) {
@@ -42,15 +44,17 @@ export function useNewProductForm(o: NewProductFormOptions) {
   const lines = useMemo(() => lineChips(o.lines), [o.lines])
   const noLines = lines.chips.length + lines.more.length === 0
 
+  const init = o.initial
   const [line, setLine] = useState<LineChip | null>(null)
-  const [somethingElse, setSomethingElse] = useState(false)
+  // An Ingredient given at the start (an Add edited again) opens the form on it, past the Line chips.
+  const [somethingElse, setSomethingElse] = useState(init?.ingredient !== undefined)
   const [moreOpen, setMoreOpen] = useState(false)
-  const [kind, setKind] = useState<IngredientKind>('food')
-  const [choice, setChoice] = useState<IngredientChoice | null>(null)
-  const [pack, setPack] = useState<PackSelection>(noPackSelection('g'))
-  const [typedName, setTypedName] = useState<string | null>(null)
+  const [kind, setKind] = useState<IngredientKind>(init?.ingredient ? choiceKind(init.ingredient) : 'food')
+  const [choice, setChoice] = useState<IngredientChoice | null>(init?.ingredient ?? null)
+  const [pack, setPack] = useState<PackSelection>(() => (init?.ingredient ? initialPackSelection(init.ingredient, o.products, init) : noPackSelection('g')))
+  const [typedName, setTypedName] = useState<string | null>(init?.productName?.trim() ? init.productName : null)
   const [renaming, setRenaming] = useState(false)
-  const [scope, setScope] = useState<BarcodeScope>('global')
+  const [scope, setScope] = useState<BarcodeScope>(init?.scope ?? 'global')
   const [weightText, setWeightText] = useState('')
   const [attempts, setAttempts] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -70,7 +74,7 @@ export function useNewProductForm(o: NewProductFormOptions) {
   const applyChoice = (next: IngredientChoice) => {
     setChoice(next)
     setKind(choiceKind(next))
-    setPack(packSelectionFor(next, o.products))
+    setPack(initialPackSelection(next, o.products, init))
   }
 
   const pickLine = (chip: LineChip) => {

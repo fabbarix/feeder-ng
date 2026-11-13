@@ -1,6 +1,6 @@
 // RR4: what features/receipt/index.ts exports and registers. Routes are discovered from `routes` (app/features.ts).
 // Pinned exports of ./index:
-//   routes: RouteObject[]    '/scan/receipt' -> ReceiptPhotosScreen, '/scan/receipt/review' -> ReceiptReviewScreen (no props)
+//   routes: RouteObject[]    '/scan/receipt' -> ReceiptPhotosScreen, '/scan/receipt/review' -> ReceiptReviewRoute (the review with its Add… sheet)
 //   ReadReceiptFooter + its props type            the footer content for SR4's ScannedList `footer` slot
 //   useReceiptApplied, publishReceiptSession, splitApplyResults, originalUuid, emitReceiptApplied?   (the Scan screen's side of the hand-over)
 //   ReceiptReviewScreen + AddSheetRenderProps     for the integration to pass renderAdd
@@ -15,6 +15,7 @@ import { useReceiptApplied } from './hooks/useReceiptApplied'
 import { splitApplyResults, originalUuid } from './lib/applyResults'
 import { publishReceiptSession } from './lib/receiptSession'
 import { ReceiptPhotosScreen } from './screens/ReceiptPhotosScreen'
+import { ReceiptReviewRoute } from './screens/ReceiptReviewRoute'
 import { ReceiptReviewScreen } from './screens/ReceiptReviewScreen'
 
 describe('routes', () => {
@@ -24,7 +25,7 @@ describe('routes', () => {
   it('the elements are the two screens', () => {
     const el = (path: string) => (feature.routes.find((r) => r.path === path)?.element as { type: unknown } | undefined)?.type
     expect(el('/scan/receipt')).toBe(ReceiptPhotosScreen)
-    expect(el('/scan/receipt/review')).toBe(ReceiptReviewScreen)
+    expect(el('/scan/receipt/review')).toBe(ReceiptReviewRoute)
   })
   it('does not clash with the Scan feature\'s /scan', () => {
     expect(() => collectFeatures({ '../features/receipt/index.ts': { routes: feature.routes }, '../features/scan/index.ts': { routes: [{ path: '/scan' }] } })).not.toThrow()

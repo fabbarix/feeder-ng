@@ -2,16 +2,17 @@
 import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { ReceiptPhotosScreen } from './screens/ReceiptPhotosScreen'
-import { ReceiptReviewScreen } from './screens/ReceiptReviewScreen'
+import { ReceiptReviewRoute } from './screens/ReceiptReviewRoute'
 
 export const routes: RouteObject[] = [
   { path: '/scan/receipt', element: createElement(ReceiptPhotosScreen) },
-  { path: '/scan/receipt/review', element: createElement(ReceiptReviewScreen) },
+  { path: '/scan/receipt/review', element: createElement(ReceiptReviewRoute) },
 ]
 
 export { ReadReceiptFooter } from './components/ReadReceiptFooter'
 export type { ReadReceiptFooterProps } from './components/ReadReceiptFooter'
 export { ReceiptReviewScreen } from './screens/ReceiptReviewScreen'
+export { ReceiptReviewRoute } from './screens/ReceiptReviewRoute'
 export type { AddSheetRenderProps } from './screens/ReceiptReviewScreen'
 export { useReceiptApplied } from './hooks/useReceiptApplied'
 export { useReceiptSession } from './hooks/useReceiptSession'

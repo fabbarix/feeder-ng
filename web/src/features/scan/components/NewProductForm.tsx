@@ -27,7 +27,9 @@ export function NewProductForm(p: NewProductSheetProps) {
     pictures: p.pictures,
     newClientUuid: p.newClientUuid ?? (() => crypto.randomUUID()),
     onSave: p.onSave,
-    onAdded: p.onAdded,
+    // Without a barcode (a receipt line's Add…) the sheet only hands its values back: no row to price afterwards.
+    onAdded: p.noBarcode ? undefined : p.onAdded,
+    initial: p.initial,
   })
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -52,7 +54,7 @@ export function NewProductForm(p: NewProductSheetProps) {
         void form.save()
       }}
     >
-      {p.barcode ? <p className="new-product__barcode">{newProductStrings.barcodeNotKnown(p.barcode)}</p> : null}
+      {p.barcode && !p.noBarcode ? <p className="new-product__barcode">{newProductStrings.barcodeNotKnown(p.barcode)}</p> : null}
 
       {form.showLines ? (
         <NewProductLines chips={form.lines} system={p.system ?? 'metric'} expanded={form.moreOpen} onExpand={form.expandLines} onPick={form.pickLine} onSomethingElse={form.openSomethingElse} />
@@ -111,7 +113,7 @@ export function NewProductForm(p: NewProductSheetProps) {
         </>
       ) : null}
 
-      {choice && p.mode === 'pack' ? (
+      {choice && p.mode === 'pack' && !p.noBarcode ? (
         <NewProductPicture coarse={p.coarsePointer ?? coarseMedia} state={form.picture} onPick={form.picture.pick} onPicking={p.onPicturePicking} />
       ) : null}
 
