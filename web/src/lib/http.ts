@@ -5,13 +5,17 @@ export class ApiError extends Error {
   readonly code: string
   /** Every other key of the response's `error` object (e.g. `field`, `reason`, `unit`), for typed handling. */
   readonly details: Readonly<Record<string, unknown>>
+  /** The whole parsed response body of an error in the `{error: {...}}` shape, for the keys beside `error` (the receipt apply's
+   *  500 carries `results`); undefined otherwise. */
+  readonly body?: unknown
 
-  constructor(status: number, code: string, message: string, details: Record<string, unknown> = {}) {
+  constructor(status: number, code: string, message: string, details: Record<string, unknown> = {}, body?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.details = details
+    if (body !== undefined) this.body = body
   }
 }
 
@@ -91,7 +95,7 @@ async function readError(res: Response): Promise<ApiError> {
     if (typeof code === 'string') {
       const message = typeof parsed.error?.message === 'string' ? parsed.error.message : res.statusText
       const { code: _code, message: _message, ...details } = parsed.error ?? {}
-      return new ApiError(res.status, code, message, details)
+      return new ApiError(res.status, code, message, details, parsed)
     }
   } catch {
     // Not the error shape; fall through.

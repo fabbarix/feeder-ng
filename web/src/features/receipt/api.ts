@@ -1,5 +1,5 @@
 // Typed calls for /api/scan/receipt (docs/design/receipt-reading.md section 7). Plain TypeScript over the shared HTTP client.
-import { createHttpClient, type RequestOptions } from '../../lib/http'
+import { ApiError, createHttpClient, type HttpClient, type RequestOptions } from '../../lib/http'
 import type { ApplyBody, ApplyOutcome, ReadView, ScanResult, StartReadBody } from './types'
 
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>
@@ -17,48 +17,26 @@ export interface ReceiptApi {
 
 const globalFetch: FetchFn = (input, init) => globalThis.fetch(input, init)
 
-/** The apply answers its results beside the error (a 500 keeps the put-back scans), which the typed client does not keep, so it reads the response itself. */
-async function applyCall(doFetch: FetchFn, body: ApplyBody): Promise<ApplyOutcome> {
-  let res: Response
-  try {
-    res = await doFetch('/api/scan/receipt/apply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      credentials: 'same-origin',
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'The network is unreachable'
-    return { ok: false, status: 0, code: 'network', message, results: [] }
-  }
-  const parsed = await readJson(res)
-  const results: ScanResult[] = Array.isArray(parsed?.results) ? parsed.results : []
-  if (res.ok) return { ok: true, applied: parsed?.applied ?? 0, results }
-  const error = parsed?.error
-  if (error && typeof error.code === 'string') {
-    return {
-      ok: false,
-      status: res.status,
-      code: error.code,
-      message: typeof error.message === 'string' ? error.message : res.statusText,
-      ...(typeof error.id === 'string' ? { id: error.id } : {}),
-      results,
-    }
-  }
-  return { ok: false, status: res.status, code: 'http_error', message: res.statusText || 'The request failed', results }
-}
-
 interface ApplyJson {
   applied?: number
-  results?: ScanResult[]
-  error?: { code?: unknown; message?: unknown; id?: unknown }
+  results?: unknown
 }
 
-async function readJson(res: Response): Promise<ApplyJson | undefined> {
+const resultsOf = (body: unknown): ScanResult[] => {
+  const results = (body as ApplyJson | null | undefined)?.results
+  return Array.isArray(results) ? (results as ScanResult[]) : []
+}
+
+/** The apply never rejects: a refusal, a 500 (whose body keeps the put-back scans beside the error, ApiError.body) and a lost
+ *  connection are all `ok: false`. */
+async function applyCall(client: HttpClient, body: ApplyBody): Promise<ApplyOutcome> {
   try {
-    return JSON.parse(await res.text()) as ApplyJson
-  } catch {
-    return undefined
+    const out = await client.post<ApplyJson | undefined>('/api/scan/receipt/apply', body)
+    return { ok: true, applied: out?.applied ?? 0, results: resultsOf(out) }
+  } catch (err) {
+    if (!(err instanceof ApiError)) return { ok: false, status: 0, code: 'unknown', message: 'The answer could not be read', results: [] }
+    const id = err.details.id
+    return { ok: false, status: err.status, code: err.code, message: err.message, ...(typeof id === 'string' ? { id } : {}), results: resultsOf(err.body) }
   }
 }
 
@@ -69,7 +47,7 @@ export function createReceiptApi(fetchFn: FetchFn = globalFetch): ReceiptApi {
     startRead: (body) => client.post<{ id: string }>('/api/scan/receipt/reads', body),
     getRead: (id, opts) => client.get<ReadView>(`/api/scan/receipt/reads/${encodeURIComponent(id)}`, opts),
     cancelRead: (id, opts) => client.delete<void>(`/api/scan/receipt/reads/${encodeURIComponent(id)}`, opts),
-    apply: (body) => applyCall(fetchFn, body),
+    apply: (body) => applyCall(client, body),
   }
 }
 
