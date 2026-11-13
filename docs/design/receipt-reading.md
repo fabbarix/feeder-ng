@@ -297,7 +297,17 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 - `POST /api/scan/receipt/reads` — body (JSON, the photo body limit of `recipefile/httpapi/reads.go`, 45 MiB):
   `{shopId, clientUuids: [...], photos: [{dataUrl}] (1..4)}`. The server:
   1. loads the session's events by `clientUuids` from `scan_events` (applied, not undone, `shop_scan` or `shop_unknown`, this Shop):
-     unknown or undone uuids are ignored; none left → `422 scans_empty`;
+     unknown or undone uuids are ignored; none left → `422 scans_empty`. One loader serves the read and the apply,
+     `scan/service.SessionEvents` (RR3), so both fingerprint the same values. Each event carries its Product's barcode
+     (the first of `product_barcodes`, canonical GTIN-14; empty for a Product known only by a Shop or weighed code).
+     **Weighed** (decided in the RR3 review): the ledger keeps no weighed flag, so a scan of a Product in g or ml is
+     weighed when its Price was taken per kg — that day's Price row has a *recorded* per kg (never one derived from the
+     pack Price) and the scan's Price is that per kg at its quantity (`product.PriceForWeight`, within one minor unit) —
+     or else when its quantity is not the Product's pack size. A weighed scan's per kg is the day's (none when the day
+     has none); a pack scan has none, even on a day whose Price row holds another scan's per kg. The per kg test catches
+     the first weighed scan of a Product made from a weighed code, whose pack size is that first weight; the quantity
+     test catches a weighed scan with no Price. (Rejected: "weighed when the day's row has a per kg", which marks every
+     pack scan of a day with a weighed one, or a derived per kg, as weighed.)
   2. groups them into rows by Product (the same rule as the phone's `scannedList.ts`, shared through the fixtures), ordered by
      first scan, and gives each its index;
   3. computes a **fingerprint** (SHA-256 over the sorted uuids and their prices and quantities);
@@ -314,14 +324,21 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 
 - `POST /api/scan/receipt/apply` — `{readId, fingerprint, clientUuids: [...], accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
   productName, packSize, scope}]}`.
-  1. The read must be done, the caller's, and still kept (`410 receipt_read_gone`).
+  1. The read must be the caller's and still kept (`410 receipt_read_gone` for an unknown, expired or another User's read),
+     and done: a read still running, or one that failed, is `409 receipt_read_not_done`. The apply is behind the same
+     availability check as the reads (`409 assistant_unavailable`).
   2. The fingerprint is recomputed, as in §7.1, from the events the phone's session holds now (`clientUuids`, this Shop,
-     applied, not undone): a mismatch (a scan, an Undo or a Price edit since the read, or a session the phone has ended) is
+     applied, not undone, made today: an earlier day's scan among the uuids is left out, as the read leaves it out): a mismatch (a scan, an Undo or a Price edit since the read, or a session the phone has ended) is
      `409 receipt_session_changed`, nothing written. The read's own uuids would not see a new scan, so the phone sends its
      current ones.
   3. Every accepted id must be one of the read's proposals; each `add` must have its choices (`422` with the proposal id).
   4. The plan (§8) runs; the answer is `200 {applied: n, results: [ScanResult...]}` with the new scan Results, so the phone
-     rebuilds its session from them.
+     rebuilds its session from them. `n` counts the distinct accepted ids (an id sent twice is one proposal).
+  5. A step that fails puts back every step before it (§8.3) and answers
+     `500 {error: {code: "receipt_apply_failed", message}, results: [ScanResult...]}`. Putting back an Undo applies the scan
+     again under a **new** uuid, `receipt:<readId>:undo:<its uuid>` (with a `#n` suffix when an earlier attempt already used
+     it), so `results` carries those scans, in the same shape as the 200's (`[]` when the put-back wrote none). The phone
+     re-keys its Scanned list: each result replaces the scan whose uuid follows `undo:`. Nothing else in the session changed.
 - Validation happens before the first write; the plan is built in full first.
 
 ### 7.3 Offline
@@ -376,6 +393,14 @@ Prices from `prev_price_json`; `UpdateProduct` → the previous name and pack si
 reverse and answers `500 receipt_apply_failed` with nothing left changed. A true single transaction would need the Stock,
 Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed here (noted as a follow-up in ADR 0018).
 
+### 8.4 Known limits
+
+- **An Ingredient created by a failed apply stays.** An accepted Add with a new Ingredient creates it through
+  `ingredientsPort.Ensure` before its Product. When a later step fails, the put-back deletes the Product it made but not the
+  Ingredient: the Ingredient port has no inverse for `Ensure`, and an Ingredient that already existed must never be removed. The
+  leftover is an unused Ingredient, visible in the Ingredients list, which a retry of the same Add finds and reuses (`Ensure`
+  matches by name). Accepted as a known leftover (RR3 review); no port change.
+
 ## 9. Cost, limits and errors
 
 **Cost.** Per read: about 1,600 input tokens per photo (a tall receipt is resized by the API), about 40 per Scanned row, about
@@ -402,6 +427,7 @@ messages where they fit:
 | `read_in_progress`, `too_many_reads` | Limiter | as for recipes ("You can read again in 12 minutes") | later |
 | `receipt_session_changed` (new) | apply after a change | "The Scanned list changed since the read." | **Read it again** |
 | `receipt_read_gone` (new) | apply after 10 min | "This read is no longer kept (10 minutes)." | Read it again |
+| `receipt_read_not_done` (new) | apply of a read still running, or one that failed | "The receipt is still being read." | wait, or read it again |
 | `scans_empty` (new) | no applied scans | "Scan something first." | no |
 
 A failed read is not counted against the hourly limit when the request never reached the model (as the Recipe Assistant does);

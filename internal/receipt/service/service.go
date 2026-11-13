@@ -72,14 +72,14 @@ type Assistant interface {
 }
 
 // Events loads the Scanned list of a read: the applied, not undone shop_scan and shop_unknown events among the phone's
-// client UUIDs, in ledger order, each with its household Date. Unknown uuids are left out. SQLEvents is the SQL
-// adapter; the scan service's loader (RR3) has the same method, so either one is the port.
+// client UUIDs, in ledger order, each with its household Date. Unknown uuids are left out. The port is the scan
+// service's loader (scanhttpapi.ReceiptApplier), the one the apply recomputes the fingerprint with.
 type Events interface {
 	SessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error)
 }
 
 // Contexts loads what a read of a Shop is matched against: today, the Shop and date of the session, the saved Shops
-// and the currency (SQLEvents is the SQL adapter).
+// and the currency (SQLContexts is the SQL adapter).
 type Contexts interface {
 	Context(ctx context.Context, shopID int64) (receipt.Context, error)
 }
@@ -223,6 +223,31 @@ func (s *Service) Job(userID int64, id string) (JobView, bool) {
 		}
 	}
 	return JobView{}, false
+}
+
+// Errors of DoneRead.
+var (
+	// ErrReadGone is a read that is unknown, no longer kept (10 minutes, 3 per User) or another User's.
+	ErrReadGone = errors.New("receipt read: gone")
+	// ErrReadNotDone is a read that is still running, or that failed.
+	ErrReadNotDone = errors.New("receipt read: not done")
+)
+
+// DoneRead is the User's done read, as the apply needs it (design §7.2 step 1): *Unavailable when the assistant cannot
+// read (the apply sits behind the same availability check as the reads), ErrReadGone for an unknown, expired or
+// another User's read, ErrReadNotDone while it runs or after it failed.
+func (s *Service) DoneRead(ctx context.Context, userID int64, id string) (JobView, error) {
+	if err := s.Available(ctx); err != nil {
+		return JobView{}, err
+	}
+	v, ok := s.Job(userID, id)
+	if !ok {
+		return JobView{}, ErrReadGone
+	}
+	if v.Status != StatusDone {
+		return JobView{}, ErrReadNotDone
+	}
+	return v, nil
 }
 
 // Cancel stops a running job of the User (its model call is cancelled and it fails as cancelled), or forgets a

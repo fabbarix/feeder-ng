@@ -46,7 +46,7 @@ This amends [ADR 0006](0006-recipe-assistant-calls-anthropic-from-the-server.md)
 
 - A second data flow of household purchases (names, barcodes, Prices, quantities, the Shop) and a photo to the provider; the deploy guide names it and the Recipe Assistant's settings page says Members can send receipts.
 - New package `internal/receipt` (pure core: schema, prompt, `Finish`, `Propose`, plan), a read service and routes sharing the Recipe Assistant's Limiter and client factory (`internal/recipeassistant/service/shared.go`), `ApplyReceiptPlan` in the scan service, and `UpdateProduct` on the Product port.
-- New error codes: `no_receipt_found`, `receipt_session_changed`, `receipt_read_gone`, `scans_empty`, `receipt_apply_failed`.
+- New error codes: `no_receipt_found`, `receipt_session_changed`, `receipt_read_gone`, `receipt_read_not_done`, `scans_empty`, `receipt_apply_failed`.
 - The apply depends on `PATCH /api/scan/prices` (SR1) and `Ensure` with a kind (H4) for adding a Supply.
 - The apply is atomic by compensation, so a crash between a step and its inverse could leave a partial result; the fingerprint then no longer matches, and the User sees the Scanned list as it is and can correct by hand. A single transaction across the ports is the follow-up that removes this window.
 - Not in this feature: keeping receipts, earlier sessions, spend reports, spreading a whole-receipt discount over Prices, creating a session from a receipt alone.

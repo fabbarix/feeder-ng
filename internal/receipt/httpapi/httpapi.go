@@ -1,15 +1,11 @@
-// Package httpapi exposes the receipt read routes (docs/design/receipt-reading.md §7.1). Handlers are thin: parse, call
-// internal/receipt/service, respond. Registers itself in init().
+// Package httpapi exposes the receipt routes: the reads (docs/design/receipt-reading.md §7.1, reads.go) and the apply
+// (§7.2, apply.go). Handlers are thin: parse, call internal/receipt/service or the scan service, respond. Registers
+// itself in init() as module "receipt".
 //
 // Adding routes: this package mounts the route groups listed in routes, in order, on the same router. A file that
-// adds routes (RR3's apply.go) appends its group in its own init(), and the group registers its routes on the router
-// it is given:
+// adds routes appends its group in its own init(), as apply.go does:
 //
-//	func init() {
-//		routes = append(routes, func(r *app.Router, a *api) {
-//			r.User("POST /api/scan/receipt/apply", a.apply)
-//		})
-//	}
+//	func init() { routes = append(routes, mountApply) }
 package httpapi
 
 import (
@@ -19,6 +15,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/receipt/service"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
 	rasvc "github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
+	scanhttpapi "github.com/fabbarix/feeder-ng/internal/scan/httpapi"
 )
 
 func init() { app.Register(app.Module{Name: "receipt", Mount: mount}) }
@@ -27,21 +24,26 @@ func init() { app.Register(app.Module{Name: "receipt", Mount: mount}) }
 var routes = []func(r *app.Router, a *api){mountReads}
 
 type api struct {
-	svc *service.Service
+	svc     *service.Service
+	applier *applier
 }
 
 func mount(r *app.Router, d app.Deps) {
 	// The Recipe Assistant's service is shared: the same availability, client, photo preparer and Limiter.
 	ra := rasvc.For(d, claude.Factory(d.Logger))
-	sqlEvents := service.NewSQLEvents(d.DB, d.Clock)
-	a := &api{svc: service.New(service.Deps{
+	// One session loader: the read fingerprints the same events the apply recomputes (design §7.1 step 1).
+	scan := scanhttpapi.NewReceiptApplier(d)
+	svc := service.New(service.Deps{
 		Assistant: service.FromRecipeAssistant(ra),
-		Events:    sqlEvents, // the loader the apply shares replaces this line (RR3: scanhttpapi.NewReceiptApplier(d))
-		Contexts:  sqlEvents,
+		Events:    scan,
+		Contexts:  service.NewSQLContexts(d.DB, d.Clock),
 		Photos:    ra.Photos(),
 		Clock:     d.Clock,
 		Logger:    d.Logger,
-	})}
+	})
+	// The apply finds the reads this service keeps.
+	SetReadLookup(d.DB, readLookup{svc: svc})
+	a := &api{svc: svc, applier: newApplier(d, scan)}
 	for _, f := range routes {
 		f(r, a)
 	}

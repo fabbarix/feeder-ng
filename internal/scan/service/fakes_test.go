@@ -87,6 +87,9 @@ func (f *fakeStock) RemoveLot(_ context.Context, id int64) error {
 	}
 	if l, ok := f.lots[id]; ok {
 		f.totals[l.IngredientID] -= l.Quantity
+		if f.totals[l.IngredientID] == 0 {
+			delete(f.totals, l.IngredientID) // as the real port: an Ingredient with no Lots has no total (reads as 0)
+		}
 		delete(f.lots, id)
 		f.removed = append(f.removed, id)
 	}
