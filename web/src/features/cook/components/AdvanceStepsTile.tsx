@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Button, Tile } from '../../../ui'
 import { formatLeadTime, type AdvanceSummary } from '../lib/advance'
 import { cookStrings } from '../strings'
+import { BaseRecipeChip } from './BaseRecipeChip'
 
 export interface AdvanceStepsTileProps {
   summary: AdvanceSummary
@@ -22,12 +23,16 @@ export function AdvanceStepsTile({ summary, onMarkDone }: AdvanceStepsTileProps)
       <ul className="cook-advance__list">
         {summary.done.map((item) => (
           <li key={item.step} className="cook-advance__done">
-            {cookStrings.advanceDone(item.text)}
+            <p>{cookStrings.advanceDone(item.text)}</p>
+            {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
           </li>
         ))}
         {summary.pending.map((item) => (
           <li key={item.step} className="cook-advance__row">
-            <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
+            <div className="cook-advance__text">
+              <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
+              {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
+            </div>
             <Button variant="secondary" size="sm" onClick={() => onMarkDone(item.step)}>
               {cookStrings.markAdvanceDoneShort}
             </Button>

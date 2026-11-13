@@ -4,6 +4,7 @@ import { ApiError } from '../../../lib/http'
 import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
 import { advanceSummary, type AdvanceSummary } from '../lib/advance'
+import { coveredLines, readyBefore } from '../lib/baseSteps'
 import { scopeOf } from '../lib/scope'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { CookSource, CookStep, CookView } from '../types'
@@ -17,6 +18,10 @@ export interface UseCookSession {
   nav: StepNav
   /** The Step on screen; null for a Recipe with no Steps. */
   step: CookStep | null
+  /** The Base recipes ready by the Step on screen (names). */
+  ready: string[]
+  /** "Béchamel from the Pantry": the Base recipes the Pantry covers, whose Steps are left out. */
+  covered: string[]
   next(): void
   back(): void
   /** Bumped by repeat(); the screen uses it to re-announce or re-read the Step. */
@@ -58,6 +63,7 @@ export function useCookSession(source: CookSource): UseCookSession {
   const started = useRef<Set<number>>(new Set())
   const nav = createNav(steps.length, index)
   const step = steps[nav.index] ?? null
+  const ready = readyBefore(steps)[nav.index] ?? []
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return
@@ -116,6 +122,8 @@ export function useCookSession(source: CookSource): UseCookSession {
     notCookable: query.error instanceof ApiError && query.error.code === 'not_cookable',
     nav,
     step,
+    ready,
+    covered: coveredLines(view?.covered),
     next: () => setIndex((i) => goNext(createNav(total, i)).index),
     back: () => setIndex((i) => goBack(createNav(total, i)).index),
     repeatCount,

@@ -89,6 +89,7 @@ export function toCookStep(visible: VisibleItem): CookStep {
     uses: item.uses,
     timer: item.timer,
     after: item.after,
+    baseRecipe: item.baseRecipe ?? null,
   }
 }
 

@@ -3,6 +3,7 @@ import { Button, Tile } from '../../../ui'
 import { formatLeadTime } from '../lib/advance'
 import type { AdvanceGroup } from '../lib/timeline'
 import { cookStrings } from '../strings'
+import { BaseRecipeChip } from './BaseRecipeChip'
 
 export interface TimelineAdvanceTileProps {
   groups: AdvanceGroup[]
@@ -26,11 +27,15 @@ export function TimelineAdvanceTile({ groups, onMarkDone }: TimelineAdvanceTileP
             {group.items.map((item) =>
               item.done ? (
                 <li key={`${item.scope}/${item.step}`} className="cook-advance__done">
-                  {cookStrings.advanceDone(item.text)}
+                  <p>{cookStrings.advanceDone(item.text)}</p>
+                  {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
                 </li>
               ) : (
                 <li key={`${item.scope}/${item.step}`} className="cook-advance__row">
-                  <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
+                  <div className="cook-advance__text">
+                    <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
+                    {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
+                  </div>
                   <Button variant="secondary" size="sm" onClick={() => onMarkDone(item.scope, item.step)}>
                     {cookStrings.markAdvanceDoneShort}
                   </Button>

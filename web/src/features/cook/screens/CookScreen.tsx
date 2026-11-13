@@ -11,6 +11,7 @@ import { AdvanceStepsTile } from '../components/AdvanceStepsTile'
 import { CookNavTiles } from '../components/CookNavTiles'
 import { CookedConfirmation } from '../components/CookedConfirmation'
 import { CookTimerStrip } from '../components/CookTimerStrip'
+import { BaseCoveredLines } from '../components/BaseCoveredLines'
 import { CookTopRow } from '../components/CookTopRow'
 import { StepTile } from '../components/StepTile'
 import { useCoachMark } from '../hooks/useCoachMark'
@@ -143,10 +144,12 @@ function SessionCookScreen(): ReactNode {
           onCoachDismiss={dismissCoach}
           onBack={session.back}
           onNext={gate.next}
+          ready={session.ready}
         />
       ) : (
         <p className="cook-screen__empty">{cookStrings.noSteps}</p>
       )}
+      <BaseCoveredLines lines={session.covered} />
       <CookTimerStrip
         scope={session.scope}
         items={timers.items}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
+import { coveredLines, readyBefore } from '../lib/baseSteps'
 import { advanceGroups, courseMenuEntries, effectiveFilter, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
 import { reheatTimerOfCourse } from '../lib/reheat'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
@@ -32,6 +33,10 @@ export interface UseCookTimeline {
   step: CookStep | null
   /** The timeline item on screen. */
   item: TimelineItem | null
+  /** The Base recipes ready by the item on screen (names), over the shown list (lib/baseSteps readyBefore). */
+  ready: string[]
+  /** "Béchamel from the Pantry": the Base recipes the Pantry covers, whose Steps are left out. */
+  covered: string[]
   /** "Side · Green beans" on a timeline of several Courses; null otherwise. */
   caption: string | null
   /** The planned clock time of the item on screen, "18:40". */
@@ -76,6 +81,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
   const nav = createNav(items.length, positions[String(filter)] ?? 0)
   const current = items[nav.index] ?? null
   const item = current?.item ?? null
+  const ready = readyBefore(items.map((i) => i.item))[nav.index] ?? []
 
   const setIndex = useCallback(
     (index: number) => setPositions((p) => ({ ...p, [String(filter)]: index })),
@@ -145,6 +151,8 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
     nav,
     step,
     item,
+    ready,
+    covered: coveredLines(view?.covered),
     caption: view && item ? itemCaption(view, item) : null,
     clock: view && item ? plannedClock(view.time, view.totalMinutes, item.startSeconds) : null,
     next: () => setIndex(goNext(nav).index),

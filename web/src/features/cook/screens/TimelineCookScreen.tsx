@@ -20,6 +20,7 @@ import type { SlotDayKey, SlotKey } from '../../plan/types'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
 import { createWebAudioAlarm } from '../adapters/alarm'
+import { BaseCoveredLines } from '../components/BaseCoveredLines'
 import { CookNavTiles } from '../components/CookNavTiles'
 import { CookedConfirmation } from '../components/CookedConfirmation'
 import { CookTimerStrip } from '../components/CookTimerStrip'
@@ -173,10 +174,12 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
           onNext={tl.gate.next}
           caption={several ? tl.caption : null}
           clock={several ? tl.clock : null}
+          ready={tl.ready}
         />
       ) : (
         <p className="cook-screen__empty">{cookStrings.noSteps}</p>
       )}
+      <BaseCoveredLines lines={tl.covered} />
       <CookTimerStrip
         scope={tl.item?.scope ?? ''}
         items={tl.timers.items}

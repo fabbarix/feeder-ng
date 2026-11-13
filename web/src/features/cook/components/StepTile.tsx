@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { Button, Icon, Tile } from '../../../ui'
 import { describeUse, stepOverline, tapAction } from '../lib/steps'
+import { BaseRecipeChip } from './BaseRecipeChip'
 import { cookStrings } from '../strings'
 import type { CookStep, StepUse } from '../types'
 
@@ -19,6 +20,8 @@ export interface StepTileProps {
   caption?: string | null
   /** The planned clock time "18:52" of the timeline; shown only when given. */
   clock?: string | null
+  /** Base recipe names ready by this Step (the block before it ended): one "<name> ready" line each. */
+  ready?: string[]
 }
 
 /**
@@ -37,6 +40,7 @@ export function StepTile({
   onCoachDismiss,
   caption = null,
   clock = null,
+  ready = [],
 }: StepTileProps): ReactNode {
   const onTap = (e: MouseEvent<HTMLElement>) => {
     if (!tapZones) return
@@ -49,7 +53,17 @@ export function StepTile({
     <Tile as="article" className="cook-step" aria-label={cookStrings.stepOf(step.number, step.of)} overline={stepOverline(step)} onClickCapture={onTap}>
       {caption ? <p className="cook-step__course">{caption}</p> : null}
       {clock ? <p className="cook-step__clock">{clock}</p> : null}
+      {step.baseRecipe ? (
+        <div className="cook-step__base">
+          <BaseRecipeChip recipe={step.baseRecipe} />
+        </div>
+      ) : null}
       <p className="cook-step__text">{step.text}</p>
+      {ready.map((name) => (
+        <p key={name} className="cook-step__ready">
+          {cookStrings.baseReady(name)}
+        </p>
+      ))}
       {step.uses.length > 0 ? <p className="cook-step__uses">{cookStrings.usesLine(step.uses.map(formatUse))}</p> : null}
       {step.imageUrl ? <img className="cook-step__image" src={step.imageUrl} alt="" /> : null}
       {tapZones ? (

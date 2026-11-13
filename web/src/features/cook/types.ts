@@ -11,6 +11,13 @@ export interface StepUse {
   unit: string
 }
 
+/** A Base recipe a Step comes from: its own name, and the path of names from the outermost one (BR-H). */
+export interface BaseRecipeLabel {
+  id: number
+  name: string
+  path: string[]
+}
+
 export interface CookStep {
   /** Index into the Recipe's Steps (what marks and timers use). */
   index: number
@@ -26,6 +33,8 @@ export interface CookStep {
   timer: { label: string; durationSeconds: number } | null
   /** Recipe Step indexes this Step waits for (it starts once they finish); absent in older fixtures = none. */
   after?: number[]
+  /** The Base recipe this Step comes from; null or absent for the Recipe's own Step. */
+  baseRecipe?: BaseRecipeLabel | null
 }
 
 export interface AdvanceItem {
@@ -35,6 +44,8 @@ export interface AdvanceItem {
   done: boolean
   doneAt: string | null
   warning: boolean
+  /** The Base recipe this Advance Step comes from; null or absent for the Recipe's own. */
+  baseRecipe?: BaseRecipeLabel | null
 }
 
 export interface CookTimer {
@@ -64,6 +75,8 @@ export interface CookView {
   advance: AdvanceItem[]
   steps: CookStep[]
   timers: CookTimer[]
+  /** The Base recipes the Pantry covers: their Steps are left out; absent in older payloads = none. */
+  covered?: BaseRecipeLabel[]
 }
 
 export interface TimersResponse {
@@ -112,6 +125,8 @@ export interface TimelineAdvance {
   done: boolean
   doneAt: string | null
   warning: boolean
+  /** The Base recipe this Advance Step comes from; null or absent for the Recipe's own. */
+  baseRecipe?: BaseRecipeLabel | null
 }
 
 /** One item of the timeline: a Step, a Reheat or a Serve item, in on-screen order. */
@@ -134,6 +149,8 @@ export interface TimelineItem {
   timer: { label: string; durationSeconds: number } | null
   /** Recipe Step indexes of the same Course this item waits for. */
   after: number[]
+  /** The Base recipe this Step comes from; null or absent for the Recipe's own Step (BR-H). */
+  baseRecipe?: BaseRecipeLabel | null
 }
 
 export interface TimelineView {
@@ -148,6 +165,8 @@ export interface TimelineView {
   courses: TimelineCourse[]
   advance: TimelineAdvance[]
   items: TimelineItem[]
+  /** The Base recipes the Pantry covers: their Steps are left out; absent in older payloads = none. */
+  covered?: BaseRecipeLabel[]
 }
 
 /** What a route opens: the slot's timeline, on one Course when `courseId` is given. */
