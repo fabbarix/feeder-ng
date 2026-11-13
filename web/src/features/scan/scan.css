@@ -194,6 +194,34 @@
   color: var(--status-success-fg);
 }
 
+/* Just scanned: the row a scan put on top washes in the success background and fades out (1.2 s). Two identical
+   keyframes, alternated by data-fresh, so a rescan of the same row plays it again. None with reduced motion. */
+.list-row[data-fresh='a'] {
+  animation: scanned-row-wash-a calc(var(--dur-3) * 5) var(--ease-out);
+}
+
+.list-row[data-fresh='b'] {
+  animation: scanned-row-wash-b calc(var(--dur-3) * 5) var(--ease-out);
+}
+
+@keyframes scanned-row-wash-a {
+  from {
+    background: var(--status-success-bg);
+  }
+}
+
+@keyframes scanned-row-wash-b {
+  from {
+    background: var(--status-success-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-row[data-fresh] {
+    animation: none;
+  }
+}
+
 /* The row whose Price is being entered is outlined with the accent focus ring: the one focus on the screen. */
 .list-row[data-pricing='true'] {
   box-shadow: var(--focus-ring);

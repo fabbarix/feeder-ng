@@ -42,3 +42,15 @@ describe('scan.css: the Split layout', () => {
     expect(Object.values(d).join(' ')).toMatch(/var\(--/)
   })
 })
+
+// SR4 review: the "just scanned" wash (shop-scan-proposals.md 13.3).
+describe('scan.css: the just-scanned wash', () => {
+  it('washes in the success background token, and plays twice-named so a rescan restarts it', () => {
+    for (const pulse of ['a', 'b']) expect(declarations(css, `.list-row[data-fresh='${pulse}']`)['animation']).toMatch(new RegExp(`scanned-row-wash-${pulse} .*var\\(--`))
+    expect(css).toMatch(/@keyframes scanned-row-wash-a\s*\{\s*from\s*\{\s*background: var\(--status-success-bg\)/)
+  })
+
+  it('is off with reduced motion', () => {
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.list-row\[data-fresh\]\s*\{\s*animation: none/)
+  })
+})

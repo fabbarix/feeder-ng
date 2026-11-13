@@ -34,6 +34,7 @@ import { StockTakeSheet } from '../components/StockTakeSheet'
 import { ToGetList } from '../components/ToGetList'
 import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
 import { UnknownBarcodeSheet } from '../components/UnknownBarcodeSheet'
+import { useJustScanned } from '../hooks/useJustScanned'
 import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
@@ -168,6 +169,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const viewfinderStatus = c.recovery.failure ? undefined : cameraText(c.camera.status)
   const scanned = c.scanned
   const { view, choose } = useListView(scanned.entries.length)
+  const justScanned = useJustScanned(scanned.loaded ? scanned.entries.length : null, scanned.rows[0]?.key ?? null)
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
 
   const pricingKey = flow.pricing?.key ?? null
@@ -233,6 +235,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           currency={c.currency}
           system={c.system}
           pricingKey={pricingKey}
+          justScanned={justScanned}
           onPrice={(key) => flow.startPriceEntry(key)}
           onIncrement={(key) => void flow.increment(key)}
           onDecrement={(key) => void flow.decrement(key)}

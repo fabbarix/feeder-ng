@@ -120,6 +120,13 @@ describe('ScannedList', () => {
     expect(screen.queryByRole('group', { name: /^Quantity of/ })).toBeNull()
   })
 
+  it('washes only the row a scan just put on top (SR4 review)', () => {
+    view(props({ justScanned: { key: '31', pulse: 'b' } }))
+    const [paper, mutti] = items()
+    expect(paper).toHaveAttribute('data-fresh', 'b')
+    expect(mutti).not.toHaveAttribute('data-fresh')
+  })
+
   it('every row button has an accessible name and the list has no unnamed button', () => {
     view(props({ pricingKey: '7' }))
     for (const b of screen.getAllByRole('button')) expect(b.getAttribute('aria-label') ?? b.textContent?.trim()).toBeTruthy()

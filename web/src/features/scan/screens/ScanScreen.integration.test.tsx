@@ -99,6 +99,7 @@ describe('ScanScreen with the real controller', () => {
     // the server answers 700 g still to get after a 700 g pack: the Line asked for 1400 g
     expect(row.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 of 1400 g$/)
     expect(within(row).getByRole('button', { name: /^Add price/ })).toBeInTheDocument()
+    expect(row).toHaveAttribute('data-fresh', 'a')
     expect(screen.getByRole('radio', { name: 'Scanned 1' })).toBeChecked()
     expect(await screen.findByText('Added Mutti passata 700 g')).toBeInTheDocument()
   })

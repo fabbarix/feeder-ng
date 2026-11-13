@@ -21,6 +21,8 @@ export interface ScannedRowProps {
   active: boolean
   /** the Price entry is open on this row: it is outlined */
   pricing: boolean
+  /** the row was just scanned: a short wash; the value alternates with each scan, so a rescan plays it again */
+  fresh?: 'a' | 'b'
   onActivate: () => void
   onPrice: () => void
   onIncrement: () => void
@@ -73,7 +75,7 @@ function ActiveStrip({ row, onPrice, onIncrement, onDecrement, onRemove }: Strip
   )
 }
 
-export function ScannedRow({ row, currency, system, active, pricing, onActivate, onPrice, onIncrement, onDecrement, onRemove }: ScannedRowProps) {
+export function ScannedRow({ row, currency, system, active, pricing, fresh, onActivate, onPrice, onIncrement, onDecrement, onRemove }: ScannedRowProps) {
   const amounts = rowAmounts(row, (cents: number) => formatMinor(cents, currency))
   const props: ListRowProps = {
     title: rowTitle(row, system),
@@ -93,6 +95,7 @@ export function ScannedRow({ row, currency, system, active, pricing, onActivate,
     footer: active ? <ActiveStrip row={row} onPrice={onPrice} onIncrement={onIncrement} onDecrement={onDecrement} onRemove={onRemove} /> : undefined,
     'data-active': active ? 'true' : undefined,
     'data-pricing': pricing ? 'true' : undefined,
+    'data-fresh': fresh,
   }
   return <ListRow {...props} />
 }
