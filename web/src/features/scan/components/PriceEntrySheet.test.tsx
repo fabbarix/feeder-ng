@@ -1,6 +1,6 @@
 // SR4: PriceEntrySheet replaces PriceEditSheet (shop-scan-proposals.md 13.4). It wraps PriceKeypad in a BottomSheet, keyed by
 // the row so it remounts for the next row, and reports Save, Next and Close. Typing is tested in ui/PriceKeypad.test.tsx.
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { buildScannedRows, type ScannedRow } from '../lib/scannedList'
@@ -29,6 +29,9 @@ function setup(over: Partial<PriceEntrySheetProps> = {}) {
   const view = render(<PriceEntrySheet {...props} />)
   return { props, ...view }
 }
+// The sheet has two buttons named "Close": the BottomSheet header's X and the keypad's own Close. Each query is scoped.
+const keypadClose = () => within(document.querySelector<HTMLElement>('.price-keypad')!).getByRole('button', { name: 'Close' })
+const headerClose = () => within(document.querySelector<HTMLElement>('.sheet__header')!).getByRole('button', { name: 'Close' })
 const tap = async (keys: string) => {
   for (const k of keys) await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
 }
@@ -84,14 +87,16 @@ describe('PriceEntrySheet', () => {
 
   it('Close, the sheet header Close and Escape each fire onClose once', async () => {
     const first = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await userEvent.click(keypadClose())
     expect(first.props.onClose).toHaveBeenCalledTimes(1)
     first.unmount()
 
+    // The header X (and the backdrop) close without the typed value: only the keypad holds it (accepted, review SR4).
     const header = setup()
-    const buttons = screen.getAllByRole('button', { name: 'Close' })
-    await userEvent.click(buttons[0]!)
+    await tap('2')
+    await userEvent.click(headerClose())
     expect(header.props.onClose).toHaveBeenCalledTimes(1)
+    expect(header.props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: null, packCents: null, perKgCents: null })
     header.unmount()
 
     const escape = setup()
@@ -102,7 +107,7 @@ describe('PriceEntrySheet', () => {
   it('Close hands over the typed entry (the screen saves a valid one and discards an empty one)', async () => {
     const { props } = setup()
     await tap('2')
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await userEvent.click(keypadClose())
     expect(props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 2, packCents: 2, perKgCents: null })
   })
 

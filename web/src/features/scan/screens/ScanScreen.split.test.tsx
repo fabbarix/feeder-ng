@@ -204,7 +204,7 @@ describe('Price entry', () => {
     await userEvent.keyboard('{Escape}')
     expect(c.flow.savePrice).toHaveBeenCalledTimes(1)
     expect(c.flow.savePrice).toHaveBeenCalledWith('31', { basis: 'pack', cents: null, packCents: null, perKgCents: null }, 'close')
-    await userEvent.click(screen.getAllByRole('button', { name: 'Close' }).at(-1)!)
+    await userEvent.click(within(document.querySelector<HTMLElement>('.price-keypad')!).getByRole('button', { name: 'Close' }))
     expect(c.flow.savePrice).toHaveBeenCalledTimes(2)
   })
 
