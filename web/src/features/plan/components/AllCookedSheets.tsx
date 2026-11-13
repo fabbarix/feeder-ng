@@ -24,6 +24,7 @@ export function AllCookedSheets({ flow }: { flow: AllCookedFlow }): ReactNode {
         onConfirm={() => void flow.confirm()}
         busy={controller.busy}
         error={controller.error}
+        usedFrom={controller.usedFrom}
       />
       <StockCorrectionSheet
         open={stock.correction !== null}

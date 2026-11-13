@@ -33,6 +33,8 @@ export interface UsedFromController {
   hasConflict: boolean
   /** Message per conflicting Lot, keyed by lotId. */
   conflictMessages: Record<number, string>
+  /** The conflicts that involve a Course (for its section), each with its message. */
+  conflictsOf: (courseId: number) => { lotId: number; message: string }[]
 }
 
 const NO_SELECTIONS: Record<number, Selection> = {}
@@ -86,5 +88,7 @@ export function useUsedFrom(courses: UsedFromCourseInput[], { unitSystem, today 
     conflicts,
     hasConflict: conflicts.length > 0,
     conflictMessages: messages,
+    conflictsOf: (courseId) =>
+      conflicts.filter((c) => c.courseIds.includes(courseId)).map((c) => ({ lotId: c.lotId, message: messages[c.lotId]! })),
   }
 }

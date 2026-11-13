@@ -2,11 +2,14 @@
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { planApi } from '../api'
+import { isUsedFromInvalid, usedFromApi, type CookPreviewWithLots } from '../api.usedFrom'
 import { planStrings } from '../strings'
+import { usedFromStrings } from '../usedFromStrings'
 import { allCookedBody, type AllCookedRow } from '../lib/toConfirm'
 import type { CookedAllResult, CookPreview, SlotDayKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
-import type { UsedFromController } from './useUsedFrom'
+import { useCookContext } from './useCookContext'
+import { useUsedFrom, type UsedFromController } from './useUsedFrom'
 
 export interface MarkAllCookedController {
   /** One row per Course in `courseIds`, in that order, from GET .../{courseId}/cook; empty until every preview has loaded. */
@@ -21,7 +24,7 @@ export interface MarkAllCookedController {
   result: CookedAllResult | null
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
-  /** The Used from picks per Course (one useUsedFrom over all previews). Optional until wired (b5-ufw). */
+  /** The Used from picks per Course (one useUsedFrom over all previews); a conflict between Courses disables confirm. */
   usedFrom?: UsedFromController
 }
 
@@ -62,6 +65,16 @@ export function useMarkAllCooked(slot: SlotDayKey | null, courseIds: number[]): 
   }
 
   const loaded = slot !== null && previews.every((q) => q.data !== undefined)
+  const cookContext = useCookContext(slot !== null)
+  const usedFrom = useUsedFrom(
+    loaded
+      ? courseIds.map((courseId, i) => {
+          const pv = previews[i]!.data as CookPreviewWithLots
+          return { courseId, courseName: pv.meal.courseName ?? '', needs: pv.needs }
+        })
+      : [],
+    { unitSystem: cookContext.unitSystem, today: cookContext.today },
+  )
   const rows: AllCookedRow[] = loaded
     ? courseIds.map((courseId, i) => {
         const preview = previews[i]!.data as CookPreview
@@ -91,22 +104,30 @@ export function useMarkAllCooked(slot: SlotDayKey | null, courseIds: number[]): 
   )
 
   const confirm = useCallback(async () => {
-    if (!slot || !loaded) return null
+    // A conflict between Courses (one Lot taken past what it holds) sends nothing.
+    if (!slot || !loaded || usedFrom.hasConflict) return null
     setBusy(true)
     setError(null)
     try {
-      const res = await planApi.cookedAll(slot, allCookedBody(rows))
+      const courses = allCookedBody(rows).map((entry) => ({ ...entry, usedFrom: usedFrom.entries(entry.courseId) }))
+      const res = await usedFromApi.cookedAll(slot, courses)
       setResult(res)
       setDismissed([])
       void invalidatePlan(client)
       return res
-    } catch {
-      setError(planStrings.cookedError)
+    } catch (err) {
+      if (isUsedFromInvalid(err)) {
+        // A Stock Lot changed under the picks: say so and reload every Course's preview.
+        setError(usedFromStrings.refused)
+        void client.invalidateQueries({ queryKey: ['plan', 'cook'] })
+      } else {
+        setError(planStrings.cookedError)
+      }
       return null
     } finally {
       setBusy(false)
     }
-  }, [slot, loaded, rows, client])
+  }, [slot, loaded, rows, client, usedFrom])
 
   const warnings = (result?.warnings ?? NONE).filter((w) => !dismissed.includes(w.ingredientId))
 
@@ -120,5 +141,6 @@ export function useMarkAllCooked(slot: SlotDayKey | null, courseIds: number[]): 
     result,
     warnings,
     dismissWarning: (ingredientId) => setDismissed((prev) => [...prev, ingredientId]),
+    usedFrom,
   }
 }

@@ -23,6 +23,7 @@ export function CookFlowSheets({ flow }: { flow: CookFlow }): ReactNode {
         onNotCooked={() => void flow.skip()}
         busy={cook.busy}
         error={cook.error}
+        usedFrom={cook.usedFrom}
       />
       <StockCorrectionSheet
         open={stock.correction !== null}
