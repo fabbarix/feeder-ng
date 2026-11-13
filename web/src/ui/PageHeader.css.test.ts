@@ -5,10 +5,11 @@ import { declarations, readUiCss } from './test-utils'
 const css = readUiCss('PageHeader.css')
 
 describe('PageHeader.css, titles break between words (SF1)', () => {
-  it('the title never breaks inside a word unless that one word cannot fit: break-word, not anywhere', () => {
+  it('the title wraps at word boundaries only (DS-A system.md §10: no anywhere, no break-word, no hyphens)', () => {
     const d = declarations(css, '.page-header__title')
-    expect(d['overflow-wrap']).toBe('break-word')
-    expect(d['word-break'] ?? 'normal').not.toBe('break-all')
+    expect(d['overflow-wrap'] ?? 'normal').toBe('normal')
+    expect(d['word-break'] ?? 'normal').toBe('normal')
+    expect(d['hyphens'] ?? 'manual').toBe('manual')
   })
 
   it('the row wraps, so the actions drop below a title that cannot keep a readable width', () => {
