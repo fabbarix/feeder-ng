@@ -375,10 +375,10 @@ _Note_: a row of the Scanned list with no Price says **Add price**; the total le
 **Receipt**:
 The paper (or printed) record a Shop gives at the till, listing what was bought and what it cost. Feeder reads it to correct a Scanned list's Prices, weights and quantities; it does not keep it.
 _Avoid_: Bill, till slip, invoice, ticket, scontrino
-_Note_: "Read the receipt" is the action, as "Read" is for the Recipe Assistant. The photos of it are not a **Photo** (a Recipe's, Step's or Member's picture) and are never stored. A **Scanned list** is what was scanned; a Receipt is what was charged.
+_Note_: "Read the receipt" is the action, as "Read" is for the Recipe Assistant. The photos of it are neither a **Photo** (a Recipe's, Step's or Member's picture) nor a **Picture** (an Ingredient's or Product's), and are never stored. A **Scanned list** is what was scanned; a Receipt is what was charged.
 
 **Receipt review**:
-The screen after a Receipt is read, listing the changes the assistant proposes to the Scanned list (Prices, weights, quantities, corrections to a Product, lines not scanned, rows not on the Receipt) as rows the User checks. Nothing changes until the User applies the checked ones.
+The screen after a Receipt is read, listing the changes the assistant proposes to the Scanned list (the Shop and date, Prices, weights, quantities, corrections to a Product, lines not scanned, rows not on the Receipt) as rows the User checks. Nothing changes until the User applies the checked ones.
 _Avoid_: Receipt import, receipt check, receipt confirmation
 _Note_: not **Import Review**, which is for Recipes read from a file or photos.
 
