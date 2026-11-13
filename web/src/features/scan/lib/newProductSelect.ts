@@ -54,9 +54,12 @@ export function unitChoices(base: BaseUnit) {
   return { baseUnit: base, conversions: [], globalUnits: unitOptions(base) }
 }
 
-/** The text a NumberField keeps for a number: a comma is the decimal point ("1,5"), as the User types it. */
+/**
+ * The text the form keeps for a NumberField's number: a dot decimal ("1.5"), as the pack chips keep theirs ("1.5" kg). The NumberField
+ * already parsed what the User typed (a comma included); toUnknownOp turns this text into the Op's number in Base Units.
+ */
 export function numberText(n: number | null): string {
-  return n === null ? '' : String(n).replace('.', ',')
+  return n === null ? '' : String(n)
 }
 
 /** The number a NumberField shows for the text kept ("" = nothing). */
