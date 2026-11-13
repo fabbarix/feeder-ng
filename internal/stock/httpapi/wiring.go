@@ -31,6 +31,7 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (service.Ing
 		ShelfLifeDays:       ing.ShelfLifeDays,
 		FrozenShelfLifeDays: ing.FrozenShelfLifeDays,
 		ImageURL:            images.URL(ing.Image),
+		Supply:              ing.IsSupply(),
 	}, nil
 }
 

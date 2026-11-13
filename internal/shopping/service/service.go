@@ -57,6 +57,8 @@ type Products interface {
 // Ingredients resolves names and Base Units; an unknown id is absent from the map.
 type Ingredients interface {
 	Info(ctx context.Context, ids []int64) (map[int64]shopping.IngredientInfo, error)
+	// RestockSupplies returns every Supply that has a Restock level (Supply true, RestockLevel set), by id (H4).
+	RestockSupplies(ctx context.Context) (map[int64]shopping.IngredientInfo, error)
 }
 
 // Household supplies the household date, the Planning Horizon and the currency.
@@ -205,9 +207,17 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	if err != nil {
 		return shopping.Input{}, err
 	}
+	restock, err := s.ports.Ingredients.RestockSupplies(ctx)
+	if err != nil {
+		return shopping.Input{}, err
+	}
 	ids := map[int64]bool{}
 	for _, m := range meals {
 		needIDs(ids, m.Needs)
+	}
+	// A Restock Line is a Line of its Supply: its Packs and Prices are looked up like any other (H4).
+	for ing := range restock {
+		ids[ing] = true
 	}
 	for _, e := range extras {
 		if e.IngredientID != 0 {
@@ -227,6 +237,9 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	info, err := s.ports.Ingredients.Info(ctx, idList)
 	if err != nil {
 		return shopping.Input{}, err
+	}
+	for ing, v := range restock {
+		info[ing] = v
 	}
 	packs, err := s.ports.Products.LastBought(ctx, idList, shopID)
 	if err != nil {
@@ -478,6 +491,7 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 			return shopping.ExtraLine{}, err
 		}
 		line.Name, line.BaseUnit, line.ImageURL = info[e.IngredientID].Name, info[e.IngredientID].BaseUnit, info[e.IngredientID].ImageURL
+		line.Supply = info[e.IngredientID].Supply
 		line.Quantity = e.Quantity - e.Got
 		if line.Quantity < 0 {
 			line.Quantity = 0

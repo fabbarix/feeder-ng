@@ -69,6 +69,8 @@ type lotJSON struct {
 	// ShelfLifeDays is the Shelf Life that applies where the Lot is (the frozen one in a Freezer); null = it does not
 	// spoil there. The Edit sheet suggests Good until from it.
 	ShelfLifeDays *int `json:"shelfLifeDays"`
+	// Kind is the Ingredient's kind: "food" or "supply" (H4).
+	Kind string `json:"kind"`
 }
 
 func lotToJSON(v service.LotView) lotJSON {
@@ -87,6 +89,7 @@ func lotToJSON(v service.LotView) lotJSON {
 		StoragePlaceID:     v.StoragePlaceID,
 		IngredientImageURL: v.IngredientImageURL,
 		ShelfLifeDays:      v.ShelfLifeDays,
+		Kind:               v.Kind,
 	}
 	if !v.GoesOff.IsNone() {
 		g := string(v.GoesOff)
@@ -113,6 +116,7 @@ type ingredientStockJSON struct {
 	UseSoon      bool    `json:"useSoon"`
 	SpoiledCount int     `json:"spoiledCount"`
 	ImageURL     string  `json:"imageUrl"` // PE: always sent, "" without a Picture
+	Kind         string  `json:"kind"`     // H4: "food" or "supply"
 }
 
 func ingredientStockToJSON(s service.IngredientStock) ingredientStockJSON {
@@ -125,6 +129,7 @@ func ingredientStockToJSON(s service.IngredientStock) ingredientStockJSON {
 		UseSoon:      s.UseSoon,
 		SpoiledCount: s.SpoiledCount,
 		ImageURL:     s.ImageURL,
+		Kind:         s.Kind,
 	}
 	if !s.NextGoesOff.IsNone() {
 		g := string(s.NextGoesOff)

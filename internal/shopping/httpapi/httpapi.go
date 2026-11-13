@@ -56,6 +56,13 @@ type lineJSON struct {
 	Pack               *packJSON      `json:"pack"`
 	EstimatedCostCents *int           `json:"estimatedCostCents"`
 	PastPlannedMeals   []pastMealJSON `json:"pastPlannedMeals"` // B5-SH: always sent, [] when none
+	Kind               string         `json:"kind"`             // H4: "food" or "supply"
+	Restock            *restockJSON   `json:"restock"`          // H4: a Restock Line's level and Stock; null otherwise
+}
+
+type restockJSON struct {
+	Level float64 `json:"level"`
+	Stock float64 `json:"stock"`
 }
 
 type pastMealJSON struct {
@@ -72,8 +79,17 @@ type extraJSON struct {
 	Name         *string  `json:"name"`
 	BaseUnit     *string  `json:"baseUnit"`
 	ImageURL     string   `json:"imageUrl"` // PE: always sent, "" for free text or without a Picture
+	Kind         *string  `json:"kind"`     // H4: "food" or "supply" for an Ingredient extra, null for free text
 	Quantity     *float64 `json:"quantity"`
 	Ticked       bool     `json:"ticked"`
+}
+
+// kindName is the JSON kind of an Ingredient line: "supply" for a Supply, else "food".
+func kindName(supply bool) string {
+	if supply {
+		return "supply"
+	}
+	return "food"
 }
 
 type listJSON struct {
@@ -113,7 +129,11 @@ type tickJSON struct {
 
 func lineToJSON(l shopping.Line) lineJSON {
 	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, ImageURL: l.ImageURL, Need: l.Need, Available: l.Available,
-		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents, PastPlannedMeals: []pastMealJSON{}}
+		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents, PastPlannedMeals: []pastMealJSON{},
+		Kind: kindName(l.Supply)}
+	if l.Restock != nil {
+		out.Restock = &restockJSON{Level: l.Restock.Level, Stock: l.Restock.Stock}
+	}
 	for _, p := range l.PastPlannedMeals {
 		out.PastPlannedMeals = append(out.PastPlannedMeals, pastMealJSON{Date: string(p.Date), MealSlotID: p.MealSlotID,
 			MealSlotName: p.MealSlotName, CourseName: p.CourseName})
@@ -127,8 +147,8 @@ func lineToJSON(l shopping.Line) lineJSON {
 func extraToJSON(e shopping.ExtraLine) extraJSON {
 	out := extraJSON{ID: e.ID, Ticked: e.Ticked, ImageURL: e.ImageURL}
 	if e.IngredientID != 0 {
-		id, name, unit, qty := e.IngredientID, e.Name, e.BaseUnit, e.Quantity
-		out.IngredientID, out.Name, out.BaseUnit, out.Quantity = &id, &name, &unit, &qty
+		id, name, unit, qty, kind := e.IngredientID, e.Name, e.BaseUnit, e.Quantity, kindName(e.Supply)
+		out.IngredientID, out.Name, out.BaseUnit, out.Quantity, out.Kind = &id, &name, &unit, &qty, &kind
 	} else {
 		text := e.Text
 		out.Text = &text

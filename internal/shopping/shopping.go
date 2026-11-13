@@ -62,7 +62,9 @@ type Meal struct {
 // IngredientInfo is what a Line shows about its Ingredient.
 type IngredientInfo struct {
 	Name, BaseUnit string
-	ImageURL       string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
+	ImageURL       string   // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
+	Supply         bool     // a Supply (ADR 0017): not food, so a Restock level may apply to it
+	RestockLevel   *float64 // a Supply's Restock level in Base Units; nil = none. Food never has one (decision D3)
 }
 
 // Pack is the pack size (Base Units) of the Product last bought for an Ingredient.
@@ -128,14 +130,22 @@ type PackSuggestion struct {
 	Remainder float64
 }
 
+// RestockInfo says why a Restock Line is on the list: the Restock level and the Stock it was compared with.
+type RestockInfo struct {
+	Level, Stock float64
+}
+
 // Line is one Ingredient line of the Shopping List. Quantity is what is still to buy (0 for a tick-only line).
+// A Restock Line (Restock set, Supply true) is a Supply below its Restock level (ADR 0017, decision D2).
 type Line struct {
 	IngredientID       int64
 	Name, BaseUnit     string
 	ImageURL           string
+	Supply             bool
 	Need, Available    float64
 	Quantity           float64
 	Ticked             bool
+	Restock            *RestockInfo
 	Pack               *PackSuggestion
 	EstimatedCostCents *int
 	// PastPlannedMeals are the uncooked meals of slots already past that this Line's need includes (date, slot, Course order).
@@ -149,6 +159,7 @@ type ExtraLine struct {
 	IngredientID   int64
 	Name, BaseUnit string
 	ImageURL       string
+	Supply         bool
 	Quantity       float64
 	Ticked         bool
 }
@@ -175,6 +186,7 @@ const eps = 1e-9
 func Derive(in Input) List {
 	out := List{From: in.From, To: in.To}
 	lines := derivedLines(in)
+	restockLines(in, lines)
 	ticked := map[int64]bool{}
 	for ing, t := range in.Ticks {
 		ticked[ing] = true
@@ -183,7 +195,8 @@ func Derive(in Input) List {
 		}
 		// Covered by Stock (or by this range's scans) and kept as ticked.
 		info := in.Ingredients[ing]
-		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: t.Needed, Available: t.Needed}
+		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: info.Supply,
+			Need: t.Needed, Available: t.Needed}
 	}
 	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is.
 	for ing := range in.NotNeeded {
@@ -336,19 +349,65 @@ func derivedLines(in Input) map[int64]Line {
 			continue
 		}
 		info := in.Ingredients[ing]
-		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Need: total, Available: total - quantity, Quantity: quantity,
-			PastPlannedMeals: pastFor[ing]}
-		if p, ok := in.Packs[ing]; ok {
-			s := SuggestPack(quantity, p)
-			line.Pack = &s
-			if price, ok := in.PackPrices[p.ProductID]; ok {
-				c := s.Count * price
-				line.EstimatedCostCents = &c
-			}
-		}
+		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: info.Supply,
+			Need: total, Available: total - quantity, Quantity: quantity, PastPlannedMeals: pastFor[ing]}
+		priceLine(&line, in, ing, quantity)
 		out[ing] = line
 	}
 	return out
+}
+
+// priceLine gives a Line the pack suggestion for quantity and, with a Price for that pack, its estimated cost.
+func priceLine(line *Line, in Input, ing int64, quantity float64) {
+	if p, ok := in.Packs[ing]; ok {
+		s := SuggestPack(quantity, p)
+		line.Pack = &s
+		if price, ok := in.PackPrices[p.ProductID]; ok {
+			c := s.Count * price
+			line.EstimatedCostCents = &c
+		}
+	}
+}
+
+// Restock is what a Supply still needs to reach its Restock level: level less Stock when Stock is below it, else 0.
+// A difference within eps is no shortfall (float noise at the level).
+func Restock(level, have float64) float64 {
+	d := level - have
+	if d <= eps {
+		return 0
+	}
+	return d
+}
+
+// restockLines adds a Restock Line for each Supply with a Restock level whose Stock (the sum of its Lots) is below it.
+// It ignores the plan and the range: a Supply's Stock does not move with the Planned Meals. A Line the plan already has
+// is left alone (a Supply is never a Recipe's Ingredient, so this does not happen in practice). A food Ingredient with
+// a stray level is ignored.
+func restockLines(in Input, lines map[int64]Line) {
+	var stocks map[int64]float64
+	for ing, info := range in.Ingredients {
+		if !info.Supply || info.RestockLevel == nil {
+			continue
+		}
+		if _, ok := lines[ing]; ok {
+			continue
+		}
+		if stocks == nil {
+			stocks = map[int64]float64{}
+			for _, l := range in.Lots {
+				stocks[l.IngredientID] += l.Quantity
+			}
+		}
+		level, have := *info.RestockLevel, stocks[ing]
+		q := Restock(level, have)
+		if q <= eps {
+			continue
+		}
+		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: true,
+			Need: level, Available: have, Quantity: q, Restock: &RestockInfo{Level: level, Stock: have}}
+		priceLine(&line, in, ing, q)
+		lines[ing] = line
+	}
 }
 
 // drawDate is the day a meal's Stock is taken on: its own date, or the first day of the range for an earlier meal.
@@ -395,7 +454,7 @@ func extraLines(extras []Extra, ings map[int64]IngredientInfo) []ExtraLine {
 		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked}
 		if e.IngredientID != 0 {
 			info := ings[e.IngredientID]
-			l.Name, l.BaseUnit, l.ImageURL = info.Name, info.BaseUnit, info.ImageURL
+			l.Name, l.BaseUnit, l.ImageURL, l.Supply = info.Name, info.BaseUnit, info.ImageURL, info.Supply
 			l.Quantity = math.Max(0, e.Quantity-e.Got)
 		}
 		out = append(out, l)
@@ -403,12 +462,13 @@ func extraLines(extras []Extra, ings map[int64]IngredientInfo) []ExtraLine {
 	return out
 }
 
-// sortLines puts open Lines first, then ticked ones, each by name (case-insensitive) then id.
+// sortLines puts open food Lines, then open Supply Lines, then ticked food, then ticked Supplies; each group by name
+// (case-insensitive) then id.
 func sortLines(lines []Line) {
 	sort.SliceStable(lines, func(i, j int) bool {
 		a, b := lines[i], lines[j]
-		if a.Ticked != b.Ticked {
-			return !a.Ticked
+		if ra, rb := lineRank(a), lineRank(b); ra != rb {
+			return ra < rb
 		}
 		na, nb := strings.ToLower(a.Name), strings.ToLower(b.Name)
 		if na != nb {
@@ -416,6 +476,18 @@ func sortLines(lines []Line) {
 		}
 		return a.IngredientID < b.IngredientID
 	})
+}
+
+// lineRank orders Lines: open food 0, open Supplies 1, ticked food 2, ticked Supplies 3.
+func lineRank(l Line) int {
+	rank := 0
+	if l.Ticked {
+		rank += 2
+	}
+	if l.Supply {
+		rank++
+	}
+	return rank
 }
 
 // LineFor returns the Ingredient Line for an Ingredient (ticked or not).

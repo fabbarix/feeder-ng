@@ -13,6 +13,7 @@ import (
 	household "github.com/fabbarix/feeder-ng/internal/household"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
@@ -101,7 +102,8 @@ func (l stockIngredients) Ingredient(ctx context.Context, id int64) (stockservic
 	if err != nil {
 		return stockservice.IngredientInfo{}, err
 	}
-	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays, FrozenShelfLifeDays: ing.FrozenShelfLifeDays}, nil
+	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays,
+		FrozenShelfLifeDays: ing.FrozenShelfLifeDays, Supply: ing.IsSupply()}, nil
 }
 
 // NewService builds the Shopping List service over the real adapters. The Scan module shares it.
@@ -279,9 +281,29 @@ func (i ingredients) Info(ctx context.Context, ids []int64) (map[int64]shopping.
 		if err != nil {
 			return nil, err
 		}
-		out[id] = shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base), ImageURL: images.URL(ing.Image)}
+		out[id] = infoOf(ing)
 	}
 	return out, nil
+}
+
+// RestockSupplies returns the Supplies that have a Restock level (H4), by id.
+func (i ingredients) RestockSupplies(ctx context.Context) (map[int64]shopping.IngredientInfo, error) {
+	list, err := i.st.RestockSupplies(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]shopping.IngredientInfo, len(list))
+	for _, ing := range list {
+		out[ing.ID] = infoOf(ing)
+	}
+	return out, nil
+}
+
+// infoOf is what the Shopping List shows of an Ingredient: its name, Base Unit, Picture and, for a Supply, its kind
+// and Restock level (H4).
+func infoOf(ing ingredient.Ingredient) shopping.IngredientInfo {
+	return shopping.IngredientInfo{Name: ing.Name, BaseUnit: string(ing.Base), ImageURL: images.URL(ing.Image),
+		Supply: ing.IsSupply(), RestockLevel: ing.RestockLevel}
 }
 
 // Compile-time checks that the adapters satisfy the ports.

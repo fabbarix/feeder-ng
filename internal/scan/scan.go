@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 )
 
 // Kind is the operation kind.
@@ -46,6 +47,8 @@ type IngredientRef struct {
 	ID       int64  `json:"id,omitempty"`
 	Name     string `json:"name,omitempty"`
 	BaseUnit string `json:"baseUnit,omitempty"`
+	// Kind is "food" or "supply" for a new Ingredient (H4); empty means food. An existing Ingredient keeps its own kind.
+	Kind string `json:"kind,omitempty"`
 }
 
 // Op is one operation from the phone. ClientUUID is the idempotency key; ScannedAt (RFC 3339) the phone's timestamp.
@@ -215,6 +218,11 @@ func (o Op) validateNewProductDetails() error {
 	if o.Ingredient == nil {
 		return &ValidationError{Field: "ingredient", Message: "an Ingredient is required"}
 	}
+	if o.Ingredient.Kind != "" {
+		if _, ok := ingredient.ParseKind(o.Ingredient.Kind); !ok {
+			return &ValidationError{Field: "ingredient", Message: "the kind must be food or supply"}
+		}
+	}
 	if o.Ingredient.ID <= 0 {
 		if strings.TrimSpace(o.Ingredient.Name) == "" {
 			return &ValidationError{Field: "ingredient", Message: "an Ingredient needs an id or a name"}
@@ -294,6 +302,7 @@ type Merged struct {
 type Applied struct {
 	IngredientID   int64  `json:"ingredientId"`
 	IngredientName string `json:"ingredientName"`
+	IngredientKind string `json:"ingredientKind"` // H4: "food" or "supply", the kind of the Ingredient
 	BaseUnit       string `json:"baseUnit"`
 	ProductID      int64  `json:"productId"`
 	ProductName    string `json:"productName"`
