@@ -46,6 +46,17 @@ func budget(root map[string]any) []string {
 		}
 		if _, ok := s["type"].([]any); ok {
 			bad = append(bad, path+": a list-valued type is a union")
+		} else if _, ok := s["type"].(string); !ok {
+			bad = append(bad, path+": every schema needs one type (no type is any type)")
+		}
+		// Only these keywords: anything else (minItems, maxItems, minimum, const, not, if, prefixItems, …) can grow the
+		// compiled grammar and needs a deliberate change here and a run of the live test.
+		for k := range s {
+			switch k {
+			case "type", "description", "properties", "required", "additionalProperties", "items", "enum":
+			default:
+				bad = append(bad, path+": the keyword "+k+" is not in the budget")
+			}
 		}
 		if e, ok := s["enum"].([]any); ok {
 			enums++
@@ -163,6 +174,10 @@ func TestBudgetRejectsAUnion(t *testing.T) {
 		"$defs":      `{"type":"object","additionalProperties":false,"required":[],"properties":{},"$defs":{"x":{}}}`,
 		"optional":   `{"type":"object","additionalProperties":false,"required":[],"properties":{"a":{"type":"integer"}}}`,
 		"open":       `{"type":"object","required":["a"],"properties":{"a":{"type":"integer"}}}`,
+		"no type":    `{"type":"object","additionalProperties":false,"required":["a"],"properties":{"a":{"description":"any"}}}`,
+		"maxItems":   `{"type":"object","additionalProperties":false,"required":["l"],"properties":{"l":{"type":"array","maxItems":5,"items":{"type":"string"}}}}`,
+		"minimum":    `{"type":"object","additionalProperties":false,"required":["a"],"properties":{"a":{"type":"integer","minimum":-1}}}`,
+		"const":      `{"type":"object","additionalProperties":false,"required":["a"],"properties":{"a":{"type":"string","const":"x"}}}`,
 		"nested arr": `{"type":"object","additionalProperties":false,"required":["l"],"properties":{"l":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["m"],"properties":{"m":{"type":"array","items":{"type":"string"}}}}}}}`,
 	} {
 		if bad := budget(decodeSchema(t, []byte(s))); len(bad) == 0 {
