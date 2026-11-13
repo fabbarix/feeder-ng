@@ -18,7 +18,23 @@ export const ROUTES = [
 ]
 
 /** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow; P16 (hf-recipes-filter): a crushed chip label. */
-export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16']
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20']
+
+/**
+ * hf-recipes-filter round 2: the filtered /recipes the guard also probes, at every width: the chips of a Side Course and a long Tag,
+ * closed, and with the Filters panel open (docs/design/recipes-filter.md 13.6). The ids file gives the Course and the Tag
+ * (resolveScenario).
+ */
+export const SCENARIOS = [
+  { name: 'recipes-filtered', route: '/recipes', open: false },
+  { name: 'recipes-filtered-open', route: '/recipes', open: true },
+]
+
+/** The URL of a scenario: its route with the Side Course and the long Tag from the ids file. */
+export function resolveScenario(scenario, ids) {
+  const params = new URLSearchParams({ course: String(ids.sideCourseId), tag: String(ids.longTag) })
+  return `${scenario.route}?${params.toString()}`
+}
 
 /** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
@@ -111,6 +127,27 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const c of m.clippedChips ?? []) add('P14', `${c.sel} "${c.label}" is cut by its ellipsis with ${c.room} px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap`)
   // hf-recipes-filter (docs/design/recipes-filter.md 11): a chip whose label is crushed to its dot (fails in every mode, see ALWAYS_FAIL).
   for (const c of m.crushedChips ?? []) add('P16', `${c.sel} "${c.label}" is crushed to ${c.px} px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a "+N"`)
+  // hf-recipes-filter round 2 (docs/design/recipes-filter.md 13.6). P17: the chip line shows a cut chip after its first, or a chip past its end.
+  for (const f of m.fitLines ?? []) {
+    const what = f.why === 'cut' ? `is cut by its ellipsis (${f.px} px of its label) after the first chip` : `runs ${f.px} px past the end of its line`
+    add('P17', `${f.sel} "${f.label}" ${what}; a chip that does not fit goes into "+N", it is never shown cut or past the line`)
+  }
+  // P18: a focus ring (3 px outline, 2 px offset) or a removable chip's 44 px hit area cut by a clipping ancestor.
+  for (const c of m.clippedRings ?? []) add('P18', `${c.sel} "${c.label}": its ${c.what} is cut by a clipping ancestor by ${c.px} px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)`)
+  // P19 (from 768 px): an open popover ends where its trigger ends, and stays inside the page content box.
+  const align = m.popoverAlign
+  if (width >= 768 && align) {
+    if (Math.abs(align.dx) > 1) add('P19', `the open popover's end edge is ${Math.abs(Math.round(align.dx))} px ${align.dx < 0 ? 'inside' : 'past'} its trigger's end edge; end-align it with the trigger`)
+    if (align.right > align.contentR + 1 || align.left < align.contentX - 1) {
+      add('P19', `the open popover leaves the page content box (x ${Math.round(align.left)} to ${Math.round(align.right)}, content ${Math.round(align.contentX)} to ${Math.round(align.contentR)}); keep it inside the page`)
+    }
+  }
+  // P20: row 3 sits one slot gap below row 2, and two panel sections are at least 12 px apart.
+  const spacing = m.filterSpacing
+  if (spacing) {
+    if (spacing.rowGap !== null && spacing.rowGap < spacing.slotGap - 0.5) add('P20', `row 3 sits ${spacing.rowGap} px below row 2; it must sit one slot gap (${spacing.slotGap} px) below it`)
+    if (spacing.sectionGap !== null && spacing.sectionGap < 12) add('P20', `two panel sections are ${spacing.sectionGap} px apart; space them at least 12 px`)
+  }
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {

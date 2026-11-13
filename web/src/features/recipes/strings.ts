@@ -26,9 +26,14 @@ export const recipeStrings = {
     tagListLabel: 'Filter by Tag',
     tagSearch: 'Search Tags',
     clear: 'Clear filters',
-    close: 'Close',
+    showRecipes: 'Show Recipes',
     activeLabel: 'Active filters',
     moreLabel: (n: number) => (n === 1 ? 'Show 1 more filter' : `Show ${n} more filters`),
+    removeCourse: (name: string) => `Remove Course: ${name}`,
+    removeTag: (name: string) => `Remove Tag: ${name}`,
+    buttonLabel: (count: number) => (count === 0 ? 'Filters' : `Filters, ${count} active`),
+    noTagMatch: (query: string) => `No Tag matches '${query}'`,
+    noTags: 'No Tag to choose from',
   },
   /** Beta.5 F7: "Last cooked ..." on a tile, a row and the detail (lib/lastCooked). */
   cookedLabel: {

@@ -1,6 +1,7 @@
 // hf-recipes-filter: the search and the rows of the Tag list in the Filters panel (docs/design/recipes-filter.md 5.5, 6).
 import { useState } from 'react'
-import { tagFilterRows, type TagFilterRow } from '../lib/recipeFilters'
+import { tagFilterRows, type TagFilterRow } from '../lib/tagRows'
+import { recipeStrings } from '../strings'
 import type { TagCount } from '../types'
 
 export interface UseTagFilterSearch {
@@ -16,6 +17,6 @@ export function useTagFilterSearch(known: readonly TagCount[], selected: string,
   const rows = tagFilterRows(known, selected, query, colourOf)
   const typed = query.trim()
   let emptyText: string | null = null
-  if (rows.length === 0) emptyText = typed !== '' ? `No Tag matches '${typed}'` : 'No Tag to choose from'
+  if (rows.length === 0) emptyText = typed !== '' ? recipeStrings.filters.noTagMatch(typed) : recipeStrings.filters.noTags
   return { query, setQuery, rows, emptyText }
 }

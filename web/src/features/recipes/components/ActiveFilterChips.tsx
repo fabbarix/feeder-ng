@@ -1,19 +1,38 @@
 // hf-recipes-filter: the line of active filter chips under the header rows: removable chips, and "+N" for those that do not fit
-// (docs/design/recipes-filter.md 4, 5.4, 8). The chips are measured in a hidden copy of the line, so every chip has a width
-// whether it shows or not.
+// (docs/design/recipes-filter.md 4, 5.4, 8, 13.1). While some chips are hidden, a copy of the line holds every real removable chip,
+// inert and hidden, laid out at its natural width, so each chip is measured at its natural width whether it shows or not.
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Chip } from '../../../ui'
 import { measureChipLine, useFittingChips, type ChipLineMetrics } from '../hooks/useFittingChips'
 import type { ActiveFilterChip } from '../lib/recipeFilters'
 import { recipeStrings } from '../strings'
 
-/** A removable chip is measured without its close icon: its 14 px icon and the 6 px gap before it. */
-const REMOVE_ALLOWANCE = 20
-
-function measureRemovable(el: HTMLElement): ChipLineMetrics {
-  const m = measureChipLine(el)
-  return { ...m, widths: m.widths.map((w) => (w > 0 ? w + REMOVE_ALLOWANCE : 0)) }
+/**
+ * The natural width of each chip of a line, in order: its box, plus any part of its label the ellipsis cut (a shrunk chip's label
+ * is narrower than its text, so the difference is measured back in).
+ */
+function naturalWidth(chip: HTMLElement): number {
+  const label = chip.querySelector<HTMLElement>('.chip__label')
+  const cut = label ? label.scrollWidth - label.clientWidth : 0
+  return chip.getBoundingClientRect().width + Math.max(0, cut)
 }
+
+/** The line's metrics: the copy's chips while some are hidden (every chip is in it), else the shown chips, which are all there. */
+function measureChips(line: HTMLElement): ChipLineMetrics {
+  if (line.clientWidth === 0) return measureChipLine(line)
+  const copy = line.querySelector<HTMLElement>(':scope > .recipe-filters__measure')
+  const source = copy ?? line
+  const chips = [...source.querySelectorAll<HTMLElement>(':scope > .chip')]
+  const more = source.querySelector<HTMLElement>(':scope > .recipe-filters__more')
+  return {
+    available: line.clientWidth,
+    widths: chips.map(naturalWidth),
+    gap: parseFloat(getComputedStyle(line).columnGap) || 0,
+    plusWidth: more ? more.getBoundingClientRect().width : 0,
+  }
+}
+
+const noop = () => {}
 
 export interface ActiveFilterChipsProps {
   chips: ActiveFilterChip[]
@@ -26,8 +45,7 @@ export interface ActiveFilterChipsProps {
 
 export function ActiveFilterChips({ chips, onRemove, onMore, fallbackFocus }: ActiveFilterChipsProps): ReactNode {
   const line = useRef<HTMLDivElement>(null)
-  const measure = useRef<HTMLDivElement>(null)
-  const { visible, hidden } = useFittingChips(measure, chips.length, measureRemovable)
+  const { visible, hidden } = useFittingChips(line, chips.length, measureChips)
   // Removing a chip moves focus to the chip that takes its place (or the "+N", or the Filters button when none is left).
   const focusIndex = useRef<number | null>(null)
   useLayoutEffect(() => {
@@ -63,16 +81,18 @@ export function ActiveFilterChips({ chips, onRemove, onMore, fallbackFocus }: Ac
           </Chip>
         </span>
       ) : null}
-      <div ref={measure} className="recipe-filters__measure" aria-hidden="true">
-        {chips.map((chip) => (
-          <Chip key={chip.key} kind="tag" tagColour={chip.tagColour}>
-            {chip.label}
-          </Chip>
-        ))}
-        <span className="recipe-filters__more">
-          <Chip kind="count">+{chips.length}</Chip>
-        </span>
-      </div>
+      {hidden > 0 ? (
+        <div className="recipe-filters__measure" aria-hidden="true" inert>
+          {chips.map((chip) => (
+            <Chip key={chip.key} kind="tag" tagColour={chip.tagColour} removeLabel={chip.removeLabel} onRemove={noop}>
+              {chip.label}
+            </Chip>
+          ))}
+          <span className="recipe-filters__more">
+            <Chip kind="count">+{chips.length}</Chip>
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }

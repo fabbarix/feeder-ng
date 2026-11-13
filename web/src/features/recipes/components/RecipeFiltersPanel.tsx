@@ -1,4 +1,4 @@
-// hf-recipes-filter: the Filters panel: Course and Tag, then Clear filters and Done (docs/design/recipes-filter.md 4, 5, 8, 9).
+// hf-recipes-filter: the Filters panel: Course and Tag, then Clear filters and Show Recipes (docs/design/recipes-filter.md 4, 5, 8, 9).
 // A popover from 768 px and a bottom sheet below it, both from the shared Popover.
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
@@ -29,12 +29,12 @@ export interface RecipeFiltersPanelProps {
 
 export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, courses, course, onCourse, known, tag, colourOf, onTag, count, onClear }: RecipeFiltersPanelProps): ReactNode {
   const clear = useRef<HTMLButtonElement>(null)
-  const done = useRef<HTMLButtonElement>(null)
-  // Clear filters turns off once it has nothing to clear: its focus moves to Done.
+  const showRecipes = useRef<HTMLButtonElement>(null)
+  // Clear filters turns off once it has nothing to clear: its focus moves to Show Recipes.
   useEffect(() => {
     if (!open || count > 0) return
     const active = document.activeElement
-    if (active === clear.current || active === document.body || active === null) done.current?.focus()
+    if (active === clear.current || active === document.body || active === null) showRecipes.current?.focus()
   }, [count, open])
 
   return (
@@ -50,12 +50,13 @@ export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, course
           <Button ref={clear} variant="tertiary" size="sm" disabled={count === 0} onClick={onClear}>
             {recipeStrings.filters.clear}
           </Button>
-          <Button ref={done} variant="secondary" size="sm" onClick={onClose}>
-            {recipeStrings.filters.close}
+          <Button ref={showRecipes} variant="secondary" size="sm" onClick={onClose}>
+            {recipeStrings.filters.showRecipes}
           </Button>
         </>
       }
     >
+      <div className="recipe-filters__body">
       {bases || courses.length < 2 ? null : (
         <section className="recipe-filters__section">
           <h3 className="recipe-filters__heading">{recipeStrings.filters.courseHeading}</h3>
@@ -68,6 +69,7 @@ export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, course
           <TagFilterList known={known} selected={tag} colourOf={colourOf} onSelect={onTag} />
         </div>
       </section>
+      </div>
     </Popover>
   )
 }

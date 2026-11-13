@@ -125,11 +125,14 @@
   list-style: none;
 }
 
-/* hf-recipes-filter: the Course group of the Filters panel is one line; it scrolls sideways and its chips keep their width. */
+/* The Course group of the Filters panel is one line; it scrolls sideways, so it is padded by a token on both axes (the focus ring of
+   its chips is 5 px) with the matching negative margin, and its chips keep their width. */
 .course-filter {
   display: flex;
   flex-wrap: nowrap;
   gap: var(--space-2);
+  padding: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -194,27 +197,33 @@
   min-inline-size: 0;
 }
 
-/* Row 3: the active filter chips, one line; what does not fit is "+N". A chip keeps room for four characters and its close icon. */
+/* Row 3: the active filter chips, one line; what does not fit is "+N". A chip keeps room for four characters and its close icon.
+   The line does not clip: a chip's focus ring and its 44 px hit area reach past its box (hf-recipes-filter round 2). */
 .recipe-filters__chips {
   position: relative;
-  overflow: hidden;
 }
 
-.recipe-filters__chips > .chip,
-.recipe-filters__measure > .chip {
+.recipe-filters__chips > .chip {
   flex: 0 1 auto;
   min-inline-size: 4.5rem;
+}
+
+/* Row 3 sits one slot gap below row 2 at every width (the ListPage gap). */
+.recipes-screen .list-page__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
 }
 
 .recipe-filters__more {
   flex: none;
 }
 
-/* The hidden copy of the chip line that measures every chip, shown or not (useFittingChips). */
+/* The hidden copy of the chip line that measures every chip at its natural width, shown or not (useFittingChips). It is as wide
+   as its content and its chips never shrink. Fixed, so it is not part of the line's or the page's scrollable overflow. */
 .recipe-filters__measure {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
+  position: fixed;
+  inline-size: max-content;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -223,9 +232,23 @@
   pointer-events: none;
 }
 
+.recipe-filters__measure > .chip {
+  flex: none;
+}
+
 /* The Filters panel: 24 rem at most, never wider than the screen; its Tag list scrolls inside a capped height. */
 .recipe-filters__panel {
   inline-size: min(24rem, 100vw - 2 * var(--space-4));
+}
+
+/* The panel's sections are spaced by its own body (the bottom sheet has no .popover__body). */
+.recipe-filters__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  /* The bottom sheet clips its body at its edge: this keeps the Course line's focus ring inside it. */
+  padding-inline: var(--space-2);
 }
 
 .recipe-filters__section {

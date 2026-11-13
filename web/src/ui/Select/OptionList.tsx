@@ -1,6 +1,6 @@
 // hf-recipes-filter: OptionList, an always-open searchable listbox: the panel of Select without its trigger (docs/design/recipes-filter.md
 // 7.2). The caller filters and orders the options it passes; OptionList renders them and wires the keys.
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '../Icon'
 import { SearchField } from '../fields/SearchField'
 import { firstEnabledIndex, nextEnabledIndex, type SelectOption } from './lib'
@@ -29,6 +29,13 @@ export function OptionList<V extends string | number>({ label, searchLabel, quer
   const [active, setActive] = useState(-1)
   const search = useRef<HTMLInputElement>(null)
   const activeId = active >= 0 && active < options.length ? optionId(active) : undefined
+
+  // The active option scrolls into view whenever it changes (the list is capped and scrolls inside).
+  useEffect(() => {
+    if (active < 0) return
+    document.getElementById(optionId(active))?.scrollIntoView?.({ block: 'nearest' })
+    // optionId is stable for this list (it depends only on baseId), so only the active index drives the scroll.
+  }, [active])
 
   const pick = (index: number) => {
     const option = options[index]
@@ -67,6 +74,7 @@ export function OptionList<V extends string | number>({ label, searchLabel, quer
         ref={search}
         role="combobox"
         label={searchLabel}
+        placeholder={searchLabel}
         value={query}
         onChange={(next) => {
           onQueryChange(next)

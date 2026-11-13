@@ -19,7 +19,13 @@ export function floatingPopoverAttr(): 'manual' | undefined {
  * panel's own display: the UA hides every [popover] that is not :popover-open, so the shown element sets it inline (the
  * browser's own :popover-open rule does the same; engines without it, and jsdom, need this).
  */
-export function useFloatingPopover(open: boolean, anchor: RefObject<HTMLElement | null>, popover: RefObject<HTMLElement | null>, display: 'block' | 'flex' = 'block'): void {
+export function useFloatingPopover(
+  open: boolean,
+  anchor: RefObject<HTMLElement | null>,
+  popover: RefObject<HTMLElement | null>,
+  display: 'block' | 'flex' = 'block',
+  placement: Pick<PlaceOptions, 'align' | 'margin'> = {},
+): void {
   // Show in the top layer; hide on close. The element is captured now because it is removed from the DOM on close.
   useLayoutEffect(() => {
     const el = popover.current as PopoverEl | null
@@ -44,12 +50,12 @@ export function useFloatingPopover(open: boolean, anchor: RefObject<HTMLElement 
 
   // Place after every render while open (the list can change size as the User types or filters).
   useLayoutEffect(() => {
-    if (open) place(anchor.current, popover.current)
+    if (open) place(anchor.current, popover.current, placement)
   })
 
   useEffect(() => {
     if (!open) return
-    const onMove = () => place(anchor.current, popover.current)
+    const onMove = () => place(anchor.current, popover.current, placement)
     window.addEventListener('scroll', onMove, { capture: true, passive: true })
     window.addEventListener('resize', onMove)
     return () => {
@@ -65,14 +71,16 @@ export function useFloatingPopover(open: boolean, anchor: RefObject<HTMLElement 
     const dialog = anchor.current?.closest('dialog')
     if (!dialog) return
     const onAnimationEnd = (e: Event) => {
-      if (e.target === dialog) place(anchor.current, popover.current)
+      if (e.target === dialog) place(anchor.current, popover.current, placement)
     }
     dialog.addEventListener('animationend', onAnimationEnd)
     return () => dialog.removeEventListener('animationend', onAnimationEnd)
   }, [open, anchor, popover])
 }
 
-function place(anchorEl: HTMLElement | null, el: HTMLElement | null): void {
+type PlaceOptions = { align?: 'start' | 'end'; margin?: number }
+
+function place(anchorEl: HTMLElement | null, el: HTMLElement | null, options: PlaceOptions): void {
   if (!anchorEl || !el) return
   // Measure at natural height: a previous cap must not shrink the measurement.
   el.style.maxHeight = ''
@@ -82,6 +90,7 @@ function place(anchorEl: HTMLElement | null, el: HTMLElement | null): void {
     anchor: { top: a.top, left: a.left, right: a.right, bottom: a.bottom },
     size: { width: p.width, height: p.height },
     viewport: { width: window.innerWidth, height: window.innerHeight },
+    ...options,
   })
   el.style.position = 'fixed'
   el.style.top = `${placed.top}px`

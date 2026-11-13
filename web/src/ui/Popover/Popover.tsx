@@ -43,7 +43,8 @@ type FloatingProps = Omit<PopoverProps, 'open'>
 function FloatingPopover({ onClose, anchorRef, title, className, id, children, footer }: FloatingProps) {
   const panel = useRef<HTMLDivElement>(null)
   const titleId = useId()
-  useFloatingPopover(true, anchorRef, panel, 'flex')
+  // The end edge lines up with the trigger's end edge, kept 16 px (--space-4) inside the viewport.
+  useFloatingPopover(true, anchorRef, panel, 'flex', { align: 'end', margin: 16 })
 
   // Opening puts focus on the first control of the body.
   useEffect(() => {
@@ -71,7 +72,7 @@ function FloatingPopover({ onClose, anchorRef, title, className, id, children, f
     }
   }, [anchorRef, onClose])
 
-  // Closed by one of its own controls (Done, Clear): focus that was inside, or lost with the removed panel, goes back to the trigger.
+  // Closed by one of its own controls (Show Recipes, Clear): focus that was inside, or lost with the removed panel, goes back to the trigger.
   useEffect(() => {
     const el = panel.current
     return () => {

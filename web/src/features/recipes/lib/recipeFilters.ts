@@ -2,6 +2,7 @@
 import type { CourseChoice } from '../../../lib/courses'
 import { kindFromParams } from './baseRecipe'
 import { tagKey } from './keys'
+import { recipeStrings } from '../strings'
 import type { RecipeKind, TagCount } from '../types'
 
 export interface RecipeFilterState {
@@ -63,60 +64,24 @@ export function activeFilterChips(state: RecipeFilterState, ctx: ActiveFilterChi
   const chips: ActiveFilterChip[] = []
   if (state.kind === 'plannable' && state.course !== null) {
     const course = ctx.courses.find((c) => c.id === state.course)
-    if (course) chips.push({ key: 'course', label: course.name, removeLabel: `Remove Course: ${course.name}` })
+    if (course) chips.push({ key: 'course', label: course.name, removeLabel: recipeStrings.filters.removeCourse(course.name) })
   }
   const tag = state.tag.trim()
   if (tag !== '') {
     const key = tagKey(tag)
     const label = ctx.known.find((t) => tagKey(t.name) === key)?.name ?? tag
     const colour = ctx.colourOf?.(label)
-    chips.push({ key: 'tag', label, removeLabel: `Remove Tag: ${label}`, ...(colour ? { tagColour: colour } : {}) })
+    chips.push({ key: 'tag', label, removeLabel: recipeStrings.filters.removeTag(label), ...(colour ? { tagColour: colour } : {}) })
   }
   return chips
 }
 
 /** The accessible name of the Filters button: "Filters", or "Filters, 2 active". */
 export function filtersButtonLabel(count: number): string {
-  return count === 0 ? 'Filters' : `Filters, ${count} active`
+  return recipeStrings.filters.buttonLabel(count)
 }
 
-export interface TagFilterRow {
-  name: string
-  recipes: number
-  colour?: string
-  selected: boolean
-}
-
-const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true })
-
-/** Lower case, accents stripped, collapsed spaces: the form search compares. */
-function normalise(text: string): string {
-  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ')
-}
-
-/**
- * The rows of the Tag list: the Tags whose name holds every word of `query` (accents and case ignored), the selected Tag
- * first (matched by key, and listed even when it is not a known Tag), then the others by name.
- */
-export function tagFilterRows(known: readonly TagCount[], selected: string, query: string, colourOf?: (name: string) => string | undefined): TagFilterRow[] {
-  const words = normalise(query).split(' ').filter(Boolean)
-  const matches = (name: string) => {
-    const haystack = normalise(name)
-    return words.every((w) => haystack.includes(w))
-  }
-  const selectedKey = selected.trim() === '' ? '' : tagKey(selected)
-  const rows: TagFilterRow[] = []
-  if (selectedKey !== '') {
-    const found = known.find((t) => tagKey(t.name) === selectedKey)
-    const name = found?.name ?? selected.trim()
-    if (matches(name)) rows.push({ name, recipes: found?.recipes ?? 0, colour: colourOf?.(name), selected: true })
-  }
-  const others = known.filter((t) => selectedKey === '' || tagKey(t.name) !== selectedKey)
-  for (const t of [...others].sort((a, b) => collator.compare(a.name, b.name))) {
-    if (matches(t.name)) rows.push({ name: t.name, recipes: t.recipes, colour: colourOf?.(t.name), selected: false })
-  }
-  return rows
-}
+export { tagFilterRows, type TagFilterRow } from './tagRows'
 
 /**
  * How many chips of a line show: all of them when they fit with their gaps, else as many as fit with a gap and the "+N" chip
