@@ -3,7 +3,7 @@ import { useEffect, useId, useRef } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { useReadAvailability } from '../../import/hooks/useReadAvailability'
-import { Button, FormActions, IconButton, ImageFileInput, Page, PageHeader, StickyActionBar, useConfirm, type ImageFileInputHandle } from '../../../ui'
+import { Button, FormActions, IconButton, ImageFileInput, Page, PageHeader, StickyActionBar, Tile, useConfirm, type ImageFileInputHandle } from '../../../ui'
 import { ReadProgress } from '../components/ReadProgress'
 import { ReceiptAlert } from '../components/ReceiptAlert'
 import { ReceiptPhotoList } from '../components/ReceiptPhotoList'
@@ -64,12 +64,12 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
         <h2 className="receipt-section__title">{photosTitle(photos.count)}</h2>
         {photos.count > 0 ? <ReceiptPhotoList photos={photos.photos} disabled={read.busy || photos.busy} onRemove={photos.remove} /> : null}
         {problem !== undefined ? (
-          <div className="receipt-problem">
+          <Tile variant="soft" className="receipt-problem">
             <p>{problem}</p>
             <Button variant="tertiary" onClick={photos.dismissProblem}>
               {t.dismiss}
             </Button>
-          </div>
+          </Tile>
         ) : null}
         {read.busy ? (
           <ReadProgress elapsedSeconds={read.elapsedSeconds} connectionLost={read.connectionLost} onCancel={() => void read.cancel()} />
@@ -93,7 +93,9 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
         {photos.count > 0 ? <p className="receipt-hint">{t.longHint}</p> : null}
       </section>
       <section className="receipt-section">
-        <p className="receipt-privacy">{t.privacy}</p>
+        <Tile variant="status" status="info">
+          <p className="receipt-privacy">{t.privacy}</p>
+        </Tile>
         {reasons.length > 0 || avail.settingsLink ? (
           <div id={reasonId} className="receipt-reasons">
             {reasons.map((reason) => (

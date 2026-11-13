@@ -1,6 +1,6 @@
 // A refusal or failure, said once in words, with the one thing to press (receiptErrors' action).
 import { Link } from 'react-router-dom'
-import { Button } from '../../../ui'
+import { Button, Tile } from '../../../ui'
 import { receiptStrings as t } from '../strings'
 import type { ReceiptErrorCopy } from '../types'
 
@@ -12,7 +12,7 @@ export interface ReceiptAlertProps {
 
 export function ReceiptAlert({ copy, onRetry, onReadAgain }: ReceiptAlertProps) {
   return (
-    <div role="alert" className="receipt-alert">
+    <Tile variant="soft" role="alert" className="receipt-alert">
       <p className="receipt-alert__message">{copy.message}</p>
       {copy.action === 'retry' && onRetry ? (
         <Button variant="secondary" onClick={onRetry}>
@@ -29,6 +29,6 @@ export function ReceiptAlert({ copy, onRetry, onReadAgain }: ReceiptAlertProps) 
           {t.recipeSettings}
         </Link>
       ) : null}
-    </div>
+    </Tile>
   )
 }

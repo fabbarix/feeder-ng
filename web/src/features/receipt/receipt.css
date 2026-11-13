@@ -27,8 +27,7 @@
 }
 
 .receipt-meta,
-.receipt-hint,
-.receipt-privacy {
+.receipt-hint {
   margin: 0;
   font-size: var(--text-meta-size);
   font-weight: var(--text-meta-weight);
@@ -66,14 +65,18 @@
   gap: var(--space-2);
 }
 
-.receipt-progress {
-  display: grid;
-  gap: var(--space-2);
-  justify-items: start;
-  padding: var(--space-3);
-  border-radius: var(--radius-tile);
-  background: var(--color-soft);
-  box-shadow: var(--elev-1);
+.receipt-progress,
+.receipt-problem,
+.receipt-alert {
+  align-items: start;
+}
+
+/* The privacy note and the review's notes sit in an info Tile, which sets their colour. */
+.receipt-privacy,
+.receipt-note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
 }
 
 .receipt-progress__status {
@@ -131,17 +134,6 @@
   }
 }
 
-.receipt-problem,
-.receipt-alert {
-  display: grid;
-  gap: var(--space-2);
-  justify-items: start;
-  padding: var(--space-3);
-  border-radius: var(--radius-tile);
-  background: var(--color-soft);
-  color: var(--color-text);
-}
-
 .receipt-alert__message {
   margin: 0;
   font-size: var(--text-body-size);
@@ -181,36 +173,11 @@
   gap: var(--space-2);
 }
 
-.receipt-metric {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border-radius: var(--radius-tile);
-  background: var(--color-surface);
-  box-shadow: var(--elev-1);
-  min-inline-size: 0;
-}
-
-.receipt-metric__label {
-  font-size: var(--text-overline-size);
-  font-weight: var(--text-overline-weight);
-  letter-spacing: var(--text-overline-tracking);
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
 .receipt-metric__value {
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
-}
-
-.receipt-note {
-  margin: 0;
-  font-size: var(--text-meta-size);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-text);
 }
 
 .receipt-row__check {
