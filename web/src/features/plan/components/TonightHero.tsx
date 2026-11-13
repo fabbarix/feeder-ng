@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Button, RecipeThumb, Tile } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { warningContextOf } from '../lib/bought'
 import { heroChips, leftoverChip } from '../lib/chips'
 import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '../lib/courses'
 import type { HeroAction, HeroDay } from '../lib/hero'
-import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotCookLabel, slotIcon, slotStartBy } from '../lib/hero'
+import { heroCookLabel, heroEyebrow, heroPhase, slotCookLabel, slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 import { CourseRow, type CourseRowHandlers } from './CourseRow'
@@ -50,6 +50,16 @@ export interface TonightHeroProps {
  * "Cook · 45 min", a photo thumb when there is one. After the slot time (lib/hero heroPhase): "<Recipe> cooked?" with
  * primary "Yes, Cooked" and secondary "Adjust". The Cook button is the only primary in the tile.
  */
+/** DS-TODAY: the hero's eyebrow in one line, "Tomorrow · Dinner · start 19:09"; each part is its own span. */
+function HeroEyebrow({ parts }: { parts: string[] }): ReactNode {
+  return parts.map((part, i) => (
+    <Fragment key={i}>
+      {i > 0 ? ' · ' : null}
+      <span>{part}</span>
+    </Fragment>
+  ))
+}
+
 export function TonightHero(props: TonightHeroProps): ReactNode {
   if (slotCourses(props.slot).length > 1) return <SeveralCoursesHero {...props} />
   return <SingleHero {...props} />
@@ -64,14 +74,13 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
   const key: SlotKey = row.key
   const phase = heroPhase(slot, now)
   const canReheat = action === 'reheat' && onReheat !== undefined
-  const startBy = phase === 'upcoming' ? heroStartBy(meal) : null
   // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
   const chips = [...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   // Yes, Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
   const awaiting = phase === 'awaiting' && day === 'today'
 
   return (
-    <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+    <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
       {dateActions ? (
         <div className="plan-hero__menu">
           <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={noop} onAddCourse={noop} dateActions={dateActions} />
@@ -80,7 +89,6 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
-          {startBy ? <p className="plan-hero__start">{startBy}</p> : null}
           <h2 className="plan-hero__name">{awaiting ? s.askCooked(meal.recipeName) : meal.recipeName}</h2>
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
@@ -145,14 +153,13 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   const awaiting = phase === 'awaiting' && day === 'today'
   const allAtOnce = awaiting && left >= 2
   const canReheat = action === 'reheat' && onReheat !== undefined
-  const startBy = phase === 'upcoming' ? slotStartBy(slot) : null
   const whole = wholeMealChip(slot, hero)
   const chips = [...(whole ? [whole] : []), ...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   const others = compactRows(slot)
   const heading = allAtOnce ? s.askCooked(slot.name) : awaiting ? s.askCooked(meal.recipeName) : meal.recipeName
 
   return (
-    <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+    <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
       {menu || dateActions ? (
         <div className="plan-hero__menu">
           <SlotMenu
@@ -168,7 +175,6 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
-          {startBy ? <p className="plan-hero__start">{startBy}</p> : null}
           <h2 className="plan-hero__name">{heading}</h2>
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
@@ -226,7 +232,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
               today={today}
               compact
               onAccent
-              actions={['swap', 'pin', 'cooked']}
+              actions={['swap', 'pin', 'more']}
               onOpen={rowHandlers.onOpen}
               onSwap={rowHandlers.onSwap}
               onPin={rowHandlers.onPin}

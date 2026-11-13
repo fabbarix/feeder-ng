@@ -21,20 +21,20 @@ export interface TodayViewProps {
 
 /**
  * Renders a layout. Heading "Today". Mode shopping: only `shopping`. Mode today: a
- * BentoGrid (labelled "Today") with a slot per tile in layout order; each slot carries data-tile. When layout.empty,
- * the EmptyState shows above the grid (so any streak tile stays visible). While loading, "Loading" and no empty state.
+ * BentoGrid by minimum width (labelled "Today") with a slot per tile in layout order; each slot carries data-tile. When
+ * layout.empty, the EmptyState shows above the grid (so the metric strip stays visible). While loading the section is
+ * aria-busy and there is no text and no empty state (DS-TODAY).
  */
 export function TodayView({ layout, loading = false, dateLabel, tiles, shopping, onOpenPlan, onRetry }: TodayViewProps): ReactElement {
   if (layout.mode === 'shopping') return <>{shopping}</>
   return (
-    <section className="today" data-hero-span={layout.heroSpan}>
+    <section className="today" aria-busy={loading ? true : undefined}>
       <PageHeader title={s.title} subtitle={dateLabel} />
-      {loading ? <p className="today__muted">{s.loading}</p> : null}
       {layout.failed && !loading ? <ErrorState message={s.loadError} onRetry={onRetry} /> : null}
       {layout.empty && !loading ? (
         <EmptyState title={s.emptyTitle} description={s.emptyHint} action={<Button onClick={onOpenPlan}>{s.emptyAction}</Button>} />
       ) : null}
-      <BentoGrid label={s.gridLabel}>
+      <BentoGrid min="wide" label={s.gridLabel}>
         {layout.tiles.map((spec) => {
           const node = tiles[spec.id]
           if (!node) return null

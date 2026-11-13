@@ -111,3 +111,16 @@ export function slotStartBy(slot: PlanSlot): string | null {
   const meal = slotHeroMeal(slot)
   return meal ? heroStartBy(meal) : null
 }
+
+/**
+ * DS-TODAY: the hero's eyebrow as its parts, one line: the day ("Today", "Tomorrow", else the short weekday), the Meal
+ * Slot, and the time: "start 18:45" while the meal is upcoming and knows when to start, else the slot time (none
+ * for tomorrow without a start-by).
+ */
+export function heroEyebrow(sel: HeroSelection, now: Date): string[] {
+  const day = sel.day === 'today' ? s.today : sel.day === 'tomorrow' ? s.tomorrow : weekdayName(sel.slot.date, 'short')
+  const startBy = heroPhase(sel.slot, now) === 'upcoming' ? slotStartBy(sel.slot) : null
+  // Tomorrow's day word replaces the slot time when no start-by is known (N3); a later day keeps its slot time.
+  const time = startBy ?? (sel.day === 'tomorrow' ? null : sel.slot.time)
+  return time === null ? [day, sel.slot.name] : [day, sel.slot.name, time]
+}

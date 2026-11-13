@@ -24,7 +24,7 @@ export function UseSoonTile({ items }: UseSoonTileProps): ReactElement | null {
           <li key={item.ingredientId} className="today__row">{`${item.name} · ${item.when}`}</li>
         ))}
       </ul>
-      {more > 0 ? <p className="today__muted">{s.useSoonMore(more)}</p> : null}
+      {more > 0 ? <p className="today__hint">{s.useSoonMore(more)}</p> : null}
     </Tile>
   )
 }

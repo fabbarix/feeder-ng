@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, IconButton } from '../../../ui'
+import { Button, Chip, IconButton, Menu } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { dayChip } from '../lib/chips'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
@@ -10,7 +10,8 @@ import { PlanChipView } from './PlanChipView'
 import type { PlanSlot, SlotKey } from '../types'
 import './CourseRow.css'
 
-export type CourseAction = 'swap' | 'pin' | 'cooked'
+/** `cooked` is a loose Mark as Cooked icon; `more` puts Mark as Cooked in the row's ⋮ (DS-TODAY hero). */
+export type CourseAction = 'swap' | 'pin' | 'cooked' | 'more'
 
 /** What a Course row can do; every handler gets the key of that Course's Planned Meal (courseId included). */
 export interface CourseRowHandlers {
@@ -77,7 +78,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
               ) : null}
             </span>
             {planned ? (
-              <span className="plan-meal__actions">
+              <span className="plan-course__actions" role="group" aria-label={`${course.name} actions`}>
                 {actions.includes('swap') ? <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap?.(key)} /> : null}
                 {actions.includes('pin') ? (
                   meal.pinned ? (
@@ -88,6 +89,9 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
                 ) : null}
                 {actions.includes('cooked') && mayResolve(meal.date, today) ? (
                   <IconButton icon="markCooked" label={s.markCooked} size="compact" onClick={() => onMarkCooked?.(key)} />
+                ) : null}
+                {actions.includes('more') && mayResolve(meal.date, today) ? (
+                  <Menu label={`More for ${course.name}`} items={[{ id: 'cooked', label: s.markCooked, onSelect: () => onMarkCooked?.(key) }]} />
                 ) : null}
               </span>
             ) : null}

@@ -29,7 +29,8 @@ import type { SlotDayKey, SlotKey } from '../../plan/types'
 import { cookReheatPath } from '../../cook'
 import { SpoiledTile } from '../../stock'
 import { useSetupChecklist } from '../hooks/useSetupChecklist'
-import { useAdvanceStepsDue, useToday, useZeroWasteStreak } from '../hooks/useToday'
+import { useAdvanceStepsDue, useToday } from '../hooks/useToday'
+import { useTodayMetrics } from '../hooks/useTodayMetrics'
 import { localDate } from '../lib/dates'
 import { todayHeading } from '../lib/heading'
 import { ShoppingListSeam, useTodayTileData } from '../seams'
@@ -37,8 +38,8 @@ import { todayStrings } from '../strings'
 import type { TileId } from '../types'
 import { courseCells } from '../../plan/lib/couldntGroups'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
+import { MetricStrip } from './MetricStrip'
 import { SetupChecklistTile } from './SetupChecklistTile'
-import { StreakTile } from './StreakTile'
 import { TodayView } from './TodayView'
 import { UseSoonTile } from './UseSoonTile'
 
@@ -59,7 +60,7 @@ export function TodayScreen(): ReactElement {
   const { layout, loading, retry } = useToday()
   const data = useTodayTileData()
   const steps = useAdvanceStepsDue()
-  const streak = useZeroWasteStreak()
+  const metrics = useTodayMetrics(data.leftovers.length)
   const flow = useCookFlow()
   const notCooked = useNotCooked()
   const isAdmin = useMe().data?.isAdmin !== false
@@ -125,14 +126,17 @@ export function TodayScreen(): ReactElement {
         onYesCooked={yesCooked}
         onAdjust={flow.open}
         onNotCooked={(key) => void notCooked(key)}
-        onMarkAllCooked={(key) => sheets.allCooked.open(key, toConfirmCourses(data.toConfirm, key))}
+        onAllCooked={(slot) => void sheets.allCooked.quickAll(slot, toConfirmCourses(data.toConfirm, slot))}
+        onMarkAllCooked={(slot) => sheets.allCooked.open(slot, toConfirmCourses(data.toConfirm, slot))}
+        onNotCookedSlot={(slot) => void sheets.actions.notCookedSlot(slot)}
       />
     ),
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
     setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} flow={leftovers.flow} tone={leftovers.tile.tone} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
-    streak: <StreakTile days={streak.days} />,
+    // The strip waits for the streak and the Shop list: its numbers are complete when it shows.
+    metrics: <MetricStrip metrics={metrics.loading ? [] : metrics.metrics} />,
   }
 
   return (

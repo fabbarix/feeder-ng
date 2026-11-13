@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Button, ListRow, Tile, useMediaQuery } from '../../../ui'
+import { useShowMore } from '../../../ui/lib/useShowMore'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { describeGoOff } from '../lib/view'
 import { capitalise } from '../lib/display'
@@ -24,15 +25,16 @@ export interface SpoiledTileProps {
  * icon + label `Button size="sm"`s: Throw out = danger-tertiary with `throwOut` (Trash), Keep = secondary with `tick`
  * (Check). L-07: each lot is a `ListRow` (title = name, meta = "amount · go-off wording"); from 820 px the two buttons
  * trail the row, below it they sit under the text. Accessible names stay "Throw out <name>" / "Keep <name>". Renders nothing when lots is empty.
- * Exported for the Today screen.
+ * Capped at 3 rows with a "Show N more" toggle (DS-TODAY). Exported for the Today screen.
  */
 export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric', stacked = false }: SpoiledTileProps): ReactElement | null {
   const wide = useMediaQuery('(min-width: 820px)') && !stacked
+  const more = useShowMore(lots)
   if (lots.length === 0) return null
   return (
     <Tile as="section" variant="status" status="danger" span="full" aria-label={strings.spoiledHeading} overline={strings.spoiledHeading} overlineIcon="spoiled">
       <ul className="spoiled-tile__list">
-        {lots.map((lot) => {
+        {more.visible.map((lot) => {
           const actions = (
             <>
               <Button variant="danger-tertiary" icon="throwOut" size="sm" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
@@ -55,6 +57,11 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
           )
         })}
       </ul>
+      {more.capped ? (
+        <Button variant="tertiary" size="sm" aria-expanded={more.expanded} onClick={more.toggle}>
+          {more.expanded ? strings.showLess : strings.showMore(more.hidden)}
+        </Button>
+      ) : null}
     </Tile>
   )
 }
