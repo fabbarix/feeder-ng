@@ -74,21 +74,6 @@ describe('recipes.css', () => {
     expect(thumb.some((r) => /max-block-size:\s*170px/.test(r.body))).toBe(false)
   })
 
-  describe('the Tag row fade (5.8)', () => {
-    const base = find((r) => r.selector === '.tag-chips')
-    const fadeIn = (r: Rule) => /mask-image:\s*linear-gradient\(to right,\s*transparent\s+0/.test(r.body)
-    it('has no fade over the start of the row by default, so "All Tags" stays fully visible', () => {
-      expect(base.length).toBeGreaterThan(0)
-      for (const r of base) expect(fadeIn(r)).toBe(false)
-    })
-    it('fades the start only once the row has scrolled', () => {
-      const scrolled = find((r) => /^\.tag-chips\[data-scrolled=['"]?true['"]?\]$/.test(r.selector))
-      expect(scrolled.some(fadeIn)).toBe(true)
-    })
-    it('still fades the end of the row, where more Tags are hidden', () => {
-      expect(base.some((r) => /mask-image:[^;]*transparent\s+100%/.test(r.body))).toBe(true)
-    })
-  })
 })
 
 describe('recipes.css, Step photo (IM2 review)', () => {

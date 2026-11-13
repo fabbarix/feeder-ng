@@ -108,6 +108,19 @@ for (const [i, name] of RECIPES.entries()) {
   if (r.ok && r.json?.id && i === 0) recipeId = r.json.id
 }
 
+// hf-recipes-filter: many Tags (docs/design/recipes-filter.md), so /recipes shows its filter header as a household with dozens of
+// Tags sees it (the beta.6 Tag row crushed every chip to its dot). A Tag may exist with no Recipe (GLOSSARY); one Recipe carries
+// eight of them, with long names, so its tile's Tag line is exercised too.
+const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
+  'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
+  'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
+for (const name of MANY_TAGS) await step('tag', 'POST', '/api/tags', { name, colour: '' })
+await step('many-tag recipe', 'POST', '/api/recipes', {
+  name: 'Slow cooker beef and barley stew', description: '', yield: 6, readyMeal: false,
+  tags: ['slow cooker', 'beef', 'comfort food', 'batch cooking', 'freezer', 'high protein', 'weeknight', 'one-pot'],
+  lines: [line(10, 600), line(13, 300), line(4, 2)], steps: [{ text: 'Cook it slowly.', kind: 'passive', durationMinutes: 360, leadTimeMinutes: 0, after: [], uses: [] }],
+})
+
 // Shops, Products with Prices
 const shops = []
 for (const name of ['Coop', 'Market Hall', 'Corner Shop']) {

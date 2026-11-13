@@ -44,13 +44,18 @@ beforeEach(() => {
   }
 })
 
+const openFilters = () => userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
+const tagList = () => screen.getByRole('listbox', { name: 'Filter by Tag' })
+
+// hf-recipes-filter: the Tag filter moved from a row of chips into the Filters panel (docs/design/recipes-filter.md).
 describe('RecipesScreen Tag colours', () => {
-  it('colours the Tag filter chips', () => {
+  it('colours each Tag of the Filters panel with its dot', async () => {
     view()
-    const filter = screen.getByRole('group', { name: 'All Tags' })
-    expect(within(filter).getByRole('button', { name: 'roast' })).toHaveAttribute('data-tag-colour', 'tomato')
-    expect(within(filter).getByRole('button', { name: 'sweet' })).toHaveAttribute('data-tag-colour', 'plum')
-    expect(within(filter).getByRole('button', { name: 'kids' })).not.toHaveAttribute('data-tag-colour')
+    await openFilters()
+    const dot = (name: string) => within(tagList()).getByRole('option', { name }).querySelector('.tag-dot')
+    expect(dot('roast')).toHaveAttribute('data-tag-colour', 'tomato')
+    expect(dot('sweet')).toHaveAttribute('data-tag-colour', 'plum')
+    expect(dot('kids')).not.toHaveAttribute('data-tag-colour')
   })
   it('shows each tile\'s first two Tags in colour and "+1" for the third', () => {
     view()
@@ -58,44 +63,52 @@ describe('RecipesScreen Tag colours', () => {
     expect(within(lists[0]!).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['sweet', 'roast', '+1'])
     expect(lists[0]!.querySelectorAll('[data-tag-colour]')).toHaveLength(2)
   })
-  it('opens already filtered by the Tag in ?tag= (the Recipe detail\'s Tag chips link here)', () => {
+  it('opens already filtered by the Tag in ?tag= (the Recipe detail\'s Tag chips link here)', async () => {
     view('/recipes?tag=roast')
     expect(lastFilter().tag).toBe('roast')
-    expect(within(screen.getByRole('group', { name: 'All Tags' })).getByRole('button', { name: 'roast' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Remove Tag: roast' })).toHaveAttribute('data-tag-colour', 'tomato')
+    await openFilters()
+    expect(within(tagList()).getByRole('option', { name: 'roast' })).toHaveAttribute('aria-selected', 'true')
   })
   it('has no Tag filter without ?tag=', () => {
     view()
     expect(lastFilter().tag).toBeUndefined()
+    expect(screen.queryByRole('group', { name: 'Active filters' })).toBeNull()
   })
-  it('choosing a Tag chip still filters', async () => {
+  it('choosing a Tag in the panel still filters', async () => {
     view()
-    await userEvent.click(within(screen.getByRole('group', { name: 'All Tags' })).getByRole('button', { name: 'sweet' }))
+    await openFilters()
+    await userEvent.click(within(tagList()).getByRole('option', { name: 'sweet' }))
     expect(lastFilter().tag).toBe('sweet')
   })
 })
 
 describe('RecipesScreen Tag filter order and URL', () => {
-  const chipNames = () => within(screen.getByRole('group', { name: 'All Tags' })).getAllByRole('button').map((b) => b.textContent)
-  it('lists the Tag filter in the Tags order (by name, accents and case ignored): "Édamame" before "sweet"', () => {
-    state.known = [{ name: 'Édamame', recipes: 1 }, { name: 'sweet', recipes: 1 }]
-    ;(state.result as { tags: unknown }).tags = [{ name: 'sweet', recipes: 1 }, { name: 'Édamame', recipes: 1 }]
+  const nameOf = (o: HTMLElement) => {
+    const by = o.getAttribute('aria-labelledby')
+    return (by ? document.getElementById(by)?.textContent : null) ?? o.getAttribute('aria-label') ?? o.textContent
+  }
+  const optionNames = () => within(tagList()).getAllByRole('option').map(nameOf)
+  it('lists the Tags by name (accents and case ignored): "Édamame" before "sweet"', async () => {
+    state.known = [{ name: 'sweet', recipes: 1 }, { name: 'Édamame', recipes: 1 }]
     view()
-    expect(chipNames()).toEqual(['All Tags', 'Édamame', 'sweet'])
+    await openFilters()
+    expect(optionNames()).toEqual(['Édamame', 'sweet'])
   })
-  it('choosing a Tag puts ?tag= in the URL; All Tags removes it', async () => {
+  it('choosing a Tag puts ?tag= in the URL; choosing it again removes it', async () => {
     view()
-    const filter = within(screen.getByRole('group', { name: 'All Tags' }))
-    await userEvent.click(filter.getByRole('button', { name: 'sweet' }))
+    await openFilters()
+    await userEvent.click(within(tagList()).getByRole('option', { name: 'sweet' }))
     expect(screen.getByTestId('where')).toHaveTextContent('?tag=sweet')
-    await userEvent.click(filter.getByRole('button', { name: 'All Tags' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('')
+    await userEvent.click(within(tagList()).getByRole('option', { name: 'sweet' }))
     expect(screen.getByTestId('where').textContent).toBe('')
     expect(lastFilter().tag).toBeUndefined()
   })
   it('a name that needs escaping round-trips', async () => {
     state.known = [{ name: 'fish & chips', recipes: 1 }]
     view()
-    await userEvent.click(within(screen.getByRole('group', { name: 'All Tags' })).getByRole('button', { name: 'fish & chips' }))
+    await openFilters()
+    await userEvent.click(within(tagList()).getByRole('option', { name: 'fish & chips' }))
     expect(screen.getByTestId('where').textContent).toBe('?tag=fish+%26+chips')
     expect(lastFilter().tag).toBe('fish & chips')
   })
