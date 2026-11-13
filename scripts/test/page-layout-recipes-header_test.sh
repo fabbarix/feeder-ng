@@ -9,7 +9,9 @@
 #                            Round 3: between 420 and 440 px it logs a console error, throws and shows the error page (P21, found
 #                            by the RESIZE_WALK of the filtered scenario, 360 to 480 px); and on a live resize through 453 to 455 px
 #                            it shows the error page and logs an error (P21 "(live resize)", found only by the 1 px RESIZE_SWEEP);
-#   /settings  fixed.html    the same state laid out as round 2 says: clean of P1, P13, P14 and P16 to P20 at every width.
+#   /settings  fixed.html    the same state laid out as round 2 says: clean of P1, P13, P14, P16 to P20 and P22 at every width.
+#   /pantry    sort-cut.html pantry-filter review: row 2 of the Pantry as first built ("By Storage Place | By Ingredient"), its Sort
+#                            chip's "Good until" cut to its ellipsis at 390 px (P22; "G…" on the real build) and at the walk's narrow widths; in full at 480 px.
 # The real build is covered by the guard itself (check.sh), which probes /recipes and its SCENARIOS. No Chrome: SKIP.
 set -uo pipefail
 for v in $(compgen -e | grep -E '^PAGE_LAYOUT'); do unset "$v"; done
@@ -37,7 +39,7 @@ const dir = process.env.FIX
 http.createServer((q, s) => {
   if (q.url.startsWith('/api/')) { s.setHeader('content-type', 'application/json'); return s.end('{}') }
   s.setHeader('content-type', 'text/html')
-  const file = q.url.startsWith('/settings') ? 'fixed.html' : q.url.startsWith('/recipes') ? 'round1.html' : 'crushed.html'
+  const file = q.url.startsWith('/settings') ? 'fixed.html' : q.url.startsWith('/recipes') ? 'round1.html' : q.url.startsWith('/pantry') ? 'sort-cut.html' : 'crushed.html'
   s.end(fs.readFileSync(path.join(dir, file)))
 }).listen(Number(process.env.PORT), '127.0.0.1')
 JS
@@ -54,8 +56,8 @@ for try in 0 1 2 3 4 5 6 7; do
   SERVER=""
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
-echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"HEARTY HOMEMADE MUSHROOM WELLINGTONS"}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|recipes|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"HEARTY HOMEMADE MUSHROOM WELLINGTONS","longPlaceId":10}' >"$TMP/ids.json"
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|recipes|settings|pantry)$' timeout 300 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
 
 # the beta.6 Tag row (/plan): its chips are crushed at a phone and both iPad portrait widths
 for w in 390 834 1024; do
@@ -91,8 +93,22 @@ grep -Eq "^\s+- 45[345]px /recipes[^:]*\(live resize\): P21 " <<<"$OUT" && ok ||
 COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes[^:]*: P21 ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
 [ "${COUNT:-0}" -gt 0 ] && ok || bad "the P21 findings must count as failures (count-fail said '${COUNT:-}')"
 
+# pantry-filter review (P22): the Sort chip's value cut to "G…" beside "By Storage Place | By Ingredient" (/pantry, sort-cut.html)
+grep -Eq "^\s+- 390px /pantry: P22 .*\"Good until\".*cuts [0-9]+ px" <<<"$OUT" && ok || bad "390px /pantry: the cut Sort value must be a P22 finding naming it (got: $OUT)"
+# the walk reads P22 at each phone width: cut at 360 and 390 px, in full at 480 px
+for w in 360 390; do
+  grep -Eq "^\s+- ${w}px /pantry\?[^:]*: P22 " <<<"$OUT" && ok || bad "${w}px /pantry (walk): the cut Sort value must be a P22 finding (got: $OUT)"
+done
+grep -Eq "^\s+- 480px /pantry\?[^:]*: P22 " <<<"$OUT" && bad "480px /pantry (walk): no P22 expected where the Sort value fits (got: $OUT)" || ok
+# no other rule saw it: the row neither overflows nor holds a crushed .chip
+for rule in P1 P13 P16; do
+  grep -Eq "^\s+- 390px /pantry: ${rule} " <<<"$OUT" && bad "390px /pantry: only P22 should see the cut Sort value, not ${rule} (got: $OUT)" || ok
+done
+COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /pantry[^:]*: P22 ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
+[ "${COUNT:-0}" -gt 0 ] && ok || bad "the P22 findings must count as failures (count-fail said '${COUNT:-}')"
+
 # round 2 (/settings) is clean at every quick-profile width
-for rule in P1 P13 P14 P16 P17 P18 P19 P20; do
+for rule in P1 P13 P14 P16 P17 P18 P19 P20 P22; do
   grep -Eq "^\s+- [0-9]+px /settings: ${rule} " <<<"$OUT" && bad "the round-2 header (/settings) must have no ${rule} finding (got: $OUT)" || ok
 done
 # and it was inspected at all five widths

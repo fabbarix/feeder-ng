@@ -586,6 +586,23 @@ const filterSpacingProbe = `
   return { rowGap, slotGap, sectionGap }
 })()`
 
+// pantry-filter review (P22): a chip Select (a toolbar picker: the Sort of both filter headers, Shop's) whose value is cut by its ellipsis.
+// The value's text is measured with a Range (its laid-out width, whatever the ellipsis paints) and by its scroll overflow.
+const cutSelectProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const out = []
+  for (const v of (main ? main.querySelectorAll('.select__trigger[data-appearance="chip"] .select__value') : [])) {
+    if (v.getClientRects().length === 0) continue
+    const box = v.getBoundingClientRect()
+    const range = document.createRange()
+    range.selectNodeContents(v)
+    const cut = Math.max(v.scrollWidth - v.clientWidth, range.getBoundingClientRect().width - box.width)
+    if (cut > 0.5) out.push({ sel: 'button.select__trigger', label: v.textContent.trim(), shown: Math.round(box.width), px: Math.round(cut) })
+  }
+  return out
+})()`
+
 // Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
 const notInspected = []
 let probes = 0
@@ -631,6 +648,7 @@ async function probePage(vp, route, pattern, kind, open) {
       clippedRings: await evaluate(clippedRingsProbe),
       popoverAlign: await evaluate(popoverAlignProbe),
       filterSpacing: await evaluate(filterSpacingProbe),
+      cutSelects: await evaluate(cutSelectProbe),
     })
     // The light findings are reported first, on the light page.
     for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
@@ -693,9 +711,12 @@ for (const walk of RESIZE_WALKS) {
         await settle()
         const runtimeErrors = [...runtimeEvents]
         if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
-        if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify(runtimeErrors)}`)
-        // Only P21 is read from the walk: the page's error state at this width, nothing from the layout probes.
-        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${tag}: ${f.message}`)
+        // pantry-filter review: and whether a chip Select (the Sort) cuts its value at this width (P22): the quick profile's only phone
+        // width is 390, and the Pantry's Sort read "Good u…" from 360 to 397 px.
+        const cutSelects = await evaluate(cutSelectProbe)
+        if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify({ runtimeErrors, cutSelects })}`)
+        // Only P21 and P22 are read from the walk: the page's error state and its Sort chip at this width.
+        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route }, cutSelects)) fail(`${tag}: ${f.message}`)
       } catch (e) {
         notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
       }

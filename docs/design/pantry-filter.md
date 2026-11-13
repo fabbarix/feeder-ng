@@ -265,10 +265,10 @@ Stock, Stock Lot, Storage Place, Use soon, Spoiled, Good until and Leftover as G
 | a11y | `stock/screens/StockScreen.filters.a11y.test.tsx` |
 | CSS contract | `ui/FilterBar/FilterBar.css.test.ts`, `stock/pantry.filters.css.test.ts` |
 | Guard | `app/pageLayoutRules.pantryFilter.test.ts`: SCENARIOS `pantry-filtered` and `pantry-filtered-open`; a second walk (`RESIZE_WALKS`); probes on the shared classes; the seed's 10 Storage Places (one of 60 characters, the API's limit), Lots in them, a use-soon Lot; `longPlaceId` in the ids file |
+| Guard, review | `app/pageLayoutRules.cutSelect.test.ts`: **P22** (always fails), a chip Select (Sort) whose value is cut by its ellipsis, read on every probe and on each width of both walks; in a browser by `scripts/test/page-layout-recipes-header_test.sh` (`sort-cut.html`: "By Storage Place \| By Ingredient" beside "Good until", cut at 360 and 390 px, whole at 480). P16 reads only `.chip` labels, so "G…" in a Select had passed. |
 
 ## 11. Not in this change
 
 - **"Use soon" and "Spoiled" together** (OR). It would need the status as a list in the URL and the lib; nobody asked.
 - **Sort for By Ingredient.** Its fixed order (use soon first, then name) stays.
 - **CourseFilter on the shared `FilterChipGroup`.** Same look and CSS; moving it changes Recipes' class names and tests for no gain now.
-- **A guard rule for a cut Select chip value.** P16 only sees `.chip` labels under 24 px; "G…" in a Select chip passed the guard.
