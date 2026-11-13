@@ -29,7 +29,7 @@
   .course-filter { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none }
   .course-filter > .chip { flex: none }
   /* bb354d3c as the review saw it: the chip line clips (hit areas and rings cut), both chips shown with the Tag cut, the Course
-     line scrolls with no padding (the ring of All Courses cut), row 3 flush under row 2, sections not spaced, the popover
+     line scrolls with no padding (the ring of the first Course chip, Main, cut), row 3 flush under row 2, sections not spaced, the popover
      start-aligned under the Filters button (past the page at 834 and 1440). */
   .list-page__filters { display: block }
   .recipe-filters__chips { overflow: hidden }
@@ -48,7 +48,7 @@
         <div id="recipe-filters" class="popover recipe-filters__panel" role="dialog" aria-label="Filters">
           <h2>Filters</h2>
           <section class="recipe-filters__section"><h3 class="recipe-filters__heading">Course</h3>
-          <div class="course-filter" role="group" aria-label="Filter by Course"><button class="chip" type="button" aria-pressed="false">All Courses</button><button class="chip" type="button" aria-pressed="false">Main</button><button class="chip" type="button" aria-pressed="true">Side</button><button class="chip" type="button" aria-pressed="false">Starter</button><button class="chip" type="button" aria-pressed="false">Dessert</button><button class="chip" type="button" aria-pressed="false">Breakfast extras</button></div></section>
+          <div class="course-filter" role="group" aria-label="Filter by Course"><button class="chip" type="button" aria-pressed="false">Main</button><button class="chip" type="button" aria-pressed="true">Side</button><button class="chip" type="button" aria-pressed="false">Starter</button><button class="chip" type="button" aria-pressed="false">Dessert</button><button class="chip" type="button" aria-pressed="false">Breakfast extras</button></div></section>
         <section class="recipe-filters__section"><h3 class="recipe-filters__heading">Tag</h3><input type="search" aria-label="Search Tags" placeholder="Search Tags"></section>
         </div>
       </div>

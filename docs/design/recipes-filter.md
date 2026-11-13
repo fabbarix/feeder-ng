@@ -83,7 +83,7 @@ Components only render and wire events (CLAUDE.md). Logic lives in `lib/recipeFi
 | `RecipeSortSelect` | features/recipes/components | Unchanged API. Now `Select appearance="chip" icon="sort"` with short trigger labels (§9). |
 | `RecipeFiltersButton` | features/recipes/components | **New.** `Button variant="secondary" size="sm" icon="filter"`, text "Filters", and a count Chip while filters are on. `aria-haspopup="dialog"`, `aria-expanded`, `aria-label` from the summary. |
 | `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Show Recipes". |
-| `CourseFilter` | features/recipes/components | Unchanged API and copy ("Filter by Course", "All Courses"). Its group is **one line**: it scrolls sideways inside the panel, chips keep their natural width (never crushed). |
+| `CourseFilter` | features/recipes/components | Unchanged API; group name "Filter by Course"; no "All Courses" chip since beta.6.2 (§15). Its group is **one line**: it scrolls sideways inside the panel, chips keep their natural width (never crushed). |
 | `TagFilterList` | features/recipes/components | **New.** The shared `OptionList` (single) fed by `useTagFilterSearch`: search, rows, empty text. |
 | `ActiveFilterChips` | features/recipes/components | **New.** The chip line of row 3: removable chips (`Chip onRemove`) and the "+N" chip, fitted by `useFittingChips`. |
 | `TagChips` | features/recipes/components | **Removed** (and its tests): its only caller was this header. |
@@ -93,7 +93,7 @@ Components only render and wire events (CLAUDE.md). Logic lives in `lib/recipeFi
 ## 5. States
 
 ### 5.1 No filter
-Row 1, row 2; no row 3. The button reads "Filters" with no count. In the panel "All Courses" is pressed, no Tag is selected,
+Row 1, row 2; no row 3. The button reads "Filters" with no count. In the panel no Course chip is pressed, no Tag is selected,
 "Clear filters" is disabled.
 
 ### 5.2 Some filters (a Course and/or a Tag)
@@ -216,7 +216,7 @@ No other ui file changes.
 - Tab order: Search → Filters → Kind (one tab stop, arrows move, as today) → Sort → each chip in row 3 → "+N" → the list.
 - **Filters button**: `aria-haspopup="dialog"`, `aria-expanded` true while the panel is open, `aria-controls` the panel.
   Its name is the summary: "Filters" or "Filters, 2 active". The count chip is `aria-hidden`.
-- **Panel**: a dialog named "Filters". On open, focus goes to the first Course chip ("All Courses"), or to the Tag search on
+- **Panel**: a dialog named "Filters". On open, focus goes to the first Course chip, or to the Tag search on
   Base recipes. Escape closes it and focus returns to the Filters button. On a phone it is the modal BottomSheet (focus
   trapped; the backdrop and the header's ✕ IconButton ("Close") dismiss it). The footer "Show Recipes" button closes it the same
   way, on every width; its name differs from the ✕ so a phone sheet never has two buttons named "Close".
@@ -237,7 +237,7 @@ No other ui file changes.
 | Search | "Search Recipes" (unchanged) |
 | Filters button | "Filters"; accessible name "Filters" / "Filters, 1 active" / "Filters, 2 active"; count chip "1", "2" |
 | Panel title | "Filters" |
-| Course section heading | "Course"; group name "Filter by Course"; first chip "All Courses" (unchanged) |
+| Course section heading | "Course"; group name "Filter by Course"; one chip per Course, no "All Courses" (§15) |
 | Tag section heading | "Tag" |
 | Tag search | label and placeholder "Search Tags" (not the SearchField default "Search") |
 | Tag listbox | "Filter by Tag" |
@@ -349,3 +349,15 @@ slightly shorter Tag; the guard's widths (390, 834, 1024, 1440, 1920) missed it.
    back to the body's edge, so without the body's padding its focus ring is cut. The cost is that the panel's content starts
    `--space-2` inside its title and footer.
 
+## 15. beta.6.2: no "All Courses" chip
+
+The user: "Instead of 'All Courses' let's just have a logic where if no courses are selected all are shown, freeing space."
+
+- `CourseFilter` shows one chip per Course and nothing else; `courseStrings.allCourses` is gone. The cooking timeline's own
+  "All" chip (`cook/CourseFilterChips`) is a separate component and is unchanged.
+- **No Course pressed means every Recipe** (no `?course=`), as before. Tapping a Course selects it (single choice; the one pressed
+  before is released); tapping the selected Course again clears it.
+- ARIA: the group stays `role="group"` "Filter by Course" of toggle buttons (`Chip kind="filter"`, `aria-pressed`); every chip
+  is a tab stop and Space or Enter toggles it. The panel opens on the first Course chip.
+- The active-filter chip, Clear filters, the Filters count and the URL are unchanged. The guard fixtures and §13.2/§14.4 now mean
+  the first Course chip where they say "All Courses".

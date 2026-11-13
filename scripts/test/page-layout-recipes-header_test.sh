@@ -3,7 +3,7 @@
 # tiny static server (fixtures/page-layout-recipes-header):
 #   /plan      crushed.html  the beta.6 Tag row with 40 Tags: every chip crushed to its dot (P16);
 #   /recipes   round1.html   bb354d3c as the review saw it, with Side and a long Tag on and the panel open: the Tag chip cut beside
-#                            "Side" (P17 at 390), hit areas and the ring of "All Courses" clipped (P18), the popover start-aligned
+#                            "Side" (P17 at 390), hit areas and the ring of the first Course chip "Main" clipped (P18), the popover start-aligned
 #                            past the page (P19 at 834 and 1440), row 3 flush under row 2 and the panel sections unspaced (P20);
 #                            Round 3: between 420 and 440 px it logs a console error, throws and shows the error page (P21, found
 #                            by the RESIZE_WALK of the filtered scenario, 360 to 480 px); and on a live resize through 453 to 455 px
@@ -68,7 +68,7 @@ COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /plan: P16 ' <<<"$OUT" | node scr
 grep -Eq "^\s+- 390px /recipes[^:]*: P17 .*HEARTY HOMEMADE" <<<"$OUT" && ok || bad "390px /recipes: the cut Tag chip beside Side must be a P17 finding naming it (got: $OUT)"
 for w in 390 834 1024 1440 1920; do
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*hit area" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped hit areas of the chip line must be a P18 finding (got: $OUT)"
-  grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*All Courses.*focus ring" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped focus ring of All Courses must be a P18 finding (got: $OUT)"
+  grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*Main.*focus ring" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped focus ring of the first Course chip (Main) must be a P18 finding (got: $OUT)"
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P20 " <<<"$OUT" && ok || bad "${w}px /recipes: row 3 flush under row 2 must be a P20 finding (got: $OUT)"
 done
 for w in 834 1440; do

@@ -7,7 +7,6 @@ describe('courseStrings', () => {
     expect(courseStrings.label).toBe('Courses')
     expect(courseStrings.wholeMeal).toBe('Whole meal')
     expect(courseStrings.wholeMealHelper('Main')).toBe("Planned as Main, it leaves the slot's other Courses empty")
-    expect(courseStrings.allCourses).toBe('All Courses')
   })
   it('titles the confirm by the number of Slot Rules', () => {
     expect(courseStrings.lossTitle('Side', 1)).toBe('Taking Side off removes a Slot Rule')

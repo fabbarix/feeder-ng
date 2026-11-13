@@ -51,15 +51,15 @@ describe('RecipeFiltersPanel', () => {
     panel({ open: false })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('the Course chips: All Courses first, then each Course; one picks it', async () => {
+  it('the Course chips: one per Course (no All Courses); one picks it, the selected one again clears it', async () => {
     const props = panel({ course: 2 })
     const group = screen.getByRole('group', { name: 'Filter by Course' })
-    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['All Courses', 'Main', 'Side', 'Starter', 'Dessert'])
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Main', 'Side', 'Starter', 'Dessert'])
     expect(within(group).getByRole('button', { name: 'Side' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(group).getByRole('button', { name: 'Dessert' }))
     expect(props.onCourse).toHaveBeenCalledWith(4)
-    await userEvent.click(within(group).getByRole('button', { name: 'All Courses' }))
-    expect(props.onCourse).toHaveBeenCalledWith(null)
+    await userEvent.click(within(group).getByRole('button', { name: 'Side' }))
+    expect(props.onCourse).toHaveBeenLastCalledWith(null)
   })
   it('has no Course section on Base recipes', () => {
     panel({ bases: true })
@@ -96,7 +96,7 @@ describe('RecipeFiltersPanel', () => {
   })
   it('opens on the first Course chip', () => {
     panel()
-    expect(screen.getByRole('button', { name: 'All Courses' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Main' })).toHaveFocus()
   })
   it('opens on the Tag search on Base recipes', () => {
     panel({ bases: true })

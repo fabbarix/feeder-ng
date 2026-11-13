@@ -63,10 +63,10 @@ describe('P17: a "+N" chip line shows a cut chip after its first, or a chip past
 
 describe('P18: a focus ring or hit area cut by a clipping ancestor', () => {
   it('names the control, what is cut and by how much', () => {
-    const f = run({ clippedRings: [{ sel: 'button.chip', label: 'All Courses', what: 'focus ring', px: 5 }, { sel: 'button.chip', label: 'Main', what: 'hit area', px: 9 }] })
+    const f = run({ clippedRings: [{ sel: 'button.chip', label: 'Main', what: 'focus ring', px: 5 }, { sel: 'button.chip', label: 'Side', what: 'hit area', px: 9 }] })
     const p = f.filter((x) => x.rule === 'P18')
     expect(p).toHaveLength(2)
-    expect(p[0]?.message).toMatch(/All Courses/)
+    expect(p[0]?.message).toMatch(/Main/)
     expect(p[0]?.message).toMatch(/focus ring/)
     expect(p[0]?.message).toMatch(/5\s*px/)
     expect(p[1]?.message).toMatch(/hit area/)

@@ -45,13 +45,15 @@ beforeEach(() => {
 })
 
 describe('RecipesScreen Course filter', () => {
-  it('has the Course filter group in the Filters panel with All Courses pressed, and no Course in the filter', async () => {
+  it('nothing selected shows all: the Course group in the Filters panel has no chip pressed and no Course in the filter', async () => {
     view()
     expect(screen.queryByRole('group', { name: 'Filter by Course' })).toBeNull()
     await openFilters()
     const group = screen.getByRole('group', { name: 'Filter by Course' })
-    expect(within(group).getByRole('button', { name: 'All Courses' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(group).queryByRole('button', { name: 'All Courses' })).toBeNull()
+    for (const b of within(group).getAllByRole('button')) expect(b).toHaveAttribute('aria-pressed', 'false')
     expect(lastFilter().course).toBeUndefined()
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
   })
   it('filtering by a Course asks the list for it', async () => {
     view()
@@ -60,12 +62,14 @@ describe('RecipesScreen Course filter', () => {
     expect(lastFilter().course).toBe(2)
     expect(screen.getByRole('button', { name: 'Side' })).toHaveAttribute('aria-pressed', 'true')
   })
-  it('All Courses clears it', async () => {
+  it('tapping the selected Course again clears it, back to every Recipe', async () => {
     view()
     await openFilters()
     await userEvent.click(screen.getByRole('button', { name: 'Side' }))
-    await userEvent.click(screen.getByRole('button', { name: 'All Courses' }))
+    expect(lastFilter().course).toBe(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Side' }))
     expect(lastFilter().course).toBeUndefined()
+    expect(screen.getByRole('button', { name: 'Side' })).toHaveAttribute('aria-pressed', 'false')
   })
   it('keeps the other filters when the Course changes', async () => {
     view()

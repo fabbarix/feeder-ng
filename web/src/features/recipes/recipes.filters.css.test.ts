@@ -131,7 +131,7 @@ describe('round 2: focus rings and hit areas are never clipped', () => {
     expect(overflow).not.toBe('hidden')
     if (overflow === 'clip') expect(px(valueFor('.recipe-filters__chips', 'overflow-clip-margin', 0))).toBeGreaterThanOrEqual(Math.max(RING, HIT))
   })
-  it('the Course line (a sideways scroller) is padded on both axes for the ring of "All Courses", with matching negative margins', () => {
+  it('the Course line (a sideways scroller) is padded on both axes for the ring of its first chip, with matching negative margins', () => {
     expect(padding('.course-filter', 'block')).toBeGreaterThanOrEqual(RING)
     expect(padding('.course-filter', 'inline')).toBeGreaterThanOrEqual(RING)
     const margin = valueFor('.course-filter', 'margin-inline', 0) ?? valueFor('.course-filter', 'margin', 0)?.split(' ')[1]

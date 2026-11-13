@@ -91,7 +91,7 @@ describe('keyboard', () => {
     view()
     filtersButton().focus()
     await userEvent.keyboard('{Enter}')
-    expect(screen.getByRole('button', { name: 'All Courses' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Main' })).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Filters' })).toBeNull()
     expect(filtersButton()).toHaveFocus()
