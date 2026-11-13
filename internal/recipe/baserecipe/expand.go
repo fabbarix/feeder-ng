@@ -2,9 +2,56 @@ package baserecipe
 
 import (
 	"math"
+	"strconv"
 
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
+
+// madeFractions is MadeFractions: one walk over the tree in line order, on a private copy of the availability.
+// Each Base recipe node's fraction is (need - taken) / need, need being its Quantity times the made part of its
+// parent (so the fraction is relative to the parent). A node under a fully covered parent gets 0 and takes
+// nothing. A node needing nothing gets 1. Lines sharing one Base recipe share its jar, in line order.
+func madeFractions(tree []Need, batches float64, have func(ingredientID int64) float64) func(Path) float64 {
+	avail := map[int64]float64{}
+	get := func(id int64) float64 {
+		if v, ok := avail[id]; ok {
+			return v
+		}
+		return have(id)
+	}
+	fracs := map[Path]float64{}
+	var walk func(nodes []Need, mult float64, covered bool)
+	walk = func(nodes []Need, mult float64, covered bool) {
+		for _, n := range nodes {
+			if n.BaseRecipeID == 0 {
+				continue
+			}
+			need := n.Quantity * mult
+			frac := 0.0
+			if !covered {
+				frac = 1
+				if need > 0 {
+					h := get(n.IngredientID)
+					taken := 0.0
+					if h > 0 {
+						taken = math.Min(h, need)
+					}
+					avail[n.IngredientID] = h - taken
+					frac = (need - taken) / need
+				}
+			}
+			fracs[n.Path] = frac
+			walk(n.Made, mult*frac, frac == 0)
+		}
+	}
+	walk(tree, batches, false)
+	return func(p Path) float64 {
+		if f, ok := fracs[p]; ok {
+			return f
+		}
+		return 1
+	}
+}
 
 // frame is one Recipe on the path from the root to the Recipe being expanded or composed.
 type frame struct {
@@ -66,20 +113,26 @@ func Expand(cat Catalog, recipeID int64) ([]Need, error) {
 	if !ok {
 		return nil, ErrNotFound
 	}
-	return expandLines(cat, r, 1, false, []frame{{r.ID, r.Name}})
+	return expandLines(cat, r, 1, false, []frame{{r.ID, r.Name}}, "")
 }
 
 // expandLines builds the needs of r's lines. scale is the factor from the root Batch down to r: every Quantity is
-// the raw line amount (Base Units) times scale, so nested Quantities are absolute for one root Batch.
-func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []frame) ([]Need, error) {
+// the raw line amount (Base Units) times scale, so nested Quantities are absolute for one root Batch. prefix is
+// the Path of r's line in its parent ("" for the root); each node's Path is the raw index of its line, with
+// unconvertible lines counted, joined to the prefix.
+func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []frame, prefix string) ([]Need, error) {
 	var out []Need
-	for _, ln := range r.Lines {
+	for i, ln := range r.Lines {
+		p := strconv.Itoa(i)
+		if prefix != "" {
+			p = prefix + "/" + p
+		}
 		q, ok := qtyOf(cat, ln)
 		if !ok {
 			continue
 		}
 		opt := optional || ln.Optional
-		n := Need{IngredientID: ln.IngredientID, Quantity: q * scale, Optional: opt}
+		n := Need{IngredientID: ln.IngredientID, Quantity: q * scale, Optional: opt, Path: Path(p)}
 		child, yield, isBlock := blockOf(cat, ln.IngredientID)
 		if !isBlock {
 			out = append(out, n)
@@ -88,7 +141,7 @@ func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []fr
 		if err := cycleFor(stack, child); err != nil {
 			return nil, err
 		}
-		made, err := expandLines(cat, child, scale*q/yield, opt, append(stack, frame{child.ID, child.Name}))
+		made, err := expandLines(cat, child, scale*q/yield, opt, append(stack, frame{child.ID, child.Name}), p)
 		if err != nil {
 			return nil, err
 		}

@@ -3,6 +3,7 @@ package ingredient
 import (
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -197,8 +198,17 @@ func levenshtein(a, b []rune) int {
 // the one fuzzy score other packages reuse (Base recipe matching, BR-A); no copy of the matcher.
 func Score(a, b string) float64 { return Similarity(FoldAccents(a), FoldAccents(b)) }
 
-// FoldAccents lower-cases s and maps accented Latin letters to their base letters (béchamel -> bechamel).
-func FoldAccents(s string) string { return accentFolder.Replace(strings.ToLower(s)) }
+// FoldAccents lower-cases s and maps accented Latin letters to their base letters (béchamel -> bechamel). It
+// also takes decomposed input: combining marks (a letter followed by U+0301 and the like) are dropped first.
+func FoldAccents(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.Is(unicode.Mn, r) {
+			return -1
+		}
+		return r
+	}, strings.ToLower(s))
+	return accentFolder.Replace(s)
+}
 
 var accentFolder = strings.NewReplacer(
 	"à", "a", "á", "a", "â", "a", "ã", "a", "ä", "a", "å", "a", "ā", "a", "ă", "a", "ą", "a",

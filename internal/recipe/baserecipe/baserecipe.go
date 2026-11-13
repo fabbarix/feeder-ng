@@ -86,7 +86,7 @@ type Need struct {
 	Made         []Need
 	// Path is the node's line in the tree, in the format ComposeSteps uses (raw line indexes from the root,
 	// unconvertible lines counted: "1", "1/3"). Set by Expand on every node; empty on the output of Flatten and
-	// Resolve. Round 2 (BR-A): STUB, Expand does not fill it yet.
+	// Resolve.
 	Path Path
 }
 
@@ -201,7 +201,7 @@ type PickerRow struct {
 // make *of what its parent asks* (relative; 0 when the parent was fully covered, so Stock of a nested Base
 // recipe is not used under a covered parent). Paths come from Need.Path; an unknown Path is 1. The walk takes
 // from a private copy of the availability, so it never touches the caller's Stock, and it is deterministic:
-// two lines of one Base recipe share the same jar in line order. Round 2 (BR-A): STUB.
+// two lines of one Base recipe share the same jar in line order.
 func MadeFractions(tree []Need, batches float64, have func(ingredientID int64) float64) func(Path) float64 {
-	return func(Path) float64 { return 1 }
+	return madeFractions(tree, batches, have)
 }
