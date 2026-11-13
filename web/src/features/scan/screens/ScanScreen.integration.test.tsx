@@ -10,7 +10,7 @@ import { parse } from '../lib/barcode'
 import { createMemoryOpStore, createMemoryPictureStore } from '../lib/queue'
 import { createSessionStore } from '../lib/sessionStore'
 import { createMemorySnapshotStore } from '../lib/snapshots'
-import { okResult, passata, products } from '../lib/scannedList.testData'
+import { cheese, okResult, passata as pricedPassata, toiletPaper } from '../lib/scannedList.testData'
 import type { OfflineData, Op, ScanResult } from '../types'
 
 const h = vi.hoisted(() => ({
@@ -46,7 +46,11 @@ vi.mock('../lib/feedback', () => ({
   webAudioBeep: () => vi.fn(),
   createFeedback: () => ({ confirm: vi.fn(), reject: vi.fn(), isMuted: () => false, setMuted: vi.fn(), canVibrate: false }),
 }))
-const offlineData: OfflineData = { shopId: 2, shopName: 'Coop', products, catalog: { globalBarcodes: { '08000500310427': 7 }, weightRules: [], weightProducts: {} } }
+// Mutti passata has no Price at Coop yet: resolveScan prices a known scan at its last Price, so only an unpriced Product
+// gives the new row "Add price".
+const { lastPriceDate: _unused, ...unpriced } = pricedPassata
+const passata = { ...unpriced, lastPriceCents: null }
+const offlineData: OfflineData = { shopId: 2, shopName: 'Coop', products: [passata, toiletPaper, cheese], catalog: { globalBarcodes: { '08000500310427': 7 }, weightRules: [], weightProducts: {} } }
 vi.mock('../hooks/useOfflineData', () => ({ useOfflineData: () => ({ offline: offlineData, status: 'ready', error: null }) }))
 vi.mock('../lib/idbStore', async () => {
   const ops = createMemoryOpStore()
@@ -108,14 +112,14 @@ describe('ScanScreen with the real controller', () => {
     expect(h.api.undo).toHaveBeenCalledTimes(1)
   })
 
-  it('Add price opens the keypad over the camera with "Last time here"; Save sends one PATCH and shows the Price and the total', async () => {
+  it('Add price opens the keypad over the camera with "No Price at Coop yet"; Save sends one PATCH and shows the Price and the total', async () => {
     open()
     await screen.findByRole('heading', { name: 'Nothing scanned yet' })
     await read()
     await userEvent.click(await screen.findByRole('button', { name: /^Add price/ }))
     expect(screen.getByRole('dialog', { name: 'Price of Mutti passata 700 g' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Scanner' })).toHaveAttribute('data-camera', 'paused')
-    expect(screen.getByRole('button', { name: /Last time here \$1\.29/ })).toBeInTheDocument()
+    expect(screen.getByText('No Price at Coop yet')).toBeInTheDocument()
     for (const k of '1.45') await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
