@@ -1,6 +1,6 @@
 # Household items: Supplies (plan)
 
-Status: **plan, decided** (2026-11-13; the user's answers in §9: D1, D2, D3, D5, D8 decided; D4, D6, D7 recommended, not yet confirmed). Base: 1.0.0-beta.6.5 (4f7b12bd). No code changes yet.
+Status: **plan, decided** (2026-11-13; the user's answers in §9: D1 to D8 all decided by the user; D4, D6 and D7 confirmed the same day). Base: 1.0.0-beta.6.5 (4f7b12bd). No code changes yet.
 
 The user: "One small feature: allow tracking buying of products that are not ingredients but household items we want to track
 prices and stock." Examples: dish soap, toilet paper, bin bags, batteries, laundry pods. They are bought at Shops, scanned by
@@ -224,8 +224,8 @@ and treats a name a Supply holds as a conflict to resolve. The Agent Prompt and 
 
 ### 4.10 Today, the board, notifications
 
-No change: a Supply never goes off, so it is never in Use soon or Spoiled; there is no low-stock tile or notification (open
-decision D4, recommended, not yet confirmed).
+No change: a Supply never goes off, so it is never in Use soon or Spoiled; there is no low-stock tile or notification (decision
+D4, confirmed by the user).
 
 ## 5. Data and API changes
 
@@ -360,18 +360,18 @@ with a Supplies group, the "what is this?" sheet with subheaders, the Supply pag
 
 ## 9. Decisions
 
-The user answered on 2026-11-13. D4, D6 and D7 keep the recommendation and are **recommended, not yet confirmed by the user**; the
-plan builds them as written unless the user says otherwise.
+The user answered on 2026-11-13. D4, D6 and D7 kept the recommendation and were then **confirmed by the user**; the plan builds
+them as written.
 
 | # | Question | Decision | Status |
 |---|---|---|---|
 | D1 | The term for a household thing that is not food | **Supply**, plural **Supplies**; "item", "household item" and "non-food" go on its _Avoid_ list (§3) | decided by the user |
 | D2 | Restock levels in scope? | **Yes.** A Supply below its Restock level gets a Shopping List Line by itself (§4.4, WP H4) | decided by the user |
 | D3 | Restock levels for food too? | **No, Supplies only.** `restock_level` on a food Ingredient is refused (`422`); a food level would have to combine with the plan's need and is a separate decision | decided by the user |
-| D4 | Today and notifications for a Supply below its Restock level | **No**: it shows on the Shopping List only; no Today tile, no board change, no notification (§4.10) | recommended, not yet confirmed by the user |
+| D4 | Today and notifications for a Supply below its Restock level | **No**: it shows on the Shopping List only; no Today tile, no board change, no notification (§4.10) | decided by the user (confirmed) |
 | D5 | Where Supplies live in the catalogue | **Their own list and pages**: Settings > Catalogue > Supplies, `/supplies` and `/supplies/:id`; the Ingredients list and page are food only (§6, WP H5) | decided by the user |
-| D6 | Pantry default | **Supplies show beside food by default**, with the "Food or Supplies" filter to narrow it (§4.6) | recommended, not yet confirmed by the user |
-| D7 | Used up | **In**: a Supply's Lot sheet has Used up, whole or part of a Lot; no per-piece counter (§4.2, WP H6) | recommended, not yet confirmed by the user |
+| D6 | Pantry default | **Supplies show beside food by default**, with the "Food or Supplies" filter to narrow it (§4.6) | decided by the user (confirmed) |
+| D7 | Used up | **In**: a Supply's Lot sheet has Used up, whole or part of a Lot; no per-piece counter (§4.2, WP H6) | decided by the user (confirmed) |
 | D8 | Release | **1.0.0-beta.7**, with migration 1550 and the `feeder-pre-1550.db` snapshot (§5.1, WP H1, H8) | decided by the user |
 
-ADR 0017 records D1, D2, D3 and D5 as decided and lists D4, D6 and D7 as pending confirmation until the user confirms them.
+ADR 0017 records D1 to D8 as decided by the user.
