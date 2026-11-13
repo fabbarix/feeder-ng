@@ -5,7 +5,8 @@
 //   PriceKeypad props:
 //     productName: string                         -> "Price of {productName}" names the display
 //     currency: string; locale?: string           -> Household currency / locale (default 'en-US')
-//     initialCents?: number | null                -> prefill (the row's Price)
+//     initialCents?: number | null                -> prefill: the row's Price per pack (a row that is not weighed)
+//     initialPerKgCents?: number | null           -> prefill: the row's Price per kg (per l); a weighed row passes this
 //     pack?: { amount: number; unit: 'g'|'ml'|'piece' }   -> pack size in base units; 'piece' or absent: per pack only
 //     weighed?: number                            -> weighed amount in g/ml: opens on per kg, shows "x 312 g = EUR6.21"
 //     last?: { cents: number; date: string } | null; shopName: string   -> the chip
@@ -89,6 +90,32 @@ describe('PriceKeypad: the announced value', () => {
   it('starts on the row\'s Price when it has one', () => {
     setup({ initialCents: 129 })
     expect(display()).toHaveTextContent('€1.29')
+  })
+
+  it('a weighed row starts on its per kg Price as it is (no round trip through the pack)', () => {
+    setup({ pack: { amount: 333, unit: 'g' }, weighed: 312, initialPerKgCents: 1990 })
+    expect(display()).toHaveTextContent('€19.90')
+    expect(screen.getByText('× 312 g = €6.21')).toBeInTheDocument()
+  })
+
+  it('a weighed row given only a pack Price converts it to per kg', () => {
+    setup({ pack: { amount: 500, unit: 'g' }, weighed: 312, initialCents: 145 })
+    expect(display()).toHaveTextContent('€2.90')
+  })
+
+  it('the per kg prefill wins over the pack Price when opening on per kg', () => {
+    setup({ pack: { amount: 500, unit: 'g' }, weighed: 312, initialCents: 999, initialPerKgCents: 1990 })
+    expect(display()).toHaveTextContent('€19.90')
+  })
+
+  it('a row opening per pack with only a per kg Price shows the pack Price it implies', () => {
+    setup({ pack: { amount: 500, unit: 'g' }, initialPerKgCents: 290 })
+    expect(display()).toHaveTextContent('€1.45')
+  })
+
+  it('ignores a per kg prefill on pieces', () => {
+    setup({ pack: { amount: 6, unit: 'piece' }, initialPerKgCents: 290 })
+    expect(display()).toHaveTextContent('€0')
   })
 })
 
