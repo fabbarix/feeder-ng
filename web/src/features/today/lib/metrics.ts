@@ -1,5 +1,5 @@
 // DS-TODAY (docs/design/system.md §2, §4): the Today metric strip: zero-waste streak, Leftovers to use, Lines to get.
-// Colour roles: success (streak), the leftover teal (Leftovers), the accent container (Lines to get). Plain TypeScript.
+// Colour roles: success (streak), the leftover teal (Leftovers), a neutral surface tile (Lines to get): never accent-soft. Plain TypeScript.
 import type { IconName } from '../../../ui/icons'
 import { todayStrings as s } from '../strings'
 import { streakMetric } from './streak'
@@ -11,7 +11,8 @@ export interface Metric {
   /** The big number: "2 d", "3 wk", "3", "16". */
   value: string
   label: string
-  tone: 'success' | 'leftover' | 'accent'
+  /** Metric tiles are never accent-soft (system.md §2): neutral is a surface tile, the others are status tones. */
+  tone: 'success' | 'leftover' | 'neutral'
   icon: IconName
 }
 
@@ -31,7 +32,7 @@ export function composeMetrics(c: MetricCounts): Metric[] {
   const out: Metric[] = []
   if (c.streakDays >= 1) out.push({ id: 'streak', value: streakMetric(c.streakDays).value, label: s.streakLabel, tone: 'success', icon: 'streak' })
   if (c.leftovers > 0 && !c.leftoversTile) out.push({ id: 'leftovers', value: String(c.leftovers), label: s.leftoversMetric, tone: 'leftover', icon: 'leftover' })
-  if (c.linesToGet > 0) out.push({ id: 'lines', value: String(c.linesToGet), label: s.linesMetric, tone: 'accent', icon: 'shop' })
+  if (c.linesToGet > 0) out.push({ id: 'lines', value: String(c.linesToGet), label: s.linesMetric, tone: 'neutral', icon: 'shop' })
   return out
 }
 
