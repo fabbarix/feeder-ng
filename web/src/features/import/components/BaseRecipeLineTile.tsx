@@ -1,11 +1,11 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Button, Chip, Tile } from '../../../ui'
+import { RadioCards, type RadioCard } from '../../../ui/fields/RadioCards'
 import { BaseRecipePicker } from '../../recipes/components/BaseRecipePicker'
 import type { LinkChoice } from '../../../lib/baseRecipes/useLineLink'
-import type { BaseRecipeRow } from '../lib/baseRecipeLines'
+import { answerForLinkChoice, askForYield, problemsFor, warningsFor, type BaseRecipeRow } from '../lib/baseRecipeLines'
 import { importStrings as s } from '../strings'
 import type { BaseRecipeAnswer, ImportTakeOverAsk, Problem, Warning } from '../types'
-import { AnswerRadios, type AnswerChoice } from './AnswerRadios'
 import { FileYieldForm } from './FileYieldForm'
 import { TakeOverQuestion } from './TakeOverQuestion'
 
@@ -23,21 +23,21 @@ export interface BaseRecipeLineTileProps {
 }
 
 /**
- * BR-E (design §11.3): one Base recipe line, "Is this another recipe?" with its answers as a crafted radio group, and "Choose another"
- * (BR-D's Base recipe picker). Answers are sent as they are chosen; nothing is linked until Confirm. A Recipe of this file that is not a Base
- * recipe asks for its Yield when the server says so.
+ * BR-E (design §11.3): one Base recipe line, "Is this another recipe?" with its answers as a radio group (arrows move, Space or Enter or a click
+ * answers), and "Choose another" (BR-D's Base recipe picker). Answers are sent when they are chosen; nothing is linked until Confirm. A Recipe of
+ * this file that is not a Base recipe asks for its Yield when the server says so.
  */
 export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onConvert, onTakeOver }: BaseRecipeLineTileProps): ReactNode {
   const uid = useId()
   const questionId = `${uid}-question`
   const [picking, setPicking] = useState(false)
-  const ownProblems = problems.filter((p) => p.path === row.path)
+  const ownProblems = problemsFor(row.path, problems)
   const alertIds = ownProblems.map((_, i) => `${uid}-problem-${i}`)
-  const ownWarnings = warnings.filter((w) => w.path === row.path)
+  const ownWarnings = warningsFor(row.path, warnings)
   const open = !row.resolved || (ask !== undefined && !ask.resolved)
-  const askForYield = ownProblems.some((p) => p.code === 'base_recipe_answer_invalid') && row.effective?.action === 'file'
 
-  const choices: AnswerChoice[] = row.options.map((o) => ({ id: o.id, title: o.label, detail: o.detail, checked: o.selected }))
+  const options: RadioCard<string>[] = row.options.map((o) => ({ value: o.id, title: o.label, description: o.detail }))
+  const checked = row.options.find((o) => o.selected)?.id ?? null
   const choose = (id: string) => {
     const option = row.options.find((o) => o.id === id)
     if (!option) return
@@ -46,9 +46,9 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
   }
   const pick = (choice: LinkChoice) => {
     setPicking(false)
-    if (choice.kind === 'existing') onAnswer({ action: 'use', recipeId: choice.baseRecipe.id })
-    else if (choice.kind === 'new') onAnswer({ action: 'create' })
-    else onConvert(choice.recipe)
+    const result = answerForLinkChoice(choice)
+    if (result.kind === 'convert') onConvert(result.recipe)
+    else onAnswer(result.answer)
   }
 
   return (
@@ -62,9 +62,9 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
         </div>
       ) : null}
       {ownProblems.map((p, i) => (
-        <div key={alertIds[i]} id={alertIds[i]} role="alert" className="base-line-tile__problem">
-          {p.message}
-        </div>
+        <Tile key={alertIds[i]} id={alertIds[i]} variant="status" status="danger" role="alert" as="div">
+          <p>{p.message}</p>
+        </Tile>
       ))}
       {ownWarnings.map((w, i) => (
         <p key={`${w.code}-${i}`} className="base-line-tile__note">
@@ -74,8 +74,18 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
       <h3 id={questionId} className="base-line-tile__question">
         {s.baseRecipes.question}
       </h3>
-      <AnswerRadios choices={choices} labelledBy={questionId} describedBy={alertIds.join(' ') || undefined} onChoose={choose} />
-      {askForYield ? <FileYieldForm onSet={(amount, unit) => onAnswer({ action: 'file', recipeIndex: row.effective!.recipeIndex, yield: amount, yieldUnit: unit })} /> : null}
+      <RadioCards
+        bare
+        labelledBy={questionId}
+        describedBy={alertIds.join(' ') || undefined}
+        activation="manual"
+        options={options}
+        value={checked}
+        onChange={choose}
+      />
+      {askForYield(row, ownProblems) ? (
+        <FileYieldForm onSet={(amount, unit) => onAnswer({ action: 'file', recipeIndex: row.effective!.recipeIndex, yield: amount, yieldUnit: unit })} />
+      ) : null}
       {ask ? <TakeOverQuestion ask={ask} onTakeOver={onTakeOver} /> : null}
       <div className="base-line-tile__actions">
         <Button variant="tertiary" onClick={() => setPicking(true)}>

@@ -21,6 +21,11 @@ export function readNextLabel(name: string): string {
   return importStrings.baseRecipes.readNext(name)
 }
 
+/** Whether a Confirm leaves follow-ups: a Base recipe to link, or a read to start. A plannable Recipe alone leaves none. */
+export function hasFollowUps(result: ImportResult): boolean {
+  return bulkLinkTargets(result).length > 0 || readNextItems(result).length > 0
+}
+
 /** Each Base recipe the import created or converted, in the answer's order: the bulk link sheet opens for each. A replaced one is left out. */
 export function bulkLinkTargets(result: ImportResult): Array<{ id: number; name: string }> {
   return result.recipes

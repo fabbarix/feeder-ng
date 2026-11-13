@@ -444,17 +444,6 @@
   white-space: nowrap;
 }
 
-/* A Problem on a line: a danger status tile with its 1 px border in the danger tone. */
-.base-line-tile__problem {
-  padding: var(--space-3);
-  border: 1px solid var(--status-danger-fg);
-  border-radius: var(--radius-tile-sm);
-  background: var(--status-danger-bg);
-  color: var(--color-text);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-line);
-}
-
 .base-line-tile__note {
   margin: 0;
   color: var(--color-muted);
@@ -466,31 +455,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-/* The answers of a line: one column of crafted radio cards, each a full-width tap target. */
-.base-answers {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
-.base-answers__choice {
-  inline-size: 100%;
-  text-align: start;
-}
-
-/* The take-over ask: an info status tile with its 1 px border in the info tone. */
-.base-take-over {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-info-fg);
-  border-radius: var(--radius-tile-sm);
-  background: var(--color-info-bg);
-  min-inline-size: 0;
 }
 
 .base-take-over__text {
@@ -505,15 +469,6 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-2);
-}
-
-/* The Confirm refusal at the top of the review: a danger status tile with its 1 px border in the danger tone. */
-.import-confirm-problem {
-  border: 1px solid var(--status-danger-fg);
-}
-
-.import-confirm-problem p {
-  margin: 0;
 }
 
 .import-follow-ups {

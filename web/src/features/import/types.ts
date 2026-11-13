@@ -25,14 +25,16 @@ export interface CourseDecision {
   /** For action 'use': an active Course. */
   courseId?: number
 }
+/** BR-E: the actions a Base recipe tile can answer with. */
+export type BaseRecipeAction = 'use' | 'file' | 'create' | 'convert' | 'keep'
+
 /**
  * BR-E: the answer to a Base recipe tile (design §11.3). `use` an existing Base recipe (recipeId), `file` a Recipe of this import
  * (recipeIndex, with a Yield when it is not marked a Base recipe), `create` a new Base recipe (readNext), `convert` a plannable
  * Recipe (recipeId, the Yield), `keep` the line as an Ingredient.
  */
 export interface BaseRecipeAnswer {
-  /** One of 'use' | 'file' | 'create' | 'convert' | 'keep' (the server's words; a string on the wire). */
-  action: string
+  action: BaseRecipeAction
   recipeId?: number
   recipeIndex?: number
   readNext?: boolean
@@ -48,6 +50,14 @@ export interface Decisions {
   baseRecipeLines?: Record<string, BaseRecipeAnswer>
   /** BR-E: the take-over ask answers (P7), by path. Absent until one is given. */
   takeOvers?: Record<string, boolean>
+}
+/** BR-E round 2: a Base recipe answer as it goes over the wire: the action is the server's word (a string), checked by the server. */
+export interface WireBaseRecipeAnswer extends Omit<BaseRecipeAnswer, 'action'> {
+  action: string
+}
+/** The decisions as they are sent to the Import Review routes: a Decisions whose Base recipe answers are the wire shape. */
+export interface DecisionsWire extends Omit<Decisions, 'baseRecipeLines'> {
+  baseRecipeLines?: Record<string, WireBaseRecipeAnswer>
 }
 
 export interface Suggestion { id: number; name: string; baseUnit: BaseUnit; score: number }
@@ -124,6 +134,8 @@ export interface BaseRecipeLine {
   resolved: boolean
   /** The plain Ingredient of the same name, when there is one (shown beside Keep it as an Ingredient). */
   keepIngredient?: { id: number; name: string; baseUnit: BaseUnit }
+  /** BR-E round 2: the reference the line makes (a Recipe's name), when the server gives one. */
+  reference?: string
 }
 /** BR-E: the take-over ask of a Base recipe whose name an Ingredient already has (`plan().takeOvers[]`, P7 = B). */
 export interface ImportTakeOverAsk {

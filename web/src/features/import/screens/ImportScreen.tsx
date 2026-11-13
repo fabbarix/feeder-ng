@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
@@ -26,19 +26,14 @@ import { useImportReview } from '../hooks/useImportReview'
 import { useReadAvailability } from '../hooks/useReadAvailability'
 import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import { useRecipeRead } from '../hooks/useRecipeRead'
-import { confirmNeedsAnswer } from '../lib/baseRecipeLines'
-import { bulkLinkTargets, readNextItems } from '../lib/confirmFollowUps'
+import { confirmNeedsAnswer, genericProblems, standaloneAsks } from '../lib/baseRecipeLines'
+import { hasFollowUps } from '../lib/confirmFollowUps'
 import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
 import { canConfirm, openCount } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { Plan } from '../types'
 import { MAX_COURSES } from '../../../lib/courses'
 import '../import.css'
-
-/** BR-E: a Confirm that created or converted Base recipes, or asked to read one next, has follow-ups (ImportFollowUps). */
-function hasFollowUps(result: NonNullable<ReturnType<typeof useImportReview>['result']>): boolean {
-  return bulkLinkTargets(result).length > 0 || readNextItems(result).length > 0
-}
 
 /**
  * Route /recipes/import: four numbered steps. 1: Read a recipe (Recipe Assistant: page, text or photo). 2: the Agent Prompt.
@@ -57,6 +52,7 @@ export function ImportScreen(): ReactNode {
   const availability = useReadAvailability()
   // BR-E: the Base recipe tiles and the convert dialog of the review.
   const baseLines = useBaseRecipeLines({ plan: r.plan, onAnswer: r.chooseBaseRecipeLine })
+  const readNoteId = useId()
   const readHeading = useRef<HTMLHeadingElement>(null)
   const reviewHeading = useRef<HTMLHeadingElement>(null)
   const { hash } = useLocation()
@@ -117,8 +113,20 @@ export function ImportScreen(): ReactNode {
         </>
       ) : (
         <>
-          {r.phase === 'source' && r.readNextFor ? <p className="read-step__muted">{s.baseRecipes.readingFor(r.readNextFor.name)}</p> : null}
-          {r.phase === 'source' ? <ReadRecipeStep read={read} availability={availability} headingRef={readHeading} photosFinished={photosFinished} /> : null}
+          {r.phase === 'source' && r.readNextFor ? (
+            <p id={readNoteId} className="read-step__muted">
+              {s.baseRecipes.readingFor(r.readNextFor.name)}
+            </p>
+          ) : null}
+          {r.phase === 'source' ? (
+            <ReadRecipeStep
+              read={read}
+              availability={availability}
+              headingRef={readHeading}
+              headingDescribedBy={r.readNextFor ? readNoteId : undefined}
+              photosFinished={photosFinished}
+            />
+          ) : null}
           <AgentPromptStep step={r.phase === 'source' ? 2 : 1} />
           {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
           <Tile as="section" className="import-review" overline={s.stepOverline(r.phase === 'source' ? 4 : 2)}>
@@ -175,10 +183,8 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
   const names = questionRows(plan.courses)
   const forbidden = screen.courseForbidden
   const limited = courseLimit !== undefined
-  const onTiles = new Set(plan.baseRecipeLines.map((l) => l.path))
-  const genericProblems = others.filter((p) => !onTiles.has(p.path))
   // A take-over ask whose Base recipe has no line of its own (an exported Base recipe imported on its own) gets its own tile.
-  const standaloneAsks = plan.takeOvers.filter((a) => !onTiles.has(a.path))
+  const asks = standaloneAsks(plan)
   return (
     <>
       <ConfirmProblemTile problem={screen.confirmProblem} />
@@ -191,11 +197,11 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
           </Button>
         </Tile>
       ) : null}
-      {genericProblems.length > 0 ? (
+      {genericProblems(plan, others).length > 0 ? (
         <Tile variant="status" status="spoil" as="section">
           <h3>{s.errorsTitle}</h3>
           <ul className="import-list">
-            {genericProblems.map((p, i) => (
+            {genericProblems(plan, others).map((p, i) => (
               <li key={`${p.path}-${i}`}>
                 <code>{p.path}</code> {p.message}
               </li>
@@ -204,33 +210,31 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
         </Tile>
       ) : null}
       <section aria-label={s.ingredientsTitle}>
-        <BentoGrid min="card" label={s.ingredientsTitle}>
+        <BentoGrid min="card">
           {plan.ingredients.map((m) => (
             <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
           ))}
         </BentoGrid>
       </section>
-      {plan.baseRecipeLines.length > 0 || standaloneAsks.length > 0 ? (
+      {plan.baseRecipeLines.length > 0 || asks.length > 0 ? (
         <section aria-label={s.baseRecipes.title}>
-        <BentoGrid min="card" label={s.baseRecipes.title}>
-          {baseLines.rows.map((row) => (
-            <BaseRecipeLineTile
-              key={row.path}
-              row={row}
-              ask={baseLines.askFor(row.path)}
-              problems={plan.problems}
-              warnings={plan.warnings}
-              onAnswer={(answer) => baseLines.answer(row.path, answer)}
-              onConvert={(recipe) => void baseLines.startConvert(row.path, recipe)}
-              onTakeOver={(yes) => screen.chooseTakeOver(row.path, yes)}
-            />
-          ))}
-          {standaloneAsks.map((ask) => (
-            <Tile as="section" key={ask.path} aria-label={ask.name} className="base-line-tile">
-              <TakeOverQuestion ask={ask} onTakeOver={(yes) => screen.chooseTakeOver(ask.path, yes)} />
-            </Tile>
-          ))}
-        </BentoGrid>
+          <BentoGrid min="card">
+            {baseLines.rows.map((row) => (
+              <BaseRecipeLineTile
+                key={row.path}
+                row={row}
+                ask={baseLines.askFor(row.path)}
+                problems={plan.problems}
+                warnings={plan.warnings}
+                onAnswer={(answer) => baseLines.answer(row.path, answer)}
+                onConvert={(recipe) => void baseLines.startConvert(row.path, recipe)}
+                onTakeOver={(yes) => screen.chooseTakeOver(row.path, yes)}
+              />
+            ))}
+            {asks.map((ask) => (
+              <TakeOverQuestion key={ask.path} ask={ask} onTakeOver={(yes) => screen.chooseTakeOver(ask.path, yes)} />
+            ))}
+          </BentoGrid>
         </section>
       ) : null}
       {plan.unitPrompts.length > 0 ? (

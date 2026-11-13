@@ -11,7 +11,7 @@ import { ExportScreen } from './ExportScreen'
 
 const base: UseExportPicker = {
   recipes: [{ id: 1, name: 'Pancakes', imageUrl: '', archived: false }], isLoading: false, error: null, selected: [1],
-  toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: '/api/recipe-file/export?all=1',
+  toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: '/api/recipe-file/export?all=1', also: [],
 }
 
 describe('ExportScreen', () => {

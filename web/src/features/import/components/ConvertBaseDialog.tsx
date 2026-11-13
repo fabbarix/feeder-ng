@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Button, Dialog, NumberField, Select } from '../../../ui'
-import { YIELD_UNITS } from '../../../lib/baseRecipes/yield'
+import { Button, Dialog } from '../../../ui'
+import { YieldField } from '../../../ui/fields/YieldField'
+import { convertConfirm } from '../../../lib/baseRecipes/convertConfirm'
 import type { ConvertState } from '../hooks/useBaseRecipeLines'
 import { importStrings as s } from '../strings'
 
@@ -15,17 +16,22 @@ export interface ConvertBaseDialogProps {
   onCancel: () => void
 }
 
+/** Stands in for the dry run while it is asked: the title and the label do not depend on it. */
+const NO_CHANGES = { plannedMeals: [], slotRules: [], leftovers: 0, preferences: 0 }
+
 /**
- * BR-E (design §3.6, §11.3 answer 4): "Turn Pesto into a Base recipe?" with what the conversion takes away (the dry run) and the Yield.
- * Nothing is saved here: Turn into a Base recipe answers the tile; Cancel, or Escape, goes back to it with nothing chosen.
+ * BR-E (design §3.6, §11.3 answer 4): "Turn Pesto into a Base recipe?" with what the conversion takes away (the dry run) and the Yield. The
+ * title and the confirm label are BR-D's convertConfirm. Nothing is saved here: Turn into a Base recipe answers the tile; Cancel, or Escape,
+ * goes back to it with nothing chosen.
  */
 export function ConvertBaseDialog({ state, canConfirm, onYield, onYieldUnit, onConfirm, onCancel }: ConvertBaseDialogProps): ReactNode {
   if (!state) return null
+  const copy = convertConfirm(state.recipe.name, NO_CHANGES)
   return (
     <Dialog
       open
       onClose={onCancel}
-      title={s.baseRecipes.convertTitle(state.recipe.name)}
+      title={copy.title}
       actions={
         <>
           <Button variant="tertiary" onClick={onCancel}>
@@ -33,7 +39,7 @@ export function ConvertBaseDialog({ state, canConfirm, onYield, onYieldUnit, onC
           </Button>
           {state.status === 'ready' ? (
             <Button variant="primary" disabled={!canConfirm} onClick={onConfirm}>
-              {s.baseRecipes.convertAction}
+              {copy.confirmLabel}
             </Button>
           ) : null}
         </>
@@ -43,10 +49,9 @@ export function ConvertBaseDialog({ state, canConfirm, onYield, onYieldUnit, onC
       {state.status === 'error' ? <p role="alert">{state.error}</p> : null}
       {state.status === 'ready' && state.confirm ? state.confirm.body.map((line, i) => <p key={i}>{line}</p>) : null}
       {state.status !== 'error' ? (
-        <>
-          <NumberField size="xs" label={s.baseRecipes.yieldLabel} value={state.yield} onChange={onYield} />
-          <Select size="xs" label={s.baseRecipes.yieldUnitLabel} options={YIELD_UNITS.map((u) => ({ value: u, label: u }))} value={state.yieldUnit} onChange={onYieldUnit} />
-        </>
+        <div className="base-yield">
+          <YieldField amount={state.yield} unit={state.yieldUnit} onAmountChange={onYield} onUnitChange={onYieldUnit} />
+        </div>
       ) : null}
     </Dialog>
   )

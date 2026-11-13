@@ -10,7 +10,7 @@ vi.mock('../hooks/useExportPicker', () => ({ useExportPicker: () => hook.picker 
 
 import { ExportScreen } from './ExportScreen'
 
-const base = (): UseExportPicker => ({ recipes: [], isLoading: false, error: null, selected: [], toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: null })
+const base = (): UseExportPicker => ({ recipes: [], isLoading: false, error: null, selected: [], toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: null, also: [] })
 const view = () => render(<MemoryRouter><ExportScreen /></MemoryRouter>)
 
 beforeEach(() => {

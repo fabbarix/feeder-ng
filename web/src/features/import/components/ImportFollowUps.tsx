@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '../../../ui'
 import { LinkCandidatesSheet } from '../../recipes/components/LinkCandidatesSheet'
-import { readNextItems, readNextLabel, type ReadNextTarget } from '../lib/confirmFollowUps'
+import { readNextLabel, type ReadNextTarget } from '../lib/confirmFollowUps'
 import { useImportFollowUps } from '../hooks/useImportFollowUps'
 import type { ImportResult } from '../types'
 
@@ -17,7 +17,7 @@ export interface ImportFollowUpsProps {
  */
 export function ImportFollowUps({ result, onReadNext }: ImportFollowUpsProps): ReactNode {
   const follow = useImportFollowUps(result)
-  const reads = readNextItems(result)
+  const reads = follow.readNext
   return (
     <>
       {reads.length > 0 ? (

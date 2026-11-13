@@ -2,8 +2,8 @@
 // The sheet needs the Base recipe's Ingredient (for a merge), which the Confirm answer does not carry: GET /api/recipes/{id}.baseIngredientId.
 import { useQueries } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { http } from '../../../lib/http'
-import { bulkLinkTargets } from '../lib/confirmFollowUps'
+import { importApi } from '../api'
+import { bulkLinkTargets, readNextItems, type ReadNextTarget } from '../lib/confirmFollowUps'
 import type { ImportResult } from '../types'
 
 export interface FollowUpTarget {
@@ -19,10 +19,8 @@ export interface UseImportFollowUps {
   remaining: number
   /** The current sheet is done (linked, or closed): the next one opens. */
   next: () => void
-}
-
-async function baseIngredientOf(id: number): Promise<{ baseIngredientId?: number | null }> {
-  return http.get<{ baseIngredientId?: number | null }>(`/api/recipes/${id}`)
+  /** The created Base recipes the User asked to read next ("Read Béchamel now"). */
+  readNext: ReadNextTarget[]
 }
 
 /** The sheets of an import, one at a time, in the answer's order. A Base recipe whose detail cannot be read is skipped. */
@@ -30,7 +28,7 @@ export function useImportFollowUps(result: ImportResult | undefined): UseImportF
   const targets = useMemo(() => (result ? bulkLinkTargets(result) : []), [result])
   const [done, setDone] = useState<number[]>([])
   const queries = useQueries({
-    queries: targets.map((t) => ({ queryKey: ['recipes', t.id, 'import-follow-up'], queryFn: () => baseIngredientOf(t.id) })),
+    queries: targets.map((t) => ({ queryKey: ['recipes', t.id, 'import-follow-up'], queryFn: () => importApi.baseIngredientOf(t.id) })),
   })
 
   const open = targets.map((t, i) => ({ t, q: queries[i]! })).filter(({ t }) => !done.includes(t.id))
@@ -38,14 +36,13 @@ export function useImportFollowUps(result: ImportResult | undefined): UseImportF
   let waiting = false
   let remaining = 0
   for (const { t, q } of open) {
-    if (q.isError) continue
-    const ingredientId = q.data?.baseIngredientId
-    if (q.data && typeof ingredientId !== 'number') continue
+    // A Base recipe that cannot be read, or has no Ingredient (null), gets no sheet.
+    if (q.isError || q.data === null) continue
     remaining += 1
     // A sheet still loading holds the queue: the ones after it wait rather than open first.
     if (target === null && !waiting) {
       if (q.data === undefined) waiting = true
-      else target = { id: t.id, name: t.name, ingredientId: ingredientId as number }
+      else target = { id: t.id, name: t.name, ingredientId: q.data }
     }
   }
 
@@ -53,5 +50,5 @@ export function useImportFollowUps(result: ImportResult | undefined): UseImportF
   const next = () => {
     if (current) setDone((d) => [...d, current.id])
   }
-  return { target, remaining, next }
+  return { target, remaining, next, readNext: result ? readNextItems(result) : [] }
 }

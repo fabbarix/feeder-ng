@@ -7,27 +7,33 @@ export interface ConfirmProblemTileProps {
   problem: ConfirmProblem | undefined
 }
 
-/** The refusal of Confirm, at the top of the review and announced (design §10, §11.3). The cycle is named with the server's words. */
+/** A message that ends with a full stop: the server's own punctuation is kept, never doubled. */
+function sentence(message: string): string {
+  return /[.!?]$/.test(message.trim()) ? message.trim() : `${message.trim()}.`
+}
+
+/**
+ * The refusal of Confirm, at the top of the review and announced (design §10, §11.3). A cycle names itself with the server's words. A take-over
+ * ask shows nothing here: it is answered on its own tile or in its own dialog.
+ */
 export function ConfirmProblemTile({ problem }: ConfirmProblemTileProps): ReactNode {
-  if (!problem) return null
+  if (!problem || problem.kind === 'takeOver') return null
   const text = (() => {
     switch (problem.kind) {
       case 'cycle':
         return (
           <>
-            <strong>{s.baseRecipes.cycleTitle}</strong> {problem.message}
+            <strong>{s.baseRecipes.cycleTitle}</strong> {sentence(problem.message)}
           </>
         )
       case 'notReady':
-        return `${s.baseRecipes.notReady} ${problem.message}`
-      case 'takeOver':
-        return s.baseRecipes.takeOverBlocked(problem.ask.ingredient.name)
+        return s.notReady
       case 'validation':
         return problem.message
     }
   })()
   return (
-    <Tile variant="status" status="danger" role="alert" as="section" className="import-confirm-problem">
+    <Tile variant="status" status="danger" role="alert" as="section">
       <p>{text}</p>
     </Tile>
   )

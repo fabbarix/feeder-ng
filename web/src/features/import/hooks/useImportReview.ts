@@ -198,14 +198,14 @@ export function useImportReview(): UseImportReview {
   )
 
   /** Applies the answers and asks the server for the plan they lead to; only the latest request is shown. */
-  const replan = useCallback(
-    (next: Decisions) => {
+  const planFor = useCallback(
+    (next: Decisions): Promise<void> => {
       decisionsRef.current = next
       setDecisions(next)
       const current = reviewRef.current
-      if (!current) return
+      if (!current) return Promise.resolve()
       const mine = ++seq.current
-      void track(() => importApi.plan(current.id, next))
+      return track(() => importApi.plan(current.id, next))
         .then((res) => {
           if (mine === seq.current) setCurrent({ id: res.id, plan: res.plan })
         })
@@ -213,6 +213,8 @@ export function useImportReview(): UseImportReview {
     },
     [track, setCurrent],
   )
+
+  const replan = useCallback((next: Decisions) => void planFor(next), [planFor])
 
   /** An answer from the User: it also clears the notice of a refused Course answer. */
   const answer = useCallback(
@@ -249,6 +251,9 @@ export function useImportReview(): UseImportReview {
           setTakeOverPrompt({ path: asked.path, baseName: asked.name, ask: problem.ask })
           return
         }
+        // Round 2: the plan has no ask for it. Plan again with the current answers so the ask shows on its tile; no dialog, no second Confirm.
+        await planFor(decisionsRef.current)
+        return
       }
       if (problem && (problem.kind !== 'validation' || problem.reason !== undefined)) {
         // BR-E: a refusal that names what to fix (a cycle, a Base recipe refused as planned, an unready plan) stays on the review.
@@ -266,7 +271,7 @@ export function useImportReview(): UseImportReview {
         setError(readFileError(e))
       }
     }
-  }, [track, client, setCurrent, replan])
+  }, [track, client, setCurrent, replan, planFor])
 
   const reset = useCallback(async () => {
     const current = reviewRef.current

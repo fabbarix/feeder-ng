@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Button, NumberField, Select } from '../../../ui'
-import { YIELD_UNITS } from '../../../lib/baseRecipes/yield'
+import { Button } from '../../../ui'
+import { YieldField } from '../../../ui/fields/YieldField'
 import { importStrings as s } from '../strings'
 
 export interface FileYieldFormProps {
@@ -17,8 +17,7 @@ export function FileYieldForm({ onSet }: FileYieldFormProps): ReactNode {
   const ready = amount !== null && amount > 0
   return (
     <div className="base-yield">
-      <NumberField size="xs" label={s.baseRecipes.yieldLabel} value={amount} onChange={setAmount} />
-      <Select size="xs" label={s.baseRecipes.yieldUnitLabel} options={YIELD_UNITS.map((u) => ({ value: u, label: u }))} value={unit} onChange={setUnit} />
+      <YieldField amount={amount} unit={unit} onAmountChange={setAmount} onUnitChange={setUnit} />
       <Button variant="secondary" disabled={!ready} onClick={() => ready && onSet(amount, unit)}>
         {s.baseRecipes.setYield}
       </Button>

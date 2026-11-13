@@ -1,7 +1,9 @@
-// BR-E (design §11.3): the rows, answers and "Confirm needs an answer" of the Base recipe line tiles. Pure TypeScript, no React.
+// BR-E (design §11.3): the rows, answers and "Confirm needs an answer" of the Base recipe line tiles, and the splits of the review's Problems and
+// asks between the tiles and the rest. Pure TypeScript, no React.
 import { joinNames } from '../../../lib/baseRecipes/refusals'
+import type { LinkChoice } from '../../../lib/baseRecipes/useLineLink'
 import { importStrings } from '../strings'
-import type { BaseRecipeAnswer, BaseRecipeLine, ImportTakeOverAsk, Plan } from '../types'
+import type { BaseRecipeAnswer, BaseRecipeLine, ImportTakeOverAsk, Plan, Problem, Warning } from '../types'
 
 const t = importStrings.baseRecipes
 
@@ -37,8 +39,11 @@ export function lineReading(line: Pick<BaseRecipeLine, 'quantity' | 'unit' | 'na
   return line.cue ? `${head} · ${line.cue}` : head
 }
 
+/** An option before its `selected` is known. */
+type OptionDraft = Omit<AnswerOption, 'selected'>
+
 /** Whether an option is the answer in force. */
-function isEffective(o: AnswerOption, e: BaseRecipeAnswer | undefined): boolean {
+function isEffective(o: OptionDraft, e: BaseRecipeAnswer | undefined): boolean {
   if (!e) return false
   switch (o.kind) {
     case 'use':
@@ -59,20 +64,20 @@ function isEffective(o: AnswerOption, e: BaseRecipeAnswer | undefined): boolean 
  * Read it next), plannable Recipes (convert), and Keep it as an Ingredient. The always-present options come even with no suggestion.
  */
 function optionsOf(line: BaseRecipeLine): AnswerOption[] {
-  const out: Omit<AnswerOption, 'selected'>[] = []
+  const drafts: OptionDraft[] = []
   for (const s of line.suggestions.filter((x) => x.kind === 'base')) {
-    out.push({ id: `use:${s.recipeId}`, kind: 'use', label: t.useBase(s.name), decision: { action: 'use', recipeId: s.recipeId } })
+    drafts.push({ id: `use:${s.recipeId}`, kind: 'use', label: t.useBase(s.name), decision: { action: 'use', recipeId: s.recipeId } })
   }
   for (const s of line.suggestions.filter((x) => x.kind === 'file')) {
-    out.push({ id: `file:${s.recipeIndex}`, kind: 'file', label: t.useFile(s.name), decision: { action: 'file', recipeIndex: s.recipeIndex } })
+    drafts.push({ id: `file:${s.recipeIndex}`, kind: 'file', label: t.useFile(s.name), decision: { action: 'file', recipeIndex: s.recipeIndex } })
   }
-  out.push({ id: 'create', kind: 'create', label: t.createFillIn, decision: { action: 'create' } })
-  out.push({ id: 'create-next', kind: 'create', label: t.createReadNext, decision: { action: 'create', readNext: true } })
+  drafts.push({ id: 'create', kind: 'create', label: t.createFillIn, decision: { action: 'create' } })
+  drafts.push({ id: 'create-next', kind: 'create', label: t.createReadNext, decision: { action: 'create', readNext: true } })
   for (const s of line.suggestions.filter((x) => x.kind === 'plannable')) {
-    out.push({ id: `convert:${s.recipeId}`, kind: 'convert', label: t.convert(s.name), decision: null, recipe: { id: s.recipeId!, name: s.name } })
+    drafts.push({ id: `convert:${s.recipeId}`, kind: 'convert', label: t.convert(s.name), decision: null, recipe: { id: s.recipeId!, name: s.name } })
   }
-  out.push({ id: 'keep', kind: 'keep', label: t.keep, detail: line.keepIngredient?.name, decision: { action: 'keep' } })
-  return out.map((o) => ({ ...o, selected: isEffective(o as AnswerOption, line.effective) }))
+  drafts.push({ id: 'keep', kind: 'keep', label: t.keep, detail: line.keepIngredient?.name, decision: { action: 'keep' } })
+  return drafts.map((o) => ({ ...o, selected: isEffective(o, line.effective) }))
 }
 
 /** The Base recipe tiles of a review, in the plan's order. */
@@ -109,13 +114,60 @@ export function takeOverFor(plan: Plan, path: string): ImportTakeOverAsk | undef
   return plan.takeOvers.find((a) => a.path === path)
 }
 
+/** The Problems of one path, in order. */
+export function problemsFor(path: string, list: readonly Problem[]): Problem[] {
+  return list.filter((p) => p.path === path)
+}
+
+/** The warnings of one path, in order. */
+export function warningsFor(path: string, list: readonly Warning[]): Warning[] {
+  return list.filter((w) => w.path === path)
+}
+
+/** The Problems that belong to a Base recipe tile (their path is a tile's line), in the plan's order. */
+export function problemsOnTiles(plan: Plan, list: readonly Problem[]): Problem[] {
+  const paths = new Set(plan.baseRecipeLines.map((l) => l.path))
+  return list.filter((p) => paths.has(p.path))
+}
+
+/** The Problems that no Base recipe tile shows: they stay in the generic list. */
+export function genericProblems(plan: Plan, list: readonly Problem[]): Problem[] {
+  const paths = new Set(plan.baseRecipeLines.map((l) => l.path))
+  return list.filter((p) => !paths.has(p.path))
+}
+
+/** The take-over asks that no tile carries (a Base recipe of the file, imported on its own: its path is "$.recipes[i]"). */
+export function standaloneAsks(plan: Plan): ImportTakeOverAsk[] {
+  const paths = new Set(plan.baseRecipeLines.map((l) => l.path))
+  return plan.takeOvers.filter((a) => !paths.has(a.path))
+}
+
+/** Whether the tile asks for a Yield: its answer is a file Recipe and the server refused it for want of one. */
+export function askForYield(row: BaseRecipeRow, problems: readonly Problem[]): boolean {
+  return row.effective?.action === 'file' && problems.some((p) => p.path === row.path && p.code === 'base_recipe_answer_invalid')
+}
+
+/** What a choice of the Choose another picker means: an answer sent now, or a plannable Recipe the convert dialog asks about first. */
+export type LinkAnswer = { kind: 'answer'; answer: BaseRecipeAnswer } | { kind: 'convert'; recipe: { id: number; name: string } }
+
+export function answerForLinkChoice(choice: LinkChoice): LinkAnswer {
+  if (choice.kind === 'existing') return { kind: 'answer', answer: { action: 'use', recipeId: choice.baseRecipe.id } }
+  if (choice.kind === 'new') return { kind: 'answer', answer: { action: 'create' } }
+  return { kind: 'convert', recipe: choice.recipe }
+}
+
 /**
- * The ask's words: "An Ingredient named béchamel exists. It is on Moussaka and Lasagne, and 1 Stock Lot of it is in the Pantry.
- * Should the new Base recipe Béchamel take it over?" ("It has no Stock" and "no Recipe" when they apply).
+ * The take-over ask's facts: "An Ingredient named béchamel exists. It is on Moussaka and Lasagne, and 1 Stock Lot of it is in the Pantry."
+ * ("It has no Stock" and "no Recipe" when they apply). The question is asked apart, see takeOverQuestion.
  */
-export function takeOverText(ask: ImportTakeOverAsk): string {
+export function takeOverFacts(ask: ImportTakeOverAsk): string {
   const names = ask.recipes.map((r) => r.name)
   const where = names.length === 0 ? t.onNoRecipe : t.onRecipes(joinNames(names))
   const sentence = ask.stockLots === 0 ? `${where} ${t.noStock}.` : `${where}, and ${t.stockLots(ask.stockLots)}.`
-  return `${t.ingredientExists(ask.ingredient.name)} ${sentence} ${t.takeOverQuestion(ask.name)}`
+  return `${t.ingredientExists(ask.ingredient.name)} ${sentence}`
+}
+
+/** The ask's words in one sentence: facts, then the question. */
+export function takeOverText(ask: ImportTakeOverAsk): string {
+  return `${takeOverFacts(ask)} ${t.takeOverQuestion(ask.name)}`
 }

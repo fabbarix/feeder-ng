@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Checkbox, CoursePicker, FieldRow, NumberField, Switch, TextArea, TextField } from '../../../ui'
+import { YieldField } from '../../../ui/fields/YieldField'
 import { frozenUseByHelper } from '../../../lib/leftovers/frozenUseBy'
 import { codeMessage, courseStrings, recipeStrings } from '../strings'
 import { numberText, numberValue, type DraftErrors, type RecipeDraft } from '../lib/draft'
@@ -7,9 +8,7 @@ import { showsWholeMeal } from '../lib/recipeCourses'
 import type { CourseChoice } from '../../../lib/courses'
 import type { TagCount } from '../types'
 import { TagInput } from './TagInput'
-import { Select } from '../../../ui'
 import { fieldsFor } from '../lib/baseRecipe'
-import { YIELD_UNITS } from '../../../lib/baseRecipes/yield'
 
 export interface RecipeDetailsFieldsProps {
   draft: RecipeDraft
@@ -69,24 +68,27 @@ export function RecipeDetailsFields({
         onChange={(description) => onChange({ description })}
       />
       <FieldRow>
-        <NumberField
-          size="xs"
-          label={f.yield}
-          min={1}
-          value={numberValue(draft.yield)}
-          error={fieldError(errors, 'yield')}
-          onChange={(n) => onChange({ yield: numberText(n) })}
-        />
         {shown.yieldUnit ? (
-          <Select
-            size="xs"
-            label={bt.yieldUnit}
-            options={YIELD_UNITS.map((u) => ({ value: u, label: u }))}
-            value={draft.yieldUnit ? draft.yieldUnit : null}
-            error={fieldError(errors, 'yieldUnit')}
-            onChange={(yieldUnit) => onChange({ yieldUnit })}
+          <YieldField
+            amount={numberValue(draft.yield)}
+            unit={draft.yieldUnit ?? ''}
+            amountLabel={f.yield}
+            unitLabel={bt.yieldUnit}
+            amountError={fieldError(errors, 'yield')}
+            unitError={fieldError(errors, 'yieldUnit')}
+            onAmountChange={(n) => onChange({ yield: numberText(n) })}
+            onUnitChange={(yieldUnit) => onChange({ yieldUnit })}
           />
-        ) : null}
+        ) : (
+          <NumberField
+            size="xs"
+            label={f.yield}
+            min={1}
+            value={numberValue(draft.yield)}
+            error={fieldError(errors, 'yield')}
+            onChange={(n) => onChange({ yield: numberText(n) })}
+          />
+        )}
         {shown.cooldown ? (
           <NumberField
             size="xs"
