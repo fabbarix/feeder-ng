@@ -18,7 +18,6 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
 	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	productstore "github.com/fabbarix/feeder-ng/internal/product/store"
-	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	scanstore "github.com/fabbarix/feeder-ng/internal/scan/store"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
 	"github.com/fabbarix/feeder-ng/internal/shopping/service"
@@ -164,7 +163,7 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 	}
 	byID := make(map[int64][]shopping.Need, len(trees))
 	for id, tree := range trees {
-		byID[id] = ShoppingNeeds(tree)
+		byID[id] = shopping.NeedsFromTree(tree)
 	}
 	slots := map[int64]household.MealSlot{}
 	courseNames := map[int64]string{}
@@ -201,21 +200,6 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 			MealID: m.ID, SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID]})
 	}
 	return out, nil
-}
-
-// ShoppingNeeds turns a Recipe's need tree (one Batch, Base Units) into the Shopping List's Needs: a Base recipe node
-// keeps its Quantity and carries its Made children (recursively), so the list is Stock first (BR-F, section 7).
-// Optional is kept as the tree has it. An empty Base recipe node has no Made and stays a plain Need of its Ingredient.
-func ShoppingNeeds(tree []baserecipe.Need) []shopping.Need {
-	var out []shopping.Need
-	for _, n := range tree {
-		sn := shopping.Need{IngredientID: n.IngredientID, Quantity: n.Quantity, Optional: n.Optional}
-		if len(n.Made) > 0 {
-			sn.Made = ShoppingNeeds(n.Made)
-		}
-		out = append(out, sn)
-	}
-	return out
 }
 
 // stockPort adds Lots through Stock (source manual, or the scan source for a tick by hand) and lists them.

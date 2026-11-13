@@ -33,7 +33,15 @@ type Need struct {
 // recipe node (no Made) stays a plain Need of its Ingredient. It is the one converter plans.Meals uses (BR-F round 2:
 // moved here from shopping/httpapi, where it was ShoppingNeeds).
 func NeedsFromTree(tree []baserecipe.Need) []Need {
-	return nil // BR-F round 2 stub
+	var out []Need
+	for _, n := range tree {
+		sn := Need{IngredientID: n.IngredientID, Quantity: n.Quantity, Optional: n.Optional}
+		if len(n.Made) > 0 {
+			sn.Made = NeedsFromTree(n.Made)
+		}
+		out = append(out, sn)
+	}
+	return out
 }
 
 // Meal is an uncooked, non-skipped Planned Meal in the range. A meal served from a Leftover (Leftover true) needs nothing.
@@ -273,7 +281,7 @@ func draws(in Input) []mealDraw {
 
 // add draws one need of the Planned Meal, amount in the Ingredient's Base Units. A plain Ingredient (and an empty Base
 // recipe, which Made leaves nil) is needed and drawn as it is. A Base recipe node (Made set) draws its own Ingredient
-// first, and only the shortfall s is made: each child is drawn for child.Quantity * s / node.Quantity, recursively, so
+// first (its shortfall goes in short only, so it is never a Line), and only the shortfall s is made: each child is drawn for child.Quantity * s / node.Quantity, recursively, so
 // nested Base recipes resolve the same way Resolve does (section 7). Children are always walked, even for an amount of
 // 0, so both walks of Attribute carry the same keys.
 func (d *mealDraw) add(p stock.ProjectedStock, n Need, amount float64, date stock.Date) {
@@ -283,6 +291,8 @@ func (d *mealDraw) add(p stock.ProjectedStock, n Need, amount float64, date stoc
 		return
 	}
 	s := draw(p, n.IngredientID, amount, date)
+	// The Base recipe Ingredient is never a Line, but its own shortfall is recorded: Attribute names a bought jar by it.
+	d.short[n.IngredientID] += s
 	ratio := 0.0
 	if n.Quantity > 0 {
 		ratio = s / n.Quantity
