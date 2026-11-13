@@ -210,3 +210,37 @@ func TestUsedUpPartOfASupplyLotIsAPatchOfTheQuantityAndIsNotWaste(t *testing.T) 
 		t.Fatalf("totals %s, waste %+v; want 7 pieces and no waste", c.Get("/api/stock").Body, waste.Records)
 	}
 }
+
+// §4.2 "a Freezer move changes nothing": moving a Supply's Lot, whole or part, into a Freezer and back out never gives
+// it a go-off date, even with a stray Shelf Life on the row.
+func TestMovingASupplysLotNeverGivesItAGoOffDate(t *testing.T) {
+	env := testkit.Start(t)
+	c := env.LoginUser(t)
+	paper := seedSupply(t, env, "Toilet paper", "piece", 30)
+	var freezer, cupboard struct {
+		ID int64 `json:"id"`
+	}
+	c.Post("/api/storage-places", map[string]any{"name": "Chest freezer", "kind": "freezer"}).MustJSON(t, &freezer)
+	c.Post("/api/storage-places", map[string]any{"name": "Utility cupboard", "kind": "pantry"}).MustJSON(t, &cupboard)
+	var l lot
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": paper, "quantity": 9, "purchased": "2026-11-08"}).MustJSON(t, &l)
+	moves := []struct {
+		place    int64
+		quantity float64
+	}{{freezer.ID, 4}, {freezer.ID, 0}, {cupboard.ID, 0}}
+	for _, m := range moves {
+		var got kindLot
+		r := c.Post(fmt.Sprintf("/api/stock/lots/%d/move", l.ID), map[string]any{"storagePlaceId": m.place, "quantity": m.quantity})
+		r.MustJSON(t, &got)
+		if r.Status != 200 || got.GoesOff != nil || got.Kind != "supply" {
+			t.Fatalf("move to %d (%v) = %d %s, want goesOff null", m.place, m.quantity, r.Status, r.Body)
+		}
+	}
+	var list struct{ Lots []kindLot }
+	c.Get("/api/stock/lots").MustJSON(t, &list)
+	for _, got := range list.Lots {
+		if got.GoesOff != nil {
+			t.Fatalf("lots = %+v, want none with a go-off date", list.Lots)
+		}
+	}
+}
