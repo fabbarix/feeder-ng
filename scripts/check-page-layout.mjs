@@ -170,6 +170,29 @@ ws.onmessage = (ev) => {
   } else if (msg.method === 'Page.javascriptDialogOpening') {
     // A "Leave site?" (beforeunload) or confirm dialog freezes the renderer until it is answered (~58 s in headless): accept at once.
     send('Page.handleJavaScriptDialog', { accept: true }, msg.sessionId).catch(() => {})
+  } else if (msg.method === 'Fetch.requestPaused') {
+    pinBoardPhase(msg.params ?? {}, msg.sessionId)
+  }
+}
+
+// pantry-filter review: the kitchen board's scheme comes from the server's day/night phase (dark from sunset to sunrise, or 19:00 to
+// 07:00 household time without a location), not from prefers-color-scheme, so its dark pass depended on the hour the guard ran. The
+// guard pins the phase instead: every /api/board answer says dark while the dark pass runs and light otherwise (BOARD_PHASE), and its
+// next change a day away, so the board's own phase timer never fires during a probe.
+const BOARD_PHASE = { dark: false }
+const pinBoardPhase = async (p, sid) => {
+  try {
+    const { body, base64Encoded } = await send('Fetch.getResponseBody', { requestId: p.requestId }, sid)
+    const data = JSON.parse(base64Encoded ? Buffer.from(body, 'base64').toString('utf8') : body)
+    if (data && typeof data.theme === 'object' && data.theme !== null) {
+      data.theme = { ...data.theme, dark: BOARD_PHASE.dark, nextChangeAt: new Date(Date.now() + 86400e3).toISOString() }
+    }
+    // The body is handed over decoded and re-encoded here, so the original length and encoding no longer apply.
+    const responseHeaders = (p.responseHeaders ?? []).filter((h) => !/^(content-length|content-encoding)$/i.test(h.name))
+    await send('Fetch.fulfillRequest', { requestId: p.requestId, responseCode: p.responseStatusCode ?? 200, responseHeaders, body: Buffer.from(JSON.stringify(data)).toString('base64') }, sid)
+  } catch {
+    // Not JSON or no body (an error answer): it goes through as it came.
+    await send('Fetch.continueRequest', { requestId: p.requestId }, sid).catch(() => {})
   }
 }
 const send = (method, params = {}, sessionId) =>
@@ -203,6 +226,8 @@ const openTab = async () => {
   await cdp('Log.enable')
   await cdp('Network.enable')
   await cdp('Network.setBypassServiceWorker', { bypass: true })
+  // pantry-filter review: /api/board answers are paused at the response, so pinBoardPhase can pin the board's day/night phase.
+  await cdp('Fetch.enable', { patterns: [{ urlPattern: '*/api/board', requestStage: 'Response' }] })
 }
 const closeTab = async () => {
   await send('Target.closeTarget', { targetId }).catch(() => {})
@@ -655,7 +680,9 @@ async function probePage(vp, route, pattern, kind, open) {
     // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
     // The scheme is put back to light in the finally, whatever happens.
     try {
-      // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
+      // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first. The
+      // board takes its scheme from the server's phase, which is pinned to dark for this pass (pinBoardPhase).
+      BOARD_PHASE.dark = true
       await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
       await Promise.race([cdp('Page.reload', {}), sleep(4000)])
       await settle()
@@ -667,6 +694,7 @@ async function probePage(vp, route, pattern, kind, open) {
     } catch (e) {
       miss(`dark scheme: ${e.message}`, `${route} (dark)`)
     } finally {
+      BOARD_PHASE.dark = false
       await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] }).catch(() => {})
     }
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
