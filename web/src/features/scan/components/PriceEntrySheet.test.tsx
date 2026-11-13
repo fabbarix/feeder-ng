@@ -122,12 +122,12 @@ describe('PriceEntrySheet', () => {
     expect(first.props.onClose).toHaveBeenCalledTimes(1)
     first.unmount()
 
-    // The header X (and the backdrop) close without the typed value: only the keypad holds it (accepted, review SR4).
+    // beta.7 polish: the header X keeps the typed Price like Escape and the keypad's Close (it closed with nothing typed before).
     const header = setup()
     await tap('2')
     await userEvent.click(headerClose())
     expect(header.props.onClose).toHaveBeenCalledTimes(1)
-    expect(header.props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: null, packCents: null, perKgCents: null })
+    expect(header.props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 200, packCents: 200, perKgCents: null })
     header.unmount()
 
     const escape = setup()

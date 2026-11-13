@@ -1,8 +1,9 @@
 // SR4: the Price entry of one row (shop-scan-proposals.md 13.4): a non-modal half-height BottomSheet around the compact
 // PriceKeypad, so the Scanned list stays in view above it (the row being priced is outlined). Keyed by the entry, so the next
 // row starts afresh. It reports Save, Next and Close with what was typed; the screen saves it. Replaces PriceEditSheet.
+import { useRef } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
-import { PriceKeypad, type PriceEntry } from '../../../ui/PriceKeypad'
+import { PriceKeypad, type PriceEntry, type PriceKeypadHandle } from '../../../ui/PriceKeypad'
 import type { PackSize } from '../../../ui/lib/priceImplication'
 import type { ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
@@ -32,9 +33,13 @@ export interface PriceEntrySheetProps {
 const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null, perKgCents: null }
 
 export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose, entryKey }: PriceEntrySheetProps) {
+  const keypad = useRef<PriceKeypadHandle>(null)
+  // The header X closes like Escape and the keypad's Close: through the keypad, which keeps a valid typed Price.
+  const close = () => (keypad.current ? keypad.current.close() : onClose(NOTHING_TYPED))
   return (
-    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={() => onClose(NOTHING_TYPED)}>
+    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={close}>
       <PriceKeypad
+        ref={keypad}
         key={entryKey ?? row.key}
         compact
         showName={false}

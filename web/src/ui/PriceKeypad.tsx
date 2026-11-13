@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import { Button } from './Button'
 import { Chip } from './Chip'
 import { Icon } from './Icon'
@@ -49,6 +49,13 @@ export interface PriceKeypadProps {
   compact?: boolean
   /** false: leave out the product name line (the host already shows it, e.g. as the sheet title). Default true. */
   showName?: boolean
+  /** The host's own Close (a sheet's header X) asks the keypad to close, so it reports what was typed, as Escape does. */
+  ref?: Ref<PriceKeypadHandle>
+}
+
+export interface PriceKeypadHandle {
+  /** Close with what was typed: `onClose(entry)`. */
+  close(): void
 }
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
@@ -57,7 +64,7 @@ const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
  * The keypad of the Price entry: our own keys only, uncontrolled. It keeps the typed text and reports a PriceEntry.
  * A physical keyboard types into it too, unless the focus is in another text field.
  */
-export function PriceKeypad({ productName, currency, locale = 'en-US', initialCents, initialPerKgCents, pack, weighed, last, shopName, hasNext, onNext, onSave, onClose, compact = false, showName = true }: PriceKeypadProps) {
+export function PriceKeypad({ productName, currency, locale = 'en-US', initialCents, initialPerKgCents, pack, weighed, last, shopName, hasNext, onNext, onSave, onClose, compact = false, showName = true, ref }: PriceKeypadProps) {
   const perKgPack = pack && supportsPerKg(pack.unit) ? pack : null
   const errorId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -135,6 +142,8 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
     setBasis(next)
     setRefused(false)
   }
+
+  useImperativeHandle(ref, () => ({ close: () => onClose(entry()) }))
 
   /** Escape or the host dialog's close request: Close, reported at most once per event dispatch. */
   function closeByKey() {

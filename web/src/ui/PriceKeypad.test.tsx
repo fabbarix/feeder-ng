@@ -541,3 +541,14 @@ describe('PriceKeypad: compact, for a half-height sheet', () => {
     expect(css).not.toMatch(/data-compact='true'\][^{]*__key\s*\{[^}]*(min-height|block-size|height)/)
   })
 })
+
+describe('the host\'s Close (beta.7 polish)', () => {
+  it('ref.close() reports what was typed, as Escape and the Close key do', async () => {
+    const handle = { current: null as { close(): void } | null }
+    const { onClose } = setup({ ref: handle })
+    await tapKeys('1.45')
+    handle.current!.close()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 145, packCents: 145, perKgCents: null })
+  })
+})
