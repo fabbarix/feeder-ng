@@ -22,6 +22,7 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/scan", a.apply)
 	r.User("POST /api/scan/sync", a.sync)
 	r.User("POST /api/scan/{clientUuid}/undo", a.undo)
+	r.User("PATCH /api/scan/prices", a.setPrices)
 	r.User("PATCH /api/scan/{clientUuid}", a.setPrice)
 }
 
@@ -96,22 +97,47 @@ func (a *api) undo(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, undoJSON{Undone: out.Undone, AlreadyUndone: out.AlreadyUndone})
 }
 
-type priceBody struct {
-	PriceCents int `json:"priceCents"`
+type pricesBody struct {
+	ClientUUIDs     []string `json:"clientUuids"`
+	PriceCents      int      `json:"priceCents"`
+	PricePerKgCents *int     `json:"pricePerKgCents"`
 }
 
+// setPrices answers 200 with the Result of each scan, in the order sent.
+func (a *api) setPrices(w http.ResponseWriter, r *http.Request) {
+	var body pricesBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	results, err := a.svc.SetPrices(r.Context(), service.SetPricesInput{ClientUUIDs: body.ClientUUIDs,
+		PriceCents: body.PriceCents, PricePerKgCents: body.PricePerKgCents})
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"results": results})
+}
+
+type priceBody struct {
+	PriceCents      int  `json:"priceCents"`
+	PricePerKgCents *int `json:"pricePerKgCents"`
+}
+
+// setPrice is setPrices for one scan; the body is that scan's Result.
 func (a *api) setPrice(w http.ResponseWriter, r *http.Request) {
 	var body priceBody
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	res, err := a.svc.SetPrice(r.Context(), r.PathValue("clientUuid"), body.PriceCents)
+	results, err := a.svc.SetPrices(r.Context(), service.SetPricesInput{ClientUUIDs: []string{r.PathValue("clientUuid")},
+		PriceCents: body.PriceCents, PricePerKgCents: body.PricePerKgCents})
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, res)
+	httpx.WriteJSON(w, http.StatusOK, results[0])
 }
 
 // writeError maps the service errors to the API's statuses.

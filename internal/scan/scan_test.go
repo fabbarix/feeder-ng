@@ -61,6 +61,11 @@ func TestEveryOperationNeedsAClientUUIDAndATimestamp(t *testing.T) {
 		t.Errorf("field = %q", got)
 	}
 	op = shopScan()
+	op.ClientUUID = "prices" // PATCH /api/scan/prices is the batch route
+	if got := field(t, op.Validate()); got != "clientUuid" {
+		t.Errorf("prices: field = %q", got)
+	}
+	op = shopScan()
 	op.ClientUUID = strings.Repeat("x", 65)
 	if got := field(t, op.Validate()); got != "clientUuid" {
 		t.Errorf("too long: field = %q", got)

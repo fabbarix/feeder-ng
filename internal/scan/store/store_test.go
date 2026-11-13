@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,5 +139,124 @@ func TestUndoStepsAreRecordedOnceEachInTheOrderTheyRan(t *testing.T) {
 	}
 	if err := st.MarkUndoStep(ctx, "ghost", store.UndoStepList); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("unknown uuid: err = %v, want ErrNotFound", err)
+	}
+}
+
+// SR1: UpdatePrices sets the price of several events in one transaction (the store half of SetPrices).
+// type PriceUpdate struct { ClientUUID string; Cents int; PriceID *int64 }  (PriceID nil keeps the one the event has)
+// func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error
+func TestUpdatePricesSetsEveryEventAndItsResult(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 100, 1)
+	ev.RangeTo = "2026-11-15"
+	_, _ = st.Insert(ctx, ev)
+	ev = event("b", 100, 2)
+	_, _ = st.Insert(ctx, ev)
+	ev = event("c", 100, 3)
+	_, _ = st.Insert(ctx, ev)
+	if err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PriceID: i64(5)}, {ClientUUID: "b", Cents: 624}}); err != nil {
+		t.Fatal(err)
+	}
+	a, _, _ := st.Get(ctx, "a")
+	b, _, _ := st.Get(ctx, "b")
+	c, _, _ := st.Get(ctx, "c")
+	if *a.PriceCents != 129 || a.PriceID == nil || *a.PriceID != 5 || !strings.Contains(a.ResultJSON, `"priceCents":129`) {
+		t.Fatalf("a = %+v", a)
+	}
+	if *b.PriceCents != 624 || b.PriceID != nil || !strings.Contains(b.ResultJSON, `"priceCents":624`) {
+		t.Fatalf("b = %+v (PriceID nil keeps the event's own)", b)
+	}
+	if *c.PriceCents != 100 {
+		t.Fatalf("c = %+v, want untouched", c)
+	}
+	if spent, _, _ := st.Totals(ctx, "2026-11-15"); spent != 129+624+100 {
+		t.Fatalf("Totals = %d, want %d", spent, 129+624+100)
+	}
+}
+
+func TestUpdatePricesIsAllOrNothing(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	_, _ = st.Insert(ctx, event("a", 100, 1))
+	err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "ghost", Cents: 129}})
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
+	}
+	if a, _, _ := st.Get(ctx, "a"); *a.PriceCents != 100 {
+		t.Fatalf("a = %d, want the first update rolled back to 100", *a.PriceCents)
+	}
+}
+
+// The transaction re-checks Undo: an event undone since the service read it is ErrUndone, and nothing is written.
+func TestUpdatePricesRefusesAnUndoneEvent(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	_, _ = st.Insert(ctx, event("a", 100, 1))
+	_, _ = st.Insert(ctx, event("b", 100, 2))
+	_, _ = st.MarkUndone(ctx, "b")
+	err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "b", Cents: 129}})
+	if !errors.Is(err, store.ErrUndone) {
+		t.Fatalf("err = %v, want ErrUndone", err)
+	}
+	if a, _, _ := st.Get(ctx, "a"); *a.PriceCents != 100 {
+		t.Fatalf("a = %d, want 100", *a.PriceCents)
+	}
+}
+
+func TestUpdatePricesSetsTheReplacedPriceOnlyWhenGiven(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 100, 1)
+	ev.PrevPriceJSON = `{"date":"2026-11-09","priceCents":90}`
+	_, _ = st.Insert(ctx, ev)
+	_, _ = st.Insert(ctx, event("b", 100, 2))
+	empty, set := "", `{"date":"2026-11-09","priceCents":80}`
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "b", Cents: 129, PrevPriceJSON: &set}})
+	a, _, _ := st.Get(ctx, "a")
+	b, _, _ := st.Get(ctx, "b")
+	if a.PrevPriceJSON != ev.PrevPriceJSON || b.PrevPriceJSON != set {
+		t.Fatalf("a %q, b %q", a.PrevPriceJSON, b.PrevPriceJSON)
+	}
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PrevPriceJSON: &empty}})
+	if a, _, _ := st.Get(ctx, "a"); a.PrevPriceJSON != "" {
+		t.Fatalf("a %q, want cleared", a.PrevPriceJSON)
+	}
+}
+
+func TestRestorePricesPutsBackNoPrice(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 0, 1)
+	ev.PriceCents, ev.ResultJSON = nil, `{"status":"applied","scan":{"priceCents":null}}`
+	before, _ := st.Insert(ctx, ev)
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PriceID: i64(5)}})
+	if err := st.RestorePrices(ctx, []store.EventPrice{before.PriceState()}); err != nil {
+		t.Fatal(err)
+	}
+	a, _, _ := st.Get(ctx, "a")
+	if a.PriceCents != nil || a.PriceID != nil || strings.Contains(a.ResultJSON, "129") {
+		t.Fatalf("a = %+v", a)
+	}
+	if err := st.RestorePrices(ctx, []store.EventPrice{{ClientUUID: "ghost"}}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("ghost: err = %v", err)
+	}
+}
+
+func TestSharedPriceIsAnotherLiveEventOnTheSamePriceRow(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	a := event("a", 100, 1)
+	a.PriceID, a.PrevPriceJSON = i64(5), `{"date":"2026-11-09","priceCents":90}`
+	b := event("b", 100, 2)
+	b.PriceID = i64(5)
+	_, _ = st.Insert(ctx, a)
+	_, _ = st.Insert(ctx, b)
+	if prev, shared, err := st.SharedPrice(ctx, 5, "b"); err != nil || !shared || prev != a.PrevPriceJSON {
+		t.Fatalf("for b: %q %v %v, want a's", prev, shared, err)
+	}
+	_, _ = st.MarkUndone(ctx, "a")
+	if _, shared, _ := st.SharedPrice(ctx, 5, "b"); shared {
+		t.Fatal("an undone event does not share")
 	}
 }
