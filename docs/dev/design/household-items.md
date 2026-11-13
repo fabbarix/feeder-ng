@@ -1,12 +1,12 @@
 # Household items: Supplies (plan)
 
-Status: **plan, for the user's answers** (2026-11-13). Base: 1.0.0-beta.6.5 (4f7b12bd). No code changes yet.
+Status: **plan, decided** (2026-11-13; the user's answers in §9: D1, D2, D3, D5, D8 decided; D4, D6, D7 recommended, not yet confirmed). Base: 1.0.0-beta.6.5 (4f7b12bd). No code changes yet.
 
 The user: "One small feature: allow tracking buying of products that are not ingredients but household items we want to track
 prices and stock." Examples: dish soap, toilet paper, bin bags, batteries, laundry pods. They are bought at Shops, scanned by
 barcode, priced, and kept in Stock as Stock Lots. They are never used by a Recipe, the planner, Exclusions, Cook Mode or Cooked.
 
-The working term in this doc is **Supply** (§3, open question 1). "Item" is an _Avoid_ word for Ingredient, Product and Stock Lot.
+The term is **Supply**, plural **Supplies** (§3, decision D1). "Item" is an _Avoid_ word for Ingredient, Product and Stock Lot.
 
 ## 1. Goal and scope
 
@@ -18,7 +18,7 @@ The working term in this doc is **Supply** (§3, open question 1). "Item" is an 
 | Scan | an unknown barcode can be saved as a Product of a new or existing Supply; Shop mode and Stock-take work as for food |
 | Price | Prices per Product per Shop, as today; the Shopping List's estimated cost includes Supply Lines |
 | Stock | Stock Lots in Storage Places, Move to, Edit, Set total, a "Used up" action; never Use soon or Spoiled |
-| Shopping List | by hand (an Ingredient extra, which exists), and a **Restock level** that adds a Line when Stock is low (open question 2) |
+| Shopping List | by hand (an Ingredient extra, which exists), and a **Restock level** that adds a Line when Stock is low (decision D2) |
 | Stock-take | unchanged: +1 pack, −1 pack, Set total |
 | Pantry | Supply Lots show in their Storage Place; a "Food / Supplies" filter in the Filters panel |
 
@@ -185,13 +185,13 @@ Shopping List estimate. No price per piece in this feature.
 
 - **By hand**: an Ingredient extra of a Supply ("Toilet paper, 9"), already supported by `shopping_extras`. A free-text extra
   ("toilet paper") stays free text; nothing converts it.
-- **Restock level** (open question 2, recommended in scope): a Supply with a Restock level L and Stock S today (sum of its Lots) has a
+- **Restock level** (decision D2, in scope): a Supply with a Restock level L and Stock S today (sum of its Lots) has a
   Line of L − S when S < L. It ignores the range (a Supply's Stock does not move with the plan), uses the pack suggestion, the
   estimate, Tick, Not needed, and Scan as every Line does (all keyed by Ingredient). A Supply both restocked and added by hand shows
   both, as a food Line and its extra do today.
 - **Where**: open Supply Lines and Supply extras sit after the food Lines under a **"Supplies"** subheader; Ticked and Not needed
   keep their groups. The Line row says why: "Below 6 · 2 in Stock".
-- Restock levels are for Supplies only (open question 3).
+- Restock levels are for Supplies only, never for food (decision D3).
 
 ### 4.5 Stock-take
 
@@ -225,7 +225,7 @@ and treats a name a Supply holds as a conflict to resolve. The Agent Prompt and 
 ### 4.10 Today, the board, notifications
 
 No change: a Supply never goes off, so it is never in Use soon or Spoiled; there is no low-stock tile or notification (open
-question 4).
+decision D4, recommended, not yet confirmed).
 
 ## 5. Data and API changes
 
@@ -242,7 +242,8 @@ The rules that span columns (a Supply has no Shelf Life; only a Supply has a Res
 
 **Snapshot:** `scripts/test/b5-snap_test.sh` fails any `15NN` file outside `1500_`–`1540_` ("extend Pre1500Prefixes or name the next
 snapshot"). Following [b6-snap.md](b6-snap.md), the decision is to **name the next snapshot**, `feeder-pre-1550.db`: the pre-1540 file
-must stay the beta.6 restore point, and a beta.6.x user needs a restore point that is the beta.6.5 database.
+must stay the beta.6 restore point, and a beta.6.x user upgrading to **1.0.0-beta.7** (decision D8) needs a restore point that is
+the beta.6.5 database.
 
 | Package | Name |
 |---|---|
@@ -296,7 +297,7 @@ sends back. Sizes: S ≈ half a day of team time, M ≈ one day.
 
 | WP | Scope | Files owned | Depends on | Size |
 |---|---|---|---|---|
-| **H0 Language** | GLOSSARY entries, ADR 0017, functional-spec decision 49 and §5, §6, §9, §10, §13 text | `GLOSSARY.md`, `docs/adr/0017-supplies-are-ingredients-of-kind-supply.md`, `docs/spec/functional-spec.md` | the user's answers | S |
+| **H0 Language** | GLOSSARY entries, ADR 0017, functional-spec decision 49 and §5, §6, §9, §10, §13 text | `GLOSSARY.md`, `docs/adr/0017-supplies-are-ingredients-of-kind-supply.md`, `docs/spec/functional-spec.md` | D1–D3, D5 (decided) | S |
 | **H1 Schema + snapshot** | migration 1550, pre-1550 snapshot | `internal/db/migrations/1550_supplies.sql`, `internal/db/db.go`, `internal/db/pending1550_test.go`, `internal/backup/backup.go` (+test), `cmd/feeder/startup.go` (+test), `scripts/test/b5-snap_test.sh`, `scripts/test/b7-snap_test.sh`, `docs/dev/design/b7-snap.md` | H0 | S |
 | **H2 Supply domain + Ingredient API** | `Kind`, `RestockLevel`, validation, kind change guard, merge guard, `?kind=` | `internal/ingredient/**` | H1 | M |
 | **H3 Food-only guards** | guards 2–7 of §2 | `internal/recipe/readymeal.go`, `internal/recipe/store/**`, `internal/household/store/**`, `internal/household/httpapi/preferences.go`, `internal/recipefile/**` | H2 | M |
@@ -304,7 +305,7 @@ sends back. Sizes: S ≈ half a day of team time, M ≈ one day.
 | **H5 Web catalogue** | Supplies routes, list and page, Restock Tile, kind Tile, New Ingredient `Segmented`, food-only pickers | `web/src/features/ingredients/**`, `web/src/features/products/**` (Products Tile only if needed), `web/src/features/settings/lib/settingsSections.ts`, `web/src/app/breadcrumbs.ts`, `web/src/app/pageWidths.ts`, `web/src/features/recipes/api.ts`, `recipes/hooks/useQuickCreateIngredient.ts`, `recipes/components/IngredientExclusionList.tsx`, `web/src/lib/baseRecipes/**`, `web/src/ui/icons.ts` | H2 (contract) | M |
 | **H6 Web Pantry** | filter section, Supply rows, Lot sheet Used up, Add to Stock | `web/src/features/stock/**` | H4 (contract) | M |
 | **H7 Web Scan + Shop** | unknown form kind and subheaders, offline kind, Supplies group, Restock copy | `web/src/features/scan/**`, `web/src/features/shop/**` | H4 (contract), H5 (New Ingredient sheet) | M |
-| **H8 Guards + release** | page-layout routes and scenarios, BDD wiring, CHANGELOG, deploy.md | `scripts/check-page-layout.modes`, `scripts/check-page-layout.mjs` scenarios, `bdd/steps_supplies_test.go`, `bdd/features/supplies/**`, `CHANGELOG.md`, `docs/dev/deploy.md` | all | S |
+| **H8 Guards + release** | page-layout routes and scenarios, BDD wiring, the 1.0.0-beta.7 CHANGELOG entry, the deploy.md "Upgrading to 1.0.0-beta.7" section | `scripts/check-page-layout.modes`, `scripts/check-page-layout.mjs` scenarios, `bdd/steps_supplies_test.go`, `bdd/features/supplies/**`, `CHANGELOG.md`, `docs/dev/deploy.md` | all | S |
 
 **Order and parallelism**
 
@@ -357,21 +358,20 @@ H0 ─► H1 ─► H2 ─┬─► H3 ─────────────�
 1440: the Pantry Filters panel with the new section in the 358 px sheet (one line per row), the "Supplies" chip in row 3, the Shop list
 with a Supplies group, the "what is this?" sheet with subheaders, the Supply page grid.
 
-## 9. Open questions for the user
+## 9. Decisions
 
-1. **The term.** What do we call a household thing that is not food? *Recommended: "Supply" (plural "Supplies"), with "item",
-   "household item" and "non-food" on its _Avoid_ list; alternatives "Sundry" or "Household good" ("Household" already names the
-   family).*
-2. **Restock levels: in scope?** Should a Supply carry a level below which it goes on the Shopping List by itself? *Recommended: yes;
-   it is the one new rule, and adding by hand already works.*
-3. **Restock levels for food too?** Olive oil and salt are often bought the same way. *Recommended: Supplies only for now; for food
-   it would have to combine with the plan's need, which is a decision of its own.*
-4. **Today and notifications.** Should a Supply below its Restock level show on Today or send a notification? *Recommended: no; it
-   shows on the Shopping List only.*
-5. **Where Supplies live in the catalogue.** Their own "Supplies" list in Settings > Catalogue, or inside Ingredients with a filter?
-   *Recommended: their own list and pages (`/supplies`), so an "Ingredient" page never shows a non-food thing.*
-6. **Pantry default.** Should the Pantry show Supplies beside food by default? *Recommended: yes, with the "Food / Supplies" filter
-   to narrow it.*
-7. **Used up.** Is a "Used up" action on a Supply's Lot wanted, beside Set total? *Recommended: yes, whole or part of a Lot; no
-   per-piece "used one" counter.*
-8. **Release.** *Recommended: ship as 1.0.0-beta.7 with migration 1550 and the `feeder-pre-1550.db` snapshot.*
+The user answered on 2026-11-13. D4, D6 and D7 keep the recommendation and are **recommended, not yet confirmed by the user**; the
+plan builds them as written unless the user says otherwise.
+
+| # | Question | Decision | Status |
+|---|---|---|---|
+| D1 | The term for a household thing that is not food | **Supply**, plural **Supplies**; "item", "household item" and "non-food" go on its _Avoid_ list (§3) | decided by the user |
+| D2 | Restock levels in scope? | **Yes.** A Supply below its Restock level gets a Shopping List Line by itself (§4.4, WP H4) | decided by the user |
+| D3 | Restock levels for food too? | **No, Supplies only.** `restock_level` on a food Ingredient is refused (`422`); a food level would have to combine with the plan's need and is a separate decision | decided by the user |
+| D4 | Today and notifications for a Supply below its Restock level | **No**: it shows on the Shopping List only; no Today tile, no board change, no notification (§4.10) | recommended, not yet confirmed by the user |
+| D5 | Where Supplies live in the catalogue | **Their own list and pages**: Settings > Catalogue > Supplies, `/supplies` and `/supplies/:id`; the Ingredients list and page are food only (§6, WP H5) | decided by the user |
+| D6 | Pantry default | **Supplies show beside food by default**, with the "Food or Supplies" filter to narrow it (§4.6) | recommended, not yet confirmed by the user |
+| D7 | Used up | **In**: a Supply's Lot sheet has Used up, whole or part of a Lot; no per-piece counter (§4.2, WP H6) | recommended, not yet confirmed by the user |
+| D8 | Release | **1.0.0-beta.7**, with migration 1550 and the `feeder-pre-1550.db` snapshot (§5.1, WP H1, H8) | decided by the user |
+
+ADR 0017 records D1, D2, D3 and D5 as decided and lists D4, D6 and D7 as pending confirmation until the user confirms them.
