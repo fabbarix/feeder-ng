@@ -110,5 +110,6 @@ export function noteTexts(notes: ReceiptNote[], money: Money): string[] {
 export const applyLabel = (n: number) => `Apply ${n} ${plural(n, 'change', 'changes')}`
 export const appliedToast = (n: number) => `Applied ${n} ${plural(n, 'change', 'changes')} from the receipt`
 export const photosTitle = (n: number) => `Photos (${n} of up to 4)`
-export const discardTitle = (n: number) => `Discard ${n} ${plural(n, 'photo', 'photos')}?`
+/** The body of the leave dialog: the photos are in memory only, so leaving loses them. */
+export const photosNotKept = (n: number) => (n === 1 ? 'The photo is not kept.' : `The ${n} photos are not kept.`)
 export const waitingText = (n: number) => `Waiting for ${n} ${plural(n, 'Scan', 'Scans')} to sync first`

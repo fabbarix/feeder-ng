@@ -11,7 +11,7 @@ import { useReceiptPhotos } from '../hooks/useReceiptPhotos'
 import { useReceiptRead } from '../hooks/useReceiptRead'
 import { useReceiptSession } from '../hooks/useReceiptSession'
 import { describeReceiptError } from '../lib/receiptErrors'
-import { discardTitle, photosTitle } from '../lib/reviewCopy'
+import { photosNotKept, photosTitle } from '../lib/reviewCopy'
 import { receiptStrings as t } from '../strings'
 import type { ReceiptSession } from '../types'
 import '../receipt.css'
@@ -40,7 +40,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
   // Leaving with photos asks first; leaving during a read just leaves (the read stops with the screen).
   const leave = async () => {
     if (photos.count > 0 && !read.busy) {
-      const ok = await confirm.confirm({ title: discardTitle(photos.count), confirmLabel: t.discard, tone: 'danger' })
+      const ok = await confirm.confirm({ title: t.leavePhotosTitle, body: photosNotKept(photos.count), confirmLabel: t.leave, tone: 'danger' })
       if (!ok) return
       photos.clear()
     }

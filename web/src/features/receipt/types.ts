@@ -30,7 +30,7 @@ export interface Proposal {
   line: number
   /** The receipt line as printed. */
   text: string
-  /** The server's default for the review: Prices, Weights and Quantities are true. */
+  /** The server's default for the review: Prices, Weighed Products and Quantities are true. */
   checked: boolean
   /** An Add: it waits for the User's choices before it can be applied. */
   needsInput: boolean
@@ -116,7 +116,7 @@ export interface ReviewState {
 
 export type AddProblem = 'ingredient' | 'productName' | 'packSize'
 
-export type SectionId = 'shopDate' | 'prices' | 'weights' | 'quantities' | 'corrections' | 'notScanned' | 'notOnReceipt'
+export type SectionId = 'shopDate' | 'prices' | 'weighed' | 'quantities' | 'corrections' | 'notScanned' | 'notOnReceipt'
 export interface ReviewSection {
   id: SectionId
   title: string

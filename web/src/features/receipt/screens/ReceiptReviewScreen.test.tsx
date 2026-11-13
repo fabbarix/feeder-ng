@@ -93,8 +93,8 @@ describe('the header, the tiles and the sections', () => {
   it('has the sections in order, with their counts, as headings over labelled lists', () => {
     show()
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings).toEqual(['Prices (3)', 'Weights (1)', 'Quantities (1)', 'Corrections (1)', 'Not scanned (2)', 'Not on the receipt (1)'])
-    for (const name of ['Prices', 'Weights', 'Quantities', 'Corrections', 'Not scanned', 'Not on the receipt']) expect(screen.getByRole('list', { name })).toBeInTheDocument()
+    expect(headings).toEqual(['Prices (3)', 'Weighed Products (1)', 'Quantities (1)', 'Corrections (1)', 'Not scanned (2)', 'Not on the receipt (1)'])
+    for (const name of ['Prices', 'Weighed Products', 'Quantities', 'Corrections', 'Not scanned', 'Not on the receipt']) expect(screen.getByRole('list', { name })).toBeInTheDocument()
   })
   it('leaves out a section the read has nothing for', () => {
     const d = readDone()
@@ -120,7 +120,7 @@ describe('the rows', () => {
     expect(rowOf(/^Parmigiano Reggiano/)).toHaveTextContent('312 g → 318 g · €6.36')
     expect(rowOf(/^Granarolo mozzarella 125 g/)).toHaveTextContent('×3 → ×4 (the receipt has 4)')
   })
-  it('Prices, Weights and Quantities are checked; Corrections, Not scanned and Not on the receipt are not (the user\'s answer)', () => {
+  it('Prices, Weighed Products and Quantities are checked; Corrections, Not scanned and Not on the receipt are not (the user\'s answer)', () => {
     show()
     for (const n of [/^Mutti passata 700 g/, /^Barilla spaghetti/, /^Parmigiano Reggiano/, /^Granarolo mozzarella/]) expect(check(n)).toBeChecked()
     const corrections = within(screen.getByRole('list', { name: 'Corrections' }))

@@ -9,16 +9,16 @@ const SECTION_OF: Record<ProposalKind, SectionId> = {
   shop: 'shopDate',
   date: 'shopDate',
   price: 'prices',
-  weight: 'weights',
+  weight: 'weighed',
   quantity: 'quantities',
   name: 'corrections',
   pack_size: 'corrections',
   add: 'notScanned',
   missing: 'notOnReceipt',
 }
-const SECTION_ORDER: SectionId[] = ['shopDate', 'prices', 'weights', 'quantities', 'corrections', 'notScanned', 'notOnReceipt']
+const SECTION_ORDER: SectionId[] = ['shopDate', 'prices', 'weighed', 'quantities', 'corrections', 'notScanned', 'notOnReceipt']
 
-/** Prices, Weights and Quantities are checked; Adds need their form; the rest is the User's choice. */
+/** Prices, Weighed Products and Quantities are checked; Adds need their form; the rest is the User's choice. */
 export function initialReview(proposals: Proposal[]): ReviewState {
   const checked: Record<string, boolean> = {}
   for (const p of proposals) if (p.checked && !p.needsInput) checked[p.id] = true
@@ -124,7 +124,7 @@ export function buildApplyBody({ readId, fingerprint, clientUuids, proposals, st
 const TITLES: Record<SectionId, string> = {
   shopDate: t.sections.shopDate,
   prices: t.sections.prices,
-  weights: t.sections.weights,
+  weighed: t.sections.weighed,
   quantities: t.sections.quantities,
   corrections: t.sections.corrections,
   notScanned: t.sections.notScanned,

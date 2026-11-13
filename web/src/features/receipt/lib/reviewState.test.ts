@@ -22,7 +22,7 @@ import {
 const proposals = readDone().proposals
 
 describe('initialReview', () => {
-  it('checks Prices, Weights and Quantities and nothing else (the user answer)', () => {
+  it('checks Prices, Weighed Products and Quantities and nothing else (the user answer)', () => {
     const s = initialReview(allProposals)
     const checked = Object.keys(s.checked).filter((id) => s.checked[id])
     expect(checked.sort()).toEqual(['price:0', 'price:1', 'price:2', 'quantity:4', 'weight:3'])
@@ -218,8 +218,8 @@ describe('buildApplyBody', () => {
 describe('buildSections', () => {
   it('groups by kind in the review order and leaves empty sections out', () => {
     const sections = buildSections(allProposals)
-    expect(sections.map((s) => s.id)).toEqual(['shopDate', 'prices', 'weights', 'quantities', 'corrections', 'notScanned', 'notOnReceipt'])
-    expect(sections.map((s) => s.title)).toEqual(['Shop and date', 'Prices', 'Weights', 'Quantities', 'Corrections', 'Not scanned', 'Not on the receipt'])
+    expect(sections.map((s) => s.id)).toEqual(['shopDate', 'prices', 'weighed', 'quantities', 'corrections', 'notScanned', 'notOnReceipt'])
+    expect(sections.map((s) => s.title)).toEqual(['Shop and date', 'Prices', 'Weighed Products', 'Quantities', 'Corrections', 'Not scanned', 'Not on the receipt'])
   })
   it('puts shop and date together, pack size and name together', () => {
     const sections = buildSections(allProposals)

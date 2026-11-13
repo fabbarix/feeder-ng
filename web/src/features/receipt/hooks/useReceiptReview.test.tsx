@@ -59,7 +59,7 @@ describe('the review', () => {
     const { result } = setup()
     expect(result.current.stored?.readId).toBe(READ_ID)
     expect(result.current.rows).toHaveLength(6)
-    expect(result.current.sections.map((s) => s.id)).toEqual(['prices', 'weights', 'quantities', 'corrections', 'notScanned', 'notOnReceipt'])
+    expect(result.current.sections.map((s) => s.id)).toEqual(['prices', 'weighed', 'quantities', 'corrections', 'notScanned', 'notOnReceipt'])
     expect(result.current).toMatchObject({ applyCount: 5, allAccepted: false, hasChecked: true, applying: false, error: undefined })
   })
   it('toggle, acceptAll and clearAll change the count', () => {

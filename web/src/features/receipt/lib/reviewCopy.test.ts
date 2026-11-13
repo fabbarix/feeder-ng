@@ -6,10 +6,10 @@
 //   applyLabel(n): string                                "Apply 6 changes" / "Apply 1 change"
 //   appliedToast(n): string                              "Applied 6 changes from the receipt" / "Applied 1 change from the receipt"
 //   photosTitle(n): string                               "Photos (2 of up to 4)"
-//   discardTitle(n): string                              "Discard 2 photos?" / "Discard 1 photo?"
+//   photosNotKept(n): string                             "The 2 photos are not kept." / "The photo is not kept."
 //   waitingText(n): string                               "Waiting for 2 Scans to sync first" / "Waiting for 1 Scan to sync first"
 import { describe, expect, it } from 'vitest'
-import { appliedToast, applyLabel, changeText, discardTitle, noteTexts, photosTitle, rowTitle, waitingText } from './reviewCopy'
+import { appliedToast, applyLabel, changeText, noteTexts, photosNotKept, photosTitle, rowTitle, waitingText } from './reviewCopy'
 import { add0, add1, date, missing5, name0, packSize1, price0, price1, proposal, quantity4, rows, shop, weight3 } from '../fixtures.test-helper'
 
 const money = (c: number) => `${c < 0 ? '-' : ''}€${(Math.abs(c) / 100).toFixed(2)}`
@@ -125,9 +125,9 @@ describe('counts in words', () => {
     expect(photosTitle(2)).toBe('Photos (2 of up to 4)')
     expect(photosTitle(0)).toBe('Photos (0 of up to 4)')
   })
-  it('discardTitle', () => {
-    expect(discardTitle(2)).toBe('Discard 2 photos?')
-    expect(discardTitle(1)).toBe('Discard 1 photo?')
+  it('photosNotKept', () => {
+    expect(photosNotKept(2)).toBe('The 2 photos are not kept.')
+    expect(photosNotKept(1)).toBe('The photo is not kept.')
   })
   it('waitingText', () => {
     expect(waitingText(2)).toBe('Waiting for 2 Scans to sync first')

@@ -10,7 +10,7 @@
 //   assistant unavailable, an Admin               a muted row "Read the receipt" with "Turn on the Recipe Assistant in Settings", a link to /settings/recipe-assistant
 //   offline                                       a muted row, meta "Reading the receipt needs a connection"
 //   scans waiting to sync                         a muted row, meta "Waiting for 2 Scans to sync first"
-//   otherwise                                     the row: Receipt icon, "Read the receipt", meta "Fill in Prices and weights from a photo"; pressing it
+//   otherwise                                     the row: Receipt icon, "Read the receipt", meta "Fill in Prices and weighed amounts from a photo"; pressing it
 //                                                 publishes the session (publishReceiptSession({shopId, clientUuids})) and goes to /scan/receipt
 //   Muted rows are not buttons. Offline wins over waiting to sync.
 import { render, screen } from '@testing-library/react'
@@ -40,7 +40,7 @@ describe('the active row', () => {
   it('shows the title and the meta as a button', () => {
     show()
     expect(row()).toBeInTheDocument()
-    expect(screen.getByText('Fill in Prices and weights from a photo')).toBeInTheDocument()
+    expect(screen.getByText('Fill in Prices and weighed amounts from a photo')).toBeInTheDocument()
   })
   it('opens /scan/receipt and hands the session over', async () => {
     show()

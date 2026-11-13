@@ -2,7 +2,7 @@
 export const receiptStrings = {
   // Where it lives (the Scanned list footer, design 3.1).
   readTitle: 'Read the receipt',
-  readMeta: 'Fill in Prices and weights from a photo',
+  readMeta: 'Fill in Prices and weighed amounts from a photo',
   needsConnection: 'Reading the receipt needs a connection',
   turnOnAssistant: 'Turn on the Recipe Assistant in Settings',
   recipeSettings: 'Recipe Assistant settings',
@@ -14,7 +14,7 @@ export const receiptStrings = {
   longHint: 'Long receipt? Take it in parts, top to bottom.',
   privacy: 'The receipt photos and your Scanned list are sent to Anthropic to read the receipt. Feeder does not keep the photos.',
   dismiss: 'Dismiss',
-  discard: 'Discard',
+  leavePhotosTitle: 'Leave without reading?',
   photosLabel: 'Photos',
   photoLabel: (n: number) => `Photo ${n}`,
   removePhoto: (n: number) => `Remove photo ${n}`,
@@ -50,7 +50,7 @@ export const receiptStrings = {
   sections: {
     shopDate: 'Shop and date',
     prices: 'Prices',
-    weights: 'Weights',
+    weighed: 'Weighed Products',
     quantities: 'Quantities',
     corrections: 'Corrections',
     notScanned: 'Not scanned',

@@ -13,8 +13,9 @@ function collect(v: unknown, out: string[] = []): string[] {
   } else if (v && typeof v === 'object') for (const x of Object.values(v)) collect(x, out)
   return out
 }
-// GLOSSARY.md _Avoid_ lists for Receipt, Receipt review, Scanned list (and the Scan terms around them).
-const AVOID = ['bill', 'till slip', 'invoice', 'ticket', 'scontrino', 'receipt import', 'receipt check', 'receipt confirmation', 'basket', 'cart', 'trolley']
+// GLOSSARY.md _Avoid_ lists for Receipt, Receipt review, Scanned list (and the Scan terms around them), plus 'discard' (Throw out / Keep)
+// and 'weights' (Planner Style), which the receipt copy is tempted by.
+const AVOID = ['bill', 'till slip', 'invoice', 'ticket', 'scontrino', 'receipt import', 'receipt check', 'receipt confirmation', 'basket', 'cart', 'trolley', 'discard', 'weights']
 
 describe('receiptStrings', () => {
   const all = collect(receiptStrings)
@@ -26,7 +27,7 @@ describe('receiptStrings', () => {
     expect(all.filter((s) => re.test(s))).toEqual([])
   })
   it('carries the copy the design fixes', () => {
-    for (const s of ['Read the receipt', 'Fill in Prices and weights from a photo', 'Take a photo', 'Add another photo', 'Reading the receipt…', 'Review the receipt', 'Nothing changes until you apply.', 'Accept all', 'Clear all', 'Add…', 'Leave without applying?'])
+    for (const s of ['Read the receipt', 'Fill in Prices and weighed amounts from a photo', 'Take a photo', 'Add another photo', 'Reading the receipt…', 'Review the receipt', 'Nothing changes until you apply.', 'Accept all', 'Clear all', 'Add…', 'Leave without applying?', 'Leave without reading?'])
       expect(all).toContain(s)
   })
 })
