@@ -45,18 +45,23 @@
 /* The metric strip: a number and its label per tile. */
 .shop-metrics__tile {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   align-content: start;
 }
 
+/* One track that stretches to the tile and may shrink, so the progress bar spans the tile (an auto track sized to its content). */
 .shop-metrics__scan-tile {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   align-content: space-between;
 }
 
+/* The Scan button fills its tile at every width (no media query narrows it). */
 .shop-metrics__scan {
   inline-size: 100%;
+  justify-self: stretch;
 }
 
 .shop-metrics__figure {

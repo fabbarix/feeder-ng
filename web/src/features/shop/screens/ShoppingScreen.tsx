@@ -126,6 +126,8 @@ export function ShoppingScreen() {
         <div className="shop-screen__shop">
           <ShopSelect
             label={shopStrings.shopLabel}
+            appearance="chip"
+            icon="shops"
             shops={shopOptions}
             value={choice.shopId ?? ANY_SHOP_ID}
             onChange={(id) => choice.setShopId(id === ANY_SHOP_ID ? null : id)}
