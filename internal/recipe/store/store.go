@@ -109,7 +109,7 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean r
 	if in, err = s.mapBaseLines(ctx, in); err != nil {
 		return recipe.Input{}, "", err
 	}
-	if err := refuseSupplyLines(ctx, s.db, in); err != nil {
+	if err := refuseSupplyLines(ctx, s.db, id, in); err != nil {
 		return recipe.Input{}, "", err
 	}
 	if err := s.checkNeededAt(ctx, in); err != nil {
@@ -288,11 +288,22 @@ func supplyNamed(ctx context.Context, q Querier, name string, exceptID int64) (b
 }
 
 // refuseSupplyLines refuses a Recipe line or a Step use whose Ingredient is a Supply (ADR 0017, guard 2): a Supply is
-// never a line of a Recipe, a Ready Meal's pack or a Base recipe, nor a use of one of its Steps (a use may name an
-// Ingredient that is on no line). The refusal names the first one: lines[i].ingredientId, else
-// steps[i].uses[j].ingredientId.
-func refuseSupplyLines(ctx context.Context, q Querier, in recipe.Input) error {
+// never a line of a Recipe, a Ready Meal's pack or a Base recipe, nor a use of one of its Steps. The refusal names the
+// first one: lines[i].ingredientId, else steps[i].uses[j].ingredientId.
+//
+// Only what the save adds is refused. A line (a use) whose Ingredient the stored Recipe recipeID already has on a line
+// (a use) is kept as it is, so a Supply line that got in by another path (a kind change between a save's checks and
+// its write, or data written by hand) never blocks an unrelated save of that Recipe, nor a Link or an Undo that rewrites it. recipeID 0 is a new Recipe:
+// every line and use is new.
+func refuseSupplyLines(ctx context.Context, q Querier, recipeID int64, in recipe.Input) error {
+	storedLines, storedUses, err := storedIngredients(ctx, q, recipeID)
+	if err != nil {
+		return err
+	}
 	for i, l := range in.Lines {
+		if storedLines[l.IngredientID] {
+			continue
+		}
 		if sup, err := isSupply(ctx, q, l.IngredientID); err != nil {
 			return err
 		} else if sup {
@@ -302,6 +313,9 @@ func refuseSupplyLines(ctx context.Context, q Querier, in recipe.Input) error {
 	}
 	for i, st := range in.Steps {
 		for j, u := range st.Uses {
+			if storedUses[u.IngredientID] {
+				continue
+			}
 			if sup, err := isSupply(ctx, q, u.IngredientID); err != nil {
 				return err
 			} else if sup {
@@ -311,6 +325,41 @@ func refuseSupplyLines(ctx context.Context, q Querier, in recipe.Input) error {
 		}
 	}
 	return nil
+}
+
+// storedIngredients is the set of Ingredients on the stored lines, and on the stored Step uses, of Recipe recipeID
+// (both empty for 0 or an unknown id).
+func storedIngredients(ctx context.Context, q Querier, recipeID int64) (lines, uses map[int64]bool, err error) {
+	lines, uses = map[int64]bool{}, map[int64]bool{}
+	if recipeID == 0 {
+		return lines, uses, nil
+	}
+	for _, s := range []struct {
+		query string
+		into  map[int64]bool
+	}{
+		{`SELECT ingredient_id FROM recipe_lines WHERE recipe_id = ?`, lines},
+		{`SELECT ingredient_id FROM recipe_step_uses WHERE recipe_id = ?`, uses},
+	} {
+		rows, err := q.QueryContext(ctx, s.query, recipeID)
+		if err != nil {
+			return nil, nil, err
+		}
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, nil, err
+			}
+			s.into[id] = true
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return lines, uses, nil
 }
 
 // checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case), or like a Supply (ADR 0017).
@@ -1050,9 +1099,6 @@ func (s *Store) MemberForUser(ctx context.Context, userID int64) (int64, error) 
 // validate looks up the Ingredients a Recipe uses, then runs recipe validation and
 // the image checks.
 func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]units.Ingredient) (recipe.Input, error) {
-	if err := refuseSupplyLines(ctx, s.db, in); err != nil {
-		return recipe.Input{}, err
-	}
 	found := map[int64]units.Ingredient{}
 	for id, ing := range preset {
 		found[id] = ing

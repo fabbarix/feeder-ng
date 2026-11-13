@@ -1239,7 +1239,7 @@ func lineIndex(in recipe.Input, lineID int64) (int, error) {
 
 // saveInTx validates the Input of a stored Recipe (its kind unchanged) against the Ingredients inside tx and writes it.
 func (s *Store) saveInTx(ctx context.Context, tx *sql.Tx, recipeID int64, in recipe.Input) error {
-	clean, err := s.validateTx(ctx, tx, in)
+	clean, err := s.validateTx(ctx, tx, recipeID, in)
 	if err != nil {
 		return err
 	}
@@ -1283,9 +1283,9 @@ func (s *Store) recipeInput(ctx context.Context, tx *sql.Tx, id int64) (recipe.I
 func boolPtrOf(b bool) *bool { return &b }
 
 // validateTx is recipe.Input.Validate with the Ingredients read inside tx (an Ingredient made earlier in the same
-// transaction counts).
-func (s *Store) validateTx(ctx context.Context, tx *sql.Tx, in recipe.Input) (recipe.Input, error) {
-	if err := refuseSupplyLines(ctx, tx, in); err != nil {
+// transaction counts). recipeID is the stored Recipe the Input saves again (see refuseSupplyLines).
+func (s *Store) validateTx(ctx context.Context, tx *sql.Tx, recipeID int64, in recipe.Input) (recipe.Input, error) {
+	if err := refuseSupplyLines(ctx, tx, recipeID, in); err != nil {
 		return recipe.Input{}, err
 	}
 	var ids []int64

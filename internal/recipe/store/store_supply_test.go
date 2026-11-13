@@ -130,6 +130,59 @@ func TestAStepUseOfFoodOnNoLineIsStillAllowed(t *testing.T) {
 	}
 }
 
+// ---- guard 2, stored lines: only what a save adds is refused ----
+//
+// H2 refuses a change to Supply while a line or a use names the Ingredient, so a stored Supply line is rare (a kind
+// change between a save's checks and its write, or data written by hand). Such a line never blocks a save that
+// leaves it as it is (renaming the Recipe, a Link or an Undo): the User fixes it in the editor, or makes the
+// Ingredient food again.
+
+func TestAStoredSupplyLineDoesNotBlockAnUnrelatedSave(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, flour := f.basics(t)
+	in := plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g"))
+	in.Steps = []recipe.Step{stepUsing(flour, 20, "g")}
+	soup := f.createPlain(t, in)
+	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, flour)
+	in.Name = "Thick soup"
+	if _, err := f.s.Update(ctx, soup.ID, in); err != nil {
+		t.Fatalf("Update: %v, want the stored line and use kept as they are", err)
+	}
+}
+
+func TestAStoredSupplyLineDoesNotBlockALinkOfAnotherLine(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, flour := f.basics(t)
+	bech := f.createBase(t, baseIn("Béchamel", 1, "l", ln(milk, 1000, "ml")))
+	lasagne := f.createPlain(t, plainIn("Lasagne", ln(milk, 500, "ml"), ln(flour, 20, "g")))
+	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, flour)
+	if _, err := f.s.LinkLine(ctx, lasagne.ID, lasagne.Lines[0].ID, recipe.LinkRequest{BaseRecipeID: bech.ID}); err != nil {
+		t.Fatalf("LinkLine: %v, want the milk line linked: the flour line is not part of the change", err)
+	}
+}
+
+func TestANewSupplyLineIsStillRefusedBesideAStoredOne(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, flour := f.basics(t)
+	soap := f.supply(t, "Dish soap", units.Millilitre)
+	soup := f.createPlain(t, plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g")))
+	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, flour)
+	_, err := f.s.Update(ctx, soup.ID, plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g"), ln(soap, 5, "ml")))
+	wantValidation(t, err, "lines[2].ingredientId", codeIngredientIsSupply)
+}
+
+func TestAStoredSupplyLineDoesNotLetTheSupplyIntoAStepUse(t *testing.T) {
+	// The line and the use are kept apart: a Supply on a stored line is not a licence to use it in a Step.
+	f := newBaseFixture(t)
+	milk, _, flour := f.basics(t)
+	soup := f.createPlain(t, plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g")))
+	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, flour)
+	in := plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g"))
+	in.Steps = []recipe.Step{stepUsing(flour, 20, "g")}
+	_, err := f.s.Update(ctx, soup.ID, in)
+	wantValidation(t, err, "steps[0].uses[0].ingredientId", codeIngredientIsSupply)
+}
+
 // ---- guard 3: a Ready Meal's Ingredient is named like the Recipe ----
 
 func TestAReadyMealNamedLikeASupplyIsRefusedAndCreatesNoIngredient(t *testing.T) {
