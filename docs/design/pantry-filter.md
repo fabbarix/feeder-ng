@@ -73,8 +73,10 @@ controls. The labels are inconsistent ("Sort by" is labelled, the chip rows are 
 - **The aside from 1280 px** keeps its sticky, scrolling column. It scrolls, so it clips: it is padded by `--space-2` inline (with a
   matching negative margin, so its content still starts at the column's edge) and `--space-3` at its end, so a chip's focus ring
   (5 px) and a removable chip's hit area (9 px below it) are never cut (P18).
-- **The panel**: `.filter-panel.pantry-filters__panel`, the shared `inline-size: min(24rem, 100vw - 2 * var(--space-4))`; the Storage
-  Place list scrolls inside `max-block-size: min(16rem, 40dvh)` so the popover fits a 900 px high desktop.
+- **The panel**: `.filter-panel.pantry-filters__panel`, the shared `inline-size: min(24rem, 100vw - 2 * var(--space-4))`; in the
+  popover (from 768 px) the Storage Place list scrolls inside `max-block-size: min(16rem, 40dvh)` so it fits a 900 px high desktop
+  (it ends at 848 px at 1440 × 900). The phone sheet carries neither class: its list takes the shared cap, `min(20rem, 50dvh)`, as
+  Recipes' Tag list does, and the sheet scrolls.
 
 | Width | Row 1 | Row 2 | Panel |
 |---|---|---|---|
