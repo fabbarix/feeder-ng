@@ -130,10 +130,13 @@ func (s *Service) UndoSupplyUse(ctx context.Context, ingredientID int64, taken [
 	if len(taken) == 0 {
 		return SupplyUse{}, ErrUseInvalid
 	}
+	// A Use never takes from the same Lot twice, so a Lot listed twice is not a Use's answer.
+	seen := make(map[int64]bool, len(taken))
 	for _, t := range taken {
-		if !(t.Quantity > 0) || math.IsInf(t.Quantity, 0) || t.Purchased.IsNone() || checkDate(t.Purchased, "purchased") != nil {
+		if !(t.Quantity > 0) || math.IsInf(t.Quantity, 0) || t.Purchased.IsNone() || checkDate(t.Purchased, "purchased") != nil || seen[t.LotID] {
 			return SupplyUse{}, ErrUseInvalid
 		}
+		seen[t.LotID] = true
 	}
 	tx, err := s.st.Begin(ctx)
 	if err != nil {
@@ -173,6 +176,16 @@ func (s *Service) UndoSupplyUse(ctx context.Context, ingredientID int64, taken [
 		if exists[t.LotID] {
 			continue
 		}
+		// A Storage Place deleted since the Use unsorted its Lots (ON DELETE SET NULL): the recreated Lot is unsorted too.
+		place := t.StoragePlaceID
+		if place != nil {
+			if _, err := s.st.StoragePlaceTx(ctx, tx, *place); errors.Is(err, store.ErrPlaceNotFound) {
+				place = nil
+			} else if err != nil {
+				return SupplyUse{}, err
+			}
+		}
+		back[i].StoragePlaceID = place
 		made, err := s.st.AddLotTx(ctx, tx, store.NewLot{
 			IngredientID:   ing.ID,
 			Quantity:       t.Quantity,
@@ -181,7 +194,7 @@ func (s *Service) UndoSupplyUse(ctx context.Context, ingredientID int64, taken [
 			Source:         store.SourceManual,
 			ProductID:      t.ProductID,
 			ShopID:         t.ShopID,
-			StoragePlaceID: t.StoragePlaceID,
+			StoragePlaceID: place,
 		})
 		if err != nil {
 			return SupplyUse{}, err

@@ -272,3 +272,41 @@ func TestUndoRefusesFoodAnEmptyListAndNonPositiveQuantities(t *testing.T) {
 		t.Fatalf("a refused Undo changed Stock to %v", total(t, f.fixture, f.paper))
 	}
 }
+
+// Review (H9): a Use never takes from the same Lot twice, so an Undo that lists a Lot twice is refused and changes nothing.
+func TestUndoRefusesALotListedTwice(t *testing.T) {
+	f := supplySetup(t)
+	lot := f.add(t, f.paper, 9, "2026-11-01")
+	twice := []service.UsedLot{{LotID: lot.ID, Quantity: 1, Purchased: "2026-11-01"}, {LotID: lot.ID, Quantity: 1, Purchased: "2026-11-01"}}
+	if _, err := f.svc.UndoSupplyUse(ctx, f.paper, twice); !errors.Is(err, service.ErrUseInvalid) {
+		t.Fatalf("err = %v, want ErrUseInvalid", err)
+	}
+	if total(t, f.fixture, f.paper) != 9 {
+		t.Fatalf("a refused Undo changed Stock to %v", total(t, f.fixture, f.paper))
+	}
+}
+
+// Review (H9): the Storage Place of an emptied Lot may be deleted before Undo. Deleting a place unsorts its Lots
+// (ON DELETE SET NULL), so the recreated Lot is unsorted too, and the Undo still works.
+func TestUndoRecreatesALotWhoseStoragePlaceWasDeletedAsUnsorted(t *testing.T) {
+	f := supplySetup(t)
+	place := f.place(t, "Utility cupboard", stock.KindPantry)
+	if _, _, err := f.svc.AddLot(ctx, service.AddInput{IngredientID: f.paper, Quantity: 4, Purchased: "2026-11-01", StoragePlaceID: &place}); err != nil {
+		t.Fatal(err)
+	}
+	used, err := f.svc.UseSupply(ctx, f.paper, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.DeleteStoragePlace(ctx, place); err != nil {
+		t.Fatal(err)
+	}
+	back, err := f.svc.UndoSupplyUse(ctx, f.paper, used.Taken)
+	if err != nil {
+		t.Fatalf("Undo after the place was deleted: %v", err)
+	}
+	lots := f.lotsOf(t, f.paper)
+	if back.Total != 4 || len(lots) != 1 || lots[0].StoragePlaceID != nil || lots[0].Purchased != "2026-11-01" {
+		t.Fatalf("lots = %+v, back = %+v, want one unsorted Lot of 4 bought on 2026-11-01", lots, back)
+	}
+}
