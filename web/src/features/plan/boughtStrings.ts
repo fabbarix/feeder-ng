@@ -8,4 +8,7 @@ export const boughtStrings = {
   warnExcluded: (member: string, ingredient: string) => `${member} now excludes ${ingredient}, which this uses. Swap it to change it.`,
   warnArchived: 'This Recipe is archived. Swap it to change it.',
   warnCourseLost: (course: string) => `This Recipe is no longer a ${course} Recipe. Swap it to change it.`,
+  warnCourseLostAny: 'This Recipe is no longer a Recipe for this Course. Swap it to change it.',
+  unknownMember: 'A Member',
+  unknownIngredient: 'an Ingredient',
 } as const

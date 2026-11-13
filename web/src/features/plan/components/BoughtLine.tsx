@@ -1,6 +1,10 @@
+import './bought.css'
 import type { BoughtInfo } from '../lib/bought'
+import { boughtLine } from '../lib/bought'
 
-// STUB (red): the developer renders the sheet line from boughtLine().
-export function BoughtLine(_props: { bought: BoughtInfo | null | undefined }) {
-  return null
+/** The sheet line naming the Ingredients bought for a Planned Meal; renders nothing when not Bought. */
+export function BoughtLine({ bought }: { bought: BoughtInfo | null | undefined }) {
+  const text = boughtLine(bought)
+  if (text === null) return null
+  return <p className="bought-line">{text}</p>
 }
