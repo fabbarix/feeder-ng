@@ -33,14 +33,17 @@ func mount(r *app.Router, d app.Deps) {
 	ra := rasvc.For(d, claude.Factory(d.Logger))
 	// One session loader: the read fingerprints the same events the apply recomputes (design §7.1 step 1).
 	scan := scanhttpapi.NewReceiptApplier(d)
-	a := &api{applier: newApplier(d, scan), svc: service.New(service.Deps{
+	svc := service.New(service.Deps{
 		Assistant: service.FromRecipeAssistant(ra),
 		Events:    scan,
 		Contexts:  service.NewSQLContexts(d.DB, d.Clock),
 		Photos:    ra.Photos(),
 		Clock:     d.Clock,
 		Logger:    d.Logger,
-	})}
+	})
+	// The apply finds the reads this service keeps.
+	SetReadLookup(d.DB, readLookup{svc: svc})
+	a := &api{svc: svc, applier: newApplier(d, scan)}
 	for _, f := range routes {
 		f(r, a)
 	}
