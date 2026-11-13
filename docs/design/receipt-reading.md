@@ -301,6 +301,7 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
   2. groups them into rows by Product (the same rule as the phone's `scannedList.ts`, shared through the fixtures), ordered by
      first scan, and gives each its index;
   3. computes a **fingerprint** (SHA-256 over the sorted uuids and their prices and quantities);
+  the grouping and the fingerprint are the pure `receipt.GroupRows` and `receipt.Fingerprint` (RR1), which the apply uses too;
   4. prepares the photos, acquires the Limiter, and starts a job; answers `202 {id}`.
   Errors before the job: photo codes (`photos_empty`, `too_many_photos`, `photo_too_large`, `photo_unsupported`),
   `read_in_progress`, `too_many_reads` (with `retryAfterSeconds`).
