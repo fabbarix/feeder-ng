@@ -162,14 +162,21 @@ func TestEmptyingMembersWhileGuestsAreAlreadySetIsServed(t *testing.T) {
 	}
 }
 
-func TestServeAgainBringsAnEmptiedDateBackToTheUsualAttendance(t *testing.T) {
+// servePatch is "Plan Dinner again": a PATCH with notServed false, which runs serveAgain in the store's transaction.
+func servePatch(f *fx, slotID int64) error {
+	off := false
+	_, err := f.st.PatchSlotDate(f.ctx, slotID, sdDate, household.SlotDatePatch{NotServed: &off, Today: sdDate})
+	return err
+}
+
+func TestPatchServeAgainBringsAnEmptiedDateBackToTheUsualAttendance(t *testing.T) {
 	f := newFx(t)
 	slot, _, _ := f.thursday(t)
 	none, zero := []household.Attendee{}, 0
 	if err := f.st.SaveWhoIsEating(f.ctx, slot.ID, sdDate, household.WhoIsEating{Members: &none, Guests: &zero}); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.st.ServeAgain(f.ctx, slot.ID, sdDate); err != nil {
+	if err := servePatch(f, slot.ID); err != nil {
 		t.Fatal(err)
 	}
 	if row, _ := f.st.SlotDate(f.ctx, slot.ID, sdDate); row.NotServed {
@@ -181,7 +188,7 @@ func TestServeAgainBringsAnEmptiedDateBackToTheUsualAttendance(t *testing.T) {
 	}
 }
 
-func TestServeAgainKeepsTheMembersAndGuestsOfAHandMarkedDate(t *testing.T) {
+func TestPatchServeAgainKeepsTheMembersAndGuestsOfAHandMarkedDate(t *testing.T) {
 	f := newFx(t)
 	slot, anna, _ := f.thursday(t)
 	att, two := []household.Attendee{{MemberID: anna.ID}}, 2
@@ -191,7 +198,7 @@ func TestServeAgainKeepsTheMembersAndGuestsOfAHandMarkedDate(t *testing.T) {
 	if err := f.st.SaveSlotDate(f.ctx, household.SlotDate{SlotID: slot.ID, Date: sdDate, NotServed: true, Time: "20:00", Guests: 2}); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.st.ServeAgain(f.ctx, slot.ID, sdDate); err != nil {
+	if err := servePatch(f, slot.ID); err != nil {
 		t.Fatal(err)
 	}
 	row, _ := f.st.SlotDate(f.ctx, slot.ID, sdDate)

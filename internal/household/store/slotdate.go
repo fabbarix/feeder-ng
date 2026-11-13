@@ -97,25 +97,6 @@ func (s *Store) SaveWhoIsEating(ctx context.Context, slotID int64, date string, 
 	})
 }
 
-// ServeAgain clears Not served for the date ("Plan Dinner again"). When the date's own Attendance is an empty
-// override and the date has no Guest (an emptied date), the override is removed too, so the usual Attendance applies
-// again; otherwise the date's Members and Guests are left as they are.
-func (s *Store) ServeAgain(ctx context.Context, slotID int64, date string) error {
-	return s.inTx(ctx, func(tx *sql.Tx) error {
-		if err := slotExists(ctx, tx, slotID); err != nil {
-			return err
-		}
-		row, err := readSlotDate(ctx, tx, slotID, date)
-		if err != nil {
-			return err
-		}
-		if err := serveAgain(ctx, tx, slotID, date, &row); err != nil {
-			return err
-		}
-		return writeSlotDate(ctx, tx, row, s.clk.Now())
-	})
-}
-
 // serveAgain clears Not served on row. An emptied date (an empty override and no Guest) also loses its override, so
 // the usual Attendance applies again; its Course overrides go with it.
 func serveAgain(ctx context.Context, tx *sql.Tx, slotID int64, date string, row *household.SlotDate) error {

@@ -13,7 +13,7 @@ The terms are the [GLOSSARY](../../../GLOSSARY.md): **Not served**, **Guest**, *
 |---|---|---|
 | Migration 1500 `meal_slot_dates` | `internal/db/migrations/1500_slot_dates.sql` | **Written** (schema from the plan; its tests are green) |
 | Pure rules | `internal/household/slotdate.go` (`SlotDate`, `EffectiveTime`, `IsNotServed`, `EmptiesDate`, `PortionsWithGuests`, `ValidateGuests`, `ValidateSlotTime`, `ValidateNotServedChange`, `WhoIsEating`) | stubs |
-| Repository | `internal/household/store/slotdate.go` (`SlotDate`, `SaveSlotDate`, `SaveWhoIsEating`, `ServeAgain`); `ClearDateAttendance` also clears Guests | stubs |
+| Repository | `internal/household/store/slotdate.go` (`SlotDate`, `SaveSlotDate`, `SaveWhoIsEating`, `PatchSlotDate` / `serveAgain`); `ClearDateAttendance` also clears Guests | stubs |
 | Routes | `internal/household/httpapi/slotdates.go` (`GET`/`PATCH /api/meal-slots/{id}/dates/{date}`) and `meals.go` (`guests` on the attendance routes) | 501 stubs |
 | Sources port | `internal/plan/runner/ports.go` `Sources.SlotDate` and `SlotDateDef`; `DBSources.SlotDate` | stub returns the zero value |
 | Plan types | `plan.SlotInfo` (`UsualTime`, `Guests`, `NotServed`; `Time` is **effective**), `plan.Changes.RaiseBatches` / `RemoveUnresolved`, `ReasonSlotDateChanged` | fields added, nothing fills them |
@@ -33,7 +33,7 @@ Everything else (notify, cook, today, shopping, the runner) is read through the 
   Member **and** `row.Guests == 0` (U1). A date with no override is never "emptied": a slot whose **usual** Attendance is empty stays Couldn't plan
   (`no_attendance`). A date of Guests and no Member is **served** (U3).
 - **Emptied date is stored.** `SaveWhoIsEating` with Members set and `EmptiesDate(members, guestsAfter)` also saves `not_served = 1`. That is what
-  "Plan Dinner again" (PATCH `notServed:false` -> `Store.ServeAgain`) clears; when the date's override is empty and it has no Guest, `ServeAgain`
+  "Plan Dinner again" (PATCH `notServed:false` -> `Store.PatchSlotDate`, which calls `serveAgain`) clears; when the date's override is empty and it has no Guest, `serveAgain`
   removes the override too, so the usual Attendance applies again. Otherwise it leaves Members and Guests alone.
 - **Not served only while no Course is Cooked or Not cooked** (U2): PATCH `notServed:true` (and its dry run) answers `422 slot_started`;
   `BuildInput` ignores `SlotInfo.NotServed` once a Course of the slot has a Cooked or Not cooked Planned Meal, so a started slot is planned as it was.
@@ -50,7 +50,7 @@ Everything else (notify, cook, today, shopping, the runner) is read through the 
   Fewer portions never lower Batches (not listed). Cooked / Not cooked: never. The hard rules still replan (archived Recipe, Exclusion of an
   attending Member). Raised Batches count for Stock, purchases and the pending Leftover like any other. The runner's `invalidOnRead` therefore
   stops clearing a meal for "Batches too few"; it still clears "nobody eats the cell" and broken Slot Rules.
-  `plan.Reconcile` turns `Raised` into `Changes.RaiseBatches` (key, Batches, Portions) and does **not** also upsert the kept meal;
+  `plan.Reconcile` turns `Raised` into `Changes.RaiseBatches` (key, Batches, Portions) and the kept meal is upserted, carrying the raised Batches and portions, when its re-check changes;
   `store.Apply` writes `batches` / `portions` of a planned row, Pinned or not, never of a Cooked / Not cooked one.
 - **Not served in the plan**: `BuildInput` marks every cell `NotServed` and drops the slot's unresolved Planned Meals, **Pinned ones too**, from
   `Existing` (a meal whose slot is already over stays, passed as Pinned, as today). The planner leaves the cells empty with
@@ -141,7 +141,7 @@ All three former questions are decided; the tests follow the decisions.
 
 Review round 3 (Opus reviewer), decided:
 
-- **a. One transaction.** `PATCH` of a slot date runs in one store call, `Store.PatchSlotDate(ctx, slotID, date, household.SlotDatePatch{NotServed, Time, Today})
+- **a. One transaction.** `PATCH` of a slot date runs in one store call, `Store.PatchSlotDate(ctx, slotID, date, household.SlotDatePatch{NotServed, Time, Today, DryRun})
   (household.SlotDate, error)`: read the row, serve again when `notServed:false`, apply only the fields sent, check `time_invalid` / `date_past` /
   `slot_started`, save. A refused patch writes nothing. The handler parses, calls and responds. The "emptied while started" check moves into
   `SaveWhoIsEating`'s transaction (`household.ErrSlotStarted`); the handler no longer reads `SlotStarted` for it.
