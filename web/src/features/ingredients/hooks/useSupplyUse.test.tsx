@@ -38,6 +38,14 @@ const pack = { id: 9, name: 'Soap 500 ml', ingredientId: 21, ingredientName: 'di
 let client: QueryClient
 const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
 const setOnline = (online: boolean) => vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(online)
+/** The Undo of the first toast, narrowed: the test fails here, with a message, when that toast has no action. */
+function firstUndo(): () => unknown {
+  const options: unknown = toast.show.mock.calls[0]?.[1]
+  if (typeof options !== 'object' || options === null || !('onAction' in options) || typeof options.onAction !== 'function') {
+    throw new Error('the first toast has no Undo action')
+  }
+  return options.onAction as () => unknown
+}
 
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -83,7 +91,7 @@ describe('useSupplyUse: a Supply counted in pieces', () => {
     act(() => result.current.request(toiletPaperJSON, 4))
     await waitFor(() => expect(toast.show).toHaveBeenCalledTimes(1))
     spy.mockClear()
-    await act(async () => toast.show.mock.calls[0][1].onAction())
+    await act(async () => firstUndo()())
     expect(api.callsTo('POST', '/api/stock/ingredients/22/use/undo').map((c) => c.body)).toEqual([{ taken: paperUsed.taken }])
     expect(toast.show).toHaveBeenLastCalledWith('Put back 1 Toilet paper', expect.not.objectContaining({ actionLabel: expect.anything() }))
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
@@ -93,7 +101,7 @@ describe('useSupplyUse: a Supply counted in pieces', () => {
     const { result } = renderHook(() => useSupplyUse(), { wrapper })
     act(() => result.current.request(toiletPaperJSON, 4))
     await waitFor(() => expect(toast.show).toHaveBeenCalledTimes(1))
-    await act(async () => toast.show.mock.calls[0][1].onAction())
+    await act(async () => firstUndo()())
     expect(toast.show).toHaveBeenLastCalledWith('Could not put that back. Try again.', expect.objectContaining({ status: 'error' }))
   })
   it('sends nothing when there is no Stock', () => {
