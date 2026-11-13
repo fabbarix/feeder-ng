@@ -28,7 +28,7 @@ GLOSSARY entry (added by RR0), under "Food and shopping":
 
 **Receipt**:
 The paper (or printed) record a Shop gives at the till, listing what was bought and what it cost. Feeder reads it to correct a
-Scan session's Prices, weights and quantities; it does not keep it.
+Scanned list's Prices, weights and quantities; it does not keep it.
 _Avoid_: Bill, till slip, invoice, ticket, scontrino
 
 "Read the receipt" is the action (as "Read" is for the Recipe Assistant). "Assistant" stays the Admin's setting; the UI names the
