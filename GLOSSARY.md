@@ -48,7 +48,7 @@ _Avoid_: Servings, makes
 _Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
 
 **Base recipe**:
-A Recipe that other Recipes call for on an ingredient line (a béchamel, a pasta frolla, a stock) and that is never planned on its own: it has no Courses, and it is never chosen for a Meal Slot or Pinned. Feeder keeps an Ingredient of its own for it, so a bought jar or a frozen batch can be stocked, scanned and used first; only what Stock does not cover is made, scaled from its Yield, and only that goes on the Shopping List. A Base recipe may call for other Base recipes, but never, through any of them, for itself.
+A Recipe that other Recipes call for on an ingredient line (a béchamel, a pasta frolla, a stock) and that is never planned on its own: it has no Courses, and it is never chosen for a Meal Slot or Pinned. Feeder keeps an Ingredient for it (its own, or a same-name one the User lets it take over), so a bought jar or a frozen batch can be stocked, scanned and used first; only what Stock does not cover is made, scaled from its Yield, and only that goes on the Shopping List. A Base recipe may call for other Base recipes, but never, through any of them, for itself.
 _Avoid_: Component, sub-recipe, sub recipe, nested recipe
 _Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)); beta.5 copy must not offer it.
 
