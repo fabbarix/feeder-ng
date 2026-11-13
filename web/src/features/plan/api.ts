@@ -46,7 +46,7 @@ export const planApi = {
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<void>('/api/plan/regenerate'),
   /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
-  regenerateDryRun: async (): Promise<RegenerateDryRun> => ({ replaces: 0, bought: [] }), // stub (red)
+  regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
   setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
     http.put<PlannedMeal>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
   confirm: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/confirm`),

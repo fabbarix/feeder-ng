@@ -10,6 +10,7 @@ import { timeCaption } from '../lib/slotDate'
 import { planStrings as s } from '../strings'
 import type { PlannedMeal, PlanSlot, SlotDateActions, SlotDayKey, SlotKey, Unfilled } from '../types'
 import { CourseRow } from './CourseRow'
+import { PlanChipView } from './PlanChipView'
 import { NotServedRow } from './NotServedRow'
 import { SlotMenu } from './SlotMenu'
 import '../plan.css'
@@ -149,11 +150,7 @@ function SingleTile({ slot, meal, unfilled, keyOf: key, today, compact, onOpen, 
           <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
             {meal.recipeName}
           </button>
-          {chip ? (
-            <Chip kind={chip.kind} status={chip.status}>
-              {chip.label}
-            </Chip>
-          ) : null}
+          {chip ? <PlanChipView chip={chip} /> : null}
         </>
       ) : (
         <>

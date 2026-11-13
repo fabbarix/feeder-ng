@@ -3,12 +3,16 @@ import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
 import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { sheetChips } from '../lib/chips'
+import { warningContextOf } from '../lib/bought'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
 import { relaxedLine } from '../lib/relaxed'
 import { weekdayName } from '../lib/phrase'
 import { mayCook, mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
+import { BoughtLine } from './BoughtLine'
+import { PlanChipView } from './PlanChipView'
+import { RuleWarningLine } from './RuleWarningLine'
 import '../plan.css'
 
 export interface PlannedMealSheetProps {
@@ -124,12 +128,12 @@ export function PlannedMealSheet({
           ) : null}
           <div className="plan-sheet__chips">
             {chips.map((c) => (
-              <Chip key={c.key} kind={c.kind} status={c.status}>
-                {c.label}
-              </Chip>
+              <PlanChipView key={c.key} chip={c} />
             ))}
             {overflow > 0 ? <Chip kind="count">{`+${overflow}`}</Chip> : null}
           </div>
+          <BoughtLine bought={meal.bought} />
+          <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, course?.name)} />
           {line ? (
             <div className="plan-sheet__relaxed">
               <p className="plan__muted">{line.text}</p>

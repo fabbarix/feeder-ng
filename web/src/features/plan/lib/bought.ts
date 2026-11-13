@@ -2,6 +2,7 @@
 import type { PlanChip } from './chips'
 import { weekdayName } from './phrase'
 import { boughtStrings as b } from '../boughtStrings'
+import type { PlannedMeal, PlanSlot } from '../types'
 
 export interface BoughtInfo {
   ingredients: { id: number; name: string }[]
@@ -33,6 +34,15 @@ export interface RegenerateDryRun {
 }
 
 export const BOUGHT_CHIP_KEY = 'why:bought'
+
+/** The names a hard-rule warn line looks up: Members from the slot's Attendance, Ingredients from the meal's Bought list. */
+export function warningContextOf(slot: Pick<PlanSlot, 'attendance'>, meal: Pick<PlannedMeal, 'bought'>, courseName?: string): WarningContext {
+  return {
+    memberName: (id) => slot.attendance?.find((a) => a.id === id)?.name,
+    ingredientName: (id) => meal.bought?.ingredients.find((i) => i.id === id)?.name,
+    courseName,
+  }
+}
 
 /** Ingredient names of a Bought meal, in server order; [] when not Bought. */
 export function boughtNames(bought: BoughtInfo | null | undefined): string[] {

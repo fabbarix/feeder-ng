@@ -121,6 +121,7 @@ export function PlanScreen(): ReactNode {
         alternatives={s.alternatives.alternatives}
         isLoading={s.alternatives.isLoading}
         onPick={(id) => void s.pickAlternative(id)}
+        bought={s.swapBought}
       />
       <RecipeChooserSheet
         open={s.chooseOpen}

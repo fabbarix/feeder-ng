@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { alternativeNote, swapMeta } from '../lib/choose'
+import { swapBoughtNote, type BoughtInfo } from '../lib/bought'
 import { planStrings as s } from '../strings'
-import type { BoughtInfo } from '../lib/bought'
 import type { Alternative, PlanSlot } from '../types'
 import '../plan.css'
 
@@ -20,13 +20,15 @@ export interface SwapSheetProps {
 }
 
 /** Bottom sheet with the top 3 alternatives as rows (thumb, Recipe, first reason and the Leftover); a tap swaps and pins. */
-export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick }: SwapSheetProps): ReactNode {
+export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick, bought }: SwapSheetProps): ReactNode {
   const slotDate = slot?.date ?? ''
   const phrase = usePhraseContext(slotDate)
   const rows = alternatives.slice(0, 3)
+  const boughtNote = swapBoughtNote(bought)
   return (
     <BottomSheet open={open} onClose={onClose} title={s.swapTitle} footer={<Button variant="tertiary" onClick={onClose}>{s.swapKeep}</Button>}>
       <div className="plan__stack">
+        {boughtNote ? <p className="plan__muted">{boughtNote}</p> : null}
         {isLoading ? <p className="plan__muted">{s.swapLoading}</p> : null}
         {!isLoading && rows.length === 0 ? <p className="plan__muted">{s.swapNone}</p> : null}
         {rows.length > 0 ? (
