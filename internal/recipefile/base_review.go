@@ -129,7 +129,6 @@ func (r *review) buildBaseRows() {
 	r.checkBaseCycles()
 	r.markBaseRecipes()
 	r.bindBaseLines()
-	r.bindConvertNames()
 }
 
 // baseAnswer is the User's answer for the tile at path, if there is one.
@@ -377,39 +376,6 @@ func (r *review) bindBaseLines() {
 	}
 }
 
-// bindConvertNames binds the kept lines named like a converted Recipe to that Recipe's Ingredient, when no plain
-// Ingredient of the name exists: a plain Ingredient of that name would be the converted Recipe's, and there is none to keep.
-func (r *review) bindConvertNames() {
-	for _, row := range r.baseRows {
-		cv := r.baseAt[row.path]
-		if cv == nil || row.effective.Action != BaseConvert || cv.ref.Kind != BaseRefRecipe {
-			continue
-		}
-		if _, plain := r.existingByKey[cv.key]; plain {
-			continue
-		}
-		for i, rec := range r.f.Recipes {
-			if !r.kept[i] {
-				continue
-			}
-			for j, l := range rec.Ingredients {
-				p := linePath(i, j)
-				if _, bound := r.baseAt[p]; bound || units.NormalizeName(l.Ingredient) != cv.key {
-					continue
-				}
-				bl := &baseLine{path: p, key: cv.key, name: cv.name, unit: l.Unit, ref: cv.ref, target: cv.target}
-				r.baseAt[p] = bl
-				if r.stepBase[i] == nil {
-					r.stepBase[i] = map[string]*baseLine{}
-				}
-				if _, dup := r.stepBase[i][cv.key]; !dup {
-					r.stepBase[i][cv.key] = bl
-				}
-			}
-		}
-	}
-}
-
 // stepBaseOf is the Base recipe line that a Step use named name stands for in Recipe i, or nil. Edge case: a Recipe with two
 // Base recipe lines of one name (answered differently) gives its Step uses the first of them; a Step use names only the
 // Ingredient, not the line, so the first answer wins.
@@ -541,6 +507,57 @@ func (r *review) checkBaseRecipes() {
 	}
 }
 
+// checkHolderCycles reports a cycle among the file's Base recipes that the plain Ingredients make: a kept line named like
+// another Base recipe of the file needs that Base recipe's Ingredient to exist first (the plain one would be created
+// before it), and the same the other way round. No write order satisfies such a cycle, so one tile is a Problem.
+func (r *review) checkHolderCycles() {
+	created := map[string]int{} // normalised name of a Base recipe the import creates -> file index
+	for i := range r.f.Recipes {
+		if r.kept[i] && r.asBase[i] && r.recipes[i].Action != ActionReplace {
+			created[units.NormalizeName(r.recipes[i].ImportedAs)] = i
+		}
+	}
+	type edge struct {
+		to   int
+		path string
+	}
+	adj := map[int][]edge{}
+	for i := range r.f.Recipes {
+		if !r.kept[i] || !r.asBase[i] || r.recipes[i].Action == ActionReplace {
+			continue
+		}
+		for j := range r.f.Recipes[i].Ingredients {
+			path := linePath(i, j)
+			if r.baseAt[path] != nil {
+				continue // a Base recipe line's cycle is checkBaseCycles' (BaseFile answers)
+			}
+			if h, ok := created[units.NormalizeName(r.f.Recipes[i].Ingredients[j].Ingredient)]; ok && h != i {
+				adj[i] = append(adj[i], edge{h, path})
+			}
+		}
+	}
+	state := map[int]int{}
+	var visit func(u int)
+	visit = func(u int) {
+		state[u] = 1
+		for _, e := range adj[u] {
+			switch state[e.to] {
+			case 0:
+				visit(e.to)
+			case 1:
+				r.problem(e.path, ProblemBaseRecipeCycle, fmt.Sprintf("%s and %s each keep a line named after the other: neither can be written first",
+					r.recipes[u].ImportedAs, r.recipes[e.to].ImportedAs))
+			}
+		}
+		state[u] = 2
+	}
+	for i := range r.f.Recipes {
+		if state[i] == 0 && len(adj[i]) > 0 {
+			visit(i)
+		}
+	}
+}
+
 // checkBaseUnits asks a unit prompt for every line of a Base recipe whose unit does not convert to its Ingredient's Base
 // Unit (§3.3): the prompt is keyed by the line's name, like a plain Ingredient's, and one per unit. An answer is the
 // conversion of that Ingredient; it is kept for the store (BaseConversions). It runs before the Recipes are validated.
@@ -622,8 +639,8 @@ func (r *review) checkBaseName(path, name string, create bool) bool {
 	key := units.NormalizeName(name)
 	ok := true
 	if create {
-		for j, fr := range r.f.Recipes {
-			if r.kept[j] && units.NormalizeName(fr.Name) == key {
+		for j := range r.f.Recipes {
+			if r.kept[j] && units.NormalizeName(r.recipes[j].ImportedAs) == key {
 				ok = false
 				r.problem(path, recipe.CodeBaseRecipeNameTaken, "a Recipe of this file already uses that name")
 			}

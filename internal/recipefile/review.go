@@ -120,6 +120,7 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 	r.answerPrompts()
 	r.finishTargets()
 	r.checkBaseUnits()
+	r.checkHolderCycles()
 	r.checkRecipes()
 	r.checkBaseRecipes()
 	r.buildTakeOvers()
