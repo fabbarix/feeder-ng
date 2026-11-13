@@ -11,6 +11,7 @@ vi.mock('../seams', () => ({
   useTodayPlan: vi.fn(),
   useTodayStock: vi.fn(() => ({ spoiled: 0, useSoon: [], loading: false })),
 }))
+vi.mock('../shopSeam', () => ({ useLinesToGet: vi.fn(() => ({ count: 0, loading: false })) })) // DS-TODAY: Lines to get
 vi.mock('../setupSeam', () => ({ useSetupFacts: vi.fn() }))
 
 const plan = (couldntPlan: number, loading = false) => ({ today: '2026-11-10', hasNextMeal: false, toConfirm: 0, couldntPlan, leftovers: 0, loading })

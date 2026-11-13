@@ -146,3 +146,14 @@ export function unresolvedCourseIds(slot: PlanSlot): number[] {
     .filter((c) => c.meal?.state === 'planned')
     .map((c) => c.courseId)
 }
+
+/**
+ * The rows a Meal Slot shows on a day tile (ds-plan): the Course rows of `courseRows`, or, when none is shown (the only
+ * Course is covered or not served), the main Course as one empty row. Empty for a slot with no Courses.
+ */
+export function slotRows(slot: PlanSlot): CourseRowModel[] {
+  const rows = courseRows(slot)
+  if (rows.length > 0) return rows
+  const main = slotCourses(slot).find((c) => c.main)
+  return main ? [{ course: main, key: courseKey(slot, main), caption: null }] : []
+}

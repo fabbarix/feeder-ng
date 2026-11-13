@@ -1,0 +1,21 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-TODAY round 2: the metric strip in the Today grid. A lone metric is not stretched into a full-width block; the icon sits top-right
+     beside the number (mockup). The markup is what <MetricStrip> renders. Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/500.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/800.css">
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/BentoGrid.css">
+<link rel="stylesheet" href="../../../../web/src/features/today/today.css">
+<style>body { margin: 0; font-family: 'Figtree', sans-serif; }</style>
+</head><body>
+<script>
+const tileHtml = (id, v, l) => `<section class="tile" data-variant="status" data-status="success" data-metric="${id}" aria-label="${l}"><span class="today-metric__icon" aria-hidden="true"><svg width="20" height="20"></svg></span>
+  <span class="tile-metric"><span class="tile-metric__value">${v}</span><span class="tile-metric__label">${l}</span></span></section>`
+const strip = (id, tiles) => `<div class="today"><div class="today-metrics" id="${id}"><div class="bento-grid" data-min="metric" role="group">${tiles}</div></div></div>`
+const T = [tileHtml('streak', '2 d', 'zero-waste streak'), tileHtml('leftovers', '3', 'Leftovers to use'), tileHtml('lines', '16', 'Lines to get')]
+document.body.insertAdjacentHTML('beforeend', [1, 2, 3].map((n) => `<div style="inline-size:1000px;margin-bottom:24px">${strip('s' + n, T.slice(0, n).join(''))}</div>`).join(''))
+const rects = (n) => [...document.querySelectorAll(`#s${n} [data-metric]`)].map((t) => t.getBoundingClientRect())
+const sw = (n) => Math.round(document.querySelector(`#s${n} .bento-grid`).getBoundingClientRect().width)
+const widths = (n) => rects(n).map((r) => Math.round(r.width)), heights = (n) => rects(n).map((r) => Math.round(r.height))
+const t1 = rects(1)[0], i = document.querySelector('#s1 .today-metric__icon').getBoundingClientRect()
+document.title = JSON.stringify({ strip: sw(1), w1: widths(1), w2: widths(2), w3: widths(3), h1: heights(1), h2: heights(2), h3: heights(3),
+  oneRow: [1, 2, 3].every((n) => new Set(rects(n).map((r) => Math.round(r.top))).size === 1), iconTopRight: i.right > t1.right - 40 && i.top < t1.top + 40 })
+</script></body></html>

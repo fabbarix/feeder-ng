@@ -2,7 +2,6 @@
 export const todayStrings = {
   title: 'Today',
   gridLabel: 'Today',
-  loading: 'Loading',
   emptyTitle: 'Nothing on the menu. The kitchen is yours.',
   emptyHint: 'No Planned Meals to cook, no Leftovers waiting, nothing about to spoil. Put your feet up or plan something tasty.',
   loadError: 'Today could not be loaded.',
@@ -14,6 +13,10 @@ export const todayStrings = {
   useSoonHeading: 'Use soon',
   streakHeading: 'Zero-waste streak',
   streakLabel: 'zero-waste streak',
+  // DS-TODAY: the metric strip (one labelled group)
+  metricsLabel: 'At a glance',
+  leftoversMetric: 'Leftovers to use',
+  linesMetric: 'Lines to get',
   goodUntil: { today: 'good until today', tomorrow: 'good until tomorrow', on: (day: string) => `good until ${day}` },
   useSoonMore: (n: number) => `+${n} more`,
   // R13: the first-run setup checklist

@@ -38,12 +38,13 @@ beforeEach(() => {
 })
 
 describe('RecipesScreen CSS scope (IH)', () => {
-  it('renders the recipes-screen class on the ListPage root, with the BentoGrid inside it, so the recipes.css 3/4-column rules match', () => {
+  it('renders the recipes-screen class on the ListPage root, with the BentoGrid (min="card", DS-A) inside it', () => {
     const { container } = view()
     const root = container.firstElementChild as HTMLElement
     expect(root.classList.contains('list-page')).toBe(true)
     expect(root.classList.contains('recipes-screen')).toBe(true)
-    expect(container.querySelector('.recipes-screen .bento-grid[data-columns="2"]')).not.toBeNull()
+    expect(container.querySelector('.recipes-screen .bento-grid[data-min="card"]')).not.toBeNull()
+    expect(container.querySelector('.recipes-screen .bento-grid[data-columns]')).toBeNull()
   })
 })
 

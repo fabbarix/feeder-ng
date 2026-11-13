@@ -1,25 +1,20 @@
-import { useId, useState, type ReactNode } from 'react'
-import { BentoGrid } from '../../../ui/BentoGrid'
-import { Button } from '../../../ui/Button'
+// B5-SH (DS-SHOP): the collapsed "Not needed (N)" group at the end of the list. Closed, it shows only its toggle; opened, its
+// Lines are rows (no tick: a Not needed Line is neither open nor ticked). The row opens the Line's sheet. Render only.
+import { useId, useState } from 'react'
 import { Icon } from '../../../ui/Icon'
-import { Tile } from '../../../ui/Tile'
+import { ListGroup } from '../../../ui/ListRow'
+import type { RowGroup } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
+import { LineRow } from './LineRow'
 
 export interface NotNeededGroupProps {
   entries: ListEntry[]
-  /** "Needed after all" on one entry */
-  onNeededAfterAll?: (entry: ListEntry) => void
-  /** the Ingredient's Picture slot, as ShoppingBody gives the other tiles */
-  lead?: (entry: ListEntry) => ReactNode
+  /** a row was tapped: its sheet offers "Needed after all" */
+  onOpen: (entry: ListEntry, group: RowGroup) => void
 }
 
-/**
- * B5-SH: the collapsed "Not needed (N)" group at the end of the list. Closed, it shows only its toggle; opened, each
- * Line shows its quantity, its unconfirmed past meals and "Needed after all". No tick control: a Not needed Line is
- * neither open nor ticked. Render only.
- */
-export function NotNeededGroup({ entries, onNeededAfterAll, lead }: NotNeededGroupProps) {
+export function NotNeededGroup({ entries, onOpen }: NotNeededGroupProps) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   if (entries.length === 0) return null
@@ -30,28 +25,12 @@ export function NotNeededGroup({ entries, onNeededAfterAll, lead }: NotNeededGro
         <Icon name="chevron" size={20} className="shop-not-needed__chevron" />
       </button>
       {open ? (
-        <div role="group" aria-label={shopStrings.notNeeded} id={panelId}>
-          <div className="shop-lines">
-            <BentoGrid columns={2}>
-              {entries.map((entry) => (
-                <Tile as="article" key={entry.key} className="line-tile" data-state="not-needed" data-lead={lead ? 'true' : undefined}>
-                  {lead ? <span className="line-tile__lead">{lead(entry)}</span> : null}
-                  <div className="line-tile__body">
-                    <p className="line-tile__title">{entry.title}</p>
-                    {entry.quantityText ? <p className="line-tile__quantity">{entry.quantityText}</p> : null}
-                    {entry.hint ? <p className="line-tile__hint">{entry.hint}</p> : null}
-                  </div>
-                  {onNeededAfterAll ? (
-                    <span className="line-tile__end">
-                      <Button variant="tertiary" size="sm" aria-label={shopStrings.neededAfterAllFor(entry.title)} onClick={() => onNeededAfterAll(entry)}>
-                        {shopStrings.neededAfterAll}
-                      </Button>
-                    </span>
-                  ) : null}
-                </Tile>
-              ))}
-            </BentoGrid>
-          </div>
+        <div id={panelId} className="shop-lines">
+          <ListGroup label={shopStrings.notNeeded}>
+            {entries.map((entry) => (
+              <LineRow key={entry.key} entry={entry} group="not-needed" onOpen={onOpen} />
+            ))}
+          </ListGroup>
         </div>
       ) : null}
     </section>

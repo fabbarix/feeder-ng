@@ -14,10 +14,12 @@ describe('Button.css, a long label stays inside its container (SF1)', () => {
     expect(declarations(css, '.button')['white-space'] ?? 'normal').not.toBe('nowrap')
   })
 
-  it('a wrapped label is centred, and an unbreakable word still breaks rather than spill', () => {
+  it('a wrapped label is centred and wraps at word boundaries only (DS-A system.md §1, §10: no break-word)', () => {
     const d = declarations(css, '.button')
     expect(d['text-align']).toBe('center')
-    expect(d['overflow-wrap']).toBe('break-word')
+    expect(d['overflow-wrap'] ?? 'normal').toBe('normal')
+    expect(d['word-break'] ?? 'normal').toBe('normal')
+    expect(d['hyphens'] ?? 'manual').toBe('manual')
   })
 
   it.each(['sm', 'md', 'lg', 'xl'])('size %s grows with two lines: min-block-size', (size) => {

@@ -26,7 +26,7 @@ export function AdvanceStepsTile({ steps }: AdvanceStepsTileProps): ReactElement
             </span>
             <span className="today__recipe">{step.recipeName}</span>
             <span>{step.description}</span>
-            <span className="today__muted">
+            <span className="today__hint">
               {step.state === 'due' ? s.advanceStepDue(step.slotTime) : s.advanceStepUpcoming(step.dueTime, step.slotTime)}
             </span>
           </li>

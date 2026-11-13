@@ -1,0 +1,36 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-TODAY round 2: the hero's slot menu and its Course row in real layout (mockup after/today-A-1024.png and -390.png). The markup
+     is what <TonightHero> renders for a slot with a Side served from a Leftover. Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/500.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/700.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/800.css">
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Button.css"><link rel="stylesheet" href="../../../../web/src/ui/IconButton.css">
+<link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/Chip.css">
+<link rel="stylesheet" href="../../../../web/src/features/plan/plan.css"><link rel="stylesheet" href="../../../../web/src/features/plan/components/CourseRow.css"><link rel="stylesheet" href="../../../../web/src/features/plan/components/TonightHero.css">
+<style>body { margin: 0; font-family: 'Figtree', sans-serif; }</style>
+</head><body>
+<script>
+const hero = (id, w) => `<section class="tile plan-hero" data-variant="hero" data-span="full" style="inline-size:${w}px" id="${id}">
+  <div class="plan-hero__menu"><button class="icon-button" data-size="md" aria-label="Dinner actions" id="${id}m"></button></div>
+  <p class="tile__overline">Tomorrow · Dinner · start 19:09</p>
+  <div class="plan-hero__body"><div class="plan-hero__text"><h2 class="plan-hero__name">Scaloppine al marsala</h2></div></div>
+  <ul class="plan-hero__courses"><li class="plan-course" aria-label="Side" data-compact="true" id="${id}row">
+    <span class="plan-course__caption" id="${id}cap">Side</span>
+    <div class="plan-course__body"><div class="plan-course__what"><button class="plan-meal__recipe" id="${id}name">Two-colour cauliflower with peppers</button>
+      <span class="chip" data-kind="status" data-status="leftover" id="${id}chip"><span class="chip__label">Leftover from Thu</span></span></div>
+    <div class="plan-course__actions" role="group" aria-label="Side actions" id="${id}act">
+      <button class="icon-button" data-size="compact" aria-label="Swap"></button><button class="icon-button" data-size="compact" aria-label="Pin"></button><button class="icon-button" data-size="compact" aria-label="More for Side"></button></div></div></li></ul></section>`
+document.body.insertAdjacentHTML('beforeend', hero('wide', 960) + '<div style="height:24px"></div>' + hero('narrow', 358))
+const R = (id) => document.getElementById(id).getBoundingClientRect()
+const out = {}
+for (const id of ['wide', 'narrow']) {
+  const t = R(id), m = R(id + 'm'), name = document.getElementById(id + 'name'), chip = R(id + 'chip'), nb = R(id + 'name'), cap = R(id + 'cap'),
+    act = document.getElementById(id + 'act'), btns = [...act.children].map((b) => Math.round(b.getBoundingClientRect().width)), ab = act.getBoundingClientRect()
+  const pad = parseFloat(getComputedStyle(document.getElementById(id)).paddingRight)
+  out[id] = { menuRightInset: Math.round(t.right - m.right), pad: Math.round(pad), menuTopInset: Math.round(m.top - t.top),
+    chipBesideName: chip.left >= nb.right - 1 && Math.abs((chip.top + chip.bottom) / 2 - (nb.top + nb.bottom) / 2) < 14,
+    chipUnderName: chip.top >= nb.bottom - 1, nameClipped: name.scrollWidth > name.clientWidth,
+    capLeft: Math.round(cap.left), capRight: Math.round(cap.right), nameLeft: Math.round(nb.left), capColumn: cap.right <= nb.left,
+    divider: parseFloat(getComputedStyle(document.querySelector(`#${id} .plan-hero__courses`)).borderTopWidth),
+    actionW: btns, equal: new Set(btns).size === 1, actRight: Math.round(ab.right), rowRight: Math.round(R(id + 'row').right), tilePadRight: Math.round(pad) }
+}
+document.title = JSON.stringify(out)
+</script></body></html>

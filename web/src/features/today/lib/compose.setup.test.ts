@@ -3,7 +3,7 @@ import type { TodayData } from '../types'
 import { composeToday } from './compose'
 
 const quiet: TodayData = {
-  scanSessionActive: false, hasNextMeal: false, spoiled: 0, advanceSteps: 0, toConfirm: 0, couldntPlan: 0, leftovers: 0, useSoon: 0, streakDays: 0,
+  scanSessionActive: false, hasNextMeal: false, spoiled: 0, advanceSteps: 0, toConfirm: 0, couldntPlan: 0, leftovers: 0, useSoon: 0, streakDays: 0, linesToGet: 0,
 }
 const ids = (d: TodayData) => {
   const l = composeToday(d)

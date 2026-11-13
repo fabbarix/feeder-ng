@@ -20,7 +20,8 @@ describe('IngredientList (ListRows, 5.15)', () => {
   it('shows the Base Unit and the Shelf Life on one meta line ("g · keeps 30 days")', () => {
     render(<IngredientList ingredients={list} system="metric" onOpen={() => {}} />)
     expect(screen.getByRole('button', { name: 'Garlic' }).closest('li')).toHaveTextContent('g · keeps 30 days')
-    expect(screen.getByRole('button', { name: 'Milk' }).closest('li')).toHaveTextContent(/^Milkml$/)
+    // DS-A (system.md §7): a row without a Picture shows the monogram ("M") before the name
+    expect(screen.getByRole('button', { name: 'Milk' }).closest('li')).toHaveTextContent(/^MMilkml$/)
     expect(screen.getByRole('button', { name: 'Egg' }).closest('li')).toHaveTextContent('piece')
   })
   it('labels Base Units in the User\'s system', () => {

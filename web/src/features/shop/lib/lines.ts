@@ -3,8 +3,8 @@ import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
-import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { shopStrings } from '../strings'
+import { slotsLabel } from './rows'
 
 /** One tile of the list: a Line or a manual extra, flattened for display. */
 export interface ListEntry {
@@ -33,6 +33,8 @@ export interface ListEntry {
    * nothing to say (an extra, a Line without unconfirmed past meals).
    */
   hint?: string
+  /** DS-SHOP: "Includes Tue Dinner" for the row's one meta line (no Courses, no "not marked Cooked yet"). Left out with no hint. */
+  hintShort?: string
   /**
    * B5-F1: the slot "Mark it" opens (the Plan address /plan?mark=<date>:<mealSlotId>, plan lib/markSlot): the oldest of the Line's unconfirmed past meals.
    * The key is left out with no hint.
@@ -55,7 +57,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
   const hint = pastMealsHint(line.pastPlannedMeals)
   const markIt = hint ? markItTarget(line.pastPlannedMeals) : null
   return {
-    ...(hint ? { hint } : {}),
+    ...(hint ? { hint, hintShort: shopStrings.includes(slotsLabel(line.pastPlannedMeals, false)) } : {}),
     ...(markIt ? { markIt } : {}),
     key: `line:${line.ingredientId}`,
     kind: 'line',
@@ -63,9 +65,10 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     extraId: null,
     title: displayName(line.name),
     detail: line.ticked ? '' : packText(line, system),
-    quantityText: line.ticked ? '' : formatQuantity(line.quantity, line.baseUnit, system),
+    // round 2: a ticked Line keeps the quantity it needed (the server's need), muted by the stylesheet
+    quantityText: formatQuantity(line.ticked ? line.need : line.quantity, line.baseUnit, system),
     packLine: line.ticked || !line.pack ? '' : `${line.pack.count} × ${line.pack.name}`,
-    estimatedCost: line.ticked ? null : priceText(line.estimatedCostCents, currency),
+    estimatedCost: priceText(line.estimatedCostCents, currency),
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,
     baseUnit: line.baseUnit,
@@ -82,7 +85,7 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     extraId: extra.id,
     title: extra.text ?? (extra.name ? displayName(extra.name) : ''),
     detail: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
-    quantityText: hasAmount && !extra.ticked ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
+    quantityText: hasAmount ? formatQuantity(extra.quantity ?? 0, extra.baseUnit ?? 'piece', system) : '',
     packLine: '',
     estimatedCost: null,
     ticked: extra.ticked,
@@ -101,19 +104,6 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
   return { open: all, ticked }
 }
 
-/** The short English weekday of a YYYY-MM-DD date. */
-function weekday(date: string): string {
-  const [y, m, d] = date.split('-').map(Number)
-  const jsDay = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
-  return weekdayShortName(jsDay === 0 ? 7 : jsDay)
-}
-
-/** "A", "A and B", "A, B and C" (the server order is kept). */
-function joinAnd(items: string[]): string {
-  if (items.length <= 1) return items.join('')
-  return `${items.slice(0, -1).join(', ')} ${shopStrings.andJoin} ${items[items.length - 1]}`
-}
-
 /**
  * B5-SH: the hint of a Line that includes Planned Meals whose slot has passed and that are not marked Cooked or Not
  * cooked yet. '' without any. Courses of one slot are grouped:
@@ -124,15 +114,7 @@ function joinAnd(items: string[]): string {
  */
 export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
   if (!meals || meals.length === 0) return ''
-  const slots = new Map<string, { label: string; courses: string[] }>()
-  for (const m of meals) {
-    const key = `${m.date}|${m.mealSlotId}`
-    const slot = slots.get(key) ?? { label: `${weekday(m.date)} ${m.mealSlotName}`, courses: [] }
-    if (m.courseName) slot.courses.push(m.courseName)
-    slots.set(key, slot)
-  }
-  const named = [...slots.values()].map((s) => (s.courses.length > 1 ? shopStrings.unconfirmedCourses(s.label, s.courses.join(', ')) : s.label))
-  return shopStrings.unconfirmedMeals(joinAnd(named))
+  return shopStrings.unconfirmedMeals(slotsLabel(meals))
 }
 
 /** B5-F1: the oldest slot among the unconfirmed past meals (by date, then Meal Slot id); null without any. */

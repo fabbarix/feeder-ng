@@ -56,7 +56,7 @@ export function RecipesScreen(): ReactNode {
   else if (list.isLoading) body = <Skeleton variant="tile" count={4} />
   else if (list.recipes.length > 0)
     body = (
-      <BentoGrid columns={2} label={recipeStrings.title}>
+      <BentoGrid min="card" label={recipeStrings.title}>
         {list.recipes.map((r) => (
           <RecipeTile
             key={r.id}

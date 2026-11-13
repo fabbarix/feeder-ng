@@ -43,11 +43,12 @@ describe('plan.css Cooked state (N6)', () => {
     for (const b of all) expect(b, b).not.toMatch(/(^|[;\s])opacity\s*:/)
   })
 
-  it.each(['cooked', 'skipped'])('the %s Recipe name and slot name use the muted token, not a faded text colour', (state) => {
-    for (const part of ['.plan-meal__recipe', '.plan-meal__slot']) {
+  // ds-plan: the Recipe name is the row's .list-row__title; the slot label is .plan-slot-head__label (state on the row, so the slot name is muted by its own rule).
+  it.each(['cooked', 'skipped'])('the %s Recipe name uses the muted token, not a faded text colour', (state) => {
+    for (const part of ['.list-row__title']) {
       const found = css
         .split('}')
-        .filter((b) => b.includes(`[data-state='${state}']`) && b.slice(0, b.indexOf('{')).includes(part))
+        .filter((b) => b.includes(`.list-row[data-state='${state}']`) && b.slice(0, b.indexOf('{')).includes(part))
       expect(found.length, `${state} ${part} rule`).toBeGreaterThan(0)
       expect(found.join('\n')).toMatch(/color:\s*var\(--color-muted\)/)
     }

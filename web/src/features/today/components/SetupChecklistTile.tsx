@@ -21,17 +21,17 @@ export function SetupChecklistTile({ checklist, onAction, isAdmin = true }: Setu
       <h2 id="today-setup-title" className="today__tile-title today__setup-title">
         {s.setupTitle}
       </h2>
-      <p className="today__muted">{s.setupProgress(checklist.doneCount, checklist.total)}</p>
+      <p className="today__hint">{s.setupProgress(checklist.doneCount, checklist.total)}</p>
       <ol className="today__list today__setup" aria-label={s.setupStepsLabel}>
         {checklist.steps.map((step) => (
           <li key={step.id} className="today__setup-step" data-done={step.done ? 'true' : 'false'} aria-current={step.current ? 'step' : undefined}>
             <Icon name={step.icon} size={20} />
             <div className="today__step">
               <span className="today__row">{step.label}</span>
-              <span className="today__muted">{step.hint}</span>
+              <span className="today__hint">{step.hint}</span>
             </div>
             {step.done ? <Chip kind="status" status="success">{s.setupDone}</Chip> : null}
-            {step.current && step.adminOnly && !isAdmin ? <span className="today__muted">{s.setupAskAdmin}</span> : null}
+            {step.current && step.adminOnly && !isAdmin ? <span className="today__hint">{s.setupAskAdmin}</span> : null}
             {step.id === actionableId ? (
               <Button variant="secondary" size="sm" className="today__setup-action" onClick={() => onAction(step)}>
                 {step.action}

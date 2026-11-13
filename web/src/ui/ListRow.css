@@ -14,22 +14,17 @@
 
 .list-row {
   position: relative;
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding-inline: var(--space-4);
-}
-
-.list-row[data-height='56'] {
-  block-size: 56px;
-}
-
-.list-row[data-height='64'] {
-  block-size: 64px;
+  /* A minimum, never a fixed height: a two-line title grows the row (system.md 3). */
+  min-block-size: var(--row-min);
 }
 
 .list-row[data-height='72'] {
-  block-size: 72px;
+  min-block-size: 72px;
 }
 
 .list-row + .list-row {
@@ -84,6 +79,33 @@
   pointer-events: auto;
 }
 
+/* A row with an ActionGroup may wrap: below 35 rem the group takes its own line (system.md 5.4); wide, it stays at the end. */
+.list-row:has(> .action-group) {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+
+.list-row > .action-group {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+/* The leading control (a tick): 44 px to hit, above the whole-row target. */
+.list-row__control {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+}
+
+.list-row > .list-row__control {
+  pointer-events: auto;
+}
+
 .list-row__lead {
   display: grid;
   place-items: center;
@@ -107,20 +129,31 @@
   min-inline-size: 0;
 }
 
+.list-row__text {
+  min-inline-size: 0;
+}
+
+/* The title wraps at a word boundary, up to two lines, then ends in an ellipsis. Never mid-word (system.md 3). */
 .list-row__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  min-inline-size: 0;
   font-size: var(--text-body-strong-size);
   line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
 }
 
+/* A rich title (wrapTitle) takes as many lines as it needs: no clamp. */
 .list-row[data-wrap-title='true'] .list-row__title {
+  display: block;
+  -webkit-line-clamp: none;
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 /* Inline links in a rich title stay clickable (content is otherwise click-through). */
@@ -130,8 +163,49 @@
 }
 
 .list-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The meta line is one line: its text ends in an ellipsis (system.md 3). */
+.list-row__meta-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-row__meta > svg {
+  flex: none;
+}
+
+/* The value column: one line, end-aligned, tabular, never narrower than --row-value-min, so quantities line up. */
+.list-row__value {
+  display: grid;
+  flex: none;
+  justify-items: end;
+  min-inline-size: var(--row-value-min);
+  text-align: end;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.list-row__sub-value {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
 
@@ -151,12 +225,6 @@
 }
 
 /* WP3b: a status colours the meta line (spoil, leftover, ...); the icon before it is decorative. */
-.list-row__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
 .list-row__meta[data-status='spoil'] {
   color: var(--status-spoil-fg);
 }
@@ -190,8 +258,7 @@
 }
 
 .list-row[data-height='auto'] {
-  block-size: auto;
-  min-block-size: 64px;
+  min-block-size: var(--row-min);
   padding-block: var(--space-2);
 }
 

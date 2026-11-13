@@ -17,10 +17,15 @@ export const ROUTES = [
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],
 ]
 
-/** quick = what scripts/check.sh runs; full = the six viewports of the UI review (PAGE_LAYOUT=full). */
+/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow. */
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15']
+
+/** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
   quick: [
     { width: 390, height: 844, mobile: true },
+    { width: 834, height: 1194, mobile: false },
+    { width: 1024, height: 1366, mobile: false },
     { width: 1440, height: 900, mobile: false },
     { width: 1920, height: 1080, mobile: false },
   ],
@@ -97,6 +102,18 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const b of m.brokenText ?? []) {
     if (b.why === 'mid-word' && /@|:\/\/|\//.test(b.token ?? '')) continue
     add('P11', `${b.sel}: ${b.why}`)
+  }
+  // DS-A (system.md 8): at the end of a scroll, no content box of <main> is under the floating bottom bar (null: no bar, from 1024 px).
+  for (const o of m.navOverlap ?? []) add('P12', `${o.sel} is under the bottom bar by ${o.px} px at the end of the scroll; add clearance (--nav-clearance)`)
+  // DS-A round 2 (system.md 10): a box wider than its tile or card spills past it (fails in every mode, see ALWAYS_FAIL).
+  for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
+  // ds-plan round 3: a chip label cut by its ellipsis while its chip line has spare room (a lone chip must show in full).
+  for (const c of m.clippedChips ?? []) add('P14', `${c.sel} "${c.label}" is cut by its ellipsis with ${c.room} px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap`)
+  // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
+  // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
+  for (const o of m.actionLayout ?? []) {
+    const what = o.why === 'collapsed' ? 'collapsed to 0 px' : o.why === 'label-clipped' ? `clips its label by ${o.px} px` : `runs ${o.px} px under the actions`
+    add('P15', `${o.sel} ${what}; give the row a real actions track (max-content) and let the group take its own line on a phone`)
   }
   return out
 }

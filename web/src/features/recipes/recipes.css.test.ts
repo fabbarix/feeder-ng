@@ -40,28 +40,17 @@ function parse(text: string, minWidth = 0): Rule[] {
 
 const rules = parse(css)
 const find = (pred: (r: Rule) => boolean) => rules.filter(pred)
-const cols = (r: Rule) => /grid-template-columns:\s*repeat\((\d),\s*minmax\(0,\s*1fr\)\)/.exec(r.body)?.[1]
 
 describe('recipes.css', () => {
   it('is readable', () => {
     expect(rules.length).toBeGreaterThan(10)
   })
 
-  describe('the Recipes grid has 2, 3 and 4 columns by width (5.8)', () => {
-    // BentoGrid renders data-columns="2"; the screen's own rules widen it.
-    const grid = find((r) => /\.recipes-screen\s+\.bento-grid\[data-columns=['"]2['"]\]/.test(r.selector) && cols(r) !== undefined)
-    const at = (min: number) => grid.filter((r) => r.minWidth === min).map(cols).at(-1)
-    it('keeps 2 columns on a phone (no override below the first breakpoint)', () => {
-      expect(grid.filter((r) => r.minWidth === 0)).toEqual([])
-    })
-    it('uses 3 columns from a tablet width and 4 columns from a desktop width', () => {
-      const widths = [...new Set(grid.map((r) => r.minWidth))].sort((a, b) => a - b)
-      expect(widths).toHaveLength(2)
-      expect(at(widths[0]!)).toBe('3')
-      expect(at(widths[1]!)).toBe('4')
-      expect(widths[0]).toBeGreaterThanOrEqual(600)
-      expect(widths[0]).toBeLessThan(widths[1]!)
-      expect(widths[1]).toBeLessThanOrEqual(1100)
+  describe('the Recipes grid is a BentoGrid min="card" (DS-A, ADR 0016; replaces the 2/3/4 columns of 5.8)', () => {
+    // The column count comes from the minimum tile width; the Recipes list gets its own redesign later in the rollout.
+    it('has no column-count overrides of the grid', () => {
+      expect(find((r) => /\.recipes-screen\s+\.bento-grid/.test(r.selector) && /grid-template-columns/.test(r.body))).toEqual([])
+      expect(css).not.toMatch(/\.bento-grid\[data-columns/)
     })
   })
 

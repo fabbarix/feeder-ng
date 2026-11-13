@@ -27,7 +27,7 @@ export function MealSlotCards({ cards, dateRows, members, canEdit, addDisabled, 
   return (
     <div className="ms-cards">
       <p className="ms-household">{text.householdLine}</p>
-      <BentoGrid columns={2}>
+      <BentoGrid min="card">
         {cards.map((card) => (
           <MealSlotCard
             key={card.key}

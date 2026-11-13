@@ -1,0 +1,10 @@
+/* DS-A word-break: 5 violations (9 with round 2 below) (names wrap at a word, never mid-word) */
+.line-tile__title { overflow-wrap: anywhere; }
+.plan-meal__recipe { overflow-wrap: break-word; }
+.plan-meal .chip { hyphens: auto; }
+.name { word-break: break-all; }
+.legacy { word-wrap: break-word; }
+/* round 2: the exemption reads the LAST compound selector, and a grouped selector is judged per selector (+4 = 9) */
+.member__email .name { overflow-wrap: anywhere; }
+.share-url, .recipe-title { word-break: break-all; }
+.barcode-list .label, .notes { hyphens: auto; }

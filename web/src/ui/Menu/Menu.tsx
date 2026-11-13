@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '../BottomSheet'
 import { Icon } from '../Icon'
-import { IconButton } from '../IconButton'
+import { IconButton, type IconButtonProps } from '../IconButton'
 import { Switch } from '../fields/Switch'
 import type { IconName } from '../icons'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -35,6 +35,8 @@ export interface MenuProps {
   /** Title of the sheet below 768 px. Default: `label`. */
   title?: string
   items: MenuEntry[]
+  /** The trigger's size, as an IconButton's: `compact` (32 px visual) for a slot header inside a day tile; a row's ⋮ matches its icon buttons; the hero's matches its actions. Default `md`. */
+  size?: IconButtonProps['size']
 }
 
 const GAP = 8
@@ -47,14 +49,14 @@ interface Placed {
 }
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
-export function Menu({ label, icon = 'more', title, items }: MenuProps) {
+export function Menu({ label, icon = 'more', title, size = 'md', items }: MenuProps) {
   const wide = useMediaQuery('(min-width: 768px)')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const close = useCallback(() => setOpen(false), [])
   return (
     <>
-      <IconButton ref={triggerRef} icon={icon} label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
+      <IconButton ref={triggerRef} icon={icon} label={label} size={size} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
       {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} /> : null}
       {open && !wide ? <Sheet title={title ?? label} items={items} onClose={close} /> : null}
     </>

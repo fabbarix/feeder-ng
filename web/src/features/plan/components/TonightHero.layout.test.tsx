@@ -18,11 +18,12 @@ describe('TonightHero primary action layout', () => {
     expect(container.querySelector('.plan-hero > button')).toBeNull()
   })
 
-  it('Yes, Cooked is large too and shares the actions row with Adjust', () => {
+  // DS-TODAY round 2 (changed on purpose): Cooked and Adjust are one ActionGroup (md buttons), not a large-button row.
+  it('Cooked shares the hero\'s one ActionGroup with Adjust', () => {
     render(<TonightHero slot={dinner()} now={new Date('2026-11-10T20:00:00Z')} {...h()} />)
-    const yes = screen.getByRole('button', { name: 'Yes, Cooked' })
-    expect(yes).toHaveAttribute('data-size', 'lg')
-    expect(yes.closest('.plan-hero__actions')).toBe(screen.getByRole('button', { name: 'Adjust' }).closest('.plan-hero__actions'))
+    const yes = screen.getByRole('button', { name: 'Cooked' })
+    expect(yes.closest('[role="group"]')).toBe(screen.getByRole('button', { name: 'Adjust' }).closest('[role="group"]'))
+    expect(yes.closest('[role="group"]')).toHaveClass('action-group')
   })
 
   it('Reheat keeps the same row', () => {

@@ -147,6 +147,6 @@ describe('WP3b #4: two trailing actions and a children slot', () => {
   it('without children nothing is added (the existing heights hold)', () => {
     const { container } = inList(<ListRow title="Milk" />)
     expect(container.querySelector('.list-row__extra')).toBeNull()
-    expect(screen.getByRole('listitem')).toHaveAttribute('data-height', '56')
+    expect(screen.getByRole('listitem')).toHaveAttribute('data-height', '64')
   })
 })
