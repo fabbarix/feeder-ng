@@ -17,6 +17,9 @@ export const ROUTES = [
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],
 ]
 
+/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow. */
+export const ALWAYS_FAIL = ['P1', 'P13']
+
 /** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
   quick: [
@@ -102,6 +105,8 @@ export function evaluateMetrics(m, { width, kind }) {
   }
   // DS-A (system.md 8): at the end of a scroll, no content box of <main> is under the floating bottom bar (null: no bar, from 1024 px).
   for (const o of m.navOverlap ?? []) add('P12', `${o.sel} is under the bottom bar by ${o.px} px at the end of the scroll; add clearance (--nav-clearance)`)
+  // DS-A round 2 (system.md 10): a box wider than its tile or card spills past it (fails in every mode, see ALWAYS_FAIL).
+  for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
   return out
 }
 

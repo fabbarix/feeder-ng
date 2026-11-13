@@ -454,8 +454,11 @@ rule_type_scale() {
   local f
   while IFS= read -r f; do
     css_scan "$f" | awk -F'\t' -v F="$f" '
+      # a token block: every selector of the rule is :root or html[...] (round 2; a descendant of :root is a feature rule)
+      function tokensel(t) { return (t ~ /^:root$/ || t ~ /^html(\[[^]]*\])*$/) }
+      function alltok(list,   n, a, i, t) { n = split(list, a, ","); for (i = 1; i <= n; i++) { t = a[i]; gsub(/^[ \t]+|[ \t]+$/, "", t); if (!tokensel(t)) return 0 } return 1 }
       $1 != "D" { next }
-      $3 ~ /^(:root|html)/ || $3 ~ /\[data-theme/ { next }
+      alltok($3) { next }
       ($4 == "font-size" || $4 == "font") {
         v = $5
         if (v == "inherit") next
@@ -490,6 +493,8 @@ rule_word_break() {
   local f
   while IFS= read -r f; do
     css_scan "$f" | awk -F'\t' -v F="$f" '
+      # the exemption reads the LAST compound of each selector (after a space, > + or ~); a selector list is judged per selector
+      function lastc(t,   n, a) { gsub(/[ \t]*[>+~][ \t]*/, " ", t); gsub(/[ \t]+$/, "", t); n = split(t, a, /[ \t]+/); return a[n] }
       $1 != "D" { next }
       {
         p = $4; v = $5; sub(/[ \t]*!important.*$/, "", v)
@@ -498,8 +503,12 @@ rule_word_break() {
         else if ((p == "overflow-wrap" || p == "word-wrap") && (v == "anywhere" || v == "break-word")) bad = 1
         else if (p == "word-break" && (v == "break-all" || v == "break-word")) bad = 1
         if (!bad) next
-        if (tolower($3) ~ /email|url|link|barcode|code/) next
-        print "word-break\t" F "\t" $2 "\t" p ": " v " on \047" $3 "\047; wrap at a word and end in an ellipsis, never mid-word (system.md 3)"
+        n = split($3, parts, ",")
+        for (i = 1; i <= n; i++) {
+          t = parts[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+          if (tolower(lastc(t)) ~ /email|url|link|barcode|code/) continue
+          print "word-break\t" F "\t" $2 "\t" p ": " v " on \047" t "\047; wrap at a word and end in an ellipsis, never mid-word (system.md 3)"
+        }
       }' >>"$VIOL"
   done < <(src_files css)
 }

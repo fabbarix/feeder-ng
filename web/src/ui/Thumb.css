@@ -5,7 +5,7 @@
   flex: none;
   aspect-ratio: 1;
   border-radius: var(--radius-thumb);
-  background: var(--color-soft);
+  background: var(--color-surface-2);
 }
 
 .thumb[data-size='40'] {
@@ -34,12 +34,12 @@
   object-fit: cover;
 }
 
-/* The monogram: centred, weight 800, accent text on the soft tone; it scales with the box. */
+/* The monogram: centred, weight 800, muted text on the neutral surface-2 (never the accent: a list of them must not tint). */
 .thumb[data-monogram='true'] {
   display: grid;
   place-items: center;
-  background: var(--color-soft);
-  color: var(--color-accent-text);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
   font-weight: 800;
   font-size: var(--text-title-3-size);
   line-height: 1;

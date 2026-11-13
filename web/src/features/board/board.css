@@ -10,8 +10,9 @@
 
 /* L-10: below 600 px the board is 2 columns of content-height rows (the hero and Use soon full width); the 4 x 3 wall grid
    starts at 600 px (see the end of this block). */
-.board-screen .bento-grid {
-  gap: 16px;
+.board-screen .board-grid {
+  display: grid;
+  gap: var(--bento-gap);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -23,7 +24,7 @@
 }
 
 @media (min-width: 600px) {
-  .board-screen .bento-grid {
+  .board-screen .board-grid {
     height: calc(100vh - 48px);
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));

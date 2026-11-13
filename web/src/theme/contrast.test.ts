@@ -94,6 +94,12 @@ const BENTO_PAIRS: ReadonlyArray<readonly [BentoKey, BentoKey, number, string]> 
   ['accentText', 'softStrong', 4.5, 'accent-text / soft-strong'],
   ['accent', 'surface', 3, 'accent / surface (button boundary)'],
   ['outline', 'surface', 3, 'outline / surface (field boundary)'],
+  // DS-A (docs/design/system.md §2, §6): the why chip is the neutral container with an accent-coloured icon.
+  ['text', 'surface2', 4.5, 'why chip text / surface-2'],
+  ['accentText', 'surface2', 3, 'why chip icon accent-text / surface-2 (non-text, >= 3)'],
+  // DS-A round 2 (system.md §2, §7): picture monograms are muted on surface-2; metric tiles are neutral: label muted on surface.
+  ['muted', 'surface', 4.5, 'metric label muted / surface'],
+  ['text', 'surface2', 4.5, 'monogram or chip text / surface-2'],
 ]
 
 const colourMap = (accent: string, scheme: Scheme) =>
@@ -161,5 +167,32 @@ describe('status palette (plan 3.1)', () => {
     expect(contrastRatio(s.lightFg, s.lightBg)).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(s.darkFg, s.darkBg)).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio('#ffffff', s.solid)).toBeGreaterThanOrEqual(4.5)
+  })
+})
+
+// DS-A round 2 (docs/design/system.md §6): the outlined "Leftover for" chip has no fill, so its fixed leftover colours sit on the
+// accent-tinted surface (and page background) of every palette. Text >= 4.5, the 1.5 px outline (a boundary) >= 3.
+describe('Leftover outline chip on every palette (DS-A)', () => {
+  const cases = ACCENT_PRESETS.flatMap((p) => (['light', 'dark'] as const).flatMap((scheme) => (['surface', 'bg'] as const).map((on) => [p.name, scheme, on] as const)))
+  it.each(cases)('%s %s, on %s: leftover fg >= 4.5, leftover solid outline >= 3', (preset, scheme, on) => {
+    const accent = ACCENT_PRESETS.find((p) => p.name === preset)!.hex
+    const palette = generatePalette({ accent }, scheme)
+    const ground = (palette.colors as unknown as Record<string, string>)[on]!
+    const leftover = (palette as unknown as { status: Record<string, { fg: string; solid: string }> }).status.leftover!
+    expect(contrastRatio(leftover.fg, ground)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(leftover.solid, ground)).toBeGreaterThanOrEqual(3)
+  })
+})
+
+// DS-A round 2 (system.md §2): a neutral metric tile's progress fill is the success tone on the surface-2 track of every palette.
+describe('Neutral metric tile progress on every palette (DS-A)', () => {
+  const cases = ACCENT_PRESETS.flatMap((p) => (['light', 'dark'] as const).map((scheme) => [p.name, scheme] as const))
+  it.each(cases)('%s %s: the success fill (status fg) on its surface-2 track and on surface >= 3', (preset, scheme) => {
+    const accent = ACCENT_PRESETS.find((p) => p.name === preset)!.hex
+    const palette = generatePalette({ accent }, scheme)
+    const c = palette.colors as unknown as Record<string, string>
+    const success = (palette as unknown as { status: Record<string, { fg: string }> }).status.success!
+    expect(contrastRatio(success.fg, c.surface2!)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(success.fg, c.surface!)).toBeGreaterThanOrEqual(3)
   })
 })

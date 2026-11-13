@@ -37,6 +37,8 @@ describe('Page: bottom clearance above the nav', () => {
     const body = declarations(readUiCss('Page.css'), '.page__body')
     expect(body['display']).toBe('grid')
     expect(body['gap']).toBe('var(--section-gap)')
+    // round 2: one track that may shrink below its content's min-content (a long word or a wide table never widens the page)
+    expect(body['grid-template-columns']).toBe('minmax(0, 1fr)')
     const { container } = render(<Page width="wide"><section>a</section><section>b</section></Page>)
     expect(container.querySelectorAll('.page__body > section')).toHaveLength(2)
   })
