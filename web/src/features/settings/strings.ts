@@ -150,6 +150,7 @@ export const settingsStrings = {
     courseEaters: (course: string, names: string) => `${course}: ${names} only`,
     datesThatDiffer: 'Dates that differ',
     notServed: 'Not served',
+    guests: (n: number) => (n === 1 ? '1 Guest' : `${n} Guests`),
     timeUsually: (time: string, usual: string) => `${time} · usually ${usual}`,
     moreMembers: (n: number) => `+${n}`,
     name: 'Name',
@@ -167,6 +168,12 @@ export const settingsStrings = {
     thisDateOnly: 'These changes affect only this date.',
     saveDate: 'Save for this date',
     resetDate: 'Reset to usual Attendance',
+    // B5-F1: Guests, the portions preview, the emptied date
+    guests: 'Guests',
+    guestsHelper: 'Each Guest eats one standard portion of every Course.',
+    portionsPreview: (n: string) => (n === '1' ? '1 portion of each Course' : `${n} portions of each Course`),
+    emptiedNote: 'Nobody is eating, so this date is Not served.',
+    whosEatingTitle: (slot: string, day: string) => `Who's eating ${slot} on ${day}`,
   },
 
   allowlistPanel: {

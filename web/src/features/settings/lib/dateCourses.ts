@@ -60,8 +60,11 @@ export function sameAttendance(a: readonly AttendanceEntry[], b: readonly Attend
   return sig(a) === sig(b)
 }
 
-/** Whether anything is overridden for the date: the Attendance or any Course (enables "Reset to usual Attendance"). */
-export function hasDateOverride(attendance: { isOverride: boolean; courses?: readonly { isOverride: boolean }[] } | undefined): boolean {
+/**
+ * Whether anything is overridden for the date: the Attendance, any Course or Guests (B5-F1: Reset to usual Attendance also drops the
+ * Guests) (enables "Reset to usual Attendance").
+ */
+export function hasDateOverride(attendance: { isOverride: boolean; courses?: readonly { isOverride: boolean }[]; guests?: number } | undefined): boolean {
   if (!attendance) return false
   return attendance.isOverride || (attendance.courses ?? []).some((c) => c.isOverride)
 }

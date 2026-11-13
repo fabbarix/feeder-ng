@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Menu, type MenuEntry } from '../../../ui'
 import { slotMenu } from '../lib/courses'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
+import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 
 export interface SlotMenuProps {
   slot: PlanSlot
@@ -12,6 +12,11 @@ export interface SlotMenuProps {
   onNotCookedSlot: (slot: SlotDayKey) => void
   /** The key of the empty Course (courseId included). */
   onAddCourse: (key: SlotKey) => void
+  /**
+   * B5-F1: when given, the menu also holds Who's eating, Time today (Time on Thu) and Not served per lib/courses slotMenu, for
+   * every slot; offline they are disabled and say "Needs a connection". Without it the menu is as before.
+   */
+  dateActions?: SlotDateActions
 }
 
 /**

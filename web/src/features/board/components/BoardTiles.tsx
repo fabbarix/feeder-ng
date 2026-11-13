@@ -32,6 +32,8 @@ export interface TonightTileProps {
   slot: SlotLike | null
   /** Shows the big "Cook" button (76 px) with a Planned Meal; it starts Cook Mode. */
   onCook?: () => void
+  /** B5-F1 (ADR 0014): the slots Not served tonight (lib/tiles tonightNotServed); with no Planned Meal the tile says "Dinner · Not served" for each instead of "Nothing planned tonight". */
+  notServed?: SlotLike[]
 }
 
 /**

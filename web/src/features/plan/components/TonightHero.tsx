@@ -6,7 +6,7 @@ import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '
 import type { HeroAction, HeroDay } from '../lib/hero'
 import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotCookLabel, slotIcon, slotStartBy } from '../lib/hero'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
+import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 import { CourseRow, type CourseRowHandlers } from './CourseRow'
 import { SlotMenu, type SlotMenuProps } from './SlotMenu'
 import '../plan.css'
@@ -37,6 +37,8 @@ export interface TonightHeroProps {
   onMarkAllCooked?: (slot: SlotDayKey) => void
   /** The slot menu's other actions; the menu shows when given. */
   menu?: Pick<SlotMenuProps, 'onNotCookedSlot' | 'onAddCourse'>
+  /** B5-F1: the per-date choices; the hero (a one-Course slot too) then has the slot menu with Who's eating, the time and Not served. */
+  dateActions?: SlotDateActions
 }
 
 /**

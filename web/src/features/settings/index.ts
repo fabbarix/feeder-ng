@@ -19,3 +19,8 @@ export const routes: RouteObject[] = [
   { path: '/settings/preferences', element: createElement(PreferencesPage) },
   recipeAssistantSettingsRoute,
 ]
+
+// B5-F1: Who's eating for Plan and Today (the Date Attendance sheet with Guests and a read-only date). Features use the sheet through here only.
+export { WhosEatingSheet } from './components/WhosEatingSheet'
+export type { WhosEatingSheetProps } from './components/WhosEatingSheet'
+export type { WhosEatingTarget } from './hooks/useAttendanceSheet'

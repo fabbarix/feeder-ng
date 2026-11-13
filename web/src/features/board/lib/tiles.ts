@@ -175,3 +175,15 @@ export function tomorrowLine(slot: SlotLike): string {
   if (names.length === 1) return `${slot.name} · ${names[0]}`
   return `${slot.name}: ${names.join(' + ')}`
 }
+
+// ---- B5-F1: a Meal Slot that is Not served on tonight or tomorrow (ADR 0014) ----
+
+/** "Dinner · Not served". */
+export function notServedLine(_slot: SlotLike): string {
+  return ''
+}
+
+/** The slots Not served on `today`, by `at` then Meal Slot id: the Tonight tile says so instead of "Nothing planned tonight". */
+export function tonightNotServed(_slots: SlotLike[], _today: string): SlotLike[] {
+  return []
+}

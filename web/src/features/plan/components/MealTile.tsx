@@ -7,7 +7,7 @@ import { courseKey, courseRows, plannedMeals, slotCourses, slotMenu, type Course
 import { compactAction, mayCook } from '../lib/resolve'
 import { slotIcon } from '../lib/hero'
 import { planStrings as s } from '../strings'
-import type { PlannedMeal, PlanSlot, SlotDayKey, SlotKey, Unfilled } from '../types'
+import type { PlannedMeal, PlanSlot, SlotDateActions, SlotDayKey, SlotKey, Unfilled } from '../types'
 import { CourseRow } from './CourseRow'
 import { SlotMenu } from './SlotMenu'
 import '../plan.css'
@@ -28,6 +28,8 @@ export interface MealTileProps {
   onMarkAllCooked?: (slot: SlotDayKey) => void
   onNotCookedSlot?: (slot: SlotDayKey) => void
   onAddCourse?: (key: SlotKey) => void
+  /** B5-F1: the per-date choices (slot menu entries, Plan <Slot> again on a Not served slot); a Not served slot shows NotServedRow, a date with its own time shows "20:15 · usually 19:30". */
+  dateActions?: SlotDateActions
 }
 
 /**

@@ -73,7 +73,7 @@ describe('MealSlotsPage: the cards', () => {
     expect(rows[1]).toHaveTextContent('Main only')
   })
 
-  it('does not render "Dates that differ" at all until useDateExceptions has a real source (PM decision; F1 turns it on)', async () => {
+  it('does not render "Dates that differ" when no upcoming date differs (or the plan cannot be read); MealSlotsPage.dates.test covers the filled tile', async () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
     await screen.findByRole('region', { name: 'Dinner' })

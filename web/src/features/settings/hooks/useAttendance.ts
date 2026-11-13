@@ -8,7 +8,7 @@ export interface AttendanceState {
   isPending: boolean
   isError: boolean
   /** PUT this date's Attendance and/or its Courses' opt-outs (undefined attendance: Courses only); also refreshes Meal Slots. */
-  save: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => Promise<DateAttendance>
+  save: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number) => Promise<DateAttendance>
   /** DELETE the override for this date. */
   reset: () => Promise<void>
   saving: boolean
@@ -30,8 +30,8 @@ export function useAttendance(slotId: number | null, date: string | null): Atten
     ])
   }
   const save = useMutation({
-    mutationFn: ({ attendance, courses }: { attendance: AttendanceEntry[] | undefined; courses?: DateCourseChange[] }) =>
-      settingsApi.saveAttendance(slotId!, date!, attendance, courses),
+    mutationFn: ({ attendance, courses, guests }: { attendance: AttendanceEntry[] | undefined; courses?: DateCourseChange[]; guests?: number }) =>
+      settingsApi.saveAttendance(slotId!, date!, attendance, courses, guests),
     onSuccess: refresh,
   })
   const reset = useMutation({ mutationFn: () => settingsApi.resetAttendance(slotId!, date!), onSuccess: refresh })
@@ -39,7 +39,7 @@ export function useAttendance(slotId: number | null, date: string | null): Atten
     attendance: query.data,
     isPending: enabled && query.isPending,
     isError: query.isError,
-    save: (attendance, courses) => save.mutateAsync({ attendance, courses }),
+    save: (attendance, courses, guests) => save.mutateAsync({ attendance, courses, guests }),
     reset: () => reset.mutateAsync(),
     saving: save.isPending || reset.isPending,
   }

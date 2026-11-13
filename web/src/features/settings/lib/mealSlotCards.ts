@@ -2,7 +2,7 @@
 // Rules: docs/dev/design/meal-slots-redesign.md ("Lib"). Every value a card shows is derived here, never in a component.
 import { weekdayLongName, weekdayOrder, weekdayShortName, type WeekStart } from '../../../ui/WeekdayPicker/weekdays'
 import { settingsStrings } from '../strings'
-import type { MealSlot, Member } from '../types'
+import type { MealSlot, Member, PlanDateSlot } from '../types'
 import { nextDateForWeekday, weekdayOfDate } from './weekdays'
 
 /** Who eats: every Member, nobody, or some of them (in the Members list order). Attendees whose Member no longer exists are ignored. */
@@ -247,9 +247,11 @@ export interface DateException {
   usualTime?: string
   /** The Members who eat that date, when it is not the usual Attendance. */
   attendeeIds?: number[]
+  /** B5-F1: Guests that date (0 = none). */
+  guests?: number
 }
 
-export type DatePart = { kind: 'notServed' } | { kind: 'time'; time: string; usualTime: string } | { kind: 'attendance'; attendeeIds: number[] }
+export type DatePart = { kind: 'notServed' } | { kind: 'time'; time: string; usualTime: string } | { kind: 'attendance'; attendeeIds: number[] } | { kind: 'guests'; guests: number }
 
 export interface DateRow {
   key: string
@@ -308,6 +310,16 @@ export function datesThatDiffer(exceptions: DateException[], opts: { today: stri
 export function datePartText(part: DatePart, members: Member[]): string {
   if (part.kind === 'notServed') return text.notServed
   if (part.kind === 'time') return text.timeUsually(part.time, part.usualTime)
+  if (part.kind === 'guests') return ''
   const names = memberNames(part.attendeeIds, members)
   return names ? text.onlyEats(names) : text.nobodyAttending
+}
+
+/**
+ * B5-F1: the exceptions the plan shows (its slots from today on): a date with its own time (`time` differs from `usualTime`),
+ * Not served, or Guests. One slot on one date per exception; a slot that differs in none of the three is left out. The Meal Slot
+ * name is the slot's; `slotId` is its `mealSlotId`.
+ */
+export function exceptionsFromPlan(_slots: PlanDateSlot[]): DateException[] {
+  return []
 }

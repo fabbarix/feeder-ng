@@ -85,10 +85,19 @@ export interface SlotMenuModel {
   notCookedSlot: boolean
   /** "Add <Course>" per addable Course, key = courseKey. */
   add: { key: SlotKey; label: string }[]
+  /** B5-F1: the per-date choices (lib/slotDate dateChoices). Present only when `slotMenu` was asked for them (then all three keys are set). */
+  whosEating?: boolean
+  notServed?: boolean
+  /** "Time today" / "Time on Thu", or null when the time cannot change. */
+  time?: string | null
 }
 
-/** The slot menu, or null when it would be empty (a one-Course slot never has one). */
-export function slotMenu(slot: PlanSlot, today: string): SlotMenuModel | null {
+/**
+ * The slot menu, or null when no entry applies. Without `dateChoices` it is as before (a one-Course slot never has one).
+ * With `dateChoices` (the screen wired the per-date handlers) it also holds Who's eating, Time today and Not served per
+ * lib/slotDate dateChoices, so a one-Course slot has a menu too (reconcile section 9, Q3).
+ */
+export function slotMenu(slot: PlanSlot, today: string, _dateChoices = false): SlotMenuModel | null {
   if (slotCourses(slot).length < 2) return null
   const wholeSlot = plannedMeals(slot).length >= 2 && mayResolve(slot.date, today)
   // A covered Course is not offered: a Whole meal already serves it.

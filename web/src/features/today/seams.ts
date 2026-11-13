@@ -49,6 +49,8 @@ export interface TodayTileData {
   couldntPlan: PlanEntry[]
   /** R13: the whole plan, so "every dinner" is measured against it. */
   planSlots?: PlanSlot[]
+  /** B5-F1: today's Meal Slots that are Not served (plan lib/slotDate notServedToday): the Tonight tile shows each as a compact row. */
+  notServedToday?: PlanSlot[]
   leftovers: Leftover[]
   planToday: string
   spoiled: StockLot[]

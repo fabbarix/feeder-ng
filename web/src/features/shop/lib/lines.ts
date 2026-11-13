@@ -33,6 +33,11 @@ export interface ListEntry {
    * nothing to say (an extra, a Line without unconfirmed past meals).
    */
   hint?: string
+  /**
+   * B5-F1: the slot "Mark it" opens (the Plan address /plan?mark=<date>:<mealSlotId>, plan lib/markSlot): the oldest of the Line's unconfirmed past meals.
+   * The key is left out with no hint.
+   */
+  markIt?: { date: string; mealSlotId: number }
 }
 
 /** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
@@ -126,6 +131,11 @@ export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
   }
   const named = [...slots.values()].map((s) => (s.courses.length > 1 ? shopStrings.unconfirmedCourses(s.label, s.courses.join(', ')) : s.label))
   return shopStrings.unconfirmedMeals(joinAnd(named))
+}
+
+/** B5-F1: the oldest slot among the unconfirmed past meals (by date, then Meal Slot id); null without any. */
+export function markItTarget(_meals: PastPlannedMeal[] | undefined): { date: string; mealSlotId: number } | null {
+  return null
 }
 
 /** B5-SH: the entries of the collapsed "Not needed" group (list.notNeeded, in server order); [] for an older saved list. */

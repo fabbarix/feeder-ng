@@ -21,7 +21,12 @@ export interface DateAttendancePanelProps {
    * `attendance` is undefined when only the Courses changed (the date's Attendance is left as it is); `courses` is left out
    * (not passed at all) when no Course changed.
    */
-  onSave: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => void | Promise<void>
+  onSave: (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number) => void | Promise<void>
+  /**
+   * B5-F1: the date is the slot block's, so it shows as text and cannot change (Plan and Today). Settings > Meal Slots leaves it
+   * false: the DateField stays. `guests` is passed to `onSave` only when the Guests changed (then `onSave(attendance, courses, guests)`).
+   */
+  dateReadOnly?: boolean
   onReset: () => void | Promise<void>
   onClose: () => void
 }
