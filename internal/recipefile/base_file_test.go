@@ -219,3 +219,17 @@ func TestParseRejectsRecipeAndNeededAtStepOnAStepUse(t *testing.T) {
 		}
 	}
 }
+
+func TestParseAcceptsNoteAndOptionalOnAStepUseAsBefore(t *testing.T) {
+	raw := mutate(t, func(root map[string]any) {
+		step := recipeAt(root, 0)["steps"].([]any)[0].(map[string]any)
+		step["uses"] = []any{map[string]any{"ingredient": "onion", "quantity": 1, "unit": "piece", "note": "sliced", "optional": false}}
+	})
+	f, err := recipefile.Parse(raw)
+	if err != nil {
+		t.Fatalf("a v1 file with note and optional on a use stays valid: %v", err)
+	}
+	if u := f.Recipes[0].Steps[0].Uses; len(u) != 1 || u[0].Ingredient != "onion" {
+		t.Errorf("uses = %+v", u)
+	}
+}

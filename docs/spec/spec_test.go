@@ -241,3 +241,30 @@ func TestRecipeRefCueDescriptionSaysWriteAnEmptyTextNotOmit(t *testing.T) {
 		t.Errorf("cue description = %q, want it to say write \"\" when there is no cue", d)
 	}
 }
+
+// BR-C round 3: since v1 a Step's `uses` took `note` and `optional` (through $defs/quantity); older files keep working.
+
+func TestAStepUseStillAllowsNoteAndOptional(t *testing.T) {
+	defs := defsOf(t)
+	items := propsOf(t, defs["step"])["uses"].(map[string]any)["items"].(map[string]any)
+	use := items
+	if ref, ok := items["$ref"].(string); ok {
+		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
+	}
+	p := propsOf(t, use)
+	for _, name := range []string{"note", "optional"} {
+		if _, has := p[name]; !has {
+			t.Errorf("a use keeps %q (backwards compatible with v1 files)", name)
+		}
+	}
+	for _, r := range requiredOf(use) {
+		if r == "note" || r == "optional" {
+			t.Errorf("%q stays optional on a use", r)
+		}
+	}
+	for _, name := range []string{"recipe", "neededAtStep"} {
+		if _, has := p[name]; has {
+			t.Errorf("a use must not have %q", name)
+		}
+	}
+}

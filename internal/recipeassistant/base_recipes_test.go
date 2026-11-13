@@ -258,3 +258,46 @@ func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing
 		t.Error("the golden still carries the old cue description")
 	}
 }
+
+// ---- round 3 --------------------------------------------------------------------------------------------------
+
+func TestOutputSchemaUseKeepsNoteAndOptionalSoTheModelMayWriteThem(t *testing.T) {
+	defs := decode(t, projected(t))["$defs"].(map[string]any)
+	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
+	use := items
+	if ref, ok := items["$ref"].(string); ok {
+		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
+	}
+	props := use["properties"].(map[string]any)
+	for _, name := range []string{"note", "optional"} {
+		if _, has := props[name]; !has {
+			t.Errorf("the projection's use lacks %q", name)
+		}
+	}
+	for _, name := range []string{"recipe", "neededAtStep"} {
+		if _, has := props[name]; has {
+			t.Errorf("the projection's use has %q", name)
+		}
+	}
+	if len(toStrings(use["required"])) != len(props) {
+		t.Errorf("every property of a use is required in the projection: %v", use["required"])
+	}
+}
+
+func TestFinishAcceptsAUseWithNoteAndOptionalSpelledOut(t *testing.T) {
+	raw := []byte(`{"format":"feeder-recipe-file","version":1,"noRecipe":false,
+	 "ingredients":[{"name":"rice","baseUnit":"g","conversions":[],"image":"","shelfLifeDays":null}],
+	 "recipes":[{"name":"Rice","description":"","yield":2,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
+	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
+	  "baseRecipe":false,"yieldUnit":"",
+	  "ingredients":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false,"recipe":null,"neededAtStep":null}],
+	  "steps":[{"text":"Boil.","kind":"active","durationMinutes":5,"leadTimeMinutes":0,"after":[],"image":"",
+	   "uses":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false}]}]}]}`)
+	fin, err := ra.Finish(raw, ra.FinishInput{Kind: ra.KindText})
+	if err != nil {
+		t.Fatalf("Finish: %v (%+v)", err, err)
+	}
+	if u := fin.File.Recipes[0].Steps[0].Uses; len(u) != 1 || u[0].Ingredient != "rice" || u[0].Note != "" {
+		t.Errorf("uses = %+v", u)
+	}
+}
