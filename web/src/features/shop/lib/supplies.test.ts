@@ -12,23 +12,23 @@ const supply = (id: number, name: string, over = {}) =>
   makeLine({ ingredientId: id, name, baseUnit: 'piece', kind: 'supply', restock: { level: 6, stock: 2 }, quantity: 4, need: 6, available: 2, pack: null, estimatedCostCents: null, ...over })
 
 describe('restockText: why a Restock Line is on the list', () => {
-  it('a piece Supply: the bare numbers, "Below 6 · 2 in Stock"', () => {
-    expect(restockText({ level: 6, stock: 2 }, 'piece', 'metric')).toBe('Below 6 · 2 in Stock')
+  it('a piece Supply: the bare numbers, "2 of 6 in Stock"', () => {
+    expect(restockText({ level: 6, stock: 2 }, 'piece', 'metric')).toBe('2 of 6 in Stock')
   })
-  it('no Stock at all says "None in Stock"', () => {
-    expect(restockText({ level: 6, stock: 0 }, 'piece', 'metric')).toBe('Below 6 · None in Stock')
+  it('no Stock at all says "0 of 6 in Stock"', () => {
+    expect(restockText({ level: 6, stock: 0 }, 'piece', 'metric')).toBe('0 of 6 in Stock')
   })
   it('a g or ml Supply carries its unit, in the display unit system', () => {
-    expect(restockText({ level: 500, stock: 200 }, 'ml', 'metric')).toBe('Below 500 ml · 200 ml in Stock')
-    expect(restockText({ level: 500, stock: 0 }, 'g', 'metric')).toBe('Below 500 g · None in Stock')
-    expect(restockText({ level: 500, stock: 200 }, 'g', 'imperial')).toBe('Below 1 lb 2 oz · 7.1 oz in Stock')
-    expect(restockText({ level: 1000, stock: 200 }, 'ml', 'imperial')).toBe('Below 4.25 cups · 0.75 cups in Stock')
+    expect(restockText({ level: 500, stock: 200 }, 'ml', 'metric')).toBe('200 ml of 500 ml in Stock')
+    expect(restockText({ level: 500, stock: 0 }, 'g', 'metric')).toBe('0 g of 500 g in Stock')
+    expect(restockText({ level: 500, stock: 200 }, 'g', 'imperial')).toBe('7.1 oz of 1 lb 2 oz in Stock')
+    expect(restockText({ level: 1000, stock: 200 }, 'ml', 'imperial')).toBe('0.75 cups of 4.25 cups in Stock')
   })
-  it('amounts round like the rest of Shop: a piece to at most 1 decimal, float dust in Stock is none', () => {
-    expect(restockText({ level: 6, stock: 1.9999999999 }, 'piece', 'metric')).toBe('Below 6 · 2 in Stock')
-    expect(restockText({ level: 6, stock: 2.25 }, 'piece', 'metric')).toBe('Below 6 · 2.3 in Stock')
-    expect(restockText({ level: 6, stock: 1e-12 }, 'piece', 'metric')).toBe('Below 6 · None in Stock')
-    expect(restockText({ level: 500, stock: 199.96 }, 'ml', 'metric')).toBe('Below 500 ml · 200 ml in Stock')
+  it('amounts round like the rest of Shop: a piece to at most 1 decimal, float dust in Stock is 0', () => {
+    expect(restockText({ level: 6, stock: 1.9999999999 }, 'piece', 'metric')).toBe('2 of 6 in Stock')
+    expect(restockText({ level: 6, stock: 2.25 }, 'piece', 'metric')).toBe('2.3 of 6 in Stock')
+    expect(restockText({ level: 6, stock: 1e-12 }, 'piece', 'metric')).toBe('0 of 6 in Stock')
+    expect(restockText({ level: 500, stock: 199.96 }, 'ml', 'metric')).toBe('200 ml of 500 ml in Stock')
   })
 })
 
@@ -36,7 +36,7 @@ describe('lineEntry / extraEntry carry the kind and the reason', () => {
   it('a Supply Line is a supply entry with its restockText', () => {
     const e = listEntries(makeList({ lines: [supply(20, 'Toilet paper')] }), 'metric').open[0]!
     expect(e.supply).toBe(true)
-    expect(e.restockText).toBe('Below 6 · 2 in Stock')
+    expect(e.restockText).toBe('2 of 6 in Stock')
   })
   it('a Supply Line without restock info (ticked after Stock was bought, or by hand) is a supply with no reason', () => {
     const e = listEntries(makeList({ lines: [supply(20, 'Toilet paper', { restock: null })] }), 'metric').open[0]!

@@ -3,7 +3,7 @@ import { formatQuantity, type BaseUnit, type UnitSystem } from '../../../lib/uni
 import { shopStrings } from '../strings'
 import type { ListEntry } from './lines'
 
-/** Float dust: Stock this close to 0 is none (as on the Supplies list, ingredients/lib/supplyUse.ts). */
+/** Float dust: Stock this close to 0 reads 0 (the same tolerance as the Supplies list, ingredients/lib/supplyUse.ts). */
 const EPS = 1e-9
 
 /**
@@ -15,11 +15,10 @@ function amountText(amount: number, base: BaseUnit, system: UnitSystem): string 
   return formatQuantity(amount, base, system)
 }
 
-/** "Below 6 · 2 in Stock", "Below 500 ml · 200 ml in Stock", "Below 6 · None in Stock" (no Stock at all). */
+/** "2 of 6 in Stock", "200 ml of 500 ml in Stock", "0 of 20 in Stock" (no Stock at all, float dust included). */
 export function restockText(restock: { level: number; stock: number }, baseUnit: BaseUnit, system: UnitSystem): string {
-  const level = amountText(restock.level, baseUnit, system)
-  const stock = restock.stock > EPS ? shopStrings.inStock(amountText(restock.stock, baseUnit, system)) : shopStrings.noneInStock
-  return shopStrings.restockReason(level, stock)
+  const stock = amountText(restock.stock > EPS ? restock.stock : 0, baseUnit, system)
+  return shopStrings.restockReason(stock, amountText(restock.level, baseUnit, system))
 }
 
 /** The food entries and the Supply entries of a list, each in the order given. Does not mutate its input. */

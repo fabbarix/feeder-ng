@@ -84,7 +84,5 @@ export const shopStrings = {
   andJoin: 'and',
   // H7′: the Supplies group and the Restock reason of a Supply Line
   supplies: 'Supplies',
-  restockReason: (level: string, stock: string) => `Below ${level} · ${stock}`,
-  inStock: (amount: string) => `${amount} in Stock`,
-  noneInStock: 'None in Stock',
+  restockReason: (stock: string, level: string) => `${stock} of ${level} in Stock`,
 }
