@@ -400,6 +400,13 @@ Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed he
   Ingredient: the Ingredient port has no inverse for `Ensure`, and an Ingredient that already existed must never be removed. The
   leftover is an unused Ingredient, visible in the Ingredients list, which a retry of the same Add finds and reuses (`Ensure`
   matches by name). Accepted as a known leftover (RR3 review); no port change.
+- **No Edit (rotate and crop) and no reorder of the receipt photos in 1.0.0-beta.7** (RR4 review). §3.2's reuse of the
+  recipe-photo editor (`PhotoEditorPanel` over `ImageEditor`) and the drag handle of mock-up 13 are not built: each photo is
+  prepared as taken (re-encoded as a JPEG, long edge 2576 px, at most 8 MiB) and can only be removed and taken again, in the
+  order taken. A badly framed photo is retaken.
+- **Leaving the photos screen while a read runs cancels it** (RR4, pinned by its tests): the screen stops polling and sends the
+  `DELETE` with `keepalive`, so the slot is freed at once. §3.3's "leaving does not cancel" and the Scanned list row "Receipt
+  read: review 9 changes" are not built; a finished read is still kept for its 10 minutes, so Back from the review returns to it.
 
 ## 9. Cost, limits and errors
 
