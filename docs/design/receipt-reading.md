@@ -69,9 +69,13 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
   `FileButton` as the new-Product Picture, scan design §2.3). The first photo opens the camera at once when the route opens.
 - **Several photos** for a long receipt: up to **4** (`recipeassistant.MaxPhotos`), in order, reorderable; the copy asks for
   top-to-bottom parts with a little overlap. The model is told the photos are consecutive parts of one receipt (§4.2).
-- **Rotate and crop** reuse the recipe-photo flow as it is: `PhotoList`, `PhotoRow` and `PhotoEditorPanel` over the shared
-  `ImageEditor` (`aspect="free"`, rotate in 90° steps, crop, Retake), from `features/import` (photo-read.md D7, D10). Each new
-  photo opens in the editor once, as in Import; **Use photo** returns to the list.
+- **Rotate and crop**: each photo row has **Edit** beside Remove (accessible name "Edit photo N"). It opens the shared
+  `PhotoEditSheet` (`ui/ImageEditor`: a modal `<dialog>` over `ImageEditor`, `aspect="free"`, Rotate left and right in 90° steps,
+  crop, Reset, **Cancel**, **Done**), the same editor Import uses for recipe photos (photo-read.md D7, D10). Escape and Close are
+  Cancel and leave the photo as it was. **Done** prepares the edited photo again with `prepareReceiptPhoto` (JPEG, long edge at
+  most 2576 px, at most 8 MiB) and replaces the photo: the thumbnail shows the edit, the old preview URL is revoked, and the
+  original is not kept. Focus returns to the row's Edit button. While the sheet is open or the edit is prepared, **Read the
+  receipt** is disabled; Edit is disabled while a read runs. Unlike Import, a new photo does not open the editor by itself.
 - The photos stay in memory only (not IndexedDB): leaving the route asks "Leave without reading?" ("The 2 photos are not kept.") in a `ConfirmDialog`.
 
 ### 3.3 Progress
@@ -400,10 +404,8 @@ Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed he
   Ingredient: the Ingredient port has no inverse for `Ensure`, and an Ingredient that already existed must never be removed. The
   leftover is an unused Ingredient, visible in the Ingredients list, which a retry of the same Add finds and reuses (`Ensure`
   matches by name). Accepted as a known leftover (RR3 review); no port change.
-- **No Edit (rotate and crop) and no reorder of the receipt photos in 1.0.0-beta.7** (RR4 review). §3.2's reuse of the
-  recipe-photo editor (`PhotoEditorPanel` over `ImageEditor`) and the drag handle of mock-up 13 are not built: each photo is
-  prepared as taken (re-encoded as a JPEG, long edge 2576 px, at most 8 MiB) and can only be removed and taken again, in the
-  order taken. A badly framed photo is retaken.
+- **No reorder of the receipt photos in 1.0.0-beta.7** (RR4 review). The drag handle of mock-up 13 is not built: the photos stay
+  in the order taken. Rotate and crop (Edit) are built (§3.2); a photo that is badly framed can also be removed and retaken.
 - **Leaving the photos screen while a read runs cancels it** (RR4, pinned by its tests): the screen stops polling and sends the
   `DELETE` with `keepalive`, so the slot is freed at once. §3.3's "leaving does not cancel" and the Scanned list row "Receipt
   read: review 9 changes" are not built; a finished read is still kept for its 10 minutes, so Back from the review returns to it.
