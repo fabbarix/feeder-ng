@@ -55,8 +55,9 @@ The terms are the [GLOSSARY](../../../GLOSSARY.md): **Leftover**, **Use-by**, **
      stays (same Use-by, same claims, not frozen) and inserts a **new row** (new id) for the frozen part: same Recipe, source, cooked date, status;
      frozen in the place with the new Use-by. Event `froze` is written for the frozen part's id, with its portions and the place.
    - **Take out** `TakeOut(id, placeID, userID)`: only a frozen Leftover (`ErrLeftoverNotFrozen`); `placeID` 0 is Not sorted, else a non-Freezer
-     place (`ErrStoragePlaceFreezer`, `ErrUnknownStoragePlace`); `frozen_on` NULL; Use-by = `TakeOutUseBy(today, recipe Use-by days, default)`
-     whatever the old Use-by was. Event `took_out` (all the portions).
+     place (`ErrStoragePlaceFreezer`, `ErrUnknownStoragePlace`); `frozen_on` NULL; Use-by = `TakeOutUseBy(today, recipe Use-by days, default)`,
+     except when the old Use-by has already passed (the Frozen Use-by ran out): then the Use-by stays that passed date and the Leftover is to
+     answer at once (PM answer 1, §9). Event `took_out` (all the portions).
    - **Answer** `Answer(id, answer, userID)`: `ErrInvalidAnswer` for anything but the three words; `ErrLeftoverNotToAnswer` unless
      `IsToAnswer`. Had it: portions to 0; Threw it out: portions to 0 and waste; Wasn't there: the row is **deleted** (`planned_meals.from_leftover_id`
      goes NULL by the foreign key). One event each (`had_it`, `threw_out`, `wasnt_there`) with the portions that were left.
@@ -177,9 +178,21 @@ All new files carry "leftover" in the name or live in a new feature file; no exi
 
 ## 9. Open questions for the PM / user
 
-1. **Take out after the Frozen Use-by passed.** ADR 0012 says Use-by = today + the Recipe's Use-by days. Plan 2.3's edge cases say such a Leftover
-   is "to answer at once". Both cannot hold. The tests follow the ADR (a fresh Use-by from today) and say so in a comment; if the user wants the
-   edge case, Take out of a to-answer Leftover would keep its old Use-by.
+**PM answers (phase 1, 2026-11-12).** Recorded here; the phase 2 tests follow them.
+
+1. **Take out after the Frozen Use-by passed**: allowed. The Leftover is to answer at once and its Use-by stays the passed one (the plan's edge
+   case; rule 6 above). `TakeOutUseBy` itself is unchanged: it gives the fresh Use-by when the old one has not passed. Phase 2 must add the
+   passed-Use-by case to the runner and httpapi tests.
+2. **Unknown or missing Storage Place** (Freeze it / Take out): `422 storage_place_unknown`. OK.
+3. **`?dryRun=1`** on `had-it`, `threw-out` and `freeze`: kept. OK.
+4. **Picking a frozen Leftover** via `{"leftoverId"}` on the existing PUT, `409 leftover_past_use_by`, `422 leftover_too_small`: OK.
+5. **Threw it out by hand on a Leftover past its Use-by** is dated Use-by + 1. OK.
+6. **Notify (Use-by push)**: in phase 2 the developer is granted `internal/notify` to skip frozen Leftovers and to-answer Leftovers in the 10:00
+   push. No push is added for to-answer Leftovers.
+
+**Original questions (kept for the record).**
+
+1. (Answered above.) Take out after the Frozen Use-by passed.
 2. **Unknown or missing Storage Place** in Freeze it / Take out: the plan table has no code. Proposed `422 storage_place_unknown`.
 3. **`?dryRun=1`** on the three portion actions is not in the plan's table. The sheet must name the Planned Meals "before confirming", so the web
    needs it (or the same list from `GET /api/plan`). Proposed as above; drop it if LOW computes the list itself.

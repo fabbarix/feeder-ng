@@ -192,11 +192,11 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 	if clean.WholeMeal != nil {
 		whole = *clean.WholeMeal
 	}
-	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
+	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days, frozen_use_by_days,
 	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, whole_meal, created_at, updated_at)
-	        VALUES (?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
+	        VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
+		nullInt(clean.FrozenUseByDays), nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
 		boolInt(whole), now, now)
 	if err != nil {
 		return 0, err
@@ -308,10 +308,10 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET name = ?, description = ?, yield = ?, ready_meal = ?, cooldown_days = ?,
-	        leftover_use_by_days = ?, reheat_minutes = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
+	        leftover_use_by_days = ?, frozen_use_by_days = ?, reheat_minutes = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
 	        whole_meal = ?, updated_at = ? WHERE id = ?`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
-		nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
+		nullInt(clean.FrozenUseByDays), nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
 		boolInt(whole), s.now(), id); err != nil {
 		return nil, err
 	}
@@ -731,12 +731,12 @@ func writeContent(ctx context.Context, tx *sql.Tx, id int64, in recipe.Input) er
 func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) {
 	var r recipe.Recipe
 	var ready, archived int64
-	var cool, useBy, reheat sql.NullInt64
+	var cool, useBy, frozenUseBy, reheat sql.NullInt64
 	var created, updated string
 	var whole int64
-	err := q.QueryRowContext(ctx, `SELECT name, description, yield, ready_meal, cooldown_days, leftover_use_by_days,
+	err := q.QueryRowContext(ctx, `SELECT name, description, yield, ready_meal, cooldown_days, leftover_use_by_days, frozen_use_by_days,
 	        reheat_minutes, source_url, source_attribution, image, archived, whole_meal, created_at, updated_at FROM recipes WHERE id = ?`, id).
-		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &reheat, &r.Source.URL, &r.Source.Attribution, &r.Image,
+		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &frozenUseBy, &reheat, &r.Source.URL, &r.Source.Attribution, &r.Image,
 			&archived, &whole, &created, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return recipe.Recipe{}, ErrNotFound
@@ -754,6 +754,9 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	}
 	if useBy.Valid {
 		r.LeftoverUseByDays = intPtr(int(useBy.Int64))
+	}
+	if frozenUseBy.Valid {
+		r.FrozenUseByDays = intPtr(int(frozenUseBy.Int64))
 	}
 	if reheat.Valid {
 		r.ReheatMinutes = intPtr(int(reheat.Int64))

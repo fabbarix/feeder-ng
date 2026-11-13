@@ -151,7 +151,7 @@ type Input struct {
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
 	// FrozenUseByDays is how long a Leftover of this Recipe keeps in a Freezer: nil = the Household's default, else
-	// 1..365 (B5-LO, ADR 0012). NOT validated or stored yet (test commit).
+	// 1..365 (B5-LO, ADR 0012).
 	FrozenUseByDays *int
 	ReheatMinutes   *int // nil = no reheat time (Reheat uses its formula); else 1..30 whole minutes (R12)
 	Source          Source
@@ -215,6 +215,12 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 			return Input{}, fieldErr("leftoverUseByDays", CodeUseByInvalid, "the use-by must be 0 to 30 days")
 		}
 		out.LeftoverUseByDays = intPtr(*d)
+	}
+	if d := in.FrozenUseByDays; d != nil {
+		if *d < 1 || *d > MaxFrozenUseByDays {
+			return Input{}, fieldErr("frozenUseByDays", CodeFrozenUseByInvalid, "the frozen use-by must be 1 to 365 days")
+		}
+		out.FrozenUseByDays = intPtr(*d)
 	}
 	if d := in.ReheatMinutes; d != nil {
 		if *d < MinReheatMinutes || *d > MaxReheatMinutes {

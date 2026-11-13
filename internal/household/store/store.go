@@ -61,10 +61,10 @@ func (s *Store) Settings(ctx context.Context) (household.Settings, error) {
 		quietStart, quietEnd string
 	)
 	err := s.db.QueryRowContext(ctx, `SELECT time_zone, time_zone_configured, planning_horizon_days,
-			default_cooldown_days, default_leftover_use_by_days, quiet_hours_start, quiet_hours_end,
+			default_cooldown_days, default_leftover_use_by_days, frozen_use_by_days, quiet_hours_start, quiet_hours_end,
 			planner_style, location_city, location_latitude, location_longitude, currency
 		FROM household_settings WHERE id = 1`).Scan(
-		&v.TimeZone, &configured, &v.PlanningHorizonDays, &v.DefaultCooldownDays, &v.DefaultLeftoverUseByDays,
+		&v.TimeZone, &configured, &v.PlanningHorizonDays, &v.DefaultCooldownDays, &v.DefaultLeftoverUseByDays, &v.FrozenUseByDays,
 		&quietStart, &quietEnd, &v.PlannerStyle, &city, &lat, &lon, &v.Currency)
 	if err != nil {
 		return household.Settings{}, err
@@ -94,11 +94,11 @@ func (s *Store) SaveSettings(ctx context.Context, v household.Settings) error {
 		}
 	}
 	_, err := s.db.ExecContext(ctx, `UPDATE household_settings SET time_zone = ?, time_zone_configured = ?,
-			planning_horizon_days = ?, default_cooldown_days = ?, default_leftover_use_by_days = ?,
+			planning_horizon_days = ?, default_cooldown_days = ?, default_leftover_use_by_days = ?, frozen_use_by_days = ?,
 			quiet_hours_start = ?, quiet_hours_end = ?, planner_style = ?,
 			location_city = ?, location_latitude = ?, location_longitude = ?, currency = ?
 		WHERE id = 1`,
-		v.TimeZone, v.TimeZoneConfigured, v.PlanningHorizonDays, v.DefaultCooldownDays, v.DefaultLeftoverUseByDays,
+		v.TimeZone, v.TimeZoneConfigured, v.PlanningHorizonDays, v.DefaultCooldownDays, v.DefaultLeftoverUseByDays, v.FrozenUseByDays,
 		v.QuietHours.Start, v.QuietHours.End, v.PlannerStyle, city, lat, lon, v.Currency)
 	return err
 }
