@@ -17,10 +17,11 @@ describe('MealTile: Bought chip', () => {
     expect(chip).toHaveAttribute('data-kind', 'why')
     expect(chip?.querySelector('svg')).not.toBeNull()
   })
-  it('shows only the one chip it had when the meal has another', () => {
+  // ds-plan: a row carries all its chips on one line (was: Bought only when the meal had no other chip).
+  it('shows the Bought chip after the others when the meal has another', () => {
     render(<MealTile slot={slot({ meal: meal({ bought, why: [favourite('Anna')] }) })} today="2026-11-10" {...handlers} />)
     expect(screen.getByText("Anna's favourite")).toBeInTheDocument()
-    expect(screen.queryByText('Bought')).not.toBeInTheDocument()
+    expect(screen.getByText('Bought')).toBeInTheDocument()
   })
   it('shows no Bought chip for a meal that is not Bought', () => {
     render(<MealTile slot={slot({ meal: meal({ bought: null }) })} today="2026-11-10" {...handlers} />)

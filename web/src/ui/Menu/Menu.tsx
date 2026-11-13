@@ -34,6 +34,8 @@ export interface MenuProps {
   icon?: IconName
   /** Title of the sheet below 768 px. Default: `label`. */
   title?: string
+  /** The trigger's size: `compact` (32 px visual) for a slot header inside a day tile. Default `md`. */
+  size?: 'md' | 'compact'
   items: MenuEntry[]
 }
 
@@ -47,14 +49,14 @@ interface Placed {
 }
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
-export function Menu({ label, icon = 'more', title, items }: MenuProps) {
+export function Menu({ label, icon = 'more', title, size = 'md', items }: MenuProps) {
   const wide = useMediaQuery('(min-width: 768px)')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const close = useCallback(() => setOpen(false), [])
   return (
     <>
-      <IconButton ref={triggerRef} icon={icon} label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
+      <IconButton ref={triggerRef} icon={icon} label={label} size={size} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
       {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} /> : null}
       {open && !wide ? <Sheet title={title ?? label} items={items} onClose={close} /> : null}
     </>
