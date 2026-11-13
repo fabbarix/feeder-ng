@@ -100,7 +100,7 @@ export function IngredientScreen() {
         </Button>
       )}
 
-      <BentoGrid columns={2} label={strings.detailsLabel}>
+      <BentoGrid min="card" label={strings.detailsLabel}>
         <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
           {locked ? (
             <>

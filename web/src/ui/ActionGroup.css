@@ -1,0 +1,38 @@
+/* ActionGroup (docs/design/system.md 5): the actions of a row or tile. Tokens only; never flex-wraps. */
+.action-group-host {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+
+/* Wide: at the row's end, buttons at their natural width, one fixed inline size so every row's group lines up in one column. */
+.action-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  inline-size: var(--action-group-inline-size);
+  margin-inline-start: auto;
+}
+
+.action-group .button {
+  white-space: nowrap;
+}
+
+/* Narrow: the group takes its own line as equal tracks, the ⋮ at 44 px. */
+@container (max-width: 35rem) {
+  .action-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 44px;
+    inline-size: auto;
+    margin-inline-start: 0;
+  }
+
+  .action-group:not([data-more]) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .action-group .button {
+    inline-size: 100%;
+  }
+}

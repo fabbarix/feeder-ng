@@ -19,7 +19,7 @@ export function IngredientList({ ingredients, system, onOpen }: IngredientListPr
           key={ingredient.id}
           title={displayName(ingredient.name)}
           meta={ingredientMeta(baseUnitLabel(ingredient.baseUnit, system), ingredient.shelfLifeDays)}
-          leading={<Thumb imageUrl={ingredient.imageUrl} size={40} />}
+          leading={<Thumb name={ingredient.name} imageUrl={ingredient.imageUrl} size={40} />}
           chevron
           onActivate={() => onOpen(ingredient.id)}
         />

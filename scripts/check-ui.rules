@@ -18,10 +18,11 @@ native-search.fail_paths=web/src/ui web/src/features/recipes web/src/features/im
 back-link=fail
 image-input=fail
 # DS-A (docs/design/system.md §10, ADR 0016): fail in the shared ui and in each screen once its redesign wave lands; warn elsewhere.
+# The tags feature is clean of all three rules, so it fails here too (TG-S guard).
 # A later wave adds its folder to the three fail_paths lines.
 type-scale=warn
-type-scale.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
+type-scale.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags
 opacity-muting=warn
-opacity-muting.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
+opacity-muting.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags
 word-break=warn
-word-break.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
+word-break.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags

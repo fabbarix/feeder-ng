@@ -24,7 +24,7 @@ export function PhotoRow({ photo, number, previewUrl, handle, disabled, onEdit, 
     <div className="photo-row">
       {handle}
       <div className="photo-row__picture">
-        {previewUrl ? <Thumb imageUrl={previewUrl} size={72} /> : <Icon name="file" size={24} />}
+        {previewUrl ? <Thumb name={readStrings.photoLabel(number)} imageUrl={previewUrl} size={72} /> : <Icon name="file" size={24} />}
       </div>
       <div className="photo-row__body">
         <p className="photo-row__title">{readStrings.photoLabel(number)}</p>

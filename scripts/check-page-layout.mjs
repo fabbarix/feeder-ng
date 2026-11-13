@@ -336,6 +336,28 @@ const probe = `
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
     fields, bars, railContrast, brokenText, dialog: null, hasMain: true }
 })()`
+// P12 (DS-A, system.md 8): scroll to the end of the page, then measure the leaf content boxes of <main> against the floating
+// bottom bar. A box whose bottom runs under the bar's top is a finding with the overlap in px; no bar (from 1024 px) gives null.
+const navProbe = `(() => {
+  const bar = document.querySelector('nav.bottom-bar')
+  if (!bar || getComputedStyle(bar).display === 'none') return null
+  const main = document.querySelector('main')
+  window.scrollTo(0, document.documentElement.scrollHeight)
+  const top = bar.getBoundingClientRect().top
+  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+  const out = []
+  for (const e of (main ? main.querySelectorAll('*') : [])) {
+    if (!vis(e) || bar.contains(e)) continue
+    const b = e.getBoundingClientRect()
+    const overlap = Math.round(b.bottom - top)
+    if (overlap <= 1 || b.top >= top) continue
+    // the leaf-most box: an ancestor of a box already under the bar is not reported again
+    if (Array.from(e.children).some((c) => c.getBoundingClientRect().bottom > top && vis(c))) continue
+    out.push({ sel: e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0], px: overlap })
+  }
+  window.scrollTo(0, 0)
+  return out.slice(0, 3)
+})()`
 // P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
 const buttonProbe = `
 (() => {
@@ -386,6 +408,7 @@ for (const vp of VIEWPORTS) {
         continue
       }
       m.lowContrastButtons = await evaluate(buttonProbe)
+      m.navOverlap = await evaluate(navProbe)
       m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
       // The light findings are reported first, on the light page.
       for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)

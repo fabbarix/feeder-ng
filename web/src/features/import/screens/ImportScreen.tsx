@@ -151,20 +151,20 @@ function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode 
           </ul>
         </Tile>
       ) : null}
-      <BentoGrid columns={2} label={s.ingredientsTitle}>
+      <BentoGrid min="card" label={s.ingredientsTitle}>
         {plan.ingredients.map((m) => (
           <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
         ))}
       </BentoGrid>
       {plan.unitPrompts.length > 0 ? (
-        <BentoGrid columns={2} label={s.unitsTitle}>
+        <BentoGrid min="card" label={s.unitsTitle}>
           {plan.unitPrompts.map((p) => (
             <UnitPromptTile key={`${p.key}-${p.unit}`} prompt={p} onAnswer={(toBase) => screen.answerConversion(p.key, p.unit, toBase)} />
           ))}
         </BentoGrid>
       ) : null}
       {names.length > 0 || limited || forbidden ? (
-        <BentoGrid columns={2} label={s.courses.title}>
+        <BentoGrid min="card" label={s.courses.title}>
           {limited ? (
             <Tile variant="status" status="danger" role="alert" as="section">
               <p>{s.courses.tooMany(MAX_COURSES)}</p>
