@@ -40,7 +40,6 @@ export function SupplyList({ supplies, stock, system, onOpen, onUse, busyId = nu
               <IconButton
                 icon="use"
                 label={useLabel(supply.name, supply.baseUnit)}
-                className="supply-use"
                 disabled={total === null || !canUse(total) || busyId === supply.id}
                 onClick={() => onUse(supply)}
               />
