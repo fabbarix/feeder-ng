@@ -69,7 +69,7 @@ describe('PriceEntrySheet', () => {
 
   it('Save reports what was typed once, when no other row lacks a Price', async () => {
     const { props } = setup()
-    await tap('145')
+    await tap('1.45')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(props.onSave).toHaveBeenCalledTimes(1)
     expect(props.onSave).toHaveBeenCalledWith({ basis: 'pack', cents: 145, packCents: 145, perKgCents: null })
@@ -106,7 +106,7 @@ describe('PriceEntrySheet', () => {
 
   it('Close hands over the typed entry (the screen saves a valid one and discards an empty one)', async () => {
     const { props } = setup()
-    await tap('2')
+    await tap('0.02')
     await userEvent.click(keypadClose())
     expect(props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 2, packCents: 2, perKgCents: null })
   })
@@ -119,7 +119,7 @@ describe('PriceEntrySheet', () => {
 
   it('is keyed by the row: the next row remounts the keypad, empty, with its own name', async () => {
     const view = setup()
-    await tap('99')
+    await tap('0.99')
     expect(screen.getByRole('status', { name: 'Price of Mutti passata 700 g' })).toHaveTextContent('0.99')
     view.rerender(<PriceEntrySheet {...view.props} row={paper} {...priceContext(toiletPaper)} last={null} />)
     expect(screen.getByRole('dialog', { name: 'Price of Regina toilet paper 9 pieces' })).toBeInTheDocument()

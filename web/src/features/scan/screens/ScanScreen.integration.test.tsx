@@ -116,7 +116,7 @@ describe('ScanScreen with the real controller', () => {
     expect(screen.getByRole('dialog', { name: 'Price of Mutti passata 700 g' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Scanner' })).toHaveAttribute('data-camera', 'paused')
     expect(screen.getByRole('button', { name: /Last time here \$1\.29/ })).toBeInTheDocument()
-    for (const k of '145') await userEvent.click(screen.getByRole('button', { name: k }))
+    for (const k of '1.45') await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(h.api.setPrices).toHaveBeenCalledTimes(1)

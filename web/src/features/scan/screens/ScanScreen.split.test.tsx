@@ -184,7 +184,7 @@ describe('Price entry', () => {
   it('"Next without a Price" is the primary while another row has none, and saves with intent next', async () => {
     const c = controllerFake({ scanned: scannedFake(sessionEntries()), flow: pricing('7') })
     open(c)
-    for (const k of '145') await userEvent.click(screen.getByRole('button', { name: k }))
+    for (const k of '1.45') await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
     await userEvent.click(screen.getByRole('button', { name: /Next without a Price/ }))
     expect(c.flow.savePrice).toHaveBeenCalledWith('7', { basis: 'pack', cents: 145, packCents: 145, perKgCents: null }, 'next')
   })
@@ -193,7 +193,7 @@ describe('Price entry', () => {
     const c = controllerFake({ scanned: scannedFake(sessionEntries()), flow: pricing('31') })
     open(c)
     expect(screen.queryByRole('button', { name: /Next without a Price/ })).toBeNull()
-    for (const k of '2') await userEvent.click(screen.getByRole('button', { name: k }))
+    for (const k of '0.02') await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(c.flow.savePrice).toHaveBeenCalledWith('31', { basis: 'pack', cents: 2, packCents: 2, perKgCents: null }, 'save')
   })
