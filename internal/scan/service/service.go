@@ -235,6 +235,10 @@ type priceSnapshot struct {
 // Apply applies one operation. A bad operation is a Result with status rejected (and no side effects); the
 // error is only for infrastructure failures. A repeated client UUID answers status duplicate with the stored result.
 func (s *Service) Apply(ctx context.Context, op scan.Op) (scan.Result, error) {
+	if strings.HasPrefix(op.ClientUUID, scan.ReceiptUUIDPrefix) {
+		// Only the receipt Apply writes these (it calls apply); a phone's Op could otherwise take a plan's uuid first.
+		return rejected(op.ClientUUID, CodeValidation, `a client UUID cannot start with "`+scan.ReceiptUUIDPrefix+`"`), nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	res, err := s.apply(ctx, op)

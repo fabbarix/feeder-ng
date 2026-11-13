@@ -106,12 +106,17 @@ func (e *ValidationError) Is(target error) bool { return target == ErrInvalid }
 // UUID could never be priced alone (the phone sends crypto.randomUUID, the receipt Apply "receipt:<readId>:<n>").
 const ReservedUUID = "prices"
 
+// ReceiptUUIDPrefix starts the client UUIDs the receipt Apply gives its scans ("receipt:<readId>:<n>"). Only the server
+// writes them: the scan service refuses a phone's Op with this prefix (Service.Apply), so a phone can neither take a
+// receipt scan's uuid before the apply nor use the longer limit below.
+const ReceiptUUIDPrefix = "receipt:"
+
 // maxClientUUIDReceipt is the longest client UUID of a receipt apply: "receipt:<readId>:undo:<uuid>" is about 86 characters
 // with two UUIDs, so receipt UUIDs get 128 (RR3). Every other client UUID keeps 64.
 const maxClientUUIDReceipt = 128
 
 func maxClientUUID(u string) int {
-	if strings.HasPrefix(u, "receipt:") {
+	if strings.HasPrefix(u, ReceiptUUIDPrefix) {
 		return maxClientUUIDReceipt
 	}
 	return 64

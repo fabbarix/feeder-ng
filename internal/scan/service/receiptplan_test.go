@@ -704,3 +704,17 @@ func TestSessionEventsAreTheLiveShopScansOfThisShopInLedgerOrder(t *testing.T) {
 		t.Error("a Price edit did not change the fingerprint")
 	}
 }
+
+// ---- the review's additions (RR3 review) --------------------------------------------------------------------------
+
+// Only the receipt Apply writes "receipt:" uuids: a phone's Op with one is refused, so it can never take a plan's uuid.
+func TestAPhonesOpCannotUseAReceiptUUID(t *testing.T) {
+	e := newRR3Env(t)
+	res, err := e.svc.Apply(context.Background(), packScan("receipt:r1:0", mutti, 700))
+	if err != nil || res.Status != scan.StatusRejected || res.Error == nil || res.Error.Code != service.CodeValidation {
+		t.Fatalf("Apply = %+v, %v; want rejected (validation)", res, err)
+	}
+	if e.live(t, "receipt:r1:0") {
+		t.Error("the receipt uuid was written")
+	}
+}

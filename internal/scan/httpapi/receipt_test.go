@@ -552,3 +552,23 @@ func TestTheApplyUsesTheScanLockWithTheOtherScanRoutes(t *testing.T) {
 }
 
 func jsonInto(b []byte, v any) error { return json.Unmarshal(b, v) }
+
+// ---- the review's additions (RR3 review) --------------------------------------------------------------------------
+
+// A phone cannot send a scan under a "receipt:" uuid: only the receipt Apply writes those.
+func TestAScanWithAReceiptUUIDIsRejected(t *testing.T) {
+	f := newReceiptFixture(t)
+	r := f.user.Post("/api/scan", f.op("receipt:r1:0"))
+	var res struct {
+		Status string `json:"status"`
+		Error  struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := jsonInto(r.Body, &res); err != nil || r.Status != 422 || res.Status != "rejected" || res.Error.Code != "validation_failed" {
+		t.Fatalf("scan = %d %s", r.Status, r.Body)
+	}
+	if f.lots(t) != 0 {
+		t.Errorf("Lots = %d: the rejected scan wrote", f.lots(t))
+	}
+}
