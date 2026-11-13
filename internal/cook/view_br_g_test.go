@@ -111,12 +111,10 @@ func TestBuildViewLeavesCoveredStepsOutAndKeepsTheComposedIndexes(t *testing.T) 
 		t.Errorf("Layer = index %d number %d of %d, Bake = index %d number %d of %d; want indexes 3 and 4, numbered 1 and 2 of 2",
 			a.Index, a.Number, a.Of, b.Index, b.Number, b.Of)
 	}
-	var names []string
-	for _, c := range v.Covered {
-		names = append(names, c.Name)
-	}
-	if want := []string{"Béchamel", "Roux"}; !reflect.DeepEqual(names, want) {
-		t.Errorf("Covered = %v, want the distinct Base recipes of the Steps left out, in order: %v", names, want)
+	// Round 2 (Option A): one entry per covered block, the outermost Base recipe: a jar of Béchamel gives [Béchamel], never Roux
+	// inside it. The entry's Path is just that Base recipe's name.
+	if len(v.Covered) != 1 || v.Covered[0].Name != "Béchamel" || !reflect.DeepEqual(v.Covered[0].Path, []string{"Béchamel"}) {
+		t.Errorf("Covered = %+v, want only the outermost Base recipe of the block: Béchamel with the path [Béchamel]", v.Covered)
 	}
 	if b := v.Steps[1]; b.Timer == nil || b.Timer.Label != "Step 2: Bake" {
 		t.Errorf("Bake timer = %+v, want Step 2 (the number counts the Steps shown)", b.Timer)

@@ -72,7 +72,7 @@ type brgView struct {
 
 type brgWorld struct {
 	*crsc2.World
-	béchamel, béchamelIng, lasagne int64
+	béchamel, béchamelIng, lasagne int64 // béchamelIng is the Base recipe's Ingredient
 	pasta, milk                    int64
 }
 

@@ -232,6 +232,32 @@ func beta6BRGSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return names, nil
 	}
+	sc.Step(`^the timeline has (\d+) items for the Course "([^"]*)", (\d+) of them labelled "([^"]*)"$`, func(total int, course string, labelled int, base string) error {
+		var cid int64
+		if err := w.Ensure().DB.QueryRow(`SELECT id FROM courses WHERE name = ?`, course).Scan(&cid); err != nil {
+			return fmt.Errorf("Course %q: %v", course, err)
+		}
+		var doc struct {
+			Items []map[string]any `json:"items"`
+		}
+		if err := w.Last.JSON(&doc); err != nil {
+			return err
+		}
+		all, with := 0, 0
+		for _, it := range doc.Items {
+			if f, _ := it["courseId"].(float64); int64(f) != cid {
+				continue
+			}
+			all++
+			if label(it) == base {
+				with++
+			}
+		}
+		if all != total || with != labelled {
+			return fmt.Errorf("the Course %s has %d items, %d labelled %q; want %d and %d: %s", course, all, with, base, total, labelled, w.Last.Body)
+		}
+		return nil
+	})
 	sc.Step(`^Cook Mode marks "([^"]*)" as covered by Stock$`, func(name string) error {
 		got, err := covered()
 		if err != nil {
