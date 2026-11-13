@@ -10,8 +10,9 @@ import (
 )
 
 // H3 (ADR 0017, docs/dev/design/household-items.md §2 guard 7): Existing hands the review every Ingredient with its kind,
-// so the review can tell a Supply; and an import never sets a Supply's Shelf Life, even if a Base recipe's Ingredient
-// became one between the review and the write (the safety net, `AND kind='food'` on the shelf_life_days update).
+// so the review can tell a Supply; an import never sets a Supply's Shelf Life, even if a Base recipe's Ingredient
+// became one between the review and the write (the safety net, `AND kind='food'` on the shelf_life_days update); and an
+// Ingredient that became a Supply since the review makes the import stale instead of becoming a Recipe line.
 
 func (f *fixture) supply(t *testing.T, name string) int64 {
 	t.Helper()
@@ -64,21 +65,30 @@ func TestAnImportNamingASupplyIsNotReadyAndWritesNothing(t *testing.T) {
 func TestAnImportNeverSetsASupplysShelfLife(t *testing.T) {
 	f := newSeeded(t)
 	// Race the guards: the moment the Base recipe is linked to its Ingredient, that Ingredient becomes a Supply, as if
-	// the User changed its kind between the review and the write.
+	// the User changed its kind between the review and the write. The file has the Base recipe alone: a Recipe calling
+	// for it would now make the import stale (TestAnImportIsStaleWhenAnIngredientBecameASupplySinceTheReview).
 	if _, err := f.db.Exec(`CREATE TRIGGER supply_race AFTER UPDATE OF base_ingredient_id ON recipes
 	        BEGIN UPDATE ingredients SET kind = 'supply' WHERE id = NEW.base_ingredient_id; END`); err != nil {
 		t.Fatal(err)
 	}
-	file := lasagneFile(bechamelLine(), fileBechamel(1, "l"))
 	shelf := 4
-	file.Ingredients[3].ShelfLifeDays = &shelf
+	file := recipefile.File{
+		Format: recipefile.Format, Version: recipefile.Version,
+		Ingredients: []recipefile.Ingredient{
+			{Name: "milk", BaseUnit: "ml"}, {Name: "butter", BaseUnit: "g"}, {Name: "béchamel", BaseUnit: "ml", ShelfLifeDays: &shelf},
+		},
+		Recipes: []recipefile.Recipe{fileBechamel(1, "l")},
+	}
 	ex, err := f.s.Existing(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := recipefile.BuildCommit(file, ex, answers(map[string]recipefile.BaseRecipeLineDecision{lineB: fileAnswer(1)}), recipefile.ImageSet{})
+	c, err := recipefile.BuildCommit(file, ex, recipefile.Decisions{}, recipefile.ImageSet{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if c.Recipes[0].BaseShelfLifeDays == nil {
+		t.Fatal("the commit carries no Shelf Life for the Base recipe's Ingredient: the test would prove nothing")
 	}
 	if _, err := f.s.Apply(ctx, c); err != nil {
 		t.Fatalf("Apply: %v (the safety net skips the update, it does not fail the import)", err)
@@ -94,6 +104,26 @@ func TestAnImportNeverSetsASupplysShelfLife(t *testing.T) {
 	}
 	if days.Valid {
 		t.Errorf("shelf_life_days = %d, want NULL: a Supply never gets a Shelf Life from an import", days.Int64)
+	}
+}
+
+func TestAnImportIsStaleWhenAnIngredientBecameASupplySinceTheReview(t *testing.T) {
+	// The review matched rice as food; it became a Supply before Confirm. Apply answers ErrStale (a new review shows the
+	// row "rice is one of your Supplies") and writes nothing: no Recipe gets a Supply line.
+	f := newFixture(t)
+	if _, err := f.db.Exec(`INSERT INTO ingredients(name, name_key, base_unit, created_at, updated_at)
+	        VALUES ('rice', 'rice', 'g', '2026-11-09T12:00:00Z', '2026-11-09T12:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	c := f.commit(t, riceFile(riceRecipe("Pilaf")), recipefile.Decisions{})
+	if _, err := f.db.Exec(`UPDATE ingredients SET kind = 'supply' WHERE name_key = 'rice'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.Apply(ctx, c); !errors.Is(err, recipefile.ErrStale) {
+		t.Fatalf("Apply = %v, want ErrStale", err)
+	}
+	if f.count(t, "recipes") != 0 || f.count(t, "recipe_lines") != 0 {
+		t.Error("a stale import writes nothing")
 	}
 }
 

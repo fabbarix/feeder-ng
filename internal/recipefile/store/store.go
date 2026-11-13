@@ -716,6 +716,9 @@ func (s *Store) unitsOf(ctx context.Context, tx *sql.Tx, in recipe.Input) (map[i
 		if err != nil {
 			return err
 		}
+		if ing.IsSupply() {
+			return ErrStale // it became a Supply since the review (ADR 0017): a new review shows the row to resolve
+		}
 		out[id] = ing.Units()
 		return nil
 	}

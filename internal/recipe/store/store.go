@@ -292,8 +292,8 @@ func supplyNamed(ctx context.Context, q Querier, name string, exceptID int64) (b
 // first one: lines[i].ingredientId, else steps[i].uses[j].ingredientId.
 //
 // Only what the save adds is refused. A line (a use) whose Ingredient the stored Recipe recipeID already has on a line
-// (a use) is kept as it is, so a Supply line that got in by another path (a kind change between a save's checks and
-// its write, or data written by hand) never blocks an unrelated save of that Recipe, nor a Link or an Undo that rewrites it. recipeID 0 is a new Recipe:
+// (a use) is kept as it is, so a Supply line that got in by another path (data written by hand, or before the
+// write re-checked inside its transaction) never blocks an unrelated save of that Recipe, nor a Link or an Undo that rewrites it. recipeID 0 is a new Recipe:
 // every line and use is new.
 func refuseSupplyLines(ctx context.Context, q Querier, recipeID int64, in recipe.Input) error {
 	storedLines, storedUses, err := storedIngredients(ctx, q, recipeID)
@@ -439,7 +439,14 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 // CreateTx inserts a Recipe whose Input is already validated (recipe.Input.Validate
 // with the Ingredients it uses) inside the caller's transaction. It checks no
 // image ids and commits nothing. Returns the new id.
+//
+// The Supply guard (refuseSupplyLines) runs again here, inside the write's transaction: the checks before it ran
+// outside, and an Ingredient may have become a Supply since (ADR 0017). Transactions are BEGIN IMMEDIATE, so nothing
+// changes a kind between this check and the write.
 func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (int64, error) {
+	if err := refuseSupplyLines(ctx, tx, 0, clean); err != nil {
+		return 0, err
+	}
 	isBase := clean.IsBase()
 	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
 		return 0, err
@@ -555,8 +562,11 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 // with an already validated Input, inside the caller's transaction. ErrNotFound
 // when there is no such Recipe. It returns the image ids the Recipe referred to
 // before; the caller removes those no longer referenced (DropUnreferenced) after
-// the commit.
+// the commit. Like CreateTx, it re-checks the Supply guard inside the transaction.
 func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recipe.Input) ([]string, error) {
+	if err := refuseSupplyLines(ctx, tx, id, clean); err != nil {
+		return nil, err
+	}
 	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
 		return nil, err
 	}

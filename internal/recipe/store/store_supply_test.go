@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 
@@ -132,8 +133,8 @@ func TestAStepUseOfFoodOnNoLineIsStillAllowed(t *testing.T) {
 
 // ---- guard 2, stored lines: only what a save adds is refused ----
 //
-// H2 refuses a change to Supply while a line or a use names the Ingredient, so a stored Supply line is rare (a kind
-// change between a save's checks and its write, or data written by hand). Such a line never blocks a save that
+// H2 refuses a change to Supply while a line or a use names the Ingredient, and the write re-checks inside its
+// transaction, so a stored Supply line comes only from data written by hand. Such a line never blocks a save that
 // leaves it as it is (renaming the Recipe, a Link or an Undo): the User fixes it in the editor, or makes the
 // Ingredient food again.
 
@@ -181,6 +182,33 @@ func TestAStoredSupplyLineDoesNotLetTheSupplyIntoAStepUse(t *testing.T) {
 	in.Steps = []recipe.Step{stepUsing(flour, 20, "g")}
 	_, err := f.s.Update(ctx, soup.ID, in)
 	wantValidation(t, err, "steps[0].uses[0].ingredientId", codeIngredientIsSupply)
+}
+
+// ---- guard 2, inside the write: a kind changed after the checks ----
+
+func TestTheWriteRefusesALineWhoseIngredientBecameASupplyAfterTheChecks(t *testing.T) {
+	// CreateTx and ReplaceTx take an Input validated before the transaction (a save, the Import Review's Apply). An
+	// Ingredient made a Supply in between is refused there, inside the transaction, and nothing is written.
+	f := newBaseFixture(t)
+	milk, _, flour := f.basics(t)
+	soup := f.createPlain(t, plainIn("Soup", ln(milk, 200, "ml")))
+	clean := plainIn("Soup", ln(milk, 200, "ml"), ln(flour, 20, "g"))
+	f.exec(t, `UPDATE ingredients SET kind = 'supply' WHERE id = ?`, flour)
+	for name, write := range map[string]func(tx *sql.Tx) error{
+		"CreateTx":  func(tx *sql.Tx) error { _, err := f.s.CreateTx(ctx, tx, clean); return err },
+		"ReplaceTx": func(tx *sql.Tx) error { _, err := f.s.ReplaceTx(ctx, tx, soup.ID, clean); return err },
+	} {
+		tx, err := f.db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = write(tx)
+		tx.Rollback()
+		var ve *recipe.ValidationError
+		if !errors.As(err, &ve) || ve.Field != "lines[1].ingredientId" || ve.Code != codeIngredientIsSupply {
+			t.Errorf("%s = %v, want %s on lines[1].ingredientId", name, err, codeIngredientIsSupply)
+		}
+	}
 }
 
 // ---- guard 3: a Ready Meal's Ingredient is named like the Recipe ----
