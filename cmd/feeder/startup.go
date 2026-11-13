@@ -23,7 +23,7 @@ type preSnapshot struct {
 }
 
 // preSnapshots is the ordered table run before any migration (docs/dev/design/crs-plan.md §1.3,
-// docs/dev/design/b5-snap.md, docs/dev/design/b6-snap.md). 1400 first, then 1500, then 1540.
+// docs/dev/design/b5-snap.md, docs/dev/design/b6-snap.md, docs/dev/design/b7-snap.md). 1400 first, then 1500, then 1540, then 1550.
 var preSnapshots = []preSnapshot{
 	{
 		file:      backup.PreSnapshotFile,
@@ -46,6 +46,14 @@ var preSnapshots = []preSnapshot{
 		keep:      true,
 		need: func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error) {
 			return db.NeedsSnapshotFor(ctx, d, fsys, db.Pre1540Prefixes)
+		},
+	},
+	{
+		file:      backup.PreSnapshot1550File,
+		migration: "1550",
+		keep:      true,
+		need: func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error) {
+			return db.NeedsSnapshotFor(ctx, d, fsys, db.Pre1550Prefixes)
 		},
 	},
 }

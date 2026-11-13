@@ -21,7 +21,8 @@ c = c.lower()
 for h in sorted((h for h in heads if " " in h), key=len, reverse=True):
     c = re.sub(r"\b" + re.escape(h) + r"(s|es)?\b", " ", c)
 # Other senses of an avoided word that are not the domain term.
-allow = ["app icons", "icon styles", "icon payload", "migrations run", "replan runs", "app runs", "run the older image", "you run your own", "open-source component"]
+allow = ["app icons", "icon styles", "icon payload", "migrations run", "replan runs", "app runs", "run the older image", "you run your own", "open-source component",
+         "the read is finished"]  # "finished" is avoided for Used up (a Supply's Lot), not for the photo read
 for a in allow:
     c = c.replace(a, " ")
 hits = sorted(w for w in avoid if re.search(r"\b" + re.escape(w) + r"(s|es)?\b", c))

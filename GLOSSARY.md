@@ -273,10 +273,25 @@ _Avoid_: Missing meal
 **Ingredient**:
 A generic food item that recipes call for and the shopping list is written in (e.g. "passata"). May carry a **Picture** (see **Photo**).
 _Avoid_: Item, food, product
+_Note_: a thing the Household buys that is not food is a **Supply**, which shares its Stock, Products and Prices.
 
 **Product**:
-A specific purchasable pack, identified by its barcode, that supplies exactly one Ingredient (e.g. "Mutti passata 700 g"). May carry a **Picture** (see **Photo**) of the pack, so it can be told from another brand at a glance.
+A specific purchasable pack, identified by its barcode, of exactly one Ingredient or Supply (e.g. "Mutti passata 700 g", "Lotus toilet paper 9 rolls"). May carry a **Picture** (see **Photo**) of the pack, so it can be told from another brand at a glance.
 _Avoid_: SKU, article, item, pack shot, product photo
+
+**Supply**:
+A generic thing that is not food, which the Household buys and keeps in Stock (dish soap, toilet paper, batteries), with Products, Prices and Stock Lots like an Ingredient. A Recipe never calls for it, and nothing about it goes off.
+_Avoid_: Item, household item, household good, non-food, consumable, sundry, essential
+_Note_: in code a Supply is an `ingredients` row with `kind = 'supply'` ([ADR 0017](docs/adr/0017-supplies-are-ingredients-of-kind-supply.md)). "Household" stays the family.
+
+**Restock level**:
+The Stock of a Supply below which the Shopping List asks for it; the Line is the Restock level less Stock, as packs of the Product last bought.
+_Avoid_: Reorder point, par level, minimum stock, low-stock threshold, alert level
+
+**Used up**:
+A Supply's Stock Lot action: taking some or all of the Lot out of Stock because the Household used it. It is not waste and not a mistake.
+_Avoid_: Consumed, finished, emptied
+_Note_: a food Lot leaves Stock through Cooked, Set total or Throw out; **Delete** stays "for a mistake" for both.
 
 **Archived**:
 The state of a Recipe, Product or Course that was used (planned, or bought) and so cannot be deleted, but is retired: left out of lists and pickers and ignored by the planner and by Scans, while its history stays. It can be unarchived.
@@ -291,7 +306,7 @@ An Ingredient-specific equivalence from another unit into its Base Unit (e.g. 1 
 _Avoid_: Measure, ratio
 
 **Stock**:
-The quantity of each Ingredient the Household currently has at home, a Base recipe's Ingredient included (a jar of béchamel, a frozen batch of ragù).
+The quantity of each Ingredient and Supply the Household currently has at home, a Base recipe's Ingredient included (a jar of béchamel, a frozen batch of ragù).
 _Avoid_: Inventory, larder
 _Note_: "Pantry" names the page that shows Stock (and the pantry kind of Storage Place); the things on it are still Stock and Stock Lots. Frozen Leftovers also appear on the Pantry page; they are not Stock.
 _Note_: [ADR 0015](docs/adr/0015-base-recipes.md).
@@ -301,20 +316,20 @@ Where the Household keeps Stock and frozen Leftovers (Kitchen Pantry, Garage Fri
 _Avoid_: Storage location, shelf, compartment
 
 **Frozen Shelf Life**:
-An optional number of days an Ingredient keeps in a Storage Place of kind freezer; a Stock Lot moved into a Freezer is good for this long from that day.
+An optional number of days an Ingredient keeps in a Storage Place of kind freezer (a Supply has none); a Stock Lot moved into a Freezer is good for this long from that day.
 _Avoid_: Freezer life, frozen expiry
 _Note_: not **Frozen Use-by**, which is a Leftover's.
 
 **Shelf Life**:
-An optional number of days an Ingredient stays usable after purchase.
+An optional number of days an Ingredient stays usable after purchase. A Supply has none.
 _Avoid_: Expiry, best-before
 
 **Stock Lot**:
-One purchase's worth of an Ingredient in Stock, with its purchase date and (if the Ingredient has a Shelf Life) its go-off date, the last day it is good; a User may correct the quantity and both dates.
+One purchase's worth of an Ingredient or Supply in Stock, with its purchase date and (if the Ingredient has a Shelf Life) its go-off date, the last day it is good; a User may correct the quantity and both dates.
 _Avoid_: Batch, item, unit
 
 **Go-off date / Good until**:
-The last day a Stock Lot is fine to use. A Stock Lot goes off the day after its go-off date. Forward copy names the last good day ("Good until today", "Good until tomorrow", "Good until Thu"); once the Stock Lot has gone off, copy says so ("Went off today", "Went off yesterday", "Went off 3 days ago"). A plan chip uses the same day: "uses spinach by Thu".
+The last day a Stock Lot is fine to use. A Supply's Stock Lot has none. A Stock Lot goes off the day after its go-off date. Forward copy names the last good day ("Good until today", "Good until tomorrow", "Good until Thu"); once the Stock Lot has gone off, copy says so ("Went off today", "Went off yesterday", "Went off 3 days ago"). A plan chip uses the same day: "uses spinach by Thu".
 _Avoid_: Expires, expiry date, "goes off Thu" for the last good day, "before Thu" for the go-off date
 
 **Frozen Use-by**:
@@ -352,7 +367,7 @@ What a Product cost at a given Shop on a given date, optionally recorded at Scan
 _Avoid_: Cost
 
 **Shopping List**:
-The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date (earlier ones not yet marked Cooked included), less Stock, less lines **Not needed**, plus any manual extras.
+The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date (earlier ones not yet marked Cooked included), less Stock, less lines **Not needed**, plus Supplies below their **Restock level**, plus any manual extras.
 _Avoid_: Grocery list, basket
 
 **Not needed**:

@@ -29,6 +29,9 @@ type Conflict struct {
 type MergePlan struct {
 	// Base is the Target's Base Unit; chosen conversions are validated against it.
 	Base units.Base
+	// KindMismatch is true when the two Ingredients are of different kinds (a Supply and food). It blocks the merge
+	// (ErrKindDiffers) and takes priority over BaseMismatch in the preview.
+	KindMismatch bool
 	// BaseMismatch is true when the Base Units differ. This blocks the merge
 	// (quantities cannot be converted between g, ml and piece); it is not resolvable
 	// by a Resolution.
@@ -46,7 +49,7 @@ type MergePlan struct {
 // PlanMerge compares source and target. Conversions are equal when their ToBase
 // values agree within a relative 1e-9. Units are compared as stored (already normalised).
 func PlanMerge(source, target Ingredient) MergePlan {
-	p := MergePlan{Base: target.Base, BaseMismatch: source.Base != target.Base}
+	p := MergePlan{Base: target.Base, BaseMismatch: source.Base != target.Base, KindMismatch: normKind(source.Kind) != normKind(target.Kind)}
 
 	src := byUnit(source.Conversions)
 	tgt := byUnit(target.Conversions)
@@ -119,6 +122,9 @@ func (e *UnresolvedError) Error() string {
 // that is not in conflict is ignored. Chosen conversions must pass
 // units.ValidateConversion for the Base Unit (otherwise *ValidationError); ShelfLifeDays must satisfy the Validate range.
 func (p MergePlan) Apply(res Resolution) (Merged, error) {
+	if p.KindMismatch {
+		return Merged{}, ErrKindDiffers
+	}
 	if p.BaseMismatch {
 		return Merged{}, ErrBaseMismatch
 	}

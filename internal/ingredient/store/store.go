@@ -22,7 +22,30 @@ var (
 	ErrInUse = errors.New("ingredient is in use")
 	// ErrMergeSelf: merging an Ingredient into itself.
 	ErrMergeSelf = errors.New("cannot merge an Ingredient into itself")
+	// ErrKindInUse: a change of kind to supply while food-only things still use the Ingredient (409 kind_in_use).
+	ErrKindInUse = errors.New("the Ingredient is still used by food-only things")
 )
+
+// Reason codes of a KindInUseError, in the order the guard checks them (docs/dev/design/household-items.md §4.8).
+const (
+	KindReasonRecipeLines = "recipe_lines" // a Recipe line, or a Ready Meal's Ingredient (which is a line)
+	KindReasonExclusions  = "exclusions"   // a Member excludes it
+	KindReasonBaseRecipe  = "base_recipe"  // it is a Base recipe's Ingredient
+)
+
+// Mover names the kind guard reads (the names the recipe store registers its movers under).
+const (
+	recipeLinesRefName = "recipe lines"
+	exclusionsRefName  = "ingredient exclusions"
+)
+
+// KindInUseError lists why an Ingredient cannot become a Supply: the Reasons, each a Kind* code.
+type KindInUseError struct{ Reasons []string }
+
+func (e *KindInUseError) Error() string {
+	return "the Ingredient cannot become a Supply: " + strings.Join(e.Reasons, ", ")
+}
+func (e *KindInUseError) Is(target error) bool { return target == ErrKindInUse }
 
 // Store reads and writes Ingredients. Methods return ingredient.ErrInvalid-matching
 // *ingredient.ValidationError for bad input.
@@ -69,12 +92,20 @@ type Patch struct {
 	ShelfLife *ShelfLifePatch
 	// FrozenShelfLife: like ShelfLife, for the Shelf Life in a Freezer.
 	FrozenShelfLife *ShelfLifePatch
+	// Kind: nil = unchanged. A change to supply clears the Shelf Lives (unless the Patch sets them) and the Lots'
+	// go-off dates; a change to food clears the Restock level (unless the Patch sets it).
+	Kind *ingredient.Kind
+	// RestockLevel: nil = unchanged, &{Level: nil} = clear it, &{Level: &n} = set it.
+	RestockLevel *RestockLevelPatch
 	// Image: nil = unchanged, &"" = remove the picture, &id = set it (IM2).
 	Image *string
 }
 
 // ShelfLifePatch distinguishes "set to n" (Days != nil) from "clear" (Days == nil).
 type ShelfLifePatch struct{ Days *int }
+
+// RestockLevelPatch distinguishes "set to n" (Level != nil) from "clear" (Level == nil).
+type RestockLevelPatch struct{ Level *float64 }
 
 // Create validates in and inserts. ErrNameTaken when the normalised name exists.
 func (s *Store) Create(ctx context.Context, in ingredient.Input) (ingredient.Ingredient, error) {
@@ -109,8 +140,8 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, in ingredient.Input) (
 	}
 	now := s.now()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO ingredients (name, name_key, base_unit, shelf_life_days, frozen_shelf_life_days, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), clean.Image, now, now)
+		`INSERT INTO ingredients (name, name_key, base_unit, kind, shelf_life_days, frozen_shelf_life_days, restock_level, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		clean.Name, units.NormalizeName(clean.Name), string(clean.Base), string(clean.Kind), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), nullFloat(clean.RestockLevel), clean.Image, now, now)
 	if err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
@@ -144,7 +175,7 @@ func (s *Store) ByName(ctx context.Context, name string) (ingredient.Ingredient,
 
 // List returns all Ingredients ordered by normalised name, with Conversions.
 func (s *Store) List(ctx context.Context) ([]ingredient.Ingredient, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, base_unit, shelf_life_days, frozen_shelf_life_days, image FROM ingredients ORDER BY name_key`)
+	rows, err := s.db.QueryContext(ctx, `SELECT `+ingredientColumns+` FROM ingredients ORDER BY name_key`)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +216,27 @@ func (s *Store) List(ctx context.Context) ([]ingredient.Ingredient, error) {
 // A Base recipe's Ingredient is never the Exact match (it is keyed by its Base recipe, not its name, §3.2): it is
 // offered among the suggestions, where the picker shows it with its Base recipe badge.
 func (s *Store) Search(ctx context.Context, query string, limit int) (SearchResult, error) {
+	return s.SearchKind(ctx, query, limit, "")
+}
+
+// ListByKind returns the Ingredients of kind, ordered as List; "" returns every kind.
+func (s *Store) ListByKind(ctx context.Context, kind ingredient.Kind) ([]ingredient.Ingredient, error) {
 	all, err := s.List(ctx)
+	if err != nil || kind == "" {
+		return all, err
+	}
+	var out []ingredient.Ingredient
+	for _, i := range all {
+		if normKind(i.Kind) == kind {
+			out = append(out, i)
+		}
+	}
+	return out, nil
+}
+
+// SearchKind is Search over the Ingredients of kind only ("" searches both kinds, as Search does).
+func (s *Store) SearchKind(ctx context.Context, query string, limit int, kind ingredient.Kind) (SearchResult, error) {
+	all, err := s.ListByKind(ctx, kind)
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -272,6 +323,10 @@ type Suggested struct {
 // new name collides with another Ingredient; renaming to a different spelling of its
 // own name (case, spacing) is fine. Changing the Base Unit while References > 0 is ErrInUse.
 // Setting a Base Unit equal to an existing conversion's unit is invalid.
+//
+// A change of Kind to supply is refused with a *KindInUseError while a recipe line, an Exclusion or a Base recipe
+// uses the Ingredient. It clears the Shelf Lives (unless the Patch sets them, which is then a 422) and the go-off
+// dates of its Lots, in the same transaction. A change to food clears the Restock level (unless the Patch sets it).
 func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingredient, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -296,18 +351,37 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 			return ingredient.Ingredient{}, ErrBaseRecipeIngredient
 		}
 	}
-	in := ingredient.Input{Name: cur.Name, Base: cur.Base, ShelfLifeDays: cur.ShelfLifeDays, FrozenShelfLifeDays: cur.FrozenShelfLifeDays, Conversions: cur.Conversions, Image: cur.Image}
+	in := ingredient.Input{Name: cur.Name, Base: cur.Base, Kind: normKind(cur.Kind), ShelfLifeDays: cur.ShelfLifeDays,
+		FrozenShelfLifeDays: cur.FrozenShelfLifeDays, RestockLevel: cur.RestockLevel, Conversions: cur.Conversions, Image: cur.Image}
 	if p.Name != nil && base == nil {
 		in.Name = *p.Name
 	}
 	if p.Base != nil {
 		in.Base = *p.Base
 	}
+	kindChange := p.Kind != nil && normKind(*p.Kind) != normKind(cur.Kind)
+	if kindChange {
+		in.Kind = normKind(*p.Kind)
+		if in.Kind == ingredient.KindSupply {
+			// The Shelf Lives go only when the Patch does not set them: a set one is judged by Validate (422).
+			if p.ShelfLife == nil {
+				in.ShelfLifeDays = nil
+			}
+			if p.FrozenShelfLife == nil {
+				in.FrozenShelfLifeDays = nil
+			}
+		} else if p.RestockLevel == nil {
+			in.RestockLevel = nil
+		}
+	}
 	if p.ShelfLife != nil {
 		in.ShelfLifeDays = p.ShelfLife.Days
 	}
 	if p.FrozenShelfLife != nil {
 		in.FrozenShelfLifeDays = p.FrozenShelfLife.Days
+	}
+	if p.RestockLevel != nil {
+		in.RestockLevel = p.RestockLevel.Level
 	}
 	if p.Image != nil {
 		in.Image = *p.Image
@@ -331,6 +405,18 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 			return ingredient.Ingredient{}, ErrInUse
 		}
 	}
+	toSupply := kindChange && clean.Kind == ingredient.KindSupply
+	if toSupply {
+		if err := s.checkKindToSupply(ctx, tx, id, base != nil); err != nil {
+			return ingredient.Ingredient{}, err
+		}
+		// A direct write, not a ReferenceMover hook: "a Supply's Lot has no go-off date" must hold in every build,
+		// whether or not the stock store registered its mover (BaseUnitTx reads stock_lots for the same reason), and
+		// in this transaction, with the guard above and the kind change below (ADR 0017 decision 5).
+		if _, err := tx.ExecContext(ctx, `UPDATE stock_lots SET goes_off = NULL WHERE ingredient_id = ?`, id); err != nil {
+			return ingredient.Ingredient{}, err
+		}
+	}
 	key := units.NormalizeName(clean.Name)
 	if base != nil {
 		if key, err = keyOf(ctx, tx, id); err != nil {
@@ -341,8 +427,8 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 		return ingredient.Ingredient{}, err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, shelf_life_days = ?, frozen_shelf_life_days = ?, image = ?, updated_at = ? WHERE id = ?`,
-		clean.Name, key, string(clean.Base), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), clean.Image, s.now(), id); err != nil {
+		`UPDATE ingredients SET name = ?, name_key = ?, base_unit = ?, kind = ?, shelf_life_days = ?, frozen_shelf_life_days = ?, restock_level = ?, image = ?, updated_at = ? WHERE id = ?`,
+		clean.Name, key, string(clean.Base), string(clean.Kind), nullDays(clean.ShelfLifeDays), nullDays(clean.FrozenShelfLifeDays), nullFloat(clean.RestockLevel), clean.Image, s.now(), id); err != nil {
 		return ingredient.Ingredient{}, mapNameErr(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -350,6 +436,30 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 	}
 	s.dropUnreferenced(ctx, cur.Image)
 	return s.Get(ctx, id)
+}
+
+// checkKindToSupply refuses (*KindInUseError) a change of the Ingredient to a Supply while food-only things use it:
+// a Recipe line (a Ready Meal's Ingredient is one), an Exclusion, or a Base recipe's Ingredient. Reasons come in
+// the order of the Kind* constants.
+func (s *Store) checkKindToSupply(ctx context.Context, q Querier, id int64, isBase bool) error {
+	refs, err := s.refCounts(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	var reasons []string
+	if refs[recipeLinesRefName] > 0 {
+		reasons = append(reasons, KindReasonRecipeLines)
+	}
+	if refs[exclusionsRefName] > 0 {
+		reasons = append(reasons, KindReasonExclusions)
+	}
+	if isBase || refs[BaseRecipeRefName] > 0 {
+		reasons = append(reasons, KindReasonBaseRecipe)
+	}
+	if len(reasons) > 0 {
+		return &KindInUseError{Reasons: reasons}
+	}
+	return nil
 }
 
 // SetConversion adds or replaces the Unit Conversion for unit (validated as in Input).
@@ -673,6 +783,24 @@ func insertConversions(ctx context.Context, tx *sql.Tx, id int64, cs []units.Con
 	return nil
 }
 
+// normKind reads the zero Kind as food.
+func normKind(k ingredient.Kind) ingredient.Kind {
+	if k == ingredient.KindSupply {
+		return k
+	}
+	return ingredient.KindFood
+}
+
+// ingredientColumns is the select list every read of an Ingredient uses (scanIngredient reads it in this order).
+const ingredientColumns = `id, name, base_unit, shelf_life_days, frozen_shelf_life_days, image, kind, restock_level`
+
+func nullFloat(f *float64) sql.NullFloat64 {
+	if f == nil {
+		return sql.NullFloat64{}
+	}
+	return sql.NullFloat64{Float64: *f, Valid: true}
+}
+
 func nullDays(d *int) sql.NullInt64 {
 	if d == nil {
 		return sql.NullInt64{}
@@ -687,13 +815,20 @@ func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 	var (
 		i      ingredient.Ingredient
 		base   string
+		kind   string
 		days   sql.NullInt64
 		frozen sql.NullInt64
+		level  sql.NullFloat64
 	)
-	if err := r.Scan(&i.ID, &i.Name, &base, &days, &frozen, &i.Image); err != nil {
+	if err := r.Scan(&i.ID, &i.Name, &base, &days, &frozen, &i.Image, &kind, &level); err != nil {
 		return ingredient.Ingredient{}, err
 	}
 	i.Base = units.Base(base)
+	i.Kind = normKind(ingredient.Kind(kind))
+	if level.Valid {
+		f := level.Float64
+		i.RestockLevel = &f
+	}
 	if days.Valid {
 		d := int(days.Int64)
 		i.ShelfLifeDays = &d
@@ -707,7 +842,7 @@ func scanIngredient(r rowScanner) (ingredient.Ingredient, error) {
 
 // loadOne reads one Ingredient with its Conversions, or ErrNotFound.
 func loadOne(ctx context.Context, q Querier, id int64) (ingredient.Ingredient, error) {
-	row := q.QueryRowContext(ctx, `SELECT id, name, base_unit, shelf_life_days, frozen_shelf_life_days, image FROM ingredients WHERE id = ?`, id)
+	row := q.QueryRowContext(ctx, `SELECT `+ingredientColumns+` FROM ingredients WHERE id = ?`, id)
 	i, err := scanIngredient(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ingredient.Ingredient{}, ErrNotFound

@@ -20,6 +20,9 @@ var ctx = context.Background()
 
 func intp(n int) *int { return &n }
 
+// fp is a *float64 for a Restock level (the store_test twin of the ingredient_test helper).
+func fp(f float64) *float64 { return &f }
+
 // fakeRefs is a ReferenceMover over a test-only table, standing in for recipe lines etc.
 type fakeRefs struct {
 	name    string
