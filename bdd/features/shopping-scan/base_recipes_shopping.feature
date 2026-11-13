@@ -2,7 +2,7 @@
 Feature: Shopping List with Stock first for Base recipes (beta.6, docs/dev/design/base-recipes.md section 7)
   A jar of Béchamel in the Pantry covers part of what Lasagne needs; only the Ingredients of the rest go on the list, and the
   Base recipe is never a line itself, unless it is empty. Monday 2026-11-09 12:00 UTC; Dinner is at 19:00 every day and the
-  Planning Horizon is 3 days, so the dinners are pinned and the planner changes nothing.
+  Planning Horizon is 3 days, so every dinner is pinned (Filler, a pinch of salt, unless a scenario pins another Recipe over it) and the planner changes nothing.
 
   Background:
     Given a running Feeder
@@ -15,6 +15,14 @@ Feature: Shopping List with Stock first for Base recipes (beta.6, docs/dev/desig
     And the shopping Recipes calling for Base recipes:
       | name    | yield | needs                          |
       | Lasagne | 4     | 200 g pasta, 500 ml Béchamel   |
+    And the shopping Recipes:
+      | name   | yield | needs |
+      | Filler | 2     | 1 g salt |
+    And the shopping dinners are pinned:
+      | date       | recipe | batches |
+      | 2026-11-09 | Filler | 1       |
+      | 2026-11-10 | Filler | 1       |
+      | 2026-11-11 | Filler | 1       |
 
   Scenario: A jar of Béchamel covers part of it, so only the rest's Ingredients are listed
     Given the shopping dinners are pinned:
