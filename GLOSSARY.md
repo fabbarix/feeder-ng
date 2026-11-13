@@ -368,7 +368,7 @@ A per-Shop rule describing how to read the Product and its weight (or price) fro
 _Avoid_: Barcode parser, PLU rule
 
 **Price**:
-What a Product cost at a given Shop on a given date, optionally recorded at Scan time. It is per pack; a Product counted in grams or millilitres may also be entered per kg or per l, which gives the pack Price from its size or weight (a Supply, counted in pieces, has a Price per pack only).
+What a Product cost at a given Shop on a given date, optionally recorded at Scan time. It is per pack; a Product counted in grams or millilitres may also be entered per kg or per l, which gives the pack Price from its size or weight (a Product counted in pieces, so most Supplies, has a Price per pack only).
 _Avoid_: Cost
 _Note_: a row of the Scanned list with no Price says **Add price**; the total leaves it out and counts it as "without a Price".
 
