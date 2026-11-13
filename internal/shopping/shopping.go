@@ -205,10 +205,17 @@ func Derive(in Input) List {
 	return out
 }
 
-// derivedLines builds the Lines that still need buying from the Planned Meals and the projected Stock. Every
-// uncooked meal up to To counts, including one whose slot has passed and that waits in To confirm, and one dated
-// before From (it is simulated on the first day of the range, when its Stock is what is still good).
-func derivedLines(in Input) map[int64]Line {
+// mealDraw is one Planned Meal of a derivation: what it needs per required Ingredient, and how much of that its own draw
+// from the projected Stock could not cover (its shortfall).
+type mealDraw struct {
+	meal  Meal
+	need  map[int64]float64
+	short map[int64]float64
+}
+
+// draws walks the Planned Meals that count, in date and time order (the order Stock is drawn in), and gives each one its
+// need and shortfall. derivedLines and Attribute both use it, so they agree on what each Planned Meal draws.
+func draws(in Input) []mealDraw {
 	meals := make([]Meal, 0, len(in.Meals))
 	for _, m := range in.Meals {
 		if m.Leftover || m.Date > in.To {
@@ -230,11 +237,9 @@ func derivedLines(in Input) map[int64]Line {
 		}
 	}
 	projected := stock.Project(usable)
-	need := map[int64]float64{}
-	short := map[int64]float64{}
-	pastFor := map[int64][]PastMeal{}
+	out := make([]mealDraw, 0, len(meals))
 	for _, m := range meals {
-		past := m.SlotID != 0 && m.At.Before(in.Now)
+		d := mealDraw{meal: m, need: map[int64]float64{}, short: map[int64]float64{}}
 		for _, n := range m.Needs {
 			if n.Optional {
 				continue
@@ -243,13 +248,33 @@ func derivedLines(in Input) map[int64]Line {
 			if !(q > 0) {
 				continue
 			}
-			need[n.IngredientID] += q
-			s := draw(projected, n.IngredientID, q, drawDate(m.Date, in.From))
-			short[n.IngredientID] += s
+			d.need[n.IngredientID] += q
+			d.short[n.IngredientID] += draw(projected, n.IngredientID, q, drawDate(m.Date, in.From))
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// derivedLines builds the Lines that still need buying from the Planned Meals and the projected Stock. Every
+// uncooked meal up to To counts, including one whose slot has passed and that waits in To confirm, and one dated
+// before From (it is simulated on the first day of the range, when its Stock is what is still good).
+func derivedLines(in Input) map[int64]Line {
+	need := map[int64]float64{}
+	short := map[int64]float64{}
+	pastFor := map[int64][]PastMeal{}
+	for _, d := range draws(in) {
+		m := d.meal
+		past := m.SlotID != 0 && m.At.Before(in.Now)
+		for ing, q := range d.need {
+			need[ing] += q
+		}
+		for ing, s := range d.short {
+			short[ing] += s
 			// A past meal that Stock does not cover is still to confirm and is named on the Line it adds to.
 			if pm := (PastMeal{Date: m.Date, MealSlotID: m.SlotID, MealSlotName: m.SlotName, CourseName: m.CourseName}); past && s > eps {
-				if p := pastFor[n.IngredientID]; len(p) == 0 || p[len(p)-1] != pm {
-					pastFor[n.IngredientID] = append(p, pm)
+				if p := pastFor[ing]; len(p) == 0 || p[len(p)-1] != pm {
+					pastFor[ing] = append(p, pm)
 				}
 			}
 		}

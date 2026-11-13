@@ -1,5 +1,11 @@
 package shopping
 
+import (
+	"sort"
+
+	"github.com/fabbarix/feeder-ng/internal/stock"
+)
+
 // B5-BO (docs/adr/0013-bought-planned-meals-held.md, docs/dev/design/b5-bo.md §3): which Planned Meals a purchase was
 // bought for. Pure, like Derive: no SQL, HTTP or time.Now.
 
@@ -29,5 +35,37 @@ type Share struct {
 // Property (attribute_bought_test.go): when every Planned Meal is in range and not past, the shares of an Ingredient
 // add up to the drop in that Ingredient's Line quantity between Derive without the Lot and Derive with it.
 func Attribute(in Input, lotID int64) []Share {
-	return nil
+	withLot := draws(in)
+	without := in
+	without.Lots = lotsWithout(in.Lots, lotID)
+	withoutLot := draws(without) // the same Planned Meals in the same order: index k is the same meal in both
+	var out []Share
+	for k, d := range withLot {
+		m := d.meal
+		if m.MealID == 0 || m.At.Before(in.Now) {
+			continue
+		}
+		ings := make([]int64, 0, len(d.short))
+		for ing := range d.short {
+			ings = append(ings, ing)
+		}
+		sort.Slice(ings, func(i, j int) bool { return ings[i] < ings[j] })
+		for _, ing := range ings {
+			if share := withoutLot[k].short[ing] - d.short[ing]; share > eps {
+				out = append(out, Share{MealID: m.MealID, IngredientID: ing, Quantity: share})
+			}
+		}
+	}
+	return out
+}
+
+// lotsWithout returns the Stock Lots except the one with id.
+func lotsWithout(lots []stock.Lot, id int64) []stock.Lot {
+	out := make([]stock.Lot, 0, len(lots))
+	for _, l := range lots {
+		if l.ID != id {
+			out = append(out, l)
+		}
+	}
+	return out
 }

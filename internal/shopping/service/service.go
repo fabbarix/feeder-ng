@@ -294,6 +294,9 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 		if err != nil {
 			return TickResult{}, err
 		}
+		if err := s.recordTick(ctx, today, to, id, in.ShopID); err != nil {
+			return TickResult{}, err
+		}
 		res.LotID, res.Created = &id, created
 	}
 	if err := s.st.SetTick(ctx, to, shopping.Tick{IngredientID: in.IngredientID, Needed: needed, By: "hand"}, res.LotID); err != nil {
@@ -301,6 +304,23 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 	}
 	s.publish("ticks")
 	return res, nil
+}
+
+// recordTick records what the Stock Lot a tick by hand added was bought for (B5-BO). It runs again on a retried tick,
+// which is harmless: a record is keyed by Planned Meal, Ingredient and Lot.
+func (s *Service) recordTick(ctx context.Context, today, to stock.Date, lotID int64, shopID *int64) error {
+	if s.ports.Bought == nil {
+		return nil
+	}
+	in, err := s.input(ctx, today, to, shopID)
+	if err != nil {
+		return err
+	}
+	shares := shopping.Attribute(in, lotID)
+	if len(shares) == 0 {
+		return nil
+	}
+	return s.ports.Bought.RecordBought(ctx, lotID, shares, s.clk.Now())
 }
 
 // neededFor is the Line quantity a tick records: the quantity still to buy, or the amount of an existing tick.
@@ -325,8 +345,19 @@ func (s *Service) Untick(ctx context.Context, ingredientID int64, to stock.Date)
 	if err != nil {
 		return err
 	}
-	if err := s.st.DeleteTick(ctx, shopping.ClampTo(today, horizon, to), ingredientID); err != nil {
+	r := shopping.ClampTo(today, horizon, to)
+	lotID, hasLot, err := s.st.TickLot(ctx, r, ingredientID)
+	if err != nil {
 		return err
+	}
+	if err := s.st.DeleteTick(ctx, r, ingredientID); err != nil {
+		return err
+	}
+	if hasLot {
+		// The Lot the tick added stays in Stock; what it was bought for does not (B5-BO).
+		if err := s.ForgetLot(ctx, lotID); err != nil {
+			return err
+		}
 	}
 	s.publish("ticks")
 	return nil
@@ -498,6 +529,11 @@ func (s *Service) AfterLot(ctx context.Context, in AfterLotInput) (Effect, error
 	before := shopping.Derive(base)
 	base.Lots = withLot
 	after := shopping.Derive(base)
+	if shares := shopping.Attribute(base, in.LotID); len(shares) > 0 && s.ports.Bought != nil {
+		if err := s.ports.Bought.RecordBought(ctx, in.LotID, shares, s.clk.Now()); err != nil {
+			return Effect{}, err
+		}
+	}
 
 	if line, on := before.LineFor(in.IngredientID); on {
 		_, ticked := base.Ticks[in.IngredientID]
@@ -563,6 +599,11 @@ type UndoLotInput struct {
 
 // UndoLot reverses AfterLot (the Lot itself is removed by the caller).
 func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
+	if in.LotID != 0 {
+		if err := s.ForgetLot(ctx, in.LotID); err != nil {
+			return err
+		}
+	}
 	if in.Unmark {
 		if err := s.st.DeleteTick(ctx, in.To, in.IngredientID); err != nil {
 			return err
@@ -584,7 +625,10 @@ func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
 // ForgetLot removes the records of what the Stock Lot was bought for (B5-BO). Lot Delete (Stock Lots, plan 2.6) calls
 // it, and so does UndoLot through UndoLotInput.LotID; an unknown Lot is not an error.
 func (s *Service) ForgetLot(ctx context.Context, lotID int64) error {
-	return nil
+	if s.ports.Bought == nil {
+		return nil
+	}
+	return s.ports.Bought.RemoveBought(ctx, lotID)
 }
 
 func (s *Service) purge(ctx context.Context, today stock.Date) error {

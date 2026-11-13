@@ -117,7 +117,11 @@ func (s *Store) Meals(ctx context.Context, from, to string) ([]plan.Meal, error)
 	if err != nil {
 		return nil, err
 	}
-	return collectMeals(rows)
+	out, err := collectMeals(rows)
+	if err != nil {
+		return nil, err
+	}
+	return out, s.fillBought(ctx, out)
 }
 
 func collectMeals(rows *sql.Rows) ([]plan.Meal, error) {
@@ -140,7 +144,14 @@ func (s *Store) Meal(ctx context.Context, key plan.Key) (plan.Meal, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return plan.Meal{}, ErrNotFound
 	}
-	return m, err
+	if err != nil {
+		return m, err
+	}
+	one := []plan.Meal{m}
+	if err := s.fillBought(ctx, one); err != nil {
+		return plan.Meal{}, err
+	}
+	return one[0], nil
 }
 
 // UnresolvedBefore returns the Planned Meals in State planned dated before date (still to confirm), oldest first.
@@ -149,7 +160,11 @@ func (s *Store) UnresolvedBefore(ctx context.Context, date string) ([]plan.Meal,
 	if err != nil {
 		return nil, err
 	}
-	return collectMeals(rows)
+	out, err := collectMeals(rows)
+	if err != nil {
+		return nil, err
+	}
+	return out, s.fillBought(ctx, out)
 }
 
 // SaveMeal inserts or replaces the Planned Meal at m.Key (the id is kept when it exists) and returns it.
@@ -184,6 +199,12 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 	state := string(m.State)
 	if state == "" {
 		state = string(plan.StatePlanned)
+	}
+	// B5-BO: a Planned Meal whose Recipe changes is no longer Bought (ADR 0013); the same Recipe keeps its records.
+	if _, err := s.q.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE planned_meal_id IN (
+		SELECT id FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ? AND recipe_id <> ?)`,
+		m.Key.Date, m.Key.MealSlotID, m.Key.CourseID, m.RecipeID); err != nil {
+		return plan.Meal{}, mapErr(err)
 	}
 	_, err = s.q.ExecContext(ctx, `INSERT INTO planned_meals (date, meal_slot_id, course_id, recipe_id, batches, portions, state, pinned,
 		from_leftover_id, from_date, from_meal_slot_id, from_course_id, relaxed, why_json, resolved_at, created_at, updated_at)
@@ -226,8 +247,14 @@ func (s *Store) SetWhy(ctx context.Context, key plan.Key, why []plan.Why) error 
 // MarkResolved sets State (cooked or skipped) and the resolution instant (the clock's now).
 func (s *Store) MarkResolved(ctx context.Context, key plan.Key, state plan.State) error {
 	now := s.now()
-	return s.affectOne(ctx, `UPDATE planned_meals SET state = ?, resolved_at = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
-		string(state), now, now, key.Date, key.MealSlotID, key.CourseID)
+	if err := s.affectOne(ctx, `UPDATE planned_meals SET state = ?, resolved_at = ?, updated_at = ? WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
+		string(state), now, now, key.Date, key.MealSlotID, key.CourseID); err != nil {
+		return err
+	}
+	// B5-BO: what was bought stays in Stock; the resolved Planned Meal is history and is no longer Bought.
+	_, err := s.q.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE planned_meal_id IN (
+		SELECT id FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?)`, key.Date, key.MealSlotID, key.CourseID)
+	return mapErr(err)
 }
 
 // DeleteMeal removes the Planned Meal at key; ErrNotFound if there is none.
