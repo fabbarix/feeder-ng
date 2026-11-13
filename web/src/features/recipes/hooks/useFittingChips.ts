@@ -38,10 +38,12 @@ export function useFittingChips(
   const [shown, setShown] = useState(count)
   const measureRef = useRef(measure)
   const fitRef = useRef<() => void>(() => {})
+  const shownNow = useRef(shown)
 
   // Runs after every render: the measure is the one of this render, and the fit follows the chips the render shows.
   useLayoutEffect(() => {
     measureRef.current = measure
+    shownNow.current = Math.min(shown, count)
     fitRef.current = () => {
       const el = line.current
       if (!el) {
@@ -50,7 +52,8 @@ export function useFittingChips(
       }
       const m = measureRef.current(el)
       const widths = Array.from({ length: count }, (_, i) => m.widths[i] ?? 0)
-      setShown(fitChips(widths, m.available, m.gap, m.plusWidth).visible)
+      // The answer so far is passed on (round 3): a chip is shown again only with FIT_MARGIN to spare, so the fit settles.
+      setShown(fitChips(widths, m.available, m.gap, m.plusWidth, shownNow.current).visible)
     }
     fitRef.current()
   })

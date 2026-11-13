@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, SCENARIOS, darkButtonFindings, evaluateMetrics, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, RESIZE_WALK, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
@@ -148,8 +148,21 @@ try {
 }
 let nextId = 1
 const pending = new Map()
+// hf-recipes-filter round 3 (P21): the errors the current page logs (an uncaught exception, a console error, a JavaScript log error).
+const runtimeEvents = []
 ws.onmessage = (ev) => {
   const msg = JSON.parse(ev.data)
+  if (msg.method && msg.sessionId === sessionId) {
+    const p = msg.params ?? {}
+    if (msg.method === 'Runtime.exceptionThrown') {
+      const d = p.exceptionDetails ?? {}
+      runtimeEvents.push({ why: 'exception', text: String(d.exception?.description ?? d.text ?? '').split('\n')[0].slice(0, 200) })
+    } else if (msg.method === 'Runtime.consoleAPICalled' && p.type === 'error') {
+      runtimeEvents.push({ why: 'console', text: (p.args ?? []).map((a) => a.value ?? a.description ?? '').join(' ').slice(0, 200) })
+    } else if (msg.method === 'Log.entryAdded' && p.entry?.level === 'error' && p.entry?.source === 'javascript') {
+      runtimeEvents.push({ why: 'log', text: String(p.entry.text ?? '').slice(0, 200) })
+    }
+  }
   if (msg.id && pending.has(msg.id)) {
     const { resolve, reject } = pending.get(msg.id)
     pending.delete(msg.id)
@@ -186,6 +199,8 @@ const openTab = async () => {
   ;({ targetId } = await send('Target.createTarget', { url: 'about:blank' }))
   ;({ sessionId } = await send('Target.attachToTarget', { targetId, flatten: true }))
   await cdp('Page.enable')
+  await cdp('Runtime.enable')
+  await cdp('Log.enable')
   await cdp('Network.enable')
   await cdp('Network.setBypassServiceWorker', { bypass: true })
 }
@@ -651,6 +666,33 @@ for (const vp of VIEWPORTS) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
     const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
     await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open)
+  }
+}
+
+// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered /recipes is loaded fresh at each phone width from 360 to 480 px, and the
+// page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
+const walkScenario = SCENARIOS.find((x) => x.name === RESIZE_WALK.scenario)
+if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+  for (const w of resizeWalkWidths()) {
+    probes++
+    const route = resolveScenario(walkScenario, ids)
+    const tag = `${w}px ${route}`
+    try {
+      await closeTab()
+      await openTab()
+      runtimeEvents.length = 0
+      // The exact CSS width, not mobile emulation: mobile emulation scaled the layout width of these phone widths (innerWidth 589 for 360).
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: false })
+      await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+      await settle()
+      const runtimeErrors = [...runtimeEvents]
+      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+      if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify(runtimeErrors)}`)
+      // Only P21 is read from the walk: the page's error state at this width, nothing from the layout probes.
+      for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${tag}: ${f.message}`)
+    } catch (e) {
+      notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
+    }
   }
 }
 

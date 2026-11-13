@@ -18,7 +18,7 @@ export const ROUTES = [
 ]
 
 /** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow; P16 (hf-recipes-filter): a crushed chip label. */
-export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20']
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20', 'P21']
 
 /**
  * hf-recipes-filter round 2: the filtered /recipes the guard also probes, at every width: the chips of a Side Course and a long Tag,
@@ -29,6 +29,28 @@ export const SCENARIOS = [
   { name: 'recipes-filtered', route: '/recipes', open: false },
   { name: 'recipes-filtered-open', route: '/recipes', open: true },
 ]
+
+/**
+ * hf-recipes-filter round 3 (docs/design/recipes-filter.md 14): the closed filtered /recipes is loaded fresh at each of these phone
+ * widths, and the page must not break at any (P21: an uncaught exception, a console error, or the error page).
+ */
+export const RESIZE_WALK = { scenario: 'recipes-filtered', from: 360, to: 480, step: 10 }
+
+/** The P21 findings of one walked width: the runtime errors and the error page the walk saw there (only P21 is read from it). */
+export function resizeWalkFindings(runtimeErrors, { width, route }) {
+  const walked = {
+    vw: width, scrollW: width, clientW: width, over: [], content: { x: 0, r: width }, railR: 0, container: { x: 0, r: width },
+    pageWidthAttr: 'wide', fields: [], bars: [], railContrast: null, dialog: null, brokenText: [], runtimeErrors,
+  }
+  return evaluateMetrics(walked, { width, route, kind: 'wide' }).filter((f) => f.rule === 'P21')
+}
+
+/** The widths of the RESIZE_WALK, in order. */
+export function resizeWalkWidths() {
+  const out = []
+  for (let w = RESIZE_WALK.from; w <= RESIZE_WALK.to; w += RESIZE_WALK.step) out.push(w)
+  return out
+}
 
 /** The URL of a scenario: its route with the Side Course and the long Tag from the ids file. */
 export function resolveScenario(scenario, ids) {
@@ -148,6 +170,8 @@ export function evaluateMetrics(m, { width, kind }) {
     if (spacing.rowGap !== null && spacing.rowGap < spacing.slotGap - 0.5) add('P20', `row 3 sits ${spacing.rowGap} px below row 2; it must sit one slot gap (${spacing.slotGap} px) below it`)
     if (spacing.sectionGap !== null && spacing.sectionGap < 12) add('P20', `two panel sections are ${spacing.sectionGap} px apart; space them at least 12 px`)
   }
+  // hf-recipes-filter round 3 (P21, always fails): the page broke while it was walked through phone widths (RESIZE_WALK).
+  for (const e of m.runtimeErrors ?? []) add('P21', `the page broke (${e.why}): ${e.text}; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {

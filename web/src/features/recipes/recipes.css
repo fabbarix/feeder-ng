@@ -141,6 +141,14 @@
   flex: none;
 }
 
+/* A trailing spacer: a horizontal scroller does not always keep its inline-end padding as scrollable space, so the last chip's
+   focus ring (3 px outline, 2 px offset) needs room of its own at the scroll end. */
+.course-filter::after {
+  content: '';
+  flex: none;
+  inline-size: var(--space-2);
+}
+
 .course-loss__rules {
   margin: var(--space-2) 0 0;
   padding-inline-start: var(--space-4);
@@ -234,6 +242,8 @@
 
 .recipe-filters__measure > .chip {
   flex: none;
+  /* The same minimum as the shown chips: one measurement for both states (round 3). */
+  min-inline-size: 4.5rem;
 }
 
 /* The Filters panel: 24 rem at most, never wider than the screen; its Tag list scrolls inside a capped height. */
@@ -247,7 +257,7 @@
   flex-direction: column;
   gap: var(--space-4);
   min-inline-size: 0;
-  /* The bottom sheet clips its body at its edge: this keeps the Course line's focus ring inside it. */
+  /* The bottom sheet clips its body at its edge: this keeps the Course line's focus ring inside it (round 3, the focus ring wins). */
   padding-inline: var(--space-2);
 }
 
