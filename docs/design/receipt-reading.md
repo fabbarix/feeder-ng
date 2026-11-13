@@ -324,7 +324,9 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 
 - `POST /api/scan/receipt/apply` — `{readId, fingerprint, clientUuids: [...], accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
   productName, packSize, scope}]}`.
-  1. The read must be done, the caller's, and still kept (`410 receipt_read_gone`).
+  1. The read must be the caller's and still kept (`410 receipt_read_gone` for an unknown, expired or another User's read),
+     and done: a read still running, or one that failed, is `409 receipt_read_not_done`. The apply is behind the same
+     availability check as the reads (`409 assistant_unavailable`).
   2. The fingerprint is recomputed, as in §7.1, from the events the phone's session holds now (`clientUuids`, this Shop,
      applied, not undone, made today: an earlier day's scan among the uuids is left out, as the read leaves it out): a mismatch (a scan, an Undo or a Price edit since the read, or a session the phone has ended) is
      `409 receipt_session_changed`, nothing written. The read's own uuids would not see a new scan, so the phone sends its
@@ -417,6 +419,7 @@ messages where they fit:
 | `read_in_progress`, `too_many_reads` | Limiter | as for recipes ("You can read again in 12 minutes") | later |
 | `receipt_session_changed` (new) | apply after a change | "The Scanned list changed since the read." | **Read it again** |
 | `receipt_read_gone` (new) | apply after 10 min | "This read is no longer kept (10 minutes)." | Read it again |
+| `receipt_read_not_done` (new) | apply of a read still running, or one that failed | "The receipt is still being read." | wait, or read it again |
 | `scans_empty` (new) | no applied scans | "Scan something first." | no |
 
 A failed read is not counted against the hourly limit when the request never reached the model (as the Recipe Assistant does);
