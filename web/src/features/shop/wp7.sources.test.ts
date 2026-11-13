@@ -33,7 +33,8 @@ const forbidden: [string, RegExp][] = [
   // a call, bare or window.-qualified (not a member such as feedback.confirm(), nor a method declaration `confirm(): void`)
   ['native alert/confirm/prompt', /(?<![\w$.])(window\.)?(alert|confirm|prompt)\((?!\)\s*(:|\{))/],
   ['legacy Button variant tonal/ghost', /variant=["'](tonal|ghost)["']/],
-  ['legacy Chip/Tile tone prop', /(?<![-\w])tone=/],
+  // Only Chip and Tile lost their tone prop; ConfirmDialog's tone="danger" is a current prop (SR2) and stays allowed.
+  ['legacy Chip/Tile tone prop', /<(Chip|Tile)\b[^>]*\stone=/],
   ['legacy Tile size prop', /<Tile\b[^>]*\ssize=/],
   ['legacy EmptyState illustration', /illustration=/],
   // a pencil glyph anywhere, and a close glyph standing alone: a whole string literal ({'×'}, "×", aria-label="×") or JSX
