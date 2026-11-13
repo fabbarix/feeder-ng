@@ -9,7 +9,7 @@ import { ReceiptAlert } from '../components/ReceiptAlert'
 import { ReviewSection } from '../components/ReviewSection'
 import { ReviewSummary } from '../components/ReviewSummary'
 import { useReceiptReview } from '../hooks/useReceiptReview'
-import { noteTexts, appliedToast, applyLabel } from '../lib/reviewCopy'
+import { noteTexts, appliedToast, applyLabel, localDay } from '../lib/reviewCopy'
 import { reviewRowViews } from '../lib/reviewRows'
 import { receiptStrings as t } from '../strings'
 import type { AddDraft, Proposal } from '../types'
@@ -25,12 +25,6 @@ export interface AddSheetRenderProps {
 
 export interface ReceiptReviewScreenProps {
   renderAdd?: (props: AddSheetRenderProps) => ReactNode
-}
-
-/** Today as a calendar day in the phone's zone (YYYY-MM-DD). */
-function localDay(now: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}) {

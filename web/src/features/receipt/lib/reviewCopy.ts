@@ -14,6 +14,12 @@ export function dayText(iso: string): string {
   return `${WEEKDAYS[day.getUTCDay()]} ${day.getUTCDate()} ${MONTHS[day.getUTCMonth()]}`
 }
 
+/** Today as a calendar day in the phone's zone (YYYY-MM-DD), the review's "today". */
+export function localDay(now: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
 
 function gramsText(g: number): string {

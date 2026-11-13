@@ -10,6 +10,7 @@ import { ReceiptPhotoList } from '../components/ReceiptPhotoList'
 import { useReceiptPhotos } from '../hooks/useReceiptPhotos'
 import { useReceiptRead } from '../hooks/useReceiptRead'
 import { useReceiptSession } from '../hooks/useReceiptSession'
+import { readGate } from '../lib/readGate'
 import { describeReceiptError } from '../lib/receiptErrors'
 import { photosNotKept, photosTitle } from '../lib/reviewCopy'
 import { receiptStrings as t } from '../strings'
@@ -47,13 +48,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
     navigate('/scan')
   }
 
-  const readable = !offline && !avail.loading && avail.enabled && avail.photos && !avail.limitMessage
-  const canRead = readable && photos.count > 0 && !photos.busy && !read.busy
-  const reasons: string[] = []
-  if (offline) reasons.push(t.needsConnection)
-  if (!avail.loading && !avail.enabled && avail.message) reasons.push(avail.message)
-  if (avail.limitMessage && avail.limitMessage !== avail.message) reasons.push(avail.limitMessage)
-  if (!avail.loading && avail.enabled && !avail.photos && avail.photosMessage) reasons.push(avail.photosMessage)
+  const { canRead, reasons } = readGate({ offline, avail, photoCount: photos.count, preparing: photos.busy, reading: read.busy })
 
   const failure = read.phase === 'failed' && read.error ? describeReceiptError(read.error, { isAdmin }) : undefined
   const problem = photos.problem ? describeReceiptError({ code: photos.problem }, { isAdmin }).message : undefined
