@@ -131,6 +131,20 @@ export const scanStrings = {
   cameraError: 'The camera could not start. Try again.',
   left: (n: number) => `${n} left`,
   askWeightTitle: 'How much does it weigh?',
+  // SR4: the Scan screen's list, its Segmented, the total and the Price entry (shop-scan-proposals.md 13.8)
+  scannedTab: (n: number) => `Scanned ${n}`,
+  toGetTab: (n: number) => `To get ${n}`,
+  withoutPrice: (n: number) => `+${n} without a Price`,
+  viewLabel: 'List view',
+  scannedListLabel: 'Scanned list',
+  toGetLabel: 'To get',
+  nothingScanned: 'Nothing scanned yet',
+  nothingScannedHint: 'Point the camera at a barcode. Lines to get are under To get.',
+  addPrice: 'Add price',
+  moreFor: (product: string) => `More for ${product}`,
+  openProduct: 'Open the Product',
+  priceOf: (product: string) => `Price of ${product}`,
+  quantityOf: (product: string) => `Quantity of ${product}`,
   /** R2-4: the near-duplicate guard says the same words as the New Ingredient sheet (one place for them). */
   guard: {
     alreadyExists: ingredientStrings.sheet.alreadyExists,

@@ -23,7 +23,7 @@ import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
 import type { IngredientChoice } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
-import type { Op, PricePatch, ScanResult } from '../types'
+import type { Op, OfflineProduct, PricePatch, ScanResult } from '../types'
 import { useOfflineData } from './useOfflineData'
 import { useCamera, type CameraStatus } from './useCamera'
 import { useCameraRecovery, type CameraRecovery } from './useCameraRecovery'
@@ -73,6 +73,8 @@ export interface ScanController {
   system: UnitSystem
   /** the Stock total of an Ingredient in Base Units, for the Stock-take sheet */
   stockTotal?: (ingredientId: number) => number | undefined
+  /** SR4: a Product of the cached offline data, by id (the Price entry's pack size and last Price) */
+  product?: (id: number) => OfflineProduct | undefined
 }
 
 /** The Scan session's view model. Mounted only after a Shop or Stock-take was chosen. */
@@ -248,6 +250,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     currency,
     system,
     stockTotal: (ingredientId) => totals.data?.find((t) => t.ingredientId === ingredientId)?.total,
+    product: (id) => offline.offline?.products.find((p) => p.id === id),
   }
 }
 
