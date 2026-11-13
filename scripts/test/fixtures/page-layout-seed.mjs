@@ -191,8 +191,27 @@ for (const s of planned.filter((x) => x.name === 'Dinner' && [pagoDate(0), pagoD
     if (rid) await api('PUT', `/api/plan/${s.date}/${s.mealSlotId}/${c.courseId}`, { recipeId: rid }) // a past slot refuses: expected
   }
 }
+// DS-A: the Plan chip line (system.md §6). A long-named Side with a big Yield (so its Leftovers are planned: "Leftover for …" on
+// the day it is cooked, "Leftover from …" where it is served), two Members' favourite on a planned Recipe ("Anna and Ben's
+// favourite") and a Slot Rule ("Slot Rule: Monday"), so the guard stresses one-line chips on /plan and / at 834 and 1024.
+const longSide = await step('long side', 'POST', '/api/recipes', {
+  name: 'Roasted two-colour cauliflower with sweet peppers, capers and marjoram', description: '', yield: 10, readyMeal: false, tags: ['vegetarian'],
+  courseIds: sideCourse ? [sideCourse.id] : undefined, lines: [lineOf('Cauliflower', 2000), lineOf('Red pepper', 3), lineOf('Marjoram', 3)], steps: cook,
+})
+if (longSide.ok && longSide.json?.id) sideIds.unshift(longSide.json.id)
+const favId = mainR.json?.id
+if (favId) for (const m of members.slice(0, 2)) await step('favourite', 'PUT', `/api/recipes/${favId}/preference`, { state: 'favourite', memberId: m.id })
+const mondayDinner = listOf(await api('GET', '/api/meal-slots')).find((x) => x.name === 'Dinner' && x.weekday === 1)
+if (mondayDinner && mainCourse && favId) await step('slot rule', 'POST', '/api/slot-rules', { mealSlotId: mondayDinner.id, courseId: mainCourse.id, recipeId: favId })
 await setZone('Pacific/Kiritimati')
 await step('plan', 'POST', '/api/plan/regenerate', {})
+// Tomorrow's Dinner Side: the long Side, two Batches, so it leaves Leftovers for a later Dinner; the regenerate then plans them.
+const ahead = ((await api('GET', '/api/plan')).json?.slots ?? []).filter((x) => x.name === 'Dinner' && x.date > (new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10)))
+const tomorrowDinner = ahead[0]
+if (tomorrowDinner && sideCourse && longSide.json?.id) {
+  await step('side batches', 'PUT', `/api/plan/${tomorrowDinner.date}/${tomorrowDinner.mealSlotId}/${sideCourse.id}`, { recipeId: longSide.json.id, batches: 2 })
+  await step('plan', 'POST', '/api/plan/regenerate', {})
+}
 const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? []).length
 
 mkdirSync(dirname(out), { recursive: true })

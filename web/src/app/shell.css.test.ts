@@ -50,11 +50,11 @@ describe('shell.css exists and follows the guards', () => {
 })
 
 describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
-  it('--nav-clearance = 70 + 12 + 16 + the safe area, applied as .app-main bottom padding', () => {
+  it('--nav-clearance = 70 + 12 + 24 (--space-6, DS-A system.md §8) + the safe area, applied as .app-main bottom padding', () => {
     const root = d(':root')
     expect(root['--nav-height']).toBe('70px')
     expect(root['--nav-inset']).toBe('12px')
-    expect(root['--nav-clearance']).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*var\(--space-4\).*env\(safe-area-inset-bottom/)
+    expect(root['--nav-clearance']).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*var\(--space-6\).*env\(safe-area-inset-bottom/)
     expect(d('.app-main')['padding-bottom']).toBe('var(--nav-clearance)')
   })
   it('QA-4: --nav-top is the bottom bar top edge: height + inset + safe area (no gap), 0 from 1024', () => {

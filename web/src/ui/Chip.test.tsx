@@ -85,8 +85,9 @@ describe('Chip kinds map to tokens (plan 4.3)', () => {
   const STATUSES = ['leftover', 'spoil', 'danger', 'success', 'pinned'] as const
   const css = readUiCss('Chip.css')
 
-  it('why: soft / accent-text', () => {
-    expect(declarations(css, ".chip[data-kind='why']")).toMatchObject({ background: 'var(--color-soft)', color: 'var(--color-accent-text)' })
+  it('why: surface-2 / text, with an accent-text icon (DS-A system.md §6: never the soft accent, which reads as a status)', () => {
+    expect(declarations(css, ".chip[data-kind='why']")).toMatchObject({ background: 'var(--color-surface-2)', color: 'var(--color-text)' })
+    expect(declarations(css, ".chip[data-kind='why'] svg")['color']).toBe('var(--color-accent-text)')
   })
   it('tag: surface-2 / muted', () => {
     expect(declarations(css, ".chip[data-kind='tag']")).toMatchObject({ background: 'var(--color-surface-2)', color: 'var(--color-muted)' })
