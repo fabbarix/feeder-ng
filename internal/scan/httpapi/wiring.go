@@ -266,6 +266,7 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 				return service.OfflineData{}, err
 			} else if latest != nil {
 				bp.LastPriceCents = latest.PriceCents
+				bp.LastPriceDate = string(latest.Date)
 			}
 		}
 		out.Products = append(out.Products, bp)

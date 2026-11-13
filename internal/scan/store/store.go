@@ -199,6 +199,35 @@ func (s *Store) UpdatePrice(ctx context.Context, clientUUID string, cents int, p
 	return nil
 }
 
+// PriceUpdate sets the Price of one scan event. PriceID nil keeps the one the event has.
+type PriceUpdate struct {
+	ClientUUID string
+	Cents      int
+	PriceID    *int64
+}
+
+// UpdatePrices applies the updates in one transaction: all of them or none (ErrNotFound for an unknown client UUID).
+// json_patch merges the price into result_json's scan object, so the stored Result answers the new price too.
+func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, u := range updates {
+		res, err := tx.ExecContext(ctx, `UPDATE scan_events SET price_cents = ?, price_id = COALESCE(?, price_id),
+			result_json = json_patch(result_json, json_object('scan', json_object('priceCents', ?))) WHERE client_uuid = ?`,
+			u.Cents, nullInt(u.PriceID), u.Cents, u.ClientUUID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+	}
+	return tx.Commit()
+}
+
 // Totals sums the range's Shop-mode events that are not undone: price_cents and the number of Stock Lots added.
 func (s *Store) Totals(ctx context.Context, rangeTo stock.Date) (spentCents, lots int, err error) {
 	err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(price_cents), 0), COUNT(lot_id) FROM scan_events

@@ -36,7 +36,7 @@ var (
 	// (never uploaded, or swept before a queued scan synced). CreateProduct is then retried without the Picture, and a
 	// merge simply does not fill one. Matched with errors.Is; the adapter maps product.ErrPictureMissing to it.
 	ErrPictureMissing = errors.New("scan: picture missing")
-	// ErrAlreadyUndone is returned by SetPrice for a scan that was undone (the API answers 409 already_undone).
+	// ErrAlreadyUndone is returned by SetPrices and SetPrice for a scan that was undone (the API answers 409 already_undone).
 	ErrAlreadyUndone = errors.New("scan: the scan was undone")
 )
 
@@ -140,6 +140,7 @@ type OfflineProduct struct {
 	// PE: the Ingredient's Picture, for a Product without one.
 	IngredientImageURL string `json:"ingredientImageUrl,omitempty"`
 	LastPriceCents     *int   `json:"lastPriceCents"`
+	LastPriceDate      string `json:"lastPriceDate,omitempty"` // YYYY-MM-DD of that Price; absent with no Price
 }
 
 // OfflineData is what the phone caches to resolve and describe scans offline.
@@ -716,58 +717,14 @@ func (s *Service) restorePrice(ctx context.Context, ev store.Event) error {
 	return err
 }
 
-// SetPrice edits the Price a scan recorded ("✎"): ErrNotFound, ErrNotUndoable for a stock_take.
+// SetPrice edits the Price of one scan, per pack (ErrNotFound, ErrNotUndoable for a stock_take, ErrAlreadyUndone). It is
+// SetPrices with that one uuid.
 func (s *Service) SetPrice(ctx context.Context, clientUUID string, cents int) (scan.Result, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ev, ok, err := s.d.Ledger.Get(ctx, clientUUID)
+	res, err := s.SetPrices(ctx, SetPricesInput{ClientUUIDs: []string{clientUUID}, PriceCents: cents})
 	if err != nil {
 		return scan.Result{}, err
 	}
-	if !ok {
-		return scan.Result{}, ErrNotFound
-	}
-	if ev.Kind == string(scan.KindStockTake) || ev.ProductID == nil || ev.ShopID == nil {
-		return scan.Result{}, ErrNotUndoable
-	}
-	if ev.UndoneAt != "" {
-		return scan.Result{}, ErrAlreadyUndone
-	}
-	if cents <= 0 {
-		return scan.Result{}, &scan.ValidationError{Field: "priceCents", Message: "a price must be more than 0"}
-	}
-	today, _, err := s.household(ctx)
-	if err != nil {
-		return scan.Result{}, err
-	}
-	date, err := s.scanDate(ctx, ev.ScannedAt, today)
-	if err != nil {
-		return scan.Result{}, err
-	}
-	var perKg *int
-	if existing, err := s.d.Catalogue.PriceOn(ctx, *ev.ProductID, *ev.ShopID, date); err != nil {
-		return scan.Result{}, err
-	} else if existing != nil {
-		perKg = existing.PricePerKgCents
-	}
-	c := cents
-	rec, err := s.d.Catalogue.RecordPrice(ctx, *ev.ProductID, PriceInput{ShopID: *ev.ShopID, Date: date, PriceCents: &c, PricePerKgCents: perKg})
-	if err != nil {
-		return scan.Result{}, err
-	}
-	if err := s.d.Ledger.UpdatePrice(ctx, clientUUID, cents, &rec.ID); err != nil {
-		return scan.Result{}, err
-	}
-	res, err := duplicate(ev)
-	if err != nil {
-		return scan.Result{}, err
-	}
-	res.Status = scan.StatusApplied
-	if res.Scan != nil {
-		res.Scan.PriceCents = &c
-	}
-	s.publish()
-	return res, nil
+	return res[0], nil
 }
 
 // OfflineData returns the offline data for a Shop (nil = home).
