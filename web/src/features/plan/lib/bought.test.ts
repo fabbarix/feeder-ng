@@ -83,7 +83,7 @@ describe('warningLine', () => {
 describe('regenerateBoughtLines', () => {
   it('names each Bought meal', () => {
     const r = regenerateBoughtLines([{ date: '2026-11-10', mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'Roast chicken', ingredients: ['chicken thighs', 'cream'] }])
-    expect(r.intro).toBe('These have Ingredients you already bought and are replaced too:')
+    expect(r.intro).toBe('Among them, these have Ingredients you already bought:')
     expect(r.lines).toEqual(['Tue Dinner · Roast chicken (chicken thighs, cream).'])
   })
   it('says nothing when none', () => {

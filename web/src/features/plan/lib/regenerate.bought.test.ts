@@ -16,7 +16,7 @@ describe('regenerateConfirmCopy with a dry run', () => {
   it('keeps the count first, then the intro, then one line per Bought meal', () => {
     const body = regenerateConfirmCopy(3, dry).body
     const count = body.indexOf('3 unpinned Planned Meals will change.')
-    const intro = body.indexOf('These have Ingredients you already bought and are replaced too:')
+    const intro = body.indexOf('Among them, these have Ingredients you already bought:')
     const first = body.indexOf('Tue Dinner · Roast chicken (chicken thighs, cream).')
     const second = body.indexOf('Wed Lunch · Green beans (beans).')
     expect(count).toBe(0)

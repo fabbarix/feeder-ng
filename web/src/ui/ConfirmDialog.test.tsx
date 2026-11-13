@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { declarations, readUiCss } from './test-utils'
 import { ConfirmDialog, ConfirmProvider, useConfirm, type ConfirmChoice } from './ConfirmDialog'
 
 const base = { open: true, title: 'Delete Chicken tikka traybake?', body: 'It is removed from future Planned Meals.', confirmLabel: 'Delete' }
@@ -130,10 +131,15 @@ describe('useConfirm', () => {
 })
 
 describe('ConfirmDialog: body line breaks', () => {
-  it('keeps the line breaks of a multi-line body (one line per item reads as lines)', () => {
-    render(<ConfirmDialog {...base} body={'Replaces 3 meals.\nTue Dinner: Stew\nWed Lunch: Pie'} onConfirm={() => {}} onCancel={() => {}} />)
+  it('the body paragraph uses the shared class, not an inline style', () => {
+    render(<ConfirmDialog {...base} body={'Replaces 3 meals.\nTue Dinner: Stew'} onConfirm={() => {}} onCancel={() => {}} />)
     const body = screen.getByText(/Replaces 3 meals\./)
+    expect(body).toHaveClass('confirm-dialog__body')
+    expect(body).not.toHaveAttribute('style')
     expect(body).toHaveTextContent('Tue Dinner: Stew')
-    expect(getComputedStyle(body).whiteSpace).toBe('pre-line')
+  })
+
+  it('Dialog.css keeps line breaks for .confirm-dialog__body (white-space: pre-line)', () => {
+    expect(declarations(readUiCss('Dialog.css'), '.confirm-dialog__body')['white-space']).toBe('pre-line')
   })
 })

@@ -78,3 +78,21 @@ describe('TonightHero with several Courses', () => {
     expect(within(row).queryByRole('note')).not.toBeInTheDocument()
   })
 })
+
+// Round 3: the hero chips now render through PlanChipView with `status`; a relaxed (why) chip must look as before.
+describe('TonightHero: a relaxed chip keeps its look', () => {
+  const relaxed = { code: 'cooldown_relaxed' as const, date: '2026-11-08', recipeId: 7 }
+  it('is a neutral why chip with no status colour (single hero)', () => {
+    show(dinner({ relaxed: true, why: [relaxed] }))
+    const chip = screen.getByText('Again soon: had Sun').closest('.chip')
+    expect(chip).toHaveAttribute('data-kind', 'why')
+    expect(chip).not.toHaveAttribute('data-status')
+  })
+  it('the same on the hero of several Courses', () => {
+    const course = (id: number, name: string, main: boolean, over = {}) => planCourse({ courseId: id, name, main, meal: courseMeal(id, name, { recipeName: name, ...over }) })
+    show(courseSlot([course(1, 'Main', true, { relaxed: true, why: [relaxed] }), course(2, 'Side', false)], { name: 'Dinner', time: '19:00', at: '2026-11-10T19:00:00Z' } as Partial<PlanSlot>))
+    const chip = screen.getByText('Again soon: had Sun').closest('.chip')
+    expect(chip).toHaveAttribute('data-kind', 'why')
+    expect(chip).not.toHaveAttribute('data-status')
+  })
+})

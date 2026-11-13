@@ -56,7 +56,7 @@ describe('PlanScreen: Regenerate names Bought Planned Meals', () => {
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
-    await waitFor(() => expect(dialog).toHaveTextContent('These have Ingredients you already bought and are replaced too:'))
+    await waitFor(() => expect(dialog).toHaveTextContent('Among them, these have Ingredients you already bought:'))
     expect(dialog).toHaveTextContent('Tue Dinner · Roast chicken (chicken thighs, cream).')
     expect(dialog).toHaveTextContent('unpinned Planned Meals will change.')
     expect(api.callsTo('POST', '/api/plan/regenerate?dryRun=1')).toHaveLength(1)
@@ -87,5 +87,59 @@ describe('PlanScreen: Regenerate names Bought Planned Meals', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
     expect(dialog).toHaveTextContent('unpinned Planned Meals will change.')
     expect(dialog).not.toHaveTextContent('already bought')
+  })
+})
+
+describe('PlanScreen: Regenerate waits for the dry run', () => {
+  /** Holds the dry-run answer until release() so the waiting state can be seen. */
+  function gated() {
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': undefined })
+    const real = globalThis.fetch
+    let release = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
+      if (input === '/api/plan/regenerate?dryRun=1') await gate
+      return real(input, init)
+    })
+    return { api, release }
+  }
+
+  it('shows the button loading while the dry run runs', async () => {
+    const { release } = gated()
+    renderWithProviders(<PlanScreen />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Regenerate' })).toHaveAttribute('aria-busy', 'true'))
+    expect(screen.queryByRole('dialog', { name: 'Regenerate the plan?' })).not.toBeInTheDocument()
+    release()
+    expect(await screen.findByRole('dialog', { name: 'Regenerate the plan?' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Regenerate' })).not.toHaveAttribute('aria-busy'))
+  })
+
+  it('two quick taps make one dry-run call and open one dialog', async () => {
+    const { api, release } = gated()
+    renderWithProviders(<PlanScreen />)
+    const button = await screen.findByRole('button', { name: 'Regenerate' })
+    await userEvent.click(button)
+    await userEvent.click(button)
+    release()
+    await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
+    expect(api.callsTo('POST', '/api/plan/regenerate?dryRun=1')).toHaveLength(1)
+    expect(screen.getAllByRole('dialog', { name: 'Regenerate the plan?' })).toHaveLength(1)
+  })
+})
+
+describe('PlanScreen: the Regenerate confirm count', () => {
+  it('uses the dry run count when it succeeds', async () => {
+    mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': { replaces: 5, bought: [] } })
+    renderWithProviders(<PlanScreen />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
+    expect(await screen.findByRole('dialog', { name: 'Regenerate the plan?' })).toHaveTextContent('5 unpinned Planned Meals will change.')
+  })
+
+  it('falls back to the count from the plan when the dry run fails', async () => {
+    mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': { status: 500, json: { error: { code: 'x', message: 'boom' } } } })
+    renderWithProviders(<PlanScreen />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
+    expect(await screen.findByRole('dialog', { name: 'Regenerate the plan?' })).toHaveTextContent('2 unpinned Planned Meals will change.')
   })
 })
