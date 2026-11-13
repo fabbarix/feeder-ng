@@ -15,7 +15,7 @@ export function ShopMetrics({ summary, onScan }: ShopMetricsProps) {
   const { left, ticked, total, percent, leftOf, meta, estimated, unpriced } = summary
   return (
     <BentoGrid min="metric" label={shopStrings.summary}>
-      <Tile variant="soft" className="shop-metrics__tile">
+      <Tile className="shop-metrics__tile">
         <div role="progressbar" aria-label={shopStrings.leftToGet} aria-valuemin={0} aria-valuemax={total} aria-valuenow={ticked} className="shop-metrics__bar">
           <span className="shop-metrics__fill" style={{ inlineSize: `${percent}%` }} />
         </div>

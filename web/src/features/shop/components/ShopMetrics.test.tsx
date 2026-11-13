@@ -87,10 +87,10 @@ describe('ShopMetrics', () => {
     expect(primaries[0]).toHaveTextContent('Scan')
   })
 
-  it('the "Left to get" tile is an accent container (soft); the others are plain surfaces', () => {
+  it('no metric tile is an accent container (system.md 2): all are plain surfaces', () => {
     render(<ShopMetrics summary={summary()} onScan={() => {}} />)
     const left = screen.getByRole('progressbar', { name: 'Left to get' }).closest('.tile')!
-    expect(left).toHaveAttribute('data-variant', 'soft')
+    expect(left).toHaveAttribute('data-variant', 'surface')
     expect(screen.getByText('Est. total').closest('.tile')).toHaveAttribute('data-variant', 'surface')
   })
 
