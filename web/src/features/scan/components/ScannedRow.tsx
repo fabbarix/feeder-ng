@@ -32,16 +32,17 @@ export interface ScannedRowProps {
 
 /** The second line: the size, then one tick (filled once the Line is covered, hollow before) and "x of y", or the clock. */
 function MetaLine({ meta }: { meta: RowMeta }) {
+  // The tick and its "x of y" (or the clock and its words) stay together when the line wraps.
   const after = meta.cover ? (
-    <>
+    <span className="scanned-row__cover">
       <Icon name={meta.cover.done ? 'success' : 'successOpen'} size={14} weight={meta.cover.done ? 'fill' : 'bold'} className="scanned-row__tick" />
       <span>{meta.cover.text}</span>
-    </>
+    </span>
   ) : meta.waiting ? (
-    <>
+    <span className="scanned-row__cover">
       <Icon name="duration" size={14} />
       <span>{scanStrings.waitingToSync}</span>
-    </>
+    </span>
   ) : null
   return (
     <span className="scanned-row__meta">
@@ -77,12 +78,13 @@ function ActiveStrip({ row, onPrice, onIncrement, onDecrement, onRemove }: Strip
 
 export function ScannedRow({ row, currency, system, active, pricing, fresh, onActivate, onPrice, onIncrement, onDecrement, onRemove }: ScannedRowProps) {
   const amounts = rowAmounts(row, (cents: number) => formatMinor(cents, currency))
+  const meta = rowMeta(row, system)
   const props: ListRowProps = {
     title: rowTitle(row, system),
     'aria-label': row.name,
     onActivate,
     leading: <Thumb name={row.name} imageUrl={row.imageUrl} size={48} />,
-    meta: <MetaLine meta={rowMeta(row, system)} />,
+    meta: <MetaLine meta={meta} />,
     value:
       amounts.value === null ? (
         <Button variant="secondary" size="sm" icon="add" className="scanned-row__add" onClick={onPrice}>
@@ -96,6 +98,8 @@ export function ScannedRow({ row, currency, system, active, pricing, fresh, onAc
     'data-active': active ? 'true' : undefined,
     'data-pricing': pricing ? 'true' : undefined,
     'data-fresh': fresh,
+    // The "Add price" pill takes the value column's room: a cover line ("1000 of 700 g") may wrap rather than be cut.
+    'data-meta-wrap': amounts.value === null && meta.cover ? 'true' : undefined,
   }
   return <ListRow {...props} />
 }

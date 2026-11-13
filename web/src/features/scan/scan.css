@@ -152,7 +152,7 @@
 }
 
 /* The second line of a Scanned row: the size, then one tick and "x of y". Muted, normal weight; only the tick is coloured.
-   Its parts never shrink, so nothing is cut: the line stays one line. */
+   Its parts never shrink, so nothing is cut: the line stays one line, except beside "Add price" (below). */
 .scanned-row__meta {
   display: inline-flex;
   align-items: center;
@@ -162,6 +162,25 @@
 
 .scanned-row__meta > * {
   flex: none;
+}
+
+.scanned-row__cover {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Beside the "Add price" pill the value column is wide, so a long "x of y" would be cut ("1000 of 70…"): there the second
+   line wraps, the tick and its "x of y" together, rather than end in an ellipsis. The row grows to fit. */
+.list-row[data-meta-wrap='true'] .list-row__meta,
+.list-row[data-meta-wrap='true'] .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+}
+
+.list-row[data-meta-wrap='true'] .scanned-row__meta {
+  flex-wrap: wrap;
+  row-gap: 0;
 }
 
 .scanned-row__tick {

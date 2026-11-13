@@ -1,7 +1,7 @@
 // SR4: ScannedRow is a ListRow of the Scanned list (shop-scan-proposals.md 13.3). It renders a SR3 row model: the Thumb
 // (or monogram), the name without the pack size, rowMeta (size · tick x of y), rowAmounts, "Add price", and for the active
 // row one strip under it: the compact Stepper, Price and Remove (no ⋮ menu since the mockup review).
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -122,6 +122,15 @@ describe('ScannedRow: what it shows', () => {
     expect(active.props.onPrice).toHaveBeenCalledTimes(1)
     expect(active.props.onActivate).not.toHaveBeenCalled()
     expect(props.onPrice).not.toHaveBeenCalled()
+  })
+
+  it('beside "Add price", a cover line may wrap (data-meta-wrap); a priced row, or one without a cover, keeps one line', () => {
+    const coveredNoPrice = rowFrom(applied('u-5', passata, {}, { onList: true, remaining: 0 }))
+    expect(setup(coveredNoPrice).item).toHaveAttribute('data-meta-wrap', 'true')
+    cleanup()
+    expect(setup(muttiToGet).item).not.toHaveAttribute('data-meta-wrap')
+    cleanup()
+    expect(setup(rowFrom(applied('u-6', toiletPaper))).item).not.toHaveAttribute('data-meta-wrap')
   })
 
   it('a priced row has no "Add price"', () => {
