@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders, slot } from '../../plan/test-utils'
-import type { CookPreview, PlanSlot } from '../../plan/types'
+import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders } from '../../plan/test-utils'
+import type { CookPreview } from '../../plan/types'
 import { TodayScreen } from './TodayScreen'
 
 const h = vi.hoisted(() => ({ toConfirm: [] as unknown[], nextSlot: null as unknown }))
@@ -30,8 +30,6 @@ const base = { 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/st
 const preview = (courseId: number, courseName: string, recipeName: string, date: string): CookPreview => ({
   meal: courseMeal(courseId, courseName, { recipeName, mealSlotId: 4, date }), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs: [{ ingredientId: 11, ingredient: 'Chicken thighs', quantity: 800 }],
 })
-const entry = (courseId: number, courseName: string, recipeName: string): PlanSlot =>
-  slot({ date: '2026-11-10', mealSlotId: 4, courseId, courseName, meal: courseMeal(courseId, courseName, { mealSlotId: 4, recipeName, date: '2026-11-10' }) })
 
 afterEach(() => {
   h.toConfirm = []
