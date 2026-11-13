@@ -2,8 +2,8 @@
 // Filters panel (docs/design/pantry-filter.md 4, 6). Plain TypeScript, no React.
 import type { FilterChip } from '../../../ui/FilterBar/types'
 import { stockStrings as strings } from '../strings'
-import type { StockLot, StorageKind, StoragePlace } from '../types'
-import { fold, type StockFilter } from './filter'
+import type { StockLot, StockKind, StorageKind, StoragePlace } from '../types'
+import { fold, type StockFilter, type StockKindFilter } from './filter'
 import { STORAGE_KINDS, KIND_ICON } from './kinds'
 import { PANTRY_SORTS, UNSORTED, type PantrySort } from './pantry'
 
@@ -15,6 +15,8 @@ export interface PantryFilterState {
   mode: PantryMode | null
   /** `?status=useSoon|spoiled`; 'all' when absent or unknown. */
   status: StockFilter
+  /** `?stock=food|supply` (H6): Food or Supplies; 'all' when absent or unknown. A different filter from `kind` (the Storage Place kind). */
+  stock: StockKindFilter
   /** `?place=<id>`, `?place=none` (UNSORTED); positive whole ids, no repeats, in URL order. */
   places: number[]
   /** `?kind=`, no repeats, in URL order. */
@@ -29,6 +31,7 @@ export interface PantryFilterState {
 
 const MODES: readonly PantryMode[] = ['places', 'ingredients']
 const STATUSES: readonly StockFilter[] = ['useSoon', 'spoiled']
+const STOCKS: readonly StockKind[] = ['food', 'supply']
 const NOT_SORTED_PARAM = 'none'
 
 const unique = <T,>(list: T[]): T[] => [...new Set(list)]
@@ -45,10 +48,12 @@ const placeParam = (id: number) => (id === UNSORTED ? NOT_SORTED_PARAM : String(
 export function pantryFiltersFromParams(params: URLSearchParams): PantryFilterState {
   const mode = params.get('view')
   const status = params.get('status')
+  const stock = params.get('stock')
   const sort = params.get('sort')
   return {
     mode: MODES.includes(mode as PantryMode) ? (mode as PantryMode) : null,
     status: STATUSES.includes(status as StockFilter) ? (status as StockFilter) : 'all',
+    stock: STOCKS.includes(stock as StockKind) ? (stock as StockKind) : 'all',
     places: unique(params.getAll('place').map(parsePlace).filter((id): id is number => id !== null)),
     kinds: unique(params.getAll('kind').filter((k): k is StorageKind => STORAGE_KINDS.includes(k as StorageKind))),
     leftovers: params.get('leftovers') === '1',
@@ -58,6 +63,14 @@ export function pantryFiltersFromParams(params: URLSearchParams): PantryFilterSt
 }
 
 const copy = (params: URLSearchParams) => new URLSearchParams(params)
+
+/** A copy with `stock` set (food or supply), or removed for 'all'. */
+export function withStock(params: URLSearchParams, stock: StockKindFilter): URLSearchParams {
+  const next = copy(params)
+  if (stock === 'all') next.delete('stock')
+  else next.set('stock', stock)
+  return next
+}
 
 /** A copy with `view` set to the list. */
 export function withMode(params: URLSearchParams, mode: PantryMode): URLSearchParams {
@@ -122,16 +135,17 @@ export function withGroupByPlace(params: URLSearchParams, on: boolean): URLSearc
 /** A copy without the filters (status, place, kind, leftovers); the list, the sort and the grouping are kept. */
 export function withoutPantryFilters(params: URLSearchParams): URLSearchParams {
   const next = copy(params)
-  for (const name of ['status', 'place', 'kind', 'leftovers']) next.delete(name)
+  for (const name of ['status', 'stock', 'place', 'kind', 'leftovers']) next.delete(name)
   return next
 }
 
 /** Which filter an active chip removes. */
-export type PantryChipKey = 'status' | 'leftovers' | `kind:${StorageKind}` | `place:${number}`
+export type PantryChipKey = 'status' | 'stock' | 'leftovers' | `kind:${StorageKind}` | `place:${number}`
 
 /** A copy without the filter of one chip. */
 export function withoutChip(params: URLSearchParams, key: PantryChipKey): URLSearchParams {
   if (key === 'status') return withStatus(params, 'all')
+  if (key === 'stock') return withStock(params, 'all')
   if (key === 'leftovers') return withLeftovers(params, false)
   const [kind, value] = key.split(':') as [string, string]
   if (kind === 'kind') return withKindToggled(params, value as StorageKind)
@@ -143,6 +157,8 @@ export function withoutChip(params: URLSearchParams, key: PantryChipKey): URLSea
 /** The filters that apply to the list on screen. */
 export interface AppliedPantryFilters {
   status: StockFilter
+  /** Food, Supplies or both; applies in both lists. */
+  stock: StockKindFilter
   /** Known Storage Place ids and UNSORTED; empty = every place. */
   places: number[]
   kinds: StorageKind[]
@@ -157,8 +173,8 @@ function knownPlaces(state: PantryFilterState, places: readonly StoragePlace[]):
 
 /** By Ingredient only the status applies; By Storage Place every filter does, an unknown Storage Place excepted. */
 export function appliedFilters(state: PantryFilterState, mode: PantryMode, places: readonly StoragePlace[]): AppliedPantryFilters {
-  if (mode === 'ingredients') return { status: state.status, places: [], kinds: [], onlyLeftovers: false }
-  return { status: state.status, places: knownPlaces(state, places), kinds: state.kinds, onlyLeftovers: state.leftovers }
+  if (mode === 'ingredients') return { status: state.status, stock: state.stock, places: [], kinds: [], onlyLeftovers: false }
+  return { status: state.status, stock: state.stock, places: knownPlaces(state, places), kinds: state.kinds, onlyLeftovers: state.leftovers }
 }
 
 /** A chip of the Filters panel's Show section: the status (one at a time) or Leftovers. */
@@ -178,6 +194,11 @@ export function shownChoices(status: StockFilter, leftovers: boolean, mode: Pant
   return mode === 'places' && leftovers ? [...shown, 'leftovers'] : shown
 }
 
+/** H6: the Food or Supplies choices the Filters panel offers: both while the Household has a Supply, none without one. */
+export function stockChoices(hasSupply: boolean): StockKind[] {
+  return hasSupply ? ['food', 'supply'] : []
+}
+
 /** Storage Places by name (accents and case ignored, numbers in order). */
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
 
@@ -194,6 +215,10 @@ export function pantryFilterChips(state: PantryFilterState, mode: PantryMode, pl
     chips.push({ key: 'status', label, removeLabel: t.remove(label), status: applied.status === 'useSoon' ? 'spoil' : 'danger' })
   }
   if (applied.onlyLeftovers) chips.push({ key: 'leftovers', label: strings.leftoversFilter, removeLabel: t.remove(strings.leftoversFilter), status: 'leftover' })
+  if (applied.stock !== 'all') {
+    const label = strings.stockFilter[applied.stock === 'food' ? 'food' : 'supplies']
+    chips.push({ key: 'stock', label, removeLabel: t.remove(label) })
+  }
   for (const kind of STORAGE_KINDS) {
     if (!applied.kinds.includes(kind)) continue
     const label = strings.kinds[kind]

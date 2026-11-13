@@ -138,4 +138,20 @@ export const stockStrings = {
   deleteBodyWentOff:
     'Use Delete for a mistake, such as a double Scan. It does not count as waste. This Stock Lot has gone off: deleting it also takes that go-off off your Zero-waste streak. To record waste, Throw out a Lot that has gone off.',
   deleted: (name: string) => `${name} removed from Stock`,
+  /** H6: the Food or Supplies filter (?stock=food|supply) of the Pantry. */
+  stockFilter: { heading: 'Food or Supplies', food: 'Food', supplies: 'Supplies' } as const,
+  /** H6: the row meta of a Supply: its Restock level, in words. */
+  supplies: {
+    restocksBelow: (level: string) => `restocks below ${level}`,
+    belowRestock: (level: string) => `below Restock level ${level}`,
+  },
+  /** H6: a Supply's Stock Lot is used up: not waste, not a mistake. */
+  usedUp: {
+    heading: 'Used up',
+    button: 'Used up',
+    amount: 'How much was used up',
+    hint: (all: string) => `Leave it as ${all} to use up all of it.`,
+    done: (name: string) => `${name} used up`,
+  },
+  deleteBodySupply: 'Use Delete for a mistake, such as a double Scan. If the Household used it, choose Used up instead.',
 }

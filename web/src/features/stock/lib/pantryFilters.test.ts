@@ -33,15 +33,15 @@ const places: StoragePlace[] = [
 
 describe('pantryFiltersFromParams', () => {
   it('is the defaults with no parameter', () => {
-    expect(pantryFiltersFromParams(p(''))).toEqual({ mode: null, status: 'all', places: [], kinds: [], leftovers: false, sort: 'goodUntil', groupByPlace: true })
+    expect(pantryFiltersFromParams(p(''))).toEqual({ mode: null, status: 'all', stock: 'all', places: [], kinds: [], leftovers: false, sort: 'goodUntil', groupByPlace: true })
   })
   it('reads every parameter', () => {
     const s = pantryFiltersFromParams(p('view=ingredients&status=spoiled&place=2&place=none&kind=fridge&kind=freezer&leftovers=1&sort=name&group=off'))
-    expect(s).toEqual({ mode: 'ingredients', status: 'spoiled', places: [2, UNSORTED], kinds: ['fridge', 'freezer'], leftovers: true, sort: 'name', groupByPlace: false })
+    expect(s).toEqual({ mode: 'ingredients', status: 'spoiled', stock: 'all', places: [2, UNSORTED], kinds: ['fridge', 'freezer'], leftovers: true, sort: 'name', groupByPlace: false })
   })
   it('ignores unknown values and repeats', () => {
     const s = pantryFiltersFromParams(p('view=grid&status=all&place=0&place=-1&place=x&place=2&place=2&kind=garage&kind=fridge&kind=fridge&leftovers=yes&sort=price&group=no'))
-    expect(s).toEqual({ mode: null, status: 'all', places: [2], kinds: ['fridge'], leftovers: false, sort: 'goodUntil', groupByPlace: true })
+    expect(s).toEqual({ mode: null, status: 'all', stock: 'all', places: [2], kinds: ['fridge'], leftovers: false, sort: 'goodUntil', groupByPlace: true })
   })
 })
 
@@ -92,10 +92,10 @@ describe('the URL writers keep every other parameter', () => {
 describe('appliedFilters', () => {
   const state = pantryFiltersFromParams(p('status=useSoon&place=2&place=77&place=none&kind=fridge&leftovers=1'))
   it('By Storage Place: every filter, an unknown Storage Place left out', () => {
-    expect(appliedFilters(state, 'places', places)).toEqual({ status: 'useSoon', places: [2, UNSORTED], kinds: ['fridge'], onlyLeftovers: true })
+    expect(appliedFilters(state, 'places', places)).toEqual({ status: 'useSoon', stock: 'all', places: [2, UNSORTED], kinds: ['fridge'], onlyLeftovers: true })
   })
   it('By Ingredient: only the status', () => {
-    expect(appliedFilters(state, 'ingredients', places)).toEqual({ status: 'useSoon', places: [], kinds: [], onlyLeftovers: false })
+    expect(appliedFilters(state, 'ingredients', places)).toEqual({ status: 'useSoon', stock: 'all', places: [], kinds: [], onlyLeftovers: false })
   })
   it('while the Storage Places load, only Not sorted applies', () => {
     expect(appliedFilters(state, 'places', []).places).toEqual([UNSORTED])

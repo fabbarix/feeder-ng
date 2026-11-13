@@ -200,7 +200,7 @@ Unchanged (spec §10.2): scan, then +1 pack, −1 pack, Set total.
 ### 4.6 Pantry filters
 
 Supply Lots show in their Storage Place groups and in By Ingredient. The Filters panel gains a section **"Food or Supplies"** with
-two toggle chips, **Food** and **Supplies**, one choice like Use soon / Spoiled (none = both). URL `?stock=food|supplies`, applied in
+two toggle chips, **Food** and **Supplies**, one choice like Use soon / Spoiled (none = both). URL `?stock=food|supply` (the kind values), applied in
 both lists, a removable chip in row 3. It is not in the existing **Kind** section: that is the Storage Place kind (pantry, fridge,
 freezer, pantry-filter.md §2.2). The section shows only while the Household has a Supply.
 

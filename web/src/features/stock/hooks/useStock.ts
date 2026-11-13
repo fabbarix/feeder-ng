@@ -5,6 +5,7 @@ import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { stockApi } from '../api'
 import { resolveStockStatus, type StockStatus } from '../lib/status'
+import { usedUpRequest } from '../lib/supplies'
 import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse } from '../types'
 
 export interface QueryState<T> {
@@ -157,6 +158,11 @@ export function useStockActions(): {
   editLot(lotId: number, patch: LotPatch): Promise<void>
   /** Beta.5: deletes a Lot as a correction. Invalidates ['stock'] and the zero-waste streak. */
   deleteLot(lotId: number): Promise<void>
+  /**
+   * H6: a Supply is used up. The whole Lot (no `used`, or as much as it holds) deletes it; part of it corrects the quantity that
+   * remains. Never waste: no Throw out, no Keep. Rejects on failure, so the screen shows its error toast.
+   */
+  usedUp(lot: Pick<StockLot, 'id' | 'quantity'>, used?: number): Promise<void>
 } {
   const client = useQueryClient()
   const moveLot = useMutation({
@@ -184,6 +190,11 @@ export function useStockActions(): {
     onSuccess: () => refreshStock(client),
   })
   return {
+    usedUp: async (lot, used) => {
+      const request = usedUpRequest(lot, used)
+      if (request.type === 'delete') await deleteLot.mutateAsync(lot.id)
+      else await editLot.mutateAsync({ lotId: lot.id, patch: { quantity: request.quantity } })
+    },
     addLot: async (input) => {
       await addLot.mutateAsync(input)
     },
