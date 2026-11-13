@@ -66,7 +66,7 @@ Anything else is an **unconvertible unit**. Import Review asks for the conversio
 | `ingredients` | Quantities for **one Batch**. `optional: true` lines are shown but not added to the Shopping List. |
 | `steps` | Ordered Steps (may be empty, e.g. for a Ready Meal). |
 
-The lines of `ingredients` take two optional fields for a line that calls for another recipe. A Step's `uses` takes only `ingredient`, `quantity` and `unit`:
+The lines of `ingredients` take two optional fields for a line that calls for another recipe. A Step's `uses` takes `ingredient`, `quantity`, `unit`, and the `note` and `optional` it has always had, but never `recipe` or `neededAtStep`:
 
 | Field | Meaning |
 |---|---|

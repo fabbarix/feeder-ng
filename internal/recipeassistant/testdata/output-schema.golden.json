@@ -332,10 +332,16 @@
     },
     "use": {
       "additionalProperties": false,
-      "description": "An Ingredient amount a Step needs. Only the Ingredient, the amount and the unit: a Step's uses never call for another recipe.",
+      "description": "An Ingredient amount a Step needs. A Step's uses never call for another recipe: no recipe or neededAtStep.",
       "properties": {
         "ingredient": {
           "$ref": "#/$defs/name"
+        },
+        "note": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
         },
         "quantity": {
           "type": "number"
@@ -346,6 +352,8 @@
       },
       "required": [
         "ingredient",
+        "note",
+        "optional",
         "quantity",
         "unit"
       ],
