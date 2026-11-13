@@ -359,6 +359,15 @@ describe('Price entry in the flow', () => {
     expect(h.deps.setPrices).toHaveBeenCalledWith({ clientUuids: ['a'], priceCents: 2000, pricePerKgCents: 2000 })
   })
 
+  it('a folded scan keeps its new Price when its flush Result arrives afterwards (review)', async () => {
+    const h = setup({ setQueuedPrice: vi.fn(async () => false) })
+    const op = scanOp('b', passata)
+    await seed(h, [{ op, result: null }])
+    await act(async () => { await flow(h).savePrice('7', entry(145), 'save') })
+    act(() => flow(h).applySyncResults([okResult(op, passata, { priceCents: null })]))
+    expect(rows(h)[0]).toMatchObject({ priceCents: 145, needsPrice: false, waiting: false })
+  })
+
   it('Next saves this row and moves to the next row without a Price', async () => {
     const h = setup()
     await seed(h, [applied('a', passata), applied('b', toiletPaper), applied('c', cheese)])

@@ -272,7 +272,8 @@ export function recordEntry(entries: SessionEntry[], op: Op, result: ScanResult 
 
 /**
  * The Results of a sync flush: a waiting scan takes its Result; a rejected one leaves the session (the sync notice says
- * why). Entries without a Result in `results` are left as they are.
+ * why). Entries without a Result in `results`, and scans that already have one, are left as they are: a flush Result
+ * that arrives after a Price save of the same scan must not put its old Price back.
  */
 export function settleEntries(entries: SessionEntry[], results: ScanResult[]): SessionEntry[] {
   if (results.length === 0) return entries
@@ -280,7 +281,7 @@ export function settleEntries(entries: SessionEntry[], results: ScanResult[]): S
   const out: SessionEntry[] = []
   for (const entry of entries) {
     const result = byUuid.get(entry.op.clientUuid)
-    if (!result) out.push(entry)
+    if (!result || entry.result !== null) out.push(entry)
     else if (result.status !== 'rejected') out.push({ op: entry.op, result })
   }
   return out

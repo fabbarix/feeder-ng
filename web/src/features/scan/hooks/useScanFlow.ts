@@ -699,6 +699,9 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
         d.notify?.(error, 'error')
         return { status: 'failed', error }
       }
+      // A folded scan (it left the queue meanwhile) takes the PATCH's Result now, so its flush Result, which may come
+      // later with the Price it was sent with, no longer settles it.
+      if (results.length > 0) session.settle(results)
       served = toServer.map((line) => {
         const r = results.find((x) => x.clientUuid === line.clientUuid)
         return {

@@ -333,6 +333,12 @@ describe('session entry helpers (pure)', () => {
     expect(after[2]?.result).toBeNull()
   })
 
+  it('settleEntries leaves a scan that already has a Result alone (a late flush Result after a Price save; review)', () => {
+    const entries = [applied('a', passata, { priceCents: 145 }, { priceCents: 145 })]
+    const stale = okResult(scanOp('a', passata), passata, { priceCents: null })
+    expect(settleEntries(entries, [stale])[0]).toBe(entries[0])
+  })
+
   it('dropEntries removes scans by uuid', () => {
     const after = dropEntries([applied('a', passata), applied('b', passata), applied('c', cheese)], ['a', 'c'])
     expect(after.map((e) => e.op.clientUuid)).toEqual(['b'])
