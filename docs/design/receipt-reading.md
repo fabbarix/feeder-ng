@@ -393,6 +393,14 @@ Prices from `prev_price_json`; `UpdateProduct` → the previous name and pack si
 reverse and answers `500 receipt_apply_failed` with nothing left changed. A true single transaction would need the Stock,
 Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed here (noted as a follow-up in ADR 0018).
 
+### 8.4 Known limits
+
+- **An Ingredient created by a failed apply stays.** An accepted Add with a new Ingredient creates it through
+  `ingredientsPort.Ensure` before its Product. When a later step fails, the put-back deletes the Product it made but not the
+  Ingredient: the Ingredient port has no inverse for `Ensure`, and an Ingredient that already existed must never be removed. The
+  leftover is an unused Ingredient, visible in the Ingredients list, which a retry of the same Add finds and reuses (`Ensure`
+  matches by name). Accepted as a known leftover (RR3 review); no port change.
+
 ## 9. Cost, limits and errors
 
 **Cost.** Per read: about 1,600 input tokens per photo (a tall receipt is resized by the API), about 40 per Scanned row, about
