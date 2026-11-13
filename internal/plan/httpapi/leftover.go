@@ -236,13 +236,11 @@ func (a *api) takeOut(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, takeOutOut{leftoverOut: l, Leftover: l, Replanned: out})
+	httpx.WriteJSON(w, http.StatusOK, takeOutOut{Leftover: l, Replanned: out})
 }
 
-// takeOutOut answers Take out: the Leftover's fields at the top level, as the route has always answered, and the same
-// Leftover under leftover, with the Planned Meals that were replanned (ADR 0012) under replanned.
+// takeOutOut answers Take out: the Leftover after it, and the Planned Meals that were unpinned to be planned again (ADR 0012).
 type takeOutOut struct {
-	leftoverOut
 	Leftover  leftoverOut     `json:"leftover"`
 	Replanned []plannedForOut `json:"replanned"`
 }

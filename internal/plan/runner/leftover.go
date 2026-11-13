@@ -291,7 +291,7 @@ func (r *Runner) Freeze(ctx context.Context, id, storagePlaceID int64, portions 
 //
 // Its Use-by is today plus the Recipe's Use-by days (the Household's default otherwise). A Leftover whose Frozen
 // Use-by has already passed keeps that date, so it is to answer at once (docs/dev/design/b5-lo.md §9, PM answer 1).
-// The Planned Meals served from it dated after the new Use-by are unpinned and unlinked, and named in Replanned.
+// The Planned Meals served from it dated after the new Use-by are unpinned, and named in Replanned.
 func (r *Runner) TakeOut(ctx context.Context, id, storagePlaceID int64, userID int64) (LeftoverResult, error) {
 	var res LeftoverResult
 	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{}, func(_ *sql.Tx, st *store.Store) (func(), error) {
@@ -299,7 +299,7 @@ func (r *Runner) TakeOut(ctx context.Context, id, storagePlaceID int64, userID i
 		if err != nil {
 			return nil, err
 		}
-		l, err := availableLeftover(ctx, st, id)
+		l, err := portionedLeftover(ctx, st, id)
 		if err != nil {
 			return nil, err
 		}
@@ -514,9 +514,9 @@ func (r *Runner) unpinLeftoverMisfits(ctx context.Context, st *store.Store, id i
 	return ks, nil
 }
 
-// unpinAfterUseBy unlinks the Planned Meals served from the Leftover id that are dated after useBy (plan.AfterUseBy):
-// unpinned, and no longer served from it, so the planning run (or the next one, past the Planning Horizon) plans them
-// again. A meal of the Use-by day or before keeps the Leftover. It returns the meals.
+// unpinAfterUseBy unpins the Planned Meals served from the Leftover id that are dated after useBy (plan.AfterUseBy).
+// They keep their link: the planning run refills them once they are in the Planning Horizon, since leftoverValid
+// fails them past the Use-by (ADR 0012). It returns them.
 func (r *Runner) unpinAfterUseBy(ctx context.Context, st *store.Store, id int64, useBy string) ([]plan.Key, error) {
 	deps, err := st.DependantsOfLeftover(ctx, id)
 	if err != nil {
@@ -524,15 +524,7 @@ func (r *Runner) unpinAfterUseBy(ctx context.Context, st *store.Store, id int64,
 	}
 	ks := plan.AfterUseBy(useBy, deps)
 	for _, k := range ks {
-		m, err := st.Meal(ctx, k)
-		if errors.Is(err, store.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		m.Pinned, m.From = false, nil
-		if _, err := st.SaveMeal(ctx, m); err != nil {
+		if err := st.SetPinned(ctx, k, false); err != nil && !errors.Is(err, store.ErrNotFound) {
 			return nil, err
 		}
 	}
