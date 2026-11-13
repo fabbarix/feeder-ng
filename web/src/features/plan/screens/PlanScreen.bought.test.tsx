@@ -107,12 +107,14 @@ describe('PlanScreen: Regenerate waits for the dry run', () => {
   it('shows the button loading while the dry run runs', async () => {
     const { release } = gated()
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Regenerate' })).toHaveAttribute('aria-busy', 'true'))
+    // Capture the header button once: when the dialog opens its confirm button has the same name.
+    const button = await screen.findByRole('button', { name: 'Regenerate' })
+    await userEvent.click(button)
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'))
     expect(screen.queryByRole('dialog', { name: 'Regenerate the plan?' })).not.toBeInTheDocument()
     release()
     expect(await screen.findByRole('dialog', { name: 'Regenerate the plan?' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Regenerate' })).not.toHaveAttribute('aria-busy'))
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'))
   })
 
   it('two quick taps make one dry-run call and open one dialog', async () => {
