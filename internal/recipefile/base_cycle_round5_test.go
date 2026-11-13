@@ -1,22 +1,17 @@
 package recipefile_test
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
 )
 
-// BR-C commit half, round 5: a cycle that mixes both kinds of edge (docs/dev/design/base-recipes.md §3.4, §11.3).
+// BR-C commit half, round 5: what is and is not a cycle edge (docs/dev/design/base-recipes.md §3.4, §11.3).
 //
-// Two kinds of edge make a Base recipe of the file wait for another one:
-//   - a file answer: a line answered "file" points at that Recipe of the file (the line calls for it);
-//   - a kept line: a line answered "keep" whose plain Ingredient is named like a Base recipe of the file needs that
-//     Base recipe's Ingredient to exist first (the store creates it with the Base recipe, never from ingredients[]).
-//
-// checkBaseCycles sees only the first kind and checkHolderCycles only the second, so a cycle made of both slipped
-// through: the plan said Ready, then Apply failed with ErrStale. The review must see the cycle on a tile.
+// Only a line answered "file" is an edge: that Recipe calls for the other. A line answered "keep" is no edge: it goes on
+// a new plain Ingredient keyed by its name, and a Base recipe's Ingredient is keyed base-recipe:<id>, so a kept line
+// named after another Base recipe depends on nothing. The plan is Ready and Apply writes everything.
 
 func fileBase(name string, yield float64, unit string, lines ...recipefile.Line) recipefile.Recipe {
 	r := miniRecipe(name)
@@ -35,78 +30,79 @@ func cycleProblems(p recipefile.Plan) []recipefile.Problem {
 	return out
 }
 
-func TestACycleMixingAFileAnswerAndAKeptLineIsAProblemOnATileNotAFailedApply(t *testing.T) {
-	// Ragù keeps "béchamel" as a plain line; Béchamel's "ragù" line is answered file -> Ragù.
+func TestAKeptLineIsNoEdgeSoARagùThatKeepsBéchamelAndABéchamelThatCallsRagùIsReady(t *testing.T) {
 	ragu := fileBase("Ragù", 1, "kg", recipefile.Line{Ingredient: "béchamel", Quantity: 100, Unit: "ml"})
 	bech := fileBase("Béchamel", 1, "l", recipefile.Line{Ingredient: "ragù", Quantity: 50, Unit: "g"})
 	f := fileOf(ragu, bech)
 	f.Ingredients = []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}, {Name: "ragù", BaseUnit: "g"}}
-	kept, answered := "$.recipes[0].ingredients[0]", "$.recipes[1].ingredients[0]"
 	d := recipefile.Decisions{BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{
-		kept: {Action: recipefile.BaseKeep}, answered: fileAnswer(0),
+		"$.recipes[0].ingredients[0]": {Action: recipefile.BaseKeep}, "$.recipes[1].ingredients[0]": fileAnswer(0),
 	}}
-
 	p := plan(t, f, recipefile.Existing{}, d)
-	if p.Ready {
-		t.Fatal("Ragù needs Béchamel's Ingredient (a kept line) and Béchamel needs Ragù (a file answer): no write order exists, so the review cannot say Ready")
+	if !p.Ready || len(cycleProblems(p)) != 0 {
+		t.Fatalf("Ragù keeps a plain béchamel line, Béchamel calls for Ragù: no cycle, ready; problems %+v", p.Problems)
 	}
-	probs := cycleProblems(p)
-	if len(probs) == 0 {
-		t.Fatalf("want a base_recipe_cycle Problem: %+v", p.Problems)
+	c, err := recipefile.BuildCommit(f, recipefile.Existing{}, d, noImages)
+	if err != nil {
+		t.Fatalf("BuildCommit: %v", err)
 	}
-	for _, pr := range probs {
-		if pr.Path != kept && pr.Path != answered {
-			t.Errorf("the Problem belongs on a tile of the cycle (%s or %s), got %q", kept, answered, pr.Path)
-		}
-		if !strings.Contains(pr.Message, "Ragù") || !strings.Contains(pr.Message, "Béchamel") {
-			t.Errorf("the message names the Recipes of the cycle: %q", pr.Message)
-		}
-		if strings.Contains(pr.Message, "each keep a line named after the other") {
-			t.Errorf("only one of the two keeps a line, so \"each keep a line\" is wrong: %q", pr.Message)
-		}
+	pos := map[int]int{}
+	for i, rc := range c.Recipes {
+		pos[rc.Index] = i
 	}
-	// BuildCommit refuses what the review refuses.
-	var notReady *recipefile.NotReadyError
-	if _, err := recipefile.BuildCommit(f, recipefile.Existing{}, d, noImages); !errors.As(err, &notReady) {
-		t.Errorf("BuildCommit = %v, want *NotReadyError", err)
+	if pos[0] > pos[1] {
+		t.Errorf("write order = %v: Ragù comes before Béchamel, which calls for it", pos)
 	}
 }
 
-func TestAThreeRecipeCycleMixingBothKindsNamesItsPathLikeCycleMessageDoes(t *testing.T) {
-	// Ragù keeps "béchamel"; Béchamel's "roux" line is answered file -> Roux; Roux's "ragù" line is answered file -> Ragù.
+func TestAThreeRecipeLoopClosedOnlyByAKeptLineIsReady(t *testing.T) {
+	// Ragù keeps "béchamel"; Béchamel's "roux" is answered file -> Roux; Roux's "ragù" is answered file -> Ragù.
 	ragu := fileBase("Ragù", 1, "kg", recipefile.Line{Ingredient: "béchamel", Quantity: 100, Unit: "ml"})
 	bech := fileBase("Béchamel", 1, "l", recipefile.Line{Ingredient: "roux", Quantity: 80, Unit: "g"})
 	roux := fileBase("Roux", 160, "g", recipefile.Line{Ingredient: "ragù", Quantity: 20, Unit: "g"})
 	f := fileOf(ragu, bech, roux)
 	f.Ingredients = []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}, {Name: "roux", BaseUnit: "g"}, {Name: "ragù", BaseUnit: "g"}}
-	kept, toRoux, toRagu := "$.recipes[0].ingredients[0]", "$.recipes[1].ingredients[0]", "$.recipes[2].ingredients[0]"
 	d := recipefile.Decisions{BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{
-		kept: {Action: recipefile.BaseKeep}, toRoux: fileAnswer(2), toRagu: fileAnswer(0),
+		"$.recipes[0].ingredients[0]": {Action: recipefile.BaseKeep},
+		"$.recipes[1].ingredients[0]": fileAnswer(2),
+		"$.recipes[2].ingredients[0]": fileAnswer(0),
 	}}
+	p := plan(t, f, recipefile.Existing{}, d)
+	if !p.Ready || len(cycleProblems(p)) != 0 {
+		t.Fatalf("only the kept line would close the loop, and it is no edge: ready, no cycle; problems %+v", p.Problems)
+	}
+	if _, err := recipefile.BuildCommit(f, recipefile.Existing{}, d, noImages); err != nil {
+		t.Fatalf("BuildCommit: %v", err)
+	}
+}
 
+func TestAThreeRecipeCycleOfFileAnswersNamesItsPathLikeCycleMessageDoes(t *testing.T) {
+	a := fileBase("Ragù", 1, "kg", recipefile.Line{Ingredient: "béchamel", Quantity: 100, Unit: "ml"})
+	b := fileBase("Béchamel", 1, "l", recipefile.Line{Ingredient: "roux", Quantity: 80, Unit: "g"})
+	c := fileBase("Roux", 160, "g", recipefile.Line{Ingredient: "ragù", Quantity: 20, Unit: "g"})
+	f := fileOf(a, b, c)
+	f.Ingredients = []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}, {Name: "roux", BaseUnit: "g"}, {Name: "ragù", BaseUnit: "g"}}
+	d := recipefile.Decisions{BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{
+		"$.recipes[0].ingredients[0]": fileAnswer(1),
+		"$.recipes[1].ingredients[0]": fileAnswer(2),
+		"$.recipes[2].ingredients[0]": fileAnswer(0),
+	}}
 	p := plan(t, f, recipefile.Existing{}, d)
 	if p.Ready {
-		t.Fatal("Ragù -> Béchamel (kept line) -> Roux -> Ragù is a cycle: the review cannot say Ready")
+		t.Fatal("Ragù, Béchamel and Roux call for each other in a ring: not ready")
 	}
 	probs := cycleProblems(p)
 	if len(probs) == 0 {
 		t.Fatalf("want a base_recipe_cycle Problem: %+v", p.Problems)
 	}
 	for _, pr := range probs {
-		if pr.Path != kept && pr.Path != toRoux && pr.Path != toRagu {
-			t.Errorf("the Problem belongs on a tile of the cycle, got %q", pr.Path)
-		}
 		for _, name := range []string{"Ragù", "Béchamel", "Roux"} {
 			if !strings.Contains(pr.Message, name) {
 				t.Errorf("the message names the whole path, %s is missing: %q", name, pr.Message)
 			}
 		}
-		if strings.Contains(pr.Message, "each keep a line named after the other") {
-			t.Errorf("\"each keep a line named after the other\" is wrong for three Recipes: %q", pr.Message)
-		}
-		// cycleMessage's shape: "A calls for B, which calls for C, which calls for A".
-		if strings.Count(pr.Message, "which calls for") != 2 {
-			t.Errorf("want the shape \"A calls for B, which calls for C, which calls for A\": %q", pr.Message)
+		if strings.Contains(pr.Message, "each keep") || strings.Count(pr.Message, "which calls for") != 2 {
+			t.Errorf("want \"A calls for B, which calls for C, which calls for A\": %q", pr.Message)
 		}
 	}
 }

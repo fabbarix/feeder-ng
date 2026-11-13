@@ -466,7 +466,8 @@ func TestACreateAnswerNamedLikeARecipeOfTheSameFileIsAProblemOnTheTile(t *testin
 	}
 }
 
-func TestTwoFileBaseRecipesWithKeptLinesNamedAfterEachOtherAreAProblemNotAFailedApply(t *testing.T) {
+func TestTwoFileBaseRecipesWithKeptLinesNamedAfterEachOtherAreReady(t *testing.T) {
+	// A kept line is no dependency: it goes on a new plain Ingredient keyed by its name, apart from the Base recipe's.
 	ragu := miniRecipe("Ragù")
 	ragu.BaseRecipe, ragu.Yield, ragu.YieldUnit = ptr(true), 1, "kg"
 	ragu.Ingredients = []recipefile.Line{{Ingredient: "béchamel", Quantity: 100, Unit: "ml"}}
@@ -480,15 +481,11 @@ func TestTwoFileBaseRecipesWithKeptLinesNamedAfterEachOtherAreAProblemNotAFailed
 		a: {Action: recipefile.BaseKeep}, b: {Action: recipefile.BaseKeep},
 	}}
 	p := plan(t, f, recipefile.Existing{}, d)
-	if p.Ready {
-		t.Fatal("each plain Ingredient would have to exist before the Base recipe that the other one needs: the review cannot say Ready")
+	if !p.Ready {
+		t.Fatalf("two kept lines are no cycle: the plan is Ready; problems %+v", p.Problems)
 	}
-	var onTile bool
-	for _, pr := range p.Problems {
-		onTile = onTile || pr.Path == a || pr.Path == b
-	}
-	if !onTile {
-		t.Errorf("want a Problem on one of the two tiles (%s, %s): %+v", a, b, p.Problems)
+	if _, err := recipefile.BuildCommit(f, recipefile.Existing{}, d, noImages); err != nil {
+		t.Fatalf("BuildCommit: %v", err)
 	}
 }
 
