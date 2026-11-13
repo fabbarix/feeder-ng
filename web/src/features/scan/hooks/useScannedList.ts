@@ -49,6 +49,8 @@ export interface ScannedList {
   settle(results: ScanResult[]): void
   drop(clientUuids: string[]): void
   reprice(updates: PriceUpdate[]): void
+  /** Replaces the entries with a pure change of them (a receipt apply: lib/receiptApplied), saved like any other change */
+  update(change: (entries: SessionEntry[]) => SessionEntry[]): void
   /** Change Shop: empties the session and its stored record */
   clear(): void
 }
@@ -97,6 +99,7 @@ export function useScannedList(options: UseScannedListOptions): ScannedList {
   const settle = useCallback((results: ScanResult[]) => setState((s) => ({ ...s, entries: settleEntries(s.entries, results) })), [])
   const drop = useCallback((clientUuids: string[]) => setState((s) => ({ ...s, entries: dropEntries(s.entries, clientUuids) })), [])
   const reprice = useCallback((updates: PriceUpdate[]) => setState((s) => ({ ...s, entries: repriceEntries(s.entries, updates) })), [])
+  const update = useCallback((change: (entries: SessionEntry[]) => SessionEntry[]) => setState((s) => ({ ...s, entries: change(s.entries) })), [])
   const clear = useCallback(() => {
     setState((s) => ({ ...s, entries: [] }))
     void store.clear()
@@ -115,6 +118,7 @@ export function useScannedList(options: UseScannedListOptions): ScannedList {
     settle,
     drop,
     reprice,
+    update,
     clear,
   }
 }

@@ -9,6 +9,8 @@ import type { ScanController } from '../hooks/useScanController'
 import type { ScanFlow } from '../hooks/useScanFlow'
 
 const controllerHook = vi.hoisted(() => ({ useScanController: vi.fn() }))
+// Receipt reading: the assistant's status is not this file's concern; off, so the footer row stays hidden.
+vi.mock('../../import/hooks/useReadAvailability', () => ({ useReadAvailability: () => ({ loading: false, enabled: false, isAdmin: false, photos: false, settingsLink: false, statusFailed: false, retry: () => {} }) }))
 vi.mock('../hooks/useScanController', () => controllerHook)
 vi.mock('../../shops/hooks/useShops', () => ({
   useShops: () => ({ shops: [{ id: 1, name: 'Aldi', location: { lat: 1, lon: 1 } }, { id: 2, name: 'Coop' }], isLoading: false, error: null, add: vi.fn() }),
@@ -55,7 +57,7 @@ function controller(over: Partial<ScanController> = {}): ScanController {
     muted: false,
     toggleMute: vi.fn(),
     canVibrate: true,
-    scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
+    scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), update: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
     list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], extras: [makeExtra()], progress: { ticked: 1, total: 3 } }),
     online: true,
     pendingCount: 0,

@@ -39,6 +39,8 @@ import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
 import { useScrollAboveSheet } from '../hooks/useScrollAboveSheet'
+import { useScanReceipt } from '../hooks/useScanReceipt'
+import { ReadReceiptFooter } from '../../receipt/components/ReadReceiptFooter'
 import { initialChoice, type ScanChoice } from '../lib/initialChoice'
 import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import type { ListView } from '../lib/listView'
@@ -174,6 +176,8 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const { view, choose } = useListView(scanCount)
   const justScanned = useJustScanned(scanCount, scanned.rows[0]?.key ?? null)
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
+  // Receipt reading (beta.7): the Scanned list's last row, the session the receipt routes read, an apply's results.
+  const receipt = useScanReceipt({ shopId: isShop && shop ? shop.id : null, scanned, online: c.online, pendingScans: c.pendingCount, refreshLive: c.refreshLive })
 
   // The Price entry's row. A new Product's row is asked for by its `new:<uuid>` key and found by its scan once the
   // server's Result has re-keyed it to the Product id.
@@ -270,6 +274,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onIncrement={(key) => void flow.increment(key)}
           onDecrement={(key) => void flow.decrement(key)}
           onRemove={(key) => void flow.removeRow(key)}
+          footer={receipt ? <ReadReceiptFooter {...receipt} /> : undefined}
         />
       ) : (
         <ToGetList entries={scanned.toGet.map((line) => lineEntry(line, c.currency, c.system))} onOpen={() => navigate('/shop')} />

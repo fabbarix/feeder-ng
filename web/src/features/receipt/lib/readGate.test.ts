@@ -1,6 +1,6 @@
 // RR4 review: the gate of "Read the receipt", moved out of the screen (design 3.2, 7.3).
 import { describe, expect, it } from 'vitest'
-import { readGate, type ReadGateInput } from './readGate'
+import { footerAvailability, readGate, type ReadGateInput } from './readGate'
 
 const base: ReadGateInput = { offline: false, avail: { loading: false, enabled: true, photos: true }, photoCount: 1, preparing: false, reading: false }
 const gate = (over: Partial<ReadGateInput> = {}, avail: Partial<ReadGateInput['avail']> = {}) => readGate({ ...base, ...over, avail: { ...base.avail, ...avail } })
@@ -31,5 +31,17 @@ describe('readGate', () => {
   it('the household limit says when to try again, once', () => {
     expect(gate({}, { limitMessage: 'later' })).toEqual({ canRead: false, reasons: ['later'] })
     expect(gate({}, { enabled: false, message: 'later', limitMessage: 'later' }).reasons).toEqual(['later'])
+  })
+})
+
+describe('footerAvailability', () => {
+  it('is available when the assistant reads photos', () => {
+    expect(footerAvailability({ loading: false, photos: true, isAdmin: false })).toEqual({ assistantAvailable: true, isAdmin: false })
+  })
+  it('is unavailable without photos, and keeps the Admin flag for the muted row', () => {
+    expect(footerAvailability({ loading: false, photos: false, isAdmin: true })).toEqual({ assistantAvailable: false, isAdmin: true })
+  })
+  it('shows nothing while the status loads, not even to an Admin', () => {
+    expect(footerAvailability({ loading: true, photos: false, isAdmin: true })).toEqual({ assistantAvailable: false, isAdmin: false })
   })
 })

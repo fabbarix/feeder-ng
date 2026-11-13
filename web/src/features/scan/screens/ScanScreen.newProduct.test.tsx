@@ -13,6 +13,8 @@ import { okResult, passata, products as listProducts, scanOp } from '../lib/scan
 import type { OfflineProduct } from '../types'
 
 const controllerHook = vi.hoisted(() => ({ useScanController: vi.fn() }))
+// Receipt reading: the assistant's status is not this file's concern; off, so the footer row stays hidden.
+vi.mock('../../import/hooks/useReadAvailability', () => ({ useReadAvailability: () => ({ loading: false, enabled: false, isAdmin: false, photos: false, settingsLink: false, statusFailed: false, retry: () => {} }) }))
 vi.mock('../hooks/useScanController', () => controllerHook)
 vi.mock('../../shops/hooks/useShops', () => ({ useShops: () => ({ shops: [{ id: 2, name: 'Coop' }], isLoading: false, error: null, add: vi.fn() }) }))
 vi.mock('../lib/lastShop', () => ({ getLastShopId: vi.fn(() => 2), setLastShopId: vi.fn(), LAST_SHOP_KEY: 'x' }))
@@ -37,7 +39,7 @@ const controller = (over: Partial<ScanController> = {}): ScanController => ({
   status: 'ready', error: null,
   camera: { status: 'ready', videoRef: { current: null }, torchSupported: true, torchOn: false, toggleTorch: vi.fn() },
   recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
-  muted: false, toggleMute: vi.fn(), canVibrate: true, scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
+  muted: false, toggleMute: vi.fn(), canVibrate: true, scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), update: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
   list: makeList({ lines }),
   online: true, pendingCount: 0, rejectedCount: 0, dismissRejected: vi.fn(), notices: [], dismissNotice: vi.fn(),
   ingredients: [{ id: 1, name: 'passata', baseUnit: 'g' }], currency: 'USD', system: 'imperial', products, setPicturePicking: vi.fn(), ...over,
@@ -123,7 +125,7 @@ describe('ScanScreen: the Price entry on a new Product\'s row', () => {
   const createdRow = buildScannedRows([{ op: { ...scanOp('u-new', passata), productId: undefined }, result: okResult(scanOp('u-new', passata), passata) }], listProducts)[0]!
   const scannedWith = (rows: typeof createdRow[]): ScanController['scanned'] => ({
     loaded: true, entries: [], rows, totals: { spentCents: 0, unpricedCount: rows.length }, toGet: [], toGetCount: 0, nextUnpriced: () => null,
-    record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn(),
+    record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), update: vi.fn(), clear: vi.fn(),
   })
 
   it('new:<uuid> finds the row after it re-keyed to the Product id: the keypad opens on it, outlined', () => {
