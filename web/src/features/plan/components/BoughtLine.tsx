@@ -1,4 +1,4 @@
-import './bought.css'
+import '../plan.css'
 import type { BoughtInfo } from '../lib/bought'
 import { boughtLine } from '../lib/bought'
 

@@ -1,4 +1,4 @@
-import './bought.css'
+import '../plan.css'
 import type { MealWarning, WarningContext } from '../lib/bought'
 import { warningLine } from '../lib/bought'
 

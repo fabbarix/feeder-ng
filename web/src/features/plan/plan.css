@@ -424,3 +424,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* b5-bow: the sheet's Bought line and the Pinned/Bought warn line (token-based). */
+.bought-line {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+}
+
+.rule-warning-line {
+  margin: 0;
+  color: var(--status-spoil-fg);
+  font-size: var(--text-body-size);
+}

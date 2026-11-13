@@ -3,6 +3,7 @@ import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../u
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { alternativeNote, swapMeta } from '../lib/choose'
 import { planStrings as s } from '../strings'
+import type { BoughtInfo } from '../lib/bought'
 import type { Alternative, PlanSlot } from '../types'
 import '../plan.css'
 
@@ -14,6 +15,8 @@ export interface SwapSheetProps {
   alternatives: Alternative[]
   isLoading: boolean
   onPick: (recipeId: number) => void
+  /** B5-BOW: the swapped meal's Bought info; when Bought the sheet notes what stays in Stock (lib/bought swapBoughtNote). */
+  bought?: BoughtInfo | null
 }
 
 /** Bottom sheet with the top 3 alternatives as rows (thumb, Recipe, first reason and the Leftover); a tap swaps and pins. */

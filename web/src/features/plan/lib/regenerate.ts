@@ -1,5 +1,6 @@
 import { planStrings as s } from '../strings'
 import type { PlanSlot } from '../types'
+import type { RegenerateDryRun } from './bought'
 
 /** How many meals Regenerate would change: each Course's Planned Meal that is state planned, not Pinned, dated today or later. */
 export function regenerateImpact(slots: PlanSlot[], today: string): number {
@@ -15,7 +16,7 @@ export interface RegenerateConfirmCopy {
 }
 
 /** Copy of the Regenerate confirm dialog; the body states the count (plan 2.4). */
-export function regenerateConfirmCopy(unpinned: number): RegenerateConfirmCopy {
+export function regenerateConfirmCopy(unpinned: number, _dryRun?: RegenerateDryRun | null): RegenerateConfirmCopy {
   const body = unpinned === 0 ? s.regenerateNone : s.regenerateCount(unpinned)
   return { title: s.regenerateConfirmTitle, body, confirmLabel: s.regenerateConfirmLabel }
 }
