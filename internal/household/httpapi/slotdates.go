@@ -108,58 +108,28 @@ func (a *api) patchSlotDate(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	timeField, err := patchedTime(in.Time)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	ctx := r.Context()
 	today, err := clock.HouseholdToday(ctx, a.d.DB, a.d.Clock)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	row, err := a.st.SlotDate(ctx, slot.ID, date)
+	dryRun := r.URL.Query().Get("dryRun") == "1"
+	notServed := in.NotServed != nil && *in.NotServed
+	row, err := a.st.PatchSlotDate(ctx, slot.ID, date, household.SlotDatePatch{
+		NotServed: in.NotServed, Time: timeField, Today: today, DryRun: dryRun,
+	})
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	// Check every field before the first write, so a refused PATCH leaves the date as it was.
-	newTime, timeGiven, err := patchedTime(in.Time, row.Time, date, today)
-	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	if in.NotServed != nil && *in.NotServed {
-		started, err := a.st.SlotStarted(ctx, slot.ID, date)
-		if err != nil {
-			writeErr(w, err)
-			return
-		}
-		if err := household.ValidateNotServedChange(date, today, started); err != nil {
-			writeErr(w, err)
-			return
-		}
-	}
-	if r.URL.Query().Get("dryRun") == "1" {
-		a.writeSlotDateRemoves(w, r, slot, date, in.NotServed != nil && *in.NotServed)
-		return
-	}
-	if in.NotServed != nil && !*in.NotServed {
-		if err := a.st.ServeAgain(ctx, slot.ID, date); err != nil {
-			writeErr(w, err)
-			return
-		}
-	}
-	// Re-read after ServeAgain, which may have changed the row, then apply the time and Not served.
-	row, err = a.st.SlotDate(ctx, slot.ID, date)
-	if err != nil {
-		writeErr(w, err)
-		return
-	}
-	if timeGiven {
-		row.Time = newTime
-	}
-	if in.NotServed != nil && *in.NotServed {
-		row.NotServed = true
-	}
-	if err := a.st.SaveSlotDate(ctx, row); err != nil {
-		writeErr(w, err)
+	if dryRun {
+		a.writeSlotDateRemoves(w, r, slot, date, row, notServed)
 		return
 	}
 	a.changed("slotDates")
@@ -171,34 +141,32 @@ func (a *api) patchSlotDate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, b)
 }
 
-// patchedTime reads the time field of a PATCH: absent (not touched), null or "" (the usual time), or an HH:MM. A
-// date in the past keeps the time it was served at, so a change of it is refused with date_past.
-func patchedTime(raw json.RawMessage, current, date, today string) (newTime string, given bool, err error) {
+// patchedTime reads the time field of a PATCH: absent (nil, not touched), null or "" (the usual time), or the text
+// of an HH:MM time, which the store checks. A field that is not a string is time_invalid.
+func patchedTime(raw json.RawMessage) (*string, error) {
 	if raw == nil {
-		return current, false, nil
+		return nil, nil
+	}
+	if string(raw) == "null" {
+		usual := ""
+		return &usual, nil
 	}
 	var s string
-	if string(raw) != "null" {
-		if err := json.Unmarshal(raw, &s); err != nil {
-			return "", true, &household.ValidationError{Field: "time", Message: "must be a 24-hour HH:MM time", Reason: "time_invalid"}
-		}
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, &household.ValidationError{Field: "time", Message: "must be a 24-hour HH:MM time", Reason: "time_invalid"}
 	}
-	if err := household.ValidateSlotTime(s); err != nil {
-		return "", true, err
-	}
-	if s != current && date < today {
-		return "", true, &household.ValidationError{Field: "time", Message: "a past date keeps its time", Reason: "date_past"}
-	}
-	return s, true, nil
+	return &s, nil
 }
 
 // writeSlotDateRemoves answers a dry run: the unresolved Planned Meals a Not served date would remove, in the slot's
-// Course order, and nothing written. Serving again, or a change of time only, removes nothing.
-func (a *api) writeSlotDateRemoves(w http.ResponseWriter, r *http.Request, slot household.MealSlot, date string, notServed bool) {
+// Course order, and nothing written. Serving again, or a change of time only, removes nothing; neither does a slot
+// whose instant is already over (its meals wait in To confirm).
+func (a *api) writeSlotDateRemoves(w http.ResponseWriter, r *http.Request, slot household.MealSlot, date string,
+	row household.SlotDate, notServed bool) {
 	var out slotDateRemovesOut
 	out.Removes.PlannedMeals = []removedMealOut{}
 	if notServed {
-		meals, err := a.st.UnresolvedMealsOn(r.Context(), slot.ID, date)
+		meals, err := a.st.UnresolvedMealsOn(r.Context(), slot.ID, date, household.EffectiveTime(slot.Time, row), a.d.Clock.Now())
 		if err != nil {
 			writeErr(w, err)
 			return
@@ -218,39 +186,4 @@ func (a *api) portionsWithGuests(r *http.Request, att []household.Attendee, gues
 		return 0, err
 	}
 	return household.PortionsWithGuests(members, att, guests)
-}
-
-// checkNotEmptiedWhileStarted refuses saving Who's eating with no Member and no Guest on a date whose Meal Slot has
-// started (a Course Cooked or Not cooked): 409 slot_started, nothing written (PM decision on U2). Emptying a date that
-// already has no Member is not a change, so it is not refused.
-func (a *api) checkNotEmptiedWhileStarted(r *http.Request, slotID int64, date string, att []household.Attendee, guests *int) error {
-	ctx := r.Context()
-	after := 0
-	if guests != nil {
-		after = *guests
-	} else {
-		row, err := a.st.SlotDate(ctx, slotID, date)
-		if err != nil {
-			return err
-		}
-		after = row.Guests
-	}
-	if !household.EmptiesDate(att, after) {
-		return nil
-	}
-	current, _, err := a.st.DateAttendance(ctx, slotID, date)
-	if err != nil {
-		return err
-	}
-	if len(current) == 0 {
-		return nil
-	}
-	started, err := a.st.SlotStarted(ctx, slotID, date)
-	if err != nil {
-		return err
-	}
-	if started {
-		return household.ErrSlotStarted
-	}
-	return nil
 }

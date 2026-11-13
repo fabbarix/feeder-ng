@@ -375,12 +375,14 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 	for _, m := range s.Meals {
 		stored[m.Key] = m
 	}
-	// Batches that follow portions (ADR 0014 point 6): Apply writes them, so the kept meal is not upserted as well.
-	raised := make(map[Key]bool, len(res.Raised))
+	// Batches that follow portions (ADR 0014 point 6): RaiseBatches writes them. A raised kept meal is upserted only when
+	// its re-check changes too, and then carries the raised Batches and portions, so Apply cannot undo the raise.
+	raised := make(map[Key]BatchRaise, len(res.Raised))
 	for _, r := range res.Raised {
 		k := keyOf(r.Key)
-		raised[k] = true
-		ch.RaiseBatches = append(ch.RaiseBatches, BatchRaise{Key: k, Batches: float64(r.Batches), Portions: r.Portions})
+		br := BatchRaise{Key: k, Batches: float64(r.Batches), Portions: r.Portions}
+		raised[k] = br
+		ch.RaiseBatches = append(ch.RaiseBatches, br)
 	}
 	rechecks := make(map[Key]planner.Recheck, len(res.Rechecks))
 	for _, rc := range res.Rechecks {
@@ -389,9 +391,10 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 	for _, kk := range res.Kept {
 		k := keyOf(kk)
 		m, ok := stored[k]
-		if !ok || raised[k] {
+		if !ok {
 			continue
 		}
+		raise, isRaised := raised[k]
 		relaxed, why, changedWhy := m.Relaxed, m.Why, false
 		if rc, fresh := rechecks[k]; fresh {
 			relaxed, why = rc.Relaxed, []Why{}
@@ -405,15 +408,18 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 			}
 			changedWhy = !sameWhy(why, m.Why)
 		}
-		portions := m.Portions
+		portions, batches := m.Portions, m.Batches
 		if p, ok := res.KeptPortions[kk]; ok {
 			portions = p
 		}
-		if relaxed == m.Relaxed && !changedWhy && samePortions(portions, m.Portions) {
+		if isRaised {
+			portions, batches = raise.Portions, raise.Batches
+		}
+		if relaxed == m.Relaxed && !changedWhy && (isRaised || samePortions(portions, m.Portions)) {
 			continue
 		}
 		ch.Upserts = append(ch.Upserts, Meal{
-			ID: m.ID, Key: k, RecipeID: m.RecipeID, Batches: m.Batches, Portions: portions,
+			ID: m.ID, Key: k, RecipeID: m.RecipeID, Batches: batches, Portions: portions,
 			State: m.State, From: m.From, Why: why, Relaxed: relaxed,
 		})
 	}

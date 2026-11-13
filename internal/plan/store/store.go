@@ -342,6 +342,11 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 				return mapErr(err)
 			}
 		}
+		// An upsert of a raised meal carries the raised Batches and portions, so it cannot undo the raise above.
+		raises := make(map[plan.Key]plan.BatchRaise, len(ch.RaiseBatches))
+		for _, r := range ch.RaiseBatches {
+			raises[r.Key] = r
+		}
 		for _, m := range ch.Upserts {
 			cur, err := st.Meal(ctx, m.Key)
 			if err == nil && (cur.Pinned || cur.State != plan.StatePlanned) {
@@ -349,6 +354,9 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 			}
 			if err != nil && !errors.Is(err, ErrNotFound) {
 				return err
+			}
+			if r, ok := raises[m.Key]; ok {
+				m.Batches, m.Portions = r.Batches, r.Portions
 			}
 			m.State, m.Pinned = plan.StatePlanned, false
 			if _, err := st.SaveMeal(ctx, m); err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/cook"
 	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
+	"github.com/fabbarix/feeder-ng/internal/household"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/notify"
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -78,9 +79,13 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
 	for _, m := range meals {
 		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
+		// A Meal Slot that is gone is skipped; any other lookup error is returned (a missing reminder is not silent).
 		day, err := s.slots.SlotDate(ctx, m.Key.MealSlotID, m.Key.Date)
-		if err != nil {
+		if errors.Is(err, household.ErrNotFound) {
 			continue
+		}
+		if err != nil {
+			return notify.Facts{}, err
 		}
 		at, err := plan.SlotInstant(m.Key.Date, day.Time, loc)
 		if err != nil {
