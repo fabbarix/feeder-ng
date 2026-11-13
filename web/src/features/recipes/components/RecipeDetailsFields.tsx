@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Checkbox, CoursePicker, FieldRow, NumberField, Switch, TextArea, TextField } from '../../../ui'
+import { frozenUseByHelper } from '../../../lib/leftovers/frozenUseBy'
 import { codeMessage, courseStrings, recipeStrings } from '../strings'
 import { numberText, numberValue, type DraftErrors, type RecipeDraft } from '../lib/draft'
 import { showsWholeMeal } from '../lib/recipeCourses'
@@ -17,12 +18,14 @@ export interface RecipeDetailsFieldsProps {
   colourOf?: (name: string) => string | undefined
   /** CRS E2: the household's active Courses, household order: the Courses picker and the Whole meal switch. */
   courses?: readonly CourseChoice[]
+  /** B5-LOW: the Household's Frozen Use-by, named in the helper ("Blank uses the Household's 90 days."); 90 until it is known. */
+  householdFrozenUseBy?: number
 }
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
-export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colourOf, courses = [] }: RecipeDetailsFieldsProps): ReactNode {
+export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colourOf, courses = [], householdFrozenUseBy = 90 }: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
   const main = courses.find((c) => c.main)
   return (
@@ -75,6 +78,16 @@ export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colour
           onChange={(n) => onChange({ reheatMinutes: numberText(n) })}
         />
       </FieldRow>
+      <NumberField
+        size="xs"
+        label={f.frozenUse}
+        unit={recipeStrings.units.days}
+        helper={frozenUseByHelper(householdFrozenUseBy)}
+        hideStepper
+        value={numberValue(draft.frozenUseByDays)}
+        error={fieldError(errors, 'frozenUseByDays')}
+        onChange={(n) => onChange({ frozenUseByDays: numberText(n) })}
+      />
       <Checkbox
         label={f.readyMeal}
         description={f.readyMealHint}

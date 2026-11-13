@@ -69,6 +69,10 @@ export interface LeftoverLike {
   recipeName: string
   portions: number
   useBy: string
+  /** B5-LOW: frozen Leftovers that are not to answer live on the Pantry, not the Board. Absent in older payloads. */
+  frozen?: boolean
+  /** Past its Use-by with portions left: a read-only "Use-by passed" line. */
+  toAnswer?: boolean
 }
 
 export interface StockTotalLike {

@@ -3,6 +3,8 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { Button, EmptyState, ListGroup, ListPage, ListRow, PageHeader, useConfirm, useToast } from '../../../ui'
 import { StoragePlaceSheet } from '../components/StoragePlaceSheet'
 import { useStoragePlaces } from '../hooks/useStoragePlaces'
+import { useLeftovers } from '../../../lib/leftovers/useLeftoverActions'
+import { pantryLeftovers, placeDeleteBody } from '../lib/pantryLeftovers'
 import { stockStrings as strings } from '../strings'
 import type { StoragePlace } from '../types'
 
@@ -14,10 +16,14 @@ export function StoragePlacesScreen(): ReactElement {
   const places = useStoragePlaces()
   const dialogs = useConfirm()
   const toast = useToast()
+  const leftovers = useLeftovers()
   const [editing, setEditing] = useState<StoragePlace | 'new' | null>(null)
 
   const remove = async (place: StoragePlace) => {
-    const answer = await dialogs.choose({ title: strings.places.deleteTitle(place.name), body: strings.places.deleteBody, confirmLabel: strings.places.delete, tone: 'danger' })
+    // B5-LOW: the frozen Leftovers in this place are named: they stay frozen and show under Not sorted.
+    const inPlace = pantryLeftovers(leftovers.leftovers).filter((l) => l.storagePlaceId === place.id)
+    const body = placeDeleteBody(inPlace, strings.places.deleteBody)
+    const answer = await dialogs.choose({ title: strings.places.deleteTitle(place.name), body, confirmLabel: strings.places.delete, tone: 'danger' })
     if (answer !== 'confirm') return
     setEditing(null)
     try {

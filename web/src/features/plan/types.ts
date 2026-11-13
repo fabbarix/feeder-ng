@@ -277,6 +277,14 @@ export interface Leftover {
   fromDate: string
   fromMealSlotId: number
   fromCourseId?: number
+  /** B5-LOW: the Storage Place of a frozen Leftover; absent in older payloads (see lib/leftovers asLeftover). */
+  storagePlaceId?: number | null
+  storagePlaceName?: string | null
+  frozen?: boolean
+  frozenOn?: string | null
+  /** Past its Use-by with portions left: asked, never answered on its own. */
+  toAnswer?: boolean
+  plannedPortions?: number
 }
 
 /** A later Planned Meal the new Leftover is planned for (R4 B13). */

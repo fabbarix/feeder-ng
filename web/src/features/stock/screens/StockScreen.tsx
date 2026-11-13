@@ -38,6 +38,8 @@ import type { StockLot } from '../types'
 import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
+import { LeftoverRow } from '../../../ui/LeftoverActions/LeftoverRow'
+import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
 import { capitalise } from '../lib/display'
@@ -70,6 +72,9 @@ export function StockScreen(): ReactElement | null {
   const lots = useStockLots(selectedId)
   // The household's date comes from the server with the lots; go-off wording uses it.
   const today = spoiled.today ?? lots.today ?? pantry.lots.today ?? ''
+  // B5-LOW: the frozen Leftovers sit in the Storage Place sections (usePantry owns the flow).
+  const leftovers = pantry.leftovers
+  const sections = leftovers.sections
 
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
@@ -152,6 +157,11 @@ export function StockScreen(): ReactElement | null {
                       {strings.filters[f]}
                     </Chip>
                   ))}
+                  {mode === 'places' && leftovers.frozenCount > 0 ? (
+                    <Chip kind="filter" selected={leftovers.onlyLeftovers} onClick={() => leftovers.setOnlyLeftovers(!leftovers.onlyLeftovers)}>
+                      {strings.leftoversFilter}
+                    </Chip>
+                  ) : null}
                 </div>
                 {mode === 'places' ? <PantryFilters view={pantry.view} places={pantry.places} onChange={pantry.setView} /> : null}
                 <Button variant="tertiary" size="sm" icon="settings" onClick={() => navigate('/settings/storage-places')}>
@@ -171,18 +181,20 @@ export function StockScreen(): ReactElement | null {
             <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
           ) : totals.status === 'offline' ? (
             <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
-          ) : totals.status === 'empty' ? (
+          ) : totals.status === 'empty' && leftovers.frozenCount === 0 ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
           ) : mode === 'places' ? (
-            pantry.groups.length === 0 ? (
+            sections.length === 0 ? (
               <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
             ) : (
               <div className="pantry-groups">
-                {pantry.groups.map((g) => {
-                  const name = g.key === -1 ? strings.lotsLabel : (g.place?.name ?? strings.unsorted)
+                {sections.map((section) => {
+                  const name = section.key === -1 ? strings.lotsLabel : section.name
+                  // A group of Leftovers only has no Stock Lots to count.
+                  const label = section.lots.length === 0 && section.leftovers.length > 0 ? name : strings.groupLabel(name, section.lots.length)
                   return (
-                    <ListGroup key={g.key} label={strings.groupLabel(name, g.lots.length)}>
-                      {g.lots.map((lot) => (
+                    <ListGroup key={section.key} label={label}>
+                      {section.lots.map((lot) => (
                         <PantryLotRow
                           key={lot.id}
                           lot={lot}
@@ -190,6 +202,15 @@ export function StockScreen(): ReactElement | null {
                           system={system}
                           placeName={pantry.view.groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
                           onOpen={setOpenLot}
+                        />
+                      ))}
+                      {section.leftovers.map((leftover) => (
+                        <LeftoverRow
+                          key={`leftover-${leftover.id}`}
+                          leftover={leftover}
+                          today={today}
+                          onAction={(kind, leftover) => leftovers.flow.openSheet(kind, leftover)}
+                          showPlace={!pantry.view.groupByPlace}
                         />
                       ))}
                     </ListGroup>
@@ -292,6 +313,8 @@ export function StockScreen(): ReactElement | null {
           })
         }}
       />
+
+      <LeftoverSheets flow={leftovers.flow} />
 
       <AddLotSheet
         open={adding}

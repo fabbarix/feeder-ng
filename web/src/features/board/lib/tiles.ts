@@ -48,15 +48,23 @@ export interface LeftoverRow {
   recipeName: string
   portions: number
   useBy: string
+  toAnswer?: boolean
 }
 
-/** Leftovers with portions > 0, soonest Use-by first (then by recipe name), at most `max`. */
+/**
+ * Leftovers with portions > 0, at most `max`: the questions first (past their Use-by), then soonest Use-by first (then by
+ * recipe name). A frozen Leftover that is not to answer is left out: it lives on the Pantry.
+ */
 export function leftoverRows(leftovers: LeftoverLike[], max: number): LeftoverRow[] {
   return leftovers
-    .filter((l) => l.portions > 0)
-    .sort((a, b) => (a.useBy < b.useBy ? -1 : a.useBy > b.useBy ? 1 : a.recipeName.localeCompare(b.recipeName)))
+    .filter((l) => l.portions > 0 && (l.toAnswer === true || l.frozen !== true))
+    .sort(
+      (a, b) =>
+        Number(b.toAnswer === true) - Number(a.toAnswer === true) ||
+        (a.useBy < b.useBy ? -1 : a.useBy > b.useBy ? 1 : a.recipeName.localeCompare(b.recipeName)),
+    )
     .slice(0, max)
-    .map((l) => ({ id: l.id, recipeName: l.recipeName, portions: l.portions, useBy: l.useBy }))
+    .map((l) => ({ id: l.id, recipeName: l.recipeName, portions: l.portions, useBy: l.useBy, toAnswer: l.toAnswer === true }))
 }
 
 /** Ingredients flagged useSoon, soonest go-off first then name, at most `max`. */

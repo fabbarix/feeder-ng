@@ -29,6 +29,13 @@ vi.mock('../hooks/usePantry', () => ({
     setView: vi.fn(),
     groups: [],
     placeOf: () => null,
+    leftovers: {
+      frozenCount: 0, onlyLeftovers: false, setOnlyLeftovers: vi.fn(), sections: [],
+      flow: {
+        today: '2026-11-09', leftovers: [], sheet: null, details: null, asked: null, context: { storagePlaces: [], recipeFrozenUseBy: null, householdFrozenUseBy: 90, recipeUseByDays: 3, loading: false },
+        busy: false, openSheet: vi.fn(), closeSheet: vi.fn(), confirm: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(), answer: vi.fn(),
+      },
+    },
   }),
 }))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => vi.fn() }))

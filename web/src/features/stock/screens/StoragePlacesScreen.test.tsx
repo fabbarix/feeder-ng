@@ -14,6 +14,7 @@ function setup(list: unknown[]) {
     'POST /api/storage-places': (c: { body?: unknown }) => ({ status: 201, json: { id: 9, ...(c.body as object) } }),
     'PATCH /api/storage-places/2': (c: { body?: unknown }) => ({ json: { id: 2, ...(c.body as object) } }),
     'DELETE /api/storage-places/2': { status: 204 },
+    'GET /api/plan/leftovers': { leftovers: [] },
   })
   renderWithProviders(<StoragePlacesScreen />, '/settings/storage-places')
   return api
@@ -70,5 +71,43 @@ describe('StoragePlacesScreen', () => {
     const d = declarations(readUiCss('ListPage.css'), '.list-page__list')
     expect(d['display']).toBe('grid')
     expect(d['gap']).toMatch(/^var\(--space-(3|4|5|6)\)$/)
+  })
+})
+
+describe('StoragePlacesScreen: frozen Leftovers in the place', () => {
+  const place = { id: 2, name: 'Garage Freezer', kind: 'freezer', default: false }
+  const open = async (leftovers: unknown[]) => {
+    mockApi({
+      'GET /api/storage-places': [place],
+      'GET /api/plan/leftovers': { leftovers },
+      'DELETE /api/storage-places/2': { status: 204 },
+    })
+    renderWithProviders(<StoragePlacesScreen />, '/settings/storage-places')
+    await userEvent.click(await screen.findByRole('button', { name: /Garage Freezer/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Edit Storage Place' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Delete Storage Place' }))
+    return screen.findByRole('dialog', { name: 'Delete Garage Freezer?' })
+  }
+  const frozen = (id: number, name: string, storagePlaceId: number | null) => ({
+    id, recipeId: id, recipeName: name, portions: 2, cookedOn: '2026-11-01', useBy: '2027-02-10', fromDate: '2026-11-01', fromMealSlotId: 2,
+    storagePlaceId, storagePlaceName: storagePlaceId === 2 ? 'Garage Freezer' : null, frozen: true, frozenOn: '2026-11-02', toAnswer: false, plannedPortions: 0,
+  })
+
+  it('names the frozen Leftovers in it and says they stay frozen, under Not sorted', async () => {
+    const confirm = await open([frozen(5, 'Chilli', 2), frozen(6, 'Stew', 2), frozen(7, 'Lasagne', 3)])
+    expect(confirm).toHaveTextContent('Chilli')
+    expect(confirm).toHaveTextContent('Stew')
+    expect(confirm).not.toHaveTextContent('Lasagne') // another place
+    expect(confirm).toHaveTextContent(/2 frozen Leftovers/)
+    expect(confirm).toHaveTextContent(/stay frozen, marked Not sorted/)
+  })
+  it('says one Leftover in the singular', async () => {
+    const confirm = await open([frozen(5, 'Chilli', 2)])
+    expect(confirm).toHaveTextContent(/1 frozen Leftover\b/)
+  })
+  it('keeps the usual text when the place holds no Leftover', async () => {
+    const confirm = await open([frozen(7, 'Lasagne', 3)])
+    expect(confirm).toHaveTextContent('Its Stock stays in the Pantry, marked Not sorted.')
+    expect(confirm).not.toHaveTextContent('Leftover')
   })
 })

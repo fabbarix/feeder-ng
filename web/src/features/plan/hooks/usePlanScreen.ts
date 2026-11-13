@@ -14,6 +14,8 @@ import { useMarkSlotRoute } from './useMarkSlotRoute'
 import { useSlotDate } from './useSlotDate'
 import { usePlanActions } from './usePlanActions'
 import { useRecipeChoices } from './useRecipeChoices'
+import { usePickLeftover } from './usePickLeftover'
+import { useLeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
 
 /** Everything the Plan screen needs: the plan, its actions and which sheet is open for which slot (one at a time). */
 export function usePlanScreen() {
@@ -32,6 +34,8 @@ export function usePlanScreen() {
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
   const slotDate = useSlotDate(plan.slots)
+  const leftoverFlow = useLeftoverFlow(plan.today)
+  const pick = usePickLeftover()
   useMarkSlotRoute({ flow, allCooked })
 
   const slotAt = (key: SlotDayKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
@@ -110,5 +114,15 @@ export function usePlanScreen() {
       setChooseKey(null)
       await actions.setMeal(key, recipeId)
     },
+    /** B5-LOW: "From the freezer": pins the frozen Leftover (by id) to the Course chosen. */
+    pickLeftover: async (leftoverId: number) => {
+      const found = leftoverFlow.leftovers.find((l) => l.id === leftoverId)
+      if (!chooseKey || !found) return
+      const key = chooseKey
+      setChooseKey(null)
+      await pick(key, found)
+    },
+    /** B5-LOW: the Leftovers, the Leftover sheets and the Leftover details of the Plan. */
+    leftovers: leftoverFlow,
   }
 }

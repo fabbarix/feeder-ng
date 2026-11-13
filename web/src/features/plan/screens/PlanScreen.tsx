@@ -8,6 +8,8 @@ import { DayTile } from '../components/DayTile'
 import { AllCookedSheets } from '../components/AllCookedSheets'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
 import { PlanGrid } from '../components/PlanGrid'
+import { PlanLeftovers } from '../components/PlanLeftovers'
+import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import { RecipeChooserSheet } from '../components/RecipeChooserSheet'
 import { SlotDateSheets } from '../components/SlotDateSheets'
 import { SwapSheet } from '../components/SwapSheet'
@@ -91,6 +93,7 @@ export function PlanScreen(): ReactNode {
           <CouldntPlanNotice groups={notice.groups} onFix={fix} span={columns === 7 ? 'full' : 2} />
         </BentoGrid>
       )}
+      <PlanLeftovers flow={s.leftovers} />
       <div ref={gridRef} className="plan__grid-box">
         {body}
       </div>
@@ -110,8 +113,10 @@ export function PlanScreen(): ReactNode {
           onPin={(k) => s.fromSheet(() => void actions.pin(k))}
           onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
           onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
+          onOpenLeftover={(id) => s.fromSheet(() => s.leftovers.openDetails(id))}
         />
       ) : null}
+      <LeftoverSheets flow={s.leftovers} />
       <AllCookedSheets flow={s.allCooked} />
       <SlotDateSheets controller={s.slotDate} />
       <SwapSheet
@@ -129,6 +134,8 @@ export function PlanScreen(): ReactNode {
         recipes={s.choices.recipes}
         isLoading={s.choices.isLoading}
         onPick={(id) => void s.pickRecipe(id)}
+        frozenLeftovers={s.leftovers.leftovers}
+        onPickLeftover={(id) => void s.pickLeftover(id)}
       />
     </div>
   )
