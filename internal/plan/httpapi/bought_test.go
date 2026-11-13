@@ -78,6 +78,44 @@ func (w *boWorld) cell(date string, course int64) *boMeal {
 	return nil
 }
 
+// takeCourseOff edits the Recipe through the API (PUT /api/recipes/{id}) so that it is served as `instead` and not as `course`.
+func (w *boWorld) takeCourseOff(recipeID, course, instead int64) {
+	w.T.Helper()
+	url := fmt.Sprintf("/api/recipes/%d", recipeID)
+	var body map[string]any
+	g := w.Admin.Get(url)
+	if g.Status != 200 || g.JSON(&body) != nil {
+		w.T.Fatalf("GET %s = %d %s", url, g.Status, g.Body)
+	}
+	body["courseIds"] = []int64{instead}
+	if r := w.Admin.Put(url, body); r.Status != 200 {
+		w.T.Fatalf("PUT %s = %d %s", url, r.Status, r.Body)
+	}
+}
+
+func TestABoughtMealThatItsRecipeLostTheCourseOfStaysTheSameRowWithItsRecords(t *testing.T) {
+	w := newBoWorld(t)
+	w.Meal(crsc2.Today, w.Slot, w.Side, w.beans, "planned", false)
+	main := w.Meal(crsc2.Today, w.Slot, w.Main, w.roast, "planned", false)
+	w.bought(main, w.chicken)
+	control := w.Meal("2026-11-10", w.Slot, w.Main, w.roast, "planned", false)
+
+	w.takeCourseOff(w.roast, w.Main, w.Side)
+
+	if n := w.Count(`SELECT COUNT(*) FROM planned_meals WHERE id = ? AND recipe_id = ?`, main, w.roast); n != 1 {
+		t.Fatalf("the Bought Planned Meal (row %d) was deleted by the Recipe edit; it must stay as the same row", main)
+	}
+	if n := w.Count(`SELECT COUNT(*) FROM planned_meal_bought WHERE planned_meal_id = ?`, main); n != 1 {
+		t.Errorf("the Bought records = %d, want 1 kept", n)
+	}
+	if m := w.cell(crsc2.Today, w.Main); m == nil || m.Bought == nil || m.Warning == nil || m.Warning.Code != "course_lost" {
+		t.Errorf("meal = %+v, want it still Bought with warning course_lost", m)
+	}
+	if n := w.Count(`SELECT COUNT(*) FROM planned_meals WHERE id = ?`, control); n != 0 {
+		t.Errorf("the unbought control (row %d) still exists; it must be removed with the lost Course", control)
+	}
+}
+
 func TestABoughtMealNamesTheIngredientsBoughtForIt(t *testing.T) {
 	w := newBoWorld(t)
 	main := w.Meal(crsc2.Today, w.Slot, w.Main, w.roast, "planned", false)
@@ -124,7 +162,7 @@ func TestABoughtMealThatNowBreaksAHardRuleStaysAndSaysWhich(t *testing.T) {
 	}{
 		{"its Recipe was archived", func(w *boWorld) { w.Exec(`UPDATE recipes SET archived = 1 WHERE id = ?`, w.roast) }, "archived", nil},
 		{"the Recipe lost the Course", func(w *boWorld) {
-			w.Exec(`DELETE FROM recipe_courses WHERE recipe_id = ? AND course_id = ?`, w.roast, w.Main)
+			w.takeCourseOff(w.roast, w.Main, w.Side)
 		}, "course_lost", nil},
 		{"a Member now excludes an Ingredient", func(w *boWorld) {
 			w.Exec(`INSERT INTO member_ingredient_exclusions(member_id, ingredient_id) VALUES (?, ?)`, w.Sam, w.cream)

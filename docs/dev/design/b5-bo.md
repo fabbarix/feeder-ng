@@ -26,7 +26,7 @@ resolving the Planned Meal, removing it, or changing its Recipe.
 | 5 | A Slot Rule reservation never drops a held meal and never reserves around it: it counts in the history like a Pinned one, so the rule cell gets a relaxed pick (ADR 0013 point 4). |
 | 6 | **U6.** A held Side beside a Whole meal main is kept; the Whole meal is not a candidate for the main Course ("held back", spec 7.2 step 2); a Whole meal set by hand leaves the held Side uncovered. |
 | 7 | A held meal in a Course nobody eats on the date is kept and shown (step 0b), like a Pinned one. Not served for the whole slot still removes it (the dry run named it first). |
-| 8 | **Clear does not apply to a held meal.** `plan.BuildInput` ignores `Snapshot.Clear` for it; the runner's `invalidOnRead` skips it. So Slot or Variety Rule changes, Swap downstream, Cooked downstream and Tag changes keep it. |
+| 8 | **Clear does not apply to a held meal.** `plan.BuildInput` ignores `Snapshot.Clear` for it; `plan.existing` marks it `Held` and never lists it in `Clear`, so the runner's `invalidOnRead` never sees it as a candidate (it needs no skip of its own). So Slot or Variety Rule changes, Swap downstream, Cooked downstream and Tag changes keep it. |
 | 9 | **new.** When Regenerate re-places a Bought cell, the row is updated **in place** (never delete and insert: the id and so the records survive). The records are removed only when the **Recipe changes** (`SaveMeal` with another `recipe_id`), so a Regenerate that happens to pick the same Recipe leaves it Bought. |
 | 10 | **new, Q18 read literally.** `shopping.Attribute` derives the shortfall of every Planned Meal from the same `derivedLines` (past, unconfirmed Planned Meals sit first in date order and absorb Stock), then gives **past meals no share**. Buying exactly the pack a past, unconfirmed dinner needs therefore Bought nobody. See open question 1. |
 | 11 | **new.** Shares are per Planned Meal and Ingredient and summed per Lot; one Planned Meal's several lines of one Ingredient are one share. A Planned Meal with `MealID` 0 gets none. |
@@ -74,7 +74,7 @@ CREATE INDEX planned_meals_recipe_cooked ON planned_meals (recipe_id, date) WHER
 | Tick's Lot | `internal/shopping/store/store.go` needs `TickLot(ctx, to, ingredientID) (lotID, ok, err)` | not written |
 | Adapter | `internal/shopping/httpapi/wiring.go`: `plans.Meals` sets `MealID: m.ID`; a `boughtRecorder` over the plan store | not written |
 | Repository | `internal/plan/store/bought.go`: `AddBought`, `RemoveBoughtForLot`, `BoughtRecords`, `Mover`; `store.go`: `Meals`/`Meal`/`UnresolvedBefore` fill `Meal.Bought`; `MarkResolved` and `SaveMeal` (Recipe change) delete the records | stubs |
-| Runner | `snapshot.go` `invalidOnRead` skips Bought; `actions.go` `View` fills `CourseView.Warning`; `runner/bought.go` `RegeneratePreview` | `Warning` field and `RegeneratePreview` stub |
+| Runner | `snapshot.go` unchanged (Bought is handled in `plan.existing`, not `invalidOnRead`); `actions.go` `View` fills `CourseView.Warning`; `runner/bought.go` `RegeneratePreview` | `Warning` field and `RegeneratePreview` stub |
 | HTTP | `internal/plan/httpapi/shapes.go`: `mealOut.Bought`, `.Warning` (types added, never filled); `handlers.go` `regenerate` `?dryRun=1` | dry run answers 501 |
 | Structural dry runs | see §9 (files outside the BO list) | no stub: the tests parse JSON themselves |
 
@@ -134,7 +134,7 @@ Ingredients (optional lines included; lowest Member id, then lowest Ingredient i
 | Repository | `internal/plan/store/bought_test.go` | add / replace / refuse / atomic, `Meal.Bought`, remove by Lot, cascade on delete, resolve ends Bought, Recipe change ends Bought (row kept), **every in-place update keeps the records and the row id** (same-Recipe save, Apply upsert, raised Batches, Pin, Unpin, SetWhy), Apply Delete, Apply re-place, Pinned and Bought, the mover (count, move, sum duplicates, registered) | red |
 | Pure plan | `internal/plan/bought_test.go` | `IsBought`; `BuildInput` holds a Bought meal, ignores Clear for it, holds only fresh unresolved unpinned ones, an over unconfirmed one is Pinned; `Reconcile` keeps a held meal and writes its recheck in place; `HardRuleWarning` (every code, order, who wins, who counts, who is checked) | red where stubs |
 | Planner golden | `internal/planner/held_bought_test.go` | held is kept for archived / excluded Recipe / excluded Ingredient / Course lost / new strict Recipe / Variety / Cool-down (each with an unheld **control** that is replaced); nobody eats the Course; Regenerate replaces it, Pinned not; Swap; **equivalence with Pinned for every other cell** (Stock and purchases, Leftover, Cool-down, Variety, Overlap) with a control; raised Batches; the keep check passes over it and the chip is recomputed (4 cases); reservation (vs. the unheld control); Whole meal (U6, 3 cases); `Held` ignored on Pinned / Cooked / Not cooked / Leftover-served; determinism | red |
-| Runner | `internal/plan/runner/held_bought_test.go` | 11 triggers (archive, exclusion, rules changed, Variety Rule, Stock-take, new Recipes, Attendance, nightly, startup, Leftovers change, Swap/Pin before, Not cooked before) leave a Bought meal as the same row; control replaces an unbought one; Batches follow portions in place; nobody eating; Regenerate replaces it **in place** and ends Bought; Regenerate leaves Pinned and Bought alone; Unpin keeps it held; choosing a Recipe ends Bought; Cooked / Not cooked end Bought; Not served removes it; `invalidOnRead` keeps it; `RegeneratePreview` (count, names, order, writes nothing, Not served slots); the view's `bought` and `warning` | red |
+| Runner | `internal/plan/runner/held_bought_test.go` | 11 triggers (archive, exclusion, rules changed, Variety Rule, Stock-take, new Recipes, Attendance, nightly, startup, Leftovers change, Swap/Pin before, Not cooked before) leave a Bought meal as the same row; control replaces an unbought one; Batches follow portions in place; nobody eating; Regenerate replaces it **in place** and ends Bought; Regenerate leaves Pinned and Bought alone; Unpin keeps it held; choosing a Recipe ends Bought; Cooked / Not cooked end Bought; Not served removes it; a Bought meal is never in `Clear` (`plan.existing`), so `invalidOnRead` keeps it; `RegeneratePreview` (count, names, order, writes nothing, Not served slots); the view's `bought` and `warning` | red |
 | HTTP, plan | `internal/plan/httpapi/bought_test.go` | `bought` names by name, Pinned and Bought, `null`s, `warning` for archived / course_lost / excluded Ingredient / excluded Recipe, Pinned gets it, unpinned unbought does not, dry run (shape, nothing written, `[]` not `null`), Regenerate without dry run still regenerates | red |
 | HTTP, structural | `internal/household/httpapi/bought_removes_test.go`, `internal/course/httpapi/bought_impact_test.go` | Not served dry run, batch dry run, real removal cascades, course impact, empty lists | red |
 | BDD | `bdd/features/beta5/plan-stability.feature` (tag `@b5-bo`), steps `bdd/steps_beta5_bo_test.go` | 21 scenarios: the 10 of the plan plus Tick by hand (and with 0), Not needed, no-need Ingredient, past slot, second pack, Undo of one of two, untick, Slot Rule not satisfied, dry run changes nothing, Pinned and Bought | red |
@@ -149,8 +149,8 @@ Run only the BO scenarios: `GODOG_TAGS=@b5-bo go test ./bdd/ -run TestFeatures`.
 
 New or filled in: `internal/plan/bought.go`, `internal/plan/store/bought.go`, `internal/plan/runner/bought.go`, `internal/shopping/attribute.go`.
 Changed: `internal/plan/plan.go` (`existing`), `internal/plan/store/store.go`, `internal/planner/state.go` (+ `reserve.go` needs no change: held is not
-`roleKept`), `internal/plan/runner/{snapshot.go,actions.go}`, `internal/plan/httpapi/{shapes.go,handlers.go}`,
-`internal/shopping/{shopping.go,service/service.go,store/store.go,httpapi/wiring.go}`. CHANGELOG `[Unreleased]` (developer step): "Planned Meals you
+`roleKept`), `internal/plan/runner/actions.go` (`snapshot.go` needs no change: Bought is held in `plan.existing`), `internal/plan/httpapi/{shapes.go,handlers.go}`,
+`internal/shopping/{shopping.go,service/service.go,store/store.go,httpapi/wiring.go}`, `internal/stock/{service/service.go,store/store.go}` (Lot Delete, §9.3), `internal/course/{course.go,store/store.go,httpapi/shapes.go}` and `internal/household/...` (structural dry runs, §9.2), `internal/recipe/store/store.go` (`dropLostCourses` leaves a Bought Planned Meal, below). CHANGELOG `[Unreleased]` (developer step): "Planned Meals you
 bought Ingredients for stay where they are when the plan changes; Regenerate names them first."
 
 ## 9. Needs outside the BO file list (reported to the PM)
@@ -162,9 +162,15 @@ bought Ingredients for stay where they are when the plan changes; Regenerate nam
    LEFT subquery over `planned_meal_bought` JOIN `ingredients` (names, ordered, distinct) in `household/store/{slotdate.go,courses.go}` and
    `course/store/store.go`; served by `household/httpapi/{slotdates.go,removes.go}` and `course/httpapi/shapes.go`. **nil, not empty:** keep the
    domain field `nil` when nothing was bought (`course/store` has a `reflect.DeepEqual` test) and make the JSON layer turn it into `[]`.
-3. **Lot Delete** (ST, plan 2.6): the stock service's Lot Delete must remove the Lot's records. Proposed: ST's service gets an optional
-   `OnLotDeleted func(ctx, lotID int64) error`, set in wiring to `shopping Service.ForgetLot`; `RemoveLot` (Undo of a scan) needs nothing, the
-   scan service already goes through `UndoLot`. Until ST merges there is no Lot Delete to wire.
+3. **Lot Delete** (ST, plan 2.6): the Lot's records are removed by **the stock store, in the same transaction that deletes the Lot**
+   (`internal/stock/store/store.go`, test `internal/stock/store/lot_bought_test.go`). There is **no `OnLotDeleted` hook** and no wiring: the
+   rows live in the same database, so one transaction is atomic and needs no port. `RemoveLot` (Undo of a scan) needs nothing, the scan
+   service already goes through `UndoLot` and `ForgetLot`.
+5. **Recipe edits and a lost Course** (`internal/recipe/store/store.go`, `dropLostCourses`; review finding): when a Recipe loses a Course, it
+   removes the future, unpinned, unresolved Planned Meals of that Course **except a Bought one** (a Planned Meal with a `planned_meal_bought`
+   row). That one stays as the same row with its records; the plan shows it with warning `course_lost` (ADR 0013). Tests:
+   `internal/recipe/store/store_courses_test.go` (`...KeepsItsBoughtPlannedMeal...`), `internal/plan/httpapi/bought_test.go` (through
+   `PUT /api/recipes/{id}`), BDD scenario "A Recipe that loses the Course keeps a Bought Planned Meal..." in `plan-stability.feature`.
 4. **`bdd/steps_beta5_sh_test.go`**: the `@wip` step "the Planned Meal of D is not Bought" (SH) can be removed and its scenario un-parked once
    BO merges: BO's "Not needed is not a purchase" scenario covers it in plan-stability.feature with a real step.
 

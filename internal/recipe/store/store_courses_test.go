@@ -422,3 +422,39 @@ func TestACreateTxAndReplaceTxRejectUnknownOrArchivedCourses(t *testing.T) {
 		}
 	}
 }
+
+// B5-BO (ADR 0013): a Recipe edit leaves a Bought Planned Meal in place, even when the Recipe loses its Course; the plan
+// shows it with the warning course_lost. An unbought control is still removed.
+func TestARecipeThatLosesACourseKeepsItsBoughtPlannedMealWithItsRecords(t *testing.T) {
+	f := newFixture(t)
+	c := f.courses(t)
+	r := f.mustCreate(t, f.simple(t, "Rice", func(in *recipe.Input) { in.CourseIDs = []int64{c.main, c.side} }))
+	slot := f.exec(t, `INSERT INTO meal_slots(weekday,name,time) VALUES (1,'Dinner','19:00')`)
+	f.exec(t, `INSERT INTO meal_slot_courses(meal_slot_id,course_id,position) VALUES (?,?,0),(?,?,1)`, slot, c.main, slot, c.side)
+	pm := func(date string) int64 {
+		return f.exec(t, `INSERT INTO planned_meals(date,meal_slot_id,course_id,recipe_id,batches,portions,state,pinned,created_at,updated_at)
+			VALUES (?,?,?,?,1,4,'planned',0,'t','t')`, date, slot, c.side, r.ID)
+	}
+	bought, control := pm("2026-11-12"), pm("2026-11-13")
+	var flour int64
+	if err := f.db.QueryRow(`SELECT id FROM ingredients WHERE name_key = 'courses flour'`).Scan(&flour); err != nil {
+		t.Fatal(err)
+	}
+	f.exec(t, `INSERT INTO planned_meal_bought(planned_meal_id,ingredient_id,lot_id,quantity,bought_at) VALUES (?,?,900,100,'2026-11-09T11:00:00Z')`, bought, flour)
+
+	in := f.simple(t, "Rice", nil)
+	in.CourseIDs = []int64{c.main}
+	if _, err := f.s.Update(ctx, r.ID, in); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := f.db.QueryRow(`SELECT COUNT(*) FROM planned_meals WHERE id = ? AND recipe_id = ? AND course_id = ?`, bought, r.ID, c.side).Scan(&n); err != nil || n != 1 {
+		t.Errorf("the Bought Planned Meal (row %d) is gone after its Recipe lost the Course (%d rows, %v); it must stay as the same row", bought, n, err)
+	}
+	if got := f.count(t, "planned_meal_bought"); got != 1 {
+		t.Errorf("planned_meal_bought has %d rows, want the 1 record kept", got)
+	}
+	if err := f.db.QueryRow(`SELECT COUNT(*) FROM planned_meals WHERE id = ?`, control).Scan(&n); err != nil || n != 0 {
+		t.Errorf("the unbought control (row %d) was not removed (%d rows, %v)", control, n, err)
+	}
+}

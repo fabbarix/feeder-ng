@@ -140,6 +140,27 @@ func beta5BoughtSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	// The real path of ADR 0013's "a Recipe edit leaves a Bought Planned Meal in place": PUT /api/recipes/{id} with the Side Course
+	// instead of the main one (the stored Recipe read back, so only the Courses change).
+	sc.Step(`^I take the main Course off the shopping Recipe "([^"]*)"$`, func(name string) error {
+		c := w.Ensure().LoginAdmin(w.TB)
+		url := fmt.Sprintf("/api/recipes/%d", id("recipe", name))
+		g := c.Get(url)
+		var body map[string]any
+		if g.Status != 200 || g.JSON(&body) != nil {
+			return fmt.Errorf("GET %s: %d %s", url, g.Status, g.Body)
+		}
+		var side int64
+		if err := w.Ensure().DB.QueryRow(`SELECT id FROM courses WHERE is_main = 0 AND archived = 0 ORDER BY position LIMIT 1`).Scan(&side); err != nil {
+			return err
+		}
+		body["courseIds"] = []int64{side}
+		w.Last = c.Put(url, body)
+		if w.Last.Status != 200 {
+			return fmt.Errorf("PUT %s: %d %s", url, w.Last.Status, w.Last.Body)
+		}
+		return settle()
+	})
 	sc.Step(`^the shopping Recipe "([^"]*)" carries the Tag "([^"]*)"$`, func(recipe, tag string) error {
 		db := w.Ensure().DB
 		if _, err := db.Exec(`INSERT OR IGNORE INTO tags (key, name, colour) VALUES (?, ?, 'tomato')`, tgKey(tag), tag); err != nil {

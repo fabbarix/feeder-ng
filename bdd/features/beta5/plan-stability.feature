@@ -275,3 +275,16 @@ Feature: Plan stability: Bought Planned Meals (beta.5, plan 2.4, ADR 0013)
     And I ask what Regenerate would replace
     Then Regenerate would name 0 Bought Planned Meals
     And the Dinner of 2026-11-10 is Bought for "chicken thighs"
+
+  Scenario: A Recipe that loses the Course keeps a Bought Planned Meal and warns, and loses the unbought ones
+    Given the planned dinners:
+      | date       | recipe        | batches |
+      | 2026-11-09 | tomato pasta  | 1       |
+      | 2026-11-10 | roast chicken | 1       |
+      | 2026-11-11 | roast chicken | 1       |
+    And I scan the barcode "5000000000012" at "Coop" as scan "scan-0001"
+    When I take the main Course off the shopping Recipe "roast chicken"
+    Then the Dinner of 2026-11-10 is "roast chicken"
+    And the Dinner of 2026-11-10 is Bought for "chicken thighs"
+    And the Dinner of 2026-11-10 has the warning "course_lost"
+    And the Dinner of 2026-11-11 is not "roast chicken"
