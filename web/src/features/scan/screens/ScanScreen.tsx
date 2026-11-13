@@ -213,10 +213,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
       >
         <video ref={c.camera.videoRef} playsInline muted autoPlay />
       </ViewfinderStrip>
-      <CameraFailure recovery={c.recovery} />
-      {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
-      <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
-      {/* The Price entry is a non-modal sheet: fixed at the bottom on a phone, docked here, under the camera, from 768 px. */}
+      {/* The Price entry is a non-modal sheet: fixed at the bottom on a phone, docked here, right under the paused camera, from 768 px. */}
       {isShop && pricingRow ? (
         <PriceEntrySheet
           row={pricingRow}
@@ -233,6 +230,9 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onClose={(entry) => savePrice(pricingRow, entry, 'close')}
         />
       ) : null}
+      <CameraFailure recovery={c.recovery} />
+      {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
+      <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
     </div>
   )
 
@@ -278,7 +278,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   )
 
   return (
-    <section className="scan-screen" data-pricing={pricingRow ? 'true' : undefined}>
+    <section className="scan-screen" data-price-entry={pricingRow ? 'open' : undefined}>
       {shop ? (
         <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
       ) : (

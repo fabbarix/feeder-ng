@@ -10,9 +10,10 @@ export function useScrollAboveSheet(rowKey: string | null): void {
     if (rowKey === null || typeof window === 'undefined') return
     const frame = window.requestAnimationFrame(() => {
       const sheet = document.querySelector<HTMLElement>(".sheet[data-modal='false']")
-      const row = document.querySelector<HTMLElement>("[data-pricing='true']")
+      const row = document.querySelector<HTMLElement>(".list-row[data-pricing='true']")
       if (!sheet || !row || getComputedStyle(sheet).position !== 'fixed') return
-      const delta = scrollAboveSheet(row.getBoundingClientRect(), sheet.getBoundingClientRect().top)
+      // The sheet sits at the bottom of the viewport; its height, not its rect, since it may still be sliding in.
+      const delta = scrollAboveSheet(row.getBoundingClientRect(), window.innerHeight - sheet.offsetHeight)
       if (delta === 0) return
       const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
       window.scrollBy({ top: delta, behavior: smooth ? 'smooth' : 'auto' })

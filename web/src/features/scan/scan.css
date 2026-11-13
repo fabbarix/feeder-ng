@@ -196,9 +196,13 @@
   }
 }
 
-/* The row whose Price is being entered is outlined with the accent focus ring: the one focus on the screen. */
+/* The row whose Price is being entered is outlined with the accent focus ring: the one focus on the screen. Drawn inside
+   the row (a negative offset), because the list group clips what goes outside it and the next row covers its bottom edge;
+   an outline, so the row's hover and pressed shading never hide it. */
 .list-row[data-pricing='true'] {
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-tile-sm);
 }
 
 .price-entry__error {
@@ -212,7 +216,7 @@
    last row can scroll up to sit just above it (hooks/useScrollAboveSheet). From 768 px the sheet is docked in the camera
    column and needs no room. */
 @media (max-width: 767.98px) {
-  .scan-screen[data-pricing='true'] {
-    padding-block-end: max(50dvh, min(460px, 85dvh));
+  .scan-screen[data-price-entry='open'] {
+    padding-block-end: max(50dvh, min(480px, 85dvh));
   }
 }

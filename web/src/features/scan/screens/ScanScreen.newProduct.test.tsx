@@ -130,7 +130,7 @@ describe('ScanScreen: the Price entry on a new Product\'s row', () => {
     open(controller({ products: listProducts, scanned: scannedWith([createdRow]), flow: flow({ paused: true, pricing: { key: 'new:u-new' } }) }))
     expect(createdRow.key).toBe(String(passata.id))
     expect(screen.getByRole('dialog', { name: `Price of ${passata.name}` })).toHaveAttribute('data-modal', 'false')
-    expect(document.querySelector("[data-pricing='true']")).not.toBeNull()
+    expect(document.querySelector(".list-row[data-pricing='true']")).not.toBeNull()
   })
 
   it('a Price entry whose row is gone (a rejected scan, an unarchive offer) closes, so the camera does not stay paused', () => {
