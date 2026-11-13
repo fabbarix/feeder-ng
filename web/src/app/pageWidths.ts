@@ -20,6 +20,9 @@ export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/recipes', width: 'wide' },
   { path: '/shop', width: 'wide' },
   { path: '/scan', width: 'narrow' },
+  // RR4: the receipt photos and the review are full-screen narrow pages (mock-ups 13 to 17).
+  { path: '/scan/receipt', width: 'narrow' },
+  { path: '/scan/receipt/review', width: 'narrow' },
   { path: '/recipes/import', width: 'narrow' },
   { path: '/recipes/export', width: 'narrow' },
   { path: '/ingredients', width: 'narrow' },
