@@ -21,15 +21,21 @@ describe('parseTakeOver (409 base_recipe_take_over, the shape internal/recipe/ht
 
 describe('takeOverDialog: names the Recipes and the Stock affected, offers Yes or No', () => {
   it('titles it with the Ingredient and the Base recipe', () => {
-    expect(takeOverDialog(ask(), 'Béchamel').title).toBe('Use the Ingredient béchamel for Béchamel?')
+    expect(takeOverDialog(ask(), 'Béchamel').title).toBe('Béchamel (Base recipe) has the name of an Ingredient. Take it over?')
   })
   it('names the Recipes and the Stock Lot, then says what Yes and No do', () => {
     const m = takeOverDialog(ask(), 'Béchamel')
     expect(m.body[0]).toBe('Lasagne and Moussaka call for it, and 1 Stock Lot of it is in the Pantry.')
     expect(m.body.join(' ')).toMatch(/Yes/)
     expect(m.body.join(' ')).toMatch(/No/)
-    expect(m).toMatchObject({ yesLabel: 'Yes', noLabel: 'No' })
+    expect(m).toMatchObject({ yesLabel: 'Yes, take it over', noLabel: 'No, keep it apart' })
     expect(m.yesDisabledReason).toBeUndefined()
+  })
+  it('says the badge tells the two apart if they are kept apart', () => {
+    const text = takeOverDialog(ask(), 'Béchamel').body.join(' ')
+    expect(text).toMatch(/Base recipe/)
+    expect(text).toMatch(/badge/)
+    expect(text).toMatch(/tells them apart/)
   })
   it('joins three names with commas and "and"; folds more than three into "N more"', () => {
     const three = takeOverDialog(ask({ recipes: [{ id: 1, name: 'Lasagne' }, { id: 2, name: 'Moussaka' }, { id: 3, name: 'Cannelloni' }] }), 'Béchamel')

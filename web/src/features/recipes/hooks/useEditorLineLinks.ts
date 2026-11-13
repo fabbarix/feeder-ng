@@ -43,6 +43,11 @@ export interface UseEditorLineLinks {
   openPlain: (key: string) => void
   closePlain: () => void
   choosePlain: (ingredient: IngredientRef) => void
+  /**
+   * "Use as a plain Ingredient" on a draft Base recipe line: back to the remembered Ingredient (`linkedFromIngredientId`) when `ingredientOf` still knows it,
+   * else (nothing remembered, or it is gone) opens the plain Ingredient dialog for that line (`plainKey`).
+   */
+  asPlain: (line: LineDraft) => void
   /** The new Base recipe's name the ask is about. */
   askName: string
   /** Words for the last failure, or null. */
@@ -185,6 +190,9 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     choosePlain: (ingredient) => {
       if (plainKey !== null) opts.unlinkLine(plainKey, ingredient)
       setPlainKey(null)
+    },
+    asPlain: () => {
+      throw new Error('BR-D: not implemented')
     },
     error,
   }

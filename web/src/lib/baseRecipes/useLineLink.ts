@@ -43,7 +43,7 @@ export interface UseLineLink {
   /** Links the line. See hooks tests: existing -> POST lines/{id}/base; new -> POST /api/recipes then link (a 409 base_recipe_take_over sets takeOverAsk and returns 'asked'); convert -> dry run, confirm naming what goes, to-base, then link. Success shows the Toast "Linked to Béchamel (Base recipe)." with Undo. */
   linkTo: (line: SavedLine, choice: LinkChoice) => Promise<LinkOutcome>
   /** Use as a plain Ingredient: DELETE lines/{id}/base, Toast "<Béchamel> is a plain Ingredient on this line." with Undo (links back). A line with no linkedFromIngredientId makes no request and returns 'pick' (the caller opens the ordinary Ingredient picker). */
-  useAsPlain: (line: SavedLine) => Promise<'done' | 'pick' | 'failed'>
+  useAsPlain: (line: SavedLine, ingredientId?: number) => Promise<'done' | 'pick' | 'failed'>
   /** The take-over ask while the User has not answered it; null otherwise. */
   takeOverAsk: TakeOverAsk | null
   /** The new Base recipe's name the ask is about. */

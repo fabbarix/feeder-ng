@@ -70,6 +70,8 @@ export interface UseRecipeEditor {
   takeOverAsk: TakeOverAsk | null
   /** BR-D: Yes/No: saves again with `takeOver` true/false (lib/draft sends it); resolves like `save`. */
   answerTakeOver: (yes: boolean) => Promise<Recipe | null>
+  /** BR-D round 3: the kind the stored Recipe has ('plannable' | 'base'), null for a Recipe not saved yet. The screen compares it with the draft on Save. */
+  storedKind: 'plannable' | 'base' | null
   /** BR-D: Escape on the ask: forgets it, saves nothing. */
   cancelTakeOver: () => void
   /**
@@ -236,6 +238,7 @@ export function useRecipeEditor(
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     courseLoss,
+    storedKind: null,
     takeOverAsk,
     answerTakeOver: (yes) => submit({ ...draft, takeOver: yes }),
     cancelTakeOver: () => setTakeOverAsk(null),

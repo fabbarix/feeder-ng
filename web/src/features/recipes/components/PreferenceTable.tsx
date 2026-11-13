@@ -20,6 +20,8 @@ export interface PreferenceTableProps {
   /** The preferences failed to load: an ErrorState with a retry. */
   error?: boolean
   onRetry?: () => void
+  /** BR-D: a Base recipe offers Exclusion only (P2 = A): no Favourite and no Dislike column or button. */
+  exclusionOnly?: boolean
 }
 
 type State = Exclude<PreferenceState, 'none'>
@@ -33,7 +35,8 @@ const STATES: { state: State; label: string; icon: IconName }[] = [
  * The Recipe's preferences of the whole Household: a real table, one row per Member, one column per state, each cell
  * a toggle button (rx-pt.md section 5.3). An Exclusion that comes from an Ingredient is shown read-only.
  */
-export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberId = null, isAdmin = false, error = false, onRetry }: PreferenceTableProps): ReactNode {
+export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberId = null, isAdmin = false, error = false, onRetry, exclusionOnly }: PreferenceTableProps): ReactNode {
+  void exclusionOnly
   if (error) return <ErrorState message={recipeStrings.preferencesLoadError} onRetry={onRetry} />
   if (rows.length === 0) {
     return (

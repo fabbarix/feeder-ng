@@ -63,16 +63,13 @@ beforeEach(() => {
 })
 
 describe('RecipeEditorScreen: Base recipe switch', () => {
-  it('asks the kind change hook first, then patches the draft; nothing is patched on Cancel', async () => {
+  it('patches the draft on the toggle and asks nothing yet (the change applies on Save, see RecipeEditorScreen.kindSwitch)', async () => {
     mockApi({})
     view()
     await userEvent.click(screen.getByRole('switch', { name: 'Base recipe' }))
-    expect(h.change.turnOn).toHaveBeenCalledWith(expect.objectContaining({ name: 'Lasagne' }))
     await waitFor(() => expect(h.editor.setDraft).toHaveBeenCalled())
-    ;(h.editor.setDraft as ReturnType<typeof vi.fn>).mockClear()
-    h.change.turnOn = vi.fn().mockResolvedValue('cancelled')
-    await userEvent.click(screen.getByRole('switch', { name: 'Base recipe' }))
-    expect(h.editor.setDraft).not.toHaveBeenCalled()
+    expect(h.change.turnOn).not.toHaveBeenCalled()
+    expect(h.change.turnOff).not.toHaveBeenCalled()
   })
 
   it('a Base recipe draft shows the Yield unit and no Courses', () => {
@@ -125,9 +122,9 @@ describe('RecipeEditorScreen: take-over ask and refusals', () => {
     mockApi({})
     h.editor = editorOf({ baseRecipe: true, name: 'Béchamel', yieldUnit: 'l', lines: [] }, { takeOverAsk: ask })
     view()
-    const dialog = screen.getByRole('dialog', { name: 'Use the Ingredient béchamel for Béchamel?' })
+    const dialog = screen.getByRole('dialog', { name: 'Béchamel (Base recipe) has the name of an Ingredient. Take it over?' })
     expect(within(dialog).getByText('Lasagne calls for it, and 1 Stock Lot of it is in the Pantry.')).toBeInTheDocument()
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Yes' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Yes, take it over' }))
     expect(h.editor.answerTakeOver).toHaveBeenCalledWith(true)
   })
 
@@ -135,7 +132,7 @@ describe('RecipeEditorScreen: take-over ask and refusals', () => {
     mockApi({})
     h.editor = editorOf({ baseRecipe: true, name: 'Béchamel', yieldUnit: 'l', lines: [] }, { takeOverAsk: ask })
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'No' }))
+    await userEvent.click(screen.getByRole('button', { name: 'No, keep it apart' }))
     expect(h.editor.answerTakeOver).toHaveBeenCalledWith(false)
   })
 

@@ -43,6 +43,10 @@ export interface RecipeLine {
 
 /** BR-D: a Base recipe line as the editor sends it (POST/PUT): by Base recipe, no `ingredientId`. */
 export interface BaseRecipeLineInput {
+  /** The stored line's id (absent on a line added in this edit). */
+  id?: number
+  /** The plain Ingredient the line was linked from, kept for "Use as a plain Ingredient"; null = nothing to go back to. */
+  linkedFromIngredientId?: number | null
   baseRecipeId: number
   quantity: number
   unit: string

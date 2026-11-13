@@ -84,3 +84,13 @@ describe('useBaseRecipeChange: the switch off (to-plannable)', () => {
     expect(api.calls).toEqual([])
   })
 })
+
+// BR-D round 3: turning a Base recipe back sends a valid portions Yield (a whole number, at least 1).
+describe('useBaseRecipeChange: the portions Yield of to-plannable', () => {
+  it.each([[4, 4], [1.5, 2], [0.2, 1], [500, 500], [Number.NaN, 4]])('Yield %s is sent as %s', async (given, sent) => {
+    const api = mockApi({ 'POST /api/recipes/2/to-plannable': summaryJSON({ id: 2, baseRecipe: false }) })
+    const { result } = renderHook(() => useBaseRecipeChange({ recipeId: 2 }), { wrapper })
+    await act(async () => { await result.current.turnOff({ name: 'Béchamel', yield: given }) })
+    expect(api.callsTo('POST', '/api/recipes/2/to-plannable')[0]?.body).toEqual({ yield: sent })
+  })
+})
