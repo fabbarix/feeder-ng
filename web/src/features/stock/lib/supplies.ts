@@ -2,6 +2,7 @@
 // off, so its rows carry no go-off wording; it says when it restocks instead. Plain TypeScript, no React.
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { stockStrings as strings } from '../strings'
+import { boughtLabel } from './ingredientLots'
 import type { BaseUnit, IngredientStock, StockKind, StockLot } from '../types'
 
 /** Anything that carries a kind: a Stock Lot, a By Ingredient row or an Add to Stock choice. Absent = food (an older answer). */
@@ -82,6 +83,11 @@ export function supplyRowMeta(item: IngredientStock, restock: Restock | null, sy
   const phrase = restockPhrase(restock, item.baseUnit, system)
   if (phrase) parts.push(phrase)
   return parts.join(' · ')
+}
+
+/** The meta of a Supply's Lot inside its By Ingredient row: "Bought today · Utility cupboard". Never a go-off part. */
+export function supplyLotLineMeta(lot: StockLot, today: string, placeName: string | null): string {
+  return [boughtLabel(lot.purchased, today), placeName ?? strings.unsorted].join(' · ')
 }
 
 /** The amount the User typed as "Used up": blank is the whole Lot (`used` undefined), else a positive number no more than the Lot holds. */

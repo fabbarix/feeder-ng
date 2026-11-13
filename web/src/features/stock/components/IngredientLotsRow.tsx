@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react'
 import { ListGroup, ListRow, Thumb } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import { boughtLabel, deductionOrder, lotMeta } from '../lib/ingredientLots'
+import { deductionOrder, lotMeta } from '../lib/ingredientLots'
 import { rowMeta } from '../lib/filter'
 import { capitalise } from '../lib/display'
-import { isBelowRestock, isSupply, supplyRowMeta, type Restock } from '../lib/supplies'
+import { isBelowRestock, isSupply, supplyLotLineMeta, supplyRowMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import type { IngredientStock, StockLot, StoragePlace } from '../types'
@@ -48,7 +48,7 @@ export function IngredientLotsRow({ item, lots, places, today, system = 'metric'
           {deductionOrder(lots).map((lot) => {
             const placeName = places.find((p) => p.id === lot.storagePlaceId)?.name ?? null
             // A Supply's Lot has no go-off part, whatever a stray date or flag says.
-            const meta = supply ? [boughtLabel(lot.purchased, today), placeName ?? strings.unsorted].join(' · ') : lotMeta(lot, today, placeName)
+            const meta = supply ? supplyLotLineMeta(lot, today, placeName) : lotMeta(lot, today, placeName)
             return (
               <ListRow
                 key={lot.id}

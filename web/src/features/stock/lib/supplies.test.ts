@@ -10,6 +10,7 @@ import {
   restockLevelsOf,
   restockOf,
   restockPhrase,
+  supplyLotLineMeta,
   supplyLotMeta,
   supplyRowMeta,
   supplyStockOf,
@@ -140,5 +141,13 @@ describe('usedUpRequest: what Used up sends (no new API; never waste)', () => {
   it('part of it is a PATCH with the quantity that remains', () => {
     expect(usedUpRequest({ id: 31, quantity: 6 }, 2)).toEqual({ type: 'patch', quantity: 4 })
     expect(usedUpRequest({ id: 31, quantity: 1 }, 0.4)).toEqual({ type: 'patch', quantity: 0.6 })
+  })
+})
+
+describe('supplyLotLineMeta', () => {
+  it('says when it was bought and where it is, never a go-off part', () => {
+    const lot = makeSupplyLot({ purchased: '2026-11-12', goesOff: '2026-11-13', useSoon: true })
+    expect(supplyLotLineMeta(lot, '2026-11-12', 'Utility cupboard')).toBe('Bought today · Utility cupboard')
+    expect(supplyLotLineMeta(lot, '2026-11-12', null)).toBe('Bought today · Not sorted')
   })
 })
