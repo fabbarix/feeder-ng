@@ -1,8 +1,8 @@
 // hf-recipes-filter: the Filters panel: Course and Tag, then Clear filters and Show Recipes (docs/design/recipes-filter.md 4, 5, 8, 9).
-// A popover from 768 px and a bottom sheet below it, both from the shared Popover.
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
+// The shared FiltersPanel: a popover from 768 px and a bottom sheet below it.
+import type { ReactNode, RefObject } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
-import { Button, Popover } from '../../../ui'
+import { FilterSection, FiltersPanel } from '../../../ui'
 import { CourseFilter } from './CourseFilter'
 import { TagFilterList } from './TagFilterList'
 import { recipeStrings } from '../strings'
@@ -28,48 +28,16 @@ export interface RecipeFiltersPanelProps {
 }
 
 export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, courses, course, onCourse, known, tag, colourOf, onTag, count, onClear }: RecipeFiltersPanelProps): ReactNode {
-  const clear = useRef<HTMLButtonElement>(null)
-  const showRecipes = useRef<HTMLButtonElement>(null)
-  // Clear filters turns off once it has nothing to clear: its focus moves to Show Recipes.
-  useEffect(() => {
-    if (!open || count > 0) return
-    const active = document.activeElement
-    if (active === clear.current || active === document.body || active === null) showRecipes.current?.focus()
-  }, [count, open])
-
   return (
-    <Popover
-      id={id}
-      open={open}
-      onClose={onClose}
-      anchorRef={anchorRef}
-      title={recipeStrings.filters.panelTitle}
-      className="recipe-filters__panel"
-      footer={
-        <>
-          <Button ref={clear} variant="tertiary" size="sm" disabled={count === 0} onClick={onClear}>
-            {recipeStrings.filters.clear}
-          </Button>
-          <Button ref={showRecipes} variant="secondary" size="sm" onClick={onClose}>
-            {recipeStrings.filters.showRecipes}
-          </Button>
-        </>
-      }
-    >
-      <div className="recipe-filters__body">
+    <FiltersPanel id={id} open={open} onClose={onClose} anchorRef={anchorRef} count={count} onClear={onClear} showLabel={recipeStrings.filters.showRecipes}>
       {bases || courses.length < 2 ? null : (
-        <section className="recipe-filters__section">
-          <h3 className="recipe-filters__heading">{recipeStrings.filters.courseHeading}</h3>
+        <FilterSection heading={recipeStrings.filters.courseHeading}>
           <CourseFilter courses={courses} selected={course} onSelect={onCourse} />
-        </section>
+        </FilterSection>
       )}
-      <section className="recipe-filters__section">
-        <h3 className="recipe-filters__heading">{recipeStrings.filters.tagHeading}</h3>
-        <div className="recipe-filters__tags">
-          <TagFilterList known={known} selected={tag} colourOf={colourOf} onSelect={onTag} />
-        </div>
-      </section>
-      </div>
-    </Popover>
+      <FilterSection heading={recipeStrings.filters.tagHeading} list>
+        <TagFilterList known={known} selected={tag} colourOf={colourOf} onSelect={onTag} />
+      </FilterSection>
+    </FiltersPanel>
   )
 }

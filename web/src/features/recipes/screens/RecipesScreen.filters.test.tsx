@@ -75,13 +75,13 @@ describe.each([390, 834, 1024, 1440, 1920])('the header at %i px', (width) => {
 
   it('row 1 is the search and the Filters button, row 2 is Kind and Sort, and nothing else', () => {
     const { container } = view()
-    const rows = container.querySelectorAll('.recipe-filters__row')
+    const rows = container.querySelectorAll('.filter-bar__row')
     expect(rows).toHaveLength(2)
     const [search, viewRow] = [...rows] as HTMLElement[]
-    expect(search).toHaveClass('recipe-filters__search-row')
+    expect(search).toHaveClass('filter-bar__search-row')
     expect(within(search!).getByRole('searchbox', { name: 'Search Recipes' })).toBeInTheDocument()
     expect(within(search!).getByRole('button', { name: 'Filters' })).toBeInTheDocument()
-    expect(viewRow).toHaveClass('recipe-filters__view-row')
+    expect(viewRow).toHaveClass('filter-bar__view-row')
     expect(within(viewRow!).getByRole('radiogroup', { name: 'Kind' })).toBeInTheDocument()
     expect(within(viewRow!).getByRole('combobox', { name: 'Sort' })).toBeInTheDocument()
   })
@@ -99,7 +99,7 @@ describe.each([390, 834, 1024, 1440, 1920])('the header at %i px', (width) => {
 
   it('has no visible "Kind" or "Sort" label (they are accessible names only)', () => {
     const { container } = view()
-    const labels = container.querySelectorAll('.recipe-filters__view-row .ui-field__label')
+    const labels = container.querySelectorAll('.filter-bar__view-row .ui-field__label')
     expect([...labels].map((l) => l.textContent)).toEqual(['Kind', 'Sort'])
     for (const label of labels) expect(label).toHaveClass('visually-hidden')
   })
@@ -107,7 +107,7 @@ describe.each([390, 834, 1024, 1440, 1920])('the header at %i px', (width) => {
   it('a filter adds one line of chips under row 2', () => {
     const { container } = view('/recipes?course=1&tag=fish')
     const line = screen.getByRole('group', { name: 'Active filters' })
-    expect(line.previousElementSibling).toBe(container.querySelector('.recipe-filters__view-row'))
+    expect(line.previousElementSibling).toBe(container.querySelector('.filter-bar__view-row'))
     expect(within(line).getAllByRole('button').map((b) => b.textContent)).toEqual(['Main', 'fish'])
   })
 })

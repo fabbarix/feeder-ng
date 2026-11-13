@@ -361,3 +361,14 @@ The user: "Instead of 'All Courses' let's just have a logic where if no courses 
   is a tab stop and Space or Enter toggles it. The panel opens on the first Course chip.
 - The active-filter chip, Clear filters, the Filters count and the URL are unchanged. The guard fixtures and §13.2/§14.4 now mean
   the first Course chip where they say "All Courses".
+
+## 16. pantry-filter: the header is shared
+
+The Pantry got the same header ([pantry-filter.md](pantry-filter.md)). What was generic moved out of Recipes, unchanged in behaviour:
+`fitChips` and `FIT_MARGIN` to `lib/filters/fitChips.ts`; `useFittingChips`, `ActiveFilterChips`, `RecipeFiltersButton` (now
+`FiltersButton`), the panel frame (`FiltersPanel`, `FilterSection`) and the CSS to `ui/FilterBar/`. The class names in this spec read
+as their shared names: `.recipe-filters__row` → `.filter-bar__row` (and `__search-row`, `__view-row`, `__sort`),
+`.recipe-filters__chips` → `.filter-chips` (`__more`, `__measure`), `.recipe-filters__panel` → `.filter-panel` (`__body`,
+`__section`, `__heading`), `.recipe-filters__tags` → `.filter-panel__list`. The guard's probes (P17, P18, P20) read the shared names,
+so they cover both headers. `fitChips` now shows every chip of a line that is not measured (0 px) whatever is shown now: a chip added
+to an unmeasured line was held in "+N" by the margin.

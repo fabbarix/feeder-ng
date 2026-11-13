@@ -113,13 +113,13 @@ describe('RecipeFiltersPanel', () => {
     expect(screen.getByRole('dialog', { name: 'Filters' }).tagName).not.toBe('DIALOG')
   })
 
-  it.each([390, 834])('round 2: at %i px its sections sit in its own spaced wrapper (.recipe-filters__body), not in the popover\'s body', (w) => {
+  it.each([390, 834])('round 2: at %i px its sections sit in its own spaced wrapper (.filter-panel__body), not in the popover\'s body', (w) => {
     stubViewportWidth(w)
     panel()
     const dialog = screen.getByRole('dialog', { name: 'Filters' })
-    const body = dialog.querySelector('.recipe-filters__body')
+    const body = dialog.querySelector('.filter-panel__body')
     expect(body).not.toBeNull()
-    expect([...body!.children].filter((c) => c.classList.contains('recipe-filters__section'))).toHaveLength(2)
+    expect([...body!.children].filter((c) => c.classList.contains('filter-panel__section'))).toHaveLength(2)
   })
   it('round 2: the footer button is "Show Recipes", so a phone sheet has one "Close" (its ✕)', () => {
     stubViewportWidth(390)

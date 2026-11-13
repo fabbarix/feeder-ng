@@ -3,10 +3,14 @@
 // scripts/test/page-layout-recipes-header_test.sh.
 import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
-import { recipeRules, rulesFor, valueFor } from './rules.test-helper'
+import { cssRules, recipeRules } from './rules.test-helper'
+
+// The Recipes header is styled by recipes.css and the shared filter header (ui/FilterBar/FilterBar.css, docs/design/pantry-filter.md 5).
+const header = cssRules(['features/recipes/recipes.css', 'ui/FilterBar/FilterBar.css'])
+const { rulesFor, valueFor } = header
 
 const WIDTHS = [0, 390, 600, 768, 834, 1024, 1440, 1920]
-const ROWS = ['.recipe-filters__row', '.recipe-filters__chips']
+const ROWS = ['.filter-bar__row', '.filter-chips']
 
 describe('every header row is one line at every width', () => {
   it.each(ROWS)('%s is a flex row that never wraps, with a token gap, and may shrink', (sel) => {
@@ -22,35 +26,35 @@ describe('every header row is one line at every width', () => {
 
 describe('row 1: search and Filters', () => {
   it('the search takes the free space and may shrink', () => {
-    expect(valueFor('.recipe-filters__search-row > .ui-field', 'flex', 0)).toBe('1 1 auto')
-    expect(valueFor('.recipe-filters__search-row > .ui-field', 'min-inline-size', 0)).toBe('0')
+    expect(valueFor('.filter-bar__search-row > .ui-field', 'flex', 0)).toBe('1 1 auto')
+    expect(valueFor('.filter-bar__search-row > .ui-field', 'min-inline-size', 0)).toBe('0')
   })
   it('the Filters button keeps its natural width', () => {
-    expect(valueFor('.recipe-filters__search-row > .button', 'flex', 0)).toBe('none')
+    expect(valueFor('.filter-bar__search-row > .button', 'flex', 0)).toBe('none')
   })
 })
 
 describe('row 2: Kind and Sort', () => {
   it('puts Kind at the start and Sort at the end', () => {
-    expect(valueFor('.recipe-filters__view-row', 'justify-content', 0)).toBe('space-between')
+    expect(valueFor('.filter-bar__view-row', 'justify-content', 0)).toBe('space-between')
   })
   it('Kind keeps its natural width, Sort may shrink (its value ends in an ellipsis)', () => {
-    expect(valueFor('.recipe-filters__view-row > .ui-field:first-child', 'flex', 0)).toBe('none')
-    expect(valueFor('.recipe-filters__sort', 'flex', 0)).toBe('0 1 auto')
-    expect(valueFor('.recipe-filters__sort', 'min-inline-size', 0)).toBe('0')
+    expect(valueFor('.filter-bar__view-row > .ui-field:first-child', 'flex', 0)).toBe('none')
+    expect(valueFor('.filter-bar__sort', 'flex', 0)).toBe('0 1 auto')
+    expect(valueFor('.filter-bar__sort', 'min-inline-size', 0)).toBe('0')
   })
 })
 
 describe('row 3: the active filter chips', () => {
   it('never scrolls sideways (what does not fit is "+N", not rendered)', () => {
-    expect(valueFor('.recipe-filters__chips', 'overflow-x', 0) ?? valueFor('.recipe-filters__chips', 'overflow', 0) ?? 'visible').not.toMatch(/auto|scroll/)
+    expect(valueFor('.filter-chips', 'overflow-x', 0) ?? valueFor('.filter-chips', 'overflow', 0) ?? 'visible').not.toMatch(/auto|scroll/)
   })
   it('a chip keeps room for four characters and its close icon, never shrinking to a dot', () => {
-    expect(valueFor('.recipe-filters__chips > .chip', 'flex', 0)).toBe('0 1 auto')
-    expect(valueFor('.recipe-filters__chips > .chip', 'min-inline-size', 0)).toMatch(/^(\d+(\.\d+)?rem|calc\(.+\))$/)
+    expect(valueFor('.filter-chips > .chip', 'flex', 0)).toBe('0 1 auto')
+    expect(valueFor('.filter-chips > .chip', 'min-inline-size', 0)).toMatch(/^(\d+(\.\d+)?rem|calc\(.+\))$/)
   })
   it('the "+N" chip never shrinks', () => {
-    expect(valueFor('.recipe-filters__more', 'flex', 0)).toBe('none')
+    expect(valueFor('.filter-chips__more', 'flex', 0)).toBe('none')
   })
 })
 
@@ -64,14 +68,14 @@ describe('the Course group in the panel is one line', () => {
 
 describe('the Filters panel', () => {
   it('the popover is at most 24 rem wide and never wider than the viewport', () => {
-    expect(valueFor('.recipe-filters__panel', 'inline-size', 768)).toMatch(/^min\(24rem,\s*100vw - 2 \* var\(--space-4\)\)$/)
+    expect(valueFor('.filter-panel', 'inline-size', 768)).toMatch(/^min\(24rem,\s*100vw - 2 \* var\(--space-4\)\)$/)
   })
   it('the Tag list scrolls inside a capped height', () => {
-    expect(valueFor('.recipe-filters__tags [role="listbox"]', 'overflow-y', 0)).toBe('auto')
-    expect(valueFor('.recipe-filters__tags [role="listbox"]', 'max-block-size', 0)).toBeDefined()
+    expect(valueFor('.filter-panel__list [role="listbox"]', 'overflow-y', 0)).toBe('auto')
+    expect(valueFor('.filter-panel__list [role="listbox"]', 'max-block-size', 0)).toBeDefined()
   })
   it('section headings use the label type role', () => {
-    expect(valueFor('.recipe-filters__heading', 'font-size', 0)).toBe('var(--text-label-size)')
+    expect(valueFor('.filter-panel__heading', 'font-size', 0)).toBe('var(--text-label-size)')
   })
 })
 
@@ -81,7 +85,7 @@ describe('the old header is gone', () => {
     expect(rulesFor('.recipes-sort')).toHaveLength(0)
   })
   it('the new rules use no colour literal and no raw font size', () => {
-    const rules = recipeRules.filter((x) => x.selector.includes('recipe-filters'))
+    const rules = header.rules.filter((x) => /filter-(bar|chips|panel)/.test(x.selector))
     expect(rules.length).toBeGreaterThan(0)
     for (const r of rules) {
       expect(r.body, r.selector).not.toMatch(/#[0-9a-f]{3,8}\b|oklch\(|rgb\(/i)
@@ -119,17 +123,17 @@ const HIT = 9 // a removable chip's ::before reaches 9 px above and below it (Ch
 
 describe('round 2: the chip line measures natural widths', () => {
   it('the measuring copy is as wide as its content, not the line, and its chips never shrink', () => {
-    expect(valueFor('.recipe-filters__measure', 'inline-size', 0)).toBe('max-content')
-    expect(valueFor('.recipe-filters__measure', 'inset-inline', 0)).toBeUndefined()
-    expect(valueFor('.recipe-filters__measure > .chip', 'flex', 0)).toBe('none')
+    expect(valueFor('.filter-chips__measure', 'inline-size', 0)).toBe('max-content')
+    expect(valueFor('.filter-chips__measure', 'inset-inline', 0)).toBeUndefined()
+    expect(valueFor('.filter-chips__measure > .chip', 'flex', 0)).toBe('none')
   })
 })
 
 describe('round 2: focus rings and hit areas are never clipped', () => {
   it('the chip line does not clip with overflow: hidden; if it clips, its clip margin holds the ring and the 44 px hit area', () => {
-    const overflow = valueFor('.recipe-filters__chips', 'overflow', 0) ?? 'visible'
+    const overflow = valueFor('.filter-chips', 'overflow', 0) ?? 'visible'
     expect(overflow).not.toBe('hidden')
-    if (overflow === 'clip') expect(px(valueFor('.recipe-filters__chips', 'overflow-clip-margin', 0))).toBeGreaterThanOrEqual(Math.max(RING, HIT))
+    if (overflow === 'clip') expect(px(valueFor('.filter-chips', 'overflow-clip-margin', 0))).toBeGreaterThanOrEqual(Math.max(RING, HIT))
   })
   it('the Course line (a sideways scroller) is padded on both axes for the ring of its first chip, with matching negative margins', () => {
     expect(padding('.course-filter', 'block')).toBeGreaterThanOrEqual(RING)
@@ -149,9 +153,9 @@ describe('round 2: spacing', () => {
     }
   })
   it('the panel spaces its own sections (the bottom sheet has no .popover__body)', () => {
-    expect(valueFor('.recipe-filters__body', 'display', 0)).toBe('flex')
-    expect(valueFor('.recipe-filters__body', 'flex-direction', 0)).toBe('column')
-    expect(px(valueFor('.recipe-filters__body', 'gap', 0))).toBeGreaterThanOrEqual(12)
+    expect(valueFor('.filter-panel__body', 'display', 0)).toBe('flex')
+    expect(valueFor('.filter-panel__body', 'flex-direction', 0)).toBe('column')
+    expect(px(valueFor('.filter-panel__body', 'gap', 0))).toBeGreaterThanOrEqual(12)
   })
   it('recipes.css never styles the shared .popover__body', () => {
     expect(recipeRules.filter((r) => r.selector.includes('popover__body'))).toEqual([])
@@ -161,13 +165,13 @@ describe('round 2: spacing', () => {
 // Round 3 (docs/design/recipes-filter.md 14): one measurement for both states, and the panel body adds no inset.
 describe('round 3: a chip measures the same shown or in the copy', () => {
   it('the copy\'s chips have the same min-inline-size as the shown chips (natural width = max(min, content) either way)', () => {
-    const shown = valueFor('.recipe-filters__chips > .chip', 'min-inline-size', 0)
+    const shown = valueFor('.filter-chips > .chip', 'min-inline-size', 0)
     expect(shown).toBeDefined()
-    expect(valueFor('.recipe-filters__measure > .chip', 'min-inline-size', 0)).toBe(shown)
+    expect(valueFor('.filter-chips__measure > .chip', 'min-inline-size', 0)).toBe(shown)
   })
   it('and the same padding, gap and font as the shown chips (no copy-only override of the chip box)', () => {
     for (const prop of ['padding', 'padding-inline', 'gap', 'font-size', 'border', 'inline-size', 'max-inline-size']) {
-      expect(valueFor('.recipe-filters__measure > .chip', prop, 0), prop).toBe(valueFor('.recipe-filters__chips > .chip', prop, 0))
+      expect(valueFor('.filter-chips__measure > .chip', prop, 0), prop).toBe(valueFor('.filter-chips > .chip', prop, 0))
     }
   })
 })

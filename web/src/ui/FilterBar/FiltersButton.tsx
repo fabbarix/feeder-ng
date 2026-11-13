@@ -1,10 +1,10 @@
-// hf-recipes-filter: the Filters button of the Recipes header; its count chip shows while filters are on (docs/design/recipes-filter.md 4, 8).
+// The Filters button of a filter header; its count chip shows while filters are on (docs/design/recipes-filter.md 4, 8; pantry-filter.md 5).
 import type { ReactNode, Ref } from 'react'
-import { Button, Chip } from '../../../ui'
-import { filtersButtonLabel } from '../lib/recipeFilters'
-import { recipeStrings } from '../strings'
+import { Button } from '../Button'
+import { Chip } from '../Chip'
+import { filterBarStrings } from './strings'
 
-export interface RecipeFiltersButtonProps {
+export interface FiltersButtonProps {
   /** Filters in force. */
   count: number
   /** Whether the panel is open. */
@@ -15,7 +15,7 @@ export interface RecipeFiltersButtonProps {
   ref?: Ref<HTMLButtonElement>
 }
 
-export function RecipeFiltersButton({ count, expanded, controls, onClick, ref }: RecipeFiltersButtonProps): ReactNode {
+export function FiltersButton({ count, expanded, controls, onClick, ref }: FiltersButtonProps): ReactNode {
   return (
     <Button
       ref={ref}
@@ -25,10 +25,10 @@ export function RecipeFiltersButton({ count, expanded, controls, onClick, ref }:
       aria-haspopup="dialog"
       aria-expanded={expanded}
       aria-controls={controls}
-      aria-label={filtersButtonLabel(count)}
+      aria-label={filterBarStrings.buttonLabel(count)}
       onClick={onClick}
     >
-      {recipeStrings.filters.button}
+      {filterBarStrings.button}
       {count > 0 ? (
         <span aria-hidden="true">
           <Chip kind="count">{count}</Chip>

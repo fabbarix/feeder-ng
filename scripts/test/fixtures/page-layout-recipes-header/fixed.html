@@ -11,58 +11,58 @@
   .chip[data-removable] { position: relative }
   .chip[data-removable]::before { content: ''; position: absolute; inset: -9px 0 }
   button.chip:focus-visible { outline: 3px solid #b33; outline-offset: 2px }
-  .recipe-filters__row, .recipe-filters__chips { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-inline-size: 0 }
-  .recipe-filters__search-row > .ui-field { flex: 1 1 auto; min-inline-size: 0 }
-  .recipe-filters__search-row input { inline-size: 100%; box-sizing: border-box; block-size: 44px }
-  .recipe-filters__search-row > .button { flex: none; block-size: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px }
-  .recipe-filters__view-row { justify-content: space-between }
-  .recipe-filters__view-row > .ui-field:first-child { flex: none }
+  .filter-bar__row, .filter-chips { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-inline-size: 0 }
+  .filter-bar__search-row > .ui-field { flex: 1 1 auto; min-inline-size: 0 }
+  .filter-bar__search-row input { inline-size: 100%; box-sizing: border-box; block-size: 44px }
+  .filter-bar__search-row > .button { flex: none; block-size: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px }
+  .filter-bar__view-row { justify-content: space-between }
+  .filter-bar__view-row > .ui-field:first-child { flex: none }
   .segmented { display: flex; gap: 4px; padding: 4px; inline-size: max-content; background: #eee; border-radius: 12px }
   .segmented__option { flex: none; padding: 0 8px; min-block-size: 40px; white-space: nowrap; border: 0; font: 700 13px/16px sans-serif }
-  .recipe-filters__sort { flex: 0 1 auto; min-inline-size: 0 }
+  .filter-bar__sort { flex: 0 1 auto; min-inline-size: 0 }
   .select__trigger { display: flex; align-items: center; gap: 4px; max-inline-size: 100%; block-size: 36px; padding: 0 10px; border-radius: 999px; border: 1px solid #888; background: none; font: 700 13px/16px sans-serif; box-sizing: border-box }
   .select__value { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-  .recipe-filters__more { flex: none }
+  .filter-chips__more { flex: none }
   .anchor-wrap { position: relative; flex: none }
   .popover { box-sizing: border-box; inline-size: min(24rem, 100vw - 32px); padding: 16px; background: #fff; box-shadow: 0 2px 8px #0003; border-radius: 20px; z-index: 2 }
-  .recipe-filters__heading { margin: 0; font: 700 13px/16px sans-serif }
+  .filter-panel__heading { margin: 0; font: 700 13px/16px sans-serif }
   .course-filter { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none }
   .course-filter > .chip { flex: none }
   /* Round 2 (docs/design/recipes-filter.md 13): no clipping chip line, a padded Course line, row 3 one slot gap below row 2,
      sections spaced by the panel's own wrapper, the popover end-aligned under the Filters button. */
   .list-page__filters { display: grid; gap: 16px }
-  .recipe-filters__chips > .chip { flex: 0 1 auto; min-inline-size: 4.5rem }
+  .filter-chips > .chip { flex: 0 1 auto; min-inline-size: 4.5rem }
   .course-filter { padding: 8px; margin-inline: -8px }
   .popover { position: absolute; top: 100%; right: 0 }
-  .recipe-filters__body { display: flex; flex-direction: column; gap: 16px }
-  .recipe-filters__section { display: flex; flex-direction: column; gap: 8px }
+  .filter-panel__body { display: flex; flex-direction: column; gap: 16px }
+  .filter-panel__section { display: flex; flex-direction: column; gap: 8px }
   @media (max-width: 767px) { .popover { position: fixed; inset: auto 0 0 0; inline-size: auto; border-radius: 20px 20px 0 0 } }
 </style>
 <script>const mq = matchMedia('(prefers-color-scheme: dark)'); const set = () => { document.documentElement.dataset.scheme = mq.matches ? 'dark' : 'light' }; set(); mq.addEventListener('change', set)</script></head><body>
 <main><div class="page" data-page-width="narrow"><div class="list-page recipes-screen">
   <div class="list-page__header"><h1>Recipes</h1></div>
   <div class="list-page__search">
-    <div class="recipe-filters__row recipe-filters__search-row">
+    <div class="filter-bar__row filter-bar__search-row">
       <div class="ui-field"><input type="search" aria-label="Search Recipes" placeholder="Search Recipes"></div>
       <div class="anchor-wrap">
         <button class="button" type="button" aria-label="Filters, 2 active" aria-haspopup="dialog" aria-expanded="true" aria-controls="recipe-filters">Filters <span class="chip" aria-hidden="true"><span class="chip__label">2</span></span></button>
-        <div id="recipe-filters" class="popover recipe-filters__panel" role="dialog" aria-label="Filters">
+        <div id="recipe-filters" class="popover filter-panel" role="dialog" aria-label="Filters">
           <h2>Filters</h2>
-          <div class="recipe-filters__body"><section class="recipe-filters__section"><h3 class="recipe-filters__heading">Course</h3>
+          <div class="filter-panel__body"><section class="filter-panel__section"><h3 class="filter-panel__heading">Course</h3>
           <div class="course-filter" role="group" aria-label="Filter by Course"><button class="chip" type="button" aria-pressed="false">Main</button><button class="chip" type="button" aria-pressed="true">Side</button><button class="chip" type="button" aria-pressed="false">Starter</button><button class="chip" type="button" aria-pressed="false">Dessert</button><button class="chip" type="button" aria-pressed="false">Breakfast extras</button></div></section>
-        <section class="recipe-filters__section"><h3 class="recipe-filters__heading">Tag</h3><input type="search" aria-label="Search Tags" placeholder="Search Tags"></section></div>
+        <section class="filter-panel__section"><h3 class="filter-panel__heading">Tag</h3><input type="search" aria-label="Search Tags" placeholder="Search Tags"></section></div>
         </div>
       </div>
     </div>
   </div>
   <div class="list-page__filters">
-    <div class="recipe-filters__row recipe-filters__view-row">
+    <div class="filter-bar__row filter-bar__view-row">
       <div class="ui-field"><div class="segmented" role="radiogroup" aria-label="Kind"><button class="segmented__option" role="radio" aria-checked="true">Recipes</button><button class="segmented__option" role="radio" aria-checked="false">Base recipes</button></div></div>
-      <div class="recipe-filters__sort"><div class="ui-field"><button class="select__trigger" role="combobox" aria-label="Sort"><span>&#8597;</span><span class="select__value">Name</span><span>&#9662;</span></button></div></div>
+      <div class="filter-bar__sort"><div class="ui-field"><button class="select__trigger" role="combobox" aria-label="Sort"><span>&#8597;</span><span class="select__value">Name</span><span>&#9662;</span></button></div></div>
     </div>
-    <div class="recipe-filters__chips" role="group" aria-label="Active filters">
+    <div class="filter-chips" role="group" aria-label="Active filters">
       <button class="chip" type="button" data-removable aria-label="Remove Course: Side"><span class="chip__label">Side</span><span class="chip__remove">&#215;</span></button>
-      <span class="recipe-filters__more"><button class="chip" type="button" data-kind="count" aria-label="Show 1 more filter"><span class="chip__label">+1</span></button></span>
+      <span class="filter-chips__more"><button class="chip" type="button" data-kind="count" aria-label="Show 1 more filter"><span class="chip__label">+1</span></button></span>
     </div>
   </div>
   <div class="list-page__list"><p>Cucumber tomato feta salad</p></div>

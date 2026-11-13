@@ -1,9 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { ActiveFilterChips, BentoGrid, Button, EmptyState, ErrorState, FiltersButton, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { useCourses } from '../../../lib/courses/useCourses'
-import { ActiveFilterChips } from '../components/ActiveFilterChips'
-import { RecipeFiltersButton } from '../components/RecipeFiltersButton'
 import { RecipeFiltersPanel } from '../components/RecipeFiltersPanel'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeSortSelect } from '../components/RecipeSortSelect'
@@ -99,9 +97,9 @@ export function RecipesScreen(): ReactNode {
       }
       search={
         <>
-          <div className="recipe-filters__row recipe-filters__search-row">
+          <div className="filter-bar__row filter-bar__search-row">
             <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
-            <RecipeFiltersButton
+            <FiltersButton
               ref={anchor}
               count={filters.count}
               expanded={panelOpen}
@@ -129,10 +127,10 @@ export function RecipesScreen(): ReactNode {
       }
       filters={
         <>
-          <div className="recipe-filters__row recipe-filters__view-row">
+          <div className="filter-bar__row filter-bar__view-row">
             <RecipeKindControl value={filters.kind} onChange={filters.setKind} />
             {bases ? null : (
-              <div className="recipe-filters__sort">
+              <div className="filter-bar__sort">
                 <RecipeSortSelect value={sort} onChange={setSort} />
               </div>
             )}

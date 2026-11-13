@@ -46,7 +46,7 @@ describe('list screens use the shared ListPage', () => {
   // (docs/design/recipes-filter.md 3); the SearchField is still in the search slot.
   it('./recipes/screens/RecipesScreen.tsx hands ListPage a search slot whose row holds the SearchField, then the Filters button', () => {
     const t = src('./recipes/screens/RecipesScreen.tsx')
-    expect(t).toMatch(/search=\{\s*(<>\s*)?<div className="recipe-filters__row recipe-filters__search-row">\s*<SearchField\b[^>]*\/>\s*<RecipeFiltersButton\b/)
+    expect(t).toMatch(/search=\{\s*(<>\s*)?<div className="filter-bar__row filter-bar__search-row">\s*<SearchField\b[^>]*\/>\s*<FiltersButton\b/)
   })
 
   it('the Stock screen (search in its aside) keeps a token gap', () => {

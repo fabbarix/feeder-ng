@@ -171,114 +171,14 @@
   white-space: nowrap;
 }
 
-/* hf-recipes-filter: the Recipes header (docs/design/recipes-filter.md 3). Every row is one line at every width; tokens only. */
-.recipe-filters__row,
-.recipe-filters__chips {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
-/* Row 1: the search takes the free space, the Filters button keeps its width. */
-.recipe-filters__search-row > .ui-field {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-.recipe-filters__search-row > .button {
-  flex: none;
-}
-
-/* Row 2: Kind at the start, Sort at the end; Sort's value may shrink (it ends in an ellipsis). */
-.recipe-filters__view-row {
-  justify-content: space-between;
-}
-
-.recipe-filters__view-row > .ui-field:first-child {
-  flex: none;
-}
-
-.recipe-filters__sort {
-  flex: 0 1 auto;
-  min-inline-size: 0;
-}
-
-/* Row 3: the active filter chips, one line; what does not fit is "+N". A chip keeps room for four characters and its close icon.
-   The line does not clip: a chip's focus ring and its 44 px hit area reach past its box (hf-recipes-filter round 2). */
-.recipe-filters__chips {
-  position: relative;
-}
-
-.recipe-filters__chips > .chip {
-  flex: 0 1 auto;
-  min-inline-size: 4.5rem;
-}
+/* hf-recipes-filter: the Recipes header (docs/design/recipes-filter.md 3). Its rows, chip line and panel are the shared filter header
+   (ui/FilterBar/FilterBar.css, docs/design/pantry-filter.md 5); only what is the Recipes' own is here. */
 
 /* Row 3 sits one slot gap below row 2 at every width (the ListPage gap). */
 .recipes-screen .list-page__filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-}
-
-.recipe-filters__more {
-  flex: none;
-}
-
-/* The hidden copy of the chip line that measures every chip at its natural width, shown or not (useFittingChips). It is as wide
-   as its content and its chips never shrink. Fixed, so it is not part of the line's or the page's scrollable overflow. */
-.recipe-filters__measure {
-  position: fixed;
-  inline-size: max-content;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-2);
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.recipe-filters__measure > .chip {
-  flex: none;
-  /* The same minimum as the shown chips: one measurement for both states (round 3). */
-  min-inline-size: 4.5rem;
-}
-
-/* The Filters panel: 24 rem at most, never wider than the screen; its Tag list scrolls inside a capped height. */
-.recipe-filters__panel {
-  inline-size: min(24rem, 100vw - 2 * var(--space-4));
-}
-
-/* The panel's sections are spaced by its own body (the bottom sheet has no .popover__body). */
-.recipe-filters__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-inline-size: 0;
-  /* The bottom sheet clips its body at its edge: this keeps the Course line's focus ring inside it (round 3, the focus ring wins). */
-  padding-inline: var(--space-2);
-}
-
-.recipe-filters__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
-.recipe-filters__heading {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--text-label-size);
-  line-height: var(--text-label-line);
-  font-weight: var(--text-label-weight);
-}
-
-.recipe-filters__tags [role='listbox'] {
-  max-block-size: min(20rem, 50dvh);
-  overflow-y: auto;
 }
 
 /* Recipe detail */

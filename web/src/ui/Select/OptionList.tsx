@@ -19,10 +19,12 @@ export interface OptionListProps<V extends string | number> {
   onToggle: (value: V) => void
   /** Shown in place of the options (e.g. nothing matches). */
   emptyText?: string | null
+  /** Several options may be selected at once (pantry-filter: Storage Places): the listbox says so (aria-multiselectable). */
+  multiple?: boolean
 }
 
 /** A search combobox over a listbox of options, always open. Arrows, Home and End move the active option; Enter toggles it. */
-export function OptionList<V extends string | number>({ label, searchLabel, query, onQueryChange, options, selected, onToggle, emptyText = null }: OptionListProps<V>): ReactNode {
+export function OptionList<V extends string | number>({ label, searchLabel, query, onQueryChange, options, selected, onToggle, emptyText = null, multiple = false }: OptionListProps<V>): ReactNode {
   const baseId = useId()
   const listId = `${baseId}-listbox`
   const optionId = (index: number) => `${baseId}-option-${index}`
@@ -86,7 +88,7 @@ export function OptionList<V extends string | number>({ label, searchLabel, quer
         aria-activedescendant={activeId}
         aria-autocomplete="list"
       />
-      <div id={listId} role="listbox" aria-label={label} className="select__list option-list__list" onMouseDown={(e) => e.preventDefault()}>
+      <div id={listId} role="listbox" aria-label={label} aria-multiselectable={multiple || undefined} className="select__list option-list__list" onMouseDown={(e) => e.preventDefault()}>
         {options.map((option, i) => {
           const isSelected = selected.includes(option.value)
           const labelId = `${optionId(i)}-label`

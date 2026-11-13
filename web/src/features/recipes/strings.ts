@@ -1,3 +1,5 @@
+import { filterBarStrings } from '../../ui/FilterBar/strings'
+
 // English UI strings of the recipes feature. Glossary terms only (Recipe, Yield, Ready Meal, Step,
 // Advance Step, Tag, Favourite, Dislike, Exclusion, Unit Conversion, Member, Cool-down, Use-by).
 export const recipeStrings = {
@@ -19,19 +21,19 @@ export const recipeStrings = {
   },
   /** hf-recipes-filter: the header's Filters button, its panel, the Tag list and the active filter chips (docs/design/recipes-filter.md 9). */
   filters: {
-    button: 'Filters',
-    panelTitle: 'Filters',
+    button: filterBarStrings.button,
+    panelTitle: filterBarStrings.panelTitle,
     courseHeading: 'Course',
     tagHeading: 'Tag',
     tagListLabel: 'Filter by Tag',
     tagSearch: 'Search Tags',
-    clear: 'Clear filters',
+    clear: filterBarStrings.clear,
     showRecipes: 'Show Recipes',
-    activeLabel: 'Active filters',
-    moreLabel: (n: number) => (n === 1 ? 'Show 1 more filter' : `Show ${n} more filters`),
+    activeLabel: filterBarStrings.activeLabel,
+    moreLabel: filterBarStrings.moreLabel,
     removeCourse: (name: string) => `Remove Course: ${name}`,
     removeTag: (name: string) => `Remove Tag: ${name}`,
-    buttonLabel: (count: number) => (count === 0 ? 'Filters' : `Filters, ${count} active`),
+    buttonLabel: filterBarStrings.buttonLabel,
     noTagMatch: (query: string) => `No Tag matches '${query}'`,
     noTags: 'No Tag to choose from',
   },

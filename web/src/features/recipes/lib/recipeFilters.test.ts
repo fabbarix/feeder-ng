@@ -5,7 +5,6 @@ import {
   activeFilterChips,
   filtersButtonLabel,
   filtersFromParams,
-  fitChips,
   tagFilterRows,
   withCourse,
   withoutFilters,
@@ -147,26 +146,5 @@ describe('tagFilterRows: search and order', () => {
     expect(rows[0]?.name).toBe('Tag 33')
     expect(rows[1]?.name).toBe('Tag 1')
     expect(rows.at(-1)?.name).toBe('Tag 40')
-  })
-})
-
-describe('fitChips: the chip line with "+N"', () => {
-  it('shows every chip that fits with its gaps', () => {
-    expect(fitChips([80, 100], 188, 8, 32)).toEqual({ visible: 2, hidden: 0 })
-  })
-  it('collapses the chips that do not fit into +N, leaving room for it', () => {
-    // 80 + 8 + 100 = 188 > 180; 80 + 8 + 32 = 120 fits
-    expect(fitChips([80, 100], 180, 8, 32)).toEqual({ visible: 1, hidden: 1 })
-    expect(fitChips([60, 60, 60, 60], 200, 8, 32)).toEqual({ visible: 2, hidden: 2 })
-  })
-  it('always shows at least one chip (it then ends in an ellipsis)', () => {
-    expect(fitChips([300, 100], 150, 8, 32)).toEqual({ visible: 1, hidden: 1 })
-    expect(fitChips([300], 150, 8, 32)).toEqual({ visible: 1, hidden: 0 })
-  })
-  it('no chips: nothing visible, nothing hidden', () => {
-    expect(fitChips([], 300, 8, 32)).toEqual({ visible: 0, hidden: 0 })
-  })
-  it('an unmeasured line (0 px, jsdom) shows every chip', () => {
-    expect(fitChips([0, 0, 0], 0, 0, 0)).toEqual({ visible: 3, hidden: 0 })
   })
 })

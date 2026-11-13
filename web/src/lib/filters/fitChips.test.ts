@@ -1,7 +1,7 @@
-// hf-recipes-filter round 3: fitChips is stable (docs/design/recipes-filter.md 14). Hiding a chip happens as soon as it does not
+// fitChips is stable (docs/design/recipes-filter.md 14). Hiding a chip happens as soon as it does not
 // fit; showing a hidden chip again needs FIT_MARGIN px to spare, so a line at the edge cannot flip between the two answers.
 import { describe, expect, it } from 'vitest'
-import { FIT_MARGIN, fitChips } from './recipeFilters'
+import { FIT_MARGIN, fitChips } from './fitChips'
 
 describe('FIT_MARGIN', () => {
   it('is a small number of px: 8 to 16 (more than subpixel rounding and the round-2 8 px disagreement, less than a chip)', () => {
@@ -38,5 +38,33 @@ describe('fitChips with the current answer', () => {
         expect(fitChips(widths, available, 8, 32, first).visible, `${available} px from ${start}`).toBe(first)
       }
     }
+  })
+})
+
+describe('fitChips: the chip line with "+N"', () => {
+  it('shows every chip that fits with its gaps', () => {
+    expect(fitChips([80, 100], 188, 8, 32)).toEqual({ visible: 2, hidden: 0 })
+  })
+  it('collapses the chips that do not fit into +N, leaving room for it', () => {
+    // 80 + 8 + 100 = 188 > 180; 80 + 8 + 32 = 120 fits
+    expect(fitChips([80, 100], 180, 8, 32)).toEqual({ visible: 1, hidden: 1 })
+    expect(fitChips([60, 60, 60, 60], 200, 8, 32)).toEqual({ visible: 2, hidden: 2 })
+  })
+  it('always shows at least one chip (it then ends in an ellipsis)', () => {
+    expect(fitChips([300, 100], 150, 8, 32)).toEqual({ visible: 1, hidden: 1 })
+    expect(fitChips([300], 150, 8, 32)).toEqual({ visible: 1, hidden: 0 })
+  })
+  it('no chips: nothing visible, nothing hidden', () => {
+    expect(fitChips([], 300, 8, 32)).toEqual({ visible: 0, hidden: 0 })
+  })
+  it('an unmeasured line (0 px, jsdom) shows every chip', () => {
+    expect(fitChips([0, 0, 0], 0, 0, 0)).toEqual({ visible: 3, hidden: 0 })
+  })
+})
+
+describe('fitChips on a line that is not measured', () => {
+  it('shows every chip even when fewer are shown now (a chip added to an unmeasured line is not held back by the margin)', () => {
+    expect(fitChips([0, 0], 0, 0, 0, 1)).toEqual({ visible: 2, hidden: 0 })
+    expect(fitChips([80, 100], 0, 8, 32, 1)).toEqual({ visible: 2, hidden: 0 })
   })
 })

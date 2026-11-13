@@ -482,13 +482,13 @@ const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); 
 
 
 // hf-recipes-filter round 2 (P17 to P20, docs/design/recipes-filter.md 13.6). Each probe is empty on a page without the header.
-// P17: a chip line (.recipe-filters__chips) shows a chip cut after its first one, or a chip past its end.
+// P17: a chip line (.filter-chips) shows a chip cut after its first one, or a chip past its end.
 const fitLinesProbe = `
 (() => {
   const main = document.querySelector('main')
   const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
   const out = []
-  for (const line of (main ? main.querySelectorAll('.recipe-filters__chips') : [])) {
+  for (const line of (main ? main.querySelectorAll('.filter-chips') : [])) {
     const lr = line.getBoundingClientRect()
     if (lr.width <= 2) continue
     const chips = [...line.children].filter((c) => c.classList.contains('chip'))
@@ -529,7 +529,7 @@ const clippedRingsProbe = `
   }
   const worst = (rect, list) => Math.max(0, ...list.map((c) => Math.max(c.l - rect.l, rect.r - c.r, c.t - rect.t, rect.b - c.b)))
   const out = []
-  const targets = [...main.querySelectorAll('.recipe-filters__chips > .chip, .course-filter > .chip')]
+  const targets = [...main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip')]
   for (const el of targets) {
     if (el.getBoundingClientRect().width <= 2) continue
     el.focus({ focusVisible: true })
@@ -573,12 +573,12 @@ const popoverAlignProbe = `
 // P20: row 3 (the chip line) sits one slot gap (the ListPage gap) below row 2, and the panel's sections are spaced.
 const filterSpacingProbe = `
 (() => {
-  const row2 = document.querySelector('.recipe-filters__view-row'), row3 = document.querySelector('.recipe-filters__chips')
+  const row2 = document.querySelector('.filter-bar__view-row'), row3 = document.querySelector('.filter-chips')
   const list = document.querySelector('.list-page')
   const slotGap = list ? parseFloat(getComputedStyle(list).rowGap) : NaN
   let rowGap = null
   if (row2 && row3 && row3.getBoundingClientRect().height > 0) rowGap = Math.round((row3.getBoundingClientRect().top - row2.getBoundingClientRect().bottom) * 10) / 10
-  const sections = [...document.querySelectorAll('.recipe-filters__section')]
+  const sections = [...document.querySelectorAll('.filter-panel__section')]
   const sectionGap = sections.length >= 2 ? Math.round((sections[1].getBoundingClientRect().top - sections[0].getBoundingClientRect().bottom) * 10) / 10 : null
   if (rowGap === null && sectionGap === null) return null
   return { rowGap, slotGap, sectionGap }
@@ -609,7 +609,7 @@ async function probePage(vp, route, pattern, kind, open) {
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
     if (open) {
       // The Filters button of the header (round 2 scenario): opened before the probes, so the popover is measured.
-      await evaluate("document.querySelector('.recipe-filters__search-row > .button')?.click()")
+      await evaluate("document.querySelector('.filter-bar__search-row > .button')?.click()")
       await settle()
     }
     const m = await evaluate(probe)

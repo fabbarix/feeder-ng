@@ -1,0 +1,138 @@
+/* The shared filter header (docs/design/recipes-filter.md 3, 13, 14; docs/design/pantry-filter.md 3, 5): the Recipes and the Pantry
+   headers. Every row is one line at every width; tokens only. */
+
+/* A header that is not in a ListPage stacks its rows itself, one slot gap (the ListPage gap) apart, so row 3 sits one slot gap
+   below row 2 (P20). */
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.filter-bar__row,
+.filter-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* Row 1: the search takes the free space, the Filters button keeps its width. */
+.filter-bar__search-row > .ui-field {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.filter-bar__search-row > .button {
+  flex: none;
+}
+
+/* Row 2: the view control at the start, Sort at the end; Sort's value may shrink (it ends in an ellipsis). */
+.filter-bar__view-row {
+  justify-content: space-between;
+}
+
+.filter-bar__view-row > .ui-field:first-child {
+  flex: none;
+}
+
+.filter-bar__sort {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
+/* Row 3: the active filter chips, one line; what does not fit is "+N". A chip keeps room for four characters and its close icon.
+   The line does not clip: a chip's focus ring and its 44 px hit area reach past its box (recipes-filter round 2). */
+.filter-chips {
+  position: relative;
+}
+
+.filter-chips > .chip {
+  flex: 0 1 auto;
+  min-inline-size: 4.5rem;
+}
+
+.filter-chips__more {
+  flex: none;
+}
+
+/* The hidden copy of the chip line that measures every chip at its natural width, shown or not (useFittingChips). It is as wide
+   as its content and its chips never shrink. Fixed, so it is not part of the line's or the page's scrollable overflow. */
+.filter-chips__measure {
+  position: fixed;
+  inline-size: max-content;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.filter-chips__measure > .chip {
+  flex: none;
+  /* The same minimum as the shown chips: one measurement for both states (recipes-filter round 3). */
+  min-inline-size: 4.5rem;
+}
+
+/* The Filters panel: 24 rem at most, never wider than the screen (a feature may narrow it). */
+.filter-panel {
+  inline-size: min(24rem, 100vw - 2 * var(--space-4));
+}
+
+/* The panel's sections are spaced by its own body (the bottom sheet has no .popover__body). */
+.filter-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  /* The bottom sheet clips its body at its edge: this keeps a chip line's focus ring inside it (recipes-filter round 3). */
+  padding-inline: var(--space-2);
+}
+
+.filter-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.filter-panel__heading {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+
+/* A long list (Tags, Storage Places) scrolls inside a capped height, under its search. */
+.filter-panel__list [role='listbox'] {
+  max-block-size: min(20rem, 50dvh);
+  overflow-y: auto;
+}
+
+/* A line of toggle filter chips: one line that scrolls sideways, its chips at their natural width. It is padded on both axes by the
+   focus ring (3 px outline, 2 px offset) with a matching negative margin, so its chips still line up with the heading. */
+.filter-chip-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-chip-group > .chip {
+  flex: none;
+}
+
+/* A trailing spacer: a horizontal scroller does not always keep its inline-end padding as scrollable space, so the last chip's
+   focus ring needs room of its own at the scroll end. */
+.filter-chip-group::after {
+  content: '';
+  flex: none;
+  inline-size: var(--space-2);
+}

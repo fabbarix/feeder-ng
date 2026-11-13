@@ -44,16 +44,16 @@ describe('P17-P20 fail in every mode', () => {
 
 describe('P17: a "+N" chip line shows a cut chip after its first, or a chip past its end', () => {
   it('a cut chip is a finding naming the line, the label and the hidden px', () => {
-    const f = run({ fitLines: [{ sel: 'div.recipe-filters__chips', label: 'extraordinarily long family favourite weeknight tag', why: 'cut', px: 182 }] })
+    const f = run({ fitLines: [{ sel: 'div.filter-chips', label: 'extraordinarily long family favourite weeknight tag', why: 'cut', px: 182 }] })
     const p = f.find((x) => x.rule === 'P17')
     expect(p?.message).toMatch(/^P17 /)
-    expect(p?.message).toMatch(/recipe-filters__chips/)
+    expect(p?.message).toMatch(/filter-chips/)
     expect(p?.message).toMatch(/extraordinarily long/)
     expect(p?.message).toMatch(/182\s*px/)
     expect(p?.message).toMatch(/\+N/)
   })
   it('a chip running past the line is a finding too', () => {
-    expect(rulesOf(run({ fitLines: [{ sel: 'div.recipe-filters__chips', label: 'Side', why: 'spill', px: 40 }] }))).toContain('P17')
+    expect(rulesOf(run({ fitLines: [{ sel: 'div.filter-chips', label: 'Side', why: 'spill', px: 40 }] }))).toContain('P17')
   })
   it('none (or no probe) is clean', () => {
     expect(rulesOf(run({ fitLines: [] }))).not.toContain('P17')
@@ -140,7 +140,7 @@ describe('the driver', () => {
   it('runs the SCENARIOS, opening the Filters panel for the open one', () => {
     expect(driver).toMatch(/SCENARIOS/)
     expect(driver).toMatch(/resolveScenario/)
-    expect(driver).toMatch(/recipe-filters__search-row/)
+    expect(driver).toMatch(/filter-bar__search-row/)
   })
   it('collects fitLines, clippedRings (focusing each chip with focusVisible), popoverAlign and filterSpacing', () => {
     for (const metric of ['fitLines', 'clippedRings', 'popoverAlign', 'filterSpacing']) expect(driver, metric).toMatch(new RegExp(`${metric}\\s*[,:=]`))

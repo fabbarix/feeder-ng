@@ -114,3 +114,17 @@ describe('OptionList', () => {
   })
 })
 
+
+// pantry-filter: a list where several options may be chosen (Storage Places) says so; a single-choice one (Tags) does not.
+describe('OptionList multiple', () => {
+  const opts: SelectOption<number>[] = [{ value: 1, label: 'Kitchen Pantry' }, { value: 2, label: 'Garage Freezer' }]
+  it('marks the listbox aria-multiselectable, and every chosen option selected', () => {
+    render(<OptionList<number> label="Filter by Storage Place" searchLabel="Search Storage Places" query="" onQueryChange={() => {}} options={opts} selected={[1, 2]} onToggle={() => {}} multiple />)
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true')
+    for (const o of screen.getAllByRole('option')) expect(o).toHaveAttribute('aria-selected', 'true')
+  })
+  it('a single-choice list has no aria-multiselectable', () => {
+    render(<OptionList<number> label="Filter by Tag" searchLabel="Search Tags" query="" onQueryChange={() => {}} options={opts} selected={[]} onToggle={() => {}} />)
+    expect(screen.getByRole('listbox')).not.toHaveAttribute('aria-multiselectable')
+  })
+})

@@ -1,7 +1,7 @@
-// hf-recipes-filter: how many chips of a one-line chip row fit, the rest collapse into "+N" (docs/design/recipes-filter.md 5.4, 6).
+// How many chips of a one-line chip row fit, the rest collapse into "+N" (docs/design/recipes-filter.md 5.4, 6; pantry-filter.md 5).
 // The row is measured after every render and again when it resizes. jsdom lays nothing out, so an unmeasured row shows every chip.
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { fitChips } from '../lib/recipeFilters'
+import { fitChips } from '../../lib/filters/fitChips'
 
 export interface ChipLineMetrics {
   /** The width the chips may take. */
@@ -13,14 +13,14 @@ export interface ChipLineMetrics {
   plusWidth: number
 }
 
-/** Reads a line's chips (its direct `.chip` children) and its "+N" chip (`.recipe-filters__more`). */
+/** Reads a line's chips (its direct `.chip` children) and its "+N" chip (`.filter-chips__more`). */
 export function measureChipLine(el: HTMLElement): ChipLineMetrics {
   const chips = [...el.querySelectorAll<HTMLElement>(':scope > .chip')]
   // A line with no layout (0 px: jsdom, or not shown) measures as zero, so every chip fits.
   if (el.clientWidth === 0) return { available: 0, widths: chips.map(() => 0), gap: 0, plusWidth: 0 }
   const cs = getComputedStyle(el)
   const padding = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
-  const more = el.querySelector<HTMLElement>(':scope > .recipe-filters__more')
+  const more = el.querySelector<HTMLElement>(':scope > .filter-chips__more')
   return {
     available: el.clientWidth - padding,
     widths: chips.map((c) => c.getBoundingClientRect().width),
