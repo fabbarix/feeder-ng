@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Button, Chip, RecipeThumb, Tile } from '../../../ui'
+import { Button, RecipeThumb, Tile } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
+import { warningContextOf } from '../lib/bought'
 import { heroChips, leftoverChip } from '../lib/chips'
 import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '../lib/courses'
 import type { HeroAction, HeroDay } from '../lib/hero'
@@ -8,6 +9,8 @@ import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotCookLabel, 
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 import { CourseRow, type CourseRowHandlers } from './CourseRow'
+import { PlanChipView } from './PlanChipView'
+import { RuleWarningLine } from './RuleWarningLine'
 import { SlotMenu, type SlotMenuProps } from './SlotMenu'
 import '../plan.css'
 
@@ -82,12 +85,11 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
               {chips.map((c) => (
-                <Chip key={c.key} kind={c.kind}>
-                  {c.label}
-                </Chip>
+                <PlanChipView key={c.key} chip={c} />
               ))}
             </div>
           ) : null}
+          <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, row.course.name)} />
         </div>
       </div>
       {!awaiting ? (
@@ -171,12 +173,11 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
               {chips.map((c) => (
-                <Chip key={c.key} kind={c.kind} status={c.status}>
-                  {c.label}
-                </Chip>
+                <PlanChipView key={c.key} chip={c} />
               ))}
             </div>
           ) : null}
+          <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, hero.course.name)} />
         </div>
       </div>
       {!awaiting ? (

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useConfirm, useToast } from '../../../ui'
+import { planApi } from '../api'
 import { courseOf, unresolvedCourseIds } from '../lib/courses'
+import type { RegenerateDryRun } from '../lib/bought'
 import { regenerateConfirmCopy, regenerateImpact } from '../lib/regenerate'
 import { planStrings } from '../strings'
 import type { SlotDayKey, SlotKey } from '../types'
@@ -22,6 +24,9 @@ export function usePlanScreen() {
   const [plannedKey, setPlannedKey] = useState<SlotKey | null>(null)
   const [swapKey, setSwapKey] = useState<SlotKey | null>(null)
   const [chooseKey, setChooseKey] = useState<SlotKey | null>(null)
+  /** True while the Regenerate dry run runs; a ref guards re-entry from a quick second tap. */
+  const [regeneratePreviewing, setRegeneratePreviewing] = useState(false)
+  const previewingRef = useRef(false)
   const alternatives = useAlternatives(swapKey)
   const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
   const allCooked = useAllCookedFlow()
@@ -31,6 +36,8 @@ export function usePlanScreen() {
 
   const slotAt = (key: SlotDayKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
   const swapSlot = slotAt(swapKey)
+  /** The swapped Planned Meal's Bought info (null when not Bought or nothing is being swapped). */
+  const swapBought = swapSlot && swapKey ? (courseOf(swapSlot, swapKey.courseId)?.meal?.bought ?? null) : null
 
   return {
     plan,
@@ -45,6 +52,7 @@ export function usePlanScreen() {
     /** The Course of the open Planned Meal sheet (undefined: the main Course). */
     plannedCourseId: plannedKey?.courseId,
     swapSlot,
+    swapBought,
     plannedOpen: plannedKey !== null,
     swapOpen: swapKey !== null,
     chooseOpen: chooseKey !== null,
@@ -76,11 +84,26 @@ export function usePlanScreen() {
         onAction: () => void actions.restore(key, before.recipeId, before.pinned),
       })
     },
-    /** Regenerate asks first (2.4): the count of Planned Meals that will change; the POST only after a yes. */
+    /** Regenerate asks first (2.4): the count and the Bought Planned Meals it would replace (a dry run, which writes nothing; a failed one asks with the count alone); the POST only after a yes. */
     askRegenerate: async () => {
-      const copy = regenerateConfirmCopy(regenerateImpact(plan.slots, plan.today))
+      if (previewingRef.current) return
+      previewingRef.current = true
+      setRegeneratePreviewing(true)
+      let dryRun: RegenerateDryRun | null
+      try {
+        dryRun = await planApi.regenerateDryRun()
+      } catch {
+        dryRun = null
+      } finally {
+        previewingRef.current = false
+        setRegeneratePreviewing(false)
+      }
+      const count = dryRun ? dryRun.replaces : regenerateImpact(plan.slots, plan.today)
+      const copy = regenerateConfirmCopy(count, dryRun)
       if (await confirm.confirm({ title: copy.title, body: copy.body, confirmLabel: copy.confirmLabel })) await actions.regenerate()
     },
+    /** True while the Regenerate dry run runs (the button shows its busy state). */
+    regeneratePreviewing,
     pickRecipe: async (recipeId: number) => {
       if (!chooseKey) return
       const key = chooseKey

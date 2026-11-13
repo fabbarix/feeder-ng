@@ -73,7 +73,7 @@ export function PlanScreen(): ReactNode {
           title={planStrings.title}
           subtitle={range}
           actions={
-            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating} onClick={() => void s.askRegenerate()}>
+            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
               {planStrings.regenerate}
             </Button>
           }
@@ -121,6 +121,7 @@ export function PlanScreen(): ReactNode {
         alternatives={s.alternatives.alternatives}
         isLoading={s.alternatives.isLoading}
         onPick={(id) => void s.pickAlternative(id)}
+        bought={s.swapBought}
       />
       <RecipeChooserSheet
         open={s.chooseOpen}

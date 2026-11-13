@@ -113,3 +113,26 @@ describe('the Leftover chip without a source date (N1)', () => {
     expect(dayChip(served('2026-11-10'), ctx)?.label).toBe('Leftover from Tue')
   })
 })
+
+// B5-BOW round 2 (ADR 0013): Today matches Plan; the hero shows the Bought chip.
+describe('heroChips: the Bought chip', () => {
+  const bought = { ingredients: [{ id: 1, name: 'chicken thighs' }] }
+  it('comes before the why chips and takes one of the two places', () => {
+    const chips = heroChips(meal({ bought, why: [favourite('Anna'), { code: 'stock_coverage', ingredient: 'rice' }] }), ctx)
+    expect(chips.map((c) => c.label)).toEqual(['Bought', "Anna's favourite"])
+  })
+  it('is the only chip when there is nothing else', () => {
+    expect(heroChips(meal({ bought }), ctx).map((c) => c.label)).toEqual(['Bought'])
+  })
+  it('never appears twice, and not when empty, null or absent', () => {
+    expect(heroChips(meal({ bought: { ingredients: [] } }), ctx)).toEqual([])
+    expect(heroChips(meal({ bought: null }), ctx)).toEqual([])
+    expect(heroChips(meal({ bought, why: [favourite('Anna')] }), ctx).filter((c) => c.label === 'Bought')).toHaveLength(1)
+  })
+  it('a relaxed chip still comes after the positive ones when it fits', () => {
+    const relaxed = { code: 'cooldown_relaxed' as const, date: '2026-11-08', recipeId: 7 }
+    const labels = heroChips(meal({ bought, why: [relaxed] }), ctx).map((c) => c.label)
+    expect(labels[0]).toBe('Bought')
+    expect(labels).toHaveLength(2)
+  })
+})

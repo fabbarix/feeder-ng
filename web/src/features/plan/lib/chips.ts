@@ -2,6 +2,7 @@ import type { ChipStatus } from '../../../ui'
 import type { PlannedMeal, WhyCode } from '../types'
 import { planStrings as s } from '../strings'
 import { phraseWhy, weekdayName, type PhraseContext } from './phrase'
+import { addBoughtChip } from './bought'
 
 /** One chip of a Planned Meal: what the planner or the state says, never a raw fact (ui-fix-plan 4.3). */
 export interface PlanChip {
@@ -64,8 +65,8 @@ function whyChips(meal: PlannedMeal, ctx: PhraseContext): PlanChip[] {
  * chip. 'best_available' never makes a chip. null when there is nothing to say.
  */
 export function dayChip(meal: PlannedMeal, ctx: PhraseContext): PlanChip | null {
-  const [first] = [...stateChips(meal), ...leftoverChip(meal), ...whyChips(meal, ctx)]
-  return first ?? null
+  const chips = [...stateChips(meal), ...leftoverChip(meal), ...whyChips(meal, ctx)]
+  return addBoughtChip(chips, meal.bought, 'row')[0] ?? null
 }
 
 /**
@@ -75,15 +76,15 @@ export function dayChip(meal: PlannedMeal, ctx: PhraseContext): PlanChip | null 
  */
 export function sheetChips(meal: PlannedMeal, ctx: PhraseContext): { chips: PlanChip[]; overflow: number } {
   const { positive, relaxed } = whyChipsSplit(meal, ctx)
-  const base = dedupe([...stateChips(meal), ...leftoverChip(meal), ...positive])
+  const base = dedupe(addBoughtChip([...stateChips(meal), ...leftoverChip(meal), ...positive], meal.bought, 'sheet'))
   if (relaxed.length === 0) return { chips: base.slice(0, SHEET_LIMIT), overflow: Math.max(0, base.length - SHEET_LIMIT) }
   const shown = [...base.slice(0, SHEET_LIMIT - 1), relaxed[0]!]
   return { chips: shown, overflow: base.length + relaxed.length - shown.length }
 }
 
-/** The why chips of the Today hero (rule: at most 2), most relevant first; a relaxed chip comes after the positive ones. */
+/** The why chips of the Today hero (rule: at most 2), most relevant first: the Bought chip first, a relaxed chip after the positive ones. */
 export function heroChips(meal: PlannedMeal, ctx: PhraseContext): PlanChip[] {
-  return whyChips(meal, ctx).slice(0, HERO_LIMIT)
+  return addBoughtChip(whyChips(meal, ctx), meal.bought, 'sheet').slice(0, HERO_LIMIT)
 }
 
 function dedupe(chips: PlanChip[]): PlanChip[] {

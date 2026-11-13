@@ -1,5 +1,7 @@
 // Shapes of the planning API (docs/dev/design/t11-planning.md). Dates are YYYY-MM-DD in household time.
 
+import type { BoughtInfo, MealWarning } from './lib/bought'
+
 export type WhyCode =
   | 'slot_rule'
   | 'leftover'
@@ -63,6 +65,10 @@ export interface PlannedMeal {
   startBy?: string
   photoUrl?: string
   tags?: string[]
+  /** B5-BOW (ADR 0013): the Ingredients bought for this Planned Meal; absent or null = not Bought. */
+  bought?: BoughtInfo | null
+  /** B5-BOW: a Pinned or Bought meal that breaks a hard rule; sent on slot views only. */
+  warning?: MealWarning | null
 }
 
 export type UnfilledReason = 'no_attendance' | 'no_candidates' | 'no_course_recipes'

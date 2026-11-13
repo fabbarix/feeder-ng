@@ -6,6 +6,7 @@ import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
 import { wholeMealChip, type CourseRowModel } from '../lib/courses'
 import { mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
+import { PlanChipView } from './PlanChipView'
 import type { PlanSlot, SlotKey } from '../types'
 
 export type CourseAction = 'swap' | 'pin' | 'cooked'
@@ -67,11 +68,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
               {meal.recipeName}
             </button>
             <span className="plan-course__chips">
-              {chip ? (
-                <Chip kind={chip.kind} status={chip.status}>
-                  {chip.label}
-                </Chip>
-              ) : null}
+              {chip ? <PlanChipView chip={chip} /> : null}
               {whole ? (
                 <Chip kind={whole.kind} status={whole.status}>
                   {whole.label}
