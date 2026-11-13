@@ -47,12 +47,12 @@ describe('ShoppingBody: structure', () => {
     expect(onOpenLine).not.toHaveBeenCalled()
   })
 
-  it('Ticked Lines are a "Ticked (N)" section with their own list, after the open ones', () => {
+  it('Ticked Lines are a "Ticked" section (count pill 1) with their own list, after the open ones', () => {
     const list = makeList({ lines: [makeLine(), line(4, 'Rice', { ticked: true, quantity: 0 })], progress: { ticked: 1, total: 2 } })
     render(<ShoppingBody {...base} list={list} />)
-    const heading = screen.getByRole('heading', { name: 'Ticked (1)' })
+    const heading = screen.getByRole('heading', { name: 'Ticked 1' })
     const ticked = screen.getByRole('list', { name: 'Ticked' })
-    expect(within(ticked).getByRole('button', { name: 'Untick Rice' })).toBeInTheDocument()
+    expect(within(ticked).getByRole('button', { name: 'Tick Rice', pressed: true })).toBeInTheDocument()
     expect(within(ticked).getAllByRole('listitem')[0]).toHaveAttribute('data-state', 'ticked')
     after(screen.getByRole('list', { name: 'To get' }), heading)
     after(heading, ticked)
@@ -81,6 +81,18 @@ describe('ShoppingBody: structure', () => {
   })
 })
 
+describe('ShoppingBody: round 2 section titles', () => {
+  it('"To get" and "Ticked" carry a count pill with the number of rows; the list keeps the plain name', () => {
+    const list = makeList({ lines: [line(1, 'Dill'), line(2, 'Rice'), line(4, 'Salt', { ticked: true, quantity: 0 })], progress: { ticked: 1, total: 3 } })
+    const { container } = render(<ShoppingBody {...base} list={list} />)
+    expect(screen.getByRole('heading', { name: 'To get 2' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ticked 1' })).toBeInTheDocument()
+    expect([...container.querySelectorAll('.shop-section__count')].map((e) => e.textContent)).toEqual(['2', '1'])
+    expect(screen.getByRole('list', { name: 'To get' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Ticked' })).toBeInTheDocument()
+  })
+})
+
 describe('ShoppingBody: the notice is said once', () => {
   const hinted = makeList({
     lines: [makeLine({ pastPlannedMeals: [makePast()] }), line(3, 'Rice', { pastPlannedMeals: [makePast()] }), line(4, 'Dill')],
@@ -89,8 +101,15 @@ describe('ShoppingBody: the notice is said once', () => {
 
   it('the sentence appears once for any number of Lines, and "Mark it" once', () => {
     render(<ShoppingBody {...base} list={hinted} onMarkIt={() => {}} />)
-    expect(screen.getAllByText(/not marked Cooked yet/)).toHaveLength(1)
+    expect(screen.getAllByText(/marked Cooked yet/)).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /Mark it/ })).toHaveLength(1)
+  })
+
+  it('round 2: the notice names the slots shortly and in bold, not the Line sentence', () => {
+    render(<ShoppingBody {...base} list={hinted} onMarkIt={() => {}} />)
+    const region = screen.getByRole('region', { name: 'Not marked Cooked yet' })
+    expect(region).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
+    expect(region.querySelector('strong')).toHaveTextContent('Tue Dinner')
   })
 
   it('each affected row carries only the small info marker', () => {

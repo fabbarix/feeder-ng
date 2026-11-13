@@ -25,7 +25,36 @@ describe('ShopMetrics', () => {
     const value = document.querySelector('.shop-metrics__value[data-metric="left"]')!
     expect(value).toHaveTextContent('16')
     expect(bar.querySelector('.shop-metrics__fill')).toBeInTheDocument()
-    expect(screen.getByText('Left to get')).toBeInTheDocument()
+  })
+
+  it('round 2: the tile reads "16 of 18 left", with the meta line "2 ticked \u00b7 until Sun 15"', () => {
+    render(<ShopMetrics summary={summary()} onScan={() => {}} />)
+    const tile = screen.getByRole('progressbar', { name: 'Left to get' }).closest('.tile')!
+    expect(tile.querySelector('.shop-metrics__value[data-metric="left"]')).toHaveTextContent('16')
+    expect(tile.querySelector('.shop-metrics__unit')).toHaveTextContent('of 18 left')
+    expect(tile.querySelector('.shop-metrics__meta')).toHaveTextContent('2 ticked \u00b7 until Sun 15')
+  })
+
+  it('round 2: the fill width is the summary\'s percent, not computed here (a summary that says 40 shows 40)', () => {
+    render(<ShopMetrics summary={{ ...summary(), percent: 40 }} onScan={() => {}} />)
+    expect(document.querySelector('.shop-metrics__fill')!.getAttribute('style')).toMatch(/\b40%/)
+  })
+
+  it('round 2: with nothing ticked the bar is still there as a full-width empty track (fill 0%)', () => {
+    render(<ShopMetrics summary={summary({ progress: { ticked: 0, total: 18 } })} onScan={() => {}} />)
+    const bar = screen.getByRole('progressbar', { name: 'Left to get' })
+    expect(bar).toHaveAttribute('aria-valuenow', '0')
+    expect(bar.querySelector('.shop-metrics__fill')!.getAttribute('style')).toMatch(/\b0%/)
+  })
+
+  it('round 2: with no Price anywhere the Scan tile still has its caption and a Scan button that fills the tile', () => {
+    render(<ShopMetrics summary={summary({ estimatedCostCents: 0, unpricedLines: 12 })} onScan={() => {}} />)
+    const tile = screen.getByText('12 Lines have no Price yet').closest('.tile') as HTMLElement
+    expect(tile).toHaveClass('shop-metrics__scan-tile')
+    const caption = tile.querySelector('.shop-metrics__caption')!
+    const button = within(tile).getByRole('button', { name: 'Scan' })
+    expect(button).toHaveClass('shop-metrics__scan')
+    expect(caption.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('the estimated total, with "est. at <Shop>"', () => {
@@ -45,7 +74,7 @@ describe('ShopMetrics', () => {
   it('the Scan tile says how many Lines have no Price yet and holds the Scan button', async () => {
     const onScan = vi.fn()
     render(<ShopMetrics summary={summary()} onScan={onScan} />)
-    const tile = screen.getByText('13 lines have no Price yet').closest('.tile') as HTMLElement
+    const tile = screen.getByText('13 Lines have no Price yet').closest('.tile') as HTMLElement
     await userEvent.click(within(tile).getByRole('button', { name: 'Scan' }))
     expect(onScan).toHaveBeenCalledOnce()
   })

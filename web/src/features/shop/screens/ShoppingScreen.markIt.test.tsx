@@ -53,7 +53,8 @@ beforeEach(() => {
 describe('ShoppingScreen: Mark it (DS-SHOP: said once in the notice; the row sheet has it too)', () => {
   it('the notice above the list says the sentence once and has one Mark it button; the Line row has none', () => {
     show(makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] }), makeLine({ ingredientId: 3, name: 'Rice', pastPlannedMeals: [makePast()] })], progress: { ticked: 0, total: 2 } }))
-    expect(screen.getAllByText('Includes Tue Dinner, not marked Cooked yet')).toHaveLength(1)
+    expect(screen.getAllByText(/marked Cooked yet/)).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Not marked Cooked yet' })).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
     expect(screen.getAllByRole('button', { name: 'Mark it' })).toHaveLength(1)
     expect(screen.queryByRole('button', { name: 'Mark it: Passata' })).toBeNull()
   })

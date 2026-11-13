@@ -1,7 +1,7 @@
 // CSS contract of the Shop feature (WP7, rewritten for DS-SHOP: docs/design/system.md, ADR 0016). vitest blanks CSS imports,
 // so the stylesheet is read from disk. Tokens only: no raw sizes, no hex, no opacity muting, no mid-word breaks.
 import { describe, expect, it } from 'vitest'
-import { declarations, ruleBlocks } from '../../../ui/test-utils'
+import { declarations, readStylesCss, ruleBlocks } from '../../../ui/test-utils'
 
 const nodeFs = 'node:fs'
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
@@ -100,30 +100,63 @@ describe('shop.css: one list on a phone, a 2-column card grid from 768 px', () =
     expect(m).toMatch(/gap:\s*var\(--bento-gap\)/)
   })
 
-  it('in the card grid each row is its own card: surface fill, tile radius, top-aligned (not stretched to a neighbour)', () => {
+  it('in the card grid each row is its own card (surface fill, tile radius) and its content stays CENTRED in the row (system.md §3)', () => {
     const m = media(/min-width:\s*768px/)
     const block = m.match(/\.shop-lines \.list-row\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(block).toMatch(/border-radius:\s*var\(--radius-tile-sm\)/)
     expect(block).toMatch(/background:\s*var\(--color-surface\)/)
-    expect(m).toMatch(/align-items:\s*start/)
+    expect(block).not.toMatch(/align-items\s*:\s*(start|flex-start|baseline)/)
+    expect(block).not.toMatch(/align-content\s*:\s*(start|flex-start)/)
+  })
+
+  it('only the grid TRACKS start at the top: the list aligns its items to start, so a short row is not stretched to a tall neighbour', () => {
+    const m = media(/min-width:\s*768px/)
+    expect(m).toMatch(/\.shop-lines \.list-group__list\s*\{[^}]*align-items:\s*start/)
   })
 })
 
 describe('shop.css: the row', () => {
-  it('the tick control is at least 44 x 44 px (ui-fix-plan 5.5, key acceptance), a ring when open', () => {
+  it('the tick control is a 44 x 44 px hit area with no border of its own (the ring is drawn inside it)', () => {
     const d = declarations(css, '.line-row__tick')
     const width = Math.max(px(d['min-width']), px(d['width']), px(d['min-inline-size']), px(d['inline-size']))
     const height = Math.max(px(d['min-height']), px(d['height']), px(d['min-block-size']), px(d['block-size']))
     expect(width).toBeGreaterThanOrEqual(44)
     expect(height).toBeGreaterThanOrEqual(44)
-    expect(d['border-radius']).toBe('var(--radius-pill)')
-    expect(d['border']).toMatch(/var\(--color-outline\)/)
+    expect(d['border'] ?? '0').toMatch(/^(0|none)\b/)
+    expect(d['background']).toMatch(/^(transparent|none)$/)
   })
 
-  it('a ticked Line is success: a filled success tick', () => {
-    const d = declarations(css, ".line-row__tick[aria-pressed='true']")
-    expect(d['background']).toBe('var(--status-success-solid)')
-    expect(d['border-color']).toBe('var(--status-success-solid)')
+  it('round 2: the visible ring is 24 px (--space-6), centred in the 44 px target, a pill with a 2 px outline', () => {
+    const d = declarations(css, '.line-row__tick::before')
+    expect(d['inline-size']).toBe('var(--space-6)')
+    expect(d['block-size']).toBe('var(--space-6)')
+    expect(d['border-radius']).toBe('var(--radius-pill)')
+    expect(d['border']).toMatch(/^2px solid /)
+    expect(d['content']).toBeDefined()
+    expect(declarations(css, '.line-row__tick')['display']).toMatch(/grid|flex/)
+  })
+
+  it('round 2: the ring stays visible in dark mode: its colour is a theme token with a dark value (--color-muted), never transparent or --status-*-bg', () => {
+    const d = declarations(css, '.line-row__tick::before')
+    expect(d['border']).toMatch(/var\(--color-muted\)/)
+    const styles = readStylesCss().replace(/\/\*[\s\S]*?\*\//g, '')
+    expect((styles.match(/--color-muted:/g) ?? []).length).toBeGreaterThanOrEqual(2) // light and dark
+  })
+
+  it('round 2: ticked = a plain check in a filled success circle: the ring fills with success, the check uses the on-success token', () => {
+    const ring = declarations(css, ".line-row__tick[aria-pressed='true']::before")
+    expect(ring['background']).toBe('var(--status-success-solid)')
+    expect(ring['border-color']).toBe('var(--status-success-solid)')
+    const tick = declarations(css, ".line-row__tick[aria-pressed='true']")
+    expect(tick['color']).toBe('var(--status-success-on-solid)')
+    expect(css).not.toMatch(/color\s*:\s*var\(--status-success-bg\)/)
+  })
+
+  it('round 2: styles.css defines --status-success-on-solid wherever --status-danger-on-solid is (light, dark, forced dark), so the check has contrast', () => {
+    const styles = readStylesCss().replace(/\/\*[\s\S]*?\*\//g, '')
+    const count = (name: string) => (styles.match(new RegExp(`${name}:`, 'g')) ?? []).length
+    expect(count('--status-success-on-solid')).toBeGreaterThanOrEqual(2)
+    expect(count('--status-success-on-solid')).toBe(count('--status-danger-on-solid'))
   })
 
   it('a ticked title is struck through and muted', () => {
@@ -167,5 +200,68 @@ describe('shop.css: metric strip and notice', () => {
     expect(px(d['min-height'])).toBeGreaterThanOrEqual(44)
     expect(d['color']).toBe('var(--color-muted)')
     expect(d['font-size']).toBe('var(--text-label-size)')
+  })
+})
+
+describe('shop.css: round 2', () => {
+  it('a ticked row mutes its quantity and cost as well as its name', () => {
+    expect(declarations(css, ".shop-lines .list-row[data-state='ticked'] .list-row__value")['color']).toBe('var(--color-muted)')
+  })
+
+  it('the metric tile does not collapse its content to the start: the progress bar spans the full width of its tile', () => {
+    const tile = declarations(css, '.shop-metrics__tile')
+    expect(tile['justify-items'] ?? 'stretch').toBe('stretch')
+    const bar = declarations(css, '.shop-metrics__bar')
+    expect(bar['inline-size']).toBe('100%')
+    expect(bar['block-size']).toMatch(/^var\(--space-\d+\)$/)
+    expect(bar['background']).toMatch(/^var\(--color-(line|surface)\)$/) // a visible empty track, not a grey pill
+    expect(declarations(css, '.shop-metrics__fill')['inset-inline-start']).toBe('0')
+  })
+
+  it('the "of N left" unit and the meta line are meta text; the unit sits on the value\'s baseline', () => {
+    expect(declarations(css, '.shop-metrics__unit')['font-size']).toBe('var(--text-body-strong-size)')
+    expect(declarations(css, '.shop-metrics__unit')['color']).toBe('var(--color-muted)')
+    expect(declarations(css, '.shop-metrics__meta')['font-size']).toBe('var(--text-meta-size)')
+    expect(declarations(css, '.shop-metrics__meta')['color']).toBe('var(--color-muted)')
+  })
+
+  it('the Scan tile spreads its caption and its button over the tile, and the button fills the width (no short pill in a big tile)', () => {
+    expect(declarations(css, '.shop-metrics__scan-tile')['align-content']).toBe('space-between')
+    expect(declarations(css, '.shop-metrics__scan')['inline-size']).toBe('100%')
+  })
+
+  it('section titles have a count pill: a neutral container with a chip-sized number', () => {
+    const t = declarations(css, '.shop-section__title')
+    expect(t['display']).toMatch(/flex|inline-flex/)
+    const pill = declarations(css, '.shop-section__count')
+    expect(pill['background']).toBe('var(--color-surface-2)')
+    expect(pill['border-radius']).toBe('var(--radius-pill)')
+    expect(pill['font-size']).toBe('var(--text-chip-size)')
+    expect(pill['font-variant-numeric']).toBe('tabular-nums')
+  })
+
+  it('the notice sentence is clamped to two lines with an ellipsis (the full text is in its title)', () => {
+    const d = declarations(css, '.shop-notice__text')
+    expect(d['display']).toBe('-webkit-box')
+    expect(d['-webkit-line-clamp']).toBe('2')
+    expect(d['overflow']).toBe('hidden')
+  })
+
+  it('the header pickers are ONE row of compact chips at every width: a flex row that does not wrap, token gap, aligned to the content grid', () => {
+    const d = declarations(css, '.shop-screen__controls')
+    expect(d['display']).toBe('flex')
+    expect(d['flex-wrap'] ?? 'nowrap').toBe('nowrap')
+    expect(d['gap']).toMatch(/^var\(--space-\d+\)$/)
+    expect(d['grid-template-columns']).toBeUndefined()
+    expect(d['justify-content'] ?? 'flex-start').toMatch(/^(flex-start|start)$/)
+    expect(d['margin-inline'] ?? '0').toBe('0')
+    // no media query turns it back into two equal columns
+    expect(css).not.toMatch(/\.shop-screen__controls[^{]*\{[^}]*grid-template-columns/)
+  })
+
+  it('the pickers shrink with an ellipsis before they wrap (min-inline-size 0), the locate button keeps its size', () => {
+    expect(declarations(css, '.shop-screen__controls > *')['min-inline-size']).toBe('0')
+    expect(declarations(css, '.shop-screen__shop')['display']).toBe('flex')
+    expect(declarations(css, '.shop-screen__shop')['align-items'] ?? 'center').toBe('center')
   })
 })

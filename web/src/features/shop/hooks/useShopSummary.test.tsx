@@ -10,7 +10,7 @@ describe('useShopSummary', () => {
     const { result } = renderHook(() => useShopSummary(list, 'Coop'))
     expect(result.current.summary.left).toBe(1)
     expect(result.current.summary.estimated).toEqual({ text: '$3.18', caption: 'est. at Coop' })
-    expect(result.current.notice?.text).toBe('Includes Tue Dinner, not marked Cooked yet')
+    expect(result.current.notice?.text).toBe("Tue Dinner isn't marked Cooked yet")
   })
 
   it('no notice without unconfirmed past meals', () => {

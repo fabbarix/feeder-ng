@@ -94,7 +94,7 @@ describe('ShoppingScreen Not needed', () => {
 
   it('names the unconfirmed past meals once, in the notice (the Mark it button: ShoppingScreen.markIt.test)', () => {
     show(makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] })] }))
-    expect(screen.getByText('Includes Tue Dinner, not marked Cooked yet')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Not marked Cooked yet' })).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
   })
 
   it('a list saved by an older version (no notNeeded, no pastPlannedMeals) renders as before', () => {

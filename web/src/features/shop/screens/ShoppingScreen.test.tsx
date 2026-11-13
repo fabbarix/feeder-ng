@@ -55,6 +55,22 @@ describe('ShoppingScreen', () => {
     expect(document.querySelector('select, input[type=checkbox], input[type=radio]')).toBeNull()
   })
 
+  it('round 2: the two pickers are compact chips in ONE row (a group), each with its icon, labels visually hidden', () => {
+    show(makeList())
+    const row = document.querySelector('.shop-screen__controls')!
+    const range = screen.getByRole('combobox', { name: /Shop for/ })
+    const shop = screen.getByRole('combobox', { name: /^Shop\b(?! for)/ })
+    expect(row).toContainElement(range)
+    expect(row).toContainElement(shop)
+    expect(range).toHaveAttribute('data-appearance', 'chip')
+    expect(shop).toHaveAttribute('data-appearance', 'chip')
+    expect(shop).toHaveTextContent('Coop')
+    expect(range.querySelector('.select__leading svg')).not.toBeNull()
+    expect(shop.querySelector('.select__leading svg')).not.toBeNull()
+    expect(row.querySelectorAll('.ui-field__label.visually-hidden')).toHaveLength(2)
+    expect(row.querySelectorAll('.ui-field[data-size]')).toHaveLength(0)
+  })
+
   it('G3: picking another Shop remembers it and refetches the list priced at that Shop', async () => {
     show(makeList())
     await userEvent.click(screen.getByRole('combobox', { name: /^Shop\b(?! for)/ }))
@@ -93,7 +109,7 @@ describe('ShoppingScreen', () => {
     // the total is in the metric strip; the Passata row shows the same $3.18 as its sub-value, so query the strip
     expect(document.querySelector('.shop-metrics__value[data-metric="total"]')).toHaveTextContent('$3.18')
     expect(screen.getByText('est. at Coop')).toBeInTheDocument()
-    expect(screen.getByText('1 line has no Price yet')).toBeInTheDocument()
+    expect(screen.getByText('1 Line has no Price yet')).toBeInTheDocument()
     expect(screen.getByText('2 × Mutti 700 g')).toBeInTheDocument()
     expect(screen.getByText('600 g')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('—')
@@ -133,11 +149,11 @@ describe('ShoppingScreen', () => {
   it('QA: ticks are visible - a ticked Line sits in the Ticked group with a check mark', async () => {
     show(makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 1, total: 2 } }))
     const ticked = screen.getByRole('list', { name: 'Ticked' })
-    const untick = within(ticked).getByRole('button', { name: 'Untick Rice' })
+    const untick = within(ticked).getByRole('button', { name: 'Tick Rice', pressed: true })
     expect(untick.querySelector('svg')).not.toBeNull()
     await userEvent.click(untick)
     expect(actions.untick).toHaveBeenCalledWith(4, '2026-11-15')
-    expect(screen.queryByRole('button', { name: 'Untick Passata' })).toBeNull()
+    expect(within(ticked).queryByRole('button', { name: 'Tick Passata' })).toBeNull()
   })
 
   it('extras can be deleted: tap the row, then Delete in its sheet (DS-SHOP: no Delete button on the row)', async () => {

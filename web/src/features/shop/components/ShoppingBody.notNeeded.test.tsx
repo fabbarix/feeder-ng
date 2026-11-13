@@ -13,7 +13,7 @@ describe('ShoppingBody Not needed', () => {
   it('puts the collapsed "Not needed (N)" group after the open Lines and the Ticked group', () => {
     const ticked = makeLine({ ingredientId: 6, name: 'Salt', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })
     const { container } = render(<ShoppingBody {...base} list={makeList({ lines: [makeLine(), ticked], notNeeded: [rice], progress: { ticked: 1, total: 2 } })} />)
-    const tickedGroup = screen.getByRole('heading', { name: 'Ticked (1)' })
+    const tickedGroup = screen.getByRole('heading', { name: 'Ticked 1' })
     const toggle = screen.getByRole('button', { name: 'Not needed (1)' })
     expect(tickedGroup.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(container).not.toHaveTextContent('Rice')

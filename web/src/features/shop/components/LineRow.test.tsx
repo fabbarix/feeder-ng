@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ListGroup } from '../../../ui/ListRow'
 import { extraEntry, lineEntry } from '../lib/lines'
 import { makeExtra, makeLine, makePast } from '../testData'
+import { Icon } from '../../../ui/Icon'
 import { LineRow } from './LineRow'
 
 const none = () => {}
@@ -104,17 +105,41 @@ describe('LineRow: targets', () => {
     await userEvent.click(tick)
     expect(onTick).toHaveBeenCalledExactlyOnceWith(passata)
     expect(onOpen).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Tick Passata' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('a ticked Line shows a filled tick, is marked ticked and unticks from the control', async () => {
+  it('a ticked Line is aria-pressed with the SAME label as when open (round 2: a state, not a renamed button), a plain check, and unticks from the control', async () => {
     const onUntick = vi.fn()
     const { container } = row(ticked, 'ticked', { onUntick })
-    const untick = screen.getByRole('button', { name: 'Untick Passata' })
-    expect(untick).toHaveAttribute('aria-pressed', 'true')
-    expect(untick.querySelector('svg')).not.toBeNull()
+    const tick = screen.getByRole('button', { name: 'Tick Passata' })
+    expect(screen.queryByRole('button', { name: 'Untick Passata' })).toBeNull()
+    expect(tick).toHaveAttribute('aria-pressed', 'true')
+    expect(tick.querySelector('svg')).not.toBeNull()
     expect(container.querySelector('.list-row')).toHaveAttribute('data-state', 'ticked')
-    await userEvent.click(untick)
+    await userEvent.click(tick)
     expect(onUntick).toHaveBeenCalledExactlyOnceWith(ticked)
+  })
+
+  it('round 2: the ticked mark is a plain check (regular or bold weight), never the filled glyph: the filled circle is CSS', () => {
+    row(ticked, 'ticked')
+    const paths = (svg: Element) => [...svg.querySelectorAll('path')].map((p) => p.getAttribute('d')).join('|')
+    const glyph = (weight: 'regular' | 'bold' | 'fill') => paths(render(<Icon name="tick" size={24} weight={weight} />).container.querySelector('svg')!)
+    const drawn = paths(screen.getByRole('button', { name: 'Tick Passata' }).querySelector('svg')!)
+    expect(drawn).not.toBe(glyph('fill'))
+    expect([glyph('regular'), glyph('bold')]).toContain(drawn)
+  })
+
+  it('round 2: a ticked row keeps its quantity and cost, so the column still lines up (the stylesheet mutes them)', () => {
+    const withPrice = lineEntry(makeLine({ ticked: true, quantity: 0, pack: null }), 'USD', 'metric')
+    const { container } = row(withPrice, 'ticked')
+    expect(container.querySelector('.list-row__value')).toHaveTextContent('1400 g')
+    expect(container.querySelector('.list-row__sub-value')).toHaveTextContent('$3.18')
+  })
+
+  it('round 2: the row target announces that it opens a dialog (aria-haspopup="dialog")', () => {
+    row()
+    expect(screen.getByRole('button', { name: 'Passata' })).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(screen.getByRole('button', { name: 'Tick Passata' })).not.toHaveAttribute('aria-haspopup')
   })
 
   it('an open row is marked open; the tick control is at least a 44 px target (the stylesheet test pins the size)', () => {

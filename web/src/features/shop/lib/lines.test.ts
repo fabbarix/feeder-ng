@@ -47,10 +47,10 @@ describe('lineEntry / extraEntry', () => {
     })
   })
 
-  it('an unpriced open Line has no cost (null, not a dash), a ticked Line shows no cost or pack', () => {
+  it('an unpriced open Line has no cost (null, not a dash), a ticked Line shows no pack and keeps its quantity (round 2)', () => {
     expect(lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric').estimatedCost).toBeNull()
     expect(lineEntry(makeLine({ pack: null }), 'USD', 'metric')).toMatchObject({ quantityText: '1400 g', packLine: '' })
-    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0, quantityText: '', packLine: '' })
+    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0, quantityText: '1400 g', packLine: '' })
   })
 
   it('a free-text extra has no amount and an Ingredient extra shows what remains', () => {
