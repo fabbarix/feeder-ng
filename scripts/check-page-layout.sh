@@ -13,7 +13,7 @@
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
-# PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (300 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME.
+# PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (600 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -186,8 +186,9 @@ fi
 
 GUARD_CMD="${PAGE_LAYOUT_GUARD_CMD:-node $ROOT/scripts/check-page-layout.mjs}"
 LIMIT=""
-# About 45 s is normal (quick profile); 300 s means something hangs. -k: kill what ignores TERM.
-command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-300}"
+# About 200 s is normal for the quick profile and 250 s for the full one (five or six viewports, the filtered scenarios, two walks;
+# pantry-filter review: 300 s left the full run under 20 % headroom). 600 s means something hangs. -k: kill what ignores TERM.
+command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-600}"
 START=$SECONDS
 # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
 (cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") 9>&- >"$OUT" 2>&1 &
@@ -210,7 +211,7 @@ if [ "$RC" -eq 0 ]; then
 fi
 if [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; then
   cat "$OUT"
-  not_run "the page layout guard timed out after ${PAGE_LAYOUT_GUARD_TIMEOUT:-300}s (${ELAPSED}s elapsed); not a layout finding"
+  not_run "the page layout guard timed out after ${PAGE_LAYOUT_GUARD_TIMEOUT:-600}s (${ELAPSED}s elapsed); not a layout finding"
 fi
 if [ "$RC" -ne 1 ]; then
   cat "$OUT"

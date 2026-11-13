@@ -107,7 +107,7 @@ Add 1920x1080 and 2560x1440; new rule 11: at >= 1024 on a non-chromeless route, 
 
 ## 8. Follow-ups (R2-L-b)
 
-- **Guard time limits.** The wrapper's guard limit is `PAGE_LAYOUT_GUARD_TIMEOUT` (default 300 s, was 900; a normal run is ~45 s), the seeder has `PAGE_LAYOUT_SEED_TIMEOUT` (90 s) and per-fetch timeouts (10 s). The driver bounds every CDP call, the `ws.onopen` handshake and the Chrome start (`PAGE_LAYOUT_CDP_TIMEOUT_MS` 20 s, `PAGE_LAYOUT_CHROME_TIMEOUT_MS` 15 s) and answers exit 2 (environment, a WARN) rather than hanging or crashing with exit 1. A timeout is a WARN, never a finding.
+- **Guard time limits.** The wrapper's guard limit is `PAGE_LAYOUT_GUARD_TIMEOUT` (default 600 s; it was 900, then 300 while a run took ~45 s; since the filtered scenarios and walks a quick run takes ~200 s and a full one ~250 s, pantry-filter review), the seeder has `PAGE_LAYOUT_SEED_TIMEOUT` (90 s) and per-fetch timeouts (10 s). The driver bounds every CDP call, the `ws.onopen` handshake and the Chrome start (`PAGE_LAYOUT_CDP_TIMEOUT_MS` 20 s, `PAGE_LAYOUT_CHROME_TIMEOUT_MS` 15 s) and answers exit 2 (environment, a WARN) rather than hanging or crashing with exit 1. A timeout is a WARN, never a finding.
 - **Chrome profile.** It lives in `<build>/page-layout-chrome-XXXX` (next to the ids file), Chrome runs in its own process group and the driver waits for it to exit before removing the profile; stale profiles of crashed runs are swept on the next start. Nothing is written to `/tmp` any more.
 - **Compact rail (1024-1439).** The current Scan item gets the same 3 px soft ring as the expanded rail.
 

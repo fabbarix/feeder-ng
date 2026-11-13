@@ -138,9 +138,10 @@ server_gone && ok || bad "the server must be stopped when the seeder fails"
 # =====================================================================================================================
 DRV="$ROOT/scripts/check-page-layout.mjs"; SEED="$ROOT/scripts/test/fixtures/page-layout-seed.mjs"
 
-# --- static: the wrapper limit is about 300 s (was 900), the seeder is limited too, every CDP call has a timeout
-grep -q 'timeout 900' "$W" && bad "the guard limit must be about 300 s, not 900"  || ok
-grep -Eq 'PAGE_LAYOUT_GUARD_TIMEOUT:-300' "$W" && ok || bad "the guard time limit must default to 300 s (PAGE_LAYOUT_GUARD_TIMEOUT)"
+# --- static: the wrapper limit is 600 s (was 900, then 300; pantry-filter review: a normal run takes 200 to 250 s), the seeder is
+# limited too, every CDP call has a timeout
+grep -q 'timeout 900' "$W" && bad "the guard limit must be 600 s, not 900"  || ok
+grep -Eq 'PAGE_LAYOUT_GUARD_TIMEOUT:-600' "$W" && ok || bad "the guard time limit must default to 600 s (PAGE_LAYOUT_GUARD_TIMEOUT)"
 grep -Eq 'PAGE_LAYOUT_SEED_TIMEOUT:-[0-9]+' "$W" && ok || bad "the seeder must run under its own time limit (PAGE_LAYOUT_SEED_TIMEOUT)"
 grep -q 'AbortSignal.timeout' "$SEED" && ok || bad "every seeder fetch needs a timeout (AbortSignal.timeout)"
 grep -q 'PAGE_LAYOUT_CDP_TIMEOUT_MS' "$DRV" && ok || bad "the driver needs a per-call CDP timeout (PAGE_LAYOUT_CDP_TIMEOUT_MS)"
