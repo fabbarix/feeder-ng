@@ -35,6 +35,10 @@ export interface ShoppingLine {
   imageUrl?: string
   /** B5-SH: the unconfirmed past meals this need includes; absent in a list saved by an older version. */
   pastPlannedMeals?: PastPlannedMeal[]
+  /** H4/H7′: a Supply is 'supply'; absent (an older saved list) or 'food' is food. */
+  kind?: 'food' | 'supply'
+  /** H7′: why a Supply Line is on the list (Base Units): its Restock level and the Stock now; null when it has no reason. */
+  restock?: { level: number; stock: number } | null
 }
 
 /** A manual extra: free text, or an Ingredient with a remaining quantity. */
@@ -48,6 +52,8 @@ export interface ShoppingExtra {
   ticked: boolean
   /** PE: the Ingredient's Picture of an Ingredient extra. */
   imageUrl?: string
+  /** H4/H7′: 'supply' for an Ingredient extra of a Supply; null for free text; absent means food. */
+  kind?: 'food' | 'supply' | null
 }
 
 export interface ShoppingSummary {

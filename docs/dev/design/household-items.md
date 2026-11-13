@@ -190,7 +190,9 @@ Shopping List estimate. No price per piece in this feature.
   estimate, Tick, Not needed, and Scan as every Line does (all keyed by Ingredient). A Supply both restocked and added by hand shows
   both, as a food Line and its extra do today.
 - **Where**: open Supply Lines and Supply extras sit after the food Lines under a **"Supplies"** subheader; Ticked and Not needed
-  keep their groups. The Line row says why: "Below 6 · 2 in Stock".
+  keep their groups. The Line row says why, in the info tone: its Stock of the Restock level, bare like the Scan rows, so it fits
+  one line: "2 of 6", "0 of 20"; metric g and ml name the unit once ("200 of 500 ml"), or both when they differ ("800 g of
+  1.2 kg"); imperial keeps both ("7.1 oz of 1 lb 2 oz").
 - Restock levels are for Supplies only, never for food (decision D3).
 
 ### 4.5 Stock-take

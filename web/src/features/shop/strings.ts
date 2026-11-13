@@ -82,4 +82,7 @@ export const shopStrings = {
   untilDay: (label: string) => `until ${label}`,
   unconfirmedCourses: (slot: string, courses: string) => `${slot} (${courses})`,
   andJoin: 'and',
+  // H7′: the Supplies group and the Restock reason of a Supply Line
+  supplies: 'Supplies',
+  restockReason: (stock: string, level: string) => `${stock} of ${level}`,
 }

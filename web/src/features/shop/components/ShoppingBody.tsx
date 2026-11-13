@@ -1,10 +1,13 @@
 // The Shop body (DS-SHOP, docs/design/system.md §3, §4): the metric strip, ONE notice, then ONE dense list of rows (a 2-column
-// card grid from 768 px, the same rows). Ticked Lines sit in their own section; Not needed stays collapsed. Render only.
+// card grid from 768 px, the same rows). Food sits under "To get", open Supplies under their own "Supplies" group (H7′,
+// household-items.md §4.4), Ticked Lines in their own section; Not needed stays collapsed. Render only.
+import { useId } from 'react'
 import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup } from '../../../ui/ListRow'
 import { useShopSummary } from '../hooks/useShopSummary'
 import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
 import type { RowGroup } from '../lib/rows'
+import { splitSupplies } from '../lib/supplies'
 import { shopStrings } from '../strings'
 import type { ShoppingList } from '../types'
 import type { UnitSystem } from '../../../lib/units'
@@ -29,7 +32,9 @@ export interface ShoppingBodyProps {
 
 export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt }: ShoppingBodyProps) {
   const { summary, notice } = useShopSummary(list, shopName)
+  const suppliesTitleId = useId()
   const { open, ticked } = listEntries(list, system)
+  const { food, supplies } = splitSupplies(open)
   const notNeeded = notNeededEntries(list, system)
   const empty = open.length === 0 && ticked.length === 0
   return (
@@ -37,14 +42,28 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
       <ShopMetrics summary={summary} onScan={onScan} />
       {notice ? <UnconfirmedNotice notice={notice} onMarkIt={onMarkIt} /> : null}
       {empty ? <EmptyState title={shopStrings.empty} description={shopStrings.emptyHint} /> : null}
-      {open.length > 0 ? (
+      {food.length > 0 ? (
         <section className="shop-open">
           <h2 className="shop-section__title">
-            {shopStrings.toGet} <span className="shop-section__count">{open.length}</span>
+            {shopStrings.toGet} <span className="shop-section__count">{food.length}</span>
           </h2>
           <div className="shop-lines">
             <ListGroup label={shopStrings.toGet}>
-              {open.map((entry) => (
+              {food.map((entry) => (
+                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+              ))}
+            </ListGroup>
+          </div>
+        </section>
+      ) : null}
+      {supplies.length > 0 ? (
+        <section className="shop-supplies" aria-labelledby={suppliesTitleId}>
+          <h2 id={suppliesTitleId} className="shop-section__title">
+            {shopStrings.supplies} <span className="shop-section__count">{supplies.length}</span>
+          </h2>
+          <div className="shop-lines">
+            <ListGroup label={shopStrings.supplies}>
+              {supplies.map((entry) => (
                 <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
               ))}
             </ListGroup>
