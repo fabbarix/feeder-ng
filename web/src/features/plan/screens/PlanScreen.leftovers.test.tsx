@@ -87,3 +87,61 @@ describe('PlanScreen: Leftovers', () => {
     expect(await within(sheet).findByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
   })
 })
+
+describe('PlanScreen: Leftovers on a Planned Meal', () => {
+  const chilliFrozen = frozenChilli({ id: 5, recipeId: 10, recipeName: 'Chilli', portions: 3, useBy: '2027-02-10' })
+  const planView = (): PlanView => ({
+    today: '2026-11-12', horizonDays: 3, updating: false,
+    slots: [
+      slot({
+        date: '2026-11-12', mealSlotId: 2,
+        meal: meal({ date: '2026-11-12', mealSlotId: 2, recipeId: 10, recipeName: 'Chilli', batches: 0, portions: 2, servedFromLeftover: { leftoverId: 5, date: '2026-11-09', mealSlotId: 2, recipeName: 'Chilli' } }),
+      }),
+    ],
+  })
+
+  it("the Planned Meal sheet's From link opens the Had it sheet of that Leftover, with the dry run notes", async () => {
+    setup([chilliFrozen], {
+      'GET /api/plan': planView(),
+      'GET /api/recipes/10': { id: 10, frozenUseByDays: null, leftoverUseByDays: null },
+      'POST /api/plan/leftovers/5/had-it?dryRun=1': { replanned: [friLunch] },
+    })
+    await userEvent.click(await screen.findByRole('button', { name: /Chilli/ }))
+    await userEvent.click(await screen.findByRole('button', { name: "From Mon's Chilli" }))
+    const sheet = await screen.findByRole('dialog', { name: 'How many portions of Chilli did you have?' })
+    expect(await within(sheet).findByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
+  })
+
+  it('Choose a Recipe offers From the freezer and pins the Leftover with its id', async () => {
+    const slotView = (): PlanView => ({
+      today: '2026-11-12', horizonDays: 3, updating: false,
+      slots: [slot({ date: '2026-11-12', mealSlotId: 2, meal: meal({ date: '2026-11-12', mealSlotId: 2, recipeId: 7, recipeName: 'Roast chicken' }) })],
+    })
+    const { api } = setup([chilliFrozen], {
+      'GET /api/plan': slotView(),
+      'GET /api/recipes': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }, { id: 7, name: 'Roast chicken', tags: [], courses: [{ id: 1 }] }],
+      'PUT /api/plan/2026-11-12/2/1': meal({ recipeId: 10, recipeName: 'Chilli', batches: 0, pinned: true }),
+    })
+    await userEvent.click(await screen.findByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
+    const freezer = await within(dialog).findByRole('list', { name: 'From the freezer' })
+    expect(within(freezer).getByText('3 portions · Garage Freezer')).toBeInTheDocument()
+    await userEvent.click(within(freezer).getByRole('button', { name: /Chilli/ }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-12/2/1')).toHaveLength(1))
+    expect(api.callsTo('PUT', '/api/plan/2026-11-12/2/1')[0]?.body).toEqual({ leftoverId: 5 })
+  })
+
+  it('a refused pick (past its Use-by, too small) says so in a toast', async () => {
+    setup([chilliFrozen], {
+      'GET /api/plan': { today: '2026-11-12', horizonDays: 3, updating: false, slots: [slot({ date: '2026-11-12', mealSlotId: 2, meal: meal({ date: '2026-11-12', mealSlotId: 2, recipeName: 'Roast chicken' }) })] },
+      'GET /api/recipes': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }],
+      'PUT /api/plan/2026-11-12/2/1': { status: 422, json: { error: { code: 'leftover_too_small', message: 'x' } } },
+    })
+    await userEvent.click(await screen.findByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
+    const freezer = await screen.findByRole('list', { name: 'From the freezer' })
+    await userEvent.click(within(freezer).getByRole('button', { name: /Chilli/ }))
+    expect(await screen.findByText('There are too few portions of Chilli left for that Planned Meal.')).toBeInTheDocument()
+  })
+})
