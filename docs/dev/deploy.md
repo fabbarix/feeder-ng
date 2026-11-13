@@ -336,3 +336,41 @@ chown 65532:65532 /srv/feeder/feeder.db
    | `feeder-pre-1400.db` | 1.0.0-beta.3 |
 
    For example, a database upgraded from 1.0.0-beta.4.2 straight to 1.0.0-beta.6 holds `feeder-pre-1500.db` and `feeder-pre-1540.db`, and both are the beta.4.2 database, so restore `feeder-pre-1500.db` and run the 1.0.0-beta.4.2 image. `feeder-pre-1400.db` exists only when the database had Planned Meals before beta.4. Restore one file only, run the image in the table, and do not start a newer image on the restored file.
+
+### Upgrading to 1.0.0-beta.7
+
+This release adds Supplies (dish soap, toilet paper, batteries), the new Scan screen and reading the Receipt from a photo, so read this before you upgrade. It starts from any 1.0.0-beta.6.x.
+
+1. Take a backup first (Admin: `POST /api/admin/backups`, or copy `/data/backups` and `/data/images`). Migrations run at start and are forward-only.
+2. Upgrade. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.7 --namespace feeder --reset-then-reuse-values`. Docker or compose: pull the new image and restart. **There is no new configuration:** no new environment variable, Helm value or secret.
+3. One migration runs on the first start: `1550` adds the kind (`food` or `supply`) and the Restock level to Ingredients. It only adds two columns, with no table rebuild: every existing Ingredient becomes food with no Restock level, and its Products, Prices and Stock Lots stay as they were.
+4. **The pre-1550 snapshot.** If the database already has applied migrations, Feeder first takes a verified snapshot as `feeder-pre-1550.db` in `/data/backups` (on Docker, the `backups` folder of the data volume; on Kubernetes, the `backups` folder of the PVC), before migration 1550 runs, with `integrity_check`. If it cannot be written, Feeder stops with a log line naming `feeder-pre-1550.db` and nothing is migrated. A fresh install takes none. An existing `feeder-pre-1550.db` is never replaced, so a start that failed after the snapshot keeps the true pre-upgrade file. The file is not listed in Settings, is never pruned by the nightly clean-up and stays until you delete it, so copy it off the volume if you want to keep it. The nightly snapshots (`feeder-YYYY-MM-DD.db`) are separate.
+5. **A new data flow: receipt photos go to the configured AI provider.** Reading a Receipt sends up to 4 photos of it, with today's Scanned list at that Shop (each row's Product name, barcode, pack size, quantity and Price), from the server to the provider the Admin set up for the Recipe Assistant, the same one recipe photos go to ([ADR 0018](../adr/0018-receipts-are-read-by-the-configured-assistant.md)). Nothing else leaves: no Ingredient names, Lines, Members, Users, other Shops or Pictures.
+   - The photos are not stored: they live in the request and the read job's memory only, never on disk, in `/data/images`, in the database or in the phone's offline queue, and they are not written to the logs. The answer is kept for 10 minutes so the Member can review it.
+   - It uses the Recipe Assistant's settings and gate: the same base URL, key and model, and the same on/off switch. If the Recipe Assistant is off or has no key, reading a Receipt says so and nothing is sent. There is no separate switch.
+   - It shares the Recipe Assistant's limit: the Household can make 30 accepted reads per rolling hour in all (recipe reads and receipt reads together), with one read running per User at a time. An Admin is not limited.
+   - Any Member may send photos. The screen says that the photos and the Scanned list go to the provider and are not kept; tell the household before you turn the Recipe Assistant on if that matters to you.
+   - Reading needs a connection. Scanning and the Scanned list work offline as before and never wait for the assistant.
+6. **Rolling back.** Migrations cannot be undone, so going back to 1.0.0-beta.6.5 means restoring the snapshot and running the older image. A `helm rollback` on its own does not restore the database:
+
+```sh
+docker stop feeder                                          # Kubernetes: kubectl -n feeder scale deploy/feeder --replicas=0
+cp /srv/feeder/backups/feeder-pre-1550.db /srv/feeder/feeder.db
+rm -f /srv/feeder/feeder.db-wal /srv/feeder/feeder.db-shm   # stale write-ahead files
+chown 65532:65532 /srv/feeder/feeder.db
+# run the older image: ghcr.io/fabbarix/feeder-ng:1.0.0-beta.6.5
+```
+
+   On Kubernetes the paths above are on the PVC, which you reach by mounting it in a helper pod while the deployment is scaled to zero (for example a pod with the PVC mounted at `/data` and an image that has `cp`, `rm` and `chown`). In the pod the snapshot is `/data/backups/feeder-pre-1550.db` and the database is `/data/feeder.db`, owned by 65532. Run the same `cp`, `rm` and `chown` there with those paths, then delete the helper pod. Then bring the replica back on the older release: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.5 --namespace feeder --reset-then-reuse-values`, or roll back the release: `helm history feeder -n feeder` lists the revisions, and `helm rollback feeder <revision> -n feeder` goes back to the last one that ran 1.0.0-beta.6.5 (the one before the upgrade, which is not always the highest number below the current one if you changed values in between). `helm rollback` scales the deployment back up, so restore the database first.
+
+   Everything Feeder recorded after the upgrade (Supplies, Restock levels, Scanned lists, Stock, new Recipes) is gone with the restore; images in `/data/images` stay. Restore the file as `feeder.db` owned by uid/gid 65532, as in Restore above. Do not start the new image on the restored file: it migrates it again. Receipt photos need no clean-up, because none were stored.
+7. **Skipping releases.** When you upgrade across more than one release, each migration group has its own snapshot, all taken before any migration runs, and each goes back to the image just before it:
+
+   | Snapshot | Restore it to go back to |
+   |---|---|
+   | `feeder-pre-1550.db` | 1.0.0-beta.6.5 |
+   | `feeder-pre-1540.db` | 1.0.0-beta.5.1 |
+   | `feeder-pre-1500.db` | 1.0.0-beta.4.2 |
+   | `feeder-pre-1400.db` | 1.0.0-beta.3 |
+
+   For example, a database upgraded from 1.0.0-beta.5.1 straight to 1.0.0-beta.7 holds `feeder-pre-1540.db` and `feeder-pre-1550.db`, and both are the beta.5.1 database, so restore `feeder-pre-1540.db` and run the 1.0.0-beta.5.1 image.
