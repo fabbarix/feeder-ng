@@ -71,7 +71,7 @@
           "$ref": "#/$defs/name"
         },
         "neededAtStep": {
-          "description": "0-based index of the step by which the other recipe must be ready. Write -1 when the line calls for no other recipe.",
+          "description": "0-based index of the step by which the other recipe must be ready. Write -1 when the line calls for no other recipe, and always in a Step's uses.",
           "type": "integer"
         },
         "note": {
@@ -85,7 +85,7 @@
         },
         "recipe": {
           "$ref": "#/$defs/recipeRef",
-          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Write name \"\" and cue \"\" when the line calls for none."
+          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Write name \"\" and cue \"\" when the line calls for no other recipe, and always in a Step's uses."
         },
         "unit": {
           "$ref": "#/$defs/unit"
@@ -282,7 +282,7 @@
         },
         "uses": {
           "items": {
-            "$ref": "#/$defs/use"
+            "$ref": "#/$defs/quantity"
           },
           "type": "array"
         }
@@ -301,35 +301,6 @@
     "unit": {
       "description": "Base units, global units, or a unit defined in the Ingredient's conversions.",
       "type": "string"
-    },
-    "use": {
-      "additionalProperties": false,
-      "description": "An Ingredient amount a Step needs. A Step's uses never call for another recipe: no recipe or neededAtStep.",
-      "properties": {
-        "ingredient": {
-          "$ref": "#/$defs/name"
-        },
-        "note": {
-          "type": "string"
-        },
-        "optional": {
-          "type": "boolean"
-        },
-        "quantity": {
-          "type": "number"
-        },
-        "unit": {
-          "$ref": "#/$defs/unit"
-        }
-      },
-      "required": [
-        "ingredient",
-        "note",
-        "optional",
-        "quantity",
-        "unit"
-      ],
-      "type": "object"
     }
   },
   "additionalProperties": false,

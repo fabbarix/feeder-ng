@@ -234,24 +234,6 @@ func TestFinishRejectsABaseRecipeWithoutAYieldUnitWithThePath(t *testing.T) {
 
 // ---- round 2 --------------------------------------------------------------------------------------------------
 
-func TestOutputSchemaUseHasNoRecipeOrNeededAtStep(t *testing.T) {
-	defs := decode(t, projected(t))["$defs"].(map[string]any)
-	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
-	use := items
-	if ref, ok := items["$ref"].(string); ok {
-		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
-	}
-	props := use["properties"].(map[string]any)
-	for _, name := range []string{"recipe", "neededAtStep"} {
-		if _, has := props[name]; has {
-			t.Errorf("the projection's use has %q: the model would fill a field Import ignores", name)
-		}
-	}
-	if len(toStrings(use["required"])) != len(props) {
-		t.Errorf("a use requires all its properties: %v", use["required"])
-	}
-}
-
 func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing.T) {
 	defs := decode(t, projected(t))["$defs"].(map[string]any)
 	cue := defs["recipeRef"].(map[string]any)["properties"].(map[string]any)["cue"].(map[string]any)
@@ -269,29 +251,6 @@ func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing
 }
 
 // ---- round 3 --------------------------------------------------------------------------------------------------
-
-func TestOutputSchemaUseKeepsNoteAndOptionalSoTheModelMayWriteThem(t *testing.T) {
-	defs := decode(t, projected(t))["$defs"].(map[string]any)
-	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
-	use := items
-	if ref, ok := items["$ref"].(string); ok {
-		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
-	}
-	props := use["properties"].(map[string]any)
-	for _, name := range []string{"note", "optional"} {
-		if _, has := props[name]; !has {
-			t.Errorf("the projection's use lacks %q", name)
-		}
-	}
-	for _, name := range []string{"recipe", "neededAtStep"} {
-		if _, has := props[name]; has {
-			t.Errorf("the projection's use has %q", name)
-		}
-	}
-	if len(toStrings(use["required"])) != len(props) {
-		t.Errorf("every property of a use is required in the projection: %v", use["required"])
-	}
-}
 
 func TestFinishAcceptsAUseWithNoteAndOptionalSpelledOut(t *testing.T) {
 	raw := []byte(`{"format":"feeder-recipe-file","version":1,"noRecipe":false,

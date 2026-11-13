@@ -81,7 +81,7 @@ func TestOutputSchemaHasNoUnionInsideNestedArrays(t *testing.T) {
 		}
 	})
 	// The same by name, so a moved array cannot hide a union.
-	for _, def := range []string{"quantity", "use", "step", "recipeRef"} {
+	for _, def := range []string{"quantity", "step", "recipeRef"} {
 		d, _ := defs[def].(map[string]any)
 		walkSchemas("$defs."+def, d, func(path string, s map[string]any) {
 			if isUnion(s) {
@@ -277,5 +277,127 @@ func TestFinishNestedBaseRecipeLineEndToEnd(t *testing.T) {
 	}
 	if roux.BaseRecipe == nil || !*roux.BaseRecipe || roux.YieldUnit != "g" || roux.Ingredients[0].Recipe != nil || roux.Ingredients[0].NeededAtStep != nil {
 		t.Errorf("Roux = %+v", roux)
+	}
+}
+
+// ---- round 2: the duplicate `use` def pushed the grammar over the limit (bisected against the real API) -------------
+
+func TestOutputSchemaDefsAreExactlyTheExpectedSet(t *testing.T) {
+	defs := decode(t, projected(t))["$defs"].(map[string]any)
+	var got []string
+	for name := range defs {
+		got = append(got, name)
+	}
+	want := []string{"image", "ingredient", "name", "quantity", "recipe", "recipeRef", "step", "unit"}
+	if len(got) != len(want) {
+		t.Errorf("$defs = %v, want exactly %v (a second line-shaped def doubles the grammar)", got, want)
+	}
+	for _, w := range want {
+		if !contains(got, w) {
+			t.Errorf("$defs lacks %q", w)
+		}
+	}
+	if _, has := defs["use"]; has {
+		t.Error("the `use` def must be gone: a Step's uses reuse quantity")
+	}
+}
+
+func TestStepUsesAndRecipeLinesShareTheQuantityDef(t *testing.T) {
+	defs := decode(t, projected(t))["$defs"].(map[string]any)
+	lines := defs["recipe"].(map[string]any)["properties"].(map[string]any)["ingredients"].(map[string]any)["items"].(map[string]any)
+	uses := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
+	if lines["$ref"] != "#/$defs/quantity" || uses["$ref"] != "#/$defs/quantity" {
+		t.Errorf("lines items = %v, uses items = %v: both must be {$ref: #/$defs/quantity}", lines, uses)
+	}
+}
+
+func TestOutputSchemaQuantityDescriptionsSayAlwaysNoneInAStepsUses(t *testing.T) {
+	props := decode(t, projected(t))["$defs"].(map[string]any)["quantity"].(map[string]any)["properties"].(map[string]any)
+	for name, want := range map[string]string{
+		"neededAtStep": "Write -1 when the line calls for no other recipe, and always in a Step's uses.",
+		"recipe":       `Write name "" and cue "" when the line calls for no other recipe, and always in a Step's uses.`,
+	} {
+		d, _ := props[name].(map[string]any)["description"].(string)
+		if !strings.HasSuffix(d, want) {
+			t.Errorf("%s description = %q, want it to end with %q", name, d, want)
+		}
+	}
+}
+
+// useAnswer is a model answer whose one Step use carries the given recipe and neededAtStep.
+func useAnswer(useExtra string) []byte {
+	return []byte(`{"format":"feeder-recipe-file","version":1,"noRecipe":false,
+	 "ingredients":[{"name":"rice","baseUnit":"g","conversions":[],"image":"","shelfLifeDays":null}],
+	 "recipes":[{"name":"Rice","description":"","yield":2,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],
+	  "image":"","cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
+	  "baseRecipe":false,"yieldUnit":"",
+	  "ingredients":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1}],
+	  "steps":[{"text":"Boil.","kind":"active","durationMinutes":5,"leadTimeMinutes":0,"after":[],"image":"",
+	   "uses":[{"ingredient":"rice","quantity":200,"unit":"g","note":"","optional":false,` + useExtra + `}]},
+	   {"text":"Serve.","kind":"active","durationMinutes":1,"leadTimeMinutes":0,"after":[0],"image":"","uses":[]},
+	   {"text":"Eat.","kind":"active","durationMinutes":1,"leadTimeMinutes":0,"after":[1],"image":"","uses":[]}]}]}`)
+}
+
+func TestFinishDropsTheSentinelsOfAStepsUses(t *testing.T) {
+	fin, err := ra.Finish(useAnswer(`"recipe":{"name":"","cue":""},"neededAtStep":-1`), ra.FinishInput{Kind: ra.KindText})
+	if err != nil {
+		t.Fatalf("Finish: %v (%+v)", err, err)
+	}
+	if u := fin.File.Recipes[0].Steps[0].Uses[0]; u.Ingredient != "rice" || u.Quantity != 200 {
+		t.Errorf("use = %+v", u)
+	}
+}
+
+// The Recipe File forbids recipe and neededAtStep on a Step's uses, so a wrong model answer must not fail validation.
+func TestFinishDropsARealRecipeAndNeededAtStepFromAStepsUse(t *testing.T) {
+	fin, err := ra.Finish(useAnswer(`"recipe":{"name":"Béchamel","cue":""},"neededAtStep":2`), ra.FinishInput{Kind: ra.KindText})
+	if err != nil {
+		t.Fatalf("Finish: %v (%+v)", err, err)
+	}
+	// Neither field survives on the use: marshal the File and look at the Step's uses.
+	out, err := json.Marshal(fin.File.Recipes[0].Steps[0].Uses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "recipe") || strings.Contains(string(out), "neededAtStep") || strings.Contains(string(out), "Béchamel") {
+		t.Errorf("the use kept a field the Recipe File forbids: %s", out)
+	}
+	// ...and the line-level mark on the Recipe's own lines is untouched by that rule.
+	if l := fin.File.Recipes[0].Ingredients[0]; l.Recipe != nil || l.NeededAtStep != nil {
+		t.Errorf("line = %+v", l)
+	}
+	// The Finished file passes the canonical schema.
+	raw, err := json.Marshal(fin.File)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := recipefile.Parse(raw); err != nil {
+		t.Errorf("the finished file fails the canonical schema: %v", err)
+	}
+}
+
+func TestFinishKeepsALinesRecipeWhileDroppingItFromTheStepsUses(t *testing.T) {
+	raw := strings.Replace(string(useAnswer(`"recipe":{"name":"Béchamel","cue":""},"neededAtStep":2`)),
+		`"recipe":{"name":"","cue":""},"neededAtStep":-1}],`, `"recipe":{"name":"Béchamel","cue":"see page 4"},"neededAtStep":1}],`, 1)
+	raw = strings.Replace(raw, `"ingredients":[{"name":"rice"`, `"ingredients":[{"name":"rice"`, 1)
+	// Béchamel must exist in the file for CheckFile: add it as a Base recipe.
+	raw = strings.Replace(raw, `{"text":"Eat.","kind":"active","durationMinutes":1,"leadTimeMinutes":0,"after":[1],"image":"","uses":[]}]}]}`,
+		`{"text":"Eat.","kind":"active","durationMinutes":1,"leadTimeMinutes":0,"after":[1],"image":"","uses":[]}]},
+	 {"name":"Béchamel","description":"","yield":1,"readyMeal":false,"courses":[],"wholeMeal":null,"tags":[],"image":"",
+	  "cooldownDays":null,"leftoverUseByDays":null,"reheatMinutes":null,"source":{"url":"","attribution":""},
+	  "baseRecipe":true,"yieldUnit":"l",
+	  "ingredients":[{"ingredient":"rice","quantity":1,"unit":"g","note":"","optional":false,"recipe":{"name":"","cue":""},"neededAtStep":-1}],
+	  "steps":[]}]}`, 1)
+	fin, err := ra.Finish([]byte(raw), ra.FinishInput{Kind: ra.KindText})
+	if err != nil {
+		t.Fatalf("Finish: %v (%+v)", err, err)
+	}
+	r := fin.File.Recipes[0]
+	if l := r.Ingredients[0]; l.Recipe == nil || l.Recipe.Name != "Béchamel" || l.NeededAtStep == nil || *l.NeededAtStep != 1 {
+		t.Errorf("the line keeps its mark: %+v", l)
+	}
+	out, _ := json.Marshal(r.Steps[0].Uses)
+	if strings.Contains(string(out), "recipe") || strings.Contains(string(out), "neededAtStep") {
+		t.Errorf("the use kept a field the Recipe File forbids: %s", out)
 	}
 }
