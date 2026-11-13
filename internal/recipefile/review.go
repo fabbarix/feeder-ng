@@ -53,6 +53,7 @@ type review struct {
 	targets     map[string]*baseTarget // Base recipe Ingredients by ref (base_review.go)
 	targetByID  map[int64]*baseTarget
 	baseConvs   []BaseConversion // unit answers for Base recipe Ingredients, to store
+	createNames []createName     // create answers, by Recipe name: the first of a name makes the Base recipe
 	takeAnswer  map[string]bool  // take-over answers in force, by path (false when only "keep apart" applies)
 }
 

@@ -316,25 +316,10 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	}
 	defer tx.Rollback()
 
-	// A new plain Ingredient named like a Base recipe this import creates waits until the Base recipes are written: the
-	// Base recipe must not find it and ask about taking it over (the import answered nothing about it).
-	baseNames := map[string]bool{}
-	for _, rc := range c.Recipes {
-		if rc.Input.IsBase() && rc.Action != recipefile.ActionReplace {
-			baseNames[units.NormalizeName(rc.Input.Name)] = true
-		}
-	}
+	// A new plain Ingredient is created right before the first Recipe that uses it. A Base recipe named like it (the holder)
+	// is written before its users (orderBaseFirst), so the holder never finds the plain Ingredient and asks about it.
 	created := map[string]int64{}
-	var pending []recipefile.NewIngredient
-	for _, n := range c.NewIngredients {
-		if baseNames[n.Key] {
-			pending = append(pending, n)
-			continue
-		}
-		if err := s.createIngredient(ctx, tx, n, imageIDs, created); err != nil {
-			return Result{}, nil, nil, err
-		}
-	}
+	pending := append([]recipefile.NewIngredient(nil), c.NewIngredients...)
 	res := Result{IngredientsCreated: len(c.NewIngredients)}
 	// A Unit Conversion the Ingredient gained since the review wins: it is kept,
 	// the file's one is skipped and not counted.
@@ -420,11 +405,8 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	}
 	var replaced []string
 	for _, rc := range c.Recipes {
-		if !rc.Input.IsBase() {
-			// The plain Ingredients of the import come before the first plannable Recipe, which may use them.
-			if err := s.createPending(ctx, tx, &pending, created, imageIDs); err != nil {
-				return Result{}, nil, nil, err
-			}
+		if err := s.createUsed(ctx, tx, rc, &pending, created, imageIDs); err != nil {
+			return Result{}, nil, nil, err
 		}
 		out, prev, err := s.writeRecipe(ctx, tx, c, rc, created, newCourses, imageIDs, names, replacing, applied)
 		if err != nil {
@@ -435,19 +417,27 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 			return Result{}, nil, nil, err
 		}
 		if rc.Action != recipefile.ActionReplace && rc.Input.IsBase() && (rc.BaseShelfLifeDays != nil || rc.BaseImage != "") {
-			// The file's definition of the new Base recipe's Ingredient: its Shelf Life and picture (none yet).
-			var shelf any
+			// The file's definition of the Base recipe's Ingredient: its Shelf Life and picture. A taken-over Ingredient keeps
+			// what it has: the Shelf Life and the picture are filled only when it has none. A picture not used is an orphan.
 			if rc.BaseShelfLifeDays != nil {
-				shelf = *rc.BaseShelfLifeDays
+				if _, err := tx.ExecContext(ctx, `UPDATE ingredients SET shelf_life_days = COALESCE(shelf_life_days, ?)
+				        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?)`, *rc.BaseShelfLifeDays, out.ID); err != nil {
+					return Result{}, nil, nil, err
+				}
 			}
-			img := imageIDs[rc.BaseImage]
-			if _, err := tx.ExecContext(ctx, `UPDATE ingredients SET shelf_life_days = COALESCE(?, shelf_life_days),
-			        image = CASE WHEN ? != '' AND image = '' THEN ? ELSE image END
-			        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?)`, shelf, img, img, out.ID); err != nil {
-				return Result{}, nil, nil, err
-			}
-			if img != "" {
-				res.PicturesAdded++
+			if img := imageIDs[rc.BaseImage]; img != "" {
+				r, err := tx.ExecContext(ctx, `UPDATE ingredients SET image = ?
+				        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?) AND image = ''`, img, out.ID)
+				if err != nil {
+					return Result{}, nil, nil, err
+				}
+				if n, _ := r.RowsAffected(); n == 1 {
+					if rc.TakeOver != nil && *rc.TakeOver {
+						res.PicturesAdded++ // an existing Ingredient took the file's picture
+					}
+				} else {
+					orphans = append(orphans, img)
+				}
 			}
 		}
 		replaced = append(replaced, prev...)
@@ -512,7 +502,39 @@ func (s *Store) createIngredient(ctx context.Context, tx *sql.Tx, n recipefile.N
 	return nil
 }
 
-// createPending creates the Ingredients held back by baseNames and empties the list.
+// createUsed creates the held-back Ingredients that rc calls for (a plain line or Step use), just before rc is written.
+func (s *Store) createUsed(ctx context.Context, tx *sql.Tx, rc recipefile.RecipeCommit, pending *[]recipefile.NewIngredient,
+	created map[string]int64, imageIDs map[string]string) error {
+	used := map[string]bool{}
+	for k, key := range rc.LineKeys {
+		if k < len(rc.LineBases) && rc.LineBases[k].Kind != "" {
+			continue
+		}
+		used[key] = true
+	}
+	for st, keys := range rc.UseKeys {
+		for u, key := range keys {
+			if st < len(rc.UseBases) && u < len(rc.UseBases[st]) && rc.UseBases[st][u].Kind != "" {
+				continue
+			}
+			used[key] = true
+		}
+	}
+	var rest []recipefile.NewIngredient
+	for _, n := range *pending {
+		if !used[n.Key] {
+			rest = append(rest, n)
+			continue
+		}
+		if err := s.createIngredient(ctx, tx, n, imageIDs, created); err != nil {
+			return err
+		}
+	}
+	*pending = rest
+	return nil
+}
+
+// createPending creates the Ingredients still held back and empties the list.
 func (s *Store) createPending(ctx context.Context, tx *sql.Tx, pending *[]recipefile.NewIngredient, created map[string]int64, imageIDs map[string]string) error {
 	for _, n := range *pending {
 		if err := s.createIngredient(ctx, tx, n, imageIDs, created); err != nil {

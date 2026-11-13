@@ -129,6 +129,7 @@ func (r *review) buildBaseRows() {
 	r.checkBaseCycles()
 	r.markBaseRecipes()
 	r.bindBaseLines()
+	r.bindConvertNames()
 }
 
 // baseAnswer is the User's answer for the tile at path, if there is one.
@@ -343,6 +344,13 @@ func (r *review) bindBaseLines() {
 			bl.ref = BaseRef{Kind: BaseRefFile, Index: idx}
 			bl.target = r.target(bl.ref, name, r.baseYield[idx], nil, 0)
 		case BaseCreate:
+			if first, shared := r.sharedCreate(name); shared {
+				// Another create answer of the same name (case, accents and a plural s ignored) makes the one Base recipe.
+				fb := r.baseAt[first]
+				bl.create, bl.yield, bl.unit = true, fb.yield, lineUnitOf(row.line, fb.yield.unit)
+				bl.ref, bl.target = fb.ref, fb.target
+				break
+			}
 			if !r.checkBaseName(row.path, name, true) {
 				row.resolved = false
 				continue
@@ -351,6 +359,7 @@ func (r *review) bindBaseLines() {
 			bl.create, bl.yield, bl.unit = true, yieldOf{yield: y, unit: unit}, lineUnitOf(row.line, unit)
 			bl.ref = BaseRef{Kind: BaseRefLine, Line: row.path}
 			bl.target = r.target(bl.ref, name, bl.yield, nil, 0)
+			r.createNames = append(r.createNames, createName{name: name, path: row.path})
 		case BaseConvert:
 			y := yieldOf{yield: d.Yield, unit: d.YieldUnit}
 			bl.ref = BaseRef{Kind: BaseRefRecipe, ID: d.RecipeID}
@@ -368,7 +377,42 @@ func (r *review) bindBaseLines() {
 	}
 }
 
-// stepBaseOf is the Base recipe line that a Step use named name stands for in Recipe i, or nil.
+// bindConvertNames binds the kept lines named like a converted Recipe to that Recipe's Ingredient, when no plain
+// Ingredient of the name exists: a plain Ingredient of that name would be the converted Recipe's, and there is none to keep.
+func (r *review) bindConvertNames() {
+	for _, row := range r.baseRows {
+		cv := r.baseAt[row.path]
+		if cv == nil || row.effective.Action != BaseConvert || cv.ref.Kind != BaseRefRecipe {
+			continue
+		}
+		if _, plain := r.existingByKey[cv.key]; plain {
+			continue
+		}
+		for i, rec := range r.f.Recipes {
+			if !r.kept[i] {
+				continue
+			}
+			for j, l := range rec.Ingredients {
+				p := linePath(i, j)
+				if _, bound := r.baseAt[p]; bound || units.NormalizeName(l.Ingredient) != cv.key {
+					continue
+				}
+				bl := &baseLine{path: p, key: cv.key, name: cv.name, unit: l.Unit, ref: cv.ref, target: cv.target}
+				r.baseAt[p] = bl
+				if r.stepBase[i] == nil {
+					r.stepBase[i] = map[string]*baseLine{}
+				}
+				if _, dup := r.stepBase[i][cv.key]; !dup {
+					r.stepBase[i][cv.key] = bl
+				}
+			}
+		}
+	}
+}
+
+// stepBaseOf is the Base recipe line that a Step use named name stands for in Recipe i, or nil. Edge case: a Recipe with two
+// Base recipe lines of one name (answered differently) gives its Step uses the first of them; a Step use names only the
+// Ingredient, not the line, so the first answer wins.
 func (r *review) stepBaseOf(i int, name string) *baseLine {
 	if r.stepBase[i] == nil {
 		return nil
@@ -550,11 +594,24 @@ func (r *review) baseUnit(bl *baseLine, unit, path string) {
 	r.prompts[idx].Answered, r.prompts[idx].ToBase = true, &toBase
 }
 
-// creates are the Base recipes that create answers make, in document order.
+// createName is a create answer's Recipe name and the path of the answer that made it first.
+type createName struct{ name, path string }
+
+// sharedCreate is the path of the create answer that already makes a Base recipe of this name, if one does.
+func (r *review) sharedCreate(name string) (string, bool) {
+	for _, c := range r.createNames {
+		if sameRecipeName(c.name, name) {
+			return c.path, true
+		}
+	}
+	return "", false
+}
+
+// creates are the Base recipes that create answers make, in document order: one per name, at its first answer.
 func (r *review) creates() []*baseLine {
 	var out []*baseLine
 	for _, row := range r.baseRows {
-		if bl := r.baseAt[row.path]; bl != nil && bl.create {
+		if bl := r.baseAt[row.path]; bl != nil && bl.create && bl.ref.Line == bl.path {
 			out = append(out, bl)
 		}
 	}
@@ -564,6 +621,14 @@ func (r *review) creates() []*baseLine {
 func (r *review) checkBaseName(path, name string, create bool) bool {
 	key := units.NormalizeName(name)
 	ok := true
+	if create {
+		for j, fr := range r.f.Recipes {
+			if r.kept[j] && units.NormalizeName(fr.Name) == key {
+				ok = false
+				r.problem(path, recipe.CodeBaseRecipeNameTaken, "a Recipe of this file already uses that name")
+			}
+		}
+	}
 	for _, e := range r.ex.Recipes {
 		if units.NormalizeName(e.Name) != key {
 			continue
@@ -711,8 +776,23 @@ func orderBaseFirst(items []RecipeCommit) []RecipeCommit {
 	for k, rc := range items {
 		byKey[key(rc)] = k
 	}
+	// holders: the Base recipes this import writes, by name; a plain Ingredient of that name is used after them.
+	holders := map[string]int{}
+	for k, rc := range items {
+		if rc.Input.IsBase() && rc.Action != ActionReplace {
+			holders[units.NormalizeName(rc.Input.Name)] = k
+		}
+	}
 	deps := func(rc RecipeCommit) []int {
 		var out []int
+		for k, lk := range rc.LineKeys {
+			if k < len(rc.LineBases) && rc.LineBases[k].Kind != "" {
+				continue
+			}
+			if h, ok := holders[lk]; ok {
+				out = append(out, h)
+			}
+		}
 		add := func(b BaseRef) {
 			var k string
 			switch b.Kind {
