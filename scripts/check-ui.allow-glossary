@@ -43,3 +43,9 @@ web/src/features/recipe-assistant/strings.ts run  # "Whoever runs your server" (
 # something else: the Timer notification (notifications:21, 28, "Timer finished") and the photo read (import:230).
 web/src/features/notifications/strings.ts finished  # "Timer finished" notification, not a Supply's Lot
 web/src/features/import/strings.ts finished  # "until the read is finished": the photo read, not a Supply's Lot
+
+# "food" is on Ingredient's Avoid list as a synonym for Ingredient. ADR 0017 makes it the name of an Ingredient's kind
+# (food | supply), and GLOSSARY (Ingredient, _Note_) allows it as the kind label and where food is set against Supplies.
+# The rule cannot tell the two senses apart, so these files are allowed after review: every "food" in them is the kind.
+web/src/features/ingredients/strings.ts food  # kind label (Food | Supply, "This is food", "Change to food") and the kind_differs merge copy
+web/src/lib/baseRecipes/strings.ts food  # differentKinds: "not both food or both Supplies" (kind_differs merge toast)

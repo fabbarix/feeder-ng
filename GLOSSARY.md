@@ -273,7 +273,7 @@ _Avoid_: Missing meal
 **Ingredient**:
 A generic food item that recipes call for and the shopping list is written in (e.g. "passata"). May carry a **Picture** (see **Photo**).
 _Avoid_: Item, food, product
-_Note_: a thing the Household buys that is not food is a **Supply**, which shares its Stock, Products and Prices.
+_Note_: a thing the Household buys that is not food is a **Supply**, which shares its Stock, Products and Prices. "Food" is avoided only as a synonym for Ingredient. It is the name of an Ingredient's kind ([ADR 0017](docs/adr/0017-supplies-are-ingredients-of-kind-supply.md)), so it is allowed as the kind label (Food | Supply, "Change to food") and in a sentence that sets food against Supplies ("one is food and the other is a Supply"). The `glossary` rule of `scripts/check-ui.sh` cannot tell the two senses apart, so each `strings.ts` that uses the kind sense has a reasoned entry in `scripts/check-ui.allow-glossary`.
 
 **Product**:
 A specific purchasable pack, identified by its barcode, of exactly one Ingredient or Supply (e.g. "Mutti passata 700 g", "Lotus toilet paper 9 rolls"). May carry a **Picture** (see **Photo**) of the pack, so it can be told from another brand at a glance.
