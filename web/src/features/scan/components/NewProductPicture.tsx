@@ -43,17 +43,26 @@ export function NewProductPicture({ coarse, state, onPick, onPicking }: NewProdu
       {/* On a phone the shared input opens the rear camera app. */}
       <ImageFileInput ref={input} capture={coarse} onFiles={chosen} />
       {state.preview ? (
-        <div className="new-product__preview">
-          <Thumb name={newProductStrings.productName} imageUrl={state.preview} size="hero" label={newProductStrings.pictureAlt} />
+        // Mockup 09: the small 4:3 Picture, the crop note and Retake in one row.
+        <div className="new-product__picture-row">
+          <div className="new-product__preview">
+            <Thumb name={newProductStrings.productName} imageUrl={state.preview} size="hero" label={newProductStrings.pictureAlt} />
+          </div>
+          <p className="new-product__hint">{newProductStrings.pictureCropped}</p>
+          <Button variant="secondary" icon="undo" disabled={state.busy} onClick={open}>
+            {newProductStrings.retake}
+          </Button>
         </div>
-      ) : null}
-      {state.preview ? <p className="new-product__hint">{newProductStrings.pictureCropped}</p> : <p className="new-product__hint">{newProductStrings.pictureOptional}</p>}
+      ) : (
+        // Mockup 07: the Button across the sheet, the note under it.
+        <>
+          <Button variant="secondary" icon="camera" block="always" disabled={state.busy} onClick={open}>
+            {coarse ? newProductStrings.takePicture : newProductStrings.choosePicture}
+          </Button>
+          <p className="new-product__hint">{newProductStrings.pictureOptional}</p>
+        </>
+      )}
       {state.failed ? <p className="new-product__error">{newProductStrings.pictureFailed}</p> : null}
-      <div>
-        <Button variant="secondary" icon="camera" disabled={state.busy} onClick={open}>
-          {state.preview ? newProductStrings.retake : coarse ? newProductStrings.takePicture : newProductStrings.choosePicture}
-        </Button>
-      </div>
     </div>
   )
 }
