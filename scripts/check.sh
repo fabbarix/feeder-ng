@@ -33,7 +33,7 @@ step "typecheck" pnpm -C web typecheck
 step "vitest" pnpm -C web test
 step "vite build" pnpm -C web build
 # Page-layout guard (R2-L): a route x viewport that is not inspected, or a refused run (a concurrent one), fails the run in every mode.
-# Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a failed web build is a WARN here.
+# Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a missing frontend (the 503 'frontend not built' page) is a WARN here; a failed vite build already failed at the vite step above.
 # PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports and fails on any guard that did not run (default: quick profile).
 step "page layout guard" bash "$ROOT/scripts/check-page-layout.sh"
 step "go vet" go vet ./...

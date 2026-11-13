@@ -47,7 +47,7 @@ out=$(js "console.log(c.notInspectedLine({ width: 390, route: '/recipes/1', reas
 # the shipped exemption list: every entry valid, and each has a reason (the file is the only way to exempt a route)
 [ -f "$EXEMPT" ] && ok || bad "scripts/check-page-layout.exempt is missing (it may hold only comments, but it must exist)"
 out=$(js "import('node:fs').then((fs) => { try { console.log('entries ' + c.parseExemptions(fs.readFileSync('$EXEMPT', 'utf8')).length) } catch (e) { console.log('error: ' + e.message) } })")
-grep -q '^entries [0-9]' <<<"$out" && ok || bad "the shipped exemption list must parse (got: $out)"
+[ "$out" = 'entries 0' ] && ok || bad "the shipped exemption list must parse (got: $out)"
 grep -q 'getBoundingClientRect\|server' "$EXEMPT" 2>/dev/null && bad "the exemption list must not exempt a route to hide a dead server or a probe crash"  || ok
 
 # --- the driver against a server that does not render the app (the failure seen in the full check: a dead or half-built server, no <main>)
@@ -78,7 +78,18 @@ JS
   pkill -f "$TMP/nomain.js" 2>/dev/null
   DOUT=$(cd "$ROOT" && CHROME="$REAL" PAGE_LAYOUT_ONLY='^/settings$' PAGE_LAYOUT_CDP_TIMEOUT_MS=3000 timeout 120 node "$DRV" --url "http://127.0.0.1:$PORT" --ids "$TMP/b/ids.json" 2>&1); RC=$?
   [ "$RC" -ne 0 ] && ok || bad "a dead server must never end in OK (rc $RC): $DOUT"
+  # a PAGE_LAYOUT_ONLY filter that matches no route inspected nothing: it fails, it is never "inspected 0 of 0" / OK
+  PORT2="$(free_port)"
+  PORT="$PORT2" setsid nohup node "$TMP/nomain.js" >/dev/null 2>&1 &
+  for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT2/" && break; sleep 0.2; done
+  DOUT=$(cd "$ROOT" && CHROME="$REAL" PAGE_LAYOUT_ONLY='^/no-such-route$' timeout 120 node "$DRV" --url "http://127.0.0.1:$PORT2" --ids "$TMP/b/ids.json" 2>&1); RC=$?
+  { [ "$RC" -ne 0 ] && ! grep -q 'check-page-layout: OK' <<<"$DOUT" && ! grep -q 'inspected 0 of 0' <<<"$DOUT"; } && ok || bad "a PAGE_LAYOUT_ONLY filter matching no route must fail, not pass as 'inspected 0 of 0' (rc $RC): $DOUT"
+  pkill -f "$TMP/nomain.js" 2>/dev/null
 fi
+# the driver's OK line reports the probes it ran, not viewports x all routes (PAGE_LAYOUT_ONLY narrows the run)
+okline=$(grep -n 'check-page-layout: OK' "$DRV")
+grep -q 'ROUTES.length' <<<"$okline" && bad "the driver's OK line must report the real probe count (the 'probes' counter), not VIEWPORTS x ROUTES.length: $okline" || ok
+grep -q 'probes' <<<"$okline" && ok || bad "the driver's OK line must report the real probe count (got: $okline)"
 
 # --- the wrapper: not-inspected lines fail the run in any mode (warn included); an exempt-only run passes
 cat >"$TMP/fake-server.sh" <<'FS'
@@ -236,6 +247,20 @@ out=$(CHROME=/nonexistent/chrome PAGE_LAYOUT=full PAGE_LAYOUT_BUILD_DIR="$TMP/no
 # --- the OK line shows the probe count from the coverage summary
 run_wrapper ""
 grep -Eq 'page layout guard: OK \(quick profile, 93 probes' <<<"$OUT" && ok || bad "the OK line must read 'OK (quick profile, 93 probes, ...)' with the count from the coverage summary (got: $OUT)"
+
+# --- check.sh takes its own per-worktree flock -n (build/check.lock) before it touches check.log; a refused run fails and leaves the log alone
+grep -q 'flock -n' "$ROOT/scripts/check.sh" && ok || bad "scripts/check.sh must take a per-worktree flock -n (build/check.lock)"
+CK="$TMP/ck"; mkdir -p "$CK/scripts" "$CK/web/src" "$CK/build"
+cp "$ROOT/scripts/check.sh" "$ROOT/scripts/check-ui.sh" "$ROOT/scripts/check-ui.rules" "$CK/scripts/"
+printf 'evidence of the first run\n' >"$CK/build/check.log"
+cp "$CK/build/check.log" "$TMP/check.log.before"
+holder "$CK/build/check.lock"
+OUT=$(CHECK_ONLY=ui timeout 60 bash "$CK/scripts/check.sh" 2>&1); RC=$?
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "check.sh must refuse (FAILED, non-zero) while build/check.lock is held by a live process (rc $RC): $OUT"
+cmp -s "$CK/build/check.log" "$TMP/check.log.before" && ok || bad "a refused check.sh must leave build/check.log byte-identical (got: $(cat "$CK/build/check.log"))"
+kill "$HOLDER" 2>/dev/null; wait "$HOLDER" 2>/dev/null
+OUT=$(CHECK_ONLY=ui timeout 60 bash "$CK/scripts/check.sh" 2>&1); RC=$?
+[ "$RC" -eq 0 ] && ok || bad "after the check.lock holder died, check.sh must run (rc $RC): $OUT"
 
 printf 'check-page-layout-coverage_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

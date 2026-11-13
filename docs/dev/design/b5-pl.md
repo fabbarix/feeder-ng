@@ -63,8 +63,13 @@ Wrapper (`scripts/check-page-layout.sh`):
   exactly the lost-coverage case. The refused run exits 1 with `page layout guard FAILED: ...` and does not touch the other run's lock, server or `build/`.
   The busy-port message names the port and the pidfile (`$BUILD/page-layout-server.pid`), so a foreign server is easy to find.
 - **The lock** is `flock -n` on `$BUILD/page-layout.lock`, held on a file descriptor for the script's whole life. The kernel drops it when the process dies,
-  so there is no stale-lock handling and a leftover lock file is harmless. A lock held by a live process refuses the run and is left alone. (The wrapper
-  sweeps old `build/page-layout-chrome-*` profile dirs; that is safe only because it runs under this lock. Say so in a comment at the sweep.)
+  so there is no stale-lock handling and a leftover lock file is harmless. A lock held by a live process refuses the run and is left alone. (The driver,
+  not the wrapper, sweeps old `build/page-layout-chrome-*` profile dirs; that is safe only because it runs under the wrapper's lock, and the comment at the sweep says so.)
+- **`check.sh` has its own lock**: `flock -n` on `build/check.lock`, on its own fd, taken before `build/check.log` is truncated. A second `scripts/check.sh` in the same
+  worktree prints a `FAILED` line and exits non-zero without touching `check.log`, so it can neither wipe the first run's evidence nor run install, vitest or
+  the vite build (which can empty `web/dist` under the first run's server) alongside it. The wrapper keeps its own lock for direct runs.
+- **A leftover server blocks later runs.** If a run is SIGKILLed, its `setsid` server can outlive it; later runs then refuse (busy port) until someone kills it
+  by hand. The refusal message names the pidfile (`build/page-layout-server.pid`).
 - **Crash is not a pass.** A guard that exits 1 without printing a `check-page-layout: coverage:` line crashed: the run FAILS in every mode. An unreadable modes
   file (the `count-fail` helper fails) FAILS too; the old `|| echo 0` fallback must not turn an unknown fail count into a pass. The driver's exit 2 (usage error,
   invalid or missing exemption file, could not start the session) FAILS in every mode.
@@ -72,6 +77,8 @@ Wrapper (`scripts/check-page-layout.sh`):
   driver's "could not start the session" all FAIL. Only two environment gaps stay SKIP/WARN (exit 0) in quick, and both FAIL in full (`PAGE_LAYOUT=full`):
   no Chrome, and no web build. "No web build" means the server answers the 503 `frontend not built` page on `/` (or `web/dist` has no `index.html`); the wrapper
   detects it right after the server is up, stops the server, runs neither seeder nor guard, and WARNs (quick) or FAILs (full).
+- A failed vite build fails `check.sh` at the vite step; only a missing frontend (the 503 `frontend not built` page, or no `web/dist/index.html`) WARNs here.
+- With `PAGE_LAYOUT_ONLY` set the driver's OK line reports the real probe count, and a filter that matches no route fails (never "inspected 0 of 0").
 - The OK line prints the probe count from the coverage summary: `page layout guard: OK (quick profile, 93 probes, 45s)`.
 
 ## The rule: zero tolerance, explicit exemptions
@@ -92,6 +99,8 @@ Wrapper (`scripts/check-page-layout.sh`):
   no raw `getBoundingClientRect`, summary `inspected 0 of 3`, no `OK`; with an exemption file the same run passes as `3 exempt, 0 failing`; a dead server never ends in `OK`.
 - Wrapper with fakes: a `not inspected` line fails in warn mode; a fully inspected run passes and shows the coverage line and the OK probe count; full mode fails
   when the seeder fails; a second run on the same port does not stop the first run's server and fails itself in full and in quick.
+- `check.sh` lock: with `build/check.lock` held by a live process, `check.sh` exits non-zero and leaves an existing `check.log` byte-identical; it runs once the holder is gone.
+- The shipped exemption list parses to exactly `entries 0`.
 - Lock: a `flock` held by a live process refuses a quick and a full run (FAILED) and is left alone; after the holder dies, a run proceeds (a leftover lock file
   is not a lock). A foreign server on the port with a free lock (separate build dir) fails in quick, names the port and the pidfile, and keeps running.
 - Crash: a guard that exits 1 without a coverage line fails in quick and full; an unreadable modes file fails; the driver's exit 2 (bad or missing exempt file,
