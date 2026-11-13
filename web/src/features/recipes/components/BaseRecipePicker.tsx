@@ -60,16 +60,21 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
   }
 
   const optionId = (index: number) => `${uid}-option-${index}`
+  const listboxId = `${uid}-list`
   let index = -1
   const option = (row: PickerRow, group: string) => {
     index += 1
     const i = index
     const isActive = i === active
+    // Round 4: a disabled option's reason is what it is described by (announced by the screen reader).
+    const reasonId = `${optionId(i)}-reason`
+    const described = row.kind !== 'new' && row.reason ? reasonId : undefined
     const common = {
       id: optionId(i),
       role: 'option' as const,
       'aria-selected': isActive,
       'aria-disabled': row.kind !== 'new' && row.disabled ? ('true' as const) : undefined,
+      'aria-describedby': described,
       tabIndex: -1,
       className: 'picker-row',
       onClick: () => choose(row),
@@ -87,14 +92,14 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
         <div key={`${group}-${i}`} {...common} aria-label={`${row.name}, ${row.detail}`}>
           <span className="picker-row__name">{row.name}</span>
           <span className="picker-row__detail">{row.detail}</span>
-          {row.reason ? <span className="picker-row__reason">{row.reason}</span> : null}
+          {row.reason ? <span id={reasonId} className="picker-row__reason">{row.reason}</span> : null}
         </div>
       )
     }
     return (
       <div key={`${group}-${i}`} {...common} aria-label={row.name}>
         <span className="picker-row__name">{row.name}</span>
-        {row.reason ? <span className="picker-row__reason">{row.reason}</span> : null}
+        {row.reason ? <span id={reasonId} className="picker-row__reason">{row.reason}</span> : null}
       </div>
     )
   }
@@ -108,16 +113,20 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
     <Dialog open title={t.title} onClose={onClose} initialFocusRef={inputRef}>
       <SearchField
         ref={inputRef}
+        role="combobox"
         label={t.search}
         value={picker.query}
         onChange={picker.setQuery}
         onKeyDown={onKeyDown}
         placeholder={t.search}
+        aria-expanded={true}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? optionId(active) : undefined}
       />
       {picker.error ? <p className="line-row__hint">{picker.error}</p> : null}
       {picker.isLoading ? <p className="line-row__hint">{t.loading}</p> : null}
-      <div role="listbox" id={`${uid}-list`} aria-label={t.title} className="picker-list">
+      <div role="listbox" id={listboxId} aria-label={t.title} className="picker-list">
         {baseRows}
         {createRow}
         {planRows.length > 0 ? (

@@ -39,6 +39,8 @@ export interface RecipeLine {
   neededAt?: number
   /** BR-D output: the plain Ingredient this line was linked from (for Use as a plain Ingredient); null/absent = none. */
   linkedFromIngredientId?: number | null
+  /** BR-D round 4 output: the Step the server's default "Needed at" is (the Base recipe's first use, else its name, else the first Step); null = none. */
+  neededAtDefault?: number | null
 }
 
 /** BR-D: a Base recipe line as the editor sends it (POST/PUT): by Base recipe, no `ingredientId`. */

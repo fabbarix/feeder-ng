@@ -6,7 +6,8 @@ import { baseRecipeLinkStrings } from '../../../lib/baseRecipes/strings'
 
 export interface LinkCandidatesSheetProps {
   open: boolean
-  baseRecipe: { id: number; name: string; baseUnit: string; ingredientId: number }
+  /** Round 4: the Base Unit comes from the candidates answer, not from here. */
+  baseRecipe: { id: number; name: string; ingredientId: number }
   onClose: () => void
   /** A link or its Undo changed the Recipes: the screen refetches. */
   onChanged?: () => void
@@ -25,7 +26,6 @@ function CandidatesBody({ baseRecipe, onClose, onChanged }: LinkCandidatesSheetP
   const s = useLinkCandidates({
     baseRecipeId: baseRecipe.id,
     baseName: baseRecipe.name,
-    baseUnit: baseRecipe.baseUnit,
     baseIngredientId: baseRecipe.ingredientId,
     onDone: onClose,
     onChanged,

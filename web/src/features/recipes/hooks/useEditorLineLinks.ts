@@ -70,6 +70,8 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
   const [askName, setAskName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const pendingNew = useRef<{ line: LineDraft; name: string } | null>(null)
+  // Round 4: a convert the take-over ask stopped; answering it runs the convert again with takeOver.
+  const pendingConvert = useRef<{ line: LineDraft; recipe: { id: number; name: string } } | null>(null)
   const pendingLink = useRef<{ key: string; base: EditorBase } | null>(null)
 
   const fail = (err: unknown) => setError(refusalMessage(err) ?? baseRecipeLinkStrings.couldNotLink)
@@ -115,23 +117,38 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     opts.linkLine(line.key, { id: created.id, name: created.name, ingredientId: created.baseIngredientId ?? 0 })
   }
 
-  /** Turns a plannable Recipe into a Base recipe (dry run, the P6 confirm, to-base with the line's Yield), then links the line. */
-  const convert = async (line: LineDraft, recipe: { id: number; name: string }) => {
-    let plan
-    try {
-      plan = await baseRecipesApi.toBasePlan(recipe.id)
-    } catch (err) {
-      fail(err)
-      return
+  /**
+   * Turns a plannable Recipe into a Base recipe (dry run, the P6 confirm, to-base with the line's Yield), then links the line. `takeOver` set: the answer
+   * to the take-over ask (round 4), so no confirm again; a 409 base_recipe_take_over asks first.
+   */
+  const convert = async (line: LineDraft, recipe: { id: number; name: string }, takeOver?: boolean) => {
+    if (takeOver === undefined) {
+      let plan
+      try {
+        plan = await baseRecipesApi.toBasePlan(recipe.id)
+      } catch (err) {
+        fail(err)
+        return
+      }
+      const c = convertConfirm(recipe.name, plan)
+      const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
+      if (!yes) return
     }
-    const c = convertConfirm(recipe.name, plan)
-    const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
-    if (!yes) return
     const y = yieldFromLine(parseNumber(line.quantity) ?? 0, line.unit)
     try {
-      const saved = await baseRecipesApi.toBase(recipe.id, { yield: y.yield, yieldUnit: y.yieldUnit })
+      const saved = await baseRecipesApi.toBase(recipe.id, takeOver === undefined ? { yield: y.yield, yieldUnit: y.yieldUnit } : { yield: y.yield, yieldUnit: y.yieldUnit, takeOver })
+      pendingConvert.current = null
+      setTakeOverAsk(null)
+      setAskName('')
       opts.linkLine(line.key, { id: recipe.id, name: recipe.name, ingredientId: saved.baseIngredientId ?? 0 })
     } catch (err) {
+      const ask = takeOver === undefined ? parseTakeOver(err) : null
+      if (ask) {
+        pendingConvert.current = { line, recipe }
+        setAskName(recipe.name)
+        setTakeOverAsk(ask)
+        return
+      }
       fail(err)
     }
   }
@@ -153,12 +170,19 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     takeOverAsk,
     askName,
     answerTakeOver: async (yes) => {
+      const convertPending = pendingConvert.current
+      if (convertPending) {
+        setTakeOverAsk(null)
+        await convert(convertPending.line, convertPending.recipe, yes)
+        return
+      }
       const pending = pendingNew.current
       if (!pending) return
       await createNew(pending.line, pending.name, yes)
     },
     cancelTakeOver: () => {
       pendingNew.current = null
+      pendingConvert.current = null
       setTakeOverAsk(null)
       setAskName('')
     },

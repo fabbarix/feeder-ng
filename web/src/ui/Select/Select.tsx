@@ -133,7 +133,7 @@ function SelectCore<V extends string | number>({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   // BR-D: the text the exact-first order ranks by: the search, or what was typed in a list without one.
-  const [rankText, setTypedText] = useState('')
+  const [typedText, setTypedText] = useState('')
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [sortIndex, setSortIndex] = useState(0)
   const [active, setActive] = useState(-1)
@@ -158,7 +158,7 @@ function SelectCore<V extends string | number>({
       createDisabled: createDisabledReason !== undefined,
       clearLabel,
       exactFirst,
-      rank: showSearch ? q : rankText,
+      rank: showSearch ? q : typedText,
     })
   const current = build(query, activeFilters, sortIndex)
 

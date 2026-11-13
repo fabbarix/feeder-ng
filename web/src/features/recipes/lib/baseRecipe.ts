@@ -117,6 +117,8 @@ export function linkDraftLine(draft: RecipeDraft, key: string, base: { id: numbe
             // a take-over line (the Base recipe Ingredient was the same one) remembers nothing
             linkedFromIngredientId: l.ingredientId === base.ingredientId ? null : l.ingredientId,
             neededAtStep: null,
+            // round 4: the server's default is not known until the line is saved (never guessed here)
+            neededAtDefault: null,
           },
     ),
   }
@@ -132,7 +134,7 @@ export function unlinkDraftLine(draft: RecipeDraft, key: string, plain: Ingredie
     lines: draft.lines.map((l) =>
       l.key !== key
         ? l
-        : { ...l, baseRecipeId: null, baseRecipeName: '', neededAtStep: null, ingredientId: plain.id, ingredientName: plain.name, linkedFromIngredientId: null },
+        : { ...l, baseRecipeId: null, baseRecipeName: '', neededAtStep: null, neededAtDefault: null, ingredientId: plain.id, ingredientName: plain.name, linkedFromIngredientId: null },
     ),
   }
 }
@@ -168,23 +170,9 @@ export function baseTileMeta(recipe: Pick<RecipeSummary, 'baseRecipe' | 'yield' 
 }
 
 /**
- * The default "Needed at" Step of a Base recipe line (design §3.3): the first non-Advance Step whose uses name the Ingredient, else the first whose text
- * names the Base recipe (whole words, accents folded), else the first non-Advance Step; null when there is none.
+ * The override a "Needed at" choice stores: the chosen Step, or null (back to the default) when it is the server's default Step.
+ * Round 4: the default comes from the server (line.neededAtDefault), never from the Steps here.
  */
-export function defaultNeededAt(
-  steps: ReadonlyArray<{ kind: RecipeStep['kind']; text: string; uses: ReadonlyArray<{ ingredientId: number | null }> }>,
-  ingredientId: number | null,
-  name: string,
-): number | null {
-  const candidates = steps.flatMap((s, i) => (s.kind === 'advance' ? [] : [i]))
-  if (candidates.length === 0) return null
-  const fold = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const needle = fold(name.trim())
-  const byUse = candidates.find((i) => ingredientId !== null && steps[i]!.uses.some((u) => u.ingredientId === ingredientId))
-  if (byUse !== undefined) return byUse
-  if (needle !== '') {
-    const byText = candidates.find((i) => new RegExp(`(^|[^a-z])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`).test(fold(steps[i]!.text)))
-    if (byText !== undefined) return byText
-  }
-  return candidates[0]!
+export function neededAtOverride(step: number | null, defaultStep: number | null): number | null {
+  return step === null || step === defaultStep ? null : step
 }

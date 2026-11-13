@@ -4,6 +4,7 @@ import { useConfirm } from '../../ui/ConfirmDialog'
 import { useToast } from '../../ui/Toast'
 import { baseRecipesApi } from './api'
 import { convertConfirm } from './convertConfirm'
+import { ApiError } from '../http'
 import { parseTakeOver } from './takeOver'
 import { refusalMessage } from './refusals'
 import { baseRecipeLinkStrings } from './strings'
@@ -66,6 +67,14 @@ interface Pending {
   name: string
 }
 
+/** What the take-over ask answers for: a new Base recipe named by the line, or a plannable Recipe the line converts (round 4). */
+type AskedFor = { kind: 'create'; pending: Pending } | { kind: 'convert'; line: SavedLine; recipe: { id: number; name: string } }
+
+/** The refusal 422 line_not_plain: the line already calls for a Base recipe (the take-over made it one). */
+function isLineNotPlain(err: unknown): boolean {
+  return err instanceof ApiError && err.details.reason === 'line_not_plain'
+}
+
 /** The line actions of a saved Recipe (the detail): Link to a Base recipe, Use as a plain Ingredient. `onChanged` runs after every change so the screen refetches. */
 export function useLineLink(opts: { recipeId: number; onChanged?: () => void }): UseLineLink {
   const { recipeId, onChanged } = opts
@@ -75,7 +84,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
   const [askName, setAskName] = useState<string | null>(null)
   const [unitPrompt, setUnitPrompt] = useState<LinkUnitPrompt | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const askFor = useRef<Pending | null>(null)
+  const askFor = useRef<AskedFor | null>(null)
   const linkFor = useRef<{ line: SavedLine; base: { id: number; name: string } } | null>(null)
 
   const fail = (err: unknown): LinkOutcome => {
@@ -89,8 +98,8 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     onChanged?.()
   }
 
-  /** POST lines/{id}/base, with the unit prompt on a unit the Base recipe's Ingredient cannot convert. */
-  const linkExisting = async (line: SavedLine, base: { id: number; name: string }): Promise<LinkOutcome> => {
+  /** POST lines/{id}/base, with the unit prompt on a unit the Base recipe's Ingredient cannot convert. `alreadyBase`: a take-over made the line one. */
+  const linkExisting = async (line: SavedLine, base: { id: number; name: string }, alreadyBase = false): Promise<LinkOutcome> => {
     linkFor.current = { line, base }
     try {
       await baseRecipesApi.linkLine(recipeId, line.id, base.id)
@@ -100,7 +109,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
         setUnitPrompt({ ingredientId: Number(e.details.ingredientId), unit: String(e.details.unit ?? line.unit), baseUnit: String(e.details.baseUnit ?? '') })
         return 'unit_prompt'
       }
-      return fail(err)
+      if (!(alreadyBase && isLineNotPlain(err))) return fail(err)
     }
     setError(null)
     onChanged?.()
@@ -120,7 +129,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     } catch (err) {
       const ask = parseTakeOver(err)
       if (ask) {
-        askFor.current = pending
+        askFor.current = { kind: 'create', pending }
         setTakeOverAsk(ask)
         setAskName(body.name)
         return 'asked'
@@ -139,18 +148,32 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     return linkExisting(pending.line, { id: created.id, name: created.name ?? body.name })
   }
 
-  const convert = async (line: SavedLine, recipe: { id: number; name: string }): Promise<LinkOutcome> => {
+  /** A plannable Recipe made a Base recipe (the confirm first), then linked. `takeOver` set: the answer to the take-over ask, no confirm again. */
+  const convert = async (line: SavedLine, recipe: { id: number; name: string }, takeOver?: boolean): Promise<LinkOutcome> => {
+    const y = yieldFromLine(line.quantity, line.unit)
+    if (takeOver === undefined) {
+      try {
+        const plan = await baseRecipesApi.toBasePlan(recipe.id)
+        const c = convertConfirm(recipe.name, plan)
+        const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
+        if (!yes) return 'cancelled'
+      } catch (err) {
+        return fail(err)
+      }
+    }
     try {
-      const plan = await baseRecipesApi.toBasePlan(recipe.id)
-      const c = convertConfirm(recipe.name, plan)
-      const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
-      if (!yes) return 'cancelled'
-      const y = yieldFromLine(line.quantity, line.unit)
-      await baseRecipesApi.toBase(recipe.id, { yield: y.yield, yieldUnit: y.yieldUnit })
+      await baseRecipesApi.toBase(recipe.id, takeOver === undefined ? { yield: y.yield, yieldUnit: y.yieldUnit } : { yield: y.yield, yieldUnit: y.yieldUnit, takeOver })
     } catch (err) {
+      const ask = takeOver === undefined ? parseTakeOver(err) : null
+      if (ask) {
+        askFor.current = { kind: 'convert', line, recipe }
+        setTakeOverAsk(ask)
+        setAskName(recipe.name)
+        return 'asked'
+      }
       return fail(err)
     }
-    return linkExisting(line, recipe)
+    return linkExisting(line, recipe, takeOver === true)
   }
 
   const linkTo = async (line: SavedLine, choice: LinkChoice): Promise<LinkOutcome> => {
@@ -161,9 +184,12 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
   }
 
   const answerTakeOver = async (yes: boolean): Promise<LinkOutcome> => {
-    const pending = askFor.current
-    if (!pending) return 'failed'
-    return createAndLink(pending, yes)
+    const asked = askFor.current
+    if (!asked) return 'failed'
+    setTakeOverAsk(null)
+    setAskName(null)
+    if (asked.kind === 'create') return createAndLink(asked.pending, yes)
+    return convert(asked.line, asked.recipe, yes)
   }
 
   const answerUnitPrompt = async (toBase: number): Promise<LinkOutcome> => {

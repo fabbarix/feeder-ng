@@ -36,7 +36,7 @@ export function IngredientLinesList({ lines, refs, system, excludedBy, onLinkToB
         return (
           <div key={`${l.ingredientId}-${i}`} className="ingredient-lines__row">
             {base ? null : <dt className="ingredient-lines__quantity">{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</dt>}
-            <dd className={base ? 'ingredient-lines__name ingredient-lines__name--base' : 'ingredient-lines__name'}>
+            <dd className="ingredient-lines__name">
               {base ? (
                 <BaseName
                   id={base.id}

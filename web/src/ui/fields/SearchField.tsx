@@ -6,20 +6,22 @@ import { fieldStrings } from './strings'
 import './Field.css'
 import './SearchField.css'
 
-export interface SearchFieldProps extends FieldSizeProps, Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'value' | 'onChange' | 'onSubmit' | 'size'> {
+export interface SearchFieldProps extends FieldSizeProps, Omit<ComponentPropsWithoutRef<'input'>, 'type' | 'value' | 'onChange' | 'onSubmit' | 'size' | 'role'> {
   label: string
   value: string
   onChange: (value: string) => void
   /** Enter. */
   onSubmit?: (value: string) => void
   ref?: Ref<HTMLInputElement>
+  /** 'searchbox' (the default) or 'combobox' when the field controls a listbox of options (round 4: the Base recipe picker). */
+  role?: 'searchbox' | 'combobox'
 }
 
 /**
  * The only `type="search"` input: a searchbox with a magnifier, a "Clear search" button (refocuses) and Escape to clear.
  * `onKeyDown` runs first; a handler that calls preventDefault() keeps SearchField from its own Escape and Enter.
  */
-export function SearchField({ size = 'full', label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, ...rest }: SearchFieldProps) {
+export function SearchField({ size = 'full', label, value, onChange, onSubmit, onKeyDown, ref, placeholder, className, role = 'searchbox', ...rest }: SearchFieldProps) {
   const inner = useRef<HTMLInputElement>(null)
   useImperativeHandle(ref, () => inner.current as HTMLInputElement)
   const clear = () => {
@@ -46,7 +48,7 @@ export function SearchField({ size = 'full', label, value, onChange, onSubmit, o
           {...rest}
           ref={inner}
           type="search"
-          role="searchbox"
+          role={role}
           aria-label={label}
           className="search-field__input"
           value={value}

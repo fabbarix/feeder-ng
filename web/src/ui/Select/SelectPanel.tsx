@@ -53,7 +53,10 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         aria-selected={isSelected}
         aria-disabled={option.disabled || undefined}
         aria-labelledby={`${p.optionId(i)}-label`}
-        aria-describedby={option.badge ? `${p.optionId(i)}-badge` : option.meta ? `${p.optionId(i)}-meta` : undefined}
+        aria-describedby={
+          // Round 4: described by its badge and then its meta, in that order (only the ones it shows).
+          [option.badge ? `${p.optionId(i)}-badge` : '', option.meta ? `${p.optionId(i)}-meta` : ''].filter(Boolean).join(' ') || undefined
+        }
         data-active={i === p.active || undefined}
         className="select__option"
         onClick={() => p.onPick(i)}

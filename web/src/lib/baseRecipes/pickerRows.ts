@@ -13,7 +13,7 @@ export interface PickerInput {
   plannable: readonly PickerPlannable[]
   /** The Recipe being edited: left out of both groups. */
   selfId?: number
-  /** Recipe id -> why it cannot be chosen (a cycle): listed disabled with this reason. */
+  /** Recipe id -> why it cannot be chosen: listed disabled with this reason. A Base recipe the server marked wouldCycle is blocked too (round 4). */
   blocked?: Readonly<Record<number, string>>
 }
 
@@ -45,7 +45,7 @@ export function pickerRows(input: PickerInput): PickerRows {
     .map((r) => ({ r, key: referenceKey(r.name) }))
     .sort((a, b) => rankOf(a.key, rankKey) - rankOf(b.key, rankKey) || a.r.name.localeCompare(b.r.name))
     .map(({ r, key }) => {
-      const reason = blocked[r.id]
+      const reason = blocked[r.id] ?? (r.wouldCycle ? `${r.name} already calls for this Recipe` : undefined)
       return {
         kind: 'base' as const,
         id: r.id,

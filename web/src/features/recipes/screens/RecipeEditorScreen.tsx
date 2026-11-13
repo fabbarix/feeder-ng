@@ -8,11 +8,10 @@ import { KindChange } from '../components/KindChange'
 import { EditorLineLinkSession } from '../components/EditorLineLinkSession'
 import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
 import { baseUnitOfYield } from '../../../lib/baseRecipes/yield'
-import type { BaseUnit } from '../types'
 import { useRef } from 'react'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { TakeOverDialog } from '../components/TakeOverDialog'
-import { defaultNeededAt, setBaseRecipe } from '../lib/baseRecipe'
+import { neededAtOverride, setBaseRecipe } from '../lib/baseRecipe'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
 import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
@@ -85,7 +84,7 @@ export function RecipeEditorScreen(): ReactNode {
   // CRS E2: a save that takes a Course off and so removes Slot Rules waits for the User's confirm.
   const [confirmingLoss, setConfirmingLoss] = useState(false)
   // BR-D: the Base recipe switch (asks first on a saved Recipe), the line links, and the bulk link sheet after a Base recipe is saved.
-  const [linkSheet, setLinkSheet] = useState<{ id: number; name: string; ingredientId: number; baseUnit: BaseUnit } | null>(null)
+  const [linkSheet, setLinkSheet] = useState<{ id: number; name: string; ingredientId: number } | null>(null)
   // A line action runs as a session (EditorLineLinkSession); a kind change runs on Save (KindChange).
   const [session, setSession] = useState<{ kind: 'picker' | 'plain'; key: string } | null>(null)
   const [kindRequest, setKindRequest] = useState<{ on: boolean } | null>(null)
@@ -103,7 +102,7 @@ export function RecipeEditorScreen(): ReactNode {
     if (editor.renameOffer) setAsking(saved)
     // BR-D: a Base recipe offers the bulk link first (its sheet closes into the Base recipe).
     else if (draft.baseRecipe && saved.baseRecipe !== false && saved.baseIngredientId !== undefined && baseUnitOfYield(draft.yieldUnit ?? '') !== null)
-      setLinkSheet({ id: saved.id, name: saved.name ?? draft.name, ingredientId: saved.baseIngredientId, baseUnit: baseUnitOfYield(draft.yieldUnit ?? '') as BaseUnit })
+      setLinkSheet({ id: saved.id, name: saved.name ?? draft.name, ingredientId: saved.baseIngredientId })
     else navigate(`/recipes/${saved.id}`)
   }
 
@@ -239,8 +238,8 @@ export function RecipeEditorScreen(): ReactNode {
                   onPick={(ing) => editor.pickIngredient(line.key, ing)}
                   onChange={(patch) => editor.updateLine(line.key, patch)}
                   steps={draft.steps}
-                  neededAtDefault={(line.baseRecipeId ?? null) !== null ? defaultNeededAt(draft.steps, line.ingredientId, line.baseRecipeName ?? line.ingredientName) : null}
-                  onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: step })}
+                  neededAtDefault={(line.baseRecipeId ?? null) !== null ? (line.neededAtDefault ?? null) : null}
+                  onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: neededAtOverride(step, line.neededAtDefault ?? null) })}
                   onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setSession({ kind: 'picker', key: line.key }) : undefined}
                   onUseAsPlain={() => setSession({ kind: 'plain', key: line.key })}
                   onRemove={() => editor.removeLine(line.key)}
@@ -306,7 +305,7 @@ export function RecipeEditorScreen(): ReactNode {
           {linkSheet ? (
             <LinkCandidatesSheet
               open
-              baseRecipe={{ id: linkSheet.id, name: linkSheet.name, baseUnit: linkSheet.baseUnit, ingredientId: linkSheet.ingredientId }}
+              baseRecipe={{ id: linkSheet.id, name: linkSheet.name, ingredientId: linkSheet.ingredientId }}
               onClose={() => navigate(`/recipes/${linkSheet.id}`)}
             />
           ) : null}

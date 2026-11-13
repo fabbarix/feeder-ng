@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useBaseRecipeChange } from '../hooks/useBaseRecipeChange'
+import { TakeOverDialog } from './TakeOverDialog'
 
 export interface KindChangeProps {
   recipeId: number | undefined
@@ -15,7 +16,8 @@ export interface KindChangeProps {
 
 /**
  * BR-D round 3: the Base recipe switch applies on Save. Mounted only for the Save of a changed kind (its hook needs the Confirm provider): it asks
- * (the P6 confirm, or nothing for a new Recipe) and reports; the screen then saves or stops.
+ * (the P6 confirm, or nothing for a new Recipe) and reports; the screen then saves or stops. Round 4: a name that is an Ingredient's asks the
+ * take-over question first (TakeOverDialog), and the report waits for the answer.
  */
 export function KindChange({ recipeId, on, name, yieldValue, yieldUnit, onResult }: KindChangeProps): ReactNode {
   const change = useBaseRecipeChange({ recipeId })
@@ -40,5 +42,12 @@ export function KindChange({ recipeId, on, name, yieldValue, yieldUnit, onResult
     // eslint-disable-next-line react-hooks/exhaustive-deps -- report once when settled
   }, [outcome])
 
-  return null
+  return (
+    <TakeOverDialog
+      ask={change.takeOverAsk}
+      baseName={name}
+      onAnswer={(yes) => void change.answerTakeOver(yes)}
+      onCancel={change.cancelTakeOver}
+    />
+  )
 }

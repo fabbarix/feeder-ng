@@ -50,9 +50,10 @@ export function LineLinkSession({ recipeId, session, refs, onChanged, onDone, on
       setPlainOpen(true)
       return
     }
+    // A refusal ends the session through the error effect below (it reports the words first); only 'done' ends it here.
     void links.useAsPlain(savedLineOf(line)).then((outcome) => {
       if (outcome === 'pick') setPlainOpen(true)
-      else onDone()
+      else if (outcome === 'done') onDone()
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a session runs once on mount
   }, [])

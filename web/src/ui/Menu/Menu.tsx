@@ -62,7 +62,6 @@ export function Menu({ label, icon = 'more', title, items, trigger, initialFocus
         <button
           ref={triggerRef}
           type="button"
-          className="menu__trigger"
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}

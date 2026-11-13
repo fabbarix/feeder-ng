@@ -8,6 +8,8 @@ export interface PickerBaseRecipe {
   yieldUnit: string | null
   archived: boolean
   usedByCount?: number
+  /** Round 4: with `?kind=base&for=`, the server says this Base recipe would make a cycle with the Recipe being edited. */
+  wouldCycle?: boolean
 }
 
 /** `GET /api/recipes` row (a plannable Recipe) as the picker's "Recipes you plan" group needs it. */
@@ -56,10 +58,16 @@ export interface LinkCandidateRow {
   reason?: string
 }
 
-/** `POST /api/recipes/{id}/link` result. */
+/** `GET /api/recipes/{id}/link-candidates`: the Base Unit of the Base recipe's Ingredient, and the lines. */
+export interface LinkCandidatesAnswer {
+  baseUnit: string
+  lines: LinkCandidate[]
+}
+
+/** `POST /api/recipes/{id}/link` result. `exclusions` counts the Members' Exclusions of the old Ingredient the merge moves (absent in an older answer). */
 export interface LinkResult {
   linked: number[]
-  mergeOffer: Array<{ ingredientId: number; name: string; stockLots: number; products: number }>
+  mergeOffer: Array<{ ingredientId: number; name: string; stockLots: number; products: number; exclusions?: number }>
 }
 
 /** The 409 `base_recipe_take_over` ask. */

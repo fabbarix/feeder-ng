@@ -28,6 +28,8 @@ export interface LineDraft {
   neededAtStep?: number | null
   /** BR-D: the plain Ingredient this line was linked from, kept for "Use as a plain Ingredient"; null/absent = none (a take-over line). */
   linkedFromIngredientId?: number | null
+  /** BR-D round 4: the server's default "Needed at" Step of a saved Base recipe line (output only, never sent); null until the server has seen the line. */
+  neededAtDefault?: number | null
 }
 
 export interface UseDraft {
@@ -151,6 +153,7 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
       baseRecipeName: l.baseRecipe?.name ?? '',
       neededAtStep: l.neededAtStep ?? null,
       linkedFromIngredientId: l.linkedFromIngredientId ?? null,
+      neededAtDefault: l.neededAtDefault ?? null,
     })),
     steps: recipe.steps.map((s) => ({
       key: newKey('step'),

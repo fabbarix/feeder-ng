@@ -7,7 +7,7 @@ import type { PickerBaseRecipe, PickerPlannable, PickerRows } from './types'
 export interface UseBaseRecipePicker {
   query: string
   setQuery: (q: string) => void
-  /** lib/baseRecipes/pickerRows of what was fetched, the query and the blocked set. */
+  /** lib/baseRecipes/pickerRows of what was fetched and the query. */
   rows: PickerRows
   isLoading: boolean
   /** Words for a failed load, or null. */
@@ -17,36 +17,12 @@ export interface UseBaseRecipePicker {
 interface Loaded {
   baseRecipes: PickerBaseRecipe[]
   plannable: PickerPlannable[]
-  blocked: Record<number, string>
-}
-
-/** Every Recipe that calls for `recipeId`, directly or through other Base recipes, with the reason it is blocked. */
-async function blockedBy(recipeId: number): Promise<Record<number, string>> {
-  const blocked: Record<number, string> = {}
-  const seen = new Set<number>([recipeId])
-  const queue = [recipeId]
-  while (queue.length > 0) {
-    const current = queue.shift()!
-    let callers: Array<{ id: number; name: string }> = []
-    try {
-      callers = await baseRecipesApi.usedBy(current)
-    } catch {
-      continue
-    }
-    for (const caller of callers) {
-      if (seen.has(caller.id)) continue
-      seen.add(caller.id)
-      blocked[caller.id] = `${caller.name} already calls for this Recipe`
-      queue.push(caller.id)
-    }
-  }
-  return blocked
 }
 
 /**
- * Data for the BaseRecipePicker. Fetches `GET /api/recipes?kind=base` and `GET /api/recipes` (the plannable Recipes). With `recipeId`, the Recipe being edited:
- * it is left out (selfId) and every Recipe that calls for it, directly or through other Base recipes (`GET /api/recipes/{id}` -> `usedBy`, followed down),
- * is blocked with "<name> already calls for this Recipe". A new Recipe (no recipeId) blocks nothing. Logic in pickerRows; this only fetches and holds the query.
+ * Data for the BaseRecipePicker. Fetches `GET /api/recipes?kind=base&for={recipeId}` (round 4: the server marks each Base recipe `wouldCycle` for the Recipe
+ * being edited, so no client walk is needed; a new Recipe asks without `for`) and `GET /api/recipes` (the plannable Recipes). The Recipe being edited is left
+ * out (selfId); a Base recipe that would make a cycle is listed disabled. Logic in pickerRows; this only fetches and holds the query.
  */
 export function useBaseRecipePicker(opts: { recipeId?: number; lineName: string }): UseBaseRecipePicker {
   const { recipeId, lineName } = opts
@@ -61,13 +37,9 @@ export function useBaseRecipePicker(opts: { recipeId?: number; lineName: string 
     setError(null)
     void (async () => {
       try {
-        const [baseRecipes, plannable, blocked] = await Promise.all([
-          baseRecipesApi.pickerBaseRecipes(),
-          baseRecipesApi.pickerPlannable(),
-          recipeId === undefined ? Promise.resolve({} as Record<number, string>) : blockedBy(recipeId),
-        ])
+        const [baseRecipes, plannable] = await Promise.all([baseRecipesApi.pickerBaseRecipes(recipeId), baseRecipesApi.pickerPlannable()])
         if (cancelled) return
-        setData({ baseRecipes, plannable, blocked })
+        setData({ baseRecipes, plannable })
       } catch {
         if (cancelled) return
         setError(baseRecipeLinkStrings.couldNotLoadBases)
@@ -88,7 +60,6 @@ export function useBaseRecipePicker(opts: { recipeId?: number; lineName: string 
         baseRecipes: data?.baseRecipes ?? [],
         plannable: data?.plannable ?? [],
         selfId: recipeId,
-        blocked: data?.blocked,
       }),
     [query, lineName, data, recipeId],
   )

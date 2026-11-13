@@ -7,7 +7,8 @@ import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSyst
 import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
-import { useBaseIngredientUnit, useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
+import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
+import { useBaseRecipeStock } from '../hooks/useBaseRecipeStock'
 import { LineLinkSession, type LineSession } from '../components/LineLinkSession'
 import { usedInText, yieldText } from '../lib/baseRecipe'
 import { CookEntry } from '../components/CookEntry'
@@ -85,7 +86,6 @@ export function RecipeDetailScreen(): ReactNode {
   )
   const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
   const isBase = r.baseRecipe === true
-  const baseIngredient = r.baseIngredientId !== undefined ? refs.byId.get(r.baseIngredientId) : undefined
 
   return (
     <section className="recipe-detail">
@@ -117,7 +117,7 @@ export function RecipeDetailScreen(): ReactNode {
           </>
         }
       />
-      {isBase ? <BaseRecipeSection recipe={r} knownUnit={baseIngredient?.baseUnit} refreshKey={candidateTick} onChanged={refreshAll} /> : null}
+      {isBase ? <BaseRecipeSection recipe={r} refreshKey={candidateTick} onChanged={refreshAll} /> : null}
       <div className="recipe-detail__layout">
         <div className="recipe-detail__aside">
           <Tile variant="media" className="recipe-detail__hero" media={thumb}>
@@ -183,7 +183,11 @@ export function RecipeDetailScreen(): ReactNode {
           recipeId={r.id}
           session={session}
           refs={refs.byId}
-          onChanged={refreshAll}
+          // a successful line action clears the words of an earlier refusal
+          onChanged={() => {
+            setLineError(null)
+            refreshAll()
+          }}
           onDone={() => setSession(null)}
           onFailed={setLineError}
         />
@@ -196,12 +200,12 @@ export function RecipeDetailScreen(): ReactNode {
 }
 
 /**
- * BR-D: a Base recipe's own facts: the Yield, the Recipes that call for it (links), and the candidates row (its copy is in the strings) that opens
- * the bulk link list while any plain line of that name is left. A child component, so a plannable Recipe never asks for candidates.
+ * BR-D: a Base recipe's own facts: the Yield, the Pantry's Stock of it, the Recipes that call for it (links), and the candidates row (its copy is in the
+ * strings) that opens the bulk link list while any plain line of that name is left. A child component, so a plannable Recipe never asks for candidates or Stock.
  */
-function BaseRecipeSection({ recipe: r, knownUnit, refreshKey, onChanged }: { recipe: Recipe; knownUnit: string | undefined; refreshKey: number; onChanged: () => void }): ReactNode {
+function BaseRecipeSection({ recipe: r, refreshKey, onChanged }: { recipe: Recipe; refreshKey: number; onChanged: () => void }): ReactNode {
   const candidates = useBaseLinkCandidates(r.id, true)
-  const baseUnit = useBaseIngredientUnit(r.baseIngredientId ?? 0, knownUnit)
+  const stock = useBaseRecipeStock(r.baseIngredientId)
   const [sheetOpen, setSheetOpen] = useState(false)
   useEffect(() => {
     if (refreshKey > 0) candidates.refetch()
@@ -215,6 +219,7 @@ function BaseRecipeSection({ recipe: r, knownUnit, refreshKey, onChanged }: { re
         <p>
           <BaseRecipeBadge /> <span>{t.yieldLine(yieldText(r.yield, r.yieldUnit))}</span>
         </p>
+        {stock.line ? <p>{stock.line}</p> : null}
         <h2>{usedInText(used.length)}</h2>
         {used.length === 0 ? null : (
           <p>
@@ -232,10 +237,10 @@ function BaseRecipeSection({ recipe: r, knownUnit, refreshKey, onChanged }: { re
           </Button>
         ) : null}
       </Tile>
-      {sheetOpen && baseUnit !== undefined ? (
+      {sheetOpen ? (
         <LinkCandidatesSheet
           open
-          baseRecipe={{ id: r.id, name: r.name, baseUnit, ingredientId: r.baseIngredientId ?? 0 }}
+          baseRecipe={{ id: r.id, name: r.name, ingredientId: r.baseIngredientId ?? 0 }}
           onClose={() => {
             setSheetOpen(false)
             candidates.refetch()

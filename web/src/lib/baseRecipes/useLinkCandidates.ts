@@ -10,8 +10,6 @@ import type { LinkCandidate, LinkCandidateRow } from './types'
 export interface UseLinkCandidatesOptions {
   baseRecipeId: number
   baseName: string
-  /** The Base Unit of the Base recipe's Ingredient ("ml"). */
-  baseUnit: string
   /** The Base recipe's Ingredient: what a merge goes into. */
   baseIngredientId: number
   /** The sheet is finished (Not now, or the merge offer answered). */
@@ -49,10 +47,12 @@ export interface UseLinkCandidates {
 
 /** Hook of the LinkCandidatesSheet (design §3.8). Fetches `GET /api/recipes/{id}/link-candidates`; the rows, counts and words come from lib/baseRecipes. */
 export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandidates {
-  const { baseRecipeId, baseName, baseUnit, baseIngredientId, onDone, onChanged } = opts
+  const { baseRecipeId, baseName, baseIngredientId, onDone, onChanged } = opts
   const toast = useToast()
   const [status, setStatus] = useState<UseLinkCandidates['status']>('loading')
   const [lines, setLines] = useState<LinkCandidate[]>([])
+  // Round 4: the Base Unit comes with the candidates answer (never from the Ingredient).
+  const [baseUnit, setBaseUnit] = useState('')
   const [ticked, setTicked] = useState<Set<number>>(() => new Set())
   const [linking, setLinking] = useState(false)
   const [step, setStep] = useState<'pick' | 'merge'>('pick')
@@ -66,9 +66,10 @@ export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandid
     setStatus('loading')
     baseRecipesApi
       .linkCandidates(baseRecipeId)
-      .then((list) => {
+      .then((answer) => {
         if (cancelled) return
-        setLines(list)
+        setBaseUnit(answer.baseUnit)
+        setLines(answer.lines)
         setStatus('ready')
       })
       .catch(() => {
