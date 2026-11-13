@@ -1,12 +1,14 @@
 // Every refusal and failure of the receipt flow as words (docs/design/receipt-reading.md section 9). Plain TypeScript, no React.
 // The server's own message is never shown: the copy is by code.
 import { availabilityOf } from '../../import/lib/readAvailability'
+import { readStrings } from '../../import/strings'
 import type { AssistantUnavailableReason } from '../../import/types'
 import { receiptStrings as t } from '../strings'
 import type { ReceiptErrorAction, ReceiptErrorCopy, ReceiptErrorInput } from '../types'
 
 const REASONS: AssistantUnavailableReason[] = ['off', 'no_secret_key', 'no_key', 'key_unreadable', 'model_unavailable']
-const SETTINGS_PROBLEMS = ['assistant_bad_key', 'assistant_billing', 'assistant_forbidden', 'assistant_model_unavailable']
+type SettingsProblem = 'assistant_bad_key' | 'assistant_billing' | 'assistant_forbidden' | 'assistant_model_unavailable'
+const SETTINGS_PROBLEMS: string[] = ['assistant_bad_key', 'assistant_billing', 'assistant_forbidden', 'assistant_model_unavailable'] satisfies SettingsProblem[]
 
 const copy = (message: string, action: ReceiptErrorAction = 'none'): ReceiptErrorCopy => ({ message, action })
 
@@ -20,9 +22,13 @@ export function readAgainWait(seconds: number): string {
   return `${m} minute${m === 1 ? '' : 's'}`
 }
 
-/** The settings-problem copy: an Admin is sent to Settings, a User to an Admin. */
-function settingsProblem(isAdmin: boolean): ReceiptErrorCopy {
-  return copy(t.settingsProblem, isAdmin ? 'settings' : 'none')
+/** The settings-problem copy (section 9): a User is sent to an Admin; an Admin gets the specific message (the Recipe Assistant's
+ *  own words, as Import says them) and the link to Settings. Without a code (an apply's assistant_unavailable) the plain line. */
+function settingsProblem(isAdmin: boolean, code?: SettingsProblem): ReceiptErrorCopy {
+  if (!isAdmin) return copy(t.settingsProblem)
+  if (code === undefined) return copy(t.settingsProblem, 'settings')
+  const e = readStrings.errors
+  return copy(`${e[code]} ${e[`${code}_hint`]}`, 'settings')
 }
 
 const FIXED: Record<string, ReceiptErrorCopy> = {
@@ -61,6 +67,6 @@ export function describeReceiptError(error: ReceiptErrorInput, o: { isAdmin: boo
     const status = availabilityOf({ available: false, reason: error.reason as AssistantUnavailableReason, photos: false }, { isAdmin: o.isAdmin })
     return copy(status.message ?? t.settingsProblem, status.settingsLink ? 'settings' : 'none')
   }
-  if (SETTINGS_PROBLEMS.includes(code)) return settingsProblem(o.isAdmin)
+  if (SETTINGS_PROBLEMS.includes(code)) return settingsProblem(o.isAdmin, code as SettingsProblem)
   return FIXED[code] ?? copy(t.generic, 'retry')
 }

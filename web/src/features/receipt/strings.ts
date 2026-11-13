@@ -59,7 +59,7 @@ export const receiptStrings = {
 
   // Refusals and failures (design 9).
   retry: 'Try again',
-  readAgain: 'Read again',
+  readAgain: 'Read it again',
   settingsProblem: "The Recipe Assistant isn't working. An Admin can check it in Settings.",
   unreachable: "Couldn't reach the assistant. Check the connection and try again.",
   network: 'Feeder could not be reached. Check your connection and try again.',
@@ -76,7 +76,7 @@ export const receiptStrings = {
   readInProgress: 'A receipt is already being read. Let it finish, or cancel it.',
   tooManyReads: (wait: string) => `You can read again in ${wait}.`,
   tooManyReadsFallback: 'You can read again in a while.',
-  sessionChanged: 'Your scans changed since the receipt was read. Read it again.',
+  sessionChanged: 'The Scanned list changed since the read.',
   readGone: 'This read is no longer kept (10 minutes).',
   notDone: 'The receipt is still being read.',
   unknownProposal: 'That line is no longer on the receipt. Read the receipt again.',

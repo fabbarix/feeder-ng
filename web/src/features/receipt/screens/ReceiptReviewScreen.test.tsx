@@ -307,18 +307,18 @@ describe('Apply: refused or failed', () => {
     await userEvent.click(applyButton())
     return await inScreen().findByRole('alert')
   }
-  it('409 receipt_session_changed: "Your scans changed since the receipt was read", with Read again', async () => {
+  it('409 receipt_session_changed: "The Scanned list changed since the read.", with Read it again', async () => {
     const alert = await press(refused(409, 'receipt_session_changed'))
-    expect(alert).toHaveTextContent('Your scans changed since the receipt was read')
+    expect(alert).toHaveTextContent('The Scanned list changed since the read.')
     expect(screen.getByTestId('where')).toHaveTextContent('/scan/receipt/review')
-    await userEvent.click(within(alert).getByRole('button', { name: 'Read again' }))
+    await userEvent.click(within(alert).getByRole('button', { name: 'Read it again' }))
     expect(screen.getByText('photos page')).toBeInTheDocument()
     expect(recallRead()).toBeUndefined()
   })
   it('410 receipt_read_gone', async () => {
     const alert = await press(refused(410, 'receipt_read_gone'))
     expect(alert).toHaveTextContent('This read is no longer kept (10 minutes).')
-    expect(within(alert).getByRole('button', { name: 'Read again' })).toBeInTheDocument()
+    expect(within(alert).getByRole('button', { name: 'Read it again' })).toBeInTheDocument()
   })
   it('409 receipt_read_not_done', async () => {
     expect(await press(refused(409, 'receipt_read_not_done'))).toHaveTextContent('The receipt is still being read.')

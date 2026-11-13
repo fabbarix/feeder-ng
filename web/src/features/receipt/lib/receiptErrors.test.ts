@@ -75,18 +75,21 @@ describe('assistant_unavailable (409, with a reason)', () => {
   })
 })
 
-describe('settings problems', () => {
-  it.each(['assistant_bad_key', 'assistant_billing', 'assistant_forbidden', 'assistant_model_unavailable'])('%s', (code) => {
+describe('settings problems: a User is sent to an Admin; an Admin gets the specific message and the link (section 9)', () => {
+  it.each([
+    ['assistant_bad_key', "The Recipe Assistant's API key was refused. Replace the key in Settings."],
+    ['assistant_billing', 'Anthropic reports a billing problem. Check it with Anthropic.'],
+    ['assistant_forbidden', "This API key may not use the Recipe Assistant's model. Check the Anthropic workspace."],
+    ['assistant_model_unavailable', 'The chosen model is no longer available. Pick another model in Settings.'],
+  ])('%s', (code, adminText) => {
     expect(d(code)).toEqual({ message: "The Recipe Assistant isn't working. An Admin can check it in Settings.", action: 'none' })
-    expect(d(code, {}, admin)).toEqual({ message: "The Recipe Assistant isn't working. An Admin can check it in Settings.", action: 'settings' })
+    expect(d(code, {}, admin)).toEqual({ message: adminText, action: 'settings' })
   })
 })
 
 describe('the apply', () => {
-  it('receipt_session_changed (user copy: "Your scans changed since the receipt was read") offers Read again', () => {
-    const r = d('receipt_session_changed')
-    expect(r.message).toContain('Your scans changed since the receipt was read')
-    expect(r.action).toBe('readAgain')
+  it('receipt_session_changed says the Scanned list changed since the read and offers Read it again', () => {
+    expect(d('receipt_session_changed')).toEqual({ message: 'The Scanned list changed since the read.', action: 'readAgain' })
   })
   it('receipt_read_gone', () => {
     expect(d('receipt_read_gone')).toEqual({ message: 'This read is no longer kept (10 minutes).', action: 'readAgain' })

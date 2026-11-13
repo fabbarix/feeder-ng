@@ -150,7 +150,7 @@ export interface ReceiptErrorInput {
   reason?: string
   retryAfterSeconds?: number
 }
-/** retry: "Try again" with the same input. readAgain: "Read again" (back to the photos). settings: link to /settings/recipe-assistant (Admins). none: nothing to press. */
+/** retry: "Try again" with the same input. readAgain: "Read it again" (back to the photos). settings: link to /settings/recipe-assistant (Admins). none: nothing to press. */
 export type ReceiptErrorAction = 'retry' | 'readAgain' | 'settings' | 'none'
 export interface ReceiptErrorCopy {
   message: string

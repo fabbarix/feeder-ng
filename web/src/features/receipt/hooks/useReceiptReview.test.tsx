@@ -143,7 +143,7 @@ describe('apply: refusals (design 7.2, 9)', () => {
   it('409 receipt_session_changed: says so and offers Read again; nothing handed over; the read stays kept', async () => {
     const { result, onApplied } = await run(refused(409, 'receipt_session_changed'))
     expect(result.current.error).toMatchObject({ code: 'receipt_session_changed', action: 'readAgain' })
-    expect(result.current.error?.message).toContain('Your scans changed since the receipt was read')
+    expect(result.current.error?.message).toBe('The Scanned list changed since the read.')
     expect(onApplied).not.toHaveBeenCalled()
     expect(takePendingReceiptApplied()).toBeUndefined()
     expect(recallRead()).toBeDefined()
