@@ -32,3 +32,22 @@ describe('the noun "Scan" in scan copy (R11a N7)', () => {
     expect(scanStrings.rejected('x')).toBe("Couldn't sync a Scan: x")
   })
 })
+
+// SR4: the Scan screen's copy (shop-scan-proposals.md 13.8; GLOSSARY: Scanned list, Price, Shopping List).
+describe('SR4 strings', () => {
+  it('the Segmented, total and empty state', () => {
+    expect(scanStrings.scannedTab(6)).toBe('Scanned 6')
+    expect(scanStrings.toGetTab(3)).toBe('To get 3')
+    expect(scanStrings.withoutPrice(1)).toBe('+1 without a Price')
+    expect(scanStrings.viewLabel).toBe('List view')
+    expect(scanStrings.scannedListLabel).toBe('Scanned list')
+    expect(scanStrings.toGetLabel).toBe('To get')
+    expect(scanStrings.nothingScanned).toBe('Nothing scanned yet')
+    expect(scanStrings.nothingScannedHint).toBe('Point the camera at a barcode. Lines to get are under To get.')
+  })
+
+  it('never uses a word the GLOSSARY avoids for the new copy', () => {
+    const text = [scanStrings.nothingScanned, scanStrings.nothingScannedHint, scanStrings.addPrice, scanStrings.withoutPrice(2)].join(' ')
+    expect(text).not.toMatch(/\b(cart|basket|item)s?\b/i)
+  })
+})

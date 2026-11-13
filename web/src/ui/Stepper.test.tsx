@@ -47,3 +47,22 @@ describe('Stepper (accessible, decimals)', () => {
     expect(screen.getByRole('button', { name: 'Increase eggs' })).toBeEnabled()
   })
 })
+
+describe('Stepper size xs (SR4: inside a list row)', () => {
+  it('uses the compact 32 px IconButtons and keeps the group, spinbutton and button names', async () => {
+    const onChange = vi.fn()
+    render(<Stepper label="Quantity of Mutti passata" value={2} min={1} size="xs" onChange={onChange} />)
+    const group = screen.getByRole('group', { name: 'Quantity of Mutti passata' })
+    expect(group).toHaveAttribute('data-size', 'xs')
+    const plus = screen.getByRole('button', { name: 'Increase Quantity of Mutti passata' })
+    expect(plus).toHaveAttribute('data-size', 'compact')
+    expect(screen.getByRole('button', { name: 'Decrease Quantity of Mutti passata' })).toHaveAttribute('data-size', 'compact')
+    await userEvent.click(plus)
+    expect(onChange).toHaveBeenCalledWith(3)
+  })
+
+  it('md and sm keep the 40 px IconButtons', () => {
+    render(<Stepper label="portions" value={2} size="sm" onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Increase portions' })).toHaveAttribute('data-size', 'md')
+  })
+})

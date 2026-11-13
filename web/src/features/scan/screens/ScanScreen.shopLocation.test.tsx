@@ -29,7 +29,7 @@ import { ScanScreen } from './ScanScreen'
 
 function flow(over: Partial<ScanFlow> = {}): ScanFlow {
   return {
-    feedback: null,
+    pricing: null, startPriceEntry: vi.fn(), closePriceEntry: vi.fn(), savePrice: vi.fn(async () => ({ status: 'saved' as const })), increment: vi.fn(), decrement: vi.fn(), removeRow: vi.fn(), confirmRemove: vi.fn(),
     banner: null,
     sheet: null,
     paused: false,
@@ -37,10 +37,6 @@ function flow(over: Partial<ScanFlow> = {}): ScanFlow {
     saveUnknown: vi.fn(),
     submitWeight: vi.fn(),
     stockTakeAction: vi.fn(),
-    openEditPrice: vi.fn(),
-    editPrice: vi.fn(),
-    undo: vi.fn(),
-    dismissFeedback: vi.fn(),
     closeSheet: vi.fn(),
     applySyncResults: vi.fn(),
     unarchiveProduct: vi.fn(),
@@ -59,7 +55,7 @@ function controller(over: Partial<ScanController> = {}): ScanController {
     muted: false,
     toggleMute: vi.fn(),
     canVibrate: true,
-    flow: flow(),
+    scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
     list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 4, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], extras: [makeExtra()], progress: { ticked: 1, total: 3 } }),
     online: true,
     pendingCount: 0,

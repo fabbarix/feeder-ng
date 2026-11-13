@@ -1,15 +1,20 @@
 // Wire types of the Scan API (docs/dev/design/t13-shopping-scan.md). Mirrors internal/scan.
+import type { IngredientKind } from '../ingredients/types'
 import type { Catalog } from './lib/barcode'
 
 export type BaseUnit = 'g' | 'ml' | 'piece'
 export type OpKind = 'shop_scan' | 'shop_unknown' | 'stock_take'
 export type StockTakeAction = 'plus_pack' | 'minus_pack' | 'set_total'
 export type BarcodeScope = 'global' | 'shop'
+/** SR3: the kind of the Ingredient a Product belongs to (H4); absent from an older server. */
+export type { IngredientKind }
 
 export interface IngredientRef {
   id?: number
   name?: string
   baseUnit?: BaseUnit
+  /** SR5 (H4): the kind a new Ingredient is created with; absent = food */
+  kind?: IngredientKind
 }
 
 /** One operation from the phone; clientUuid is the idempotency key. */
@@ -60,6 +65,8 @@ export interface ScanApplied {
   remaining: number
   ticked: boolean
   productCreated: boolean
+  /** SR3 (H4): the kind of the Ingredient, for the Scanned list's grouping */
+  ingredientKind?: IngredientKind
   /** pictureFilled (PPX): the Product had no Picture and took the one from the form */
   merged?: { productId: number; productName: string; pictureFilled?: boolean }
   total?: number
@@ -84,6 +91,17 @@ export interface OfflineProduct {
   /** PE: the Ingredient's Picture, the fallback for a queued scan; absent when none */
   ingredientImageUrl?: string
   lastPriceCents: number | null
+  /** SR3: the day of lastPriceCents at this Shop, YYYY-MM-DD; absent with no Price */
+  lastPriceDate?: string
+  /** SR3 (H4): the kind of the Ingredient; absent from an older server */
+  ingredientKind?: IngredientKind
+}
+
+/** SR3: PATCH /api/scan/prices: one Price for every scan of a row (pricePerKgCents: each scan costs its quantity at it). */
+export interface PricePatch {
+  clientUuids: string[]
+  priceCents: number
+  pricePerKgCents?: number
 }
 
 /** What the phone caches to resolve and describe a scan offline. */

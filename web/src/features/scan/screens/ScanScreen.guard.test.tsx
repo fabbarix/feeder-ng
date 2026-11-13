@@ -1,4 +1,4 @@
-// R2-4: ScanScreen wires the near-duplicate lookup into the "what is this?" sheet only while online.
+// R2-4: ScanScreen wires the near-duplicate lookup into the "What is this?" sheet (NewProductSheet) only while online.
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -21,9 +21,10 @@ function controller(online: boolean): ScanController {
     camera: { status: 'ready', videoRef: { current: null }, torchSupported: false, torchOn: false, toggleTorch: vi.fn() },
     recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
     muted: false, toggleMute: vi.fn(), canVibrate: false,
+    scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(),
     flow: {
-      feedback: null, banner: null, paused: true, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(), openEditPrice: vi.fn(),
-      editPrice: vi.fn(), undo: vi.fn(), dismissFeedback: vi.fn(), closeSheet: vi.fn(), applySyncResults: vi.fn(), unarchiveProduct: vi.fn(), unarchiving: false,
+      pricing: null, startPriceEntry: vi.fn(), closePriceEntry: vi.fn(), savePrice: vi.fn(async () => ({ status: 'saved' as const })), increment: vi.fn(), decrement: vi.fn(), removeRow: vi.fn(), confirmRemove: vi.fn(), banner: null, paused: true, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(),
+      closeSheet: vi.fn(), applySyncResults: vi.fn(), unarchiveProduct: vi.fn(), unarchiving: false,
       createNewInstead: vi.fn(), sheet: { kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: '123' } },
     } as unknown as ScanController['flow'],
     list: makeList(), online, pendingCount: 0, rejectedCount: 0, dismissRejected: vi.fn(), notices: [], dismissNotice: vi.fn(),
@@ -34,9 +35,11 @@ function controller(online: boolean): ScanController {
 async function createSumac(online: boolean) {
   controllerHook.useScanController.mockReturnValue(controller(online))
   render(<MemoryRouter><ScanScreen /></MemoryRouter>)
+  // The list has open Lines: "Which Line is it?" comes first; "Something else" opens the Ingredient Select.
+  await userEvent.click(screen.getByRole('button', { name: 'Something else' }))
   await userEvent.click(screen.getByRole('combobox', { name: /Ingredient/ }))
   await userEvent.type(screen.getByRole('searchbox'), 'Sumac')
-  await userEvent.click(screen.getByRole('option', { name: 'Create Ingredient "Sumac"' }))
+  await userEvent.click(screen.getByRole('option', { name: 'New Ingredient “Sumac”' }))
 }
 
 beforeEach(() => {

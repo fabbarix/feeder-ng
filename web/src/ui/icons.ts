@@ -31,6 +31,7 @@ import { CarrotIcon } from '@phosphor-icons/react/dist/csr/Carrot'
 import { ChartPieSliceIcon } from '@phosphor-icons/react/dist/csr/ChartPieSlice'
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
+import { CircleIcon } from '@phosphor-icons/react/dist/csr/Circle'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
 import { ClipboardTextIcon } from '@phosphor-icons/react/dist/csr/ClipboardText'
 import { CloudSlashIcon } from '@phosphor-icons/react/dist/csr/CloudSlash'
@@ -229,6 +230,8 @@ export const icons = {
   readyMeal: PackageIcon,
   duration: ClockIcon,
   success: CheckCircleIcon,
+  // SR4: a Scanned row's Line still partly to get (the hollow twin of `success`)
+  successOpen: CircleIcon,
   info: InfoIcon,
   warning: WarningIcon,
   error: WarningCircleIcon,

@@ -16,6 +16,14 @@ html:has(.sticky-action-bar) .toast-region {
   bottom: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--space-3));
 }
 
+/* A phone with a non-modal half sheet open (the Price keypad beside the Scanned list): the toast sits above the sheet, so
+   "Added … · Undo" never covers its keys. The height is the half sheet's (BottomSheet.css). */
+@media (max-width: 767.98px) {
+  html:has(.sheet[data-modal='false'][data-size='half']) .toast-region {
+    bottom: calc(max(50dvh, min(480px, 85dvh)) + var(--space-3));
+  }
+}
+
 /* Both live regions stay mounted; an empty one takes no room. */
 .toast-live {
   display: flex;

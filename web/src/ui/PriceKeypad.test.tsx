@@ -121,6 +121,66 @@ describe('PriceKeypad: the announced value', () => {
   })
 })
 
+describe('PriceKeypad: a prefilled Price', () => {
+  it('the first key replaces the prefill instead of appending to it', async () => {
+    setup({ initialCents: 129 })
+    await tapKeys('2')
+    expect(display()).toHaveTextContent('€2')
+    await tapKeys('.45')
+    expect(display()).toHaveTextContent('€2.45')
+  })
+
+  it('the decimal key first starts over at "0."', async () => {
+    setup({ initialCents: 129 })
+    await tapKeys('.5')
+    expect(display()).toHaveTextContent('€0.5')
+  })
+
+  it('Backspace on an untouched prefill clears it; after a key it removes one character', async () => {
+    setup({ initialCents: 129 })
+    await userEvent.click(key('Backspace'))
+    expect(display()).toHaveTextContent('€0')
+    await tapKeys('12')
+    await userEvent.click(key('Backspace'))
+    expect(display()).toHaveTextContent('€1')
+  })
+
+  it('a physical keyboard follows the same rule', () => {
+    setup({ initialCents: 129 })
+    fireEvent.keyDown(document.body, { key: '3' })
+    expect(display()).toHaveTextContent('€3')
+  })
+
+  it('a weighed row\'s per kg prefill is replaced too', async () => {
+    setup({ pack: { amount: 500, unit: 'g' }, weighed: 312, initialPerKgCents: 1990 })
+    await tapKeys('9')
+    expect(display()).toHaveTextContent('€9')
+  })
+
+  it('switching per pack and per kg keeps an untouched prefill a prefill', async () => {
+    setup({ pack: { amount: 500, unit: 'g' }, initialCents: 145 })
+    await userEvent.click(screen.getByRole('radio', { name: 'per kg' }))
+    expect(display()).toHaveTextContent('€2.90')
+    await tapKeys('3')
+    expect(display()).toHaveTextContent('€3')
+  })
+
+  it('the Last-time chip\'s Price is offered like a prefill: the next key replaces it', async () => {
+    setup({ last: { cents: 129, date: '2026-11-03' } })
+    await tapKeys('5')
+    await userEvent.click(screen.getByRole('button', { name: 'Last time here €1.29 · 3 Nov' }))
+    expect(display()).toHaveTextContent('€1.29')
+    await tapKeys('2')
+    expect(display()).toHaveTextContent('€2')
+  })
+
+  it('an untouched prefill is saved as it is', async () => {
+    const { onSave } = setup({ initialCents: 129 })
+    await userEvent.click(key('Save'))
+    expect(onSave).toHaveBeenCalledWith({ basis: 'pack', cents: 129, packCents: 129, perKgCents: null })
+  })
+})
+
 describe('PriceKeypad: what it implies', () => {
   it('a per pack Price on a 500 g pack: "= €2.90/kg for 500 g"', async () => {
     setup({ pack: { amount: 500, unit: 'g' } })
@@ -454,5 +514,30 @@ describe('PriceKeypad: a11y and size', () => {
 
   it('does not hard-code colours: tokens only', () => {
     expect(readUiCss('PriceKeypad.css')).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/)
+  })
+})
+
+describe('PriceKeypad: compact, for a half-height sheet', () => {
+  it('marks itself compact and can leave out the name its host already shows', () => {
+    const { container } = setup({ compact: true, showName: false })
+    expect(container.querySelector('.price-keypad')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByText('Mutti passata')).toBeNull()
+    expect(display()).toBeInTheDocument()
+  })
+
+  it('puts what the Price implies and the Last-time chip on one line; the default keypad keeps them as rows', () => {
+    const css = readUiCss('PriceKeypad.css')
+    expect(declarations(css, '.price-keypad__notes')['display']).toBe('contents')
+    const compact = declarations(css, ".price-keypad[data-compact='true'] .price-keypad__notes")
+    expect(compact['display']).toBe('flex')
+    expect(compact['flex-wrap']).toBe('wrap')
+  })
+
+  it('keeps the keys at least 44 px high: compact changes only the spacing', () => {
+    const css = readUiCss('PriceKeypad.css')
+    expect(declarations(css, '.price-keypad__key')['min-height']).toBe('44px')
+    const compactKeys = declarations(css, ".price-keypad[data-compact='true'] .price-keypad__keys")
+    expect(compactKeys['min-height']).toBeUndefined()
+    expect(css).not.toMatch(/data-compact='true'\][^{]*__key\s*\{[^}]*(min-height|block-size|height)/)
   })
 })

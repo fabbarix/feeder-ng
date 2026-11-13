@@ -16,45 +16,6 @@
   color: var(--status-danger-fg);
 }
 
-.scan-feedback {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--tile-pad);
-  border-radius: var(--radius-tile);
-  background: var(--color-soft);
-}
-
-/* PP: with a Product Picture the line reads thumb then text; queued note and actions take the full width below. */
-.scan-feedback[data-has-picture] {
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: var(--space-3);
-}
-
-.scan-feedback[data-has-picture] > :not(:first-child):not(.scan-feedback__text) {
-  grid-column: 1 / -1;
-}
-
-.scan-feedback__text {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--text-body-strong-size);
-  font-weight: 700;
-  line-height: var(--text-body-strong-line);
-}
-
-.scan-feedback__queued {
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-}
-
-.scan-feedback__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .scan-notices {
   display: grid;
   gap: var(--space-2);
@@ -83,69 +44,9 @@
   gap: var(--space-3);
 }
 
-.live-list {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.live-list__count {
-  margin: 0;
-  font-size: var(--text-title-3-size);
-  font-weight: 800;
-  line-height: var(--text-title-3-line);
-}
-
-.live-list__entries {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.live-list__entry {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  color: var(--color-text);
-}
-
-.live-list__entry[data-state='ticked'] {
-  color: var(--color-muted);
-  text-decoration: line-through;
-}
-
-.live-list__title {
-  font-weight: 700;
-}
-
-.live-list__detail {
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-}
-
 .shop-picker {
   display: grid;
   gap: var(--space-3);
-}
-
-/* The near-duplicate guard of the "what is this?" sheet (same look as the New Ingredient sheet's). */
-.unknown-sheet__guard {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface-2);
-}
-
-.unknown-sheet__guard p {
-  margin: 0;
-}
-
-.unknown-sheet__guard-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 
 .stock-take__pack {
@@ -161,17 +62,10 @@
   gap: var(--space-2);
 }
 
-/* The sheet forms (ManualBarcodeEntry, UnknownBarcodeSheet): one column, the fields and buttons spaced by the gap token. */
+/* The sheet forms (ManualBarcodeEntry): one column, the fields and buttons spaced by the gap token. */
 .scan-sheet-form {
   display: grid;
   gap: var(--space-3);
-}
-
-.unknown-sheet__hint {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
 }
 
 /* Shop Location: "You seem to be at Coop (40 m)." with a switch button, under the header. */
@@ -190,4 +84,139 @@
 
 .scan-elsewhere > span {
   flex: 1 1 12rem;
+}
+
+/* SR4: the Split layout (shop-scan-proposals.md 13.2): the camera strip over the Scanned list, side by side from 768 px. */
+.scan-screen__split {
+  display: grid;
+  gap: var(--bento-gap);
+  align-items: start;
+}
+
+.scan-screen__camera,
+.scan-screen__list {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .scan-screen__split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+}
+
+/* The Segmented "Scanned N · To get M" and the total, one row above the list. */
+.scan-screen__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.scan-screen__total {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+
+.scan-screen__amount {
+  font-size: var(--text-title-3-size);
+  font-weight: 800;
+  line-height: var(--text-title-3-line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Add price" sits in the value column, which the whole-row target lets the pointer through: it catches it itself. */
+.scanned-row__add {
+  pointer-events: auto;
+}
+
+/* The active row's strip, under the row in the same card: a subtle divider, the Stepper left, Price and Remove right. */
+.scanned-row__strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  padding-block: var(--space-1);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.scanned-row__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* The second line of a Scanned row: the size, then one tick and "x of y". Muted, normal weight; only the tick is coloured.
+   Its parts never shrink, so nothing is cut: the line stays one line. */
+.scanned-row__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 400;
+}
+
+.scanned-row__meta > * {
+  flex: none;
+}
+
+.scanned-row__tick {
+  color: var(--status-success-fg);
+}
+
+/* Just scanned: the row a scan put on top washes in the success background and fades out (1.2 s). Two identical
+   keyframes, alternated by data-fresh, so a rescan of the same row plays it again. None with reduced motion. */
+.list-row[data-fresh='a'] {
+  animation: scanned-row-wash-a calc(var(--dur-3) * 5) var(--ease-out);
+}
+
+.list-row[data-fresh='b'] {
+  animation: scanned-row-wash-b calc(var(--dur-3) * 5) var(--ease-out);
+}
+
+@keyframes scanned-row-wash-a {
+  from {
+    background: var(--status-success-bg);
+  }
+}
+
+@keyframes scanned-row-wash-b {
+  from {
+    background: var(--status-success-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-row[data-fresh] {
+    animation: none;
+  }
+}
+
+/* The row whose Price is being entered is outlined with the accent focus ring: the one focus on the screen. Drawn inside
+   the row (a negative offset), because the list group clips what goes outside it and the next row covers its bottom edge;
+   an outline, so the row's hover and pressed shading never hide it. */
+.list-row[data-pricing='true'] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-tile-sm);
+}
+
+.price-entry__error {
+  margin: 0;
+  color: var(--status-danger-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+/* The Price entry is a non-modal half sheet fixed at the bottom on a phone: the page gets room under the list, so even the
+   last row can scroll up to sit just above it (hooks/useScrollAboveSheet). From 768 px the sheet is docked in the camera
+   column and needs no room. */
+@media (max-width: 767.98px) {
+  .scan-screen[data-price-entry='open'] {
+    padding-block-end: max(50dvh, min(480px, 85dvh));
+  }
 }

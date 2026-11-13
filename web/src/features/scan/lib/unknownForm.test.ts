@@ -95,15 +95,17 @@ describe('toUnknownOp', () => {
       quantity: 400,
       packSize: 400,
       scope: 'global',
-      ingredient: { name: 'tinned tomatoes', baseUnit: 'g' },
+      // SR5 (H7): a new Ingredient says its kind, food here (it used to be left out).
+      ingredient: { name: 'tinned tomatoes', baseUnit: 'g', kind: 'food' },
       productName: 'Tinned tomatoes 400 g',
     })
   })
 
   it('refers to an existing Ingredient by id and converts the pack size to Base Units', () => {
     const op = toUnknownOp(form({ ingredient: { id: 9, name: 'milk', baseUnit: 'ml' }, packSize: '1', packUnit: 'l', scope: 'shop', productName: ' Milk 1 l ' }), { mode: 'pack', code: '04000000000013' }, meta)
-    expect(op).toMatchObject({ ingredient: { id: 9 }, quantity: 1000, packSize: 1000, scope: 'shop', productName: 'Milk 1 l' })
-    expect(op.ingredient).not.toHaveProperty('name')
+    expect(op).toMatchObject({ quantity: 1000, packSize: 1000, scope: 'shop', productName: 'Milk 1 l' })
+    // SR5 review: the id finds it (the server ignores the rest); name, Base Unit and kind are for the row while the scan waits to sync.
+    expect(op.ingredient).toEqual({ id: 9, name: 'milk', baseUnit: 'ml', kind: 'food' })
   })
 
   it('a weighed code carries the rule, the item code and the decoded weight, and no pack size or scope', () => {
@@ -117,7 +119,8 @@ describe('toUnknownOp', () => {
       ruleId: 3,
       itemCode: '00009',
       quantity: 500,
-      ingredient: { id: 4 },
+      // SR5 review: the existing Ingredient's name, Base Unit and kind ride along with its id.
+      ingredient: { id: 4, name: 'carrots', baseUnit: 'g', kind: 'food' },
       productName: 'Loose carrots',
     })
   })

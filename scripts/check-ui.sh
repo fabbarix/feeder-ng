@@ -13,7 +13,8 @@
 #   native-search    7  no <input type="search"> outside web/src/ui (use the SearchField primitive)
 #   back-link        8  no BackLink, no <Link>/<a> reading "Back to ...", no <IconButton icon="back"> that navigates (use Breadcrumbs)
 #   image-input      9  no own image input (IM2): no accept= with an image type or extension, no capture=, no '/api/images' upload URL
-#                       outside web/src/ui/ImagePicker (use <ImagePicker>); accept=".json" and display URLs like `/api/images/${id}` are fine
+#                       outside web/src/ui/ImagePicker (use <ImagePicker>); accept=".json" and display URLs like `/api/images/${id}` are fine,
+#                       and so is the capture prop of the shared <ImageFileInput> (capture={onPhone})
 #   type-scale      10  a font-size / font that is not a --text-* token (or inherit), outside a token block (:root, html[...]) (system.md 1)
 #   opacity-muting  11  opacity between 0.5 and 0.95 on a selector that is not a disabled state: mute text with --color-muted (system.md 2)
 #   word-break      12  hyphens: auto, overflow-wrap / word-wrap anywhere|break-word, word-break break-all|break-word, unless the selector
@@ -443,8 +444,25 @@ rule_back_link
 
 # ------------------------------------------------------------------ rule 9
 rule_image_input() {
-  src_files tsx ts | grep -v "^$SRC/ui/ImagePicker/" | code_match image-input "own image input; use the shared <ImagePicker> (ui/ImagePicker is the only place for accept=image, capture= and the upload URLs)" \
-    'accept=[^>]*(image/|[.](png|jpe?g|webp|heic|heif|gif|avif))|(^|[^A-Za-z0-9_-])capture=|[\x27"`]/api/images(/from-url)?[\x27"`]'
+  local files list
+  files="$(src_files tsx ts | grep -v "^$SRC/ui/ImagePicker/")"
+  code_match image-input "own image input; use the shared <ImagePicker> (ui/ImagePicker is the only place for accept=image, capture= and the upload URLs)" \
+    'accept=[^>]*(image/|[.](png|jpe?g|webp|heic|heif|gif|avif))|[\x27"`]/api/images(/from-url)?[\x27"`]' <<<"$files"
+  # capture= is flagged on any element but the shared <ImageFileInput>, whose boolean capture prop is how a feature asks for the camera
+  # (the prop is the API; the attribute itself is still written only in ui/ImagePicker). The element runs from <ImageFileInput to its />.
+  [ -n "$files" ] || return 0
+  mapfile -t list <<<"$files"
+  awk -v RULE=image-input -v MSG="own capture= attribute; ask for the camera with the shared <ImageFileInput capture>" '
+    FNR == 1 { inblk = 0; ifi = 0 }
+    inblk { if (index($0, "*/")) inblk = 0; next }
+    $0 ~ /^[ \t]*\/\// { next }
+    $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    {
+      line = $0
+      if (line ~ /<ImageFileInput([^A-Za-z0-9_]|$)/) ifi = 1
+      if (!ifi && line ~ /(^|[^A-Za-z0-9_-])capture=/) print RULE "\t" FILENAME "\t" FNR "\t" MSG
+      if (ifi && index(line, "/>")) ifi = 0
+    }' "${list[@]}" >>"$VIOL"
 }
 rule_image_input
 

@@ -526,6 +526,26 @@ otherwise. Mockup frames A1 to A3 show the shape; the Price entry follows B3 wit
 - Only one row is active at a time; scanning, scrolling away or tapping another row clears it.
 - Supplies use the same row ("Regina toilet paper 9 pieces", amount "9 pieces").
 
+**Changes after the mockup review (the user, 2026-11-13).** These replace the table above where they differ.
+
+- *Row text.* Line 1 is the Product name only, without the pack size ("Mutti passata", not "Mutti passata 700 g").
+  Line 2 is muted, normal weight: the pack size ("125 g", "9 pieces"), or the scanned weight of a weighed row. On a
+  Shopping List row it goes on with " · ", one tick and "x of y": what this session's scans cover of the Line, against
+  the Line's quantity, in the Line's unit ("250 of 375 g", "2 of 6", "312 of 300 g"). Metric g and ml name the unit once
+  when both amounts share it and keep both when they format differently; imperial keeps both (as the Shop screen's
+  Restock reason). The tick is a filled check-circle once the Line is covered and a hollow circle (Phosphor Circle) in
+  the same success colour while some is still to get; exactly one per row, and no Thumb badge. A row not on the list
+  shows only the size. "On the list", "ticked", "{Line} ticked", "still to get" and "Not on the list" are gone, so
+  their strings leave 13.8. Rows stay two lines.
+- *Active row.* The top part is the same as every other row (name, line 2, the Price with "×2 · €1.29"); the Price
+  is plain text, and "Add price" stays the pill. Under it, in the same row card, one calm strip with a subtle top
+  divider: the compact `Stepper` (32 px outline − and +, a regular-weight count) on the left; two quiet text buttons on
+  the right, **Price** (accent text) and **Remove** (danger text). A weighed row has the strip without the Stepper.
+  There is no ⋮ menu, so "More for {product}" and "Open the Product" leave 13.8. The Price entry starts from Add
+  price, from the strip's Price, or from "+k without a Price". Remove behaves as in 13.6 (×1 at once with Put back,
+  ×2 or more through the `ConfirmDialog`). Accessible names: "Quantity of {product}", "Price of {product}…",
+  "Remove {product}".
+
 ### 13.4 Price entry (from B, with a decimal key)
 
 - **Starts** from a row's Price or Add price pill, or from "+k without a Price". The camera pauses (no reads while typing).
