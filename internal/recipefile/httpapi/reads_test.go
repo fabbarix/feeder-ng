@@ -895,3 +895,24 @@ func TestNoSecretShowsInAnyReadResponse(t *testing.T) {
 		}
 	}
 }
+
+// BR-C: a read whose answer has a line calling for another recipe ends in Import Review with a Base recipe tile.
+func TestAReadOfALineThatPointsAtAnotherRecipeEndsInReviewWithATile(t *testing.T) {
+	w := raStart(t)
+	v := raText(t, w.user, "Lasagne: 500 ml béchamel (see page 42), lasagne sheets. #fake:base-reference")
+	if v.State != "done" || v.Review == nil {
+		t.Fatalf("read = %+v", v)
+	}
+	rows := v.Review.Plan.BaseRecipeLines
+	if len(rows) != 1 || rows[0].Cue != "see page 42" || rows[0].Reference != "Béchamel" || rows[0].Resolved {
+		t.Fatalf("tiles = %+v", rows)
+	}
+	if v.Review.Plan.Ready {
+		t.Error("Confirm waits for the tile")
+	}
+	v = raText(t, w.user, "Lasagne and Béchamel. #fake:base-recipes")
+	rows = v.Review.Plan.BaseRecipeLines
+	if len(rows) != 1 || !rows[0].Resolved || rows[0].Effective == nil || rows[0].Effective.Action != recipefile.BaseFile {
+		t.Fatalf("the Béchamel of the same file is preselected: %+v", rows)
+	}
+}

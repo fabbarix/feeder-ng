@@ -39,6 +39,10 @@ type review struct {
 	warnings []Warning
 	newCount int
 	stale    bool // an answer refers to a Recipe or Ingredient that no longer exists
+
+	baseIngs    map[int64]bool // Ingredients that belong to a Base recipe: never matched by plain name (base_review.go)
+	baseRecipes map[int64]bool // existing Base recipes
+	baseRows    []*baseRow     // the Base recipe tiles
 }
 
 // ingRow is one Ingredient of the kept Recipes, keyed by normalised name.
@@ -80,11 +84,15 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		cleaned:       map[int]recipe.Input{},
 		byKey:         map[string]*ingRow{},
 	}
+	r.baseIngs, r.baseRecipes = baseSets(ex)
 	for _, e := range ex.Ingredients {
+		r.existingByID[e.ID] = e
+		if r.baseIngs[e.ID] {
+			continue // a Base recipe's Ingredient is keyed by its Base recipe, never by name
+		}
 		if _, dup := r.existingByKey[e.Key()]; !dup {
 			r.existingByKey[e.Key()] = e
 		}
-		r.existingByID[e.ID] = e
 		r.takenNames[e.Key()] = true
 	}
 	r.buildRecipeRows()
@@ -95,6 +103,7 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 	r.answerPrompts()
 	r.finishTargets()
 	r.checkRecipes()
+	r.buildBaseRows()
 	r.collectImageWarnings()
 	return r
 }
@@ -297,6 +306,9 @@ func (r *review) classify(row *ingRow) (string, []Suggestion, *BaseUnitConflict)
 	}
 	var cands []ingredient.Candidate
 	for _, e := range r.ex.Ingredients {
+		if r.baseIngs[e.ID] {
+			continue
+		}
 		cands = append(cands, ingredient.Candidate{ID: e.ID, Name: e.Name})
 	}
 	var sugg []Suggestion
@@ -549,8 +561,18 @@ func (r *review) checkRecipes() {
 			continue
 		}
 		in := r.recipeInput(i, rec)
-		clean, err := in.Validate(lookup)
+		checked := in
+		if r.fileBase(i) {
+			// A Base recipe's Yield is an amount, not portions: recipe.Input's portion limit does not apply to it.
+			if !(rec.Yield > 0) || rec.Yield > maxBaseYield {
+				r.problem(recipePath(i, "yield"), recipe.CodeYieldInvalid, "the yield of a base recipe must be more than 0 and at most 100000")
+				continue
+			}
+			checked.Yield = 1
+		}
+		clean, err := checked.Validate(lookup)
 		if err == nil {
+			clean.Yield = in.Yield
 			r.cleaned[i] = clean
 			continue
 		}
@@ -664,14 +686,15 @@ func collapse(s string) string { return strings.Join(strings.Fields(s), " ") }
 // plan assembles the Import Review state from the rows.
 func (r *review) plan() Plan {
 	p := Plan{
-		Ingredients: []IngredientMatch{},
-		UnitPrompts: append([]UnitPrompt{}, r.prompts...),
-		Recipes:     append([]RecipeStatus{}, r.recipes...),
-		Courses:     []CourseMatch{},
-		Problems:    append([]Problem{}, r.problems...),
-		Warnings:    append([]Warning{}, r.warnings...),
+		Ingredients:     []IngredientMatch{},
+		UnitPrompts:     append([]UnitPrompt{}, r.prompts...),
+		Recipes:         append([]RecipeStatus{}, r.recipes...),
+		Courses:         []CourseMatch{},
+		BaseRecipeLines: r.baseLines(),
+		Problems:        append([]Problem{}, r.problems...),
+		Warnings:        append([]Warning{}, r.warnings...),
 	}
-	ready := len(r.problems) == 0
+	ready := len(r.problems) == 0 && r.baseReady()
 	if r.courses != nil {
 		p.Courses = append(p.Courses, r.courses.rows...)
 		for _, c := range r.courses.rows {
@@ -704,7 +727,7 @@ func (r *review) plan() Plan {
 
 // commit is the write set of a ready review.
 func (r *review) commit() Commit {
-	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings}
+	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings, BaseRecipeLines: r.baseCommits()}
 	if r.courses != nil {
 		c.NewCourses = r.courses.newCourses
 		c.UnarchiveCourses = r.courses.unarchive

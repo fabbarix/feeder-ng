@@ -1,0 +1,55 @@
+{
+  "format": "feeder-recipe-file",
+  "version": 1,
+  "ingredients": [
+    { "name": "lasagne sheets", "baseUnit": "g" },
+    { "name": "milk", "baseUnit": "ml", "shelfLifeDays": 5 },
+    { "name": "butter", "baseUnit": "g", "shelfLifeDays": 30 },
+    { "name": "flour", "baseUnit": "g" },
+    { "name": "béchamel", "baseUnit": "ml", "shelfLifeDays": 4 },
+    { "name": "roux", "baseUnit": "g", "shelfLifeDays": 3 }
+  ],
+  "recipes": [
+    {
+      "name": "Lasagne",
+      "yield": 4,
+      "courses": ["Main"],
+      "ingredients": [
+        { "ingredient": "lasagne sheets", "quantity": 250, "unit": "g" },
+        { "ingredient": "béchamel", "quantity": 500, "unit": "ml", "recipe": { "name": "Béchamel", "cue": "see page 42" }, "neededAtStep": 1 }
+      ],
+      "steps": [
+        { "text": "Cook the sheets.", "kind": "active", "durationMinutes": 8 },
+        { "text": "Layer the sheets and the béchamel.", "kind": "active", "durationMinutes": 10, "after": [0] },
+        { "text": "Bake.", "kind": "passive", "durationMinutes": 30, "after": [1] }
+      ]
+    },
+    {
+      "name": "Béchamel",
+      "baseRecipe": true,
+      "yield": 1,
+      "yieldUnit": "l",
+      "ingredients": [
+        { "ingredient": "milk", "quantity": 1000, "unit": "ml" },
+        { "ingredient": "roux", "quantity": 160, "unit": "g", "recipe": { "name": "Roux" }, "neededAtStep": 1 }
+      ],
+      "steps": [
+        { "text": "Warm the milk.", "kind": "active", "durationMinutes": 5 },
+        { "text": "Whisk the roux into the milk and simmer.", "kind": "passive", "durationMinutes": 10, "after": [0] }
+      ]
+    },
+    {
+      "name": "Roux",
+      "baseRecipe": true,
+      "yield": 160,
+      "yieldUnit": "g",
+      "ingredients": [
+        { "ingredient": "butter", "quantity": 80, "unit": "g" },
+        { "ingredient": "flour", "quantity": 80, "unit": "g" }
+      ],
+      "steps": [
+        { "text": "Melt the butter and cook the flour in it.", "kind": "active", "durationMinutes": 4 }
+      ]
+    }
+  ]
+}

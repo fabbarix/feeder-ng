@@ -70,6 +70,17 @@
         "ingredient": {
           "$ref": "#/$defs/name"
         },
+        "neededAtStep": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "0-based index of the step by which the other recipe must be ready. Null for none."
+        },
         "note": {
           "type": "string"
         },
@@ -79,15 +90,28 @@
         "quantity": {
           "type": "number"
         },
+        "recipe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/recipeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Null when the line calls for none."
+        },
         "unit": {
           "$ref": "#/$defs/unit"
         }
       },
       "required": [
         "ingredient",
+        "neededAtStep",
         "note",
         "optional",
         "quantity",
+        "recipe",
         "unit"
       ],
       "type": "object"
@@ -95,6 +119,17 @@
     "recipe": {
       "additionalProperties": false,
       "properties": {
+        "baseRecipe": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "true for a Base recipe (a recipe other recipes call for, never planned); false or null otherwise."
+        },
         "cooldownDays": {
           "anyOf": [
             {
@@ -193,9 +228,21 @@
         "yield": {
           "description": "Standard portions produced by one Batch (for a Ready Meal: portions in one pack).",
           "type": "number"
+        },
+        "yieldUnit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/unit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The unit of a Base recipe's yield (g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion). Null unless baseRecipe is true."
         }
       },
       "required": [
+        "baseRecipe",
         "cooldownDays",
         "courses",
         "description",
@@ -209,7 +256,25 @@
         "steps",
         "tags",
         "wholeMeal",
-        "yield"
+        "yield",
+        "yieldUnit"
+      ],
+      "type": "object"
+    },
+    "recipeRef": {
+      "additionalProperties": false,
+      "properties": {
+        "cue": {
+          "description": "The words in the source that point at the other recipe, such as \"see page 42\". Write \"\" when the source gives none.",
+          "type": "string"
+        },
+        "name": {
+          "$ref": "#/$defs/name"
+        }
+      },
+      "required": [
+        "cue",
+        "name"
       ],
       "type": "object"
     },
@@ -245,7 +310,7 @@
         },
         "uses": {
           "items": {
-            "$ref": "#/$defs/quantity"
+            "$ref": "#/$defs/use"
           },
           "type": "array"
         }
@@ -264,6 +329,35 @@
     "unit": {
       "description": "Base units, global units, or a unit defined in the Ingredient's conversions.",
       "type": "string"
+    },
+    "use": {
+      "additionalProperties": false,
+      "description": "An Ingredient amount a Step needs. A Step's uses never call for another recipe: no recipe or neededAtStep.",
+      "properties": {
+        "ingredient": {
+          "$ref": "#/$defs/name"
+        },
+        "note": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "required": [
+        "ingredient",
+        "note",
+        "optional",
+        "quantity",
+        "unit"
+      ],
+      "type": "object"
     }
   },
   "additionalProperties": false,

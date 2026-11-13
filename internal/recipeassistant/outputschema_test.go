@@ -266,11 +266,11 @@ func compile(t *testing.T, schema []byte) *jsonschema.Schema {
 
 // fullAnswer is a small answer as the model writes it under the projection: every field present, "none" spelled out.
 func fullAnswer() map[string]any {
-	none := map[string]any{"ingredient": "butter", "quantity": 10.0, "unit": "g", "note": "", "optional": false}
+	none := map[string]any{"ingredient": "butter", "quantity": 10.0, "unit": "g", "note": "", "optional": false, "recipe": nil, "neededAtStep": nil}
 	return map[string]any{"format": "feeder-recipe-file", "version": 1.0, "noRecipe": false,
 		"ingredients": []any{map[string]any{"name": "butter", "baseUnit": "g", "conversions": []any{}, "image": "", "shelfLifeDays": nil}},
 		"recipes": []any{map[string]any{
-			"name": "Buttered toast", "description": "", "yield": 1.0, "readyMeal": false, "tags": []any{}, "image": "",
+			"name": "Buttered toast", "description": "", "yield": 1.0, "readyMeal": false, "baseRecipe": false, "yieldUnit": "", "tags": []any{}, "image": "",
 			"cooldownDays": nil, "leftoverUseByDays": nil, "reheatMinutes": nil, "courses": []any{}, "wholeMeal": nil, "source": map[string]any{"url": "", "attribution": ""},
 			"ingredients": []any{none},
 			"steps": []any{map[string]any{"text": "Toast the bread.", "kind": "active", "durationMinutes": 3.0, "leadTimeMinutes": 0.0,

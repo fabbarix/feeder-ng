@@ -23,6 +23,8 @@ Rules:
 13. Courses: set "courses" to the names of the Courses the recipe can fill, one or more, chosen ONLY from the list below and written exactly as given. Never invent a Course. Leave "courses" out when none clearly fits; the recipe then gets the Course marked (default).
 {{COURSES}}
 14. Whole meal: set "wholeMeal" to true only for a recipe that needs no other Course beside it (a one-pot recipe, a Ready Meal that comes with its sides), to false for a recipe that wants something served with it (a bought dessert or side, a frozen pizza that wants a salad), and leave it out when the source does not say.
+15. Base recipes: a recipe that is only there to be used inside other recipes (a sauce, a dough, a stock, a spice mix) and is not served as a dish of its own gets "baseRecipe": true, "yield" = the amount one batch produces and "yieldUnit" (g, kg, ml, l, piece or portion); leave "courses", "wholeMeal", "cooldownDays", "leftoverUseByDays" and "reheatMinutes" out. Every other recipe gets "baseRecipe": false.
+16. A line that calls for another recipe ("500 ml béchamel (see page 42)", "1 quantity of pasta frolla", "the sauce from the previous recipe") stays an ordinary ingredient line with a sensible name, amount and unit ("1 quantity" is quantity 1, unit "batch", with a conversion), and adds "recipe": { "name": the other recipe's name, "cue": the words that point at it }. When the other recipe is in the same source, use its exact name. Set "neededAtStep" to the step that adds it when that is clear. A line that calls for no other recipe has "recipe": null. Never invent a recipe that the source does not point at.
 
 JSON Schema:
 {{SCHEMA}}

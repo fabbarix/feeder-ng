@@ -31,7 +31,7 @@ func pruneNone(answer map[string]any) map[string]any {
 }
 
 func pruneValue(v any, schema map[string]any, defs map[string]any) {
-	schema = resolve(schema, defs)
+	schema = branchFor(v, resolve(schema, defs), defs)
 	switch val := v.(type) {
 	case map[string]any:
 		props, _ := schema["properties"].(map[string]any)
@@ -62,6 +62,30 @@ func pruneValue(v any, schema map[string]any, defs map[string]any) {
 			pruneValue(item, items, defs)
 		}
 	}
+}
+
+// branchFor picks, out of an anyOf (a nullable reference such as a line's "recipe": a reference or null), the branch
+// that describes the value: an object branch for an object, a list branch for a list. Other schemas are returned as they are.
+func branchFor(v any, schema map[string]any, defs map[string]any) map[string]any {
+	list, ok := schema["anyOf"].([]any)
+	if !ok {
+		return schema
+	}
+	for _, b := range list {
+		bm, _ := b.(map[string]any)
+		r := resolve(bm, defs)
+		switch v.(type) {
+		case map[string]any:
+			if _, has := r["properties"]; has {
+				return r
+			}
+		case []any:
+			if _, has := r["items"]; has {
+				return r
+			}
+		}
+	}
+	return schema
 }
 
 // resolve follows a local "#/$defs/<name>" reference.
