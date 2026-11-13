@@ -4,6 +4,7 @@ import { LEFTOVER_STEP } from '../lib/cook'
 import type { AllCookedRow } from '../lib/toConfirm'
 import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
+import type { UsedFromController } from '../hooks/useUsedFrom'
 import '../plan.css'
 
 export interface MarkAllCookedSheetProps {
@@ -15,6 +16,8 @@ export interface MarkAllCookedSheetProps {
   onConfirm: () => void
   busy: boolean
   error: string | null
+  /** The Used from picks, per Course; a conflict disables Mark all Cooked. Optional until wired (b5-ufw). */
+  usedFrom?: UsedFromController
 }
 
 /**

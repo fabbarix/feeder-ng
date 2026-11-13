@@ -59,10 +59,10 @@ interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
 
 ## 5. Wiring plan (developer step, after b5-f1 merges)
 
-1. `types.ts`: replace `CookPreview.needs` by `UsedFromNeed[]`; add `usedFrom?` to `CookedAllEntry`; delete the temporary aliases in `api.usedFrom.ts`.
-2. `api.ts`: `cooked(key, leftoverPortions, usedFrom?)` and `cookedAll` pass `usedFrom` (or call `usedFromApi`).
-3. `useMarkCooked`: `const uf = useUsedFrom([{ courseId, courseName, needs: preview.needs }])`; `confirm` sends `uf.entries(courseId)`; on `isUsedFromInvalid` set the error to `usedFromStrings.refused`, invalidate the preview query.
-4. `useMarkAllCooked`: one `useUsedFrom` over all previews; each `courses[i]` carries its `usedFrom`; the confirm is disabled while `hasConflict`.
+1. `types.ts` and `api.ts` are owned by team b5-bow and are NOT edited here. The Used from types stay in `lib/usedFrom.ts` and `api.usedFrom.ts` (`CookPreviewWithLots`, `CookedAllEntryWithUsedFrom`); the hooks cast the preview to `CookPreviewWithLots` and send through `usedFromApi.cooked` / `usedFromApi.cookedAll` (a one-line follow-up after both teams merge may fold them into `types.ts`).
+2. New `hooks/useCookContext.ts` returns `{ unitSystem, today }` (stub in the red commit): the display Unit System (`useDisplayUnitSystem`, the existing setting) and the plan view's `today` (react-query `['plan','view']`, no extra fetch when it is cached). Existing hook tests that count requests must stay green (mock or prime the caches).
+3. `useMarkCooked` (controller gains `usedFrom`, optional until wired; make it required and update fixtures): `const uf = useUsedFrom([{ courseId, courseName, needs: preview.needs }])`; `confirm` sends `uf.entries(courseId)`; on `isUsedFromInvalid` set the error to `usedFromStrings.refused`, invalidate the `['plan','cook']` previews. Any other failure keeps `planStrings.cookedError`.
+4. `useMarkAllCooked`: one `useUsedFrom` over all previews; each `courses[i]` carries its `usedFrom`; `confirm()` returns null without a request while `hasConflict`; the sheet disables its primary button. A 422 `used_from_invalid` handled as above (all previews reload).
 5. `MarkCookedSheet` / `MarkAllCookedSheet`: render `<UsedFromSection>` below the Leftover stepper (per Course section in Mark all Cooked); props flow from the hook through `CookFlowSheets` / `AllCookedSheets`.
 6. Replace the `needs: []` fixtures in the existing sheet tests if the type change needs it; add a CHANGELOG entry.
 

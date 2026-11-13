@@ -5,6 +5,7 @@ import { planStrings } from '../strings'
 import { leftoverOutcome, type LeftoverOutcome } from '../lib/cook'
 import type { CookedResult, CookPreview, SlotKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
+import type { UsedFromController } from './useUsedFrom'
 
 export interface MarkCookedController {
   preview: CookPreview | null
@@ -23,6 +24,8 @@ export interface MarkCookedController {
   /** Shortfall warnings still on screen (dismissed ones are removed). */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
+  /** The Used from picks for the Course (useUsedFrom over preview.needs). Optional until wired (b5-ufw). */
+  usedFrom?: UsedFromController
 }
 
 const NO_WARNINGS: StockWarning[] = []

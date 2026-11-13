@@ -6,6 +6,7 @@ import { planStrings } from '../strings'
 import { allCookedBody, type AllCookedRow } from '../lib/toConfirm'
 import type { CookedAllResult, CookPreview, SlotDayKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
+import type { UsedFromController } from './useUsedFrom'
 
 export interface MarkAllCookedController {
   /** One row per Course in `courseIds`, in that order, from GET .../{courseId}/cook; empty until every preview has loaded. */
@@ -20,6 +21,8 @@ export interface MarkAllCookedController {
   result: CookedAllResult | null
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
+  /** The Used from picks per Course (one useUsedFrom over all previews). Optional until wired (b5-ufw). */
+  usedFrom?: UsedFromController
 }
 
 const NONE: never[] = []

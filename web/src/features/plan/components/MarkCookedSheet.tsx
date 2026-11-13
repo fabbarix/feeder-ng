@@ -4,6 +4,7 @@ import { LEFTOVER_STEP, formatPortions } from '../lib/cook'
 import { weekdayName } from '../lib/phrase'
 import { planStrings } from '../strings'
 import type { CookPreview } from '../types'
+import type { UsedFromController } from '../hooks/useUsedFrom'
 import '../plan.css'
 
 export interface MarkCookedSheetProps {
@@ -17,6 +18,8 @@ export interface MarkCookedSheetProps {
   onNotCooked: () => void
   busy: boolean
   error: string | null
+  /** The Used from picks (below the Leftover stepper). Optional until wired (b5-ufw). */
+  usedFrom?: UsedFromController
 }
 
 /**

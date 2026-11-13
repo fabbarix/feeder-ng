@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, renderHook, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { CookFlow } from '../hooks/useCookFlow'
+import { useUsedFrom } from '../hooks/useUsedFrom'
 import { meal } from '../test-utils'
 import { CookFlowSheets } from './CookFlowSheets'
 
@@ -33,5 +34,13 @@ describe('CookFlowSheets', () => {
     const warnings = [{ ingredientId: 11, name: 'rice', baseUnit: 'g', have: 0, need: 250, shortfall: 250, message: 'Stock shows no rice, the recipe uses 250 g' }]
     render(<CookFlowSheets flow={flow({ warnings })} />)
     expect(screen.getByRole('alert')).toHaveTextContent('Stock shows no rice, the recipe uses 250 g')
+  })
+
+  it('passes the flow\'s Used from controller to the sheet', () => {
+    const needs = [{ ingredientId: 11, ingredient: 'Chicken', quantity: 800, baseUnit: 'g' as const, lots: [{ id: 1, quantity: 500, purchased: '2026-11-09', goesOff: null, storagePlaceName: 'Fridge' }] }]
+    const usedFrom = renderHook(() => useUsedFrom([{ courseId: 1, courseName: 'Main', needs }], { unitSystem: 'metric', today: '2026-11-10' })).result.current
+    const base = flow().cook
+    render(<CookFlowSheets flow={flow({ cookKey: { date: '2026-11-10', mealSlotId: 2, courseId: 1 }, cook: { ...base, usedFrom, preview: { meal: meal({ courseId: 1 }), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs } as never } })} />)
+    expect(screen.getByRole('button', { name: /Used from/ })).toBeInTheDocument()
   })
 })
