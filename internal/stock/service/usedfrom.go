@@ -36,11 +36,12 @@ type PickedDeduction struct {
 
 // DeductForCookedPickedTx is DeductForCookedTx with Used from, for one or several meals (Mark all Cooked passes one
 // CookedMeal per Course). Same transaction contract as DeductForCookedTx (no begin, commit or publish).
-// Per Ingredient: step A validates every meal's picks against the Lots (all picks of all meals are summed per Lot) and
-// takes them; step B takes each meal's rest (need minus its picked amount, if above 0) in default order, in meal order.
-// So the outcome does not depend on which Course comes first. Never blocks on short Stock (Warnings, as before).
-// Unknown Ingredients and non-positive needs are skipped, as before; a pick for an Ingredient that is not among that
-// meal's needs is refused. Nothing is written when it returns an error.
+// Before anything is written, every Ingredient's picks are validated against its Lots (one read of tx; all picks of
+// all meals are summed per Lot), so a refused pick leaves Stock untouched even if the caller commits anyway. Then per
+// Ingredient: step A takes the picks; step B takes each meal's rest (need minus its picked amount, if above 0) in
+// default order, in meal order. So the outcome does not depend on which Course comes first. Never blocks on short
+// Stock (Warnings, as before). Unknown Ingredients and non-positive needs are skipped, as before; a pick for an
+// Ingredient that is not among that meal's needs is refused. Nothing is written when it returns an error.
 func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals []CookedMeal) (PickedDeduction, error) {
 	plan, err := s.planPicked(ctx, meals)
 	if err != nil {
@@ -53,6 +54,9 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 	d.Warnings = []Warning{}
 	if len(plan.needs) == 0 {
 		return d, nil
+	}
+	if err := s.checkPicks(ctx, tx, plan); err != nil {
+		return PickedDeduction{}, err
 	}
 	today, err := s.today(ctx)
 	if err != nil {
@@ -112,6 +116,24 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 		}
 	}
 	return d, nil
+}
+
+// checkPicks validates every Ingredient's picks against its Lots, reading every Lot once inside tx. Nothing is written.
+func (s *Service) checkPicks(ctx context.Context, tx *sql.Tx, plan pickedPlan) error {
+	stored, err := s.st.LotsTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	byIng := map[int64][]stock.Lot{}
+	for _, l := range stored {
+		byIng[l.IngredientID] = append(byIng[l.IngredientID], l.Lot)
+	}
+	for _, id := range plan.ingOrder {
+		if _, err := stock.DeductPicked(byIng[id], 0, plan.picks[id]); err != nil {
+			return fmt.Errorf("%w: %w", ErrUsedFromInvalid, err)
+		}
+	}
+	return nil
 }
 
 // pickedNeed is one resolved need of one meal (unknown Ingredients and non-positive needs are not in the plan).
@@ -203,6 +225,7 @@ func (s *Service) PreviewCooked(ctx context.Context, needs []stock.Need) ([]Need
 		return nil, err
 	}
 	out := []NeedPreview{}
+	places := map[int64]string{} // Storage Place ID -> name, resolved once for the whole preview
 	for _, n := range needs {
 		if !(n.Quantity > 0) || math.IsInf(n.Quantity, 0) {
 			continue
@@ -232,13 +255,13 @@ func (s *Service) PreviewCooked(ctx context.Context, needs []stock.Need) ([]Need
 		if err != nil {
 			return nil, err
 		}
-		places, err := s.placeNames(ctx, sorted)
+		names, err := s.placeNames(ctx, sorted, places)
 		if err != nil {
 			return nil, err
 		}
 		lots := make([]PreviewLot, 0, len(views))
 		for i, v := range views {
-			lots = append(lots, PreviewLot{LotView: v, StoragePlaceName: places[i]})
+			lots = append(lots, PreviewLot{LotView: v, StoragePlaceName: names[i]})
 		}
 		res := stock.Deduct(sortedPlain, n.Quantity)
 		def := res.Taken
@@ -259,10 +282,10 @@ func (s *Service) PreviewCooked(ctx context.Context, needs []stock.Need) ([]Need
 	return out, nil
 }
 
-// placeNames returns the Storage Place name of each Lot ("" when unsorted, or the place no longer exists).
-func (s *Service) placeNames(ctx context.Context, lots []store.StoredLot) ([]string, error) {
+// placeNames returns the Storage Place name of each Lot ("" when unsorted, or the place no longer exists). byID caches
+// the names already resolved by the caller, so each place is looked up once.
+func (s *Service) placeNames(ctx context.Context, lots []store.StoredLot, byID map[int64]string) ([]string, error) {
 	names := make([]string, len(lots))
-	byID := map[int64]string{}
 	for i, l := range lots {
 		if l.StoragePlaceID == nil {
 			continue

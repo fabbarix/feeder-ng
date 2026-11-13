@@ -104,13 +104,7 @@ func Deduct(lots []Lot, need float64) DeductResult {
 		return res
 	}
 
-	order := make([]int, len(lots))
-	for i := range order {
-		order[i] = i
-	}
-	sort.SliceStable(order, func(i, j int) bool {
-		return consumptionLess(lots[order[i]], lots[order[j]])
-	})
+	order := ConsumptionOrder(lots)
 
 	left := need
 	for _, idx := range order {

@@ -25,10 +25,10 @@ var (
 // order given (a Pick above need is taken as picked), then deducts what is left of need (need minus the picked total,
 // when above 0) from what the lots still hold, in Deduct's order. need <= 0 still takes the Picks (Mark all Cooked
 // applies every Course's Picks before any default rest). With no Picks the result equals Deduct(lots, need).
-// Taken has one entry per Lot (picked and default quantity added), picked Lots first in Pick order, then the default
-// Lots in consumption order. Lots, Shortfall and the eps rules are those of Deduct; Shortfall is the part of need that
-// neither Picks nor Stock covered. Refused (zero result): ErrPickQuantity, ErrPickUnknownLot, ErrPickTooMuch (the
-// Picks of one Lot are summed first). The input is not modified.
+// Taken has one entry per Lot (picked and default quantity added), the Lots the User chose first in Pick order, then
+// the default Lots in consumption order. Lots, Shortfall and the eps rules are those of Deduct; Shortfall is the part
+// of need that neither Picks nor Stock covered. Refused (zero result): ErrPickQuantity, ErrPickUnknownLot,
+// ErrPickTooMuch (the Picks of one Lot are summed first). The input is not modified.
 func DeductPicked(lots []Lot, need float64, picks []Pick) (DeductResult, error) {
 	if len(picks) == 0 {
 		return Deduct(lots, need), nil
