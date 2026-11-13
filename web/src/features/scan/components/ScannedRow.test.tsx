@@ -18,7 +18,7 @@ const muttiTicked = rowFrom(
 const muttiToGet = rowFrom(applied('u-1', passata, { priceCents: 89 }, { priceCents: 89, onList: true, remaining: 700 }))
 const notOnList = rowFrom(applied('u-1', passata, { priceCents: 129 }, { priceCents: 129 }))
 const paperNoPrice = rowFrom(applied('u-3', toiletPaper, {}, { onList: true, ticked: true }))
-const loose = rowFrom(applied('u-4', cheese, { quantity: 312, weighed: true, priceCents: 624, pricePerKgCents: 2000 }, { quantity: 312, priceCents: 624, onList: true, ticked: true }))
+const loose = rowFrom(applied('u-4', cheese, { quantity: 312, weighed: true, priceCents: 624, pricePerKgCents: 2000 }, { quantity: 312, priceCents: 624, onList: true, ticked: true, productImageUrl: '/api/images/cheese' }))
 const waiting = rowFrom(queued('q-1', passata, { priceCents: 129 }))
 
 function setup(row: RowModel, over: Partial<ScannedRowProps> = {}) {
