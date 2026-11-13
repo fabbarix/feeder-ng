@@ -470,7 +470,9 @@ func TestNeededAtDefaultRules(t *testing.T) {
 		{"text on the accented side", mk(step("Boil", act, 1), step("Stir in the Béchamel", act, 1)), 1},
 		{"whole words only", mk(step("Taste the bechamelle", act, 1), step("Use the bechamel", act, 1)), 1},
 		{"first Step when nothing names it", mk(step("Boil", act, 1), step("Bake", pas, 20)), 0},
-		{"no Steps at all", mk(), 0},
+		{"no Steps at all: no anchor", mk(), -1},
+		{"only Advance Steps: no anchor", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60}), -1},
+		{"first non-Advance Step when nothing names it", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60}, step("Cook", act, 5)), 1},
 		{"Advance Steps are skipped for uses", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60, Uses: use(iBechamelI)}, br.Step{Text: "Layer", Kind: act, Uses: use(iBechamelI)}), 1},
 		{"Advance Steps are skipped for text", mk(br.Step{Text: "Make the béchamel ahead", Kind: adv, LeadTimeMinutes: 60}, step("Mix", act, 1), step("Add the béchamel", act, 1)), 2},
 	}
