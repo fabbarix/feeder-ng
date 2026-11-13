@@ -109,6 +109,9 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean r
 	if in, err = s.mapBaseLines(ctx, in); err != nil {
 		return recipe.Input{}, "", err
 	}
+	if err := refuseSupplyLines(ctx, s.db, id, in); err != nil {
+		return recipe.Input{}, "", err
+	}
 	if err := s.checkNeededAt(ctx, in); err != nil {
 		return recipe.Input{}, "", err
 	}
@@ -126,10 +129,15 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean r
 	if err := s.markBaseCandidates(ctx, cands); err != nil {
 		return recipe.Input{}, "", err
 	}
+	if err := s.markSupplyCandidates(ctx, cands); err != nil {
+		return recipe.Input{}, "", err
+	}
 	choice := recipe.ChooseReadyMealIngredient(in.Name, cands)
 	switch {
 	case choice.BaseRecipeTaken:
 		return recipe.Input{}, "", refusedName(recipe.CodeBaseRecipeNameTaken)
+	case choice.SupplyTaken:
+		return recipe.Input{}, "", refusedName(recipe.CodeSupplyNameTaken)
 	case choice.Conflict:
 		return recipe.Input{}, "", &recipe.ValidationError{Field: "lines", Code: recipe.CodeReadyMealUnit,
 			Message: "an Ingredient with the Recipe's name already exists but is not counted in pieces; name the pack Ingredient in the line"}
@@ -239,10 +247,132 @@ func (s *Store) markBaseCandidates(ctx context.Context, cands []recipe.ReadyMeal
 	return nil
 }
 
-// checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case).
+// markSupplyCandidates tells the Ready Meal rule which Ingredients are Supplies (ADR 0017): it never reuses one.
+func (s *Store) markSupplyCandidates(ctx context.Context, cands []recipe.ReadyMealCandidate) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ingredients WHERE kind = 'supply'`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	supplies := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		supplies[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range cands {
+		cands[i].Supply = supplies[cands[i].ID]
+	}
+	return nil
+}
+
+// isSupply reports whether the Ingredient id is a Supply (kind supply). An unknown id is not a Supply.
+func isSupply(ctx context.Context, q Querier, id int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM ingredients WHERE id = ? AND kind = 'supply'`, id).Scan(&n)
+	return n > 0, err
+}
+
+// supplyNamed reports whether a Supply other than exceptID holds the normalised name (ingredients.name_key of a plain
+// Ingredient is its normalised name). exceptID 0 excludes none.
+func supplyNamed(ctx context.Context, q Querier, name string, exceptID int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM ingredients WHERE kind = 'supply' AND name_key = ? AND id != ?`,
+		units.NormalizeName(name), exceptID).Scan(&n)
+	return n > 0, err
+}
+
+// refuseSupplyLines refuses a Recipe line or a Step use whose Ingredient is a Supply (ADR 0017, guard 2): a Supply is
+// never a line of a Recipe, a Ready Meal's pack or a Base recipe, nor a use of one of its Steps. The refusal names the
+// first one: lines[i].ingredientId, else steps[i].uses[j].ingredientId.
+//
+// Only what the save adds is refused. A line (a use) whose Ingredient the stored Recipe recipeID already has on a line
+// (a use) is kept as it is, so a Supply line that got in by another path (data written by hand, or before the
+// write re-checked inside its transaction) never blocks an unrelated save of that Recipe, nor a Link or an Undo that rewrites it. recipeID 0 is a new Recipe:
+// every line and use is new.
+func refuseSupplyLines(ctx context.Context, q Querier, recipeID int64, in recipe.Input) error {
+	storedLines, storedUses, err := storedIngredients(ctx, q, recipeID)
+	if err != nil {
+		return err
+	}
+	for i, l := range in.Lines {
+		if storedLines[l.IngredientID] {
+			continue
+		}
+		if sup, err := isSupply(ctx, q, l.IngredientID); err != nil {
+			return err
+		} else if sup {
+			return &recipe.ValidationError{Field: fmt.Sprintf("lines[%d].ingredientId", i), Code: recipe.CodeIngredientIsSupply,
+				Message: "a Supply is not food: it cannot be a line of a Recipe"}
+		}
+	}
+	for i, st := range in.Steps {
+		for j, u := range st.Uses {
+			if storedUses[u.IngredientID] {
+				continue
+			}
+			if sup, err := isSupply(ctx, q, u.IngredientID); err != nil {
+				return err
+			} else if sup {
+				return &recipe.ValidationError{Field: fmt.Sprintf("steps[%d].uses[%d].ingredientId", i, j),
+					Code: recipe.CodeIngredientIsSupply, Message: "a Supply is not food: a Step cannot use it"}
+			}
+		}
+	}
+	return nil
+}
+
+// storedIngredients is the set of Ingredients on the stored lines, and on the stored Step uses, of Recipe recipeID
+// (both empty for 0 or an unknown id).
+func storedIngredients(ctx context.Context, q Querier, recipeID int64) (lines, uses map[int64]bool, err error) {
+	lines, uses = map[int64]bool{}, map[int64]bool{}
+	if recipeID == 0 {
+		return lines, uses, nil
+	}
+	for _, s := range []struct {
+		query string
+		into  map[int64]bool
+	}{
+		{`SELECT ingredient_id FROM recipe_lines WHERE recipe_id = ?`, lines},
+		{`SELECT ingredient_id FROM recipe_step_uses WHERE recipe_id = ?`, uses},
+	} {
+		rows, err := q.QueryContext(ctx, s.query, recipeID)
+		if err != nil {
+			return nil, nil, err
+		}
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, nil, err
+			}
+			s.into[id] = true
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return lines, uses, nil
+}
+
+// checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case), or like a Supply (ADR 0017).
 func (s *Store) checkReadyMealName(ctx context.Context, clean recipe.Input, selfID int64) error {
 	if !clean.ReadyMeal {
 		return nil
+	}
+	sup, err := supplyNamed(ctx, s.db, clean.Name, 0)
+	if err != nil {
+		return err
+	}
+	if sup {
+		return refusedName(recipe.CodeSupplyNameTaken)
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT name FROM recipes WHERE base_ingredient_id IS NOT NULL AND id != ?`, selfID)
 	if err != nil {
@@ -309,7 +439,14 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 // CreateTx inserts a Recipe whose Input is already validated (recipe.Input.Validate
 // with the Ingredients it uses) inside the caller's transaction. It checks no
 // image ids and commits nothing. Returns the new id.
+//
+// The Supply guard (refuseSupplyLines) runs again here, inside the write's transaction: the checks before it ran
+// outside, and an Ingredient may have become a Supply since (ADR 0017). Transactions are BEGIN IMMEDIATE, so nothing
+// changes a kind between this check and the write.
 func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (int64, error) {
+	if err := refuseSupplyLines(ctx, tx, 0, clean); err != nil {
+		return 0, err
+	}
 	isBase := clean.IsBase()
 	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
 		return 0, err
@@ -425,8 +562,11 @@ func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.R
 // with an already validated Input, inside the caller's transaction. ErrNotFound
 // when there is no such Recipe. It returns the image ids the Recipe referred to
 // before; the caller removes those no longer referenced (DropUnreferenced) after
-// the commit.
+// the commit. Like CreateTx, it re-checks the Supply guard inside the transaction.
 func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recipe.Input) ([]string, error) {
+	if err := refuseSupplyLines(ctx, tx, id, clean); err != nil {
+		return nil, err
+	}
 	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
 		return nil, err
 	}
@@ -883,7 +1023,15 @@ func (s *Store) SetIngredientExclusion(ctx context.Context, memberID, ingredient
 		return err
 	}
 	if excluded {
-		_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id) VALUES (?,?)`,
+		sup, err := isSupply(ctx, s.db, ingredientID)
+		if err != nil {
+			return err
+		}
+		if sup {
+			return &recipe.ValidationError{Field: "ingredientId", Code: recipe.CodeIngredientIsSupply,
+				Message: "a Supply is not food: it cannot be excluded"}
+		}
+		_, err = s.db.ExecContext(ctx, `INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id) VALUES (?,?)`,
 			memberID, ingredientID)
 		return err
 	}
