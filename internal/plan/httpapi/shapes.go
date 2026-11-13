@@ -223,9 +223,11 @@ type warningOut struct {
 }
 
 type needOut struct {
-	IngredientID int64   `json:"ingredientId"`
-	Ingredient   string  `json:"ingredient"`
-	Quantity     float64 `json:"quantity"`
+	IngredientID int64           `json:"ingredientId"`
+	Ingredient   string          `json:"ingredient"`
+	Quantity     float64         `json:"quantity"`
+	BaseUnit     string          `json:"baseUnit"`
+	Lots         []lotPreviewOut `json:"lots"`
 }
 
 type cookPreviewOut struct {
