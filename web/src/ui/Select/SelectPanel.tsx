@@ -66,6 +66,7 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
           <span id={`${p.optionId(i)}-label`} className="select__label">
             {option.label}
           </span>
+          {option.badge ? <span className="select__badge">{option.badge}</span> : null}
           {option.meta ? (
             <span id={`${p.optionId(i)}-meta`} className="select__meta">
               {option.meta}

@@ -1,10 +1,17 @@
-import { useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
+import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
+import { useLineLink, type SavedLine } from '../../../lib/baseRecipes/useLineLink'
+import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
+import { BaseRecipePicker } from '../components/BaseRecipePicker'
+import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
+import { TakeOverDialog } from '../components/TakeOverDialog'
+import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
+import { usedInText, yieldText } from '../lib/baseRecipe'
 import { CookEntry } from '../components/CookEntry'
 import { CourseChips } from '../components/CourseChips'
 import { IngredientExclusionList } from '../components/IngredientExclusionList'
@@ -24,6 +31,7 @@ import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
+import type { Recipe, RecipeLine } from '../types'
 import '../recipes.css'
 
 /**
@@ -50,6 +58,16 @@ export function RecipeDetailScreen(): ReactNode {
   const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
   const { colourOf } = useRecipeTags()
+  // BR-D: the line links (Link to a Base recipe, Use as a plain Ingredient) save at once; a change refetches the Recipe and its candidates.
+  const [pickerFor, setPickerFor] = useState<RecipeLine | null>(null)
+  const [candidateTick, setCandidateTick] = useState(0)
+  const links = useLineLink({
+    recipeId,
+    onChanged: () => {
+      recipe.refetch()
+      setCandidateTick((n) => n + 1)
+    },
+  })
 
   if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
   if (!r)
@@ -70,6 +88,16 @@ export function RecipeDetailScreen(): ReactNode {
     />
   )
   const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
+  const savedLine = (line: RecipeLine): SavedLine => ({
+    id: line.id ?? 0,
+    ingredientName: line.ingredient ?? '',
+    quantity: line.quantity,
+    unit: line.unit,
+    linkedFromIngredientId: line.linkedFromIngredientId ?? null,
+    baseRecipe: line.baseRecipe ? { id: line.baseRecipe.id, name: line.baseRecipe.name } : null,
+  })
+  const isBase = r.baseRecipe === true
+  const baseIngredient = r.baseIngredientId !== undefined ? refs.byId.get(r.baseIngredientId) : undefined
 
   return (
     <section className="recipe-detail">
@@ -101,6 +129,7 @@ export function RecipeDetailScreen(): ReactNode {
           </>
         }
       />
+      {isBase ? <BaseRecipeSection recipe={r} baseUnit={baseIngredient?.baseUnit} refreshKey={candidateTick} /> : null}
       <div className="recipe-detail__layout">
         <div className="recipe-detail__aside">
           <Tile variant="media" className="recipe-detail__hero" media={thumb}>
@@ -124,6 +153,12 @@ export function RecipeDetailScreen(): ReactNode {
               lines={r.lines}
               refs={refs.byId}
               system={system}
+              onLinkToBase={(line) => setPickerFor(line)}
+              onUseAsPlain={(line) => {
+                void links.useAsPlain(savedLine(line)).then((outcome) => {
+                  if (outcome === 'pick') setPickerFor(line)
+                })
+              }}
               excludedBy={{
                 members: (ingredientId) => excludersOf(household.members, household.prefsByMember, ingredientId),
                 onOpen: (ingredientId, name) => setExcluding({ id: ingredientId, name }),
@@ -158,8 +193,75 @@ export function RecipeDetailScreen(): ReactNode {
       <Dialog open={excluding !== null} onClose={() => setExcluding(null)} title={excluding ? recipeStrings.whoExcludes(excluding.name) : ''}>
         {excluding ? <IngredientExclusionList ingredientId={excluding.id} ingredientName={excluding.name} /> : null}
       </Dialog>
+      <BaseRecipePicker
+        open={pickerFor !== null}
+        lineName={pickerFor?.ingredient ?? ''}
+        recipeId={r.id}
+        onClose={() => setPickerFor(null)}
+        onChoose={(choice) => {
+          const line = pickerFor
+          setPickerFor(null)
+          if (line) void links.linkTo(savedLine(line), choice)
+        }}
+      />
+      <TakeOverDialog
+        ask={links.takeOverAsk}
+        baseName={links.askName ?? ''}
+        onAnswer={(yes) => void links.answerTakeOver(yes)}
+        onCancel={links.cancelTakeOver}
+      />
+      {links.error ? <ErrorState message={links.error} /> : null}
       {actions.error ? <ErrorState message={actions.error} /> : null}
       {wide ? null : <StickyActionBar label={recipeStrings.cook.barLabel}>{cook}</StickyActionBar>}
     </section>
+  )
+}
+
+/**
+ * BR-D: a Base recipe's own facts: the Yield, the Recipes that call for it (links), and the row "Recipes with an Ingredient named béchamel (N)" that opens
+ * the bulk link list while any plain line of that name is left. A child component, so a plannable Recipe never asks for candidates.
+ */
+function BaseRecipeSection({ recipe: r, baseUnit, refreshKey }: { recipe: Recipe; baseUnit: string | undefined; refreshKey: number }): ReactNode {
+  const candidates = useBaseLinkCandidates(r.id, true)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  useEffect(() => {
+    if (refreshKey > 0) candidates.refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when the screen reports a link change
+  }, [refreshKey])
+  const used = r.usedBy ?? []
+  return (
+    <>
+      <Tile as="section" span="full" aria-label={recipeStrings.baseRecipe.badge}>
+        <p>
+          <BaseRecipeBadge /> <span>{`Yield ${yieldText(r.yield, r.yieldUnit)}`}</span>
+        </p>
+        <h2>{usedInText(used.length)}</h2>
+        {used.length === 0 ? null : (
+          <p>
+            {used.map((u, i) => (
+              <span key={u.id}>
+                {i > 0 ? ', ' : null}
+                <Link to={`/recipes/${u.id}`}>{u.name}</Link>
+              </span>
+            ))}
+          </p>
+        )}
+        {candidates.count > 0 ? (
+          <Button variant="tertiary" onClick={() => setSheetOpen(true)}>
+            {`Recipes with an Ingredient named ${candidates.ingredientName} (${candidates.count})`}
+          </Button>
+        ) : null}
+      </Tile>
+      {sheetOpen && baseUnit !== undefined ? (
+        <LinkCandidatesSheet
+          open
+          baseRecipe={{ id: r.id, name: r.name, baseUnit, ingredientId: r.baseIngredientId ?? 0 }}
+          onClose={() => {
+            setSheetOpen(false)
+            candidates.refetch()
+          }}
+        />
+      ) : null}
+    </>
   )
 }

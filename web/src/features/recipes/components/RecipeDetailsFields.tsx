@@ -7,6 +7,9 @@ import { showsWholeMeal } from '../lib/recipeCourses'
 import type { CourseChoice } from '../../../lib/courses'
 import type { TagCount } from '../types'
 import { TagInput } from './TagInput'
+import { Select } from '../../../ui'
+import { fieldsFor } from '../lib/baseRecipe'
+import { YIELD_UNITS } from '../../../lib/baseRecipes/yield'
 
 export interface RecipeDetailsFieldsProps {
   draft: RecipeDraft
@@ -31,11 +34,32 @@ export interface RecipeDetailsFieldsProps {
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /** The name, description, Yield, Ready Meal, Tags, Cool-down and Use-by overrides, the Reheat time, and the source of a Recipe: field primitives only. */
-export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colourOf, courses = [], householdFrozenUseBy = 90 }: RecipeDetailsFieldsProps): ReactNode {
+export function RecipeDetailsFields({
+  draft,
+  errors,
+  onChange,
+  knownTags,
+  colourOf,
+  courses = [],
+  householdFrozenUseBy = 90,
+  onBaseRecipeChange,
+  baseRecipeBusy,
+}: RecipeDetailsFieldsProps): ReactNode {
   const f = recipeStrings.fields
   const main = courses.find((c) => c.main)
+  const shown = fieldsFor(draft.baseRecipe === true)
+  const bt = recipeStrings.baseRecipe
   return (
     <div className="recipe-details">
+      {onBaseRecipeChange ? (
+        <Switch
+          label={bt.switchLabel}
+          description={bt.switchHelper}
+          checked={draft.baseRecipe === true}
+          disabled={baseRecipeBusy}
+          onChange={(on) => onBaseRecipeChange(on)}
+        />
+      ) : null}
       <TextField size="lg" label={f.name} value={draft.name} error={fieldError(errors, 'name')} onChange={(name) => onChange({ name })} />
       <TextArea
         size="full"
@@ -53,63 +77,85 @@ export function RecipeDetailsFields({ draft, errors, onChange, knownTags, colour
           error={fieldError(errors, 'yield')}
           onChange={(n) => onChange({ yield: numberText(n) })}
         />
-        <NumberField
-          size="xs"
-          label={f.cooldown}
-          unit={recipeStrings.units.days}
-          helper={f.cooldownHint}
-          hideStepper
-          value={numberValue(draft.cooldownDays)}
-          error={fieldError(errors, 'cooldownDays')}
-          onChange={(n) => onChange({ cooldownDays: numberText(n) })}
-        />
-        <NumberField
-          size="xs"
-          label={f.useBy}
-          unit={recipeStrings.units.days}
-          helper={f.useByHint}
-          hideStepper
-          value={numberValue(draft.leftoverUseByDays)}
-          error={fieldError(errors, 'leftoverUseByDays')}
-          onChange={(n) => onChange({ leftoverUseByDays: numberText(n) })}
-        />
-        <NumberField
-          size="xs"
-          label={f.reheat}
-          unit={recipeStrings.units.min}
-          helper={f.reheatHint}
-          hideStepper
-          value={numberValue(draft.reheatMinutes)}
-          error={fieldError(errors, 'reheatMinutes')}
-          onChange={(n) => onChange({ reheatMinutes: numberText(n) })}
-        />
+        {shown.yieldUnit ? (
+          <Select
+            size="xs"
+            label={bt.yieldUnit}
+            options={YIELD_UNITS.map((u) => ({ value: u, label: u }))}
+            value={draft.yieldUnit ? draft.yieldUnit : null}
+            error={fieldError(errors, 'yieldUnit')}
+            onChange={(yieldUnit) => onChange({ yieldUnit })}
+          />
+        ) : null}
+        {shown.cooldown ? (
+          <NumberField
+            size="xs"
+            label={f.cooldown}
+            unit={recipeStrings.units.days}
+            helper={f.cooldownHint}
+            hideStepper
+            value={numberValue(draft.cooldownDays)}
+            error={fieldError(errors, 'cooldownDays')}
+            onChange={(n) => onChange({ cooldownDays: numberText(n) })}
+          />
+        ) : null}
+        {shown.leftoverUseBy ? (
+          <NumberField
+            size="xs"
+            label={f.useBy}
+            unit={recipeStrings.units.days}
+            helper={f.useByHint}
+            hideStepper
+            value={numberValue(draft.leftoverUseByDays)}
+            error={fieldError(errors, 'leftoverUseByDays')}
+            onChange={(n) => onChange({ leftoverUseByDays: numberText(n) })}
+          />
+        ) : null}
+        {shown.reheat ? (
+          <NumberField
+            size="xs"
+            label={f.reheat}
+            unit={recipeStrings.units.min}
+            helper={f.reheatHint}
+            hideStepper
+            value={numberValue(draft.reheatMinutes)}
+            error={fieldError(errors, 'reheatMinutes')}
+            onChange={(n) => onChange({ reheatMinutes: numberText(n) })}
+          />
+        ) : null}
       </FieldRow>
-      <NumberField
-        size="xs"
-        label={f.frozenUse}
-        unit={recipeStrings.units.days}
-        helper={frozenUseByHelper(householdFrozenUseBy)}
-        hideStepper
-        value={numberValue(draft.frozenUseByDays)}
-        error={fieldError(errors, 'frozenUseByDays')}
-        onChange={(n) => onChange({ frozenUseByDays: numberText(n) })}
-      />
-      <Checkbox
-        label={f.readyMeal}
-        description={f.readyMealHint}
-        checked={draft.readyMeal}
-        onChange={(readyMeal) => onChange({ readyMeal })}
-      />
-      <CoursePicker
-        label={courseStrings.label}
-        courses={courses}
-        value={draft.courseIds}
-        ordered={false}
-        required={courses.length > 0}
-        error={errors.courses ? codeMessage(errors.courses) : undefined}
-        onChange={(courseIds) => onChange({ courseIds })}
-      />
-      {showsWholeMeal(draft.courseIds, courses) && main ? (
+      {shown.frozenUseBy ? (
+        <NumberField
+          size="xs"
+          label={f.frozenUse}
+          unit={recipeStrings.units.days}
+          helper={frozenUseByHelper(householdFrozenUseBy)}
+          hideStepper
+          value={numberValue(draft.frozenUseByDays)}
+          error={fieldError(errors, 'frozenUseByDays')}
+          onChange={(n) => onChange({ frozenUseByDays: numberText(n) })}
+        />
+      ) : null}
+      {shown.readyMeal ? (
+        <Checkbox
+          label={f.readyMeal}
+          description={f.readyMealHint}
+          checked={draft.readyMeal}
+          onChange={(readyMeal) => onChange({ readyMeal })}
+        />
+      ) : null}
+      {shown.courses ? (
+        <CoursePicker
+          label={courseStrings.label}
+          courses={courses}
+          value={draft.courseIds}
+          ordered={false}
+          required={courses.length > 0}
+          error={errors.courses ? codeMessage(errors.courses) : undefined}
+          onChange={(courseIds) => onChange({ courseIds })}
+        />
+      ) : null}
+      {shown.wholeMeal && showsWholeMeal(draft.courseIds, courses) && main ? (
         <Switch
           label={courseStrings.wholeMeal}
           description={courseStrings.wholeMealHelper(main.name)}

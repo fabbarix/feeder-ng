@@ -1,3 +1,9 @@
+import { useState } from 'react'
+import { useOptionalConfirm } from '../../../ui/ConfirmDialog'
+import { baseRecipesApi } from '../../../lib/baseRecipes/api'
+import { convertConfirm } from '../../../lib/baseRecipes/convertConfirm'
+import { inUseRefusal, refusalMessage } from '../../../lib/baseRecipes/refusals'
+import { recipeStrings } from '../strings'
 import type { Recipe } from '../types'
 
 export interface UseBaseRecipeChange {
@@ -13,6 +19,46 @@ export interface UseBaseRecipeChange {
 
 /** The kind change of the Recipe editor. `recipeId` undefined = not saved yet. Logic in lib/baseRecipes (convertConfirm, refusals, api). */
 export function useBaseRecipeChange(opts: { recipeId?: number; onConverted?: (recipe: Recipe) => void }): UseBaseRecipeChange {
-  void opts
-  throw new Error('BR-D: not implemented')
+  const { recipeId, onConverted } = opts
+  const confirm = useOptionalConfirm()
+  const [error, setError] = useState<string | null>(null)
+
+  const turnOn: UseBaseRecipeChange['turnOn'] = async (input) => {
+    setError(null)
+    if (recipeId === undefined) return 'done'
+    let plan
+    try {
+      plan = await baseRecipesApi.toBasePlan(recipeId)
+    } catch (err) {
+      setError(refusalMessage(err) ?? recipeStrings.generic)
+      return 'failed'
+    }
+    const c = convertConfirm(input.name, plan)
+    const yes = confirm ? await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel }) : false
+    if (!yes) return 'cancelled'
+    try {
+      const recipe = await baseRecipesApi.toBase(recipeId, { yield: input.yield, yieldUnit: input.yieldUnit })
+      onConverted?.(recipe)
+      return 'done'
+    } catch (err) {
+      setError(refusalMessage(err) ?? recipeStrings.generic)
+      return 'failed'
+    }
+  }
+
+  const turnOff: UseBaseRecipeChange['turnOff'] = async (input) => {
+    setError(null)
+    if (recipeId === undefined) return 'done'
+    try {
+      const recipe = await baseRecipesApi.toPlannable(recipeId, { yield: input.yield })
+      onConverted?.(recipe)
+      return 'done'
+    } catch (err) {
+      const inUse = inUseRefusal(err, input.name)
+      setError(inUse ? inUse.message : (refusalMessage(err) ?? recipeStrings.generic))
+      return 'failed'
+    }
+  }
+
+  return { turnOn, turnOff, error }
 }

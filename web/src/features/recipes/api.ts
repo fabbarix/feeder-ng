@@ -22,6 +22,8 @@ function listQuery(f: RecipeFilter): string {
   if (f.course !== undefined) params.set('course', String(f.course))
   // The name sort is the server's default, so it is not sent.
   if (f.sort && f.sort !== 'name') params.set('sort', f.sort)
+  // BR-D: the default (plannable) is not sent.
+  if (f.kind && f.kind !== 'plannable') params.set('kind', f.kind)
   const s = params.toString()
   return s ? `?${s}` : ''
 }

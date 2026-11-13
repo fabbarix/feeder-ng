@@ -1,4 +1,5 @@
 import { Avatar } from '../Avatar'
+import { Chip } from '../Chip'
 import { Icon } from '../Icon'
 import { RecipeThumb } from '../RecipeThumb'
 import { Thumb } from '../Thumb'
@@ -67,13 +68,30 @@ export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
   }))
 }
 
-/** Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once, no badge). */
+/**
+ * Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once, no badge).
+ * BR-D: listed by name (case and accents aside, so the same-name pair sits together), a Base recipe's Ingredient before a plain one of the same name,
+ * and carries the "Base recipe" badge (cooking-pot).
+ */
 export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number | string>[] {
-  return ingredients.map((i) => ({
+  const order = ingredients.map((i, index) => ({ i, index }))
+  order.sort((a, b) => {
+    const byName = a.i.name.localeCompare(b.i.name, undefined, { sensitivity: 'base' })
+    if (byName !== 0) return byName
+    const baseA = a.i.baseRecipe ? 0 : 1
+    const baseB = b.i.baseRecipe ? 0 : 1
+    return baseA !== baseB ? baseA - baseB : a.index - b.index
+  })
+  return order.map(({ i }) => ({
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
     leading: <Thumb imageUrl={i.imageUrl} size={40} />,
+    badge: i.baseRecipe ? (
+      <Chip kind="tag" icon="cook">
+        {selectStrings.baseRecipeBadge}
+      </Chip>
+    ) : undefined,
   }))
 }
 

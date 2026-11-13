@@ -11,6 +11,8 @@ export interface ConversionEditorProps {
   system: UnitSystem
   onAdd: (c: Conversion) => void
   onRemove: (unit: string) => void
+  /** BR-D: units set by the Base recipe's Yield (batch, portion): shown read-only with "Set by the Base recipe". */
+  lockedUnits?: readonly string[]
 }
 
 /**
@@ -18,7 +20,7 @@ export interface ConversionEditorProps {
  * strings.noConversions; then the add form: Unit, "Amount in g|ml|piece" (always the metric Base Unit
  * label, since the stored value is metric), "Add conversion". Errors from useConversionForm show inline (role alert).
  */
-export function ConversionEditor({ conversions, base, system, onAdd, onRemove }: ConversionEditorProps) {
+export function ConversionEditor({ conversions, base, system, onAdd, onRemove, lockedUnits = [] }: ConversionEditorProps) {
   const form = useConversionForm(base, conversions.map((c) => c.unit), onAdd)
   const amountLabel = strings.conversionAmountLabel(baseUnitLabel(base, 'metric'))
 
@@ -34,9 +36,13 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove }:
               key={c.unit}
               title={formatConversion(c.unit, c.toBase, base, system)}
               trailing={
-                <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
-                  {strings.removeConversion(c.unit)}
-                </Button>
+                lockedUnits.includes(c.unit) ? (
+                  <span className="ingredient__locked">{strings.setByBaseRecipe}</span>
+                ) : (
+                  <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
+                    {strings.removeConversion(c.unit)}
+                  </Button>
+                )
               }
             />
           ))}

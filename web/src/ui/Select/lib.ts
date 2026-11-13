@@ -14,6 +14,8 @@ export interface SelectOption<V extends string | number = string> {
   disabled?: boolean
   /** 40 px thumb, icon, badge or avatar. */
   leading?: ReactNode
+  /** BR-D: a small tag after the label (the Base recipe badge of an Ingredient option). */
+  badge?: ReactNode
   /** WP3b: the clear row of a Select with `clearLabel`; it is chosen while nothing is (value null). Built by buildList only. */
   clear?: boolean
   /** R11a: what the closed trigger shows for this option when it differs from `label` ("Tue · Dinner"). */

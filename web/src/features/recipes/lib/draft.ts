@@ -125,6 +125,8 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     description: recipe.description,
     yield: String(recipe.yield),
     readyMeal: recipe.readyMeal,
+    baseRecipe: recipe.baseRecipe === true,
+    yieldUnit: recipe.baseRecipe ? (recipe.yieldUnit ?? '') : '',
     courseIds: recipe.courses.map((c) => c.id),
     wholeMeal: recipe.wholeMeal,
     wholeMealSet: false,
@@ -138,12 +140,17 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     image: recipe.image,
     lines: recipe.lines.map((l) => ({
       key: newKey('line'),
+      id: l.id,
       ingredientId: l.ingredientId,
       ingredientName: l.ingredient ?? '',
       quantity: String(l.quantity),
       unit: l.unit,
       optional: l.optional,
       note: l.note,
+      baseRecipeId: l.baseRecipe ? l.baseRecipe.id : null,
+      baseRecipeName: l.baseRecipe?.name ?? '',
+      neededAtStep: l.neededAtStep ?? null,
+      linkedFromIngredientId: l.linkedFromIngredientId ?? null,
     })),
     steps: recipe.steps.map((s) => ({
       key: newKey('step'),
@@ -212,14 +219,18 @@ const frozenUseByOf = (text: string): number | null => {
  * Ingredient are skipped. Advance Steps are sent with after [].
  */
 export function draftToInput(draft: RecipeDraft): RecipeInput {
+  const base = draft.baseRecipe === true
   return {
     name: draft.name.trim(),
     description: draft.description.trim(),
     yield: numberOrZero(draft.yield),
-    readyMeal: draft.readyMeal,
-    courseIds: [...draft.courseIds],
-    wholeMeal: draft.wholeMeal,
+    readyMeal: base ? false : draft.readyMeal,
+    courseIds: base ? [] : [...draft.courseIds],
+    wholeMeal: base ? false : draft.wholeMeal,
     tags: [...draft.tags],
+    // BR-D: a plannable Recipe sends no kind (absent keeps it); a Base recipe sends its Yield unit.
+    ...(base ? { baseRecipe: true, yieldUnit: draft.yieldUnit ?? '' } : {}),
+    ...(draft.takeOver === undefined ? {} : { takeOver: draft.takeOver }),
     cooldownDays: overrideOf(draft.cooldownDays),
     leftoverUseByDays: overrideOf(draft.leftoverUseByDays),
     frozenUseByDays: frozenUseByOf(draft.frozenUseByDays),
@@ -227,14 +238,25 @@ export function draftToInput(draft: RecipeDraft): RecipeInput {
     source: { url: draft.sourceUrl.trim(), attribution: draft.sourceAttribution.trim() },
     image: draft.image,
     lines: draft.lines
-      .filter((l) => l.ingredientId !== null)
-      .map((l) => ({
-        ingredientId: l.ingredientId!,
-        quantity: numberOrZero(l.quantity),
-        unit: l.unit.trim().toLowerCase(),
-        optional: l.optional,
-        note: l.note.trim(),
-      })),
+      .filter((l) => l.ingredientId !== null || (l.baseRecipeId ?? null) !== null)
+      .map((l) =>
+        (l.baseRecipeId ?? null) !== null
+          ? {
+              baseRecipeId: l.baseRecipeId!,
+              quantity: numberOrZero(l.quantity),
+              unit: l.unit.trim().toLowerCase(),
+              optional: l.optional,
+              note: l.note.trim(),
+              neededAtStep: l.neededAtStep ?? null,
+            }
+          : {
+              ingredientId: l.ingredientId!,
+              quantity: numberOrZero(l.quantity),
+              unit: l.unit.trim().toLowerCase(),
+              optional: l.optional,
+              note: l.note.trim(),
+            },
+      ),
     steps: draft.steps.map((s) => ({
       text: s.text.trim(),
       kind: s.kind,
@@ -263,12 +285,17 @@ const isWhole = (n: number) => Number.isInteger(n)
  */
 export function validateDraft(draft: RecipeDraft): DraftErrors {
   const errors: DraftErrors = {}
+  const base = draft.baseRecipe === true
   if (draft.name.trim() === '') errors.name = 'name_required'
   const yieldValue = parseNumber(draft.yield)
-  if (yieldValue === null || yieldValue <= 0 || yieldValue > 100) errors.yield = 'yield_invalid'
+  // BR-D: a Base recipe's Yield is an amount in its unit (up to 100000); a plannable Recipe's is portions (up to 100).
+  const yieldMax = base ? 100000 : 100
+  if (yieldValue === null || yieldValue <= 0 || yieldValue > yieldMax) errors.yield = 'yield_invalid'
+  if (base && (draft.yieldUnit ?? '') === '') errors.yieldUnit = 'yield_unit_invalid'
 
-  if (draft.lines.length === 0) errors.lines = 'lines_required'
-  else if (draft.readyMeal && draft.lines.length !== 1) errors.lines = 'ready_meal_lines'
+  // A Base recipe needs no lines to be saved (its Ingredients are optional; it is never planned).
+  if (!base && draft.lines.length === 0) errors.lines = 'lines_required'
+  else if (!base && draft.readyMeal && draft.lines.length !== 1) errors.lines = 'ready_meal_lines'
   draft.lines.forEach((l, i) => {
     const pending = draft.readyMeal && l.auto === true && l.ingredientId === null // R14: the server creates the Ingredient on save
     if (l.ingredientId === null && !pending) errors[`lines.${i}.ingredient`] = 'ingredient_required'
