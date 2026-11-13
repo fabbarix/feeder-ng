@@ -80,6 +80,9 @@ type ProductInfo struct {
 	ImageURL       string // "/api/images/<id>" of the Product's Picture, "" = none (PP)
 	// IngredientImageURL is the Ingredient's Picture, "" = none (PE): scan feedback falls back to it.
 	IngredientImageURL string
+	// Barcode is the Product's first global barcode (canonical, the smallest of product_barcodes; "" = none). Product
+	// fills it; the receipt read sends it with each row (RR3).
+	Barcode string
 }
 
 // ShopBarcode is a Shop-only barcode: a plain code, or RuleID + ItemCode for a weighed one.

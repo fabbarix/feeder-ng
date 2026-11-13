@@ -857,3 +857,18 @@ func TestSessionEventsWeighedRule(t *testing.T) {
 		t.Errorf("w-first (700 g at 20.00/kg) = weighed %v, per kg %d", evs[1].Weighed, evs[1].PerKgCents)
 	}
 }
+
+// Each event carries its Product's barcode (RR2's read sends it to the assistant).
+func TestSessionEventsCarryTheProductsBarcode(t *testing.T) {
+	e := newRR3Env(t)
+	p := e.cat.products[mutti]
+	p.Barcode = "08000500310427"
+	e.cat.products[mutti] = p
+	evs, err := e.svc.SessionEvents(context.Background(), 1, []string{"u1", "u3"})
+	if err != nil || len(evs) != 2 {
+		t.Fatal(evs, err)
+	}
+	if evs[0].Barcode != "08000500310427" || evs[1].Barcode != "" {
+		t.Errorf("barcodes = %q, %q", evs[0].Barcode, evs[1].Barcode)
+	}
+}

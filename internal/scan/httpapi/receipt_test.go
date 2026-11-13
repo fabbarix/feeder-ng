@@ -555,6 +555,25 @@ func jsonInto(b []byte, v any) error { return json.Unmarshal(b, v) }
 
 // ---- the review's additions (RR3 review) --------------------------------------------------------------------------
 
+// The read and the apply send each row's barcode: the Product's first global barcode, from product_barcodes.
+func TestSessionEventsCarryTheProductsBarcode(t *testing.T) {
+	f := newReceiptFixture(t)
+	uuids := f.session(t)
+	evs, err := f.ap.SessionEvents(context.Background(), f.shop, uuids)
+	if err != nil || len(evs) != 2 {
+		t.Fatalf("events = %d, %v", len(evs), err)
+	}
+	var want string
+	if err := f.env.DB.QueryRow(`SELECT MIN(code) FROM product_barcodes WHERE product_id = ?`, f.product).Scan(&want); err != nil || want == "" {
+		t.Fatalf("the fixture's Product has no barcode: %q %v", want, err)
+	}
+	for _, e := range evs {
+		if e.Barcode != want || e.Weighed || e.PerKgCents != -1 {
+			t.Errorf("%s: barcode %q (want %q), weighed %v, per kg %d: a pack scan has no per kg, not even a derived one", e.UUID, e.Barcode, want, e.Weighed, e.PerKgCents)
+		}
+	}
+}
+
 // A phone cannot send a scan under a "receipt:" uuid: only the receipt Apply writes those.
 func TestAScanWithAReceiptUUIDIsRejected(t *testing.T) {
 	f := newReceiptFixture(t)

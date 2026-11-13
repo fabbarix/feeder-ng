@@ -97,6 +97,9 @@ func (s *Service) SessionEvents(ctx context.Context, shopID int64, uuids []strin
 
 // sessionEvents is SessionEvents with the scan lock held.
 //
+// Barcode is the Product's first global barcode (canonical GTIN-14, the smallest; "" for none, as for a Product known
+// only by a Shop or weighed code).
+//
 // The weighed rule (receipt-reading §7.1, decided in the RR3 review): the ledger keeps no weighed flag, so a scan of a
 // Product in g or ml is weighed when its Price was taken per kg, that is when the day's Price row has a recorded per kg
 // (Catalogue.PriceOn never serves a derived one) and the scan's Price is that per kg at its quantity
@@ -151,7 +154,7 @@ func (s *Service) sessionEvents(ctx context.Context, shopID int64, uuids []strin
 			price = *ev.PriceCents
 		}
 		weighed, perKg := weighedScan(p, ev.Quantity, price, day)
-		out = append(out, receipt.ScanEvent{UUID: ev.ClientUUID, ProductID: p.ID, Product: p.Name,
+		out = append(out, receipt.ScanEvent{UUID: ev.ClientUUID, ProductID: p.ID, Product: p.Name, Barcode: p.Barcode,
 			BaseUnit: p.BaseUnit, PackSize: int(p.PackSize), Weighed: weighed, Quantity: ev.Quantity, PriceCents: price,
 			PerKgCents: perKg, ShopID: shopID, Date: string(date)})
 	}

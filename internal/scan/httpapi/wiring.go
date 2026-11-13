@@ -113,7 +113,11 @@ func (c catalogue) Product(ctx context.Context, id int64) (service.ProductInfo, 
 	if err != nil {
 		return service.ProductInfo{}, err
 	}
-	return c.info(ctx, d.Product)
+	out, err := c.info(ctx, d.Product)
+	if err == nil && len(d.Barcodes) > 0 {
+		out.Barcode = d.Barcodes[0] // canonical and sorted: the smallest, as RR2's read takes it
+	}
+	return out, err
 }
 
 func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (service.ProductInfo, error) {
