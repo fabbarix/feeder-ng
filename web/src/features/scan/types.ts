@@ -13,6 +13,8 @@ export interface IngredientRef {
   id?: number
   name?: string
   baseUnit?: BaseUnit
+  /** SR5 (H4): the kind a new Ingredient is created with; absent = food */
+  kind?: IngredientKind
 }
 
 /** One operation from the phone; clientUuid is the idempotency key. */

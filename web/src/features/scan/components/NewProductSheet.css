@@ -1,0 +1,160 @@
+/* The new-Product sheet (SR5). Its own file: scan.css belongs to SR4. Colours and sizes come from the tokens. */
+.new-product__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.new-product__lines,
+.new-product__kind,
+.new-product__pack,
+.new-product__picture,
+.new-product__other {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.new-product__label {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+.new-product__barcode,
+.new-product__hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.new-product__error {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-info-fg);
+}
+
+.new-product__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.new-product__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.new-product__chip[aria-pressed='true'] {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  border-color: var(--color-primary-container);
+}
+
+.new-product__chip--outline {
+  background: transparent;
+}
+
+.new-product__chip--quiet {
+  color: var(--color-muted);
+}
+
+.new-product__chip-tag {
+  font-size: var(--text-chip-size);
+  color: var(--color-muted);
+}
+
+.new-product__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.new-product__eyebrow p {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.new-product__guard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+
+.new-product__guard p {
+  margin: 0;
+}
+
+.new-product__picture-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.new-product__picture-row .new-product__hint {
+  flex: 1;
+}
+
+.new-product__preview {
+  flex: none;
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-tile-sm);
+}
+
+/* The shared Thumb's hero is 16:9; here it fills the 4:3 box. The attribute keeps this rule above Thumb.css whatever the load order. */
+.new-product__preview .thumb[data-size='hero'] {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+
+.new-product__preview .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.new-product__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface-2);
+}
+
+.new-product__summary p {
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.new-product__summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
