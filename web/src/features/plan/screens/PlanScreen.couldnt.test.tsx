@@ -18,7 +18,7 @@ const widthStub = (width: number) =>
     const min = /min-width:\s*(\d+)px/.exec(query)
     return { matches: min ? width >= Number(min[1]) : false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }
   })
-const dayTile = (name: string) => screen.findByRole('heading', { name }).then((h) => h.closest('article') as HTMLElement)
+const dayTile = (name: string) => screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name === 'Tomorrow' ? /· Tomorrow$/ : new RegExp(`^${name.slice(0, 3)} \\d`) }).then((h) => h.closest('article') as HTMLElement)
 
 // Scenario: nobody is set to attend two dinners. The Plan groups them in one notice at the top and marks each day.
 const nobodyAttends = view([

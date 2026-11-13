@@ -94,7 +94,7 @@ describe('MealTile (on a day tile)', () => {
     it("today's planned meal has a Cook icon button", async () => {
       const h = setup()
       await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
-      expect(h.onCook).toHaveBeenCalledWith(key)
+      expect(h.onCook).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 }) // ds-plan: the header Cook is the slot's
     })
 
     it('a future meal has none', () => {

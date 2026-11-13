@@ -73,7 +73,7 @@ describe('PlanCourseRow: chips on one line', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { servedFromLeftover: { date: '2026-11-09' } as never, why: [{ code: 'leftover_fits', date: '2026-11-13' }, { code: 'favourite', members: ['Mia'] }] }) }))
     const from = within(li as HTMLElement).getByText('Leftover from Mon').closest('.chip')!
     const forChip = within(li as HTMLElement).getByText('Leftover for Fri').closest('.chip')!
-    const fav = within(li as HTMLElement).getByText('Mia’s favourite').closest('.chip')!
+    const fav = within(li as HTMLElement).getByText("Mia's favourite").closest('.chip')!
     expect(from).toHaveAttribute('data-status', 'leftover')
     expect(from).not.toHaveAttribute('data-outline')
     expect(forChip).toHaveAttribute('data-status', 'leftover')
@@ -84,7 +84,7 @@ describe('PlanCourseRow: chips on one line', () => {
 
   it('every chip carries its full text as the tooltip', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { why: [{ code: 'favourite', members: ['Mia', 'Fabio'] }] }) }))
-    expect(chipsOf(li)!.querySelector('.chip')).toHaveAttribute('title', 'Mia and Fabio’s favourite')
+    expect(chipsOf(li)!.querySelector('.chip')).toHaveAttribute('title', "Mia and Fabio's favourite")
   })
 
   it('a meal with nothing to say has no chip line at all', () => {
@@ -94,7 +94,7 @@ describe('PlanCourseRow: chips on one line', () => {
 
   it('a chip is not a second tap target inside the row: it is not a button', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { why: [{ code: 'favourite', members: ['Mia'] }] }) }))
-    expect(within(li as HTMLElement).queryAllByRole('button').map((b) => b.getAttribute('aria-label'))).not.toContain('Mia’s favourite')
+    expect(within(li as HTMLElement).queryAllByRole('button').map((b) => b.getAttribute('aria-label'))).not.toContain("Mia's favourite")
   })
 })
 

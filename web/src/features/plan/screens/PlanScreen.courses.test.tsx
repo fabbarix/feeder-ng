@@ -29,7 +29,9 @@ const preview = (courseId: number, courseName: string, recipeName: string): Cook
 const alt = (id: number, name: string): Alternative => ({ recipeId: id, recipeName: name, batches: 1, newLeftoverPortions: 0, newLeftoverUseBy: '', score: 2, why: [] })
 
 const today = async () => (await screen.findByRole('heading', { name: /· Today$/ })).closest('article') as HTMLElement
-const row = async (name: string) => within(await screen.findByRole('list', { name: 'Dinner Courses' })).getByRole('listitem', { name })
+// ds-plan: a Course row is a ListRow (no li aria-label): found by the Course label in its meta line.
+const row = async (name: string) =>
+  within(await screen.findByRole('list', { name: 'Dinner Courses' })).getAllByRole('listitem').find((li) => li.querySelector('.list-row__meta')?.textContent?.startsWith(name)) as HTMLElement
 
 describe('PlanScreen with Courses', () => {
   it('shows the slot once, a row per served Course with its caption, and no row for the empty optional Dessert', async () => {
@@ -37,7 +39,7 @@ describe('PlanScreen with Courses', () => {
     renderWithProviders(<PlanScreen />)
     const tile = await today()
     expect(within(tile).getAllByText('Dinner')).toHaveLength(1)
-    expect(within(tile).getAllByRole('listitem').map((li) => li.getAttribute('aria-label'))).toEqual(['Main', 'Side'])
+    expect(within(tile).getAllByRole('listitem').map((li) => li.querySelector('.list-row__meta')?.textContent)).toEqual(['Main', 'Side'])
   })
 
   it('Swap on the Side asks for the Side\'s alternatives and sets the pick on the Side', async () => {
@@ -133,10 +135,13 @@ describe('PlanScreen with one Course (regression guards)', () => {
     expect(api.calls.some((c) => c.path === '/api/plan/2026-11-10/2/confirm')).toBe(false)
   })
 
-  it('shows no Course caption and no list of Courses', async () => {
+  // ds-plan: a one-Course slot is the same structure (header, then the Courses list) with one row and no caption.
+  it('shows no Course caption, in a Courses list of one row', async () => {
     mockApi({ 'GET /api/plan': view([plain()]) })
     renderWithProviders(<PlanScreen />)
     const tile = await today()
-    expect(within(tile).queryByRole('list', { name: /Courses/ })).not.toBeInTheDocument()
+    const list = within(tile).getByRole('list', { name: /Courses/ })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+    expect(list.querySelector('.list-row__meta')).toBeNull()
   })
 })

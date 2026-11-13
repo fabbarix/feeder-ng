@@ -16,7 +16,7 @@ const view = (): PlanView => ({
 })
 const asked = leftover({ id: 3, recipeName: 'Chilli', portions: 2, useBy: '2026-11-10', toAnswer: true })
 const soup = leftover({ id: 4, recipeId: 11, recipeName: 'Soup', portions: 2, useBy: '2026-11-14' })
-const dayTile = async (name: string) => (await screen.findByRole('heading', { name })).closest('article') as HTMLElement
+const dayTile = async (name: string) => (await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name })).closest('article') as HTMLElement
 const QUESTION = "Chilli was to be used by Tue. Had it, threw it out, or wasn't there?"
 
 function setup(leftovers: Leftover[], extra: Record<string, unknown> = {}) {

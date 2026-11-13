@@ -25,7 +25,7 @@ describe('rowChips', () => {
 
   it('a favourite is a neutral why chip with the favourite icon (accent-coloured by the chip)', () => {
     const [chip] = rowChips(withWhy({ code: 'favourite', members: ['Mia', 'Fabio'] }), ctx)
-    expect(chip).toMatchObject({ kind: 'why', icon: 'favourite', label: 'Mia and Fabio’s favourite' })
+    expect(chip).toMatchObject({ kind: 'why', icon: 'favourite', label: "Mia and Fabio's favourite" })
     expect(chip!.status).toBeUndefined()
     expect(chip!.outline).toBeFalsy()
   })
@@ -51,7 +51,7 @@ describe('rowChips', () => {
       meal({ pinned: true, servedFromLeftover: { date: '2026-11-09' } as never, why: [{ code: 'favourite', members: ['Mia'] }, { code: 'leftover_fits', date: '2026-11-13' }] }),
       ctx,
     )
-    expect(chips.map((c) => c.label)).toEqual(['Pinned', 'Leftover from Mon', 'Leftover for Fri', 'Mia’s favourite'])
+    expect(chips.map((c) => c.label)).toEqual(['Pinned', 'Leftover from Mon', 'Leftover for Fri', "Mia's favourite"])
   })
 
   it('a Cooked meal says Cooked in the success tone first', () => {
@@ -61,7 +61,7 @@ describe('rowChips', () => {
   it('a "Whole meal" chip passed in comes after the leftover chips and before the why chips', () => {
     const whole = { key: 'status:whole-meal', kind: 'status' as const, status: 'info' as const, label: 'Whole meal' }
     const labels = rowChips(withWhy({ code: 'favourite', members: ['Mia'] }), ctx, whole).map((c) => c.label)
-    expect(labels).toEqual(['Whole meal', 'Mia’s favourite'])
+    expect(labels).toEqual(['Whole meal', "Mia's favourite"])
   })
 
   it('has no duplicate labels, no chip for best_available, none for a meal with nothing to say', () => {

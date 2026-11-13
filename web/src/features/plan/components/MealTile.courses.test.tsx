@@ -84,7 +84,7 @@ describe('several Courses: one slot block', () => {
     const unfilled = { reason: 'no_course_recipes' as const, slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } }
     const h = setup(courseSlot([main(), side({ meal: null, unfilled })]))
     const item = rowOf('Side')
-    expect(item.querySelector('[data-unfilled]')).not.toBeNull()
+    expect(item).toHaveAttribute('data-unfilled')
     await userEvent.click(within(item).getByRole('button', { name: 'Choose a Recipe' }))
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
   })
