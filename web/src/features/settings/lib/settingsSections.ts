@@ -3,7 +3,7 @@ import type { IconName } from '../../../ui/icons'
 import { settingsStrings } from '../strings'
 
 export interface SettingsSection {
-  id: 'ingredients' | 'products' | 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'tags' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
+  id: 'ingredients' | 'supplies' | 'products' | 'household' | 'members' | 'mealSlots' | 'courses' | 'planningRules' | 'tags' | 'shops' | 'storagePlaces' | 'accessRequests' | 'preferences' | 'notifications' | 'allowlist' | 'recipeAssistant'
   /** Row title (a GLOSSARY term or UI name; copy lives in strings.ts as settingsStrings.index.sections[id]). */
   title: string
   /** One-line description under the title. */
@@ -24,6 +24,7 @@ const copy = settingsStrings.index.sections
 
 const SECTIONS: Array<SettingsSection & { group: SettingsGroup['id'] }> = [
   { group: 'catalogue', id: 'ingredients', ...copy.ingredients, icon: 'ingredients', path: '/ingredients' },
+  { group: 'catalogue', id: 'supplies', ...copy.supplies, icon: 'supply', path: '/supplies' },
   { group: 'catalogue', id: 'products', ...copy.products, icon: 'barcodes', path: '/products' },
   { group: 'catalogue', id: 'shops', ...copy.shops, icon: 'shops', path: '/settings/shops' },
   { group: 'catalogue', id: 'tags', ...copy.tags, icon: 'tag', path: '/settings/tags' },
@@ -48,7 +49,7 @@ const GROUP_ORDER: Array<{ id: SettingsGroup['id']; title: string }> = [
 
 /**
  * The index groups, in order, with the rows each Viewer sees (empty groups are dropped):
- *   Catalogue: Ingredients, Products, Shops, Tags, Courses, Storage Places     (/ingredients, /products, /settings/shops, /tags, /courses, /storage-places)
+ *   Catalogue: Ingredients, Supplies, Products, Shops, Tags, Courses, Storage Places     (/ingredients, /supplies, /products, /settings/shops, /tags, /courses, /storage-places)
  *   Household: Household, Members, Meal Slots, Planning rules, Sign-in requests; Admins also get Allowlist and Recipe Assistant, last
  *                                                                              (/settings/household, /members, /meal-slots, /planning, /access-requests, /allowlist, /recipe-assistant)
  *   You:       Your preferences, Notifications                                 (/settings/preferences, /notifications)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ApiError } from '../http'
 import { useToast } from '../../ui/Toast'
 import { baseRecipesApi } from './api'
 import { mergeOffers, type MergeOfferView } from './mergeOffer'
@@ -138,6 +139,10 @@ export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandid
     setMergeIssue(null)
     try {
       const preview = await baseRecipesApi.mergePreview(current.ingredientId, baseIngredientId)
+      if (preview.blocked === 'kind_differs') {
+        setMergeIssue(baseRecipeLinkStrings.differentKinds(current.name, baseName))
+        return
+      }
       if (preview.blocked) {
         setMergeIssue(baseRecipeLinkStrings.differentBaseUnits(current.name, baseName))
         return
@@ -148,8 +153,9 @@ export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandid
       }
       await baseRecipesApi.mergeInto(current.ingredientId, baseIngredientId)
       finishOffer()
-    } catch {
-      setMergeIssue(baseRecipeLinkStrings.couldNotMerge)
+    } catch (err) {
+      const kindRefused = err instanceof ApiError && err.code === 'kind_differs'
+      setMergeIssue(kindRefused ? baseRecipeLinkStrings.differentKinds(current.name, baseName) : baseRecipeLinkStrings.couldNotMerge)
     }
   }
 

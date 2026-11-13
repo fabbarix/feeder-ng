@@ -5,6 +5,8 @@ export const strings = {
   newIngredient: 'New Ingredient',
   createIngredient: 'Create Ingredient',
   nameLabel: 'Name',
+  /** H5: the New Ingredient sheet's name for a Supply (ADR 0017). */
+  newSupply: 'New Supply',
   /** PT: the Ingredient page's Tile of the Members who exclude it (rx-pt.md section 5.4). */
   excludedBy: 'Excluded by',
   baseUnitLabel: 'Base Unit',
@@ -74,6 +76,8 @@ export const strings = {
   mergeSummary: (source: string, target: string) => `${source} will be merged into ${target}`,
   mergeMoves: (n: number) => `${n} place${n === 1 ? '' : 's'} will move`,
   mergeBlocked: "These Ingredients count in different Base Units, so they can't be merged",
+  /** H5: a food and a Supply never merge (H2 kind_differs). */
+  mergeBlockedKind: "One is food and the other is a Supply, so they can't be merged",
   mergeConflictsTitle: 'Choose what to keep',
   mergeConflictConversion: (unit: string) => `1 ${unit} is…`,
   mergeConflictShelfLife: 'Shelf Life is…',
@@ -81,11 +85,54 @@ export const strings = {
   mergeKeepNoShelfLife: 'Keep no Shelf Life',
   mergeChangeTarget: 'Choose another Ingredient',
   mergeConfirm: 'Merge',
+  /** H5: the Supplies (kind 'supply') words; the food words above stay as they are. */
+  supply: {
+    title: 'Supplies',
+    searchLabel: 'Search Supplies',
+    newLabel: 'New Supply',
+    createLabel: 'Create Supply',
+    notFoundTitle: 'That Supply does not exist',
+    mergeInto: 'Merge into another Supply',
+    deleteLabel: 'Delete Supply',
+    emptyTitle: 'No Supplies yet',
+    emptyText: 'Dish soap, toilet paper or batteries: things you buy and keep in Stock but never cook with.',
+    noMatches: 'No Supply matches that search',
+  },
+  /** H5: the kind choice, the kind Tile, the Restock level and the words of a refused kind change. */
+  kind: {
+    label: 'Kind',
+    food: 'Food',
+    supply: 'Supply',
+    thisIsFood: 'This is food',
+    thisIsSupply: 'This is a Supply',
+    changeToSupply: 'Change to Supply',
+    changeToFood: 'Change to food',
+    toSupplyTitle: (name: string) => `Change ${name} to a Supply?`,
+    toSupplyBody: 'Its Shelf Life and the Good until of its Stock Lots are cleared.',
+    refusalTitle: { food: "It can't become food yet", supply: "It can't become a Supply yet" },
+    reasons: {
+      recipe_lines: 'It is on a Recipe line',
+      exclusions: 'A Member excludes it',
+      base_recipe: "It is a Base recipe's Ingredient",
+    },
+    gotIt: 'Got it',
+  },
+  restock: {
+    label: 'Restock level',
+    helper: 'Shopping List asks for it when Stock falls below this amount.',
+    none: 'No Restock level',
+    below: (amount: string) => `Below ${amount}`,
+    metaBelow: (amount: string) => `restocks below ${amount}`,
+    save: 'Save Restock level',
+    clear: 'Clear Restock level',
+  },
   errors: {
     unitRequired: 'Enter a unit',
     unitIsBase: (base: string) => `That is already the Base Unit (${base})`,
     unitTaken: 'This Ingredient already has a conversion for that unit',
     amountInvalid: 'Enter an amount greater than 0',
     daysInvalid: 'Enter a whole number of days, 1 or more',
+    supplyHasShelfLife: 'A Supply has no Shelf Life',
+    restockOnFood: 'Only a Supply has a Restock level',
   },
 } as const
