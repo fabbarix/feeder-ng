@@ -226,6 +226,23 @@ describe('PriceKeypad: the actions', () => {
     expect(primary.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
   })
 
+  it('refuses a per kg Price whose pack Price rounds to 0 (the server needs a pack Price above 0)', async () => {
+    const { onSave, onClose } = setup({ pack: { amount: 100, unit: 'g' }, weighed: 100 })
+    await tapKeys('.01')
+    await userEvent.click(key('Save'))
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a number above 0')
+    await userEvent.click(key('Close'))
+    expect(onClose).toHaveBeenCalledWith({ basis: 'perKg', cents: null, packCents: null, perKgCents: null })
+  })
+
+  it('a per kg entry rounds the pack Price half up like product.PriceForWeight: €2.99/kg for 250 g is €0.75', async () => {
+    const { onSave } = setup({ pack: { amount: 250, unit: 'g' }, weighed: 250 })
+    await tapKeys('2.99')
+    await userEvent.click(key('Save'))
+    expect(onSave).toHaveBeenCalledWith({ basis: 'perKg', cents: 299, packCents: 75, perKgCents: 299 })
+  })
+
   it('Next with nothing typed just moves on, reporting no Price', async () => {
     const { onNext } = setup({ hasNext: true })
     await userEvent.click(screen.getByRole('button', { name: /^Next without a Price/ }))

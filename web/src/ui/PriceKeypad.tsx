@@ -80,11 +80,13 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
   }
 
   const cents = typedToMinor(typed, currency)
-  const valid = cents !== null && cents > 0
+  // A per kg Price whose pack Price rounds to 0 (€0.01/kg for 100 g) is refused like 0: the server needs a pack Price above 0.
+  const packOfPerKg = basis === 'perKg' && perKgPack && cents !== null ? packFromPerKg(cents, perKgPack.amount, perKgPack.unit) : null
+  const valid = cents !== null && cents > 0 && (packOfPerKg === null || packOfPerKg > 0)
 
   function entry(): PriceEntry {
     if (!valid) return { basis, cents: null, packCents: null, perKgCents: null }
-    if (basis === 'perKg' && perKgPack) return { basis, cents, packCents: packFromPerKg(cents, perKgPack.amount, perKgPack.unit), perKgCents: cents }
+    if (packOfPerKg !== null) return { basis, cents, packCents: packOfPerKg, perKgCents: cents }
     return { basis: 'pack', cents, packCents: cents, perKgCents: null }
   }
 
@@ -93,9 +95,9 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
     setRefused(false)
   }
 
-  /** Save or Next. A typed 0 is refused on the display, nothing is reported. */
+  /** Save or Next. A typed 0 (or a per kg Price whose pack Price is 0) is refused on the display, nothing is reported. */
   function commit() {
-    if (cents === 0) return setRefused(true)
+    if (cents !== null && !valid) return setRefused(true)
     if (hasNext) onNext(entry())
     else onSave(entry())
   }
