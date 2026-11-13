@@ -682,6 +682,7 @@ func (r *review) checkBaseName(path, name string, create bool) bool {
 // buildTakeOvers asks, for every Base recipe the import creates whose name is held by a plain Ingredient that exists,
 // whether to take that Ingredient over (P7 = B). Nothing is preselected. Where the Yield's unit does not convert to the
 // plain Ingredient's Base Unit, only "keep apart" applies: it is in force already, with a same_name_ingredient warning.
+// A name a Supply holds is never asked about: it is a supply_name_taken Problem.
 func (r *review) buildTakeOvers() {
 	r.takeOvers = []TakeOverAsk{}
 	r.takeAnswer = map[string]bool{}
@@ -715,7 +716,14 @@ func (r *review) buildTakeOvers() {
 		}
 	}
 	for _, it := range items {
-		plain, ok := r.existingByKey[units.NormalizeName(it.name)]
+		key := units.NormalizeName(it.name)
+		if r.supplyByKey[key] {
+			// A Supply holds the name for good (ADR 0017): never a take-over ask. The User skips the Recipe, names the
+			// created Base recipe otherwise, or converts another Recipe.
+			r.problem(it.path, CodeSupplyNameTaken, fmt.Sprintf("%s is one of your Supplies", it.name))
+			continue
+		}
+		plain, ok := r.existingByKey[key]
 		if !ok {
 			continue
 		}

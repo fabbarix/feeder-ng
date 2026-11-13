@@ -151,3 +151,26 @@ func TestAFoodIngredientOfTheSameNameStillMatchesExactly(t *testing.T) {
 		t.Fatalf("status = %q, want exact", m.Status)
 	}
 }
+
+func TestABaseRecipeNamedLikeASupplyIsAProblemNeverATakeOver(t *testing.T) {
+	// The store refuses it (supply_name_taken on Apply); the review says so first, so Confirm is never offered.
+	yes := true
+	f := recipefile.File{
+		Format: recipefile.Format, Version: recipefile.Version,
+		Recipes: []recipefile.Recipe{{Name: "Dish soap", Yield: 1, BaseRecipe: &yes, YieldUnit: "l",
+			Ingredients: []recipefile.Line{{Ingredient: "milk", Quantity: 1, Unit: "l"}}}},
+	}
+	ex := recipefile.Existing{Ingredients: []ingredientT{supplyIng(7, "dish  Soap", "ml"), ing(8, "milk", "ml")}}
+	p := plan(t, f, ex, recipefile.Decisions{})
+	if p.Ready || len(p.TakeOvers) != 0 {
+		t.Fatalf("ready = %v, take-overs = %+v: want not ready and no take-over ask for a Supply", p.Ready, p.TakeOvers)
+	}
+	pb := problemAt(p, codeSupplyNameTaken)
+	if pb == nil || pb.Path != "$.recipes[0]" || !strings.Contains(pb.Message, "Dish soap is one of your Supplies") {
+		t.Fatalf("problems = %+v, want %s at $.recipes[0]", p.Problems, codeSupplyNameTaken)
+	}
+	skip := recipefile.Decisions{Recipes: []recipefile.RecipeDecision{{Index: 0, Action: recipefile.ActionSkip}}}
+	if p := plan(t, f, ex, skip); problemAt(p, codeSupplyNameTaken) != nil {
+		t.Fatalf("problems = %+v: skipping the Recipe resolves it", p.Problems)
+	}
+}
