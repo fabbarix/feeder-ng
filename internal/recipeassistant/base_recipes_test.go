@@ -123,10 +123,19 @@ func TestAgentPromptGoldenHoldsRules15And16(t *testing.T) {
 	}
 }
 
-func TestTheAddendumDoesNotMentionBaseRecipes(t *testing.T) {
-	// "the addendum is unchanged": the rules live in the Agent Prompt, the schema carries the fields.
-	if strings.Contains(strings.ToLower(ra.Addendum), "base recipe") {
-		t.Error("the Recipe Assistant addendum stays as it was")
+func TestTheAddendumTellsTheModelTheNoneValuesOfTheBaseRecipeFields(t *testing.T) {
+	// HF-schema: the output schema writes none as a sentinel, so the API-only addendum says so; the Agent Prompt
+	// (shared with the paste flow) keeps saying null.
+	want := `For the line fields recipe and neededAtStep write {"name":"","cue":""} and -1 when a line calls for no other recipe, and always in a Step's uses; write baseRecipe false and yieldUnit "" for a recipe that is not a Base recipe.`
+	if !strings.Contains(ra.Addendum, want) {
+		t.Errorf("the addendum lacks the sentence %q", want)
+	}
+	raw, err := os.ReadFile("testdata/agent-prompt-template.golden.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"neededAtStep" -1`) || strings.Contains(string(raw), `{"name":"","cue":""}`) {
+		t.Error("the Agent Prompt keeps null: the sentinels belong to the addendum")
 	}
 }
 

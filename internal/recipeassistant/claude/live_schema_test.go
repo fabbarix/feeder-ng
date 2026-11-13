@@ -40,9 +40,9 @@ func TestLiveOutputSchemaCompiles(t *testing.T) {
 		Schema:    schema,
 		MaxTokens: 16,
 	})
-	// A 16-token answer is cut off (max_tokens) and the adapter reports that as an error, which is fine here: only a
-	// refused schema (invalid request, HTTP 400) fails the test.
-	if err != nil && recipeassistant.CodeOf(err) == recipeassistant.CodeRequestRejected {
-		t.Fatalf("the API refused the output schema: %v", err)
+	// A 16-token answer is cut off, which the adapter reports as output-too-long: that proves the schema compiled.
+	// Anything else fails: a refused schema (400), a bad key (401), a network error or a timeout.
+	if err != nil && recipeassistant.CodeOf(err) != recipeassistant.CodeOutputTooLong {
+		t.Fatalf("the output schema check failed (%s): %v", recipeassistant.CodeOf(err), err)
 	}
 }
