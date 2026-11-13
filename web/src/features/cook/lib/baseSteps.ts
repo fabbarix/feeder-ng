@@ -54,7 +54,7 @@ export function readyBefore(items: readonly BaseMarked[]): string[][] {
   return out
 }
 
-/** One line per covered Base recipe, in order: "Béchamel from the Pantry". Empty when none (or the payload has none). */
+/** One line per covered Base recipe, in order: "Béchamel from Stock". Empty when none (or the payload has none). */
 export function coveredLines(covered: readonly BaseRecipeLabel[] | undefined): string[] {
-  return (covered ?? []).map((label) => s.coveredFromPantry(baseChipText(label)))
+  return (covered ?? []).map((label) => s.coveredFromStock(baseChipText(label)))
 }

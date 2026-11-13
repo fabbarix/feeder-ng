@@ -283,7 +283,7 @@
   margin: 0.5rem 0 0.25rem;
 }
 
-/* BR-H: Base recipes in Cook Mode (the chip of a Base recipe Step, "<name> ready", the Pantry's covered lines). Tokens only. */
+/* BR-H: Base recipes in Cook Mode (the chip of a Base recipe Step, "<name> ready", the Stock-covered lines). Tokens only. */
 .cook-step__base {
   justify-self: start;
   max-inline-size: 100%;

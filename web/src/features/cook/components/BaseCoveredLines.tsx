@@ -1,4 +1,4 @@
-// BR-H: the lines that say which Base recipes the Pantry covers, so the Step numbers that skip them are explained.
+// BR-H: the lines that say which Base recipes Stock covers, so the Step numbers that skip them are explained.
 import type { ReactNode } from 'react'
 import { cookStrings } from '../strings'
 
@@ -7,7 +7,7 @@ export interface BaseCoveredLinesProps {
   lines: string[]
 }
 
-/** A plain list named "Left out of the Steps", read in place; renders nothing when no Base recipe is covered. */
+/** A plain list named "Already in Stock", read in place; renders nothing when no Base recipe is covered. */
 export function BaseCoveredLines({ lines }: BaseCoveredLinesProps): ReactNode {
   if (lines.length === 0) return null
   return (

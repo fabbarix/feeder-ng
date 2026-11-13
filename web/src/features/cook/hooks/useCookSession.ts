@@ -20,7 +20,7 @@ export interface UseCookSession {
   step: CookStep | null
   /** The Base recipes ready by the Step on screen (names). */
   ready: string[]
-  /** "Béchamel from the Pantry": the Base recipes the Pantry covers, whose Steps are left out. */
+  /** "Béchamel from Stock": the Base recipes Stock covers, whose Steps are left out. */
   covered: string[]
   next(): void
   back(): void

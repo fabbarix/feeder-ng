@@ -52,7 +52,7 @@ export const cookStrings = {
   baseRecipeChip: (text: string) => `${text}, Base recipe`,
   /** "Béchamel ready": a Base recipe is ready by the Step on screen. */
   baseReady: (name: string) => `${name} ready`,
-  /** "Béchamel from the Pantry": a Base recipe the Pantry covers, whose Steps are left out. */
-  coveredFromPantry: (text: string) => `${text} from the Pantry`,
-  coveredHeading: 'Left out of the Steps',
+  /** "Béchamel from Stock": a Base recipe Stock covers, whose Steps are left out. */
+  coveredFromStock: (text: string) => `${text} from Stock`,
+  coveredHeading: 'Already in Stock',
 } as const

@@ -35,7 +35,7 @@ export interface UseCookTimeline {
   item: TimelineItem | null
   /** The Base recipes ready by the item on screen (names), over the shown list (lib/baseSteps readyBefore). */
   ready: string[]
-  /** "Béchamel from the Pantry": the Base recipes the Pantry covers, whose Steps are left out. */
+  /** "Béchamel from Stock": the Base recipes Stock covers, whose Steps are left out. */
   covered: string[]
   /** "Side · Green beans" on a timeline of several Courses; null otherwise. */
   caption: string | null

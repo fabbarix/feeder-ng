@@ -75,7 +75,7 @@ export interface CookView {
   advance: AdvanceItem[]
   steps: CookStep[]
   timers: CookTimer[]
-  /** The Base recipes the Pantry covers: their Steps are left out; absent in older payloads = none. */
+  /** The Base recipes Stock covers: their Steps are left out; absent in older payloads = none. */
   covered?: BaseRecipeLabel[]
 }
 
@@ -165,7 +165,7 @@ export interface TimelineView {
   courses: TimelineCourse[]
   advance: TimelineAdvance[]
   items: TimelineItem[]
-  /** The Base recipes the Pantry covers: their Steps are left out; absent in older payloads = none. */
+  /** The Base recipes Stock covers: their Steps are left out; absent in older payloads = none. */
   covered?: BaseRecipeLabel[]
 }
 
