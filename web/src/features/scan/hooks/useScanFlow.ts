@@ -12,7 +12,17 @@ import { stockTakeMessage } from '../lib/stockTakeToast'
 import { feedbackText } from '../lib/toast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
-import type { OfflineData, OfflineProduct, Op, ScanResult, StockTakeAction } from '../types'
+import { planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
+import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
+import type { ScannedList } from './useScannedList'
+import type { OfflineData, OfflineProduct, Op, PricePatch, ScanResult, StockTakeAction } from '../types'
+
+/** SR3: the options of a Toast: an action (Undo, Put back) and how long it stays. */
+export interface NotifyOptions {
+  actionLabel?: string
+  onAction?: () => unknown
+  durationMs?: number
+}
 
 export interface ScanFlowDeps {
   mode: 'shop' | 'stocktake'
@@ -29,15 +39,19 @@ export interface ScanFlowDeps {
   /** drops a still-queued Op (Undo while offline); false when it was already sent */
   cancelQueued: (clientUuid: string) => Promise<boolean>
   undo: (clientUuid: string) => Promise<void>
-  setPrice: (clientUuid: string, priceCents: number) => Promise<void>
+  setPrice: (clientUuid: string, priceCents: number, pricePerKgCents?: number) => Promise<void>
   /** B6: an edit of a still-queued scan: sync.updateQueuedPrice; true when the queue took it, false when it already left */
-  setQueuedPrice?: (clientUuid: string, priceCents: number) => Promise<boolean>
+  setQueuedPrice?: (clientUuid: string, priceCents: number, pricePerKgCents?: number) => Promise<boolean>
+  /** SR3: PATCH /api/scan/prices (scanApi.setPrices): one Price for the scans of a row; without it each scan is priced alone */
+  setPrices?: (body: PricePatch) => Promise<ScanResult[]>
+  /** SR3: the Scanned list of the Shop (useScannedList). Without it the flow behaves as before the list (Stock-take). */
+  session?: ScannedList
   feedback: Pick<Feedback, 'confirm' | 'reject'>
   /**
    * WP7: a transient message (Toast). Stock-take outcomes (+1 pack, -1 pack, Set total, waiting to sync, rejected) go
    * here instead of the inline banner (QA: "-1 pack gives no toast"); lib/stockTakeToast.stockTakeMessage builds the text.
    */
-  notify?: (message: string, status: 'success' | 'info' | 'error') => void
+  notify?: (message: string, status: 'success' | 'info' | 'error', opts?: NotifyOptions) => void
   /** R8, online only: scanApi.findArchived(code, shopId). A network error (ApiError 0) or a missing dep means "no archived owner known". */
   findArchived?: (barcode: string, shopId: number) => Promise<ArchivedProduct | null>
   /** R8: scanApi.product(id), for the owner named by a barcode_archived rejection */
@@ -56,6 +70,20 @@ export type FlowSheet =
   | { kind: 'edit_price' }
   /** R8: an Archived Product owns the barcode; offered before (or after a barcode_archived rejection of) a new Product */
   | { kind: 'unarchive'; product: ArchivedProduct; target: UnknownTarget }
+  /** SR3: Remove of a row with two or more scans asks first */
+  | { kind: 'confirm_remove'; key: string; name: string; count: number }
+
+/** SR3: the Price entry is open on the row `key` (the camera is paused while it is). */
+export interface PricingState {
+  key: string
+}
+
+/** SR3: how a Price entry ended. `failed` and `refused` keep the entry open. */
+export type PriceOutcome =
+  | { status: 'saved' }
+  | { status: 'discarded' }
+  | { status: 'refused'; error: string }
+  | { status: 'failed'; error: string }
 
 export interface FlowFeedback {
   clientUuid: string
@@ -82,7 +110,7 @@ export interface ScanFlow {
   banner: FlowBanner | null
   /** the open sheet, or null */
   sheet: FlowSheet | null
-  /** true while a sheet is open: the scanner should not read */
+  /** true while a sheet or the Price entry is open: the scanner should not read */
   paused: boolean
   onScan(scanned: Scanned): Promise<void>
   saveUnknown(values: UnknownFormValues): Promise<void>
@@ -105,6 +133,21 @@ export interface ScanFlow {
   unarchiving: boolean
   /** R8: "Create a new Product instead" -> the unknown sheet for the same target; a second barcode_archived is then a warn banner, not another prompt. */
   createNewInstead(): void
+  /** SR3: the Price entry open on a row, or null */
+  pricing: PricingState | null
+  /** SR3: "+1 without a Price" (no key: the first row without a Price, from the top) or a row's Price pill */
+  startPriceEntry(key?: string): void
+  closePriceEntry(): void
+  /** SR3: saves a Price for the row: one edit of the queued scans and one PATCH for the applied ones (13.4, 13.9) */
+  savePrice(key: string, entry: PriceEntry, intent: PriceIntent): Promise<PriceOutcome>
+  /** SR3: + on a row: a new shop_scan Op for its Product (not for a weighed row) */
+  increment(key: string): Promise<void>
+  /** SR3: − on a row: Undo of its latest scan; at ×1 it is Remove */
+  decrement(key: string): Promise<void>
+  /** SR3: Remove: ×1 at once with "Put back"; ×2 or more opens confirm_remove first */
+  removeRow(key: string): Promise<void>
+  /** SR3: the confirm_remove sheet's Remove: undoes every scan of the row, latest first */
+  confirmRemove(): Promise<void>
 }
 
 /** The line of the last scan, as the flow keeps it (the text is derived when shown). */
@@ -137,6 +180,13 @@ const nowIso = (d: ScanFlowDeps) => (d.now ? d.now() : new Date()).toISOString()
 /** The message of a failed call, for a toast. */
 const failureText = (err: unknown) => (err instanceof Error ? err.message : scanStrings.unarchiveFailed)
 
+/** SR3: the server's PATCH /api/scan/prices, or the single-scan PATCH for each scan when the batch call is not wired. */
+async function sendPrices(d: ScanFlowDeps, body: PricePatch): Promise<ScanResult[]> {
+  if (d.setPrices) return d.setPrices(body)
+  for (const clientUuid of body.clientUuids) await d.setPrice(clientUuid, body.priceCents, body.pricePerKgCents)
+  return []
+}
+
 /**
  * Shop mode: planScan(scanned, offline). known -> build a shop_scan Op (new clientUuid, scannedAt = now, shopId,
  * rangeTo, productId, quantity, priceCents when known), call feedback.confirm(), submit, then show the feedback
@@ -158,16 +208,29 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   // R8: an unarchive is under way (the ref guards a double tap; the state shows the sheet's busy Button).
   const unarchivePending = useRef(false)
   const [unarchiving, setUnarchiving] = useState(false)
+  // SR3: the Price entry open on a row (null when closed).
+  const [pricing, setPricing] = useState<PricingState | null>(null)
 
   const text = (l: Pick<Line, 'ingredientName' | 'baseUnit' | 'quantity' | 'priceCents' | 'onList'>) =>
     feedbackText({ ingredientName: l.ingredientName, quantity: l.quantity, baseUnit: l.baseUnit, priceCents: l.priceCents, currency: depsRef.current.currency, onList: l.onList }, depsRef.current.system)
 
-  /** Applies the Result of one Op (or the queueing when null) to the feedback line and the banner. */
-  const finish = async (clientUuid: string, result: ScanResult | null, fallback: Fallback, productName: string) => {
+  /** SR3: the Toast after a scan: "Added {product}" with Undo for 5 s. */
+  const announceAdded = (productName: string, clientUuid: string) => {
+    depsRef.current.notify?.(scanStrings.added(productName), 'success', { actionLabel: scanStrings.undo, onAction: () => undoScan(clientUuid), durationMs: 5000 })
+  }
+
+  /** Applies the Result of one Op (or the queueing when null) to the feedback line and the banner; with a Scanned list, to the list and the Toast. */
+  const finish = async (op: Op, result: ScanResult | null, fallback: Fallback, productName: string) => {
     const d = depsRef.current
+    const clientUuid = op.clientUuid
     if (result === null) {
       d.feedback.confirm()
       setBanner(null)
+      if (d.session) {
+        d.session.record(op, null)
+        announceAdded(productName, clientUuid)
+        return
+      }
       setLine({ clientUuid, ingredientName: fallback.ingredientName, baseUnit: fallback.baseUnit, quantity: fallback.quantity, priceCents: fallback.priceCents, onList: true, queued: true, productName, ...(fallback.imageUrl ? { imageUrl: fallback.imageUrl } : {}) })
       return
     }
@@ -179,6 +242,11 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     }
     d.feedback.confirm()
     setBanner(null)
+    if (d.session) {
+      d.session.record(op, result)
+      announceAdded(productName, clientUuid)
+      return
+    }
     const s = result.scan
     // PE: the Product's Picture, else its Ingredient's.
     const picture = s ? s.productImageUrl || s.ingredientImageUrl : fallback.imageUrl
@@ -214,7 +282,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     if (plan.weighed) op.weighed = true
     const result = await d.submit(op)
     await finish(
-      op.clientUuid,
+      op,
       result,
       { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: plan.quantity, priceCents: plan.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl || plan.product.ingredientImageUrl },
       plan.product.name,
@@ -317,7 +385,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       return
     }
     await finish(
-      op.clientUuid,
+      op,
       result,
       {
         ingredientName: values.ingredient?.name ?? '',
@@ -344,7 +412,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     setSheet(null)
     const result = await d.submit(op)
     await finish(
-      op.clientUuid,
+      op,
       result,
       { ingredientName: plan.product.ingredientName, baseUnit: plan.product.baseUnit, quantity: asked.quantity, priceCents: asked.priceCents, productName: plan.product.name, imageUrl: plan.product.imageUrl || plan.product.ingredientImageUrl },
       plan.product.name,
@@ -401,7 +469,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: product.id, quantity: product.packSize }
       const result = await d.submit(op)
       await finish(
-        op.clientUuid,
+        op,
         result,
         { ingredientName: product.ingredientName, baseUnit: product.baseUnit, quantity: product.packSize, priceCents: null, productName: product.name },
         product.name,
@@ -440,6 +508,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
    * explains it). Results for other scans, and a line that is not waiting, are left alone.
    */
   const applySyncResults = (results: ScanResult[]): void => {
+    depsRef.current.session?.settle(results)
     setLine((current) => {
       if (!current || !current.queued) return current
       const result = results.find((r) => r.clientUuid === current.clientUuid)
@@ -472,6 +541,193 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     setLine(null)
   }
 
+  // ---- SR3: the Scanned list ------------------------------------------------------------------------------------
+
+  const findRow = (key: string): ScannedRow | undefined => depsRef.current.session?.rows.find((r) => r.key === key)
+
+  /**
+   * Undoes one scan: a queued one leaves the queue (the server undoes it when it already left); the list drops it.
+   * False when the Undo failed (the Toast says why and the scan stays).
+   */
+  const undoScan = async (clientUuid: string): Promise<boolean> => {
+    const d = depsRef.current
+    const entry = d.session?.entries.find((e) => e.op.clientUuid === clientUuid)
+    try {
+      if (entry && entry.result === null) {
+        const removed = await d.cancelQueued(clientUuid)
+        if (!removed) await serverUndo(clientUuid)
+      } else {
+        await serverUndo(clientUuid)
+      }
+    } catch (err) {
+      d.notify?.(err instanceof Error ? err.message : scanStrings.undoFailed, 'error')
+      return false
+    }
+    d.session?.drop([clientUuid])
+    return true
+  }
+
+  /** Put back: a new shop_scan Op for the Product of a removed row, at its Price (and its weight, when weighed). */
+  const putBack = async (row: ScannedRow): Promise<void> => {
+    const d = depsRef.current
+    const scan = row.scans[row.scans.length - 1]
+    if (!d.shop || row.productId === null || !scan) return
+    const product = d.offline?.products.find((p) => p.id === row.productId)
+    const priceCents = row.priceCents ?? product?.lastPriceCents ?? null
+    const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: row.productId, quantity: scan.quantity }
+    if (priceCents !== null) op.priceCents = priceCents
+    if (scan.pricePerKgCents !== null) op.pricePerKgCents = scan.pricePerKgCents
+    if (scan.weighed) op.weighed = true
+    const result = await d.submit(op)
+    await finish(
+      op,
+      result,
+      { ingredientName: row.ingredientName, baseUnit: row.baseUnit, quantity: scan.quantity, priceCents, productName: row.name, ...(row.imageUrl ? { imageUrl: row.imageUrl } : {}) },
+      row.name,
+    )
+  }
+
+  /** Remove of a row with one scan: at once, with "Removed {product}" and Put back. */
+  const removeOne = async (row: ScannedRow): Promise<void> => {
+    const scan = row.scans[0]
+    if (!scan) return
+    if (!(await undoScan(scan.clientUuid))) return
+    depsRef.current.notify?.(scanStrings.removed(row.name), 'info', { actionLabel: scanStrings.putBack, onAction: () => putBack(row) })
+  }
+
+  const increment = async (key: string): Promise<void> => {
+    const d = depsRef.current
+    const row = findRow(key)
+    if (!row || !d.shop || row.weighed || row.productId === null) return
+    const latest = row.scans[row.scans.length - 1]
+    if (!latest) return
+    const product = d.offline?.products.find((p) => p.id === row.productId)
+    const priceCents = row.priceCents ?? product?.lastPriceCents ?? null
+    const op: Op = { ...newOpBase(uuid(), 'shop_scan'), productId: row.productId, quantity: latest.quantity }
+    if (priceCents !== null) op.priceCents = priceCents
+    const result = await d.submit(op)
+    await finish(
+      op,
+      result,
+      { ingredientName: row.ingredientName, baseUnit: row.baseUnit, quantity: latest.quantity, priceCents, productName: row.name, ...(row.imageUrl ? { imageUrl: row.imageUrl } : {}) },
+      row.name,
+    )
+  }
+
+  const decrement = async (key: string): Promise<void> => {
+    const row = findRow(key)
+    if (!row) return
+    if (row.count <= 1) {
+      await removeOne(row)
+      return
+    }
+    const latest = row.scans[row.scans.length - 1]
+    if (latest) await undoScan(latest.clientUuid)
+  }
+
+  const removeRow = async (key: string): Promise<void> => {
+    const row = findRow(key)
+    if (!row) return
+    if (row.count > 1) {
+      setSheet({ kind: 'confirm_remove', key, name: row.name, count: row.count })
+      return
+    }
+    await removeOne(row)
+  }
+
+  const confirmRemove = async (): Promise<void> => {
+    if (!sheet || sheet.kind !== 'confirm_remove') return
+    const row = findRow(sheet.key)
+    setSheet(null)
+    if (!row) return
+    for (const scan of [...row.scans].reverse()) {
+      if (!(await undoScan(scan.clientUuid))) break
+    }
+  }
+
+  const startPriceEntry = (key?: string): void => {
+    const session = depsRef.current.session
+    if (!session) return
+    if (key !== undefined) {
+      setPricing({ key })
+      return
+    }
+    const next = nextWithoutPrice(session.rows)
+    setPricing(next ? { key: next.key } : null)
+  }
+
+  const closePriceEntry = (): void => setPricing(null)
+
+  /**
+   * SR3: a Price entry for a row (shop-scan-proposals.md §13.4, §13.9). The queued scans are edited in the queue (one that
+   * already left the queue goes to the server with the applied ones); the applied scans take one PATCH; the list shows
+   * the server's Prices. Next moves the entry to the next row without a Price.
+   */
+  const savePrice = async (key: string, entry: PriceEntry, intent: PriceIntent): Promise<PriceOutcome> => {
+    const d = depsRef.current
+    const session = d.session
+    const row = session?.rows.find((r) => r.key === key)
+    if (!session || !row) {
+      setPricing(null)
+      return { status: 'discarded' }
+    }
+    const plan = planPriceEntry(row, entry, intent)
+    if (plan.kind === 'refuse') return { status: 'refused', error: plan.error }
+    if (plan.kind === 'discard') {
+      setPricing(null)
+      return { status: 'discarded' }
+    }
+    const entries = session.entries
+    const queuedNow: PriceUpdate[] = []
+    const toServer: PriceLine[] = [...plan.applied]
+    for (const line of plan.queued) {
+      const inQueue = d.setQueuedPrice ? await d.setQueuedPrice(line.clientUuid, line.priceCents, line.pricePerKgCents) : false
+      if (inQueue) queuedNow.push(line)
+      else toServer.push(line)
+    }
+    if (queuedNow.length > 0) session.reprice(queuedNow)
+
+    let served: PriceUpdate[] = []
+    if (toServer.length > 0) {
+      const head = plan.patch ?? toServer[0]!
+      const body: PricePatch = {
+        clientUuids: toServer.map((l) => l.clientUuid),
+        priceCents: head.priceCents,
+        ...(head.pricePerKgCents !== undefined ? { pricePerKgCents: head.pricePerKgCents } : {}),
+      }
+      let results: ScanResult[]
+      try {
+        results = await sendPrices(d, body)
+      } catch (err) {
+        const error = err instanceof Error ? err.message : scanStrings.undoFailed
+        d.notify?.(error, 'error')
+        return { status: 'failed', error }
+      }
+      served = toServer.map((line) => {
+        const r = results.find((x) => x.clientUuid === line.clientUuid)
+        return {
+          clientUuid: line.clientUuid,
+          priceCents: r?.scan?.priceCents ?? line.priceCents,
+          ...(body.pricePerKgCents !== undefined ? { pricePerKgCents: body.pricePerKgCents } : {}),
+        }
+      })
+      session.reprice(served)
+    }
+
+    if (intent === 'next') {
+      const updates = [...queuedNow, ...served]
+      const after = displayOrder(buildScannedRows(repriceEntries(entries, updates), d.offline?.products ?? []))
+      const next = nextWithoutPrice(after, key)
+      setPricing(next ? { key: next.key } : null)
+    } else {
+      setPricing(null)
+    }
+    return { status: 'saved' }
+  }
+
+  const paused = sheet !== null || pricing !== null
+
+
   const feedback: FlowFeedback | null = line
     ? { clientUuid: line.clientUuid, text: text(line), queued: line.queued, productName: line.productName, priceCents: line.priceCents, canEditPrice: true, ...(line.imageUrl ? { imageUrl: line.imageUrl } : {}) }
     : null
@@ -480,7 +736,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     feedback,
     banner,
     sheet,
-    paused: sheet !== null,
+    paused,
     onScan,
     saveUnknown,
     submitWeight,
@@ -494,5 +750,13 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     unarchiveProduct,
     unarchiving,
     createNewInstead,
+    pricing,
+    startPriceEntry,
+    closePriceEntry,
+    savePrice,
+    increment,
+    decrement,
+    removeRow,
+    confirmRemove,
   }
 }

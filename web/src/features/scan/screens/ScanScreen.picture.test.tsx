@@ -19,7 +19,7 @@ vi.mock('../../../ui', async (orig) => ({
 import { ScanScreen } from './ScanScreen'
 
 const flow = (over: Partial<ScanFlow> = {}): ScanFlow => ({
-  feedback: null, banner: null, sheet: null, paused: false, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(),
+  feedback: null, pricing: null, startPriceEntry: vi.fn(), closePriceEntry: vi.fn(), savePrice: vi.fn(async () => ({ status: 'saved' as const })), increment: vi.fn(), decrement: vi.fn(), removeRow: vi.fn(), confirmRemove: vi.fn(), banner: null, sheet: null, paused: false, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(),
   openEditPrice: vi.fn(), editPrice: vi.fn(), undo: vi.fn(), dismissFeedback: vi.fn(), closeSheet: vi.fn(), applySyncResults: vi.fn(),
   unarchiveProduct: vi.fn(), unarchiving: false, createNewInstead: vi.fn(), ...over,
 })
@@ -27,7 +27,7 @@ const controller = (over: Partial<ScanController> = {}): ScanController => ({
   status: 'ready', error: null,
   camera: { status: 'ready', videoRef: { current: null }, torchSupported: true, torchOn: false, toggleTorch: vi.fn() },
   recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
-  muted: false, toggleMute: vi.fn(), canVibrate: true, flow: flow(), list: makeList({ lines: [], extras: [], progress: { ticked: 0, total: 0 } }),
+  muted: false, toggleMute: vi.fn(), canVibrate: true, scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(), list: makeList({ lines: [], extras: [], progress: { ticked: 0, total: 0 } }),
   online: true, pendingCount: 0, rejectedCount: 0, dismissRejected: vi.fn(), notices: [], dismissNotice: vi.fn(),
   ingredients: [{ id: 1, name: 'passata', baseUnit: 'g' }], currency: 'USD', system: 'metric', ...over,
 })
