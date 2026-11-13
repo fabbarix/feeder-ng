@@ -272,6 +272,8 @@ A Base recipe may have no lines (Import Review's "Add it as a new Base recipe ·
 - **Labels.** `cook.Step`, `cook.CookStep` and `service.TimelineItem` gain `baseRecipe: { id, name, path } | null`. Cook Mode shows a neutral chip with the Base recipe's name on each such Step ("Béchamel", "Béchamel · Roux"), and the Needed at Step's text gains "Béchamel ready" when the block ends before it. Timers on a Base recipe's Passive Step are labelled "Béchamel: simmer". The Next gate, Advance Step marks and the single-Course view are unchanged (they work on indexes).
 - **Multi-Course slots.** Each Course's composed Steps are its block for `cook.Timeline`, unchanged: one Course's Base recipe never leaves its Course's block.
 
+**Amendment (2026-11-13).** The notification facts (`internal/notify/facts`) apply Stock with the meal's Batches, as Cook Mode does: a Planned Meal's composed Steps are read with `NeedTree`, `MadeFractions` over the Stock on hand and `Cook`, so a jar that covers a Base recipe turns its block into zero-length Steps. Start cooking therefore matches the timeline's `startAt` when a jar covers a Base recipe. The Advance Step IDs stay composed indexes, and a covered Advance Step is not listed. The backend hides covered Steps from the timeline and the Cook Mode view and returns `covered` (the Base recipes left out, in order, `[]` when none) for BR-H's wording.
+
 ---
 
 ## 10. API

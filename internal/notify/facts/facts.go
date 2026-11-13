@@ -21,6 +21,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
 	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/stock"
@@ -77,6 +78,11 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	var out notify.Facts
 	recipes := map[int64]recipeEntry{} // each Recipe is read once per call
 	planned := map[int64]string{}      // Ingredient -> earliest fresh Planned Meal use from today on
+	lots, err := s.stock.Lots(ctx, 0)
+	if err != nil {
+		return notify.Facts{}, err
+	}
+	have := stockOnHand(lots) // what Cook Mode sees: a Base recipe's jar covers its block for the meal's Batches (BR-G)
 	for _, m := range meals {
 		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
 		// A Meal Slot that is gone is skipped; any other lookup error is returned (a missing reminder is not silent).
@@ -103,6 +109,10 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			State: string(m.State), FromLeftover: !m.Fresh(),
 		}
 		// The store lists a slot's meals in Course position order (plan store Meals), which Compute relies on.
+		composed, err := s.composedSteps(ctx, m.RecipeID, m.Batches, have)
+		if err != nil {
+			return notify.Facts{}, err
+		}
 		if mf.FromLeftover {
 			reheat := 0
 			if rec.ReheatMinutes != nil {
@@ -110,10 +120,11 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			}
 			mf.ReheatSeconds = cook.DefaultReheatSeconds(m.Portions, reheat)
 		} else {
-			mf.Steps = scheduleSteps(rec.Steps)
+			mf.Steps = scheduleSteps(composed)
 		}
-		for i, st := range rec.Steps {
-			if st.Kind == schedule.Advance {
+		// The ID of an Advance Step is its index in the composed Steps; a covered one is not asked for.
+		for i, st := range composed {
+			if st.Kind == schedule.Advance && !st.Covered {
 				mf.AdvanceSteps = append(mf.AdvanceSteps, notify.AdvanceStepFact{
 					ID: int64(i), Description: st.Text, Lead: time.Duration(st.LeadTimeMinutes) * time.Minute,
 				})
@@ -146,10 +157,6 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			return notify.Facts{}, err
 		}
 		out.Leftovers = append(out.Leftovers, notify.LeftoverFact{ID: l.ID, RecipeName: rec.Name, Portions: l.Portions, UseBy: l.UseBy})
-	}
-	lots, err := s.stock.Lots(ctx, 0)
-	if err != nil {
-		return notify.Facts{}, err
 	}
 	names := map[int64]string{}
 	for _, l := range lots {
@@ -206,10 +213,46 @@ func (s *Source) name(ctx context.Context, id int64, cache map[int64]string) (st
 	return ing.Name, nil
 }
 
-// scheduleSteps is a Recipe's Steps as the scheduling input (cook.Timeline), Advance Steps included.
-func scheduleSteps(steps []recipe.Step) []schedule.Step {
+// composedSteps is a Recipe's Steps as Cook Mode walks them for a Planned Meal of batches (BR-G): its Base recipes' Steps
+// composed in, and a block Stock covers as zero-length Active Steps (the indexes stay). A Recipe whose tree cannot be
+// built (a cycle written before the check), or a meal with no Batches, is composed as if nothing were in Stock.
+func (s *Source) composedSteps(ctx context.Context, recipeID int64, batches float64, have map[int64]float64) ([]baserecipe.ComposedStep, error) {
+	var made func(baserecipe.Path) float64
+	if batches > 0 {
+		tree, err := s.recipes.NeedTree(ctx, recipeID)
+		switch {
+		case errors.Is(err, baserecipe.ErrCycle):
+		case err != nil:
+			return nil, err
+		default:
+			made = baserecipe.MadeFractions(tree, batches, func(id int64) float64 { return have[id] })
+		}
+	}
+	comp, err := s.recipes.Cook(ctx, recipeID, made)
+	if err != nil {
+		return nil, err
+	}
+	return comp.Steps, nil
+}
+
+// stockOnHand is the quantity of Stock held per Ingredient.
+func stockOnHand(lots []stockstore.StoredLot) map[int64]float64 {
+	have := make(map[int64]float64, len(lots))
+	for _, l := range lots {
+		have[l.IngredientID] += l.Quantity
+	}
+	return have
+}
+
+// scheduleSteps is a composed Recipe's Steps as the scheduling input (cook.Timeline), Advance Steps included. A covered
+// Step is a zero-length Active Step, as in Cook Mode.
+func scheduleSteps(steps []baserecipe.ComposedStep) []schedule.Step {
 	out := make([]schedule.Step, 0, len(steps))
 	for _, st := range steps {
+		if st.Covered {
+			out = append(out, schedule.Step{Kind: schedule.Active, After: st.After})
+			continue
+		}
 		out = append(out, schedule.Step{Kind: st.Kind, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes, After: st.After})
 	}
 	return out

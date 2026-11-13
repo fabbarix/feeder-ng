@@ -667,7 +667,14 @@ func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, er
 	p.Proposed = plan.ProposedLeftover(m.Batches, rc.Yield, p.PortionsNeeded)
 	p.Max = m.Batches * rc.Yield
 	p.UseBy = plan.LeftoverUseBy(key.Date, rc.UseByDays, in.settings.DefaultUseByDays)
-	p.Needs = needsFor(rc, m.Batches)
+	book, err := r.needsBookFor(ctx)
+	if err != nil {
+		return CookPreview{}, err
+	}
+	p.Needs, err = book.needsOf(ctx, rc, m.Batches, nil)
+	if err != nil {
+		return CookPreview{}, err
+	}
 	if cp, ok := r.d.Stock.(CookPreviewer); ok {
 		lots, err := cp.PreviewCooked(ctx, p.Needs)
 		if err != nil {
@@ -835,7 +842,14 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 		if err := plan.CheckLeftoverPortions(portions, m.Batches*rc.Yield); err != nil {
 			return nil, err
 		}
-		needs := needsFor(rc, m.Batches)
+		book, err := r.needsBookFor(withTx(ctx, tx))
+		if err != nil {
+			return nil, err
+		}
+		needs, err := book.needsOf(withTx(ctx, tx), rc, m.Batches, usedFrom)
+		if err != nil {
+			return nil, err
+		}
 		var d Deduction
 		if hasPicks(usedFrom) {
 			d, err = r.deductPicked(ctx, tx, []CookedMeal{{Needs: needs, UsedFrom: usedFrom}})

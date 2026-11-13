@@ -28,6 +28,13 @@ type Recipes interface {
 	Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps, error)
 }
 
+// MealRecipes is the optional part of Recipes that gives the Steps of a Planned Meal's Recipe with the meal's Batches,
+// with the Stock on hand covering its Base recipes (BR-G). The service asks for them wherever it holds a Planned Meal,
+// and for Steps everywhere else (a Recipe opened on its own assumes everything is made).
+type MealRecipes interface {
+	MealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error)
+}
+
 // MealInfo is a Planned Meal as Cook Mode needs it.
 type MealInfo struct {
 	Date       string

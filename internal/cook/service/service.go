@@ -117,7 +117,7 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 	if meal.State != "planned" || meal.Batches <= 0 {
 		return CookView{}, ErrNotCookable
 	}
-	rs, err := s.cfg.Recipes.Steps(ctx, meal.RecipeID)
+	rs, err := s.mealSteps(ctx, meal.RecipeID, meal.Batches)
 	if err != nil {
 		return CookView{}, err
 	}
@@ -139,6 +139,15 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 		return CookView{}, err
 	}
 	return CookView{View: view, Meal: &meal, Timers: timers, Now: now, Today: today}, nil
+}
+
+// mealSteps is the Steps of a Planned Meal's Recipe: with the meal's Batches and the Stock on hand when the Recipes port gives
+// them (MealRecipes), else the Recipe's Steps. A Leftover-served meal (no Batches) cooks nothing, so it gets the Steps.
+func (s *Service) mealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error) {
+	if mr, ok := s.cfg.Recipes.(MealRecipes); ok && batches > 0 {
+		return mr.MealSteps(ctx, recipeID, batches)
+	}
+	return s.cfg.Recipes.Steps(ctx, recipeID)
 }
 
 // RecipeView is Cook Mode for a Recipe with a chosen Batch count (ErrNotFound;
@@ -228,15 +237,14 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
-	recipeID := parts.RecipeID
 	if parts.IsMeal {
 		meal, err := s.cfg.Meals.Meal(ctx, parts.Date, parts.MealSlotID, parts.CourseID)
 		if err != nil {
 			return cook.RecipeSteps{}, err
 		}
-		recipeID = meal.RecipeID
+		return s.mealSteps(ctx, meal.RecipeID, meal.Batches)
 	}
-	return s.cfg.Recipes.Steps(ctx, recipeID)
+	return s.cfg.Recipes.Steps(ctx, parts.RecipeID)
 }
 
 // ScopeRecipeName is the name of the Recipe a scope cooks, "" for an empty or unknown scope (the timers list shows it
@@ -635,19 +643,20 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	steps := map[int64]cook.RecipeSteps{}
+	steps := map[stepsKey]cook.RecipeSteps{}
 	var cands []cook.AdvanceCandidate
 	for _, m := range meals {
 		if m.Batches <= 0 {
 			continue
 		}
-		rs, ok := steps[m.RecipeID]
+		key := stepsKey{recipe: m.RecipeID, batches: m.Batches}
+		rs, ok := steps[key]
 		if !ok {
-			rs, err = s.cfg.Recipes.Steps(ctx, m.RecipeID)
+			rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches)
 			if err != nil {
 				return nil, err
 			}
-			steps[m.RecipeID] = rs
+			steps[key] = rs
 		}
 		scope := courseScope(m)
 		marks, err := s.cfg.Store.Marks(ctx, scope)
@@ -655,7 +664,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			return nil, err
 		}
 		for i, st := range rs.Steps {
-			if st.Kind != schedule.Advance {
+			if st.Kind != schedule.Advance || st.Covered {
 				continue
 			}
 			_, done := marks[i]

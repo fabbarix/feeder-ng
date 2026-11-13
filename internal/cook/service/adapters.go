@@ -12,6 +12,7 @@ import (
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/stock"
@@ -63,10 +64,44 @@ func (u ingredientUnits) Units(ctx context.Context, id int64) (units.Ingredient,
 
 type dbRecipes struct{ a *DB }
 
-// Steps implements Recipes: the Recipe's Steps with Ingredient names on their uses.
+// Steps implements Recipes: the Recipe's Steps with its Base recipes' Steps composed in and Ingredient names on their
+// uses, everything made (a Recipe opened on its own assumes nothing is in Stock; BR-G).
 func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps, error) {
+	return r.compose(ctx, recipeID, nil)
+}
+
+// MealSteps implements MealRecipes: the Steps of a Planned Meal's Recipe with its Batches, the Base recipe Ingredients
+// Stock holds taken first (baserecipe.MadeFractions over the Stock on hand): a block that Stock covers is left out of
+// the view, not out of the indexes (BR-G, design section 9). A Recipe whose tree cannot be built (a cycle written before the
+// check) is composed as if nothing were in Stock.
+func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error) {
+	tree, err := r.a.rc.NeedTree(ctx, recipeID)
+	if errors.Is(err, baserecipe.ErrCycle) {
+		return r.compose(ctx, recipeID, nil)
+	}
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	have, err := r.a.stockOnHand(ctx)
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	made := baserecipe.MadeFractions(tree, batches, func(id int64) float64 { return have[id] })
+	return r.compose(ctx, recipeID, made)
+}
+
+// compose is the Recipe's composed Steps (baserecipe.ComposeSteps through the store) as Cook Mode needs them. made is nil
+// for everything made.
+func (r dbRecipes) compose(ctx context.Context, recipeID int64, made func(baserecipe.Path) float64) (cook.RecipeSteps, error) {
 	rec, err := r.a.rc.Get(ctx, recipeID)
 	if errors.Is(err, recipestore.ErrNotFound) {
+		return cook.RecipeSteps{}, ErrNotFound
+	}
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	comp, err := r.a.rc.Cook(ctx, recipeID, made)
+	if errors.Is(err, baserecipe.ErrNotFound) {
 		return cook.RecipeSteps{}, ErrNotFound
 	}
 	if err != nil {
@@ -77,15 +112,24 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 	if rec.ReheatMinutes != nil {
 		out.ReheatMinutes = *rec.ReheatMinutes
 	}
-	for _, st := range rec.Steps {
+	own := 0 // the Recipe's own Steps come in their order; the next one gives the image
+	for _, cs := range comp.Steps {
 		step := cook.Step{
-			Kind: st.Kind, Text: st.Text, DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes,
-			After: st.After,
+			Kind: cs.Kind, Text: cs.Text, DurationMinutes: cs.DurationMinutes, LeadTimeMinutes: cs.LeadTimeMinutes,
+			After: cs.After, Covered: cs.Covered,
 		}
-		if st.Image != "" {
-			step.ImageURL = images.URL(st.Image)
+		if cs.Origin == nil {
+			if own < len(rec.Steps) && rec.Steps[own].Text == cs.Text {
+				if img := rec.Steps[own].Image; img != "" {
+					step.ImageURL = images.URL(img)
+				}
+				own++
+			}
+		} else {
+			step.BaseRecipe = &cook.BaseRecipe{ID: cs.Origin.BaseRecipeID, Name: cs.Origin.Names[len(cs.Origin.Names)-1],
+				Path: append([]string(nil), cs.Origin.Names...)}
 		}
-		for _, u := range st.Uses {
+		for _, u := range cs.Uses {
 			name, ok := names[u.IngredientID]
 			if !ok {
 				ing, err := r.a.ing.Get(ctx, u.IngredientID)
@@ -100,6 +144,25 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 		out.Steps = append(out.Steps, step)
 	}
 	return out, nil
+}
+
+// stockOnHand is the quantity of Stock held per Ingredient (the Lots' quantities).
+func (a *DB) stockOnHand(ctx context.Context) (map[int64]float64, error) {
+	rows, err := a.db.QueryContext(ctx, `SELECT ingredient_id, SUM(quantity) FROM stock_lots GROUP BY ingredient_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	have := map[int64]float64{}
+	for rows.Next() {
+		var id int64
+		var q float64
+		if err := rows.Scan(&id, &q); err != nil {
+			return nil, err
+		}
+		have[id] = q
+	}
+	return have, rows.Err()
 }
 
 type dbMeals struct{ a *DB }

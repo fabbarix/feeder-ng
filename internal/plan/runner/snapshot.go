@@ -3,12 +3,14 @@ package runner
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/store"
 	"github.com/fabbarix/feeder-ng/internal/planner"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 )
 
 // info is the household context every run and action starts from.
@@ -353,6 +355,87 @@ func needsFor(rc planner.Recipe, batches float64) []Need {
 		out = append(out, Need{IngredientID: int64(n.IngredientID), Quantity: n.Quantity * batches})
 	}
 	return out
+}
+
+// TreeSource is the optional part of Sources that gives the need tree of each plannable Recipe, by Recipe id
+// (docs/dev/design/base-recipes.md section 8). A Recipe without an entry keeps the planner's Needs.
+type TreeSource interface {
+	NeedTrees(ctx context.Context) (map[int64][]baserecipe.Need, error)
+}
+
+// needsBook resolves what a Cooked deducts (BR-G): each Recipe's need tree is run through baserecipe.Resolve against the
+// Stock on hand, so a Base recipe Ingredient is taken first and only the made part's Ingredients are deducted. The Stock on
+// hand is read once per book, inside the caller's transaction when its context carries one, and shrinks as the Courses
+// of one write take from it.
+type needsBook struct {
+	r     *Runner
+	trees map[int64][]baserecipe.Need
+	have  map[int64]float64 // nil until the Stock is read
+}
+
+// needsBookFor reads the need trees of the Sources (none when they are not a TreeSource).
+func (r *Runner) needsBookFor(ctx context.Context) (*needsBook, error) {
+	b := &needsBook{r: r}
+	if ts, ok := r.d.Source.(TreeSource); ok {
+		trees, err := ts.NeedTrees(ctx)
+		if err != nil {
+			return nil, err
+		}
+		b.trees = trees
+	}
+	return b, nil
+}
+
+// load reads the Stock on hand per Ingredient, once.
+func (b *needsBook) load(ctx context.Context) error {
+	if b.have != nil {
+		return nil
+	}
+	lots, _, err := b.r.d.Stock.Lots(ctx)
+	if err != nil {
+		return err
+	}
+	b.have = make(map[int64]float64, len(lots))
+	for _, l := range lots {
+		b.have[int64(l.IngredientID)] += l.Quantity
+	}
+	return nil
+}
+
+// needsOf is what Stock is asked to deduct for batches of the Recipe. Without a need tree it is needsFor. With one, the tree
+// is resolved Stock first (baserecipe.Resolve) and its Optional lines are left out. picks are the Used from picks of this
+// meal: on a Base recipe Ingredient they are the Stock the meal may take, instead of the Stock on hand; picks on other
+// Ingredients change nothing here.
+func (b *needsBook) needsOf(ctx context.Context, rc planner.Recipe, batches float64, picks []UsedFrom) ([]Need, error) {
+	tree, ok := b.trees[int64(rc.ID)]
+	if !ok {
+		return needsFor(rc, batches), nil
+	}
+	if err := b.load(ctx); err != nil {
+		return nil, err
+	}
+	picked := map[int64]float64{}
+	for _, u := range picks {
+		for _, p := range u.Picks {
+			picked[u.IngredientID] += p.Quantity
+		}
+	}
+	have := func(id int64) float64 {
+		h := b.have[id]
+		if q, ok := picked[id]; ok {
+			h = math.Min(h, q)
+		}
+		return h
+	}
+	take := func(id int64, q float64) { b.have[id] -= q }
+	var out []Need
+	for _, n := range baserecipe.Resolve(tree, batches, have, take) {
+		if n.Optional {
+			continue
+		}
+		out = append(out, Need{IngredientID: n.IngredientID, Quantity: n.Quantity})
+	}
+	return out, nil
 }
 
 // cellPortions is what a cell of the slot needs: the Portion Factors of its Course Attendance plus one per Guest of the

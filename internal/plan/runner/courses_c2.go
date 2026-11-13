@@ -387,6 +387,10 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			}
 			listed[id], index[id] = c, i
 		}
+		book, err := r.needsBookFor(withTx(ctx, tx))
+		if err != nil {
+			return nil, err
+		}
 		var needs []Need
 		var meals []CookedMeal // the fresh Courses, in the slot's Course order
 		for _, m := range day {
@@ -399,7 +403,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			if !ok {
 				i = -1
 			}
-			meal, n, err := r.cookInAll(ctx, tx, st, in, si, m, recipes, lo, listed[real].UsedFrom, i)
+			meal, n, err := r.cookInAll(withTx(ctx, tx), book, st, in, si, m, recipes, lo, listed[real].UsedFrom, i)
 			if err != nil {
 				return nil, err
 			}
@@ -449,7 +453,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 // cookInAll marks one unresolved Planned Meal of CookAll Cooked, as Cooked does (Leftover-served meals consume their
 // source; fresh ones record their Leftover). It returns the meal to deduct (nil for a Leftover-served one) and the
 // Leftover made. index is the request's entry (-1: none). Picks on a Leftover-served meal are ErrUsedFromInvalid.
-func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
+func (r *Runner) cookInAll(ctx context.Context, book *needsBook, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
 	recipes []planner.Recipe, listedPortions *float64, usedFrom []UsedFrom, index int) (*CookedMeal, *plan.Leftover, error) {
 	need := cellPortions(si, m.Key.CourseID)
 	if !m.Fresh() {
@@ -506,7 +510,11 @@ func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in 
 	if err := r.unpinMisfits(ctx, st, m.Key, portions, in); err != nil {
 		return nil, nil, err
 	}
-	return &CookedMeal{Needs: needsFor(rc, m.Batches), UsedFrom: usedFrom}, made, nil
+	needs, err := book.needsOf(ctx, rc, m.Batches, usedFrom)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &CookedMeal{Needs: needs, UsedFrom: usedFrom}, made, nil
 }
 
 // anyPicks reports whether any of the meals has a Used from pick.
