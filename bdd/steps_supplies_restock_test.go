@@ -79,6 +79,22 @@ func suppliesRestockSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return err
 	})
+	sc.Step(`^the Product "([^"]*)" of the Supply was last bought at the Shop "([^"]*)"$`, func(prod, shop string) error {
+		pid, err := id("product", prod)
+		if err != nil {
+			return err
+		}
+		sid, err := id("shop", shop)
+		if err != nil {
+			return err
+		}
+		// A purchase alone: it makes the Product the one last bought without adding Stock.
+		r := user().Post("/api/purchases", map[string]any{"productId": pid, "shopId": sid, "date": "2026-11-01"})
+		if r.Status != 201 {
+			return fmt.Errorf("record the purchase: %d %s", r.Status, r.Body)
+		}
+		return nil
+	})
 	sc.Step(`^the Household holds (\d+) (?:piece|g|ml) of the Supply "([^"]*)"$`, func(qty int, name string) error {
 		iid, err := id("ing", name)
 		if err != nil {

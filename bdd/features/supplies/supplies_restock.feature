@@ -12,7 +12,8 @@ Feature: Restock Lines for Supplies
     And the Supply "Toilet paper" is sold as the Product "Lotus 9 rolls" of pack size 9 with barcode "5410091000004"
 
   Scenario: Below the Restock level the list asks for the difference in whole packs
-    Given the Household holds 2 piece of the Supply "Toilet paper"
+    Given the Product "Lotus 9 rolls" of the Supply was last bought at the Shop "Coop"
+    And the Household holds 2 piece of the Supply "Toilet paper"
     When I view the Supplies list
     Then the Supplies list has a Line for "Toilet paper" of 7 piece
     And the Line "Toilet paper" says Below 9 with 2 in Stock
