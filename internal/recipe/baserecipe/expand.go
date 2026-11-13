@@ -23,7 +23,8 @@ func madeFractions(tree []Need, batches float64, have func(ingredientID int64) f
 	var walk func(nodes []Need, mult float64, covered bool)
 	walk = func(nodes []Need, mult float64, covered bool) {
 		for _, n := range nodes {
-			if n.BaseRecipeID == 0 {
+			// An Optional line never takes Stock (BR-G round 3): it is shown as made, and so are the lines inside it.
+			if n.BaseRecipeID == 0 || n.Optional {
 				continue
 			}
 			need := n.Quantity * mult
@@ -51,6 +52,25 @@ func madeFractions(tree []Need, batches float64, have func(ingredientID int64) f
 		}
 		return 1
 	}
+}
+
+// RequiredOnly is the need tree with its Optional Base recipe nodes turned into plain optional leaves (BaseRecipeID 0, no Made):
+// a leaf never takes Stock, so an optional line can neither take a jar from a later line nor from a later Course. A required
+// Base recipe node keeps its Made, and its lines are made the same way, so it still takes its jar first. The result is the input
+// of Resolve, and of MadeFractions (which skips optional nodes too). Pure; the input is not changed.
+func RequiredOnly(tree []Need) []Need {
+	out := make([]Need, 0, len(tree))
+	for _, n := range tree {
+		if n.Optional && n.BaseRecipeID != 0 {
+			out = append(out, Need{IngredientID: n.IngredientID, Quantity: n.Quantity, Optional: true, Path: n.Path})
+			continue
+		}
+		if len(n.Made) > 0 {
+			n.Made = RequiredOnly(n.Made)
+		}
+		out = append(out, n)
+	}
+	return out
 }
 
 // frame is one Recipe on the path from the root to the Recipe being expanded or composed.

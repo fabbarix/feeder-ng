@@ -91,6 +91,7 @@ func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float6
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
+	tree = baserecipe.RequiredOnly(tree)
 	made := baserecipe.MadeFractions(tree, batches, func(id int64) float64 { return have[id] })
 	return r.compose(ctx, recipeID, made)
 }
@@ -115,6 +116,7 @@ func (r dbRecipes) SlotSteps(ctx context.Context, meals []SlotMeal) ([]cook.Reci
 		case err != nil:
 			return nil, err
 		case m.Batches > 0:
+			tree = baserecipe.RequiredOnly(tree)
 			made = baserecipe.MadeFractions(tree, m.Batches, pool)
 			baserecipe.Resolve(tree, m.Batches, pool, take)
 		}

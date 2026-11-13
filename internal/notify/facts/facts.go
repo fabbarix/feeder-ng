@@ -86,6 +86,7 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	}
 	have := stockOnHand(lots)                // what Cook Mode sees: a Base recipe's jar covers its block for the meal's Batches (BR-G)
 	pools := map[slotKey]map[int64]float64{} // the Stock each slot's Courses share, in Course order, per date and Meal Slot
+	trees := map[int64]treeEntry{}           // each Recipe's need tree, read once per call (no cache across calls)
 	for _, m := range meals {
 		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
 		// A Meal Slot that is gone is skipped; any other lookup error is returned (a missing reminder is not silent).
@@ -125,7 +126,7 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 				pool = maps.Clone(have)
 				pools[key] = pool
 			}
-			composed, err := s.composeMeal(ctx, m, rec, pool)
+			composed, err := s.composeMeal(ctx, m, rec, pool, trees)
 			if err != nil {
 				return notify.Facts{}, err
 			}
@@ -228,26 +229,38 @@ type slotKey struct {
 	slot int64
 }
 
-// composeMeal is the Recipe's Steps for a fresh Planned Meal, as Cook Mode walks them (BR-G): its Base recipes composed in, and
-// the Stock the Courses of its slot before it leave (pool, shared by the slot in Course order). A planned meal takes its
-// blocks from the pool; another state only reads it. A cycle written before the check gives the Recipe's own Steps and a
-// warning, so one Recipe never fails Facts.
-func (s *Source) composeMeal(ctx context.Context, m plan.Meal, rec recipe.Recipe, pool map[int64]float64) ([]baserecipe.ComposedStep, error) {
+// treeEntry is one Recipe's need tree read, or why it could not be read (a cycle written before the check).
+type treeEntry struct {
+	tree []baserecipe.Need
+	err  error
+}
+
+// composeMeal is the Recipe's Steps as Cook Mode walks them for a meal (BR-G). Only a planned fresh meal is composed, with its
+// Base recipes in and the Stock the Courses of its slot before it leave (pool, shared by the slot in Course order; the meal
+// takes its blocks from it). A Recipe with no Base recipe line, and a meal that is not planned, use the Recipe's own Steps
+// directly. A cycle written before the check gives the own Steps and a warning, so one Recipe never fails Facts.
+func (s *Source) composeMeal(ctx context.Context, m plan.Meal, rec recipe.Recipe, pool map[int64]float64, trees map[int64]treeEntry) ([]baserecipe.ComposedStep, error) {
+	if m.State != plan.StatePlanned || !hasBaseLine(rec) {
+		return ownSteps(m.RecipeID, rec, nil, false), nil
+	}
+	te, ok := trees[m.RecipeID]
+	if !ok {
+		te.tree, te.err = s.recipes.NeedTree(ctx, m.RecipeID)
+		if te.err != nil && !errors.Is(te.err, baserecipe.ErrCycle) {
+			return nil, te.err
+		}
+		trees[m.RecipeID] = te
+	}
+	if te.err != nil {
+		return ownSteps(m.RecipeID, rec, te.err, true), nil
+	}
 	have := func(id int64) float64 { return pool[id] }
-	tree, err := s.recipes.NeedTree(ctx, m.RecipeID)
-	if errors.Is(err, baserecipe.ErrCycle) {
-		return ownSteps(m.RecipeID, rec, err), nil
-	}
-	if err != nil {
-		return nil, err
-	}
+	tree := baserecipe.RequiredOnly(te.tree)
 	made := baserecipe.MadeFractions(tree, m.Batches, have)
-	if m.State == plan.StatePlanned {
-		baserecipe.Resolve(tree, m.Batches, have, func(id int64, q float64) { pool[id] -= q })
-	}
+	baserecipe.Resolve(tree, m.Batches, have, func(id int64, q float64) { pool[id] -= q })
 	comp, err := s.recipes.Cook(ctx, m.RecipeID, made)
 	if errors.Is(err, baserecipe.ErrCycle) {
-		return ownSteps(m.RecipeID, rec, err), nil
+		return ownSteps(m.RecipeID, rec, err, true), nil
 	}
 	if err != nil {
 		return nil, err
@@ -255,9 +268,21 @@ func (s *Source) composeMeal(ctx context.Context, m plan.Meal, rec recipe.Recipe
 	return comp.Steps, nil
 }
 
-// ownSteps is a Recipe's own Steps in the composed form (no Base recipe Steps), with a warning for the cycle that cost them.
-func ownSteps(recipeID int64, rec recipe.Recipe, cause error) []baserecipe.ComposedStep {
-	slog.Default().Warn("recipe with a Base recipe cycle: its own Steps only", "recipe", recipeID, "err", cause)
+// hasBaseLine reports whether a Recipe calls for a Base recipe.
+func hasBaseLine(rec recipe.Recipe) bool {
+	for _, ln := range rec.Lines {
+		if ln.Base != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// ownSteps is a Recipe's own Steps in the composed form (no Base recipe Steps); warn logs the cycle that cost them.
+func ownSteps(recipeID int64, rec recipe.Recipe, cause error, warn bool) []baserecipe.ComposedStep {
+	if warn {
+		slog.Default().Warn("recipe with a Base recipe cycle: its own Steps only", "recipe", recipeID, "err", cause)
+	}
 	out := make([]baserecipe.ComposedStep, 0, len(rec.Steps))
 	for _, st := range rec.Steps {
 		out = append(out, baserecipe.ComposedStep{Step: baserecipe.Step{Text: st.Text, Kind: st.Kind,
