@@ -57,10 +57,30 @@ describe('P12: content under the bottom bar', () => {
     expect(findings({ navOverlap: [] }, 390).map((x) => x.rule)).not.toContain('P12')
     expect(findings({ navOverlap: null }, 1024).map((x) => x.rule)).not.toContain('P12')
   })
-  it('the driver probes it: scrolls to the end, measures main content against nav.bottom-bar, returns navOverlap', () => {
+  it('the driver probes it with the shared probe file: scrolls to the end, measures main content against nav.bottom-bar', () => {
+    // round 2: one probe (scripts/lib/page-layout-nav-probe.js, `feederNavProbe`), evaluated by the driver and exercised on
+    // static pages by scripts/test/ds-layout_test.sh
     expect(driver).toMatch(/navOverlap/)
-    expect(driver).toMatch(/nav\.bottom-bar|\.bottom-bar/)
-    expect(driver).toMatch(/scrollTo\([^)]*scrollHeight/)
+    expect(driver).toMatch(/page-layout-nav-probe\.js/)
+    let probe = ''
+    try {
+      probe = readFileSync(resolve(cwd, '../scripts/lib/page-layout-nav-probe.js'), 'utf8')
+    } catch {
+      /* missing: the expectations below fail */
+    }
+    expect(probe).toMatch(/feederNavProbe/)
+    expect(probe).toMatch(/nav\.bottom-bar/)
+    expect(probe).toMatch(/scrollTo\([^)]*scrollHeight/)
+  })
+  it('round 2: a box intersecting the bar counts, also one entirely under it; only a box below the bar\'s bottom edge is skipped', () => {
+    let probe = ''
+    try {
+      probe = readFileSync(resolve(cwd, '../scripts/lib/page-layout-nav-probe.js'), 'utf8')
+    } catch {
+      /* missing */
+    }
+    expect(probe).not.toMatch(/b\.top\s*>=\s*top\b/) // the beta.5.1 skip that hid a fully covered button
+    expect(probe).toMatch(/\.bottom\b/) // compares against the bar's bottom edge
   })
 })
 

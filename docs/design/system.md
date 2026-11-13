@@ -34,9 +34,10 @@ Colour means something, and an accent-derived colour never imitates a status col
 | Role | Tokens | Goes on |
 |---|---|---|
 | Accent, solid | `--color-accent` / `--color-on-accent` | **The one primary action** of a region (Scan, Cooked, Confirm), the current nav item, the today ring. Nothing else. |
-| Accent container | `--color-soft`, `--color-soft-strong` / `--color-accent-text` | Selected filters, picture monograms, the "Lines to get" metric, the hero **in dark mode** |
-| Neutral container | `--color-surface-2` / `--color-text` | Secondary buttons, **why chips** (accent-coloured icon on a neutral fill), the date badge, Slot Rule chips |
-| Success | `--status-success-*` | A ticked Line (filled tick, struck-through name), Cooked, the Zero-waste streak, the Shop progress fill |
+| Accent container | `--color-soft`, `--color-soft-strong` / `--color-accent-text` | Selected filters and the hero **in dark mode**. Never a monogram, a metric tile or a chip. |
+| Neutral container | `--color-surface-2` / `--color-text`, `--color-muted` | Secondary buttons, **why chips** (accent-coloured icon on a neutral fill), the date badge, Slot Rule chips, **picture monograms** (muted letter), the progress track |
+| Neutral surface | `--color-surface` / `--color-text`, `--color-muted` | **Metric tiles** that carry no status ("Left to get", the estimated total, "Lines to get") |
+| Success | `--status-success-*` | A ticked Line (filled tick, struck-through name), Cooked, the Zero-waste streak tile, the progress fill of a metric tile (`--status-success-fg`: the solid is made for white text and is under 3:1 on dark surfaces) |
 | Leftover | `--status-leftover-*` | **Filled** for "Leftover from …", **outlined** for "Leftover for …". A Leftover is always teal. |
 | Spoil / danger | `--status-spoil-*`, `--status-danger-*` | Use soon, went off, Throw out |
 | Info | `--color-info-*` | Open questions: the To confirm badge, the "not marked Cooked yet" notice, and its row hints |
@@ -47,7 +48,9 @@ Colour means something, and an accent-derived colour never imitates a status col
 - In light mode it is accent solid with on-accent text. The why chips on it are `on-accent` at 18 % over the accent.
 - In dark mode it is the **accent container** (`--color-soft-strong`) with `--color-text`, and its Cook button becomes accent solid. A full-width tile of the pastel dark accent glares at night.
 
-**Contrast.** Every pair above is checked at WCAG AA for each palette in `theme/palette.golden.ts`, light and dark.
+**Where the accent goes.** The accent is reserved for the one primary action, the current nav item and the today ring (and the light hero). A screen with a red or orange accent must not look alarmed: in the round-2 Shop review with Tomato, accent-soft monograms on every row and an accent-soft "Left to get" tile read as alarm. So **metric tiles are neutral or status-toned, never accent-soft**, and monograms are neutral.
+
+**Contrast.** Every pair above is checked at WCAG AA for each palette in `theme/palette.golden.ts`, light and dark (`theme/contrast.test.ts`). This includes the why chip's text and icon on surface-2, the muted metric label on surface, the outlined Leftover chip on surface and page background, and the success progress fill on its track.
 
 ## 3. List rows (`ListRow`)
 
@@ -82,7 +85,8 @@ grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-*), 100%), 1f
 | `wide` | `--tile-min-wide` | 28 rem | Two-up feature tiles | 1 / 1 / 2 |
 
 - **Width never comes from status.** No tile spans extra columns because it is "today" or "important". Today in Plan is marked by its accent ring and an accent name. The hero, when it spans, spans the **full row** (`span="full"`).
-- **Small tiles come only as a metric strip** (`min="metric"`, `auto-fit`) that fills its row. On a phone the strip is always one row of up to three. A half-width orphan cannot happen.
+- **Small tiles come only as a metric strip** (`min="metric"`, `auto-fit`) that fills its row and holds **at most three tiles per row at any width**: a track is never narrower than a third of the row (`calc((100% - 2 * var(--bento-gap)) / 3)`). On a phone the strip is one row of up to three. A half-width orphan cannot happen.
+- **Metric tiles are neutral (surface) or status-toned** (the Zero-waste streak is success), never accent-soft (§2).
 - **Gaps.** `--bento-gap` between tiles. A tile's content is top-aligned.
 
 **Decisions taken (2026-11-12):**
@@ -96,12 +100,15 @@ grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-*), 100%), 1f
 ```
 
 1. **At most one primary** (filled accent) and **one secondary** per group. Everything else goes into a **⋮ Menu** named "More for <label>": Not cooked, Not needed, Delete, and any other rare or destructive action.
-2. **Wide container** (the host is at least 35 rem wide; a container query on `.action-group-host`):
-   - the group sits at the end of its row;
+2. **The container is the caller's row or tile.** `<ActionGroup>` renders the group itself (`.action-group`, `role="group"`) with no wrapper. The container query reads the nearest inline-size container with a **definite width**:
+   - a `ListRow` (`.list-row` is a container);
+   - any other row or tile: the caller adds `.action-group-host` to it. Never put it on a shrink-to-fit box (an inline-flex item, an auto-width flex child): under `container-type: inline-size` such a box has no intrinsic width and collapses to 0 px. That is what the round-2 review found when the host was the group's own wrapper inside a flex row.
+3. **Wide container** (at least 35 rem):
+   - the group sits at the end of its row (`margin-inline-start: auto`, `flex: none`), on one line;
    - buttons keep their natural width;
-   - each group has a fixed inline size, `--action-group-inline-size`, so every row's actions line up in one column.
-3. **Narrow container:** the group takes its own line as a grid of equal tracks (`1fr 1fr 44px`). It **never** `flex-wrap`s raggedly.
-4. **Icon actions on a row** (Cook, Swap, Pin, ⋮) form one icon set, always at the row's end, in that fixed order. They are never on a line of their own.
+   - the group has a **minimum** inline size, `--action-group-min-inline-size` (18 rem, sized to the widest real group: "All Cooked" with its icon + "Adjust" + ⋮), so the groups of a list line up in one column without ever overflowing.
+4. **Narrow container:** the group takes its own line as a grid of equal tracks (`1fr 1fr 44px`, no minimum). It **never** `flex-wrap`s raggedly, and its buttons never overflow their track.
+5. **Icon actions on a row** (Cook, Swap, Pin, ⋮) form one icon set, always at the row's end, in that fixed order. They are never on a line of their own.
 
 ## 6. Chips
 
@@ -126,9 +133,9 @@ grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-*), 100%), 1f
 
 - **Never an empty box.** An Ingredient or Product without a Picture, or whose Picture fails to load, shows a **monogram**:
   - its first letter, uppercase, weight 800;
-  - `--color-accent-text` on `--color-soft`;
+  - `--color-muted` on the neutral `--color-surface-2`, **never the accent** (§2): a list of monograms must not tint every row;
   - the same size and radius as a picture, so rows stay aligned.
-- `Thumb` takes the `name` it stands for.
+- `Thumb` takes the `name` it stands for. It is decorative (`aria-hidden`) because the name is shown beside it; given a `label`, the monogram is an image named by it (`role="img"`, `aria-label`), as a Picture would be.
 - Recipes keep the brief's "Tag icon + initial" tile (`RecipeThumb`).
 
 ## 8. Spacing and the nav
@@ -138,7 +145,8 @@ grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-*), 100%), 1f
 - **Inside a tile:** padding is `--tile-pad`, never overridden. Header to content is `--space-3`. Rows are separated by a 1 px `--color-line` divider, with no ad-hoc margins. Raw `px` / `rem` gaps are not allowed in feature CSS.
 - **Nav clearance.**
   - Below 1024 px the page ends at least `--space-6` above the floating bottom bar: `--nav-clearance` = nav height + inset + `--space-6` + the safe area.
-  - At the end of a scroll, no content box of `<main>` may be under the bar. The page-layout guard checks this as rule **P12**.
+  - At the end of a scroll, no content box of `<main>` may **intersect** the bar: a box partly or entirely under it is a finding; only a box that starts below the bar's bottom edge is ignored. The page-layout guard checks this as rule **P12**, with the probe in `scripts/lib/page-layout-nav-probe.js`.
+- **The page body** is a grid of one shrinkable track (`grid-template-columns: minmax(0, 1fr)`), its sections spaced by `--section-gap`.
 
 ## 9. The To confirm pattern
 
@@ -161,9 +169,10 @@ Decided 2026-11-12: option A, one decision per Meal Slot. The per-Course checkli
 
 | Guard | Where it lives | What it checks |
 |---|---|---|
-| `type-scale` | `scripts/check-ui.sh` | A `font-size` / `font` other than a `--text-*` token, or `inherit`. |
+| `type-scale` | `scripts/check-ui.sh` | A `font-size` / `font` other than a `--text-*` token, or `inherit`, outside a token block. A token block is a rule whose every selector matches `^(:root\|html(\[[^\]]*\])*)$`. |
 | `opacity-muting` | `scripts/check-ui.sh` | `opacity` between 0.5 and 0.95 outside a disabled state (use `--color-muted`). |
-| `word-break` | `scripts/check-ui.sh` | `hyphens: auto`, `overflow-wrap: anywhere / break-word`, `word-break: break-all / break-word` on anything but a one-token value (email, URL, link, barcode, code). |
+| `word-break` | `scripts/check-ui.sh` | `hyphens: auto`, `overflow-wrap: anywhere / break-word`, `word-break: break-all / break-word` unless the **last compound** of the selector names a one-token value (email, URL, link, barcode, code). A selector list is judged per selector. |
 | `check-ui.rules` | `scripts/check-ui.rules` | All three rules **fail** in `web/src/ui` and in the screens redone in beta.5.1 (`shop`, `today`, `plan`). They warn elsewhere, until each screen's wave adds its folder. |
 | Page-layout guard | `scripts/check-page-layout.sh` | The quick profile includes the iPad portrait sizes 834×1194 and 1024×1366. The seed uses long, realistic names and a "not marked Cooked yet" hint. **P11** (mid-word break, clipped text) and **P12** (content under the bottom bar) run at every size. |
 | Primitive contracts | `web/src/ui/*.ds.test.tsx` | The primitive contracts above. |
+| Real layout | `scripts/test/ds-layout_test.sh` | Headless Chrome on static fixtures with the real stylesheets. ActionGroup in a flex row (not 0 px wide, no overflow, aligned), the metric strip (at most 3 per row) and the P12 probe (a covered button is a finding). |

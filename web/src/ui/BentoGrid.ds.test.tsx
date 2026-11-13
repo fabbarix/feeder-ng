@@ -36,14 +36,20 @@ describe('BentoGrid: minimum tile width', () => {
     }
   })
 
-  it('a metric strip fills its row (auto-fit), so small tiles are never a half-width orphan', () => {
-    const d = declarations(css, ".bento-grid[data-min='metric']")
-    expect(d['grid-template-columns']).toBe('repeat(auto-fit, minmax(min(var(--tile-min-metric), 100%), 1fr))')
+  // round 2: "up to three" (system.md §4) is a cap, not only a phone rule: a track is never narrower than a third of the row.
+  const CAP = 'calc((100% - 2 * var(--bento-gap)) / 3)'
+  it('a metric strip fills its row (auto-fit) and holds at most 3 tiles per row: each track is at least a third of the row', () => {
+    const v = declarations(css, ".bento-grid[data-min='metric']")['grid-template-columns'] ?? ''
+    expect(v).toMatch(/^repeat\(auto-fit, minmax\(/)
+    expect(v).toContain('var(--tile-min-metric)')
+    expect(v).toContain(CAP)
   })
 
-  it('a metric strip is one row of up to three on a phone (< 600 px): equal tracks, not two and an orphan', () => {
+  it('on a phone (< 600 px) the strip is one row of up to three equal tracks, with the same cap', () => {
     const phone = code(css).match(/@media\s*\(max-width:\s*599px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
-    expect(phone).toMatch(/\.bento-grid\[data-min='metric'\]\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(0,\s*1fr\)\)/)
+    const v = phone.match(/\.bento-grid\[data-min='metric'\]\s*\{[^}]*grid-template-columns:\s*([^;]+);/)?.[1] ?? ''
+    expect(v).toMatch(/^repeat\(auto-fit, minmax\(/)
+    expect(v).toContain(CAP)
   })
 
   it('has no column-count rules left (no data-columns selector)', () => {

@@ -109,8 +109,10 @@ describe('ListRow anatomy: stylesheet', () => {
     expect(sub['color']).toBe('var(--color-muted)')
   })
 
-  it('the control catches the pointer above the whole-row target', () => {
-    expect(declarations(css, '.list-row__control')['pointer-events']).toBe('auto')
+  it('the control catches the pointer above the whole-row target: one declaration, at the weight that beats the lift', () => {
+    // `.list-row > :not(.list-row__target)` (0,2,0) sets pointer-events none; only a (0,2,0) rule after it restores the control.
+    expect(declarations(css, '.list-row > .list-row__control')['pointer-events']).toBe('auto')
+    expect(declarations(css, '.list-row__control')['pointer-events']).toBeUndefined() // round 2: the dead duplicate goes
   })
 
   it('styles.css defines --row-min (64px) and --row-value-min (5.5rem; 4.25rem below 600 px)', () => {

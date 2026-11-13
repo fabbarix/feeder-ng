@@ -1,5 +1,5 @@
 // DS-A (docs/design/system.md §7): a missing Picture is never an empty box. Thumb takes the `name` it stands for and, without a
-// Picture (or after a load error), draws a monogram: the first letter, uppercase, weight 800, accent-text on soft, same box.
+// Picture (or after a load error), draws a monogram: the first letter, uppercase, weight 800, muted on surface-2 (round 2), same box.
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Thumb } from './index'
@@ -48,14 +48,37 @@ describe('Thumb monogram', () => {
     expect(box(container).textContent).toBe('')
   })
 
-  it('the monogram is centred, weight 800, accent-text on soft; it scales with the box', () => {
+  it('the monogram is centred, weight 800, muted text on the neutral surface-2 (round 2: never the accent); it scales with the box', () => {
+    // With a red accent (Tomato) an accent-soft monogram on every row read as alarm (review-shop/shop-1024-light-tomato.png).
     const d = declarations(css, ".thumb[data-monogram='true']")
     expect(d['display']).toBe('grid')
     expect(d['place-items']).toBe('center')
-    expect(d['background']).toBe('var(--color-soft)')
-    expect(d['color']).toBe('var(--color-accent-text)')
+    expect(d['background']).toBe('var(--color-surface-2)')
+    expect(d['color']).toBe('var(--color-muted)')
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/--color-(soft|accent)/)
     expect(d['font-weight']).toBe('800')
     expect(declarations(css, ".thumb[data-size='72'][data-monogram='true']")['font-size']).toBe('var(--text-title-1-size)')
     expect(declarations(css, ".thumb[data-size='40'][data-monogram='true']")['font-size']).toBe('var(--text-title-3-size)')
+  })
+})
+
+describe('Thumb monogram with a label (DS-A round 2)', () => {
+  it('with `label` and no Picture, the monogram is an image named by the label (role="img", aria-label), not hidden', () => {
+    const { container } = render(<Thumb name="Feta" label="Feta, no picture yet" />)
+    const el = box(container)
+    expect(el).toHaveAttribute('role', 'img')
+    expect(el).toHaveAttribute('aria-label', 'Feta, no picture yet')
+    expect(el).not.toHaveAttribute('aria-hidden')
+  })
+  it('after a load error a labelled Thumb keeps its name the same way', () => {
+    const { container } = render(<Thumb name="Feta" label="Feta" imageUrl="/api/images/cccc" />)
+    fireEvent.error(container.querySelector('img')!)
+    expect(box(container)).toHaveAttribute('role', 'img')
+    expect(box(container)).toHaveAttribute('aria-label', 'Feta')
+  })
+  it('without `label` it stays decorative (aria-hidden, no role)', () => {
+    const { container } = render(<Thumb name="Feta" />)
+    expect(box(container)).toHaveAttribute('aria-hidden', 'true')
+    expect(box(container)).not.toHaveAttribute('role')
   })
 })

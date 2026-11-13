@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # DS-A (docs/design/system.md §1, §3, §10; ADR 0016): three new check-ui rules.
-#   type-scale      a font-size / font that is not a --text-* token (or inherit), outside a token block (:root / html[...])
+#   type-scale      a font-size / font that is not a --text-* token (or inherit), outside a token block: a rule whose every
+#                   selector is ^(:root|html(\[[^\]]*\])*)$ (":root .x", "html .x" and "[data-theme] .x" are feature rules)
 #   opacity-muting  opacity between 0.5 and 0.95 (or 50%..95%) on a selector that is not a disabled state: use --color-muted
 #   word-break      hyphens: auto, overflow-wrap / word-wrap: anywhere|break-word, word-break: break-all|break-word, unless the
-#                   selector names a one-token value (email, url, link, barcode, code)
+#                   the LAST compound of the selector names a one-token value (email, url, link, barcode, code); a selector
+#                   list is judged per selector, one violation per offending selector
 # Each fails in web/src/ui and the screens redone in beta.5.1 (shop, today, plan) and warns elsewhere (check-ui.rules fail_paths).
 # Kept apart from check-ui_test.sh so the older rules' tests stay green while these are red.
 set -uo pipefail
@@ -21,7 +23,9 @@ mkdir -p "$TMP/noallow"
 
 OLD=(native-ui phosphor colour-literals class-hooks sizing glossary)
 NEW=(type-scale opacity-muting word-break)
-declare -A EXPECT=([type-scale]=4 [opacity-muting]=3 [word-break]=5)
+# round 2: type-scale exempts only a bare token block (every selector ^(:root|html([...])*)$); word-break reads the last compound
+# selector, per selector of a group (one violation per offending selector).
+declare -A EXPECT=([type-scale]=7 [opacity-muting]=3 [word-break]=9)
 
 run_ui() { # ROOT RULES_FILE -> RC, OUTPUT
   OUTPUT="$(CHECK_UI_ALLOW_DIR="$TMP/noallow" CHECK_UI_OUT="$TMP/out.txt" bash "$SCRIPTS/check-ui.sh" --root "$1" --rules "$2" 2>&1)"
@@ -67,6 +71,8 @@ run_ui "$FIX/opacity-muting/fail" "$(rules_file opacity-muting warn)"
 grep -q -- '--color-muted' "$TMP/out.txt" && ok || bad "opacity-muting: the message must point to --color-muted"
 run_ui "$FIX/word-break/fail" "$(rules_file word-break warn)"
 grep -Eq 'line-tile__title|plan-meal__recipe' "$TMP/out.txt" && ok || bad "word-break: the report must name the selector"
+grep -q "recipe-title" "$TMP/out.txt" && ok || bad "word-break: in '.share-url, .recipe-title' the report names .recipe-title"
+grep -Eq "word-break.*'\.share-url'" "$TMP/out.txt" && bad "word-break: '.share-url' in a group stays exempt" || ok
 
 # --- the header documents the three rules, and RULE_NAMES knows them
 for r in "${NEW[@]}"; do
