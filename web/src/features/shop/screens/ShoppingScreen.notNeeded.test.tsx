@@ -84,11 +84,9 @@ describe('ShoppingScreen Not needed', () => {
     expect(screen.queryByRole('button', { name: /Actions for/ })).toBeNull()
   })
 
-  it('names the unconfirmed past meals of a Line, and ships without "Mark it" until the Plan page can open To confirm', () => {
+  it('names the unconfirmed past meals of a Line (the Mark it button: ShoppingScreen.markIt.test)', () => {
     show(makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] })] }))
     expect(screen.getByText('Includes Tue Dinner, not marked Cooked yet')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Mark it/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /Mark it/ })).toBeNull()
   })
 
   it('a list saved by an older version (no notNeeded, no pastPlannedMeals) renders as before', () => {

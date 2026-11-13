@@ -96,13 +96,13 @@ export function useMealSlotsPage() {
     }
   }
 
-  const saveDate = async (entries: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => {
+  const saveDate = async (entries: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number) => {
     try {
-      await attendance.save(entries, courses)
+      await attendance.save(entries, courses, guests)
       toast.show(settingsStrings.attendanceSaved, { status: 'success' })
       setDateEditor(null)
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, dateEditor?.slot.name), { status: 'error' })
     }
   }
 
@@ -112,7 +112,7 @@ export function useMealSlotsPage() {
       toast.show(settingsStrings.attendanceReset, { status: 'success' })
       setDateEditor(null)
     } catch (err) {
-      toast.show(errorMessage(err), { status: 'error' })
+      toast.show(errorMessage(err, dateEditor?.slot.name), { status: 'error' })
     }
   }
 

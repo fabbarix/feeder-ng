@@ -3,6 +3,7 @@ import { planStrings as s } from '../strings'
 import type { AttendanceMember, PlanCourse, PlannedMeal, PlanSlot, SlotKey } from '../types'
 import type { PlanChip } from './chips'
 import { mayResolve } from './resolve'
+import { dateChoices as dateChoicesOf, timeChoiceLabel } from './slotDate'
 
 /** One visible row of a slot block. */
 export interface CourseRowModel {
@@ -85,18 +86,35 @@ export interface SlotMenuModel {
   notCookedSlot: boolean
   /** "Add <Course>" per addable Course, key = courseKey. */
   add: { key: SlotKey; label: string }[]
+  /** B5-F1: the per-date choices (lib/slotDate dateChoices). Present only when `slotMenu` was asked for them (then all three keys are set). */
+  whosEating?: boolean
+  notServed?: boolean
+  /** "Time today" / "Time on Thu", or null when the time cannot change. */
+  time?: string | null
 }
 
-/** The slot menu, or null when it would be empty (a one-Course slot never has one). */
-export function slotMenu(slot: PlanSlot, today: string): SlotMenuModel | null {
-  if (slotCourses(slot).length < 2) return null
+/**
+ * The slot menu, or null when no entry applies. Without `dateChoices` it is as before (a one-Course slot never has one).
+ * With `dateChoices` (the screen wired the per-date handlers) it also holds Who's eating, Time today and Not served per
+ * lib/slotDate dateChoices, so a one-Course slot has a menu too (reconcile section 9, Q3).
+ */
+export function slotMenu(slot: PlanSlot, today: string, dateChoices = false): SlotMenuModel | null {
+  if (!dateChoices && slotCourses(slot).length < 2) return null
   const wholeSlot = plannedMeals(slot).length >= 2 && mayResolve(slot.date, today)
   // A covered Course is not offered: a Whole meal already serves it.
   const add = addableCourses(slot)
     .filter((c) => c.coveredBy === null)
     .map((c) => ({ key: courseKey(slot, c), label: s.addCourse(c.name) }))
-  if (!wholeSlot && add.length === 0) return null
-  return { markAllCooked: wholeSlot, notCookedSlot: wholeSlot, add }
+  const choices = dateChoices ? dateChoicesOf(slot, today) : null
+  const anyDate = choices !== null && (choices.whosEating || choices.notServed || choices.time)
+  if (!wholeSlot && add.length === 0 && !anyDate) return null
+  const menu: SlotMenuModel = { markAllCooked: wholeSlot, notCookedSlot: wholeSlot, add }
+  if (choices) {
+    menu.whosEating = choices.whosEating
+    menu.notServed = choices.notServed
+    menu.time = choices.time ? timeChoiceLabel(slot, today) : null
+  }
+  return menu
 }
 
 /** The row that takes the hero picture on Today: the main Course's row when its Planned Meal is still to cook, else the first row whose Planned Meal is; null when none. */

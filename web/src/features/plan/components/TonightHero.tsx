@@ -6,7 +6,7 @@ import { compactRows, heroRow, plannedMeals, slotCourses, wholeMealChip } from '
 import type { HeroAction, HeroDay } from '../lib/hero'
 import { heroCookLabel, heroDayOverline, heroPhase, heroStartBy, slotCookLabel, slotIcon, slotStartBy } from '../lib/hero'
 import { planStrings as s } from '../strings'
-import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
+import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 import { CourseRow, type CourseRowHandlers } from './CourseRow'
 import { SlotMenu, type SlotMenuProps } from './SlotMenu'
 import '../plan.css'
@@ -37,6 +37,8 @@ export interface TonightHeroProps {
   onMarkAllCooked?: (slot: SlotDayKey) => void
   /** The slot menu's other actions; the menu shows when given. */
   menu?: Pick<SlotMenuProps, 'onNotCookedSlot' | 'onAddCourse'>
+  /** B5-F1: the per-date choices; the hero (a one-Course slot too) then has the slot menu with Who's eating, the time and Not served. */
+  dateActions?: SlotDateActions
 }
 
 /**
@@ -51,7 +53,7 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
 }
 
 /** A slot that serves one Course: the single-Recipe hero, as before. */
-function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
+function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', dateActions }: TonightHeroProps): ReactNode {
   const row = heroRow(slot)
   const meal = row?.course.meal ?? null
   const phrase = usePhraseContext(slot.date)
@@ -67,6 +69,11 @@ function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy =
 
   return (
     <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+      {dateActions ? (
+        <div className="plan-hero__menu">
+          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={noop} onAddCourse={noop} dateActions={dateActions} />
+        </div>
+      ) : null}
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
@@ -125,7 +132,7 @@ const noop = () => {}
  * After the slot time with two or more Courses to cook: "<Slot> cooked?" and one primary Mark all Cooked; with one left
  * it is a one-Course hero whose Yes, Cooked and Adjust report that Course.
  */
-function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu }: TonightHeroProps): ReactNode {
+function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu, dateActions }: TonightHeroProps): ReactNode {
   const hero = heroRow(slot)
   const meal = hero?.course.meal
   const phrase = usePhraseContext(slot.date)
@@ -144,9 +151,16 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
 
   return (
     <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
-      {menu ? (
+      {menu || dateActions ? (
         <div className="plan-hero__menu">
-          <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={menu.onNotCookedSlot} onAddCourse={menu.onAddCourse} />
+          <SlotMenu
+            slot={slot}
+            today={today}
+            onMarkAllCooked={onMarkAllCooked}
+            onNotCookedSlot={menu?.onNotCookedSlot ?? noop}
+            onAddCourse={menu?.onAddCourse ?? noop}
+            dateActions={dateActions}
+          />
         </div>
       ) : null}
       <div className="plan-hero__body">

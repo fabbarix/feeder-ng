@@ -4,6 +4,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import type { UnitSystem } from '../../lib/units'
 import { heroSelection, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
+import { notServedToday } from '../plan/lib/slotDate'
 import type { HeroAction, HeroDay } from '../plan'
 import type { Leftover, PlanEntry, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
@@ -21,6 +22,7 @@ export const ShoppingListSeam = ShoppingScreen
 export interface TodayPlanCounts {
   /** Household date (YYYY-MM-DD), for the date under the title. */
   today: string
+  /** A Planned Meal to show, or a Meal Slot Not served today (its compact row takes the Tonight place). */
   hasNextMeal: boolean
   toConfirm: number
   couldntPlan: number
@@ -49,6 +51,8 @@ export interface TodayTileData {
   couldntPlan: PlanEntry[]
   /** R13: the whole plan, so "every dinner" is measured against it. */
   planSlots?: PlanSlot[]
+  /** B5-F1: today's Meal Slots that are Not served (plan lib/slotDate notServedToday): the Tonight tile shows each as a compact row. */
+  notServedToday?: PlanSlot[]
   leftovers: Leftover[]
   planToday: string
   spoiled: StockLot[]
@@ -84,6 +88,7 @@ export function useTodayTileData(): TodayTileData {
     toConfirm: toConfirm.slots,
     couldntPlan: couldntPlan.slots,
     planSlots: plan.slots,
+    notServedToday: notServedToday(plan.slots, plan.today),
     leftovers: leftovers.leftovers,
     planToday: plan.today,
     spoiled: spoiled.data ?? [],
@@ -108,7 +113,7 @@ export function useTodayPlan(): TodayPlanCounts {
   const d = useTodayTileData()
   return {
     today: d.planToday,
-    hasNextMeal: d.nextSlot !== null,
+    hasNextMeal: d.nextSlot !== null || (d.notServedToday ?? []).length > 0,
     toConfirm: d.toConfirm.length,
     couldntPlan: d.couldntPlan.length,
     leftovers: d.leftovers.length,

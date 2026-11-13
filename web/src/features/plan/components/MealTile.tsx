@@ -6,9 +6,11 @@ import { dayChip } from '../lib/chips'
 import { courseKey, courseRows, plannedMeals, slotCourses, slotMenu, type CourseRowModel } from '../lib/courses'
 import { compactAction, mayCook } from '../lib/resolve'
 import { slotIcon } from '../lib/hero'
+import { timeCaption } from '../lib/slotDate'
 import { planStrings as s } from '../strings'
-import type { PlannedMeal, PlanSlot, SlotDayKey, SlotKey, Unfilled } from '../types'
+import type { PlannedMeal, PlanSlot, SlotDateActions, SlotDayKey, SlotKey, Unfilled } from '../types'
 import { CourseRow } from './CourseRow'
+import { NotServedRow } from './NotServedRow'
 import { SlotMenu } from './SlotMenu'
 import '../plan.css'
 
@@ -28,6 +30,8 @@ export interface MealTileProps {
   onMarkAllCooked?: (slot: SlotDayKey) => void
   onNotCookedSlot?: (slot: SlotDayKey) => void
   onAddCourse?: (key: SlotKey) => void
+  /** B5-F1: the per-date choices (slot menu entries, Plan <Slot> again on a Not served slot); a Not served slot shows NotServedRow, a date with its own time shows "20:15 · usually 19:30". */
+  dateActions?: SlotDateActions
 }
 
 /**
@@ -39,7 +43,9 @@ export interface MealTileProps {
  * block's title on a compact tile) and a tertiary "Choose a Recipe". No Mark as Cooked, Pin or Confirm here: the sheet has them.
  */
 export function MealTile(props: MealTileProps): ReactNode {
-  const { slot, today, compact = false, onCook, onMarkAllCooked = noop, onNotCookedSlot = noop, onAddCourse = noop } = props
+  const { slot, today, compact = false, onCook, onMarkAllCooked = noop, onNotCookedSlot = noop, onAddCourse = noop, dateActions } = props
+  // B5-F1: a Not served date is one compact row with "Plan <Slot> again" (no Courses, no reasons).
+  if (dateActions && slot.notServed) return <NotServedRow slot={slot} offline={dateActions.offline} onPlanAgain={dateActions.onPlanAgain} />
   const rows = courseRows(slot)
   if (slotCourses(slot).length > 1 && rows.length > 0) {
     return (
@@ -55,6 +61,7 @@ export function MealTile(props: MealTileProps): ReactNode {
         onMarkAllCooked={onMarkAllCooked}
         onNotCookedSlot={onNotCookedSlot}
         onAddCourse={onAddCourse}
+        dateActions={dateActions}
       />
     )
   }
@@ -63,7 +70,7 @@ export function MealTile(props: MealTileProps): ReactNode {
   const single = lone ? lone.course : slotCourses(slot).find((c) => c.main)
   if (!single) return null
   const key: SlotKey = lone ? lone.key : courseKey(slot, single)
-  const menu = compact ? null : slotMenu(slot, today)
+  const menu = compact ? null : slotMenu(slot, today, dateActions !== undefined)
   return (
     <SingleTile
       slot={slot}
@@ -76,7 +83,7 @@ export function MealTile(props: MealTileProps): ReactNode {
       onSwap={props.onSwap}
       onChoose={props.onChoose}
       onCook={onCook}
-      menu={menu ? <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} /> : null}
+      menu={menu ? <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} /> : null}
     />
   )
 }
@@ -116,6 +123,7 @@ function SingleTile({ slot, meal, unfilled, keyOf: key, today, compact, onOpen, 
           <span className="plan-meal__slot">
             <Icon name={slotIcon(slot.name)} size={16} />
             <span className="plan-meal__name">{slot.name}</span>
+            <TimeCaption slot={slot} />
           </span>
         )}
         {compact ? (
@@ -182,13 +190,20 @@ interface SeveralCoursesProps {
   onMarkAllCooked: (slot: SlotDayKey) => void
   onNotCookedSlot: (slot: SlotDayKey) => void
   onAddCourse: (key: SlotKey) => void
+  dateActions?: SlotDateActions
+}
+
+/** B5-F1: a date with its own time reads "20:15 · usually 19:30" under the Meal Slot name (the usual time shows nothing). */
+function TimeCaption({ slot }: { slot: PlanSlot }): ReactNode {
+  const caption = timeCaption(slot)
+  return caption ? <span className="plan-meal__caption">{caption}</span> : null
 }
 
 /**
  * A slot with several Course rows (spec 7.5): the slot named once, Cook once on the head (it opens the slot's timeline),
  * then a list of Course rows, each with its own Swap (a compact week shows none), and the slot menu.
  */
-function SeveralCourses({ slot, rows, today, compact, onOpen, onSwap, onChoose, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse }: SeveralCoursesProps): ReactNode {
+function SeveralCourses({ slot, rows, today, compact, onOpen, onSwap, onChoose, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions }: SeveralCoursesProps): ReactNode {
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const cookable = plannedMeals(slot).length > 0 && (compact ? compactAction(slot.date, today) === 'cook' : mayCook(slot.date, today))
   return (
@@ -203,6 +218,7 @@ function SeveralCourses({ slot, rows, today, compact, onOpen, onSwap, onChoose, 
           <span className="plan-meal__slot">
             <Icon name={slotIcon(slot.name)} size={16} />
             <span className="plan-meal__name">{slot.name}</span>
+            <TimeCaption slot={slot} />
           </span>
         )}
         {cookable ? (
@@ -210,7 +226,7 @@ function SeveralCourses({ slot, rows, today, compact, onOpen, onSwap, onChoose, 
             <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(slotKey)} />
           </span>
         ) : null}
-        {compact ? null : <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} />}
+        {compact ? null : <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} />}
       </div>
       <ul aria-label={`${slot.name} Courses`} className="plan-meal__courses">
         {rows.map((row) => (

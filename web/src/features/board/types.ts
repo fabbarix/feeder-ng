@@ -48,6 +48,8 @@ export interface SlotLike {
   courses?: CourseLike[]
   cookMinutes?: number | null
   startBy?: string
+  /** B5-F1 (ADR 0014): `time` and `at` are the date's effective time; the slot is Not served on this date. */
+  notServed?: boolean
 }
 
 /** CRS F: one Course of a slot, as the board needs it. */
@@ -58,7 +60,7 @@ export interface CourseLike {
   meal: { recipeId: number; recipeName: string; batches: number; portions: number; state: 'planned' | 'cooked' | 'skipped'; wholeMeal?: boolean; relaxed?: boolean } | null
   unfilled?: { reason: string } | null
   coveredBy?: { courseId: number; recipeId: number; recipeName: string } | null
-  unserved?: 'optional' | 'no_course_attendance' | null
+  unserved?: 'optional' | 'no_course_attendance' | 'not_served' | null
 }
 
 export interface LeftoverLike {

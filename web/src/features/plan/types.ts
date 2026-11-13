@@ -148,7 +148,8 @@ export interface CoveredBy {
 }
 
 /** CRS F: why a Course with no Planned Meal has no reason either. */
-export type Unserved = 'optional' | 'no_course_attendance'
+/** `not_served` (ADR 0014): the whole Meal Slot is Not served on that date; every Course of it carries it. */
+export type Unserved = 'optional' | 'no_course_attendance' | 'not_served'
 
 /**
  * CRS F (spec 16): one Course of a slot on a date. At most one of meal, unfilled, coveredBy and unserved is set.
@@ -184,6 +185,12 @@ export interface PlanSlot {
   cookMinutes?: number | null
   /** CRS F: "HH:MM" to start the timeline by (hero "start 18:45"). */
   startBy?: string
+  /** B5-F1 (ADR 0014): `time` and `at` are the date's EFFECTIVE time; `usualTime` is the Meal Slot's usual one (equal when the date has no time of its own). */
+  usualTime?: string
+  /** B5-F1: the Meal Slot is Not served on this date (marked, or its Who's eating was emptied). */
+  notServed?: boolean
+  /** B5-F1: Guests eating on this date (0 to 20); `portions` already includes them. */
+  guests?: number
 }
 
 /** One entry of the flat to-confirm and couldn't-plan lists: a slot for one Course, with that Course's own meal or reason. */
@@ -332,4 +339,46 @@ export interface MealSlotChoice {
   time: string
   /** CRS F: the Courses the slot serves, in its order (GET /api/meal-slots `courses`). */
   courses?: { id: number; name: string; main: boolean }[]
+}
+
+// ---- B5-F1: a Meal Slot on one date (ADR 0014; docs/dev/design/b5-sd.md section 3) ----
+
+/** GET and PATCH /api/meal-slots/{id}/dates/{date}. `time` is null when the date has the usual time. */
+export interface SlotDateInfo {
+  date: string
+  notServed: boolean
+  time: string | null
+  usualTime: string
+  guests: number
+}
+
+/** PATCH body: a key that is not sent is not touched; `time: null` goes back to the usual time. */
+export interface SlotDatePatch {
+  notServed?: boolean
+  time?: string | null
+}
+
+/** One unresolved Planned Meal a Not served date removes (the dry run's answer), in the slot's Course order. */
+export interface RemovedMeal {
+  courseId: number
+  courseName: string
+  recipeName: string
+  pinned: boolean
+  /** Names of the Ingredients bought for it; [] when none. */
+  bought: string[]
+}
+
+/** PATCH ?dryRun=1 with `notServed: true`: nothing is written. */
+export interface NotServedPreview {
+  removes: { plannedMeals: RemovedMeal[] }
+}
+
+/** The per-date choices of a slot block, wired by hooks/useSlotDate and handed down to SlotMenu, MealTile and TonightHero. */
+export interface SlotDateActions {
+  /** Offline: the three choices show as unavailable ("Needs a connection"); Plan Dinner again is disabled. */
+  offline: boolean
+  onWhosEating: (slot: SlotDayKey) => void
+  onNotServed: (slot: SlotDayKey) => void
+  onTime: (slot: SlotDayKey) => void
+  onPlanAgain: (slot: SlotDayKey) => void
 }
