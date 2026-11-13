@@ -109,6 +109,9 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean r
 	if in, err = s.mapBaseLines(ctx, in); err != nil {
 		return recipe.Input{}, "", err
 	}
+	if err := refuseSupplyLines(ctx, s.db, in); err != nil {
+		return recipe.Input{}, "", err
+	}
 	if err := s.checkNeededAt(ctx, in); err != nil {
 		return recipe.Input{}, "", err
 	}
@@ -126,10 +129,15 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean r
 	if err := s.markBaseCandidates(ctx, cands); err != nil {
 		return recipe.Input{}, "", err
 	}
+	if err := s.markSupplyCandidates(ctx, cands); err != nil {
+		return recipe.Input{}, "", err
+	}
 	choice := recipe.ChooseReadyMealIngredient(in.Name, cands)
 	switch {
 	case choice.BaseRecipeTaken:
 		return recipe.Input{}, "", refusedName(recipe.CodeBaseRecipeNameTaken)
+	case choice.SupplyTaken:
+		return recipe.Input{}, "", refusedName(recipe.CodeSupplyNameTaken)
 	case choice.Conflict:
 		return recipe.Input{}, "", &recipe.ValidationError{Field: "lines", Code: recipe.CodeReadyMealUnit,
 			Message: "an Ingredient with the Recipe's name already exists but is not counted in pieces; name the pack Ingredient in the line"}
@@ -239,10 +247,73 @@ func (s *Store) markBaseCandidates(ctx context.Context, cands []recipe.ReadyMeal
 	return nil
 }
 
-// checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case).
+// markSupplyCandidates tells the Ready Meal rule which Ingredients are Supplies (ADR 0017): it never reuses one.
+func (s *Store) markSupplyCandidates(ctx context.Context, cands []recipe.ReadyMealCandidate) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ingredients WHERE kind = 'supply'`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	supplies := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		supplies[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range cands {
+		cands[i].Supply = supplies[cands[i].ID]
+	}
+	return nil
+}
+
+// isSupply reports whether the Ingredient id is a Supply (kind supply). An unknown id is not a Supply.
+func isSupply(ctx context.Context, q Querier, id int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM ingredients WHERE id = ? AND kind = 'supply'`, id).Scan(&n)
+	return n > 0, err
+}
+
+// supplyNamed reports whether a Supply other than exceptID holds the normalised name (ingredients.name_key of a plain
+// Ingredient is its normalised name). exceptID 0 excludes none.
+func supplyNamed(ctx context.Context, q Querier, name string, exceptID int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM ingredients WHERE kind = 'supply' AND name_key = ? AND id != ?`,
+		units.NormalizeName(name), exceptID).Scan(&n)
+	return n > 0, err
+}
+
+// refuseSupplyLines refuses a Recipe line whose Ingredient is a Supply (ADR 0017, guard 2): a Supply is never a line of
+// a Recipe, a Ready Meal's pack or a Base recipe. The line is named by its index, lines[i].ingredientId.
+func refuseSupplyLines(ctx context.Context, q Querier, in recipe.Input) error {
+	for i, l := range in.Lines {
+		sup, err := isSupply(ctx, q, l.IngredientID)
+		if err != nil {
+			return err
+		}
+		if sup {
+			return &recipe.ValidationError{Field: fmt.Sprintf("lines[%d].ingredientId", i), Code: recipe.CodeIngredientIsSupply,
+				Message: "a Supply is not food: it cannot be a line of a Recipe"}
+		}
+	}
+	return nil
+}
+
+// checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case), or like a Supply (ADR 0017).
 func (s *Store) checkReadyMealName(ctx context.Context, clean recipe.Input, selfID int64) error {
 	if !clean.ReadyMeal {
 		return nil
+	}
+	sup, err := supplyNamed(ctx, s.db, clean.Name, 0)
+	if err != nil {
+		return err
+	}
+	if sup {
+		return refusedName(recipe.CodeSupplyNameTaken)
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT name FROM recipes WHERE base_ingredient_id IS NOT NULL AND id != ?`, selfID)
 	if err != nil {
@@ -883,7 +954,15 @@ func (s *Store) SetIngredientExclusion(ctx context.Context, memberID, ingredient
 		return err
 	}
 	if excluded {
-		_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id) VALUES (?,?)`,
+		sup, err := isSupply(ctx, s.db, ingredientID)
+		if err != nil {
+			return err
+		}
+		if sup {
+			return &recipe.ValidationError{Field: "ingredientId", Code: recipe.CodeIngredientIsSupply,
+				Message: "a Supply is not food: it cannot be excluded"}
+		}
+		_, err = s.db.ExecContext(ctx, `INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id) VALUES (?,?)`,
 			memberID, ingredientID)
 		return err
 	}
@@ -961,6 +1040,9 @@ func (s *Store) MemberForUser(ctx context.Context, userID int64) (int64, error) 
 // validate looks up the Ingredients a Recipe uses, then runs recipe validation and
 // the image checks.
 func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]units.Ingredient) (recipe.Input, error) {
+	if err := refuseSupplyLines(ctx, s.db, in); err != nil {
+		return recipe.Input{}, err
+	}
 	found := map[int64]units.Ingredient{}
 	for id, ing := range preset {
 		found[id] = ing

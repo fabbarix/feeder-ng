@@ -11,6 +11,14 @@ import (
 // made without inventing a quantity (R14, docs/dev/design/r14-recipe-editor.md).
 const CodeReadyMealUnit = "ready_meal_unit"
 
+// Food-only codes (ADR 0017, docs/dev/design/household-items.md §2): a Supply is an Ingredient of kind supply, and
+// food-only paths refuse it. CodeIngredientIsSupply is a Recipe line (or an Exclusion) whose Ingredient is a Supply;
+// CodeSupplyNameTaken is a Ready Meal or a Base recipe named like a Supply.
+const (
+	CodeIngredientIsSupply = "ingredient_is_supply"
+	CodeSupplyNameTaken    = "supply_name_taken"
+)
+
 // ReadyMealCandidate is an existing Ingredient as the Ready Meal rule sees it.
 type ReadyMealCandidate struct {
 	ID   int64
@@ -19,6 +27,9 @@ type ReadyMealCandidate struct {
 	// BaseRecipe marks the Ingredient of a Base recipe (ADR 0015): a Ready Meal never reuses it, and a Ready Meal
 	// named like it is refused (BaseRecipeTaken). The store fills it in.
 	BaseRecipe bool
+	// Supply marks an Ingredient of kind supply (ADR 0017). A Ready Meal never reuses it, and a Ready Meal named like it
+	// is refused (SupplyTaken), whatever its Base Unit. The store fills it in.
+	Supply bool
 }
 
 // ReadyMealChoice says which Ingredient a Ready Meal stands for.
@@ -34,7 +45,9 @@ type ReadyMealChoice struct {
 	Conflict bool
 	// BaseRecipeTaken: a Base recipe holds the name (CodeBaseRecipeNameTaken); nothing is reused or created.
 	BaseRecipeTaken bool
-	Line            Line
+	// SupplyTaken: a Supply holds the name (CodeSupplyNameTaken); nothing is reused or created.
+	SupplyTaken bool
+	Line        Line
 }
 
 // NeedsReadyMealIngredient reports whether the Input asks the server to derive the pack line:
@@ -56,7 +69,12 @@ func ChooseReadyMealIngredient(recipeName string, existing []ReadyMealCandidate)
 		}
 	}
 	for _, c := range existing {
-		if c.BaseRecipe {
+		if c.Supply && units.NormalizeName(c.Name) == key {
+			return ReadyMealChoice{SupplyTaken: true}
+		}
+	}
+	for _, c := range existing {
+		if c.BaseRecipe || c.Supply {
 			continue
 		}
 		if units.NormalizeName(c.Name) != key {

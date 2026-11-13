@@ -431,8 +431,9 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 			// The file's definition of the Base recipe's Ingredient: its Shelf Life and picture. A taken-over Ingredient keeps
 			// what it has: the Shelf Life and the picture are filled only when it has none. A picture not used is an orphan.
 			if rc.BaseShelfLifeDays != nil {
+				// AND kind='food' is the safety net (ADR 0017): a Supply never gets a Shelf Life, even if its kind changed after the review.
 				if _, err := tx.ExecContext(ctx, `UPDATE ingredients SET shelf_life_days = COALESCE(shelf_life_days, ?)
-				        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?)`, *rc.BaseShelfLifeDays, out.ID); err != nil {
+				        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?) AND kind = 'food'`, *rc.BaseShelfLifeDays, out.ID); err != nil {
 					return Result{}, nil, nil, err
 				}
 			}

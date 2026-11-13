@@ -524,8 +524,11 @@ func (s *Store) writeYield(ctx context.Context, tx *sql.Tx, ingredientID int64, 
 // refusedName is the validation error of a name another Base recipe or a Ready Meal holds (§3.2).
 func refusedName(code string) error {
 	msg := "A Base recipe already uses that name"
-	if code == recipe.CodeReadyMealNameTaken {
+	switch code {
+	case recipe.CodeReadyMealNameTaken:
 		msg = "A Ready Meal already uses that name"
+	case recipe.CodeSupplyNameTaken:
+		msg = "A Supply already uses that name"
 	}
 	return &recipe.ValidationError{Field: "name", Code: code, Message: msg}
 }
@@ -559,6 +562,12 @@ func (s *Store) claimBase(ctx context.Context, tx *sql.Tx, recipeID, own int64, 
 	base, ok := recipe.YieldBase(in.YieldUnit)
 	if !ok {
 		return 0, &recipe.ValidationError{Field: "yieldUnit", Code: recipe.CodeYieldUnitInvalid, Message: "a Base recipe's yield needs a unit"}
+	}
+	// A Supply holds its name for good (ADR 0017): it is refused whatever the take-over answer, never asked about.
+	if sup, err := supplyNamed(ctx, tx, in.Name, own); err != nil {
+		return 0, err
+	} else if sup {
+		return 0, refusedName(recipe.CodeSupplyNameTaken)
 	}
 	var dec recipe.NameDecision
 	if keepName && own != 0 {
@@ -673,6 +682,9 @@ func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID in
 			}
 		}
 		if err := s.ings.MergeTx(ctx, tx, own, plainID, res); err != nil {
+			if errors.Is(err, ingredient.ErrKindDiffers) {
+				return 0, refusedName(recipe.CodeSupplyNameTaken)
+			}
 			return 0, err
 		}
 	}
@@ -1273,6 +1285,9 @@ func boolPtrOf(b bool) *bool { return &b }
 // validateTx is recipe.Input.Validate with the Ingredients read inside tx (an Ingredient made earlier in the same
 // transaction counts).
 func (s *Store) validateTx(ctx context.Context, tx *sql.Tx, in recipe.Input) (recipe.Input, error) {
+	if err := refuseSupplyLines(ctx, tx, in); err != nil {
+		return recipe.Input{}, err
+	}
 	var ids []int64
 	for _, l := range in.Lines {
 		ids = append(ids, l.IngredientID)
