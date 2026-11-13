@@ -11,7 +11,7 @@ import (
 func TestDefaultSettingsMatchSpec(t *testing.T) {
 	s := household.DefaultSettings("Europe/Rome")
 	want := household.Settings{
-		TimeZone: "Europe/Rome", PlanningHorizonDays: 7, DefaultCooldownDays: 7, DefaultLeftoverUseByDays: 3,
+		TimeZone: "Europe/Rome", PlanningHorizonDays: 7, DefaultCooldownDays: 7, DefaultLeftoverUseByDays: 3, FrozenUseByDays: 90,
 		QuietHours: household.QuietHours{Start: "22:00", End: "07:00"}, PlannerStyle: 0.5, Currency: "USD",
 	}
 	if s != want {

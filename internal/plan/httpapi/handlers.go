@@ -127,7 +127,7 @@ func (a *api) couldntPlan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) leftovers(w http.ResponseWriter, r *http.Request) {
-	ls, err := a.run.Leftovers(r.Context())
+	vs, err := a.run.LeftoverViews(r.Context())
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -137,9 +137,9 @@ func (a *api) leftovers(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	out := make([]leftoverOut, 0, len(ls))
-	for _, l := range ls {
-		out = append(out, leftoverFor(l, t))
+	out := make([]leftoverOut, 0, len(vs))
+	for _, v := range vs {
+		out = append(out, leftoverViewFor(v, t))
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"leftovers": out})
 }
@@ -214,11 +214,21 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		RecipeID int64    `json:"recipeId"`
-		Batches  *float64 `json:"batches"`
+		RecipeID   int64    `json:"recipeId"`
+		Batches    *float64 `json:"batches"`
+		LeftoverID int64    `json:"leftoverId"` // "From the freezer": a Leftover instead of a Recipe (B5-LO)
 	}
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		httpx.WriteAPIError(w, err)
+		return
+	}
+	if body.LeftoverID != 0 {
+		res, err := a.run.PickLeftover(r.Context(), k, body.LeftoverID)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		a.putMeal(w, r, res)
 		return
 	}
 	if body.RecipeID <= 0 {
@@ -230,15 +240,18 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	a.putMeal(w, r, res)
+}
+
+// putMeal answers a set meal (by Recipe or by Leftover): the meal and the Courses a Whole meal covered.
+func (a *api) putMeal(w http.ResponseWriter, r *http.Request, res runner.SetResult) {
 	t, err := a.names.load(r.Context(), &res.Meal)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	covered := make([]int64, 0, len(res.Covered))
-	for _, c := range res.Covered {
-		covered = append(covered, c)
-	}
+	covered = append(covered, res.Covered...)
 	httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(res.Meal, t), Covered: covered})
 }
 
