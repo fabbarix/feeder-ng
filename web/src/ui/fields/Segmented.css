@@ -8,6 +8,20 @@
   background: var(--color-surface-2);
 }
 
+.segmented[data-compact] {
+  inline-size: max-content;
+}
+
+.segmented[data-compact] .segmented__option {
+  flex: none;
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}
+
+.ui-field:has(> .segmented[data-compact]) {
+  inline-size: max-content;
+}
+
 .segmented[data-disabled] {
   border-color: var(--color-outline);
   background: transparent;

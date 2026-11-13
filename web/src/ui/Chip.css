@@ -295,3 +295,19 @@ button.chip:focus-visible {
 .chip[data-tag-colour='rose'] .chip__dot {
   background: var(--tag-rose-dot);
 }
+
+/* hf-recipes-filter: a removable chip ("Main ×"): a 44 px hit area around the 26 px chip, and the close icon never shrinks. */
+.chip[data-removable] {
+  position: relative;
+}
+
+.chip[data-removable]::before {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
+.chip__remove {
+  display: inline-flex;
+  flex: none;
+}

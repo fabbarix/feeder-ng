@@ -8,12 +8,14 @@ export interface RecipeKindControlProps {
   onChange: (kind: Exclude<RecipeKind, 'all'>) => void
 }
 
-/** BR-D: the segmented control "Recipes · Base recipes" of the Recipes list (shared Segmented, a radiogroup labelled "Kind"). */
+/** BR-D: the segmented control "Recipes · Base recipes" of the Recipes list (shared Segmented, a radiogroup labelled "Kind"). hf-recipes-filter: compact, its label visually hidden. */
 export function RecipeKindControl({ value, onChange }: RecipeKindControlProps): ReactNode {
   const t = recipeStrings.baseRecipe.kind
   return (
     <Segmented
       label={t.label}
+      labelHidden
+      compact
       value={value}
       onChange={onChange}
       options={[

@@ -17,8 +17,8 @@ export const ROUTES = [
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],
 ]
 
-/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow. */
-export const ALWAYS_FAIL = ['P1', 'P13', 'P15']
+/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow; P16 (hf-recipes-filter): a crushed chip label. */
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16']
 
 /** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
@@ -109,6 +109,8 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
   // ds-plan round 3: a chip label cut by its ellipsis while its chip line has spare room (a lone chip must show in full).
   for (const c of m.clippedChips ?? []) add('P14', `${c.sel} "${c.label}" is cut by its ellipsis with ${c.room} px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap`)
+  // hf-recipes-filter (docs/design/recipes-filter.md 11): a chip whose label is crushed to its dot (fails in every mode, see ALWAYS_FAIL).
+  for (const c of m.crushedChips ?? []) add('P16', `${c.sel} "${c.label}" is crushed to ${c.px} px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a "+N"`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {
