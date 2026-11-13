@@ -256,6 +256,37 @@ func TestPickedSkipsUnknownIngredientsAndNonPositiveNeeds(t *testing.T) {
 	}
 }
 
+func TestPickedRefusalAfterAnEarlierIngredientWrittenLeavesNothingWritten(t *testing.T) {
+	f := setup(t)
+	oldLot, newLot := thighLots(t, f)
+	milkLot := f.add(t, f.milk, 1000, "")
+	// Thighs come first and would be written; the milk pick then names a thighs Lot and is refused. The caller
+	// commits anyway (it must not have to roll back for the refusal to leave Stock untouched).
+	m := service.CookedMeal{
+		Needs: []stock.Need{{IngredientID: f.thighs, Quantity: 600}, {IngredientID: f.milk, Quantity: 100}},
+		UsedFrom: []service.IngredientPicks{
+			{IngredientID: f.milk, Picks: []stock.Pick{{LotID: oldLot.ID, Quantity: 10}}},
+		},
+	}
+	tx, err := f.st.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.svc.DeductForCookedPickedTx(ctx, tx, []service.CookedMeal{m})
+	if !errors.Is(err, service.ErrUsedFromInvalid) {
+		t.Fatalf("err = %v, want ErrUsedFromInvalid", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if got := lotQuantities(t, f, f.thighs); !reflect.DeepEqual(got, map[int64]float64{oldLot.ID: 500, newLot.ID: 800}) {
+		t.Errorf("thighs changed by a refused call: %+v", got)
+	}
+	if got := lotQuantities(t, f, f.milk); !reflect.DeepEqual(got, map[int64]float64{milkLot.ID: 1000}) {
+		t.Errorf("milk changed by a refused call: %+v", got)
+	}
+}
+
 func TestPickedRollsBackWithTheCallersTransaction(t *testing.T) {
 	f := setup(t)
 	oldLot, newLot := thighLots(t, f)
@@ -305,6 +336,32 @@ func TestPreviewCookedListsLotsInDeductionOrderWithDefaultSelection(t *testing.T
 	}
 	if got[1].IngredientID != f.milk || got[1].Need != 200 || len(got[1].Lots) != 1 {
 		t.Fatalf("milk = %+v", got[1])
+	}
+}
+
+func TestPreviewCookedKeepsAGoneOffLot(t *testing.T) {
+	f := setup(t)
+	goneOff := f.add(t, f.thighs, 200, "2026-11-01") // goes off 11-05, today is 11-09
+	fresh := f.add(t, f.thighs, 800, "2026-11-09")   // goes off 11-13
+	got, err := f.svc.PreviewCooked(ctx, []stock.Need{{IngredientID: f.thighs, Quantity: 300}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("preview = %+v", got)
+	}
+	p := got[0]
+	if len(p.Lots) != 2 || p.Lots[0].ID != goneOff.ID || p.Lots[1].ID != fresh.ID {
+		t.Fatalf("Lots = %+v, want the gone-off Lot present and first", p.Lots)
+	}
+	if !p.Lots[0].Spoiled || p.Lots[0].GoesOff != "2026-11-05" || p.Lots[1].Spoiled {
+		t.Fatalf("lot views = %+v, %+v, want the first marked gone off", p.Lots[0], p.Lots[1])
+	}
+	if p.Have != 1000 {
+		t.Fatalf("Have = %v, want the gone-off Lot counted (1000)", p.Have)
+	}
+	if want := []stock.Taken{{LotID: goneOff.ID, Quantity: 200}, {LotID: fresh.ID, Quantity: 100}}; !reflect.DeepEqual(p.Default, want) {
+		t.Fatalf("Default = %+v, want %+v", p.Default, want)
 	}
 }
 
