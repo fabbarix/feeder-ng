@@ -4,6 +4,22 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6.2] - 2026-11-13
+
+The Pantry gets the same compact filter header as the Recipes list.
+
+### Changed
+
+- **Pantry filter header.** Search sits beside a Filters button that shows how many filters are on, with the Storage Place or Ingredient list and Sort below it. Filters opens a panel (a sheet on a phone) with Use soon and Spoiled, Pantry, Fridge and Freezer, a searchable list of your Storage Places with their Lot counts (pick one or several), and Group by Storage Place. The filters you pick show as named chips you can remove, with "+N" when they don't fit. With nothing picked you see all your Stock. Your filters are kept in the page address, so Back keeps them. The Storage Places settings link moved to the ⋮ menu.
+
+### Fixed
+
+- **Sort on narrow phones.** Below 420 px the Sort on the Pantry and the Recipes list is narrower, so "Good until", "Longest ago" and "Most recent" show in full.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.2 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.6.1] - 2026-11-13
 
 Recipe reading works again, and the Recipes list has a simpler filter header that copes with many Tags.
@@ -300,7 +316,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...HEAD
+[1.0.0-beta.6.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...v1.0.0-beta.6.2
 [1.0.0-beta.6.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...v1.0.0-beta.6.1
 [1.0.0-beta.6]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...v1.0.0-beta.6
 [1.0.0-beta.5.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...v1.0.0-beta.5.1
