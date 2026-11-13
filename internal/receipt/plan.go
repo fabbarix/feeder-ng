@@ -182,6 +182,10 @@ func BuildPlan(in PlanInput) (Plan, error) {
 		if !ok {
 			return Plan{}, &PlanError{Code: PlanUnknownProposal, ID: id}
 		}
+		if p.Row >= len(in.Rows) {
+			// The rows must be the read's own: a proposal for a row the plan does not have would be dropped silently.
+			return Plan{}, &PlanError{Code: PlanUnknownProposal, ID: id}
+		}
 		acc[id] = true
 		if p.Kind == KindAdd && !completeChoice(in.Adds[id]) {
 			return Plan{}, &PlanError{Code: PlanAddIncomplete, ID: id}

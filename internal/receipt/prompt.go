@@ -56,8 +56,10 @@ type requestBody struct {
 // Recipe Assistant's source wrapper. A weighed row's barcode is left empty (design §4.1).
 func BuildRequestText(in RequestInput) (string, error) {
 	body := requestBody{Shop: in.Shop, Date: in.Date, Currency: in.Currency, MinorDigits: in.MinorDigits, Rows: make([]requestRow, 0, len(in.Rows))}
-	for _, r := range in.Rows {
-		rr := requestRow{Row: r.Index, Product: r.Product, Barcode: r.Barcode, BaseUnit: r.BaseUnit, PackSize: r.PackSize,
+	for i, r := range in.Rows {
+		// The model answers with the row's position in in.Rows, which is what Finish and Propose index by; GroupRows
+		// gives every row its position as Index, so the two agree.
+		rr := requestRow{Row: i, Product: r.Product, Barcode: r.Barcode, BaseUnit: r.BaseUnit, PackSize: r.PackSize,
 			Scans: r.Scans, Quantity: r.Quantity, Weighed: r.Weighed, PriceCents: r.PriceCents, PerKgCents: r.PerKgCents}
 		if r.Weighed {
 			rr.Barcode = ""

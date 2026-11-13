@@ -27,7 +27,7 @@ const (
 )
 
 // Row is one grouped row of the Scanned list, as the server holds it. Index is the server's row index, which the model
-// answers with. PriceCents is per pack, or for the weighed quantity of a weighed row; -1 means none. PerKgCents is -1
+// answers with: always the row's position in the rows a read uses (GroupRows sets it so). PriceCents is per pack, or for the weighed quantity of a weighed row; -1 means none. PerKgCents is -1
 // when none. Quantity is in the base unit, summed over the events.
 type Row struct {
 	Index      int

@@ -442,3 +442,12 @@ func TestAnAddChoiceNeedsAPackSizeAndAKnownBaseUnit(t *testing.T) {
 		}
 	}
 }
+
+func TestAnAcceptedProposalForARowThePlanDoesNotHaveIsRefused(t *testing.T) {
+	in := planInput(t, nil, []string{"price:0"}, nil, mkLine(map[string]any{"row": 0, "count": 2, "priceCents": 270}))
+	in.Rows = nil
+	_, err := receipt.BuildPlan(in)
+	if pe, ok := err.(*receipt.PlanError); !ok || pe.Code != receipt.PlanUnknownProposal || pe.ID != "price:0" {
+		t.Errorf("err = %v", err)
+	}
+}

@@ -171,3 +171,17 @@ func TestAnswerNeverLogsItsLines(t *testing.T) {
 		}
 	}
 }
+
+// Review: the model answers with the index the request sent, and Finish and Propose index the rows by position, so
+// the request sends the position even if a caller's Index disagrees.
+func TestRequestTextSendsTheRowsPosition(t *testing.T) {
+	in := fixtureInput()
+	in.Rows[0].Index, in.Rows[1].Index = 7, 7
+	got, err := receipt.BuildRequestText(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `"row":0,`) || !strings.Contains(got, `"row":1,`) || strings.Contains(got, `"row":7`) {
+		t.Errorf("rows go by position: %s", got)
+	}
+}
