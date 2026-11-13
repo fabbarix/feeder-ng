@@ -91,12 +91,13 @@ beforeEach(() => {
 })
 
 describe('ScanScreen with the real controller', () => {
-  it('starts empty; a scan becomes a row that says it is on the list, with an Add price button and the "Added" toast', async () => {
+  it('starts empty; a scan becomes a row that says what it covers of the Line, with an Add price button and the "Added" toast', async () => {
     open()
     expect(await screen.findByRole('heading', { name: 'Nothing scanned yet' })).toBeInTheDocument()
     await read()
     const row = (await within(await screen.findByRole('list', { name: 'Scanned list' })).findByRole('button', { name: 'Mutti passata 700 g' })).closest('li')!
-    expect(row).toHaveTextContent('On the list · 700 g still to get')
+    // the server answers 700 g still to get after a 700 g pack: the Line asked for 1400 g
+    expect(row.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 of 1400 g$/)
     expect(within(row).getByRole('button', { name: /^Add price/ })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Scanned 1' })).toBeChecked()
     expect(await screen.findByText('Added Mutti passata 700 g')).toBeInTheDocument()

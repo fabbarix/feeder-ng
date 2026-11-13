@@ -41,6 +41,8 @@ export interface ScannedRow {
   pending: boolean
   /** the latest applied scan's match with the Shopping List */
   onList: boolean
+  /** what this session's scans cover of the Ingredient's Shopping List Line; null when no applied scan counted against it */
+  cover: LineCover | null
   ticked: boolean
   remaining: number | null
   weighed: boolean
@@ -55,6 +57,18 @@ export interface ScannedRow {
   needsPrice: boolean
   /** index of the row's latest scan in the session (newest first in displayOrder) */
   latest: number
+}
+
+/**
+ * What this session's scans cover of a Shopping List Line, in the Line's Base Unit: "250 of 375 g". Every applied scan of
+ * the Ingredient that counted against the list is in `got`, whichever Product it was.
+ */
+export interface LineCover {
+  got: number
+  /** the Line's quantity when the session's first such scan was read */
+  of: number
+  /** nothing more to get: the latest such scan left nothing on the Line */
+  done: boolean
 }
 
 export interface ScannedTotals {
@@ -146,7 +160,34 @@ function scanRef(entry: SessionEntry, products: OfflineProduct[]): ScanRef {
 
 const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0)
 
-function toRow(key: string, items: { entry: SessionEntry; index: number }[], products: OfflineProduct[]): ScannedRow {
+/** Float dust: a remainder this close to 0 is nothing (the server's own tolerance). */
+const EPS = 1e-9
+
+/**
+ * The cover of an Ingredient's Line by the session's applied scans (in session order). A scan that left some of the Line
+ * gives its quantity exactly (what was got up to it, plus its `remaining`). When the first scan already covered it, the
+ * Result says only 0, so the Shopping List answers: a ticked Line keeps the quantity it had when it was ticked (`need`), and
+ * a list that has not heard of the scans yet still shows it (`quantity`). Without either, the cover is what was got.
+ */
+function lineCover(ingredientId: number | null, entries: SessionEntry[], list: ShoppingList | undefined): LineCover | null {
+  if (ingredientId === null) return null
+  const scans = entries.flatMap((e) => (e.result?.scan && e.result.status !== 'rejected' && e.result.scan.onList && e.result.scan.ingredientId === ingredientId ? [e.result.scan] : []))
+  if (scans.length === 0) return null
+  let got = 0
+  let of: number | null = null
+  for (const scan of scans) {
+    got += scan.quantity
+    if (scan.remaining > EPS) of = got + scan.remaining
+  }
+  if (of === null) {
+    const line = list?.lines.find((l) => l.ingredientId === ingredientId)
+    const asked = line ? (line.ticked ? line.need : line.quantity) : 0
+    of = asked > EPS ? asked : got
+  }
+  return { got, of, done: scans[scans.length - 1]!.remaining <= EPS }
+}
+
+function toRow(key: string, items: { entry: SessionEntry; index: number }[], products: OfflineProduct[], cover: (ingredientId: number | null) => LineCover | null): ScannedRow {
   const latest = items[items.length - 1]!
   const described = describeEntry(latest.entry, products)
   const scans = items.map((i) => scanRef(i.entry, products))
@@ -170,6 +211,7 @@ function toRow(key: string, items: { entry: SessionEntry; index: number }[], pro
     waiting: scans.every((s) => s.queued),
     pending: scans.some((s) => s.queued),
     onList: matched?.onList ?? false,
+    cover: matched?.onList ? cover(described.ingredientId) : null,
     ticked: matched?.ticked ?? false,
     remaining: matched ? matched.remaining : null,
     weighed,
@@ -187,8 +229,9 @@ function toRow(key: string, items: { entry: SessionEntry; index: number }[], pro
 /**
  * One row per Product, in first-scan order. A Result that the server rejected is left out (its notice says why); a
  * duplicate counts like an applied scan. A scan that creates a Product is a row of its own until its Result names one.
+ * `list`, the live Shopping List, completes a Line's cover when the scans alone cannot tell its quantity (see lineCover).
  */
-export function buildScannedRows(entries: SessionEntry[], products: OfflineProduct[]): ScannedRow[] {
+export function buildScannedRows(entries: SessionEntry[], products: OfflineProduct[], list?: ShoppingList): ScannedRow[] {
   const groups = new Map<string, { entry: SessionEntry; index: number }[]>()
   entries.forEach((entry, index) => {
     if (entry.result?.status === 'rejected') return
@@ -198,7 +241,12 @@ export function buildScannedRows(entries: SessionEntry[], products: OfflineProdu
     if (group) group.push({ entry, index })
     else groups.set(key, [{ entry, index }])
   })
-  return [...groups].map(([key, items]) => toRow(key, items, products))
+  const covers = new Map<number | null, LineCover | null>()
+  const cover = (ingredientId: number | null) => {
+    if (!covers.has(ingredientId)) covers.set(ingredientId, lineCover(ingredientId, entries, list))
+    return covers.get(ingredientId) ?? null
+  }
+  return [...groups].map(([key, items]) => toRow(key, items, products, cover))
 }
 
 /** Newest first: a rescan moves its row to the top. Does not change the input. */
@@ -225,23 +273,62 @@ export function nextWithoutPrice(rows: ScannedRow[], current?: string | null): S
 }
 
 export interface RowMeta {
-  tone: 'success' | 'muted'
-  text: string
-  mark: 'tick' | 'outline' | 'clock' | null
+  /** the pack size ("125 g", "9 pieces"), or the weighed amount of a weighed row ("312 g"); '' when unknown */
+  size: string
+  /** the Shopping List Line it covers, "250 of 375 g", and whether that is all of it; null when not on the list */
+  cover: { text: string; done: boolean } | null
+  /** every scan still waits in the queue: "Waiting to sync" */
+  waiting: boolean
 }
 
-/** The one-line state of a row under its name. */
-export function rowMeta(row: ScannedRow, system: UnitSystem): RowMeta {
-  if (row.waiting) return { tone: 'muted', text: scanStrings.waitingToSync, mark: 'clock' }
-  if (row.onList) {
-    if (row.weighed) {
-      return { tone: 'success', text: scanStrings.onListWeight(formatQuantity(row.weight ?? 0, row.baseUnit, system)), mark: row.ticked ? 'tick' : 'outline' }
-    }
-    if (row.ticked || (row.remaining ?? 0) <= 0) return { tone: 'success', text: scanStrings.onListTicked(row.ingredientName), mark: 'tick' }
-    return { tone: 'success', text: scanStrings.onListStillToGet(formatQuantity(row.remaining ?? 0, row.baseUnit, system)), mark: 'outline' }
+/** One amount of an x-of-y: a piece is a bare number (as formatQuantity rounds it); g and ml read as elsewhere. */
+function coverAmount(amount: number, base: BaseUnit, system: UnitSystem): string {
+  if (base === 'piece') return String(Number(amount.toFixed(1)))
+  return formatQuantity(amount, base, system)
+}
+
+/** "200 ml" -> ["200", "ml"]; null when the text is not one number and one unit ("1 lb 2 oz"). */
+function numberAndUnit(text: string): [string, string] | null {
+  const m = /^(-?[\d.]+) (\S+)$/.exec(text)
+  return m ? [m[1]!, m[2]!] : null
+}
+
+/**
+ * "x of y" in the Line's unit, as the Shop screen's Restock reason reads (household-items §4.4): pieces are bare ("2 of 6"),
+ * metric g and ml name the unit once when both amounts share it ("250 of 375 g") and keep both when they do not; imperial
+ * keeps both ("7.1 oz of 1 lb 2 oz").
+ */
+export function coverText(got: number, of: number, base: BaseUnit, system: UnitSystem): string {
+  let x = coverAmount(got > EPS ? got : 0, base, system)
+  const y = coverAmount(of, base, system)
+  if (base !== 'piece' && system === 'metric') {
+    const a = numberAndUnit(x)
+    const b = numberAndUnit(y)
+    if (a && b && a[1] === b[1]) x = a[0]
   }
-  if (row.weighed) return { tone: 'muted', text: formatQuantity(row.weight ?? 0, row.baseUnit, system), mark: null }
-  return { tone: 'muted', text: scanStrings.rowNotOnList, mark: null }
+  return scanStrings.coverOf(x, y)
+}
+
+/** The pack size of a row (its latest pack scan), or its weighed amount. */
+function sizeText(row: ScannedRow, system: UnitSystem): string {
+  const amount = row.weighed ? row.weight : ([...row.scans].reverse().find((s) => !s.weighed)?.quantity ?? null)
+  return amount !== null && amount > 0 ? formatQuantity(amount, row.baseUnit, system) : ''
+}
+
+/** The second line of a row: its size, then the Line it covers (or "Waiting to sync"). Never "On the list" or "ticked". */
+export function rowMeta(row: ScannedRow, system: UnitSystem): RowMeta {
+  const cover = row.cover && !row.waiting ? { text: coverText(row.cover.got, row.cover.of, row.baseUnit, system), done: row.cover.done } : null
+  return { size: sizeText(row, system), cover, waiting: row.waiting }
+}
+
+/**
+ * The first line of a row: the Product name without the pack size the second line already shows ("Mutti passata 700 g"
+ * reads "Mutti passata"). A name that is only the size keeps it.
+ */
+export function rowTitle(row: ScannedRow, system: UnitSystem): string {
+  const size = sizeText(row, system)
+  const suffix = ` ${size}`
+  return size && row.name.endsWith(suffix) && row.name.length > suffix.length ? row.name.slice(0, -suffix.length).trimEnd() : row.name
 }
 
 /** The value and the sub-value of a row. `money` formats minor units (the caller knows the currency). */

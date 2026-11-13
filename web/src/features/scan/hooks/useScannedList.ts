@@ -89,7 +89,7 @@ export function useScannedList(options: UseScannedListOptions): ScannedList {
   }, [state, key, store, shopId, day])
 
   const products = offline?.products ?? NO_PRODUCTS
-  const rows = useMemo(() => displayOrder(buildScannedRows(state.entries, products)), [state.entries, products])
+  const rows = useMemo(() => displayOrder(buildScannedRows(state.entries, products, list)), [state.entries, products, list])
   const totals = useMemo(() => scannedTotals(rows), [rows])
   const toGet = useMemo(() => toGetLines(list, rows), [list, rows])
 

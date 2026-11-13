@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { makeLine, makeList } from '../../shop/testData'
 import {
   buildScannedRows,
+  coverText,
   displayOrder,
   dropEntries,
   nextWithoutPrice,
@@ -11,6 +12,7 @@ import {
   repriceEntries,
   rowAmounts,
   rowMeta,
+  rowTitle,
   scannedTotals,
   settleEntries,
   toGetLines,
@@ -238,27 +240,73 @@ describe('nextWithoutPrice', () => {
   })
 })
 
-describe('rowMeta: the one-line state of a row (exact copy)', () => {
-  const row = (entries: SessionEntry[]) => buildScannedRows(entries, products)[0]!
-  it('matched, Line ticked', () => {
-    expect(rowMeta(row([applied('a', passata, {}, { onList: true, ticked: true })]), 'metric')).toEqual({ tone: 'success', text: 'On the list · Passata ticked', mark: 'tick' })
+describe('rowMeta: the second line of a row, its size and the Line it covers (exact copy)', () => {
+  const row = (entries: SessionEntry[], list?: Parameters<typeof buildScannedRows>[2]) => buildScannedRows(entries, products, list)[0]!
+  it('a row not on the list shows only its pack size', () => {
+    expect(rowMeta(row([applied('a', passata)]), 'metric')).toEqual({ size: '700 g', cover: null, waiting: false })
   })
-  it('matched, more to get', () => {
-    expect(rowMeta(row([applied('a', passata, {}, { onList: true, remaining: 700 })]), 'metric')).toEqual({ tone: 'success', text: 'On the list · 700 g still to get', mark: 'outline' })
+  it('a Line still partly to get: what the scans got of the Line, hollow until covered', () => {
+    const mozzarella = { ...passata, name: 'Granarolo mozzarella', packSize: 125 }
+    const entries = [applied('a', mozzarella, {}, { onList: true, remaining: 250 }), applied('b', mozzarella, {}, { onList: true, remaining: 125 })]
+    expect(rowMeta(row(entries), 'metric')).toEqual({ size: '125 g', cover: { text: '250 of 375 g', done: false }, waiting: false })
   })
-  it('not on the list', () => {
-    expect(rowMeta(row([applied('a', passata)]), 'metric')).toEqual({ tone: 'muted', text: 'Not on the list', mark: null })
+  it('a covered Line is done; its quantity comes from the scan that left some of it', () => {
+    const entries = [applied('a', passata, {}, { onList: true, remaining: 700 }), applied('b', passata, {}, { onList: true, ticked: true, remaining: 0 })]
+    expect(rowMeta(row(entries), 'metric').cover).toEqual({ text: '1400 of 1400 g', done: true })
   })
-  it('waiting to sync', () => {
-    expect(rowMeta(row([queued('a', passata)]), 'metric')).toEqual({ tone: 'muted', text: 'Waiting to sync', mark: 'clock' })
-  })
-  it('weighed, on the list or not', () => {
+  it('a Line the first scan covered takes its quantity from the Shopping List: a ticked Line keeps what it asked for', () => {
     const op = scanOp('a', cheese, { quantity: 312, weighed: true })
-    expect(rowMeta(row([{ op, result: okResult(op, cheese, { onList: true, remaining: 100 }) }]), 'metric').text).toBe('On the list · 312 g')
-    expect(rowMeta(row([{ op, result: okResult(op, cheese) }]), 'metric').text).toBe('312 g')
+    const entries = [{ op, result: okResult(op, cheese, { onList: true, ticked: true, remaining: 0 }) }]
+    const ticked = makeList({ lines: [makeLine({ ingredientId: 5, name: 'Cheese', ticked: true, need: 300, available: 300, quantity: 0 })] })
+    expect(rowMeta(row(entries, ticked), 'metric')).toEqual({ size: '312 g', cover: { text: '312 of 300 g', done: true }, waiting: false })
+    const notYet = makeList({ lines: [makeLine({ ingredientId: 5, name: 'Cheese', ticked: false, quantity: 300 })] })
+    expect(rowMeta(row(entries, notYet), 'metric').cover?.text).toBe('312 of 300 g')
+    expect(rowMeta(row(entries), 'metric').cover?.text).toBe('312 of 312 g')
   })
-  it('a Supply counted in pieces', () => {
-    expect(rowMeta(row([applied('a', toiletPaper, {}, { onList: true, remaining: 9 })]), 'metric').text).toBe('On the list · 9 pieces still to get')
+  it('counts every Product of the Ingredient the session scanned, not only the row\'s', () => {
+    const other = { ...passata, id: 8, name: 'Cirio passata 500 g', packSize: 500 }
+    const entries = [applied('a', other, {}, { onList: true, remaining: 1000 }), applied('b', passata, {}, { onList: true, remaining: 300 })]
+    const rows = buildScannedRows(entries, [...products, other])
+    expect(rows.map((r) => rowMeta(r, 'metric').cover?.text)).toEqual(['1200 of 1500 g', '1200 of 1500 g'])
+  })
+  it('a Supply counted in pieces is bare: "9 of 9"', () => {
+    expect(rowMeta(row([applied('a', toiletPaper, {}, { onList: true, ticked: true, remaining: 0 })], makeList({ lines: [makeLine({ ingredientId: 12, baseUnit: 'piece', ticked: true, need: 9, quantity: 0 })] })), 'metric')).toEqual({
+      size: '9 pieces',
+      cover: { text: '9 of 9', done: true },
+      waiting: false,
+    })
+  })
+  it('waiting to sync: the size and no cover yet', () => {
+    expect(rowMeta(row([queued('a', passata)]), 'metric')).toEqual({ size: '700 g', cover: null, waiting: true })
+  })
+  it('a weighed row shows its weight, on the list or not', () => {
+    const op = scanOp('a', cheese, { quantity: 312, weighed: true })
+    expect(rowMeta(row([{ op, result: okResult(op, cheese) }]), 'metric')).toEqual({ size: '312 g', cover: null, waiting: false })
+  })
+})
+
+describe('coverText: x of y in the Line\'s unit (as the Shop screen\'s Restock reason)', () => {
+  it('pieces are bare numbers', () => {
+    expect(coverText(2, 6, 'piece', 'metric')).toBe('2 of 6')
+  })
+  it('metric g and ml name the unit once', () => {
+    expect(coverText(250, 375, 'g', 'metric')).toBe('250 of 375 g')
+    expect(coverText(200, 500, 'ml', 'metric')).toBe('200 of 500 ml')
+  })
+  it('imperial keeps both units', () => {
+    expect(coverText(200, 500, 'g', 'imperial')).toBe('7.1 oz of 1 lb 2 oz')
+  })
+})
+
+describe('rowTitle: the first line is the Product name without the pack size', () => {
+  const row = (entries: SessionEntry[]) => buildScannedRows(entries, products)[0]!
+  it('drops a trailing pack size the second line shows', () => {
+    expect(rowTitle(row([applied('a', passata)]), 'metric')).toBe('Mutti passata')
+    expect(rowTitle(row([applied('a', toiletPaper)]), 'metric')).toBe('Regina toilet paper')
+  })
+  it('keeps a name without the size, and a name that is only the size', () => {
+    expect(rowTitle(row([applied('a', { ...passata, name: 'Granarolo mozzarella' })]), 'metric')).toBe('Granarolo mozzarella')
+    expect(rowTitle(row([applied('a', { ...passata, name: '700 g' })]), 'metric')).toBe('700 g')
   })
 })
 

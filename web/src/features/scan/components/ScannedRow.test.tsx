@@ -1,5 +1,5 @@
 // SR4: ScannedRow is a ListRow of the Scanned list (shop-scan-proposals.md 13.3). It renders a SR3 row model: the Thumb
-// (or monogram), the name, rowMeta, rowAmounts, "Add price", and for the active row the Stepper and the ⋮ menu.
+// (or monogram), the name without the pack size, rowMeta (size · tick x of y), rowAmounts, "Add price", and for the active row the Stepper and the ⋮ menu.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -53,27 +53,40 @@ describe('ScannedRow: what it shows', () => {
     expect(props.onActivate).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the meta and the amounts from rowMeta and rowAmounts', () => {
+  it('line 1 is the Product name without the pack size the second line shows', () => {
     const { item } = setup(muttiTicked)
-    expect(within(item).getByText(rowMeta(muttiTicked, 'metric').text)).toBeInTheDocument()
-    expect(within(item).getByText('On the list · Passata ticked')).toBeInTheDocument()
+    expect(item.querySelector('.list-row__title')).toHaveTextContent(/^Mutti passata$/)
+  })
+
+  it('line 2 is the size, then the Line it covers, from rowMeta; the amounts come from rowAmounts', () => {
+    const { item } = setup(muttiTicked)
+    const meta = rowMeta(muttiTicked, 'metric')
+    expect(meta).toEqual({ size: '700 g', cover: { text: '1400 of 1400 g', done: true }, waiting: false })
+    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1400 of 1400 g$/)
     const amounts = rowAmounts(muttiTicked, money)
     expect(within(item).getByText(amounts.value!)).toBeInTheDocument()
     expect(within(item).getByText(amounts.sub)).toBeInTheDocument()
     expect(amounts).toEqual({ value: '$2.58', sub: '×2 · $1.29' })
   })
 
-  it('says what is still to get, "Not on the list", and "Waiting to sync"', () => {
-    expect(setup(muttiToGet).item).toHaveTextContent('On the list · 700 g still to get')
+  it('a Line still partly to get, a row not on the list (the size only), and a row waiting to sync', () => {
+    expect(setup(muttiToGet).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 of 1400 g$/)
     document.body.innerHTML = ''
-    expect(setup(notOnList).item).toHaveTextContent('Not on the list')
+    expect(setup(notOnList).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g$/)
     document.body.innerHTML = ''
-    expect(setup(waiting).item).toHaveTextContent('Waiting to sync')
+    expect(setup(waiting).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·Waiting to sync$/)
+  })
+
+  it('never says "On the list", "ticked", "still to get" or "Not on the list"', () => {
+    for (const row of [muttiTicked, muttiToGet, notOnList, paperNoPrice, loose, waiting]) {
+      document.body.innerHTML = ''
+      expect(setup(row).item.textContent).not.toMatch(/on the list|ticked|still to get/i)
+    }
   })
 
   it('a weighed row shows its weight and its Price per kg, no ×', () => {
     const { item } = setup(loose)
-    expect(item).toHaveTextContent('On the list · 312 g')
+    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^312 g·312 of 312 g$/)
     expect(item).toHaveTextContent('$6.24')
     expect(item).toHaveTextContent('$20.00/kg')
     expect(item.textContent).not.toMatch(/×/)
@@ -113,16 +126,34 @@ describe('ScannedRow: what it shows', () => {
 })
 
 describe('ScannedRow: the Shopping List match shows one tick', () => {
-  it('a matched row has exactly one check icon, in the meta line beside "On the list", and no badge on the Thumb', () => {
+  const tickOf = (row: RowModel) => {
+    document.body.innerHTML = ''
+    const { item } = setup(row)
+    const ticks = item.querySelectorAll('.list-row__meta svg')
+    expect(ticks).toHaveLength(1)
+    expect(ticks[0]).toHaveClass('scanned-row__tick')
+    return ticks[0]!.innerHTML
+  }
+
+  it('a matched row has exactly one tick, on the second line, and no badge on the Thumb', () => {
     for (const row of [muttiTicked, muttiToGet, loose]) {
       document.body.innerHTML = ''
       const { item } = setup(row)
       expect(item.querySelectorAll('.list-row__meta svg')).toHaveLength(1)
-      expect(item.querySelector('.list-row__meta')).toHaveAttribute('data-status', 'success')
       // nothing is drawn over the Thumb: no icon in the leading slot, no badge element at all
       expect(item.querySelectorAll('.list-row__leading svg')).toHaveLength(0)
       expect(item.querySelector('[class*="badge"], [data-badge]')).toBeNull()
     }
+  })
+
+  it('the tick is filled once the Line is covered and hollow while some is still to get', () => {
+    expect(tickOf(muttiTicked)).toBe(tickOf(loose))
+    expect(tickOf(muttiToGet)).not.toBe(tickOf(muttiTicked))
+  })
+
+  it('the second line is muted: only the tick takes the success colour', () => {
+    const { item } = setup(muttiToGet)
+    expect(item.querySelector('.list-row__meta')).not.toHaveAttribute('data-status')
   })
 
   it('a monogram row (no Picture) has no badge either', () => {
@@ -131,16 +162,15 @@ describe('ScannedRow: the Shopping List match shows one tick', () => {
     expect(item.querySelectorAll('.list-row__meta svg')).toHaveLength(1)
   })
 
-  it('a row that is not on the list has no check icon and a muted meta', () => {
+  it('a row that is not on the list has no tick', () => {
     const { item } = setup(notOnList)
-    expect(item.querySelector('.list-row__meta')).not.toHaveAttribute('data-status', 'success')
     expect(item.querySelectorAll('.list-row__meta svg')).toHaveLength(0)
   })
 
-  it('a waiting row has the clock, not the check, and no badge', () => {
+  it('a waiting row has the clock, not the tick, and no badge', () => {
     const { item } = setup(waiting)
     expect(item.querySelectorAll('.list-row__meta svg')).toHaveLength(1)
-    expect(item.querySelector('.list-row__meta')).not.toHaveAttribute('data-status', 'success')
+    expect(item.querySelector('.scanned-row__tick')).toBeNull()
     expect(item.querySelectorAll('.list-row__leading svg')).toHaveLength(0)
   })
 })

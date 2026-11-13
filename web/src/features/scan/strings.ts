@@ -114,10 +114,8 @@ export const scanStrings = {
   keepThem: 'Keep them',
   undoFailed: "Couldn't undo that Scan. Try again.",
   priceSaveFailed: "Couldn't save that Price. Try again.",
-  rowNotOnList: 'Not on the list',
-  onListTicked: (ingredient: string) => `On the list · ${ingredient} ticked`,
-  onListStillToGet: (qty: string) => `On the list · ${qty} still to get`,
-  onListWeight: (qty: string) => `On the list · ${qty}`,
+  /** SR4 review: what a row's scans cover of its Line, "250 of 375 g" (the Shop screen's Restock reason reads the same). */
+  coverOf: (got: string, of: string) => `${got} of ${of}`,
   perKg: (money: string) => `${money}/kg`,
   perL: (money: string) => `${money}/l`,
   stockTakeTitle: (name: string) => `Stock-take: ${name}`,
