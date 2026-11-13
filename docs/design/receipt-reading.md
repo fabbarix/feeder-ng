@@ -272,16 +272,18 @@ it concerns, and the values before and after.
 |---|---|
 | `price` | A row's lines (all with readable `priceCents`): pack rows → per pack = round(Σ price / Σ count), or `unitPriceCents` when every line printed the same one; weighed rows → per kg from `perKgCents`, else Σ price × 1000 / Σ grams. Proposed when the row has no Price or differs by at least one minor unit. |
 | `weight` | A weighed row (or a Product in g whose line has `grams` > 0; such a row is then read by weight: Price per kg, no quantity or pack size): Σ grams differs from the scanned quantity by more than 1 % or 2 g. The new Price follows: the lines' amount, else their per kg, else the row's own per kg at the new weight; the new scan keeps the per kg. |
-| `quantity` | A pack row: Σ count differs from its scans. |
+| `quantity` | A pack row: Σ count differs from its scans. A matched line with `count` 0 is one pack (a receipt prints a count only above one), with or without a readable price; in the per-pack Price only the lines with a price count. |
 | `pack_size` | A matched line's `packSize` (in the row's Base Unit) differs from the Product's pack size. |
 | `name` | A matched line with a non-empty `name` that differs from the Product name (case and spacing ignored). |
-| `add` | Each line with `row: -1`, a count or grams, and a Price; prefilled name, pack size, unit and Price. |
+| `add` | Each line with `row: -1`, a count or grams, and a Price (0 or more); prefilled name, pack size, unit and Price. An unmatched line with neither a count nor grams is not an Add (it shows only in the totals). Applying one needs an Ingredient (an existing one, or a new one with a name and a Base Unit), a Product name and a pack size above 0. |
 | `missing` | A row that no line matched. |
 | `shop` | `shopName` is set, does not match the session's Shop (normalised, `name_key` rules), and matches exactly one other saved Shop. A name that matches no Shop is a note only ("The receipt says LIDL"), never a proposal. |
 | `date` | `date` is set, differs from the session's date, and is within the last 7 days. |
 
 Notes (not proposals): the totals comparison; a whole-receipt discount (a line with negative `priceCents` and `row: -1`); lines
-dropped by `Finish`.
+dropped by `Finish`. The projected total is the sum of the receipt's readable line amounts, **discount lines included**, so it
+compares like for like with the total paid: a discount does not raise a "totals differ" note of its own (it has its own note),
+and a difference means a line was missed or misread.
 
 ## 7. Server API
 

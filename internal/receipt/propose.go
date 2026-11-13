@@ -118,15 +118,13 @@ func isAdd(l Line) bool {
 	return l.PriceCents != nil && *l.PriceCents >= 0 && (l.Count > 0 || l.Grams > 0)
 }
 
-// lineCount is the packs a line bought: its count, or one pack when it printed a price and no count.
+// lineCount is the packs a matched pack line bought: its count, or one pack when it printed none (a receipt prints a
+// count only above one). An unreadable price does not unmake the line: it is still a pack bought.
 func lineCount(l Line) int {
 	if l.Count > 0 {
 		return l.Count
 	}
-	if l.PriceCents != nil {
-		return 1
-	}
-	return 0
+	return 1
 }
 
 // roundDiv divides with round half up; num and den are non-negative, den is positive.

@@ -3,6 +3,7 @@ package receipt
 import (
 	"fmt"
 	"math"
+	"strings"
 )
 
 // Phase orders the steps of a plan (design §8.1).
@@ -409,15 +410,21 @@ func BuildPlan(in PlanInput) (Plan, error) {
 	return Plan{Steps: b.steps}, nil
 }
 
-// completeChoice: an Add needs an Ingredient (an ID, or a new one with a name) and a Product name.
+// completeChoice: an Add needs an Ingredient (an ID, or a new one with a name and a Base Unit), a Product name and a
+// positive pack size (a Product's pack size must be positive).
 func completeChoice(c AddChoice) bool {
-	if c.ProductName == "" {
+	if strings.TrimSpace(c.ProductName) == "" || c.PackSize <= 0 {
 		return false
 	}
-	if c.Ingredient.New != nil {
-		return c.Ingredient.New.Name != ""
+	if n := c.Ingredient.New; n != nil {
+		switch n.BaseUnit {
+		case "g", "ml", "piece":
+		default:
+			return false
+		}
+		return strings.TrimSpace(n.Name) != ""
 	}
-	return c.Ingredient.ID != 0
+	return c.Ingredient.ID > 0
 }
 
 // addBaseUnit is the Base Unit of an Add's Product: the new Ingredient's, else the line's unit.

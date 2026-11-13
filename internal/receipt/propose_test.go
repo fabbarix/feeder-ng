@@ -432,3 +432,16 @@ func TestAWeighedRowWithATinyQuantityDoesNotDivideByZero(t *testing.T) {
 		t.Error("the line's per kg is proposed, the row has none")
 	}
 }
+
+// Review: a matched pack line with no count is one pack, whether or not its price could be read.
+func TestAMatchedLineWithoutACountIsOnePackEvenWithoutAPrice(t *testing.T) {
+	r := propose(t, nil,
+		mkLine(map[string]any{"row": 0, "count": 1, "priceCents": 129}),
+		mkLine(map[string]any{"row": 0}))
+	none(t, r, "quantity:0") // two lines, two scans
+	none(t, r, "price:0")    // 129 over the one priced pack
+	r = propose(t, nil, mkLine(map[string]any{"row": 0, "priceCents": 135}))
+	if p := mustFind(t, r, "quantity:0"); *p.After.Count != 1 {
+		t.Errorf("one line, no count: one pack, got %d", *p.After.Count)
+	}
+}

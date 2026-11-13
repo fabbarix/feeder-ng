@@ -426,3 +426,19 @@ func TestAPackRowReadByWeightIsScannedAgainOnceAtItsWeight(t *testing.T) {
 		t.Errorf("new scan = %+v", n)
 	}
 }
+
+func TestAnAddChoiceNeedsAPackSizeAndAKnownBaseUnit(t *testing.T) {
+	line := mkLine(map[string]any{"row": -1, "text": "PANE", "grams": 450, "priceCents": 225, "name": "Pane"})
+	for name, c := range map[string]receipt.AddChoice{
+		"no pack size":   {Ingredient: receipt.IngredientChoice{ID: 7}, ProductName: "Pane"},
+		"blank name":     {Ingredient: receipt.IngredientChoice{ID: 7}, ProductName: "  ", PackSize: 450},
+		"bad base unit":  {Ingredient: receipt.IngredientChoice{New: &receipt.NewIngredient{Name: "pane", BaseUnit: "kg"}}, ProductName: "Pane", PackSize: 450},
+		"no ingredient":  {ProductName: "Pane", PackSize: 450},
+		"blank new name": {Ingredient: receipt.IngredientChoice{New: &receipt.NewIngredient{Name: " ", BaseUnit: "g"}}, ProductName: "Pane", PackSize: 450},
+	} {
+		in := planInput(t, nil, []string{"add:0"}, map[string]receipt.AddChoice{"add:0": c}, line)
+		if _, err := receipt.BuildPlan(in); err == nil {
+			t.Errorf("%s: the Add must be refused", name)
+		}
+	}
+}
