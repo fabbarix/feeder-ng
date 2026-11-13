@@ -53,7 +53,7 @@ _Avoid_: Component, sub-recipe, sub recipe, nested recipe
 _Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)); beta.5 copy must not offer it.
 
 **Base recipe line**:
-An ingredient line that calls for a Base recipe by amount ("500 ml Béchamel (Base recipe)"). Every Ingredient inside the Base recipe, at any depth, counts for Exclusions and the planner as if it were on the Recipe itself. A plain line is turned into one only when a User links it.
+An ingredient line that calls for a Base recipe by amount ("500 ml Béchamel (Base recipe)"). Every Ingredient inside the Base recipe, at any depth, counts for Exclusions and the planner as if it were on the Recipe itself. A plain line is turned into one only when a User links it, or lets the Base recipe take over its Ingredient.
 _Avoid_: Recipe reference, linked recipe, sub-recipe line
 _Note_: beta.6 (scheduled, not in the app yet; [ADR 0015](docs/adr/0015-base-recipes.md)).
 
