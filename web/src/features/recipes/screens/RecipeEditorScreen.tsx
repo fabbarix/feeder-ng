@@ -9,6 +9,7 @@ import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
 import { PhotoPicker } from '../components/PhotoPicker'
 import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
+import { useHouseholdFrozenUseBy } from '../hooks/useHouseholdFrozenUseBy'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { RecipeSectionIndex } from '../components/RecipeSectionIndex'
 import { StepsEditor } from '../components/StepsEditor'
@@ -40,6 +41,7 @@ export function RecipeEditorScreen(): ReactNode {
   const recipeId = id === undefined ? undefined : Number(id)
   const refs = useIngredientRefs()
   const { known: knownTags, colourOf, isLoading: tagsLoading } = useRecipeTags()
+  const householdFrozenUseBy = useHouseholdFrozenUseBy()
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ingredients made from the picker, known at once (the list refetch may still be on its way).
   const [made, setMade] = useState<IngredientRef[]>([])
@@ -144,6 +146,7 @@ export function RecipeEditorScreen(): ReactNode {
               knownTags={knownTags}
               colourOf={tagsLoading ? undefined : colourOf}
               courses={courses}
+              householdFrozenUseBy={householdFrozenUseBy}
               onChange={changeDetails}
             />
           </Tile>

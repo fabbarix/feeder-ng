@@ -1,3 +1,4 @@
+import { parseFrozenUseBy } from '../../../lib/leftovers/frozenUseBy'
 import type { IngredientRef, Recipe, RecipeInput, StepKind } from '../types'
 
 // The editor's form state: everything the User types is a string until draftToInput parses it.
@@ -53,6 +54,8 @@ export interface RecipeDraft {
   tags: string[]
   cooldownDays: string
   leftoverUseByDays: string
+  /** B5-LOW: whole days 1 to 365 as typed; blank = the Household's Frozen Use-by. */
+  frozenUseByDays: string
   /** R12: whole minutes 1 to 30 as typed; blank = not set. */
   reheatMinutes: string
   sourceUrl: string
@@ -86,6 +89,7 @@ export function emptyDraft(): RecipeDraft {
     tags: [],
     cooldownDays: '',
     leftoverUseByDays: '',
+    frozenUseByDays: '',
     reheatMinutes: '',
     sourceUrl: '',
     sourceAttribution: '',
@@ -111,6 +115,7 @@ export function draftFromRecipe(recipe: Recipe): RecipeDraft {
     tags: [...recipe.tags],
     cooldownDays: numText(recipe.cooldownDays),
     leftoverUseByDays: numText(recipe.leftoverUseByDays),
+    frozenUseByDays: numText(recipe.frozenUseByDays),
     reheatMinutes: numText(recipe.reheatMinutes),
     sourceUrl: recipe.source.url,
     sourceAttribution: recipe.source.attribution,
@@ -178,6 +183,12 @@ const numberOrZero = (text: string): number => parseNumber(text) ?? 0
 /** Parses an optional override: blank means null (the household default). */
 const overrideOf = (text: string): number | null => (text.trim() === '' ? null : parseNumber(text))
 
+/** The Frozen Use-by as sent: whole days 1 to 365, or null when blank or not valid (validateDraft says which). */
+const frozenUseByOf = (text: string): number | null => {
+  const parsed = parseFrozenUseBy(text, { required: false })
+  return parsed.ok ? parsed.value : null
+}
+
 /**
  * Builds the API body. Names/notes trimmed; blank cooldown/use-by -> null (household default),
  * "0" -> 0; blank durations/lead times -> 0; unparsable numbers -> NaN-free defaults are NOT
@@ -195,6 +206,7 @@ export function draftToInput(draft: RecipeDraft): RecipeInput {
     tags: [...draft.tags],
     cooldownDays: overrideOf(draft.cooldownDays),
     leftoverUseByDays: overrideOf(draft.leftoverUseByDays),
+    frozenUseByDays: frozenUseByOf(draft.frozenUseByDays),
     reheatMinutes: overrideOf(draft.reheatMinutes),
     source: { url: draft.sourceUrl.trim(), attribution: draft.sourceAttribution.trim() },
     image: draft.image,
@@ -228,7 +240,8 @@ const isWhole = (n: number) => Number.isInteger(n)
  *  name: name_required; yield: yield_invalid;
  *  lines: lines_required (none) | ready_meal_lines (Ready Meal without exactly one);
  *  lines.N.ingredient: ingredient_required; lines.N.quantity: quantity_invalid; lines.N.unit: unit_required;
- *  cooldownDays: cooldown_invalid; leftoverUseByDays: use_by_invalid; reheatMinutes: reheat_invalid;
+ *  cooldownDays: cooldown_invalid; leftoverUseByDays: use_by_invalid; frozenUseByDays: frozen_use_by_invalid;
+ *  reheatMinutes: reheat_invalid;
  *  steps.N.text: step_text_required; steps.N.durationMinutes: passive_needs_duration;
  *  steps.N.leadTimeMinutes: advance_needs_lead_time; steps.N.uses.M.ingredient|quantity|unit as the lines.
  */
@@ -255,6 +268,7 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
   if (draft.leftoverUseByDays.trim() !== '' && (useBy === null || useBy < 0 || useBy > 30 || !isWhole(useBy))) {
     errors.leftoverUseByDays = 'use_by_invalid'
   }
+  if (!parseFrozenUseBy(draft.frozenUseByDays, { required: false }).ok) errors.frozenUseByDays = 'frozen_use_by_invalid'
   const reheat = overrideOf(draft.reheatMinutes)
   if (draft.reheatMinutes.trim() !== '' && (reheat === null || reheat < 1 || reheat > 30 || !isWhole(reheat))) {
     errors.reheatMinutes = 'reheat_invalid'

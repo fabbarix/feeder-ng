@@ -9,6 +9,7 @@ export const leftoverStrings = {
   freezeIt: 'Freeze it',
   takeOut: 'Take out',
   cancel: 'Cancel',
+  close: 'Close',
   portions: 'Portions',
   storagePlace: 'Storage Place',
   wasteNote: 'This counts as waste: the zero-waste streak starts again today.',
@@ -28,6 +29,16 @@ export const hadItTitle = (name: string): string => `How many portions of ${name
 export const throwOutTitle = (name: string): string => `Throw out ${name}?`
 export const freezeTitle = (name: string): string => `Freeze ${name}`
 export const takeOutTitle = (name: string): string => `Take ${name} out of the freezer?`
+/** The details sheet of a Leftover ("From Mon's Chilli" opens "Chilli Leftover"). */
+export const detailsTitle = (name: string): string => `${name} Leftover`
+/** The question that names the Planned Meals an answer would replan. */
+export const answerTitle = (name: string): string => `Answer for ${name}?`
+/** The button that gives an answer, in the question's words. */
+export const answerLabel = (answer: LeftoverAnswer): string => {
+  if (answer === 'had_it') return leftoverStrings.hadIt
+  if (answer === 'threw_out') return leftoverStrings.threwOut
+  return leftoverStrings.wasntThere
+}
 
 /** "Chilli was to be used by Tue. Had it, threw it out, or wasn't there?" */
 export const questionText = (name: string, useBy: string, today: string): string =>

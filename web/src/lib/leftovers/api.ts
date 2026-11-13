@@ -25,9 +25,9 @@ export const leftoversApi = {
     )
     return { frozen: out.frozen, left: out.left ?? null, replanned: replannedOf(out.replanned) }
   },
-  /** `POST /api/plan/leftovers/{id}/take-out` `{ storagePlaceId }` (null = Not sorted); the flat Leftover. */
-  takeOut: (id: number, storagePlaceId: number | null): Promise<Leftover> =>
-    http.post<Leftover>(`/api/plan/leftovers/${id}/take-out`, { storagePlaceId }),
+  /** `POST /api/plan/leftovers/{id}/take-out` `{ storagePlaceId }` (null = Not sorted): the Leftover and the replanned meals. */
+  takeOut: async (id: number, storagePlaceId: number | null): Promise<LeftoverResult> =>
+    resultOf(await http.post<WireResult>(`/api/plan/leftovers/${id}/take-out`, { storagePlaceId })),
   /** `POST /api/plan/leftovers/{id}/answer` `{ answer }`; 204. */
   answer: async (id: number, answer: LeftoverAnswer): Promise<void> => {
     await http.post<void>(`/api/plan/leftovers/${id}/answer`, { answer })
@@ -37,7 +37,12 @@ export const leftoversApi = {
    * Route and body are those of the real call.
    */
   preview: async (id: number, request: DryRunRequest): Promise<PlannedMealRef[]> => {
-    const body = request.kind === 'freeze' ? { storagePlaceId: request.storagePlaceId, portions: request.portions } : { portions: request.portions }
+    const body =
+      request.kind === 'freeze'
+        ? { storagePlaceId: request.storagePlaceId, portions: request.portions }
+        : request.kind === 'take-out'
+          ? { storagePlaceId: request.storagePlaceId }
+          : { portions: request.portions }
     const out = await http.post<{ replanned?: PlannedMealRef[] | null }>(`/api/plan/leftovers/${id}/${request.kind}?dryRun=1`, body)
     return replannedOf(out.replanned)
   },

@@ -1,7 +1,8 @@
 // The Leftovers query and the hand actions (react-query). Not exported from the pure barrel index.ts.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../http'
+import { connectEvents } from '../sse'
 import { useToast } from '../../ui/Toast'
 import { leftoversApi } from './api'
 import { actionError, answerToast, freezeToast, hadItToast, leftoverStrings, takeOutToast, threwOutToast } from './copy'
@@ -14,9 +15,19 @@ export interface LeftoversState {
   isError: boolean
 }
 
-/** `GET /api/plan/leftovers` under the key the plan feature already uses (`['plan', 'leftovers']`). */
+/** `GET /api/plan/leftovers` under the key the plan feature already uses (`['plan', 'leftovers']`). Refetches on the SSE `plan` topic. */
 export function useLeftovers(): LeftoversState {
+  const client = useQueryClient()
   const query = useQuery({ queryKey: leftoverKeys.list, queryFn: leftoversApi.list })
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return
+    const connection = connectEvents()
+    const off = connection.subscribe('plan', () => void client.invalidateQueries({ queryKey: leftoverKeys.list }))
+    return () => {
+      off()
+      connection.close()
+    }
+  }, [client])
   return { leftovers: query.data ?? [], isPending: query.isPending, isError: query.isError }
 }
 
@@ -63,14 +74,14 @@ async function perform(job: Job, today: string): Promise<Outcome> {
     }
     case 'take-out': {
       const out = await leftoversApi.takeOut(leftover.id, r.storagePlaceId)
-      return { message: takeOutToast(leftover.recipeName, out.useBy, today), waste: false }
+      return { message: takeOutToast(leftover.recipeName, out.leftover.useBy, today), waste: false }
     }
   }
 }
 
-/** The server dry run for the draft: the Planned Meals that would lose portions. `[]` while loading, for no draft and for Take out. */
+/** The server dry run for the draft: the Planned Meals that would lose portions. `[]` while loading and with no draft. */
 export function useReplanPreview(leftoverId: number, request: LeftoverRequest | null): PlannedMealRef[] {
-  const dryRun = request !== null && request.kind !== 'take-out' ? request : null
+  const dryRun = request
   const query = useQuery({
     queryKey: ['plan', 'replan-preview', leftoverId, dryRun],
     queryFn: () => leftoversApi.preview(leftoverId, dryRun!),

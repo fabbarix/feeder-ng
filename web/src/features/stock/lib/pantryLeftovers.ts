@@ -1,8 +1,10 @@
 // Pantry: frozen Leftovers in their Freezer group (U4). Pure.
 import { leftoverStrings, portionsLabel, useByPhrase } from '../../../lib/leftovers/copy'
+import { dayDiff } from '../../../lib/leftovers/dates'
 import { NOT_SORTED_PLACE, type Leftover } from '../../../lib/leftovers'
-import type { StorageKind, StoragePlace } from '../types'
-import { fold } from './filter'
+import type { StockLot, StorageKind, StoragePlace } from '../types'
+import { fold, type StockFilter } from './filter'
+import { UNSORTED, type PantryGroup } from './pantry'
 
 export interface LeftoverGroup {
   /** The Storage Place id; 0 (NOT_SORTED_PLACE) for "Not sorted". */
@@ -55,4 +57,45 @@ export function filterPantryLeftovers(leftovers: Leftover[], places: StoragePlac
 /** "Chilli", "3 portions · Use by 10 Feb". */
 export function pantryLeftoverText(l: Leftover, today: string): { title: string; meta: string } {
   return { title: l.recipeName, meta: `${portionsLabel(l.portions)} · ${useByPhrase(l.useBy, today)}` }
+}
+
+/**
+ * The Pantry's "Use soon" and "Spoiled" filters for Leftovers: Use soon is a Use-by today or tomorrow (or past), Spoiled is
+ * a Leftover to answer (past its Use-by). "All" keeps every frozen Leftover.
+ */
+export function statusLeftovers(leftovers: Leftover[], status: StockFilter, today: string): Leftover[] {
+  if (status === 'all') return leftovers
+  if (status === 'spoiled') return leftovers.filter((l) => l.toAnswer)
+  return leftovers.filter((l) => dayDiff(l.useBy, today) <= 1)
+}
+
+/** One section of the Pantry list: a Storage Place (or Not sorted), or the one ungrouped list (key -1). */
+export interface PantrySection {
+  key: number
+  name: string
+  lots: StockLot[]
+  leftovers: Leftover[]
+}
+
+/**
+ * The Pantry list's sections: each Storage Place's Stock Lots and frozen Leftovers together, by name with "Not sorted" last;
+ * ungrouped, one section with the Lots and then the Leftovers. Empty sections are left out.
+ */
+export function pantrySections(lotGroups: PantryGroup[], leftovers: Leftover[], places: StoragePlace[], groupByPlace: boolean): PantrySection[] {
+  if (!groupByPlace) {
+    const lots = lotGroups.flatMap((g) => g.lots)
+    return lots.length + leftovers.length > 0 ? [{ key: -1, name: '', lots, leftovers }] : []
+  }
+  const byKey = new Map<number, PantrySection>()
+  for (const g of lotGroups) {
+    if (g.key === -1) continue
+    byKey.set(g.key, { key: g.key, name: g.place?.name ?? leftoverStrings.notSorted, lots: g.lots, leftovers: [] })
+  }
+  for (const g of leftoverGroups(leftovers, places)) {
+    const section = byKey.get(g.placeId) ?? { key: g.placeId, name: g.name, lots: [], leftovers: [] }
+    section.leftovers = g.leftovers
+    byKey.set(g.placeId, section)
+  }
+  const sections = [...byKey.values()].filter((s) => s.lots.length + s.leftovers.length > 0)
+  return sections.sort((a, b) => (a.key === UNSORTED ? 1 : 0) - (b.key === UNSORTED ? 1 : 0) || a.name.localeCompare(b.name))
 }

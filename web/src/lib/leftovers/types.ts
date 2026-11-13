@@ -42,7 +42,7 @@ export interface PlannedMealRef {
   recipeName?: string
 }
 
-/** The answer of had-it and threw-out: the Leftover and the Planned Meals that were replanned. */
+/** The answer of had-it, threw-out and take-out: the Leftover and the Planned Meals that were replanned. */
 export interface LeftoverResult {
   leftover: Leftover
   replanned: PlannedMealRef[]
@@ -67,5 +67,5 @@ export type LeftoverRequest =
   | { kind: 'freeze'; storagePlaceId: number; portions: number }
   | { kind: 'take-out'; storagePlaceId: number | null }
 
-/** The requests the server can dry run (`?dryRun=1`): take out never moves a Planned Meal. */
-export type DryRunRequest = Exclude<LeftoverRequest, { kind: 'take-out' }>
+/** The requests the server can dry run (`?dryRun=1`): every one of them can move Planned Meals, Take out included. */
+export type DryRunRequest = LeftoverRequest

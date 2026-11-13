@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
+import { fromLeftoverLabel } from '../../../lib/leftovers/copy'
 import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { sheetChips } from '../lib/chips'
@@ -38,6 +39,8 @@ export interface PlannedMealSheetProps {
   onMarkRecipes?: (courseId: number) => void
   onAddRecipes?: () => void
   onReviewVarietyRules?: () => void
+  /** B5-LOW: the "From Mon's Chilli" link of a meal served from a Leftover opens that Leftover (its id). */
+  onOpenLeftover?: (leftoverId: number) => void
 }
 
 /**
@@ -61,6 +64,7 @@ export function PlannedMealSheet({
   onMarkRecipes = () => {},
   onAddRecipes = () => {},
   onReviewVarietyRules = () => {},
+  onOpenLeftover,
 }: PlannedMealSheetProps): ReactNode {
   const course = slot ? courseOf(slot, courseId) : undefined
   const meal = course?.meal ?? null
@@ -117,6 +121,11 @@ export function PlannedMealSheet({
         <div className="plan-sheet">
           <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
           <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
+          {meal.servedFromLeftover?.leftoverId != null && onOpenLeftover ? (
+            <Button variant="tertiary" size="sm" onClick={() => onOpenLeftover(meal.servedFromLeftover!.leftoverId!)}>
+              {fromLeftoverLabel(meal.servedFromLeftover.date, meal.servedFromLeftover.recipeName)}
+            </Button>
+          ) : null}
           {(attendance && attendance.length > 0) || guests > 0 ? (
             <div className="plan-sheet__attendance">
               {attendance?.map((a) => (

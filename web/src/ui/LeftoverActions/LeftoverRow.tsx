@@ -11,9 +11,11 @@ export interface LeftoverRowProps {
   today: string
   /** A menu entry was chosen: the parent opens the matching LeftoverSheet. */
   onAction: (kind: LeftoverActionKind, leftover: Leftover) => void
+  /** Adds the Storage Place of a frozen Leftover to its meta line; off where the group heading already names it. Default on. */
+  showPlace?: boolean
 }
 
-export function LeftoverRow({ leftover, today, onAction }: LeftoverRowProps) {
+export function LeftoverRow({ leftover, today, onAction, showPlace = true }: LeftoverRowProps) {
   const row = leftoverRow(leftover, today)
   const entries: MenuEntry[] = menuActions(leftover, today).map((kind) => ({
     id: kind,
@@ -21,16 +23,14 @@ export function LeftoverRow({ leftover, today, onAction }: LeftoverRowProps) {
     tone: kind === 'threw-out' ? 'danger' : undefined,
     onSelect: () => onAction(kind, leftover),
   }))
-  const place = leftover.frozen ? (leftover.storagePlaceName ?? leftoverStrings.notSorted) : null
+  const place = showPlace && leftover.frozen ? (leftover.storagePlaceName ?? leftoverStrings.notSorted) : null
   return (
     <ListRow
       title={row.recipeName}
-      meta={row.text}
+      meta={place ? `${row.text} · ${place}` : row.text}
       metaStatus={row.tone === 'info' ? undefined : row.tone}
       icon={row.icon}
       trailing={entries.length > 0 ? <Menu label={`Actions for ${leftover.recipeName}`} items={entries} /> : undefined}
-    >
-      {place ? <span className="leftover-row__place">{place}</span> : null}
-    </ListRow>
+    />
   )
 }

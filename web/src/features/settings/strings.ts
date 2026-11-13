@@ -47,6 +47,7 @@ export const settingsStrings = {
     planningHorizon: 'Planning Horizon (days)',
     cooldown: 'Default Cool-down (days)',
     leftoverUseBy: 'Default Leftover Use-by (days)',
+    frozenUseBy: 'Default Frozen Use-by (days)',
     quietStart: 'Quiet hours start',
     quietEnd: 'Quiet hours end',
     location: 'Location',

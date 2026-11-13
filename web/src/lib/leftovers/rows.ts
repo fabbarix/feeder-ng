@@ -49,6 +49,14 @@ export function tileRows(leftovers: Leftover[], today: string): LeftoverRowModel
   return [...frozenQuestions, ...questions, ...rest].map((l) => leftoverRow(l, today))
 }
 
+/**
+ * The Leftovers the Plan lists as "Leftovers to use": all of them, except the ones a Planned Meal in the view is served from
+ * (the meal's own link shows them). A question is always listed: it is still to be answered.
+ */
+export function leftoversToUse(leftovers: Leftover[], servedIds: ReadonlySet<number>): Leftover[] {
+  return leftovers.filter((l) => l.toAnswer || !servedIds.has(l.id))
+}
+
 /** The row menu: Had it, Threw it out, then Freeze it (before the Use-by, not frozen) or Take out (frozen). None for a question. */
 export function menuActions(l: Leftover, today: string): LeftoverActionKind[] {
   if (l.toAnswer) return []
@@ -79,10 +87,13 @@ export interface FreezerChoice {
   meta: string
 }
 
-/** Choose a Recipe, "From the freezer": frozen Leftovers with portions, by Recipe name. */
-export function freezerChoices(leftovers: Leftover[]): FreezerChoice[] {
+/**
+ * Choose a Recipe, "From the freezer": frozen Leftovers with portions, by Recipe name. With `recipeIds`, only the Leftovers of
+ * those Recipes (the Recipes the chooser offers).
+ */
+export function freezerChoices(leftovers: Leftover[], recipeIds?: ReadonlySet<number>): FreezerChoice[] {
   return leftovers
-    .filter((l) => l.frozen && l.portions > 0)
+    .filter((l) => l.frozen && l.portions > 0 && (recipeIds === undefined || recipeIds.has(l.recipeId)))
     .sort((a, b) => a.recipeName.localeCompare(b.recipeName) || a.id - b.id)
     .map((l) => ({
       leftoverId: l.id,

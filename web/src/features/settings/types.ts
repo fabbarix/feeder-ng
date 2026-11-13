@@ -7,6 +7,8 @@ export interface HouseholdSettings {
   planningHorizonDays: number
   defaultCooldownDays: number
   defaultLeftoverUseByDays: number
+  /** B5-LOW: the Household's Frozen Use-by, whole days 1 to 365 (the default for a frozen Leftover; a Recipe may override it). Absent in older payloads (90 then). */
+  frozenUseByDays?: number
   quietHours: { start: string; end: string }
   /** 0 = Use what we have, 0.5 = Variety, 1 = Favourites. */
   plannerStyle: number

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { DEFAULT_VIEW, pantryGroups, type PantryGroup, type PantryView } from '../lib/pantry'
 import type { StockLot, StoragePlace } from '../types'
+import { usePantryLeftovers, type PantryLeftovers } from './usePantryLeftovers'
 import { useAllLots, type LotsState } from './useStock'
 import { useStoragePlaces } from './useStoragePlaces'
 
@@ -37,6 +38,8 @@ export interface UsePantry {
   setView: (change: Partial<PantryView>) => void
   groups: PantryGroup[]
   placeOf: (lot: StockLot) => StoragePlace | null
+  /** B5-LOW: the frozen Leftovers in the Pantry, with their flow and sections. */
+  leftovers: PantryLeftovers
 }
 
 export function usePantry(): UsePantry {
@@ -46,7 +49,9 @@ export function usePantry(): UsePantry {
   const [mode, setModeState] = useState<PantryMode>(readMode)
   const groups = useMemo(() => pantryGroups(lots.data ?? [], places, view), [lots.data, places, view])
   const byId = useMemo(() => new Map(places.map((p) => [p.id, p])), [places])
+  const leftovers = usePantryLeftovers({ today: lots.today ?? '', mode, places, view, groups })
   return {
+    leftovers,
     mode,
     setMode: (m) => {
       setModeState(m)
