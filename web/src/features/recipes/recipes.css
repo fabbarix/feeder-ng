@@ -364,8 +364,13 @@
   white-space: nowrap;
 }
 
-/* Ingredient lines: quantity and name in two columns, no bullets. */
+/*
+ * Ingredient lines: [menu] [quantity] [name], no bullets. The menu column is as wide as the IconButton (40 visual,
+ * 44 hit) on every line, empty where a line has no menu, so the menus, quantities and names each line up.
+ * The text sits a half-button down, so the ⋮ is centred on the first text line, even when the name wraps.
+ */
 .ingredient-lines {
+  container: ingredient-lines / inline-size;
   display: grid;
   gap: var(--space-2);
   margin: 0;
@@ -373,9 +378,17 @@
 
 .ingredient-lines__row {
   display: grid;
-  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
-  align-items: baseline;
+  grid-template-columns: var(--space-10) minmax(0, 7rem) minmax(0, 1fr);
+  align-items: start;
   gap: var(--space-3);
+}
+
+/* A narrow list (a phone, the side column at 1280 px and up): the menu column costs the name its room, so the quantity column
+   narrows to the list value column (system.md 3). */
+@container ingredient-lines (max-width: 25rem) {
+  .ingredient-lines__row {
+    grid-template-columns: var(--space-10) minmax(0, var(--row-value-min)) minmax(0, 1fr);
+  }
 }
 
 .ingredient-lines__row dt,
@@ -384,18 +397,38 @@
   min-inline-size: 0;
 }
 
+.ingredient-lines__actions {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+}
+
+.ingredient-lines__quantity,
+.ingredient-lines__name {
+  grid-row: 1;
+  padding-block-start: calc((var(--space-10) - var(--text-body-line)) / 2);
+  line-height: var(--text-body-line);
+}
+
 .ingredient-lines__quantity {
+  grid-column: 2;
   font-weight: var(--text-label-weight);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
 .ingredient-lines__name {
+  grid-column: 3;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-2);
   overflow-wrap: anywhere;
+}
+
+/* A Base recipe line reads as one sentence ("500 ml Béchamel (Base recipe)") from the quantity column on. */
+.ingredient-lines__name--base {
+  grid-column: 2 / -1;
 }
 
 .ingredient-lines__tag,

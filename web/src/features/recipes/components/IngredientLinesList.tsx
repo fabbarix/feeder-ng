@@ -18,7 +18,11 @@ export interface IngredientLinesListProps {
   onUseAsPlain?: (line: RecipeLine) => void
 }
 
-/** The ingredient lines of a Recipe in the User's display system, as a two-column grid (quantity | name). */
+/**
+ * The ingredient lines of a Recipe in the User's display system, as a grid (menu | quantity | name).
+ * The ⋮ menu is the last cell in the DOM (after the name, so the keyboard order stays), but the grid draws it in the first
+ * column, so every line's menu lines up; a line without one leaves that column empty.
+ */
 export function IngredientLinesList({ lines, refs, system, onLinkToBase, onUseAsPlain }: IngredientLinesListProps): ReactNode {
   return (
     <dl className="ingredient-lines">
@@ -29,7 +33,7 @@ export function IngredientLinesList({ lines, refs, system, onLinkToBase, onUseAs
         return (
           <div key={`${l.ingredientId}-${i}`} className="ingredient-lines__row">
             {base ? null : <dt className="ingredient-lines__quantity">{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</dt>}
-            <dd className="ingredient-lines__name">
+            <dd className={base ? 'ingredient-lines__name ingredient-lines__name--base' : 'ingredient-lines__name'}>
               {base ? (
                 <BaseName
                   id={base.id}
@@ -42,8 +46,12 @@ export function IngredientLinesList({ lines, refs, system, onLinkToBase, onUseAs
               )}
               {l.optional ? <span className="ingredient-lines__tag">{recipeStrings.optional}</span> : null}
               {l.note ? <span className="ingredient-lines__note">{l.note}</span> : null}
-              {actions.length > 0 ? <Menu label={recipeStrings.lines.actions(name)} items={actions} /> : null}
             </dd>
+            {actions.length > 0 ? (
+              <dd className="ingredient-lines__actions">
+                <Menu label={recipeStrings.lines.actions(name)} items={actions} />
+              </dd>
+            ) : null}
           </div>
         )
       })}
