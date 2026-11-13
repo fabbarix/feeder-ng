@@ -21,8 +21,21 @@ describe('tileRows', () => {
     expect(rows[0]).toMatchObject({ text: '3 portions · Use by tomorrow', tone: 'spoil' })
     expect(rows[1]).toMatchObject({ text: '1.5 portions · Use by Mon', tone: 'leftover' })
   })
-  it('frozen Leftovers are not on Today (they are on the Pantry page)', () => {
+  it('frozen Leftovers that are not to answer are not on Today (they are on the Pantry page)', () => {
     expect(tileRows([frozenChilli(), soon], TODAY).map((r) => r.id)).toEqual([1])
+  })
+  it('a frozen Leftover that is to answer is a question row on Today, with a badge naming its Storage Place', () => {
+    const frozenAsked = frozenChilli({ id: 6, recipeName: 'Dal', useBy: '2026-11-11', toAnswer: true })
+    const rows = tileRows([soon, frozenAsked, answer1], TODAY)
+    expect(rows.map((r) => [r.id, r.kind])).toEqual([[6, 'question'], [3, 'question'], [1, 'leftover']])
+    expect(rows[0]).toMatchObject({ badge: 'Garage Freezer', tone: 'info', icon: 'question' })
+  })
+  it('the badge says Not sorted when the frozen Leftover has no Storage Place any more', () => {
+    const [row] = tileRows([frozenChilli({ toAnswer: true, useBy: '2026-11-11', storagePlaceId: null, storagePlaceName: null })], TODAY)
+    expect(row!.badge).toBe('Not sorted')
+  })
+  it('a question that is not frozen has no badge', () => {
+    expect(tileRows([answer1], TODAY)[0]!.badge).toBeUndefined()
   })
 })
 

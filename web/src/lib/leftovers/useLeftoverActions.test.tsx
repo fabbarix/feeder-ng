@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../../features/settings/test-utils'
 import { ToastProvider } from '../../ui'
-import { leftover, TODAY } from './fixtures'
-import { useLeftoverActions, useLeftovers } from './useLeftoverActions'
+import { friLunch, leftover, TODAY } from './fixtures'
+import { useLeftoverActions, useLeftovers, useReplanPreview } from './useLeftoverActions'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -44,7 +44,7 @@ describe('useLeftoverActions', () => {
       'GET /api/plan/leftovers': () => ({ leftovers: list }),
       'POST /api/plan/leftovers/1/had-it': () => {
         list = [leftover({ portions: 1 })]
-        return { ...list[0], replanned: [] }
+        return { leftover: list[0], replanned: [] }
       },
     })
     const client = newClient()
@@ -58,21 +58,60 @@ describe('useLeftoverActions', () => {
     expect(ok).toBe(true)
     expect(api.callsTo('POST', '/api/plan/leftovers/1/had-it')[0]!.body).toEqual({ portions: 2 })
     expect(await screen.findByText('Noted: 2 portions of Chilli. 1 left.')).toBeInTheDocument()
+    expect(screen.queryByText(/undefined/)).toBeNull()
     await waitFor(() => expect(both.result.current.s.leftovers[0]?.portions).toBe(1))
   })
 
-  it('Threw it out also refreshes the Pantry and waste (stock keys)', async () => {
-    mockApi({ 'POST /api/plan/leftovers/1/threw-out': { ...leftover({ portions: 0 }), replanned: [] } })
+  it('Had it with nothing left says None left', async () => {
+    mockApi({ 'POST /api/plan/leftovers/1/had-it': { leftover: leftover({ portions: 0 }), replanned: [] } })
+    const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(newClient()) })
+    await act(async () => {
+      await result.current.run(chilli, { kind: 'had-it', portions: 3 })
+    })
+    expect(await screen.findByText('Noted: 3 portions of Chilli. None left.')).toBeInTheDocument()
+  })
+
+  const invalidated = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey)
+
+  it('Had it refreshes the plan and the Pantry (stock) but not the streak or the Board', async () => {
+    mockApi({ 'POST /api/plan/leftovers/1/had-it': { leftover: leftover({ portions: 1 }), replanned: [] } })
+    const client = newClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(client) })
+    await act(async () => {
+      await result.current.run(chilli, { kind: 'had-it', portions: 2 })
+    })
+    expect(invalidated(spy)).toEqual(expect.arrayContaining([['plan'], ['stock']]))
+    expect(invalidated(spy)).not.toContainEqual(['today', 'streak'])
+    expect(invalidated(spy)).not.toContainEqual(['board'])
+  })
+
+  it('Threw it out also refreshes the streak and the Board', async () => {
+    mockApi({ 'POST /api/plan/leftovers/1/threw-out': { leftover: leftover({ portions: 0 }), replanned: [] } })
     const client = newClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(client) })
     await act(async () => {
       await result.current.run(chilli, { kind: 'threw-out', portions: 3 })
     })
-    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0])
-    expect(keys).toContain('plan')
-    expect(keys).toContain('stock')
+    expect(invalidated(spy)).toEqual(expect.arrayContaining([['plan'], ['stock'], ['today', 'streak'], ['board']]))
     expect(await screen.findByText('Threw out 3 portions of Chilli.')).toBeInTheDocument()
+  })
+
+  it('the Threw it out answer also refreshes the streak and the Board; the other answers do not', async () => {
+    mockApi({ 'POST /api/plan/leftovers/1/answer': { status: 204 } })
+    const client = newClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(client) })
+    await act(async () => {
+      await result.current.answer(chilli, 'had_it')
+    })
+    expect(invalidated(spy)).not.toContainEqual(['today', 'streak'])
+    spy.mockClear()
+    await act(async () => {
+      await result.current.answer(chilli, 'threw_out')
+    })
+    expect(invalidated(spy)).toEqual(expect.arrayContaining([['plan'], ['stock'], ['today', 'streak'], ['board']]))
   })
 
   it('Freeze it POSTs the Storage Place and portions and toasts the Use-by', async () => {
@@ -92,7 +131,7 @@ describe('useLeftoverActions', () => {
   })
 
   it('Take out POSTs the Storage Place (null = Not sorted)', async () => {
-    const api = mockApi({ 'POST /api/plan/leftovers/1/take-out': { ...leftover({ useBy: '2026-11-15' }), replanned: [] } })
+    const api = mockApi({ 'POST /api/plan/leftovers/1/take-out': leftover({ useBy: '2026-11-15' }) })
     const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(newClient()) })
     await act(async () => {
       await result.current.run(chilli, { kind: 'take-out', storagePlaceId: null })
@@ -129,7 +168,7 @@ describe('useLeftoverActions', () => {
 
   it('busy is true while a call is in flight', async () => {
     let release: () => void = () => {}
-    mockApi({ 'POST /api/plan/leftovers/1/had-it': () => new Promise((r) => { release = () => r({ ...leftover(), replanned: [] }) }) })
+    mockApi({ 'POST /api/plan/leftovers/1/had-it': () => new Promise((r) => { release = () => r({ leftover: leftover(), replanned: [] }) }) })
     const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(newClient()) })
     expect(result.current.busy).toBe(false)
     let pending: Promise<boolean> = Promise.resolve(false)
@@ -142,5 +181,35 @@ describe('useLeftoverActions', () => {
       await pending
     })
     expect(result.current.busy).toBe(false)
+  })
+})
+
+describe('useReplanPreview (the server dry run)', () => {
+  it('asks the dry run for the draft request and returns the Planned Meals that would lose portions', async () => {
+    const api = mockApi({ 'POST /api/plan/leftovers/1/had-it?dryRun=1': { replanned: [friLunch] } })
+    const { result } = renderHook(() => useReplanPreview(1, { kind: 'had-it', portions: 2 }), { wrapper: wrapperWith(newClient()) })
+    expect(result.current).toEqual([])
+    await waitFor(() => expect(result.current).toEqual([friLunch]))
+    expect(api.calls[0]!.body).toEqual({ portions: 2 })
+  })
+  it('asks again when the draft changes', async () => {
+    const api = mockApi({
+      'POST /api/plan/leftovers/1/threw-out?dryRun=1': (c: { body?: { portions?: number } }) => ({ replanned: c.body?.portions === 3 ? [friLunch] : [] }),
+    })
+    const { result, rerender } = renderHook(({ p }) => useReplanPreview(1, { kind: 'threw-out', portions: p }), {
+      wrapper: wrapperWith(newClient()),
+      initialProps: { p: 1 },
+    })
+    await waitFor(() => expect(api.calls).toHaveLength(1))
+    rerender({ p: 3 })
+    await waitFor(() => expect(result.current).toEqual([friLunch]))
+    expect(api.calls).toHaveLength(2)
+  })
+  it('does not call the server without a request or for Take out', async () => {
+    const api = mockApi({})
+    renderHook(() => useReplanPreview(1, null), { wrapper: wrapperWith(newClient()) })
+    renderHook(() => useReplanPreview(1, { kind: 'take-out', storagePlaceId: null }), { wrapper: wrapperWith(newClient()) })
+    await act(async () => {})
+    expect(api.calls).toEqual([])
   })
 })

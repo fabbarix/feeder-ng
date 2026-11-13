@@ -1,5 +1,5 @@
 // Test fixtures for the Leftovers lib and its components. Today is Thursday 2026-11-12.
-import type { Leftover, LeftoverPlace } from './types'
+import type { Leftover, LeftoverPlace, PlannedMealRef } from './types'
 
 export const TODAY = '2026-11-12'
 
@@ -18,3 +18,7 @@ export const places: LeftoverPlace[] = [
   { id: 3, name: 'Garage Fridge', kind: 'fridge', default: false },
   { id: 4, name: 'Basement Freezer', kind: 'freezer', default: false },
 ]
+
+/** A Planned Meal the server says would lose its portions (`replanned`, or the dry run). */
+export const friLunch: PlannedMealRef = { date: '2026-11-13', mealSlotId: 2, mealSlotName: 'Lunch', courseId: 1, recipeName: 'Chilli' }
+export const friDinner: PlannedMealRef = { date: '2026-11-13', mealSlotId: 3, mealSlotName: 'Dinner', courseId: 1, recipeName: 'Chilli' }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  actionError, answerToast, claimNote, freezeNote, freezeTitle, freezeToast, fromLeftoverLabel, hadItTitle, hadItToast, leftoverStrings,
-  portionsLabel, questionText, takeOutNote, takeOutTitle, takeOutToast, threwOutToast, throwOutTitle, useByPhrase,
+  actionError, answerToast, freezeNote, freezeTitle, freezeToast, fromLeftoverLabel, hadItTitle, hadItToast, leftoverStrings,
+  portionsLabel, questionText, replannedNote, takeOutNote, takeOutTitle, takeOutToast, threwOutToast, throwOutTitle, useByPhrase,
 } from './copy'
 
 const T = '2026-11-12'
@@ -37,8 +37,8 @@ describe('sheet copy', () => {
     expect(freezeNote('2027-02-10', 90, T)).toBe('Use by 10 Feb in the freezer (90 days)')
     expect(takeOutNote('2026-11-15', 3, T)).toBe('Use by Sun once out (3 days)')
   })
-  it('names a Planned Meal that is planned again', () => {
-    expect(claimNote({ date: '2026-11-13', slotName: 'Lunch', portions: 2 })).toBe('Fri Lunch was going to have 2 portions of it; it is planned again.')
+  it('names a Planned Meal that is planned again (from the server dry run, which has no portions)', () => {
+    expect(replannedNote({ date: '2026-11-13', mealSlotId: 2, mealSlotName: 'Lunch', courseId: 1 })).toBe('Fri Lunch was going to have it; it is planned again.')
   })
 })
 
@@ -84,6 +84,8 @@ describe('actionError', () => {
     expect(actionError({ status: 422, code: 'portions_invalid' }, 'Chilli')).toBe('There are not that many portions of Chilli left.')
     expect(actionError({ status: 422, code: 'storage_place_not_freezer' }, 'Chilli')).toBe('Pick a Storage Place of kind freezer.')
     expect(actionError({ status: 422, code: 'storage_place_freezer' }, 'Chilli')).toBe('Pick a Storage Place that is not a freezer.')
+    expect(actionError({ status: 422, code: 'storage_place_unknown' }, 'Chilli')).toBe('That Storage Place is gone. Pick another.')
+    expect(actionError({ status: 422, code: 'leftover_too_small' }, 'Chilli')).toBe('There are too few portions of Chilli left for that Planned Meal.')
     expect(actionError({ status: 404, code: 'not_found' }, 'Chilli')).toBe('Chilli is gone.')
   })
   it('falls back to a plain line', () => {

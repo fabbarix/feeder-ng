@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { places } from './fixtures'
 import {
-  defaultFreezer, freezeDefaultPortions, freezeUseBy, freezerPlaces, hadItDefault, lostClaims, portionBounds, takeOutPlaces,
+  defaultFreezer, freezeDefaultPortions, freezeUseBy, freezerPlaces, hadItDefault, portionBounds, takeOutPlaces,
   takeOutUseBy, throwOutDefault,
 } from './portions'
 
@@ -19,6 +19,11 @@ describe('portion defaults', () => {
   it('Freeze it defaults to the portions no Planned Meal is planned to use', () => {
     expect(freezeDefaultPortions(5, 2)).toBe(3)
     expect(freezeDefaultPortions(5, 0)).toBe(5)
+  })
+  it('Freeze it rounds the spare portions down to a 0.5 step so the stepper default is reachable', () => {
+    expect(freezeDefaultPortions(5.25, 2)).toBe(3)
+    expect(freezeDefaultPortions(4.75, 2)).toBe(2.5)
+    expect(freezeDefaultPortions(3, 0.25)).toBe(2.5)
   })
   it('Freeze it defaults to all of them when every portion is planned', () => {
     expect(freezeDefaultPortions(2, 2)).toBe(2)
@@ -53,18 +58,3 @@ describe('Use-by after Freeze it and Take out', () => {
   })
 })
 
-describe('lostClaims', () => {
-  const claims = [
-    { date: '2026-11-13', slotName: 'Lunch', portions: 2 },
-    { date: '2026-11-14', slotName: 'Dinner', portions: 2 },
-  ]
-  it('keeps the soonest Planned Meals and replans the ones that no longer fit', () => {
-    expect(lostClaims(claims, 3)).toEqual([claims[1]])
-    expect(lostClaims(claims, 4)).toEqual([])
-    expect(lostClaims(claims, 1)).toEqual(claims)
-    expect(lostClaims(claims, 0)).toEqual(claims)
-  })
-  it('no claims, nothing lost', () => {
-    expect(lostClaims([], 0)).toEqual([])
-  })
-})
