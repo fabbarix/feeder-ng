@@ -190,6 +190,14 @@ func beta6BRFSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return fmt.Errorf("no Course %q in %s", course, w.Last.Body)
 	})
+	sc.Step(`^the shopping Base recipe "([^"]*)" keeps for (\d+) days$`, func(name string, days int) error {
+		iid := idVar("ss:ingredient:" + name)
+		if iid == 0 {
+			return fmt.Errorf("Base recipe %q was not set up", name)
+		}
+		_, err := w.Ensure().DB.Exec(`UPDATE ingredients SET shelf_life_days = ? WHERE id = ?`, days, iid)
+		return err
+	})
 	sc.Step(`^the shopping Base recipes:$`, makeBase)
 	sc.Step(`^the shopping Recipes calling for Base recipes:$`, makePlain)
 	sc.Step(`^the C2 Base recipes:$`, makeBase)

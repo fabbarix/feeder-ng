@@ -251,15 +251,6 @@ func TestBoughtAttributionFollowsTheLinesOfAMealWithABaseRecipe(t *testing.T) {
 
 // ---- Consistency with Cooked: shopping derives the same split as baserecipe.Resolve (section 7 and 8) ----
 
-// toShopping is the conversion plans.Meals does (httpapi.ShoppingNeeds), written out for this test.
-func toShopping(tree []baserecipe.Need) []shopping.Need {
-	var out []shopping.Need
-	for _, n := range tree {
-		out = append(out, shopping.Need{IngredientID: n.IngredientID, Quantity: n.Quantity, Optional: n.Optional, Made: toShopping(n.Made)})
-	}
-	return out
-}
-
 func plain(ing int64, q float64) baserecipe.Need {
 	return baserecipe.Need{IngredientID: ing, Quantity: q}
 }
@@ -299,7 +290,7 @@ func TestShoppingAgreesWithBaseRecipeResolveOnWhatIsLeftToMake(t *testing.T) {
 					want[n.IngredientID] += n.Quantity // the part Stock did not cover, as plain Ingredients
 				}
 			}
-			l := shopping.Derive(baseIn(lots, dinner("2026-11-10", c.batches, toShopping(tree)...)))
+			l := shopping.Derive(baseIn(lots, dinner("2026-11-10", c.batches, shopping.NeedsFromTree(tree)...)))
 			var got, ids []int64
 			for _, ln := range l.Lines {
 				ids = append(ids, ln.IngredientID)
@@ -319,4 +310,27 @@ func TestShoppingAgreesWithBaseRecipeResolveOnWhatIsLeftToMake(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---- Bought attribution of a jar (round 2) ----
+
+func TestABoughtJarOfABaseRecipeIsAttributedUnderTheBaseRecipeIngredientNotItsChildren(t *testing.T) {
+	// The jar bought (Lot 9, 300 ml of Béchamel) covers part of Tuesday's Lasagne: the share is 300 ml of Béchamel for
+	// meal 1, not the milk, butter and flour that jar saved.
+	in := boInput([]stock.Lot{boLot(9, bech, 300)}, boMeal(1, "2026-11-10", 1, bechamel500()))
+	in.Ingredients = baseInfo()
+	boWant(t, shopping.Attribute(in, 9), "1/10=300")
+}
+
+func TestABoughtJarSpreadsOverTheMealsThatShareItInDateOrder(t *testing.T) {
+	in := boInput([]stock.Lot{boLot(9, bech, 600)}, boMeal(1, "2026-11-10", 1, bechamel500()), boMeal(2, "2026-11-12", 1, bechamel500()))
+	in.Ingredients = baseInfo()
+	boWant(t, shopping.Attribute(in, 9), "1/10=500", "2/10=100")
+}
+
+func TestABoughtJarInsideANestedBaseRecipeIsAttributedToThatNode(t *testing.T) {
+	// A bought jar of Roux (Lot 9, 30 g) covers 30 g of the 50 g inside the Béchamel: the share is Roux, not butter or flour.
+	in := boInput([]stock.Lot{boLot(9, roux, 30)}, boMeal(1, "2026-11-10", 1, nestedBechamel500()))
+	in.Ingredients = baseInfo()
+	boWant(t, shopping.Attribute(in, 9), "1/11=30")
 }

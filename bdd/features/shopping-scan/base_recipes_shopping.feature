@@ -114,3 +114,24 @@ Feature: Shopping List with Stock first for Base recipes (beta.6, docs/dev/desig
     Then the Shopping List line "milk" includes the unconfirmed Dinner of 2026-11-09
     And the Shopping List line "butter" includes the unconfirmed Dinner of 2026-11-09
     And the Shopping List line "pasta" includes the unconfirmed Dinner of 2026-11-09
+
+  Scenario: A jar that goes off before the meal is not used
+    Given the shopping Base recipe "Béchamel" keeps for 2 days
+    And the shopping dinners are pinned:
+      | date       | recipe  | batches |
+      | 2026-11-10 | Lasagne | 1       |
+    And the shopping Stock holds 600 ml of "Béchamel" bought on 2026-11-05
+    When I view the Shopping List
+    Then the Shopping List needs 500 ml of "milk"
+    And the Shopping List needs 30 g of "butter"
+    And the Shopping List has no line for "Béchamel"
+
+  Scenario: A jar that is still good on the day of the meal is used
+    Given the shopping Base recipe "Béchamel" keeps for 10 days
+    And the shopping dinners are pinned:
+      | date       | recipe  | batches |
+      | 2026-11-10 | Lasagne | 1       |
+    And the shopping Stock holds 600 ml of "Béchamel" bought on 2026-11-05
+    When I view the Shopping List
+    Then the Shopping List has no line for "milk"
+    And the Shopping List has no line for "Béchamel"

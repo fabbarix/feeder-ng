@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/stock"
 )
 
@@ -25,6 +26,14 @@ type Need struct {
 	Quantity     float64
 	Optional     bool
 	Made         []Need
+}
+
+// NeedsFromTree turns a Recipe's need tree (one Batch, Base Units) into Needs: a Base recipe node keeps its Quantity and
+// carries its Made children, recursively, so the list is Stock first. Optional is kept as the tree has it. An empty Base
+// recipe node (no Made) stays a plain Need of its Ingredient. It is the one converter plans.Meals uses (BR-F round 2:
+// moved here from shopping/httpapi, where it was ShoppingNeeds).
+func NeedsFromTree(tree []baserecipe.Need) []Need {
+	return nil // BR-F round 2 stub
 }
 
 // Meal is an uncooked, non-skipped Planned Meal in the range. A meal served from a Leftover (Leftover true) needs nothing.

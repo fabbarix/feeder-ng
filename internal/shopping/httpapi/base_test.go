@@ -3,12 +3,15 @@ package httpapi_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
-	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	shoppinghttp "github.com/fabbarix/feeder-ng/internal/shopping/httpapi"
+	"github.com/fabbarix/feeder-ng/internal/shopping/service"
+	"github.com/fabbarix/feeder-ng/internal/stock"
 	"github.com/fabbarix/feeder-ng/internal/testkit"
 )
 
@@ -238,32 +241,40 @@ func TestThePastMealHintShowsOnLinesThatCameFromABaseRecipe(t *testing.T) {
 	}
 }
 
-// ---- ShoppingNeeds, the conversion plans.Meals does from Store.NeedTree ----
+// ---- BR-F round 2 (Opus review) ----
 
-func TestShoppingNeedsKeepsTheTreeNestedAndOptional(t *testing.T) {
-	tree := []baserecipe.Need{
-		{IngredientID: 1, Quantity: 200},
-		{IngredientID: 10, Quantity: 500, BaseRecipeID: 7, Optional: true, Made: []baserecipe.Need{
-			{IngredientID: 3, Quantity: 500, Optional: true},
-			{IngredientID: 11, Quantity: 50, BaseRecipeID: 8, Optional: true, Made: []baserecipe.Need{{IngredientID: 12, Quantity: 25, Optional: true}}},
-		}},
-		{IngredientID: 14, Quantity: 50, BaseRecipeID: 9}, // an empty Base recipe: no Made
+func TestAMealWhoseRecipeIsCyclicListsNothingAndDoesNotFailTheList(t *testing.T) {
+	w := newBRWorld(t)
+	a := w.base("Sauce A", 1, "l", line(w.milk, 1000, "ml"))
+	b := w.base("Sauce B", 1, "l", callFor(a.ID, 500, "ml"))
+	cyclic := w.plain("Lasagne", line(w.flour, 200, "g"), callFor(b.ID, 500, "ml")).ID
+	soup := w.plain("Soup", line(w.butter, 50, "g")).ID
+	w.exec(`INSERT INTO recipe_lines(recipe_id, position, ingredient_id, quantity, unit) VALUES (?, 5, ?, 500, 'ml')`, a.ID, b.BaseIngredientID)
+	w.dinners("19:00", cyclic, 1, "2026-11-10")
+	w.exec(`INSERT INTO planned_meals(date,meal_slot_id,course_id,recipe_id,batches,portions,pinned,created_at,updated_at)
+		VALUES ('2026-11-11',90,(SELECT id FROM courses WHERE name='Main'),?,1,4,1,'2026-11-09T12:00:00Z','2026-11-09T12:00:00Z')`, soup)
+	// The cyclic Lasagne needs nothing (no flour either: it has no tree); Soup is listed as usual; the read is a 200.
+	w.wantLines(w.list(), map[int64]float64{w.butter: 50})
+}
+
+func TestAShoppingListReadLoadsTheCatalogOnce(t *testing.T) {
+	w := newBRWorld(t)
+	w.simple()
+	w.plain("Soup", line(w.milk, 200, "ml"))
+	w.plain("Stew", line(w.flour, 100, "g"))
+	w.dinners("19:00", w.lasagne, 1, "2026-11-10", "2026-11-11")
+	d, n := w.env.OpenCounting(t, func(q string) bool {
+		return strings.Contains(q, "FROM ingredient_conversions") && !strings.Contains(q, "WHERE")
+	})
+	svc := shoppinghttp.NewService(app.Deps{DB: d, Clock: w.env.Clock, Config: w.env.Config, Events: nil})
+	n.Reset()
+	if _, err := svc.List(context.Background(), service.Query{To: stock.Date("2026-11-15")}); err != nil {
+		t.Fatalf("List: %v", err)
 	}
-	got := shoppinghttp.ShoppingNeeds(tree)
-	if len(got) != 3 {
-		t.Fatalf("ShoppingNeeds = %+v, want 3 nodes", got)
-	}
-	if g := got[0]; g.IngredientID != 1 || g.Quantity != 200 || g.Optional || g.Made != nil {
-		t.Errorf("plain node = %+v", got[0])
-	}
-	b := got[1]
-	if b.IngredientID != 10 || b.Quantity != 500 || !b.Optional || len(b.Made) != 2 || b.Made[0].IngredientID != 3 || len(b.Made[1].Made) != 1 || b.Made[1].Made[0].IngredientID != 12 || b.Made[1].Made[0].Quantity != 25 {
-		t.Errorf("Base recipe node = %+v, want its Made children, nested, with Optional kept", b)
-	}
-	if e := got[2]; e.IngredientID != 14 || e.Quantity != 50 || e.Made != nil {
-		t.Errorf("empty Base recipe node = %+v, want a plain Need of its Ingredient (Made nil)", e)
+	if got := n.Count(); got != 1 {
+		t.Errorf("a Shopping List read loaded the catalog %d times for 4 Recipes, want once (stays red until BR-B round 3's batch Store.NeedTrees)", got)
 	}
 }
 
-// The tree plans.Meals reads is the one BR-G's Cooked reads: DBSources.NeedTrees (internal/plan/runner/basetree.go).
+// DBSources.NeedTrees stays the entry point of plans.Meals.
 var _ = (*runner.DBSources).NeedTrees
