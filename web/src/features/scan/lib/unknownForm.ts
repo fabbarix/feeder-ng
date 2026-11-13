@@ -1,6 +1,7 @@
 // The "what is this?" form for an unknown barcode (functional spec §10.1): validation, the prefilled Product name,
 // and the Op it produces. Plain TypeScript, no React. Stubs until implemented.
 import { defaultBaseUnit } from '../../ingredients/lib/newIngredient'
+import type { IngredientKind } from '../../ingredients/types'
 import { defaultProductName } from '../../products/lib/names'
 import type { RawImage } from '../../../ui'
 import { scanStrings } from '../strings'
@@ -14,6 +15,8 @@ export interface IngredientChoice {
   baseUnit: BaseUnit
   /** PE: the Ingredient's Picture address, drawn in the picker option */
   imageUrl?: string
+  /** SR5 (H7): food or supply; absent = food. A new Supply is created with kind 'supply'. */
+  kind?: IngredientKind
 }
 
 export interface UnknownFormValues {
@@ -32,6 +35,11 @@ export interface UnknownFormValues {
    * queue, which uploads it on sync. Left out of an online form (the picker uploads and `image` is set instead).
    */
   picture?: RawImage | null
+  /**
+   * SR5: the Op's clientUuid, chosen by the sheet so that the caller can name the new row (`newRowKey`) once the form is added.
+   * toUnknownOp uses it when present and `meta.clientUuid` otherwise.
+   */
+  clientUuid?: string
 }
 
 /** pack: the full form. weighed: Ingredient + Product name only. weighed_price: also the weight, once. */
@@ -140,4 +148,32 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
 /** R2-4: the Base Unit a new Ingredient gets from the pack unit chosen: the shared ingredients/lib/newIngredient.defaultBaseUnit rule. */
 export function newIngredientBaseUnit(packUnit: string): BaseUnit {
   return defaultBaseUnit(packUnit)
+}
+
+/** SR5: the Base Unit a new Ingredient starts on in the sheet's Base Unit choice: g for food, piece for a Supply. */
+export function defaultNewBaseUnit(_kind: IngredientKind): BaseUnit {
+  throw new Error('SR5: defaultNewBaseUnit is not implemented')
+}
+
+/** SR5: an Ingredient choice's kind (absent = food). */
+export function choiceKind(_choice: IngredientChoice | null): IngredientKind {
+  throw new Error('SR5: choiceKind is not implemented')
+}
+
+/** SR5: the choices of one kind, for the Select behind the Ingredient | Supply Segmented. */
+export function choicesOfKind(_choices: IngredientChoice[], _kind: IngredientKind): IngredientChoice[] {
+  throw new Error('SR5: choicesOfKind is not implemented')
+}
+
+/**
+ * SR5: the Product name the summary line offers. A pack: suggestedName ("Dish soap 500 ml"). A weighed code has no pack size: the
+ * Ingredient's name, capitalised ("Loose carrots" is what the User renames it to). "" until the Ingredient is known.
+ */
+export function defaultName(_values: UnknownFormValues, _mode: UnknownMode): string {
+  throw new Error('SR5: defaultName is not implemented')
+}
+
+/** SR5: the key the Scanned list gives the row of a Product that a queued scan has not created yet (scannedList: `new:<uuid>`). */
+export function newRowKey(_clientUuid: string): string {
+  throw new Error('SR5: newRowKey is not implemented')
 }

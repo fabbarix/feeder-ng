@@ -1,3 +1,5 @@
+// DEPRECATED (SR5): replaced by NewProductSheet. Delete this file, its four UnknownBarcodeSheet.*.test.tsx files and the UnknownBarcodeSheet case of
+// Scan.formActions.test.tsx once ScanScreen mounts NewProductSheet (SR4's import swap).
 // The "what is this?" sheet for an unknown barcode: the Ingredient, the pack or the weight, the name and the scope.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CROP_ASPECTS, ImagePicker } from '../../../ui'

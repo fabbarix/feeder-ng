@@ -95,7 +95,8 @@ describe('toUnknownOp', () => {
       quantity: 400,
       packSize: 400,
       scope: 'global',
-      ingredient: { name: 'tinned tomatoes', baseUnit: 'g' },
+      // SR5 (H7): a new Ingredient says its kind, food here (it used to be left out).
+      ingredient: { name: 'tinned tomatoes', baseUnit: 'g', kind: 'food' },
       productName: 'Tinned tomatoes 400 g',
     })
   })
