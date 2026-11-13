@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mockApi, renderWithProviders } from '../../plan/test-utils'
+import { mockApi, renderWithProviders, type RecordedCall } from '../../plan/test-utils'
 import { BECHAMEL, baseAdvance, baseCookView, baseTimeline, coveredCookView, coveredTimeline, nestedTimeline } from '../base-fixtures'
 import { MAIN_SCOPE, timer } from '../timeline-fixtures'
 import type { CookTimer, CookView, TimelineView } from '../types'
@@ -27,7 +27,7 @@ function setupMeal(view: TimelineView, timers: CookTimer[] = []) {
   const api = mockApi({
     'GET /api/cook/meals/2026-11-10/4/all': view,
     'GET /api/cook/timers': () => ({ now: new Date().toISOString(), timers }),
-    'POST /api/cook/timers': (c) => postedTimer(c.body),
+    'POST /api/cook/timers': (c: RecordedCall) => postedTimer(c.body),
     'PUT /api/cook/marks': {},
     'GET /api/courses': courses,
     'GET /api/plan': plan,
@@ -46,7 +46,7 @@ function setupRecipe(view: CookView, timers: CookTimer[] = []) {
   const api = mockApi({
     'GET /api/cook/recipes/7?batches=1': view,
     'GET /api/cook/timers': () => ({ now: new Date().toISOString(), timers }),
-    'POST /api/cook/timers': (c) => postedTimer(c.body),
+    'POST /api/cook/timers': (c: RecordedCall) => postedTimer(c.body),
     'PUT /api/cook/marks': {},
     'GET /api/courses': courses,
     'GET /api/plan': plan,
