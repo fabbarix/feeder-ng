@@ -71,7 +71,20 @@ func beta5UsedFromSteps(sc *godog.ScenarioContext, w *World) {
 				return l, nil
 			}
 		}
-		return lot{}, fmt.Errorf("no Lot of %q bought on %s", name, date)
+		// Not among that Ingredient's Lots: any Ingredient's Lot bought that day (a pick may name another Ingredient's Lot).
+		var all struct {
+			Lots []lot `json:"lots"`
+		}
+		r := w.Client.Get("/api/stock/lots")
+		if err := r.JSON(&all); err != nil || r.Status != 200 {
+			return lot{}, fmt.Errorf("list Lots: %d %s", r.Status, r.Body)
+		}
+		for _, l := range all.Lots {
+			if l.Purchased == date {
+				return l, nil
+			}
+		}
+		return lot{}, fmt.Errorf("no Lot bought on %s", date)
 	}
 	// usedFromOf turns the rows of "ingredient | bought | quantity" into the request's usedFrom list.
 	usedFromOf := func(table *godog.Table) ([]map[string]any, error) {
