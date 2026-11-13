@@ -62,7 +62,7 @@ describe('ScannedList', () => {
     expect(screen.queryByText('Read the receipt')).toBeNull()
   })
 
-  it('tapping a row makes it active: Stepper and menu; tapping another moves them; tapping it again clears it', async () => {
+  it('tapping a row makes it active: its strip shows; tapping another moves it; tapping it again clears it', async () => {
     view(props())
     const [paper, mutti] = items()
     await userEvent.click(within(mutti!).getByRole('button', { name: 'Mutti passata 700 g' }))
@@ -82,8 +82,7 @@ describe('ScannedList', () => {
     await userEvent.click(within(mutti).getByRole('button', { name: 'Increase Quantity of Mutti passata 700 g' }))
     await userEvent.click(within(mutti).getByRole('button', { name: 'Decrease Quantity of Mutti passata 700 g' }))
     await userEvent.click(within(mutti).getByRole('button', { name: /^Price of Mutti/ }))
-    await userEvent.click(within(mutti).getByRole('button', { name: 'More for Mutti passata 700 g' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove' }))
+    await userEvent.click(within(mutti).getByRole('button', { name: 'Remove Mutti passata 700 g' }))
     expect(p.onIncrement).toHaveBeenCalledWith('7')
     expect(p.onDecrement).toHaveBeenCalledWith('7')
     expect(p.onPrice).toHaveBeenCalledWith('7')

@@ -19,12 +19,10 @@ export interface ScannedListProps {
   onIncrement: (key: string) => void
   onDecrement: (key: string) => void
   onRemove: (key: string) => void
-  /** given, the rows with a Product offer "Open the Product" */
-  onOpenProduct?: (key: string) => void
   footer?: ReactNode
 }
 
-export function ScannedList({ rows, currency, system, pricingKey, onPrice, onIncrement, onDecrement, onRemove, onOpenProduct, footer }: ScannedListProps) {
+export function ScannedList({ rows, currency, system, pricingKey, onPrice, onIncrement, onDecrement, onRemove, footer }: ScannedListProps) {
   const [activeKey, setActiveKey] = useState<string | null>(null)
   // A scan of another Product puts its row on top: the active row is cleared. A rescan (the active row moves up) keeps it.
   const top = rows[0]?.key ?? null
@@ -53,7 +51,6 @@ export function ScannedList({ rows, currency, system, pricingKey, onPrice, onInc
               onIncrement={() => onIncrement(row.key)}
               onDecrement={() => onDecrement(row.key)}
               onRemove={() => onRemove(row.key)}
-              {...(onOpenProduct && row.productId !== null ? { onOpenProduct: () => onOpenProduct(row.key) } : {})}
             />
           ))}
         </ListGroup>

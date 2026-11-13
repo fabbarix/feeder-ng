@@ -237,10 +237,6 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onIncrement={(key) => void flow.increment(key)}
           onDecrement={(key) => void flow.decrement(key)}
           onRemove={(key) => void flow.removeRow(key)}
-          onOpenProduct={(key) => {
-            const row = scanned.rows.find((r) => r.key === key)
-            if (row?.productId != null) navigate(`/products/${row.productId}`)
-          }}
         />
       ) : (
         <ToGetList entries={scanned.toGet.map((line) => lineEntry(line, c.currency, c.system))} onOpen={() => navigate('/shop')} />

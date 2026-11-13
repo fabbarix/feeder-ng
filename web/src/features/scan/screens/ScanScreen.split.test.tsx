@@ -143,16 +143,16 @@ describe('Rows wired to the flow', () => {
     const mutti = rowOf('Mutti passata 700 g')
     await userEvent.click(within(mutti).getByRole('button', { name: 'Increase Quantity of Mutti passata 700 g' }))
     await userEvent.click(within(mutti).getByRole('button', { name: 'Decrease Quantity of Mutti passata 700 g' }))
-    await userEvent.click(within(mutti).getByRole('button', { name: 'More for Mutti passata 700 g' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove' }))
+    await userEvent.click(within(mutti).getByRole('button', { name: 'Remove Mutti passata 700 g' }))
     expect(c.flow.increment).toHaveBeenCalledWith('7')
     expect(c.flow.decrement).toHaveBeenCalledWith('7')
     expect(c.flow.removeRow).toHaveBeenCalledWith('7')
   })
 
-  it('a row Price and "Add price" start the Price entry on that row', async () => {
+  it('the active row\'s Price and "Add price" start the Price entry on that row', async () => {
     const c = controllerFake({ scanned: scannedFake(sessionEntries()) })
     open(c)
+    await userEvent.click(within(scannedList()).getByRole('button', { name: 'Mutti passata 700 g' }))
     await userEvent.click(within(rowOf('Mutti passata 700 g')).getByRole('button', { name: /^Price of Mutti/ }))
     expect(c.flow.startPriceEntry).toHaveBeenLastCalledWith('7')
     await userEvent.click(within(rowOf('Regina toilet paper 9 pieces')).getByRole('button', { name: /^Add price/ }))

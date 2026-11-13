@@ -1,5 +1,6 @@
 // SR4: ScannedRow is a ListRow of the Scanned list (shop-scan-proposals.md 13.3). It renders a SR3 row model: the Thumb
-// (or monogram), the name without the pack size, rowMeta (size · tick x of y), rowAmounts, "Add price", and for the active row the Stepper and the ⋮ menu.
+// (or monogram), the name without the pack size, rowMeta (size · tick x of y), rowAmounts, "Add price", and for the active
+// row one strip under it: the compact Stepper, Price and Remove (no ⋮ menu since the mockup review).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -109,18 +110,21 @@ describe('ScannedRow: what it shows', () => {
     expect(item.textContent).not.toMatch(/\$/)
   })
 
-  it('a priced row opens the Price entry from its Price button, named "Price of <product>"', async () => {
+  it('a priced row shows its Price as plain text on the right; the Price entry starts from the active row\'s strip', async () => {
     const { props, item } = setup(muttiTicked)
-    const price = within(item).getByRole('button', { name: /^Price of Mutti passata 700 g/ })
-    expect(price).toHaveTextContent('$2.58')
+    expect(item.querySelector('.list-row__value')).toHaveTextContent('$2.58×2 · $1.29')
+    expect(within(item).queryByRole('button', { name: /^Price of/ })).toBeNull()
+    document.body.innerHTML = ''
+    const active = setup(muttiTicked, { active: true })
+    const price = within(active.item).getByRole('button', { name: 'Price of Mutti passata 700 g…' })
+    expect(price).toHaveTextContent(/^Price$/)
     await userEvent.click(price)
-    expect(props.onPrice).toHaveBeenCalledTimes(1)
-    expect(props.onActivate).not.toHaveBeenCalled()
+    expect(active.props.onPrice).toHaveBeenCalledTimes(1)
+    expect(active.props.onActivate).not.toHaveBeenCalled()
+    expect(props.onPrice).not.toHaveBeenCalled()
   })
 
-  it('a row with no Price has no "Price of" button, and a priced row has no "Add price"', () => {
-    expect(within(setup(paperNoPrice).item).queryByRole('button', { name: /^Price of/ })).toBeNull()
-    document.body.innerHTML = ''
+  it('a priced row has no "Add price"', () => {
     expect(within(setup(notOnList).item).queryByRole('button', { name: /^Add price/ })).toBeNull()
   })
 })
@@ -176,19 +180,28 @@ describe('ScannedRow: the Shopping List match shows one tick', () => {
 })
 
 describe('ScannedRow: the active row', () => {
-  it('shows no Stepper or menu until it is active', () => {
+  it('shows no strip until it is active', () => {
     const { item } = setup(muttiTicked)
     expect(within(item).queryByRole('group', { name: 'Quantity of Mutti passata 700 g' })).toBeNull()
-    expect(within(item).queryByRole('button', { name: 'More for Mutti passata 700 g' })).toBeNull()
+    expect(within(item).queryByRole('button', { name: 'Remove Mutti passata 700 g' })).toBeNull()
+    expect(item.querySelector('.list-row__footer')).toBeNull()
     expect(item).not.toHaveAttribute('data-active')
   })
 
-  it('shows the Stepper (− ×N +) in the value column and the ⋮ "More for <product>" menu', () => {
+  it('keeps the top part of every row and adds one strip under it, in the same item: Stepper, Price, Remove; no ⋮ menu', () => {
     const { item } = setup(muttiTicked, { active: true })
     expect(item).toHaveAttribute('data-active', 'true')
-    const stepper = within(item).getByRole('group', { name: 'Quantity of Mutti passata 700 g' })
+    expect(item.querySelector('.list-row__title')).toHaveTextContent(/^Mutti passata$/)
+    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1400 of 1400 g$/)
+    expect(item.querySelector('.list-row__value')).toHaveTextContent('$2.58×2 · $1.29')
+    const strip = item.querySelector<HTMLElement>('.list-row__footer')!
+    const stepper = within(strip).getByRole('group', { name: 'Quantity of Mutti passata 700 g' })
+    expect(stepper).toHaveAttribute('data-size', 'xs')
     expect(within(stepper).getByRole('spinbutton')).toHaveAttribute('aria-valuenow', '2')
-    expect(within(item).getByRole('button', { name: 'More for Mutti passata 700 g' })).toHaveAttribute('aria-haspopup', 'menu')
+    expect(within(strip).getByRole('button', { name: 'Price of Mutti passata 700 g…' })).toBeInTheDocument()
+    expect(within(strip).getByRole('button', { name: 'Remove Mutti passata 700 g' })).toHaveTextContent(/^Remove$/)
+    expect(within(item).queryByRole('button', { name: /^More for/ })).toBeNull()
+    expect(item.querySelector('[aria-haspopup="menu"]')).toBeNull()
   })
 
   it('+ and − call the row handlers once each', async () => {
@@ -205,26 +218,18 @@ describe('ScannedRow: the active row', () => {
     expect(props.onDecrement).toHaveBeenCalledTimes(1)
   })
 
-  it('the menu offers Remove, and Open the Product only when the screen can open it', async () => {
-    const { props } = setup(muttiTicked, { active: true })
-    await userEvent.click(screen.getByRole('button', { name: 'More for Mutti passata 700 g' }))
-    expect(screen.queryByRole('menuitem', { name: 'Open the Product' })).toBeNull()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove' }))
+  it('Remove calls onRemove once (the screen removes at once or asks)', async () => {
+    const { props, item } = setup(muttiTicked, { active: true })
+    await userEvent.click(within(item).getByRole('button', { name: 'Remove Mutti passata 700 g' }))
     expect(props.onRemove).toHaveBeenCalledTimes(1)
+    expect(props.onActivate).not.toHaveBeenCalled()
   })
 
-  it('Open the Product is in the menu when onOpenProduct is given', async () => {
-    const onOpenProduct = vi.fn()
-    setup(muttiTicked, { active: true, onOpenProduct })
-    await userEvent.click(screen.getByRole('button', { name: 'More for Mutti passata 700 g' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Open the Product' }))
-    expect(onOpenProduct).toHaveBeenCalledTimes(1)
-  })
-
-  it('a weighed row has no Stepper (+ adds packs), only the menu', () => {
+  it('a weighed row has the strip without the Stepper', () => {
     const { item } = setup(loose, { active: true })
     expect(within(item).queryByRole('group', { name: 'Quantity of Loose cheese' })).toBeNull()
-    expect(within(item).getByRole('button', { name: 'More for Loose cheese' })).toBeInTheDocument()
+    expect(within(item).getByRole('button', { name: 'Price of Loose cheese…' })).toBeInTheDocument()
+    expect(within(item).getByRole('button', { name: 'Remove Loose cheese' })).toBeInTheDocument()
   })
 
   it('the row being priced is marked data-pricing (outlined)', () => {
@@ -235,8 +240,8 @@ describe('ScannedRow: the active row', () => {
 
 it('new strings exist with the spec copy', () => {
   expect(scanStrings.addPrice).toBe('Add price')
-  expect(scanStrings.moreFor('Mutti passata')).toBe('More for Mutti passata')
-  expect(scanStrings.openProduct).toBe('Open the Product')
+  expect(scanStrings.priceAction).toBe('Price')
+  expect(scanStrings.removeProduct('Mutti passata')).toBe('Remove Mutti passata')
   expect(scanStrings.priceOf('Mutti passata')).toBe('Price of Mutti passata')
   expect(scanStrings.quantityOf('Mutti passata')).toBe('Quantity of Mutti passata')
 })

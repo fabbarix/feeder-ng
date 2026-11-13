@@ -139,8 +139,9 @@ export const scanStrings = {
   nothingScanned: 'Nothing scanned yet',
   nothingScannedHint: 'Point the camera at a barcode. Lines to get are under To get.',
   addPrice: 'Add price',
-  moreFor: (product: string) => `More for ${product}`,
-  openProduct: 'Open the Product',
+  /** SR4 review: the active row's strip (its accessible name is priceOf(product) + "…", and removeProduct(product)) */
+  priceAction: 'Price',
+  removeProduct: (product: string) => `Remove ${product}`,
   priceOf: (product: string) => `Price of ${product}`,
   quantityOf: (product: string) => `Quantity of ${product}`,
   /** R2-4: the near-duplicate guard says the same words as the New Ingredient sheet (one place for them). */
