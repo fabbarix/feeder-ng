@@ -1,10 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import { planApi } from '../api'
+import { isUsedFromInvalid, normaliseCookPreview, usedFromApi } from '../api.usedFrom'
 import { planStrings } from '../strings'
+import { usedFromStrings } from '../usedFromStrings'
 import { leftoverOutcome, type LeftoverOutcome } from '../lib/cook'
 import type { CookedResult, CookPreview, SlotKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
+import { useCookContext } from './useCookContext'
+import { useUsedFrom, type UsedFromController } from './useUsedFrom'
 
 export interface MarkCookedController {
   preview: CookPreview | null
@@ -23,6 +27,10 @@ export interface MarkCookedController {
   /** Shortfall warnings still on screen (dismissed ones are removed). */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
+  /** The Course of the key (null while idle); the Used from section is shown for this Course. */
+  courseId: number | null
+  /** The Used from picks for the Course (useUsedFrom over the normalised preview needs). */
+  usedFrom: UsedFromController
 }
 
 const NO_WARNINGS: StockWarning[] = []
@@ -36,7 +44,13 @@ export function useMarkCooked(key: SlotKey | null): MarkCookedController {
     enabled: key !== null,
     gcTime: 0,
   })
-  const preview = key === null ? null : (q.data ?? null)
+  const preview = useMemo(() => (q.data ? normaliseCookPreview(q.data) : null), [q.data])
+  const cookContext = useCookContext(key !== null)
+  const usedFromCourses = useMemo(
+    () => (preview && key ? [{ courseId: key.courseId, courseName: preview.meal.courseName ?? '', needs: preview.needs }] : []),
+    [preview, key],
+  )
+  const usedFrom = useUsedFrom(usedFromCourses, { unitSystem: cookContext.unitSystem, today: cookContext.today })
   const [edited, setEdited] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,18 +75,24 @@ export function useMarkCooked(key: SlotKey | null): MarkCookedController {
     setBusy(true)
     setError(null)
     try {
-      const res = await planApi.cooked(key, edited ?? preview.proposedLeftover)
+      const res = await usedFromApi.cooked(key, { leftoverPortions: edited ?? preview.proposedLeftover, usedFrom: usedFrom.entries(key.courseId) })
       setResult(res)
       setDismissed([])
       void refresh()
       return res
-    } catch {
-      setError(planStrings.cookedError)
+    } catch (err) {
+      if (isUsedFromInvalid(err)) {
+        // A Stock Lot changed under the picks: say so and reload the preview (the picks drop with the old Lots).
+        setError(usedFromStrings.refused)
+        void client.invalidateQueries({ queryKey: ['plan', 'cook'] })
+      } else {
+        setError(planStrings.cookedError)
+      }
       return null
     } finally {
       setBusy(false)
     }
-  }, [key, preview, edited, refresh])
+  }, [key, preview, edited, refresh, usedFrom, client])
 
   const notCooked = useCallback(async () => {
     if (!key) return false
@@ -106,5 +126,7 @@ export function useMarkCooked(key: SlotKey | null): MarkCookedController {
     outcome,
     warnings,
     dismissWarning: (id) => setDismissed((d) => [...d, id]),
+    courseId: key?.courseId ?? null,
+    usedFrom,
   }
 }

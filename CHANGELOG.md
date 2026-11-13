@@ -18,6 +18,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
 - **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
 - **Bought Planned Meals are kept.** Once a Scan or Tick by hand on the Shopping List covers part of a Planned Meal's Ingredients, the Planned Meal is Bought, and automatic replans leave it as it is. Plan and Today show a Bought chip and what was bought, and warn when a Bought Planned Meal now breaks a rule: an Exclusion, an archived Recipe or a lost Course. Regenerate asks first, naming the Bought Planned Meals it would replace, and Swap notes what stays in Stock.
+- **Used from at Mark as Cooked.** The Mark as Cooked sheet and the Mark all Cooked sheet, on Plan, Today and in Cook Mode, have a Used from row: pick the Stock Lots a Cooked Planned Meal took an Ingredient from, with the amount from each, or leave it on soonest to go off first. Mark all Cooked refuses a pick that takes more from a Stock Lot than it holds.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { meal } from '../test-utils'
+import { meal, noUsedFrom } from '../test-utils'
 import type { CookPreview } from '../types'
 import { MarkCookedSheet } from './MarkCookedSheet'
 
@@ -12,7 +12,7 @@ const preview: CookPreview = {
 
 function setup(over: Partial<React.ComponentProps<typeof MarkCookedSheet>> = {}) {
   const h = { onClose: vi.fn(), onLeftoverChange: vi.fn(), onConfirm: vi.fn(), onNotCooked: vi.fn() }
-  render(<MarkCookedSheet open preview={preview} isLoading={false} leftover={2} busy={false} error={null} {...h} {...over} />)
+  render(<MarkCookedSheet open preview={preview} isLoading={false} leftover={2} busy={false} error={null} courseId={1} usedFrom={noUsedFrom()} {...h} {...over} />)
   return h
 }
 
