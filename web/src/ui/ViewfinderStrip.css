@@ -19,6 +19,22 @@
   aspect-ratio: 4 / 3;
 }
 
+.viewfinder-strip[data-size='tall'] .viewfinder-strip__picture {
+  height: 180px;
+}
+
+.viewfinder-strip[data-camera='paused'] .viewfinder-strip__picture video {
+  filter: brightness(0.5);
+}
+
+.viewfinder-strip__glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--viewfinder-reticle);
+}
+
 .viewfinder-strip__picture video {
   width: 100%;
   height: 100%;
@@ -37,9 +53,11 @@
   position: absolute;
   inset: auto 12px 10px;
   margin: 0;
-  color: var(--color-text);
+  color: var(--viewfinder-reticle);
   font-size: var(--text-meta-size);
   text-align: center;
+  /* White on the fixed dark frame is 18.6:1 in both schemes; the halo keeps it legible over a bright live picture. */
+  text-shadow: 0 0 4px var(--viewfinder-frame), 0 1px 2px var(--viewfinder-frame);
 }
 
 .viewfinder-strip__controls {
