@@ -64,12 +64,15 @@ type ingredientJSON struct {
 	ID            int64  `json:"id"`
 	Name          string `json:"name"`
 	BaseUnit      string `json:"baseUnit"`
+	Kind          string `json:"kind"` // "food" or "supply" (ADR 0017)
 	ShelfLifeDays *int   `json:"shelfLifeDays"`
 	// FrozenShelfLifeDays is the Shelf Life in a Freezer; null = the Freezer does not change the go-off date.
-	FrozenShelfLifeDays *int             `json:"frozenShelfLifeDays"`
-	Conversions         []conversionJSON `json:"conversions"`
-	Image               string           `json:"image"`
-	ImageURL            string           `json:"imageUrl"`
+	FrozenShelfLifeDays *int `json:"frozenShelfLifeDays"`
+	// RestockLevel is the Stock below which a Supply is put on the Shopping List; null = none (always null for food).
+	RestockLevel *float64         `json:"restockLevel"`
+	Conversions  []conversionJSON `json:"conversions"`
+	Image        string           `json:"image"`
+	ImageURL     string           `json:"imageUrl"`
 	// BaseRecipe is the Base recipe this Ingredient belongs to (null for a plain Ingredient, §3.2).
 	BaseRecipe *baseRecipeJSON `json:"baseRecipe"`
 }
@@ -86,8 +89,10 @@ func toJSON(i ingredient.Ingredient) ingredientJSON {
 		ID:                  i.ID,
 		Name:                i.Name,
 		BaseUnit:            string(i.Base),
+		Kind:                string(kindOf(i.Kind)),
 		ShelfLifeDays:       i.ShelfLifeDays,
 		FrozenShelfLifeDays: i.FrozenShelfLifeDays,
+		RestockLevel:        i.RestockLevel,
 		Conversions:         []conversionJSON{},
 		Image:               i.Image,
 	}
@@ -130,6 +135,14 @@ type conflictJSON struct {
 	Target float64 `json:"target"`
 }
 
+// kindOf reads the zero Kind as food.
+func kindOf(k ingredient.Kind) ingredient.Kind {
+	if k == ingredient.KindSupply {
+		return k
+	}
+	return ingredient.KindFood
+}
+
 type previewJSON struct {
 	Source           ingredientJSON   `json:"source"`
 	Target           ingredientJSON   `json:"target"`
@@ -139,6 +152,27 @@ type previewJSON struct {
 	Conflicts        []conflictJSON   `json:"conflicts"`
 	SourceReferences map[string]int   `json:"sourceReferences"`
 	TargetReferences map[string]int   `json:"targetReferences"`
+}
+
+// restockLevelField is a presence-aware Restock level in a request body: absent (set false), null (set, level nil:
+// clear it) or a number in Base Units.
+type restockLevelField struct {
+	set   bool
+	level *float64
+}
+
+func (f *restockLevelField) UnmarshalJSON(b []byte) error {
+	f.set = true
+	if string(bytes.TrimSpace(b)) == "null" {
+		f.level = nil
+		return nil
+	}
+	var n float64
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+	f.level = &n
+	return nil
 }
 
 // shelfLifeField is a presence-aware Shelf Life in a request body: absent (set
@@ -170,8 +204,10 @@ type conversionIn struct {
 type createBody struct {
 	Name                string         `json:"name"`
 	BaseUnit            string         `json:"baseUnit"`
+	Kind                *string        `json:"kind"` // absent = food; "" or anything but food/supply is a 400
 	ShelfLifeDays       *int           `json:"shelfLifeDays"`
 	FrozenShelfLifeDays *int           `json:"frozenShelfLifeDays"`
+	RestockLevel        *float64       `json:"restockLevel"`
 	Conversions         []conversionIn `json:"conversions"`
 	Image               string         `json:"image"`
 }
@@ -179,10 +215,13 @@ type createBody struct {
 type patchBody struct {
 	Name          *string        `json:"name"`
 	BaseUnit      *string        `json:"baseUnit"`
+	Kind          *string        `json:"kind"`
 	ShelfLifeDays shelfLifeField `json:"shelfLifeDays"`
 	// FrozenShelfLifeDays is presence-aware like shelfLifeDays: absent keeps it, null clears it.
 	FrozenShelfLifeDays shelfLifeField `json:"frozenShelfLifeDays"`
-	Image               *string        `json:"image"` // nil = keep, "" = remove
+	// RestockLevel is presence-aware: absent keeps it, null clears it.
+	RestockLevel restockLevelField `json:"restockLevel"`
+	Image        *string           `json:"image"` // nil = keep, "" = remove
 }
 
 type mergeBody struct {
@@ -197,8 +236,25 @@ type resolutionIn struct {
 
 // Handlers.
 
+// kindQuery reads ?kind=: absent is every kind ("" with ok), food or supply; anything else is a 400.
+func kindQuery(w http.ResponseWriter, r *http.Request) (ingredient.Kind, bool) {
+	if !r.URL.Query().Has("kind") {
+		return "", true
+	}
+	k, ok := ingredient.ParseKind(r.URL.Query().Get("kind"))
+	if !ok {
+		httpx.WriteError(w, http.StatusBadRequest, "bad_request", "The kind must be food or supply")
+		return "", false
+	}
+	return k, true
+}
+
 func (a *api) list(w http.ResponseWriter, r *http.Request) {
-	all, err := a.store.List(r.Context())
+	kind, ok := kindQuery(w, r)
+	if !ok {
+		return
+	}
+	all, err := a.store.ListByKind(r.Context(), kind)
 	if err != nil {
 		httpx.WriteAPIError(w, err)
 		return
@@ -223,7 +279,11 @@ func (a *api) search(w http.ResponseWriter, r *http.Request) {
 	if n, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil {
 		limit = n
 	}
-	res, err := a.store.Search(r.Context(), r.URL.Query().Get("q"), limit)
+	kind, ok := kindQuery(w, r)
+	if !ok {
+		return
+	}
+	res, err := a.store.SearchKind(r.Context(), r.URL.Query().Get("q"), limit, kind)
 	if err != nil {
 		httpx.WriteAPIError(w, err)
 		return
@@ -254,7 +314,16 @@ func (a *api) create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays, FrozenShelfLifeDays: body.FrozenShelfLifeDays, Image: body.Image}
+	in := ingredient.Input{Name: body.Name, Base: units.Base(body.BaseUnit), ShelfLifeDays: body.ShelfLifeDays,
+		FrozenShelfLifeDays: body.FrozenShelfLifeDays, RestockLevel: body.RestockLevel, Image: body.Image}
+	if body.Kind != nil {
+		k, err := parseKindField(*body.Kind)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		in.Kind = k
+	}
 	for _, c := range body.Conversions {
 		in.Conversions = append(in.Conversions, units.Conversion{Unit: c.Unit, ToBase: c.ToBase})
 	}
@@ -304,6 +373,17 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 	if body.BaseUnit != nil {
 		b := units.Base(*body.BaseUnit)
 		p.Base = &b
+	}
+	if body.Kind != nil {
+		k, err := parseKindField(*body.Kind)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		p.Kind = &k
+	}
+	if body.RestockLevel.set {
+		p.RestockLevel = &store.RestockLevelPatch{Level: body.RestockLevel.level}
 	}
 	if body.ShelfLifeDays.set {
 		p.ShelfLife = &store.ShelfLifePatch{Days: body.ShelfLifeDays.days}
@@ -400,7 +480,10 @@ func (a *api) mergePreview(w http.ResponseWriter, r *http.Request) {
 		SourceReferences: p.SourceReferences,
 		TargetReferences: p.TargetReferences,
 	}
-	if p.Plan.BaseMismatch {
+	switch {
+	case p.Plan.KindMismatch:
+		out.Blocked = "kind_differs"
+	case p.Plan.BaseMismatch:
 		out.Blocked = "base_unit_mismatch"
 	}
 	for _, c := range p.Plan.Conflicts {
@@ -467,6 +550,15 @@ func (a *api) changed(id int64) {
 	}
 }
 
+// parseKindField reads a kind from a request body: food or supply, else a plain 400 on field kind.
+func parseKindField(s string) (ingredient.Kind, error) {
+	k, ok := ingredient.ParseKind(s)
+	if !ok {
+		return "", &ingredient.ValidationError{Field: "kind", Message: "The kind must be food or supply"}
+	}
+	return k, nil
+}
+
 // idParam reads the {id} path value; a malformed id is simply not found.
 func idParam(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -481,9 +573,21 @@ func idParam(w http.ResponseWriter, r *http.Request) (int64, bool) {
 func writeErr(w http.ResponseWriter, err error) {
 	var unresolved *ingredient.UnresolvedError
 	var cycle *store.CycleError
+	var kindInUse *store.KindInUseError
+	var ve *ingredient.ValidationError
 	switch {
+	case errors.As(err, &ve) && ve.Reason != "":
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "validation_failed", "message": ve.Message, "reason": ve.Reason, "field": ve.Field,
+		}})
 	case errors.Is(err, ingredient.ErrInvalid):
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_ingredient", err.Error())
+	case errors.As(err, &kindInUse):
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "kind_in_use", "message": "Food-only things still use this Ingredient", "reasons": kindInUse.Reasons,
+		}})
+	case errors.Is(err, ingredient.ErrKindDiffers):
+		httpx.WriteError(w, http.StatusConflict, "kind_differs", "A Supply and a food Ingredient cannot be merged")
 	case errors.Is(err, store.ErrNameTaken):
 		httpx.WriteError(w, http.StatusConflict, "name_taken", "An Ingredient with that name already exists")
 	case errors.Is(err, store.ErrInUse):
