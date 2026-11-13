@@ -23,7 +23,8 @@ export interface PriceKeypadProps {
   locale?: string
   /**
    * The row's Price per pack (the Price record's `priceCents`), in minor units. A row that is not weighed passes this.
-   * It opens in the opening basis: converted to per kg when a weighed row has no `initialPerKgCents`.
+   * It opens in the opening basis: converted to per kg when a weighed row has no `initialPerKgCents`. A prefill is replaced
+   * by the first digit or decimal key, and Backspace clears it.
    */
   initialCents?: number | null
   /**
@@ -61,6 +62,11 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
   const openingBasis: PriceBasis = perKgPack && weighed !== undefined ? 'perKg' : 'pack'
   const [basis, setBasis] = useState<PriceBasis>(openingBasis)
   const [typed, setTyped] = useState(() => openingText())
+  /**
+   * The display holds a prefill (the row's Price, or the Last-time chip's) that no key has touched yet: the first digit or
+   * decimal key starts over instead of appending, and Backspace clears it.
+   */
+  const [prefilled, setPrefilled] = useState(() => typed !== '')
   const [refused, setRefused] = useState(false)
 
   /** A pack Price (minor units) as the typed text of a basis. */
@@ -92,6 +98,20 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
 
   function press(next: string) {
     setTyped(next)
+    setPrefilled(false)
+    setRefused(false)
+  }
+
+  /** What the keys work on: nothing while a prefill is untouched, else the typed text. */
+  const base = prefilled ? '' : typed
+  const digit = (d: string) => press(pressDigit(base, d, currency))
+  const decimal = () => press(pressDecimal(base, currency))
+  const backspace = () => press(pressBackspace(base))
+
+  /** A Price that is offered rather than typed (the Last-time chip): shown as a prefill. */
+  function offer(next: string) {
+    setTyped(next)
+    setPrefilled(next !== '')
     setRefused(false)
   }
 
@@ -136,9 +156,9 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
       if (inOtherDialog(target)) return
       if (target?.matches?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
-      if (/^[0-9]$/.test(e.key)) return press(pressDigit(typed, e.key, currency))
-      if (e.key === '.' || e.key === ',') return press(pressDecimal(typed, currency))
-      if (e.key === 'Backspace') return press(pressBackspace(typed))
+      if (/^[0-9]$/.test(e.key)) return digit(e.key)
+      if (e.key === '.' || e.key === ',') return decimal()
+      if (e.key === 'Backspace') return backspace()
       if (e.key === 'Enter' && !(target instanceof HTMLButtonElement)) {
         e.preventDefault()
         return commit()
@@ -183,7 +203,7 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
       {implied ? <p className="price-keypad__implied">{implied}</p> : null}
       {last ? (
         <span className="price-keypad__last">
-          <Chip kind="tag" onClick={() => press(valueIn(last.cents, basis))}>
+          <Chip kind="tag" onClick={() => offer(valueIn(last.cents, basis))}>
             {lastPriceHint({ cents: last.cents, date: last.date, currency, locale })}
           </Chip>
         </span>
@@ -192,21 +212,21 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
       )}
       <div role="group" aria-label={uiStrings.keypad} className="price-keypad__keys">
         {DIGITS.map((d) => (
-          <button key={d} type="button" className="price-keypad__key" onClick={() => press(pressDigit(typed, d, currency))}>
+          <button key={d} type="button" className="price-keypad__key" onClick={() => digit(d)}>
             {d}
           </button>
         ))}
         {hasDecimalKey(currency) ? (
-          <button type="button" className="price-keypad__key" aria-label={uiStrings.decimalKey} onClick={() => press(pressDecimal(typed, currency))}>
+          <button type="button" className="price-keypad__key" aria-label={uiStrings.decimalKey} onClick={decimal}>
             {separator}
           </button>
         ) : (
           <span className="price-keypad__key-gap" aria-hidden="true" />
         )}
-        <button type="button" className="price-keypad__key" onClick={() => press(pressDigit(typed, '0', currency))}>
+        <button type="button" className="price-keypad__key" onClick={() => digit('0')}>
           0
         </button>
-        <button type="button" className="price-keypad__key" aria-label={uiStrings.backspace} onClick={() => press(pressBackspace(typed))}>
+        <button type="button" className="price-keypad__key" aria-label={uiStrings.backspace} onClick={backspace}>
           <Icon name="backspace" size={20} />
         </button>
       </div>

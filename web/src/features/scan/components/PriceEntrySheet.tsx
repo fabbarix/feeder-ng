@@ -14,7 +14,7 @@ export interface PriceEntrySheetProps {
   /** the Product's pack: "per pack · per kg" for grams and millilitres */
   pack?: PackSize
   last: { cents: number; date: string } | null
-  /** a weighed row's weight in g or ml: it opens on per kg */
+  /** a weighed row's weight in g or ml: it opens on per kg (on its `initialPerKgCents`); a pack row opens on its own Price */
   weighed?: number
   initialPerKgCents?: number | null
   /** another row has no Price: the primary is "Next without a Price" */
@@ -39,6 +39,7 @@ export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, w
         pack={pack}
         last={last}
         weighed={weighed}
+        initialCents={row.weighed ? null : row.priceCents}
         initialPerKgCents={initialPerKgCents}
         shopName={shopName}
         hasNext={hasNext}

@@ -62,6 +62,21 @@ describe('PriceEntrySheet', () => {
     expect(screen.getByRole('status', { name: 'Price of Loose cheese' })).toHaveTextContent('20.00')
   })
 
+  it('a priced row opens prefilled with its Price, and the first key replaces it', async () => {
+    const priced = rowOf(applied('u-5', passata, { priceCents: 129 }))
+    setup({ row: priced })
+    const display = screen.getByRole('status', { name: 'Price of Mutti passata 700 g' })
+    expect(display).toHaveTextContent('$1.29')
+    await tap('2')
+    expect(display).toHaveTextContent('$2')
+    expect(display).not.toHaveTextContent('1.29')
+  })
+
+  it('an unpriced row opens empty', () => {
+    setup()
+    expect(screen.getByRole('status', { name: 'Price of Mutti passata 700 g' })).toHaveTextContent('$0')
+  })
+
   it('pieces have only per pack: no switch', () => {
     setup({ row: paper, ...priceContext(toiletPaper), last: null })
     expect(screen.queryByRole('radio', { name: 'per kg' })).toBeNull()
