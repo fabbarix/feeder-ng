@@ -116,3 +116,21 @@ describe('planPriceEntry: discard and refusal', () => {
     expect(planPriceEntry(empty, entry(), 'save')).toEqual({ kind: 'discard' })
   })
 })
+
+describe('planPriceEntry: per kg costs every scan as the server does (review)', () => {
+  it('a pack scan is costed by its quantity at the Price per kg, not by the typed pack Price', () => {
+    // 200/kg × 700 g = 140, whatever pack Price the sheet sent; the PATCH still carries that pack Price
+    const plan = planPriceEntry(row(applied('a', passata)), entry({ basis: 'perKg', cents: 200, packCents: 141, perKgCents: 200 }), 'save')
+    expect(plan).toMatchObject({ kind: 'save', patch: { priceCents: 141, pricePerKgCents: 200 }, applied: [{ clientUuid: 'a', priceCents: 140, pricePerKgCents: 200 }] })
+  })
+
+  it('a weighed scan that would cost less than 1 cent is refused (the server refuses it too)', () => {
+    const a = scanOp('a', cheese, { quantity: 2, weighed: true })
+    const plan = planPriceEntry(row({ op: a, result: okResult(a, cheese) }), entry({ basis: 'perKg', cents: 100, packCents: 100, perKgCents: 100 }), 'save')
+    expect(plan).toEqual({ kind: 'refuse', error: PRICE_REFUSED })
+  })
+
+  it('a per kg entry with no Price per kg is not saved as a pack Price', () => {
+    expect(planPriceEntry(row(applied('a', passata)), entry({ basis: 'perKg', cents: null, packCents: 145, perKgCents: null }), 'save').kind).toBe('refuse')
+  })
+})

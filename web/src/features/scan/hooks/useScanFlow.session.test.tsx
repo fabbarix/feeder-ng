@@ -352,6 +352,13 @@ describe('Price entry in the flow', () => {
     expect(h.deps.setPrices).toHaveBeenCalledWith({ clientUuids: ['a', 'b'], priceCents: 145 })
   })
 
+  it('a weighed queued scan that left the queue is sent with the row\'s pack Price, not its own weighed Price (review)', async () => {
+    const h = setup({ setQueuedPrice: vi.fn(async () => false) })
+    await seed(h, [{ op: scanOp('a', cheese, { quantity: 312, weighed: true }), result: null }])
+    await act(async () => { await flow(h).savePrice('21', entry(2000, { basis: 'perKg', cents: 2000, perKgCents: 2000 }), 'save') })
+    expect(h.deps.setPrices).toHaveBeenCalledWith({ clientUuids: ['a'], priceCents: 2000, pricePerKgCents: 2000 })
+  })
+
   it('Next saves this row and moves to the next row without a Price', async () => {
     const h = setup()
     await seed(h, [applied('a', passata), applied('b', toiletPaper), applied('c', cheese)])

@@ -12,7 +12,7 @@ import { stockTakeMessage } from '../lib/stockTakeToast'
 import { feedbackText } from '../lib/toast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
-import { planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
+import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
 import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
 import type { ScannedList } from './useScannedList'
 import type { OfflineData, OfflineProduct, Op, PricePatch, ScanResult, StockTakeAction } from '../types'
@@ -689,12 +689,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
     let served: PriceUpdate[] = []
     if (toServer.length > 0) {
-      const head = plan.patch ?? toServer[0]!
-      const body: PricePatch = {
-        clientUuids: toServer.map((l) => l.clientUuid),
-        priceCents: head.priceCents,
-        ...(head.pricePerKgCents !== undefined ? { pricePerKgCents: head.pricePerKgCents } : {}),
-      }
+      // The row's pack Price (and Price per kg), also when only queued scans that left the queue are sent.
+      const body: PricePatch = { clientUuids: toServer.map((l) => l.clientUuid), ...entryPrice(entry)! }
       let results: ScanResult[]
       try {
         results = await sendPrices(d, body)
