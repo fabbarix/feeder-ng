@@ -1,4 +1,5 @@
 // Pure helpers behind the kitchen board's tiles. Plain TypeScript, no React.
+import { boardStrings } from '../strings'
 import type { CourseLike, LeftoverLike, SlotLike, StockTotalLike } from '../types'
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
@@ -34,11 +35,11 @@ export function tomorrowMeals(slots: SlotLike[], today: string): SlotLike[] {
   return plannedOn(slots, dayAfter(today))
 }
 
-/** R13: tomorrow's Planned Meals plus the meals the planner could not plan (no meal, a recorded reason), by time. Read-only. */
+/** R13: tomorrow's Planned Meals plus the meals the planner could not plan (no meal, a recorded reason) and Not served slots (B5-F1), by time. Read-only. */
 export function tomorrowSlots(slots: SlotLike[], today: string): SlotLike[] {
   const date = dayAfter(today)
   return slots
-    .filter((s) => s.date === date && (hasPlanned(s) || (!hasPlanned(s) && (s.courses ?? []).some((c) => !!c.unfilled))))
+    .filter((s) => s.date === date && (hasPlanned(s) || s.notServed === true || (s.courses ?? []).some((c) => !!c.unfilled)))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }
 
@@ -167,6 +168,7 @@ export function tonightRows(slot: SlotLike): TonightRow[] {
  * it that holds a Planned Meal.
  */
 export function tomorrowLine(slot: SlotLike): string {
+  if (slot.notServed === true) return notServedLine(slot)
   const names = (slot.courses ?? [])
     .map((c) => c.meal)
     .filter((m): m is NonNullable<typeof m> => m !== null && m.state === 'planned')
@@ -174,4 +176,18 @@ export function tomorrowLine(slot: SlotLike): string {
   if (names.length === 0) return slot.name
   if (names.length === 1) return `${slot.name} · ${names[0]}`
   return `${slot.name}: ${names.join(' + ')}`
+}
+
+// ---- B5-F1: a Meal Slot that is Not served on tonight or tomorrow (ADR 0014) ----
+
+/** "Dinner · Not served". */
+export function notServedLine(slot: SlotLike): string {
+  return `${slot.name} · ${boardStrings.notServed}`
+}
+
+/** The slots Not served on `today`, by `at` then Meal Slot id: the Tonight tile says so instead of "Nothing planned tonight". */
+export function tonightNotServed(slots: SlotLike[], today: string): SlotLike[] {
+  return slots
+    .filter((s) => s.date === today && s.notServed === true)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }

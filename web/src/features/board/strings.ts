@@ -3,6 +3,8 @@ export const boardStrings = {
   tonight: 'Tonight',
   tonightCourses: "Tonight's Courses",
   tonightNone: 'Nothing planned tonight',
+  /** B5-F1: a Meal Slot Not served on its date ("Dinner · Not served"). */
+  notServed: 'Not served',
   nextAdvance: 'Next Advance Step',
   nextAdvanceNone: 'Nothing to prepare ahead',
   overdue: 'Overdue',
