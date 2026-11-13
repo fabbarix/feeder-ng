@@ -149,10 +149,12 @@ export function evaluateMetrics(m, { width, kind }) {
     // A field that shares a wrapping row with chips (the tag input) says so with data-size-intent="inline" (f.inline).
     if (['text', 'email', 'search', 'url'].includes(f.type) && !f.short && !f.inline && f.w < 160) add('P5', `field "${f.label}" collapsed to ${f.w}px`)
   }
+  // The bar floats inside the gutters, so it lines up with the container's content box (containerInner) when the probe reports it.
+  const edge = m.containerInner ?? m.container
   for (const b of m.bars) {
     if (b.bgAlpha === 0) add('P6', `sticky bar .${b.cls} has a transparent background`)
-    if (Math.abs(b.x - m.container.x) > 4 || Math.abs(b.r - m.container.r) > 4) {
-      add('P6', `sticky bar .${b.cls} (${b.x}-${b.r}) does not line up with the page container (${m.container.x}-${m.container.r})`)
+    if (Math.abs(b.x - edge.x) > 4 || Math.abs(b.r - edge.r) > 4) {
+      add('P6', `sticky bar .${b.cls} (${b.x}-${b.r}) does not line up with the page content (${edge.x}-${edge.r})`)
     }
   }
   if (m.railContrast !== null && m.railContrast < 4.5) add('P7', `current rail item contrast ${m.railContrast}:1 (< 4.5)`)

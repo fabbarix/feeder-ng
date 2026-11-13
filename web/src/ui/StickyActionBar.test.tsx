@@ -102,8 +102,8 @@ describe('StickyActionBar.css', () => {
   it('sticks to the bottom clear of the phone bottom bar (--nav-top is 0 from 1024), below the bottom bar in z-order', () => {
     const b = d('.sticky-action-bar')
     expect(b['position']).toBe('sticky')
-    // QA-4: flush on the bottom bar's top edge (--nav-top), not --nav-clearance, which adds a 16 px content gap.
-    expect(b['bottom']).toBe('var(--nav-top)')
+    // Floats a gutter above the bottom bar's top edge (--nav-top), not --nav-clearance.
+    expect(b['bottom']).toBe('calc(var(--nav-top) + var(--page-gutter))')
     expect(Number(b['z-index'])).toBeGreaterThan(0)
     expect(Number(b['z-index'])).toBeLessThan(10) // .bottom-bar is 10
   })
@@ -126,15 +126,16 @@ describe('StickyActionBar.css', () => {
     expect(b['background']).toBe('var(--color-surface)')
     expect(code).not.toMatch(/rgba?\(|color-mix|backdrop-filter|\bopacity\s*:|transparent/)
   })
-  it('spans the Page container edge to edge: negative gutter margin and gutter padding', () => {
+  it('stays inside the Page content (no negative gutter margin, never under the rail), padded like a tile', () => {
     const b = d('.sticky-action-bar')
-    expect(b['margin-inline']).toBe('calc(-1 * var(--page-gutter))')
-    expect(b['padding-inline']).toBe('var(--page-gutter)')
+    expect(b['margin-inline']).toBeUndefined()
+    expect(b['padding-inline']).toBe('var(--tile-pad)')
   })
-  it('has a top hairline always and the elevation only while stuck', () => {
-    expect(d('.sticky-action-bar')['border-block-start']).toBe('1px solid var(--color-line)')
-    expect(d(".sticky-action-bar[data-stuck='true']")['box-shadow']).toBe('var(--elev-2)')
-    expect(d('.sticky-action-bar')['box-shadow']).toBeUndefined()
+  it('floats like the phone bottom bar: full hairline border, tile radius, elevation', () => {
+    const b = d('.sticky-action-bar')
+    expect(b['border']).toBe('1px solid var(--color-line)')
+    expect(b['border-radius']).toBe('var(--radius-tile)')
+    expect(b['box-shadow']).toBe('var(--elev-2)')
   })
   it('aligns the inner row: full page by default, the narrow form column when data-column="narrow"', () => {
     expect(d('.sticky-action-bar__inner')['margin-inline']).toBe('auto')
@@ -142,9 +143,9 @@ describe('StickyActionBar.css', () => {
   })
   it('respects the safe area from 1024 (where there is no bottom bar above it) and never covers a focused field', () => {
     const wide = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
-    expect(wide).toMatch(/padding-block-end\s*:[^;]*env\(safe-area-inset-bottom/)
+    expect(wide).toMatch(/bottom\s*:[^;]*env\(safe-area-inset-bottom/)
     expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
-    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--sticky-bar-clearance))')
+    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance))')
   })
   it('uses tokens only', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)

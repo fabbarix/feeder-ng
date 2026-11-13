@@ -288,9 +288,9 @@ const probe = `
   const over = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {
     if (e.hasAttribute('data-page-width')) continue // the container itself: its padding is the gutter, not content
-    if (e.closest('.sticky-action-bar')) continue // a bar spans the container edges by design (rule P6 checks it)
+    if (e.closest('.sticky-action-bar')) continue // a bar spans the content edges by design (rule P6 checks it)
     if (!vis(e)) continue
-    if (e.matches('.sticky-action-bar')) continue // as wide as the container by design (P6 checks its alignment); its inner row is measured
+    if (e.matches('.sticky-action-bar')) continue // as wide as the content by design (P6 checks its alignment); its inner row is measured
     const b = e.getBoundingClientRect()
     if (b.width < 2) continue
     if (b.right > cw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0])
@@ -373,8 +373,11 @@ const probe = `
   const pageEl = main && main.querySelector('[data-page-width]')
   const container = pageEl || main
   const cb = container.getBoundingClientRect()
+  // P6: the floating action bar lines up with the container's content box (inside the gutters), as the cards above it do.
+  const ccs = getComputedStyle(container)
+  const inner = { x: Math.round(cb.x + parseFloat(ccs.paddingLeft) + parseFloat(ccs.borderLeftWidth)), r: Math.round(cb.right - parseFloat(ccs.paddingRight) - parseFloat(ccs.borderRightWidth)) }
   return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
-    content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) },
+    content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) }, containerInner: inner,
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
     fields, bars, railContrast, brokenText, dialog: null, hasMain: true }
 })()`

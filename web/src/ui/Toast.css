@@ -13,7 +13,7 @@
 }
 
 html:has(.sticky-action-bar) .toast-region {
-  bottom: calc(var(--nav-top) + var(--sticky-bar-clearance) + var(--space-3));
+  bottom: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--space-3));
 }
 
 /* Both live regions stay mounted; an empty one takes no room. */

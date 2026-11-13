@@ -37,7 +37,7 @@ describe('FU-1: a toast never covers the sticky action bar', () => {
   it('--sticky-bar-clearance defaults to the stacked two-row phone bar, derived from its tokens (padding, 2 x 44 controls, gap, border)', () => {
     expect(declarations(stickyCss, ':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
     expect(declarations(stickyCss, '.sticky-action-bar')['padding-block']).toBe('var(--space-3)')
-    expect(declarations(stickyCss, '.sticky-action-bar')['border-block-start']).toMatch(/^1px solid/)
+    expect(declarations(stickyCss, '.sticky-action-bar')['border']).toMatch(/^1px solid/)
   })
   it('the toast stays above the bar in z-order', () => {
     expect(Number(declarations(toastCss, '.toast-region')['z-index'])).toBeGreaterThan(Number(declarations(stickyCss, '.sticky-action-bar')['z-index']))
@@ -47,7 +47,7 @@ describe('FU-1: a toast never covers the sticky action bar', () => {
 describe('FU-2: the sticky-bar page padding skips full-screen pages', () => {
   it('.app-main:has(.sticky-action-bar) is limited with :not(.app-main--full)', () => {
     const css = strip(stickyCss)
-    expect(css).toMatch(/\.app-main:has\(\s*\.sticky-action-bar\s*\):not\(\s*\.app-main--full\s*\)\s*\{[^}]*padding-bottom:\s*var\(--nav-top\)/)
+    expect(css).toMatch(/\.app-main:has\(\s*\.sticky-action-bar\s*\):not\(\s*\.app-main--full\s*\)\s*\{[^}]*padding-bottom:\s*calc\(var\(--nav-top\) \+ var\(--page-gutter\)\)/)
     expect(css).not.toMatch(/\.app-main:has\(\s*\.sticky-action-bar\s*\)\s*\{/)
   })
   it('the full-screen class named is the one the shell really sets', () => {
