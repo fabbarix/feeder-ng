@@ -51,6 +51,8 @@ try {
 }
 
 // The Chrome profile lives next to the ids file (the worktree's build dir), never in the system tmp dir; stale ones of crashed runs are swept first.
+// The sweep is safe only under the lock: scripts/check-page-layout.sh holds $BUILD/page-layout.lock (flock) for its whole run, so no other
+// run in this build dir can be removing or using a profile dir at the same time. Run this driver by hand only when no wrapper run is active.
 const profileRoot = dirname(idsPath)
 mkdirSync(profileRoot, { recursive: true })
 for (const name of readdirSync(profileRoot)) {
@@ -205,7 +207,7 @@ try {
     `fetch('/api/dev/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ${JSON.stringify(email)} }) }).then((r) => r.status)`,
   )
 } catch (e) {
-  // Environment trouble (no server, hung CDP), not a layout finding: exit 2, which the wrapper only warns about.
+  // Environment trouble (no server, hung CDP), not a layout finding: exit 2, which the wrapper FAILS on in every mode (lost coverage).
   console.error(`check-page-layout: could not start the session (${e.message})`)
   await die(2)
 }

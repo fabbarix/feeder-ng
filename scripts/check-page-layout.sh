@@ -4,9 +4,9 @@
 # (scripts/check-page-layout.mjs), stops the server it started on EVERY exit path, and maps findings to warn/fail per route
 # (scripts/check-page-layout.modes).
 # Coverage: a route x viewport that was not inspected FAILS in every mode. Rule findings are warn/fail by the modes file.
-# A refused run (a busy port, or a second run in this worktree) FAILS in every mode: it means a concurrent run.
-# A guard that did not run for environment trouble (no Chrome, no web build, seed or server failure) is a SKIP/WARN in quick,
-# and a FAILED run in full (PAGE_LAYOUT=full, release QA).
+# A guard that did not run FAILS in every mode (quick too): a refused run (a busy port, or a run already holding this
+# worktree's lock), a server or seed that did not come up, a timeout, a crash, or a driver exit 2. Only two environment gaps
+# pass in quick: no Chrome (SKIP) and no web build (WARN). Both FAIL in full (PAGE_LAYOUT=full, release QA).
 #   scripts/check-page-layout.sh                 quick profile (390, 1440, 1920)
 #   PAGE_LAYOUT=full scripts/check-page-layout.sh    six viewports (release QA)
 #   PAGE_LAYOUT=skip ...                          do nothing
@@ -67,50 +67,26 @@ mkdir -p "$BUILD"
 SERVER_PID=""
 STARTED=""
 GUARD_PID=""
-LOCKED=""
 
-# One run per worktree: a lock directory in the build dir, holding the pid of its run. A lock whose pid is gone is stale.
-release_lock() {
-  if [ -n "$LOCKED" ]; then
-    rm -rf "$LOCK"
-    LOCKED=""
-  fi
-}
-acquire_lock() {
-  if mkdir "$LOCK" 2>/dev/null; then
-    echo $$ >"$LOCK/pid"
-    LOCKED=1
-    return 0
-  fi
-  local other
-  other="$(cat "$LOCK/pid" 2>/dev/null || true)"
-  if [ -n "$other" ] && kill -0 "$other" 2>/dev/null; then
-    return 1
-  fi
-  rm -rf "$LOCK"
-  if mkdir "$LOCK" 2>/dev/null; then
-    echo $$ >"$LOCK/pid"
-    LOCKED=1
-    return 0
-  fi
-  return 1
-}
-
-# A refused run: another run holds the worktree's lock, or the port is taken. It fails in every mode.
+# A refused run: another run holds this worktree's lock, or the port is taken. It FAILS in every mode.
 refused() {
-  release_lock
   echo "page layout guard FAILED: $1"
   exit 1
 }
 
-# A guard that did not run: a WARN (exit 0) in quick, a FAILED run (exit 1) in full.
+# A guard that did not run (coverage lost) FAILS in every mode, quick included.
 not_run() {
-  release_lock
+  echo "page layout guard FAILED: $1"
+  exit 1
+}
+
+# The web build is missing: the server answers 503 "frontend not built". A WARN (exit 0) in quick, a FAILED run in full.
+no_web_build() {
   if [ "$PROFILE" = full ]; then
-    echo "page layout guard FAILED: $1"
+    echo "page layout guard FAILED: no web build (the server answers 503 'frontend not built'); run pnpm -C web build and rebuild the server"
     exit 1
   fi
-  echo "WARN: $1"
+  echo "WARN: no web build (the server answers 503 'frontend not built'); page layout guard not run (run pnpm -C web build)"
   exit 0
 }
 
@@ -138,24 +114,27 @@ stop_server() {
   SERVER_PID=""
   STARTED=""
 }
-cleanup() {
-  stop_server
-  release_lock
+
+# One run per worktree: flock -n on $BUILD/page-layout.lock, held on fd 9 for this script's whole life. The kernel drops the lock
+# when the holder dies, so there is no stale-lock handling and a leftover lock file is harmless. Every process this run starts
+# closes fd 9 (`9>&-`), so no server, seeder, guard or Chrome can keep the lock after this run has gone.
+acquire_lock() {
+  exec 9>"$LOCK" && flock -n 9
 }
 
-# The lock and the busy-port check come before the trap: a run that is refused must not stop anything it does not own.
+# The lock and the busy-port check come before the trap: a refused run must not stop anything it does not own.
 if ! acquire_lock; then
-  refused "another page layout guard is running in this worktree (lock $LOCK); not run"
+  refused "another page layout guard is running in this worktree (lock $LOCK is held); not run"
 fi
 # Never touch a server that is not ours.
 if curl -s -o /dev/null --max-time 1 "$URL/" 2>/dev/null; then
-  refused "something already listens on $URL; page layout guard not run (set PAGE_LAYOUT_PORT to another port)"
+  refused "port $PORT is taken: something already listens on $URL, so page layout guard not run (the pid of a server this worktree started is in $PIDFILE; set PAGE_LAYOUT_PORT to another port)"
 fi
-trap cleanup EXIT
+trap stop_server EXIT
 trap 'exit 130' INT TERM HUP
 
 if [ -z "${PAGE_LAYOUT_SERVER_CMD:-}" ]; then
-  if ! (cd "$ROOT" && go build -buildvcs=false -o "$BUILD/feeder" ./cmd/feeder) >"$BUILD/page-layout-build.log" 2>&1; then
+  if ! (cd "$ROOT" && go build -buildvcs=false -o "$BUILD/feeder" ./cmd/feeder) 9>&- >"$BUILD/page-layout-build.log" 2>&1; then
     not_run "go build failed, page layout guard not run (see $BUILD/page-layout-build.log)"
   fi
   SERVER_CMD="$BUILD/feeder"
@@ -170,7 +149,7 @@ rm -f "$PIDFILE"
 
 # Detached (own session and process group), loopback only, scratch data dir, dev login.
 FEEDER_DEV_LOGIN=1 FEEDER_ADMIN_EMAIL=admin@example.test FEEDER_DATA_DIR="$DATA" FEEDER_ADDR="127.0.0.1:$PORT" PORT="$PORT" \
-  setsid nohup bash -c 'echo $$ >"$1"; shift; exec '"$SERVER_CMD" _ "$PIDFILE" >>"$LOG" 2>&1 </dev/null &
+  setsid nohup bash -c 'echo $$ >"$1"; shift; exec '"$SERVER_CMD" _ "$PIDFILE" >>"$LOG" 2>&1 </dev/null 9>&- &
 SERVER_PID=$!
 STARTED=1
 
@@ -185,11 +164,18 @@ if [ -z "$ready" ]; then
 fi
 [ -s "$PIDFILE" ] && SERVER_PID="$(cat "$PIDFILE")"
 
+# No web build: without web/dist the server answers 503 "frontend not built" on every page. There is no app to guard, so neither the seeder nor the guard runs.
+ROOT_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$URL/" 2>/dev/null || true)"
+ROOT_BODY="$(curl -s --max-time 2 "$URL/" 2>/dev/null || true)"
+if [ "$ROOT_CODE" = 503 ] && grep -qi 'frontend not built' <<<"$ROOT_BODY"; then
+  no_web_build
+fi
+
 SEED_CMD="${PAGE_LAYOUT_SEED_CMD:-node $ROOT/scripts/test/fixtures/page-layout-seed.mjs}"
 # Same kind of limit as the guard: a hung seeder must not hang check.sh. -k: kill whatever ignores TERM.
 SEED_LIMIT=""
 command -v timeout >/dev/null 2>&1 && SEED_LIMIT="timeout -k 5 ${PAGE_LAYOUT_SEED_TIMEOUT:-90}"
-(cd "$ROOT" && exec $SEED_LIMIT bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") >"$BUILD/page-layout-seed.log" 2>&1
+(cd "$ROOT" && exec $SEED_LIMIT bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") 9>&- >"$BUILD/page-layout-seed.log" 2>&1
 SEED_RC=$?
 if [ "$SEED_RC" -ne 0 ]; then
   if [ "$SEED_RC" -eq 124 ] || [ "$SEED_RC" -eq 137 ]; then
@@ -204,16 +190,22 @@ LIMIT=""
 command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-300}"
 START=$SECONDS
 # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
-(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") >"$OUT" 2>&1 &
+(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") 9>&- >"$OUT" 2>&1 &
 GUARD_PID=$!
 wait "$GUARD_PID"
 RC=$?
 GUARD_PID=""
 ELAPSED=$((SECONDS - START))
+# The probe count from the driver's coverage summary ("check-page-layout: coverage: inspected N of M (...)").
+PROBES="$(sed -n 's/^.*check-page-layout: coverage: inspected \([0-9][0-9]*\) of .*/\1/p' "$OUT" | tail -n1)"
 
 if [ "$RC" -eq 0 ]; then
   cat "$OUT"
-  echo "page layout guard: OK ($PROFILE profile, ${ELAPSED}s)"
+  if [ -n "$PROBES" ]; then
+    echo "page layout guard: OK ($PROFILE profile, $PROBES probes, ${ELAPSED}s)"
+  else
+    echo "page layout guard: OK ($PROFILE profile, ${ELAPSED}s)"
+  fi
   exit 0
 fi
 if [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; then
@@ -224,19 +216,32 @@ if [ "$RC" -ne 1 ]; then
   cat "$OUT"
   not_run "the page layout guard could not run (exit $RC, ${ELAPSED}s); not a layout finding"
 fi
-
+# Exit 1 is a run with findings or lost coverage. Exit 1 with neither a finding nor a coverage line is a crash, and it FAILS.
 N="$(grep -cE '^[[:space:]]+- [0-9]+px ' "$OUT")"
+if [ "$N" -eq 0 ] && ! grep -q 'check-page-layout: coverage:' "$OUT"; then
+  cat "$OUT"
+  not_run "the page layout guard crashed (exit 1 with no coverage line, ${ELAPSED}s); not a layout finding"
+fi
+
 BYRULE="$(grep -oE '^[[:space:]]+- [0-9]+px [^:]+: P[0-9]+' "$OUT" | grep -oE 'P[0-9]+$' | sort | uniq -c | awk '{printf "%s=%s ", $2, $1}')"
-FAILN="$(node "$ROOT/scripts/lib/page-layout-modes.mjs" count-fail "$MODES" <"$OUT" 2>/dev/null || echo 0)"
 NI="$(grep -cE '^  ! [0-9]+px .*not inspected' "$OUT")"
 cat "$OUT"
-if [ "${NI:-0}" -gt 0 ]; then
+# The fail count is only meaningful if the modes file can be read: an unknown count must never pass as 0.
+if [ ! -r "$MODES" ]; then
+  echo "page layout guard FAILED: the modes file $MODES cannot be read, so the fail count is unknown ($N finding(s), ${ELAPSED}s)"
+  exit 1
+fi
+if ! FAILN="$(node "$ROOT/scripts/lib/page-layout-modes.mjs" count-fail "$MODES" <"$OUT")"; then
+  echo "page layout guard FAILED: the modes file $MODES could not be read, so the fail count is unknown (${ELAPSED}s)"
+  exit 1
+fi
+if [ "$NI" -gt 0 ]; then
   echo "page layout guard FAILED: $NI route(s) not inspected (the ! lines above; a route that cannot be probed needs a reason in scripts/check-page-layout.exempt), ${ELAPSED}s"
 fi
-if [ "${FAILN:-0}" -gt 0 ]; then
+if [ "$FAILN" -gt 0 ]; then
   echo "page layout guard FAILED: $FAILN finding(s) on routes in fail mode (scripts/check-page-layout.modes); $N in total ($BYRULE), ${ELAPSED}s"
 fi
-if [ "${NI:-0}" -gt 0 ] || [ "${FAILN:-0}" -gt 0 ]; then
+if [ "$NI" -gt 0 ] || [ "$FAILN" -gt 0 ]; then
   exit 1
 fi
 echo "WARN: $N page-layout findings (warn mode) [$BYRULE] ($PROFILE profile, ${ELAPSED}s); flip routes in scripts/check-page-layout.modes as they are migrated"
