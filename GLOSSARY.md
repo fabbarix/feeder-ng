@@ -58,7 +58,7 @@ _Avoid_: Recipe reference, linked recipe, sub-recipe line
 _Note_: [ADR 0015](docs/adr/0015-base-recipes.md).
 
 **Needed at**:
-The Step of a Recipe by which a Base recipe line must be ready: the Base recipe's Steps are placed on the cooking timeline to finish before it. Unless the User picks one, it is the first Step that uses the Base recipe, else the first Step whose text names it, else the first non-Advance Step.
+The Step of a Recipe by which a Base recipe line must be ready: the Base recipe's Steps are placed on the cooking timeline to finish before it. Unless the User picks one, it is the first non-Advance Step that uses the Base recipe, else the first non-Advance Step whose text names it, else the first non-Advance Step.
 _Avoid_: Link step, anchor step, ready-by step
 _Note_: [ADR 0015](docs/adr/0015-base-recipes.md). Do not confuse with **Not needed** (a Shopping List line).
 
