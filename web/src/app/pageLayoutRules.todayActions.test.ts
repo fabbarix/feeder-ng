@@ -1,4 +1,4 @@
-// DS-TODAY round 2: the page-layout guard learns P14, the review's finding on Today: a row's actions collapsed to 0 px, buttons
+// DS-TODAY round 2: the page-layout guard learns P15, the review's finding on Today: a row's actions collapsed to 0 px, buttons
 // narrower than their label, text under the actions. The probe reports `actionLayout` [{ sel, why, px }]; it fails in every mode.
 import { describe, expect, it } from 'vitest'
 
@@ -20,26 +20,26 @@ const base = (vw: number) => ({
 })
 const run = (actionLayout: unknown, width = 1024) => rules.evaluateMetrics({ ...base(width), actionLayout }, { width, route: '/', kind: 'wide' })
 
-describe('P14: actions that do not fit their row', () => {
-  it('a button narrower than its label is a P14 finding naming it and the clipped pixels', () => {
-    const p = run([{ sel: 'button.button', why: 'label-clipped', px: 12 }]).find((x) => x.rule === 'P14')
-    expect(p?.message).toMatch(/^P14 /)
+describe('P15: actions that do not fit their row', () => {
+  it('a button narrower than its label is a P15 finding naming it and the clipped pixels', () => {
+    const p = run([{ sel: 'button.button', why: 'label-clipped', px: 12 }]).find((x) => x.rule === 'P15')
+    expect(p?.message).toMatch(/^P15 /)
     expect(p?.message).toMatch(/button\.button/)
     expect(p?.message).toMatch(/12\s*px/)
   })
 
-  it('an action group of 0 px, or text under the actions, is a P14 finding too', () => {
-    expect(run([{ sel: 'div.action-group', why: 'collapsed', px: 0 }]).map((x) => x.rule)).toContain('P14')
-    expect(run([{ sel: 'p.to-confirm__title', why: 'overlaps-actions', px: 30 }]).map((x) => x.rule)).toContain('P14')
+  it('an action group of 0 px, or text under the actions, is a P15 finding too', () => {
+    expect(run([{ sel: 'div.action-group', why: 'collapsed', px: 0 }]).map((x) => x.rule)).toContain('P15')
+    expect(run([{ sel: 'p.to-confirm__title', why: 'overlaps-actions', px: 30 }]).map((x) => x.rule)).toContain('P15')
   })
 
   it('nothing reported is clean; an older probe without the field is clean', () => {
-    expect(run([]).map((x) => x.rule)).not.toContain('P14')
-    expect(run(undefined).map((x) => x.rule)).not.toContain('P14')
+    expect(run([]).map((x) => x.rule)).not.toContain('P15')
+    expect(run(undefined).map((x) => x.rule)).not.toContain('P15')
   })
 
   it('it fails in every mode (ALWAYS_FAIL), also on warn routes', () => {
-    expect(rules.ALWAYS_FAIL).toContain('P14')
+    expect(rules.ALWAYS_FAIL).toContain('P15')
   })
 
   it('the driver measures it in the page: button scrollWidth > clientWidth, a group under 1 px, a text box intersecting its row\'s group', () => {
