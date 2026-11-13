@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,5 +139,51 @@ func TestUndoStepsAreRecordedOnceEachInTheOrderTheyRan(t *testing.T) {
 	}
 	if err := st.MarkUndoStep(ctx, "ghost", store.UndoStepList); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("unknown uuid: err = %v, want ErrNotFound", err)
+	}
+}
+
+// SR1: UpdatePrices sets the price of several events in one transaction (the store half of SetPrices).
+// type PriceUpdate struct { ClientUUID string; Cents int; PriceID *int64 }  (PriceID nil keeps the one the event has)
+// func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error
+func TestUpdatePricesSetsEveryEventAndItsResult(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 100, 1)
+	ev.RangeTo = "2026-11-15"
+	_, _ = st.Insert(ctx, ev)
+	ev = event("b", 100, 2)
+	_, _ = st.Insert(ctx, ev)
+	ev = event("c", 100, 3)
+	_, _ = st.Insert(ctx, ev)
+	if err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PriceID: i64(5)}, {ClientUUID: "b", Cents: 624}}); err != nil {
+		t.Fatal(err)
+	}
+	a, _, _ := st.Get(ctx, "a")
+	b, _, _ := st.Get(ctx, "b")
+	c, _, _ := st.Get(ctx, "c")
+	if *a.PriceCents != 129 || a.PriceID == nil || *a.PriceID != 5 || !strings.Contains(a.ResultJSON, `"priceCents":129`) {
+		t.Fatalf("a = %+v", a)
+	}
+	if *b.PriceCents != 624 || b.PriceID != nil || !strings.Contains(b.ResultJSON, `"priceCents":624`) {
+		t.Fatalf("b = %+v (PriceID nil keeps the event's own)", b)
+	}
+	if *c.PriceCents != 100 {
+		t.Fatalf("c = %+v, want untouched", c)
+	}
+	if spent, _, _ := st.Totals(ctx, "2026-11-15"); spent != 129+624+100 {
+		t.Fatalf("Totals = %d, want %d", spent, 129+624+100)
+	}
+}
+
+func TestUpdatePricesIsAllOrNothing(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	_, _ = st.Insert(ctx, event("a", 100, 1))
+	err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "ghost", Cents: 129}})
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
+	}
+	if a, _, _ := st.Get(ctx, "a"); *a.PriceCents != 100 {
+		t.Fatalf("a = %d, want the first update rolled back to 100", *a.PriceCents)
 	}
 }
