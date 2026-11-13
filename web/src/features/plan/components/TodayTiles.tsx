@@ -4,7 +4,7 @@ import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
 import type { LeftoverActionKind, LeftoverAnswer } from '../../../lib/leftovers/types'
 import type { Leftover as LeftoverFull } from '../../../lib/leftovers/types'
 import type { LeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
-import { toConfirmRows, toConfirmSidesLine, type ToConfirmRow } from '../lib/toConfirm'
+import { toConfirmMeta, toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
 import { asLeftover, leftoverRows } from '../lib/leftovers'
 import { tileRows } from '../../../lib/leftovers/rows'
 import { planStrings as s } from '../strings'
@@ -33,7 +33,7 @@ const noop = (): void => {}
 /** One row of To confirm: day and slot, the Main Recipe with its "+ Side" line, and the one decision (ActionGroup). */
 function ToConfirmRowItem({ row, handlers }: { row: ToConfirmRow; handlers: Required<Omit<ToConfirmTileProps, 'slots'>> }): ReactNode {
   const label = `${row.dayLabel} ${row.slotName}`
-  const meta = toConfirmSidesLine(row)
+  const meta = toConfirmMeta(row)
   const single = row.single
   const group =
     single !== undefined
@@ -48,14 +48,21 @@ function ToConfirmRowItem({ row, handlers }: { row: ToConfirmRow; handlers: Requ
           more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCookedSlot(row.slot) }],
         }
   return (
-    <li className="to-confirm__row">
+    // The row is the ActionGroup's container (action-group-host): the group is its direct child (DS-A round 2).
+    <li className="to-confirm__row action-group-host">
       <p className="to-confirm__when">
         <span>{row.dayLabel}</span>
         <span>{row.slotName}</span>
       </p>
       <div className="to-confirm__text">
         <p className="to-confirm__title">{row.main}</p>
-        {meta ? <p className="to-confirm__meta">{meta}</p> : null}
+        {meta ? (
+          <p className="to-confirm__meta">
+            {meta.emphasis !== null ? <strong>{meta.emphasis}</strong> : null}
+            {meta.emphasis !== null ? ' · ' : null}
+            {meta.text}
+          </p>
+        ) : null}
       </div>
       <ActionGroup label={label} primary={group.primary} secondary={group.secondary} more={group.more} />
     </li>
@@ -78,7 +85,9 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAll
           <Icon name="markCooked" size={20} />
         </span>
         <h2 className="to-confirm__heading">{s.toConfirmTitle}</h2>
-        <span className="to-confirm__count">{rows.length}</span>
+        <span className="to-confirm__count" data-shape="pill">
+          {rows.length}
+        </span>
       </div>
       <ul className="to-confirm__list">
         {rows.map((row) => (

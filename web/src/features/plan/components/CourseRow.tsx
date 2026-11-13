@@ -66,16 +66,19 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
       >
         {meal ? (
           <>
-            <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
-              {meal.recipeName}
-            </button>
-            <span className="plan-course__chips">
-              {chip ? <PlanChipView chip={chip} /> : null}
-              {whole ? (
-                <Chip kind={whole.kind} status={whole.status}>
-                  {whole.label}
-                </Chip>
-              ) : null}
+            {/* DS-TODAY round 2: the name and its chips share one box; CSS puts the chip beside the name (wide) or under it (phone). */}
+            <span className="plan-course__what">
+              <button type="button" className="plan-meal__recipe" title={meal.recipeName} onClick={() => onOpen(key)}>
+                {meal.recipeName}
+              </button>
+              <span className="plan-course__chips">
+                {chip ? <PlanChipView chip={chip} /> : null}
+                {whole ? (
+                  <Chip kind={whole.kind} status={whole.status}>
+                    {whole.label}
+                  </Chip>
+                ) : null}
+              </span>
             </span>
             {planned ? (
               <span className="plan-course__actions" role="group" aria-label={`${course.name} actions`}>
@@ -91,7 +94,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
                   <IconButton icon="markCooked" label={s.markCooked} size="compact" onClick={() => onMarkCooked?.(key)} />
                 ) : null}
                 {actions.includes('more') && mayResolve(meal.date, today) ? (
-                  <Menu label={`More for ${course.name}`} items={[{ id: 'cooked', label: s.markCooked, onSelect: () => onMarkCooked?.(key) }]} />
+                  <Menu label={`More for ${course.name}`} size="compact" items={[{ id: 'cooked', label: s.markCooked, onSelect: () => onMarkCooked?.(key) }]} />
                 ) : null}
               </span>
             ) : null}

@@ -10,11 +10,12 @@ export interface TodayMetrics {
   loading: boolean
 }
 
-export function useTodayMetrics(leftovers: number): TodayMetrics {
+/** `leftoversTile`: the Leftovers tile is on screen, so the strip leaves its Leftovers metric out. */
+export function useTodayMetrics(leftovers: number, leftoversTile = false): TodayMetrics {
   const streak = useZeroWasteStreak()
   const lines = useLinesToGet()
   return {
-    metrics: composeMetrics({ streakDays: streak.days, leftovers, linesToGet: lines.count }),
+    metrics: composeMetrics({ streakDays: streak.days, leftovers, linesToGet: lines.count, leftoversTile }),
     loading: streak.loading || lines.loading,
   }
 }

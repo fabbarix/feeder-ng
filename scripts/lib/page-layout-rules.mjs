@@ -18,7 +18,7 @@ export const ROUTES = [
 ]
 
 /** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow. */
-export const ALWAYS_FAIL = ['P1', 'P13']
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15']
 
 /** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
@@ -107,6 +107,12 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const o of m.navOverlap ?? []) add('P12', `${o.sel} is under the bottom bar by ${o.px} px at the end of the scroll; add clearance (--nav-clearance)`)
   // DS-A round 2 (system.md 10): a box wider than its tile or card spills past it (fails in every mode, see ALWAYS_FAIL).
   for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
+  // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
+  // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
+  for (const o of m.actionLayout ?? []) {
+    const what = o.why === 'collapsed' ? 'collapsed to 0 px' : o.why === 'label-clipped' ? `clips its label by ${o.px} px` : `runs ${o.px} px under the actions`
+    add('P15', `${o.sel} ${what}; give the row a real actions track (max-content) and let the group take its own line on a phone`)
+  }
   return out
 }
 

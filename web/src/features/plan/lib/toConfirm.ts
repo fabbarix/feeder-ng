@@ -88,6 +88,9 @@ export interface ToConfirmRow {
   primary: 'cooked' | 'allCooked'
   /** The key of the one Course, when the slot has only one. */
   single?: SlotKey
+  /** The Main Recipe's Course name ("Main") and the portions of its Planned Meal (DS-TODAY round 2: "Main · 2 portions"). */
+  courseName: string
+  portions: number | null
 }
 
 const dishKey = (name: string): string => name.trim().toLowerCase()
@@ -125,6 +128,8 @@ export function toConfirmRows(entries: PlanEntry[]): ToConfirmRow[] {
       sides,
       courseCount: list.length,
       primary: list.length > 1 ? 'allCooked' : 'cooked',
+      courseName: main.courseName,
+      portions: main.meal?.portions ?? null,
     }
     if (list.length === 1) row.single = { date: first.date, mealSlotId: first.mealSlotId, courseId: main.courseId }
     return row
@@ -157,4 +162,24 @@ export function previewRows(courseIds: number[], previews: CookPreview[]): AllCo
       leftoverUseBy: p.leftoverUseBy,
     }
   })
+}
+
+/** The meta line of a row: an emphasised lead ("+ Side", set in <strong>) and the rest; null when there is nothing to say. */
+export interface ToConfirmMeta {
+  emphasis: string | null
+  text: string
+}
+
+/**
+ * DS-TODAY round 2: the one-Course row says "Main · 2 portions"; a row with sides says "+ Side · Recipe", with "+ Side"
+ * emphasised (toConfirmSidesLine's first part); a row with several Courses and no sides has no meta line.
+ */
+export function toConfirmMeta(row: ToConfirmRow): ToConfirmMeta | null {
+  const line = toConfirmSidesLine(row)
+  if (line !== null) {
+    const cut = line.indexOf(' · ')
+    return cut < 0 ? { emphasis: null, text: line } : { emphasis: line.slice(0, cut), text: line.slice(cut + 3) }
+  }
+  if (row.single && row.portions !== null) return { emphasis: null, text: `${row.courseName} · ${s.portionsNeeded(row.portions)}` }
+  return null
 }

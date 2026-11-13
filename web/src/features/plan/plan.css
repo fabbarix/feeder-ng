@@ -227,8 +227,8 @@
 /* CRS F: the slot menu (⋮) sits in the hero's top row, on the overline's line, at the end. */
 .plan-hero__menu {
   position: absolute;
-  top: 8px;
-  inset-inline-end: 8px;
+  top: var(--tile-pad);
+  inset-inline-end: var(--tile-pad);
 }
 /* The overline (the Meal Slot name, up to 50 characters) wraps before it reaches the slot menu: button + gap. */
 .plan-hero:has(.plan-hero__menu) .tile__overline {

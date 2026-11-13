@@ -19,13 +19,18 @@ export interface MetricCounts {
   streakDays: number
   leftovers: number
   linesToGet: number
+  /** DS-TODAY round 2: the Leftovers tile is on screen and says the count, so the Leftovers metric is left out. */
+  leftoversTile?: boolean
 }
 
-/** The metrics that have something to say, in order: streak (from one day on), Leftovers, Lines to get (no zero counts). */
+/**
+ * The metrics that have something to say, in order: streak (from one day on), Leftovers (not while the Leftovers tile
+ * shows it), Lines to get (no zero counts).
+ */
 export function composeMetrics(c: MetricCounts): Metric[] {
   const out: Metric[] = []
   if (c.streakDays >= 1) out.push({ id: 'streak', value: streakMetric(c.streakDays).value, label: s.streakLabel, tone: 'success', icon: 'streak' })
-  if (c.leftovers > 0) out.push({ id: 'leftovers', value: String(c.leftovers), label: s.leftoversMetric, tone: 'leftover', icon: 'leftover' })
+  if (c.leftovers > 0 && !c.leftoversTile) out.push({ id: 'leftovers', value: String(c.leftovers), label: s.leftoversMetric, tone: 'leftover', icon: 'leftover' })
   if (c.linesToGet > 0) out.push({ id: 'lines', value: String(c.linesToGet), label: s.linesMetric, tone: 'accent', icon: 'shop' })
   return out
 }

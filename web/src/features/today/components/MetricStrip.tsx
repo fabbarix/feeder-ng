@@ -26,7 +26,9 @@ export function MetricStrip({ metrics }: MetricStripProps): ReactElement | null 
             status={m.tone === 'accent' ? undefined : m.tone}
             data-metric={m.id}
           >
-            <Icon name={m.icon} size={16} />
+            <span className="today-metric__icon" aria-hidden="true">
+              <Icon name={m.icon} size={20} />
+            </span>
             <TileMetric value={m.value} label={m.label} />
           </Tile>
         ))}

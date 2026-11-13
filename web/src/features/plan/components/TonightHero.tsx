@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
-import { Button, RecipeThumb, Tile } from '../../../ui'
+import { ActionGroup, Button, RecipeThumb, Tile } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { warningContextOf } from '../lib/bought'
 import { heroChips, leftoverChip } from '../lib/chips'
@@ -21,36 +21,30 @@ export interface TonightHeroProps {
   now: Date
   /** Open Cook Mode (Today routes to lib/cook cookPath). */
   onCook: (key: SlotDayKey) => void
-  /** "Yes, Cooked": mark Cooked with the planned Leftover portions in one tap. */
+  /** "Cooked": mark Cooked with the planned Leftover portions in one tap. */
   onYesCooked: (key: SlotKey) => void
   /** R12 "Reheat": open the Reheat screen of a meal served from a Leftover (lib/hero action 'reheat'). */
   /** Required for the Reheat action: without it the Reheat button is not shown. */
   onReheat?: (key: SlotKey) => void
   /** "Adjust": open the Mark as Cooked sheet. */
   onAdjust: (key: SlotKey) => void
-  /** True while a Yes, Cooked is being saved. */
+  /** True while a Cooked is being saved. */
   busy?: boolean
   /** N3: from lib/hero heroSelection. Default 'today' and 'cook'. */
   day?: HeroDay
   action?: HeroAction
   /** Household date, for Mark as Cooked on the compact rows and the slot menu (default: the slot's date). */
   today?: string
-  /** The compact rows' actions (Swap, Pin or Unpin, Mark as Cooked); the Recipe name opens the Course's sheet. */
+  /** The compact rows' actions (Swap, Pin or Unpin, the ⋮ with Mark as Cooked); the Recipe name opens the Course's sheet. */
   rowHandlers?: CourseRowHandlers
-  /** "Mark all Cooked" of the hero after the slot time, when several Courses are still to cook. */
+  /** "All Cooked" and "Adjust" of the hero after the slot time, when several Courses are still to cook. */
   onMarkAllCooked?: (slot: SlotDayKey) => void
-  /** The slot menu's other actions; the menu shows when given. */
+  /** The slot menu's other actions and the hero's "Not cooked" (the whole Meal Slot); the menu shows when given. */
   menu?: Pick<SlotMenuProps, 'onNotCookedSlot' | 'onAddCourse'>
   /** B5-F1: the per-date choices; the hero (a one-Course slot too) then has the slot menu with Who's eating, the time and Not served. */
   dateActions?: SlotDateActions
 }
 
-/**
- * The Today hero (ui-fix-plan 2.1, 2.2, 5.1): a full-width accent Tile (variant hero). Before the slot time: overline
- * "DINNER · 19:30" with "start 18:45" when known, the Recipe name, up to 2 why chips, a primary Cook button
- * "Cook · 45 min", a photo thumb when there is one. After the slot time (lib/hero heroPhase): "<Recipe> cooked?" with
- * primary "Yes, Cooked" and secondary "Adjust". The Cook button is the only primary in the tile.
- */
 /** DS-TODAY: the hero's eyebrow in one line, "Tomorrow · Dinner · start 19:09"; each part is its own span. */
 function HeroEyebrow({ parts }: { parts: string[] }): ReactNode {
   return parts.map((part, i) => (
@@ -61,13 +55,21 @@ function HeroEyebrow({ parts }: { parts: string[] }): ReactNode {
   ))
 }
 
+/**
+ * The Today hero (ui-fix-plan 2.1, 2.2, 5.1, docs/design/system.md round 2): a full-width accent Tile. Before the slot time
+ * its eyebrow, the Recipe name, up to 2 why chips and the Cook button. After the slot time the title stays the Recipe, a
+ * `.plan-hero__ask` line asks "<Recipe> cooked?", and the hero's own ActionGroup offers Cooked (or All Cooked), Adjust and
+ * Not cooked in the ⋮. A slot with several Courses lists the other Courses as compact rows under the hero.
+ */
 export function TonightHero(props: TonightHeroProps): ReactNode {
   if (slotCourses(props.slot).length > 1) return <SeveralCoursesHero {...props} />
   return <SingleHero {...props} />
 }
 
-/** A slot that serves one Course: the single-Recipe hero, as before. */
-function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', dateActions }: TonightHeroProps): ReactNode {
+const noop = () => {}
+
+/** A slot that serves one Course: the single-Recipe hero. */
+function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', dateActions, menu }: TonightHeroProps): ReactNode {
   const row = heroRow(slot)
   const meal = row?.course.meal ?? null
   const phrase = usePhraseContext(slot.date)
@@ -77,20 +79,27 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
   const canReheat = action === 'reheat' && onReheat !== undefined
   // A meal served from a Leftover says so ("Leftover from Mon"); the why chips follow, two at most in all.
   const chips = [...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
-  // Yes, Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
+  // Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
   const awaiting = phase === 'awaiting' && day === 'today'
+  const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const primary = { label: s.cooked, icon: 'markCooked' as const, disabled: busy, onClick: () => onYesCooked(key) }
+  const secondary = canReheat
+    ? { label: s.reheat, icon: 'reheat' as const, disabled: busy, onClick: () => onReheat(key) }
+    : { label: s.adjust, disabled: busy, onClick: () => onAdjust(key) }
+  const more = [{ id: 'not-cooked', label: s.notCooked, onSelect: () => (menu?.onNotCookedSlot ?? noop)(slotKey) }]
 
   return (
     <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
       {dateActions ? (
         <div className="plan-hero__menu">
-          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={noop} onAddCourse={noop} dateActions={dateActions} />
+          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={menu?.onNotCookedSlot ?? noop} onAddCourse={noop} dateActions={dateActions} />
         </div>
       ) : null}
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
-          <h2 className="plan-hero__name">{awaiting ? s.askCooked(meal.recipeName) : meal.recipeName}</h2>
+          <h2 className="plan-hero__name">{meal.recipeName}</h2>
+          {awaiting ? <p className="plan-hero__ask">{s.askCooked(meal.recipeName)}</p> : null}
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
               {chips.map((c) => (
@@ -117,31 +126,18 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
         ) : null
       ) : (
         <div className="plan-hero__actions">
-          <Button variant="primary" size="lg" block="phone" icon="markCooked" disabled={busy} onClick={() => onYesCooked(key)}>
-            {s.yesCooked}
-          </Button>
-          {canReheat ? (
-            <Button variant="secondary" size="lg" icon="reheat" disabled={busy} onClick={() => onReheat(key)}>
-              {s.reheat}
-            </Button>
-          ) : (
-            <Button variant="secondary" size="lg" disabled={busy} onClick={() => onAdjust(key)}>
-              {s.adjust}
-            </Button>
-          )}
+          <ActionGroup label={slot.name} primary={primary} secondary={secondary} more={more} />
         </div>
       )}
     </Tile>
   )
 }
 
-const noop = () => {}
-
 /**
- * A slot with several Courses (spec 7.5): the hero is the main Course's Planned Meal (or the first Course still to
- * cook); the other Courses are compact rows under it. Cook, "start" and "Cook · 30 min" are the slot's (the timeline).
- * After the slot time with two or more Courses to cook: "<Slot> cooked?" and one primary Mark all Cooked; with one left
- * it is a one-Course hero whose Yes, Cooked and Adjust report that Course.
+ * A slot with several Courses (spec 7.5): the hero is the main Course's Planned Meal (or the first Course still to cook);
+ * the other Courses are compact rows under it. Cook, "start" and "Cook · 30 min" are the slot's (the timeline). After the
+ * slot time with two or more Courses to cook the ask is "<Slot> cooked?" and the group is All Cooked, Adjust, ⋮; with one
+ * left it is a one-Course hero whose Cooked and Adjust report that Course.
  */
 function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu, dateActions }: TonightHeroProps): ReactNode {
   const hero = heroRow(slot)
@@ -157,7 +153,13 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   const whole = wholeMealChip(slot, hero)
   const chips = [...(whole ? [whole] : []), ...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   const others = compactRows(slot)
-  const heading = allAtOnce ? s.askCooked(slot.name) : awaiting ? s.askCooked(meal.recipeName) : meal.recipeName
+  const primary = allAtOnce
+    ? { label: s.allCookedShort, disabled: busy, onClick: () => onMarkAllCooked(slotKey) }
+    : { label: s.cooked, icon: 'markCooked' as const, disabled: busy, onClick: () => onYesCooked(hero.key) }
+  const secondary = canReheat
+    ? { label: s.reheat, icon: 'reheat' as const, disabled: busy, onClick: () => onReheat(hero.key) }
+    : { label: s.adjust, disabled: busy, onClick: () => (allAtOnce ? onMarkAllCooked(slotKey) : onAdjust(hero.key)) }
+  const more = [{ id: 'not-cooked', label: s.notCooked, onSelect: () => (menu?.onNotCookedSlot ?? noop)(slotKey) }]
 
   return (
     <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
@@ -176,7 +178,8 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
-          <h2 className="plan-hero__name">{heading}</h2>
+          <h2 className="plan-hero__name">{meal.recipeName}</h2>
+          {awaiting ? <p className="plan-hero__ask">{s.askCooked(allAtOnce ? slot.name : meal.recipeName)}</p> : null}
           {!awaiting && chips.length > 0 ? (
             <div className="plan-hero__chips">
               {chips.map((c) => (
@@ -201,26 +204,9 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
             </Button>
           </div>
         ) : null
-      ) : allAtOnce ? (
-        <div className="plan-hero__actions">
-          <Button variant="primary" size="lg" block="phone" icon="markCooked" disabled={busy} onClick={() => onMarkAllCooked(slotKey)}>
-            {s.markAllCooked}
-          </Button>
-        </div>
       ) : (
         <div className="plan-hero__actions">
-          <Button variant="primary" size="lg" block="phone" icon="markCooked" disabled={busy} onClick={() => onYesCooked(hero.key)}>
-            {s.yesCooked}
-          </Button>
-          {canReheat ? (
-            <Button variant="secondary" size="lg" icon="reheat" disabled={busy} onClick={() => onReheat(hero.key)}>
-              {s.reheat}
-            </Button>
-          ) : (
-            <Button variant="secondary" size="lg" disabled={busy} onClick={() => onAdjust(hero.key)}>
-              {s.adjust}
-            </Button>
-          )}
+          <ActionGroup label={slot.name} primary={primary} secondary={secondary} more={more} />
         </div>
       )}
       {others.length > 0 ? (

@@ -20,6 +20,8 @@
 
 .action-group .button {
   white-space: nowrap;
+  /* DS-TODAY round 2: a button keeps its label's width; the group's inline size never squeezes a label. */
+  flex: none;
 }
 
 /* Narrow: the group takes its own line as equal tracks; the ⋮ at 44 px; no minimum. */

@@ -60,7 +60,7 @@ export function TodayScreen(): ReactElement {
   const { layout, loading, retry } = useToday()
   const data = useTodayTileData()
   const steps = useAdvanceStepsDue()
-  const metrics = useTodayMetrics(data.leftovers.length)
+  const metrics = useTodayMetrics(data.leftovers.length, data.leftovers.length > 0)
   const flow = useCookFlow()
   const notCooked = useNotCooked()
   const isAdmin = useMe().data?.isAdmin !== false
