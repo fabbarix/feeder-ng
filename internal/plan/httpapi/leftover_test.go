@@ -355,10 +355,11 @@ func TestTakeOutMakesItANormalLeftover(t *testing.T) {
 	freezer := w.place("Garage Freezer", "freezer")
 	id := w.leftover(w.chilli, 3, "2027-02-07", freezer, "2026-11-02")
 	r := w.post(id, "take-out", map[string]any{"storagePlaceId": nil})
-	var out loBody
-	if r.Status != 200 || r.JSON(&out) != nil {
+	var ans loAnswer
+	if r.Status != 200 || r.JSON(&ans) != nil {
 		t.Fatalf("take-out = %d %s", r.Status, r.Body)
 	}
+	out := ans.Leftover
 	if out.ID != id || out.Frozen || out.FrozenOn != nil || out.StoragePlaceID != nil || out.UseBy != "2026-11-12" {
 		t.Errorf("Leftover = %+v, want not frozen, in no place, Use-by 2026-11-12 (today + the Household's 3 days)", out)
 	}
@@ -369,8 +370,12 @@ func TestTakeOutToAFridge(t *testing.T) {
 	freezer, fridge := w.place("Garage Freezer", "freezer"), w.place("Kitchen Fridge", "fridge")
 	id := w.leftover(w.chilli, 3, "2027-02-07", freezer, "2026-11-02")
 	r := w.post(id, "take-out", map[string]any{"storagePlaceId": fridge})
-	var out loBody
-	if r.Status != 200 || r.JSON(&out) != nil || out.StoragePlaceID == nil || *out.StoragePlaceID != fridge || out.Frozen {
+	var ans loAnswer
+	if r.Status != 200 || r.JSON(&ans) != nil {
+		t.Fatalf("take-out = %d %s", r.Status, r.Body)
+	}
+	out := ans.Leftover
+	if out.StoragePlaceID == nil || *out.StoragePlaceID != fridge || out.Frozen {
 		t.Fatalf("take-out = %d %s, want it in the Kitchen Fridge, not frozen", r.Status, r.Body)
 	}
 }
@@ -538,4 +543,11 @@ func TestALeftoverWithNoPortionsAnswers404ForFreezeHadItAndThrewItOut(t *testing
 	loWantErr(t, "freeze", w.post(id, "freeze", map[string]any{"storagePlaceId": freezer}), 404, "not_found")
 	loWantErr(t, "had-it", w.post(id, "had-it", map[string]any{"portions": 1}), 404, "not_found")
 	loWantErr(t, "threw-out", w.post(id, "threw-out", map[string]any{"portions": 1}), 404, "not_found")
+}
+
+func TestAFrozenLeftoverWithNoPortionsCannotBeTakenOut(t *testing.T) {
+	w := newLO(t)
+	freezer := w.place("Garage Freezer", "freezer")
+	id := w.leftover(w.chilli, 0, "2027-02-07", freezer, "2026-11-02")
+	loWantErr(t, "take-out", w.post(id, "take-out", map[string]any{"storagePlaceId": nil}), 404, "not_found")
 }

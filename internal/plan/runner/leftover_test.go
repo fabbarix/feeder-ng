@@ -886,8 +886,19 @@ func TestTakeOutUnpinsAndReplansTheMealsDatedAfterTheNewUseBy(t *testing.T) {
 	if want := keys(e.key(13)); !reflect.DeepEqual(res.Replanned, want) {
 		t.Errorf("Replanned = %v, want %v (only the meal dated after the new Use-by 2026-11-12)", res.Replanned, want)
 	}
-	if e.loServedFrom(13, l.ID) || e.loPinned(13) {
-		t.Error("Friday must be planned again: unpinned and no longer served from the Leftover")
+	if e.loPinned(13) {
+		t.Error("Friday must be unpinned, so the next planning run plans it again")
+	}
+	// Take out only unpins: it must not unlink, which would leave a fresh meal with 0 Batches until the next run.
+	// Move the clock until Friday is inside the Planning Horizon and plan.
+	e.clk.Set(time.Date(2026, 11, 11, 12, 0, 0, 0, time.UTC))
+	e.mustPlan()
+	m := e.meal(13)
+	if m.From != nil && m.From.LeftoverID == l.ID {
+		t.Errorf("Friday = %+v, want it no longer served from the Leftover once planned again", m)
+	}
+	if m.Batches < 1 {
+		t.Errorf("Friday = %+v, want at least 1 Batch (a planned-again meal is cooked fresh, never 0 Batches)", m)
 	}
 	if !e.loServedFrom(11, l.ID) || !e.loServedFrom(12, l.ID) || !e.loPinned(12) {
 		t.Error("the meals dated on or before the new Use-by must be left alone")
@@ -957,5 +968,20 @@ func TestALeftoverWithNoPortionsIsNotFoundForFreezeHadItAndThrewItOut(t *testing
 	}
 	if len(e.loEvents(l.ID)) != 0 || len(e.stock.waste) != 0 {
 		t.Error("a refused action wrote something")
+	}
+}
+
+func TestAFrozenLeftoverWithNoPortionsCannotBeTakenOut(t *testing.T) {
+	e := newEnv(t)
+	freezer := e.loPlace("Garage Freezer", "freezer")
+	l := e.loFrozen("chicken", 3, "2027-02-07", freezer, "2026-11-02")
+	if _, err := e.db.Exec(`UPDATE leftovers SET portions = 0 WHERE id = ?`, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.r.TakeOut(ctx, l.ID, 0, loUser); !errors.Is(err, runner.ErrNotFound) {
+		t.Errorf("TakeOut = %v, want ErrNotFound", err)
+	}
+	if got := e.loGet(l.ID); !got.Frozen() || len(e.loEvents(l.ID)) != 0 {
+		t.Errorf("a refused Take out changed something: %+v", got)
 	}
 }

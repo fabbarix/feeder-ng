@@ -109,7 +109,7 @@ Errors are `{"error": {"code", "message", "field"?, "reason"?}}`.
 | `POST /api/plan/leftovers/{id}/had-it` | `{ "portions" }` | `{ "leftover": L, "replanned": [R] }` | `404 not_found`, `422 portions_invalid` (also for a missing `portions`) |
 | `POST /api/plan/leftovers/{id}/threw-out` | `{ "portions" }` | as above | as above |
 | `POST /api/plan/leftovers/{id}/freeze` | `{ "storagePlaceId", "portions"? }` | `{ "frozen": L, "left": L \| null, "replanned": [R] }` | `404`, `409 leftover_past_use_by`, `409 leftover_frozen`, `422 storage_place_not_freezer`, `422 storage_place_unknown`, `422 portions_invalid` |
-| `POST /api/plan/leftovers/{id}/take-out` | `{ "storagePlaceId": id \| null }` | `L` | `404`, `409 leftover_not_frozen`, `422 storage_place_freezer`, `422 storage_place_unknown` |
+| `POST /api/plan/leftovers/{id}/take-out` | `{ "storagePlaceId": id \| null }` | `{ leftover: L, replanned: [R] }` (as Had it and Threw it out; also with `?dryRun=1`) | `404`, `409 leftover_not_frozen`, `422 storage_place_freezer`, `422 storage_place_unknown` |
 | `POST /api/plan/leftovers/{id}/answer` | `{ "answer": "had_it" \| "threw_out" \| "wasnt_there" }` | `204` | `404`, `409 leftover_not_to_answer`, `422 validation_failed` (`field: answer`, also when missing) |
 | `PUT /api/plan/{date}/{slotId}/{courseId}` | `{ "leftoverId" }` | the Planned Meal as today (`servedFromLeftover.leftoverId` set) | the existing codes, plus `404 not_found`, `409 leftover_past_use_by`, `422 leftover_too_small` |
 
