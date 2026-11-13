@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strconv"
 	"sync"
@@ -450,6 +451,7 @@ func (b *bus) count(topic string) int {
 }
 
 type env struct {
+	db     *sql.DB
 	svc    *service.Service
 	ledger *store.Store
 	stock  *fakeStock
@@ -469,8 +471,10 @@ const (
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	clk := clock.NewFake(startTime)
+	db := stocktest.NewDB(t)
 	e := &env{
-		ledger: store.New(stocktest.NewDB(t), clk),
+		db:     db,
+		ledger: store.New(db, clk),
 		stock:  newFakeStock(),
 		cat:    newFakeCatalogue(),
 		ing:    &fakeIngredients{},

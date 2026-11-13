@@ -199,6 +199,9 @@ func (s *Store) UpdatePrice(ctx context.Context, clientUUID string, cents int, p
 	return nil
 }
 
+// ErrUndone is returned by UpdatePrices for an event that was undone: the store re-checks it in the transaction.
+var ErrUndone = errors.New("scan store: undone")
+
 // PriceUpdate sets the Price of one scan event. PriceID nil keeps the one the event has; PrevPriceJSON nil keeps the
 // event's own, and a value replaces it ("" clears it).
 type PriceUpdate struct {
@@ -208,8 +211,8 @@ type PriceUpdate struct {
 	PrevPriceJSON *string
 }
 
-// UpdatePrices applies the updates in one transaction: all of them or none (ErrNotFound for an unknown client UUID).
-// json_patch merges the price into result_json's scan object, so the stored
+// UpdatePrices applies the updates in one transaction: all of them or none (ErrNotFound for an unknown client UUID,
+// ErrUndone for one undone in the meantime). json_patch merges the price into result_json's scan object, so the stored
 // Result answers the new price too.
 func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -226,8 +229,44 @@ func (s *Store) UpdatePrices(ctx context.Context, updates []PriceUpdate) error {
 		res, err := tx.ExecContext(ctx, `UPDATE scan_events SET price_cents = ?, price_id = COALESCE(?, price_id),
 			prev_price_json = CASE WHEN ? THEN prev_price_json ELSE ? END,
 			result_json = json_patch(result_json, json_object('scan', json_object('priceCents', ?)))
-			WHERE client_uuid = ?`,
+			WHERE client_uuid = ? AND undone_at IS NULL`,
 			u.Cents, nullInt(u.PriceID), keepPrev, prev, u.Cents, u.ClientUUID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return missingOrUndone(ctx, tx, u.ClientUUID)
+		}
+	}
+	return tx.Commit()
+}
+
+// EventPrice is the price state of one scan event, as RestorePrices puts it back: Cents nil is no price.
+type EventPrice struct {
+	ClientUUID    string
+	Cents         *int
+	PriceID       *int64
+	PrevPriceJSON string
+}
+
+// PriceState is the price state of an event (for RestorePrices).
+func (e Event) PriceState() EventPrice {
+	return EventPrice{ClientUUID: e.ClientUUID, Cents: e.PriceCents, PriceID: e.PriceID, PrevPriceJSON: e.PrevPriceJSON}
+}
+
+// RestorePrices puts back the price state of the events exactly (price, Price row, the Price it replaced and the stored
+// Result's priceCents), in one transaction. It is the inverse of UpdatePrices; an undone event is restored too, so a
+// compensation never stops half way. ErrNotFound for an unknown client UUID.
+func (s *Store) RestorePrices(ctx context.Context, states []EventPrice) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, st := range states {
+		res, err := tx.ExecContext(ctx, `UPDATE scan_events SET price_cents = ?, price_id = ?, prev_price_json = ?,
+			result_json = json_patch(result_json, json_object('scan', json_object('priceCents', ?))) WHERE client_uuid = ?`,
+			nullIntPtr(st.Cents), nullInt(st.PriceID), nullString(st.PrevPriceJSON), nullIntPtr(st.Cents), st.ClientUUID)
 		if err != nil {
 			return err
 		}
@@ -252,6 +291,20 @@ func (s *Store) SharedPrice(ctx context.Context, priceID int64, exceptUUID strin
 		return "", false, err
 	}
 	return prev.String, true, nil
+}
+
+func missingOrUndone(ctx context.Context, tx *sql.Tx, clientUUID string) error {
+	var undone sql.NullString
+	err := tx.QueryRowContext(ctx, `SELECT undone_at FROM scan_events WHERE client_uuid = ?`, clientUUID).Scan(&undone)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrNotFound
+	case err != nil:
+		return err
+	case undone.Valid:
+		return ErrUndone
+	}
+	return ErrNotFound
 }
 
 // Totals sums the range's Shop-mode events that are not undone: price_cents and the number of Stock Lots added.

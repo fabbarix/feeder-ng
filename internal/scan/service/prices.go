@@ -22,68 +22,101 @@ type SetPricesInput struct {
 	PricePerKgCents *int
 }
 
-// SetPrices sets the Price of several scans of one row (PATCH /api/scan/prices, and the receipt Apply). It returns one
-// Result per distinct uuid, in the order sent. Every check runs before the first write: on any error nothing changes.
-// There is one Price row per Shop and day of the scans; a day's per kg is kept when no PricePerKgCents is sent.
+// SetPrices sets the Price of several scans of one row (PATCH /api/scan/prices). It returns one Result per distinct
+// uuid, in the order sent. Every check runs before the first write, and on an error after it the writes are put back:
+// on any error nothing changes. There is one Price row per Shop and day of the scans; a day's per kg is kept when no
+// PricePerKgCents is sent. It takes the scan lock; the receipt Apply, which holds it, calls setPrices.
 func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Result, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	out, _, err := s.setPrices(ctx, in)
+	return out, err
+}
+
+// The day's Prices (product store) and the scans' prices (scan ledger) are two writes, not one transaction (ADR 0018
+// decision 8: the ports take no *sql.Tx). The scan write is one transaction; a failure of it puts the day's Prices back.
+// The gap left: a crash between the two writes, or a failed put-back, leaves a day's Price at the new value while its
+// scans keep theirs. Recording a Price is an upsert per Product, Shop and day, so retrying the same call converges.
+
+// PricesBefore is what one setPrices changed, as it was before: restorePrices puts it back (the receipt Apply's inverse
+// of a set of Prices, and setPrices' own compensation).
+type PricesBefore struct {
+	Events []store.EventPrice
+	Days   []DayPriceBefore
+}
+
+// DayPriceBefore is a Shop's Price of a Product on a day before setPrices wrote it: Before nil means there was none, and
+// restoring deletes the row setPrices wrote (WrittenID).
+type DayPriceBefore struct {
+	ProductID, ShopID int64
+	Date              stock.Date
+	Before            *PriceInfo
+	WrittenID         int64
+}
+
+// setPrices is SetPrices with the scan lock held. It also returns what it changed, for restorePrices.
+func (s *Service) setPrices(ctx context.Context, in SetPricesInput) ([]scan.Result, PricesBefore, error) {
 	uuids := distinct(in.ClientUUIDs)
 	if len(uuids) == 0 {
-		return nil, &scan.ValidationError{Field: "clientUuids", Message: "at least one scan is required"}
+		return nil, PricesBefore{}, &scan.ValidationError{Field: "clientUuids", Message: "at least one scan is required"}
 	}
 	if in.PriceCents <= 0 {
-		return nil, &scan.ValidationError{Field: "priceCents", Message: "a price must be more than 0"}
+		return nil, PricesBefore{}, &scan.ValidationError{Field: "priceCents", Message: "a price must be more than 0"}
 	}
 	if in.PricePerKgCents != nil && *in.PricePerKgCents <= 0 {
-		return nil, &scan.ValidationError{Field: "pricePerKgCents", Message: "a price per kg must be more than 0"}
+		return nil, PricesBefore{}, &scan.ValidationError{Field: "pricePerKgCents", Message: "a price per kg must be more than 0"}
 	}
 
 	events, err := s.pricedScans(ctx, uuids)
 	if err != nil {
-		return nil, err
+		return nil, PricesBefore{}, err
 	}
 	shop, pid := *events[0].ShopID, *events[0].ProductID
 	p, err := s.d.Catalogue.Product(ctx, pid)
 	if errors.Is(err, ErrProductGone) {
-		return nil, ErrNotFound
+		return nil, PricesBefore{}, ErrNotFound
 	}
 	if err != nil {
-		return nil, err
+		return nil, PricesBefore{}, err
 	}
 	base := units.Base(p.BaseUnit)
 	if in.PricePerKgCents != nil && base == units.Piece {
-		return nil, &scan.ValidationError{Field: "pricePerKgCents", Message: "a Product in pieces has no price per kg"}
+		return nil, PricesBefore{}, &scan.ValidationError{Field: "pricePerKgCents", Message: "a Product in pieces has no price per kg"}
 	}
 
 	today, _, err := s.household(ctx)
 	if err != nil {
-		return nil, err
+		return nil, PricesBefore{}, err
 	}
 	dates := make([]stock.Date, len(events))
 	for i, ev := range events {
 		if dates[i], err = s.scanDate(ctx, ev.ScannedAt, today); err != nil {
-			return nil, err
+			return nil, PricesBefore{}, err
 		}
 	}
-	// Each day's Price as it is (as prev_price_json keeps it), and the day's per kg: the one sent, else the one the day
-	// already has.
-	var days []stock.Date
+	// Each day's Price as it is (copied: recording overwrites the same-day row in place), and the day's per kg: the one
+	// sent, else the one the day already has.
+	var days []DayPriceBefore
+	dayIndex := map[stock.Date]int{}
 	dayPerKg := map[stock.Date]*int{}
-	dayBefore := map[stock.Date]string{}
 	for _, d := range dates {
-		if _, seen := dayPerKg[d]; seen {
+		if _, seen := dayIndex[d]; seen {
 			continue
 		}
-		days = append(days, d)
 		existing, err := s.d.Catalogue.PriceOn(ctx, pid, shop, d)
 		if err != nil {
-			return nil, err
+			return nil, PricesBefore{}, err
 		}
-		dayBefore[d] = snapshotJSON(existing)
+		var before *PriceInfo
+		if existing != nil {
+			before = &PriceInfo{ID: existing.ID, Date: existing.Date, PriceCents: copyInt(existing.PriceCents),
+				PricePerKgCents: copyInt(existing.PricePerKgCents)}
+		}
+		dayIndex[d] = len(days)
+		days = append(days, DayPriceBefore{ProductID: pid, ShopID: shop, Date: d, Before: before})
 		dayPerKg[d] = copyInt(in.PricePerKgCents)
-		if in.PricePerKgCents == nil && existing != nil {
-			dayPerKg[d] = copyInt(existing.PricePerKgCents)
+		if in.PricePerKgCents == nil && before != nil {
+			dayPerKg[d] = copyInt(before.PricePerKgCents)
 		}
 	}
 	cents := make([]int, len(events))
@@ -94,50 +127,64 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 		}
 		c, ok := product.PriceForWeight(product.Price{PricePerKgCents: in.PricePerKgCents}, p.PackSize, base, ev.Quantity)
 		if !ok {
-			return nil, &scan.ValidationError{Field: "pricePerKgCents", Message: "the price per kg gives less than 1 cent for a scan"}
+			return nil, PricesBefore{}, &scan.ValidationError{Field: "pricePerKgCents", Message: "the price per kg gives less than 1 cent for a scan"}
 		}
 		cents[i] = c
 	}
 
-	// All checks passed: the writes start here.
-	priceIDs := map[stock.Date]int64{}
+	// All checks passed: the writes start here. A failure puts back what was written (best effort, as purchase does).
+	undo := PricesBefore{}
+	fail := func(err error) ([]scan.Result, PricesBefore, error) {
+		_ = s.restorePrices(context.WithoutCancel(ctx), undo)
+		return nil, PricesBefore{}, err
+	}
 	baseline := map[stock.Date]*string{}
-	for _, d := range days {
+	for i := range days {
+		d := &days[i]
 		pack := in.PriceCents
-		rec, err := s.d.Catalogue.RecordPrice(ctx, pid, PriceInput{ShopID: shop, Date: d, PriceCents: &pack, PricePerKgCents: dayPerKg[d]})
+		rec, err := s.d.Catalogue.RecordPrice(ctx, pid, PriceInput{ShopID: shop, Date: d.Date, PriceCents: &pack, PricePerKgCents: dayPerKg[d.Date]})
 		if err != nil {
-			return nil, err
+			return fail(err)
 		}
-		priceIDs[d] = rec.ID
+		d.WrittenID = rec.ID
+		undo.Days = append(undo.Days, *d)
 		// The scans that now refer to the day's Price share what it was before the first of them wrote it, so an Undo
 		// of one of them leaves it to the others and the last one puts that back (see Undo).
 		prev, shared, err := s.d.Ledger.SharedPrice(ctx, rec.ID, "")
 		if err != nil {
-			return nil, err
+			return fail(err)
 		}
 		if !shared {
-			prev = dayBefore[d]
+			prev = snapshotJSON(d.Before)
 		}
-		baseline[d] = &prev
+		baseline[d.Date] = &prev
 	}
 	updates := make([]store.PriceUpdate, len(events))
 	for i, ev := range events {
-		id := priceIDs[dates[i]]
+		id := days[dayIndex[dates[i]]].WrittenID
 		u := store.PriceUpdate{ClientUUID: ev.ClientUUID, Cents: cents[i], PriceID: &id}
 		if ev.PriceID == nil || *ev.PriceID != id {
 			u.PrevPriceJSON = baseline[dates[i]]
 		}
 		updates[i] = u
+		undo.Events = append(undo.Events, ev.PriceState())
 	}
 	if err := s.d.Ledger.UpdatePrices(ctx, updates); err != nil {
-		return nil, err
+		undo.Events = nil // the transaction rolled back
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			err = ErrNotFound
+		case errors.Is(err, store.ErrUndone):
+			err = ErrAlreadyUndone
+		}
+		return fail(err)
 	}
 
 	out := make([]scan.Result, len(events))
 	for i, ev := range events {
 		var res scan.Result
 		if err := json.Unmarshal([]byte(ev.ResultJSON), &res); err != nil {
-			return nil, err
+			return fail(err)
 		}
 		res.Status, res.Error = scan.StatusApplied, nil
 		if res.Scan != nil {
@@ -147,7 +194,27 @@ func (s *Service) SetPrices(ctx context.Context, in SetPricesInput) ([]scan.Resu
 		out[i] = res
 	}
 	s.publish()
-	return out, nil
+	return out, undo, nil
+}
+
+// restorePrices puts back what one setPrices changed: each scan's price, Price row and replaced Price, then each day's
+// Price (re-recorded, or deleted when the day had none). It runs every step and returns the errors joined.
+func (s *Service) restorePrices(ctx context.Context, b PricesBefore) error {
+	var errs []error
+	if len(b.Events) > 0 {
+		errs = append(errs, s.d.Ledger.RestorePrices(ctx, b.Events))
+	}
+	for i := len(b.Days) - 1; i >= 0; i-- {
+		d := b.Days[i]
+		if d.Before == nil {
+			errs = append(errs, s.d.Catalogue.DeletePrice(ctx, d.WrittenID))
+			continue
+		}
+		_, err := s.d.Catalogue.RecordPrice(ctx, d.ProductID, PriceInput{ShopID: d.ShopID, Date: d.Date,
+			PriceCents: copyInt(d.Before.PriceCents), PricePerKgCents: copyInt(d.Before.PricePerKgCents)})
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 // snapshotJSON is a day's Price as prev_price_json keeps it ("" for none).

@@ -402,3 +402,74 @@ func TestUndoOutOfOrderKeepsTheDaysPriceForTheScansLeft(t *testing.T) {
 		t.Fatalf("after the last Undo the Price of the day = %+v, want none", p)
 	}
 }
+
+// A failure of the scan write after the day's Prices were written puts the Prices back: nothing changes.
+func TestSetPricesPutsTheDaysPricesBackWhenTheScanWriteFails(t *testing.T) {
+	e := setPricesEnv(t)
+	apply(t, e, packScan("a", mutti, 700))
+	yesterday := packScan("b", mutti, 700)
+	yesterday.ScannedAt = "2026-11-08T12:00:00Z"
+	apply(t, e, yesterday)
+	e.cat.seedPrice(mutti, 1, "2026-11-08", 150) // typed on the Prices page
+	if _, err := e.db.Exec(`CREATE TRIGGER fail_price BEFORE UPDATE OF price_cents ON scan_events
+		BEGIN SELECT RAISE(ABORT, 'disk full'); END`); err != nil {
+		t.Fatal(err)
+	}
+	spentBefore := spent(t, e)
+	if _, err := setPrices(e, service.SetPricesInput{ClientUUIDs: []string{"a", "b"}, PriceCents: 129, PricePerKgCents: ip(200)}); err == nil {
+		t.Fatal("SetPrices succeeded, want the scan write's error")
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-08"); p == nil || *p.PriceCents != 150 || p.PricePerKgCents != nil {
+		t.Fatalf("Price of the 8th = %+v, want 150 put back", p)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p != nil {
+		t.Fatalf("Price of the 9th = %+v, want none (the one written is removed)", p)
+	}
+	if spent(t, e) != spentBefore {
+		t.Fatalf("spent %d, want %d", spent(t, e), spentBefore)
+	}
+}
+
+// RR3: the receipt Apply keeps what setPrices changed and puts it back with restorePrices, its inverse: the scans'
+// prices (also "no price"), the Prices of the days and what an Undo would restore.
+func TestRestorePricesIsTheInverseOfSetPrices(t *testing.T) {
+	e := setPricesEnv(t)
+	apply(t, e, packScan("a", mutti, 700)) // no Price yet: unpriced
+	e.cat.seedPrice(mutti, 1, "2026-11-08", 150)
+	yesterday := packScan("b", mutti, 700)
+	yesterday.ScannedAt = "2026-11-08T12:00:00Z"
+	apply(t, e, yesterday) // prefilled 150, the Price of the 8th
+	ctx := context.Background()
+	evA, _, _ := e.ledger.Get(ctx, "a")
+	evB, _, _ := e.ledger.Get(ctx, "b")
+	spentBefore := spent(t, e)
+
+	_, before, err := e.svc.SetPricesBefore(ctx, service.SetPricesInput{ClientUUIDs: []string{"a", "b"}, PriceCents: 129})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.RestorePrices(ctx, before); err != nil {
+		t.Fatal(err)
+	}
+	if spent(t, e) != spentBefore {
+		t.Fatalf("spent %d, want %d", spent(t, e), spentBefore)
+	}
+	afterA, _, _ := e.ledger.Get(ctx, "a")
+	afterB, _, _ := e.ledger.Get(ctx, "b")
+	if evA.PriceCents != nil || afterA.PriceCents != nil || afterA.PriceID != nil || afterA.PrevPriceJSON != evA.PrevPriceJSON {
+		t.Fatalf("a = %+v, want unpriced as before", afterA.PriceState())
+	}
+	if afterB.PriceCents == nil || *afterB.PriceCents != 150 || *afterB.PriceID != *evB.PriceID || afterB.PrevPriceJSON != evB.PrevPriceJSON {
+		t.Fatalf("b = %+v, want %+v", afterB.PriceState(), evB.PriceState())
+	}
+	var res scan.Result
+	if err := json.Unmarshal([]byte(afterA.ResultJSON), &res); err != nil || res.Scan.PriceCents != nil {
+		t.Fatalf("a's stored Result = %s, want no price", afterA.ResultJSON)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-08"); p == nil || *p.PriceCents != 150 {
+		t.Fatalf("Price of the 8th = %+v, want 150", p)
+	}
+	if p := priceOn(t, e, mutti, 1, "2026-11-09"); p != nil {
+		t.Fatalf("Price of the 9th = %+v, want none", p)
+	}
+}

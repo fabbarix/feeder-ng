@@ -188,6 +188,22 @@ func TestUpdatePricesIsAllOrNothing(t *testing.T) {
 	}
 }
 
+// The transaction re-checks Undo: an event undone since the service read it is ErrUndone, and nothing is written.
+func TestUpdatePricesRefusesAnUndoneEvent(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	_, _ = st.Insert(ctx, event("a", 100, 1))
+	_, _ = st.Insert(ctx, event("b", 100, 2))
+	_, _ = st.MarkUndone(ctx, "b")
+	err := st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129}, {ClientUUID: "b", Cents: 129}})
+	if !errors.Is(err, store.ErrUndone) {
+		t.Fatalf("err = %v, want ErrUndone", err)
+	}
+	if a, _, _ := st.Get(ctx, "a"); *a.PriceCents != 100 {
+		t.Fatalf("a = %d, want 100", *a.PriceCents)
+	}
+}
+
 func TestUpdatePricesSetsTheReplacedPriceOnlyWhenGiven(t *testing.T) {
 	st, _ := setup(t)
 	ctx := context.Background()
@@ -205,6 +221,25 @@ func TestUpdatePricesSetsTheReplacedPriceOnlyWhenGiven(t *testing.T) {
 	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PrevPriceJSON: &empty}})
 	if a, _, _ := st.Get(ctx, "a"); a.PrevPriceJSON != "" {
 		t.Fatalf("a %q, want cleared", a.PrevPriceJSON)
+	}
+}
+
+func TestRestorePricesPutsBackNoPrice(t *testing.T) {
+	st, _ := setup(t)
+	ctx := context.Background()
+	ev := event("a", 0, 1)
+	ev.PriceCents, ev.ResultJSON = nil, `{"status":"applied","scan":{"priceCents":null}}`
+	before, _ := st.Insert(ctx, ev)
+	_ = st.UpdatePrices(ctx, []store.PriceUpdate{{ClientUUID: "a", Cents: 129, PriceID: i64(5)}})
+	if err := st.RestorePrices(ctx, []store.EventPrice{before.PriceState()}); err != nil {
+		t.Fatal(err)
+	}
+	a, _, _ := st.Get(ctx, "a")
+	if a.PriceCents != nil || a.PriceID != nil || strings.Contains(a.ResultJSON, "129") {
+		t.Fatalf("a = %+v", a)
+	}
+	if err := st.RestorePrices(ctx, []store.EventPrice{{ClientUUID: "ghost"}}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("ghost: err = %v", err)
 	}
 }
 
