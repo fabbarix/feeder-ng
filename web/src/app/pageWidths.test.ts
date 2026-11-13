@@ -20,6 +20,8 @@ describe('pageWidthFor: the per-route width table', () => {
     ['/recipes/export', 'narrow'],
     ['/ingredients', 'narrow'],
     ['/ingredients/7', 'narrow'],
+    ['/supplies', 'narrow'],
+    ['/supplies/7', 'narrow'],
     ['/products', 'narrow'],
     ['/products/7', 'narrow'],
     ['/settings', 'narrow'],

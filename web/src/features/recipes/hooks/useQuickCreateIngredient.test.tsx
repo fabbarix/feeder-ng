@@ -52,7 +52,7 @@ describe('useQuickCreateIngredient', () => {
     await act(async () => {
       made = await result.current.create({ name: 'Saffron', baseUnit: 'g' })
     })
-    expect(api.create).toHaveBeenCalledWith({ name: 'Saffron', baseUnit: 'g' })
+    expect(api.create).toHaveBeenCalledWith({ name: 'Saffron', baseUnit: 'g', kind: 'food' })
     expect(made).toBe(saffron)
     expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['ingredients'] }))
   })

@@ -149,3 +149,20 @@
   font-size: var(--text-meta-size);
   color: var(--color-muted);
 }
+
+/* H5: the Restock level Tile of a Supply and the Kind Tile (ADR 0017). Tokens only. */
+.restock__summary,
+.kind-tile__text {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.kind-tile__reasons {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  color: var(--color-text);
+}

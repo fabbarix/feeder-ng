@@ -43,7 +43,7 @@ export const recipesApi = {
   /** CRS E2: the Meal Slots' names (`GET /api/meal-slots`). */
   mealSlots: () => http.get<SlotName[]>('/api/meal-slots'),
   /** All Ingredients, with their Base Units and Unit Conversions (for unit pickers and quantities). */
-  ingredients: () => http.get<IngredientRef[]>('/api/ingredients'),
+  ingredients: () => http.get<IngredientRef[]>('/api/ingredients?kind=food'),
   saveConversion: async (ingredientId: number, unit: string, toBase: number): Promise<void> => {
     await http.put(`/api/ingredients/${ingredientId}/conversions/${encodeURIComponent(unit)}`, { toBase })
   },

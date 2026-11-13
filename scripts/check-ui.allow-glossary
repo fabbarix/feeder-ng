@@ -46,3 +46,8 @@ web/src/features/import/strings.ts finished  # "until the read is finished": the
 
 # "bill" is on Receipt's Avoid list; "billing" in the Recipe Assistant's error copy is the provider's account billing.
 web/src/features/import/strings.ts bill  # "Anthropic reports a billing problem", not a Receipt
+# "food" is on Ingredient's Avoid list as a synonym for Ingredient. ADR 0017 makes it the name of an Ingredient's kind
+# (food | supply), and GLOSSARY (Ingredient, _Note_) allows it as the kind label and where food is set against Supplies.
+# The rule cannot tell the two senses apart, so these files are allowed after review: every "food" in them is the kind.
+web/src/features/ingredients/strings.ts food  # kind label (Food | Supply, "This is food", "Change to food") and the kind_differs merge copy
+web/src/lib/baseRecipes/strings.ts food  # differentKinds: "not both food or both Supplies" (kind_differs merge toast)

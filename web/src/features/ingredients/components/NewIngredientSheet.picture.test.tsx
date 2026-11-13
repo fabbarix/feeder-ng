@@ -43,7 +43,7 @@ describe('NewIngredientSheet: Picture', () => {
     const onCreate = setup()
     await create()
     expect(onCreate).toHaveBeenCalledTimes(1)
-    expect(onCreate.mock.calls[0]![0]).toEqual({ name: 'Saffron', baseUnit: 'g' })
+    expect(onCreate.mock.calls[0]![0]).toEqual({ name: 'Saffron', baseUnit: 'g', kind: 'food' })
   })
 
   it('sends the image id of the picked picture with the new Ingredient', async () => {
@@ -51,7 +51,7 @@ describe('NewIngredientSheet: Picture', () => {
     await userEvent.click(screen.getByRole('button', { name: `pick ${strings.sheet.pictureLabel}` }))
     expect(picker()).toHaveAttribute('data-value', PICKED_ID)
     await create()
-    expect(onCreate.mock.calls[0]![0]).toEqual({ name: 'Saffron', baseUnit: 'g', image: PICKED_ID })
+    expect(onCreate.mock.calls[0]![0]).toEqual({ name: 'Saffron', baseUnit: 'g', kind: 'food', image: PICKED_ID })
   })
 
   it('removing the picture before creating sends no image', async () => {
