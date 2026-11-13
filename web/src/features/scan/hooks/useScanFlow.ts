@@ -180,6 +180,16 @@ const nowIso = (d: ScanFlowDeps) => (d.now ? d.now() : new Date()).toISOString()
 /** The message of a failed call, for a toast. */
 const failureText = (err: unknown) => (err instanceof Error ? err.message : scanStrings.unarchiveFailed)
 
+/** SR3: a Toast action that runs at most once (a double tap on Undo or Put back does it once). */
+function once(fn: () => unknown): () => unknown {
+  let used = false
+  return () => {
+    if (used) return undefined
+    used = true
+    return fn()
+  }
+}
+
 /** SR3: the server's PATCH /api/scan/prices, or the single-scan PATCH for each scan when the batch call is not wired. */
 async function sendPrices(d: ScanFlowDeps, body: PricePatch): Promise<ScanResult[]> {
   if (d.setPrices) return d.setPrices(body)
@@ -210,13 +220,22 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const [unarchiving, setUnarchiving] = useState(false)
   // SR3: the Price entry open on a row (null when closed).
   const [pricing, setPricing] = useState<PricingState | null>(null)
+  // SR3: the scans whose Undo is under way.
+  const undoing = useRef(new Set<string>())
 
   const text = (l: Pick<Line, 'ingredientName' | 'baseUnit' | 'quantity' | 'priceCents' | 'onList'>) =>
     feedbackText({ ingredientName: l.ingredientName, quantity: l.quantity, baseUnit: l.baseUnit, priceCents: l.priceCents, currency: depsRef.current.currency, onList: l.onList }, depsRef.current.system)
 
-  /** SR3: the Toast after a scan: "Added {product}" with Undo for 5 s. */
+  /**
+   * SR3: the Toast after a scan: "Added {product}" with Undo for 5 s. Undo fires once, and not at all when the scan
+   * already left the list (−, Remove or a rejected sync took it).
+   */
   const announceAdded = (productName: string, clientUuid: string) => {
-    depsRef.current.notify?.(scanStrings.added(productName), 'success', { actionLabel: scanStrings.undo, onAction: () => undoScan(clientUuid), durationMs: 5000 })
+    const undoOnce = once(async () => {
+      if (!depsRef.current.session?.entries.some((e) => e.op.clientUuid === clientUuid)) return
+      await undoScan(clientUuid)
+    })
+    depsRef.current.notify?.(scanStrings.added(productName), 'success', { actionLabel: scanStrings.undo, onAction: undoOnce, durationMs: 5000 })
   }
 
   /** Applies the Result of one Op (or the queueing when null) to the feedback line and the banner; with a Scanned list, to the list and the Toast. */
@@ -550,6 +569,17 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
    * False when the Undo failed (the Toast says why and the scan stays).
    */
   const undoScan = async (clientUuid: string): Promise<boolean> => {
+    // A second Undo of the same scan while the first is under way (a double tap on −) does nothing.
+    if (undoing.current.has(clientUuid)) return false
+    undoing.current.add(clientUuid)
+    try {
+      return await undoScanNow(clientUuid)
+    } finally {
+      undoing.current.delete(clientUuid)
+    }
+  }
+
+  const undoScanNow = async (clientUuid: string): Promise<boolean> => {
     const d = depsRef.current
     const entry = d.session?.entries.find((e) => e.op.clientUuid === clientUuid)
     try {
@@ -592,7 +622,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     const scan = row.scans[0]
     if (!scan) return
     if (!(await undoScan(scan.clientUuid))) return
-    depsRef.current.notify?.(scanStrings.removed(row.name), 'info', { actionLabel: scanStrings.putBack, onAction: () => putBack(row) })
+    depsRef.current.notify?.(scanStrings.removed(row.name), 'info', { actionLabel: scanStrings.putBack, onAction: once(() => putBack(row)) })
   }
 
   const increment = async (key: string): Promise<void> => {

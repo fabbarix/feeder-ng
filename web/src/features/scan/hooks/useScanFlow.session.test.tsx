@@ -139,6 +139,51 @@ describe('a scan lands in the Scanned list', () => {
   })
 })
 
+describe('toast actions fire once (review)', () => {
+  it('a second tap on Undo does nothing', async () => {
+    const h = setup()
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h)
+    const onAction = lastNotify(h)[2]!.onAction!
+    await act(async () => { await onAction(); await onAction() })
+    expect(h.deps.undo).toHaveBeenCalledTimes(1)
+  })
+
+  it('Undo of a scan that − already took off the list does nothing', async () => {
+    const h = setup()
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h)
+    await scanCode(h)
+    const onAction = lastNotify(h)[2]!.onAction!
+    await act(async () => flow(h).decrement('7'))
+    expect(h.deps.undo).toHaveBeenCalledTimes(1)
+    await act(async () => { await onAction() })
+    expect(h.deps.undo).toHaveBeenCalledTimes(1)
+    expect(rows(h)[0]?.clientUuids).toEqual(['uuid-1'])
+  })
+
+  it('a second tap on Put back sends one Op', async () => {
+    const h = setup()
+    await seed(h, [applied('a', passata, { priceCents: 150 })])
+    await act(async () => flow(h).removeRow('7'))
+    const onAction = lastNotify(h)[2]!.onAction!
+    await act(async () => { await onAction(); await onAction() })
+    expect(h.deps.submit).toHaveBeenCalledTimes(1)
+  })
+
+  it('a double tap on − undoes one scan', async () => {
+    let release: () => void = () => {}
+    const h = setup({ undo: vi.fn(() => new Promise<void>((r) => { release = r })) })
+    await seed(h, [applied('a', passata), applied('b', passata), applied('c', passata)])
+    let first: Promise<void> | undefined
+    let second: Promise<void> | undefined
+    act(() => { first = flow(h).decrement('7'); second = flow(h).decrement('7') })
+    await act(async () => { release(); await first; await second })
+    expect(h.deps.undo).toHaveBeenCalledTimes(1)
+    expect(rows(h)[0]?.count).toBe(2)
+  })
+})
+
 describe('+ and − on the active row', () => {
   it('+ sends a new shop_scan Op for the same Product (no camera), at the row\'s Price', async () => {
     const h = setup()
