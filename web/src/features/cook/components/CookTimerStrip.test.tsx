@@ -102,3 +102,13 @@ describe('CookTimerStrip', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+// BR-H: a timer on a Base recipe's Passive Step is labelled "Path · …: text" by the server and shown as sent.
+describe('CookTimerStrip: Base recipe timers', () => {
+  it('shows a Base recipe Step\'s timer under its label, nested paths included', () => {
+    strip([item(1, 'running', 600, 'Béchamel: Simmer the sauce'), item(2, 'running', 120, 'Béchamel · Roux: Rest the roux')])
+    expect(screen.getByRole('timer', { name: 'Béchamel: Simmer the sauce' })).toHaveTextContent('10:00')
+    expect(screen.getByRole('timer', { name: 'Béchamel · Roux: Rest the roux' })).toHaveTextContent('2:00')
+    expect(screen.getAllByRole('button', { name: /Béchamel: Simmer the sauce/ }).length).toBeGreaterThan(0)
+  })
+})
