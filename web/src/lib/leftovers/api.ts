@@ -1,20 +1,30 @@
 // Typed calls for the Leftover routes (beta5-plan 2.3). All User, CSRF.
-// STUB (red): the developer implements these with `http` from '../http'.
-import type { FreezeResult, Leftover, LeftoverAnswer, LeftoverResult } from './types'
+import { http } from '../http'
+import type { FreezeResult, Leftover, LeftoverAnswer, LeftoverResult, PlannedMealRef } from './types'
 
-const todo = <T>(): Promise<T> => Promise.reject(new Error('not implemented'))
+/** A had-it, threw-out or take-out answer as the server may leave `replanned` out. */
+type WireResult = Omit<LeftoverResult, 'replanned'> & { replanned?: PlannedMealRef[] }
+
+/** The server leaves `replanned` out when nothing moved: the client treats that as no Planned Meals. */
+const withReplanned = (out: WireResult): LeftoverResult => ({ ...out, replanned: out.replanned ?? [] })
 
 export const leftoversApi = {
   /** `GET /api/plan/leftovers`, unwrapped from `{ leftovers }`. */
-  list: (): Promise<Leftover[]> => todo(),
+  list: async (): Promise<Leftover[]> => (await http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers')).leftovers,
   /** `POST /api/plan/leftovers/{id}/had-it` `{ portions }`. */
-  hadIt: (_id: number, _portions: number): Promise<LeftoverResult> => todo(),
+  hadIt: async (id: number, portions: number): Promise<LeftoverResult> =>
+    withReplanned(await http.post<WireResult>(`/api/plan/leftovers/${id}/had-it`, { portions })),
   /** `POST /api/plan/leftovers/{id}/threw-out` `{ portions }`. */
-  threwOut: (_id: number, _portions: number): Promise<LeftoverResult> => todo(),
+  threwOut: async (id: number, portions: number): Promise<LeftoverResult> =>
+    withReplanned(await http.post<WireResult>(`/api/plan/leftovers/${id}/threw-out`, { portions })),
   /** `POST /api/plan/leftovers/{id}/freeze` `{ storagePlaceId, portions }`. */
-  freeze: (_id: number, _storagePlaceId: number, _portions: number): Promise<FreezeResult> => todo(),
+  freeze: (id: number, storagePlaceId: number, portions: number): Promise<FreezeResult> =>
+    http.post<FreezeResult>(`/api/plan/leftovers/${id}/freeze`, { storagePlaceId, portions }),
   /** `POST /api/plan/leftovers/{id}/take-out` `{ storagePlaceId }` (null = Not sorted). */
-  takeOut: (_id: number, _storagePlaceId: number | null): Promise<LeftoverResult> => todo(),
+  takeOut: async (id: number, storagePlaceId: number | null): Promise<LeftoverResult> =>
+    withReplanned(await http.post<WireResult>(`/api/plan/leftovers/${id}/take-out`, { storagePlaceId })),
   /** `POST /api/plan/leftovers/{id}/answer` `{ answer }`; 204. */
-  answer: (_id: number, _answer: LeftoverAnswer): Promise<void> => todo(),
+  answer: async (id: number, answer: LeftoverAnswer): Promise<void> => {
+    await http.post<void>(`/api/plan/leftovers/${id}/answer`, { answer })
+  },
 }

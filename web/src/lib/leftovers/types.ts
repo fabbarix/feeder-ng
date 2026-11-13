@@ -1,5 +1,8 @@
 // Leftovers by hand (b5-low; docs/dev/design/b5-low.md; beta5-plan 2.3). Plain TypeScript, no React.
 
+/** The Storage Place id of "Not sorted" (no place, or a Freezer that was deleted); real places start at 1. */
+export const NOT_SORTED_PLACE = 0
+
 /** A Storage Place as the Leftover sheets need it. The stock feature's `StoragePlace` is assignable to it. */
 export interface LeftoverPlace {
   id: number

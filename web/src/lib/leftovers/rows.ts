@@ -1,5 +1,7 @@
-// View models for Leftover rows and choices (no React). STUB (red).
+// View models for Leftover rows and choices (no React).
 import type { IconName } from '../../ui/icons'
+import { dayDiff } from './dates'
+import { leftoverStrings, portionsLabel, questionText, useByPhrase } from './copy'
 import type { Leftover, LeftoverActionKind } from './types'
 
 export type LeftoverRowKind = 'question' | 'leftover' | 'frozen'
@@ -14,18 +16,52 @@ export interface LeftoverRowModel {
   icon: IconName
 }
 
+const byUseBy = (a: Leftover, b: Leftover) => a.useBy.localeCompare(b.useBy) || a.id - b.id
+
+/** One row for a Leftover: a question while it is to be answered, else a Leftover (frozen or not). */
+export function leftoverRow(l: Leftover, today: string): LeftoverRowModel {
+  if (l.toAnswer) {
+    return { id: l.id, kind: 'question', recipeName: l.recipeName, text: questionText(l.recipeName, l.useBy, today), tone: 'info', icon: 'question' }
+  }
+  const soon = dayDiff(l.useBy, today) <= 1
+  return {
+    id: l.id,
+    kind: l.frozen ? 'frozen' : 'leftover',
+    recipeName: l.recipeName,
+    text: `${portionsLabel(l.portions)} · ${useByPhrase(l.useBy, today)}`,
+    tone: soon ? 'spoil' : 'leftover',
+    icon: l.frozen ? 'snowflake' : 'leftover',
+  }
+}
+
 /** Today's Leftovers tile: the questions first (oldest Use-by first), then the not frozen Leftovers (soonest Use-by first). */
-export function tileRows(_leftovers: Leftover[], _today: string): LeftoverRowModel[] {
-  return []
+export function tileRows(leftovers: Leftover[], today: string): LeftoverRowModel[] {
+  const notFrozen = leftovers.filter((l) => !l.frozen)
+  const questions = notFrozen.filter((l) => l.toAnswer).sort(byUseBy)
+  const rest = notFrozen.filter((l) => !l.toAnswer).sort(byUseBy)
+  return [...questions, ...rest].map((l) => leftoverRow(l, today))
 }
 
 /** The row menu: Had it, Threw it out, then Freeze it (before the Use-by, not frozen) or Take out (frozen). None for a question. */
-export function menuActions(_l: Leftover, _today: string): LeftoverActionKind[] {
-  return []
+export function menuActions(l: Leftover, today: string): LeftoverActionKind[] {
+  if (l.toAnswer) return []
+  const actions: LeftoverActionKind[] = ['had-it', 'threw-out']
+  if (l.frozen) actions.push('take-out')
+  else if (dayDiff(l.useBy, today) >= 0) actions.push('freeze')
+  return actions
 }
 
-export function actionLabel(_kind: LeftoverActionKind): string {
-  return ''
+export function actionLabel(kind: LeftoverActionKind): string {
+  switch (kind) {
+    case 'had-it':
+      return leftoverStrings.hadIt
+    case 'threw-out':
+      return leftoverStrings.threwOut
+    case 'freeze':
+      return leftoverStrings.freezeIt
+    case 'take-out':
+      return leftoverStrings.takeOut
+  }
 }
 
 export interface FreezerChoice {
@@ -37,6 +73,14 @@ export interface FreezerChoice {
 }
 
 /** Choose a Recipe, "From the freezer": frozen Leftovers with portions, by Recipe name. */
-export function freezerChoices(_leftovers: Leftover[]): FreezerChoice[] {
-  return []
+export function freezerChoices(leftovers: Leftover[]): FreezerChoice[] {
+  return leftovers
+    .filter((l) => l.frozen && l.portions > 0)
+    .sort((a, b) => a.recipeName.localeCompare(b.recipeName) || a.id - b.id)
+    .map((l) => ({
+      leftoverId: l.id,
+      recipeId: l.recipeId,
+      recipeName: l.recipeName,
+      meta: `${portionsLabel(l.portions)} · ${l.storagePlaceName ?? leftoverStrings.notSorted}`,
+    }))
 }
