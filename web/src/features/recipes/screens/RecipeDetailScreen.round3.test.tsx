@@ -120,7 +120,7 @@ describe('detail: Use as a plain Ingredient with nothing to go back to (design �
 describe('detail: Unit Conversion prompt when a link\'s unit does not convert', () => {
   const unknownUnit = () => refusal(422, 'unknown_unit', { ingredientId: 30, ingredient: 'Béchamel', unit: 'jar', baseUnit: 'ml' })
   const open = async (routes: Record<string, unknown>) => {
-    const api = mockApi({ 'GET /api/recipes?kind=base': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [], ...routes })
+    const api = mockApi({ 'GET /api/recipes?kind=base&for=7': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [], ...routes })
     setRecipe(recipe({ id: 7, name: 'Lasagne', lines: [{ ...plainLine, unit: 'jar', quantity: 2 }] }))
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Actions for béchamel' }))

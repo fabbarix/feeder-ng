@@ -65,7 +65,7 @@ describe('RecipeDetailScreen: Base recipe lines', () => {
 
   it('Link to a Base recipe saves at once: picks the Base recipe, POSTs the link, toasts with Undo and refreshes', async () => {
     const api = mockApi({
-      'GET /api/recipes?kind=base': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [],
+      'GET /api/recipes?kind=base&for=7': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [],
       'POST /api/recipes/7/lines/70/base': { id: 7 },
       'DELETE /api/recipes/7/lines/70/base': { id: 7 },
     })
@@ -96,7 +96,7 @@ describe('RecipeDetailScreen: Base recipe lines', () => {
 
   it('shows a refusal of the link (a cycle) as words on the screen', async () => {
     mockApi({
-      'GET /api/recipes?kind=base': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [],
+      'GET /api/recipes?kind=base&for=7': [summaryJSON({ id: 3, name: 'Béchamel' })], 'GET /api/recipes': [],
       'POST /api/recipes/7/lines/70/base': { status: 422, json: { error: { code: 'validation_failed', message: 'x', field: 'lineId', reason: 'base_recipe_cycle', path: ['Lasagne', 'Béchamel', 'Lasagne'] } } },
     })
     setRecipe(recipe({ id: 7, name: 'Lasagne', lines: [plainLine] }))

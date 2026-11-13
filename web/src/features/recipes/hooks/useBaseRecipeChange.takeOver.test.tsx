@@ -19,14 +19,14 @@ async function startAsked(hook: { result: { current: ReturnType<typeof useBaseRe
   act(() => { out = hook.result.current.turnOn(input) })
   await userEvent.click(await screen.findByRole('button', { name: 'Turn into a Base recipe' }))
   await waitFor(() => expect(hook.result.current.takeOverAsk).not.toBeNull())
-  return out
+  return { p: out }
 }
 
 describe('useBaseRecipeChange: the take-over ask on to-base', () => {
   it('a 409 sets takeOverAsk (Recipes, Stock, convertible) and the turn-on stays open; nothing is converted yet', async () => {
     const api = mockApi({ ...routes(), 'POST /api/recipes/4/to-base': ask })
     const hook = renderHook(() => useBaseRecipeChange({ recipeId: 4 }), { wrapper })
-    void (await startAsked(hook))
+    await startAsked(hook)
     expect(hook.result.current.takeOverAsk).toMatchObject({ ingredient: { id: 5, name: 'pesto' }, recipes: [{ id: 1, name: 'Lasagne' }], stockLots: 2, convertible: true })
     expect(api.callsTo('POST', '/api/recipes/4/to-base')).toHaveLength(1)
     expect(api.callsTo('POST', '/api/recipes/4/to-base')[0]?.body).toEqual({ yield: 4, yieldUnit: 'portion' })
@@ -37,7 +37,7 @@ describe('useBaseRecipeChange: the take-over ask on to-base', () => {
     const onConverted = vi.fn()
     const api = mockApi({ ...routes(), 'POST /api/recipes/4/to-base': () => (first ? ((first = false), ask) : summaryJSON({ id: 4, name: 'Pesto', baseIngredientId: 5 })) })
     const hook = renderHook(() => useBaseRecipeChange({ recipeId: 4, onConverted }), { wrapper })
-    const out = await startAsked(hook)
+    const { p: out } = await startAsked(hook)
     await act(async () => { await hook.result.current.answerTakeOver(true) })
     expect(await out).toBe('done')
     expect(api.callsTo('POST', '/api/recipes/4/to-base')[1]?.body).toEqual({ yield: 4, yieldUnit: 'portion', takeOver: true })
@@ -49,7 +49,7 @@ describe('useBaseRecipeChange: the take-over ask on to-base', () => {
     let first = true
     const api = mockApi({ ...routes(), 'POST /api/recipes/4/to-base': () => (first ? ((first = false), ask) : summaryJSON({ id: 4, name: 'Pesto' })) })
     const hook = renderHook(() => useBaseRecipeChange({ recipeId: 4 }), { wrapper })
-    const out = await startAsked(hook)
+    const { p: out } = await startAsked(hook)
     await act(async () => { await hook.result.current.answerTakeOver(false) })
     expect(await out).toBe('done')
     expect(api.callsTo('POST', '/api/recipes/4/to-base')[1]?.body).toEqual({ yield: 4, yieldUnit: 'portion', takeOver: false })
@@ -58,7 +58,7 @@ describe('useBaseRecipeChange: the take-over ask on to-base', () => {
   it('Cancel settles cancelled and sends nothing more', async () => {
     const api = mockApi({ ...routes(), 'POST /api/recipes/4/to-base': ask })
     const hook = renderHook(() => useBaseRecipeChange({ recipeId: 4 }), { wrapper })
-    const out = await startAsked(hook)
+    const { p: out } = await startAsked(hook)
     act(() => hook.result.current.cancelTakeOver())
     expect(await out).toBe('cancelled')
     expect(hook.result.current.takeOverAsk).toBeNull()
@@ -72,7 +72,7 @@ describe('useBaseRecipeChange: the take-over ask on to-base', () => {
       'POST /api/recipes/4/to-base': () => (first ? ((first = false), ask) : refusal(422, 'validation_failed', { field: 'lines[0]', reason: 'base_recipe_cycle', path: ['Pesto', 'Sauce', 'Pesto'] })),
     })
     const hook = renderHook(() => useBaseRecipeChange({ recipeId: 4 }), { wrapper })
-    const out = await startAsked(hook)
+    const { p: out } = await startAsked(hook)
     await act(async () => { await hook.result.current.answerTakeOver(true) })
     expect(await out).toBe('failed')
     expect(hook.result.current.error).toBe('Pesto calls for Sauce, which calls for Pesto')

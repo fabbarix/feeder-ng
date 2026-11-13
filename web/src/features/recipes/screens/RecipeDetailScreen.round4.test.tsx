@@ -120,9 +120,10 @@ describe('detail: the line error clears on the next success', () => {
       await userEvent.click(screen.getByRole('menuitem', { name: 'Use as a plain Ingredient' }))
     }
     await act()
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    const words = await screen.findByText(/could not|Could not|wrong|try again/i, { selector: 'p[role="alert"]' })
+    expect(words).toBeInTheDocument()
     await act()
     await waitFor(() => expect(calls).toBe(2))
-    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    await waitFor(() => expect(words).not.toBeInTheDocument())
   })
 })

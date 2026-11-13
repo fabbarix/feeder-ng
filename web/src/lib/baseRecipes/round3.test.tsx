@@ -50,8 +50,8 @@ describe('code contracts from the review', () => {
     expect(text).toContain('newBaseRecipeInput')
     expect(text).not.toContain('as never')
   })
-  it('Select has no unused typedText branch in exactFirst (rank is the search text)', () => {
-    expect(readSource('ui/Select/Select.tsx')).not.toContain('typedText')
+  it('Select ranks by the search text, or by typedText in a list without a search (round 4 rename)', () => {
+    expect(readSource('ui/Select/Select.tsx')).toMatch(/rank: showSearch \? q : typedText/)
   })
   it('the screens have no `ml` fallback for the base unit (it comes from the Base recipe)', () => {
     expect(readSource('features/recipes/screens/RecipeEditorScreen.tsx')).not.toMatch(/\?\?\s*'ml'/)
