@@ -157,17 +157,13 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 	if err != nil {
 		return nil, err
 	}
-	recipes, err := p.sources.Recipes(ctx)
+	trees, err := p.sources.NeedTrees(ctx)
 	if err != nil {
 		return nil, err
 	}
-	byID := map[int64][]shopping.Need{}
-	for _, r := range recipes {
-		needs := make([]shopping.Need, 0, len(r.Needs))
-		for _, n := range r.Needs {
-			needs = append(needs, shopping.Need{IngredientID: int64(n.IngredientID), Quantity: n.Quantity, Optional: n.Optional})
-		}
-		byID[int64(r.ID)] = needs
+	byID := make(map[int64][]shopping.Need, len(trees))
+	for id, tree := range trees {
+		byID[id] = shopping.NeedsFromTree(tree)
 	}
 	slots := map[int64]household.MealSlot{}
 	courseNames := map[int64]string{}

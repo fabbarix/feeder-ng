@@ -13,6 +13,7 @@ import (
 func init() {
 	ingstore.RegisterMover(recipeLinesMover{})
 	ingstore.RegisterMover(ingredientExclusionsMover{})
+	ingstore.RegisterMover(baseRecipesMover{})
 }
 
 // recipeLinesMover covers ingredient lines and Step uses. It is also a
@@ -29,9 +30,11 @@ func (recipeLinesMover) Count(ctx context.Context, q ingstore.Querier, ingredien
 }
 
 func (recipeLinesMover) Move(ctx context.Context, tx *sql.Tx, from, to int64) error {
+	// A remembered plain Ingredient (linked_from_ingredient_id, §3.7) is rewritten too, not counted as a reference.
 	for _, q := range []string{
 		`UPDATE recipe_lines SET ingredient_id = ? WHERE ingredient_id = ?`,
 		`UPDATE recipe_step_uses SET ingredient_id = ? WHERE ingredient_id = ?`,
+		`UPDATE recipe_lines SET linked_from_ingredient_id = ? WHERE linked_from_ingredient_id = ?`,
 	} {
 		if _, err := tx.ExecContext(ctx, q, to, from); err != nil {
 			return err
@@ -67,5 +70,23 @@ func (ingredientExclusionsMover) Move(ctx context.Context, tx *sql.Tx, from, to 
 		return err
 	}
 	_, err := tx.ExecContext(ctx, `UPDATE member_ingredient_exclusions SET ingredient_id = ? WHERE ingredient_id = ?`, to, from)
+	return err
+}
+
+// baseRecipesMover counts the Recipes whose Base recipe Ingredient this is (recipes.base_ingredient_id, ADR 0015).
+// The ingredient store's Base Unit guard does not count it (ingstore.BaseRecipeRefName); the delete guard and the
+// port do.
+type baseRecipesMover struct{}
+
+func (baseRecipesMover) Name() string { return ingstore.BaseRecipeRefName }
+
+func (baseRecipesMover) Count(ctx context.Context, q ingstore.Querier, ingredientID int64) (int, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM recipes WHERE base_ingredient_id = ?`, ingredientID).Scan(&n)
+	return n, err
+}
+
+func (baseRecipesMover) Move(ctx context.Context, tx *sql.Tx, from, to int64) error {
+	_, err := tx.ExecContext(ctx, `UPDATE recipes SET base_ingredient_id = ? WHERE base_ingredient_id = ?`, to, from)
 	return err
 }

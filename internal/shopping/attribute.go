@@ -1,8 +1,6 @@
 package shopping
 
 import (
-	"sort"
-
 	"github.com/fabbarix/feeder-ng/internal/stock"
 )
 
@@ -39,24 +37,34 @@ func Attribute(in Input, lotID int64) []Share {
 	without := in
 	without.Lots = lotsWithout(in.Lots, lotID)
 	withoutLot := draws(without) // the same Planned Meals in the same order: index k is the same meal in both
+	// A Lot only changes the draws of its own Ingredient at the top level, but a Base recipe's Ingredient changes what
+	// its children make. A share is therefore named under the Lot's Ingredient only (round 2: a bought jar is attributed
+	// under its Base recipe Ingredient, not under the milk, butter and flour it saved).
+	ing, ok := lotIngredient(in.Lots, lotID)
+	if !ok {
+		return nil
+	}
 	var out []Share
 	for k, d := range withLot {
 		m := d.meal
 		if m.MealID == 0 || m.At.Before(in.Now) {
 			continue
 		}
-		ings := make([]int64, 0, len(d.short))
-		for ing := range d.short {
-			ings = append(ings, ing)
-		}
-		sort.Slice(ings, func(i, j int) bool { return ings[i] < ings[j] })
-		for _, ing := range ings {
-			if share := withoutLot[k].short[ing] - d.short[ing]; share > eps {
-				out = append(out, Share{MealID: m.MealID, IngredientID: ing, Quantity: share})
-			}
+		if share := withoutLot[k].short[ing] - d.short[ing]; share > eps {
+			out = append(out, Share{MealID: m.MealID, IngredientID: ing, Quantity: share})
 		}
 	}
 	return out
+}
+
+// lotIngredient is the Ingredient of the Lot with id.
+func lotIngredient(lots []stock.Lot, id int64) (int64, bool) {
+	for _, l := range lots {
+		if l.ID == id {
+			return l.IngredientID, true
+		}
+	}
+	return 0, false
 }
 
 // lotsWithout returns the Stock Lots except the one with id.
