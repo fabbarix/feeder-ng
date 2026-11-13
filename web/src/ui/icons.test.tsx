@@ -14,6 +14,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['recipes', 'BookOpenText'],
   ['stock', 'Package'],
   ['ingredients', 'Carrot'],
+  ['supply', 'SprayBottle'], // H5: a Supply (ADR 0017)
   ['products', 'ShoppingBagOpen'],
   ['shops', 'Storefront'],
   ['location', 'MapPin'],

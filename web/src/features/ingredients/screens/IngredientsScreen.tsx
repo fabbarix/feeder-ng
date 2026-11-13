@@ -6,36 +6,42 @@ import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useIngredients } from '../hooks/useIngredients'
+import { kindBasePath, wordsFor } from '../lib/kind'
 import { strings } from '../strings'
+import type { IngredientKind } from '../types'
 
-/** Route /ingredients: heading, "Search Ingredients" field, "New Ingredient" button (opens NewIngredientSheet), IngredientList or EmptyState (none yet / no match); opening a row navigates to /ingredients/:id. */
-export function IngredientsScreen() {
+/**
+ * Route /ingredients (food) and /supplies (kind "supply"): heading, search, "New Ingredient" or "New Supply" (the sheet is fixed to the kind),
+ * the list or EmptyState (none yet / no match); opening a row navigates to that kind's page.
+ */
+export function IngredientsScreen({ kind = 'food' }: { kind?: IngredientKind }) {
   const navigate = useNavigate()
   const system = useDisplayUnitSystem()
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
-  const list = useIngredients(query)
+  const list = useIngredients(query, kind)
   const breadcrumbs = useBreadcrumbs()
+  const words = wordsFor(kind)
 
   const openNew = () => setCreating(true)
   let body
   if (list.error) {
     body = <p role="alert">{strings.actionFailed}</p>
   } else if (list.ingredients.length > 0) {
-    body = <IngredientList ingredients={list.ingredients} system={system} onOpen={(id) => navigate(`/ingredients/${id}`)} />
+    body = <IngredientList ingredients={list.ingredients} system={system} label={words.title} onOpen={(id) => navigate(`${kindBasePath(kind)}/${id}`)} />
   } else if (list.isEmpty) {
-    body = <EmptyState title={strings.emptyTitle} description={strings.emptyText} action={<Button onClick={openNew}>{strings.newIngredient}</Button>} />
+    body = <EmptyState title={words.emptyTitle} description={words.emptyText} action={<Button onClick={openNew}>{words.newLabel}</Button>} />
   } else {
-    body = <p>{strings.noMatches}</p>
+    body = <p>{words.noMatches}</p>
   }
 
   return (
     <ListPage
-      header={<PageHeader title={strings.title} breadcrumbs={breadcrumbs} actions={<Button size="sm" icon="add" onClick={openNew}>{strings.newIngredient}</Button>} />}
-      search={<SearchField label={strings.searchLabel} value={query} onChange={setQuery} />}
+      header={<PageHeader title={words.title} breadcrumbs={breadcrumbs} actions={<Button size="sm" icon="add" onClick={openNew}>{words.newLabel}</Button>} />}
+      search={<SearchField label={words.searchLabel} value={query} onChange={setQuery} />}
     >
       {body}
-      <NewIngredientSheet open={creating} onClose={() => setCreating(false)} onCreate={list.create} />
+      <NewIngredientSheet open={creating} onClose={() => setCreating(false)} onCreate={list.create} kind={kind} chooseKind={false} />
     </ListPage>
   )
 }

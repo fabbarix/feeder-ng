@@ -54,7 +54,7 @@ Shopping List, Scan and Stock-take unchanged. Food-only paths refuse or hide a S
   (list below). Name uniqueness (`ingredients.name_key UNIQUE`) spans both kinds: a Supply "Vinegar" blocks a food "Vinegar".
 - **Size:** S–M. About 1 migration, 1 domain field, ~10 guards and filters, 1 pure rule, 3 screens touched plus 2 reused routes.
 - **Code paths:** `internal/ingredient` (+store, +httpapi), `internal/recipe/store` (line and Base recipe guards),
-  `internal/household/store` (Exclusion guard), `internal/recipefile` (Existing, review), `internal/shopping` (Restock Lines),
+  `internal/recipe/store` `SetIngredientExclusion` (Exclusion guard), `internal/recipefile` (Existing, review), `internal/shopping` (Restock Lines),
   `internal/scan/httpapi/wiring.go` (`ingredientsPort.Ensure` gets a kind); web `features/ingredients`, `recipes`, `stock`, `scan`,
   `shop`, `settings`, `app/breadcrumbs.ts`.
 
@@ -86,11 +86,11 @@ Shopping List, Scan and Stock-take unchanged. Food-only paths refuse or hide a S
 | # | Place | Code | Change |
 |---|---|---|---|
 | 1 | Recipe ingredient line picker and quick-create | `web/src/features/recipes/api.ts` (`ingredients`), `hooks/useQuickCreateIngredient.ts`, IngredientSelect | food only; quick-create makes food |
-| 2 | Saving a Recipe line | `internal/recipe/store/store.go` (the `SELECT 1 FROM ingredients` check, ~l.882) | `422 ingredient_is_supply` |
+| 2 | Saving a Recipe line or a Step use | `internal/recipe/store/store.go` (`refuseSupplyLines`, before the write and again inside its transaction in `CreateTx`/`ReplaceTx`) | `422 ingredient_is_supply` on `lines[i].ingredientId` or `steps[i].uses[j].ingredientId` (a use may name an Ingredient on no line); only lines and uses the save adds, so a stored one never blocks an unrelated save |
 | 3 | Ready Meal's Ingredient by name | `internal/recipe/readymeal.go` `ChooseReadyMealIngredient`, `internal/recipe/store` | a Supply of that name is refused (`422 supply_name_taken`) |
 | 4 | Base recipe take-over by name | `internal/recipe/store/base.go` (name_key lookups ~l.380, l.430) | never offer a Supply; refuse `supply_name_taken` |
 | 5 | Base recipe line linking | `web/src/lib/baseRecipes/useLineLink.ts`, `recipe/store/base.go` | food only |
-| 6 | Exclusions | `PUT /api/me/preferences` (`internal/household/httpapi/preferences.go`), `member_ingredient_exclusions`, `features/recipes/components/IngredientExclusionList.tsx` | refuse a Supply; no Excluded by Tile on a Supply |
+| 6 | Exclusions | `PUT /api/ingredient-exclusions/{ingredientId}` (`internal/recipe/httpapi`) → `recipe/store.SetIngredientExclusion`, `member_ingredient_exclusions`, `features/recipes/components/IngredientExclusionList.tsx` | refuse a Supply; no Excluded by Tile on a Supply |
 | 7 | Import Review matching (Recipe File, Recipe Assistant) | `internal/recipefile/store/store.go` `Existing` (`s.ingredients.List`), `recipefile/review.go` | match food only; a name a Supply holds is a row error "Vinegar is one of your Supplies" with pick or rename |
 | 8 | Fuzzy search | `GET /api/ingredients/search` (`ingredient/search.go`) | `?kind=food` for Import Review and the recipe editor; New Ingredient's "Did you mean" searches both |
 | 9 | Merge | `internal/ingredient/merge.go`, `GET /api/ingredients/{id}/merge-preview` | across kinds is `blocked: "kind_differs"` |
@@ -269,7 +269,8 @@ Every existing Ingredient becomes `food`; no data moves; every existing endpoint
 | `GET /api/ingredients/search` | optional `?kind=` |
 | `GET /api/ingredients/{id}/merge-preview` | `blocked: "kind_differs"` |
 | Recipe save, Ready Meal save, Base recipe save and link | `422 ingredient_is_supply` / `supply_name_taken` |
-| `PUT /api/me/preferences` | `422 ingredient_is_supply` for a Supply in `excludedIngredients` |
+| Import Review (Recipe File, Recipe Assistant) | Ingredient row `status: "supply"` with Problem `supply_name_taken` ("X is one of your Supplies"), also for a Base recipe named like a Supply; Apply answers stale if an Ingredient became a Supply since the review |
+| `PUT /api/ingredient-exclusions/{ingredientId}` | `422 ingredient_is_supply` (field `ingredientId`) for `excluded: true` on a Supply; `excluded: false` stays allowed |
 | `GET /api/shopping/list` | a Line gains `kind` and `restock: {level, stock} \| null`; extras gain `kind` |
 | `GET /api/stock`, `GET /api/stock/lots` | each row gains `kind` |
 | `GET /api/scan/offline`, `POST /api/scan`, `POST /api/scan/sync` | Ingredients carry `kind`; the unknown-barcode Op's new Ingredient carries an optional `kind` (default `food`) |
@@ -300,7 +301,7 @@ sends back. Sizes: S ≈ half a day of team time, M ≈ one day.
 | **H0 Language** | GLOSSARY entries, ADR 0017, functional-spec decision 49 and §5, §6, §9, §10, §13 text | `GLOSSARY.md`, `docs/adr/0017-supplies-are-ingredients-of-kind-supply.md`, `docs/spec/functional-spec.md` | D1–D3, D5 (decided) | S |
 | **H1 Schema + snapshot** | migration 1550, pre-1550 snapshot | `internal/db/migrations/1550_supplies.sql`, `internal/db/db.go`, `internal/db/pending1550_test.go`, `internal/backup/backup.go` (+test), `cmd/feeder/startup.go` (+test), `scripts/test/b5-snap_test.sh`, `scripts/test/b7-snap_test.sh`, `docs/dev/design/b7-snap.md` | H0 | S |
 | **H2 Supply domain + Ingredient API** | `Kind`, `RestockLevel`, validation, kind change guard, merge guard, `?kind=` | `internal/ingredient/**` | H1 | M |
-| **H3 Food-only guards** | guards 2–7 of §2 | `internal/recipe/readymeal.go`, `internal/recipe/store/**`, `internal/household/store/**`, `internal/household/httpapi/preferences.go`, `internal/recipefile/**` | H2 | M |
+| **H3 Food-only guards** | guards 2–7 of §2 | `internal/recipe/readymeal.go`, `internal/recipe/store/**` (Exclusions: `SetIngredientExclusion`), `internal/recipefile/**` | H2 | M |
 | **H4 Restock Lines + kind in lists** | pure `shopping.Restock`, Line `kind`/`restock`, service and handler; `kind` on Stock and offline rows; `Ensure` with kind | `internal/shopping/**`, `internal/stock/httpapi/**`, `internal/scan/**` | H2 | M |
 | **H5 Web catalogue** | Supplies routes, list and page, Restock Tile, kind Tile, New Ingredient `Segmented`, food-only pickers | `web/src/features/ingredients/**`, `web/src/features/products/**` (Products Tile only if needed), `web/src/features/settings/lib/settingsSections.ts`, `web/src/app/breadcrumbs.ts`, `web/src/app/pageWidths.ts`, `web/src/features/recipes/api.ts`, `recipes/hooks/useQuickCreateIngredient.ts`, `recipes/components/IngredientExclusionList.tsx`, `web/src/lib/baseRecipes/**`, `web/src/ui/icons.ts` | H2 (contract) | M |
 | **H6 Web Pantry** | filter section, Supply rows, Lot sheet Used up, Add to Stock | `web/src/features/stock/**` | H4 (contract) | M |
@@ -329,7 +330,7 @@ H0 ─► H1 ─► H2 ─┬─► H3 ─────────────�
   Shelf Life and Lot `goes_off` on the change.
 - `internal/shopping`: `Restock` (below, at, above the level; no Stock; pack rounding; ticked; Not needed; with an extra; range
   ignored; a food Ingredient with a stray level is ignored).
-- `internal/recipe/store`, `household/store`, `recipefile`: each guard refuses a Supply; Import Review conflict on a Supply's name;
+- `internal/recipe/store`, `recipefile`: each guard refuses a Supply; Import Review conflict on a Supply's name;
   export of a Household with Supplies writes none.
 - Regression: planner (`internal/planner`) and Cooked (`internal/plan/runner`) unchanged with Supply Stock present; streak and
   notify ignore Supply Lots.

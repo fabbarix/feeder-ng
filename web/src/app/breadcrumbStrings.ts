@@ -10,6 +10,8 @@ export const breadcrumbStrings = {
   /** beta.5: the Catalogue lists sit under Settings, so their crumb is the list's own title. */
   catalogue: {
     ingredients: 'Ingredients',
+    /** H5: the Supplies list, Settings > Supplies. */
+    supplies: 'Supplies',
     products: 'Products',
   },
   /** Fallback labels for an entity crumb until its name is known (the GLOSSARY term). */
@@ -19,6 +21,8 @@ export const breadcrumbStrings = {
     ingredient: 'Ingredient',
     product: 'Product',
   },
+  /** H5: a Supply's page crumb until its name is known (the GLOSSARY term); its own key, the entity list above is pinned. */
+  supplyEntity: 'Supply',
   newRecipe: 'New Recipe',
   importRecipes: importStrings.importTitle,
   exportRecipes: importStrings.exportTitle,

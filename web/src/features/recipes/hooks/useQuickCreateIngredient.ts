@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { ingredientsApi } from '../../ingredients/api'
+import { asFood } from '../../ingredients/lib/kind'
 import type { Ingredient, NewIngredient } from '../../ingredients/types'
 import { recipeStrings } from '../strings'
 import type { IngredientRef } from '../types'
@@ -48,7 +49,8 @@ export function useQuickCreateIngredient({ pick }: { pick: (lineKey: string, ing
     open: setRequest,
     close: () => setRequest(null),
     create: async (body) => {
-      const made = await ingredientsApi.create(body)
+      // H5: a Recipe line only ever makes food (decision D5), whatever kind the sheet sent.
+      const made = await ingredientsApi.create(asFood(body))
       void client.invalidateQueries({ queryKey: ['ingredients'] })
       return made
     },

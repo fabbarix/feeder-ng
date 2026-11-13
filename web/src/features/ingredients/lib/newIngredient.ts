@@ -1,6 +1,7 @@
 import type { IconName } from '../../../ui/icons'
 import type { BaseUnit } from '../../../lib/units'
-import type { Ingredient, NewIngredient, SearchResult, Suggestion } from '../types'
+import type { Ingredient, IngredientKind, NewIngredient, SearchResult, Suggestion } from '../types'
+import { parseRestockText } from './kind'
 
 // R14 (docs/dev/design/r14-recipe-editor.md): pure rules of the New Ingredient sheet.
 import { strings } from '../strings'
@@ -66,4 +67,43 @@ export function duplicateGuard(result: SearchResult): DuplicateGuard {
   if (result.exact) return { kind: 'exists', ingredient: result.exact }
   if (result.suggestions.length > 0) return { kind: 'similar', suggestions: result.suggestions }
   return { kind: 'clear' }
+}
+
+/** H5: the New Ingredient sheet's form, for either kind. A Supply has a Restock level and no Shelf Life (decision D3). */
+export interface KindIngredientForm extends NewIngredientForm {
+  kind: IngredientKind
+  /** As typed: blank = none. */
+  restock: string
+}
+
+export type KindIngredientErrors = NewIngredientErrors & { restock?: string }
+
+/**
+ * Validates the sheet for its kind and builds the body: food is checkNewIngredient plus kind 'food'; a Supply has the name, the Base Unit,
+ * kind 'supply' and restockLevel when one is typed (never a shelfLifeDays, whatever was typed before switching).
+ */
+export function checkKindIngredient(form: KindIngredientForm): { ok: true; value: NewIngredient } | { ok: false; errors: KindIngredientErrors } {
+  if (form.kind === 'food') {
+    const checked = checkNewIngredient(form)
+    return checked.ok ? { ok: true, value: { ...checked.value, kind: 'food' } } : checked
+  }
+  const named = checkNewIngredient({ name: form.name, baseUnit: form.baseUnit, shelfLife: '' })
+  const restock = parseRestockText(form.restock)
+  if (!named.ok || !restock.ok) {
+    return {
+      ok: false,
+      errors: {
+        // The only name error is a blank name, worded for a Supply.
+        ...(named.ok ? {} : { name: strings.supply.nameRequired }),
+        ...(restock.ok ? {} : { restock: restock.error }),
+      },
+    }
+  }
+  const { name, baseUnit } = named.value
+  return { ok: true, value: restock.value === null ? { name, baseUnit, kind: 'supply' } : { name, baseUnit, kind: 'supply', restockLevel: restock.value } }
+}
+
+/** Switching the kind in the sheet: a Supply starts on piece; going back to food keeps the Base Unit the User chose. */
+export function baseUnitAfterKindChange(next: IngredientKind, current: BaseUnit): BaseUnit {
+  return next === 'supply' ? 'piece' : current
 }

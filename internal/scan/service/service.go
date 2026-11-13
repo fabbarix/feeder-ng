@@ -14,6 +14,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/product"
 	"github.com/fabbarix/feeder-ng/internal/scan"
 	"github.com/fabbarix/feeder-ng/internal/scan/store"
@@ -73,6 +74,7 @@ type ProductInfo struct {
 	Name           string
 	IngredientID   int64
 	IngredientName string
+	IngredientKind string // H4: "food" or "supply", the kind of the Product's Ingredient
 	BaseUnit       string
 	PackSize       float64
 	ImageURL       string // "/api/images/<id>" of the Product's Picture, "" = none (PP)
@@ -131,6 +133,7 @@ type OfflineProduct struct {
 	Name           string  `json:"name"`
 	IngredientID   int64   `json:"ingredientId"`
 	IngredientName string  `json:"ingredientName"`
+	IngredientKind string  `json:"ingredientKind"` // H4
 	BaseUnit       string  `json:"baseUnit"`
 	PackSize       float64 `json:"packSize"`
 	ImageURL       string  `json:"imageUrl,omitempty"` // PP: the Picture, so a scan can be described offline
@@ -170,7 +173,8 @@ type Catalogue interface {
 
 // Ingredients finds or creates an Ingredient by name (name key), returning its id.
 type Ingredients interface {
-	Ensure(ctx context.Context, name, baseUnit string) (int64, error)
+	// Ensure finds the Ingredient by name or creates it with kind (H4); an existing row keeps its own kind.
+	Ensure(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, error)
 }
 
 // List is the Shopping List port (implemented by shopping/service.Service).
@@ -314,7 +318,11 @@ func (s *Service) shopUnknown(ctx context.Context, op scan.Op) (scan.Result, err
 	}
 	ingredientID := op.Ingredient.ID
 	if ingredientID <= 0 {
-		if ingredientID, err = s.d.Ingredients.Ensure(ctx, strings.TrimSpace(op.Ingredient.Name), op.Ingredient.BaseUnit); err != nil {
+		kind := ingredient.KindFood
+		if k, ok := ingredient.ParseKind(op.Ingredient.Kind); ok {
+			kind = k
+		}
+		if ingredientID, err = s.d.Ingredients.Ensure(ctx, strings.TrimSpace(op.Ingredient.Name), op.Ingredient.BaseUnit, kind); err != nil {
 			return scan.Result{}, err
 		}
 	}
@@ -511,7 +519,7 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 			Unmark: eff.Ticked, ExtraID: eff.ExtraID, LotID: lotID})
 	})
 
-	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit,
+	applied := scan.Applied{IngredientID: p.IngredientID, IngredientName: p.IngredientName, IngredientKind: p.IngredientKind, BaseUnit: p.BaseUnit,
 		ProductID: pid, ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: op.Quantity, LotID: &lotID, PriceCents: price,
 		OnList: eff.OnList, Remaining: eff.Remaining, Ticked: eff.Ticked, Merged: merged}
 	if created != nil {
@@ -592,7 +600,7 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 		return scan.Result{}, err
 	}
 	pid := p.ID
-	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, BaseUnit: p.BaseUnit, ProductID: pid,
+	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, IngredientKind: p.IngredientKind, BaseUnit: p.BaseUnit, ProductID: pid,
 		ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: quantity, LotID: lotID, Total: &after}
 	res := scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied, Scan: &applied}
 	resJSON, err := json.Marshal(res)

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ingredientsApi } from '../api'
 import { totalReferences } from '../lib/references'
 import type { BaseUnit } from '../../../lib/units'
-import type { Conversion, Ingredient, IngredientDetail } from '../types'
+import type { Conversion, Ingredient, IngredientDetail, IngredientKind } from '../types'
 
 export interface UseIngredient {
   ingredient: IngredientDetail | undefined
@@ -19,6 +19,10 @@ export interface UseIngredient {
   setFrozenShelfLife: (days: number | null) => Promise<Ingredient>
   /** IM2: the picture's image id; '' removes it. */
   setImage: (imageId: string) => Promise<Ingredient>
+  /** H5: a Supply's Restock level in Base Units; null clears it. */
+  setRestockLevel: (level: number | null) => Promise<Ingredient>
+  /** H5: food or Supply. A refusal rejects with the 409 kind_in_use ApiError (its reasons in details). */
+  setKind: (kind: IngredientKind) => Promise<Ingredient>
   setConversion: (c: Conversion) => Promise<Ingredient>
   removeConversion: (unit: string) => Promise<Ingredient>
   remove: () => Promise<void>
@@ -49,12 +53,14 @@ export function useIngredient(id: number): UseIngredient {
     setShelfLife: (shelfLifeDays) => changed(ingredientsApi.patch(id, { shelfLifeDays })),
     setFrozenShelfLife: (frozenShelfLifeDays) => changed(ingredientsApi.patch(id, { frozenShelfLifeDays })),
     setImage: (image) => changed(ingredientsApi.patch(id, { image })),
+    setRestockLevel: (restockLevel) => changed(ingredientsApi.patch(id, { restockLevel })),
+    setKind: (kind) => changed(ingredientsApi.patch(id, { kind })),
     setConversion: (c) => changed(ingredientsApi.setConversion(id, c)),
     removeConversion: (unit) => changed(ingredientsApi.removeConversion(id, unit)),
     remove: async () => {
       await ingredientsApi.remove(id)
       client.removeQueries({ queryKey: ['ingredients', id], exact: true })
-      await client.invalidateQueries({ queryKey: ['ingredients'], exact: true })
+      await client.invalidateQueries({ queryKey: ['ingredients'] })
     },
   }
 }

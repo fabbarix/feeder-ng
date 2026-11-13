@@ -13,6 +13,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/stock"
 	"github.com/fabbarix/feeder-ng/internal/stock/store"
 )
@@ -35,6 +36,25 @@ type IngredientInfo struct {
 	// FrozenShelfLifeDays is the Shelf Life in a Freezer (Storage Place of kind freezer); nil = no different.
 	FrozenShelfLifeDays *int
 	ImageURL            string // PE: "/api/images/<id>" of the Ingredient's Picture, "" without one
+	// Supply is true for a Supply (ADR 0017): its Lots never get a go-off date, whatever Shelf Life the row keeps (H4).
+	Supply bool
+}
+
+// shelfLifeOf is the Shelf Life that applies to a Lot of the Ingredient in a Storage Place of kind k. A Supply has none
+// (H4, household-items.md §4.2: "goes_off is always null"), so a stray Shelf Life on its row never gives it a date.
+func shelfLifeOf(ing IngredientInfo, k stock.Kind) *int {
+	if ing.Supply {
+		return nil
+	}
+	return stock.ShelfLifeIn(k, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+}
+
+// kindName is the API's kind of an Ingredient: "food" or "supply".
+func kindName(ing IngredientInfo) string {
+	if ing.Supply {
+		return string(ingredient.KindSupply)
+	}
+	return string(ingredient.KindFood)
 }
 
 // Ingredients looks Ingredients up (adapter over the Ingredient store).
@@ -88,6 +108,8 @@ type LotView struct {
 	// ShelfLifeDays is the Shelf Life that applies where the Lot is (stock.ShelfLifeIn the Storage Place's kind:
 	// the frozen one in a Freezer); nil = it does not spoil there. The Edit sheet suggests Good until from it.
 	ShelfLifeDays *int
+	// Kind is the Ingredient's kind: "food" or "supply" (H4).
+	Kind string
 }
 
 // IngredientStock is one Ingredient's Stock: the total and its soonest go-off date.
@@ -101,6 +123,7 @@ type IngredientStock struct {
 	UseSoon      bool
 	SpoiledCount int
 	ImageURL     string
+	Kind         string // "food" or "supply" (H4)
 }
 
 // Warning says Stock could not cover a Cooked meal's need for an Ingredient.
@@ -159,7 +182,7 @@ func (s *Service) AddLot(ctx context.Context, in AddInput) (LotView, bool, error
 	if place != nil {
 		kind, placeID = place.Kind, &place.ID
 	}
-	planned := stock.NewLot(0, ing.ID, in.Quantity, purchased, stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays))
+	planned := stock.NewLot(0, ing.ID, in.Quantity, purchased, shelfLifeOf(ing, kind))
 	saved, created, err := s.st.AddLot(ctx, store.NewLot{
 		StoragePlaceID: placeID,
 		IngredientID:   ing.ID,
@@ -206,9 +229,9 @@ func (s *Service) SetTotal(ctx context.Context, ingredientID int64, total float6
 	if err != nil {
 		return IngredientStock{}, err
 	}
-	shelfLife := ing.ShelfLifeDays
+	shelfLife := shelfLifeOf(ing, stock.KindNone)
 	if place != nil {
-		shelfLife = stock.ShelfLifeIn(place.Kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+		shelfLife = shelfLifeOf(ing, place.Kind)
 	}
 	changed := false
 	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
@@ -261,7 +284,12 @@ func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (Lo
 	if err != nil {
 		return LotView{}, err
 	}
-	shelfLife := stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+	shelfLife := shelfLifeOf(ing, kind)
+	// H4: a Supply's Lot has no go-off date. A go-off sent with the edit is ignored; the rest of the edit applies.
+	onlyGoesOff := ing.Supply && edit.Quantity == nil && edit.Purchased == nil && edit.GoesOff != nil
+	if ing.Supply {
+		edit.GoesOff = nil
+	}
 	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
 		out := make([]stock.Lot, 0, len(lots))
 		found := false
@@ -269,10 +297,17 @@ func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (Lo
 		for _, l := range lots {
 			if l.ID == lotID {
 				found = true
-				corrected, err := stock.ValidateEdit(l, edit, today, shelfLife)
-				if err != nil {
-					// Wraps both ErrInvalid and the *stock.EditError (its field and reason) for the API.
-					return store.Mutation{}, fmt.Errorf("%w: %w", ErrInvalid, err)
+				corrected := l
+				if !onlyGoesOff {
+					var err error
+					corrected, err = stock.ValidateEdit(l, edit, today, shelfLife)
+					if err != nil {
+						// Wraps both ErrInvalid and the *stock.EditError (its field and reason) for the API.
+						return store.Mutation{}, fmt.Errorf("%w: %w", ErrInvalid, err)
+					}
+				}
+				if ing.Supply {
+					corrected.GoesOff = stock.None
 				}
 				if corrected.GoesOff != l.GoesOff {
 					forget = append(forget, lotID) // a new go-off date starts afresh: the old go-off record goes
@@ -764,13 +799,14 @@ func view(l store.StoredLot, ing IngredientInfo, today stock.Date, kind stock.Ki
 		Spoiled:            stock.IsSpoiled(l.Lot, today),
 		UseSoon:            stock.IsUseSoon(l.Lot, today),
 		IngredientImageURL: ing.ImageURL,
-		ShelfLifeDays:      stock.ShelfLifeIn(kind, ing.ShelfLifeDays, ing.FrozenShelfLifeDays),
+		ShelfLifeDays:      shelfLifeOf(ing, kind),
+		Kind:               kindName(ing),
 	}
 }
 
 // summarise builds one Ingredient's Stock from its lots (none = empty Stock).
 func summarise(ing IngredientInfo, lots []store.StoredLot, today stock.Date) IngredientStock {
-	out := IngredientStock{IngredientID: ing.ID, Name: ing.Name, BaseUnit: ing.BaseUnit, ImageURL: ing.ImageURL}
+	out := IngredientStock{IngredientID: ing.ID, Name: ing.Name, BaseUnit: ing.BaseUnit, ImageURL: ing.ImageURL, Kind: kindName(ing)}
 	for _, l := range lots {
 		out.Total += l.Quantity
 		out.LotCount++
@@ -887,7 +923,10 @@ func (s *Service) MoveLot(ctx context.Context, lotID, placeID int64, quantity fl
 	if err != nil {
 		return LotView{}, err
 	}
-	goesOff := stock.GoOffAfterMove(lot.GoesOff, from, to.Kind, today, ing.ShelfLifeDays, ing.FrozenShelfLifeDays)
+	goesOff := stock.GoOffAfterMove(lot.GoesOff, from, to.Kind, today, shelfLifeOf(ing, stock.KindNone), ing.FrozenShelfLifeDays)
+	if ing.Supply {
+		goesOff = stock.None // H4: a Supply's Lot never has a go-off date, in a Freezer or out of one
+	}
 	moved, err := s.st.MoveLot(ctx, store.Move{LotID: lotID, PlaceID: placeID, Quantity: quantity, GoesOff: goesOff})
 	if err != nil {
 		return LotView{}, err

@@ -494,7 +494,7 @@ otherwise. Mockup frames A1 to A3 show the shape; the Price entry follows B3 wit
 [Segmented: Scanned 6 | To get 3]          [€21.38        ]   ← title-3, tabular
                                            [+1 without a Price] ← meta, muted; absent when all are priced
 [Scanned list (ListGroup of ScannedRow), newest first      ]
-[ListRow "Read the receipt" (beta.8, receipt-reading.md)   ]
+[ListRow "Read the receipt" (beta.7, receipt-reading.md)   ]
 [bottom nav (kept)                                         ]
 ```
 
@@ -622,7 +622,7 @@ this spec, GLOSSARY, ADRs and system.md; fixes small findings itself, sends larg
 |---|---|---|---|---|
 | **SR0 Spec** | functional spec §10.1 rewritten for the Scanned list, short form and Price entry; decision entry | `docs/spec/functional-spec.md` (§10.1 and the decision list only) | – | S |
 | **SR1 Scan API** | `PATCH /api/scan/prices`, `pricePerKgCents` on the PATCH, `lastPriceDate` | `internal/scan/service/prices.go` (new) + test, `internal/scan/httpapi/httpapi.go`, `internal/scan/httpapi/wiring.go`, `internal/scan/store/store.go` (`UpdatePrices`) | **H4 merged** (H4 owns `internal/scan/**` until then) | S |
-| **SR2 Primitives** | `PriceKeypad`, `ViewfinderStrip size="tall"`, compact `Stepper` variant if missing; Phosphor `Receipt` icon for beta.8 | `web/src/ui/PriceKeypad.{tsx,css}` + tests, `web/src/ui/ViewfinderStrip.{tsx,css}`, `web/src/ui/Stepper.{tsx,css}`, `web/src/ui/index.ts`, `web/src/ui/icons.ts` | – | S |
+| **SR2 Primitives** | `PriceKeypad`, `ViewfinderStrip size="tall"`, compact `Stepper` variant if missing; Phosphor `Receipt` icon for receipt reading | `web/src/ui/PriceKeypad.{tsx,css}` + tests, `web/src/ui/ViewfinderStrip.{tsx,css}`, `web/src/ui/Stepper.{tsx,css}`, `web/src/ui/index.ts`, `web/src/ui/icons.ts` | – | S |
 | **SR3 Session model** | pure grouping of Ops and Results into rows, totals, "next without a Price", the IndexedDB session, +/−/Remove and group Price in the flow | `web/src/features/scan/lib/scannedList.ts`, `lib/sessionStore.ts`, `lib/priceEntry.ts` + tests, `hooks/useScannedList.ts`, `hooks/useScanFlow.ts`, `hooks/useScanController.ts`, `api.ts`, `types.ts` | SR1 (contract) | M |
 | **SR4 Screen** | the scanning screen, `ScannedRow`, Segmented, total, the keypad sheet and Next, Toasts, empty state; the footer slot for "Read the receipt" | `web/src/features/scan/screens/ScanScreen.tsx`, `components/ScannedList.tsx`, `components/ScannedRow.tsx`, `components/PriceEntrySheet.tsx` (replaces `PriceEditSheet`), `components/ScanFeedback.tsx` (removed), `components/LiveList.tsx` (removed), `scan.css`, `strings.ts` | SR2, SR3 | M |
 | **SR5 Short form** | `NewProductSheet`: Line chips, Ingredient · Supply, pack chips, native camera Button, summary and Rename; the Op with `kind` (H7's unknown-form half) | `web/src/features/scan/components/NewProductSheet.tsx` (replaces `UnknownBarcodeSheet`), `lib/unknownForm.ts`, `lib/lineChoice.ts`, `lib/packChips.ts` + tests, `newProductStrings.ts` | SR2; H4 (contract); H5 (the New Ingredient `Segmented`) | M |

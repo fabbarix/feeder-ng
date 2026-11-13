@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	"github.com/fabbarix/feeder-ng/internal/scan"
 	"github.com/fabbarix/feeder-ng/internal/scan/service"
 	"github.com/fabbarix/feeder-ng/internal/scan/store"
@@ -342,11 +343,17 @@ func (f *fakeCatalogue) seedPrice(product, shop int64, date stock.Date, cents in
 type fakeIngredients struct {
 	byName map[string]int64
 	calls  []string
-	next   int64
+	// kinds is the kind each lookup of a name asked for (H4): Ensure(ctx, name, baseUnit, kind).
+	kinds map[string]ingredient.Kind
+	next  int64
 }
 
-func (f *fakeIngredients) Ensure(_ context.Context, name, _ string) (int64, error) {
+func (f *fakeIngredients) Ensure(_ context.Context, name, _ string, kind ingredient.Kind) (int64, error) {
 	f.calls = append(f.calls, name)
+	if f.kinds == nil {
+		f.kinds = map[string]ingredient.Kind{}
+	}
+	f.kinds[name] = kind
 	if id, ok := f.byName[name]; ok {
 		return id, nil
 	}

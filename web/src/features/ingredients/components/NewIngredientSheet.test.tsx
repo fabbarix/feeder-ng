@@ -108,13 +108,13 @@ describe('NewIngredientSheet: creating', () => {
     await userEvent.click(unit('ml'))
     await userEvent.type(screen.getByLabelText(new RegExp(strings.sheet.shelfLifeLabel)), '365')
     await userEvent.click(create())
-    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Olive oil', baseUnit: 'ml', shelfLifeDays: 365 })
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Olive oil', baseUnit: 'ml', shelfLifeDays: 365, kind: 'food' })
     expect(p.onClose).toHaveBeenCalled()
   })
   it('leaves Shelf Life out when it is blank', async () => {
     const p = setup({ initialName: 'Flour' })
     await userEvent.click(create())
-    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Flour', baseUnit: 'g' })
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Flour', baseUnit: 'g', kind: 'food' })
     expect((p.onCreate as ReturnType<typeof vi.fn>).mock.calls[0]![0]).not.toHaveProperty('shelfLifeDays')
   })
   it('keeps Create enabled on an empty name and explains inside the field, then focuses it', async () => {
@@ -189,7 +189,7 @@ describe('NewIngredientSheet: near duplicates ("Did you mean Garlic?")', () => {
     const p = setup({ initialName: 'Garlik', findSimilar: vi.fn().mockResolvedValue(similar), onUseExisting: vi.fn() })
     await userEvent.click(create())
     await userEvent.click(await screen.findByRole('button', { name: strings.sheet.createAnyway('Garlik') }))
-    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Garlik', baseUnit: 'g' })
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Garlik', baseUnit: 'g', kind: 'food' })
     expect(p.findSimilar).toHaveBeenCalledTimes(1)
   })
   it('an exact match says it exists, offers to use it and does not offer to create a twin', async () => {

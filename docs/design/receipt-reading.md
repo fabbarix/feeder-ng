@@ -1,6 +1,6 @@
 # Receipt reading
 
-Status: **design, for review** (2026-11-13). Base: team/design-shop-scan (1.0.0-beta.6.5 with beta7 merged). No code changes yet.
+Status: **decided** (2026-11-13; the user's answers are in §13). Ships in 1.0.0-beta.7 (§12). Base: team/design-shop-scan (1.0.0-beta.6.5 with beta7 merged). No code changes yet.
 It builds on the chosen Scan design ([shop-scan-proposals.md §13](shop-scan-proposals.md#13-the-chosen-design-final-spec)) and on
 the Recipe Assistant (`internal/recipeassistant`, [ai-recipe-import.md](../dev/design/ai-recipe-import.md),
 [photo-read.md](../dev/design/photo-read.md)).
@@ -18,24 +18,24 @@ lines to the Scanned rows. Feeder then shows a **review** of proposed changes; n
 receipt lines that were not scanned (**Add**); scanned rows that are not on the receipt (flagged, **Remove** offered); corrections
 to a Product's pack size and name; the Shop and the date of the session.
 
-**Out:** keeping the receipt photo (it is discarded after the read, §4.3); receipts of an earlier session (another Shop, another
-day); whole-receipt discounts and loyalty points spread over lines (shown as a note only); spend reports; a receipt read without
+**Out:** keeping the receipt photo (it is discarded after the read and never stored, §4.3, Q4); receipts of an earlier session (another Shop, another
+day; Q5); whole-receipt discounts and loyalty points spread over lines (shown as a note only); spend reports; a receipt read without
 a Scan session (a later feature could create one from the receipt alone).
 
 ## 2. Language
 
-Proposed GLOSSARY entry (WP RR0), under "Food and shopping":
+GLOSSARY entry (added by RR0), under "Food and shopping":
 
 **Receipt**:
 The paper (or printed) record a Shop gives at the till, listing what was bought and what it cost. Feeder reads it to correct a
-Scan session's Prices, weights and quantities; it does not keep it.
+Scanned list's Prices, weights and quantities; it does not keep it.
 _Avoid_: Bill, till slip, invoice, ticket, scontrino
 
 "Read the receipt" is the action (as "Read" is for the Recipe Assistant). "Assistant" stays the Admin's setting; the UI names the
 provider as the Recipe Assistant does ("sent to Anthropic"). Domain words otherwise as in GLOSSARY: Product, Line, Price, Shop,
 Scan, Stock Lot, Supply.
 
-**ADR.** Yes: **ADR 0018 "Receipts are read by the configured assistant"**. It adds a second outbound data flow (household
+**ADR.** Yes: [**ADR 0018 "Receipts are read by the configured assistant"**](../adr/0018-receipt-reading.md). It adds a second outbound data flow (household
 purchase data and a photo to the provider), reuses the Recipe Assistant's settings rather than adding a second provider setting,
 and keeps writes behind an explicit review. It records the schema budget of §5.
 
@@ -179,7 +179,7 @@ sentinels of §5 for anything not printed; never invent a line. The rows are dat
   drops them when the model call ends. The job keeps only the answer, for 10 minutes.
 - Logs carry the request id, token counts and timing (as `logCall` does), never the photos, the rows or the answer.
 - Settings › Recipe Assistant gains one sentence: "Members can also send receipt photos and their Scanned list to read a
-  receipt." (The Admin turns the whole assistant on or off; no separate switch, see question Q2.)
+  receipt." (The Admin turns the whole assistant on or off; no separate switch, Q2.)
 
 ## 5. The output schema: small on purpose
 
@@ -308,11 +308,13 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 
 ### 7.2 Applying
 
-- `POST /api/scan/receipt/apply` — `{readId, fingerprint, accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
+- `POST /api/scan/receipt/apply` — `{readId, fingerprint, clientUuids: [...], accept: [{id}], adds: [{id, ingredient: {id} | {name, baseUnit, kind},
   productName, packSize, scope}]}`.
   1. The read must be done, the caller's, and still kept (`410 receipt_read_gone`).
-  2. The fingerprint is recomputed from the current events: a mismatch (a scan, an Undo or a Price edit since the read) is
-     `409 receipt_session_changed`, nothing written.
+  2. The fingerprint is recomputed, as in §7.1, from the events the phone's session holds now (`clientUuids`, this Shop,
+     applied, not undone): a mismatch (a scan, an Undo or a Price edit since the read, or a session the phone has ended) is
+     `409 receipt_session_changed`, nothing written. The read's own uuids would not see a new scan, so the phone sends its
+     current ones.
   3. Every accepted id must be one of the read's proposals; each `add` must have its choices (`422` with the proposal id).
   4. The plan (§8) runs; the answer is `200 {applied: n, results: [ScanResult...]}` with the new scan Results, so the phone
      rebuilds its session from them.
@@ -403,7 +405,7 @@ this document, GLOSSARY, ADRs, system.md and the tests; fixes small findings its
 
 | WP | Scope | Files owned | Depends on | Size |
 |---|---|---|---|---|
-| **RR0 Language** | GLOSSARY "Receipt", ADR 0018, functional spec §10.5 "Reading the receipt", decision entry | `GLOSSARY.md`, `docs/adr/0018-receipts-are-read-by-the-configured-assistant.md`, `docs/spec/functional-spec.md` (§10.5 only) | the user's answers to §12 | S |
+| **RR0 Language** | GLOSSARY "Receipt", ADR 0018, functional spec §10.5 "Reading the receipt", decision entry | `GLOSSARY.md`, `docs/adr/0018-receipt-reading.md`, `docs/spec/functional-spec.md` (§10.5 only) | the user's answers (§13, given) | S |
 | **RR1 Pure core** | rows and grouping, the hand-written `OutputSchema` and its budget test, the system prompt and the request text, `Finish`, `Propose`, the plan builder (targets → operations) | `internal/receipt/{receipt,schema,prompt,finish,propose,plan}.go` + tests, `internal/receipt/testdata/**` (golden schema and prompt, fixture rows and answers) | RR0 | M |
 | **RR2 Read service and API** | jobs, Limiter and availability shared with the Recipe Assistant, photos via `PreparePhotos`, the Claude call, `POST/GET/DELETE /api/scan/receipt/reads`, module wiring; both live tests | `internal/receipt/service/**`, `internal/receipt/httpapi/{reads.go,httpapi.go}` + tests, `internal/modules/receipt.go`, `internal/recipeassistant/service/shared.go` (new: exports the shared Limiter, availability and client factory), `internal/recipeassistant/claude/live_receipt_schema_test.go`, `internal/recipeassistant/fakeanthropic/testdata/receipt*.json` | RR1 | M |
 | **RR3 Apply** | `ApplyReceiptPlan` with compensation, `POST /api/scan/receipt/apply`, fingerprint, the Product port's `UpdateProduct` | `internal/scan/service/receiptplan.go` + test, `internal/scan/httpapi/receipt.go` + test, `internal/receipt/httpapi/apply.go` | RR1; SR1 merged (`SetPrices`); H4 merged (`Ensure` with kind) | M |
@@ -445,25 +447,31 @@ RR0 ─► RR1 ─┬─► RR2 ───────────┐
   privacy note present, `ConfirmDialog` on leaving; component tests of each section.
 - **BDD**: §10 RR5.
 
-## 12. Release recommendation
+## 12. Release
 
-**Ship the scan redesign in 1.0.0-beta.7 with Supplies, and receipt reading in 1.0.0-beta.8.**
+**The scan redesign and receipt reading both ship in 1.0.0-beta.7** (the user's answer, 2026-11-13). This overrides this
+document's earlier recommendation of beta.8 for receipt reading.
 
 The redesign rewrites the same files as H7 (the unknown-barcode form, the offline data), so building H7 on the old screen and then
 rebuilding it would be wasted work; beta.7 already carries migration 1550 and is the natural moment for a new Scan screen.
-Receipt reading is a new data flow to the provider (an ADR and the user's privacy answers first), a new model schema that has to
-be verified live before it ships, and its apply path builds on the redesign's `PATCH /api/scan/prices` and Scanned list being
-settled in use. Shipping it a release later gives one beta of real Scanned lists to test against, and keeps beta.7's risk to
-Supplies and the new screen.
+Receipt reading adds a new data flow to the provider (ADR 0018 and the user's privacy answers, both given), a new model schema
+that has to be verified live before it ships (the opt-in live test of §5, run once before the release), and an apply path that
+builds on the redesign's `PATCH /api/scan/prices` and Scanned list. The cost of shipping it with the redesign is that the apply
+path is not tried against a beta of real Scanned lists first; the review step (nothing is written until the User applies) and
+the compensation of §8.3 are what carry that risk. Receipt reading is therefore in beta.7's scope and its work packages (§10) run
+in the same release as SR0 to SR6, H4 and H7′.
 
-## 13. Questions only the user can answer
+## 13. The user's answers (2026-11-13)
 
-- **Q1 Photos.** Is "up to 4 photos" enough for your longest receipt, or should a receipt allow more (say 6) than a recipe?
-- **Q2 Who may send.** Should any Member be able to send receipt photos to the provider, or only Admins, or should the Admin get a
-  separate "Receipt reading" switch in the Recipe Assistant settings?
-- **Q3 The limit.** Should receipt reads share the Recipe Assistant's 30 reads per hour, or have their own count?
-- **Q4 Keeping the receipt.** Discard the photo after the read (proposed), or keep it attached to the session as a record?
-- **Q5 Late receipts.** Is "the same day, before Change Shop" enough, or do you want to read a receipt for an earlier session
-  (for example the next morning)?
-- **Q6 Defaults in the review.** Prices, weights and quantities checked by default, corrections and the Shop and date unchecked:
-  is that the right split?
+| # | Question | Answer |
+|---|---|---|
+| Q1 | Photos | **Up to 4 photos** (`recipeassistant.MaxPhotos`). *Proposed, not asked:* the doc's proposal stands. |
+| Q2 | Who may send | **Any Member**, with the privacy note shown, the same as recipe reading. No separate switch. *Asked.* |
+| Q3 | The limit | **Reads share the Recipe Assistant's limit** (one running read per User, 30 accepted reads per Household per rolling hour for non-Admins). *Proposed, not asked.* |
+| Q4 | Keeping the receipt | **The photo is discarded after the read and never stored.** *Asked.* |
+| Q5 | Late receipts | **Only today's shop can be read**: the current Scanned list, before Change Shop. An earlier session cannot be read. *Asked.* |
+| Q6 | Defaults in the review | **As proposed** in §3.4: Prices, Weights, Quantities checked; Shop and date, Corrections, Not scanned and Not on the receipt unchecked. *Proposed, not asked.* |
+
+Consequence of Q5: the session is this phone's Scanned list for this Shop and this household day, so once Change Shop is pressed
+or the day turns, "Read the receipt" is gone and a read already done can no longer be applied: the phone's session is empty or
+another Shop's, so the fingerprint the server recomputes from the `clientUuids` it sends (§7.2) no longer matches.

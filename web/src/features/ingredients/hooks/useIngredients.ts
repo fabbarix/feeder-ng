@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { ingredientsApi } from '../api'
 import { filterIngredients } from '../lib/names'
-import type { Ingredient, NewIngredient } from '../types'
+import type { Ingredient, IngredientKind, NewIngredient } from '../types'
 
 export interface UseIngredients {
   /** Filtered by `query` with filterIngredients, ordered by name. */
@@ -15,10 +15,13 @@ export interface UseIngredients {
   create: (body: NewIngredient) => Promise<Ingredient>
 }
 
-/** The Ingredient list query (react-query key ['ingredients']) and create mutation. */
-export function useIngredients(query: string): UseIngredients {
+/**
+ * The Ingredient list of one kind (react-query key ['ingredients', 'list', kind], so food and Supplies never share a cache entry)
+ * and the create mutation. Food by default (H5, decision D5: /ingredients is food only).
+ */
+export function useIngredients(query: string, kind: IngredientKind = 'food'): UseIngredients {
   const client = useQueryClient()
-  const list = useQuery({ queryKey: ['ingredients'], queryFn: () => ingredientsApi.list() })
+  const list = useQuery({ queryKey: ['ingredients', 'list', kind], queryFn: () => ingredientsApi.list(undefined, kind) })
   const all = useMemo(() => list.data ?? [], [list.data])
   const ingredients = useMemo(() => filterIngredients(all, query), [all, query])
 

@@ -86,6 +86,17 @@ func productInfo(p productstore.Product) service.ProductInfo {
 		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
 }
 
+// info is productInfo with the kind of the Product's Ingredient (H4: a Supply's Applied and offline rows say so).
+func (c catalogue) info(ctx context.Context, p productstore.Product) (service.ProductInfo, error) {
+	out := productInfo(p)
+	kind, err := ingredientstore.KindOf(ctx, c.db, p.IngredientID)
+	if err != nil {
+		return service.ProductInfo{}, err
+	}
+	out.IngredientKind = string(kind)
+	return out, nil
+}
+
 func (c catalogue) ShopExists(ctx context.Context, id int64) (bool, error) {
 	_, err := c.st.Shop(ctx, id)
 	if errors.Is(err, productstore.ErrNotFound) {
@@ -102,7 +113,7 @@ func (c catalogue) Product(ctx context.Context, id int64) (service.ProductInfo, 
 	if err != nil {
 		return service.ProductInfo{}, err
 	}
-	return productInfo(d.Product), nil
+	return c.info(ctx, d.Product)
 }
 
 func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (service.ProductInfo, error) {
@@ -129,7 +140,7 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	if err != nil {
 		return service.ProductInfo{}, err
 	}
-	return productInfo(d.Product), nil
+	return c.info(ctx, d.Product)
 }
 
 // FillPicture gives the Product the Picture only when it has none (PPX), through the store's atomic FillImage, then reads the
@@ -152,7 +163,8 @@ func (c catalogue) FillPicture(ctx context.Context, productID int64, image strin
 	if err != nil {
 		return service.ProductInfo{}, false, err
 	}
-	return productInfo(d.Product), filled, nil
+	info, err := c.info(ctx, d.Product)
+	return info, filled, err
 }
 
 // SoldAt reports whether the Product is already sold at the Shop (T9's product_shops link).
@@ -242,9 +254,13 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 	if err != nil {
 		return service.OfflineData{}, err
 	}
+	kinds, err := ingredientstore.Kinds(ctx, c.db)
+	if err != nil {
+		return service.OfflineData{}, err
+	}
 	for _, p := range products {
 		bp := service.OfflineProduct{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-			BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
+			IngredientKind: string(kinds[p.IngredientID]), BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
 		if shopID != nil {
 			if latest, err := c.LatestPrice(ctx, p.ID, *shopID); err != nil {
 				return service.OfflineData{}, err
@@ -260,7 +276,7 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 // ingredientsPort finds an Ingredient by name or creates it (T2).
 type ingredientsPort struct{ st *ingredientstore.Store }
 
-func (i ingredientsPort) Ensure(ctx context.Context, name, baseUnit string) (int64, error) {
+func (i ingredientsPort) Ensure(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, error) {
 	ing, err := i.st.ByName(ctx, name)
 	if err == nil {
 		return ing.ID, nil
@@ -268,7 +284,7 @@ func (i ingredientsPort) Ensure(ctx context.Context, name, baseUnit string) (int
 	if !errors.Is(err, ingredientstore.ErrNotFound) {
 		return 0, err
 	}
-	created, err := i.st.Create(ctx, ingredient.Input{Name: name, Base: units.Base(baseUnit)})
+	created, err := i.st.Create(ctx, ingredient.Input{Name: name, Base: units.Base(baseUnit), Kind: kind})
 	if err != nil {
 		return 0, err
 	}
