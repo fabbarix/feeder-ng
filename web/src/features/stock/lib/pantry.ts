@@ -1,6 +1,7 @@
 // The Pantry list: every Stock Lot, filtered, sorted and grouped by Storage Place. Plain TypeScript, no React.
 import type { StockLot, StorageKind, StoragePlace } from '../types'
-import { fold, type StockFilter } from './filter'
+import { fold, type StockFilter, type StockKindFilter } from './filter'
+import { isSupply } from './supplies'
 
 /** Sort orders of the Pantry list. */
 export type PantrySort = 'goodUntil' | 'name' | 'quantity' | 'purchased' | 'place'
@@ -13,6 +14,8 @@ export interface PantryView {
   query: string
   /** all, use soon or spoiled (the server's flags) */
   status: StockFilter
+  /** Food, Supplies or both ('all'); a Supply is never use soon or spoiled. */
+  stock: StockKindFilter
   /** Storage Place ids to show (UNSORTED for Lots in none); empty = every place */
   places: number[]
   /** kinds to show (a Lot in no place counts as none of them); empty = every kind */
@@ -22,7 +25,7 @@ export interface PantryView {
   groupByPlace: boolean
 }
 
-export const DEFAULT_VIEW: PantryView = { query: '', status: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true }
+export const DEFAULT_VIEW: PantryView = { query: '', status: 'all', stock: 'all', places: [], kinds: [], sort: 'goodUntil', groupByPlace: true }
 
 export interface PantryGroup {
   /** the Storage Place, or null for "Not sorted" (and for the single group of an ungrouped list) */
@@ -39,8 +42,11 @@ export function filterLots(lots: StockLot[], places: StoragePlace[], view: Pantr
   const terms = words(view.query)
   const kindOf = new Map(places.map((p) => [p.id, p.kind]))
   return lots.filter((lot) => {
-    if (view.status === 'useSoon' && !lot.useSoon) return false
-    if (view.status === 'spoiled' && !lot.spoiled) return false
+    const supply = isSupply(lot)
+    if (view.stock === 'food' && supply) return false
+    if (view.stock === 'supply' && !supply) return false
+    if (view.status === 'useSoon' && (supply || !lot.useSoon)) return false
+    if (view.status === 'spoiled' && (supply || !lot.spoiled)) return false
     const placeId = lot.storagePlaceId ?? UNSORTED
     if (view.places.length > 0 && !view.places.includes(placeId)) return false
     if (view.kinds.length > 0) {

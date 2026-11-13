@@ -1,9 +1,10 @@
 import type { ReactElement } from 'react'
 import { ListGroup, ListRow, Thumb } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import { deductionOrder, lotMeta } from '../lib/ingredientLots'
+import { boughtLabel, deductionOrder, lotMeta } from '../lib/ingredientLots'
 import { rowMeta } from '../lib/filter'
 import { capitalise } from '../lib/display'
+import { isBelowRestock, isSupply, supplyRowMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import type { IngredientStock, StockLot, StoragePlace } from '../types'
@@ -19,6 +20,8 @@ export interface IngredientLotsRowProps {
   onToggle: () => void
   /** A Lot was tapped: the screen opens the Lot sheet. */
   onOpenLot: (lot: StockLot) => void
+  /** H6: a Supply's Restock level and Stock (null without a level). Food ignores it. */
+  restock?: Restock | null
 }
 
 /**
@@ -26,13 +29,15 @@ export interface IngredientLotsRowProps {
  * trailing = its total, meta as StockRow, the target named "<Name>, 2 Stock Lots" with aria-expanded; the panel is a
  * list "<Name> Stock Lots" of one ListRow per Lot (title = quantity, meta = lotMeta), each a button that calls onOpenLot.
  */
-export function IngredientLotsRow({ item, lots, places, today, system = 'metric', expanded, onToggle, onOpenLot }: IngredientLotsRowProps): ReactElement | null {
+export function IngredientLotsRow({ item, lots, places, today, system = 'metric', expanded, onToggle, onOpenLot, restock = null }: IngredientLotsRowProps): ReactElement | null {
   const name = capitalise(item.name)
+  const supply = isSupply(item)
   return (
     <ListRow
       title={name}
       aria-label={strings.ingredientLotsLabel(name, lots.length)}
-      meta={rowMeta(item, today)}
+      meta={supply ? supplyRowMeta(item, restock, system) : rowMeta(item, today)}
+      metaStatus={supply && isBelowRestock(restock) ? 'info' : undefined}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
       leading={<Thumb name={name} imageUrl={item.imageUrl} size={40} />}
       chevron
@@ -42,12 +47,14 @@ export function IngredientLotsRow({ item, lots, places, today, system = 'metric'
         <ListGroup label={strings.lotsOf(name)}>
           {deductionOrder(lots).map((lot) => {
             const placeName = places.find((p) => p.id === lot.storagePlaceId)?.name ?? null
+            // A Supply's Lot has no go-off part, whatever a stray date or flag says.
+            const meta = supply ? [boughtLabel(lot.purchased, today), placeName ?? strings.unsorted].join(' · ') : lotMeta(lot, today, placeName)
             return (
               <ListRow
                 key={lot.id}
                 title={formatQuantity(lot.quantity, lot.baseUnit, system)}
-                meta={lotMeta(lot, today, placeName)}
-                metaStatus={describeGoOff(lot, today).tone === 'spoil' ? 'spoil' : undefined}
+                meta={meta}
+                metaStatus={!supply && describeGoOff(lot, today).tone === 'spoil' ? 'spoil' : undefined}
                 chevron
                 onActivate={() => onOpenLot(lot)}
               />

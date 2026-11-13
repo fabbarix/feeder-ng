@@ -4,7 +4,7 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { FilterChip } from '../../../ui/FilterBar/types'
-import type { StockFilter } from '../lib/filter'
+import type { StockFilter, StockKindFilter } from '../lib/filter'
 import type { PantrySort } from '../lib/pantry'
 import {
   appliedFilters,
@@ -17,13 +17,14 @@ import {
   withPlaceToggled,
   withSort,
   withStatus,
+  withStock,
   withoutChip,
   withoutPantryFilters,
   type AppliedPantryFilters,
   type PantryChipKey,
   type PantryMode,
 } from '../lib/pantryFilters'
-import type { StorageKind, StoragePlace } from '../types'
+import type { StockKind, StorageKind, StoragePlace } from '../types'
 
 /** Where this device remembers the chosen list (storage may be missing or throw). */
 export const PANTRY_MODE_KEY = 'feeder:pantry-mode'
@@ -51,6 +52,9 @@ export interface UsePantryFilters {
   status: StockFilter
   /** Choosing the status in force again clears it (no "All": nothing chosen is all of Stock). */
   setStatus(status: StockFilter): void
+  /** H6: Food or Supplies. Choosing the value in force again clears it. */
+  stock: StockKindFilter
+  setStock(stock: StockKind): void
   places: number[]
   togglePlace(id: number): void
   kinds: StorageKind[]
@@ -85,6 +89,8 @@ export function usePantryFilters(places: readonly StoragePlace[]): UsePantryFilt
     },
     status: state.status,
     setStatus: (next) => write((prev) => withStatus(prev, next === pantryFiltersFromParams(prev).status ? 'all' : next)),
+    stock: state.stock,
+    setStock: (next) => write((prev) => withStock(prev, next === pantryFiltersFromParams(prev).stock ? 'all' : next)),
     places: state.places,
     togglePlace: (id) => write((prev) => withPlaceToggled(prev, id)),
     kinds: state.kinds,

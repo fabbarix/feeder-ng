@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactElement } from 'react'
 import { BottomSheet, Button, DateField, FormActions, Switch, TextField } from '../../../ui'
 import { capitalise } from '../lib/display'
+import { isSupply } from '../lib/supplies'
 import { changeGoesOff, changePurchased, checkLotForm, initialForm, toggleNoGoOff, type LotForm, type LotFormErrors } from '../lib/lotEdit'
 import { stockStrings as strings } from '../strings'
 import type { LotPatch, StockLot } from '../types'
@@ -40,6 +41,8 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
   const [form, setForm] = useState<LotForm>(() => initialForm(lot))
   const [errors, setErrors] = useState<LotFormErrors>({})
   const shelfLife = lot.shelfLifeDays
+  // H6: a Supply never goes off: no Good until, no "No go-off date" switch.
+  const goesOff = !isSupply(lot)
   const messages = errorText(errors)
 
   const save = (event: FormEvent) => {
@@ -80,19 +83,21 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
           setErrors((e) => ({ ...e, purchased: undefined, goesOff: undefined }))
         }}
       />
-      <DateField
-        label={strings.goodUntil}
-        value={form.goesOff}
-        min={form.purchased || undefined}
-        today={today}
-        disabled={form.noGoOff}
-        error={messages.goesOff}
-        onChange={(goesOff) => {
-          setForm((f) => changeGoesOff(f, goesOff))
-          setErrors((e) => ({ ...e, goesOff: undefined }))
-        }}
-      />
-      {shelfLife == null ? (
+      {goesOff ? (
+        <DateField
+          label={strings.goodUntil}
+          value={form.goesOff}
+          min={form.purchased || undefined}
+          today={today}
+          disabled={form.noGoOff}
+          error={messages.goesOff}
+          onChange={(goesOffDate) => {
+            setForm((f) => changeGoesOff(f, goesOffDate))
+            setErrors((e) => ({ ...e, goesOff: undefined }))
+          }}
+        />
+      ) : null}
+      {goesOff && shelfLife == null ? (
         <Switch
           label={strings.noGoOffSwitch}
           checked={form.noGoOff}

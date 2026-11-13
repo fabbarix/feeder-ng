@@ -42,6 +42,7 @@ import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
 import { capitalise } from '../lib/display'
 import { lotsOfIngredient } from '../lib/ingredientLots'
 import { filterTotals } from '../lib/filter'
+import { householdHasSupply, restockLevelsOf, restockOf, supplyStockOf } from '../lib/supplies'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import '../stock.css'
@@ -77,7 +78,12 @@ export function StockScreen(): ReactElement | null {
   const leftovers = pantry.leftovers
   const sections = leftovers.sections
 
-  const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), applied.status, query), [totals.data, applied.status, query])
+  const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), applied.status, query, applied.stock), [totals.data, applied.status, applied.stock, query])
+  // H6: a Supply's Restock level (from the catalogue) and its Stock (summed over the Lots); food has neither.
+  const supplyLevels = useMemo(() => restockLevelsOf(choices.choices), [choices.choices])
+  const supplyStock = useMemo(() => supplyStockOf(pantry.lots.data ?? []), [pantry.lots.data])
+  const restockFor = (ingredientId: number) => restockOf(ingredientId, supplyLevels, supplyStock)
+  const hasSupplies = householdHasSupply(pantry.lots.data ?? [], choices.choices)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
   // The aside is a 24 rem column from 1280 px: the spoiled rows keep their actions under the text there.
@@ -183,6 +189,7 @@ export function StockScreen(): ReactElement | null {
                           today={today}
                           system={system}
                           placeName={groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
+                          restock={restockFor(lot.ingredientId)}
                           onOpen={setOpenLot}
                         />
                       ))}
@@ -215,6 +222,7 @@ export function StockScreen(): ReactElement | null {
                   expanded={openIngredients.isOpen(item.ingredientId)}
                   onToggle={() => openIngredients.toggle(item.ingredientId)}
                   onOpenLot={setOpenLot}
+                  restock={restockFor(item.ingredientId)}
                 />
               ))}
             </ListGroup>
@@ -230,6 +238,9 @@ export function StockScreen(): ReactElement | null {
         mode={mode}
         status={filters.status}
         onStatus={filters.setStatus}
+        stock={filters.stock}
+        onStock={filters.setStock}
+        hasSupplies={hasSupplies}
         hasLeftovers={leftovers.frozenCount > 0}
         leftovers={filters.leftovers}
         onLeftovers={filters.setLeftovers}
@@ -302,6 +313,13 @@ export function StockScreen(): ReactElement | null {
           void attempt(async () => {
             await actions.deleteLot(lot.id)
             toast.show(strings.deleted(lot.ingredientName), { status: 'success' })
+          })
+        }}
+        onUsedUp={(lot, used) => {
+          setOpenLot(null)
+          void attempt(async () => {
+            await actions.usedUp(lot, used)
+            toast.show(strings.usedUp.done(capitalise(lot.ingredientName)), { status: 'success' })
           })
         }}
       />

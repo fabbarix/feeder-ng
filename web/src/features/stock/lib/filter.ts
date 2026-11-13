@@ -1,9 +1,12 @@
 import type { UnitSystem } from '../../../lib/units'
-import type { IngredientStock } from '../types'
+import type { IngredientStock, StockKind } from '../types'
 import { stockStrings as strings } from '../strings'
 import { daysBetween } from './days'
+import { isSupply } from './supplies'
 
 export type StockFilter = 'all' | 'useSoon' | 'spoiled'
+/** H6: Food or Supplies (?stock=); 'all' keeps both. */
+export type StockKindFilter = 'all' | StockKind
 
 const WORD_SEPARATOR = /\s+/
 
@@ -13,15 +16,19 @@ export function fold(text: string): string {
 }
 
 /**
- * Pure. `all` keeps everything, `useSoon` keeps items with useSoon, `spoiled` keeps spoiledCount > 0.
+ * Pure. `all` keeps everything, `useSoon` keeps items with useSoon, `spoiled` keeps spoiledCount > 0. A Supply never matches
+ * useSoon or spoiled (it never goes off); `stock` keeps food, or Supplies, or both ('all'); a missing kind is food.
  * `query` is matched accent- and case-insensitively against the name; every word must match.
  * Does not mutate; keeps the input order.
  */
-export function filterTotals(items: IngredientStock[], filter: StockFilter, query: string): IngredientStock[] {
+export function filterTotals(items: IngredientStock[], filter: StockFilter, query: string, stock: StockKindFilter = 'all'): IngredientStock[] {
   const words = fold(query.trim()).split(WORD_SEPARATOR).filter(Boolean)
   return items.filter((item) => {
-    if (filter === 'useSoon' && !item.useSoon) return false
-    if (filter === 'spoiled' && item.spoiledCount <= 0) return false
+    const supply = isSupply(item)
+    if (stock === 'food' && supply) return false
+    if (stock === 'supply' && !supply) return false
+    if (filter === 'useSoon' && (supply || !item.useSoon)) return false
+    if (filter === 'spoiled' && (supply || item.spoiledCount <= 0)) return false
     if (words.length === 0) return true
     const name = fold(item.name)
     return words.every((word) => name.includes(word))
