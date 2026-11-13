@@ -353,6 +353,11 @@ _Note_: a Leftover's equivalent is **Threw it out**.
 **Scan**:
 Reading a barcode with the phone; in a Shop it ticks the Shopping List and adds a Stock Lot; at home (Stock-take) it corrects Stock.
 _Avoid_: Check-off
+_Note_: a Scan in a Shop shows in the **Scanned list**. Scanning the same Product again is one more Scan of the same row (×2), and Undo reverses the latest one.
+
+**Scanned list**:
+What this phone has scanned at one Shop today, one row per Product (not per Scan), newest first, with each row's Price and the total. It starts empty at each Shop (Change Shop ends it) and with each household day. It is not the Shopping List: Lines still to get are under **To get**, and a second shopper's Scans tick Lines there but do not appear in this phone's Scanned list.
+_Avoid_: Basket, cart, trolley
 
 **Stock-take**:
 A scanning mode used at home to add or remove Stock without involving the Shopping List.
@@ -363,8 +368,19 @@ A per-Shop rule describing how to read the Product and its weight (or price) fro
 _Avoid_: Barcode parser, PLU rule
 
 **Price**:
-What a Product cost at a given Shop on a given date, optionally recorded at Scan time.
+What a Product cost at a given Shop on a given date, optionally recorded at Scan time. It is per pack; a Product counted in grams or millilitres may also be entered per kg or per l, which gives the pack Price from its size or weight (a Supply, counted in pieces, has a Price per pack only).
 _Avoid_: Cost
+_Note_: a row of the Scanned list with no Price says **Add price**; the total leaves it out and counts it as "without a Price".
+
+**Receipt**:
+The paper (or printed) record a Shop gives at the till, listing what was bought and what it cost. Feeder reads it to correct a Scanned list's Prices, weights and quantities; it does not keep it.
+_Avoid_: Bill, till slip, invoice, ticket, scontrino
+_Note_: "Read the receipt" is the action, as "Read" is for the Recipe Assistant. The photos of it are not a **Photo** (a Recipe's, Step's or Member's picture) and are never stored. A **Scanned list** is what was scanned; a Receipt is what was charged.
+
+**Receipt review**:
+The screen after a Receipt is read, listing the changes the assistant proposes to the Scanned list (Prices, weights, quantities, corrections to a Product, lines not scanned, rows not on the Receipt) as rows the User checks. Nothing changes until the User applies the checked ones.
+_Avoid_: Receipt import, receipt check, receipt confirmation
+_Note_: not **Import Review**, which is for Recipes read from a file or photos.
 
 **Shopping List**:
 The Ingredients and quantities still needed for uncooked Planned Meals up to a chosen date (earlier ones not yet marked Cooked included), less Stock, less lines **Not needed**, plus Supplies below their **Restock level**, plus any manual extras.
