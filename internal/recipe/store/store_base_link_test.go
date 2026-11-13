@@ -436,12 +436,12 @@ func TestUnlinkReversesABulkLinkAllOrNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	canLine := mustLineID(t, f, s.cann.ID)
-	err := f.s.Unlink(ctx, s.bech.ID, []int64{lasagneLine, canLine}) // Cannelloni's line is not a Base recipe line
+	_, err := f.s.Unlink(ctx, s.bech.ID, []int64{lasagneLine, canLine}) // Cannelloni's line is not a Base recipe line
 	wantValidation(t, err, "lineIds", recipe.CodeLineNotBase)
 	if id, _ := f.lineIngredient(t, lasagneLine); id != s.bech.BaseIngredientID {
 		t.Error("all or nothing: Lasagne stays linked when another line is refused")
 	}
-	if err := f.s.Unlink(ctx, s.bech.ID, []int64{lasagneLine, moussakaLine}); err != nil {
+	if _, err := f.s.Unlink(ctx, s.bech.ID, []int64{lasagneLine, moussakaLine}); err != nil {
 		t.Fatalf("Unlink: %v", err)
 	}
 	for _, id := range []int64{lasagneLine, moussakaLine} {

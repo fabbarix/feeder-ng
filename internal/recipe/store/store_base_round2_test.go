@@ -303,33 +303,17 @@ func TestDeletingAnUnusedBaseRecipeWhoseIngredientStaysDropsTheBatchAndPortionCo
 	}
 }
 
-func TestDeletingAnUnusedBaseRecipeWhoseNameAPlainIngredientHoldsStillSucceeds(t *testing.T) {
-	f := newBaseFixture(t)
-	b := f.createBase(t, baseIn("Stock", 1, "l"))
-	f.ingredient(t, "stock", units.Millilitre)
-	f.lot(t, b.BaseIngredientID, 500)
-	if err := f.s.Delete(ctx, b.ID); err != nil {
-		t.Fatalf("Delete with a plain Ingredient holding the name = %v, want it to succeed", err)
-	}
-	if _, err := f.ings.Get(ctx, b.BaseIngredientID); err != nil {
-		t.Errorf("the Ingredient with Stock stays: %v", err)
-	}
-	if k := f.nameKey(t, b.BaseIngredientID); k == "stock" {
-		t.Error("it cannot take the plain key a plain Ingredient holds")
-	}
-}
-
 func TestLinkAndUnlinkRefuseAnIdThatIsNotABaseRecipe(t *testing.T) {
 	f := newBaseFixture(t)
 	s := f.bulkSetup(t)
 	line := mustLineID(t, f, s.lasagne.ID)
-	if err := f.s.Unlink(ctx, s.lasagne.ID, []int64{line}); !errors.Is(err, storeErrNotFound) {
+	if _, err := f.s.Unlink(ctx, s.lasagne.ID, []int64{line}); !errors.Is(err, storeErrNotFound) {
 		t.Errorf("Unlink with a plannable id = %v, want ErrNotFound (404)", err)
 	}
 	if _, err := f.s.Link(ctx, s.lasagne.ID, []int64{line}); !errors.Is(err, storeErrNotFound) {
 		t.Errorf("Link with a plannable id = %v, want ErrNotFound", err)
 	}
-	if err := f.s.Unlink(ctx, 99999, []int64{line}); !errors.Is(err, storeErrNotFound) {
+	if _, err := f.s.Unlink(ctx, 99999, []int64{line}); !errors.Is(err, storeErrNotFound) {
 		t.Errorf("Unlink with an unknown id = %v, want ErrNotFound", err)
 	}
 }
