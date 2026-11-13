@@ -4,7 +4,7 @@ import { ApiError } from '../../../lib/http'
 import { ingredientsApi } from '../api'
 import { type Answers, buildMergeRequest, isResolved } from '../lib/mergeResolution'
 import { filterIngredients, normalizeName } from '../lib/names'
-import type { Ingredient, MergePreview } from '../types'
+import type { Ingredient, IngredientKind, MergePreview } from '../types'
 import { useIngredients } from './useIngredients'
 
 /** Shorter queries are matched as a plain substring; longer ones go to the server's fuzzy search. */
@@ -32,18 +32,19 @@ export interface UseMergeFlow {
   merge: (onMerged?: (survivor: Ingredient) => void) => Promise<Ingredient>
 }
 
-export function useMergeFlow(sourceId: number): UseMergeFlow {
+/** The merge of one Ingredient into another of the same kind: candidates and search stay in `kind` (food by default). */
+export function useMergeFlow(sourceId: number, kind: IngredientKind = 'food'): UseMergeFlow {
   const client = useQueryClient()
   const [query, setQuery] = useState('')
   const [target, setTarget] = useState<Ingredient | null>(null)
   const [answers, setAnswers] = useState<Answers>({})
-  const { ingredients } = useIngredients('')
+  const { ingredients } = useIngredients('', kind)
 
   const key = normalizeName(query)
   const searching = key.length >= SEARCH_MIN_LENGTH
   const search = useQuery({
-    queryKey: ['ingredients', 'search', key],
-    queryFn: () => ingredientsApi.search(query.trim()),
+    queryKey: ['ingredients', 'search', kind, key],
+    queryFn: () => ingredientsApi.search(query.trim(), undefined, kind),
     enabled: searching,
   })
 
@@ -89,7 +90,7 @@ export function useMergeFlow(sourceId: number): UseMergeFlow {
         survivor = await ingredientsApi.merge(sourceId, buildMergeRequest(target.id, preview.conflicts, answers))
       } catch (e) {
         // The server found conflicts (or a Base Unit mismatch) the preview did not show: reload it so the User sees them.
-        if (e instanceof ApiError && (e.code === 'merge_conflicts' || e.code === 'base_unit_mismatch')) {
+        if (e instanceof ApiError && (e.code === 'merge_conflicts' || e.code === 'base_unit_mismatch' || e.code === 'kind_differs')) {
           void client.invalidateQueries({ queryKey: ['ingredients', sourceId, 'merge-preview'] })
         }
         throw e

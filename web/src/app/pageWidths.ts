@@ -24,6 +24,8 @@ export const ROUTE_WIDTHS: RouteWidth[] = [
   { path: '/recipes/export', width: 'narrow' },
   { path: '/ingredients', width: 'narrow' },
   { path: '/ingredients/:id', width: 'narrow' },
+  { path: '/supplies', width: 'narrow' },
+  { path: '/supplies/:id', width: 'narrow' },
   { path: '/products', width: 'narrow' },
   { path: '/products/:id', width: 'narrow' },
   { path: '/settings', width: 'narrow' },

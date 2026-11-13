@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { BaseUnit } from '../../../lib/units'
 import { checkConversion, parseShelfLife } from '../lib/conversionForm'
+import { parseRestockText, restockText } from '../lib/kind'
 import { strings } from '../strings'
 import type { Conversion } from '../types'
 
@@ -93,5 +94,48 @@ export function useShelfLifeForm(days: number | null, onSave: (days: number | nu
     error,
     submit,
     clear,
+  }
+}
+
+export interface RestockForm {
+  /** The field's text: the Base Unit amount, blank for none. */
+  text: string
+  setText: (v: string) => void
+  /** Message for the last save attempt, else null. */
+  error: string | null
+  /** Parses the text; a bad amount sets the error, otherwise onSave(level | null). */
+  submit: () => void
+  clear: () => void
+}
+
+/** The Restock level field of a Supply: follows the saved level, saves in Base Units (H5, decision D3). */
+export function useRestockForm(level: number | null, onSave: (level: number | null) => void): RestockForm {
+  const [text, setTextState] = useState(restockText(level))
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTextState(restockText(level))
+    setError(null)
+  }, [level])
+
+  const save = (raw: string) => {
+    const parsed = parseRestockText(raw)
+    if (!parsed.ok) {
+      setError(parsed.error)
+      return
+    }
+    setError(null)
+    onSave(parsed.value)
+  }
+
+  return {
+    text,
+    setText: (v) => {
+      setTextState(v)
+      setError(null)
+    },
+    error,
+    submit: () => save(text),
+    clear: () => save(''),
   }
 }

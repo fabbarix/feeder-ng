@@ -24,6 +24,7 @@ type review struct {
 
 	existingByKey map[string]ingredient.Ingredient
 	existingByID  map[int64]ingredient.Ingredient
+	supplyByKey   map[string]bool // normalised names of the Supplies: food never matches them (ADR 0017)
 	takenNames    map[string]bool // normalised names of existing and created Ingredients
 
 	recipes  []RecipeStatus
@@ -92,6 +93,7 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		f: f, ex: ex, d: d, images: images,
 		existingByKey: map[string]ingredient.Ingredient{},
 		existingByID:  map[int64]ingredient.Ingredient{},
+		supplyByKey:   map[string]bool{},
 		takenNames:    map[string]bool{},
 		cleaned:       map[int]recipe.Input{},
 		byKey:         map[string]*ingRow{},
@@ -106,7 +108,9 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		if r.baseIngs[e.ID] {
 			continue // a Base recipe's Ingredient is keyed by its Base recipe, never by name
 		}
-		if _, dup := r.existingByKey[e.Key()]; !dup {
+		if e.IsSupply() {
+			r.supplyByKey[e.Key()] = true // a name a Supply holds is taken, but it is never a match (ADR 0017)
+		} else if _, dup := r.existingByKey[e.Key()]; !dup {
 			r.existingByKey[e.Key()] = e
 		}
 		r.takenNames[e.Key()] = true
@@ -307,6 +311,9 @@ func (r *review) resolveRows() {
 			row.match = &ex
 		}
 		row.target = r.targetFor(row)
+		if row.status == StatusSupply && row.target == nil {
+			r.problem(r.usedByPath(row), CodeSupplyNameTaken, fmt.Sprintf("%s is one of your Supplies", row.name))
+		}
 		if row.decision != nil {
 			d := *row.decision
 			d.Key = row.key
@@ -321,6 +328,8 @@ func (r *review) resolveRows() {
 func (r *review) classify(row *ingRow) (string, []Suggestion, *BaseUnitConflict) {
 	ex, matched := r.existingByKey[row.key]
 	switch {
+	case r.supplyByKey[row.key]:
+		return StatusSupply, nil, nil
 	case matched && row.def != nil && row.def.BaseUnit != string(ex.Base):
 		return StatusConflict, nil, &BaseUnitConflict{File: row.def.BaseUnit, Existing: string(ex.Base)}
 	case matched:
@@ -332,8 +341,8 @@ func (r *review) classify(row *ingRow) (string, []Suggestion, *BaseUnitConflict)
 	}
 	var cands []ingredient.Candidate
 	for _, e := range r.ex.Ingredients {
-		if r.baseIngs[e.ID] {
-			continue
+		if r.baseIngs[e.ID] || e.IsSupply() {
+			continue // a Supply is never suggested (ADR 0017)
 		}
 		cands = append(cands, ingredient.Candidate{ID: e.ID, Name: e.Name})
 	}
@@ -355,10 +364,10 @@ func (r *review) targetFor(row *ingRow) *target {
 	if d != nil {
 		switch d.Action {
 		case ActionUse:
-			if e, ok := r.existingByID[d.IngredientID]; ok {
+			if e, ok := r.existingByID[d.IngredientID]; ok && !e.IsSupply() {
 				return existingTarget(e)
 			}
-			return nil
+			return nil // a Supply is never a target, even when the User names its id (ADR 0017)
 		case ActionCreate:
 			return r.createTarget(row, d)
 		}

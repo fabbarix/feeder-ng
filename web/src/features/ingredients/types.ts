@@ -1,5 +1,8 @@
 import type { BaseUnit } from '../../lib/units'
 
+/** ADR 0017: a Supply is an Ingredient of kind 'supply'. */
+export type IngredientKind = 'food' | 'supply'
+
 export interface Conversion {
   unit: string
   toBase: number
@@ -19,6 +22,10 @@ export interface Ingredient {
   imageUrl?: string
   /** BR-D: set when this is a Base recipe's Ingredient; null/absent for a plain Ingredient. */
   baseRecipe?: { id: number; name: string; archived: boolean } | null
+  /** H2: food or supply; absent in older fixtures (read as food). */
+  kind?: IngredientKind
+  /** H2: a Supply's Restock level in Base Units; null/absent = none. */
+  restockLevel?: number | null
 }
 
 /** GET /api/ingredients/{id}: the Ingredient plus what other features use it (label -> count). */
@@ -50,7 +57,7 @@ export interface MergePreview {
   source: Ingredient
   target: Ingredient
   /** '' when the merge can go ahead, 'base_unit_mismatch' when it cannot. */
-  blocked: '' | 'base_unit_mismatch'
+  blocked: '' | 'base_unit_mismatch' | 'kind_differs'
   conversions: Conversion[]
   shelfLifeDays: number | null
   conflicts: Conflict[]
@@ -74,6 +81,8 @@ export interface NewIngredient {
   conversions?: Conversion[]
   /** IM2: image id from the ImagePicker; leave out for no picture. */
   image?: string
+  kind?: IngredientKind
+  restockLevel?: number
 }
 
 export interface IngredientPatch {
@@ -85,4 +94,7 @@ export interface IngredientPatch {
   frozenShelfLifeDays?: number | null
   /** IM2: an image id sets the picture, '' removes it, absent leaves it. */
   image?: string
+  kind?: IngredientKind
+  /** null clears the Restock level. */
+  restockLevel?: number | null
 }

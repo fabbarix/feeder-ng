@@ -9,12 +9,17 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
+// CodeSupplyNameTaken is the Problem code of a row whose name one of the Household's Supplies holds (ADR 0017): the
+// row is resolved only by a new name for it or by a food Ingredient.
+const CodeSupplyNameTaken = "supply_name_taken"
+
 // Ingredient match statuses (IngredientMatch.Status).
 const (
 	StatusExact     = "exact"     // same normalised name as an existing Ingredient
 	StatusSuggested = "suggested" // no exact match, but close existing names exist; default is to create
 	StatusNew       = "new"       // no match; created from the file's definition
 	StatusUndefined = "undefined" // no match and no definition in the file: needs a decision
+	StatusSupply    = "supply"    // the name is held by a Supply (ADR 0017): never matched or suggested; needs a new name or food
 	StatusConflict  = "conflict"  // exact match whose Base Unit differs from the definition: needs a decision
 )
 

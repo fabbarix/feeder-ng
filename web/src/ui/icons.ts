@@ -40,6 +40,7 @@ import { CookieIcon } from '@phosphor-icons/react/dist/csr/Cookie'
 import { CookingPotIcon } from '@phosphor-icons/react/dist/csr/CookingPot'
 import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
 import { CubeIcon } from '@phosphor-icons/react/dist/csr/Cube'
+import { SprayBottleIcon } from '@phosphor-icons/react/dist/csr/SprayBottle'
 import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsSixVertical'
 import { DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/csr/DotsThreeVertical'
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple'
@@ -121,6 +122,7 @@ export const icons = {
   fridge: ThermometerColdIcon,
   freezer: SnowflakeIcon,
   ingredients: CarrotIcon,
+  supply: SprayBottleIcon, // H5: a Supply (ADR 0017)
   products: ShoppingBagOpenIcon,
   shops: StorefrontIcon,
   location: MapPinIcon,

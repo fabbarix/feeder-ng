@@ -8,5 +8,7 @@ export const baseRecipeLinkStrings = {
   couldNotLoadCandidates: 'The lines could not be loaded. Try again.',
   couldNotMerge: 'The Ingredient could not be merged. Try again.',
   differentBaseUnits: (a: string, b: string) => `${a} and ${b} have different Base Units, so they cannot be merged.`,
+  /** H5: a food and a Supply never merge (kind_differs). */
+  differentKinds: (a: string, b: string) => `${a} and ${b} are not both food or both Supplies, so they cannot be merged.`,
   hasConflicts: 'It has conflicts to settle first. Merge it on its Ingredient page.',
 } as const

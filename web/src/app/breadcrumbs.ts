@@ -46,6 +46,9 @@ export const ROUTE_CRUMBS: RouteCrumb[] = [
   { path: '/recipes/:id', label: S.entity.recipe, parent: '/recipes', entity: true },
   { path: '/recipes/:id/edit', label: S.edit, parent: '/recipes/:id' },
   { path: '/ingredients/:id', label: S.entity.ingredient, parent: '/ingredients', entity: true },
+  // H5 (decision D5): the Supplies sit under Settings > Catalogue, like the Ingredients.
+  { path: '/supplies', label: S.catalogue.supplies, parent: '/settings' },
+  { path: '/supplies/:id', label: S.supplyEntity, parent: '/supplies', entity: true },
   // CRS G2 (RX): Plan > Review Exclusions.
   { path: '/plan/couldnt-plan/excluded', label: S.reviewExclusions, parent: '/plan' },
   { path: '/products/:id', label: S.entity.product, parent: '/products', entity: true },
