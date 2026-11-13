@@ -112,3 +112,43 @@
     animation: none;
   }
 }
+
+/* A non-modal sheet (modal={false}): no backdrop, the page behind stays usable. On a phone it is fixed at the bottom above the
+   bottom bar; from 768 px it is docked in the page where it is mounted. */
+.sheet[data-modal='false'] {
+  z-index: 11;
+  box-shadow: var(--elev-3);
+}
+
+/* About half the viewport on a phone: the body scrolls inside when its content is taller. */
+.sheet[data-size='half'],
+.sheet[data-size='half'] .sheet__panel {
+  block-size: max(50dvh, min(460px, 85dvh));
+}
+
+.sheet[data-size='half'] .sheet__grip {
+  margin-block-end: var(--space-2);
+}
+
+.sheet[data-size='half'] .sheet__header {
+  margin-block-end: var(--space-1);
+}
+
+@media (min-width: 768px) {
+  .sheet[data-modal='false'] {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    margin: 0;
+    border-radius: var(--radius-tile);
+    box-shadow: none;
+    animation: none;
+  }
+
+  .sheet[data-size='half'],
+  .sheet[data-size='half'] .sheet__panel {
+    block-size: auto;
+  }
+}

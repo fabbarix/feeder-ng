@@ -14,19 +14,31 @@ export interface BottomSheetProps {
   footer?: ReactNode
   /** Element to focus on open (default: the first interactive element of the body or footer, else the title). */
   initialFocusRef?: RefObject<HTMLElement | null>
+  /**
+   * false: a non-modal sheet. No backdrop and the page behind stays usable (a list can scroll and be tapped beside it). On a
+   * phone it is fixed at the bottom over the page; from 768 px it is docked: it sits in the page where it is mounted. Escape
+   * and the header Close still dismiss it. Default true.
+   */
+  modal?: boolean
+  /** 'half': about half the viewport high on a phone, the body scrolling inside (a keypad beside a list). Default 'auto'. */
+  size?: 'auto' | 'half'
 }
 
-/** A modal panel that rises from the bottom (a `<dialog>`); a centred dialog from 768 px. Escape, backdrop and Close dismiss it. */
+/**
+ * A modal panel that rises from the bottom (a `<dialog>`); a centred dialog from 768 px. Escape, backdrop and Close dismiss it.
+ * `modal={false}` makes it a non-modal sheet (see the prop).
+ */
 export function BottomSheet(props: BottomSheetProps) {
   return props.open ? <SheetSurface {...props} /> : null
 }
 
-function SheetSurface({ onClose, title, children, footer, initialFocusRef }: Omit<BottomSheetProps, 'open'>) {
+function SheetSurface({ onClose, title, children, footer, initialFocusRef, modal = true, size = 'auto' }: Omit<BottomSheetProps, 'open'>) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const { onBackdropClick } = useModalDialog(ref, {
     onClose,
-    dismissOnBackdrop: true,
+    modal,
+    dismissOnBackdrop: modal,
     initialFocus: (dialog) =>
       initialFocusRef?.current ??
       dialog.querySelector<HTMLElement>(`.sheet__body ${INTERACTIVE_SELECTOR}, .sheet__footer ${INTERACTIVE_SELECTOR}`) ??
@@ -34,7 +46,15 @@ function SheetSurface({ onClose, title, children, footer, initialFocusRef }: Omi
   })
 
   return (
-    <dialog ref={ref} className="sheet" aria-labelledby={titleId} {...{ [PRIMARY_SCOPE_ATTR]: '' }} onClick={onBackdropClick}>
+    <dialog
+      ref={ref}
+      className="sheet"
+      data-modal={modal ? undefined : 'false'}
+      data-size={size === 'auto' ? undefined : size}
+      aria-labelledby={titleId}
+      {...{ [PRIMARY_SCOPE_ATTR]: '' }}
+      onClick={onBackdropClick}
+    >
       <div className="sheet__panel">
         <span className="sheet__grip" aria-hidden="true" />
         <header className="sheet__header">
