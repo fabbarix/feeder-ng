@@ -167,18 +167,23 @@
 }
 
 /* The chips of a row: one line, the ones that do not fit are clipped (the sheet shows all). */
+/* Round 3: the line is as wide as the row's text, so a lone chip has the room of the row. A chip takes its natural width and
+   shrinks only when the line is really full (P14 flags a cut label with room to spare). The "+N" chip never shrinks. */
 .plan-row__chips {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-1);
+  inline-size: 100%;
   min-width: 0;
   overflow: hidden;
 }
-/* A chip keeps its size (flex none) but no more than 40 % of the line, so two chips and the "+N" chip fit the line (P11). */
 .plan-row__chips .chip {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+.plan-row__chips .chip[data-kind='count'] {
   flex: none;
-  max-inline-size: 40%;
 }
 /* Swap and Pin: a group at the end of the row that never shrinks. */
 .plan-row__actions {

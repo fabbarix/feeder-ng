@@ -107,6 +107,8 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const o of m.navOverlap ?? []) add('P12', `${o.sel} is under the bottom bar by ${o.px} px at the end of the scroll; add clearance (--nav-clearance)`)
   // DS-A round 2 (system.md 10): a box wider than its tile or card spills past it (fails in every mode, see ALWAYS_FAIL).
   for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
+  // ds-plan round 3: a chip label cut by its ellipsis while its chip line has spare room (a lone chip must show in full).
+  for (const c of m.clippedChips ?? []) add('P14', `${c.sel} "${c.label}" is cut by its ellipsis with ${c.room} px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap`)
   return out
 }
 
