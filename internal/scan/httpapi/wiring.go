@@ -143,6 +143,32 @@ func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (se
 	return c.info(ctx, d.Product)
 }
 
+// UpdateProduct sets the name and pack size (the receipt Apply's correction). An unknown Product is ErrProductGone.
+func (c catalogue) UpdateProduct(ctx context.Context, id int64, in service.ProductUpdate) (service.ProductInfo, error) {
+	name, size := in.Name, in.PackSize
+	d, err := c.st.UpdateProduct(ctx, id, &name, &size)
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ProductInfo{}, service.ErrProductGone
+	}
+	var invalid *product.ValidationError
+	if errors.As(err, &invalid) {
+		return service.ProductInfo{}, &scan.ValidationError{Field: invalid.Field, Message: invalid.Message}
+	}
+	if err != nil {
+		return service.ProductInfo{}, err
+	}
+	return c.info(ctx, d.Product)
+}
+
+// DeleteProduct removes a Product the receipt Apply made and then put back (an unknown one is ErrProductGone).
+func (c catalogue) DeleteProduct(ctx context.Context, id int64) error {
+	err := c.st.DeleteProduct(ctx, id)
+	if errors.Is(err, productstore.ErrNotFound) {
+		return service.ErrProductGone
+	}
+	return err
+}
+
 // FillPicture gives the Product the Picture only when it has none (PPX), through the store's atomic FillImage, then reads the
 // Product back so the result carries the winner's picture when it already had one.
 func (c catalogue) FillPicture(ctx context.Context, productID int64, image string) (service.ProductInfo, bool, error) {

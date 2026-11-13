@@ -17,7 +17,7 @@ func init() { app.Register(app.Module{Name: "scan", Mount: mount}) }
 
 // mount registers the routes listed in docs/dev/design/t13-shopping-scan.md (all r.User).
 func mount(r *app.Router, d app.Deps) {
-	a := &api{svc: newService(d)}
+	a := &api{svc: ServiceFor(d)}
 	r.User("GET /api/scan/offline", a.offline)
 	r.User("POST /api/scan", a.apply)
 	r.User("POST /api/scan/sync", a.sync)

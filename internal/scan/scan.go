@@ -106,9 +106,20 @@ func (e *ValidationError) Is(target error) bool { return target == ErrInvalid }
 // UUID could never be priced alone (the phone sends crypto.randomUUID, the receipt Apply "receipt:<readId>:<n>").
 const ReservedUUID = "prices"
 
+// maxClientUUIDReceipt is the longest client UUID of a receipt apply: "receipt:<readId>:undo:<uuid>" is about 86 characters
+// with two UUIDs, so receipt UUIDs get 128 (RR3). Every other client UUID keeps 64.
+const maxClientUUIDReceipt = 128
+
+func maxClientUUID(u string) int {
+	if strings.HasPrefix(u, "receipt:") {
+		return maxClientUUIDReceipt
+	}
+	return 64
+}
+
 // Validate checks the operation without touching any state (rules in the design note).
 func (o Op) Validate() error {
-	if u := strings.TrimSpace(o.ClientUUID); u == "" || len(o.ClientUUID) > 64 {
+	if u := strings.TrimSpace(o.ClientUUID); u == "" || len(o.ClientUUID) > maxClientUUID(o.ClientUUID) {
 		return &ValidationError{Field: "clientUuid", Message: "a client UUID of 1 to 64 characters is required"}
 	}
 	if o.ClientUUID == ReservedUUID {

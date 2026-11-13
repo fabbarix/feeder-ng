@@ -151,11 +151,21 @@ type OfflineData struct {
 	Products []OfflineProduct `json:"products"`
 }
 
+// ProductUpdate is a Product's name and pack size, both set (a correction from a receipt; its inverse sets the old ones).
+type ProductUpdate struct {
+	Name     string
+	PackSize float64
+}
+
 // Catalogue is the Products/Shops port (T9).
 type Catalogue interface {
 	ShopExists(ctx context.Context, id int64) (bool, error)
 	Product(ctx context.Context, id int64) (ProductInfo, error) // ErrProductGone
 	CreateProduct(ctx context.Context, in NewProduct) (ProductInfo, error)
+	// UpdateProduct sets the name and pack size (ErrProductGone for an unknown Product); DeleteProduct removes a Product
+	// that has no purchase or usage (the inverse of CreateProduct in a receipt plan).
+	UpdateProduct(ctx context.Context, id int64, in ProductUpdate) (ProductInfo, error)
+	DeleteProduct(ctx context.Context, id int64) error
 	// FillPicture (PPX) gives the Product the Picture only when it has none, atomically. filled is false when it already
 	// had one (ProductInfo then carries its own). A missing file is ErrPictureMissing; nothing is deleted.
 	FillPicture(ctx context.Context, productID int64, image string) (info ProductInfo, filled bool, err error)
@@ -227,6 +237,16 @@ type priceSnapshot struct {
 func (s *Service) Apply(ctx context.Context, op scan.Op) (scan.Result, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	res, err := s.apply(ctx, op)
+	// Only a Shop scan that was written is published (stock_take never was); the receipt plan publishes once at its end.
+	if err == nil && res.Status == scan.StatusApplied && op.Kind != scan.KindStockTake {
+		s.publish()
+	}
+	return res, err
+}
+
+// apply is Apply with the scan lock held, and publishes nothing.
+func (s *Service) apply(ctx context.Context, op scan.Op) (scan.Result, error) {
 	if err := op.Validate(); err != nil {
 		return rejected(op.ClientUUID, CodeValidation, err.Error()), nil
 	}
@@ -560,7 +580,6 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 		}
 		return fail(err)
 	}
-	s.publish()
 	return res, nil
 }
 
@@ -636,6 +655,15 @@ type UndoResult struct{ Undone, AlreadyUndone bool }
 func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	res, err := s.undo(ctx, clientUUID)
+	if err == nil && res.Undone {
+		s.publish()
+	}
+	return res, err
+}
+
+// undo is Undo with the scan lock held, and publishes nothing.
+func (s *Service) undo(ctx context.Context, clientUUID string) (UndoResult, error) {
 	ev, ok, err := s.d.Ledger.Get(ctx, clientUUID)
 	if err != nil {
 		return UndoResult{}, err
@@ -710,7 +738,6 @@ func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, erro
 	if _, err := s.d.Ledger.MarkUndone(ctx, clientUUID); err != nil {
 		return UndoResult{}, err
 	}
-	s.publish()
 	return UndoResult{Undone: true}, nil
 }
 
