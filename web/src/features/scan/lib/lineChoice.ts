@@ -1,6 +1,7 @@
 // "Which Line is it?" (SR5, 13.5 step 1): which open Shopping List Lines can be the unknown Product, in which order.
 // Plain TypeScript, no React.
 import type { IngredientKind } from '../../ingredients/types'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { BaseUnit } from '../types'
 import type { IngredientChoice } from './unknownForm'
 
@@ -60,4 +61,9 @@ export function choiceFromLine(chip: LineChip): IngredientChoice {
   const choice: IngredientChoice = { id: chip.ingredientId, name: chip.name, baseUnit: chip.baseUnit, kind: chip.kind }
   if (chip.imageUrl) choice.imageUrl = chip.imageUrl
   return choice
+}
+
+/** What a chip says beside the name: the amount still to get ("125 g", "6 pieces"); a Restock Line says Restock instead, so no amount. */
+export function lineChipAmount(chip: LineChip, system: UnitSystem): string {
+  return chip.restock ? '' : formatQuantity(chip.quantity, chip.baseUnit, system)
 }

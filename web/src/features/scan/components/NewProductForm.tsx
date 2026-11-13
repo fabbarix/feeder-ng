@@ -55,7 +55,7 @@ export function NewProductForm(p: NewProductSheetProps) {
       {p.barcode ? <p className="new-product__barcode">{newProductStrings.barcodeNotKnown(p.barcode)}</p> : null}
 
       {form.showLines ? (
-        <NewProductLines chips={form.lines} expanded={form.moreOpen} onExpand={form.expandLines} onPick={form.pickLine} onSomethingElse={form.openSomethingElse} />
+        <NewProductLines chips={form.lines} system={p.system ?? 'metric'} expanded={form.moreOpen} onExpand={form.expandLines} onPick={form.pickLine} onSomethingElse={form.openSomethingElse} />
       ) : null}
 
       {form.showKind ? (

@@ -1,6 +1,6 @@
 // SR5: which open Lines can be the unknown Product ("Which Line is it?"), and in which order.
 import { describe, expect, it } from 'vitest'
-import { choiceFromLine, lineChips, MAX_LINE_CHIPS, type LineCandidate } from './lineChoice'
+import { choiceFromLine, lineChipAmount, lineChips, MAX_LINE_CHIPS, type LineCandidate } from './lineChoice'
 
 const line = (id: number, name: string, over: Partial<LineCandidate> = {}): LineCandidate => ({ ingredientId: id, name, baseUnit: 'g', quantity: 100, ticked: false, ...over })
 
@@ -80,5 +80,17 @@ describe('choiceFromLine', () => {
   it('leaves the Picture out when the Line has none', () => {
     const [chip] = lineChips([line(1, 'Mozzarella')]).chips
     expect(choiceFromLine(chip!)).toEqual({ id: 1, name: 'Mozzarella', baseUnit: 'g', kind: 'food' })
+  })
+})
+
+describe('lineChipAmount', () => {
+  it('is the amount still to get, in the Household\'s units', () => {
+    const { chips } = lineChips([line(1, 'Mozzarella', { quantity: 125 }), line(2, 'Eggs', { baseUnit: 'piece', quantity: 6 })])
+    expect(chips.map((c) => lineChipAmount(c, 'metric'))).toEqual(['125 g', '6 pieces'])
+  })
+
+  it('a Restock Line shows no amount: its chip says Restock', () => {
+    const [chip] = lineChips([line(5, 'Dish soap', { kind: 'supply', baseUnit: 'ml', quantity: 500 })]).chips
+    expect(lineChipAmount(chip!, 'metric')).toBe('')
   })
 })

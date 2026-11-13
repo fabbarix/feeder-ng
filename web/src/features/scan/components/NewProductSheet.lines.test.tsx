@@ -33,6 +33,14 @@ describe('NewProductSheet: Which Line is it?', () => {
     expect(chipNames().filter((n) => /Pasta|Covered/.test(n))).toEqual([])
   })
 
+  it('each chip says the amount still to get; a Restock Line says Restock', () => {
+    setup({ lines })
+    const names = chipNames()
+    expect(names[0]).toBe('Mozzarella125 g')
+    expect(names[3]).toBe('Eggs6 pieces')
+    expect(names[4]).toBe('Dish soapRestock')
+  })
+
   it('a partly covered Line is still there', () => {
     setup({ lines: [{ ...mozzarellaLine, quantity: 40 }] })
     expect(chipNames()[0]).toMatch(/^Mozzarella/)
