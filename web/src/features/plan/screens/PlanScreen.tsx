@@ -73,11 +73,9 @@ export function PlanScreen(): ReactNode {
           title={planStrings.title}
           subtitle={range}
           actions={
-            <div aria-hidden={s.regenerateConfirming || undefined}>
-              <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
-                {planStrings.regenerate}
-              </Button>
-            </div>
+            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
+              {planStrings.regenerate}
+            </Button>
           }
         />
       )}

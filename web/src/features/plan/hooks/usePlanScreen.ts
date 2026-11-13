@@ -27,8 +27,6 @@ export function usePlanScreen() {
   /** True while the Regenerate dry run runs; a ref guards re-entry from a quick second tap. */
   const [regeneratePreviewing, setRegeneratePreviewing] = useState(false)
   const previewingRef = useRef(false)
-  /** True while the Regenerate confirm is up: the page behind it is hidden from assistive tech (modal). */
-  const [regenerateConfirming, setRegenerateConfirming] = useState(false)
   const alternatives = useAlternatives(swapKey)
   const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
   const allCooked = useAllCookedFlow()
@@ -102,19 +100,10 @@ export function usePlanScreen() {
       }
       const count = dryRun ? dryRun.replaces : regenerateImpact(plan.slots, plan.today)
       const copy = regenerateConfirmCopy(count, dryRun)
-      setRegenerateConfirming(true)
-      let yes: boolean
-      try {
-        yes = await confirm.confirm({ title: copy.title, body: copy.body, confirmLabel: copy.confirmLabel })
-      } finally {
-        setRegenerateConfirming(false)
-      }
-      if (yes) await actions.regenerate()
+      if (await confirm.confirm({ title: copy.title, body: copy.body, confirmLabel: copy.confirmLabel })) await actions.regenerate()
     },
     /** True while the Regenerate dry run runs (the button shows its busy state). */
     regeneratePreviewing,
-    /** True while the Regenerate confirm is open. */
-    regenerateConfirming,
     pickRecipe: async (recipeId: number) => {
       if (!chooseKey) return
       const key = chooseKey
