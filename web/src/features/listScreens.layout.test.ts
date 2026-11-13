@@ -35,12 +35,19 @@ describe('list screens use the shared ListPage', () => {
     expect(src('./recipes/screens/RecipesScreen.tsx')).toMatch(/<ListPage\b[^>]*className="recipes-screen"/)
   })
 
-  it.each(['./ingredients/screens/IngredientsScreen.tsx', './products/screens/ProductsScreen.tsx', './recipes/screens/RecipesScreen.tsx'])(
+  it.each(['./ingredients/screens/IngredientsScreen.tsx', './products/screens/ProductsScreen.tsx'])(
     '%s hands the SearchField to ListPage as its search slot',
     (p) => {
       expect(src(p), p).toMatch(/search=\{\s*<SearchField\b/)
     },
   )
+
+  // hf-recipes-filter: Recipes' search slot is row 1 of its filter header, the SearchField with the Filters button beside it
+  // (docs/design/recipes-filter.md 3); the SearchField is still in the search slot.
+  it('./recipes/screens/RecipesScreen.tsx hands ListPage a search slot whose row holds the SearchField, then the Filters button', () => {
+    const t = src('./recipes/screens/RecipesScreen.tsx')
+    expect(t).toMatch(/search=\{\s*(<>\s*)?<div className="recipe-filters__row recipe-filters__search-row">\s*<SearchField\b[^>]*\/>\s*<RecipeFiltersButton\b/)
+  })
 
   it('the Stock screen (search in its aside) keeps a token gap', () => {
     expect(stockCss.replace(/\/\*[\s\S]*?\*\//g, '')).toMatch(/\.stock-screen\s*\{[^}]*gap:\s*var\(--space-[3-6]\)/)

@@ -84,7 +84,7 @@ describe('the old header is gone', () => {
     expect(rules.length).toBeGreaterThan(0)
     for (const r of rules) {
       expect(r.body, r.selector).not.toMatch(/#[0-9a-f]{3,8}\b|oklch\(|rgb\(/i)
-      expect(r.body, r.selector).not.toMatch(/font-size:\s*(?!var\(--text-)/)
+      expect(r.body, r.selector).not.toMatch(/font-size:\s*(?!var\(--text-)\S/)
     }
   })
 })

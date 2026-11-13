@@ -105,10 +105,10 @@ describe('keyboard', () => {
     expect(lastFilter().tag).toBe('sweet')
     expect(screen.getByRole('option', { name: 'sweet' })).toHaveAttribute('aria-selected', 'true')
   })
-  it('Done closes the panel and returns focus to the button', async () => {
+  it('Close closes the panel and returns focus to the button', async () => {
     view()
     await userEvent.click(filtersButton())
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Filters' })).toBeNull()
     expect(filtersButton()).toHaveFocus()
   })
@@ -124,10 +124,10 @@ describe('keyboard', () => {
     await userEvent.keyboard('{Enter}')
     expect(screen.getByRole('button', { name: 'Filters' })).toHaveFocus()
   })
-  it('Clear filters, once disabled, leaves focus on Done', async () => {
+  it('Clear filters, once disabled, leaves focus on Close', async () => {
     view('/recipes?tag=fish')
     await userEvent.click(filtersButton())
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
-    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus()
   })
 })

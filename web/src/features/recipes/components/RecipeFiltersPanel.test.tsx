@@ -1,4 +1,4 @@
-// hf-recipes-filter: the Filters panel: Course and Tag, Clear filters and Done (docs/design/recipes-filter.md 4, 5, 8, 9).
+// hf-recipes-filter: the Filters panel: Course and Tag, Clear filters and Close (docs/design/recipes-filter.md 4, 5, 8, 9).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
@@ -84,9 +84,9 @@ describe('RecipeFiltersPanel', () => {
     expect(props.onClear).toHaveBeenCalledTimes(1)
     expect(props.onClose).not.toHaveBeenCalled()
   })
-  it('Done closes the panel', async () => {
+  it('Close (the footer button) closes the panel', async () => {
     const props = panel()
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(props.onClose).toHaveBeenCalledTimes(1)
   })
   it('has no accent button (New Recipe stays the one primary action)', () => {

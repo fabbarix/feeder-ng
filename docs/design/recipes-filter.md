@@ -81,7 +81,7 @@ Components only render and wire events (CLAUDE.md). Logic lives in `lib/recipeFi
 | `RecipeKindControl` | features/recipes/components | Unchanged API. Now `Segmented compact labelHidden` (radiogroup "Kind"). |
 | `RecipeSortSelect` | features/recipes/components | Unchanged API. Now `Select appearance="chip" icon="sort"` with short trigger labels (§9). |
 | `RecipeFiltersButton` | features/recipes/components | **New.** `Button variant="secondary" size="sm" icon="filter"`, text "Filters", and a count Chip while filters are on. `aria-haspopup="dialog"`, `aria-expanded`, `aria-label` from the summary. |
-| `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Done". |
+| `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Close". |
 | `CourseFilter` | features/recipes/components | Unchanged API and copy ("Filter by Course", "All Courses"). Its group is **one line**: it scrolls sideways inside the panel, chips keep their natural width (never crushed). |
 | `TagFilterList` | features/recipes/components | **New.** The shared `OptionList` (single) fed by `useTagFilterSearch`: search, rows, empty text. |
 | `ActiveFilterChips` | features/recipes/components | **New.** The chip line of row 3: removable chips (`Chip onRemove`) and the "+N" chip, fitted by `useFittingChips`. |
@@ -209,7 +209,8 @@ No other ui file changes.
   Its name is the summary: "Filters" or "Filters, 2 active". The count chip is `aria-hidden`.
 - **Panel**: a dialog named "Filters". On open, focus goes to the first Course chip ("All Courses"), or to the Tag search on
   Base recipes. Escape closes it and focus returns to the Filters button. On a phone it is the modal BottomSheet (focus
-  trapped, backdrop and Close dismiss it). "Done" closes it the same way.
+  trapped; the backdrop and the header's ✕ IconButton dismiss it). The footer "Close" button closes it the same way, on every width.
+  On a phone the sheet's ✕ is also named "Close": both buttons do the same thing.
 - **Course group**: "Filter by Course", toggle buttons (`aria-pressed`), as today.
 - **Tag list**: a search combobox "Search Tags" over a listbox "Filter by Tag"; each option is named by the Tag's name and
   described by its count ("3 Recipes"); `aria-selected` on the chosen Tag. The colour dot is decorative.
@@ -217,7 +218,7 @@ No other ui file changes.
   next chip, or to the Filters button when it was the last. "+N" is a button named "Show 1 more filter" / "Show 2 more filters"
   that opens the panel.
 - **Clear filters**: removes the Course and the Tag, keeps the panel open, focus stays on it (it becomes disabled, so focus
-  moves to "Done").
+  moves to "Close").
 - Kind: radiogroup "Kind" (label visually hidden). Sort: combobox "Sort" (label visually hidden), its value the short label.
 
 ## 9. Copy
@@ -234,7 +235,7 @@ No other ui file changes.
 | Tag row meta | "1 Recipe", "3 Recipes", "No Recipes yet" (`tagColourStrings.recipes`) |
 | Empty Tag search | "No Tag matches 'xyz'" |
 | No Tags | "No Tag to choose from" |
-| Panel footer | "Clear filters", "Done" |
+| Panel footer | "Clear filters", "Close" ("Done" is a GLOSSARY _Avoid_ word) |
 | Course chip | visible "Main"; name "Remove Course: Main" |
 | Tag chip | visible "fish"; name "Remove Tag: fish" |
 | More chip | "+1", "+2"; name "Show 1 more filter", "Show 2 more filters" |
@@ -245,7 +246,7 @@ No word from GLOSSARY's _Avoid_ lists ("category", "label" for a Tag; "dish type
 
 ## 10. Colour and type
 
-- New Recipe stays the one accent action of the page. Filters is `secondary`; the count is `Chip kind="count"`; "Done" is
+- New Recipe stays the one accent action of the page. Filters is `secondary`; the count is `Chip kind="count"`; "Close" is
   `secondary` and "Clear filters" `tertiary` (the panel has no accent).
 - The Course chip is neutral (`kind="tag"` with no colour). A Tag chip carries its Tag colour; the Tag list's dot is `TagDot`.
 - Section headings in the panel are `label` (`--text-label-*`). Feature CSS uses only `--text-*`, `--space-*` and colour tokens.
