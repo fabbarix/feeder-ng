@@ -420,3 +420,93 @@ func TestFactsGiveALeftoverCourseWithoutReheatMinutesTheDefaultLength(t *testing
 		t.Errorf("ReheatSeconds = %d, want 240 (120 s + 60 s for each of 2 further portions)", m.ReheatSeconds)
 	}
 }
+
+// B5-SD (ADR 0014): a Meal Slot on one date has its own time; the facts' SlotAt, and so every reminder (Start cooking,
+// Advance Step, Confirm Cooked, Leftover) and the keys that end in the due instant, follow it.
+func TestFactsUseTheDatesTimeForTheSlotInstant(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	if _, err := w.db.Exec(`INSERT INTO meal_slot_dates (slot_id, date, not_served, time, guests, updated_at) VALUES (?, '2026-11-09', 0, '21:00', 0, '2026-11-09T09:00:00Z')`, w.dinner); err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := find(f, "2026-11-09", w.dinner)
+	if !ok {
+		t.Fatal("meal missing")
+	}
+	if want := time.Date(2026, 11, 9, 20, 0, 0, 0, time.UTC); !m.SlotAt.Equal(want) { // 21:00 Rome = 20:00Z, not the usual 19:30
+		t.Errorf("SlotAt = %s, want %s (the date's 21:00 in Rome)", m.SlotAt.UTC(), want)
+	}
+}
+
+func TestFactsKeepTheUsualTimeOnOtherDatesAndForGuestsOnlyRows(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	w.meal(t, "2026-11-10", w.lunch, w.porridge, plan.StatePlanned, nil)
+	// A row with Guests and no time of its own, and a row for another date, change nothing.
+	if _, err := w.db.Exec(`INSERT INTO meal_slot_dates (slot_id, date, guests, updated_at) VALUES (?, '2026-11-09', 3, '2026-11-09T09:00:00Z')`, w.dinner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.db.Exec(`INSERT INTO meal_slot_dates (slot_id, date, time, updated_at) VALUES (?, '2026-11-17', '08:00', '2026-11-09T09:00:00Z')`, w.lunch); err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, _ := find(f, "2026-11-09", w.dinner)
+	l, _ := find(f, "2026-11-10", w.lunch)
+	if want := time.Date(2026, 11, 9, 18, 30, 0, 0, time.UTC); !d.SlotAt.Equal(want) {
+		t.Errorf("dinner SlotAt = %s, want the usual 19:30 Rome (%s)", d.SlotAt.UTC(), want)
+	}
+	if want := time.Date(2026, 11, 10, 11, 30, 0, 0, time.UTC); !l.SlotAt.Equal(want) {
+		t.Errorf("lunch SlotAt = %s, want the usual 12:30 Rome (%s)", l.SlotAt.UTC(), want)
+	}
+}
+
+// B5-SD review round 3 (PM decision 3e): a SlotDate lookup error that is not "not found" is returned, not skipped
+// (a meal silently missing from the facts is a reminder silently never sent); a missing Meal Slot is still skipped.
+func TestFactsReturnASlotDateLookupErrorThatIsNotNotFound(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	if _, err := w.db.Exec(`DROP TABLE meal_slot_dates`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.src.Facts(ctx, w.now); err == nil {
+		t.Error("Facts = nil error with the slot-date lookup failing; the error must be returned, not skipped")
+	}
+}
+
+func TestFactsStillSkipAMealWhoseMealSlotIsGone(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	w.meal(t, "2026-11-09", w.lunch, w.porridge, plan.StatePlanned, nil)
+	conn, err := w.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	// A Planned Meal of a deleted Meal Slot cannot exist under the foreign keys; switch them off on this connection.
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.ExecContext(ctx, `DELETE FROM meal_slots WHERE id = ?`, w.dinner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatalf("Facts = %v; a missing Meal Slot is skipped, not an error", err)
+	}
+	if _, ok := find(f, "2026-11-09", w.dinner); ok {
+		t.Error("the meal of the deleted Meal Slot is in the facts")
+	}
+	if _, ok := find(f, "2026-11-09", w.lunch); !ok {
+		t.Error("the other meal is missing from the facts")
+	}
+}

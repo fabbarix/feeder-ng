@@ -298,6 +298,28 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 				return mapErr(err)
 			}
 		}
+		// A Not served Meal Slot: its unresolved Planned Meals go, Pinned ones too (the User confirmed the list).
+		for _, k := range ch.RemoveUnresolved {
+			_, err := st.q.ExecContext(ctx, `DELETE FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?
+				AND state = 'planned'`, k.Date, k.MealSlotID, k.CourseID)
+			if err != nil {
+				return mapErr(err)
+			}
+		}
+		// Batches that follow portions (ADR 0014 point 6): a planned meal, Pinned or not, keeps its Recipe. Cooked and
+		// Not cooked meals are never touched.
+		for _, r := range ch.RaiseBatches {
+			if _, err := st.q.ExecContext(ctx, `UPDATE planned_meals SET batches = ?, portions = ?, updated_at = ?
+				WHERE date = ? AND meal_slot_id = ? AND course_id = ? AND state = 'planned'`,
+				r.Batches, r.Portions, st.now(), r.Key.Date, r.Key.MealSlotID, r.Key.CourseID); err != nil {
+				return mapErr(err)
+			}
+		}
+		// An upsert of a raised meal carries the raised Batches and portions, so it cannot undo the raise above.
+		raises := make(map[plan.Key]plan.BatchRaise, len(ch.RaiseBatches))
+		for _, r := range ch.RaiseBatches {
+			raises[r.Key] = r
+		}
 		for _, m := range ch.Upserts {
 			cur, err := st.Meal(ctx, m.Key)
 			if err == nil && (cur.Pinned || cur.State != plan.StatePlanned) {
@@ -305,6 +327,9 @@ func (s *Store) Apply(ctx context.Context, ch plan.Changes) error {
 			}
 			if err != nil && !errors.Is(err, ErrNotFound) {
 				return err
+			}
+			if r, ok := raises[m.Key]; ok {
+				m.Batches, m.Portions = r.Batches, r.Portions
 			}
 			m.State, m.Pinned = plan.StatePlanned, false
 			if _, err := st.SaveMeal(ctx, m); err != nil {

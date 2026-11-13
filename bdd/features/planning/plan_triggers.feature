@@ -45,16 +45,15 @@ Feature: When the planner runs
     Then the plan slot on 2026-11-10 has a Planned Meal
     And the plan slot on 2026-11-10 does not have the remembered Recipe
 
-  Scenario: Changing Attendance replans, and an empty table explains itself
+  Scenario: Changing Attendance replans, and an empty table is Not served (beta.5, U1)
     When nobody attends the Dinner on 2026-11-10
     And the planner has finished
     And I view the plan
     Then the plan slot on 2026-11-10 is empty
-    And the plan slot on 2026-11-10 could not be planned because "no_attendance"
+    And the plan slot on 2026-11-10 is Not served
     When I list the slots the planner could not plan
     Then the response status is 200
-    And the plan JSON "slots.0.date" is "2026-11-10"
-    And the plan JSON "slots.0.unfilled.reason" is "no_attendance"
+    And the plan JSON "slots" has 0 items
 
   Scenario: Every Recipe archived: the Course has no Recipes to plan
     Given every planning Recipe is archived

@@ -36,7 +36,7 @@ func Swap(in Input, key SlotKey) ([]Placement, error) {
 	// Walk the earlier slots so the target sees their Stock use, cool-down and Leftovers.
 	st.walk(i)
 
-	portions := PortionsNeeded(s.Attendance)
+	portions := s.Portions()
 	if portions <= eps {
 		return nil, nil
 	}

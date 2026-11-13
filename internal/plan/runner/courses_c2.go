@@ -48,7 +48,7 @@ type CourseView struct {
 	Meal            *plan.Meal
 	Unfilled        *plan.Unfilled
 	CoveredBy       *CoveredBy
-	Unserved        string // "", "optional" or "no_course_attendance"
+	Unserved        string // "", "optional", "no_course_attendance" or "not_served" (the whole slot is Not served on that date)
 	History         bool   // a Course the slot no longer serves, shown for its Cooked or Not cooked meal
 }
 
@@ -69,7 +69,12 @@ func (r *Runner) occurrence(ctx context.Context, def MealSlotDef, date string) (
 	if err != nil {
 		return plan.SlotInfo{}, err
 	}
-	return plan.SlotInfo{Key: plan.Key{Date: date, MealSlotID: def.ID}, Name: def.Name, Time: def.Time, Attendance: att, Courses: courses}, nil
+	d, err := r.d.Source.SlotDate(ctx, def.ID, date)
+	if err != nil {
+		return plan.SlotInfo{}, err
+	}
+	return plan.SlotInfo{Key: plan.Key{Date: date, MealSlotID: def.ID}, Name: def.Name, Time: d.Time, UsualTime: d.UsualTime,
+		Guests: d.Guests, NotServed: d.NotServed, Attendance: att, Courses: courses}, nil
 }
 
 // hasCourse reports whether the slot serves the Course (real id).
@@ -140,15 +145,18 @@ func slotOrder(si plan.SlotInfo, meals []plan.Meal) []plan.Meal {
 // by the cell's key; whole reports the Whole meals.
 func courseViews(si plan.SlotInfo, meals []plan.Meal, unfilled map[plan.Key]plan.Unfilled, whole func(int64) bool) []CourseView {
 	mealOf := map[int64]plan.Meal{}
+	started := false // a Course Cooked or Not cooked: the slot is no longer Not served (U2)
 	for _, m := range meals {
 		mealOf[m.Key.CourseID] = m
+		started = started || m.State == plan.StateCooked || m.State == plan.StateSkipped
 	}
+	notServed := si.NotServed && !started
 	out := make([]CourseView, 0, len(si.Courses))
 	var mainMeal *plan.Meal
 	mainCourse := mainOf(si)
 	for _, c := range si.Courses {
 		cv := CourseView{CourseID: c.CourseID, Main: c.Main, Optional: c.Optional, Attendance: c.Attendance,
-			Portions: attendancePortions(c.Attendance), OptOutMemberIDs: optOutsOf(si.Attendance, c.Attendance)}
+			Portions: cellPortions(si, c.CourseID), OptOutMemberIDs: optOutsOf(si.Attendance, c.Attendance)}
 		key := plan.Key{Date: si.Key.Date, MealSlotID: si.Key.MealSlotID, CourseID: c.CourseID}
 		if m, ok := mealOf[c.CourseID]; ok {
 			cv.Meal = &m
@@ -168,6 +176,8 @@ func courseViews(si plan.SlotInfo, meals []plan.Meal, unfilled map[plan.Key]plan
 			continue
 		}
 		switch {
+		case notServed:
+			cv.Unserved = "not_served"
 		case len(cv.Attendance) == 0 && len(si.Attendance) > 0:
 			cv.Unserved = "no_course_attendance"
 		case !cv.Main && mainMeal != nil && whole(mainMeal.RecipeID):
@@ -425,7 +435,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 // source; fresh ones return the Stock they need and record their Leftover). index is the request's entry (-1: none).
 func (r *Runner) cookInAll(ctx context.Context, tx *sql.Tx, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
 	recipes []planner.Recipe, listedPortions *float64, index int) ([]Need, *plan.Leftover, error) {
-	need := attendancePortions(courseAttendance(si, m.Key.CourseID))
+	need := cellPortions(si, m.Key.CourseID)
 	if !m.Fresh() {
 		src, err := r.leftoverSource(ctx, st, m)
 		if err != nil {

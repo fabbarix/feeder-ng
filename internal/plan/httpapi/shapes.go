@@ -99,12 +99,17 @@ type ruleOut struct {
 }
 
 type slotOut struct {
-	Date       string        `json:"date"`
-	MealSlotID int64         `json:"mealSlotId"`
-	Name       string        `json:"name"`
-	Time       string        `json:"time"`
-	At         string        `json:"at"`
-	Portions   float64       `json:"portions"`
+	Date       string  `json:"date"`
+	MealSlotID int64   `json:"mealSlotId"`
+	Name       string  `json:"name"`
+	Time       string  `json:"time"` // the EFFECTIVE time: the date's own when set (ADR 0014), else the usual one
+	At         string  `json:"at"`
+	Portions   float64 `json:"portions"` // Guests included
+	// B5-SD (ADR 0014): the usual time (differs from time only when the date has its own), whether the Meal Slot is
+	// Not served on the date, and its Guests. Filled by slotFor.
+	UsualTime  string        `json:"usualTime"`
+	NotServed  bool          `json:"notServed"`
+	Guests     int           `json:"guests"`
 	Attendance []attendeeOut `json:"attendance"`
 	Rules      []ruleOut     `json:"rules"`
 	// Courses are the slot's Course rows in the slot's order, then history rows (crs-c2 §3.1).
@@ -309,7 +314,7 @@ func slotFor(s runner.SlotView, t table) slotOut {
 	out := slotOut{
 		Date: s.Key.Date, MealSlotID: s.Key.MealSlotID, Name: s.Name, Time: s.Time,
 		At: s.At.Format(time.RFC3339), Portions: s.Portions, Attendance: []attendeeOut{}, Rules: rulesFor(s.Rules, t),
-		Courses: []courseOut{},
+		Courses: []courseOut{}, UsualTime: s.UsualTime, NotServed: s.NotServed, Guests: s.Guests,
 	}
 	for _, c := range s.Courses {
 		out.Courses = append(out.Courses, courseFor(c, s.At, t))

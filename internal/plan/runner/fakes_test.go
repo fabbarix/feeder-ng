@@ -24,9 +24,10 @@ type fakeSources struct {
 	mu         sync.Mutex
 	settings   plan.Settings
 	slots      []runner.MealSlotDef
-	attendees  map[string][]plan.Attendee   // by "slotID|date" for overrides
-	courses    map[string][]plan.SlotCourse // by "slotID|date"; "slotID|" serves every date; none: the main Course alone (mainID)
-	mainID     int64                        // the real id of the main Course that a Meal Slot serves by default (crs-c3)
+	attendees  map[string][]plan.Attendee    // by "slotID|date" for overrides
+	courses    map[string][]plan.SlotCourse  // by "slotID|date"; "slotID|" serves every date; none: the main Course alone (mainID)
+	dates      map[string]runner.SlotDateDef // by "slotID|date": the Meal Slot on one date (default: usual time, served, no Guests)
+	mainID     int64                         // the real id of the main Course that a Meal Slot serves by default (crs-c3)
 	recipes    []planner.Recipe
 	prefs      map[int64]planner.Preferences
 	calls      int   // Settings calls = planning runs started
@@ -64,6 +65,40 @@ func (s *fakeSources) SlotCourses(_ context.Context, slotID int64, date string) 
 	}
 	return []plan.SlotCourse{{CourseID: s.mainID, Main: true, Attendance: att}}, nil
 }
+func (s *fakeSources) SlotDate(_ context.Context, slotID int64, date string) (runner.SlotDateDef, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if d, ok := s.dates[attKey(slotID, date)]; ok {
+		if d.UsualTime == "" {
+			d.UsualTime = s.usualTime(slotID)
+		}
+		if d.Time == "" {
+			d.Time = d.UsualTime
+		}
+		return d, nil
+	}
+	return runner.SlotDateDef{Time: s.usualTime(slotID), UsualTime: s.usualTime(slotID)}, nil
+}
+
+func (s *fakeSources) usualTime(slotID int64) string {
+	for _, d := range s.slots {
+		if d.ID == slotID {
+			return d.Time
+		}
+	}
+	return ""
+}
+
+// setDate sets the Meal Slot's facts on one date.
+func (s *fakeSources) setDate(slotID int64, date string, d runner.SlotDateDef) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.dates == nil {
+		s.dates = map[string]runner.SlotDateDef{}
+	}
+	s.dates[attKey(slotID, date)] = d
+}
+
 func (s *fakeSources) Recipes(context.Context) ([]planner.Recipe, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

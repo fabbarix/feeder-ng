@@ -165,6 +165,8 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code = http.StatusNotFound, "unknown_slot"
 	case errors.Is(err, runner.ErrInPast):
 		status, code = http.StatusUnprocessableEntity, "in_past"
+	case errors.Is(err, runner.ErrNotServed):
+		status, code = http.StatusUnprocessableEntity, "not_served"
 	case errors.Is(err, runner.ErrAlreadyResolved):
 		status, code = http.StatusConflict, "already_resolved"
 	case errors.Is(err, runner.ErrNotSwappable):

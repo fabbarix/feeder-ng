@@ -84,10 +84,8 @@ func TestPlanDropsInvalidPlannedMeals(t *testing.T) {
 			name: "a Member attending now has an Exclusion on it", recipe: []Recipe{rcp(1, 2), rcp(3, 2)},
 			meal: ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}, prefs: map[MemberID]Preferences{ben: {ExcludedRecipes: []RecipeID{3}}},
 		},
-		{
-			name: "Attendance grew: not enough Batches", recipe: []Recipe{rcp(1, 2), rcp(3, 2)},
-			meal: ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}, att: attendees(1, 1, 1),
-		},
+		// "Attendance grew: not enough Batches" moved to batchesfollow_test.go (B5-SD, ADR 0014 point 6): the meal now
+		// keeps its Recipe and gets more Batches instead of being replanned.
 		{name: "Recipe no longer exists", recipe: []Recipe{rcp(1, 2)}, meal: ExistingMeal{State: MealPlanned, RecipeID: 3, Batches: 1}},
 	}
 	for _, tt := range tests {
