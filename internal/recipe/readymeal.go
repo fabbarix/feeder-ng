@@ -16,6 +16,9 @@ type ReadyMealCandidate struct {
 	ID   int64
 	Name string
 	Base units.Base
+	// BaseRecipe marks the Ingredient of a Base recipe (ADR 0015): a Ready Meal never reuses it, and a Ready Meal
+	// named like it is refused (BaseRecipeTaken). The store fills it in.
+	BaseRecipe bool
 }
 
 // ReadyMealChoice says which Ingredient a Ready Meal stands for.
@@ -29,7 +32,9 @@ type ReadyMealChoice struct {
 	ReuseID  int64
 	Create   string
 	Conflict bool
-	Line     Line
+	// BaseRecipeTaken: a Base recipe holds the name (CodeBaseRecipeNameTaken); nothing is reused or created.
+	BaseRecipeTaken bool
+	Line            Line
 }
 
 // NeedsReadyMealIngredient reports whether the Input asks the server to derive the pack line:

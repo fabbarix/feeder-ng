@@ -30,6 +30,8 @@ type Store struct {
 	clk    clock.Clock
 	movers *Movers
 	images Images
+	// baseRecipes is the Base recipe port (base.go); nil = no Ingredient belongs to a Base recipe.
+	baseRecipes BaseRecipes
 }
 
 // Images is the part of the image store the Ingredient Store needs (IM2): the same shape as recipe/store.Images.

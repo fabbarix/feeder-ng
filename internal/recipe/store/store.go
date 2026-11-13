@@ -14,6 +14,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	tagstore "github.com/fabbarix/feeder-ng/internal/tag/store"
@@ -64,6 +65,7 @@ type Store struct {
 	src     IngredientSource
 	planned *PlannedCheckers
 	images  Images
+	ings    *ingstore.Store // Base recipe lifecycle (base.go); nil = Base recipes cannot be made
 }
 
 // New returns a Store. Without WithImages, image references are not checked.
@@ -341,6 +343,8 @@ func (s *Store) DropUnreferenced(ctx context.Context, ids []string) {
 
 // ListFilter selects Recipes. Archived: "" or "no" = active only, "yes" = archived only, "all".
 type ListFilter struct {
+	// Kind: "" or "plannable" = plannable Recipes only (the default), "base" = Base recipes only, "all" = both.
+	Kind     string
 	Archived string
 	Tag      string // TagKey match; "" = any
 	Query    string // case-insensitive substring of the name; "" = any

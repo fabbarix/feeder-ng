@@ -61,7 +61,27 @@ const (
 	CodeMinutesInvalid     = "minutes_invalid"
 	CodeCoursesEmpty       = "courses_empty"  // field "courses": a non-nil empty CourseIDs (spec §4)
 	CodeCourseUnknown      = "course_unknown" // field "courses": an unknown or archived Course id (checked by the store)
+
+	// Base recipes (ADR 0015, beta.6; docs/dev/design/base-recipes.md §3, §10).
+	CodeBaseRecipeCycle     = "base_recipe_cycle"      // field of the line; Path names the cycle (CycleError)
+	CodeBaseRecipeReadyMeal = "base_recipe_ready_meal" // a Ready Meal can never be a Base recipe (the flag clash only)
+	CodeBaseRecipeNameTaken = "base_recipe_name_taken" // field "name": a Base recipe already holds the name
+	CodeReadyMealNameTaken  = "ready_meal_name_taken"  // field "name": a Ready Meal's Ingredient holds the name
+	CodeBaseRecipeField     = "base_recipe_field"      // a field a Base recipe does not have was set; Field names it
+	CodeYieldUnitInvalid    = "yield_unit_invalid"     // field "yieldUnit"
+	CodeNeededAtStepInvalid = "needed_at_step_invalid" // field "lines[i].neededAtStep"
+	CodeLineNotPlain        = "line_not_plain"         // link: the line already calls for a Base recipe
+	CodeLineNotBase         = "line_not_base"          // unlink: the line does not call for a Base recipe
+	CodeTakeOverUnit        = "take_over_unit"         // field "takeOver": the Yield's unit does not convert to that Ingredient's Base Unit
+	CodeBaseRecipeKind      = "base_recipe_kind"       // field "baseRecipe": a save cannot change the kind (ToBase / ToPlannable do); also ToBase of a Base recipe
+	CodeBasePreference      = "base_recipe_preference" // field "state": a Base recipe has Exclusions only, no Favourite or Dislike (P2)
+	CodeLinkInvalid         = "link_invalid"           // field "link": the link body names none or more than one of baseRecipeId, create, convertRecipeId
+	CodeIngredientRequired  = "ingredient_required"    // field "ingredientId": Use as a plain Ingredient needs one (the remembered Ingredient is gone or none)
+	CodeNotACandidate       = "not_a_candidate"        // field "lineIds": a line is not a link candidate of that Base recipe
 )
+
+// MaxBaseYield is the largest Yield of a Base recipe (1000 g must fit); a plannable Recipe keeps MaxYield.
+const MaxBaseYield = 100000.0
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
 var ErrInvalid = errors.New("invalid recipe")
@@ -108,12 +128,28 @@ type Source struct {
 // Line is one ingredient line, for ONE Batch. Quantity is in Unit, not yet in
 // Base Units. Ingredient (the display name) is output only.
 type Line struct {
+	// ID is the stored line's id (output; lets the link routes name a line). 0 on input.
+	ID           int64
 	IngredientID int64
 	Ingredient   string
 	Quantity     float64
 	Unit         string
 	Optional     bool
 	Note         string
+
+	// BaseRecipeID (input only): call for this Base recipe; the store maps it to the Base recipe's Ingredient. Give
+	// either IngredientID or BaseRecipeID.
+	BaseRecipeID int64
+	// NeededAtStep is the stored Needed at override: a 0-based index into the Recipe's own Steps; nil = the default
+	// rule. Only a Base recipe line may have one (CodeNeededAtStepInvalid otherwise).
+	NeededAtStep *int
+	// LinkedFromIngredientID (output; kept by the store across saves) is the plain Ingredient the line had before it
+	// was linked to a Base recipe (§3.7), 0 = none.
+	LinkedFromIngredientID int64
+	// Base (output) is set when IngredientID is a Base recipe's Ingredient; NeededAt (output) is the effective
+	// Needed at Step (baserecipe.NeededAt) of such a line.
+	Base     *BaseRef
+	NeededAt int
 }
 
 // Use is an Ingredient amount a Step needs (informational).
@@ -158,6 +194,17 @@ type Input struct {
 	Image           string // image id, "" = none
 	Lines           []Line
 	Steps           []Step
+
+	// BaseRecipe makes the Recipe a Base recipe (§3.1); YieldUnit is then the unit of its Yield (one of YieldUnits)
+	// and must be empty otherwise. nil is absent: a create gets false, an update keeps the stored kind (like
+	// WholeMeal); a stored Recipe always has it set. Asking an update for the other kind is CodeBaseRecipeKind: the
+	// kind changes by ToBase and ToPlannable. Use IsBase to read it.
+	BaseRecipe *bool
+	YieldUnit  string
+	// TakeOver is the User's answer to the take-over ask of §3.2 (create as a Base recipe, rename a Base recipe): true
+	// takes the same-name plain Ingredient over, false keeps it apart, nil = not asked yet (the store answers with a
+	// *TakeOverError when a plain Ingredient has the name).
+	TakeOver *bool
 }
 
 // IngredientLookup returns the Ingredient (with its Unit Conversions) for an id.
@@ -465,6 +512,11 @@ type Recipe struct {
 	Timing    Timing
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	// Base recipe outputs (§10); zero for a plannable Recipe.
+	BaseIngredientID int64    // the Base recipe's Ingredient
+	UsedBy           []Ref    // Recipes (archived included) with a line calling for this Base recipe; never nil
+	Within           []Within // the Ingredients inside, through the Base recipes this Recipe calls for; never nil
 }
 
 // CourseRef is a Course as a Recipe shows it.
@@ -487,6 +539,10 @@ type Summary struct {
 	TotalMinutes   int
 	AdvanceMinutes int
 	ReheatMinutes  int // 0 = none (R12)
+
+	BaseRecipe  bool   // §10: a Base recipe
+	YieldUnit   string // its Yield's unit, "" for a plannable Recipe
+	UsedByCount int    // Recipes that call for it (Base recipes only)
 }
 
 // State is a Member's preference for a Recipe. A Member has exactly one state
