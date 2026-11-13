@@ -255,8 +255,15 @@ func (c catalogue) DeletePrice(ctx context.Context, id int64) error {
 	return c.st.DeletePrice(ctx, id)
 }
 
+// priceInfo is a Price as the scan service sees it: the recorded values only. The store also serves a per kg derived
+// from the pack Price; the scan service writes what it reads back (a same-day snapshot, a put-back, the day's per kg
+// that SetPrices keeps), and a derived per kg written back would become a recorded one, so it is left out here.
 func priceInfo(p productstore.Price) *service.PriceInfo {
-	return &service.PriceInfo{ID: p.ID, Date: stock.Date(p.Date), PriceCents: p.PriceCents, PricePerKgCents: p.PricePerKgCents}
+	perKg := p.PricePerKgCents
+	if p.PricePerKgDerived {
+		perKg = nil
+	}
+	return &service.PriceInfo{ID: p.ID, Date: stock.Date(p.Date), PriceCents: p.PriceCents, PricePerKgCents: perKg}
 }
 
 // OfflineData is the offline data: the barcode Catalog of the Shop (or home), the Products and the latest Price per Product there.

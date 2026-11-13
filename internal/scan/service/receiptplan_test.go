@@ -835,3 +835,25 @@ func (r *rr3Env) lotCountFor(t *testing.T) int {
 	t.Helper()
 	return r.stock.lotCount()
 }
+
+// The weighed rule: a scan priced per kg is weighed even when its weight is the pack size (a Product made from a
+// weighed code takes its first weight as pack size); a pack scan on the same day stays a pack scan.
+func TestSessionEventsWeighedRule(t *testing.T) {
+	e := newRR3Env(t)
+	ctx := context.Background()
+	w := packScan("w-first", mutti, 700)
+	w.PriceCents, w.PricePerKgCents = ip(1400), ip(2000)
+	if res, err := e.svc.Apply(ctx, w); err != nil || res.Status != scan.StatusApplied {
+		t.Fatal(res, err)
+	}
+	evs, err := e.svc.SessionEvents(ctx, 1, []string{"u1", "w-first"})
+	if err != nil || len(evs) != 2 {
+		t.Fatal(evs, err)
+	}
+	if evs[0].Weighed || evs[0].PerKgCents != -1 {
+		t.Errorf("u1 (a pack at 129) = weighed %v, per kg %d", evs[0].Weighed, evs[0].PerKgCents)
+	}
+	if !evs[1].Weighed || evs[1].PerKgCents != 2000 {
+		t.Errorf("w-first (700 g at 20.00/kg) = weighed %v, per kg %d", evs[1].Weighed, evs[1].PerKgCents)
+	}
+}

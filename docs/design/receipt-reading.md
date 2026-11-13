@@ -297,7 +297,17 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
 - `POST /api/scan/receipt/reads` — body (JSON, the photo body limit of `recipefile/httpapi/reads.go`, 45 MiB):
   `{shopId, clientUuids: [...], photos: [{dataUrl}] (1..4)}`. The server:
   1. loads the session's events by `clientUuids` from `scan_events` (applied, not undone, `shop_scan` or `shop_unknown`, this Shop):
-     unknown or undone uuids are ignored; none left → `422 scans_empty`;
+     unknown or undone uuids are ignored; none left → `422 scans_empty`. One loader serves the read and the apply,
+     `scan/service.SessionEvents` (RR3), so both fingerprint the same values. Each event carries its Product's barcode
+     (the first of `product_barcodes`, canonical GTIN-14; empty for a Product known only by a Shop or weighed code).
+     **Weighed** (decided in the RR3 review): the ledger keeps no weighed flag, so a scan of a Product in g or ml is
+     weighed when its Price was taken per kg — that day's Price row has a *recorded* per kg (never one derived from the
+     pack Price) and the scan's Price is that per kg at its quantity (`product.PriceForWeight`, within one minor unit) —
+     or else when its quantity is not the Product's pack size. A weighed scan's per kg is the day's (none when the day
+     has none); a pack scan has none, even on a day whose Price row holds another scan's per kg. The per kg test catches
+     the first weighed scan of a Product made from a weighed code, whose pack size is that first weight; the quantity
+     test catches a weighed scan with no Price. (Rejected: "weighed when the day's row has a per kg", which marks every
+     pack scan of a day with a weighed one, or a derived per kg, as weighed.)
   2. groups them into rows by Product (the same rule as the phone's `scannedList.ts`, shared through the fixtures), ordered by
      first scan, and gives each its index;
   3. computes a **fingerprint** (SHA-256 over the sorted uuids and their prices and quantities);

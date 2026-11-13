@@ -96,6 +96,13 @@ func (s *Service) SessionEvents(ctx context.Context, shopID int64, uuids []strin
 }
 
 // sessionEvents is SessionEvents with the scan lock held.
+//
+// The weighed rule (receipt-reading §7.1, decided in the RR3 review): the ledger keeps no weighed flag, so a scan of a
+// Product in g or ml is weighed when its Price was taken per kg, that is when the day's Price row has a recorded per kg
+// (Catalogue.PriceOn never serves a derived one) and the scan's Price is that per kg at its quantity
+// (product.PriceForWeight, within 1 minor unit for a price read off a label), or else when its quantity is not the
+// Product's pack size. A weighed scan's PerKgCents is the day's per kg (-1 for none); a pack scan's is always -1, even
+// when the day's row holds a per kg from another scan.
 func (s *Service) sessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error) {
 	var evs []store.Event
 	seen := make(map[string]bool, len(uuids))
@@ -135,29 +142,42 @@ func (s *Service) sessionEvents(ctx context.Context, shopID int64, uuids []strin
 		if err != nil {
 			return nil, err
 		}
-		perKg := -1
 		day, err := s.d.Catalogue.PriceOn(ctx, p.ID, shopID, date)
 		if err != nil {
 			return nil, err
-		}
-		if day != nil && day.PricePerKgCents != nil {
-			perKg = *day.PricePerKgCents
 		}
 		price := -1
 		if ev.PriceCents != nil {
 			price = *ev.PriceCents
 		}
-		// A weighed scan is one whose quantity is not a pack of the Product (the ledger keeps no weighed flag). Only a
-		// weighed scan has a per kg: a pack scan's Price is per pack, even when the day's row also holds a per kg.
-		weighed := units.Base(p.BaseUnit) != units.Piece && ev.Quantity != p.PackSize
-		if !weighed {
-			perKg = -1
-		}
+		weighed, perKg := weighedScan(p, ev.Quantity, price, day)
 		out = append(out, receipt.ScanEvent{UUID: ev.ClientUUID, ProductID: p.ID, Product: p.Name,
 			BaseUnit: p.BaseUnit, PackSize: int(p.PackSize), Weighed: weighed, Quantity: ev.Quantity, PriceCents: price,
 			PerKgCents: perKg, ShopID: shopID, Date: string(date)})
 	}
 	return out, nil
+}
+
+// weighedScan applies the weighed rule (see sessionEvents) to one scan: whether it is weighed, and its per kg (-1 none).
+func weighedScan(p ProductInfo, qty float64, price int, day *PriceInfo) (bool, int) {
+	base := units.Base(p.BaseUnit)
+	if base == units.Piece {
+		return false, -1
+	}
+	perKg := -1
+	if day != nil && day.PricePerKgCents != nil {
+		perKg = *day.PricePerKgCents
+	}
+	pricedPerKg := false
+	if perKg >= 0 && price >= 0 {
+		if c, ok := product.PriceForWeight(product.Price{PricePerKgCents: &perKg}, p.PackSize, base, qty); ok {
+			pricedPerKg = c-price <= 1 && price-c <= 1
+		}
+	}
+	if !pricedPerKg && qty == p.PackSize {
+		return false, -1
+	}
+	return true, perKg
 }
 
 // ApplyReceiptPlan runs a receipt's plan under the scan lock: each step in order, and on the first failure the inverses

@@ -116,7 +116,7 @@ type PriceInfo struct {
 	ID              int64
 	Date            stock.Date
 	PriceCents      *int
-	PricePerKgCents *int
+	PricePerKgCents *int // recorded only: never one derived from the pack Price
 }
 
 // PriceInput records a Price for the Product at a Shop on a date (the same day is replaced).
