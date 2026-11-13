@@ -288,6 +288,12 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 // meals and reports them as Covered. Errors: ErrUnknownSlot (not a Meal Slot of that weekday), ErrInPast (before
 // today), ErrAlreadyResolved (Cooked or skipped there), ErrUnknownRecipe, ErrArchivedRecipe, ErrInvalidBatches.
 func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64, batches *float64) (SetResult, error) {
+	return r.setCell(ctx, key, recipeID, batches, 0)
+}
+
+// setCell sets the Course's meal at key to a Recipe (SetCourseMeal), or, when leftoverID is not 0, to the Recipe of that
+// Leftover served from it (UseLeftover: no batches, the Leftover's Use-by and portions checked).
+func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batches *float64, leftoverID int64) (SetResult, error) {
 	var covered []int64
 	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
@@ -311,6 +317,14 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		}
 		if sd.NotServed {
 			return nil, ErrNotServed
+		}
+		var pick *plan.Leftover
+		if leftoverID != 0 {
+			l, err := availableLeftover(ctx, st, leftoverID)
+			if err != nil {
+				return nil, err
+			}
+			pick, recipeID = &l, int64(l.RecipeID)
 		}
 		recipes, err := r.d.Source.Recipes(ctx)
 		if err != nil {
@@ -347,6 +361,28 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 			b = *batches
 		} else if n := planner.BatchesFor(portions, rc.Yield); n > 1 {
 			b = float64(n)
+		}
+		var from *plan.Source
+		if pick != nil {
+			b = 0
+			from = &plan.Source{LeftoverID: pick.ID, From: pick.From}
+			if pick.UseBy < key.Date {
+				return nil, ErrLeftoverPastUseBy
+			}
+			// What the other Planned Meals served from it already claim (this cell's own claim does not count).
+			deps, err := st.DependantsOfLeftover(ctx, pick.ID)
+			if err != nil {
+				return nil, err
+			}
+			var others []plan.Meal
+			for _, d := range deps {
+				if d.Key != key {
+					others = append(others, d)
+				}
+			}
+			if pick.Portions-claimsOf(others) < portions-eps {
+				return nil, ErrLeftoverTooSmall
+			}
 		}
 
 		day, err := st.Meals(ctx, key.Date, key.Date)
@@ -385,7 +421,7 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 			}
 		}
 		if _, err := st.SaveMeal(ctx, plan.Meal{Key: key, RecipeID: recipeID, Batches: b, Portions: portions,
-			State: plan.StatePlanned, Pinned: true}); err != nil {
+			State: plan.StatePlanned, Pinned: true, From: from}); err != nil {
 			return nil, mapStoreErr(err)
 		}
 		for _, m := range day {
@@ -760,7 +796,8 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 				if err := st.SetLeftoverPortions(ctx, src.ID, left); err != nil {
 					return nil, err
 				}
-				if err := r.unpinMisfits(ctx, st, src.From, left, in); err != nil {
+				// By id: a frozen part and the part that stayed may share a source meal (docs/dev/design/b5-lo.md §2.9).
+				if _, err := r.unpinLeftoverMisfits(ctx, st, src.ID, left, in); err != nil {
 					return nil, err
 				}
 			}

@@ -598,17 +598,22 @@ func TestTakeOutRefusals(t *testing.T) {
 	}
 }
 
-func TestTakeOutAfterTheFrozenUseByGivesAFreshUseByFromToday(t *testing.T) {
-	// ADR 0012: Use-by = today + the Recipe's Use-by days. The plan's edge case says such a Leftover "is to answer at
-	// once"; that contradicts the ADR (see the open question in docs/dev/design/b5-lo.md), so only the ADR is tested.
+func TestTakeOutAfterTheFrozenUseByKeepsThePassedUseByAndAsksAtOnce(t *testing.T) {
+	// PM answer 1 (docs/dev/design/b5-lo.md §9): taking out a Leftover whose Frozen Use-by has passed is allowed. Its
+	// Use-by stays the passed date, so it is to answer at once (the ADR's "today + the Recipe's days" applies only while
+	// the old Use-by has not passed).
 	e := newEnv(t)
 	freezer := e.loPlace("Garage Freezer", "freezer")
 	l := e.loFrozen("chicken", 3, "2026-11-01", freezer, "2026-08-03") // its Frozen Use-by passed
 	if _, err := e.r.TakeOut(ctx, l.ID, 0, loUser); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.loGet(l.ID); got.UseBy != "2026-11-12" {
-		t.Errorf("Use-by = %q, want 2026-11-12", got.UseBy)
+	got := e.loGet(l.ID)
+	if got.UseBy != "2026-11-01" || got.Frozen() || got.Portions != 3 {
+		t.Errorf("Leftover = %+v, want not frozen, 3 portions, Use-by kept at 2026-11-01", got)
+	}
+	if views, _ := e.r.LeftoverViews(ctx); len(views) != 1 || !views[0].ToAnswer {
+		t.Errorf("views = %+v, want the Leftover to answer at once", views)
 	}
 }
 

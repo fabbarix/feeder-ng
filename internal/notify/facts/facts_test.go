@@ -293,6 +293,29 @@ func TestFactsCarryAvailableLeftovers(t *testing.T) {
 	}
 }
 
+// B5-LO (ADR 0012): the 10:00 Use-by push is for an ordinary Leftover: a frozen one and one to answer are left out.
+func TestFactsLeaveOutFrozenAndToAnswerLeftovers(t *testing.T) {
+	w := newWorld(t)
+	ok, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: w.key(t, "2026-11-08", w.dinner), Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-11"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: w.key(t, "2026-11-05", w.dinner), Portions: 2, CookedOn: "2026-11-05",
+		UseBy: "2027-02-07", FrozenOn: "2026-11-02"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.plans.AddLeftover(ctx, plan.Leftover{RecipeID: w.curry, From: w.key(t, "2026-11-04", w.dinner), Portions: 1, CookedOn: "2026-11-04", UseBy: "2026-11-07"}); err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.Leftovers) != 1 || f.Leftovers[0].ID != ok.ID {
+		t.Errorf("Leftovers = %+v, want only the ordinary one (no push for a frozen one or one to answer)", f.Leftovers)
+	}
+}
+
 func TestStockLotsAreUsedByPlanOnlyByAFreshPlannedMealOnOrBeforeTheGoOffDate(t *testing.T) {
 	w := newWorld(t)
 	// Fresh Planned Meals: Curry (spinach) today; Porridge (milk, salt) on 11-11.
