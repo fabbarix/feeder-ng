@@ -120,9 +120,9 @@ grep -q "back-link" "$SCRIPTS/check-ui.sh" && ok || bad "check-ui.sh must docume
 # Kept apart like back-link so that only these cases are red until the rule exists.
 ii="$TMP/rules-imginput-warn"; { cat "$(rules_file sizing warn)"; echo "image-input=warn"; } >"$ii"
 run_ui "$FIX/image-input/fail" "$ii"
-[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 6 ] && ok || bad "image-input: expected 6 (accept image/*, accept .png, capture, two upload URLs, a ui primitive outside ui/ImagePicker) and exit 0 in warn mode (rc $RC, got $(count_of image-input))"
+[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 7 ] && ok || bad "image-input: expected 7 (accept image/*, accept .png, capture, a capture after a closed <ImageFileInput>, two upload URLs, a ui primitive outside ui/ImagePicker) and exit 0 in warn mode (rc $RC, got $(count_of image-input))"
 run_ui "$FIX/image-input/pass" "$ii"
-[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 0 ] && ok || bad "image-input: pass fixture (ui/ImagePicker itself, a .json FileDrop, a comment, a test file, a display URL) must report 0 (rc $RC, got $(count_of image-input))"
+[ "$RC" -eq 0 ] && [ "$(count_of image-input)" = 0 ] && ok || bad "image-input: pass fixture (ui/ImagePicker itself, a .json FileDrop, a comment, a test file, a display URL, the capture prop of <ImageFileInput>) must report 0 (rc $RC, got $(count_of image-input))"
 ii="$TMP/rules-imginput-fail"; { cat "$(rules_file sizing warn)"; echo "image-input=fail"; } >"$ii"
 run_ui "$FIX/image-input/fail" "$ii"
 [ "$RC" -eq 1 ] && ok || bad "image-input=fail must exit 1 on the fail fixture (got $RC)"

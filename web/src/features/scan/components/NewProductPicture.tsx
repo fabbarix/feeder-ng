@@ -26,9 +26,6 @@ export function NewProductPicture({ coarse, state, onPick, onPicking }: NewProdu
     return () => document.removeEventListener('cancel', cancelled, true)
   }, [onPicking])
 
-  // On a phone the shared input opens the rear camera app (its capture prop).
-  const cameraProps = coarse ? { capture: true } : {}
-
   const open = () => {
     onPicking?.(true)
     input.current?.open()
@@ -43,8 +40,8 @@ export function NewProductPicture({ coarse, state, onPick, onPicking }: NewProdu
   return (
     <div className="new-product__picture">
       <span className="new-product__label">{newProductStrings.pictureLabel}</span>
-      {/* The shared ImageFileInput owns the capture attribute; it is passed as a prop object here, not written as an attribute. */}
-      <ImageFileInput ref={input} {...cameraProps} onFiles={chosen} />
+      {/* On a phone the shared input opens the rear camera app. */}
+      <ImageFileInput ref={input} capture={coarse} onFiles={chosen} />
       {state.preview ? (
         <div className="new-product__preview">
           <Thumb name={newProductStrings.productName} imageUrl={state.preview} size="hero" label={newProductStrings.pictureAlt} />
