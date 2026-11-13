@@ -13,11 +13,13 @@ import { Skeleton } from '../../../ui/Skeleton'
 import { useToast } from '../../../ui/Toast'
 import { CelebrationTile } from '../components/CelebrationTile'
 import { ExtraSheet } from '../components/ExtraSheet'
+import { LineSheet } from '../components/LineSheet'
 import { RangePicker } from '../components/RangePicker'
 import { ShoppingBody } from '../components/ShoppingBody'
 import { TickSheet } from '../components/TickSheet'
 import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
 import type { ListEntry } from '../lib/lines'
+import { useLineSheet } from '../hooks/useLineSheet'
 import { useShopChoice } from '../hooks/useShopChoice'
 import { useShopHere } from '../hooks/useShopHere'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
@@ -88,6 +90,16 @@ export function ShoppingScreen() {
     run(() => actions.neededAfterAll(entry.ingredientId as number, data.to, choice.shopId))
   }
 
+  // DS-SHOP: a row opens its sheet; the sheet's actions run the handlers above.
+  const lineSheet = useLineSheet({
+    onNotNeeded,
+    onNeededAfterAll,
+    onMarkIt: (entry) => {
+      if (entry.markIt) navigate(markSlotPath(entry.markIt))
+    },
+    onDelete,
+  })
+
   const onTickSubmit = (entry: ListEntry, quantity: number) => {
     if (!data) return
     setSheet(null)
@@ -143,15 +155,12 @@ export function ShoppingScreen() {
           shopName={shopName}
           onTick={onTick}
           onUntick={onUntick}
-          onDelete={onDelete}
+          onOpenLine={lineSheet.open}
           onScan={() => navigate('/scan')}
-          onNotNeeded={onNotNeeded}
-          onNeededAfterAll={onNeededAfterAll}
-          onMarkIt={(entry) => {
-            if (entry.markIt) navigate(markSlotPath(entry.markIt))
-          }}
+          onMarkIt={(slot) => navigate(markSlotPath(slot))}
         />
       ) : null}
+      <LineSheet entry={lineSheet.entry} actions={lineSheet.actions} onAction={lineSheet.run} onClose={lineSheet.close} />
       {sheet?.kind === 'tick' && data ? (
         <TickSheet
           key={sheet.entry.key}

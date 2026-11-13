@@ -146,8 +146,8 @@ export function ListRow(props: ListRowProps) {
       data-wrap-title={wrapTitle ? 'true' : undefined}
       data-expanded={isExpanded ? 'true' : undefined}
     >
-      {target}
       {control ? <span className="list-row__control">{control}</span> : null}
+      {target}
       {leading ? (
         <span className="list-row__leading">{leading}</span>
       ) : icon ? (
