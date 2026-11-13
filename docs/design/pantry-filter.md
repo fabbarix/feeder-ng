@@ -17,7 +17,8 @@ controls. The labels are inconsistent ("Sort by" is labelled, the chip rows are 
 1. **The Recipes structure, at every width**: row 1 Search + Filters; row 2 the List control + Sort; row 3 the active filter chips,
    only while a filter is on. Every row is one line.
 2. **The filters move into a Filters panel** (popover from 768 px, bottom sheet below, the shared `Popover`): Show (Use soon, Spoiled,
-   Leftovers), Kind (Pantry, Fridge, Freezer), Storage Place (a searchable list with Lot counts, Not sorted included) and the "Group by
+   Leftovers), Food or Supplies (Food, Supplies; beta.7, only while the Household has a Supply, household-items.md §4.6), Kind
+   (Pantry, Fridge, Freezer), Storage Place (a searchable list with Lot counts, Not sorted included) and the "Group by
    Storage Place" switch. Footer: "Clear filters" and "Show Stock".
 3. **Use soon and Spoiled are toggle chips with no "All"**: none pressed means all of Stock, the Courses rule (recipes-filter §15).
    They stay one choice (the server flags a Lot as one or the other; "both" would always be empty): pressing the other one moves the
@@ -91,13 +92,13 @@ Rows 1 and 2; no row 3. "Filters" has no count. In the panel nothing is pressed 
 
 ### 4.2 Some filters
 "Filters" and a count chip (one per active chip). Row 3 shows, in this order: the status chip ("Use soon", `status="spoil"`; "Spoiled",
-`status="danger"`, each with its status icon, the status colours of system.md §2), "Leftovers" (`status="leftover"`, teal), one chip
-per Kind ("Fridge", with its kind icon), one per Storage Place (by name, "Not sorted" last; neutral). Each is a removable chip.
+`status="danger"`, each with its status icon, the status colours of system.md §2), "Leftovers" (`status="leftover"`, teal), "Food" or
+"Supplies" (`?stock=food|supply`, neutral), one chip per Kind ("Fridge", with its kind icon), one per Storage Place (by name, "Not sorted" last; neutral). Each is a removable chip.
 
 ### 4.3 By Ingredient
-Only the status filter applies (the per-Ingredient totals have no Storage Place). A Storage Place, Kind or Leftovers filter in the URL is
+Only the status filter and Food or Supplies apply (the per-Ingredient totals have no Storage Place). A Storage Place, Kind or Leftovers filter in the URL is
 kept but not applied, not counted, not shown as a chip, and its sections are not in the panel (the Recipes rule for a Course on Base
-recipes). The panel holds Show (Use soon, Spoiled) only.
+recipes). The panel holds Show (Use soon, Spoiled) and, while the Household has a Supply, Food or Supplies.
 
 ### 4.4 Many Storage Places
 Nothing changes in the header. The panel's Storage Place list scrolls inside its own box under its search. Each row:
