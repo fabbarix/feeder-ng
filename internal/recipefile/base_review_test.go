@@ -3,6 +3,7 @@ package recipefile_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -274,10 +275,58 @@ func TestAFileRecipeNotMarkedAsABaseRecipeIsOfferedButNeedsAYield(t *testing.T) 
 	if rowAt(t, p, lineB).Resolved || !hasProblemCode(p, recipefile.ProblemBaseRecipeAnswer) {
 		t.Errorf("choosing it without a Yield is incomplete: %+v", p)
 	}
-	p = answer(recipefile.BaseRecipeLineDecision{Action: recipefile.BaseFile, RecipeIndex: &idx, Yield: 1, YieldUnit: "portion"})
-	if !rowAt(t, p, lineB).Resolved || !p.Ready {
-		t.Errorf("with a Yield: %+v", p)
+	// 1 portion is 1 piece: the line's 500 ml does not convert to the Base recipe Ingredient yet. That is a unit
+	// prompt on the Base recipe's Ingredient (§3.3), the pattern plain Ingredients use, and not a Problem.
+	withYield := recipefile.BaseRecipeLineDecision{Action: recipefile.BaseFile, RecipeIndex: &idx, Yield: 1, YieldUnit: "portion"}
+	p = answer(withYield)
+	if !rowAt(t, p, lineB).Resolved {
+		t.Errorf("with a Yield the tile is answered: %+v", p)
 	}
+	pr := promptOf(p, "béchamel", "ml")
+	if pr == nil || pr.Answered || pr.Base != "piece" {
+		t.Fatalf("want an open unit prompt for ml on the Base recipe's Ingredient (piece): %+v", p.UnitPrompts)
+	}
+	if p.Ready || len(p.Problems) != 0 {
+		t.Errorf("not ready until the prompt is answered, and it is no Problem: ready %v problems %+v", p.Ready, p.Problems)
+	}
+}
+
+func TestAnsweringTheUnitPromptOfABaseRecipeIngredientMakesThePlanReady(t *testing.T) {
+	f := withMilk(lasagneWith(bechamelLine(), fileBechamel(false)))
+	idx := 1
+	d := recipefile.Decisions{
+		BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{lineB: {Action: recipefile.BaseFile, RecipeIndex: &idx, Yield: 1, YieldUnit: "portion"}},
+		Conversions:     []recipefile.ConversionAnswer{{Key: "béchamel", Unit: "ml", ToBase: 0.002}}, // 500 ml is 1 piece
+	}
+	p := plan(t, f, recipefile.Existing{}, d)
+	if pr := promptOf(p, "béchamel", "ml"); pr == nil || !pr.Answered {
+		t.Fatalf("prompt = %+v", p.UnitPrompts)
+	}
+	if !p.Ready {
+		t.Fatalf("not ready: %+v", p.Problems)
+	}
+	c, err := recipefile.BuildCommit(f, recipefile.Existing{}, d, noImages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := recipeCommitAt(c, 1)
+	if b == nil {
+		t.Fatalf("no commit for the file Base recipe: %+v", c.Recipes)
+	}
+	// The conversion belongs to the Base recipe's Ingredient, which the store creates: it must travel with the commit.
+	raw, _ := json.Marshal(c)
+	if !strings.Contains(string(raw), "0.002") && !strings.Contains(fmt.Sprintf("%+v", c), "0.002") {
+		t.Errorf("the answered conversion must be in the commit: %+v", c)
+	}
+}
+
+func recipeCommitAt(c recipefile.Commit, index int) *recipefile.RecipeCommit {
+	for i := range c.Recipes {
+		if c.Recipes[i].Index == index {
+			return &c.Recipes[i]
+		}
+	}
+	return nil
 }
 
 func hasProblemCode(p recipefile.Plan, code string) bool {

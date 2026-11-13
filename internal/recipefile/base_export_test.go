@@ -280,13 +280,14 @@ func TestAnExportWithASameNameIngredientParsesAndImportsWithoutProblems(t *testi
 	if len(p.Problems) != 0 {
 		t.Fatalf("problems = %+v", p.Problems)
 	}
+	// §11.3: every béchamel line is preselected as a Base recipe line, and those lines have no Ingredient row.
 	n := 0
 	for _, m := range p.Ingredients {
 		if m.Key == "béchamel" || m.Key == "bechamel" {
 			n++
 		}
 	}
-	if n != 1 {
-		t.Errorf("one Ingredient row for béchamel, got %d", n)
+	if n != 0 {
+		t.Errorf("0 plain Ingredient rows for béchamel while all its lines call for the Base recipe, got %d", n)
 	}
 }

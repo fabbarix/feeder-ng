@@ -221,7 +221,7 @@ func plainBechamel(base string) recipefile.Existing {
 }
 
 func TestACreatedBaseRecipeMeetingAPlainIngredientOfItsNameAsksBeforeTakingItOver(t *testing.T) {
-	f := lasagneWith(bechamelLine(), fileBechamel(true))
+	f := withMilk(lasagneWith(bechamelLine(), fileBechamel(true)))
 	d := answerAt(lineB, fileAnswer(1))
 	p := plan(t, f, plainBechamel("ml"), d)
 	if p.Ready {
@@ -274,7 +274,7 @@ func TestThePlainIngredientIsNotAskedAboutWhenTheLineStaysPlainOrUsesABaseRecipe
 }
 
 func TestADifferentBaseUnitIsNotConvertibleWarnsAndNeedsNoAnswer(t *testing.T) {
-	f := lasagneWith(bechamelLine(), fileBechamel(true)) // yields 1 l, so ml
+	f := withMilk(lasagneWith(bechamelLine(), fileBechamel(true))) // yields 1 l, so ml
 	p := plan(t, f, plainBechamel("g"), answerAt(lineB, fileAnswer(1)))
 	asks, _ := planMap(t, p)["takeOvers"].([]any)
 	if len(asks) != 1 || asks[0].(map[string]any)["convertible"] != false || asks[0].(map[string]any)["resolved"] != true {
@@ -373,5 +373,64 @@ func TestImportReviewSuggestsWhatMatchReferenceRanksForAMarkedLine(t *testing.T)
 	}
 	if len(row.Suggestions) > 0 && row.Suggestions[0].Name != "Bechamel" {
 		t.Errorf("the exact Base recipe comes first, got %q", row.Suggestions[0].Name)
+	}
+}
+
+// ---- rowless decisions, names that are taken --------------------------------------------------------------------------
+
+func creamLine() recipefile.Line {
+	return recipefile.Line{Ingredient: "cream", Quantity: 100, Unit: "ml"}
+}
+
+func TestAKeepDecisionOnALineWithNoRowIsIgnored(t *testing.T) {
+	f := lasagneWith(creamLine())
+	base := plan(t, f, existingBase(), recipefile.Decisions{})
+	p := plan(t, f, existingBase(), answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseKeep}))
+	if len(p.BaseRecipeLines) != 0 || len(p.Problems) != 0 || p.Ready != base.Ready || !p.Ready {
+		t.Errorf("keep on a line nobody asks about changes nothing: rows %+v problems %+v ready %v", p.BaseRecipeLines, p.Problems, p.Ready)
+	}
+	c, err := recipefile.BuildCommit(f, existingBase(), answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseKeep}), noImages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.BaseRecipeLines) != 0 {
+		t.Errorf("the commit carries no tile for it: %+v", c.BaseRecipeLines)
+	}
+}
+
+func TestAnyOtherDecisionOnALineWithNoRowIsHonoured(t *testing.T) {
+	f := lasagneWith(creamLine())
+	for name, d := range map[string]recipefile.BaseRecipeLineDecision{
+		"use":    {Action: recipefile.BaseUse, RecipeID: 40},
+		"create": {Action: recipefile.BaseCreate},
+	} {
+		p := plan(t, f, existingBase(), answerAt(lineB, d))
+		row := rowAt(t, p, lineB)
+		if !row.Resolved || row.Effective == nil || row.Effective.Action != d.Action {
+			t.Errorf("%s: the User chose it on a line of their own: %+v", name, row)
+		}
+		c, err := recipefile.BuildCommit(f, existingBase(), answerAt(lineB, d), noImages)
+		if err != nil || len(c.BaseRecipeLines) != 1 || c.BaseRecipeLines[0].Decision.Action != d.Action {
+			t.Errorf("%s: commit = %+v, %v", name, c.BaseRecipeLines, err)
+		}
+	}
+}
+
+func TestANameAnotherBaseRecipeHoldsIsAProblemOnTheTileBeforeConfirm(t *testing.T) {
+	p := plan(t, lasagneWith(bechamelLine()), existingBase(), answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseCreate}))
+	if p.Ready || !hasProblem(p, lineB, "base_recipe_name_taken") {
+		t.Errorf("want base_recipe_name_taken at %s: %+v", lineB, p.Problems)
+	}
+	if row := rowAt(t, p, lineB); row.Resolved {
+		t.Errorf("the refused answer leaves the tile open: %+v", row)
+	}
+}
+
+func TestANameAReadyMealHoldsIsAProblemOnTheTileBeforeConfirm(t *testing.T) {
+	ex := recipefile.Existing{Recipes: []recipefile.RecipeRef{{ID: 60, Name: "Pizza", ReadyMeal: true}}}
+	line := recipefile.Line{Ingredient: "pizza", Quantity: 1, Unit: "piece"}
+	p := plan(t, lasagneWith(line), ex, answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseCreate}))
+	if p.Ready || !hasProblem(p, lineB, "ready_meal_name_taken") {
+		t.Errorf("want ready_meal_name_taken at %s: %+v", lineB, p.Problems)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
+	"github.com/fabbarix/feeder-ng/internal/imaging"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
@@ -782,5 +783,73 @@ func TestADifferentBaseUnitWarnsAndOnlyOffersToKeepApart(t *testing.T) {
 	}
 	if ing, _, _ := f.lineAt(t, moussaka.ID, 0); ing != plain {
 		t.Error("Moussaka's line stays on the plain Ingredient")
+	}
+}
+
+// ---- Result, Shelf Life and Picture, the unit prompt ---------------------------------------------------------------
+
+func TestResultListsTheBaseRecipesCreatedByCreateAnswersBesideTheFileRecipes(t *testing.T) {
+	f := newSeeded(t)
+	res := f.apply(t, lasagneFile(bechamelLine()), answers(map[string]recipefile.BaseRecipeLineDecision{lineB: {Action: recipefile.BaseCreate, ReadNext: true}}))
+	b := f.recipeNamed(t, "Béchamel")
+	var found, lasagne bool
+	for _, r := range res.Recipes {
+		found = found || (r.Name == "Béchamel" && r.ID == b.id && r.Action == "created")
+		lasagne = lasagne || r.Name == "Lasagne"
+	}
+	if !found || !lasagne {
+		t.Errorf("Result.Recipes = %+v: want Lasagne and the created Béchamel (id %d), so the review can offer \"Read Béchamel now\"", res.Recipes, b.id)
+	}
+}
+
+func TestAFileBaseRecipesIngredientTakesTheFilesShelfLifeAndPicture(t *testing.T) {
+	f := newSeeded(t)
+	file := lasagneFile(bechamelLine(), fileBechamel(1, "l"))
+	shelf := 4
+	file.Ingredients[3].ShelfLifeDays = &shelf
+	imgs := recipefile.ImageSet{Images: map[string]imaging.Result{"$.ingredients[3].image": {WebP: webpOf(t, 8, 6), Width: 8, Height: 6}}}
+	ex, err := f.s.Existing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := recipefile.BuildCommit(file, ex, answers(map[string]recipefile.BaseRecipeLineDecision{lineB: fileAnswer(1)}), imgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.Apply(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	b := f.recipeNamed(t, "Béchamel")
+	var days sql.NullInt64
+	var image string
+	if err := f.db.QueryRow(`SELECT shelf_life_days, image FROM ingredients WHERE id = ?`, b.baseIng.Int64).Scan(&days, &image); err != nil {
+		t.Fatal(err)
+	}
+	if !days.Valid || days.Int64 != 4 || image == "" {
+		t.Errorf("Base recipe Ingredient: shelf life %v picture %q, want 4 days and the file's picture", days, image)
+	}
+	if f.imageFiles(t) != 1 {
+		t.Errorf("image files = %d, want 1", f.imageFiles(t))
+	}
+}
+
+func TestTheAnsweredUnitPromptIsSavedAsAConversionOfTheBaseRecipesIngredient(t *testing.T) {
+	f := newSeeded(t)
+	b := fileBechamel(1, "portion") // 1 portion = 1 piece, so "500 ml" needs an answer
+	b.BaseRecipe = ptrOf(false)
+	file := lasagneFile(bechamelLine(), b)
+	idx := 1
+	d := answers(map[string]recipefile.BaseRecipeLineDecision{lineB: {Action: recipefile.BaseFile, RecipeIndex: &idx, Yield: 1, YieldUnit: "portion"}})
+	d.Conversions = []recipefile.ConversionAnswer{{Key: "béchamel", Unit: "ml", ToBase: 0.002}}
+	f.apply(t, file, d)
+	base := f.recipeNamed(t, "Béchamel")
+	if !base.baseIng.Valid {
+		t.Fatal("Béchamel is a Base recipe")
+	}
+	if v, ok := f.conversionOf(t, base.baseIng.Int64, "ml"); !ok || v != 0.002 {
+		t.Errorf("ml conversion on the Base recipe Ingredient = %v, %v; want 0.002", v, ok)
+	}
+	if _, ok := f.ingredientIDByKey(t, "béchamel"); ok {
+		t.Error("and no plain béchamel Ingredient")
 	}
 }
