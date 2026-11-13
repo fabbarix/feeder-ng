@@ -38,7 +38,7 @@ lacks "$REL" 'pull_request' "release.yml must not run on pull requests"
 lacks "$REL" '(PAT|personal)' "release.yml must not use a personal access token"
 
 # D1: PRs build without pushing. D2: publishing happens on v* tags only.
-has "$CI"  'branches:\s*\[main\]' "ci.yml must run on pushes to main"
+lacks "$CI" '^\s*push:\s*$' "ci.yml must not run on pushes (main is not checked; v* tags run release.yml)"
 has "$REL" "type=raw,value=latest,enable=.*refs/tags/v" "latest must be enabled only for v* tags"
 has "$REL" 'org\.opencontainers\.image\.source' "release.yml must set org.opencontainers.image.source"
 has "$REL" 'cache-from:\s*type=gha' "release.yml must read the GHA cache"
@@ -63,9 +63,8 @@ has "$REL" '^# .*(only|just).*v\*' "release.yml header must say it publishes v* 
 has "$REL" 'type=semver,pattern=\{\{version\}\}' "release.yml must publish the exact semver tag"
 # every tags: rule in release.yml is a semver or latest rule enabled for tags
 if grep -E '^\s+type=' "$REL" | grep -Ev 'enable=.*refs/tags/v' >/dev/null; then bad "every image tag rule must be enabled only for v* tags"; else ok; fi
-# ci.yml: checks only on PRs and main; never publishes.
+# ci.yml: checks only on pull requests; never publishes.
 has "$CI" '^\s*pull_request:' "ci.yml must still run on pull_request"
-has "$CI" '^\s*push:\s*$' "ci.yml must still run on push"
 lacks "$CI" 'push:\s*true' "ci.yml must never push an image"
 lacks "$CI" 'registry:|ghcr\.io' "ci.yml must not touch a registry"
 lacks "$CI" 'helm (push|registry)' "ci.yml must not publish a chart"

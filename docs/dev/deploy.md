@@ -33,7 +33,7 @@ All tags are multi-arch (`linux/amd64`, `linux/arm64`) and carry the OCI label `
 
 Workflows:
 
-- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests and on pushes to `main`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR. It never publishes.
+- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests only; a push to `main` runs nothing, and checks run on `v*` tags through `release.yml`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR. It never publishes.
 - `.github/workflows/release.yml` ("Publish"): runs only on `v*` tags. It runs the checks, then builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). It then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`. A failed release is re-run with *Re-run jobs* on the tag's run, which keeps the tag.
 
 Images and the chart are published from `v*` tags only. `latest` is set only on stable tags (no `-` in the tag).
