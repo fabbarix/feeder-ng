@@ -59,7 +59,7 @@ function HeroEyebrow({ parts }: { parts: string[] }): ReactNode {
  * The Today hero (ui-fix-plan 2.1, 2.2, 5.1, docs/design/system.md round 2): a full-width accent Tile. Before the slot time
  * its eyebrow, the Recipe name, up to 2 why chips and the Cook button. After the slot time the title stays the Recipe, a
  * `.plan-hero__ask` line asks "<Recipe> cooked?", and the hero's own ActionGroup offers Cooked (or All Cooked), Adjust and
- * Not cooked in the ⋮. A slot with several Courses lists the other Courses as compact rows under the hero.
+ * the slot ⋮ holds Not cooked. A slot with several Courses lists the other Courses as compact rows under the hero.
  */
 export function TonightHero(props: TonightHeroProps): ReactNode {
   if (slotCourses(props.slot).length > 1) return <SeveralCoursesHero {...props} />
@@ -81,18 +81,15 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
   const chips = [...leftoverChip(meal), ...heroChips(meal, phrase)].slice(0, 2)
   // Cooked / Adjust only for a meal of today (a future meal may not be marked Cooked).
   const awaiting = phase === 'awaiting' && day === 'today'
-  const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const primary = { label: s.cooked, icon: 'markCooked' as const, disabled: busy, onClick: () => onYesCooked(key) }
   const secondary = canReheat
     ? { label: s.reheat, icon: 'reheat' as const, disabled: busy, onClick: () => onReheat(key) }
     : { label: s.adjust, disabled: busy, onClick: () => onAdjust(key) }
-  const more = [{ id: 'not-cooked', label: s.notCooked, onSelect: () => (menu?.onNotCookedSlot ?? noop)(slotKey) }]
-
   return (
     <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
-      {dateActions ? (
+      {menu || dateActions ? (
         <div className="plan-hero__menu">
-          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={menu?.onNotCookedSlot ?? noop} onAddCourse={noop} dateActions={dateActions} />
+          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={menu?.onNotCookedSlot ?? noop} onAddCourse={noop} dateActions={dateActions} notCookedFirst={awaiting} />
         </div>
       ) : null}
       <div className="plan-hero__body">
@@ -126,7 +123,7 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
         ) : null
       ) : (
         <div className="plan-hero__actions">
-          <ActionGroup label={slot.name} primary={primary} secondary={secondary} more={more} />
+          <ActionGroup label={slot.name} primary={primary} secondary={secondary} />
         </div>
       )}
     </Tile>
@@ -136,7 +133,7 @@ function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onRehea
 /**
  * A slot with several Courses (spec 7.5): the hero is the main Course's Planned Meal (or the first Course still to cook);
  * the other Courses are compact rows under it. Cook, "start" and "Cook · 30 min" are the slot's (the timeline). After the
- * slot time with two or more Courses to cook the ask is "<Slot> cooked?" and the group is All Cooked, Adjust, ⋮; with one
+ * slot time with two or more Courses to cook the ask is "<Slot> cooked?" and the group is All Cooked and Adjust (Not cooked is in the slot ⋮); with one
  * left it is a one-Course hero whose Cooked and Adjust report that Course.
  */
 function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu, dateActions }: TonightHeroProps): ReactNode {
@@ -159,8 +156,6 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
   const secondary = canReheat
     ? { label: s.reheat, icon: 'reheat' as const, disabled: busy, onClick: () => onReheat(hero.key) }
     : { label: s.adjust, disabled: busy, onClick: () => (allAtOnce ? onMarkAllCooked(slotKey) : onAdjust(hero.key)) }
-  const more = [{ id: 'not-cooked', label: s.notCooked, onSelect: () => (menu?.onNotCookedSlot ?? noop)(slotKey) }]
-
   return (
     <Tile variant="hero" span="full" overline={<HeroEyebrow parts={heroEyebrow({ slot, day, action }, now)} />} overlineIcon={slotIcon(slot.name)} className="plan-hero">
       {menu || dateActions ? (
@@ -172,6 +167,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
             onNotCookedSlot={menu?.onNotCookedSlot ?? noop}
             onAddCourse={menu?.onAddCourse ?? noop}
             dateActions={dateActions}
+            notCookedFirst={awaiting}
           />
         </div>
       ) : null}
@@ -206,7 +202,7 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
         ) : null
       ) : (
         <div className="plan-hero__actions">
-          <ActionGroup label={slot.name} primary={primary} secondary={secondary} more={more} />
+          <ActionGroup label={slot.name} primary={primary} secondary={secondary} />
         </div>
       )}
       {others.length > 0 ? (

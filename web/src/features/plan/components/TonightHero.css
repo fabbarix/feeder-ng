@@ -42,6 +42,11 @@
   padding: 0;
   display: grid;
 }
+/* DS-TODAY round 3: every To confirm primary has one width, the widest label's ("All Cooked", 142 px with its padding), so the
+   primaries of all rows share one column: the same start and width, whatever the label. */
+.to-confirm__list {
+  --to-confirm-primary-width: 9.5rem;
+}
 /* The row is the ActionGroup's container (action-group-host): badge | text (shrinks) | actions on max-content, never an auto track. */
 .to-confirm__row {
   display: grid;
@@ -57,6 +62,12 @@
 @container (max-width: 35rem) {
   .to-confirm__row .action-group {
     grid-column: 1 / -1;
+  }
+}
+/* A wide row: the primary of every row is the same width (the shared primary width). */
+@container (min-width: 35rem) {
+  .to-confirm__row .action-group > [data-variant='primary'] {
+    inline-size: var(--to-confirm-primary-width);
   }
 }
 .to-confirm__when {

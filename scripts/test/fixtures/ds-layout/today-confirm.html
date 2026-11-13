@@ -25,8 +25,9 @@ for (const id of ['wide', 'narrow']) {
     const r = document.getElementById(`r${id}${n}`).getBoundingClientRect()
     const g = document.getElementById(`g${id}${n}`), gb = g.getBoundingClientRect()
     const t = document.querySelector(`#r${id}${n} .to-confirm__text`).getBoundingClientRect()
+    const pb = g.querySelector('[data-variant="primary"]').getBoundingClientRect()
     const btns = [...g.querySelectorAll('button')] // labelled buttons are checked for a clipped label; the icon-only ⋮ is exempt (its 44 px hit area is ::after)
-    return { gw: Math.round(gb.width), gl: Math.round(gb.left), gr: Math.round(gb.right), gt: Math.round(gb.top), rl: Math.round(r.left), rr: Math.round(r.right),
+    return { pl: Math.round(pb.left), pw: Math.round(pb.width), gw: Math.round(gb.width), gl: Math.round(gb.left), gr: Math.round(gb.right), gt: Math.round(gb.top), rl: Math.round(r.left), rr: Math.round(r.right),
       tr: Math.round(t.right), tb: Math.round(t.bottom), tl: Math.round(t.left),
       clipped: btns.filter((b) => b.textContent.trim() !== '').some((b) => b.scrollWidth > b.clientWidth), btnW: btns.map((b) => Math.round(b.getBoundingClientRect().width)),
       overlap: !(t.right <= gb.left + 1 || t.bottom <= gb.top + 1 || t.left >= gb.right - 1 || t.top >= gb.bottom - 1) }

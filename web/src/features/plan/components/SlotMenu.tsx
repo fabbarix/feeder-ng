@@ -20,20 +20,25 @@ export interface SlotMenuProps {
   dateActions?: SlotDateActions
   /** ds-plan round 2: the trigger is compact (32 px) in a day tile's header; the Today hero keeps the default size. */
   size?: 'md' | 'compact'
+  /** DS-TODAY round 3: Not cooked is the first item (the hero after the slot time). Default: after Mark all Cooked. */
+  notCookedFirst?: boolean
 }
 
 /**
  * The slot block's menu: the shared Menu labelled "<Slot> actions", with "Mark all Cooked", "Not cooked: whole slot",
  * "Add <Course>" per lib/courses slotMenu and, with `dateActions`, the per-date choices. Renders nothing when slotMenu is null.
  */
-export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, size }: SlotMenuProps): ReactNode {
+export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, size, notCookedFirst = false }: SlotMenuProps): ReactNode {
   const model = slotMenu(slot, today, dateActions !== undefined)
   if (!model) return null
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const offline = dateActions?.offline ?? false
   const items: MenuEntry[] = []
+  // DS-TODAY round 3: after the slot time the hero's own decision is Cooked and Adjust, so Not cooked leads this menu.
+  const notCooked = model.notCookedSlot ? { id: 'not-cooked-slot', label: s.notCookedSlot, onSelect: () => onNotCookedSlot(slotKey) } : null
+  if (notCookedFirst && notCooked) items.push(notCooked)
   if (model.markAllCooked) items.push({ id: 'mark-all-cooked', label: s.markAllCooked, onSelect: () => onMarkAllCooked(slotKey) })
-  if (model.notCookedSlot) items.push({ id: 'not-cooked-slot', label: s.notCookedSlot, onSelect: () => onNotCookedSlot(slotKey) })
+  if (!notCookedFirst && notCooked) items.push(notCooked)
   for (const add of model.add) items.push({ id: `add-${add.key.courseId}`, label: add.label, onSelect: () => onAddCourse(add.key) })
   if (dateActions && model.whosEating) {
     items.push({ id: 'whos-eating', label: choiceLabel(s.slotDate.whosEating, offline), disabled: offline, onSelect: () => dateActions.onWhosEating(slotKey) })

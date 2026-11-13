@@ -47,9 +47,9 @@
 .today-metrics {
   grid-column: 1 / -1;
 }
-/* A lone metric keeps one track of the strip (auto-fill, never stretched to the row); at most three tracks per row. */
+/* The strip always fills its row: 1, 2 or 3 metrics share it evenly (auto-fit collapses the empty tracks). */
 .today-metrics .bento-grid[data-min] {
-  grid-template-columns: repeat(auto-fill, minmax(max(min(var(--tile-min-metric), 100%), calc((100% - 2 * var(--bento-gap)) / 3)), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
 }
 .today-metrics .tile {
   position: relative;
