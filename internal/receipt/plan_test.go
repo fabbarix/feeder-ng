@@ -192,7 +192,7 @@ func TestAReplacedRowCarriesItsPriceSoNoSeparateSetPrices(t *testing.T) {
 		if s.Op.Kind == receipt.OpSetPrices {
 			t.Errorf("a replaced row takes its Price on the new scans: %+v", s)
 		}
-		if s.Op.Kind == receipt.OpNewScan && (s.Op.PriceCents != 135 || s.Op.Date != "2026-11-12") {
+		if s.Op.Kind == receipt.OpNewScan && (s.Op.Date != "2026-11-12" || (s.Op.ProductID == 10 && s.Op.PriceCents != 135)) {
 			t.Errorf("new scan = %+v", s.Op)
 		}
 	}
@@ -334,5 +334,77 @@ func TestCompensateRunsTheInversesInReverseUpToTheFailure(t *testing.T) {
 	}
 	if n := len(p.Compensate(len(p.Steps) + 5)); n != len(p.Steps) {
 		t.Errorf("a failedAt past the end compensates every step, got %d", n)
+	}
+}
+
+// Review decision (design §8.1): the Shop and date move every scan the User keeps. A row the receipt does not list
+// stays in the session unless the User accepts its missing proposal, and then it was bought on this trip too.
+func TestShopAndDateAlsoMoveAKeptRowTheReceiptDoesNotList(t *testing.T) {
+	in := planInput(t, map[string]any{"shopName": "Coop", "date": "2026-11-12"}, []string{"shop", "date"}, nil,
+		mkLine(map[string]any{"row": 0, "count": 2, "priceCents": 258}),
+		mkLine(map[string]any{"row": 1, "grams": 312, "priceCents": 624, "perKgCents": 2000}),
+		mkLine(map[string]any{"row": 2, "count": 1, "priceCents": 99}))
+	// row 3 (e5) is not on the receipt and the User keeps it
+	p := buildPlan(t, in)
+	undone, moved := map[string]bool{}, 0
+	for _, s := range p.Steps {
+		switch s.Op.Kind {
+		case receipt.OpUndo:
+			undone[s.Op.UUID] = true
+		case receipt.OpNewScan:
+			moved++
+			if s.Op.ShopID != 2 || s.Op.Date != "2026-11-12" {
+				t.Errorf("new scan goes to Coop on 12 Nov: %+v", s.Op)
+			}
+		}
+	}
+	for _, u := range []string{"e1", "e2", "e3", "e4", "e5"} {
+		if !undone[u] {
+			t.Errorf("%s is not moved", u)
+		}
+	}
+	if moved != 5 {
+		t.Errorf("5 events, 5 new scans, got %d", moved)
+	}
+}
+
+func TestShopAndDateLeaveARemovedRowToItsRemove(t *testing.T) {
+	in := planInput(t, map[string]any{"shopName": "Coop"}, []string{"shop", "missing:3"}, nil,
+		mkLine(map[string]any{"row": 0, "count": 2, "priceCents": 258}),
+		mkLine(map[string]any{"row": 1, "grams": 312, "priceCents": 624, "perKgCents": 2000}),
+		mkLine(map[string]any{"row": 2, "count": 1, "priceCents": 99}))
+	p := buildPlan(t, in)
+	n := 0
+	for _, s := range p.Steps {
+		if s.Op.Kind == receipt.OpUndo && s.Op.UUID == "e5" {
+			n++
+			if s.Phase != receipt.PhaseRemove {
+				t.Errorf("e5 is undone by its Remove only: %v", s.Phase)
+			}
+		}
+	}
+	if n != 1 {
+		t.Errorf("e5 undone %d times", n)
+	}
+}
+
+func TestAReweighedRowIsScannedAgainOnceAtTheNewShop(t *testing.T) {
+	in := planInput(t, map[string]any{"shopName": "Coop"}, []string{"shop", "weight:1"}, nil,
+		mkLine(map[string]any{"row": 1, "grams": 330, "priceCents": 660, "perKgCents": 2000}))
+	in.Rows = in.Rows[1:2]
+	in.Rows[0].Index = 0
+	// the proposals were made on the four rows: re-key them to the one row kept here
+	for i := range in.Proposals {
+		if in.Proposals[i].ID == "weight:1" {
+			in.Proposals[i].ID, in.Proposals[i].Row = "weight:0", 0
+		}
+	}
+	in.Accept = []string{"shop", "weight:0"}
+	p := buildPlan(t, in)
+	if got := kinds(p); len(got) != 2 || got[0] != receipt.OpUndo || got[1] != receipt.OpNewScan {
+		t.Fatalf("one undo and one new scan: %v", got)
+	}
+	if o := p.Steps[1].Op; o.ShopID != 2 || o.Quantity != 330 || o.PriceCents != 660 {
+		t.Errorf("new scan = %+v", o)
 	}
 }

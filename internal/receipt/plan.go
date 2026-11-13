@@ -186,13 +186,13 @@ func BuildPlan(in PlanInput) (Plan, error) {
 			return Plan{}, &PlanError{Code: PlanAddIncomplete, ID: id}
 		}
 	}
-	unmatched := func(r int) bool {
-		_, ok := byID[pid("missing", r)]
-		return ok
-	}
 	accP := func(kind string, r int) (Proposal, bool) {
 		id := pid(kind, r)
 		return byID[id], acc[id]
+	}
+	reweighed := func(r int) bool {
+		_, ok := accP("weight", r)
+		return ok
 	}
 
 	ctx := in.Ctx
@@ -239,11 +239,13 @@ func BuildPlan(in PlanInput) (Plan, error) {
 			Inverse: Op{Kind: OpUpdateProduct, ProductID: row.ProductID, Name: row.Product, PackSize: row.PackSize}})
 	}
 
-	// Replace: an event whose shop, date or pack size changes is undone and scanned again with the target values. A row
-	// the receipt does not list has no target of its own, so the shop and date move only the matched rows; the review's
-	// missing proposal is how the User removes the others.
+	// Replace: an event whose shop, date or pack size changes is undone and scanned again with the target values. The
+	// shop and date move every scan the User keeps, listed on the receipt or not: a row the User does not remove through
+	// its missing proposal is one they say they bought on this trip, so at the receipt's Shop and on its date. A removed
+	// row is undone below, and a row whose weight changes is scanned again at the target shop and date in the quantity
+	// phase, so neither is replaced here.
 	for r, row := range rows {
-		if removed[r] || unmatched(r) {
+		if removed[r] || reweighed(r) {
 			continue
 		}
 		pp, packOK := accP("pack_size", r)

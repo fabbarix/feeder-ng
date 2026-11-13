@@ -350,6 +350,11 @@ Lots, purchases, Prices, Shopping List ticks and Bought for a Planned Meal stay 
 | Add | a Product created without a barcode (`products` create, as the Product sheet does), then a `shop_scan` Op; a new Ingredient or Supply through `ingredientsPort.Ensure(name, baseUnit, kind)` (H4) |
 | Remove (missing) | `Undo` of each of the row's events |
 
+**Shop and date move every row the User keeps** (decided in the RR1 review). A row the receipt does not list stays in the
+session unless the User accepts its "Not on the receipt" proposal; keeping it says it was bought on this trip, so it moves to the
+receipt's Shop and date with the others (one trip is never split across two Shops or days). A row whose Remove is accepted is
+only undone, and a row whose weight changes is scanned again once, at the target Shop and date.
+
 Order: Product corrections, Shop and date replacements, weight and quantity changes, Prices, Adds, Removes. New events get new
 client UUIDs (`receipt:<readId>:<n>`, idempotent if the apply is retried with the same read).
 
