@@ -1,5 +1,5 @@
 // DS-TODAY (docs/design/system.md §2, §4): the Today metric strip: zero-waste streak, Leftovers to use, Lines to get.
-// Colour roles: success (streak), the leftover teal (Leftovers), the accent container (Lines to get).
+// Colour roles: success (streak), the leftover teal (Leftovers), a neutral surface tile (Lines to get): never accent-soft.
 import { describe, expect, it } from 'vitest'
 import { composeMetrics, countLinesToGet } from './metrics'
 
@@ -8,7 +8,7 @@ describe('composeMetrics', () => {
     expect(composeMetrics({ streakDays: 2, leftovers: 3, linesToGet: 16 })).toEqual([
       { id: 'streak', value: '2 d', label: 'zero-waste streak', tone: 'success', icon: 'streak' },
       { id: 'leftovers', value: '3', label: 'Leftovers to use', tone: 'leftover', icon: 'leftover' },
-      { id: 'lines', value: '16', label: 'Lines to get', tone: 'accent', icon: 'shop' },
+      { id: 'lines', value: '16', label: 'Lines to get', tone: 'neutral', icon: 'shop' },
     ])
   })
 

@@ -19,17 +19,17 @@ describe('metric tiles are never accent-soft', () => {
     expect(metricFiles.map((x) => x.f).join(' ')).toMatch(/MetricStrip\.tsx/) // DS-TODAY: the streak tile became the metric strip
     expect(metricFiles.map((x) => x.f).join(' ')).toMatch(/CostTile\.tsx/)
   })
-  // DS-TODAY: MetricStrip's "Lines to get" metric is the accent container on purpose (system.md §2: the one place --color-soft is a metric tone); it is a dynamic
-  // variant (tone 'accent'), and is checked below instead of by the literal scan.
-  it.each(files.filter(({ src, f }) => /<TileMetric\b|className="cost-tile"/.test(src) && !f.endsWith('MetricStrip.tsx')).map((x) => [x.f, x.src] as const))('%s: no variant="soft" Tile', (_f, src) => {
+  it.each(files.filter(({ src }) => /<TileMetric\b|className="cost-tile"/.test(src)).map((x) => [x.f, x.src] as const))('%s: no variant="soft" Tile', (_f, src) => {
     expect(src).not.toMatch(/<Tile\b[^>]*variant="soft"/)
   })
-  it('the Zero-waste streak is the success tone, and only "Lines to get" is the accent container', () => {
+  // system.md §2: metric tiles are neutral or status-toned; the accent is for the primary action, the nav item, the today ring and the light hero.
+  it('the Zero-waste streak is success, Leftovers the leftover tone, Lines to get a neutral surface tile, and MetricStrip never renders soft', () => {
     const lib = readFileSync(`${cwd}/src/features/today/lib/metrics.ts`, 'utf8')
     expect(lib).toMatch(/id:\s*'streak'[^}]*tone:\s*'success'/)
     expect(lib).toMatch(/id:\s*'leftovers'[^}]*tone:\s*'leftover'/)
-    expect(lib).toMatch(/id:\s*'lines'[^}]*tone:\s*'accent'/)
+    expect(lib).toMatch(/id:\s*'lines'[^}]*tone:\s*'neutral'/)
+    expect(lib).not.toMatch(/tone:\s*'accent'/)
     const strip = files.find((x) => x.f.endsWith('MetricStrip.tsx'))!.src
-    expect(strip).toMatch(/variant=\{m\.tone === 'accent' \? 'soft' : 'status'\}/)
+    expect(strip).not.toMatch(/['"]soft['"]/)
   })
 })

@@ -35,12 +35,13 @@ describe('MetricStrip', () => {
     }
   })
 
-  it('colour roles: success for the streak, the leftover teal for Leftovers, the accent container (soft) for Lines', () => {
+  it('colour roles: success for the streak, the leftover teal for Leftovers, a neutral surface tile for Lines (never accent-soft)', () => {
     const { container } = render(<MetricStrip metrics={all} />)
     expect(container.querySelector('[data-metric="streak"]')).toHaveAttribute('data-variant', 'status')
     expect(container.querySelector('[data-metric="streak"]')).toHaveAttribute('data-status', 'success')
     expect(container.querySelector('[data-metric="leftovers"]')).toHaveAttribute('data-status', 'leftover')
-    expect(container.querySelector('[data-metric="lines"]')).toHaveAttribute('data-variant', 'soft')
+    expect(container.querySelector('[data-metric="lines"]')).toHaveAttribute('data-variant', 'surface')
+    expect(container.querySelector('[data-variant="soft"]')).toBeNull()
   })
 
   it('no tile spans extra columns (status never changes width) and none is a button or link (the Leftovers tile below owns the tap)', () => {
