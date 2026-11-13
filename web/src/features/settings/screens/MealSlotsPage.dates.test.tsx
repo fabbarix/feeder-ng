@@ -1,5 +1,6 @@
 // B5-F1 (ADR 0014): Settings > Meal Slots shows the read-only "Dates that differ" tile once per-date changes exist.
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { householdSettings } from '../components/fixtures'
 import { fabio, mia } from '../components/mealSlotCardFixtures'
@@ -57,5 +58,26 @@ describe('MealSlotsPage: Dates that differ', () => {
       expect(within(tile).getByText('Set from the Plan, for one date. The usual week does not change.')).toBeInTheDocument()
       unmount()
     }
+  })
+
+  it('a refused date save (409 slot_started) toasts the Plan sentence in GLOSSARY words and keeps the sheet open', async () => {
+    const url = '/api/meal-slots/501/attendance?date=2026-11-09'
+    const base = mockApi({
+      'GET /api/me': ADMIN_ME,
+      'GET /api/household/settings': householdSettings,
+      'GET /api/members': [mia, fabio],
+      'GET /api/meal-slots': [1, 2, 3, 4, 5, 6, 7].map(dinner),
+      'GET /api/plan': plan,
+      [`GET ${url}`]: { slotId: 501, date: '2026-11-09', isOverride: false, attendance: both, portionsNeeded: 2, guests: 0, courses: [] },
+      [`PUT ${url}`]: { status: 409, json: { error: { code: 'slot_started', message: 'raw server text' } } },
+    })
+    renderWithProviders(<MealSlotsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Dinner' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-09' })
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: mia.name }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))
+    await waitFor(() => expect(base.callsTo('PUT', url)).toHaveLength(1))
+    expect(await screen.findByText('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Dinner on 2026-11-09' })).toBeInTheDocument()
   })
 })

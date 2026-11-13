@@ -118,6 +118,19 @@ describe('useAttendanceSheet', () => {
     expect(await screen.findByRole('status')).toBeInTheDocument()
   })
 
+  it('a started slot (409 slot_started) toasts the Plan sentence in GLOSSARY words, resolves false and stays open', async () => {
+    routes({ [`PUT ${PATH}`]: { status: 409, json: { error: { code: 'slot_started', message: 'raw server text' } } } })
+    const { result, onClose } = setup({ beforeEmptying: async () => true })
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    let ok = true
+    await act(async () => {
+      ok = await result.current.save([], undefined, undefined)
+    })
+    expect(ok).toBe(false)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(await screen.findByText('Part of Dinner is already Cooked or Not cooked, so it cannot be left out.')).toBeInTheDocument()
+  })
+
   it('reset DELETEs the date\'s Attendance (Guests too), toasts and closes', async () => {
     const api = routes({ [`DELETE ${PATH}`]: undefined })
     const { result, onClose } = setup()

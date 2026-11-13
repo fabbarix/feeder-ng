@@ -28,7 +28,9 @@ const MARK = `/plan?mark=${DAY}:4`
 
 function renderAt(slots: PlanSlot[], entries: string[] = [MARK], extra: Record<string, unknown> = {}) {
   const api = mockApi({
-    'GET /api/plan': view(slots),
+    // The server's plain GET /api/plan starts at today and never returns an earlier day; only the dated query returns the marked date.
+    'GET /api/plan': view([]),
+    [`GET /api/plan?from=${DAY}&to=${DAY}`]: view(slots),
     [`GET /api/plan/${DAY}/4/1/cook`]: preview(1, 'Main', 'Roast chicken'),
     [`GET /api/plan/${DAY}/4/2/cook`]: preview(2, 'Side', 'Green beans'),
     ...extra,
@@ -70,8 +72,24 @@ describe('PlanScreen ?mark=', () => {
   it('does not open anything before the plan has loaded, and opens once, not again on a refetch', async () => {
     const api = renderAt([dinner()])
     await screen.findByRole('dialog', { name: 'Mark all Cooked' })
-    expect(api.callsTo('GET', '/api/plan').length).toBeGreaterThan(0)
+    expect(api.callsTo('GET', `/api/plan?from=${DAY}&to=${DAY}`).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('dialog', { name: 'Mark all Cooked' })).toHaveLength(1)
+  })
+
+  it('a meal on an earlier day: the hook fetches the marked date itself, as plain /api/plan never returns it', async () => {
+    const api = renderAt([dinner()])
+    const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
+    expect(await within(sheet).findByText('Roast chicken')).toBeInTheDocument()
+    expect(api.callsTo('GET', `/api/plan?from=${DAY}&to=${DAY}`)).toHaveLength(1)
+    expect(screen.queryByText('Nothing is left to mark Cooked there.')).not.toBeInTheDocument()
+  })
+
+  it('the sheet still opens when plain /api/plan has no slot for that day (and the dated fetch is not repeated on a refetch)', async () => {
+    const api = renderAt([dinner()])
+    await screen.findByRole('dialog', { name: 'Mark all Cooked' })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.getAllByRole('dialog', { name: 'Mark all Cooked' })).toHaveLength(1)
+    expect(api.callsTo('GET', `/api/plan?from=${DAY}&to=${DAY}`)).toHaveLength(1)
   })
 
   it('closing the sheet goes back to where it came from (the Shopping List)', async () => {
