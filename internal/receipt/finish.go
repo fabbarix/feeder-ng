@@ -14,6 +14,14 @@ const maxLines = 200
 
 const dateLayout = "2006-01-02"
 
+// Bounds past which a value is not a receipt's: they keep the arithmetic of Propose and BuildPlan (× 1000 for a price
+// per kg) far from overflow. A line beyond them is dropped as line_invalid; a total beyond them is unknown.
+const (
+	maxCents = 100_000_000 // one million in a currency with two minor digits
+	maxGrams = 10_000_000  // ten tonnes
+	maxCount = 10_000
+)
+
 // Finish turns the model's raw answer into a checked Answer (design §5.1). Pure: today is "YYYY-MM-DD".
 //
 // Errors: CodeInvalidOutput for a malformed answer (not an object, a field missing or of the wrong type, a non-integer
@@ -25,6 +33,9 @@ func Finish(raw []byte, rows []Row, today string) (Answer, []Warning, error) {
 	dec.UseNumber()
 	if err := dec.Decode(&v); err != nil {
 		return Answer{}, nil, invalid("the answer is not JSON")
+	}
+	if dec.More() {
+		return Answer{}, nil, invalid("the answer has data after the JSON object")
 	}
 	top, ok := v.(map[string]any)
 	if !ok {
@@ -67,7 +78,7 @@ func Finish(raw []byte, rows []Row, today string) (Answer, []Warning, error) {
 	}
 
 	a := Answer{ShopName: shopName, Date: checkDate(date, today), Lines: lines}
-	if total >= 0 {
+	if total >= 0 && total <= maxCents {
 		a.TotalCents = intPtr(total)
 	}
 	return a, warnings, nil
@@ -116,7 +127,9 @@ func checkLine(i int, rl rawLine, rows []Row) (Line, []Warning, bool) {
 	}
 	// A negative priceCents other than -1 on an unmatched line is a whole-receipt discount: kept, never dropped.
 	badPrice := rl.price < -1 && row != -1
-	if rl.count < 0 || rl.grams < 0 || rl.packSize < 0 || rl.unitPrice < -1 || rl.perKg < -1 || badPrice {
+	tooBig := rl.count > maxCount || rl.grams > maxGrams || rl.packSize > maxGrams ||
+		rl.price > maxCents || rl.price < -maxCents || rl.unitPrice > maxCents || rl.perKg > maxCents
+	if rl.count < 0 || rl.grams < 0 || rl.packSize < 0 || rl.unitPrice < -1 || rl.perKg < -1 || badPrice || tooBig {
 		return Line{}, append(ws, Warning{Code: WarnLineInvalid, Line: i}), false
 	}
 	ln := Line{

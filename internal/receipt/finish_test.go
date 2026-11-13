@@ -274,3 +274,31 @@ func TestFinishTrustsNothingElseFromTheAnswer(t *testing.T) {
 		t.Errorf("extra field: %v %+v", err, a)
 	}
 }
+
+func TestFinishRejectsDataAfterTheObject(t *testing.T) {
+	raw := append(mkRaw(t, nil, mkLine(map[string]any{"row": 0, "count": 1, "priceCents": 129})), []byte(` {"readable":true}`)...)
+	if _, _, err := receipt.Finish(raw, fixtureRows(), "2026-11-13"); ra.CodeOf(err) != ra.CodeInvalidOutput {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestFinishDropsAnAbsurdAmountAndForgetsAnAbsurdTotal(t *testing.T) {
+	for name, over := range map[string]map[string]any{
+		"price":    {"row": 0, "count": 1, "priceCents": 1 << 50},
+		"discount": {"row": -1, "priceCents": -(1 << 50)},
+		"perKg":    {"row": 1, "grams": 312, "priceCents": 624, "perKgCents": 1 << 50},
+		"grams":    {"row": 1, "grams": 1 << 40, "priceCents": 624},
+		"count":    {"row": 0, "count": 1 << 40, "priceCents": 129},
+	} {
+		a, ws, err := receipt.Finish(mkRaw(t, map[string]any{"totalCents": 1 << 50}, mkLine(over), mkLine(map[string]any{"row": 3, "count": 1, "priceCents": 150})), fixtureRows(), "2026-11-13")
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(a.Lines) != 1 || len(ws) != 1 || ws[0].Code != receipt.WarnLineInvalid {
+			t.Errorf("%s: the line is dropped as line_invalid: %d lines, %v", name, len(a.Lines), ws)
+		}
+		if a.TotalCents != nil {
+			t.Errorf("%s: an absurd total is unknown", name)
+		}
+	}
+}

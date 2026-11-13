@@ -254,10 +254,11 @@ and checks that `Finish` accepts the answer and at least the Price of row 0 is p
 
 `receipt.Finish(raw []byte, rows []Row) (Answer, []Warning, error)`, pure:
 
-1. Not a JSON object → `CodeInvalidOutput`. `readable: false`, or no lines → `CodeNoReceiptFound` (new, §9).
+1. Not a JSON object (or data after it) → `CodeInvalidOutput`. `readable: false`, or no lines → `CodeNoReceiptFound` (new, §9).
 2. Sentinels mapped back: `""` → absent, `-1` → unknown, `0` → none.
 3. Per line: `row` outside `[-1, len(rows))` → treated as `-1` with the warning `row_out_of_range`; a negative amount other than
-   `-1`, a negative count or weight → the line dropped with `line_invalid`; `packUnit` must agree with `packSize` (else both
+   `-1`, a negative count or weight, or a value past the sanity bounds (an amount above 100,000,000 minor units, more than
+   10,000 packs, more than 10 t) → the line dropped with `line_invalid` (a total past the bound is unknown); `packUnit` must agree with `packSize` (else both
    cleared); a matched line whose `packUnit` differs from the row's Base Unit loses its pack size.
 4. `date` not a real day, or later than today → absent. More than 200 lines → `CodeOutputTooLong`.
 5. Nothing else is trusted: the rows' identities, Shops and Products come from the server, never from the answer.
