@@ -99,7 +99,8 @@ func TestCookComposesTheBaseRecipesStepsIntoTheRecipesOwnWithLabels(t *testing.T
 
 func TestTheCachedTotalTimeOfAUserIsRewrittenWhenABaseRecipeIsEdited(t *testing.T) {
 	f := newBaseFixture(t)
-	roux := baseIn("Roux", 300, "g")
+	_, butter, flour := f.basics(t)
+	roux := baseIn("Roux", 300, "g", ln(butter, 150, "g"), ln(flour, 150, "g"))
 	roux.Steps = []recipe.Step{active("Cook the roux", 5)}
 	r := f.createBase(t, roux)
 	bin := baseIn("Béchamel", 1, "l", callFor(r, 50, "g"))
