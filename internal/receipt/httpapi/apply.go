@@ -18,6 +18,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/receipt"
 	"github.com/fabbarix/feeder-ng/internal/scan"
 	scanhttpapi "github.com/fabbarix/feeder-ng/internal/scan/httpapi"
+	scanservice "github.com/fabbarix/feeder-ng/internal/scan/service"
 	shoppinghttpapi "github.com/fabbarix/feeder-ng/internal/shopping/httpapi"
 )
 
@@ -160,13 +161,7 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 		changed(w)
 		return
 	}
-	events, err := a.ap.SessionEvents(ctx, read.ShopID, body.ClientUUIDs)
-	if err != nil {
-		httpx.WriteAPIError(w, err)
-		return
-	}
-	fp := receipt.Fingerprint(events)
-	if len(events) == 0 || fp != read.Fingerprint || (body.Fingerprint != "" && body.Fingerprint != fp) {
+	if body.Fingerprint != "" && body.Fingerprint != read.Fingerprint {
 		changed(w)
 		return
 	}
@@ -179,22 +174,31 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 	for _, c := range body.Adds {
 		adds[c.ID] = c.choice()
 	}
-	plan, err := receipt.BuildPlan(receipt.PlanInput{ReadID: read.ID, Rows: read.Rows, Ctx: read.Ctx,
-		Proposals: read.Proposals, Accept: accept, Adds: adds})
+	// The session check, the plan and its run share one hold of the scan lock (§7.2 step 2): no Scan, Undo or Price
+	// edit from another phone can land between them.
+	res, err := a.ap.Service().ApplyReceipt(ctx, scanservice.ReceiptApply{ShopID: read.ShopID, ClientUUIDs: body.ClientUUIDs,
+		Fingerprint: read.Fingerprint, Build: func() (receipt.Plan, error) {
+			return receipt.BuildPlan(receipt.PlanInput{ReadID: read.ID, Rows: read.Rows, Ctx: read.Ctx,
+				Proposals: read.Proposals, Accept: accept, Adds: adds})
+		}})
 	var pe *receipt.PlanError
-	if errors.As(err, &pe) {
+	switch {
+	case errors.Is(err, scanservice.ErrReceiptSessionChanged):
+		changed(w)
+		return
+	case errors.As(err, &pe):
 		planRefused(w, pe)
 		return
-	}
-	if err != nil {
-		httpx.WriteAPIError(w, err)
-		return
-	}
-
-	res, err := a.ap.Service().ApplyReceiptPlan(ctx, plan)
-	if err != nil {
-		slog.ErrorContext(ctx, "receipt apply failed", "err", err)
+	case errors.Is(err, scanservice.ErrReceiptApplyFailed):
+		var ae *scanservice.ReceiptApplyError
+		if errors.As(err, &ae) {
+			// Counts only: the step's index and kind, and whether the put-back failed; never the rows or the uuids.
+			slog.ErrorContext(ctx, "receipt apply failed", "step", ae.Step, "kind", string(ae.Kind), "putBackFailed", ae.Compensation != nil)
+		}
 		httpx.WriteError(w, http.StatusInternalServerError, "receipt_apply_failed", "The receipt could not be applied. Check the Scanned list and try again.")
+		return
+	case err != nil:
+		httpx.WriteAPIError(w, err)
 		return
 	}
 	results := res.Results

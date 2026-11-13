@@ -718,3 +718,79 @@ func TestAPhonesOpCannotUseAReceiptUUID(t *testing.T) {
 		t.Error("the receipt uuid was written")
 	}
 }
+
+// pricePlan re-prices u1 and u2 to 140: a plan that touches the session's own scans.
+func pricePlan() receipt.Plan {
+	return receipt.Plan{Steps: []receipt.Step{step(receipt.PhasePrice,
+		receipt.Op{Kind: receipt.OpSetPrices, Prices: []receipt.PriceChange{{UUID: "u1", PriceCents: 140, PerKgCents: -1}, {UUID: "u2", PriceCents: 140, PerKgCents: -1}}},
+		receipt.Op{Kind: receipt.OpSetPrices})}}
+}
+
+// A Price edit (from another phone, or this phone's queue) that lands after the read is refused by the apply's own
+// check: the session is loaded and fingerprinted under the lock the plan then runs under.
+func TestApplyReceiptRefusesASessionThatChangedSinceTheRead(t *testing.T) {
+	e := newRR3Env(t)
+	ctx := context.Background()
+	uuids := []string{"u1", "u2", "u3"}
+	evs, err := e.svc.SessionEvents(ctx, 1, uuids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fp := receipt.Fingerprint(evs)
+	if _, err := e.svc.SetPrices(ctx, service.SetPricesInput{ClientUUIDs: []string{"u1", "u2"}, PriceCents: 130}); err != nil {
+		t.Fatal(err)
+	}
+	before, published := e.snapshot(t), e.bus.count(shopservice.Topic)
+	built := false
+	_, err = e.svc.ApplyReceipt(ctx, service.ReceiptApply{ShopID: 1, ClientUUIDs: uuids, Fingerprint: fp,
+		Build: func() (receipt.Plan, error) { built = true; return pricePlan(), nil }})
+	if !errors.Is(err, service.ErrReceiptSessionChanged) {
+		t.Fatalf("err = %v, want ErrReceiptSessionChanged", err)
+	}
+	if built || e.snapshot(t) != before || e.bus.count(shopservice.Topic) != published {
+		t.Errorf("a refused apply built its plan (%v), wrote or published", built)
+	}
+	if _, err := e.svc.ApplyReceipt(ctx, service.ReceiptApply{ShopID: 1, ClientUUIDs: nil, Fingerprint: receipt.Fingerprint(nil),
+		Build: func() (receipt.Plan, error) { return pricePlan(), nil }}); !errors.Is(err, service.ErrReceiptSessionChanged) {
+		t.Errorf("an empty session: err = %v, want ErrReceiptSessionChanged", err)
+	}
+}
+
+// The race the handler had: the check and the plan under two holds of the lock, so an Undo could land between them.
+// ApplyReceipt holds the lock from the check to the end of the plan: an Undo sent while it builds waits, and runs after.
+func TestApplyReceiptHoldsTheLockFromTheCheckToTheEndOfThePlan(t *testing.T) {
+	e := newRR3Env(t)
+	ctx := context.Background()
+	uuids := []string{"u1", "u2", "u3"}
+	evs, err := e.svc.SessionEvents(ctx, 1, uuids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	building, release := make(chan struct{}), make(chan struct{})
+	applyDone := make(chan error, 1)
+	go func() {
+		_, err := e.svc.ApplyReceipt(ctx, service.ReceiptApply{ShopID: 1, ClientUUIDs: uuids, Fingerprint: receipt.Fingerprint(evs),
+			Build: func() (receipt.Plan, error) { close(building); <-release; return pricePlan(), nil }})
+		applyDone <- err
+	}()
+	select {
+	case <-building:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the apply never built its plan")
+	}
+	undoDone := make(chan struct{})
+	go func() { _, _ = e.svc.Undo(ctx, "u2"); close(undoDone) }()
+	select {
+	case <-undoDone:
+		t.Fatal("an Undo ran between the session check and the plan")
+	case <-time.After(150 * time.Millisecond):
+	}
+	close(release)
+	if err := <-applyDone; err != nil {
+		t.Fatal(err)
+	}
+	<-undoDone
+	if e.priceOfScan(t, "u1") != 140 || e.live(t, "u2") {
+		t.Errorf("u1 = %d, u2 live %v: want the plan first, then the Undo", e.priceOfScan(t, "u1"), e.live(t, "u2"))
+	}
+}

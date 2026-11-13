@@ -51,12 +51,52 @@ func (e *ReceiptApplyError) Unwrap() error { return e.Err }
 // Is makes errors.Is(err, ErrReceiptApplyFailed) true.
 func (e *ReceiptApplyError) Is(target error) bool { return target == ErrReceiptApplyFailed }
 
+// ErrReceiptSessionChanged is an apply whose session no longer has the read's fingerprint (a Scan, an Undo or a Price
+// edit since the read, or a session ended by Change Shop): nothing was written (receipt-reading §7.2 step 2).
+var ErrReceiptSessionChanged = errors.New("scan: receipt session changed")
+
+// ReceiptApply is one apply of a read: the phone's session now (its Shop and client uuids), the read's fingerprint,
+// and the plan to run once the session still matches it. Build is pure (receipt.BuildPlan over the read); its error
+// is returned as is, with nothing written.
+type ReceiptApply struct {
+	ShopID      int64
+	ClientUUIDs []string
+	Fingerprint string
+	Build       func() (receipt.Plan, error)
+}
+
+// ApplyReceipt is the receipt apply (receipt-reading §7.2, §8.2): under ONE hold of the scan lock it loads the
+// session's events, compares their fingerprint with the read's, builds the plan and runs it. No Scan, Undo or Price
+// edit from another phone can land between the check and the plan. A session that changed (or is empty) is
+// ErrReceiptSessionChanged.
+func (s *Service) ApplyReceipt(ctx context.Context, in ReceiptApply) (ReceiptApplyResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	events, err := s.sessionEvents(ctx, in.ShopID, in.ClientUUIDs)
+	if err != nil {
+		return ReceiptApplyResult{}, err
+	}
+	if len(events) == 0 || receipt.Fingerprint(events) != in.Fingerprint {
+		return ReceiptApplyResult{}, ErrReceiptSessionChanged
+	}
+	plan, err := in.Build()
+	if err != nil {
+		return ReceiptApplyResult{}, err
+	}
+	return s.applyReceiptPlan(ctx, plan)
+}
+
 // SessionEvents is the one loader the read and the apply share (receipt-reading §7.1 step 1): the live shop_scan and
 // shop_unknown events among uuids, at this Shop, in ledger order. Unknown, undone and other-Shop uuids are ignored.
-// PerKgCents is the per kg of that day's Price, for a weighed scan (-1 for a pack scan or none). It takes the scan lock, so it never sees a plan half applied.
+// It takes the scan lock, so it never sees a plan half applied.
 func (s *Service) SessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.sessionEvents(ctx, shopID, uuids)
+}
+
+// sessionEvents is SessionEvents with the scan lock held.
+func (s *Service) sessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error) {
 	var evs []store.Event
 	seen := make(map[string]bool, len(uuids))
 	for _, u := range uuids {
@@ -113,19 +153,25 @@ func (s *Service) SessionEvents(ctx context.Context, shopID int64, uuids []strin
 		if !weighed {
 			perKg = -1
 		}
-		out = append(out, receipt.ScanEvent{UUID: ev.ClientUUID, ProductID: p.ID, Product: p.Name, BaseUnit: p.BaseUnit,
-			PackSize: int(p.PackSize), Weighed: weighed, Quantity: ev.Quantity, PriceCents: price, PerKgCents: perKg,
-			ShopID: shopID, Date: string(date)})
+		out = append(out, receipt.ScanEvent{UUID: ev.ClientUUID, ProductID: p.ID, Product: p.Name,
+			BaseUnit: p.BaseUnit, PackSize: int(p.PackSize), Weighed: weighed, Quantity: ev.Quantity, PriceCents: price,
+			PerKgCents: perKg, ShopID: shopID, Date: string(date)})
 	}
 	return out, nil
 }
 
 // ApplyReceiptPlan runs a receipt's plan under the scan lock: each step in order, and on the first failure the inverses
 // of the steps that did something, in reverse, every one tried. It publishes one update at the end; a failure that was put
-// back cleanly publishes nothing, and one whose put-back failed publishes so the phones reload.
+// back cleanly publishes nothing, and one whose put-back failed publishes so the phones reload. It does not check the
+// session: the apply route uses ApplyReceipt, which does, under the same lock.
 func (s *Service) ApplyReceiptPlan(ctx context.Context, plan receipt.Plan) (ReceiptApplyResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.applyReceiptPlan(ctx, plan)
+}
+
+// applyReceiptPlan is ApplyReceiptPlan with the scan lock held.
+func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (ReceiptApplyResult, error) {
 	r := &planRun{s: s, refs: map[string]int64{}, scanOf: map[string]string{}, index: map[string]int{}}
 	for _, st := range plan.Steps {
 		if st.Op.Kind == receipt.OpNewScan && st.Op.Ref != "" {
