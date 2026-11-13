@@ -100,16 +100,42 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
     ],
   })
 
-  it("the Planned Meal sheet's From link opens the Had it sheet of that Leftover, with the dry run notes", async () => {
-    setup([chilliFrozen], {
+  const openLink = async (leftovers: Leftover[], link: string) => {
+    setup(leftovers, {
       'GET /api/plan': planView(),
       'GET /api/recipes/10': { id: 10, frozenUseByDays: null, leftoverUseByDays: null },
       'POST /api/plan/leftovers/5/had-it?dryRun=1': { replanned: [friLunch] },
+      'POST /api/plan/leftovers/5/take-out?dryRun=1': { replanned: [friLunch] },
     })
     await userEvent.click(await screen.findByRole('button', { name: /Chilli/ }))
-    await userEvent.click(await screen.findByRole('button', { name: "From Mon's Chilli" }))
-    const sheet = await screen.findByRole('dialog', { name: 'How many portions of Chilli did you have?' })
-    expect(await within(sheet).findByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: link }))
+    return screen.findByRole('dialog', { name: 'Chilli Leftover' })
+  }
+
+  it("the From link opens that Leftover's own sheet: portions, Use-by, Storage Place when frozen, and its actions", async () => {
+    const sheet = await openLink([chilliFrozen], "From Mon's Chilli")
+    expect(within(sheet).getByText('3 portions · Use by 10 Feb')).toBeInTheDocument()
+    expect(within(sheet).getByText('Garage Freezer')).toBeInTheDocument()
+    expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Take out'])
+  })
+
+  it('a Leftover that is not frozen shows no Storage Place and offers Freeze it', async () => {
+    const sheet = await openLink([{ ...chilliFrozen, frozen: false, frozenOn: null, storagePlaceId: null, storagePlaceName: null, useBy: '2026-11-14' }], "From Mon's Chilli")
+    expect(within(sheet).getByText('3 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(sheet).queryByText('Garage Freezer')).toBeNull()
+    expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Freeze it'])
+  })
+
+  it('opens nothing else on its own: no portions question until an action is chosen', async () => {
+    await openLink([chilliFrozen], "From Mon's Chilli")
+    expect(screen.queryByRole('dialog', { name: 'How many portions of Chilli did you have?' })).toBeNull()
+  })
+
+  it('an action there opens the same sheet as the Today and Pantry rows, with the dry run notes', async () => {
+    const sheet = await openLink([chilliFrozen], "From Mon's Chilli")
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Take out' }))
+    const take = await screen.findByRole('dialog', { name: 'Take Chilli out of the freezer?' })
+    expect(await within(take).findByText('Fri Lunch was going to have it; it is planned again.')).toBeInTheDocument()
   })
 
   it('Choose a Recipe offers From the freezer and pins the Leftover with its id', async () => {
