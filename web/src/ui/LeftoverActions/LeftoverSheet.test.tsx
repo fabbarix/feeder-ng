@@ -285,13 +285,17 @@ describe("dry run on Had it and Threw it out", () => {
     ).toBeInTheDocument();
     expect(api.calls[0]!.body).toEqual({ portions: 3 });
   });
-  it("Take out never asks the dry run", async () => {
-    const api = dryRuns();
+  it("Take out asks the dry run too and names the Planned Meals it replans", async () => {
+    const api = dryRuns({
+      "POST /api/plan/leftovers/5/take-out?dryRun=1": { replanned: [friLunch] },
+    });
     view("take-out", { leftover: frozenChilli() });
-    await userEvent.click(
-      screen.getByRole("combobox", { name: "Storage Place" }),
-    );
-    expect(api.calls).toEqual([]);
+    expect(
+      await screen.findByText(
+        "Fri Lunch was going to have it; it is planned again.",
+      ),
+    ).toBeInTheDocument();
+    expect(api.calls[0]!.body).toEqual({ storagePlaceId: 1 });
   });
 });
 

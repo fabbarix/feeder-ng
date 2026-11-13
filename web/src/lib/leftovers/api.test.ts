@@ -39,12 +39,22 @@ describe('leftoversApi', () => {
     mockApi({ 'POST /api/plan/leftovers/1/freeze': { frozen: frozenChilli(), left: null, replanned: [] } })
     expect((await leftoversApi.freeze(1, 2, 3)).left).toBeNull()
   })
-  it('takeOut POSTs the Storage Place (null for Not sorted) and returns the flat Leftover', async () => {
-    const api = mockApi({ 'POST /api/plan/leftovers/5/take-out': leftover({ id: 5, useBy: '2026-11-15' }) })
+  it('takeOut POSTs the Storage Place (null for Not sorted) and returns {leftover, replanned} like Had it', async () => {
+    const api = mockApi({ 'POST /api/plan/leftovers/5/take-out': { leftover: leftover({ id: 5, useBy: '2026-11-15' }), replanned: [friLunch] } })
     const out = await leftoversApi.takeOut(5, null)
     expect(api.calls[0]!.body).toEqual({ storagePlaceId: null })
-    expect(out.id).toBe(5)
-    expect(out.useBy).toBe('2026-11-15')
+    expect(out.leftover.id).toBe(5)
+    expect(out.leftover.useBy).toBe('2026-11-15')
+    expect(out.replanned).toEqual([friLunch])
+  })
+  it('takeOut treats a missing or null replanned as none', async () => {
+    mockApi({ 'POST /api/plan/leftovers/5/take-out': { leftover: leftover({ id: 5 }), replanned: null } })
+    expect((await leftoversApi.takeOut(5, 3)).replanned).toEqual([])
+  })
+  it('preview take-out POSTs ?dryRun=1 with the Storage Place (null = Not sorted)', async () => {
+    const api = mockApi({ 'POST /api/plan/leftovers/5/take-out?dryRun=1': { replanned: [friDinner] } })
+    expect(await leftoversApi.preview(5, { kind: 'take-out', storagePlaceId: null })).toEqual([friDinner])
+    expect(api.calls[0]!.body).toEqual({ storagePlaceId: null })
   })
   it('preview POSTs had-it with ?dryRun=1 and returns the Planned Meals that would lose portions', async () => {
     const api = mockApi({ 'POST /api/plan/leftovers/1/had-it?dryRun=1': { replanned: [friLunch] } })

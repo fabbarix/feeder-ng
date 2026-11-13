@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../../features/settings/test-utils'
 import { ToastProvider } from '../../ui'
-import { friLunch, leftover, TODAY } from './fixtures'
+import { friDinner, friLunch, leftover, TODAY } from './fixtures'
 import { useLeftoverActions, useLeftovers, useReplanPreview } from './useLeftoverActions'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -131,7 +131,7 @@ describe('useLeftoverActions', () => {
   })
 
   it('Take out POSTs the Storage Place (null = Not sorted)', async () => {
-    const api = mockApi({ 'POST /api/plan/leftovers/1/take-out': leftover({ useBy: '2026-11-15' }) })
+    const api = mockApi({ 'POST /api/plan/leftovers/1/take-out': { leftover: leftover({ useBy: '2026-11-15' }), replanned: [] } })
     const { result } = renderHook(() => useLeftoverActions({ today: TODAY }), { wrapper: wrapperWith(newClient()) })
     await act(async () => {
       await result.current.run(chilli, { kind: 'take-out', storagePlaceId: null })
@@ -205,11 +205,16 @@ describe('useReplanPreview (the server dry run)', () => {
     await waitFor(() => expect(result.current).toEqual([friLunch]))
     expect(api.calls).toHaveLength(2)
   })
-  it('does not call the server without a request or for Take out', async () => {
+  it('does not call the server without a request', async () => {
     const api = mockApi({})
     renderHook(() => useReplanPreview(1, null), { wrapper: wrapperWith(newClient()) })
-    renderHook(() => useReplanPreview(1, { kind: 'take-out', storagePlaceId: null }), { wrapper: wrapperWith(newClient()) })
     await act(async () => {})
     expect(api.calls).toEqual([])
+  })
+  it('Take out asks the dry run too, with the chosen Storage Place', async () => {
+    const api = mockApi({ 'POST /api/plan/leftovers/1/take-out?dryRun=1': { replanned: [friDinner] } })
+    const { result } = renderHook(() => useReplanPreview(1, { kind: 'take-out', storagePlaceId: 3 }), { wrapper: wrapperWith(newClient()) })
+    await waitFor(() => expect(result.current).toEqual([friDinner]))
+    expect(api.calls[0]!.body).toEqual({ storagePlaceId: 3 })
   })
 })
