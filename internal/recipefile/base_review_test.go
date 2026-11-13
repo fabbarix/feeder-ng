@@ -438,8 +438,3 @@ func TestBuildCommitCarriesTheAnsweredTiles(t *testing.T) {
 		t.Fatalf("commit tiles = %+v", c.BaseRecipeLines)
 	}
 }
-
-func TestCommitOfBaseRecipesWaitsForBRB(t *testing.T) {
-	t.Skip("BR-C commit half: creating Base recipes and their Ingredients before the Recipes that call for them, converting a " +
-		"plannable Recipe, 'replace keeps id and Ingredient' and the cycle check at Confirm all need BR-B's store (one transaction).")
-}

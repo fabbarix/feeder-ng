@@ -290,9 +290,3 @@ func TestAnExportWithASameNameIngredientParsesAndImportsWithoutProblems(t *testi
 		t.Errorf("one Ingredient row for béchamel, got %d", n)
 	}
 }
-
-func TestSameNameIngredientsRoundTripAsTwoIngredients(t *testing.T) {
-	t.Skip("BR-C/BR-B: telling the plain béchamel line from the Base recipe's one after import (two Ingredients again) " +
-		"needs the store's Base recipe Ingredient lifecycle (base-recipe:<id> keys); the file format has one name only. " +
-		"Test it with the commit half.")
-}

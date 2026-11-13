@@ -2,10 +2,8 @@ package recipefile
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 
-	"github.com/fabbarix/feeder-ng/internal/ingredient"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
 
@@ -14,7 +12,7 @@ import (
 // A tile is made for a line of a kept Recipe that the model marked as calling for another recipe (`recipe`), or whose
 // Ingredient name matches a Recipe by name: an existing Base recipe, an existing plannable Recipe, or a Recipe of the
 // same file. A marked line matches on the mark's name, close names included; an unmarked line matches on exact name
-// only. Matching ignores case, accents and a plural "s". Only an exact match to a Base recipe (existing, or a Base
+// only. Matching is baserecipe.MatchReference: case, accents and a plural "s" are ignored. Only an exact match to a Base recipe (existing, or a Base
 // recipe of the file) is preselected, and a Base recipe is preferred over a plain Ingredient of the same name. A
 // preselected answer still needs the User's confirmation of the review.
 
@@ -88,68 +86,55 @@ func (r *review) baseAnswer(path string) (BaseRecipeLineDecision, bool) {
 	return d, ok
 }
 
-// baseCandidates are the Recipes a line may be, exact matches first, then Base recipes, Recipes of the file and
-// plannable Recipes. The Recipe the line sits in is never a candidate: a Recipe does not call for itself.
+// baseCandidates are the Recipes a line may be, ranked by baserecipe.MatchReference (the picker's matcher too): exact
+// matches first, then Base recipes, Recipes of the file and plannable Recipes. A marked line keeps the close matches;
+// an unmarked one only the exact ones. The Recipe the line sits in is never a candidate: a Recipe does not call for
+// itself.
 func (r *review) baseCandidates(i int, l Line) []BaseRecipeSuggestion {
 	name, marked := l.Ingredient, l.Recipe != nil
 	if marked {
 		name = l.Recipe.Name
 	}
-	key := refKey(name)
-	own := refKey(r.f.Recipes[i].Name)
-	match := func(candidate string) (exact, ok bool) {
-		ck := refKey(candidate)
-		if ck == key {
-			return true, true
-		}
-		if !marked {
-			return false, false
-		}
-		return false, ingredient.Similarity(key, ck) >= ingredient.MinScore
-	}
-	var out []BaseRecipeSuggestion
+	own := r.f.Recipes[i].Name
+	var cands []baserecipe.RefCandidate
 	for _, e := range r.ex.Recipes {
-		if refKey(e.Name) == own || e.ReadyMeal {
+		if sameRecipeName(e.Name, own) || e.ReadyMeal {
 			continue // a Ready Meal can never be a Base recipe (ADR 0015)
 		}
-		exact, ok := match(e.Name)
-		if !ok {
-			continue
-		}
-		kind := SuggestPlannable
+		kind := baserecipe.KindPlannable
 		if r.baseRecipes[e.ID] {
-			kind = SuggestBase
+			kind = baserecipe.KindBase
 		}
-		out = append(out, BaseRecipeSuggestion{Kind: kind, RecipeID: e.ID, Name: e.Name, Exact: exact})
+		cands = append(cands, baserecipe.RefCandidate{Kind: kind, RecipeID: e.ID, Name: e.Name})
 	}
 	for j, fr := range r.f.Recipes {
-		if !r.kept[j] || j == i || refKey(fr.Name) == own || fr.ReadyMeal {
+		if !r.kept[j] || j == i || sameRecipeName(fr.Name, own) || fr.ReadyMeal {
 			continue
 		}
-		exact, ok := match(fr.Name)
-		if !ok {
-			continue
-		}
-		idx := j
-		out = append(out, BaseRecipeSuggestion{Kind: SuggestFile, RecipeIndex: &idx, Name: fr.Name, Exact: exact})
+		cands = append(cands, baserecipe.RefCandidate{Kind: baserecipe.KindFile, FileIndex: j, Name: fr.Name})
 	}
-	sort.SliceStable(out, func(a, b int) bool {
-		if out[a].Exact != out[b].Exact {
-			return out[a].Exact
+	var out []BaseRecipeSuggestion
+	// FileIndex -1: no cue is read yet ("previous recipe" and the like), only names.
+	for _, s := range baserecipe.MatchReference(baserecipe.Reference{Name: name, FileIndex: -1}, cands) {
+		if !marked && !s.Exact {
+			continue
 		}
-		return kindRank(out[a].Kind) < kindRank(out[b].Kind)
-	})
+		sg := BaseRecipeSuggestion{Kind: s.Kind, Name: s.Name, Exact: s.Exact}
+		if s.Kind == baserecipe.KindFile {
+			idx := s.FileIndex
+			sg.RecipeIndex = &idx
+		} else {
+			sg.RecipeID = s.RecipeID
+		}
+		out = append(out, sg)
+	}
 	return out
 }
 
-func kindRank(kind string) int {
-	switch kind {
-	case SuggestBase:
-		return 0
-	case SuggestFile:
-		return 1
-	}
-	return 2
+// sameRecipeName reports whether two Recipe names are the same for Base recipe matching.
+func sameRecipeName(a, b string) bool {
+	m := baserecipe.MatchReference(baserecipe.Reference{Name: a, FileIndex: -1}, []baserecipe.RefCandidate{{Kind: baserecipe.KindFile, Name: b}})
+	return len(m) == 1 && m[0].Exact
 }
 
 // preselect is the answer a line starts with: only an exact match to a Base recipe (existing first, then one of the
@@ -333,31 +318,4 @@ func (r *review) plainIngredient(name string) *ExistingRef {
 		}
 	}
 	return nil
-}
-
-// refKey is the name key for Base recipe matching: case, accents and a plural "s" ignored, words collapsed.
-func refKey(s string) string {
-	fields := strings.Fields(strings.Map(unaccent, strings.ToLower(s)))
-	for k, t := range fields {
-		if len(t) > 3 && strings.HasSuffix(t, "s") && !strings.HasSuffix(t, "ss") {
-			fields[k] = t[:len(t)-1]
-		}
-	}
-	return strings.Join(fields, " ")
-}
-
-var accentFold = map[rune]rune{
-	'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a',
-	'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-	'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-	'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
-	'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-	'ç': 'c', 'ñ': 'n',
-}
-
-func unaccent(r rune) rune {
-	if f, ok := accentFold[r]; ok {
-		return f
-	}
-	return r
 }
