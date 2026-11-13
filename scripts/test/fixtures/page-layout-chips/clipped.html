@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>clipped chip</title>
+<!-- ds-plan round 3 (the Plan review: "Leftover from Sat" shown as "L…" on a 1024 px row). The chip line is only as wide as its
+     content (no inline-size: 100%), so `max-inline-size: 40%` of that small width cuts a LONE chip, with the row's room unused.
+     The guard must report P14. -->
+<style>
+  body { margin: 0; font: 15px/20px sans-serif }
+  .page { padding: 0 16px }
+  .bento-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)) }
+  .tile { display: grid; grid-template-columns: minmax(0, 1fr); padding: 16px; border: 1px solid #888; border-radius: 20px }
+  .row { display: flex; gap: 8px; align-items: flex-start }
+  .row__text { min-width: 0; flex: 1 1 auto }
+  .row__chips { display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; overflow: hidden }
+  .chip { display: inline-flex; align-items: center; block-size: 26px; padding: 0 10px; border-radius: 999px; background: #eee; white-space: nowrap; flex: none; max-inline-size: 40% }
+  .chip__label { min-width: 0; overflow: hidden; text-overflow: ellipsis }
+</style>
+<script>const mq = matchMedia('(prefers-color-scheme: dark)'); const set = () => { document.documentElement.dataset.scheme = mq.matches ? 'dark' : 'light' }; set(); mq.addEventListener('change', set)</script></head><body>
+<main><div class="page" data-page-width="wide"><h1>Plan</h1><div class="bento-grid">
+  <section class="tile"><h2>Sat 14</h2>
+    <div class="row"><div class="row__text"><div>Sam's Rotisserie Chicken</div><div class="row__chips"><span class="chip"><span class="chip__label">Leftover from Sat</span></span></div></div><button>⇆</button></div>
+  </section>
+</div></div></main></body></html>

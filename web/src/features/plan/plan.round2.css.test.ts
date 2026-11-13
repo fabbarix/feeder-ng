@@ -26,8 +26,10 @@ describe('1. nothing in a day tile can be wider than the tile (the Mon 16 row wa
 })
 
 describe('2. chips keep their full size and the row caps them (lib/rowChips capChips)', () => {
-  it('a chip in the row never shrinks: flex none, so there are no "Sl…" stubs', () => {
-    expect(d('.plan-row__chips .chip')['flex']).toBe('none')
+  // round 3: was `flex: none` + max 40 %; superseded by plan.round3.css.test.ts (chips shrink only as a last resort, on a full-width line).
+  it('a chip in the row may shrink only when the line is full (flex 0 1 auto); the "+N" chip never does', () => {
+    expect(d('.plan-row__chips .chip')['flex']).toBe('0 1 auto')
+    expect(d(".plan-row__chips .chip[data-kind='count']")['flex']).toBe('none')
   })
 
   it('the chip line still clips on one line as a last resort', () => {
