@@ -1,4 +1,4 @@
-import type { Leftover as LeftoverLike, PlanSlot } from '../types'
+import type { Leftover as LeftoverLike } from '../types'
 import type { Leftover } from '../../../lib/leftovers/types'
 import { formatPortions } from './cook'
 import { dayNumber, weekdayName } from './phrase'
@@ -14,21 +14,6 @@ export function asLeftover(l: LeftoverLike): Leftover {
     toAnswer: l.toAnswer ?? false,
     plannedPortions: l.plannedPortions ?? 0,
   }
-}
-
-/**
- * The Leftovers a Planned Meal in this view is served from. "Leftovers to use" leaves them out (the meal's own link shows them),
- * except a question: one past its Use-by is still asked until it is answered.
- */
-export function servedLeftoverIds(slots: PlanSlot[]): Set<number> {
-  const ids = new Set<number>()
-  for (const slot of slots) {
-    for (const course of slot.courses ?? []) {
-      const id = course.meal?.servedFromLeftover?.leftoverId
-      if (id !== null && id !== undefined) ids.add(id)
-    }
-  }
-  return ids
 }
 
 export interface LeftoverRow {

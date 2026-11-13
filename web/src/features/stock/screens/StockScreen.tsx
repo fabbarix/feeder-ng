@@ -72,9 +72,9 @@ export function StockScreen(): ReactElement | null {
   const lots = useStockLots(selectedId)
   // The household's date comes from the server with the lots; go-off wording uses it.
   const today = spoiled.today ?? lots.today ?? pantry.lots.today ?? ''
-  // B5-LOW: the frozen Leftovers sit in the Storage Place sections; the hook is optional so a stubbed Pantry still renders.
+  // B5-LOW: the frozen Leftovers sit in the Storage Place sections (usePantry owns the flow).
   const leftovers = pantry.leftovers
-  const sections = leftovers?.sections ?? []
+  const sections = leftovers.sections
 
   const items = useMemo(() => filterTotals(sortTotals(totals.data ?? []), filter, query), [totals.data, filter, query])
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
@@ -157,7 +157,7 @@ export function StockScreen(): ReactElement | null {
                       {strings.filters[f]}
                     </Chip>
                   ))}
-                  {mode === 'places' && leftovers && leftovers.frozenCount > 0 ? (
+                  {mode === 'places' && leftovers.frozenCount > 0 ? (
                     <Chip kind="filter" selected={leftovers.onlyLeftovers} onClick={() => leftovers.setOnlyLeftovers(!leftovers.onlyLeftovers)}>
                       {strings.leftoversFilter}
                     </Chip>
@@ -181,7 +181,7 @@ export function StockScreen(): ReactElement | null {
             <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
           ) : totals.status === 'offline' ? (
             <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
-          ) : totals.status === 'empty' && !(leftovers && leftovers.frozenCount > 0) ? (
+          ) : totals.status === 'empty' && leftovers.frozenCount === 0 ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
           ) : mode === 'places' ? (
             sections.length === 0 ? (
@@ -209,7 +209,7 @@ export function StockScreen(): ReactElement | null {
                           key={`leftover-${leftover.id}`}
                           leftover={leftover}
                           today={today}
-                          onAction={(kind, leftover) => leftovers?.flow.openSheet(kind, leftover)}
+                          onAction={(kind, leftover) => leftovers.flow.openSheet(kind, leftover)}
                           showPlace={!pantry.view.groupByPlace}
                         />
                       ))}
@@ -314,7 +314,7 @@ export function StockScreen(): ReactElement | null {
         }}
       />
 
-      {leftovers ? <LeftoverSheets flow={leftovers.flow} /> : null}
+      <LeftoverSheets flow={leftovers.flow} />
 
       <AddLotSheet
         open={adding}

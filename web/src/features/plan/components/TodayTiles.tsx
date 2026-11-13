@@ -91,6 +91,8 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onMar
 export interface LeftoversTileProps {
   leftovers: Leftover[]
   today: string
+  /** The tile's tone: "info" while a question is open (round 2), else the Leftover tone. */
+  tone?: 'info' | 'leftover'
   /** Makes the whole tile open the Plan (stretched target named "Leftovers to use"); the rows sit above it. */
   onOpen?: () => void
   /** B5-LOW: the rows act in place: a question answers (after the dry run), a row opens its sheet from the flow. */
@@ -102,7 +104,7 @@ export interface LeftoversTileProps {
  * leftover icon, a row per Leftover "Chicken curry" with meta "2 portions · Use by Thu" (the spoil tone when due
  * today or tomorrow). Renders nothing when there are none.
  */
-export function LeftoversTile({ leftovers, today, onOpen, flow }: LeftoversTileProps): ReactNode {
+export function LeftoversTile({ leftovers, today, onOpen, flow, tone = 'leftover' }: LeftoversTileProps): ReactNode {
   // With a flow the frozen Leftovers that are not to answer stay on the Pantry: the tile lists what it shows.
   const rows = flow ? [] : leftoverRows(leftovers, today)
   if (flow ? tileRows(leftovers.map(asLeftover), today).length === 0 : rows.length === 0) return null
@@ -110,7 +112,7 @@ export function LeftoversTile({ leftovers, today, onOpen, flow }: LeftoversTileP
     <Tile
       as="section"
       variant="status"
-      status="leftover"
+      status={tone}
       className="plan-leftovers"
       overline={s.leftoversOverline}
       overlineIcon="leftover"

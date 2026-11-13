@@ -59,14 +59,23 @@ export function pantryLeftoverText(l: Leftover, today: string): { title: string;
   return { title: l.recipeName, meta: `${portionsLabel(l.portions)} · ${useByPhrase(l.useBy, today)}` }
 }
 
+/** The Stock Lot "Use soon" window: today and the three days after (the same rule as the Lots). */
+export const LEFTOVER_USE_SOON_DAYS = 3
+
 /**
- * The Pantry's "Use soon" and "Spoiled" filters for Leftovers: Use soon is a Use-by today or tomorrow (or past), Spoiled is
- * a Leftover to answer (past its Use-by). "All" keeps every frozen Leftover.
+ * The Pantry's "Use soon" and "Spoiled" filters for Leftovers. Use soon: a Use-by from today to today + 3, not past, and never
+ * a Leftover to answer. Spoiled: a Leftover to answer. "All" keeps every frozen Leftover. With no Household date (empty
+ * `today`) there is no day maths, so Use soon is empty.
  */
 export function statusLeftovers(leftovers: Leftover[], status: StockFilter, today: string): Leftover[] {
   if (status === 'all') return leftovers
   if (status === 'spoiled') return leftovers.filter((l) => l.toAnswer)
-  return leftovers.filter((l) => dayDiff(l.useBy, today) <= 1)
+  if (today === '') return []
+  return leftovers.filter((l) => {
+    if (l.toAnswer) return false
+    const days = dayDiff(l.useBy, today)
+    return days >= 0 && days <= LEFTOVER_USE_SOON_DAYS
+  })
 }
 
 /** One section of the Pantry list: a Storage Place (or Not sorted), or the one ungrouped list (key -1). */
@@ -98,4 +107,15 @@ export function pantrySections(lotGroups: PantryGroup[], leftovers: Leftover[], 
   }
   const sections = [...byKey.values()].filter((s) => s.lots.length + s.leftovers.length > 0)
   return sections.sort((a, b) => (a.key === UNSORTED ? 1 : 0) - (b.key === UNSORTED ? 1 : 0) || a.name.localeCompare(b.name))
+}
+
+/**
+ * The delete confirm of a Storage Place that holds frozen Leftovers: they are named and say they stay frozen, marked Not sorted.
+ * With none, the usual Stock sentence (`stockBody`) stands.
+ */
+export function placeDeleteBody(inPlace: Leftover[], stockBody: string): string {
+  if (inPlace.length === 0) return stockBody
+  const names = inPlace.map((l) => l.recipeName).join(', ')
+  const stays = inPlace.length === 1 ? `1 frozen Leftover (${names}) stays frozen, marked Not sorted.` : `${inPlace.length} frozen Leftovers (${names}) stay frozen, marked Not sorted.`
+  return `${stockBody} ${stays}`
 }

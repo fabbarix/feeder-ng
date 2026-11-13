@@ -18,7 +18,6 @@ import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
 import { useContainerColumns } from '../hooks/useContainerColumns'
 import { usePlanScreen } from '../hooks/usePlanScreen'
 import { courseCells, unplannedOf } from '../lib/couldntGroups'
-import { servedLeftoverIds } from '../lib/leftovers'
 import { dateRange, groupByDay } from '../lib/days'
 import { cookPath } from '../lib/cook'
 import { planStrings } from '../strings'
@@ -42,7 +41,6 @@ export function PlanScreen(): ReactNode {
   const isAdmin = useMe().data?.isAdmin !== false
   const notice = useCouldntPlanNotice(unplanned, courseCells(plan.slots), isAdmin)
   const fix = useCouldntFix(s.openChoose)
-  const servedIds = useMemo(() => servedLeftoverIds(plan.slots), [plan.slots])
 
   let body: ReactNode
   if (plan.isLoading) body = <p className="plan__muted">{planStrings.loading}</p>
@@ -95,7 +93,7 @@ export function PlanScreen(): ReactNode {
           <CouldntPlanNotice groups={notice.groups} onFix={fix} span={columns === 7 ? 'full' : 2} />
         </BentoGrid>
       )}
-      <PlanLeftovers flow={s.leftovers} servedIds={servedIds} />
+      <PlanLeftovers flow={s.leftovers} />
       <div ref={gridRef} className="plan__grid-box">
         {body}
       </div>

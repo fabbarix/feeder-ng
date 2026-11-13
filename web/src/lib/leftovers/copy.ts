@@ -31,8 +31,8 @@ export const freezeTitle = (name: string): string => `Freeze ${name}`
 export const takeOutTitle = (name: string): string => `Take ${name} out of the freezer?`
 /** The details sheet of a Leftover ("From Mon's Chilli" opens "Chilli Leftover"). */
 export const detailsTitle = (name: string): string => `${name} Leftover`
-/** The question that names the Planned Meals an answer would replan. */
-export const answerTitle = (name: string): string => `Answer for ${name}?`
+/** The confirm that names the Planned Meals an answer would replan (round 2: "Replan for Chilli?"). */
+export const answerTitle = (name: string): string => `Replan for ${name}?`
 /** The button that gives an answer, in the question's words. */
 export const answerLabel = (answer: LeftoverAnswer): string => {
   if (answer === 'had_it') return leftoverStrings.hadIt

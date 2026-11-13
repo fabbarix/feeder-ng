@@ -1,6 +1,6 @@
-// The Leftover sheets of one screen, drawn from its flow: the action sheet, the details sheet and the answer question.
+// The Leftover sheets of one screen, drawn from its flow: the action sheet and the details sheet. An answer that would replan
+// is asked by the flow through the shared confirm.
 import type { LeftoverFlow } from '../../lib/leftovers/useLeftoverFlow'
-import { LeftoverAskDialog } from './LeftoverAskDialog'
 import { LeftoverDetailsSheet } from './LeftoverDetailsSheet'
 import { LeftoverSheet } from './LeftoverSheet'
 
@@ -25,10 +25,10 @@ export function LeftoverSheets({ flow }: LeftoverSheetsProps) {
           busy={flow.busy}
           onConfirm={(request) => void flow.confirm(request)}
           onClose={flow.closeSheet}
+          storagePlacesHref="/settings/storage-places"
         />
       ) : null}
       <LeftoverDetailsSheet leftover={flow.details} today={flow.today} onClose={flow.closeDetails} onAction={flow.openSheet} />
-      <LeftoverAskDialog asked={flow.asked} busy={flow.busy} onConfirm={() => void flow.confirmAnswer()} onCancel={flow.cancelAnswer} />
     </>
   )
 }
