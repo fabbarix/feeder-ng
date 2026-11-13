@@ -53,16 +53,20 @@ function show() {
     <MemoryRouter initialEntries={['/scan', '/scan/receipt']} initialIndex={1}>
       <ToastProvider>
         <ConfirmProvider>
-          <Routes>
-            <Route path="/scan/receipt" element={<ReceiptPhotosScreen />} />
-            <Route path="*" element={<p>elsewhere</p>} />
-          </Routes>
+          <div data-testid="screen">
+            <Routes>
+              <Route path="/scan/receipt" element={<ReceiptPhotosScreen />} />
+              <Route path="*" element={<p>elsewhere</p>} />
+            </Routes>
+          </div>
           <Where />
         </ConfirmProvider>
       </ToastProvider>
     </MemoryRouter>,
   )
 }
+// The screen's own content: ToastProvider's live regions (role status and alert) are always there, outside it.
+const inScreen = () => within(screen.getByTestId('screen'))
 const readButton = () => screen.queryByRole('button', { name: 'Read the receipt' })
 
 beforeEach(() => {
@@ -222,7 +226,7 @@ describe('reading', () => {
     setPhotos(2)
     const r = running()
     show()
-    const live = screen.getByRole('status')
+    const live = inScreen().getByRole('status')
     expect(live).toHaveTextContent('Reading the receipt…')
     expect(live).toHaveAttribute('aria-live', 'polite')
     expect(screen.queryByText('Long receipts can take up to a minute')).toBeNull()
@@ -233,7 +237,7 @@ describe('reading', () => {
     setPhotos(2)
     running({ elapsedSeconds: 15 })
     show()
-    expect(screen.getByRole('status')).toHaveTextContent('Long receipts can take up to a minute')
+    expect(inScreen().getByRole('status')).toHaveTextContent('Long receipts can take up to a minute')
   })
   it('while it runs the photos cannot be changed and the read cannot be started again', () => {
     setPhotos(2)
@@ -247,13 +251,13 @@ describe('reading', () => {
     setPhotos(2)
     running({ connectionLost: true })
     show()
-    expect(screen.getByRole('status')).toHaveTextContent('Lost the connection. The read continues; come back to see it.')
+    expect(inScreen().getByRole('status')).toHaveTextContent('Lost the connection. The read continues; come back to see it.')
   })
   it('starting shows the same progress', () => {
     setPhotos(2)
     setRead({ phase: 'starting', busy: true })
     show()
-    expect(screen.getByRole('status')).toHaveTextContent('Reading the receipt…')
+    expect(inScreen().getByRole('status')).toHaveTextContent('Reading the receipt…')
   })
   it('a finished read opens the review', () => {
     setPhotos(2)
@@ -269,7 +273,7 @@ describe('a failed read', () => {
     setPhotos(2)
     const r = failed({ code: 'assistant_unreachable' })
     show()
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach the assistant. Check the connection and try again.")
+    expect(inScreen().getByRole('alert')).toHaveTextContent("Couldn't reach the assistant. Check the connection and try again.")
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(r.start).toHaveBeenCalledWith([{ dataUrl: 'data:image/jpeg;base64,1' }, { dataUrl: 'data:image/jpeg;base64,2' }])
   })
@@ -277,7 +281,7 @@ describe('a failed read', () => {
     setPhotos(2)
     failed({ code: 'no_receipt_found' })
     show()
-    expect(screen.getByRole('alert')).toHaveTextContent('No receipt found in the photos. Take it flat, in good light.')
+    expect(inScreen().getByRole('alert')).toHaveTextContent('No receipt found in the photos. Take it flat, in good light.')
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
     expect(screen.getAllByRole('button', { name: /^Remove photo/ })).toHaveLength(2)
     expect(readButton()).toBeEnabled()
@@ -295,14 +299,14 @@ describe('a failed read', () => {
     setPhotos(1)
     failed({ code, ...extra })
     show()
-    expect(screen.getByRole('alert')).toHaveTextContent(text)
+    expect(inScreen().getByRole('alert')).toHaveTextContent(text)
   })
   it('an Admin is told the assistant needs settings and gets the link', () => {
     setAvail({ isAdmin: true })
     setPhotos(1)
     failed({ code: 'assistant_unavailable', reason: 'no_key' })
     show()
-    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe Assistant needs an API key. Add it in Settings.')
+    expect(inScreen().getByRole('alert')).toHaveTextContent('The Recipe Assistant needs an API key. Add it in Settings.')
     expect(screen.getByRole('link', { name: /Recipe Assistant settings/ })).toHaveAttribute('href', '/settings/recipe-assistant')
   })
 })

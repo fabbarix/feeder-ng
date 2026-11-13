@@ -31,17 +31,21 @@ function show(renderAdd?: (p: AddSheetRenderProps) => ReactNode) {
     <MemoryRouter initialEntries={['/scan', '/scan/receipt/review']} initialIndex={1}>
       <ToastProvider>
         <ConfirmProvider>
-          <Routes>
-            <Route path="/scan/receipt/review" element={<ReceiptReviewScreen renderAdd={renderAdd} />} />
-            <Route path="/scan/receipt" element={<p>photos page</p>} />
-            <Route path="/scan" element={<p>scan page</p>} />
-          </Routes>
+          <div data-testid="screen">
+            <Routes>
+              <Route path="/scan/receipt/review" element={<ReceiptReviewScreen renderAdd={renderAdd} />} />
+              <Route path="/scan/receipt" element={<p>photos page</p>} />
+              <Route path="/scan" element={<p>scan page</p>} />
+            </Routes>
+          </div>
           <Where />
         </ConfirmProvider>
       </ToastProvider>
     </MemoryRouter>,
   )
 }
+// The screen's own content: ToastProvider's live regions (role status and alert) are always there, outside it.
+const inScreen = () => within(screen.getByTestId('screen'))
 const check = (name: RegExp | string) => screen.getByRole('checkbox', { name }) as HTMLInputElement
 const rowOf = (name: RegExp | string) => check(name).closest('li') as HTMLElement
 const applyButton = () => within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: /^Apply \d+ changes?$/ })
@@ -301,7 +305,7 @@ describe('Apply: refused or failed', () => {
     api.apply.mockResolvedValue(outcome)
     show()
     await userEvent.click(applyButton())
-    return await screen.findByRole('alert')
+    return await inScreen().findByRole('alert')
   }
   it('409 receipt_session_changed: "Your scans changed since the receipt was read", with Read again', async () => {
     const alert = await press(refused(409, 'receipt_session_changed'))
