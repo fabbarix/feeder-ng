@@ -280,8 +280,8 @@ Feature: Plan stability: Bought Planned Meals (beta.5, plan 2.4, ADR 0013)
     Given the planned dinners:
       | date       | recipe        | batches |
       | 2026-11-09 | tomato pasta  | 1       |
-      | 2026-11-10 | roast chicken | 1       |
       | 2026-11-11 | roast chicken | 1       |
+      | 2026-11-10 | roast chicken | 1       |
     And I scan the barcode "5000000000012" at "Coop" as scan "scan-0001"
     When I take the main Course off the shopping Recipe "roast chicken"
     Then the Dinner of 2026-11-10 is "roast chicken"
