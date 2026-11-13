@@ -40,10 +40,17 @@ describe('BaseRecipePicker (design §3.7)', () => {
 
   it('searches', async () => {
     await open()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'roux')
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'rou')
     await waitFor(() => expect(screen.queryByRole('option', { name: /^Béchamel,/ })).toBeNull())
     expect(screen.getByRole('option', { name: /^Roux/ })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Add "Roux" as a new Base recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Add "Rou" as a new Base recipe' })).toBeInTheDocument()
+  })
+
+  it('offers no new Base recipe when the search is exactly the name of one', async () => {
+    await open()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search Base recipes' }), 'roux')
+    await screen.findByRole('option', { name: /^Roux/ })
+    expect(screen.queryByRole('option', { name: /^Add "/ })).toBeNull()
   })
 
   it('chooses an existing Base recipe', async () => {

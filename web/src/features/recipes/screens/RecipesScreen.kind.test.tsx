@@ -2,17 +2,19 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { summary } from '../fixtures.test-helper'
+import { courseChoices, summary } from '../fixtures.test-helper'
 import type { RecipeFilter } from '../types'
 
 // BR-D: the Recipes list's kind: Recipes · Base recipes (?kind=base), Base recipes hidden by default.
-const state = vi.hoisted(() => ({ filters: [] as unknown[], result: {} as Record<string, unknown> }))
+const state = vi.hoisted(() => ({ filters: [] as unknown[], result: {} as Record<string, unknown>, courses: [] as unknown[] }))
 vi.mock('../hooks/useRecipes', () => ({
   useRecipes: (f: unknown) => {
     state.filters.push(f)
     return state.result
   },
 }))
+vi.mock('../hooks/useRecipeTags', () => ({ useRecipeTags: () => ({ known: [], colourOf: () => undefined }) }))
+vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: state.courses, isPending: false, isError: false }) }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 
 import { RecipesScreen } from './RecipesScreen'
@@ -35,6 +37,7 @@ const bechamel = summary({ id: 9, name: 'Béchamel', baseRecipe: true, yield: 1,
 
 beforeEach(() => {
   state.filters = []
+  state.courses = courseChoices
   state.result = {
     recipes: [summary({ id: 1, name: 'Pancakes' }), summary({ id: 2, name: 'Roast tray' })],
     tags: [], isLoading: false, isEmpty: false, error: null,

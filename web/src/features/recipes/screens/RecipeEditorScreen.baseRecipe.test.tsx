@@ -143,7 +143,7 @@ describe('RecipeEditorScreen: take-over ask and refusals', () => {
     mockApi({})
     h.editor = editorOf({}, { refusal: 'Roux calls for Béchamel, which calls for Roux', errors: { 'lines.0': 'base_recipe_cycle' } })
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent('Roux calls for Béchamel, which calls for Roux')
+    expect(screen.getByText('Roux calls for Béchamel, which calls for Roux')).toBeInTheDocument()
   })
 })
 

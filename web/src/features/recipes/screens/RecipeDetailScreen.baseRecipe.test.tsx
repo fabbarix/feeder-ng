@@ -31,7 +31,7 @@ const view = (entry = '/recipes/7') =>
         <ConfirmProvider>
           <MemoryRouter initialEntries={[entry]}>
             <Routes>
-              <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
+              <Route path="/recipes/:id" element={<><RecipeDetailScreen /><Where /></>} />
               <Route path="*" element={<Where />} />
             </Routes>
           </MemoryRouter>

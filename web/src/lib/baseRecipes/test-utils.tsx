@@ -14,6 +14,14 @@ export interface RecordedCall {
 type Reply = { status?: number; json?: unknown }
 type Handler = Reply | unknown | ((call: RecordedCall) => Reply | unknown)
 
+/** "METHOD /path?b=2&a=1" -> "METHOD /path?a=1&b=2": the order of query parameters never decides a match. */
+function routeKey(method: string, path: string): string {
+  const [p, q] = path.split('?')
+  if (!q) return `${method} ${p}`
+  const sorted = [...new URLSearchParams(q).entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join('&')
+  return `${method} ${p}?${sorted}`
+}
+
 /** Stubs global fetch. Keys are "METHOD /path?query". A handler is a value (200 JSON), `{status, json}`, or a function of the call. Unknown routes answer 404. */
 export function mockApi(handlers: Record<string, Handler>) {
   const calls: RecordedCall[] = []
@@ -21,16 +29,17 @@ export function mockApi(handlers: Record<string, Handler>) {
     const method = init?.method ?? 'GET'
     const call: RecordedCall = { method, path: input, body: init?.body ? JSON.parse(String(init.body)) : undefined }
     calls.push(call)
-    const key = `${method} ${input}`
-    if (!(key in handlers)) return new Response(JSON.stringify({ error: { code: 'not_found', message: `no stub for ${key}` } }), { status: 404 })
-    const h = handlers[key]
+    const key = routeKey(method, input)
+    const table = Object.fromEntries(Object.entries(handlers).map(([k, v]) => [routeKey(k.slice(0, k.indexOf(' ')), k.slice(k.indexOf(' ') + 1)), v]))
+    if (!(key in table)) return new Response(JSON.stringify({ error: { code: 'not_found', message: `no stub for ${key}` } }), { status: 404 })
+    const h = table[key]
     const out = typeof h === 'function' ? (h as (c: RecordedCall) => unknown)(call) : h
     const reply = (out && typeof out === 'object' && ('status' in out || 'json' in out) ? out : { json: out }) as Reply
     const status = reply.status ?? (reply.json === undefined ? 204 : 200)
     return new Response(reply.json === undefined ? null : JSON.stringify(reply.json), { status })
   })
   vi.stubGlobal('fetch', fetchMock)
-  return { calls, callsTo: (method: string, path: string) => calls.filter((c) => c.method === method && c.path === path) }
+  return { calls, callsTo: (method: string, path: string) => calls.filter((c) => routeKey(c.method, c.path) === routeKey(method, path)) }
 }
 
 /** A refusal body as the API sends it: { error: { code, message, ...details } }. */
