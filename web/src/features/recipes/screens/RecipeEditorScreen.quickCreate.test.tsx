@@ -81,7 +81,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
     await startDraft()
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Create Ingredient' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Ingredient' })).toBeNull())
-    expect(iApi.create).toHaveBeenCalledWith({ name: 'saffron', baseUnit: 'g' })
+    expect(iApi.create).toHaveBeenCalledWith({ name: 'saffron', baseUnit: 'g', kind: 'food' })
     expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('Saffron')
     expect(recipeName()).toHaveValue('Paella')
     expect(screen.getByLabelText(recipeStrings.lines.quantity)).toHaveFocus()

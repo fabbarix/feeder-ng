@@ -25,6 +25,7 @@ describe('crumbsFor: Settings sub-pages', () => {
     ['/settings/tags', 'Tags'], // TG-S
     ['/settings/shops', 'Shops'],
     ['/ingredients', 'Ingredients'], // beta.5: Settings > Catalogue
+    ['/supplies', 'Supplies'], // H5 (decision D5): Settings > Catalogue
     ['/products', 'Products'],
     ['/settings/preferences', 'Your preferences'],
     ['/settings/notifications', 'Notifications'],

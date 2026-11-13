@@ -4,7 +4,7 @@ import { settingsGroups } from './settingsSections'
 
 const ids = (isAdmin: boolean) => settingsGroups(isAdmin).map((g) => [g.id, g.sections.map((s) => s.id)])
 
-const CATALOGUE = ['ingredients', 'products', 'shops', 'tags', 'courses', 'storagePlaces']
+const CATALOGUE = ['ingredients', 'supplies', 'products', 'shops', 'tags', 'courses', 'storagePlaces']
 const HOUSEHOLD = ['household', 'members', 'mealSlots', 'planningRules', 'accessRequests']
 const ADMIN_ROWS = ['allowlist', 'recipeAssistant']
 
@@ -38,6 +38,7 @@ describe('settingsGroups (beta.5, spec decision 43: Catalogue, Household, You)',
     const paths = Object.fromEntries(settingsGroups(true).flatMap((g) => g.sections.map((s) => [s.id, s.path])))
     expect(paths).toEqual({
       ingredients: '/ingredients',
+      supplies: '/supplies',
       products: '/products',
       household: '/settings/household',
       members: '/settings/members',
@@ -65,13 +66,14 @@ describe('settingsGroups (beta.5, spec decision 43: Catalogue, Household, You)',
 
   it('uses GLOSSARY wording for titles, in index order', () => {
     const titles = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.title))
-    expect(titles).toEqual(['Ingredients', 'Products', 'Shops', 'Tags', 'Courses', 'Storage Places', 'Household', 'Members', 'Meal Slots', 'Planning rules', 'Sign-in requests', 'Allowlist', 'Recipe Assistant', 'Your preferences', 'Notifications'])
+    expect(titles).toEqual(['Ingredients', 'Supplies', 'Products', 'Shops', 'Tags', 'Courses', 'Storage Places', 'Household', 'Members', 'Meal Slots', 'Planning rules', 'Sign-in requests', 'Allowlist', 'Recipe Assistant', 'Your preferences', 'Notifications'])
   })
 
-  it('Ingredients and Products lead the Catalogue with their own icons (the avatar menu icons they had)', () => {
+  it('Ingredients, Supplies and Products lead the Catalogue with their own icons (the avatar menu icons they had)', () => {
     const catalogue = settingsGroups(false).find((g) => g.id === 'catalogue')!
-    expect(catalogue.sections.slice(0, 2)).toMatchObject([
+    expect(catalogue.sections.slice(0, 3)).toMatchObject([
       { id: 'ingredients', title: 'Ingredients', path: '/ingredients', icon: 'ingredients' },
+      { id: 'supplies', title: 'Supplies', path: '/supplies', icon: 'supply' },
       { id: 'products', title: 'Products', path: '/products', icon: 'barcodes' },
     ])
     for (const s of catalogue.sections) expect(s.adminOnly, s.id).toBeFalsy()
