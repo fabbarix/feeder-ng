@@ -16,7 +16,7 @@ Roles (model in brackets):
 - **Each team** runs one feature through this pipeline:
   1. **Designer / test author** [Sonnet 5.5]: designs the feature from the spec and writes the test cases first: **unit tests** and **BDD scenarios** (Gherkin).
   2. **Developer** [Haiku 5.5]: implements the code until the tests pass, following the code structure rules below.
-  3. **Reviewer** [Opus 5.5]: checks the diff against the spec, GLOSSARY, ADRs, conventions and tests, then approves it or sends it back to step 1 or 2. **Nothing merges without this approval.**
+  3. **Reviewer** [Opus 5.5]: checks the diff against the spec, GLOSSARY, ADRs, conventions and tests, and **fixes what it finds itself**, tests and code alike, then re-runs the checks and approves. It does not send the work back to steps 1 or 2. It records each fix in its own commit and states any test it changed and why. It hands back only what it cannot settle alone: a product or design decision for the user, or a change outside the team's files. **Nothing merges without this approval.**
 
 Parallel-work rules:
 
