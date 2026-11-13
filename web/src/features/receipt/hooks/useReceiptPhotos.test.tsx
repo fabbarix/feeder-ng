@@ -127,6 +127,28 @@ describe('remove, clear and the body', () => {
     unmount()
     expect(objectUrls.revoke).toHaveBeenCalledTimes(2)
   })
+  it('an add still preparing when the screen is left makes no preview URL (nothing would revoke it)', async () => {
+    let release!: (v: unknown) => void
+    const { result, unmount, objectUrls } = setup(fakeEngine({ decode: () => new Promise((r) => { release = r }) }))
+    let p!: Promise<void>
+    act(() => { p = result.current.add(files(1)) })
+    unmount()
+    release({ width: 100, height: 100, close: () => undefined })
+    await p
+    expect(objectUrls.create).not.toHaveBeenCalled()
+  })
+  it('every preview made is revoked once, whether removed, cleared or left', async () => {
+    const { result, unmount, objectUrls } = setup()
+    await act(async () => { await result.current.add(files(3)) })
+    act(() => result.current.remove(result.current.photos[0]!.id))
+    act(() => result.current.clear())
+    await act(async () => { await result.current.add(files(1)) })
+    unmount()
+    const made = objectUrls.create.mock.results.map((r) => r.value as string)
+    const revoked = objectUrls.revoke.mock.calls.map((c) => c[0] as string)
+    expect(made).toHaveLength(4)
+    expect([...revoked].sort()).toEqual([...made].sort())
+  })
   it('never writes to IndexedDB or localStorage', async () => {
     const set = vi.spyOn(Storage.prototype, 'setItem')
     const { result } = setup()

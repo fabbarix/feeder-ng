@@ -50,6 +50,8 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
   const list = useRef<ReceiptPhotoItem[]>([])
   const previews = useRef(new Map<string, string>())
   const seq = useRef(0)
+  // False once the screen is left: an add still preparing a file then makes no preview URL that nothing would revoke.
+  const alive = useRef(true)
 
   const commit = useCallback((next: ReceiptPhotoItem[]) => {
     list.current = next
@@ -68,6 +70,7 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
           }
           try {
             const out = await prepareReceiptPhoto(file, env.engine)
+            if (!alive.current) return
             const id = `receipt-photo-${++seq.current}`
             const previewUrl = env.urls.create(out.blob)
             previews.current.set(id, previewUrl)
@@ -77,7 +80,7 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
           }
         }
       } finally {
-        setBusy(false)
+        if (alive.current) setBusy(false)
       }
     },
     [env, commit],
@@ -104,7 +107,9 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
   // Synchronous on unmount: the previews are never kept after the screen is left.
   useEffect(() => {
     const urls = previews.current
+    alive.current = true
     return () => {
+      alive.current = false
       for (const url of urls.values()) env.urls.revoke(url)
       urls.clear()
     }
