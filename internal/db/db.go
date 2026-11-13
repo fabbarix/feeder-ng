@@ -285,3 +285,12 @@ func hasAnyPrefix(name string, prefixes []string) bool {
 func NeedsPre1500Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
 	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1500Prefixes)
 }
+
+// Pre1540Prefixes are the file-name prefixes of the beta.6 migration 1540 (Base recipes). Pending triggers the
+// snapshot feeder-pre-1540.db (docs/dev/design/b6-snap.md).
+var Pre1540Prefixes = []string{"1540_"}
+
+// NeedsPre1540Snapshot is NeedsSnapshotFor over the embedded migrations and Pre1540Prefixes.
+func NeedsPre1540Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
+	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1540Prefixes)
+}
