@@ -765,6 +765,14 @@ func writeFieldError(w http.ResponseWriter, field, reason, message string) {
 	}})
 }
 
+// WriteValidation answers a field the domain refuses (422 validation_failed). The Import Review's Confirm answers the same
+// shape, so both are written here.
+func WriteValidation(w http.ResponseWriter, ve *recipe.ValidationError) {
+	httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
+		"code": "validation_failed", "message": ve.Message, "field": ve.Field, "reason": ve.Code,
+	}})
+}
+
 // WriteTakeOver answers a take-over ask (409 base_recipe_take_over). The Import Review's Confirm answers the same shape,
 // so both are written here.
 func WriteTakeOver(w http.ResponseWriter, ask *recipe.TakeOverError) {
@@ -810,9 +818,7 @@ func writeErr(w http.ResponseWriter, err error) {
 	case errors.Is(err, recipe.ErrBaseUnitInUse):
 		httpx.WriteError(w, http.StatusConflict, "base_unit_in_use", "The Yield's unit changes the Base Unit while the Ingredient has Stock, Products or lines")
 	case errors.As(err, &ve):
-		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
-			"code": "validation_failed", "message": ve.Message, "field": ve.Field, "reason": ve.Code,
-		}})
+		WriteValidation(w, ve)
 	case errors.As(err, &ue):
 		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
 			"code": "unknown_unit", "message": ue.Error(), "field": ue.Field,

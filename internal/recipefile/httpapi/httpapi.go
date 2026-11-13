@@ -285,31 +285,19 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 func writeApplyError(w http.ResponseWriter, err error) {
 	var ce *recipe.CycleError
 	var ask *recipe.TakeOverError
+	var ve *recipe.ValidationError
 	switch {
 	case errors.As(err, &ce):
 		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
-			"code": "base_recipe_cycle", "message": cycleSentence(ce.Path), "path": ce.Path,
+			"code": "base_recipe_cycle", "message": recipefile.CycleMessage(ce.Path), "path": ce.Path,
 		}})
 	case errors.As(err, &ask):
 		recipeapi.WriteTakeOver(w, ask)
+	case errors.As(err, &ve):
+		recipeapi.WriteValidation(w, ve)
 	default:
 		httpx.WriteAPIError(w, err)
 	}
-}
-
-// cycleSentence says a closed path of Recipe names as the review does: "A calls for B, which calls for A".
-func cycleSentence(path []string) string {
-	switch {
-	case len(path) == 2:
-		return path[0] + " cannot call for itself"
-	case len(path) < 2:
-		return "base recipe cycle"
-	}
-	msg := path[0] + " calls for " + path[1]
-	for _, name := range path[2:] {
-		msg += ", which calls for " + name
-	}
-	return msg
 }
 
 // close drops an owned Import Review.

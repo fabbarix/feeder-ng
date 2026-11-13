@@ -126,8 +126,43 @@ func (r *review) buildBaseRows() {
 			r.baseRows = append(r.baseRows, row)
 		}
 	}
+	r.checkConvertGroups()
 	r.markBaseRecipes()
 	r.bindBaseLines()
+}
+
+// checkConvertGroups says one Recipe is turned into a Base recipe once, however many tiles answer convert to it (round 6:
+// Lasagne's and Gnocchi's "pesto"). The first tile in document order makes the Yield; a later tile whose answer gives
+// another Yield or unit is base_recipe_answer_invalid on its own tile, and it stays open.
+func (r *review) checkConvertGroups() {
+	first := map[int64]*baseRow{}
+	for _, row := range r.baseRows {
+		if !row.resolved || row.effective == nil || row.effective.Action != BaseConvert {
+			continue
+		}
+		id := row.effective.RecipeID
+		f, seen := first[id]
+		if !seen {
+			first[id] = row
+			continue
+		}
+		if f.effective.Yield == row.effective.Yield && f.effective.YieldUnit == row.effective.YieldUnit {
+			continue
+		}
+		row.resolved = false
+		r.problem(row.path, ProblemBaseRecipeAnswer, fmt.Sprintf("%s is turned into a Base recipe once: the tile at %s makes it %g %s, so this answer must give the same Yield",
+			r.recipeNameOf(id), f.path, f.effective.Yield, f.effective.YieldUnit))
+	}
+}
+
+// recipeNameOf is the name of a stored Recipe, for a message.
+func (r *review) recipeNameOf(id int64) string {
+	for _, e := range r.ex.Recipes {
+		if e.ID == id {
+			return e.Name
+		}
+	}
+	return "this Recipe"
 }
 
 // baseAnswer is the User's answer for the tile at path, if there is one.
@@ -293,13 +328,26 @@ func (r *review) nameOf(i int) string {
 }
 
 func (r *review) cycleMessage(cycle []int) string {
-	if len(cycle) == 2 {
-		return fmt.Sprintf("%s cannot call for itself", r.nameOf(cycle[0]))
+	names := make([]string, len(cycle))
+	for k, idx := range cycle {
+		names[k] = r.nameOf(idx)
 	}
-	// cycle starts and ends with the same Recipe: "A calls for B, which calls for C, which calls for A".
-	msg := r.nameOf(cycle[0]) + " calls for " + r.nameOf(cycle[1])
-	for _, idx := range cycle[2:] {
-		msg += ", which calls for " + r.nameOf(idx)
+	return CycleMessage(names)
+}
+
+// CycleMessage says a closed path of Recipe names: "A cannot call for itself", or "A calls for B, which calls for C, which
+// calls for A". The review and the Confirm answer both use it.
+func CycleMessage(path []string) string {
+	switch {
+	case len(path) < 2:
+		return "base recipe cycle"
+	case len(path) == 2:
+		return path[0] + " cannot call for itself"
+	}
+	// the path starts and ends with the same Recipe
+	msg := path[0] + " calls for " + path[1]
+	for _, name := range path[2:] {
+		msg += ", which calls for " + name
 	}
 	return msg
 }
@@ -473,8 +521,16 @@ func (r *review) baseLines() []BaseRecipeLine {
 // baseCommits are the answered tiles, for the store.
 func (r *review) baseCommits() []BaseRecipeLineCommit {
 	var out []BaseRecipeLineCommit
+	converted := map[int64]bool{}
 	for _, row := range r.baseRows {
 		if row.resolved && row.effective != nil {
+			// One convert entry per Recipe (round 6): the first tile carries the answer; the others point at the Recipe too.
+			if row.effective.Action == BaseConvert {
+				if converted[row.effective.RecipeID] {
+					continue
+				}
+				converted[row.effective.RecipeID] = true
+			}
 			out = append(out, BaseRecipeLineCommit{RecipeIndex: row.recipeIdx, Line: row.lineIdx, Path: row.path, Decision: *row.effective, TakeOver: r.takeOverFor(row.path)})
 		}
 	}
@@ -643,11 +699,14 @@ func (r *review) buildTakeOvers() {
 	for _, bl := range r.creates() {
 		items = append(items, item{path: bl.path, name: bl.name, y: bl.yield})
 	}
-	// A plannable Recipe turned into a Base recipe (convert) is asked about under its own name.
+	// A plannable Recipe turned into a Base recipe (convert) is asked about under its own name, once per Recipe: on the first
+	// tile that answers convert to it.
+	convertAsked := map[int64]bool{}
 	for _, row := range r.baseRows {
-		if !row.resolved || row.effective == nil || row.effective.Action != BaseConvert {
+		if !row.resolved || row.effective == nil || row.effective.Action != BaseConvert || convertAsked[row.effective.RecipeID] {
 			continue
 		}
+		convertAsked[row.effective.RecipeID] = true
 		for _, e := range r.ex.Recipes {
 			if e.ID == row.effective.RecipeID {
 				items = append(items, item{path: row.path, name: e.Name, y: yieldOf{yield: row.effective.Yield, unit: row.effective.YieldUnit}})
