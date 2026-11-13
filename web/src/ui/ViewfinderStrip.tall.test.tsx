@@ -105,6 +105,12 @@ describe('ViewfinderStrip camera states', () => {
     expect(screen.getByRole('region', { name: 'Camera' })).toBeInTheDocument()
   })
 
+  it('writes the status in the reticle white over the dark frame, with a frame-coloured halo for a bright picture', () => {
+    const rule = declarations(readUiCss('ViewfinderStrip.css'), '.viewfinder-strip__status')
+    expect(rule.color).toBe('var(--viewfinder-reticle)')
+    expect(rule['text-shadow']).toMatch(/var\(--viewfinder-frame\)/)
+  })
+
   it('shows a paused picture dimmed in CSS, never animated with reduced motion', () => {
     const css = readUiCss('ViewfinderStrip.css')
     expect(css).toMatch(/\[data-camera=['"]paused['"]\]/)
