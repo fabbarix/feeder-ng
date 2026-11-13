@@ -33,16 +33,20 @@ export interface Leftover {
   plannedPortions: number
 }
 
-/** A Planned Meal that was replanned by an action (date, slot and Course, as the plan names them). */
+/** A Planned Meal named by the server (date, slot and Course, as the plan names them). */
 export interface PlannedMealRef {
   date: string
   mealSlotId: number
+  mealSlotName: string
   courseId?: number
   recipeName?: string
 }
 
-/** The answer of had-it, threw-out and take-out: the Leftover, flat, plus what was replanned. */
-export type LeftoverResult = Leftover & { replanned: PlannedMealRef[] }
+/** The answer of had-it and threw-out: the Leftover and the Planned Meals that were replanned. */
+export interface LeftoverResult {
+  leftover: Leftover
+  replanned: PlannedMealRef[]
+}
 
 /** The answer of freeze: the frozen part and what is left (null when all of it was frozen). */
 export interface FreezeResult {
@@ -63,9 +67,5 @@ export type LeftoverRequest =
   | { kind: 'freeze'; storagePlaceId: number; portions: number }
   | { kind: 'take-out'; storagePlaceId: number | null }
 
-/** The Planned Meal that is served from a Leftover and needs portions of it (from the plan). */
-export interface LeftoverClaim {
-  date: string
-  slotName: string
-  portions: number
-}
+/** The requests the server can dry run (`?dryRun=1`): take out never moves a Planned Meal. */
+export type DryRunRequest = Exclude<LeftoverRequest, { kind: 'take-out' }>

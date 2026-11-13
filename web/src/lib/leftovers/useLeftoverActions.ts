@@ -6,7 +6,7 @@ import { useToast } from '../../ui/Toast'
 import { leftoversApi } from './api'
 import { actionError, answerToast, freezeToast, hadItToast, leftoverStrings, takeOutToast, threwOutToast } from './copy'
 import { leftoverKeys } from './queryKeys'
-import type { Leftover, LeftoverAnswer, LeftoverRequest } from './types'
+import type { Leftover, LeftoverAnswer, LeftoverRequest, PlannedMealRef } from './types'
 
 export interface LeftoversState {
   leftovers: Leftover[]
@@ -35,31 +35,48 @@ export interface LeftoverActions {
 type Target = Pick<Leftover, 'id' | 'recipeName'>
 type Job = { leftover: Target; request: LeftoverRequest } | { leftover: Target; answer: LeftoverAnswer }
 
+/** What a successful job changed: the toast line, and whether waste was recorded (the streak and the Board then move). */
+interface Outcome {
+  message: string
+  waste: boolean
+}
+
 /** Makes the call and returns the toast line for it. */
-async function perform(job: Job, today: string): Promise<string> {
+async function perform(job: Job, today: string): Promise<Outcome> {
   const { leftover } = job
   if ('answer' in job) {
     await leftoversApi.answer(leftover.id, job.answer)
-    return answerToast(leftover.recipeName, job.answer)
+    return { message: answerToast(leftover.recipeName, job.answer), waste: job.answer === 'threw_out' }
   }
   const r = job.request
   switch (r.kind) {
     case 'had-it': {
       const out = await leftoversApi.hadIt(leftover.id, r.portions)
-      return hadItToast(leftover.recipeName, r.portions, out.portions)
+      return { message: hadItToast(leftover.recipeName, r.portions, out.leftover.portions), waste: false }
     }
     case 'threw-out':
       await leftoversApi.threwOut(leftover.id, r.portions)
-      return threwOutToast(leftover.recipeName, r.portions)
+      return { message: threwOutToast(leftover.recipeName, r.portions), waste: true }
     case 'freeze': {
       const out = await leftoversApi.freeze(leftover.id, r.storagePlaceId, r.portions)
-      return freezeToast(leftover.recipeName, out.frozen.storagePlaceName ?? leftoverStrings.notSorted, out.frozen.useBy, today)
+      return { message: freezeToast(leftover.recipeName, out.frozen.storagePlaceName ?? leftoverStrings.notSorted, out.frozen.useBy, today), waste: false }
     }
     case 'take-out': {
       const out = await leftoversApi.takeOut(leftover.id, r.storagePlaceId)
-      return takeOutToast(leftover.recipeName, out.useBy, today)
+      return { message: takeOutToast(leftover.recipeName, out.useBy, today), waste: false }
     }
   }
+}
+
+/** The server dry run for the draft: the Planned Meals that would lose portions. `[]` while loading, for no draft and for Take out. */
+export function useReplanPreview(leftoverId: number, request: LeftoverRequest | null): PlannedMealRef[] {
+  const dryRun = request !== null && request.kind !== 'take-out' ? request : null
+  const query = useQuery({
+    queryKey: ['plan', 'replan-preview', leftoverId, dryRun],
+    queryFn: () => leftoversApi.preview(leftoverId, dryRun!),
+    enabled: dryRun !== null,
+  })
+  return query.data ?? []
 }
 
 const errorShape = (err: unknown): { status?: number; code?: string } =>
@@ -73,11 +90,16 @@ export function useLeftoverActions({ today }: { today: string }): LeftoverAction
   const settle = async (job: Job): Promise<boolean> => {
     setBusy(true)
     try {
-      const message = await perform(job, today)
-      toast.show(message, { status: 'success' })
-      // The plan key covers the Leftovers list; the Pantry and waste live under 'stock'.
+      const outcome = await perform(job, today)
+      toast.show(outcome.message, { status: 'success' })
+      // The plan key covers the Leftovers list; the Pantry lives under 'stock'.
       void client.invalidateQueries({ queryKey: ['plan'] })
       void client.invalidateQueries({ queryKey: ['stock'] })
+      if (outcome.waste) {
+        // Waste restarts the zero-waste streak and shows on the Board.
+        void client.invalidateQueries({ queryKey: ['today', 'streak'] })
+        void client.invalidateQueries({ queryKey: ['board'] })
+      }
       return true
     } catch (err) {
       toast.show(actionError(errorShape(err), job.leftover.recipeName), { status: 'error' })

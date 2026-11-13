@@ -14,6 +14,8 @@ export interface LeftoverRowModel {
   text: string
   tone: 'info' | 'spoil' | 'leftover'
   icon: IconName
+  /** A frozen question names its Storage Place ("Not sorted" without one), so it is not hidden in the Pantry. */
+  badge?: string
 }
 
 const byUseBy = (a: Leftover, b: Leftover) => a.useBy.localeCompare(b.useBy) || a.id - b.id
@@ -21,7 +23,8 @@ const byUseBy = (a: Leftover, b: Leftover) => a.useBy.localeCompare(b.useBy) || 
 /** One row for a Leftover: a question while it is to be answered, else a Leftover (frozen or not). */
 export function leftoverRow(l: Leftover, today: string): LeftoverRowModel {
   if (l.toAnswer) {
-    return { id: l.id, kind: 'question', recipeName: l.recipeName, text: questionText(l.recipeName, l.useBy, today), tone: 'info', icon: 'question' }
+    const badge = l.frozen ? (l.storagePlaceName ?? leftoverStrings.notSorted) : undefined
+    return { id: l.id, kind: 'question', recipeName: l.recipeName, text: questionText(l.recipeName, l.useBy, today), tone: 'info', icon: 'question', badge }
   }
   const soon = dayDiff(l.useBy, today) <= 1
   return {
@@ -34,12 +37,16 @@ export function leftoverRow(l: Leftover, today: string): LeftoverRowModel {
   }
 }
 
-/** Today's Leftovers tile: the questions first (oldest Use-by first), then the not frozen Leftovers (soonest Use-by first). */
+/**
+ * Today's Leftovers tile: the questions first (frozen ones before the others, since they need a trip to the freezer; each
+ * group oldest Use-by first), then the not frozen Leftovers (soonest Use-by first). Frozen Leftovers that are not to answer stay on the Pantry.
+ */
 export function tileRows(leftovers: Leftover[], today: string): LeftoverRowModel[] {
-  const notFrozen = leftovers.filter((l) => !l.frozen)
-  const questions = notFrozen.filter((l) => l.toAnswer).sort(byUseBy)
-  const rest = notFrozen.filter((l) => !l.toAnswer).sort(byUseBy)
-  return [...questions, ...rest].map((l) => leftoverRow(l, today))
+  const shown = leftovers.filter((l) => !l.frozen || l.toAnswer)
+  const frozenQuestions = shown.filter((l) => l.toAnswer && l.frozen).sort(byUseBy)
+  const questions = shown.filter((l) => l.toAnswer && !l.frozen).sort(byUseBy)
+  const rest = shown.filter((l) => !l.toAnswer).sort(byUseBy)
+  return [...frozenQuestions, ...questions, ...rest].map((l) => leftoverRow(l, today))
 }
 
 /** The row menu: Had it, Threw it out, then Freeze it (before the Use-by, not frozen) or Take out (frozen). None for a question. */

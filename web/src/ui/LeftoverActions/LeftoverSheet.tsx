@@ -1,38 +1,32 @@
 // The Had it / Threw it out / Freeze it / Take out sheet (BottomSheet + StepperField + Select).
-// The draft (portions, chosen place) is local state; defaults and bounds come from lib/leftovers.
+// The draft (portions, chosen place) is local state; defaults, requests, choices and notes come from lib/leftovers/sheetModel.
 import { useState } from 'react'
+import { useHref, useInRouterContext, useLinkClickHandler } from 'react-router-dom'
 import {
   actionLabel,
-  claimNote,
-  defaultFreezer,
-  freezeDefaultPortions,
-  freezeNote,
   freezeTitle,
-  freezerPlaces,
-  freezeUseBy,
-  hadItDefault,
   hadItTitle,
-  lostClaims,
   leftoverStrings,
-  NOT_SORTED_PLACE,
+  placeChoices,
   portionBounds,
-  takeOutNote,
-  takeOutPlaces,
+  replannedNotes,
+  sheetDefaults,
+  sheetNotes,
+  sheetRequest,
   takeOutTitle,
-  takeOutUseBy,
-  throwOutDefault,
   throwOutTitle,
   type Leftover,
   type LeftoverActionKind,
-  type LeftoverClaim,
   type LeftoverPlace,
   type LeftoverRequest,
+  type SheetDraft,
+  type SheetInput,
 } from '../../lib/leftovers'
+import { useReplanPreview } from '../../lib/leftovers/useLeftoverActions'
 import { BottomSheet } from '../BottomSheet'
 import { Button } from '../Button'
 import { StepperField } from '../fields/StepperField'
 import { Select } from '../Select/Select'
-import type { SelectOption } from '../Select/lib'
 import './LeftoverActions.css'
 
 export interface LeftoverSheetProps {
@@ -46,8 +40,6 @@ export interface LeftoverSheetProps {
   householdFrozenUseBy: number
   /** The Recipe's Use-by days (Take out). */
   recipeUseByDays: number
-  /** Planned Meals served from this Leftover, soonest first. */
-  claims: LeftoverClaim[]
   busy?: boolean
   onConfirm: (request: LeftoverRequest) => void
   onClose: () => void
@@ -70,13 +62,14 @@ export function LeftoverSheet(props: LeftoverSheetProps) {
 
 type OpenProps = LeftoverSheetProps & { action: LeftoverActionKind }
 
-function OpenSheet({ action, leftover, today, storagePlaces, recipeFrozenUseBy, householdFrozenUseBy, recipeUseByDays, claims, busy = false, onConfirm, onClose, storagePlacesHref }: OpenProps) {
+function OpenSheet({ action, leftover, today, storagePlaces, recipeFrozenUseBy, householdFrozenUseBy, recipeUseByDays, busy = false, onConfirm, onClose, storagePlacesHref }: OpenProps) {
+  const input: SheetInput = { action, leftover, places: storagePlaces, today, recipeFrozenUseBy, householdFrozenUseBy, recipeUseByDays }
+  const [draft, setDraft] = useState<SheetDraft>(() => sheetDefaults(input))
+  const request = sheetRequest(action, draft)
+  // Take out never replans; every other draft asks the server what it would move.
+  const replanned = useReplanPreview(leftover.id, request)
+  const choices = placeChoices(action, storagePlaces)
   const bounds = portionBounds(leftover.portions)
-  const [portions, setPortions] = useState(() => initialPortions(action, leftover))
-  const [placeId, setPlaceId] = useState<number | null>(() => initialPlace(action, storagePlaces))
-  const freezers = freezerPlaces(storagePlaces)
-  const request = requestFor(action, portions, placeId)
-  const lost = action === 'take-out' ? [] : lostClaims(claims, leftover.portions - portions)
   const name = leftover.recipeName
 
   return (
@@ -98,50 +91,41 @@ function OpenSheet({ action, leftover, today, storagePlaces, recipeFrozenUseBy, 
       }
     >
       <div className="leftover-sheet__stack">
-        {action === 'had-it' || action === 'threw-out' || action === 'freeze' ? (
-          <StepperField label={leftoverStrings.portions} value={portions} onChange={setPortions} min={bounds.min} max={bounds.max} step={bounds.step} />
+        {action !== 'take-out' ? (
+          <StepperField
+            label={leftoverStrings.portions}
+            value={draft.portions}
+            onChange={(portions) => setDraft((d) => ({ ...d, portions }))}
+            min={bounds.min}
+            max={bounds.max}
+            step={bounds.step}
+          />
         ) : null}
 
-        {action === 'threw-out' ? <p className="leftover-sheet__note">{leftoverStrings.wasteNote}</p> : null}
+        {choices.length > 0 ? (
+          <Select<number>
+            label={leftoverStrings.storagePlace}
+            options={choices}
+            value={draft.placeId}
+            onChange={(placeId) => setDraft((d) => ({ ...d, placeId }))}
+          />
+        ) : null}
 
-        {action === 'freeze' && freezers.length === 0 ? (
+        {action === 'freeze' && choices.length === 0 ? (
           <p className="leftover-sheet__note">
-            {leftoverStrings.addFreezerFirst}{' '}
-            {storagePlacesHref ? (
-              <a className="leftover-sheet__link" href={storagePlacesHref}>
-                {leftoverStrings.storagePlaces}
-              </a>
-            ) : null}
+            {leftoverStrings.addFreezerFirst} {storagePlacesHref ? <StoragePlacesLink href={storagePlacesHref} /> : null}
           </p>
         ) : null}
 
-        {action === 'freeze' && freezers.length > 0 ? (
-          <>
-            <Select<number>
-              label={leftoverStrings.storagePlace}
-              options={freezers.map(placeOption)}
-              value={placeId}
-              onChange={setPlaceId}
-            />
-            <p className="leftover-sheet__note">{freezeNoteFor(recipeFrozenUseBy, householdFrozenUseBy, today)}</p>
-          </>
-        ) : null}
+        {sheetNotes(input).map((note) => (
+          <p key={note} className="leftover-sheet__note">
+            {note}
+          </p>
+        ))}
 
-        {action === 'take-out' ? (
-          <>
-            <Select<number>
-              label={leftoverStrings.storagePlace}
-              options={[...takeOutPlaces(storagePlaces).map(placeOption), { value: NOT_SORTED_PLACE, label: leftoverStrings.notSorted }]}
-              value={placeId}
-              onChange={setPlaceId}
-            />
-            <p className="leftover-sheet__note">{takeOutNoteFor(recipeUseByDays, today)}</p>
-          </>
-        ) : null}
-
-        {lost.map((claim) => (
-          <p key={`${claim.date}-${claim.slotName}`} className="leftover-sheet__note">
-            {claimNote(claim)}
+        {replannedNotes(replanned).map((note) => (
+          <p key={note.key} className="leftover-sheet__note">
+            {note.text}
           </p>
         ))}
       </div>
@@ -149,47 +133,18 @@ function OpenSheet({ action, leftover, today, storagePlaces, recipeFrozenUseBy, 
   )
 }
 
-const placeOption = (p: LeftoverPlace): SelectOption<number> => ({ value: p.id, label: p.name })
-
-function initialPortions(action: LeftoverActionKind, leftover: Leftover): number {
-  switch (action) {
-    case 'had-it':
-      return hadItDefault(leftover.portions)
-    case 'threw-out':
-      return throwOutDefault(leftover.portions)
-    case 'freeze':
-      return freezeDefaultPortions(leftover.portions, leftover.plannedPortions)
-    case 'take-out':
-      return leftover.portions
-  }
+/** The "Storage Places" link: client-side inside a Router (no reload), a plain anchor outside one. */
+function StoragePlacesLink({ href }: { href: string }) {
+  const inRouter = useInRouterContext()
+  return inRouter ? <RouterStoragePlacesLink to={href} /> : <a className="leftover-sheet__link" href={href}>{leftoverStrings.storagePlaces}</a>
 }
 
-function initialPlace(action: LeftoverActionKind, places: LeftoverPlace[]): number | null {
-  if (action === 'freeze') return defaultFreezer(places)?.id ?? null
-  if (action === 'take-out') return NOT_SORTED_PLACE
-  return null
-}
-
-/** What confirm sends, or null when the sheet has nothing to confirm (Freeze it with no Freezer). */
-function requestFor(action: LeftoverActionKind, portions: number, placeId: number | null): LeftoverRequest | null {
-  switch (action) {
-    case 'had-it':
-      return { kind: 'had-it', portions }
-    case 'threw-out':
-      return { kind: 'threw-out', portions }
-    case 'freeze':
-      return placeId === null ? null : { kind: 'freeze', storagePlaceId: placeId, portions }
-    case 'take-out':
-      return { kind: 'take-out', storagePlaceId: placeId === NOT_SORTED_PLACE ? null : placeId }
-  }
-}
-
-function freezeNoteFor(recipeDays: number | null, householdDays: number, today: string): string {
-  const { date, days } = freezeUseBy(today, recipeDays, householdDays)
-  return freezeNote(date, days, today)
-}
-
-function takeOutNoteFor(useByDays: number, today: string): string {
-  const { date, days } = takeOutUseBy(today, useByDays)
-  return takeOutNote(date, days, today)
+function RouterStoragePlacesLink({ to }: { to: string }) {
+  const href = useHref(to)
+  const onClick = useLinkClickHandler(to)
+  return (
+    <a className="leftover-sheet__link" href={href} onClick={onClick}>
+      {leftoverStrings.storagePlaces}
+    </a>
+  )
 }

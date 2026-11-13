@@ -1,6 +1,6 @@
 // Pure defaults and rules for the Leftover sheets (no React).
 import { addDays } from './dates'
-import type { LeftoverClaim, LeftoverPlace } from './types'
+import type { LeftoverPlace } from './types'
 
 export const PORTION_STEP = 0.5
 
@@ -25,10 +25,11 @@ export function portionBounds(left: number): StepperBounds {
   return { min: PORTION_STEP, max: left, step: PORTION_STEP }
 }
 
-/** Freeze it: default the portions no Planned Meal is planned to use; all of them when every portion is planned. */
+/** Freeze it: default the portions no Planned Meal is planned to use, rounded down to a 0.5 step; all of them when less than half a portion is spare. */
 export function freezeDefaultPortions(left: number, plannedPortions: number): number {
   const spare = left - plannedPortions
-  return spare < PORTION_STEP ? left : spare
+  if (spare < PORTION_STEP) return left
+  return Math.floor(spare / PORTION_STEP) * PORTION_STEP
 }
 
 const byName = (a: LeftoverPlace, b: LeftoverPlace) => a.name.localeCompare(b.name)
@@ -58,15 +59,4 @@ export function freezeUseBy(today: string, recipeDays: number | null, householdD
 /** Use-by after Take out: today + the Recipe's Use-by days. */
 export function takeOutUseBy(today: string, useByDays: number): { date: string; days: number } {
   return { date: addDays(today, useByDays), days: useByDays }
-}
-
-/** Planned Meals (claims, soonest first) that cannot keep their portions when `left` portions remain: they are replanned. */
-export function lostClaims(claims: LeftoverClaim[], left: number): LeftoverClaim[] {
-  let remaining = left
-  const lost: LeftoverClaim[] = []
-  for (const claim of claims) {
-    if (claim.portions <= remaining) remaining -= claim.portions
-    else lost.push(claim)
-  }
-  return lost
 }

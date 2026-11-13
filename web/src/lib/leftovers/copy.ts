@@ -1,6 +1,6 @@
 // Leftover copy in GLOSSARY words (docs/dev/design/b5-low.md section 3). Pure functions.
 import { dateWord, weekdayShort } from './dates'
-import type { LeftoverAnswer, LeftoverClaim } from './types'
+import type { LeftoverAnswer, PlannedMealRef } from './types'
 
 export const leftoverStrings = {
   hadIt: 'Had it',
@@ -44,9 +44,9 @@ export const freezeNote = (useBy: string, days: number, today: string): string =
 export const takeOutNote = (useBy: string, days: number, today: string): string =>
   `Use by ${dateWord(useBy, today)} once out (${days} days)`
 
-/** "Thu Lunch was going to have 2 portions of it; it is planned again." */
-export const claimNote = (claim: LeftoverClaim): string =>
-  `${weekdayShort(claim.date)} ${claim.slotName} was going to have ${portionsLabel(claim.portions)} of it; it is planned again.`
+/** "Fri Lunch was going to have it; it is planned again." (the server's dry run names no portions). */
+export const replannedNote = (ref: PlannedMealRef): string =>
+  `${weekdayShort(ref.date)} ${ref.mealSlotName} was going to have it; it is planned again.`
 
 export const hadItToast = (name: string, had: number, left: number): string =>
   `Noted: ${portionsLabel(had)} of ${name}. ${left > 0 ? `${left} left.` : 'None left.'}`
@@ -72,6 +72,8 @@ const ERRORS: Record<string, (name: string) => string> = {
   portions_invalid: (n) => `There are not that many portions of ${n} left.`,
   storage_place_not_freezer: () => 'Pick a Storage Place of kind freezer.',
   storage_place_freezer: () => 'Pick a Storage Place that is not a freezer.',
+  storage_place_unknown: () => 'That Storage Place is gone. Pick another.',
+  leftover_too_small: (n) => `There are too few portions of ${n} left for that Planned Meal.`,
 }
 
 /** The message for a failed action, by the API's error code. */
