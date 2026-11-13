@@ -21,15 +21,15 @@ export interface RowValue {
   subValue?: string
 }
 
-/** The short English weekday of a YYYY-MM-DD date. */
-function weekday(date: string): string {
+/** The short English weekday of a YYYY-MM-DD date ("Tue"). */
+export function weekdayOf(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
   const jsDay = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
   return weekdayShortName(jsDay === 0 ? 7 : jsDay)
 }
 
 /** "A", "A and B", "A, B and C" (the order given is kept). */
-function joinAnd(items: string[]): string {
+export function joinAnd(items: string[]): string {
   if (items.length <= 1) return items.join('')
   return `${items.slice(0, -1).join(', ')} ${shopStrings.andJoin} ${items[items.length - 1]}`
 }
@@ -43,7 +43,7 @@ export function slotsLabel(meals: PastPlannedMeal[] | undefined, withCourses = t
   const slots = new Map<string, { label: string; courses: string[] }>()
   for (const m of meals) {
     const key = `${m.date}|${m.mealSlotId}`
-    const slot = slots.get(key) ?? { label: `${weekday(m.date)} ${m.mealSlotName}`, courses: [] }
+    const slot = slots.get(key) ?? { label: `${weekdayOf(m.date)} ${m.mealSlotName}`, courses: [] }
     if (m.courseName && !slot.courses.includes(m.courseName)) slot.courses.push(m.courseName)
     slots.set(key, slot)
   }

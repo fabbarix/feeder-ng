@@ -31,20 +31,25 @@ export interface FieldFrameProps {
   className?: string
   /** Max inline size token; sets data-size on the frame. */
   size?: FieldSize
+  /** DS-SHOP round 2: "chip" is a compact toolbar picker; the frame carries data-appearance. */
+  appearance?: 'chip'
+  /** The label is still the accessible name, only visually hidden. */
+  labelHidden?: boolean
   children: ReactNode
 }
 
 /** Label above the control, helper and error below (docs/design/ui-fix-plan.md 4.10). */
-export function FieldFrame({ ids, label, labelFor, helper, error, className, size, children }: FieldFrameProps) {
+export function FieldFrame({ ids, label, labelFor, helper, error, className, size, appearance, labelHidden, children }: FieldFrameProps) {
   const frameClass = ['ui-field', className].filter(Boolean).join(' ')
+  const labelClass = labelHidden ? 'ui-field__label visually-hidden' : 'ui-field__label'
   return (
-    <div className={frameClass} data-size={size} data-invalid={error ? '' : undefined}>
+    <div className={frameClass} data-size={size} data-appearance={appearance} data-invalid={error ? '' : undefined}>
       {labelFor ? (
-        <label id={ids.labelId} htmlFor={labelFor} className="ui-field__label">
+        <label id={ids.labelId} htmlFor={labelFor} className={labelClass}>
           {label}
         </label>
       ) : (
-        <span id={ids.labelId} className="ui-field__label">
+        <span id={ids.labelId} className={labelClass}>
           {label}
         </span>
       )}

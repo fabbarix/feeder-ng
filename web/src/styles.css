@@ -133,6 +133,7 @@
   --status-danger-bg: #ffe0dc;
   --status-danger-solid: #ab413e;
   --status-danger-on-solid: #fff;
+  --status-success-on-solid: #fff;
   --status-success-fg: #115629;
   --status-success-bg: #d1f2d7;
   --status-success-solid: #0a7e3a;
@@ -225,6 +226,7 @@
   :root:not([data-scheme='light']) {
     --status-danger-solid: #ab413e;
     --status-danger-on-solid: #fff;
+    --status-success-on-solid: #fff;
     --color-bg: #090f0b;
     --color-surface: #131c16;
     --color-surface-2: #1e2a22;
@@ -309,6 +311,7 @@
   --status-danger-bg: #47211e;
   --status-danger-solid: #ab413e;
   --status-danger-on-solid: #fff;
+  --status-success-on-solid: #fff;
   --status-success-fg: #a7e2b2;
   --status-success-bg: #14361d;
   --status-pinned-fg: #c7cdff;

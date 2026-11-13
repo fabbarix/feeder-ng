@@ -19,10 +19,11 @@ export type ShopSelectProps = ShopSelectBase &
 export function ShopSelect({ shops, value, onChange, clearLabel, onCreate, createLabel, ...field }: ShopSelectProps) {
   const options = useMemo(() => shopOptions(shops), [shops])
   return clearLabel === undefined ? (
-    <Select<number> {...field} entityName="Shop" options={options} value={value} onChange={onChange} onCreate={onCreate} createLabel={createLabel} />
+    <Select<number> {...field} appearance="chip" entityName="Shop" options={options} value={value} onChange={onChange} onCreate={onCreate} createLabel={createLabel} />
   ) : (
     <Select<number>
       {...field}
+      appearance="chip"
       entityName="Shop"
       options={options}
       value={value}

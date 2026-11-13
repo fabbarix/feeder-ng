@@ -31,6 +31,8 @@ interface ListRowBase {
   metaIcon?: IconName
   /** WP3b: extra content (e.g. Chips) under the meta line. Makes the row auto-height (`data-height="auto"`). */
   children?: ReactNode
+  /** DS-SHOP round 2: the row's target opens a dialog (`aria-haspopup`); set on an `onActivate` target only. */
+  haspopup?: 'dialog'
 }
 
 /**
@@ -111,6 +113,7 @@ export function ListRow(props: ListRowProps) {
     metaStatus,
     metaIcon,
     wrapTitle,
+    haspopup,
   } = props
   const inRouter = useInRouterContext()
   const panelId = useId()
@@ -135,7 +138,7 @@ export function ListRow(props: ListRowProps) {
       />
     )
   } else if (onActivate) {
-    target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} onClick={onActivate} />
+    target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} aria-haspopup={haspopup} onClick={onActivate} />
   }
   return (
     <li

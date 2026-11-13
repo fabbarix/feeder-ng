@@ -12,15 +12,21 @@
 }
 
 .shop-screen__controls {
-  display: grid;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: var(--space-3);
-  grid-template-columns: minmax(0, 1fr);
+}
+
+.shop-screen__controls > * {
+  min-inline-size: 0;
 }
 
 /* The Shop select with "Find the Shop I am in" beside it, bottom-aligned with the field. */
 .shop-screen__shop {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -39,9 +45,40 @@
 /* The metric strip: a number and its label per tile. */
 .shop-metrics__tile {
   display: grid;
-  gap: var(--space-1);
-  justify-items: start;
+  gap: var(--space-2);
   align-content: start;
+}
+
+.shop-metrics__scan-tile {
+  display: grid;
+  gap: var(--space-2);
+  align-content: space-between;
+}
+
+.shop-metrics__scan {
+  inline-size: 100%;
+}
+
+.shop-metrics__figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.shop-metrics__unit {
+  color: var(--color-muted);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+}
+
+.shop-metrics__meta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 
 .shop-metrics__bar {
@@ -49,7 +86,7 @@
   inline-size: 100%;
   block-size: var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--color-surface-2);
+  background: var(--color-line);
   overflow: hidden;
 }
 
@@ -94,6 +131,10 @@
 }
 
 .shop-notice__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   margin: 0;
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
@@ -108,11 +149,27 @@
 }
 
 .shop-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   color: var(--color-text);
   font-size: var(--text-title-3-size);
   font-weight: var(--text-title-3-weight);
   line-height: var(--text-title-3-line);
+}
+
+.shop-section__count {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: var(--space-6);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .shop-lines {
@@ -121,10 +178,6 @@
 
 /* One list on a phone: the ListGroup column. From 768 px the same rows become a 2-column card grid, and the controls sit side by side. */
 @media (min-width: 768px) {
-  .shop-screen__controls {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
   .shop-lines .list-group {
     background: none;
     box-shadow: none;
@@ -134,13 +187,13 @@
   .shop-lines .list-group__list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-card), 100%), 1fr));
+    align-items: start;
     gap: var(--bento-gap);
   }
 
   .shop-lines .list-row {
     border-radius: var(--radius-tile-sm);
     background: var(--color-surface);
-    align-items: start;
     overflow: hidden;
   }
 
@@ -149,8 +202,10 @@
   }
 }
 
-/* The tick: a 44 px touch target, a ring when open, a filled success tick when ticked. */
+/* The tick: a 44 px hit area with no border of its own. The visible ring is a 24 px circle drawn inside it (::before), its
+   colour the muted text token in both schemes. Ticked: a filled success circle with a plain check (--status-success-on-solid). */
 .line-row__tick {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -159,16 +214,36 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0;
-  border: 2px solid var(--color-outline);
+  border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--status-success-bg);
+  color: var(--color-text);
   cursor: pointer;
 }
 
-.line-row__tick[aria-pressed='true'] {
+.line-row__tick::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border: 2px solid var(--color-muted);
+  border-radius: var(--radius-pill);
+}
+
+.line-row__tick svg {
+  position: relative;
+}
+
+.line-row__tick[aria-pressed='true']::before {
   background: var(--status-success-solid);
   border-color: var(--status-success-solid);
+}
+
+.line-row__tick[aria-pressed='true'] {
+  color: var(--status-success-on-solid);
 }
 
 .line-row__tick:focus-visible {
@@ -183,6 +258,11 @@
 }
 
 .shop-lines .list-row[data-state='not-needed'] .list-row__title {
+  color: var(--color-muted);
+}
+
+.shop-lines .list-row[data-state='ticked'] .list-row__value,
+.shop-lines .list-row[data-state='ticked'] .list-row__sub-value {
   color: var(--color-muted);
 }
 

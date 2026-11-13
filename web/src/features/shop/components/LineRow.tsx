@@ -20,22 +20,24 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen }: LineRowProps
   const ticked = group === 'ticked'
   const meta = rowMeta(entry)
   const { value, subValue } = rowValue(entry)
+  // round 2: the label is stable ("Tick X") and the state is aria-pressed; the ticked mark is a plain check in a CSS circle
   const control =
     group === 'not-needed' ? undefined : (
       <button
         type="button"
         className="line-row__tick"
-        aria-label={ticked ? shopStrings.untick(entry.title) : shopStrings.tickTitle(entry.title)}
+        aria-label={shopStrings.tickTitle(entry.title)}
         aria-pressed={ticked}
         onClick={() => (ticked ? onUntick?.(entry) : onTick?.(entry))}
       >
-        {ticked ? <Icon name="tick" size={24} weight="fill" /> : null}
+        {ticked ? <Icon name="tick" size={24} weight="bold" /> : null}
       </button>
     )
   return (
     <ListRow
       title={entry.title}
       onActivate={() => onOpen(entry, group)}
+      haspopup="dialog"
       data-state={group}
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}

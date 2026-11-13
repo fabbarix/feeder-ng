@@ -3,6 +3,7 @@ import { BottomSheet } from '../BottomSheet'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
 import { Icon } from '../Icon'
+import type { IconName } from '../icons'
 import type { FieldSizeProps } from '../fields/Field'
 import { FieldFrame, useFieldIds } from '../fields/FieldFrame'
 import { buildList, type SelectFilter, type SelectSort } from './buildList'
@@ -36,6 +37,10 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   createLabel?: (query: string) => string
   /** R14: shows the create row disabled (aria-disabled) with this reason as its second line; choosing it does nothing. */
   createDisabledReason?: string
+  /** DS-SHOP round 2: "chip" is the compact picker of a toolbar: a pill sized by its value, its label visually hidden (still the name). */
+  appearance?: 'chip'
+  /** Chip only: an icon before the value, instead of the selected option's own leading visual. */
+  icon?: IconName
 }
 
 export interface SelectProps<V extends string | number = string> extends SelectBaseProps<V> {
@@ -117,6 +122,8 @@ function SelectCore<V extends string | number>({
   closeOnPick,
   clearLabel,
   onClear,
+  appearance,
+  icon,
 }: CoreProps<V>) {
   const ids = useFieldIds()
   const baseId = useId()
@@ -303,7 +310,7 @@ function SelectCore<V extends string | number>({
   )
 
   return (
-    <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
+    <FieldFrame ids={ids} size={appearance === 'chip' ? undefined : size} appearance={appearance} labelHidden={appearance === 'chip'} label={label} helper={helper} error={error}>
       <div ref={anchor} className="select">
         <button
           ref={trigger}
@@ -319,6 +326,7 @@ function SelectCore<V extends string | number>({
           aria-invalid={error ? true : undefined}
           aria-required={required || undefined}
           disabled={disabled}
+          data-appearance={appearance}
           data-placeholder={triggerText === '' ? '' : undefined}
           onClick={(e) => {
             // A click that follows a key the keydown handler already acted on (Space fires click on keyup) is ignored.
@@ -328,7 +336,13 @@ function SelectCore<V extends string | number>({
           }}
           onKeyDown={onKey}
         >
-          {!multi && selectedOption?.leading ? <span className="select__leading">{selectedOption.leading}</span> : null}
+          {!multi && icon ? (
+            <span className="select__leading">
+              <Icon name={icon} size={20} />
+            </span>
+          ) : !multi && selectedOption?.leading ? (
+            <span className="select__leading">{selectedOption.leading}</span>
+          ) : null}
           <span className="select__value">{triggerText === '' ? (placeholder ?? '') : triggerText}</span>
           <Icon name="expand" size={20} />
         </button>

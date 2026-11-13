@@ -39,7 +39,9 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
       {empty ? <EmptyState title={shopStrings.empty} description={shopStrings.emptyHint} /> : null}
       {open.length > 0 ? (
         <section className="shop-open">
-          <h2 className="shop-section__title">{shopStrings.toGet}</h2>
+          <h2 className="shop-section__title">
+            {shopStrings.toGet} <span className="shop-section__count">{open.length}</span>
+          </h2>
           <div className="shop-lines">
             <ListGroup label={shopStrings.toGet}>
               {open.map((entry) => (
@@ -51,7 +53,9 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
       ) : null}
       {ticked.length > 0 ? (
         <section className="shop-ticked">
-          <h2 className="shop-section__title">{shopStrings.tickedGroup(ticked.length)}</h2>
+          <h2 className="shop-section__title">
+            {shopStrings.ticked} <span className="shop-section__count">{ticked.length}</span>
+          </h2>
           <div className="shop-lines">
             <ListGroup label={shopStrings.ticked}>
               {ticked.map((entry) => (
