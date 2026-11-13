@@ -20,6 +20,24 @@ type ExportInput struct {
 	Recipes     []recipe.Recipe
 	Ingredients map[int64]ingredient.Ingredient
 	Image       func(id string) (dataURL string, err error)
+	// BaseRecipes (beta.6, BR-C) are the Base recipes Build may add: every Recipe in Recipes whose Ingredient is one of these
+	// is a Base recipe, and every one a line calls for (IngredientID == OwnIngredientID), at any depth, is added to the file.
+	BaseRecipes []ExportBaseRecipe
+	// NeededAtStep is a line's "needed at" Step, by Recipe id and line index.
+	NeededAtStep map[LineRef]int
+}
+
+// ExportBaseRecipe is a Base recipe with the Ingredient it owns and its Yield unit.
+type ExportBaseRecipe struct {
+	Recipe          recipe.Recipe
+	OwnIngredientID int64
+	YieldUnit       string
+}
+
+// LineRef addresses a Recipe line.
+type LineRef struct {
+	RecipeID int64
+	Line     int
 }
 
 // Build makes a Recipe File: Recipes in the given order, one definition for

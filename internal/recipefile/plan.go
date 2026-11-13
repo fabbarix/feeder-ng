@@ -70,6 +70,16 @@ type Existing struct {
 	// Courses are every Course of the Household, archived ones included, in household order. Empty (a caller
 	// that does not know Courses) leaves the imported Recipes' CourseIDs and WholeMeal as the file says.
 	Courses []CourseRef
+	// BaseRecipes (beta.6, BR-C) says which of Recipes are Base recipes and which Ingredient each owns. Recipes still
+	// lists every Recipe, so name conflicts work as before. A Base recipe's Ingredient is also in Ingredients, but
+	// plain-name matching never returns it.
+	BaseRecipes []BaseRecipeRef
+}
+
+// BaseRecipeRef marks an existing Recipe as a Base recipe.
+type BaseRecipeRef struct {
+	RecipeID     int64
+	IngredientID int64
 }
 
 // CourseRef is an existing Course.
@@ -116,6 +126,66 @@ type Decisions struct {
 	Conversions []ConversionAnswer   `json:"conversions"`
 	Recipes     []RecipeDecision     `json:"recipes"`
 	Courses     []CourseDecision     `json:"courses"`
+	// BaseRecipeLines (beta.6, BR-C) answers the Base recipe tiles, by line path ("$.recipes[0].ingredients[1]").
+	BaseRecipeLines map[string]BaseRecipeLineDecision `json:"baseRecipeLines,omitempty"`
+}
+
+// Base recipe line actions (BaseRecipeLineDecision.Action).
+const (
+	BaseUse     = "use"     // an existing Base recipe (RecipeID)
+	BaseFile    = "file"    // a Recipe of this file (RecipeIndex); Yield and YieldUnit when the file does not mark it as a Base recipe
+	BaseCreate  = "create"  // a new, empty Base recipe named from the line
+	BaseConvert = "convert" // an existing plannable Recipe (RecipeID) turned into a Base recipe, with Yield and YieldUnit
+	BaseKeep    = "keep"    // the line stays a plain Ingredient line
+)
+
+// BaseRecipeLineDecision answers one Base recipe tile.
+type BaseRecipeLineDecision struct {
+	Action      string  `json:"action"`
+	RecipeID    int64   `json:"recipeId,omitempty"`
+	RecipeIndex *int    `json:"recipeIndex,omitempty"`
+	Yield       float64 `json:"yield,omitempty"`
+	YieldUnit   string  `json:"yieldUnit,omitempty"`
+	ReadNext    bool    `json:"readNext,omitempty"` // BaseCreate: offer to read the recipe after Confirm
+}
+
+// Suggestion kinds of a Base recipe tile.
+const (
+	SuggestBase      = "base"      // an existing Base recipe
+	SuggestPlannable = "plannable" // an existing plannable Recipe
+	SuggestFile      = "file"      // a Recipe of the same file
+)
+
+// Problem codes of Base recipe lines.
+const (
+	ProblemBaseRecipeAnswer = "base_recipe_answer_invalid" // the answer does not fit the row (unknown Recipe, no Yield, ...)
+	ProblemBaseRecipeCycle  = "base_recipe_cycle"          // the file's own answers make Recipes call for each other
+)
+
+// BaseRecipeSuggestion is one Recipe a line may be.
+type BaseRecipeSuggestion struct {
+	Kind        string `json:"kind"`
+	RecipeID    int64  `json:"recipeId,omitempty"`
+	RecipeIndex *int   `json:"recipeIndex,omitempty"`
+	Name        string `json:"name"`
+	Exact       bool   `json:"exact"`
+}
+
+// BaseRecipeLine is the Import Review tile for one line that the model marked or that matches a Recipe by name.
+// Effective is the answer in force: the User's, or the preselected one (only an exact name match to an existing Base
+// recipe or to a Base recipe of this file); Resolved is false until there is one. KeepIngredient is the plain Ingredient of
+// the same name, when one exists (the "Keep it as an Ingredient" answer shows it).
+type BaseRecipeLine struct {
+	Path           string                  `json:"path"`
+	Name           string                  `json:"name"` // the line's Ingredient as read
+	Reference      string                  `json:"reference,omitempty"`
+	Cue            string                  `json:"cue,omitempty"`
+	Quantity       float64                 `json:"quantity"`
+	Unit           string                  `json:"unit"`
+	Suggestions    []BaseRecipeSuggestion  `json:"suggestions"`
+	KeepIngredient *ExistingRef            `json:"keepIngredient,omitempty"`
+	Effective      *BaseRecipeLineDecision `json:"effective,omitempty"`
+	Resolved       bool                    `json:"resolved"`
 }
 
 // CourseDecision answers one Course name of the file, keyed by course.NameKey of the name.
@@ -225,9 +295,11 @@ type Plan struct {
 	UnitPrompts []UnitPrompt      `json:"unitPrompts"`
 	Recipes     []RecipeStatus    `json:"recipes"`
 	Courses     []CourseMatch     `json:"courses"`
-	Problems    []Problem         `json:"problems"`
-	Warnings    []Warning         `json:"warnings"`
-	Ready       bool              `json:"ready"`
+	// BaseRecipeLines (beta.6, BR-C): never null in JSON; Ready needs every row Resolved.
+	BaseRecipeLines []BaseRecipeLine `json:"baseRecipeLines"`
+	Problems        []Problem        `json:"problems"`
+	Warnings        []Warning        `json:"warnings"`
+	Ready           bool             `json:"ready"`
 }
 
 // BuildPlan computes the Import Review state (rules in the design note):
@@ -331,6 +403,15 @@ type Commit struct {
 	Recipes          []RecipeCommit
 	Images           map[string]imaging.Result // by image path; only images that were resolved
 	Warnings         []Warning
+	// BaseRecipeLines (beta.6, BR-C commit half, needs BR-B's store): what Confirm writes for each answered tile.
+	BaseRecipeLines []BaseRecipeLineCommit
+}
+
+// BaseRecipeLineCommit is one answered tile for the store: the Base recipes to create come before the Recipes that call for them.
+type BaseRecipeLineCommit struct {
+	RecipeIndex int // the Recipe of the file the line is in
+	Line        int
+	Decision    BaseRecipeLineDecision
 }
 
 // BuildCommit builds the write set, or *NotReadyError when BuildPlan is not

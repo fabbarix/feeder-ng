@@ -50,6 +50,10 @@ type Recipe struct {
 	Description string  `json:"description,omitempty"`
 	Yield       float64 `json:"yield"`
 	ReadyMeal   bool    `json:"readyMeal,omitempty"`
+	// BaseRecipe (beta.6, BR-C) is nil when absent or null, true for a Base recipe, false for "plannable, said so".
+	// With it, Yield is the amount of one Batch in YieldUnit.
+	BaseRecipe *bool  `json:"baseRecipe,omitempty"`
+	YieldUnit  string `json:"yieldUnit,omitempty"`
 	// Courses are Course names (crs-e1): written in household order, matched on import with course.NameKey.
 	// Empty means the main Course.
 	Courses []string `json:"courses,omitempty"`
@@ -72,6 +76,15 @@ type Line struct {
 	Unit       string  `json:"unit"`
 	Note       string  `json:"note,omitempty"`
 	Optional   bool    `json:"optional,omitempty"`
+	// Recipe (beta.6, BR-C): this line calls for another recipe. NeededAtStep is the 0-based Step by which it must be ready.
+	Recipe       *LineRecipe `json:"recipe,omitempty"`
+	NeededAtStep *int        `json:"neededAtStep,omitempty"`
+}
+
+// LineRecipe is the reference a line makes to another recipe: its name, and the words in the source that point at it.
+type LineRecipe struct {
+	Name string `json:"name"`
+	Cue  string `json:"cue,omitempty"`
 }
 
 // Step is one Step. Minutes are fractional in the file format; the importer

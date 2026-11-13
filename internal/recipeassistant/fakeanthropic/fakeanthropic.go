@@ -243,6 +243,16 @@ func ValidFile() string {
 	return string(b)
 }
 
+// BaseRecipesFile (beta.6, BR-C; marker #fake:base-recipes) is a valid answer with two Recipes: Lasagne (plannable) with a
+// line "500 ml béchamel" marked `recipe: { name: "Béchamel", cue: "" }`, and Béchamel (baseRecipe, yield 1 l).
+// STUB: the developer writes it (it must be a valid Recipe File, as the model would answer after Finish's pruneNone).
+func BaseRecipesFile() string { return "" }
+
+// BaseReferenceFile (beta.6, BR-C; marker #fake:base-reference) is a valid answer with one Recipe, Lasagne, whose line
+// "500 ml béchamel (see page 42)" is marked `recipe: { name: "Béchamel", cue: "see page 42" }`, and no Béchamel in the file.
+// STUB: the developer writes it.
+func BaseReferenceFile() string { return "" }
+
 // InvalidFile is a well-formed JSON answer that fails the Recipe File schema (yield is a string).
 func InvalidFile() string {
 	var m map[string]any
