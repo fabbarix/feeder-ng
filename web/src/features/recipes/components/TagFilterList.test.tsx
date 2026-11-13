@@ -58,4 +58,8 @@ describe('TagFilterList', () => {
     render(<TagFilterList known={[]} selected="" onSelect={() => {}} />)
     expect(screen.getByText('No Tag to choose from')).toBeInTheDocument()
   })
+  it('round 2: the search shows "Search Tags" as its placeholder (not the SearchField default)', () => {
+    render(<TagFilterList known={many} selected="" onSelect={() => {}} />)
+    expect(screen.getByRole('combobox', { name: 'Search Tags' })).toHaveAttribute('placeholder', 'Search Tags')
+  })
 })

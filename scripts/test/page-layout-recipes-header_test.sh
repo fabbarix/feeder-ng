@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# hf-recipes-filter: the Recipes filter header in a browser (docs/design/recipes-filter.md 1, 11). Rule P16 of the page-layout
-# guard: a chip whose label is crushed (cut by its ellipsis to under 24 px) is a finding even when its line is full, which is
-# what the beta.6 Tag row did with 25+ Tags (every Tag a dot with no name, in a sideways-scrolling row that P1, P13 and P14 let
-# through). The real driver runs against a tiny static server (fixtures/page-layout-recipes-header): /recipes is the beta.6
-# header with 40 Tags (crushed.html); /settings is the new header with a Course and a Tag on (fixed.html), which must be clean
-# of P1, P13, P14 and P16 at every quick-profile width. No Chrome: SKIP.
+# hf-recipes-filter: the Recipes filter header in a browser (docs/design/recipes-filter.md 1, 11, 13). The real driver runs against a
+# tiny static server (fixtures/page-layout-recipes-header):
+#   /plan      crushed.html  the beta.6 Tag row with 40 Tags: every chip crushed to its dot (P16);
+#   /recipes   round1.html   bb354d3c as the review saw it, with Side and a long Tag on and the panel open: the Tag chip cut beside
+#                            "Side" (P17 at 390), hit areas and the ring of "All Courses" clipped (P18), the popover start-aligned
+#                            past the page (P19 at 834 and 1440), row 3 flush under row 2 and the panel sections unspaced (P20);
+#   /settings  fixed.html    the same state laid out as round 2 says: clean of P1, P13, P14 and P16 to P20 at every width.
+# The real build is covered by the guard itself (check.sh), which probes /recipes and its SCENARIOS. No Chrome: SKIP.
 set -uo pipefail
 for v in $(compgen -e | grep -E '^PAGE_LAYOUT'); do unset "$v"; done
 
@@ -32,26 +34,45 @@ const dir = process.env.FIX
 http.createServer((q, s) => {
   if (q.url.startsWith('/api/')) { s.setHeader('content-type', 'application/json'); return s.end('{}') }
   s.setHeader('content-type', 'text/html')
-  s.end(fs.readFileSync(path.join(dir, q.url.startsWith('/settings') ? 'fixed.html' : 'crushed.html')))
+  const file = q.url.startsWith('/settings') ? 'fixed.html' : q.url.startsWith('/recipes') ? 'round1.html' : 'crushed.html'
+  s.end(fs.readFileSync(path.join(dir, file)))
 }).listen(Number(process.env.PORT), '127.0.0.1')
 JS
 FIX="$FIX" PORT="$PORT" node "$TMP/server.cjs" >/dev/null 2>&1 &
 SERVER=$!
 for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" && break; sleep 0.2; done
-echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(recipes|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"extraordinarily long family favourite weeknight tag"}' >"$TMP/ids.json"
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|recipes|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
 
-# the beta.6 Tag row: its chips are crushed at a phone, both iPad portrait widths
+# the beta.6 Tag row (/plan): its chips are crushed at a phone and both iPad portrait widths
 for w in 390 834 1024; do
-  grep -Eq "^\s+- ${w}px /recipes: P16 " <<<"$OUT" && ok || bad "${w}px /recipes: the crushed Tag row must be a P16 finding (got: $OUT)"
+  grep -Eq "^\s+- ${w}px /plan: P16 " <<<"$OUT" && ok || bad "${w}px /plan: the crushed Tag row must be a P16 finding (got: $OUT)"
 done
-# P16 fails in every mode (ALWAYS_FAIL), so the guard's count-fail sees it on /recipes, a warn route (only its P16 lines are fed in:
-# /settings is a fail route, where the fixture's page-width findings would count anyway)
-COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes: P16 ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
-[ "${COUNT:-0}" -gt 0 ] && ok || bad "the P16 findings on /recipes must count as failures (count-fail said '${COUNT:-}')"
-# the new header is clean at every quick-profile width
-for rule in P1 P13 P14 P16; do
-  grep -Eq "^\s+- [0-9]+px /settings: ${rule} " <<<"$OUT" && bad "the new header (/settings) must have no ${rule} finding (got: $OUT)" || ok
+# P16 fails in every mode (ALWAYS_FAIL), so the guard's count-fail sees it on a warn route (only those lines are fed in)
+COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /plan: P16 ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
+[ "${COUNT:-0}" -gt 0 ] && ok || bad "the P16 findings must count as failures (count-fail said '${COUNT:-}')"
+
+# round 1 (/recipes, and its SCENARIOS, which this static server answers with the same page)
+grep -Eq "^\s+- 390px /recipes[^:]*: P17 .*extraordinarily long" <<<"$OUT" && ok || bad "390px /recipes: the cut Tag chip beside Side must be a P17 finding naming it (got: $OUT)"
+for w in 390 834 1024 1440 1920; do
+  grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*hit area" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped hit areas of the chip line must be a P18 finding (got: $OUT)"
+  grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*All Courses.*focus ring" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped focus ring of All Courses must be a P18 finding (got: $OUT)"
+  grep -Eq "^\s+- ${w}px /recipes[^:]*: P20 " <<<"$OUT" && ok || bad "${w}px /recipes: row 3 flush under row 2 must be a P20 finding (got: $OUT)"
+done
+for w in 834 1440; do
+  grep -Eq "^\s+- ${w}px /recipes[^:]*: P19 " <<<"$OUT" && ok || bad "${w}px /recipes: the start-aligned popover must be a P19 finding (got: $OUT)"
+done
+# P17 to P20 fail in every mode
+COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes[^:]*: P(17|18|19|20) ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
+[ "${COUNT:-0}" -gt 0 ] && ok || bad "the P17-P20 findings must count as failures (count-fail said '${COUNT:-}')"
+
+# round 2 (/settings) is clean at every quick-profile width
+for rule in P1 P13 P14 P16 P17 P18 P19 P20; do
+  grep -Eq "^\s+- [0-9]+px /settings: ${rule} " <<<"$OUT" && bad "the round-2 header (/settings) must have no ${rule} finding (got: $OUT)" || ok
+done
+# and it was inspected at all five widths
+for w in 390 834 1024 1440 1920; do
+  grep -Eq "^\s+! ${w}px /settings" <<<"$OUT" && bad "${w}px /settings was not inspected (got: $OUT)" || ok
 done
 
 printf 'page-layout-recipes-header_test: %d passed, %d failed\n' "$PASS" "$FAIL"

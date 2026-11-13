@@ -1,6 +1,6 @@
 # Recipes list: the filter header (hotfix hf-recipes-filter)
 
-Status: **design, tests red** (2026-11-13). Release: a hotfix on 1.0.0-beta.6. Domain words come from
+Status: **round 2, tests red** (2026-11-13; round 1 built in bb354d3c and sent back by review, see [§13](#13-round-2-after-the-review-of-bb354d3c)). Release: a hotfix on 1.0.0-beta.6. Domain words come from
 [GLOSSARY.md](../../GLOSSARY.md); the rules from [system.md](system.md) and [ADR 0016](../adr/0016-design-system-rules-enforced.md).
 
 ## 1. The problem
@@ -81,7 +81,7 @@ Components only render and wire events (CLAUDE.md). Logic lives in `lib/recipeFi
 | `RecipeKindControl` | features/recipes/components | Unchanged API. Now `Segmented compact labelHidden` (radiogroup "Kind"). |
 | `RecipeSortSelect` | features/recipes/components | Unchanged API. Now `Select appearance="chip" icon="sort"` with short trigger labels (§9). |
 | `RecipeFiltersButton` | features/recipes/components | **New.** `Button variant="secondary" size="sm" icon="filter"`, text "Filters", and a count Chip while filters are on. `aria-haspopup="dialog"`, `aria-expanded`, `aria-label` from the summary. |
-| `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Close". |
+| `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Show Recipes". |
 | `CourseFilter` | features/recipes/components | Unchanged API and copy ("Filter by Course", "All Courses"). Its group is **one line**: it scrolls sideways inside the panel, chips keep their natural width (never crushed). |
 | `TagFilterList` | features/recipes/components | **New.** The shared `OptionList` (single) fed by `useTagFilterSearch`: search, rows, empty text. |
 | `ActiveFilterChips` | features/recipes/components | **New.** The chip line of row 3: removable chips (`Chip onRemove`) and the "+N" chip, fitted by `useFittingChips`. |
@@ -107,6 +107,12 @@ search field stays on top. Each row: `[● dot] fish ............ 3 Recipes`, na
 Only possible with long names on a phone. The chips that fit show in full, in order (Course, then Tag); the rest collapse into
 "+N", which opens the panel. At least one chip always shows; a single chip wider than the line ends in an ellipsis, with its
 full name in its tooltip and accessible name. A chip is never narrower than its "×" and four characters (`min-inline-size`).
+
+- **Only the first chip may ever be cut.** Any later chip that does not fit at its natural width goes into "+N"; it is never shown
+  cut. Example, 390 px, `?course=2&tag=extraordinarily long family favourite weeknight tag`: the line shows "Side ×" and "+1".
+- **Natural widths.** The chips are measured in a copy of the line that holds the **real removable chips** (the same `Chip
+  onRemove` markup, label and close icon) under `inert` and `aria-hidden`, laid out at `inline-size: max-content` with `flex: none`
+  chips, so nothing in the copy shrinks. No width is added by hand (no "remove allowance" constant).
 
 ### 5.5 Empty Tag search
 The list shows one line, "No Tag matches 'xyz'" (`meta`, muted), in place of the rows; the search keeps its text and its
@@ -186,13 +192,15 @@ on resize (ResizeObserver when present); without a measurement (jsdom) every chi
 
 1. **`Popover`** (new, `ui/Popover/Popover.tsx`, exported from `ui/index.ts`). `{ open, onClose, anchorRef, title, children,
    footer? }`. From 768 px a non-modal `role="dialog"` named by its visible title, floated with `useFloatingPopover` (top layer),
-   end-aligned under the anchor; Escape and an outside click close it and return focus to the anchor; on open, focus moves to the
+   end-aligned under the anchor (its end edge on the anchor's end edge, kept inside the page gutter: `placePopover({ align:
+   'end', margin })`, where `margin` is `--space-4`, 16 px); Escape and an outside click close it and return focus to the anchor; on open, focus moves to the
    first interactive element of the body. Below 768 px it renders a `BottomSheet` with the same title and footer.
 2. **`OptionList`** (new, `ui/Select/OptionList.tsx`, exported). An inline, always-open listbox with a search field on top: the
    panel part of `Select` without its trigger. `{ label, searchLabel, query, onQueryChange, options: SelectOption<V>[],
    selected: V[], onToggle(value: V), emptyText?: string | null }`. The search field is a `combobox` (`aria-expanded="true"`,
    `aria-controls`, `aria-activedescendant`); ArrowUp/Down, Home/End move the active option, Enter toggles it; a click toggles.
-   It does not filter or order: the caller passes the options to show.
+   It does not filter or order: the caller passes the options to show. The search field's placeholder is its `searchLabel`
+   ("Search Tags"). The active option scrolls into view (`scrollIntoView({ block: 'nearest' })`) whenever it changes.
 3. **`Segmented`**: `labelHidden?: boolean` (the label stays the radiogroup's name, visually hidden, as Select's chip does) and
    `compact?: boolean` (`data-compact`: the group is as wide as its options, `inline-size: max-content`, options `flex: none`
    with `--space-2` padding; height stays 40 px).
@@ -209,8 +217,8 @@ No other ui file changes.
   Its name is the summary: "Filters" or "Filters, 2 active". The count chip is `aria-hidden`.
 - **Panel**: a dialog named "Filters". On open, focus goes to the first Course chip ("All Courses"), or to the Tag search on
   Base recipes. Escape closes it and focus returns to the Filters button. On a phone it is the modal BottomSheet (focus
-  trapped; the backdrop and the header's ✕ IconButton dismiss it). The footer "Close" button closes it the same way, on every width.
-  On a phone the sheet's ✕ is also named "Close": both buttons do the same thing.
+  trapped; the backdrop and the header's ✕ IconButton ("Close") dismiss it). The footer "Show Recipes" button closes it the same
+  way, on every width; its name differs from the ✕ so a phone sheet never has two buttons named "Close".
 - **Course group**: "Filter by Course", toggle buttons (`aria-pressed`), as today.
 - **Tag list**: a search combobox "Search Tags" over a listbox "Filter by Tag"; each option is named by the Tag's name and
   described by its count ("3 Recipes"); `aria-selected` on the chosen Tag. The colour dot is decorative.
@@ -218,7 +226,7 @@ No other ui file changes.
   next chip, or to the Filters button when it was the last. "+N" is a button named "Show 1 more filter" / "Show 2 more filters"
   that opens the panel.
 - **Clear filters**: removes the Course and the Tag, keeps the panel open, focus stays on it (it becomes disabled, so focus
-  moves to "Close").
+  moves to "Show Recipes").
 - Kind: radiogroup "Kind" (label visually hidden). Sort: combobox "Sort" (label visually hidden), its value the short label.
 
 ## 9. Copy
@@ -230,12 +238,12 @@ No other ui file changes.
 | Panel title | "Filters" |
 | Course section heading | "Course"; group name "Filter by Course"; first chip "All Courses" (unchanged) |
 | Tag section heading | "Tag" |
-| Tag search | label and placeholder "Search Tags" |
+| Tag search | label and placeholder "Search Tags" (not the SearchField default "Search") |
 | Tag listbox | "Filter by Tag" |
 | Tag row meta | "1 Recipe", "3 Recipes", "No Recipes yet" (`tagColourStrings.recipes`) |
 | Empty Tag search | "No Tag matches 'xyz'" |
 | No Tags | "No Tag to choose from" |
-| Panel footer | "Clear filters", "Close" ("Done" is a GLOSSARY _Avoid_ word) |
+| Panel footer | "Clear filters", "Show Recipes" ("Done" is a GLOSSARY _Avoid_ word; "Close" is the sheet's ✕) |
 | Course chip | visible "Main"; name "Remove Course: Main" |
 | Tag chip | visible "fish"; name "Remove Tag: fish" |
 | More chip | "+1", "+2"; name "Show 1 more filter", "Show 2 more filters" |
@@ -246,7 +254,7 @@ No word from GLOSSARY's _Avoid_ lists ("category", "label" for a Tag; "dish type
 
 ## 10. Colour and type
 
-- New Recipe stays the one accent action of the page. Filters is `secondary`; the count is `Chip kind="count"`; "Close" is
+- New Recipe stays the one accent action of the page. Filters is `secondary`; the count is `Chip kind="count"`; "Show Recipes" is
   `secondary` and "Clear filters" `tertiary` (the panel has no accent).
 - The Course chip is neutral (`kind="tag"` with no colour). A Tag chip carries its Tag colour; the Tag list's dot is `TagDot`.
 - Section headings in the panel are `label` (`--text-label-*`). Feature CSS uses only `--text-*`, `--space-*` and colour tokens.
@@ -274,3 +282,46 @@ line is full; P14 only sees chips cut while their line has room.
   all of them (AND, narrows) or any (OR). The panel's list and chip line are already built for several (`OptionList` takes
   `selected: V[]`, the chip line fits N chips), so it is a server change, a lib change and a `multi` flag.
 - Search in the URL (it stays component state, as today).
+
+## 13. Round 2 (after the review of bb354d3c)
+
+The reviewer checked the real build in a browser (390 and 1440 px, panel open and closed). Round 2 keeps the design and fixes
+how it is built. Every user-facing string is in `recipeStrings` (§9); the footer button is "Show Recipes". The keys are
+`recipeStrings.filters.removeCourse(name)`, `removeTag(name)`, `buttonLabel(count)`, `noTagMatch(query)`, `noTags`,
+`tagSearch` and `showRecipes`; `lib/recipeFilters.ts` and `hooks/useTagFilterSearch.ts` hold no copy of their own.
+
+1. **Overflow is measured at natural widths** (§5.4). Round 1's hidden copy was `inset-inline: 0` with `flex: 0 1 auto` chips, so
+   it measured shrunk widths, then added a hand-made 20 px "remove allowance"; at 390 px both chips showed, the Tag cut.
+   - The copy (`.recipe-filters__measure`) is `inert`, `aria-hidden`, `inline-size: max-content`, its chips `flex: none`, and
+     holds the real removable chips.
+2. **Focus rings and hit areas are never clipped.** The 3 px outline (+2 px offset) of a removable chip and of "All Courses", and
+   a removable chip's 44 px hit area (`::before`, 9 px above and below), stay inside every clipping ancestor.
+   - `.recipe-filters__chips` does not use `overflow: hidden`. (Nothing past the fitted chips is rendered, so it needs no
+     clipping; if it clips, it is `overflow: clip` with `overflow-clip-margin` of at least 9 px.)
+   - `.course-filter` scrolls sideways, so it is padded on both axes by at least 5 px (`--space-2`) with a matching negative
+     margin, so its chips still line up with the heading.
+3. **Spacing.**
+   - Row 3 sits one slot gap (`--space-4`, the ListPage gap) below row 2 at every width: the Recipes filters slot is a grid
+     with that gap (`.recipes-screen .list-page__filters`).
+   - The panel's sections are spaced by the panel's own wrapper, `.recipe-filters__body` (`flex` column, `gap: var(--space-4)`),
+     so the bottom sheet (which has no `.popover__body`) spaces "Tag" from the Course chips too. recipes.css never styles
+     `.popover__body`.
+4. **OptionList keyboard scrolling**: the active option scrolls into view, `block: 'nearest'` (§7.2).
+5. **Popover alignment**: from 768 px the popover's end edge is the Filters button's end edge (±1 px) and the popover stays
+   inside the page content box (§7.1).
+6. **Browser coverage (page-layout guard).**
+   - New always-failing rules:
+     - **P17** a chip line that fits chips with "+N" (`.recipe-filters__chips`) shows a cut chip that is not its first, or a
+       chip that runs past the line;
+     - **P18** a focus ring or a hit area cut by a clipping ancestor (`overflow` other than visible, plus `overflow-clip-margin`),
+       for the chips of `.recipe-filters__chips` and `.course-filter`; a chip scrolled partly out of its own scroll container
+       is skipped;
+     - **P19** an open `.popover` whose end edge is not its trigger's (the element with `aria-controls` = its id), or that
+       leaves the page content box (from 768 px);
+     - **P20** Recipes filter spacing: row 3 not one slot gap below row 2, or two panel sections closer than `--space-3`.
+   - **Scenarios**: besides `/recipes`, the guard probes `/recipes?course=<Side>&tag=<a long Tag>` (row 3 and "+N"), and the
+     same URL with the Filters panel open (the sheet below 768 px, the popover from 768 px), on the real build. The seed writes
+     `sideCourseId` and `longTag` to the ids file.
+   - The static fixtures (`scripts/test/fixtures/page-layout-recipes-header/`) prove each probe: `crushed.html` (P16),
+     `round1.html` (the bb354d3c defects: P17, P18, P19, P20) and `fixed.html` (the round-2 layout: clean).
+

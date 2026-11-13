@@ -2,6 +2,7 @@
 // one-line rows are pinned here and checked in a browser by the page-layout guard (P1, P13, P14, P16) and
 // scripts/test/page-layout-recipes-header_test.sh.
 import { describe, expect, it } from 'vitest'
+import { readSource } from '../plan/test-css'
 import { recipeRules, rulesFor, valueFor } from './rules.test-helper'
 
 const WIDTHS = [0, 390, 600, 768, 834, 1024, 1440, 1920]
@@ -41,8 +42,8 @@ describe('row 2: Kind and Sort', () => {
 })
 
 describe('row 3: the active filter chips', () => {
-  it('clips what does not fit instead of scrolling sideways (the rest is "+N")', () => {
-    expect(valueFor('.recipe-filters__chips', 'overflow', 0)).toBe('hidden')
+  it('never scrolls sideways (what does not fit is "+N", not rendered)', () => {
+    expect(valueFor('.recipe-filters__chips', 'overflow-x', 0) ?? valueFor('.recipe-filters__chips', 'overflow', 0) ?? 'visible').not.toMatch(/auto|scroll/)
   })
   it('a chip keeps room for four characters and its close icon, never shrinking to a dot', () => {
     expect(valueFor('.recipe-filters__chips > .chip', 'flex', 0)).toBe('0 1 auto')
@@ -88,3 +89,73 @@ describe('the old header is gone', () => {
     }
   })
 })
+
+// Round 2 (docs/design/recipes-filter.md 13): what the review of bb354d3c found in the browser.
+const styles = readSource('styles.css')
+/** px of a length: '12px', 'var(--space-3)', 'calc(-1 * var(--space-2))' (sign kept); NaN when it cannot be read. */
+function px(value: string | undefined): number {
+  if (!value) return NaN
+  const v = value.trim()
+  const token = /^(-)?var\((--[\w-]+)\)$/.exec(v)
+  if (token) {
+    const m = new RegExp(`${token[2]}:\\s*(-?[\\d.]+)px`).exec(styles)
+    return m ? (token[1] ? -1 : 1) * Number(m[1]) : NaN
+  }
+  const neg = /^calc\(\s*-1\s*\*\s*(.+)\)$/.exec(v)
+  if (neg) return -px(neg[1])
+  const plain = /^(-?[\d.]+)px$/.exec(v)
+  return plain ? Number(plain[1]) : v === '0' ? 0 : NaN
+}
+/** The block or inline padding of a selector at width 0: padding-block / padding-inline, else the matching part of padding. */
+function padding(sel: string, axis: 'block' | 'inline'): number {
+  const own = valueFor(sel, `padding-${axis}`, 0)
+  if (own) return px(own.split(' ')[0])
+  const all = (valueFor(sel, 'padding', 0) ?? '').split(' ').filter(Boolean)
+  if (all.length === 0) return 0
+  return px(axis === 'block' ? all[0] : (all[1] ?? all[0]))
+}
+const RING = 3 + 2 // outline 3 px + offset 2 px (Chip.css button.chip:focus-visible)
+const HIT = 9 // a removable chip's ::before reaches 9 px above and below it (Chip.css)
+
+describe('round 2: the chip line measures natural widths', () => {
+  it('the measuring copy is as wide as its content, not the line, and its chips never shrink', () => {
+    expect(valueFor('.recipe-filters__measure', 'inline-size', 0)).toBe('max-content')
+    expect(valueFor('.recipe-filters__measure', 'inset-inline', 0)).toBeUndefined()
+    expect(valueFor('.recipe-filters__measure > .chip', 'flex', 0)).toBe('none')
+    expect(valueFor('.recipe-filters__measure > .chip', 'min-inline-size', 0)).toBeUndefined()
+  })
+})
+
+describe('round 2: focus rings and hit areas are never clipped', () => {
+  it('the chip line does not clip with overflow: hidden; if it clips, its clip margin holds the ring and the 44 px hit area', () => {
+    const overflow = valueFor('.recipe-filters__chips', 'overflow', 0) ?? 'visible'
+    expect(overflow).not.toBe('hidden')
+    if (overflow === 'clip') expect(px(valueFor('.recipe-filters__chips', 'overflow-clip-margin', 0))).toBeGreaterThanOrEqual(Math.max(RING, HIT))
+  })
+  it('the Course line (a sideways scroller) is padded on both axes for the ring of "All Courses", with matching negative margins', () => {
+    expect(padding('.course-filter', 'block')).toBeGreaterThanOrEqual(RING)
+    expect(padding('.course-filter', 'inline')).toBeGreaterThanOrEqual(RING)
+    const margin = valueFor('.course-filter', 'margin-inline', 0) ?? valueFor('.course-filter', 'margin', 0)?.split(' ')[1]
+    expect(px(margin)).toBe(-padding('.course-filter', 'inline'))
+  })
+})
+
+describe('round 2: spacing', () => {
+  const listPageGap = /\.list-page\s*\{[^}]*gap:\s*([^;]+);/.exec(readSource('ui/ListPage.css').replace(/\/\*[\s\S]*?\*\//g, ''))?.[1]?.trim()
+  it('row 3 sits one slot gap below row 2: the Recipes filters slot stacks its rows with the ListPage gap', () => {
+    expect(listPageGap).toBe('var(--space-4)')
+    for (const w of WIDTHS) {
+      expect(valueFor('.recipes-screen .list-page__filters', 'display', w), `@${w}`).toBe('grid')
+      expect(valueFor('.recipes-screen .list-page__filters', 'gap', w), `@${w}`).toBe(listPageGap)
+    }
+  })
+  it('the panel spaces its own sections (the bottom sheet has no .popover__body)', () => {
+    expect(valueFor('.recipe-filters__body', 'display', 0)).toBe('flex')
+    expect(valueFor('.recipe-filters__body', 'flex-direction', 0)).toBe('column')
+    expect(px(valueFor('.recipe-filters__body', 'gap', 0))).toBeGreaterThanOrEqual(12)
+  })
+  it('recipes.css never styles the shared .popover__body', () => {
+    expect(recipeRules.filter((r) => r.selector.includes('popover__body'))).toEqual([])
+  })
+})
+

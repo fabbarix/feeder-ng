@@ -86,4 +86,31 @@ describe('OptionList', () => {
     const { container } = render(<Harness />)
     expect(container.querySelector('select')).toBeNull()
   })
+  it('round 2: the search field\'s placeholder is its searchLabel', () => {
+    render(<Harness />)
+    expect(screen.getByRole('combobox', { name: 'Search Tags' })).toHaveAttribute('placeholder', 'Search Tags')
+  })
+  it('round 2: the active option scrolls into view (block: nearest) each time it changes', async () => {
+    const calls: { el: Element; arg: unknown }[] = []
+    const original = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function (this: Element, arg?: unknown) {
+      calls.push({ el: this, arg })
+    } as typeof Element.prototype.scrollIntoView
+    try {
+      render(<Harness />)
+      screen.getByRole('combobox', { name: 'Search Tags' }).focus()
+      await userEvent.keyboard('{ArrowDown}')
+      expect(calls.at(-1)?.el).toBe(screen.getByRole('option', { name: 'fish' }))
+      expect(calls.at(-1)?.arg).toEqual({ block: 'nearest' })
+      await userEvent.keyboard('{End}')
+      expect(calls.at(-1)?.el).toBe(screen.getByRole('option', { name: 'kids' }))
+      expect(calls.at(-1)?.arg).toEqual({ block: 'nearest' })
+      const count = calls.length
+      await userEvent.keyboard('{End}')
+      expect(calls.length).toBe(count)
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+  })
 })
+

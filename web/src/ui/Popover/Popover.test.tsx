@@ -96,3 +96,32 @@ describe('Popover below 768 px', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
+
+describe('Popover placement from 768 px (round 2, docs/design/recipes-filter.md 7.1, 13.5)', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) }) as DOMRect
+
+  it.each([
+    [834, 690, 112],
+    [1440, 1280, 112],
+  ])('at %i px its end edge is the anchor\'s end edge', async (vw, anchorLeft, anchorWidth) => {
+    stubViewportWidth(vw)
+    vi.stubGlobal('innerWidth', vw)
+    vi.stubGlobal('innerHeight', 900)
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.textContent === 'Filters' && this.tagName === 'BUTTON') return rect(anchorLeft, 180, anchorWidth, 36)
+      if (this.getAttribute('role') === 'dialog') return rect(0, 0, 384, 400)
+      return rect(0, 0, 0, 0)
+    })
+    try {
+      render(<Harness />)
+      await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+      const panel = screen.getByRole('dialog', { name: 'Filters' })
+      expect(parseFloat(panel.style.left) + 384).toBeCloseTo(anchorLeft + anchorWidth, 0)
+      expect(parseFloat(panel.style.top)).toBeGreaterThanOrEqual(216)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+

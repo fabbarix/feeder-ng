@@ -63,4 +63,31 @@ describe('ActiveFilterChips', () => {
     render(<ActiveFilterChips chips={chips} onRemove={() => {}} onMore={() => {}} />)
     expect(screen.queryByRole('button', { name: /more filter/ })).toBeNull()
   })
+
+  describe('round 2: the measuring copy (docs/design/recipes-filter.md 5.4, 13.1)', () => {
+    it('is inert and hidden, and holds the real removable chips, one per filter, plus a "+N"', () => {
+      fit.visible = 1
+      const { container } = render(<ActiveFilterChips chips={chips} onRemove={() => {}} onMore={() => {}} />)
+      const copy = container.querySelector('.recipe-filters__measure')!
+      expect(copy).not.toBeNull()
+      expect(copy).toHaveAttribute('inert')
+      expect(copy).toHaveAttribute('aria-hidden', 'true')
+      const copies = copy.querySelectorAll('.chip[data-removable]')
+      expect([...copies].map((c) => c.querySelector('.chip__label')?.textContent)).toEqual(['Main', 'fish'])
+      for (const c of copies) expect(c.querySelector('.chip__remove svg')).not.toBeNull()
+      expect(copy.querySelector('.recipe-filters__more')).not.toBeNull()
+    })
+    it('its chips are not in the accessibility tree or the tab order (only the shown chips are)', () => {
+      fit.visible = -1
+      render(<ActiveFilterChips chips={chips} onRemove={() => {}} onMore={() => {}} />)
+      expect(screen.getAllByRole('button', { name: 'Remove Tag: fish' })).toHaveLength(1)
+    })
+    it('adds no hand-made width to the measured chips', () => {
+      const raw = import.meta.glob(['./ActiveFilterChips.tsx', '../hooks/useFittingChips.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+      for (const [path, text] of Object.entries(raw)) {
+        expect(text, path).not.toMatch(/ALLOWANCE/i)
+        expect(text, path).not.toMatch(/\bw\s*\+\s*\d+/)
+      }
+    })
+  })
 })

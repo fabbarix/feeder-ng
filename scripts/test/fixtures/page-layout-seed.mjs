@@ -111,6 +111,8 @@ for (const [i, name] of RECIPES.entries()) {
 // hf-recipes-filter: many Tags (docs/design/recipes-filter.md), so /recipes shows its filter header as a household with dozens of
 // Tags sees it (the beta.6 Tag row crushed every chip to its dot). A Tag may exist with no Recipe (GLOSSARY); one Recipe carries
 // eight of them, with long names, so its tile's Tag line is exercised too.
+// Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 px.
+const LONG_TAG = 'extraordinarily long family favourite weeknight tag'
 const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
   'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
   'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
@@ -171,7 +173,9 @@ for (const [name, lines] of [
   ['Two-colour cauliflower with peppers', [lineOf('Cauliflower', 1500), lineOf('Red pepper', 2), lineOf('Marjoram', 2)]],
   ['Cucumber tomato feta salad', [lineOf('Cucumber', 2), lineOf('Feta', 150), line(3, 200)]],
 ]) {
-  const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags: ['vegetarian'], courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
+  // hf-recipes-filter round 2: the salad carries LONG_TAG, so /recipes?course=<Side>&tag=<LONG_TAG> lists it (guard SCENARIOS).
+  const tags = name.startsWith('Cucumber') ? ['vegetarian', LONG_TAG] : ['vegetarian']
+  const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags, courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
   if (r.ok && r.json?.id) sideIds.push(r.json.id)
 }
 const mainR = await step('main recipe', 'POST', '/api/recipes', {
@@ -230,5 +234,7 @@ if (tomorrowDinner && sideCourse && longSide.json?.id) {
 const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? []).length
 
 mkdirSync(dirname(out), { recursive: true })
-writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm }, null, 2) + '\n')
+// hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
+const sideCourseId = sideCourse?.id ?? null
+writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG }, null, 2) + '\n')
 console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, toConfirm ${toConfirm}) -> ${out}`)

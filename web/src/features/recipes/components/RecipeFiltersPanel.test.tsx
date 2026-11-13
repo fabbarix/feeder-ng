@@ -1,4 +1,4 @@
-// hf-recipes-filter: the Filters panel: Course and Tag, Clear filters and Close (docs/design/recipes-filter.md 4, 5, 8, 9).
+// hf-recipes-filter: the Filters panel: Course and Tag, Clear filters and Show Recipes (docs/design/recipes-filter.md 4, 5, 8, 9).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
@@ -84,9 +84,9 @@ describe('RecipeFiltersPanel', () => {
     expect(props.onClear).toHaveBeenCalledTimes(1)
     expect(props.onClose).not.toHaveBeenCalled()
   })
-  it('Close (the footer button) closes the panel', async () => {
+  it('Show Recipes closes the panel', async () => {
     const props = panel()
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Show Recipes' }))
     expect(props.onClose).toHaveBeenCalledTimes(1)
   })
   it('has no accent button (New Recipe stays the one primary action)', () => {
@@ -112,4 +112,20 @@ describe('RecipeFiltersPanel', () => {
     panel()
     expect(screen.getByRole('dialog', { name: 'Filters' }).tagName).not.toBe('DIALOG')
   })
+
+  it.each([390, 834])('round 2: at %i px its sections sit in its own spaced wrapper (.recipe-filters__body), not in the popover\'s body', (w) => {
+    stubViewportWidth(w)
+    panel()
+    const dialog = screen.getByRole('dialog', { name: 'Filters' })
+    const body = dialog.querySelector('.recipe-filters__body')
+    expect(body).not.toBeNull()
+    expect([...body!.children].filter((c) => c.classList.contains('recipe-filters__section'))).toHaveLength(2)
+  })
+  it('round 2: the footer button is "Show Recipes", so a phone sheet has one "Close" (its ✕)', () => {
+    stubViewportWidth(390)
+    panel()
+    expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Show Recipes' })).toBeInTheDocument()
+  })
 })
+
