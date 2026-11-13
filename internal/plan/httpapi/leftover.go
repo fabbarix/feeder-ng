@@ -217,7 +217,11 @@ func (a *api) takeOut(w http.ResponseWriter, r *http.Request) {
 	if body.StoragePlaceID != nil {
 		place = *body.StoragePlaceID
 	}
-	res, err := a.run.TakeOut(r.Context(), id, place, actingUser(r))
+	res, err := a.run.TakeOut(previewCtx(r), id, place, actingUser(r))
+	if dryRun(r) {
+		a.preview(w, r, err, res.Replanned, res.Leftover.RecipeID)
+		return
+	}
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -227,7 +231,20 @@ func (a *api) takeOut(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, l)
+	out, err := a.replannedOut(r.Context(), res.Replanned, res.Leftover.RecipeID)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, takeOutOut{leftoverOut: l, Leftover: l, Replanned: out})
+}
+
+// takeOutOut answers Take out: the Leftover's fields at the top level, as the route has always answered, and the same
+// Leftover under leftover, with the Planned Meals that were replanned (ADR 0012) under replanned.
+type takeOutOut struct {
+	leftoverOut
+	Leftover  leftoverOut     `json:"leftover"`
+	Replanned []plannedForOut `json:"replanned"`
 }
 
 func (a *api) answer(w http.ResponseWriter, r *http.Request) {

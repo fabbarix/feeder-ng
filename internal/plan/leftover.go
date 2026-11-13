@@ -162,6 +162,19 @@ func MisfitDependants(available float64, deps []Dependant) []Key {
 	return out
 }
 
+// AfterUseBy lists the Planned Meals served from a Leftover (served, in the order they are served) that are dated after
+// useBy. Take out shortens a Leftover's Use-by, so these meals can no longer have it: they are unpinned and planned
+// again (ADR 0012). A meal dated on the Use-by itself is still good.
+func AfterUseBy(useBy string, served []Meal) []Key {
+	var out []Key
+	for _, m := range served {
+		if m.Key.Date > useBy {
+			out = append(out, m.Key)
+		}
+	}
+	return out
+}
+
 // leftoverEps absorbs float noise in portion arithmetic (as eps in cook.go).
 const leftoverEps = 1e-9
 

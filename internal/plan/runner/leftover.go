@@ -145,7 +145,7 @@ func (r *Runner) HadIt(ctx context.Context, id int64, portions float64, userID i
 		if err != nil {
 			return nil, err
 		}
-		l, err := availableLeftover(ctx, st, id)
+		l, err := portionedLeftover(ctx, st, id)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (r *Runner) ThrewOut(ctx context.Context, id int64, portions float64, userI
 		if err != nil {
 			return nil, err
 		}
-		l, err := availableLeftover(ctx, st, id)
+		l, err := portionedLeftover(ctx, st, id)
 		if err != nil {
 			return nil, err
 		}
@@ -212,7 +212,7 @@ func (r *Runner) Freeze(ctx context.Context, id, storagePlaceID int64, portions 
 		if err != nil {
 			return nil, err
 		}
-		l, err := availableLeftover(ctx, st, id)
+		l, err := portionedLeftover(ctx, st, id)
 		if err != nil {
 			return nil, err
 		}
@@ -291,6 +291,7 @@ func (r *Runner) Freeze(ctx context.Context, id, storagePlaceID int64, portions 
 //
 // Its Use-by is today plus the Recipe's Use-by days (the Household's default otherwise). A Leftover whose Frozen
 // Use-by has already passed keeps that date, so it is to answer at once (docs/dev/design/b5-lo.md §9, PM answer 1).
+// The Planned Meals served from it dated after the new Use-by are unpinned and unlinked, and named in Replanned.
 func (r *Runner) TakeOut(ctx context.Context, id, storagePlaceID int64, userID int64) (LeftoverResult, error) {
 	var res LeftoverResult
 	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{}, func(_ *sql.Tx, st *store.Store) (func(), error) {
@@ -331,6 +332,10 @@ func (r *Runner) TakeOut(ctx context.Context, id, storagePlaceID int64, userID i
 		}
 		if err := st.AddLeftoverEvent(ctx, plan.LeftoverEvent{LeftoverID: id, RecipeID: l.RecipeID, Kind: plan.EventTookOut,
 			Portions: l.Portions, On: in.today, StoragePlaceID: storagePlaceID, UserID: userID}); err != nil {
+			return nil, err
+		}
+		res.Replanned, err = r.unpinAfterUseBy(ctx, st, id, useBy)
+		if err != nil {
 			return nil, err
 		}
 		res.Leftover, err = reload(ctx, st, id)
@@ -397,8 +402,14 @@ func (r *Runner) Answer(ctx context.Context, id int64, answer plan.LeftoverAnswe
 // ErrCourseNotInSlot, ErrRecipeNotInCourse, ErrRecipeInSlot) plus ErrNotFound, ErrLeftoverPastUseBy (the Use-by is
 // before the meal's date) and ErrLeftoverTooSmall.
 func (r *Runner) UseLeftover(ctx context.Context, key plan.Key, leftoverID int64) (plan.Meal, error) {
-	res, err := r.setCell(ctx, key, 0, nil, leftoverID)
+	res, err := r.PickLeftover(ctx, key, leftoverID)
 	return res.Meal, err
+}
+
+// PickLeftover is UseLeftover with what the pick covered: a Whole-meal Leftover in the main Course covers the other
+// Courses' unpinned, unresolved meals, as a Recipe set there does (SetResult.Covered).
+func (r *Runner) PickLeftover(ctx context.Context, key plan.Key, leftoverID int64) (SetResult, error) {
+	return r.setCell(ctx, key, 0, nil, leftoverID)
 }
 
 // availableLeftover is the Leftover of id when it is still available; ErrNotFound otherwise.
@@ -408,6 +419,19 @@ func availableLeftover(ctx context.Context, st *store.Store, id int64) (plan.Lef
 		return plan.Leftover{}, mapStoreErr(err)
 	}
 	if l.Status != plan.LeftoverAvailable {
+		return plan.Leftover{}, ErrNotFound
+	}
+	return l, nil
+}
+
+// portionedLeftover is availableLeftover for the actions that take portions off it (Had it, Threw it out, Freeze it):
+// a Leftover with 0 portions left is gone for them too, so ErrNotFound (ADR 0012).
+func portionedLeftover(ctx context.Context, st *store.Store, id int64) (plan.Leftover, error) {
+	l, err := availableLeftover(ctx, st, id)
+	if err != nil {
+		return plan.Leftover{}, err
+	}
+	if l.Portions <= 0 {
 		return plan.Leftover{}, ErrNotFound
 	}
 	return l, nil
@@ -484,6 +508,31 @@ func (r *Runner) unpinLeftoverMisfits(ctx context.Context, st *store.Store, id i
 	}
 	for _, k := range ks {
 		if err := st.SetPinned(ctx, k, false); err != nil && !errors.Is(err, store.ErrNotFound) {
+			return nil, err
+		}
+	}
+	return ks, nil
+}
+
+// unpinAfterUseBy unlinks the Planned Meals served from the Leftover id that are dated after useBy (plan.AfterUseBy):
+// unpinned, and no longer served from it, so the planning run (or the next one, past the Planning Horizon) plans them
+// again. A meal of the Use-by day or before keeps the Leftover. It returns the meals.
+func (r *Runner) unpinAfterUseBy(ctx context.Context, st *store.Store, id int64, useBy string) ([]plan.Key, error) {
+	deps, err := st.DependantsOfLeftover(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	ks := plan.AfterUseBy(useBy, deps)
+	for _, k := range ks {
+		m, err := st.Meal(ctx, k)
+		if errors.Is(err, store.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		m.Pinned, m.From = false, nil
+		if _, err := st.SaveMeal(ctx, m); err != nil {
 			return nil, err
 		}
 	}

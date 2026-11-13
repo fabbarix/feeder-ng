@@ -223,17 +223,12 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.LeftoverID != 0 {
-		m, err := a.run.UseLeftover(r.Context(), k, body.LeftoverID)
+		res, err := a.run.PickLeftover(r.Context(), k, body.LeftoverID)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
-		t, err := a.names.load(r.Context(), &m)
-		if err != nil {
-			writeErr(w, err)
-			return
-		}
-		httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(m, t), Covered: []int64{}})
+		a.putMeal(w, r, res)
 		return
 	}
 	if body.RecipeID <= 0 {
@@ -245,15 +240,18 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	a.putMeal(w, r, res)
+}
+
+// putMeal answers a set meal (by Recipe or by Leftover): the meal and the Courses a Whole meal covered.
+func (a *api) putMeal(w http.ResponseWriter, r *http.Request, res runner.SetResult) {
 	t, err := a.names.load(r.Context(), &res.Meal)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	covered := make([]int64, 0, len(res.Covered))
-	for _, c := range res.Covered {
-		covered = append(covered, c)
-	}
+	covered = append(covered, res.Covered...)
 	httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(res.Meal, t), Covered: covered})
 }
 

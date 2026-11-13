@@ -334,7 +334,8 @@ func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batc
 		if !ok {
 			return nil, ErrUnknownRecipe
 		}
-		if rc.Archived {
+		// An archived Recipe refuses a meal it would be cooked for, not a Leftover of it: the food exists (ADR 0012).
+		if rc.Archived && pick == nil {
 			return nil, ErrArchivedRecipe
 		}
 		if batches != nil && *batches <= 0 {
