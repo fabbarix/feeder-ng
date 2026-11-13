@@ -4,6 +4,10 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.5] - 2026-11-12
+
+A Meal Slot on one date (Not served, Guests, its own time), Leftovers answered by hand and kept in the freezer, Bought Planned Meals that stay, Used from at Mark as Cooked, Stock Lots on the Pantry, and a cleaner Settings.
+
 ### Added
 
 - **Leftovers by hand.** A Leftover past its Use-by is no longer thrown away on its own. A Leftover takes Had it (portions used outside the plan, not waste), Threw it out (waste dated the day of the action, or the day after the Use-by when the Leftover is already past it), Freeze it (into a Freezer, for the Frozen Use-by) or Take out (out of the Freezer, for the Recipe's Use-by days). Each one shows the Planned Meals it would replan.
@@ -21,6 +25,26 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
 - **Bought Planned Meals are kept.** Once a Scan or Tick by hand on the Shopping List covers part of a Planned Meal's Ingredients, the Planned Meal is Bought, and automatic replans leave it as it is. Plan and Today show a Bought chip and what was bought, and warn when a Bought Planned Meal now breaks a rule: an Exclusion, an archived Recipe or a lost Course. Regenerate asks first, naming the Bought Planned Meals it would replace, and Swap notes what stays in Stock.
 - **Used from at Mark as Cooked.** The Mark as Cooked sheet and the Mark all Cooked sheet, on Plan, Today and in Cook Mode, have a Used from row: pick the Stock Lots a Cooked Planned Meal took an Ingredient from, with the amount from each, or leave it on soonest to go off first. Mark all Cooked refuses a pick that takes more from a Stock Lot than it holds.
+- **Not needed on the Shopping List.** A line's menu has Not needed: the line leaves the list for its range, adds no Stock and is not a purchase. A group "Not needed (2)" at the end lists them with Needed after all.
+
+### Changed
+
+- **Seven buttons in the bottom bar.** Settings is now its own button, every button has the same width, Scan sits in the centre, and the highlighted button has room at both ends of the bar.
+- **Settings > Meal Slots.** One card per Meal Slot with its usual time, Courses, who eats and the days it is served, plus the days that differ. Dates that differ lists the coming dates with their own time, Not served or Guests.
+- **Settings in three groups.** Settings is grouped into Catalogue, Household and You.
+- **Recipes by last cooked.** The Recipes list has a Sort select: Name, Last cooked longest ago first, or Last cooked most recent first, and each Recipe shows when it was last cooked.
+
+### Upgrading
+
+No new settings. The database is migrated on start: 1500 adds the Meal Slot on one date (Not served, the date's own time and Guests), 1510 lets a Leftover sit in a Storage Place and be frozen and adds the Frozen Use-by and the history of Leftovers by hand, 1520 records which Planned Meal a purchase from the Shopping List was bought for, and 1530 adds Not needed on the Shopping List. Migrations cannot be undone. Purchases made before the upgrade have no record, so a Planned Meal becomes Bought only by a purchase after it.
+
+If the database already has applied migrations, Feeder first saves a checked copy of it as `feeder-pre-1500.db` in the `backups` folder of the data volume (`/data/backups`), before any of the four migrations runs. It is not listed in Settings, the nightly clean-up does not remove it, an existing copy is kept, and a fresh install takes none. If the copy cannot be written, Feeder stops with a log line naming the file and migrates nothing.
+
+A Leftover past its Use-by is no longer thrown away at 03:00: after the upgrade it waits on Today until someone answers Had it, Threw it out or Wasn't there.
+
+Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.5 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
+To go back to 1.0.0-beta.4.2, stop Feeder (on Kubernetes, set the deployment to zero replicas), copy `feeder-pre-1500.db` over `feeder.db` (and delete `feeder.db-wal` and `feeder.db-shm`), then start the older image. Everything you changed after the upgrade is lost. On Kubernetes, `helm history feeder -n feeder` lists the revisions and `helm rollback feeder <revision> -n feeder` returns to the one that ran 1.0.0-beta.4.2, but only after the database is restored. The steps are in the deploy guide, "Upgrading from 1.0.0-beta.4.2 to 1.0.0-beta.5".
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 
@@ -207,7 +231,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...HEAD
+[1.0.0-beta.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...v1.0.0-beta.5
 [1.0.0-beta.4.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...v1.0.0-beta.4.2
 [1.0.0-beta.4.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...v1.0.0-beta.4.1
 [1.0.0-beta.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.3...v1.0.0-beta.4
