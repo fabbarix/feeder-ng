@@ -1,6 +1,7 @@
 // The "Read the receipt" row at the foot of the Scanned list (design 3.1, 7.3). It is the Scan screen's footer slot (SR4) and imports nothing of it.
 import { Link, useNavigate } from 'react-router-dom'
 import { ListRow } from '../../../ui'
+import { showsReadReceiptRow } from '../lib/readGate'
 import { publishReceiptSession } from '../lib/receiptSession'
 import { waitingText } from '../lib/reviewCopy'
 import { receiptStrings as t } from '../strings'
@@ -19,9 +20,8 @@ export interface ReadReceiptFooterProps {
 /** The row, or nothing: no scans, or the assistant off for a User. An Admin sees it muted with the way to turn it on. Offline wins over waiting. */
 export function ReadReceiptFooter({ shopId, clientUuids, online, assistantAvailable, isAdmin = false, pendingScans = 0 }: ReadReceiptFooterProps) {
   const navigate = useNavigate()
-  if (clientUuids.length === 0) return null
+  if (!showsReadReceiptRow({ clientUuids, assistantAvailable, isAdmin })) return null
   if (!assistantAvailable) {
-    if (!isAdmin) return null
     return (
       <ListRow title={t.readTitle} icon="receipt">
         <Link to="/settings/recipe-assistant" className="receipt-link">

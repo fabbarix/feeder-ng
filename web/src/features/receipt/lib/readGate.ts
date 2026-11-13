@@ -37,3 +37,8 @@ export function footerAvailability(avail: Pick<ReadAvailability, 'loading' | 'ph
   if (avail.loading) return { assistantAvailable: false, isAdmin: false }
   return { assistantAvailable: avail.photos, isAdmin: avail.isAdmin }
 }
+
+/** Whether the Scanned list shows the "Read the receipt" row at all (design 3.1): with a scan, and the assistant available or an Admin to turn it on. */
+export function showsReadReceiptRow(o: { clientUuids: readonly string[]; assistantAvailable: boolean; isAdmin?: boolean }): boolean {
+  return o.clientUuids.length > 0 && (o.assistantAvailable || o.isAdmin === true)
+}

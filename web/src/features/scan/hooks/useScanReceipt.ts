@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useReadAvailability } from '../../import/hooks/useReadAvailability'
 import type { ReadReceiptFooterProps } from '../../receipt/components/ReadReceiptFooter'
 import { useReceiptApplied } from '../../receipt/hooks/useReceiptApplied'
-import { footerAvailability } from '../../receipt/lib/readGate'
+import { footerAvailability, showsReadReceiptRow } from '../../receipt/lib/readGate'
 import { publishReceiptSession } from '../../receipt/lib/receiptSession'
 import type { ReceiptAppliedEvent } from '../../receipt/types'
 import { appliedClientUuids, applyReceiptToSession } from '../lib/receiptApplied'
@@ -21,7 +21,7 @@ export interface UseScanReceiptOptions {
   refreshLive?: () => void
 }
 
-/** The footer row's props, or null in Stock-take. */
+/** The footer row's props; null in Stock-take, and when the row would not show (no scans, or the assistant off for a User). */
 export function useScanReceipt({ shopId, scanned, online, pendingScans, refreshLive }: UseScanReceiptOptions): ReadReceiptFooterProps | null {
   const avail = useReadAvailability()
   const { entries, loaded, update } = scanned
@@ -48,5 +48,6 @@ export function useScanReceipt({ shopId, scanned, online, pendingScans, refreshL
   }, [shopId, loaded, waiting, update, refreshLive])
 
   if (shopId === null) return null
-  return { shopId, clientUuids, online, pendingScans, ...footerAvailability(avail) }
+  const props = { shopId, clientUuids, online, pendingScans, ...footerAvailability(avail) }
+  return showsReadReceiptRow(props) ? props : null
 }

@@ -41,6 +41,8 @@ import { useScanSession } from '../hooks/useScanSessionActive'
 import { useScrollAboveSheet } from '../hooks/useScrollAboveSheet'
 import { useScanReceipt } from '../hooks/useScanReceipt'
 import { ReadReceiptFooter } from '../../receipt/components/ReadReceiptFooter'
+import { receiptStrings } from '../../receipt/strings'
+import { ListGroup } from '../../../ui/ListRow'
 import { initialChoice, type ScanChoice } from '../lib/initialChoice'
 import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import type { ListView } from '../lib/listView'
@@ -274,7 +276,13 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onIncrement={(key) => void flow.increment(key)}
           onDecrement={(key) => void flow.decrement(key)}
           onRemove={(key) => void flow.removeRow(key)}
-          footer={receipt ? <ReadReceiptFooter {...receipt} /> : undefined}
+          footer={
+            receipt ? (
+              <ListGroup label={receiptStrings.footerGroup}>
+                <ReadReceiptFooter {...receipt} />
+              </ListGroup>
+            ) : undefined
+          }
         />
       ) : (
         <ToGetList entries={scanned.toGet.map((line) => lineEntry(line, c.currency, c.system))} onOpen={() => navigate('/shop')} />

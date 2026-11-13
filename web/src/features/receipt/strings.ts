@@ -3,6 +3,8 @@ export const receiptStrings = {
   // Where it lives (the Scanned list footer, design 3.1).
   readTitle: 'Read the receipt',
   readMeta: 'Fill in Prices and weighed amounts from a photo',
+  /** The accessible name of the footer row's own list, under the Scanned list. */
+  footerGroup: 'Receipt',
   needsConnection: 'Reading the receipt needs a connection',
   turnOnAssistant: 'Turn on the Recipe Assistant in Settings',
   recipeSettings: 'Recipe Assistant settings',

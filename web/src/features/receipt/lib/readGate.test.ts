@@ -1,6 +1,6 @@
 // RR4 review: the gate of "Read the receipt", moved out of the screen (design 3.2, 7.3).
 import { describe, expect, it } from 'vitest'
-import { footerAvailability, readGate, type ReadGateInput } from './readGate'
+import { footerAvailability, readGate, showsReadReceiptRow, type ReadGateInput } from './readGate'
 
 const base: ReadGateInput = { offline: false, avail: { loading: false, enabled: true, photos: true }, photoCount: 1, preparing: false, reading: false }
 const gate = (over: Partial<ReadGateInput> = {}, avail: Partial<ReadGateInput['avail']> = {}) => readGate({ ...base, ...over, avail: { ...base.avail, ...avail } })
@@ -43,5 +43,16 @@ describe('footerAvailability', () => {
   })
   it('shows nothing while the status loads, not even to an Admin', () => {
     expect(footerAvailability({ loading: true, photos: false, isAdmin: true })).toEqual({ assistantAvailable: false, isAdmin: false })
+  })
+})
+
+describe('showsReadReceiptRow', () => {
+  it('needs a scan', () => {
+    expect(showsReadReceiptRow({ clientUuids: [], assistantAvailable: true, isAdmin: true })).toBe(false)
+  })
+  it('shows with the assistant available, or to an Admin who can turn it on', () => {
+    expect(showsReadReceiptRow({ clientUuids: ['u1'], assistantAvailable: true })).toBe(true)
+    expect(showsReadReceiptRow({ clientUuids: ['u1'], assistantAvailable: false, isAdmin: true })).toBe(true)
+    expect(showsReadReceiptRow({ clientUuids: ['u1'], assistantAvailable: false })).toBe(false)
   })
 })
