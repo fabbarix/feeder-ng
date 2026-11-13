@@ -197,3 +197,47 @@ func TestThePublishedExampleStaysValidAndFreeOfBeta6Fields(t *testing.T) {
 		t.Fatalf("the beta.5 example is still a valid file: %v", err)
 	}
 }
+
+// BR-C round 2: a Step's `uses` names an Ingredient and an amount, nothing else (Import ignores `recipe` and
+// `neededAtStep` there).
+
+func TestAStepUseHasNoRecipeOrNeededAtStep(t *testing.T) {
+	defs := defsOf(t)
+	items := propsOf(t, defs["step"])["uses"].(map[string]any)["items"].(map[string]any)
+	use := items
+	if ref, ok := items["$ref"].(string); ok {
+		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
+	}
+	p := propsOf(t, use)
+	for _, name := range []string{"recipe", "neededAtStep"} {
+		if _, has := p[name]; has {
+			t.Errorf("a use must not have %q", name)
+		}
+	}
+	for _, name := range []string{"ingredient", "quantity", "unit"} {
+		if _, has := p[name]; !has {
+			t.Errorf("a use keeps %q", name)
+		}
+	}
+	if use["additionalProperties"] != false {
+		t.Error("a use is a closed object")
+	}
+	// The ingredient lines of a Recipe still have the fields.
+	if _, has := propsOf(t, defs["quantity"])["recipe"]; !has {
+		t.Error("ingredient lines keep `recipe`")
+	}
+}
+
+func TestRecipeFileDocNoLongerGivesUsesTheReferenceFields(t *testing.T) {
+	if strings.Contains(spec.RecipeFileMD, "(and a Step's `uses`) take two optional fields") {
+		t.Error("recipe-file.md still says a Step's `uses` takes `recipe` and `neededAtStep`")
+	}
+}
+
+func TestRecipeRefCueDescriptionSaysWriteAnEmptyTextNotOmit(t *testing.T) {
+	cue := propsOf(t, defsOf(t)["recipeRef"])["cue"].(map[string]any)
+	d, _ := cue["description"].(string)
+	if strings.Contains(d, "Omit it") || !strings.Contains(d, `""`) {
+		t.Errorf("cue description = %q, want it to say write \"\" when there is no cue", d)
+	}
+}

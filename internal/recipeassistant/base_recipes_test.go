@@ -222,3 +222,39 @@ func TestFinishRejectsABaseRecipeWithoutAYieldUnitWithThePath(t *testing.T) {
 		t.Errorf("paths = %+v, want one at $.recipes[0].yieldUnit so the repair turn can fix it", e.Paths)
 	}
 }
+
+// ---- round 2 --------------------------------------------------------------------------------------------------
+
+func TestOutputSchemaUseHasNoRecipeOrNeededAtStep(t *testing.T) {
+	defs := decode(t, projected(t))["$defs"].(map[string]any)
+	items := defs["step"].(map[string]any)["properties"].(map[string]any)["uses"].(map[string]any)["items"].(map[string]any)
+	use := items
+	if ref, ok := items["$ref"].(string); ok {
+		use = defs[strings.TrimPrefix(ref, "#/$defs/")].(map[string]any)
+	}
+	props := use["properties"].(map[string]any)
+	for _, name := range []string{"recipe", "neededAtStep"} {
+		if _, has := props[name]; has {
+			t.Errorf("the projection's use has %q: the model would fill a field Import ignores", name)
+		}
+	}
+	if len(toStrings(use["required"])) != len(props) {
+		t.Errorf("a use requires all its properties: %v", use["required"])
+	}
+}
+
+func TestOutputSchemaCueDescriptionSaysWriteEmptyTextWhenThereIsNoCue(t *testing.T) {
+	defs := decode(t, projected(t))["$defs"].(map[string]any)
+	cue := defs["recipeRef"].(map[string]any)["properties"].(map[string]any)["cue"].(map[string]any)
+	d, _ := cue["description"].(string)
+	if strings.Contains(d, "Omit it") || !strings.Contains(d, `""`) {
+		t.Errorf("cue description = %q: the projection requires cue, so the model must be told to write \"\"", d)
+	}
+	raw, err := os.ReadFile("testdata/output-schema.golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "Omit it when the source gives none") {
+		t.Error("the golden still carries the old cue description")
+	}
+}

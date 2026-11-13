@@ -207,3 +207,15 @@ func TestCheckFileErrorsOfBaseRecipesComeInDocumentOrder(t *testing.T) {
 		t.Errorf("paths = %v", got)
 	}
 }
+
+func TestParseRejectsRecipeAndNeededAtStepOnAStepUse(t *testing.T) {
+	for field, val := range map[string]any{"recipe": map[string]any{"name": "Béchamel"}, "neededAtStep": 1} {
+		raw := mutate(t, func(root map[string]any) {
+			step := recipeAt(root, 0)["steps"].([]any)[0].(map[string]any)
+			step["uses"] = []any{map[string]any{"ingredient": "onion", "quantity": 1, "unit": "piece", field: val}}
+		})
+		if _, err := recipefile.Parse(raw); err == nil {
+			t.Errorf("a use with %q must be refused", field)
+		}
+	}
+}

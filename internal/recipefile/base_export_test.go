@@ -238,3 +238,61 @@ func TestExportThenParseKeepsTheFixtureShape(t *testing.T) {
 		t.Errorf("export %v, fixture %v", recipeNames(exported), recipeNames(fixture))
 	}
 }
+
+// ---- round 2: a plain Ingredient beside a Base recipe's own Ingredient of the same name -----------------------
+
+func sameNameExportInput() recipefile.ExportInput {
+	in := baseExportInput()
+	// Moussaka (14) uses a plain "béchamel" Ingredient (30), kept apart from the Base recipe Béchamel's own (21).
+	in.Ingredients[30] = ingredient.Ingredient{ID: 30, Name: "béchamel", Base: "ml"}
+	in.Recipes = append(in.Recipes, recipe.Recipe{ID: 14, Input: recipe.Input{Name: "Moussaka", Yield: 4,
+		Lines: []recipe.Line{{IngredientID: 30, Quantity: 300, Unit: "ml"}}}})
+	return in
+}
+
+func TestExportNeverWritesTwoIngredientDefinitionsWithTheSameName(t *testing.T) {
+	f, _ := recipefile.Build(sameNameExportInput())
+	seen := map[string]int{}
+	for _, d := range f.Ingredients {
+		seen[units.NormalizeName(d.Name)]++
+	}
+	for name, n := range seen {
+		if n > 1 {
+			t.Errorf("%d definitions named %q", n, name)
+		}
+	}
+}
+
+func TestAnExportWithASameNameIngredientParsesAndImportsWithoutProblems(t *testing.T) {
+	f, _ := recipefile.Build(sameNameExportInput())
+	raw, err := recipefile.Marshal(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := recipefile.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := recipefile.CheckFile(parsed); len(errs) != 0 {
+		t.Fatalf("CheckFile: %+v", errs)
+	}
+	p := plan(t, parsed, recipefile.Existing{}, recipefile.Decisions{})
+	if len(p.Problems) != 0 {
+		t.Fatalf("problems = %+v", p.Problems)
+	}
+	n := 0
+	for _, m := range p.Ingredients {
+		if m.Key == "béchamel" || m.Key == "bechamel" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("one Ingredient row for béchamel, got %d", n)
+	}
+}
+
+func TestSameNameIngredientsRoundTripAsTwoIngredients(t *testing.T) {
+	t.Skip("BR-C/BR-B: telling the plain béchamel line from the Base recipe's one after import (two Ingredients again) " +
+		"needs the store's Base recipe Ingredient lifecycle (base-recipe:<id> keys); the file format has one name only. " +
+		"Test it with the commit half.")
+}

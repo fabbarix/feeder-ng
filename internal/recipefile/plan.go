@@ -94,6 +94,8 @@ type CourseRef struct {
 type RecipeRef struct {
 	ID   int64
 	Name string
+	// ReadyMeal (beta.6, BR-C round 2): a Ready Meal is never a Base recipe target. Filled by the store from the Recipe.
+	ReadyMeal bool
 }
 
 // IngredientDecision answers one Ingredient of the file, keyed by its
