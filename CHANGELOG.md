@@ -12,6 +12,7 @@ Recipe reading works again, and the Recipes list has a simpler filter header tha
 
 - **Reading a recipe with the Recipe Assistant failed** with "The compiled grammar is too large" since 1.0.0-beta.6. The answer Feeder asks Claude for grew too large with the Base recipe fields; it is back within the limit, and reading a recipe that calls for another one (a lasagne with its béchamel) works again.
 - **The Recipes filter header** showed every Tag as an unnamed coloured dot in a row that ran off the screen, and stacked Kind, Course and Sort on separate lines. It is now Search with a Filters button, then the Recipes or Base recipes switch with a compact Sort. Filters opens a panel (a sheet on a phone) with the Courses and a searchable list of Tags by name, colour and Recipe count. The filters you pick show as named chips you can remove, with "+N" when they don't fit. The chosen Course is now kept in the page address, so going back to the list keeps it.
+- **No more "All Courses".** The Filters panel lists only your Courses. With none picked, every Recipe shows; tap a Course to filter by it, and tap it again to show every Recipe.
 - **Settings › Tags** cut off a long Tag's Recipe count and pushed its arrow past the edge on a phone; a long Tag name now ends in an ellipsis, with the full name kept for screen readers.
 
 ### Upgrading
