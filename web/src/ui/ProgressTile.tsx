@@ -9,12 +9,12 @@ export interface ProgressTileProps {
   valueLabel?: string
 }
 
-/** A soft Tile showing progress through a known total, as an accessible progressbar. */
+/** A neutral metric tile (surface) showing progress through a known total, as an accessible progressbar (system.md 2). */
 export function ProgressTile({ label, value, max, valueLabel }: ProgressTileProps) {
   const clamped = Math.min(Math.max(value, 0), Math.max(max, 0))
   const percent = max > 0 ? (clamped / max) * 100 : 0
   return (
-    <Tile variant="soft" className="progress-tile">
+    <Tile className="progress-tile">
       <div
         role="progressbar"
         aria-label={label}

@@ -22,7 +22,7 @@ export interface CostTileProps {
 export function CostTile({ estimatedCostCents, unpriced, currency, shopName, onScan }: CostTileProps) {
   const priced = estimatedCostCents > 0
   return (
-    <Tile variant="soft" className="cost-tile">
+    <Tile className="cost-tile">
       {priced ? (
         <>
           <p className="cost-tile__label">{shopStrings.estimatedTotal}</p>

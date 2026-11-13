@@ -1,5 +1,9 @@
-/* DS-A type-scale: 4 violations */
+/* DS-A type-scale: 4 violations (7 with round 2 below) */
 .a { font-size: 1.125rem; }
 .b { font-size: 0.875em; }
 .c { font: 700 1.1rem/1.2 'Figtree', sans-serif; }
 .d { font-size: 14px; }
+/* round 2: only a bare :root or html[...] block holds tokens; a descendant of :root or html is a feature rule (+3 = 7) */
+:root .caption { font-size: 0.9rem; }
+html .title { font-size: 1.2rem; }
+[data-theme='dark'] .tag { font-size: 0.75rem; }

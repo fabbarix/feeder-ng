@@ -19,14 +19,15 @@
 }
 
 /* A metric strip fills its row: small tiles never come as a half-width orphan. */
+/* At most three tiles per row at any width: a track is never narrower than a third of the row (system.md 4). */
 .bento-grid[data-min='metric'] {
-  grid-template-columns: repeat(auto-fit, minmax(min(var(--tile-min-metric), 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(max(min(var(--tile-min-metric), 100%), calc((100% - 2 * var(--bento-gap)) / 3)), 1fr));
 }
 
 /* On a phone the metric strip is one row of up to three equal tracks. */
 @media (max-width: 599px) {
   .bento-grid[data-min='metric'] {
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(calc((100% - 2 * var(--bento-gap)) / 3), 1fr));
   }
 }
 

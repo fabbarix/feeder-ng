@@ -1,0 +1,48 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-A round 2 (docs/design/system.md §5): ActionGroup in real layout, with the app's real stylesheets. The markup is what
+     <ActionGroup> renders (the group is the root; the caller's row or tile is the container). Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/500.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/700.css">
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Button.css"><link rel="stylesheet" href="../../../../web/src/ui/IconButton.css">
+<link rel="stylesheet" href="../../../../web/src/ui/ListRow.css"><link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/BentoGrid.css">
+<link rel="stylesheet" href="../../../../web/src/ui/ActionGroup.css">
+<style>body { margin: 0; font-family: 'Figtree', sans-serif; } ul { margin: 0; padding: 0; list-style: none; } .box { margin-bottom: 24px; }</style>
+</head><body>
+<!-- 1. two ListRows in an 800 px list: groups of different widths ("Cooked" vs "All Cooked") -->
+<ul class="box" style="inline-size: 800px">
+  <li class="list-row" id="row1"><span class="list-row__text"><span class="list-row__title">Sam's Manicotti</span></span>
+    <div class="action-group" role="group" aria-label="Wed Dinner" data-more="true" id="g1">
+      <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>Cooked</button>
+      <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+      <button class="icon-button" data-size="md" aria-label="More for Wed Dinner"></button></div></li>
+  <li class="list-row" id="row2"><span class="list-row__text"><span class="list-row__title">Sam's Manicotti + Two-colour cauliflower with peppers</span></span>
+    <div class="action-group" role="group" aria-label="Thu Dinner" data-more="true" id="g2">
+      <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>All Cooked</button>
+      <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+      <button class="icon-button" data-size="md" aria-label="More for Thu Dinner"></button></div></li>
+</ul>
+<!-- 2. a plain flex row that is the host (.action-group-host on the caller's row), 800 px -->
+<div class="box action-group-host" id="row3" style="inline-size: 800px; display: flex; align-items: center; gap: 12px">
+  <div style="flex: 1; min-inline-size: 0">Wed Dinner: Pasta</div>
+  <div class="action-group" role="group" aria-label="Wed Dinner" data-more="true" id="g3">
+    <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>All Cooked</button>
+    <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+    <button class="icon-button" data-size="md" aria-label="More for Wed Dinner"></button></div>
+</div>
+<!-- 3. a narrow tile (a phone, 358 px): the group takes its own line as equal tracks -->
+<section class="box tile action-group-host" id="row4" style="inline-size: 358px">
+  <p style="margin: 0">Thu Dinner</p>
+  <div class="action-group" role="group" aria-label="Thu Dinner" data-more="true" id="g4">
+    <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>All Cooked</button>
+    <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+    <button class="icon-button" data-size="md" aria-label="More for Thu Dinner"></button></div>
+</section>
+<script>
+const rect = (id) => document.getElementById(id).getBoundingClientRect()
+const group = (gid, rid) => {
+  const g = document.getElementById(gid), r = rect(rid), b = g.getBoundingClientRect()
+  const kids = [...g.children].map((c) => c.getBoundingClientRect())
+  return { display: getComputedStyle(g).display, w: Math.round(b.width), left: Math.round(b.left), right: Math.round(b.right), hostRight: Math.round(r.right),
+    overflow: kids.some((k) => k.right > b.right + 1 || k.left < b.left - 1), oneLine: new Set(kids.map((k) => Math.round((k.top + k.bottom) / 2))).size === 1 }
+}
+document.title = JSON.stringify({ g1: group('g1', 'row1'), g2: group('g2', 'row2'), g3: group('g3', 'row3'), g4: group('g4', 'row4') })
+</script></body></html>

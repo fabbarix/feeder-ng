@@ -1,4 +1,5 @@
-// R2-4 L-10: board.css is 2 columns by default and becomes the 4 x 3 wall grid from 600 px.
+// R2-4 L-10: board.css is 2 columns by default and becomes the 4 x 3 wall grid from 600 px. DS-A round 2: its own .board-grid, not a
+// borrowed .bento-grid (ADR 0016: the BentoGrid tracks and its no-status-span rule must not reach the wall grid).
 import { describe, expect, it } from 'vitest'
 
 const nodeFs = 'node:fs'
@@ -19,13 +20,13 @@ describe('board.css phone grid', () => {
     expect(at).toBeGreaterThan(-1)
   })
   it('the default grid is 2 columns with content-height rows', () => {
-    const r = rule(base, '.board-screen .bento-grid')
+    const r = rule(base, '.board-screen .board-grid')
     expect(r).toMatch(/grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/)
     expect(r).not.toMatch(/height:\s*calc\(100vh/)
     expect(r).not.toMatch(/grid-template-rows:\s*repeat\(3/)
   })
   it('from 600 px it is the 4 x 3 grid at screen height', () => {
-    const r = rule(wall, '  .board-screen .bento-grid')
+    const r = rule(wall, '  .board-screen .board-grid')
     expect(r).toMatch(/grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/)
     expect(r).toMatch(/grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/)
     expect(r).toMatch(/height:\s*calc\(100vh - 48px\)/)

@@ -1,0 +1,14 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-A round 2 (system.md §4): a metric strip holds at most three tiles per row, at any width. Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/BentoGrid.css">
+<style>body { margin: 0 }</style></head><body>
+<div class="bento-grid" data-min="metric" id="wide" style="inline-size: 1100px">
+  <section class="tile">1</section><section class="tile">2</section><section class="tile">3</section><section class="tile">4</section><section class="tile">5</section></div>
+<div class="bento-grid" data-min="metric" id="three" style="inline-size: 1100px">
+  <section class="tile">1</section><section class="tile">2</section><section class="tile">3</section></div>
+<script>
+const rows = (id) => [...document.getElementById(id).children].map((t) => Math.round(t.getBoundingClientRect().top))
+const perRow = (id) => { const r = rows(id); return r.filter((t) => t === r[0]).length }
+const widths = (id) => [...document.getElementById(id).children].map((t) => Math.round(t.getBoundingClientRect().width))
+document.title = JSON.stringify({ wideFirstRow: perRow('wide'), threeFirstRow: perRow('three'), threeWidths: widths('three') })
+</script></body></html>

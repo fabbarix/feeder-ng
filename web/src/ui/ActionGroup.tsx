@@ -28,21 +28,20 @@ export interface ActionGroupProps {
  */
 export function ActionGroup({ label, primary, secondary, more }: ActionGroupProps) {
   const hasMore = Boolean(more && more.length > 0)
+  // The group is the root (no wrapper). Its container is the caller's row or tile (a .list-row, or .action-group-host).
   return (
-    <div className="action-group-host">
-      <div className="action-group" role="group" aria-label={label} data-more={hasMore ? 'true' : undefined}>
-        {primary ? (
-          <Button variant="primary" size="md" icon={primary.icon} disabled={primary.disabled} onClick={primary.onClick}>
-            {primary.label}
-          </Button>
-        ) : null}
-        {secondary ? (
-          <Button variant="secondary" size="md" icon={secondary.icon} disabled={secondary.disabled} onClick={secondary.onClick}>
-            {secondary.label}
-          </Button>
-        ) : null}
-        {hasMore ? <Menu label={`More for ${label}`} items={more!} /> : null}
-      </div>
+    <div className="action-group" role="group" aria-label={label} data-more={hasMore ? 'true' : undefined}>
+      {primary ? (
+        <Button variant="primary" size="md" icon={primary.icon} disabled={primary.disabled} onClick={primary.onClick}>
+          {primary.label}
+        </Button>
+      ) : null}
+      {secondary ? (
+        <Button variant="secondary" size="md" icon={secondary.icon} disabled={secondary.disabled} onClick={secondary.onClick}>
+          {secondary.label}
+        </Button>
+      ) : null}
+      {hasMore ? <Menu label={`More for ${label}`} items={more!} /> : null}
     </div>
   )
 }

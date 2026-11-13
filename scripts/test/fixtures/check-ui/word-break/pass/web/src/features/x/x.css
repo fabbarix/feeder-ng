@@ -5,3 +5,6 @@
 .product__barcode { overflow-wrap: anywhere; }
 .invite-code { word-break: break-all; }
 .title { overflow-wrap: normal; hyphens: manual; word-break: normal; }
+.list .member__email { overflow-wrap: anywhere; }
+.row .source-link, .row .share-url { word-break: break-all; }
+.product__barcode:hover { overflow-wrap: anywhere; }

@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { StreakTile } from './StreakTile'
 
 describe('StreakTile', () => {
-  it('is a soft half tile with a big number and a short label', () => {
+  it('is a success-toned half tile with a big number and a short label', () => {
     const { container } = render(<StreakTile days={21} />)
     expect(screen.getByText('3 wk')).toBeInTheDocument()
     expect(screen.getByText('zero-waste streak')).toBeInTheDocument()
-    const tile = container.querySelector('[data-variant="soft"]')!
+    const tile = container.querySelector('[data-variant="status"]')!
     expect(tile).toHaveAttribute('data-span', '1')
+    expect(tile).toHaveAttribute('data-status', 'success')
     expect(screen.queryByText(/without throwing food away/)).not.toBeInTheDocument()
   })
 

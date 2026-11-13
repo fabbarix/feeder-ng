@@ -70,7 +70,7 @@ export function BoardScreen(): ReactNode {
   return (
     <div className="board-screen" data-board="true">
       {/* The wall grid is the board's own 4 x 3 layout (ADR 0016), not a BentoGrid: a fixed display at a known size. */}
-      <div className="bento-grid">
+      <div className="board-grid">
         <Cell id="tonight" layout={layout}>
           <TonightTile slot={tonight} notServed={tonightNotServed(slots, data.today)} onCook={startPath ? () => navigate(startPath) : undefined} />
         </Cell>

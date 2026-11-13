@@ -73,36 +73,53 @@ describe('ActionGroup: render', () => {
   })
 })
 
-describe('ActionGroup: layout (container query on .action-group-host)', () => {
-  it('a host is an inline-size container', () => {
+describe('ActionGroup: the group is the root; the container is the caller\'s row or tile (round 2)', () => {
+  // A host of its own inside a flex row has no intrinsic width under container-type: inline-size, so it collapsed to 0 px and
+  // was always "narrow" (review repro dsa-review/t.html). The container is now a caller-provided ancestor with a definite width.
+  it('renders no wrapper: the labelled group is the root element', () => {
+    const { container } = render(<ActionGroup label="Thu Dinner" primary={{ label: 'Cooked', onClick: () => {} }} />)
+    const root = container.firstElementChild!
+    expect(root).toHaveClass('action-group')
+    expect(root).toHaveAttribute('role', 'group')
+    expect(container.querySelector('.action-group-host')).toBeNull()
+  })
+})
+
+describe('ActionGroup: layout (container query on the caller\'s .action-group-host or .list-row)', () => {
+  it('.action-group-host (put on the row or tile) and .list-row are inline-size containers', () => {
     expect(declarations(css, '.action-group-host')['container-type']).toBe('inline-size')
+    expect(declarations(readUiCss('ListRow.css'), '.list-row')['container-type']).toBe('inline-size')
   })
 
-  it('wide (default): a flex row at the end, no wrapping, one fixed inline size shared by the rows of a list', () => {
+  it('wide (default): a flex row at the end that never shrinks or wraps; a minimum inline size, not a fixed one', () => {
     const d = declarations(css, '.action-group')
     expect(d['display']).toBe('flex')
     expect(d['justify-content']).toBe('flex-end')
     expect(d['flex-wrap'] ?? 'nowrap').toBe('nowrap')
-    expect(d['inline-size']).toBe('var(--action-group-inline-size)')
     expect(d['flex']).toBe('none')
+    expect(d['min-inline-size']).toBe('var(--action-group-min-inline-size)')
+    expect(d['inline-size']).toBeUndefined() // a fixed 15rem overflowed with "All Cooked" + "Adjust" + ⋮
   })
 
   it('narrow host (< 35rem): its own line as equal tracks 1fr 1fr 44px', () => {
     const narrow = code(css).match(/@container\s*\(max-width:\s*35rem\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
     expect(narrow).toMatch(/\.action-group\s*\{[^}]*display:\s*grid/)
     expect(narrow).toMatch(/\.action-group\s*\{[^}]*grid-template-columns:\s*1fr 1fr 44px/)
-    expect(narrow).toMatch(/\.action-group\s*\{[^}]*inline-size:\s*auto/)
+    expect(narrow).toMatch(/\.action-group\s*\{[^}]*min-inline-size:\s*0/)
   })
 
   it('never flex-wraps anywhere', () => {
     expect(code(css)).not.toMatch(/flex-wrap:\s*wrap/)
   })
 
-  it('the group\'s buttons keep one line', () => {
+  it("the group's buttons keep one line", () => {
     expect(declarations(css, '.action-group .button')['white-space']).toBe('nowrap')
   })
 
-  it('styles.css defines --action-group-inline-size', () => {
-    expect(readStylesCss()).toMatch(/--action-group-inline-size:\s*15rem/)
+  it('styles.css sizes the minimum for the widest real group ("All Cooked" with its icon + "Adjust" + ⋮): 18rem', () => {
+    expect(readStylesCss()).toMatch(/--action-group-min-inline-size:\s*18rem/)
+    expect(readStylesCss()).not.toMatch(/--action-group-inline-size\s*:/)
   })
+  // The real layout (a flex row: not 0 px wide, no overflow, groups aligned) is checked in headless Chrome by
+  // scripts/test/ds-layout_test.sh: jsdom has no layout.
 })

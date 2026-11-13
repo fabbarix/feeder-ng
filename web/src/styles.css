@@ -64,8 +64,8 @@
   /* List rows (system.md 3): at least 64 px; the value column keeps quantities in one column. */
   --row-min: 64px;
   --row-value-min: 5.5rem;
-  /* ActionGroup (system.md 5): the fixed width of a group in a wide row. */
-  --action-group-inline-size: 15rem;
+  /* ActionGroup (system.md 5): the minimum width of a group in a wide row (the widest real group needs 18 rem). */
+  --action-group-min-inline-size: 18rem;
   /* Section rhythm (system.md 8): the gap between the sections of a Page. */
   --section-gap: var(--space-6);
 

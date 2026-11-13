@@ -14,6 +14,7 @@
 
 .list-row {
   position: relative;
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -87,7 +88,6 @@
   place-items: center;
   inline-size: 44px;
   block-size: 44px;
-  pointer-events: auto;
 }
 
 .list-row > .list-row__control {
