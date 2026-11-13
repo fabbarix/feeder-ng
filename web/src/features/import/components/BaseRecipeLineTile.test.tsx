@@ -102,6 +102,7 @@ describe('BaseRecipeLineTile', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Choose another' }))
       expect(await screen.findByRole('dialog', { name: 'Link to a Base recipe' })).toBeInTheDocument()
       expect(await screen.findByRole('option', { name: /^Stock,/ })).toBeInTheDocument()
+      await userEvent.type(screen.getByRole('combobox', { name: 'Search Base recipes' }), 'pes')
       expect(screen.getByRole('group', { name: 'Recipes you plan' })).toBeInTheDocument()
     })
 
@@ -117,6 +118,7 @@ describe('BaseRecipeLineTile', () => {
       mockApi(routes())
       const on = show({ suggestions })
       await userEvent.click(screen.getByRole('button', { name: 'Choose another' }))
+      await userEvent.type(await screen.findByRole('combobox', { name: 'Search Base recipes' }), 'pes')
       await userEvent.click(await screen.findByRole('option', { name: 'Pesto' }))
       expect(on.onConvert).toHaveBeenCalledWith({ id: 7, name: 'Pesto' })
     })
@@ -135,7 +137,7 @@ describe('BaseRecipeLineTile', () => {
   describe('Problems and warnings', () => {
     it('announces a Problem on the tile (an alert) and links it to the group', () => {
       show({ suggestions }, { problems: [{ path: '$.recipes[0].ingredients[1]', code: 'base_recipe_answer_invalid', message: 'this answer does not fit the line: choose a Recipe of this file' }] })
-      const alert = screen.getByRole('alert')
+      const alert = within(screen.getByRole('region', { name: '500 ml béchamel' })).getByRole('alert')
       expect(alert).toHaveTextContent('this answer does not fit the line: choose a Recipe of this file')
       const group = screen.getByRole('radiogroup', { name: 'Is this another recipe?' })
       expect(group.getAttribute('aria-describedby') ?? '').toContain(alert.id)
@@ -143,7 +145,7 @@ describe('BaseRecipeLineTile', () => {
 
     it('shows only the Problems of its own path', () => {
       show({}, { problems: [{ path: '$.recipes[3].ingredients[0]', code: 'x', message: 'someone else\'s' }] })
-      expect(screen.queryByRole('alert')).toBeNull()
+      expect(within(screen.getByRole('region', { name: '500 ml béchamel' })).queryByRole('alert')).toBeNull()
     })
 
     it('asks the Yield of a Recipe of the file that is not marked as a Base recipe, when the server says it needs one', async () => {

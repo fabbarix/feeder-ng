@@ -140,7 +140,7 @@ describe('ImportScreen, the answers', () => {
 describe('ImportScreen, Confirm waits for an answer', () => {
   it('an unanswered tile disables Confirm even when the plan says ready, and says which', () => {
     view()
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Confirm import' })).toBeDisabled()
     expect(screen.getByText('1 thing left to answer')).toBeInTheDocument()
     expect(screen.getByText('Confirm needs an answer to "500 ml béchamel"')).toBeInTheDocument()
   })
@@ -151,7 +151,7 @@ describe('ImportScreen, Confirm waits for an answer', () => {
     })
     view()
     expect(screen.getByRole('radio', { name: /Use Base recipe Béchamel/ })).toBeChecked()
-    const confirm = screen.getByRole('button', { name: 'Confirm' })
+    const confirm = screen.getByRole('button', { name: 'Confirm import' })
     expect(confirm).toBeEnabled()
     await userEvent.click(confirm)
     expect(h.review.confirm).toHaveBeenCalledOnce()
@@ -165,7 +165,7 @@ describe('ImportScreen, the refusals of Confirm', () => {
       confirmProblem: { kind: 'cycle', message: 'Béchamel calls for Roux, which calls for Béchamel', path: ['Béchamel', 'Roux', 'Béchamel'] },
     })
     view()
-    const alert = screen.getByRole('alert')
+    const alert = screen.getByText(/Béchamel calls for Roux, which calls for Béchamel/).closest('[role=alert]') as HTMLElement
     expect(alert).toHaveTextContent('Béchamel calls for Roux, which calls for Béchamel')
     const tile = screen.getByRole('region', { name: '500 ml béchamel' })
     expect(alert.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -174,7 +174,7 @@ describe('ImportScreen, the refusals of Confirm', () => {
   it('shows base_recipe_kind and import_not_ready the same way', () => {
     h.review = state({ plan: open(), confirmProblem: { kind: 'validation', reason: 'base_recipe_kind', message: 'A Base recipe cannot be planned.' } })
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent('A Base recipe cannot be planned.')
+    expect(screen.getByText('A Base recipe cannot be planned.').closest('[role=alert]')).not.toBeNull()
   })
 
   it('opens the take-over dialog on a 409 and sends its answer to the hook', async () => {
