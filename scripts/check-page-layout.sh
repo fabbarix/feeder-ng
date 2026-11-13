@@ -4,7 +4,8 @@
 # (scripts/check-page-layout.mjs), stops the server it started on EVERY exit path, and maps findings to warn/fail per route
 # (scripts/check-page-layout.modes).
 # Coverage: a route x viewport that was not inspected FAILS in every mode. Rule findings are warn/fail by the modes file.
-# A guard that did not run is a SKIP/WARN in quick (no Chrome, build or seed trouble, a busy port, a second run in this worktree),
+# A refused run (a busy port, or a second run in this worktree) FAILS in every mode: it means a concurrent run.
+# A guard that did not run for environment trouble (no Chrome, no web build, seed or server failure) is a SKIP/WARN in quick,
 # and a FAILED run in full (PAGE_LAYOUT=full, release QA).
 #   scripts/check-page-layout.sh                 quick profile (390, 1440, 1920)
 #   PAGE_LAYOUT=full scripts/check-page-layout.sh    six viewports (release QA)
@@ -95,6 +96,13 @@ acquire_lock() {
   return 1
 }
 
+# A refused run: another run holds the worktree's lock, or the port is taken. It fails in every mode.
+refused() {
+  release_lock
+  echo "page layout guard FAILED: $1"
+  exit 1
+}
+
 # A guard that did not run: a WARN (exit 0) in quick, a FAILED run (exit 1) in full.
 not_run() {
   release_lock
@@ -137,11 +145,11 @@ cleanup() {
 
 # The lock and the busy-port check come before the trap: a run that is refused must not stop anything it does not own.
 if ! acquire_lock; then
-  not_run "another page layout guard is running in this worktree (lock $LOCK); not run"
+  refused "another page layout guard is running in this worktree (lock $LOCK); not run"
 fi
 # Never touch a server that is not ours.
 if curl -s -o /dev/null --max-time 1 "$URL/" 2>/dev/null; then
-  not_run "something already listens on $URL; page layout guard not run (set PAGE_LAYOUT_PORT to another port)"
+  refused "something already listens on $URL; page layout guard not run (set PAGE_LAYOUT_PORT to another port)"
 fi
 trap cleanup EXIT
 trap 'exit 130' INT TERM HUP

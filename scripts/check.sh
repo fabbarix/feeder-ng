@@ -32,8 +32,9 @@ step "pnpm install (frozen lockfile)" pnpm -C web install --frozen-lockfile
 step "typecheck" pnpm -C web typecheck
 step "vitest" pnpm -C web test
 step "vite build" pnpm -C web build
-# Page-layout guard (R2-L): WARN mode, never fails the run until a route is flipped in scripts/check-page-layout.modes.
-# PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports (default: quick profile).
+# Page-layout guard (R2-L): a route x viewport that is not inspected, or a refused run (a concurrent one), fails the run in every mode.
+# Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a failed web build is a WARN here.
+# PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports and fails on any guard that did not run (default: quick profile).
 step "page layout guard" bash "$ROOT/scripts/check-page-layout.sh"
 step "go vet" go vet ./...
 step "go test" go test ./...

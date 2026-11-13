@@ -125,9 +125,19 @@ run_wrapper "" PAGE_LAYOUT=full
 SECOND_RC=$RC
 curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT_OVERRIDE/" && ok || bad "a second run on the same port stopped the first run's server"
 [ "$SECOND_RC" -ne 0 ] && ok || bad "full mode: a second run that finds its port taken must fail, not exit 0 (rc $SECOND_RC)"
+# a refused run fails in quick too (check.sh runs quick: a busy port there means a concurrent run, which must not pass silently)
+run_wrapper ""
+QUICK_RC=$RC
+[ "$QUICK_RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "quick mode: a refused run (the first run holds the port and the lock) must FAIL, not WARN (rc $QUICK_RC): $OUT"
+unset PORT_OVERRIDE BUILD_OVERRIDE
 wait "$FIRST" 2>/dev/null
 [ "$(cat "$TMP/first.rc" 2>/dev/null)" = 0 ] && ok || bad "the first run must still finish OK (rc $(cat "$TMP/first.rc" 2>/dev/null))"
-unset PORT_OVERRIDE BUILD_OVERRIDE
+
+# --- a lock held by a live run refuses a run in this worktree in every mode, and the refused run leaves that lock alone
+LB="$TMP/locked"; mkdir -p "$LB/page-layout.lock"; echo $$ >"$LB/page-layout.lock/pid"
+BUILD_OVERRIDE="$LB"; run_wrapper ""; LOCK_RC=$RC; unset BUILD_OVERRIDE
+[ "$LOCK_RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "a run refused by the lock must FAIL in quick (rc $LOCK_RC): $OUT"
+[ -d "$LB/page-layout.lock" ] && ok || bad "a refused run must not remove the lock of the run that holds it"
 
 printf 'check-page-layout-coverage_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

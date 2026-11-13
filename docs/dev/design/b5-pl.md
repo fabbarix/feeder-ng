@@ -59,9 +59,11 @@ Wrapper (`scripts/check-page-layout.sh`):
   (warn/fail) applies to rule findings only, never to coverage. This applies to the quick profile too, because `check.sh` runs quick and that is where it was lost.
 - `stop_server` only stops a server **this run started**: the pidfile fallback is removed (a `STARTED` flag set after the spawn), and the "port is taken" check
   happens before the trap that stops servers. A second run on the same port therefore leaves the first run's server alone.
-- Concurrent runs in one worktree are refused cleanly (lock in `$BUILD`; same message as the busy port) instead of sharing `build/` and the Chrome profile sweep.
-- `PAGE_LAYOUT=full` (release QA): a guard that did not run (port taken, build, seed, server start failure, timeout) is a **failure**, not a `WARN` with exit 0.
-  Quick keeps the SKIP/WARN behaviour for environment trouble (no Chrome, no build), as before.
+- A **refused run** fails in every mode, quick included (PM decision): a busy port or a lock held by another run in this worktree (a lock in `$BUILD`,
+  `page-layout.lock`, whose pid is gone is stale) means a concurrent run, which is exactly the lost-coverage case. The refused run exits 1 with
+  `page layout guard FAILED: ...` and does not remove the lock or touch the other run's server or `build/`.
+- `PAGE_LAYOUT=full` (release QA): a guard that did not run for any reason (no Chrome, build, seed or server failure, timeout) is a **failure**, not a `WARN` with exit 0.
+  Quick keeps SKIP/WARN for environment trouble only: no Chrome and no web build (and seed, server, timeout trouble, as before).
 
 ## The rule: zero tolerance, explicit exemptions
 
@@ -80,7 +82,8 @@ Wrapper (`scripts/check-page-layout.sh`):
 - Driver against a stub server without a rendered app (needs Chrome; skipped without): exit 1, `! 390px /settings: not inspected`, reason `no <main>`,
   no raw `getBoundingClientRect`, summary `inspected 0 of 3`, no `OK`; with an exemption file the same run passes as `3 exempt, 0 failing`; a dead server never ends in `OK`.
 - Wrapper with fakes: a `not inspected` line fails in warn mode; a fully inspected run passes and shows the coverage line; full mode fails when the seeder fails;
-  a second run on the same port does not stop the first run's server and (full mode) fails itself, the first run still finishes OK.
+  a second run on the same port does not stop the first run's server and fails itself in full and in quick (a refused run fails in every mode); a lock held by a
+  live run refuses a quick run with FAILED and leaves the lock in place; the first run still finishes OK.
 
 Existing `check-page-layout_test.sh` keeps passing except where it asserts the old WARN-exit-0 for environment trouble: those assertions apply to quick only.
 
