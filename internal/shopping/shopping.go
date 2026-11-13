@@ -27,6 +27,8 @@ type Meal struct {
 	Batches  float64
 	Leftover bool
 	Needs    []Need
+	// B5-BO: the Planned Meal's id (planned_meals.id), what Attribute names a Share by. 0 = unknown: never attributed.
+	MealID int64
 	// B5-SH: what the "Includes Tue Dinner, not marked Cooked yet" hint names. SlotID 0 = unknown (never hinted).
 	SlotID     int64
 	SlotName   string

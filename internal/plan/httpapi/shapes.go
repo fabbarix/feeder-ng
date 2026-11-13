@@ -42,18 +42,22 @@ type mealOut struct {
 	Date       string `json:"date"`
 	MealSlotID int64  `json:"mealSlotId"`
 	// CourseID is the real id of the Course the meal fills (crs-c2); CourseName its name.
-	CourseID           int64              `json:"courseId"`
-	CourseName         string             `json:"courseName"`
-	RecipeID           int64              `json:"recipeId"`
-	RecipeName         string             `json:"recipeName"`
-	WholeMeal          bool               `json:"wholeMeal"`
-	Relaxed            bool               `json:"relaxed"`
-	Batches            float64            `json:"batches"`
-	Portions           float64            `json:"portions"`
-	State              string             `json:"state"`
-	Pinned             bool               `json:"pinned"`
-	ServedFromLeftover *leftoverSourceOut `json:"servedFromLeftover"`
-	Why                []whyOut           `json:"why"`
+	CourseID   int64   `json:"courseId"`
+	CourseName string  `json:"courseName"`
+	RecipeID   int64   `json:"recipeId"`
+	RecipeName string  `json:"recipeName"`
+	WholeMeal  bool    `json:"wholeMeal"`
+	Relaxed    bool    `json:"relaxed"`
+	Batches    float64 `json:"batches"`
+	Portions   float64 `json:"portions"`
+	State      string  `json:"state"`
+	Pinned     bool    `json:"pinned"`
+	// B5-BO (ADR 0013): what a purchase was bought for this meal (null when nothing was), and the hard rule a Pinned or
+	// Bought meal now breaks (null when none). Filled by mealFor and courseFor.
+	Bought             *boughtOut          `json:"bought"`
+	Warning            *hardRuleWarningOut `json:"warning"`
+	ServedFromLeftover *leftoverSourceOut  `json:"servedFromLeftover"`
+	Why                []whyOut            `json:"why"`
 	// Optional, additive (WP6): the Recipe's total time in minutes, the "HH:MM" to start cooking by (slot time less the
 	// total time, household zone; slot views only) and the Recipe photo. Omitted when unknown.
 	CookMinutes int    `json:"cookMinutes,omitempty"`
@@ -61,6 +65,23 @@ type mealOut struct {
 	PhotoURL    string `json:"photoUrl,omitempty"`
 	// R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when set.
 	ReheatMinutes int `json:"reheatMinutes,omitempty"`
+}
+
+// boughtOut lists the Ingredients a purchase was bought for the meal, by name.
+type boughtOut struct {
+	Ingredients []boughtIngredientOut `json:"ingredients"`
+}
+
+type boughtIngredientOut struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// hardRuleWarningOut is plan.Warning as served: code excluded | archived | course_lost, and the Member / Ingredient for excluded.
+type hardRuleWarningOut struct {
+	Code         string `json:"code"`
+	MemberID     int64  `json:"memberId,omitempty"`
+	IngredientID int64  `json:"ingredientId,omitempty"`
 }
 
 type eliminationsOut struct {

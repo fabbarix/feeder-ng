@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
@@ -70,6 +71,15 @@ type Ledger interface {
 	Totals(ctx context.Context, rangeTo stock.Date) (spentCents, lots int, err error)
 }
 
+// BoughtRecorder keeps what each purchase was bought for (B5-BO, ADR 0013): the Planned Meals a Stock Lot covered. The
+// real adapter writes planned_meal_bought through the plan store; Ports.Bought may be nil (nothing is recorded).
+type BoughtRecorder interface {
+	// RecordBought stores the shares of the Lot (see shopping.Attribute). It is called only with at least one share.
+	RecordBought(ctx context.Context, lotID int64, shares []shopping.Share, at time.Time) error
+	// RemoveBought removes every record of the Lot; a Lot with none is not an error.
+	RemoveBought(ctx context.Context, lotID int64) error
+}
+
 // Publisher is *events.Bus.
 type Publisher interface{ Publish(topic string, data any) }
 
@@ -81,6 +91,7 @@ type Ports struct {
 	Ingredients Ingredients
 	Household   Household
 	Ledger      Ledger
+	Bought      BoughtRecorder // optional
 }
 
 // Service is the Shopping List use-case layer.
@@ -545,6 +556,9 @@ type UndoLotInput struct {
 	Quantity     float64
 	Unmark       bool
 	ExtraID      int64
+	// LotID is the Stock Lot the scan added (B5-BO): the records of what it was bought for are removed with it.
+	// 0 = not known: nothing is removed.
+	LotID int64
 }
 
 // UndoLot reverses AfterLot (the Lot itself is removed by the caller).
@@ -564,6 +578,12 @@ func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
 			}
 		}
 	}
+	return nil
+}
+
+// ForgetLot removes the records of what the Stock Lot was bought for (B5-BO). Lot Delete (Stock Lots, plan 2.6) calls
+// it, and so does UndoLot through UndoLotInput.LotID; an unknown Lot is not an error.
+func (s *Service) ForgetLot(ctx context.Context, lotID int64) error {
 	return nil
 }
 

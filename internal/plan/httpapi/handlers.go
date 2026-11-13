@@ -145,6 +145,11 @@ func (a *api) leftovers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) regenerate(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("dryRun") == "1" {
+		// TEST-FIRST STUB (team B5-BO): the dry run answers 501 until the developer writes it.
+		httpx.WriteError(w, http.StatusNotImplemented, "not_implemented", "the Regenerate dry run is not implemented yet")
+		return
+	}
 	sum, err := a.run.Regenerate(r.Context())
 	if err != nil {
 		writeErr(w, err)
