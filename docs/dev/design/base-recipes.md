@@ -326,7 +326,7 @@ The checks that the schema cannot express (the projection drops `if`/`then`) liv
   - `yieldUnit`: required unit, `""` for none.
 
   A Step's `uses` reuse the `quantity` def, and the separate `use` def is gone: a second line-shaped def doubled that part of the grammar and pushed it over the limit even with the sentinels (measured). The model therefore also writes the sentinels in a use, and the descriptions say "always in a Step's uses". `pruneNone` maps the sentinels back to absent (`isSentinel`: `-1`, a blank recipe name, a blank cue, `false`, `""`); `dropUseMarks` in `Finish` removes `recipe` and `neededAtStep` from every Step use, even a real name, because the Recipe File forbids them there, so a wrong model answer cannot fail the canonical validation. **`baseRecipe: false` now means absent** on the way back (it used to stay as `false`); the Recipe File treats the two alike. The addendum (API only) tells the model the sentinels; the Agent Prompt keeps `null` for the paste flow. Golden: `testdata/output-schema.golden.json`.
-- **Agent Prompt** gains two rules (the addendum is unchanged):
+- **Agent Prompt** gains two rules (the addendum gained the "none" values sentence in beta.6.1):
 
   > 15. Base recipes: a recipe that is only there to be used inside other recipes (a sauce, a dough, a stock, a spice mix) and is not served as a dish of its own gets "baseRecipe": true, "yield" = the amount one batch produces and "yieldUnit" (g, kg, ml, l, piece or portion); leave "courses", "wholeMeal", "cooldownDays", "leftoverUseByDays" and "reheatMinutes" out. Every other recipe gets "baseRecipe": false.
   >
