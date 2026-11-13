@@ -72,14 +72,14 @@ type Assistant interface {
 }
 
 // Events loads the Scanned list of a read: the applied, not undone shop_scan and shop_unknown events among the phone's
-// client UUIDs, in ledger order, each with its household Date. Unknown uuids are left out. SQLEvents is the SQL
-// adapter; the scan service's loader (RR3) has the same method, so either one is the port.
+// client UUIDs, in ledger order, each with its household Date. Unknown uuids are left out. The port is the scan
+// service's loader (scanhttpapi.ReceiptApplier), the one the apply recomputes the fingerprint with.
 type Events interface {
 	SessionEvents(ctx context.Context, shopID int64, uuids []string) ([]receipt.ScanEvent, error)
 }
 
 // Contexts loads what a read of a Shop is matched against: today, the Shop and date of the session, the saved Shops
-// and the currency (SQLEvents is the SQL adapter).
+// and the currency (SQLContexts is the SQL adapter).
 type Contexts interface {
 	Context(ctx context.Context, shopID int64) (receipt.Context, error)
 }
