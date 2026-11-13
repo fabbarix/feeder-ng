@@ -201,9 +201,11 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 		state = string(plan.StatePlanned)
 	}
 	// B5-BO: a Planned Meal whose Recipe changes is no longer Bought (ADR 0013); the same Recipe keeps its records.
-	if _, err := s.q.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE planned_meal_id IN (
-		SELECT id FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ? AND recipe_id <> ?)`,
-		m.Key.Date, m.Key.MealSlotID, m.Key.CourseID, m.RecipeID); err != nil {
+	// The row's id and Recipe are read first; its records go only after the upsert has succeeded.
+	var prevID, prevRecipe int64
+	err = s.q.QueryRowContext(ctx, `SELECT id, recipe_id FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND course_id = ?`,
+		m.Key.Date, m.Key.MealSlotID, m.Key.CourseID).Scan(&prevID, &prevRecipe)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return plan.Meal{}, mapErr(err)
 	}
 	_, err = s.q.ExecContext(ctx, `INSERT INTO planned_meals (date, meal_slot_id, course_id, recipe_id, batches, portions, state, pinned,
@@ -219,6 +221,11 @@ func (s *Store) SaveMeal(ctx context.Context, m plan.Meal) (plan.Meal, error) {
 		fromLeftover, fromDate, fromSlot, fromCourse, relaxed, why, resolved, now, now)
 	if err != nil {
 		return plan.Meal{}, mapErr(err)
+	}
+	if prevID != 0 && prevRecipe != m.RecipeID {
+		if _, err := s.q.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE planned_meal_id = ?`, prevID); err != nil {
+			return plan.Meal{}, mapErr(err)
+		}
 	}
 	return s.Meal(ctx, m.Key)
 }

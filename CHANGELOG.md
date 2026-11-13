@@ -13,7 +13,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ### Changed
 
-- **Regenerate lists Bought meals.** Before Regenerate replaces anything, it can list the Bought Planned Meals it would replace, with the Ingredients bought for each, and change nothing.
+- **Regenerate lists Bought Planned Meals.** Before Regenerate replaces anything, it can list the Bought Planned Meals it would replace, with the Ingredients bought for each, and change nothing.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 
