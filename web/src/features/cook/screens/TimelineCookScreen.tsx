@@ -213,6 +213,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         }}
         busy={marked.busy}
         error={marked.error}
+        courseId={marked.courseId}
         usedFrom={marked.usedFrom}
       />
       <MarkAllCookedSheet

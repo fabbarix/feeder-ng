@@ -17,8 +17,8 @@ export interface MarkAllCookedSheetProps {
   onConfirm: () => void
   busy: boolean
   error: string | null
-  /** The Used from picks, per Course; a conflict disables Mark all Cooked. Optional until wired (b5-ufw). */
-  usedFrom?: UsedFromController
+  /** The Used from picks, per Course; a conflict disables Mark all Cooked. */
+  usedFrom: UsedFromController
 }
 
 /**
@@ -27,7 +27,7 @@ export interface MarkAllCookedSheetProps {
  */
 export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverChange, onConfirm, busy, error, usedFrom }: MarkAllCookedSheetProps): ReactNode {
   const ready = rows.length > 0 && !isLoading
-  const conflict = usedFrom?.hasConflict === true
+  const conflict = usedFrom.hasConflict
   const footer = (
     <div className="plan-sheet__actions">
       <Button variant="primary" disabled={busy || !ready || conflict} onClick={onConfirm}>
@@ -60,7 +60,7 @@ export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverC
                 ) : (
                   <Chip>{s.noLeftover}</Chip>
                 )}
-                {usedFrom ? <CourseUsedFrom usedFrom={usedFrom} courseId={row.courseId} /> : null}
+                {usedFrom.lines(row.courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={row.courseId} /> : null}
               </>
             ) : (
               <p className="plan__muted">{s.fromLeftoverNote}</p>

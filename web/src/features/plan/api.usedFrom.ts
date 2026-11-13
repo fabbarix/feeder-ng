@@ -6,6 +6,20 @@ import type { UsedFromEntry, UsedFromNeed } from './lib/usedFrom'
 export type CookPreviewWithLots = Omit<CookPreview, 'needs'> & { needs: UsedFromNeed[] }
 export type CookedAllEntryWithUsedFrom = CookedAllEntry & { usedFrom?: UsedFromEntry[] }
 
+/**
+ * A cook preview as the Used from pieces read it. An older server may send needs without `baseUnit` or `lots`: a need
+ * with no baseUnit is dropped (there is no unit to show it in), a need with no lots gets none, missing needs become [].
+ */
+export function normaliseCookPreview(preview: CookPreview): CookPreviewWithLots {
+  const raw = (preview.needs ?? []) as unknown as (Omit<UsedFromNeed, 'lots'> & { lots?: UsedFromNeed['lots'] })[]
+  const needs: UsedFromNeed[] = []
+  for (const need of raw) {
+    if (!need.baseUnit) continue
+    needs.push({ ...need, baseUnit: need.baseUnit, lots: need.lots ?? [] })
+  }
+  return { ...preview, needs }
+}
+
 export interface CookedBody {
   leftoverPortions?: number
   usedFrom?: UsedFromEntry[]

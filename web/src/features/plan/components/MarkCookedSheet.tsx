@@ -19,8 +19,10 @@ export interface MarkCookedSheetProps {
   onNotCooked: () => void
   busy: boolean
   error: string | null
-  /** The Used from picks (below the Leftover stepper). Optional until wired (b5-ufw). */
-  usedFrom?: UsedFromController
+  /** The Course of the key, or null: the Used from row is for this Course. */
+  courseId: number | null
+  /** The Used from picks (below the Leftover stepper). */
+  usedFrom: UsedFromController
 }
 
 /**
@@ -29,7 +31,7 @@ export interface MarkCookedSheetProps {
  * Cooked (the one primary), No Leftover (while there is one) and Not cooked.
  */
 export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
-  const { open, onClose, preview, isLoading, leftover, onLeftoverChange, onConfirm, onNotCooked, busy, error, usedFrom } = props
+  const { open, onClose, preview, isLoading, leftover, onLeftoverChange, onConfirm, onNotCooked, busy, error, courseId, usedFrom } = props
   const fresh = preview?.fresh ?? false
   const footer = (
     <div className="plan-sheet__actions">
@@ -74,7 +76,7 @@ export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
                 ) : (
                   <Chip>{planStrings.noLeftover}</Chip>
                 )}
-                {usedFrom && preview.meal.courseId !== undefined ? <CourseUsedFrom usedFrom={usedFrom} courseId={preview.meal.courseId} /> : null}
+                {courseId !== null && usedFrom.lines(courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={courseId} /> : null}
               </>
             ) : (
               <p className="plan__muted">{planStrings.fromLeftoverNote}</p>

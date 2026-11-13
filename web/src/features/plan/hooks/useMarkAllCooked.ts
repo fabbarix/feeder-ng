@@ -2,7 +2,7 @@
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { planApi } from '../api'
-import { isUsedFromInvalid, usedFromApi, type CookPreviewWithLots } from '../api.usedFrom'
+import { isUsedFromInvalid, normaliseCookPreview, usedFromApi } from '../api.usedFrom'
 import { planStrings } from '../strings'
 import { usedFromStrings } from '../usedFromStrings'
 import { allCookedBody, type AllCookedRow } from '../lib/toConfirm'
@@ -25,7 +25,7 @@ export interface MarkAllCookedController {
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
   /** The Used from picks per Course (one useUsedFrom over all previews); a conflict between Courses disables confirm. */
-  usedFrom?: UsedFromController
+  usedFrom: UsedFromController
 }
 
 const NONE: never[] = []
@@ -69,7 +69,7 @@ export function useMarkAllCooked(slot: SlotDayKey | null, courseIds: number[]): 
   const usedFrom = useUsedFrom(
     loaded
       ? courseIds.map((courseId, i) => {
-          const pv = previews[i]!.data as CookPreviewWithLots
+          const pv = normaliseCookPreview(previews[i]!.data as CookPreview)
           return { courseId, courseName: pv.meal.courseName ?? '', needs: pv.needs }
         })
       : [],
