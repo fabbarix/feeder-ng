@@ -17,10 +17,12 @@ export const ROUTES = [
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],
 ]
 
-/** quick = what scripts/check.sh runs; full = the six viewports of the UI review (PAGE_LAYOUT=full). */
+/** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
   quick: [
     { width: 390, height: 844, mobile: true },
+    { width: 834, height: 1194, mobile: false },
+    { width: 1024, height: 1366, mobile: false },
     { width: 1440, height: 900, mobile: false },
     { width: 1920, height: 1080, mobile: false },
   ],

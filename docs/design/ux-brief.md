@@ -31,5 +31,7 @@ Inputs for the UI/UX proposals. Domain terms are defined in [GLOSSARY.md](../../
 ## Chosen direction: Bento (2026-11-09)
 Modular tiles of different sizes, each sized by urgency. Today is a grid of widgets (tonight's dinner as a large accent tile; prep-ahead, leftovers, use-soon and streak as smaller tiles). Plan is a 2-column grid of day tiles with today spanning both columns. The Shopping List is a progress tile, a cost tile and a grid of item tiles. The kitchen board is a 4×3 tile grid, and Cook Mode is a large step tile with timer tiles and full-width Back/Next tiles. The font is Figtree, the tint is strong (surfaces visibly tinted from the accent) and corners are 20–32 px. Reference: the "2 Bento" row of the proposals canvas, https://claude.ai/artifact/BXPfBDmcwV9udSGKYKsWx1.
 
+**The rules that carry Bento out** (type roles, colour roles, list rows, the grid by minimum tile width, ActionGroup, chips, picture monograms, spacing and the nav clearance, the To confirm pattern) are in [system.md](system.md), since 2026-11-12 (beta.5.1). They hold for every accent theme, in light and dark.
+
 ## Proposal deliverable
 Five clickable HTML mockups plus a comparison page. Each proposal shows the same screens: Today, Plan (week), Shopping + Scan, Cook Mode, Recipe detail, Kitchen board. Each is shown at phone and tablet sizes, in light and dark modes, with a live accent picker.

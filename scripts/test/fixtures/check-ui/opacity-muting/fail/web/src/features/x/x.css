@@ -1,0 +1,4 @@
+/* DS-A opacity-muting: 3 violations (use --color-muted) */
+.plan__muted { opacity: 0.8; }
+.caption { opacity: .75; }
+.reason { opacity: 85%; }

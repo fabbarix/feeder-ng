@@ -1,0 +1,6 @@
+/* DS-A word-break: 5 violations (names wrap at a word, never mid-word) */
+.line-tile__title { overflow-wrap: anywhere; }
+.plan-meal__recipe { overflow-wrap: break-word; }
+.plan-meal .chip { hyphens: auto; }
+.name { word-break: break-all; }
+.legacy { word-wrap: break-word; }

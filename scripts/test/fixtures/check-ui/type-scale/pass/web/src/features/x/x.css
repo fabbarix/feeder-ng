@@ -1,0 +1,4 @@
+.a { font-size: var(--text-body-size); line-height: var(--text-body-line); }
+.b { font-size: inherit; }
+.c { font: inherit; }
+.d { font-weight: 800; letter-spacing: var(--text-overline-tracking); }

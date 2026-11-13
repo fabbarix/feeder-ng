@@ -1,0 +1,2 @@
+/* token definitions live in :root: not flagged */
+:root { --text-body-size: 15px; --text-meta-size: 13px; font-size: 16px; }

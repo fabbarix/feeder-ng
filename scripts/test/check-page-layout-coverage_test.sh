@@ -68,12 +68,13 @@ JS
   grep -q '! 390px /settings: not inspected' <<<"$DOUT" && ok || bad "the not-inspected route must be listed as '! 390px /settings: not inspected (...)' (got: $DOUT)"
   grep -q 'no <main>' <<<"$DOUT" && ok || bad "the reason must say the page has no <main> element, not a raw getBoundingClientRect TypeError (got: $DOUT)"
   grep -q 'getBoundingClientRect' <<<"$DOUT" && bad "the raw TypeError must not reach the output" || ok
-  grep -q 'coverage: inspected 0 of 3 (not inspected 3: 0 exempt, 3 failing)' <<<"$DOUT" && ok || bad "the summary must count inspected and not inspected routes (got: $DOUT)"
+  # DS-A: the quick profile has 5 viewports (390, 834, 1024, 1440, 1920)
+  grep -q 'coverage: inspected 0 of 5 (not inspected 5: 0 exempt, 5 failing)' <<<"$DOUT" && ok || bad "the summary must count inspected and not inspected routes (got: $DOUT)"
   grep -q 'check-page-layout: OK' <<<"$DOUT" && bad "the guard must not print OK when routes were not inspected" || ok
   # an explicit exemption turns that route's lines into 'exempt' and the run passes
   printf '/settings test fixture: this server renders no app\n' >"$TMP/b/exempt"
   DOUT=$(cd "$ROOT" && CHROME="$REAL" PAGE_LAYOUT_ONLY='^/settings$' timeout 120 node "$DRV" --url "http://127.0.0.1:$PORT" --ids "$TMP/b/ids.json" --exempt "$TMP/b/exempt" 2>&1); RC=$?
-  [ "$RC" -eq 0 ] && grep -q '3 exempt, 0 failing' <<<"$DOUT" && ok || bad "an exempt route that cannot be probed passes and is counted as exempt (rc $RC): $DOUT"
+  [ "$RC" -eq 0 ] && grep -q '5 exempt, 0 failing' <<<"$DOUT" && ok || bad "an exempt route that cannot be probed passes and is counted as exempt (rc $RC): $DOUT"
   # a server that dies while the guard runs is the same thing: not inspected, never OK
   pkill -f "$TMP/nomain.js" 2>/dev/null
   DOUT=$(cd "$ROOT" && CHROME="$REAL" PAGE_LAYOUT_ONLY='^/settings$' PAGE_LAYOUT_CDP_TIMEOUT_MS=3000 timeout 120 node "$DRV" --url "http://127.0.0.1:$PORT" --ids "$TMP/b/ids.json" 2>&1); RC=$?

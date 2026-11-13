@@ -17,3 +17,11 @@ native-search=warn
 native-search.fail_paths=web/src/ui web/src/features/recipes web/src/features/import web/src/features/cook web/src/features/board web/src/features/stock web/src/features/shop web/src/features/scan web/src/features/plan web/src/features/today web/src/features/settings web/src/features/ingredients web/src/features/products web/src/features/shops web/src/features/notifications web/src/features/signin web/src/features/recipe-assistant web/src/features/tags
 back-link=fail
 image-input=fail
+# DS-A (docs/design/system.md §10, ADR 0016): fail in the shared ui and in each screen once its redesign wave lands; warn elsewhere.
+# A later wave adds its folder to the three fail_paths lines.
+type-scale=warn
+type-scale.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
+opacity-muting=warn
+opacity-muting.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
+word-break=warn
+word-break.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan
