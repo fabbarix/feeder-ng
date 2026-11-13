@@ -46,7 +46,10 @@ func (l ingredientLookup) Ingredient(ctx context.Context, id int64) (stockservic
 	if err != nil {
 		return stockservice.IngredientInfo{}, err
 	}
-	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays, FrozenShelfLifeDays: ing.FrozenShelfLifeDays}, nil
+	// Supply as in the other adapters (H4): Cooked never draws a Supply, but every view and any Lot this service writes
+	// then follows the same go-off guard and kind.
+	return stockservice.IngredientInfo{ID: ing.ID, Name: ing.Name, BaseUnit: string(ing.Base), ShelfLifeDays: ing.ShelfLifeDays,
+		FrozenShelfLifeDays: ing.FrozenShelfLifeDays, Supply: ing.IsSupply()}, nil
 }
 
 // householdToday returns today's date in the household zone.
