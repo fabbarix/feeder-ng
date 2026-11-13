@@ -5,11 +5,16 @@
 //                                      [--chrome /usr/bin/google-chrome] [--email admin@example.test]
 // --url is required (no default port), so two worktrees can never probe each other's server by accident.
 // For every route x viewport it asserts P1..P9 (scripts/lib/page-layout-rules.mjs). Prints one line per finding
-// ("  - <w>px <route>: <rule> ...") and exits 1 on any; exit 2 = usage or environment trouble (the wrapper only warns about that).
+// ("  - <w>px <route>: <rule> ...") and one per probe that was not inspected ("  ! <w>px <route>: not inspected (<reason>)").
+// Every route x viewport must be inspected: a probe that cannot run fails the guard unless its route is exempt
+// (scripts/check-page-layout.exempt, or --exempt FILE). Exit 1 on any finding or failing not-inspected entry, never OK then;
+// exit 2 = usage or environment trouble (the wrapper treats that as not run). Design: docs/dev/design/b5-pl.md.
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { PROFILES, ROUTES, darkButtonFindings, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
+import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -30,6 +35,14 @@ if (!VIEWPORTS) {
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const email = arg('email', 'admin@example.test')
 const idsPath = arg('ids', 'build/page-layout-ids.json')
+let exemptions
+try {
+  const exemptPath = arg('exempt', join(dirname(fileURLToPath(import.meta.url)), 'check-page-layout.exempt'))
+  exemptions = parseExemptions(readFileSync(exemptPath, 'utf8'))
+} catch (e) {
+  console.error(`check-page-layout: ${e.message}`)
+  process.exit(2)
+}
 let ids = { recipeId: 1, ingredientId: 1, productId: 1, shopId: 1 }
 try {
   ids = { ...ids, ...JSON.parse(readFileSync(idsPath, 'utf8')) }
@@ -214,6 +227,11 @@ const settle = async () => {
 
 const probe = `
 (() => {
+  // A page without the app (an error page, a 503 text, a blank document) has no <main>: report what it shows instead of measuring nothing.
+  if (!document.querySelector('main')) {
+    const text = (document.body?.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 80)
+    return { hasMain: false, title: document.title.trim().slice(0, 80), text }
+  }
   const vw = innerWidth
   const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
   const inScroller = (e) => { for (let p = e.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll' || o === 'hidden') return true } return false }
@@ -314,7 +332,7 @@ const probe = `
   return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
     content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) },
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
-    fields, bars, railContrast, brokenText, dialog: null }
+    fields, bars, railContrast, brokenText, dialog: null, hasMain: true }
 })()`
 // P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
 const buttonProbe = `
@@ -335,13 +353,24 @@ const buttonProbe = `
 })()`
 const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
+// Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
+const notInspected = []
+let probes = 0
 const started = Date.now()
 for (const vp of VIEWPORTS) {
   for (const [pattern, kind] of ROUTES) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(pattern)) continue
+    probes++
     const route = resolveRoute(pattern, ids)
     const tag = `${vp.width}px ${route}`
     const t0 = Date.now()
+    // One entry per probe, whichever step failed first.
+    let missed = false
+    const miss = (reason, label = route) => {
+      if (missed) return
+      missed = true
+      notInspected.push({ width: vp.width, route: label, pattern, reason })
+    }
     try {
       await closeTab()
       await openTab()
@@ -350,11 +379,15 @@ for (const vp of VIEWPORTS) {
       await settle()
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
       const m = await evaluate(probe)
+      if (!m.hasMain) {
+        miss(`no <main> element (${m.title || m.text || 'empty page'})`)
+        continue
+      }
       m.lowContrastButtons = await evaluate(buttonProbe)
       m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
       // The light findings are reported first, on the light page.
       for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
-      // FU-4: the dark P10 pass runs after the light findings and has its own error handling; only its P10 findings are reported.
+      // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
       // The scheme is put back to light in the finally, whatever happens.
       try {
         // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
@@ -362,28 +395,39 @@ for (const vp of VIEWPORTS) {
         await Promise.race([cdp('Page.reload', {}), sleep(4000)])
         await settle()
         if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
-          throw new Error('the dark scheme was not applied (data-scheme is not dark); environment problem, not a finding')
+          throw new Error('data-scheme is not dark; the scheme emulation did not apply')
         }
         const lowContrastButtonsDark = await evaluate(buttonProbe)
         for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
       } catch (e) {
-        console.error(`check-page-layout: could not inspect ${tag} (dark scheme: ${e.message})`)
+        miss(`dark scheme: ${e.message}`, `${route} (dark)`)
       } finally {
-        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] }).catch(() => {})
       }
       if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
     } catch (e) {
-      // A probe that cannot run is an environment problem, not a layout finding: say so without a finding line.
-      console.error(`check-page-layout: could not inspect ${tag} (${e.message})`)
+      // A probe that cannot run is not a layout finding, but it is lost coverage: it is not inspected, and it fails unless exempt.
+      miss(e.message)
     }
   }
 }
 
 ws.close()
 const seconds = Math.round((Date.now() - started) / 1000)
-if (failures.length) {
-  console.log(`check-page-layout: ${failures.length} failure(s) (${profileName} profile, ${seconds}s)\n` + failures.map((f) => '  - ' + f).join('\n'))
-  await die(1)
+const coverage = coverageSummary({ inspected: probes - notInspected.length, notInspected, exemptions })
+const exemptReason = (entry) => exemptions.find((x) => x.pattern === entry.pattern).reason
+const detail = [
+  ...failures.map((f) => '  - ' + f),
+  ...notInspected.map((entry) =>
+    coverage.exempt.includes(entry) ? `  ~ ${entry.width}px ${entry.route}: exempt (${exemptReason(entry)})` : notInspectedLine(entry),
+  ),
+]
+const bad = failures.length + coverage.failing.length
+if (bad) {
+  console.log(`check-page-layout: ${failures.length} failure(s), ${coverage.failing.length} not inspected (${profileName} profile, ${seconds}s)`)
 }
+if (detail.length) console.log(detail.join('\n'))
+console.log(coverage.line)
+if (bad) await die(1)
 console.log(`check-page-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes, ${seconds}s)`)
 await die(0)
