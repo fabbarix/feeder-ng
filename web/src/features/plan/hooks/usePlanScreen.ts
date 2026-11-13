@@ -8,6 +8,8 @@ import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
 import { useCookFlow } from './useCookFlow'
 import { usePlan } from './usePlan'
+import { useMarkSlotRoute } from './useMarkSlotRoute'
+import { useSlotDate } from './useSlotDate'
 import { usePlanActions } from './usePlanActions'
 import { useRecipeChoices } from './useRecipeChoices'
 
@@ -24,6 +26,8 @@ export function usePlanScreen() {
   const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
+  const slotDate = useSlotDate(plan.slots)
+  useMarkSlotRoute({ flow, allCooked })
 
   const slotAt = (key: SlotDayKey | null) => (key ? (plan.slots.find((s) => s.date === key.date && s.mealSlotId === key.mealSlotId) ?? null) : null)
   const swapSlot = slotAt(swapKey)
@@ -33,6 +37,8 @@ export function usePlanScreen() {
     actions,
     flow,
     allCooked,
+    /** B5-F1: the per-date choices of the slot blocks (Who's eating, Time, Not served) and their sheets. */
+    slotDate,
     alternatives,
     choices,
     plannedSlot: slotAt(plannedKey),

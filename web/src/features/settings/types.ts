@@ -110,6 +110,19 @@ export interface DateAttendance {
   portionsNeeded: number
   /** CRS D2: one per Course of the slot, in its order (always sent by the server; absent in older fixtures). */
   courses?: DateCourse[]
+  /** B5-F1 (ADR 0014): Guests eating that date, 0 to 20 (absent in older fixtures = 0). `portionsNeeded` includes them. */
+  guests?: number
+}
+
+/** B5-F1: the slice of GET /api/plan "Dates that differ" reads: a slot on a date with its effective and usual time, Not served and Guests. */
+export interface PlanDateSlot {
+  date: string
+  mealSlotId: number
+  name: string
+  time: string
+  usualTime?: string
+  notServed?: boolean
+  guests?: number
 }
 
 export interface AllowedUser {

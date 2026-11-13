@@ -2,7 +2,7 @@
 // Rules: docs/dev/design/meal-slots-redesign.md ("Lib"). Every value a card shows is derived here, never in a component.
 import { weekdayLongName, weekdayOrder, weekdayShortName, type WeekStart } from '../../../ui/WeekdayPicker/weekdays'
 import { settingsStrings } from '../strings'
-import type { MealSlot, Member } from '../types'
+import type { MealSlot, Member, PlanDateSlot } from '../types'
 import { nextDateForWeekday, weekdayOfDate } from './weekdays'
 
 /** Who eats: every Member, nobody, or some of them (in the Members list order). Attendees whose Member no longer exists are ignored. */
@@ -236,7 +236,7 @@ export function differenceParts(difference: DayDifference, card: Pick<MealSlotCa
   return parts
 }
 
-/** An upcoming date on which a Meal Slot differs from its usual (beta.5's per-date backend will fill this; Guests join it with F1). */
+/** An upcoming date on which a Meal Slot differs from its usual: Not served, its own time, Guests (B5-F1). */
 export interface DateException {
   date: string
   slotId: number
@@ -247,9 +247,11 @@ export interface DateException {
   usualTime?: string
   /** The Members who eat that date, when it is not the usual Attendance. */
   attendeeIds?: number[]
+  /** B5-F1: Guests that date (0 = none). */
+  guests?: number
 }
 
-export type DatePart = { kind: 'notServed' } | { kind: 'time'; time: string; usualTime: string } | { kind: 'attendance'; attendeeIds: number[] }
+export type DatePart = { kind: 'notServed' } | { kind: 'time'; time: string; usualTime: string } | { kind: 'attendance'; attendeeIds: number[] } | { kind: 'guests'; guests: number }
 
 export interface DateRow {
   key: string
@@ -282,6 +284,7 @@ function partsOf(e: DateException): DatePart[] {
   const parts: DatePart[] = []
   if (e.time !== undefined && e.time !== e.usualTime) parts.push({ kind: 'time', time: e.time, usualTime: e.usualTime ?? '' })
   if (e.attendeeIds !== undefined) parts.push({ kind: 'attendance', attendeeIds: e.attendeeIds })
+  if (e.guests !== undefined && e.guests > 0) parts.push({ kind: 'guests', guests: e.guests })
   return parts
 }
 
@@ -308,6 +311,29 @@ export function datesThatDiffer(exceptions: DateException[], opts: { today: stri
 export function datePartText(part: DatePart, members: Member[]): string {
   if (part.kind === 'notServed') return text.notServed
   if (part.kind === 'time') return text.timeUsually(part.time, part.usualTime)
+  if (part.kind === 'guests') return text.guests(part.guests)
   const names = memberNames(part.attendeeIds, members)
   return names ? text.onlyEats(names) : text.nobodyAttending
+}
+
+/**
+ * B5-F1: the exceptions the plan shows (its slots from today on): a date with its own time (`time` differs from `usualTime`),
+ * Not served, or Guests. One slot on one date per exception; a slot that differs in none of the three is left out. The Meal Slot
+ * name is the slot's; `slotId` is its `mealSlotId`.
+ */
+export function exceptionsFromPlan(slots: PlanDateSlot[]): DateException[] {
+  return slots.flatMap((sl) => {
+    const guests = sl.guests ?? 0
+    const notServed = sl.notServed === true
+    const ownTime = sl.usualTime !== undefined && sl.time !== sl.usualTime
+    if (!notServed && !ownTime && guests === 0) return []
+    const exception: DateException = { date: sl.date, slotId: sl.mealSlotId, slotName: sl.name }
+    if (notServed) exception.notServed = true
+    if (ownTime) {
+      exception.time = sl.time
+      exception.usualTime = sl.usualTime
+    }
+    if (guests > 0) exception.guests = guests
+    return [exception]
+  })
 }

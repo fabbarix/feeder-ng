@@ -9,6 +9,11 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Stock Lots inline.** On the Pantry, each Ingredient shows its Stock Lots under its name, with the quantity, Bought on and Good until of each, so the Stock is visible without opening every Lot.
 - **Edit a Stock Lot.** Correct a Stock Lot's quantity, Bought on and Good until from its sheet. Changing Bought on suggests Good until again from the Shelf Life, unless Good until is chosen in the same edit. An Ingredient with a Shelf Life needs a Good until; "No go-off date" is offered only without one. A Storage Place is still changed with Move to.
 - **Delete a Stock Lot.** Delete removes a Stock Lot entered by mistake, such as a double Scan. It is not counted as waste.
+- **Not served for one date.** The slot menu on Plan and Today has Not served for that date only. Feeder asks first when Planned Meals go (naming what goes, and what was bought), then the slot reads "Dinner · Not served" with Plan Dinner again, and the toast has Undo. The kitchen board's Tonight and Tomorrow tiles show it too.
+- **Who's eating with Guests.** The Who's eating sheet on Plan and Today takes Guests, 0 to 20, who eat one standard portion of every Course. Taking every Member off a date with no Guests leaves it Not served, as Settings does.
+- **Time today.** The slot menu on Plan and Today sets the time of one date (Time today, or Time on Thu), with Back to the usual time. A date with its own time reads "20:15 · usually 19:30".
+- **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
+- **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 

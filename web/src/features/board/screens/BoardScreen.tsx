@@ -9,7 +9,7 @@ import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimer
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
 import { boardLayout, type BoardCell } from '../lib/layout'
-import { boardSlots, leftoverRows, startCookPath, tomorrowSlots, tonightMeal, useSoonRows } from '../lib/tiles'
+import { boardSlots, leftoverRows, startCookPath, tomorrowSlots, tonightMeal, tonightNotServed, useSoonRows } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import '../board.css'
 
@@ -71,7 +71,7 @@ export function BoardScreen(): ReactNode {
     <div className="board-screen" data-board="true">
       <BentoGrid columns={wall ? 4 : 2}>
         <Cell id="tonight" layout={layout}>
-          <TonightTile slot={tonight} onCook={startPath ? () => navigate(startPath) : undefined} />
+          <TonightTile slot={tonight} notServed={tonightNotServed(slots, data.today)} onCook={startPath ? () => navigate(startPath) : undefined} />
         </Cell>
         <Cell id="clock" layout={layout}>
           <ClockTile now={clock} timeZone={zone} />
