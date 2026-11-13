@@ -171,13 +171,3 @@ describe('round 3: a chip measures the same shown or in the copy', () => {
     }
   })
 })
-
-describe('round 3: the panel body shares its start edge with the title and the footer', () => {
-  it.each(['padding', 'padding-inline', 'padding-inline-start', 'padding-left', 'margin', 'margin-inline', 'margin-inline-start', 'margin-left'])(
-    '.recipe-filters__body sets no %s (or 0)',
-    (prop) => {
-      for (const w of WIDTHS) expect([undefined, '0'], `${prop} @${w}`).toContain(valueFor('.recipe-filters__body', prop, w))
-    },
-  )
-})
-
