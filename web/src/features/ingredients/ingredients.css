@@ -136,3 +136,16 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* BR-D: a Base recipe's Ingredient: the badge and link, the read-only conversions. Tokens only. */
+.ingredient__base {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ingredient__helper,
+.ingredient__locked {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}

@@ -203,3 +203,11 @@
 .select__group {
   display: grid;
 }
+
+/* BR-D: the "Base recipe" badge after an Ingredient's name; a pill that never shrinks the label. */
+.select__badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-inline-start: var(--space-2);
+  border-radius: var(--radius-chip);
+}

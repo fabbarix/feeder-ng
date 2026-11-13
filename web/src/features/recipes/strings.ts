@@ -75,6 +75,8 @@ export const recipeStrings = {
       loading: 'Loading…',
     },
     takeOver: { title: 'Use the Ingredient', yes: 'Yes', no: 'No' },
+    chooseIngredient: 'Choose an Ingredient',
+    cancelChoose: 'Cancel',
     links: {
       undoLinked: 'Undo',
       mergeIssueNone: '',

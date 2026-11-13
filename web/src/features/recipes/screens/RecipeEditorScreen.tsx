@@ -5,15 +5,14 @@ import { ApiError } from '../../../lib/http'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
 import { useBaseRecipeChange } from '../hooks/useBaseRecipeChange'
-import { recipesApi } from '../api'
+import { useEditorLineLinks } from '../hooks/useEditorLineLinks'
+import { PlainIngredientDialog } from '../components/PlainIngredientDialog'
+import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
 import { BaseRecipePicker } from '../components/BaseRecipePicker'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { TakeOverDialog } from '../components/TakeOverDialog'
 import { defaultNeededAt, setBaseRecipe } from '../lib/baseRecipe'
 import { parseNumber } from '../lib/draft'
-import { yieldFromLine } from '../../../lib/baseRecipes/yield'
-import type { LinkChoice } from '../../../lib/baseRecipes/useLineLink'
-import { baseRecipesApi } from '../../../lib/baseRecipes/api'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
 import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
@@ -23,7 +22,6 @@ import { useHouseholdFrozenUseBy } from '../hooks/useHouseholdFrozenUseBy'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { RecipeSectionIndex } from '../components/RecipeSectionIndex'
 import { StepsEditor } from '../components/StepsEditor'
-import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
@@ -87,9 +85,14 @@ export function RecipeEditorScreen(): ReactNode {
   const [confirmingLoss, setConfirmingLoss] = useState(false)
   // BR-D: the Base recipe switch (asks first on a saved Recipe), the line links, and the bulk link sheet after a Base recipe is saved.
   const change = useBaseRecipeChange({ recipeId })
-  const [pickerFor, setPickerFor] = useState<string | null>(null)
   const [linkSheet, setLinkSheet] = useState<{ id: number; name: string; ingredientId: number } | null>(null)
 
+  // BR-D: the line links (picker, take-over, convert, Unit Conversion, plain Ingredient) are in the hook; the screen renders them.
+  const links = useEditorLineLinks({
+    ingredientOf: (id) => byId.get(id),
+    linkLine: editor.linkLine,
+    unlinkLine: editor.unlinkLine,
+  })
   const crumbs = useBreadcrumbs(editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
   const draft = editor.draft
@@ -112,44 +115,6 @@ export function RecipeEditorScreen(): ReactNode {
       ? await change.turnOn({ name, yield: y, yieldUnit: draft.yieldUnit || 'portion' })
       : await change.turnOff({ name, yield: y })
     if (outcome === 'done') editor.setDraft((d) => setBaseRecipe(d, on))
-  }
-
-  /** BR-D: "Link to a Base recipe" on a draft line: an existing Base recipe is linked with its Ingredient; a new one is created first. */
-  const linkChosen = async (key: string, choice: LinkChoice) => {
-    setPickerFor(null)
-    setSaveError(null)
-    try {
-      if (choice.kind === 'existing') {
-        const full = await recipesApi.get(choice.baseRecipe.id)
-        editor.linkLine(key, { id: choice.baseRecipe.id, name: choice.baseRecipe.name, ingredientId: full.baseIngredientId ?? 0 })
-      } else if (choice.kind === 'new') {
-        const line = draft.lines.find((l) => l.key === key)
-        const y = yieldFromLine(parseNumber(line?.quantity ?? '') ?? 1, line?.unit ?? '')
-        const created = await baseRecipesApi.createBase({
-          name: choice.name,
-          description: '',
-          yield: y.yield,
-          yieldUnit: y.yieldUnit,
-          baseRecipe: true,
-          readyMeal: false,
-          courseIds: [],
-          wholeMeal: false,
-          tags: [],
-          cooldownDays: null,
-          leftoverUseByDays: null,
-          reheatMinutes: null,
-          source: { url: '', attribution: '' },
-          image: '',
-          lines: [],
-          steps: [],
-        })
-        editor.linkLine(key, { id: created.id, name: created.name, ingredientId: created.baseIngredientId ?? 0 })
-      } else {
-        setSaveError(recipeStrings.baseRecipe.picker.loading)
-      }
-    } catch (err) {
-      failed(err)
-    }
   }
 
   const answerRename = async (rename: boolean) => {
@@ -195,6 +160,8 @@ export function RecipeEditorScreen(): ReactNode {
       failed(err)
     }
   }
+
+  const lineByKey = (key: string | null) => (key === null ? undefined : draft.lines.find((l) => l.key === key))
 
   return (
     <>
@@ -266,13 +233,13 @@ export function RecipeEditorScreen(): ReactNode {
                   steps={draft.steps}
                   neededAtDefault={(line.baseRecipeId ?? null) !== null ? defaultNeededAt(draft.steps, line.ingredientId, line.baseRecipeName ?? line.ingredientName) : null}
                   onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: step })}
-                  onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setPickerFor(line.key) : undefined}
+                  onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => links.openPicker(line.key) : undefined}
                   onUseAsPlain={
                     (line.baseRecipeId ?? null) !== null
                       ? () => {
                           const plain = line.linkedFromIngredientId != null ? byId.get(line.linkedFromIngredientId) : undefined
                           if (plain) editor.unlinkLine(line.key, plain)
-                          else setPickerFor(line.key)
+                          else links.openPlain(line.key)
                         }
                       : undefined
                   }
@@ -304,17 +271,32 @@ export function RecipeEditorScreen(): ReactNode {
             />
           </Tile>
           {saveError ? <p role="alert">{saveError}</p> : null}
+          {links.error ? <p role="alert">{links.error}</p> : null}
           {editor.refusal ? <p role="alert">{editor.refusal}</p> : Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
           <BaseRecipePicker
-            open={pickerFor !== null}
-            lineName={draft.lines.find((l) => l.key === pickerFor)?.ingredientName ?? ''}
+            open={links.pickerKey !== null}
+            lineName={lineByKey(links.pickerKey)?.ingredientName ?? ''}
             recipeId={recipeId}
-            onClose={() => setPickerFor(null)}
+            onClose={links.closePicker}
             onChoose={(choice) => {
-              const key = pickerFor
-              if (key) void linkChosen(key, choice)
+              const line = lineByKey(links.pickerKey)
+              links.closePicker()
+              if (line) void links.linkTo(line, choice)
             }}
           />
+          <PlainIngredientDialog
+            open={links.plainKey !== null}
+            ingredients={ingredients}
+            onChoose={links.choosePlain}
+            onCancel={links.closePlain}
+          />
+          {links.unitPrompt ? (
+            <UnitConversionPrompt
+              prompt={links.unitPrompt}
+              onSave={(toBase) => void links.answerUnitPrompt(toBase)}
+              onCancel={links.dismissUnitPrompt}
+            />
+          ) : null}
           <TakeOverDialog
             ask={editor.takeOverAsk}
             baseName={draft.name}
@@ -322,6 +304,12 @@ export function RecipeEditorScreen(): ReactNode {
               void editor.answerTakeOver(yes).then((saved) => finish(saved))
             }}
             onCancel={editor.cancelTakeOver}
+          />
+          <TakeOverDialog
+            ask={links.takeOverAsk}
+            baseName={links.askName}
+            onAnswer={(yes) => void links.answerTakeOver(yes)}
+            onCancel={links.cancelTakeOver}
           />
           {linkSheet ? (
             <LinkCandidatesSheet

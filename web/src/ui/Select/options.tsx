@@ -68,21 +68,31 @@ export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
   }))
 }
 
+/** Name key for the same-name pairs: case and accents aside, spacing collapsed. */
+const nameKey = (name: string) =>
+  name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLowerCase()
+
 /**
- * Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once, no badge).
- * BR-D: listed by name (case and accents aside, so the same-name pair sits together), a Base recipe's Ingredient before a plain one of the same name,
- * and carries the "Base recipe" badge (cooking-pot).
+ * The order the caller gave is kept. BR-D: on an exact name tie (case and accents aside) a Base recipe's Ingredient takes the earlier of the two
+ * places, the plain one the later; the Ingredients between them stay where they were.
+ * Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once); a Base recipe's Ingredient carries the "Base recipe" badge.
  */
 export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number | string>[] {
-  const order = ingredients.map((i, index) => ({ i, index }))
-  order.sort((a, b) => {
-    const byName = a.i.name.localeCompare(b.i.name, undefined, { sensitivity: 'base' })
-    if (byName !== 0) return byName
-    const baseA = a.i.baseRecipe ? 0 : 1
-    const baseB = b.i.baseRecipe ? 0 : 1
-    return baseA !== baseB ? baseA - baseB : a.index - b.index
+  const order = [...ingredients]
+  const byName = new Map<string, number[]>()
+  ingredients.forEach((i, index) => {
+    const k = nameKey(i.name)
+    byName.set(k, [...(byName.get(k) ?? []), index])
   })
-  return order.map(({ i }) => ({
+  for (const slots of byName.values()) {
+    const baseAt = slots.find((index) => ingredients[index]!.baseRecipe)
+    if (slots.length < 2 || baseAt === undefined) continue
+    const ordered = [baseAt, ...slots.filter((index) => index !== baseAt)]
+    slots.forEach((slot, n) => {
+      order[slot] = ingredients[ordered[n]!]!
+    })
+  }
+  return order.map((i) => ({
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
