@@ -109,8 +109,8 @@ func (r *review) baseCandidates(i int, l Line) []BaseRecipeSuggestion {
 	}
 	var out []BaseRecipeSuggestion
 	for _, e := range r.ex.Recipes {
-		if refKey(e.Name) == own {
-			continue
+		if refKey(e.Name) == own || e.ReadyMeal {
+			continue // a Ready Meal can never be a Base recipe (ADR 0015)
 		}
 		exact, ok := match(e.Name)
 		if !ok {
@@ -123,7 +123,7 @@ func (r *review) baseCandidates(i int, l Line) []BaseRecipeSuggestion {
 		out = append(out, BaseRecipeSuggestion{Kind: kind, RecipeID: e.ID, Name: e.Name, Exact: exact})
 	}
 	for j, fr := range r.f.Recipes {
-		if !r.kept[j] || j == i || refKey(fr.Name) == own {
+		if !r.kept[j] || j == i || refKey(fr.Name) == own || fr.ReadyMeal {
 			continue
 		}
 		exact, ok := match(fr.Name)
@@ -181,12 +181,18 @@ func (r *review) checkBaseAnswer(d BaseRecipeLineDecision) string {
 		if d.RecipeIndex == nil || *d.RecipeIndex < 0 || *d.RecipeIndex >= len(r.f.Recipes) || !r.kept[*d.RecipeIndex] {
 			return fit + "choose a Recipe of this file"
 		}
+		if r.f.Recipes[*d.RecipeIndex].ReadyMeal {
+			return fit + "a Ready Meal can never be a Base recipe"
+		}
 		if !r.fileBase(*d.RecipeIndex) && (d.Yield <= 0 || !ValidYieldUnit(d.YieldUnit)) {
 			return fit + "a Recipe that is not marked as a Base recipe needs a Yield and its unit"
 		}
 	case BaseConvert:
 		if !r.isPlannable(d.RecipeID) {
 			return fit + "only a plannable Recipe of the Household can be turned into a Base recipe"
+		}
+		if r.isReadyMeal(d.RecipeID) {
+			return fit + "a Ready Meal can never be a Base recipe"
 		}
 		if d.Yield <= 0 || !ValidYieldUnit(d.YieldUnit) {
 			return fit + "turning it into a Base recipe needs a Yield and its unit"
@@ -299,6 +305,16 @@ func (r *review) isPlannable(id int64) bool {
 	for _, e := range r.ex.Recipes {
 		if e.ID == id {
 			return true
+		}
+	}
+	return false
+}
+
+// isReadyMeal reports whether id is an existing Ready Meal.
+func (r *review) isReadyMeal(id int64) bool {
+	for _, e := range r.ex.Recipes {
+		if e.ID == id {
+			return e.ReadyMeal
 		}
 	}
 	return false

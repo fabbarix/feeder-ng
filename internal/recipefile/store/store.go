@@ -74,7 +74,7 @@ func (s *Store) Existing(ctx context.Context) (recipefile.Existing, error) {
 		return ex, err
 	}
 	for _, r := range recs {
-		ex.Recipes = append(ex.Recipes, recipefile.RecipeRef{ID: r.ID, Name: r.Name})
+		ex.Recipes = append(ex.Recipes, recipefile.RecipeRef{ID: r.ID, Name: r.Name, ReadyMeal: r.ReadyMeal})
 	}
 	ex.Courses, err = s.existingCourses(ctx)
 	if err != nil {

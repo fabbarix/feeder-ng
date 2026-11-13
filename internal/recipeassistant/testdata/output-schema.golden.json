@@ -265,7 +265,7 @@
       "additionalProperties": false,
       "properties": {
         "cue": {
-          "description": "The words in the source that point at the other recipe (\"see page 42\"). Omit it when the source gives none.",
+          "description": "The words in the source that point at the other recipe, such as \"see page 42\". Write \"\" when the source gives none.",
           "type": "string"
         },
         "name": {
@@ -310,7 +310,7 @@
         },
         "uses": {
           "items": {
-            "$ref": "#/$defs/quantity"
+            "$ref": "#/$defs/use"
           },
           "type": "array"
         }
@@ -329,6 +329,27 @@
     "unit": {
       "description": "Base units, global units, or a unit defined in the Ingredient's conversions.",
       "type": "string"
+    },
+    "use": {
+      "additionalProperties": false,
+      "description": "An Ingredient amount a Step needs. Only the Ingredient, the amount and the unit: a Step's uses never call for another recipe.",
+      "properties": {
+        "ingredient": {
+          "$ref": "#/$defs/name"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "required": [
+        "ingredient",
+        "quantity",
+        "unit"
+      ],
+      "type": "object"
     }
   },
   "additionalProperties": false,

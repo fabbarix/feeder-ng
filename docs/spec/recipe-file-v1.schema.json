@@ -91,6 +91,17 @@
         }
       }
     },
+    "use": {
+      "description": "An Ingredient amount a Step needs. Only the Ingredient, the amount and the unit: a Step's uses never call for another recipe.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ingredient", "quantity", "unit"],
+      "properties": {
+        "ingredient": { "$ref": "#/$defs/name" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "$ref": "#/$defs/unit" }
+      }
+    },
     "recipeRef": {
       "type": "object",
       "additionalProperties": false,
@@ -98,7 +109,7 @@
       "properties": {
         "name": { "$ref": "#/$defs/name" },
         "cue": {
-          "description": "The words in the source that point at the other recipe (\"see page 42\"). Omit it when the source gives none.",
+          "description": "The words in the source that point at the other recipe, such as \"see page 42\". Write \"\" when the source gives none.",
           "type": "string",
           "maxLength": 200
         }
@@ -125,7 +136,7 @@
         "image": { "$ref": "#/$defs/image" },
         "uses": {
           "type": "array",
-          "items": { "$ref": "#/$defs/quantity" }
+          "items": { "$ref": "#/$defs/use" }
         }
       },
       "allOf": [

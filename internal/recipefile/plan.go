@@ -59,8 +59,9 @@ const (
 
 // Warning codes.
 const (
-	WarnImageFailed       = "image_failed"       // an image could not be fetched or decoded; dropped
-	WarnConversionDiffers = "conversion_differs" // existing Unit Conversion kept over the file's different value
+	WarnImageFailed        = "image_failed"         // an image could not be fetched or decoded; dropped
+	WarnConversionDiffers  = "conversion_differs"   // existing Unit Conversion kept over the file's different value
+	WarnSameNameIngredient = "same_name_ingredient" // export: a same-name plain Ingredient left out (base units differ)
 )
 
 // Existing is the household's current data that planning matches against.

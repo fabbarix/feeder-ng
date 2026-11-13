@@ -170,16 +170,38 @@ func Build(in ExportInput) (File, []Warning) {
 		}
 		return ids[i] < ids[j]
 	})
-	for idx, id := range ids {
-		ing := in.Ingredients[id]
+	// One definition per normalised name (beta.6, BR-C round 2): a plain Ingredient that shares its name with another
+	// Ingredient of the file is merged into that definition. The definition is the Base recipe's Ingredient's when one
+	// of the group is a Base recipe's (the Base recipe is then written by name, its own Ingredient is what it is), else
+	// the first one. The others add their Unit Conversions (without "batch") and their Shelf Life where the definition
+	// has none; a different base unit cannot be merged and is left out with a warning.
+	var groups [][]int64
+	groupAt := map[string]int{}
+	for _, id := range ids {
+		key := units.NormalizeName(in.Ingredients[id].Name)
+		if g, ok := groupAt[key]; ok {
+			groups[g] = append(groups[g], id)
+			continue
+		}
+		groupAt[key] = len(groups)
+		groups = append(groups, []int64{id})
+	}
+	for idx, group := range groups {
+		primary, ownsBase := group[0], false
+		for _, id := range group {
+			if _, ok := byIngredient[id]; ok {
+				primary, ownsBase = id, true
+				break
+			}
+		}
+		ing := in.Ingredients[primary]
 		def := Ingredient{
 			Name:          ingredient.DisplayName(ing.Name),
 			BaseUnit:      string(ing.Base),
 			ShelfLifeDays: copyInt(ing.ShelfLifeDays),
 		}
-		_, ownsBase := byIngredient[id]
 		for _, c := range ing.Conversions {
-			if ownsBase && units.NormalizeUnit(c.Unit) == "batch" {
+			if _, isBase := byIngredient[primary]; isBase && units.NormalizeUnit(c.Unit) == "batch" {
 				continue // the batch conversion is the Base recipe's Yield, set again on import
 			}
 			def.Conversions = append(def.Conversions, Conversion{Unit: c.Unit, ToBase: c.ToBase})
@@ -191,9 +213,41 @@ func Build(in ExportInput) (File, []Warning) {
 				def.Image = data
 			}
 		}
+		for _, id := range group {
+			if id == primary {
+				continue
+			}
+			other := in.Ingredients[id]
+			if units.Base(other.Base) != ing.Base {
+				warns = append(warns, Warning{Path: fmt.Sprintf("$.ingredients[%d].name", idx), Code: WarnSameNameIngredient,
+					Message: fmt.Sprintf("%s is kept in Feeder with another base unit than the Base recipe's %s; its own definition is not written", def.Name, def.BaseUnit)})
+				continue
+			}
+			if def.ShelfLifeDays == nil && other.ShelfLifeDays != nil {
+				def.ShelfLifeDays = copyInt(other.ShelfLifeDays)
+			}
+			for _, c := range other.Conversions {
+				if ownsBase && units.NormalizeUnit(c.Unit) == "batch" {
+					continue
+				}
+				if _, have := findFileConv(def.Conversions, c.Unit); !have {
+					def.Conversions = append(def.Conversions, Conversion{Unit: c.Unit, ToBase: c.ToBase})
+				}
+			}
+		}
 		f.Ingredients = append(f.Ingredients, def)
 	}
 	return f, warns
+}
+
+// findFileConv finds a definition's conversion for a unit, by normalised unit.
+func findFileConv(cs []Conversion, unit string) (Conversion, bool) {
+	for _, c := range cs {
+		if units.NormalizeUnit(c.Unit) == units.NormalizeUnit(unit) {
+			return c, true
+		}
+	}
+	return Conversion{}, false
 }
 
 // callsFor lists the Ingredient ids a Recipe's lines and Step uses name, in document order.
