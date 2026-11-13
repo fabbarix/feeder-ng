@@ -56,8 +56,8 @@ func (r *review) buildCourses() {
 	rowOf := map[string]int{}
 	recipeKeys := map[int][]string{}
 	for i, rec := range r.f.Recipes {
-		if !r.kept[i] {
-			continue
+		if !r.kept[i] || r.asBase[i] {
+			continue // a Base recipe has no Courses (§3.1)
 		}
 		for j, raw := range rec.Courses {
 			path := fmt.Sprintf("$.recipes[%d].courses[%d]", i, j)
@@ -143,7 +143,7 @@ func (r *review) buildCourses() {
 
 	// What each kept Recipe gets.
 	for i, rec := range r.f.Recipes {
-		if !r.kept[i] {
+		if !r.kept[i] || r.asBase[i] {
 			continue
 		}
 		var ids []int64

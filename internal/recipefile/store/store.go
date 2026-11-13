@@ -43,16 +43,32 @@ type Store struct {
 	guarded     *imgs.Guarded
 }
 
-// New returns a Store.
+// ingredientSource gives the Recipe store the Ingredients (with Unit Conversions) its lines refer to.
+type ingredientSource struct{ s *ingstore.Store }
+
+func (g ingredientSource) Units(ctx context.Context, id int64) (units.Ingredient, bool, error) {
+	ing, err := g.s.Get(ctx, id)
+	if errors.Is(err, ingstore.ErrNotFound) {
+		return units.Ingredient{}, false, nil
+	}
+	if err != nil {
+		return units.Ingredient{}, false, err
+	}
+	return ing.Units(), true, nil
+}
+
+// New returns a Store. The Base recipe lifecycle is wired here: the Recipe store creates, takes over and names the
+// Ingredients of Base recipes through the Ingredient store, which guards them with the Recipe store's port.
 func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
 	guarded := imgs.NewGuarded(images, refs.New(d))
+	ings := ingstore.New(d, clk, ingstore.WithBaseRecipes(recipestore.NewBaseRecipePort(d)))
 	return &Store{
 		guarded:     guarded,
 		db:          d,
 		clk:         clk,
 		images:      images,
-		ingredients: ingstore.New(d, clk),
-		recipes:     recipestore.New(d, clk, nil).WithImages(guarded),
+		ingredients: ings,
+		recipes:     recipestore.New(d, clk, ingredientSource{ings}).WithImages(guarded).WithIngredients(ings),
 		courses:     coursestore.New(d, clk),
 	}
 }
@@ -60,8 +76,8 @@ func New(d *sql.DB, clk clock.Clock, images *imaging.Store) *Store {
 // now is the timestamp of a row written by this store.
 func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 
-// Existing loads every Ingredient (with Unit Conversions) and every Recipe id
-// and name (archived ones too).
+// Existing loads every Ingredient (with Unit Conversions), every Recipe id and name (archived ones and Base recipes
+// too), which of them are Base recipes and what each plain Ingredient is used by (the take-over ask).
 func (s *Store) Existing(ctx context.Context) (recipefile.Existing, error) {
 	var ex recipefile.Existing
 	ings, err := s.ingredients.List(ctx)
@@ -69,7 +85,7 @@ func (s *Store) Existing(ctx context.Context) (recipefile.Existing, error) {
 		return ex, err
 	}
 	ex.Ingredients = ings
-	recs, err := s.recipes.List(ctx, recipestore.ListFilter{Archived: "all"})
+	recs, err := s.recipes.List(ctx, recipestore.ListFilter{Archived: "all", Kind: "all"})
 	if err != nil {
 		return ex, err
 	}
@@ -80,7 +96,78 @@ func (s *Store) Existing(ctx context.Context) (recipefile.Existing, error) {
 	if err != nil {
 		return ex, err
 	}
+	if ex.BaseRecipes, err = s.baseRecipes(ctx); err != nil {
+		return ex, err
+	}
+	if ex.IngredientUses, err = s.ingredientUses(ctx); err != nil {
+		return ex, err
+	}
 	return ex, nil
+}
+
+// baseRecipes lists the Base recipes and the Ingredient each owns.
+func (s *Store) baseRecipes(ctx context.Context) ([]recipefile.BaseRecipeRef, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, base_ingredient_id FROM recipes WHERE base_ingredient_id IS NOT NULL ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []recipefile.BaseRecipeRef
+	for rows.Next() {
+		var b recipefile.BaseRecipeRef
+		if err := rows.Scan(&b.RecipeID, &b.IngredientID); err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+// ingredientUses says, for every Ingredient a Recipe uses (in a line or a Step), which Recipes use it and its count of
+// Stock lots. Archived Recipes are included.
+func (s *Store) ingredientUses(ctx context.Context) (map[int64]recipefile.IngredientUse, error) {
+	out := map[int64]recipefile.IngredientUse{}
+	rows, err := s.db.QueryContext(ctx, `SELECT x.ingredient_id, r.id, r.name FROM (
+	        SELECT ingredient_id, recipe_id FROM recipe_lines
+	        UNION
+	        SELECT ingredient_id, recipe_id FROM recipe_step_uses) x
+	        JOIN recipes r ON r.id = x.recipe_id
+	        ORDER BY r.name COLLATE NOCASE, r.id`)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var ing int64
+		var ref recipefile.NamedRef
+		if err := rows.Scan(&ing, &ref.ID, &ref.Name); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		u := out[ing]
+		u.Recipes = append(u.Recipes, ref)
+		out[ing] = u
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+	lots, err := s.db.QueryContext(ctx, `SELECT ingredient_id, count(*) FROM stock_lots GROUP BY ingredient_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer lots.Close()
+	for lots.Next() {
+		var ing int64
+		var n int
+		if err := lots.Scan(&ing, &n); err != nil {
+			return nil, err
+		}
+		u := out[ing]
+		u.StockLots = n
+		out[ing] = u
+	}
+	return out, lots.Err()
 }
 
 // Exportable loads the Recipes (all, or those with the given ids) and the
@@ -229,9 +316,24 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 	}
 	defer tx.Rollback()
 
-	created, err := s.createIngredients(ctx, tx, c, imageIDs)
-	if err != nil {
-		return Result{}, nil, nil, err
+	// A new plain Ingredient named like a Base recipe this import creates waits until the Base recipes are written: the
+	// Base recipe must not find it and ask about taking it over (the import answered nothing about it).
+	baseNames := map[string]bool{}
+	for _, rc := range c.Recipes {
+		if rc.Input.IsBase() && rc.Action != recipefile.ActionReplace {
+			baseNames[units.NormalizeName(rc.Input.Name)] = true
+		}
+	}
+	created := map[string]int64{}
+	var pending []recipefile.NewIngredient
+	for _, n := range c.NewIngredients {
+		if baseNames[n.Key] {
+			pending = append(pending, n)
+			continue
+		}
+		if err := s.createIngredient(ctx, tx, n, imageIDs, created); err != nil {
+			return Result{}, nil, nil, err
+		}
 	}
 	res := Result{IngredientsCreated: len(c.NewIngredients)}
 	// A Unit Conversion the Ingredient gained since the review wins: it is kept,
@@ -280,14 +382,81 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 		}
 	}
 
+	// convert: a plannable Recipe becomes a Base recipe, with the effects of §3.6, before the Recipes that call for it.
+	for _, bl := range c.BaseRecipeLines {
+		if bl.Decision.Action != recipefile.BaseConvert {
+			continue
+		}
+		in := recipe.ToBaseInput{Yield: bl.Decision.Yield, YieldUnit: bl.Decision.YieldUnit, TakeOver: bl.TakeOver}
+		if err := s.recipes.ToBaseTx(ctx, tx, bl.Decision.RecipeID, in); err != nil {
+			return Result{}, nil, nil, staleOr(err)
+		}
+	}
+
+	// Unit answers for Base recipe Ingredients are saved as soon as the Ingredient exists, before a Recipe that calls it is
+	// validated. A reference not written yet waits.
+	applied := map[string]int64{} // Base recipes written so far, by fileKey / lineKey
+	pendingConv := append([]recipefile.BaseConversion(nil), c.BaseConversions...)
+	applyConv := func() error {
+		var rest []recipefile.BaseConversion
+		for _, bc := range pendingConv {
+			id, err := s.baseIngredient(ctx, tx, bc.Ref, applied)
+			if errors.Is(err, ErrStale) {
+				rest = append(rest, bc)
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if _, err := s.ingredients.AddConversionTx(ctx, tx, id, bc.Conversion); err != nil {
+				return staleOr(err)
+			}
+		}
+		pendingConv = rest
+		return nil
+	}
+	if err := applyConv(); err != nil {
+		return Result{}, nil, nil, err
+	}
 	var replaced []string
 	for _, rc := range c.Recipes {
-		applied, prev, err := s.writeRecipe(ctx, tx, c, rc, created, newCourses, imageIDs, names, replacing)
+		if !rc.Input.IsBase() {
+			// The plain Ingredients of the import come before the first plannable Recipe, which may use them.
+			if err := s.createPending(ctx, tx, &pending, created, imageIDs); err != nil {
+				return Result{}, nil, nil, err
+			}
+		}
+		out, prev, err := s.writeRecipe(ctx, tx, c, rc, created, newCourses, imageIDs, names, replacing, applied)
 		if err != nil {
 			return Result{}, nil, nil, err
 		}
-		res.Recipes = append(res.Recipes, applied)
+		res.Recipes = append(res.Recipes, out)
+		if err := applyConv(); err != nil {
+			return Result{}, nil, nil, err
+		}
+		if rc.Action != recipefile.ActionReplace && rc.Input.IsBase() && (rc.BaseShelfLifeDays != nil || rc.BaseImage != "") {
+			// The file's definition of the new Base recipe's Ingredient: its Shelf Life and picture (none yet).
+			var shelf any
+			if rc.BaseShelfLifeDays != nil {
+				shelf = *rc.BaseShelfLifeDays
+			}
+			img := imageIDs[rc.BaseImage]
+			if _, err := tx.ExecContext(ctx, `UPDATE ingredients SET shelf_life_days = COALESCE(?, shelf_life_days),
+			        image = CASE WHEN ? != '' AND image = '' THEN ? ELSE image END
+			        WHERE id = (SELECT base_ingredient_id FROM recipes WHERE id = ?)`, shelf, img, img, out.ID); err != nil {
+				return Result{}, nil, nil, err
+			}
+			if img != "" {
+				res.PicturesAdded++
+			}
+		}
 		replaced = append(replaced, prev...)
+	}
+	if err := s.createPending(ctx, tx, &pending, created, imageIDs); err != nil {
+		return Result{}, nil, nil, err
+	}
+	if len(pendingConv) > 0 {
+		return Result{}, nil, nil, ErrStale // a conversion for a Base recipe the import did not write
 	}
 	if err := tx.Commit(); err != nil {
 		return Result{}, nil, nil, err
@@ -329,28 +498,67 @@ func (ni nameIndex) taken(key string, replacing map[int64]bool) bool {
 	return false
 }
 
-// createIngredients inserts the new Ingredients and returns their ids by key.
-func (s *Store) createIngredients(ctx context.Context, tx *sql.Tx, c recipefile.Commit, imageIDs map[string]string) (map[string]int64, error) {
-	created := map[string]int64{}
-	for _, n := range c.NewIngredients {
-		in := n.Input
-		if n.ImagePath != "" {
-			in.Image = imageIDs[n.ImagePath]
-		}
-		ing, err := s.ingredients.CreateTx(ctx, tx, in)
-		if err != nil {
-			return nil, staleOr(err)
-		}
-		created[n.Key] = ing.ID
+// createIngredient inserts one new Ingredient and records its id by key.
+func (s *Store) createIngredient(ctx context.Context, tx *sql.Tx, n recipefile.NewIngredient, imageIDs map[string]string, created map[string]int64) error {
+	in := n.Input
+	if n.ImagePath != "" {
+		in.Image = imageIDs[n.ImagePath]
 	}
-	return created, nil
+	ing, err := s.ingredients.CreateTx(ctx, tx, in)
+	if err != nil {
+		return staleOr(err)
+	}
+	created[n.Key] = ing.ID
+	return nil
+}
+
+// createPending creates the Ingredients held back by baseNames and empties the list.
+func (s *Store) createPending(ctx context.Context, tx *sql.Tx, pending *[]recipefile.NewIngredient, created map[string]int64, imageIDs map[string]string) error {
+	for _, n := range *pending {
+		if err := s.createIngredient(ctx, tx, n, imageIDs, created); err != nil {
+			return err
+		}
+	}
+	*pending = nil
+	return nil
+}
+
+// fileKey and lineKey name a Base recipe written by this import in the applied map.
+func fileKey(i int) string    { return fmt.Sprintf("file:%d", i) }
+func lineKey(p string) string { return "line:" + p }
+
+// baseIngredient is the Ingredient of the Base recipe a line calls for: a stored one, or one this import wrote.
+func (s *Store) baseIngredient(ctx context.Context, tx *sql.Tx, ref recipefile.BaseRef, applied map[string]int64) (int64, error) {
+	var id int64
+	switch ref.Kind {
+	case recipefile.BaseRefRecipe:
+		id = ref.ID
+	case recipefile.BaseRefFile:
+		id = applied[fileKey(ref.Index)]
+	case recipefile.BaseRefLine:
+		id = applied[lineKey(ref.Line)]
+	default:
+		return 0, ErrStale
+	}
+	if id == 0 {
+		return 0, ErrStale
+	}
+	var ing sql.NullInt64
+	err := tx.QueryRowContext(ctx, `SELECT base_ingredient_id FROM recipes WHERE id = ?`, id).Scan(&ing)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && !ing.Valid) {
+		return 0, ErrStale
+	}
+	if err != nil {
+		return 0, err
+	}
+	return ing.Int64, nil
 }
 
 // writeRecipe creates or replaces one Recipe. Its Ingredient ids come from the
 // Commit's resolution, and its Input is validated again against the Ingredients
 // as they are inside this transaction.
 func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit, rc recipefile.RecipeCommit,
-	created, newCourses map[string]int64, imageIDs map[string]string, names nameIndex, replacing map[int64]bool) (AppliedRecipe, []string, error) {
+	created, newCourses map[string]int64, imageIDs map[string]string, names nameIndex, replacing map[int64]bool, applied map[string]int64) (AppliedRecipe, []string, error) {
 	in := rc.Input
 	courseIDs, err := courseIDsFor(rc, newCourses)
 	if err != nil {
@@ -376,8 +584,19 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 		}
 		return id, nil
 	}
+	// A Base recipe line calls for the Base recipe's Ingredient; a plain one for the Ingredient its name resolved to.
+	lineID := func(ref recipefile.BaseRef, key string) (int64, error) {
+		if ref.Kind != "" {
+			return s.baseIngredient(ctx, tx, ref, applied)
+		}
+		return idOf(key)
+	}
 	for i := range in.Lines {
-		id, err := idOf(rc.LineKeys[i])
+		var ref recipefile.BaseRef
+		if i < len(rc.LineBases) {
+			ref = rc.LineBases[i]
+		}
+		id, err := lineID(ref, rc.LineKeys[i])
 		if err != nil {
 			return AppliedRecipe{}, nil, err
 		}
@@ -385,7 +604,11 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 	}
 	for st := range in.Steps {
 		for u := range in.Steps[st].Uses {
-			id, err := idOf(rc.UseKeys[st][u])
+			var ref recipefile.BaseRef
+			if st < len(rc.UseBases) && u < len(rc.UseBases[st]) {
+				ref = rc.UseBases[st][u]
+			}
+			id, err := lineID(ref, rc.UseKeys[st][u])
 			if err != nil {
 				return AppliedRecipe{}, nil, err
 			}
@@ -414,23 +637,33 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 	if rc.Action != recipefile.ActionReplace && names.taken(key, replacing) {
 		return AppliedRecipe{}, nil, ErrStale // the name was taken since the review
 	}
+	clean.TakeOver = rc.TakeOver // the answer of the take-over ask (P7); Validate does not carry it
 
+	var out AppliedRecipe
+	var prev []string
 	if rc.Action == recipefile.ActionReplace {
-		prev, err := s.recipes.ReplaceTx(ctx, tx, rc.ReplaceID, clean)
+		prev, err = s.recipes.ReplaceTx(ctx, tx, rc.ReplaceID, clean)
 		if errors.Is(err, recipestore.ErrNotFound) {
 			return AppliedRecipe{}, nil, ErrStale
 		}
 		if err != nil {
 			return AppliedRecipe{}, nil, err
 		}
-		return AppliedRecipe{Index: rc.Index, ID: rc.ReplaceID, Name: clean.Name, Action: "replaced"}, prev, nil
+		out = AppliedRecipe{Index: rc.Index, ID: rc.ReplaceID, Name: clean.Name, Action: "replaced"}
+	} else {
+		id, err := s.recipes.CreateTx(ctx, tx, clean)
+		if err != nil {
+			return AppliedRecipe{}, nil, err
+		}
+		names.add(key, id)
+		out = AppliedRecipe{Index: rc.Index, ID: id, Name: clean.Name, Action: "created"}
 	}
-	id, err := s.recipes.CreateTx(ctx, tx, clean)
-	if err != nil {
-		return AppliedRecipe{}, nil, err
+	if rc.Index >= 0 {
+		applied[fileKey(rc.Index)] = out.ID
+	} else {
+		applied[lineKey(rc.Line)] = out.ID
 	}
-	names.add(key, id)
-	return AppliedRecipe{Index: rc.Index, ID: id, Name: clean.Name, Action: "created"}, nil, nil
+	return out, prev, nil
 }
 
 // unitsOf loads, inside tx, every Ingredient the Input uses.

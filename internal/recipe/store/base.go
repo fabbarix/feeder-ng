@@ -811,6 +811,11 @@ func (s *Store) ToBase(ctx context.Context, id int64, in recipe.ToBaseInput) (re
 	return s.Get(ctx, id)
 }
 
+// ToBaseTx is ToBase inside the caller's transaction (the import of recipefile writes a Recipe's kind change this way).
+func (s *Store) ToBaseTx(ctx context.Context, tx *sql.Tx, id int64, in recipe.ToBaseInput) error {
+	return s.toBaseTx(ctx, tx, id, in)
+}
+
 // toBaseTx is ToBase inside the caller's transaction: the ask and the refusals come before anything changes.
 func (s *Store) toBaseTx(ctx context.Context, tx *sql.Tx, id int64, in recipe.ToBaseInput) error {
 	var name string

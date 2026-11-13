@@ -75,12 +75,27 @@ type Existing struct {
 	// lists every Recipe, so name conflicts work as before. A Base recipe's Ingredient is also in Ingredients, but
 	// plain-name matching never returns it.
 	BaseRecipes []BaseRecipeRef
+	// IngredientUses (beta.6, BR-C commit half) is what the take-over ask of P7 shows, by plain Ingredient id: the Recipes
+	// it is on (archived included, lines and Step uses) and its count of Stock lots.
+	IngredientUses map[int64]IngredientUse
 }
 
 // BaseRecipeRef marks an existing Recipe as a Base recipe.
 type BaseRecipeRef struct {
 	RecipeID     int64
 	IngredientID int64
+}
+
+// IngredientUse says where a plain Ingredient is used and how much Stock it has.
+type IngredientUse struct {
+	Recipes   []NamedRef
+	StockLots int
+}
+
+// NamedRef is a Recipe by id and name, as the take-over ask lists them.
+type NamedRef struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // CourseRef is an existing Course.
@@ -131,6 +146,9 @@ type Decisions struct {
 	Courses     []CourseDecision     `json:"courses"`
 	// BaseRecipeLines (beta.6, BR-C) answers the Base recipe tiles, by line path ("$.recipes[0].ingredients[1]").
 	BaseRecipeLines map[string]BaseRecipeLineDecision `json:"baseRecipeLines,omitempty"`
+	// TakeOvers (beta.6, BR-C, P7 = B) answers the take-over asks by path: true takes the same-name plain Ingredient over,
+	// false keeps it apart. Nothing is preselected; an ask without an answer keeps the plan not Ready.
+	TakeOvers map[string]bool `json:"takeOvers,omitempty"`
 }
 
 // Base recipe line actions (BaseRecipeLineDecision.Action).
@@ -164,6 +182,21 @@ const (
 	ProblemBaseRecipeAnswer = "base_recipe_answer_invalid" // the answer does not fit the row (unknown Recipe, no Yield, ...)
 	ProblemBaseRecipeCycle  = "base_recipe_cycle"          // the file's own answers make Recipes call for each other
 )
+
+// TakeOverAsk is the P7 question of Import Review: a Base recipe the import creates has the name of a plain Ingredient
+// that exists. Path is the line path (create, convert) or "$.recipes[i]" (a Recipe of the file). Convertible is false
+// when the Base Unit differs; then only "keep apart" applies and Resolved is already true (with a same_name_ingredient
+// warning). Answer is the User's, when given.
+type TakeOverAsk struct {
+	Path        string      `json:"path"`
+	Name        string      `json:"name"`
+	Ingredient  ExistingRef `json:"ingredient"`
+	Recipes     []NamedRef  `json:"recipes"`
+	StockLots   int         `json:"stockLots"`
+	Convertible bool        `json:"convertible"`
+	Answer      *bool       `json:"answer,omitempty"`
+	Resolved    bool        `json:"resolved"`
+}
 
 // BaseRecipeSuggestion is one Recipe a line may be.
 type BaseRecipeSuggestion struct {
@@ -300,9 +333,11 @@ type Plan struct {
 	Courses     []CourseMatch     `json:"courses"`
 	// BaseRecipeLines (beta.6, BR-C): never null in JSON; Ready needs every row Resolved.
 	BaseRecipeLines []BaseRecipeLine `json:"baseRecipeLines"`
-	Problems        []Problem        `json:"problems"`
-	Warnings        []Warning        `json:"warnings"`
-	Ready           bool             `json:"ready"`
+	// TakeOvers (beta.6, BR-C): never null in JSON; every ask needs its answer for Ready.
+	TakeOvers []TakeOverAsk `json:"takeOvers"`
+	Problems  []Problem     `json:"problems"`
+	Warnings  []Warning     `json:"warnings"`
+	Ready     bool          `json:"ready"`
 }
 
 // BuildPlan computes the Import Review state (rules in the design note):
@@ -370,12 +405,30 @@ type AddedImage struct {
 // 0) one of Commit.NewIngredients by Key.
 type ResolvedIngredient struct{ ID int64 }
 
+// Base recipe references of a Commit (beta.6, BR-C commit half).
+const (
+	BaseRefRecipe = "recipe" // ID: a stored Base recipe (use) or a plannable Recipe turned into one (convert)
+	BaseRefFile   = "file"   // Index: a Recipe of the file that this Commit creates as a Base recipe
+	BaseRefLine   = "line"   // Line: the path of a create answer; the Base recipe it names is written by this Commit
+)
+
+// BaseRef is the Base recipe a Base recipe line calls for. Kind "" is a plain line (its Ingredient comes from
+// LineKeys / UseKeys).
+type BaseRef struct {
+	Kind  string
+	ID    int64
+	Index int
+	Line  string
+}
+
 // RecipeCommit is one Recipe to write. Input.Lines[i].IngredientID and
 // Input.Steps[s].Uses[u].IngredientID are 0 and are filled from
-// Commit.Resolved using LineKeys[i] / UseKeys[s][u]. Input.Image and the Step
+// Commit.Resolved using LineKeys[i] / UseKeys[s][u], or, for a Base recipe line (LineBases[i].Kind set,
+// UseBases[s][u]), from the Base recipe's Ingredient. Input.Image and the Step
 // images are empty; ImagePath ("$.recipes[0].image") and StepImagePaths[s]
 // ("$.recipes[0].steps[2].image") key into Commit.Images.
 type RecipeCommit struct {
+	// Index is the Recipe of the file, -1 for a create answer (a Base recipe that has no file Recipe).
 	Index int
 	// NewCourseKeys are the NewCourses (by Key) this Recipe also gets, once created; Input.CourseIDs holds the
 	// existing ones. The store writes the Recipe's Courses in household order.
@@ -385,8 +438,18 @@ type RecipeCommit struct {
 	Input          recipe.Input
 	LineKeys       []string
 	UseKeys        [][]string
+	LineBases      []BaseRef
+	UseBases       [][]BaseRef
 	ImagePath      string
 	StepImagePaths []string
+	// Line is the path of the create answer that asked for this Recipe ("" otherwise).
+	Line string
+	// TakeOver is the answer of the take-over ask for this Base recipe (nil: no same-name plain Ingredient to ask about).
+	TakeOver *bool
+	// BaseShelfLifeDays and BaseImage are the file's definition of the Ingredient this new Base recipe gets (the Shelf
+	// Life and the picture of the file's Ingredient of its name). BaseImage keys into Commit.Images; "" = none.
+	BaseShelfLifeDays *int
+	BaseImage         string
 }
 
 // NewCourse is a Course to create (an Admin's "add" answer), added last in the household order.
@@ -406,8 +469,17 @@ type Commit struct {
 	Recipes          []RecipeCommit
 	Images           map[string]imaging.Result // by image path; only images that were resolved
 	Warnings         []Warning
-	// BaseRecipeLines (beta.6, BR-C commit half, needs BR-B's store): what Confirm writes for each answered tile.
+	// BaseConversions (beta.6, BR-C): the unit prompts answered for Base recipe Ingredients, saved on the Ingredient the
+	// reference names once it exists.
+	BaseConversions []BaseConversion
+	// BaseRecipeLines (beta.6, BR-C): each answered tile. The Recipes (RecipeCommit.LineBases) carry where they point.
 	BaseRecipeLines []BaseRecipeLineCommit
+}
+
+// BaseConversion is a unit conversion answered for a Base recipe's Ingredient.
+type BaseConversion struct {
+	Ref        BaseRef
+	Conversion units.Conversion
 }
 
 // BaseRecipeLineCommit is one answered tile for the store: the Base recipes to create come before the Recipes that call for them.
@@ -415,6 +487,8 @@ type BaseRecipeLineCommit struct {
 	RecipeIndex int // the Recipe of the file the line is in
 	Line        int
 	Decision    BaseRecipeLineDecision
+	// TakeOver is the answer of the take-over ask of this line's Base recipe (convert, create), nil when there is none.
+	TakeOver *bool
 }
 
 // BuildCommit builds the write set, or *NotReadyError when BuildPlan is not

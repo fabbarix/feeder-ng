@@ -40,9 +40,20 @@ type review struct {
 	newCount int
 	stale    bool // an answer refers to a Recipe or Ingredient that no longer exists
 
-	baseIngs    map[int64]bool // Ingredients that belong to a Base recipe: never matched by plain name (base_review.go)
-	baseRecipes map[int64]bool // existing Base recipes
-	baseRows    []*baseRow     // the Base recipe tiles
+	baseIngs    map[int64]bool  // Ingredients that belong to a Base recipe: never matched by plain name (base_review.go)
+	baseRecipes map[int64]bool  // existing Base recipes
+	baseIngOf   map[int64]int64 // existing Base recipe id -> its Ingredient
+	baseRows    []*baseRow      // the Base recipe tiles
+	asBase      []bool          // per file Recipe: created as a Base recipe (marked, or a file answer points at it)
+	baseYield   []yieldOf       // per file Recipe that is a Base recipe: its Yield
+	baseAt      map[string]*baseLine
+	stepBase    []map[string]*baseLine // per file Recipe: the Base recipe lines a Step use named like it stands for
+	nextVirt    int64
+	takeOvers   []TakeOverAsk
+	targets     map[string]*baseTarget // Base recipe Ingredients by ref (base_review.go)
+	targetByID  map[int64]*baseTarget
+	baseConvs   []BaseConversion // unit answers for Base recipe Ingredients, to store
+	takeAnswer  map[string]bool  // take-over answers in force, by path (false when only "keep apart" applies)
 }
 
 // ingRow is one Ingredient of the kept Recipes, keyed by normalised name.
@@ -85,6 +96,10 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		byKey:         map[string]*ingRow{},
 	}
 	r.baseIngs, r.baseRecipes = baseSets(ex)
+	r.baseIngOf = map[int64]int64{}
+	for _, b := range ex.BaseRecipes {
+		r.baseIngOf[b.RecipeID] = b.IngredientID
+	}
 	for _, e := range ex.Ingredients {
 		r.existingByID[e.ID] = e
 		if r.baseIngs[e.ID] {
@@ -96,14 +111,17 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 		r.takenNames[e.Key()] = true
 	}
 	r.buildRecipeRows()
+	r.buildBaseRows()
 	r.buildCourses()
 	r.buildIngredientRows()
 	r.resolveRows()
 	r.checkUnits()
 	r.answerPrompts()
 	r.finishTargets()
+	r.checkBaseUnits()
 	r.checkRecipes()
-	r.buildBaseRows()
+	r.checkBaseRecipes()
+	r.buildTakeOvers()
 	r.collectImageWarnings()
 	return r
 }
@@ -255,11 +273,17 @@ func (r *review) buildIngredientRows() {
 			continue
 		}
 		for j, l := range rec.Ingredients {
+			if r.baseLineFor(linePath(i, j)) != nil {
+				continue // a Base recipe line calls for the Base recipe's Ingredient, not a plain one
+			}
 			pack := rec.ReadyMeal && j == 0 && units.NormalizeName(l.Ingredient) == units.NormalizeName(rec.Name)
-			add(l.Ingredient, fmt.Sprintf("$.recipes[%d].ingredients[%d]", i, j), pack)
+			add(l.Ingredient, linePath(i, j), pack)
 		}
 		for s, st := range rec.Steps {
 			for u, use := range st.Uses {
+				if r.stepBaseOf(i, use.Ingredient) != nil {
+					continue
+				}
 				add(use.Ingredient, fmt.Sprintf("$.recipes[%d].steps[%d].uses[%d]", i, s, u), false)
 			}
 		}
@@ -426,10 +450,16 @@ func (r *review) checkUnits() {
 			continue
 		}
 		for j, l := range rec.Ingredients {
-			r.checkUse(units.NormalizeName(l.Ingredient), l.Unit, fmt.Sprintf("$.recipes[%d].ingredients[%d]", i, j))
+			if r.baseLineFor(linePath(i, j)) != nil {
+				continue
+			}
+			r.checkUse(units.NormalizeName(l.Ingredient), l.Unit, linePath(i, j))
 		}
 		for s, st := range rec.Steps {
 			for u, use := range st.Uses {
+				if r.stepBaseOf(i, use.Ingredient) != nil {
+					continue
+				}
 				r.checkUse(units.NormalizeName(use.Ingredient), use.Unit, fmt.Sprintf("$.recipes[%d].steps[%d].uses[%d]", i, s, u))
 			}
 		}
@@ -549,30 +579,26 @@ func (row *ingRow) unitsView() units.Ingredient {
 // are all resolved. Unknown units are left to the unit prompts.
 func (r *review) checkRecipes() {
 	lookup := func(id int64) (units.Ingredient, bool) {
+		if t, ok := r.targetByID[id]; ok {
+			return t.ing, true
+		}
 		for _, row := range r.rows {
 			if row.target != nil && row.target.id == id {
 				return row.unitsView(), true
 			}
 		}
+		if e, ok := r.existingByID[id]; ok {
+			return e.Units(), true
+		}
 		return units.Ingredient{}, false
 	}
 	for i, rec := range r.f.Recipes {
-		if !r.kept[i] || !r.allResolved(rec) {
+		if !r.kept[i] || !r.allResolved(i, rec) {
 			continue
 		}
 		in := r.recipeInput(i, rec)
-		checked := in
-		if r.fileBase(i) {
-			// A Base recipe's Yield is an amount, not portions: recipe.Input's portion limit does not apply to it.
-			if !(rec.Yield > 0) || rec.Yield > maxBaseYield {
-				r.problem(recipePath(i, "yield"), recipe.CodeYieldInvalid, "the yield of a base recipe must be more than 0 and at most 100000")
-				continue
-			}
-			checked.Yield = 1
-		}
-		clean, err := checked.Validate(lookup)
+		clean, err := in.Validate(lookup)
 		if err == nil {
-			clean.Yield = in.Yield
 			r.cleaned[i] = clean
 			continue
 		}
@@ -589,14 +615,20 @@ func (r *review) checkRecipes() {
 	}
 }
 
-func (r *review) allResolved(rec Recipe) bool {
-	for _, l := range rec.Ingredients {
+func (r *review) allResolved(i int, rec Recipe) bool {
+	for j, l := range rec.Ingredients {
+		if r.baseLineFor(linePath(i, j)) != nil {
+			continue
+		}
 		if row := r.byKey[units.NormalizeName(l.Ingredient)]; row == nil || row.target == nil {
 			return false
 		}
 	}
 	for _, st := range rec.Steps {
 		for _, u := range st.Uses {
+			if r.stepBaseOf(i, u.Ingredient) != nil {
+				continue
+			}
 			if row := r.byKey[units.NormalizeName(u.Ingredient)]; row == nil || row.target == nil {
 				return false
 			}
@@ -618,10 +650,18 @@ func (r *review) recipeInput(i int, rec Recipe) recipe.Input {
 		LeftoverUseByDays: rec.LeftoverUseByDays,
 		ReheatMinutes:     rec.ReheatMinutes,
 	}
+	if r.asBase[i] {
+		y := r.baseYield[i]
+		in.Yield, in.YieldUnit, in.BaseRecipe = y.yield, y.unit, boolPtr(true)
+	}
 	if rec.Source != nil {
 		in.Source = recipe.Source{URL: rec.Source.URL, Attribution: rec.Source.Attribution}
 	}
-	for _, l := range rec.Ingredients {
+	for j, l := range rec.Ingredients {
+		if bl := r.baseLineFor(linePath(i, j)); bl != nil {
+			in.Lines = append(in.Lines, recipe.Line{IngredientID: bl.target.id, Quantity: l.Quantity, Unit: bl.unit, Optional: l.Optional, Note: l.Note})
+			continue
+		}
 		row := r.byKey[units.NormalizeName(l.Ingredient)]
 		in.Lines = append(in.Lines, recipe.Line{IngredientID: row.target.id, Quantity: l.Quantity, Unit: l.Unit, Optional: l.Optional, Note: l.Note})
 	}
@@ -634,6 +674,10 @@ func (r *review) recipeInput(i int, rec Recipe) recipe.Input {
 			After:           st.After,
 		}
 		for _, u := range st.Uses {
+			if sb := r.stepBaseOf(i, u.Ingredient); sb != nil {
+				s.Uses = append(s.Uses, recipe.Use{IngredientID: sb.target.id, Quantity: u.Quantity, Unit: u.Unit})
+				continue
+			}
 			row := r.byKey[units.NormalizeName(u.Ingredient)]
 			s.Uses = append(s.Uses, recipe.Use{IngredientID: row.target.id, Quantity: u.Quantity, Unit: u.Unit})
 		}
@@ -691,6 +735,7 @@ func (r *review) plan() Plan {
 		Recipes:         append([]RecipeStatus{}, r.recipes...),
 		Courses:         []CourseMatch{},
 		BaseRecipeLines: r.baseLines(),
+		TakeOvers:       []TakeOverAsk{},
 		Problems:        append([]Problem{}, r.problems...),
 		Warnings:        append([]Warning{}, r.warnings...),
 	}
@@ -721,13 +766,18 @@ func (r *review) plan() Plan {
 	for _, rs := range r.recipes {
 		ready = ready && rs.Resolved
 	}
+	for _, a := range r.takeOvers {
+		ready = ready && a.Resolved
+	}
+	p.TakeOvers = append([]TakeOverAsk{}, r.takeOvers...)
 	p.Ready = ready
 	return p
 }
 
 // commit is the write set of a ready review.
 func (r *review) commit() Commit {
-	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings, BaseRecipeLines: r.baseCommits()}
+	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings, BaseRecipeLines: r.baseCommits(),
+		BaseConversions: append([]BaseConversion{}, r.baseConvs...)}
 	if r.courses != nil {
 		c.NewCourses = r.courses.newCourses
 		c.UnarchiveCourses = r.courses.unarchive
@@ -757,18 +807,26 @@ func (r *review) commit() Commit {
 			c.AddedConversions = append(c.AddedConversions, AddedConversion{IngredientID: t.existingID, Conversion: conv})
 		}
 	}
+	var recs []RecipeCommit
 	for i, rec := range r.f.Recipes {
 		if !r.kept[i] {
 			continue
 		}
 		rc := r.recipeCommit(i, rec)
-		c.Recipes = append(c.Recipes, rc)
-		for _, p := range append([]string{rc.ImagePath}, rc.StepImagePaths...) {
+		recs = append(recs, rc)
+		for _, p := range append([]string{rc.ImagePath, rc.BaseImage}, rc.StepImagePaths...) {
 			if res, ok := r.images.Images[p]; ok && p != "" {
 				c.Images[p] = res
 			}
 		}
 	}
+	for _, bl := range r.creates() {
+		recs = append(recs, RecipeCommit{
+			Index: -1, Action: "create", Line: bl.path, TakeOver: r.takeOverFor(bl.path),
+			Input: recipe.Input{Name: bl.name, Yield: bl.yield.yield, YieldUnit: bl.yield.unit, BaseRecipe: boolPtr(true)},
+		})
+	}
+	c.Recipes = orderBaseFirst(recs)
 	return c
 }
 
@@ -781,14 +839,26 @@ func (r *review) recipeCommit(i int, rec Recipe) RecipeCommit {
 	}
 	for k, l := range rec.Ingredients {
 		rc.Input.Lines[k].IngredientID = 0
+		var ref BaseRef
+		if bl := r.baseLineFor(linePath(i, k)); bl != nil {
+			ref = bl.ref
+		}
+		rc.LineBases = append(rc.LineBases, ref)
 		rc.LineKeys = append(rc.LineKeys, units.NormalizeName(l.Ingredient))
 	}
 	for s, st := range rec.Steps {
 		var keys []string
+		var refs []BaseRef
 		for u, use := range st.Uses {
 			rc.Input.Steps[s].Uses[u].IngredientID = 0
+			var ref BaseRef
+			if sb := r.stepBaseOf(i, use.Ingredient); sb != nil {
+				ref = sb.ref
+			}
+			refs = append(refs, ref)
 			keys = append(keys, units.NormalizeName(use.Ingredient))
 		}
+		rc.UseBases = append(rc.UseBases, refs)
 		rc.UseKeys = append(rc.UseKeys, keys)
 		p := fmt.Sprintf("$.recipes[%d].steps[%d].image", i, s)
 		if !r.hasImage(p) {
@@ -799,12 +869,19 @@ func (r *review) recipeCommit(i int, rec Recipe) RecipeCommit {
 	if p := fmt.Sprintf("$.recipes[%d].image", i); r.hasImage(p) {
 		rc.ImagePath = p
 	}
-	if st := r.courses; st != nil {
+	switch {
+	case r.asBase[i]:
+		// A Base recipe has no Courses and is never a whole meal (§3.1); the store writes it so.
+		in.CourseIDs, in.WholeMeal = nil, nil
+		rc.TakeOver = r.takeOverFor(fmt.Sprintf("$.recipes[%d]", i))
+		r.baseDefinition(&rc, units.NormalizeName(r.recipes[i].ImportedAs))
+	case r.courses != nil:
+		st := r.courses
 		w := st.recipeWhol[i]
 		in.CourseIDs = st.recipeIDs[i]
 		in.WholeMeal = &w
 		rc.NewCourseKeys = st.recipeNew[i]
-	} else if rec.WholeMeal != nil {
+	case rec.WholeMeal != nil:
 		w := *rec.WholeMeal
 		in.WholeMeal = &w
 	}
