@@ -71,7 +71,7 @@ export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
-    leading: <Thumb imageUrl={i.imageUrl} size={40} />,
+    leading: <Thumb name={i.name} imageUrl={i.imageUrl} size={40} />,
   }))
 }
 

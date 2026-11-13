@@ -7,8 +7,8 @@
 .plan__note,
 .plan__muted {
   margin: 0;
-  font-size: 0.875rem;
-  opacity: 0.8;
+  font-size: var(--text-body-size);
+  color: var(--color-muted);
 }
 .plan__error {
   margin: 0;
@@ -16,7 +16,7 @@
 }
 .plan__tile-title {
   margin: 0 0 12px;
-  font-size: 1.25rem;
+  font-size: var(--text-title-3-size);
 }
 /* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (Today's, or the Plan's notice grid). */
 .plan-couldnt-notice {
@@ -80,12 +80,11 @@
 .plan-day__title {
   margin: 0 0 8px;
   min-width: 0;
-  font-size: 1.125rem;
-  overflow-wrap: break-word;
+  font-size: var(--text-title-3-size);
 }
 /* At 7 columns a day tile is narrow: its heading steps down a size so "Tomorrow" does not break mid-word. */
 .plan-grid[data-columns='7'] .plan-day__title {
-  font-size: 1rem;
+  font-size: var(--text-body-strong-size);
 }
 /* A ~140 px day tile (1440 px viewport beside the rail): tight padding leaves the compact head row room for the slot icon,
    the time and one action, and the Recipe name keeps its 2-line clamp (the full name is the button's title). */
@@ -107,8 +106,6 @@
   block-size: auto;
   min-block-size: 28px;
   white-space: normal;
-  overflow-wrap: break-word;
-  hyphens: auto;
   text-align: start;
 }
 /* The divider between Planned Meals shows only on a day with 3 or more meals (data-dividers): a 1 px line. */
@@ -140,7 +137,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
+  font-size: var(--text-label-size);
   color: var(--color-muted);
 }
 .plan-meal__slot > svg {
@@ -164,11 +161,9 @@
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 1.1rem;
+  font-size: var(--text-body-strong-size);
   font-weight: 700;
   text-align: start;
-  overflow-wrap: break-word;
-  hyphens: auto;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -176,14 +171,13 @@
 }
 .plan-meal__reason {
   margin: 0;
-  font-size: 0.9rem;
-  overflow-wrap: break-word;
+  font-size: var(--text-meta-size);
 }
 
 /* B5-F1: "20:15 · usually 19:30" under the Meal Slot name; a Not served slot's compact row. */
 .plan-meal__caption {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--text-meta-size);
   font-weight: normal;
   color: var(--color-muted);
 }
@@ -204,10 +198,10 @@
 .plan-grid[data-columns='7'] .plan-meal [data-kind] {
   min-block-size: 24px;
   padding-inline: 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-chip-size);
 }
 .plan-grid[data-columns='7'] .plan-meal__recipe {
-  font-size: 1rem;
+  font-size: var(--text-body-strong-size);
 }
 
 /* The Today hero: the photo and the text side by side, the actions below. */
@@ -238,13 +232,12 @@
 }
 .plan-hero__start {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-label-size);
   font-variant-numeric: tabular-nums;
 }
 .plan-hero__name {
   margin: 0;
-  font-size: 1.5rem;
-  overflow-wrap: break-word;
+  font-size: var(--text-title-2-size);
 }
 .plan-hero__chips,
 .plan-hero__actions,
@@ -271,17 +264,16 @@
   margin: 0;
 }
 .plan-sheet__meta {
-  font-size: 0.875rem;
-  opacity: 0.8;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
 }
 .plan-sheet__facts {
   font-variant-numeric: tabular-nums;
 }
 .plan-sheet__recipe {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--text-body-strong-size);
   font-weight: 700;
-  overflow-wrap: break-word;
 }
 .plan-sheet__actions {
   display: grid;
@@ -317,8 +309,6 @@
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
-  overflow-wrap: break-word;
-  hyphens: auto;
 }
 .plan-leftovers .list-row__meta {
   display: flex;
@@ -369,8 +359,8 @@
   gap: 0.25rem;
 }
 .plan-course__caption {
-  font-size: 0.8125rem;
-  opacity: 0.75;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
 }
 .plan-course__body {
   display: flex;
@@ -407,27 +397,17 @@
 }
 .plan__caption {
   margin: 0;
-  font-size: 0.8125rem;
-  opacity: 0.75;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
 }
 .plan-course__reason {
-  font-size: 0.8125rem;
-  opacity: 0.85;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
 }
 /* The cell the URL hash names takes focus: a visible ring, not the browser default alone. */
 .plan-exclusions [tabindex="-1"]:focus {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
-}
-
-/* CRS G2 (rx-pt 4.2): one column of Tiles on a phone, two from 1024 px. */
-.plan-exclusions .bento-grid[data-columns='2'] {
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 1024px) {
-  .plan-exclusions .bento-grid[data-columns='2'] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* b5-bow: the sheet's Bought line and the Pinned/Bought warn line (token-based). */

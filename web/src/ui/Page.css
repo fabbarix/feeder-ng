@@ -25,7 +25,10 @@
   --page-max: none;
 }
 
+/* The sections of a page are spaced by one token (system.md 8). */
 .page__body {
+  display: grid;
+  gap: var(--section-gap);
   min-inline-size: 0;
 }
 

@@ -89,7 +89,7 @@ export function PlanScreen(): ReactNode {
       ) : null}
       <CookFlowSheets flow={flow} />
       {plan.isLoading || plan.failed || notice.groups.length === 0 ? null : (
-        <BentoGrid columns={columns === 7 ? 4 : columns} label={planStrings.couldntPlanTitle}>
+        <BentoGrid min="card" label={planStrings.couldntPlanTitle}>
           <CouldntPlanNotice groups={notice.groups} onFix={fix} span={columns === 7 ? 'full' : 2} />
         </BentoGrid>
       )}

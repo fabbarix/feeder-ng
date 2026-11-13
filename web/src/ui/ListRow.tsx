@@ -14,6 +14,12 @@ interface ListRowBase {
   leading?: ReactNode
   /** Right-aligned value (tabular) or one IconButton. */
   trailing?: ReactNode
+  /** The value column (system.md 3): end-aligned, tabular, one line, at least --row-value-min wide. Lines up down a list. */
+  value?: ReactNode
+  /** A second line under `value` (muted, meta size), e.g. a price. */
+  subValue?: ReactNode
+  /** The leading control, before the picture (a tick, a checkbox). It catches the pointer on its own; the rest of the row is the target. */
+  control?: ReactNode
   /** Shows a CaretRight chevron. */
   chevron?: boolean
   selected?: boolean
@@ -85,12 +91,32 @@ function passthroughData(props: Record<string, unknown>): Record<string, string>
 
 /** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`, required for a ReactNode title on a row with a target). */
 export function ListRow(props: ListRowProps) {
-  const { title, meta, icon, leading, trailing, chevron, selected, href, onActivate, onToggle, expanded, panel, children, metaStatus, metaIcon, wrapTitle } =
-    props
+  const {
+    title,
+    meta,
+    icon,
+    leading,
+    trailing,
+    value,
+    subValue,
+    control,
+    chevron,
+    selected,
+    href,
+    onActivate,
+    onToggle,
+    expanded,
+    panel,
+    children,
+    metaStatus,
+    metaIcon,
+    wrapTitle,
+  } = props
   const inRouter = useInRouterContext()
   const panelId = useId()
   const isExpanded = onToggle !== undefined && expanded === true
-  const height = isExpanded || children || wrapTitle ? 'auto' : leading ? 72 : meta ? 64 : 56
+  // Every row is at least 64 px (72 with a picture) and grows with its title; only an expanded, rich or wrapping row is `auto`.
+  const height = isExpanded || children || wrapTitle ? 'auto' : leading ? 72 : 64
   const current = selected ? 'true' : undefined
   const label = props['aria-label'] ?? (typeof title === 'string' ? title : '')
   const metaGlyph: IconName | undefined = metaIcon ?? (metaStatus ? defaultStatusIcon(metaStatus) : undefined)
@@ -121,6 +147,7 @@ export function ListRow(props: ListRowProps) {
       data-expanded={isExpanded ? 'true' : undefined}
     >
       {target}
+      {control ? <span className="list-row__control">{control}</span> : null}
       {leading ? (
         <span className="list-row__leading">{leading}</span>
       ) : icon ? (
@@ -133,11 +160,17 @@ export function ListRow(props: ListRowProps) {
         {meta ? (
           <span className="list-row__meta" data-status={metaStatus}>
             {metaGlyph ? <Icon name={metaGlyph} size={14} /> : null}
-            {meta}
+            <span className="list-row__meta-text">{meta}</span>
           </span>
         ) : null}
         {children ? <span className="list-row__extra">{children}</span> : null}
       </span>
+      {value !== undefined ? (
+        <span className="list-row__value">
+          {value}
+          {subValue !== undefined ? <span className="list-row__sub-value">{subValue}</span> : null}
+        </span>
+      ) : null}
       {trailing ? <span className="list-row__trailing">{trailing}</span> : null}
       {chevron ? (
         <span className="list-row__chevron">

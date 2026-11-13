@@ -7,5 +7,5 @@ import { Thumb } from '../../../ui/Thumb'
 
 /** One option per Ingredient that has an id (an Ingredient still to be created has none and is not listed). */
 export function ingredientPickerOptions(ingredients: { id?: number; name: string; baseUnit: string; imageUrl?: string }[]): SelectOption<number>[] {
-  return ingredients.flatMap((i) => (i.id === undefined ? [] : [{ value: i.id, label: i.name, meta: selectStrings.baseUnitMeta(i.baseUnit), leading: <Thumb imageUrl={i.imageUrl} size={40} /> }]))
+  return ingredients.flatMap((i) => (i.id === undefined ? [] : [{ value: i.id, label: i.name, meta: selectStrings.baseUnitMeta(i.baseUnit), leading: <Thumb name={i.name} imageUrl={i.imageUrl} size={40} /> }]))
 }

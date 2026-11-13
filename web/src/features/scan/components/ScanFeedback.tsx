@@ -22,7 +22,7 @@ export interface ScanFeedbackProps {
 export function ScanFeedback({ text, imageUrl, queued = false, canEditPrice, onEditPrice, onUndo, onDismiss }: ScanFeedbackProps) {
   return (
     <div role="status" aria-live="polite" className="scan-feedback" data-has-picture={imageUrl ? '' : undefined}>
-      {imageUrl ? <Thumb imageUrl={imageUrl} size={40} /> : null}
+      {imageUrl ? <Thumb name={text} imageUrl={imageUrl} size={40} /> : null}
       <p className="scan-feedback__text">{text}</p>
       {queued ? <span className="scan-feedback__queued">{scanStrings.waitingToSync}</span> : null}
       <div className="scan-feedback__actions">
