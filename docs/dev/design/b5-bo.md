@@ -166,13 +166,13 @@ bought Ingredients for stay where they are when the plan changes; Regenerate nam
    (`internal/stock/store/store.go`, test `internal/stock/store/lot_bought_test.go`). There is **no `OnLotDeleted` hook** and no wiring: the
    rows live in the same database, so one transaction is atomic and needs no port. `RemoveLot` (Undo of a scan) needs nothing, the scan
    service already goes through `UndoLot` and `ForgetLot`.
+4. **`bdd/steps_beta5_sh_test.go`**: the `@wip` step "the Planned Meal of D is not Bought" (SH) can be removed and its scenario un-parked once
+   BO merges: BO's "Not needed is not a purchase" scenario covers it in plan-stability.feature with a real step.
 5. **Recipe edits and a lost Course** (`internal/recipe/store/store.go`, `dropLostCourses`; review finding): when a Recipe loses a Course, it
    removes the future, unpinned, unresolved Planned Meals of that Course **except a Bought one** (a Planned Meal with a `planned_meal_bought`
    row). That one stays as the same row with its records; the plan shows it with warning `course_lost` (ADR 0013). Tests:
    `internal/recipe/store/store_courses_test.go` (`...KeepsItsBoughtPlannedMeal...`), `internal/plan/httpapi/bought_test.go` (through
    `PUT /api/recipes/{id}`), BDD scenario "A Recipe that loses the Course keeps a Bought Planned Meal..." in `plan-stability.feature`.
-4. **`bdd/steps_beta5_sh_test.go`**: the `@wip` step "the Planned Meal of D is not Bought" (SH) can be removed and its scenario un-parked once
-   BO merges: BO's "Not needed is not a purchase" scenario covers it in plan-stability.feature with a real step.
 
 ## 10. Open questions for the PM / user
 
