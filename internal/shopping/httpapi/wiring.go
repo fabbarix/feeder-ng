@@ -158,17 +158,13 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 	if err != nil {
 		return nil, err
 	}
-	recipes, err := p.sources.Recipes(ctx)
+	trees, err := p.sources.NeedTrees(ctx)
 	if err != nil {
 		return nil, err
 	}
-	byID := map[int64][]shopping.Need{}
-	for _, r := range recipes {
-		needs := make([]shopping.Need, 0, len(r.Needs))
-		for _, n := range r.Needs {
-			needs = append(needs, shopping.Need{IngredientID: int64(n.IngredientID), Quantity: n.Quantity, Optional: n.Optional})
-		}
-		byID[int64(r.ID)] = needs
+	byID := make(map[int64][]shopping.Need, len(trees))
+	for id, tree := range trees {
+		byID[id] = ShoppingNeeds(tree)
 	}
 	slots := map[int64]household.MealSlot{}
 	courseNames := map[int64]string{}
@@ -211,7 +207,15 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 // keeps its Quantity and carries its Made children (recursively), so the list is Stock first (BR-F, section 7).
 // Optional is kept as the tree has it. An empty Base recipe node has no Made and stays a plain Need of its Ingredient.
 func ShoppingNeeds(tree []baserecipe.Need) []shopping.Need {
-	return nil // BR-F stub
+	var out []shopping.Need
+	for _, n := range tree {
+		sn := shopping.Need{IngredientID: n.IngredientID, Quantity: n.Quantity, Optional: n.Optional}
+		if len(n.Made) > 0 {
+			sn.Made = ShoppingNeeds(n.Made)
+		}
+		out = append(out, sn)
+	}
+	return out
 }
 
 // stockPort adds Lots through Stock (source manual, or the scan source for a tick by hand) and lists them.

@@ -10,12 +10,12 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/household"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
-	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/planner"
 	productstore "github.com/fabbarix/feeder-ng/internal/product/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
 )
@@ -195,14 +195,20 @@ func (s *DBSources) members(ctx context.Context) (map[int64]household.Member, er
 	return out, nil
 }
 
-// Recipes implements Sources: every Recipe, archived ones included, with the Needs of one Batch in Base Units.
-// A line whose unit cannot be converted is left out (it is not deducted and not planned for).
+// Recipes implements Sources: every plannable Recipe, archived ones included, with the Needs of one Batch in Base
+// Units. A Base recipe line is flattened (baserecipe.Flatten over NeedTrees): the Base recipe's own leaves at full
+// Quantity, and the Base recipe itself as an optional line of 0, so an Exclusion of any Ingredient inside it rules the
+// Recipe out (section 5). A line whose unit cannot be converted is left out (it is not deducted and not planned for).
+// A Base recipe is never passed: it could never be a candidate.
 func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 	list, err := s.rc.List(ctx, recipestore.ListFilter{Archived: "all"})
 	if err != nil {
 		return nil, err
 	}
-	ings := map[int64]ingredient.Ingredient{}
+	trees, err := s.NeedTrees(ctx)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]planner.Recipe, 0, len(list))
 	for _, sum := range list {
 		rec, err := s.rc.Get(ctx, sum.ID)
@@ -215,25 +221,11 @@ func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 		for _, t := range rec.Tags {
 			pr.Tags = append(pr.Tags, planner.Tag(t))
 		}
-		for _, a := range rec.Timing.Advance {
-			pr.AdvanceSteps = append(pr.AdvanceSteps, planner.AdvanceStep{Lead: time.Duration(a.LeadTimeMinutes) * time.Minute})
+		if pr.AdvanceSteps, err = s.advanceSteps(ctx, rec); err != nil {
+			return nil, err
 		}
-		for _, line := range rec.Lines {
-			ing, ok := ings[line.IngredientID]
-			if !ok {
-				ing, err = s.ing.Get(ctx, line.IngredientID)
-				if err != nil {
-					s.log.Warn("recipe line with an unknown Ingredient skipped", "recipe", rec.ID, "ingredient", line.IngredientID)
-					continue
-				}
-				ings[line.IngredientID] = ing
-			}
-			q, err := units.ToBase(line.Quantity, line.Unit, ing.Units())
-			if err != nil {
-				s.log.Warn("recipe line with an unconvertible unit skipped", "recipe", rec.ID, "ingredient", line.IngredientID)
-				continue
-			}
-			pr.Needs = append(pr.Needs, planner.Need{IngredientID: planner.IngredientID(line.IngredientID), Quantity: q, Optional: line.Optional})
+		for _, n := range baserecipe.Flatten(trees[sum.ID]) {
+			pr.Needs = append(pr.Needs, planner.Need{IngredientID: planner.IngredientID(n.IngredientID), Quantity: n.Quantity, Optional: n.Optional})
 		}
 		out = append(out, pr)
 	}
