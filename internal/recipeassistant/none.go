@@ -49,7 +49,7 @@ func pruneValue(v any, schema map[string]any, defs map[string]any) {
 				continue
 			}
 			pruneValue(child, cs, defs)
-			if !required[key] && isNone(child, resolve(cs, defs)) {
+			if isSentinel(key, child) || (!required[key] && isNone(child, resolve(cs, defs))) {
 				delete(val, key)
 			}
 		}
@@ -97,6 +97,31 @@ func resolve(schema map[string]any, defs map[string]any) map[string]any {
 		}
 	}
 	return schema
+}
+
+// isSentinel reports the HF-schema "none" values of the Base recipe fields (see overrideSentinels), whatever the
+// canonical schema says about them: -1 for neededAtStep, false for baseRecipe, a recipe whose name is blank (its cue
+// alone does not point at anything), and a blank cue. yieldUnit "" is caught by isNone.
+func isSentinel(key string, child any) bool {
+	switch key {
+	case "neededAtStep":
+		f, ok := child.(float64)
+		return ok && f == -1
+	case "baseRecipe":
+		b, ok := child.(bool)
+		return ok && !b
+	case "recipe":
+		m, ok := child.(map[string]any)
+		if !ok {
+			return false
+		}
+		name, _ := m["name"].(string)
+		return strings.TrimSpace(name) == ""
+	case "cue":
+		s, ok := child.(string)
+		return ok && strings.TrimSpace(s) == ""
+	}
+	return false
 }
 
 // isNone reports an explicit "none": null, blank text, an empty list or object, or 0 for a plain number (a nullable
