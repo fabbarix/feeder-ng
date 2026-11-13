@@ -6,6 +6,16 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 mkdir -p build
+
+# One check per worktree (b5-pl): flock -n on build/check.lock, held on fd 8 for this script's whole life. It is taken BEFORE the log is
+# truncated, so a refused run leaves the first run's check.log alone. The kernel drops the lock when the holder dies (no stale-lock handling).
+# fd 8 is closed in every child (`8>&-`), so nothing this run starts can keep the lock after it has gone. The wrapper's own lock is
+# build/page-layout.lock (fd 9), a different file, so the page-layout step never blocks on this one.
+if ! { exec 8>"$ROOT/build/check.lock" && flock -n 8; }; then
+  echo "check.sh FAILED: another check is already running in this worktree (lock $ROOT/build/check.lock is held); not run" >&2
+  exit 1
+fi
+
 LOG="$ROOT/build/check.log"
 : >"$LOG"
 
@@ -13,7 +23,7 @@ step() {
   local name="$1"
   shift
   printf '\n==> %s\n' "$name" | tee -a "$LOG"
-  "$@" 2>&1 | tee -a "$LOG"
+  "$@" 8>&- 2>&1 | tee -a "$LOG"
   local rc=${PIPESTATUS[0]}
   if [ "$rc" -ne 0 ]; then
     printf 'CHECK FAILED: %s (exit %s)\n' "$name" "$rc" | tee -a "$LOG"
@@ -52,7 +62,7 @@ run_shell_tests() {
   fi
   for f in "${tests[@]}"; do
     printf -- '--> %s\n' "${f#"$ROOT"/}"
-    if ! bash "$f"; then
+    if ! bash "$f" 8>&-; then
       printf 'FAILED: %s\n' "${f#"$ROOT"/}"
       status=1
     fi

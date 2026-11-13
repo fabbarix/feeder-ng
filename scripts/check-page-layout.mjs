@@ -415,6 +415,11 @@ for (const vp of VIEWPORTS) {
 }
 
 ws.close()
+// A PAGE_LAYOUT_ONLY filter that matches no route inspected nothing: a usage error (exit 2), never "inspected 0 of 0" and never OK.
+if (probes === 0) {
+  console.log(`check-page-layout: PAGE_LAYOUT_ONLY=${process.env.PAGE_LAYOUT_ONLY} matches no route in ROUTES; nothing was inspected`)
+  await die(2)
+}
 const seconds = Math.round((Date.now() - started) / 1000)
 const coverage = coverageSummary({ inspected: probes - notInspected.length, notInspected, exemptions })
 const exemptReason = (entry) => exemptions.find((x) => x.pattern === entry.pattern).reason
@@ -431,5 +436,5 @@ if (bad) {
 if (detail.length) console.log(detail.join('\n'))
 console.log(coverage.line)
 if (bad) await die(1)
-console.log(`check-page-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes, ${seconds}s)`)
+console.log(`check-page-layout: OK (${probes} probes, ${seconds}s)`)
 await die(0)
