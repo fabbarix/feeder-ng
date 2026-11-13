@@ -1,24 +1,22 @@
 // The short new-Product sheet for an unknown barcode (SR5, shop-scan-proposals 13.5): Which Line is it?, Ingredient | Supply, pack chips,
-// an optional Picture from the phone's own camera, a summary line, Add. It replaces UnknownBarcodeSheet. Stub until implemented.
-import type { RawImage } from '../../../ui'
-import type { UnitSystem } from '../../../lib/units'
-import type { SearchResult } from '../../ingredients/types'
+// an optional Picture from the phone's own camera, a summary line, Add. It replaces UnknownBarcodeSheet. The sheet only opens the form;
+// the form's state and steps live in hooks/useNewProductForm.
+import { BottomSheet } from '../../../ui'
 import type { LineCandidate } from '../lib/lineChoice'
 import type { PackProduct } from '../lib/packChips'
+import type { PictureHandlers } from '../lib/newProductPicture'
 import type { IngredientChoice, UnknownFormValues, UnknownMode } from '../lib/unknownForm'
+import type { SearchResult } from '../../ingredients/types'
+import type { UnitSystem } from '../../../lib/units'
+import { newProductStrings } from '../newProductStrings'
+import { NewProductForm } from './NewProductForm'
 import './NewProductSheet.css'
 
-/** The two things a Picture needs from the outside, so tests (and an offline phone) can replace them. */
-export interface PictureHandlers {
-  /** The captured file, centre-cropped to 4:3 and downscaled (OFFLINE_PICTURE_MAX_SIDE / _MAX_BYTES). Rejects for a file that is not a usable image. */
-  prepare(file: File): Promise<RawImage>
-  /** Online only: uploads a prepared Picture (POST /api/images) and resolves with the image id. */
-  upload(image: RawImage): Promise<string>
-}
+export type { PictureHandlers } from '../lib/newProductPicture'
 
 /**
- * Props are a superset of UnknownBarcodeSheet's, so SR4 swaps the import and adds what it has: open, onClose, mode, shopName,
- * ingredients, priceText, onSave, canUpload and findSimilar mean exactly what they meant there. The optional ones are new.
+ * Props are a superset of UnknownBarcodeSheet's, so SR4 swaps the import and adds what it has: open, onClose, mode, shopName, ingredients,
+ * priceText, onSave, canUpload and findSimilar mean exactly what they meant there. The optional ones are new.
  */
 export interface NewProductSheetProps {
   open: boolean
@@ -59,6 +57,10 @@ export interface NewProductSheetProps {
   onAdded?: (rowKey: string, clientUuid: string) => void
 }
 
-export function NewProductSheet(_props: NewProductSheetProps) {
-  return null
+export function NewProductSheet(props: NewProductSheetProps) {
+  return (
+    <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title}>
+      {props.open ? <NewProductForm {...props} /> : null}
+    </BottomSheet>
+  )
 }

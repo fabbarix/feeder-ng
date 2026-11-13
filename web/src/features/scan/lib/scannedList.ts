@@ -119,7 +119,7 @@ function describeEntry(entry: SessionEntry, products: OfflineProduct[]): Describ
     name: op.productName ?? '',
     ingredientId: op.ingredient?.id ?? null,
     ingredientName: op.ingredient?.name ?? op.productName ?? '',
-    kind: 'food',
+    kind: op.ingredient?.kind ?? 'food',
     baseUnit: op.ingredient?.baseUnit ?? 'g',
   }
 }

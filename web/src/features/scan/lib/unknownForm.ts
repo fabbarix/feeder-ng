@@ -100,7 +100,7 @@ export function suggestedName(values: UnknownFormValues): string {
 /** Errors by field; empty when the form can be saved. Strings come from scanStrings. */
 export function validateUnknownForm(values: UnknownFormValues, mode: UnknownMode): FormErrors {
   const errors: FormErrors = {}
-  if (!values.ingredient) errors.ingredient = scanStrings.required
+  if (!values.ingredient || (values.ingredient.id === undefined && values.ingredient.name.trim() === '')) errors.ingredient = scanStrings.required
   if (values.productName.trim() === '') errors.productName = scanStrings.required
   if (mode === 'pack') {
     const base = values.ingredient?.baseUnit ?? 'g'
@@ -113,9 +113,9 @@ export function validateUnknownForm(values: UnknownFormValues, mode: UnknownMode
 /** The shop_unknown Op for a valid form (see docs/dev/design/t13-shopping-scan.md for the field mapping). */
 export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, meta: OpMeta): Op {
   const base = values.ingredient?.baseUnit ?? 'g'
-  const ingredient = values.ingredient?.id !== undefined ? { id: values.ingredient.id } : { name: values.ingredient?.name ?? '', baseUnit: base }
+  const ingredient = values.ingredient?.id !== undefined ? { id: values.ingredient.id } : { name: values.ingredient?.name ?? '', baseUnit: base, kind: choiceKind(values.ingredient) }
   const op: Op = {
-    clientUuid: meta.clientUuid,
+    clientUuid: values.clientUuid ?? meta.clientUuid,
     scannedAt: meta.scannedAt,
     kind: 'shop_unknown',
     shopId: meta.shopId,
@@ -151,29 +151,31 @@ export function newIngredientBaseUnit(packUnit: string): BaseUnit {
 }
 
 /** SR5: the Base Unit a new Ingredient starts on in the sheet's Base Unit choice: g for food, piece for a Supply. */
-export function defaultNewBaseUnit(_kind: IngredientKind): BaseUnit {
-  throw new Error('SR5: defaultNewBaseUnit is not implemented')
+export function defaultNewBaseUnit(kind: IngredientKind): BaseUnit {
+  return kind === 'supply' ? 'piece' : 'g'
 }
 
 /** SR5: an Ingredient choice's kind (absent = food). */
-export function choiceKind(_choice: IngredientChoice | null): IngredientKind {
-  throw new Error('SR5: choiceKind is not implemented')
+export function choiceKind(choice: IngredientChoice | null): IngredientKind {
+  return choice?.kind ?? 'food'
 }
 
 /** SR5: the choices of one kind, for the Select behind the Ingredient | Supply Segmented. */
-export function choicesOfKind(_choices: IngredientChoice[], _kind: IngredientKind): IngredientChoice[] {
-  throw new Error('SR5: choicesOfKind is not implemented')
+export function choicesOfKind(choices: IngredientChoice[], kind: IngredientKind): IngredientChoice[] {
+  return choices.filter((c) => choiceKind(c) === kind)
 }
 
 /**
  * SR5: the Product name the summary line offers. A pack: suggestedName ("Dish soap 500 ml"). A weighed code has no pack size: the
  * Ingredient's name, capitalised ("Loose carrots" is what the User renames it to). "" until the Ingredient is known.
  */
-export function defaultName(_values: UnknownFormValues, _mode: UnknownMode): string {
-  throw new Error('SR5: defaultName is not implemented')
+export function defaultName(values: UnknownFormValues, mode: UnknownMode): string {
+  if (mode === 'pack') return suggestedName(values)
+  const name = values.ingredient?.name.trim() ?? ''
+  return name === '' ? '' : name.charAt(0).toUpperCase() + name.slice(1)
 }
 
 /** SR5: the key the Scanned list gives the row of a Product that a queued scan has not created yet (scannedList: `new:<uuid>`). */
-export function newRowKey(_clientUuid: string): string {
-  throw new Error('SR5: newRowKey is not implemented')
+export function newRowKey(clientUuid: string): string {
+  return `new:${clientUuid}`
 }
