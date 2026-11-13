@@ -27,16 +27,22 @@ export interface PlanCourseRowProps {
 export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onChoose }: PlanCourseRowProps): ReactNode {
   const { course, key, caption } = row
   const meal = course.meal
-  const { chips, actions, empty } = usePlanCourseRow(row, slot)
+  const { chips, more, actions, empty } = usePlanCourseRow(row, slot)
   const shown: RowChip[] = empty ? (empty.chip ? [empty.chip] : []) : chips
+  // Round 2: at most two chips show; the rest collapse into one neutral "+N" chip whose title and name list them.
   const chipLine =
-    shown.length > 0 ? (
+    shown.length > 0 || more ? (
       <div className="plan-row__chips">
         {shown.map((c) => (
           <Chip key={c.key} kind={c.kind} status={c.status} outline={c.outline} icon={c.icon}>
             {c.label}
           </Chip>
         ))}
+        {more ? (
+          <Chip kind="count" title={more.title} label={`${more.label}: ${more.title}`}>
+            {more.label}
+          </Chip>
+        ) : null}
       </div>
     ) : undefined
   const trailing = actions.length > 0 ? <span className="plan-row__actions">{actions.map((a) => actionButton(a, key, onSwap, onPin, onUnpin))}</span> : undefined
@@ -48,6 +54,7 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
         onActivate={() => onOpen(key)}
         meta={caption ?? undefined}
         trailing={trailing}
+        wrapTitle
         data-state={meal.state !== 'planned' ? meal.state : undefined}
       >
         {chipLine}
@@ -61,6 +68,7 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
       aria-label={choosable ? s.choose : undefined}
       onActivate={choosable ? () => onChoose(key) : undefined}
       meta={caption ?? undefined}
+      wrapTitle
       data-unfilled=""
     >
       {chipLine}

@@ -28,8 +28,10 @@ export interface ChipProps {
   /** A TagColourId (spec 4.1): a `tag` or `filter` chip is tinted (a filter only while selected) and shows a leading dot. Unknown ids are ignored. */
   tagColour?: string
   onClick?: () => void
-  /** Accessible name of a clickable chip when it must say more than its text (it should start with the visible text). */
+  /** Accessible name of a chip when it must say more than its text (it should start with the visible text). A span chip with a label reads as one image. */
   label?: string
+  /** Tooltip (`title`) when it must differ from the text, e.g. the hidden labels behind a "+N" chip. Defaults to the text. */
+  title?: string
   /** Id of an element that describes a clickable chip (the screen reader reads it after the name). */
   'aria-describedby'?: string
   children: ReactNode
@@ -58,7 +60,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, label, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -93,7 +95,7 @@ export function Chip({ kind, status, outline, tone, icon, selected, disabled, ta
     'data-tone': tone,
     'data-tag-colour': tagged,
     'data-outline': outline ? 'true' : undefined,
-    title: typeof children === 'string' ? children : label,
+    title: title ?? (typeof children === 'string' ? children : label),
   }
 
   if (onClick || finalKind === 'filter') {
@@ -113,7 +115,7 @@ export function Chip({ kind, status, outline, tone, icon, selected, disabled, ta
     )
   }
   return (
-    <span className="chip" {...attrs}>
+    <span className="chip" role={label ? 'img' : undefined} aria-label={label} {...attrs}>
       {content}
     </span>
   )

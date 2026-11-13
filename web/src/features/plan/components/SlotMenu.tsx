@@ -18,13 +18,15 @@ export interface SlotMenuProps {
    * every slot; offline they are disabled and say "Needs a connection". Without it the menu is as before.
    */
   dateActions?: SlotDateActions
+  /** ds-plan round 2: the trigger is compact (32 px) in a day tile's header; the Today hero keeps the default size. */
+  size?: 'md' | 'compact'
 }
 
 /**
  * The slot block's menu: the shared Menu labelled "<Slot> actions", with "Mark all Cooked", "Not cooked: whole slot",
  * "Add <Course>" per lib/courses slotMenu and, with `dateActions`, the per-date choices. Renders nothing when slotMenu is null.
  */
-export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions }: SlotMenuProps): ReactNode {
+export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, size }: SlotMenuProps): ReactNode {
   const model = slotMenu(slot, today, dateActions !== undefined)
   if (!model) return null
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
@@ -42,5 +44,5 @@ export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddC
   if (dateActions && model.notServed) {
     items.push({ id: 'not-served', label: choiceLabel(s.slotDate.notServed, offline), disabled: offline, onSelect: () => dateActions.onNotServed(slotKey) })
   }
-  return <Menu label={s.slotActions(slot.name)} items={items} />
+  return <Menu label={s.slotActions(slot.name)} size={size} items={items} />
 }

@@ -1,6 +1,6 @@
 import { usePhraseContext } from './usePhraseContext'
 import { wholeMealChip, type CourseRowModel } from '../lib/courses'
-import { emptyRow, rowChips, type ChipMore, type EmptyRowModel, type RowChip } from '../lib/rowChips'
+import { capChips, emptyRow, rowChips, type ChipMore, type EmptyRowModel, type RowChip } from '../lib/rowChips'
 import { rowActions, type RowAction } from '../lib/rowActions'
 import type { PlanSlot } from '../types'
 
@@ -19,9 +19,10 @@ export interface PlanCourseRowView {
 export function usePlanCourseRow(row: CourseRowModel, slot: PlanSlot): PlanCourseRowView {
   const phrase = usePhraseContext(slot.date)
   const meal = row.course.meal
+  const { shown, more } = capChips(meal ? rowChips(meal, phrase, wholeMealChip(slot, row)) : [])
   return {
-    chips: meal ? rowChips(meal, phrase, wholeMealChip(slot, row)) : [],
-    more: null,
+    chips: shown,
+    more,
     actions: rowActions(meal),
     empty: meal ? null : emptyRow(row.course),
   }

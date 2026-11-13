@@ -32,7 +32,7 @@ export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSl
         <span className="plan-slot-head__actions">
           {head.cook ? <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(slotKey)} /> : null}
           {head.menu ? (
-            <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} />
+            <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} size="compact" />
           ) : null}
         </span>
       ) : null}

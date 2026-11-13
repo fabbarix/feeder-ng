@@ -119,7 +119,12 @@ export interface ChipMore {
   count: number
 }
 
-/** The first `limit` chips in order, and a "+N" for the rest (null when everything fits). Stub: the developer implements it. */
-export function capChips(_chips: RowChip[], _limit: number = ROW_CHIP_LIMIT): { shown: RowChip[]; more: ChipMore | null } {
-  throw new Error('ds-plan round 2: capChips is not implemented')
+/** The first `limit` chips in order, and a "+N" for the rest (null when everything fits). Never changes its input. */
+export function capChips(chips: RowChip[], limit: number = ROW_CHIP_LIMIT): { shown: RowChip[]; more: ChipMore | null } {
+  if (chips.length <= limit) return { shown: chips.slice(), more: null }
+  const hidden = chips.slice(limit)
+  return {
+    shown: chips.slice(0, limit),
+    more: { label: `+${hidden.length}`, title: hidden.map((c) => c.label).join(', '), count: hidden.length },
+  }
 }

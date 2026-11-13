@@ -16,7 +16,7 @@
   font-weight: 600;
 }
 .plan__tile-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: var(--text-title-3-size);
 }
 /* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (the Plan's notice grid, or Today's). */
@@ -24,28 +24,28 @@
   display: contents;
 }
 .plan-couldnt__summary {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-1);
   font-weight: 600;
 }
 .plan-couldnt .plan__list {
   list-style: none;
   padding-left: 0;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 .plan__stack {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 .plan__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .plan__list {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -129,6 +129,7 @@
 /* The Course rows of a slot: a ListRow each, separated by the 1 px line. */
 .plan-meal__courses {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
   margin: 0;
   padding: 0;
@@ -137,10 +138,25 @@
 .plan-meal__courses > .list-row + .list-row {
   border-top: 1px solid var(--color-line);
 }
+/* Round 2: a Course row is flush with the slot header (no inline inset), shrinks inside the tile, and its content is
+   top-aligned with token padding. Swap and Pin sit on the title line. */
+.plan-meal__courses > .list-row {
+  min-inline-size: 0;
+  padding-inline: 0;
+  padding-block: var(--space-2);
+  align-items: flex-start;
+}
+.plan-meal__courses > .list-row .list-row__text {
+  min-inline-size: 0;
+}
+.plan-meal__courses > .list-row .list-row__trailing {
+  align-self: flex-start;
+}
 /* An empty Course is a dashed row. */
 .plan-meal .list-row[data-unfilled] {
   border: 1px dashed var(--color-outline);
   border-radius: var(--radius-control);
+  padding-inline: var(--space-3);
 }
 /* Cooked and Not cooked: a quieter tone, not a fade (WCAG AA). */
 .plan-meal .list-row[data-state='cooked'] .list-row__title {
@@ -159,9 +175,10 @@
   min-width: 0;
   overflow: hidden;
 }
+/* A chip keeps its size (flex none) but no more than 40 % of the line, so two chips and the "+N" chip fit the line (P11). */
 .plan-row__chips .chip {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: none;
+  max-inline-size: 40%;
 }
 /* Swap and Pin: a group at the end of the row that never shrinks. */
 .plan-row__actions {
@@ -177,13 +194,13 @@
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 4px 8px;
+  gap: var(--space-1) var(--space-2);
   min-width: 0;
 }
 .plan-meal__slot {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -208,8 +225,8 @@
 .plan-meal--not-served {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  padding: 12px;
-  border-radius: 16px;
+  padding: var(--space-3);
+  border-radius: var(--radius-button);
 }
 .plan-meal--not-served .plan-meal__head {
   grid-column: 1 / -1;
@@ -221,27 +238,27 @@
 /* The Today hero: the photo and the text side by side, the actions below. */
 .plan-hero {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   position: relative;
 }
 /* CRS F: the slot menu (⋮) sits in the hero's top row, on the overline's line, at the end. */
 .plan-hero__menu {
   position: absolute;
-  top: 8px;
-  inset-inline-end: 8px;
+  top: var(--space-2);
+  inset-inline-end: var(--space-2);
 }
 /* The overline (the Meal Slot name, up to 50 characters) wraps before it reaches the slot menu: button + gap. */
 .plan-hero:has(.plan-hero__menu) .tile__overline {
-  padding-inline-end: calc(40px + var(--space-2));
+  padding-inline-end: calc(var(--space-8) + var(--space-4));
 }
 .plan-hero__body {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: flex-start;
 }
 .plan-hero__text {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .plan-hero__start {
@@ -259,7 +276,7 @@
 .plan-sheet__attendance {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* B5-F1: the Guests after the attendees, in the body text colour. */
@@ -271,7 +288,7 @@
 /* Sheets: meta lines, facts and the footer actions. */
 .plan-sheet {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .plan-sheet__meta,
 .plan-sheet__facts {
@@ -294,15 +311,15 @@
   width: 100%;
   grid-template-columns: minmax(0, 1fr);
   justify-items: stretch;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .plan-confirm {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .plan-form {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .plan-sheet__course {
   display: grid;
@@ -324,7 +341,7 @@
 /* N2: the Leftovers tile is half width on a phone: rows size to their content, the name wraps over the meta line. */
 .plan-leftovers .list-row[data-height] {
   block-size: auto;
-  min-block-size: 64px;
+  min-block-size: var(--row-min);
   padding-block: var(--space-2);
   padding-inline: var(--space-3);
 }
@@ -352,7 +369,7 @@
   .plan-confirm {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    column-gap: 16px;
+    column-gap: var(--space-4);
   }
 }
 
@@ -369,7 +386,7 @@
 .plan__pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
