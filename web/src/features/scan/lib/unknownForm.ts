@@ -5,7 +5,7 @@ import type { IngredientKind } from '../../ingredients/types'
 import { defaultProductName } from '../../products/lib/names'
 import type { RawImage } from '../../../ui'
 import { scanStrings } from '../strings'
-import type { BarcodeScope, BaseUnit, Op } from '../types'
+import type { BarcodeScope, BaseUnit, IngredientRef, Op } from '../types'
 import { pricePerKgFromWeight } from './barcode'
 
 export interface IngredientChoice {
@@ -113,7 +113,9 @@ export function validateUnknownForm(values: UnknownFormValues, mode: UnknownMode
 /** The shop_unknown Op for a valid form (see docs/dev/design/t13-shopping-scan.md for the field mapping). */
 export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, meta: OpMeta): Op {
   const base = values.ingredient?.baseUnit ?? 'g'
-  const ingredient = values.ingredient?.id !== undefined ? { id: values.ingredient.id } : { name: values.ingredient?.name ?? '', baseUnit: base, kind: choiceKind(values.ingredient) }
+  // An existing Ingredient is found by its id (the server ignores the rest); its name, Base Unit and kind ride along so that the row of a
+  // scan still waiting to sync names it and counts it right (scannedList reads them from the queued Op).
+  const ingredient: IngredientRef = { ...(values.ingredient?.id !== undefined ? { id: values.ingredient.id } : {}), name: values.ingredient?.name ?? '', baseUnit: base, kind: choiceKind(values.ingredient) }
   const op: Op = {
     clientUuid: values.clientUuid ?? meta.clientUuid,
     scannedAt: meta.scannedAt,

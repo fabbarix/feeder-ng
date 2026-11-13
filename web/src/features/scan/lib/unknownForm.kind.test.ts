@@ -22,9 +22,9 @@ describe('toUnknownOp: kind', () => {
     expect(toUnknownOp(noKind, { mode: 'pack', code: '8001234567890' }, meta).ingredient).toMatchObject({ kind: 'food' })
   })
 
-  it('an existing Ingredient or Supply is only its id: the server knows its kind', () => {
+  it('an existing Ingredient or Supply is found by its id, and carries its name, Base Unit and kind for the waiting row', () => {
     const existing = { ...supply, ingredient: { id: 31, name: 'Toilet paper', baseUnit: 'piece' as const, kind: 'supply' as const } }
-    expect(toUnknownOp(existing, { mode: 'pack', code: '8001234567890' }, meta).ingredient).toEqual({ id: 31 })
+    expect(toUnknownOp(existing, { mode: 'pack', code: '8001234567890' }, meta).ingredient).toEqual({ id: 31, name: 'Toilet paper', baseUnit: 'piece', kind: 'supply' })
   })
 
   it('a weighed code for a new Supply carries the kind too', () => {

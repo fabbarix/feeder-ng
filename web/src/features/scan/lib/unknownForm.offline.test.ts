@@ -26,6 +26,13 @@ describe('an unknown barcode queued offline', () => {
     expect(row).toMatchObject({ kind: 'food' })
   })
 
+  it('a Restock Line picked offline (an existing Supply) says Supply, with its name and Base Unit', () => {
+    const picked: UnknownFormValues = { ...values('supply'), ingredient: { id: 15, name: 'Dish soap', baseUnit: 'ml', kind: 'supply' }, packSize: '500', packUnit: 'ml', productName: 'Dish soap 500 ml' }
+    const op = toUnknownOp(picked, { mode: 'pack', code: '8001234567892' }, meta)
+    const [row] = buildScannedRows([{ op, result: null }], [])
+    expect(row).toMatchObject({ kind: 'supply', baseUnit: 'ml', ingredientId: 15, ingredientName: 'Dish soap', waiting: true })
+  })
+
   it('an Op queued before this change (no kind) is food', () => {
     const op = toUnknownOp(values('food'), { mode: 'pack', code: '8001234567891' }, meta)
     const old = { ...op, ingredient: { name: 'olive oil', baseUnit: 'ml' as const } }
