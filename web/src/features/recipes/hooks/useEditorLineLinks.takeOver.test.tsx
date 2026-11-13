@@ -68,3 +68,85 @@ describe('useEditorLineLinks: convert, take-over ask', () => {
     expect(linkLine).not.toHaveBeenCalled()
   })
 })
+
+// BR-D round 5: the two pending asks (a convert and a new Base recipe) can never both be live; the newest wins, and a failed answer forgets its ask.
+describe('useEditorLineLinks: one pending take-over ask at a time', () => {
+  const newAsk = refusal(409, 'base_recipe_take_over', { ingredient: { id: 6, name: 'béchamel' }, recipes: [], stockLots: 0, convertible: true })
+  const bech = { id: 9, name: 'Béchamel', baseIngredientId: 6 }
+  const mixed = (retry: unknown) => {
+    let toBase = 0
+    let created = 0
+    return {
+      'POST /api/recipes/20/to-base?dryRun=1': plan,
+      'POST /api/recipes/20/to-base': () => (++toBase === 1 ? ask : retry),
+      'POST /api/recipes': () => (++created === 1 ? newAsk : { status: 201, json: bech }),
+    }
+  }
+
+  it.each([
+    ['422', refusal(422, 'validation_failed', { field: 'lines[0]', reason: 'base_recipe_cycle', path: ['Pesto', 'Sauce', 'Pesto'] })],
+    ['500', refusal(500, 'internal')],
+  ])('a convert Yes refused (%s) leaves no stale convert: a later new-Base-recipe Yes creates it and never resends to-base', async (_label, retry) => {
+    const api = mockApi(mixed(retry))
+    const { result, linkLine } = setup()
+    await convert(result)
+    await vi.waitFor(() => expect(result.current.takeOverAsk).not.toBeNull())
+    await act(async () => { await result.current.answerTakeOver(true) })
+    expect(result.current.error).not.toBeNull()
+    expect(api.callsTo('POST', '/api/recipes/20/to-base')).toHaveLength(2)
+
+    await act(async () => { await result.current.linkTo(line, { kind: 'new', name: 'Béchamel' }) })
+    expect(result.current.takeOverAsk).toMatchObject({ ingredient: { id: 6 } })
+    expect(result.current.askName).toBe('Béchamel')
+    await act(async () => { await result.current.answerTakeOver(true) })
+
+    expect(api.callsTo('POST', '/api/recipes/20/to-base')).toHaveLength(2) // still the two from the convert
+    expect(api.callsTo('POST', '/api/recipes')).toHaveLength(2)
+    expect(api.callsTo('POST', '/api/recipes')[1]?.body).toMatchObject({ name: 'Béchamel', takeOver: true })
+    expect(linkLine).toHaveBeenCalledTimes(1)
+    expect(linkLine).toHaveBeenCalledWith('k', { id: 9, name: 'Béchamel', ingredientId: 6 })
+  })
+
+  it('a new-Base-recipe ask left pending, then a convert: the convert replaces it, and Yes answers the convert only', async () => {
+    const api = mockApi(mixed({ id: 20, name: 'Pesto', baseRecipe: true, baseIngredientId: 5 }))
+    const { result, linkLine } = setup()
+    await act(async () => { await result.current.linkTo(line, { kind: 'new', name: 'Béchamel' }) })
+    expect(result.current.takeOverAsk).toMatchObject({ ingredient: { id: 6 } })
+
+    await convert(result)
+    await vi.waitFor(() => expect(result.current.takeOverAsk).toMatchObject({ ingredient: { id: 5 } }))
+    expect(result.current.askName).toBe('Pesto')
+
+    await act(async () => { await result.current.answerTakeOver(true) })
+    expect(api.callsTo('POST', '/api/recipes/20/to-base')[1]?.body).toEqual({ yield: 200, yieldUnit: 'g', takeOver: true })
+    expect(api.callsTo('POST', '/api/recipes')).toHaveLength(1) // the abandoned new-Base-recipe ask is never answered
+    expect(linkLine).toHaveBeenCalledTimes(1)
+    expect(linkLine).toHaveBeenCalledWith('k', { id: 20, name: 'Pesto', ingredientId: 5 })
+    expect(result.current.takeOverAsk).toBeNull()
+  })
+
+  it('a convert ask left pending, then a new Base recipe: Yes answers the new one only', async () => {
+    const api = mockApi(mixed({ id: 20, name: 'Pesto' }))
+    const { result, linkLine } = setup()
+    await convert(result)
+    await vi.waitFor(() => expect(result.current.takeOverAsk).toMatchObject({ ingredient: { id: 5 } }))
+    await act(async () => { await result.current.linkTo(line, { kind: 'new', name: 'Béchamel' }) })
+    expect(result.current.takeOverAsk).toMatchObject({ ingredient: { id: 6 } })
+    await act(async () => { await result.current.answerTakeOver(true) })
+    expect(api.callsTo('POST', '/api/recipes/20/to-base')).toHaveLength(1)
+    expect(api.callsTo('POST', '/api/recipes')[1]?.body).toMatchObject({ takeOver: true })
+    expect(linkLine).toHaveBeenCalledTimes(1)
+    expect(linkLine).toHaveBeenCalledWith('k', { id: 9, name: 'Béchamel', ingredientId: 6 })
+  })
+
+  it('cancelTakeOver forgets both: a later answer sends nothing', async () => {
+    const api = mockApi(mixed({ id: 20, name: 'Pesto' }))
+    const { result } = setup()
+    await convert(result)
+    await vi.waitFor(() => expect(result.current.takeOverAsk).not.toBeNull())
+    act(() => result.current.cancelTakeOver())
+    const before = api.calls.length
+    await act(async () => { await result.current.answerTakeOver(true) })
+    expect(api.calls.length).toBe(before)
+  })
+})

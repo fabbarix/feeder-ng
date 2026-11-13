@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, refusal } from '../../../lib/baseRecipes/test-utils'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
@@ -34,6 +34,7 @@ const view = (entry = '/recipes/3') =>
           <MemoryRouter initialEntries={[entry]}>
             <Routes>
               <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
+              <Route path="*" element={<Where />} />
             </Routes>
           </MemoryRouter>
         </ConfirmProvider>
@@ -104,6 +105,48 @@ describe('detail: the Stock line of a Base recipe', () => {
   })
 })
 
+const Where = () => <p data-testid="where">{useLocation().pathname}</p>
+
+describe('detail: the Stock line is a link to the Ingredient', () => {
+  it('is a real link (role link) named by the line, to the Base recipe\'s Ingredient page', async () => {
+    mockApi(stock(stockRow()))
+    setRecipe(bech())
+    view()
+    const link = await screen.findByRole('link', { name: 'In the Pantry: 300 ml' })
+    expect(link).toHaveAttribute('href', '/ingredients/30')
+  })
+  it('uses the shared link styling: a class naming it, not a bare <a>', async () => {
+    mockApi(stock(stockRow()))
+    setRecipe(bech())
+    view()
+    const link = await screen.findByRole('link', { name: 'In the Pantry: 300 ml' })
+    expect(link.getAttribute('class') ?? '').toMatch(/link/)
+  })
+  it('follows the link inside the app (no page load)', async () => {
+    mockApi(stock(stockRow()))
+    setRecipe(bech())
+    view()
+    await userEvent.click(await screen.findByRole('link', { name: 'In the Pantry: 300 ml' }))
+    expect(await screen.findByTestId('where')).toHaveTextContent('/ingredients/30')
+  })
+  it('"none" is plain text, not a link', async () => {
+    mockApi(stock(stockRow({ ingredientId: 99 })))
+    setRecipe(bech())
+    view()
+    expect(await screen.findByText('In the Pantry: none')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /In the Pantry/ })).toBeNull()
+  })
+  it('renders nothing while the Stock loads or after an error', async () => {
+    const api = mockApi({ 'GET /api/stock': refusal(500, 'internal'), 'GET /api/recipes/3/link-candidates': { baseUnit: 'ml', lines: [] } })
+    setRecipe(bech())
+    view()
+    expect(screen.queryByText(/In the Pantry/)).toBeNull()
+    await waitFor(() => expect(api.callsTo('GET', '/api/stock')).toHaveLength(1))
+    expect(screen.queryByText(/In the Pantry/)).toBeNull()
+    expect(screen.queryByRole('link', { name: /In the Pantry/ })).toBeNull()
+  })
+})
+
 describe('detail: the line error clears on the next success', () => {
   const baseLine: RecipeLine = {
     id: 71, ingredientId: 30, ingredient: 'Béchamel', quantity: 500, unit: 'ml', optional: false, note: '',
@@ -120,10 +163,10 @@ describe('detail: the line error clears on the next success', () => {
       await userEvent.click(screen.getByRole('menuitem', { name: 'Use as a plain Ingredient' }))
     }
     await act()
-    const words = await screen.findByText(/could not|Could not|wrong|try again/i, { selector: 'p[role="alert"]' })
-    expect(words).toBeInTheDocument()
+    const words = /could not|wrong|try again/i
+    expect(await screen.findByText(words, { selector: 'p[role="alert"]' })).toBeInTheDocument()
     await act()
     await waitFor(() => expect(calls).toBe(2))
-    await waitFor(() => expect(words).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(words, { selector: 'p[role="alert"]' })).toBeNull())
   })
 })
