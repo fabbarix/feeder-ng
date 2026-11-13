@@ -213,6 +213,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         }}
         busy={marked.busy}
         error={marked.error}
+        usedFrom={marked.usedFrom}
       />
       <MarkAllCookedSheet
         open={allCooked.key !== null}
@@ -229,6 +230,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
         }}
         busy={allCooked.controller.busy}
         error={allCooked.controller.error}
+        usedFrom={allCooked.controller.usedFrom}
       />
     </div>
   )
