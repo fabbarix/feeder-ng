@@ -57,6 +57,13 @@ export const strings = {
   conversionAmountLabel: (baseLabel: string) => `Amount in ${baseLabel}`,
   addConversion: 'Add conversion',
   removeConversion: (unit: string) => `Remove ${unit}`,
+  /** BR-D: a batch or portion Unit Conversion of a Base recipe's Ingredient is set by the Yield, read-only. */
+  setByBaseRecipe: 'Set by the Base recipe',
+  /** BR-D: the Base recipe badge and link on the Ingredient page; the name follows the Base recipe. */
+  baseRecipeBadge: 'Base recipe',
+  baseRecipeArchived: 'Base recipe, archived',
+  openBaseRecipe: (name: string) => `Open ${name} (Base recipe)`,
+  renameBaseRecipe: 'Rename the Base recipe to rename this Ingredient.',
   deleteIngredient: 'Delete Ingredient',
   deleteLocked: (n: number) => `Used in ${n} place${n === 1 ? '' : 's'}, so it can't be removed`,
   deleteConfirm: (name: string) => `Delete ${name}?`,

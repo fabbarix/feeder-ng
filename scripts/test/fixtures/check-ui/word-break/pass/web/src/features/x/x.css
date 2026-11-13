@@ -1,0 +1,10 @@
+/* one-token values (an email, a URL or link, a barcode, a code) may break: they have no word boundary */
+.member__email { overflow-wrap: anywhere; }
+.share-url { word-break: break-all; }
+.source-link { overflow-wrap: anywhere; }
+.product__barcode { overflow-wrap: anywhere; }
+.invite-code { word-break: break-all; }
+.title { overflow-wrap: normal; hyphens: manual; word-break: normal; }
+.list .member__email { overflow-wrap: anywhere; }
+.row .source-link, .row .share-url { word-break: break-all; }
+.product__barcode:hover { overflow-wrap: anywhere; }

@@ -27,7 +27,7 @@ export function StockRow({ item, today, onOpen, system = 'metric', lead }: Stock
       title={capitalise(item.name)}
       meta={rowMeta(item, today)}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
-      leading={lead ?? <Thumb imageUrl={item.imageUrl} size={40} />}
+      leading={lead ?? <Thumb name={item.name} imageUrl={item.imageUrl} size={40} />}
       chevron
       onActivate={() => onOpen(item.ingredientId)}
     />

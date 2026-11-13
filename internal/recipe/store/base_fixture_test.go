@@ -196,3 +196,7 @@ var storeErrNotFound = store.ErrNotFound
 func newPort(f *bf) ingstore.BaseRecipes { return store.NewBaseRecipePort(f.db) }
 
 func ingredientResolution() ingredient.Resolution { return ingredient.Resolution{} }
+
+func store_ListFilterFor(kind string, forID int64) store.ListFilter {
+	return store.ListFilter{Kind: kind, For: forID}
+}

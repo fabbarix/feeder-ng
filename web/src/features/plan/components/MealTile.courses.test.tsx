@@ -10,21 +10,23 @@ const main = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 1, name:
 const side = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { recipeName: 'Green beans', recipeId: 8 }), ...over })
 const dessert = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 3, name: 'Dessert', main: false, optional: true, unserved: 'optional', ...over })
 
-function setup(s: PlanSlot, today = '2026-11-10', compact = false) {
-  const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn(), onMarkAllCooked: vi.fn(), onNotCookedSlot: vi.fn(), onAddCourse: vi.fn() }
-  const view = render(<MealTile slot={s} today={today} compact={compact} {...handlers} />)
+function setup(s: PlanSlot, today = '2026-11-10') {
+  const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn(), onPin: vi.fn(), onUnpin: vi.fn(), onMarkAllCooked: vi.fn(), onNotCookedSlot: vi.fn(), onAddCourse: vi.fn() }
+  const view = render(<MealTile slot={s} today={today} {...handlers} />)
   return { ...handlers, container: view.container }
 }
-const rowOf = (name: string) => screen.getByRole('listitem', { name })
+// ds-plan: a Course row is a ListRow (an <li> without its own aria-label): found by the Course label in its meta line.
+const rowOf = (name: string) =>
+  screen.getAllByRole('listitem').find((li) => li.querySelector('.list-row__meta')?.textContent?.startsWith(name)) as HTMLElement
 
 describe('one Course looks exactly as before (regression guards)', () => {
-  it.each([false, true])('a slot with a single Course in `courses` renders the same markup as a slot without (compact %s)', (compact) => {
+  it('a slot with a single Course in `courses` renders the same markup as a slot without', () => {
     const m = meal({ recipeName: 'Chicken curry', why: [{ code: 'favourite', members: ['Anna'] }] })
-    const before = render(<MealTile slot={slot({ meal: m })} today="2026-11-10" compact={compact} onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />)
+    const before = render(<MealTile slot={slot({ meal: m })} today="2026-11-10" onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />)
     const old = before.container.innerHTML
     before.unmount()
     const after = render(
-      <MealTile slot={courseSlot([planCourse({ courseId: 1, name: 'Main', meal: m })])} today="2026-11-10" compact={compact} onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />,
+      <MealTile slot={courseSlot([planCourse({ courseId: 1, name: 'Main', meal: m })])} today="2026-11-10" onOpen={() => {}} onSwap={() => {}} onChoose={() => {}} onCook={() => {}} />,
     )
     expect(after.container.innerHTML).toBe(old)
   })
@@ -42,7 +44,7 @@ describe('several Courses: one slot block', () => {
   it('names the slot once and lists a row per Course in the slot order, each with its caption', () => {
     setup(twoCourses())
     expect(screen.getAllByText('Dinner')).toHaveLength(1)
-    expect(screen.getAllByRole('listitem').map((li) => li.getAttribute('aria-label'))).toEqual(['Main', 'Side'])
+    expect(screen.getAllByRole('listitem').map((li) => li.querySelector('.list-row__meta')?.textContent)).toEqual(['Main', 'Side'])
     expect(within(rowOf('Main')).getByRole('button', { name: /Roast chicken/ })).toBeInTheDocument()
     expect(within(rowOf('Side')).getByRole('button', { name: /Green beans/ })).toBeInTheDocument()
   })
@@ -82,7 +84,7 @@ describe('several Courses: one slot block', () => {
     const unfilled = { reason: 'no_course_recipes' as const, slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } }
     const h = setup(courseSlot([main(), side({ meal: null, unfilled })]))
     const item = rowOf('Side')
-    expect(item.querySelector('[data-unfilled]')).not.toBeNull()
+    expect(item).toHaveAttribute('data-unfilled')
     await userEvent.click(within(item).getByRole('button', { name: 'Choose a Recipe' }))
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
   })
@@ -121,19 +123,5 @@ describe('the slot menu', () => {
   it('no menu on a one-Course slot', () => {
     setup(slot())
     expect(screen.queryByRole('button', { name: /actions/ })).not.toBeInTheDocument()
-  })
-})
-
-describe('the 7-column week (compact)', () => {
-  it('lists the rows but no per-Course buttons; Cook (today) stays once on the head', () => {
-    setup(courseSlot([main(), side()]), '2026-11-10', true)
-    expect(screen.getAllByRole('listitem')).toHaveLength(2)
-    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Cook' })).toHaveLength(1)
-  })
-
-  it('a day after today has no Cook', () => {
-    setup(courseSlot([main(), side()]), '2026-11-09', true)
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
   })
 })

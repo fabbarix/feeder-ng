@@ -14,6 +14,10 @@
 #   back-link        8  no BackLink, no <Link>/<a> reading "Back to ...", no <IconButton icon="back"> that navigates (use Breadcrumbs)
 #   image-input      9  no own image input (IM2): no accept= with an image type or extension, no capture=, no '/api/images' upload URL
 #                       outside web/src/ui/ImagePicker (use <ImagePicker>); accept=".json" and display URLs like `/api/images/${id}` are fine
+#   type-scale      10  a font-size / font that is not a --text-* token (or inherit), outside a token block (:root, html[...]) (system.md 1)
+#   opacity-muting  11  opacity between 0.5 and 0.95 on a selector that is not a disabled state: mute text with --color-muted (system.md 2)
+#   word-break      12  hyphens: auto, overflow-wrap / word-wrap anywhere|break-word, word-break break-all|break-word, unless the selector
+#                       names a one-token value (email, url, link, barcode, code) (system.md 3)
 #
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
@@ -53,7 +57,7 @@ trap 'rm -rf "$TMP"' EXIT
 VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
-RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input)
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input type-scale opacity-muting word-break)
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
@@ -443,6 +447,74 @@ rule_image_input() {
     'accept=[^>]*(image/|[.](png|jpe?g|webp|heic|heif|gif|avif))|(^|[^A-Za-z0-9_-])capture=|[\x27"`]/api/images(/from-url)?[\x27"`]'
 }
 rule_image_input
+
+# ------------------------------------------------------------------ rule 10
+# DS-A (docs/design/system.md 1): feature CSS sets no font size or font outside the --text-* type roles (tokens live in :root).
+rule_type_scale() {
+  local f
+  while IFS= read -r f; do
+    css_scan "$f" | awk -F'\t' -v F="$f" '
+      # a token block: every selector of the rule is :root or html[...] (round 2; a descendant of :root is a feature rule)
+      function tokensel(t) { return (t ~ /^:root$/ || t ~ /^html(\[[^]]*\])*$/) }
+      function alltok(list,   n, a, i, t) { n = split(list, a, ","); for (i = 1; i <= n; i++) { t = a[i]; gsub(/^[ \t]+|[ \t]+$/, "", t); if (!tokensel(t)) return 0 } return 1 }
+      $1 != "D" { next }
+      alltok($3) { next }
+      ($4 == "font-size" || $4 == "font") {
+        v = $5
+        if (v == "inherit") next
+        if ($4 == "font-size" && v ~ /^var\(--text-[A-Za-z0-9_-]+\)$/) next
+        if ($4 == "font" && v ~ /var\(--text-/) next
+        print "type-scale\t" F "\t" $2 "\t" $4 ": " v " on \047" $3 "\047; use a --text-* type role (system.md 1), not a raw size or font"
+      }' >>"$VIOL"
+  done < <(src_files css)
+}
+
+# ------------------------------------------------------------------ rule 11
+# DS-A (docs/design/system.md 2): muted text is --color-muted, never a partial opacity. Disabled controls may fade.
+rule_opacity_muting() {
+  local f
+  while IFS= read -r f; do
+    css_scan "$f" | awk -F'\t' -v F="$f" '
+      $1 != "D" || $4 != "opacity" { next }
+      $3 ~ /:disabled|\[disabled|aria-disabled|data-disabled/ { next }
+      {
+        v = $5; sub(/[ \t]*!important.*$/, "", v)
+        if (v ~ /^[0-9.]+%$/) { n = (v + 0) / 100 }
+        else if (v ~ /^[0-9.]+$/) { n = v + 0 }
+        else next
+        if (n >= 0.5 && n <= 0.95) print "opacity-muting\t" F "\t" $2 "\topacity " v " on \047" $3 "\047 mutes content; use --color-muted for muted text (system.md 2)"
+      }' >>"$VIOL"
+  done < <(src_files css)
+}
+
+# ------------------------------------------------------------------ rule 12
+# DS-A (docs/design/system.md 3): text wraps at a word boundary. Only a one-token value (email, URL, link, barcode, code) may break.
+rule_word_break() {
+  local f
+  while IFS= read -r f; do
+    css_scan "$f" | awk -F'\t' -v F="$f" '
+      # the exemption reads the LAST compound of each selector (after a space, > + or ~); a selector list is judged per selector
+      function lastc(t,   n, a) { gsub(/[ \t]*[>+~][ \t]*/, " ", t); gsub(/[ \t]+$/, "", t); n = split(t, a, /[ \t]+/); return a[n] }
+      $1 != "D" { next }
+      {
+        p = $4; v = $5; sub(/[ \t]*!important.*$/, "", v)
+        bad = 0
+        if (p == "hyphens" && v == "auto") bad = 1
+        else if ((p == "overflow-wrap" || p == "word-wrap") && (v == "anywhere" || v == "break-word")) bad = 1
+        else if (p == "word-break" && (v == "break-all" || v == "break-word")) bad = 1
+        if (!bad) next
+        n = split($3, parts, ",")
+        for (i = 1; i <= n; i++) {
+          t = parts[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+          if (tolower(lastc(t)) ~ /email|url|link|barcode|code/) continue
+          print "word-break\t" F "\t" $2 "\t" p ": " v " on \047" t "\047; wrap at a word and end in an ellipsis, never mid-word (system.md 3)"
+        }
+      }' >>"$VIOL"
+  done < <(src_files css)
+}
+rule_type_scale
+rule_opacity_muting
+rule_word_break
 
 # File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
 if [ -f "$ALLOW_COLOURS" ]; then

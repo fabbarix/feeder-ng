@@ -1,25 +1,42 @@
-/* BentoGrid (docs/design/ui-fix-plan.md 4.4): one gap token; rows stretch to their tallest tile. */
+/* BentoGrid (docs/design/system.md 4, ADR 0016): tracks sized by a minimum tile width; tiles are one track, or the whole row. */
 .bento-grid {
   display: grid;
   gap: var(--bento-gap);
   align-items: stretch;
-  grid-auto-rows: auto;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-inline-size: 0;
 }
 
-.bento-grid[data-columns='2'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.bento-grid[data-min='card'] {
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-card), 100%), 1fr));
 }
 
-.bento-grid[data-columns='3'] {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.bento-grid[data-min='day'] {
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-day), 100%), 1fr));
 }
 
-.bento-grid[data-columns='4'] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.bento-grid[data-min='wide'] {
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-wide), 100%), 1fr));
 }
 
-/* WP3b (plan 4.4): the week strip, one column per day. */
-.bento-grid[data-columns='7'] {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+/* A metric strip fills its row: small tiles never come as a half-width orphan. */
+/* At most three tiles per row at any width: a track is never narrower than a third of the row (system.md 4). */
+.bento-grid[data-min='metric'] {
+  grid-template-columns: repeat(auto-fit, minmax(max(min(var(--tile-min-metric), 100%), calc((100% - 2 * var(--bento-gap)) / 3)), 1fr));
+}
+
+/* On a phone the metric strip is one row of up to three equal tracks. */
+@media (max-width: 599px) {
+  .bento-grid[data-min='metric'] {
+    grid-template-columns: repeat(auto-fit, minmax(calc((100% - 2 * var(--bento-gap)) / 3), 1fr));
+  }
+}
+
+/* A tile's content is top-aligned: a tall neighbour never centres it. */
+.bento-grid > .tile {
+  justify-content: flex-start;
+}
+
+/* No status spans: a tile in a BentoGrid takes one track (only span="full" fills the row). */
+.bento-grid > .tile[data-span='2'] {
+  grid-column: auto;
 }

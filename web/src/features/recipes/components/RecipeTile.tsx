@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Chip, Icon, RecipeThumb, Tile } from '../../../ui'
 import { timeSummary } from '../lib/timeSummary'
 import { CourseChips } from './CourseChips'
+import { BaseRecipeBadge } from './BaseRecipeBadge'
+import { baseTileMeta } from '../lib/baseRecipe'
 import { RecipeTags } from './RecipeTags'
 import { recipeStrings } from '../strings'
 import type { RecipeSummary } from '../types'
@@ -26,6 +28,8 @@ export interface RecipeTileProps {
  */
 export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, lastCooked }: RecipeTileProps): ReactNode {
   const time = timeSummary(recipe)
+  // BR-D: a Base recipe's tile shows its Yield and Used in where a plannable tile shows Last cooked (never both).
+  const baseMeta = baseTileMeta(recipe)
   const thumb = <RecipeThumb name={recipe.name} photoUrl={recipe.imageUrl || undefined} tags={recipe.tags} size="hero" />
   return (
     <Tile
@@ -47,12 +51,20 @@ export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, l
             {time.ahead}
           </Chip>
         ) : null}
-        {lastCooked ? <span className="recipe-tile__cooked">{lastCooked}</span> : null}
+        {baseMeta ? (
+          <>
+            <span className="recipe-tile__yield">{baseMeta.yield}</span>
+            <span className="recipe-tile__cooked">{baseMeta.usedIn}</span>
+          </>
+        ) : lastCooked ? (
+          <span className="recipe-tile__cooked">{lastCooked}</span>
+        ) : null}
       </div>
       <CourseChips names={courseNames ?? []} wholeMeal={wholeMeal} />
       <RecipeTags tags={recipe.tags} colourOf={colourOf} limit={2} />
-      {recipe.readyMeal || recipe.archived ? (
+      {recipe.readyMeal || recipe.archived || recipe.baseRecipe ? (
         <div className="recipe-tile__tags">
+          {recipe.baseRecipe ? <BaseRecipeBadge /> : null}
           {recipe.readyMeal ? <Chip kind="tag">{recipeStrings.readyMeal}</Chip> : null}
           {recipe.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
         </div>

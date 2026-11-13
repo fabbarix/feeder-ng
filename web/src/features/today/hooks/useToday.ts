@@ -3,6 +3,7 @@ import { todayApi } from '../api'
 import { composeToday } from '../lib/compose'
 import { needsSetup } from '../lib/setup'
 import { useScanSessionActive, useTodayPlan, useTodayStock } from '../seams'
+import { useLinesToGet } from '../shopSeam'
 import { useSetupFacts } from '../setupSeam'
 import type { AdvanceStepDue, TodayLayout } from '../types'
 
@@ -19,7 +20,7 @@ export interface UseToday {
 
 /**
  * Today's data: the scan-session flag and the plan and stock counts (seams), plus
- * Advance Steps due and the zero-waste streak (this feature's API), composed with
+ * Advance Steps due, the zero-waste streak (this feature's API) and the Lines to get (the Shop seam), composed with
  * composeToday. A failing own endpoint counts as nothing to show.
  */
 export function useToday(): UseToday {
@@ -28,6 +29,7 @@ export function useToday(): UseToday {
   const stock = useTodayStock()
   const steps = useAdvanceStepsDue()
   const streak = useZeroWasteStreak()
+  const lines = useLinesToGet()
   const setup = useSetupFacts()
   const layout = composeToday({
     scanSessionActive,
@@ -40,9 +42,10 @@ export function useToday(): UseToday {
     leftovers: plan.leftovers,
     useSoon: stock.useSoon.length,
     streakDays: streak.days,
+    linesToGet: lines.count,
     loadFailed: plan.failed === true || stock.failed === true,
   })
-  return { layout, retry: plan.retry ?? noop, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading || setup.loading }
+  return { layout, retry: plan.retry ?? noop, today: plan.today, loading: plan.loading || stock.loading || steps.loading || streak.loading || lines.loading || setup.loading }
 }
 
 export interface AdvanceStepsState {

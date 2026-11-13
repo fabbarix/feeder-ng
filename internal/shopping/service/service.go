@@ -207,9 +207,7 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	}
 	ids := map[int64]bool{}
 	for _, m := range meals {
-		for _, n := range m.Needs {
-			ids[n.IngredientID] = true
-		}
+		needIDs(ids, m.Needs)
 	}
 	for _, e := range extras {
 		if e.IngredientID != 0 {
@@ -710,4 +708,13 @@ func (s *Service) ClearNotNeeded(ctx context.Context, ingredientID int64, to sto
 	}
 	s.publish("list")
 	return nil
+}
+
+// needIDs adds the Ingredients of the needs and of the Base recipe needs they make (BR-F: a Made child is a Line of its
+// own, so its Ingredient must be named too).
+func needIDs(ids map[int64]bool, needs []shopping.Need) {
+	for _, n := range needs {
+		ids[n.IngredientID] = true
+		needIDs(ids, n.Made)
+	}
 }

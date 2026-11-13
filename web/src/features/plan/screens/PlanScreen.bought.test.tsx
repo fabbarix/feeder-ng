@@ -21,7 +21,7 @@ const dryRun = {
   bought: [{ date: '2026-11-10', mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'Roast chicken', ingredients: ['chicken thighs', 'cream'] }],
 }
 
-const tile = async (name: string) => ((await screen.findByRole('heading', { name })).closest('article') as HTMLElement)
+const tile = async (name: string) => ((await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name === 'Tomorrow' ? /· Tomorrow$/ : name })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
   await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
   return screen.findByRole('dialog', { name: recipe })

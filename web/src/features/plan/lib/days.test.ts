@@ -32,28 +32,14 @@ describe('groupByDay', () => {
     expect(days[0]!.slots.map((s) => s.time)).toEqual(['12:30', '19:00'])
   })
 
-  it('today spans both columns of the grid, other days one', () => {
-    const days = groupByDay(slots, '2026-11-09')
-    expect(days.map((d) => d.span)).toEqual([2, 1, 1])
-    expect(days.map((d) => d.isToday)).toEqual([true, false, false])
+  // ds-plan: today no longer spans (the old span tests are replaced by days.heading.test.ts).
+  it('marks today', () => {
+    expect(groupByDay(slots, '2026-11-09').map((d) => d.isToday)).toEqual([true, false, false])
   })
 
-  it('at 7 columns (a true week) today spans ONE column; at 2 and 4 it still spans two', () => {
-    expect(groupByDay(slots, '2026-11-09', 7).map((d) => d.span)).toEqual([1, 1, 1])
-    expect(groupByDay(slots, '2026-11-09', 7).map((d) => d.isToday)).toEqual([true, false, false])
-    expect(groupByDay(slots, '2026-11-09', 4).map((d) => d.span)).toEqual([2, 1, 1])
-    expect(groupByDay(slots, '2026-11-09', 2).map((d) => d.span)).toEqual([2, 1, 1])
-  })
-
-  it('shortTitle keeps Today / Tomorrow / Yesterday and shortens other weekdays ("Wed"), so a 7-column heading never clips', () => {
+  it('the heading keeps Today / Tomorrow / Yesterday titles for the old title field', () => {
     const days = groupByDay([slot('2026-11-08', 2, '19:00'), ...slots, slot('2026-11-12', 2, '19:00')], '2026-11-09')
-    expect(days.map((d) => d.shortTitle)).toEqual(['Yesterday', 'Today', 'Tomorrow', 'Wed', 'Thu'])
     expect(days.map((d) => d.title)).toEqual(['Yesterday', 'Today', 'Tomorrow', 'Wednesday', 'Thursday'])
-  })
-
-  it('without a slot today nothing spans two columns', () => {
-    const days = groupByDay(slots.slice(0, 1), '2026-11-09')
-    expect(days.map((d) => d.span)).toEqual([1])
   })
 
   it('labels: Today, Tomorrow, Yesterday, then the weekday and date', () => {

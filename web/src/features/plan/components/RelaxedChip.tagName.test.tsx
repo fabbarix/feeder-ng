@@ -24,7 +24,7 @@ const withWhy = (): PlanSlot => slot({ meal: meal({ why: relaxed }) })
 
 describe('relaxed Variety chip names the Tag', () => {
   it('MealTile says "3rd Fish this week"', async () => {
-    renderIn(<MealTile slot={withWhy()} today="2026-11-10" compact onOpen={noop} onSwap={noop} onChoose={noop} onCook={noop} />)
+    renderIn(<MealTile slot={withWhy()} today="2026-11-10" onOpen={noop} onSwap={noop} onChoose={noop} onCook={noop} />)
     expect(await screen.findByText('3rd Fish this week')).toBeInTheDocument()
     expect(screen.queryByText('3rd fish this week')).not.toBeInTheDocument()
   })
@@ -52,7 +52,7 @@ describe('relaxed Variety chip names the Tag', () => {
   })
 
   it('falls back to the key while the Tag is unknown', () => {
-    renderIn(<MealTile slot={withWhy()} today="2026-11-10" compact onOpen={noop} onSwap={noop} onChoose={noop} onCook={noop} />, [])
+    renderIn(<MealTile slot={withWhy()} today="2026-11-10" onOpen={noop} onSwap={noop} onChoose={noop} onCook={noop} />, [])
     expect(screen.getByText('3rd fish this week')).toBeInTheDocument()
   })
 })

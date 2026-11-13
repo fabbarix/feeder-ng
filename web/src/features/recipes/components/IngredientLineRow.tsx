@@ -1,10 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import type { SortableItemProps } from '../../../ui'
 import { Button, Chip, IconButton, IngredientSelect, Menu, TextField, UnitSelect } from '../../../ui'
+import { BaseRecipeBadge } from './BaseRecipeBadge'
+import { NeededAtMenu } from './NeededAtMenu'
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
-import type { IngredientRef } from '../types'
+import type { IngredientRef, RecipeStep } from '../types'
 
 export interface IngredientLineRowProps {
   line: LineDraft
@@ -35,6 +37,16 @@ export interface IngredientLineRowProps {
   /** L13: take focus in the Ingredient picker now (a line just added); calls onIngredientFocused once it has. */
   focusIngredient?: boolean
   onIngredientFocused?: () => void
+  /** BR-D: the Recipe's Steps, for the Needed at menu of a Base recipe line (line.baseRecipeId set). */
+  steps?: ReadonlyArray<Pick<RecipeStep, 'text' | 'kind'>>
+  /** BR-D: the default Needed at Step (0-based), marked "(default)"; null = unknown. */
+  neededAtDefault?: number | null
+  /** BR-D: a Step index = override, null = back to the default. */
+  onNeededAt?: (step: number | null) => void
+  /** BR-D: "Link to a Base recipe" in the actions menu of a plain line with an Ingredient. Without it the item is absent. */
+  onLinkToBase?: () => void
+  /** BR-D: "Use as a plain Ingredient" in the actions menu of a Base recipe line. Without it the item is absent. */
+  onUseAsPlain?: () => void
 }
 
 /** The row's class names with the one the sortable adds. */
@@ -82,6 +94,11 @@ export function IngredientLineRow({
   onAmountFocused,
   focusIngredient,
   onIngredientFocused,
+  steps,
+  neededAtDefault,
+  onNeededAt,
+  onLinkToBase,
+  onUseAsPlain,
 }: IngredientLineRowProps): ReactNode {
   const amountRef = useRef<HTMLDivElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -113,6 +130,11 @@ export function IngredientLineRow({
   const units = ingredient ? unitChoicesOf(ingredient) : { baseUnit: line.unit, conversions: [], globalUnits: [] }
   const asks = needsConversion(line.unit, ingredient)
   const who = (line.ingredientName || ingredient?.name || '').trim() || recipeStrings.lines.lineLabel(index + 1)
+  const isBase = (line.baseRecipeId ?? null) !== null
+  const linkItems = [
+    ...(onLinkToBase && !isBase && line.ingredientId !== null ? [{ id: 'link', label: recipeStrings.baseRecipe.linkAction, icon: 'cook' as const, onSelect: onLinkToBase }] : []),
+    ...(onUseAsPlain && isBase ? [{ id: 'plain', label: recipeStrings.baseRecipe.plainAction, icon: 'cook' as const, onSelect: onUseAsPlain }] : []),
+  ]
   return (
     <li {...itemProps} className={rowClass('line-row', itemProps)}>
       <div className="line-row__ingredient">
@@ -132,7 +154,17 @@ export function IngredientLineRow({
             }}
           />
           {line.optional ? <Chip kind="tag">{recipeStrings.lines.optional}</Chip> : null}
+          {isBase ? <BaseRecipeBadge /> : null}
         </div>
+        {isBase && steps && onNeededAt ? (
+          <NeededAtMenu
+            steps={steps}
+            value={line.neededAtStep ?? neededAtDefault ?? 0}
+            defaultStep={neededAtDefault ?? null}
+            lineName={line.baseRecipeName || line.ingredientName}
+            onChange={onNeededAt}
+          />
+        ) : null}
       </div>
       <div ref={amountRef} className="line-row__quantity">
         <TextField
@@ -173,6 +205,7 @@ export function IngredientLineRow({
           label={recipeStrings.lines.actions(who)}
           items={[
             ...moveItems(index, count, onMove),
+            ...linkItems,
             {
               id: 'optional',
               label: recipeStrings.lines.optional,

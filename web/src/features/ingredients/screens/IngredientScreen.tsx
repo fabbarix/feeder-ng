@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, Chip, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
 import { IngredientExclusionList } from '../../recipes/components/IngredientExclusionList'
 import { BaseUnitPicker } from '../components/BaseUnitPicker'
@@ -78,7 +78,20 @@ export function IngredientScreen() {
       <PageHeader title={displayName(ingredient.name)} breadcrumbs={breadcrumbs} />
       {error ? <p role="alert">{error}</p> : null}
 
-      {renaming ? (
+      {ingredient.baseRecipe ? (
+        <p className="ingredient__base">
+          <Chip kind="tag" icon="cook">
+            {ingredient.baseRecipe.archived ? strings.baseRecipeArchived : strings.baseRecipeBadge}
+          </Chip>{' '}
+          <Link to={`/recipes/${ingredient.baseRecipe.id}`} aria-label={strings.openBaseRecipe(ingredient.baseRecipe.name)}>
+            {ingredient.baseRecipe.name}
+          </Link>
+        </p>
+      ) : null}
+
+      {ingredient.baseRecipe ? (
+        <p className="ingredient__helper">{strings.renameBaseRecipe}</p>
+      ) : renaming ? (
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -100,7 +113,7 @@ export function IngredientScreen() {
         </Button>
       )}
 
-      <BentoGrid columns={2} label={strings.detailsLabel}>
+      <BentoGrid min="card" label={strings.detailsLabel}>
         <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
           {locked ? (
             <>
@@ -149,6 +162,7 @@ export function IngredientScreen() {
             conversions={ingredient.conversions}
             base={ingredient.baseUnit}
             system={system}
+            lockedUnits={ingredient.baseRecipe ? ['batch', 'portion'] : undefined}
             onAdd={(c) => void attempt(() => ing.setConversion(c))}
             onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
           />

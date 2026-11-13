@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>overflow</title>
+<!-- DS-A round 2 (the Plan review: Course rows 582 px wide in a 358 px day tile, the page 614 px wide at 390, and the guard said
+     OK). A no-wrap row in a grid whose track is `1fr` (= minmax(auto, 1fr)), not minmax(0, 1fr): the track grows to the row's
+     min-content. The guard must report P1 (the document is wider than the viewport) and P13 (content wider than its tile). -->
+<style>
+  body { margin: 0; font: 15px/20px sans-serif }
+  .page { padding: 0 16px }
+  .bento-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)) }
+  .tile { display: grid; grid-template-columns: 1fr; padding: 16px; border: 1px solid #888; border-radius: 20px }
+  .course { display: grid; grid-template-columns: 3.5rem 1fr 32px; gap: 8px; align-items: center }
+  .course__chips { display: flex; gap: 4px; white-space: nowrap }
+  .chip { padding: 0 10px; border-radius: 999px; background: #eee }
+</style>
+<!-- the app marks the scheme it renders; the driver checks it after emulating dark -->
+<script>const mq = matchMedia('(prefers-color-scheme: dark)'); const set = () => { document.documentElement.dataset.scheme = mq.matches ? 'dark' : 'light' }; set(); mq.addEventListener('change', set)</script></head><body>
+<main><div class="page" data-page-width="wide"><h1>Plan</h1><div class="bento-grid">
+  <section class="tile"><h2>Monday</h2>
+    <div class="course"><span>Main</span><span class="course__chips"><span class="chip">Slot Rule: Monday</span><span class="chip">Anna and Ben's favourite</span><span class="chip">Again soon: had Fri</span></span><button>⇆</button></div>
+  </section>
+</div></div></main></body></html>

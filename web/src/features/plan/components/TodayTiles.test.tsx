@@ -19,18 +19,20 @@ describe('ToConfirmTile', () => {
     expect(screen.getByRole('heading', { name: 'To confirm' }).closest('[data-span]')).toHaveAttribute('data-span', 'full')
   })
 
-  it('offers Yes, Cooked (one tap), Adjust and Not cooked, each reporting the slot', async () => {
+  // DS-TODAY (changed on purpose): the buttons are one ActionGroup: Cooked (primary), Adjust (secondary), Not cooked in the ⋮.
+  it('offers Cooked (one tap, primary), Adjust (secondary) and Not cooked (in the ⋮), each reporting the slot', async () => {
     const h = setup()
     const key = { date: '2026-11-09', mealSlotId: 2, courseId: 1 }
-    const yes = screen.getByRole('button', { name: 'Yes, Cooked' })
-    expect(yes).toHaveAttribute('data-variant', 'secondary')
-    await userEvent.click(yes)
+    const cooked = screen.getByRole('button', { name: 'Cooked' })
+    expect(cooked).toHaveAttribute('data-variant', 'primary')
+    await userEvent.click(cooked)
     expect(h.onYesCooked).toHaveBeenCalledWith(key)
-    await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
+    const adjust = screen.getByRole('button', { name: 'Adjust' })
+    expect(adjust).toHaveAttribute('data-variant', 'secondary')
+    await userEvent.click(adjust)
     expect(h.onAdjust).toHaveBeenCalledWith(key)
-    const not = screen.getByRole('button', { name: 'Not cooked' })
-    expect(not).toHaveAttribute('data-variant', 'tertiary')
-    await userEvent.click(not)
+    await userEvent.click(screen.getByRole('button', { name: /^More for / }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
     expect(h.onNotCooked).toHaveBeenCalledWith(key)
   })
 

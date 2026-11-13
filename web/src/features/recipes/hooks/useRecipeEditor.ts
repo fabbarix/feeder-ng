@@ -23,6 +23,10 @@ import { parseUnknownUnit, type UnitPrompt } from '../lib/unitPrompt'
 import { renameOffer as renameOfferOf, syncReadyMealLine, type RenameOffer } from '../lib/readyMeal'
 import { lostSlotRules, reconcileWholeMeal, validateCourses, withDefaultCourse } from '../lib/recipeCourses'
 import type { CourseChoice } from '../../../lib/courses'
+import type { TakeOverAsk } from '../../../lib/baseRecipes/types'
+import { parseTakeOver } from '../../../lib/baseRecipes/takeOver'
+import { refusalMessage } from '../../../lib/baseRecipes/refusals'
+import { linkDraftLine, unlinkDraftLine } from '../lib/baseRecipe'
 import type { CourseLoss, IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
@@ -60,6 +64,25 @@ export interface UseRecipeEditor {
   renameLinkedIngredient: () => Promise<void>
   /** CRS E2: the Slot Rules a save would remove because the draft takes a Course off (lib/recipeCourses.lostSlotRules); null when none. */
   courseLoss: CourseLoss | null
+  /**
+   * BR-D: set while a save was answered 409 `base_recipe_take_over` (a new Base recipe, or a rename, named like a plain Ingredient). Nothing is saved until the answer.
+   */
+  takeOverAsk: TakeOverAsk | null
+  /** BR-D: Yes/No: saves again with `takeOver` true/false (lib/draft sends it); resolves like `save`. */
+  answerTakeOver: (yes: boolean) => Promise<Recipe | null>
+  /** BR-D round 3: the kind the stored Recipe has ('plannable' | 'base'), null for a Recipe not saved yet. The screen compares it with the draft on Save. */
+  storedKind: 'plannable' | 'base' | null
+  /** BR-D: Escape on the ask: forgets it, saves nothing. */
+  cancelTakeOver: () => void
+  /**
+   * BR-D: the words of a Base recipe refusal that has no field to sit on, or whose words need the server's path: a cycle ("Roux calls for Béchamel, which calls for Roux",
+   * with the line also in `errors['lines.1']`), a name taken (also `errors.name`). Null when none. Cleared by the next save.
+   */
+  refusal: string | null
+  /** BR-D: "Link to a Base recipe" on a draft line (lib/baseRecipe.linkDraftLine); the link is saved with the Recipe. */
+  linkLine: (key: string, base: { id: number; name: string; ingredientId: number }) => void
+  /** BR-D: "Use as a plain Ingredient" on a draft line (lib/baseRecipe.unlinkDraftLine). */
+  unlinkLine: (key: string, plain: IngredientRef) => void
 }
 
 const NO_INGREDIENTS: readonly IngredientRef[] = []
@@ -99,6 +122,8 @@ export function useRecipeEditor(
   const [saving, setSaving] = useState(false)
   const [unitPrompt, setUnitPrompt] = useState<UnitPrompt | null>(null)
   const [keptOffer, setKeptOffer] = useState<RenameOffer | null>(null)
+  const [takeOverAsk, setTakeOverAsk] = useState<TakeOverAsk | null>(null)
+  const [refusal, setRefusal] = useState<string | null>(null)
   const loaded = useRef(false)
   const known = useRef(ingredients)
   known.current = ingredients
@@ -130,6 +155,8 @@ export function useRecipeEditor(
   }, [ingredients])
 
   const liveOffer = renameOfferOf(existing.data, draft, ingredients)
+  // BR-D round 3: the kind the stored Recipe has; the screen compares it with the draft on Save (the switch applies there).
+  const storedKind: 'plannable' | 'base' | null = existing.data ? (existing.data.baseRecipe ? 'base' : 'plannable') : null
 
   const courseLoss = recipeId === undefined || !rulesQuery.data || !slotsQuery.data
     ? null
@@ -151,6 +178,7 @@ export function useRecipeEditor(
     // CRS E2: the Courses check waits until the household's Courses are known; the server is the backstop.
     const clientErrors = { ...validateDraft(d), ...(courses.length > 0 ? validateCourses(d) : {}) }
     setErrors(clientErrors)
+    setRefusal(null)
     if (Object.keys(clientErrors).length > 0) return null
     const input = draftToInput(d)
     setSaving(true)
@@ -158,6 +186,7 @@ export function useRecipeEditor(
       const saved = recipeId === undefined ? await recipesApi.create(input) : await recipesApi.replace(recipeId, input)
       setErrors({})
       setUnitPrompt(null)
+      setTakeOverAsk(null)
       setKeptOffer(renameOfferOf(existing.data, d, known.current))
       refreshLists()
       void client.invalidateQueries({ queryKey: ['ingredients'] }) // a Ready Meal may have made its Ingredient
@@ -168,9 +197,16 @@ export function useRecipeEditor(
         setUnitPrompt(prompt)
         return null
       }
+      // BR-D: a same-name plain Ingredient is asked about, nothing is saved until the answer.
+      const ask = parseTakeOver(err)
+      if (ask) {
+        setTakeOverAsk(ask)
+        return null
+      }
       if (err instanceof ApiError && err.code === 'validation_failed' && typeof err.details.field === 'string') {
         const reason = typeof err.details.reason === 'string' ? err.details.reason : err.message
         setErrors({ [serverErrorKey(err.details.field, reason)]: reason })
+        setRefusal(refusalMessage(err))
         return null
       }
       throw err
@@ -185,6 +221,7 @@ export function useRecipeEditor(
     errors,
     saving,
     isLoading: recipeId !== undefined && existing.isLoading,
+    storedKind,
     unitPrompt,
     save: () => submit(draft),
     answerUnitPrompt: async (toBase) => {
@@ -204,6 +241,12 @@ export function useRecipeEditor(
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     courseLoss,
+    takeOverAsk,
+    answerTakeOver: (yes) => submit({ ...draft, takeOver: yes }),
+    cancelTakeOver: () => setTakeOverAsk(null),
+    refusal,
+    linkLine: (key, base) => setDraft((d) => linkDraftLine(d, key, base)),
+    unlinkLine: (key, plain) => setDraft((d) => unlinkDraftLine(d, key, plain)),
     renameOffer: keptOffer ?? liveOffer,
     renameLinkedIngredient: async () => {
       const offer = keptOffer ?? liveOffer

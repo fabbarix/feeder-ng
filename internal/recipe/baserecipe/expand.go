@@ -76,12 +76,21 @@ func cycleFor(stack []frame, child Recipe) error {
 // qtyOf is a line's Quantity in its Ingredient's Base Units. ok is false for an unknown Ingredient or a unit
 // that does not convert: such a line is skipped.
 func qtyOf(cat Catalog, ln Line) (float64, bool) {
+	q, _, ok := lineQty(cat, ln)
+	return q, ok
+}
+
+// lineQty is qtyOf with the reason a line is skipped (empty when ok).
+func lineQty(cat Catalog, ln Line) (float64, SkipReason, bool) {
 	u, ok := cat.Units(ln.IngredientID)
 	if !ok {
-		return 0, false
+		return 0, SkipUnknownIngredient, false
 	}
 	q, err := units.ToBase(ln.Quantity, ln.Unit, u)
-	return q, err == nil
+	if err != nil {
+		return 0, SkipUnconvertibleUnit, false
+	}
+	return q, "", true
 }
 
 // blockOf reports whether an Ingredient is a Base recipe's, and if so the Base recipe and its Yield in the
@@ -109,26 +118,43 @@ func blockOf(cat Catalog, ingredientID int64) (Recipe, float64, bool) {
 // Expand returns the need tree of one Batch of the Recipe. An unconvertible line is skipped. A Base recipe that
 // is (transitively) on its own path is a *CycleError. An unknown Recipe id is ErrNotFound.
 func Expand(cat Catalog, recipeID int64) ([]Need, error) {
+	exp, err := ExpandReport(cat, recipeID)
+	if err != nil {
+		return nil, err
+	}
+	return exp.Needs, nil
+}
+
+// ExpandReport is Expand plus the lines it skipped, each with the Recipe it sits in. Its Needs are exactly Expand's.
+func ExpandReport(cat Catalog, recipeID int64) (Expansion, error) {
 	r, ok := cat.Recipe(recipeID)
 	if !ok {
-		return nil, ErrNotFound
+		return Expansion{}, ErrNotFound
 	}
-	return expandLines(cat, r, 1, false, []frame{{r.ID, r.Name}}, "")
+	var rep Expansion
+	needs, err := expandLines(cat, r, 1, false, []frame{{r.ID, r.Name}}, "", &rep)
+	if err != nil {
+		return Expansion{}, err
+	}
+	rep.Needs = needs
+	return rep, nil
 }
 
 // expandLines builds the needs of r's lines. scale is the factor from the root Batch down to r: every Quantity is
 // the raw line amount (Base Units) times scale, so nested Quantities are absolute for one root Batch. prefix is
 // the Path of r's line in its parent ("" for the root); each node's Path is the raw index of its line, with
-// unconvertible lines counted, joined to the prefix.
-func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []frame, prefix string) ([]Need, error) {
+// unconvertible lines counted, joined to the prefix. Skipped lines are appended to rep as they are met.
+func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []frame, prefix string, rep *Expansion) ([]Need, error) {
 	var out []Need
 	for i, ln := range r.Lines {
 		p := strconv.Itoa(i)
 		if prefix != "" {
 			p = prefix + "/" + p
 		}
-		q, ok := qtyOf(cat, ln)
+		q, reason, ok := lineQty(cat, ln)
 		if !ok {
+			rep.Skipped = append(rep.Skipped, Skipped{RecipeID: r.ID, RecipeName: r.Name, Line: i,
+				IngredientID: ln.IngredientID, Unit: ln.Unit, Reason: reason})
 			continue
 		}
 		opt := optional || ln.Optional
@@ -141,7 +167,7 @@ func expandLines(cat Catalog, r Recipe, scale float64, optional bool, stack []fr
 		if err := cycleFor(stack, child); err != nil {
 			return nil, err
 		}
-		made, err := expandLines(cat, child, scale*q/yield, opt, append(stack, frame{child.ID, child.Name}), p)
+		made, err := expandLines(cat, child, scale*q/yield, opt, append(stack, frame{child.ID, child.Name}), p, rep)
 		if err != nil {
 			return nil, err
 		}

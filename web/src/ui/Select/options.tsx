@@ -1,4 +1,5 @@
 import { Avatar } from '../Avatar'
+import { Chip } from '../Chip'
 import { Icon } from '../Icon'
 import { RecipeThumb } from '../RecipeThumb'
 import { Thumb } from '../Thumb'
@@ -24,6 +25,8 @@ export interface IngredientChoice {
   baseUnit: string
   /** PE: the Ingredient's Picture address; the option draws a Thumb (an empty slot without it). */
   imageUrl?: string
+  /** BR-D: set when this is a Base recipe's Ingredient: the option shows the "Base recipe" badge. A plain Ingredient of the same name is a second option. */
+  baseRecipe?: { id: number; name: string; archived: boolean } | null
 }
 export interface UnitChoices {
   baseUnit: string
@@ -65,13 +68,41 @@ export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
   }))
 }
 
-/** Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once, no badge). */
+/** Name key for the same-name pairs: case and accents aside, spacing collapsed. */
+const nameKey = (name: string) =>
+  name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLowerCase()
+
+/**
+ * The order the caller gave is kept. BR-D: on an exact name tie (case and accents aside) a Base recipe's Ingredient takes the earlier of the two
+ * places, the plain one the later; the Ingredients between them stay where they were.
+ * Value = id, or the temporary key of a not-yet-saved Ingredient; meta = the Base Unit (once); a Base recipe's Ingredient carries the "Base recipe" badge.
+ */
 export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption<number | string>[] {
-  return ingredients.map((i) => ({
+  const order = [...ingredients]
+  const byName = new Map<string, number[]>()
+  ingredients.forEach((i, index) => {
+    const k = nameKey(i.name)
+    byName.set(k, [...(byName.get(k) ?? []), index])
+  })
+  for (const slots of byName.values()) {
+    const baseAt = slots.find((index) => ingredients[index]!.baseRecipe)
+    if (slots.length < 2 || baseAt === undefined) continue
+    const ordered = [baseAt, ...slots.filter((index) => index !== baseAt)]
+    slots.forEach((slot, n) => {
+      order[slot] = ingredients[ordered[n]!]!
+    })
+  }
+  return order.map((i) => ({
     value: (i.id ?? i.key)!,
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
-    leading: <Thumb imageUrl={i.imageUrl} size={40} />,
+    leading: <Thumb name={i.name} imageUrl={i.imageUrl} size={40} />,
+    preferred: i.baseRecipe ? true : undefined,
+    badge: i.baseRecipe ? (
+      <Chip kind="tag" icon="cook">
+        {selectStrings.baseRecipeBadge}
+      </Chip>
+    ) : undefined,
   }))
 }
 

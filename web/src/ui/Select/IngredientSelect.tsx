@@ -26,6 +26,7 @@ export function IngredientSelect({ ingredients, value, onChange, onCreate, creat
       onCreate={onCreate}
       createDisabledReason={createDisabledReason}
       createLabel={selectStrings.createIngredient}
+      exactFirst
     />
   )
 }

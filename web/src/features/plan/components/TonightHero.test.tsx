@@ -22,7 +22,8 @@ describe('TonightHero before the slot time', () => {
     const { container } = setup(dinner())
     expect(container.querySelector('[data-variant="hero"]')).not.toBeNull()
     expect(container.querySelector('[data-span="full"]')).not.toBeNull()
-    expect(screen.getByText('DINNER · 19:30')).toBeInTheDocument()
+    // DS-TODAY (changed on purpose): one eyebrow line "Today · Dinner · start 18:45" (spans), not "DINNER · 19:30" + a separate paragraph.
+    expect(container.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 18:45')
     expect(screen.getByText('start 18:45')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
   })
@@ -56,21 +57,24 @@ describe('TonightHero before the slot time', () => {
 })
 
 describe('TonightHero after the slot time', () => {
-  it('asks "<Recipe> cooked?" with Yes, Cooked (primary) and Adjust (secondary)', async () => {
+  // DS-TODAY round 2 (changed on purpose): the title stays the Recipe; "<Recipe> cooked?" is the ask line; Cooked (primary), Adjust, ⋮.
+  it('keeps the Recipe as the title, asks "<Recipe> cooked?" and offers Cooked (primary) and Adjust (secondary)', async () => {
     const h = setup(dinner(), after)
-    expect(screen.getByRole('heading', { name: 'Chicken curry cooked?' })).toBeInTheDocument()
-    const yes = screen.getByRole('button', { name: 'Yes, Cooked' })
+    expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Chicken curry cooked?')
+    const yes = screen.getByRole('button', { name: 'Cooked' })
     expect(yes).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(yes)
     expect(h.onYesCooked).toHaveBeenCalledWith(key)
     await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
     expect(h.onAdjust).toHaveBeenCalledWith(key)
-    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook ·/ })).not.toBeInTheDocument() // no Cook Mode button; "Cooked" is the primary
+    expect(screen.queryByRole('button', { name: /^More for / })).not.toBeInTheDocument() // round 3: the slot's ⋮ is the only menu
   })
 
-  it('disables the buttons while a Yes, Cooked is being saved', () => {
+  it('disables the buttons while Cooked is being saved', () => {
     setup(dinner(), after, true)
-    expect(screen.getByRole('button', { name: 'Yes, Cooked' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cooked' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Adjust' })).toBeDisabled()
   })
 })
@@ -87,9 +91,10 @@ describe('TonightHero day and action (N3)', () => {
     return h
   }
 
-  it('tomorrow: a day label overline "TOMORROW · LUNCH" instead of the slot time', () => {
+  // DS-TODAY (changed on purpose): the eyebrow is mixed case (CSS upper-cases it) and keeps the day word.
+  it('tomorrow: a day label eyebrow "Tomorrow · Lunch" instead of the slot time', () => {
     render2(lunch(), { day: 'tomorrow', action: 'none' })
-    expect(screen.getByText('TOMORROW · LUNCH')).toBeInTheDocument()
+    expect(document.querySelector('.plan-hero .tile__overline')!.textContent).toMatch(/^Tomorrow · Lunch/)
     expect(screen.queryByText(/13:00/)).not.toBeInTheDocument()
   })
 

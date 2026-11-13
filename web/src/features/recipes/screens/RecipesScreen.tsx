@@ -6,14 +6,16 @@ import { CourseFilter } from '../components/CourseFilter'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeSortSelect } from '../components/RecipeSortSelect'
 import { RecipeTile } from '../components/RecipeTile'
+import { RecipeKindControl } from '../components/RecipeKindControl'
 import { TagChips } from '../components/TagChips'
 import { useRecipeSort } from '../hooks/useRecipeSort'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { useRecipes } from '../hooks/useRecipes'
 import { lastCookedLabel, localToday } from '../lib/lastCooked'
+import { kindFromParams, withKind } from '../lib/baseRecipe'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
-import type { RecipeFilter } from '../types'
+import type { RecipeFilter, RecipeKind } from '../types'
 import '../recipes.css'
 
 /**
@@ -41,12 +43,17 @@ export function RecipesScreen(): ReactNode {
   const [course, setCourse] = useState<number | null>(null)
   const { choices } = useCourses()
   const { sort, setSort } = useRecipeSort()
+  // BR-D: Recipes · Base recipes, kept in the URL (?kind=base). Base recipes have no sort and no Course filter.
+  const kind = kindFromParams(searchParams)
+  const setKind = (next: Exclude<RecipeKind, 'all'>) => setSearchParams((prev) => withKind(prev, next), { replace: true })
+  const bases = kind === 'base'
   const filter: RecipeFilter = {
     q: q.trim() || undefined,
     tag: tag || undefined,
-    course: course ?? undefined,
+    course: bases ? undefined : (course ?? undefined),
     archived: showArchived ? 'all' : 'no',
-    sort,
+    sort: bases ? undefined : sort,
+    kind,
   }
   const list = useRecipes(filter)
   const today = localToday()
@@ -56,7 +63,7 @@ export function RecipesScreen(): ReactNode {
   else if (list.isLoading) body = <Skeleton variant="tile" count={4} />
   else if (list.recipes.length > 0)
     body = (
-      <BentoGrid columns={2} label={recipeStrings.title}>
+      <BentoGrid min="card" label={recipeStrings.title}>
         {list.recipes.map((r) => (
           <RecipeTile
             key={r.id}
@@ -65,7 +72,7 @@ export function RecipesScreen(): ReactNode {
             colourOf={colourOf}
             courseNames={courseNamesOf(r.courseIds, choices)}
             wholeMeal={r.wholeMeal && showsWholeMeal(r.courseIds, choices)}
-            lastCooked={lastCookedLabel(r.lastCookedOn, today)}
+            lastCooked={r.baseRecipe ? undefined : lastCookedLabel(r.lastCookedOn, today)}
           />
         ))}
       </BentoGrid>
@@ -74,7 +81,7 @@ export function RecipesScreen(): ReactNode {
     body = (
       <EmptyState
         icon="recipes"
-        title={recipeStrings.empty}
+        title={bases ? recipeStrings.baseRecipe.emptyBases : recipeStrings.empty}
         action={
           <Button icon="add" onClick={() => navigate('/recipes/new')}>
             {recipeStrings.newRecipe}
@@ -103,11 +110,14 @@ export function RecipesScreen(): ReactNode {
       search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
       filters={
         <>
+          <RecipeKindControl value={kind} onChange={setKind} />
           <TagChips tags={known} selected={tag} onSelect={setTag} colourOf={colourOf} />
-          <CourseFilter courses={choices} selected={course} onSelect={setCourse} />
-          <div className="recipes-sort">
-            <RecipeSortSelect value={sort} onChange={setSort} />
-          </div>
+          {bases ? null : <CourseFilter courses={choices} selected={course} onSelect={setCourse} />}
+          {bases ? null : (
+            <div className="recipes-sort">
+              <RecipeSortSelect value={sort} onChange={setSort} />
+            </div>
+          )}
         </>
       }
     >

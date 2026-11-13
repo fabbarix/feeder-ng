@@ -36,31 +36,37 @@
 }
 
 .tile[data-variant='status'][data-status='leftover'] {
+  border: 1px solid var(--status-leftover-fg);
   background: var(--status-leftover-bg);
   color: var(--status-leftover-fg);
 }
 
 .tile[data-variant='status'][data-status='spoil'] {
+  border: 1px solid var(--status-spoil-fg);
   background: var(--status-spoil-bg);
   color: var(--status-spoil-fg);
 }
 
 .tile[data-variant='status'][data-status='danger'] {
+  border: 1px solid var(--status-danger-fg);
   background: var(--status-danger-bg);
   color: var(--status-danger-fg);
 }
 
 .tile[data-variant='status'][data-status='success'] {
+  border: 1px solid var(--status-success-fg);
   background: var(--status-success-bg);
   color: var(--status-success-fg);
 }
 
 .tile[data-variant='status'][data-status='pinned'] {
+  border: 1px solid var(--status-pinned-fg);
   background: var(--status-pinned-bg);
   color: var(--status-pinned-fg);
 }
 
 .tile[data-variant="status"][data-status="info"] {
+  border: 1px solid var(--color-info-fg);
   background: var(--color-info-bg);
   color: var(--color-info-fg);
 }

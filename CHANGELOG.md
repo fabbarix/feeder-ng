@@ -4,6 +4,26 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.5.1] - 2026-11-13
+
+A redesign of Today, Plan and Shop on one set of design rules, so screens line up, read clearly and use colour with meaning on phones, tablets and desktops alike.
+
+### Changed
+
+- **Shop.** The Shopping List is one row per Line: tick, Picture, name with one short line under it, and the quantity in a column. On a tablet the rows sit in two columns. Tap a row for its sheet (Mark it, Not needed, Delete); the ⋮ buttons are gone. "Shop for" and "Shop" are compact pickers in one row. A summary at the top shows how much is left, with a progress bar, and how many Lines have no Price yet. Lines from past Planned Meals not marked Cooked are named once, in a notice above the list.
+- **Today.** To confirm has one row per Meal Slot with Cooked (or All Cooked) and Adjust; Not cooked is in the menu. The top tile keeps the Main Recipe after its time and asks "Dinner cooked?". A summary strip shows the Zero-waste streak, Leftovers to use and Lines to get, sharing one row. "Throw out or keep?" shows three Stock Lots, then Show more.
+- **Plan.** Days are equal tiles, two per row on a tablet, with today marked by a ring. Each Meal Slot has a header with its full name and its Cook and ⋮ buttons; each Course is one row with the Recipe name in full, one line of chips and Swap and Pin. A row shows at most two chips, then "+N" naming the rest.
+- **Design rules.** One set of type sizes, colour only where it means something (green for Cooked, teal for Leftovers, blue to confirm, orange and red for going off), Pictures without a photo show their first letter, chips stay on one line, and pages end above the bottom bar. Status tiles have a thin border in their colour so they stand out with every accent.
+
+### Fixed
+
+- **Names broken mid-word** on tablets, such as "Cauliflo-wer", and Plan rows that pushed the page sideways on a phone.
+- **Buttons and chips cut short** or overlapping text on narrow screens.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.5.1 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.5] - 2026-11-12
 
 A Meal Slot on one date (Not served, Guests, its own time), Leftovers answered by hand and kept in the freezer, Bought Planned Meals that stay, Used from at Mark as Cooked, Stock Lots on the Pantry, and a cleaner Settings.
@@ -231,7 +251,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...HEAD
+[1.0.0-beta.5.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...v1.0.0-beta.5.1
 [1.0.0-beta.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...v1.0.0-beta.5
 [1.0.0-beta.4.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...v1.0.0-beta.4.2
 [1.0.0-beta.4.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4...v1.0.0-beta.4.1

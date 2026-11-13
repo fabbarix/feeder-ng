@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '../BottomSheet'
 import { Icon } from '../Icon'
-import { IconButton } from '../IconButton'
+import { IconButton, type IconButtonProps } from '../IconButton'
 import { Switch } from '../fields/Switch'
 import type { IconName } from '../icons'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -35,6 +35,12 @@ export interface MenuProps {
   /** Title of the sheet below 768 px. Default: `label`. */
   title?: string
   items: MenuEntry[]
+  /** The trigger's size, as an IconButton's: `compact` (32 px visual) for a slot header inside a day tile; a row's ⋮ matches its icon buttons; the hero's matches its actions. Default `md`. Ignored with a text `trigger`. */
+  size?: IconButtonProps['size']
+  /** BR-D: a text trigger (the Needed at chip) instead of the icon button; named by `label`. */
+  trigger?: ReactNode
+  /** BR-D: the item that takes the focus on open (default: the first). */
+  initialFocusId?: string
 }
 
 const GAP = 8
@@ -47,15 +53,34 @@ interface Placed {
 }
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
-export function Menu({ label, icon = 'more', title, items }: MenuProps) {
+export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId }: MenuProps) {
   const wide = useMediaQuery('(min-width: 768px)')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const close = useCallback(() => setOpen(false), [])
   return (
     <>
-      <IconButton ref={triggerRef} icon={icon} label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
-      {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} /> : null}
+      {trigger !== undefined ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setOpen(true)
+            }
+          }}
+        >
+          {trigger}
+        </button>
+      ) : (
+        <IconButton ref={triggerRef} icon={icon} label={label} size={size} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
+      )}
+      {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} initialFocusId={initialFocusId} /> : null}
       {open && !wide ? <Sheet title={title ?? label} items={items} onClose={close} /> : null}
     </>
   )
@@ -66,11 +91,13 @@ function Popover({
   items,
   triggerRef,
   onClose,
+  initialFocusId,
 }: {
   label: string
   items: MenuEntry[]
   triggerRef: React.RefObject<HTMLButtonElement | null>
   onClose: () => void
+  initialFocusId?: string
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [placed, setPlaced] = useState<Placed | null>(null)
@@ -79,6 +106,7 @@ function Popover({
     onClose,
     menuRef,
     triggerRef,
+    initialFocusId,
   })
 
   const place = useCallback(() => {
@@ -153,6 +181,7 @@ function PopoverItem({ item, onSelect }: { item: MenuItem; onSelect: (item: Menu
     className: 'menu__item',
     'data-tone': item.tone,
     'aria-disabled': item.disabled ? (true as const) : undefined,
+    'data-item-id': item.id,
     tabIndex: -1,
   }
   const body: ReactNode = (

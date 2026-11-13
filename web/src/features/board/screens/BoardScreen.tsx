@@ -4,7 +4,7 @@ import { useTimers } from '../../cook/hooks/useTimers'
 import { useLeftovers, usePlan } from '../../plan'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import { useHouseholdSettings } from '../../settings/hooks/useHouseholdSettings'
-import { BentoGrid, EmptyState, useMediaQuery } from '../../../ui'
+import { EmptyState, useMediaQuery } from '../../../ui'
 import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile, TomorrowTile, StreakTile, TonightTile } from '../components/BoardTiles'
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
@@ -69,7 +69,8 @@ export function BoardScreen(): ReactNode {
 
   return (
     <div className="board-screen" data-board="true">
-      <BentoGrid columns={wall ? 4 : 2}>
+      {/* The wall grid is the board's own 4 x 3 layout (ADR 0016), not a BentoGrid: a fixed display at a known size. */}
+      <div className="board-grid">
         <Cell id="tonight" layout={layout}>
           <TonightTile slot={tonight} notServed={tonightNotServed(slots, data.today)} onCook={startPath ? () => navigate(startPath) : undefined} />
         </Cell>
@@ -94,7 +95,7 @@ export function BoardScreen(): ReactNode {
         <Cell id="streak" layout={layout}>
           <StreakTile days={data.streak.days} />
         </Cell>
-      </BentoGrid>
+      </div>
     </div>
   )
 }

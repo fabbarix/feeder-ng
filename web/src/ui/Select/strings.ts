@@ -8,4 +8,6 @@ export const selectStrings = {
   createIngredient: (query: string) => `Create Ingredient "${query}"`,
   useUnit: (query: string) => `Use unit "${query}"`,
   baseUnitMeta: (unit: string) => `Base Unit: ${unit}`,
+  /** BR-D: the badge of a Base recipe's Ingredient option. */
+  baseRecipeBadge: 'Base recipe',
 }

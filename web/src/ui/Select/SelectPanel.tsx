@@ -53,25 +53,37 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         aria-selected={isSelected}
         aria-disabled={option.disabled || undefined}
         aria-labelledby={`${p.optionId(i)}-label`}
-        aria-describedby={option.meta ? `${p.optionId(i)}-meta` : undefined}
+        aria-describedby={
+          // Round 4: described by its badge and then its meta, in that order (only the ones it shows).
+          [option.badge ? `${p.optionId(i)}-badge` : '', option.meta ? `${p.optionId(i)}-meta` : ''].filter(Boolean).join(' ') || undefined
+        }
         data-active={i === p.active || undefined}
         className="select__option"
         onClick={() => p.onPick(i)}
         onMouseEnter={() => p.onHover(i)}
       >
-        {option.leading ? <span className="select__leading" aria-hidden="true">
-            {option.leading}
-          </span> : null}
         <span className="select__text">
           <span id={`${p.optionId(i)}-label`} className="select__label">
             {option.label}
           </span>
+          {option.badge ? (
+            <span id={`${p.optionId(i)}-badge`} className="select__badge">
+              {option.badge}
+            </span>
+          ) : null}
           {option.meta ? (
             <span id={`${p.optionId(i)}-meta`} className="select__meta">
               {option.meta}
             </span>
           ) : null}
         </span>
+        {/* Decorative (aria-hidden), after the text in the DOM so the option's text starts with its name (a Thumb's monogram letter
+            would otherwise lead it); `.select__option > .select__leading` draws it first. */}
+        {option.leading ? (
+          <span className="select__leading" aria-hidden="true">
+            {option.leading}
+          </span>
+        ) : null}
         {isSelected ? <Icon name="tick" size={20} weight="fill" /> : null}
       </div>
     )

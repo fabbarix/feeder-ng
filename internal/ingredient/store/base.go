@@ -46,6 +46,12 @@ type BaseRecipes interface {
 	MergeCycle(ctx context.Context, q Querier, sourceID, targetID int64) ([]string, error)
 }
 
+// mergeObserver is implemented by a BaseRecipes port that also refreshes what a merge changed (the recipe store
+// rewrites the cached total time of the Recipes calling the target's Base recipe). Optional.
+type mergeObserver interface {
+	AfterMerge(ctx context.Context, tx *sql.Tx, targetID int64) error
+}
+
 // BaseRecipeRefName is the name of the ReferenceMover that counts the Recipes whose base_ingredient_id is an
 // Ingredient (recipe/store). A Base recipe's own Ingredient is referenced by it, which does not stop its Yield from
 // changing family (BaseUnitTx), only Stock, Products and lines do.
@@ -256,6 +262,11 @@ func (s *Store) mergeTx(ctx context.Context, tx *sql.Tx, sourceID, targetID int6
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM ingredients WHERE id = ?`, sourceID); err != nil {
 		return "", err
+	}
+	if o, ok := s.baseRecipes.(mergeObserver); ok {
+		if err := o.AfterMerge(ctx, tx, targetID); err != nil {
+			return "", err
+		}
 	}
 	return dropped, nil
 }

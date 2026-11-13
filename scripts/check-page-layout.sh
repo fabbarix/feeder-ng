@@ -7,7 +7,7 @@
 # A guard that did not run FAILS in every mode (quick too): a refused run (a busy port, or a run already holding this
 # worktree's lock), a server or seed that did not come up, a timeout, a crash, or a driver exit 2. Only two environment gaps
 # pass in quick: no Chrome (SKIP) and no web build (WARN). Both FAIL in full (PAGE_LAYOUT=full, release QA).
-#   scripts/check-page-layout.sh                 quick profile (390, 1440, 1920)
+#   scripts/check-page-layout.sh                 quick profile (390, 834, 1024, 1440, 1920)
 #   PAGE_LAYOUT=full scripts/check-page-layout.sh    six viewports (release QA)
 #   PAGE_LAYOUT=skip ...                          do nothing
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)

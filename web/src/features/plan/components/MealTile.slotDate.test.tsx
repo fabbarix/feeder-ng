@@ -9,7 +9,7 @@ import { MealTile } from './MealTile'
 
 const dateActions = (over: Partial<SlotDateActions> = {}): SlotDateActions => ({ offline: false, onWhosEating: vi.fn(), onNotServed: vi.fn(), onTime: vi.fn(), onPlanAgain: vi.fn(), ...over })
 
-function setup(s: PlanSlot, over: { compact?: boolean; dateActions?: SlotDateActions } = {}) {
+function setup(s: PlanSlot, over: { dateActions?: SlotDateActions } = {}) {
   const handlers = { onOpen: vi.fn(), onSwap: vi.fn(), onChoose: vi.fn(), onCook: vi.fn() }
   render(
     <MemoryRouter>
@@ -33,11 +33,6 @@ describe('MealTile: a Not served slot', () => {
     expect(screen.queryByText('Not planned')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Plan Dinner again' }))
     expect(date.onPlanAgain).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 4 })
-  })
-
-  it('the compact week shows it too', () => {
-    setup(notServed, { compact: true, dateActions: dateActions() })
-    expect(screen.getByText('Dinner · Not served')).toBeInTheDocument()
   })
 })
 
@@ -67,11 +62,6 @@ describe('MealTile: the slot menu', () => {
     setup(courseSlot([a, b], { date: '2026-11-12' }), { dateActions: dateActions() })
     await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toContain("Who's eating")
-  })
-
-  it('the 7-column week keeps its single icon action and has no menu', () => {
-    setup(slot({ date: '2026-11-12' }), { compact: true, dateActions: dateActions() })
-    expect(screen.queryByRole('button', { name: 'Dinner actions' })).not.toBeInTheDocument()
   })
 
   it('without the per-date handlers the tile is as before', () => {

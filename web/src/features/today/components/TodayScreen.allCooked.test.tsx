@@ -75,7 +75,8 @@ describe.each([
     h.toConfirm = [entry(1, 'Main', 'Roast chicken'), entry(2, 'Side', 'Green beans')]
     const api = routes()
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Mark all Cooked' }))
+    // DS-TODAY (changed on purpose): the To confirm row's "Adjust" opens the Mark all Cooked sheet (the "Mark all Cooked" button is gone).
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
     return api
   }],
 ])('Today: Mark all Cooked from %s', (_name, open) => {

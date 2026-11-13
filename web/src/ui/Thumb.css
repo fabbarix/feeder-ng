@@ -1,11 +1,11 @@
-/* Thumb: an Ingredient's or a Product's Picture, or an empty slot of the same box. Tokens only. */
+/* Thumb: an Ingredient's or a Product's Picture, or its monogram in the same box (docs/design/system.md 7). Tokens only. */
 .thumb {
   display: block;
   overflow: hidden;
   flex: none;
   aspect-ratio: 1;
   border-radius: var(--radius-thumb);
-  background: var(--color-soft);
+  background: var(--color-surface-2);
 }
 
 .thumb[data-size='40'] {
@@ -32,4 +32,29 @@
   inline-size: 100%;
   block-size: 100%;
   object-fit: cover;
+}
+
+/* The monogram: centred, weight 800, muted text on the neutral surface-2 (never the accent: a list of them must not tint). */
+.thumb[data-monogram='true'] {
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-weight: 800;
+  font-size: var(--text-title-3-size);
+  line-height: 1;
+}
+
+.thumb[data-size='40'][data-monogram='true'],
+.thumb[data-size='48'][data-monogram='true'] {
+  font-size: var(--text-title-3-size);
+}
+
+.thumb[data-size='72'][data-monogram='true'],
+.thumb[data-size='hero'][data-monogram='true'] {
+  font-size: var(--text-title-1-size);
+}
+
+.thumb__monogram {
+  line-height: 1;
 }

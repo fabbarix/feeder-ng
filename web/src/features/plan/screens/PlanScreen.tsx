@@ -15,27 +15,24 @@ import { SlotDateSheets } from '../components/SlotDateSheets'
 import { SwapSheet } from '../components/SwapSheet'
 import { useCouldntFix } from '../hooks/useCouldntFix'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
-import { useContainerColumns } from '../hooks/useContainerColumns'
+import { usePlanDays } from '../hooks/usePlanDays'
 import { usePlanScreen } from '../hooks/usePlanScreen'
 import { courseCells, unplannedOf } from '../lib/couldntGroups'
-import { dateRange, groupByDay } from '../lib/days'
 import { cookPath } from '../lib/cook'
 import { planStrings } from '../strings'
 import type { SlotDayKey } from '../types'
 import '../plan.css'
 
 /**
- * Route /plan: a week grid of day tiles (2, 4 or 7 columns, today spanning two). A tap on a Planned Meal opens its
- * sheet; Swap, Choose a Recipe and the Mark as Cooked flow open their sheets, one at a time. Regenerate asks first.
- * Composition only: the logic lives in hooks/ and lib/.
+ * Route /plan: a week grid of equal day tiles (BentoGrid min="day"; today is marked, not wider). A tap on a Course row
+ * opens its Planned Meal sheet; Swap, Pin, Choose a Recipe and the Mark as Cooked flow open their sheets, one at a time.
+ * Regenerate asks first. Composition only: the logic lives in hooks/ and lib/.
  */
 export function PlanScreen(): ReactNode {
   const s = usePlanScreen()
   const navigate = useNavigate()
-  const { ref: gridRef, columns } = useContainerColumns()
   const { plan, actions, flow } = s
-  const days = groupByDay(plan.slots, plan.today, columns)
-  const range = days.length > 0 ? dateRange(days[0]!.date, days[days.length - 1]!.date) : undefined
+  const { days, range } = usePlanDays(plan.slots, plan.today)
   const cookMeal = (key: SlotDayKey) => navigate(cookPath(key))
   const unplanned = useMemo(() => unplannedOf(courseCells(plan.slots)), [plan.slots])
   const isAdmin = useMe().data?.isAdmin !== false
@@ -48,15 +45,16 @@ export function PlanScreen(): ReactNode {
   else if (days.length === 0) body = <EmptyState title={planStrings.empty} />
   else
     body = (
-      <PlanGrid columns={columns}>
+      <PlanGrid>
         {days.map((day) => (
           <DayTile
             key={day.date}
             day={day}
-            compact={columns === 7}
             today={plan.today}
             onOpen={(k) => s.openPlanned(k)}
             onSwap={(k) => s.openSwap(k)}
+            onPin={(k) => void actions.pin(k)}
+            onUnpin={(k) => void actions.unpin(k)}
             onChoose={(k) => s.openChoose(k)}
             onCook={cookMeal}
             onMarkAllCooked={(k) => s.openAllCooked(k)}
@@ -89,14 +87,12 @@ export function PlanScreen(): ReactNode {
       ) : null}
       <CookFlowSheets flow={flow} />
       {plan.isLoading || plan.failed || notice.groups.length === 0 ? null : (
-        <BentoGrid columns={columns === 7 ? 4 : columns} label={planStrings.couldntPlanTitle}>
-          <CouldntPlanNotice groups={notice.groups} onFix={fix} span={columns === 7 ? 'full' : 2} />
+        <BentoGrid min="wide" label={planStrings.couldntPlanTitle}>
+          <CouldntPlanNotice groups={notice.groups} onFix={fix} span="full" />
         </BentoGrid>
       )}
       <PlanLeftovers flow={s.leftovers} />
-      <div ref={gridRef} className="plan__grid-box">
-        {body}
-      </div>
+      {body}
       {s.plannedCourseId !== undefined ? (
         <PlannedMealSheet
           open={s.plannedOpen}

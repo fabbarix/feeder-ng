@@ -9,6 +9,9 @@ export const stockStrings = {
   spoiledHeading: 'Throw out or keep?',
   throwOut: 'Throw out',
   keep: 'Keep',
+  /** DS-TODAY: the cap of a long list. */
+  showMore: (n: number) => `Show ${n} more`,
+  showLess: 'Show less',
   throwOutLabel: (name: string) => `Throw out ${name}`,
   throwOutLotLabel: (name: string) => `Throw out ${name} lot`,
   keepLabel: (name: string) => `Keep ${name}`,
