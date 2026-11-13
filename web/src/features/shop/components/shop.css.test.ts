@@ -210,6 +210,10 @@ describe('shop.css: round 2', () => {
 
   it('the metric tile does not collapse its content to the start: the progress bar spans the full width of its tile', () => {
     const tile = declarations(css, '.shop-metrics__tile')
+    // round 3: `inline-size: 100%` on the bar passes while an auto grid track sizes to the content (126 px bar in a 387 px tile),
+    // so the TRACK is what is pinned: one column that stretches to the tile and may shrink.
+    expect(tile['display']).toBe('grid')
+    expect(tile['grid-template-columns']).toMatch(/^minmax\(0, ?1fr\)$/)
     expect(tile['justify-items'] ?? 'stretch').toBe('stretch')
     const bar = declarations(css, '.shop-metrics__bar')
     expect(bar['inline-size']).toBe('100%')
@@ -227,7 +231,16 @@ describe('shop.css: round 2', () => {
 
   it('the Scan tile spreads its caption and its button over the tile, and the button fills the width (no short pill in a big tile)', () => {
     expect(declarations(css, '.shop-metrics__scan-tile')['align-content']).toBe('space-between')
+    expect(declarations(css, '.shop-metrics__scan-tile')['grid-template-columns']).toMatch(/^minmax\(0, ?1fr\)$/)
     expect(declarations(css, '.shop-metrics__scan')['inline-size']).toBe('100%')
+  })
+
+  it('round 3: the Scan button fills its tile at EVERY width: no media query narrows it, and it is a block-level grid item', () => {
+    expect(css.match(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g)?.filter((m) => m.includes('.shop-metrics__scan')) ?? []).toEqual([])
+    const d = declarations(css, '.shop-metrics__scan')
+    expect(d['inline-size']).toBe('100%')
+    expect(d['justify-self'] ?? 'stretch').toBe('stretch')
+    expect(d['max-inline-size']).toBeUndefined()
   })
 
   it('section titles have a count pill: a neutral container with a chip-sized number', () => {

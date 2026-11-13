@@ -31,6 +31,16 @@ describe('PriceEditor', () => {
     expect(screen.getByRole('combobox', { name: strings.shopLabel })).toBeInTheDocument()
   })
 
+  it('round 3: its Shop field is a normal field (visible label, no chip appearance): the chip is opt-in for the Shop screen only', () => {
+    renderIt()
+    const trigger = screen.getByRole('combobox', { name: strings.shopLabel })
+    expect(trigger).not.toHaveAttribute('data-appearance')
+    const label = document.querySelector('.ui-field__label')!
+    expect(label).toHaveTextContent(strings.shopLabel)
+    expect(label).not.toHaveClass('visually-hidden')
+    expect(document.querySelector('[data-appearance="chip"]')).toBeNull()
+  })
+
   it('prefills the Price from the latest one at the chosen Shop', async () => {
     renderIt()
     await pickOption(strings.shopLabel, 'Corner Market')
