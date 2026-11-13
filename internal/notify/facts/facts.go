@@ -8,6 +8,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
+	"maps"
 	"time"
 
 	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
@@ -82,7 +84,8 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	if err != nil {
 		return notify.Facts{}, err
 	}
-	have := stockOnHand(lots) // what Cook Mode sees: a Base recipe's jar covers its block for the meal's Batches (BR-G)
+	have := stockOnHand(lots)                // what Cook Mode sees: a Base recipe's jar covers its block for the meal's Batches (BR-G)
+	pools := map[slotKey]map[int64]float64{} // the Stock each slot's Courses share, in Course order, per date and Meal Slot
 	for _, m := range meals {
 		// The slot's effective time on the date: the date's own time when it has one (ADR 0014).
 		// A Meal Slot that is gone is skipped; any other lookup error is returned (a missing reminder is not silent).
@@ -109,10 +112,6 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			State: string(m.State), FromLeftover: !m.Fresh(),
 		}
 		// The store lists a slot's meals in Course position order (plan store Meals), which Compute relies on.
-		composed, err := s.composedSteps(ctx, m.RecipeID, m.Batches, have)
-		if err != nil {
-			return notify.Facts{}, err
-		}
 		if mf.FromLeftover {
 			reheat := 0
 			if rec.ReheatMinutes != nil {
@@ -120,14 +119,24 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			}
 			mf.ReheatSeconds = cook.DefaultReheatSeconds(m.Portions, reheat)
 		} else {
+			key := slotKey{date: m.Key.Date, slot: m.Key.MealSlotID}
+			pool, ok := pools[key]
+			if !ok {
+				pool = maps.Clone(have)
+				pools[key] = pool
+			}
+			composed, err := s.composeMeal(ctx, m, rec, pool)
+			if err != nil {
+				return notify.Facts{}, err
+			}
 			mf.Steps = scheduleSteps(composed)
-		}
-		// The ID of an Advance Step is its index in the composed Steps; a covered one is not asked for.
-		for i, st := range composed {
-			if st.Kind == schedule.Advance && !st.Covered {
-				mf.AdvanceSteps = append(mf.AdvanceSteps, notify.AdvanceStepFact{
-					ID: int64(i), Description: st.Text, Lead: time.Duration(st.LeadTimeMinutes) * time.Minute,
-				})
+			// The ID of an Advance Step is its index in the composed Steps; a covered one is not asked for.
+			for i, st := range composed {
+				if st.Kind == schedule.Advance && !st.Covered {
+					mf.AdvanceSteps = append(mf.AdvanceSteps, notify.AdvanceStepFact{
+						ID: int64(i), Description: st.Text, Lead: time.Duration(st.LeadTimeMinutes) * time.Minute,
+					})
+				}
 			}
 		}
 		out.Meals = append(out.Meals, mf)
@@ -213,26 +222,48 @@ func (s *Source) name(ctx context.Context, id int64, cache map[int64]string) (st
 	return ing.Name, nil
 }
 
-// composedSteps is a Recipe's Steps as Cook Mode walks them for a Planned Meal of batches (BR-G): its Base recipes' Steps
-// composed in, and a block Stock covers as zero-length Active Steps (the indexes stay). A Recipe whose tree cannot be
-// built (a cycle written before the check), or a meal with no Batches, is composed as if nothing were in Stock.
-func (s *Source) composedSteps(ctx context.Context, recipeID int64, batches float64, have map[int64]float64) ([]baserecipe.ComposedStep, error) {
-	var made func(baserecipe.Path) float64
-	if batches > 0 {
-		tree, err := s.recipes.NeedTree(ctx, recipeID)
-		switch {
-		case errors.Is(err, baserecipe.ErrCycle):
-		case err != nil:
-			return nil, err
-		default:
-			made = baserecipe.MadeFractions(tree, batches, func(id int64) float64 { return have[id] })
-		}
+// slotKey is one Meal Slot occurrence: the Courses of a slot share the Stock within it, never across days.
+type slotKey struct {
+	date string
+	slot int64
+}
+
+// composeMeal is the Recipe's Steps for a fresh Planned Meal, as Cook Mode walks them (BR-G): its Base recipes composed in, and
+// the Stock the Courses of its slot before it leave (pool, shared by the slot in Course order). A planned meal takes its
+// blocks from the pool; another state only reads it. A cycle written before the check gives the Recipe's own Steps and a
+// warning, so one Recipe never fails Facts.
+func (s *Source) composeMeal(ctx context.Context, m plan.Meal, rec recipe.Recipe, pool map[int64]float64) ([]baserecipe.ComposedStep, error) {
+	have := func(id int64) float64 { return pool[id] }
+	tree, err := s.recipes.NeedTree(ctx, m.RecipeID)
+	if errors.Is(err, baserecipe.ErrCycle) {
+		return ownSteps(m.RecipeID, rec, err), nil
 	}
-	comp, err := s.recipes.Cook(ctx, recipeID, made)
+	if err != nil {
+		return nil, err
+	}
+	made := baserecipe.MadeFractions(tree, m.Batches, have)
+	if m.State == plan.StatePlanned {
+		baserecipe.Resolve(tree, m.Batches, have, func(id int64, q float64) { pool[id] -= q })
+	}
+	comp, err := s.recipes.Cook(ctx, m.RecipeID, made)
+	if errors.Is(err, baserecipe.ErrCycle) {
+		return ownSteps(m.RecipeID, rec, err), nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	return comp.Steps, nil
+}
+
+// ownSteps is a Recipe's own Steps in the composed form (no Base recipe Steps), with a warning for the cycle that cost them.
+func ownSteps(recipeID int64, rec recipe.Recipe, cause error) []baserecipe.ComposedStep {
+	slog.Default().Warn("recipe with a Base recipe cycle: its own Steps only", "recipe", recipeID, "err", cause)
+	out := make([]baserecipe.ComposedStep, 0, len(rec.Steps))
+	for _, st := range rec.Steps {
+		out = append(out, baserecipe.ComposedStep{Step: baserecipe.Step{Text: st.Text, Kind: st.Kind,
+			DurationMinutes: st.DurationMinutes, LeadTimeMinutes: st.LeadTimeMinutes, After: st.After}})
+	}
+	return out
 }
 
 // stockOnHand is the quantity of Stock held per Ingredient.

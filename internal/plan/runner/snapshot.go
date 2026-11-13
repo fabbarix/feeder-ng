@@ -402,6 +402,27 @@ func (b *needsBook) load(ctx context.Context) error {
 	return nil
 }
 
+// requiredOnly is the need tree without its Optional nodes, at any depth: an Optional line is never deducted, so it must not
+// take Stock from the jar either (a later Course of the slot gets it). A Base recipe whose lines are all Optional is left out
+// too: it has nothing to make that is deducted.
+func requiredOnly(tree []baserecipe.Need) []baserecipe.Need {
+	var out []baserecipe.Need
+	for _, n := range tree {
+		if n.Optional {
+			continue
+		}
+		if len(n.Made) > 0 {
+			made := requiredOnly(n.Made)
+			if len(made) == 0 {
+				continue
+			}
+			n.Made = made
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
 // needsOf is what Stock is asked to deduct for batches of the Recipe. Without a need tree it is needsFor. With one, the tree
 // is resolved Stock first (baserecipe.Resolve) and its Optional lines are left out. picks are the Used from picks of this
 // meal: on a Base recipe Ingredient they are the Stock the meal may take, instead of the Stock on hand; picks on other
@@ -411,6 +432,7 @@ func (b *needsBook) needsOf(ctx context.Context, rc planner.Recipe, batches floa
 	if !ok {
 		return needsFor(rc, batches), nil
 	}
+	tree = requiredOnly(tree)
 	if err := b.load(ctx); err != nil {
 		return nil, err
 	}

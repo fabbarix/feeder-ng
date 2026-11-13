@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/clock"
@@ -12,6 +13,7 @@ import (
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
+	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
@@ -79,6 +81,9 @@ func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float6
 	if errors.Is(err, baserecipe.ErrCycle) {
 		return r.compose(ctx, recipeID, nil)
 	}
+	if errors.Is(err, baserecipe.ErrNotFound) {
+		return cook.RecipeSteps{}, ErrNotFound
+	}
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
@@ -88,6 +93,38 @@ func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float6
 	}
 	made := baserecipe.MadeFractions(tree, batches, func(id int64) float64 { return have[id] })
 	return r.compose(ctx, recipeID, made)
+}
+
+// SlotSteps implements SlotRecipes: the Steps of the slot's meals in order, sharing one Stock on hand: meal i sees what
+// meals 0..i-1 leave (baserecipe.Resolve takes from the availability, as Cooked does; BR-G round 2).
+func (r dbRecipes) SlotSteps(ctx context.Context, meals []SlotMeal) ([]cook.RecipeSteps, error) {
+	have, err := r.a.stockOnHand(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pool := func(id int64) float64 { return have[id] }
+	take := func(id int64, q float64) { have[id] -= q }
+	out := make([]cook.RecipeSteps, 0, len(meals))
+	for _, m := range meals {
+		var made func(baserecipe.Path) float64
+		tree, err := r.a.rc.NeedTree(ctx, m.RecipeID)
+		switch {
+		case errors.Is(err, baserecipe.ErrCycle): // composed as everything made, below
+		case errors.Is(err, baserecipe.ErrNotFound):
+			return nil, ErrNotFound
+		case err != nil:
+			return nil, err
+		case m.Batches > 0:
+			made = baserecipe.MadeFractions(tree, m.Batches, pool)
+			baserecipe.Resolve(tree, m.Batches, pool, take)
+		}
+		rs, err := r.compose(ctx, m.RecipeID, made)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rs)
+	}
+	return out, nil
 }
 
 // compose is the Recipe's composed Steps (baserecipe.ComposeSteps through the store) as Cook Mode needs them. made is nil
@@ -101,10 +138,14 @@ func (r dbRecipes) compose(ctx context.Context, recipeID int64, made func(basere
 		return cook.RecipeSteps{}, err
 	}
 	comp, err := r.a.rc.Cook(ctx, recipeID, made)
-	if errors.Is(err, baserecipe.ErrNotFound) {
+	switch {
+	case errors.Is(err, baserecipe.ErrCycle):
+		// A cycle written before the check: the Recipe's own Steps, as before Base recipes, and a warning.
+		slog.Default().Warn("recipe with a Base recipe cycle: its own Steps only", "recipe", recipeID, "err", err)
+		comp = ownComposed(rec.Steps)
+	case errors.Is(err, baserecipe.ErrNotFound):
 		return cook.RecipeSteps{}, ErrNotFound
-	}
-	if err != nil {
+	case err != nil:
 		return cook.RecipeSteps{}, err
 	}
 	names := map[int64]string{}
@@ -144,6 +185,20 @@ func (r dbRecipes) compose(ctx context.Context, recipeID int64, made func(basere
 		out.Steps = append(out.Steps, step)
 	}
 	return out, nil
+}
+
+// ownComposed is a Recipe's own Steps in the composed form, with no Base recipe Steps in them.
+func ownComposed(steps []recipe.Step) baserecipe.Composed {
+	out := baserecipe.Composed{Steps: make([]baserecipe.ComposedStep, 0, len(steps))}
+	for _, st := range steps {
+		cs := baserecipe.ComposedStep{Step: baserecipe.Step{Text: st.Text, Kind: st.Kind, DurationMinutes: st.DurationMinutes,
+			LeadTimeMinutes: st.LeadTimeMinutes, After: st.After}}
+		for _, u := range st.Uses {
+			cs.Uses = append(cs.Uses, schedule.Use{IngredientID: u.IngredientID, Quantity: u.Quantity, Unit: u.Unit})
+		}
+		out.Steps = append(out.Steps, cs)
+	}
+	return out
 }
 
 // stockOnHand is the quantity of Stock held per Ingredient (the Lots' quantities).

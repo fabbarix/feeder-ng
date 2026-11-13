@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/cook"
@@ -81,12 +82,6 @@ type openCourse struct {
 	rs   cook.RecipeSteps
 }
 
-// stepsKey keys the Steps read for one slot: a Recipe with the Batches of the meal that cooks it (Stock depends on them).
-type stepsKey struct {
-	recipe  int64
-	batches float64
-}
-
 // SlotTimeline builds the timeline of a slot on a date. ErrNotFound when the slot has no Planned Meal there;
 // ErrNotCookable when no Course is left to cook or reheat. Leftover Courses are reheats: items, but no Steps.
 func (s *Service) SlotTimeline(ctx context.Context, date string, mealSlotID int64) (Timeline, error) {
@@ -108,15 +103,30 @@ func (s *Service) SlotTimeline(ctx context.Context, date string, mealSlotID int6
 		Time: metas[0].At.In(zone).Format("15:04")}
 	var inputs []cook.Course
 	var open []openCourse
-	steps := map[stepsKey]cook.RecipeSteps{}
+	// The planned fresh Courses share the Stock in Course order: one SlotSteps call when the port gives it (BR-G round 2).
+	var fresh []SlotMeal
+	freshAt := map[int64]int{} // Course id -> place in fresh
 	for _, m := range metas {
-		key := stepsKey{recipe: m.RecipeID, batches: m.Batches}
-		rs, ok := steps[key]
-		if !ok {
-			if rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches); err != nil {
-				return Timeline{}, err
-			}
-			steps[key] = rs
+		if m.State == "planned" && m.Batches > 0 {
+			freshAt[m.CourseID] = len(fresh)
+			fresh = append(fresh, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+		}
+	}
+	var shared []cook.RecipeSteps
+	if sr, ok := s.cfg.Recipes.(SlotRecipes); ok && len(fresh) > 0 {
+		if shared, err = sr.SlotSteps(ctx, fresh); err != nil {
+			return Timeline{}, err
+		}
+		if len(shared) != len(fresh) {
+			return Timeline{}, fmt.Errorf("slot steps: %d answers for %d meals", len(shared), len(fresh))
+		}
+	}
+	for _, m := range metas {
+		var rs cook.RecipeSteps
+		if i, ok := freshAt[m.CourseID]; ok && shared != nil {
+			rs = shared[i]
+		} else if rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches); err != nil {
+			return Timeline{}, err
 		}
 		tc := TimelineCourse{CourseID: m.CourseID, Name: m.CourseName, RecipeID: m.RecipeID, RecipeName: rs.Name,
 			Scope: courseScope(m), Batches: m.Batches, Fresh: m.Batches > 0, State: m.State}
@@ -244,17 +254,18 @@ func recipeNumber(rs cook.RecipeSteps, index int) int {
 	return n
 }
 
-// coveredBy lists the distinct Base recipes whose Steps Stock covers in the open Courses, in order (never nil).
+// coveredBy lists the outermost Base recipe of each covered block in the open Courses, each Course on its own (a jar
+// covers the Courses' blocks separately), in order and never nil.
 func coveredBy(open []openCourse) []cook.BaseRecipe {
 	out := []cook.BaseRecipe{}
 	seen := map[int64]bool{}
 	for _, oc := range open {
-		for _, st := range oc.rs.Steps {
-			if !st.Covered || st.BaseRecipe == nil || seen[st.BaseRecipe.ID] {
+		for _, b := range cook.OutermostCovered(oc.rs.Steps) {
+			if seen[b.ID] {
 				continue
 			}
-			seen[st.BaseRecipe.ID] = true
-			out = append(out, *st.BaseRecipe)
+			seen[b.ID] = true
+			out = append(out, b)
 		}
 	}
 	return out

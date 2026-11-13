@@ -117,7 +117,7 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 	if meal.State != "planned" || meal.Batches <= 0 {
 		return CookView{}, ErrNotCookable
 	}
-	rs, err := s.mealSteps(ctx, meal.RecipeID, meal.Batches)
+	rs, err := s.courseSteps(ctx, meal)
 	if err != nil {
 		return CookView{}, err
 	}
@@ -139,6 +139,43 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 		return CookView{}, err
 	}
 	return CookView{View: view, Meal: &meal, Timers: timers, Now: now, Today: today}, nil
+}
+
+// courseSteps is the Steps of a Planned Meal's Course with the Stock that the Courses before it in the slot leave (BR-G
+// round 2): the slot's planned fresh Courses up to and including this one go to SlotRecipes in one call, and the last answer
+// is this Course's. Without SlotRecipes, or for a Leftover-served meal, it is mealSteps.
+func (s *Service) courseSteps(ctx context.Context, m MealInfo) (cook.RecipeSteps, error) {
+	sr, ok := s.cfg.Recipes.(SlotRecipes)
+	if !ok || m.Batches <= 0 {
+		return s.mealSteps(ctx, m.RecipeID, m.Batches)
+	}
+	metas, err := s.cfg.Meals.Slot(ctx, m.Date, m.MealSlotID)
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	var meals []SlotMeal
+	found := false
+	for _, x := range metas {
+		if x.CourseID == m.CourseID {
+			meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+			found = true
+			break
+		}
+		if x.State == "planned" && x.Batches > 0 {
+			meals = append(meals, SlotMeal{RecipeID: x.RecipeID, Batches: x.Batches})
+		}
+	}
+	if !found {
+		meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+	}
+	answers, err := sr.SlotSteps(ctx, meals)
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	if len(answers) != len(meals) {
+		return cook.RecipeSteps{}, fmt.Errorf("slot steps: %d answers for %d meals", len(answers), len(meals))
+	}
+	return answers[len(answers)-1], nil
 }
 
 // mealSteps is the Steps of a Planned Meal's Recipe: with the meal's Batches and the Stock on hand when the Recipes port gives
@@ -242,7 +279,7 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 		if err != nil {
 			return cook.RecipeSteps{}, err
 		}
-		return s.mealSteps(ctx, meal.RecipeID, meal.Batches)
+		return s.courseSteps(ctx, meal)
 	}
 	return s.cfg.Recipes.Steps(ctx, parts.RecipeID)
 }
@@ -643,20 +680,14 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	steps := map[stepsKey]cook.RecipeSteps{}
 	var cands []cook.AdvanceCandidate
 	for _, m := range meals {
 		if m.Batches <= 0 {
 			continue
 		}
-		key := stepsKey{recipe: m.RecipeID, batches: m.Batches}
-		rs, ok := steps[key]
-		if !ok {
-			rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches)
-			if err != nil {
-				return nil, err
-			}
-			steps[key] = rs
+		rs, err := s.courseSteps(ctx, m)
+		if err != nil {
+			return nil, err
 		}
 		scope := courseScope(m)
 		marks, err := s.cfg.Store.Marks(ctx, scope)

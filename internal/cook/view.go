@@ -102,7 +102,6 @@ func BuildView(scope Scope, rs RecipeSteps, batches float64, marks map[int]time.
 	}
 	for i, s := range rs.Steps {
 		if s.Covered {
-			v.addCovered(s.BaseRecipe)
 			continue
 		}
 		if s.Kind == schedule.Advance {
@@ -134,20 +133,54 @@ func BuildView(scope Scope, rs RecipeSteps, batches float64, marks map[int]time.
 		}
 		v.Steps = append(v.Steps, cs)
 	}
+	v.Covered = OutermostCovered(rs.Steps)
 	return v, nil
 }
 
-// addCovered lists a covered Step's Base recipe once, in order.
-func (v *View) addCovered(b *BaseRecipe) {
-	if b == nil {
-		return
-	}
-	for _, c := range v.Covered {
-		if c.ID == b.ID {
-			return
+// OutermostCovered lists the Base recipes whose blocks Stock covers, one per block: a covered Step's Base recipe is left out
+// when a covered Step of an enclosing Base recipe is on its path (a jar of Béchamel covers Roux inside it, so the list is
+// [Béchamel]). In the order of the Steps, never nil.
+func OutermostCovered(steps []Step) []BaseRecipe {
+	out := []BaseRecipe{}
+	for _, s := range steps {
+		if !s.Covered || s.BaseRecipe == nil || enclosed(steps, s.BaseRecipe.Path) {
+			continue
+		}
+		dup := false
+		for _, c := range out {
+			if c.ID == s.BaseRecipe.ID {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			out = append(out, BaseRecipe{ID: s.BaseRecipe.ID, Name: s.BaseRecipe.Name, Path: append([]string(nil), s.BaseRecipe.Path...)})
 		}
 	}
-	v.Covered = append(v.Covered, *b)
+	return out
+}
+
+// enclosed reports whether a covered Step's Base recipe sits inside another covered Base recipe: some covered Step has a
+// strictly shorter Path that is a prefix of path.
+func enclosed(steps []Step, path []string) bool {
+	for _, s := range steps {
+		if !s.Covered || s.BaseRecipe == nil || len(s.BaseRecipe.Path) >= len(path) {
+			continue
+		}
+		if hasPrefix(path, s.BaseRecipe.Path) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPrefix(path, prefix []string) bool {
+	for i := range prefix {
+		if path[i] != prefix[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // BaseTimerLabel is the timer label of a Base recipe's Step: its path joined with " · ", then the Step's text.
