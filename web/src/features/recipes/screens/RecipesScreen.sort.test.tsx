@@ -68,17 +68,22 @@ describe('RecipesScreen Sort', () => {
     await pick('Last cooked: longest ago first')
     expect(lastFilter().sort).toBe('last_cooked_asc')
     expect(new URLSearchParams(screen.getByTestId('where').textContent ?? '').get('sort')).toBe('last_cooked_asc')
-    expect(sortBox()).toHaveTextContent('Last cooked: longest ago first')
+    // hf-recipes-filter: the closed trigger shows the short label; the long one stays in the option list.
+    expect(sortBox()).toHaveTextContent(/^Longest ago$/)
+    await userEvent.click(sortBox())
+    expect(screen.getByRole('option', { name: 'Last cooked: longest ago first' })).toHaveAttribute('aria-selected', 'true')
   })
   it('remembers the choice on the device', async () => {
     view()
     await pick('Last cooked: most recent first')
     expect(window.localStorage.getItem(RECIPE_SORT_KEY)).toBe('last_cooked_desc')
   })
-  it('opens on the sort in the URL', () => {
+  it('opens on the sort in the URL', async () => {
     view('/recipes?sort=last_cooked_desc')
     expect(lastFilter().sort).toBe('last_cooked_desc')
-    expect(sortBox()).toHaveTextContent('Last cooked: most recent first')
+    expect(sortBox()).toHaveTextContent(/^Most recent$/)
+    await userEvent.click(sortBox())
+    expect(screen.getByRole('option', { name: 'Last cooked: most recent first' })).toHaveAttribute('aria-selected', 'true')
   })
   it('opens on the remembered sort when the URL has none, and shows it in the URL', () => {
     window.localStorage.setItem(RECIPE_SORT_KEY, 'last_cooked_asc')

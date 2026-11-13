@@ -13,6 +13,27 @@ export const recipeStrings = {
     name: 'Name',
     longestAgo: 'Last cooked: longest ago first',
     mostRecent: 'Last cooked: most recent first',
+    /** hf-recipes-filter: the short value the Sort chip shows (the list keeps the long labels). */
+    longestAgoShort: 'Longest ago',
+    mostRecentShort: 'Most recent',
+  },
+  /** hf-recipes-filter: the header's Filters button, its panel, the Tag list and the active filter chips (docs/design/recipes-filter.md 9). */
+  filters: {
+    button: 'Filters',
+    panelTitle: 'Filters',
+    courseHeading: 'Course',
+    tagHeading: 'Tag',
+    tagListLabel: 'Filter by Tag',
+    tagSearch: 'Search Tags',
+    clear: 'Clear filters',
+    showRecipes: 'Show Recipes',
+    activeLabel: 'Active filters',
+    moreLabel: (n: number) => (n === 1 ? 'Show 1 more filter' : `Show ${n} more filters`),
+    removeCourse: (name: string) => `Remove Course: ${name}`,
+    removeTag: (name: string) => `Remove Tag: ${name}`,
+    buttonLabel: (count: number) => (count === 0 ? 'Filters' : `Filters, ${count} active`),
+    noTagMatch: (query: string) => `No Tag matches '${query}'`,
+    noTags: 'No Tag to choose from',
   },
   /** Beta.5 F7: "Last cooked ..." on a tile, a row and the detail (lib/lastCooked). */
   cookedLabel: {

@@ -11,9 +11,19 @@ describe('RecipeSortSelect', () => {
     render(<RecipeSortSelect value="name" onChange={() => {}} />)
     expect(trigger()).toHaveTextContent('Name')
   })
-  it('shows the long label of a last cooked sort', () => {
-    render(<RecipeSortSelect value="last_cooked_desc" onChange={() => {}} />)
-    expect(trigger()).toHaveTextContent('Last cooked: most recent first')
+  it('hf-recipes-filter: the trigger shows the short label of a last cooked sort, the list the long one', async () => {
+    const { rerender } = render(<RecipeSortSelect value="last_cooked_desc" onChange={() => {}} />)
+    expect(trigger()).toHaveTextContent(/^Most recent$/)
+    rerender(<RecipeSortSelect value="last_cooked_asc" onChange={() => {}} />)
+    expect(trigger()).toHaveTextContent(/^Longest ago$/)
+    rerender(<RecipeSortSelect value="name" onChange={() => {}} />)
+    expect(trigger()).toHaveTextContent(/^Name$/)
+  })
+  it('hf-recipes-filter: is the compact chip picker with the sort icon, its "Sort" label visually hidden', () => {
+    const { container } = render(<RecipeSortSelect value="name" onChange={() => {}} />)
+    expect(trigger()).toHaveAttribute('data-appearance', 'chip')
+    expect(trigger().querySelector('.select__leading svg')).not.toBeNull()
+    expect(container.querySelector('.ui-field__label')).toHaveClass('visually-hidden')
   })
   it('lists Name, then longest ago first, then most recent first', async () => {
     render(<RecipeSortSelect value="name" onChange={() => {}} />)

@@ -68,11 +68,11 @@ describe('RecipesScreen', () => {
     expect(lastFilter().q).toBeUndefined()
   })
 
-  it('filters by Tag with one group of filter Chips', async () => {
+  it('filters by Tag from the Filters panel (hf-recipes-filter: no row of Tag chips in the header)', async () => {
     view()
-    const group = screen.getByRole('group', { name: 'All Tags' })
-    expect(group).toContainElement(screen.getByRole('button', { name: 'roast' }))
-    await userEvent.click(screen.getByRole('button', { name: 'roast' }))
+    expect(screen.queryByRole('group', { name: 'All Tags' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    await userEvent.click(screen.getByRole('option', { name: 'roast' }))
     expect(lastFilter().tag).toBe('roast')
   })
 

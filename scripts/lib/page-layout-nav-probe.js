@@ -21,7 +21,8 @@ function feederNavProbe() {
   }
   const hits = []
   for (const e of main.querySelectorAll('*')) {
-    if (bar.contains(e) || !visible(e)) continue
+    // A dialog or a popover in the top layer is above the bar, not under it: its content is not an overlap.
+    if (bar.contains(e) || !visible(e) || e.closest('dialog, [popover]')) continue
     const b = e.getBoundingClientRect()
     const s = getComputedStyle(e)
     const cTop = b.top + parseFloat(s.borderTopWidth) + parseFloat(s.paddingTop)

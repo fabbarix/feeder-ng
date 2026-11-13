@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, darkButtonFindings, evaluateMetrics, resolveRoute } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALK, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
@@ -148,8 +148,21 @@ try {
 }
 let nextId = 1
 const pending = new Map()
+// hf-recipes-filter round 3 (P21): the errors the current page logs (an uncaught exception, a console error, a JavaScript log error).
+const runtimeEvents = []
 ws.onmessage = (ev) => {
   const msg = JSON.parse(ev.data)
+  if (msg.method && msg.sessionId === sessionId) {
+    const p = msg.params ?? {}
+    if (msg.method === 'Runtime.exceptionThrown') {
+      const d = p.exceptionDetails ?? {}
+      runtimeEvents.push({ why: 'exception', text: String(d.exception?.description ?? d.text ?? '').split('\n')[0].slice(0, 200) })
+    } else if (msg.method === 'Runtime.consoleAPICalled' && p.type === 'error') {
+      runtimeEvents.push({ why: 'console', text: (p.args ?? []).map((a) => a.value ?? a.description ?? '').join(' ').slice(0, 200) })
+    } else if (msg.method === 'Log.entryAdded' && p.entry?.level === 'error' && p.entry?.source === 'javascript') {
+      runtimeEvents.push({ why: 'log', text: String(p.entry.text ?? '').slice(0, 200) })
+    }
+  }
   if (msg.id && pending.has(msg.id)) {
     const { resolve, reject } = pending.get(msg.id)
     pending.delete(msg.id)
@@ -186,6 +199,8 @@ const openTab = async () => {
   ;({ targetId } = await send('Target.createTarget', { url: 'about:blank' }))
   ;({ sessionId } = await send('Target.attachToTarget', { targetId, flatten: true }))
   await cdp('Page.enable')
+  await cdp('Runtime.enable')
+  await cdp('Log.enable')
   await cdp('Network.enable')
   await cdp('Network.setBypassServiceWorker', { bypass: true })
 }
@@ -268,8 +283,9 @@ const probe = `
   const bars = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {
     const s = getComputedStyle(e)
-    // P6 is about action bars stuck to the bottom of the viewport; a top-sticky side panel (the Stock aside) is not one.
-    if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button, a')) {
+    // P6 is about action bars stuck to the bottom of the viewport; a top-sticky side panel (the Stock aside) is not one. A dialog or a
+    // popover is in the top layer and places itself (P19 checks the popover), so it is not a page bar.
+    if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button, a') && !e.closest('dialog, [popover]')) {
       const b = e.getBoundingClientRect()
       bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1) })
     }
@@ -426,6 +442,25 @@ const chipProbe = `
   return out.slice(0, 5)
 })()`
 
+// hf-recipes-filter (P16): a visible chip whose label is crushed: the chip is on screen, its label is cut by its ellipsis, and the label is
+// narrower than 24 px while its text is longer. The chip is what is checked for visibility, not the label: a label squeezed to 0 px is
+// hidden by its own box and would otherwise be skipped.
+const crushedProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
+  const out = []
+  for (const chip of (main ? main.querySelectorAll('.chip') : [])) {
+    if (!vis(chip)) continue
+    const label = chip.querySelector('.chip__label')
+    if (!label || !(label.clientWidth < 24) || label.scrollWidth <= label.clientWidth + 1) continue
+    if (getComputedStyle(label).textOverflow !== 'ellipsis') continue
+    out.push({ sel: sel(chip), label: label.textContent.trim().slice(0, 60), px: Math.round(label.clientWidth) })
+  }
+  return out.slice(0, 5)
+})()`
+
 // P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
 const buttonProbe = `
 (() => {
@@ -445,66 +480,251 @@ const buttonProbe = `
 })()`
 const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
+
+// hf-recipes-filter round 2 (P17 to P20, docs/design/recipes-filter.md 13.6). Each probe is empty on a page without the header.
+// P17: a chip line (.recipe-filters__chips) shows a chip cut after its first one, or a chip past its end.
+const fitLinesProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
+  const out = []
+  for (const line of (main ? main.querySelectorAll('.recipe-filters__chips') : [])) {
+    const lr = line.getBoundingClientRect()
+    if (lr.width <= 2) continue
+    const chips = [...line.children].filter((c) => c.classList.contains('chip'))
+    chips.forEach((chip, i) => {
+      const r = chip.getBoundingClientRect()
+      const label = chip.querySelector('.chip__label')
+      const text = label ? label.textContent.trim().slice(0, 60) : ''
+      const cut = label ? label.scrollWidth - label.clientWidth : 0
+      if (r.width > 2 && r.right > lr.right + 1) out.push({ sel: sel(line), label: text, why: 'spill', px: Math.round(r.right - lr.right) })
+      else if (i > 0 && cut > 1) out.push({ sel: sel(line), label: text, why: 'cut', px: Math.round(label.clientWidth) })
+    })
+  }
+  return out.slice(0, 5)
+})()`
+
+// P18: a focus ring (3 px outline, 2 px offset) or a removable chip's hit area (its ::before, reaching past it) cut by a clipping
+// ancestor. Each chip is focused with focusVisible so its ring is drawn. A chip scrolled partly out of its own scroll container is skipped.
+const clippedRingsProbe = `
+(() => {
+  const main = document.querySelector('main')
+  if (!main) return []
+  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
+  const bounds = (el) => {
+    const out = []
+    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      // A dialog or a popover is in the top layer: the page's ancestors above it do not clip it.
+      if (p.matches('dialog, [popover]')) break
+      const s = getComputedStyle(p)
+      const xClip = s.overflowX !== 'visible', yClip = s.overflowY !== 'visible'
+      if (!xClip && !yClip) continue
+      const r = p.getBoundingClientRect()
+      const l = r.left + p.clientLeft, t = r.top + p.clientTop
+      const m = parseFloat(s.overflowClipMargin) || 0
+      const mx = s.overflowX === 'clip' ? m : 0, my = s.overflowY === 'clip' ? m : 0
+      out.push({ l: xClip ? l - mx : -Infinity, r: xClip ? l + p.clientWidth + mx : Infinity, t: yClip ? t - my : -Infinity, b: yClip ? t + p.clientHeight + my : Infinity, scroller: out.length === 0 })
+    }
+    return out
+  }
+  const worst = (rect, list) => Math.max(0, ...list.map((c) => Math.max(c.l - rect.l, rect.r - c.r, c.t - rect.t, rect.b - c.b)))
+  const out = []
+  const targets = [...main.querySelectorAll('.recipe-filters__chips > .chip, .course-filter > .chip')]
+  for (const el of targets) {
+    if (el.getBoundingClientRect().width <= 2) continue
+    el.focus({ focusVisible: true })
+    const r = el.getBoundingClientRect()
+    const list = bounds(el)
+    const scroller = list.find((c) => c.scroller)
+    if (scroller && (r.left < scroller.l - 0.5 || r.right > scroller.r + 0.5)) continue
+    const label = el.textContent.trim().slice(0, 40)
+    const ring = worst({ l: r.left - 5, r: r.right + 5, t: r.top - 5, b: r.bottom + 5 }, list)
+    if (Math.round(ring) >= 1) out.push({ sel: sel(el), label, what: 'focus ring', px: Math.round(ring) })
+    const before = getComputedStyle(el, '::before')
+    if (el.matches('.chip[data-removable]') && before.position === 'absolute') {
+      const ext = Math.max(0, -parseFloat(before.top) || 0, -parseFloat(before.bottom) || 0)
+      const hit = worst({ l: r.left, r: r.right, t: r.top - ext, b: r.bottom + ext }, list)
+      if (ext > 0 && Math.round(hit) >= 1) out.push({ sel: sel(el), label, what: 'hit area', px: Math.round(hit) })
+    }
+  }
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur()
+  return out.slice(0, 8)
+})()`
+
+// P19 (from 768 px): an open popover (role dialog with an id) and the trigger that controls it: its end edge against the trigger's, and
+// its edges against the page content box (the padding box of <main>).
+const popoverAlignProbe = `
+(() => {
+  const pop = document.querySelector('.popover[role="dialog"][id]')
+  if (!pop) return null
+  const trigger = document.querySelector('[aria-controls="' + pop.id + '"]')
+  const main = document.querySelector('main')
+  if (!trigger || !main) return null
+  const r = pop.getBoundingClientRect()
+  if (r.width < 2) return null
+  const t = trigger.getBoundingClientRect()
+  const mr = main.getBoundingClientRect(), ms = getComputedStyle(main)
+  return {
+    dx: Math.round(r.right - t.right), left: Math.round(r.left), right: Math.round(r.right),
+    contentX: Math.round(mr.left + parseFloat(ms.paddingLeft)), contentR: Math.round(mr.right - parseFloat(ms.paddingRight)),
+  }
+})()`
+
+// P20: row 3 (the chip line) sits one slot gap (the ListPage gap) below row 2, and the panel's sections are spaced.
+const filterSpacingProbe = `
+(() => {
+  const row2 = document.querySelector('.recipe-filters__view-row'), row3 = document.querySelector('.recipe-filters__chips')
+  const list = document.querySelector('.list-page')
+  const slotGap = list ? parseFloat(getComputedStyle(list).rowGap) : NaN
+  let rowGap = null
+  if (row2 && row3 && row3.getBoundingClientRect().height > 0) rowGap = Math.round((row3.getBoundingClientRect().top - row2.getBoundingClientRect().bottom) * 10) / 10
+  const sections = [...document.querySelectorAll('.recipe-filters__section')]
+  const sectionGap = sections.length >= 2 ? Math.round((sections[1].getBoundingClientRect().top - sections[0].getBoundingClientRect().bottom) * 10) / 10 : null
+  if (rowGap === null && sectionGap === null) return null
+  return { rowGap, slotGap, sectionGap }
+})()`
+
 // Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
 const notInspected = []
 let probes = 0
 const started = Date.now()
+/** One page at one width: navigate, settle, run every probe and report its findings; open = the Filters panel is opened first (hf-recipes-filter SCENARIOS). */
+async function probePage(vp, route, pattern, kind, open) {
+  probes++
+  const tag = `${vp.width}px ${route}`
+  const t0 = Date.now()
+  // One entry per probe, whichever step failed first.
+  let missed = false
+  const miss = (reason, label = route) => {
+    if (missed) return
+    missed = true
+    notInspected.push({ width: vp.width, route: label, pattern, reason })
+  }
+  try {
+    await closeTab()
+    await openTab()
+    await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+    await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+    await settle()
+    if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
+    if (open) {
+      // The Filters button of the header (round 2 scenario): opened before the probes, so the popover is measured.
+      await evaluate("document.querySelector('.recipe-filters__search-row > .button')?.click()")
+      await settle()
+    }
+    const m = await evaluate(probe)
+    if (!m.hasMain) {
+      miss(`no <main> element (${m.title || m.text || 'empty page'})`)
+      return
+    }
+    m.lowContrastButtons = await evaluate(buttonProbe)
+    m.navOverlap = await evaluate(`(() => { ${navProbeSource}\n; return feederNavProbe() })()`)
+    m.tileOverflow = await evaluate(tileProbe)
+    Object.assign(m, { clippedChips: await evaluate(chipProbe), crushedChips: await evaluate(crushedProbe) })
+    m.actionLayout = await evaluate(actionProbe)
+    m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
+    // hf-recipes-filter round 2: the chip line, its focus rings and hit areas, the popover's alignment and the header's spacing.
+    Object.assign(m, {
+      fitLines: await evaluate(fitLinesProbe),
+      clippedRings: await evaluate(clippedRingsProbe),
+      popoverAlign: await evaluate(popoverAlignProbe),
+      filterSpacing: await evaluate(filterSpacingProbe),
+    })
+    // The light findings are reported first, on the light page.
+    for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+    // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
+    // The scheme is put back to light in the finally, whatever happens.
+    try {
+      // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
+      await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+      await Promise.race([cdp('Page.reload', {}), sleep(4000)])
+      await settle()
+      if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
+        throw new Error('data-scheme is not dark; the scheme emulation did not apply')
+      }
+      const lowContrastButtonsDark = await evaluate(buttonProbe)
+      for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
+    } catch (e) {
+      miss(`dark scheme: ${e.message}`, `${route} (dark)`)
+    } finally {
+      await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] }).catch(() => {})
+    }
+    if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
+  } catch (e) {
+    // A probe that cannot run is not a layout finding, but it is lost coverage: it is not inspected, and it fails unless exempt.
+    miss(e.message)
+  }
+}
+
 for (const vp of VIEWPORTS) {
   for (const [pattern, kind] of ROUTES) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(pattern)) continue
+    await probePage(vp, resolveRoute(pattern, ids), pattern, kind, false)
+  }
+  // hf-recipes-filter round 2: the filtered /recipes, closed and with the Filters panel open (SCENARIOS).
+  for (const scenario of SCENARIOS) {
+    if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
+    const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open)
+  }
+}
+
+// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered /recipes is loaded fresh at each phone width from 360 to 480 px, and the
+// page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
+const walkScenario = SCENARIOS.find((x) => x.name === RESIZE_WALK.scenario)
+if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+  for (const w of resizeWalkWidths()) {
     probes++
-    const route = resolveRoute(pattern, ids)
-    const tag = `${vp.width}px ${route}`
-    const t0 = Date.now()
-    // One entry per probe, whichever step failed first.
-    let missed = false
-    const miss = (reason, label = route) => {
-      if (missed) return
-      missed = true
-      notInspected.push({ width: vp.width, route: label, pattern, reason })
-    }
+    const route = resolveScenario(walkScenario, ids)
+    const tag = `${w}px ${route}`
     try {
       await closeTab()
       await openTab()
-      await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+      runtimeEvents.length = 0
+      // Phone emulation, as the quick profile's 390 px probe: the app lays out at exactly w CSS px (documentElement.clientWidth = w; no
+      // scrollbar takes 15 px of it, as it does without mobile emulation). Only a page wider than w (a horizontal overflow) reports a
+      // larger innerWidth under mobile emulation; its layout width is still w.
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
       await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
       await settle()
-      if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
-      const m = await evaluate(probe)
-      if (!m.hasMain) {
-        miss(`no <main> element (${m.title || m.text || 'empty page'})`)
-        continue
-      }
-      m.lowContrastButtons = await evaluate(buttonProbe)
-      m.navOverlap = await evaluate(`(() => { ${navProbeSource}\n; return feederNavProbe() })()`)
-      m.tileOverflow = await evaluate(tileProbe)
-      Object.assign(m, { clippedChips: await evaluate(chipProbe) })
-      m.actionLayout = await evaluate(actionProbe)
-      m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
-      // The light findings are reported first, on the light page.
-      for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
-      // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
-      // The scheme is put back to light in the finally, whatever happens.
-      try {
-        // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first.
-        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
-        await Promise.race([cdp('Page.reload', {}), sleep(4000)])
-        await settle()
-        if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
-          throw new Error('data-scheme is not dark; the scheme emulation did not apply')
-        }
-        const lowContrastButtonsDark = await evaluate(buttonProbe)
-        for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
-      } catch (e) {
-        miss(`dark scheme: ${e.message}`, `${route} (dark)`)
-      } finally {
-        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] }).catch(() => {})
-      }
-      if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  ${tag} ${Date.now() - t0}ms`)
+      const runtimeErrors = [...runtimeEvents]
+      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+      if (process.env.PAGE_LAYOUT_DEBUG) console.error(`  walk ${tag}: ${JSON.stringify(runtimeErrors)}`)
+      // Only P21 is read from the walk: the page's error state at this width, nothing from the layout probes.
+      for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${tag}: ${f.message}`)
     } catch (e) {
-      // A probe that cannot run is not a layout finding, but it is lost coverage: it is not inspected, and it fails unless exempt.
-      miss(e.message)
+      notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
     }
+  }
+}
+
+// Review of round 3 (P21, RESIZE_SWEEP): the 10 px steps of the walk can step over a narrow window (round 2's loop lived in 8 px), and a
+// fresh load never exercises the resize path (ResizeObserver). So the same page is also loaded once at the widest width and resized
+// live, 1 px at a time, down to the narrowest and back up. The first width at which it logs an error or shows the error page is a
+// P21 finding, labelled "(live resize)".
+if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+  probes++
+  const route = resolveScenario(walkScenario, ids)
+  const widths = resizeSweepWidths()
+  try {
+    await closeTab()
+    await openTab()
+    await cdp('Emulation.setDeviceMetricsOverride', { width: widths[0], height: 844, deviceScaleFactor: 1, mobile: true })
+    await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+    await settle()
+    runtimeEvents.length = 0
+    for (const w of widths) {
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+      await sleep(RESIZE_SWEEP.pauseMs)
+      const runtimeErrors = [...runtimeEvents]
+      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+      if (runtimeErrors.length > 0) {
+        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${w}px ${route} (live resize): ${f.message}`)
+        break
+      }
+    }
+  } catch (e) {
+    notInspected.push({ width: widths[0], route: `${route} (live resize)`, pattern: walkScenario.route, reason: e.message })
   }
 }
 

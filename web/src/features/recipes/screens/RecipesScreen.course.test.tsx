@@ -27,6 +27,8 @@ const view = () =>
       </Routes>
     </MemoryRouter>,
   )
+// hf-recipes-filter: the Course filter lives in the Filters panel (docs/design/recipes-filter.md).
+const openFilters = () => userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
 const lastFilter = () => state.filters.at(-1) as RecipeFilter
 
 beforeEach(() => {
@@ -43,20 +45,24 @@ beforeEach(() => {
 })
 
 describe('RecipesScreen Course filter', () => {
-  it('has the Course filter group with All Courses pressed, and no Course in the filter', () => {
+  it('has the Course filter group in the Filters panel with All Courses pressed, and no Course in the filter', async () => {
     view()
+    expect(screen.queryByRole('group', { name: 'Filter by Course' })).toBeNull()
+    await openFilters()
     const group = screen.getByRole('group', { name: 'Filter by Course' })
     expect(within(group).getByRole('button', { name: 'All Courses' })).toHaveAttribute('aria-pressed', 'true')
     expect(lastFilter().course).toBeUndefined()
   })
   it('filtering by a Course asks the list for it', async () => {
     view()
+    await openFilters()
     await userEvent.click(screen.getByRole('button', { name: 'Side' }))
     expect(lastFilter().course).toBe(2)
     expect(screen.getByRole('button', { name: 'Side' })).toHaveAttribute('aria-pressed', 'true')
   })
   it('All Courses clears it', async () => {
     view()
+    await openFilters()
     await userEvent.click(screen.getByRole('button', { name: 'Side' }))
     await userEvent.click(screen.getByRole('button', { name: 'All Courses' }))
     expect(lastFilter().course).toBeUndefined()
@@ -64,12 +70,14 @@ describe('RecipesScreen Course filter', () => {
   it('keeps the other filters when the Course changes', async () => {
     view()
     await userEvent.type(screen.getByRole('searchbox'), 'rice')
+    await openFilters()
     await userEvent.click(screen.getByRole('button', { name: 'Side' }))
     expect(lastFilter()).toMatchObject({ q: 'rice', course: 2, archived: 'no' })
   })
-  it('has no Course filter while the household has a single Course', () => {
+  it('has no Course filter while the household has a single Course', async () => {
     state.courses = courseChoices.slice(0, 1)
     view()
+    await openFilters()
     expect(screen.queryByRole('group', { name: 'Filter by Course' })).toBeNull()
   })
 })

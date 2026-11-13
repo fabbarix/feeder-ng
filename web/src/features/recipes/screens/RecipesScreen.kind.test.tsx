@@ -79,17 +79,19 @@ describe('RecipesScreen: Base recipes', () => {
     state.result = { recipes: [bechamel], tags: [], isLoading: false, isEmpty: false, error: null }
   })
 
-  it('hides the sort (and sends none) and the Course filter', () => {
+  it('hides the sort (and sends none) and the Course filter', async () => {
     view('/recipes?kind=base')
     expect(screen.queryByRole('combobox', { name: 'Sort' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
     expect(screen.queryByRole('group', { name: 'Filter by Course' })).toBeNull()
     expect(lastFilter().sort).toBeUndefined()
     expect(lastFilter().course).toBeUndefined()
   })
 
-  it('keeps the sort and the Course filter on Recipes', () => {
+  it('keeps the sort and the Course filter on Recipes', async () => {
     view()
     expect(screen.getByRole('combobox', { name: 'Sort' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Filters/ }))
     expect(screen.getByRole('group', { name: 'Filter by Course' })).toBeInTheDocument()
   })
 

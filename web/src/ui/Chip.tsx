@@ -28,6 +28,10 @@ export interface ChipProps {
   /** A TagColourId (spec 4.1): a `tag` or `filter` chip is tinted (a filter only while selected) and shows a leading dot. Unknown ids are ignored. */
   tagColour?: string
   onClick?: () => void
+  /** hf-recipes-filter: a removable chip ("Main ×"): one button that removes what it names; its close icon follows the text. */
+  onRemove?: () => void
+  /** The accessible name of a removable chip (it says what goes, e.g. "Remove Tag: fish"). */
+  removeLabel?: string
   /** Accessible name of a chip when it must say more than its text (it should start with the visible text). A span chip with a label reads as one image. */
   label?: string
   /** Tooltip (`title`) when it must differ from the text, e.g. the hidden labels behind a "+N" chip. Defaults to the text. */
@@ -60,7 +64,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, onRemove, removeLabel, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -96,6 +100,17 @@ export function Chip({ kind, status, outline, tone, icon, selected, disabled, ta
     'data-tag-colour': tagged,
     'data-outline': outline ? 'true' : undefined,
     title: title ?? (typeof children === 'string' ? children : label),
+  }
+
+  if (onRemove) {
+    return (
+      <button type="button" className="chip" {...attrs} data-removable="" aria-label={removeLabel} disabled={disabled} onClick={onRemove}>
+        {content}
+        <span className="chip__remove" aria-hidden="true">
+          <Icon name="close" size={14} />
+        </span>
+      </button>
+    )
   }
 
   if (onClick || finalKind === 'filter') {

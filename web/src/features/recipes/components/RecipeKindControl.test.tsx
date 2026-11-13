@@ -21,4 +21,9 @@ describe('RecipeKindControl: Recipes · Base recipes', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Base recipes' }))
     expect(onChange).toHaveBeenCalledWith('base')
   })
+  it('hf-recipes-filter: is compact, with its "Kind" label visually hidden (still the radiogroup name)', () => {
+    const { container } = render(<RecipeKindControl value="plannable" onChange={() => {}} />)
+    expect(screen.getByRole('radiogroup', { name: 'Kind' })).toHaveAttribute('data-compact')
+    expect(container.querySelector('.ui-field__label')).toHaveClass('visually-hidden')
+  })
 })

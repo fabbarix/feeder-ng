@@ -219,3 +219,16 @@
   margin-inline-start: var(--space-2);
   border-radius: var(--radius-chip);
 }
+
+/* OptionList (hf-recipes-filter, docs/design/recipes-filter.md 7.2): the always-open panel of a Select, sized by its parent. */
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-block-size: 0;
+}
+
+.option-list__list {
+  max-block-size: none;
+  overflow-y: auto;
+}

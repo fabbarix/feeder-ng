@@ -17,8 +17,60 @@ export const ROUTES = [
   ['/settings/recipe-assistant', 'narrow'], ['/board', 'full'],
 ]
 
-/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow. */
-export const ALWAYS_FAIL = ['P1', 'P13', 'P15']
+/** Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow; P16 (hf-recipes-filter): a crushed chip label. */
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20', 'P21']
+
+/**
+ * hf-recipes-filter round 2: the filtered /recipes the guard also probes, at every width: the chips of a Side Course and a long Tag,
+ * closed, and with the Filters panel open (docs/design/recipes-filter.md 13.6). The ids file gives the Course and the Tag
+ * (resolveScenario).
+ */
+export const SCENARIOS = [
+  { name: 'recipes-filtered', route: '/recipes', open: false },
+  { name: 'recipes-filtered-open', route: '/recipes', open: true },
+]
+
+/**
+ * hf-recipes-filter round 3 (docs/design/recipes-filter.md 14): the closed filtered /recipes is loaded fresh at each of these phone
+ * widths, and the page must not break at any (P21: an uncaught exception, a console error, or the error page).
+ */
+export const RESIZE_WALK = { scenario: 'recipes-filtered', from: 360, to: 480, step: 10 }
+
+/** The P21 findings of one walked width: the runtime errors and the error page the walk saw there (only P21 is read from it). */
+export function resizeWalkFindings(runtimeErrors, { width, route }) {
+  const walked = {
+    vw: width, scrollW: width, clientW: width, over: [], content: { x: 0, r: width }, railR: 0, container: { x: 0, r: width },
+    pageWidthAttr: 'wide', fields: [], bars: [], railContrast: null, dialog: null, brokenText: [], runtimeErrors,
+  }
+  return evaluateMetrics(walked, { width, route, kind: 'wide' }).filter((f) => f.rule === 'P21')
+}
+
+/**
+ * Review of round 3: the same scenario resized live in one page, 1 px at a time, from the walk's widest width down to its narrowest
+ * and back up, with `pauseMs` after each step (P21 "(live resize)"). It catches a window narrower than the walk's step, and the
+ * resize path that a fresh load never takes.
+ */
+export const RESIZE_SWEEP = { step: 1, pauseMs: 40 }
+
+/** The widths of the RESIZE_SWEEP, in order: RESIZE_WALK.to down to RESIZE_WALK.from, then back up. */
+export function resizeSweepWidths() {
+  const down = []
+  for (let w = RESIZE_WALK.to; w >= RESIZE_WALK.from; w -= RESIZE_SWEEP.step) down.push(w)
+  return [...down, ...down.slice(0, -1).reverse()]
+}
+
+/** The widths of the RESIZE_WALK, in order. */
+export function resizeWalkWidths() {
+  const out = []
+  for (let w = RESIZE_WALK.from; w <= RESIZE_WALK.to; w += RESIZE_WALK.step) out.push(w)
+  return out
+}
+
+/** The URL of a scenario: its route with the Side Course and the long Tag from the ids file. */
+export function resolveScenario(scenario, ids) {
+  const params = new URLSearchParams({ course: String(ids.sideCourseId), tag: String(ids.longTag) })
+  return `${scenario.route}?${params.toString()}`
+}
 
 /** quick = what scripts/check.sh runs, iPad portrait included (DS-A, ADR 0016); full = the six viewports of the UI review (PAGE_LAYOUT=full). */
 export const PROFILES = {
@@ -109,6 +161,31 @@ export function evaluateMetrics(m, { width, kind }) {
   for (const o of m.tileOverflow ?? []) add('P13', `${o.sel} spills ${o.px} px past its ${o.card}; give its track min-inline-size: 0 or let it wrap or scroll`)
   // ds-plan round 3: a chip label cut by its ellipsis while its chip line has spare room (a lone chip must show in full).
   for (const c of m.clippedChips ?? []) add('P14', `${c.sel} "${c.label}" is cut by its ellipsis with ${c.room} px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap`)
+  // hf-recipes-filter (docs/design/recipes-filter.md 11): a chip whose label is crushed to its dot (fails in every mode, see ALWAYS_FAIL).
+  for (const c of m.crushedChips ?? []) add('P16', `${c.sel} "${c.label}" is crushed to ${c.px} px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a "+N"`)
+  // hf-recipes-filter round 2 (docs/design/recipes-filter.md 13.6). P17: the chip line shows a cut chip after its first, or a chip past its end.
+  for (const f of m.fitLines ?? []) {
+    const what = f.why === 'cut' ? `is cut by its ellipsis (${f.px} px of its label) after the first chip` : `runs ${f.px} px past the end of its line`
+    add('P17', `${f.sel} "${f.label}" ${what}; a chip that does not fit goes into "+N", it is never shown cut or past the line`)
+  }
+  // P18: a focus ring (3 px outline, 2 px offset) or a removable chip's 44 px hit area cut by a clipping ancestor.
+  for (const c of m.clippedRings ?? []) add('P18', `${c.sel} "${c.label}": its ${c.what} is cut by a clipping ancestor by ${c.px} px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)`)
+  // P19 (from 768 px): an open popover ends where its trigger ends, and stays inside the page content box.
+  const align = m.popoverAlign
+  if (width >= 768 && align) {
+    if (Math.abs(align.dx) > 1) add('P19', `the open popover's end edge is ${Math.abs(Math.round(align.dx))} px ${align.dx < 0 ? 'inside' : 'past'} its trigger's end edge; end-align it with the trigger`)
+    if (align.right > align.contentR + 1 || align.left < align.contentX - 1) {
+      add('P19', `the open popover leaves the page content box (x ${Math.round(align.left)} to ${Math.round(align.right)}, content ${Math.round(align.contentX)} to ${Math.round(align.contentR)}); keep it inside the page`)
+    }
+  }
+  // P20: row 3 sits one slot gap below row 2, and two panel sections are at least 12 px apart.
+  const spacing = m.filterSpacing
+  if (spacing) {
+    if (spacing.rowGap !== null && spacing.rowGap < spacing.slotGap - 0.5) add('P20', `row 3 sits ${spacing.rowGap} px below row 2; it must sit one slot gap (${spacing.slotGap} px) below it`)
+    if (spacing.sectionGap !== null && spacing.sectionGap < 12) add('P20', `two panel sections are ${spacing.sectionGap} px apart; space them at least 12 px`)
+  }
+  // hf-recipes-filter round 3 (P21, always fails): the page broke while it was walked through phone widths (RESIZE_WALK).
+  for (const e of m.runtimeErrors ?? []) add('P21', `the page broke (${e.why}): ${e.text}; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {

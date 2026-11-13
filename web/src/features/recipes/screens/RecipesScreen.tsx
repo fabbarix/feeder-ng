@@ -1,59 +1,49 @@
-import { useState, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useId, useRef, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BentoGrid, Button, EmptyState, ErrorState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { useCourses } from '../../../lib/courses/useCourses'
-import { CourseFilter } from '../components/CourseFilter'
+import { ActiveFilterChips } from '../components/ActiveFilterChips'
+import { RecipeFiltersButton } from '../components/RecipeFiltersButton'
+import { RecipeFiltersPanel } from '../components/RecipeFiltersPanel'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
 import { RecipeSortSelect } from '../components/RecipeSortSelect'
 import { RecipeTile } from '../components/RecipeTile'
 import { RecipeKindControl } from '../components/RecipeKindControl'
-import { TagChips } from '../components/TagChips'
 import { useRecipeSort } from '../hooks/useRecipeSort'
+import { useRecipeFilters } from '../hooks/useRecipeFilters'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { useRecipes } from '../hooks/useRecipes'
 import { lastCookedLabel, localToday } from '../lib/lastCooked'
-import { kindFromParams, withKind } from '../lib/baseRecipe'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
-import type { RecipeFilter, RecipeKind } from '../types'
+import type { RecipeFilter } from '../types'
 import '../recipes.css'
 
 /**
  * Route /recipes: the header ("New Recipe" and the More overflow with Import, Export, Copy Agent Prompt and Show
- * archived), the search, one row of Tag filters, then the Recipes as media Tiles. Opening a Tile goes to /recipes/:id.
+ * archived), two one-line rows (Search and Filters; Kind and Sort) and the active filter chips, then the Recipes as media
+ * Tiles. Course and Tag are chosen in the Filters panel. Opening a Tile goes to /recipes/:id.
  */
 export function RecipesScreen(): ReactNode {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [searchParams, setSearchParams] = useSearchParams()
-  // TG-RW: the Tag filter lives in the URL (/recipes?tag=<name>), so the detail's Tag links open the list filtered.
-  const tag = searchParams.get('tag') ?? ''
-  const setTag = (name: string) =>
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        if (name) next.set('tag', name)
-        else next.delete('tag')
-        return next
-      },
-      { replace: true },
-    )
   const { known, colourOf } = useRecipeTags()
   const [showArchived, setShowArchived] = useState(false)
-  const [course, setCourse] = useState<number | null>(null)
   const { choices } = useCourses()
   const { sort, setSort } = useRecipeSort()
-  // BR-D: Recipes · Base recipes, kept in the URL (?kind=base). Base recipes have no sort and no Course filter.
-  const kind = kindFromParams(searchParams)
-  const setKind = (next: Exclude<RecipeKind, 'all'>) => setSearchParams((prev) => withKind(prev, next), { replace: true })
-  const bases = kind === 'base'
+  // The filters live in the URL (?kind, ?course, ?tag): a link or the back button brings them back.
+  const filters = useRecipeFilters(choices, known, colourOf)
+  const bases = filters.kind === 'base'
+  const [panelOpen, setPanelOpen] = useState(false)
+  const anchor = useRef<HTMLButtonElement>(null)
+  const panelId = useId()
   const filter: RecipeFilter = {
     q: q.trim() || undefined,
-    tag: tag || undefined,
-    course: bases ? undefined : (course ?? undefined),
+    tag: filters.tag || undefined,
+    course: bases ? undefined : (filters.course ?? undefined),
     archived: showArchived ? 'all' : 'no',
     sort: bases ? undefined : sort,
-    kind,
+    kind: filters.kind,
   }
   const list = useRecipes(filter)
   const today = localToday()
@@ -107,17 +97,47 @@ export function RecipesScreen(): ReactNode {
           }
         />
       }
-      search={<SearchField label={recipeStrings.search} value={q} onChange={setQ} />}
+      search={
+        <>
+          <div className="recipe-filters__row recipe-filters__search-row">
+            <SearchField label={recipeStrings.search} value={q} onChange={setQ} />
+            <RecipeFiltersButton
+              ref={anchor}
+              count={filters.count}
+              expanded={panelOpen}
+              controls={panelOpen ? panelId : undefined}
+              onClick={() => setPanelOpen((open) => !open)}
+            />
+          </div>
+          <RecipeFiltersPanel
+            id={panelId}
+            open={panelOpen}
+            onClose={() => setPanelOpen(false)}
+            anchorRef={anchor}
+            bases={bases}
+            courses={choices}
+            course={filters.course}
+            onCourse={filters.setCourse}
+            known={known}
+            tag={filters.tag}
+            colourOf={colourOf}
+            onTag={filters.setTag}
+            count={filters.count}
+            onClear={filters.clear}
+          />
+        </>
+      }
       filters={
         <>
-          <RecipeKindControl value={kind} onChange={setKind} />
-          <TagChips tags={known} selected={tag} onSelect={setTag} colourOf={colourOf} />
-          {bases ? null : <CourseFilter courses={choices} selected={course} onSelect={setCourse} />}
-          {bases ? null : (
-            <div className="recipes-sort">
-              <RecipeSortSelect value={sort} onChange={setSort} />
-            </div>
-          )}
+          <div className="recipe-filters__row recipe-filters__view-row">
+            <RecipeKindControl value={filters.kind} onChange={filters.setKind} />
+            {bases ? null : (
+              <div className="recipe-filters__sort">
+                <RecipeSortSelect value={sort} onChange={setSort} />
+              </div>
+            )}
+          </div>
+          <ActiveFilterChips chips={filters.chips} onRemove={filters.remove} onMore={() => setPanelOpen(true)} fallbackFocus={anchor} />
         </>
       }
     >

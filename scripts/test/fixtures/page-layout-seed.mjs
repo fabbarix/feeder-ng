@@ -7,7 +7,8 @@
 // productId, shopId) for the guard's ":id" routes.
 //   node scripts/test/fixtures/page-layout-seed.mjs http://127.0.0.1:<port> [--out build/page-layout-ids.json] [--email admin@example.test]
 // Best effort: a step that the API refuses is reported on stderr and skipped (the guard then probes emptier screens, which is still
-// a layout). Exit 0 whenever login worked; exit 1 when it did not.
+// a layout). Exit 0 whenever login worked; exit 1 when it did not, or when the Side Recipe with LONG_TAG was not created (the guard's
+// filtered /recipes scenarios would then show no Recipe, so they must not pass quietly).
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { pickZones, SLOT_TIMES } from './page-layout-seed-zones.mjs'
@@ -108,6 +109,25 @@ for (const [i, name] of RECIPES.entries()) {
   if (r.ok && r.json?.id && i === 0) recipeId = r.json.id
 }
 
+// hf-recipes-filter: many Tags (docs/design/recipes-filter.md), so /recipes shows its filter header as a household with dozens of
+// Tags sees it (the beta.6 Tag row crushed every chip to its dot). A Tag may exist with no Recipe (GLOSSARY); one Recipe carries
+// eight of them, with long names, so its tile's Tag line is exercised too.
+// Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 and 430 px.
+// Round 3: a Tag holds at most 40 characters (the API refuses longer ones, so the 51-character Tag of round 2 was never created). In
+// capitals this 36-character name draws a 338 px chip (with its colour dot and close icon). Beside "Side" (72 px and an 8 px gap) the
+// line needs 418 px: it overflows into "+1" below a 450 px screen (390 and 430 included) and both chips show again from 462 px (the
+// FIT_MARGIN), so the guard's 360-480 px walk and live sweep cross both edges of the fit.
+const LONG_TAG = 'HEARTY HOMEMADE MUSHROOM WELLINGTONS'
+const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
+  'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
+  'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
+for (const name of MANY_TAGS) await step('tag', 'POST', '/api/tags', { name, colour: '' })
+await step('many-tag recipe', 'POST', '/api/recipes', {
+  name: 'Slow cooker beef and barley stew', description: '', yield: 6, readyMeal: false,
+  tags: ['slow cooker', 'beef', 'comfort food', 'batch cooking', 'freezer', 'high protein', 'weeknight', 'one-pot'],
+  lines: [line(10, 600), line(13, 300), line(4, 2)], steps: [{ text: 'Cook it slowly.', kind: 'passive', durationMinutes: 360, leadTimeMinutes: 0, after: [], uses: [] }],
+})
+
 // Shops, Products with Prices
 const shops = []
 for (const name of ['Coop', 'Market Hall', 'Corner Shop']) {
@@ -154,12 +174,16 @@ const mainCourse = courses.find((c) => c.main) ?? courses.find((c) => c.name ===
 const sideCourse = courses.find((c) => c.name === 'Side')
 const cook = [{ text: 'Prepare and cook.', kind: 'active', durationMinutes: 15, leadTimeMinutes: 0, after: [], uses: [] }]
 const sideIds = []
+let longTagRecipe = null
 for (const [name, lines] of [
   ['Two-colour cauliflower with peppers', [lineOf('Cauliflower', 1500), lineOf('Red pepper', 2), lineOf('Marjoram', 2)]],
   ['Cucumber tomato feta salad', [lineOf('Cucumber', 2), lineOf('Feta', 150), line(3, 200)]],
 ]) {
-  const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags: ['vegetarian'], courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
+  // hf-recipes-filter round 2: the salad carries LONG_TAG, so /recipes?course=<Side>&tag=<LONG_TAG> lists it (guard SCENARIOS).
+  const tags = name.startsWith('Cucumber') ? ['vegetarian', LONG_TAG] : ['vegetarian']
+  const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags, courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
   if (r.ok && r.json?.id) sideIds.push(r.json.id)
+  if (r.ok && r.json?.id && tags.includes(LONG_TAG)) longTagRecipe = r.json.id
 }
 const mainR = await step('main recipe', 'POST', '/api/recipes', {
   name: 'Cauliflower al gorgonzola with chestnut mushrooms', description: '', yield: 4, readyMeal: false, tags: ['vegetarian'],
@@ -217,5 +241,11 @@ if (tomorrowDinner && sideCourse && longSide.json?.id) {
 const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? []).length
 
 mkdirSync(dirname(out), { recursive: true })
-writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm }, null, 2) + '\n')
+// hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
+const sideCourseId = sideCourse?.id ?? null
+writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG }, null, 2) + '\n')
+if (longTagRecipe === null || sideCourseId === null) {
+  console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
+  process.exit(1)
+}
 console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, toConfirm ${toConfirm}) -> ${out}`)

@@ -3,3 +3,21 @@
   display: grid;
   gap: var(--space-4);
 }
+
+/* A Tag may have 40 characters: a long one in capitals is a 340 px pill, wider than a phone's row once the usage line and the
+   chevron are beside it. ListRow's leading slot never shrinks, so on this list it may: at most 65% of the row, and the pill ends in
+   an ellipsis (its full name stays in its tooltip and in the row's accessible name). */
+.tags-screen {
+  min-inline-size: 0;
+}
+
+.tags-screen .list-row__leading {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 65%;
+}
+
+.tags-screen .list-row__leading > .chip {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}

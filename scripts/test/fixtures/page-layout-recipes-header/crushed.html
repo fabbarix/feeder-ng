@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>crushed Tag row</title>
+<!-- hf-recipes-filter: the beta.6 Recipes header with 40 Tags (the screenshot). P16 must name the crushed chips. -->
+<style>
+  body { margin: 0; font: 15px/20px sans-serif }
+  main { padding: 0 16px }
+  .list-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px }
+  .chip { display: inline-flex; align-items: center; gap: 4px; block-size: 26px; padding: 0 10px; border-radius: 999px; background: #eee; white-space: nowrap; font: 700 12px/16px sans-serif; border: 0 }
+  .chip__dot { inline-size: 8px; block-size: 8px; border-radius: 50%; background: teal; flex: none }
+  .chip__label { min-width: 0; overflow: hidden; text-overflow: ellipsis }
+  /* beta.6: the Tag row. A scroll container (so not P1 or P13) that is really full (so not P14); every chip shrinks to its dot. */
+  .tag-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-block: 4px }
+  .tag-chips > .chip { flex: 0 1 auto; min-inline-size: 0 }
+</style>
+<script>const mq = matchMedia('(prefers-color-scheme: dark)'); const set = () => { document.documentElement.dataset.scheme = mq.matches ? 'dark' : 'light' }; set(); mq.addEventListener('change', set)</script></head><body>
+<main><div class="page" data-page-width="wide"><div class="list-page recipes-screen">
+  <h1>Recipes</h1>
+  <input type="search" aria-label="Search Recipes">
+  <div class="tag-chips" role="group" aria-label="All Tags">
+    <button class="chip" type="button" aria-pressed="true"><span class="chip__label">All Tags</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">beef</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">breakfast</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">budget</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">chicken</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">comfort food</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">curry</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">dairy-free</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">easy</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">family</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">fish</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">freezer</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">gluten-free</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">grill</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">kids</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">leftovers</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">lunchbox</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">one-pot</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">pasta</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">pork</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">quick</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">rice</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">roast</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">salad</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">slow cooker</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">soup</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">spicy</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">sweet</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">vegetarian</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">vegan</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">weeknight</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">batch cooking</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">barbecue</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">brunch</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">christmas</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">date night</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">high protein</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">meal prep</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">no-cook</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">party</span></button>
+    <button class="chip" type="button" aria-pressed="false"><span class="chip__dot"></span><span class="chip__label">summer</span></button>
+  </div>
+</div></div></main></body></html>
