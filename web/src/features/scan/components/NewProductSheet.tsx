@@ -1,5 +1,5 @@
 // The short new-Product sheet for an unknown barcode (SR5, shop-scan-proposals 13.5): Which Line is it?, Ingredient | Supply, pack chips,
-// an optional Picture from the phone's own camera, a summary line, Add. It replaces UnknownBarcodeSheet. The sheet only opens the form;
+// an optional Picture from the phone's own camera, a summary line, Add. It replaced UnknownBarcodeSheet (beta.7). The sheet only opens the form;
 // the form's state and steps live in hooks/useNewProductForm.
 import { BottomSheet } from '../../../ui'
 import type { LineCandidate } from '../lib/lineChoice'
@@ -14,10 +14,7 @@ import './NewProductSheet.css'
 
 export type { PictureHandlers } from '../lib/newProductPicture'
 
-/**
- * Props are a superset of UnknownBarcodeSheet's, so SR4 swaps the import and adds what it has: open, onClose, mode, shopName, ingredients,
- * priceText, onSave, canUpload and findSimilar mean exactly what they meant there. The optional ones are new.
- */
+/** The sheet of an unknown barcode. ScanScreen passes what it has: the barcode, the live Lines, the offline Products, the unit system. */
 export interface NewProductSheetProps {
   open: boolean
   onClose: () => void

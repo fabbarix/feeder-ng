@@ -8,7 +8,7 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const css = readFileSync(`${cwd}/src/features/scan/scan.css`, 'utf8')
 
 describe('scan.css', () => {
-  it('the sheet form stacks its fields with a token gap (UnknownBarcodeSheet, ManualBarcodeEntry)', () => {
+  it('the sheet form stacks its fields with a token gap (ManualBarcodeEntry)', () => {
     const d = declarations(css, '.scan-sheet-form')
     expect(d['display']).toMatch(/^(flex|grid)$/)
     if (d['display'] === 'flex') expect(d['flex-direction']).toBe('column')

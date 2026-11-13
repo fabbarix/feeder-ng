@@ -1,4 +1,4 @@
-// SR4: the old scan line, live list and Edit price sheet are gone (shop-scan-proposals.md 13.6, 13.10): nothing uses them.
+// SR4: the old scan line, live list and Edit price sheet are gone, and (integration) the old "What is this?" sheet (shop-scan-proposals.md 13.6, 13.10): nothing uses them.
 import { describe, expect, it } from 'vitest'
 
 const nodeFs = 'node:fs'
@@ -7,14 +7,15 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const scan = `${cwd}/src/features/scan`
 
 describe('removed components', () => {
-  it.each(['components/ScanFeedback.tsx', 'components/LiveList.tsx', 'components/PriceEditSheet.tsx'])('%s is gone', (file) => {
+  it.each(['components/ScanFeedback.tsx', 'components/LiveList.tsx', 'components/PriceEditSheet.tsx', 'components/UnknownBarcodeSheet.tsx'])('%s is gone', (file) => {
     expect(existsSync(`${scan}/${file}`)).toBe(false)
   })
 
   it('the Scan screen no longer mentions them', () => {
     const screen = readFileSync(`${scan}/screens/ScanScreen.tsx`, 'utf8')
-    for (const name of ['ScanFeedback', 'LiveList', 'PriceEditSheet', 'openEditPrice']) expect(screen).not.toContain(name)
+    for (const name of ['ScanFeedback', 'LiveList', 'PriceEditSheet', 'openEditPrice', 'UnknownBarcodeSheet']) expect(screen).not.toContain(name)
     expect(screen).toContain('PriceEntrySheet')
+    expect(screen).toContain('NewProductSheet')
     expect(screen).toContain('ScannedList')
   })
 

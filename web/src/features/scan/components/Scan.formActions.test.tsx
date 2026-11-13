@@ -7,15 +7,10 @@ import { AskWeightSheet } from './AskWeightSheet'
 import { ManualBarcodeEntry } from './ManualBarcodeEntry'
 import { StockTakeSheet } from './StockTakeSheet'
 import { UnarchiveProductSheet } from './UnarchiveProductSheet'
-import { UnknownBarcodeSheet } from './UnknownBarcodeSheet'
 
 const inPrimary = (name: string | RegExp) => screen.getByRole('button', { name }).closest('.form-actions__primary')
 
 describe('Scan sheets use FormActions', () => {
-  it('What is this?: Save', () => {
-    render(<UnknownBarcodeSheet open onClose={() => {}} mode="pack" shopName="Coop" ingredients={[]} onSave={() => {}} />)
-    expect(inPrimary('Save')).not.toBeNull()
-  })
   it('How much does it weigh?: Save', () => {
     render(<AskWeightSheet open onClose={() => {}} productName="Ham" priceText="$2.50" onSubmit={() => {}} />)
     expect(inPrimary('Save')).not.toBeNull()
