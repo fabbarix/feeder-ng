@@ -930,25 +930,42 @@ func TestAKeptLineOfAFileBaseRecipeNamedLikeABaseRecipeTheImportCreatesAppliesIn
 	}
 }
 
-func TestConvertWithAKeptLineOfTheSameNameAndNoStoredPlainIngredientApplies(t *testing.T) {
+func TestConvertWithAKeptLineOfTheSameNameLeavesThatLinePlainOnANewIngredient(t *testing.T) {
 	f := newSeeded(t)
 	p := f.seedPesto(t)
 	gnocchi := recipefile.Recipe{Name: "Gnocchi", Yield: 2, Ingredients: []recipefile.Line{{Ingredient: "pesto", Quantity: 30, Unit: "g"}}}
 	file := lasagneFile(pestoLine(), gnocchi)
+	gLine := "$.recipes[1].ingredients[0]"
 	d := answers(map[string]recipefile.BaseRecipeLineDecision{
-		lineB:                         {Action: recipefile.BaseConvert, RecipeID: p.recipe.ID, Yield: 200, YieldUnit: "g"},
-		"$.recipes[1].ingredients[0]": {Action: recipefile.BaseKeep},
+		lineB: {Action: recipefile.BaseConvert, RecipeID: p.recipe.ID, Yield: 200, YieldUnit: "g"},
+		gLine: {Action: recipefile.BaseKeep},
 	})
+	ex, err := f.s.Existing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pl := recipefile.BuildPlan(file, ex, d, recipefile.ImageSet{})
+	var row *recipefile.IngredientMatch
+	for i := range pl.Ingredients {
+		if pl.Ingredients[i].Key == "pesto" {
+			row = &pl.Ingredients[i]
+		}
+	}
+	if row == nil || len(row.UsedBy) != 1 || row.UsedBy[0] != gLine {
+		t.Fatalf("the plan shows a plain pesto row used by the kept line only: %+v", pl.Ingredients)
+	}
 	readyThenApply(t, f, file, d)
+
 	pesto := f.recipeNamed(t, "Pesto")
-	if !pesto.baseIng.Valid {
-		t.Fatal("Pesto is a Base recipe")
+	plain, ok := f.ingredientIDByKey(t, "pesto")
+	if !pesto.baseIng.Valid || !ok || plain == pesto.baseIng.Int64 {
+		t.Fatalf("want two Ingredients: Pesto's own %v and a new plain pesto %d (%v)", pesto.baseIng, plain, ok)
 	}
-	if _, ok := f.ingredientIDByKey(t, "pesto"); ok {
-		t.Error("no plain pesto remains: the convert target counts among the Base recipe names")
+	if ing, _, _ := f.lineAt(t, f.recipeNamed(t, "Gnocchi").id, 0); ing != plain {
+		t.Errorf("the kept line is on the plain pesto %d, got %d: keep never links silently", plain, ing)
 	}
-	if ing, _, _ := f.lineAt(t, f.recipeNamed(t, "Gnocchi").id, 0); ing != pesto.baseIng.Int64 {
-		t.Errorf("the kept line lands on Pesto's Ingredient (%d), the one Ingredient of that name: got %d", pesto.baseIng.Int64, ing)
+	if ing, _, _ := f.lineAt(t, f.recipeNamed(t, "Lasagne").id, 1); ing != pesto.baseIng.Int64 {
+		t.Errorf("the converted line is on Pesto's Ingredient")
 	}
 }
 

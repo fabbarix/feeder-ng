@@ -465,3 +465,58 @@ func TestACreateAnswerNamedLikeARecipeOfTheSameFileIsAProblemOnTheTile(t *testin
 		t.Errorf("want base_recipe_name_taken at %s before Confirm: ready %v problems %+v", path, p.Ready, p.Problems)
 	}
 }
+
+func TestTwoFileBaseRecipesWithKeptLinesNamedAfterEachOtherAreAProblemNotAFailedApply(t *testing.T) {
+	ragu := miniRecipe("Ragù")
+	ragu.BaseRecipe, ragu.Yield, ragu.YieldUnit = ptr(true), 1, "kg"
+	ragu.Ingredients = []recipefile.Line{{Ingredient: "béchamel", Quantity: 100, Unit: "ml"}}
+	bech := miniRecipe("Béchamel")
+	bech.BaseRecipe, bech.Yield, bech.YieldUnit = ptr(true), 1, "l"
+	bech.Ingredients = []recipefile.Line{{Ingredient: "ragù", Quantity: 50, Unit: "g"}}
+	f := fileOf(ragu, bech)
+	f.Ingredients = []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}, {Name: "ragù", BaseUnit: "g"}}
+	a, b := "$.recipes[0].ingredients[0]", "$.recipes[1].ingredients[0]"
+	d := recipefile.Decisions{BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{
+		a: {Action: recipefile.BaseKeep}, b: {Action: recipefile.BaseKeep},
+	}}
+	p := plan(t, f, recipefile.Existing{}, d)
+	if p.Ready {
+		t.Fatal("each plain Ingredient would have to exist before the Base recipe that the other one needs: the review cannot say Ready")
+	}
+	var onTile bool
+	for _, pr := range p.Problems {
+		onTile = onTile || pr.Path == a || pr.Path == b
+	}
+	if !onTile {
+		t.Errorf("want a Problem on one of the two tiles (%s, %s): %+v", a, b, p.Problems)
+	}
+}
+
+func nameTakenFixture() (recipefile.File, recipefile.Existing) {
+	pesto := miniRecipe("Pesto")
+	f := lasagneWith(recipefile.Line{Ingredient: "pesto", Quantity: 50, Unit: "g"}, pesto)
+	f.Ingredients = append(f.Ingredients, recipefile.Ingredient{Name: "Rice", BaseUnit: "g"})
+	return f, recipefile.Existing{Recipes: []recipefile.RecipeRef{{ID: 50, Name: "Pesto"}}} // a plannable Pesto
+}
+
+func TestCheckBaseNameUsesTheNameOfAKeepBothRenameNotTheFilesName(t *testing.T) {
+	f, ex := nameTakenFixture()
+	d := answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseCreate})
+	d.Recipes = []recipefile.RecipeDecision{{Index: 1, Action: recipefile.ActionKeepBoth}} // the file's Pesto is imported as "Pesto (2)"
+	p := plan(t, f, ex, d)
+	if hasProblem(p, lineB, "base_recipe_name_taken") {
+		t.Errorf("the file's Pesto becomes Pesto (2), so a created Base recipe called pesto is free: %+v", p.Problems)
+	}
+}
+
+func TestCheckBaseNameRefusesTheNameAKeepBothRenameGives(t *testing.T) {
+	f, ex := nameTakenFixture()
+	f.Recipes[0].Ingredients[1].Ingredient = "pesto (2)"
+	f.Ingredients[1].Name = "pesto (2)"
+	d := answerAt(lineB, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseCreate})
+	d.Recipes = []recipefile.RecipeDecision{{Index: 1, Action: recipefile.ActionKeepBoth}}
+	p := plan(t, f, ex, d)
+	if p.Ready || !hasProblem(p, lineB, "base_recipe_name_taken") {
+		t.Errorf("a Base recipe called pesto (2) clashes with the file's renamed Recipe: ready %v problems %+v", p.Ready, p.Problems)
+	}
+}
