@@ -245,13 +245,36 @@ func ValidFile() string {
 
 // BaseRecipesFile (beta.6, BR-C; marker #fake:base-recipes) is a valid answer with two Recipes: Lasagne (plannable) with a
 // line "500 ml béchamel" marked `recipe: { name: "Béchamel", cue: "" }`, and Béchamel (baseRecipe, yield 1 l).
-// STUB: the developer writes it (it must be a valid Recipe File, as the model would answer after Finish's pruneNone).
-func BaseRecipesFile() string { return "" }
+func BaseRecipesFile() string {
+	return `{"format":"feeder-recipe-file","version":1,
+ "ingredients":[
+  {"name":"lasagne sheets","baseUnit":"g"},
+  {"name":"béchamel","baseUnit":"ml"},
+  {"name":"milk","baseUnit":"ml"},
+  {"name":"butter","baseUnit":"g"},
+  {"name":"flour","baseUnit":"g"}],
+ "recipes":[
+  {"name":"Lasagne","yield":4,"courses":["Main"],"ingredients":[
+    {"ingredient":"lasagne sheets","quantity":250,"unit":"g"},
+    {"ingredient":"béchamel","quantity":500,"unit":"ml","recipe":{"name":"Béchamel","cue":""}}]},
+  {"name":"Béchamel","baseRecipe":true,"yield":1,"yieldUnit":"l","ingredients":[
+    {"ingredient":"milk","quantity":1000,"unit":"ml"},
+    {"ingredient":"butter","quantity":40,"unit":"g"},
+    {"ingredient":"flour","quantity":40,"unit":"g"}]}]}`
+}
 
 // BaseReferenceFile (beta.6, BR-C; marker #fake:base-reference) is a valid answer with one Recipe, Lasagne, whose line
 // "500 ml béchamel (see page 42)" is marked `recipe: { name: "Béchamel", cue: "see page 42" }`, and no Béchamel in the file.
-// STUB: the developer writes it.
-func BaseReferenceFile() string { return "" }
+func BaseReferenceFile() string {
+	return `{"format":"feeder-recipe-file","version":1,
+ "ingredients":[
+  {"name":"lasagne sheets","baseUnit":"g"},
+  {"name":"béchamel","baseUnit":"ml"}],
+ "recipes":[
+  {"name":"Lasagne","yield":4,"courses":["Main"],"ingredients":[
+    {"ingredient":"lasagne sheets","quantity":250,"unit":"g"},
+    {"ingredient":"béchamel","quantity":500,"unit":"ml","recipe":{"name":"Béchamel","cue":"see page 42"}}]}]}`
+}
 
 // InvalidFile is a well-formed JSON answer that fails the Recipe File schema (yield is a string).
 func InvalidFile() string {
@@ -274,6 +297,25 @@ func InjectedFile() string {
 	r["source"] = map[string]any{"url": "https://evil.example/x", "attribution": "Family recipe"}
 	b, _ := json.Marshal(m)
 	return string(b)
+}
+
+// markerOf is the marker after "#fake:" in text: the leading letters, digits and hyphens, so "#fake:base-recipes</source>"
+// is "base-recipes". It is "" when there is none.
+func markerOf(text string) string {
+	i := strings.Index(text, "#fake:")
+	if i < 0 {
+		return ""
+	}
+	rest := text[i+len("#fake:"):]
+	end := 0
+	for end < len(rest) {
+		c := rest[end]
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
+			break
+		}
+		end++
+	}
+	return rest[:end]
 }
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
@@ -324,13 +366,14 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request, req Request) {
 			}
 		}
 	}
-	marker := ""
-	if i := strings.Index(first, "#fake:"); i >= 0 {
-		marker = strings.Fields(first[i+len("#fake:"):] + " ")[0]
-	}
+	marker := markerOf(first)
 	reply := Reply{Text: ValidFile()}
 	switch marker {
 	case "valid":
+	case "base-recipes":
+		reply.Text = BaseRecipesFile()
+	case "base-reference":
+		reply.Text = BaseReferenceFile()
 	case "invalid-then-valid":
 		if turns < 2 {
 			reply.Text = InvalidFile()

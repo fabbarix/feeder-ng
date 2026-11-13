@@ -45,6 +45,12 @@ type LineRef struct {
 // ExportedAt = Now in RFC 3339 UTC, ingredient names as stored (display
 // name), images embedded as data URLs. Zero values that mean "default" are
 // omitted (nil CooldownDays, nil shelf life); 0 days is kept.
+//
+// Base recipes (beta.6, BR-C): every Base recipe a Recipe calls for, at any depth, is added after the requested
+// Recipes, in discovery order, once each (docs/dev/design/base-recipes.md §11.1). A Base recipe is written with
+// baseRecipe true, its yieldUnit, and none of the Course and planning fields. Its Ingredient is defined without the
+// "batch" Unit Conversion, which belongs to the Yield. A line that calls for a Base recipe is written with recipe and,
+// when NeededAtStep has it, neededAtStep. A file without Base recipes is written as before.
 func Build(in ExportInput) (File, []Warning) {
 	var warns []Warning
 	used := map[int64]bool{}
@@ -55,24 +61,56 @@ func Build(in ExportInput) (File, []Warning) {
 		Recipes:    make([]Recipe, 0, len(in.Recipes)),
 	}
 
-	for i, r := range in.Recipes {
-		base := fmt.Sprintf("$.recipes[%d]", i)
+	byIngredient := map[int64]ExportBaseRecipe{}
+	byRecipe := map[int64]ExportBaseRecipe{}
+	for _, b := range in.BaseRecipes {
+		byIngredient[b.OwnIngredientID] = b
+		byRecipe[b.Recipe.ID] = b
+	}
+	// The Recipes to write, the requested ones first, then the Base recipes they call for (breadth first).
+	order := append([]recipe.Recipe{}, in.Recipes...)
+	seen := map[int64]bool{}
+	for _, r := range in.Recipes {
+		seen[r.ID] = true
+	}
+	for i := 0; i < len(order); i++ {
+		for _, id := range callsFor(order[i]) {
+			b, ok := byIngredient[id]
+			if !ok || seen[b.Recipe.ID] {
+				continue
+			}
+			seen[b.Recipe.ID] = true
+			order = append(order, b.Recipe)
+		}
+	}
+
+	for _, r := range order {
+		base := fmt.Sprintf("$.recipes[%d]", len(f.Recipes))
+		br, isBase := byRecipe[r.ID]
 		out := Recipe{
-			Name:              r.Name,
-			Description:       r.Description,
-			Yield:             r.Yield,
-			ReadyMeal:         r.ReadyMeal,
-			Tags:              r.Tags,
-			CooldownDays:      copyInt(r.CooldownDays),
-			LeftoverUseByDays: copyInt(r.LeftoverUseByDays),
-			ReheatMinutes:     copyInt(r.ReheatMinutes),
+			Name:        r.Name,
+			Description: r.Description,
+			Yield:       r.Yield,
+			ReadyMeal:   r.ReadyMeal,
+			Tags:        r.Tags,
 		}
-		for _, c := range r.Courses {
-			out.Courses = append(out.Courses, c.Name)
-		}
-		if r.WholeMeal != nil {
-			w := *r.WholeMeal
-			out.WholeMeal = &w
+		if isBase {
+			t := true
+			out.BaseRecipe = &t
+			out.YieldUnit = br.YieldUnit
+			out.ReadyMeal = false
+			used[br.OwnIngredientID] = true
+		} else {
+			out.CooldownDays = copyInt(r.CooldownDays)
+			out.LeftoverUseByDays = copyInt(r.LeftoverUseByDays)
+			out.ReheatMinutes = copyInt(r.ReheatMinutes)
+			for _, c := range r.Courses {
+				out.Courses = append(out.Courses, c.Name)
+			}
+			if r.WholeMeal != nil {
+				w := *r.WholeMeal
+				out.WholeMeal = &w
+			}
 		}
 		if r.Source.URL != "" || r.Source.Attribution != "" {
 			out.Source = &Source{URL: r.Source.URL, Attribution: r.Source.Attribution}
@@ -84,9 +122,16 @@ func Build(in ExportInput) (File, []Warning) {
 				out.Image = data
 			}
 		}
-		for _, l := range r.Lines {
+		for j, l := range r.Lines {
 			used[l.IngredientID] = true
-			out.Ingredients = append(out.Ingredients, lineOut(l, in.Ingredients))
+			line := lineOut(l, in.Ingredients)
+			if b, ok := byIngredient[l.IngredientID]; ok {
+				line.Recipe = &LineRecipe{Name: b.Recipe.Name}
+				if n, ok := in.NeededAtStep[LineRef{RecipeID: r.ID, Line: j}]; ok {
+					line.NeededAtStep = &n
+				}
+			}
+			out.Ingredients = append(out.Ingredients, line)
 		}
 		for j, s := range r.Steps {
 			st := Step{Text: s.Text, Kind: string(s.Kind), After: s.After}
@@ -132,7 +177,11 @@ func Build(in ExportInput) (File, []Warning) {
 			BaseUnit:      string(ing.Base),
 			ShelfLifeDays: copyInt(ing.ShelfLifeDays),
 		}
+		_, ownsBase := byIngredient[id]
 		for _, c := range ing.Conversions {
+			if ownsBase && units.NormalizeUnit(c.Unit) == "batch" {
+				continue // the batch conversion is the Base recipe's Yield, set again on import
+			}
 			def.Conversions = append(def.Conversions, Conversion{Unit: c.Unit, ToBase: c.ToBase})
 		}
 		if ing.Image != "" {
@@ -145,6 +194,20 @@ func Build(in ExportInput) (File, []Warning) {
 		f.Ingredients = append(f.Ingredients, def)
 	}
 	return f, warns
+}
+
+// callsFor lists the Ingredient ids a Recipe's lines and Step uses name, in document order.
+func callsFor(r recipe.Recipe) []int64 {
+	var out []int64
+	for _, l := range r.Lines {
+		out = append(out, l.IngredientID)
+	}
+	for _, s := range r.Steps {
+		for _, u := range s.Uses {
+			out = append(out, u.IngredientID)
+		}
+	}
+	return out
 }
 
 // lineOut writes a line (or a Step use) by the display name of its Ingredient.
