@@ -4,7 +4,7 @@
 // Lasagne calls for 500 g of Béchamel. Béchamel has "Melt the butter" (5 min Active) and "Simmer the sauce" (20 min Passive),
 // Lasagne has "Layer the lasagne" and "Bake". The composed list puts Béchamel's block first, so the indexes are the composed
 // ones: 0 Melt, 1 Simmer (after 0), 2 Layer (after 1), 3 Bake (after 2). `baseRecipe` is null for the Recipe's own Steps,
-// `covered` is an array (never null), and a timer on a Base recipe Step is labelled "Path: text".
+// `covered` is an array (never null), and a timer on a Base recipe Step is labelled "Path: text", an own Step's "Step n: text" ("Recipe · text" only on a multi-Course timeline).
 import type { BaseRecipeLabel, CookStep, CookView, TimelineAdvance, TimelineItem, TimelineView } from './types'
 import { MAIN_SCOPE } from './timeline-fixtures'
 
@@ -28,7 +28,7 @@ export const SIMMER = baseItem({
 export const LAYER = baseItem({ step: 2, number: 3, text: 'Layer the lasagne', startSeconds: 1500, endSeconds: 2100, after: [1] })
 export const BAKE = baseItem({
   step: 3, number: 4, text: 'Bake', kind: 'passive', durationMinutes: 30, startSeconds: 2100, endSeconds: 3900, after: [2],
-  timer: { label: 'Lasagne: Bake', durationSeconds: 1800 },
+  timer: { label: 'Step 4: Bake', durationSeconds: 1800 },
 })
 
 const lasagneCourse = { courseId: 1, name: 'Main', recipeId: 7, recipeName: 'Lasagne', scope: MAIN_SCOPE, batches: 1, fresh: true, state: 'planned' as const }
@@ -56,7 +56,7 @@ export function baseAdvance(): TimelineAdvance[] {
 export function coveredTimeline(): TimelineView {
   return view({
     totalMinutes: 40,
-    items: [{ ...LAYER, number: 1, startSeconds: 0, endSeconds: 600, after: [] }, { ...BAKE, number: 2, startSeconds: 600, endSeconds: 2400 }],
+    items: [{ ...LAYER, number: 1, startSeconds: 0, endSeconds: 600, after: [] }, { ...BAKE, number: 2, startSeconds: 600, endSeconds: 2400, timer: { label: 'Step 2: Bake', durationSeconds: 1800 } }],
     covered: [BECHAMEL],
   })
 }
@@ -92,5 +92,5 @@ export function baseCookView(over: Partial<CookView> = {}): CookView {
 }
 
 export function coveredCookView(): CookView {
-  return baseCookView({ steps: [viewStep(LAYER, 1, 2), viewStep(BAKE, 2, 2)], covered: [BECHAMEL] })
+  return baseCookView({ steps: [viewStep(LAYER, 1, 2), viewStep({ ...BAKE, timer: { label: 'Step 2: Bake', durationSeconds: 1800 } }, 2, 2)], covered: [BECHAMEL] })
 }

@@ -49,7 +49,7 @@ describe('useCookSession: Base recipe Steps', () => {
   it('covered gives the lines; the covered Steps are not in the view, so "Step 1 of 2" and the composed index', async () => {
     const r = setup(coveredCookView())
     await ready(r)
-    expect(r.result.current.covered).toEqual(['Béchamel from the Pantry'])
+    expect(r.result.current.covered).toEqual(['Béchamel from Stock'])
     expect(r.result.current.step).toMatchObject({ number: 1, of: 2, index: 2 })
     expect(r.result.current.ready).toEqual([])
   })
@@ -57,7 +57,7 @@ describe('useCookSession: Base recipe Steps', () => {
   it('two covered Base recipes give two lines in order; none (or no field) gives none', async () => {
     const two = setup(baseCookView({ covered: [BECHAMEL, FROLLA] }))
     await ready(two)
-    expect(two.result.current.covered).toEqual(['Béchamel from the Pantry', 'Pasta frolla from the Pantry'])
+    expect(two.result.current.covered).toEqual(['Béchamel from Stock', 'Pasta frolla from Stock'])
     const { covered: _omit, ...old } = baseCookView()
     const older = setup(old as CookView)
     await ready(older)

@@ -89,7 +89,7 @@ describe('useCookTimeline: Base recipe Steps', () => {
   it('covered is the lines of the Base recipes the Pantry covers; their Steps are not items', async () => {
     const r = setup(coveredTimeline())
     await ready(r)
-    expect(r.result.current.covered).toEqual(['Béchamel from the Pantry'])
+    expect(r.result.current.covered).toEqual(['Béchamel from Stock'])
     expect(r.result.current.items.map((i) => i.item.text)).toEqual(['Layer the lasagne', 'Bake'])
     expect(r.result.current.step).toMatchObject({ number: 1, of: 2, index: 2, baseRecipe: null })
     expect(r.result.current.ready).toEqual([])

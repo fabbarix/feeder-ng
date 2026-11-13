@@ -2,7 +2,7 @@
 // Pinned API of lib/baseSteps.ts:
 //   baseChipText(label)            "Béchamel", "Béchamel · Roux" (the path joined with " · "; the name when the path is empty)
 //   readyBefore(items)             per item (same length, same order): the Base recipes that are ready by that item, as names
-//   coveredLines(covered)          one line per covered Base recipe, in order: "Béchamel from the Pantry"
+//   coveredLines(covered)          one line per covered Base recipe, in order: "Béchamel from Stock"
 import { describe, expect, it } from 'vitest'
 import { BAKE, BECHAMEL, FROLLA, LAYER, MELT, ROUX, SIMMER, baseItem } from '../base-fixtures'
 import { baseChipText, coveredLines, readyBefore } from './baseSteps'
@@ -74,11 +74,11 @@ describe('readyBefore', () => {
 })
 
 describe('coveredLines', () => {
-  it('says each covered Base recipe comes from the Pantry, in order', () => {
-    expect(coveredLines([BECHAMEL, FROLLA])).toEqual(['Béchamel from the Pantry', 'Pasta frolla from the Pantry'])
+  it('says each covered Base recipe comes from Stock, in order', () => {
+    expect(coveredLines([BECHAMEL, FROLLA])).toEqual(['Béchamel from Stock', 'Pasta frolla from Stock'])
   })
-  it('uses the outermost name of a path (covered names only the outermost, but a path is joined if it is longer)', () => {
-    expect(coveredLines([ROUX])).toEqual(['Béchamel · Roux from the Pantry'])
+  it('joins a longer path with " · " before the wording', () => {
+    expect(coveredLines([ROUX])).toEqual(['Béchamel · Roux from Stock'])
   })
   it('is empty when nothing is covered, or the payload has no covered (older)', () => {
     expect(coveredLines([])).toEqual([])

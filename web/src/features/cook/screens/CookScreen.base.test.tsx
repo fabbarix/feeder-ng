@@ -16,11 +16,18 @@ vi.mock('../../../lib/sse', () => ({
 const courses = { courses: [{ id: 1, name: 'Main', position: 0, main: true, archived: false }] }
 const plan = { today: '2026-11-10', horizonDays: 3, updating: false, slots: [] }
 
+// The timer the server would make for the posted body (scope and step), labelled as BR-G labels the Step.
+const LABELS: Record<number, string> = { 1: 'Béchamel: Simmer the sauce', 3: 'Step 4: Bake' }
+function postedTimer(body: unknown) {
+  const { scope, step } = body as { scope: string; step: number }
+  return timer({ scope, step, label: LABELS[step] ?? `Step ${step + 1}` })
+}
+
 function setupMeal(view: TimelineView, timers: CookTimer[] = []) {
   const api = mockApi({
     'GET /api/cook/meals/2026-11-10/4/all': view,
     'GET /api/cook/timers': () => ({ now: new Date().toISOString(), timers }),
-    'POST /api/cook/timers': () => timer({ scope: MAIN_SCOPE, step: 1, label: 'Béchamel: Simmer the sauce' }),
+    'POST /api/cook/timers': (c) => postedTimer(c.body),
     'PUT /api/cook/marks': {},
     'GET /api/courses': courses,
     'GET /api/plan': plan,
@@ -39,7 +46,7 @@ function setupRecipe(view: CookView, timers: CookTimer[] = []) {
   const api = mockApi({
     'GET /api/cook/recipes/7?batches=1': view,
     'GET /api/cook/timers': () => ({ now: new Date().toISOString(), timers }),
-    'POST /api/cook/timers': () => timer({ scope: 'recipe:7', step: 1, label: 'Béchamel: Simmer the sauce' }),
+    'POST /api/cook/timers': (c) => postedTimer(c.body),
     'PUT /api/cook/marks': {},
     'GET /api/courses': courses,
     'GET /api/plan': plan,
@@ -103,8 +110,8 @@ describe('CookScreen timeline: covered Base recipes', () => {
     setupMeal(coveredTimeline())
     const tile = await screen.findByRole('article', { name: 'Step 1 of 2' })
     expect(within(tile).getByText('Layer the lasagne')).toBeInTheDocument()
-    const list = screen.getByRole('list', { name: 'Left out of the Steps' })
-    expect(within(list).getByText('Béchamel from the Pantry')).toBeInTheDocument()
+    const list = screen.getByRole('list', { name: 'Already in Stock' })
+    expect(within(list).getByText('Béchamel from Stock')).toBeInTheDocument()
     expect(screen.queryByText('Melt the butter')).not.toBeInTheDocument()
     expect(screen.queryByRole('article', { name: /Step \d+ of 4/ })).not.toBeInTheDocument()
   })
@@ -112,8 +119,8 @@ describe('CookScreen timeline: covered Base recipes', () => {
   it('shows no line when nothing is covered', async () => {
     setupMeal(baseTimeline())
     await screen.findByRole('article', { name: 'Step 1 of 4' })
-    expect(screen.queryByRole('list', { name: 'Left out of the Steps' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/from the Pantry/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Already in Stock' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/from Stock/)).not.toBeInTheDocument()
   })
 
   it('keeps the line while walking the Steps', async () => {
@@ -121,7 +128,7 @@ describe('CookScreen timeline: covered Base recipes', () => {
     await screen.findByRole('article', { name: 'Step 1 of 2' })
     await next()
     await screen.findByRole('article', { name: 'Step 2 of 2' })
-    expect(screen.getByText('Béchamel from the Pantry')).toBeInTheDocument()
+    expect(screen.getByText('Béchamel from Stock')).toBeInTheDocument()
   })
 
   it('a Step with a composed index keeps it for the marks and timers (the Bake timer is Step 3)', async () => {
@@ -170,7 +177,7 @@ describe('CookScreen Course view (Recipe route): Base recipes', () => {
   it('covered Base recipes are lines, not Steps', async () => {
     setupRecipe(coveredCookView())
     await screen.findByRole('article', { name: 'Step 1 of 2' })
-    expect(within(screen.getByRole('list', { name: 'Left out of the Steps' })).getByText('Béchamel from the Pantry')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Already in Stock' })).getByText('Béchamel from Stock')).toBeInTheDocument()
     expect(screen.queryByText('Melt the butter')).not.toBeInTheDocument()
   })
 
