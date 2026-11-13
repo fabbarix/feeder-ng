@@ -28,6 +28,19 @@ Feature: Food-only paths refuse a Supply
     And the error field is "lines[1].ingredientId"
     And the household has 0 Recipes
 
+  Scenario: A Step cannot use a Supply, even one on no line
+    When I create a Recipe with JSON:
+      """
+      {"name": "Soapy soup", "yield": 2, "lines": [{"ingredientId": <id:milk>, "quantity": 200, "unit": "ml"}],
+       "steps": [{"text": "Wipe the pan", "kind": "active", "durationMinutes": 2,
+                  "uses": [{"ingredientId": <id:Dish soap>, "quantity": 5, "unit": "ml"}]}]}
+      """
+    Then the response status is 422
+    And the error code is "validation_failed"
+    And the error reason is "ingredient_is_supply"
+    And the error field is "steps[0].uses[0].ingredientId"
+    And the household has 0 Recipes
+
   Scenario: A saved Recipe cannot be given a Supply line
     When I create a Recipe with JSON:
       """
