@@ -16,6 +16,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/imaging"
 	ingstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/recipe"
+	"github.com/fabbarix/feeder-ng/internal/recipe/baserecipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	tagstore "github.com/fabbarix/feeder-ng/internal/tag/store"
 	"github.com/fabbarix/feeder-ng/internal/units"
@@ -604,6 +605,9 @@ type ListFilter struct {
 	// Couldn't plan fix uses the second.
 	CourseID    int64
 	NotCourseID int64
+	// For (round 2): the Recipe a line is being added to. With Kind "base" each Summary's WouldCycle says whether
+	// a line of For calling for that Base recipe would make a cycle (one catalog load plus baserecipe.FindCycle).
+	For int64
 }
 
 // List returns Summaries ordered by name (case-insensitive), then id.
@@ -638,7 +642,7 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 		args = append(args, f.NotCourseID)
 	}
 	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes, r.whole_meal,
-	        r.base_ingredient_id IS NOT NULL, r.yield_unit,
+	        r.base_ingredient_id, r.yield_unit,
 	        (SELECT count(DISTINCT rl.recipe_id) FROM recipe_lines rl WHERE rl.ingredient_id = r.base_ingredient_id) FROM recipes r`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
@@ -653,16 +657,17 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	out := []recipe.Summary{}
 	for rows.Next() {
 		var sum recipe.Summary
-		var ready, archived, whole, isBase, used int64
-		var reheat sql.NullInt64
+		var ready, archived, whole, used int64
+		var reheat, baseIng sql.NullInt64
 		var yieldUnit sql.NullString
 		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat, &whole,
-			&isBase, &yieldUnit, &used); err != nil {
+			&baseIng, &yieldUnit, &used); err != nil {
 			return nil, err
 		}
 		sum.ReheatMinutes = int(reheat.Int64)
 		sum.WholeMeal = whole == 1
-		sum.BaseRecipe = isBase == 1
+		sum.BaseRecipe = baseIng.Valid
+		sum.BaseIngredientID = baseIng.Int64
 		sum.YieldUnit = yieldUnit.String
 		sum.UsedByCount = int(used)
 		sum.CourseIDs = []int64{}
@@ -676,6 +681,11 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	if f.For != 0 && f.Kind != "plannable" {
+		if err := s.markWouldCycle(ctx, out, f.For); err != nil {
+			return nil, err
+		}
 	}
 	if len(out) == 0 {
 		return out, nil
@@ -795,6 +805,11 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 		// plain key back here; a plain Ingredient holding the name keeps the key of the Base recipe (ErrNameTaken).
 		if err := s.ings.ReleaseBaseRecipeTx(ctx, tx, baseIng.Int64); err != nil && !errors.Is(err, ingstore.ErrNameTaken) {
 			return err
+		}
+		for _, k := range []string{"batch", "portion"} {
+			if err := s.ings.RemoveConversionTx(ctx, tx, baseIng.Int64, k); err != nil {
+				return err
+			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -1246,4 +1261,27 @@ func (s *Store) dropLostCourses(ctx context.Context, tx *sql.Tx, id int64, lost 
 // householdToday is the date (YYYY-MM-DD) of the clock's now in the Household's time zone.
 func (s *Store) householdToday(ctx context.Context, q Querier) (string, error) {
 	return clock.HouseholdToday(ctx, q, s.clk)
+}
+
+// markWouldCycle sets WouldCycle on each Base recipe summary: a line of the Recipe forID calling for it would make a
+// cycle, that is, the Base recipe reaches forID through the "calls for" graph. One catalog load, one FindCycle each
+// (round 2). A virtual edge forID -> base stands for the new line.
+func (s *Store) markWouldCycle(ctx context.Context, out []recipe.Summary, forID int64) error {
+	cat, err := loadCatalog(ctx, s.db)
+	if err != nil {
+		return err
+	}
+	graph := cat.graph()
+	for i := range out {
+		if !out[i].BaseRecipe {
+			continue
+		}
+		edges := make(map[int64][]int64, len(graph)+1)
+		for k, v := range graph {
+			edges[k] = v
+		}
+		edges[forID] = append(append([]int64(nil), graph[forID]...), out[i].ID)
+		out[i].WouldCycle = baserecipe.FindCycle(edges, cat.names, forID) != nil
+	}
+	return nil
 }

@@ -145,6 +145,8 @@ type lineJSON struct {
 	NeededAtStep           *int         `json:"neededAtStep"`
 	NeededAt               int          `json:"neededAt"`
 	LinkedFromIngredientID *int64       `json:"linkedFromIngredientId"`
+	// NeededAtDefault is the Step the default rule gives, with the override cleared (null for a plain line).
+	NeededAtDefault *int `json:"neededAtDefault"`
 }
 
 // baseRefJSON is the Base recipe a line calls for.
@@ -237,6 +239,9 @@ type summaryJSON struct {
 	BaseRecipe   bool    `json:"baseRecipe"`
 	YieldUnit    *string `json:"yieldUnit"`
 	UsedByCount  int     `json:"usedByCount"`
+	// BaseIngredientID is the Base recipe's Ingredient (0 for a plannable Recipe); WouldCycle is set with ?for= (round 2).
+	BaseIngredientID int64 `json:"baseIngredientId"`
+	WouldCycle       bool  `json:"wouldCycle"`
 }
 
 // courseJSON is a Course of a Recipe, in household order.
@@ -398,7 +403,15 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, "kind", "kind_invalid", "kind must be plannable, base or all")
 		return
 	}
+	forID, ok := optionalID(q.Get("for"))
+	if !ok || (forID != nil && *forID <= 0) {
+		writeFieldError(w, "for", "for_invalid", "for must be a Recipe id")
+		return
+	}
 	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q"), Kind: kind}
+	if forID != nil {
+		f.For = *forID
+	}
 	if course != nil {
 		f.CourseID = *course
 	}
@@ -428,6 +441,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
 			CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
 			BaseRecipe: s.BaseRecipe, YieldUnit: yieldUnitPtr(s.YieldUnit), UsedByCount: s.UsedByCount,
+			BaseIngredientID: s.BaseIngredientID, WouldCycle: s.WouldCycle,
 		}
 		if d, ok := cooked[s.ID]; ok {
 			j.LastCookedOn = &d
@@ -449,6 +463,7 @@ func (a *api) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(rec.ID)
+	a.ingredientChanged(rec)
 	httpx.WriteJSON(w, http.StatusCreated, toRecipeJSON(rec))
 }
 
@@ -490,6 +505,7 @@ func (a *api) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(id)
+	a.ingredientChanged(rec)
 	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
 }
 
@@ -624,6 +640,14 @@ func (a *api) writePreferences(w http.ResponseWriter, r *http.Request, memberID 
 
 // Events.
 
+// ingredientChanged tells the Ingredient lists that a Base recipe's Ingredient may have been renamed or taken over
+// (round 2): a Base recipe save publishes its Ingredient.
+func (a *api) ingredientChanged(rec recipe.Recipe) {
+	if rec.IsBase() {
+		a.events.Publish("ingredients", map[string]int64{"id": rec.BaseIngredientID})
+	}
+}
+
 func (a *api) changed(id int64) {
 	a.events.Publish(topic, map[string]int64{"id": id})
 }
@@ -695,6 +719,8 @@ func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 		}
 		if l.Base != nil {
 			lj.BaseRecipe = &baseRefJSON{ID: l.Base.ID, Name: l.Base.Name, Archived: l.Base.Archived, Empty: l.Base.Empty}
+			def := l.NeededAtDefault
+			lj.NeededAtDefault = &def
 		}
 		if l.LinkedFromIngredientID != 0 {
 			from := l.LinkedFromIngredientID
@@ -881,6 +907,7 @@ func (a *api) toBase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.changed(id)
+	a.ingredientChanged(rec)
 	httpx.WriteJSON(w, http.StatusOK, toRecipeJSON(rec))
 }
 
@@ -990,9 +1017,15 @@ func (a *api) linkCandidates(w http.ResponseWriter, r *http.Request) {
 		Linkable       bool    `json:"linkable"`
 		Reason         string  `json:"reason,omitempty"`
 	}
+	unit, err := a.store.BaseUnit(r.Context(), id)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	out := struct {
-		Lines []lineOut `json:"lines"`
-	}{Lines: []lineOut{}}
+		BaseUnit string    `json:"baseUnit"`
+		Lines    []lineOut `json:"lines"`
+	}{BaseUnit: unit, Lines: []lineOut{}}
 	for _, c := range cands {
 		out.Lines = append(out.Lines, lineOut{LineID: c.LineID, RecipeID: c.RecipeID, RecipeName: c.RecipeName, Archived: c.Archived,
 			IngredientID: c.IngredientID, IngredientName: c.IngredientName, Quantity: c.Quantity, Unit: c.Unit,
@@ -1027,13 +1060,18 @@ func (a *api) link(w http.ResponseWriter, r *http.Request) {
 		Name         string `json:"name"`
 		StockLots    int    `json:"stockLots"`
 		Products     int    `json:"products"`
+		Exclusions   int    `json:"exclusions"`
 	}
 	out := struct {
 		Linked     []int64    `json:"linked"`
 		MergeOffer []mergeOut `json:"mergeOffer"`
 	}{Linked: nonNilIDs(res.Linked), MergeOffer: []mergeOut{}}
 	for _, m := range res.MergeOffer {
-		out.MergeOffer = append(out.MergeOffer, mergeOut{IngredientID: m.IngredientID, Name: m.Name, StockLots: m.StockLots, Products: m.Products})
+		out.MergeOffer = append(out.MergeOffer, mergeOut{IngredientID: m.IngredientID, Name: m.Name, StockLots: m.StockLots,
+			Products: m.Products, Exclusions: m.Exclusions})
+	}
+	for _, rid := range res.Recipes {
+		a.changed(rid)
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -1048,10 +1086,18 @@ func (a *api) unlink(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
+	affected, err := a.store.RecipesOfLines(r.Context(), b.LineIDs)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	if err := a.store.Unlink(r.Context(), id, b.LineIDs); err != nil {
 		writeErr(w, err)
 		return
 	}
 	a.changed(id)
+	for _, rid := range affected {
+		a.changed(rid)
+	}
 	httpx.WriteJSON(w, http.StatusOK, map[string][]int64{"unlinked": nonNilIDs(b.LineIDs)})
 }
