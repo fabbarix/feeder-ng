@@ -54,7 +54,7 @@ describe('SuppliesScreen', () => {
   })
   it('lists the Supplies and opens one at /supplies/:id', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: /Dish soap/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Dish soap' }))
     expect(screen.getByText('supply page')).toBeInTheDocument()
   })
   it('searches with "Search Supplies" and passes the text on', async () => {
