@@ -152,8 +152,16 @@ describe('the driver', () => {
 
 describe('the seed', () => {
   it('tags a Side Recipe with a very long Tag and writes sideCourseId and longTag to the ids file', () => {
-    expect(seed).toMatch(/extraordinarily long family favourite weeknight tag/)
+    expect(seed).toMatch(/const LONG_TAG = '[^']+'/)
     expect(seed).toMatch(/sideCourseId/)
     expect(seed).toMatch(/longTag/)
+  })
+  // Round 3 (review): the API refuses a Tag over 40 characters, so a longer LONG_TAG is never created and the filtered scenario shows
+  // no Recipe. The seed exits 1 when the Recipe carrying it is missing.
+  it('keeps LONG_TAG within the 40 characters a Tag may have, and fails when its Recipe is not created', () => {
+    const tag = /const LONG_TAG = '([^']+)'/.exec(seed)?.[1] ?? ''
+    expect([...tag].length).toBeGreaterThan(30)
+    expect([...tag].length).toBeLessThanOrEqual(40)
+    expect(seed).toMatch(/longTagRecipe === null[^\n]*\n[^\n]*\n\s*process\.exit\(1\)/)
   })
 })

@@ -7,7 +7,8 @@
 // productId, shopId) for the guard's ":id" routes.
 //   node scripts/test/fixtures/page-layout-seed.mjs http://127.0.0.1:<port> [--out build/page-layout-ids.json] [--email admin@example.test]
 // Best effort: a step that the API refuses is reported on stderr and skipped (the guard then probes emptier screens, which is still
-// a layout). Exit 0 whenever login worked; exit 1 when it did not.
+// a layout). Exit 0 whenever login worked; exit 1 when it did not, or when the Side Recipe with LONG_TAG was not created (the guard's
+// filtered /recipes scenarios would then show no Recipe, so they must not pass quietly).
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { pickZones, SLOT_TIMES } from './page-layout-seed-zones.mjs'
@@ -111,8 +112,10 @@ for (const [i, name] of RECIPES.entries()) {
 // hf-recipes-filter: many Tags (docs/design/recipes-filter.md), so /recipes shows its filter header as a household with dozens of
 // Tags sees it (the beta.6 Tag row crushed every chip to its dot). A Tag may exist with no Recipe (GLOSSARY); one Recipe carries
 // eight of them, with long names, so its tile's Tag line is exercised too.
-// Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 px.
-const LONG_TAG = 'extraordinarily long family favourite weeknight tag'
+// Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 and 430 px.
+// Round 3: a Tag holds at most 40 characters (the API refuses longer ones, so the 51-character Tag of round 2 was never created). In
+// capitals this 39-character name draws a 352 px chip, past the 318 px that "Side" leaves on a 430 px line.
+const LONG_TAG = 'HOMEMADE WEDNESDAY MUSHROOM WELLINGTONS'
 const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
   'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
   'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
@@ -169,6 +172,7 @@ const mainCourse = courses.find((c) => c.main) ?? courses.find((c) => c.name ===
 const sideCourse = courses.find((c) => c.name === 'Side')
 const cook = [{ text: 'Prepare and cook.', kind: 'active', durationMinutes: 15, leadTimeMinutes: 0, after: [], uses: [] }]
 const sideIds = []
+let longTagRecipe = null
 for (const [name, lines] of [
   ['Two-colour cauliflower with peppers', [lineOf('Cauliflower', 1500), lineOf('Red pepper', 2), lineOf('Marjoram', 2)]],
   ['Cucumber tomato feta salad', [lineOf('Cucumber', 2), lineOf('Feta', 150), line(3, 200)]],
@@ -177,6 +181,7 @@ for (const [name, lines] of [
   const tags = name.startsWith('Cucumber') ? ['vegetarian', LONG_TAG] : ['vegetarian']
   const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags, courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
   if (r.ok && r.json?.id) sideIds.push(r.json.id)
+  if (r.ok && r.json?.id && tags.includes(LONG_TAG)) longTagRecipe = r.json.id
 }
 const mainR = await step('main recipe', 'POST', '/api/recipes', {
   name: 'Cauliflower al gorgonzola with chestnut mushrooms', description: '', yield: 4, readyMeal: false, tags: ['vegetarian'],
@@ -237,4 +242,8 @@ mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
 const sideCourseId = sideCourse?.id ?? null
 writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG }, null, 2) + '\n')
+if (longTagRecipe === null || sideCourseId === null) {
+  console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
+  process.exit(1)
+}
 console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, toConfirm ${toConfirm}) -> ${out}`)
