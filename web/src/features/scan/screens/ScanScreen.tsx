@@ -168,8 +168,10 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   // A camera failure is explained by CameraFailure below; the strip only carries the starting text.
   const viewfinderStatus = c.recovery.failure ? undefined : cameraText(c.camera.status)
   const scanned = c.scanned
-  const { view, choose } = useListView(scanned.entries.length)
-  const justScanned = useJustScanned(scanned.loaded ? scanned.entries.length : null, scanned.rows[0]?.key ?? null)
+  // Until the stored session is in, its scans coming back are not new scans (no switch to Scanned, no wash).
+  const scanCount = scanned.loaded ? scanned.entries.length : null
+  const { view, choose } = useListView(scanCount)
+  const justScanned = useJustScanned(scanCount, scanned.rows[0]?.key ?? null)
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
 
   const pricingKey = flow.pricing?.key ?? null

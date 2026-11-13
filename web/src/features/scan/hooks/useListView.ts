@@ -16,13 +16,16 @@ export interface ListViewController {
   choose: (view: ListView) => void
 }
 
-/** `scanCount` is the number of scans of the session: a count that grows (a scan) shows the Scanned list. */
-export function useListView(scanCount: number): ListViewController {
+/**
+ * `scanCount` is the number of scans of the session, or null until the stored session has loaded: a count that grows (a
+ * scan) shows the Scanned list. The stored session coming back is not a scan, so it keeps the remembered choice.
+ */
+export function useListView(scanCount: number | null): ListViewController {
   const [view, setView] = useState<ListView>(() => readListView(localStorageOrNull()))
   const [seen, setSeen] = useState(scanCount)
-  if (scanCount > seen) {
+  if (scanCount !== seen) {
     setSeen(scanCount)
-    setView('scanned')
+    if (seen !== null && scanCount !== null && scanCount > seen) setView('scanned')
   }
   return {
     view,
