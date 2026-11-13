@@ -69,13 +69,13 @@ describe('PlanScreen: Not served', () => {
 })
 
 describe('PlanScreen: Time today', () => {
-  it('the dialog saves the date\'s time and the slot then shows "20:15 · usually 19:30"', async () => {
+  it('the dialog saves the date\'s time and the slot then shows "20:30 · usually 19:30"', async () => {
     let own = false
     const api = mockApi({
-      'GET /api/plan': () => view([own ? planned({ time: '20:15' }) : planned()]),
+      'GET /api/plan': () => view([own ? planned({ time: '20:30' }) : planned()]),
       [`PATCH ${PATH}`]: () => {
         own = true
-        return { ...info, time: '20:15' }
+        return { ...info, time: '20:30' }
       },
     })
     renderWithProviders(<PlanScreen />)

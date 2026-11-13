@@ -178,7 +178,7 @@ describe('useSlotDate: Who\'s eating', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }))
     await waitFor(() => expect(api.callsTo('PATCH', PATH)).toHaveLength(1))
     expect(api.callsTo('PATCH', PATH)[0]?.body).toEqual({ notServed: false })
-    expect(screen.getByText('Thu Dinner is not served')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Thu Dinner is not served')).not.toBeInTheDocument())
   })
 })
 
