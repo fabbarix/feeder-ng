@@ -457,6 +457,14 @@ describe('Price entry in the flow', () => {
     expect(flow(h).pricing).toBeNull()
   })
 
+  it('a failure that is not an Error says "Couldn\'t save that Price. Try again." (review)', async () => {
+    const h = setup({ setPrices: vi.fn(async () => { throw 'offline' }) } as Partial<ScanFlowDeps>)
+    await seed(h, [applied('a', passata)])
+    let outcome: unknown
+    await act(async () => { outcome = await flow(h).savePrice('7', entry(145), 'save') })
+    expect(outcome).toEqual({ status: 'failed', error: "Couldn't save that Price. Try again." })
+  })
+
   it.each([[404, 'not_found'], [409, 'already_undone'], [409, 'not_undoable'], [422, 'invalid_price']])('a %i %s from the server changes nothing and says why', async (status, code) => {
     const h = setup({ setPrices: vi.fn(async () => { throw new ApiError(status, code, 'The server said no') }) } as Partial<ScanFlowDeps>)
     await seed(h, [applied('a', passata)])

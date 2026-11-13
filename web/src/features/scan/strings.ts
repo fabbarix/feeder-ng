@@ -113,6 +113,7 @@ export const scanStrings = {
   removeAction: 'Remove',
   keepThem: 'Keep them',
   undoFailed: "Couldn't undo that Scan. Try again.",
+  priceSaveFailed: "Couldn't save that Price. Try again.",
   rowNotOnList: 'Not on the list',
   onListTicked: (ingredient: string) => `On the list · ${ingredient} ticked`,
   onListStillToGet: (qty: string) => `On the list · ${qty} still to get`,

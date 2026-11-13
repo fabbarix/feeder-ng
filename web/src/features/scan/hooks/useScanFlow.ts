@@ -725,7 +725,7 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       try {
         results = await sendPrices(d, body)
       } catch (err) {
-        const error = err instanceof Error ? err.message : scanStrings.undoFailed
+        const error = err instanceof Error ? err.message : scanStrings.priceSaveFailed
         d.notify?.(error, 'error')
         return { status: 'failed', error }
       }
