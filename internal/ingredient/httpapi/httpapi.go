@@ -391,12 +391,25 @@ func (a *api) patch(w http.ResponseWriter, r *http.Request) {
 	if body.FrozenShelfLifeDays.set {
 		p.FrozenShelfLife = &store.ShelfLifePatch{Days: body.FrozenShelfLifeDays.days}
 	}
+	var wasSupply bool
+	if p.Kind != nil {
+		cur, err := a.store.Get(r.Context(), id)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		wasSupply = cur.IsSupply()
+	}
 	updated, err := a.store.Update(r.Context(), id, p)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	a.changed(id)
+	if !wasSupply && updated.IsSupply() {
+		// The change to a Supply cleared its Lots' go-off dates: the Pantry refreshes on the stock topic.
+		a.stockChanged(id)
+	}
 	a.respond(w, r, http.StatusOK, updated)
 }
 
@@ -547,6 +560,14 @@ func (a *api) respond(w http.ResponseWriter, r *http.Request, status int, i ingr
 func (a *api) changed(id int64) {
 	if a.events != nil {
 		a.events.Publish(topic, map[string]int64{"id": id})
+	}
+}
+
+// stockChanged tells the SPA that the Stock Lots of Ingredient id changed, in the stock service's own event shape
+// (internal/stock/service: stock {"changed":"lots","ingredientIds":[id]}).
+func (a *api) stockChanged(id int64) {
+	if a.events != nil {
+		a.events.Publish("stock", map[string]any{"changed": "lots", "ingredientIds": []int64{id}})
 	}
 }
 

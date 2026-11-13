@@ -410,6 +410,9 @@ func (s *Store) Update(ctx context.Context, id int64, p Patch) (ingredient.Ingre
 		if err := s.checkKindToSupply(ctx, tx, id, base != nil); err != nil {
 			return ingredient.Ingredient{}, err
 		}
+		// A direct write, not a ReferenceMover hook: "a Supply's Lot has no go-off date" must hold in every build,
+		// whether or not the stock store registered its mover (BaseUnitTx reads stock_lots for the same reason), and
+		// in this transaction, with the guard above and the kind change below (ADR 0017 decision 5).
 		if _, err := tx.ExecContext(ctx, `UPDATE stock_lots SET goes_off = NULL WHERE ingredient_id = ?`, id); err != nil {
 			return ingredient.Ingredient{}, err
 		}
