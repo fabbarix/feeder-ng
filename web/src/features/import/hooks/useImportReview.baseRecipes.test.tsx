@@ -1,6 +1,6 @@
 // BR-E: Base recipe answers and the Confirm refusals in useImportReview (design §11.3, §13). RED until the hook has them.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
@@ -169,18 +169,20 @@ describe('useImportReview, Confirm refusals', () => {
 })
 
 describe('useImportReview, a 409 take-over the plan has no ask for (round 2)', () => {
-  const stray = new ApiError(409, 'base_recipe_take_over', 'an Ingredient named béchamel exists: take it over?', {
-    ingredient: { id: 5, name: 'béchamel' },
+  const stray = new ApiError(409, 'base_recipe_take_over', 'an Ingredient named roux exists: take it over?', {
+    ingredient: { id: 6, name: 'roux' },
     recipes: [{ id: 11, name: 'Moussaka', archived: false }],
     stockLots: 1,
     convertible: true,
   })
-  const withAsk = plan({ ready: false, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [takeOver()] })
+  const withAsk = plan({ ready: false, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [takeOver({ ingredient: { id: 6, name: 'roux', baseUnit: 'g' } })] })
+
+  const noAsk = plan({ ready: true, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [] })
 
   beforeEach(() => {
     vi.clearAllMocks()
-    api.open.mockResolvedValue({ id: 'r1', plan: plan({ ready: true, baseRecipeLines: [baseLine({ resolved: true, effective: { action: 'create' } })], takeOvers: [] }) })
-    api.plan.mockResolvedValue({ id: 'r1', plan: withAsk })
+    api.open.mockResolvedValue({ id: 'r1', plan: noAsk })
+    api.plan.mockResolvedValue({ id: 'r1', plan: noAsk })
     api.confirm.mockRejectedValue(stray)
     api.discard.mockResolvedValue(undefined)
   })
@@ -188,10 +190,14 @@ describe('useImportReview, a 409 take-over the plan has no ask for (round 2)', (
   it('plans again with the current answers, so the ask shows on its tile', async () => {
     const { result } = await reviewing()
     await act(async () => result.current.chooseBaseRecipeLine(path, { action: 'create' }))
+    await waitFor(() => expect(api.plan).toHaveBeenCalledTimes(1)) // the re-plan of the answer has landed
+    await waitFor(() => expect(result.current.busy).toBe(false))
     api.plan.mockClear()
+    api.plan.mockResolvedValue({ id: 'r1', plan: withAsk })
     await act(() => result.current.confirm())
     expect(api.plan).toHaveBeenCalledWith('r1', expect.objectContaining({ baseRecipeLines: { [path]: { action: 'create' } } }))
     expect(result.current.plan).toEqual(withAsk)
+    expect(result.current.plan?.takeOvers.map((a) => a.ingredient.id)).toEqual([6]) // the ask for ingredient 6 is on its tile
     expect(result.current.phase).toBe('reviewing')
   })
 
