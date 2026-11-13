@@ -120,7 +120,7 @@ func newReview(f File, ex Existing, d Decisions, images ImageSet) *review {
 	r.answerPrompts()
 	r.finishTargets()
 	r.checkBaseUnits()
-	r.checkHolderCycles()
+	r.checkBaseGraph()
 	r.checkRecipes()
 	r.checkBaseRecipes()
 	r.buildTakeOvers()
@@ -777,7 +777,7 @@ func (r *review) plan() Plan {
 }
 
 // commit is the write set of a ready review.
-func (r *review) commit() Commit {
+func (r *review) commit() (Commit, error) {
 	c := Commit{Resolved: map[string]ResolvedIngredient{}, Images: map[string]imaging.Result{}, Warnings: r.warnings, BaseRecipeLines: r.baseCommits(),
 		BaseConversions: append([]BaseConversion{}, r.baseConvs...)}
 	if r.courses != nil {
@@ -823,13 +823,31 @@ func (r *review) commit() Commit {
 		}
 	}
 	for _, bl := range r.creates() {
+		d, _ := r.baseAnswer(bl.path)
 		recs = append(recs, RecipeCommit{
-			Index: -1, Action: "create", Line: bl.path, TakeOver: r.takeOverFor(bl.path),
+			Index: -1, Action: "create", Line: bl.path, TakeOver: r.takeOverFor(bl.path), ReadNext: d.ReadNext,
 			Input: recipe.Input{Name: bl.name, Yield: bl.yield.yield, YieldUnit: bl.yield.unit, BaseRecipe: boolPtr(true)},
 		})
 	}
-	c.Recipes = orderBaseFirst(recs)
-	return c
+	// A Base recipe whose name is held by a plain Ingredient this import creates has no take-over ask in the review (the
+	// ask is for stored Ingredients only): it is kept apart, so the Base recipe gets its own Ingredient whatever the order.
+	newPlain := map[string]bool{}
+	for _, ni := range c.NewIngredients {
+		newPlain[units.NormalizeName(ni.Input.Name)] = true
+	}
+	for k := range recs {
+		rc := &recs[k]
+		if rc.Input.IsBase() && rc.Action != ActionReplace && rc.TakeOver == nil && newPlain[units.NormalizeName(rc.Input.Name)] {
+			keepApart := false
+			rc.TakeOver = &keepApart
+		}
+	}
+	ordered, err := orderBaseFirst(recs)
+	if err != nil {
+		return Commit{}, err
+	}
+	c.Recipes = ordered
+	return c, nil
 }
 
 func (r *review) recipeCommit(i int, rec Recipe) RecipeCommit {

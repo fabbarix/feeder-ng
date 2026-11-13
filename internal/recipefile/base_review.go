@@ -126,7 +126,6 @@ func (r *review) buildBaseRows() {
 			r.baseRows = append(r.baseRows, row)
 		}
 	}
-	r.checkBaseCycles()
 	r.markBaseRecipes()
 	r.bindBaseLines()
 }
@@ -245,9 +244,11 @@ func (r *review) checkBaseAnswer(d BaseRecipeLineDecision) string {
 	return ""
 }
 
-// checkBaseCycles reports every cycle that the file's own answers make: Recipes that call for each other through
-// BaseFile answers. A Recipe calling for itself is a cycle of one.
-func (r *review) checkBaseCycles() {
+// checkBaseGraph reports every cycle among the file's Base recipes. Only a line answered "file" is an edge: that Recipe
+// calls for the other. A kept line is no edge: it goes on a new plain Ingredient keyed by its name, and a Base recipe's
+// Ingredient is keyed base-recipe:<id>, so a kept line named after another Base recipe depends on nothing. A Recipe
+// calling for itself is a cycle of one.
+func (r *review) checkBaseGraph() {
 	adj := map[int][]baseEdge{}
 	for _, row := range r.baseRows {
 		if row.resolved && row.effective.Action == BaseFile {
@@ -277,20 +278,28 @@ func (r *review) checkBaseCycles() {
 		state[u] = 2
 	}
 	for i := range r.f.Recipes {
-		if r.kept[i] && state[i] == 0 {
+		if state[i] == 0 && len(adj[i]) > 0 {
 			visit(i)
 		}
 	}
 }
 
+// nameOf is the name a Recipe of the file gets in the store: its imported name, or its own name when it has none yet.
+func (r *review) nameOf(i int) string {
+	if n := r.recipes[i].ImportedAs; n != "" {
+		return n
+	}
+	return r.f.Recipes[i].Name
+}
+
 func (r *review) cycleMessage(cycle []int) string {
 	if len(cycle) == 2 {
-		return fmt.Sprintf("%s cannot call for itself", r.f.Recipes[cycle[0]].Name)
+		return fmt.Sprintf("%s cannot call for itself", r.nameOf(cycle[0]))
 	}
-	// cycle starts and ends with the same Recipe: "A calls for B, which calls for A".
-	msg := r.f.Recipes[cycle[0]].Name + " calls for " + r.f.Recipes[cycle[1]].Name
+	// cycle starts and ends with the same Recipe: "A calls for B, which calls for C, which calls for A".
+	msg := r.nameOf(cycle[0]) + " calls for " + r.nameOf(cycle[1])
 	for _, idx := range cycle[2:] {
-		msg += ", which calls for " + r.f.Recipes[idx].Name
+		msg += ", which calls for " + r.nameOf(idx)
 	}
 	return msg
 }
@@ -466,7 +475,7 @@ func (r *review) baseCommits() []BaseRecipeLineCommit {
 	var out []BaseRecipeLineCommit
 	for _, row := range r.baseRows {
 		if row.resolved && row.effective != nil {
-			out = append(out, BaseRecipeLineCommit{RecipeIndex: row.recipeIdx, Line: row.lineIdx, Decision: *row.effective, TakeOver: r.takeOverFor(row.path)})
+			out = append(out, BaseRecipeLineCommit{RecipeIndex: row.recipeIdx, Line: row.lineIdx, Path: row.path, Decision: *row.effective, TakeOver: r.takeOverFor(row.path)})
 		}
 	}
 	return out
@@ -503,57 +512,6 @@ func (r *review) checkBaseRecipes() {
 		in := recipe.Input{Name: bl.name, Yield: bl.yield.yield, YieldUnit: bl.yield.unit, BaseRecipe: boolPtr(true)}
 		if _, err := in.Validate(func(int64) (units.Ingredient, bool) { return units.Ingredient{}, false }); err != nil {
 			r.problem(bl.path, "invalid_recipe", err.Error())
-		}
-	}
-}
-
-// checkHolderCycles reports a cycle among the file's Base recipes that the plain Ingredients make: a kept line named like
-// another Base recipe of the file needs that Base recipe's Ingredient to exist first (the plain one would be created
-// before it), and the same the other way round. No write order satisfies such a cycle, so one tile is a Problem.
-func (r *review) checkHolderCycles() {
-	created := map[string]int{} // normalised name of a Base recipe the import creates -> file index
-	for i := range r.f.Recipes {
-		if r.kept[i] && r.asBase[i] && r.recipes[i].Action != ActionReplace {
-			created[units.NormalizeName(r.recipes[i].ImportedAs)] = i
-		}
-	}
-	type edge struct {
-		to   int
-		path string
-	}
-	adj := map[int][]edge{}
-	for i := range r.f.Recipes {
-		if !r.kept[i] || !r.asBase[i] || r.recipes[i].Action == ActionReplace {
-			continue
-		}
-		for j := range r.f.Recipes[i].Ingredients {
-			path := linePath(i, j)
-			if r.baseAt[path] != nil {
-				continue // a Base recipe line's cycle is checkBaseCycles' (BaseFile answers)
-			}
-			if h, ok := created[units.NormalizeName(r.f.Recipes[i].Ingredients[j].Ingredient)]; ok && h != i {
-				adj[i] = append(adj[i], edge{h, path})
-			}
-		}
-	}
-	state := map[int]int{}
-	var visit func(u int)
-	visit = func(u int) {
-		state[u] = 1
-		for _, e := range adj[u] {
-			switch state[e.to] {
-			case 0:
-				visit(e.to)
-			case 1:
-				r.problem(e.path, ProblemBaseRecipeCycle, fmt.Sprintf("%s and %s each keep a line named after the other: neither can be written first",
-					r.recipes[u].ImportedAs, r.recipes[e.to].ImportedAs))
-			}
-		}
-		state[u] = 2
-	}
-	for i := range r.f.Recipes {
-		if state[i] == 0 && len(adj[i]) > 0 {
-			visit(i)
 		}
 	}
 }
@@ -781,8 +739,9 @@ func (r *review) plainIngredient(name string) *ExistingRef {
 }
 
 // orderBaseFirst orders the Recipes to write: each Base recipe after the Base recipes it calls for (a file Base recipe
-// that calls another one comes after it), then the others. Within a group, file order.
-func orderBaseFirst(items []RecipeCommit) []RecipeCommit {
+// that calls another one comes after it), then the others. Within a group, file order. The review refuses every cycle, so
+// a back edge here is a *recipe.CycleError, never a dropped edge: the write order would be wrong.
+func orderBaseFirst(items []RecipeCommit) ([]RecipeCommit, error) {
 	key := func(rc RecipeCommit) string {
 		if rc.Index >= 0 {
 			return fmt.Sprintf("file:%d", rc.Index)
@@ -793,24 +752,16 @@ func orderBaseFirst(items []RecipeCommit) []RecipeCommit {
 	for k, rc := range items {
 		byKey[key(rc)] = k
 	}
-	// holders: the Base recipes this import writes, by name; a plain Ingredient of that name is used after them.
-	holders := map[string]int{}
-	for k, rc := range items {
-		if rc.Input.IsBase() && rc.Action != ActionReplace {
-			holders[units.NormalizeName(rc.Input.Name)] = k
-		}
-	}
-	deps := func(rc RecipeCommit) []int {
+	// deps are the items k must come after: the Base recipes its file answers call for (a kept line is no order).
+	deps := func(k int) []int {
+		rc := items[k]
 		var out []int
-		for k, lk := range rc.LineKeys {
-			if k < len(rc.LineBases) && rc.LineBases[k].Kind != "" {
-				continue
-			}
-			if h, ok := holders[lk]; ok {
-				out = append(out, h)
+		add := func(j int) {
+			if j != k {
+				out = append(out, j)
 			}
 		}
-		add := func(b BaseRef) {
+		addRef := func(b BaseRef) {
 			var k string
 			switch b.Kind {
 			case BaseRefFile:
@@ -821,42 +772,74 @@ func orderBaseFirst(items []RecipeCommit) []RecipeCommit {
 				return
 			}
 			if j, ok := byKey[k]; ok {
-				out = append(out, j)
+				add(j)
 			}
 		}
 		for _, b := range rc.LineBases {
-			add(b)
+			addRef(b)
 		}
 		for _, us := range rc.UseBases {
 			for _, b := range us {
-				add(b)
+				addRef(b)
 			}
 		}
 		return out
 	}
-	state := make([]int, len(items))
+	state := make([]int, len(items)) // 0 unvisited, 1 on the stack, 2 done
+	var stack []int
 	var out []RecipeCommit
-	var visit func(k int)
-	visit = func(k int) {
-		if state[k] != 0 {
-			return
-		}
+	var visit func(k int) error
+	visit = func(k int) error {
 		state[k] = 1
-		for _, d := range deps(items[k]) {
-			visit(d)
+		stack = append(stack, k)
+		for _, d := range deps(k) {
+			switch state[d] {
+			case 1:
+				return cycleError(items, stack, d)
+			case 0:
+				if err := visit(d); err != nil {
+					return err
+				}
+			}
 		}
+		stack = stack[:len(stack)-1]
 		state[k] = 2
 		out = append(out, items[k])
+		return nil
 	}
 	for k, rc := range items {
-		if rc.Input.IsBase() {
-			visit(k)
+		if rc.Input.IsBase() && state[k] == 0 {
+			if err := visit(k); err != nil {
+				return nil, err
+			}
 		}
 	}
 	for k := range items {
-		visit(k)
+		if state[k] == 0 {
+			if err := visit(k); err != nil {
+				return nil, err
+			}
+		}
 	}
-	return out
+	return out, nil
+}
+
+// cycleError is the cycle the stack holds from back (a Recipe already on it) to the top: a *recipe.CycleError whose path
+// is the closed list of the Recipes' names.
+func cycleError(items []RecipeCommit, stack []int, back int) error {
+	pos := 0
+	for stack[pos] != back {
+		pos++
+	}
+	var path []string
+	for _, k := range append(append([]int{}, stack[pos:]...), back) {
+		path = append(path, items[k].Input.Name)
+	}
+	field := fmt.Sprintf("recipes[%d]", items[back].Index)
+	if items[back].Index < 0 {
+		field = items[back].Line
+	}
+	return &recipe.CycleError{Field: field, Path: path}
 }
 
 func boolPtr(b bool) *bool { return &b }

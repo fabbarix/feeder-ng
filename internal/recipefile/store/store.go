@@ -252,12 +252,17 @@ type Result struct {
 	CoursesUnarchived  int // crs-e1: archived Courses brought back by an Admin's answer
 }
 
-// AppliedRecipe is one written Recipe.
+// AppliedRecipe is one written Recipe. Action is "created", "replaced" or "converted" (a plannable Recipe turned into a
+// Base recipe, Index -1). Base says the Recipe is a Base recipe after the import. Line is the path of the tile that
+// created or converted it ("" for a Recipe of the file), and ReadNext is that tile's "Read it next".
 type AppliedRecipe struct {
-	Index  int
-	ID     int64
-	Name   string
-	Action string // "created" or "replaced"
+	Index    int
+	ID       int64
+	Name     string
+	Action   string
+	Base     bool
+	Line     string
+	ReadNext bool
 }
 
 // Apply writes the Commit in one transaction: new Ingredients, added
@@ -376,6 +381,12 @@ func (s *Store) write(ctx context.Context, c recipefile.Commit, imageIDs map[str
 		if err := s.recipes.ToBaseTx(ctx, tx, bl.Decision.RecipeID, in); err != nil {
 			return Result{}, nil, nil, staleOr(err)
 		}
+		var name string
+		if err := tx.QueryRowContext(ctx, `SELECT name FROM recipes WHERE id = ?`, bl.Decision.RecipeID).Scan(&name); err != nil {
+			return Result{}, nil, nil, err
+		}
+		res.Recipes = append(res.Recipes, AppliedRecipe{Index: -1, ID: bl.Decision.RecipeID, Name: name,
+			Action: "converted", Base: true, Line: bl.Path})
 	}
 
 	// Unit answers for Base recipe Ingredients are saved as soon as the Ingredient exists, before a Recipe that calls it is
@@ -671,14 +682,16 @@ func (s *Store) writeRecipe(ctx context.Context, tx *sql.Tx, c recipefile.Commit
 		if err != nil {
 			return AppliedRecipe{}, nil, err
 		}
-		out = AppliedRecipe{Index: rc.Index, ID: rc.ReplaceID, Name: clean.Name, Action: "replaced"}
+		out = AppliedRecipe{Index: rc.Index, ID: rc.ReplaceID, Name: clean.Name, Action: "replaced",
+			Base: rc.Input.IsBase(), Line: rc.Line, ReadNext: rc.ReadNext}
 	} else {
 		id, err := s.recipes.CreateTx(ctx, tx, clean)
 		if err != nil {
 			return AppliedRecipe{}, nil, err
 		}
 		names.add(key, id)
-		out = AppliedRecipe{Index: rc.Index, ID: id, Name: clean.Name, Action: "created"}
+		out = AppliedRecipe{Index: rc.Index, ID: id, Name: clean.Name, Action: "created",
+			Base: rc.Input.IsBase(), Line: rc.Line, ReadNext: rc.ReadNext}
 	}
 	if rc.Index >= 0 {
 		applied[fileKey(rc.Index)] = out.ID

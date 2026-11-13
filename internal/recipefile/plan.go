@@ -444,6 +444,8 @@ type RecipeCommit struct {
 	StepImagePaths []string
 	// Line is the path of the create answer that asked for this Recipe ("" otherwise).
 	Line string
+	// ReadNext is the create tile's "Read it next" answer: the screen offers to read the Base recipe after Confirm.
+	ReadNext bool
 	// TakeOver is the answer of the take-over ask for this Base recipe (nil: no same-name plain Ingredient to ask about).
 	TakeOver *bool
 	// BaseShelfLifeDays and BaseImage are the file's definition of the Ingredient this new Base recipe gets (the Shelf
@@ -486,6 +488,7 @@ type BaseConversion struct {
 type BaseRecipeLineCommit struct {
 	RecipeIndex int // the Recipe of the file the line is in
 	Line        int
+	Path        string // the tile's line path ("$.recipes[0].ingredients[1]")
 	Decision    BaseRecipeLineDecision
 	// TakeOver is the answer of the take-over ask of this line's Base recipe (convert, create), nil when there is none.
 	TakeOver *bool
@@ -504,5 +507,5 @@ func BuildCommit(f File, ex Existing, d Decisions, images ImageSet) (Commit, err
 	if !p.Ready {
 		return Commit{}, &NotReadyError{Plan: p}
 	}
-	return r.commit(), nil
+	return r.commit()
 }

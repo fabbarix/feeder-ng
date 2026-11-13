@@ -19,6 +19,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/events"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/imaging"
+	"github.com/fabbarix/feeder-ng/internal/recipe"
+	recipeapi "github.com/fabbarix/feeder-ng/internal/recipe/httpapi"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
@@ -255,7 +257,7 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		httpx.WriteAPIError(w, err)
+		writeApplyError(w, err)
 		return
 	}
 	// Only an Admin adds or unarchives a Course (spec 13). The Review stays open for the User to answer again.
@@ -269,12 +271,45 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		httpx.WriteAPIError(w, err)
+		writeApplyError(w, err)
 		return
 	}
 	done = true // imported: the Review stays closed
 	a.published(res)
 	httpx.WriteJSON(w, http.StatusOK, confirmAnswer(res))
+}
+
+// writeApplyError answers an error of BuildCommit or Apply. A cycle among the Base recipes is 422 base_recipe_cycle with
+// the path of Recipe names, and a take-over ask is the Recipe API's 409; anything else goes through httpx.WriteAPIError.
+// Confirm leaves the Review open in every case.
+func writeApplyError(w http.ResponseWriter, err error) {
+	var ce *recipe.CycleError
+	var ask *recipe.TakeOverError
+	switch {
+	case errors.As(err, &ce):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{
+			"code": "base_recipe_cycle", "message": cycleSentence(ce.Path), "path": ce.Path,
+		}})
+	case errors.As(err, &ask):
+		recipeapi.WriteTakeOver(w, ask)
+	default:
+		httpx.WriteAPIError(w, err)
+	}
+}
+
+// cycleSentence says a closed path of Recipe names as the review does: "A calls for B, which calls for A".
+func cycleSentence(path []string) string {
+	switch {
+	case len(path) == 2:
+		return path[0] + " cannot call for itself"
+	case len(path) < 2:
+		return "base recipe cycle"
+	}
+	msg := path[0] + " calls for " + path[1]
+	for _, name := range path[2:] {
+		msg += ", which calls for " + name
+	}
+	return msg
 }
 
 // close drops an owned Import Review.
@@ -347,17 +382,21 @@ type confirmJSON struct {
 }
 
 type appliedJSON struct {
-	Index  int    `json:"index"`
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	Action string `json:"action"`
+	Index    int    `json:"index"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Action   string `json:"action"`
+	Base     bool   `json:"baseRecipe"`
+	Line     string `json:"line,omitempty"`
+	ReadNext bool   `json:"readNext,omitempty"`
 }
 
 func confirmAnswer(res store.Result) confirmJSON {
 	out := confirmJSON{Recipes: []appliedJSON{}, IngredientsCreated: res.IngredientsCreated, ConversionsAdded: res.ConversionsAdded,
 		CoursesCreated: res.CoursesCreated, CoursesUnarchived: res.CoursesUnarchived}
 	for _, r := range res.Recipes {
-		out.Recipes = append(out.Recipes, appliedJSON{Index: r.Index, ID: r.ID, Name: r.Name, Action: r.Action})
+		out.Recipes = append(out.Recipes, appliedJSON{Index: r.Index, ID: r.ID, Name: r.Name, Action: r.Action,
+			Base: r.Base, Line: r.Line, ReadNext: r.ReadNext})
 	}
 	return out
 }

@@ -765,6 +765,20 @@ func writeFieldError(w http.ResponseWriter, field, reason, message string) {
 	}})
 }
 
+// WriteTakeOver answers a take-over ask (409 base_recipe_take_over). The Import Review's Confirm answers the same shape,
+// so both are written here.
+func WriteTakeOver(w http.ResponseWriter, ask *recipe.TakeOverError) {
+	recs := []refJSON{}
+	for _, u := range ask.Recipes {
+		recs = append(recs, refJSON{ID: u.ID, Name: u.Name, Archived: u.Archived})
+	}
+	httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+		"code": "base_recipe_take_over", "message": ask.Error(),
+		"ingredient": refJSON{ID: ask.Ingredient.ID, Name: ask.Ingredient.Name}, "recipes": recs,
+		"stockLots": ask.StockLots, "convertible": ask.Convertible,
+	}})
+}
+
 // writeErr maps domain and store errors to responses.
 func writeErr(w http.ResponseWriter, err error) {
 	var ve *recipe.ValidationError
@@ -787,15 +801,7 @@ func writeErr(w http.ResponseWriter, err error) {
 			"code": "base_recipe_in_use", "message": inUse.Error(), "usedBy": used,
 		}})
 	case errors.As(err, &ask):
-		recs := []refJSON{}
-		for _, u := range ask.Recipes {
-			recs = append(recs, refJSON{ID: u.ID, Name: u.Name, Archived: u.Archived})
-		}
-		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
-			"code": "base_recipe_take_over", "message": ask.Error(),
-			"ingredient": refJSON{ID: ask.Ingredient.ID, Name: ask.Ingredient.Name}, "recipes": recs,
-			"stockLots": ask.StockLots, "convertible": ask.Convertible,
-		}})
+		WriteTakeOver(w, ask)
 	case errors.As(err, &taken):
 		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
 			"code": "ingredient_name_taken", "message": taken.Error(),
