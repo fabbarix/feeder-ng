@@ -4,6 +4,22 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6.3] - 2026-11-13
+
+A tidier Recipe page.
+
+### Changed
+
+- **Exclusions are set on the Ingredient, not on a Recipe's lines.** A Recipe's Ingredient lines no longer carry the Exclusion button and the faces of who excludes them; set an Exclusion on the Ingredient's own page.
+
+### Fixed
+
+- **The Ingredients and Steps cards** on a Recipe's page touched on a tablet; they now have the usual gap between them.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.3 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.6.2] - 2026-11-13
 
 The Pantry gets the same compact filter header as the Recipes list.
@@ -316,7 +332,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...HEAD
+[1.0.0-beta.6.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...v1.0.0-beta.6.3
 [1.0.0-beta.6.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...v1.0.0-beta.6.2
 [1.0.0-beta.6.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...v1.0.0-beta.6.1
 [1.0.0-beta.6]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...v1.0.0-beta.6
