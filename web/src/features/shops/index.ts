@@ -8,7 +8,7 @@ const feature: FeatureModule = {
     { path: '/settings/shops', element: createElement(ShopsScreen) },
     { path: '/settings/shops/:id', element: createElement(ShopScreen) },
   ],
-  navItems: [{ id: 'shops', label: 'Shops', path: '/settings/shops', placement: 'menu', order: 40 }],
+  navItems: [],
 }
 
 export const routes = feature.routes

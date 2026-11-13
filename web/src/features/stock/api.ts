@@ -1,5 +1,5 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
-import type { AddLotInput, IngredientStock, StockLot, StockLotsResponse, StockWarning, StoragePlace, StoragePlaceInput, WasteRecord } from './types'
+import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse, StockWarning, StoragePlace, StoragePlaceInput, WasteRecord } from './types'
 
 export interface StockApi {
   totals(): Promise<IngredientStock[]>
@@ -12,6 +12,10 @@ export interface StockApi {
   cooked(needs: { ingredientId: number; quantity: number }[]): Promise<StockWarning[]>
   /** Pantry: moves a Lot, or `quantity` of it (absent = all), to a Storage Place. */
   moveLot(lotId: number, storagePlaceId: number, quantity?: number): Promise<StockLot>
+  /** Beta.5: corrects a Lot (quantity, Bought on, Good until); resolves with the corrected Lot. */
+  updateLot(lotId: number, patch: LotPatch): Promise<StockLot>
+  /** Beta.5: deletes a Lot as a correction (not waste); a gone-off Lot's go-off goes with it. */
+  deleteLot(lotId: number): Promise<void>
   storagePlaces(): Promise<StoragePlace[]>
   createPlace(input: StoragePlaceInput): Promise<StoragePlace>
   updatePlace(id: number, input: StoragePlaceInput): Promise<StoragePlace>
@@ -48,6 +52,12 @@ export function createStockApi(client: HttpClient): StockApi {
     },
     moveLot(lotId, storagePlaceId, quantity) {
       return client.post<StockLot>(`/api/stock/lots/${lotId}/move`, quantity === undefined ? { storagePlaceId } : { storagePlaceId, quantity })
+    },
+    updateLot(lotId, patch) {
+      return client.patch<StockLot>(`/api/stock/lots/${lotId}`, patch)
+    },
+    deleteLot(lotId) {
+      return client.delete<void>(`/api/stock/lots/${lotId}`)
     },
     storagePlaces() {
       return client.get<StoragePlace[]>('/api/storage-places')

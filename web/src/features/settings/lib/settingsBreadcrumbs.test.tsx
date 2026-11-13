@@ -6,8 +6,10 @@ import { render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { routes as accessRoutes } from '../../access'
+import { routes as ingredientRoutes } from '../../ingredients'
 import { routes as notificationRoutes } from '../../notifications'
 import { routes as planRoutes } from '../../plan'
+import { routes as productRoutes } from '../../products'
 import { routes as shopsRoutes } from '../../shops'
 import { routes as stockRoutes } from '../../stock'
 import { routes as tagsRoutes } from '../../tags'
@@ -19,7 +21,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('Settings index sub-pages', () => {
   const paths = settingsGroups(true).flatMap((g) => g.sections.map((s) => s.path))
-  const all = [...settingsRoutes, ...planRoutes, ...shopsRoutes, ...stockRoutes, ...tagsRoutes, ...notificationRoutes, ...accessRoutes]
+  const all = [...settingsRoutes, ...planRoutes, ...shopsRoutes, ...stockRoutes, ...tagsRoutes, ...notificationRoutes, ...accessRoutes, ...ingredientRoutes, ...productRoutes] // beta.5: Ingredients and Products are index rows now
 
   it('every index path has a route', () => {
     for (const path of paths) expect(all.some((r) => r.path === path), path).toBe(true)

@@ -19,6 +19,18 @@ export interface StockLot {
   storagePlaceId?: number | null
   /** Pantry: the Ingredient's Picture, '' = none. */
   ingredientImageUrl?: string
+  /** Beta.5: the Shelf Life in days that applies where the Lot is (the frozen one in a Freezer); null = it does not spoil there. */
+  shelfLifeDays?: number | null
+}
+
+/**
+ * Beta.5: a correction to a Lot (PATCH /api/stock/lots/{id}). A field left out is left as it is; `goesOff: null` clears
+ * Good until. A changed `purchased` with no `goesOff` makes the server suggest Good until again from the Shelf Life.
+ */
+export interface LotPatch {
+  quantity?: number
+  purchased?: string
+  goesOff?: string | null
 }
 
 /** Pantry: a Storage Place's kind; a Freezer uses the Ingredient's frozen Shelf Life. */
