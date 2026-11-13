@@ -31,7 +31,7 @@ export interface ListEntry {
   imageUrl?: string
   /** H7′: a Supply (a Line or an Ingredient extra of kind supply); food and free text are not. */
   supply: boolean
-  /** H7′: "2 of 6 in Stock" for a Supply Line with a Restock reason; '' otherwise (extras, food, no reason). */
+  /** H7′: "2 of 6" for a Supply Line with a Restock reason; '' otherwise (extras, food, no reason). */
   restockText: string
   /**
    * B5-SH: "Includes Tue Dinner, not marked Cooked yet" (see pastMealsHint). The key is left out of entries with

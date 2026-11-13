@@ -90,7 +90,7 @@ describe('ShoppingBody: the Supplies group', () => {
     render(<ShoppingBody {...base} list={makeList({ lines: [supply(20, 'Toilet paper', { ticked: true, quantity: 0 })], progress: { ticked: 1, total: 1 } })} />)
     const row = within(screen.getByRole('list', { name: 'Ticked' })).getByRole('listitem')
     expect(row.querySelector('.list-row__meta')).toBeNull()
-    expect(screen.queryByText(/ in Stock$/)).toBeNull()
+    expect(screen.queryByText(/^[\d.]+( [a-z]+)? of /)).toBeNull()
   })
 
   it('a Not needed Supply Line stays in the Not needed group', async () => {
@@ -116,9 +116,9 @@ describe('ShoppingBody: Restock copy', () => {
     render(<ShoppingBody {...base} list={mixed()} />)
     const row = within(screen.getByRole('list', { name: 'Supplies' })).getAllByRole('listitem')[0]!
     const meta = row.querySelector('.list-row__meta')!
-    expect(meta).toHaveTextContent('2 of 6 in Stock')
+    expect(meta).toHaveTextContent('2 of 6')
     expect(meta).toHaveAttribute('data-status', 'info')
-    expect(within(screen.getByRole('list', { name: 'Supplies' })).getByText('0 of 20 in Stock')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Supplies' })).getByText('0 of 20')).toBeInTheDocument()
   })
 
   it('the row still shows the quantity to buy, and the estimate when there is a Price', () => {
@@ -131,12 +131,12 @@ describe('ShoppingBody: Restock copy', () => {
 
   it('a Supply extra and a Supply Line without restock info have no Restock reason', () => {
     render(<ShoppingBody {...base} list={makeList({ lines: [supply(20, 'Toilet paper', { restock: null })], extras: [makeExtra({ id: 5, text: null, ingredientId: 22, name: 'Soap', baseUnit: 'piece', quantity: 2, kind: 'supply' })], progress: { ticked: 0, total: 2 } })} />)
-    expect(screen.queryByText(/ in Stock$/)).toBeNull()
+    expect(screen.queryByText(/^[\d.]+( [a-z]+)? of /)).toBeNull()
   })
 
   it('food Lines never show a Restock reason, whatever they carry', () => {
     render(<ShoppingBody {...base} list={makeList({ lines: [food(1, 'Rice', { restock: { level: 9, stock: 1 } })], progress: { ticked: 0, total: 1 } })} />)
-    expect(screen.queryByText(/ in Stock$/)).toBeNull()
+    expect(screen.queryByText(/^[\d.]+( [a-z]+)? of /)).toBeNull()
   })
 
   it('ticking a Restock Line, and tapping its row, behave as for any Line (the entry carries the ingredient)', async () => {
