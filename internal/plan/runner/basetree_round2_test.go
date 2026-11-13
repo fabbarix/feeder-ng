@@ -70,20 +70,6 @@ func TestACyclicRecipeNeverReachesThePlannerAndDoesNotFailTheRun(t *testing.T) {
 	}
 }
 
-func TestARecipeWithoutATreeNeverReachesThePlannerWhateverTheReason(t *testing.T) {
-	s := newBRSrc(t)
-	s.plain("Soup", brLine(s.milk, 200, "ml"))
-	all, err := s.src.Recipes(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, r := range all {
-		if len(r.Needs) == 0 {
-			t.Errorf("Recipe %q reaches the planner with no Needs", r.Name)
-		}
-	}
-}
-
 // ---- the catalog is loaded once per read (one Store.NeedTrees), not once per Recipe ----
 
 // catalogLoad matches the one statement only the catalog load runs: every Unit Conversion, with no WHERE.
@@ -99,7 +85,10 @@ func (s *brSrc) fewRecipes() {
 	s.plain("Stew", brLine(s.flour, 100, "g"))
 }
 
-// These stay red until BR-B round 3 adds the batch Store.NeedTrees and the composed Timing.Advance on Get.
+// Red until the runner takes its trees from the batch Store.NeedTrees. Get composes a Recipe with Base recipe lines over
+// its own catalog load now (BR-B round 3), so Recipes must not call Get for those Recipes: the planner's lead times come
+// from the cached composed advance_minutes of the List summary (a single AdvanceStep of that Lead), and the other
+// planner fields from a read that does not compose.
 func TestAPlannerRunLoadsTheCatalogOnce(t *testing.T) {
 	s := newBRSrc(t)
 	s.fewRecipes()

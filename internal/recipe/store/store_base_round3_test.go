@@ -409,3 +409,74 @@ func TestDeletingAfterTheMergeSucceedsAndTheStockStaysOnTheOrdinaryIngredient(t 
 		t.Errorf("Delete after the merge = %v, want it to succeed (the plain Ingredient no longer holds the name)", err)
 	}
 }
+
+// ---- 6. The cached advance_minutes is composed like total_minutes ----
+
+func TestTheCachedAdvanceTimeOfARecipeIsComposedAtSaveAndAgreesWithTheListAndTheDetail(t *testing.T) {
+	f := newBaseFixture(t)
+	_, chilli := f.advanceSetup(t) // Chilli: own 120 min Advance Step; Beans: 480 min soak
+	cached := func(id int64) (n int) {
+		if err := f.db.QueryRow(`SELECT advance_minutes FROM recipes WHERE id = ?`, id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if cached(chilli.ID) != 480 {
+		t.Errorf("cached advance_minutes of Chilli = %d, want the composed 480 (the Beans' soak is longer than its own 120)", cached(chilli.ID))
+	}
+	assertAgree(t, f, chilli.ID, 480)
+}
+
+func assertAgree(t *testing.T, f *bf, id int64, want int) {
+	t.Helper()
+	got, err := f.s.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := f.s.List(ctx, store_ListFilterFor("all", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sum := range list {
+		if sum.ID == id {
+			if sum.AdvanceMinutes != got.Timing.AdvanceMinutes || sum.AdvanceMinutes != want {
+				t.Errorf("recipe %d: list advanceMinutes %d, detail %d, want both %d", id, sum.AdvanceMinutes, got.Timing.AdvanceMinutes, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("recipe %d not in the list", id)
+}
+
+func TestTheCachedAdvanceTimeOfEveryCallerIsRewrittenWhenABaseRecipeIsEdited(t *testing.T) {
+	f := newBaseFixture(t)
+	milk, _, _ := f.basics(t)
+	rin := baseIn("Beans", 500, "g", ln(milk, 100, "ml"))
+	rin.Steps = []recipe.Step{{Text: "Soak", Kind: schedule.Advance, LeadTimeMinutes: 480}, active("Boil", 30)}
+	beans := f.createBase(t, rin)
+	sin := baseIn("Bean stew", 1, "kg", callFor(beans, 500, "g"))
+	sin.Steps = []recipe.Step{active("Simmer", 20)}
+	stew := f.createBase(t, sin) // a Base recipe calling a Base recipe
+	cin := plainIn("Chilli", callFor(stew, 300, "g"))
+	cin.Steps = []recipe.Step{active("Serve", 5)}
+	chilli := f.createPlain(t, cin)
+	for _, id := range []int64{stew.ID, chilli.ID} {
+		assertAgree(t, f, id, 480)
+	}
+
+	rin.Steps = []recipe.Step{{Text: "Soak", Kind: schedule.Advance, LeadTimeMinutes: 720}, active("Boil", 30)}
+	if _, err := f.s.Update(ctx, beans.ID, rin); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []int64{stew.ID, chilli.ID} {
+		assertAgree(t, f, id, 720)
+	}
+
+	rin.Steps = []recipe.Step{active("Boil", 30)} // the soak goes
+	if _, err := f.s.Update(ctx, beans.ID, rin); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []int64{stew.ID, chilli.ID} {
+		assertAgree(t, f, id, 0)
+	}
+}
