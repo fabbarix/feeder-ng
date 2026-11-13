@@ -37,7 +37,7 @@ describe('usePantryFilters', () => {
   it('reads the URL', () => {
     const { result } = setup('/pantry?status=spoiled&place=2&kind=fridge&sort=name&group=off')
     expect(result.current.filters).toMatchObject({ status: 'spoiled', places: [2], kinds: ['fridge'], sort: 'name', groupByPlace: false, count: 3 })
-    expect(result.current.filters.applied).toEqual({ status: 'spoiled', places: [2], kinds: ['fridge'], onlyLeftovers: false })
+    expect(result.current.filters.applied).toEqual({ status: 'spoiled', stock: 'all', places: [2], kinds: ['fridge'], onlyLeftovers: false })
   })
   it('every setter writes the URL, replacing the history entry, and keeps the rest', () => {
     const { result } = setup('/pantry?x=1')
@@ -73,7 +73,7 @@ describe('usePantryFilters', () => {
     const { result } = setup('/pantry?view=ingredients&status=useSoon&place=2&kind=fridge&leftovers=1')
     expect(result.current.filters.count).toBe(1)
     expect(result.current.filters.chips.map((c) => c.key)).toEqual(['status'])
-    expect(result.current.filters.applied).toEqual({ status: 'useSoon', places: [], kinds: [], onlyLeftovers: false })
+    expect(result.current.filters.applied).toEqual({ status: 'useSoon', stock: 'all', places: [], kinds: [], onlyLeftovers: false })
   })
 })
 
