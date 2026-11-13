@@ -1,6 +1,8 @@
 # In-shop scanning: five proposals
 
-Status: **proposals, for the user to choose** (2026-11-13). Base: 1.0.0-beta.6.5 (4f7b12bd). Design only: no code changes.
+Status: **decided** (2026-11-13): the user chose **A (Split)** with D's "Which Line is it?" and B's in-row Price entry; §12
+records the decisions and §13 is the final spec. Base: 1.0.0-beta.6.5 (4f7b12bd), then beta7 merged. Design only: no code changes.
+Receipt reading, the follow-up the user asked for, is designed in [receipt-reading.md](receipt-reading.md).
 Mockups: one HTML page with all five proposals as 390×844 phone frames, light and dark (kept outside the repository).
 
 **The user's brief:** "Redesign the in shop scanning experience: it should show a list of the items and quantities scanned, the
@@ -449,10 +451,189 @@ Work, roughly: `PriceKeypad` primitive (S), Scanned list model and IndexedDB (M)
 form with Line chips and the native camera Button (M), `PATCH` per-kg and group Price (S). Supplies plug in with household-items
 H7.
 
-## 11. Open questions for the user
+## 11. Open questions for the user (answered in §12)
 
 1. Should a second shopper's scans appear in my Scanned list (needs `GET /api/scan/session`), or is the Shopping List's ticking
    enough?
 2. Per kg: only for Products in grams (and per l for ml), or also "per piece" for Supplies (out of beta.7 today)?
 3. After Change Shop, start an empty Scanned list (proposed) or keep the earlier Shop's rows greyed?
 4. Hide the bottom nav while scanning (E), or keep it everywhere (A–D)?
+
+## 12. Decisions (the user, 2026-11-13)
+
+| # | Question | Decision |
+|---|---|---|
+| S1 | Which direction | **A (Split)**, with **D's "Which Line is it?"** as the first step of the new-Product form and **B's in-row Price entry with "Next without a Price"**. B's cash-register entry is not taken: the keypad keeps a decimal key. |
+| S2 | A second shopper's scans in my Scanned list | **No.** The Scanned list is this phone's session; the second shopper's scans still tick Lines through the Shopping List (SSE). No `GET /api/scan/session`. |
+| S3 | Per kg | **Per kg (Products in g) and per l (Products in ml) only.** Pieces, so most Supplies, have a Price per pack only. |
+| S4 | After Change Shop | **An empty Scanned list.** The earlier Shop's scans stay recorded; they are not shown. |
+| S5 | The bottom nav while scanning | **Kept**, as on every screen. |
+| S6 | Receipt reading | **Added** by the user after the choice: "allow the user to take a picture of the receipt and sent it to the configured assistant with the scan contents to fill prices, weights and corrections to the products." Designed in [receipt-reading.md](receipt-reading.md). |
+
+## 13. The chosen design: final spec
+
+This section replaces §3 to §7 as the thing to build. §2 (shared foundations) still holds where this section does not say
+otherwise. Mockup frames A1 to A3 show the shape; the Price entry follows B3 with a decimal key, and the new-Product sheet follows D2.
+
+### 13.1 Starting a session
+
+- Unchanged entry: the centre **Scan** button opens `/scan`. The session starts with the last Shop used, or with "Where are you
+  shopping?" (`ShopPicker`, Shop Location first), as today.
+- **No Shop known** (first use, or the last Shop was deleted): the camera starts and "Where are you shopping?" opens as a
+  `BottomSheet` over it. A barcode read while the sheet is open is held on the phone (it cannot be an Op without `shopId`) and
+  applied once a Shop is picked; closing the sheet without a Shop drops it with the Toast "Pick a Shop to keep that Scan".
+- "You seem to be at Coop (40 m). **Switch to Coop**" stays as today, under the header.
+- **Change Shop** ends the session: the next Shop starts with an empty Scanned list (S4). With unpriced rows it asks nothing;
+  the Prices can still be set on the Product page.
+
+### 13.2 The scanning screen
+
+```
+[PageHeader: Esselunga ▾                       Change Shop ]
+[ViewfinderStrip size="tall" (180 px), torch, mute         ]
+[Segmented: Scanned 6 | To get 3]          [€21.38        ]   ← title-3, tabular
+                                           [+1 without a Price] ← meta, muted; absent when all are priced
+[Scanned list (ListGroup of ScannedRow), newest first      ]
+[ListRow "Read the receipt" (beta.8, receipt-reading.md)   ]
+[bottom nav (kept)                                         ]
+```
+
+- **Segmented** `Scanned N · To get M`. N counts rows (Products), not scans; M is the Shopping List's open Lines. It remembers the
+  last choice per device. A scan always switches back to Scanned and flashes the new row.
+- **Total**: the sum of the rows' Prices (Price × count, or the weighed Price), `formatMinor`. Rows without a Price are left out
+  and counted in "+k without a Price"; tapping that line starts the Price entry on the first such row (13.4).
+- **Empty Scanned**: an `EmptyState` "Nothing scanned yet" with "Point the camera at a barcode. Lines to get are under To get."
+- **To get** shows the Shop screen's `LineRow` list unchanged (Tick by hand, Not needed, the Ticked group collapsed). Supplies'
+  Restock Lines appear there under their "Supplies" subheader (household-items §4.4).
+
+### 13.3 A Scanned row
+
+`ScannedRow` is a `ListRow`: `[Thumb 48 + match badge] [Product name] [Price / Add price]` over `[meta] [sub-value]`.
+
+| State | Meta (one line) | Value / sub-value |
+|---|---|---|
+| Matched, Line ticked | success tick + "On the list · Passata ticked" (`--status-success-fg`) | €2.58 / "×2 · €1.29" |
+| Matched, more to get | outlined success badge; "On the list · 700 g still to get" | €2.67 / "×3 · €0.89" |
+| Not on the list (or Not needed) | "Not on the list" (muted) | €8.90 / "×1" |
+| Weighed | "On the list · 312 g" or "312 g" | €6.24 / "€20.00/kg" |
+| No Price | as above | **Add price** pill (surface-2) / "×1" |
+| Waiting to sync | clock icon, "Waiting to sync" (muted); the match badge appears with the Result | as above |
+| Just scanned | `--status-success-bg` wash fading over 1.2 s (none with reduced motion); the row moves to the top | |
+| Active (tapped) | the value column shows the compact `Stepper` (− ×N +) and the row gets a trailing ⋮ "More for Mutti passata": **Remove**, **Open the Product** | |
+| Price entry | the value becomes a focused price pill (accent focus ring, the one focus on screen) | |
+
+- Title: the Product name; Thumb: the Product's Picture, else its Ingredient's, else the monogram (system.md §7).
+- Only one row is active at a time; scanning, scrolling away or tapping another row clears it.
+- Supplies use the same row ("Regina toilet paper 9 pieces", amount "9 pieces").
+
+### 13.4 Price entry (from B, with a decimal key)
+
+- **Starts** from a row's Price or Add price pill, or from "+k without a Price". The camera pauses (no reads while typing).
+- The **keypad sheet** (`PriceKeypad` in a non-modal `BottomSheet`, about 45 % of the height) docks at the bottom; the list scrolls
+  so the row being priced sits just above it, outlined.
+- Sheet content, top to bottom:
+  - the row's name (meta) and, for a Product in g or ml, the `Segmented` **per pack · per kg** (or **per l**); a weighed row opens
+    on per kg; pieces show no Segmented (S3);
+  - the display: "€1.45" (`display` role), and under it what it implies: "= €2.90/kg for 500 g" or "× 312 g = €6.21";
+  - one neutral chip: "Last time here €1.29 · 3 Nov" (tapping it types that Price), or "No Price at Esselunga yet";
+  - the keypad: 1–9, the decimal key (the Household locale's separator; hidden for a 0-digit currency), 0, backspace;
+  - actions: **Close** (tertiary) and the primary: **Next without a Price →** while another row has no Price, else **Save**.
+- **Next** saves this row and moves the pill to the next row without a Price (top to bottom); the last one turns the primary into
+  Save. Close saves what was typed if it is valid, and discards an empty or invalid entry.
+- **What is saved**: a per-pack Price applies to every scan of the row; per kg sends `pricePerKgCents` and the pack Price it implies
+  (rounded half up, `product.PriceForWeight`). Queued scans are edited in the queue (`setQueuedPrice`); applied ones through
+  `PATCH /api/scan/prices` (13.9). A refused value shows the field error "Enter a number above 0".
+
+### 13.5 A new Product (from D)
+
+An unknown barcode pauses the camera and opens **"What is this?"** (`NewProductSheet`, replacing `UnknownBarcodeSheet`).
+
+1. **Which Line is it?** Chips of the open Lines, partially covered ones included, Restock Lines of Supplies included, in list
+   order, at most 8 then "More Lines"; and **Something else** (outlined, search icon). Picking a Line sets the Ingredient (or
+   Supply), its Base Unit and the "ticks" promise. With no open Lines the step is skipped.
+2. **Something else** reveals the `Segmented` **Ingredient · Supply** and the `Select` (typeahead, "Ingredients" and "Supplies"
+   subheaders, "New Ingredient 'X'" / "New Supply 'X'"; the near-duplicate guard as today). A new Supply defaults to piece.
+3. **Pack size**: chips from the chosen Ingredient's existing Products and common sizes for its Base Unit (g: 250 g, 500 g, 1 kg;
+   ml: 500 ml, 1 l; piece: 1, 4, 6, 10), then **Other** (a `StepperField` with the unit `Select`). The first chip is preselected
+   when the Ingredient has one usual size.
+4. **Take a Picture** (secondary Button with the camera icon): the hidden `capture="environment"` input (§2.3); after the shot the
+   button becomes the Picture with "Retake". On a computer it reads **Choose a Picture**.
+5. A summary note: 'Saved as "Eggs 6 pieces", Any Shop. **Rename**' (Rename turns the note into the name `TextField`), and
+   **More: This Shop only**.
+6. Primary: **Add · ticks Eggs** when a Line was picked, else **Add**. The Price is not asked: the new row says Add price and the
+   keypad opens on it at once (Close leaves it unpriced).
+
+Deferred by default: the Product name, the Picture, the scope and the Price. Required: what it is, and the pack size. The weighed
+variant (Weight Barcode Rule, unknown item code) shows steps 1–2 only; the price-valued one also asks the weight once, as today.
+The Archived-Product offer (Unarchive) comes first, as today. Offline: the same sheet; the Picture is kept as a Blob (PPX).
+
+### 13.6 Quantity, Undo and removal
+
+- Scanning the same barcode again: ×N+1, the row moves to the top, beep and buzz.
+- **+** on the active row: a new `shop_scan` Op for the same Product (no camera). **−**: Undo of that Product's latest scan; at ×1
+  it is Remove.
+- **Remove** (⋮, or swipe left on the row with the button twin): ×1 at once with the Toast "Removed Monini olive oil · **Put back**"
+  (Put back sends a new Op); ×2 or more asks first in a `ConfirmDialog`: "Remove 3 Granarolo mozzarella? Their Stock Lots and Price
+  go too." **Remove** / **Keep them**.
+- After every scan the Toast "Added Mutti passata · **Undo**" (5 s), replacing today's `ScanFeedback` line.
+
+### 13.7 Edge cases
+
+| Case | Behaviour and copy |
+|---|---|
+| Offline | `ScanNotices` as today under the strip: "Offline: Scans are kept and sent when you are back online"; rows "Waiting to sync"; match badges come with the sync Result; Prices edit the queue. |
+| Rejected on sync | the row is removed and the notice "Couldn't sync a Scan: …" stays, as today. |
+| Not a product code | banner "Not a product code" (as today). |
+| Unreadable | "Couldn't read that, try again", reject buzz. |
+| Camera fails | `CameraFailure` as today with **Type the barcode instead**; a typed barcode follows the same flow. |
+| Stock-take | unchanged (`StockTakeSheet`); the Scanned list is Shop mode only. |
+| A reload | the session (this Shop, this household day) comes back from IndexedDB; the next day it starts empty. |
+| One hand | Segmented, rows, Stepper, keypad and primary actions are in the lower 60 %; Change Shop is the only control near the top. |
+
+### 13.8 Copy (new strings, in `features/scan/strings.ts`)
+
+"Scanned {n}", "To get {n}", "+{n} without a Price", "Add price", "On the list · {line} ticked", "On the list · {qty} still to
+get", "Not on the list", "Waiting to sync", "Nothing scanned yet", "Price of {product}", "per pack", "per kg", "per l", "Last time
+here {price} · {date}", "No Price at {shop} yet", "= {perKg}/kg for {size}", "× {weight} = {price}", "Next without a Price",
+"Close", "Save", "What is this?", "Which Line is it?", "Something else", "More Lines", "Take a Picture", "Choose a Picture",
+"Retake", 'Saved as "{name}", Any Shop.', "Rename", "More: This Shop only", "Add · ticks {line}", "Add", "Added {product}",
+"Undo", "Removed {product}", "Put back", "Remove {n} {product}?", "Their Stock Lots and Price go too.", "Keep them", "More for
+{product}", "Remove", "Open the Product", "Pick a Shop to keep that Scan".
+
+### 13.9 Data and API (final)
+
+| Change | Where |
+|---|---|
+| The Scanned session on the phone: Ops and Results of this Shop and household day, in IndexedDB beside the queue | `web/src/features/scan/lib/sessionStore.ts` |
+| `PATCH /api/scan/prices {clientUuids: [...], priceCents, pricePerKgCents?}`: one Price for all scans of a row, each event's `price_cents` updated (so `summary.spentCents` stays right), one Price row per day as now; 404 for an unknown uuid, 409 for an undone one, nothing written on error | `internal/scan/service`, `internal/scan/httpapi` |
+| `PATCH /api/scan/{clientUuid}` also accepts `pricePerKgCents` (additive; the queue's edit of a queued Op already can) | same |
+| `OfflineProduct.lastPriceDate` (additive, `YYYY-MM-DD`, absent with no Price) for "Last time here €1.29 · 3 Nov" | `internal/scan/httpapi/wiring.go`, `service.OfflineProduct` |
+| From the Supplies plan (H4, in progress): `ingredientKind` on scan rows and offline Products, `Ensure` with a kind | H4 |
+
+No migration. `+1` is a `shop_scan` Op, `−1` and Remove are Undo, as today.
+
+### 13.10 Work packages (they replace the scan half of household-items H7)
+
+Team format: **test author** (Sonnet: unit tests and Gherkin first) → **developer** (Haiku) → **reviewer** (Opus: checks against
+this spec, GLOSSARY, ADRs and system.md; fixes small findings itself, sends larger ones back). The receipt WPs are in
+[receipt-reading.md §10](receipt-reading.md#10-work-packages).
+
+| WP | Scope | Files owned | Depends on | Size |
+|---|---|---|---|---|
+| **SR0 Spec** | functional spec §10.1 rewritten for the Scanned list, short form and Price entry; decision entry | `docs/spec/functional-spec.md` (§10.1 and the decision list only) | – | S |
+| **SR1 Scan API** | `PATCH /api/scan/prices`, `pricePerKgCents` on the PATCH, `lastPriceDate` | `internal/scan/service/prices.go` (new) + test, `internal/scan/httpapi/httpapi.go`, `internal/scan/httpapi/wiring.go`, `internal/scan/store/store.go` (`UpdatePrices`) | **H4 merged** (H4 owns `internal/scan/**` until then) | S |
+| **SR2 Primitives** | `PriceKeypad`, `ViewfinderStrip size="tall"`, compact `Stepper` variant if missing; Phosphor `Receipt` icon for beta.8 | `web/src/ui/PriceKeypad.{tsx,css}` + tests, `web/src/ui/ViewfinderStrip.{tsx,css}`, `web/src/ui/Stepper.{tsx,css}`, `web/src/ui/index.ts`, `web/src/ui/icons.ts` | – | S |
+| **SR3 Session model** | pure grouping of Ops and Results into rows, totals, "next without a Price", the IndexedDB session, +/−/Remove and group Price in the flow | `web/src/features/scan/lib/scannedList.ts`, `lib/sessionStore.ts`, `lib/priceEntry.ts` + tests, `hooks/useScannedList.ts`, `hooks/useScanFlow.ts`, `hooks/useScanController.ts`, `api.ts`, `types.ts` | SR1 (contract) | M |
+| **SR4 Screen** | the scanning screen, `ScannedRow`, Segmented, total, the keypad sheet and Next, Toasts, empty state; the footer slot for "Read the receipt" | `web/src/features/scan/screens/ScanScreen.tsx`, `components/ScannedList.tsx`, `components/ScannedRow.tsx`, `components/PriceEntrySheet.tsx` (replaces `PriceEditSheet`), `components/ScanFeedback.tsx` (removed), `components/LiveList.tsx` (removed), `scan.css`, `strings.ts` | SR2, SR3 | M |
+| **SR5 Short form** | `NewProductSheet`: Line chips, Ingredient · Supply, pack chips, native camera Button, summary and Rename; the Op with `kind` (H7's unknown-form half) | `web/src/features/scan/components/NewProductSheet.tsx` (replaces `UnknownBarcodeSheet`), `lib/unknownForm.ts`, `lib/lineChoice.ts`, `lib/packChips.ts` + tests, `newProductStrings.ts` | SR2; H4 (contract); H5 (the New Ingredient `Segmented`) | M |
+| **H7′ Shop** | what is left of H7: the Shop screen's "Supplies" group and Restock copy | `web/src/features/shop/**` | H4 (contract) | S |
+| **SR6 Guards** | BDD `bdd/features/scan/scanned_list.feature`, `new_product.feature`, `price_entry.feature` and steps; page-layout scenarios for `/scan` (keypad open, sheet open) at 360, 390, 834; CHANGELOG lines | `bdd/features/scan/**`, `bdd/steps_scan_list_test.go`, `scripts/check-page-layout.mjs` (scan scenarios), `CHANGELOG.md` (scan lines) | SR4, SR5 | S |
+
+**Order.** SR0 and SR2 start at once (with H4 running). SR1 after H4 merges. SR3 after SR1's contract is frozen (tests can start
+on fixtures). SR4 and SR5 run in parallel (disjoint files; `strings.ts` belongs to SR4, `newProductStrings.ts` to SR5). H7′ runs
+beside them. SR6 last, folded into H8 for the release.
+
+**How H7 changes.** H7 owned all of `web/src/features/scan/**` for three things: the unknown form's kind and subheaders, the
+offline kind, and nothing else in Scan. The form is rewritten by **SR5**, which takes those requirements (Ingredient · Supply,
+subheaders, a new Supply on piece, `kind` in the Op); the offline kind (`ingredientKind` on `OfflineProduct`, from H4) is read by
+**SR3**. H7 shrinks to **H7′**, the Shop screen only. No file is owned twice.
