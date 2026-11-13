@@ -254,7 +254,7 @@ quickly". It builds on Used up (§4.2): a Supply's Stock goes down because it wa
   the other row actions; `HandGrabbing` says "pick up" (it would read as Add to Stock or "take it with me"), and the bare `minus` is
   the Stepper's. Accessible name: **"Use one Toilet paper"** for a piece Supply, **"Use some Dish soap"** for g and ml. It never
   opens the row.
-- **Pieces: one tap uses 1.** **g and ml: a tap opens a small sheet** ("Use Dish soap", a `NumberField` "How much" in the Base Unit,
+- **Pieces: one tap uses 1.** **g and ml: a tap opens a small sheet** ("Use Dish soap", a `TextField` "How much" with `inputMode="decimal"` and the Base Unit as its suffix (a comma reads as a decimal point),
   buttons **Use** and **Use all**). The field starts at the **pack size of the Product last bought** (`GET /api/products/last-bought`,
   already used by the Restock Lines), never above Stock; empty when none is known. More than Stock or 0 is refused in the sheet
   ("Only 800 ml in Stock", "Use more than 0").
@@ -272,16 +272,23 @@ quickly". It builds on Used up (§4.2): a Supply's Stock goes down because it wa
 | Endpoint | Behaviour |
 |---|---|
 | `POST /api/stock/ingredients/{id}/use` `{"quantity": 1}` | Takes `quantity` (Base Units) from the Supply's Lots, **oldest purchased first** (`stock.Use`, which follows `stock.Deduct`'s order: a Supply's Lots have no go-off date, so it is oldest purchase, then lowest id). Emptied Lots are deleted (a correction, never a go-off or waste). Answers `200 {ingredientId, name, baseUnit, quantity, total, taken: [{lotId, quantity, purchased, storagePlaceId, productId, shopId}]}`: `total` is the Stock left, `taken` is in the order taken and carries what a Lot needs to be rebuilt. Publishes one `stock` event `{changed: "lots", ingredientIds: [id]}` after the commit |
-| `POST /api/stock/ingredients/{id}/use/undo` `{"taken": [...]}` | Puts each entry back: a Lot that still exists gets the quantity added; an emptied Lot is **recreated** with its `purchased`, Storage Place, Product and Shop (a new id, no go-off date). Answers like Use (`quantity` = what came back, `total` = Stock now). Same event |
+| `POST /api/stock/ingredients/{id}/use/undo` `{"taken": [...]}` | Puts each entry back: a Lot that still exists gets the quantity added; an emptied Lot is **recreated** with its `purchased`, Storage Place, Product and Shop (a new id, no go-off date). A Storage Place deleted since the Use unsorted its Lots (`ON DELETE SET NULL`), so the recreated Lot is unsorted too. Answers like Use (`quantity` = what came back, `total` = Stock now). Same event |
 
 - Refusals, all `422` with `error.code`: **`ingredient_not_supply`** (food: Use is for Supplies only), **`use_quantity_invalid`**
-  (quantity 0, below 0 or absent; for Undo an empty or missing list, a quantity of 0 or less or a missing `purchased`),
+  (quantity 0, below 0 or absent; for Undo an empty or missing list, a quantity of 0 or less, a missing `purchased` or the same
+  `lotId` twice, which no Use answers),
   **`use_exceeds_stock`** (more than is in Stock, or none at all; nothing is taken). An unknown Ingredient is `404 not_found`.
   Nothing changes and nothing is published on a refusal.
 - **Why Undo takes the Lots back instead of a server-side token**: no new table, no expiry to design, and Undo keeps working after
   a reload of the toast's closure; the cost is that Undo trusts the client's Lots, which is fine: every User of the Household may
   already edit any Lot (`PATCH /api/stock/lots/{id}`). Undo is not idempotent (pressing it twice puts it back twice), so the web
   disables the toast action after one press.
+- **Review decision: Undo is not bounded by what was taken.** A User could send any `taken` (made-up quantities or `lotId`s)
+  and add Stock. That grants nothing: the same User can already add a Lot of any size (`POST /api/stock/lots`), edit one
+  (`PATCH /api/stock/lots/{id}`) or set any total by a Stock-take, and every User of the Household is trusted with Stock.
+  Bounding it would need a record of each Use (a table and an expiry), which is the server-side token this design chose not to
+  build. Undo checks only what keeps the data sound: positive quantities, a valid `purchased`, no Lot listed twice, a Storage
+  Place that still exists, and the Ingredient is a Supply.
 - Code: `stock.Use` (pure, `internal/stock/use.go`), `Service.UseSupply` and `Service.UndoSupplyUse` (`internal/stock/service/use.go`,
   one transaction, publish after commit), thin handlers in `internal/stock/httpapi`. Errors: `stock.ErrUseNotPositive`,
   `stock.ErrUseExceedsStock`; `service.ErrNotSupply`, `service.ErrUseInvalid`, `service.ErrUseExceedsStock` (each also an
