@@ -23,6 +23,7 @@ describe('SettingsIndexPage (/settings, 5.14)', () => {
     renderWithProviders(<SettingsIndexPage />, '/settings')
     const expected: Record<string, string> = {
       Ingredients: '/ingredients',
+      Supplies: '/supplies',
       Products: '/products',
       Household: '/settings/household',
       Members: '/settings/members',
@@ -47,7 +48,7 @@ describe('SettingsIndexPage (/settings, 5.14)', () => {
     mockApi({ 'GET /api/me': ADMIN_ME })
     renderWithProviders(<SettingsIndexPage />, '/settings')
     const names = (list: HTMLElement) => within(list).getAllByRole('link').map((a) => a.getAttribute('aria-label'))
-    expect(names(await screen.findByRole('list', { name: 'Catalogue' }))).toEqual(['Ingredients', 'Products', 'Shops', 'Tags', 'Courses', 'Storage Places'])
+    expect(names(await screen.findByRole('list', { name: 'Catalogue' }))).toEqual(['Ingredients', 'Supplies', 'Products', 'Shops', 'Tags', 'Courses', 'Storage Places'])
     expect(names(await screen.findByRole('list', { name: 'Household' }))).toEqual(['Household', 'Members', 'Meal Slots', 'Planning rules', 'Sign-in requests', 'Allowlist', 'Recipe Assistant'])
     expect(names(await screen.findByRole('list', { name: 'You' }))).toEqual(['Your preferences', 'Notifications'])
   })
