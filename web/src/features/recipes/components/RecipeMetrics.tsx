@@ -21,7 +21,7 @@ export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinut
   const time = timeSummary({ totalMinutes, advanceMinutes })
   const ahead = time.ahead ? recipeStrings.aheadMetric(formatMinutes(advanceMinutes)) : null
   return (
-    <BentoGrid columns={2}>
+    <BentoGrid min="card">
       <Tile variant="soft">
         <p className="recipe-metric">{recipeStrings.portionsPerBatch(yieldText)}</p>
         {readyMeal ? <Chip kind="tag">{recipeStrings.readyMeal}</Chip> : null}

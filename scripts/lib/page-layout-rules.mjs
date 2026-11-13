@@ -100,6 +100,8 @@ export function evaluateMetrics(m, { width, kind }) {
     if (b.why === 'mid-word' && /@|:\/\/|\//.test(b.token ?? '')) continue
     add('P11', `${b.sel}: ${b.why}`)
   }
+  // DS-A (system.md 8): at the end of a scroll, no content box of <main> is under the floating bottom bar (null: no bar, from 1024 px).
+  for (const o of m.navOverlap ?? []) add('P12', `${o.sel} is under the bottom bar by ${o.px} px at the end of the scroll; add clearance (--nav-clearance)`)
   return out
 }
 

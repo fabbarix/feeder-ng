@@ -27,7 +27,7 @@ export interface ShoppingBodyProps {
 
 /** PE: the Ingredient's Picture (an empty slot without one); a free-text extra is not an Ingredient and has no lead. */
 function leadOf(entry: ListEntry) {
-  return entry.ingredientId === null ? undefined : <Thumb imageUrl={entry.imageUrl} size={40} />
+  return entry.ingredientId === null ? undefined : <Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />
 }
 
 /** The list's tiles: how many are left and the estimate, the open entries, then the Ticked group. Render only. */
@@ -38,13 +38,13 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
   const empty = open.length === 0 && ticked.length === 0
   return (
     <>
-      <BentoGrid columns={2}>
+      <BentoGrid min="card">
         <ProgressTile label={shopStrings.leftToGet} value={list.progress.ticked} max={list.progress.total} valueLabel={String(left)} />
         <CostTile estimatedCostCents={list.estimatedCostCents} unpriced={list.unpricedLines} currency={list.currency} shopName={shopName} onScan={onScan} />
       </BentoGrid>
       {empty ? <EmptyState title={shopStrings.empty} description={shopStrings.emptyHint} /> : null}
       <div className="shop-lines">
-        <BentoGrid columns={2}>
+        <BentoGrid min="card">
           {open.map((entry) => (
             <LineTile
               key={entry.key}
@@ -64,7 +64,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelet
           <h2 className="shop-ticked__title">{shopStrings.tickedGroup(ticked.length)}</h2>
           <div role="group" aria-label={shopStrings.ticked}>
             <div className="shop-lines">
-              <BentoGrid columns={2}>
+              <BentoGrid min="card">
                 {ticked.map((entry) => (
                   <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} lead={leadOf(entry)} onMarkIt={onMarkIt} />
                 ))}

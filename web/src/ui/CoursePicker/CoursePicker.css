@@ -47,7 +47,6 @@
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
   line-height: var(--text-body-strong-line);
-  overflow-wrap: anywhere;
 }
 
 .course-picker__main {

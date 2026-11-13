@@ -40,7 +40,6 @@
   font-size: var(--text-title-1-size);
   line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
-  overflow-wrap: break-word;
 }
 
 .page-header__subtitle {

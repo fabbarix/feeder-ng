@@ -16,6 +16,8 @@ export interface ChipProps {
   kind?: ChipKind
   /** Colour of `state` and `status` chips. */
   status?: ChipStatus
+  /** An outlined status chip (system.md 6): "Leftover for" is `kind="status" status="leftover" outline`. */
+  outline?: boolean
   /** @deprecated use `kind` (+ `status`). */
   tone?: ChipTone
   /** An IconName; a ReactNode is still accepted for unmigrated call sites (deprecated). */
@@ -56,7 +58,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, tone, icon, selected, disabled, tagColour, onClick, label, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, label, 'aria-describedby': describedBy, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -77,14 +79,22 @@ export function Chip({ kind, status, tone, icon, selected, disabled, tagColour, 
     if (fallback) leading = <Icon name={fallback} size={14} />
   }
 
+  // One line (system.md 6): the label truncates, and the full text is the tooltip (and the name, unless `label` says more).
   const content = (
     <>
       {showDot ? <span className="chip__dot" aria-hidden="true" /> : null}
       {leading}
-      {children}
+      <span className="chip__label">{children}</span>
     </>
   )
-  const attrs = { 'data-kind': finalKind, 'data-status': finalStatus, 'data-tone': tone, 'data-tag-colour': tagged }
+  const attrs = {
+    'data-kind': finalKind,
+    'data-status': finalStatus,
+    'data-tone': tone,
+    'data-tag-colour': tagged,
+    'data-outline': outline ? 'true' : undefined,
+    title: typeof children === 'string' ? children : label,
+  }
 
   if (onClick || finalKind === 'filter') {
     return (
